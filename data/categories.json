@@ -1,0 +1,40 @@
+{
+    "DNSProxy": {
+        "Categories": {
+            "Default": {
+                "MALICIOUS": {
+                    "Enabled": 0
+                },
+                "VPN": {
+                    "Enabled": 1
+                },
+                "ADULT": {
+                    "Enabled": 1
+                },
+                "DRUGS": {
+                    "Enabled": 1
+                },
+                "GUNS": {
+                    "Enabled": 0
+                },
+                "SOCIALMEDIA": {
+                    "Enabled": 0
+                },
+                "ADS": {
+                    "Enabled": 0
+                },
+                "DYNDNS": {
+                    "Enabled": 0
+                },
+                "TEENTOP50": {
+                    "Enabled": 0
+                }
+            },
+            "UserDefined": {
+                "COOL": {
+                    "Enabled": 1
+                }
+            }
+        }
+    }
+}

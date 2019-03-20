@@ -1,0 +1,62 @@
+{
+    "Settings": {
+        "HOMEDIR": {
+            "Path": "/home/free/Desktop/Firewall/"
+        },
+        "Interface": {
+            "Inside": "eth0",
+            "Outside": "eth0"
+        },
+        "DNSServers": {
+            "Server1": {
+                "Name": "OpenDNS1",
+                "IP Address": "208.67.220.222"
+            },
+            "Server2": {
+                "Name": "OpenDNS2",
+                "IP Address": "208.67.220.220"
+            }
+        },
+        "LocalNET": {
+            "IP Address": "192.168.83.0/24"
+        },
+        "ExternalDNS": {
+            "Enabled": 0
+        },
+        "Categories": {
+            "MALICIOUS": {
+                "Enabled": 1
+            },
+            "VPN": {
+                "Enabled": 1
+            },
+            "ADULT": {
+                "Enabled": 0
+            },
+            "DRUGS": {
+                "Enabled": 1
+            },
+            "GUNS": {
+                "Enabled": 0
+            },
+            "SOCIALMEDIA": {
+                "Enabled": 0
+            },
+            "ADS": {
+                "Enabled": 0
+            },
+            "DYNDNS": {
+                "Enabled": 0
+            },
+            "TEENTOP50": {
+                "Enabled": 0
+            }
+        },
+        "DHCPReservations": {
+            "d0:77:14:99:ac:f3": {
+                "IP Address": "192.168.5.208",
+                "Name": "Jacob"
+            }
+        }
+    }
+}
