@@ -7,6 +7,6 @@
     "Server2": {
         "Name": "OpenDNS2",
         "IP Address": "208.67.220.220",
-        "Status": "Down"
+        "Status": "UP"
     }
 }

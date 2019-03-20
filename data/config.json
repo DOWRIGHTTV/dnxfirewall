@@ -4,8 +4,8 @@
             "Path": "/home/free/Desktop/Firewall/"
         },
         "Interface": {
-            "Inside": "eth0",
-            "Outside": "eth0"
+            "Inside": "wlan0",
+            "Outside": "wlan0"
         },
         "DNSServers": {
             "Server1": {

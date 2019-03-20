@@ -29,7 +29,11 @@ if __name__ == '__main__':
             print('|       || | |   ||   _   |  |   |    |   _   ||   _   ||       ||       |')
             print('|______| |_|  |__||__| |__|  |___|    |__| |__||__| |__||_______||_______|')
 
-            Run()
+            run = input('Run DNX?: [Y/n]')
+            if (run == '' or run.lower() == 'y'):
+                Run()
+            else:
+                exit(1)   
         else:
             print('DNX FWALL requires Root Priveledges. Exiting...')
             exit(1)
@@ -37,5 +41,5 @@ if __name__ == '__main__':
         print(E)
     except KeyboardInterrupt:
         print('\n-----------------------------------------------------')
-        print("User Interrupt. Exiting Some Random Thing")
+        print("User Interrupt. Exiting DNX Firewall")
         print('-----------------------------------------------------')

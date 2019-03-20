@@ -4,8 +4,6 @@ import os, sys, time, subprocess
 import threading, asyncio
 import struct
 
-sys.path.insert(0, '/home/free/Desktop/DNX-FWALL-CMD/dnx-configure')
-
 from socket import *
 from dnx_configure.system_info import Interface
 
@@ -28,14 +26,14 @@ class DHCPLeases:
 #            await asyncio.sleep(60)
             await asyncio.sleep(60 * 60)
             print('Backing up DNX DHCP Leases')
-            with open('dnx.leases', 'w+') as leases:
+            with open('dhcp_server/dnx.leases', 'w+') as leases:
                 for ip, value in self.leasetable.items():
                     if (value is not None and value != '-1'):
                         leases.write('{} {} {}\n'.format(ip, value[0], value[1]))
 
     def ReadLeases(self):
         try:
-            with open('dnx.leases', 'r') as leases:
+            with open('dhcp_server/dnx.leases', 'r') as leases:
                 while True:
                     urlHex = ''
                     line = leases.readline().strip().lower()
