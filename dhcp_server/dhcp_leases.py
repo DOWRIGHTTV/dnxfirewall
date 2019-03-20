@@ -1,11 +1,13 @@
 #!/usr/bin/python3
 
-import os, time, subprocess
+import os, sys, time, subprocess
 import threading, asyncio
 import struct
 
+sys.path.insert(0, '/home/free/Desktop/DNX-FWALL-CMD/dnx-configure')
+
 from socket import *
-from system_info import Interface
+from dnx_configure.system_info import Interface
 
 class DHCPLeases:
     def __init__(self, setting, whitelist):

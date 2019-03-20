@@ -9,7 +9,7 @@ import json
 
 
 from socket import *
-from system_info import Interface
+from dnx_configure.system_info import Interface
 
 
 class DNSRelay:

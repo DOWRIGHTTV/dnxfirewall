@@ -1,15 +1,16 @@
 #!/usr/bin/python3
 
-import os, time, subprocess
+import os, sys, time, subprocess
 import threading, asyncio
 import struct
 import json
 
 from socket import *
 from collections import OrderedDict
-from system_info import Interface
-from dhcp_leases import DHCPLeases
-from dhcp_response import DHCPResponse
+
+from dnx_configure.system_info import Interface
+from dhcp_server.dhcp_leases import DHCPLeases
+from dhcp_server.dhcp_response import DHCPResponse
 
 class DHCPServer:
     def __init__(self):

@@ -4,19 +4,21 @@
 #from scapy.all import *
 #from socket import AF_INET, SOCK_DGRAM, socket
 
-import os, subprocess
+import os, sys
 import time, threading
 import json
 
-from system_info import System, Interface
-from dnx_dbconnector import SQLConnector as DBConnector
 from subprocess import run
-from dns_proxy_response import DNSResponse
-from dns_proxy_sniffer import Sniffer
+
+from dnx_configure.system_info import System, Interface
+from dnx_configure.dnx_dbconnector import SQLConnector as DBConnector
+from dns_proxy.dns_proxy_response import DNSResponse
+from dns_proxy.dns_proxy_sniffer import Sniffer
 
 class DNSProxy:
     def __init__(self):
-        with open('data/config.json', 'r') as settings:
+        self.path = os.getcwd().strip('dns-proxy')
+        with open('{}/data/config.json'.format(self.path), 'r') as settings:
             self.setting = json.load(settings)        
                     
         self.iface = self.setting['Settings']['Interface']['Inside']    
@@ -32,17 +34,17 @@ class DNSProxy:
         self.Proxy()
         
     def ProxyDB(self):
-        ProxyDB = DBConnector()
+        ProxyDB = DBConnector(self.path)
         ProxyDB.Connect()
         ProxyDB.Cleaner()
         ProxyDB.Disconnect()
     
     def Dictload(self):  
-        with open('data/whitelist.json', 'r') as whitelists:
+        with open('{}/data/whitelist.json'.format(self.path), 'r') as whitelists:
             whitelist = json.load(whitelists)
         exceptions = whitelist['Whitelists']['Exceptions']
           
-        with open('domainlists/Blocked.domains', 'r') as BL:
+        with open('{}/domainlists/Blocked.domains'.format(self.path), 'r') as BL:
             while True:
                 urlHex = ''
                 line = BL.readline().strip().lower()
@@ -107,7 +109,7 @@ class DNSProxy:
             print(E)
         
     def WhitelistCheck(self, request):
-        with open('data/whitelist.json', 'r') as whitelists:
+        with open('{}/data/whitelist.json'.format(self.path), 'r') as whitelists:
             whitelist = json.load(whitelists)
         whitelist = whitelist['Whitelists']['Domains']
         try:

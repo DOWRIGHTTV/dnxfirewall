@@ -1,26 +1,8 @@
 {
     "Blacklists": {
         "Domains": {
-            "google.com": {
-                "Hex": "google|03|com",
-                "Time": "Mar 17 19:12:04",
-                "WWW": "www.google.com",
-                "Expire": "120"
-            },
-            "pronhub.com": {
-                "Hex": "pronhub|03|com",
-                "Time": "Mar 18 12:40:38",
-                "WWW": "www.pronhub.com",
-                "Expire": "180"
-            }
-        },
+	},
         "Exceptions": {
-            "google.com": {
-                "Reason": "mali"
-            },
-            "wtf.bullshit": {
-                "Reason": "fuckthis"
-            }
         }
     }
 }
