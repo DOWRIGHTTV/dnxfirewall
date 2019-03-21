@@ -5,18 +5,17 @@ import os
 import time
 import datetime
 
-class SQLConnector:
-    def __init__(self, path):
-        self.path = path
+class DBConnector:
+    def __init__(self):
+        self.path = os.getcwd().strip('dnx_configure')
         self.db = '{}/data/dnxfwallproxy.db'.format(self.path)
-        print(self.db)
         self.table = 'PROXYBLOCKS'
         
         try:        
             if not os.path.isfile (self.db):
                 with open(self.db, 'w+') as db:
                     pass       
-        except Exception as BULLSHIT:
+        except Exception:
             pass
             
     def Connect(self):
@@ -70,7 +69,7 @@ class SQLConnector:
 
 if __name__ == '__main__':
 #    url = 'fbob.com'
-    ProxyDB = SQLConnector()
+    ProxyDB = DBConnector()
     ProxyDB.Connect()
     try:
         while True:

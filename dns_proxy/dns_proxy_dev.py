@@ -11,7 +11,7 @@ import json
 from subprocess import run
 
 from dnx_configure.system_info import System, Interface
-from dnx_configure.dnx_dbconnector import SQLConnector as DBConnector
+from dnx_configure.dnx_dbconnector import DBConnector
 from dns_proxy.dns_proxy_response import DNSResponse
 from dns_proxy.dns_proxy_sniffer import Sniffer
 
@@ -34,7 +34,7 @@ class DNSProxy:
         self.Proxy()
         
     def ProxyDB(self):
-        ProxyDB = DBConnector(self.path)
+        ProxyDB = DBConnector()
         ProxyDB.Connect()
         ProxyDB.Cleaner()
         ProxyDB.Disconnect()

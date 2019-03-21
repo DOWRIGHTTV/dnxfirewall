@@ -2,12 +2,12 @@
 
 import multiprocessing
 import threading
-import os
+import os, signal
 
 import dns_proxy.dns_proxy_dev as DNSProxyInit
 import dns_relay.dns_relay as DNSRelayInit
 import dhcp_server.dhcp_server as DHCPServerInit
-  
+
 def Run():
     DNSProxy = DNSProxyInit.DNSProxy()
     DNSRelay = DNSRelayInit.DNSRelay()
@@ -16,6 +16,8 @@ def Run():
     threading.Thread(target=DNSProxy.Start).start()
     threading.Thread(target=DNSRelay.Start).start()
     threading.Thread(target=DHCPServer.Start).start()
+   
+    signal.pause()
 
 if __name__ == '__main__':
     try:
