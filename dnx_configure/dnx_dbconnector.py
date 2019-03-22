@@ -7,7 +7,7 @@ import datetime
 
 class DBConnector:
     def __init__(self):
-        self.path = os.getcwd().strip('dnx_configure')
+        self.path = os.environ['HOME_DIR']
         self.db = '{}/data/dnxfwallproxy.db'.format(self.path)
         self.table = 'PROXYBLOCKS'
         

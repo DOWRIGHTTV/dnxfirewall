@@ -5,8 +5,12 @@ import threading, asyncio
 import struct
 import json
 
-from socket import *
+from socket import socket, inet_aton, AF_INET, SOCK_DGRAM, \
+    SOL_SOCKET, SO_REUSEADDR, SO_BROADCAST, SO_BINDTODEVICE
 from collections import OrderedDict
+
+path = os.environ['HOME_DIR']
+sys.path.append(path)
 
 from dnx_configure.system_info import Interface
 from dhcp_server.dhcp_leases import DHCPLeases
@@ -14,9 +18,10 @@ from dhcp_server.dhcp_response import DHCPResponse
 
 class DHCPServer:
     def __init__(self):
-        with open('data/config.json', 'r') as settings:
+        self.path = os.environ['HOME_DIR']
+        with open('{}/data/config.json'.format(self.path), 'r') as settings:
             self.setting = json.load(settings)
-        with open('data/whitelist.json', 'r') as whitelists:
+        with open('{}/data/whitelist.json'.format(self.path), 'r') as whitelists:
             self.whitelist = json.load(whitelists)
         
         self.Leases = DHCPLeases(self.setting, self.whitelist)

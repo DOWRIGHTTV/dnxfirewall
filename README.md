@@ -1,6 +1,8 @@
 # DNX-FWALL-CMD
 Command line version of DNX Firewall.
 
-1. Before running edit data/config.json to reflect your system.
+~Before running~ 
 
-2.use dnx_run.py to start the system.
+1. Edit data/config.json to reflect your system.
+2. Change environment variable in dnx_run.sh
+3. Use dnx_run.sh to start the system.

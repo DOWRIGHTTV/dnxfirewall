@@ -5,7 +5,7 @@ import json
 import threading
 
 from subprocess import run
-from system_info import *
+from system_info import Interface
 
 class Defaults:
     def __init__(self):

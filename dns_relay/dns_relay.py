@@ -1,20 +1,24 @@
 #!/usr/bin/python3
 
-import os, subprocess
+import os, sys, subprocess
 import struct
 import traceback
 import time
 import threading
 import json
 
+from socket import socket, AF_INET, SOCK_DGRAM
 
-from socket import *
+path = os.environ['HOME_DIR']
+sys.path.append(path)
+
 from dnx_configure.system_info import Interface
 
 
 class DNSRelay:
     def __init__(self):
-        with open('data/config.json', 'r') as settings:
+        self.path = os.environ['HOME_DIR']
+        with open('{}/data/config.json'.format(self.path), 'r') as settings:
             self.setting = json.load(settings)
 
         self.iniface = self.setting['Settings']['Interface']['Inside']
@@ -68,7 +72,7 @@ class DNSRelay:
             print('[+] Listening -> {}:{}'.format(self.laddr, self.lport))
             while True:
                 self.data, self.addr = self.sock.recvfrom(1024)
-                start = time.time()
+#                start = time.time()
                 try:
                     self.parse_init_query(self.data)
                     
@@ -100,7 +104,6 @@ class DNSRelay:
         self.sock.sendto(data, self.addr)
                
 #        print('--------------------------')
-#        print(self.data2)
 #        end = time.time()
 #        print(end - start)
 #        print('--------------------------')       

@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from socket import *
+from socket import socket, inet_aton, AF_PACKET, SOCK_RAW
 import struct
 import binascii
 import codecs
@@ -21,7 +21,7 @@ class Sniffer:
                 Packet.Parse()
                 if (Packet.qname) and (Packet.qtype == 1):
                     self.action(Packet)
-            except AttributeError as AE:
+            except AttributeError:
                 pass
             except Exception as E:
                 print(E)
@@ -50,7 +50,7 @@ class PacketParse:
         d = []
         smac = struct.unpack('!6c', self.data[0:6])
         dmac = struct.unpack('!6c', self.data[6:12])
-        PROTO = struct.unpack('!2c', self.data[12:14])
+#        PROTO = struct.unpack('!2c', self.data[12:14])
 
         for byte in smac:
             s.append(byte.hex())

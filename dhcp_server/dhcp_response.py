@@ -4,7 +4,7 @@ import os, sys, time, subprocess
 import threading, asyncio
 import struct
 
-from socket import *
+from socket import inet_aton
 from dnx_configure.system_info import Interface
 
 class DHCPResponse:

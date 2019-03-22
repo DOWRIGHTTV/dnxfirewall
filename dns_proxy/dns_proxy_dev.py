@@ -1,14 +1,13 @@
 #!/usr/bin/python3
 
-#from __future__ import print_function
-#from scapy.all import *
-#from socket import AF_INET, SOCK_DGRAM, socket
-
 import os, sys
 import time, threading
 import json
 
 from subprocess import run
+
+path = os.environ['HOME_DIR']
+sys.path.append(path)
 
 from dnx_configure.system_info import System, Interface
 from dnx_configure.dnx_dbconnector import DBConnector
@@ -17,7 +16,7 @@ from dns_proxy.dns_proxy_sniffer import Sniffer
 
 class DNSProxy:
     def __init__(self):
-        self.path = os.getcwd().strip('dns-proxy')
+        self.path = os.environ['HOME_DIR']
         with open('{}/data/config.json'.format(self.path), 'r') as settings:
             self.setting = json.load(settings)        
                     

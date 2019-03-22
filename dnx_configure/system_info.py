@@ -1,14 +1,15 @@
 #!/usr/bin/python3
 
-
-from collections import OrderedDict
-from subprocess import check_output
+import os
 import datetime
 import json
 
+from collections import OrderedDict
+from subprocess import check_output
+
 class Interface:
     def __init__(self):
-        self.path = './data'
+        self.path = os.environ['HOME_DIR']
         
     def IP(self, interface):
         output = check_output('ifconfig {}'.format(interface), shell=True).decode()
@@ -60,7 +61,7 @@ class Interface:
 
     def Bandwidth(self):
         intstat = {}
-        with open('{}/interface_speed.json'.format(self.path), 'r') as speed:
+        with open('{}/data/interface_speed.json'.format(self.path), 'r') as speed:
             bandwidth = json.load(speed)
         for key, value in bandwidth.items():
             intstat[key] = [round(int(value[0])*8/1024, 2), round(int(value[1])*8/1024, 2)]
@@ -70,7 +71,7 @@ class Interface:
         
 class System:
     def __init__(self):
-        self.path = './data'
+        self.path = os.environ['HOME_DIR']
         
     def CPU(self):
         with open('/proc/stat', 'r') as CPU:
@@ -118,7 +119,7 @@ class System:
         return(ram)
     
     def DNSStatus(self):
-        with open('{}/dnsstatus.json'.format(self.path)) as dnsstat:
+        with open('{}/data/dnsstatus.json'.format(self.path)) as dnsstat:
             dnsstatus = json.load(dnsstat)
 #        print(dnsstatus)
         return dnsstatus
