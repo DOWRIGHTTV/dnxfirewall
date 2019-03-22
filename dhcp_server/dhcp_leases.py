@@ -4,7 +4,9 @@ import os, sys, time, subprocess
 import threading, asyncio
 import struct
 
-from socket import *
+path = os.environ['HOME_DIR']
+sys.path.append(path)
+
 from dnx_configure.system_info import Interface
 
 class DHCPLeases:
@@ -104,14 +106,14 @@ class DHCPLeases:
 
     def Release(self, ip, mac):    
         try:
-            self.leasetable[ip] = lease_ip
+            lease_ip = self.leasetable[ip]
             if (lease_ip is not None):
                 if (lease_ip[1] == mac and lease_ip[0] != '-1'):
                     print('Releasing {} : {} from table'.format(ip, mac))
                     self.leasetable[ip] = None
             else:
                 pass
-        except Exception as E:
+        except Exception:
             pass
 
     ## -- Handing out IP Addresses to response class -- ##
