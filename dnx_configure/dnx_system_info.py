@@ -122,54 +122,11 @@ class System:
         with open('{}/data/dnsstatus.json'.format(self.path)) as dnsstat:
             dnsstatus = json.load(dnsstat)
 #        print(dnsstatus)
-        return dnsstatus
-    
-    def FirewallRules(self):
-        firewallrules = OrderedDict()
-        output = check_output('sudo iptables -nL FIREWALL --line-number', shell=True).decode()
-        output = output.splitlines()
-        for i, rules in enumerate(output, 1):
-            if ('RETURN' in rules):
-                pass
-            elif (i not in {1,2}):
-                opt_list = []
-                rule = rules.split()
-                for i, option in enumerate(rule):
-                    if (i in {7}):
-                        option = option.split(':')[1]
-                        opt_list.append(option)
-                    elif (i not in {0,2,3}):
-                        opt_list.append(option)
-                if len(opt_list) == 3:
-                    opt_list.append('any')
-                    opt_list.append('any')
-                firewallrules[rule[0]] = opt_list
-                   
-        print(firewallrules)
-        return(firewallrules)
-        
-    def NATRules(self):
-        natrules = OrderedDict()
-        output = check_output('sudo iptables -t nat -nL PREROUTING --line-number', shell=True).decode()
-        output = output.splitlines()
-        for i, rule in enumerate(output, 1):
-            if (i > 2):
-                rule = rule.split()
-                hostinfo = rule[8].split(':')
-                host_ip = hostinfo[1]
-                host_port = hostinfo[2]
-                dport = rule[7].split(':')[1]
-                proto = rule[6]
-                
-                natrules[rule[0]] = [proto, dport, host_ip, host_port]
-        
-#        print(natrules)
-        return(natrules)    
-            
+        return dnsstatus 
                                 
 if __name__ == '__main__':
     Int = Interface()
-    Sys = System()
+#    Sys = System()
 #    Int.IP(INIFACE)
 #    Int.MTU(INIFACE)
 #    Int.Netmask(INIFACE)
@@ -179,6 +136,3 @@ if __name__ == '__main__':
 #    Sys.Uptime()
 #    Sys.RAM()
 #    Sys.DNSStatus()
-    Sys.FirewallRules()  
-#    Sys.NATRules() 
-

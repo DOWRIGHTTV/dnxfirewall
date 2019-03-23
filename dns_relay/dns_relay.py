@@ -12,7 +12,7 @@ from socket import socket, AF_INET, SOCK_DGRAM
 path = os.environ['HOME_DIR']
 sys.path.append(path)
 
-from dnx_configure.system_info import Interface
+from dnx_configure.dnx_system_info import Interface
 
 
 class DNSRelay:

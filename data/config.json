@@ -17,7 +17,7 @@
                 "IP Address": "208.67.220.220"
             }
         },
-        "LocalNET": {
+        "LocalNet": {
             "IP Address": "192.168.83.0/24"
         },
         "ExternalDNS": {

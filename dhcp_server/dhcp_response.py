@@ -5,7 +5,7 @@ import threading, asyncio
 import struct
 
 from socket import inet_aton
-from dnx_configure.system_info import Interface
+from dnx_configure.dnx_system_info import Interface
 
 class DHCPResponse:
     def __init__(self, insideint, xid, mac, ciaddr, chaddr, options, Leases):

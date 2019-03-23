@@ -1,9 +1,10 @@
 #!/usr/bin/python3
 
-from socket import socket, inet_aton, AF_PACKET, SOCK_RAW
 import struct
 import binascii
 import codecs
+
+from socket import socket, inet_aton, AF_PACKET, SOCK_RAW
 
 class Sniffer:
     def __init__(self, iface, action):

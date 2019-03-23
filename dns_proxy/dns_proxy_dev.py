@@ -9,8 +9,8 @@ from subprocess import run
 path = os.environ['HOME_DIR']
 sys.path.append(path)
 
-from dnx_configure.system_info import System, Interface
-from dnx_configure.dnx_dbconnector import DBConnector
+from dnx_configure.dnx_system_info import System, Interface
+from dnx_configure.dnx_db_connector import DBConnector
 from dns_proxy.dns_proxy_response import DNSResponse
 from dns_proxy.dns_proxy_sniffer import Sniffer
 

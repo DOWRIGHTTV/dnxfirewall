@@ -6,28 +6,28 @@ import struct
 import json
 
 from socket import socket, inet_aton, AF_INET, SOCK_DGRAM, \
-    SOL_SOCKET, SO_REUSEADDR, SO_BROADCAST, SO_BINDTODEVICE
+    SOL_SOCKET, SO_BROADCAST, SO_BINDTODEVICE, SO_REUSEADDR
 from collections import OrderedDict
 
 path = os.environ['HOME_DIR']
-sys.path.append(path)
+sys.path.insert(0, path)
 
-from dnx_configure.system_info import Interface
+from dnx_configure.dnx_system_info import Interface
 from dhcp_server.dhcp_leases import DHCPLeases
 from dhcp_server.dhcp_response import DHCPResponse
 
 class DHCPServer:
     def __init__(self):
         self.path = os.environ['HOME_DIR']
+
         with open('{}/data/config.json'.format(self.path), 'r') as settings:
-            self.setting = json.load(settings)
-        with open('{}/data/whitelist.json'.format(self.path), 'r') as whitelists:
-            self.whitelist = json.load(whitelists)
-        
-        self.Leases = DHCPLeases(self.setting, self.whitelist)
+            setting = json.load(settings)
+
+        self.insideint = setting['Settings']['Interface']['Inside']
+        self.localNet = setting['Settings']['LocalNet']['IP Address']
         self.ongoing = {}
-        
-        self.insideint = self.setting['Settings']['Interface']['Inside']
+
+        self.Leases = DHCPLeases(self.localNet)
 
     def Start(self):
         print("[+] Building DHCP Range")
@@ -45,7 +45,8 @@ class DHCPServer:
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            loop.run_until_complete(asyncio.gather(self.Leases.Timer(), self.Leases.WritetoFile()))
+            loop.run_until_complete(asyncio.gather(self.Leases.LeaseTimer(), 
+            self.Leases.ReservationTimer(), self.Leases.WritetoFile()))
         except Exception as E:
             print('AsyncIO General Error : {}'.format(E))
         
@@ -164,16 +165,16 @@ class DHCPParser:
     def Data(self, data):
         options = OrderedDict()
         
-        bptype  = data[0]
-        hwtype = data[1]
-        hwlen = data[2]
+#        bptype  = data[0]
+#        hwtype = data[1]
+#        hwlen = data[2]
         xID = data[4:8]
         ciaddr = data[12:16]
         mac = data[28:28+6] # MAC ADDR ONLY
         chaddr = data[28:28+16]
-        mcookie = data[236:240]
-        dhcpm = data[240]
-        mlen = data[241]
+#        mcookie = data[236:240]
+#        dhcpm = data[240]
+#        mlen = data[241]
         mtype = data[242]     
         
         mac = struct.unpack("!6c", mac)
@@ -189,7 +190,7 @@ class DHCPParser:
         if mtype not in {7}:
             for b, byte in enumerate(reversed(data), 1):
                 if (byte == 55):
-                    paramreq = data[-(b)]
+#                    paramreq = data[-(b)]
                     paramlen = data[-(b-1)]
                     for opt in data[-(b-2):-(b-2) + paramlen]:
                         options[opt] = None
