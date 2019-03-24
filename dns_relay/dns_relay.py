@@ -7,17 +7,17 @@ import time
 import threading
 import json
 
-from socket import socket, AF_INET, SOCK_DGRAM
-
 path = os.environ['HOME_DIR']
-sys.path.append(path)
+sys.path.insert(0, path)
 
+from socket import socket, AF_INET, SOCK_DGRAM
 from dnx_configure.dnx_system_info import Interface
 
 
 class DNSRelay:
     def __init__(self):
         self.path = os.environ['HOME_DIR']
+        
         with open('{}/data/config.json'.format(self.path), 'r') as settings:
             self.setting = json.load(settings)
 
@@ -59,8 +59,8 @@ class DNSRelay:
                                             "IP Address": dnsserver['IP Address'],
                                             "Status": status}})
 
-            with open('data/dnsstatus.json', 'w') as dnsstat:
-                json.dump(self.dnsserver, dnsstat, indent=4)                       
+            with open('{}/data/dnsstatus.json'.format(self.path), 'w') as dnsstat:
+                json.dump(self.dnsserver, dnsstat, indent=4)
         
             time.sleep(10)
 
@@ -83,19 +83,20 @@ class DNSRelay:
                     else:
                         pass
                 except Exception as E:
-                    print(E)                    
+                    pass                    
         except Exception as E:
-            print(E)
+            pass
             
     def RelayThread(self):
         sock = socket(AF_INET, SOCK_DGRAM)
-        time.sleep(.1)
+        ## -- 75 ms delay on all requests to give proxy more time to react -- ## Should be more tightly tuned
+        time.sleep(.075)
+        ## -------------- ##
         for server in self.dnsList:
             if (server[1] == True):
                 sock.sendto(self.data, (server[0], 53))
                 print('Request Relayed to {}: {}'.format(server, 53))
-                print('Request Relayed')
-                data, addr = sock.recvfrom(1024)
+                data, _ = sock.recvfrom(1024)
                 data = self.parse_and_rewrite_query_response(data)
                 print('Request Received')
                 break
@@ -109,9 +110,9 @@ class DNSRelay:
 #        print('--------------------------')       
 
     def parse_init_query(self, data):
-        header = data[:12]
+#        header = data[:12]
         self.payload = data[12:]
-        tmp = struct.unpack(">6H", header)
+#        tmp = struct.unpack(">6H", header)
         j = self.payload.index(0) + 1 + 4
         self.qtype = self.payload[j-3:j-2]
     

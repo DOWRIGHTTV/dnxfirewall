@@ -69,6 +69,8 @@ class Defaults:
                 
     def main_output_set(self):
         run('iptables -P OUTPUT DROP', shell=True) # Default DROP
+        run('iptables -A OUTPUT -d {} -j ACCEPT'.format(self.localnet), shell=True)
+        run('iptables -A OUTPUT -d 255.255.255.255 -j ACCEPT', shell=True)
         for chain in self.dns_chains:
             run('iptables -A OUTPUT -s {} -p udp --dport 53 -j {}'.format(self.wanip, chain), shell=True) # DNS Queries pushed to custom DNS chains for inspection
         run('iptables -A OUTPUT -s {} -j ACCEPT'.format(self.wanip), shell=True) # allowing all outgoing connections from Firewall (replacing default Allow)
