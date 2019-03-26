@@ -1,23 +1,41 @@
 #!/usr/bin/python3
 
-catlist = ['Malicious', 'VPN', 'Adult', 'Drugs', 'Guns', 'DynDNS', 'Ads', 'SocialMedia', 'TeenTop50']
-
-combinefiles = []
-
-def Combine():
-    for cat in catlist:
-        with open('config.py', 'r') as config:
-            for line in config:
-                if ('{}=1'.format(cat.upper()) in line):
-                    combinefiles.append('{}.domains'.format(cat))
-
-    with open('domainlists/Blocked.domains', 'w+') as Blocked:
-        for files in combinefiles:
-            with open('domainlists/{}'.format(files), 'r+') as files:
-                for line in files:
-                    Blocked.write(line)
+import os, json
 
 
+
+path = os.environ['HOME_DIR']
+
+class ListFiles:
+    def __init__(self):
+        self.combinefiles = []
+
+    def CombineList(self):
+        with open('{}/data/categories.py', 'r') as categories:
+            category = json.load(categories)
+
+        default_cats = category['DNSProxy']['Categories']['Default']
+        ud_cats = category['DNSProxy']['Categories']['UserDefined']
+
+        for cat in default_cats:
+            if (cat['Enabled'] == 1):
+                self.combinefiles.append(cat)
+
+        with open('{}/domainlists/Blocked.domains'.format(path), 'w+') as Blocked:
+            for files in self.combinefiles:
+                with open('domainlists/{}.domains'.format(files), 'r+') as files:
+                    for line in files:
+                        Blocked.write(line)
+            for cat in ud_cats:
+                if (cat['Enabled'] == 1):
+                    for entry in cat:
+                        if ('Enabled' not in line):
+                            Blocked.write('{} {}'.format(entry.lower(), cat.lower()))
+
+    def GetList(self):
+        # this method is for downloading updated lists from the web
+        pass
 
 if __name__ == '__main__':
-    Combine()                
+    ListFile = ListFiles()
+    ListFile.CombineList()                
