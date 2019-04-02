@@ -1,61 +1,34 @@
 {
     "Settings": {
-        "HOMEDIR": {
-            "Path": "/home/free/Desktop/Firewall/"
-        },
         "Interface": {
-            "Inside": "wlan0",
-            "Outside": "wlan0"
+            "Outside": "eth0",
+            "Inside": "eth0"
         },
         "DNSServers": {
             "Server1": {
                 "Name": "OpenDNS1",
-                "IP Address": "208.67.220.222"
+                "IP Address": "208.67.222.222"
             },
             "Server2": {
                 "Name": "OpenDNS2",
                 "IP Address": "208.67.220.220"
             }
         },
-        "LocalNet": {
-            "IP Address": "192.168.83.0/24"
-        },
-        "ExternalDNS": {
-            "Enabled": 0
-        },
-        "Categories": {
-            "MALICIOUS": {
-                "Enabled": 1
-            },
-            "VPN": {
-                "Enabled": 1
-            },
-            "ADULT": {
+        "TOR Lists": {
+            "Entry": {
                 "Enabled": 0
             },
-            "DRUGS": {
-                "Enabled": 1
-            },
-            "GUNS": {
-                "Enabled": 0
-            },
-            "SOCIALMEDIA": {
-                "Enabled": 0
-            },
-            "ADS": {
-                "Enabled": 0
-            },
-            "DYNDNS": {
-                "Enabled": 0
-            },
-            "TEENTOP50": {
+            "Exit": {
                 "Enabled": 0
             }
         },
+        "LocalNet": {
+            "IP Address": "192.168.5.0/24"
+        },
         "DHCPReservations": {
-            "d0:77:14:99:ac:f3": {
-                "IP Address": "192.168.5.208",
-                "Name": "Jacob"
+            "cc:cc:cc:cc:cc:cc": {
+                "IP Address": "192.168.5.25",
+                "Name": "Erika"
             }
         }
     }

@@ -1,0 +1,68 @@
+{
+    "TLDs": {
+        ".xxx": {
+            "Enabled": 0,
+            "Hex": "|03|xxx"
+        },
+        ".porn": {
+            "Enabled": 0,
+            "Hex": "|04|porn"
+        },
+        ".adult": {
+            "Enabled": 0,
+            "Hex": "|05|adult"
+        },
+        ".ru": {
+            "Enabled": 0,
+            "Hex": "|02|ru"
+        },
+        ".ads": {
+            "Enabled": 0,
+            "Hex": "|03|ads"
+        },
+        ".click": {
+            "Enabled": 0,
+            "Hex": "|04|click"
+        },
+        ".cn": {
+            "Enabled": 0,
+            "Hex": "|02|cn"
+        },
+        ".download": {
+            "Enabled": 0,
+            "Hex": "|08|download"
+        },
+        ".top": {
+            "Enabled": 0,
+            "Hex": "|03|top"
+        },
+        ".loan": {
+            "Enabled": 0,
+            "Hex": "|04|loan"
+        },
+        ".work": {
+            "Enabled": 0,
+            "Hex": "|04|work"
+        },
+        ".men": {
+            "Enabled": 0,
+            "Hex": "|03|men"
+        },
+        ".cf": {
+            "Enabled": 0,
+            "Hex": "|02|cf"
+        },
+        ".gq": {
+            "Enabled": 0,
+            "Hex": "|02|gq"
+        },
+        ".ml": {
+            "Enabled": 0,
+            "Hex": "|02|ml"
+        },
+        ".ga": {
+            "Enabled": 0,
+            "Hex": "|02|ga"
+        }
+    }
+}

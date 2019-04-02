@@ -1,29 +1,41 @@
 {
     "DNSProxy": {
+        "Keyword": {
+            "Enabled": 1
+        },
         "Categories": {
             "Default": {
                 "MALICIOUS": {
-                    "Enabled": 0
-                },
-                "VPN": {
                     "Enabled": 1
                 },
-                "ADULT": {
+                "CRYPTOMINER": {
+                    "Enabled": 1
+                },
+                "ADS": {
+                    "Enabled": 1
+                },
+                "VPN": {
+                    "Enabled": 0
+                },
+                "MATURE": {
+                    "Enabled": 0
+                },
+                "PORN": {
                     "Enabled": 1
                 },
                 "DRUGS": {
-                    "Enabled": 1
+                    "Enabled": 0
                 },
-                "GUNS": {
+                "WEAPONS": {
                     "Enabled": 0
                 },
                 "SOCIALMEDIA": {
                     "Enabled": 0
                 },
-                "ADS": {
+                "DYNDNS": {
                     "Enabled": 0
                 },
-                "DYNDNS": {
+                "P2P": {
                     "Enabled": 0
                 },
                 "TEENTOP50": {
@@ -32,7 +44,14 @@
             },
             "UserDefined": {
                 "COOL": {
-                    "Enabled": 1
+                    "Enabled": 0
+                },
+                "SHITHEAD": {
+                    "Enabled": 0
+                },
+                "BAD": {
+                    "Enabled": 0,
+                    "badsite.com": "bad"
                 }
             }
         }

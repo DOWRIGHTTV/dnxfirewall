@@ -1,33 +1,10 @@
 {
     "Whitelists": {
-        "Domains": {
-            "bob.com": {
-                "Hex": "bob|03|com",
-                "Time": "Mar 17 18:10:01",
-                "WWW": "www.bob.com",
-                "Expire": "60"
-            },
-            "bullshit.wtf": {
-                "Hex": "bullshit|03|wtf",
-                "Time": "Mar 18 16:58:19",
-                "WWW": "www.bullshit.wtf",
-                "Expire": "80"
-            }
-        },
-        "Users": {
-            "aa:aa:aa:aa:aa:aa": {
-                "User": "Bob"
-            },
-            "bb:bb:bb:bb:bb:bb": {
-                "User": "Rebecca"
-            }
-        },
-        "Exceptions": {
-            "bob.com": {
-                "Reason": "bad"
-            },
-            "fuckyou.button": {
-                "Reason": "pieceofshit"
+        "Domains": {},
+        "Exceptions": {},
+        "IP Whitelist": {
+            "192.168.83.26": {
+                "User": "Stacey"
             }
         }
     }

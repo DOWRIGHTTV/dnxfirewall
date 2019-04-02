@@ -2,16 +2,13 @@
 
 import os, json
 
-
-
-path = os.environ['HOME_DIR']
-
 class ListFiles:
     def __init__(self):
         self.combinefiles = []
+        self.path = os.environ['HOME_DIR']
 
     def CombineList(self):
-        with open('{}/data/categories.py', 'r') as categories:
+        with open('{}/data/categories.py'.format(self.path), 'r') as categories:
             category = json.load(categories)
 
         default_cats = category['DNSProxy']['Categories']['Default']
@@ -21,7 +18,7 @@ class ListFiles:
             if (cat['Enabled'] == 1):
                 self.combinefiles.append(cat)
 
-        with open('{}/domainlists/Blocked.domains'.format(path), 'w+') as Blocked:
+        with open('{}/domainlists/Blocked.domains'.format(self.path), 'w+') as Blocked:
             for files in self.combinefiles:
                 with open('domainlists/{}.domains'.format(files), 'r+') as files:
                     for line in files:
@@ -31,10 +28,6 @@ class ListFiles:
                     for entry in cat:
                         if ('Enabled' not in line):
                             Blocked.write('{} {}'.format(entry.lower(), cat.lower()))
-
-    def GetList(self):
-        # this method is for downloading updated lists from the web
-        pass
 
 if __name__ == '__main__':
     ListFile = ListFiles()
