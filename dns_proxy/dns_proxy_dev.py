@@ -40,7 +40,8 @@ class DNSProxy:
         self.LoadTLDs()
         self.LoadSignatures()
         
-        self.Proxy()
+        threading.Thread(target=self.Proxy).start()
+        threading.Thread(target=self.CustomLists).start()
 
     def ProxyDB(self):
         for table in {'ProxyBlocks', 'PIHosts'}:
@@ -209,6 +210,30 @@ class DNSProxy:
     def LoadIPTables(self):
         IPTables = IPT()
 #        IPTables.Restore()
+
+    def CustomLists(self):
+        while True:
+            current_time = time.time()
+
+            ## -------------------------------------------##
+            ## -- WHITELIST CHECK AND CLEAN/ IF NEEDED -- ##
+
+            wl_check = False
+            with open('{}/data/whitelist.json'.format(self.path), 'r') as whitelists:
+                whitelist = json.load(whitelists)
+            self.w_list = whitelist['Whitelists']['Domains']
+
+            for domain in self.w_list:
+                if current_time > self.w_list[domain]['Expire']:
+                    self.w_list.pop(domain)
+                    wl_check = True
+            
+            if wl_check:
+                 with open('{}/data/whitelist.json'.format(self.path), 'w') as whitelists:
+                    json.dump(self.w_list, whitelists, indent=4)
+
+            print('Updating whitelists in memory.')
+            time.sleep(5*60)
         
 if __name__ == '__main__':
     DNSP = DNSProxy()

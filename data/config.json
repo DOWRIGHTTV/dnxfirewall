@@ -1,5 +1,9 @@
 {
     "Settings": {
+        "Logging": {
+            "Enabled": 1,
+            "Length": 60
+        },
         "Interface": {
             "Outside": "eth0",
             "Inside": "eth0"

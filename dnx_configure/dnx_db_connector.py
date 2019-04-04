@@ -23,11 +23,11 @@ class DBConnector:
         self.conn = sqlite3.connect(self.db)
         self.conn.row_factory = sqlite3.Row
         self.c = self.conn.cursor()
-        if (self.table == 'ProxyBlocks'):
-            self.c.execute('create table if not exists {} (Domain, Category, Count, Reason, LastSeen)'.format(self.table))
+        if (self.table == 'DNSProxy'):
+            self.c.execute('create table if not exists {} (Domain, Category, Reason, Action, Count, LastSeen)'.format(self.table))
         elif (self.table == 'PIHosts'):
             self.c.execute('create table if not exists {} (MAC, IPAddress, Domain, Reason, LastSeen)'.format(self.table))
-        elif (self.table == 'FWBlocks'):
+        elif (self.table == 'FWProxy'):
             self.c.execute('create table if not exists {} (IPSRC, IPDST, Category, Blocked, LastSeen)'.format(self.table))   
 
     def Disconnect(self):
@@ -36,21 +36,21 @@ class DBConnector:
         except Exception as E: 
             print(E)
         
-    def StandardInput(self, domain, cat, timestamp, reason):
-        results = self.StandardEntryCheck(domain)
+    def StandardInput(self, domain, timestamp, category, reason, action):
+        results = self.StandardEntryCheck(domain, action)
         if not results:
-            self.c.execute('insert into {} values (?, ?, ?, ?, ?)'.format(self.table), (domain, cat, 1, reason, timestamp))
+            self.c.execute('insert into {} values (?, ?, ?, ?, ?, ?)'.format(self.table), (domain, category, reason, action, 1, timestamp))
         else:
-            i = results[0][2]
-            t = results[0][3]
+            i = results[0][4]
+            t = results[0][5]
             if (timestamp - t > 10):
                 i += 1
-                self.c.execute('update {} set Count=?, LastSeen=?, Reason=? where Domain=?'.format(self.table), (i, timestamp, reason, domain))
+                self.c.execute('update {} set Count=?, LastSeen=?, Reason=? where Domain=? and Action=?'.format(self.table), (i, timestamp, reason, domain, action))
                             
         self.conn.commit()
 
-    def StandardEntryCheck(self, domain):
-        self.c.execute('select * from {} where Domain=?'.format(self.table), (domain,))
+    def StandardEntryCheck(self, domain, action):
+        self.c.execute('select * from {} where Domain=? and Action=?'.format(self.table), (domain, action))
         results = self.c.fetchall()
         return results
 
@@ -77,29 +77,35 @@ class DBConnector:
         self.c.execute('delete from PIHosts where MAC=? and Domain=?', (i_host, domain))
         self.conn.commit()                
         
-    def QueryLast(self, count):
-        self.c.execute('select * from {} order by LastSeen desc limit {}'.format(self.table, count))
+    def QueryLast(self, count, action):
+        if (action in {'Allowed', 'Blocked'}):
+            self.c.execute('select * from {} where Action=? order by LastSeen desc limit {}'.format(self.table, count), (action,))
+        elif (action in {'Both'}):
+            self.c.execute('select * from {} order by LastSeen desc limit {}'.format(self.table, count))
         self.conn.row_factory = sqlite3.Row   
         results = self.c.fetchall()
-#        print(results)
+
         return results
 
-    def QueryTop(self, count, table='ProxyBlocks'):
-        self.c.execute('select * from {} order by Count desc limit {}'.format(table, count))
-        self.conn.row_factory = sqlite3.Row   
+    def QueryTop(self, count, action):
+        if (action in {'Allowed', 'Blocked'}):
+            self.c.execute('select * from {} where Action=? order by Count desc limit {}'.format(self.table, count), (action,))
+        elif (action in {'Both'}):
+            self.c.execute('select * from {} order by Count desc limit {}'.format(self.table, count))
+        self.conn.row_factory = sqlite3.Row
         results = self.c.fetchall()
-#        print(results)
+
         return results
 
-    def DomainCount(self, table='ProxyBlocks'):
-        self.c.execute('select count(*) from {}'.format(table))
+    def DomainCount(self):
+        self.c.execute('select count(*) from {}'.format(self.table))
         self.conn.row_factory = sqlite3.Row
         results = self.c.fetchall()
       
         return results
 
-    def RequestCount(self, table='ProxyBlocks'):
-        self.c.execute('select Count from {}'.format(table))
+    def RequestCount(self):
+        self.c.execute('select Count from {}'.format(self.table))
         self.conn.row_factory = sqlite3.Row
         results = self.c.fetchall()
         
@@ -117,9 +123,9 @@ class DBConnector:
 
 if __name__ == '__main__':
 #    url = 'fbob.com'
-    table = 'ProxyBlocks'
+    table = 'DNSProxy'
 #    table = 'PIHosts'
-#    table = 'FWBlocks'
+#    table = 'FWProxy'
     ProxyDB = DBConnector(table)
     ProxyDB.Connect()
     try:
@@ -128,29 +134,30 @@ if __name__ == '__main__':
     #        timestamp = 11
             cat = 'douchey'
             reason = 'standard'
-            url = input('list test url: ' )
+            url = input('list test url: ')
             if url == '75.275.199.27':
-                ProxyDB.TORInput('192.168.83.23', url, 'Entry', timestamp, True)
+                ProxyDB.FWInput('192.168.83.23', url, 'Entry', timestamp, True)
             elif url == 'mali.com':
                 cat = 'mali'
                 table = 'PIHosts'
                 ProxyDB.InfectedInput('aa:aa:aa:aa:aa:aa', '192.168.10.2', url, cat, timestamp)
             elif url == 'tor':
-                results = ProxyDB.QueryLast(10)
+                results = ProxyDB.QueryLast(10, action='Blocked')
                 for result in results:       
                     print(result[0],result[1],result[2],result[3], result[4])
             elif url == 'infected':
-                results = ProxyDB.QueryLast(10)
-                for result in results:       
+                results = ProxyDB.QueryLast(10, action='Blocked')
+                for result in results:
                     print(result[0],result[1],result[2],result[3], result[4])
             elif url == 'top10':
-                results = ProxyDB.QueryLast(10)
+                results = ProxyDB.QueryLast(10, action='Blocked')
                 for result in results:            
                     print(result[0],result[1],result[2],result[3])
             elif url == 'clean':
-                ProxyDB.Cleaner(table)
+                ProxyDB.Cleaner()
             else:
-                ProxyDB.StandardInput(url, cat, timestamp, reason)
+                ##domain, timestamp, cat, reason, action##
+                ProxyDB.StandardInput(url, timestamp, cat, reason, action='Blocked')
     except KeyboardInterrupt:
         ProxyDB.Disconnect()
 
