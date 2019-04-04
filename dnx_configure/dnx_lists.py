@@ -8,14 +8,14 @@ class ListFiles:
         self.path = os.environ['HOME_DIR']
 
     def CombineList(self):
-        with open('{}/data/categories.py'.format(self.path), 'r') as categories:
+        with open('{}/data/categories.json'.format(self.path), 'r') as categories:
             category = json.load(categories)
 
         default_cats = category['DNSProxy']['Categories']['Default']
         ud_cats = category['DNSProxy']['Categories']['UserDefined']
 
         for cat in default_cats:
-            if (cat['Enabled'] == 1):
+            if (default_cats[cat]['Enabled'] == 1):
                 self.combinefiles.append(cat)
 
         with open('{}/domainlists/Blocked.domains'.format(self.path), 'w+') as Blocked:

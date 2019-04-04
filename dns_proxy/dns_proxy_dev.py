@@ -31,8 +31,8 @@ class DNSProxy:
         self.dns_sigs = {}
                 
     def Start(self):
-        ListFile = ListFiles()
-        ListFile.CombineList()
+#        ListFile = ListFiles()
+#        ListFile.CombineList()
         
         self.ProxyDB()
         self.LoadIPTables()
@@ -44,7 +44,7 @@ class DNSProxy:
         threading.Thread(target=self.CustomLists).start()
 
     def ProxyDB(self):
-        for table in {'ProxyBlocks', 'PIHosts'}:
+        for table in {'DNSProxy', 'PIHosts'}:
             ProxyDB = DBConnector(table)
             ProxyDB.Connect()
             ProxyDB.Cleaner()
