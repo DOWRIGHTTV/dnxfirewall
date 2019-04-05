@@ -221,7 +221,7 @@ class DNSProxy:
             print(E)
 
     def EnterpriseLogging(self, mac, src_ip, req2, hittime, category, reason, action):
-        date = datetime.datetime.now
+        date = datetime.now
         date = '{}-{}-{}'.format(date.year, date.month, date.day)
         with open ('{}/dnx_logs/{}-DNSProxyLogs.txt'.format(self.path, date), 'a+') as Logs:
             Logs.write('{}; src.mac={}; src.ip={}; domain={}; category={}; filter={}; action={};'\
