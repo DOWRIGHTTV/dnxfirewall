@@ -4,6 +4,7 @@ import os, sys
 import time, threading
 import json
 
+from datetime import datetime
 from subprocess import run
 
 path = os.environ['HOME_DIR']
@@ -30,6 +31,8 @@ class DNSProxy:
         self.DEVNULL = open(os.devnull, 'wb')
         self.dns_sigs = {}
         self.b_list = {}
+        self.ent_logging = True
+        self.ent_full = False
                 
     def Start(self):
 #        ListFile = ListFiles()
@@ -201,17 +204,28 @@ class DNSProxy:
                 action = 'Blocked'
                
                 self.TrafficLogging(req2, hittime, category, reason, action, table='DNSProxy')
+                if (self.ent_logging):
+                    self.EnterpriseLogging(mac, src_ip, req2, hittime, category, reason, action)
 
             # logs all requests, regardless of action of proxy.
             if (self.full_logging and not redirect):
                 category = ' '
                 reason = 'Logging'
                 action = 'Allowed'
-
+ 
                 self.TrafficLogging(req2, hittime, category, reason, action, table='DNSProxy')
-        
+                if (self.ent_full):
+                    self.EnterpriseLogging(mac, src_ip, req2, hittime, category, reason, action)
+
         except Exception as E:
-            print(E) 
+            print(E)
+
+    def EnterpriseLogging(self, mac, src_ip, req2, hittime, category, reason, action):
+        date = datetime.datetime.now
+        date = '{}-{}-{}'.format(date.year, date.month, date.day)
+        with open ('{}/dnx_logs/{}-DNSProxyLogs.txt'.format(self.path, date), 'a+') as Logs:
+            Logs.write('{}; src.mac={}; src.ip={}; domain={}; category={}; filter={}; action={};'\
+                .format(hittime, mac, src_ip, req2, category, reason, action))
 
     def TrafficLogging(self, arg1, arg2, arg3, arg4, arg5, table):
         if (table in {'DNSProxy'}):
