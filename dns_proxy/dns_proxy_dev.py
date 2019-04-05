@@ -183,34 +183,50 @@ class DNSProxy:
                     category = cat
                     break
                                        
+            # logs redirected/blocked requests
             if (redirect):
-                DNS = DNSResponse(self.iface, self.insideip, packet)
-                threading.Thread(target=DNS.Response).start()
-                print('Directed {} to Firewall.'.format(req2))
+                action = 'Blocked'
+               
+                self.TrafficLogging(req2, hittime, category, reason, action, table='DNSProxy')
 
-                ProxyDB = DBConnector(table='ProxyBlocks')
-                ProxyDB.Connect()
-                
-                ProxyDB.StandardInput(req2, category, hittime, reason)
-                ProxyDB.Disconnect()
+            # logs all requests, regardless of action of proxy.
+            if (self.full_logging and not redirect):
+                category = ' '
+                reason = 'Logging'
+                action = 'Allowed'
 
-            if (category in {'malicious', 'cryptominer'}):
-                if (category in {'malicious'}):
-                    reason = 'Malware'
-                elif (category in {'cryptominer'}):
-                    reason = 'Crypto Miner Hijack'
-                ProxyDB = DBConnector(table='PIHosts')
-                ProxyDB.Connect()
-
-                ProxyDB.InfectedInput(mac, src_ip, domain, reason, hittime)
-                ProxyDB.Disconnect()
+                self.TrafficLogging(req2, hittime, category, reason, action, table='DNSProxy')
         
         except Exception as E:
             print(E) 
 
+    def TrafficLogging(self, arg1, arg2, arg3, arg4, arg5, table):
+        if (table in {'DNSProxy'}):
+            ProxyDB = DBConnector(table)
+            ProxyDB.Connect()       
+            ProxyDB.StandardInput(arg1, arg2, arg3, arg4, arg5)
+        elif (table in {'PIHosts'}):
+            ProxyDB = DBConnector(table)
+            ProxyDB.Disconnect()
+            ProxyDB.InfectedInput(arg1, arg2, arg3, arg4, arg5)
+
+        ProxyDB.Disconnect()
+
     def LoadIPTables(self):
         IPTables = IPT()
 #        IPTables.Restore()
+
+    def CheckLogging(self):
+        while True:
+            with open('{}/data/config.json'.format(self.path), 'r') as logging:
+                log = json.load(logging)
+
+            logging = log['Settings']['Logging']['Enabled']
+            if (logging == 1):
+                self.full_logging = True
+            else:
+                self.full_logging = False
+            time.sleep(5*60)
 
     def CustomLists(self):
         while True:
