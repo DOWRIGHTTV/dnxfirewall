@@ -182,6 +182,19 @@ class DNSProxy:
                     run('iptables -I {} -m string --hex-string "{}" --algo bm -j DROP'.format(chain, keyword), shell=True)
                     category = cat
                     break
+                    
+            if (redirect):
+                DNS = DNSResponse(self.iface, self.insideip, packet)
+                threading.Thread(target=DNS.Response).start()
+                print('Directed {} to Firewall.'.format(req2))
+
+            if (category in {'malicious', 'cryptominer'}):
+                if (category in {'malicious'}):
+                    reason = 'Malware'
+                elif (category in {'cryptominer'}):
+                    reason = 'Crypto Miner Hijack'
+
+                self.TrafficLogging(mac, src_ip, domain, reason, hittime, table='PIHosts')
                                        
             # logs redirected/blocked requests
             if (redirect):
