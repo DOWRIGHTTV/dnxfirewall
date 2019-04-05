@@ -29,6 +29,7 @@ class DNSProxy:
         self.insideip = Int.IP(self.iface)
         self.DEVNULL = open(os.devnull, 'wb')
         self.dns_sigs = {}
+        self.b_list = {}
                 
     def Start(self):
 #        ListFile = ListFiles()
@@ -40,8 +41,8 @@ class DNSProxy:
         self.LoadTLDs()
         self.LoadSignatures()
         
+        threading.Thread(target=self.CustomLists).start()        
         threading.Thread(target=self.Proxy).start()
-        threading.Thread(target=self.CustomLists).start()
 
     def ProxyDB(self):
         for table in {'DNSProxy', 'PIHosts'}:
