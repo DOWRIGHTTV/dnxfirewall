@@ -7,28 +7,24 @@ class ListFiles:
         self.combinefiles = []
         self.path = os.environ['HOME_DIR']
 
-    def CombineList(self):
         with open('{}/data/categories.json'.format(self.path), 'r') as categories:
-            category = json.load(categories)
+            self.category = json.load(categories)
 
-        default_cats = category['DNSProxy']['Categories']['Default']
-        ud_cats = category['DNSProxy']['Categories']['UserDefined']
+    def CombineLists(self):
+
+        default_cats = self.category['DNSProxy']['Categories']['Default']
 
         for cat in default_cats:
             if (default_cats[cat]['Enabled'] == 1):
                 self.combinefiles.append(cat)
 
-        with open('{}/domainlists/Blocked.domains'.format(self.path), 'w+') as Blocked:
+        with open('{}/dnx_domainlists/blocked.domains'.format(self.path), 'w+') as blocked:
             for files in self.combinefiles:
-                with open('domainlists/{}.domains'.format(files), 'r+') as files:
+                with open('{}/dnx_domainlists/{}.domains'.format(self.path, files.lower()), 'r+') as files:
                     for line in files:
-                        Blocked.write(line)
-            for cat in ud_cats:
-                if (cat['Enabled'] == 1):
-                    for entry in cat:
-                        if ('Enabled' not in line):
-                            Blocked.write('{} {}'.format(entry.lower(), cat.lower()))
-
+                        if ('#' not in line):
+                            blocked.write(line)
+                            
 if __name__ == '__main__':
     ListFile = ListFiles()
-    ListFile.CombineList()                
+    ListFile.CombineLists()                

@@ -1,7 +1,7 @@
 {
     "Settings": {
         "Logging": {
-            "Enabled": 1,
+            "Enabled": 0,
             "Length": 60
         },
         "Interface": {

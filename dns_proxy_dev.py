@@ -37,8 +37,8 @@ class DNSProxy:
         self.log_supress = set()
                 
     def Start(self):
-        ListFile = ListFiles()
-        ListFile.CombineLists()
+#        ListFile = ListFiles()
+#        ListFile.CombineList()
         
         self.ProxyDB()
         self.LoadIPTables()

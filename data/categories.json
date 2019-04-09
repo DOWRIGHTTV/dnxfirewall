@@ -1,7 +1,7 @@
 {
     "DNSProxy": {
         "Keyword": {
-            "Enabled": 1
+            "Enabled": 0
         },
         "Categories": {
             "Default": {
@@ -14,44 +14,8 @@
                 "ADS": {
                     "Enabled": 1
                 },
-                "VPN": {
-                    "Enabled": 0
-                },
-                "MATURE": {
-                    "Enabled": 0
-                },
-                "PORN": {
-                    "Enabled": 1
-                },
-                "DRUGS": {
-                    "Enabled": 0
-                },
-                "WEAPONS": {
-                    "Enabled": 0
-                },
                 "SOCIALMEDIA": {
                     "Enabled": 0
-                },
-                "DYNDNS": {
-                    "Enabled": 0
-                },
-                "P2P": {
-                    "Enabled": 0
-                },
-                "TEENTOP50": {
-                    "Enabled": 0
-                }
-            },
-            "UserDefined": {
-                "COOL": {
-                    "Enabled": 0
-                },
-                "SHITHEAD": {
-                    "Enabled": 0
-                },
-                "BAD": {
-                    "Enabled": 0,
-                    "badsite.com": "bad"
                 }
             }
         }
