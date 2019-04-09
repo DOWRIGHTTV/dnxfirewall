@@ -1,13 +1,6 @@
 {
     "Whitelists": {
-        "Domains": {
-            "facebook.com": {
-                "Hex": "facebook|03|com",
-                "Time": "Apr 3 17:59:42",
-                "Rule Length": "75",
-                "Expire": 1554344082.1926606
-            }
-        },
+        "Domains": {},
         "Exceptions": {},
         "IP Whitelist": {
             "192.168.83.26": {

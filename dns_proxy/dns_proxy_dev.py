@@ -139,57 +139,73 @@ class DNSProxy:
             hittime = int(time.time())
             mac = packet.smac
             src_ip = packet.src
-            req1 = packet.qname
-            req2 = req1.strip('www.')
-            req3 = 'www.{}'.format(req2)
-            req_tld = '.{}'.format(req1.split('.')[-1])
+            req1 = packet.qname.lower() # www.micro.com or micro.com || sd.micro.com
+            req_tld = '.{}'.format(req1.split('.')[-1]) # .com
             category = ''
 
-            if (req1 in self.w_list or req2 in self.w_list or req3 in self.w_list):
+            ## removing sub domains for matching || sd.micro.com > micro.com ##
+            req = req1.split('.')
+            if (len(req[-2]) > 3):
+                req2 = '{}.{}'.format(req[-2], req[-1]) # micro.com
+            else:
+                try:
+                    req2 = '{}.{}.{}'.format(req[-3], req[-2], req[-1]) # micro.co.uk
+                except IndexError:
+                    req2 = '{}.{}'.format(req[-2], req[-1]) # micro.com
+
+            # Whitelist check of FQDN then overall domain ##
+            if (req1 in self.w_list or req2 in self.w_list):
                 pass
 
-            elif (req1 in self.dns_sigs or req2 in self.dns_sigs or req3 in self.dns_sigs):
+            ## P1. Standard Category blocking of FQDN ##
+            ## P2. Standard Category blocking of overall domain || micro.com ##        
+            elif (req1 in self.dns_sigs or req2 in self.dns_sigs):
                 print('Standard Block: {}'.format(req1))
                 redirect = True
                 reason = 'Category'
-                domain = self.dns_sigs[req2][0]
-                category = self.dns_sigs[req2][1]
-                if (self.dns_sigs[req2][2] == 0):
-                    self.dns_sigs[req2][2] += 1
+                domainHex = self.dns_sigs[req1][0]
+                category = self.dns_sigs[req1][1]
+                if (self.dns_sigs[req1][2] == 0):
+                    self.dns_sigs[req1][2] += 1
                     if (category in {'malicious', 'cryptominer'}):
                         chain = 'MALICIOUS'
                     else:
                         chain = 'BLACKLIST'
-                    run('iptables -I {} -m string --hex-string "{}" --algo bm -j DROP'.format(chain, domain), shell=True)
-                                            
-            elif (req1 in self.b_list or req2 in self.b_list or req3 in self.b_list):
+                    run('iptables -I {} -m string --hex-string "{}" --algo bm -j DROP'.format(chain, domainHex), shell=True)           
+
+            ## P1. Blacklist block of FQDN ##
+            ## P2. Blacklist block of overall domain ##                           
+            elif (req1 in self.b_list or req2 in self.b_list):
                 print('Blacklist Block: {}'.format(req1))
                 redirect = True
                 reason = 'Blacklist'
                 category = 'Time Base'
 
-            elif req_tld in self.tlds:
+            ## TLD (top level domain) block ##
+            elif (req_tld in self.tlds):
                 print('TLD Block: {}'.format(req1))
                 redirect = True
                 category = req_tld
                 reason = 'TLD Filter'
 
-            for keyword, cat in self.keywords.items():
-                if keyword in req2:
-                    redirect = True
-                    reason = 'Keyword'
-                    if (category in {'malicious', 'cryptominer'}):
-                        chain = 'MALICIOUS'
-                    else:
-                        chain = 'BLACKLIST'
-                    run('iptables -I {} -m string --hex-string "{}" --algo bm -j DROP'.format(chain, keyword), shell=True)
-                    category = cat
-                    break
+            ## Keyword Search within domain || block if match ##
+            else:
+                for keyword, cat in self.keywords.items():
+                    if keyword in req1:
+                        redirect = True
+                        reason = 'Keyword'
+                        if (category in {'malicious', 'cryptominer'}):
+                            chain = 'MALICIOUS'
+                        else:
+                            chain = 'BLACKLIST'
+                        run('iptables -I {} -m string --hex-string "{}" --algo bm -j DROP'.format(chain, keyword), shell=True)
+                        category = cat
+                        break
                     
             if (redirect):
                 DNS = DNSResponse(self.iface, self.insideip, packet)
                 threading.Thread(target=DNS.Response).start()
-                print('Directed {} to Firewall.'.format(req2))
+                print('Directed {} to Firewall.'.format(req1))
 
             if (category in {'malicious', 'cryptominer'}):
                 if (category in {'malicious'}):
@@ -197,15 +213,15 @@ class DNSProxy:
                 elif (category in {'cryptominer'}):
                     reason = 'Crypto Miner Hijack'
 
-                self.TrafficLogging(mac, src_ip, domain, reason, hittime, table='PIHosts')
+                self.TrafficLogging(mac, src_ip, req1, reason, hittime, table='PIHosts')
                                        
             # logs redirected/blocked requests
             if (redirect):
                 action = 'Blocked'
                
-                self.TrafficLogging(req2, hittime, category, reason, action, table='DNSProxy')
+                self.TrafficLogging(req1, hittime, category, reason, action, table='DNSProxy')
                 if (self.ent_logging):
-                    self.EnterpriseLogging(mac, src_ip, req2, hittime, category, reason, action)
+                    self.EnterpriseLogging(mac, src_ip, req1, hittime, category, reason, action)
 
             # logs all requests, regardless of action of proxy.
             if (self.full_logging and not redirect):
@@ -213,19 +229,19 @@ class DNSProxy:
                 reason = 'Logging'
                 action = 'Allowed'
  
-                self.TrafficLogging(req2, hittime, category, reason, action, table='DNSProxy')
+                self.TrafficLogging(req1, hittime, category, reason, action, table='DNSProxy')
                 if (self.ent_full):
-                    self.EnterpriseLogging(mac, src_ip, req2, hittime, category, reason, action)
+                    self.EnterpriseLogging(mac, src_ip, req1, hittime, category, reason, action)
 
         except Exception as E:
             print(E)
 
-    def EnterpriseLogging(self, mac, src_ip, req2, hittime, category, reason, action):
+    def EnterpriseLogging(self, mac, src_ip, req1, hittime, category, reason, action):
         date = datetime.now()
         date = '{}-{}-{}'.format(date.year, date.month, date.day)
         with open ('{}/dnx_logs/{}-DNSProxyLogs.txt'.format(self.path, date), 'a+') as Logs:
             Logs.write('{}; src.mac={}; src.ip={}; domain={}; category={}; filter={}; action={};'\
-                .format(hittime, mac, src_ip, req2, category, reason, action))
+                .format(hittime, mac, src_ip, req1, category, reason, action))
 
     def TrafficLogging(self, arg1, arg2, arg3, arg4, arg5, table):
         if (table in {'DNSProxy'}):
@@ -256,6 +272,7 @@ class DNSProxy:
             time.sleep(5*60)
 
     def CustomLists(self):
+        w_list_remove = set()
         while True:
             current_time = time.time()
 
@@ -269,14 +286,19 @@ class DNSProxy:
 
             for domain in self.w_list:
                 if current_time > self.w_list[domain]['Expire']:
-                    self.w_list.pop(domain)
+                    w_list_remove.add(domain)
                     wl_check = True
             
+            for domain in w_list_remove:
+                self.w_list.pop(domain, None)
+
             if wl_check:
                  with open('{}/data/whitelist.json'.format(self.path), 'w') as whitelists:
-                    json.dump(self.w_list, whitelists, indent=4)
+                    json.dump(whitelist, whitelists, indent=4)
 
-            print('Updating whitelists in memory.')
+                    self.w_list = whitelist['Whitelists']['Domains']
+
+            print('Updated whitelists in memory.')
             time.sleep(5*60)
         
 if __name__ == '__main__':
