@@ -32,14 +32,14 @@ class PacketParse:
         self.addr = addr
         
     def Parse(self):
-        self.ethernet()
-        self.ip()
-        self.protocol()
+        self.Ethernet()
+        self.IP()
+        self.Protocol()
         if (self.protocol != 1):
-            self.ports()
+            self.Ports()
 
                 
-    def ethernet(self):   
+    def Ethernet(self):   
         s = []
         d = []
         smac = struct.unpack('!6c', self.data[0:6])
@@ -53,16 +53,16 @@ class PacketParse:
         self.smac = '{}:{}:{}:{}:{}:{}'.format(s[0], s[1], s[2], s[3], s[4], s[5])
         self.dmac = '{}:{}:{}:{}:{}:{}'.format(d[0], d[1], d[2], d[3], d[4], d[5])  
     
-    def ip(self):
+    def IP(self):
         s = struct.unpack('!4B', self.data[26:30])
         d = struct.unpack('!4B', self.data[30:34])
         self.src = '{}.{}.{}.{}'.format(s[0], s[1], s[2], s[3])
         self.dst = '{}.{}.{}.{}'.format(d[0], d[1], d[2], d[3])
         
-    def protocol(self):
+    def Protocol(self):
         self.protocol = self.data[23]
         
-    def ports(self):
+    def Ports(self):
         ports = struct.unpack('!2H', self.data[34:38])
         self.sport = ports[0]
         self.dport = ports[1]

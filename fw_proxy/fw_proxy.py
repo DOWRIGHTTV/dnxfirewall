@@ -4,6 +4,7 @@ import os, sys
 import time, threading
 import json
 
+from datetime import datetime
 from subprocess import run
 
 path = os.environ['HOME_DIR']
@@ -12,6 +13,7 @@ sys.path.insert(0, path)
 from dnx_configure.dnx_system_info import System, Interface
 from dnx_configure.dnx_db_connector import DBConnector
 from fw_proxy.fw_proxy_sniffer import Sniffer
+from fw_proxy.fw_proxy_timer import Timer as TM
 
 class FWProxy:
     def __init__(self):
@@ -32,10 +34,13 @@ class FWProxy:
         self.session_tracker = {}
                 
     def Start(self):
-        self.LoadSignatures()
-    
-    
-        self.Proxy()
+        Timer = TM()
+        
+        self.ProxyDB()
+        self.LoadSignatures()       
+
+        threading.Thread(target=Timer.Start).start()
+        threading.Thread(target=self.Proxy).start()
 
     #running cleaning operation on DB for > 30 days logs
     def ProxyDB(self):
@@ -47,12 +52,12 @@ class FWProxy:
     # Loading lists of interesting traffic into sets    
     def LoadSignatures(self):
         self.tor_nodes = {}
-        with open('{}/dnx_iplists/tor_entry.nodes'.format(self.path), 'r') as tor_list:
+        with open('{}/dnx_iplists/tor_entry.ips'.format(self.path), 'r') as tor_list:
             for node in tor_list:
                 self.tor_nodes[node.strip()] = 'Tor Entry'
 #        print(self.tor_entry)
                 
-        with open('{}/dnx_iplists/tor_exit.nodes'.format(self.path), 'r') as tor_list:
+        with open('{}/dnx_iplists/tor_exit.ips'.format(self.path), 'r') as tor_list:
             for node in tor_list:
                 self.tor_nodes[node.strip()] = 'Tor Exit'
         
@@ -75,9 +80,8 @@ class FWProxy:
         dst_ip = packet.dst
         print(dst_ip)
         src_ip = packet.src
-        if (packet.protocol != 1):
-            dport = packet.dport
-            sport = packet.sport
+        dport = packet.dport
+        sport = packet.sport
        
         # Catches initial request to interesting traffic, filtering for local host > FW
         if (dst_ip in self.tor_nodes):
@@ -122,7 +126,6 @@ class FWProxy:
             return True
         else:
             return False
-
 
 if __name__ == "__main__":
     Proxy = FWProxy()
