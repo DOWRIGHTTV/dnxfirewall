@@ -268,7 +268,7 @@ class DNSProxy:
             ProxyDB.StandardInput(arg1, arg2, arg3, arg4, arg5)
         elif (table in {'PIHosts'}):
             ProxyDB = DBConnector(table)
-            ProxyDB.Disconnect()
+            ProxyDB.Connect()
             ProxyDB.InfectedInput(arg1, arg2, arg3, arg4, arg5)
 
         ProxyDB.Disconnect()

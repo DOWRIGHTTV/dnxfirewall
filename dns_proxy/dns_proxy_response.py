@@ -7,7 +7,7 @@ import binascii
 import subprocess
 import array
 from contextlib import closing
-from socket import socket, inet_aton, AF_PACKET, SOCK_RAW
+from socket import socket, inet_aton, AF_PACKET, SOCK_RAW, IPPROTO_UDP
 
 
 class DNSResponse:
