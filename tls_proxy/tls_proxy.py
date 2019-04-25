@@ -26,9 +26,9 @@ class TLSProxy:
 
     def SignatureCheck(self, packet, ssl):
         print('/'*30)
-        print('SIGNATURE CHECK')
-        print(packet.dport)
-        print(packet.sport)        
+        # print('SIGNATURE CHECK')
+        # print(packet.dport)
+        # print(packet.sport)        
         print('CERTIFICATE: {}'.format(ssl.certificate_chain))
         print('/'*30)
 

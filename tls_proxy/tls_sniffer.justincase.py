@@ -30,11 +30,16 @@ class Sniffer:
             try:
                 Header = HeaderParse(data, addr)
                 hs_type, tcp_info, sport = Header.Parse()
+#                print('{} {}'.format(hs_type, tcp_info))
+#                _, tcp_segment_length = tcp_info
+
                 ''' Will match any client hello message which indicates an attempted encrpytion connection
                 handshake to a remote server.
                 Upon matching, will start a thread to handle the rest of the connection to ensure
                 persistent communication can be handled within each ssl handler class instance '''
                 if (hs_type == 1):
+#                    ack_check = seq_number + tcp_segment_length
+#                    self.ack_check = ack_check
                     SSLHandler = SSLHandlerThread(self.action, self.s, data, tcp_info, sport)
                     threading.Thread(target=SSLHandler.Start).start()
             except AttributeError:
@@ -70,17 +75,11 @@ class SSLHandlerThread:
         self.expected_sequence_number = ack_number
         self.valid_sequence = set()
 
+        self.ssl_packet_size = 0
+        self.expected_packet_size = 0
         self.ssl_packet = {}
 
-        self.handshake = {'server_hello': {
-                            'status': False,
-                            'sequence': 0,
-                            'segment': 0}, 
-                        'hello_done': {
-                            'status': False,
-                            'sequence': 0,
-                            'segment': 0
-                        }}
+        self.ssl_hello_done = False
 
         threading.Thread(target=self.Timer).start()
 
@@ -88,64 +87,70 @@ class SSLHandlerThread:
     Adds packets to a dictionary, then will send packet for reorder, header removal, and joining to
     then be sent to Certificate Parser prior to being sent back to the proxy '''
     def Start(self):
-        server_hello = self.handshake['server_hello']
-        hello_done = self.handshake['hello_done']
         start = time.time()
-        print('+'*30)
+        print('='*30)
         print('CLIENT HELLO - Sent to SSL HANDLER')
         while self.active:
-            local = 0
-            complete = False
-            marked = False
             ack_number = None
             data, addr = self.s.recvfrom(8000)
             try:
                 packet = HeaderParse(data, addr)
-                _, tcp_info, dport = packet.Parse()
+                hs_type, tcp_info, dport = packet.Parse()
                 if (tcp_info):
                     seq_number, ack_number, tcp_header_length, tcp_segment_length = tcp_info
                 ''' Checkign to ensure each packet is part of the same transmission just split over multiple packets '''
                 if (ack_number == self.expected_ack_number):
                     print('ACK: {} || EXCPECTED ACK: {} || DPORT {}'.format(ack_number, self.expected_ack_number, dport))
-                    if (seq_number in self.ssl_packet):
-                        pass
-                    elif (seq_number == self.initial_sequence_number):
-                        print('SEQ: {} || INITIAL SEQUENCE: {} || DPORT {}'.format(seq_number, self.initial_sequence_number, dport))
-                        self.tcp_header_length = tcp_header_length
-                        server_hello.update({'status': True, 'sequence': seq_number, 'segment': tcp_segment_length})
-                        local = 1
-                        marked = True
-                    elif (seq_number == self.expected_sequence_number):                       
+                    ''' IF: Will match an initial Server Hello response, calculate the next sequence number, then add
+                    packet to the ssl_packet dictionary with sequence and key and contents as value '''
+                    ''' ELSE: Will match all subsequent packets after server hello with a matchin ack value, which **should**
+                    guarantee that the packet is apart of the same message, but not identifyable as part of server hello '''
+                    if (hs_type == 2):
+                        print('-'*30)
+                        self.sequence_offset = seq_number
+                        print('SERVER HELLO')
                         print('SEQ: {} || EXPECTED SEQUENCE: {} || DPORT {}'.format(seq_number, self.expected_sequence_number, dport))
-                        marked = True
+                        ''' Ensuring sequence number is 0 before adding packet since this should only match initial Server Hellos
+                        If sequence number is not 0, this would be a server hello from a different thread. '''
+                        if (seq_number == self.initial_sequence_number):
+                            self.ssl_packet[seq_number] = data
+                            self.tcp_header_length = tcp_header_length
+                            self.expected_sequence_number += tcp_segment_length
+                            self.ssl_packet_size += tcp_segment_length
+#                            print(self.ssl_packet)
+                            print(seq_number)
+                            print('-'*30)
+                    else:
+                        print('SEQ: {} || EXPECTED SEQUENCE: {} || DPORT {}'.format(seq_number, self.expected_sequence_number, dport))
+                        ''' IF: Will match packets that arive in order, if order is out one time, this will no longer match
+                        and the out of order next condition should be met goign forward. '''
+                        ''' ELIF: Will match "out of order packets", but use client port number to try and ensure the connection is of
+                        the same tcp stream '''
+                        if (seq_number == self.expected_sequence_number):
+                            self.ssl_packet[seq_number] = data
+                            self.expected_sequence_number += tcp_segment_length
+                            self.ssl_packet_size += tcp_segment_length
+#                            print(self.ssl_packet)
+#                            print(self.sequence_number)
+                            print('-'*30)
+                        elif (dport == self.client_port):
+                            print('OUT OF ORDER PACKET RECIEVED || DPORT {}'.format(dport))
+                            self.ssl_packet[seq_number] = data
+                            self.ssl_packet_size += tcp_segment_length
+#                            self.expected_sequence_number += tcp_segment_length
+#                            print(self.ssl_packet)
+#                            print(self.sequence_number)
+                            print('-'*30)
+                        ''' Identified finished packet, calling method to reorder and remove headers. '''
+#                        print('PK SIZE: {} | EXPEXTED SIZE {}'.format(self.ssl_packet_size, hs_length))
+#                        if (self.ssl_packet_size >= self.expected_packet_size):
+                        if (self.ssl_packet[seq_number][-4:] == b'\x0e\x00\x00\x00' and len):
+                            self.ssl_hello_done = True
+                            print('DETECTED HELLO DONE')
 
-                    elif (dport == self.client_port):
-                        print('OUT OF ORDER PACKET RECIEVED || DPORT {}'.format(dport))
-                        marked = True
-
-                    if (marked):
-                        self.ssl_packet[seq_number] = data
-                        self.expected_sequence_number += tcp_segment_length
-
-                    ''' Identified finished packet, calling method to reorder and remove headers. '''
-                    if (self.ssl_packet[seq_number][-4:] == b'\x0e\x00\x00\x00'):
-                        hello_done.update({'status': True, 'sequence': seq_number, 'segment': tcp_segment_length})
-                        print('DETECTED HELLO DONE')
-                    
-                    if (server_hello['status'] and hello_done['status']):
-                        ('HAVE SERVER H AND H DONE')
-                        if (server_hello['sequence'] + server_hello['segment'] == hello_done['sequence']):
-                            print('COMPLETE PACKET')
-                            complete = True
-                        elif (len(self.ssl_packet) >= 3):
-                            print('PROBABLY COMPLETE PACKET')
-                            complete = True
-                        elif (len(self.ssl_packet) == 1 and local == 1):
-                            print('SHORT ASS SSL PACKET')
-                            complete = True
-
-                        if (complete):
-                            print('='*30)
+                        if (self.ssl_hello_done and len(self.ssl_packet) > 1):
+#                            print(self.ssl_packet)
+                            print('+'*30)
                             ssl_packet = self.FixPacketFormat()
                             ssl = SSLParse(ssl_packet, tcp_header_length)
                             ssl.Start()
@@ -165,8 +170,8 @@ class SSLHandlerThread:
         ssl_packet_order = sorted(self.ssl_packet.keys())
         header_remove = 34 + self.tcp_header_length
 
-        # for seq_number in ssl_packet_order:
-        #     print(seq_number)
+        for seq_number in ssl_packet_order:
+            print(seq_number)
         #     print(self.ssl_packet[seq_number])
 
         ssl_packet = b''
@@ -177,12 +182,12 @@ class SSLHandlerThread:
             else:                
                 ssl_packet += packet[header_remove:]
         
-#        print(ssl_packet)
+        print(ssl_packet)
         return ssl_packet
 
-    ''' Timeing out Thread after 600 MS to ensure threads do not remain up for invalid or missed traffic '''
+    ''' Timeing out Thread after 750 MS to ensure threads do not remain up for invalid or missed traffic '''
     def Timer(self):
-        time.sleep(.6)
+        time.sleep(.75)
         self.active = False
                                         
 class HeaderParse:
@@ -198,9 +203,9 @@ class HeaderParse:
         tcp_info = None
         port = None
 #        self.Ethernet()
-        self.IP()
+#        self.IP()
         self.Protocol()
-        if (self.protocol == 6 and len(self.data) >= 75):
+        if (self.protocol == 6 and len(self.data) >= 73):
             self.Ports()
             tcp_info = self.TCP()
             if (self.dport == 443):
@@ -214,8 +219,6 @@ class HeaderParse:
                 port = self.dport
                 if (self.content_type == 22 and self.handshake_type == 2):
                     hs_type = 2
-                elif (self.content_type == 22 and self.handshake_type == 11):
-                    print('TYPE 11 DETECTED')
                             
         return hs_type, tcp_info, port
 
@@ -309,6 +312,7 @@ class SSLParse:
         on type 11, type 2 will apply an offset and pass, all else will be ignored. '''
         while self.Parsing:
             self.HandshakeProtocol()
+            print(self.handshake_type)
             if (self.handshake_type == 11):
                 self.AllCertificates()
                 ''' Calling a recursive method to parse each individual certificate and then checking against total
@@ -322,13 +326,16 @@ class SSLParse:
                         break                  
             elif (self.handshake_type == 2):
                 self.offset += self.handshake_type_length + 4 + 5
+                print(self.offset)
             else:
                 break
+        print(self.certificate_chain)
     
     ''' Checking the Handshake Protocol Type || 2 (Server Hello), 11 (Certificate) || if Server Hello, implements offset
     to allow for the Certificate to index correctly. If already type 11 (Certificate), then no offset will be applied
     upon returning from this method. '''
     def HandshakeProtocol(self):
+#        print(self.data[self.offset + self.tcp_size + 34:self.offset + self.tcp_size + 34 + 9])
         handshake_protocol = struct.unpack('!B2H2BH', self.data[self.offset + 66:self.offset + 75])
         self.content_type = handshake_protocol[0]
         self.version = handshake_protocol[1]
@@ -339,6 +346,7 @@ class SSLParse:
     ''' Parsing the initial certificates fields which contains total length of all certificates which will be used to validate the parsing is complete
     and will also help with indexing the first certificate start location. ''' 
     def AllCertificates(self):
+#        print('in certificates overall')
         certificates_length_start = self.offset + self.tcp_size + 34 + 9
         self.certificates_total_length = struct.unpack('!H', self.data[certificates_length_start + 1:certificates_length_start + 3])[0]
         
