@@ -47,7 +47,7 @@ class DNSProxy:
         self.LoadSignatures()
         
         threading.Thread(target=self.CustomLists).start()
-        threading.Thread(target=self.CheckLogging).start()      
+        threading.Thread(target=self.CheckLogging).start()
         threading.Thread(target=self.Proxy).start()
 
     def ProxyDB(self):
