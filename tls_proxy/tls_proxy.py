@@ -96,7 +96,7 @@ class TLSProxy:
             reason = 'Policy'
             category = 'Self Signed'
 
-#        run(f'iptables -I {chain} -p tcp -s {src_ip} --sport {src_port} -d {dst_ip} -j DROP', shell=True)  
+        run(f'iptables -I {chain} -p tcp -s {src_ip} --sport {src_port} -d {dst_ip} -j DROP', shell=True)  
 
         return redirect, reason, category
 

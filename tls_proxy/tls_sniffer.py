@@ -35,7 +35,7 @@ class Sniffer:
                 Upon matching, will start a thread to handle the rest of the connection to ensure
                 persistent communication can be handled within each ssl handler class instance '''
                 if (hs_type == 1):
-                    SSLHandler = SSLHandlerThread(self.action, self.s, data, tcp_info, sport)
+                    SSLHandler = SSLHandlerThread(self.action, self.iface, data, tcp_info, sport)
                     threading.Thread(target=SSLHandler.Start).start()
             except Exception as E:
                 print(E)
@@ -49,12 +49,16 @@ class SSLHandlerThread:
     SSL Server Hello packet is combined up until the Server Hello end it will send the reorder and reformat
     the packet to look as though it was sent as one, then will send the packet to the SSL Parse class to have
     the SSL Cert in the chain split from the packet and sent to the TLS Proxy. '''
-    def __init__(self, action, socket, data, tcp_info, client_port):
+    def __init__(self, action, iface, data, tcp_info, client_port):
         seq_number, ack_number, _, tcp_segment_length = tcp_info
         self.action = action
-        self.s = socket
+        self.iface = iface
         self.data = data
         self.client_port = client_port
+
+        self.socket = socket(AF_PACKET, SOCK_RAW)
+        self.socket.bind((self.iface, 3))
+
         self.active = True
 
         self.tcp_header_length = 0
@@ -68,7 +72,6 @@ class SSLHandlerThread:
         self.valid_sequence = set()
 
         self.ssl_packet_validation = {}
-
         self.ssl_packet = {}
 
         #'sequence': 0, 'segment': 0
@@ -93,7 +96,7 @@ class SSLHandlerThread:
         while self.active:
             same_packet = False
             ack_number = None
-            data, addr = self.s.recvfrom(65565)
+            data, addr = self.socket.recvfrom(65565)
             try:
                 packet = HeaderParse(data, addr)
                 _, tcp_info, dport = packet.Parse()
@@ -148,7 +151,7 @@ class SSLHandlerThread:
                                     break
                                 seq_validation = sequence + length
                             else:
-                                print('COMPLETE PACKET. YUSS THIS IS SO COOL.')
+                                print('COMPLETE PACKET.')
                                 complete = True
                                 
                         if (complete):
@@ -179,6 +182,7 @@ class SSLHandlerThread:
         ssl_packet = b''
         for seq_number in ssl_packet_order:
             packet = self.ssl_packet[seq_number]
+            print(packet)
             if (seq_number == self.initial_sequence_number):
                 ssl_packet += packet
             else:                
