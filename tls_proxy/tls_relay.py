@@ -47,25 +47,27 @@ class TLSRelay:
 
             print(f'[+] Listening -> {self.iniface}:{self.lport}')
             while True:
-                data_from_host, src_info = self.sock.recvfrom(65565)
+                data_from_host, _ = self.sock.recvfrom(65565)
                 print('RECIEVED DATA FROM HOST')
 #                start = time.time()
                 try:
                     packet_from_host = PacketManipulation(self.header_info, data_from_host)
                     packet_from_host.Start()
-                    Relay = threading.Thread(target=self.RelayThread, args=(packet_from_host, src_info))
-                    Relay.daemon = True
-                    Relay.start()
+                    if (packet_from_host.dport in {443}):
+                        Relay = threading.Thread(target=self.RelayThread, args=(packet_from_host))
+                        Relay.daemon = True
+                        Relay.start()
                 except Exception as E:
-                    pass
+                    pass                    
         except Exception as E:
             print(E)
             
-    def RelayThread(self, packet_from_host, src_info):
+    def RelayThread(self, packet_from_host):
         sock = socket(AF_PACKET, SOCK_RAW)
         sock.bind((self.waniface, 3))
         header_info = [self.lan_mac, packet_from_host.smac, self.lan_ip]
-        dst_ip, dst_port = src_info
+        host_ip = packet_from_host.src
+        host_port = packet_from_host.sport
         ## -- 75 ms delay on all requests to give proxy more time to react -- ## Should be more tightly tuned
         time.sleep(.01)
         ## -------------- ##
@@ -73,7 +75,7 @@ class TLSRelay:
         print(f'Request Relayed to Server on {443}')
         data_from_server, _ = sock.recv(65565)
         print('Request Received from Server')
-        packet_from_server = PacketManipulation(header_info, data_from_server, dst_ip, dst_port)
+        packet_from_server = PacketManipulation(header_info, data_from_server, host_ip, host_port)
         packet_from_server.Start()
         self.sock.send(packet_from_server.send_data)
         print('Request Relayed to Host')
@@ -90,7 +92,6 @@ class PacketManipulation:
         self.dst_ip = dst_ip
         self.host_port = host_port
 
-
     def Start(self):
 #        self.Ethernet()
         self.IP()
@@ -101,7 +102,7 @@ class PacketManipulation:
                 self.TCP()
                 self.RebuildHeaders()
 
-            elif (self.sport in {443} and self.dst_port == self.dst_ip):
+            elif (self.sport in {443} and self.dst_port == self.host_port):
                 self.TCP()
                 self.RebuildHeaders()
 
@@ -123,10 +124,12 @@ class PacketManipulation:
         
     ''' Parsing SRC and DST protocol ports '''
     def Ports(self):
-        self.sport = self.data[34:36]
-        self.dport = self.data[36:38]
+        ports = struct.unpack('!2H', self.data[34:38])
+        self.sport = ports[0]
+        self.dport = ports[1]
 
-        self.dst_port = struct.unpack('!H', self.dport)[0]
+        self.src_port = self.data[34:36]
+        self.dst_port = self.data[36:38]
 
     ''' Parsing TCP information like sequence and acknowledgement number amd calculated tcp header
     length to be used by other classes for offset/proper indexing of packet contents.
@@ -174,7 +177,7 @@ class PacketManipulation:
         if (not self.dst_ip):
             ipv4_header += self.dst
         else:
-            ipv4_header = inet_aton(src.dst_ip)
+            ipv4_header = self.dst_ip
         if (len(self.ipv4H) > 20):
             ipv4_header += self.ipv4H[20:]
 
