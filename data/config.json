@@ -18,8 +18,8 @@
             "Enabled": 1
         },
         "Interface": {
-            "Outside": "enp0s3",
-            "Inside": "enp0s8"
+            "Outside": "eth0",
+            "Inside": "eth0"
         },
         "DNSServers": {
             "Server1": {
@@ -47,7 +47,7 @@
             }
         },
         "LocalNet": {
-            "IP Address": "192.168.83.0/24"
+            "IP Address": "192.168.5.0/24"
         },
         "DHCPReservations": {
             "aa:aa:aa:aa:aa:aa": {
