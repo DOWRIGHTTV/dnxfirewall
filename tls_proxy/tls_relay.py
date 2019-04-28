@@ -43,7 +43,7 @@ class TLSRelay:
     def Main(self):
         try:        
             self.sock = socket(AF_PACKET, SOCK_RAW)
-            self.sock.bind((self.lan_ip, 3))
+            self.sock.bind((self.iniface, 3))
 
             # listen for UDP datagrams
             print(f'[+] Listening -> {self.lan_ip}:{self.lport}')
@@ -64,7 +64,7 @@ class TLSRelay:
             
     def RelayThread(self, packet_from_host):
         sock = socket(AF_PACKET, SOCK_RAW)
-        sock.bind((self.wan_ip, 3))
+        sock.bind((self.waniface, 3))
         header_info = [self.lan_mac, packet_from_host.smac, self.lan_ip]
         ## -- 75 ms delay on all requests to give proxy more time to react -- ## Should be more tightly tuned
         time.sleep(.01)
