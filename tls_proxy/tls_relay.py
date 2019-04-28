@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import os, sys, time
 import struct
@@ -49,20 +49,22 @@ class TLSRelay:
             while True:
                 data_from_host, _ = self.sock.recvfrom(65565)
                 print('RECIEVED DATA FROM HOST')
-#                start = time.time()
+    #                start = time.time()
                 try:
                     packet_from_host = PacketManipulation(self.header_info, data_from_host)
                     packet_from_host.Start()
+                    print(packet_from_host.dport)
                     if (packet_from_host.dport in {443}):
-                        Relay = threading.Thread(target=self.RelayThread, args=(packet_from_host))
+                        Relay = threading.Thread(target=self.RelayThread, args=(packet_from_host,))
                         Relay.daemon = True
                         Relay.start()
                 except Exception as E:
-                    pass                    
+                    print(E)
         except Exception as E:
             print(E)
             
     def RelayThread(self, packet_from_host):
+        print('hi mom')
         sock = socket(AF_PACKET, SOCK_RAW)
         sock.bind((self.waniface, 3))
         header_info = [self.lan_mac, packet_from_host.smac, self.lan_ip]
@@ -72,7 +74,7 @@ class TLSRelay:
         time.sleep(.01)
         ## -------------- ##
         sock.send(packet_from_host.send_data)
-        print(f'Request Relayed to Server on {443}')
+        print(f'Request Relayed to Server on 443')
         data_from_server, _ = sock.recv(65565)
         print('Request Received from Server')
         packet_from_server = PacketManipulation(header_info, data_from_server, host_ip, host_port)
@@ -91,9 +93,11 @@ class PacketManipulation:
         self.data = data
         self.dst_ip = dst_ip
         self.host_port = host_port
+        
+        self.dport = None
 
     def Start(self):
-#        self.Ethernet()
+        self.Ethernet()
         self.IP()
         self.Protocol()
         if (self.protocol in {6}):
@@ -110,6 +114,7 @@ class PacketManipulation:
     def Ethernet(self):
         self.smac = self.data[0:6]
         self.eth_proto = self.data[12:14]
+        
     
     ''' Parsing IP headers || SRC and DST IP Address '''
     def IP(self):
@@ -163,27 +168,28 @@ class PacketManipulation:
         return (~sum) & 0xffff
 
     def RebuildHeaders(self):
-        eth_header = b''
         ipv4_header = b''
 
-        src_mac = binascii.unhexlify(self.src_mac.replace(b':', b''))
-        dst_mac = binascii.unhexlify(self.dst_mac.replace(b':', b''))
-        eth_header += src_mac
-        eth_header += dst_mac
-
+        eth_header = struct.pack('!6s6s',
+        binascii.unhexlify(self.src_mac.replace(':', '')),
+        binascii.unhexlify(self.dst_mac.replace(':', '')))
+        eth_header += self.eth_proto
+        
         ipv4_header += self.ipv4H[:10]
         ipv4_header += b'\x00\x00'
         ipv4_header += inet_aton(self.src_ip)
+
         if (not self.dst_ip):
             ipv4_header += self.dst
         else:
             ipv4_header = self.dst_ip
+
         if (len(self.ipv4H) > 20):
             ipv4_header += self.ipv4H[20:]
 
         ipv4_checksum = self.IPV4Checksum(ipv4_header)
         ipv4_checksum = struct.pack('<H', ipv4_checksum)
-        ipv4_header.split('b\x00\x00')
+        ipv4_header = ipv4_header.split(b'\x00\x00')
         ipv4_header = ipv4_header[0] + ipv4_checksum + ipv4_header[1]
 
         rebuilt_header = eth_header + ipv4_header + self.tcp_header

@@ -41,7 +41,7 @@ class Interface:
         for line in output:       
             if('ether' in line):
                 line = line.strip().split()
-                mac = line[2]
+                mac = line[1]
 #                print(mac)
                 return(mac)
 
