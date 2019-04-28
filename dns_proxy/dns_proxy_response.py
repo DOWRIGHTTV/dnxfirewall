@@ -43,7 +43,6 @@ class Packet:
         self.create_ipv4_fields_list()
         self.ipv4H = self.assemble_ipv4_fields()
         self.ip_chk = self.cksum(self.ipv4H)
-
     
     def split_packet(self):
         self.smac = self.packet.dmac
