@@ -73,7 +73,7 @@ class TLSRelay:
         print(f'Request Relayed to Server on {443}')
         data_from_server, _ = sock.recv(65565)
         print('Request Received from Server')
-        packet_from_server = PacketManipulation(header_info, data_from_server, packer_from_host.sport)
+        packet_from_server = PacketManipulation(header_info, data_from_server, packet_from_host.sport)
         packet_from_server.Start()
         self.sock.send(packet_from_server.send_data)
         print('Request Relayed to Host')
