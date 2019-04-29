@@ -33,21 +33,15 @@ class TLSRelay:
         dfg_mac = Int.DFGMAC(dfg)
         wan_mac = Int.MAC(self.waniface)
         self.lan_mac = Int.MAC(self.iniface)
+#        dfg_mac = '08:00:27:72:aa:2f'
         self.header_info = [wan_mac, dfg_mac, self.wan_ip]
-
-        try:        
-            self.lan_sock = socket(AF_PACKET, SOCK_RAW)
-            self.lan_sock.bind((self.iniface, 3))
-
-            self.wan_sock = socket(AF_PACKET, SOCK_RAW)
-            self.wan_sock.bind((self.waniface, 0))
-        except Exception as E:
-            print(f'MAIN SOCKET EXCEPTION: {E}')
                
     def Start(self):
         self.Main()
 
     def Main(self):
+        self.lan_sock = socket(AF_PACKET, SOCK_RAW)
+        self.lan_sock.bind((self.iniface, 3))
         print(f'[+] Listening -> {self.iniface}')
         while True:
             data_from_host, _ = self.lan_sock.recvfrom(65565)
@@ -56,7 +50,7 @@ class TLSRelay:
                 packet_from_host = PacketManipulation(self.header_info, data_from_host)
                 packet_from_host.Start()
                 if (packet_from_host.dport in {443}):
-                    print('RECIEVED HTTPS CONNECTION FROM HOST')
+                    print(f'HTTPS CONNECTION FROM HOST: {packet_from_host.sport}')
                     Relay = threading.Thread(target=self.RelayThread, args=(packet_from_host,))
                     Relay.daemon = True
                     Relay.start()
@@ -64,14 +58,19 @@ class TLSRelay:
                 print(f'MAIN PARSE EXCEPTION: {E}')
             
     def RelayThread(self, packet_from_host):
-        self.wan_sock.send(packet_from_host.send_data)
-        print(f'HTTPS Request Relayed to Server')
+        wan_sock = socket(AF_PACKET, SOCK_RAW)
+        wan_sock.bind((self.waniface, 3))
+        wan_sock.send(packet_from_host.send_data)
+#        print(f'HTTPS Request Relayed to Server')
 
         ## packing required information into a list for the response to build headers and assigning variables
-        ## in the local scope for ip info from packet from host instanced class of PacketManipulation. 
-        header_info = [self.lan_mac, packet_from_host.smac, self.lan_ip]
-        host_ip = packet_from_host.src
-        host_port = packet_from_host.sport
+        ## in the local scope for ip info from packet from host instanced class of PacketManipulation.
+        try:
+            header_info = [self.lan_mac, packet_from_host.smac, packet_from_host.dst]
+            host_ip = packet_from_host.src
+            host_port = packet_from_host.sport
+        except Exception as E:
+            print(E)
 
         ## -- 75 ms delay on all requests to give proxy more time to react -- ## Should be more tightly tuned
 #        time.sleep(.01)
@@ -80,21 +79,19 @@ class TLSRelay:
         ''' Sending rebuilt packet to original destination from local client, currently forwarding all packets,
         in the future will attempt to validated from tls proxy whether packet is ok for forwarding. '''
         while True:
-            data_from_server, _ = self.wan_sock.recvfrom(65565)
+            data_from_server, _ = wan_sock.recvfrom(65565)
             try:
                 ## Parsing packets to wan interface to look for https response.
                 packet_from_server = PacketManipulation(header_info, data_from_server, host_ip, host_port)
                 packet_from_server.Start()
-                if packet_from_server.protocol in {6}:
-                    print('RESPONSE FROM SOMETHING')
+                if packet_from_server.protocol in {6} and packet_from_server.sport in {443}:
                 ## Checking desination port to match against original source port. if a match, will relay the packet
                 ## information back to the original host/client.
-                if (packet_from_server.dport == packet_from_host.sport):
-                    print('HTTPS Response Received from Server')
-                    print(packet_from_server.send_data)
-                    self.lan_sock.send(packet_from_server.send_data)
-                    print('Request Relayed to Host')
-                    break
+                    if (packet_from_server.dport == packet_from_host.sport):
+#                        print('HTTPS Response Received from Server')
+                        self.lan_sock.send(packet_from_server.send_data)
+                        print(f'Response sent to Host: {packet_from_server.dport}')
+                        break
             except Exception as E:
                 print(f'RELAY PARSE EXCEPTION: {E}')
                 traceback.print_exc()
@@ -111,19 +108,19 @@ class PacketManipulation:
         
         self.dport = None
         self.sport = None
+        self.payload = b''
 
     def Start(self):
         self.Ethernet()
         self.IP()
         self.Protocol()
         if (self.protocol in {6}):
-            self.Ports()
+            self.Ports()           
             if (self.dport in {443}):
                 self.TCP()
                 self.PsuedoHeader()
-                self.RebuildHeaders()
-
-            elif (self.sport in {443} and self.dst_port == self.host_port):
+                self.RebuildHeaders()             
+            elif (self.sport in {443} and self.dport == self.host_port):
                 self.TCP()
                 self.PsuedoHeader()
                 self.RebuildHeaders()
@@ -133,12 +130,12 @@ class PacketManipulation:
         self.eth_proto = self.data[12:14]
         
         s = []
-        smac = self.data[0:6]
+        smac = self.data[6:12]
         smac = struct.unpack('!6c', smac)
         for byte in smac:
             s.append(byte.hex())
             
-        self.smac = f'{s[0]}:{s[1]}:{s[2]}:{s[3]}:{s[4]}:{s[5]}'       
+        self.smac = f'{s[0]}:{s[1]}:{s[2]}:{s[3]}:{s[4]}:{s[5]}'
     
     ''' Parsing IP headers || SRC and DST IP Address '''
     def IP(self):
@@ -147,7 +144,7 @@ class PacketManipulation:
         self.src = self.ipv4H[12:16]
         self.dst = self.ipv4H[16:20]
         
-        s = struct.unpack('!4B', self.src)        
+        s = struct.unpack('!4B', self.src)
         d = struct.unpack('!4B', self.dst)
         
         self.src = f'{s[0]}.{s[1]}.{s[2]}.{s[3]}'
@@ -185,38 +182,33 @@ class PacketManipulation:
 
         self.tcp_header = self.data[34:34+self.tcp_header_length]
         self.tcp_segment_length = len(self.data) - 34
-        self.payload = self.data[34+self.tcp_header_length:] 
+        if (len(self.data) > 34+self.tcp_header_length):
+            self.payload = self.data[34+self.tcp_header_length:]
 
     def PsuedoHeader(self):
         psuedo_header = b''
         psuedo_header += inet_aton(self.src_ip)
-        psuedo_header += inet_aton(self.dst)
-        print(psuedo_header)
+        if (self.dst_ip):
+            psuedo_header += inet_aton(self.dst_ip)
+        else:
+            psuedo_header += inet_aton(self.dst)            
         psuedo_header += struct.pack('!2BH', 0, 6, self.tcp_segment_length)
-        print(psuedo_header)
-        psuedo_packet = psuedo_header + self.data[34+self.tcp_header_length:]
+        psuedo_packet = psuedo_header + self.data[34:34+16] + b'\x00\x00' + self.data[34+18:]
         
-        print(psuedo_packet)
         tcp_checksum = self.Checksum.TCP(psuedo_packet)
-        self.tcp_checksum = struct.pack('!L', tcp_checksum)
+        self.tcp_checksum = struct.pack('<H', tcp_checksum)
 
     def RebuildHeaders(self):
         ethernet_header = self.RebuildEthernet()
-        print(1)
-        print(ethernet_header)
         ip_header = self.RebuildIP()
-        print(2)
-        print(ip_header)
         tcp_header = self.RebuildTCP()
-        print(3)
-        print(tcp_header)
 
         self.send_data = ethernet_header + ip_header + tcp_header + self.payload
 
     def RebuildEthernet(self):
         eth_header = struct.pack('!6s6s',
-        binascii.unhexlify(self.src_mac.replace(':', '')),
-        binascii.unhexlify(self.dst_mac.replace(':', '')))
+        binascii.unhexlify(self.dst_mac.replace(':', '')),
+        binascii.unhexlify(self.src_mac.replace(':', '')))
         eth_header += self.eth_proto
 
         return eth_header
@@ -227,10 +219,10 @@ class PacketManipulation:
         ipv4_header += b'\x00\x00'
         ipv4_header += inet_aton(self.src_ip)
 
-        if (not self.dst_ip):
-            ipv4_header += inet_aton(self.dst)
-        else:
-            ipv4_header = inet_aton(self.dst_ip)
+        if (self.dst_ip):
+            ipv4_header += inet_aton(self.dst_ip)
+        else:            
+            ipv4_header += inet_aton(self.dst)         
 
         if (len(self.ipv4H) > 20):
             ipv4_header += self.ipv4H[20:]
@@ -242,9 +234,9 @@ class PacketManipulation:
         return ipv4_header
 
     def RebuildTCP(self):
-        tcp_header = self.tcp_header[:16] + self.tcp_checksum
+        tcp_header = self.tcp_header[:16] + self.tcp_checksum + b'\x00\x00'
         if (self.tcp_header_length > 20):
-            self.tcp_header += self.tcp_header[20:self.tcp_header_length]
+            tcp_header += self.tcp_header[20:self.tcp_header_length]
 
         return tcp_header
 
@@ -267,18 +259,17 @@ class Checksums:
         s = 0
         # loop taking 2 characters at a time
         for i in range(0, len(msg), 2):
-            w = msg[i] + (msg[i+1] << 8 )
-            s = s + w
+            if ((i+1) < len(msg)):
+                a = msg[i]
+                b = msg[i+1]
+                s = s + (a+(b << 8))            
+            elif ((i+1) == len(msg)):
+                s += msg[i]
 
-            s = (s>>16) + (s & 0xffff)
-            s = s + (s >> 16)
+        s = s + (s >> 16)
+        s = ~s & 0xffff
 
-            #complement and mask to 4 byte short
-            s = ~s & 0xffff
-
-            return s 
-
-
+        return s
 
 if __name__ == "__main__":
     try:        
