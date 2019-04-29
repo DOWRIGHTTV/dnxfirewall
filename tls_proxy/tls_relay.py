@@ -123,6 +123,7 @@ class PacketManipulation:
 
             elif (self.sport in {443} and self.dst_port == self.host_port):
                 self.TCP()
+                self.PsuedoHeader()
                 self.RebuildHeaders()
 
     ''' Parsing ethernet headers || SRC and DST MAC Address'''            
@@ -181,6 +182,7 @@ class PacketManipulation:
                 self.tcp_header_length += bit_values[i]
 
         self.tcp_header = self.data[34:34+self.tcp_header_length]
+        self.payload = self.data[34+self.tcp_header_length:]
 
     def IPV4Checksum(self, header):
         if len(header) & 1:
@@ -196,14 +198,49 @@ class PacketManipulation:
 
         return (~sum) & 0xffff
 
-    def RebuildHeaders(self):
-        ipv4_header = b''
+    def TCPChecksum(self, msg):
+        s = 0       # Binary Sum
+        # loop taking 2 characters at a time
+        for i in range(0, len(msg), 2):
+            if (i+1) < len(msg):
+                a = ord(msg[i]) 
+                b = ord(msg[i+1])
+                s = s + (a+(b << 8))
+            elif (i+1)==len(msg):
+                s += ord(msg[i])
 
+        s = s + (s >> 16)
+        s = ~s & 0xffff
+
+        return s
+
+    def PsuedoHeader(self):
+        psuedo_header = b''
+        psuedo_header += struct.unpack('!4B', self.src_ip)
+        psuedo_header += self.dst
+        psuedo_header += struct.unpack('!2BH', 1, 1, self.tcp_header_length)
+        psuedo_packet = psuedo_header + self.data[34+self.tcp_header_length:]
+        
+        tcp_checksum = self.TCPChecksum(psuedo_packet)
+        self.tcp_checksum = struct.pack('!L', tcp_checksum)
+
+    def RebuildHeaders(self):
+        ethernet_header = self.RebuildEthernet()
+        ip_header = self.RebuildIP()
+        tcp_header = self.RebuildTCP
+
+        self.send_data = ethernet_header + ip_header + tcp_header + self.payload
+
+    def RebuildEthernet(self):
         eth_header = struct.pack('!6s6s',
         binascii.unhexlify(self.src_mac.replace(':', '')),
         binascii.unhexlify(self.dst_mac.replace(':', '')))
         eth_header += self.eth_proto
-        
+
+        return eth_header
+
+    def RebuildIP(self):
+        ipv4_header = b''
         ipv4_header += self.ipv4H[:10]
         ipv4_header += b'\x00\x00'
         ipv4_header += inet_aton(self.src_ip)
@@ -220,9 +257,14 @@ class PacketManipulation:
         ipv4_checksum = struct.pack('<H', ipv4_checksum)
         ipv4_header = ipv4_header[:10] + ipv4_checksum + ipv4_header[12:]
 
-        rebuilt_header = eth_header + ipv4_header + self.tcp_header
+        return ipv4_header
 
-        self.send_data = rebuilt_header + self.data[34+self.tcp_header_length:]
+    def RebuildTCP(self):
+        tcp_header = self.tcp_header[:16] + self.tcp_checksum
+        if (self.tcp_header_length > 20):
+            self.tcp_header += self.tcp_header[20:self.tcp_header_length]
+
+        return tcp_header
 
 if __name__ == "__main__":
     try:        
