@@ -48,13 +48,12 @@ class TLSRelay:
             print(f'[+] Listening -> {self.iniface}:{self.lport}')
             while True:
                 data_from_host, _ = self.sock.recvfrom(65565)
-                print('RECIEVED DATA FROM HOST')
     #                start = time.time()
                 try:
                     packet_from_host = PacketManipulation(self.header_info, data_from_host)
                     packet_from_host.Start()
-                    print(packet_from_host.dport)
                     if (packet_from_host.dport in {443}):
+                        print('RECIEVED HTTPS CONNECTION FROM HOST')
                         Relay = threading.Thread(target=self.RelayThread, args=(packet_from_host,))
                         Relay.daemon = True
                         Relay.start()
@@ -64,35 +63,41 @@ class TLSRelay:
             print(E)
             
     def RelayThread(self, packet_from_host):
-        sock = socket(AF_PACKET, SOCK_RAW)
-        sock.bind((self.waniface, 3))
-        ## packing required information into a list for the response to build headers and assigning variables
-        ## in the local scope for ip info from packet from host instanced class of PacketManipulation. 
-        header_info = [self.lan_mac, packet_from_host.smac, self.lan_ip]
-        host_ip = packet_from_host.src
-        host_port = packet_from_host.sport
+        try:
+            sock = socket(AF_PACKET, SOCK_RAW)
+            sock.bind((self.waniface, 3))
+            ## packing required information into a list for the response to build headers and assigning variables
+            ## in the local scope for ip info from packet from host instanced class of PacketManipulation. 
+            header_info = [self.lan_mac, packet_from_host.smac, self.lan_ip]
+            host_ip = packet_from_host.src
+            host_port = packet_from_host.sport
 
-        ## -- 75 ms delay on all requests to give proxy more time to react -- ## Should be more tightly tuned
-        time.sleep(.01)
-        ## -------------- ##
+            ## -- 75 ms delay on all requests to give proxy more time to react -- ## Should be more tightly tuned
+            time.sleep(.01)
+            ## -------------- ##
 
-        ## Sending rebuilt packet to original destination from local client, currently forwarding all packets,
-        ## in the future will attempt to validated from tls proxy whether packet is ok for forwarding.
-        sock.send(packet_from_host.send_data)
-        print(f'Request Relayed to Server on 443')
-        while True:
-            data_from_server, _ = sock.recv(65565)
-            print('Request Received from Server')
+            ## Sending rebuilt packet to original destination from local client, currently forwarding all packets,
+            ## in the future will attempt to validated from tls proxy whether packet is ok for forwarding.
+            sock.send(packet_from_host.send_data)
+            print(f'HTTPS Request Relayed to Server')
 
-            ## Parsing packets to wan interface to look for https response.
-            packet_from_server = PacketManipulation(header_info, data_from_server, host_ip, host_port)
-            packet_from_server.Start()
-            ## Checking desination port to match against original source port. if a match, will relay the packet
-            ## information back to the original host/client.
-            if (packet_from_server.dport == packet_from_host.sport):
-                self.sock.send(packet_from_server.send_data)
-                print('Request Relayed to Host')
-                break
+            while True:
+                data_from_server, _ = sock.recvfrom(65565)
+                try:
+                    ## Parsing packets to wan interface to look for https response.
+                    packet_from_server = PacketManipulation(header_info, data_from_server, host_ip, host_port)
+                    packet_from_server.Start()
+                    ## Checking desination port to match against original source port. if a match, will relay the packet
+                    ## information back to the original host/client.
+                    if (packet_from_server.dport == packet_from_host.sport):
+                        print('HTTPS Response Received from Server')
+                        self.sock.send(packet_from_server.send_data)
+                        print('Request Relayed to Host')
+                        break
+                except Exception as E:
+                    print(E)
+        except Exception as E:
+            print(E)
 
 class PacketManipulation:
     def __init__(self, header_info, data, dst_ip=None, host_port=None):
