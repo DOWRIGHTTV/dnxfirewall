@@ -119,6 +119,7 @@ class PacketManipulation:
             self.Ports()
             if (self.dport in {443}):
                 self.TCP()
+                self.PsuedoHeader()
                 self.RebuildHeaders()
 
             elif (self.sport in {443} and self.dst_port == self.host_port):
@@ -182,6 +183,7 @@ class PacketManipulation:
                 self.tcp_header_length += bit_values[i]
 
         self.tcp_header = self.data[34:34+self.tcp_header_length]
+        self.tcp_segment_length = len(self.data) - 34
         self.payload = self.data[34+self.tcp_header_length:]
 
     def IPV4Checksum(self, header):
@@ -199,6 +201,7 @@ class PacketManipulation:
         return (~sum) & 0xffff
 
     def TCPChecksum(self, msg):
+        print(msg)
         s = 0       # Binary Sum
         # loop taking 2 characters at a time
         for i in range(0, len(msg), 2):
@@ -216,18 +219,27 @@ class PacketManipulation:
 
     def PsuedoHeader(self):
         psuedo_header = b''
-        psuedo_header += struct.unpack('!4B', self.src_ip)
-        psuedo_header += self.dst
-        psuedo_header += struct.unpack('!2BH', 1, 1, self.tcp_header_length)
+        psuedo_header += inet_aton(self.src_ip)
+        psuedo_header += inet_aton(self.dst)
+        print(psuedo_header)
+        psuedo_header += struct.pack('!2BH', 0, 6, self.tcp_segment_length)
+        print(psuedo_header)
         psuedo_packet = psuedo_header + self.data[34+self.tcp_header_length:]
         
+        print(psuedo_packet)
         tcp_checksum = self.TCPChecksum(psuedo_packet)
         self.tcp_checksum = struct.pack('!L', tcp_checksum)
 
     def RebuildHeaders(self):
         ethernet_header = self.RebuildEthernet()
+        print(1)
+        print(ethernet_header)
         ip_header = self.RebuildIP()
-        tcp_header = self.RebuildTCP
+        print(2)
+        print(ip_header)
+        tcp_header = self.RebuildTCP()
+        print(3)
+        print(tcp_header)
 
         self.send_data = ethernet_header + ip_header + tcp_header + self.payload
 
