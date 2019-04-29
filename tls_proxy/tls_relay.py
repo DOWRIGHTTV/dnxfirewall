@@ -101,6 +101,7 @@ class TLSRelay:
 
 class PacketManipulation:
     def __init__(self, header_info, data, dst_ip=None, host_port=None):
+        self.Checksum = Checksums()
         self.src_mac, self.dst_mac, self.src_ip = header_info
         self.data = data
         self.dst_ip = dst_ip
@@ -184,38 +185,7 @@ class PacketManipulation:
 
         self.tcp_header = self.data[34:34+self.tcp_header_length]
         self.tcp_segment_length = len(self.data) - 34
-        self.payload = self.data[34+self.tcp_header_length:]
-
-    def IPV4Checksum(self, header):
-        if len(header) & 1:
-            header = header + '\0'
-        words = array.array('h', header)
-        sum = 0
-        for word in words:
-            sum = sum + (word & 0xffff)
-        hi = sum >> 16
-        lo = sum & 0xffff
-        sum = hi + lo
-        sum = sum + (sum >> 16)
-
-        return (~sum) & 0xffff
-
-    def TCPChecksum(self, msg):
-        print(msg)
-        s = 0       # Binary Sum
-        # loop taking 2 characters at a time
-        for i in range(0, len(msg), 2):
-            if (i+1) < len(msg):
-                a = ord(msg[i]) 
-                b = ord(msg[i+1])
-                s = s + (a+(b << 8))
-            elif (i+1)==len(msg):
-                s += ord(msg[i])
-
-        s = s + (s >> 16)
-        s = ~s & 0xffff
-
-        return s
+        self.payload = self.data[34+self.tcp_header_length:] 
 
     def PsuedoHeader(self):
         psuedo_header = b''
@@ -227,7 +197,7 @@ class PacketManipulation:
         psuedo_packet = psuedo_header + self.data[34+self.tcp_header_length:]
         
         print(psuedo_packet)
-        tcp_checksum = self.TCPChecksum(psuedo_packet)
+        tcp_checksum = self.Checksum.TCP(psuedo_packet)
         self.tcp_checksum = struct.pack('!L', tcp_checksum)
 
     def RebuildHeaders(self):
@@ -265,7 +235,7 @@ class PacketManipulation:
         if (len(self.ipv4H) > 20):
             ipv4_header += self.ipv4H[20:]
 
-        ipv4_checksum = self.IPV4Checksum(ipv4_header)
+        ipv4_checksum = self.Checksum.IPV4(ipv4_header)
         ipv4_checksum = struct.pack('<H', ipv4_checksum)
         ipv4_header = ipv4_header[:10] + ipv4_checksum + ipv4_header[12:]
 
@@ -277,6 +247,38 @@ class PacketManipulation:
             self.tcp_header += self.tcp_header[20:self.tcp_header_length]
 
         return tcp_header
+
+class Checksums:
+    def IPV4(self, header):
+        if len(header) & 1:
+            header = header + '\0'
+        words = array.array('h', header)
+        sum = 0
+        for word in words:
+            sum = sum + (word & 0xffff)
+        hi = sum >> 16
+        lo = sum & 0xffff
+        sum = hi + lo
+        sum = sum + (sum >> 16)
+
+        return (~sum) & 0xffff
+
+    def TCP(self, msg):
+        s = 0
+        # loop taking 2 characters at a time
+        for i in range(0, len(msg), 2):
+            w = msg[i] + (msg[i+1] << 8 )
+            s = s + w
+
+            s = (s>>16) + (s & 0xffff)
+            s = s + (s >> 16)
+
+            #complement and mask to 4 byte short
+            s = ~s & 0xffff
+
+            return s 
+
+
 
 if __name__ == "__main__":
     try:        
