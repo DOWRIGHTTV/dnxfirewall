@@ -33,79 +33,71 @@ class TLSRelay:
         dfg_mac = Int.DFGMAC(dfg)
         wan_mac = Int.MAC(self.waniface)
         self.lan_mac = Int.MAC(self.iniface)
-
         self.header_info = [wan_mac, dfg_mac, self.wan_ip]
-        
-        self.lport = 443
+
+        try:        
+            self.lan_sock = socket(AF_PACKET, SOCK_RAW)
+            self.lan_sock.bind((self.iniface, 3))
+
+            self.wan_sock = socket(AF_PACKET, SOCK_RAW)
+            self.wan_sock.bind((self.waniface, 0))
+        except Exception as E:
+            print(f'MAIN SOCKET EXCEPTION: {E}')
                
     def Start(self):
         self.Main()
 
     def Main(self):
-        try:        
-            self.sock = socket(AF_PACKET, SOCK_RAW)
-            self.sock.bind((self.iniface, 3))
-
-            print(f'[+] Listening -> {self.iniface}')
-            while True:
-                data_from_host, _ = self.sock.recvfrom(65565)
-    #                start = time.time()
-                try:
-                    packet_from_host = PacketManipulation(self.header_info, data_from_host)
-                    packet_from_host.Start()
-                    if (packet_from_host.dport in {443}):
-                        print('RECIEVED HTTPS CONNECTION FROM HOST')
-                        Relay = threading.Thread(target=self.RelayThread, args=(packet_from_host,))
-                        Relay.daemon = True
-                        Relay.start()
-                except Exception as E:
-                    print(f'MAIN PARSE EXCEPTION: {E}')
-        except Exception as E:
-            print(f'MAIN SOCKET EXCEPTION: {E}')
+        print(f'[+] Listening -> {self.iniface}')
+        while True:
+            data_from_host, _ = self.lan_sock.recvfrom(65565)
+#                start = time.time()
+            try:
+                packet_from_host = PacketManipulation(self.header_info, data_from_host)
+                packet_from_host.Start()
+                if (packet_from_host.dport in {443}):
+                    print('RECIEVED HTTPS CONNECTION FROM HOST')
+                    Relay = threading.Thread(target=self.RelayThread, args=(packet_from_host,))
+                    Relay.daemon = True
+                    Relay.start()
+            except Exception as E:
+                print(f'MAIN PARSE EXCEPTION: {E}')
             
     def RelayThread(self, packet_from_host):
-        try:
-            sock = socket(AF_PACKET, SOCK_RAW)
-            sock.bind((self.waniface, 0))
-            ## packing required information into a list for the response to build headers and assigning variables
-            ## in the local scope for ip info from packet from host instanced class of PacketManipulation. 
-            header_info = [self.lan_mac, packet_from_host.smac, self.lan_ip]
-            host_ip = packet_from_host.src
-            host_port = packet_from_host.sport
+        self.wan_sock.send(packet_from_host.send_data)
+        print(f'HTTPS Request Relayed to Server')
 
-            ## -- 75 ms delay on all requests to give proxy more time to react -- ## Should be more tightly tuned
-            time.sleep(.01)
-            ## -------------- ##
+        ## packing required information into a list for the response to build headers and assigning variables
+        ## in the local scope for ip info from packet from host instanced class of PacketManipulation. 
+        header_info = [self.lan_mac, packet_from_host.smac, self.lan_ip]
+        host_ip = packet_from_host.src
+        host_port = packet_from_host.sport
 
-            ## Sending rebuilt packet to original destination from local client, currently forwarding all packets,
-            ## in the future will attempt to validated from tls proxy whether packet is ok for forwarding.
-            sock.send(packet_from_host.send_data)
-            print(f'HTTPS Request Relayed to Server')
-#            print(packet_from_host.send_data)
+        ## -- 75 ms delay on all requests to give proxy more time to react -- ## Should be more tightly tuned
+#        time.sleep(.01)
+        ## -------------- ##
 
-            while True:
-                data_from_server, _ = sock.recvfrom(65565)
-                try:
-                    ## Parsing packets to wan interface to look for https response.
-                    packet_from_server = PacketManipulation(header_info, data_from_server, host_ip, host_port)
-                    packet_from_server.Start()
-                    if packet_from_server.protocol in {6}:
-                        print('RESPONSE FROM SOMETHING')
-                        print(data_from_server)
-                        print(packet_from_server.sport)
-                    ## Checking desination port to match against original source port. if a match, will relay the packet
-                    ## information back to the original host/client.
-                    if (packet_from_server.dport == packet_from_host.sport):
-                        print('HTTPS Response Received from Server')
-                        print(packet_from_server.send_data)
-                        self.sock.send(packet_from_server.send_data)
-                        print('Request Relayed to Host')
-                        break
-                except Exception as E:
-                    print(f'RELAY PARSE EXCEPTION: {E}')
-                    traceback.print_exc()
-        except Exception as E:
-            print(f'RELAY SOCKET EXCEPTION: {E}')
+        ''' Sending rebuilt packet to original destination from local client, currently forwarding all packets,
+        in the future will attempt to validated from tls proxy whether packet is ok for forwarding. '''
+        while True:
+            data_from_server, _ = self.wan_sock.recvfrom(65565)
+            try:
+                ## Parsing packets to wan interface to look for https response.
+                packet_from_server = PacketManipulation(header_info, data_from_server, host_ip, host_port)
+                packet_from_server.Start()
+                if packet_from_server.protocol in {6}:
+                    print('RESPONSE FROM SOMETHING')
+                ## Checking desination port to match against original source port. if a match, will relay the packet
+                ## information back to the original host/client.
+                if (packet_from_server.dport == packet_from_host.sport):
+                    print('HTTPS Response Received from Server')
+                    print(packet_from_server.send_data)
+                    self.lan_sock.send(packet_from_server.send_data)
+                    print('Request Relayed to Host')
+                    break
+            except Exception as E:
+                print(f'RELAY PARSE EXCEPTION: {E}')
+                traceback.print_exc()
 
 class PacketManipulation:
     def __init__(self, header_info, data, dst_ip=None, host_port=None):
