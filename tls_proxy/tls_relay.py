@@ -80,6 +80,7 @@ class TLSRelay:
             ## in the future will attempt to validated from tls proxy whether packet is ok for forwarding.
             sock.send(packet_from_host.send_data)
             print(f'HTTPS Request Relayed to Server')
+            print(packet_from_host.send_data)
 
             while True:
                 data_from_server, _ = sock.recvfrom(65565)
