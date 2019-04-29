@@ -35,15 +35,22 @@ class TLSRelay:
         self.lan_mac = Int.MAC(self.iniface)
 #        dfg_mac = '08:00:27:72:aa:2f'
         self.header_info = [wan_mac, dfg_mac, self.wan_ip]
+
+        self.active_connections = {'Clients': {}}
+
+        self.lan_sock = socket(AF_PACKET, SOCK_RAW)
+        self.lan_sock.bind((self.iniface, 3))
+
+        self.wan_sock = socket(AF_PACKET, SOCK_RAW)
+        self.wan_sock.bind((self.waniface, 3))
                
     def Start(self):
         self.Main()
 
     def Main(self):
-        self.lan_sock = socket(AF_PACKET, SOCK_RAW)
-        self.lan_sock.bind((self.iniface, 3))
         print(f'[+] Listening -> {self.iniface}')
         while True:
+            conn_handle = False
             data_from_host, _ = self.lan_sock.recvfrom(65565)
 #                start = time.time()
             try:
@@ -51,16 +58,27 @@ class TLSRelay:
                 packet_from_host.Start()
                 if (packet_from_host.dport in {443}):
                     print(f'HTTPS CONNECTION FROM HOST: {packet_from_host.sport}')
-                    Relay = threading.Thread(target=self.RelayThread, args=(packet_from_host,))
-                    Relay.daemon = True
-                    Relay.start()
+                    self.wan_sock.send(packet_from_host.send_data)
+
+                    src_ip = packet_from_host.src
+                    src_port = packet_from_host.sport
+                    if src_ip not in self.active_connections['Clients']:
+                        self.active_connections['Clients'][src_ip] = {src_port: ''}
+                        conn_handle = True
+                    elif (src_ip in self.active_connections['Clients'] and \
+                    src_port not in self.active_connections['Clients'][src_ip]):
+                        self.active_connections['Clients'][src_ip].update({src_port: ''})    
+                        conn_handle = True
+                    if (conn_handle):       
+                        Relay = threading.Thread(target=self.RelayThread, args=(packet_from_host,))
+                        Relay.daemon = True
+                        Relay.start()
             except Exception as E:
                 print(f'MAIN PARSE EXCEPTION: {E}')
             
     def RelayThread(self, packet_from_host):
         wan_sock = socket(AF_PACKET, SOCK_RAW)
         wan_sock.bind((self.waniface, 3))
-        wan_sock.send(packet_from_host.send_data)
 #        print(f'HTTPS Request Relayed to Server')
 
         ## packing required information into a list for the response to build headers and assigning variables
@@ -69,13 +87,14 @@ class TLSRelay:
             header_info = [self.lan_mac, packet_from_host.smac, packet_from_host.dst]
             host_ip = packet_from_host.src
             host_port = packet_from_host.sport
+            src_ip = packet_from_host.src
         except Exception as E:
             print(E)
 
         ## -- 75 ms delay on all requests to give proxy more time to react -- ## Should be more tightly tuned
 #        time.sleep(.01)
         ## -------------- ##
-
+        self.Timer()
         ''' Sending rebuilt packet to original destination from local client, currently forwarding all packets,
         in the future will attempt to validated from tls proxy whether packet is ok for forwarding. '''
         while True:
@@ -91,10 +110,21 @@ class TLSRelay:
 #                        print('HTTPS Response Received from Server')
                         self.lan_sock.send(packet_from_server.send_data)
                         print(f'Response sent to Host: {packet_from_server.dport}')
+                        self.time_out = 0
                         break
+                if (self.time_out >= 3):
+                    self.active_connections['Clients'][src_ip].pop(host_port, None)                   
+                    break
             except Exception as E:
                 print(f'RELAY PARSE EXCEPTION: {E}')
                 traceback.print_exc()
+
+    def Timer(self):
+        self.time_out = 0
+        while True:
+            time.sleep(1)
+            self.time_out += 1
+
 
 class PacketManipulation:
     def __init__(self, header_info, data, dst_ip=None, host_port=None):
