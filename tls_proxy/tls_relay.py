@@ -69,7 +69,8 @@ class TLSRelay:
                     src_port not in self.active_connections['Clients'][src_ip]):
                         self.active_connections['Clients'][src_ip].update({src_port: ''})    
                         conn_handle = True
-                    if (conn_handle):       
+                    if (conn_handle):
+                        print('Sending Connection to Thread')
                         Relay = threading.Thread(target=self.RelayThread, args=(packet_from_host,))
                         Relay.daemon = True
                         Relay.start()
@@ -94,11 +95,12 @@ class TLSRelay:
         ## -- 75 ms delay on all requests to give proxy more time to react -- ## Should be more tightly tuned
 #        time.sleep(.01)
         ## -------------- ##
-        self.Timer()
+        threading.Thread(target=self.Timer).start()
         ''' Sending rebuilt packet to original destination from local client, currently forwarding all packets,
         in the future will attempt to validated from tls proxy whether packet is ok for forwarding. '''
         while True:
             data_from_server, _ = wan_sock.recvfrom(65565)
+            print(data_from_server)
             try:
                 ## Parsing packets to wan interface to look for https response.
                 packet_from_server = PacketManipulation(header_info, data_from_server, host_ip, host_port)
@@ -106,13 +108,14 @@ class TLSRelay:
                 if packet_from_server.protocol in {6} and packet_from_server.sport in {443}:
                 ## Checking desination port to match against original source port. if a match, will relay the packet
                 ## information back to the original host/client.
+                    print(f'{packet_from_server.dport} : {packet_from_host.sport}')
                     if (packet_from_server.dport == packet_from_host.sport):
 #                        print('HTTPS Response Received from Server')
                         self.lan_sock.send(packet_from_server.send_data)
                         print(f'Response sent to Host: {packet_from_server.dport}')
                         self.time_out = 0
                         break
-                if (self.time_out >= 3):
+                if (self.time_out >= 7):
                     self.active_connections['Clients'][src_ip].pop(host_port, None)                   
                     break
             except Exception as E:
