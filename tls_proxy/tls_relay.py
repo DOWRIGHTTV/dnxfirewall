@@ -36,11 +36,11 @@ class TLSRelay:
         dfg_mac = Int.IPtoMAC(dfg)
         wan_mac = Int.MAC(self.waniface)
         self.lan_mac = Int.MAC(self.iniface)
-        wan_subnet = Int.WANSubnet(self.waniface, dfg)  
+        wan_subnet = Int.WANSubnet(self.waniface, dfg)
         self.header_info = [wan_mac, dfg_mac, self.wan_ip, wan_subnet]     
 
         self.active_connections = {'Clients': {}}
-        self.nat_ports = set()
+        self.nat_ports = {}
 
         self.lan_sock = socket(AF_PACKET, SOCK_RAW)
         self.lan_sock.bind((self.iniface, 3))
@@ -100,7 +100,7 @@ class TLSRelay:
 #        print(f'HTTPS Request Relayed to Server')
         ## packing required information into a list for the response to build headers and assigning variables
         ## in the local scope for ip info from packet from host instanced class of PacketManipulation.
-        header_info = [self.lan_mac, packet_from_host.smac, packet_from_host.dst]
+        header_info = [self.lan_mac, packet_from_host.smac, packet_from_host.dst, {}]
         nat_port = connection['NAT']['Port']
         host_port = packet_from_host.sport
         src_ip = packet_from_host.src
@@ -131,6 +131,7 @@ class TLSRelay:
                 ## Time out connection after not recieving anything from remote server for |7 seconds|
                 ## This number should be tuned further as it may unnecessarily long.
                 if (self.time_out >= 7):
+                    src_ip = connection['Client']['IP']
                     active_connections[src_ip].pop(host_port, None)
                     self.nat_ports.pop(nat_port, None)
                     break
@@ -146,7 +147,7 @@ class TLSRelay:
             sock.bind(('', 0))
             nat_port = sock.getsockname()[1]
             if (nat_port not in self.nat_ports):
-                self.nat_ports.add(nat_port)
+                self.nat_ports[nat_port] = ''
                 
                 return nat_port
 
@@ -163,7 +164,8 @@ class PacketManipulation:
         self.data = data
         self.connection = connection
 
-        self.tcp_header_length = 0        
+        self.tcp_header_length = 0 
+        self.dst_ip = None      
         self.dport = None
         self.sport = None
         self.nat_port = None

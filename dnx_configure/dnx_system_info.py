@@ -120,7 +120,7 @@ class Interface:
         network = f'{ip[0]}.{ip[1]}.{ip[2]}'
         for i, mask in enumerate(masks):
             if (int(netmask[3]) == mask):
-                usable_ips = [dfg[3]+1, dfg[3]+hosts[i]]
+                usable_ips = [int(dfg[3])+1, int(dfg[3])+hosts[i]]
 
         for ip in range(usable_ips[0], usable_ips[1]):
             ip_range.add(f'{network}.{ip}')
