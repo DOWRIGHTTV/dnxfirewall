@@ -8,9 +8,8 @@ import datetime
 class DBConnector:
     def __init__(self, table):
         self.table = table
-        self.path = os.environ['HOME_DIR']
-        
-        self.db = '{}/data/dnxfwallproxy.db'.format(self.path)
+        self.path = os.environ['HOME_DIR']        
+        self.db = '{}/dnx_system/database/dnxfwall.db'.format(self.path)
         
         try:
             if not os.path.isfile (self.db):
