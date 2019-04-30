@@ -31,7 +31,7 @@ class FWProxy:
         self.DEVNULL = open(os.devnull, 'wb')
         self.dns_sigs = {}
 
-        self.session_tracker = {}
+        self.session_tracker = {'Clients': {}}
                 
     def Start(self):
         Timer = TM()
@@ -75,10 +75,10 @@ class FWProxy:
 
     def SignatureCheck(self, packet):
         #setting variables and filtering out ICMP
+        session_tracker = self.session_tracker['Clients']
         log = False
         hittime = int(time.time())
         dst_ip = packet.dst
-        print(dst_ip)
         src_ip = packet.src
         dport = packet.dport
         sport = packet.sport
@@ -86,7 +86,10 @@ class FWProxy:
         # Catches initial request to interesting traffic, filtering for local host > FW
         if (dst_ip in self.tor_nodes):
             print('Detected connection to TOR Node: {}'.format(dst_ip))
-            self.session_tracker[sport] = src_ip
+            if (src_ip not in session_tracker):
+                session_tracker.update({src_ip: {sport: ''}})
+            else:
+                session_tracker[src_ip].update({sport: ''})
             category = self.tor_nodes[dst_ip]
             blocked = self.SessionTracker(sport, src_ip)
             if (blocked):
@@ -97,16 +100,15 @@ class FWProxy:
             category = 'FW Rule'
 
         # Catches the response of interesting traffic, filtering for FW > local host#
-        if (dport in self.session_tracker):
-            if (dst_ip == self.session_tracker[dport]):
-                print('Detected response from TOR Node: {}'.format(src_ip))
-                self.session_tracker.pop(dport, None)
-                category = self.tor_nodes[src_ip]
-                blocked = False
-                log = True
-                # Reversing src/dst to show initial connection.
-                src_ip = packet.dst
-                dst_ip = packet.src
+        if (dst_ip in session_tracker and dport in session_tracker[src_ip]):
+            print('Detected response from TOR Node: {}'.format(src_ip))
+            session_tracker[dst_ip].pop(dport, None)
+            category = self.tor_nodes[src_ip]
+            blocked = False
+            log = True
+            # Reversing src/dst to show initial connection.
+            src_ip = packet.dst
+            dst_ip = packet.src
         
         # logging to database if filters detect interesting tracking, noting block /allow
         if (log):
@@ -120,9 +122,10 @@ class FWProxy:
     # applying a wait to give response enough time to come back, if
     # if response is not seen within time, assumes packet was dropped
     def SessionTracker(self, sport, src_ip):
+        session_tracker = self.session_tracker['Clients']
         time.sleep(2)
-        if (sport in self.session_tracker):
-            self.session_tracker.pop(sport, None)
+        if (src_ip in session_tracker and sport in session_tracker[src_ip]):
+            session_tracker[src_ip].pop(sport, None)
             return True
         else:
             return False
