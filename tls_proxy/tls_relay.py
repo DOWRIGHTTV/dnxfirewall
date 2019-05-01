@@ -13,7 +13,8 @@ from subprocess import run
 path = os.environ['HOME_DIR']
 sys.path.insert(0, path)
 
-from socket import socket, inet_aton, AF_PACKET, SOCK_RAW, AF_INET, SOCK_STREAM
+from socket import socket, inet_aton, AF_PACKET, SOCK_RAW, AF_INET
+from socket import SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
 from dnx_configure.dnx_system_info import Interface
 from dnx_configure.dnx_exceptions import *
 
@@ -42,11 +43,21 @@ class TLSRelay:
         self.active_connections = {'Clients': {}}
         self.nat_ports = {}
 
+        ## RAW Sockets which actually handle the traffic.
         self.lan_sock = socket(AF_PACKET, SOCK_RAW)
         self.lan_sock.bind((self.iniface, 3))
-
         self.wan_sock = socket(AF_PACKET, SOCK_RAW)
         self.wan_sock.bind((self.waniface, 3))
+
+        ## dummy socket to ensure the system doesnt send TCP resets to clients trying to connect
+        ## through the proxy, which is all HTTPS traffic via a ip table nat redirect
+        try:
+            self.proxy_sock = socket(AF_INET, SOCK_STREAM)
+            self.proxy_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+            self.proxy_sock.bind('', 443)
+            self.proxy_sock.listen()
+        finally:
+            self.proxy_sock.close()
 
         self.tls_ports = {443}
                
@@ -80,12 +91,12 @@ class TLSRelay:
                         active_connections[src_ip].update({src_port: ''})    
                         conn_handle = True
                     if (conn_handle):
-                        nat_port = self.AssignPublicPort()
+                        sock, nat_port = self.CreateSocket()
                         print('Sending Connection to Thread')
                         connection = {'Client': {'IP': src_ip, 'Port': src_port},
                                         'NAT': {'IP': self.wan_ip, 'Port': nat_port},
                                         'Server': {'IP': dst_ip, 'Port': dst_port}}
-                        Relay = threading.Thread(target=self.RelayThread, args=(packet_from_host, connection))
+                        Relay = threading.Thread(target=self.RelayThread, args=(sock, connection, packet_from_host))
                         Relay.daemon = True
                         Relay.start()
             except DNXError as DE:
@@ -93,7 +104,7 @@ class TLSRelay:
             except Exception as E:
                 print(f'MAIN PARSE EXCEPTION: {E}')
             
-    def RelayThread(self, packet_from_host, connection):
+    def RelayThread(self, sock, connection, packet_from_host):
         active_connections = self.active_connections['Clients']
         wan_sock = socket(AF_PACKET, SOCK_RAW)
         wan_sock.bind((self.waniface, 3))
@@ -133,7 +144,7 @@ class TLSRelay:
                 if (self.time_out >= 7):
                     src_ip = connection['Client']['IP']
                     active_connections[src_ip].pop(host_port, None)
-                    self.nat_ports.pop(nat_port, None)
+                    sock.close()
                     break
             except DNXError:
                 pass
@@ -141,15 +152,14 @@ class TLSRelay:
                 print(f'RELAY PARSE EXCEPTION: {E}')
                 traceback.print_exc()
 
-    def AssignPublicPort(self):
+    def CreateSocket(self):
         while True:
             sock = socket(AF_INET, SOCK_STREAM)
             sock.bind(('', 0))
+            sock.listen()
             nat_port = sock.getsockname()[1]
-            if (nat_port not in self.nat_ports):
-                self.nat_ports[nat_port] = ''
-                
-                return nat_port
+                            
+            return sock, nat_port
 
     def Timer(self):
         self.time_out = 0
