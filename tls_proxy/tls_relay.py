@@ -51,10 +51,10 @@ class TLSRelay:
 
         ## dummy socket to ensure the system doesnt send TCP resets to clients trying to connect
         ## through the proxy, which is all HTTPS traffic via a ip table nat redirect
-        self.proxy_sock = socket(AF_INET, SOCK_STREAM)
-        self.proxy_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-        self.proxy_sock.bind(('', 443))
-        self.proxy_sock.listen()
+#        self.proxy_sock = socket(AF_INET, SOCK_STREAM)
+#        self.proxy_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+#        self.proxy_sock.bind(('', 443))
+#        self.proxy_sock.listen()
 
         self.tls_ports = {443}
                
@@ -92,14 +92,14 @@ class TLSRelay:
                         sock, nat_port = self.CreateSocket()
                         connection = {'Client': {'IP': src_ip, 'Port': src_port, 'MAC': src_mac},
                                         'NAT': {'IP': self.wan_ip, 'Port': nat_port, 'MAC': self.wan_mac},
-                                        'Inside': {'MAC': self.lan_mac},
+                                        'LAN': {'MAC': self.lan_mac},
                                         'Server': {'IP': dst_ip, 'Port': dst_port}}
                         packet_from_host = PacketManipulation(host_packet_headers, self.wan_info, data_from_host, connection, from_server=False)
                         packet_from_host.Start()
                         self.wan_sock.send(packet_from_host.send_data)
                         
                     if (conn_handle):
-                        print('Sending Connection to Thread')
+                        print(f'Sending Connection to Thread: CLIENT {src_port} | NAT {nat_port}')
                         Relay = threading.Thread(target=self.RelayThread, args=(sock, connection))
                         Relay.daemon = True
                         Relay.start()
@@ -139,6 +139,8 @@ class TLSRelay:
                 if src_ip == server_ip and src_port == server_port:
                 ## Checking desination port to match against original source port. if a match, will relay the packet
                 ## information back to the original host/client.
+                    print('hi mom')
+                    print(f'{dst_port} : {nat_port}')
                     if (dst_port == nat_port):
                         ## Parsing packets to wan interface to look for https response.
                         packet_from_server = PacketManipulation(server_packet_headers, lan_info, data_from_server, connection, from_server=True)
@@ -262,6 +264,7 @@ class PacketManipulation:
             self.src_ip = connection['NAT']['IP']
             self.nat_port = connection['NAT']['Port']
             self.nat_port = struct.pack('!H', self.nat_port)
+            self.dst_ip = self.packet_headers.dst
             self.dst_port = self.data[36:38]
 
     def Start(self):
@@ -295,21 +298,20 @@ class PacketManipulation:
                 self.tcp_header_length += bit_values[i]
 
         self.tcp_header = self.data[34:34+self.tcp_header_length]
-        self.tcp_segment_length = len(self.data) - 34
+        self.tcp_length = len(self.data) - 34
         if (len(self.data) > 34+self.tcp_header_length):
             self.payload = self.data[34+self.tcp_header_length:]
 
     def PsuedoHeader(self):
         psuedo_header = b''
         psuedo_header += inet_aton(self.src_ip)
-        if (self.from_server):
-            psuedo_header += inet_aton(self.dst_ip)
-            psuedo_header += struct.pack('!2BH', 0, 6, self.tcp_segment_length)
-            psuedo_packet = psuedo_header + self.data[34:34+2] + self.client_port + self.data[34+4:34+16] + b'\x00\x00' + self.data[34+18:]
+        psuedo_header += inet_aton(self.dst_ip)
+        psuedo_header += struct.pack('!2BH', 0, 6, self.tcp_length)
+        if (self.from_server):            
+            psuedo_header += self.tcp_header[0:2] + self.client_port + self.tcp_header[4:16] + b'\x00\x00' + self.tcp_header[18:]     
         else:
-            psuedo_header += inet_aton(self.packet_headers.dst)
-            psuedo_header += struct.pack('!2BH', 0, 6, self.tcp_segment_length)
-            psuedo_packet = psuedo_header + self.nat_port + self.data[36:36+16] + b'\x00\x00' + self.data[34+18:]           
+            psuedo_header += self.nat_port + self.tcp_header[2:16] + b'\x00\x00' + self.tcp_header[18:]
+        psuedo_packet = psuedo_header + self.payload
         
         tcp_checksum = self.Checksum.TCP(psuedo_packet)
         self.tcp_checksum = struct.pack('<H', tcp_checksum)
@@ -333,12 +335,8 @@ class PacketManipulation:
         ipv4_header = b''
         ipv4_header += self.packet_headers.ipv4H[:10]
         ipv4_header += b'\x00\x00'
-        ipv4_header += inet_aton(self.src_ip)
-
-        if (self.from_server):            
-            ipv4_header += inet_aton(self.packet_headers.dst)
-        else:
-            ipv4_header += inet_aton(self.dst_ip)      
+        ipv4_header += inet_aton(self.src_ip)           
+        ipv4_header += inet_aton(self.dst_ip) 
 
         if (len(self.packet_headers.ipv4H) > 20):
             ipv4_header += self.packet_headers.ipv4H[20:]
@@ -356,7 +354,7 @@ class PacketManipulation:
             tcp_header = self.nat_port + self.tcp_header[2:16] + self.tcp_checksum + b'\x00\x00'
 
         if (self.tcp_header_length > 20):
-            tcp_header += self.tcp_header[20:self.tcp_header_length]          
+            tcp_header += self.tcp_header[20:self.tcp_header_length]
 
         return tcp_header
 
