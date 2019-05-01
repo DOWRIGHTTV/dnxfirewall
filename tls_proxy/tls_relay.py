@@ -254,10 +254,11 @@ class PacketManipulation:
 
         if (from_server):
             self.dst_ip = connection['Client']['IP']
-            self.dst_port = connection['Client']['Port']
-            self.dst_port = struct.pack('!H', connection['Client']['Port'])            
+            self.client_port = connection['Client']['Port']
+            self.client_port = struct.pack('!H', connection['Client']['Port'])            
         else:
             self.nat_port = connection['NAT']['Port']
+            self.nat_port = struct.pack('!H', self.nat_port)
             self.dst_port = self.data[36:38]
 
     def Start(self):
@@ -300,10 +301,9 @@ class PacketManipulation:
         psuedo_header += inet_aton(self.src_ip)
         if (self.from_server):
             psuedo_header += inet_aton(self.dst_ip)
-            psuedo_header += struct.pack('!2BH', 0, 6, self.tcp_segment_length)            
-            psuedo_packet = psuedo_header + self.data[34:34+16] + b'\x00\x00' + self.data[34+18:]
+            psuedo_header += struct.pack('!2BH', 0, 6, self.tcp_segment_length)
+            psuedo_packet = psuedo_header + self.data[34:34+2] + self.client_port + self.data[34+4:34+16] + b'\x00\x00' + self.data[34+18:]
         else:
-            self.nat_port = struct.pack('!H', self.nat_port)
             psuedo_header += inet_aton(self.packet_headers.dst)
             psuedo_header += struct.pack('!2BH', 0, 6, self.tcp_segment_length)
             psuedo_packet = psuedo_header + self.nat_port + self.data[36:36+16] + b'\x00\x00' + self.data[34+18:]           
@@ -332,10 +332,10 @@ class PacketManipulation:
         ipv4_header += b'\x00\x00'
         ipv4_header += inet_aton(self.src_ip)
 
-        if (self.dst_ip):
-            ipv4_header += inet_aton(self.dst_ip)
-        else:            
-            ipv4_header += inet_aton(self.packet_headers.dst)         
+        if (self.from_server):            
+            ipv4_header += inet_aton(self.packet_headers.dst)
+        else:
+            ipv4_header += inet_aton(self.dst_ip)      
 
         if (len(self.packet_headers.ipv4H) > 20):
             ipv4_header += self.packet_headers.ipv4H[20:]
@@ -348,7 +348,7 @@ class PacketManipulation:
 
     def RebuildTCP(self):
         if (self.from_server):
-            tcp_header = self.tcp_header[:2] + self.dst_port + self.tcp_header[4:16 ]+ self.tcp_checksum + b'\x00\x00'
+            tcp_header = self.tcp_header[:2] + self.client_port + self.tcp_header[4:16] + self.tcp_checksum + b'\x00\x00'
         else:            
             tcp_header = self.nat_port + self.tcp_header[2:16] + self.tcp_checksum + b'\x00\x00'
 
