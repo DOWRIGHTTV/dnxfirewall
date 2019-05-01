@@ -35,10 +35,10 @@ class TLSRelay:
         self.wan_ip = Int.IP(self.waniface)
         dfg = Int.DefaultGateway()
         dfg_mac = Int.IPtoMAC(dfg)
-        wan_mac = Int.MAC(self.waniface)
+        self.wan_mac = Int.MAC(self.waniface)
         self.lan_mac = Int.MAC(self.iniface)
         wan_subnet = Int.WANSubnet(self.waniface, dfg)
-        self.header_adjustment = [wan_mac, dfg_mac, self.wan_ip, wan_subnet]     
+        self.wan_info = [dfg_mac, wan_subnet]     
 
         self.active_connections = {'Clients': {}}
         self.nat_ports = {}
@@ -91,9 +91,10 @@ class TLSRelay:
                     if (relay):
                         sock, nat_port = self.CreateSocket()
                         connection = {'Client': {'IP': src_ip, 'Port': src_port, 'MAC': src_mac},
-                                        'NAT': {'IP': self.wan_ip, 'Port': nat_port},
+                                        'NAT': {'IP': self.wan_ip, 'Port': nat_port, 'MAC': self.wan_mac},
+                                        'Inside': {'MAC': self.lan_mac},
                                         'Server': {'IP': dst_ip, 'Port': dst_port}}
-                        packet_from_host = PacketManipulation(host_packet_headers, self.header_adjustment, data_from_host, connection, from_server=False)
+                        packet_from_host = PacketManipulation(host_packet_headers, self.wan_info, data_from_host, connection, from_server=False)
                         packet_from_host.Start()
                         self.wan_sock.send(packet_from_host.send_data)
                         
@@ -119,7 +120,7 @@ class TLSRelay:
         server_port = connection['Server']['Port']
         ## packing required information into a list for the response to build headers and assigning variables
         ## in the local scope for ip info from packet from host instanced class of PacketManipulation.
-        header_adjustment = [self.lan_mac, client_mac, server_ip, {}]
+        lan_info = [client_mac, {}]
         
         ## -- 75 ms delay on all requests to give proxy more time to react -- ## Should be more tightly tuned
 #        time.sleep(.01)
@@ -140,7 +141,7 @@ class TLSRelay:
                 ## information back to the original host/client.
                     if (dst_port == nat_port):
                         ## Parsing packets to wan interface to look for https response.
-                        packet_from_server = PacketManipulation(server_packet_headers, header_adjustment, data_from_server, connection, from_server=True)
+                        packet_from_server = PacketManipulation(server_packet_headers, lan_info, data_from_server, connection, from_server=True)
                         packet_from_server.Start()
 
 #                        print('HTTPS Response Received from Server')
@@ -237,26 +238,28 @@ class PacketHeaders:
         self.src_port = self.data[34:36]
 
 class PacketManipulation:
-    def __init__(self, packet_headers, header_adjustment, data, connection, from_server):
+    def __init__(self, packet_headers, net_info, data, connection, from_server):
         self.Checksum = Checksums()
         self.packet_headers = packet_headers
-        self.src_mac, self.dst_mac, self.src_ip, self.wan_subnet = header_adjustment
+        self.dst_mac, self.wan_subnet = net_info
         self.data = data
         self.connection = connection
         self.from_server = from_server
 
         self.tcp_header_length = 0 
-        self.dst_ip = None      
-        self.dport = None
-        self.sport = None
+        self.dst_ip = None
         self.nat_port = None
         self.payload = b''
 
         if (from_server):
+            self.src_mac = connection['LAN']['MAC']
+            self.src_ip = connection['Server']['IP']
             self.dst_ip = connection['Client']['IP']
             self.client_port = connection['Client']['Port']
             self.client_port = struct.pack('!H', connection['Client']['Port'])            
         else:
+            self.src_mac = connection['NAT']['MAC']
+            self.src_ip = connection['NAT']['IP']
             self.nat_port = connection['NAT']['Port']
             self.nat_port = struct.pack('!H', self.nat_port)
             self.dst_port = self.data[36:38]
