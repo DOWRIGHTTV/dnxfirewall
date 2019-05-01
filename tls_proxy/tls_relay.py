@@ -82,14 +82,17 @@ class TLSRelay:
                     dst_port = host_packet_headers.dport
 
                     if src_ip not in active_connections:
-                        active_connections[src_ip] = {src_port: ''}
+                        sock, nat_port = self.CreateSocket()
+                        active_connections[src_ip] = {src_port: nat_port}
                         conn_handle = True
                     elif (src_ip in active_connections and src_port not in active_connections[src_ip]):
-                        active_connections[src_ip].update({src_port: ''})    
+                        sock, nat_port = self.CreateSocket()
+                        active_connections[src_ip].update({src_port: nat_port})
                         conn_handle = True
+                    else:
+                        nat_port = active_connections[src_ip][src_port]
                         
                     if (relay):
-                        sock, nat_port = self.CreateSocket()
                         connection = {'Client': {'IP': src_ip, 'Port': src_port, 'MAC': src_mac},
                                         'NAT': {'IP': self.wan_ip, 'Port': nat_port, 'MAC': self.wan_mac},
                                         'LAN': {'MAC': self.lan_mac},
