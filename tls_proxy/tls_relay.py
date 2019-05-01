@@ -67,13 +67,13 @@ class TLSRelay:
             active_connections = self.active_connections['Clients']
             conn_handle = False
             relay = True
-            data_from_host, _ = self.lan_sock.recvfrom(65565)
+            data_from_host = self.lan_sock.recv(65565)
 #                start = time.time()
             try:
                 host_packet_headers = PacketHeaders(data_from_host)
                 host_packet_headers.Parse()
                 if (host_packet_headers.dport in self.tls_ports):
-                    print(f'HTTPS CONNECTION FROM HOST: {host_packet_headers.sport}')
+#                    print(f'HTTPS CONNECTION FROM HOST: {host_packet_headers.sport}')
 
                     src_mac = host_packet_headers.smac
                     src_ip = host_packet_headers.src
@@ -132,7 +132,7 @@ class TLSRelay:
         ''' Sending rebuilt packet to original destination from local client, currently forwarding all packets,
         in the future will attempt to validated from tls proxy whether packet is ok for forwarding. '''
         while True:
-            data_from_server, _ = wan_sock.recvfrom(65565)
+            data_from_server = wan_sock.recv(65565)
             try:
                 server_packet_headers = PacketHeaders(data_from_server, nat_port)
                 server_packet_headers.Parse()
@@ -142,8 +142,6 @@ class TLSRelay:
                 if src_ip == server_ip and src_port == server_port:
                 ## Checking desination port to match against original source port. if a match, will relay the packet
                 ## information back to the original host/client.
-                    print('hi mom')
-                    print(f'{dst_port} : {nat_port}')
                     if (dst_port == nat_port):
                         ## Parsing packets to wan interface to look for https response.
                         packet_from_server = PacketManipulation(server_packet_headers, lan_info, data_from_server, connection, from_server=True)
@@ -153,13 +151,13 @@ class TLSRelay:
                         self.lan_sock.send(packet_from_server.send_data)
                         print(f'Response sent to Host: {connection["Client"]["Port"]}')
                         self.time_out = 0
-                        break
                 ## Time out connection after not recieving anything from remote server for |7 seconds|
                 ## This number should be tuned further as it may unnecessarily long.
-                if (self.time_out >= 7):
+                if (self.time_out >= 2):
                     src_ip = connection['Client']['IP']
                     active_connections[src_ip].pop(client_port, None)
                     sock.close()
+                    wan_sock.close()
                     break
             except DNXError:
                 pass
