@@ -66,17 +66,20 @@ class TLSRelay:
         while True:
             active_connections = self.active_connections['Clients']
             conn_handle = False
+            relay = True
             data_from_host, _ = self.lan_sock.recvfrom(65565)
 #                start = time.time()
             try:
-                packet_headers = PacketHeaders(data_from_host)
-                if (packet_headers.dport in self.tls_ports):
-                    print(f'HTTPS CONNECTION FROM HOST: {packet_headers.sport}')
+                host_packet_headers = PacketHeaders(data_from_host)
+                host_packet_headers.Parse()
+                if (host_packet_headers.dport in self.tls_ports):
+                    print(f'HTTPS CONNECTION FROM HOST: {host_packet_headers.sport}')
 
-                    src_ip = packet_headers.src
-                    src_port = packet_headers.sport
-                    dst_ip = packet_headers.dst
-                    dst_port = packet_headers.dport
+                    src_mac = host_packet_headers.smac
+                    src_ip = host_packet_headers.src
+                    src_port = host_packet_headers.sport
+                    dst_ip = host_packet_headers.dst
+                    dst_port = host_packet_headers.dport
 
                     if src_ip not in active_connections:
                         active_connections[src_ip] = {src_port: ''}
@@ -84,17 +87,19 @@ class TLSRelay:
                     elif (src_ip in active_connections and src_port not in active_connections[src_ip]):
                         active_connections[src_ip].update({src_port: ''})    
                         conn_handle = True
-                    if (conn_handle):
+                        
+                    if (relay):
                         sock, nat_port = self.CreateSocket()
-                        packet_from_host = PacketManipulation(packet_headers, self.header_adjustment, data_from_host)
-                        packet_from_host.Start()
-                        self.wan_sock.send(packet_from_host.send_data)
-
-                        print('Sending Connection to Thread')
-                        connection = {'Client': {'IP': src_ip, 'Port': src_port},
+                        connection = {'Client': {'IP': src_ip, 'Port': src_port, 'MAC': src_mac},
                                         'NAT': {'IP': self.wan_ip, 'Port': nat_port},
                                         'Server': {'IP': dst_ip, 'Port': dst_port}}
-                        Relay = threading.Thread(target=self.RelayThread, args=(sock, connection, packet_from_host))
+                        packet_from_host = PacketManipulation(host_packet_headers, self.header_adjustment, data_from_host, connection, from_server=False)
+                        packet_from_host.Start()
+                        self.wan_sock.send(packet_from_host.send_data)
+                        
+                    if (conn_handle):
+                        print('Sending Connection to Thread')
+                        Relay = threading.Thread(target=self.RelayThread, args=(sock, connection))
                         Relay.daemon = True
                         Relay.start()
             except DNXError as DE:
@@ -102,17 +107,20 @@ class TLSRelay:
             except Exception as E:
                 print(f'MAIN PARSE EXCEPTION: {E}')
             
-    def RelayThread(self, sock, connection, packet_from_host):
+    def RelayThread(self, sock, connection):
         active_connections = self.active_connections['Clients']
         wan_sock = socket(AF_PACKET, SOCK_RAW)
         wan_sock.bind((self.waniface, 3))
 #        print(f'HTTPS Request Relayed to Server')
+        client_mac = connection['Client']['MAC']
+        client_port = connection['Client']['Port']
+        nat_port = connection['NAT']['Port']
+        server_ip = connection['Server']['IP']
+        server_port = connection['Server']['Port']
         ## packing required information into a list for the response to build headers and assigning variables
         ## in the local scope for ip info from packet from host instanced class of PacketManipulation.
-        header_adjustment = [self.lan_mac, packet_from_host.smac, packet_from_host.dst, {}]
-        nat_port = connection['NAT']['Port']
-        host_port = packet_from_host.sport
-        src_ip = packet_from_host.src
+        header_adjustment = [self.lan_mac, client_mac, server_ip, {}]
+        
         ## -- 75 ms delay on all requests to give proxy more time to react -- ## Should be more tightly tuned
 #        time.sleep(.01)
         ## -------------- ##
@@ -122,16 +130,17 @@ class TLSRelay:
         while True:
             data_from_server, _ = wan_sock.recvfrom(65565)
             try:
-                packet_headers = PacketHeaders(data_from_server, nat_port)
-                src_ip = packet_headers.src
-                src_port = packet_headers.sport
-                dst_port = packet_headers.dport
-                if src_ip == connection['Server']['IP'] and src_port == connection['Server']['Port']:
+                server_packet_headers = PacketHeaders(data_from_server, nat_port)
+                server_packet_headers.Parse()
+                src_ip = server_packet_headers.src
+                src_port = server_packet_headers.sport
+                dst_port = server_packet_headers.dport
+                if src_ip == server_ip and src_port == server_port:
                 ## Checking desination port to match against original source port. if a match, will relay the packet
                 ## information back to the original host/client.
                     if (dst_port == nat_port):
                         ## Parsing packets to wan interface to look for https response.
-                        packet_from_server = PacketManipulation(packet_headers, header_adjustment, data_from_server, connection)
+                        packet_from_server = PacketManipulation(server_packet_headers, header_adjustment, data_from_server, connection, from_server=True)
                         packet_from_server.Start()
 
 #                        print('HTTPS Response Received from Server')
@@ -143,7 +152,7 @@ class TLSRelay:
                 ## This number should be tuned further as it may unnecessarily long.
                 if (self.time_out >= 7):
                     src_ip = connection['Client']['IP']
-                    active_connections[src_ip].pop(host_port, None)
+                    active_connections[src_ip].pop(client_port, None)
                     sock.close()
                     break
             except DNXError:
@@ -170,8 +179,11 @@ class PacketHeaders:
     def __init__(self, data, nat_port=None):
         self.data = data
         self.nat_port = nat_port
+        
+        self.dport = None
+        self.sport = None
 
-    def Start(self):
+    def Parse(self):
         self.Ethernet()
         self.IP()
         self.Protocol()
@@ -225,12 +237,13 @@ class PacketHeaders:
         self.src_port = self.data[34:36]
 
 class PacketManipulation:
-    def __init__(self, packet_headers, header_adjustment, data, connection=None):
+    def __init__(self, packet_headers, header_adjustment, data, connection, from_server):
         self.Checksum = Checksums()
         self.packet_headers = packet_headers
         self.src_mac, self.dst_mac, self.src_ip, self.wan_subnet = header_adjustment
         self.data = data
         self.connection = connection
+        self.from_server = from_server
 
         self.tcp_header_length = 0 
         self.dst_ip = None      
@@ -239,14 +252,12 @@ class PacketManipulation:
         self.nat_port = None
         self.payload = b''
 
-        if (connection):
+        if (from_server):
             self.dst_ip = connection['Client']['IP']
             self.dst_port = connection['Client']['Port']
-            self.nat_port = connection['NAT']['Port']
-
-        if (connection):
-            self.dst_port = struct.pack('!H', connection['Client']['Port'])
+            self.dst_port = struct.pack('!H', connection['Client']['Port'])            
         else:
+            self.nat_port = connection['NAT']['Port']
             self.dst_port = self.data[36:38]
 
     def Start(self):
@@ -287,12 +298,15 @@ class PacketManipulation:
     def PsuedoHeader(self):
         psuedo_header = b''
         psuedo_header += inet_aton(self.src_ip)
-        if (self.dst_ip):
+        if (self.from_server):
             psuedo_header += inet_aton(self.dst_ip)
+            psuedo_header += struct.pack('!2BH', 0, 6, self.tcp_segment_length)            
+            psuedo_packet = psuedo_header + self.data[34:34+16] + b'\x00\x00' + self.data[34+18:]
         else:
-            psuedo_header += inet_aton(self.packet_headers.dst)            
-        psuedo_header += struct.pack('!2BH', 0, 6, self.tcp_segment_length)
-        psuedo_packet = psuedo_header + self.data[34:34+16] + b'\x00\x00' + self.data[34+18:]
+            self.nat_port = struct.pack('!H', self.nat_port)
+            psuedo_header += inet_aton(self.packet_headers.dst)
+            psuedo_header += struct.pack('!2BH', 0, 6, self.tcp_segment_length)
+            psuedo_packet = psuedo_header + self.nat_port + self.data[36:36+16] + b'\x00\x00' + self.data[34+18:]           
         
         tcp_checksum = self.Checksum.TCP(psuedo_packet)
         self.tcp_checksum = struct.pack('<H', tcp_checksum)
@@ -333,10 +347,11 @@ class PacketManipulation:
         return ipv4_header
 
     def RebuildTCP(self):
-        if (self.connection):
+        if (self.from_server):
             tcp_header = self.tcp_header[:2] + self.dst_port + self.tcp_header[4:16 ]+ self.tcp_checksum + b'\x00\x00'
-        else:
-            tcp_header = self.tcp_header[:16] + self.tcp_checksum + b'\x00\x00'
+        else:            
+            tcp_header = self.nat_port + self.tcp_header[2:16] + self.tcp_checksum + b'\x00\x00'
+
         if (self.tcp_header_length > 20):
             tcp_header += self.tcp_header[20:self.tcp_header_length]          
 
