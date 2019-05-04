@@ -49,13 +49,6 @@ class TLSRelay:
         self.wan_sock = socket(AF_PACKET, SOCK_RAW)
         self.wan_sock.bind((self.waniface, 3))
 
-        ## dummy socket to ensure the system doesnt send TCP resets to clients trying to connect
-        ## through the proxy, which is all HTTPS traffic via a ip table nat redirect
-#        self.proxy_sock = socket(AF_INET, SOCK_STREAM)
-#        self.proxy_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-#        self.proxy_sock.bind(('', 443))
-#        self.proxy_sock.listen()
-
         self.tls_ports = {443}
                
     def Start(self):
@@ -163,6 +156,8 @@ class TLSRelay:
                     break
             except DNXError:
                 pass
+            except OSError as E:
+                print(f'{E} : {len(packet_from_server.send_data)}')
             except Exception as E:
                 print(f'RELAY PARSE EXCEPTION: {E}')
                 traceback.print_exc()
