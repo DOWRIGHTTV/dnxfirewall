@@ -28,7 +28,7 @@
             },
             "Server2": {
                 "Name": "OpenDNS2",
-                "IP Address": "208.67.220.220"
+                "Subnet": "208.67.220.220"
             }
         },
         "TimeRestriction": {

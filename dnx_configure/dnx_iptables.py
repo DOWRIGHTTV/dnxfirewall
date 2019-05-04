@@ -62,6 +62,7 @@ class Defaults:
         run('iptables -A INPUT -i {} -p tcp --dport 443 -j ACCEPT'.format(self.inside_int), shell=True) # Allowing HTTPS to Firewalls Web server (internal only)
         run('iptables -A INPUT -i {} -p tcp --dport 80 -j ACCEPT'.format(self.inside_int), shell=True) # Allowing HTTP to Firewalls Web server (internal only)
         run('iptables -A INPUT -i {} -p tcp --dport 5000 -j ACCEPT'.format(self.inside_int), shell=True) # Allowing HTTP to Firewalls Web server (internal only)
+        run('iptables -A INPUT -i {} -d 255.255.255.255 -j ACCEPT'.format(self.inside_int), shell=True)
         run('iptables -A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT', shell=True) # Tracking connection state for return traffic from WAN back Firewall itself
 
     def main_output_set(self):
