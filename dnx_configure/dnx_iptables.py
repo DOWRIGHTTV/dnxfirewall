@@ -1,5 +1,5 @@
 
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import os, sys, time
 import json
@@ -18,7 +18,7 @@ class Defaults:
         self.dns_chains = ['MALICIOUS', 'WHITELIST' , 'BLACKLIST']
         self.custom_chains = ['MALICIOUS', 'WHITELIST' , 'BLACKLIST', 'FIREWALL', 'NAT', 'TOR']
 
-	self.path = os.environ['HOME_DIR']
+        self.path = os.environ['HOME_DIR']
 
         with open('{}/data/config.json'.format(self.path), 'r') as cfg:
             settings = json.load(cfg)
