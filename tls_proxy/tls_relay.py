@@ -101,6 +101,8 @@ class TLSRelay:
                         Relay.start()
             except DNXError as DE:
                 print(DE)
+            except OSError as OS:
+                print(f'{OS} | FROM: {len(packet_from_host.send_data)} | SEND: {len(data_from_host)}')
             except Exception as E:
                 print(f'MAIN PARSE EXCEPTION: {E}')
             
