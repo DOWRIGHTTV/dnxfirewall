@@ -10,7 +10,7 @@ from subprocess import run
 path = os.environ['HOME_DIR']
 sys.path.insert(0, path)
 
-from dnx_configure.dnx_system_info import System, Interface
+from dnx_configure.dnx_system_info import Interface
 from dnx_configure.dnx_db_connector import DBConnector
 from fw_proxy.fw_proxy_sniffer import Sniffer
 from fw_proxy.fw_proxy_timer import Timer as TM

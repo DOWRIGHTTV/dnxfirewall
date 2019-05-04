@@ -24,7 +24,7 @@ class DHCPServer:
             setting = json.load(settings)
 
         self.insideint = setting['Settings']['Interface']['Inside']
-        self.localNet = setting['Settings']['LocalNet']['IP Address']
+        self.localNet = setting['Settings']['LocalNet']['Subnet']
         self.ongoing = {}
 
         self.Leases = DHCPLeases(self.localNet)

@@ -12,7 +12,7 @@ from subprocess import run
 path = os.environ['HOME_DIR']
 sys.path.insert(0, path)
 
-from tls_proxy.tls_sniffer import Sniffer
+from tls_proxy.tls_relay import TLSRelay
 from dnx_configure.dnx_db_connector import DBConnector
 
 class TLSProxy:
@@ -39,13 +39,14 @@ class TLSProxy:
         self.ssl_sigs = {'google.com': 'test', 'dell.com': 'test', 'www.digicert.com' : 'BAD CA'}
 
     def Proxy(self):
-        Proxy = Sniffer(self.iface, action=self.SignatureCheck)
+        Proxy = TLSRelay(action=self.SignatureCheck)
         Proxy.Start()
 
     def SignatureCheck(self, packet, ssl):
         start = time()
         try:
-            redirect = False
+            block = False
+            forward = True
             hittime = round(time())
     #        mac = packet.smac
             src_ip = packet.dst
@@ -74,10 +75,13 @@ class TLSProxy:
                     domain = None
                     redirect, reason, category = self.StandardBlock(domain, src_ip, src_port, dst_ip)
 
-            if (redirect):
-    #            action = 'Blocked'
-                #self.TrafficLogging(domain, hittime, category, reason, action, table='TLSProxy')
-                print(f'WOULD REDIRECT {src_ip} : {domain}')
+            if (block):
+                action = 'Blocked'
+#                self.TrafficLogging(domain, hittime, category, reason, action, table='TLSProxy')
+                print(f'NOT FORWARDING {src_ip} : {domain}')
+                forward = False
+
+            return forward
         except Exception as E:
             print(E)
         
@@ -87,7 +91,7 @@ class TLSProxy:
         print('%'*30)
     def StandardBlock(self, domain, src_ip, src_port, dst_ip):
         print('Standard Block: {}'.format(domain))
-        redirect = True
+        block = True
         chain = 'SSL'
         if (domain):
             reason = 'Category'
@@ -96,9 +100,9 @@ class TLSProxy:
             reason = 'Policy'
             category = 'Self Signed'
 
-        run(f'iptables -I {chain} -p tcp -s {src_ip} --sport {src_port} -d {dst_ip} -j REJECT', shell=True)  
+#        run(f'iptables -I {chain} -p tcp -s {src_ip} --sport {src_port} -d {dst_ip} -j REJECT', shell=True)  
 
-        return redirect, reason, category
+        return block, reason, category
 
     def TrafficLogging(self, arg1, arg2, arg3, arg4, arg5, table):
         if (table in {'TLSProxy'}):

@@ -17,10 +17,12 @@ from socket import socket, inet_aton, AF_PACKET, SOCK_RAW, AF_INET
 from socket import SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
 from dnx_configure.dnx_system_info import Interface
 from dnx_configure.dnx_exceptions import *
+from tls_proxy.tls_sniffer import SSLHandlerThread, SSL, SSLType
 
 
 class TLSRelay:
-    def __init__(self):
+    def __init__(self, action):
+        self.action = action
         self.path = os.environ['HOME_DIR']
         
         with open('{}/data/config.json'.format(self.path), 'r') as settings:
@@ -95,18 +97,19 @@ class TLSRelay:
                         self.wan_sock.send(packet_from_host.send_data)
                         
                     if (conn_handle):
+                        SSL = SSLType(data_from_host)
+                        _, tcp_info = SSL.Parse()
                         print(f'Sending Connection to Thread: CLIENT {src_port} | NAT {nat_port}')
-                        Relay = threading.Thread(target=self.RelayThread, args=(sock, connection))
+                        Relay = threading.Thread(target=self.RelayThread, args=(sock, connection, tcp_info))
                         Relay.daemon = True
                         Relay.start()
+
             except DNXError as DE:
                 print(DE)
-            except OSError as OS:
-                print(f'{OS} | FROM: {len(packet_from_host.send_data)} | SEND: {len(data_from_host)}')
             except Exception as E:
                 print(f'MAIN PARSE EXCEPTION: {E}')
             
-    def RelayThread(self, sock, connection):
+    def RelayThread(self, sock, connection, tcp_info):
         active_connections = self.active_connections['Clients']
         wan_sock = socket(AF_PACKET, SOCK_RAW)
         wan_sock.bind((self.waniface, 3))
@@ -119,11 +122,9 @@ class TLSRelay:
         ## packing required information into a list for the response to build headers and assigning variables
         ## in the local scope for ip info from packet from host instanced class of PacketManipulation.
         lan_info = [client_mac, {}]
-        
-        ## -- 75 ms delay on all requests to give proxy more time to react -- ## Should be more tightly tuned
-#        time.sleep(.01)
-        ## -------------- ##
         threading.Thread(target=self.Timer).start()
+
+        SSLHandler = SSLHandlerThread(tcp_info, self.action)
         ''' Sending rebuilt packet to original destination from local client, currently forwarding all packets,
         in the future will attempt to validated from tls proxy whether packet is ok for forwarding. '''
         while True:
@@ -139,16 +140,18 @@ class TLSRelay:
                 ## information back to the original host/client.
                     if (dst_port == nat_port):
                         ## Parsing packets to wan interface to look for https response.
-                        packet_from_server = PacketManipulation(server_packet_headers, lan_info, data_from_server, connection, from_server=True)
-                        packet_from_server.Start()
+                        forward = self.CheckSSLType(SSLHandler, data_from_server)
+                        if (forward):
+                            packet_from_server = PacketManipulation(server_packet_headers, lan_info, data_from_server, connection, from_server=True)
+                            packet_from_server.Start()
 
-#                        print('HTTPS Response Received from Server')
-                        self.lan_sock.send(packet_from_server.send_data)
-                        print(f'Response sent to Host: {connection["Client"]["Port"]}')
-                        self.time_out = 0
+    #                        print('HTTPS Response Received from Server')
+                            self.lan_sock.send(packet_from_server.send_data)
+                            print(f'Response sent to Host: {connection["Client"]["Port"]}')
+                            self.time_out = 0
                 ## Time out connection after not recieving anything from remote server for |7 seconds|
                 ## This number should be tuned further as it may unnecessarily long.
-                if (self.time_out >= 2):
+                if (self.time_out >= 30):
                     src_ip = connection['Client']['IP']
                     active_connections[src_ip].pop(client_port, None)
                     sock.close()
@@ -156,11 +159,15 @@ class TLSRelay:
                     break
             except DNXError:
                 pass
-            except OSError as E:
-                print(f'{E} : {len(packet_from_server.send_data)}')
             except Exception as E:
                 print(f'RELAY PARSE EXCEPTION: {E}')
                 traceback.print_exc()
+
+    def CheckSSLType(self, SSLHandler, data_from_server):
+        if (len(data_from_server) >= 75):
+            forward = SSLHandler.Start(data_from_server)
+
+            return forward
 
     def CreateSocket(self):
         sock = socket(AF_INET, SOCK_STREAM)
@@ -191,9 +198,9 @@ class PacketHeaders:
         if (self.protocol in {6}):
             self.Ports()           
             if (self.dport in {443}):
-                pass
+                return
             elif (self.sport in {443} and self.dport == self.nat_port):
-                pass
+                return
             else:
                 raise TCPProtocolError('Packet is not related to HTTPS or to the specific session.')
         else:
