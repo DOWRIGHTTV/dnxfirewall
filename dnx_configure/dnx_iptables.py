@@ -14,22 +14,15 @@ from dnx_configure.dnx_system_info import Interface
 
 class Defaults:
     def __init__(self):
-        Int = Interface()
+        self.path = os.environ['HOME_DIR']
         self.dns_chains = ['MALICIOUS', 'WHITELIST' , 'BLACKLIST']
         self.custom_chains = ['MALICIOUS', 'WHITELIST' , 'BLACKLIST', 'FIREWALL', 'NAT', 'TOR']
-
-        self.path = os.environ['HOME_DIR']
 
         with open('{}/data/config.json'.format(self.path), 'r') as cfg:
             settings = json.load(cfg)
 
         self.inside_int = settings['Settings']['Interface']['Inside']
         self.wan_int = settings['Settings']['Interface']['Outside']
-        self.extdns = settings['Settings']['ExternalDNS']['Enabled']
-        self.localnet = settings['Settings']['LocalNet']['IP Address']
-
-        self.insideip = Int.IP(self.inside_int)
-        self.wanip = Int.IP(self.wan_int)
 
     def Start(self):
         try:
