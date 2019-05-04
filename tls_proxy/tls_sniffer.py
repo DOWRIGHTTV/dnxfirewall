@@ -124,6 +124,8 @@ class SSLHandlerThread:
                             self.action(packet, ssl)
 
                     return forward
+            else:
+                return True
         except Exception as E:
             print(E)
        
