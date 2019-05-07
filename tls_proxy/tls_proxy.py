@@ -36,7 +36,8 @@ class TLSProxy:
         self.Proxy()
 
     def LoadSignatures(self):
-        self.ssl_sigs = {'google.com': 'test', 'dell.com': 'test', 'www.digicert.com' : 'BAD CA'}
+#        self.ssl_sigs = {'google.com': 'test', 'dell.com': 'test', 'www.digicert.com' : 'BAD CA'}
+        self.ssl_sigs = {}
 
     def Proxy(self):
         Proxy = TLSRelay(action=self.SignatureCheck)
