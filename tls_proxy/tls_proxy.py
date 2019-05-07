@@ -36,8 +36,8 @@ class TLSProxy:
         self.Proxy()
 
     def LoadSignatures(self):
-#        self.ssl_sigs = {'google.com': 'test', 'dell.com': 'test', 'www.digicert.com' : 'BAD CA'}
-        self.ssl_sigs = {}
+        self.ssl_sigs = {'google.com': 'test', 'dell.com': 'test', 'www.digicert.com' : 'BAD CA'}
+#        self.ssl_sigs = {}
 
     def Proxy(self):
         Proxy = TLSRelay(action=self.SignatureCheck)
@@ -69,17 +69,19 @@ class TLSProxy:
             for domain in self.domain_matches:
                 if (domain in self.ssl_sigs):
                     redirect, reason, category = self.StandardBlock(domain, client_ip, client_port, server_ip)
+                    block = True
                     break
 
             if (self.self_signed_block):
                 if (len(ssl) == 1):
                     domain = None
                     redirect, reason, category = self.StandardBlock(domain, client_ip, client_port, server_ip)
+                    block = True
 
             if (block):
                 action = 'Blocked'
 #                self.TrafficLogging(domain, hittime, category, reason, action, table='TLSProxy')
-                print(f'NOT FORWARDING {src_ip} : {domain}')
+                print(f'NOT FORWARDING {client_ip} : {domain}')
                 forward = False
 
             return forward

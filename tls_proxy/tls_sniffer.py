@@ -123,7 +123,7 @@ class SSLHandlerThread:
                         if (ssl.certificate_chain):
                             self.action(self.connection, ssl)
 
-                    return forward
+                return forward
             else:
                 return True
         except Exception as E:

@@ -101,7 +101,7 @@ class TLSRelay:
                         self.wan_sock.send(packet_from_host.send_data)
                         relay = False
 
-                    elif src_ip not in active_connections:
+                    elif (src_ip not in active_connections):
                         nat_port = self.tcp_handshakes['Clients'][src_ip][src_port]
                         active_connections[src_ip] = {src_port: nat_port}
                         conn_handle = True
@@ -119,7 +119,6 @@ class TLSRelay:
                         self.wan_sock.send(packet_from_host.send_data)
                         
                     if (conn_handle):
-                        tcp_handshakes[src_ip].pop(src_port, None)
                         SSL = SSLType(data_from_host)
                         _, tcp_info = SSL.Parse()
                         print(f'Sending Connection to Thread: CLIENT {src_port} | NAT {nat_port}')
@@ -132,6 +131,8 @@ class TLSRelay:
             except Exception as E:
                 print(f'MAIN PARSE EXCEPTION: {E}')
                 traceback.print_exc()
+#                print(f'HANDHSAKES: {tcp_handshakes}')
+#                print(f'CONNS: {self.connections}')
 
     def CreateConnection(self, src_mac, src_ip, src_port, dst_ip, dst_port):
         tcp_handshakes = self.tcp_handshakes['Clients']
@@ -191,10 +192,11 @@ class TLSRelay:
                         packet_from_server.Start()
                         if (src_ip not in active_connections):
                             self.lan_sock.send(packet_from_server.send_data)
-                            break
+                            
                         elif (src_ip in active_connections and src_port not in active_connections[src_ip]):
                             self.lan_sock.send(packet_from_server.send_data)
-                            break                        
+                if (timeout >= 2):
+                    break                               
             except DNXError as DE:
                 pass
             except Exception as E:
@@ -202,6 +204,7 @@ class TLSRelay:
             
     def SSLRelayThread(self, sock, connection, tcp_info):
         active_connections = self.active_connections['Clients']
+        tcp_handshakes = self.tcp_handshakes['Clients']
         connections = self.connections['Clients']
         wan_sock = socket(AF_PACKET, SOCK_RAW)
         wan_sock.bind((self.waniface, 3))
@@ -231,8 +234,11 @@ class TLSRelay:
                 ## Checking desination port to match against original source port. if a match, will relay the packet
                 ## information back to the original host/client.
                     if (dst_port == nat_port):
+                        self.time_out = 0
                         ## Parsing packets to wan interface to look for https response.
                         forward = self.CheckSSLType(SSLHandler, data_from_server)
+#                        forward = True
+                        print(forward)
                         if (forward):
                             packet_from_server = PacketManipulation(server_packet_headers, lan_info, data_from_server, connection, from_server=True)
                             packet_from_server.Start()
@@ -240,13 +246,13 @@ class TLSRelay:
     #                        print('HTTPS Response Received from Server')
                             self.lan_sock.send(packet_from_server.send_data)
                             print(f'Response sent to Host: {connection["Client"]["Port"]}')
-                            self.time_out = 0
                 ## Time out connection after not recieving anything from remote server for |7 seconds|
                 ## This number should be tuned further as it may unnecessarily long.
-                if (self.time_out >= 30):
+                if (self.time_out >= 60):
                     src_ip = connection['Client']['IP']
                     active_connections[src_ip].pop(client_port, None)
                     connections[src_ip].pop(client_port, None)
+                    tcp_handshakes[src_ip].pop(src_port, None)
                     sock.close()
                     wan_sock.close()
                     break
