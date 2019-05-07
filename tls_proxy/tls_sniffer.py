@@ -54,8 +54,8 @@ class SSLHandlerThread:
         ack_number = None
         forward = True
         try:
-            SSL = SSLType(data)
-            _, tcp_info = SSL.Parse()
+            SSLT = SSLType(data)
+            _, tcp_info = SSLT.Parse()
             if (tcp_info):
                 seq_number, ack_number, tcp_header_length, tcp_segment_length = tcp_info
                 
@@ -142,7 +142,6 @@ class SSLHandlerThread:
         ssl_packet = b''
         for seq_number in ssl_packet_order:
             packet = self.ssl_packet[seq_number]
-            print(packet)
             if (seq_number == self.initial_sequence_number):
                 ssl_packet += packet
             else:                

@@ -159,7 +159,6 @@ class TLSRelay:
         return sock, connection
     
     def TCPRelayThread(self, sock, connection):
-        tcp_handshakes = self.tcp_handshakes['Clients']
         wan_sock = socket(AF_PACKET, SOCK_RAW)
         wan_sock.bind((self.waniface, 3))
 #        print(f'HTTPS Request Relayed to Server')
