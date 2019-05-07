@@ -42,16 +42,16 @@ class TLSProxy:
         Proxy = TLSRelay(action=self.SignatureCheck)
         Proxy.Start()
 
-    def SignatureCheck(self, packet, ssl):
+    def SignatureCheck(self, connection, ssl):
         start = time()
         try:
             block = False
             forward = True
             hittime = round(time())
     #        mac = packet.smac
-            src_ip = packet.dst
-            src_port = packet.dport
-            dst_ip = packet.src
+            client_ip = connection['Client']['IP']
+            client_port = connection['Client']['Port']
+            server_ip = connection['Server']['IP']
 
             for i, certificate in enumerate(ssl.certificate_chain, 1):
                 matches = re.findall(self.domain_reg, certificate.decode('utf-8', 'ignore'))
@@ -67,13 +67,13 @@ class TLSProxy:
             
             for domain in self.domain_matches:
                 if (domain in self.ssl_sigs):
-                    redirect, reason, category = self.StandardBlock(domain, src_ip, src_port, dst_ip)
+                    redirect, reason, category = self.StandardBlock(domain, client_ip, client_port, server_ip)
                     break
 
             if (self.self_signed_block):
                 if (len(ssl) == 1):
                     domain = None
-                    redirect, reason, category = self.StandardBlock(domain, src_ip, src_port, dst_ip)
+                    redirect, reason, category = self.StandardBlock(domain, client_ip, client_port, server_ip)
 
             if (block):
                 action = 'Blocked'
@@ -89,7 +89,7 @@ class TLSProxy:
         print('%'*30)
         print(end-start)
         print('%'*30)
-    def StandardBlock(self, domain, src_ip, src_port, dst_ip):
+    def StandardBlock(self, domain, client_ip, client_port, server_ip):
         print('Standard Block: {}'.format(domain))
         block = True
         chain = 'SSL'

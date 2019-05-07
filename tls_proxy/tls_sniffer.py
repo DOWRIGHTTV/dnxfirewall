@@ -16,7 +16,8 @@ class SSLHandlerThread:
     SSL Server Hello packet is combined up until the Server Hello end it will send the reorder and reformat
     the packet to look as though it was sent as one, then will send the packet to the SSL Parse class to have
     the SSL Cert in the chain split from the packet and sent to the TLS Proxy. '''
-    def __init__(self, tcp_info, action):
+    def __init__(self, connection, tcp_info, action):
+        self.connection = connection
         seq_number, ack_number, _, tcp_segment_length = tcp_info
         self.action = action
         self.active = True
@@ -49,20 +50,19 @@ class SSLHandlerThread:
         hello_done = self.handshake['hello_done']
         start = time.time()
         print('+'*30)
-        print('CLIENT HELLO - Sent to SSL HANDLER')
         same_packet = False
         ack_number = None
         forward = True
         try:
-            packet = SSLType(data)
-            _, tcp_info = packet.Parse()
+            SSL = SSLType(data)
+            _, tcp_info = SSL.Parse()
             if (tcp_info):
                 seq_number, ack_number, tcp_header_length, tcp_segment_length = tcp_info
                 
             if (ack_number == self.expected_ack_number):
                 print(f'ACK: {ack_number} || EXCPECTED ACK: {self.expected_ack_number}')
                 if (seq_number in self.ssl_packet):
-                    pass
+                    marked = False
                 elif (seq_number == self.initial_sequence_number):
                     print(f'SEQ: {seq_number} || INITIAL SEQUENCE: {self.initial_sequence_number}')
                     self.tcp_header_length = tcp_header_length
@@ -121,7 +121,7 @@ class SSLHandlerThread:
                         print(end-start)
                         print('*'*50)
                         if (ssl.certificate_chain):
-                            self.action(packet, ssl)
+                            self.action(self.connection, ssl)
 
                     return forward
             else:

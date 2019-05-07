@@ -18,8 +18,8 @@
             "Enabled": 1
         },
         "Interface": {
-            "Outside": "eth0",
-            "Inside": "eth0"
+            "Outside": "enp0s3",
+            "Inside": "enp0s8"
         },
         "DNSServers": {
             "Server1": {
@@ -28,7 +28,7 @@
             },
             "Server2": {
                 "Name": "OpenDNS2",
-                "Subnet": "208.67.220.220"
+                "IP Address": "208.67.220.220"
             }
         },
         "TimeRestriction": {
@@ -47,7 +47,7 @@
             }
         },
         "LocalNet": {
-            "IP Address": "192.168.5.0/24"
+            "IP Address": "192.168.83.0/24"
         },
         "DHCPReservations": {
             "aa:aa:aa:aa:aa:aa": {
