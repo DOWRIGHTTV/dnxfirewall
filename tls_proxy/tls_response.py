@@ -64,8 +64,8 @@ class CreatePacket:
 
     def AssignValues(self):
         self.l2pro = 0x0800
-        self.nat_port = self.connection['NAT']['Port']
-        self.client_port = self.connection['Client']['Port']
+        self.nat_port = struct.pack('!H', self.connection['NAT']['Port'])
+        self.client_port = struct.pack('!H', self.connection['Client']['Port'])
 
         if (self.to_server):
             self.smac = self.connection['NAT']['MAC']
