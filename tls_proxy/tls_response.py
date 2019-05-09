@@ -54,7 +54,11 @@ class CreatePacket:
     def Create(self):
         self.AssignValues()
         self.CreateIPv4()
+        self.CreateTCP()
+
         self.AssembleIPv4()
+        self.AssembleTCP()
+        
         self.ip_checksum = self.Checksum.IPv4(self.ipv4_header)
         self.tcp_checksum = self.PseudoHeader()
 

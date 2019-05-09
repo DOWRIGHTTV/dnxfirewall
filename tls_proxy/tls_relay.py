@@ -129,8 +129,9 @@ class TLSRelay:
             except DNXError as DE:
                 pass
             except Exception as E:
-                print(f'MAIN PARSE EXCEPTION: {E}')
-                traceback.print_exc()
+                pass
+#                print(f'MAIN PARSE EXCEPTION: {E}')
+#                traceback.print_exc()
 #                print(f'HANDHSAKES: {tcp_handshakes}')
 #                print(f'CONNS: {self.connections}')
 
@@ -239,14 +240,14 @@ class TLSRelay:
                         ## Parsing packets to wan interface to look for https response.
                         forward = self.CheckSSLType(SSLHandler, data_from_server)
 #                        forward = True
-                        print(forward)
+#                        print(forward)
                         if (forward):
                             packet_from_server = PacketManipulation(server_packet_headers, lan_info, data_from_server, connection, from_server=True)
                             packet_from_server.Start()
 
     #                        print('HTTPS Response Received from Server')
                             self.lan_sock.send(packet_from_server.send_data)
-                            print(f'Response sent to Host: {connection["Client"]["Port"]}')
+#                            print(f'Response sent to Host: {connection["Client"]["Port"]}')
                 ## Time out connection after not recieving anything from remote server for |7 seconds|
                 ## This number should be tuned further as it may unnecessarily long.
                 if (self.time_out >= 120):
