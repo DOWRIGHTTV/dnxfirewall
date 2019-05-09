@@ -127,7 +127,7 @@ class TLSRelay:
                         SSLRelay.start()
 
             except DNXError as DE:
-                print(DE)
+                pass
             except Exception as E:
                 print(f'MAIN PARSE EXCEPTION: {E}')
                 traceback.print_exc()
