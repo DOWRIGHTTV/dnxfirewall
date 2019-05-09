@@ -150,7 +150,7 @@ class TLSRelay:
                         'NAT': {'IP': self.wan_ip, 'Port': nat_port, 'MAC': self.wan_mac},
                         'LAN': {'IP': self.lan_ip, 'MAC': self.lan_mac},
                         'Server': {'IP': dst_ip, 'Port': dst_port},
-                        'WAN': {self.wan_info},
+                        'DFG': {'MAC': self.wan_info[0]},
                         'Socket': sock}
                         
         if (connect is True):                
