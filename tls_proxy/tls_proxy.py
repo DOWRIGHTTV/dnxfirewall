@@ -4,6 +4,7 @@ import os, sys
 import threading
 import json
 import re
+import traceback
 
 from time import time
 from datetime import datetime
@@ -95,6 +96,7 @@ class TLSProxy:
 
             return forward
         except Exception as E:
+            traceback.print_exc()
             print(E)
         
         end = time()
