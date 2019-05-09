@@ -49,7 +49,6 @@ class SSLHandlerThread:
         server_hello = self.handshake['server_hello']
         hello_done = self.handshake['hello_done']
         start = time.time()
-        print('+'*30)
         same_packet = False
         ack_number = None
         forward = True
