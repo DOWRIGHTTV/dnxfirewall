@@ -58,7 +58,7 @@ class CreatePacket:
 
         self.AssembleIPv4()
         self.AssembleTCP()
-        
+
         self.ip_checksum = self.Checksum.IPv4(self.ipv4_header)
         self.tcp_checksum = self.PseudoHeader()
 
@@ -130,7 +130,7 @@ class CreatePacket:
         )
 
 ## -- L4 - UDP Section ---- ##            
-    def CreateTCP(self):            
+    def CreateTCP(self):          
         self.tcp_seq = 0
         self.tcp_ack_seq = 0
         self.tcp_hdr_len = 80
@@ -156,13 +156,15 @@ class CreatePacket:
 
     def AssembleTCP(self):
         self.tcp_header = struct.pack('!2H2L2B3H',
+        self.sport,
+        self.dport,
         self.tcp_seq,
         self.tcp_ack_seq,
         self.tcp_hdr_len,
         self.tcp_flags,
         self.tcp_wdw,
         self.tcp_chk,
-        self.tcp_urg_ptr                 
+        self.tcp_urg_ptr
         )
 
     def PseudoHeader(self):
