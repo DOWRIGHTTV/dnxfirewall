@@ -249,7 +249,7 @@ class TLSRelay:
                             print(f'Response sent to Host: {connection["Client"]["Port"]}')
                 ## Time out connection after not recieving anything from remote server for |7 seconds|
                 ## This number should be tuned further as it may unnecessarily long.
-                if (self.time_out >= 60):
+                if (self.time_out >= 120):
                     src_ip = connection['Client']['IP']
                     active_connections[src_ip].pop(client_port, None)
                     connections[src_ip].pop(client_port, None)
