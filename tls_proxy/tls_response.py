@@ -22,7 +22,7 @@ class TLSResponse:
         wan_int = setting['Settings']['Interface']['Outside']          
         lan_int = setting['Settings']['Interface']['Inside']
 
-        wan_int = 'eth0'
+#        wan_int = 'eth0'
         self.s = socket(AF_PACKET, SOCK_RAW)
         if (to_server):
             self.s.bind((wan_int, 0))
