@@ -11,9 +11,7 @@ from socket import socket, htons, inet_aton, AF_PACKET, SOCK_RAW, IPPROTO_TCP
 path = os.environ['HOME_DIR']
 sys.path.insert(0, path)
 
-from dnx_configure.dnx_system_info import Interface
 from dnx_configure.dnx_packet_checks import Checksums
-
 
 class TLSResponse:
     def __init__(self, connection, to_server=False):
@@ -24,6 +22,7 @@ class TLSResponse:
         wan_int = setting['Settings']['Interface']['Outside']          
         lan_int = setting['Settings']['Interface']['Inside']
 
+        wan_int = 'eth0'
         self.s = socket(AF_PACKET, SOCK_RAW)
         if (to_server):
             self.s.bind((wan_int, 0))
@@ -47,9 +46,6 @@ class CreatePacket:
         self.connection = connection
         self.to_server = to_server
 
-        self.ipv4_checksum = 0
-        self.tcp_checksum = 0
-
         self.Checksum = Checksums()
     
     def Create(self):
@@ -60,7 +56,7 @@ class CreatePacket:
         self.AssembleIPv4()
         self.AssembleTCP()
 
-        self.ip_checksum = self.Checksum.IPv4(self.ipv4_header)
+        self.ipv4_checksum = self.Checksum.IPv4(self.ipv4_header)
         self.tcp_checksum = self.PseudoHeader()
 
     def AssignValues(self):
@@ -97,9 +93,9 @@ class CreatePacket:
         self.ip_ver = (ip_ver << 4 ) + ip_vhl
         ip_dsc = 0
         ip_ecn = 0
-        self.ip_dfc = (ip_dsc << 2 ) + ip_ecn        
-        self.ip_tol = 20                    # ---- [ Total Length]        
-        self.ip_idf = 0                     # ---- [ Identification ]        
+        self.ip_dfc = (ip_dsc << 2 ) + ip_ecn
+        self.ip_tol = 20 + 20                   # ---- [ Total Length]        
+        self.ip_idf = 1                     # ---- [ Identification ]        
         ip_rsv = 0                          # ---- [ Flags ]
         ip_dtf = 0
         ip_mrf = 0
@@ -108,7 +104,7 @@ class CreatePacket:
         self.ip_flg = (ip_rsv << 7) + (ip_dtf << 6) + (ip_mrf << 5) + (ip_frag_offset)        
         self.ip_ttl = 255                           # ---- [ Total Length ]        
         self.ip_proto = IPPROTO_TCP                 # ---- [ Protocol ]        
-        self.ip_chk = self.ipv4_checksum            # ---- [ Check Sum ]        
+        self.ipv4_checksum = 0           # ---- [ Check Sum ]        
         self.ip_saddr = inet_aton(self.src_ip)      # ---- [ Source Address ]        
         self.ip_daddr = inet_aton(self.dst_ip)      # ---- [ Destination Address ]
     
@@ -123,7 +119,7 @@ class CreatePacket:
         self.ip_proto        # protocol
         )    
         self.ipv4_header += struct.pack('<H' ,
-        self.ip_chk         # Checksum
+        self.ipv4_checksum         # Checksum
         )
         self.ipv4_header += struct.pack('!4s4s' ,
         self.ip_saddr,        # Source IP 
@@ -132,28 +128,25 @@ class CreatePacket:
 
 ## -- L4 - UDP Section ---- ##            
     def CreateTCP(self):          
-        self.tcp_seq = 0
+        self.tcp_seq = 696969
         self.tcp_ack_seq = 0
         self.tcp_hdr_len = 80
 
-        tcp_flags_rsv = (0 << 9)
-        tcp_flags_noc = (0 << 8)
-        tcp_flags_cwr = (0 << 7)
-        tcp_flags_ecn = (0 << 6)
-        tcp_flags_urg = (0 << 5)
-        tcp_flags_ack = (1 << 4)
-        tcp_flags_psh = (0 << 3)
-        tcp_flags_rst = (0 << 2)
-        tcp_flags_syn = (0 << 1)
-        tcp_flags_fin = (0)
+        tcp_urg = 0
+        tcp_ack = 0
+        tcp_psh = 0
+        tcp_rst = 1
+        tcp_syn = 0
+        tcp_fin = 0
 
-        self.tcp_flags = tcp_flags_rsv + tcp_flags_noc + tcp_flags_cwr + \
-                tcp_flags_ecn + tcp_flags_urg + tcp_flags_ack + \
-                tcp_flags_psh + tcp_flags_rst + tcp_flags_syn + tcp_flags_fin
+        tcp_doff = 5
+        self.tcp_offset_res = (tcp_doff << 4) + 0
+        self.tcp_flags = tcp_fin + (tcp_syn << 1) + (tcp_rst << 2) + (tcp_psh << 3) + (tcp_ack << 4) + (tcp_urg << 5)
 
         self.tcp_wdw = htons(5840)
-        self.tcp_chk = self.tcp_checksum
+        self.tcp_checksum = 0
         self.tcp_urg_ptr = 0
+        self.padding = b'\x00'*12
 
     def AssembleTCP(self):
         self.tcp_header = struct.pack('!2H2L2B3H',
@@ -161,10 +154,10 @@ class CreatePacket:
         self.dport,
         self.tcp_seq,
         self.tcp_ack_seq,
-        self.tcp_hdr_len,
+        self.tcp_offset_res,
         self.tcp_flags,
         self.tcp_wdw,
-        self.tcp_chk,
+        self.tcp_checksum,
         self.tcp_urg_ptr
         )
 
@@ -182,3 +175,14 @@ class CreatePacket:
         tcp_checksum = self.Checksum.TCP(pseudo_packet)
 
         return tcp_checksum
+
+if __name__ == '__main__':
+    connection = {'Client': {'IP': '192.168.5.135', 'Port': 4400, 'MAC': 'bb:bb:bb:bb:bb:bb'},
+                        'NAT': {'IP': '192.168.5.135', 'Port': 4400, 'MAC': '08:00:27:02:10:b6'},
+                        'LAN': {'IP': '10.10.10.10', 'MAC': 'aa:aa:aa:aa:aa:aa'},
+                        'Server': {'IP': '192.168.2.1', 'Port': 4444},
+                        'DFG': {'MAC': 'fc:aa:14:fe:1d:c8'},
+                        'Socket': 'sock'}
+
+    TLSR = TLSResponse(connection, to_server=True)
+    TLSR.Send()
