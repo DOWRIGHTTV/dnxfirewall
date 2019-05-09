@@ -52,6 +52,7 @@ class CreatePacket:
         self.Checksum = Checksums()
     
     def Create(self):
+        self.AssignValues()
         self.CreateIPv4()
         self.AssembleIPv4()
         self.ip_checksum = self.Checksum.IPv4(self.ipv4_header)
