@@ -13,6 +13,8 @@ path = os.environ['HOME_DIR']
 sys.path.insert(0, path)
 
 from tls_proxy.tls_relay import TLSRelay
+from tls_proxy.tls_dsocket import TLSSocket
+from tls_proxy.tls_response import TLSResponse as TLSR
 from dnx_configure.dnx_db_connector import DBConnector
 
 class TLSProxy:
@@ -20,7 +22,7 @@ class TLSProxy:
         self.path = os.environ['HOME_DIR']
         with open('{}/data/config.json'.format(self.path), 'r') as settings:
             self.setting = json.load(settings)                                
-        self.iface = self.setting['Settings']['Interface']['Inside'] 
+        self.lan_int = self.setting['Settings']['Interface']['Inside'] 
 
         self.domain_reg = re.compile(
         r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z]{2,}\.?))', re.IGNORECASE)
@@ -41,7 +43,9 @@ class TLSProxy:
 
     def Proxy(self):
         Proxy = TLSRelay(action=self.SignatureCheck)
-        Proxy.Start()
+
+        threading.Thread(target=TLSSocket).start()
+        threading.Thread(target=Proxy.Start).start()
 
     def SignatureCheck(self, connection, ssl):
         start = time()
@@ -79,9 +83,14 @@ class TLSProxy:
                     block = True
 
             if (block):
+                TLSResponse = TLSR(connection, to_server=True)
+                TLSResponse.Send()
+                TLSResponse = TLSR(connection, to_server=False)
+                TLSResponse.Send()
                 action = 'Blocked'
 #                self.TrafficLogging(domain, hittime, category, reason, action, table='TLSProxy')
                 print(f'NOT FORWARDING {client_ip} : {domain}')
+
                 forward = False
 
             return forward

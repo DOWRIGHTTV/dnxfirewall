@@ -40,7 +40,7 @@ class TLSRelay:
         self.wan_mac = Int.MAC(self.waniface)
         self.lan_mac = Int.MAC(self.iniface)
         wan_subnet = Int.WANSubnet(self.waniface, dfg)
-        self.wan_info = [dfg_mac, wan_subnet]     
+        self.wan_info = [dfg_mac, wan_subnet]
 
         self.connections = {'Clients': {}}
         self.active_connections = {'Clients': {}}
@@ -148,8 +148,9 @@ class TLSRelay:
             
         connection = {'Client': {'IP': src_ip, 'Port': src_port, 'MAC': src_mac},
                         'NAT': {'IP': self.wan_ip, 'Port': nat_port, 'MAC': self.wan_mac},
-                        'LAN': {'MAC': self.lan_mac},
+                        'LAN': {'IP': self.lan_ip, 'MAC': self.lan_mac},
                         'Server': {'IP': dst_ip, 'Port': dst_port},
+                        'WAN': {self.wan_info},
                         'Socket': sock}
                         
         if (connect is True):                
@@ -195,7 +196,7 @@ class TLSRelay:
                             
                         elif (src_ip in active_connections and src_port not in active_connections[src_ip]):
                             self.lan_sock.send(packet_from_server.send_data)
-                if (timeout >= 2):
+                if (self.time_out >= 2):
                     break                               
             except DNXError as DE:
                 pass
