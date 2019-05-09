@@ -76,7 +76,7 @@ class CreatePacket:
             self.dport = self.connection['Server']['Port']
         else:
             self.smac = self.connection['LAN']['MAC']
-            self.src_ip = self.connection['LAN']['IP']
+            self.src_ip = self.connection['Server']['IP']
             self.sport = self.connection['Server']['Port']
             self.dmac = self.connection['Client']['MAC']
             self.dst_ip = self.connection['Client']['IP']
