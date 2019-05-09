@@ -38,6 +38,7 @@ class TLSResponse:
         self.Packet.AssembleIPv4()
         self.Packet.AssembleTCP()
         packet = self.Packet.ethernet_header + self.Packet.ipv4_header + self.Packet.tcp_header
+        print(packet)
         self.s.send(packet)
         print('TCP RESET SENT')
 
@@ -85,8 +86,8 @@ class CreatePacket:
 ## -- L2 - Ethernet Section ---- ##
     def AssembleEthernet(self):
         self.ethernet_header = struct.pack('!6s6sH' ,
-        binascii.unhexlify(self.smac.replace(":","")),
         binascii.unhexlify(self.dmac.replace(":","")),
+        binascii.unhexlify(self.smac.replace(":","")),
         self.l2pro)
 
 ## -- L3 - IP Section ---- ##        
