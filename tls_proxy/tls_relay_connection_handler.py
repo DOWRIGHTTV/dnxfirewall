@@ -11,7 +11,7 @@ sys.path.insert(0, path)
 
 from dnx_configure.dnx_exceptions import *
 from tls_proxy.tls_proxy_sniffer import SSLHandlerThread, SSL, SSLType
-from tls_proxy.tls_relay import PacketHeaders, PacketManipulation
+from tls_proxy.tls_proxy_packets import PacketHeaders, PacketManipulation
 
 class ConnectionHandler:
     def __init__(self, tls_relay):
