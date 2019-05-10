@@ -58,8 +58,6 @@ class TLSRelay:
     def Main(self):
         print(f'[+] Listening -> {self.lan_int}')
         while True:
-            active_connections = self.active_connections['Clients']
-            tcp_handshakes = self.tcp_handshakes['Clients']
             conn_handle = False
             relay = True
             data_from_host = self.lan_sock.recv(65565)
@@ -73,19 +71,19 @@ class TLSRelay:
 #                traceback.print_exc()
 
             if (host_packet_headers.dport in self.tls_ports):
-#                    print(f'HTTPS CONNECTION FROM HOST: {host_packet_headers.sport}')
+                print(f'HTTPS CONNECTION FROM HOST: {host_packet_headers.sport}')
                 src_mac = host_packet_headers.smac
                 src_ip = host_packet_headers.src
                 src_port = host_packet_headers.sport
                 dst_ip = host_packet_headers.dst
                 dst_port = host_packet_headers.dport
-#                    print(f'{active_connections} : {len(host_packet_headers.payload)} || DFH: {len(data_from_host)}')
+                print(f'{self.active_connections} : {len(host_packet_headers.payload)} || DFH: {len(data_from_host)}')
                 if (len(host_packet_headers.payload) == 0):
                     tcp_relay = False
-                    if (src_ip not in tcp_handshakes):
+                    if (src_ip not in self.tcp_handshakes):
                         TLSRelay.sock, TLSRelay.connection = self.CreateConnection(src_mac, src_ip, src_port, dst_ip, dst_port)
                         tcp_relay = True
-                    elif (src_ip in tcp_handshakes and src_port not in tcp_handshakes[src_ip]):
+                    elif (src_ip in self.tcp_handshakes and src_port not in self.tcp_handshakes[src_ip]):
                         self.sock, self.connection = self.CreateConnection(src_mac, src_ip, src_port, dst_ip, dst_port)
                         tcp_relay = True
                     else:
@@ -103,16 +101,16 @@ class TLSRelay:
                     self.wan_sock.send(packet_from_host.send_data)
                     relay = False
 
-                elif (src_ip not in active_connections):
+                elif (src_ip not in self.active_connections):
                     nat_port = self.tcp_handshakes['Clients'][src_ip][src_port]
-                    active_connections[src_ip] = {src_port: nat_port}
+                    self.active_connections[src_ip] = {src_port: nat_port}
                     conn_handle = True
-                elif (src_ip in active_connections and src_port not in active_connections[src_ip]):
+                elif (src_ip in self.active_connections and src_port not in self.active_connections[src_ip]):
                     nat_port = self.tcp_handshakes['Clients'][src_ip][src_port]
-                    active_connections[src_ip].update({src_port: nat_port})
+                    self.active_connections[src_ip].update({src_port: nat_port})
                     conn_handle = True
                 else:
-                    nat_port = active_connections[src_ip][src_port]
+                    nat_port = self.active_connections[src_ip][src_port]
                     
                 if (relay):
                     connection = self.connections['Clients'][src_ip][src_port]
