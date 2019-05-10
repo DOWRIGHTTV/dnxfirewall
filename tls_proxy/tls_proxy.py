@@ -14,8 +14,8 @@ path = os.environ['HOME_DIR']
 sys.path.insert(0, path)
 
 from tls_proxy.tls_relay import TLSRelay
-from tls_proxy.tls_dsocket import TLSSocket
-from tls_proxy.tls_response import TLSResponse as TLSR
+from tls_proxy.tls_relay_dsocket import TLSSocket
+from tls_proxy.tls_proxy_response import TLSResponse as TLSR
 from dnx_configure.dnx_db_connector import DBConnector
 
 class TLSProxy:
@@ -113,8 +113,6 @@ class TLSProxy:
         else:
             reason = 'Policy'
             category = 'Self Signed'
-
-#        run(f'iptables -I {chain} -p tcp -s {src_ip} --sport {src_port} -d {dst_ip} -j REJECT', shell=True)  
 
         return block, reason, category
 

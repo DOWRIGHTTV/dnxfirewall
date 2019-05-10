@@ -9,5 +9,3 @@ def TLSSocket():
 
     while True:
         sock.listen()
-
-

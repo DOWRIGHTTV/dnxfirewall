@@ -17,7 +17,9 @@ from socket import socket, inet_aton, AF_PACKET, SOCK_RAW, AF_INET
 from socket import SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
 from dnx_configure.dnx_system_info import Interface
 from dnx_configure.dnx_exceptions import *
-from tls_proxy.tls_sniffer import SSLHandlerThread, SSL, SSLType
+from dnx_configure.dnx_packet_checks import Checksums
+from tls_proxy.tls_proxy_sniffer import SSLHandlerThread, SSL, SSLType
+from tls_proxy.tls_relay_connection_handler import ConnectionHandler as CH
 
 
 class TLSRelay:
@@ -25,115 +27,112 @@ class TLSRelay:
         self.action = action
         self.path = os.environ['HOME_DIR']
         
-        with open('{}/data/config.json'.format(self.path), 'r') as settings:
+        with open(f'{self.path}/data/config.json', 'r') as settings:
             self.setting = json.load(settings)
 
-        self.iniface = self.setting['Settings']['Interface']['Inside']
-        self.waniface = self.setting['Settings']['Interface']['Outside']
+        self.lan_int = self.setting['Settings']['Interface']['Inside']
+        self.wan_int = self.setting['Settings']['Interface']['Outside']
         self.dnsserver = self.setting['Settings']['DNSServers']
 
         Int = Interface()
-        self.lan_ip = Int.IP(self.iniface)
-        self.wan_ip = Int.IP(self.waniface)
+        self.lan_ip = Int.IP(self.lan_int)
+        self.wan_ip = Int.IP(self.wan_int)
         dfg = Int.DefaultGateway()
         dfg_mac = Int.IPtoMAC(dfg)
-        self.wan_mac = Int.MAC(self.waniface)
-        self.lan_mac = Int.MAC(self.iniface)
-        wan_subnet = Int.WANSubnet(self.waniface, dfg)
+        self.wan_mac = Int.MAC(self.wan_int)
+        self.lan_mac = Int.MAC(self.lan_int)
+        wan_subnet = Int.WANSubnet(self.wan_int, dfg)
         self.wan_info = [dfg_mac, wan_subnet]
 
-        self.connections = {'Clients': {}}
-        self.active_connections = {'Clients': {}}
-        self.tcp_handshakes = {'Clients': {}}
+        TLSRelay.connections = {'Clients': {}}
+        TLSRelay.active_connections = {'Clients': {}}
+        TLSRelay.tcp_handshakes = {'Clients': {}}
         self.nat_ports = {}
 
         ## RAW Sockets which actually handle the traffic.
         self.lan_sock = socket(AF_PACKET, SOCK_RAW)
-        self.lan_sock.bind((self.iniface, 3))
+        self.lan_sock.bind((self.lan_int, 3))
         self.wan_sock = socket(AF_PACKET, SOCK_RAW)
-        self.wan_sock.bind((self.waniface, 3))
+        self.wan_sock.bind((self.wan_int, 3))
 
         self.tls_ports = {443}
+        self.tcp_info = []
                
     def Start(self):
         self.Main()
 
     def Main(self):
-        print(f'[+] Listening -> {self.iniface}')
+        print(f'[+] Listening -> {self.lan_int}')
         while True:
             active_connections = self.active_connections['Clients']
             tcp_handshakes = self.tcp_handshakes['Clients']
             conn_handle = False
             relay = True
             data_from_host = self.lan_sock.recv(65565)
-#                start = time.time()
             try:
                 host_packet_headers = PacketHeaders(data_from_host)
                 host_packet_headers.Parse()
-                if (host_packet_headers.dport in self.tls_ports):
-#                    print(f'HTTPS CONNECTION FROM HOST: {host_packet_headers.sport}')
-
-                    src_mac = host_packet_headers.smac
-                    src_ip = host_packet_headers.src
-                    src_port = host_packet_headers.sport
-                    dst_ip = host_packet_headers.dst
-                    dst_port = host_packet_headers.dport
-
-#                    print(f'{active_connections} : {len(host_packet_headers.payload)} || DFH: {len(data_from_host)}')
-                    if (len(host_packet_headers.payload) == 0):
-                        tcp_relay = False
-                        if (src_ip not in tcp_handshakes):
-                            sock, connection = self.CreateConnection(src_mac, src_ip, src_port, dst_ip, dst_port)
-                            tcp_relay = True
-                        elif (src_ip in tcp_handshakes and src_port not in tcp_handshakes[src_ip]):
-                            sock, connection = self.CreateConnection(src_mac, src_ip, src_port, dst_ip, dst_port)
-                            tcp_relay = True
-                        else:
-                            connection = self.connections['Clients'][src_ip][src_port]
-                            
-                        if (tcp_relay):
-                            TCPRelay = threading.Thread(target=self.TCPRelayThread, args=(sock, connection))
-                            TCPRelay.daemon = True
-                            TCPRelay.start()
-                            
-                        packet_from_host = PacketManipulation(host_packet_headers, self.wan_info, data_from_host, connection, from_server=False)
-                        packet_from_host.Start()
-                        self.wan_sock.send(packet_from_host.send_data)
-                        relay = False
-
-                    elif (src_ip not in active_connections):
-                        nat_port = self.tcp_handshakes['Clients'][src_ip][src_port]
-                        active_connections[src_ip] = {src_port: nat_port}
-                        conn_handle = True
-                    elif (src_ip in active_connections and src_port not in active_connections[src_ip]):
-                        nat_port = self.tcp_handshakes['Clients'][src_ip][src_port]
-                        active_connections[src_ip].update({src_port: nat_port})
-                        conn_handle = True
-                    else:
-                        nat_port = active_connections[src_ip][src_port]
-                        
-                    if (relay):
-                        connection = self.connections['Clients'][src_ip][src_port]
-                        packet_from_host = PacketManipulation(host_packet_headers, self.wan_info, data_from_host, connection, from_server=False)
-                        packet_from_host.Start()
-                        self.wan_sock.send(packet_from_host.send_data)
-                        
-                    if (conn_handle):
-                        SSL = SSLType(data_from_host)
-                        _, tcp_info = SSL.Parse()
-                        print(f'Sending Connection to Thread: CLIENT {src_port} | NAT {nat_port}')
-                        SSLRelay = threading.Thread(target=self.SSLRelayThread, args=(sock, connection, tcp_info))
-                        SSLRelay.daemon = True
-                        SSLRelay.start()
-
             except DNXError as DE:
                 pass
             except Exception as E:
-                pass
-#                print(f'MAIN PARSE EXCEPTION: {E}')
+                print(f'MAIN PARSE EXCEPTION: {E}')
 #                traceback.print_exc()
-#                print(f'HANDHSAKES: {tcp_handshakes}')
-#                print(f'CONNS: {self.connections}')
+
+            if (host_packet_headers.dport in self.tls_ports):
+#                    print(f'HTTPS CONNECTION FROM HOST: {host_packet_headers.sport}')
+                src_mac = host_packet_headers.smac
+                src_ip = host_packet_headers.src
+                src_port = host_packet_headers.sport
+                dst_ip = host_packet_headers.dst
+                dst_port = host_packet_headers.dport
+#                    print(f'{active_connections} : {len(host_packet_headers.payload)} || DFH: {len(data_from_host)}')
+                if (len(host_packet_headers.payload) == 0):
+                    tcp_relay = False
+                    if (src_ip not in tcp_handshakes):
+                        self.sock, self.connection = self.CreateConnection(src_mac, src_ip, src_port, dst_ip, dst_port)
+                        tcp_relay = True
+                    elif (src_ip in tcp_handshakes and src_port not in tcp_handshakes[src_ip]):
+                        self.sock, self.connection = self.CreateConnection(src_mac, src_ip, src_port, dst_ip, dst_port)
+                        tcp_relay = True
+                    else:
+                        connection = self.connections['Clients'][src_ip][src_port]
+                        
+                    if (tcp_relay):
+                        ConnectionHandler = CH(TLSRelay)
+                        TCPRelay = threading.Thread(target=ConnectionHandler.Start, args=('TCP',))
+                        TCPRelay.daemon = True
+                        TCPRelay.start()
+                        
+                    packet_from_host = PacketManipulation(host_packet_headers, self.wan_info, data_from_host, connection, from_server=False)
+                    packet_from_host.Start()
+                    self.wan_sock.send(packet_from_host.send_data)
+                    relay = False
+
+                elif (src_ip not in active_connections):
+                    nat_port = self.tcp_handshakes['Clients'][src_ip][src_port]
+                    active_connections[src_ip] = {src_port: nat_port}
+                    conn_handle = True
+                elif (src_ip in active_connections and src_port not in active_connections[src_ip]):
+                    nat_port = self.tcp_handshakes['Clients'][src_ip][src_port]
+                    active_connections[src_ip].update({src_port: nat_port})
+                    conn_handle = True
+                else:
+                    nat_port = active_connections[src_ip][src_port]
+                    
+                if (relay):
+                    connection = self.connections['Clients'][src_ip][src_port]
+                    packet_from_host = PacketManipulation(host_packet_headers, self.wan_info, data_from_host, connection, from_server=False)
+                    packet_from_host.Start()
+                    self.wan_sock.send(packet_from_host.send_data)
+                    
+                if (conn_handle):
+                    SSL = SSLType(data_from_host)
+                    _, self.tcp_info = SSL.Parse()
+                    print(f'Sending Connection to Thread: CLIENT {src_port} | NAT {nat_port}')
+                    ConnectionHandler = CH(TLSRelay)
+                    SSLRelay = threading.Thread(target=ConnectionHandler.Start, args=('SSL'))
+                    SSLRelay.daemon = True
+                    SSLRelay.start()
 
     def CreateConnection(self, src_mac, src_ip, src_port, dst_ip, dst_port):
         tcp_handshakes = self.tcp_handshakes['Clients']
@@ -160,115 +159,6 @@ class TLSRelay:
             connections[src_ip].update({src_port: connection})
 
         return sock, connection
-    
-    def TCPRelayThread(self, sock, connection):
-        wan_sock = socket(AF_PACKET, SOCK_RAW)
-        wan_sock.bind((self.waniface, 3))
-#        print(f'HTTPS Request Relayed to Server')
-        client_mac = connection['Client']['MAC']
-        client_port = connection['Client']['Port']
-        nat_port = connection['NAT']['Port']
-        server_ip = connection['Server']['IP']
-        server_port = connection['Server']['Port']
-        ## packing required information into a list for the response to build headers and assigning variables
-        ## in the local scope for ip info from packet from host instanced class of PacketManipulation.
-        lan_info = [client_mac, {}]
-        threading.Thread(target=self.Timer).start()
-        while True:
-            active_connections = self.active_connections['Clients']
-            data_from_server = wan_sock.recv(65565)
-            try:
-                server_packet_headers = PacketHeaders(data_from_server, nat_port)
-                server_packet_headers.Parse()
-                src_ip = server_packet_headers.src
-                src_port = server_packet_headers.sport
-                dst_port = server_packet_headers.dport
-#                print(f'{src_ip} : {src_port} > {dst_port} || NAT: {nat_port} || PY LEN {len(server_packet_headers.payload)}')
-#                print(f'{server_ip} : {server_port}')
-                if (len(server_packet_headers.payload) == 0 and src_ip == server_ip and src_port == server_port):
-#                    print('RECIEVED SYN/ACK')
-                ## Checking desination port to match against original source port. if a match, will relay the packet
-                ## information back to the original host/client.
-                    if (dst_port == nat_port):
-                        packet_from_server = PacketManipulation(server_packet_headers, lan_info, data_from_server, connection, from_server=True)
-                        packet_from_server.Start()
-                        if (src_ip not in active_connections):
-                            self.lan_sock.send(packet_from_server.send_data)
-                            
-                        elif (src_ip in active_connections and src_port not in active_connections[src_ip]):
-                            self.lan_sock.send(packet_from_server.send_data)
-                if (self.time_out >= 2):
-                    break                               
-            except DNXError as DE:
-                pass
-            except Exception as E:
-                pass
-            
-    def SSLRelayThread(self, sock, connection, tcp_info):
-        active_connections = self.active_connections['Clients']
-        tcp_handshakes = self.tcp_handshakes['Clients']
-        connections = self.connections['Clients']
-        wan_sock = socket(AF_PACKET, SOCK_RAW)
-        wan_sock.bind((self.waniface, 3))
-#        print(f'HTTPS Request Relayed to Server')
-        client_mac = connection['Client']['MAC']
-        client_port = connection['Client']['Port']
-        nat_port = connection['NAT']['Port']
-        server_ip = connection['Server']['IP']
-        server_port = connection['Server']['Port']
-        ## packing required information into a list for the response to build headers and assigning variables
-        ## in the local scope for ip info from packet from host instanced class of PacketManipulation.
-        lan_info = [client_mac, {}]
-        threading.Thread(target=self.Timer).start()
-
-        SSLHandler = SSLHandlerThread(connection, tcp_info, self.action)
-        ''' Sending rebuilt packet to original destination from local client, currently forwarding all packets,
-        in the future will attempt to validated from tls proxy whether packet is ok for forwarding. '''
-        while True:
-            data_from_server = wan_sock.recv(65565)
-            try:
-                server_packet_headers = PacketHeaders(data_from_server, nat_port)
-                server_packet_headers.Parse()
-                src_ip = server_packet_headers.src
-                src_port = server_packet_headers.sport
-                dst_port = server_packet_headers.dport
-                if src_ip == server_ip and src_port == server_port:
-                ## Checking desination port to match against original source port. if a match, will relay the packet
-                ## information back to the original host/client.
-                    if (dst_port == nat_port):
-                        self.time_out = 0
-                        ## Parsing packets to wan interface to look for https response.
-                        forward = self.CheckSSLType(SSLHandler, data_from_server)
-#                        forward = True
-#                        print(forward)
-                        if (forward):
-                            packet_from_server = PacketManipulation(server_packet_headers, lan_info, data_from_server, connection, from_server=True)
-                            packet_from_server.Start()
-
-    #                        print('HTTPS Response Received from Server')
-                            self.lan_sock.send(packet_from_server.send_data)
-#                            print(f'Response sent to Host: {connection["Client"]["Port"]}')
-                ## Time out connection after not recieving anything from remote server for |7 seconds|
-                ## This number should be tuned further as it may unnecessarily long.
-                if (self.time_out >= 120):
-                    src_ip = connection['Client']['IP']
-                    active_connections[src_ip].pop(client_port, None)
-                    connections[src_ip].pop(client_port, None)
-                    tcp_handshakes[src_ip].pop(src_port, None)
-                    sock.close()
-                    wan_sock.close()
-                    break
-            except DNXError:
-                pass
-            except Exception as E:
-                print(f'RELAY PARSE EXCEPTION: {E}')
-                traceback.print_exc()
-
-    def CheckSSLType(self, SSLHandler, data_from_server):
-        if (len(data_from_server) >= 75):
-            forward = SSLHandler.Start(data_from_server)
-
-            return forward
 
     def CreateSocket(self):
         sock = socket(AF_INET, SOCK_STREAM)
@@ -277,12 +167,6 @@ class TLSRelay:
         nat_port = sock.getsockname()[1]
                         
         return sock, nat_port
-
-    def Timer(self):
-        self.time_out = 0
-        while True:
-            time.sleep(1)
-            self.time_out += 1
 
 class PacketHeaders:
     def __init__(self, data, nat_port=None):
@@ -466,7 +350,7 @@ class PacketManipulation:
         if (len(self.packet_headers.ipv4H) > 20):
             ipv4_header += self.packet_headers.ipv4H[20:]
 
-        ipv4_checksum = self.Checksum.IPV4(ipv4_header)
+        ipv4_checksum = self.Checksum.IPv4(ipv4_header)
         ipv4_checksum = struct.pack('<H', ipv4_checksum)
         ipv4_header = ipv4_header[:10] + ipv4_checksum + ipv4_header[12:]
 
@@ -482,42 +366,3 @@ class PacketManipulation:
             tcp_header += self.tcp_header[20:self.tcp_header_length]
 
         return tcp_header
-
-class Checksums:
-    def IPV4(self, header):
-        if len(header) & 1:
-            header = header + '\0'
-        words = array.array('h', header)
-        sum = 0
-        for word in words:
-            sum = sum + (word & 0xffff)
-        hi = sum >> 16
-        lo = sum & 0xffff
-        sum = hi + lo
-        sum = sum + (sum >> 16)
-
-        return (~sum) & 0xffff
-
-    def TCP(self, msg):
-        s = 0
-        # loop taking 2 characters at a time
-        for i in range(0, len(msg), 2):
-            if ((i+1) < len(msg)):
-                a = msg[i]
-                b = msg[i+1]
-                s = s + (a+(b << 8))            
-            elif ((i+1) == len(msg)):
-                s += msg[i]
-
-        s = s + (s >> 16)
-        s = ~s & 0xffff
-
-        return s
-
-if __name__ == "__main__":
-    try:        
-        TLS = TLSRelay()
-        TLS.Start()
-    except KeyboardInterrupt:
-        exit()
-
