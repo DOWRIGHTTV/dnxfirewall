@@ -89,7 +89,7 @@ class TLSRelay:
                         self.sock, self.connection = self.CreateConnection(src_mac, src_ip, src_port, dst_ip, dst_port)
                         tcp_relay = True
                     else:
-                        connection = self.connections['Clients'][src_ip][src_port]
+                        self.connection = self.connections['Clients'][src_ip][src_port]
                         
                     if (tcp_relay):
                         ConnectionHandler = CH(TLSRelay)
@@ -97,7 +97,7 @@ class TLSRelay:
                         TCPRelay.daemon = True
                         TCPRelay.start()
                         
-                    packet_from_host = PacketManipulation(host_packet_headers, self.wan_info, data_from_host, connection, from_server=False)
+                    packet_from_host = PacketManipulation(host_packet_headers, self.wan_info, data_from_host, self.connection, from_server=False)
                     packet_from_host.Start()
                     self.wan_sock.send(packet_from_host.send_data)
                     relay = False
