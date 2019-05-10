@@ -162,7 +162,7 @@ class TLSRelay:
 
     def CreateSocket(self):
         sock = socket(AF_INET, SOCK_STREAM)
-        sock.bind(('', 0))
+        sock.bind((self.wan_ip, 0))
         sock.listen()
         nat_port = sock.getsockname()[1]
                         

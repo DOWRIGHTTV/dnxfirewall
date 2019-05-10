@@ -21,7 +21,7 @@ from dnx_configure.dnx_db_connector import DBConnector
 class TLSProxy:
     def __init__(self):
         self.path = os.environ['HOME_DIR']
-        with open('{}/data/config.json'.format(self.path), 'r') as settings:
+        with open(f'{self.path}/data/config.json', 'r') as settings:
             self.setting = json.load(settings)                                
         self.lan_int = self.setting['Settings']['Interface']['Inside'] 
 
