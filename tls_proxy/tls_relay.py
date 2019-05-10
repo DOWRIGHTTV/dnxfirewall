@@ -18,13 +18,13 @@ from tls_proxy.tls_relay_connection_handler import ConnectionHandler as CH
 
 class TLSRelay:
     def __init__(self, action):
-        self.action = action
+        TLSRelay.action = action
         self.path = os.environ['HOME_DIR']
         
         with open(f'{self.path}/data/config.json', 'r') as settings:
             self.setting = json.load(settings)
 
-        self.lan_int = self.setting['Settings']['Interface']['Inside']
+        TLSRelay.lan_int = self.setting['Settings']['Interface']['Inside']
         self.wan_int = self.setting['Settings']['Interface']['Outside']
         self.dnsserver = self.setting['Settings']['DNSServers']
 
@@ -44,13 +44,13 @@ class TLSRelay:
         self.nat_ports = {}
 
         ## RAW Sockets which actually handle the traffic.
-        self.lan_sock = socket(AF_PACKET, SOCK_RAW)
+        TLSRelay.lan_sock = socket(AF_PACKET, SOCK_RAW)
         self.lan_sock.bind((self.lan_int, 3))
         self.wan_sock = socket(AF_PACKET, SOCK_RAW)
         self.wan_sock.bind((self.wan_int, 3))
 
         self.tls_ports = {443}
-        self.tcp_info = []
+        TLSRelay.tcp_info = []
                
     def Start(self):
         self.Main()
@@ -83,7 +83,7 @@ class TLSRelay:
                 if (len(host_packet_headers.payload) == 0):
                     tcp_relay = False
                     if (src_ip not in tcp_handshakes):
-                        self.sock, self.connection = self.CreateConnection(src_mac, src_ip, src_port, dst_ip, dst_port)
+                        TLSRelay.sock, TLSRelay.connection = self.CreateConnection(src_mac, src_ip, src_port, dst_ip, dst_port)
                         tcp_relay = True
                     elif (src_ip in tcp_handshakes and src_port not in tcp_handshakes[src_ip]):
                         self.sock, self.connection = self.CreateConnection(src_mac, src_ip, src_port, dst_ip, dst_port)
@@ -121,7 +121,7 @@ class TLSRelay:
                     
                 if (conn_handle):
                     SSL = SSLType(data_from_host)
-                    _, self.tcp_info = SSL.Parse()
+                    _, TLSRelay.tcp_info = SSL.Parse()
                     print(f'Sending Connection to Thread: CLIENT {src_port} | NAT {nat_port}')
                     ConnectionHandler = CH(TLSRelay)
                     SSLRelay = threading.Thread(target=ConnectionHandler.Start, args=('SSL'))
