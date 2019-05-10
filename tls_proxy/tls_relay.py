@@ -93,7 +93,7 @@ class TLSRelay:
                         
                     if (tcp_relay):
                         ConnectionHandler = CH(TLSRelay)
-                        TCPRelay = threading.Thread(target=ConnectionHandler.Start, args=('TCP',))
+                        TCPRelay = threading.Thread(target=ConnectionHandler.Start, args=(2, 'TCP'))
                         TCPRelay.daemon = True
                         TCPRelay.start()
                         
@@ -124,7 +124,7 @@ class TLSRelay:
                     _, TLSRelay.tcp_info = SSL.Parse()
                     print(f'Sending Connection to Thread: CLIENT {src_port} | NAT {nat_port}')
                     ConnectionHandler = CH(TLSRelay)
-                    SSLRelay = threading.Thread(target=ConnectionHandler.Start, args=('SSL'))
+                    SSLRelay = threading.Thread(target=ConnectionHandler.Start, args=(120, 'SSL'))
                     SSLRelay.daemon = True
                     SSLRelay.start()
 
