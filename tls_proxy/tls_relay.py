@@ -77,7 +77,7 @@ class TLSRelay:
                 src_port = host_packet_headers.sport
                 dst_ip = host_packet_headers.dst
                 dst_port = host_packet_headers.dport
-                print(f'{self.active_connections} : {len(host_packet_headers.payload)} || DFH: {len(data_from_host)}')
+#                print(f'{self.active_connections} : {len(host_packet_headers.payload)} || DFH: {len(data_from_host)}')
                 if (len(host_packet_headers.payload) == 0):
                     tcp_relay = False
                     if (src_ip not in self.tcp_handshakes):
@@ -130,15 +130,7 @@ class TLSRelay:
     def CreateConnection(self, src_mac, src_ip, src_port, dst_ip, dst_port):
         tcp_handshakes = self.tcp_handshakes['Clients']
         connections = self.connections['Clients']
-        if (src_ip not in tcp_handshakes):
-            sock, nat_port = self.CreateSocket()
-            tcp_handshakes[src_ip] = {src_port: nat_port}
-            connect = True
-        elif (src_ip in tcp_handshakes and src_port not in tcp_handshakes[src_ip]):
-            sock, nat_port = self.CreateSocket()
-            tcp_handshakes[src_ip].update({src_port: nat_port})
-            connect = False
-            
+        sock, nat_port = self.CreateSocket()
         connection = {'Client': {'IP': src_ip, 'Port': src_port, 'MAC': src_mac},
                         'NAT': {'IP': self.wan_ip, 'Port': nat_port, 'MAC': self.wan_mac},
                         'LAN': {'IP': self.lan_ip, 'MAC': self.lan_mac},
@@ -146,9 +138,11 @@ class TLSRelay:
                         'DFG': {'MAC': self.wan_info[0]},
                         'Socket': sock}
                         
-        if (connect is True):                
+        if (src_ip not in tcp_handshakes):
+            tcp_handshakes[src_ip] = {src_port: nat_port}
             connections[src_ip] = {src_port: connection}
-        elif (connect is False):
+        elif (src_ip in tcp_handshakes and src_port not in tcp_handshakes[src_ip]):
+            tcp_handshakes[src_ip].update({src_port: nat_port})
             connections[src_ip].update({src_port: connection})
 
         return sock, connection
