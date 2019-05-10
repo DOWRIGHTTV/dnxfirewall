@@ -66,7 +66,7 @@ class TLSRelay:
             try:
                 host_packet_headers = PacketHeaders(data_from_host)
                 host_packet_headers.Parse()
-            except DNXError as DE:
+            except DNXError:
                 pass
             except Exception as E:
                 print(f'MAIN PARSE EXCEPTION: {E}')
@@ -92,6 +92,7 @@ class TLSRelay:
                         self.connection = self.connections['Clients'][src_ip][src_port]
                         
                     if (tcp_relay):
+                        print('SENDING TO TCP HANDLER')
                         ConnectionHandler = CH(TLSRelay)
                         TCPRelay = threading.Thread(target=ConnectionHandler.Start, args=(2, 'TCP'))
                         TCPRelay.daemon = True

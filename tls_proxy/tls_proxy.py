@@ -49,7 +49,6 @@ class TLSProxy:
         threading.Thread(target=Proxy.Start).start()
 
     def SignatureCheck(self, connection, ssl):
-        start = time()
         try:
             block = False
             forward = True
@@ -98,11 +97,7 @@ class TLSProxy:
         except Exception as E:
             traceback.print_exc()
             print(E)
-        
-        end = time()
-        print('%'*30)
-        print(end-start)
-        print('%'*30)
+
     def StandardBlock(self, domain, client_ip, client_port, server_ip):
         print('Standard Block: {}'.format(domain))
         block = True

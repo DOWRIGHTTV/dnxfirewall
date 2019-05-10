@@ -39,6 +39,7 @@ class ConnectionHandler:
         threading.Thread(target=self.Timer).start()
         while True:
             self.data_from_server = self.wan_sock.recv(65565)
+            print('RECEIVED DATA FROM SERVER')
             try:
                 self.server_packet_headers = PacketHeaders(self.data_from_server, self.nat_port)
                 self.server_packet_headers.Parse()
@@ -49,7 +50,7 @@ class ConnectionHandler:
                 if (protocol == 'TCP'):
                     self.TCP()
                 elif (protocol == 'SSL'):
-                    self.SSL(self.tcp_info)
+                    self.SSL()
 
                 timeout = self.Timeout()
                 if (timeout):
@@ -72,8 +73,8 @@ class ConnectionHandler:
                 elif (self.src_ip in self.tls_relay.active_connections and self.src_port not in self.tls_relay.active_connections[self.src_ip]):
                     self.lan_sock.send(packet_from_server.send_data)
             
-    def SSL(self, tcp_info):
-        SSLHandler = SSLHandlerThread(self.connection, tcp_info, self.action)
+    def SSL(self):
+        SSLHandler = SSLHandlerThread(self.connection, self.tcp_info, self.action)
         ''' Sending rebuilt packet to original destination from local client, currently forwarding all packets,
         in the future will attempt to validated from tls proxy whether packet is ok for forwarding. '''
         if self.src_ip == self.server_ip and self.src_port == self.server_port:
@@ -86,7 +87,6 @@ class ConnectionHandler:
                 if (forward):
                     packet_from_server = PacketManipulation(self.server_packet_headers, self.lan_info, self.data_from_server, self.connection, from_server=True)
                     packet_from_server.Start()
-
 #                        print('HTTPS Response Received from Server')
                     self.lan_sock.send(packet_from_server.send_data)
 #                            print(f'Response sent to Host: {connection["Client"]["Port"]}')
