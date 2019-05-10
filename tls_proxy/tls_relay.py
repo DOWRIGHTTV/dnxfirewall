@@ -24,8 +24,8 @@ class TLSRelay:
         with open(f'{self.path}/data/config.json', 'r') as settings:
             self.setting = json.load(settings)
 
-        TLSRelay.lan_int = self.setting['Settings']['Interface']['Inside']
-        self.wan_int = self.setting['Settings']['Interface']['Outside']
+        self.lan_int = self.setting['Settings']['Interface']['Inside']
+        TLSRelay.wan_int = self.setting['Settings']['Interface']['Outside']
         self.dnsserver = self.setting['Settings']['DNSServers']
 
         Int = Interface()
