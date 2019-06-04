@@ -1,4 +1,4 @@
-#!/usr/bin/ env python3
+#!/usr/bin/env python3
 
 import array
 
@@ -28,6 +28,19 @@ class Checksums:
             elif ((i+1) == len(msg)):
                 s += msg[i]
 
+        s = s + (s >> 16)
+        s = ~s & 0xffff
+
+        return s
+
+    def ICMP(self, msg):
+        s = 0       # Binary Sum
+        # loop taking 2 characters at a time
+        for i in range(0, len(msg), 2):
+            a = msg[i]
+            b = msg[i+1]
+            s = s + (a+(b << 8))     
+        # One's Complement
         s = s + (s >> 16)
         s = ~s & 0xffff
 

@@ -33,7 +33,7 @@ class PacketHeaders:
             elif (self.sport in {443} and self.dport == self.nat_port):
                 return
             else:
-                raise TCPProtocolError('Packet is not related to HTTPS or to the specific session.')
+                raise TCPProtocolError('TCP Protocol is not related to HTTPS or to the specific session.')
         else:
             raise IPProtocolError('Packet protocol is not 6/TCP')
 
