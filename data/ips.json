@@ -1,0 +1,28 @@
+{
+    "IPS": {
+        "DDOS": {
+            "Enabled": false,
+            "Limits": {
+                "Source": {
+                    "TCP": 100,
+                    "UDP": 100,
+                    "ICMP": 100
+                },
+                "Destination": {
+                    "Combined": 200
+                }
+            }
+        },
+        "PortScan": {
+            "Logging": false,
+            "Prevention": false,
+            "Length": 0,
+            "Mitigation": false
+        },
+        "OpenProtocols": {
+            "ICMP": false,
+            "TCP": {},
+            "UDP": {}
+        }
+    }
+}

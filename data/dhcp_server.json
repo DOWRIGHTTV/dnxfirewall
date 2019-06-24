@@ -1,0 +1,14 @@
+{
+    "Options": {
+        "1": "subnetmask",
+        "3": "router",
+        "6": "dnsserver",
+        "26": "mtu",
+        "28": "broadcast",
+        "51": "leasetime",
+        "58": "renewtime",
+        "59": "rebindtime"
+    },
+    "Reservations": {},
+    "Leases": {}
+}

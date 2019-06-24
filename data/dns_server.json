@@ -1,0 +1,15 @@
+{
+    "DNSServer": {
+        "Resolvers": {
+            "Server1": {
+                "Name": "OpenDNS1",
+                "IP Address": "208.67.222.222"
+            },
+            "Server2": {
+                "Name": "OpenDNS2",
+                "IP Address": "208.67.222.220"
+            }
+        },
+        "Records": {}
+    }
+}

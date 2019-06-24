@@ -1,16 +1,27 @@
 #!/usr/bin/python3
 
-from socket import socket, AF_PACKET, SOCK_RAW
+import os, sys
 import struct
 import binascii
 import codecs
 
+from socket import socket, AF_PACKET, SOCK_RAW
+
+path = os.environ['HOME_DIR']
+sys.path.insert(0, path)
+
+from dnx_configure.dnx_exceptions import *
+
+ICMP = 1
+TCP = 6
+UDP = 17
+
 class Sniffer:
-    def __init__(self, iface, action):
-        self.iface = iface
+    def __init__(self, lan_int, action):
+        self.lan_int = lan_int
         self.action = action
         self.s = socket(AF_PACKET, SOCK_RAW)
-        self.s.bind((self.iface, 3))
+        self.s.bind((self.lan_int, 3))
         
     def Start(self):
         print('[+] Sniffing on All Interfaces')
@@ -19,9 +30,9 @@ class Sniffer:
             try:
                 Packet = PacketParse(data, addr)
                 Packet.Parse()
-                if (Packet.protocol == 6 or Packet.protocol == 17):
+                if (Packet.protocol in {TCP, UDP}):
                     self.action(Packet)
-            except AttributeError:
+            except DNXError:
                 pass
             except Exception as E:
                 print(E)
@@ -35,9 +46,10 @@ class PacketParse:
         self.Ethernet()
         self.IP()
         self.Protocol()
-        if (self.protocol != 1):
+        if (self.protocol in {TCP, UDP}):
             self.Ports()
-
+        else:
+            raise IPProtocolError('Packet protocol is not 6/TCP or 17/UDP')
                 
     def Ethernet(self):   
         s = []
@@ -50,14 +62,14 @@ class PacketParse:
         for byte in dmac:
             d.append(byte.hex())
     
-        self.smac = '{}:{}:{}:{}:{}:{}'.format(s[0], s[1], s[2], s[3], s[4], s[5])
-        self.dmac = '{}:{}:{}:{}:{}:{}'.format(d[0], d[1], d[2], d[3], d[4], d[5])  
+        self.smac = f'{s[0]}:{s[1]}:{s[2]}:{s[3]}:{s[4]}:{s[5]}'
+        self.dmac = f'{d[0]}:{d[1]}:{d[2]}:{d[3]}:{d[4]}:{d[5]}'
     
     def IP(self):
         s = struct.unpack('!4B', self.data[26:30])
         d = struct.unpack('!4B', self.data[30:34])
-        self.src = '{}.{}.{}.{}'.format(s[0], s[1], s[2], s[3])
-        self.dst = '{}.{}.{}.{}'.format(d[0], d[1], d[2], d[3])
+        self.src = f'{s[0]}.{s[1]}.{s[2]}.{s[3]}'
+        self.dst = f'{d[0]}.{d[1]}.{d[2]}.{d[3]}'
         
     def Protocol(self):
         self.protocol = self.data[23]

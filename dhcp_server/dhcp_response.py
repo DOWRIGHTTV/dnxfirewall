@@ -5,50 +5,50 @@ import threading, asyncio
 import struct
 
 from socket import inet_aton
+
+path = os.environ['HOME_DIR']
+sys.path.insert(0, path)
+
 from dnx_configure.dnx_system_info import Interface
 
 class DHCPResponse:
-    def __init__(self, insideint, xid, mac, ciaddr, chaddr, options, Leases):
-        Int = Interface()
-        self.insideip = Int.IP(insideint)
+    def __init__(self, response_info):
+        xID, ciaddr, chaddr, handout_ip, options = response_info
 
-        self.Leases = Leases
-
-        self.xID = xid
-        self.chaddr = chaddr
+        self.xID = xID
         self.ciaddr = ciaddr
-        self.serveroptions = options
+        self.chaddr = chaddr
+        self.yiaddr = handout_ip
+        self.server_options = options
 
-        self.yiaddr = self.Leases.Handout(mac)
-        print('Handing Out: {}'.format(self.yiaddr))
+        self.inside_ip = options.get(54)[1] # already A TO N :)
 
     def Assemble(self):
-        self.create_dhcp_packet()
-        self.assemble_dhcp_packet()
+        self.CreateDHCP()
+        self.AssembleDHCP()
         self.AssembleOptions()
         
-        self.dhcp += self.options
+        self.dhcp_response += self.options
         
-        return self.dhcp
+        return self.dhcp_response
                 
     def AssembleOptions(self):
         self.options = b''
-        for option in self.serveroptions:
-            optlen = self.serveroptions[option][0]
-            opt = self.serveroptions[option][1]
+        for option in self.server_options:
+            optlen = self.server_options[option][0]
+            opt = self.server_options[option][1]
             if (option in {53}):
                 self.options += struct.pack('!3B', option, optlen, opt)
             elif (option in {1,3,6,28,54}):
                 self.options += struct.pack('!2B', option, optlen) + opt
-            elif (option == 26):
+            elif (option in {26}):
                 self.options += struct.pack('!2BH', option, optlen, opt)
             elif (option in {51,58,59}):
                 self.options += struct.pack('!2BL', option, optlen, opt)
-            else:
-                pass
+
         self.options += b'\xFF\x00'
         
-    def create_dhcp_packet(self):
+    def CreateDHCP(self):
         self.op         = 2
         self.htype      = 1
         self.hlen       = 6
@@ -58,7 +58,7 @@ class DHCPResponse:
         self.flags      = 0
         self.ciaddr     = inet_aton(self.ciaddr)
         self.yiaddr     = inet_aton(self.yiaddr)
-        self.siaddr     = inet_aton(self.insideip)
+        self.siaddr     = self.inside_ip
         self.giaddr     = inet_aton('0.0.0.0')
         
         self.chaddr     = self.chaddr
@@ -68,15 +68,15 @@ class DHCPResponse:
         self.filename     = struct.pack('!128s', b'\x00' * 128)
         self.mcookie    = struct.pack('!4B', 99, 130, 83, 99)                   
 
-    def assemble_dhcp_packet(self):
-        self.dhcp = struct.pack('!4B' ,
+    def AssembleDHCP(self):
+        self.dhcp_response = struct.pack('!4B' ,
         self.op,
         self.htype,
         self.hlen,
         self.hops
         )
-        self.dhcp += self.xid
-        self.dhcp += struct.pack('2H4s4s4s4s',
+        self.dhcp_response += self.xid
+        self.dhcp_response += struct.pack('2H4s4s4s4s',
         self.secs,
         self.flags,
         self.ciaddr,
@@ -84,5 +84,5 @@ class DHCPResponse:
         self.siaddr,
         self.giaddr
         )
-        self.dhcp += self.chaddr + self.sname + self.filename + self.mcookie
+        self.dhcp_response += self.chaddr + self.sname + self.filename + self.mcookie
     
