@@ -2,13 +2,18 @@
     "DNSServer": {
         "Resolvers": {
             "Server1": {
-                "Name": "OpenDNS1",
-                "IP Address": "208.67.222.222"
+                "Name": "Cloudflare1",
+                "IP Address": "1.1.1.1"
             },
             "Server2": {
-                "Name": "OpenDNS2",
-                "IP Address": "208.67.222.220"
+                "Name": "CloudFlare2",
+                "IP Address": "1.0.0.1"
             }
+        },
+        "TLS": {
+            "Enabled": true,
+            "Fallback": true,
+            "Retry": 5
         },
         "Records": {}
     }

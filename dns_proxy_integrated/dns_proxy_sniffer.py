@@ -11,7 +11,7 @@ from socket import socket, AF_PACKET, SOCK_RAW
 path = os.environ['HOME_DIR']
 sys.path.insert(0, path)
 
-from dnx_configure.dnx_exceptions import *
+from dnx_configure.dnx_exceptions import DNXError, DNSProtocolError, UDPProtocolError, IPProtocolError
 
 UDP = 17
 DNS = 53
@@ -59,18 +59,17 @@ class PacketParse:
             raise IPProtocolError('Packet protocol is not 17/UDP')
                 
     def Ethernet(self):
-        s = []
-        d = []
         smac = struct.unpack('!6c', self.data[6:12])
         dmac = struct.unpack('!6c', self.data[0:6])
 
-        for byte in smac:
-            s.append(byte.hex())
-        for byte in dmac:
-            d.append(byte.hex())
-    
-        self.smac = f'{s[0]}:{s[1]}:{s[2]}:{s[3]}:{s[4]}:{s[5]}'
-        self.dmac = f'{d[0]}:{d[1]}:{d[2]}:{d[3]}:{d[4]}:{d[5]}'    
+        self.smac = ''
+        self.dmac = ''
+        for i, (b1, b2) in enumerate(zip(smac, dmac), 1):
+            if (i != 1):
+                self.smac += ':'
+                self.dmac += ':'
+            self.smac += f'{b1.hex()}'
+            self.dmac += f'{b2.hex()}'
     
     def IPv4(self):
         s = struct.unpack('!4B', self.data[26:30])

@@ -10,6 +10,7 @@ from subprocess import run
 path = os.environ['HOME_DIR']
 sys.path.insert(0, path)
 
+from dnx_syslog.log_main import SyslogService
 from dnx_configure.dnx_system_info import System, Interface
 from dnx_configure.dnx_db_connector import DBConnector
 from dnx_configure.dnx_lists import ListFiles
@@ -29,6 +30,7 @@ class DNSProxy:
 
     def __init__(self):
         self.path = os.environ['HOME_DIR']
+        self.Syslog = SyslogService()
 
         with open(f'{self.path}/data/config.json', 'r') as settings:
             setting = json.load(settings)
@@ -43,12 +45,8 @@ class DNSProxy:
         self.dns_blacklist = None
         self.dns_sigs = {}
         self.dns_records = {}
-        
-        self.ent_logging = True
-        self.ent_full = False        
-        self.log_supress = set()
 
-        DNSProxy.flagged_traffic = {}
+        self.flagged_traffic = {}
 
     ''' Start Method to Initialize All proxy configurations, including cleaning the database tables to the configures
         length. Starting a child thread for DNS Relay and DNS Proxy Sniffer, to handle requests, and doing an AsyncIO
@@ -56,7 +54,7 @@ class DNSProxy:
     def Start(self):
         ListFile = ListFiles()
         ListFile.CombineLists()
-        DNSRelay = DNSR(DNSProxy)
+        DNSRelay = DNSR(self)
 
         self.ProxyDB()
         self.LoadKeywords()
@@ -232,8 +230,7 @@ class DNSProxy:
             action = 'Blocked'
 
             self.TrafficLogging(request, hit_time, category, reason, action, table='DNSProxy')
-            if (self.ent_logging and req1 not in self.log_supress):
-                self.EnterpriseLogging(mac, src_ip, req1, hittime, category, reason, action)
+            self.SendSyslog(mac, src_ip, request, category, reason, action)
 
         # logs all requests, regardless of action of proxy.
         elif (self.full_logging and not redirect):
@@ -242,8 +239,7 @@ class DNSProxy:
             action = 'Allowed'
 
             self.TrafficLogging(request, hit_time, category, reason, action, table='DNSProxy')
-            if (self.ent_full and req1 not in self.log_supress):
-                    self.EnterpriseLogging(mac, src_ip, req1, hittime, category, reason, action)
+            self.SendSyslog(mac, src_ip, request, category, reason, action)
 
     def BlacklistBlock(self, src_ip, src_port, request):
         print(f'Blacklist Block: {request}')
@@ -275,30 +271,31 @@ class DNSProxy:
         else:
             Sys = System()
             Sys.Log(f'Client Source port overlap detected: {src_ip}:{src_port}')
-            
-    def EnterpriseLogging(self, mac, src_ip, req1, hittime, category, reason, action):
-        threading.Thread(target=self.LogSupress, args=(req1,)).start()
-        date = datetime.now()
-        date = f'{date.year}-{date.month}-{date.day}'
-        with open (f'{self.path}/dnx_logs/{date}-DNSProxyLogs.txt', 'a+') as Logs:
-            Logs.write(f'{hittime}; src.mac={mac}; src.ip={src_ip}; domain={req1}; category={category}; filter={reason}; action={action}\n'\)
-                
-    def LogSupress(self, req1):
-        self.log_supress.add(req1)
-        time.sleep(5)
-        self.log_supress.remove(req1)
 
     def TrafficLogging(self, arg1, arg2, arg3, arg4, arg5, table):
         if (table in {'DNSProxy'}):
             ProxyDB = DBConnector(table)
             ProxyDB.Connect()
             ProxyDB.StandardInput(arg1, arg2, arg3, arg4, arg5)
+
         elif (table in {'PIHosts'}):
             ProxyDB = DBConnector(table)
             ProxyDB.Disconnect()
             ProxyDB.InfectedInput(arg1, arg2, arg3, arg4, arg5)
 
-        ProxyDB.Disconnect()
+    def SendSyslog(self, src_mac, src_ip, domain, category, reason, action):
+        msg_type = 14
+        module = 'DNSProxy'
+        if (category in {'malicious', 'cryptominer'}):
+            msg_level = 1
+        else:
+            if (action == 'Blocked'):
+                msg_level = 5
+            elif (action == 'Allowed'):
+                msg_level = 6
+        
+        message = f'src.mac={src_mac}; src.ip={src_ip}; domain={domain}; category={category}; filter={reason}; action={action}'
+        self.Syslog.AddtoQueue(module, msg_type, msg_level, message)
 
     # AsyncIO method called to gather automated/ continuous methods | this is python 3.7 version of async
     async def Main(self):
