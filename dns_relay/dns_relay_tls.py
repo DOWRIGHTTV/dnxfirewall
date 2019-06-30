@@ -184,7 +184,7 @@ class DNSRelay:
                 for message in msg_queue:
                     try:
                         secure_socket.send(message)
-                        self.dns_tls_queue.pop()
+                        self.dns_tls_queue.pop(0)
                     except Exception as E:
                         traceback.print_exc()
                         print(f'SEND: {E}')
