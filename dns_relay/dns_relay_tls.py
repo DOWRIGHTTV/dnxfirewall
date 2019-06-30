@@ -25,9 +25,8 @@ TCP = 6
 UDP = 17
 
 class DNSRelay:
-    def __init__(self, dnsproxy):
+    def __init__(self):
         self.path = os.environ['HOME_DIR']
-        self.dnsproxy = dnsproxy
 #        self.System = Sys()
 #        self.Syslog = SyslogService()
         
@@ -362,3 +361,7 @@ class PacketManipulation:
         tcp_dns_payload = payload_length + tcp_dns_id + self.data[2:]
 
         return(tcp_dns_payload)
+        
+if __name__ == '__main__':
+    DNSRelay = DNSRelay()
+    DNSRelay.Start()
