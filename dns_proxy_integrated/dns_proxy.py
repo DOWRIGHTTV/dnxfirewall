@@ -10,14 +10,14 @@ from subprocess import run
 path = os.environ['HOME_DIR']
 sys.path.insert(0, path)
 
-from dnx_syslog.log_main import SyslogService
-from dnx_configure.dnx_system_info import System, Interface
+#from dnx_syslog.log_main import SyslogService
+from dnx_configure.dnx_system_info import Interface
 from dnx_configure.dnx_db_connector import DBConnector
 from dnx_configure.dnx_lists import ListFiles
 from dnx_configure.dnx_iptables import IPTables as IPT
-from dns_proxy.dns_proxy_response import DNSResponse
-from dns_proxy.dns_proxy_sniffer import Sniffer
-from dns_proxy.dns_proxy_relay import DNSRelay as DNSR
+from dns_proxy_integrated.dns_proxy_response import DNSResponse
+from dns_proxy_integrated.dns_proxy_sniffer import Sniffer
+from dns_proxy_integrated.dns_proxy_relay import DNSRelay as DNSR
 
 class DNSProxy:
     ''' Main Class for DNS Proxy. This class directly controls the logic regarding the signatures, whether something
@@ -30,7 +30,7 @@ class DNSProxy:
 
     def __init__(self):
         self.path = os.environ['HOME_DIR']
-        self.Syslog = SyslogService()
+#        self.Syslog = SyslogService()
 
         with open(f'{self.path}/data/config.json', 'r') as settings:
             setting = json.load(settings)
@@ -230,7 +230,7 @@ class DNSProxy:
             action = 'Blocked'
 
             self.TrafficLogging(request, hit_time, category, reason, action, table='DNSProxy')
-            self.SendSyslog(mac, src_ip, request, category, reason, action)
+#            self.SendSyslog(mac, src_ip, request, category, reason, action)
 
         # logs all requests, regardless of action of proxy.
         elif (self.full_logging and not redirect):
@@ -239,7 +239,7 @@ class DNSProxy:
             action = 'Allowed'
 
             self.TrafficLogging(request, hit_time, category, reason, action, table='DNSProxy')
-            self.SendSyslog(mac, src_ip, request, category, reason, action)
+#            self.SendSyslog(mac, src_ip, request, category, reason, action)
 
     def BlacklistBlock(self, src_ip, src_port, request):
         print(f'Blacklist Block: {request}')
@@ -268,9 +268,9 @@ class DNSProxy:
             self.flagged_traffic[src_ip] = {src_port: request}
         elif (src_port not in self.flagged_traffic[src_ip]):
             self.flagged_traffic[src_ip].update({src_port: request})
-        else:
-            Sys = System()
-            Sys.Log(f'Client Source port overlap detected: {src_ip}:{src_port}')
+        # else:
+        #     Sys = System()
+        #     Sys.Log(f'Client Source port overlap detected: {src_ip}:{src_port}')
 
     def TrafficLogging(self, arg1, arg2, arg3, arg4, arg5, table):
         if (table in {'DNSProxy'}):
@@ -283,19 +283,19 @@ class DNSProxy:
             ProxyDB.Disconnect()
             ProxyDB.InfectedInput(arg1, arg2, arg3, arg4, arg5)
 
-    def SendSyslog(self, src_mac, src_ip, domain, category, reason, action):
-        msg_type = 14
-        module = 'DNSProxy'
-        if (category in {'malicious', 'cryptominer'}):
-            msg_level = 1
-        else:
-            if (action == 'Blocked'):
-                msg_level = 5
-            elif (action == 'Allowed'):
-                msg_level = 6
+#     def SendSyslog(self, src_mac, src_ip, domain, category, reason, action):
+#         msg_type = 14
+#         module = 'DNSProxy'
+#         if (category in {'malicious', 'cryptominer'}):
+#             msg_level = 1
+#         else:
+#             if (action == 'Blocked'):
+#                 msg_level = 5
+#             elif (action == 'Allowed'):
+#                 msg_level = 6
         
-        message = f'src.mac={src_mac}; src.ip={src_ip}; domain={domain}; category={category}; filter={reason}; action={action}'
-        self.Syslog.AddtoQueue(module, msg_type, msg_level, message)
+#         message = f'src.mac={src_mac}; src.ip={src_ip}; domain={domain}; category={category}; filter={reason}; action={action}'
+#         self.Syslog.AddtoQueue(module, msg_type, msg_level, message)
 
     # AsyncIO method called to gather automated/ continuous methods | this is python 3.7 version of async
     async def Main(self):

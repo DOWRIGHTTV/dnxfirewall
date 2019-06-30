@@ -15,9 +15,9 @@ sys.path.insert(0, path)
 from copy import deepcopy
 from socket import socket, timeout, AF_INET, SOCK_DGRAM, SOCK_STREAM
 
-from dnx_syslog.log_main import SyslogService
+#from dnx_syslog.log_main import SyslogService #will be added soon
 from dnx_configure.dnx_system_info import Interface
-from dnx_configure.dnx_system_info import System as Sys
+#from dnx_configure.dnx_system_info import System as Sys # will maybe be added soon. (local logging)
 
 DNS_TLS_PORT = 853
 DNS_PORT = 53
@@ -28,8 +28,8 @@ class DNSRelay:
     def __init__(self, dnsproxy):
         self.path = os.environ['HOME_DIR']
         self.dnsproxy = dnsproxy
-        self.System = Sys()
-        self.Syslog = SyslogService()
+#        self.System = Sys()
+#        self.Syslog = SyslogService()
         
         with open(f'{self.path}/data/config.json', 'r') as settings:
             self.setting = json.load(settings)
@@ -170,11 +170,11 @@ class DNSRelay:
                 packet_from_server = packet.send_data
 #                print('Request Received')
                 break
-        else:
-            message = 'Both configured DNS Servers are unreachable from the DNS Relay'
+#        else:
+#            message = 'Both configured DNS Servers are unreachable from the DNS Relay'
 
-            self.System.Log(f'DNS: {message}')
-            self.Syslog.AddtoQueue(module='DNSRelay', msg_type=3, msg_level=1, message=message)
+#            self.System.Log(f'DNS: {message}')
+#            self.Syslog.AddtoQueue(module='DNSRelay', msg_type=3, msg_level=1, message=message)
             relayed = False
 
         if (relayed):

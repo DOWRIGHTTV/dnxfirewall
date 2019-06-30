@@ -13,7 +13,7 @@
         "TLS": {
             "Enabled": true,
             "Fallback": true,
-            "Retry": 5
+            "Retry": 600
         },
         "Records": {}
     }
