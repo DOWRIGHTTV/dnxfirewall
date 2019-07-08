@@ -10,7 +10,9 @@
 
 <h2>Before Reunning</h2>
 - [+] Edit data/config.json to reflect your system
+
 - [+] Change environment variable in dnx_run.sh
+
 - [+] Use dnx_run.sh to start the system
 
 <h2>Optional</h2>
