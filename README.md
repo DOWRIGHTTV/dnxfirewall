@@ -25,6 +25,8 @@
 
 <h2>Instructional Demo</h2>
 
-<a href="http://www.youtube.com/watch?feature=player_embedded&v=6NvRXlNjpOc
-" target="_blank"><img src="http://img.youtube.com/vi/6NvRXlNjpOc/0.jpg" 
-alt="DNX Firewall Demo" width="240" height="180" border="10" /></a>
+<h3 align="center">
+	<a href="http://www.youtube.com/watch?feature=player_embedded&v=6NvRXlNjpOc" target="_blank">
+		<img src="http://img.youtube.com/vi/6NvRXlNjpOc/0.jpg" alt="DNX Firewall Demo" width="480" height="360" border="10" />
+	</a>
+</h3>
