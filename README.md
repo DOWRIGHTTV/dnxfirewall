@@ -7,8 +7,8 @@
 <h3 align="center">
 	Command Line Version
 	<br>
-	[<img src="https://github.com/ProHackTech/DNX-FWALL-CMD/blob/master/Readme_Social/twitch.png">](https://www.twitch.tv/dowright)
-	[<img src="https://github.com/ProHackTech/DNX-FWALL-CMD/blob/master/Readme_Social/youtube.png">](https://www.youtube.com/channel/UCKAiTcsiD50oZvf9h0xbvCg)
+	
+	[![Twitch](https://github.com/ProHackTech/DNX-FWALL-CMD/blob/master/Readme_Social/twitch.png)](https://www.twitch.tv/dowright)
 </h3>
 
 <h4>Bought to you by: </h4>
