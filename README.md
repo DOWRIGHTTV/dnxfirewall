@@ -2,11 +2,12 @@
 	<br>
 	<img src="https://github.com/ProHackTech/DNX-FWALL-CMD/blob/master/DNX_Logo.png" alt="DNX Firewall Logo">
 	<br>
-	DNX Firewall
 </h1>
 <h3 align="center">
 	Command Line Version
 </h3>
+
+<h4>Bought to you by: </h4>
 
 <h2>Before Reunning</h2>
 
@@ -23,4 +24,7 @@
 - To enable full enterprise logging, ensure full logging (above) is enabled and set || self.ent_full = False > True || in dns_proxy_dev.py
 
 <h2>Instructional Demo</h2>
-[![YouTube Demo](https://img.youtube.com/vi/6NvRXlNjpOc/0.jpg)](https://www.youtube.com/watch?v=6NvRXlNjpOc)
+
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=6NvRXlNjpOc
+" target="_blank"><img src="http://img.youtube.com/vi/6NvRXlNjpOc/0.jpg" 
+alt="DNX Firewall Demo" width="240" height="180" border="10" /></a>
