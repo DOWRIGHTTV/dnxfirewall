@@ -2,9 +2,10 @@
 	<br>
 	<img src="https://github.com/ProHackTech/DNX-FWALL-CMD/blob/master/DNX_Logo.png" alt="DNX Firewall Logo">
 	<br>
-	<a href="https://www.twitch.tv/dowright" target="_blank"><img src="https://github.com/ProHackTech/DNX-FWALL-CMD/blob/master/Readme_Social/twitch.png" alt="Twitch Stream" /></a>
-	<a href="https://www.youtube.com/channel/UCKAiTcsiD50oZvf9h0xbvCg" target="_blank"><img src="https://github.com/ProHackTech/DNX-FWALL-CMD/blob/master/Readme_Social/youtube.png" alt="YouTube Channel"/></a>
 </h1>
+
+<a href="https://www.twitch.tv/dowright" target="_blank"><img src="https://github.com/ProHackTech/DNX-FWALL-CMD/blob/master/Readme_Social/twitch.png" alt="Twitch Stream" /></a>
+<a href="https://www.youtube.com/channel/UCKAiTcsiD50oZvf9h0xbvCg" target="_blank"><img src="https://github.com/ProHackTech/DNX-FWALL-CMD/blob/master/Readme_Social/youtube.png" alt="YouTube Channel"/></a>
 
 <h3 align="center">
 	Command Line Version
