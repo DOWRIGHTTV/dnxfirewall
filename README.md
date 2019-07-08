@@ -9,6 +9,7 @@
 </h3>
 
 <h2>Before Reunning</h2>
+
 - [+] Edit data/config.json to reflect your system
 
 - [+] Change environment variable in dnx_run.sh
@@ -16,7 +17,9 @@
 - [+] Use dnx_run.sh to start the system
 
 <h2>Optional</h2>
+
 - To enable full logging (log all request instead of only blocked), change Logging Enabled to 1 in data/config.json
+
 - To enable full enterprise logging, ensure full logging (above) is enabled and set || self.ent_full = False > True || in dns_proxy_dev.py
 
 <h2>Instructional Demo</h2>
