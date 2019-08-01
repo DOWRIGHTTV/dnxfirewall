@@ -7,42 +7,47 @@ import json
 
 from subprocess import run
 
-path = os.environ['HOME_DIR']
-sys.path.insert(0, path)
+HOME_DIR = os.environ['HOME_DIR']
+sys.path.insert(0, HOME_DIR)
 
-#from dnx_syslog.log_main import SyslogService
+from dnx_logging.log_main import LogHandler
+from dnx_syslog.syl_main import SyslogHandler
 from dnx_configure.dnx_system_info import Interface
 from dnx_configure.dnx_db_connector import DBConnector
 from dnx_configure.dnx_lists import ListFiles
 from dnx_configure.dnx_iptables import IPTables as IPT
-from dns_proxy_integrated.dns_proxy_response import DNSResponse
-from dns_proxy_integrated.dns_proxy_sniffer import Sniffer
-from dns_proxy_integrated.dns_proxy_relay import DNSRelay as DNSR
+from dns_proxy.dns_proxy_response import DNSResponse
+from dns_proxy.dns_proxy_sniffer import DNSSniffer
+from dns_proxy.dns_proxy_relay import DNSRelay as DNSR
+
+LOG_MOD = 'dns_proxy'
+SYSLOG_MOD = 'DNSProxy'
+EVENT = 14
+
+ALERT = 1
+NOTICE = 5
+INFORMATIONAL = 6
 
 class DNSProxy:
     ''' Main Class for DNS Proxy. This class directly controls the logic regarding the signatures, whether something
         should be blocked or allowed, managing signature updates from user front end configurations. This class also
-        serves as a bridge between the DNS Proxy Sniffer and DNS Relay give them a single point to flag traffic and 
+        serves as a bridge between the DNS Proxy Sniffer and DNS Relay give them a single point to flag traffic and
         identify traffic that should not be relayed/blocked via the class variable "flagged_traffic" dictionary. If
-        the Proxy sniffer detects traffic that should be blocked it inputs the connection info into the dictionary 
+        the Proxy sniffer detects traffic that should be blocked it inputs the connection info into the dictionary
         for the DNS Relay to refer to before relaying the traffic. If the query information matches a dictionary item
         the DNS Relay will not forward the traffic to the configured public resolvers. '''
 
     def __init__(self):
-        self.path = os.environ['HOME_DIR']
-#        self.Syslog = SyslogService()
-
-        with open(f'{self.path}/data/config.json', 'r') as settings:
+        with open(f'{HOME_DIR}/data/config.json', 'r') as settings:
             setting = json.load(settings)
-        self.lan_int = setting['Settings']['Interface']['Inside']
+        self.lan_int = setting['settings']['interface']['inside']
 
         Int = Interface()
         self.lan_ip = Int.IP(self.lan_int)
-        self.DEVNULL = open(os.devnull, 'wb')
-        self.full_logging = None
-        self.ip_whitelist = None
-        self.dns_whitelist = None
-        self.dns_blacklist = None
+        self.full_logging = False
+        self.ip_whitelist = {}
+        self.dns_whitelist = {}
+        self.dns_blacklist = {}
         self.dns_sigs = {}
         self.dns_records = {}
 
@@ -52,17 +57,23 @@ class DNSProxy:
         length. Starting a child thread for DNS Relay and DNS Proxy Sniffer, to handle requests, and doing an AsyncIO
         gather on proxy timer methods in main thread for rule updates '''
     def Start(self):
+        self.Log = LogHandler()
+        self.Syslog = SyslogHandler(self.lan_ip)
+
+        Sniffer = DNSSniffer(self)
+        self.DNSRelay = DNSR(self)
+
         ListFile = ListFiles()
-        ListFile.CombineLists()
-        DNSRelay = DNSR(self)
+        ListFile.CombineDomains()
+        ListFile.CombineKeywords()
 
         self.ProxyDB()
         self.LoadKeywords()
         self.LoadTLDs()
         self.LoadSignatures()
 
-        threading.Thread(target=DNSRelay.Start).start()
-        threading.Thread(target=self.Proxy).start()
+        threading.Thread(target=Sniffer.Start).start()
+        threading.Thread(target=self.DNSRelay.Start).start()
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -76,20 +87,20 @@ class DNSProxy:
             ProxyDB.Disconnect()
 
     def LoadSignatures(self):
-        with open(f'{self.path}/data/whitelist.json', 'r') as whitelists:
+        with open(f'{HOME_DIR}/data/whitelist.json', 'r') as whitelists:
             whitelist = json.load(whitelists)
-        wl_exceptions = whitelist['Whitelists']['Exceptions']
+        wl_exceptions = whitelist['whitelists']['exceptions']
 
-        with open(f'{self.path}/data/blacklist.json', 'r') as blacklists:
+        with open(f'{HOME_DIR}/data/blacklist.json', 'r') as blacklists:
             blacklist = json.load(blacklists)
-        bl_exceptions = blacklist['Blacklists']['Exceptions']
+        bl_exceptions = blacklist['blacklists']['exceptions']
 
-        with open(f'{self.path}/dnx_domainlists/blocked.domains', 'r') as Blocked:
+        with open(f'{HOME_DIR}/dnx_domainlists/blocked.domains', 'r') as blocked:
             while True:
-                line = Blocked.readline().strip().lower().split()
+                line = blocked.readline().strip().split()
                 if (not line):
                     break
-                if ('#' not in line and line != '\n'):
+                if (line != '\n'):
                     domain = line[0]
                     category = line[1]
                     if (domain not in wl_exceptions):
@@ -101,52 +112,39 @@ class DNSProxy:
 
     def LoadTLDs(self):
         self.tlds = set()
-        with open(f'{self.path}/data/tlds.json', 'r') as tlds:
+        with open(f'{HOME_DIR}/data/tlds.json', 'r') as tlds:
             tld = json.load(tlds)
-        tlds_all = tld['TLDs']
+        tlds_all = tld['tlds']
 
         for entry in tlds_all:
-            tld_enabled = tld['TLDs'][entry]['Enabled']
+            tld_enabled = tld['tlds'][entry]['enabled']
             if (tld_enabled):
                 self.tlds.add(entry)
 
+    ## consider making a combine keywords file. this would be in line with ip and domain categories
     def LoadKeywords(self):
         self.keywords = {}
 
-        with open(f'{self.path}/data/categories.json', 'r') as keywords:
-            keyword = json.load(keywords)
-        keyword_enabled = keyword['DNSProxy']['Keyword']['Enabled']
+        with open(f'{HOME_DIR}/dnx_domainlists/blocked.keywords', 'r') as blocked:
+            while True:
+                line = blocked.readline().strip().split()
+                if (not line):
+                    break
+                if (line != '\n'):
+                    keyword = line[0]
+                    cat = line[1]
 
-        if (keyword_enabled):
-            en_cats = set()
-            cats = keyword['DNSProxy']['Categories']['Default']
-            for cat in cats:
-                cat_enabled = cats[cat]['Enabled']
-                if (cat_enabled):
-                    en_cats.add(cat)
-
-            with open(f'{self.path}/dnx_domainlists/keyword.domains', 'r') as keywords:
-                for line in keywords:
-                    if ('#' not in line and line != '\n'):
-                        line = line.split()
-                        keyword = line[0]
-                        cat = line[1]
-                        if cat.upper() in en_cats:
-                            self.keywords[keyword] = cat
-
-    def Proxy(self):
-
-        Proxy = Sniffer(self.lan_int, action=self.SignatureCheck)
-        Proxy.Start()
+                    self.keywords[keyword] = cat
 
     def SignatureCheck(self, packet):
+        start = time.time()
         redirect = False
         dns_record = False
         whitelisted_query = False
-        hit_time = round(time.time())
-        mac = packet.smac
-        src_ip = packet.src
-        src_port = packet.sport
+        timestamp = round(time.time())
+        mac = packet.src_mac
+        src_ip = packet.src_ip
+        src_port = packet.src_port
         req1 = packet.qname.lower() # www.micro.com or micro.com || sd.micro.com
         category = ''
         if ('.' in req1):
@@ -159,7 +157,7 @@ class DNSProxy:
             req2 = None
             req_tld = None
             request = req1
-
+        print(f'1 ||| {time.time()} || PROXY RECEIVED: {src_ip}: {src_port}: {req1}')
         if (req1 in self.dns_records):
             dns_record = True
             self.ApplyDNF(src_ip, src_port, request)
@@ -173,10 +171,10 @@ class DNSProxy:
         if (req1 in self.dns_sigs):
             redirect, reason, category = self.StandardBlock(src_ip, src_port, req1, whitelisted_query)
 
-        ## P2. Standard Category blocking of overall domain || micro.com if whitelisted, will check to ensure its not 
+        ## P2. Standard Category blocking of overall domain || micro.com if whitelisted, will check to ensure its not
         ## a malicious category before allowing it to continue
         elif (req2 in self.dns_sigs):
-            redirect, reason, category = self.StandardBlock(src_ip, src_port, req1, whitelisted_query)
+            redirect, reason, category = self.StandardBlock(src_ip, src_port, req2, whitelisted_query)
 
         ## P1. Blacklist block of FQDN if not whitelisted ##
         elif (req1 in self.dns_blacklist and not whitelisted_query):
@@ -193,14 +191,14 @@ class DNSProxy:
             print(f'TLD Block: {req1}')
             redirect = True
             category = req_tld
-            reason = 'TLD Filter'
+            reason = 'tld filter'
 
         ## Keyword Search within domain || block if match ##
         else:
             for keyword, cat in self.keywords.items():
                 if keyword in req1:
                     redirect = True
-                    reason = 'Keyword'
+                    reason = 'keyword'
                     category = cat
                     self.ApplyDNF(src_ip, src_port, request)
                     break
@@ -211,49 +209,56 @@ class DNSProxy:
             DNS.Response()
 
         ##Redirect to IP Address in local DNS Record (user configurable)
-        if (dns_record):
+        elif (dns_record):
             record_ip = self.dns_records[req1]
             DNS = DNSResponse(self.lan_int, record_ip, packet)
             DNS.Response()
 
+        print(f'TIME TO SEARCH/BLOCK: {time.time() - start}')
         ## Log to Infected Hosts DB Table if matching malicious type categories ##
-        if (category in {'malicious', 'cryptominer'}):
+        if (category in {'malicious', 'cryptominer'} and self.logging_level >= ALERT):
+            table ='PIHosts'
             if (category in {'malicious'}):
-                reason = 'Malware'
+                reason = 'malware'
             elif (category in {'cryptominer'}):
-                reason = 'Crypto Miner Hijack'
+                reason = 'crypto miner hijack'
 
-            self.TrafficLogging(mac, src_ip, request, reason, hit_time, table='PIHosts')
+            logging_options = {'mac': mac, 'src_ip': src_ip, 'host': request, 'reason': reason}
+            self.TrafficLogging(table, timestamp, logging_options)
 
         # logs redirected/blocked requests
-        if (redirect):
-            action = 'Blocked'
+        if (redirect and self.logging_level >= NOTICE):
+            table = 'DNSProxy'
+            action = 'blocked'
 
-            self.TrafficLogging(request, hit_time, category, reason, action, table='DNSProxy')
-#            self.SendSyslog(mac, src_ip, request, category, reason, action)
+            logging_options = {'src_ip': src_ip, 'request': request, 'category': category ,
+                                'reason': reason, 'action': action}
+            self.TrafficLogging(table, timestamp, logging_options)
 
         # logs all requests, regardless of action of proxy.
-        elif (self.full_logging and not redirect):
+        elif (not redirect and self.logging_level >= INFORMATIONAL):
+            table = 'DNSProxy'
             category = 'N/A'
-            reason = 'Logging'
-            action = 'Allowed'
+            reason = 'logging'
+            action = 'allowed'
 
-            self.TrafficLogging(request, hit_time, category, reason, action, table='DNSProxy')
-#            self.SendSyslog(mac, src_ip, request, category, reason, action)
+            logging_options = {'src_ip': src_ip, 'request': request, 'category': category ,
+                                'reason': reason, 'action': action}
+            self.TrafficLogging(table, timestamp, logging_options)
 
     def BlacklistBlock(self, src_ip, src_port, request):
         print(f'Blacklist Block: {request}')
         redirect = True
-        reason = 'Blacklist'
-        category = 'Time Base'
+        reason = 'blacklist'
+        category = 'time based'
         self.ApplyDNF(src_ip, src_port, request)
 
         return redirect, reason, category
 
     def StandardBlock(self, src_ip, src_port, request, whitelisted_query):
         redirect = False
-        print(f'Standard Block: {request}')
-        reason = 'Category'
+#        print(f'Standard Block: {request}')
+        reason = 'category'
         category = self.dns_sigs[request]
         if (whitelisted_query and category not in {'malicious', 'cryptominer'}):
             pass
@@ -268,54 +273,64 @@ class DNSProxy:
             self.flagged_traffic[src_ip] = {src_port: request}
         elif (src_port not in self.flagged_traffic[src_ip]):
             self.flagged_traffic[src_ip].update({src_port: request})
+        print(f'DNF APPLIED| {src_ip}: {src_port}: {request}')
         # else:
-        #     Sys = System()
-        #     Sys.Log(f'Client Source port overlap detected: {src_ip}:{src_port}')
+        #     self.Log.AddtoQueue(f'Client Source port overlap detected: {src_ip}:{src_port}')
 
-    def TrafficLogging(self, arg1, arg2, arg3, arg4, arg5, table):
+    def TrafficLogging(self, table, timestamp, logging_options):
         if (table in {'DNSProxy'}):
             ProxyDB = DBConnector(table)
             ProxyDB.Connect()
-            ProxyDB.StandardInput(arg1, arg2, arg3, arg4, arg5)
-
+            ProxyDB.StandardInput(timestamp, logging_options)
         elif (table in {'PIHosts'}):
             ProxyDB = DBConnector(table)
-            ProxyDB.Disconnect()
-            ProxyDB.InfectedInput(arg1, arg2, arg3, arg4, arg5)
+            ProxyDB.Connect()
+            ProxyDB.InfectedInput(timestamp, logging_options)
 
-#     def SendSyslog(self, src_mac, src_ip, domain, category, reason, action):
-#         msg_type = 14
-#         module = 'DNSProxy'
-#         if (category in {'malicious', 'cryptominer'}):
-#             msg_level = 1
-#         else:
-#             if (action == 'Blocked'):
-#                 msg_level = 5
-#             elif (action == 'Allowed'):
-#                 msg_level = 6
-        
-#         message = f'src.mac={src_mac}; src.ip={src_ip}; domain={domain}; category={category}; filter={reason}; action={action}'
-#         self.Syslog.AddtoQueue(module, msg_type, msg_level, message)
+        ProxyDB.Disconnect()
+
+        if (table in {'DNSProxy'}):
+            self.AlertSyslog(logging_options)
+
+    def AlertSyslog(self, logging_options):
+        src_ip = logging_options['src_ip']
+        request = logging_options['request']
+        category = logging_options['category']
+        reason = logging_options['reason']
+        action = logging_options['action']
+
+        if (category in {'malicious', 'cryptominer'}):
+            msg_level = ALERT
+        else:
+            if (action == 'blocked'):
+                msg_level = NOTICE
+            elif (action == 'allowed'):
+                msg_level = INFORMATIONAL
+
+        message = f'src.ip={src_ip}; request={request}; category={category}; filter={reason}; action={action}'
+        self.Syslog.Message(SYSLOG_MOD, EVENT, msg_level, message)
 
     # AsyncIO method called to gather automated/ continuous methods | this is python 3.7 version of async
     async def Main(self):
-        await asyncio.gather(self.CheckLogging(), self.CustomLists(), self.DNSRecords())
+        await asyncio.gather(self.CheckLogging(), self.CustomLists(), self.DNSRecords(),
+                            self.DNSRelay.CheckSettings(), self.DNSRelay.Reachability(),
+                            self.Log.QueueHandler(LOG_MOD), self.Syslog.CheckSettings())
 
     async def CheckLogging(self):
         while True:
-            with open(f'{self.path}/data/config.json', 'r') as settings:
+            with open(f'{HOME_DIR}/data/config.json', 'r') as settings:
                 setting = json.load(settings)
 
-            self.full_logging = setting['Settings']['Logging']['Enabled']
+            self.logging_level = setting['settings']['logging']['level']
 
             await asyncio.sleep(5*60)
 
     async def DNSRecords(self):
         while True:
-            with open(f'{self.path}/data/dns_server.json', 'r') as dns_records:
+            with open(f'{HOME_DIR}/data/dns_server.json', 'r') as dns_records:
                 dns_record = json.load(dns_records)
 
-            self.dns_records = dns_record['DNSServer']['Records']
+            self.dns_records = dns_record['dns_server']['records']
 
             await asyncio.sleep(5*60)
 
@@ -327,20 +342,20 @@ class DNSProxy:
 
             ## --------------------------------------------- ##
             ## -- IP WHITELIST CHECK AND CLEAN/ IF NEEDED -- ##
-            with open(f'{self.path}/data/whitelist.json', 'r') as whitelists:
+            with open(f'{HOME_DIR}/data/whitelist.json', 'r') as whitelists:
                 whitelist = json.load(whitelists)
-            self.ip_whitelist = whitelist['Whitelists']['IP Whitelist']
+            self.ip_whitelist = whitelist['whitelists']['ip_whitelist']
 
             ## ---------------------------------------------- ##
             ## -- DNS WHITELIST CHECK AND CLEAN/ IF NEEDED -- ##
 
             wl_check = False
-            with open(f'{self.path}/data/whitelist.json', 'r') as whitelists:
+            with open(f'{HOME_DIR}/data/whitelist.json', 'r') as whitelists:
                 whitelist = json.load(whitelists)
-            self.dns_whitelist = whitelist['Whitelists']['Domains']
+            self.dns_whitelist = whitelist['whitelists']['domains']
 
             for domain in self.dns_whitelist:
-                if current_time > self.dns_whitelist[domain]['Expire']:
+                if current_time > self.dns_whitelist[domain]['expire']:
                     w_list_remove.add(domain)
                     wl_check = True
 
@@ -348,21 +363,21 @@ class DNSProxy:
                 self.dns_whitelist.pop(domain, None)
 
             if wl_check:
-                 with open(f'{self.path}/data/whitelist.json', 'w') as whitelists:
+                 with open(f'{HOME_DIR}/data/whitelist.json', 'w') as whitelists:
                     json.dump(whitelist, whitelists, indent=4)
 
-                    self.dns_whitelist = whitelist['Whitelists']['Domains']
+                    self.dns_whitelist = whitelist['whitelists']['domains']
 
             ## -------------------------------------------##
             ## -- BLACKLIST CHECK AND CLEAN/ IF NEEDED -- ##
 
             bl_check = False
-            with open(f'{self.path}/data/blacklist.json', 'r') as blacklists:
-                blacklist = json.load(blacklists)    
-            self.dns_blacklist = blacklist['Blacklists']['Domains']
+            with open(f'{HOME_DIR}/data/blacklist.json', 'r') as blacklists:
+                blacklist = json.load(blacklists)
+            self.dns_blacklist = blacklist['blacklists']['domains']
 
             for domain in self.dns_blacklist:
-                if current_time > self.dns_blacklist[domain]['Expire']:
+                if current_time > self.dns_blacklist[domain]['expire']:
                     b_list_remove.add(domain)
                     bl_check = True
 
@@ -370,10 +385,10 @@ class DNSProxy:
                 self.dns_blacklist.pop(domain, None)
 
             if bl_check:
-                 with open(f'{self.path}/data/blacklist.json', 'w') as blacklists:
+                 with open(f'{HOME_DIR}/data/blacklist.json', 'w') as blacklists:
                     json.dump(blacklist, blacklists, indent=4)
 
-                    self.dns_blacklist = whitelist['Whitelists']['Domains']
+                    self.dns_blacklist = whitelist['whitelists']['domains']
             print('Updating white/blacklists in memory.')
             await asyncio.sleep(5*60)
 

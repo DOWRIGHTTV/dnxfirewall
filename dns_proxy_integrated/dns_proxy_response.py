@@ -10,20 +10,16 @@ import array
 from contextlib import closing
 from socket import socket, inet_aton, AF_PACKET, SOCK_RAW, IPPROTO_UDP
 
-path = os.environ['HOME_DIR']
-sys.path.insert(0, path)
+HOME_DIR = os.environ['HOME_DIR']
+sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_packet_checks import Checksums
 
-DNS = 53
-
 class DNSResponse:
-    def __init__(self, inside_int, response_ip, packet):
-        self.inside_int = inside_int
-        
+    def __init__(self, lan_int, response_ip, packet):
         self.s = socket(AF_PACKET, SOCK_RAW)
-        self.s.bind((self.inside_int, 0))
-        
+        self.s.bind((lan_int, 0))
+
         self.Packet = Packet(response_ip, packet)
         self.Packet.Start()
 
@@ -44,7 +40,7 @@ class Packet:
         self.packet = packet
 
         self.Checksum = Checksums()
-    
+
         self.dns_payload = b''
 
     def Start(self):
@@ -55,25 +51,25 @@ class Packet:
         self.CreateIPv4()
         self.AssembleIPv4()
         self.ip_chk = self.Checksum.IPv4(self.ipv4_header)
-    
+
     def SplitPacket(self):
-        self.smac = self.packet.smac
-        self.dmac = self.packet.dmac
-        self.dst_ip = self.packet.src
-        self.src_ip = self.packet.dst
-        self.src_port = DNS
-        self.dst_port = self.packet.sport
+        self.dst_mac = self.packet.src_mac
+        self.src_mac = self.packet.dst_mac
+        self.src_ip = self.packet.dst_ip
+        self.dst_ip = self.packet.src_ip
+        self.src_port = 53
+        self.dst_port = self.packet.src_port
         self.dnsID = self.packet.dnsID
         self.url = self.packet.qname.lower()
 
         self.l2pro = 0x0800
-        
+
     def AssembleEthernet(self):
         self.ethernet_header = struct.pack('!6s6sH' ,
-        binascii.unhexlify(self.smac.replace(":","")),
-        binascii.unhexlify(self.dmac.replace(":","")),
+        binascii.unhexlify(self.dst_mac.replace(":","")),
+        binascii.unhexlify(self.src_mac.replace(":","")),
         self.l2pro)
-      
+
     def CreateIPv4(self):
         ip_ver = 4
         ip_vhl = 5
@@ -89,12 +85,12 @@ class Packet:
         ip_frag_offset = 0
 
         self.ip_flg = (ip_rsv << 7) + (ip_dtf << 6) + (ip_mrf << 5) + (ip_frag_offset)
-        self.ip_ttl = 255   
+        self.ip_ttl = 255
         self.ip_proto = IPPROTO_UDP
         self.ip_chk = 0
         self.ip_saddr = inet_aton(self.src_ip)
         self.ip_daddr = inet_aton(self.dst_ip)
-    
+
     def AssembleIPv4(self):
         self.ipv4_header = struct.pack('!2B3H2B' ,
         self.ip_ver,
@@ -104,7 +100,7 @@ class Packet:
         self.ip_flg,
         self.ip_ttl,
         self.ip_proto
-        )    
+        )
         self.ipv4_header += struct.pack('<H' ,
         self.ip_chk
         )
@@ -112,22 +108,20 @@ class Packet:
         self.ip_saddr,
         self.ip_daddr
         )
-          
-    def CreateUDP(self):            
-        self.udp_sport = DNS
-        self.udp_dport = self.dst_port
+
+    def CreateUDP(self):
         self.udp_len = self.dnsL + 8 + 6
         self.udp_chk = 0
 
     def AssembleUDP(self):
         self.udp_header = struct.pack('!4H' ,
-        self.udp_sport,
-        self.udp_dport,
+        self.src_port,
+        self.dst_port,
         self.udp_len,
         self.udp_chk
         )
-        
-    def CreateDNS(self):    
+
+    def CreateDNS(self):
         self.id        = self.dnsID
         self.qr        = 1
         self.opcode    = 0
@@ -144,7 +138,7 @@ class Packet:
         self.nscount   = 0
         self.arcount   = 0
         self.dnsL = self.dnsRL + 12
-        
+
     def AssembleDNS(self):
         self.p1 = (self.qr << 7) | (self.opcode << 3) | (self.aa << 2) | (self.tc << 1) | (self.rd << 0)
         self.p2 = (self.ra << 7) | (self.z << 6) | (self.ad << 5) | (self.cd << 4) | (self.rcode << 0)
@@ -158,12 +152,12 @@ class Packet:
         self.nscount,
         self.arcount
         )
-        
+
     def CreateQueryResponse(self):
         self.qname     = self.url
         self.qtype     = 1
         self.qclass    = 1
-        
+
         self.rrname    = b'\xc0\x0c'
         self.type      = 1
         self.rclass    = 1
@@ -172,7 +166,7 @@ class Packet:
         self.rdata     = inet_aton(self.response_ip)
         self.urlTTL    = len(self.url) * 2
         self.dnsRL     = self.urlTTL + 14 + 2
-        
+
     def AssembleQueryResponse(self):
         split_url = self.url.split('.')
         for part in split_url:
@@ -185,10 +179,9 @@ class Packet:
         self.qtype,
         self.qclass
         )
-        self.dns_payload += self.dns_payload     
-        self.dns_payload += struct.pack('!LH4s' , 
+        self.dns_payload += self.dns_payload
+        self.dns_payload += struct.pack('!LH4s' ,
         self.ttl,
         self.rdlen,
         self.rdata
-        )        
-        
+        )
