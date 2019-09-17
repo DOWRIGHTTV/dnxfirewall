@@ -25,6 +25,8 @@
 - NOTE: The front end is not included in public/foss version of firewall, but the funcionality of the system is the same.
 Edit json files accordingly to implement specific system controls, eg whitelist, blacklist, dns records, etc. CLI is in progress and some settings can be configured using it.
 
+This video is outdated, but still shows general functionality. an updated video will be created soon which will show the newly added modules: syslog client, standard logging, ips/ids, updated dns proxy functionality, updated ip proxy functionality, more.
+
 <h3 align="center">
 	<a href="http://www.youtube.com/watch?feature=player_embedded&v=6NvRXlNjpOc" target="_blank">
 		<img src="http://img.youtube.com/vi/6NvRXlNjpOc/0.jpg" alt="DNX Firewall Demo" width="480" height="360" border="10" />
