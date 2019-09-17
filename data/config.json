@@ -1,59 +1,28 @@
 {
-    "Settings": {
-        "License": {
-            "MAC": 0,
-            "UUID": 0,
-            "Activated": true,
-            "Validated": true
+    "settings": {
+        "logging": {
+            "length": 60,
+            "level": 6
         },
-        "TimeOffset": {
-            "Direction": "-",
-            "Amount": 7
-        },
-        "Logging": {
-            "Enabled": 1,
-            "Length": 60
-        },
-        "Wildcard": {
-            "Enabled": 1
-        },
-        "Interface": {
-            "Outside": "enp0s3",
-            "Inside": "enp0s8"
-        },
-        "DNSServers": {
-            "Server1": {
-                "Name": "OpenDNS1",
-                "IP Address": "208.67.222.222"
-            },
-            "Server2": {
-                "Name": "OpenDNS2",
-                "IP Address": "208.67.220.220"
+        "interface": {
+            "outside": "eth0",
+            "inside": "eth0",
+            "wan": {
+                "default_mac": "aa:aa:aa:aa:aa:aa",
+                "configured_mac": null,
+                "dhcp": true,
+                "mac_set": true
             }
         },
-        "TimeRestriction": {
-            "Enabled": true,
-            "Active": false,
-            "Start": "1:00",
-            "End": 1231512,
-            "Length": 11700
+        "time_restriction": {
+            "enabled": false,
+            "active": false,
+            "start": "22:00",
+            "end": 1566212400.0,
+            "length": 21600
         },
-        "TOR Lists": {
-            "Entry": {
-                "Enabled": 0
-            },
-            "Exit": {
-                "Enabled": 0
-            }
-        },
-        "LocalNet": {
-            "IP Address": "192.168.83.0/24"
-        },
-        "DHCPReservations": {
-            "aa:aa:aa:aa:aa:aa": {
-                "IP Address": "192.169.5.69",
-                "Name": "not Bob"
-            }
+        "local_net": {
+            "subnet": "192.168.83.0/24"
         }
     }
 }

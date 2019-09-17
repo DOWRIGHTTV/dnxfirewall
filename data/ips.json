@@ -1,28 +1,35 @@
 {
-    "IPS": {
-        "DDOS": {
-            "Enabled": false,
-            "Limits": {
-                "Source": {
-                    "TCP": 100,
-                    "UDP": 100,
-                    "ICMP": 100
+    "ips": {
+        "ddos": {
+            "enabled": false,
+            "limits": {
+                "source": {
+                    "tcp": 100,
+                    "udp": 100,
+                    "icmp": 100
                 },
-                "Destination": {
-                    "Combined": 200
+                "destination": {
+                    "combined": 200
                 }
             }
         },
-        "PortScan": {
-            "Logging": false,
-            "Prevention": false,
-            "Length": 0,
-            "Mitigation": false
+        "port_scan": {
+            "prevention": false,
+            "reject": false,
+            "length": 48,
+            "logging": false
         },
-        "OpenProtocols": {
-            "ICMP": false,
-            "TCP": {},
-            "UDP": {}
+        "open_protocols": {
+            "icmp": true,
+            "tcp": {
+                "109": "",
+                "13": ""
+            },
+            "udp": {}
+        },
+        "whitelist": {
+            "dns_servers": true,
+            "ip_whitelist": {}
         }
     }
 }

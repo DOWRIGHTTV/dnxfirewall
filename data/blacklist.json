@@ -1,13 +1,6 @@
 {
-    "Blacklists": {
-        "Domains": {
-            "bob.com": {
-                "Hex": "bob|03|com",
-                "Time": "Apr 1 19:07:33",
-                "Rule Length": 60,
-                "Expire": 1554174453.350557
-            }
-        },
-        "Exceptions": {}
+    "blacklists": {
+        "domains": {},
+        "exceptions": {}
     }
 }

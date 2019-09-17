@@ -1,103 +1,57 @@
 #!/usr/bin/python3
 
-import struct
-import binascii
-import codecs
+import os, sys
+import time
+import traceback
+import threading
 
-from socket import socket, inet_aton, AF_PACKET, SOCK_RAW
+from ipaddress import IPv4Address
+from socket import socket, error, AF_PACKET, SOCK_RAW
 
-class Sniffer:
-    def __init__(self, iface, action):
-        self.action = action
-        self.iface = iface
-        self.s = socket(AF_PACKET, SOCK_RAW)
-        self.s.bind((self.iface, 3))
-        
-    def Start(self):
-        print('[+] Sniffing on: {}'.format(self.iface))
+HOME_DIR = os.environ['HOME_DIR']
+sys.path.insert(0, HOME_DIR)
+
+from dnx_configure.dnx_constants import *
+from dns_proxy.dns_proxy_packets import PacketParse
+from dns_proxy.dns_proxy_response import DNSResponse
+
+
+class DNSSniffer:
+    def __init__(self, DNSProxy):
+        self.DNSProxy = DNSProxy
+        self.lan_int = DNSProxy.lan_int
+
+    def Start(self, from_proxy=False):
+        self.sock = socket(AF_PACKET, SOCK_RAW)
+        self.sock.bind((self.lan_int, 3))
+        print(f'[+] Sniffing: {self.lan_int}')
         while True:
-            data, addr = self.s.recvfrom(1024)
+            if (from_proxy):
+                time.sleep(5)
+                from_proxy = False
+
             try:
-                Packet = PacketParse(data, addr)
-                Packet.Parse()
-                if (Packet.qname) and (Packet.qtype == 1):
-                    self.action(Packet)
-            except AttributeError:
-                pass
-            except Exception as E:
-                print(E)
-                                        
-class PacketParse:
-    def __init__(self, data, addr):
-        self.data = data
-        self.addr = addr
-        
-    def Parse(self):
+                data = self.sock.recv(4096)
+
+                self.PacketHandler(data)
+            except error:
+                break
+
+        self.Start()
+
+    def PacketHandler(self, data):
         try:
-            self.udp()
-            if (self.dport == 53):
-                self.dnsQuery()
-                self.dns()
-                if (self.qtype == 1):
-                    self.ip()
-                    self.ethernet()
-            else:
-                pass
+            packet = PacketParse(data)
+            packet.Parse()
+
         except Exception:
-            pass
-                
-    def ethernet(self):   
-        s = []
-        d = []
-        smac = struct.unpack('!6c', self.data[0:6])
-        dmac = struct.unpack('!6c', self.data[6:12])
-#        PROTO = struct.unpack('!2c', self.data[12:14])
+            traceback.print_exc()
 
-        for byte in smac:
-            s.append(byte.hex())
-        for byte in dmac:
-            d.append(byte.hex())
-    
-        self.smac = '{}:{}:{}:{}:{}:{}'.format(s[0], s[1], s[2], s[3], s[4], s[5])
-        self.dmac = '{}:{}:{}:{}:{}:{}'.format(d[0], d[1], d[2], d[3], d[4], d[5])    
-    
-    def ip(self):
-        s = struct.unpack('!4B', self.data[26:30])
-        d = struct.unpack('!4B', self.data[30:34])
-        self.src = '{}.{}.{}.{}'.format(s[0], s[1], s[2], s[3])
-        self.dst = '{}.{}.{}.{}'.format(d[0], d[1], d[2], d[3])
+        if (packet.qtype == A_RECORD):
+#            print(f'SOURCE: {packet.src_ip}:{packet.src_port} DEST: {packet.dst_ip}:{packet.dst_port} | {packet.request}')
+            threading.Thread(target=self.DNSProxy.SignatureCheck, args=(packet,)).start()
 
-    def udp(self):
-        ports = struct.unpack('!2H', self.data[34:38])
-        self.sport = ports[0]
-        self.dport = ports[1]
-    
-    def dns(self):
-        dnsID = struct.unpack('!H', self.data[42:44])
-        self.dnsID = dnsID[0]        
-
-    def dnsQuery(self):
-        qn = self.data[54:].split(b'\x00',1)
-        qt = qn[1]
-        qn = qn[0]
-        b = 1
-        for byte in qn[1:]:
-            b += 1
-
-        qname = struct.unpack('!{}B'.format(b), qn[0:b+1])
-        dnsQ = struct.unpack('!2H', qt[0:4])
-        self.qtype = dnsQ[0]
-
-        len = -1
-        self.qname = ''
-        for byte in qname:
-            if(len == -1):
-                len = byte
-            elif(len == 0):
-                len = byte
-                self.qname += "."
-            else:
-                self.qname += chr(byte)
-                len -= 1
-      
-        
+        # sending a response/ refuse message for ipv6 queries (firewall will have ipv6 disabled anyways)
+        elif (packet.qtype == AAAA_RECORD):
+            Proxy = DNSResponse(packet, self.lan_int, response_ip=None, query_type=packet.qtype)
+            threading.Thread(target=Proxy.Response).start()

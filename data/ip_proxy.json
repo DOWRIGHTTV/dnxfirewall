@@ -1,0 +1,24 @@
+{
+    "ip_proxy": {
+        "directions": {
+            "malicious": "inbound",
+            "tor": "both"
+        },
+        "lists": {
+            "tor": {
+                "entry": {
+                    "enabled": false
+                },
+                "exit": {
+                    "enabled": false
+                }
+            },
+            "malware": {
+                "enabled": true
+            },
+            "compromised": {
+                "enabled": true
+            }
+        }
+    }
+}

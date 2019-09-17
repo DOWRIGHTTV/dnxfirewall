@@ -1,0 +1,423 @@
+{
+    "main": {
+        "commands": {
+            "help": {
+                "info": "enables/disables cli feedback. enabled by default"
+            },
+            "commands": {
+                "info": "show all available commands"
+            },
+            "list": {
+                "info": "show all available configuration branches"
+            },
+            "version": {
+                    "info": "shows system and signature versions"
+            },
+            "quit": {
+                "info": "disconnect from dnx command line"
+            }
+        },
+        "configuration": {
+            "dns": {
+                "info": "dns server configuration",
+                "commands": {
+                    "help": {
+                        "info": "enables/disables cli feedback. enabled by default"
+                    },
+                    "commands": {
+                        "info": "show all available commands"
+                    },
+                    "show": {
+                        "args" : "!settings",
+                        "info": "show options/setting information"
+                    },
+                    "set": {
+                        "args": "!settings2",
+                        "info": "configures setting from user input"
+                    },
+                    "clear": {
+                        "args": "!settings3",
+                        "info": "resets loaded data"
+                    },
+                    "enable": {
+                        "args" : "!settings4",
+                        "info": "turns on a feature/setting"
+                    },
+                    "disable": {
+                        "args" : "!settings4",
+                        "info": "turns off a feature/setting"
+                    },
+                    "exit": {
+                        "info": "return to previous menu"
+                    }
+                },
+                "settings": {
+                    "servers": {
+                        "info": "public dns servers used to resolve requests"
+                    },
+                    "top-domains": {
+                        "info": "current top domains requested by clients on local network"
+                    },
+                    "tls": {
+                        "info": "encrypt dns records over public internet"
+                    },
+                    "tls-retry": {
+                        "info": "time to retry tls connection after failure to connect"
+                    },
+                    "udp-fallback": {
+                        "info": "send messages using udp/unencrypted on tls failure"
+                    }
+                },
+                "settings2": {
+                    "server1": {
+                        "info": "primary public dns server"
+                    },
+                    "server2": {
+                        "info": "secondary public dns server"
+                    },
+                    "tls-retry": {
+                        "info": "time to retry tls connection after failure to connect"
+                    }
+                },
+                "settings3": {
+                    "dns-cache": {
+                        "info": "locally stored dns records to speed up client resolution"
+                    },
+                    "top-domains": {
+                        "info": "current top domains requested by clients on local network"
+                    }
+                },
+                "settings4": {
+                    "tls": {
+                        "info": "encrypt dns records over public internet",
+                        "syntax": "tls"
+                    },
+                    "udp-fallback": {
+                        "info": "send messages using udp/unencrypted on tls failure",
+                        "syntax": "udp-fallback"
+                    }
+                }
+            },
+            "domain": {
+                "info": "dns proxy configuration",
+                "commands": {
+                    "help": {
+                        "info": "enables/disables cli feedback. enabled by default"
+                    },
+                    "commands": {
+                        "info": "show all available commands"
+                    },
+                    "show": {
+                        "args" : "!settings",
+                        "info": "show options/setting information"
+                    },
+                    "enable": {
+                        "args" : "!settings",
+                        "info": "turns on a feature/setting"
+                    },
+                    "disable": {
+                        "args" : "!settings",
+                        "info": "turns off a feature/setting"
+                    },
+                    "exit": {
+                        "info": "return to previous menu"
+                    }
+                },
+                "settings": {
+                    "keyword": {
+                        "info": "domain name keyword search/filtering"
+                    },
+                    "category": {
+                        "info": "standard domain categories",
+                        "syntax": "categories"
+                    },
+                    "tld": {
+                        "info": "domain tld filtering",
+                        "syntax": "tlds"
+                    }
+                }
+            },
+            "ip": {
+                "info": "ip proxy configuration",
+                "commands": {
+                    "help": {
+                        "info": "enables/disables cli feedback. enabled by default"
+                    },
+                    "commands": {
+                        "info": "show all available commands"
+                    },
+                    "show": {
+                        "args" : "!settings3",
+                        "info": "show options/setting information"
+                    },
+                    "set": {
+                        "args" : "!settings2",
+                        "info": "configure option/setting"
+                    },
+                   "enable": {
+                        "args" : "!settings",
+                        "info": "turn on a feature/setting"
+                    },
+                    "disable": {
+                        "args" : "!settings",
+                        "info": "turn off a feature/setting"
+                    },
+                    "exit": {
+                        "info": "return to previous menu"
+                    }
+                },
+                "settings": {
+                    "list": {
+                        "info": "standard ip host lists",
+                        "syntax": "lists"
+                    }
+                },
+                "settings2": {
+                    "direction": {
+                        "info": "ip host traffic direction filter",
+                        "syntax": "directions"
+                    }
+                },
+                "settings3": {
+                    "list": {
+                        "info": "standard ip host lists",
+                        "syntax": "lists"
+                    },
+                    "direction": {
+                        "info": "ip host traffic direction filter",
+                        "syntax": "directions"
+                    }
+                }
+            },
+            "whitelist": {
+                "info": "dnx firewall services",
+                "commands": {
+                    "help": {
+                        "info": "enables/disables cli feedback. enabled by default"
+                    },
+                    "commands": {
+                        "info": "show all available commands"
+                    },
+                    "show": {
+                        "args" : "!settings",
+                        "info": "show options/setting information"
+                    },
+                    "add": {
+                        "args" : "!settings",
+                        "info": "create whitelist object"
+                    },
+                    "delete": {
+                        "args" : "!settings",
+                        "info": "delete whitelist object"
+                    },
+                    "exit": {
+                        "info": "return to previous menu"
+                    }
+                },
+                "settings": {
+                    "timebased": {
+                        "info": "time based domain whitelist (default 1 hour)",
+                        "syntax": "timebased"
+                    },
+                    "exception": {
+                        "info": "permanent domain whitelist (pre proxy)",
+                        "syntax": "exceptions"
+                    },
+                    "ip": {
+                        "info": "ip based whitelist (for local clients)",
+                        "syntax": "ip"
+                    }
+                }
+            },
+            "blacklist": {
+                "info": "dnx firewall services",
+                "commands": {
+                    "help": {
+                        "info": "enables/disables cli feedback. enabled by default"
+                    },
+                    "commands": {
+                        "info": "show all available commands"
+                    },
+                    "show": {
+                        "args" : "!settings",
+                        "info": "show options/setting information"
+                    },
+                    "add": {
+                        "args" : "!settings",
+                        "info": "create blacklist object"
+                    },
+                    "delete": {
+                        "args" : "!settings",
+                        "info": "delete blacklist object"
+                    },
+                    "exit": {
+                        "info": "return to previous menu"
+                    }
+                },
+                "settings": {
+                    "timebased": {
+                        "info": "time based domain blacklist (default 1 hour)",
+                        "syntax": "timebased"
+                    },
+                    "exception": {
+                        "info": "permanent domain blacklist (pre proxy)",
+                        "syntax": "exceptions"
+                    }
+                }
+            },
+            "interface": {
+                "info": "dnx firewall wan interface settings",
+                "commands": {
+                    "help": {
+                        "info": "enables/disables cli feedback. enabled by default"
+                    },
+                    "commands": {
+                        "info": "show all available commands"
+                    },
+                    "show": {
+                        "args" : "!settings",
+                        "info": "show options/setting information"
+                    },
+                    "set": {
+                        "args" : "!settings2",
+                        "info": "configure interface settings"
+                    },
+                    "configure": {
+                        "args" : "!settings2",
+                        "info": "applies configured settings"
+                    },
+                    "exit": {
+                        "info": "return to previous menu"
+                    }
+                },
+                "settings": {
+                    "interface": {
+                        "info": "configure interface information"
+                    },
+                    "pending": {
+                        "info": "shows configurations that will be applied"
+                    }
+                },
+                "settings2": {
+                    "ip-address": {
+                        "options": ["*valid ip*"],
+                        "info": "configure wan interface ip address"
+                    },
+                    "netmask": {
+                        "options": ["*valid netmask*"],
+                        "info": "configure wan interface subnet mask"
+                    },
+                    "default-gateway": {
+                        "options": ["*valid ip*"],
+                        "info": "configure wan interface default gateway"
+                    },
+                    "mac-address": {
+                        "options": ["*valid mac*", "default"],
+                        "info": "configure wan interface mac address"
+                    },
+                    "mode": {
+                        "options": ["dhcp", "static"],
+                        "info": "configure wan interface mode"
+                    }
+                }
+            },
+            "ips": {
+                "info": "ips/ids configuration",
+                "commands": {
+                    "help": {
+                        "info": "enables/disables cli feedback. enabled by default"
+                    },
+                    "commands": {
+                        "info": "show all available commands"
+                    },
+                    "show": {
+                        "args" : "!settings",
+                        "info": "show options/setting information"
+                    },
+                    "set": {
+                        "args" : "!settings",
+                        "info": "configure option/setting"
+                    },
+                   "enable": {
+                        "args" : "!settings",
+                        "info": "turn on a feature/setting"
+                    },
+                    "disable": {
+                        "args" : "!settings",
+                        "info": "turn off a feature/setting"
+                    },
+                    "exit": {
+                        "info": "return to previous menu"
+                    }
+                },
+                "settings": {
+                    "whitelist": {
+                        "info": "external ip host whitelisting"
+                    },
+                    "portscan": {
+                        "info": "portscan detection/prevention settings"
+                    },
+                    "ddos": {
+                        "info": "ddos detection/prevention settings"
+                    }
+                }
+            },
+            "services": {
+                "info": "dnx firewall services",
+                "commands": {
+                    "help": {
+                        "info": "enables/disables cli feedback. enabled by default"
+                    },
+                    "list" : {
+                        "info": "show all available services"
+                    },
+                    "commands": {
+                        "info": "show all available commands"
+                    },
+                    "status": {
+                        "info": "show service status"
+                    },
+                    "start" : {
+                        "args" : "!services",
+                        "info": "starts a dnx service",
+                        "syntax": "started"},
+                    "restart": {
+                        "args" : "!services",
+                        "info": "restarts a dnx service",
+                        "syntax": "restarted"},
+                    "stop": {
+                        "args" : "!services",
+                        "info": "stops a dnx service",
+                        "syntax": "stopped"
+                    },
+                    "exit": {
+                        "info": "return to previous menu"
+                    }
+                },
+                "services": {
+                    "dns-proxy": {
+                        "info": "DNS request filtering"
+                    },
+                    "fw-proxy": {
+                        "info": "IP host filtering"
+                    },
+                    "ips": {
+                        "info": "DDOS and portscan protection"
+                    },
+                    "dhcp-server": {
+                        "info": "handing out local ip address to clients"
+                    },
+                    "updates": {
+                        "info": "handling dnx system and signature updates"
+                    },
+                    "syslog": {
+                        "info": "sends log messages to remote server"
+                    },
+                    "log": {
+                        "info": "manages local system logs"
+                    }
+                }
+            }
+        }
+    }
+}

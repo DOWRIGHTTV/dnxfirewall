@@ -1,0 +1,19 @@
+{
+    "syslog": {
+        "enabled": false,
+        "protocol": 17,
+        "tls": {
+            "enabled": false,
+            "self_signed": false,
+            "retry": 3600
+        },
+        "tcp": {
+            "fallback": false,
+            "retry": 300
+        },
+        "udp": {
+            "fallback": false
+        },
+        "servers": {}
+    }
+}

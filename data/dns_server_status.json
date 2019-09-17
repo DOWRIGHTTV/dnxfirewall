@@ -1,12 +1,10 @@
 {
-    "Server1": {
-        "Name": "OpenDNS1",
-        "IP Address": "208.67.220.222",
-        "Status": "UP"
+    "1.1.1.1": {
+        "reach": true,
+        "tls": true
     },
-    "Server2": {
-        "Name": "OpenDNS2",
-        "IP Address": "208.67.220.220",
-        "Status": "UP"
+    "1.0.0.1": {
+        "reach": true,
+        "tls": true
     }
 }

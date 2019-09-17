@@ -1,11 +1,7 @@
 {
-    "Whitelists": {
-        "Domains": {},
-        "Exceptions": {},
-        "IP Whitelist": {
-            "192.168.83.26": {
-                "User": "Stacey"
-            }
-        }
+    "whitelists": {
+        "domains": {},
+        "exceptions": {},
+        "ip_whitelist": {}
     }
 }

@@ -1,20 +1,26 @@
 {
-    "DNSServer": {
-        "Resolvers": {
-            "Server1": {
-                "Name": "Cloudflare1",
-                "IP Address": "1.1.1.1"
+    "dns_server": {
+        "resolvers": {
+            "server1": {
+                "name": "Cloudflare1",
+                "ip_address": "1.1.1.1"
             },
-            "Server2": {
-                "Name": "CloudFlare2",
-                "IP Address": "1.0.0.1"
+            "server2": {
+                "name": "Cloudflare2",
+                "ip_address": "1.0.0.1"
             }
         },
-        "TLS": {
-            "Enabled": true,
-            "Fallback": true,
-            "Retry": 600
+        "cache": {
+            "standard": false,
+            "top_domains": false
         },
-        "Records": {}
+        "tls": {
+            "enabled": false,
+            "fallback": false,
+            "retry": 600
+        },
+        "records": {
+            "dnxfirewall": "192.168.83.1"
+        }
     }
 }
