@@ -1,0 +1,63 @@
+move dnxfirewall to /home/dnx
+-----------------------------
+git clone https://github.com/dowrighttv/dnxfirewall-cmd.git
+========================================
+
+system dependencies
+    python3.7
+    python3-pip
+    postgresql
+    libpcre3 libpcre3-devpython3
+    libnetfilterqueue
+    python-netfilterqueue
+
+python dependencies (root and dnx)
+    pg8000
+    
+---------------------------------------
+sudo apt install nginx postgresql python3-pip
+pip3 install flask pg8000 uwsgi (uwsgi is a python package)
+sudo pip3 install pg8000
+================================
+
+create user dnx, usergroup dnx
+chown all dnx related files to dnx:dnx
+add www-data to dnx group
+--------------------------
+sudo chown -r dnx:dnx dnxfirewall
+sudo usermod -aG dnx www-data
+================================
+
+create postrgesql db dnxfirewall
+create db user dnx
+create db password firewall
+add db user dnx to db dnxfirewall
+--------------------------------
+sudo -u postgres psql
+CREATE DATABASE dnxfirewall;
+create user dnx with encrypted password 'firewall';
+grant all privileges on database dnxfirewall to dnx;
+================================================
+
+move all services files from /dnxfirewall/service to /etc/systemd/system
+systemctl enable all dnx service, nginx, postgresql
+
+RUN SCRIPT
+====================
+
+change /data/config.json
+    interface names
+
+change lan interface ip to localnet subnet with 192.168.83.1/24
+
+sudo ifconfig enp0s8 192.168.83.1 netmask 255.255.255.0
+
+|| IF NOT ALREADY DONE ||
+run /dnx_configure/dnx_iptables.py (this will reconfigure your iptables, reboot required)
+
+|| If upgrading from earlier version ||
+
+keep copy of configuration files
+copy dnx-ips.service from services folder to systemd and enable it for auto start
+migrate configuration files from old version to new (be careful fields may be different so dont copy over)
+restart device for some scripts to run and changes to be active
