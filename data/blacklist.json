@@ -1,6 +1,6 @@
 {
-    "blacklists": {
-        "domains": {},
-        "exceptions": {}
+    "blacklist": {
+        "domain": {},
+        "exception": {}
     }
 }

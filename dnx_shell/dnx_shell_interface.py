@@ -31,7 +31,7 @@ class Interface:
                                             'mode': {'setting': None, 'syntax': 'mode'}}
 
         self.Standard = Standard(self)
-        self.ShowStatus(initial_load=True)
+        self.ShowIPAddress(initial_load=True)
 
     def CommandLoop(self):
         while True:
@@ -70,6 +70,9 @@ class Interface:
             self.Standard.ChangeHelpSetting()
             return
 
+        elif (comm == 'configure'):
+            self.ApplyPending()
+
         elif (comm == 'commands'):
             for cm, values in self.valid[comm].items():
                 info = values['info']
@@ -105,8 +108,10 @@ class Interface:
             return
 
         elif (comm == 'show'):
-            if (arg in {'interface'}):
-                self.ShowStatus()
+            if (arg in {'ip-address'}):
+                self.ShowIPAddress()
+            elif (arg in {'mac-address'}):
+                self.ShowMACAddress()
             elif (arg in {'pending'}):
                 self.ShowPending()
 
@@ -125,16 +130,6 @@ class Interface:
                 for option in arg_options:
                     arg2 = self.Standard.CalculateSpace(arg)
                     self.conn.send(f'{arg2} {option}\n'.encode('utf-8'))
-                # if (comm == 'ip-address'):
-                #     self.Standard.SendNotice(f'missing ip address.')
-                # elif (comm == 'netmask'):
-                #     self.Standard.SendNotice(f'missing netmask.')
-                # elif (comm == 'default-gateway'):
-                #     self.Standard.SendNotice(f'missing default gateway.')
-                # elif (comm == 'mac-address'):
-                #     self.Standard.SendNotice(f'missing mac address.')
-                # elif (comm == 'mode'):
-                #     self.Standard.SendNotice(f'missing interface mode type.')
 
                 return
 
@@ -174,6 +169,8 @@ class Interface:
 
     def InputSettings(self, arg, option):
         arg = arg.replace('-', '_')
+        if (option == 'none'):
+            option = 'not set'
         self.interface_settings_pending[arg].update({'setting': option})
 
         syntax = self.interface_settings_pending[arg].get('syntax')
@@ -187,7 +184,6 @@ class Interface:
         else:
             self.Standard.SendNotice(f'ip address and subnet mask must be configured before default gateway.')
             return (None, None)
-
 
     #checking all pending items to ensure the user is informed about how to properly apply the settings. will notify
     #the user if the current pending changes are not valid.
@@ -220,7 +216,7 @@ class Interface:
             self.Standard.ShowSend(pending_name, pending_setting)
         self.CheckInterfaceMode(notice=True)
 
-    def ShowStatus(self, initial_load=False):
+    def ShowIPAddress(self, initial_load=False):
         Inter = Int()
         with open(f'{HOME_DIR}/data/config.json', 'r') as settings:
            setting = json.load(settings)
@@ -245,8 +241,19 @@ class Interface:
             self.Standard.ShowSend('ip-address', wan_ip)
             self.Standard.ShowSend('netmask', wan_netmask)
             self.Standard.ShowSend('default-gateway', wan_dfg)
-            self.Standard.ShowSend('mac-address', configured_wan_mac)
             self.Standard.ShowSend('mode', wan_mode)
+
+    def ShowMACAddress(self):
+        with open(f'{HOME_DIR}/data/config.json', 'r') as settings:
+           setting = json.load(settings)
+
+        interface_settings = setting['settings']['interface']
+        default_wan_mac = interface_settings['wan']['default_mac']
+        configured_wan_mac = interface_settings['wan']['configured_mac']
+        if (not configured_wan_mac):
+            configured_wan_mac = default_wan_mac
+
+        self.Standard.ShowSend('mac-address', configured_wan_mac)
 
     def ChangeMode(self, comm, arg, option):
         self.interface_settings_pending['mode'].update({'setting': option})
@@ -299,5 +306,11 @@ class Interface:
 
         self.Standard.SendNotice(f'netmask set to {netmask}. use "show pending" command to check loaded configuration.')
 
-    def ApplyPending(self, arg, option):
-        pass
+    def ApplyPending(self):
+        if (self.interface_settings_pending == 'dhcp'):
+            for setting, info in self.interface_settings_pending.items():
+                if (setting in {'mac_address', 'mode'}):
+                    continue
+
+                if (info['setting']):
+                    pass

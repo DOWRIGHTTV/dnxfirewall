@@ -112,18 +112,18 @@ class TopLevel:
         validated = system['license']['validated']
 
         system_version = update['updates']['system']['version']
-        domain_version = update['updates']['signatures']['domain']['version']
-        ip_version = update['updates']['signatures']['ip']['version']
+        domain_version = update['updates']['signature']['domain']['version']
+        ip_version = update['updates']['signature']['ip']['version']
         self.system_current = update['updates']['system']['current']
-        self.domain_current = update['updates']['signatures']['domain']['current']
-        self.ip_current = update['updates']['signatures']['ip']['current']
+        self.domain_current = update['updates']['signature']['domain']['current']
+        self.ip_current = update['updates']['signature']['ip']['current']
         self.system_restart = update['updates']['system']['restart']
-        self.domain_restart = update['updates']['signatures']['domain']['restart']
-        self.ip_restart = update['updates']['signatures']['ip']['restart']
+        self.domain_restart = update['updates']['signature']['domain']['restart']
+        self.ip_restart = update['updates']['signature']['ip']['restart']
         self.system_error = update['updates']['system']['error']
-        self.signature_error = update['updates']['signatures']
-        self.domain_error = update['updates']['signatures']['domain']['error']
-        self.ip_error = update['updates']['signatures']['ip']['error']
+        self.signature_error = update['updates']['signature']
+        self.domain_error = update['updates']['signature']['domain']['error']
+        self.ip_error = update['updates']['signature']['ip']['error']
 
         software_versions = {'status': 0, 'system': {'v': system_version, 's': 0}, 'domain': {'v': domain_version, 's': 0}, 'ip': {'v': ip_version, 's': 0}}
         for mod in ['system', 'domain', 'ip']:

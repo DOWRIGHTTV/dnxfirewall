@@ -1,12 +1,12 @@
 {
     "dns_server": {
         "resolvers": {
-            "server1": {
-                "name": "Cloudflare1",
+            "primary": {
+                "name": "CloudFlare1",
                 "ip_address": "1.1.1.1"
             },
-            "server2": {
-                "name": "Cloudflare2",
+            "secondary": {
+                "name": "CloudFlare2",
                 "ip_address": "1.0.0.1"
             }
         },
@@ -15,12 +15,11 @@
             "top_domains": false
         },
         "tls": {
-            "enabled": false,
-            "fallback": false,
-            "retry": 600
+            "enabled": true,
+            "fallback": false
         },
         "records": {
-            "dnxfirewall": "192.168.83.1"
+            "dnx.firewall": "192.168.83.1"
         }
     }
 }

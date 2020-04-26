@@ -7,51 +7,44 @@ import json
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_system_info import System as Sys
+from dnx_configure.dnx_system_info import System
+
 
 class SyslogFormat:
-    def __init__(self):
-        self.System = Sys()
-
-    def Message(self, system_ip, module, msg_type, msg_level, message):
+    def message(self, system_ip, module, msg_type, msg_level, message):
         epoch = time.time()
 
-        date = self.Date()
-        timestamp = self.System.FormatTime(epoch)
-        msg_type = self.ReturnType(msg_type)
-        msg_level = self.ReturnLevel(msg_level)
+        date = ''.join(self.System.date())
+        timestamp = System.format_time(epoch)
+        msg_type  = self._convert_type(msg_type)
+        msg_level = self._convert_level(msg_level)
 
-        #add time offset??
-        #20140624|19:08:15|EVENT|DNSProxy:Informational|192.168.83.1|src.mac={}; src.ip={}; domain={}; category={}; filter={}; action={}
+        # using system/UTC time
+        # 20140624|19:08:15|EVENT|DNSProxy:Informational|192.168.83.1|*MESSAGE*
         message = f'{date}|{timestamp}|{msg_type}|{module}:{msg_level}|{system_ip}|{message}'
 
-        return message
+        return message.encode('utf-8')
 
-    def ReturnType(self, msg_type):
+    def return_type(self, msg_type):
         # T3 = System Daemons | T14 = Event/Log Alert
         if (msg_type == 3):
-            msg_type = 'SYSTEM'
+            msg_type = 'system'
         elif (msg_type == 14):
-            msg_type = 'EVENT'
+            msg_type = 'event'
 
         return msg_type
 
-    def Date(self):
-        d = self.System.Date()
-        date = f'{d[0]}{d[1]}{d[2]}'
-
-        return date
-
-    def ReturnLevel(self, level):
+    def return_level(self, level):
+        '''converts log level as integer to string. valid input: 0-7'''
         log_levels = {
-            0 : 'Emergency', # system is unusable
-            1 : 'Alert', #action must be taken immediately
-            2 : 'Critical', # critical conditions
-            3 : 'Error', # error conditions
-            4 : 'Warning', # warning conditions
-            5 : 'Notice', # normal but significant condition
-            6 : 'Informational', # informational messages
-            7 : 'Debug', # debug-level messages
+            0 : 'emergency',      # system is unusable
+            1 : 'alert',          # action must be taken immediately
+            2 : 'critical',       # critical conditions
+            3 : 'error',          # error conditions
+            4 : 'warning',        # warning conditions
+            5 : 'notice',         # normal but significant condition
+            6 : 'informational',  # informational messages
+            7 : 'debug',          # debug-level messages
         }
 
         return log_levels[level]

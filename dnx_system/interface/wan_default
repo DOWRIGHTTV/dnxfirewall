@@ -1,0 +1,12 @@
+[Match]
+Name=wan
+
+[Network]
+DHCP=yes
+BindCarrier=eth0
+IPForward=ipv4
+
+##DNX Fields
+useDNS=false
+DNS=NULL
+DNS=NULL

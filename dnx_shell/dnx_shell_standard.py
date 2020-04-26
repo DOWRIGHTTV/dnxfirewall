@@ -75,7 +75,6 @@ class Standard:
 
     #fix the damn validation shit when you get back from store you shithead.
     def ValidateIP(self, ip_address):
-        print(self.valid_ip.match(ip_address))
         if (self.valid_ip.match(ip_address) or ip_address == 'none'):
             return True
         else:

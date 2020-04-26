@@ -12,13 +12,13 @@ sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import SHELL_SPACE
 from dnx_shell.dnx_shell_main import TopLevel
+from dnx_shell.dnx_shell_authentication import Authentication
+
 
 class DNXShell:
     def __init__(self):
         self.HOST = ''
         self.PORT = 6912
-
-        self.users = {'dowright': 'password', 'd': 'p'}
 
     def Start(self):
         self.Server()
@@ -43,8 +43,7 @@ class DNXShell:
             # connections and authentication.
             result = TopLevel(conn).CommandLoop()
             if (result == 'QUIT'):
-                conn.close()
-                break
+                return 'QUIT'
 
     def Main(self):
         while True:
@@ -57,6 +56,7 @@ class DNXShell:
 
     #Authenticing the connection
     def Authenticate(self, conn):
+        Account = Authentication()
         i = 0
         authenticated = False
         while True:
@@ -67,26 +67,22 @@ class DNXShell:
                 password = conn.recv(1024).decode().strip('\r\n')
 
                 if (not authenticated and i < 3):
-                    authenticated = self.CheckUser(username, password)
-                    i += 1
+                    authenticated = Account.Login(username, password)
                     if (authenticated):
                         break
+
+                    i += 1
+
                 else:
                     conn.send('authentication not successful. Disconnecting.\r\n'.encode('utf-8'))
                     conn.close()
                     break
 
             conn.send('Authenticated\r\n'.encode('utf-8'))
-            self.Shell(conn)
-
-    #validating credentials
-    def CheckUser(self, username, password):
-        if username in self.users:
-            if (self.users[username] == password):
-                return True
-            else:
-                return False
-
+            result = self.Shell(conn)
+            if (result == 'QUIT'):
+                conn.close()
+                break
 
 if __name__ == '__main__':
     DNX = DNXShell()

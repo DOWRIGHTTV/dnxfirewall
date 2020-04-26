@@ -1,25 +1,25 @@
 {
     "settings": {
-        "logging": {
-            "length": 60,
-            "level": 6
-        },
-        "interface": {
-            "outside": "eth0",
-            "inside": "eth0",
+        "interfaces": {
+            "lan": {
+                "ident": "eth0",
+                "ip": "192.168.83.1",
+                "netmask": "255.255.255.0",
+                "subnet": "192.168.83.0/24"
+            },
+            "dmz": {
+                "ident": null,
+                "ip": null,
+                "netmask": null,
+                "subnet": null
+            },
             "wan": {
-                "default_mac": "aa:aa:aa:aa:aa:aa",
+                "ident": "eth0",
+                "default_mac": null,
                 "configured_mac": null,
                 "dhcp": true,
-                "mac_set": true
+                "mac_set": false
             }
-        },
-        "time_restriction": {
-            "enabled": false,
-            "active": false,
-            "start": "22:00",
-            "end": 1566212400.0,
-            "length": 21600
         },
         "local_net": {
             "subnet": "192.168.83.0/24"

@@ -1,34 +1,27 @@
 {
     "ips": {
+        "passive_block_ttl": 24,
         "ddos": {
-            "enabled": false,
+            "enabled": 1,
             "limits": {
                 "source": {
                     "tcp": 100,
                     "udp": 100,
                     "icmp": 100
-                },
-                "destination": {
-                    "combined": 200
                 }
             }
         },
         "port_scan": {
-            "prevention": false,
-            "reject": false,
-            "length": 48,
-            "logging": false
+            "drop": true,
+            "reject": true
         },
         "open_protocols": {
-            "icmp": true,
-            "tcp": {
-                "109": "",
-                "13": ""
-            },
+            "icmp": false,
+            "tcp": {},
             "udp": {}
         },
         "whitelist": {
-            "dns_servers": true,
+            "dns_servers": 0,
             "ip_whitelist": {}
         }
     }

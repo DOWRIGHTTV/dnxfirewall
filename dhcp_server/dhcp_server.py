@@ -1,204 +1,182 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
-import os, sys, time, subprocess
-import threading, asyncio
+import os, sys
+import time, subprocess
+import threading
 import struct
 import json
+import traceback
 
-from socket import socket, inet_aton, AF_INET, SOCK_DGRAM
+from ipaddress import IPv4Address
+from socket import socket, error, inet_aton, AF_INET, SOCK_DGRAM
 from socket import SOL_SOCKET, SO_BROADCAST, SO_BINDTODEVICE, SO_REUSEADDR
-from collections import OrderedDict
 
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import *
-from dnx_logging.log_main import LogHandler
-from dnx_configure.dnx_system_info import Interface as Int
-from dhcp_server.dhcp_leases import DHCPLeases
-from dhcp_server.dhcp_response import DHCPResponse
+import dnx_iptools.dnx_interface as interface
 
-LOG_MOD = 'dhcp_server'
+from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
+from dnx_iptools.dnx_parent_classes import Listener
+from dnx_iptools.dnx_structs import * # pylint: disable=unused-wildcard-import
+from dnx_iptools.dnx_standard_tools import looper
+
+from dnx_logging.log_main import LogHandler as Log
+from dhcp_server.dhcp_server_requests import ServerResponse, ClientRequest
+from dhcp_server.dhcp_server_automate import Configuration, Leases
+
+LOG_NAME = 'dhcp_server'
 
 
-class DHCPServer:
-    def __init__(self):
-        self.Log = LogHandler(LOG_MOD)
-        # add configuration check for icmp checks prior to handing out ip.
-        self.icmp_check = True
-        self.Leases = DHCPLeases(self)
+class DHCPServer(Listener):
+    intf_settings = {}
+    options = {}
+    leases  = {} # NOTE: this is pissing me off. it conflicts with custom default dict
+    reservations = {}
+    options_lock = threading.Lock()
+    handout_lock = threading.Lock()
 
-        self.ongoing = {}
+    _valid_mtypes = [DHCP.DISCOVER, DHCP.REQUEST, DHCP.RELEASE]
+    _valid_idents = []
+    _ongoing = {}
 
-        self.handout_lock = threading.Lock()
-        self.log_queue_lock = threading.Lock()
+    _packet_parser = ClientRequest
 
-    def Start(self):
-        self.LoadInterfaces()
-        # -- Creating Lease Dictionary -- #
-        self.Leases.BuildRange()
-        self.Leases.LoadLeases()
-        # -- Building Server Options Dictionary -- #
-        self.SetServerOptions()
-        # -- Creating socket && starting main server thread -- #
-        self.CreateSocket()
-        threading.Thread(target=self.Server).start()
+    __slots__ = ()
 
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        asyncio.run(self.Main())
+    @classmethod
+    def _setup(cls):
+        Configuration.setup(cls)
 
-    async def Main(self):
-        ## -- Starting Server and Timers in Asyncio Gather -- ##
-        await asyncio.gather(self.Leases.LeaseTimer(), self.Leases.ReservationTimer(),
-                            self.Leases.WritetoFile(), self.Log.QueueHandler(self.log_queue_lock))
+        # initializing the lease table dictionary and giving a reference to the reservations
+        cls.leases = Leases(cls.reservations)
 
-    def CreateSocket(self):
-        self.s = socket(AF_INET, SOCK_DGRAM)
-        self.s.setsockopt(SOL_SOCKET, SO_REUSEADDR,1)
-        self.s.setsockopt(SOL_SOCKET, SO_BROADCAST,1)
-        self.s.setsockopt(SOL_SOCKET, SO_BINDTODEVICE, self.bind_int)
-        self.s.bind(('0.0.0.0', 67))
-        print('[+] Listening on Port 67')
+        ClientRequest.set_server_reference(cls)
+        cls.set_proxy_callback(func=cls.handle_dhcp)
 
-    def Server(self):
-        while True:
-            try:
-                Parse = DHCPParser(self.dhcp_server_options)
-                rdata = self.s.recv(1024) ## removed recvfrom, dont need since ip of client is identified in packet
-                print(rdata)
-                response_info, options = Parse.Data(rdata)
-                options = Parse.Options(options)
-                threading.Thread(target=self.Response, args=(response_info, options)).start()
-            except Exception as E:
-                print(E)
+        cls._valid_idents = [*[intf['ip'].ip for intf in cls.intf_settings.values()], None]
 
-    def Response(self, response_info, options):
-        print('Response Thread')
-        mtype, xID, ciaddr, mac_address = response_info
-        if (mac_address in self.ongoing and self.ongoing[mac_address] != xID):
-            options[53] = [1, DHCP_NAK]
-        elif mtype == DHCP_DISCOVER:
-            options[53] = [1, DHCP_OFFER]
-        elif mtype == DHCP_REQUEST:
-            options[53] = [1, DHCP_ACK]
-        elif mtype == DHCP_RELEASE:
-            self.Leases.Release(ciaddr, mac_address)
+    def _pre_inspect(self, packet):
+        if (packet.mtype in self._valid_mtypes
+                and packet.server_ident in self._valid_idents):
+            return True
 
-        if (mtype != DHCP_RELEASE):
-            self.SendResponse(response_info, options)
+        return False
 
-    def SendResponse(self, response_info, options):
-        print('Send Thread')
-        mtype, xID, ciaddr, mac_address = response_info
-        mtype = options[53][1]
-        ## -- Set ongiong request flag, NAK duplicates -- ##
-        if (mtype != DHCP_NAK):
-            self.ongoing[mac_address] = xID
-            threading.Thread(target=self.OngoingTimer, args=(mac_address,)).start()
+    @classmethod
+    def handle_dhcp(cls, packet):
+        '''pseudo alternate constructer acting as a callback for the Parent/Listener class, but will not return
+        the created instance. instead it will internally manage the instance and ensure the request gets handled.'''
 
-        ## locking handout method call to ensure checking/setting leases is thread safe
-        with self.handout_lock:
-            handout_ip = self.Leases.Handout(mac_address)
+        # NOTE: sending in None to fulfill __init__ requirements in the parent. MAYBE. one day. we can decide if
+        # we can to remove the assignments in initialization and inject them via the alternate constructor, allowing
+        # classing doing a self callback (non external) to not need to fill in the gap needlessly.
+        self = cls(None, None)
+        self._handle_request(packet)
 
-        response_info =  xID, mac_address, ciaddr, handout_ip, options
-        Response = DHCPResponse(response_info)
-        sdata = Response.Assemble()
-        if (mtype in {DHCP_OFFER, DHCP_ACK, DHCP_NAK} and handout_ip):
-            if (ciaddr == '0.0.0.0'):
-                print(f'Sent BROADCAST TYPE: {mtype} to 255.255.255.255:68')
-                self.s.sendto(sdata, ('255.255.255.255', 68))
-            else:
-                print(f'Sent UNICAST TYPE: {mtype} to {ciaddr}:68')
-                self.s.sendto(sdata, (ciaddr, 68))
+    def _handle_request(self, client_request):
+        request_id, response_mtype = (client_request.mac, client_request.xID), None
+        Log.debug(f'REQ | TYPE={client_request.mtype}, ID={request_id}')
+        if (client_request.mtype == DHCP.RELEASE):
+            self._release(client_request.ip, client_request.mac)
 
-        ## -- Remove ongiong request flag, NAK duplicates -- ##
-        if (mtype == DHCP_ACK and handout_ip):
-            self.ongoing.pop(mac_address, None)
+        elif (client_request.mtype == DHCP.DISCOVER):
+            response_mtype, record = self._discover(request_id, client_request)
 
-    def SetServerOptions(self):
-        print('[+] DHCP: Setting server options.')
-        insideip, netmask, broadcast, mtu = self.InterfaceInfo()
-        dhcp_server_options = {}
+        elif (client_request.mtype == DHCP.REQUEST):
+            response_mtype, record = self._request(request_id, client_request)
 
-        dhcp_server_options[1] = [4, inet_aton(netmask)]         # OPT 1  | Subnet Mask
-        dhcp_server_options[3] = [4, inet_aton(insideip)]        # OPT 3  | Router
-        dhcp_server_options[6] = [4, inet_aton(insideip)]        # OPT 6  | DNS Server
-        dhcp_server_options[26] = [2, mtu]                       # OPT 26 | MTU
-        dhcp_server_options[28] = [4, inet_aton(broadcast)]      # OPT 28 | Broadcast
-        dhcp_server_options[51] = [4, 86400]                     # OPT 51 | Lease Time
-        dhcp_server_options[54] = [4, inet_aton(insideip)]       # OPT 54 | Server Identity
-        dhcp_server_options[58] = [4, 43200]                     # OPT 58 | Renew Time
-        dhcp_server_options[59] = [4, 74025]                     # OPT 59 | Rebind Time
+        if (response_mtype):
+            client_request.generate_server_response(response_mtype)
 
-        self.dhcp_server_options = dhcp_server_options
+            # this is filtering out response types like dhcp nak
+            if (record):
+                self.leases.modify( # pylint: disable=no-member
+                    client_request.handout_ip, record
+            )
 
-    def OngoingTimer(self, mac):
-        time.sleep(6)
-        self.ongoing.pop(mac, None)
+            self.send_to_client(client_request)
 
-    def InterfaceInfo(self):
-        Interface = Int()
-        insideip = Interface.IP(self.lan_int)
-        netmask = Interface.Netmask(self.lan_int)
-        broadcast = Interface.Broadcast(self.lan_int)
-        mtu = Interface.MTU(self.lan_int)
+        else:
+            Log.warning(f'Unknown request type from {client_request.mac}')
 
-        return(insideip, netmask, broadcast, mtu)
+    def _release(self, ip_address, mac_address):
+        dhcp = ServerResponse(server=self)
 
-    def LoadInterfaces(self):
-        with open(f'{HOME_DIR}/data/config.json', 'r') as settings:
-            setting = json.load(settings)
+        # if mac/ lease mac match, the lease will be removed from the table
+        if dhcp.release(ip_address, mac_address):
+            self.leases.modify(ip_address, None) # pylint: disable=no-member
 
-        self.lan_int = setting['settings']['interface']['inside']
-        self.bind_int = f'{self.lan_int}\0'.encode('utf-8')
+    def _discover(self, request_id, client_request):
+        dhcp = ServerResponse(client_request.intf, server=self)
+        self._ongoing[request_id] = dhcp
 
-class DHCPParser:
-    def __init__(self, dhcp_server_options):
-        self.dhcp_server_options = dhcp_server_options
-        self.mtypeopt = []
+        client_request.handout_ip = dhcp.offer(client_request)
+        record = (DHCP.OFFERED, fast_time(), client_request.mac)
 
-    def Options(self, client_options):
-        server_options_reponse = OrderedDict()
-        server_options_reponse[54] = self.dhcp_server_options[54]
-        server_options_reponse[53] = self.mtypeopt
-        if (51 not in client_options):
-            server_options_reponse[51] = self.dhcp_server_options[51]
+        return DHCP.OFFER, record
 
-        for option in client_options:
-            server_option = self.dhcp_server_options.get(option, None)
-            if (server_option):
-                server_options_reponse[option] = server_option
+    def _request(self, request_id, client_request):
+        dhcp = self._ongoing.get(request_id, None)
+        if (not dhcp):
+            dhcp = ServerResponse(client_request.intf, server=self)
 
-        return server_options_reponse
+        result = dhcp.ack(client_request)
+        # not responding per rfc 2131
+        if (result == DHCP.DROP):
+            self._ongoing.pop(request_id, None)
+            response_mtype, record = None, None
 
-    def Data(self, data):
-        xID = data[4:8]
-        ciaddr = data[12:16]
-        mac = data[28:28+6] # MAC ADDR ONLY
-        mtype = data[242]
+        # sending NAK per rfc 2131
+        elif (result == DHCP.NAK):
+            client_request.handout_ip = INADDR_ANY
+            response_mtype, record = DHCP.NAK, None
 
-        mac = struct.unpack('!6c', mac)
-        mac_address = ''
-        for i, byte in enumerate(mac, 1):
-            if (i != 1):
-                mac_address += ':'
-            mac_address += f'{byte.hex()}'
+        # responding with ACK
+        elif (result):
+            client_request.handout_ip = result
+            response_mtype = DHCP.ACK
+            record = (DHCP.LEASED, fast_time(), client_request.mac)
 
-        cia = struct.unpack('!4B', ciaddr)
-        ciaddr = f'{cia[0]}.{cia[1]}.{cia[2]}.{cia[3]}'
+        # protecting return on invalid dhcp types | NOTE: validate if this even does anything. :)
+        else:
+            response_mtype, record = None, None
 
-        options = OrderedDict()
-        if mtype != DHCP_RELEASE:
-            for b, byte in enumerate(reversed(data), 1):
-                if (byte == 55):
-                    paramlen = data[-(b-1)]
-                    for opt in data[-(b-2):-(b-2) + paramlen]:
-                        options[opt] = None
-                    break
+        return response_mtype, record
 
-        return (mtype, xID, ciaddr, mac_address), options
+    @property
+    # NOTE: might need to be adjusted due to new listener class
+    def is_enabled(self):
+        return True
+
+        # if self.intf_settings[self.name]['enabled']: return True
+
+        # return False
+
+    @staticmethod
+    # will send response to client over socket depending on host details it will decide unicast or broadcast
+    def send_to_client(client_request):
+        if (client_request.bcast):
+            Log.debug(f'Sent BROADCAST to 255.255.255.255:68')
+            client_request.sock.sendto(client_request.send_data, (f'{BROADCAST}', 68))
+        else:
+            Log.debug(f'Sent UNICAST to {client_request.handout_ip}:68')
+            client_request.sock.sendto(client_request.send_data, (f'{client_request.handout_ip}', 68))
+
+    @property
+    def listener_sock(self):
+        l_sock = socket(AF_INET, SOCK_DGRAM)
+        l_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR,1)
+        l_sock.setsockopt(SOL_SOCKET, SO_BROADCAST,1)
+        l_sock.setsockopt(SOL_SOCKET, SO_BINDTODEVICE, f'{self._intf}\0'.encode('utf-8'))
+        l_sock.bind((str(INADDR_ANY), PROTO.DHCP_SVR))
+
+        return l_sock
 
 if __name__ == '__main__':
-    DHCPServer = DHCPServer()
-    DHCPServer.Start()
+    Log.run(
+        name=LOG_NAME,
+        verbose=VERBOSE,
+        root=ROOT
+    )
+    DHCPServer.run(Log, threaded=False)

@@ -1,0 +1,15 @@
+[Unit]
+Description=DNX Firewall DNS Proxy Service
+After=dnx-log.service dnx-syslog.service
+StartLimitIntervalSec=3
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=3
+User=root
+ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dns_proxy/dns_proxy.py
+Environment=HOME_DIR=/home/dnx/dnxfirewall
+
+[Install]
+WantedBy=multi-user.target

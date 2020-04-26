@@ -1,305 +1,220 @@
 #!/usr/bin/python3
 
 import os, sys
-import time
-import threading, asyncio
-import json
+import socket
 
-from copy import deepcopy
-from types import SimpleNamespace as SName
+from functools import lru_cache
 
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import *
+from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
+from dnx_iptools.dnx_parent_classes import Listener
+from dnx_configure.dnx_namedtuples import DNS_REQUEST_RESULTS, PROXY_DECISION
+from dnx_configure.dnx_namedtuples import WHITELIST, BLACKLIST, SIGNATURES
 
-from dns_proxy.dns_proxy_response import DNSResponse
-from dns_proxy.dns_proxy_sniffer import DNSSniffer
-from dns_proxy.dns_proxy_relay import DNSRelay, DNSCache
-from dns_proxy.dns_proxy_protocols import TLSRelay, UDPRelay
-from dns_proxy.dns_proxy_automate import Automate
+from dns_proxy.dns_proxy_log import Log
+from dns_proxy.dns_proxy_packets import ProxyRequest
+from dns_proxy.dns_proxy_server import DNSServer
+from dns_proxy.dns_proxy_automate import Configuration
 
-from dnx_logging.log_main import LogHandler
-from dnx_syslog.syl_main import SyslogHandler
-from dnx_configure.dnx_system_info import Interface
-from dnx_configure.dnx_db_connector import DBConnector
-from dnx_configure.dnx_lists import ListFiles
-from dnx_configure.dnx_iptables import IPTables as IPT
+from dnx_configure.dnx_code_profiler import profiler
 
-LOG_MOD = 'dns_proxy'
-SYSLOG_MOD = 'DNSProxy'
+LOG_NAME = 'dns_proxy'
 
-class DNSProxy:
-    ''' Main Class for DNS Proxy. This class directly controls the logic regarding the signatures, whether something
-        should be blocked or allowed, managing signature updates from user front end configurations. This class also
-        serves as a bridge between the DNS Proxy Sniffer and DNS Relay give them a single point to flag traffic and
-        identify traffic that should not be relayed/blocked via the class variable "flagged_traffic" dictionary. If
-        the Proxy sniffer detects traffic that should be blocked it inputs the connection info into the dictionary
-        for the DNS Relay to refer to before relaying the traffic. If the query information matches a dictionary item
-        the DNS Relay will not forward the traffic to the configured public resolvers. '''
 
-    def __init__(self):
-        self.ip_whitelist = {}
-        self.dns_whitelist = {}
-        self.dns_blacklist = {}
-        self.dns_sigs = {}
-        self.dns_records = {}
-        self.dns_servers = {}
+class DNSProxy(Listener):
+    # dns | ip
+    whitelist = WHITELIST(
+        {}, {}
+    )
+    blacklist = BLACKLIST(
+        {}
+    )
 
-        self.allowed_request = {}
-        self.flagged_request = {}
+    _dns_sig_ref = None
 
-        self.shared_decision_lock = threading.Lock()
-        self.log_queue_lock = threading.Lock()
+    _packet_parser = ProxyRequest.interface # alternate constructor
+    _dns_server    = DNSServer
 
-        self.logging_level = 0
-        self.syslog_enabled = False
+    @classmethod
+    def _setup(cls):
+        dns_sigs = Configuration.load_signatures()
+        # en_dns | dns | tld | keyword
+        cls.signatures = SIGNATURES(
+            set(), dns_sigs, {}, []
+        )
 
-    ''' Start Method to Initialize All proxy configurations, including cleaning the database tables to the configures
-        length. Starting a child thread for DNS Relay and DNS Proxy Sniffer, to handle requests, and doing an AsyncIO
-        gather on proxy timer methods in main thread for rule updates '''
-    def Start(self):
-        self.LoadInterfaces()
+        Configuration.proxy_setup(cls)
+        cls.set_proxy_callback(func=Inspect.dns)
 
-        self.Log = LogHandler(self)
-        self.Syslog = SyslogHandler(self)
-        self.Automate = Automate(self)
+        Log.notice(f'{cls.__name__} initialization complete.')
 
-        self.DNSCache = DNSCache(self)
-        self.TLSRelay = TLSRelay(self)
-        self.UDPRelay = UDPRelay(self)
-        self.DNSRelay = DNSRelay(self)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-        ListFile = ListFiles()
-        ListFile.CombineDomains()
-        ListFile.CombineKeywords()
+        self._dns_record_get = self._dns_server.dns_records.get
 
-        self.LoadKeywords()
-        self.LoadTLDs()
-        self.LoadSignatures()
+#    @profiler
+    # pre check will filter out invalid packets or local dns records/ .local.
+    def _pre_inspect(self, packet):
+        if (packet.qr != DNS.QUERY): return False
 
-        Sniffer = DNSSniffer(self)
-        # setting from_proxy arg to True to have the sniffer sleep for 5 seconds while settings can initialize
-        threading.Thread(target=Sniffer.Start, args=(True,)).start()
-        threading.Thread(target=self.DNSRelay.Start).start()
+        if (packet.qtype in [DNS.A, DNS.NS]
+                and not self._dns_record_get(packet.request)):
+            return True
 
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        asyncio.run(self.RecurringTasks())
+        # refusing ipv6 dns record types as policy
+        if (packet.qtype == DNS.AAAA):
+            packet.generate_proxy_response() # NOTE: complete
+            self.send_to_client(packet) # NOTE: complete
 
-    def SignatureCheck(self, packet):
-        timestamp = time.time()
+        return False
 
-        dns_record = False
-        whitelisted_query = False
-        redirect = False
-        log_connection = False
-        category = None
+    @classmethod
+    def notify_server(cls, packet, decision):
+        cls._dns_server.REQ_RESULTS[packet.client_address] = decision
 
-        request_info = {'src_ip': packet.src_ip, 'src_port': packet.src_port, 'request': {1: packet.request, 2: packet.request2}}
-        if (packet.request in self.dns_records):
-            dns_record = True
+    @property
+    def listener_sock(self):
+        l_sock = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.IPPROTO_UDP)
+        l_sock.bind((self._intf, 3))
 
-        # Whitelist check of FQDN then overall domain ##
-        elif (packet.request in self.dns_whitelist or packet.request2 in self.dns_whitelist or packet.src_ip in self.ip_whitelist):
-            whitelisted_query = True
+        return l_sock
 
-        ## will prevent all other checks from being processed if a local dns record is found for domain (for performance)
-        if (dns_record):
-            self.ApplyDecision(request_info, decision=FLAGGED)
 
-        ## P1. Standard Category blocking of FQDN || if whitelisted, will check to ensure its not a malicious category
-        ## before allowing it to continue
-        elif (packet.request in self.dns_sigs):
-            redirect, reason, category = self.StandardBlock(request_info, whitelisted_query)
+class Inspect:
+    _Proxy = DNSProxy
 
-        ## P2. Standard Category blocking of overall domain || micro.com if whitelisted, will check to ensure its not
-        ## a malicious category before allowing it to continue
-        elif (packet.request2 in self.dns_sigs):
-            redirect, reason, category = self.StandardBlock(request_info, whitelisted_query, position=2)
+    __slots__ = (
+        # protected vars
+        '_packet', '_whitelisted', '_match'
+    )
 
-        ## P1/P2 Blacklist block of FQDN if not whitelisted ##
-        elif (not whitelisted_query) and (packet.request in self.dns_blacklist or packet.request2 in self.dns_blacklist):
-            print(f'Blacklist Block: {packet.request}')
-            redirect = True
-            reason = 'blacklist'
-            category = 'time based'
+    def __init__(self, packet):
+        self._packet = packet
 
-        ## TLD (top level domain) block ##
-        elif (packet.request_tld in self.tlds):
-            print(f'TLD Block: {packet.request}')
-            redirect = True
-            category = packet.request_tld
-            reason = 'tld filter'
+        self._whitelisted = False
+        self._match = None
 
-        ## Keyword Search within domain || block if match ##
+    @classmethod
+    def dns(cls, packet):
+        self = cls(packet)
+        request_results = self._dns_inspect()
+        # NOTE: accessing class var through instance is 7-10% faster
+        if (not request_results.redirect):
+            self._Proxy.notify_server(packet, decision=DNS.ALLOWED)
         else:
-            for keyword, cat in self.keywords.items():
-                if (keyword in packet.request):
-                    redirect = True
-                    reason = 'keyword'
-                    category = cat
-                    break
+            self._Proxy.notify_server(packet, decision=DNS.FLAGGED)
 
-        ## Redirect to firewall if traffic match/blocked ##
-        if (redirect):
-            self.ApplyDecision(request_info, decision=FLAGGED)
-            DNSResponse(packet, self.lan_int, self.lan_ip).Response()
+            packet.generate_proxy_response()
 
-        ##Redirect to IP Address in local DNS Record (user configurable)
-        elif (dns_record):
-            record_ip = self.dns_records.get(packet.request)
-            DNSResponse(packet, self.lan_int, record_ip).Response()
+            self._Proxy.send_to_client(packet)
+
+        Log.log(packet, request_results)
+
+    # this is where the system decides whether to block dns query/sinkhole or to allow. notification will be done via the
+    # request tracker upon returning signature scan result
+    def _dns_inspect(self):
+        packet, Proxy, whitelisted = self._packet, self._Proxy, False
+
+        # TODO: make this only apply to global whitelist as currently it will think tor whitelist entries
+        # are part of it.
+        # checking whitelist.
+        if (packet.src_ip in Proxy.whitelist.ip):
+            whitelisted = True
+
+        # NOTE: dns whitelist does not override tld blocks at the moment
+        # signature/ blacklist check. if either match will return results
+        for i, enum_request in enumerate(packet.requests):
+            # TLD (top level domain) block | after first index will pass
+            # nested to allow for continue
+            if (not i):
+                if Proxy.signatures.tld.get(enum_request):
+                    Log.dprint(f'TLD Block: {packet.request}')
+
+                    return DNS_REQUEST_RESULTS(True, 'tld filter', enum_request)
+                continue
+
+            # NOTE: allowing malicious category overrides (for false positives)
+            if (enum_request in Proxy.whitelist.dns):
+
+                return DNS_REQUEST_RESULTS(False, None, None)
+
+            # ip whitelist overrides configured blacklist
+            if (not whitelisted and enum_request in Proxy.blacklist.dns):
+                Log.dprint(f'Blacklist Block: {packet.request}')
+
+                return DNS_REQUEST_RESULTS(True, 'blacklist', 'time based')
+
+            # pulling domain category if signature present.
+            category = self._bin_search(enum_request)
+            if category and self._block_query(category, whitelisted):
+                Log.dprint(f'Category Block: {packet.request}')
+
+                return DNS_REQUEST_RESULTS(True, 'category', category)
+
+        # Keyword search within domain || block if match
+        for keyword, category in Proxy.signatures.keyword:
+            if (keyword in packet.request):
+                Log.dprint(f'Keyword Block: {packet.request}')
+
+                return DNS_REQUEST_RESULTS(True, 'keyword', category)
+
+        # DEFAULT ACTION | ALLOW
+        return DNS_REQUEST_RESULTS(False, None, None)
+
+    @lru_cache(maxsize=1024)
+    def _bin_search(self, request, recursion=False):
+        rb_id, rh_id = request
+        if (not recursion):
+            sigs = self._Proxy.signatures.dns
         else:
-            self.ApplyDecision(request_info, decision=ALLOWED)
+            sigs = self._match
+        # initializing data set bounds
+        left, right = 0, len(sigs)-1
 
-        ## Log to Infected Clients DB Table if matching malicious type categories
-        if (category in {'malicious', 'cryptominer'} and self.logging_level >= ALERT):
-            table ='infectedclients'
-            if (category in {'malicious'}):
-                reason = 'malware'
-            elif (category in {'cryptominer'}):
-                reason = 'cryptominer'
-
-            logging_options = {'infected_client': packet.src_mac, 'src_ip': packet.src_ip, 'detected_host': packet.request, 'reason': reason}
-            self.TrafficLogging(table, timestamp, logging_options)
-
-        # logs redirected/blocked requests
-        if (redirect and self.logging_level >= NOTICE):
-            action = 'blocked'
-            log_connection = True
-
-        # logs all requests, regardless of action of proxy if not already logged
-        elif (not redirect and self.logging_level >= INFORMATIONAL):
-            category = 'N/A'
-            reason = 'logging'
-            action = 'allowed'
-            log_connection = True
-
-        if (log_connection):
-            table = 'dnsproxy'
-            logging_options = {'src_ip': packet.src_ip, 'request': packet.request, 'category': category ,
-                                'reason': reason, 'action': action}
-
-            self.TrafficLogging(table, timestamp, logging_options)
-
-    def StandardBlock(self, request_info, whitelisted_query, position=1):
-        redirect = False
-#        print(f'Standard Block: {request}')
-        reason = 'category'
-        category = self.dns_sigs[request_info['request'][position]]
-        if (not whitelisted_query or category in {'malicious', 'cryptominer'}):
-            redirect = True
-
-        return redirect, reason, category
-
-    def ApplyDecision(self, request_info, decision):
-        info = SName(**request_info)
-        request_tracker = getattr(self, f'{decision}_request')
-        try:
-            request_tracker[info.src_ip].update({info.src_port: info.request[1]})
-        except KeyError:
-            request_tracker[info.src_ip] = {info.src_port: info.request[1]}
-        # else:
-            # self.Log.AddtoQueue(f'Client Source port overlap detected: {src_ip}:{src_port}')
-
-    def TrafficLogging(self, table, timestamp, logging_options):
-        ProxyDB = DBConnector(table)
-        ProxyDB.Connect()
-        if (table in {'dnsproxy'}):
-            ProxyDB.StandardInput(timestamp, logging_options)
-
-            if (self.syslog_enabled):
-                self.AlertSyslog(logging_options)
-
-        elif (table in {'infectedclients'}):
-            ProxyDB.InfectedInput(timestamp, logging_options)
-
-        ProxyDB.Disconnect()
-
-    def AlertSyslog(self, logging_options):
-        opt = SName(**logging_options)
-
-        if (opt.category in {'malicious', 'cryptominer'}):
-            msg_level = ALERT
+        while left <= right:
+            mid = left + (right - left) // 2
+            b_id, match = sigs[mid]
+            # host bin id matches a bin id in sigs
+            if (b_id == rb_id):
+                break
+            # excluding left half
+            elif (b_id < rb_id):
+                left = mid + 1
+            # excluding right half
+            elif (b_id > rb_id):
+                right = mid - 1
         else:
-            if (opt.action == 'blocked'):
-                msg_level = NOTICE
-            elif (opt.action == 'allowed'):
-                msg_level = INFORMATIONAL
+            return None
 
-        message = f'src.ip={opt.src_ip}; request={opt.request}; category={opt.category}; '
-        message += f'filter={opt.reason}; action={opt.action}'
-        self.Syslog.Message(EVENT, msg_level, message)
+        self._match = match
+        # on bin match, recursively call to check host ids
+        if (not recursion):
+            return self._bin_search((rh_id, 0), recursion=True)
 
-    def LoadSignatures(self):
-        with open(f'{HOME_DIR}/data/whitelist.json', 'r') as whitelists:
-            whitelist = json.load(whitelists)
-        wl_exceptions = whitelist['whitelists']['exceptions']
+        return DNS_CAT(match)
 
-        with open(f'{HOME_DIR}/data/blacklist.json', 'r') as blacklists:
-            blacklist = json.load(blacklists)
-        bl_exceptions = blacklist['blacklists']['exceptions']
+    # grabbing the request category and determining whether the request should be blocked. if so, returns general
+    # information for further processing
+    def _block_query(self, category, whitelisted):
+        # signature match, but blocking disabled for the category | ALLOW
+        if (category not in self._Proxy.signatures.en_dns):
+            return False
 
-        with open(f'{HOME_DIR}/dnx_domainlists/blocked.domains', 'r') as blocked:
-            while True:
-                line = blocked.readline().strip().split()
-                if (not line):
-                    break
-                if (line != '\n'):
-                    domain = line[0]
-                    category = line[1]
-                    if (domain not in wl_exceptions):
-                        self.dns_sigs[domain] = category
+        # signature match, not whitelisted, or whitelisted and cat is bad | BLOCK
+        if (not whitelisted or category in ['malicious', 'cryptominer']):
+            return True
 
-            for domain in bl_exceptions:
-                self.dns_sigs[domain] = 'blacklist'
-
-    def LoadTLDs(self):
-        self.tlds = set()
-        with open(f'{HOME_DIR}/data/dns_proxy.json', 'r') as tlds:
-            tld = json.load(tlds)
-        all_tlds = tld['dns_proxy']['tlds']
-
-        for entry, info in all_tlds.items():
-            tld_enabled = info['enabled']
-            if (tld_enabled):
-                self.tlds.add(entry)
-
-    ## consider making a combine keywords file. this would be in line with ip and domain categories
-    def LoadKeywords(self):
-        self.keywords = {}
-
-        with open(f'{HOME_DIR}/dnx_domainlists/blocked.keywords', 'r') as blocked:
-            while True:
-                line = blocked.readline().strip().split()
-                if (not line):
-                    break
-                if (line != '\n'):
-                    keyword = line[0]
-                    cat = line[1]
-
-                    self.keywords[keyword] = cat
-
-    def LoadInterfaces(self):
-        with open(f'{HOME_DIR}/data/config.json', 'r') as settings:
-            setting = json.load(settings)
-
-        self.lan_int = setting['settings']['interface']['inside']
-        self.wan_int = setting['settings']['interface']['outside']
-
-        Int = Interface()
-        self.lan_ip = Int.IP(self.lan_int)
-        self.wan_ip = Int.IP(self.wan_int)
-
-    # AsyncIO method called to gather automated/ continuous methods | this is python 3.7 version of async
-    async def RecurringTasks(self):
-        await asyncio.gather(self.Automate.Settings(), self.Automate.Reachability(),
-                            self.Automate.DNSRecords(), self.Automate.UserDefinedLists(),
-                            self.Automate.ClearCache(), self.Syslog.Settings(SYSLOG_MOD),
-                            self.Log.Settings(LOG_MOD), self.Log.QueueHandler(self.log_queue_lock))
-
+        # default action | ALLOW
+        return False
 
 if __name__ == '__main__':
-    DNSP = DNSProxy()
-    DNSP.Start()
+    Log.run(
+        name=LOG_NAME,
+        verbose=VERBOSE,
+        root=ROOT
+    )
+    DNSProxy.run(Log, threaded=True)
+    DNSServer.run(Log, threaded=True)

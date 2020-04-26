@@ -1,125 +1,44 @@
 {
     "dns_proxy": {
         "keyword": {
-            "enabled": false
+            "enabled": [
+                "cryptominer"
+            ]
         },
         "categories": {
             "default": {
                 "malicious": {
-                    "enabled": true
+                    "enabled": true,
+                    "keyword": false
                 },
                 "cryptominer": {
-                    "enabled": true
-                },
-                "telemetry": {
-                    "enabled": true
+                    "enabled": true,
+                    "keyword": false
                 },
                 "ads": {
-                    "enabled": true
-                },
-                "vpn": {
-                    "enabled": true
-                },
-                "mature": {
-                    "enabled": false
-                },
-                "pornography": {
-                    "enabled": true
-                },
-                "drugs": {
-                    "enabled": false
-                },
-                "weapons": {
-                    "enabled": false
-                },
-                "socialmedia": {
-                    "enabled": true
-                },
-                "dyndns": {
-                    "enabled": false
-                },
-                "p2p": {
-                    "enabled": false
-                },
-                "gambling": {
-                    "enabled": true
-                },
-                "videogames": {
-                    "enabled": true
-                },
-                "purchases": {
-                    "enabled": false
-                },
-                "teentop50": {
-                    "enabled": true
-                },
-                "remotelogin": {
-                    "enabled": false
-                },
-                "downloads": {
-                    "enabled": false
+                    "enabled": false,
+                    "keyword": false
                 }
             },
-            "user_defined": {
-                "bob": {
-                    "enabled": true,
-                    "asfasfg.com": "asda"
-                },
-                "notbob": {
-                    "enabled": true,
-                    "sgsd.com": "asdasd"
-                }
-            }
+            "user_defined": {}
         },
         "tlds": {
-            ".xxx": {
-                "enabled": true
-            },
-            ".porn": {
-                "enabled": false
-            },
-            ".adult": {
-                "enabled": false
-            },
-            ".ru": {
-                "enabled": false
-            },
-            ".ads": {
-                "enabled": true
-            },
-            ".click": {
-                "enabled": true
-            },
-            ".cn": {
-                "enabled": true
-            },
-            ".download": {
-                "enabled": true
-            },
-            ".top": {
-                "enabled": true
-            },
-            ".loan": {
-                "enabled": true
-            },
-            ".work": {
-                "enabled": true
-            },
-            ".men": {
-                "enabled": true
-            },
-            ".cf": {
-                "enabled": true
-            },
-            ".gq": {
-                "enabled": true
-            },
-            ".ml": {
-                "enabled": true
-            },
-            ".ga": {
-                "enabled": true
-            }
+            ".ru": false,
+            ".cn": false,
+            ".xxx": false,
+            ".porn": false,
+            ".adult": false,
+            ".ads": false,
+            ".click": true,
+            ".download": true,
+            ".top": true,
+            ".loan": true,
+            ".work": true,
+            ".men": true,
+            ".cf": true,
+            ".gq": true,
+            ".ml": true,
+            ".ga": true
         }
     }
 }

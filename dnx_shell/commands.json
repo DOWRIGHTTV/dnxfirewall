@@ -190,7 +190,7 @@
                 }
             },
             "whitelist": {
-                "info": "dnx firewall services",
+                "info": "firewall whitelist",
                 "commands": {
                     "help": {
                         "info": "enables/disables cli feedback. enabled by default"
@@ -230,7 +230,7 @@
                 }
             },
             "blacklist": {
-                "info": "dnx firewall services",
+                "info": "firewall blacklist",
                 "commands": {
                     "help": {
                         "info": "enables/disables cli feedback. enabled by default"
@@ -291,8 +291,11 @@
                     }
                 },
                 "settings": {
-                    "interface": {
-                        "info": "configure interface information"
+                    "ip-address": {
+                        "info": "configure interface ip address information"
+                    },
+                    "mac-address": {
+                        "info": "configure interface mac address"
                     },
                     "pending": {
                         "info": "shows configurations that will be applied"
@@ -335,7 +338,7 @@
                         "info": "show options/setting information"
                     },
                     "set": {
-                        "args" : "!settings",
+                        "args" : "!settings2",
                         "info": "configure option/setting"
                     },
                    "enable": {
@@ -352,12 +355,25 @@
                 },
                 "settings": {
                     "whitelist": {
+                        "options": ["dns"],
                         "info": "external ip host whitelisting"
                     },
                     "portscan": {
+                        "options": ["prevention", "reject"],
                         "info": "portscan detection/prevention settings"
                     },
                     "ddos": {
+                        "options": ["prevention"],
+                        "info": "ddos detection/prevention settings"
+                    }
+                },
+                "settings2": {
+                    "portscan": {
+                        "options": ["block-length"],
+                        "info": "portscan detection/prevention settings"
+                    },
+                    "ddos": {
+                        "options": ["tcp", "udp", "icmp"],
                         "info": "ddos detection/prevention settings"
                     }
                 }

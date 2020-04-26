@@ -1,236 +1,185 @@
 #!usr/bin/env python3
 
 import os, sys
-import time
 import random
 import threading
 import traceback
 import ssl
+import socket
 
+from copy import deepcopy
 from collections import deque
-from socket import socket, timeout, AF_INET, SOCK_DGRAM, SOCK_STREAM, SHUT_WR
 
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import *
-from dns_proxy.dns_proxy_packets import PacketManipulation
+from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
+from dnx_configure.dnx_namedtuples import RELAY_CONN
+from dnx_iptools.dnx_parent_classes import ProtoRelay
+from dnx_iptools.dnx_structs import short_unpackf
+from dnx_iptools.dnx_standard_tools import looper, dnx_queue
+
+from dns_proxy.dns_proxy_log import Log
+from dns_proxy.dns_proxy_packets import ClientRequest, ServerResponse
+
+from dnx_configure.dnx_code_profiler import profiler
 
 
-class UDPRelay:
-    def __init__(self, DNSProxy):
-        self.DNSProxy = DNSProxy
+class UDPRelay(ProtoRelay):
+    _protocol = PROTO.UDP
 
-    def SendQuery(self, packet, client_address, fallback=False):
-        # grabbing the data object from packet class being passed around
-        if (not fallback):
-            data_from_client = packet.data
-        # removing packet length | already in byte form
-        else:
-            data_from_client = packet[2:]
+    __slots__ = ()
 
-        # Iterating over DNS Server List and Sending to first server that is available.
-        for server_ip, server_info in self.DNSProxy.dns_servers.items():
-            if (server_info['reach'] is True):
-                try:
-                    udp_socket = socket(AF_INET, SOCK_DGRAM)
-                    udp_socket.bind((self.DNSProxy.wan_ip, 0))
+    @property
+    def standby_condition(self):
+        if (self.DNSServer.udp_fallback and not self.DNSServer.tls_up):
+            return True
 
-                    udp_socket.sendto(data_from_client, (server_ip, DNS_PORT))
-                    print(f'Request Relayed to {server_ip}: {DNS_PORT}')
+        return False
 
-                    break
-                except Exception:
-                    traceback.print_exc()
+    def _register_new_socket(self):
+        with self.DNSServer.server_lock:
+            for dns_server in self.DNSServer.dns_servers:
+                if (not dns_server[self._protocol]): continue
 
-        self.ReceiveQuery(udp_socket, client_address, fallback)
+                return self._create_socket(dns_server['ip']) # never fail so will always return True
+            else:
+                Log.critical('NO UDP SERVER AVAILABLE.')
 
-    def ReceiveQuery(self, udp_socket, client_address, fallback=False):
-        ## if no error in send/recieve to/from server the packet will be relayed back to host
-        try:
-            data_from_server = udp_socket.recv(4096)
+    @dnx_queue(Log, name='UDPRelay')
+    def relay(self, client_query):
+        self._send_query(client_query)
 
-            self.ParseServerResponse(data_from_server, client_address, fallback)
-
-#                    print(f'Request Relayed to {client_address[0]}: {client_address[1]}')
-        except Exception:
-            traceback.print_exc()
-
-        udp_socket.close()
-
-    def ParseServerResponse(self, data_from_server, client_address, fallback=False):
-        packet = PacketManipulation(data_from_server, protocol=UDP)
-        packet.Parse()
-
-        if (not fallback):
-            packet.Rewrite()
-        ## Grabbing information from TLS Connection tracker to ensure request gets back to correct client
-        else:
-            client_address = self.DNSProxy.TLSRelay.dns_connection_tracker[packet.dns_id].get('client_address')
-            original_dns_id = self.DNSProxy.TLSRelay.dns_connection_tracker[packet.dns_id].get('client_id')
-            self.DNSProxy.TLSRelay.dns_connection_tracker.pop(packet.dns_id, None)
-
-            packet.Rewrite(dns_id=original_dns_id)
-
-        self.DNSProxy.DNSRelay.SendtoClient(packet, client_address)
-
-        # adding packets to cache if not already in and incrimenting the counter for the requested domain.
-        self.DNSProxy.DNSCache.Add(packet, client_address)
-        self.DNSProxy.DNSCache.IncrementCounter(packet.request)
-
-class TLSRelay:
-    def __init__(self, DNSProxy):
-        self.DNSProxy = DNSProxy
-
-        self.dns_connection_tracker = {}
-        self.dns_tls_queue = deque()
-
-        self.unique_id_lock = threading.Lock()
-
-    def AddtoQueue(self, packet, client_address):
-        tcp_dns_id = self.GenerateIDandStore()
-        dns_payload = packet.UDPtoTLS(tcp_dns_id)
-
-        ## Adding client connection info to tracker to be used by response handler
-        self.dns_connection_tracker.update({tcp_dns_id: {'client_id': packet.dns_id, 'client_address': client_address}})
-
-        self.dns_tls_queue.append(dns_payload)
-
-    def ProcessQueue(self):
-        while True:
-            now = time.time()
-            if (not self.dns_tls_queue):
-            # waiting 1ms before checking queue again for idle perf
-                time.sleep(.001)
-                continue
-
-            for secure_server, server_info in self.DNSProxy.dns_servers.items():
-                retry = now - server_info.get('retry', now)
-                if (server_info['tls'] or retry >= self.DNSProxy.tls_retry):
-                    secure_socket = self.Connect(secure_server)
-                if (secure_socket):
-                    self.QueryThreads(secure_socket)
-
-                    break
-            ## UDP Fallback Section | if enabled will create thread to UDPRelay for each message in queue
-            ## if not enabled, all messages will be dropped.
-            print(f'UDP FALLBACK SETTING: {self.DNSProxy.udp_fallback}')
-            if (not secure_socket and self.DNSProxy.udp_fallback):
-                print('TLS Failure! Sending Queries over UDP.')
-                while self.dns_tls_queue:
-                    dns_request = self.dns_tls_queue.popleft()
-                    ## calling udp relay as a backup due to both tls server sockets returning None. passing original
-                    # message, No client info, and setting fallback argument to True.
-                    threading.Thread(target=self.DNSProxy.UDPRelay.SendQuery, args=(dns_request, None, True)).start()
-
-    def QueryThreads(self, secure_socket):
-        threading.Thread(target=self.ReceiveQueries, args=(secure_socket,)).start()
-        time.sleep(.0001)
-        self.SendQueries(secure_socket)
-
-    def SendQueries(self, secure_socket):
-        try:
-            while self.dns_tls_queue:
-                message = self.dns_tls_queue.popleft()
-
-                secure_socket.send(message)
-
-            secure_socket.shutdown(SHUT_WR)
-
-        except Exception as E:
-            print(f'TLSQUEUE | SEND: {E}')
-
-    ## TLS handler for all message responses sent from TLS queue. once it receivesthe expected amount it tears down
-    ##  the socket and closes the thread for performance. duplicates can cause issues because of this, but the initial
-    ## query was UDP so unrealiable anyways.
-    def ReceiveQueries(self, secure_socket):
+    # TODO: see if this can be moved into parent class
+    # receive data from server. if dns response will call parse method else will close the socket.
+    def _recv_handler(self):
         while True:
             try:
-                data_from_server = secure_socket.recv(4096)
+                data_from_server = self._relay_conn.sock.recv(1024)
+            except (socket.timeout, OSError) as e:
+                print(f'RCV SOCKET ERROR: {e}')
+                break
+            else:
+                if (not data_from_server): continue
+                self._reset_fail_detection()
+                self.DNSServer.queue.add(data_from_server)
+
+        self._relay_conn.sock.close()
+
+    def _create_socket(self, server_ip):
+        dns_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        dns_sock.connect((server_ip, PROTO.DNS))
+
+        self._relay_conn = RELAY_CONN(server_ip, dns_sock)
+
+        return True
+
+
+class TLSRelay(ProtoRelay):
+    _protocol   = PROTO.DNS_TLS
+    _keepalives = False
+    _dns_packet = ClientRequest.generate_keepalive
+
+    __slots__ = (
+        '_tls_context'
+    )
+
+    # TODO: see if tls up can be moved here. | reachability???
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._create_tls_context()
+        threading.Thread(target=self._tls_keepalive).start()
+
+    @property
+    def fail_condition(self):
+        if (not self.DNSServer.tls_up and self.DNSServer.udp_fallback):
+            return True
+
+        return False
+
+    # iterating over dns server list and calling to create a connection to first available server. this will only happen
+    # if a socket connection isnt already established when attempting to send query.
+    def _register_new_socket(self, client_query=None):
+        with self.DNSServer.server_lock:
+            for tls_server in self.DNSServer.dns_servers:
+                if (not tls_server[self._protocol]): continue
+
+                if self._tls_connect(tls_server['ip']): return True
+
+                self.mark_server_down()
+            else:
+                Log.error('NO SECURE SERVERS AVAILABLE!')
+                self.DNSServer.tls_up = False
+                if (self.DNSServer.udp_fallback and client_query):
+                    self._send_to_fallback(client_query)
+
+    @dnx_queue(Log, name='TLSRelay')
+    def relay(self, client_query):
+        if (self.fail_condition and self._fallback):
+            return self._send_to_fallback(client_query)
+
+        self._send_query(client_query)
+
+    # receive data from server. if dns response will call parse method else will close the socket.
+    def _recv_handler(self):
+        recv_buffer = []
+        while True:
+            try:
+                data_from_server = self._relay_conn.sock.recv(1024)
+            except (socket.timeout, OSError) as e:
+                Log.dprint(f'RECV HANDLER: {e}')
+                break
+
+            else:
+                self._reset_fail_detection()
                 if (not data_from_server):
+                    Log.dprint('RECV HANDLER: PIPELINE CLOSED BY REMOTE SERVER!')
                     break
 
-                self.ParseServerResponse(data_from_server)
-            except (timeout, BlockingIOError):
-                break
-            except Exception:
-                traceback.print_exc()
-                break
+                recv_buffer.append(data_from_server)
+                while recv_buffer:
+                    current_data = b''.join(recv_buffer)[2:]
+                    data_len = short_unpackf(recv_buffer[0])[0]
+                    if (len(current_data) == data_len):
+                        recv_buffer = []
+                    elif (len(current_data) > data_len):
+                        recv_buffer = [current_data[data_len:]]
+                    else: break
 
-        secure_socket.close()
+                    if not self.is_keepalive(current_data):
+                        self.DNSServer.responder.add(current_data[:data_len])
 
-    # Response Handler will match all recieved request responses from the server, match it to the host connection
-    # and relay it back to the correct host/port. this will happen as they are recieved. the socket will be closed
-    # once the recieved count matches the expected/sent count or from socket timeout
-    def ParseServerResponse(self, data_from_server):
+        self._relay_conn.sock.close()
+
+#    @profiler
+    def _tls_connect(self, tls_server):
+        Log.dprint(f'Opening Secure socket to {tls_server}: 853')
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # NOTE: this should improve sending performance since we expect a dns record to only be a small
+        # portion of available bytes in MTU/max bytes(1500). seems to provide no improvement after 1 run.
+        # there could be other bottlenecks in play so we can re evaluate later.
+        # sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        dns_sock = self._tls_context.wrap_socket(sock, server_hostname=tls_server)
         try:
-            # Checking the DNS ID in packet, Adjusted to ensure uniqueness
-            packet = PacketManipulation(data_from_server, protocol=TCP)
-            dns_id = packet.DNSID()
-            # Checking client DNS ID and Address info to relay query back to host
-            dns_query_info = self.dns_connection_tracker.get(dns_id, None)
-            if (dns_query_info):
-                packet.Parse()
-                print(f'Secure Request Received from Server. DNS ID: {packet.dns_id} | {packet.request}')
-
-                client_dns_id = dns_query_info.get('client_id')
-                client_address = dns_query_info.get('client_address')
-                ## Parsing packet and rewriting TTL to minimum 5 minutes/max 1 hour and changing DNS ID back to original.
-                packet.Rewrite(dns_id=client_dns_id)
-
-                client_ip, client_port = client_address
-                # these vars will be set to none if it was a request generated by the caching system.
-                if (client_ip and client_port):
-                    self.DNSProxy.DNSRelay.SendtoClient(packet, client_address)
-
-                # adding packets to cache if not already in and incrimenting the counter for the requested domain.
-                self.DNSProxy.DNSCache.Add(packet, client_address)
-                self.DNSProxy.DNSCache.IncrementCounter(packet.request)
-
-            #see if this can be in the if statement. cant remember why it was pulled out.
-            self.dns_connection_tracker.pop(packet.dns_id, None)
-        except ValueError:
-            print(data_from_server)
-            traceback.print_exc()
-        except Exception:
-            traceback.print_exc()
-
-    ## Generate a unique DNS ID to be used by TLS connections only. Applies a lock on the function to ensure this
-    ## id is thread safe and uniqueness is guranteed. IDs are stored in a dictionary for reference.
-    def GenerateIDandStore(self):
-        with self.unique_id_lock:
-            while True:
-                dns_id = random.randint(1, 32000)
-                if (dns_id not in self.dns_connection_tracker):
-                    self.dns_connection_tracker.update({dns_id: ''})
-
-                    return dns_id
-
-    def Connect(self, secure_server):
-        sock = socket(AF_INET, SOCK_STREAM)
-        sock.bind((self.DNSProxy.wan_ip, 0))
-
-        context = ssl.create_default_context()
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        context.verify_mode = ssl.CERT_REQUIRED
-        context.load_verify_locations('/etc/ssl/certs/ca-certificates.crt')
-
-        # Wrap socket and Connect. If successful connect will break while loop and allow
-        # queue handler to send DNS queries in queue
-        try:
-            print(f'Opening Secure socket to {secure_server}: 853')
-            secure_socket = context.wrap_socket(sock, server_hostname=secure_server)
-            secure_socket.connect((secure_server, DNS_TLS_PORT))
-
-        except Exception:
-            traceback.print_exc()
-            secure_socket = None
-
-        # resetting server tls status if connection was successful
-        if (secure_socket):
-            self.DNSProxy.dns_servers[secure_server].update({'tls': True})
-        # setting server tls status to down due to connection issue with server/port over tls
+            dns_sock.connect((tls_server, PROTO.DNS_TLS))
+        except OSError:
+            return None
         else:
-            self.DNSProxy.dns_servers[secure_server].update({'tls': False, 'retry': time.time()})
+            return True
+        finally:
+            self._relay_conn = RELAY_CONN(tls_server, dns_sock)
 
-        return secure_socket
+    @looper(8)
+    # will send a valid dns query every ^ seconds to ensure the pipe does not get closed by remote server for
+    # inactivity. this is only needed if servers are rapidly closing connections and can be enable/disabled.
+    def _tls_keepalive(self):
+        if (not self.is_enabled or not self._keepalives): return
+
+        self.relay.add(self._dns_packet(KEEP_ALIVE_DOMAIN, self._protocol)) # pylint: disable=no-member
+
+    def _create_tls_context(self):
+        self._tls_context = ssl.create_default_context()
+        self._tls_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        self._tls_context.verify_mode = ssl.CERT_REQUIRED
+        self._tls_context.load_verify_locations('/etc/ssl/certs/ca-certificates.crt')

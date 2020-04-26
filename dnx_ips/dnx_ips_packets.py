@@ -1,81 +1,127 @@
 #!/usr/bin/env python3
 
-import struct
-
-from ipaddress import IPv4Address
+import os, sys
+import time
 
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import *
+import dnx_iptools.dnx_interface as interface
+
+from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
+from dnx_iptools.dnx_structs import * # pylint: disable=unused-wildcard-import
+from dnx_iptools.dnx_parent_classes import RawPacket, RawResponse
+from dnx_iptools.dnx_protocol_tools import checksum_ipv4, checksum_tcp, checksum_icmp
+from dnx_configure.dnx_namedtuples import IPS_IP_INFO
 
 
-class PacketParse:
-    def __init__(self, data):
-        self.data = data
+# TODO: make sure iptable rule can allow for icmp echo/8 through forward. basically if host is doing a icmp flood
+# attack on an open port it will not be detected with current rules.
+class IPSPacket(RawPacket):
+    def __init__(self):
+        super().__init__()
 
-        self.ip_header_length = 0
-        self.protocol = 0
-        self.tcp_syn = False
-        self.tcp_ack = False
+        self.icmp_type = None
+        self.udp_payload = b''
+        self.icmp_payload_override = b''
 
-        self.udp_payload = False
+    def tcp_override(self, dst_port, seq_num):
+        self.dst_port = dst_port
+        self.sequence_num = seq_num
 
-    def Parse(self):
-        self.Ethernet()
-        self.Protocol()
-        self.IP()
-        if (self.protocol == TCP):
-            self.TCP()
-        elif (self.protocol == UDP):
-            self.UDP()
+        return self
 
-    def Ethernet(self):
-        self.src_mac = ':'.join(b.hex() for b in struct.unpack('!6c', self.data[6:12]))
-        self.dst_mac = ':'.join(b.hex() for b in struct.unpack('!6c', self.data[0:6]))
+    def udp_override(self, icmp_payload):
+        self.icmp_payload_override = icmp_payload
 
-    def IP(self):
-        self.src_ip = str(IPv4Address(self.data[26:30]))
-        self.dst_ip = str(IPv4Address(self.data[30:34]))
+        return self
 
-        ip_header = self.data[14:]
+    # building named tuple with tracked_ip, tracked_port, and local_port variables
+    def _before_exit(self):
+        if (self.zone == SEND_TO_IPS):
+            self.zone = WAN_IN
 
-        header_length = bin(ip_header[0])[5:10]
-        bit_values = [32,16,8,4]
-        for bit, value in zip(header_length, bit_values):
-            if (int(bit)):
-                self.ip_header_length += value
+        if (self.protocol == PROTO.ICMP):
+            self.conn = IPS_IP_INFO(str(self.src_ip), None, None)
+        else:
+            self.conn = IPS_IP_INFO(str(self.src_ip), str(self.src_port), self.dst_port)
 
-    def Protocol(self):
-        self.protocol = self.data[23]
 
-    def UDP(self):
-        header_start = self.ip_header_length + 14
-        header_end = header_start + 8
-        udp_header = struct.unpack('!4H', self.data[header_start:header_end])
+class IPSResponse(RawResponse):
+    _intfs = (
+        (WAN_IN, interface.get_intf('wan')),
+    )
 
-        self.src_port = udp_header[0]
-        self.dst_port = udp_header[1]
-        self.udp_length = udp_header[2]
-        self.udp_checksum = udp_header[3]
+    def _prepare_packet(self, packet):
+        # 1a. generating tcp/pseudo header | iterating to calculate checksum
+        if (packet.protocol == PROTO.TCP):
+            protocol, checksum = PROTO.TCP, double_byte_pack(0,0)
+            for i in range(2):
+                tcp_header = tcp_header_pack(
+                    packet.dst_port, packet.src_port, 696969, packet.seq_number + 1,
+                    80, 20, 0, checksum, 0
+                )
+                if i: break
+                pseudo_header = [pseudo_header_pack(
+                    self._dnx_src_ip, packet.src_ip.packed, 0, 6, 20
+                ), tcp_header]
+                checksum = checksum_tcp(b''.join(pseudo_header))
 
-        if (self.udp_length > 8):
-            self.udp_payload = True
+            send_data = [tcp_header]
 
-    def TCP(self):
-        header_start = self.ip_header_length + 14
-        header_end = header_start + 32
-        tcp_header = self.data[header_start:header_end]
+        # 1b. generating icmp header and payload iterating to calculate checksum
+        elif (packet.protocol == PROTO.UDP):
+            protocol, checksum = PROTO.ICMP, double_byte_pack(0,0)
+            for i in range(2):
+                icmp_full = [icmp_header_pack(3, 3, checksum, 0, 0)]
+                if (packet.icmp_payload_override):
+                    icmp_full.append(packet.icmp_payload_override)
+                else:
+                    icmp_full.extend([packet.ip_header, packet.udp_header, packet.udp_payload])
+                if i: break
+                checksum = checksum_icmp(b''.join(icmp_full))
 
-        tcp_ports = struct.unpack('!2H', tcp_header[:4]) #2LH
-        self.src_port = tcp_ports[0]
-        self.dst_port = tcp_ports[1]
+            send_data = [icmp_full]
 
-        numbers = struct.unpack('!2L', tcp_header[4:12])
-        self.seq_number = numbers[0]
-        self.ack_number = numbers[1]
+        # 2. generating ip header with loop to create header, calculate zerod checksum, then rebuild
+        # with correct checksum | append to send data
+        ip_len, checksum = 20 + len(b''.join(send_data)), double_byte_pack(0,0)
+        for i in range(2):
+            ip_header = ip_header_pack(
+                69, 0, ip_len, 0, 16384, 255, protocol,
+                checksum, self._dnx_src_ip, packet.src_ip.packed
+            )
+            if i: break
+            checksum = checksum_ipv4(ip_header)
 
-        if (tcp_header[14] & 1 << 1): # SYN
-            self.tcp_syn = True
-        if (tcp_header[14] & 1 << 4): # ACK
-            self.tcp_ack = True
+        send_data.append(ip_header)
+
+        # 3. generating ethernet header | append to send data
+        send_data.append(eth_header_pack(
+            packet.src_mac, self._dnx_src_mac, L2_PROTO
+        ))
+        # assigning instance variable with joined data from above
+        self.send_data = b''.join(reversed(send_data))
+
+    def _packet_override(self, packet):
+        port_override = self._Module.open_ports[packet.protocol].get(packet.dst_port)
+        if (not port_override): return
+
+        if (packet.protocol == PROTO.TCP):
+            packet.dst_port = port_override
+
+        elif (packet.protocol == PROTO.UDP):
+            packet.udp_header = udp_header_pack(
+                packet.src_port, port_override, packet.udp_len, packet.udp_check
+            )
+            checksum = double_byte_pack(0,0)
+            for i in range(2):
+                ip_header = ip_header_pack(
+                    packet.ip_header[:10], checksum, packet.src_ip.packed, self._dnx_src_ip
+                )
+                if i: break
+                checksum = checksum_ipv4(ip_header)
+
+    #all packets need to be further examined in override method
+    def _override_needed(self, packet):
+        return True

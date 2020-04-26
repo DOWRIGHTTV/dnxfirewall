@@ -1,293 +1,256 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import os, sys
 import time
 import threading
-import asyncio
-import json
 
-from datetime import datetime
-from subprocess import Popen
-from types import SimpleNamespace as SName
+from functools import lru_cache
 
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import *
-from ip_proxy.ip_proxy_sniffer import IPSniffer
-from ip_proxy.ip_proxy_timer import IPTimer as TM
-from ip_proxy.ip_proxy_automate import Automate
-from dnx_configure.dnx_system_info import System, Interface
+from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_configure.dnx_lists import ListFiles
-from dnx_configure.dnx_db_connector import DBConnector
-from dnx_logging.log_main import LogHandler
-from dnx_syslog.syl_main import SyslogHandler
+from dnx_configure.dnx_namedtuples import IPP_IP_INFO, IPP_INSPECTION_RESULTS, IPP_LOG, INFECTED_LOG
+from dnx_configure.dnx_file_operations import load_signatures
+from dnx_iptools.dnx_parent_classes import NFQueue
 
-SYSLOG_MOD = 'IPProxy'
-LOG_MOD = 'ip_proxy'
+from ip_proxy.ip_proxy_log import Log
+from ip_proxy.ip_proxy_packets import IPPPacket, ProxyResponse
+from ip_proxy.ip_proxy_restrict import LanRestrict
+from ip_proxy.ip_proxy_automate import Configuration
+
+from dnx_configure.dnx_code_profiler import profiler
+
+LOG_NAME = 'ip_proxy'
 
 
-class IPProxy:
-    def __init__(self):
-        self.fw_rules = {}
-        self.ip_signatures = {}
-        self.open_tcp_ports = set()
-        self.open_udp_ports = set()
+class IPProxy(NFQueue):
+    inspect_on     = False
+    ids_mode       = False
+    cat_enabled    = False
+    cat_settings   = {}
+    cat_signatures = {}
+    geo_enabled    = False
+    geo_settings   = {}
+    geo_signatures = {}
+    ip_whitelist   = {}
+    tor_whitelist  = {}
+    open_ports     = {
+        PROTO.TCP: {},
+        PROTO.UDP: {}
+    }
+    _packet_parser = IPPPacket.netfilter # alternate constructor
 
-        self.inbound_session_tracker = {}
-        self.outbound_session_tracker = {}
+    @classmethod
+    def _setup(cls):
+        Configuration.setup(cls)
+        ProxyResponse.setup(cls, Log)
+        LanRestrict.run(cls)
 
-        self.tcp_session_tracker = {}
+        cls.set_proxy_callback(func=Inspect.ip)
 
-        self.fw_rule_creation_lock = threading.Lock()
-
-        self.block_settings = {'malware': 'mal_block', 'compromised': 'mal_block',
-                                'entry': 'tor_block', 'exit': 'tor_block'}
-        self.chain_settings = {'malware': 'MALICIOUS', 'compromised': 'MALICIOUS',
-                                'entry': 'TOR', 'exit': 'TOR'}
-
-        # var initialization to give proxy time to load correct settings
-        self.tor_entry_block = False
-        self.tor_exit_block = False
-        self.malware_block = False
-        self.compromised_block = False
-        self.syslog_enabled = False
-        self.logging_level = 0
-
-    def Start(self):
-        self.LoadInterfaces()
-
-        self.Log = LogHandler(self)
-        self.Syslog = SyslogHandler(self)
-        self.Automate = Automate(self)
-
-        ListFile = ListFiles()
-        ListFile.CombineIPs()
-
-        self.Timer = TM()
-        self.LoadSignatures()
-
-        Sniffer = IPSniffer(self)
-        # True boolean notifies thread that it was the initial start and to minimize sleep time
-        threading.Thread(target=Sniffer.Start, args=(True,)).start()
-
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        asyncio.run(self.Main())
-
-    def SignatureCheck(self, packet):
-        timestamp = round(time.time())
-
-        signature_match = False
-        active_block = False
-        already_blocked = False
-        log_connection = False
-
-        direction = None
-        category = None
-
-        ## OUTBOUND RULE TCP
-        if (packet.dst_ip in self.ip_signatures):
-            direction = OUTBOUND
-            signature_match = True
-            tracked_ip = packet.dst_ip
-            local_ip = packet.src_ip
-
-            if (packet.procotol == UDP):
-                main_st = self.outbound_session_tracker
-                other_st = self.inbound_session_tracker
-
-        ## INBOUND RULE TCP
-        elif (packet.dst_port in self.open_tcp_ports and packet.src_ip in self.ip_signatures):
-            direction = INBOUND
-            signature_match = True
-            tracked_ip = packet.src_ip
-            local_ip = packet.dst_ip
-
-            if (packet.protocol == UDP):
-                main_st = self.inbound_session_tracker
-                other_st = self.outbound_session_tracker
-
-        if (packet.protocol == TCP and signature_match):
-            ## if new connection, will add to fw_rules dictionary to prevent duplicate iptable rules, then will add to
-            ## outbound session tracker and set active block to true to notify code to put ip table rule in
-            tcp_st = self.tcp_session_tracker
-            category = self.ip_signatures.get(tracked_ip)
-            if (packet.tcp_syn and not packet.tcp_ack):
-                ## applying lock on dict lookup/ add to protect state between condition and insert
-                with self.fw_rule_creation_lock:
-                    if (tracked_ip not in self.fw_rules):
-                        self.fw_rules.update({tracked_ip: [timestamp, category]})
-                        tcp_st[tracked_ip] = {local_ip: 0}
-                        active_block = True
-
-            ## will increment packet count of already active connections on responses/acks as a metric of what made it through
-            elif (packet.tcp_ack and not packet.tcp_syn):
-                count = tcp_st[tracked_ip].get(local_ip, 0) + 1
-                tcp_st[tracked_ip].update({local_ip: count})
-                print(f'INCREMENTED {tracked_ip}: {count}')
-
-            # if a new connection is seen, but already blocked packet counter will reset to ensure numbers do not inflate
-            # can probably remove after more recent changes since we do not see new connections so soon anymore
-            elif (packet.tcp_syn and not packet.tcp_ack):
-                tcp_st[tracked_ip] = {local_ip: 0}
-
-            ## implementing the block via ip table if user configured to do so based on category and direction
-            block_enabled = getattr(self, f'{category}_block')
-            block_direction = getattr(self, self.block_settings[category])
-            if (block_enabled and active_block) and (block_direction == direction or block_direction == BOTH):
-                self.StandardBlock(tracked_ip, local_ip, direction, category)
-
-                # session tracker will check packet counts to add confidence metric, this blocks for 1.5 seconds
-                confidence = self.SessionTracker(tracked_ip, local_ip, direction)
-                print(f'TRACKED IP: {tracked_ip} | CONFIDENCE: {confidence}')
-            # this will prevent the informational log option to log unrelated or already blocked connections
-            elif (block_enabled and not active_block):
-                already_blocked = True
-
-        ## will match if packet is udp protocol and either source or destination ip matches a proxy signature
-        elif (packet.protocol == UDP and signature_match):
-            # will match if direction is not already tracked
-            category = self.ip_signatures.get(tracked_ip)
-            if (tracked_ip not in other_st and tracked_ip not in main_st):
-                ## applying lock on dict lookup/ add to protect state between condition and insert
-                with self.fw_rule_creation_lock:
-                    if (tracked_ip not in self.fw_rules):
-                        self.fw_rules.update({tracked_ip: [timestamp, category]})
-                        main_st[tracked_ip] = {local_ip: 0}
-                        active_block = True
-
-            ## will match if connection is being tracked and increment packet count for confidence metric
-            elif (tracked_ip not in other_st and tracked_ip in main_st):
-                count = tcp_st[tracked_ip].get(local_ip, 0) + 1
-                main_st[tracked_ip].update({local_ip: count})
-                print(f'INCREMENTED {packet.dst_ip}: {count}')
-
-            ## implementing the block via ip table if user configured to do so based on category and direction
-            block_enabled = getattr(self, f'{category}_block')
-            block_direction = getattr(self, self.block_settings[category])
-            if (block_enabled and active_block) and (block_direction == direction or block_direction == BOTH):
-                self.StandardBlock(tracked_ip, local_ip, direction, category)
-
-                # session tracker will check packet counts to add confidence metric, this blocks for 1.5 seconds
-                confidence = self.SessionTracker(tracked_ip, local_ip, direction)
-            # this will prevent the informational log option to log unrelated or already blocked connections
-            elif (block_enabled and not active_block):
-                already_blocked = True
-
-        ## Log to Infected Hosts DB Table if matching malicious type categories ##
-        if (category in {'malware'} and direction == OUTBOUND and self.logging_level >= ALERT):
-
-            reason = 'malware'
-            table = 'infectedclients'
-
-            logging_options = {'infected_client': packet.src_mac, 'src_ip': packet.src_ip, 'detected_host': packet.dst_ip, 'reason': reason}
-            self.TrafficLogging(table, timestamp, logging_options)
-
-        # logs blocked requests that let more than 7 packets through
-        if (active_block and confidence == MEDIUM and self.logging_level >= WARNING):
-            action = 'blocked'
-            log_connection = True
-
-        # logs redirected/blocked requests that blocked within 7 packets
-        elif (active_block and confidence in {HIGH, VERY_HIGH} and self.logging_level >= NOTICE):
-            action = 'blocked'
-            log_connection = True
-
-        # logs all interesting requests if not configured to block and log level is informational
-        elif (signature_match) and (not already_blocked and self.logging_level >= INFORMATIONAL):
-            action = 'logged'
-            confidence = 'n/a'
-            log_connection = True
-
-        if (log_connection):
-            table = 'ipproxy'
-            logging_options = {'src_ip': packet.src_ip, 'dst_ip': packet.dst_ip, 'category': category ,
-                                'direction': direction, 'action': action, 'confidence': confidence}
-
-            self.TrafficLogging(table, timestamp, logging_options)
-
-    def StandardBlock(self, blocked_ip, local_ip, direction, category):
-        chain = self.chain_settings[category]
-
-        Popen(f'sudo iptables -t mangle -A {chain} -s {blocked_ip} -j DROP && \
-                sudo iptables -t mangle -A {chain} -d {blocked_ip} -j DROP', shell=True)
-
-    # applying a wait to give response enough time to come back, if
-    # if response is not seen within time, assumes packet was dropped
-    def SessionTracker(self, blocked_ip, local_ip, direction):
-        time.sleep(1.5)
-        count = self.tcp_session_tracker[blocked_ip].get(local_ip)
-
-        if (count <= 3):
-            confidence = VERY_HIGH
-        elif (3 < count <= 7):
-            confidence = HIGH
+    # if nothing is enabled the packet will be forwarded based on mark of packet.
+    def _pre_check(self, nfqueue):
+        if (self.inspect_on or LanRestrict.is_active):
+            return True # marked for parsing
         else:
-            confidence = MEDIUM
+            self.forward_packet(nfqueue, nfqueue.get_mark())
 
-        self.tcp_session_tracker[blocked_ip].update({local_ip: 0})
+        return False # parse not needed
 
-        return confidence
+    def _pre_inspect(self, packet):
+        # if local ip is not in the ip whitelist, the packet will be dropped while time restriction is active.
+        if (LanRestrict.is_active and packet.zone == LAN_IN
+                and packet.src_ip not in self.ip_whitelist):
+            packet.nfqueue.drop()
 
-    def TrafficLogging(self, table, timestamp, logging_options):
-        ProxyDB = DBConnector(table)
-        ProxyDB.Connect()
-        if (table in {'ipproxy'}):
-            ProxyDB.IPInput(timestamp, logging_options)
+        elif (self.inspect_on):
+            return True # marked for further inspection
 
-            if (self.syslog_enabled):
-                self.AlertSyslog(logging_options)
-        elif (table in {'infectedclients'}):
-            ProxyDB.InfectedInput(timestamp, logging_options)
-
-        ProxyDB.Disconnect()
-
-    def AlertSyslog(self, logging_options):
-        opt = SName(logging_options)
-
-        if (opt.category in {'malware'}):
-            msg_level = ALERT
+        # just in case proxy was disabled mid parse of packets
         else:
-            if (opt.confidence == MEDIUM):
-                msg_level = WARNING
-            elif (opt.confidence in {HIGH, VERY_HIGH}):
-                msg_level = NOTICE
-            elif (opt.action == 'logged'):
-                msg_level = INFORMATIONAL
+            self.forward_packet(packet.nfqueue, packet.zone)
 
-        message = f'src.ip={opt.src_ip}; dst.ip={opt.dst_ip}; category={opt.category}; '
-        message += f'direction={opt.direction}; action={opt.action}; confidence={opt.confidence}'
+    @staticmethod
+    def forward_packet(nfqueue, zone, action=CONN.ACCEPT):
+        if (zone == WAN_IN and action is CONN.DROP):
+            nfqueue.set_mark(IP_PROXY_DROP)
+        elif (zone == LAN_IN):
+            nfqueue.set_mark(SEND_TO_FIREWALL)
+        elif (zone == WAN_IN):
+            nfqueue.set_mark(SEND_TO_IPS)
+        # NOTE: this is to protect the repeat if no match. probably log??
+        else:
+            nfqueue.drop()
+            return
 
-        self.Syslog.Message(EVENT, msg_level, message)
+        nfqueue.repeat()
 
-    # Loading lists of interesting traffic into sets
-    def LoadSignatures(self):
-        with open(f'{HOME_DIR}/dnx_iplists/blocked.ips', 'r') as blocked:
-            while True:
-                line = blocked.readline().strip().split()
-                if (not line):
-                    break
-                if (line != '\n'):
-                    host = line[0]
-                    category = line[1]
-                    self.ip_signatures[host] = category
 
-    def LoadInterfaces(self):
-        with open(f'{HOME_DIR}/data/config.json', 'r') as settings:
-            setting = json.load(settings)
+class Inspect:
+    _Proxy = IPProxy
+    _ProxyResponse = ProxyResponse
 
-        self.wan_int = setting['settings']['interface']['outside']
-        self.lan_int = setting['settings']['interface']['inside']
+    __slots__ = (
+        '_packet', '_match'
+    )
 
-    # AsyncIO method called to gather automated/ continuous methods | this is python 3.7 version of async
-    async def Main(self):
-        await asyncio.gather(self.Timer.Settings(), self.Timer.Start(),
-                            self.Automate.Blocking(), self.Automate.ClearIPTables(),
-                            self.Automate.OpenPorts(), self.Log.Settings(LOG_MOD),
-                            self.Syslog.Settings(SYSLOG_MOD))
+    def __init__(self, packet):
+        self._packet = packet
 
-                            ## LOG QUEUE? THIS MODULE IS THREADED
+        self._match = None
+
+    @classmethod
+    def ip(cls, packet):
+        self = cls(packet)
+        action, category = self._ip_inspect()
+
+        self._Proxy.forward_packet(packet.nfqueue, packet.zone, action)
+
+        # sending reset
+        if (action is CONN.DROP):
+            self._ProxyResponse.prepare_and_send(packet)
+
+        if (category):
+            Log.log(packet, IPP_INSPECTION_RESULTS(category, action))
+
+    def _ip_inspect(self):
+        action = CONN.ACCEPT # setting default action
+        packet, Proxy = self._packet, self._Proxy
+        # will cross reference category based ips if enabled
+        if (Proxy.cat_enabled):
+            category = self._cat_bin_match(packet.bin_data)
+            Log.debug(f'CAT LOOKUP | {packet.conn.tracked_ip}: {category}')
+            # this will convert the specific category to an enum representing the over all category group.
+            if (category):
+                cat_group = IPP_CAT((category // 10) * 10)
+                # action will be marked as drop. this will allow for ids override later if configured.
+                if (category is IPP_CAT.TOR and packet.conn.local_ip not in Proxy.tor_whitelist):
+                    Log.debug(f'IP PROXY | TOR CONNECTION WHITELISTED: {packet.conn.local_ip} > {packet.conn.tracked_ip}')
+                    action = CONN.DROP
+                # if category match, and category is configured to block in direction of conn/packet
+                elif self._blocked_ip(category, cat_group):
+                    action = CONN.DROP
+
+        # will cross reference geolocation network if enabled at not already blocked
+        if (action is CONN.ACCEPT and Proxy.geo_enabled):
+            category = self._geo_bin_match(packet.bin_data)
+            Log.debug(f'GEO LOOKUP | {packet.conn.tracked_ip}: {category}')
+            # if category match and country is configurted to block in direction of conn/packet
+            if category and self._blocked_country(category):
+                action = CONN.DROP
+
+        # NOTE: debugs are for testing.
+        if (action is CONN.ACCEPT):
+            Log.debug(f'IP PROXY | ACCEPTED | {packet.conn.tracked_ip}: {packet.direction}')
+
+        # if marked for drop, but id mode is enabled decision will get changed to ACCEPT.
+        elif (action is CONN.DROP and Proxy.ids_mode): # NOTE: should only match if IDS mode enabled and sig match + cat enabled(direction match included)
+            Log.debug(f'IP PROXY | DETECTED | {packet.conn.tracked_ip}: {packet.direction}.')
+            action = CONN.ACCEPT
+
+        elif (action is CONN.DROP):
+            Log.debug(f'IP PROXY | DROPPED | {packet.conn.tracked_ip}: {packet.direction}')
+
+        return action, category
+
+    # category setting lookup. will match packet direction with configured dir for category/category group.
+    def _blocked_ip(self, category, cat_group):
+        cat_lookup = category if cat_group is IPP_CAT.TOR else cat_group
+
+        block_direction = self._Proxy.cat_settings[cat_lookup]
+        if (block_direction in [self._packet.direction, DIR.BOTH]):
+            return True
+
+        return False
+
+    def _blocked_country(self, category):
+        if (self._Proxy.geo_settings[category] in [self._packet.direction, DIR.BOTH]):
+            return True
+
+        return False
+
+    @lru_cache(maxsize=1024)
+    def _cat_bin_match(self, host, recursion=False):
+        hb_id, hh_id, f_octet = host
+        if (not recursion):
+            sigs = self._Proxy.cat_signatures
+            left, right = self._calculate_bounds(left=0, right=len(sigs)-1, f_octet=f_octet)
+        else:
+            sigs = self._match
+            left, right = 0, len(sigs)-1
+
+        while left <= right:
+            mid = left + (right - left) // 2
+            b_id, match = sigs[mid]
+            # host bin id matches a bin id in sigs
+            if (b_id == hb_id):
+                break
+            # excluding left half
+            elif (b_id < hb_id):
+                left = mid + 1
+            # excluding right half
+            elif (b_id > hb_id):
+                right = mid - 1
+        else:
+            return None
+
+        self._match = match
+        # on bin match, recursively call to check host ids
+        if (not recursion):
+            return self._cat_bin_match((hh_id, 0, 0), recursion=True)
+
+        return IPP_CAT(match)
+
+    @lru_cache(maxsize=1024)
+    def _geo_bin_match(self, host):
+        sigs = self._Proxy.geo_signatures
+        hb_id, h_id, f_octet = host
+        # initial adjustment. using an interpolative clamping of left/right bounds.
+        left, right = self._calculate_bounds(left=0, right=len(sigs)-1, f_octet=f_octet)
+        while left <= right:
+            mid = left + (right - left) // 2
+            b_id, h_ranges = sigs[mid]
+            # excluding left half
+            if (b_id < hb_id):
+                left = mid + 1
+            # excluding right half
+            elif (b_id > hb_id):
+                right = mid - 1
+            # host bin id matches a bin id in sigs
+            else:
+                break
+        else:
+            return None
+
+        # TODO: need a 3-way tuple (start, end, country_code)
+        for r_start, r_end, c_code in h_ranges:
+            if r_start <= h_id <= r_end:
+                return GEO(c_code)
+
+    # NOTE: pretty sure this can cause a signature miss
+    def _calculate_bounds(self, left, right, f_octet):
+        '''returns interpolation adjustment of list bounds to maximize bin search speed.'''
+        ratio = f_octet/255
+        if (ratio < .15):
+            right = int(right * .16)
+        elif (ratio > .85):
+            left = int(right * .84)
+        if (ratio < .3):
+            right = int(right * .31)
+        elif (ratio > .7):
+            left = int(right * .69)
+        else:
+            left  = int(right * .15)
+            right = int(right * .85)
+
+        return left, right
+
 if __name__ == "__main__":
-    Proxy = IPProxy()
-    Proxy.Start()
+    Log.run(
+        name=LOG_NAME,
+        verbose=VERBOSE,
+        root=ROOT
+    )
+    IPProxy.run(Log, q_num=1)

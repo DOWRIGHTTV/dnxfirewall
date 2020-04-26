@@ -42,7 +42,7 @@ class IPS:
 
     def Parse(self, data):
         arg_len = len(data)
-        comm, arg, option, _ = self.Standard.HandleArguments(data)
+        comm, arg, option, option2 = self.Standard.HandleArguments(data)
 
         if (comm is None):
             return
@@ -70,8 +70,9 @@ class IPS:
 
             return
 
-        elif (comm in {'show', 'enable', 'disable'} and not arg and not option):
-            for arg, value in self.valid['settings'].items():
+        elif (comm in {'show', 'set', 'enable', 'disable'} and not arg and not option):
+            arg_list = self.valid['commands'][comm]['args'].strip('!')
+            for arg, value in self.valid[arg_list].items():
                 if (comm == 'show' and arg in {'category', 'tld'}):
                     arg = value['syntax']
                 info = value['info']
@@ -84,107 +85,209 @@ class IPS:
         if (arg_len < 2):
             return
 
-        elif (comm == 'show'):
-            return
-
-        elif (comm in {'enable', 'disable'} and arg_len == 2):
-            self.ChangeStatus(comm, arg, option)
-
-            return
-
         args = self.Standard.GrabArgs(comm)
         status = self.Standard.ValidateArgs(arg, args)
         if (not status):
             self.Standard.SendNotice(f'invalid argument. use "{comm}" command for all available options.')
             return
 
+        elif (comm == 'show'):
+            self.ShowStatus(arg)
+
+            return
+
         # all subsequent commands require length of 2
         if (arg_len < 3):
-            if (status and not option and comm in {'enable', 'disable'}):
-                self.Standard.SendNotice(f'missing category. use "show categories" command for all available categories.')
+            if (status and not option):
+                arg_list = self.valid['commands'][comm]['args'].strip('!')
+                arg_options = self.valid[arg_list][arg]['options']
+                for option in arg_options:
+                    arg2 = self.Standard.CalculateSpace(arg)
+                    self.conn.send(f'{arg2} {option}\n'.encode('utf-8'))
 
-                return
+            return
 
         if (comm in {'enable', 'disable'} and arg_len == 3):
-            status = self.ValidateCategory(arg, option)
+            status = self.ValidateEnDisSetting(arg, option)
             if (status):
                 self.ChangeStatus(comm, arg, option)
 
+        if (arg_len < 4):
+            if (status and not option2):
+                if (arg == 'ddos' and option in {'tcp', 'udp', 'icmp'}):
+                    option = self.Standard.CalculateSpace(option)
+                    ddos_option = f'{option} *10-99*'
+                    self.conn.send(f'{ddos_option}\n'.encode('utf-8'))
+                elif (arg == 'portscan' and option in {'block-length'}):
+                    option = self.Standard.CalculateSpace(option)
+                    for val in [0, 24, 48, 72]:
+                        portscan_option = f'{option} {val}'
+                        self.conn.send(f'{portscan_option}\n'.encode('utf-8'))
+                elif (arg == 'whitelist'):
+                    option = self.Standard.CalculateSpace(option)
+                    whitelist_option = f'{option} *reason*'
+                    self.conn.send(f'{whitelist_option}\n'.encode('utf-8'))
+
+            return
+
+        elif (comm == 'set'):
+            status = self.ValidateOptions(arg, option, option2)
+            if (status):
+                self.ConfigureOption(arg, option, option2)
+
     def ShowStatus(self, arg):
-        with open(f'{HOME_DIR}/data/dns_proxy.json', 'r') as settings:
+        with open(f'{HOME_DIR}/data/ips.json', 'r') as settings:
             setting = json.load(settings)
 
-        if (arg == 'keyword'):
-            status = setting['dns_proxy']['keyword']['enabled']
+        if (arg == 'whitelist'):
+            dns_servers = setting['ips']['whitelist']['dns_servers']
+            if (dns_servers):
+                status = 'ENABLED'
+            else:
+                status = 'DISABLED'
+
+            dns_servers = self.Standard.CalculateSpace(arg)
+            dns_servers_status = f'{dns_servers} {status}'
+            self.conn.send(f'{dns_servers_status}\n'.encode('utf-8'))
+
+            user_whitelist = setting['ips']['whitelist']['ip_whitelist']
+            for ip_address, reason in user_whitelist.items():
+                ip_address = self.Standard.CalculateSpace(ip_address)
+                ip_address_whitelist = f'{ip_address} {reason}'
+                self.conn.send(f'{ip_address_whitelist}\n'.encode('utf-8'))
+
+        elif (arg in 'portscan'):
+            portscan_settings = setting['ips']['port_scan']
+            for setting, status in portscan_settings.items():
+                if (setting != 'length'):
+                    if (status):
+                        status = 'ENABLED'
+                    else:
+                        status = 'DISABLED'
+                else:
+                    status = f'{status} hours'
+
+                setting = self.Standard.CalculateSpace(setting)
+                setting_status = f'{setting} {status}'
+                self.conn.send(f'{setting_status}\n'.encode('utf-8'))
+
+        if (arg == 'ddos'):
+            status = setting['ips']['ddos']['enabled']
             if (status):
                 status = 'ENABLED'
             else:
                 status = 'DISABLED'
 
-            keyword = self.Standard.CalculateSpace(arg)
-            keyword_status = f'{keyword} {status}'
-            self.conn.send(f'{keyword_status}\n'.encode('utf-8'))
+            prevention = self.Standard.CalculateSpace('prevention')
+            prevention_status = f'{prevention} {status}'
+            self.conn.send(f'{prevention_status}\n'.encode('utf-8'))
 
-        elif (arg in 'categories', 'tlds'):
-            category = setting['dns_proxy'][arg]
-            if (arg == 'categories'):
-                category = category['default']
-
-            for cat, status in category.items():
-                if (status['enabled']):
-                    status = 'ENABLED'
-                else:
-                    status = 'DISABLED'
-
-                cat = self.Standard.CalculateSpace(cat)
-                cat_status = f'{cat} {status}'
-                self.conn.send(f'{cat_status}\n'.encode('utf-8'))
+            limits = setting['ips']['ddos']['limits']
+            for direction, settings in limits.items():
+                self.conn.send(f'   {direction}\n'.encode('utf-8'))
+                for protocol, pps in settings.items():
+                    protocol = self.Standard.CalculateSpace(protocol)
+                    protocol_pps = f'{protocol} {pps} pps'
+                    self.conn.send(f'{protocol_pps}\n'.encode('utf-8'))
 
     def ChangeStatus(self, comm, arg, option):
-        with open(f'{HOME_DIR}/data/dns_proxy.json', 'r') as settings:
+        with open(f'{HOME_DIR}/data/ips.json', 'r') as settings:
             setting = json.load(settings)
 
-        if (arg == 'keyword'):
-            category = setting['dns_proxy']['keyword']
-            option = 'keyword'
-            syntax = 'keyword'
+        if (arg == 'portscan'):
+            category = setting['ips']['port_scan']
 
-        elif (arg == 'category'):
-            category = setting['dns_proxy']['categories']['default']
-            if (option in {'malicious', 'cryptominer'} and comm == 'disable'):
-                self.Standard.SendNotice('critical categories cannot be disabled.')
+        elif (arg == 'ddos'):
+            category = setting['ips']['ddos']
+            option = 'enabled'
 
-                return
+        elif (arg == 'whitelist'):
+            category = setting['ips']['whitelist']
+            option = 'dns_servers'
 
-        elif (arg == 'tld'):
-            category = setting['dns_proxy']['tlds']
-
-        old_status = category[option]['enabled']
+        old_status = category[option]
         if (comm == 'enable'):
-            category[option].update({'enabled': True})
+            category.update({option: True})
         elif (comm == 'disable'):
-            category[option].update({'enabled': False})
-        new_status = category[option]['enabled']
+            category.update({option: False})
+        new_status = category[option]
 
         if (old_status == new_status):
-            if (arg == 'keyword'):
-                self.Standard.SendNotice(f'{option} already {comm}d.')
-            else:
-                self.Standard.SendNotice(f'{arg} {option} already {comm}d.')
+            self.Standard.SendNotice(f'{arg} {option} already {comm}d.')
         else:
-            syntax = self.valid['settings'][arg]['syntax']
-            with open(f'{HOME_DIR}/data/dns_proxy.json', 'w') as settings:
+            with open(f'{HOME_DIR}/data/ips.json', 'w') as settings:
                 json.dump(setting, settings, indent=4)
 
-            self.Standard.SendNotice(f'{comm}d {option}. use "show {syntax}" command to check current status.')
+            self.Standard.SendNotice(f'{comm}d {arg} {option}. use "show {arg}" command to check current status.')
 
-    def ValidateCategory(self, arg, option):
-        syntax = self.valid['settings'][arg]['syntax']
-        valid_domain = self.valid_domain[syntax]
-        if (arg == 'category'):
-            valid_domain = valid_domain['default']
+    def ConfigureOption(self, arg, option, option2):
+        with open(f'{HOME_DIR}/data/ips.json', 'r') as settings:
+            setting = json.load(settings)
 
-        if (option not in valid_domain):
-            self.Standard.SendNotice(f'invalid {arg}. use "show {syntax}" to view all available {syntax}.')
-        else:
-            return True
+        option_setting = setting[arg]
+
+        if (arg in {'portscan', 'ddos'}):
+            if (arg == 'portscan'):
+                option2 = 'length'
+
+            old_status = option_setting[option][option2]
+            option_setting.update({option: option2})
+            new_status = option_setting[option][option2]
+            if (old_status == new_status):
+                self.Standard.SendNotice(f'{arg} {option} already set to {option2}.')
+            else:
+                with open(f'{HOME_DIR}/data/ips.json', 'w') as settings:
+                    json.dump(setting, settings, indent=4)
+
+                self.Standard.SendNotice(f'{arg} {option} set to {option2}. use "show {arg}" command to check current status.')
+
+    def ValidateEnDisSetting(self, arg, option):
+        if (arg == 'portscan'):
+            if (option in {'prevention', 'reject'}):
+                return True
+
+        elif (arg == 'ddos'):
+            if (option in {'prevention'}):
+                return True
+
+        elif (arg == 'whitelist'):
+            if (option in {'dns'}):
+                return True
+
+        self.Standard.SendNotice(f'invalid {arg} setting. use "show {arg}" to view all available settings.')
+
+    def ValidateOptions(self, arg, option, option2):
+        if (arg == 'ddos'):
+            if (option in {'tcp', 'udp', 'icmp'}):
+                if (option2.isdigit() and int(option2) in range(10,100)):
+                    return True
+                else:
+                    message = f'invalid packet per second. use "set ddos {option}" command for available options.'
+
+            else:
+                 message = f'invalid protocol. use "set ddos" command for available options.'
+
+        elif (arg == 'portscan'):
+            if (option in {'block-length'}):
+                if (option2.isdigit() and int(option2) in {0,24,48,72}):
+                    return True
+                else:
+                    message = 'invalid block length. use "set portscan block-length" command for available options.'
+
+            else:
+                message = 'invalid option. use "set portscan" command for available options.'
+
+
+    def ValidateADDorDelete(self):
+        if (arg == 'whitelist'):
+            valid_ip = self.Standard.ValidateIP(option)
+            if (valid_ip):
+                valid_string = self.Standard.AlphaNum(option2)
+                if (valid_string):
+                    return True
+                else:
+                    message = 'invalid reason. must be alpha numeric characters.'
+            else:
+                message = 'invalid ip address.'
+
+        self.Standard.SendNotice(message)

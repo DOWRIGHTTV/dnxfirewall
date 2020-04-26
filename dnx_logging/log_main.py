@@ -2,155 +2,349 @@
 
 import os, sys
 import time
-import json
-import asyncio
+import threading
 import shutil
+import json
 
+
+from functools import wraps
 from collections import deque
+from socket import socket, AF_INET, SOCK_DGRAM
 
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import *
-from dnx_configure.dnx_db_connector import DBConnector
-from dnx_configure.dnx_system_info import System as Sys
+from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
+from dnx_iptools.dnx_standard_tools import looper, classproperty, dnx_queue
+from dnx_configure.dnx_file_operations import load_configuration, cfg_read_poller, change_file_owner
+from dnx_database.ddb_connector import DBConnector
+from dnx_configure.dnx_system_info import System
 
 
 class LogService:
     def __init__(self):
-        self.System = Sys()
+        self.System = System()
 
-    def Start(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        asyncio.run(self.Main())
+        self.log_modules = [
+            'dhcp_server', 'dns_proxy', 'ip_proxy',
+            'ips', 'syslog', 'system', 'update', 'logins'
+        ]
 
-    async def Main(self):
-        await asyncio.gather(self.Settings, self.Organize(), self.CleanDBTables())
+    def start(self):
+        threading.Thread(target=self.get_settings).start()
+        threading.Thread(target=self.organize).start()
+        threading.Thread(target=self.clean_db_tables).start()
+        threading.Thread(target=self.clean_blocked_table).start()
 
     # Recurring logic to gather all log files and add the mto a signle file (combined logs) every 5 minutes
-    async def Organize(self):
+    @looper(THREE_MIN)
+    def organize(self):
+        # print('[+] Starting organize operation.')
         log_entries = []
-        date = self.System.Date()
-        log_modules = ['dhcp_server', 'dns_proxy', 'ip_proxy', 'ips', 'syslog', 'system', 'update']
-        while True:
-            for module in log_modules:
-                module_entries = await self.CombineLogs(module, date)
-                if (module_entries):
-                    log_entries.extend(module_entries)
+        date = ''.join(self.System.date())
+        for module in self.log_modules:
+            module_entries = self.combine_logs(module, date)
+            if (module_entries):
+                log_entries.extend(module_entries)
 
-            sorted_log_entries = sorted(log_entries)
-            if (sorted_log_entries):
-                await self.WriteCombinedLogs(sorted_log_entries, date)
-
-            await asyncio.sleep(SETTINGS_TIMER)
+        sorted_log_entries = sorted(log_entries)
+        if (sorted_log_entries):
+            self.write_combined_logs(sorted_log_entries, date)
+        log_entries = None # overwriting var to regain system memory
 
     # grabbing the log from the sent in module, splitting the lines, and returning a list
-    async def CombineLogs(self, module, date):
+    # TODO: see if we can load file as generator
+    def combine_logs(self, module, date):
+        file_entries = []
         try:
-            with open(f'{HOME_DIR}/dnx_system/log/{module}/{date[0]}{date[1]}{date[2]}-{module}.log', 'r') as log_file:
-                log_entries = log_file.read().strip().split('\n')
+#            print(f'opening {HOME_DIR}/dnx_system/log/{module}/{date[0]}{date[1]}{date[2]}-{module}.log to view entries')
+            with open(f'{HOME_DIR}/dnx_system/log/{module}/{date}-{module}.log', 'r') as log_file:
+                for _ in range(20):
+                    line = log_file.readline().strip()
+                    if not line: break
 
-            return log_entries
+                    file_entries.append(line)
         except FileNotFoundError:
-            pass
+            return None
+        else:
+            return file_entries
 
     # writing the log entries to the combined log
-    async def WriteCombinedLogs(self, sorted_log_entries, date):
-        with open(f'{HOME_DIR}/dnx_system/log/combined_log/{date[0]}{date[1]}{date[2]}-combined.log', 'w+') as system_log:
+    def write_combined_logs(self, sorted_log_entries, date):
+        with open(f'{HOME_DIR}/dnx_system/log/combined/{date}-combined.log', 'w+') as system_log:
+#            print(f'writing {HOME_DIR}/dnx_system/log/combined/{date[0]}{date[1]}{date[2]}-combined.log')
             for log in sorted_log_entries:
                 system_log.write(f'{log}\n')
 
-    async def CleanDBTables(self):
-        while True:
-            for table in {'dnsproxy', 'ipproxy' , 'ips', 'infectedclients'}:
-                Database = DBConnector(table)
-                Database.Connect()
-                Database.Cleaner(self.log_length)
-                Database.Disconnect()
+    @looper(ONE_DAY)
+    def clean_db_tables(self):
+        # print('[+] Starting general DB table cleaner.')
+        with DBConnector() as FirewallDB:
+            for table in ['dnsproxy', 'ipproxy' , 'ips', 'infectedclients']:
+                FirewallDB.table_cleaner(self.log_length, table=table)
 
-            #running on system startup and every 24 hours thereafter
-            await asyncio.sleep(EXTRA_LONG_TIMER)
+    @looper(THREE_MIN)
+    def clean_blocked_table(self):
+        # print('[+] Starting DB blocked table cleaner.')
+        with DBConnector() as FirewallDB:
+            FirewallDB.blocked_cleaner(table='blocked')
 
-    async def Settings(self):
-        while True:
-            with open(f'{HOME_DIR}/data/config.json', 'r') as logging:
-                log = json.load(logging)
+    @cfg_read_poller('logging_client')
+    def get_settings(self, cfg_file):
+#        print('[+] Starting settings update poller.')
+        log_settings = load_configuration(cfg_file)
 
-            self.log_length = log['settings']['logging']['length']
+        self.log_length = log_settings['logging']['logging']['length']
+        self.logging_level = log_settings['logging']['logging']['level']
 
-            await asyncio.sleep(SETTINGS_TIMER)
+#
+# LOG HANDLING PARENT CLASS
+#
+
+# SYSTEM LOG DECORATOR
+def level(lvl):
+    def decorator(log_func):
+        @classmethod
+        def wrapper(cls, message):
+            message = f'{log_func.__name__}: {message}'
+            if (cls.verbose): print(message) # pylint: disable=no-member
+
+            if (lvl <= cls._LEVEL): # pylint: disable=no-member
+                cls._system_log(message) # pylint: disable=no-member
+
+        return wrapper
+    return decorator
+
+# EVENT LOG DECORATOR
 
 
 class LogHandler:
-    def __init__(self, process, module=None):
-        self.process = process
-        self.System = Sys()
+    _LEVEL   = 0
+    _syslog  = False
+    _running = False
 
-        self.log_queue = deque()
+    _log_q   = deque()
+    _path    = f'{HOME_DIR}/dnx_system/log/'
+    _db_sock = socket()
+    _syslog_sock = socket()
 
-        if (module):
-            self.module = module
+    @classmethod
+    def run(cls, *, name, verbose=False, root=False, console=True):
+        '''initializes log handler settings and monitors system configs for changes
+        with log/syslog settings.'''
+        if (cls.is_root and not root):
+            raise RuntimeError('must set root argument to True if running as root.')
+        if (cls.is_running):
+            raise RuntimeWarning('the log handler has already been started.')
 
-    async def Settings(self, module):
-        print('[+] Starting: Log Settings Update Thread.')
-        self.module = module
-        while True:
-            with open(f'{HOME_DIR}/data/config.json', 'r') as settings:
-                setting = json.load(settings)
+        cls.name     = name
+        cls.verbose  = verbose
+        cls.root     = root
+        cls.console  = console
+        cls._running = True
 
-            self.process.logging_level = setting['settings']['logging']['level']
+        cls._path += f'{name}/'
 
-            await asyncio.sleep(SETTINGS_TIMER)
+        threading.Thread(target=cls._log_settings).start()
+        threading.Thread(target=cls._slog_settings).start()
 
-    ## this is the message input for threadsafe/sequential modules
-    def Message(self, message):
-        timestamp = time.time()
-        timestamp = self.System.FormatTime(timestamp)
-        d = self.System.Date()
-        with open(f'{HOME_DIR}/dnx_system/log/{self.module}/{d[0]}{d[1]}{d[2]}-{self.module}.log', 'a+') as Log:
-            Log.write(f'{timestamp}: {message}\n')
+        # passing cls as arg because this is going through a generic decorator that strips the cls reference
+        threading.Thread(target=cls._write_to_disk, args=(cls,)).start()
 
-        ## make sure this works. should be fine, but front end might do something weird to chmod???
-        user_id = os.geteuid()
-        if (user_id == 0):
-            file_path = f'{HOME_DIR}/dnx_system/log/{self.module}/{d[0]}{d[1]}{d[2]}-{self.module}.log'
-            shutil.chown(file_path, user=USER, group=GROUP)
-            os.chmod(file_path, 0o660)
+    @classproperty
+    def is_root(cls): # pylint: disable=no-self-argument
+        '''return True is process is running as root/ userid=0.'''
+        return True if not os.geteuid() else False
 
-            ## REPLACED THESE WITH CODE ABOVE. REMOVE AFTER TESTING AND VALIDATING CHANGES WORK
-#            run(f'chown dnx:dnx {file_path}', shell=True)
-#            run(f'chmod 660 {file_path}', shell=True)
+    @classproperty
+    def is_running(cls): # pylint: disable=no-self-argument
+        '''return True if run method has been called.'''
+        return cls._running
 
-    def AddtoQueue(self, message, log_queue_lock):
-        timestamp = time.time()
-        with log_queue_lock:
-            self.log_queue.append((timestamp, message))
+    @classproperty
+    def current_lvl(cls): # pylint: disable=no-self-argument
+        '''returns current system log settings level.'''
+        return cls._LEVEL
 
-    ## This is the message handler for ensure thread safety in multi threaded or asynchronous tasks
-    async def QueueHandler(self, log_queue_lock):
-        while True:
-            d = self.System.Date()
-            if (not self.log_queue):
-                # waiting 1 second before checking queue again for idle perf
-                await asyncio.sleep(SHORT_POLL)
-                continue
+    @classproperty
+    def syslog_enabled(cls): # pylint: disable=no-self-argument
+        '''returns True if syslog is configured in the system else False.'''
+        return cls._syslog
 
-            with open(f'{HOME_DIR}/dnx_system/log/{self.module}/{d[0]}{d[1]}{d[2]}-{self.module}.log', 'a+') as Log:
-                with log_queue_lock:
-                    while self.log_queue:
-                        full_message = self.log_queue.popleft()
-                        timestamp = full_message[0]
-                        message = full_message[1]
+    @level(0)
+    def emergency(self):
+        '''system is unusable.'''
+        pass
 
-                        Log.write(f'{timestamp}: {message}\n')
+    @level(1)
+    def alert(self):
+        '''action must be taken immediately.'''
+        pass
 
-            user_id = os.geteuid()
-            if (user_id == 0):
-                file_path = f'{HOME_DIR}/dnx_system/log/{self.module}/{d[0]}{d[1]}{d[2]}-{self.module}.log'
-                shutil.chown(file_path, user=USER, group=GROUP)
-                os.chmod(file_path, 0o660)
+    @level(2)
+    def critical(self):
+        '''critical conditions.'''
+        pass
 
-            ## REPLACED THESE WITH CODE ABOVE. REMOVE AFTER TESTING AND VALIDATING CHANGES WORK
-#            run(f'chown dnx:dnx {file_path}', shell=True)
-#            run(f'chmod 660 {file_path}', shell=True)
+    @level(3)
+    def error(self):
+        '''error conditions.'''
+        pass
+
+    @level(4)
+    def warning(self):
+        '''warning conditions.'''
+        pass
+
+    @level(5)
+    def notice(self):
+        '''normal but significant condition.'''
+        pass
+
+    @level(6)
+    def informational(self):
+        '''informational messages.'''
+        pass
+
+    @level(7)
+    def debug(self):
+        '''debug-level messages.'''
+        pass
+
+    @classmethod
+    def console(cls, message):
+        '''print message to console. this is for all important console only events. use dprint for
+        non essential console output which is linked to verbose attribute.'''
+        if (cls.console):
+            print(message)
+
+    @classmethod
+    def dprint(cls, message):
+        '''print function alternative to supress/show terminal output.'''
+        if (cls.verbose):
+            print(message)
+
+    @dnx_queue(None, name='LogHandler')
+    ## This is the message handler for ensuring thread safety in multi threaded tasks  # pylint: disable=no-self-argument
+    def _write_to_disk(cls, job):
+        date = System.date(string=True)
+        path = cls._path + f'{date}-{cls.name}.log'
+
+        timestamp, message = job
+        with open(path, 'a+') as log:
+            log.write(f'{timestamp}|{message}\n')
+
+        if (cls.root):
+            change_file_owner(path)
+
+    @classmethod
+    def _system_log(cls, message):
+        '''thread safe method to log message string sent in to system log file. if thread safety is not need
+        user standard message method.'''
+        timestamp = round(time.time())
+
+        cls._log_q.append((timestamp, message))
+
+    @classmethod
+    def event_log(cls, timestamp, log, method):
+        '''log security events to database. uses local socket controlled by log service
+        to aggregate messages accross all modules.
+
+        Do not override.
+
+        '''
+        log_data = Format.db_message(timestamp, log, method)
+#        print(f'SERIALIZED: {timestamp} {log_entry} {method}')
+        for _ in range(2):
+            try:
+                cls._db_sock.send(log_data)
+            except OSError:
+                cls._create_db_sock()
+            else:
+                break
+
+    @classmethod
+    def slog_log(cls, mtype, level, message):
+        return # NOTE: to not mess up decorator
+
+        # message = Format.message(cls_name, mtype, level, message)
+        # for attempt in range(2):
+        #     try:
+        #         cls._syslog_sock.send(message)
+        #     except OSError:
+        #         cls._create_syslog_sock()
+        #     else:
+        #         # NOTE: should log to front end
+        #         break
+
+    @cfg_read_poller('logging_client', class_method=True)
+    def _log_settings(cls, cfg_file):  # pylint: disable=no-self-argument
+        logging = load_configuration(cfg_file)['logging']
+
+        cls._LEVEL = logging['logging']['level']
+
+    @cfg_read_poller('syslog_client', class_method=True)
+    def _slog_settings(cls, cfg_file):  # pylint: disable=no-self-argument
+        syslog = load_configuration(cfg_file)['syslog']
+
+        cls._syslog = syslog['enabled']
+
+    @classmethod
+    def _create_sockets(cls):
+        cls._create_syslog_sock()
+        cls._create_db_sock()
+
+    @classmethod
+    def _create_syslog_sock(cls):
+        cls._syslog_sock = socket(AF_INET, SOCK_DGRAM)
+        cls._syslog_sock.connect((f'{LOCALHOST}', SYSLOG_SOCKET))
+
+    @classmethod
+    def _create_db_sock(cls):
+        cls._db_sock = socket(AF_INET, SOCK_DGRAM)
+        cls._db_sock.connect((f'{LOCALHOST}', DATABASE_SOCKET))
+
+
+class Format:
+    '''log formatting class used by log handler. system time/UTC will be used.'''
+    @classmethod
+    def message(cls, mod_name, mtype, level, message):
+        date = System.date(string=True)
+        timestamp = System.format_time(fast_time())
+        level = cls._convert_level(level)
+
+        system_ip = None
+
+        # using system/UTC time
+        # 20140624|19:08:15|EVENT|DNSProxy:Informational|192.168.83.1|*MESSAGE*
+        message = f'{date}|{timestamp}|{mtype.name}|{mod_name}:{level}|{system_ip}|{message}'
+
+        return message.encode('utf-8')
+
+    @staticmethod
+    def db_message(timestamp, log, method):
+        log_data = {
+            'method': method,
+            'timestamp': timestamp,
+            'log': log
+        }
+
+        return json.dumps(log_data).encode('utf-8')
+
+    @staticmethod
+    def _convert_level(level):
+        '''converts log level as integer to string. valid input: 0-7'''
+        return {
+            0 : 'emergency',      # system is unusable
+            1 : 'alert',          # action must be taken immediately
+            2 : 'critical',       # critical conditions
+            3 : 'error',          # error conditions
+            4 : 'warning',        # warning conditions
+            5 : 'notice',         # normal but significant condition
+            6 : 'informational',  # informational messages
+            7 : 'debug',          # debug-level messages
+        }[level]
+
+if __name__ == '__main__':
+    Log = LogService()
+    Log.start()

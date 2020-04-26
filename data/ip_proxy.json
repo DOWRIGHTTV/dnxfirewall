@@ -1,24 +1,28 @@
 {
     "ip_proxy": {
+        "ids_mode": false,
         "directions": {
-            "malicious": "inbound",
-            "tor": "both"
+            "mal": 1,
+            "tor": 3
         },
-        "lists": {
-            "tor": {
-                "entry": {
-                    "enabled": false
-                },
-                "exit": {
-                    "enabled": false
-                }
-            },
-            "malware": {
-                "enabled": true
-            },
-            "compromised": {
-                "enabled": true
-            }
+        "categories": {
+            "malicious": 1,
+            "compromised": 0,
+            "tor_entry": 0,
+            "tor_exit": 0
+        },
+        "geolocation": {
+            "china": 0,
+            "iran": 0,
+            "netherlands": 0,
+            "nkorea": 0,
+            "russia": 0,
+            "venezuela": 0
+        },
+        "time_restriction": {
+            "enabled": false,
+            "start": "21:00",
+            "length": 28800
         }
     }
 }
