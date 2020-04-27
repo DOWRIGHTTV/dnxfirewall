@@ -76,6 +76,7 @@ to lower level control is present to maintain the highest possible throughput wi
 - [+] Run/ follow the deployment scripts (in order) to automate system setup. look at comments in script files for more direction.
 
 <h2>Non DNX code dependencies/sources!</h2>
+
 https://github.com/tlocke/pg8000 | pure python postgresql adapter
 
 https://github.com/kti/python-netfilterqueue | cython/ python extension for binding to linux kernel netfilter
