@@ -3,3 +3,4 @@
 .json    linguist-language=Python
 .txt     linguist-language=Python
 .service linguist-language=Python
+.geo     linguist-language=Python
