@@ -25,16 +25,16 @@ to lower level control is present to maintain the highest possible throughput wi
 - DNS Proxy
 
     - category based blocking (general, TLD, substring matching)
-
-    - user added whitelist/blacklists or custom general category creation
-
+    
+    - user added whitelist/blacklist or custom general category creation
+    
     - native DNS over TLS conversion
-
+    
     - local dns server
-
+    
     - software failover
-
-    - 2 levels of record caching
+    
+    - 2 level record caching
     
 - IP Proxy (transparent) Bi directional
 
@@ -75,12 +75,6 @@ to lower level control is present to maintain the highest possible throughput wi
 
 - [+] Run/ follow the deployment scripts (in order) to automate system setup. look at comments in script files for more direction.
 
-<h2>General Showcase Demo (outdated)</h2>
-
-- NOTE: The front end is not currently included in the public/foss version of firewall, but the funcionality of the system is the same.
-Edit json files accordingly to implement specific system controls, eg whitelist, blacklist, dns records, etc. a DNX CLI will be implemented
-eventually which will configuration changes easier to deal with.
-
 <h2>Non DNX code dependencies/sources!</h2>
 https://github.com/tlocke/pg8000 | pure python postgresql adapter
 
@@ -91,6 +85,12 @@ https://www.ip2location.com/free/visitor-blocker | geolocation ip filtering data
 https://gitlab.com/ZeroDot1/CoinBlockerLists | cryptominer hostset
 
 https://squidblacklist.org | malicious and advertisement hostsets
+
+<h2>General Showcase Demo (outdated)</h2>
+
+- NOTE: The front end is not currently included in the public/foss version of firewall, but the funcionality of the system is the same.
+Edit json files accordingly to implement specific system controls, eg whitelist, blacklist, dns records, etc. a DNX CLI will be implemented
+eventually which will configuration changes easier to deal with.
 
 This video is extremely outdated, but still shows general functionality and some of the high level security implementations. an updated video will be created soon which will show the newly added modules: syslog client, standard logging, ips/ids, updated dns proxy functionality, updated ip proxy functionality, more.
 
