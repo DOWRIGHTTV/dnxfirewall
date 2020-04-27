@@ -1,8 +1,8 @@
 # ????
-.png     linguist-language=Python
-.json    linguist-language=Python
-.txt     linguist-language=Python
-.service linguist-language=Python
-.geo     linguist-language=Python
-.domains linguist-language=Python
-.ips     linguist-language=Python
+*.png     linguist-language=Python
+*.json    linguist-language=Python
+*.txt     linguist-language=Python
+*.service linguist-language=Python
+*.geo     linguist-language=Python
+*.domains linguist-language=Python
+*.ips     linguist-language=Python
