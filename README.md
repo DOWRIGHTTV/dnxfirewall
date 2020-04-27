@@ -21,6 +21,7 @@ to lower level control is present to maintain the highest possible throughput wi
 "architecture, system design" video will be created at some point to show how this is possible with pure python.
 
 <h2>Included Features</h2>
+<code>
 - DNS Proxy
 
     - category based blocking (general, TLD, substring matching)
@@ -62,7 +63,7 @@ to lower level control is present to maintain the highest possible throughput wi
     - Database management
 
     - Syslog client (UDP, TCP, TLS)
-
+</code>
 
 <h2>Before Running</h2>
 
