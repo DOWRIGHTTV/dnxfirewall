@@ -1,28 +1,24 @@
 #!/usr/bin/env python3
 
 import os
-from subprocess import Popen
+from subprocess import run, DEVNULL
 
 if (os.geteuid() != 0):
     exit("You need to have root privileges to run this script.\nPlease try again, this time using 'sudo'. Exiting.")
 
 print('creating firewall user')
-process = Popen('sudo useradd -p firewall dnx && sudo mkdir /home/dnx && sudo chown dnx:dnx /home/dnx', shell=True)
-process.wait()
+run('sudo useradd -p firewall dnx && sudo mkdir /home/dnx && sudo chown dnx:dnx /home/dnx', shell=True, stdout=DEVNULL)
 
 print('installing system dependencies')
-process = Popen('sudo apt install nginx postgresql python3-pip libnetfilter_queue -y', shell=True)
-process.wait()
+run('sudo apt install nginx postgresql python3-pip libnetfilter_queue -y', shell=True, stdout=DEVNULL)
 
 print('enabling system services')
 services = ['nginx', 'postgresql']
 for service in services:
-    process = Popen(f'sudo systemctl enable {service}', shell=True)
-    process.wait()
+    run(f'sudo systemctl enable {service}', shell=True, stdout=DEVNULL)
 
 print('starting postgresql database service')
-process = Popen('sudo systemctl start postgresql', shell=True)
-process.wait()
+run('sudo systemctl start postgresql', shell=True, stdout=DEVNULL)
 
 print('initial script complete. manual work required.')
 print('step 1. please manually create database with following info. name:dnxfirewall user:dnx password:firewall.')

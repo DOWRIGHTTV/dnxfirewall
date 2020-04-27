@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import os
-from subprocess import Popen
+from subprocess import run, DEVNULL
 
 if (os.geteuid() != 0):
     exit("You need to have root privileges to run this script.\nPlease try again, this time using 'sudo'. Exiting.")
@@ -12,4 +12,4 @@ services = [
     ]
 
 for service in services:
-    Popen(f'sudo systemctl restart dnx-{service}', shell=True)
+    run(f'sudo systemctl restart dnx-{service}', shell=True, stdout=DEVNULL)
