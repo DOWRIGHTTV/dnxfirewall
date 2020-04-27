@@ -1,3 +1,9 @@
+# -------------------------------------------------------
+# Free IP2Location Firewall List by Country
+# Source: https://www.ip2location.com/free/visitor-blocker
+# Last Generated: 25 Apr 2020 21:46:51 GMT
+# [Important] Please update this list every month
+# -------------------------------------------------------
 1.0.1.0/24 china
 1.0.2.0/23 china
 1.0.8.0/21 china

@@ -1,31 +1,97 @@
 <h1 align="center">
 	<br>
-	<img src="https://github.com/ProHackTech/DNX-FWALL-CMD/blob/master/DNX_Logo.png" alt="DNX Firewall Logo">
+	<img src="https://github.com/DOWRIGHTTV/dnxfirewall-cmd/blob/master/utils/dnxlogo_v2.png" alt="DNX Firewall Logo">
 	<br>
 </h1>
 
 <h3 align="center">
-	Command Line Version
+	Command Line Version | coded/tested live on twitch.tv.
 	<br>
 	<a href="https://www.twitch.tv/dowright" target="_blank">
 		<img src="https://github.com/ProHackTech/DNX-FWALL-CMD/blob/master/Readme_Social/twitch.png" alt="DOWRIGHTTV" />
 	</a>
 </h3>
 
+<h2>Overview</h2>
+DNX Firewall is an optimized/high performance collection of applications or services to convert a standard linux system
+into a zone based next generation firewall. All software is designed to run in conjunction with eachother, but with a modular 
+design certain aspects can be completely removed with little effort. The primary security modules have DIRECT/INLINE control 
+over all connections, streams, messages, that goes through the system. That being said, depending on the protocol, offloading
+to lower level control is present to maintain the highest possible throughput with full inspection enabled. A low level
+"architecture, system design" video will be created at some point to show how this is possible with pure python.
+
+<h2>Included Features</h2>
+- DNS Proxy
+
+    - category based blocking (general, TLD, substring matching)
+
+    - user added whitelist/blacklists or custom general category creation
+
+    - native DNS over TLS conversion
+
+    - local dns server
+
+    - software failover
+
+    - 2 levels of record caching
+    
+- IP Proxy (transparent) Bi directional
+
+    - reprutation based host filtering
+
+    - geolocation filter
+
+    - lan restriction (disables internet access to the LAN for all IPs not whitelisted)
+    
+- IPS/IPS (WAN/inbound)
+
+    - Denial of service detection/prevention
+
+    - Portscan detection/prevention
+
+- Lightweight DHCP Server (custom)
+
+    - ip reservations
+
+    - security alert integration
+
+- General Services
+
+    - Log handling
+
+    - Database management
+
+    - Syslog client (UDP, TCP, TLS)
+
+
 <h2>Before Running</h2>
 
 - [+] Edit data/config.json to reflect your system
 
-- [+] Change environment variable in dnx_run.sh
+- [+] Move all systemd service files into the systems systemd folder.
 
-- [+] Use dnx_run.sh to start the system
+- [+] Configure system interfaces.
 
-<h2>Instructional Demo</h2>
+- [+] Run/ follow the deployment scripts (in order) to automate system setup. look at comments in script files for more direction.
 
-- NOTE: The front end is not included in public/foss version of firewall, but the funcionality of the system is the same.
-Edit json files accordingly to implement specific system controls, eg whitelist, blacklist, dns records, etc. CLI is in progress and some settings can be configured using it.
+<h2>General Showcase Demo (outdated)</h2>
 
-This video is outdated, but still shows general functionality. an updated video will be created soon which will show the newly added modules: syslog client, standard logging, ips/ids, updated dns proxy functionality, updated ip proxy functionality, more.
+- NOTE: The front end is not currently included in the public/foss version of firewall, but the funcionality of the system is the same.
+Edit json files accordingly to implement specific system controls, eg whitelist, blacklist, dns records, etc. a DNX CLI will be implemented
+eventually which will configuration changes easier to deal with.
+
+<h2>Non DNX code dependencies/sources!</h2>
+https://github.com/tlocke/pg8000 | pure python postgresql adapter
+
+https://github.com/kti/python-netfilterqueue | cython/ python extension for binding to linux kernel netfilter
+
+https://www.ip2location.com/free/visitor-blocker | geolocation ip filtering datasets
+
+https://gitlab.com/ZeroDot1/CoinBlockerLists | cryptominer hostset
+
+https://squidblacklist.org | malicious and advertisement hostsets
+
+This video is extremely outdated, but still shows general functionality and some of the high level security implementations. an updated video will be created soon which will show the newly added modules: syslog client, standard logging, ips/ids, updated dns proxy functionality, updated ip proxy functionality, more.
 
 <h3 align="center">
 	<a href="http://www.youtube.com/watch?feature=player_embedded&v=6NvRXlNjpOc" target="_blank">
