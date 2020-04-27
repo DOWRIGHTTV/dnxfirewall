@@ -200,6 +200,7 @@ SEND_TO_FIREWALL = 30
 
 DNS_BIN_OFFSET = 4 # NOTE: 4 seems to be a good compromise of len(bins) vs len(buckets)
 class DNS_CAT(_IntEnum):
+    doh = -30
     whitelist = -20
     blacklist = -10
 
