@@ -18,6 +18,54 @@ from dnx_configure.dnx_constants import USER, GROUP, LOG, FILE_POLL_TIMER
 from dnx_configure.dnx_constants import DNS_BIN_OFFSET, DNS_CAT, IPP_CAT, GEO
 from dnx_configure.dnx_exceptions import ValidationError
 
+#will load json data from file, convert it to a python dict, then return as object
+def load_configuration(filename, *, path=f'{HOME_DIR}/', folder='data'):
+    '''will load json data from file, convert it to a python dict, then return as object.
+    path must be ended with / for the directory to be processed correctly.'''
+    if (not path.endswith('/')):
+        raise ValueError('filepath must end with "/" if path argument is used.')
+
+    if (not filename.endswith('.json')):
+        filename += '.json'
+
+    with open(f'{path}{folder}/{filename}', 'r') as settings:
+        settings = json.load(settings)
+
+    return settings
+
+def write_configuration(data, filename, *, path=f'{HOME_DIR}/', folder='data'):
+    '''will write json data to file. path must be ended with / for the directory
+    to be processed correctly.'''
+    if (not path.endswith('/')):
+        raise ValueError('filepath must end with "/" if path argument is used.')
+
+    if (not filename.endswith('.json')):
+        filename += '.json'
+
+    with open(f'{path}{folder}/{filename}', 'w') as settings:
+        json.dump(data, settings, indent=4)
+
+def append_to_file(data, filename, *, path=f'{HOME_DIR}/', folder='data'):
+    '''will append data to filepath must be ended with / for the directory
+    to be processed correctly.'''
+    if (not path.endswith('/')):
+        raise ValueError('filepath must end with "/" if path argument is used.')
+
+    with open(f'{path}{folder}/{filename}', 'a') as settings:
+        settings.write(data)
+
+def tail_file(file, *, line_count):
+    f = subprocess.run(['tail', '-n', f'{line_count}', file], capture_output=True)
+
+    return reversed(f.stdout.decode().splitlines())
+
+def change_file_owner(file_path):
+    if (os.getuid()):
+        raise RuntimeError('process must be ran as root user to change file owner.')
+
+    shutil.chown(file_path, user=USER, group=GROUP)
+    os.chmod(file_path, 0o660)
+
 # used to load ip and domain signatures. if whitelist exceptions are specified then they will not
 # get loaded into the proxy. the try/except block is used to ensure bad rules dont prevent proxy
 # from starting though the bad rule will be ommited from the proxy.
