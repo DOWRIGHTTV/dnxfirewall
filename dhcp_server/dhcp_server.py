@@ -159,6 +159,7 @@ class DHCPServer(Listener):
         if (client_request.bcast):
             Log.debug(f'Sent BROADCAST to 255.255.255.255:68')
             client_request.sock.sendto(client_request.send_data, (f'{BROADCAST}', 68))
+
         else:
             Log.debug(f'Sent UNICAST to {client_request.handout_ip}:68')
             client_request.sock.sendto(client_request.send_data, (f'{client_request.handout_ip}', 68))

@@ -1,12 +1,13 @@
 #!/usr/bin/python3
 
-import time, os, sys
+import os, sys
+import time
 import fcntl
 import json
 import threading
 import asyncio
 
-from subprocess import run, run, CalledProcessError
+from subprocess import run, run, CalledProcessError, DEVNULL
 from types import SimpleNamespace as SName
 
 HOME_DIR = os.environ['HOME_DIR']
@@ -14,7 +15,10 @@ sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import *
 from dnx_configure.dnx_file_operations import load_configuration
-from dnx_configure.dnx_system_info import Interface
+
+__all__ = (
+    'Defaults', 'IPTableManager'
+)
 
 
 class Defaults:
@@ -104,23 +108,23 @@ class Defaults:
         run('echo 1 > /proc/sys/net/ipv4/ip_forward', shell=True) # Allow forwarding through system, required for NAT to work.
 
     def block_ipv6(self):
-        run(f'ip6tables -P INPUT DROP', shell=True)
-        run(f'ip6tables -P FORWARD DROP', shell=True)
-        run(f'ip6tables -P OUTPUT DROP', shell=True)
+        run(f'ip6tables -P INPUT DROP', shell=True, stdout=DEVNULL)
+        run(f'ip6tables -P FORWARD DROP', shell=True, stdout=DEVNULL)
+        run(f'ip6tables -P OUTPUT DROP', shell=True, stdout=DEVNULL)
 
     def get_settings(self):
-        interface_settings = load_configuration('config.json')
+        interface_settings = load_configuration('config')
 
-        interface = interface_settings['settings']['interface']
-        self.lan_int = interface['inside']
-        self.wan_int = interface['outside']
+        interface = interface_settings['settings']['interfaces']
+        self.lan_int = interface['lan']['ident']
+        self.wan_int = interface['wan']['ident']
 
         self.custom_chains = ['FIREWALL', 'NAT', 'DOH']
 
 
-# TODO: add global file lock to iptable manager in a similar manner to config manager.
-# this will ensure rules will not conflict with eachother if something is being changed
-# in other processes/ threads.
+_err_write = sys.stderr.write
+
+
 class IPTableManager:
     ''' This is the IP Table rule adjustment manager. if class is called in as a context manager, all method calls
     must be ran in the context where the class instance itself is returned as the object. Changes as part of a context
@@ -170,7 +174,7 @@ class IPTableManager:
             sudo iptables -t {table} -A {chain} -d {ip_address} -j DROP', shell=True
             )
 
-        print(f'RULE INSERTED: {ip_address} | {time.time()}')
+        _err_write(f'RULE INSERTED: {ip_address} | {fast_time()}')
 
     @staticmethod
     def proxy_del_rule(ip_address, *, table, chain):
@@ -179,7 +183,7 @@ class IPTableManager:
             sudo iptables -t {table} -D {chain} -d {ip_address} -j DROP', shell=True
             )
 
-        print(f'RULE REMOVED: {ip_address} | {time.time()}')
+        _err_write(f'RULE REMOVED: {ip_address} | {fast_time()}')
 
     def add_rule(self, iptable_rule):
         opt = SName(**iptable_rule)
@@ -204,27 +208,28 @@ class IPTableManager:
         run(f'sudo iptables -D {chain} {fw_rule}', shell=True)
 
     def add_nat(self, protocol, dst_port, host_ip, host_port):
-        nat_rule = None
-        nat_allow = None
-        if (protocol == 'icmp'):
-            nat_rule  = f'sudo iptables -t nat -I NAT -i {self._wan_int} '
-            nat_rule += f'-p {protocol} -j DNAT --to-destination {host_ip}'
+        nat_rule, nat_allow = None, None
 
-            nat_allow  = f'sudo iptables -I NAT -i {self._wan_int}'
-            nat_allow += f'-p {protocol} -j ACCEPT'
+        if (protocol == 'icmp'):
+            nat_rule = [f'sudo iptables -t nat -I NAT -i {self._wan_int} ',
+                f'-p {protocol} -j DNAT --to-destination {host_ip}']
+
+            nat_allow = [f'sudo iptables -I NAT -i {self._wan_int} ',
+                f'-p {protocol} -j ACCEPT']
 
         else:
-            nat_rule  = f'sudo iptables -t nat -I NAT -i {self._wan_int} -p {protocol} '
-            nat_rule += f'--dport {dst_port} -j DNAT --to-destination {host_ip}'
-            if (dst_port != host_port):
-                nat_rule += f':{host_port}'
+            nat_rule = [f'sudo iptables -t nat -I NAT -i {self._wan_int} -p {protocol} '
+                f'--dport {dst_port} -j DNAT --to-destination {host_ip}']
 
-            nat_allow  = f'sudo iptables -I NAT -i {self._wan_int} '
-            nat_allow += f'-p {protocol} --dport {host_port} -j ACCEPT'
+            if (dst_port != host_port):
+                nat_rule.append(f':{host_port}')
+
+            nat_allow = [f'sudo iptables -I NAT -i {self._wan_int} '
+                f'-p {protocol} --dport {host_port} -j ACCEPT']
 
         if (nat_rule and nat_allow):
-            run(nat_rule, shell=True)
-            run(nat_allow, shell=True)
+            run(''.join(nat_rule), shell=True)
+            run(''.join(nat_allow), shell=True)
 
     def delete_nat(self, nat_rule):
         run(f'sudo iptables -t nat -D NAT {nat_rule}', shell=True)
@@ -234,6 +239,7 @@ class IPTableManager:
         action = {True: '-A', False: '-D'}[action]
         if (whitelist_type == 'global'):
             run(f'sudo iptables {action} IP_WHITELIST -s {ip_address} -j ACCEPT', shell=True)
+
         elif (whitelist_type == 'tor'):
             run(f'sudo iptables -t mangle {action} TOR_WHITELIST -s {ip_address} -j ACCEPT', shell=True)
 
@@ -243,10 +249,7 @@ class IPTableManager:
             ips_to_block = [sig.strip().split()[0] for sig in ips_to_block.readlines()]
 
         for ip in ips_to_block:
-            run(
-                f'sudo iptables -A DOH -p tcp -d {ip} --dport 443 -j REJECT --reject-with tcp-reset',
-                shell=True
-            )
+            run(f'sudo iptables -A DOH -p tcp -d {ip} --dport 443 -j REJECT --reject-with tcp-reset', shell=True)
 
     @staticmethod
     def clear_dns_over_https():
@@ -255,4 +258,4 @@ class IPTableManager:
 if __name__ == '__main__':
     Defaults().start()
     IPTableManager().commit()
-    print('COMMITED IP TABLES')
+    _err_write('COMMITED IP TABLES')
