@@ -10,7 +10,13 @@ print('creating firewall user')
 run('sudo useradd -p firewall dnx && sudo mkdir /home/dnx && sudo chown dnx:dnx /home/dnx', shell=True, stdout=DEVNULL)
 
 print('installing system dependencies')
-run('sudo apt install nginx postgresql python3-pip libnetfilter_queue -y', shell=True, stdout=DEVNULL)
+run('sudo apt install nginx postgresql python3-pip -y', shell=True, stdout=DEVNULL)
+
+print('attempting install of libnetfilter_queue')
+try:
+    run('sudo apt install libnetfilter_queue -y', shell=True, check=True, stdout=DEVNULL)
+except CalledProcessError:
+    print('WARNING: unable to install kernel dependency. you are on your own. see https://netfilter.org/projects/libnetfilter_queue/doxygen/html/ for details.')
 
 print('enabling system services')
 services = ['nginx', 'postgresql']
