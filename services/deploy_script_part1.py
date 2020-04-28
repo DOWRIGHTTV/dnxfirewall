@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import os
-from subprocess import run, DEVNULL
+from subprocess import run, DEVNULL, CalledProcessError
 
 if (os.geteuid() != 0):
     exit("You need to have root privileges to run this script.\nPlease try again, this time using 'sudo'. Exiting.")
