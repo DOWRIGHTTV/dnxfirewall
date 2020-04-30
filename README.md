@@ -31,7 +31,7 @@ modules. A low level "architecture, system design" video will be created at some
     
     - user added whitelist/blacklist or custom general category creation
     
-    - native DNS over TLS conversion
+    - native DNS over TLS conversion with optional UDP fallback
     
     - local dns server
     
@@ -47,7 +47,7 @@ modules. A low level "architecture, system design" video will be created at some
 
     - lan restriction (disables internet access to the LAN for all IPs not whitelisted)
     
-- IPS/IPS (WAN/inbound)
+- IPS/IDS (WAN/inbound)
 
     - Denial of service detection/prevention
 
@@ -65,7 +65,8 @@ modules. A low level "architecture, system design" video will be created at some
 
     - Database management
 
-    - Syslog client (UDP, TCP, TLS)
+    - Syslog client (UDP, TCP, TLS) IMPORTANT: currently in a beta/unstable state.
+this service will not be enabled by default and will require the service enabled to start on system start.
     
 - Additional notes
     - IPv6 disabled
@@ -80,13 +81,13 @@ modules. A low level "architecture, system design" video will be created at some
 
 <h2>Before Running</h2>
 
-- [+] Edit data/config.json to reflect your system
+- [+] Edit data/config.json and data/dhcp_server.json to reflect your system [interfaces]
 
 - [+] Move all systemd service files into the systems systemd folder.
 
-- [+] Configure system interfaces.
+- [+] Configure system interfaces. LAN needs to be Default Gateway of local network.
 
-- [+] Compile python-netfilterqueue for your current architecture/distro
+- [+] Compile python-netfilterqueue for your current architecture/distro (link below)
         
         - ensure name is netfilter.so and placed in the dnxfirewall/netfilter folder
 

@@ -19,7 +19,7 @@ except CalledProcessError:
     print('WARNING: unable to install kernel dependency. you are on your own. see https://netfilter.org/projects/libnetfilter_queue/doxygen/html/ for details.')
 
 print('enabling system services')
-services = ['nginx', 'postgresql']
+services = ['postgresql']
 for service in services:
     run(f'sudo systemctl enable {service}', shell=True, stdout=DEVNULL)
 
@@ -31,7 +31,7 @@ print('step 1. please manually create database with following info. name:dnxfire
 print('see the comments in this file for the commands to execute to achieve this.')
 print('step 2. configure lan interface with ip/subnet 192.168.83.1/24.')
 print('step 3. move dnxfirewall folder into /home/dnx/.')
-print('step 4. change data/config.json to show correct interface names.')
+print('step 4. change data/config.json and data/dhcp_server.json to show correct interface names.')
 print('step 5. adjust sudoers to allow for some commmands to be done without password. see comments in file for what to add.')
 
 # DATABASE CREATION CODE
