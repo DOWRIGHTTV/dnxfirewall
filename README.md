@@ -25,68 +25,70 @@ modules. A low level "architecture, system design" video will be created at some
 <h2>Included Features</h2>
 
 <code>
+	
 - DNS Proxy
-
-    - category based blocking (general, TLD, substring matching)
+	
+   - category based blocking (general, TLD, substring matching)
     
-    - user added whitelist/blacklist or custom general category creation
+   - user added whitelist/blacklist or custom general category creation
     
-    - native DNS over TLS conversion
+   - native DNS over TLS conversion with optional UDP fallback
     
-    - local dns server
+   - local dns server
     
-    - software failover
+   - software failover
     
-    - 2 level record caching
+   - 2 level record caching
     
 - IP Proxy (transparent) Bi directional
 
-    - reprutation based host filtering
+   - reprutation based host filtering
 
-    - geolocation filter
+   - geolocation filter
 
-    - lan restriction (disables internet access to the LAN for all IPs not whitelisted)
+   - lan restriction (disables internet access to the LAN for all IPs not whitelisted)
     
-- IPS/IPS (WAN/inbound)
+- IPS/IDS (WAN/inbound)
 
-    - Denial of service detection/prevention
+   - Denial of service detection/prevention
 
-    - Portscan detection/prevention
+   - Portscan detection/prevention
 
 - Lightweight DHCP Server (custom)
 
-    - ip reservations
+   - ip reservations
 
-    - security alert integration
+   - security alert integration
 
 - General Services
 
-    - Log handling
+   - Log handling
 
-    - Database management
+   - Database management
 
-    - Syslog client (UDP, TCP, TLS)
+   - Syslog client (UDP, TCP, TLS) IMPORTANT: currently in a beta/unstable state.
+this service will not be enabled by default and will require the service enabled to start on system start.
     
 - Additional notes
-    - IPv6 disabled
-    - prebuilt iptable rules
-    - DNS over HTTPs blocks (dns bypass prevention)
-    - DNS over TCP blocks (dns bypass prevention)
-    - DNS over TLS blocks (dns bypass prevention)
-    - all inbound connections to wan DROPPED by default
-    - IPTABLES custom chain for admin hook into packet flow
+   - IPv6 disabled
+   - prebuilt iptable rules
+   - DNS over HTTPs blocks (dns bypass prevention)
+   - DNS over TCP blocks (dns bypass prevention)
+   - DNS over TLS blocks (dns bypass prevention)
+   - all inbound connections to wan DROPPED by default
+   - IPTABLES custom chain for admin hook into packet flow
     
 </code>
 
 <h2>Before Running</h2>
 
-- [+] Edit data/config.json to reflect your system
+- [+] Edit data/config.json and data/dhcp_server.json to reflect your system [interfaces]
 
 - [+] Move all systemd service files into the systems systemd folder.
 
-- [+] Configure system interfaces.
+- [+] Configure system interfaces. LAN needs to be Default Gateway of local network.
 
-- [+] Compile python-netfilterqueue for your current architecture/distro
+- [+] Compile python-netfilterqueue for your current architecture/distro (link below)
         
         - ensure name is netfilter.so and placed in the dnxfirewall/netfilter folder
 

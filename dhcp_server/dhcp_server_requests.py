@@ -231,7 +231,7 @@ class ClientRequest:
         data = self._data
 
         self.xID    = data[4:8]
-        self.bcast = short_unpack(data[10:12]) >> 15
+        self.bcast  = short_unpack(data[10:12])[0] >> 15
         self.ip     = IPv4Address(data[12:16])
         self.chaddr = data[28:44]
         self.mac    = data[28:34].hex()
