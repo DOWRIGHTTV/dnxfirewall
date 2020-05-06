@@ -33,11 +33,15 @@ class IPS_IDS(NFQueue):
     ip_whitelist = {}
     open_ports = {PROTO.TCP: {}, PROTO.UDP:{}}
     connection_limits = {}
+    broadcast = None
 
     ddos_prevention = False
     portscan_prevention = False
     portscan_reject = False
     ids_mode = False # TODO: implement this throughout
+
+    ddos_engine_enabled = False
+    ps_engine_enabled   = False
 
     active_ddos = False
 
@@ -103,21 +107,6 @@ class IPS_IDS(NFQueue):
 
         return False
 
-    @property
-    # TODO: implement IDS mode
-    def ps_engine_enabled(self):
-        if ((self.portscan_prevention) and (self.open_ports[PROTO.TCP] or self.open_ports[PROTO.UDP])):
-            return True
-
-        return False
-
-    @property
-    # TODO: implement IDS mode
-    def ddos_engine_enabled(self):
-        if (self.ddos_prevention):
-            return True
-
-        return False
 
 class Inspect:
     _IPS = IPS_IDS

@@ -77,6 +77,7 @@ class DHCPServer(Listener):
     def _handle_request(self, client_request):
         request_id, response_mtype = (client_request.mac, client_request.xID), None
         Log.debug(f'REQ | TYPE={client_request.mtype}, ID={request_id}')
+
         if (client_request.mtype == DHCP.RELEASE):
             self._release(client_request.ip, client_request.mac)
 
@@ -85,6 +86,9 @@ class DHCPServer(Listener):
 
         elif (client_request.mtype == DHCP.REQUEST):
             response_mtype, record = self._request(request_id, client_request)
+
+        else:
+            Log.warning(f'Unknown request type from {client_request.mac}')
 
         if (response_mtype):
             client_request.generate_server_response(response_mtype)
@@ -96,9 +100,6 @@ class DHCPServer(Listener):
             )
 
             self.send_to_client(client_request)
-
-        else:
-            Log.warning(f'Unknown request type from {client_request.mac}')
 
     def _release(self, ip_address, mac_address):
         dhcp = ServerResponse(server=self)
@@ -112,9 +113,8 @@ class DHCPServer(Listener):
         self._ongoing[request_id] = dhcp
 
         client_request.handout_ip = dhcp.offer(client_request)
-        record = (DHCP.OFFERED, fast_time(), client_request.mac)
 
-        return DHCP.OFFER, record
+        return DHCP.OFFER, (DHCP.OFFERED, fast_time(), client_request.mac)
 
     def _request(self, request_id, client_request):
         dhcp = self._ongoing.get(request_id, None)
@@ -138,7 +138,7 @@ class DHCPServer(Listener):
             response_mtype = DHCP.ACK
             record = (DHCP.LEASED, fast_time(), client_request.mac)
 
-        # protecting return on invalid dhcp types | NOTE: validate if this even does anything. :)
+        # protecting return on invalid dhcp types | TODO: validate if this even does anything. :)
         else:
             response_mtype, record = None, None
 
@@ -156,7 +156,10 @@ class DHCPServer(Listener):
     @staticmethod
     # will send response to client over socket depending on host details it will decide unicast or broadcast
     def send_to_client(client_request):
-        if (client_request.bcast):
+        # TODO: this current has problems so all requests will be broadcast unless they have the unicast
+        # flag set and have a valid source ip address. for full unicast support, its looking like a raw
+        # socket would have to be used because the dst mac would need to be the request chaddr field.
+        if (client_request.bcast and client_request.ip == INADDR_ANY):
             Log.debug(f'Sent BROADCAST to 255.255.255.255:68')
             client_request.sock.sendto(client_request.send_data, (f'{BROADCAST}', 68))
         else:

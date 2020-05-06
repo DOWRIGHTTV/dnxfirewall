@@ -12,7 +12,7 @@ fast_sleep = time.sleep
 
 __all__ = (
     'looper', 'dynamic_looper',
-    'Initialize', 'dnx_queue', 'DNXQueue',
+    'Initialize', 'dnx_queue',
     'ByteContainer', 'classproperty', 'keep_info'
 )
 
@@ -21,8 +21,10 @@ def looper(sleep_len):
     is sent in the loop will continue immediately.'''
     if not isinstance(sleep_len, int):
         raise TypeError('sleep length must be an integer.')
+
     elif (sleep_len < 0):
         raise ValueError('sleep length must be >= 0.')
+
     def decorator(loop_function):
         def wrapper(*args):
             while True:

@@ -13,11 +13,11 @@ sys.path.insert(0, _HOME_DIR)
 from dnx_iptools.dnx_structs import * # pylint: disable=unused-wildcard-import
 
 __all__ = (
-    'checksum_dnx', 'checksum_icmp', 'checksum_ipv4', 'checksum_tcp',
+    'checksum_icmp', 'checksum_ipv4', 'checksum_tcp',
     'convert_dns_string_to_bytes', 'convert_mac_to_bytes',
     'convert_mac_to_string', 'convert_string_to_bitmap',
     'create_dns_query_header', 'create_dns_response_header',
-    'create_dnx_proto_packet', 'icmp_reachable', 'parse_query_name'
+    'icmp_reachable', 'parse_query_name'
 )
 
 # will ping specified host. to be used to prevent duplicate ip address handouts.
@@ -161,4 +161,3 @@ def create_dns_query_header(dns_id, arc=0, *, cd):
         (ra <<  7) | (zz <<  6) | (ad <<  5) | (cd << 4) | (rc << 0)
 
     return dns_header_pack(dns_id, f, 1, 0, 0, arc)
-

@@ -40,6 +40,12 @@ MAC_TEMPLATE = b'\x00\x00\x00\x00\x00\x00'
 L2_PROTO = 0x0800
 
 
+#CFG
+class CFG(_IntEnum):
+    DEL = 0
+    ADD = 1
+    ADD_DEL = 2
+
 #protocols
 class DNX(_IntEnum):
     INIT  = 0
@@ -162,7 +168,7 @@ class CONN(_Enum):
     # decisions
     DROP   = 5
     ACCEPT = 6
-    
+
 #dhcp server message types
 class DHCP(_IntEnum):
     DISCOVER = 1

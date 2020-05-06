@@ -12,7 +12,7 @@ sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_configure.dnx_file_operations import load_configuration, cfg_read_poller, ConfigurationManager
-from dnx_configure.dnx_configure import System
+from dnx_configure.dnx_system_info import System
 from dnx_iptools.dnx_standard_tools import looper, classproperty, Initialize
 
 from ip_proxy.ip_proxy_log import Log

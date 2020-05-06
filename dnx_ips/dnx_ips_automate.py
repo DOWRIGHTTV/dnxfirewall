@@ -125,10 +125,11 @@ class Configuration:
     def _update_system_vars(self):
         # waiting for any thread to report a change in configuration.
         self._cfg_change.wait()
+
         #resetting the config change event.
         self._cfg_change.clear()
 
-        open_ports = bool(self.IPS.open_ports[PROTO.TCP] or self.IPS.open_ports[PROTO.UDP])
+        open_ports = any([self.IPS.open_ports[PROTO.TCP], self.IPS.open_ports[PROTO.UDP]])
         if (self.IPS.ddos_prevention or
                 (self.IPS.portscan_prevention and open_ports)):
             self.IPS.ins_engine_enabled = True

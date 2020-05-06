@@ -101,21 +101,7 @@ class LogService:
 # LOG HANDLING PARENT CLASS
 #
 
-# SYSTEM LOG DECORATOR
-def level(lvl):
-    def decorator(log_func):
-        @classmethod
-        def wrapper(cls, message):
-            message = f'{log_func.__name__}: {message}'
-            if (cls.verbose): print(message) # pylint: disable=no-member
-
-            if (lvl <= cls._LEVEL): # pylint: disable=no-member
-                cls._system_log(message) # pylint: disable=no-member
-
-        return wrapper
-    return decorator
-
-# EVENT LOG DECORATOR
+_log_write = sys.stderr.write
 
 
 class LogHandler:
@@ -123,7 +109,6 @@ class LogHandler:
     _syslog  = False
     _running = False
 
-    _log_q   = deque()
     _path    = f'{HOME_DIR}/dnx_system/log/'
     _db_sock = socket()
     _syslog_sock = socket()
@@ -143,7 +128,7 @@ class LogHandler:
         cls.console  = console
         cls._running = True
 
-        cls._path += f'{name}/'
+        cls._path += f'{name}'
 
         threading.Thread(target=cls._log_settings).start()
         threading.Thread(target=cls._slog_settings).start()
@@ -171,42 +156,34 @@ class LogHandler:
         '''returns True if syslog is configured in the system else False.'''
         return cls._syslog
 
-    @level(0)
     def emergency(self):
         '''system is unusable.'''
         pass
 
-    @level(1)
     def alert(self):
         '''action must be taken immediately.'''
         pass
 
-    @level(2)
     def critical(self):
         '''critical conditions.'''
         pass
 
-    @level(3)
     def error(self):
         '''error conditions.'''
         pass
 
-    @level(4)
     def warning(self):
         '''warning conditions.'''
         pass
 
-    @level(5)
     def notice(self):
         '''normal but significant condition.'''
         pass
 
-    @level(6)
     def informational(self):
         '''informational messages.'''
         pass
 
-    @level(7)
     def debug(self):
         '''debug-level messages.'''
         pass
@@ -216,34 +193,35 @@ class LogHandler:
         '''print message to console. this is for all important console only events. use dprint for
         non essential console output which is linked to verbose attribute.'''
         if (cls.console):
-            print(message)
+            _log_write(f'{message}\n')
 
     @classmethod
     def dprint(cls, message):
         '''print function alternative to supress/show terminal output.'''
         if (cls.verbose):
-            print(message)
+            _log_write(f'{message}\n')
+
+    def simple_write(self, m_name, level, message):
+        '''alternate system log method. this can be used to override global module log name if needed.'''
+
+        path = f'{HOME_DIR}/dnx_system/log/{m_name}/{System.date(string=True)}-{m_name}.log'
+        with open(path, 'a+') as log:
+            log.write(f'{int(fast_time())}|{level}: {message}')
+
+        if (self.root):
+            change_file_owner(path)
 
     @dnx_queue(None, name='LogHandler')
-    ## This is the message handler for ensuring thread safety in multi threaded tasks  # pylint: disable=no-self-argument
+    ## This is the message handler for ensuring thread safety in multi threaded tasks # pylint: disable=no-self-argument
     def _write_to_disk(cls, job):
-        date = System.date(string=True)
-        path = cls._path + f'{date}-{cls.name}.log'
+        path = f'{cls._path}/{System.date(string=True)}-{cls.name}.log'
 
         timestamp, message = job
         with open(path, 'a+') as log:
-            log.write(f'{timestamp}|{message}\n')
+            log.write(f'{timestamp}|{message}')
 
         if (cls.root):
             change_file_owner(path)
-
-    @classmethod
-    def _system_log(cls, message):
-        '''thread safe method to log message string sent in to system log file. if thread safety is not need
-        user standard message method.'''
-        timestamp = round(time.time())
-
-        cls._log_q.append((timestamp, message))
 
     @classmethod
     def event_log(cls, timestamp, log, method):
@@ -277,11 +255,48 @@ class LogHandler:
         #         # NOTE: should log to front end
         #         break
 
+    @classmethod
+    def _add_logging_methods(cls):
+        '''dynamicly overrides default log level methods depending on current log settings.'''
+        mapping = Format.convert_level()
+
+        for level_number, level_name in mapping.items():
+            cls._update_log_method(level_number, level_name)
+
+    @classmethod
+    def _update_log_method(cls, level_num, level_info):
+        level_name, desc = level_info
+        # if verbose is enabled all entries will be logged to terminal, but system log filter applies
+        if (cls.verbose):
+            @classmethod
+            def log_method(cls, message):
+                message = f'{fast_time()}|{level_name}: {message}\n'
+
+                _log_write(message)
+
+                if (level_num <= cls._LEVEL):
+                    cls._write_to_disk.add(message)
+
+        # entry will be logged to file
+        elif (level_num <= cls._LEVEL):
+            @classmethod
+            def log_method(cls, message):
+                cls._system_log(f'{fast_time()}|{level_name}: {message}\n')
+
+        # log level is disabled
+        else:
+            def log_method(_):
+                pass
+
+        setattr(cls, level_name, log_method)
+
     @cfg_read_poller('logging_client', class_method=True)
     def _log_settings(cls, cfg_file):  # pylint: disable=no-self-argument
         logging = load_configuration(cfg_file)['logging']
 
         cls._LEVEL = logging['logging']['level']
+
+        cls._add_logging_methods()
 
     @cfg_read_poller('syslog_client', class_method=True)
     def _slog_settings(cls, cfg_file):  # pylint: disable=no-self-argument
@@ -307,11 +322,12 @@ class LogHandler:
 
 class Format:
     '''log formatting class used by log handler. system time/UTC will be used.'''
+
     @classmethod
     def message(cls, mod_name, mtype, level, message):
         date = System.date(string=True)
         timestamp = System.format_time(fast_time())
-        level = cls._convert_level(level)
+        level = cls.convert_level(level)
 
         system_ip = None
 
@@ -332,18 +348,25 @@ class Format:
         return json.dumps(log_data).encode('utf-8')
 
     @staticmethod
-    def _convert_level(level):
-        '''converts log level as integer to string. valid input: 0-7'''
-        return {
-            0 : 'emergency',      # system is unusable
-            1 : 'alert',          # action must be taken immediately
-            2 : 'critical',       # critical conditions
-            3 : 'error',          # error conditions
-            4 : 'warning',        # warning conditions
-            5 : 'notice',         # normal but significant condition
-            6 : 'informational',  # informational messages
-            7 : 'debug',          # debug-level messages
-        }[level]
+    def convert_level(level=None):
+        '''converts log level as integer to string. valid input: 0-7. if level is None the entire
+        dict will be returned.'''
+
+        levels = {
+            0 : ['emergency', 'system is unusable'],
+            1 : ['alert', 'action must be taken immediately'],
+            2 : ['critical', 'critical conditions'],
+            3 : ['error', 'error conditions'],
+            4 : ['warning', 'warning conditions'],
+            5 : ['notice', 'normal but significant condition'],
+            6 : ['informational', 'informational messages'],
+            7 : ['debug', 'debug-level messages']
+        }
+
+        if (level is None):
+            return levels
+
+        return levels[level][0]
 
 if __name__ == '__main__':
     Log = LogService()

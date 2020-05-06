@@ -316,6 +316,85 @@ def cfg_write_poller(list_function):
     return wrapper
 
 
+class ConfigurationManager:
+    ''' Class to ensure process safe operations on configuration files. This class is written
+    as a context manager and must be used as such. upon calling the context a file lock will
+    be obtained or block until it can aquire the lock and return the class object to the caller.
+    '''
+
+    __slots__ = (
+        '_config_file', '_config_lock_file', '_config_lock',
+        '_temp_file', '_temp_file_path', '_file_name',
+        '_data_written', '_Log'
+    )
+    def __init__(self, config_file, Log=None):
+        self._config_file = f'{HOME_DIR}/dnx_system/data/{config_file}'
+        self._file_name = config_file
+        self._Log = Log
+
+        if (not config_file.endswith('.json')):
+            self._config_file += '.json'
+
+        self._config_lock_file = f'{HOME_DIR}/dnx_system/config.lock'
+        self._data_written = False
+
+    # attempts to acquire lock on system config lock (blocks until acquired), then opens a temporary
+    # file which the new configuration will be written to, and finally returns the class object.
+    def __enter__(self):
+        self._config_lock = open(self._config_lock_file, 'r+')
+        fcntl.flock(self._config_lock, fcntl.LOCK_EX)
+
+        self._temp_file_path = f'{HOME_DIR}/dnx_system/data/{token_urlsafe(10)}.json'
+        self._temp_file = open(self._temp_file_path, 'w+')
+
+        if (self._Log):
+            self._Log.debug(f'Config file lock aquired for {self._file_name}.')
+
+        return self
+
+    # if there is no exception on leaving the context and data was written to the temp file the temporary
+    # file will be renamed over the configuration file sent in by the caller. if an exception is raised
+    # the temporary file will be deleted. The file lock will be released upon exiting
+    def __exit__(self, exc_type, exc_val, traceback):
+        if (exc_type is None and self._data_written):
+            os.replace(self._temp_file_path, self._config_file)
+            os.chmod(self._config_file, 0o660)
+            shutil.chown(self._config_file, user=USER, group=GROUP)
+        else:
+            self._temp_file.close()
+            os.unlink(self._temp_file_path)
+            if (self._Log):
+                self._Log.error(f'configuration manager exiting with error: {exc_val}')
+
+        # releasing lock for purposes specified in flock(1) man page under -u (unlock)
+        fcntl.flock(self._config_lock, fcntl.LOCK_UN)
+        self._config_lock.close()
+        if (self._Log):
+            self._Log.debug(f'file lock released for {self._file_name}')
+
+        if (exc_type is not ValidationError):
+            return True
+
+    #will load json data from file, convert it to a python dict, then returned as object
+    def load_configuration(self):
+        ''' returns python dictionary of configuration file contents'''
+        with open(self._config_file, 'r') as config_file:
+            settings = json.load(config_file)
+
+        return settings
+
+    # accepts python dictionary to be serialized to json and written to file opened. will ensure
+    # data gets fully rewrittin and if short than original the excess gets truncated.
+    def write_configuration(self, data_to_write):
+        '''writes configuration data as json to generated temporary file'''
+        if (self._data_written):
+            raise Warning('can only write data to file one time.')
+
+        json.dump(data_to_write, self._temp_file, indent=4)
+        self._temp_file.flush()
+        self._data_written = True
+
+
 class Watcher:
     '''this class is used to detect file changes, primarily configuration files.'''
     __slots__ = (

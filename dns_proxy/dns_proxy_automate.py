@@ -242,6 +242,7 @@ class Reachability:
     __slots__ = (
         'DNSServer', '_protocol', '_tls_context', '_udp_query'
     )
+
     def __init__(self, protocol, DNSServer):
         self._protocol = protocol
         self.DNSServer = DNSServer

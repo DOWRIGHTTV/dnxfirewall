@@ -21,7 +21,7 @@ from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-impo
 from dnx_iptools.dnx_structs import * # pylint: disable=unused-wildcard-import
 from dnx_configure.dnx_namedtuples import RELAY_CONN, NFQ_SOCK, L_SOCK
 from dnx_iptools.dnx_protocol_tools import checksum_ipv4, checksum_tcp, checksum_icmp
-from dnx_iptools.dnx_standard_tools import looper, DNXQueue
+from dnx_iptools.dnx_standard_tools import looper
 
 __all__ = (
     'Listener', 'ProtoRelay', 'NFQueue', 'RawPacket', 'RawResponse'
