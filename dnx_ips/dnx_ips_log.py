@@ -5,14 +5,15 @@ from dnx_configure.dnx_namedtuples import IPS_LOG
 
 from dnx_logging.log_main import LogHandler
 
+
 class Log(LogHandler):
 
     @classmethod
     def log(cls, pkt, scan_info=None, *, engine):
-        if (engine == IPS.DDOS):
-            lvl, log = cls._generate_ddos_log(pkt)
+        if (engine is IPS.DDOS):
+            lvl, log = cls._generate_ddos_log(pkt, scan_info)
 
-        elif (engine == IPS.PORTSCAN):
+        elif (engine is IPS.PORTSCAN):
             lvl, log = cls._generate_ps_log(pkt, scan_info)
 
         if (log):
@@ -21,47 +22,46 @@ class Log(LogHandler):
                 cls.slog_log(LOG.EVENT, lvl, cls.generate_syslog_message(log))
 
     @classmethod
-    def _generate_ddos_log(cls, pkt):
-        if (cls.current_lvl >= LOG.CRITICAL):
-            log = IPS_LOG(pkt.conn.tracked_ip, pkt.protocol.name, IPS.DDOS.name, 'filtered')
+    def _generate_ddos_log(cls, pkt, scan_info):
+        if (cls.current_lvl >= LOG.ALERT and scan_info is IPS.LOGGED):
+            log = IPS_LOG(pkt.conn.tracked_ip, pkt.protocol.name, IPS.DDOS.name, 'logged') # pylint: disable=no-member
+
+            cls.debug(f'ACTIVE DOS LOGGED: {pkt.conn.tracked_ip}')
+
+            return LOG.ALERT, log
+
+        if (cls.current_lvl >= LOG.CRITICAL and scan_info is IPS.FILTERED):
+            log = IPS_LOG(pkt.conn.tracked_ip, pkt.protocol.name, IPS.DDOS.name, 'filtered') # pylint: disable=no-member
+
+            cls.debug(f'ACTIVE DOS FILTERED: {pkt.conn.tracked_ip}')
 
             return LOG.CRITICAL, log
 
-        return LOG.NONE, ''
+        return LOG.NONE, None
 
     @classmethod
     def _generate_ps_log(cls,  pkt, scan_info):
         # will match if open ports are contained in pre detection logging (port was hit before flagged)
-        if (scan_info.initial_block and scan_info.block_status is IPS.MISSED and cls.current_lvl >= LOG.WARNING):
-            log = IPS_LOG(pkt.conn.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, 'missed')
+        if (scan_info.initial_block and scan_info.block_status in [IPS.LOGGED, IPS.MISSED]
+                and cls.current_lvl >= LOG.WARNING):
 
-            cls.debug(f'ACTIVE BLOCK: {pkt.conn.tracked_ip}')
+            log = IPS_LOG(pkt.conn.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, scan_info.block_status.name) # pylint: disable=no-member
+
+            cls.debug(f'ACTIVE SCAN LOGGED/MISSED: {pkt.conn.tracked_ip}')
 
             return LOG.WARNING, log
 
         # will match if open ports are not contained in pre detection logging (port was hit before flagged)
         elif (scan_info.initial_block and scan_info.block_status is IPS.BLOCKED and cls.current_lvl >= LOG.NOTICE):
-            log = IPS_LOG(pkt.conn.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, 'blocked')
+            log = IPS_LOG(pkt.conn.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, 'blocked') # pylint: disable=no-member
 
-            cls.debug(f'ACTIVE BLOCK: {pkt.conn.tracked_ip}')
+            cls.debug(f'ACTIVE SCAN BLOCK: {pkt.conn.tracked_ip}')
 
             return LOG.NOTICE, log
 
-        # will match if the rules above do not and the connection is marked to be actively blocked. this doesnt care about whether
-        # the scan had already been blocked and has an active firewall rule, because it assumes blocking disabled.
-        elif (scan_info.block_status is IPS.LOGGED and cls.current_lvl >= LOG.INFO):
-            log = IPS_LOG(pkt.conn.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, 'logged')
-
-            cls.debug(f'ACTIVE SCAN LOGGED: {pkt.conn.tracked_ip}')
-
-            return LOG.INFO, log
+        return LOG.NONE, None
 
     # for sending message to the syslog service
     @staticmethod
     def generate_syslog_message(log):
-        message  = [
-            f'src.ip={log.ip}; protocol={log.protocol}; attack_type={log.attack_type}; ',
-            f'action={log.action}'
-        ]
-
-        return ''.join(message)
+        return f'src.ip={log.ip}; protocol={log.protocol}; attack_type={log.attack_type}; action={log.action}'

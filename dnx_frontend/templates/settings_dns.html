@@ -1,0 +1,346 @@
+{% extends('layout.html') %}
+{% block body %}
+<section id="tabs-bar" class="tabsbar">
+    <div class="container">
+        <div class="row">
+            <div class="col s12 m12 l12 xl12">
+                <ul class="tabs">
+                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='1' %} class="active" {% endif %} href="#dnsservers"
+                            onclick="activeTab(1)">Servers</a></li>
+                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='2' %} class="active" {% endif %} href="#dnsrecords"
+                            onclick="activeTab(2)">Records</a></li>
+                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='3' %} class="active" {% endif %} href="#dnscache"
+                            onclick="activeTab(3)">Cache</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+<section id="dnsservers">
+    <div class="container">
+        <div class="row">
+            <div class="col s12 m8">
+                <div class="card-panel">
+                    <h4 class="red-text">DNS Servers</h4>
+                    <table class="striped centered">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>IP Address</th>
+                                <th>Status</th>
+                                <th>TLS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for server_info in dns_settings['dns_servers'].values() %}
+                            <tr>
+                                <td>{{server_info['name']}}</td>
+                                <td>{{server_info['ip_address']}}</td>
+                                <td>{{server_info['dns_up']}}</td>
+                                <td>{{server_info['tls_up']}}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-panel">
+                    <h4 class="red-text light-3">DNS over TLS</h4>
+                    <form action="/settings/dns" method="POST">
+                        <input type="hidden" name="tab" value="1">
+                        <input type="hidden" name="dns_protocol_update">
+                        <div class="row">
+                            <div class="input-field col s3 center">
+                                Encrypted DNS (TCP)
+                                <div class="switch">
+                                    <label>
+                                        Off
+                                        <input type="checkbox" {% if dns_settings['tls'] %} checked="checked"
+                                            {% endif %} name="dns-protocol-settings" value="dns_over_tls"
+                                            onchange="this.form.submit()">
+                                        <span class="lever"></span>
+                                        On
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="input-field col s3 center">
+                                UDP Fallback
+                                <div class="switch">
+                                    <label>
+                                        Off
+                                        {% if not dns_settings['tls'] %}
+                                        <input disabled type="checkbox">
+                                        {% else %}
+                                        <input type="checkbox" {% if dns_settings['udp_fallback'] %} checked="checked"
+                                            {% endif %} name="dns-protocol-settings" value="udp_fallback"
+                                            onchange="this.form.submit()">
+                                        {% endif %}
+                                        <span class="lever"></span>
+                                        On
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <noscript>
+                            <div class="row">
+                                <div class="input-field col s0 m5 center"></div>
+                                <div class="input-field col s12 m2 center">
+                                    <a class="waves-effect waves-light btn modal-trigger col s12" href="#dns-modal1"><i
+                                            class="material-icons"></i>Update</a>
+                                    <div id="dns-modal1" class="modal">
+                                        <div class="modal-content">
+                                            <h5 class="red-text">Changing DNS protocol settings can take a few minutes
+                                                to take effect. Restarting
+                                                the DNS proxy manually will force the settings immediately.</h5>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button class="btn waves-effect waves-light">Continue</button>
+                                            <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </noscript>
+                    </form>
+                </div>
+            </div>
+            <div class="col s12 m4">
+                <div class="card-panel">
+                    <h4 class="red-text light-3">Edit DNS Servers</h4>
+                    <form action="/settings/dns" method="POST">
+                        <input type="hidden" name="tab" value="1">
+                        <div class="row">
+                            <div class="input-field col s12">
+                                <input type="text" name="dnsserver1" class="validate" placeholder="192.168.10.1">
+                                <label for="">Server 1 (IP)</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="input-field col s12">
+                                <input type="text" name="dnsname1" class="validate" placeholder="Server1">
+                                <label for="">Server 1 (Name)</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="input-field col s12">
+                                <input type="text" name="dnsserver2" class="validate" placeholder="192.168.10.2">
+                                <label for="">Server 2 (IP)</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="input-field col s12">
+                                <input type="text" name="dnsname2" class="validate" placeholder="Server2">
+                                <label for="">Server 2 (Name)</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="input-field col s12 m4">
+                                <a class="waves-effect waves-light btn modal-trigger col s12" href="#dns-modal2"><i
+                                        class="material-icons"></i>Update</a>
+                                <div id="dns-modal2" class="modal">
+                                    <div class="modal-content">
+                                        <h5 class="red-text">Changing DNS Servers will restart the WAN interface.
+                                            Continue?</h5>
+                                    </div>
+                                    <form action="/settings/dns" method="POST">
+                                        <div class="modal-footer">
+                                            <button class="btn waves-effect waves-light">YES</button>
+                                            <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+                                            <input type="hidden" name="tab" value="1">
+                                            <input type="hidden" name="dns_update"">
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<section id="dnsrecords">
+    <div class="container">
+        <div class="row">
+            <div class="col s12 m8">
+                <div class="card-panel">
+                    <h4 class="red-text">DNS Records</h4>
+                    <table class="striped centered">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Domain Name</th>
+                                <th>IP Address</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if dns_settings['dns_records'] %}
+                            {% for name, ip_address in dns_settings['dns_records'].items() %}
+                            <tr>
+                                <td>
+                                    <a class="waves-effect waves-light btn modal-trigger"
+                                        href="#dns-modal3-{{loop.index}}"><i
+                                            class="material-icons">remove</i></a>
+                                    <div id="dns-modal3-{{loop.index}}"
+                                        class="modal">
+                                        <div class="modal-content">
+                                            <h5 class="red-text">Are you sure
+                                                you want to remove the 'DNS
+                                                Record'?</h5>
+                                        </div>
+                                        <form action="/settings/dns"
+                                            method="POST">
+                                            <div class="modal-footer">
+                                                <button
+                                                    class="btn waves-effect waves-light">YES</button>
+                                                <a
+                                                    class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+                                                <input type="hidden" name="tab"
+                                                    value="2">
+                                                <input type="hidden"
+                                                    name="dns_record_remove"
+                                                    value="{{name}}">
+                                            </div>
+                                        </form>
+                                    </div>
+                                </td>
+                                <td>{{name}}</td>
+                                <td>{{ip_address}}</td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td></td>
+                                <td>No Records</td>
+                                <td></td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col s12 m4">
+                <div class="card-panel">
+                    <h4 class="red-text light-3">Add DNS Records</h4>
+                    <form action="/settings/dns" method="POST">
+                        <input type="hidden" name="tab" value="2">
+                        <div class="row">
+                            <div class="input-field col s12">
+                                <input type="text" name="dns_record_name"
+                                    class="validate" placeholder="homepc">
+                                <label for="">Domain Name</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="input-field col s12">
+                                <input type="text" name="dns_record_ip"
+                                    class="validate"
+                                    placeholder="192.168.83.67">
+                                <label for="">IP Address</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="input-field col s12 m4">
+                                <input type="hidden" name="dns_record_update">
+                                <button
+                                    class="btn waves-effect waves-light col s12">
+                                    <i class="material-icons"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<section id="dnscache">
+    <div class="container">
+        <div class="row">
+            <div class="col s12 m8">
+                <div class="card-panel">
+                    <h4 class="red-text">Top Domains</h4>
+                    <table class="striped">
+                        <thead>
+                            <th>Position</th>
+                            <th>Domain</th>
+                        </thead>
+                        <tbody>
+                            {% if dns_settings['top_domains'] %}
+                            {% for domain, count in dns_settings['top_domains'].items() %}
+                            <tr>
+                                <td>{{count}}</td>
+                                <td>{{domain}}</td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td></td>
+                                <td>No Top Domains</td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col s12 m4">
+                <div class="card-panel">
+                    <h4 class="red-text light-3">Clear Cache</h4>
+                    <form action="/settings/dns" method="POST">
+                        <input type="hidden" name="tab" value="3">
+                        <div class="row">
+                            <div class="input-field col s1"></div>
+                            <div class="input-field col s5">
+                                TOP DOMAINS
+                                <div class="switch">
+                                    <label>
+                                        {% if dns_settings['cache']['clear_top_domains'] %}
+                                        <input type="checkbox" checked="checked" name="clear_top_domains">
+                                        {% else %}
+                                        <input type="checkbox" name="clear_top_domains">
+                                        {% endif %}
+                                        <span class="lever"></span>
+                                        Clear
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="input-field col s5">
+                                STANDARD
+                                <div class="switch">
+                                    <label>
+                                        {% if dns_settings['cache']['clear_dns_cache'] %}
+                                        <input type="checkbox" checked="checked" name="clear_dns_cache">
+                                        {% else %}
+                                        <input type="checkbox" name="clear_dns_cache">
+                                        {% endif %}
+                                        <span class="lever"></span>
+                                        Clear
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="input-field col s12 m4">
+                                <a class="waves-effect waves-light btn modal-trigger col s12" href="#dns-modal4"><i
+                                        class="material-icons"></i>Update</a>
+                                <div id="dns-modal4" class="modal">
+                                    <div class="modal-content">
+                                        <h5 class="red-text">Initiating DNS cache clear cannot be undone and can take a
+                                            few minutes to process. Are you sure you want to proceed?</h5>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button class="btn waves-effect waves-light">Continue</button>
+                                        <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+                                        <input type="hidden" name="dns_cache_clear">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

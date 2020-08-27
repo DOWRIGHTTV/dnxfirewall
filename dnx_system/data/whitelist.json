@@ -1,0 +1,7 @@
+{
+    "whitelist": {
+        "domain": {},
+        "exception": {},
+        "ip_whitelist": {}
+    }
+}

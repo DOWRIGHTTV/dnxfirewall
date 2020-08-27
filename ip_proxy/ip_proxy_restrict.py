@@ -12,7 +12,7 @@ sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_configure.dnx_file_operations import load_configuration, cfg_read_poller, ConfigurationManager
-from dnx_configure.dnx_system_info import System
+from dnx_configure.dnx_configure import System
 from dnx_iptools.dnx_standard_tools import looper, classproperty, Initialize
 
 from ip_proxy.ip_proxy_log import Log
@@ -55,9 +55,9 @@ class LanRestrict:
 
     @cfg_read_poller('ip_proxy')
     def _get_settings(self, cfg_file):
-        restriction_settings = load_configuration(cfg_file)
+        ip_proxy = load_configuration(cfg_file)['ip_proxy']
 
-        enabled = restriction_settings['ip_proxy']['time_restriction']['enabled']
+        enabled = ip_proxy['time_restriction']['enabled']
         self._change_attribute('_enabled', enabled)
 
         self.initialize.done()
@@ -92,19 +92,17 @@ class LanRestrict:
     def _calculate_times(self):
         restriction_start, restriction_length, offset = self._load_restriction()
 
-        now = time.time() + offset
+        now = fast_time() + offset
         c_d = [int(i) for i in System.date(now)] # current date
+        r_start = [int(i) for i in restriction_start.split(':')]
 
-        restriction_start = restriction_start.split(':')
-        restriction_start = [int(i) for i in restriction_start]
-
-        restriction_start = datetime(c_d[0], c_d[1], c_d[2], restriction_start[0], restriction_start[1]).timestamp()
-        restriction_start = restriction_start
+        restriction_start = datetime(c_d[0], c_d[1], c_d[2], r_start[0], r_start[1]).timestamp()
         restriction_end = restriction_start + restriction_length
 
         if (self.is_active):
-            restriction_status = load_configuration('ip_proxy_timer.json')
+            restriction_status = load_configuration('ip_proxy_timer')
             restriction_end = restriction_status['time_restriction']['end']
+
         else:
             self._write_end_time(restriction_end)
 
@@ -113,30 +111,30 @@ class LanRestrict:
     # Calculating the time.time() of when timer should end. calculated by current days start time (time since epoch)
     # and then adding seconds of user configured amount to start time.
     def _write_end_time(self, restriction_end):
-        with ConfigurationManager('ip_proxy_timer.json') as dnx:
+        with ConfigurationManager('ip_proxy_timer') as dnx:
             time_restriction = dnx.load_configuration()
 
-            time_restriction['time_restriction'].update({'end': restriction_end})
+            time_restriction['time_restriction']['end'] = restriction_end
 
             dnx.write_configuration(time_restriction)
 
     def _load_restriction(self):
-        restriction = load_configuration('ip_proxy.json')
-        offset_settings = load_configuration('logging_client.json')
+        ip_proxy = load_configuration('ip_proxy')['ip_proxy']
+        logging = load_configuration('logging_client')['logging']
 
-        restriction_start  = restriction['ip_proxy']['time_restriction']['start']
-        restriction_length = restriction['ip_proxy']['time_restriction']['length']
+        restriction_start  = ip_proxy['time_restriction']['start']
+        restriction_length = ip_proxy['time_restriction']['length']
 
-        offset = offset_settings['logging']['time_offset']
-        os_direction = offset['direction']
-        os_amount    = offset['amount']
+        os_direction = logging['time_offset']['direction']
+        os_amount    = logging['time_offset']['amount']
 
-        offset = int(f'{os_direction}{os_amount}') * 3600
+        offset = int(f'{os_direction}{os_amount}') * ONE_DAY
 
         return restriction_start, restriction_length, offset
 
     def _set_restriction_status(self, active):
         self._change_attribute('_active', active)
+
         with ConfigurationManager('ip_proxy_timer') as dnx:
             restriction_status = dnx.load_configuration()
 

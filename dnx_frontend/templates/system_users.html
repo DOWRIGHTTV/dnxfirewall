@@ -1,0 +1,86 @@
+{% extends('layout.html') %}
+{% block body %}
+<section id="users">
+    <div class="container">
+        <div class="row">
+            <div class="col s12 m8">
+                <div class="card-panel">
+                    <h4 class="red-text">Current Users</h4>
+                    <table class="striped">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>User</th>
+                                <th>Role</th>
+                                <th>Password</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user, user_info in user_list.items() %}
+                            <tr>
+                                <td>
+                                    <a class="waves-effect waves-light btn modal-trigger"
+                                        href="#user-modal1-{{loop.index}}"><i class="material-icons">remove</i></a>
+                                    <div id="user-modal1-{{loop.index}}" class="modal">
+                                        <div class="modal-content">
+                                            <h5 class="red-text">Are you sure you want to remove this user?</h5>
+                                        </div>
+                                        <form action="/system/users" method="POST">
+                                            <div class="modal-footer">
+                                                <button class="btn waves-effect waves-light">YES</button>
+                                                <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+                                                <input type="hidden" name="user_remove" value="{{user}}">
+                                                <input type="hidden" name="user_role" value="{{user_info[1]}}">
+                                            </div>
+                                        </form>
+                                    </div>
+                                </td>
+                                <td>{{user}}</label></td>
+                                <td>{{user_info[1]}}</td>
+                                <td>{{user_info[0]}}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col s12 m4">
+                <div class="card-panel">
+                    <h4 class="red-text light-3">Add User</h4>
+                    <form action="/system/users" method="POST">
+                        <div class="row">
+                            <div class="input-field col s12">
+                                <input type="text" name="user_acct" class="validate" placeholder=admin required>
+                                <label for="">Username</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="input-field col s12">
+                                <input type="password" name="user_password" class="validate" placeholder=password
+                                    required>
+                                <label for="">Password (minimum 8 chars)</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="input-field col s12">
+                                <select name="user_role" id="">
+                                    <option value="admin">admin</option>
+                                    <option value="user">user</option>
+                                    <option value="cli">cli</option>
+                                </select>
+                                <label for="user_role">Role</label>
+                            </div>
+                            <div class="row">
+                                <div class="input-field col s12 m4">
+                                    <input type="hidden" name="user_add">
+                                    <button class="btn waves-effect waves-light col s12">
+                                        <i class="material-icons"></i> Add
+                                    </button>
+                                </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

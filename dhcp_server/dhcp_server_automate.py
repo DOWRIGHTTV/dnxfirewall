@@ -187,12 +187,18 @@ class Leases(dict):
 
     def modify(self, ip, record):
         '''modifies a record in the lease table. this will automatically ensure changes get written to disk.'''
-        # converting to string to allow for ip address object to be sent in.
+        # if record is None, the action was a dhcp release so the record will be locally assigned as available.
+        if not record:
+            record = (DHCP.AVAILABLE, 0, 0)
+
+        # this lock is protecting the internal lease table dict from getting mutated while the cleanup thread is active.
         with self._lease_table_lock:
             self[ip] = record
 
         # added change to disk storage queue for lease persistence across device/process shutdowns.
-        self._storage.add((f'{ip}', record)) # pylint: disable=no-member
+        # will only store leases. offers will be treated as volitile and not persist restarts
+        if (record[0] is DHCP.LEASED):
+            self._storage.add((f'{ip}', record)) # pylint: disable=no-member
 
     @dnx_queue(Log, name='Leases')
     # store leases table changes to disk. if record is not present that indicates the record needs to be removed.

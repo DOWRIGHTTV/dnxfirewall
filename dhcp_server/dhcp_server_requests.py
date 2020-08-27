@@ -60,9 +60,9 @@ class ServerResponse:
 
         is_available, lease_mac = self.is_available(discover.req_ip, mac=True)
         # outcome 1/2 in rfc 2131
-        if ((discover.ip != INADDR_ANY)
+        if ((discover.ciaddr != INADDR_ANY)
                 and (lease_mac == discover.mac or is_available)):
-            return discover.ip
+            return discover.ciaddr
 
         # outcome 3 in rfc 2131
         if (discover.req_ip and is_available):
@@ -75,46 +75,52 @@ class ServerResponse:
     def ack(self, request):
         self._request = request
         self._lease_time, _, lease_mac = self._svr.leases[request.req_ip]
+
         # DHCP.SELECTING
         if (self.selecting):
             # extra validation to ensure an offer cannot be stolen by another client. rfc does not mention this.
-            if (lease_mac != request.mac): return DHCP.DROP
+            if (lease_mac != request.mac):
+                return DHCP.DROP, None
 
-            return request.req_ip
+            return DHCP.ACK, request.req_ip
 
         # DHCP.INIT_REBOOT
         elif (self.init_reboot):
             # client request from a different network, responding with NAK
-            if (request.req_ip not in self._intf_net): return DHCP.NAK
+            if (request.req_ip not in self._intf_net):
+                return DHCP.NAK, None
 
             # client lease does not exist, remaining silent
-            if (not lease_mac): return DHCP.DROP
+            if (not lease_mac):
+                return DHCP.DROP, None
 
             # client lease does not match client request, sending NAK
-            elif (lease_mac != request.mac): return DHCP.NAK
+            elif (lease_mac != request.mac):
+                return DHCP.NAK, None
 
             # client lease matches client, renewing lease and responsing with ip
-            return request.req_ip
+            return DHCP.ACK, request.req_ip
 
         # DHCP.REBINDING or DHCP.RENEWING
         elif (self.lease_active):
+            # NOTE: this is not specified in RFC 2131, look into this, should be safer and not cause problems
             # client lease does not match server held lease, remaining silent
-            if (lease_mac != request.mac): return DHCP.DROP
+            if (lease_mac != request.mac):
+                return DHCP.DROP, None
 
-            elif (self.rebinding):
-                #request_type = DHCP.REBINDING
-                pass
-
+            # Because 'giaddr' is not filled in, the DHCP server will trust the value in 'ciaddr', and
+            # use it when replying to the client.
             elif (self.renewing):
-                #request_type = DHCP.RENEWING
-                pass
+                return DHCP.RENEWING, request.ciaddr
 
-            return request.ip
+            # This message MUST be broadcast to the 0xffffffff IP broadcast address.
+            elif (self.rebinding):
+                return DHCP.REBINDING, request.ciaddr
 
     @property
     def selecting(self):
         request = self._request
-        if (request.ip == INADDR_ANY
+        if (request.ciaddr == INADDR_ANY
                 and request.server_ident and request.req_ip):
             return True
 
@@ -131,7 +137,7 @@ class ServerResponse:
     @property
     def lease_active(self):
         request = self._request
-        if (request.ip != INADDR_ANY
+        if (request.ciaddr != INADDR_ANY
                 and not request.server_ident and not request.req_ip):
             return True
 
@@ -146,7 +152,7 @@ class ServerResponse:
 
     @property
     def renewing(self):
-        if (fast_time() - self._lease_time < 74025):
+        if (43200 <= fast_time() - self._lease_time < 74025):
             return True
 
         return False
@@ -192,7 +198,7 @@ class ClientRequest:
         '_data', '_address', '_name', '_intf_net',
         'init_time', 'server_ident', 'mtype', 'req_ip',
         'handout_ip', 'requested_options', 'response_header',
-        'response_options', 'bcast', 'xID', 'ip', 'chaddr', 'mac',
+        'response_options', 'bcast', 'xID', 'ciaddr', 'chaddr', 'mac',
         '_response_mtype', 'send_data', 'sock', 'intf',
 
         # local references to callbacks
@@ -208,9 +214,11 @@ class ClientRequest:
         cls._Server = server_reference
 
     def __init__(self, data, address, sock_info):
+        # NOTE: sock_info (namedtuple): name ip socket send sendto recvfrom
+
         self._data = data
-#        self._address = address
-        self.sock, self.intf = sock_info
+    #    self._address = address
+        self.sock = sock_info
 
         self.init_time    = fast_time()
         self.server_ident = None
@@ -223,16 +231,18 @@ class ClientRequest:
         self.response_options  = []
 
         # assigning local reference to server callbacks through class alias object
-        self._server_options_get  = self._Server.options[sock_info[1]].get
+        self._server_options_get  = self._Server.options[sock_info.name].get
         self._server_reservations = self._Server.reservations
-        self._server_int_ip = self._Server.intf_settings[sock_info[1]]['ip'].ip
+        # self._server_int_ip = self._Server.intf_settings[sock_info[1]]['ip'].ip # NOTE: depricate? i dont think we need
+            # a separate refence for ip now that it is stored as part of the socket info
 
+    # TODO: look at other parent classes, but consider sending data in directly as arg instead of in constructor
     def parse(self):
         data = self._data
 
         self.xID    = data[4:8]
         self.bcast  = short_unpack(data[10:12])[0] >> 15
-        self.ip     = IPv4Address(data[12:16])
+        self.ciaddr = IPv4Address(data[12:16]) # ciaddr
         self.chaddr = data[28:44]
         self.mac    = data[28:34].hex()
 
@@ -262,30 +272,33 @@ class ClientRequest:
     # calling internal methods for header and options/payload, then combining byte strings as send data.
     # server options are locked to ensure the config loader thread does not mutate while this is iterating.
     def generate_server_response(self, response_mtype):
-        self._response_mtype = response_mtype
+        # override the contained record types with DHCP ACK since they are for server use and not to be sent
+        if (response_mtype in [DHCP.RENEWING, DHCP.REBINDING]):
+            response_mtype = DHCP.ACK
 
         send_data = [self._generate_dhcp_header()]
         with self._Server.options_lock:
-            send_data.append(self._generate_server_options())
+            send_data.append(self._generate_server_options(response_mtype))
 
         self.send_data = b''.join(send_data)
 
     def _generate_dhcp_header(self):
-        p_time = round(fast_time() - self.init_time)
+        p_time = int(fast_time() - self.init_time)
+
         return dhcp_header_pack(
-            2, 1, 6, 0, self.xID, p_time, 0, self.ip.packed,
-            self.handout_ip.packed, self._server_int_ip.packed,
+            2, 1, 6, 0, self.xID, p_time, 0, self.ciaddr.packed,
+            self.handout_ip.packed, self.sock.ip.packed,
             INADDR_ANY.packed, self.chaddr, b'DNX FIREWALL',
             b'\x00'*180, 99, 130, 83, 99
         )
 
-    def _generate_server_options(self):
+    def _generate_server_options(self, response_mtype):
         # local reference for load fast in tight loop
         requested_options = self.requested_options
         server_option_get = self._server_options_get
         pack_methods = self._pack
 
-        response_options = [dhcp_byte_pack(53, 1, self._response_mtype)]
+        response_options = [dhcp_byte_pack(53, 1, response_mtype)]
         for opt_num in requested_options:
             opt, opt_val = server_option_get(opt_num, _NULL_OPT)
             if (not opt): continue

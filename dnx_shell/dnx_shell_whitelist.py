@@ -21,7 +21,7 @@ class Whitelist:
         with open(f'{HOME_DIR}/dnx_shell/commands.json', 'r') as commands:
             valid_commands = json.load(commands)
 
-        with open(f'{HOME_DIR}/data/whitelist.json', 'r') as settings:
+        with open(f'{HOME_DIR}/dnx_system/data/whitelist.json', 'r') as settings:
             setting = json.load(settings)
 
         self.valid = valid_commands['main']['configuration']['whitelist']
@@ -116,7 +116,7 @@ class Whitelist:
                     self.AddWhitelist(comm, arg, option, option2)
 
     def ShowStatus(self, arg):
-        with open(f'{HOME_DIR}/data/whitelist.json', 'r') as settings:
+        with open(f'{HOME_DIR}/dnx_system/data/whitelist.json', 'r') as settings:
             setting = json.load(settings)
 
         arg2 = arg
@@ -155,7 +155,7 @@ class Whitelist:
             self.conn.send(f'{wl_status}\n'.encode('utf-8'))
 
     def AddWhitelist(self, comm, arg, option, option2):
-        with open(f'{HOME_DIR}/data/whitelist.json', 'r') as settings:
+        with open(f'{HOME_DIR}/dnx_system/data/whitelist.json', 'r') as settings:
             setting = json.load(settings)
 
         whitelist = setting['whitelists']
@@ -178,7 +178,7 @@ class Whitelist:
                 whitelist['domains'].update({option: {'time': now, 'rule_length': option2*60, 'expire': expire}})
 
         syntax = self.valid['settings'][arg]['syntax']
-        with open(f'{HOME_DIR}/data/whitelist.json', 'w') as settings:
+        with open(f'{HOME_DIR}/dnx_system/data/whitelist.json', 'w') as settings:
             json.dump(setting, settings, indent=4)
 
         self.Standard.SendNotice(f'added {option}. use "show {syntax}" command to check current status.')

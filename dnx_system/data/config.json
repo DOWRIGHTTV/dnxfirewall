@@ -1,0 +1,41 @@
+{
+    "settings": {
+        "flask": {
+            "key": "fZeH-XfuyhmEOfF63lO6xTpiGtnJ598tfHZwv3Pxajw"
+        },
+        "interfaces": {
+            "lan": {
+                "ident": "eth0",
+                "ip": "192.168.83.1",
+                "netmask": "255.255.255.0",
+                "subnet": "192.168.83.0/24"
+            },
+            "dmz": {
+                "ident": null,
+                "ip": null,
+                "netmask": null,
+                "subnet": null
+            },
+            "wan": {
+                "ident": "eth0",
+                "default_mac": null,
+                "configured_mac": null,
+                "dhcp": true,
+                "mac_set": false
+            }
+        },
+        "local_net": {
+            "subnet": "192.168.83.0/24"
+        }
+    },
+    "services": {
+        "dnx-dns-proxy": "domain filter/server with local cache",
+        "dnx-ip-proxy": "bi-directional ip filter",
+        "dnx-ips": "dos and portscan mitigation",
+        "dnx-dhcp-server": "allocates ip addresses",
+        "dnx-updates": "handles system and signature updates",
+        "dnx-log": "log cleanup and aggregation",
+        "dnx-syslog": "send system or event logs over the network",
+        "dnx-database": "security event management"
+    }
+}

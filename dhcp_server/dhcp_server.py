@@ -75,23 +75,23 @@ class DHCPServer(Listener):
         self._handle_request(packet)
 
     def _handle_request(self, client_request):
-        request_id, response_mtype = (client_request.mac, client_request.xID), None
+        request_id, request_mtype = (client_request.mac, client_request.xID), None
         Log.debug(f'REQ | TYPE={client_request.mtype}, ID={request_id}')
 
         if (client_request.mtype == DHCP.RELEASE):
-            self._release(client_request.ip, client_request.mac)
+            self._release(client_request.ciaddr, client_request.mac)
 
         elif (client_request.mtype == DHCP.DISCOVER):
-            response_mtype, record = self._discover(request_id, client_request)
+            request_mtype, record = self._discover(request_id, client_request)
 
         elif (client_request.mtype == DHCP.REQUEST):
-            response_mtype, record = self._request(request_id, client_request)
+            request_mtype, record = self._request(request_id, client_request)
 
         else:
             Log.warning(f'Unknown request type from {client_request.mac}')
 
-        if (response_mtype):
-            client_request.generate_server_response(response_mtype)
+        if (request_mtype):
+            client_request.generate_server_response(request_mtype)
 
             # this is filtering out response types like dhcp nak
             if (record):
@@ -99,7 +99,7 @@ class DHCPServer(Listener):
                     client_request.handout_ip, record
             )
 
-            self.send_to_client(client_request)
+            self.send_to_client(client_request, request_mtype)
 
     def _release(self, ip_address, mac_address):
         dhcp = ServerResponse(server=self)
@@ -109,7 +109,7 @@ class DHCPServer(Listener):
             self.leases.modify(ip_address, None) # pylint: disable=no-member
 
     def _discover(self, request_id, client_request):
-        dhcp = ServerResponse(client_request.intf, server=self)
+        dhcp = ServerResponse(client_request.sock.name, server=self)
         self._ongoing[request_id] = dhcp
 
         client_request.handout_ip = dhcp.offer(client_request)
@@ -119,30 +119,32 @@ class DHCPServer(Listener):
     def _request(self, request_id, client_request):
         dhcp = self._ongoing.get(request_id, None)
         if (not dhcp):
-            dhcp = ServerResponse(client_request.intf, server=self)
+            dhcp = ServerResponse(client_request.sock.name, server=self)
 
-        result = dhcp.ack(client_request)
+        request_mtype, handout_ip = dhcp.ack(client_request)
         # not responding per rfc 2131
-        if (result == DHCP.DROP):
-            self._ongoing.pop(request_id, None)
-            response_mtype, record = None, None
+        if (request_mtype is DHCP.DROP):
+            record = None
 
         # sending NAK per rfc 2131
-        elif (result == DHCP.NAK):
+        elif (request_mtype is DHCP.NAK):
             client_request.handout_ip = INADDR_ANY
-            response_mtype, record = DHCP.NAK, None
+            record = None
 
         # responding with ACK
-        elif (result):
-            client_request.handout_ip = result
-            response_mtype = DHCP.ACK
+        elif (request_mtype in [DHCP.ACK, DHCP.RENEWING, DHCP.REBINDING]):
+            client_request.handout_ip = handout_ip
             record = (DHCP.LEASED, fast_time(), client_request.mac)
 
         # protecting return on invalid dhcp types | TODO: validate if this even does anything. :)
         else:
-            response_mtype, record = None, None
+            record = None
 
-        return response_mtype, record
+        # removing the request from ongoing since we are sending the final message and do
+        # not need any objects from the request instance anymore.
+        self._ongoing.pop(request_id, None)
+
+        return request_mtype, record
 
     @property
     # NOTE: might need to be adjusted due to new listener class
@@ -155,24 +157,31 @@ class DHCPServer(Listener):
 
     @staticmethod
     # will send response to client over socket depending on host details it will decide unicast or broadcast
-    def send_to_client(client_request):
-        # TODO: this current has problems so all requests will be broadcast unless they have the unicast
-        # flag set and have a valid source ip address. for full unicast support, its looking like a raw
-        # socket would have to be used because the dst mac would need to be the request chaddr field.
-        if (client_request.bcast and client_request.ip == INADDR_ANY):
-            Log.debug(f'Sent BROADCAST to 255.255.255.255:68')
+    def send_to_client(client_request, request_mtype):
+        if (request_mtype is DHCP.RENEWING):
+            client_request.sock.sendto(client_request.send_data, (f'{client_request.ciaddr}', 68))
+
+            Log.debug(f'Sent unicast to {client_request.ciaddr}:68')
+
+        # NOTE: sending broadcast because fuck.
+        else:
             client_request.sock.sendto(client_request.send_data, (f'{BROADCAST}', 68))
 
-        else:
-            Log.debug(f'Sent UNICAST to {client_request.handout_ip}:68')
-            client_request.sock.sendto(client_request.send_data, (f'{client_request.handout_ip}', 68))
+            Log.debug(f'Sent broadcast for {client_request.handout_ip} to 255.255.255.255:68')
 
-    @property
-    def listener_sock(self):
+        # NOTE: it seems we cannot support this unless we use raw sockets or inject a static arp entry through syscall
+        # If the broadcast bit is not set and 'giaddr' is zero and
+        # 'ciaddr' is zero, then the server unicasts DHCPOFFER and DHCPACK
+        # messages to the client's hardware address and 'yiaddr' address.  In
+        # all cases, when 'giaddr' is zero, the server broadcasts any DHCPNAK
+        # messages to 0xffffffff.
+
+    @staticmethod
+    def listener_sock(intf, intf_ip):
         l_sock = socket(AF_INET, SOCK_DGRAM)
         l_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR,1)
         l_sock.setsockopt(SOL_SOCKET, SO_BROADCAST,1)
-        l_sock.setsockopt(SOL_SOCKET, SO_BINDTODEVICE, f'{self._intf}\0'.encode('utf-8'))
+        l_sock.setsockopt(SOL_SOCKET, SO_BINDTODEVICE, f'{intf}\0'.encode('utf-8'))
         l_sock.bind((str(INADDR_ANY), PROTO.DHCP_SVR))
 
         return l_sock

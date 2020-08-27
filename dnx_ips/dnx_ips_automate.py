@@ -5,6 +5,8 @@ import json
 import time
 import threading
 
+from ipaddress import IPv4Address
+
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
@@ -36,10 +38,9 @@ class Configuration:
         self._manage_ip_tables()
         threading.Thread(target=self._get_settings).start()
         threading.Thread(target=self._get_open_ports).start()
-        threading.Thread(target=self._ip_whitelist).start()
         threading.Thread(target=self._update_system_vars).start()
 
-        self.initialize.wait_for_threads(count=4)
+        self.initialize.wait_for_threads(count=3)
 
         threading.Thread(target=self._clear_ip_tables).start()
 
@@ -47,21 +48,20 @@ class Configuration:
         IPTableManager.purge_proxy_rules(table='mangle', chain='IPS')
 
     def _load_interfaces(self):
-        interface = load_configuration('config.json')
+        dnx_settings = load_configuration('config')['settings']
 
-        self.IPS.wan_int = interface['settings']['interfaces']['wan']
+        wan_ident = dnx_settings['interfaces']['wan']['ident']
 
-        self.IPS.broadcast = Interface.broadcast_address(self.IPS.wan_int['ident'])
+        self.IPS.broadcast = Interface.broadcast_address(wan_ident)
 
     @cfg_read_poller('ips')
     def _get_settings(self, cfg_file):
-#        print('[+] Starting: IPS Settings Update Thread.')
         ips = load_configuration(cfg_file)['ips']
 
-        self.IPS.ddos_prevention     = ips['ddos']['enabled']
-        self.IPS.portscan_prevention = ips['port_scan']['drop']
+        self.IPS.ids_mode = ips['ids_mode']
 
-        # ddos CPS THRESHHOLD CHECK
+        self.IPS.ddos_prevention = ips['ddos']['enabled']
+        # ddos CPS configured thresholds
         tcp_src_limit  = ips['ddos']['limits']['source']['tcp']
         udp_src_limit  = ips['ddos']['limits']['source']['udp']
         icmp_src_limit = ips['ddos']['limits']['source']['icmp']
@@ -71,16 +71,21 @@ class Configuration:
             PROTO.UDP: udp_src_limit
         }
 
-        ##Checking length(hours) to leave IP Table Rules in place for hosts part of ddos attacks
-        self.IPS.block_length = 0
-        if (self.IPS.portscan_prevention or self.IPS.ddos_prevention):
-            self.IPS.block_length = ips['passive_block_ttl'] * 3600
-
-        ## Reject packet (tcp reset and icmp port unreachable)
+        self.IPS.portscan_prevention = ips['port_scan']['enabled']
         self.IPS.portscan_reject = ips['port_scan']['reject']
 
-        ## whitelist configured dns servers (local instance var)
-        self.whitelist_dns_servers = ips['whitelist']['dns_servers']
+        # checking length(hours) to leave IP Table Rules in place for hosts part of ddos attacks
+        self.IPS.block_length = 0
+        if (self.IPS.ddos_prevention and not self.IPS.ids_mode):
+            self.IPS.block_length = ips['passive_block_ttl'] * ONE_HOUR
+
+        # NOTE: this will provide a simple way to ensure very recently blocked hosts do not get their
+        # rule removed if passive blocking is disabled.
+        if (not self.IPS.block_length):
+            self.IPS.block_length = TEN_MIN
+
+        # src ips that will not trigger ips
+        self.IPS.ip_whitelist = set([IPv4Address(ip) for ip in ips['whitelist']['ip_whitelist']])
 
         self._cfg_change.set()
         self.initialize.done()
@@ -89,34 +94,14 @@ class Configuration:
     # the setting set in the decorator or remove the decorator entirely.
     @cfg_read_poller('ips')
     def _get_open_ports(self, cfg_file):
-        ips_settings = load_configuration(cfg_file)
+        ips = load_configuration(cfg_file)['ips']
 
-        ips = ips_settings['ips']
         open_tcp_ports = ips['open_protocols']['tcp']
         open_udp_ports = ips['open_protocols']['udp']
         self.IPS.open_ports = {
             PROTO.TCP: {int(local_port): int(wan_port) for wan_port, local_port in open_tcp_ports.items()},
             PROTO.UDP: {int(local_port): int(wan_port) for wan_port, local_port in open_udp_ports.items()}
         }
-
-        self._cfg_change.set()
-        self.initialize.done()
-
-    @cfg_read_poller('ips')
-    def _ip_whitelist(self, cfg_file):
-        whitelist = load_configuration(cfg_file)
-
-        ip_whitelist = set(whitelist['ips']['whitelist']['ip_whitelist'])
-        if (self.whitelist_dns_servers):
-            dns_servers_settings = load_configuration('dns_server.json')
-
-            dns_servers = dns_servers_settings['dns_server']
-            dns1 = dns_servers['resolvers']['server1']['ip_address']
-            dns2 = dns_servers['resolvers']['server2']['ip_address']
-
-            self.IPS.ip_whitelist = ip_whitelist.union({dns1, dns2})
-        else:
-            self.IPS.ip_whitelist = ip_whitelist
 
         self._cfg_change.set()
         self.initialize.done()
@@ -129,9 +114,8 @@ class Configuration:
         #resetting the config change event.
         self._cfg_change.clear()
 
-        open_ports = any([self.IPS.open_ports[PROTO.TCP], self.IPS.open_ports[PROTO.UDP]])
-        if (self.IPS.ddos_prevention or
-                (self.IPS.portscan_prevention and open_ports)):
+        open_ports = self.IPS.open_ports[PROTO.TCP] or self.IPS.open_ports[PROTO.UDP]
+        if (self.IPS.ddos_prevention or (self.IPS.portscan_prevention and open_ports)):
             self.IPS.ins_engine_enabled = True
         else:
             self.IPS.ins_engine_enabled = False
@@ -150,22 +134,24 @@ class Configuration:
 
     @dynamic_looper
     def _clear_ip_tables(self):
-        ips_to_remove = []
-        if (self.IPS.active_ddos or not self.IPS.ddos_prevention): return ONE_MIN
+        IPS = self.IPS
 
-        now = time.time()
-        for tracked_ip, rule_info in self.IPS.fw_rules.items():
-            time_added = rule_info['timestamp']
-            if (now - time_added < self.IPS.block_length): continue
+        if (not IPS.fw_rules): return ONE_MIN
 
-            ips_to_remove.append(tracked_ip)
+        now, ips_to_remove = fast_time(), []
+        for tracked_ip, insert_time in IPS.fw_rules.items():
+            if (now - insert_time > IPS.block_length):
+                ips_to_remove.append(tracked_ip)
 
         if (not ips_to_remove): return FIVE_MIN
 
         with IPTableManager() as iptables:
             for tracked_ip in ips_to_remove:
-                if not self.IPS.fw_rules.pop(tracked_ip, None): continue
-
-                iptables.proxy_del_rule(tracked_ip, table='mangle', chain='IPS')
+                # NOTE: if the system is configured in IDS mode when the rule was created, an active rule would not have
+                # be inserted into the system. this will still run, but effectively do nothing. maybe we can figure out
+                # a way to identify the type of rule in the data set. remember that there could be some thread safety
+                # concerns when dealing with this issue so make sure solution is well thought out.
+                if IPS.fw_rules.pop(tracked_ip, None):
+                    iptables.proxy_del_rule(tracked_ip, table='mangle', chain='IPS')
 
         return FIVE_MIN

@@ -10,10 +10,9 @@ from copy import copy
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-import dnx_iptools.dnx_interface as interface
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_iptools.dnx_standard_tools import dynamic_looper
-from dnx_configure.dnx_namedtuples import IPS_WAN_INFO, IPS_SCAN_RESULTS, IPS_IP_INFO, IPS_LOG
+from dnx_configure.dnx_namedtuples import IPS_SCAN_RESULTS, DDOS_TRACKERS, PSCAN_TRACKERS
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_iptables import IPTableManager
 
@@ -28,6 +27,7 @@ LOG_NAME = 'ips'
 
 
 # TODO: CONVERT PROTOCOL TO ENUMS SINCE WE ARE RESTRICING VIA IPTABLES/NFQUEUE TO ONLY PROTOCOLS WE CARE ABOUT!!!.
+# TODO: ENSURE WE CLEAN TIMED OUT HOSTS FROM HOST TRACKING DICTS AT X (10?) MIN INTERVALS!!
 class IPS_IDS(NFQueue):
     fw_rules = {}
     ip_whitelist = {}
@@ -43,8 +43,6 @@ class IPS_IDS(NFQueue):
     ddos_engine_enabled = False
     ps_engine_enabled   = False
 
-    active_ddos = False
-
     _packet_parser = IPSPacket.netfilter # alternate constructor, but does not return self
 
     @classmethod
@@ -56,44 +54,71 @@ class IPS_IDS(NFQueue):
 
     # if nothing is enabled the packet will be sent back to iptables for further inspection
     def _pre_check(self, nfqueue):
-        if (not self.ddos_engine_enabled and nfqueue.get_mark() == IP_PROXY_DROP):
-            Log.debug('packet fast dropped from ip proxy | ddos engine disabled')
+        # if ip proxy marked for drop we will do that first
+        if (nfqueue.get_mark() == IP_PROXY_DROP):
             nfqueue.drop()
 
-        elif (not self.inspection_enabled):
-            self.forward_packet(nfqueue)
-        else:
-            return True # marking for inspection
+            # if ddos engine is enabled we want to inspect regardless of ip proxy decision
+            if (self.ddos_engine_enabled):
+                self.inspection_required = IPS.DDOS
 
-    # NOTE: not returning boolean because the result will need to potentially call multiple threads which is
-    # not compatible with inhereted class
-    def _pre_inspect(self, packet):
-        if (packet.dst_ip == self.broadcast): # TODO: figure this out
-            packet.nfqueue.drop()
+                return True
+
             return False
 
-        if (self.ddos_engine_enabled and (packet.protocol != PROTO.ICMP or packet.icmp_type == ICMP.ECHO)):
-            threading.Thread(target=Inspect.ddos, args=(packet,)).start()
+        # the following are to match the specific condition of the system to make it easier to deal with in the
+        # pre inspection method.
+        if (self.ps_engine_enabled and self.ddos_engine_enabled):
+            self.inspection_required = IPS.BOTH
 
-        # this will block packets on behalf of the ip proxy which will not longer directly block.
-        # this will allow for ip proxy blocks to still be evaluated for ddos if enabled.
-        if (packet.zone == IP_PROXY_DROP):
-            packet.nfqueue.drop()
+        elif (self.ps_engine_enabled):
+            self.inspection_required = IPS.PORTSCAN
 
-        # will send all other packets to firewall for decision due to portscan engine being disable, but
-        # will still allow ddos inspection if enabled
-        elif (not self.ps_engine_enabled):
-            self.forward_packet(packet.nfqueue)
+        elif (self.ddos_engine_enabled):
+            self.forward_packet(nfqueue)
+            self.inspection_required = IPS.DDOS
 
-        # will inspect for portscan if not icmp and not a broadcasted packet
-        elif (packet.protocol != PROTO.ICMP):
-            return True
-
-        # forward any non matching packets to firewall. icmp and broadcasts primarily
         else:
+            self.forward_packet(nfqueue)
+
+            return False
+
+        return True
+
+    def _pre_inspect(self, packet):
+        # whilelisted source ip does not need to be inspected
+        if (packet.src_ip in self.ip_whitelist):
             self.forward_packet(packet.nfqueue)
 
-        return False # inspection not required
+            return False
+
+        # ternary operations to define local var for broadcast packet
+        broadcast = True if packet.dst_ip == self.broadcast else False
+
+        if (not broadcast):
+            if (self.inspection_required is IPS.BOTH):
+                threading.Thread(target=Inspect.ddos, args=(packet,)).start()
+
+                # will mark for inspection by portscan if protocol is udp or tcp
+                if (packet.protocol is not PROTO.ICMP):
+                    return True
+
+            # will mark for inspection by portscan if protocol is udp or tcp
+            elif (packet.protocol is not PROTO.ICMP and self.inspection_required is IPS.PORTSCAN):
+                return True
+
+            # dont need to mark for inspection since ddos inspection is technically not in line with the networking
+            # functionality and should not make a packet decision.
+            elif (self.inspection_required is IPS.DDOS):
+                threading.Thread(target=Inspect.ddos, args=(packet,)).start()
+
+                return False
+
+        # sending packet to underlying firewall
+        self.forward_packet(packet.nfqueue)
+
+        # default action | inspection not required
+        return False
 
     @staticmethod
     def forward_packet(nfqueue):
@@ -107,251 +132,203 @@ class IPS_IDS(NFQueue):
 
         return False
 
+#
+# INSPECTION CLASS
+#
+
 
 class Inspect:
     _IPS = IPS_IDS
     _IPSResponse = IPSResponse
-    _status_lock = threading.Lock()
 
     pscan_tracker = {
-        proto: {'lock': threading.Lock(), 'tracker': {}}
-        for proto in [PROTO.TCP, PROTO.UDP]
+        proto: PSCAN_TRACKERS(threading.Lock(), {})
+            for proto in [PROTO.TCP, PROTO.UDP]
     }
     ddos_tracker = {
-        proto: {'lock': threading.Lock(), 'tracker': {}}
-        for proto in [PROTO.TCP, PROTO.UDP, PROTO.ICMP]
+        proto: DDOS_TRACKERS(threading.Lock(), {})
+            for proto in [PROTO.TCP, PROTO.UDP, PROTO.ICMP]
     }
-    active_ddos_hosts = {}
-    def __init__(self, packet):
-        self._packet = packet
 
     @classmethod
     def portscan(cls, packet):
-        self = cls(packet)
-        self._portscan_inspect()
+        self = cls()
+        self._portscan_inspect(packet)
 
     @classmethod
     def ddos(cls, packet):
-        time.sleep(MSEC)
-        self = cls(packet)
-        self._ddos_inspect()
+        self = cls()
+        self._ddos_inspect(packet)
 
     # this method drives the overall logic of the ddos detection engine. it will try to conserve resources by not sending packets
     # that dont need to be checked or logged under normal conditions.
-    # NOTE: ensure the refactor did not break anything. you know me.
-    def _ddos_inspect(self):
-        ddos = self.ddos_tracker.get(self._packet.protocol)
-        with ddos['lock']:
-            if not self._ddos_detected(ddos['tracker']): return
+    def _ddos_inspect(self, packet):
+        ddos = self.ddos_tracker[packet.protocol]
+        with ddos.lock:
+            if not self._ddos_detected(ddos.tracker, packet): return
 
-        # this is to supress log entries for ddos hosts that are being detected by the engine, but not blocked
-        # this behavior would only happen in informational logging mode without block enabled.
-        if self._recently_detected(self._packet.conn.tracked_ip): return
+        if (self._IPS.ids_mode):
+            Log.log(packet, IPS.LOGGED, engine=IPS.DDOS)
 
-        if (self._IPS.ddos_prevention):
-            IPTableManager.proxy_add_rule(self._packet.conn.tracked_ip, table='mangle', chain='IPS')
+        elif (self._IPS.ddos_prevention):
+            IPTableManager.proxy_add_rule(packet.conn.tracked_ip, table='mangle', chain='IPS')
 
-        # TODO: add entry for ids mode
+            Log.log(packet, IPS.FILTERED, engine=IPS.DDOS)
 
-        Log.log(self._packet, engine=IPS.DDOS)
+    def _ddos_detected(self, ddos_tracker, packet):
+        tracked_ip = ddos_tracker.get(packet.conn.tracked_ip, None)
+        if (not tracked_ip or fast_time() - tracked_ip['last_seen'] > 15):
+            self._add_to_tracker(ddos_tracker, packet, engine=IPS.DDOS)
 
-    def _ddos_detected(self, ddos_tracker):
-        detected = False
-        tracked_ip = ddos_tracker.get(self._packet.conn.tracked_ip, None)
-        if (not tracked_ip):
-            self._add_to_tracker(ddos_tracker, engine=IPS.DDOS)
         else:
-            new_count = tracked_ip['count'] + 1
-            tracked_ip.update(count=new_count, last_seen=self._packet.timestamp)
+            tracked_ip['count'] += 1
+            tracked_ip['last_seen'] = packet.timestamp
 
             # if conn limit exceeded and host is not already marked, returns active ddos and add ip to tracker
-            if self._threshhold_exceeded(tracked_ip['initial'], new_count):
-                print(f'ACTIVE BLOCK: {self._packet.conn.tracked_ip}')
-                # dictionary containing all hosts currently marked as an active ddos attacker
-                self.active_ddos_hosts[self._packet.conn.tracked_ip] = 1
-                detected = True
+            if self._threshhold_exceeded(tracked_ip, packet):
+                Log.debug(f'ACTIVE BLOCK: {packet.conn.tracked_ip}')
 
-        return detected
+                # this is to supress log entries for ddos hosts that are being detected by the engine since there is a delay
+                # between detection and kernel offload or some packets are already in queue
+                if (packet.conn.tracked_ip not in self._IPS.fw_rules):
+                    self._IPS.fw_rules[packet.conn.tracked_ip] = packet.timestamp
 
-    def _threshhold_exceeded(self, initial, count):
-        protocol_src_limit = self._IPS.connection_limits[self._packet.protocol]
-        elapsed_time = self._packet.timestamp - initial
+                    return True
+
+        return False
+
+    def _threshhold_exceeded(self, tracked_ip, packet):
+        protocol_src_limit = self._IPS.connection_limits[packet.protocol]
+        elapsed_time = packet.timestamp - tracked_ip['initial']
         if (elapsed_time < 2): return False
 
-        connections_per_second = count/elapsed_time
-        if (connections_per_second < protocol_src_limit): return False
+        if (tracked_ip['count']/elapsed_time < protocol_src_limit): return False
 
         # host is now considered active DDOS
-        Log.debug(f'CPS: {connections_per_second}')
+        Log.debug('CPS: {}'.format(tracked_ip['count']/elapsed_time))
+
         return True
-
-    @dynamic_looper
-    def _ddos_timeout(self, tracked_ip, ddos_tracker):
-        # if marked as an active ddos host, will timeout the conn
-        # since we will be dropping all subsequent conn attempts at the kernel level
-        if self.active_ddos_hosts.pop(tracked_ip, None): return 'break'
-
-        # if tracked ip hasnt been seen for 10 seconds, it will be removed from the ddos tracker and thread will close
-        tracked_connection = ddos_tracker.get(tracked_ip, None)
-        last_seen = tracked_connection.get('last_seen')
-        if (time.time() - last_seen >= 10):
-            ddos_tracker.pop(tracked_ip)
-            Log.debug(f'DDOS TIMED OUT CONN: {tracked_ip}')
-
-            return 'break'
-
-        return 5.1
 
     # this method drives the overall logic of the portscan detection engine. it will try to conserve resources but not sending packets
     # that dont need to be checked or logged under normal conditions.
-    def _portscan_inspect(self):
-        pscan = self.pscan_tracker.get(self._packet.protocol)
-        with pscan['lock']:
-            initial_block, active_scanner, pre_detection_logging = self._portscan_detect(pscan['tracker'])
+    def _portscan_inspect(self, packet):
+        # TODO: optimize _IPS reference please! :)
+        pscan = self.pscan_tracker[packet.protocol]
+        with pscan.lock:
+            initial_block, active_scanner, pre_detection_logging = self._portscan_detect(pscan.tracker, packet)
+
         if (not active_scanner):
-            Log.informational(f'PROXY ACCEPT | {self._packet.src_ip}:{self._packet.src_port} > {self._packet.dst_ip}:{self._packet.dst_port}.')
-            self._IPS.forward_packet(self._packet.nfqueue)
+            Log.debug(f'PROXY ACCEPT | {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
+            self._IPS.forward_packet(packet.nfqueue)
 
             return
 
-        if (self._IPS.portscan_prevention):
-            if (self._IPS.ids_mode):
-                self._IPS.forward_packet(self._packet.nfqueue)
-                block_status = IPS.LOGGED
-            else:
-                self._packet.nfqueue.drop()
+        if (self._IPS.ids_mode):
+            self._IPS.forward_packet(packet.nfqueue)
+            block_status = IPS.LOGGED
 
+        elif (self._IPS.portscan_prevention):
+            packet.nfqueue.drop()
+
+            # if rejection is enabled on top of prevention port uncreachable packets will be sent back to the scanner.
             if (self._IPS.portscan_reject):
-                self._portscan_reject(pre_detection_logging)
+                self._portscan_reject(pre_detection_logging, packet, initial_block)
 
-            if (pre_detection_logging):
-                block_status = self._get_block_status(pre_detection_logging)
+            # if initial block is not set then the current host has already been effectively blocked and does not need
+            # to do anything beyond this point.
+            if (not initial_block): return
 
-                Log.informational(f'PROXY ACTIVE SCANNER DROP {self._packet.src_ip}:{self._packet.src_port} > {self._packet.dst_ip}:{self._packet.dst_port}.')
-                if (not self.active_ddos):
-                    scan_info = IPS_SCAN_RESULTS(initial_block, active_scanner, block_status)
-                    Log.log(self._packet, scan_info, engine=IPS.PORTSCAN)
+            block_status = self._get_block_status(pre_detection_logging, packet.protocol)
 
-                else: # NOTE: for testing purposes only
-                    Log.informational('ACTIVE DDOS WHEN ATTEMPTING TO LOG PORTSCAN, LOG HAULTED.')
+        Log.debug(f'PROXY INITIAL SCANNER | {block_status.name} | {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
+
+        if (not self._IPS.fw_rules):
+            scan_info = IPS_SCAN_RESULTS(initial_block, active_scanner, block_status)
+            Log.log(packet, scan_info, engine=IPS.PORTSCAN)
+
+        else: # NOTE: for testing purposes only
+            Log.debug('ACTIVE DDOS WHEN ATTEMPTING TO LOG PORTSCAN, LOG HAULTED.')
 
     # makes a decision on connections/ packets on whether it meets the criteria of a portscanner. will return status as need to block (active_block)
     # or initiated block, but still seeing packets from host (scan_detected)
-    def _portscan_detect(self, pscan_tracker):
-        initial_block, scan_detected, pre_detection_logging = False, False, None
+    def _portscan_detect(self, pscan_tracker, packet):
+        initial_block, scan_detected = False, False
 
-        if self.is_active_scanner(pscan_tracker, self._packet.conn.tracked_ip):
-            pscan_tracker[self._packet.conn.tracked_ip]['last_seen'] = self._packet.timestamp
-            # initial_block, scan_detected, pre_detection_logging
-            return False, True, {}
+        # if first time the source ip is seen, it will add ip to dictionary and return immediately
+        tracked_ip = pscan_tracker.get(packet.conn.tracked_ip, None)
 
-        # if first time the source ip is seen, it will add ip to dictionary
-        tracked_ip = pscan_tracker.get(self._packet.conn.tracked_ip, None)
-        if (not tracked_ip):
-            self._add_to_tracker(pscan_tracker, engine=IPS.PORTSCAN)
+        # NOTE: this should also act as an effective timout mechanism to re allow packets/ connections from a host
+        if (not tracked_ip or fast_time() - tracked_ip['last_seen'] > 15):
+            self._add_to_tracker(pscan_tracker, packet, engine=IPS.PORTSCAN)
+
+            return False, False, {}
+
+        if (tracked_ip['active_scanner']):
+            tracked_ip['last_seen'] = packet.timestamp
+
+            scan_detected = True
+
         else:
-            tracked_ip['last_seen'] = self._packet.timestamp
-            tracked_ip['target'][self._packet.conn.local_port] = 1
+            tracked_ip['target'][packet.conn.local_port] = 1
+            tracked_ip['last_seen'] = packet.timestamp
+
             # this is the logic to determine whether a host is a scanner or not.
-            if ((len(tracked_ip['target']) >= 4) or (self._packet.protocol is PROTO.UDP and not self._packet.udp_payload)):
+            if (len(tracked_ip['target']) >= 4) or (packet.protocol is PROTO.UDP and not packet.udp_payload):
                 tracked_ip['active_scanner'] = True
-                pre_detection_logging = tracked_ip.get('pre_detect')
-                initial_block = True
-                scan_detected = True
+
+                initial_block, scan_detected = True, True
 
             # mapping local port to tcp sequence number for any connection that isnt flagged as active block. this information
             # will be used to retroactively reject scans on ports before being flagged as a scanner.
-            if (self._packet.protocol is PROTO.TCP):
-                tracked_ip['pre_detect'][self._packet.conn.local_port] = self._packet.seq_number
-            elif (self._packet.protocol is PROTO.UDP):
-                tracked_ip['pre_detect'][self._packet.conn.local_port] = self._packet.ip_header_plus_data
+            if (packet.protocol is PROTO.TCP):
+                tracked_ip['pre_detect'][packet.conn.local_port] = packet.seq_number
+
+            elif (packet.protocol is PROTO.UDP):
+                tracked_ip['pre_detect'][packet.conn.local_port] = packet.data
 
         # returning scan tracker to be used by reject to retroactively handle ports before marked as a scanner.
-        return initial_block, scan_detected, pre_detection_logging
+        return initial_block, scan_detected, tracked_ip['pre_detect']
 
-    def _add_to_tracker(self, tracker, *, engine):
-        packet = self._packet
+    def _add_to_tracker(self, tracker, packet, *, engine):
         if (engine is IPS.PORTSCAN):
             tracker[packet.conn.tracked_ip] = {
                 'last_seen': packet.timestamp, 'active_scanner': False,
                 'pre_detect': {}, 'target': {packet.conn.local_port: 1}
             }
-        elif(engine is IPS.DDOS):
+
+        elif (engine is IPS.DDOS):
             tracker[packet.conn.tracked_ip] = {
                 'count': 1, 'initial': packet.timestamp, 'last_seen': packet.timestamp
             }
-        threading.Thread(
-            target=getattr(self, f'_{engine.name.lower()}_timeout'),
-            args=(packet.conn.tracked_ip, tracker)
-        ).start()
-
-    def is_active_scanner(self, host_tracker, tracked_ip):
-        tracked = host_tracker.get(tracked_ip)
-        if (not tracked):
-            return False
-
-        return tracked['active_scanner']
 
     # using pre detection logging to re create packets prior to being marked as a scanner then calling standard reject
     # to the reject message actually sent
-    def _portscan_reject(self, pre_detection_logging):
-        if (not pre_detection_logging):
-            self._IPSResponse.prepare_and_send(self._packet)
+    def _portscan_reject(self, pre_detection_logging, packet, initial_block):
+        if (not initial_block):
+            self._IPSResponse.prepare_and_send(packet)
+
         else:
-            if (self._packet.protocol == PROTO.TCP):
+            IPSResponse = self._IPSResponse
+            if (packet.protocol is PROTO.TCP):
                 for port, seq_num in pre_detection_logging.items():
-                    self._IPSResponse.prepare_and_send(
-                        copy(self._packet).tcp_override(port, seq_num)
+                    IPSResponse.prepare_and_send(
+                        copy(packet).tcp_override(port, seq_num)
                     )
 
-            elif (self._packet.protocol == PROTO.UDP):
+            elif (packet.protocol is PROTO.UDP):
                 for port, icmp_payload in pre_detection_logging.items():
-                    self._IPSResponse.prepare_and_send(
-                        copy(self._packet).udp_override(icmp_payload)
+                    IPSResponse.prepare_and_send(
+                        copy(packet).udp_override(icmp_payload)
                     )
 
-    @dynamic_looper
-    # this will timeout the portscanner host from the tracker once activity has not been seen for 10 seconds.
-    def _portscan_timeout(self, tracked_ip, scan_tracker):
-        last_seen = scan_tracker.get(tracked_ip)['last_seen']
-        if (time.time() - last_seen < 10): return 5.1
+    def _get_block_status(self, pre_detection_logging, protocol):
+        open_ports = self._IPS.open_ports
 
-        scan_tracker.pop(tracked_ip, None)
-        print(f'PORTSCAN TIMED OUT CONN: {tracked_ip}')
-        return 'break'
-
-    def _get_block_status(self, pre_detection_logging):
         for port in pre_detection_logging:
-            if port in self._IPS.open_ports[self._packet.protocol]:
+            if port in open_ports[protocol]:
                 return IPS.MISSED
 
         return IPS.BLOCKED
-
-    # TODO: validate the thread timer is actually running and calling the method/ the object is being removed
-    # NOTE: will this recently detected set work across instances?
-    # from the set. maybe make locks per protocol??
-    def _recently_detected(self, tracked_ip, recently_detected=set()):
-        with self._status_lock:
-            if (tracked_ip in recently_detected): return True
-
-            recently_detected.add(tracked_ip)
-            threading.Timer(
-                TEN_SEC, self._remove_recently_detected_host, args=(tracked_ip, recently_detected)
-            ).start()
-
-            return False
-
-    def _remove_recently_detected_host(self, tracked_ip, recently_detected):
-        recently_detected.remove(tracked_ip)
-
-    @property
-    def active_ddos(self):
-        if (self.active_ddos_hosts):
-            self._IPS.active_ddos = True
-            return True
-
-        self._IPS.active_ddos = False
-        return False
 
 
 if __name__ == '__main__':

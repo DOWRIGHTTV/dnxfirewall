@@ -22,15 +22,14 @@ class UDPMessage:
     def __init__(self, SyslogService):
         self.SyslogService = SyslogService
 
-    def send_queue(self, udp_socket):
+    def send_message(self, udp_socket, message):
         server_list = self.SyslogService.syslog_servers
-        while self.SyslogService.syslog_queue:
+
+        # sending to all configured server, soft cap of 2
+        for server, server_info in server_list.items():
+            server_port = server_info['port']
             try:
-                message = self.SyslogService.syslog_queue.popleft()
-                # sending to all configured server, soft cap of 2
-                for server, server_info in server_list.items():
-                    server_port = server_info['port']
-                    udp_socket.sendto(message, (server, server_port))
+                udp_socket.sendto(message, (server, server_port))
             except OSError:
                 traceback.print_exc()
             finally:
@@ -38,7 +37,6 @@ class UDPMessage:
 
     def create_udp_socket(self):
         udp_socket = socket(AF_INET, SOCK_DGRAM)
-#        udp_socket.bind((self.SyslogService.lan_ip, 0))
 
         return udp_socket
 
@@ -80,14 +78,13 @@ class TCPMessage:
 
     # Standard TCP socket creation, will return socket object if success or None if not
     def create_tcp_socket(self, server, server_port):
+        sock = socket(AF_INET, SOCK_STREAM)
         try:
-            sock = socket(AF_INET, SOCK_STREAM)
             sock.connect((server, server_port))
-        except Exception:
-            sock = None
+        except OSError:
             traceback.print_exc()
-
-        return sock
+        else:
+            return sock
 
     # Connect will retry 3 times if issues, then mark TLS server as inactive and timestamp.
     # timestamp will be used to re attempt to connect after retry limit exceeded in message
@@ -116,34 +113,37 @@ class TCPMessage:
         return secure_tcp_connections
 
     def create_tls_socket(self, secure_server):
+        print(f'Opening Secure socket to {secure_server}: 6514')
+
         # checking certificate validation status here instead of when creating context to allow for setting update
         # without restarting the service.
         self._update_certificate_verify()
-        try:
-            sock = socket(AF_INET, SOCK_STREAM)
-#            sock.bind((self.SyslogService.lan_ip, 0))
 
-            print(f'Opening Secure socket to {secure_server}: 6514')
-            secure_socket = self.context.wrap_socket(sock, server_hostname=secure_server)
+        sock = socket(AF_INET, SOCK_STREAM)
+        # NOTE: this should improve sending performance since we expect a dns record to only be a small
+        # portion of available bytes in MTU/max bytes(1500). seems to provide no improvement after 1 run.
+        # there could be other bottlenecks in play so we can re evaluate later.
+        # sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        secure_socket = self._tls_context.wrap_socket(sock, server_hostname=secure_server)
+        try:
             secure_socket.connect((secure_server, SYSLOG_TLS_PORT))
-        except Exception as E:
-            secure_socket = None
+        except OSError as E:
             traceback.print_exc()
             print(f'CONNECT: {E}')
-
-        return secure_socket
+        else:
+            return secure_socket
 
     def disconnect_socket(self, tcp_connections):
         for socket in tcp_connections:
             socket.close()
 
     def _create_tls_conxtext(self):
-        self.context = ssl.create_default_context()
-        self.context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        self.context.load_verify_locations('/etc/ssl/certs/ca-certificates.crt')
+        self._tls_context = ssl.create_default_context()
+        self._tls_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        self._tls_context.load_verify_locations('/etc/ssl/certs/ca-certificates.crt')
 
     def _update_certificate_verify(self):
         if (not self.SyslogService.self_signed_cert):
-            self.context.verify_mode = ssl.CERT_REQUIRED
+            self._tls_context.verify_mode = ssl.CERT_REQUIRED
         else:
-            self.context.verify_mode = ssl.CERT_OPTIONAL
+            self._tls_context.verify_mode = ssl.CERT_OPTIONAL

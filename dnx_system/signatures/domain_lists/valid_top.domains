@@ -1,0 +1,37 @@
+# this list will prevent domains containing these strings from top domain caching counts
+
+# random filters
+-
+test
+detect
+
+# firefox callouts except main site itself
+.mozilla
+
+# random noisy service sites
+oscp.
+
+# general service filter
+ntp
+api
+akamai
+cdn
+microsoft
+windows
+ubuntu
+dns
+http
+telemetry
+wpad
+
+# digits
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9

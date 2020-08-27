@@ -15,21 +15,25 @@ from socket import error, SOL_SOCKET, SO_REUSEADDR
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-import dnx_iptools.dnx_interface_checks as interface
+import dnx_iptools.dnx_interface as interface
 
-# pylint: disable=unused-wildcard-import
-from dnx_configure.dnx_constants import *
-from dnx_configure.dnx_file_operations import load_configuration, write_configuration, cfg_read_poller
-from dnx_configure.dnx_system_info import Interface as Int
-from dnx_logging.log_main import LogHandler
+from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
+from dnx_configure.dnx_namedtuples import SYSLOG_SERVERS
+from dnx_iptools.dnx_standard_tools import dnx_queue
+from dnx_logging.log_main import LogHandler as Log
 from dnx_syslog.syl_format import SyslogFormat
 from dnx_syslog.syl_protocols import UDPMessage, TCPMessage
-from dnx_syslog.syl_automate import Automate
+from dnx_syslog.syl_automate import Configuration
 
 LOG_MOD = 'syslog'
 
 
 class SyslogService:
+
+    syslog_servers = SYSLOG_SERVERS(
+        {}, {}
+    )
+
     def __init__(self):
         self.tcp_fallback = False
         self.udp_fallback = False
@@ -43,8 +47,6 @@ class SyslogService:
 
         self.get_interface_settings()
 
-        self.Log = LogHandler(process=self)
-        self.Automate = Automate(self)
         self.SyslogUDP = UDPMessage(self)
         self.SyslogTCP = TCPMessage(self)
 
@@ -57,56 +59,45 @@ class SyslogService:
         interface.wait_for_interface(self.lan_int)
         self.lan_ip = interface.wait_for_ip(self.lan_int)
         while True:
-            if (self.syslog_servers):
-                break
-            time.sleep(FIVE_SEC)
+            if (self.syslog_servers): break
+
+            fast_sleep(FIVE_SEC)
 
         threading.Thread(target=self.process_message_queue).start()
 
+    @dnx_queue(Log, name='SyslogClient')
     # Checking the syslog message queue for entries. if entries it will connection to the configured server over the
     # configured protocol/ports, then send the sockets to the protocol classes to actually send the messages
     def process_message_queue(self):
-        while True:
-            tcp_connections = None
-            if (not self.syslog_queue):
-                # waiting 5 second before checking queue again for idle perf
-                time.sleep(FIVE_SEC)
-                continue
-
-            if (self.syslog_protocol == PROTO.TCP):
-                if (self.tls_enabled):
-                    tcp_connections = self.SyslogTCP.tls_connect()
-                    # if all tls connections failed and tcp fallback is enabled, will attempt to connect to same servers over standard tcp port
-                    if (not tcp_connections and self.tcp_fallback):
-                        self.SyslogTCP.tcp_connect()
-                else:
+        if (self.syslog_protocol == PROTO.TCP):
+            if (self.tls_enabled):
+                tcp_connections = self.SyslogTCP.tls_connect()
+                # if all tls connections failed and tcp fallback is enabled, will attempt to connect to same servers over standard tcp port
+                if (not tcp_connections and self.tcp_fallback):
                     self.SyslogTCP.tcp_connect()
+            else:
+                self.SyslogTCP.tcp_connect()
 
-                if (tcp_connections):
-                    self.SyslogTCP.send_queue(tcp_connections)
+            if (tcp_connections):
+                self.SyslogTCP.send_queue(tcp_connections)
 
-            if (self.syslog_protocol == PROTO.UDP) or (self.udp_fallback and not tcp_connections):
-                udp_socket = self.SyslogUDP.create_udp_socket()
-                if (udp_socket):
-                    self.SyslogUDP.send_queue(udp_socket)
+        if (self.syslog_protocol == PROTO.UDP) or (self.udp_fallback and not tcp_connections):
+            udp_socket = self.SyslogUDP.create_udp_socket()
+            if (udp_socket):
+                self.SyslogUDP.send_queue(udp_socket)
 
-    def get_interface_settings(self):
-        interface_settings = load_configuration('config.json')
-        self.lan_int = interface_settings['settings']['interface']['inside']
-
+    @looper(NO_DELAY)
     # local socket receiving messages to be sent over syslog from all processes firewall wide. once a message is
     # received it will add it to the queue to be handled by a separate method.
     def _main(self):
-        while True:
-            try:
-                syslog_message = self.service_sock.recv(2048)
-                if (syslog_message):
-                    self.syslog_queue.append(syslog_message)
-            except OSError:
-                #NOTE: should report this to front end if service socket error.
-                break
-
-        self._ready_interface_service()
+        try:
+            syslog_message = self.service_sock.recv(2048)
+        except OSError:
+            traceback.print_exc()
+            #NOTE: should report this to front end if service socket error.
+        else:
+            if (syslog_message):
+                self.syslog_queue.append(syslog_message)
 
     def _ready_interface_service(self):
         while True:
@@ -127,11 +118,6 @@ class SyslogService:
         except OSError:
             # failed to create socket. interface may be down.
             return True
-
-    def automate_threads(self):
-        self.Log.start()
-        threading.Thread(target=self.Automate.get_settings).start()
-#        threading.Thread(target=self.Automate.reachability).start()
 
 
 class SyslogHandler:

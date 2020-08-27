@@ -7,13 +7,12 @@ import threading
 from copy import copy
 from collections import deque
 
-fast_time = time.time
-fast_sleep = time.sleep
+from dnx_configure.dnx_constants import MSEC, fast_time, fast_sleep
 
 __all__ = (
     'looper', 'dynamic_looper',
-    'Initialize', 'dnx_queue',
-    'ByteContainer', 'classproperty', 'keep_info'
+    'Initialize', 'dnx_queue', 'DNXQueue',
+    'bytecontainer', 'classproperty', 'keep_info'
 )
 
 def looper(sleep_len):
@@ -32,6 +31,7 @@ def looper(sleep_len):
 
                 if (sleep_len):
                     fast_sleep(sleep_len)
+
         return wrapper
     return decorator
 
@@ -75,7 +75,7 @@ class Initialize:
 
         # blocking until all threads check in by individually calling done method
         while not self._initial_load_complete:
-            time.sleep(1)
+            fast_sleep(1)
 
         self.has_ran = True
         self._is_initializing = False
@@ -111,6 +111,7 @@ class Initialize:
         return False
 
     @property
+    # TODO: this is broken. it doesnt track based on iniactivity either???
     def _timeout_reached(self):
         if (not self._timeout):
             return False
@@ -145,6 +146,7 @@ def dnx_queue(Log, name=None):
         def wrapper(*args):
             if (Log):
                 Log.debug(f'{name}/dnx_queue started.')
+
             while True:
                 job_wait()
                 # clearing job notification
@@ -153,11 +155,14 @@ def dnx_queue(Log, name=None):
                 while queue:
                     job = queue_get()
                     try:
+                        # TODO: see if we should just send in the queue reference and perform the pop in the called func. if
+                        # we do this we would probably want it to be optional and use a conditional set on start to identify.
                         func(*args, job)
                     except Exception as E:
                         if (Log):
                             Log.warning(f'error while processing a {name}/dnx_queue started job. | {E}')
-                        fast_sleep(.001)
+
+                        fast_sleep(MSEC)
 
         def add(job):
             '''adds job to work queue, then marks event indicating a job is available.'''
@@ -170,57 +175,119 @@ def dnx_queue(Log, name=None):
     return decorator
 
 
-class ByteContainer:
-    '''named tuple like class for storing raw byte sections with named fields. calling
-    len on the container will return sum of all bytes stored not amount of fields.'''
-    def __init__(self, obj_name, field_names):
-        self._obj_name = obj_name
-        self._field_names = field_names.split()
-        for name in self._field_names:
-            setattr(self, name, '')
+class DNXQueue:
+    '''small class to provide a custom queue mechanism for any queue handling functions. This
+    is a direct replacement for dynamic_looper for queues. this is to be used as a decorator,
+    but it requires an active instance prior to decoration.
 
-        self._byte_len = 0
+    example:
+        dnx_queue = DNXQueue(Log)
 
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self._obj_name}, '{' '.join(self._field_names)}')"
+        @dnx_queue
+        def some_func(job):
+            process(job)
 
-    def __str__(self):
-        fields = [f'{n}={getattr(self, n)}' for n in self._field_names]
+    '''
+    __slots__ = (
+        '_Log', '_queue', '_func', '_job_available', '_name'
+    )
 
-        return f"{self._obj_name}({', '.join(fields)})"
+    def __init__(self, Log, name=None):
+        self._Log   = Log
+        self._name  = name
+        self._queue = deque()
 
-    def __call__(self, *args):
-        if (len(args) != len(self._field_names)):
-            raise TypeError(f'Expected {len(self._field_names)} arguments, got {len(args)}')
+        self._job_available = threading.Event()
 
-        new_container = copy(self)
-        for name, value in zip(self._field_names, args):
-            if (not isinstance(value, bytes)):
-                raise TypeError('this container can only hold raw bytes.')
-            new_container._byte_len += len(value)
-            setattr(new_container, name, value)
+    def __call__(self, func):
+        self._func = func
 
-        return new_container
+        return self._looper
 
-    def __len__(self):
-        return self._byte_len
+    def _looper(self, instance):
+        '''waiting for job to become available. once available the, event will be reset
+        and the decorated function will be called with the return of queue pop as an
+        argument. runs forever.'''
+        self._Log.debug(f'{self._name}/{self.__class__.__name__} started.')
+        while True:
+            self._job_available.wait()
+            # processing all available jobs
+            self._job_available.clear()
+            while self._queue:
+                try:
+                    job = self._queue.popleft()
+                    self._func(instance, job)
+                except Exception as E:
+                    self._Log.warning(f'error while processing a {self._name}/{self.__class__.__name__} job. | {E}')
+                    fast_sleep(.001)
 
-    def __getitem__(self, position):
-        return getattr(self, f'{self._field_names[position]}')
+    def add(self, job):
+        '''adds job to work queue, then marks event indicating a job is available.'''
+        self._queue.append(job)
+        self._job_available.set()
 
-    def __iter__(self):
-        yield from [getattr(self, x) for x in self._field_names]
 
-    def update(self, field_name, new_value):
-        if (field_name not in self._field_names):
-            raise ValueError('field name does not exist.')
+def bytecontainer(obj_name, field_names):
+    '''named tuple like class factory for storing raw byte sections with named fields. calling
+    len on the container will return sum of all bytes stored not amount of fields. slots are
+    being used to speed up attribute access.'''
 
-        if (not isinstance(new_value, bytes)):
-            raise TypeError('this container can only hold raw bytes.')
+    if not isinstance(field_names, list):
+        field_names = field_names.split()
 
-        self._byte_len -= len(getattr(self, field_name))
-        setattr(self, field_name, new_value)
-        self._byte_len += len(new_value)
+    class ByteContainer:
+
+        __slots__ = (
+            '_obj_name', '_field_names', '_len_fields',
+            *field_names
+        )
+
+        def __init__(self, obj_name, field_names):
+            self._obj_name = obj_name
+            self._field_names = field_names
+            for name in field_names:
+                setattr(self, name, '')
+
+            self._len_fields = len(field_names)
+
+        def __repr__(self):
+            return f"{self.__class__.__name__}({self._obj_name}, '{' '.join(self._field_names)}')"
+
+        def __str__(self):
+            fast_get = self.__getattribute__
+            fields = [f'{n}={fast_get(n)}' for n in self._field_names]
+
+            return f"{self._obj_name}({', '.join(fields)})"
+
+        def __call__(self, *args):
+            if (len(args) != self._len_fields):
+                raise TypeError(f'Expected {self._len_fields} arguments, got {len(args)}')
+
+            new_container = copy(self)
+            for name, value in zip(self._field_names, args):
+                setattr(new_container, name, value)
+
+            return new_container
+
+        def __len__(self):
+            fast_get = self.__getattribute__
+
+            return sum([len(fast_get(field_name)) for field_name in self._field_names])
+
+        def __getitem__(self, position):
+            return getattr(self, f'{self._field_names[position]}')
+
+        def __iter__(self):
+            fast_get = self.__getattribute__
+
+            yield from [fast_get(x) for x in self._field_names]
+
+        # NOTE: consider removing this for direct access. this used to provide some input validation, but now that
+        # it has been removed, the method call itself is pretty worthless.
+        def update(self, field_name, new_value):
+           setattr(self, field_name, new_value)
+
+    return ByteContainer(obj_name, field_names)
 
 
 class classproperty:

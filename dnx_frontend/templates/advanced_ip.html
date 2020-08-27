@@ -1,0 +1,199 @@
+{% extends('layout.html') %}
+{% block body %}
+<section id="tabs-bar" class="tabsbar">
+    <div class="container">
+        <div class="row">
+            <div class="col s12 m12">
+                <ul class="tabs">
+                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='1' %} class="active" {% endif %} href="#categories"
+                            onclick="activeTab(1)">Categories</a></li>
+                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='2' %} class="active" {% endif %} href="#geolocation"
+                            onclick="activeTab(2)">Geolocation</a></li>
+                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='3' %} class="active" {% endif %}
+                            href="#lan-restrict" onclick="activeTab(3)">Lan Restrict</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+<section id="categories" class="section">
+    <div class="container">
+        <div class="row">
+            <div class="col s12 m2"></div>
+            <div class="col s12 m8">
+                <div class="card-panel">
+                    <h4 class="red-text light-3">Reputation</h4>
+                    <form action="/advanced/ip" method="post">
+                        <input type="hidden" name="tab" value="1">
+                        <input type="hidden" name="ip_hosts_update">
+                        <div class="row">
+                            {% for category, enabled in ip_settings['categories'].items() %}
+                            <div class="input-field col s1 m1"></div>
+                            <div class="input-field col s5 m5">
+                                {{category}}
+                                <br>
+                                <select name="categories" id="" onchange="this.form.submit()">
+                                    <option value="{{category}}_0" {% if enabled==1 %} selected {% endif %}>OFF</option>
+                                    <option value="{{category}}_1" {% if enabled==1 %} selected {% endif %}>OUTBOUND</option>
+                                    <option value="{{category}}_2" {% if enabled==2 %} selected {% endif %}>INBOUND</option>
+                                    <option value="{{category}}_3" {% if enabled==3 %} selected {% endif %}>BOTH</option>
+                                </select>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <noscript>
+                            <div class="row">
+                                <div class="col s12 center">
+                                    <button class="btn waves-effect waves-light">
+                                        <i class="material-icons"></i> Update
+                                    </button>
+                                </div>
+                            </div>
+                        </noscript>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<section id="geolocation" class="section">
+    <div class="container">
+        <div class="row">
+            <div class="col s12 m1"></div>
+            <div class="col s12 m10">
+                <div class="card-panel">
+                    <h4 class="red-text light-3">Geolocation</h4>
+                    <form action="/advanced/ip" method="post">
+                        <input type="hidden" name="tab" value="2">
+                        <input type="hidden" name="geo_lists_update">
+                        <div class="row">
+                            {% for country, enabled in ip_settings['geolocation'].items() %}
+                            <div class="input-field col s1 m1"></div>
+                            <div class="input-field col s3 m3">
+                                {{country.title()}}
+                                <br>
+                                <select name="countries" id="" onchange="this.form.submit()">
+                                    <option value="{{country}}_0" {% if enabled==1 %} selected {% endif %}>OFF</option>
+                                    <option value="{{country}}_1" {% if enabled==1 %} selected {% endif %}>OUTBOUND</option>
+                                    <option value="{{country}}_2" {% if enabled==2 %} selected {% endif %}>INBOUND</option>
+                                    <option value="{{country}}_3" {% if enabled==3 %} selected {% endif %}>BOTH</option>
+                                </select>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <noscript>
+                            <div class="row">
+                                <div class="col s12 center">
+                                    <button class="btn waves-effect waves-light">
+                                        <i class="material-icons"></i> Update
+                                    </button>
+                                </div>
+                            </div>
+                        </noscript>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<section id="lan-restrict" class="section">
+    <div class="container">
+        <div class="row">
+            <div class="col s12 m3"></div>
+            <div class="col s12 m6">
+                <div class="card-panel">
+                    <h4 class="red-text light-3">Lan Restrict</h4>
+                    <form action="/advanced/ip" method="post">
+                        <input type="hidden" name="tab" value="3">
+                        <div class="col s12 m12">
+                            <h6>Start Time</h6>
+                            <div class="row">
+                                <div class="input-field col s12 m3">
+                                    <select name="hour" id="">
+                                        {% for i in range(0,13) %}
+                                        <option value="{{i}}" {% if ip_settings['tr_settings']['hour']==loop.index %}
+                                            selected {% endif %}>{{i}}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <label for="hour">Hour</label>
+                                </div>
+                                <div class="input-field col s12 m3">
+                                    <select name="minutes" id="">
+                                        <option value="00" {% if ip_settings['tr_settings']['minutes']==00 %} selected
+                                            {% endif %}>00</option>
+                                        <option value="15" {% if ip_settings['tr_settings']['minutes']==15 %} selected
+                                            {% endif %}>15</option>
+                                        <option value="30" {% if ip_settings['tr_settings']['minutes']==30 %} selected
+                                            {% endif %}>30</option>
+                                        <option value="45" {% if ip_settings['tr_settings']['minutes']==45 %} selected
+                                            {% endif %}>45</option>
+                                    </select>
+                                    <label for="minute">Minute</label>
+                                </div>
+                                <div class="input-field col s12 m3">
+                                    <select name="time_suffix" id="">
+                                        <option value="AM" {% if ip_settings['tr_settings']['suffix']=='AM' %} selected
+                                            {% endif %}>AM</option>
+                                        <option value="PM" {% if ip_settings['tr_settings']['suffix']=='PM' %} selected
+                                            {% endif %}>PM</option>
+                                    </select>
+                                    <label for="time_suffix"></label>
+                                </div>
+                            </div>
+                            <h6>Length</h6>
+                            <div class="row">
+                                <div class="input-field col s12 m3">
+                                    <select name="tlen_hour" id="">
+                                        {% for i in range(1,12) %}
+                                        <option value="{{i}}"
+                                            {% if ip_settings['tr_settings']['length_hour']==loop.index %} selected
+                                            {% endif %}>{{i}}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <label for="tlen_hour">Hour</label>
+                                </div>
+                                <div class="input-field col s12 m3">
+                                    <select name="tlen_minutes" id="">
+                                        <option value="00" {% if ip_settings['tr_settings']['length_minutes']==00 %}
+                                            selected {% endif %}>00</option>
+                                        <option value="15" {% if ip_settings['tr_settings']['length_minutes']==15 %}
+                                            selected {% endif %}>15</option>
+                                        <option value="30" {% if ip_settings['tr_settings']['length_minutes']==30 %}
+                                            selected {% endif %}>30</option>
+                                        <option value="45" {% if ip_settings['tr_settings']['length_minutes']==45 %}
+                                            selected {% endif %}>45</option>
+                                    </select>
+                                    <label for="tlen_minute">Minute</label>
+                                </div>
+                                <div class="input-field col s12 m6 center">
+                                    <br>
+                                    <div class="switch">
+                                        <label>
+                                            Disabled
+                                            {% if ip_settings['tr_settings']['enabled'] %}
+                                            <input type="checkbox" checked="checked" name="restriction_enable">
+                                            {% else %}
+                                            <input type="checkbox" name="restriction_enable">
+                                            {% endif %}
+                                            <span class="lever"></span>
+                                            Enabled
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col s12 center">
+                                <button class="btn waves-effect waves-light">
+                                    <input type="hidden" name="time_res_update">
+                                    <i class="material-icons"></i> Update
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

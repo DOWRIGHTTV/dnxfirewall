@@ -1,0 +1,106 @@
+{% extends('layout.html') %}
+{% block body %}
+<section id="tabs-bar" class="tabsbar">
+    <div class="container">
+        <div class="row">
+            <div class="col s12 m12 l12 xl12">
+                <ul class="tabs">
+                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='1' %} class="active" {% endif %} href="#dhcpres"
+                            onclick="activeTab(1)">Reservations</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+<section id="dhcpres">
+    <div class="container">
+        <div class="row">
+            <div class="col s12 m8">
+                <div class="card-panel">
+                    <h4 class="red-text">DHCP Reservation</h4>
+                    <table class="striped">
+                        <thead>
+                            <th></th>
+                            <th>Mac Address</th>
+                            <th>IP Address</th>
+                            <th>User</th>
+                        </thead>
+                        <tbody>
+                            {% if dhcp_settings['reservations'] %}
+                            {% for mac, info in dhcp_settings['reservations'].items() %}
+                            <tr>
+                                <td>
+                                    <a class="waves-effect waves-light btn modal-trigger" href="#dhcp-modal1-1"><i
+                                            class="material-icons">remove</i></a>
+                                    <div id="dhcp-modal1-{{loop.index}}" class="modal">
+                                        <div class="modal-content">
+                                            <h5 class="red-text">Are you sure you want to remove the DHCP reservation?
+                                            </h5>
+                                        </div>
+                                        <form action="/settings/dhcp" method="POST">
+                                            <div class="modal-footer">
+                                                <button class="btn waves-effect waves-light">YES</button>
+                                                <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+                                                <input type="hidden" name="tab" value="1">
+                                                <input type="hidden" name="dhcp_res_remove" value="{{mac}}">
+                                            </div>
+                                        </form>
+                                    </div>
+                                </td>
+                                <td>{{mac}}</td>
+                                <td>{{info['ip_address']}}</td>
+                                <td>{{info['name']}}</td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td></td>
+                                <td>No Reservations</td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col s12 m4">
+                <div class="card-panel">
+                    <h4 class="red-text light-3">Add DHCP Reservation</h4>
+                    <form action="/settings/dhcp" method="POST">
+                        <input type="hidden" name="tab" value="1">
+                        <div class="row">
+                            <div class="input-field col s12">
+                                <input type="text" name="mac_address" class="validate" placeholder="aa:aa:aa:aa:aa:aa"
+                                    required>
+                                <label for="">Mac Address</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="input-field col s12">
+                                <input type="text" name="ip_address" class="validate" placeholder="192.168.5.14"
+                                    required>
+                                <label for="">IP Address</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="input-field col s12">
+                                <input type="text" name="res_name" class="validate" placeholder="Erika">
+                                <label for="">Username</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="input-field col s12 m4">
+                                <input type="hidden" name="dhcp_res_add">
+                                <button class="btn waves-effect waves-light col s12">
+                                    <i class="material-icons"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

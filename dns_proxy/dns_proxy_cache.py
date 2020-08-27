@@ -3,10 +3,7 @@
 import os, sys
 import threading
 
-from time import sleep
-from collections import Counter
-
-# NOTE: this is an alternate implementation of the DNSCache class inhereting from dict.
+from collections import Counter, OrderedDict
 
 import dnx_configure.dnx_file_operations as fo
 
@@ -146,7 +143,7 @@ class DNSCache(dict):
         request_handler, dns_packet = self._request_handler, self._dns_packet
         for domain in self._top_domains:
             request_handler(dns_packet(domain))
-            sleep(.1)
+            fast_sleep(.1)
 
         fo.write_configuration(self._top_domains, 'dns_cache')
 
@@ -171,3 +168,84 @@ class DNSCache(dict):
         self._dom_counter = Counter({dom: cnt for cnt, dom in enumerate(dom_list)})
 
         self._top_dom_filter = set(fo.load_top_domains_filter())
+
+
+class RequestTracker(OrderedDict):
+    ''' Tracks DNS Server requests and allows for either DNS Proxy or Server to add initial client address key
+    on a first come basis and the second one will update the corresponding value index with info directly.
+
+        RequestTracker([client_address: [client_query, decision]])
+    '''
+
+    __slots__ = (
+        'insert_lock', 'counter_lock',
+
+        'ready_count',
+
+        'request_wait', 'request_set', 'request_clear'
+    )
+
+    def __init__(self):
+        self.insert_lock = threading.Lock()
+        self.counter_lock = threading.Lock()
+
+        self.ready_count = 0
+
+        request_ready = threading.Event()
+        self.request_wait  = request_ready.wait
+        self.request_set   = request_ready.set
+        self.request_clear = request_ready.clear
+
+    # blocks until the request ready flag has been set, then iterates over dict and appends any client adress with
+    # both values present. (client_query class instance object and decision)
+    def return_ready(self):
+        self.request_wait()
+
+        ready_requests = []
+        tracker = list(self.items())
+        for client_address, (client_query, decision) in tracker:
+
+            # using inverse because it has potential to be more efficient if both are not present. decision is more
+            # likely to be input first, so it will be evaled only if client_query is present.
+            if not client_query or not decision:
+                continue
+
+            ready_requests.append((client_query, decision))
+
+            # lock protects count, which is also accessed by server and proxy via insert method.
+            with self.counter_lock:
+                self.ready_count -= 1
+
+            # removes entry from tracker if request is ready for forwarding.
+            del self[client_address]
+
+        if not self.ready_count:
+            self.request_clear()
+
+        # here temporarily for testing implementation
+        elif self.ready_count < 0:
+            raise RuntimeError('Request Tracker ready count dropped below 0. probably fatal. yay me.')
+
+        return ready_requests
+
+    # this is a thread safe method to add entries to the request tracker dictionary. this will ensure the key
+    # exists before updatin the value. a default dict cannot be used (from what i can tell) because an empty
+    # list would raise an index error if it was trying to set decision before request.
+    def insert(self, client_address, info, *, module_index):
+
+        with self.insert_lock:
+
+            # if client address is not already present, it will be added before updating the module index value
+            if client_address not in self:
+
+                # default entry for requests. 1. client request instance 2. proxy decision
+                self[client_address] = [None, None]
+                self[client_address][module_index] = info
+
+            else:
+                with self.counter_lock:
+                    self.ready_count += 1
+
+                self[client_address][module_index] = info
+
+                self.request_set()

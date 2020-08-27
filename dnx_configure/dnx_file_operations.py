@@ -3,11 +3,11 @@
 import os, sys
 import json
 import time
-import fcntl
 import shutil
 import hashlib
 import subprocess
 
+from fcntl import flock, LOCK_EX, LOCK_UN
 from secrets import token_urlsafe
 from ipaddress import IPv4Address, IPv4Network
 
@@ -18,40 +18,31 @@ from dnx_configure.dnx_constants import USER, GROUP, LOG, FILE_POLL_TIMER
 from dnx_configure.dnx_constants import DNS_BIN_OFFSET, DNS_CAT, IPP_CAT, GEO
 from dnx_configure.dnx_exceptions import ValidationError
 
-#will load json data from file, convert it to a python dict, then return as object
-def load_configuration(filename, *, path=f'{HOME_DIR}/', folder='data'):
-    '''will load json data from file, convert it to a python dict, then return as object.
-    path must be ended with / for the directory to be processed correctly.'''
-    if (not path.endswith('/')):
-        raise ValueError('filepath must end with "/" if path argument is used.')
-
+# will load json data from file, convert it to a python dict, then return as object
+def load_configuration(filename, *, filepath='/dnx_system/data'):
+    '''load json data from file, convert it to a python dict, then return as object.'''
     if (not filename.endswith('.json')):
-        filename += '.json'
+        filename = ''.join([filename, '.json'])
 
-    with open(f'{path}{folder}/{filename}', 'r') as settings:
+    with open(f'{HOME_DIR}/{filepath}/{filename}', 'r') as settings:
         settings = json.load(settings)
 
     return settings
 
-def write_configuration(data, filename, *, path=f'{HOME_DIR}/', folder='data'):
-    '''will write json data to file. path must be ended with / for the directory
-    to be processed correctly.'''
-    if (not path.endswith('/')):
-        raise ValueError('filepath must end with "/" if path argument is used.')
+def write_configuration(data, filename, *, filepath='/dnx_system/data'):
+    '''write json data to file.'''
 
     if (not filename.endswith('.json')):
-        filename += '.json'
+        filename = ''.join([filename, '.json'])
 
-    with open(f'{path}{folder}/{filename}', 'w') as settings:
+    with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
         json.dump(data, settings, indent=4)
 
-def append_to_file(data, filename, *, path=f'{HOME_DIR}/', folder='data'):
+def append_to_file(data, filename, *, filepath='/dnx_system/data'):
     '''will append data to filepath must be ended with / for the directory
     to be processed correctly.'''
-    if (not path.endswith('/')):
-        raise ValueError('filepath must end with "/" if path argument is used.')
 
-    with open(f'{path}{folder}/{filename}', 'a') as settings:
+    with open(f'{HOME_DIR}/{filepath}/{filename}', 'a') as settings:
         settings.write(data)
 
 def tail_file(file, *, line_count):
@@ -284,7 +275,7 @@ def cfg_read_poller(watch_file, class_method=False):
         raise TypeError('watch file must be a string.')
 
     if (not watch_file.endswith('.json')):
-        watch_file += '.json'
+        watch_file = ''.join([watch_file, '.json'])
 
     def decorator(function_to_wrap):
         if (not class_method):
@@ -327,13 +318,17 @@ class ConfigurationManager:
         '_temp_file', '_temp_file_path', '_file_name',
         '_data_written', '_Log'
     )
-    def __init__(self, config_file, Log=None):
-        self._config_file = f'{HOME_DIR}/dnx_system/data/{config_file}'
+    def __init__(self, config_file, file_path=None, Log=None):
+        if (not config_file.endswith('.json')):
+            config_file = ''.join([config_file, '.json'])
+
+        if file_path is None:
+            self._config_file = f'{HOME_DIR}/dnx_system/data/{config_file}'
+        else:
+            self._config_file = f'{HOME_DIR}/{file_path}/{config_file}'
+
         self._file_name = config_file
         self._Log = Log
-
-        if (not config_file.endswith('.json')):
-            self._config_file += '.json'
 
         self._config_lock_file = f'{HOME_DIR}/dnx_system/config.lock'
         self._data_written = False
@@ -342,7 +337,7 @@ class ConfigurationManager:
     # file which the new configuration will be written to, and finally returns the class object.
     def __enter__(self):
         self._config_lock = open(self._config_lock_file, 'r+')
-        fcntl.flock(self._config_lock, fcntl.LOCK_EX)
+        flock(self._config_lock, LOCK_EX)
 
         self._temp_file_path = f'{HOME_DIR}/dnx_system/data/{token_urlsafe(10)}.json'
         self._temp_file = open(self._temp_file_path, 'w+')
@@ -367,7 +362,7 @@ class ConfigurationManager:
                 self._Log.error(f'configuration manager exiting with error: {exc_val}')
 
         # releasing lock for purposes specified in flock(1) man page under -u (unlock)
-        fcntl.flock(self._config_lock, fcntl.LOCK_UN)
+        flock(self._config_lock, LOCK_UN)
         self._config_lock.close()
         if (self._Log):
             self._Log.debug(f'file lock released for {self._file_name}')
@@ -388,7 +383,7 @@ class ConfigurationManager:
     def write_configuration(self, data_to_write):
         '''writes configuration data as json to generated temporary file'''
         if (self._data_written):
-            raise Warning('can only write data to file one time.')
+            raise RuntimeWarning('configuration file has already been written to.')
 
         json.dump(data_to_write, self._temp_file, indent=4)
         self._temp_file.flush()
@@ -405,7 +400,7 @@ class Watcher:
     def __init__(self, watch_file, callback):
         self._watch_file = watch_file
         self._callback   = callback
-        self._full_path  = f'{HOME_DIR}/data/{watch_file}'
+        self._full_path  = f'{HOME_DIR}/dnx_system/data/{watch_file}'
 
         self._last_modified_time = 0
 

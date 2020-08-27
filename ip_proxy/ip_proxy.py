@@ -10,6 +10,7 @@ HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
+from dnx_iptools.dnx_binary_search import generate_linear_binary_search, generate_recursive_binary_search # pylint: disable=no-name-in-module
 from dnx_configure.dnx_lists import ListFiles
 from dnx_configure.dnx_namedtuples import IPP_IP_INFO, IPP_INSPECTION_RESULTS, IPP_LOG, INFECTED_LOG
 from dnx_configure.dnx_file_operations import load_signatures
@@ -24,16 +25,16 @@ from dnx_configure.dnx_code_profiler import profiler
 
 LOG_NAME = 'ip_proxy'
 
-
+# TODO:
 class IPProxy(NFQueue):
     inspect_on     = False
     ids_mode       = False
     cat_enabled    = False
     cat_settings   = {}
-    cat_signatures = {}
+
     geo_enabled    = False
     geo_settings   = {}
-    geo_signatures = {}
+
     ip_whitelist   = {}
     tor_whitelist  = {}
     open_ports     = {
@@ -72,8 +73,8 @@ class IPProxy(NFQueue):
         else:
             self.forward_packet(packet.nfqueue, packet.zone)
 
-    @staticmethod
-    def forward_packet(nfqueue, zone, action=CONN.ACCEPT):
+    @classmethod
+    def forward_packet(cls, nfqueue, zone, action=CONN.ACCEPT):
         if (zone == WAN_IN and action is CONN.DROP):
             nfqueue.set_mark(IP_PROXY_DROP)
         elif (zone == LAN_IN):
@@ -96,49 +97,52 @@ class Inspect:
         '_packet', '_match'
     )
 
-    def __init__(self, packet):
-        self._packet = packet
+    # direct reference to the Proxy forward packet method
+    _forward_packet = _Proxy.forward_packet
 
+    # direct reference to the proxy response method
+    _prepare_and_send = _ProxyResponse.prepare_and_send
+
+    def __init__(self):
         self._match = None
 
     @classmethod
     def ip(cls, packet):
-        self = cls(packet)
-        action, category = self._ip_inspect()
+        self = cls()
+        action, category = self._ip_inspect(packet)
 
         self._Proxy.forward_packet(packet.nfqueue, packet.zone, action)
+#        self._forward_packet(packet.nfqueue, packet.zone, action)
 
         # sending reset
         if (action is CONN.DROP):
-            self._ProxyResponse.prepare_and_send(packet)
+            self._prepare_and_send(packet)
 
         if (category):
             Log.log(packet, IPP_INSPECTION_RESULTS(category, action))
 
-    def _ip_inspect(self):
+    def _ip_inspect(self, packet):
         action = CONN.ACCEPT # setting default action
-        packet, Proxy = self._packet, self._Proxy
+        Proxy = self._Proxy
         # will cross reference category based ips if enabled
         if (Proxy.cat_enabled):
-            category = self._cat_bin_match(packet.bin_data)
+            category = IPP_CAT(_recursive_binary_search(packet.bin_data))
+
             Log.debug(f'CAT LOOKUP | {packet.conn.tracked_ip}: {category}')
-            # this will convert the specific category to an enum representing the over all category group.
-            if (category):
-                cat_group = IPP_CAT((category // 10) * 10)
-                # action will be marked as drop. this will allow for ids override later if configured.
-                if (category is IPP_CAT.TOR and packet.conn.local_ip not in Proxy.tor_whitelist):
-                    Log.debug(f'IP PROXY | TOR CONNECTION WHITELISTED: {packet.conn.local_ip} > {packet.conn.tracked_ip}')
-                    action = CONN.DROP
-                # if category match, and category is configured to block in direction of conn/packet
-                elif self._blocked_ip(category, cat_group):
-                    action = CONN.DROP
+
+            # if category match, and category is configured to block in direction of conn/packet
+            if (category is not IPP_CAT.NONE) and self._blocked_ip(category, packet):
+                action = CONN.DROP
 
         # will cross reference geolocation network if enabled at not already blocked
+        # NOTE: this is now using imported cython function factory
         if (action is CONN.ACCEPT and Proxy.geo_enabled):
-            category = self._geo_bin_match(packet.bin_data)
+            category = GEO(_linear_binary_search(packet.bin_data))
+
             Log.debug(f'GEO LOOKUP | {packet.conn.tracked_ip}: {category}')
+
             # if category match and country is configurted to block in direction of conn/packet
-            if category and self._blocked_country(category):
+            if (category is not GEO.NONE) and self._blocked_country(category, packet.direction):
                 action = CONN.DROP
 
         # NOTE: debugs are for testing.
@@ -156,98 +160,109 @@ class Inspect:
         return action, category
 
     # category setting lookup. will match packet direction with configured dir for category/category group.
-    def _blocked_ip(self, category, cat_group):
-        cat_lookup = category if cat_group is IPP_CAT.TOR else cat_group
+    def _blocked_ip(self, category, packet):
+        # flooring cat to its cat group for easier matching of tor nodes
+        cat_group = IPP_CAT((category // 10) * 10)
+        if (cat_group is IPP_CAT.TOR):
+            block_direction = self._Proxy.cat_settings[category]
+            if (packet.conn.local_ip in self._Proxy.tor_whitelist):
+                return False
 
-        block_direction = self._Proxy.cat_settings[cat_lookup]
-        if (block_direction in [self._packet.direction, DIR.BOTH]):
+        else:
+            block_direction = self._Proxy.cat_settings[cat_group]
+
+        # notify proxy the connection should be blocked
+        if (block_direction in [packet.direction, DIR.BOTH]):
+            return True
+
+        # default action is allow due to category not being enabled
+        return False
+
+    def _blocked_country(self, category, direction):
+        if (self._Proxy.geo_settings[category] in [direction, DIR.BOTH]):
             return True
 
         return False
 
-    def _blocked_country(self, category):
-        if (self._Proxy.geo_settings[category] in [self._packet.direction, DIR.BOTH]):
-            return True
 
-        return False
+    # NOTE: this has been moved to a cython extension and is imported and set up at runtime.
+    # keeping for archival purposes for awhile.
 
-    @lru_cache(maxsize=1024)
-    def _cat_bin_match(self, host, recursion=False):
-        hb_id, hh_id, f_octet = host
-        if (not recursion):
-            sigs = self._Proxy.cat_signatures
-            left, right = self._calculate_bounds(left=0, right=len(sigs)-1, f_octet=f_octet)
-        else:
-            sigs = self._match
-            left, right = 0, len(sigs)-1
+    # @lru_cache(maxsize=1024)
+    # def _cat_bin_match(self, host, recursion=False):
+    #     hb_id, hh_id, f_octet = host
+    #     if (not recursion):
+    #         sigs = self._Proxy.cat_signatures
+    #         left, right = self._calculate_bounds(left=0, right=len(sigs)-1, f_octet=f_octet)
+    #     else:
+    #         sigs = self._match
+    #         left, right = 0, len(sigs)-1
 
-        while left <= right:
-            mid = left + (right - left) // 2
-            b_id, match = sigs[mid]
-            # host bin id matches a bin id in sigs
-            if (b_id == hb_id):
-                break
-            # excluding left half
-            elif (b_id < hb_id):
-                left = mid + 1
-            # excluding right half
-            elif (b_id > hb_id):
-                right = mid - 1
-        else:
-            return None
+    #     while left <= right:
+    #         mid = left + (right - left) // 2
+    #         b_id, match = sigs[mid]
 
-        self._match = match
-        # on bin match, recursively call to check host ids
-        if (not recursion):
-            return self._cat_bin_match((hh_id, 0, 0), recursion=True)
+    #         # host bin id matches a bin id in sigs
+    #         if (b_id == hb_id):
+    #             break
 
-        return IPP_CAT(match)
+    #         # excluding left half
+    #         elif (b_id < hb_id):
+    #             left = mid + 1
 
-    @lru_cache(maxsize=1024)
-    def _geo_bin_match(self, host):
-        sigs = self._Proxy.geo_signatures
-        hb_id, h_id, f_octet = host
-        # initial adjustment. using an interpolative clamping of left/right bounds.
-        left, right = self._calculate_bounds(left=0, right=len(sigs)-1, f_octet=f_octet)
-        while left <= right:
-            mid = left + (right - left) // 2
-            b_id, h_ranges = sigs[mid]
-            # excluding left half
-            if (b_id < hb_id):
-                left = mid + 1
-            # excluding right half
-            elif (b_id > hb_id):
-                right = mid - 1
-            # host bin id matches a bin id in sigs
-            else:
-                break
-        else:
-            return None
+    #         # excluding right half
+    #         elif (b_id > hb_id):
+    #             right = mid - 1
+    #     else:
+    #         return None
 
-        # TODO: need a 3-way tuple (start, end, country_code)
-        for r_start, r_end, c_code in h_ranges:
-            if r_start <= h_id <= r_end:
-                return GEO(c_code)
+    #     # on bin match, assign var of dataset then recursively call to check host ids
+    #     if (not recursion):
+    #         self._match = match
 
-    # NOTE: pretty sure this can cause a signature miss
-    def _calculate_bounds(self, left, right, f_octet):
-        '''returns interpolation adjustment of list bounds to maximize bin search speed.'''
-        ratio = f_octet/255
-        if (ratio < .15):
-            right = int(right * .16)
-        elif (ratio > .85):
-            left = int(right * .84)
-        if (ratio < .3):
-            right = int(right * .31)
-        elif (ratio > .7):
-            left = int(right * .69)
-        else:
-            left  = int(right * .15)
-            right = int(right * .85)
+    #         return self._cat_bin_match((hh_id, 0, 0), recursion=True)
 
-        return left, right
+    #     return IPP_CAT(match)
+
+    # @lru_cache(maxsize=1024)
+    # def _geo_bin_match(self, host):
+    #     hb_id, h_id, f_octet = host
+    #     sigs = self._Proxy.geo_signatures
+
+    #     # initial adjustment. using an interpolative clamping of left/right bounds.
+    #     left, right = self._calculate_bounds(left=0, right=len(sigs)-1, f_octet=f_octet)
+    #     while left <= right:
+    #         mid = left + (right - left) // 2
+    #         b_id, h_ranges = sigs[mid]
+
+    #         # excluding left half
+    #         if (b_id < hb_id):
+    #             left = mid + 1
+
+    #         # excluding right half
+    #         elif (b_id > hb_id):
+    #             right = mid - 1
+
+    #         # host bin id matches a bin id in sigs
+    #         else:
+    #             break
+    #     else:
+    #         return None
+
+    #     for r_start, r_end, c_code in h_ranges:
+    #         if r_start <= h_id <= r_end:
+    #             return GEO(c_code)
 
 if __name__ == "__main__":
+    ip_cat_signatures, geoloc_signatures = Configuration.load_ip_signature_bitmaps()
+
+    # using cython function factory to create binary search function with module specific signatures
+    ip_cat_signature_bounds = (0, len(ip_cat_signatures)-1)
+    geoloc_signature_bounds = (0, len(geoloc_signatures)-1)
+
+    _recursive_binary_search = generate_recursive_binary_search(ip_cat_signatures, ip_cat_signature_bounds)
+    _linear_binary_search = generate_linear_binary_search(geoloc_signatures, geoloc_signature_bounds)
+
     Log.run(
         name=LOG_NAME,
         verbose=VERBOSE,

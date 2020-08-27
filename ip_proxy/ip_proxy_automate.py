@@ -29,6 +29,7 @@ class Configuration:
     def setup(cls, IPProxy):
         if (cls._setup):
             raise RuntimeError('configuration setup should only be called once.')
+
         cls._setup = True
 
         self = cls(IPProxy.__name__)
@@ -36,7 +37,6 @@ class Configuration:
 
         self._load_interfaces()
         self._manage_ip_tables()
-        self._import_signatures()
         threading.Thread(target=self._get_settings).start()
         threading.Thread(target=self._get_ip_whitelist).start()
         threading.Thread(target=self._get_open_ports).start()
@@ -44,17 +44,17 @@ class Configuration:
         self.initialize.wait_for_threads(count=3)
 
     def _load_interfaces(self):
-        general_settings = load_configuration('config')
+        dnx_settings = load_configuration('config')['settings']
 
-        lan_net = general_settings['settings']['interfaces']['lan']['subnet']
+        lan_net = dnx_settings['interfaces']['lan']['subnet']
         self.IPProxy.lan_net = IPv4Network(lan_net)
 
     @cfg_read_poller('ip_proxy')
     def _get_settings(self, cfg_file):
-        proxy_settings = load_configuration(cfg_file)
+        ip_proxy = load_configuration(cfg_file)['ip_proxy']
 
-        cat_settings = proxy_settings['ip_proxy']['categories']
-        geo_settings = proxy_settings['ip_proxy']['geolocation']
+        cat_settings = ip_proxy['categories']
+        geo_settings = ip_proxy['geolocation']
 
         cat_enabled = []
         for cat, setting in cat_settings.items():
@@ -72,18 +72,18 @@ class Configuration:
             except KeyError:
                 continue # NOTE: temporary while not all enums/countries are populated
 
-        self.IPProxy.inspect_on = bool(cat_enabled or geo_enabled)
+        self.IPProxy.inspect_on  = bool(cat_enabled or geo_enabled)
         self.IPProxy.cat_enabled = bool(cat_enabled)
         self.IPProxy.geo_enabled = bool(geo_enabled)
-        self.IPProxy.ids_mode = proxy_settings['ip_proxy']['ids_mode']
+        self.IPProxy.ids_mode = ip_proxy['ids_mode']
 
         self.initialize.done()
 
     @cfg_read_poller('whitelist')
     def _get_ip_whitelist(self, cfg_file):
-        whitelist_settings = load_configuration(cfg_file)
+        whitelist = load_configuration(cfg_file)['whitelist']
 
-        whitelist = whitelist_settings['whitelist']['ip_whitelist']
+        whitelist = whitelist['ip_whitelist']
         self.IPProxy.ip_whitelist = {
             ip for ip, wl_info in whitelist.items() if wl_info['type'] == 'ip'
         }
@@ -96,9 +96,8 @@ class Configuration:
 
     @cfg_read_poller('ips')
     def _get_open_ports(self, cfg_file):
-        ips_settings = load_configuration(cfg_file)
+        ips = load_configuration(cfg_file)['ips']
 
-        ips = ips_settings['ips']
         open_tcp_ports = ips['open_protocols']['tcp']
         open_udp_ports = ips['open_protocols']['udp']
         self.IPProxy.open_ports = {
@@ -116,12 +115,14 @@ class Configuration:
         IPTableManager.clear_dns_over_https()
         IPTableManager.update_dns_over_https()
 
+    @staticmethod
     # Loading lists of interesting traffic into dictionaries and creating ip table rules for dns over https blocking
-    def _import_signatures(self):
+    def load_ip_signature_bitmaps():
         list_files = ListFiles(Log=Log)
         list_files.combine_ips()
         list_files.combine_geolocation()
 
-#        self.IPProxy.cat_signatures = load_signatures(Log, mod='ip')
-        self.IPProxy.cat_signatures = load_ip_bitmap(Log)
-        self.IPProxy.geo_signatures = load_geo_bitmap(Log)
+        ip_category_signatures = load_ip_bitmap(Log)
+        geolocation_signatures = load_geo_bitmap(Log)
+
+        return ip_category_signatures, geolocation_signatures

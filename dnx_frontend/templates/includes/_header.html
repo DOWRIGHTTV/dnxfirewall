@@ -1,0 +1,127 @@
+<!-- header: navbar, slider content -->
+<header>
+    <nav class="red darken-3">
+        <div class="container">
+            <div class="nav-wrapper">
+                <a href="/dashboard" class="brand-logo"><img src="/static/assets/images/dnxlogo_v2.png" height="40px"
+                        style="display: block;"></a>
+                {% if navi %}
+                {% if user_role == 'admin' %}
+                <a href="dashboard" data-target="mobile-nav" class="sidenav-trigger show-mobile-menu"><i
+                        class="material-icons">menu</i></a>
+                <ul class="right remove-big-menu">
+                    <li><a href="dashboard"><i class="material-icons left">dashboard</i>Dashboard</a></li>
+                    <li><a href="" class="dropdown-trigger" data-target="settings-dropdown"><i
+                                class="material-icons left">settings</i>
+                            Settings <i class="material-icons right">arrow_drop_down</i></a></li>
+                    <li><a href="" class="dropdown-trigger" data-target="advanced-dropdown"><i
+                                class="material-icons left">security</i>
+                            Advanced <i class="material-icons right">arrow_drop_down</i></a></li>
+                    <li><a href="" class="dropdown-trigger" data-target="system-dropdown"><i
+                                class="material-icons left">computer</i>
+                            System <i class="material-icons right">arrow_drop_down</i></a></li>
+                    <li><a href="" class="dropdown-trigger" data-target="device-dropdown"><i
+                                class="material-icons left">power_settings_new</i>
+                            Device <i class="material-icons right">arrow_drop_down</i></a></li>
+                    <li><a href="logout"><i class="material-icons left">logout</i>Logout</a></li>
+                </ul>
+                {% elif user_role == 'user' %}
+                <a href="dashboard" data-target="mobile-nav-user" class="sidenav-trigger"><i
+                        class="material-icons">menu</i></a>
+                <ul class="right remove-big-menu">
+                    <li><a href="dashboard"><i class="material-icons left">dashboard</i>Dashboard</a></li>
+                    <li><a href="system/reports"><i class="material-icons left">assignment_late</i> Reports</a></li>
+                    <li><a href="logout"><i class="material-icons left">logout</i>Logout</a></li>
+                </ul>
+                {% elif login_btn %}
+                <a href="login"><i class="material-icons left">send</i>Login</a>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- dropdown -->
+    <ul id="settings-dropdown" class="dropdown-content">
+        <li><a href="settings/dns"><i class="material-icons left">dns</i> DNS</a></li>
+        <li><a href="settings/dhcp"><i class="material-icons left">filter_b_and_w</i> DHCP</a></li>
+        <li><a href="settings/interface"><i class="material-icons left">format_italic</i> Interface</a></li>
+        <li><a href="settings/logging"><i class="material-icons left">description</i> Logging</a></li>
+        <li><a href="settings/syslog"><i class="material-icons left">file_copy</i> Syslog</a></li>
+        <li><a href="settings/categories"><i class="material-icons left">library_books</i> Categories</a></li>
+    </ul>
+    <ul id="device-dropdown" class="dropdown-content">
+        <li><a href="device/restart"><i class="material-icons left">refresh</i> Restart</a></li>
+        <li><a href="device/shutdown"><i class="material-icons left">power_settings_new</i> Shutdown</a></li>
+    </ul>
+    <ul id="advanced-dropdown" class="dropdown-content">
+        <li><a href="/advanced/whitelist"><i class="material-icons">thumb_up</i> Whitelist</a></li>
+        <li><a href="/advanced/blacklist"><i class="material-icons">thumb_down</i> Blacklist</a></li>
+        <li><a href="/advanced/domain"><i class="material-icons">collections_bookmark</i> Domain</a></li>
+        <li><a href="/advanced/ip"><i class="material-icons">verified_user</i> IP</a></li>
+        <li><a href="/advanced/firewall"><i class="material-icons">security</i> Firewall</a></li>
+        <li><a href="/advanced/ips"><i class="material-icons">report</i> IPS/IDS</a></li>
+    </ul>
+    <ul id="system-dropdown" class="dropdown-content">
+        <li><a href="system/users"><i class="material-icons">group</i> Users</a></li>
+        <li><a href="system/backups"><i class="material-icons left">backup</i> Backups</a></li>
+        <li><a href="system/reports"><i class="material-icons">assignment_late</i> Reports</a></li>
+        <li><a href="system/logs"><i class="material-icons">assignment</i> Logs</a></li>
+        <li><a href="system/services"><i class="material-icons left">sync</i> Services</a></li>
+    </ul>
+    <!-- end dropdown-->
+
+    <!-- sidenav -->
+    <ul class="sidenav" id="mobile-nav">
+        <li><a href="dashboard"><i class="material-icons left">dashboard</i>Dashboard</a></li>
+        <li><a href="" class="dropdown-trigger" data-target="sidenav-settings-dropdown"><i
+                    class="material-icons left">settings</i>
+                Settings <i class="material-icons right">arrow_drop_down</i></a></li>
+        <li><a href="" class="dropdown-trigger" data-target="sidenav-advanced-dropdown"><i
+                    class="material-icons left">security</i>
+                Advanced <i class="material-icons right">arrow_drop_down</i></a></li>
+        <li><a href="" class="dropdown-trigger" data-target="sidenav-system-dropdown"><i
+                    class="material-icons left">computer</i>
+                System <i class="material-icons right">arrow_drop_down</i></a></li>
+        <li><a href="" class="dropdown-trigger" data-target="sidenav-device-dropdown"><i
+                    class="material-icons left">power_settings_new</i>
+                Device <i class="material-icons right">arrow_drop_down</i></a></li>
+        <li><a href="logout"><i class="material-icons left">logout</i>Logout</a></li>
+    </ul>
+    <!-- sidenav dropdown -->
+    <ul id="sidenav-settings-dropdown" class="dropdown-content">
+        <li><a href="settings/dns"><i class="material-icons left">dns</i> DNS</a></li>
+        <li><a href="settings/dhcp"><i class="material-icons left">filter_b_and_w</i> DHCP</a></li>
+        <li><a href="settings/interface"><i class="material-icons left">format_italic</i> Interface</a></li>
+        <li><a href="settings/logging"><i class="material-icons left">description</i> Logging</a></li>
+        <li><a href="settings/syslog"><i class="material-icons left">file_copy</i> Syslog</a></li>
+        <li><a href="settings/categories"><i class="material-icons left">library_books</i> Categories</a></li>
+    </ul>
+    <ul id="sidenav-device-dropdown" class="dropdown-content">
+        <li><a href="device/restart"><i class="material-icons left">refresh</i> Restart</a></li>
+        <li><a href="device/shutdown"><i class="material-icons left">power_settings_new</i> Shutdown</a></li>
+    </ul>
+    <ul id="sidenav-advanced-dropdown" class="dropdown-content red">
+        <li><a href="/advanced/whitelist"><i class="material-icons">thumb_up</i> Whitelist</a></li>
+        <li><a href="/advanced/blacklist"><i class="material-icons">thumb_down</i> Blacklist</a></li>
+        <li><a href="/advanced/domain"><i class="material-icons">collections_bookmark</i> Domain</a></li>
+        <li><a href="/advanced/ip"><i class="material-icons">verified_user</i> IP</a></li>
+        <li><a href="/advanced/firewall"><i class="material-icons">security</i> Firewall</a></li>
+        <li><a href="/advanced/ips"><i class="material-icons">report</i> IPS/IDS</a></li>
+    </ul>
+    <ul id="sidenav-system-dropdown" class="dropdown-content red">
+        <li><a href="system/users"><i class="material-icons">group</i> Users</a></li>
+        <li><a href="system/backups"><i class="material-icons left">backup</i> Backups</a></li>
+        <li><a href="system/reports"><i class="material-icons">assignment_late</i> Reports</a></li>
+        <li><a href="system/logs"><i class="material-icons">assignment</i> Logs</a></li>
+        <li><a href="system/services"><i class="material-icons left">sync</i> Services</a></li>
+    </ul>
+    <!-- end sidenav dropdown -->
+
+    <!-- sidenav role > USER -->
+    <ul class="sidenav" id="mobile-nav-user">
+        <li><a href="dashboard"><i class="material-icons left">dashboard</i>Dashboard</a></li>
+        <li><a href="system/reports"><i class="material-icons">assignment_late</i> Reports</a></li>
+        <li><a href="logout"><i class="material-icons left">logout</i>Logout</a></li>
+    </ul>
+</header>

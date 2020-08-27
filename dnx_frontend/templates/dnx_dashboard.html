@@ -1,0 +1,152 @@
+{% extends('layout.html') %}
+{% block body %}
+{% if dashboard['notify'] %}
+<div id="dash-modal" class="modal modal-pop">
+    <div class="modal-content">
+        <script>var error = true;</script>
+        <h5 class="red-text">{{dashboard['notify']}}</h5>
+    </div>
+    <a class="modal-close waves-effect waves-green btn-flat right">OK</a>
+</div>
+{% endif %}
+<!-- the boxes to show "at a glance" -->
+<section id="why-me" class="section scrollspy grey lighten-4 center">
+    <div class="container">
+        <h4 class="red-text">Blocked (Last 30 Days)</h4>
+        <div class="row row-flex">
+            <div class="col s12 m4">
+                <div class="card-panel card-panel-eql">
+                    <i class="material-icons large red-text">info</i><br>
+                    <h4>Unique Domains</h4>
+                    <ul>
+                        <h1>{{dashboard['domain_count']}}</h1>
+                    </ul>
+                </div>
+            </div>
+            {% if dashboard['infected_hosts'] %}
+            <div class="col s12 m4">
+                <div class="card-panel card-panel-eql">
+                    <i class="material-icons large red-text">report_problem</i><br>
+                    <h4>Infected Hosts</h4>
+                    <ul>
+                        {% for value in dashboard['infected_hosts'] %}
+                        <li>{{value[0]}} | {{value[1]}} | {{value[3]}}</span></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% else %}
+            <div class="col s12 m4">
+                <div class="card-panel card-panel-eql">
+                    <i class="material-icons large red-text">error</i><br>
+                    <h4>Top Domains</h4>
+                    <ul>
+                        {% for domain, category in dashboard['top_domains'].items() %}
+                        <li>
+                            <span style="float: left">{{domain}}</span><span class="badge">{{category}}</span>
+                        </li>
+                        <br>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+            <div class="col s12 m4">
+                <div class="card-panel card-panel-eql">
+                    <i class="material-icons large red-text">cancel</i><br>
+                    <h4>Total Requests</h4>
+                    <ul>
+                        <h1>{{dashboard['request_count']}}</h1>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- Tabs for statistics -->
+<section id="statistics">
+    <div class="container">
+        <div class="row">
+            <div class="col s12 m12 l12 xl12">
+                <h4 class="red-text">System Information</h4>
+                <ul class="tabs">
+                    <li class="tab col s3 m3 l4 xl2"><a class="active" href="#server-stat">Server Status</a></li>
+                    <li class="tab col s3 m3 l4 xl2"><a href="#system-stat">System Stats</a></li>
+                    <li class="tab col s3 m3 l4 xl2"><a href="#interface-stat">Interface Stats</a></li>
+                </ul>
+            </div>
+            <!-- server stat -->
+            <div id="server-stat" class="col s12 m12">
+                <table class="striped">
+                    <thead>
+                        <tr>
+                            <th>DNS Server1</th>
+                            <th>DNS Server2</th>
+                            <th>DNS Proxy</th>
+                            <th>IP Proxy</th>
+                            <th>IPS/IDS</th>
+                            <th>DHCP Server</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            {% for server in dashboard['dns_servers'].values() %}
+                            <td>{{server['name']}} : {{server['status']}} {% if 'tls' in server %} | TLS:
+                                {{server['tls']}} {% endif %}
+                                ({{server['ip_address']}})</td>
+                            {% endfor %}
+                            {% for mod, status in dashboard['module_status'].items() %}
+                            {% if status %}
+                            <td>UP</td>
+                            {% else %}
+                            <td>Down</td>
+                            {% endif %}
+                            {% endfor %}
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- system stat tab-->
+            <div id="system-stat" class="col s12 m12">
+                <table class="striped">
+                    <thead>
+                        <tr>
+                            <th>CPU Utilization:</th>
+                            <th>RAM Utilization:</th>
+                            <th>System Uptime:</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{{dashboard['cpu']}}</td>
+                            <td>{{dashboard['ram']}}</td>
+                            <td>{{dashboard['uptime']}}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- interface tab content -->
+            <div id="interface-stat" class="col s12 m12">
+                <table class="striped">
+                    <thead>
+                        <tr>
+                            <th>Interface</th>
+                            <th>Input Rate</th>
+                            <th>Output Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for interface, speed in dashboard['interfaces'].items() %}
+                        <tr>
+                            <td>{{interface}}</td>
+                            <td>{{speed[0]}}</td>
+                            <td>{{speed[1]}}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends('layout.html') %}
+{% block body %}
+<!-- slider (good UX however kind of pointless if you don't have anything to display that's really neat? -->
+{% if hasSlider %}
+{% include('slider.html') %}
+{% endif %}
+<!-- Tabs for statistics -->
+<section id="dropdown" class="section">
+    <div class="container">
+        <div class="col s12 m12">
+            <div class="card-panel">
+                <h4 class="red-text">System Logs</h4>
+                <div class="row">
+                    <form action="system/logs" method="POST">
+                        <div class="input-field col s10 m6">
+                            <select name="table" onchange="this.form.submit()">
+                                <option value="combined" {% if menu=='1' %} selected {% endif %} onclick="activeTab(1)"
+                                    >Combined Log</option>
+                                <option value="system" {% if menu=='2' %} selected {% endif %} onclick="activeTab(2)"
+                                    >System Log</option>
+                                <option value="update" {% if menu=='3' %} selected {% endif %} onclick="activeTab(3)"
+                                    >Update Log</option>
+                                <option value="logins" {% if menu=='4' %} selected {% endif %} onclick="activeTab(4)"
+                                    >Logins Log</option>
+                                <option value="dns_proxy" {% if menu=='5' %} selected {% endif %}onclick="activeTab(5)"
+                                    >DNS Proxy Log</option>
+                                <option value="ip_proxy" {% if menu=='6' %} selected {% endif %} onclick="activeTab(6)"
+                                    >IP Proxy Log</option>
+                                <option value="ips" {% if menu=='7' %} selected {% endif %} onclick="activeTab(7)"
+                                    >IPS Log</option>
+                                <option value="dhcp_server" {% if menu=='8' %} selected {% endif %}
+                                    onclick="activeTab(8)">DHCP Server Log</option>
+                                <option value="syslog" {% if menu=='9' %} selected {% endif %} onclick="activeTab(9)"
+                                    >Syslog Log</option>
+                            </select>
+                            <label for="table">Log Files</label>
+                        </div>
+                        <noscript>
+                            <div class="input-field col s3 m3">
+                                <button class="btn waves-effect waves-light col s4">
+                                    <i class="material-icons">cached</i>
+                                </button>
+                            </div>
+                        </noscript>
+                    </form>
+                </div>
+                <div class="row">
+                    <table class="striped">
+                        <thead>
+                            <tr>
+                                <th>Date/Time</th>
+                                <th>Log Entry</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if table_data %}
+                            {% for date_time, log_entry in table_data %}
+                            <tr>
+                                <td>{{date_time}}</td>
+                                <td>{{log_entry}}</td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td>No Logs</td>
+                                <td></td>
+                            </tr>
+                        </tbody>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

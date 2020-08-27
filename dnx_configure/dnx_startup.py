@@ -14,38 +14,57 @@ import dnx_configure.dnx_configure as configure
 from dnx_logging.log_main import LogHandler as Log
 from dnx_configure.dnx_interface_services import interface_bandwidth
 from dnx_configure.dnx_file_operations import ConfigurationManager
-from dnx_configure.dnx_iptables import Defaults, IPTableManager as IPTables
-from dnx_database.ddb_connector import DBConnector
+from dnx_configure.dnx_iptables import IPTableManager as IPTables
+from dnx_database.ddb_connector_sqlite import DBConnector
 from dnx_logging.log_main import LogHandler
 
 __all__ = (
     'Startup'
 )
 
+
+# TODO: initialize Log
 LOG_MOD = 'system'
+
+_run_script = False
+_update_script = Path(f'{HOME_DIR}/dnx_configure/update_script.py')
+if (_update_script.is_file()):
+    from dnx_configure.update_script import UpdateScript as US
+    _run_script = True
 
 class Startup:
     def run(self):
-        self.restore_iptables()
         self.apply_network_forwarding()
         self.configure_ipv6_iptables()
+        self.restore_iptables()
         if (_run_script):
             self.update_startup_script()
         self.reset_flask_key()
         self.reset_update_flags()
         self.create_database_tables()
 
+    # ensuring system allows forwarding. NOTE: probably not required for hardware unit as this is enabled by default.
+    def apply_network_forwarding(self):
+        IPTables.network_forwarding()
+
+    # changing default action for IPv6 to block everything on all chains in main table
+    def configure_ipv6_iptables(self):
+        IPTables.block_ipv6()
+
     # loading IP Tables from file
     def restore_iptables(self):
         IPTables().restore()
 
-    # Ensuring System allows forwarding. NOTE: probably not required for hardware unit as this is enabled by default.
-    def apply_network_forwarding(self):
-        Defaults().network_forwarding()
-
-    # changing default action for IPv6 to block everything on all chains in main table
-    def configure_ipv6_iptables(self):
-        Defaults().block_ipv6()
+    # Running startup script if present (to change things from updates)
+    def update_startup_script(self):
+        UpdateScript = US()
+        try:
+            UpdateScript.run()
+        except Exception:
+            Log.error('DNX update script failed to run on startup.')
+        else:
+            Log.notice('DNX update script ran on startup.')
+            os.remove(_update_script)
 
     def reset_flask_key(self):
         with ConfigurationManager('config') as dnx:

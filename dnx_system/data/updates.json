@@ -1,0 +1,28 @@
+{
+    "updates": {
+        "in_progress": false,
+        "server": {
+            "status": false
+        },
+        "system": {
+            "version": "1.0.0",
+            "current": false,
+            "restart": false,
+            "error": null
+        },
+        "signature": {
+            "domain": {
+                "version": "20191023-1",
+                "current": true,
+                "restart": false,
+                "error": null
+            },
+            "ip": {
+                "version": "20191024-1",
+                "current": true,
+                "restart": false,
+                "error": null
+            }
+        }
+    }
+}

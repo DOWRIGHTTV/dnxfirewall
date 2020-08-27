@@ -13,11 +13,11 @@ sys.path.insert(0, _HOME_DIR)
 from dnx_iptools.dnx_structs import * # pylint: disable=unused-wildcard-import
 
 __all__ = (
-    'checksum_icmp', 'checksum_ipv4', 'checksum_tcp',
+    'checksum_dnx', 'checksum_icmp', 'checksum_ipv4', 'checksum_tcp',
     'convert_dns_string_to_bytes', 'convert_mac_to_bytes',
     'convert_mac_to_string', 'convert_string_to_bitmap',
     'create_dns_query_header', 'create_dns_response_header',
-    'icmp_reachable', 'parse_query_name'
+    'create_dnx_proto_packet', 'icmp_reachable', 'parse_query_name'
 )
 
 # will ping specified host. to be used to prevent duplicate ip address handouts.
@@ -73,6 +73,16 @@ def checksum_icmp(msg):
     s  = ~s & 0xffff
 
     return checksum_pack(s)
+
+# calculates and return dnx header checksum
+def checksum_dnx(msg):
+    s = 0
+    while msg:
+        s  += (msg[0] + (msg[1] << 8))
+        msg = msg[2:]
+
+    s += (s >> 16)
+    return ~s & 0xffff
 
 def convert_mac_to_string(mac_address):
     string_mac = []
@@ -161,3 +171,16 @@ def create_dns_query_header(dns_id, arc=0, *, cd):
         (ra <<  7) | (zz <<  6) | (ad <<  5) | (cd << 4) | (rc << 0)
 
     return dns_header_pack(dns_id, f, 1, 0, 0, arc)
+
+def create_dnx_proto_packet(data, *, ident, dtype, lcv=0, cnv=0):
+    checksum = b'\x00\x00'
+    r2, r1, data_len = 0, 0, len(data)
+    v_byte = (r2 << 7) | (r1 << 6) | (lcv << 5) | (cnv << 4) | (dtype << 0)
+    for i in range(2):
+        send_data = [
+            dnx_header_pack(ident, v_byte, data_len, checksum), data
+        ]
+        if i: break
+        checksum = checksum_pack(checksum_dnx(b''.join(send_data)))
+
+    return send_data

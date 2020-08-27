@@ -1,0 +1,52 @@
+{
+    "dns_proxy": {
+        "keyword": {
+            "enabled": [
+                "cryptominer"
+            ]
+        },
+        "categories": {
+            "default": {
+                "malicious": {
+                    "enabled": true,
+                    "keyword": false
+                },
+                "cryptominer": {
+                    "enabled": true,
+                    "keyword": false
+                },
+                "telemetry": {
+                    "enabled": false,
+                    "keyword": false
+                },
+                "ads": {
+                    "enabled": false,
+                    "keyword": false
+                },
+                "vpn": {
+                    "enabled": false,
+                    "keyword": false
+                }
+            },
+            "user_defined": {}
+        },
+        "tlds": {
+            ".ru": true,
+            ".cn": true,
+            ".xxx": true,
+            ".porn": true,
+            ".adult": true,
+            ".ads": true,
+            ".click": true,
+            ".download": true,
+            ".top": true,
+            ".loan": true,
+            ".work": true,
+            ".men": true,
+            ".cf": true,
+            ".gq": true,
+            ".ml": true,
+            ".ga": true
+        }
+    }
+}

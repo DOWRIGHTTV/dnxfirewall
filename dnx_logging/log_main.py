@@ -17,14 +17,12 @@ sys.path.insert(0, HOME_DIR)
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_iptools.dnx_standard_tools import looper, classproperty, dnx_queue
 from dnx_configure.dnx_file_operations import load_configuration, cfg_read_poller, change_file_owner
-from dnx_database.ddb_connector import DBConnector
+from dnx_database.ddb_connector_sqlite import DBConnector
 from dnx_configure.dnx_system_info import System
 
 
 class LogService:
     def __init__(self):
-        self.System = System()
-
         self.log_modules = [
             'dhcp_server', 'dns_proxy', 'ip_proxy',
             'ips', 'syslog', 'system', 'update', 'logins'
@@ -41,7 +39,7 @@ class LogService:
     def organize(self):
         # print('[+] Starting organize operation.')
         log_entries = []
-        date = ''.join(self.System.date())
+        date = ''.join(System.date())
         for module in self.log_modules:
             module_entries = self.combine_logs(module, date)
             if (module_entries):

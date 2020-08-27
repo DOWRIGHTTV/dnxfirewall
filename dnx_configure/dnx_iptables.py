@@ -1,41 +1,48 @@
 #!/usr/bin/python3
 
 import os, sys
-import time
 import fcntl
-import json
-import threading
-import asyncio
 
-from subprocess import run, run, CalledProcessError, DEVNULL
+from subprocess import run, CalledProcessError, DEVNULL
 from types import SimpleNamespace as SName
 
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import *
+from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_configure.dnx_file_operations import load_configuration
 
 __all__ = (
-    'Defaults', 'IPTableManager'
+    'IPTableManager'
 )
 
+_err_write = sys.stderr.write
+_system = os.system
 
-class Defaults:
-    def start(self):
-        self.get_settings()
-        try:
-            self.create_new_chains()
-            self.prerouting_set()
-            self.mangle_forward_set()
-            self.main_forward_set()
-            self.main_input_set()
-            self.main_output_set()
-            self.nat()
-            self.network_forwarding()
-            self.block_ipv6()
-        except Exception as E:
-            print(E)
+
+class _Defaults:
+    '''class containing methods to build default iptable rulesets.'''
+
+    def __init__(self, lan_int, wan_int):
+        self.lan_int = lan_int
+        self.wan_int = wan_int
+
+    # calling all methods in the class dict.
+    def load(self):
+        for n, f in self.__dict__.items():
+            if ('__' not in n):
+                try:
+                    f(self)
+                except Exception as E:
+                    _err_write(E)
+
+    def get_settings(self):
+        dnx_settings = load_configuration('config')['settings']
+
+        self.lan_int = dnx_settings['interfaces']['lan']['ident']
+        self.wan_int = dnx_settings['interfaces']['wan']['ident']
+
+        self.custom_chains = ['FIREWALL', 'NAT', 'DOH']
 
     def create_new_chains(self):
         for chain in self.custom_chains:
@@ -57,23 +64,34 @@ class Defaults:
 
     def main_forward_set(self):
         run('iptables -P FORWARD DROP', shell=True) # Default DROP
+
+        # HTTPS Proxy (JA3 only) | NOTE: this is before conntracking, but wont actually match unless connection first gets allowed
+        run(f'iptables -A FORWARD -i {self.lan_int} -p tcp -m tcp --dport 443 -m connbytes --connbytes 4:4 '
+            '--connbytes-mode packets --connbytes-dir both -j NFQUEUE --queue-num 3', shell=True)
+        run(f'iptables -A FORWARD -i {self.wan_int} -p tcp -m tcp --sport 443 -m connbytes --connbytes 5:5 '
+            '--connbytes-mode packets --connbytes-dir both -j NFQUEUE --queue-num 3', shell=True)
+
         run('iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT', shell=True) # Tracking connection state for return traffic from WAN back to Inside
+
         # standard blocking for unwanted DNS protocol/ports to help prevent proxy bypass
         run(f'iptables -A FORWARD -i {self.lan_int} -p udp --dport 853 -j REJECT --reject-with icmp-port-unreachable', shell=True) # Block External DNS over TLS Queries UDP (Public Resolver)
         run(f'iptables -A FORWARD -i {self.lan_int} -p tcp --dport  53 -j REJECT --reject-with tcp-reset', shell=True) # Block External DNS Queries TCP (Public Resolver)
         run(f'iptables -A FORWARD -i {self.lan_int} -p tcp --dport 853 -j REJECT --reject-with tcp-reset', shell=True) # Block External DNS over TLS Queries TCP (Public Resolver)
         run(f'iptables -A FORWARD -i {self.lan_int} -j DOH', shell=True)
 
-        run(f'iptables -A FORWARD -i {self.lan_int} -p icmp -j ACCEPT', shell=True) # ALLOW ICMP OUTBOUND
-        run(' iptables -A FORWARD -p tcp -m mark --mark 10 -j NFQUEUE --queue-num 1', shell=True) # IP Proxy TCP
-        run(' iptables -A FORWARD -p tcp -m mark --mark 11 -j NFQUEUE --queue-num 1', shell=True) # IP Proxy TCP
-        run(' iptables -A FORWARD -p udp -m mark --mark 10 -j NFQUEUE --queue-num 1', shell=True) # IP Proxy UDP
-        run(' iptables -A FORWARD -p udp -m mark --mark 11 -j NFQUEUE --queue-num 1', shell=True) # IP Proxy UDP
+        # run(f'iptables -A FORWARD -i {self.lan_int} -p icmp -j ACCEPT', shell=True) # ALLOW ICMP OUTBOUND
+        run('iptables -A FORWARD -p tcp -m mark --mark 10 -j NFQUEUE --queue-num 1', shell=True) # IP Proxy TCP
+        run('iptables -A FORWARD -p tcp -m mark --mark 11 -j NFQUEUE --queue-num 1', shell=True) # IP Proxy TCP
+        run('iptables -A FORWARD -p udp -m mark --mark 10 -j NFQUEUE --queue-num 1', shell=True) # IP Proxy UDP
+        run('iptables -A FORWARD -p udp -m mark --mark 11 -j NFQUEUE --queue-num 1', shell=True) # IP Proxy UDP
+
         # ip proxy drop, but allowing ips to inspect to ddos
         run(f'iptables -A FORWARD -m mark --mark 25 -j NFQUEUE --queue-num 2', shell=True) # IPS UDP
+
         # IPS proper
         run(f'iptables -A FORWARD -p icmp -m mark --mark 11 -j NFQUEUE --queue-num 2', shell=True) # IPS ICMP - only type 8 will be checked, rest forwaded
         run(f'iptables -A FORWARD -m mark --mark 20 -j NFQUEUE --queue-num 2', shell=True) # IPS TCP/UDP
+
         # custom chains
         run(' iptables -A FORWARD -m mark --mark 30 -j FIREWALL', shell=True) # User configured firewall rules go HERE
         run(f'iptables -A FORWARD -i {self.wan_int} -m mark --mark 30 -j NAT', shell=True) # Checking Port Forward Allow Rules
@@ -85,7 +103,7 @@ class Defaults:
 
         run(' iptables -A INPUT -p tcp --dport 22 -j ACCEPT', shell=True) # NOTE: SSH CONN FOR LAB TESTING
         run(' iptables -A INPUT -p udp -d 127.0.0.53 --dport 53 -j ACCEPT', shell=True) # NOTE: TEMP FOR UBUNTU DNS SERVICE
-        run(' iptables -A INPUT -s 127.0.0.1/24 -d 127.0.0.1/24 -j ACCEPT', shell=True) # PGRES SQL LOCAL PORT
+        run(' iptables -A INPUT -s 127.0.0.1/24 -d 127.0.0.1/24 -j ACCEPT', shell=True) # PGRES SQL/ LOCAL SOCKETS
         run(f'iptables -A INPUT -i {self.lan_int} -p icmp --icmp-type any -j ACCEPT', shell=True) # Allow ICMP to Firewall
         run(f'iptables -A INPUT -i {self.lan_int} -p udp --dport 67 -j ACCEPT', shell=True) # DHCP Server listening port
         run(f'iptables -A INPUT -i {self.lan_int} -p udp --dport 53 -j ACCEPT', shell=True) # DNS Query(To firewall DNS Relay) is allowed in,
@@ -104,26 +122,6 @@ class Defaults:
         run(f'iptables -t nat -A POSTROUTING -o {self.wan_int} -j MASQUERADE', shell=True) # Main masquerade rule. Inside to Outside
         run(f'iptables -t nat -I PREROUTING  -i {self.lan_int} -p udp --dport 53 -j REDIRECT --to-port 53', shell=True)
 
-    def network_forwarding(self):
-        run('echo 1 > /proc/sys/net/ipv4/ip_forward', shell=True) # Allow forwarding through system, required for NAT to work.
-
-    def block_ipv6(self):
-        run(f'ip6tables -P INPUT DROP', shell=True, stdout=DEVNULL)
-        run(f'ip6tables -P FORWARD DROP', shell=True, stdout=DEVNULL)
-        run(f'ip6tables -P OUTPUT DROP', shell=True, stdout=DEVNULL)
-
-    def get_settings(self):
-        interface_settings = load_configuration('config')
-
-        interface = interface_settings['settings']['interfaces']
-        self.lan_int = interface['lan']['ident']
-        self.wan_int = interface['wan']['ident']
-
-        self.custom_chains = ['FIREWALL', 'NAT', 'DOH']
-
-
-_err_write = sys.stderr.write
-
 
 class IPTableManager:
     ''' This is the IP Table rule adjustment manager. if class is called in as a context manager, all method calls
@@ -131,11 +129,10 @@ class IPTableManager:
     will be automatically saved upon exit of the context, otherwise they will have to be saved manually.
     '''
     def __init__(self):
-        interface_settings = load_configuration('config')
+        dnx_settings = load_configuration('config')['settings']
 
-        interface_settings = interface_settings['settings']['interfaces']
-        self._wan_int = interface_settings['wan']['ident']
-        self._lan_int = interface_settings['lan']['ident']
+        self._wan_int = dnx_settings['interfaces']['wan']['ident']
+        self._lan_int = dnx_settings['interfaces']['lan']['ident']
 
         self._iptables_lock_file = f'{HOME_DIR}/dnx_system/iptables.lock'
 
@@ -147,7 +144,7 @@ class IPTableManager:
 
     def __exit__(self, exc_type, exc_val, traceback):
         if (exc_type is None):
-            run(f'sudo iptables-save > {HOME_DIR}/dnx_system/iptables/iptables_backup.cnf', shell=True)
+            self.commit()
 
         fcntl.flock(self._iptables_lock, fcntl.LOCK_UN)
         self._iptables_lock.close()
@@ -157,49 +154,49 @@ class IPTableManager:
     def commit(self):
         '''explicit, process safe, call to save iptables to backup file. this is not needed if using
         within a context manager as the commit happens on exit.'''
+
         run(f'sudo iptables-save > {HOME_DIR}/dnx_system/iptables/iptables_backup.cnf', shell=True)
 
     def restore(self):
         '''process safe restore of iptable rules in/from backup file.'''
+
         run(f'sudo iptables-restore < {HOME_DIR}/dnx_system/iptables/iptables_backup.cnf', shell=True)
 
-    @staticmethod
-    def purge_proxy_rules(*, table, chain):
-        run(f'sudo iptables -t {table} -F {chain}', shell=True)
+    # TODO: think about the duplicate rule check before running this as a safety for creating duplicate rules
+    def apply_defaults(self):
+        ''' convenience function wrapper around the iptable Default class. all iptable default rules will
+        be loaded. if used within the context manager (recommended), the iptables lock will be aquired
+        before continuing (will block until done). iptable commit will be done on exit.
 
-    @staticmethod
-    def proxy_add_rule(ip_address, *, table, chain):
-        run(
-            f'sudo iptables -t {table} -A {chain} -s {ip_address} -j DROP && \
-            sudo iptables -t {table} -A {chain} -d {ip_address} -j DROP', shell=True
-            )
+        NOTE: this method should not be called more than once during system operation or duplicate rules
+        will be inserted into iptables.'''
 
-        _err_write(f'RULE INSERTED: {ip_address} | {fast_time()}')
+        defaults = _Defaults(self._lan_int, self._wan_int)
+        defaults.load()
 
-    @staticmethod
-    def proxy_del_rule(ip_address, *, table, chain):
-        run(
-            f'sudo iptables -t {table} -D {chain} -s {ip_address} -j DROP && \
-            sudo iptables -t {table} -D {chain} -d {ip_address} -j DROP', shell=True
-            )
-
-        _err_write(f'RULE REMOVED: {ip_address} | {fast_time()}')
+        _err_write('IPTable defaults ')
 
     def add_rule(self, iptable_rule):
         opt = SName(**iptable_rule)
 
         firewall_rule = None
         if (opt.protocol == 'any'):
-            firewall_rule  = f'sudo iptables -I FIREWALL {opt.pos} -s {opt.src_ip}/{opt.src_netmask} '
-            firewall_rule += f'-d {opt.dst_ip}/{opt.dst_netmask} -j {opt.action}'
+            firewall_rule = (
+                f'sudo iptables -I FIREWALL {opt.pos} -s {opt.src_ip}/{opt.src_netmask} '
+                f'-d {opt.dst_ip}/{opt.dst_netmask} -j {opt.action}'
+            )
 
         elif (opt.protocol == 'icmp'):
-            firewall_rule  = f'sudo iptables -I FIREWALL {opt.pos} -p icmp -s {opt.src_ip}/{opt.src_netmask} '
-            firewall_rule += f'-d {opt.dst_ip}/{opt.dst_netmask} -j {opt.action}'
+            firewall_rule = (
+                f'sudo iptables -I FIREWALL {opt.pos} -p icmp -s {opt.src_ip}/{opt.src_netmask} '
+                f'-d {opt.dst_ip}/{opt.dst_netmask} -j {opt.action}'
+            )
 
         elif (opt.protocol in {'tcp', 'udp'}):
-            firewall_rule  = f'sudo iptables -I FIREWALL {opt.pos} -p {opt.protocol} -s {opt.src_ip}/{opt.src_netmask} '
-            firewall_rule += f'-d {opt.dst_ip}/{opt.dst_netmask} --dport {opt.dst_port} -j {opt.action}'
+            firewall_rule = (
+                f'sudo iptables -I FIREWALL {opt.pos} -p {opt.protocol} -s {opt.src_ip}/{opt.src_netmask} '
+                f'-d {opt.dst_ip}/{opt.dst_netmask} --dport {opt.dst_port} -j {opt.action}'
+            )
 
         if (firewall_rule):
             run(firewall_rule, shell=True)
@@ -211,11 +208,12 @@ class IPTableManager:
         nat_rule, nat_allow = None, None
 
         if (protocol == 'icmp'):
-            nat_rule = [f'sudo iptables -t nat -I NAT -i {self._wan_int} ',
-                f'-p {protocol} -j DNAT --to-destination {host_ip}']
+            nat_rule = (
+                f'sudo iptables -t nat -I NAT -i {self._wan_int} '
+                f'-p {protocol} -j DNAT --to-destination {host_ip}'
+            )
 
-            nat_allow = [f'sudo iptables -I NAT -i {self._wan_int} ',
-                f'-p {protocol} -j ACCEPT']
+            nat_allow = f'sudo iptables -I NAT -i {self._wan_int} -p {protocol} -j ACCEPT'
 
         else:
             nat_rule = [f'sudo iptables -t nat -I NAT -i {self._wan_int} -p {protocol} '
@@ -224,24 +222,58 @@ class IPTableManager:
             if (dst_port != host_port):
                 nat_rule.append(f':{host_port}')
 
-            nat_allow = [f'sudo iptables -I NAT -i {self._wan_int} '
-                f'-p {protocol} --dport {host_port} -j ACCEPT']
+            nat_rule = ''.join(nat_rule)
+
+            nat_allow = (
+                f'sudo iptables -I NAT -i {self._wan_int} -p {protocol} --dport {host_port} -j ACCEPT'
+            )
 
         if (nat_rule and nat_allow):
-            run(''.join(nat_rule), shell=True)
-            run(''.join(nat_allow), shell=True)
+            run(nat_rule, shell=True)
+            run(nat_allow, shell=True)
 
     def delete_nat(self, nat_rule):
         run(f'sudo iptables -t nat -D NAT {nat_rule}', shell=True)
         run(f'sudo iptables -D NAT {nat_rule}', shell=True)
 
-    def update_ip_whitelist(self, ip_address, whitelist_type, action):
-        action = {True: '-A', False: '-D'}[action]
-        if (whitelist_type == 'global'):
-            run(f'sudo iptables {action} IP_WHITELIST -s {ip_address} -j ACCEPT', shell=True)
+    @staticmethod
+    def network_forwarding():
+        run('echo 1 > /proc/sys/net/ipv4/ip_forward', shell=True) # Allow forwarding through system, required for NAT to work.
 
-        elif (whitelist_type == 'tor'):
-            run(f'sudo iptables -t mangle {action} TOR_WHITELIST -s {ip_address} -j ACCEPT', shell=True)
+    @staticmethod
+    def block_ipv6():
+        run('ip6tables -P INPUT DROP', shell=True)
+        run('ip6tables -P FORWARD DROP', shell=True)
+        run('ip6tables -P OUTPUT DROP', shell=True)
+
+    @staticmethod
+    def purge_proxy_rules(*, table, chain):
+        '''removing all rules from the sent in table and chain. this should be used only be called during
+        proxy initialization.'''
+
+        run(f'sudo iptables -t {table} -F {chain}', shell=True)
+
+    @staticmethod
+    def proxy_add_rule(ip_address, *, table, chain):
+        ''' inject ip table rules into the sent in table and chain. the ip_address argument will be blocked
+        as a source or destination of traffic. both rules are sharing a single os.system call.'''
+        _system(
+            f'sudo iptables -t {table} -A {chain} -s {ip_address} -j DROP && '
+            f'sudo iptables -t {table} -A {chain} -d {ip_address} -j DROP'
+            )
+
+        # NOTE: this should be removed one day
+        _err_write(f'RULE INSERTED: {ip_address} | {fast_time()}')
+
+    @staticmethod
+    def proxy_del_rule(ip_address, *, table, chain):
+        run(
+            f'sudo iptables -t {table} -D {chain} -s {ip_address} -j DROP && '
+            f'sudo iptables -t {table} -D {chain} -d {ip_address} -j DROP', shell=True, stdout=DEVNULL
+            )
+
+        # NOTE: this should be removed one day
+        _err_write(f'RULE REMOVED: {ip_address} | {fast_time()}')
 
     @staticmethod
     def update_dns_over_https():
@@ -256,6 +288,5 @@ class IPTableManager:
         run(f'sudo iptables -F DOH', shell=True)
 
 if __name__ == '__main__':
-    Defaults().start()
-    IPTableManager().commit()
-    _err_write('COMMITED IP TABLES')
+    with IPTableManager() as iptables:
+        iptables.apply_defaults()

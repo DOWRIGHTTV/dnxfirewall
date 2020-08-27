@@ -123,15 +123,14 @@ class System:
         run('sudo shutdown', shell=True)
 
     @staticmethod
+    # TODO: this seems completely fucked. ?????? are you high and drunk?
     def cpu_usage():
-        with open('/proc/stat', 'r') as CPU:
-            line = CPU.readline().split()
+        with open('/proc/stat', 'r') as cpu:
+            line = cpu.readline().split()
 
         idle = int(line[4])
-        b = 0
-        for entry in line[1:]:
-            b += int(entry)
-        idle *= 100/b
+
+        idle *= 100/sum([int(x) for x in line[1:]])
 
         percent = round(100 - idle, 2)
 #        print(utilization)
@@ -140,13 +139,15 @@ class System:
     @staticmethod
     def uptime():
         with open('/proc/uptime', 'r') as uptime:
-            uptime = uptime.readline().split()[0]
+            uptime = int(float(uptime.readline().split()[0]))
 
-            uptime = timedelta(0, int(float(uptime)))
-            utime = str(uptime).split()
-            if ('day' in str(uptime) or 'days' in str(uptime)):
+            uptime = str(timedelta(0, uptime))
+            utime = uptime.split()
+
+            if ('day' in uptime or 'days' in uptime):
                 utime2 = utime[2].split(':')
                 uptime = f'{utime[0]} day/s {utime2[0]} hour/s {utime2[1]} minute/s'
+
             else:
                 utime0 = utime[0].split(':')
                 uptime = f'0 day/s {utime0[0]} hour/s {utime0[1]} minute/s'
@@ -155,26 +156,28 @@ class System:
 
     @staticmethod
     def ram_usage():
-        meminfo = []
-        with open('/proc/meminfo', 'r') as RAM:
-            for i, line in enumerate(RAM, 1):
-                if (i not in {1,3}):
-                    continue
+        '''returns available ram %. 69.82%'''
+        total, available = None, None
+        with open('/proc/meminfo', 'r') as memory:
+            for line in memory:
+                if ('MemTotal' in line):
+                    total = int(line.split()[1])
 
-                usage = line.split()[1]
-                meminfo.append(usage)
+                elif ('MemAvailable' in line):
+                    available = int(line.split()[1])
 
-        ram = round(int(meminfo[1]) / int(meminfo[0]) * 100, 1)
-        ram = f'{ram}%'
+                if (total and available): break
+
+        ram = f'{round((total / available) * 100, 1)}%'
 #        print(ram)
         return ram
 
     @staticmethod
     def calculate_time_offset(logged_time):
         '''returns modified time based on current time offset settings.'''
-        offset_settings = load_configuration('logging_client')
+        logging = load_configuration('logging_client')['logging']
 
-        offset = offset_settings['logging']['time_offset']
+        offset = logging['time_offset']
         os_direction = offset['direction']
         os_amount    = offset['amount']
         offset       = int(f'{os_direction}{os_amount}') * 3600
@@ -198,7 +201,8 @@ class System:
     @staticmethod
     def format_time(epoch):
         '''return time in general 24h format. 19:08:15'''
-        return str(ctime(epoch).split()[3])
+
+        return f'{ctime(epoch).split()[3]}'
 
     @staticmethod
     def date(timestamp=None, string=False):
@@ -207,7 +211,8 @@ class System:
         dt = datetime.now()
         if (timestamp):
             dt = datetime.fromtimestamp(timestamp)
-        yr = str(dt.year)
+
+        yr = f'{dt.year}'
         mo = f'{dt.month:02}'
         dy = f'{dt.day:02}'
         if (string):
@@ -224,9 +229,8 @@ class System:
     @staticmethod
     def dns_status():
         dns_servers_status = load_configuration('dns_server_status')
-        dns_servers = load_configuration('dns_server')
+        dns_server = load_configuration('dns_server')['dns_server']
 
-        dns_server = dns_servers['dns_server']
         tls_enabled = dns_server['tls']['enabled']
         dns_servers = dns_server['resolvers']
         dns_servers_copy = deepcopy(dns_servers)
@@ -340,7 +344,7 @@ class Services:
     @staticmethod
     def status(service):
         try:
-            return run(f'sudo systemctl status {service}', shell=True, stdout=DEVNULL, check=True)
+            return run(f'sudo systemctl status {service}', shell=True, check=True, stdout=DEVNULL)
         except CalledProcessError:
             return False
 

@@ -2,16 +2,27 @@
 
 import time as _time
 import os as _os
+import sys as _sys
 
 from enum import Enum as _Enum, IntEnum as _IntEnum
 from ipaddress import IPv4Address as _IPv4Address
 
+fast_time  = _time.time
+fast_sleep = _time.sleep
+write_err  = _sys.stderr.write
 
-FTIME = _time.time # fast call for epoch timestamp
-fast_time = _time.time
+byte_join = b''.join
+str_join = ''.join
 
 VERBOSE = True
 ROOT = True if not _os.getuid() else False
+
+# globally sets which sql to use | sqlite3 = 0, psql = 1
+SQL_VERSION = 0
+
+#license server number validation
+LICENSE_SVR_VALIDATION = 599641200
+INVALID_FORM = 'Invalid form data.'
 
 #interface bandwidth
 INT_BANDWIDTH_TIMER = 5
@@ -20,8 +31,11 @@ INT_BANDWIDTH_TIMER = 5
 FILE_POLL_TIMER = 10
 
 # dnx user/group
-USER  = 'dnx'
-GROUP = 'dnx'
+USER  = 'free'
+GROUP = 'free'
+
+# Certificate authority store file
+CERTIFICATE_STORE = '/etc/ssl/certs/ca-certificates.crt'
 
 #front end domain height counts
 DF_DOMAIN_HEIGHT = 6
@@ -38,7 +52,6 @@ BROADCAST  = _IPv4Address('255.255.255.255')
 
 MAC_TEMPLATE = b'\x00\x00\x00\x00\x00\x00'
 L2_PROTO = 0x0800
-
 
 #CFG
 class CFG(_IntEnum):
@@ -68,6 +81,7 @@ class PROTO(_IntEnum):
     UDP      = 17
     DNS      = 53
     DHCP_SVR = 67
+    HTTPS    = 443
     DNS_TLS  = 853
 
 #MDNS_PORT       = 5353
@@ -117,7 +131,7 @@ NULL_ADDR = (None,None)
 
 TOP_DOMAIN_COUNT = 20
 HEARTBEAT_FAIL_LIMIT = 3
-KEEP_ALIVE_DOMAIN = 'duckduckgo.com'
+KEEP_ALIVE_DOMAIN = 'updates.dnxsec.com'
 
 class DNS(_IntEnum):
     #dns relay decisions
@@ -126,6 +140,9 @@ class DNS(_IntEnum):
     TIMED_OUT  = -3
     NO_NOTICE  = -4
     WAIT_COUNT = 7 # NEW 1ms*i in range(7)  | OLD:wait for decision * interval(1ms)
+    # module identifiers
+    SERVER = 0
+    PROXY  = 1
     #dns query types
     QUERY     = 0
     RESPONSE  = 1
@@ -144,14 +161,23 @@ class DNS(_IntEnum):
 class ICMP(_IntEnum):
     ECHO = 8
 
+class TLS(_IntEnum):
+    CLIENT_HELLO = 1
+    SERVER_HELLO = 2
+    CERTIFICATE  = 11
+    SERVER_HELLO_DONE = 14
+
 # ips detection engines
 # return status of detected portscans
 class IPS(_Enum):
+    DISABLED = 0
     DDOS     = 1
     PORTSCAN = 2
-    BLOCKED  = 3
-    MISSED   = 4
-    LOGGED   = 5
+    BOTH     = 3
+    BLOCKED  = 4
+    FILTERED = 5
+    MISSED   = 6
+    LOGGED   = 7
 
 # traffic direction / type
 class DIR(_Enum):
@@ -180,7 +206,7 @@ class DHCP(_IntEnum):
     RELEASE  = 7
     INFORM   = 8 # Add support
     DROP     = 9
-    # dhcp lease types
+    # dhcp lease types | these are required ints
     AVAILABLE   =  0
     RESERVATION = -1
     OFFERED     = -2
@@ -206,15 +232,33 @@ SEND_TO_FIREWALL = 30
 
 DNS_BIN_OFFSET = 4 # NOTE: 4 seems to be a good compromise of len(bins) vs len(buckets)
 class DNS_CAT(_IntEnum):
+    NONE = 0
+
     doh = -30
     whitelist = -20
     blacklist = -10
 
     malicious   = 10
     cryptominer = 11
+    telemetry   = 20
     ads = 30
+    vpn = 40
+    mature = 50
+    pornography = 60
+    drugs   = 70
+    weapons = 80
+    socialmedia = 90
+    dyndns = 100
+    p2p    = 110
+    gambling    = 120
+    videogames  = 130
+    purchases   = 140
+    remotelogin = 150
+    downloads   = 160
+    teentop50   = 1000
 
 class IPP_CAT(_IntEnum):
+    NONE = 0
     COMPROMISED = 10
     COMPROMISED_HOST = 11
     MALICIOUS   = 20
@@ -225,6 +269,7 @@ class IPP_CAT(_IntEnum):
     TOR_EXIT  = 32
 
 class GEO(_IntEnum):
+    NONE   = 0
     Brazil = 76
     China  = 156
     India  = 356

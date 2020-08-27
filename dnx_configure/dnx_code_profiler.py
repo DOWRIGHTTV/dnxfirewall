@@ -1,33 +1,41 @@
 #!/usr/bin/env python3
 
-import os, sys
+import os as _os
+import sys as _sys
+import time as _time
 
-import cProfile, pstats, io
+from io import StringIO as _StringIO
+from cProfile import Profile as _Profile
+from pstats import Stats as _Stats, SortKey as _SortKey
 
-from pstats import SortKey
-
-HOME_DIR = os.environ['HOME_DIR']
-sys.path.insert(0, HOME_DIR)
+HOME_DIR = _os.environ['HOME_DIR']
+_sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_file_operations import append_to_file
 
-FILENAME = 'ip_proxy.profile'
+_fast_time_ns = _time.perf_counter_ns
+_CUMU = _SortKey.CUMULATIVE
 
-def profiler(thing_to_be_profiled):
-    def wrapper(*args, **kwargs):
-        pr = cProfile.Profile()
-        pr.enable()
+# TODO: this is broken. wtf.
+def profiler(*, filename):
+    def decorator(thing_to_be_profiled):
+        def wrapper(*args, **kwargs):
+            pr = _Profile(_fast_time_ns)
+            pr.enable()
 
-        #profiled function
-        thing_to_be_profiled(*args, **kwargs)
+            #profiled function
+            thing_to_be_profiled(*args, **kwargs)
 
-        pr.disable()
-        s = io.StringIO()
-        sortby = SortKey.CUMULATIVE
-        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-        ps.print_stats()
+            pr.disable()
+            s = _StringIO()
 
-        append_to_file('='*10+'FUNCTION START'+'='*10+'\n', FILENAME, folder='dnx_system/profiler_results')
-        append_to_file(s.getvalue(), FILENAME, folder='dnx_system/profiler_results')
+            ps = _Stats(pr, stream=s).sort_stats(_CUMU)
+            ps.print_stats()
 
-    return wrapper
+            message = ''.join(['='*10, 'FUNCTION START', '='*10, '\n'])
+
+            append_to_file(message, filename, filepath='dnx_system/profiler_results')
+            append_to_file(s.getvalue(), filename, filepath='dnx_system/profiler_results')
+
+        return wrapper
+    return decorator

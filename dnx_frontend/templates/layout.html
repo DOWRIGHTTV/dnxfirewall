@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>DNX Firewall Security Appliance - Admin Panel</title>
+    <base href="/">
+    <link href="{{url_for('static', filename='assets/fonts/roboto.css')}}" rel="stylesheet">
+    <link href="{{url_for('static', filename='assets/css/icons.css')}}" rel="stylesheet">
+    <link href="{{url_for('static', filename='assets/css/style.css')}}" rel="stylesheet">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='assets/images/shield.png') }}">
+</head>
+<body>
+    {% include 'includes/_header.html' %}
+    {% block body %}{% endblock body %}
+    {% if standard_error %}
+    {% include 'includes/_error_notify.html' %}
+    {% endif %}
+    {% if idle_timeout %}
+    {% include 'includes/_idle_timeout.html' %}
+    {% endif %}
+    {% if footer %}
+    {% include 'includes/_footer.html' %}
+    {% endif %}
+    <!-- materialize js-->
+    <script src="{{url_for('static',filename='assets/js/materialize.min.js')}}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialized everything below OR you can individually initialize them + pass options
+            M.AutoInit();
+
+            var modal = document.querySelector(".modal-pop");
+            var instance = M.Modal.init(modal);
+            if (error) {
+            instance.open();
+            };
+
+            const slider = document.querySelectorAll(".slider");
+            if(slider) M.Slider.init(slider, {
+                indicators: false,
+                height: 500,
+                transition: 500,
+                interval: 6000
+            });
+        })
+        document.addEventListener('DOMContentLoaded', function() {
+            var elems = document.querySelectorAll('.dropdown-trigger');
+            var instances = M.Dropdown.init(elems, {
+                coverTrigger : false
+            });
+        })
+
+        function activeTab(n){
+        history.replaceState(null, null, window.location.pathname+"?tab="+n);
+        document.getElementById("timeout-tab").innerHTML = "<input type=hidden name=tab value="+n+">";
+        }
+
+        function activeMenu(n){
+        document.getElementById("timeout-menu").innerHTML = "<input type=hidden name=menu value="+n+">";
+        }
+
+        function idleTimeout(){
+            var timeoutNotify = document.querySelector(".modal-idle-timeout");
+            var notifyInstance = M.Modal.init(timeoutNotify);
+            notifyInstance.open();
+        }
+
+    </script>
+</body>
+</html>

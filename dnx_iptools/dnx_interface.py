@@ -2,10 +2,11 @@
 
 import time
 import socket
-import fcntl
 import csv
 
 from ipaddress import IPv4Address
+from fcntl import ioctl
+from socket import socket, inet_aton, AF_INET, SOCK_DGRAM
 
 from dnx_configure.dnx_constants import ONE_SEC
 from dnx_configure.dnx_file_operations import load_configuration
@@ -61,23 +62,46 @@ def wait_for_ip(interface):
 
         time.sleep(ONE_SEC)
 
-def get_src_ip(*, dst_ip):
-    '''return correct source ip address for a particular destination ip address based on
-    routing table. return will be an ipv4address object. will return None if error.'''
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect((str(dst_ip), 0))
+# oooook
+def masquerade_port(*, dst_ip):
+    s = socket(AF_INET, SOCK_DGRAM)
+    s.connect((f'{dst_ip}', 0))
     try:
-        return IPv4Address(s.getsockname()[0])
+        return s.getsockname()[1]
     except:
-        return None
+        return 0
     finally:
         s.close()
 
+def get_src_ip(*, dst_ip, packed=False):
+    '''return correct source ip address for a particular destination ip address based on routing table.
+
+    return will be bytes if packed is True or an ipv4address object otherwise. a zerod ip
+    will be returned if error.'''
+
+    s = socket(AF_INET, SOCK_DGRAM)
+    s.connect((f'{dst_ip}', 0))
+    if (packed):
+        try:
+            return inet_aton(s.getsockname()[0])
+        except:
+            return b'\x00'*4
+        finally:
+            s.close()
+
+    else:
+        try:
+            return IPv4Address(s.getsockname()[0])
+        except:
+            return IPv4Address('0.0.0.0')
+        finally:
+            s.close()
+
 def get_mac(*, interface):
     '''return raw byte mac address for sent in interface. will return None on OSError.'''
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s = socket(AF_INET, SOCK_DGRAM)
     try:
-        return fcntl.ioctl(s.fileno(), 0x8927,  fcntl_pack(bytes(interface, 'utf-8')))[18:24]
+        return ioctl(s.fileno(), 0x8927,  fcntl_pack(bytes(interface, 'utf-8')))[18:24]
     except OSError:
         return None
     finally:
@@ -85,10 +109,10 @@ def get_mac(*, interface):
 
 def get_ip_address(*, interface):
     '''return ip address object for current ip address for sent in interface. will return None on OSError.'''
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s = socket(AF_INET, SOCK_DGRAM)
     try:
         return IPv4Address(
-            fcntl.ioctl(s.fileno(), 0x8915, fcntl_pack(bytes(interface, 'utf-8')))[20:24]
+            ioctl(s.fileno(), 0x8915, fcntl_pack(bytes(interface, 'utf-8')))[20:24]
         )
     except OSError:
         return None
@@ -96,10 +120,10 @@ def get_ip_address(*, interface):
         s.close()
 
 def get_netmask(*, interface):
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s = socket(AF_INET, SOCK_DGRAM)
     try:
         return IPv4Address(
-            fcntl.ioctl(s.fileno(), 0x891b, fcntl_pack(bytes(interface, 'utf-8')))[20:24]
+            ioctl(s.fileno(), 0x891b, fcntl_pack(bytes(interface, 'utf-8')))[20:24]
         )
     except OSError:
         return None
@@ -112,4 +136,4 @@ def get_arp_table():
         reader = csv.reader(
             arp_table, skipinitialspace=True, delimiter=' ')
 
-        return {a[0]: a[3] for a in reader[1:]}
+        return {a[0]: a[3].replace(':', '') for a in reader}
