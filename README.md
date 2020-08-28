@@ -1,4 +1,4 @@
-<h5>NOTICE: The license has changed from the CMD version (GPLv3). The 'FULL' version (current branch) is licensed under AGPLv3.</h5>
+<h5><strong>NOTICE: The license has changed from the CMD version (GPLv3). The 'FULL' version (current branch) is licensed under AGPLv3.</strong></h5>
 
 <h1 align="center">
 	<br>
@@ -26,52 +26,33 @@ modules. A low level "architecture, system design" video will be created at some
 
 <h2>Included Features</h2>
 
-<code>
-	
 - DNS Proxy
-	
    - category based blocking (general, TLD, substring matching)
-    
    - user added whitelist/blacklist or custom general category creation
-    
    - native DNS over TLS conversion with optional UDP fallback
-    
    - local dns server
-    
    - software failover
-    
    - 2 level record caching
-    
 - IP Proxy (transparent) Bi directional
-
    - reprutation based host filtering
-
    - geolocation filter
-
    - lan restriction (disables internet access to the LAN for all IPs not whitelisted)
-    
+
 - IPS/IDS (WAN/inbound)
-
    - Denial of service detection/prevention
-
    - Portscan detection/prevention
 
 - Lightweight DHCP Server (custom)
-
    - ip reservations
-
    - security alert integration
 
 - General Services
-
    - Log handling
-
    - Database management
-
    - Syslog client (UDP, TCP, TLS) IMPORTANT: currently in a beta/unstable state.
 this service will not be enabled by default and will require the service enabled to start on system start.
     
-- Additional notes
+- Additional Features
    - IPv6 disabled
    - prebuilt iptable rules
    - DNS over HTTPs blocks (dns bypass prevention)
@@ -79,41 +60,39 @@ this service will not be enabled by default and will require the service enabled
    - DNS over TLS blocks (dns bypass prevention)
    - all inbound connections to wan DROPPED by default
    - IPTABLES custom chain for admin hook into packet flow
-    
-</code>
 
 <h2>Before Running</h2>
 
-- [+] Edit data/config.json and data/dhcp_server.json to reflect your system [interfaces]
+<strong>NEW: sqlite3 is now the default database in use (to simplify deployments). The environment variable "SQL_VERSION" located in dnx_configure/dnx_constants.py can be flipped to use postgresql. WARNING: switching the database used after initial configuration may cause problems. </strong>
+
+- [+] Edit data/config.json and data/dhcp_server.json to reflect your system [interfaces].
 
 - [+] Move all systemd service files into the systems systemd folder.
 
 - [+] Configure system interfaces. LAN needs to be Default Gateway of local network.
 
-- [+] Compile python-netfilterqueue for your current architecture/distro (link below)
+- [+] Compile python-netfilterqueue for your current architecture/distro (link below).
         
         - ensure name is netfilter.so and placed in the dnxfirewall/netfilter folder
+	
+- [+] Compile dnx_iptools/binary_search.pyx for your current architecture/distro.
 
-- [+] Run/ follow, in order, the deployment scripts to automate system setup. look at comments in script files 
+- [+] Run/ follow, in order, the corresponding deployment scripts [for the selected database] to automate system setup. look at comments in script files 
 for more direction.
 
 <h2>Non DNX code dependencies/sources!</h2>
 
-https://github.com/tlocke/pg8000 | pure python postgresql adapter
-
-https://github.com/kti/python-netfilterqueue | cython/ python extension for binding to linux kernel netfilter | THIS IS AWESOME!!!!!
+https://github.com/kti/python-netfilterqueue | cython <-> python extension for binding to linux kernel [netfilter] | THIS IS AWESOME!
 
 https://www.ip2location.com/free/visitor-blocker | geolocation ip filtering datasets
 
-https://gitlab.com/ZeroDot1/CoinBlockerLists | cryptominer hostset
+https://gitlab.com/ZeroDot1/CoinBlockerLists | cryptominer host set
 
-https://squidblacklist.org | malicious and advertisement hostsets
+https://squidblacklist.org | malicious and advertisement host sets
+
+<bold>OPTIONAL:</bold> https://github.com/tlocke/pg8000 | pure python postgresql adapter
 
 <h2>General Showcase Demo (outdated)</h2>
-
-- NOTE: The front end is not currently included in the public/foss version of firewall, but the funcionality of the system 
-is the same. Edit json files accordingly to implement specific system controls, eg whitelist, blacklist, dns records, etc. 
-a DNX CLI/shell will be implemented eventually which will configuration changes easier to deal with.
 
 This video is extremely outdated, but still shows general functionality and some of the high level security implementations. 
 an updated video will be created soon which will show the newly added modules: syslog client, standard logging, ips/ids, 
