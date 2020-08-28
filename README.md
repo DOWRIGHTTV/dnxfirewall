@@ -1,3 +1,5 @@
+<h5>NOTICE: This version(CMD) is no longer being supported. Reference to this build will be retained to ensure the original licensing (GPLv3) rights are retained for anyone that previously derived from or copied this work. The full version can be found in the 'dnxfirewall' branch.</h5>
+
 <h1 align="center">
 	<br>
 	<img src="https://github.com/DOWRIGHTTV/dnxfirewall-cmd/blob/master/utils/dnxlogo_v2.png" alt="DNX Firewall Logo">
