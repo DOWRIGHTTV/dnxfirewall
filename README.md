@@ -1,3 +1,5 @@
+<h5>NOTICE: The license has changed from the CMD version (GPLv3). The 'FULL' version (current branch) is licensed under AGPLv3.</h5>
+
 <h1 align="center">
 	<br>
 	<img src="https://github.com/DOWRIGHTTV/dnxfirewall-cmd/blob/master/utils/dnxlogo_v2.png" alt="DNX Firewall Logo">
