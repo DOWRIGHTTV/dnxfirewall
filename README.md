@@ -2,7 +2,7 @@
 
 <h1 align="center">
 	<br>
-	<img src="https://github.com/DOWRIGHTTV/dnxfirewall-cmd/blob/master/utils/dnxlogo_v2.png" alt="DNX Firewall Logo">
+	<img src="https://github.com/DOWRIGHTTV/dnxfirewall/blob/dnxfirewall/dnx_frontend/static/assets/images/dnxlogo_v2.png" alt="dnxfirewall logo">
 	<br>
 </h1>
 
