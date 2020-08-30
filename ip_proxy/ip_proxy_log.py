@@ -10,12 +10,12 @@ class Log(LogHandler):
 
     @classmethod
     def log(cls, pkt, inspection):
-        lvl, log = cls._generate_log(pkt, inspection)
+        lvl, logs = cls._generate_log(pkt, inspection)
+        for method, log in logs.items():
+            cls.event_log(pkt.timestamp, log, method=method)
 
-        if (log):
-            cls.event_log(pkt.timestamp, log, method='ipp')
-            if (cls.syslog_enabled):
-                cls.slog_log(LOG.EVENT, lvl, cls.generate_syslog_message(log))
+        if (cls.syslog_enabled and logs):
+            cls.slog_log(LOG.EVENT, lvl, cls.generate_syslog_message(log))
 
     @staticmethod
     def generate_syslog_message(log):
@@ -28,7 +28,7 @@ class Log(LogHandler):
     def _generate_log(cls, pkt, inspection):
         if (inspection.category in cls._infected_cats and pkt.direction is DIR.OUTBOUND and cls.current_lvl >= LOG.ALERT):
             log = IPP_LOG(
-                pkt.conn.local_ip, pkt.conn.tracked_ip, inspection.category, pkt.direction.name, 'blocked'
+                pkt.conn.local_ip, pkt.conn.tracked_ip, inspection.category.name, pkt.direction.name, 'blocked'
             )
 
             log2 = INFECTED_LOG(
@@ -39,14 +39,9 @@ class Log(LogHandler):
 
         elif (cls.current_lvl >= LOG.NOTICE):
             action = 'blocked' if inspection.action is CONN.DROP else 'logged'
-            # if (inspection.action is CONN.DROP):
-            #     action = 'blocked'
-
-            # elif (inspection.action is CONN.ACCEPT):
-            #     action = 'logged'
 
             log = IPP_LOG(
-                pkt.conn.local_ip, pkt.conn.tracked_ip, inspection.category, pkt.direction.name, action
+                pkt.conn.local_ip, pkt.conn.tracked_ip, inspection.category.name, pkt.direction.name, action
             )
 
             return LOG.NOTICE, {'ipp': log}
