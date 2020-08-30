@@ -15,7 +15,7 @@ sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import FIVE_MIN, ONE_DAY, fast_time, SQL_VERSION
 from dnx_configure.dnx_namedtuples import BLOCKED_DOM
-from ddb_connector_psql import DBConnector as _psql_db_connector
+from dnx_database.ddb_connector_psql import DBConnector as _psql_db_connector
 
 __all__ = ('DBConnector',)
 
