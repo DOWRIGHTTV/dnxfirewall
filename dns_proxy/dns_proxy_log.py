@@ -23,15 +23,15 @@ class Log(LogHandler):
 
         ## Log to Infected Clients DB Table if matching malicious type categories
         elif (req.category in [DNS_CAT.malicious, DNS_CAT.cryptominer] and cls.current_lvl >= LOG.ALERT):
-            log = DNS_LOG(f'{pkt.src_ip}', pkt.request, req.category, req.category, 'blocked')
+            log = DNS_LOG(f'{pkt.src_ip}', pkt.request, req.category.name, req.reason, 'blocked')
 
-            log2 = INFECTED_LOG(pkt.src_mac.hex(), f'{pkt.src_ip}', pkt.request, req.category)
+            log2 = INFECTED_LOG(pkt.src_mac.hex(), f'{pkt.src_ip}', pkt.request, req.category.name)
 
             return LOG.ALERT, {'dns': log, 'blocked': log, 'infected': log2}
 
         # logs redirected/blocked requests
         elif (req.redirect and cls.current_lvl >= LOG.NOTICE):
-            log = DNS_LOG(f'{pkt.src_ip}', pkt.request, req.category, req.reason, 'blocked')
+            log = DNS_LOG(f'{pkt.src_ip}', pkt.request, req.category.name, req.reason, 'blocked')
 
             return LOG.NOTICE, {'dns': log, 'blocked': log}
 
