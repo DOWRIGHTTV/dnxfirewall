@@ -28,9 +28,11 @@ class _Defaults:
         self.wan_int = wan_int
 
     # calling all methods in the class dict.
-    def load(self):
-        for n, f in self.__dict__.items():
-            if ('__' not in n):
+    @classmethod
+    def load(cls, lan_int, wan_int):
+        self = cls(lan_int, wan_int)
+        for n, f in cls.__dict__.items():
+            if '__' not in n and n != 'load':
                 try:
                     f(self)
                 except Exception as E:
@@ -164,17 +166,15 @@ class IPTableManager:
 
     # TODO: think about the duplicate rule check before running this as a safety for creating duplicate rules
     def apply_defaults(self):
-        ''' convenience function wrapper around the iptable Default class. all iptable default rules will
-        be loaded. if used within the context manager (recommended), the iptables lock will be aquired
-        before continuing (will block until done). iptable commit will be done on exit.
+        ''' convenience function wrapper around the iptable _Default class. all iptable default rules will
+        be loaded. iptable commit will be done on exit.
 
         NOTE: this method should not be called more than once during system operation or duplicate rules
         will be inserted into iptables.'''
 
-        defaults = _Defaults(self._lan_int, self._wan_int)
-        defaults.load()
+        _Defaults.load(self._lan_int, self._wan_int)
 
-        _err_write('IPTable defaults ')
+        print('IPTable defaults loaded')
 
     def add_rule(self, iptable_rule):
         opt = SName(**iptable_rule)
