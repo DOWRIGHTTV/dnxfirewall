@@ -78,6 +78,9 @@ this service will not be enabled by default and will require the service enabled
 	
 - [+] Compile dnx_iptools/binary_search.pyx for your current architecture/distro.
 
+        - ensure name is binary_search.so and placed in the dnxfirewall/dnx_iptools folder
+	- NOTE: in the future this step will be wrapped into the deployment script
+	
 - [+] Run/ follow, in order, the corresponding deployment scripts [for the selected database] to automate system setup. look at comments in script files 
 for more direction.
 
