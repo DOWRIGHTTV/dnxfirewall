@@ -7,7 +7,7 @@
 </h1>
 
 <h3 align="center">
-	Command Line Version | coded/tested live on twitch.tv.
+	Coded/tested live on twitch.tv.
 	<br>
 	<a href="https://www.twitch.tv/dowright" target="_blank">
 		<img src="https://github.com/ProHackTech/DNX-FWALL-CMD/blob/master/Readme_Social/twitch.png" alt="DOWRIGHTTV" />
@@ -74,6 +74,7 @@ this service will not be enabled by default and will require the service enabled
 - [+] Compile python-netfilterqueue for your current architecture/distro (link below).
         
         - ensure name is netfilter.so and placed in the dnxfirewall/netfilter folder
+	- NOTE: in the future this step will be wrapped into the deployment script
 	
 - [+] Compile dnx_iptools/binary_search.pyx for your current architecture/distro.
 
