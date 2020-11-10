@@ -3,7 +3,7 @@
 import json
 import hashlib
 import os, sys
-import time
+import time, datetime
 import threading
 
 from datetime import timedelta
@@ -495,7 +495,7 @@ def dnx_login():
         authenticated, username, user_role = Authentication.user_login(request.form, request.remote_addr)
         if (authenticated):
             session['username'] = username
-            # session['expire_time'] = time.time() + 30
+            # session['expire_time'] = + 30
 
             update_session_tracker(username, user_role, request.remote_addr)
 
@@ -606,12 +606,13 @@ def update_session_tracker(username, user_role=None, remote_addr=None, *, action
 
     with ConfigurationManager('session_tracker', file_path='dnx_frontend') as session_tracker:
         stored_tracker = session_tracker.load_configuration()
-
+        
         if (action is CFG.ADD):
+            last_login = datetime.datetime.now()
             stored_tracker['active_users'][username] = {
                 'user_role': user_role,
                 'remote_addr': remote_addr,
-                'logged_in': time.time(), # NOTE: can probably make this human readable format here.
+                'logged_in': last_login, 
                 'last_seen': None
             }
 
