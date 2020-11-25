@@ -37,7 +37,7 @@ class Listener:
     _proxy_callback = _NOT_IMPLEMENTED
     _intfs = (
         get_intf('lan'),
-        # get_intf('dmz')
+        get_intf('dmz')
     )
 
     __slots__ = (
@@ -293,13 +293,12 @@ class ProtoRelay:
     # aquires lock then will mark server down if it is present in config
     # NOTE: i feel like this can be much better. investigate.
     def mark_server_down(self):
-        relay_conn = self._relay_conn
+        self._relay_conn.sock.close()
 
-        relay_conn.sock.close()
         with self._DNSServer.server_lock:
             for server in self._DNSServer.dns_servers:
-                if (server['ip'] == relay_conn.remote_ip):
-                    self._DNSServer.dns_servers[server['ip']][self._protocol] = False
+                if (server['ip'] == self._relay_conn.remote_ip):
+                    server[self._protocol] = False
 
     def _send_to_fallback(self, client_query):
         '''allows for relay to fallback to a secondary relay. uses class object passed into run method.'''
@@ -631,7 +630,7 @@ class RawResponse:
     _intfs  = (
         (LAN_IN, get_intf('lan')),
         (WAN_IN, get_intf('wan')),
-#        (DMZ_IN, get_intf('dmz'))
+        (DMZ_IN, get_intf('dmz'))
     )
 
     __slots__ = (

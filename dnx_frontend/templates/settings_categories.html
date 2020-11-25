@@ -25,11 +25,11 @@
                         <div class="row">
                             <div class="input-field col s12">
                                 <select name="menu" onchange="this.form.submit()">
+                                    <!-- this is not an error, jenja is used to send correct value into javascript function-->
                                     {% for cat in category_settings['ud_list'] %}
                                     {% if loop.index == menu %}
                                     <option value="{{loop.index}}" selected>{{cat}}</option>
                                     {% else %}
-                                    <!-- this is not an error, jenja is used to send correct value into javascript function-->
                                     <option value="{{loop.index}}" onclick="activeMenu({{loop.index}})">{{cat}}</option>
                                     {% endif %}
                                     {% endfor %}

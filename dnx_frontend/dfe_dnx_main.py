@@ -14,12 +14,11 @@ sys.path.insert(0, HOME_DIR)
 
 import dnx_configure.dnx_validate as validate
 
-from dnx_configure.dnx_constants import VERBOSE, ROOT, CFG
+from dnx_configure.dnx_constants import CFG
 from dnx_configure.dnx_file_operations import load_configuration, ConfigurationManager
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_database.ddb_connector_sqlite import DBConnector
 from dnx_configure.dnx_system_info import System
-from dnx_configure.dnx_license import License
 from dnx_logging.log_main import LogHandler as Log
 
 from dnx_frontend.dfe_dnx_authentication import Authentication, user_restrict
@@ -37,15 +36,13 @@ import dnx_frontend.dfe_advanced_domain as dns_proxy
 import dnx_frontend.dfe_advanced_ip as ip_proxy
 import dnx_frontend.dfe_advanced_firewall as dnx_firewall
 import dnx_frontend.dfe_advanced_ips as dnx_ips
-import dnx_frontend.dfe_system_updates as dfe_updates
 import dnx_frontend.dfe_system_users as dfe_users
 import dnx_frontend.dfe_system_backups as dfe_backups
 import dnx_frontend.dfe_system_reports as proxy_reports
 import dnx_frontend.dfe_system_logs as dfe_logs
-import dnx_frontend.dfe_system_license as dnx_license
 import dnx_frontend.dfe_system_services as dnx_services
 
-LOG_NAME = 'system'
+LOG_NAME = 'web_app'
 
 app = Flask(__name__, static_url_path='/static')
 
@@ -62,7 +59,6 @@ trusted_proxies = ['127.0.0.1']
 @app.route('/dashboard', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
 def dnx_dashboard(dnx_session_data):
-    License.timeout_status()
     dashboard = dfe_dashboard.load_page()
 
     page_settings = {
@@ -253,14 +249,19 @@ def advanced_ip(dnx_session_data):
 @user_restrict('admin')
 def advanced_firewall(dnx_session_data):
     tab = request.args.get('tab', '1')
+    menu_option = request.args.get('menu', '1')
+
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'uri_path': '/advanced/firewall'
+        'navi': True, 'tab': tab, 'menu': menu_option,
+        'standard_error': None, 'idle_timeout': True,
+        'uri_path': '/advanced/firewall',
+        'selected': 'GLOBAL_INTERFACE',
+        'zones': ['GLOBAL', 'WAN', 'DMZ', 'LAN']
     }
 
     page_settings.update(dnx_session_data)
 
-    page_action = standard_page_logic(
+    page_action = firewall_page_logic(
         dnx_firewall, page_settings, 'firewall_settings', page_name='advanced_firewall')
 
     return page_action
@@ -285,30 +286,6 @@ def advanced_ips(dnx_session_data):
 ## START OF SYSTEMS TAB
 ## ---------------------------------------------
 
-@app.route('/system/updates', methods=['GET', 'POST'])
-@user_restrict('admin')
-def system_updates(dnx_session_data):
-    tab = request.args.get('tab', '1')
-
-    update_info, error = dfe_updates.load_page()
-
-    page_settings = {
-        'navi': True, 'tab': tab, 'update_error': error,
-        'idle_timeout': True, 'uri_path': '/system/updates',
-        'update_info': update_info, 'standard_error': None
-    }
-
-    page_settings.update(dnx_session_data)
-
-    if (request.method == 'POST'):
-        tab = request.form.get('tab', '1')
-        error = dfe_updates.update_page(request.form)
-        page_settings['standard_error'] = error
-        if (not error):
-            return redirect(url_for('system_updates', tab=tab))
-
-    return render_template('system_updates.html', **page_settings)
-
 @app.route('/system/users', methods=['GET', 'POST'])
 @user_restrict('admin')
 def system_users(dnx_session_data):
@@ -321,21 +298,6 @@ def system_users(dnx_session_data):
 
     page_action = standard_page_logic(
         dfe_users, page_settings, 'user_list', page_name='system_users')
-
-    return page_action
-
-@app.route('/system/backups', methods=['GET', 'POST'])
-@user_restrict('admin')
-def system_backups(dnx_session_data):
-    page_settings = {
-        'navi': True, 'standard_error': None, 'idle_timeout': True,
-        'uri_path': '/system/backups'
-    }
-
-    page_settings.update(dnx_session_data)
-
-    page_action = standard_page_logic(
-        dfe_backups, page_settings, 'current_backups', page_name='system_backups')
 
     return page_action
 
@@ -367,20 +329,6 @@ def system_logs(dnx_session_data):
 
     return page_action
 
-@app.route('/system/license', methods=['GET', 'POST'])
-@user_restrict('admin')
-def system_license(dnx_session_data):
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'standard_error': None
-    }
-
-    page_settings.update(dnx_session_data)
-
-    page_action = standard_page_logic(
-        dnx_license, page_settings, 'license_info', page_name='system_license')
-
-    return page_action
-
 @app.route('/system/services', methods=['GET', 'POST'])
 @user_restrict('admin')
 def system_services(dnx_session_data):
@@ -392,6 +340,21 @@ def system_services(dnx_session_data):
 
     page_action = standard_page_logic(
         dnx_services, page_settings, 'service_info', page_name='system_services')
+
+    return page_action
+
+@app.route('/system/backups', methods=['GET', 'POST'])
+@user_restrict('admin')
+def system_backups(dnx_session_data):
+    page_settings = {
+        'navi': True, 'standard_error': None, 'idle_timeout': True,
+        'uri_path': '/system/backups'
+    }
+
+    page_settings.update(dnx_session_data)
+
+    page_action = standard_page_logic(
+        dfe_backups, page_settings, 'current_backups', page_name='system_backups')
 
     return page_action
 
@@ -448,8 +411,6 @@ def dnx_logout(dnx_session_data):
 
 @app.route('/blocked')
 def dnx_blocked():
-    License.timeout_status()
-
     # checking for domain sent by nginx that is being redirected to firewall. if domain doesnt exist (user navigated to
     # this page manually) then a not authorized page will be served. If the domain is not a valid domain (regex) the request
     # will be ridirected back to blocked page without a domain. NOTE: this is a crazy bit of code that should be tested much
@@ -543,6 +504,24 @@ def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
 
     return render_template(f'{page_name}.html', **page_settings)
 
+def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name):
+    if (request.method == 'POST' and 'extend_session_timer' not in request.form):
+        tab = request.form.get('tab', '1')
+
+        error, selected, page_data = dnx_page.update_page(request.form)
+
+        page_settings.update({
+            'tab': tab,
+            'selected': selected,
+            'standard_error': error,
+            data_key: page_data
+        })
+
+    else:
+        page_settings[data_key] = dnx_page.load_page()
+
+    return render_template(f'{page_name}.html', **page_settings)
+
 def log_page_logic(log_page, page_settings, *, page_name):
     # menu_option = page_settings['menu'] # NOTE: why this here?
     if (request.method == 'GET'):
@@ -628,9 +607,7 @@ def user_timeout():
 
 ## SETUP LOGGING CLASS
 Log.run(
-    name=LOG_NAME,
-    verbose=VERBOSE,
-    root=ROOT
+    name=LOG_NAME
 )
 
 if __name__ == '__main__':

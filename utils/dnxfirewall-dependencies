@@ -1,0 +1,72 @@
+move dnxfirewall to /home/dnx
+-----------------------------
+git clone ssh://free@192.168.2.89/opt/git/dnxfirewall.git
+=============================================
+
+system dependencies
+    python3.7
+    python3-pip
+    nginx
+    postgresql
+    libpcre3 libpcre3-devpython3
+
+python dependencies (root and dnx)
+    flask
+    pg8000
+    uwsgi
+---------------------------------------
+sudo apt install nginx postgresql python3-pip
+pip3 install flask pg8000 uwsgi (uwsgi is a python package)
+sudo pip3 install pg8000
+================================
+
+create user dnx, usergroup dnx
+chown all dnx related files to dnx:dnx
+add www-data to dnx group
+--------------------------
+sudo chown -r dnx:dnx dnxfirewall
+sudo usermod -aG dnx www-data
+================================
+
+create postrgesql db dnxfirewall
+create db user dnx
+create db password firewall
+add db user dnx to db dnxfirewall
+--------------------------------
+sudo -u postgres psql
+CREATE DATABASE dnxfirewall;
+create user dnx with encrypted password 'firewall';
+grant all privileges on database dnxfirewall to dnx;
+================================================
+
+move all services files from /dnxfirewall/service to /etc/systemd/system
+systemctl enable all dnx service, nginx, postgresql
+RUN SCRIPT
+====================
+
+generate ssl_certificate to /etc/ssl/certs/dnx-web.crt
+generate ssl_certificate_key to /etc/ssl/certs/dnx-web.key
+move nginx config (dnx-web) to /etx/nginx/site-available
+    enable nginx site
+    add www-data to dnx group
+---------------------------------------------------
+ln -s /etc/nginx/sites-available/dnx_web /etc/nginx/sites-enabled/
+sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/certs/dnx-web.key -out /etc/ssl/certs/dnx-web.crt
+sudo usermod -aG www-data dnx
+============================================================
+
+change /data/config.json
+    interface names
+
+change lan interface ip to localnet subnet with 192.168.83.1/24
+
+sudo ifconfig enp0s8 192.168.83.1 netmask 255.255.255.0
+
+|| IF NOT ALREADY DONE ||
+run /dnx_configure/dnx_iptables.py (this will reconfigure your iptables, reboot required)
+
+|| If upgrading from earlier version ||
+keep copy of configuration files
+copy dnx-ips.service from services folder to systemd and enable it for auto start
+migrate configuration files from old version to new (be careful fields may be different so dont copy over)
+restart device for some scripts to run and changes to be active

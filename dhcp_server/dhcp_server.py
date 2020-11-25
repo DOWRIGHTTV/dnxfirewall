@@ -87,8 +87,13 @@ class DHCPServer(Listener):
         elif (client_request.mtype == DHCP.REQUEST):
             request_mtype, record = self._request(request_id, client_request)
 
+        # TODO: i believe this is why the fatal exception was being raised. the log system
+        # was not working so i cant prove it yet. adding a return just in case, which should be
+        # there anyways as this condition is null and should not be responded to anyways.
         else:
             Log.warning(f'Unknown request type from {client_request.mac}')
+
+            return
 
         if (request_mtype):
             client_request.generate_server_response(request_mtype)
@@ -117,6 +122,7 @@ class DHCPServer(Listener):
         return DHCP.OFFER, (DHCP.OFFERED, fast_time(), client_request.mac)
 
     def _request(self, request_id, client_request):
+        # NOTE: assign get method on init?
         dhcp = self._ongoing.get(request_id, None)
         if (not dhcp):
             dhcp = ServerResponse(client_request.sock.name, server=self)
@@ -188,8 +194,6 @@ class DHCPServer(Listener):
 
 if __name__ == '__main__':
     Log.run(
-        name=LOG_NAME,
-        verbose=VERBOSE,
-        root=ROOT
+        name=LOG_NAME
     )
     DHCPServer.run(Log, threaded=False)

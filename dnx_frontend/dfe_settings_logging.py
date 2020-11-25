@@ -9,7 +9,7 @@ sys.path.insert(0, HOME_DIR)
 import dnx_configure.dnx_configure as configure
 import dnx_configure.dnx_validate as validate
 
-from dnx_configure.dnx_constants import fast_time, INVALID_FORM
+from dnx_configure.dnx_constants import fast_time, DATA, INVALID_FORM, LOG_LEVELS
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_configure.dnx_system_info import System
@@ -17,58 +17,57 @@ from dnx_configure.dnx_system_info import System
 def load_page():
     logging_settings = load_configuration('logging_client')['logging']
 
-    logging = logging_settings['logging']
-    log_level = logging['level']
-    log_length = logging['length']
-    log_settings = {'level': log_level, 'length': log_length}
+    log = logging_settings['logging']
 
+    # correcting time for configured offset.
     time_offset = logging_settings['time_offset']
-    offset_values = {'direction': time_offset['direction'], 'amount': time_offset['amount']}
-
     system_time = System.format_date_time(fast_time())
-
     local_time = System.calculate_time_offset(fast_time())
     local_time = System.format_date_time(local_time)
 
     logging_settings = {
-        'system': system_time, 'local': local_time, 'logging': log_settings,
-        'offset': offset_values
+        'system': system_time, 'local': local_time,
+        'offset': {
+            'direction': time_offset['direction'],
+            'amount': time_offset['amount']
+        },
+        'logging': {
+            'log_levels': [level.title() for level in LOG_LEVELS],
+            'level': log['level'],
+            'length': log['length']
+        }
     }
 
     return logging_settings
 
 def update_page(form):
-    # Matching logging update form and sending to configuration method.
+    # matching logging update form and sending to configuration method.
     if ('logging_update' in form):
-        log_length = form.get('log_length', None)
-        log_level = form.get('log_level', None)
-        if (not log_length or not log_level):
+        log_settings = {
+            'log_length': validate.get_convert_int(form, 'log_length'),
+            'log_level': validate.get_convert_int(form, 'log_level')
+        }
+        if (DATA.INVALID in log_settings.values()):
             return INVALID_FORM
 
         try:
-            log_settings = {'length': int(log_length), 'level': int(log_level)}
             validate.log_settings(log_settings)
-        except ValueError:
-            return INVALID_FORM
-
         except ValidationError as ve:
             return ve
         else:
             configure.set_logging(log_settings)
 
-    # Matching time offset form and sending to configuration method.
+    # matching time offset form and sending to configuration method.
     elif ('time_offset_update' in form):
-        dir_offset = form.get('dir-offset', None)
-        time_offset = form.get('time-offset', None)
-        if (not dir_offset or not time_offset):
+        offset_settings = {
+            'direction': form.get('dir_offset', DATA.INVALID),
+            'time': validate.get_convert_int(form, 'time')
+        }
+        if (DATA.INVALID in offset_settings.values()):
             return INVALID_FORM
 
         try:
-            offset_settings = {'direction': dir_offset, 'time': int(time_offset)}
             validate.time_offset(offset_settings)
-        except ValueError:
-            return INVALID_FORM
-
         except ValidationError as ve:
             return ve
         else:

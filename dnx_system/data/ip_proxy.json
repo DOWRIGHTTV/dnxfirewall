@@ -3,7 +3,7 @@
         "ids_mode": false,
         "categories": {
             "malicious": 1,
-            "compromised": 1,
+            "compromised": 0,
             "tor_entry": 0,
             "tor_exit": 0
         },

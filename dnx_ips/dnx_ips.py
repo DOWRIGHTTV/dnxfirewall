@@ -333,8 +333,6 @@ class Inspect:
 
 if __name__ == '__main__':
     Log.run(
-        name=LOG_NAME,
-        verbose=VERBOSE,
-        root=ROOT
+        name=LOG_NAME
     )
     IPS_IDS.run(Log, q_num=2)

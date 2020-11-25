@@ -27,16 +27,14 @@ run('sudo pip3 install flask pg8000 uwsgi', shell=True, stdout=DEVNULL)
 
 print('copying dnx service files and enabling on startup')
 services = [
-    'log', 'syslog', 'dhcp-server', 'dns-proxy', 'ip-proxy',
-    'ips', 'startup', 'web', 'interface'
+    'log', 'syslog', 'database', 'dhcp-server', 'dns-proxy',
+    'ip-proxy', 'ips', 'startup', 'updates', 'web', 'interface'
     ]
 
 for service in services:
     run(f'sudo cp /home/dnx/dnxfirewall/services/dnx-{service}.service /etc/systemd/system/', shell=True, stdout=DEVNULL)
 
     run(f'sudo systemctl enable dnx-{service}', shell=True, stdout=DEVNULL)
-    
-run(f'sudo cp /home/dnx/dnxfirewall/services/dnx-database-psql.service /etc/systemd/system/dnx-database.service', shell=True, stdout=DEVNULL)
 
 print('generating ssl certificates')
 run('sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/certs/dnx-web.key -out /etc/ssl/certs/dnx-web.crt', shell=True, stdout=DEVNULL)

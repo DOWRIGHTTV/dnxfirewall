@@ -14,7 +14,6 @@ write_err  = _sys.stderr.write
 byte_join = b''.join
 str_join = ''.join
 
-VERBOSE = True
 ROOT = True if not _os.getuid() else False
 
 # globally sets which sql to use | sqlite3 = 0, psql = 1
@@ -23,6 +22,9 @@ SQL_VERSION = 0
 #license server number validation
 LICENSE_SVR_VALIDATION = 599641200
 INVALID_FORM = 'Invalid form data.'
+class DATA(_IntEnum):
+    INVALID = -1
+    MISSING = -2
 
 #interface bandwidth
 INT_BANDWIDTH_TIMER = 5
@@ -105,6 +107,17 @@ class LOG(_IntEnum):
     NOTICE    = 5
     INFO      = 6
     DEBUG     = 7
+
+LOG_LEVELS = [
+    'EMERGENCY',
+    'ALERT',
+    'CRITICAL',
+    'ERROR',
+    'WARNING',
+    'NOTICE',
+    'INFO',
+    'DEBUG'
+]
 
 # timers
 ONE_DAY    = 86400 # 1 day

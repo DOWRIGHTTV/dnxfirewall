@@ -9,6 +9,8 @@ from dnx_logging.log_main import LogHandler
 class Log(LogHandler):
 
     @classmethod
+    # TODO: if we relocate standard log method into parent LogHandler, this would need to stay/override since
+    # it does not conform to proxy structure.
     def log(cls, pkt, scan_info=None, *, engine):
         if (engine is IPS.DDOS):
             lvl, log = cls._generate_ddos_log(pkt, scan_info)

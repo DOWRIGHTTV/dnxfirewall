@@ -11,12 +11,12 @@
                 }
             },
             "dmz": {
-                "enabled": false,
-                "ident": null,
+                "enabled": true,
+                "ident": "eth0",
                 "icmp_check": false,
                 "lease_range": {
-                    "start": 16,
-                    "end": 205
+                    "start": 206,
+                    "end": 225
                 }
             }
         },

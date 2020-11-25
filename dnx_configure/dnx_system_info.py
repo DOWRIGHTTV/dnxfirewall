@@ -268,53 +268,82 @@ class System:
         return backups
 
     @staticmethod
-    def firewall_rules():
+    def firewall_rules(*, chain='GLOBAL_INTERFACE'):
+        # getting list of all rules in specified chain
+        output = run(
+            f'sudo iptables -nL {chain} --line-number', shell=True, capture_output=True, text=True
+        ).stdout.splitlines()
+
+        # parsing output and formatting for use by front end
         firewallrules = []
-        output = run('sudo iptables -nL FIREWALL --line-number', shell=True, capture_output=True, text=True).stdout.splitlines()
-        for rule in output:
-            opt_list = []
-            rule = rule.split()
-            if (not rule[0].isdigit()): continue
+        for rule in output[2:]:
 
-            source = 'ANY' if rule[4] == '0.0.0.0/0' else rule[4]
+            modified_rule = [x for i, x in enumerate(rule.split()) if i not in [3, 6]]
+            # if ports are specified, it will be parsed then replaced with new value
+            if (len(modified_rule) == 6):
+                modified_rule[-1] = modified_rule[-1].lstrip('dpt:')
 
-            if (rule[2] in ['tcp', 'udp']):
-                port = rule[7].split(':')[1]
-                opt_list = (rule[0], source, rule[5], rule[2].upper(), port, rule[1])
-            elif (rule[2] in ['icmp', 'all']):
-                if (rule[2] == 'all'):
-                    rule[2] = 'ANY'
-                opt_list = (rule[0], source, rule[5], rule[2].upper(), 'N/A', rule[1])
-            firewallrules.append(opt_list)
+            elif (modified_rule[2] in ['icmp', 'all']):
+                modified_rule.append('N/A')
+
+            else:
+                modified_rule.append('ANY')
+
+            pos, action, proto, src, dst, port = modified_rule
+
+            proto = 'ANY' if proto == 'all' else proto
+            src   = 'ANY' if src == '0.0.0.0/0' else src
+            dst   = 'ANY' if dst == '0.0.0.0/0' else dst
+
+            firewallrules.append((pos, src, dst, proto.upper(), port, action))
 
 #        print(firewallrules)
         return firewallrules
 
     @staticmethod
-    def nat_rules():
+    def nat_rules(*, nat_type='DSTNAT'):
         natrules = []
-        output = run('sudo iptables -t nat -nL NAT --line-number', shell=True, capture_output=True, text=True).stdout.splitlines()
-        for rule in output:
-            rule = rule.split()
-            if (not rule[0].isdigit()): continue
+        output = run(
+            f'sudo iptables -t nat -nL {nat_type} --line-number', shell=True, capture_output=True, text=True
+        ).stdout.splitlines()
 
-            protocol = rule[2]
-            if (protocol in ['tcp', 'udp']):
-                dst_port = rule[7].split(':')[1]
-                host_info = rule[8].split(':')
-                host_ip = host_info[1]
-                if (len(host_info) == 3):
-                    host_port = host_info[2]
+        if (nat_type == 'DSTNAT'):
+            # default values. should only be used if icmp protocol is specified.
+            dst_port, host_port = 'N/A', 'N/A'
+
+            for rule in output[2:]:
+
+                modified_rule = [x for i, x in enumerate(rule.split()) if i not in [1, 3, 6]]
+
+                host_info = modified_rule[5].lstrip('to:')
+                if (modified_rule[1] in ['tcp', 'udp']):
+
+                    dst_port = modified_rule[4].lstrip('dpt:')
+
+                    # checking for pat or port foward
+                    try:
+                        host_ip, host_port = host_info.split(':')
+                    except ValueError:
+                        host_ip, host_port = host_info, dst_port
+
+                # for icmp
                 else:
-                    host_port = dst_port
-            elif (protocol == 'icmp'):
-                host_ip = rule[6].split(':')[1]
-                dst_port = 'N/A'
-                host_port = 'N/A'
+                    host_ip = host_info
 
-            natrules.append((rule[0], protocol, dst_port, host_ip, host_port))
+                pos, proto, *_ = modified_rule
 
-#        print(natrules)
+                natrules.append((pos, proto, dst_port, host_ip, host_port))
+
+        elif (nat_type == 'SRCNAT'):
+
+            for rule in output[2:]:
+
+                rule = rule.split()
+
+                # position, original source, new source
+                natrules.append([rule[0], rule[4], rule[6].lstrip('to:')])
+
+        # print(natrules)
         return natrules
 
     @staticmethod

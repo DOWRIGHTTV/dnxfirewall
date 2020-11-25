@@ -109,7 +109,6 @@ class DNSServer(Listener):
         if (client_query.qr != DNS.QUERY or client_query.qtype not in [DNS.A, DNS.NS]):
             return False
 
-
         local_record = self._dns_records_get(client_query.request)
 
         # generating server response and sending to client. client query is passed in twice for compatibility

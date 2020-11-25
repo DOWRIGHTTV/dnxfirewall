@@ -123,8 +123,10 @@ class Initialize:
 
 def dnx_queue(Log, name=None):
     '''decorator to add custom queue mechanism for any queue handling functions. This
-    is a direct replacement for dynamic_looper for queues. if used on a class method
-    set class_method argument to True.
+    is a direct replacement for dynamic_looper for queues.
+
+
+    WTF IS THIS -> if used on a class method set class_method argument to True.
 
     example:
         @dnx_queue(Log, name='Server')
@@ -143,6 +145,8 @@ def dnx_queue(Log, name=None):
         job_clear = job_available.clear
         job_set = job_available.set
 
+        # TODO: is this code compatible with class methods? the *args should make this compatible with class
+        # methods inherently. if that is the case does @classmethod decorator need to be on initial method?
         def wrapper(*args):
             if (Log):
                 Log.debug(f'{name}/dnx_queue started.')
@@ -166,6 +170,7 @@ def dnx_queue(Log, name=None):
 
         def add(job):
             '''adds job to work queue, then marks event indicating a job is available.'''
+
             queue_add(job)
             job_set()
 

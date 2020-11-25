@@ -11,10 +11,10 @@
                 "subnet": "192.168.83.0/24"
             },
             "dmz": {
-                "ident": null,
-                "ip": null,
-                "netmask": null,
-                "subnet": null
+                "ident": "eth0",
+                "ip": "192.168.83.1",
+                "netmask": "255.255.255.0",
+                "subnet": "192.168.83.0/24"
             },
             "wan": {
                 "ident": "eth0",

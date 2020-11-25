@@ -1,15 +1,5 @@
 {% extends('layout.html') %}
 {% block body %}
-{% if dashboard['notify'] %}
-<div id="dash-modal" class="modal modal-pop">
-    <div class="modal-content">
-        <script>var error = true;</script>
-        <h5 class="red-text">{{dashboard['notify']}}</h5>
-    </div>
-    <a class="modal-close waves-effect waves-green btn-flat right">OK</a>
-</div>
-{% endif %}
-<!-- the boxes to show "at a glance" -->
 <section id="why-me" class="section scrollspy grey lighten-4 center">
     <div class="container">
         <h4 class="red-text">Blocked (Last 30 Days)</h4>
@@ -63,7 +53,6 @@
         </div>
     </div>
 </section>
-<!-- Tabs for statistics -->
 <section id="statistics">
     <div class="container">
         <div class="row">
@@ -75,7 +64,6 @@
                     <li class="tab col s3 m3 l4 xl2"><a href="#interface-stat">Interface Stats</a></li>
                 </ul>
             </div>
-            <!-- server stat -->
             <div id="server-stat" class="col s12 m12">
                 <table class="striped">
                     <thead>
@@ -106,7 +94,6 @@
                     </tbody>
                 </table>
             </div>
-            <!-- system stat tab-->
             <div id="system-stat" class="col s12 m12">
                 <table class="striped">
                     <thead>
@@ -125,7 +112,6 @@
                     </tbody>
                 </table>
             </div>
-            <!-- interface tab content -->
             <div id="interface-stat" class="col s12 m12">
                 <table class="striped">
                     <thead>

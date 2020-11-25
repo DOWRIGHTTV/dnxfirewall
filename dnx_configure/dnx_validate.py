@@ -11,8 +11,11 @@ from ipaddress import IPv4Address, IPv4Network
 _HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, _HOME_DIR)
 
+from dnx_configure.dnx_constants import LOG, DATA, INVALID_FORM
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
+
+# TODO: why no CSRF. :(
 
 __all__ = (
     'standard', 'syslog_dropdown', 'mac_address',
@@ -24,7 +27,7 @@ __all__ = (
     'time_restriction', 'dns_over_tls', 'del_firewall_rule',
     'add_firewall_rule', 'portscan_settings',
     'ips_passive_block_length', 'add_ip_whitelist',
-    'del_ip_whitelist', 'main_services', 'domain_categories',
+    'main_services', 'domain_categories',
     'dns_record_add', 'dns_record_remove', # NOTE: these names should be flipped
     'ValidationError'
 )
@@ -33,12 +36,23 @@ _VALID_MAC = re.compile('(?:[0-9a-fA-F]:?){12}')
 _VALID_IP = re.compile('^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$')
 _VALID_DOMAIN = re.compile('(//|\\s+|^)(\\w\\.|\\w[A-Za-z0-9-]{0,61}\\w\\.){1,3}[A-Za-z]{2,6}')
 
+def get_convert_int(form, key):
+    '''gets string value from submitted form then converts into an integer and returns. If key is not present
+    or string cannot be converted an IntEnum representing the error will be returned.'''
+
+    try:
+        value = form.get(key, DATA.MISSING)
+
+        return value if DATA.MISSING else int(value)
+    except:
+        return DATA.INVALID
+
 def convert_int(num):
-    '''converts argument into an integer, then returns. -1 will be return on error.'''
+    '''converts argument into an integer, then returns. -1 will be returned on error.'''
     try:
         return int(num)
     except:
-        return -1
+        return DATA.INVALID
 
 def standard(user_input):
     if (not user_input.isalnum()):
@@ -56,12 +70,24 @@ def mac_address(mac):
     if (not _VALID_MAC.match(mac)):
         raise ValidationError('MAC Address is not valid.')
 
-def ip_address(ipa):
-    if (ipa == '127.0.0.1'):
+def _ip_address(ip_addr):
+    if (ip_addr == '127.0.0.1'):
         raise ValidationError('IP Address cannot be 127.0.0.1/loopback.')
 
-    if (not _VALID_IP.match(ipa)):
+    if (not _VALID_IP.match(ip_addr)):
         raise ValidationError('IP Address is not valid.')
+
+# this is convienience wrapper around above function to allow for multiple ips to be checked with one func call.
+def ip_address(ip_addr=None, *, ip_iter=None):
+    ip_iter = [] if not ip_iter else ip_iter
+    if (not isinstance(ip_iter, list)):
+        return ValidationError('Data format must be a list.')
+
+    if ip_addr:
+        ip_iter.append(ip_addr)
+
+    for ip in ip_iter:
+        _ip_address(ip)
 
 def default_gateway(ipa):
     if (ipa == '127.0.0.1'):
@@ -140,9 +166,12 @@ def dhcp_reservation(reservation_settings):
         raise ValidationError('IP Address must be inside of localnet. ex 192.168.83.10')
 
 def log_settings(log_settings):
-    log_length = convert_int(log_settings['length'])
-    log_level = convert_int(log_settings['level'])
-    if (log_length not in [30, 45, 60, 90] or log_level not in [1, 4, 5, 6]):
+    if (log_settings['length'] not in [30, 45, 60, 90]):
+        raise ValidationError('Log settings are not valid.')
+
+    try:
+        LOG(log_settings['level'])
+    except ValueError:
         raise ValidationError('Log settings are not valid.')
 
 def time_offset(offset_settings):
@@ -150,7 +179,7 @@ def time_offset(offset_settings):
     if (dir_offset not in [' ', '-', '+']):
         raise ValidationError('Time offset direction is not valid.')
 
-    time_offset = convert_int(offset_settings['time'])
+    time_offset = offset_settings['time']
     if (time_offset not in range(0,15)):
         raise ValidationError('Time offset amount is not valid.')
 
@@ -198,14 +227,14 @@ def ip_proxy_settings(ip_hosts_settings, *, ruleset='categories'):
         try:
             category, direction = category[:-2], category[-1]
         except:
-            raise ValidationError('Invalid form data.')
+            raise ValidationError(INVALID_FORM)
 
         if (category not in valid_categories):
-            raise ValidationError('Invalid form data.')
+            raise ValidationError(INVALID_FORM)
 
         direction = convert_int(direction)
         if (direction not in range(4)):
-            raise ValidationError('Invalid form data.')
+            raise ValidationError(INVALID_FORM)
 
 def time_restriction(tr_settings):
     tr_hour = convert_int(tr_settings['hour'])
@@ -229,45 +258,80 @@ def dns_over_tls(dns_tls_settings):
     current_tls = dns_server['tls']['enabled']
     for item in dns_tls_settings['enabled']:
         if (item not in ['dns_over_tls', 'udp_fallback']):
-            raise ValidationError('Invalid form data.')
+            raise ValidationError(INVALID_FORM)
 
     # NOTE: current_tls shouldnt matter since tls will be in form if enabled regardless
     if (not current_tls and 'udp_fallback' in dns_tls_settings['enabled']
             and 'dns_over_tls' not in dns_tls_settings['enabled']):
         raise ValidationError('DNS over TLS must be enabled to configure UDP fallback.')
 
-def del_firewall_rule(position, chain):
-    if (chain == 'FIREWALL'):
-        output = run('sudo iptables -nL FIREWALL --line-number', shell=True, capture_output=True).stdout.splitlines()
+def del_firewall_rule(fw_rule):
+    output = run(
+        f'sudo iptables -nL {fw_rule.zone} --line-number', shell=True, capture_output=True
+    ).stdout.splitlines()
 
-    elif (chain == 'NAT'):
-        output = run('sudo iptables -t nat -nL NAT --line-number', shell=True, capture_output=True).stdout.splitlines()
-    rule_count = len(output) - 1
-
-    position = convert_int(position)
-    if (position not in range(1, rule_count)):
+    rule_count = len(output) + 2
+    if (convert_int(fw_rule.position) not in range(1, rule_count)):
         raise ValidationError('Selected rule is not valid and cannot be removed.')
 
-def add_firewall_rule(firewall_rule):
-    pos = convert_int(firewall_rule['pos'])
-    protocol = firewall_rule['protocol']
-    dst_port = firewall_rule['dst_port']
+def add_firewall_rule(fw_rule):
+    # ensuring all necessary fields are present in the namespace before continuing.
+    valid_fields = [
+        'action', 'dst_ip', 'dst_netmask', 'dst_port', 'position',
+        'protocol', 'src_ip', 'src_netmask', 'tab', 'zone'
+    ]
+    if not all([hasattr(fw_rule, x) for x in valid_fields]):
+        raise ValidationError('Invalid form.')
 
-    output = run('sudo iptables -nL FIREWALL --line-number', shell=True, capture_output=True).stdout.splitlines()
-    rule_count = len(output) - 1
+    # grabbing list of configured iptable rules for the specified chain.
+    output = run(
+        f'sudo iptables -nL {fw_rule.zone} --line-number', shell=True, capture_output=True
+    ).stdout.splitlines()[1:]
 
-    if (rule_count == 1 and pos != 1):
+    rule_count = len(output)
+    fw_rule.position = convert_int(fw_rule.position)
+    if (not rule_count and fw_rule.position != 1):
         raise ValidationError('First firewall rule must have position 1.')
 
-    else:
-        if (pos not in range(1, rule_count)):
-            raise ValidationError(f'Position outside of valid range. (1-{rule_count-1}')
+    if (not 0 < fw_rule.position <= rule_count+1):
+        raise ValidationError(f'Position outside of valid range. (1-{rule_count+1})')
 
-    if (protocol not in ['any', 'tcp', 'udp', 'icmp']):
+    if (fw_rule.protocol not in ['any', 'tcp', 'udp', 'icmp']):
         raise ValidationError('Network protocol is not valid.')
 
-    if (protocol in ['any', 'icmp'] and dst_port is not None):
+    if (fw_rule.protocol in ['any', 'icmp'] and fw_rule.dst_port):
         raise ValidationError('Only TCP/UDP use destination port field.')
+
+def del_nat_rule(nat_rule):
+    output = run(
+        f'sudo iptables -t nat -nL {nat_rule.nat_type} --line-number', shell=True, capture_output=True
+    ).stdout.splitlines()[1:]
+
+    rule_count = len(output)
+    if (convert_int(nat_rule.position) not in range(1, rule_count)):
+        raise ValidationError('Selected rule is not valid and cannot be removed.')
+
+def add_dnat_rule(nat_rule):
+    # ensuring all necessary fields are present in the namespace before continuing.
+    valid_fields = [
+        'src_zone', 'dst_port', 'host_ip', 'host_port', 'protocol'
+    ]
+    if not all([hasattr(nat_rule, x) for x in valid_fields]):
+        raise ValidationError('Invalid form.')
+
+    if (nat_rule.protocol == 'icmp'):
+        open_protocols = load_configuration('ips.json')['ips']
+        icmp_allow = open_protocols['open_protocols']['icmp']
+        if (icmp_allow):
+            return 'Only one ICMP rule can be active at a time. Remove existing rule before adding another.'
+
+def add_snat_rule(nat_rule):
+    # ensuring all necessary fields are present in the namespace before continuing.
+    valid_fields = [
+        'src_zone', 'orig_src_ip', 'new_src_ip',
+    ]
+    if not all([hasattr(nat_rule, x) for x in valid_fields]):
+        raise ValidationError('Invalid form.')
 
 def portscan_settings(portscan_settings):
     ips = load_configuration('ips')['ips']
@@ -275,7 +339,7 @@ def portscan_settings(portscan_settings):
     current_prevention = ips['port_scan']['enabled']
     for item in portscan_settings:
         if (item not in ['enabled', 'reject']):
-            raise ValidationError('Invalid form data.')
+            raise ValidationError(INVALID_FORM)
 
     if ('reject' in portscan_settings and 'drop' not in portscan_settings
             and not current_prevention):
@@ -284,29 +348,19 @@ def portscan_settings(portscan_settings):
 def ips_passive_block_length(pb_length):
     pb_length = convert_int(pb_length)
     if (pb_length not in [0, 24, 48, 72]):
-        raise ValidationError('Invalid form data.')
+        raise ValidationError(INVALID_FORM)
 
     return pb_length
 
-def add_ip_whitelist(whitelist_ip, whitelist_settings):
-    wl_user = whitelist_settings['user']
-    wl_type = whitelist_settings['type']
+def add_ip_whitelist(whitelist_settings):
+    # handling alphanum check. will raise exception if invalid.
+    standard(whitelist_settings['user'])
 
-    if (not wl_user.isalnum()):
-        raise ValidationError('Standard fields can only contain alpha numeric characters.')
+    if (whitelist_settings['type'] not in ['global', 'tor']):
+        raise ValidationError(INVALID_FORM)
 
-    if (wl_type not in ['global', 'tor']):
-        raise ValidationError('Invalid form data.')
-
-    dnx_settings = load_configuration('config')['settings']
-    local_net = IPv4Network(dnx_settings['local_net']['subnet'])
-    ip_object = IPv4Address(whitelist_ip)
-    if (ip_object not in local_net):
-        raise ValidationError('IP Address must be inside of localnet. ex 192.168.83.10')
-
-def del_ip_whitelist(whitelist_type):
-    if (whitelist_type not in ['global', 'tor']):
-        raise ValidationError('Invalid form data.')
+    # if ip is valid this will return, otherwise a ValidationError will be raised.
+    _ip_address(whitelist_settings['user'])
 
 def main_services(services_form):
     valid_services = ['dnx-dns-proxy', 'dnx-fw-proxy', 'dnx-dhcp-server', 'dnx-updates']
@@ -314,10 +368,10 @@ def main_services(services_form):
     ruleset = services_form['ruleset']
 
     if (service not in valid_services):
-        raise ValidationError('Invalid form data.')
+        raise ValidationError(INVALID_FORM)
 
     if (service in ['dnx-dns-proxy', 'dnx-ip-proxy'] and ruleset is None):
-        raise ValidationError('Invalid form data.')
+        raise ValidationError(INVALID_FORM)
 
 def domain_categories(categories, ruleset):
     if (ruleset == 'default' and not all(['malicious' in categories, 'cryptominer' in categories])):
@@ -332,7 +386,7 @@ def domain_categories(categories, ruleset):
 
     for category in categories:
         if category not in cat_list:
-            raise ValidationError('Invalid form data.')
+            raise ValidationError(INVALID_FORM)
 
 def domain_category_keywords(categories):
     dns_proxy = load_configuration('dns_proxy')['dns_proxy']
@@ -340,10 +394,10 @@ def domain_category_keywords(categories):
     domain_cats = dns_proxy['categories']['default']
     for cat in categories:
         if (cat not in domain_cats):
-            raise ValidationError('Invalid form data.')
+            raise ValidationError(INVALID_FORM)
 
         if (not domain_cats[cat]['enabled']):
-            raise ValidationError('Invalid form data.')
+            raise ValidationError(INVALID_FORM)
 
 def dns_record_add(dns_record_name):
     if (not _VALID_DOMAIN.match(dns_record_name)
@@ -357,4 +411,4 @@ def dns_record_remove(dns_record_name):
         raise ValidationError('Cannot remove dnxfirewall dns record.')
 
     if (dns_record_name not in dns_server['records']):
-        raise ValidationError('Invalid form data.')
+        raise ValidationError(INVALID_FORM)

@@ -101,7 +101,8 @@ class LogService:
 
 _log_write = sys.stderr.write
 
-
+# TODO: create a function that can be used to write logs for system errors that happen prior to log
+# handler being intitialized.
 class LogHandler:
     _LEVEL   = 0
     _syslog  = False
@@ -112,17 +113,13 @@ class LogHandler:
     _syslog_sock = socket()
 
     @classmethod
-    def run(cls, *, name, verbose=False, root=False, console=True):
+    def run(cls, *, name, console=True):
         '''initializes log handler settings and monitors system configs for changes
         with log/syslog settings.'''
-        if (cls.is_root and not root):
-            raise RuntimeError('must set root argument to True if running as root.')
         if (cls.is_running):
             raise RuntimeWarning('the log handler has already been started.')
 
         cls.name     = name
-        cls.verbose  = verbose
-        cls.root     = root
         cls.console  = console
         cls._running = True
 
@@ -196,29 +193,28 @@ class LogHandler:
     @classmethod
     def dprint(cls, message):
         '''print function alternative to supress/show terminal output.'''
-        if (cls.verbose):
+        if (LOG.DEBUG):
             _log_write(f'{message}\n')
 
-    def simple_write(self, m_name, level, message):
+    @staticmethod
+    def simple_write(m_name, level_name, message):
         '''alternate system log method. this can be used to override global module log name if needed.'''
 
         path = f'{HOME_DIR}/dnx_system/log/{m_name}/{System.date(string=True)}-{m_name}.log'
         with open(path, 'a+') as log:
-            log.write(f'{int(fast_time())}|{level}: {message}\n')
+            log.write(f'{int(fast_time())}|{m_name}{level_name}|{message}\n')
 
-        if (self.root):
+        if (ROOT):
             change_file_owner(path)
 
     @dnx_queue(None, name='LogHandler')
-    ## This is the message handler for ensuring thread safety in multi threaded tasks # pylint: disable=no-self-argument
-    def _write_to_disk(cls, job):
+    def _write_to_disk(cls, job): # pylint: disable=no-self-argument
         path = f'{cls._path}/{System.date(string=True)}-{cls.name}.log'
 
-        timestamp, message = job
         with open(path, 'a+') as log:
-            log.write(f'{timestamp}|{message}')
+            log.write(job)
 
-        if (cls.root):
+        if (ROOT):
             change_file_owner(path)
 
     @classmethod
@@ -229,8 +225,8 @@ class LogHandler:
         Do not override.
 
         '''
+
         log_data = Format.db_message(timestamp, log, method)
-#        print(f'SERIALIZED: {timestamp} {log_entry} {method}')
         for _ in range(2):
             try:
                 cls._db_sock.send(log_data)
@@ -256,6 +252,7 @@ class LogHandler:
     @classmethod
     def _add_logging_methods(cls):
         '''dynamicly overrides default log level methods depending on current log settings.'''
+
         mapping = Format.convert_level()
 
         for level_number, level_name in mapping.items():
@@ -263,23 +260,25 @@ class LogHandler:
 
     @classmethod
     def _update_log_method(cls, level_num, level_info):
-        level_name, desc = level_info
-        # if verbose is enabled all entries will be logged to terminal, but system log filter applies
-        if (cls.verbose):
+        level_name, desc = level_info # pylint disable=unused-variable # NOTE: for future use
+        # if verbose is enabled all entries will be logged
+        if (level_num == LOG.DEBUG):
             @classmethod
             def log_method(cls, message):
-                message = f'{fast_time()}|{level_name}: {message}\n'
+                message = f'{round(fast_time())}|{cls.name}|{level_name}|{message}\n'
 
                 _log_write(message)
 
-                if (level_num <= cls._LEVEL):
-                    cls._write_to_disk.add(message)
+                # NOTE: verbose should also write everything to disk to ensure issues can be tracked
+                # over time vs just at time of troubleshooting.
+                # if (level_num <= cls._LEVEL):
+                cls._write_to_disk.add(message)
 
         # entry will be logged to file
         elif (level_num <= cls._LEVEL):
             @classmethod
             def log_method(cls, message):
-                cls._system_log(f'{fast_time()}|{level_name}: {message}\n')
+                cls._write_to_disk.add(f'{round(fast_time())}|{cls.name}|{level_name}|{message}\n')
 
         # log level is disabled
         else:

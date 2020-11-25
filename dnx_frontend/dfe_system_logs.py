@@ -23,12 +23,17 @@ def update_page(form):
 
     selected = {
         'combined': '1', 'system': '2', 'update': '3', 'logins': '4',
-        'dns_proxy': '5', 'ip_proxy': '6', 'ips': '7', 'dhcp_server':'8' ,
+        'dns_proxy': '5', 'ip_proxy': '6', 'ips': '7', 'dhcp_server':'8',
         'syslog': '9'}.get(log_type, '1')
 
     # returning none to fill the table_args var on the calling funtion to allow for reusablity with the reports page method
     return get_log_entries(log_files), selected, None
 
+# TODO: make front end logging 4 fields. date/time, service, level, entry. this will make the presentation nicer
+# and will still allow for service identification on the combined system log.
+    # NOTE: it looks like not all long entries, especially debug have the service identified in the log currently.
+    # would probably be a good idea to just use the log/service name defined in module so each entry does not need
+    # to worry about it.
 def get_log_entries(log_files):
     combined_log = []
     total_lines, line_limit = 0, 100
@@ -37,13 +42,17 @@ def get_log_entries(log_files):
 
         log_entries = tail_file(file, line_count=100)
         for line in log_entries:
+
+            # skipping over empty lines.
+            if not line.strip('\n'): continue
+
             total_lines += 1
             if total_lines >= line_limit: break
 
-            epoch, log_message = line.split('|')
+            epoch, *log_entry = line.split('|', 3)
             date_time = System.calculate_time_offset(int(epoch))
             date_time = System.format_log_time(date_time)
 
-            combined_log.append((date_time, log_message))
+            combined_log.append((date_time, *log_entry))
 
     return combined_log

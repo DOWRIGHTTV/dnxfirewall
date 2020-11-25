@@ -18,7 +18,10 @@
         },
         "open_protocols": {
             "icmp": false,
-            "tcp": {},
+            "tcp": {
+                "2222": "90",
+                "8989": "90"
+            },
             "udp": {}
         },
         "whitelist": {

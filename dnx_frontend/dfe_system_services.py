@@ -31,7 +31,6 @@ def update_page(form):
         service = form.get('restart_svc')
 
         service = 'dnx-' + service.replace(' ', '-')
-        print(service)
         if (service not in valid_services):
             return INVALID_FORM
 

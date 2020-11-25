@@ -5,8 +5,8 @@
             "amount": 0
         },
         "logging": {
-            "length": 45,
-            "level": 5
+            "length": 30,
+            "level": 7
         }
     }
 }

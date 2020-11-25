@@ -116,33 +116,40 @@ def set_logging(log_settings):
 # only the dnx config file will change, but the system one will not be changed
 # CHANGING DNS SERVERS MIGHT REQUIRE WAN RESTART WHICH WOULD. INVESTIGATE.
 def set_dns_servers(dns_server_info):
+    field = {1: 'primary', 2: 'secondary'}
+
     with ConfigurationManager('dns_server') as dnx:
         dns_server_settings = dnx.load_configuration()
 
-        dns = dns_server_settings['dns_server']['resolvers']
+        public_resolvers = dns_server_settings['dns_server']['resolvers']
+
         for i, (server_name, ip_address) in enumerate(dns_server_info.items(), 1):
-            if (server_name and ip_address):
-                server = dns[f'server{i}']
-                server.update({
-                    'name': server_name,
-                    'ip_address': ip_address
-                })
+            if (not server_name and ip_address):
+                continue
+
+            public_resolvers[field[i]].update({
+                'name': server_name,
+                'ip_address': ip_address
+            })
 
         dnx.write_configuration(dns_server_settings)
 
-    wan_information = load_configuration('config')
-    interface = wan_information['settings']['interface']
+    wan_information = load_configuration('config')['settings']
+    interface = wan_information['interfaces']
     wan_dhcp = interface['wan']['dhcp']
-    wan_int = interface['outside']
+    wan_int = interface['wan']['ident']
     if (not wan_dhcp):
         wan_ip = interface.get_ip_address(wan_int)
-        wan_netmask = Interface.netmask(wan_int)
-        wan_dfg = Interface.default_gateway(wan_int)
 
+        wan_dfg = Interface.default_gateway(wan_int)
         cidr = System.standard_to_cidr(wan_netmask)
 
-        wan_settings = {'ip_address': wan_ip, 'cidr': cidr, 'default_gateway': wan_dfg}
-        set_wan_interface(wan_settings)
+        # TODO: convert this to new module
+        wan_netmask = Interface.netmask(wan_int)
+
+        set_wan_interface({
+            'ip_address': wan_ip, 'cidr': cidr, 'default_gateway': wan_dfg
+        })
 
 def update_dns_record(dns_record_name, action, dns_record_ip=None):
     with ConfigurationManager('dns_server') as dnx:
@@ -180,16 +187,16 @@ def configure_user_account(account_info, action):
 
         dnx.write_configuration(accounts)
 
-def set_proxy_exception(domain, action, reason=None, *, ruleset):
+def set_proxy_exception(exception_settings, *, ruleset):
     with ConfigurationManager(ruleset) as dnx:
         exceptions_list = dnx.load_configuration()
 
         exceptions = exceptions_list[ruleset]['exception']
-        if (action is CFG.ADD):
-            exceptions[domain]['reason'] = reason
+        if (exception_settings['action'] is CFG.ADD):
+            exceptions[exception_settings['domain']]['reason'] = exception_settings['reason']
 
-        elif (action is CFG.DEL):
-            exceptions.pop(domain)
+        elif (exception_settings['action'] is CFG.DEL):
+            exceptions.pop(exception_settings['domain'])
 
         dnx.write_configuration(exceptions_list)
 
@@ -231,18 +238,18 @@ def update_custom_category_domain(category, domain, reason=None, *, action):
         dnx.write_configuration(custom_category_domains)
 
 # adds a time based rule to whitelist/blacklist
-def add_proxy_domain(domain, timer, *, ruleset):
+def add_proxy_domain(whitelist_settings, *, ruleset):
     input_time  = int(fast_time())
-    expire_time = input_time + timer*60
+    expire_time = input_time + whitelist_settings['timer'] * 60
 
     with ConfigurationManager(ruleset) as dnx:
         domain_list = dnx.load_configuration()
 
         domains = domain_list[ruleset]['domain']
         domains.update({
-            domain: {
+            whitelist_settings['domain']: {
                 'time': input_time,
-                'rule_length': timer,
+                'rule_length': whitelist_settings['timer'],
                 'expire': expire_time
             }
         })
@@ -268,19 +275,19 @@ def set_domain_tlds(update_tlds):
 
         dnx.write_configuration(proxy_settings)
 
-def add_proxy_ip_whitelist(whitelist_ip, whitelist_settings):
+def add_proxy_ip_whitelist(whitelist_settings):
     with ConfigurationManager('whitelist') as dnx:
         whitelist = dnx.load_configuration()
 
         ip_whitelist = whitelist['whitelist']['ip_whitelist']
-        ip_whitelist[whitelist_ip] = {
+        ip_whitelist[whitelist_settings['ip']] = {
             'user': whitelist_settings['user'],
             'type': whitelist_settings['type']
         }
 
         dnx.write_configuration(whitelist)
 
-def del_proxy_ip_whitelist(whitelist_ip, whitelist_type):
+def del_proxy_ip_whitelist(whitelist_ip):
     with ConfigurationManager('whitelist') as dnx:
         whitelist = dnx.load_configuration()
 
@@ -429,29 +436,6 @@ def update_ip_restriction_settings(tr_settings):
 
         dnx.write_configuration(time_restriction_settings)
 
-# settings update service reset and error flags back to False/None.
-def reset_module_flags(*, system=False, signatures=False, ruleset='both'):
-    with ConfigurationManager('updates') as dnx:
-        system_updates = dnx.load_configuration()
-        if (system):
-            system_status = system_updates['updates']['system']
-            system_status.update({'restart': False, 'error': None})
-
-        if (signatures and ruleset == 'domain'):
-            signature_status = system_updates['updates']['signature']
-            signature_status[ruleset].update({'restart': False, 'error': None})
-
-        elif (signatures and ruleset == 'ip'):
-            signature_status = system_updates['updates']['signature']
-            signature_status[ruleset].update({'restart': False, 'error': None})
-
-        elif (signatures and ruleset == 'both'):
-            signature_status = system_updates['updates']['signature']
-            for ruleset in ['domain', 'ip']:
-                signature_status[ruleset].update({'restart': False, 'error': None})
-
-        dnx.write_configuration(system_updates)
-
 def set_dns_cache_clear_flag(clear_dns_cache):
     with ConfigurationManager('dns_server') as dnx:
         dns_server_settings = dnx.load_configuration()
@@ -462,19 +446,6 @@ def set_dns_cache_clear_flag(clear_dns_cache):
                 dns_cache_flags[flag] = True
 
         dnx.write_configuration(dns_server_settings)
-
-def reset_update_errors():
-    with ConfigurationManager('updates') as dnx:
-        update_settings = dnx.load_configuration()
-
-        system_status = update_settings['updates']['system']
-        signature_status = update_settings['updates']['signature']
-
-        system_status['error'] = None
-        for ruleset in ['domain', 'ip']:
-            signature_status[ruleset]['error'] = None
-
-        dnx.write_configuration(update_settings)
 
 def set_ips_ddos(action):
     with ConfigurationManager('ips') as dnx:
@@ -514,6 +485,8 @@ def set_ips_ddos_limits(ddos_limits):
 
         dnx.write_configuration(ips_settings)
 
+# TODO: this is code halfway between new and old format. probably needs some work. for now its ok
+# since this only controls internal system dns queries (clients on network go through software proxy)
 # True > User Config | False > restore DHCP
 def set_wan_interface(settings=None):
     ## Opening Config JASON file and updating WAN Interface information to be
@@ -566,16 +539,19 @@ def set_wan_interface(settings=None):
             Services.restart('systemd-networkd')
             dnx.write_configuration(interface_settings)
 
-def add_open_wan_protocol(protocol, dst_port, host_port):
+def add_open_wan_protocol(nat_info):
     with ConfigurationManager('ips') as dnx:
         open_protocol_settings = dnx.load_configuration()
 
         open_protocols = open_protocol_settings['ips']['open_protocols']
-        if (dst_port):
-            open_protocols[protocol][dst_port] = host_port
-        # this is handling icmp i think.
+
+        # if dst port is present protocol is tcp/udp
+        if (nat_info.dst_port):
+            open_protocols[nat_info.protocol][nat_info.dst_port] = nat_info.host_port
+
+        # will only match icmp, which is configured as a boolean value
         else:
-            open_protocols[protocol] = True
+            open_protocols[nat_info.protocol] = True
 
         dnx.write_configuration(open_protocol_settings)
 

@@ -8,7 +8,7 @@ if (os.geteuid() != 0):
 
 services = [
     'dns-proxy', 'ip-proxy', 'ips', 'dhcp-server', 'web',
-    'updates', 'log', 'syslog', 'database', 'interface'
+    'log', 'syslog', 'database', 'interface'
     ]
 
 for service in services:

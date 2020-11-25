@@ -11,13 +11,13 @@ sys.path.insert(0, HOME_DIR)
 import dnx_configure.dnx_configure as configure
 import dnx_configure.dnx_validate as validate
 
-from dnx_configure.dnx_constants import CFG, INVALID_FORM
+from dnx_configure.dnx_constants import CFG, DATA, INVALID_FORM
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_configure.dnx_system_info import System
 
 def load_page():
-    whitelist = load_configuration('whitelist.json')['whitelist']
+    whitelist = load_configuration('whitelist')['whitelist']
 
     exceptions = whitelist['exception']
     domain_whitelist = whitelist['domain']
@@ -37,78 +37,89 @@ def load_page():
 
 def update_page(form):
     if ('wl_add' in form):
-        domain = form.get('domain', None)
-        timer = form.get('rule_length', None)
-        if (not domain or not timer):
+        whitelist_settings = {
+            'domain': form.get('domain', DATA.INVALID),
+            'timer': validate.get_convert_int(form, 'rule_length')
+        }
+        if (DATA.INVALID in whitelist_settings.values()):
             return INVALID_FORM
 
         try:
-            validate.domain(domain)
-            validate.timer(timer)
+            validate.domain(whitelist_settings['domain'])
+            validate.timer(whitelist_settings['timer'])
         except ValidationError as ve:
             return ve
         else:
-            configure.add_proxy_domain(domain, timer, ruleset='whitelist')
+            configure.add_proxy_domain(whitelist_settings, ruleset='whitelist')
 
     elif ('wl_remove' in form):
-        domain = form.get('wl_remove', None)
-        if (not domain):
+        domain = form.get('wl_remove', DATA.INVALID)
+
+        if (domain is DATA.INVALID):
             return INVALID_FORM
 
         configure.del_proxy_domain(domain, ruleset='whitelist')
 
     elif ('exc_add' in form):
-        domain = form.get('domain', None)
-        reason = form.get('reason', None)
-        if (not domain or not reason):
+        exception_settings = {
+            'domain': form.get('domain', DATA.INVALID),
+            'reason': form.get('reason', DATA.INVALID),
+            'action': CFG.ADD
+        }
+        if (DATA.INVALID in exception_settings.values()):
             return INVALID_FORM
 
         try:
-            validate.domain(domain)
-            validate.standard(reason)
+            validate.domain(exception_settings['domain'])
+            validate.standard(exception_settings['reason'])
         except ValidationError as ve:
             return ve
         else:
-            configure.set_proxy_exception(domain, CFG.ADD, reason, ruleset='whitelist')
+            configure.set_proxy_exception(exception_settings, ruleset='whitelist')
 
     elif ('exc_remove' in form):
-        domain = form.get('exc_remove', None)
-        if (not domain):
+        exception_settings = {
+            'domain': form.get('exc_remove', DATA.INVALID),
+            'reason': None,
+            'action': CFG.DEL
+        }
+        if (exception_settings['domain'] is DATA.INVALID):
             return INVALID_FORM
 
-        configure.set_proxy_exception(domain, CFG.DEL, ruleset='whitelist')
+        configure.set_proxy_exception(exception_settings, ruleset='whitelist')
+
+    # TODO: this should not restrict ips to only "local_net" now that we have multiple interfaces.
+    # we should have the user select which interface it will be active on so we can properly validate the
+    # ip address falls within that subnet.
 
     elif ('ip_wl_add' in form):
-        whitelist_ip = form.get('ip_wl_ip', None)
-        whitelist_user = form.get('ip_wl_user', None)
-        whitelist_type = form.get('ip_wl_type', None)
-
-        whitelist_settings = {'user': whitelist_user, 'type': whitelist_type}
-        if not all([whitelist_ip, whitelist_type, whitelist_user]):
+        whitelist_settings = {
+            'ip': form.get('ip_wl_ip', DATA.INVALID),
+            'user':form.get('ip_wl_user', DATA.INVALID),
+            'type': form.get('ip_wl_type', DATA.INVALID)
+        }
+        if (DATA.INVALID in whitelist_settings.values()):
             return INVALID_FORM
 
         try:
-            validate.ip_address(whitelist_ip)
-            validate.add_ip_whitelist(whitelist_ip, whitelist_settings)
+            validate.add_ip_whitelist(whitelist_settings)
         except ValidationError as ve:
             return ve
         else:
-            configure.add_proxy_ip_whitelist(whitelist_ip, whitelist_settings)
+            configure.add_proxy_ip_whitelist(whitelist_settings)
 
     elif ('ip_wl_remove' in form):
-        whitelist_ip = form.get('ip_wl_ip', None)
-        whitelist_type = form.get('ip_wl_type', None)
+        whitelist_ip = form.get('ip_wl_ip', DATA.INVALID)
 
-        if (not whitelist_ip or not whitelist_type):
+        if (whitelist_ip is DATA.INVALID):
             return INVALID_FORM
 
         try:
             validate.ip_address(whitelist_ip)
-            validate.del_ip_whitelist(whitelist_type)
         except ValidationError as ve:
             return ve
         else:
-            configure.del_proxy_ip_whitelist(whitelist_ip, whitelist_type)
+            configure.del_proxy_ip_whitelist(whitelist_ip)
 
     else:
         return INVALID_FORM

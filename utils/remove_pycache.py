@@ -13,13 +13,13 @@ folders = [
     'dnx_backups', 'dnx_configure',
     'dnx_database', 'dnx_frontend',
     'dnx_logging', 'dnx_system',
-    'dnx_updates', 'dhcp_server',
+    'dhcp_server', 'ip_proxy'
     'dns_proxy', 'dnx_ips',
     'dnx_iptools', 'dnx_syslog',
-    'ip_proxy', 'netfilter'
+    'netfilter'
     ]
 
 for folder in folders:
     run(f'sudo rm -r {HOME_DIR}/{folder}/__pycache__', shell=True, stdout=DEVNULL)
-    
+
     print(f'removed pycache for {folder}! :)')

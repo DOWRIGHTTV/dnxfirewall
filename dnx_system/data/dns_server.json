@@ -16,7 +16,7 @@
         },
         "tls": {
             "enabled": true,
-            "fallback": false
+            "fallback": true
         },
         "records": {
             "dnx.firewall": "192.168.83.1"

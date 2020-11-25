@@ -59,6 +59,7 @@ def load_page():
     return dns_settings
 
 def update_page(form):
+    # TODO: i dont like this. fix this.
     # Matching DNS Update form and sending to configuration method.
     if ('dns_update' in form):
         dnsname1 = form.get('dnsname1', None)

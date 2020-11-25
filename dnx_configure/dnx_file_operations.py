@@ -318,6 +318,7 @@ class ConfigurationManager:
         '_temp_file', '_temp_file_path', '_file_name',
         '_data_written', '_Log'
     )
+
     def __init__(self, config_file, file_path=None, Log=None):
         if (not config_file.endswith('.json')):
             config_file = ''.join([config_file, '.json'])
@@ -342,6 +343,9 @@ class ConfigurationManager:
         self._temp_file_path = f'{HOME_DIR}/dnx_system/data/{token_urlsafe(10)}.json'
         self._temp_file = open(self._temp_file_path, 'w+')
 
+        os.chmod(self._temp_file_path, 0o660)
+        shutil.chown(self._temp_file_path, user=USER, group=GROUP)
+
         if (self._Log):
             self._Log.debug(f'Config file lock aquired for {self._file_name}.')
 
@@ -353,8 +357,7 @@ class ConfigurationManager:
     def __exit__(self, exc_type, exc_val, traceback):
         if (exc_type is None and self._data_written):
             os.replace(self._temp_file_path, self._config_file)
-            os.chmod(self._config_file, 0o660)
-            shutil.chown(self._config_file, user=USER, group=GROUP)
+
         else:
             self._temp_file.close()
             os.unlink(self._temp_file_path)

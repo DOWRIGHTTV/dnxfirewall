@@ -25,13 +25,13 @@ from dnx_iptools.dnx_parent_classes import RawPacket
 class ClientRequest:
     __slots__ = (
         # protected vars
-        '_data', '_dns_header', '_dns_query',
+        '_data', '_dns_header', '_dns_query', '_arc',
 
         # public vars - init
         'address', 'sendto', 'top_domain',
         'keepalive', 'dom_local', 'fallback',
         'dns_id', 'request', 'send_data',
-        'arc', 'additional_data',
+        'additional_data',
 
         # public vars - dns
         'qr', 'op', 'aa', 'tc', 'rd',
@@ -62,7 +62,7 @@ class ClientRequest:
         self.send_data = b''
 
         # OPT record defaults
-        self.arc = 0
+        self._arc = 0
         self.additional_data = b''
 
     def __str__(self):
@@ -138,11 +138,11 @@ class ClientRequest:
 
         # if additional data seen after question record, will mark additional record count as 1 in dns header
         if (self.additional_data):
-            self.arc = 1
+            self._arc = 1
 
         # TODO: see what the list bounds are for having to resize. if the header + length fits, we can remove
         # the pre assignment length bytes. make sure insert scenario is looked at.
-        send_data = [b'\x00\x00', create_dns_query_header(dns_id, self.arc, cd=self.cd)]
+        send_data = [b'\x00\x00', create_dns_query_header(dns_id, self._arc, cd=self.cd)]
         send_data.append(convert_dns_string_to_bytes(self.request))
         send_data.append(double_short_pack(self.qtype, 1))
         send_data.append(self.additional_data)

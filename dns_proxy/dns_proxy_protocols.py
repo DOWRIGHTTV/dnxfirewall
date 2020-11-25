@@ -158,7 +158,7 @@ class TLSRelay(ProtoRelay):
                 # if no data is received/EOF the remote end has closed the connection
                 if (not data_from_server):
                     Log.dprint('RECV HANDLER: PIPELINE CLOSED BY REMOTE SERVER!')
-                    return
+                    break
 
             recv_buff_append(data_from_server)
             while recv_buffer:

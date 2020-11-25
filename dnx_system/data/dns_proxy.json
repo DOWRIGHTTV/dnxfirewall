@@ -16,7 +16,7 @@
                     "keyword": false
                 },
                 "telemetry": {
-                    "enabled": false,
+                    "enabled": true,
                     "keyword": false
                 },
                 "ads": {
@@ -26,16 +26,60 @@
                 "vpn": {
                     "enabled": false,
                     "keyword": false
+                },
+                "mature": {
+                    "enabled": false,
+                    "keyword": false
+                },
+                "pornography": {
+                    "enabled": false,
+                    "keyword": false
+                },
+                "drugs": {
+                    "enabled": true,
+                    "keyword": false
+                },
+                "weapons": {
+                    "enabled": false,
+                    "keyword": false
+                },
+                "socialmedia": {
+                    "enabled": false,
+                    "keyword": false
+                },
+                "p2p": {
+                    "enabled": false,
+                    "keyword": false
+                },
+                "gambling": {
+                    "enabled": true,
+                    "keyword": false
+                },
+                "videogames": {
+                    "enabled": false,
+                    "keyword": false
+                },
+                "purchases": {
+                    "enabled": false,
+                    "keyword": false
+                },
+                "remotelogin": {
+                    "enabled": false,
+                    "keyword": false
+                },
+                "downloads": {
+                    "enabled": false,
+                    "keyword": false
                 }
             },
             "user_defined": {}
         },
         "tlds": {
-            ".ru": true,
-            ".cn": true,
-            ".xxx": true,
-            ".porn": true,
-            ".adult": true,
+            ".ru": false,
+            ".cn": false,
+            ".xxx": false,
+            ".porn": false,
+            ".adult": false,
             ".ads": true,
             ".click": true,
             ".download": true,

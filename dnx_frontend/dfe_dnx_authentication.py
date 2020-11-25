@@ -20,8 +20,6 @@ LOG_NAME = 'logins'
 
 class Authentication:
     def __init__(self):
-        self._Log = Log()
-
         self._time_expired = threading.Event()
 
     @staticmethod
@@ -43,12 +41,12 @@ class Authentication:
 
         authorized, username, user_role = self._user_login(form, login_ip)
         if (authorized):
-            self._Log.simple_write(
+            Log.simple_write(
                 LOG_NAME, 'notice', f'User {username} successfully logged in from {login_ip}.'
             )
 
         else:
-            self._Log.simple_write(
+            Log.simple_write(
                 LOG_NAME, 'warning', f'Failed login attempt for user {username} from {login_ip}.'
             )
 

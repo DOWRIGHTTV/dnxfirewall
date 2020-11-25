@@ -10,7 +10,7 @@ HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
-from dnx_iptools.dnx_binary_search import generate_linear_binary_search, generate_recursive_binary_search # pylint: disable=no-name-in-module
+from dnx_iptools.dnx_binary_search import generate_linear_binary_search, generate_recursive_binary_search # pylint: disable=import-error, no-name-in-module
 from dnx_configure.dnx_lists import ListFiles
 from dnx_configure.dnx_namedtuples import IPP_IP_INFO, IPP_INSPECTION_RESULTS, IPP_LOG, INFECTED_LOG
 from dnx_configure.dnx_file_operations import load_signatures
@@ -25,7 +25,7 @@ from dnx_configure.dnx_code_profiler import profiler
 
 LOG_NAME = 'ip_proxy'
 
-# TODO:
+
 class IPProxy(NFQueue):
     inspect_on     = False
     ids_mode       = False
@@ -77,10 +77,13 @@ class IPProxy(NFQueue):
     def forward_packet(cls, nfqueue, zone, action=CONN.ACCEPT):
         if (zone == WAN_IN and action is CONN.DROP):
             nfqueue.set_mark(IP_PROXY_DROP)
-        elif (zone == LAN_IN):
+
+        elif (zone in [LAN_IN, DMZ_IN]):
             nfqueue.set_mark(SEND_TO_FIREWALL)
+
         elif (zone == WAN_IN):
             nfqueue.set_mark(SEND_TO_IPS)
+
         # NOTE: this is to protect the repeat if no match. probably log??
         else:
             nfqueue.drop()
@@ -184,75 +187,6 @@ class Inspect:
 
         return False
 
-
-    # NOTE: this has been moved to a cython extension and is imported and set up at runtime.
-    # keeping for archival purposes for awhile.
-
-    # @lru_cache(maxsize=1024)
-    # def _cat_bin_match(self, host, recursion=False):
-    #     hb_id, hh_id, f_octet = host
-    #     if (not recursion):
-    #         sigs = self._Proxy.cat_signatures
-    #         left, right = self._calculate_bounds(left=0, right=len(sigs)-1, f_octet=f_octet)
-    #     else:
-    #         sigs = self._match
-    #         left, right = 0, len(sigs)-1
-
-    #     while left <= right:
-    #         mid = left + (right - left) // 2
-    #         b_id, match = sigs[mid]
-
-    #         # host bin id matches a bin id in sigs
-    #         if (b_id == hb_id):
-    #             break
-
-    #         # excluding left half
-    #         elif (b_id < hb_id):
-    #             left = mid + 1
-
-    #         # excluding right half
-    #         elif (b_id > hb_id):
-    #             right = mid - 1
-    #     else:
-    #         return None
-
-    #     # on bin match, assign var of dataset then recursively call to check host ids
-    #     if (not recursion):
-    #         self._match = match
-
-    #         return self._cat_bin_match((hh_id, 0, 0), recursion=True)
-
-    #     return IPP_CAT(match)
-
-    # @lru_cache(maxsize=1024)
-    # def _geo_bin_match(self, host):
-    #     hb_id, h_id, f_octet = host
-    #     sigs = self._Proxy.geo_signatures
-
-    #     # initial adjustment. using an interpolative clamping of left/right bounds.
-    #     left, right = self._calculate_bounds(left=0, right=len(sigs)-1, f_octet=f_octet)
-    #     while left <= right:
-    #         mid = left + (right - left) // 2
-    #         b_id, h_ranges = sigs[mid]
-
-    #         # excluding left half
-    #         if (b_id < hb_id):
-    #             left = mid + 1
-
-    #         # excluding right half
-    #         elif (b_id > hb_id):
-    #             right = mid - 1
-
-    #         # host bin id matches a bin id in sigs
-    #         else:
-    #             break
-    #     else:
-    #         return None
-
-    #     for r_start, r_end, c_code in h_ranges:
-    #         if r_start <= h_id <= r_end:
-    #             return GEO(c_code)
-
 if __name__ == "__main__":
     ip_cat_signatures, geoloc_signatures = Configuration.load_ip_signature_bitmaps()
 
@@ -264,8 +198,6 @@ if __name__ == "__main__":
     _linear_binary_search = generate_linear_binary_search(geoloc_signatures, geoloc_signature_bounds)
 
     Log.run(
-        name=LOG_NAME,
-        verbose=VERBOSE,
-        root=ROOT
+        name=LOG_NAME
     )
     IPProxy.run(Log, q_num=1)

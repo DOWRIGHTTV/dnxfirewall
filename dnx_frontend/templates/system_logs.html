@@ -1,9 +1,5 @@
 {% extends('layout.html') %}
 {% block body %}
-<!-- slider (good UX however kind of pointless if you don't have anything to display that's really neat? -->
-{% if hasSlider %}
-{% include('slider.html') %}
-{% endif %}
 <!-- Tabs for statistics -->
 <section id="dropdown" class="section">
     <div class="container">
@@ -14,24 +10,11 @@
                     <form action="system/logs" method="POST">
                         <div class="input-field col s10 m6">
                             <select name="table" onchange="this.form.submit()">
-                                <option value="combined" {% if menu=='1' %} selected {% endif %} onclick="activeTab(1)"
-                                    >Combined Log</option>
-                                <option value="system" {% if menu=='2' %} selected {% endif %} onclick="activeTab(2)"
-                                    >System Log</option>
-                                <option value="update" {% if menu=='3' %} selected {% endif %} onclick="activeTab(3)"
-                                    >Update Log</option>
-                                <option value="logins" {% if menu=='4' %} selected {% endif %} onclick="activeTab(4)"
-                                    >Logins Log</option>
-                                <option value="dns_proxy" {% if menu=='5' %} selected {% endif %}onclick="activeTab(5)"
-                                    >DNS Proxy Log</option>
-                                <option value="ip_proxy" {% if menu=='6' %} selected {% endif %} onclick="activeTab(6)"
-                                    >IP Proxy Log</option>
-                                <option value="ips" {% if menu=='7' %} selected {% endif %} onclick="activeTab(7)"
-                                    >IPS Log</option>
-                                <option value="dhcp_server" {% if menu=='8' %} selected {% endif %}
-                                    onclick="activeTab(8)">DHCP Server Log</option>
-                                <option value="syslog" {% if menu=='9' %} selected {% endif %} onclick="activeTab(9)"
-                                    >Syslog Log</option>
+                                {% for selection in
+                                    ['combined', 'system', 'update', 'logins', 'dns_proxy', 'ip_proxy', 'ips', 'dhcp_server', 'syslog'] %}
+                                <option value="{{selection}}" {% if menu==loop.index|string %} selected {% endif %}
+                                    >{{selection.upper()|replace('_', ' ')}} LOG</option>
+                                {% endfor %}
                             </select>
                             <label for="table">Log Files</label>
                         </div>
@@ -49,14 +32,18 @@
                         <thead>
                             <tr>
                                 <th>Date/Time</th>
+                                <th>Service</th>
+                                <th>Level</th>
                                 <th>Log Entry</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% if table_data %}
-                            {% for date_time, log_entry in table_data %}
+                            {% for date_time, service, log_level, log_entry in table_data %}
                             <tr>
                                 <td>{{date_time}}</td>
+                                <td>{{service}}</td>
+                                <td>{{log_level}}</td>
                                 <td>{{log_entry}}</td>
                             </tr>
                             {% endfor %}

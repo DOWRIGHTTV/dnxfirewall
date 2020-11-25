@@ -39,14 +39,14 @@
                         <div class="row">
                             <div class="input-field col s12 m12">
                                 <select name="log_level" id="">
-                                    <option value="1" {% if logging_settings['logging']['level']==1 %} selected
-                                        {% endif %}>1: Alert</option>
-                                    <option value="4" {% if logging_settings['logging']['level']==4 %} selected
-                                        {% endif %}>4: Warning</option>
-                                    <option value="5" {% if logging_settings['logging']['level']==5 %} selected
-                                        {% endif %}>5: Notice</option>
-                                    <option value="6" {% if logging_settings['logging']['level']==6 %} selected
-                                        {% endif %}>6: Informational</option>
+                                    {% for level in logging_settings['logging']['log_levels'] %}
+                                    {% set level_num = loop.index - 1 %}
+                                    {% if logging_settings['logging']['level']==level_num %}
+                                    <option value="{{level_num}}" selected>{{level_num}}: {{level}}</option>
+                                    {% else %}
+                                    <option value="{{level_num}}">{{level_num}}: {{level}}</option>
+                                    {% endif %}
+                                    {% endfor %}
                                 </select>
                                 <label for="log_level">Log Level (Severity)</label>
                             </div>
@@ -73,7 +73,7 @@
                         <input type="hidden" name="tab" value="2">
                         <div class="row">
                             <div class="input-field col s6 m6">
-                                <select name="dir-offset" id="">
+                                <select name="dir_offset" id="">
                                     <option value=" " {% if logging_settings['offset']['amount']==0 %} selected
                                         {% endif %}></option>
                                     <option value="-" {% if logging_settings['offset']['direction']=='-' and not
@@ -81,16 +81,16 @@
                                     <option value="+" {% if logging_settings['offset']['direction']=='+' and not
                                         logging_settings['offset']['amount']==0 %} selected {% endif %}>+</option>
                                 </select>
-                                <label for="dir-offset">Direction</label>
+                                <label for="dir_offset">Direction</label>
                             </div>
                             <div class="input-field col s6 m6">
-                                <select name="time-offset" id="">
+                                <select name="time_offset" id="">
                                     {% for i in range(0,15) %}
                                     <option value="{{i}}" {% if logging_settings['offset']['amount']==loop.index-1 %}
                                         selected {% endif %}>{{i}}</option>
                                     {% endfor %}
                                 </select>
-                                <label for="time-offset">Time Offset</label>
+                                <label for="time_offset">Time Offset</label>
                             </div>
                         </div>
                         <div class="row">

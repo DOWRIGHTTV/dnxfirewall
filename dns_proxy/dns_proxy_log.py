@@ -8,6 +8,7 @@ from dnx_configure.dnx_namedtuples import DNS_LOG, INFECTED_LOG
 class Log(LogHandler):
 
     @classmethod
+    # TODO: this looks standard and can probably just be relocated into the parent LogHandler.
     def log(cls, pkt, req):
         lvl, logs = cls._generate_event_log(pkt, req)
         for method, log in logs.items():
@@ -18,10 +19,10 @@ class Log(LogHandler):
 
     @classmethod
     def _generate_event_log(cls, pkt, req):
-        #supressing logs for dns over https. these are blocked in the backgrounds and should not notify the user.
+        # supressing logs for dns over https. these are blocked in the backgrounds and should not notify the user.
         if (req.category in [DNS_CAT.doh]): pass
 
-        ## Log to Infected Clients DB Table if matching malicious type categories
+        # log to infected clients db table if matching malicious type categories
         elif (req.category in [DNS_CAT.malicious, DNS_CAT.cryptominer] and cls.current_lvl >= LOG.ALERT):
             log = DNS_LOG(f'{pkt.src_ip}', pkt.request, req.category.name, req.reason, 'blocked')
 

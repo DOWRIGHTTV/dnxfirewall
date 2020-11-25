@@ -47,6 +47,6 @@ INFECTED_LOG = _namedtuple('infected_log', 'infected_client src_ip detected_host
 BLOCKED_DOM = _namedtuple('blocked', 'domain category reason')
 
 #SOCKET
-L_SOCK   = _namedtuple('listener_socket', 'name ip socket send sendto recvfrom')
+L_SOCK = _namedtuple('listener_socket', 'name ip socket send sendto recvfrom')
 # NFQ_SOCK = _namedtuple('socket_info', 'zone name mac ip sock')
 NFQ_SEND_SOCK = _namedtuple('socket_info', 'zone name ip sock_sendto')

@@ -19,6 +19,7 @@ def load_page():
         request_count = ProxyDB.total_request_count(table='dnsproxy', action='blocked')
         inf_hosts = ProxyDB.query_last(5, table='infectedclients', action='all')
 
+    # TODO: see if this is a candidate for a class method
     Int = Interface()
     intstat = Int.bandwidth()
 
@@ -27,7 +28,7 @@ def load_page():
     ram = System.ram_usage()
     dns_servers = System.dns_status()
 
-    #----- Services Status ------#
+    # TODO: make this iterable
     dns_proxy = Services.status('dnx-dns-proxy')
     ip_proxy = Services.status('dnx-ip-proxy')
     dhcp_server = Services.status('dnx-dhcp-server')
@@ -37,33 +38,10 @@ def load_page():
         'dns_proxy': dns_proxy, 'ip_proxy': ip_proxy, 'dnx_ips': dnx_ips, 'dhcp_server': dhcp_server
     }
 
-    dnx_license = load_configuration('license')['license']
-    updates = load_configuration('updates')['updates']
-
-    notify = False
-    if (dnx_license['validated']):
-        system_uptodate = updates['system']['current']
-        domains_uptodate = updates['signature']['domain']['current']
-        ip_uptodate = updates['signature']['ip']['current']
-
-        if not all([system_uptodate, domains_uptodate, ip_uptodate]):
-            notify = 'DNX firewall has updates available. Check updates tab for more info.'
-
-    # System/Service Restart pending check
-    sys_restart = updates['system']['restart']
-    domain_restart = updates['signature']['domain']['restart']
-    ip_restart = updates['signature']['ip']['restart']
-
-    if (domain_restart or ip_restart):
-        notify = 'One or more DNX Services require a restart after signature updates. Please check the updates page for more information.'
-
-    if (sys_restart):
-        notify = 'DNX firewall is pending a system restart after updates.'
-
     dashboard = {
         'domain_count': domain_count, 'infected_hosts': inf_hosts, 'top_domains': top_domains,
         'request_count': request_count, 'interfaces': intstat, 'uptime': uptime, 'cpu': cpu,
-        'ram': ram, 'dns_servers': dns_servers, 'module_status': mod_status, 'notify': notify
+        'ram': ram, 'dns_servers': dns_servers, 'module_status': mod_status
     }
 
     return dashboard

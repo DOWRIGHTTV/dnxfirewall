@@ -29,11 +29,6 @@ dnx ALL = (root) NOPASSWD: /usr/bin/systemctl
 dnx ALL = (root) NOPASSWD: /sbin/shutdown
 dnx ALL = (root) NOPASSWD: /sbin/reboot
 
-free ALL = (root) NOPASSWD: /usr/sbin/iptables
-free ALL = (root) NOPASSWD: /usr/bin/systemctl
-free ALL = (root) NOPASSWD: /sbin/shutdown
-free ALL = (root) NOPASSWD: /sbin/reboo
-
 # See sudoers(5) for more information on "#include" directives:
 
 #includedir /etc/sudoers.d

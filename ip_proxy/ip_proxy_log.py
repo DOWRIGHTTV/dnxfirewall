@@ -9,6 +9,7 @@ class Log(LogHandler):
     _infected_cats = ['command/control']
 
     @classmethod
+    # TODO: this looks standard and can probably just be relocated into the parent LogHandler.
     def log(cls, pkt, inspection):
         lvl, logs = cls._generate_log(pkt, inspection)
         for method, log in logs.items():

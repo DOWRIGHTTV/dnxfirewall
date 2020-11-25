@@ -10,7 +10,7 @@ sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_iptools.dnx_parent_classes import Listener
-from dnx_iptools.dnx_binary_search import generate_recursive_binary_search # pylint: disable=no-name-in-module
+from dnx_iptools.dnx_binary_search import generate_recursive_binary_search # pylint: disable=import-error, no-name-in-module
 from dnx_configure.dnx_namedtuples import DNS_REQUEST_RESULTS, PROXY_DECISION
 from dnx_configure.dnx_namedtuples import DNS_WHITELIST, DNS_BLACKLIST, DNS_SIGNATURES
 
@@ -192,44 +192,6 @@ class Inspect:
         # default action | ALLOW
         return False
 
-    # NOTE: this has been moved to a cython extension and is imported and set up at runtime.
-    # keeping for archival purposes for awhile.
-
-    # @lru_cache(maxsize=1024)
-    # def _bin_search(self, request, recursion=False):
-    #     rb_id, rh_id = request
-    #     if (not recursion):
-    #         sigs = self._Proxy.signatures.dns
-    #     else:
-    #         sigs = self._match
-    #     # initializing data set bounds
-    #     left, right = 0, len(sigs)-1
-
-    #     while left <= right:
-    #         mid = left + (right - left) // 2
-    #         b_id, match = sigs[mid]
-    #         # host bin id matches a bin id in sigs
-    #         if (b_id == rb_id):
-    #             break
-
-    #         # excluding left half
-    #         elif (b_id < rb_id):
-    #             left = mid + 1
-
-    #         # excluding right half
-    #         elif (b_id > rb_id):
-    #             right = mid - 1
-    #     else:
-    #         return None
-
-    #     # on bin match, recursively call to check host ids
-    #     if (not recursion):
-    #         self._match = match
-
-    #         return self._bin_search((rh_id, 0), recursion=True)
-
-    #     return DNS_CAT(match)
-
 if __name__ == '__main__':
     dns_cat_signatures = Configuration.load_dns_signature_bitmap()
 
@@ -239,9 +201,7 @@ if __name__ == '__main__':
     _recursive_binary_search = generate_recursive_binary_search(dns_cat_signatures, signature_bounds)
 
     Log.run(
-        name=LOG_NAME,
-        verbose=VERBOSE,
-        root=ROOT
+        name=LOG_NAME
     )
     DNSProxy.run(Log, threaded=True)
     DNSServer.run(Log, threaded=False)

@@ -125,7 +125,7 @@ class DNSCache(dict):
             del self[domain]
 
         # should print __str__ of self. if debug level will log to file.
-#        Log.debug(self)
+    #    Log.debug(self)
 
     # automated process to keep top 20 queried domains permanently in cache. it will use the current caches packet to generate
     # a new packet and add to the standard tls queue. the recieving end will know how to handle this by settings the client address
@@ -196,6 +196,9 @@ class RequestTracker(OrderedDict):
         self.request_set   = request_ready.set
         self.request_clear = request_ready.clear
 
+    # TODO: figure out why sometimes the count never reaches 0 OR the Event never gets cleared. sometimes
+    # it seems to loop endlessly/immediately between dns server > return ready > request wait > server
+
     # blocks until the request ready flag has been set, then iterates over dict and appends any client adress with
     # both values present. (client_query class instance object and decision)
     def return_ready(self):
@@ -207,7 +210,7 @@ class RequestTracker(OrderedDict):
 
             # using inverse because it has potential to be more efficient if both are not present. decision is more
             # likely to be input first, so it will be evaled only if client_query is present.
-            if not client_query or not decision:
+            if (not client_query or not decision):
                 continue
 
             ready_requests.append((client_query, decision))
@@ -242,6 +245,8 @@ class RequestTracker(OrderedDict):
                 self[client_address] = [None, None]
                 self[client_address][module_index] = info
 
+            # if present 1/2 entries exist so after this condition 2/2 will be present and request will be ready
+            # for forwarding. setting thread event to allow return ready to unblock and start processing.
             else:
                 with self.counter_lock:
                     self.ready_count += 1
