@@ -21,9 +21,6 @@ g00 ads
 telemetry telemetry
 analytics telemetry
 
-#DYNDNS
-dyndns dyndns
-
 #P2P
 torrent p2p
 
@@ -49,5 +46,3 @@ freeware downloads
 download downloads
 shareware downloads
 software downloads
-
-teen teentop50
