@@ -38,7 +38,7 @@ class DatabaseService:
         print('[+] Starting database log entry processing queue.')
         fail_count = 0
         while True:
-            # NOTE: this will block in dnx_queue loop
+            # NOTE: this is blocking inside dnx_queue loop decorator on _write_to_database function.
             with DBConnector() as database:
                 self._write_to_database(database) # pylint: disable = no-value-for-parameter
 
@@ -75,7 +75,7 @@ class DatabaseService:
             log_entry = log_tuple(*data['log'])
 
             self._add_to_db_queue((name, data['timestamp'], log_entry))
-            print('ADDED LOG TO QUEUE!')
+            write_err('ADDED LOG TO QUEUE!')
 
     def _create_service_socket(self):
         self._service_socket = socket(AF_INET, SOCK_DGRAM)

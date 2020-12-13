@@ -19,6 +19,7 @@ USER = 'dnx'
 PASSWORD = 'firewall'
 
 
+# TODO: make sure the fixes done to sqlite connector are translated to this module as well.
 class DBConnector:
     def __init__(self, table=None):
         self.table = table

@@ -37,7 +37,8 @@ class ClientRequest:
         'qr', 'op', 'aa', 'tc', 'rd',
         'ra', 'zz', 'ad', 'cd', 'rc',
 
-        'requests', 'qtype', 'qclass', 'question_record'
+        'request_identifier', 'requests', 'qtype',
+        'qclass', 'question_record'
     )
 
     def __init__(self, data, address, sock_info):
@@ -52,16 +53,15 @@ class ClientRequest:
             self.sendto = sock_info.sendto # 5 object named tuple
 
         self.top_domain = False if address[0] else True
-
-        self.keepalive = False
-        self.dom_local = False
-        self.fallback  = False
+        self.dom_local  = False
+        self.keepalive  = False
+        self.fallback   = False
 
         self.dns_id    = 1
         self.request   = None
         self.send_data = b''
 
-        # OPT record defaults
+        # OPT record defaults # TODO: add better support for this
         self._arc = 0
         self.additional_data = b''
 
@@ -74,6 +74,8 @@ class ClientRequest:
 
         self._parse_header(self._dns_header)
         self._parse_dns_query(self._dns_query)
+
+        self.request_identifier = (*self.address, self.dns_id)
 
     # TODO: see if we should validate whether there is an indicated question record before continuing
     def _parse_header(self, dns_header):
@@ -186,8 +188,8 @@ class ProxyRequest(RawPacket):
         '_dns_header', '_dns_query',
 
         # public vars
-        'request', 'requests', 'client_address', 'dom_local',
-        'qtype', 'qclass', 'dns_id', 'question_record',
+        'request', 'requests', 'request_identifier',
+        'dom_local', 'qtype', 'qclass', 'dns_id', 'question_record',
 
         'qr', '_rd', '_cd', 'send_data'
     )
@@ -198,25 +200,21 @@ class ProxyRequest(RawPacket):
         self.qr     = None
         self.qtype  = None
         self.qclass = None
+        self.request_identifier = None
 
     @property
     def continue_condition(self):
-        if (self.protocol is PROTO.UDP):
-            return True
-
-        return False
+        return True if self.protocol is PROTO.UDP else False
 
     # extension from parent class.
     def _before_exit(self):
-        dns_header = self.udp_payload[:12]
-        dns_query  = self.udp_payload[12:]
-
         if (self.dst_port == PROTO.DNS):
-            self._header(dns_header)
-            if (self.qr == DNS.QUERY):
-                self._query(dns_query)
+            self._header(self.udp_payload[:12]) # first 12 bytes are header
 
-        self.client_address = (f'{self.src_ip}', self.src_port)
+            if (self.qr == DNS.QUERY):
+                self._query(self.udp_payload[12:]) # 13+ is query data
+
+                self.request_identifier = (f'{self.src_ip}', self.src_port, self.dns_id)
 
     # dns header
     def _header(self, dns_header):

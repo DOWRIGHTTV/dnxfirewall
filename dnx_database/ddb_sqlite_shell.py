@@ -9,6 +9,8 @@ import traceback
 
 HOME_DIR = os.environ['HOME_DIR']
 
+valid_commands = set(['select',])
+
 conn = sqlite3.connect(f'{HOME_DIR}/dnx_system/data/dnxfirewall.sqlite3')
 cur = conn.cursor()
 
@@ -17,32 +19,30 @@ print('Enter a blank line to exit.')
 print('-'*36)
 
 def sqlite_shell():
-    buffer = ''
+
     while True:
-        line = input(': ')
-        if not line:
+        line, buffer = input(': '), ''
+        if (not line):
             break
 
-        buffer += line
-        if not sqlite3.complete_statement(buffer):
+        buffer += line.strip()
+        if (not sqlite3.complete_statement(buffer) or
+                buffer.split()[0] not in valid_commands):
             continue
 
         try:
-            buffer = buffer.strip()
-            cur.execute(buffer)
-
-            if buffer.lstrip().upper().startswith('SELECT'):
-                print(cur.fetchall())
-
+            cur.execute(buffer.strip())
         except sqlite3.Error as e:
             print('An error occurred: ', e.args[0])
 
-        buffer = ''
+        else:
+            print(cur.fetchall())
 
 try:
     sqlite_shell()
 except KeyboardInterrupt:
     print('exiting without commit...')
+
 else:
     print('exiting with commit...')
     conn.commit()

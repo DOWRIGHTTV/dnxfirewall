@@ -58,11 +58,11 @@ class DNSProxy(Listener):
         self._dns_record_get = self._dns_server.dns_records.get
 
     @classmethod
-    def notify_server(cls, client_address, decision):
+    def notify_server(cls, request_identifier, decision):
         '''add the client address and proxy decision to the reference request results dictionary. this reference
         is controlled through a local class variable assignment.'''
 
-        cls._request_tracker_insert(client_address, decision, module_index=DNS.PROXY)
+        cls._request_tracker_insert(request_identifier, decision, module_index=DNS.PROXY)
 
     @classmethod
     def send_to_client(cls, packet):
@@ -121,10 +121,10 @@ class Inspect:
         request_results = self._dns_inspect(packet)
         # NOTE: accessing class var through instance is 7-10% faster
         if (not request_results.redirect):
-            self._proxy_notify_server(packet.client_address, decision=DNS.ALLOWED)
+            self._proxy_notify_server(packet.request_identifier, decision=DNS.ALLOWED)
 
         else:
-            self._proxy_notify_server(packet.client_address, decision=DNS.FLAGGED)
+            self._proxy_notify_server(packet.request_identifier, decision=DNS.FLAGGED)
 
             packet.generate_proxy_response()
 
@@ -140,6 +140,7 @@ class Inspect:
         whitelisted = self._ip_whitelist_get(packet.src_ip, False)
 
         # signature/ blacklist check.
+        # DNS_REQUEST_RESULTS(redirect, block type, category)
         # NOTE: dns whitelist does not override tld blocks at the moment | this is most likely the desired setup
         for i, enum_request in enumerate(packet.requests):
             # TLD (top level domain) block | after first index will pass nested to allow for continue
@@ -148,6 +149,7 @@ class Inspect:
                     Log.dprint(f'TLD Block: {packet.request}')
 
                     return DNS_REQUEST_RESULTS(True, 'tld filter', enum_request)
+
                 continue
 
             # NOTE: allowing malicious category overrides (for false positives)

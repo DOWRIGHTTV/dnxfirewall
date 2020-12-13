@@ -19,7 +19,14 @@ folders = [
     'netfilter'
     ]
 
+removal_count = 0
 for folder in folders:
-    run(f'sudo rm -r {HOME_DIR}/{folder}/__pycache__', shell=True, stdout=DEVNULL)
+    try:
+        run(f'sudo rm -r {HOME_DIR}/{folder}/__pycache__', shell=True,
+            stdout=DEVNULL, stderr=DEVNULL, check=True)
+    except SubprocessError:
+        pass
+    else:
+        removal_count += 1
 
-    print(f'removed pycache for {folder}! :)')
+print(f'pycache removed: {removal_count}')

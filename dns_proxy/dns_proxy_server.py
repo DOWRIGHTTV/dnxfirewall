@@ -27,6 +27,12 @@ from dns_proxy.dns_proxy_packets import ClientRequest, ServerResponse
 from dnx_configure.dnx_code_profiler import profiler
 
 
+# TODO: ensure that servers get tested for reachability on startup so initialization wont hang if the configured
+# primary server is unreachable. tls_up variable is initialized as True, but that shouldnt be the case. Maybe we
+# can simply make that False and let the reachability thread engage first before the system continues??
+
+# the socket returns after "connecting" to remote server, but the protocol is listed as 0. when the relay
+# attempts to send the requests, we get no return (prob cuz tcp handshake never happened)
 class DNSServer(Listener):
     protocol = PROTO.NOT_SET
     tls_up   = True # assuming servers are up on startup
@@ -82,7 +88,7 @@ class DNSServer(Listener):
 
     # NOTE: this is the callback assigned on start and is called by the listener parent class after parsing.
     def receive_request(self, client_query):
-        self.request_tracker_insert(client_query.address, client_query, module_index=DNS.SERVER)
+        self.request_tracker_insert(client_query.request_identifier, client_query, module_index=DNS.SERVER)
 
     @dnx_queue(Log, name='DNSServer')
     def responder(self, server_response):

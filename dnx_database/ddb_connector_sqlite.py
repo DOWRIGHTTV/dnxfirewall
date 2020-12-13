@@ -13,7 +13,7 @@ from collections import namedtuple
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import FIVE_MIN, ONE_DAY, fast_time, SQL_VERSION
+from dnx_configure.dnx_constants import FIVE_MIN, ONE_DAY, fast_time, SQL_VERSION, write_err
 from dnx_configure.dnx_namedtuples import BLOCKED_DOM
 from dnx_database.ddb_connector_psql import DBConnector as _psql_db_connector
 
@@ -37,6 +37,9 @@ class _DBConnector:
             self.conn.commit()
 
         self.conn.close()
+
+        if (exc_type):
+            write_err(f'error while writing to database: {exc_val}')
 
         return True
 

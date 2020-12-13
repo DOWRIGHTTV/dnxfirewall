@@ -25,7 +25,7 @@ class LogService:
     def __init__(self):
         self.log_modules = [
             'dhcp_server', 'dns_proxy', 'ip_proxy',
-            'ips', 'syslog', 'system', 'update', 'logins'
+            'ips', 'syslog', 'system', 'logins'
         ]
 
     def start(self):
@@ -220,7 +220,7 @@ class LogHandler:
     @classmethod
     def event_log(cls, timestamp, log, method):
         '''log security events to database. uses local socket controlled by log service
-        to aggregate messages accross all modules.
+        to aggregate messages across all modules.
 
         Do not override.
 
@@ -302,6 +302,7 @@ class LogHandler:
         cls._syslog = syslog['enabled']
 
     @classmethod
+    # TODO: remove this and let the error handler create the socket on initial send, yes?
     def _create_sockets(cls):
         cls._create_syslog_sock()
         cls._create_db_sock()

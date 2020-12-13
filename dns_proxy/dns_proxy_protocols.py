@@ -165,19 +165,20 @@ class TLSRelay(ProtoRelay):
                 current_data = byte_join(recv_buffer)
                 data_len, data = short_unpackf(current_data)[0], current_data[2:]
 
-                # more data is needed for a complete response.
-                if data_len < len(data): break
+                # more data is needed for a complete response. NOTE: this scenario is kind of dumb
+                # and shouldnt happen unless the server sends length of record and record seperately.
+                if (len(data) < data_len): break
 
-                # clearing the buffer. this is the easiest way to deal with unkown condition of single or multiple
-                # dns records contained in one packet.
+                # clearing the buffer since we either have nothing left to process or we will re add
+                # the leftover bytes back with the next condition.
                 recv_buff_clear()
 
-                # if identified data length is > the actual data we have, multiple records are contained in the packet
-                # so we will append the remainder back into the buffer.
-                if data_len > len(data):
+                # if expected data length is greater than local buffer, multiple records were returned
+                # in a batch so appending leftover bytes after removing the current records data from buffer.
+                if (len(data) > data_len):
                     recv_buff_append(data[data_len:])
 
-                # filtering internal connection keepalives
+                # ignoring internally generated connection keepalives
                 if (data[0] != DNS.KEEPALIVE):
                     responder_add(data[:data_len])
 
@@ -193,11 +194,11 @@ class TLSRelay(ProtoRelay):
         except OSError:
             return None
         else:
-            return True
+            self._relay_conn = RELAY_CONN(
+                tls_server, dns_sock, dns_sock.send, dns_sock.recv, dns_sock.version()
+            )
 
-        # NOTE: is this ok if we fail to connect? seems alittle weird after looking at it again.
-        finally:
-            self._relay_conn = RELAY_CONN(tls_server, dns_sock, dns_sock.send, dns_sock.recv, dns_sock.version())
+            return True
 
     @looper(8)
     # will send a valid dns query every ^ seconds to ensure the pipe does not get closed by remote server for

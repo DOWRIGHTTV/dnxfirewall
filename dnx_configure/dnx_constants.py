@@ -9,18 +9,22 @@ from ipaddress import IPv4Address as _IPv4Address
 
 fast_time  = _time.time
 fast_sleep = _time.sleep
-write_err  = _sys.stderr.write
+def write_err(err):
+    _sys.stdout.write(f'{err}\n')
+    _sys.stdout.flush()
 
+# direct reference/ micro optimization for string and byte string joins. 
 byte_join = b''.join
 str_join = ''.join
 
+# allows services to know their system level of control. in some cases, they
+# will need to change owner of files to dnx.
 ROOT = True if not _os.getuid() else False
 
 # globally sets which sql to use | sqlite3 = 0, psql = 1
 SQL_VERSION = 0
 
-#license server number validation
-LICENSE_SVR_VALIDATION = 599641200
+# front end validation vars
 INVALID_FORM = 'Invalid form data.'
 class DATA(_IntEnum):
     INVALID = -1
@@ -33,8 +37,8 @@ INT_BANDWIDTH_TIMER = 5
 FILE_POLL_TIMER = 10
 
 # dnx user/group
-USER  = 'free'
-GROUP = 'free'
+USER  = 'dnx'
+GROUP = 'dnx'
 
 # Certificate authority store file
 CERTIFICATE_STORE = '/etc/ssl/certs/ca-certificates.crt'
@@ -47,7 +51,7 @@ TLD_HEIGHT       = 4
 #dnx shell
 SHELL_SPACE = 30
 
-# ip addresses
+# general ip addresses used by modules
 LOCALHOST  = _IPv4Address('127.0.0.1')
 INADDR_ANY = _IPv4Address('0.0.0.0')
 BROADCAST  = _IPv4Address('255.255.255.255')
@@ -60,16 +64,6 @@ class CFG(_IntEnum):
     DEL = 0
     ADD = 1
     ADD_DEL = 2
-
-#protocols
-class DNX(_IntEnum):
-    INIT  = 0
-    CONT  = 1
-    RESP  = 2
-    VT1   = 1
-    VT2   = 2
-    RCODE = 3
-    JSON  = 4
 
 class SOCK(_IntEnum):
     RAW = 1
@@ -90,10 +84,6 @@ class PROTO(_IntEnum):
 SYSLOG_TLS_PORT = 6514
 SYSLOG_SOCKET   = 6969 # LOCAL SOCKET
 DATABASE_SOCKET = 6970 # LOCAL SOCKET
-
-#syslog/logging
-SYSTEM = 3
-EVENT  = 14
 
 class LOG(_IntEnum):
     SYSTEM  = 3
@@ -144,7 +134,7 @@ NULL_ADDR = (None,None)
 
 TOP_DOMAIN_COUNT = 20
 HEARTBEAT_FAIL_LIMIT = 3
-KEEP_ALIVE_DOMAIN = 'updates.dnxsec.com'
+KEEP_ALIVE_DOMAIN = 'dnxfirewall.com'
 
 class DNS(_IntEnum):
     #dns relay decisions
@@ -210,6 +200,7 @@ class CONN(_Enum):
 
 #dhcp server message types
 class DHCP(_IntEnum):
+    NOT_SET  = 0
     DISCOVER = 1
     OFFER    = 2
     REQUEST  = 3
@@ -220,10 +211,10 @@ class DHCP(_IntEnum):
     INFORM   = 8 # Add support
     DROP     = 9
     # dhcp lease types | these are required ints
-    AVAILABLE   =  0
-    RESERVATION = -1
-    OFFERED     = -2
-    LEASED      = -3
+    AVAILABLE   = -1
+    RESERVATION = -2
+    OFFERED     = -3
+    LEASED      = -4
     # dhcp request types
     SELECTING   = 11
     INIT_REBOOT = 12
@@ -261,14 +252,12 @@ class DNS_CAT(_IntEnum):
     drugs   = 70
     weapons = 80
     socialmedia = 90
-    dyndns = 100
     p2p    = 110
     gambling    = 120
     videogames  = 130
     purchases   = 140
     remotelogin = 150
     downloads   = 160
-    teentop50   = 1000
 
 class IPP_CAT(_IntEnum):
     NONE = 0

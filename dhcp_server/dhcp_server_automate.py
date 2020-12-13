@@ -5,7 +5,7 @@ import time
 import json
 import threading
 
-from collections import deque
+from collections import deque, namedtuple
 from socket import inet_aton
 from ipaddress import IPv4Address, IPv4Network, IPv4Interface
 
@@ -163,6 +163,7 @@ class Configuration:
 # custom dictionary to manage dhcp server leases including timeouts, updates, or persistence (store to disk)
 
 _NULL_LEASE = (DHCP.AVAILABLE, None, None)
+_STORED_RECORD = namedtuple('stored_record', 'ip record')
 
 
 class Leases(dict):
@@ -185,20 +186,18 @@ class Leases(dict):
     def __missing__(self, key):
         return _NULL_LEASE
 
-    def modify(self, ip, record):
-        '''modifies a record in the lease table. this will automatically ensure changes get written to disk.'''
-        # if record is None, the action was a dhcp release so the record will be locally assigned as available.
-        if not record:
-            record = (DHCP.AVAILABLE, 0, 0)
+    def modify(self, ip, record=_NULL_LEASE):
+        '''modifies a record in the lease table. this will automatically ensure changes get written to disk. if no record
+        is provided, a dhcp release is assumed.'''
+
+        # added change to disk storage queue for lease persistence across device/process shutdowns.
+        # will only store leases. offers will be treated as volitile and not persist restarts
+        if (record[0] is not DHCP.OFFERED):
+            self._storage.add(_STORED_RECORD(f'{ip}', record)) # pylint: disable=no-member
 
         # this lock is protecting the internal lease table dict from getting mutated while the cleanup thread is active.
         with self._lease_table_lock:
             self[ip] = record
-
-        # added change to disk storage queue for lease persistence across device/process shutdowns.
-        # will only store leases. offers will be treated as volitile and not persist restarts
-        if (record[0] is DHCP.LEASED):
-            self._storage.add((f'{ip}', record)) # pylint: disable=no-member
 
     @dnx_queue(Log, name='Leases')
     # store leases table changes to disk. if record is not present that indicates the record needs to be removed.
@@ -207,11 +206,11 @@ class Leases(dict):
             dhcp_settings = dnx.load_configuration()
             leases = dhcp_settings['dhcp_server']['leases']
 
-            ip, record = dhcp_lease
-            if (not record):
-                leases.pop(ip, None)
+            if (not dhcp_lease.record):
+                leases.pop(dhcp_lease.ip, None)
+
             else:
-                leases[ip] = record
+                leases[dhcp_lease.ip] = dhcp_lease.record
 
             dnx.write_configuration(dhcp_settings)
 

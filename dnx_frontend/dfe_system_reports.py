@@ -23,6 +23,9 @@ def update_page(form):
         'ic_all': '9'
     }
 
+    # TODO: bring validation up to speed (ensure host is valid mac format). make database raise validation error if the when removing
+    # a client that isnt present in the db. this means some tomfoolery happened and we should return
+    # invalid form error.
     menu_option = selected_num.get(table_type, '1')
     if ('i_client_remove' in form):
         infected_client = form.get('infected_client', None)

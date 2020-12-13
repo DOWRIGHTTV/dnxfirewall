@@ -3,7 +3,7 @@
 import os, sys
 import threading
 
-from collections import Counter, OrderedDict
+from collections import Counter, OrderedDict, namedtuple
 
 import dnx_configure.dnx_file_operations as fo
 
@@ -11,6 +11,8 @@ from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-impo
 from dnx_configure.dnx_namedtuples import DNS_CACHE, CACHED_RECORD
 from dnx_iptools.dnx_standard_tools import looper
 from dns_proxy.dns_proxy_log import Log
+
+request_info = namedtuple('request_info', 'server proxy')
 
 # NOTE: normal_cache boolean is not working correctly. top domains are showing up as True
 # fix or remove. might not be needed anymore as it was initial implemented to assist with
@@ -174,7 +176,7 @@ class RequestTracker(OrderedDict):
     ''' Tracks DNS Server requests and allows for either DNS Proxy or Server to add initial client address key
     on a first come basis and the second one will update the corresponding value index with info directly.
 
-        RequestTracker([client_address: [client_query, decision]])
+        RequestTracker([request_identifier: [client_query, decision, timestamp]])
     '''
 
     __slots__ = (
@@ -205,12 +207,16 @@ class RequestTracker(OrderedDict):
         self.request_wait()
 
         ready_requests = []
-        tracker = list(self.items())
-        for client_address, (client_query, decision) in tracker:
+        for request_identifier, (client_query, decision, timestamp) in list(self.items()):
 
             # using inverse because it has potential to be more efficient if both are not present. decision is more
             # likely to be input first, so it will be evaled only if client_query is present.
             if (not client_query or not decision):
+
+                # removes entry from tracker if not finalized within 1 second
+                if (fast_time() - timestamp >= ONE_SEC):
+                    del self[request_identifier]
+
                 continue
 
             ready_requests.append((client_query, decision))
@@ -220,9 +226,9 @@ class RequestTracker(OrderedDict):
                 self.ready_count -= 1
 
             # removes entry from tracker if request is ready for forwarding.
-            del self[client_address]
+            del self[request_identifier]
 
-        if not self.ready_count:
+        if (not self.ready_count):
             self.request_clear()
 
         # here temporarily for testing implementation
@@ -234,23 +240,22 @@ class RequestTracker(OrderedDict):
     # this is a thread safe method to add entries to the request tracker dictionary. this will ensure the key
     # exists before updatin the value. a default dict cannot be used (from what i can tell) because an empty
     # list would raise an index error if it was trying to set decision before request.
-    def insert(self, client_address, info, *, module_index):
-
+    def insert(self, request_identifier, data, *, module_index):
         with self.insert_lock:
 
+            tracked_request = self.get(request_identifier, None)
             # if client address is not already present, it will be added before updating the module index value
-            if client_address not in self:
-
-                # default entry for requests. 1. client request instance 2. proxy decision
-                self[client_address] = [None, None]
-                self[client_address][module_index] = info
+            if (not tracked_request):
+                # default entry: 1. client request instance 2. proxy decision, 3. timestamp
+                self[request_identifier] = [None, None, fast_time()]
+                self[request_identifier][module_index] = data
 
             # if present 1/2 entries exist so after this condition 2/2 will be present and request will be ready
             # for forwarding. setting thread event to allow return ready to unblock and start processing.
-            else:
+            elif (tracked_request[module_index] is None):
                 with self.counter_lock:
                     self.ready_count += 1
 
-                self[client_address][module_index] = info
+                self[request_identifier][module_index] = data
 
                 self.request_set()

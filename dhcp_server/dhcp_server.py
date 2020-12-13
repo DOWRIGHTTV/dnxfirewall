@@ -75,43 +75,42 @@ class DHCPServer(Listener):
         self._handle_request(packet)
 
     def _handle_request(self, client_request):
-        request_id, request_mtype = (client_request.mac, client_request.xID), None
+        request_id, server_mtype, record = (client_request.mac, client_request.xID), DHCP.NOT_SET, None
         Log.debug(f'REQ | TYPE={client_request.mtype}, ID={request_id}')
 
         if (client_request.mtype == DHCP.RELEASE):
             self._release(client_request.ciaddr, client_request.mac)
 
         elif (client_request.mtype == DHCP.DISCOVER):
-            request_mtype, record = self._discover(request_id, client_request)
+            server_mtype, record = self._discover(request_id, client_request)
 
         elif (client_request.mtype == DHCP.REQUEST):
-            request_mtype, record = self._request(request_id, client_request)
+            server_mtype, record = self._request(request_id, client_request)
 
-        # TODO: i believe this is why the fatal exception was being raised. the log system
-        # was not working so i cant prove it yet. adding a return just in case, which should be
-        # there anyways as this condition is null and should not be responded to anyways.
+        # TODO: logging purposes only. probably isnt needed. the below condition are protected by
+        # the initiated value being "DHCP.NOT_SET" so we dont need to cover for them.
         else:
             Log.warning(f'Unknown request type from {client_request.mac}')
 
-            return
-
-        if (request_mtype):
-            client_request.generate_server_response(request_mtype)
-
-            # this is filtering out response types like dhcp nak
-            if (record):
-                self.leases.modify( # pylint: disable=no-member
-                    client_request.handout_ip, record
+        # this is filtering out response types like dhcp nak | modifying lease before
+        # sending to ensure a power failure will have persistent record data.
+        if (server_mtype not in [DHCP.DROP, DHCP.NAK]):
+            self.leases.modify( # pylint: disable=no-member
+                client_request.handout_ip, record
             )
 
-            self.send_to_client(client_request, request_mtype)
+        # only types specific in list require a response.
+        if (server_mtype in [DHCP.OFFER, DHCP.ACK, DHCP.NAK]):
+            client_request.generate_server_response(server_mtype)
+
+            self.send_to_client(client_request, server_mtype)
 
     def _release(self, ip_address, mac_address):
         dhcp = ServerResponse(server=self)
 
         # if mac/ lease mac match, the lease will be removed from the table
         if dhcp.release(ip_address, mac_address):
-            self.leases.modify(ip_address, None) # pylint: disable=no-member
+            self.leases.modify(ip_address) # pylint: disable=no-member
 
     def _discover(self, request_id, client_request):
         dhcp = ServerResponse(client_request.sock.name, server=self)
@@ -121,6 +120,11 @@ class DHCPServer(Listener):
 
         return DHCP.OFFER, (DHCP.OFFERED, fast_time(), client_request.mac)
 
+    # TODO: troubleshoot this. it seems that requests to confirm or renew a lease are breaking causing a
+    # fatal exception. (none type cant be .packed()). look into how we are defining a handout_ip for
+    # renewals. we might be doing something wrong or out of order where the initialez value never get
+    # overwritten. it could also be the logic in this method is bad and doesnt correctly determine
+    # what to do (less likely as it is trying to respond back to requester)
     def _request(self, request_id, client_request):
         # NOTE: assign get method on init?
         dhcp = self._ongoing.get(request_id, None)
@@ -144,7 +148,7 @@ class DHCPServer(Listener):
 
         # protecting return on invalid dhcp types | TODO: validate if this even does anything. :)
         else:
-            record = None
+            record, request_mtype = None, DHCP.DROP
 
         # removing the request from ongoing since we are sending the final message and do
         # not need any objects from the request instance anymore.
@@ -163,8 +167,8 @@ class DHCPServer(Listener):
 
     @staticmethod
     # will send response to client over socket depending on host details it will decide unicast or broadcast
-    def send_to_client(client_request, request_mtype):
-        if (request_mtype is DHCP.RENEWING):
+    def send_to_client(client_request, server_mtype):
+        if (server_mtype is DHCP.RENEWING):
             client_request.sock.sendto(client_request.send_data, (f'{client_request.ciaddr}', 68))
 
             Log.debug(f'Sent unicast to {client_request.ciaddr}:68')
