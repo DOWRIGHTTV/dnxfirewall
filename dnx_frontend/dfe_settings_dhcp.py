@@ -10,8 +10,8 @@ sys.path.insert(0, HOME_DIR)
 import dnx_configure.dnx_configure as configure
 import dnx_configure.dnx_validate as validate
 
-from dnx_configure.dnx_constants import CFG, INVALID_FORM
-from dnx_iptools.dnx_protocol_tools import convert_mac_to_string as m2s
+from dnx_configure.dnx_constants import CFG, DATA, INVALID_FORM
+from dnx_iptools.dnx_protocol_tools import convert_mac_to_string as mac_str
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_configure.dnx_system_info import Services
@@ -21,18 +21,24 @@ def load_page():
     dhcp_res_list = dhcp_server['reservations']
 
     return {'reservations': {
-        m2s(mac): info for mac, info in dhcp_res_list.items()}
+        mac_str(mac): info for mac, info in dhcp_res_list.items()}
     }
 
+#TODO: figure out a way to ensure duplicate ip addresses cannot have a reservation created. currently we
+# use the mac address as the key/identifier which would allow for different macs to be configured with the
+# same ip address.
 def update_page(form):
     if ('dhcp_res_add' in form):
-        mac_address = form.get('mac_address', '').lower()
-        ip_address = form.get('ip_address', None)
-        username = form.get('res_name', None)
-        if not all([mac_address, ip_address, username]):
+        dhcp_settings = {
+            'zone': form.get('zone', DATA.INVALID),
+            'mac': form.get('mac_address', ''),
+            'ip': form.get('ip_address', DATA.INVALID),
+            'description': form.get('description', DATA.INVALID)
+        }
+
+        if (DATA.INVALID in dhcp_settings.values()):
             return INVALID_FORM
 
-        dhcp_settings = {'mac': mac_address, 'ip': ip_address, 'username': username}
         try:
             validate.dhcp_reservation(dhcp_settings)
         except ValidationError as ve:

@@ -21,9 +21,10 @@
                     <table class="striped">
                         <thead>
                             <th></th>
+                            <th>Zone</th>
                             <th>Mac Address</th>
                             <th>IP Address</th>
-                            <th>User</th>
+                            <th>Description</th>
                         </thead>
                         <tbody>
                             {% if dhcp_settings['reservations'] %}
@@ -47,15 +48,17 @@
                                         </form>
                                     </div>
                                 </td>
+                                <td>{{zone}}</td>
                                 <td>{{mac}}</td>
                                 <td>{{info['ip_address']}}</td>
-                                <td>{{info['name']}}</td>
+                                <td>{{info['description']}}</td>
                             </tr>
                             {% endfor %}
                             {% else %}
                             <tr>
                                 <td></td>
                                 <td>No Reservations</td>
+                                <td></td>
                                 <td></td>
                                 <td></td>
                             </tr>
@@ -70,10 +73,17 @@
                     <form action="/settings/dhcp" method="POST">
                         <input type="hidden" name="tab" value="1">
                         <div class="row">
-                            <div class="input-field col s12">
+                            <div class="input-field col s8">
                                 <input type="text" name="mac_address" class="validate" placeholder="aa:aa:aa:aa:aa:aa"
                                     required>
                                 <label for="">Mac Address</label>
+                            </div>
+                            <div class="input-field col s4">
+                                <select name="zone" id="">
+                                    <option value="DMZ">DMZ</option>
+                                    <option value="LAN">LAN</option>
+                                </select>
+                                <label for="">Zone</label>
                             </div>
                         </div>
                         <div class="row">
@@ -85,8 +95,8 @@
                         </div>
                         <div class="row">
                             <div class="input-field col s12">
-                                <input type="text" name="res_name" class="validate" placeholder="Erika">
-                                <label for="">Username</label>
+                                <input type="text" name="description" class="validate" placeholder="Erika's PC">
+                                <label for="">Description</label>
                             </div>
                         </div>
                         <div class="row">

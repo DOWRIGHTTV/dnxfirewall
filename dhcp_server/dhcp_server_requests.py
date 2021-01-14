@@ -29,8 +29,9 @@ __all__ = (
 class ServerResponse:
     __slots__ = (
         '_svr', '_request', '_lease_time',
-        '_intf_net', '_r_start', '_r_end',
-        '_check_icmp_reach'
+        '_check_icmp_reach',
+
+        '_handout_range', '_net_hosts'
     )
 
     def __init__(self, intf=None, *, server):
@@ -39,11 +40,14 @@ class ServerResponse:
         # if interface ident is sent in we will assign config values. offer/ ack require these
         # values while release does not.
         if (intf):
-            _intf_settings = server.intf_settings[intf]
-            self._intf_net = _intf_settings['ip'].network
-            self._r_start  = _intf_settings['lease_range']['start']
-            self._r_end    = _intf_settings['lease_range']['end'] + 1
-            self._check_icmp_reach = _intf_settings['icmp_check']
+            intf_settings = server.intf_settings[intf]
+            intf_net    = intf_settings['ip'].network
+            range_start = intf_settings['lease_range']['start']
+            range_end   = intf_settings['lease_range']['end'] + 1
+            self._check_icmp_reach = intf_settings['icmp_check']
+
+            self._net_hosts = set(intf_net.hosts())
+            self._handout_range = list(intf_net)[range_start:range_end]
 
     # if client sends a dhcp release, will ensure client info matches current lease then remove
     # lease from table
@@ -55,22 +59,34 @@ class ServerResponse:
 
         return False
 
+    # TODO: ensure that if lease range gets changed while running, any client outside of new range
+    # will have their requested ip ignored if it falls outside of the new range.
     def offer(self, discover):
-        if (discover.reservation): return discover.reservation
+        reservation = discover.reservation(self._net_hosts)
+        if (reservation):
+            return reservation
 
-        is_available, lease_mac = self.is_available(discover.req_ip, mac=True)
+        # NOTE: why is this lock here. this portion of the code is synchronous
+        # with self._svr.handout_lock:
+
+        is_available, lease_mac = self._is_available(discover.req_ip, mac=True)
         # outcome 1/2 in rfc 2131
         if ((discover.ciaddr != INADDR_ANY)
                 and (lease_mac == discover.mac or is_available)):
-            return discover.ciaddr
+
+            # ensuring the requested ip address falls within the currently configured handout range for the
+            # interface/ network the request was received on.
+            return discover.ciaddr if discover.ciaddr in self._handout_range else self._get_available_ip()
 
         # outcome 3 in rfc 2131
         if (discover.req_ip and is_available):
-            return discover.req_ip
+
+            # ensuring the requested ip address falls within the currently configured handout range for the
+            # interface/ network the request was received on.
+            return discover.req_ip if discover.req_ip in self._handout_range else self._get_available_ip()
 
         # outcome 4 in rfc 2131
-        with self._svr.handout_lock:
-            return self._get_available_ip()
+        return self._get_available_ip()
 
     def ack(self, request):
         self._request = request
@@ -87,7 +103,7 @@ class ServerResponse:
         # DHCP.INIT_REBOOT
         elif (self.init_reboot):
             # client request from a different network, responding with NAK
-            if (request.req_ip not in self._intf_net):
+            if (request.req_ip not in self._handout_range):
                 return DHCP.NAK, None
 
             # client lease does not exist, remaining silent
@@ -160,12 +176,17 @@ class ServerResponse:
     # generate available random IP in network range. if no ip is available None will be returned.
     # If icmp reachability check is enabled, and the ip is reachable, the process will continue
     # until a valid ip is selected or loop is exhausted
-    def _get_available_ip(self):
-        local_net = list(self._intf_net)[self._r_start:self._r_end]
-        for _ in range(len(local_net)):
-            ip_address = _fast_choice(local_net)
 
-            if not self.is_available(ip_address): continue
+    # TODO: as the available ip addresses gets closer to 0% it, it will be increasingly harder
+    # for this function to find and available ip. realistically, it would be likely that many requests
+    # would fail since the iteration uses the total count in range, but random choice can return duplicates.
+    # how can we ensure the range is actually filled vs getting a random miss on available ip space.
+    def _get_available_ip(self):
+        handout_range = self._handout_range
+        for _ in range(len(handout_range)):
+            ip_address = _fast_choice(handout_range)
+
+            if not self._is_available(ip_address): continue
 
             if (self._check_icmp_reach): # TODO: figure out how we will get notified
                 if icmp_reachable(ip_address): continue
@@ -174,7 +195,7 @@ class ServerResponse:
         else:
             Log.critical('IP handout error. No available IPs in range.') # TODO: comeback
 
-    def is_available(self, ip_address, mac=False):
+    def _is_available(self, ip_address, mac=False):
         '''returns True if the ip address is available to lease out. if mac is set to True a tuple of status and
         associated mac, if any, will be returned.'''
         lease_status, _, lease_mac = self._svr.leases[ip_address]
@@ -195,7 +216,7 @@ class ClientRequest:
     }
 
     __slots__ = (
-        '_data', '_address', '_name', '_intf_net',
+        '_data', '_address', '_name',
         'init_time', 'server_ident', 'mtype', 'req_ip',
         'handout_ip', 'requested_options', 'response_header',
         'response_options', 'bcast', 'xID', 'ciaddr', 'chaddr', 'mac',
@@ -310,9 +331,13 @@ class ClientRequest:
 
         return b''.join(response_options)
 
-    @property
-    def reservation(self):
+    # NOTE: recently changed this to ensure reversations arent used if they are for a network
+    # different that what the request came in on.
+    def reservation(self, network_hosts):
         try:
-            return self._server_reservations[self.mac]['ip_address']
+            reserved_ip = self._server_reservations[self.mac]['ip_address']
         except KeyError:
             return None
+
+        else:
+            return reserved_ip if reserved_ip in network_hosts else None

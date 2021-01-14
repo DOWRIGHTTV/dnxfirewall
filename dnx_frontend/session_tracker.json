@@ -1,5 +1,10 @@
 {
     "active_users": {
-        "dnx": {}
+        "dnx": {
+            "user_role": "admin",
+            "remote_addr": "192.168.5.179",
+            "logged_in": 1610505265.3500366,
+            "last_seen": null
+        }
     }
 }

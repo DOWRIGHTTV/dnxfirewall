@@ -86,6 +86,7 @@ def _firewall_rules(zone, action, form):
     error = None
     # moving form data into a simple namespace. this will allow us to validate and mutate it easier
     # that its current state of immutable dict.
+    print(form)
     fields = SimpleNamespace(**form)
     if (action == 'remove'):
         try:

@@ -51,6 +51,7 @@ class DHCPServer(Listener):
         # initializing the lease table dictionary and giving a reference to the reservations
         cls.leases = Leases(cls.reservations)
 
+        # so we dont need to import/ hardcore the server class reference.
         ClientRequest.set_server_reference(cls)
         cls.set_proxy_callback(func=cls.handle_dhcp)
 
@@ -94,12 +95,12 @@ class DHCPServer(Listener):
 
         # this is filtering out response types like dhcp nak | modifying lease before
         # sending to ensure a power failure will have persistent record data.
-        if (server_mtype not in [DHCP.DROP, DHCP.NAK]):
+        if (server_mtype not in [DHCP.NOT_SET, DHCP.DROP, DHCP.NAK]):
             self.leases.modify( # pylint: disable=no-member
                 client_request.handout_ip, record
             )
 
-        # only types specific in list require a response.
+        # only types specified in list require a response.
         if (server_mtype in [DHCP.OFFER, DHCP.ACK, DHCP.NAK]):
             client_request.generate_server_response(server_mtype)
 
@@ -111,6 +112,9 @@ class DHCPServer(Listener):
         # if mac/ lease mac match, the lease will be removed from the table
         if dhcp.release(ip_address, mac_address):
             self.leases.modify(ip_address) # pylint: disable=no-member
+
+        else:
+            Log.warning(f'Client {mac_address} attempted invalid release.')
 
     def _discover(self, request_id, client_request):
         dhcp = ServerResponse(client_request.sock.name, server=self)

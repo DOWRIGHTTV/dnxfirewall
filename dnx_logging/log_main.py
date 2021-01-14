@@ -261,17 +261,14 @@ class LogHandler:
     @classmethod
     def _update_log_method(cls, level_num, level_info):
         level_name, desc = level_info # pylint disable=unused-variable # NOTE: for future use
-        # if verbose is enabled all entries will be logged
-        if (level_num == LOG.DEBUG):
+        # if debug/verbose is enabled all entries will be logged and printed to terminal
+        if (cls._LEVEL == LOG.DEBUG):
             @classmethod
             def log_method(cls, message):
                 message = f'{round(fast_time())}|{cls.name}|{level_name}|{message}\n'
 
                 _log_write(message)
 
-                # NOTE: verbose should also write everything to disk to ensure issues can be tracked
-                # over time vs just at time of troubleshooting.
-                # if (level_num <= cls._LEVEL):
                 cls._write_to_disk.add(message)
 
         # entry will be logged to file

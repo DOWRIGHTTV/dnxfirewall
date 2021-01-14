@@ -15,7 +15,7 @@ sys.path.insert(0, HOME_DIR)
 
 import dnx_iptools.dnx_interface as interface
 
-from dnx_configure.dnx_constants import CFG, fast_time
+from dnx_configure.dnx_constants import CFG, fast_time, str_join
 from dnx_configure.dnx_file_operations import load_configuration, ConfigurationManager
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_frontend.dfe_dnx_authentication import Authentication
@@ -59,18 +59,17 @@ def set_wan_mac(action, mac_address=None):
         dnx.write_configuration(dnx_settings)
 
 def set_dhcp_reservation(dhcp_settings, action):
-    dhcp = SimpleNamespace(**dhcp_settings)
     with ConfigurationManager('dhcp_server') as dnx:
         dhcp_reservations = dnx.load_configuration()
 
-        modified_mac = ''.join(dhcp.mac.split(':'))
+        modified_mac = str_join(dhcp_settings['mac'].lower().split(':'))
 
         macs = dhcp_reservations['dhcp_server']['reservations']
         if (action is CFG.ADD and modified_mac not in macs):
             macs.update({
                 modified_mac: {
-                    'ip_address': dhcp.ip,
-                    'name': dhcp.username
+                    'ip_address': dhcp_settings['ip'],
+                    'description': dhcp_settings['description']
                 }
             })
 

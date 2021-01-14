@@ -84,7 +84,7 @@ def update_page(form):
             if (not 10 <= limit <= 200):
                 return f'{protocol} limit must be in range 20-200.'
 
-            ddos_limits[protocol] = form_limit
+            ddos_limits[protocol] = limit
 
         configure.set_ips_ddos(action)
 

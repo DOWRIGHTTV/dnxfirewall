@@ -30,15 +30,18 @@ LOG_NAME = 'ips'
 # TODO: ENSURE WE CLEAN TIMED OUT HOSTS FROM HOST TRACKING DICTS AT X (10?) MIN INTERVALS!!
 class IPS_IDS(NFQueue):
     fw_rules = {}
-    ip_whitelist = {}
-    open_ports = {PROTO.TCP: {}, PROTO.UDP:{}}
     connection_limits = {}
-    broadcast = None
+    ip_whitelist = {}
+    open_ports = {
+        PROTO.TCP: {},
+        PROTO.UDP:{}
+    }
 
     ddos_prevention = False
     portscan_prevention = False
     portscan_reject = False
     ids_mode = False # TODO: implement this throughout
+    broadcast = None
 
     ddos_engine_enabled = False
     ps_engine_enabled   = False
@@ -51,6 +54,8 @@ class IPS_IDS(NFQueue):
         IPSResponse.setup(cls, Log)
 
         cls.set_proxy_callback(func=Inspect.portscan) # this will get called after parsing is complete.
+
+        Log.notice(f'{cls.__name__} initialization complete.')
 
     # if nothing is enabled the packet will be sent back to iptables for further inspection
     def _pre_check(self, nfqueue):
@@ -74,8 +79,10 @@ class IPS_IDS(NFQueue):
         elif (self.ps_engine_enabled):
             self.inspection_required = IPS.PORTSCAN
 
+        # NOTE: we could forward the packet here, but as of right now i am feeling it to be in pre inspect after
+        # its conditions were simplified. we can look into the potential performance gain of doing it here later
+        # if it seems necessary.
         elif (self.ddos_engine_enabled):
-            self.forward_packet(nfqueue)
             self.inspection_required = IPS.DDOS
 
         else:
@@ -87,6 +94,8 @@ class IPS_IDS(NFQueue):
 
     def _pre_inspect(self, packet):
         # whilelisted source ip does not need to be inspected
+        # NOTE: this could be a duplicate decision if ddos engine is only thing enabled. THIS IS ONLY RELEVANT
+        # IF PRE CHECK HAS THE FORWARD PACKET CALL. AS OF RIGHT NOW IT DOES NOT.
         if (packet.src_ip in self.ip_whitelist):
             self.forward_packet(packet.nfqueue)
 
@@ -96,25 +105,13 @@ class IPS_IDS(NFQueue):
         broadcast = True if packet.dst_ip == self.broadcast else False
 
         if (not broadcast):
-            if (self.inspection_required is IPS.BOTH):
+            if (self.inspection_required in [IPS.BOTH, IPS.DDOS]):
                 threading.Thread(target=Inspect.ddos, args=(packet,)).start()
-
-                # will mark for inspection by portscan if protocol is udp or tcp
-                if (packet.protocol is not PROTO.ICMP):
-                    return True
 
             # will mark for inspection by portscan if protocol is udp or tcp
-            elif (packet.protocol is not PROTO.ICMP and self.inspection_required is IPS.PORTSCAN):
+            if (packet.protocol is not PROTO.ICMP and self.inspection_required in [IPS.BOTH, IPS.PORTSCAN]):
                 return True
 
-            # dont need to mark for inspection since ddos inspection is technically not in line with the networking
-            # functionality and should not make a packet decision.
-            elif (self.inspection_required is IPS.DDOS):
-                threading.Thread(target=Inspect.ddos, args=(packet,)).start()
-
-                return False
-
-        # sending packet to underlying firewall
         self.forward_packet(packet.nfqueue)
 
         # default action | inspection not required
@@ -131,10 +128,6 @@ class IPS_IDS(NFQueue):
             return True
 
         return False
-
-#
-# INSPECTION CLASS
-#
 
 
 class Inspect:
@@ -153,9 +146,10 @@ class Inspect:
     @classmethod
     def portscan(cls, packet):
         self = cls()
-        self._portscan_inspect(packet)
+        self._portscan_inspect(cls._IPS, packet)
 
     @classmethod
+    # NOTE: not passing in _IPS object since it doesnt seem to be worth it. maybe can for consistency though.
     def ddos(cls, packet):
         self = cls()
         self._ddos_inspect(packet)
@@ -198,40 +192,39 @@ class Inspect:
         return False
 
     def _threshhold_exceeded(self, tracked_ip, packet):
-        protocol_src_limit = self._IPS.connection_limits[packet.protocol]
         elapsed_time = packet.timestamp - tracked_ip['initial']
         if (elapsed_time < 2): return False
 
+        protocol_src_limit = self._IPS.connection_limits[packet.protocol]
         if (tracked_ip['count']/elapsed_time < protocol_src_limit): return False
 
-        # host is now considered active DDOS
+        # host is now marked as engaging in active d/dos attack.
         Log.debug('CPS: {}'.format(tracked_ip['count']/elapsed_time))
 
         return True
 
     # this method drives the overall logic of the portscan detection engine. it will try to conserve resources but not sending packets
     # that dont need to be checked or logged under normal conditions.
-    def _portscan_inspect(self, packet):
-        # TODO: optimize _IPS reference please! :)
+    def _portscan_inspect(self, IPS_IDS, packet):
         pscan = self.pscan_tracker[packet.protocol]
         with pscan.lock:
             initial_block, active_scanner, pre_detection_logging = self._portscan_detect(pscan.tracker, packet)
 
         if (not active_scanner):
             Log.debug(f'PROXY ACCEPT | {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
-            self._IPS.forward_packet(packet.nfqueue)
+            IPS_IDS.forward_packet(packet.nfqueue)
 
             return
 
-        if (self._IPS.ids_mode):
-            self._IPS.forward_packet(packet.nfqueue)
+        if (IPS_IDS.ids_mode):
+            IPS_IDS.forward_packet(packet.nfqueue)
             block_status = IPS.LOGGED
 
-        elif (self._IPS.portscan_prevention):
+        elif (IPS_IDS.portscan_prevention):
             packet.nfqueue.drop()
 
             # if rejection is enabled on top of prevention port uncreachable packets will be sent back to the scanner.
-            if (self._IPS.portscan_reject):
+            if (IPS_IDS.portscan_reject):
                 self._portscan_reject(pre_detection_logging, packet, initial_block)
 
             # if initial block is not set then the current host has already been effectively blocked and does not need
@@ -242,7 +235,10 @@ class Inspect:
 
         Log.debug(f'PROXY INITIAL SCANNER | {block_status.name} | {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
 
-        if (not self._IPS.fw_rules):
+        # NOTE: i think this is stupid. this would effectivly block all portscan logging while passive blocking is
+        # active, right???? if that is the case, we need to figure out a different way to deal with this. i think this
+        # was to ensure ddos wasnt logged as portscan first, but this doesnt soudn liek a good way to do this anymore.
+        if (not IPS_IDS.fw_rules):
             scan_info = IPS_SCAN_RESULTS(initial_block, active_scanner, block_status)
             Log.log(packet, scan_info, engine=IPS.PORTSCAN)
 

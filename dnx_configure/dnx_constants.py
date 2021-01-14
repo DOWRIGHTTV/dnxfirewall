@@ -13,18 +13,16 @@ def write_err(err):
     _sys.stdout.write(f'{err}\n')
     _sys.stdout.flush()
 
-# direct reference/ micro optimization for string and byte string joins. 
 byte_join = b''.join
 str_join = ''.join
 
-# allows services to know their system level of control. in some cases, they
-# will need to change owner of files to dnx.
 ROOT = True if not _os.getuid() else False
 
 # globally sets which sql to use | sqlite3 = 0, psql = 1
 SQL_VERSION = 0
 
-# front end validation vars
+#license server number validation
+LICENSE_SVR_VALIDATION = 599641200
 INVALID_FORM = 'Invalid form data.'
 class DATA(_IntEnum):
     INVALID = -1
@@ -37,8 +35,8 @@ INT_BANDWIDTH_TIMER = 5
 FILE_POLL_TIMER = 10
 
 # dnx user/group
-USER  = 'dnx'
-GROUP = 'dnx'
+USER  = 'free'
+GROUP = 'free'
 
 # Certificate authority store file
 CERTIFICATE_STORE = '/etc/ssl/certs/ca-certificates.crt'
@@ -51,7 +49,7 @@ TLD_HEIGHT       = 4
 #dnx shell
 SHELL_SPACE = 30
 
-# general ip addresses used by modules
+# ip addresses
 LOCALHOST  = _IPv4Address('127.0.0.1')
 INADDR_ANY = _IPv4Address('0.0.0.0')
 BROADCAST  = _IPv4Address('255.255.255.255')
@@ -64,6 +62,16 @@ class CFG(_IntEnum):
     DEL = 0
     ADD = 1
     ADD_DEL = 2
+
+#protocols
+class DNX(_IntEnum):
+    INIT  = 0
+    CONT  = 1
+    RESP  = 2
+    VT1   = 1
+    VT2   = 2
+    RCODE = 3
+    JSON  = 4
 
 class SOCK(_IntEnum):
     RAW = 1
@@ -84,6 +92,10 @@ class PROTO(_IntEnum):
 SYSLOG_TLS_PORT = 6514
 SYSLOG_SOCKET   = 6969 # LOCAL SOCKET
 DATABASE_SOCKET = 6970 # LOCAL SOCKET
+
+#syslog/logging
+SYSTEM = 3
+EVENT  = 14
 
 class LOG(_IntEnum):
     SYSTEM  = 3
@@ -134,7 +146,7 @@ NULL_ADDR = (None,None)
 
 TOP_DOMAIN_COUNT = 20
 HEARTBEAT_FAIL_LIMIT = 3
-KEEP_ALIVE_DOMAIN = 'dnxfirewall.com'
+KEEP_ALIVE_DOMAIN = 'updates.dnxsec.com'
 
 class DNS(_IntEnum):
     #dns relay decisions
@@ -228,8 +240,6 @@ LAN_IN = 10
 WAN_IN = 11
 DMZ_IN = 12
 
-LAN_TO_WAN       = 10
-WAN_TO_LAN       = 11
 SEND_TO_IPS      = 20
 IP_PROXY_DROP    = 25
 SEND_TO_FIREWALL = 30
@@ -239,8 +249,7 @@ class DNS_CAT(_IntEnum):
     NONE = 0
 
     doh = -30
-    whitelist = -20
-    blacklist = -10
+    time_based = -5
 
     malicious   = 10
     cryptominer = 11
@@ -252,12 +261,34 @@ class DNS_CAT(_IntEnum):
     drugs   = 70
     weapons = 80
     socialmedia = 90
+    dyndns = 100
     p2p    = 110
     gambling    = 120
     videogames  = 130
     purchases   = 140
     remotelogin = 150
     downloads   = 160
+    teentop50   = 1000
+
+class TLD_CAT(_IntEnum):
+    NONE = 0
+
+    ru = 1
+    cn = 2
+    xxx = 3
+    porn = 4
+    adult = 5
+    ads = 6
+    click = 7
+    download = 8
+    top = 9
+    loan = 10
+    work = 11
+    men = 12
+    cf = 13
+    gq = 14
+    ml = 15
+    ga = 16
 
 class IPP_CAT(_IntEnum):
     NONE = 0

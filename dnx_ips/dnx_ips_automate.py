@@ -62,27 +62,29 @@ class Configuration:
 
         self.IPS.ddos_prevention = ips['ddos']['enabled']
         # ddos CPS configured thresholds
-        tcp_src_limit  = ips['ddos']['limits']['source']['tcp']
-        udp_src_limit  = ips['ddos']['limits']['source']['udp']
-        icmp_src_limit = ips['ddos']['limits']['source']['icmp']
         self.IPS.connection_limits = {
-            PROTO.ICMP: icmp_src_limit,
-            PROTO.TCP: tcp_src_limit,
-            PROTO.UDP: udp_src_limit
+            PROTO.ICMP: ips['ddos']['limits']['source']['icmp'],
+            PROTO.TCP:  ips['ddos']['limits']['source']['tcp'],
+            PROTO.UDP:  ips['ddos']['limits']['source']['udp']
         }
 
         self.IPS.portscan_prevention = ips['port_scan']['enabled']
         self.IPS.portscan_reject = ips['port_scan']['reject']
 
         # checking length(hours) to leave IP Table Rules in place for hosts part of ddos attacks
-        self.IPS.block_length = 0
         if (self.IPS.ddos_prevention and not self.IPS.ids_mode):
-            self.IPS.block_length = ips['passive_block_ttl'] * ONE_HOUR
 
-        # NOTE: this will provide a simple way to ensure very recently blocked hosts do not get their
-        # rule removed if passive blocking is disabled.
-        if (not self.IPS.block_length):
-            self.IPS.block_length = TEN_MIN
+            # NOTE: this will provide a simple way to ensure very recently blocked hosts do not get their
+            # rule removed if passive blocking is disabled.
+            if (not self.IPS.block_length):
+                self.IPS.block_length = FIVE_MIN
+
+            else:
+                self.IPS.block_length = ips['passive_block_ttl'] * ONE_HOUR
+
+        # if ddos engine is disabled
+        else:
+            self.IPS.block_length = 0
 
         # src ips that will not trigger ips
         self.IPS.ip_whitelist = set([IPv4Address(ip) for ip in ips['whitelist']['ip_whitelist']])
@@ -96,11 +98,13 @@ class Configuration:
     def _get_open_ports(self, cfg_file):
         ips = load_configuration(cfg_file)['ips']
 
-        open_tcp_ports = ips['open_protocols']['tcp']
-        open_udp_ports = ips['open_protocols']['udp']
         self.IPS.open_ports = {
-            PROTO.TCP: {int(local_port): int(wan_port) for wan_port, local_port in open_tcp_ports.items()},
-            PROTO.UDP: {int(local_port): int(wan_port) for wan_port, local_port in open_udp_ports.items()}
+            PROTO.TCP: {
+                int(local_port): int(wan_port) for wan_port, local_port in ips['open_protocols']['tcp'].items()
+            },
+            PROTO.UDP: {
+                int(local_port): int(wan_port) for wan_port, local_port in ips['open_protocols']['udp'].items()
+            }
         }
 
         self._cfg_change.set()
@@ -132,26 +136,18 @@ class Configuration:
 
         self.initialize.done()
 
-    @dynamic_looper
+    @looper(THIRTY_MIN)
+    # TODO: consider making this work off of a thread event. then we can convert the dynamic looper
+    # to a standard looper and method will block until an actual host has been blocked.
     def _clear_ip_tables(self):
-        IPS = self.IPS
+        # quick check to see if any firewall rules exist
+        if not self.IPS.firewall_rules: return
 
-        if (not IPS.fw_rules): return ONE_MIN
-
-        now, ips_to_remove = fast_time(), []
-        for tracked_ip, insert_time in IPS.fw_rules.items():
-            if (now - insert_time > IPS.block_length):
-                ips_to_remove.append(tracked_ip)
-
-        if (not ips_to_remove): return FIVE_MIN
+        firewall_rules = self.IPS.firewall_rules
+        block_length = self.IPS.block_length
+        now = fast_time()
 
         with IPTableManager() as iptables:
-            for tracked_ip in ips_to_remove:
-                # NOTE: if the system is configured in IDS mode when the rule was created, an active rule would not have
-                # be inserted into the system. this will still run, but effectively do nothing. maybe we can figure out
-                # a way to identify the type of rule in the data set. remember that there could be some thread safety
-                # concerns when dealing with this issue so make sure solution is well thought out.
-                if IPS.fw_rules.pop(tracked_ip, None):
+            for tracked_ip, insert_time in list(firewall_rules.items()):
+                if (now - insert_time > block_length) and firewall_rules.pop(tracked_ip, None):
                     iptables.proxy_del_rule(tracked_ip, table='mangle', chain='IPS')
-
-        return FIVE_MIN

@@ -10,7 +10,7 @@ print('creating firewall user')
 run('sudo useradd -p firewall dnx && sudo mkdir /home/dnx && sudo chown dnx:dnx /home/dnx', shell=True, stdout=DEVNULL)
 
 print('installing system dependencies')
-run('sudo apt install nginx python3-pip libnetfilter_queue -y', shell=True, stdout=DEVNULL)
+run('sudo apt install nginx python3-pip libnetfilter-queue-dev -y', shell=True, stdout=DEVNULL)
 
 print('enabling system services')
 run('sudo systemctl enable nginx', shell=True, stdout=DEVNULL)

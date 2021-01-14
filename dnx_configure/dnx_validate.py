@@ -54,16 +54,22 @@ def convert_int(num):
     except:
         return DATA.INVALID
 
-def standard(user_input):
-    if (not user_input.isalnum()):
-        raise ValidationError('Standard fields can only contain alpha numeric characters.')
+def standard(user_input, *, override=[]):
+    for char in user_input:
+        if (not char.isalnum() and char not in override):
+            override = ', '.join(override)
+
+            # TODO: FUCK ENGLISH. MAKE THIS MAKE SENSE PLEASE GOD. FUCK.
+            raise ValidationError(
+                f'Standard fields can only contain alpha numeric {override}.'
+            )
 
 def syslog_dropdown(syslog_time):
     syslog_time = convert_int(syslog_time)
     if (syslog_time):
         raise ValidationError('Dropdown values must be an integer.')
 
-    if (syslog_time not in [6,10,60]):
+    if (syslog_time not in [5,10,60]):
         raise ValidationError('Dropdown values can only be 5, 10, or 60.')
 
 def mac_address(mac):
@@ -157,13 +163,15 @@ def user_role(user_role):
 def dhcp_reservation(reservation_settings):
     mac_address(reservation_settings['mac'])
     ip_address(reservation_settings['ip'])
-    standard(reservation_settings['username'])
+    standard(reservation_settings['description'], override=[' '])
 
-    dnx_settings = load_configuration('config')['settings']
-    local_net = IPv4Network(dnx_settings['local_net']['subnet'])
-    ip_object = IPv4Address(reservation_settings['ip'])
-    if (ip_object not in local_net):
-        raise ValidationError('IP Address must be inside of localnet. ex 192.168.83.10')
+    dhcp_settings = load_configuration('config')['settings']
+
+    reservation_ip = IPv4Address(reservation_settings['ip'])
+    zone_net = IPv4Network(dhcp_settings['interfaces'][reservation_settings['zone'].lower()]['subnet'])
+
+    if (reservation_ip not in zone_net.hosts()):
+        raise ValidationError(f'IP Address must fall within {str(zone_net)} range.')
 
 def log_settings(log_settings):
     if (log_settings['length'] not in [30, 45, 60, 90]):

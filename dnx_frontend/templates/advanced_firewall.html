@@ -98,13 +98,9 @@
                                 <input type="text" name="position" class="validate" placeholder=7>
                                 <label for="">Position</label>
                             </div>
-                            <div class="input-field col s6">
-                                <select name="zone" id="">
-                                    {% for zone in zones %}
-                                    <option value="{{zone}}_INTERFACE">{{zone}}</option>
-                                    {% endfor %}
-                                </select>
-                                <label for="">Zone</label>
+                            <div class="col s6">
+                                <label>Zone</label>
+                                <h6 class="black-text">{{selected[:-10]}}</h6>
                             </div>
                         </div>
                         <div class="row">

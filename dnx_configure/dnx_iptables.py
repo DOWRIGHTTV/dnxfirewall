@@ -68,6 +68,8 @@ class _Defaults:
         run(' iptables -t mangle -A PREROUTING -j IPS', shell=True) # IPS rules insert into here
 
     def mangle_forward_set(self):
+        run(f'iptables -t mangle -A INPUT -i {self._wan_int} -j MARK --set-mark {SEND_TO_IPS}', shell=True) # wan > closed port/ips
+
         # this will mark all packets to be inspected by ip proxy and allow it to pass packet on to other rules
         run(f'iptables -t mangle -A FORWARD -i {self._lan_int} -j MARK --set-mark {LAN_IN}', shell=True) # lan > any
         run(f'iptables -t mangle -A FORWARD -i {self._wan_int} -j MARK --set-mark {WAN_IN}', shell=True) # wan > any
@@ -195,7 +197,7 @@ class IPTableManager:
 
         self._interfaces = (self._wan_int, self._lan_int, self._dmz_int)
 
-        self._iptables_lock_file = f'{HOME_DIR}/dnx_system/iptables.lock'
+        self._iptables_lock_file = f'{HOME_DIR}/dnx_system/iptables/iptables.lock'
 
     def __enter__(self):
         self._iptables_lock = open(self._iptables_lock_file, 'r+')
@@ -237,6 +239,7 @@ class IPTableManager:
         write_err('dnxfirewall iptable defaults applied.')
 
     def add_rule(self, rule):
+        print(rule)
         if (rule.protocol == 'any'):
             firewall_rule = (
                 f'sudo iptables -I {rule.zone} {rule.position} -s {rule.src_ip}/{rule.src_netmask} '

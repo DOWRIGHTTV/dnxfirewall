@@ -18,6 +18,8 @@ from dnx_logging.log_main import LogHandler as Log
 from dnx_configure.dnx_file_operations import load_configuration, cfg_read_poller, ConfigurationManager
 from dnx_iptools.dnx_standard_tools import looper, dnx_queue, Initialize
 
+_NULL_LEASE = (DHCP.AVAILABLE, None, None)
+
 
 class Configuration:
     _setup = False
@@ -75,10 +77,12 @@ class Configuration:
         self.initialize.wait_in_line(2)
 
         with self.DHCPServer.options_lock:
+
             # iterating over server interfaces and populated server option data sets NOTE: consider merging server
             # options with the interface settings since they are technically bound.
             for intf, settings in self.DHCPServer.intf_settings.items():
                 for _intf in interfaces.values():
+
                     # ensuring the iterfaces match since we cannot guarantee order
                     if (intf != _intf['ident']): continue
 
@@ -88,6 +92,7 @@ class Configuration:
                     # converting keys to integers (json keys are string only), then packing any
                     # option value that is in ip address form to raw bytes.
                     for o_id, values in server_options.items():
+
                         opt_len, opt_val = values
                         if (not isinstance(opt_val, str)):
                             self.DHCPServer.options[intf][int(o_id)] = (opt_len, opt_val)
@@ -112,20 +117,33 @@ class Configuration:
     def _get_reservations(self, cfg_file):
         dhcp_settings = load_configuration(cfg_file)['dhcp_server']
 
-        self.DHCPServer.reservations = dhcp_settings['reservations']
+        # dict comp that retains all info of stored json data, but converts ip address into objects
+        self.DHCPServer.reservations = {
+            mac: {
+                'ip_address': IPv4Address(info['ip_address']),
+                'description': info['description']
+            }
+            for mac, info in dhcp_settings['reservations'].items()
+        }
 
+        # creating local reference for iteration performance
         reservations = self.DHCPServer.reservations
-        reservation_list = list(reservations.items())
-        dhcp_leases = list(self.DHCPServer.leases.items())
-        for ip, record in dhcp_leases:
-            r_type, *_ = record
-            ip_object = IPv4Address(ip)
-            if (r_type is DHCP.RESERVATION and ip_object not in reservations):
-                self.DHCPServer.leases.pop(ip_object)
 
-        # configuring dhcp reservations
+        # loaded all reserved ip addressing into a set to be referenced below
+        reserved_ips = set([IPv4Address(info['ip_address']) for info in reservations.values()])
+
+        # sets reserved ip addresses lease records to available is there are no longer configured
+        dhcp_leases = self.DHCPServer.leases
+        for ip, record in dhcp_leases.items():
+
+            # record[0] is record type. cross referencing ip reservation list with current lease table
+            # to reset any leased record placeholders for the reserved ip.
+            if (record[0] is DHCP.RESERVATION and IPv4Address(ip) not in reserved_ips):
+                dhcp_leases[ip] = _NULL_LEASE
+
+        # adding dhcp reservations to lease table to prevent them from being selected during an offer
         self.DHCPServer.leases.update({
-            IPv4Address(ip): (DHCP.RESERVATION, 0, mac) for ip, mac in reservation_list
+            IPv4Address(info['ip_address']): (DHCP.RESERVATION, 0, mac) for mac, info in reservations.items()
         })
 
         self.initialize.done()
@@ -137,14 +155,16 @@ class Configuration:
         fw_intf = fw_settings['interfaces']
         dhcp_intfs = server_settings['interfaces']
 
-        # ident
+        # interface ident eg. eth0
         for intf in self.DHCPServer._intfs:
-            # friendly name
+            # interface friendly name eg. wan
             for _intf, settings in dhcp_intfs.items():
                 # ensuring the iterfaces match since we cannot guarantee order
                 if (intf != settings['ident']): continue
 
-                # passing over disabled server interfaces. NOTE: DEF temporary
+                # passing over disabled server interfaces. NOTE: DEF temporary NOTE: no fuck you, we might
+                # want the user to be able to disable dhcp servers for multiple reasons (static only, separate
+                # dhcp server, security, etc.)
                 if not dhcp_intfs[_intf]['enabled']: continue
 
                 # creating ipv4 interface object which will be associated with the ident in the config.
@@ -161,11 +181,10 @@ class Configuration:
 
 
 # custom dictionary to manage dhcp server leases including timeouts, updates, or persistence (store to disk)
-
-_NULL_LEASE = (DHCP.AVAILABLE, None, None)
 _STORED_RECORD = namedtuple('stored_record', 'ip record')
 
 
+# TODO: consider making a namedtuple for the record itself (r_type, expire_time, mac)
 class Leases(dict):
     _setup = False
 
@@ -206,7 +225,7 @@ class Leases(dict):
             dhcp_settings = dnx.load_configuration()
             leases = dhcp_settings['dhcp_server']['leases']
 
-            if (not dhcp_lease.record):
+            if (dhcp_lease.record is _NULL_LEASE):
                 leases.pop(dhcp_lease.ip, None)
 
             else:
@@ -226,7 +245,7 @@ class Leases(dict):
 
     @looper(ONE_MIN)
     # TODO: TEST RESERVATIONS GET CLEANED UP
-    # removing expired entries from lease table on a per interface basis. checked every 1 minutes.
+    # removing expired entries from lease table on a per interface basis.
     def _lease_table_cleanup(self):
         current_time = fast_time()
         # copying dictionary as list for local reference performance

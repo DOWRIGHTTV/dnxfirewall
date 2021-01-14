@@ -112,7 +112,7 @@ class Inspect:
     @classmethod
     def ip(cls, packet):
         self = cls()
-        action, category = self._ip_inspect(packet)
+        action, category = self._ip_inspect(self._Proxy, packet)
 
         self._Proxy.forward_packet(packet.nfqueue, packet.zone, action)
 #        self._forward_packet(packet.nfqueue, packet.zone, action)
@@ -121,12 +121,16 @@ class Inspect:
         if (action is CONN.DROP):
             self._prepare_and_send(packet)
 
+        # NOTE: this reduces overall logging when not blocking, by only logging for info if log level is
+        # set high enough AND the remote ip falls within a country or reputation category. we could remove
+        # this restriction, which would log all connections being made, which may be more inline with how
+        # it should function.
         if (category):
             Log.log(packet, IPP_INSPECTION_RESULTS(category, action))
 
-    def _ip_inspect(self, packet):
+    def _ip_inspect(self, Proxy, packet):
         action = CONN.ACCEPT # setting default action
-        Proxy = self._Proxy
+
         # will cross reference category based ips if enabled
         if (Proxy.cat_enabled):
             category = IPP_CAT(_recursive_binary_search(packet.bin_data))

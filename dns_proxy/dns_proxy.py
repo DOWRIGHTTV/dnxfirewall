@@ -118,7 +118,7 @@ class Inspect:
     @classmethod
     def dns(cls, packet):
         self = cls()
-        request_results = self._dns_inspect(packet)
+        request_results = self._dns_inspect(self._Proxy, packet)
         # NOTE: accessing class var through instance is 7-10% faster
         if (not request_results.redirect):
             self._proxy_notify_server(packet.request_identifier, decision=DNS.ALLOWED)
@@ -134,9 +134,7 @@ class Inspect:
 
     # this is where the system decides whether to block dns query/sinkhole or to allow. notification will be done
     # via the request tracker upon returning signature scan result
-    def _dns_inspect(self, packet):
-        Proxy = self._Proxy # NOTE: consider sending this in on all inspection classes?
-
+    def _dns_inspect(self, Proxy, packet):
         whitelisted = self._ip_whitelist_get(packet.src_ip, False)
 
         # signature/ blacklist check.
@@ -148,7 +146,7 @@ class Inspect:
                 if self._tld_get(enum_request):
                     Log.dprint(f'TLD Block: {packet.request}')
 
-                    return DNS_REQUEST_RESULTS(True, 'tld filter', enum_request)
+                    return DNS_REQUEST_RESULTS(True, 'tld filter', TLD_CAT[enum_request])
 
                 continue
 
@@ -161,7 +159,7 @@ class Inspect:
             if (not whitelisted and enum_request in Proxy.blacklist.dns):
                 Log.dprint(f'Blacklist Block: {packet.request}')
 
-                return DNS_REQUEST_RESULTS(True, 'blacklist', 'time based')
+                return DNS_REQUEST_RESULTS(True, 'blacklist', DNS_CAT.time_based)
 
             # pulling domain category if signature present. | NOTE: this is now using imported cython function factory
             category = DNS_CAT(_recursive_binary_search(enum_request))
@@ -188,7 +186,7 @@ class Inspect:
             return False
 
         # signature match, not whitelisted, or whitelisted and cat is bad | BLOCK
-        if (not whitelisted or category in ['malicious', 'cryptominer']):
+        if (not whitelisted or category in [DNS_CAT.malicious, DNS_CAT.cryptominer]):
             return True
 
         # default action | ALLOW
