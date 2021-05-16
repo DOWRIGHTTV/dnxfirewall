@@ -47,10 +47,6 @@
                     "enabled": false,
                     "keyword": false
                 },
-                "dyndns": {
-                    "enabled": false,
-                    "keyword": false
-                },
                 "p2p": {
                     "enabled": false,
                     "keyword": false
