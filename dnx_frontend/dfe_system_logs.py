@@ -17,7 +17,7 @@ def load_page():
 
 def update_page(form):
     log_type = form.get('table', 'combined')
-    if (log_type in ['combined', 'dhcp_server', 'dns_proxy', 'ip_proxy', 'ips', 'syslog', 'system', 'update', 'logins']):
+    if (log_type in ['combined', 'dhcp_server', 'dns_proxy', 'ip_proxy', 'ips', 'syslog', 'system', 'web_app', 'logins']):
         file_path = f'{HOME_DIR}/dnx_system/log/{log_type}'
         log_files = [f'{file_path}/{file}' for file in reversed(os.listdir(file_path)[-7:])]
 

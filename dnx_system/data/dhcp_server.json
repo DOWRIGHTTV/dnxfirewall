@@ -3,7 +3,7 @@
         "interfaces": {
             "lan": {
                 "enabled": true,
-                "ident": "eth0",
+                "ident": null,
                 "icmp_check": false,
                 "lease_range": {
                     "start": 16,
@@ -12,7 +12,7 @@
             },
             "dmz": {
                 "enabled": true,
-                "ident": "eth0",
+                "ident": null,
                 "icmp_check": false,
                 "lease_range": {
                     "start": 206,

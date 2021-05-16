@@ -15,12 +15,16 @@ sys.path.insert(0, HOME_DIR)
 
 import dnx_iptools.dnx_interface as interface
 
-from dnx_configure.dnx_constants import CFG, fast_time, str_join
+from dnx_configure.dnx_constants import CFG, INVALID_FORM, fast_time, str_join
 from dnx_configure.dnx_file_operations import load_configuration, ConfigurationManager
 from dnx_configure.dnx_exceptions import ValidationError
-from dnx_frontend.dfe_dnx_authentication import Authentication
 from dnx_configure.dnx_iptables import IPTableManager
 from dnx_configure.dnx_system_info import System, Services, Interface
+from dnx_frontend.dfe_dnx_authentication import Authentication
+from dnx_logging.log_main import LogHandler as Log
+
+# NOTE: this will allow the config manager to reference the Log class without an import. (cyclical import error)
+ConfigurationManager.set_log_reference(Log)
 
 def set_default_mac_flag():
     with ConfigurationManager('config') as dnx:
@@ -60,23 +64,58 @@ def set_wan_mac(action, mac_address=None):
 
 def set_dhcp_reservation(dhcp_settings, action):
     with ConfigurationManager('dhcp_server') as dnx:
-        dhcp_reservations = dnx.load_configuration()
+        dhcp_server_settings = dnx.load_configuration()
 
-        modified_mac = str_join(dhcp_settings['mac'].lower().split(':'))
+        leases = dhcp_server_settings['dhcp_server']['leases']
+        reservations = dhcp_server_settings['dhcp_server']['reservations']
+        reserved_ips = set([info['ip_address'] for info in reservations.values()])
 
-        macs = dhcp_reservations['dhcp_server']['reservations']
-        if (action is CFG.ADD and modified_mac not in macs):
-            macs.update({
-                modified_mac: {
+        if (action is CFG.ADD):
+
+            # preventing reservations being created for ips with an active dhcp lease
+            if (dhcp_settings['ip'] in leases):
+                raise ValidationError(
+                    f'There is an active lease with {dhcp_settings["ip"]}. Clear the lease and try again.'
+                )
+
+            # ensuring mac address and ip address are unique
+            if (dhcp_settings['mac'] in reservations or dhcp_settings['ip'] in reserved_ips):
+                raise ValidationError('IP Address already has a reservation.')
+
+            reservations.update({
+                dhcp_settings['mac']: {
+                    'zone': dhcp_settings['zone'],
                     'ip_address': dhcp_settings['ip'],
                     'description': dhcp_settings['description']
                 }
             })
 
         elif (action is CFG.DEL):
-            macs.pop(modified_mac, None)
+            reservations.pop(dhcp_settings['mac'], None)
 
-        dnx.write_configuration(dhcp_reservations)
+        dnx.write_configuration(dhcp_server_settings)
+
+def set_dhcp_settings(dhcp_settings):
+    with ConfigurationManager('dhcp_server') as dnx:
+        dhcp_server_settings = dnx.load_configuration()
+
+        interface = dhcp_settings.pop('interface')
+
+        dhcp_server_settings['dhcp_server']['interfaces'][interface].update(dhcp_settings)
+
+        dnx.write_configuration(dhcp_server_settings)
+
+def remove_dhcp_lease(ip_addr):
+    with ConfigurationManager('dhcp_server') as dnx:
+        dhcp_leases = dnx.load_configuration()
+
+        leases = dhcp_leases['dhcp_server']['leases']
+
+        if not leases.pop(ip_addr, None):
+            raise ValidationError(INVALID_FORM)
+
+        dnx.write_configuration(dhcp_leases)
+
 
 def set_domain_categories(en_cats, *, ruleset):
     with ConfigurationManager('dns_proxy') as dnx:

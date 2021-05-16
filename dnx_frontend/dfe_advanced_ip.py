@@ -31,7 +31,8 @@ def load_page():
         hour -= 12
         suffix = 'PM'
 
-    # TODO: what in the actuall @#$@ is this.
+    # TODO: what in the actuall @#$@ is this. NOTE: this looks like the tlen_hour is will absorb the overall length
+    # and will be dealt with if the result is a float.
     tr_length /= 3600
     tlen_hour = tr_length
     tlen_minutes = 0

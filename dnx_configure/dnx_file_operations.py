@@ -9,6 +9,7 @@ import subprocess
 
 from fcntl import flock, LOCK_EX, LOCK_UN
 from secrets import token_urlsafe
+from collections import defaultdict
 from ipaddress import IPv4Address, IPv4Network
 
 HOME_DIR = os.environ['HOME_DIR']
@@ -17,6 +18,10 @@ sys.path.insert(0, HOME_DIR)
 from dnx_configure.dnx_constants import USER, GROUP, LOG, FILE_POLL_TIMER
 from dnx_configure.dnx_constants import DNS_BIN_OFFSET, DNS_CAT, IPP_CAT, GEO
 from dnx_configure.dnx_exceptions import ValidationError
+
+# dedinitions for ip proxy data structures. Consider moving to constants module (make name more specific)
+MSB = int(0b11111111111110000000000000000000)
+LSB = int(0b00000000000001111111111111111111)
 
 # will load json data from file, convert it to a python dict, then return as object
 def load_configuration(filename, *, filepath='/dnx_system/data'):
@@ -113,28 +118,29 @@ def load_dns_bitmap(Log, bl_exc=[], wl_exc=[]):
 
 def load_ip_bitmap(Log):
     '''returns a bitmap trie for ip host filtering loaded from the consolodated blocked.ips file.'''
-    dict_nets, bin_offset = {}, 5
+    dict_nets = defaultdict(list)
     with open(f'{HOME_DIR}/dnx_system/signatures/ip_lists/blocked.ips', 'r') as ip_sigs:
-        for sig in ip_sigs:
+        for signature in ip_sigs:
+
+            # preventing disabled signatures from being loaded
+            if signature.startswith('#'): continue
+
+            sig = signature.strip().split(maxsplit=1)
             try:
-                si = sig.strip().split(maxsplit=1)
-                ip = int(IPv4Address(si[0]))
-                cat = int(IPP_CAT[si[1].upper()])
+                ip_addr = int(IPv4Address(sig[0]))
+                cat = int(IPP_CAT[sig[1].upper()])
             except Exception as E:
-                Log.warning(f'bad signature detected in ip. | {E} | {sig}')
+                Log.warning(f'bad signature detected in ip. | {E} | {signature}')
                 continue
 
-            ip = f'{int(IPv4Address(ip))}'
+            bin_id  = ip_addr & MSB
+            host_id = ip_addr & LSB
 
-            b_id = int(ip[:-bin_offset])
-            host = int(ip[-bin_offset:])
-            try:
-                dict_nets[b_id].append((host, cat))
-            except KeyError:
-                dict_nets[b_id] = [(host, cat)]
-            else:
-                # sorted the items in bin/bucket #
-                dict_nets[b_id].sort()
+            dict_nets[bin_id].append((host_id, cat))
+
+            # NOTE: sorting items in the current bin. This could be moved to the end if we did a final
+            # iter pass over the dict_nets to sort. This would also prevent having to sort more times than needed.
+            dict_nets[bin_id].sort()
 
     # converting to nested tuple and sorting, list > tuple done on return
     nets = [(k, tuple(v)) for k,v in dict_nets.items()]
@@ -147,55 +153,61 @@ def load_ip_bitmap(Log):
 def load_geo_bitmap(Log):
     '''returns a bitmap trie for geolocation filtering loaded from the consolodated blocked.geo file.'''
     # temporary dict to generate dataset easier and local var for easier bin size adjustments
-    dict_nets, bin_offset = {}, 5
+    dict_nets = defaultdict(list)
     with open(f'{HOME_DIR}/dnx_system/signatures/geo_lists/blocked.geo', 'r') as geo_sigs:
-        for net in geo_sigs:
-            if '#' in net: continue
-            try:
-                geo_signature = net.strip().split(maxsplit=1)
-                net = IPv4Network(geo_signature[0])
-                country = int(GEO[geo_signature[1].title()])
-            except Exception as E:
-                Log.warning(f'bad signature detected in geo. | {E} | {net}')
-                continue
+        geo_sigs = list(geo_sigs)
 
-            # assigning vars for bin id, host ranges, and ip count
-            net_id = str(int(net.network_address))
-            ip_count = int(net.num_addresses) - 1
+    for net in geo_sigs:
 
-            rollover_max = int('9'*bin_offset)
-            bis_id = int(net_id[:-bin_offset])
-            host = int(net_id[-bin_offset:])
-            try:
-                bin_range = dict_nets[bis_id]
-            except KeyError:
-                bin_range = dict_nets[bis_id] = []
+        # preventing disabled signatures from being loaded
+        if net.startswith('#'): continue
 
-            while ip_count > 0:
-                diff = rollover_max - host
-                if diff > ip_count:
-                    bin_range.append((host,host+ip_count, country))
+        geo_signature = net.strip().split(maxsplit=1)
+        try:
+            net, country = IPv4Network(geo_signature[0]), int(GEO[geo_signature[1].upper()])
+        except Exception as E:
+            Log.warning(f'bad signature detected in geo. | {E} | {net}')
+            continue
+
+        # assigning vars for bin id, host ranges, and ip count
+        net_id = int(net.network_address)
+        ip_count = int(net.num_addresses) - 1
+        if (ip_count < LSB):
+            bin_id = net_id & MSB
+            host_id_start = net_id & LSB
+
+            dict_nets[bin_id].append(
+                (host_id_start, host_id_start+ip_count, country)
+            )
+
+        else:
+            offset = 0
+            while True:
+                current_ip_index = int(net[offset])
+                bin_id = current_ip_index & MSB
+
+                remaining_ips = ip_count - offset
+                if (remaining_ips <= LSB):
+                    dict_nets[bin_id].append(
+                        (current_ip_index, current_ip_index+remaining_ips, country)
+                    )
+
                     break
 
-                # NOTE: if max host id is reached, will roll over to next bin id integer
                 else:
-                    bin_range.append((host,rollover_max, country))
-                    bis_id += 1
-                    ip_count -= diff
-                    host = 0
+                    dict_nets[bin_id].append((current_ip_index, LSB, country))
 
-                    try:
-                        bin_range = dict_nets[bis_id]
-                    except KeyError:
-                        bin_range = dict_nets[bis_id] = []
+                    offset += LSB
 
-                bin_range.sort()
-            dict_nets[bis_id] = _merge_geo_ranges(bin_range)
+        bin_contents = dict_nets[bin_id]
+        bin_contents.sort()
+
+        dict_nets[bin_id] = _merge_geo_ranges(bin_contents)
 
     nets = [(k, tuple(v)) for k,v in dict_nets.items()]
     nets.sort()
 
-    dict_nets = None
+    dict_nets, geo_sigs = None, None
 
     return tuple(nets)
 
@@ -313,25 +325,31 @@ class ConfigurationManager:
     be obtained or block until it can aquire the lock and return the class object to the caller.
     '''
 
+    Log = None
+
     __slots__ = (
         '_config_file', '_config_lock_file', '_config_lock',
         '_temp_file', '_temp_file_path', '_file_name',
-        '_data_written', '_Log'
+        '_data_written'
     )
 
-    def __init__(self, config_file, file_path=None, Log=None):
-        if (not config_file.endswith('.json')):
-            config_file = ''.join([config_file, '.json'])
+    @classmethod
+    def set_log_reference(cls, ref):
+        '''sets logging class reference for configuration manager specific errors.'''
 
-        if file_path is None:
-            self._config_file = f'{HOME_DIR}/dnx_system/data/{config_file}'
-        else:
-            self._config_file = f'{HOME_DIR}/{file_path}/{config_file}'
+        cls.Log = ref
 
-        self._file_name = config_file
-        self._Log = Log
-
+    def __init__(self, config_file, file_path=None):
         self._config_lock_file = f'{HOME_DIR}/dnx_system/config.lock'
+
+        config_file = config_file if config_file.endswith('.json') else f'{config_file}.json'
+
+        no_path = f'{HOME_DIR}/dnx_system/data/{config_file}'
+        with_path = f'{HOME_DIR}/{file_path}/{config_file}'
+
+        self._config_file = no_path if file_path is None else with_path
+        self._file_name = config_file
+
         self._data_written = False
 
     # attempts to acquire lock on system config lock (blocks until acquired), then opens a temporary
@@ -346,8 +364,7 @@ class ConfigurationManager:
         os.chmod(self._temp_file_path, 0o660)
         shutil.chown(self._temp_file_path, user=USER, group=GROUP)
 
-        if (self._Log):
-            self._Log.debug(f'Config file lock aquired for {self._file_name}.')
+        self.Log.debug(f'Config file lock aquired for {self._file_name}.')
 
         return self
 
@@ -361,17 +378,19 @@ class ConfigurationManager:
         else:
             self._temp_file.close()
             os.unlink(self._temp_file_path)
-            if (self._Log):
-                self._Log.error(f'configuration manager exiting with error: {exc_val}')
 
         # releasing lock for purposes specified in flock(1) man page under -u (unlock)
         flock(self._config_lock, LOCK_UN)
         self._config_lock.close()
-        if (self._Log):
-            self._Log.debug(f'file lock released for {self._file_name}')
+        self.Log.debug(f'file lock released for {self._file_name}')
 
-        if (exc_type is not ValidationError):
+        if (exc_type is None):
             return True
+
+        elif (exc_type is not ValidationError):
+            self.Log.error(f'configuration manager error: {exc_val}')
+
+            raise ValidationError('Unknown error. See log for details.')
 
     #will load json data from file, convert it to a python dict, then returned as object
     def load_configuration(self):

@@ -30,9 +30,9 @@
                             {% for category, enabled in ip_settings['categories'].items() %}
                             <div class="input-field col s1 m1"></div>
                             <div class="input-field col s5 m5">
-                                {{category}}
+                                {{category.title().replace('_', ' ')}}
                                 <br>
-                                <select name="categories" id="" onchange="this.form.submit()">
+                                <select class="browser-default" name="categories" id="" onchange="this.form.submit()">
                                     <option value="{{category}}_0" {% if enabled==1 %} selected {% endif %}>OFF</option>
                                     <option value="{{category}}_1" {% if enabled==1 %} selected {% endif %}>OUTBOUND</option>
                                     <option value="{{category}}_2" {% if enabled==2 %} selected {% endif %}>INBOUND</option>
@@ -70,10 +70,10 @@
                             {% for country, enabled in ip_settings['geolocation'].items() %}
                             <div class="input-field col s1 m1"></div>
                             <div class="input-field col s3 m3">
-                                {{country.title()}}
+                                {{country.title().replace('_', '. ')}}
                                 <br>
-                                <select name="countries" id="" onchange="this.form.submit()">
-                                    <option value="{{country}}_0" {% if enabled==1 %} selected {% endif %}>OFF</option>
+                                <select class="browser-default" name="countries" id="" onchange="this.form.submit()">
+                                    <option value="{{country}}_0" {% if enabled==0 %} selected {% endif %}>OFF</option>
                                     <option value="{{country}}_1" {% if enabled==1 %} selected {% endif %}>OUTBOUND</option>
                                     <option value="{{country}}_2" {% if enabled==2 %} selected {% endif %}>INBOUND</option>
                                     <option value="{{country}}_3" {% if enabled==3 %} selected {% endif %}>BOTH</option>
@@ -102,32 +102,18 @@
             <div class="col s12 m3"></div>
             <div class="col s12 m6">
                 <div class="card-panel">
-                    <h4 class="red-text light-3">Lan Restrict</h4>
+                    <h4 class="red-text light-3">LAN Restrict</h4>
                     <form action="/advanced/ip" method="post">
                         <input type="hidden" name="tab" value="3">
                         <div class="col s12 m12">
                             <h6>Start Time</h6>
                             <div class="row">
                                 <div class="input-field col s12 m3">
-                                    <select name="hour" id="">
-                                        {% for i in range(0,13) %}
-                                        <option value="{{i}}" {% if ip_settings['tr_settings']['hour']==loop.index %}
-                                            selected {% endif %}>{{i}}</option>
-                                        {% endfor %}
-                                    </select>
+                                    <input type="number" name="hour" min="0" max="12" value="{{ip_settings['tr_settings']['hour']}}">
                                     <label for="hour">Hour</label>
                                 </div>
                                 <div class="input-field col s12 m3">
-                                    <select name="minutes" id="">
-                                        <option value="00" {% if ip_settings['tr_settings']['minutes']==00 %} selected
-                                            {% endif %}>00</option>
-                                        <option value="15" {% if ip_settings['tr_settings']['minutes']==15 %} selected
-                                            {% endif %}>15</option>
-                                        <option value="30" {% if ip_settings['tr_settings']['minutes']==30 %} selected
-                                            {% endif %}>30</option>
-                                        <option value="45" {% if ip_settings['tr_settings']['minutes']==45 %} selected
-                                            {% endif %}>45</option>
-                                    </select>
+                                    <input type="number" name="minute" min="0" max="45" step="15" value="{{ip_settings['tr_settings']['minutes']}}">
                                     <label for="minute">Minute</label>
                                 </div>
                                 <div class="input-field col s12 m3">
@@ -140,41 +126,23 @@
                                     <label for="time_suffix"></label>
                                 </div>
                             </div>
-                            <h6>Length</h6>
+                            <h6>Duration</h6>
                             <div class="row">
                                 <div class="input-field col s12 m3">
-                                    <select name="tlen_hour" id="">
-                                        {% for i in range(1,12) %}
-                                        <option value="{{i}}"
-                                            {% if ip_settings['tr_settings']['length_hour']==loop.index %} selected
-                                            {% endif %}>{{i}}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <label for="tlen_hour">Hour</label>
+                                    <input type="number" name="tlen_hour" min="0" max="11" value="{{ip_settings['tr_settings']['length_hour']}}">
+                                    <label for="tlen_hour">Hours</label>
                                 </div>
                                 <div class="input-field col s12 m3">
-                                    <select name="tlen_minutes" id="">
-                                        <option value="00" {% if ip_settings['tr_settings']['length_minutes']==00 %}
-                                            selected {% endif %}>00</option>
-                                        <option value="15" {% if ip_settings['tr_settings']['length_minutes']==15 %}
-                                            selected {% endif %}>15</option>
-                                        <option value="30" {% if ip_settings['tr_settings']['length_minutes']==30 %}
-                                            selected {% endif %}>30</option>
-                                        <option value="45" {% if ip_settings['tr_settings']['length_minutes']==45 %}
-                                            selected {% endif %}>45</option>
-                                    </select>
-                                    <label for="tlen_minute">Minute</label>
+                                    <input type="number" name="tlen_minutes" min="0" max="45" step="15" value="{{ip_settings['tr_settings']['length_minutes']}}">
+                                    <label for="tlen_minutes">Minutes</label>
                                 </div>
                                 <div class="input-field col s12 m6 center">
                                     <br>
                                     <div class="switch">
                                         <label>
                                             Disabled
-                                            {% if ip_settings['tr_settings']['enabled'] %}
-                                            <input type="checkbox" checked="checked" name="restriction_enable">
-                                            {% else %}
-                                            <input type="checkbox" name="restriction_enable">
-                                            {% endif %}
+                                            <input type="checkbox" {% if ip_settings['tr_settings']['enabled'] %}
+                                                checked="checked"  {% endif %} name="restriction_enable">
                                             <span class="lever"></span>
                                             Enabled
                                         </label>

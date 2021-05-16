@@ -32,8 +32,8 @@ __all__ = (
     'ValidationError'
 )
 
+# TODO: mac regex allows trailing characters. it should hard cut after the exact char length.
 _VALID_MAC = re.compile('(?:[0-9a-fA-F]:?){12}')
-_VALID_IP = re.compile('^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$')
 _VALID_DOMAIN = re.compile('(//|\\s+|^)(\\w\\.|\\w[A-Za-z0-9-]{0,61}\\w\\.){1,3}[A-Za-z]{2,6}')
 
 def get_convert_int(form, key):
@@ -43,7 +43,7 @@ def get_convert_int(form, key):
     try:
         value = form.get(key, DATA.MISSING)
 
-        return value if DATA.MISSING else int(value)
+        return value if value == DATA.MISSING else int(value)
     except:
         return DATA.INVALID
 
@@ -60,9 +60,7 @@ def standard(user_input, *, override=[]):
             override = ', '.join(override)
 
             # TODO: FUCK ENGLISH. MAKE THIS MAKE SENSE PLEASE GOD. FUCK.
-            raise ValidationError(
-                f'Standard fields can only contain alpha numeric {override}.'
-            )
+            raise ValidationError(f'Standard fields can only contain alpha numeric {override}.')
 
 def syslog_dropdown(syslog_time):
     syslog_time = convert_int(syslog_time)
@@ -77,11 +75,13 @@ def mac_address(mac):
         raise ValidationError('MAC Address is not valid.')
 
 def _ip_address(ip_addr):
-    if (ip_addr == '127.0.0.1'):
-        raise ValidationError('IP Address cannot be 127.0.0.1/loopback.')
-
-    if (not _VALID_IP.match(ip_addr)):
+    try:
+        ip_addr = IPv4Address(ip_addr)
+    except:
         raise ValidationError('IP Address is not valid.')
+
+    if (ip_addr.is_loopback):
+        raise ValidationError('IP Address cannot be 127.0.0.1/loopback.')
 
 # this is convienience wrapper around above function to allow for multiple ips to be checked with one func call.
 def ip_address(ip_addr=None, *, ip_iter=None):
@@ -89,18 +89,20 @@ def ip_address(ip_addr=None, *, ip_iter=None):
     if (not isinstance(ip_iter, list)):
         return ValidationError('Data format must be a list.')
 
-    if ip_addr:
+    if (ip_addr):
         ip_iter.append(ip_addr)
 
     for ip in ip_iter:
         _ip_address(ip)
 
-def default_gateway(ipa):
-    if (ipa == '127.0.0.1'):
-        raise ValidationError('Default Gateway cannot be 127.0.0.1/loopback.')
+def default_gateway(ip_addr):
+    try:
+        ip_addr = IPv4Address(ip_addr)
+    except:
+        raise ValidationError('Default gateway is not valid.')
 
-    if (not _VALID_IP.match(ipa)):
-        raise ValidationError('Default Gateway is not valid.')
+    if (ip_addr.is_loopback):
+        raise ValidationError('Default gateway cannot be 127.0.0.1/loopback.')
 
 def domain(domain):
     if (not _VALID_DOMAIN.match(domain)):
@@ -161,17 +163,34 @@ def user_role(user_role):
         raise ValidationError('User settings are not valid.')
 
 def dhcp_reservation(reservation_settings):
-    mac_address(reservation_settings['mac'])
-    ip_address(reservation_settings['ip'])
     standard(reservation_settings['description'], override=[' '])
+    mac_address(reservation_settings['mac'])
+    _ip_address(reservation_settings['ip'])
 
     dhcp_settings = load_configuration('config')['settings']
 
-    reservation_ip = IPv4Address(reservation_settings['ip'])
     zone_net = IPv4Network(dhcp_settings['interfaces'][reservation_settings['zone'].lower()]['subnet'])
-
-    if (reservation_ip not in zone_net.hosts()):
+    if (IPv4Address(reservation_settings['ip']) not in zone_net.hosts()):
         raise ValidationError(f'IP Address must fall within {str(zone_net)} range.')
+
+    # converting mac address into storing format. taking burden from front end and configuration methods.
+    reservation_settings['mac'] = reservation_settings['mac'].lower().replace(':', '')
+
+def dhcp_general_settings(server_settings):
+    if (server_settings['interface'] not in ['lan', 'dmz']):
+        raise ValidationError('Invalid interface referenced.')
+
+    lease_range = server_settings['lease_range']
+
+    # clamping range into lan/dmz class C's. this will have to change later if more control over interface
+    # configurations is implemented.
+    for field in lease_range.values():
+        print(type(field))
+        if (field not in range(2,255)):
+            raise ValidationError('DHCP ranges must be between 2 and 254.')
+
+    if (lease_range['start'] >= lease_range['end']):
+        raise ValidationError('DHCP pool start value must be less than the end value.')
 
 def log_settings(log_settings):
     if (log_settings['length'] not in [30, 45, 60, 90]):

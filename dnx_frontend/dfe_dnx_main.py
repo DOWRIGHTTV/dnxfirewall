@@ -320,7 +320,8 @@ def system_reports(dnx_session_data):
 def system_logs(dnx_session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True,
-        'uri_path': '/system/logs', 'menu': '1'
+        'uri_path': '/system/logs', 'menu': '1',
+        'log_files': ['combined', 'logins', 'web_app', 'system', 'dns_proxy', 'ip_proxy', 'ips', 'dhcp_server', 'syslog']
     }
 
     page_settings.update(dnx_session_data)
@@ -606,9 +607,7 @@ def user_timeout():
     session.modified = True
 
 ## SETUP LOGGING CLASS
-Log.run(
-    name=LOG_NAME
-)
+Log.run(name=LOG_NAME)
 
 if __name__ == '__main__':
    app.run(debug=True)

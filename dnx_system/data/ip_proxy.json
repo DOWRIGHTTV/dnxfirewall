@@ -8,17 +8,17 @@
             "tor_exit": 0
         },
         "geolocation": {
-            "china": 1,
+            "china": 3,
             "iran": 1,
             "netherlands": 1,
-            "nkorea": 1,
+            "n_korea": 1,
             "russia": 1,
             "venezuela": 1
         },
         "time_restriction": {
             "enabled": false,
-            "start": "21:00",
-            "length": 28800
+            "start": "22:30",
+            "length": 30600
         }
     }
 }

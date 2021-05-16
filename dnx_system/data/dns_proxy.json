@@ -32,7 +32,7 @@
                     "keyword": false
                 },
                 "pornography": {
-                    "enabled": false,
+                    "enabled": true,
                     "keyword": false
                 },
                 "drugs": {
@@ -47,6 +47,10 @@
                     "enabled": false,
                     "keyword": false
                 },
+                "dyndns": {
+                    "enabled": false,
+                    "keyword": false
+                },
                 "p2p": {
                     "enabled": false,
                     "keyword": false
@@ -56,7 +60,7 @@
                     "keyword": false
                 },
                 "videogames": {
-                    "enabled": false,
+                    "enabled": true,
                     "keyword": false
                 },
                 "purchases": {

@@ -1,7 +1,7 @@
 
 import threading as _threading
 
-from functools import lru_cache
+from functools import _lru_cache
 
 def generate_recursive_binary_search(tuple signatures, (int, int) bounds):
 
@@ -10,7 +10,7 @@ def generate_recursive_binary_search(tuple signatures, (int, int) bounds):
 
     cdef object recursion_lock = _threading.Lock()
 
-    @lru_cache(maxsize=1024)
+    @_lru_cache(maxsize=1024)
     def recursive_binary_search((long, long) host, bint recursion=0):
         nonlocal bin_match
 

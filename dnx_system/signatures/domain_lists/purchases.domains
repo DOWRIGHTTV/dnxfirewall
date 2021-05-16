@@ -1,7 +1,10 @@
 pay.amazon.com purchases
 adyen.com purchases
 alipay.com purchases
+#apple pay
+#atos
 authorize.net purchases
+#bips
 bitpay.com purchases
 bkash.com purchases
 bpay.com.au purchases
@@ -15,6 +18,7 @@ datacash.com purchases
 digi.cash purchases
 digitalriver.com purchases
 dwolla.com purchases
+#edy
 elavon.com purchases
 emergentpayments.net purchases
 euronetworldwide.com purchases

@@ -2,15 +2,6 @@
     "whitelist": {
         "domain": {},
         "exception": {},
-        "ip_whitelist": {
-            "192.168.83.69": {
-                "user": "bob",
-                "type": "global"
-            },
-            "192.168.83.70": {
-                "user": "bob",
-                "type": "tor"
-            }
-        }
+        "ip_whitelist": {}
     }
 }

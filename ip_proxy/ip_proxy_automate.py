@@ -68,7 +68,7 @@ class Configuration:
 
             # using enum for category key and direction value
             try:
-                self.IPProxy.geo_settings[GEO[cat.title()]] = DIR(setting)
+                self.IPProxy.geo_settings[GEO[cat.upper()]] = DIR(setting)
             except KeyError:
                 continue # NOTE: temporary while not all enums/countries are populated
 

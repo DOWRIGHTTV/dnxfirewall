@@ -61,6 +61,8 @@ class ServerResponse:
 
     # TODO: ensure that if lease range gets changed while running, any client outside of new range
     # will have their requested ip ignored if it falls outside of the new range.
+    # TODO: only allow one lease per host. when i host is given a new lease, check that it doesnt
+    # already have one (looking at you linux). if multiple are present, clear out all but most recent.
     def offer(self, discover):
         reservation = discover.reservation(self._net_hosts)
         if (reservation):

@@ -21,8 +21,6 @@ ROOT = True if not _os.getuid() else False
 # globally sets which sql to use | sqlite3 = 0, psql = 1
 SQL_VERSION = 0
 
-#license server number validation
-LICENSE_SVR_VALIDATION = 599641200
 INVALID_FORM = 'Invalid form data.'
 class DATA(_IntEnum):
     INVALID = -1
@@ -35,8 +33,8 @@ INT_BANDWIDTH_TIMER = 5
 FILE_POLL_TIMER = 10
 
 # dnx user/group
-USER  = 'free'
-GROUP = 'free'
+USER  = 'dnx'
+GROUP = 'dnx'
 
 # Certificate authority store file
 CERTIFICATE_STORE = '/etc/ssl/certs/ca-certificates.crt'
@@ -88,15 +86,11 @@ class PROTO(_IntEnum):
     HTTPS    = 443
     DNS_TLS  = 853
 
-#MDNS_PORT       = 5353
 SYSLOG_TLS_PORT = 6514
 SYSLOG_SOCKET   = 6969 # LOCAL SOCKET
 DATABASE_SOCKET = 6970 # LOCAL SOCKET
 
 #syslog/logging
-SYSTEM = 3
-EVENT  = 14
-
 class LOG(_IntEnum):
     SYSTEM  = 3
     EVENT   = 14
@@ -137,16 +131,17 @@ ONE_SEC    = 1
 MSEC       = .001 # one millisecond
 NO_DELAY   = 0
 
+# dns record related values
 MAX_A_RECORD_COUNT = 3
 MINIMUM_TTL        = 300
 DEFAULT_TTL        = 300
 NOT_VALID          = -1
 
-NULL_ADDR = (None,None)
-
 TOP_DOMAIN_COUNT = 20
 HEARTBEAT_FAIL_LIMIT = 3
-KEEP_ALIVE_DOMAIN = 'updates.dnxsec.com'
+KEEP_ALIVE_DOMAIN = 'dnxfirewall.com'
+
+NULL_ADDR = (None,None)
 
 class DNS(_IntEnum):
     #dns relay decisions
@@ -154,7 +149,7 @@ class DNS(_IntEnum):
     FLAGGED    = -2
     TIMED_OUT  = -3
     NO_NOTICE  = -4
-    WAIT_COUNT = 7 # NEW 1ms*i in range(7)  | OLD:wait for decision * interval(1ms)
+    WAIT_COUNT = 7 # NEW 1ms*i in range(WAIT_COUNT)  | OLD:wait for decision * interval(1ms)
     # module identifiers
     SERVER = 0
     PROXY  = 1
@@ -303,16 +298,16 @@ class IPP_CAT(_IntEnum):
 
 class GEO(_IntEnum):
     NONE   = 0
-    Brazil = 76
-    China  = 156
-    India  = 356
-    Iran   = 364
-    Japan  = 392
-    NKorea = 408
-    SKorea = 410
-    Netherlands = 528
-    Russia = 643
-    Spain  = 724
-    Thailand = 764
-    Turkey = 792
-    Venezuela = 862
+    BRAZIL = 76
+    CHINA  = 156
+    INDIA  = 356
+    IRAN   = 364
+    JAPAN  = 392
+    N_KOREA = 408
+    S_KOREA = 410
+    NETHERLANDS = 528
+    RUSSIA = 643
+    SPAIN  = 724
+    THAILAND = 764
+    TURKEY = 792
+    VENEZUELA = 862
