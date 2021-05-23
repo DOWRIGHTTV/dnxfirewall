@@ -1,6 +1,6 @@
 [Unit]
 Description=DNX Firewall Logging Service (cleanup and merging)
-After=dnx-database.service
+After=dnx-database-sqlite.service
 StartLimitIntervalSec=3
 
 [Service]

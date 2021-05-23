@@ -321,6 +321,6 @@ if __name__ == '__main__':
 
     progress('dnxfirewall deployment complete')
 
-    sprint('restart then navigate to https://dnx.firewall to manage.')
+    sprint('\nrestart then navigate to https://dnx.firewall to manage.')
     os._exit(0)
 

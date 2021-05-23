@@ -1,7 +1,7 @@
 
 import threading as _threading
 
-from functools import _lru_cache
+from functools import lru_cache as _lru_cache
 
 def generate_recursive_binary_search(tuple signatures, (int, int) bounds):
 
