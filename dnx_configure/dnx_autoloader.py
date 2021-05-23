@@ -85,7 +85,7 @@ def progress(desc):
     percents = round(100.0 * completed_count / float(p_total), 1)
 
     bar = ''.join(['#' * filled_len, '=' * (bar_len - filled_len)])
-    sys.stdout.write(f'{completed_count}/{p_total} || [{bar}] {percents} || {desc}{" "*12}\r')
+    sys.stdout.write(f'{completed_count}/{p_total} || [{bar}] {percents}% || {desc}{" "*12}\r')
     sys.stdout.flush()
 
 #============================
@@ -130,7 +130,9 @@ def check_system_interfaces():
     return interfaces_detected
 
 def collect_interface_associations(interfaces_detected):
-    print(f'{LINEBREAK}\n', 'available interfaces\n', f'{LINEBREAK}')
+    print(LINEBREAK)
+    print('available interfaces')
+    print(LINEBREAK)
 
     for i, interface in enumerate(interfaces_detected, 1):
         print(f'{i}. {interface}')
