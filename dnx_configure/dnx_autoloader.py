@@ -6,7 +6,7 @@ import json
 
 from subprocess import run, DEVNULL, CalledProcessError
 
-USER_DIR = '/home/dnx/'
+USER_DIR = '/home/dnx'
 HOME_DIR = f'{USER_DIR}/dnxfirewall'
 
 os.environ['HOME_DIR'] = HOME_DIR
@@ -19,7 +19,7 @@ from dnx_logging.log_main import LogHandler as Log
 LOG_NAME = 'system'
 PROGRESS_TOTAL_COUNT = 10
 
-LINEBREAK = ' '*32
+LINEBREAK = '-'*32
 
 #----------------------------
 # UTILS
