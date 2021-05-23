@@ -8,7 +8,7 @@
             "tor_exit": 0
         },
         "geolocation": {
-            "china": 3,
+            "china": 1,
             "iran": 1,
             "netherlands": 1,
             "n_korea": 1,

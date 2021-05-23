@@ -44,8 +44,8 @@ def update_page(form):
     # matching logging update form and sending to configuration method.
     if ('logging_update' in form):
         log_settings = {
-            'log_length': validate.get_convert_int(form, 'log_length'),
-            'log_level': validate.get_convert_int(form, 'log_level')
+            'length': validate.get_convert_int(form, 'length'),
+            'level': validate.get_convert_int(form, 'level')
         }
         if (DATA.INVALID in log_settings.values()):
             return INVALID_FORM

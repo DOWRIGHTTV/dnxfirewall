@@ -2,7 +2,6 @@
 
 import os, sys
 import time
-import pg8000
 import datetime
 import traceback
 
@@ -17,6 +16,11 @@ from dnx_configure.dnx_namedtuples import BLOCKED_DOM
 
 USER = 'dnx'
 PASSWORD = 'firewall'
+
+try:
+    import pg8000
+except:
+    raise RuntimeError('pg8000 library is required if running in postgresql mode.')
 
 
 # TODO: make sure the fixes done to sqlite connector are translated to this module as well.

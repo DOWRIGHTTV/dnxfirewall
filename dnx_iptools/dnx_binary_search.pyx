@@ -73,7 +73,7 @@ def generate_recursive_binary_search(tuple signatures, (int, int) bounds):
 
 def generate_linear_binary_search(tuple sigs, (int, int) bounds):
 
-    @_lru_cache(maxsize=1024)
+    @lru_cache(maxsize=1024)
     def linear_binary_search((int, int) host):
 
         cdef int b_id, hb_id, h_id

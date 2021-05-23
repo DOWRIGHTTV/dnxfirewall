@@ -6,7 +6,7 @@
         },
         "logging": {
             "length": 30,
-            "level": 7
+            "level": 4
         }
     }
 }

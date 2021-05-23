@@ -167,8 +167,8 @@ class _Defaults:
     # TODO: implement commands to check source and dnat changes in nat table.
     def nat(self):
         # rules to check custom nat chains
-        run(f'iptables -t nat -I POSTROUTING -j SRCNAT')
-        run(f'iptables -t nat -I PREROUTING -j DSTNAT')
+        run(f'iptables -t nat -I POSTROUTING -j SRCNAT', shell=True)
+        run(f'iptables -t nat -I PREROUTING -j DSTNAT', shell=True)
 
         run(f'iptables -t nat -A POSTROUTING -o {self._wan_int} -j MASQUERADE', shell=True) # Main masquerade rule. Inside to Outside
         run(f'iptables -t nat -I PREROUTING ! -i {self._wan_int} -p udp --dport 53 -j REDIRECT --to-port 53', shell=True) # internal zones dns redirct into proxy
@@ -226,7 +226,7 @@ class IPTableManager:
         run(f'sudo iptables-restore < {HOME_DIR}/dnx_system/iptables/iptables_backup.cnf', shell=True)
 
     # TODO: think about the duplicate rule check before running this as a safety for creating duplicate rules
-    def apply_defaults(self):
+    def apply_defaults(self, *, suppress=False):
         ''' convenience function wrapper around the iptable Default class. all iptable default rules will
         be loaded. if used within the context manager (recommended), the iptables lock will be aquired
         before continuing (will block until done). iptable commit will be done on exit.
@@ -236,7 +236,8 @@ class IPTableManager:
 
         _Defaults.load(self._interfaces)
 
-        write_err('dnxfirewall iptable defaults applied.')
+        if (not suppress):
+            write_err('dnxfirewall iptable defaults applied.')
 
     def add_rule(self, rule):
         print(rule)

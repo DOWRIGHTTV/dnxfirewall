@@ -33,7 +33,6 @@ class Startup:
         self.configure_ipv6_iptables()
         self.restore_iptables()
         self.reset_flask_key()
-        self.reset_update_flags()
         self.create_database_tables()
 
     # ensuring system allows forwarding. NOTE: probably not required for hardware unit as this is enabled by default.
@@ -57,11 +56,7 @@ class Startup:
 
             dnx.write_configuration(flask_settings)
 
-    # Resetting system/signatures flags to default
-    def reset_update_flags(self):
-        configure.set_default_mac_flag()
-
-    # Creating all DB tables if not already done
+    # creating all DB tables if not already done
     def create_database_tables(self):
         with DBConnector() as database:
             database.create_db_tables()

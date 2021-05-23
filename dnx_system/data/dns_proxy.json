@@ -1,9 +1,7 @@
 {
     "dns_proxy": {
         "keyword": {
-            "enabled": [
-                "cryptominer"
-            ]
+            "enabled": []
         },
         "categories": {
             "default": {
@@ -32,11 +30,11 @@
                     "keyword": false
                 },
                 "pornography": {
-                    "enabled": true,
+                    "enabled": false,
                     "keyword": false
                 },
                 "drugs": {
-                    "enabled": true,
+                    "enabled": false,
                     "keyword": false
                 },
                 "weapons": {
@@ -52,11 +50,11 @@
                     "keyword": false
                 },
                 "gambling": {
-                    "enabled": true,
+                    "enabled": false,
                     "keyword": false
                 },
                 "videogames": {
-                    "enabled": true,
+                    "enabled": false,
                     "keyword": false
                 },
                 "purchases": {

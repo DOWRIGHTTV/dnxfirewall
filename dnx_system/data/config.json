@@ -1,5 +1,6 @@
 {
     "settings": {
+        "auto_loader": false,
         "flask": {
             "key": "fZeH-XfuyhmEOfF63lO6xTpiGtnJ598tfHZwv3Pxajw"
         },

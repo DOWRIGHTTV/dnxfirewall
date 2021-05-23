@@ -15,7 +15,6 @@ sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import FIVE_MIN, ONE_DAY, fast_time, SQL_VERSION, write_err
 from dnx_configure.dnx_namedtuples import BLOCKED_DOM
-from dnx_database.ddb_connector_psql import DBConnector as _psql_db_connector
 
 __all__ = ('DBConnector',)
 
@@ -283,7 +282,11 @@ class _DBConnector:
             'timestamp not null)'
         )
 
-DBConnector = _psql_db_connector if SQL_VERSION == 1 else _DBConnector
+if (SQL_VERSION == 1):
+    from dnx_database.ddb_connector_psql import DBConnector
+
+else:
+    DBConnector = _DBConnector
 
 if __name__ == '__main__':
     # NOTE: CREATE THE TABLES

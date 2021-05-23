@@ -202,7 +202,7 @@ class LogHandler:
 
         path = f'{HOME_DIR}/dnx_system/log/{m_name}/{System.date(string=True)}-{m_name}.log'
         with open(path, 'a+') as log:
-            log.write(f'{int(fast_time())}|{m_name}{level_name}|{message}\n')
+            log.write(f'{int(fast_time())}|{m_name}|{level_name}|{message}\n')
 
         if (ROOT):
             change_file_owner(path)

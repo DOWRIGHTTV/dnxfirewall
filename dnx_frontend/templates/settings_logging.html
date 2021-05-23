@@ -23,7 +23,7 @@
                         <input type="hidden" name="tab" value="1">
                         <div class="row">
                             <div class="input-field col s12 m12">
-                                <select name="log_length" id="">
+                                <select name="length" id="">
                                     <option value="30" {% if logging_settings['logging']['length']==30 %} selected
                                         {% endif %}>30</option>
                                     <option value="45" {% if logging_settings['logging']['length']==45 %} selected
@@ -33,12 +33,12 @@
                                     <option value="90" {% if logging_settings['logging']['length']==90 %} selected
                                         {% endif %}>90</option>
                                 </select>
-                                <label for="log_length">Length (Days)</label>
+                                <label for="length">Length (Days)</label>
                             </div>
                         </div>
                         <div class="row">
                             <div class="input-field col s12 m12">
-                                <select name="log_level" id="">
+                                <select name="level" id="">
                                     {% for level in logging_settings['logging']['log_levels'] %}
                                     {% set level_num = loop.index - 1 %}
                                     {% if logging_settings['logging']['level']==level_num %}

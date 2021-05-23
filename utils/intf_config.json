@@ -1,0 +1,19 @@
+{
+    "network": {
+        "version": 2,
+        "renderer": "networkd",
+        "ethernets": {
+            "_WAN_": {
+                "dhcp4": "yes"
+            },
+            "_LAN_": {
+                "dhcp4": "no",
+                "addresses": "[192.168.83.1/24]"
+            },
+            "_DMZ_": {
+                "dhcp4": "no",
+                "addresses": "[192.168.84.1/24]"
+            }
+        }
+    }
+}
