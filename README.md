@@ -6,100 +6,120 @@
 	<br>
 </h1>
 
-<h3 align="center">
-	Coded/tested live on twitch.tv.
-	<br>
-	<a href="https://www.twitch.tv/dowright" target="_blank">
-		<img src="https://github.com/ProHackTech/DNX-FWALL-CMD/blob/master/Readme_Social/twitch.png" alt="DOWRIGHTTV" />
-	</a>
-</h3>
-
+<br>
 <h2>Overview</h2>
 
-DNX Firewall is an optimized/high performance collection of applications or services to convert a standard linux system
+  DNX Firewall is an optimized/high performance collection of applications and services to convert a standard linux system
 into a zone based next generation firewall. All software is designed to run in conjunction with eachother, but with a modular 
 design certain aspects can be completely removed with little effort. The primary security modules have DIRECT/INLINE control 
-over all connections, streams, messages, that goes through the system. That being said, depending on the protocol, offloading
-to lower level control is present to maintain the highest possible throughput with full inspection enabled. There is an IPTable
-custom chain to allow for the administrator to hook into the packet flow without the ability to accidentally override dnx security
-modules. A low level "architecture, system design" video will be created at some point to show how this is possible with pure python.
+over all connections, streams, and messages that goes through the system. That being said, depending on the protocol, offloading
+to lower level control is present to maintain the highest possible throughput with full inspection enabled. custom iptable chains
+are used to allow for the administrator to hook into the packet flow without worrying about accidentally overriding dnx security
+modules control.
 
+A low level "architecture, system design" video will be created at some point to show how this is possible with pure python.
+
+<br>
 <h2>Included Features</h2>
 
-- DNS Proxy
+<strong>NEW: sqlite3 is now the default database in use (to simplify deployments). postgresql is still present on the backend and will be able to be enabled during system deployment in a future release.</strong>
+
+<strong>NEW: Auto deployment utility (auto loader) is now live. This should be used to deploy the system on any compatible distro. See compatible distro list for more details. </strong>
+
+- DNS proxy
    - category based blocking (general, TLD, substring matching)
    - user added whitelist/blacklist or custom general category creation
    - native DNS over TLS conversion with optional UDP fallback
-   - local dns server
-   - software failover
+   - local dns server (authoritative via packet manipulation)
+   - automatic software failover
    - 2 level record caching
-- IP Proxy (transparent) Bi directional
-   - reprutation based host filtering
-   - geolocation filter
-   - lan restriction (disables internet access to the LAN for all IPs not whitelisted)
+
+- IP proxy (transparent) bi-directional
+   - reputation based host filtering
+   - geolocation filter (country blocking)
+   - lan restriction (disables internet access to the LAN for all IPs not whitelisted) | Parental Control
 
 - IPS/IDS (WAN/inbound)
-   - Denial of service detection/prevention
-   - Portscan detection/prevention
+   - denial of service detection/prevention
+   - portscan detection/prevention
 
-- Lightweight DHCP Server (custom)
+- Lightweight DHCP server (native software)
    - ip reservations
+   - interface level control (enable/disable)
    - security alert integration
 
 - General Services
-   - Log handling
-   - Database management
-   - Syslog client (UDP, TCP, TLS) IMPORTANT: currently in a beta/unstable state.
-this service will not be enabled by default and will require the service enabled to start on system start.
+   - log handling
+   - database management
+   - syslog client (UDP, TCP, TLS) IMPORTANT: currently in a beta/unstable state. this service will not be enabled by default.
     
 - Additional Features
    - IPv6 disabled
-   - prebuilt iptable rules
-   - DNS over HTTPs blocks (dns bypass prevention)
-   - DNS over TCP blocks (dns bypass prevention)
-   - DNS over TLS blocks (dns bypass prevention)
-   - all inbound connections to wan DROPPED by default
+   - prebuilt iptable rules (all inbound connections to wan DROPPED by default)
+   - DNS over HTTPs restricted (dns bypass prevention)
+   - DNS over TCP restricted (dns bypass prevention)
+   - DNS over TLS restricted (dns bypass prevention)
    - IPTABLES custom chain for admin hook into packet flow
 
-<h2>Before Running</h2>
+<br>
+<h2>To deploy (using auto loader)</h2>
 
-<strong>NEW: sqlite3 is now the default database in use (to simplify deployments). The environment variable "SQL_VERSION" located in dnx_configure/dnx_constants.py can be flipped to use postgresql. WARNING: switching the database used after initial configuration may cause problems. </strong>
+1. select linux distro on compatible distro list (see below)
 
-- [+] Edit data/config.json and data/dhcp_server.json to reflect your system [interfaces].
+2. install linux on physical hardware or a VM
+	
+	2a. (3) interfaces are required (WAN, LAN, DMZ)
+	
+	2b. create "dnx" user during install or once complete
+	
+	2c. install and make python3.8 default (if applicable)
 
-- [+] Move all systemd service files into the systems systemd folder.
+3. upgrade and update system
 
-- [+] Configure system interfaces. LAN needs to be Default Gateway of local network.
-
-- [+] Compile python-netfilterqueue for your current architecture/distro (link below).
+4. install git
+	
+5. clone https://github.com/dowrighttv/dnxfirewall.git to "dnx" user home directory (/home/dnx)
         
-        - ensure name is netfilter.so and placed in the dnxfirewall/netfilter folder
-	- NOTE: in the future this step will be wrapped into the deployment script
+6. log in as "dnx" user run command: sudo python3 dnxfirewall/dnx_configure/dnx_autoloader.py
 	
-- [+] Compile dnx_iptools/binary_search.pyx for your current architecture/distro.
-
-        - ensure name is binary_search.so and placed in the dnxfirewall/dnx_iptools folder
-	- NOTE: in the future this step will be wrapped into the deployment script
+7. follow prompts to associate physical interfaces to dnxfirewall zones
 	
-- [+] Run/ follow, in order, the corresponding deployment scripts [for the selected database] to automate system setup. look at comments in script files 
-for more direction.
+8. once utility is complete, restart system and navigate to https://dnx.firewall from LAN or DMZ interface.
+	
+<br>
+<h2>Compatible linux distros with dnxfirewall auto loader </h2>
+	
+  - Ubuntu server 20.04 LTS (stable)
+	
+  - Debian based distros (untested, but likely stable)
+	
+  - Non Debian based distros (not supported)
 
-<h2>Non DNX code dependencies/sources!</h2>
+<br>
+<h2>Additional info</h2>
 
-https://github.com/kti/python-netfilterqueue | cython <-> python extension for binding to linux kernel [netfilter] | THIS IS AWESOME!
+<h4 align="center">coded and tested live on twitch.tv.</h4>
+<p align="center"><a href="https://www.twitch.tv/dowright" target="_blank">
+	<img src="https://github.com/ProHackTech/DNX-FWALL-CMD/blob/master/Readme_Social/twitch.png" alt="DOWRIGHTTV"/>
+</a></p>
 
-https://www.ip2location.com/free/visitor-blocker | geolocation ip filtering datasets
+<br>
+<h4>External code sources</h4>
 
-https://gitlab.com/ZeroDot1/CoinBlockerLists | cryptominer host set
+https://github.com/kti/python-netfilterqueue | cython <-> python C extension for binding to linux kernel [netfilter]
 
-https://squidblacklist.org | malicious and advertisement host sets
+https://www.ip2location.com/free/visitor-blocker | geolocation filtering datasets (ip address assignments by country)
 
-<bold>OPTIONAL:</bold> https://github.com/tlocke/pg8000 | pure python postgresql adapter
+https://gitlab.com/ZeroDot1/CoinBlockerLists | cryptominer host dataset
 
-<h2>General Showcase Demo (outdated)</h2>
+https://squidblacklist.org | malicious and advertisement host datasets
 
-This video is extremely outdated, but still shows general functionality and some of the high level security implementations. 
-an updated video will be created soon which will show the newly added modules: syslog client, standard logging, ips/ids, 
+<bold>psql only:</bold> https://github.com/tlocke/pg8000 | pure python postgresql adapter
+
+<br>
+<h4>Showcase demo</h4>	
+  This video is extremely outdated, but still shows general functionality and some of the high level security implementations. 
+An updated video will be created soon(ish), which will show the newly added modules: syslog client, standard logging, ips/ids, 
 updated dns proxy functionality, updated ip proxy functionality, more.
 
 <h3 align="center">
