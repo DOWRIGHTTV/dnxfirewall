@@ -85,7 +85,8 @@ def progress(desc):
     percents = round(100.0 * completed_count / float(p_total), 1)
 
     bar = ''.join(['#' * filled_len, '=' * (bar_len - filled_len)])
-    sys.stdout.write(f'{completed_count}/{p_total} || [{bar}] {percents}% || {desc}{" "*12}\r')
+    sys.stdout.write(f'{" "*72}\r')
+    sys.stdout.write(f'{completed_count}/{p_total} || [{bar}] {percents}% || {desc}\r')
     sys.stdout.flush()
 
 #============================
