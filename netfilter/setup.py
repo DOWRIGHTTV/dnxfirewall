@@ -1,6 +1,9 @@
 from distutils.core import setup, Extension
 
 VERSION = "0.8.1" # Remember to change CHANGES.txt and netfilterqueue.pyx when version changes.
+HOME_DIR = '/home/dnx/dnxfirewall'
+
+os.chdir(f'{HOME_DIR}/netfilter')
 
 try:
     # Use Cython

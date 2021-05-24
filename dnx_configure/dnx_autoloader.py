@@ -259,7 +259,7 @@ def set_permissions():
 # SERVICE FILE SETUP
 #============================
 def set_services():
-    ignore_list = ['dnx-database-psql.service']
+    ignore_list = ['dnx-database-psql.service', 'dnx-syslog.service']
 
     progress('creating dnxfirewall services')
 
