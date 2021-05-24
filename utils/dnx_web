@@ -31,17 +31,3 @@ server {
 	}
 }
 
-
-#server {
-#        listen              4433 ssl;
-#        server_name         dnxfirewall;
-#        ssl_certificate     /etc/ssl/certs/dnx-web.crt;
-#        ssl_certificate_key /etc/ssl/certs/dnx-web.key;
-#        ssl_protocols       TLSv1 TLSv1.1 TLSv1.2;
-#        ssl_ciphers         HIGH:!aNULL:!MD5;
-
-#        location / {
-#                include uwsgi_params;
-#                uwsgi_pass unix:/home/dnx/dnxfirewall/dnx_frontend/dnx_web.sock;
-#        }
-#}

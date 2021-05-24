@@ -17,7 +17,7 @@ from dnx_configure.dnx_iptables import IPTableManager
 from dnx_logging.log_main import LogHandler as Log
 
 LOG_NAME = 'system'
-PROGRESS_TOTAL_COUNT = 10
+PROGRESS_TOTAL_COUNT = 12
 
 LINEBREAK = '-'*32
 
@@ -93,7 +93,7 @@ def progress(desc):
 # INTERFACE CONFIGURATION
 #============================
 
-# convenience function
+# convenience function wrapper for phsysical interface to dnxfirewall zone association.
 def configure_interfaces():
     with open(f'{HOME_DIR}/utils/intf_config.json', 'r') as intf_configs:
         intf_configs = intf_configs.read()
@@ -219,7 +219,18 @@ def install_packages():
         ('pip3 install flask uwsgi', 'installing python web app framework'),
         ('sudo apt install nginx -y', 'installing web server driver'),
         ('sudo apt install libnetfilter-queue-dev net-tools -y', 'installing networking components'),
-        ('pip3 install Cython', 'installing C extension language (Cython)'),
+        ('pip3 install Cython', 'installing C extension language (Cython)')
+    ]
+
+    for command, desc in commands:
+
+        progress(desc)
+
+        dnx_run(command)
+
+def compile_extensions():
+
+    commands = [
         (f'sudo python3 {HOME_DIR}/utils/compile_bin_search.py build_ext --inplace', 'compiling binary search C extension'),
         (f'sudo python3 {HOME_DIR}/netfilter/setup.py build_ext --inplace', 'compiling python-netfilterqueue C extension')
     ]
@@ -230,9 +241,28 @@ def install_packages():
 
         dnx_run(command)
 
+def configure_webui():
+
+    commands = [
+        ('sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/certs/dnx-web.key -out /etc/ssl/certs/dnx-web.crt',
+        'generating dnx webui ssl certificate'),
+        (f'sudo mv {HOME_DIR}/utils/dnx_web /etc/nginx/sites-available/', 'configuring management webui'),
+        ('ln -s /etc/nginx/sites-available/dnx_web /etc/nginx/sites-enabled/', None),
+        ('sudo rm /etc/nginx/sites-enabled/default', None)
+    ]
+
+    for command, desc in commands:
+
+        # this allows some commands to ride off of the previous status message and completion %.
+        if (desc):
+            progress(desc)
+
+        dnx_run(command)
+
 #============================
 # PERMISSION CONFIGURATION
 #============================
+
 def set_permissions():
 
     progress('configuring dnxfirewall permissions')
@@ -259,6 +289,7 @@ def set_permissions():
 #============================
 # SERVICE FILE SETUP
 #============================
+
 def set_services():
     ignore_list = ['dnx-database-psql.service', 'dnx-syslog.service']
 
@@ -271,6 +302,8 @@ def set_services():
         dnx_run(f'sudo cp {HOME_DIR}/services/{service} /etc/systemd/system/')
 
         dnx_run(f'sudo systemctl enable {service}')
+
+    dnx_run(f'sudo systemctl enable nginx')
 
 #============================
 # INITIAL IPTABLE SETUP
@@ -314,6 +347,8 @@ if __name__ == '__main__':
     print(LINEBREAK)
 
     install_packages()
+    compile_extensions()
+    configure_webui()
     set_permissions()
     set_services()
     configure_iptables()
