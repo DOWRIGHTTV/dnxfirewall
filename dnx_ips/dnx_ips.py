@@ -26,7 +26,7 @@ from dnx_configure.dnx_code_profiler import profiler
 LOG_NAME = 'ips'
 
 
-# TODO: CONVERT PROTOCOL TO ENUMS SINCE WE ARE RESTRICING VIA IPTABLES/NFQUEUE TO ONLY PROTOCOLS WE CARE ABOUT!!!.
+# TODO: CONVERT PROTOCOL TO ENUMS SINCE WE ARE RESTRICTING VIA IPTABLES/NFQUEUE TO ONLY PROTOCOLS WE CARE ABOUT!!!.
 # TODO: ENSURE WE CLEAN TIMED OUT HOSTS FROM HOST TRACKING DICTS AT X (10?) MIN INTERVALS!!
 class IPS_IDS(NFQueue):
     fw_rules = {}
@@ -237,7 +237,7 @@ class Inspect:
 
         # NOTE: i think this is stupid. this would effectivly block all portscan logging while passive blocking is
         # active, right???? if that is the case, we need to figure out a different way to deal with this. i think this
-        # was to ensure ddos wasnt logged as portscan first, but this doesnt soudn liek a good way to do this anymore.
+        # was to ensure ddos wasnt logged as portscan first, but this doesnt sound like a good way to do this anymore.
         if (not IPS_IDS.fw_rules):
             scan_info = IPS_SCAN_RESULTS(initial_block, active_scanner, block_status)
             Log.log(packet, scan_info, engine=IPS.PORTSCAN)

@@ -19,7 +19,7 @@ server {
         types_hash_max_size 2048;
 
         if ($host !~ (dnx.firewall|192.168.83.1) ) {
-  return 301 https://dnxfirewall/blocked?dom=$host;
+  return 301 https://dnx.firewall/blocked?dom=$host;
 	}
 	if ($host = "192.168.83.1") {
   return 301 https://dnx.firewall/dashboard;
@@ -30,4 +30,3 @@ server {
                 uwsgi_pass unix:/home/dnx/dnxfirewall/dnx_frontend/dnx_web.sock;
 	}
 }
-

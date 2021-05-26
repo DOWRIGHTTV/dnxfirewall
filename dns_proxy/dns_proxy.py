@@ -198,6 +198,9 @@ if __name__ == '__main__':
     # using cython function factory to create binary search function with module specific signatures
     signature_bounds = (0, len(dns_cat_signatures)-1)
 
+    # TODO: collisions were found in the geolocation filtering data structure. this has been fixed
+    # for geolocation and standard ip category filtering, but has not been investigated for dns signatures.
+    # run through the signatures, generate bin and host id, then check for host id collisions within a bin.
     _recursive_binary_search = generate_recursive_binary_search(dns_cat_signatures, signature_bounds)
 
     Log.run(

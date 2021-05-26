@@ -20,13 +20,15 @@ __all__ = ('DBConnector',)
 
 
 class _DBConnector:
+    DB_PATH = f'{HOME_DIR}/dnx_system/data/dnxfirewall.sqlite3'
+
     def __init__(self, table=None):
         self.table = table
 
         self.data_written = False
 
     def __enter__(self):
-        self.conn = sqlite3.connect(f'{HOME_DIR}/dnx_system/data/dnxfirewall.sqlite3')
+        self.conn = sqlite3.connect(self.DB_PATH)
         self.c = self.conn.cursor()
 
         return self

@@ -141,13 +141,14 @@ class Configuration:
     # to a standard looper and method will block until an actual host has been blocked.
     def _clear_ip_tables(self):
         # quick check to see if any firewall rules exist
-        if not self.IPS.firewall_rules: return
+        firewall_rules = self.IPS.fw_rules
+        if (not firewall_rules): return
 
-        firewall_rules = self.IPS.firewall_rules
-        block_length = self.IPS.block_length
-        now = fast_time()
+        block_length, now = self.IPS.block_length, fast_time()
 
+        # TODO: look into a method that isnt linearly complext to clear firewall rules. its expected to be
+        # somewhat small so its not terrible as is.
         with IPTableManager() as iptables:
-            for tracked_ip, insert_time in list(firewall_rules.items()):
-                if (now - insert_time > block_length) and firewall_rules.pop(tracked_ip, None):
+            for tracked_ip, insertion_time in list(firewall_rules.items()):
+                if (now - insertion_time > block_length) and firewall_rules.pop(tracked_ip, None):
                     iptables.proxy_del_rule(tracked_ip, table='mangle', chain='IPS')

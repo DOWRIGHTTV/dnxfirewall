@@ -21,6 +21,8 @@ PROGRESS_TOTAL_COUNT = 12
 
 LINEBREAK = '-'*32
 
+VERBOSE = False
+
 #----------------------------
 # UTILS
 #----------------------------
@@ -38,7 +40,12 @@ def eprint(string):
 def dnx_run(string):
     '''convenience function, subprocess run wrapper adding additional args.'''
     try:
-        run(string, shell=True, stdout=DEVNULL, stderr=DEVNULL, check=True)
+        if (VERBOSE):
+            run(string, shell=True, check=True)
+
+        else:
+            run(string, shell=True, stdout=DEVNULL, stderr=DEVNULL, check=True)
+
     except CalledProcessError as cpe:
         eprint(cpe)
 
@@ -242,11 +249,26 @@ def compile_extensions():
         dnx_run(command)
 
 def configure_webui():
+    cert_subject = ''.join([
+        '/C=US',
+        '/ST=Arizona',
+        '/L=cyberspace',
+        '/O=dnxfirewall',
+        '/OU=security',
+        '/CN=dnx.firewall',
+        '/emailAddress=help@dnxfirewall.com'
+    ])
+
+    generate_cert_commands = [
+        f'sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048',
+        f'-keyout {HOME_DIR}/dnx_system/ssl/dnx-web.key',
+        f'-out {HOME_DIR}/dnx_system/ssl/dnx-web.crt',
+        f'-subj {cert_subject}'
+    ]
 
     commands = [
-        ('sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/certs/dnx-web.key -out /etc/ssl/certs/dnx-web.crt',
-        'generating dnx webui ssl certificate'),
-        (f'sudo mv {HOME_DIR}/utils/dnx_web /etc/nginx/sites-available/', 'configuring management webui'),
+        (' '.join(generate_cert_commands), 'generating dnx webui ssl certificate'),
+        (f'sudo cp {HOME_DIR}/utils/dnx_web /etc/nginx/sites-available/', 'configuring management webui'),
         ('ln -s /etc/nginx/sites-available/dnx_web /etc/nginx/sites-enabled/', None),
         ('sudo rm /etc/nginx/sites-enabled/default', None)
     ]
@@ -272,7 +294,13 @@ def set_permissions():
 
     # apply file permissions 750 on folders, 640 on files
     dnx_run(f'sudo chmod -R 750 {USER_DIR}/dnxfirewall')
-    dnx_run(f'sudo find {USER_DIR}/dnxfirewall -type f -print0|xargs -0 chmod 644')
+    dnx_run(f'sudo find {USER_DIR}/dnxfirewall -type f -print0|xargs -0 chmod 640')
+
+    # adding www-data user to dnx group
+    dnx_run('sudo usermod -aG dnx www-data')
+
+    # reverse of above
+    dnx_run('sudo usermod -aG www-data dnx')
 
     # update sudoers to allow dnx user no pass for specific system functions
     no_pass = [
@@ -359,4 +387,3 @@ if __name__ == '__main__':
 
     sprint('\nrestart then navigate to https://dnx.firewall to manage.')
     os._exit(0)
-
