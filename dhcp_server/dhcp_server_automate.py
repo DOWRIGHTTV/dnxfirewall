@@ -20,6 +20,9 @@ from dnx_iptools.dnx_standard_tools import looper, dnx_queue, Initialize
 
 _NULL_LEASE = (DHCP.AVAILABLE, None, None)
 
+# required when using configuration manager.
+ConfigurationManager.set_log_reference(Log)
+
 
 class Configuration:
     _setup = False
