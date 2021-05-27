@@ -141,29 +141,17 @@ class DNSServer(Listener):
             requests = return_ready()
 
             for client_query, decision in requests:
+
+                # if request is allowed, search cache before sending sending to relay.
                 if decision is DNS.ALLOWED and not self._cached_response(client_query):
                     self._handle_query(client_query)
 
-                Log.informational(f'{self.protocol.name} Relay ALLOWED | {client_query}') # pylint: disable=no-member
-
-    # # NOTE: in process of being replaced
-    # def _wait_for_proxy_decision_old(self, client_query):
-    #     # waiting for proxy decision. if iteration completes normally, it will be marked as a timeout.
-    #     # NOTE: TESTING | after each check a msec will get added to the interval.
-    #     for interval in [x/1000 for x in range(DNS.WAIT_COUNT)]: # converting to msec
-    #         decision = self._req_results_pop(client_query.address, DNS.NO_NOTICE)
-    #         if (decision is DNS.ALLOWED): break
-    #         if (decision is DNS.FLAGGED): return
-
-    #         fast_sleep(interval)
-    #     else: return
-
-    #     if not self._cached_response(client_query):
-    #         self._handle_query(client_query)
-
-    #     Log.informational(f'{self.protocol.name} Relay ALLOWED | {client_query}') # pylint: disable=no-member
+                    Log.debug(f'{self.protocol.name} Relay ALLOWED | {client_query}') # pylint: disable=no-member
 
     def _cached_response(self, client_query):
+        '''searches cache for query name. if a cached record is found, a response will be generated
+        and sent back to the client.'''
+
         cached_dom = self._records_cache_search(client_query.request)
         if (cached_dom.records):
             client_query.generate_cached_response(cached_dom)

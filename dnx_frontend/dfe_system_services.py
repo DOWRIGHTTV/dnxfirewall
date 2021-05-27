@@ -25,7 +25,6 @@ def load_page():
 
 def update_page(form):
     valid_services = load_configuration('config')['services']
-    sec_flags = {'dnx-ip-proxy': 'ip', 'dnx-dns-proxy': 'domain'}
 
     if ('restart_svc' in form):
         service = form.get('restart_svc')
@@ -35,10 +34,6 @@ def update_page(form):
             return INVALID_FORM
 
         Services.restart(service)
-
-        if (service in sec_flags):
-            ruleset = sec_flags[service]
-            configure.reset_module_flags(system=False, signatures=True, ruleset=ruleset)
 
     elif ('start_svc' in form):
         service = form.get('start_svc')
@@ -58,8 +53,5 @@ def update_page(form):
 
         Services.stop(service)
 
-        if (service in sec_flags):
-            ruleset = sec_flags[service]
-            configure.reset_module_flags(system=False, signatures=True, ruleset=ruleset)
     else:
         return INVALID_FORM

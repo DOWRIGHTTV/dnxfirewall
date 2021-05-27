@@ -31,9 +31,8 @@
         "dnx-ip-proxy": "bi-directional ip filter",
         "dnx-ips": "dos and portscan mitigation",
         "dnx-dhcp-server": "allocates ip addresses",
-        "dnx-updates": "handles system and signature updates",
         "dnx-log": "log cleanup and aggregation",
         "dnx-syslog": "send system or event logs over the network",
-        "dnx-database": "security event management"
+        "dnx-database-sqlite": "security event management"
     }
 }
