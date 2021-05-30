@@ -61,10 +61,8 @@ class _Defaults:
             run(f'iptables -t nat -N {chain}', shell=True)
 
         run(' iptables -t mangle -N IPS', shell=True) # for DDOS prevention
-        # run(' iptables -t nat -N NAT', shell=True) # wan to dmz nat rules (shouldnt need since rules will be put in firewall chain)
 
     def prerouting_set(self):
-        # run(' iptables -t nat -A PREROUTING -j NAT', shell=True) # User DNATS insert into here
         run(' iptables -t mangle -A PREROUTING -j IPS', shell=True) # IPS rules insert into here
 
     def mangle_forward_set(self):
@@ -78,14 +76,6 @@ class _Defaults:
     # TODO: figure out why "!" isnt working how we thought it is supposed to work.
     def main_forward_set(self):
         run('iptables -P FORWARD DROP', shell=True) # Default DROP
-
-        # TODO: figure out how this will be handled with multiple local interfaces.
-        # HTTPS Proxy (JA3 only) | NOTE: this is before conntracking, but wont actually match unless connection first gets allowed
-            # since its target the 4th and 5th packet in the stream.
-        # run(f'iptables -A FORWARD -i {self._lan_int} -p tcp -m tcp --dport 443 -m connbytes --connbytes 4:4 '
-        #     '--connbytes-mode packets --connbytes-dir both -j NFQUEUE --queue-num 3', shell=True)
-        # run(f'iptables -A FORWARD -i {self._wan_int} -p tcp -m tcp --sport 443 -m connbytes --connbytes 5:5 '
-        #     '--connbytes-mode packets --connbytes-dir both -j NFQUEUE --queue-num 3', shell=True)
 
         # tracking connection state for return traffic from WAN back to inside
         run('iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT', shell=True)
@@ -144,7 +134,7 @@ class _Defaults:
         run(' iptables -P INPUT DROP', shell=True) # default DROP
         run(' iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT', shell=True) # Tracking connection state for return traffic from WAN back Firewall itself
 
-        run(' iptables -A INPUT -p tcp --dport 22 -j ACCEPT', shell=True) # NOTE: SSH CONN FOR LAB TESTING
+        #run(' iptables -A INPUT -p tcp --dport 22 -j ACCEPT', shell=True) # NOTE: SSH CONN FOR LAB TESTING
         run(' iptables -A INPUT -p udp -d 127.0.0.53 --dport 53 -j ACCEPT', shell=True) # NOTE: TEMP FOR UBUNTU DNS SERVICE
 
         # TODO: this is fucked up. we should be able to remove interface input, then just use WAN_ZONE for mark.
