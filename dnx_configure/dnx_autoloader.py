@@ -29,11 +29,11 @@ VERBOSE = False
 
 def sprint(string):
     '''setup print. includes timestamp before arg str.'''
-    print(f'{round(time.time(), 2)}| {string}')
+    print(f'{time.strftime('%H:%M:%S')}| {string}')
 
 def eprint(string):
     '''error print. includes timestamp and alert before arg str.'''
-    print(f'{round(time.time(), 2)}| !!! {string}')
+    print(f'{time.strftime('%H:%M:%S')}| !!! {string}')
 
     os._exit(1)
 
@@ -86,13 +86,13 @@ def progress(desc):
 
     completed_count += 1
 
-    bar_len = 32
+    bar_len = 30
 
     filled_len = int(round(bar_len * completed_count / float(p_total)))
     percents = round(100.0 * completed_count / float(p_total), 1)
 
     bar = ''.join(['#' * filled_len, '=' * (bar_len - filled_len)])
-    sys.stdout.write(f'{" "*72}\r')
+    sys.stdout.write(f'{" "*90}\r')
     sys.stdout.write(f'{completed_count}/{p_total} || [{bar}] {percents}% || {desc}\r')
     sys.stdout.flush()
 
@@ -385,5 +385,5 @@ if __name__ == '__main__':
 
     progress('dnxfirewall deployment complete')
 
-    sprint('\nrestart then navigate to https://dnx.firewall to manage.')
+    sprint('\nrestart system then navigate to https://dnx.firewall from LAN or DMZ to manage.')
     os._exit(0)
