@@ -125,6 +125,10 @@ class _Defaults:
         # NOTE: LAN INTERFACE FIREWALL
         run(f'iptables -A FORWARD -i {self._lan_int} -m mark --mark {SEND_TO_FIREWALL} -j LAN_INTERFACE', shell=True)
 
+        # IMPORTANT: default allow any outbound. this is to make the firewall plug and play for non power users. source
+        # ip network is hardcoded, but may change at a later date abd the setup does not allow user to change this value.
+        run(f'iptables -A LAN_INTERFACE -s 192.168.83.0/24 -d 0.0.0.0/0 -j ACCEPT', shell=True)
+
         # ============================================
 
         # NOTE: DMZ INTERFACE FIREWALL
