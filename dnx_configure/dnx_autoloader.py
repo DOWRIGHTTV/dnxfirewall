@@ -29,11 +29,11 @@ VERBOSE = False
 
 def sprint(string):
     '''setup print. includes timestamp before arg str.'''
-    print(f'{time.strftime('%H:%M:%S')}| {string}')
+    print(f'{time.strftime("%H:%M:%S")}| {string}')
 
 def eprint(string):
     '''error print. includes timestamp and alert before arg str.'''
-    print(f'{time.strftime('%H:%M:%S')}| !!! {string}')
+    print(f'{time.strftime("%H:%M:%S")}| !!! {string}')
 
     os._exit(1)
 
@@ -222,7 +222,9 @@ def confirm_interfaces(interface_config):
 def install_packages():
 
     commands = [
-        ('sudo apt install python3-pip -y', 'installing python3 package installer'),
+        ('sudo apt install python3.8 python3-pip -y', 'setting up python3'),
+        ('sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 0', None),
+        ('sudo update-alternatives --set python3 /usr/bin/python3.8', None),
         ('pip3 install flask uwsgi', 'installing python web app framework'),
         ('sudo apt install nginx -y', 'installing web server driver'),
         ('sudo apt install libnetfilter-queue-dev net-tools -y', 'installing networking components'),
