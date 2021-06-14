@@ -29,11 +29,11 @@ VERBOSE = False
 
 def sprint(string):
     '''setup print. includes timestamp before arg str.'''
-    print(f'{time.strftime('%H:%M:%S')}| {string}')
+    print(f'{time.strftime("%H:%M:%S")}| {string}')
 
 def eprint(string):
     '''error print. includes timestamp and alert before arg str.'''
-    print(f'{time.strftime('%H:%M:%S')}| !!! {string}')
+    print(f'{time.strftime("%H:%M:%S")}| !!! {string}')
 
     os._exit(1)
 
