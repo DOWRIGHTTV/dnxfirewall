@@ -584,7 +584,7 @@ def update_session_tracker(username, user_role=None, remote_addr=None, *, action
     if (action is CFG.ADD and not remote_addr):
         raise ValueError('remote_addr must be specified if action is set to add.')
 
-    with ConfigurationManager('session_tracker', file_path='dnx_frontend') as session_tracker:
+    with ConfigurationManager('session_tracker', file_path='dnx_frontend/data') as session_tracker:
         stored_tracker = session_tracker.load_configuration()
 
         if (action is CFG.ADD):

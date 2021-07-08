@@ -25,7 +25,7 @@ class Authentication:
     @staticmethod
     ## see if this is safe. if use returns something outside of dictionary, error will occur.
     def get_user_role(username):
-        local_accounts = load_configuration('logins')['users']
+        local_accounts = load_configuration('logins', filepath='dnx_frontend/data')['users']
         try:
             return local_accounts[username]['role']
         except KeyError:
@@ -98,7 +98,7 @@ class Authentication:
         return hash_total.hexdigest()
 
     def _user_authorized(self, username, hexpass):
-        local_accounts = load_configuration('logins')['users']
+        local_accounts = load_configuration('logins', filepath='dnx_frontend/data')['users']
         try:
             password = local_accounts[username]['password']
         except KeyError:
@@ -123,7 +123,7 @@ def user_restrict(*authorized_roles):
             # will redirect to login page if user is not logged in
             username = session.get('username', None)
 
-            session_tracker = load_configuration('session_tracker', filepath='dnx_frontend')['active_users']
+            session_tracker = load_configuration('session_tracker', filepath='dnx_frontend/data')['active_users']
             # NOTE: this is dnx local tracking of sessions. not to be confused with flask session tracking
             dnx_session_data = session_tracker.get(username)
             if not dnx_session_data or dnx_session_data['remote_addr'] != request.remote_addr:
