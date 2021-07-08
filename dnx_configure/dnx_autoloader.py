@@ -3,6 +3,7 @@
 import os, sys
 import time
 import json
+import socket
 
 from subprocess import run, DEVNULL, CalledProcessError
 
@@ -17,11 +18,13 @@ from dnx_configure.dnx_iptables import IPTableManager
 from dnx_logging.log_main import LogHandler as Log
 
 LOG_NAME = 'system'
-PROGRESS_TOTAL_COUNT = 12
+PROGRESS_TOTAL_COUNT = 15
 
 LINEBREAK = '-'*32
 
 VERBOSE = False
+
+# DID: use socket.if_nameindex() for interface identification and assignment, replace net-tools + subprocess
 
 #----------------------------
 # UTILS
@@ -75,6 +78,10 @@ def check_already_ran():
 
         eprint('dnxfirewall auto loader has already been completed. exiting...')
 
+# installing net tools if not already present
+# def check_net_tools():
+#     dnx_run('sudo apt install net-tools -y', 'installing net-tools')
+
 #----------------------------
 # PROGRESS BAR
 #----------------------------
@@ -119,18 +126,21 @@ def configure_interfaces():
     set_dhcp_interfaces(user_intf_config)
 
 def check_system_interfaces():
-    output = run('sudo ifconfig -a', shell=True, capture_output=True)
 
-    interfaces_detected = []
-    for line in output.stdout.decode('utf-8').splitlines():
+    interfaces_detected = [intf for intf in socket.if_nameindex() if 'lo' not in intf[1]]
 
-        # used to detect first line of interface output
-        if ('flags' in line):
-            interface = line.split(':', 1)[0]
+    # output = run('sudo ifconfig -a', shell=True, capture_output=True)
 
-            # filtering loopback interface from user choices
-            if (interface != 'lo'):
-                interfaces_detected.append(interface)
+    # interfaces_detected = []
+    # for line in output.stdout.decode('utf-8').splitlines():
+
+    #     # used to detect first line of interface output
+    #     if ('flags' in line):
+    #         interface = line.split(':', 1)[0]
+
+    #         # filtering loopback interface from user choices
+    #         if (interface != 'lo'):
+    #             interfaces_detected.append(interface)
 
     if (len(interfaces_detected) < 3):
         eprint(f'at least 3 interfaces are required to deploy dnxfirewall. detected: {len(interfaces_detected)}.')
@@ -150,7 +160,7 @@ def collect_interface_associations(interfaces_detected):
     # build out full json for interface configs as dict
     interface_config = {'WAN': None, 'LAN': None, 'DMZ': None}
     while True:
-        for i, int_name in enumerate(interface_config, 1):
+        for i, int_name in interface_config:
             while True:
                 select = input(f'select {int_name} interface: ')
                 if (select.isdigit() and int(select) in range(1, len(interfaces_detected)+1)):
@@ -227,7 +237,7 @@ def install_packages():
         ('sudo update-alternatives --set python3 /usr/bin/python3.8', None),
         ('pip3 install flask uwsgi', 'installing python web app framework'),
         ('sudo apt install nginx -y', 'installing web server driver'),
-        ('sudo apt install libnetfilter-queue-dev net-tools -y', 'installing networking components'),
+        ('sudo apt install libnetfilter-queue-dev -y', 'installing networking components'),
         ('pip3 install Cython', 'installing C extension language (Cython)')
     ]
 
@@ -358,10 +368,11 @@ def mark_completion_flag():
         dnx.write_configuration(dnx_settings)
 
 if __name__ == '__main__':
-    # pre checks to make prevent basic deployer failures
+    # pre checks to make sure application can run properly
     check_run_as_root()
     check_dnx_user()
     check_clone_location()
+    # check_net_tools()
 
     # intiializing log module which is required when using ConfigurationManager
     Log.run(
@@ -388,4 +399,5 @@ if __name__ == '__main__':
     progress('dnxfirewall deployment complete')
 
     sprint('\nrestart system then navigate to https://dnx.firewall from LAN or DMZ to manage.')
+    sprint('ssh is allowed on WAN for setup. This should be removed prior to moving to production.')
     os._exit(0)

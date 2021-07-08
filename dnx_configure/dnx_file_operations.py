@@ -24,17 +24,29 @@ MSB = int(0b11111111111110000000000000000000)
 LSB = int(0b00000000000001111111111111111111)
 
 # will load json data from file, convert it to a python dict, then return as object
+# TODO: add usr config support, which will merge will loaded system defaults.
 def load_configuration(filename, *, filepath='/dnx_system/data'):
     '''load json data from file, convert it to a python dict, then return as object.'''
     if (not filename.endswith('.json')):
         filename = ''.join([filename, '.json'])
 
-    with open(f'{HOME_DIR}/{filepath}/{filename}', 'r') as settings:
-        settings = json.load(settings)
+    # loading system default configs
+    with open(f'{HOME_DIR}/{filepath}/{filename}', 'r') as system_settings:
+        system_settings = json.load(system_settings)
 
-    return settings
+    if os.path.exists(f'{HOME_DIR}/{filepath}/usr/{filename}'):
 
-def write_configuration(data, filename, *, filepath='/dnx_system/data'):
+        # loading user configurations (if exists)
+        with open(f'{HOME_DIR}/{filepath}/usr/{filename}', 'r') as usr_settings:
+            usr_settings = json.load(usr_settings)
+
+        # updating system settings dict with user settings to be used in memory/ by modules only.
+        system_settings.update(usr_settings)
+
+    return system_settings
+
+# TODO: write configs to usr folder keeping main system configs as defaults.
+def write_configuration(data, filename, *, filepath='/dnx_system/data/usr'):
     '''write json data to file.'''
 
     if (not filename.endswith('.json')):
@@ -222,9 +234,11 @@ def _merge_geo_ranges(ls):
         if (temp_item and l[0] == temp_item[1] + 1
                 and l[2] == temp_item[2]):
             temp_item[1] = l[1]
+
         # applying current item to temp item since it didnt exist
         elif (not temp_item):
             temp_item = l
+
         # once a discontigious range is detected. the temp item for previous range will get appended to the list to be
         # returned as well as the current list.
         else:
@@ -326,11 +340,12 @@ class ConfigurationManager:
     '''
 
     Log = None
+    config_lock_file = f'{HOME_DIR}/dnx_system/config.lock'
 
     __slots__ = (
-        '_config_file', '_config_lock_file', '_config_lock',
-        '_temp_file', '_temp_file_path', '_file_name',
-        '_data_written'
+        '_config_lock', '_filename', '_data_written',
+        '_std_path', '_system_path_file', '_usr_path_file',
+        '_temp_file', '_temp_file_path'
     )
 
     @classmethod
@@ -340,31 +355,37 @@ class ConfigurationManager:
         cls.Log = ref
 
     def __init__(self, config_file, file_path=None):
-        self._config_lock_file = f'{HOME_DIR}/dnx_system/config.lock'
-
-        config_file = config_file if config_file.endswith('.json') else f'{config_file}.json'
-
-        no_path = f'{HOME_DIR}/dnx_system/data/{config_file}'
-        with_path = f'{HOME_DIR}/{file_path}/{config_file}'
-
-        self._config_file = no_path if file_path is None else with_path
-        self._file_name = config_file
-
         self._data_written = False
+        self._std_path = True
+        if (file_path):
+            self._std_path = False
+
+        else:
+            file_path = 'dnx_system/data'
+
+        # backwards compatibility between specifying file ext and not.
+        self._filename = config_file if config_file.endswith('.json') else f'{config_file}.json'
+
+        self._system_path_file = f'{HOME_DIR}/{file_path}/{self._filename}'
+        self._usr_path_file = f'{HOME_DIR}/dnx_system/data/usr/{self._filename}'
 
     # attempts to acquire lock on system config lock (blocks until acquired), then opens a temporary
     # file which the new configuration will be written to, and finally returns the class object.
     def __enter__(self):
-        self._config_lock = open(self._config_lock_file, 'r+')
+        self._config_lock = open(self.config_lock_file, 'r+')
+
+        # aquiring lock on shared lock file
         flock(self._config_lock, LOCK_EX)
 
-        self._temp_file_path = f'{HOME_DIR}/dnx_system/data/{token_urlsafe(10)}.json'
+        self._temp_file_path = f'{HOME_DIR}/dnx_system/data/usr/{token_urlsafe(10)}.json'
         self._temp_file = open(self._temp_file_path, 'w+')
 
+        # changing file permissions and settings owner to dnx:dnx to not cause permissions issues
+        # after copy.
         os.chmod(self._temp_file_path, 0o660)
         shutil.chown(self._temp_file_path, user=USER, group=GROUP)
 
-        self.Log.debug(f'Config file lock aquired for {self._file_name}.')
+        self.Log.debug(f'Config file lock aquired for {self._filename}.')
 
         return self
 
@@ -372,8 +393,10 @@ class ConfigurationManager:
     # file will be renamed over the configuration file sent in by the caller. if an exception is raised
     # the temporary file will be deleted. The file lock will be released upon exiting
     def __exit__(self, exc_type, exc_val, traceback):
+        replace_target = self._usr_path_file if self._std_path else self._system_path_file
+
         if (exc_type is None and self._data_written):
-            os.replace(self._temp_file_path, self._config_file)
+            os.replace(self._temp_file_path, replace_target)
 
         else:
             self._temp_file.close()
@@ -381,8 +404,10 @@ class ConfigurationManager:
 
         # releasing lock for purposes specified in flock(1) man page under -u (unlock)
         flock(self._config_lock, LOCK_UN)
+
+        # closing file after unlock to allow reference to be cleaned up.
         self._config_lock.close()
-        self.Log.debug(f'file lock released for {self._file_name}')
+        self.Log.debug(f'file lock released for {self._filename}')
 
         if (exc_type is None):
             return True
@@ -395,10 +420,19 @@ class ConfigurationManager:
     #will load json data from file, convert it to a python dict, then returned as object
     def load_configuration(self):
         ''' returns python dictionary of configuration file contents'''
-        with open(self._config_file, 'r') as config_file:
-            settings = json.load(config_file)
+        with open(self._system_path_file, 'r') as system_settings:
+            system_settings = json.load(system_settings)
 
-        return settings
+        if (self._std_path) and os.path.exists(self._usr_path_file):
+
+            # loading user configurations (if exists)
+            with open(self._usr_path_file, 'r') as usr_settings:
+                usr_settings = json.load(usr_settings)
+
+            # updating system settings dict with user settings to be used in memory/ by modules only.
+            system_settings.update(usr_settings)
+
+        return system_settings
 
     # accepts python dictionary to be serialized to json and written to file opened. will ensure
     # data gets fully rewrittin and if short than original the excess gets truncated.
@@ -409,6 +443,8 @@ class ConfigurationManager:
 
         json.dump(data_to_write, self._temp_file, indent=4)
         self._temp_file.flush()
+
+        # this is to inform context to copy temp file to dnx configuration folder
         self._data_written = True
 
 
