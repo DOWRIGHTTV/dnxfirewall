@@ -465,6 +465,11 @@ class Watcher:
     # will check file for change in set intervals, currently using global constant for config file polling
     def watch(self, *args):
         args = [*args, self._watch_file]
+        
+        # NOTE: initial load of data to accomodate the new usr dir. This may change in the future.
+        # TODO: see if this can be wrapped into the while loop or if this is most efficient.
+        self._callback(*args)
+        
         while True:
             if (self.is_modified):
                 self._callback(*args)
