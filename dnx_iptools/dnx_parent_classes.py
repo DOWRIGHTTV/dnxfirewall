@@ -540,7 +540,8 @@ class RawPacket:
         self.sendto  = sock_info[4]
 
         # NOTE: source mac is only needed to identify infected/compromised local hosts
-        self.src_mac = address
+        # currently using arp at time of log to identify mac address of infected host
+        # self.src_mac = address
 
         self._dlen = len(data)
         self.data = data
@@ -676,7 +677,7 @@ class RawResponse:
         zone, _intf = intf
 
         wait_for_interface(interface=_intf)
-        ip  = wait_for_ip(interface=_intf)
+        ip = wait_for_ip(interface=_intf)
 
         # sock sender is the direct reference to the socket send method
         cls._registered_socks[zone] = NFQ_SEND_SOCK(*intf, ip, cls.sock_sender(_intf))

@@ -458,7 +458,7 @@ class Watcher:
     def __init__(self, watch_file, callback):
         self._watch_file = watch_file
         self._callback   = callback
-        self._full_path  = f'{HOME_DIR}/dnx_system/data/{watch_file}'
+        self._full_path  = f'{HOME_DIR}/dnx_system/data/usr/{watch_file}'
 
         self._last_modified_time = 0
 
@@ -468,15 +468,23 @@ class Watcher:
         while True:
             if (self.is_modified):
                 self._callback(*args)
+
             else:
                 time.sleep(FILE_POLL_TIMER)
 
     @property
     # if watch file has been modified will update modified time and return True, else return False
     def is_modified(self):
+        if not os.path.isfile(self._full_path):
+            return False
+
         modified_time = os.stat(self._full_path).st_mtime
         if (modified_time != self._last_modified_time):
+
+            # updating shared modified time to reflect recent changes and return True notifying system of
+            # a file change event
             self._last_modified_time = modified_time
+
             return True
 
         return False

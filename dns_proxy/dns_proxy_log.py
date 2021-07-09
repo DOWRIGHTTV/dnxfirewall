@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
-from dnx_logging.log_main import LogHandler
 from dnx_configure.dnx_constants import LOG, DNS_CAT
 from dnx_configure.dnx_namedtuples import DNS_LOG, INFECTED_LOG
+from dnx_logging.log_main import LogHandler
+from dnx_iptools.dnx_interface import get_arp_table
 
 
 class Log(LogHandler):
@@ -26,7 +27,7 @@ class Log(LogHandler):
         elif (req.category in [DNS_CAT.malicious, DNS_CAT.cryptominer] and cls.current_lvl >= LOG.ALERT):
             log = DNS_LOG(f'{pkt.src_ip}', pkt.request, req.category.name, req.reason, 'blocked')
 
-            log2 = INFECTED_LOG(pkt.src_mac.hex(), f'{pkt.src_ip}', pkt.request, req.category.name)
+            log2 = INFECTED_LOG(get_arp_table(host=pkt.src_ip), f'{pkt.src_ip}', pkt.request, req.category.name)
 
             return LOG.ALERT, {'dns': log, 'blocked': log, 'infected': log2}
 

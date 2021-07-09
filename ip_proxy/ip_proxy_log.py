@@ -3,6 +3,7 @@
 from dnx_configure.dnx_constants import LOG, DIR, CONN
 from dnx_configure.dnx_namedtuples import IPP_LOG, INFECTED_LOG
 from dnx_logging.log_main import LogHandler
+from dnx_iptools.dnx_interface import get_arp_table
 
 
 class Log(LogHandler):
@@ -33,7 +34,7 @@ class Log(LogHandler):
             )
 
             log2 = INFECTED_LOG(
-                pkt.src_mac.hex(), pkt.conn.local_ip, pkt.conn.tracked_ip, 'malware'
+                get_arp_table(host=pkt.conn.local_ip), pkt.conn.local_ip, pkt.conn.tracked_ip, 'malware'
             )
 
             return LOG.ALERT, {'ipp': log, 'infected': log2}
@@ -46,5 +47,11 @@ class Log(LogHandler):
             )
 
             return LOG.NOTICE, {'ipp': log}
+
+        # logs all requests, regardless of action of proxy if not already logged
+        elif (inspection.action is CONN.ACCEPT and cls.current_lvl >= LOG.INFO):
+            log = IPP_LOG(pkt.conn.local_ip, pkt.conn.tracked_ip, 'N/A', pkt.direction.name, 'allowed')
+
+            return LOG.INFO, {'ipp': log}
 
         return LOG.NONE, {}

@@ -130,10 +130,24 @@ def get_netmask(*, interface):
     finally:
         s.close()
 
-def get_arp_table():
+def get_arp_table(*, host=None):
+    '''return arp table as dictionary
+
+        {IPv4Address(ip): mac}
+
+    if host is specified, return just the mac address of the host sent in. If no host is present
+    returns None
+    '''
+
     with open('/proc/net/arp') as arp_table:
         #'IP address', 'HW type', 'Flags', 'HW address', 'Mask', 'Device'
         reader = csv.reader(
             arp_table, skipinitialspace=True, delimiter=' ')
 
-        return {a[0]: a[3].replace(':', '') for a in reader}
+
+    arp_table = {IPv4Address(a[0]): a[3].replace(':', '') for a in reader}
+    if (host):
+        return arp_table.get(host, None)
+
+    else:
+        return arp_table
