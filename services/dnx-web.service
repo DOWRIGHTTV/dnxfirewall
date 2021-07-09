@@ -10,7 +10,7 @@ RestartSec=3
 User=dnx
 Group=dnx
 WorkingDirectory=/home/dnx/dnxfirewall/dnx_frontend
-ExecStart=/home/dnx/.local/bin/uwsgi --enable-threads --ini dnx_web.ini
+ExecStart=/usr/local/bin/uwsgi --enable-threads --ini dnx_web.ini
 Environment=HOME_DIR=/home/dnx/dnxfirewall
 Environment=SYSTEMD_PAGER=
 
