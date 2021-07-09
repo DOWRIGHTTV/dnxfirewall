@@ -9,23 +9,14 @@ VERSION = "0.8.1" # Remember to change CHANGES.txt and netfilterqueue.pyx when v
 HOME_DIR = '/home/dnx/dnxfirewall'
 os.chdir(f'{HOME_DIR}/netfilter')
 
-try:
-    # Use Cython
-    from Cython.Distutils import build_ext
-    cmd = {"build_ext": build_ext}
-    ext = Extension(
-            "netfilterqueue",
-            sources=["netfilterqueue.pyx",],
-            libraries=["netfilter_queue"],
-        )
-except ImportError:
-    # No Cython
-    cmd = {}
-    ext = Extension(
-            "netfilterqueue",
-            sources = ["netfilterqueue.c"],
-            libraries=["netfilter_queue"],
-        )
+# Use Cython
+from Cython.Distutils import build_ext
+cmd = {"build_ext": build_ext}
+ext = Extension(
+        "netfilterqueue",
+        sources=["netfilterqueue.pyx",],
+        libraries=["netfilter_queue"],
+    )
 
 setup(
     cmdclass = cmd,
