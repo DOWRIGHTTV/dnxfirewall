@@ -127,7 +127,7 @@ def configure_interfaces():
 
 def check_system_interfaces():
 
-    interfaces_detected = [intf for intf in socket.if_nameindex() if 'lo' not in intf[1]]
+    interfaces_detected = [intf[1] for intf in socket.if_nameindex() if 'lo' not in intf[1]]
 
     # output = run('sudo ifconfig -a', shell=True, capture_output=True)
 
@@ -160,7 +160,7 @@ def collect_interface_associations(interfaces_detected):
     # build out full json for interface configs as dict
     interface_config = {'WAN': None, 'LAN': None, 'DMZ': None}
     while True:
-        for i, int_name in interface_config:
+        for int_name in interface_config:
             while True:
                 select = input(f'select {int_name} interface: ')
                 if (select.isdigit() and int(select) in range(1, len(interfaces_detected)+1)):
