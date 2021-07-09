@@ -237,7 +237,7 @@ def install_packages():
         ('sudo update-alternatives --set python3 /usr/bin/python3.8', None),
         ('pip3 install flask uwsgi', 'installing python web app framework'),
         ('sudo apt install nginx -y', 'installing web server driver'),
-        ('sudo apt install libnetfilter-queue-dev -y', 'installing networking components'),
+        ('sudo apt install libnetfilter-queue-dev net-tools -y', 'installing networking components'),
         ('pip3 install Cython', 'installing C extension language (Cython)')
     ]
 
