@@ -141,12 +141,11 @@ def get_arp_table(*, host=None):
 
     with open('/proc/net/arp') as arp_table:
         #'IP address', 'HW type', 'Flags', 'HW address', 'Mask', 'Device'
-        reader = csv.reader(
-            arp_table, skipinitialspace=True, delimiter=' ')
+        arp_table = list(
+            csv.reader(arp_table, skipinitialspace=True, delimiter=' ')
+        )
 
-
-        arp_table = {IPv4Address(a[0]): a[3].replace(':', '') for a in reader}
-    
+    arp_table = {IPv4Address(a[0]): a[3].replace(':', '') for a in arp_table[1:]}
     if (host):
         return arp_table.get(host, None)
 
