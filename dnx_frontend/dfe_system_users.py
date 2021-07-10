@@ -16,7 +16,7 @@ from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 
 def load_page():
-    users = load_configuration('logins')['users']
+    users = load_configuration('logins', filepath='/dnx_frontend/data')['users']
 
     userlist = {}
     for account, info in users.items():

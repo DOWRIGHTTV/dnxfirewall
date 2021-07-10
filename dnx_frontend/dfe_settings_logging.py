@@ -61,7 +61,7 @@ def update_page(form):
     elif ('time_offset_update' in form):
         offset_settings = {
             'direction': form.get('dir_offset', DATA.INVALID),
-            'time': validate.get_convert_int(form, 'time')
+            'time': validate.get_convert_int(form, 'time_offset')
         }
         if (DATA.INVALID in offset_settings.values()):
             return INVALID_FORM
