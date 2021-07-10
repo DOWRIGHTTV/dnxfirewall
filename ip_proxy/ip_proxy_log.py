@@ -28,28 +28,30 @@ class Log(LogHandler):
 
     @classmethod
     def _generate_log(cls, pkt, inspection):
-        if (inspection.category in cls._infected_cats and pkt.direction is DIR.OUTBOUND and cls.current_lvl >= LOG.ALERT):
-            log = IPP_LOG(
-                pkt.conn.local_ip, pkt.conn.tracked_ip, inspection.category.name, pkt.direction.name, 'blocked'
-            )
+        if (inspection.action is CONN.DROP):
+            if (inspection.category in cls._infected_cats and pkt.direction is DIR.OUTBOUND and cls.current_lvl >= LOG.ALERT):
+                log = IPP_LOG(
+                    pkt.conn.local_ip, pkt.conn.tracked_ip, inspection.category.name, pkt.direction.name, 'blocked'
+                )
 
-            log2 = INFECTED_LOG(
-                get_arp_table(host=pkt.conn.local_ip), pkt.conn.local_ip, pkt.conn.tracked_ip, 'malware'
-            )
+                log2 = INFECTED_LOG(
+                    get_arp_table(host=pkt.conn.local_ip), pkt.conn.local_ip, pkt.conn.tracked_ip, 'malware'
+                )
 
-            return LOG.ALERT, {'ipp': log, 'infected': log2}
+                return LOG.ALERT, {'ipp': log, 'infected': log2}
 
-        elif (cls.current_lvl >= LOG.NOTICE):
-            action = 'blocked' if inspection.action is CONN.DROP else 'logged'
+            elif (cls.current_lvl >= LOG.NOTICE):
+                action = 'blocked' if inspection.action is CONN.DROP else 'logged'
 
-            log = IPP_LOG(
-                pkt.conn.local_ip, pkt.conn.tracked_ip, inspection.category.name, pkt.direction.name, action
-            )
+                log = IPP_LOG(
+                    pkt.conn.local_ip, pkt.conn.tracked_ip, inspection.category.name, pkt.direction.name, action
+                )
 
-            return LOG.NOTICE, {'ipp': log}
+                return LOG.NOTICE, {'ipp': log}
 
-        # logs all requests, regardless of action of proxy if not already logged
-        elif (inspection.action is CONN.ACCEPT and cls.current_lvl >= LOG.INFO):
+        # informational logging for all accepted connections
+        # TODO: add category definition here. should just be able to define var, but make sure before switching from N/A.
+        elif (cls.current_lvl >= LOG.INFO):
             log = IPP_LOG(pkt.conn.local_ip, pkt.conn.tracked_ip, 'N/A', pkt.direction.name, 'allowed')
 
             return LOG.INFO, {'ipp': log}

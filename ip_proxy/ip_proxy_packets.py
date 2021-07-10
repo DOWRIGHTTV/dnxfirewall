@@ -12,6 +12,10 @@ from dnx_iptools.dnx_parent_classes import RawPacket, RawResponse
 from dnx_iptools.dnx_protocol_tools import checksum_ipv4, checksum_tcp, checksum_icmp
 from dnx_configure.dnx_namedtuples import IPP_SRC_INFO, IPP_DST_INFO, IPP_IP_INFO
 
+# definitions for ip proxy data structures. Consider moving to constants module (make name more specific)
+MSB = int(0b11111111111110000000000000000000)
+LSB = int(0b00000000000001111111111111111111)
+
 
 class IPPPacket(RawPacket):
     __slots__ = (
@@ -25,8 +29,7 @@ class IPPPacket(RawPacket):
             # but replacing it with a more efficient mechanism
             self.conn = IPP_IP_INFO(f'{self.src_ip}', f'{self.dst_ip}')
 
-            bin_data = f'{int(self.src_ip)}'
-            self.bin_data = (int(bin_data[:-5]), int(bin_data[-5:]))
+            ip_addr = int(self.src_ip)
 
         elif (self.zone in [LAN_IN, DMZ_IN]):
             self.direction = DIR.OUTBOUND
@@ -34,8 +37,9 @@ class IPPPacket(RawPacket):
             # but replacing it with a more efficient mechanism
             self.conn = IPP_IP_INFO(f'{self.dst_ip}', f'{self.src_ip}')
 
-            bin_data = f'{int(self.dst_ip)}'
-            self.bin_data = (int(bin_data[:-5]), int(bin_data[-5:]))
+            ip_addr = int(self.dst_ip)
+
+        self.bin_data = (ip_addr & MSB, ip_addr & LSB)
 
 
 # TODO: test UDP / icmp dst unreachable packet!
