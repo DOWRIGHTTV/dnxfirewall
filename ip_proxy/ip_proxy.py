@@ -125,8 +125,8 @@ class Inspect:
         # set high enough AND the remote ip falls within a country or reputation category. we could remove
         # this restriction, which would log all connections being made, which may be more inline with how
         # it should function.
-        if (category):
-            Log.log(packet, IPP_INSPECTION_RESULTS(category, action))
+        # if (category):
+        Log.log(packet, IPP_INSPECTION_RESULTS(category, action))
 
     def _ip_inspect(self, Proxy, packet):
         action = CONN.ACCEPT # setting default action
@@ -154,15 +154,15 @@ class Inspect:
 
         # NOTE: debugs are for testing.
         if (action is CONN.ACCEPT):
-            Log.debug(f'IP PROXY | ACCEPTED | {packet.conn.tracked_ip}: {packet.direction}')
+            Log.debug(f'IP PROXY | ACCEPTED | {packet.conn.local_ip} | {packet.conn.tracked_ip} | {packet.direction}')
 
-        # if marked for drop, but id mode is enabled decision will get changed to ACCEPT.
+        # if marked for drop, but ids mode is enabled decision will get changed to ACCEPT.
         elif (action is CONN.DROP and Proxy.ids_mode): # NOTE: should only match if IDS mode enabled and sig match + cat enabled(direction match included)
-            Log.debug(f'IP PROXY | DETECTED | {packet.conn.tracked_ip}: {packet.direction}.')
+            Log.debug(f'IP PROXY | DETECTED | {packet.conn.local_ip} | {packet.conn.tracked_ip} | {packet.direction}')
             action = CONN.ACCEPT
 
         elif (action is CONN.DROP):
-            Log.debug(f'IP PROXY | DROPPED | {packet.conn.tracked_ip}: {packet.direction}')
+            Log.debug(f'IP PROXY | DROPPED | {packet.conn.local_ip} | {packet.conn.tracked_ip} | {packet.direction}')
 
         return action, category
 
