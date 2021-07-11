@@ -61,8 +61,10 @@ class _Defaults:
             run(f'iptables -t nat -N {chain}', shell=True)
 
         run(' iptables -t mangle -N IPS', shell=True) # for DDOS prevention
+        # run(' iptables -t nat -N NAT', shell=True) # wan to dmz nat rules (shouldnt need since rules will be put in firewall chain)
 
     def prerouting_set(self):
+        # run(' iptables -t nat -A PREROUTING -j NAT', shell=True) # User DNATS insert into here
         run(' iptables -t mangle -A PREROUTING -j IPS', shell=True) # IPS rules insert into here
 
     def mangle_forward_set(self):
@@ -76,6 +78,14 @@ class _Defaults:
     # TODO: figure out why "!" isnt working how we thought it is supposed to work.
     def main_forward_set(self):
         run('iptables -P FORWARD DROP', shell=True) # Default DROP
+
+        # TODO: figure out how this will be handled with multiple local interfaces.
+        # HTTPS Proxy (JA3 only) | NOTE: this is before conntracking, but wont actually match unless connection first gets allowed
+            # since its target the 4th and 5th packet in the stream.
+        # run(f'iptables -A FORWARD -i {self._lan_int} -p tcp -m tcp --dport 443 -m connbytes --connbytes 4:4 '
+        #     '--connbytes-mode packets --connbytes-dir both -j NFQUEUE --queue-num 3', shell=True)
+        # run(f'iptables -A FORWARD -i {self._wan_int} -p tcp -m tcp --sport 443 -m connbytes --connbytes 5:5 '
+        #     '--connbytes-mode packets --connbytes-dir both -j NFQUEUE --queue-num 3', shell=True)
 
         # tracking connection state for return traffic from WAN back to inside
         run('iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT', shell=True)
@@ -125,7 +135,7 @@ class _Defaults:
         # NOTE: LAN INTERFACE FIREWALL
         run(f'iptables -A FORWARD -i {self._lan_int} -m mark --mark {SEND_TO_FIREWALL} -j LAN_INTERFACE', shell=True)
 
-        # IMPORTANT: default allow any outbound. this is to make the firewall plug and play for non power users. source
+        # IMPORTANT: default allow any outbound. this is to make the firewall plug and play for non power users source.
         # ip network is hardcoded, but may change at a later date abd the setup does not allow user to change this value.
         run(f'iptables -A LAN_INTERFACE -s 192.168.83.0/24 -d 0.0.0.0/0 -j ACCEPT', shell=True)
 
@@ -138,10 +148,10 @@ class _Defaults:
         run(' iptables -P INPUT DROP', shell=True) # default DROP
         run(' iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT', shell=True) # Tracking connection state for return traffic from WAN back Firewall itself
 
-        #run(' iptables -A INPUT -p tcp --dport 22 -j ACCEPT', shell=True) # NOTE: SSH CONN FOR LAB TESTING
+#        run(' iptables -A INPUT -p tcp --dport 22 -j ACCEPT', shell=True) # NOTE: SSH CONN FOR LAB TESTING
         run(' iptables -A INPUT -p udp -d 127.0.0.53 --dport 53 -j ACCEPT', shell=True) # NOTE: TEMP FOR UBUNTU DNS SERVICE
 
-        # TODO: this is fucked up. we should be able to remove interface input, then just use WAN_ZONE for mark.
+        # TODO: this should probably be modified for zone functionality, using WAN_ZONE mark. input mangle rule would need adjusting too.
         # required for portscan and ddos protection logic
         run(f'iptables -A INPUT -i {self._wan_int} -p tcp -m mark --mark {SEND_TO_IPS} -j NFQUEUE --queue-num 2', shell=True)
         run(f'iptables -A INPUT -i {self._wan_int} -p udp -m mark --mark {SEND_TO_IPS} -j NFQUEUE --queue-num 2', shell=True)
@@ -234,7 +244,6 @@ class IPTableManager:
             write_err('dnxfirewall iptable defaults applied.')
 
     def add_rule(self, rule):
-        print(rule)
         if (rule.protocol == 'any'):
             firewall_rule = (
                 f'sudo iptables -I {rule.zone} {rule.position} -s {rule.src_ip}/{rule.src_netmask} '

@@ -12,6 +12,7 @@ def generate_recursive_binary_search(tuple signatures, (int, int) bounds):
 
     @_lru_cache(maxsize=1024)
     def recursive_binary_search((long, long) host, bint recursion=0):
+
         nonlocal bin_match
 
         cdef long b_id, hb_id, hh_id
@@ -21,6 +22,7 @@ def generate_recursive_binary_search(tuple signatures, (int, int) bounds):
 
         cdef tuple h_ranges
         cdef long host_match
+        cdef short null = 0
 
         if (not recursion):
             left, right = bounds
@@ -44,11 +46,11 @@ def generate_recursive_binary_search(tuple signatures, (int, int) bounds):
 
                         return recursive_binary_search((hh_id, 0), recursion=1)
             else:
-                return 0
+                return null
 
         else:
             # assigning bounds of the items in the bin found in the first search
-            left, right = 0, len(bin_match)-1
+            left, right = null, len(bin_match)-1
 
             while left <= right:
                 mid = left + (right - left) // 2
@@ -67,16 +69,16 @@ def generate_recursive_binary_search(tuple signatures, (int, int) bounds):
                     return host_match
 
             else:
-                return 0
+                return null
 
     return recursive_binary_search
 
 def generate_linear_binary_search(tuple sigs, (int, int) bounds):
 
     @_lru_cache(maxsize=1024)
-    def linear_binary_search((int, int) host):
+    def linear_binary_search((long, long) host):
 
-        cdef int b_id, hb_id, h_id
+        cdef long b_id, hb_id, h_id
         hb_id, h_id = host
 
         cdef int left, right, mid
@@ -84,8 +86,9 @@ def generate_linear_binary_search(tuple sigs, (int, int) bounds):
 
         cdef tuple h_ranges
 
-        cdef int r_start, r_end, c_code
-        cdef (int, int, int) h_range
+        cdef long r_start, r_end
+        cdef short c_code, null = 0
+        cdef (long, long, short) h_range
 
         while left <= right:
             mid = left + (right - left) // 2
@@ -109,9 +112,9 @@ def generate_linear_binary_search(tuple sigs, (int, int) bounds):
                         return c_code
 
                 else:
-                    return 0
+                    return null
 
         else:
-            return 0
+            return null
 
     return linear_binary_search
