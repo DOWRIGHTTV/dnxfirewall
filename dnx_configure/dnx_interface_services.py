@@ -43,9 +43,9 @@ def get_current_bytes():
     try:
         return {iface[0][1][:-1]:[iface[3][1], iface[5][1]] for iface
             in [[y.split() for y in x.split('\\')] for x in check_output('ip -s -o link', shell=True).decode().splitlines()
-            if 'wan' in x or 'lan' in x]}
+            if 'lo' not in x]}
     except Exception as E:
-        Log().simple_write(LOG_NAME, 'error', f'Interface bandwidth module error | {E}')
+        Log.simple_write(LOG_NAME, 'error', f'Interface bandwidth module error | {E}')
         sleep(1)
 
 if __name__ == '__main__':

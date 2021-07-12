@@ -80,8 +80,8 @@ class DNSProxy(Listener):
 
         # refusing ipv6 dns record types as policy
         if (packet.qtype == DNS.AAAA):
-            packet.generate_proxy_response() # NOTE: complete
-            self.send_to_client(packet) # NOTE: complete
+            packet.generate_proxy_response()
+            self.send_to_client(packet)
 
         return False
 

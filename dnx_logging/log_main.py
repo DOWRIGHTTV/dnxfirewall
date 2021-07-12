@@ -15,10 +15,12 @@ HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
-from dnx_iptools.dnx_standard_tools import looper, classproperty, dnx_queue
+from dnx_iptools.dnx_standard_tools import looper, classproperty, dnx_queue, Initialize
 from dnx_configure.dnx_file_operations import load_configuration, cfg_read_poller, change_file_owner
 from dnx_database.ddb_connector_sqlite import DBConnector
 from dnx_configure.dnx_system_info import System
+
+LOG_NAME = 'system'
 
 
 class LogService:
@@ -28,8 +30,13 @@ class LogService:
             'ips', 'syslog', 'system', 'logins'
         ]
 
+        self._initialize = Initialize(LogHandler, 'LogService')
+
     def start(self):
         threading.Thread(target=self.get_settings).start()
+
+        self._initialize.wait_for_threads(count=1)
+
         threading.Thread(target=self.organize).start()
         threading.Thread(target=self.clean_db_tables).start()
         threading.Thread(target=self.clean_blocked_table).start()
@@ -39,6 +46,7 @@ class LogService:
     def organize(self):
         # print('[+] Starting organize operation.')
         log_entries = []
+
         date = ''.join(System.date())
         for module in self.log_modules:
             module_entries = self.combine_logs(module, date)
@@ -48,24 +56,25 @@ class LogService:
         sorted_log_entries = sorted(log_entries)
         if (sorted_log_entries):
             self.write_combined_logs(sorted_log_entries, date)
+
         log_entries = None # overwriting var to regain system memory
 
     # grabbing the log from the sent in module, splitting the lines, and returning a list
     # TODO: see if we can load file as generator
     def combine_logs(self, module, date):
         file_entries = []
-        try:
-#            print(f'opening {HOME_DIR}/dnx_system/log/{module}/{date[0]}{date[1]}{date[2]}-{module}.log to view entries')
-            with open(f'{HOME_DIR}/dnx_system/log/{module}/{date}-{module}.log', 'r') as log_file:
-                for _ in range(20):
-                    line = log_file.readline().strip()
-                    if not line: break
 
-                    file_entries.append(line)
-        except FileNotFoundError:
+        if not os.path.isfile(f'{HOME_DIR}/dnx_system/log/{module}/{date}-{module}.log'):
             return None
-        else:
-            return file_entries
+
+        with open(f'{HOME_DIR}/dnx_system/log/{module}/{date}-{module}.log', 'r') as log_file:
+            for _ in range(20):
+                line = log_file.readline().strip()
+                if not line: break
+
+                file_entries.append(line)
+
+        return file_entries
 
     # writing the log entries to the combined log
     def write_combined_logs(self, sorted_log_entries, date):
@@ -77,15 +86,21 @@ class LogService:
     @looper(ONE_DAY)
     def clean_db_tables(self):
         # print('[+] Starting general DB table cleaner.')
-        with DBConnector() as FirewallDB:
+        with DBConnector(Log) as FirewallDB:
             for table in ['dnsproxy', 'ipproxy' , 'ips', 'infectedclients']:
                 FirewallDB.table_cleaner(self.log_length, table=table)
+
+        # NOTE: consider moving this into the DBConnector so it can report if no exc are raised.
+        Log.notice('completed daily database cleaning')
 
     @looper(THREE_MIN)
     def clean_blocked_table(self):
         # print('[+] Starting DB blocked table cleaner.')
-        with DBConnector() as FirewallDB:
+        with DBConnector(Log) as FirewallDB:
             FirewallDB.blocked_cleaner(table='blocked')
+
+        # NOTE: consider moving this into the DBConnector so it can report if no exc are raised.
+        Log.debug('completed blocked database cleaning')
 
     @cfg_read_poller('logging_client')
     def get_settings(self, cfg_file):
@@ -95,11 +110,9 @@ class LogService:
         self.log_length = log_settings['logging']['logging']['length']
         self.logging_level = log_settings['logging']['logging']['level']
 
-#
-# LOG HANDLING PARENT CLASS
-#
+        self._initialize.done()
 
-_log_write = sys.stderr.write
+# LOG HANDLING PARENT CLASS
 
 # TODO: create a function that can be used to write logs for system errors that happen prior to log
 # handler being intitialized.
@@ -188,13 +201,13 @@ class LogHandler:
         '''print message to console. this is for all important console only events. use dprint for
         non essential console output which is linked to verbose attribute.'''
         if (cls.console):
-            _log_write(f'{message}\n')
+            write_log(f'{message}\n')
 
     @classmethod
     def dprint(cls, message):
         '''print function alternative to supress/show terminal output.'''
         if (LOG.DEBUG):
-            _log_write(f'{message}\n')
+            write_log(f'{message}\n')
 
     @staticmethod
     def simple_write(m_name, level_name, message):
@@ -267,7 +280,7 @@ class LogHandler:
             def log_method(cls, message):
                 message = f'{round(fast_time())}|{cls.name}|{level_name}|{message}\n'
 
-                _log_write(message)
+                write_log(message)
 
                 cls._write_to_disk.add(message)
 
@@ -364,5 +377,11 @@ class Format:
         return levels[level][0]
 
 if __name__ == '__main__':
-    Log = LogService()
-    Log.start()
+    # aliasing to keep log service conventions the same as other modules
+    Log = LogHandler
+    Log.run(
+        name=LOG_NAME
+    )
+
+    LogService = LogService()
+    LogService.start()

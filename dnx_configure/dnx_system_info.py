@@ -15,6 +15,7 @@ from subprocess import run, CalledProcessError, DEVNULL
 _HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, _HOME_DIR)
 
+from dnx_configure.dnx_constants import str_join
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_iptools.dnx_protocol_tools import convert_mac_to_bytes
 
@@ -24,6 +25,7 @@ __all__ = (
 
 
 class Interface:
+    '''This class is being depricated and being replaced by dnx_interface module in iptools dir.'''
 
     @staticmethod
     def ip_address(interface):
@@ -168,7 +170,7 @@ class System:
 
                 if (total and available): break
 
-        ram = f'{round((total / available) * 100, 1)}%'
+        ram = f'{round((total / available) * 10, 1)}%'
 #        print(ram)
         return ram
 
@@ -216,7 +218,7 @@ class System:
         mo = f'{dt.month:02}'
         dy = f'{dt.day:02}'
         if (string):
-            return ''.join([yr, mo, dy])
+            return str_join([yr, mo, dy])
 
         return [yr, mo, dy]
 
@@ -268,6 +270,7 @@ class System:
         return backups
 
     @staticmethod
+    # TODO: this can be refactored to follow dnat/snat format for parsing
     def firewall_rules(*, chain='GLOBAL_INTERFACE'):
         # getting list of all rules in specified chain
         output = run(
@@ -304,44 +307,38 @@ class System:
     def nat_rules(*, nat_type='DSTNAT'):
         natrules = []
         output = run(
-            f'sudo iptables -t nat -nL {nat_type} --line-number', shell=True, capture_output=True, text=True
+            f'sudo iptables -t nat --list-rules | grep "A {nat_type}"', shell=True, capture_output=True, text=True
         ).stdout.splitlines()
 
-        if (nat_type == 'DSTNAT'):
-            # default values. should only be used if icmp protocol is specified.
-            dst_port, host_port = 'N/A', 'N/A'
+        for i, rule in enumerate(output, 1):
 
-            for rule in output[2:]:
+            rule, rule_d = rule.split(), {}
+            while rule:
+                data, rule = rule[:2], rule[2:]
 
-                modified_rule = [x for i, x in enumerate(rule.split()) if i not in [1, 3, 6]]
+                arg, value = data
+                # filtering out unneccesary args
+                if arg in ['-m', '-j']: continue
 
-                host_info = modified_rule[5].lstrip('to:')
-                if (modified_rule[1] in ['tcp', 'udp']):
+                if (nat_type == 'SRCNAT'):
+                    rule_d[arg] = value
 
-                    dst_port = modified_rule[4].lstrip('dpt:')
+                elif (nat_type == 'DSTNAT'):
 
-                    # checking for pat or port foward
-                    try:
-                        host_ip, host_port = host_info.split(':')
-                    except ValueError:
-                        host_ip, host_port = host_info, dst_port
+                    if (arg != '--to-destination'):
+                        rule_d[arg] = value
 
-                # for icmp
-                else:
-                    host_ip = host_info
+                    else:
+                        try:
+                            rule_d['--to-port'] = value.split(':')[1]
+                            rule_d['--to-dest'] = value.split(':')[0]
+                        except IndexError:
+                            rule_d['--to-dest'] = value
+                            rule_d['--to-port'] = rule_d['--dport']
 
-                pos, proto, *_ = modified_rule
 
-                natrules.append((pos, proto, dst_port, host_ip, host_port))
 
-        elif (nat_type == 'SRCNAT'):
-
-            for rule in output[2:]:
-
-                rule = rule.split()
-
-                # position, original source, new source
-                natrules.append([rule[0], rule[4], rule[6].lstrip('to:')])
+            natrules.append((i, rule_d))
 
         # print(natrules)
         return natrules

@@ -16,7 +16,10 @@ import dnx_configure.dnx_namedtuples as dnx_nt
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_iptools.dnx_standard_tools import dnx_queue, looper
+from dnx_logging.log_main import LogHandler as Log
 from dnx_database.ddb_connector_sqlite import DBConnector
+
+LOG_NAME = 'system'
 
 
 class DatabaseService:
@@ -39,7 +42,7 @@ class DatabaseService:
         fail_count = 0
         while True:
             # NOTE: this is blocking inside dnx_queue loop decorator on _write_to_database function.
-            with DBConnector() as database:
+            with DBConnector(Log) as database:
                 self._write_to_database(database) # pylint: disable = no-value-for-parameter
 
             fail_count += 1
@@ -49,6 +52,9 @@ class DatabaseService:
 
             fast_sleep(ONE_SEC)
 
+    # TODO consider initialing LogHandler so we can send this into the queue. That would also allow us to send it into the
+    # DBConnector context to log properly and be viewing in front end. this would probably require an additional log section
+    # for database logs.
     @dnx_queue(None, name='Database')
     def _write_to_database(self, database, job):
         method, timestamp, log_info = job
@@ -70,17 +76,21 @@ class DatabaseService:
             data = loads(data.decode())
 
             name = data['method']
-            # NOTE: this is grabbing correct namedtuple, maybe locally store again?
+            # NOTE: this is grabbing correct namedtuple, maybe locally store again? NOTE: what does this even mean?
             log_tuple = getattr(dnx_nt, f'{name}_log'.upper())
             log_entry = log_tuple(*data['log'])
 
             self._add_to_db_queue((name, data['timestamp'], log_entry))
-            write_err('ADDED LOG TO QUEUE!')
+            # write_log('ADDED LOG TO QUEUE!')
 
     def _create_service_socket(self):
         self._service_socket = socket(AF_INET, SOCK_DGRAM)
         self._service_socket.bind((f'{LOCALHOST}', DATABASE_SOCKET))
 
 if __name__ == '__main__':
+    Log.run(
+        name=LOG_NAME
+    )
+
     DBService = DatabaseService()
     DBService.start()

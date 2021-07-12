@@ -185,7 +185,7 @@ def dhcp_general_settings(server_settings):
     # clamping range into lan/dmz class C's. this will have to change later if more control over interface
     # configurations is implemented.
     for field in lease_range.values():
-        print(type(field))
+        # print(type(field))
         if (field not in range(2,255)):
             raise ValidationError('DHCP ranges must be between 2 and 254.')
 
@@ -335,7 +335,7 @@ def del_nat_rule(nat_rule):
     ).stdout.splitlines()[1:]
 
     rule_count = len(output)
-    if (convert_int(nat_rule.position) not in range(1, rule_count)):
+    if (convert_int(nat_rule.position) not in range(1, rule_count+1)):
         raise ValidationError('Selected rule is not valid and cannot be removed.')
 
 def add_dnat_rule(nat_rule):

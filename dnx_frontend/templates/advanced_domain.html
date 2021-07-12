@@ -153,7 +153,7 @@
                     <h4 class="red-text light-3">Keyword Search</h4>
                     <form action="/advanced/domain" method="post">
                         <input type="hidden" name="tab" value="3">
-                        <input type="hidden" name="keyword_update" value="">
+                        <input type="hidden" name="keyword_update">
                         <div class="row">
                             {% for category, settings in domain_settings['default'].items() %}
                             {% if settings['enabled'] %}

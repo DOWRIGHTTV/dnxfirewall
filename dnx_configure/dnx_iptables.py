@@ -19,7 +19,7 @@ __all__ = (
 _system = os.system
 
 # TODO: reverse inspection order for forward chain.
-# PROXY ACCEPT MARK WILL BE AT TOP OF CHAin
+# PROXY ACCEPT MARK WILL BE AT TOP OF CHAIN | is this some kind of weird optimization?
 # 1. internal to wan ip proxy
 #    - source zone/ip/port to dst zone/ip/port
 #       a. deny, drop packet
@@ -30,7 +30,8 @@ class _Defaults:
 
     def __init__(self, interfaces):
 
-        self._wan_int, self._lan_int, self._dmz_int = interfaces
+        for zone, intf in interfaces.items():
+            setattr(self, f'_{zone}_int', intf)
 
    # calling all methods in the class dict.
     @classmethod
@@ -42,7 +43,7 @@ class _Defaults:
                 try:
                     f(self)
                 except Exception as E:
-                    write_err(E)
+                    write_log(E)
 
     def get_settings(self):
         dnx_settings = load_configuration('config')['settings']
@@ -73,9 +74,8 @@ class _Defaults:
         # this will mark all packets to be inspected by ip proxy and allow it to pass packet on to other rules
         run(f'iptables -t mangle -A FORWARD -i {self._lan_int} -j MARK --set-mark {LAN_IN}', shell=True) # lan > any
         run(f'iptables -t mangle -A FORWARD -i {self._wan_int} -j MARK --set-mark {WAN_IN}', shell=True) # wan > any
-        run(f'iptables -t mangle -A FORWARD -i {self._dmz_int} -j MARK --set-mark {DMZ_IN}', shell=True) # dmz > any
+        run(f'iptables -t mangle -A FORWARD -i {self._dmz_int} -j MARK --set-mark {DMZ_IN}', shell=True) # dmz > any # pylint: disable=no-member
 
-    # TODO: figure out why "!" isnt working how we thought it is supposed to work.
     def main_forward_set(self):
         run('iptables -P FORWARD DROP', shell=True) # Default DROP
 
@@ -105,21 +105,24 @@ class _Defaults:
         #           b. if OUTBOUND, silently drop in ip proxy
         #       2. if not blocked host detected
         #           a. if INBOUND and icmp type 8, tag SEND_TO_IPS
-        #           b. if OUTBOUND, SEND_TO_FIREWALL (will be automatically allowed by explicit allow by default)
+        #           b. if OUTBOUND, SEND_TO_FIREWALL (can be controlled by user ip tables)
         #
         # run(f'iptables -A FORWARD -i {self._lan_int} -p icmp -j ACCEPT', shell=True) # ALLOW ICMP OUTBOUND
         for zone in [LAN_IN, WAN_IN, DMZ_IN]:
             run(f'iptables -A FORWARD -p tcp -m mark --mark {zone} -j NFQUEUE --queue-num 1', shell=True) # ip proxy TCP
             run(f'iptables -A FORWARD -p udp -m mark --mark {zone} -j NFQUEUE --queue-num 1', shell=True) # ip proxy UDP
+            run(f'iptables -A FORWARD -p icmp -m mark --mark {zone} -j NFQUEUE --queue-num 1', shell=True) # ip proxy ICMP
 
         # ip proxy drop, but allowing ips to inspect for ddos
         run(f'iptables -A FORWARD -m mark --mark {IP_PROXY_DROP} -j NFQUEUE --queue-num 2', shell=True) # IPS inspect on ip proxy drop
 
         # IPS proper
-        run(f'iptables -A FORWARD -p icmp -m icmp --icmp-type 8 -m mark --mark {WAN_IN} -j NFQUEUE --queue-num 2', shell=True) # IPS ICMP - only type 8 will be checked, rest forwaded
         run(f'iptables -A FORWARD -m mark --mark {SEND_TO_IPS} -j NFQUEUE --queue-num 2', shell=True) # IPS TCP/UDP
+        # this should now be handled by the ip proxy. it will forward to the ips if needed. this was here to fill the gap when icmp
+        # was bypassing the ip proxy.
+#        run(f'iptables -A FORWARD -p icmp -m icmp --icmp-type 8 -m mark --mark {WAN_IN} -j NFQUEUE --queue-num 2', shell=True) # IPS ICMP - only type 8 will be checked, rest forwaded
 
-        # block WAN > LAN | explicit deny nat into LAN as an extra safety mechanism. NOTE: this should be evaled to see if this should be done.
+        # block WAN > LAN | explicit deny nat into LAN as an extra safety mechanism. NOTE: this should be evaled to see if this should be optional.
         run(f'iptables -A FORWARD -i {self._wan_int} -o {self._lan_int} -m mark --mark {SEND_TO_FIREWALL} -j DROP', shell=True)
 
         # NOTE: GLOBAL FIREWALL
@@ -142,7 +145,7 @@ class _Defaults:
         # ============================================
 
         # NOTE: DMZ INTERFACE FIREWALL
-        run(f'iptables -A FORWARD -i {self._dmz_int} -m mark --mark {SEND_TO_FIREWALL} -j DMZ_INTERFACE', shell=True)
+        run(f'iptables -A FORWARD -i {self._dmz_int} -m mark --mark {SEND_TO_FIREWALL} -j DMZ_INTERFACE', shell=True) # pylint: disable=no-member
 
     def main_input_set(self):
         run(' iptables -P INPUT DROP', shell=True) # default DROP
@@ -168,7 +171,7 @@ class _Defaults:
     def main_output_set(self):
         run('iptables -P OUTPUT ACCEPT', shell=True) # Default ALLOW
 
-    # TODO: implement commands to check source and dnat changes in nat table.
+    # TODO: implement commands to check source and dnat changes in nat table. what does this even mean?
     def nat(self):
         # rules to check custom nat chains
         run(f'iptables -t nat -I POSTROUTING -j SRCNAT', shell=True)
@@ -185,21 +188,21 @@ class IPTableManager:
     '''
 
     __slots__ = (
-        # protected vars
-        '_wan_int', '_lan_int', '_dmz_int', '_interfaces',
+       '_intf_to_zone', '_zone_to_intf',
 
         '_iptables_lock_file', '_iptables_lock'
     )
 
     def __init__(self):
-        dnx_settings = load_configuration('config')['settings']
+        dnx_intf_settigs = load_configuration('config')['settings']['interfaces']
 
-        self._wan_int = dnx_settings['interfaces']['wan']['ident']
+        self._intf_to_zone = {
+            dnx_intf_settigs[zone]['ident']: zone for zone in ['wan', 'lan', 'dmz']
+        }
 
-        self._lan_int = dnx_settings['interfaces']['lan']['ident']
-        self._dmz_int = dnx_settings['interfaces']['dmz']['ident']
-
-        self._interfaces = (self._wan_int, self._lan_int, self._dmz_int)
+        self._zone_to_intf = {
+            zone: dnx_intf_settigs[zone]['ident'] for zone in ['wan', 'lan', 'dmz']
+        }
 
         self._iptables_lock_file = f'{HOME_DIR}/dnx_system/iptables/iptables.lock'
 
@@ -238,10 +241,10 @@ class IPTableManager:
         NOTE: this method should not be called more than once during system operation or duplicate rules
         will be inserted into iptables.'''
 
-        _Defaults.load(self._interfaces)
+        _Defaults.load(self._zone_to_intf)
 
         if (not suppress):
-            write_err('dnxfirewall iptable defaults applied.')
+            write_log('dnxfirewall iptable defaults applied.')
 
     def add_rule(self, rule):
         if (rule.protocol == 'any'):
@@ -268,7 +271,7 @@ class IPTableManager:
         run(f'sudo iptables -D {rule.zone} {rule.position}', shell=True)
 
     def add_nat(self, rule):
-        src_interface = getattr(self, f'_{rule.src_zone.lower()}_int')
+        src_interface = self._zone_to_intf[f'{rule.src_zone}']
 
         # implement dnat into iptables
         if (rule.nat_type == 'DSTNAT'):
@@ -280,18 +283,25 @@ class IPTableManager:
                 )
 
             else:
-                nat_rule = (
-                    f'sudo iptables -t nat -I DSTNAT -i {src_interface} '
+                nat_rule = [
+                    f'sudo iptables -t nat -I DSTNAT -i {src_interface} ',
                     f'-p {rule.protocol} --dport {rule.dst_port} -j DNAT --to-destination {rule.host_ip}'
-                )
+                ]
+
+                # inserting destination ip directly following interface argument
+                if (rule.dst_ip):
+                    nat_rule.insert(1, f'-d {rule.dst_ip} ')
 
                 if (rule.dst_port != rule.host_port):
-                    nat_rule += f':{rule.host_port}'
+                    nat_rule.append(f':{rule.host_port}')
+
+                nat_rule = str_join(nat_rule)
 
         elif (rule.nat_type == 'SRCNAT'):
 
             nat_rule = (
-                f'sudo iptables -t nat -I SRCNAT -o {self._wan_int} '
+                'sudo iptables -t nat -I SRCNAT '
+                f'-i {src_interface} -o {self._zone_to_intf["wan"]} '
                 f'-s {rule.orig_src_ip}  -j SNAT --to-source {rule.new_src_ip}'
             )
 
@@ -330,7 +340,7 @@ class IPTableManager:
         )
 
         # NOTE: this should be removed one day
-        write_err(f'RULE INSERTED: {ip_address} | {fast_time()}')
+        write_log(f'RULE INSERTED: {ip_address} | {fast_time()}')
 
     @staticmethod
     def proxy_del_rule(ip_address, *, table, chain):
@@ -341,7 +351,7 @@ class IPTableManager:
         )
 
         # NOTE: this should be removed one day
-        write_err(f'RULE REMOVED: {ip_address} | {fast_time()}')
+        write_log(f'RULE REMOVED: {ip_address} | {fast_time()}')
 
     @staticmethod
     def update_dns_over_https():

@@ -5,11 +5,10 @@ import threading
 
 from collections import Counter, OrderedDict, namedtuple
 
-import dnx_configure.dnx_file_operations as fo
-
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_configure.dnx_namedtuples import DNS_CACHE, CACHED_RECORD
 from dnx_iptools.dnx_standard_tools import looper
+from dnx_configure.dnx_file_operations import ConfigurationManager, load_configuration, write_configuration, load_top_domains_filter
 from dns_proxy.dns_proxy_log import Log
 
 request_info = namedtuple('request_info', 'server proxy')
@@ -31,17 +30,15 @@ class DNSCache(dict):
         set_query_generator(*reference to packet class*)
         set_query_handler(*reference to dns server request handler function*)
 
-    if the above callbacks are not set the top domains caching system will actively update records, though the counts
+    if the above callbacks are not set the top domains caching system will NOT actively update records, though the counts
     will still be accurate/usable.
     '''
     clear_dns_cache   = False
     clear_top_domains = False
 
     __slots__ = (
-        # protected vars
         '_dns_packet', '_request_handler',
 
-        # private vars
         '_dom_counter', '_top_domains',
         '_cnter_lock', '_top_dom_filter'
     )
@@ -95,7 +92,7 @@ class DNSCache(dict):
         '''add query to cache after calculating expiration time.'''
         self[request] = data_to_cache
 
-        Log.dprint(f'CACHE ADD | NAME: {request} TTL: {data_to_cache.ttl}')
+        Log.debug(f'CACHE ADD | NAME: {request} TTL: {data_to_cache.ttl}')
 
     def search(self, query_name):
         '''if client requested domain is present in cache, will return namedtuple of time left on ttl
@@ -113,7 +110,7 @@ class DNSCache(dict):
             with self._cnter_lock:
                 self._dom_counter[domain] += 1
 
-    @looper(FIVE_MIN)
+    @looper(THREE_MIN)
     # automated process to flush the cache if expire time has been reached.
     def _auto_clear_cache(self):
         cache, now = self.items, fast_time()
@@ -126,13 +123,13 @@ class DNSCache(dict):
         for domain in expired:
             del self[domain]
 
-        # should print __str__ of self. if debug level will log to file.
-    #    Log.debug(self)
+        # logging cache size information
+        Log.debug(self)
 
+    @looper(THREE_MIN)
     # automated process to keep top 20 queried domains permanently in cache. it will use the current caches packet to generate
     # a new packet and add to the standard tls queue. the recieving end will know how to handle this by settings the client address
     # to none in the session tracker.
-    @looper(THREE_MIN)
     def _auto_top_domains(self):
         if (self.clear_top_domains):
             self._dom_counter = Counter()
@@ -147,13 +144,16 @@ class DNSCache(dict):
             request_handler(dns_packet(domain))
             fast_sleep(.1)
 
-        fo.write_configuration(self._top_domains, 'dns_cache')
+        Log.debug('top domains refreshed')
 
+        write_configuration(self._top_domains, 'dns_cache')
+
+    @classmethod
     # method called to reset dictionary cache for sent in value (standard or top domains) and then reset the flag in the
     # json file back to false.
-    def _reset_flag(self, cache_type):
-        setattr(self, f'clear_{cache_type}', False)
-        with fo.ConfigurationManager('dns_server') as dnx:
+    def _reset_flag(cls, cache_type):
+        setattr(cls, f'clear_{cache_type}', False)
+        with ConfigurationManager('dns_server') as dnx:
             dns_settings = dnx.load_configuration()
 
             dns_settings['dns_server']['cache'][cache_type] = False
@@ -164,12 +164,12 @@ class DNSCache(dict):
 
     # loads top domains from file for persistence between restarts/shutdowns and top domains filter
     def _load_top_domains(self):
-        self._top_domains = fo.load_configuration('dns_cache')
+        self._top_domains = load_configuration('dns_cache')
 
         dom_list = reversed(list(self._top_domains))
         self._dom_counter = Counter({dom: cnt for cnt, dom in enumerate(dom_list)})
 
-        self._top_dom_filter = set(fo.load_top_domains_filter())
+        self._top_dom_filter = set(load_top_domains_filter())
 
 
 class RequestTracker(OrderedDict):

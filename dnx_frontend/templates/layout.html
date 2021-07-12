@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>DNX Firewall Security Appliance - Admin Panel</title>
+    <title>dnxfirewall - Admin Panel</title>
     <base href="/">
     <link href="{{url_for('static', filename='assets/fonts/roboto.css')}}" rel="stylesheet">
     <link href="{{url_for('static', filename='assets/css/icons.css')}}" rel="stylesheet">
@@ -14,15 +14,19 @@
 <body>
     {% include 'includes/_header.html' %}
     {% block body %}{% endblock body %}
+
     {% if standard_error %}
     {% include 'includes/_error_notify.html' %}
     {% endif %}
+
     {% if idle_timeout %}
     {% include 'includes/_idle_timeout.html' %}
     {% endif %}
+
     {% if footer %}
     {% include 'includes/_footer.html' %}
     {% endif %}
+
     <!-- materialize js-->
     <script src="{{url_for('static',filename='assets/js/materialize.min.js')}}"></script>
     <script>

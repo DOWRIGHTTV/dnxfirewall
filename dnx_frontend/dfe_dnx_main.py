@@ -524,18 +524,19 @@ def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name):
     return render_template(f'{page_name}.html', **page_settings)
 
 def log_page_logic(log_page, page_settings, *, page_name):
-    # menu_option = page_settings['menu'] # NOTE: why this here?
+    # can now accept redirects from other places on the webui to load specific tables directly on load
+    # using uri queries
     if (request.method == 'GET'):
-        page_settings['table_data'] = log_page.load_page()
+        table_data, menu_option, table = log_page.load_page(request.args)
 
     elif (request.method == 'POST'):
         table_data, menu_option, table = log_page.update_page(request.form)
 
-        page_settings.update({
-            'table_data': table_data,
-            'menu': menu_option,
-            'table': table
-        })
+    page_settings.update({
+        'table_data': table_data,
+        'menu': menu_option,
+        'table': table
+    })
 
     return render_template(f'{page_name}.html', **page_settings)
 
