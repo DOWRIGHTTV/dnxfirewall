@@ -22,7 +22,7 @@ __all__ = ('DBConnector',)
 class _DBConnector:
     DB_PATH = f'{HOME_DIR}/dnx_system/data/dnxfirewall.sqlite3'
 
-    # NOTE: if Log is not sent int, calling any method configured to log will error out, but likely not cause
+    # NOTE: if Log is not sent in, calling any method configured to log will error out, but likely not cause
     # significant impact as it is covered by the context.
     def __init__(self, Log=None, *, table=None):
         self._Log = Log
