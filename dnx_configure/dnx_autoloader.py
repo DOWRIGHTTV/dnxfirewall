@@ -13,6 +13,7 @@ HOME_DIR = f'{USER_DIR}/dnxfirewall'
 os.environ['HOME_DIR'] = HOME_DIR
 sys.path.insert(0, HOME_DIR)
 
+from dnx_configure.dnx_constants import str_join
 from dnx_configure.dnx_file_operations import ConfigurationManager
 from dnx_configure.dnx_iptables import IPTableManager
 from dnx_logging.log_main import LogHandler as Log
@@ -98,7 +99,7 @@ def progress(desc):
     filled_len = int(round(bar_len * completed_count / float(p_total)))
     percents = round(100.0 * completed_count / float(p_total), 1)
 
-    bar = ''.join(['#' * filled_len, '=' * (bar_len - filled_len)])
+    bar = str_join(['#' * filled_len, '=' * (bar_len - filled_len)])
     sys.stdout.write(f'{" "*90}\r')
     sys.stdout.write(f'{completed_count}/{p_total} || [{bar}] {percents}% || {desc}\r')
     sys.stdout.flush()
@@ -261,7 +262,7 @@ def compile_extensions():
         dnx_run(command)
 
 def configure_webui():
-    cert_subject = ''.join([
+    cert_subject = str_join([
         '/C=US',
         '/ST=Arizona',
         '/L=cyberspace',

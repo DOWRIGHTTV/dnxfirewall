@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from dnx_configure.dnx_constants import LOG, DIR, CONN
+from dnx_configure.dnx_constants import LOG, DIR, CONN, str_join
 from dnx_configure.dnx_namedtuples import IPP_LOG, INFECTED_LOG
 from dnx_logging.log_main import LogHandler
 from dnx_iptools.dnx_interface import get_arp_table
@@ -21,7 +21,7 @@ class Log(LogHandler):
 
     @staticmethod
     def generate_syslog_message(log):
-        return ''.join([
+        return str_join([
             f'local.ip={log.local_ip}; tracked.ip={log.tracked_ip}; category={log.category}; ',
             f'direction={log.direction}; action={log.action}'
         ])

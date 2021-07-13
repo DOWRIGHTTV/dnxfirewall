@@ -15,7 +15,7 @@ from ipaddress import IPv4Address, IPv4Network
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import USER, GROUP, LOG, FILE_POLL_TIMER
+from dnx_configure.dnx_constants import USER, GROUP, LOG, FILE_POLL_TIMER, str_join
 from dnx_configure.dnx_constants import DNS_BIN_OFFSET, DNS_CAT, IPP_CAT, GEO
 from dnx_configure.dnx_exceptions import ValidationError
 
@@ -28,7 +28,7 @@ LSB = int(0b00000000000001111111111111111111)
 def load_configuration(filename, *, filepath='/dnx_system/data'):
     '''load json data from file, convert it to a python dict, then return as object.'''
     if (not filename.endswith('.json')):
-        filename = ''.join([filename, '.json'])
+        filename = str_join([filename, '.json'])
 
     # loading system default configs
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'r') as system_settings:
@@ -50,7 +50,7 @@ def write_configuration(data, filename, *, filepath='/dnx_system/data/usr'):
     '''write json data to file.'''
 
     if (not filename.endswith('.json')):
-        filename = ''.join([filename, '.json'])
+        filename = str_join([filename, '.json'])
 
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
         json.dump(data, settings, indent=4)
@@ -301,7 +301,7 @@ def cfg_read_poller(watch_file, class_method=False):
         raise TypeError('watch file must be a string.')
 
     if (not watch_file.endswith('.json')):
-        watch_file = ''.join([watch_file, '.json'])
+        watch_file = str_join([watch_file, '.json'])
 
     def decorator(function_to_wrap):
         if (not class_method):
@@ -321,6 +321,7 @@ def cfg_read_poller(watch_file, class_method=False):
 def cfg_write_poller(list_function):
     '''Automate class configuration file poll decorator. this decorator is only compatible with
     the dns proxy module whitelist/blacklist read/write operations'''
+
     def wrapper(*args):
         print(f'[+] Starting user defined {args[1]} timer')
         last_modified_time, new_args = 0, (*args, f'{args[1]}.json')

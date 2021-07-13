@@ -30,7 +30,7 @@ class LogService:
             'ips', 'syslog', 'system', 'logins'
         ]
 
-        self._initialize = Initialize(LogHandler, 'LogService')
+        self._initialize = Initialize(Log, 'LogService')
 
     def start(self):
         threading.Thread(target=self.get_settings).start()
@@ -47,7 +47,7 @@ class LogService:
         # print('[+] Starting organize operation.')
         log_entries = []
 
-        date = ''.join(System.date())
+        date = str_join(System.date())
         for module in self.log_modules:
             module_entries = self.combine_logs(module, date)
             if (module_entries):
