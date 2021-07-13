@@ -11,7 +11,7 @@ from collections import namedtuple
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import FIVE_MIN, ONE_DAY, fast_time
+from dnx_configure.dnx_constants import ONE_DAY, FIVE_MIN, write_log, fast_time
 from dnx_configure.dnx_namedtuples import BLOCKED_DOM
 
 USER = 'dnx'
@@ -25,7 +25,7 @@ except:
 
 # TODO: make sure the fixes done to sqlite connector are translated to this module as well.
 class DBConnector:
-    def __init__(self, table=None):
+    def __init__(self, Log=None, *, table=None):
         self.table = table
 
         self.data_written = False
@@ -132,7 +132,7 @@ class DBConnector:
                 time.sleep(1)
         # NOTE: log this to front end
         else:
-            sys.stderr.write('BLOCKED QUERY LOOKUP ERROR!!')
+            write_log('BLOCKED QUERY LOOKUP ERROR!!')
 
     def query_last(self, count, src_ip=None, *, table, action):
         if (action in ['allowed', 'blocked']):

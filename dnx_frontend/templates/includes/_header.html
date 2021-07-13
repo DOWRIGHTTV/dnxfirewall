@@ -3,12 +3,18 @@
     <nav class="red darken-3">
         <div class="container">
             <div class="nav-wrapper">
-                <a href="/dashboard" class="brand-logo"><img src="/static/assets/images/dnxlogo_v2.png" height="40px"
-                        style="display: block;"></a>
-                {% if navi %}
+                <a href="/dashboard" class="brand-logo"><img src="/static/assets/images/dnxlogo_v2.png"
+                        height="40px" style="display: block;"></a>
+
+                {% if login_btn %}
+                <a href="login"><i class="material-icons left">send</i>Login</a>
+
+                {% elif navi %}
+                <a href="dashboard" data-target="mobile-nav" class="sidenav-trigger show-mobile-menu">
+                    <i class="material-icons">menu</i>
+                </a>
+
                 {% if user_role == 'admin' %}
-                <a href="dashboard" data-target="mobile-nav" class="sidenav-trigger show-mobile-menu"><i
-                        class="material-icons">menu</i></a>
                 <ul class="right remove-big-menu">
                     <li><a href="dashboard"><i class="material-icons left">dashboard</i>Dashboard</a></li>
                     <li><a href="" class="dropdown-trigger" data-target="settings-dropdown"><i
@@ -25,23 +31,20 @@
                             Device <i class="material-icons right">arrow_drop_down</i></a></li>
                     <li><a href="logout"><i class="material-icons left">logout</i>Logout</a></li>
                 </ul>
+
                 {% elif user_role == 'user' %}
-                <a href="dashboard" data-target="mobile-nav-user" class="sidenav-trigger"><i
-                        class="material-icons">menu</i></a>
                 <ul class="right remove-big-menu">
                     <li><a href="dashboard"><i class="material-icons left">dashboard</i>Dashboard</a></li>
                     <li><a href="system/reports"><i class="material-icons left">assignment_late</i> Reports</a></li>
                     <li><a href="logout"><i class="material-icons left">logout</i>Logout</a></li>
                 </ul>
-                {% elif login_btn %}
-                <a href="login"><i class="material-icons left">send</i>Login</a>
                 {% endif %}
                 {% endif %}
             </div>
         </div>
     </nav>
 
-    <!-- dropdown -->
+    <!-- full nav dropdown - large screens -->
     <ul id="settings-dropdown" class="dropdown-content">
         <li><a href="settings/dns"><i class="material-icons left">dns</i> DNS</a></li>
         <li><a href="settings/dhcp"><i class="material-icons left">filter_b_and_w</i> DHCP</a></li>
@@ -71,7 +74,7 @@
     </ul>
     <!-- end dropdown-->
 
-    <!-- sidenav -->
+    <!-- sidenav - small screens -->
     <ul class="sidenav" id="mobile-nav">
         <li><a href="dashboard"><i class="material-icons left">dashboard</i>Dashboard</a></li>
         <li><a href="" class="dropdown-trigger" data-target="sidenav-settings-dropdown"><i

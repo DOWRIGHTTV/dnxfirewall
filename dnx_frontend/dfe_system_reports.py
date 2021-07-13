@@ -12,15 +12,23 @@ from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_system_info import Interface, System, Services
 from dnx_database.ddb_connector_sqlite import DBConnector
 
-def load_page():
-    return get_table_data(action='blocked', table='dnsproxy', method='last')
+def load_page(uri_query):
+    # if sent from dashboard link, infected clients table will open directly.
+    if uri_query.get('view_clients', None):
+        return load_infected_clients()
+
+    return get_table_data(action='blocked', table='dnsproxy', method='last'), '1', '1'
 
 def update_page(form):
     table_type = form.get('table', 'db_time')
     selected_num = {
         'db_time': '1', 'db_count': '2', 'dv_time': '3', 'dv_count': '4',
-        'ad_time': '5', 'ad_count': '6', 'ip_hosts_time':'7' , 'ips_time':'8',
-        'ic_all': '9'
+        'ad_time': '5', 'ad_count': '6',
+
+        'iph_block_time':'7',  'iph_view_time':'8',  'iph_all_time':'9',
+
+        'ips_time':'10',
+        'ic_all': '11'
     }
 
     # TODO: bring validation up to speed (ensure host is valid mac format). make database raise validation error if the when removing
@@ -38,13 +46,13 @@ def update_page(form):
 
             FirewallDB.commit_entries()
 
-    if (table_type in ['db_time', 'db_count']):
+    if (table_type in ['db_time', 'db_count', 'iph_block_time']):
         action = 'blocked'
 
-    elif (table_type in ['dv_time', 'dv_count']):
+    elif (table_type in ['dv_time', 'dv_count', 'iph_view_time']):
         action = 'allowed'
 
-    elif (table_type in ['ad_time', 'ad_count']):
+    elif (table_type in ['ad_time', 'ad_count', 'iph_all_time']):
         action = 'all'
 
     #domains blocked, viewed, or both
@@ -55,17 +63,16 @@ def update_page(form):
     elif (table_type in ['db_count', 'dv_count', 'ad_count']):
         return get_table_data(action, table='dnsproxy', method='top'), menu_option, '1'
 
-    elif (table_type in ['ip_hosts_time']):
-        return get_table_data(action='all', table='ipproxy', method='last'), menu_option, '2'
+    elif (table_type in ['iph_block_time', 'iph_view_time', 'iph_all_time']):
+        return get_table_data(action=action, table='ipproxy', method='last'), menu_option, '2'
 
     elif (table_type in ['ips_time']):
         return get_table_data(action='all', table='ips', method='last'), menu_option, '3'
 
     elif (table_type in ['ic_all'] or 'i_client_remove' in form):
-        dhcp_server = load_configuration('dhcp_server')['dhcp_server']
-        users = dhcp_server['reservations']
 
-        return get_table_data(action='all', table='infectedclients', method='last', users=users), menu_option, '4'
+        # created function so load page could reuse code.
+        return load_infected_clients()
 
 def get_table_data(action, *, table, method, users=None):
     '''will query the database by using getattr(FirewallDB, f'query_{method}') on DB Connector context.
@@ -90,3 +97,9 @@ def format_row(row, users):
 
     entries.append(last_seen)
     return [str(x).lower().replace('_', ' ') for x in entries]
+
+def load_infected_clients():
+    dhcp_server = load_configuration('dhcp_server')['dhcp_server']
+    users = dhcp_server['reservations']
+
+    return get_table_data(action='all', table='infectedclients', method='last', users=users), '11', '4'

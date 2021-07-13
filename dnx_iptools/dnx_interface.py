@@ -130,10 +130,12 @@ def get_netmask(*, interface):
     finally:
         s.close()
 
-def get_arp_table(*, host=None):
+def get_arp_table(*, modify=False, host=None):
     '''return arp table as dictionary
 
-        {IPv4Address(ip): mac}
+        {IPv4Address(ip): mac} = get_arp_table(modify=True)
+
+    if modify is set to True, the ":" will be removed from the mac addresses.
 
     if host is specified, return just the mac address of the host sent in. If no host is present
     returns None
@@ -145,10 +147,15 @@ def get_arp_table(*, host=None):
             csv.reader(arp_table, skipinitialspace=True, delimiter=' ')
         )
 
-    arp_table = {IPv4Address(a[0]): a[3].replace(':', '') for a in arp_table[1:]}
+    if (modify):
+        arp_table = {IPv4Address(a[0]): a[3].replace(':', '') for a in arp_table[1:]}
+
+    else:
+        arp_table = {IPv4Address(a[0]): a[3] for a in arp_table[1:]}
+
+
     if (host):
         return arp_table.get(host, None)
 
     else:
         return arp_table
-

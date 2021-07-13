@@ -185,7 +185,7 @@ def dhcp_general_settings(server_settings):
     # clamping range into lan/dmz class C's. this will have to change later if more control over interface
     # configurations is implemented.
     for field in lease_range.values():
-        print(type(field))
+        # print(type(field))
         if (field not in range(2,255)):
             raise ValidationError('DHCP ranges must be between 2 and 254.')
 
@@ -335,21 +335,24 @@ def del_nat_rule(nat_rule):
     ).stdout.splitlines()[1:]
 
     rule_count = len(output)
-    if (convert_int(nat_rule.position) not in range(1, rule_count)):
+    if (convert_int(nat_rule.position) not in range(1, rule_count+1)):
         raise ValidationError('Selected rule is not valid and cannot be removed.')
 
 def add_dnat_rule(nat_rule):
     # ensuring all necessary fields are present in the namespace before continuing.
     valid_fields = [
-        'src_zone', 'dst_port', 'host_ip', 'host_port', 'protocol'
+        'src_zone', 'dst_ip', 'dst_port', 'host_ip', 'host_port', 'protocol'
     ]
     if not all([hasattr(nat_rule, x) for x in valid_fields]):
         raise ValidationError('Invalid form.')
 
+    if (not nat_rule.dst_ip and nat_rule.dst_port in ['443', '80']):
+        raise ValidationError('Ports 80,443 cannot be set as destination port when destination IP is not set.')
+
     if (nat_rule.protocol == 'icmp'):
-        open_protocols = load_configuration('ips.json')['ips']
-        icmp_allow = open_protocols['open_protocols']['icmp']
-        if (icmp_allow):
+        open_protocols = load_configuration('ips')['ips']
+
+        if (open_protocols['open_protocols']['icmp']):
             return 'Only one ICMP rule can be active at a time. Remove existing rule before adding another.'
 
 def add_snat_rule(nat_rule):
@@ -429,7 +432,7 @@ def domain_category_keywords(categories):
 def dns_record_add(dns_record_name):
     if (not _VALID_DOMAIN.match(dns_record_name)
             and not dns_record_name.isalnum()):
-        raise ValidationError('local dns record is not valid.')
+        raise ValidationError('Local dns record is not valid.')
 
 def dns_record_remove(dns_record_name):
     dns_server = load_configuration('dns_server')['dns_server']

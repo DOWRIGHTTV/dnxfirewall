@@ -4,7 +4,7 @@
     <div class="container">
         <h4 class="red-text">Blocked (Last 30 Days)</h4>
         <div class="row row-flex">
-            <div class="col s12 m4">
+            <div class="col s12 m6">
                 <div class="card-panel card-panel-eql">
                     <i class="material-icons large red-text">info</i><br>
                     <h4>Unique Domains</h4>
@@ -13,35 +13,7 @@
                     </ul>
                 </div>
             </div>
-            {% if dashboard['infected_hosts'] %}
-            <div class="col s12 m4">
-                <div class="card-panel card-panel-eql">
-                    <i class="material-icons large red-text">report_problem</i><br>
-                    <h4>Infected Hosts</h4>
-                    <ul>
-                        {% for value in dashboard['infected_hosts'] %}
-                        <li>{{value[0]}} | {{value[1]}} | {{value[3]}}</span></li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-            {% else %}
-            <div class="col s12 m4">
-                <div class="card-panel card-panel-eql">
-                    <i class="material-icons large red-text">error</i><br>
-                    <h4>Top Domains</h4>
-                    <ul>
-                        {% for domain, category in dashboard['top_domains'].items() %}
-                        <li>
-                            <span style="float: left">{{domain}}</span><span class="badge">{{category}}</span>
-                        </li>
-                        <br>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-            {% endif %}
-            <div class="col s12 m4">
+            <div class="col s12 m6">
                 <div class="card-panel card-panel-eql">
                     <i class="material-icons large red-text">cancel</i><br>
                     <h4>Total Requests</h4>
@@ -50,6 +22,48 @@
                     </ul>
                 </div>
             </div>
+            <div class="col s12 m12">
+                <div class="card-panel card-panel-eql">
+                    <i class="material-icons large red-text">error</i><br>
+                    <h4>Most Searched</h4>
+                    <ul>
+                        {% if not dashboard['top_domains'] %}
+                        <li>
+                            <span style="float: center">No domains blocked </span>
+                        </li>
+                        {% else %}
+                        {% for domain, category in dashboard['top_domains'].items() %}
+                        <li>
+                            <span style="float: left">{{domain}}</span><span class="badge">{{category}}</span>
+                        </li>
+                        <br>
+                        {% endfor %}
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            {% if dashboard['infected_hosts']%}
+            <div class="col s12 m12">
+                <div class="card-panel card-panel-eql">
+                    <i class="material-icons large red-text">report_problem</i><br>
+                    <h4>Infected Hosts</h4>
+                    <div class="row">
+                        <ul>
+                            {% for value in dashboard['infected_hosts'] %}
+                            <li>{{value[0]}} | {{value[1]}} | {{value[3]}}</span></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <div class="row">
+                        <div class="col s8 m4 offset-s2 offset-m4">
+                            <a href="/system/reports?view_clients=1" target="_blank">
+                                <button class="btn waves-effect waves-light">Open Reports</button>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </section>

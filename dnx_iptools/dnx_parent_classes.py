@@ -45,7 +45,6 @@ class Listener:
         '_intf', '_intf_ip', '_threaded', '_name',
 
         # private vars
-        '__epoll', '__registered_socks',
         '__epoll_poll', '__registered_socks_get'
     )
 
@@ -271,8 +270,9 @@ class ProtoRelay:
             else:
                 self._increment_fail_detection()
 
-                # NOTE: temporary | identifying connection version to terminal.
-                write_err(f'SENT {self._relay_conn.version}[{attempt}]: {client_query.request}\n') # pylint: disable=no-member
+                # NOTE: temporary | identifying connection version to terminal. when removing consider having the relay protocol
+                # show in the webui > system reports.
+                write_log(f'SENT {self._relay_conn.version}[{attempt}]: {client_query.request}\n') # pylint: disable=no-member
                 break
 
     def _recv_handler(self):
@@ -594,7 +594,7 @@ class RawPacket:
         udp_len       = udp_header[2]
         self.udp_chk  = udp_header[3]
 
-        self.udp_len = udp_len
+        self.udp_len     = udp_len
         self.udp_header  = data[:8]
         self.udp_payload = data[8:udp_len]
 

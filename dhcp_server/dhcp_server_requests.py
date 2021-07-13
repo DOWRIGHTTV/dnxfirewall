@@ -303,7 +303,7 @@ class ClientRequest:
         with self._Server.options_lock:
             send_data.append(self._generate_server_options(response_mtype))
 
-        self.send_data = b''.join(send_data)
+        self.send_data = byte_join(send_data)
 
     def _generate_dhcp_header(self):
         p_time = int(fast_time() - self.init_time)
@@ -331,7 +331,7 @@ class ClientRequest:
 
         response_options.append(double_byte_pack(255, 0))
 
-        return b''.join(response_options)
+        return byte_join(response_options)
 
     # NOTE: recently changed this to ensure reversations arent used if they are for a network
     # different that what the request came in on.

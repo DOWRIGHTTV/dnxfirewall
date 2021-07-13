@@ -62,7 +62,7 @@ class UDPRelay(ProtoRelay):
             try:
                 data_from_server = conn_recv(1024)
             except (socket.timeout, OSError) as e:
-                write_err(f'RCV SOCKET ERROR: {e}\n')
+                Log.error(f'RCV SOCKET ERROR: {e}')
                 break
             else:
                 self._reset_fail_detection()

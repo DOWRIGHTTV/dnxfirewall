@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from dnx_configure.dnx_constants import LOG, DNS_CAT
+from dnx_configure.dnx_constants import LOG, DNS_CAT, str_join
 from dnx_configure.dnx_namedtuples import DNS_LOG, INFECTED_LOG
 from dnx_logging.log_main import LogHandler
 from dnx_iptools.dnx_interface import get_arp_table
@@ -53,4 +53,4 @@ class Log(LogHandler):
             f'filter={log.reason}; action={log.action}'
         ]
 
-        return ''.join(message)
+        return str_join(message)

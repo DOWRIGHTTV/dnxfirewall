@@ -53,12 +53,15 @@ class IPProxy(NFQueue):
 
     # if nothing is enabled the packet will be forwarded based on mark of packet.
     def _pre_check(self, nfqueue):
+        # marked for parsing
         if (self.inspect_on or LanRestrict.is_active):
-            return True # marked for parsing
+            return True
+
         else:
             self.forward_packet(nfqueue, nfqueue.get_mark())
 
-        return False # parse not needed
+        # parse not needed
+        return False
 
     def _pre_inspect(self, packet):
         # if local ip is not in the ip whitelist, the packet will be dropped while time restriction is active.
@@ -66,8 +69,9 @@ class IPProxy(NFQueue):
                 and packet.src_ip not in self.ip_whitelist):
             packet.nfqueue.drop()
 
+        # marked for further inspection
         elif (self.inspect_on):
-            return True # marked for further inspection
+            return True
 
         # just in case proxy was disabled mid parse of packets
         else:
@@ -114,12 +118,13 @@ class Inspect:
         self = cls()
         action, category = self._ip_inspect(self._Proxy, packet)
 
-        self._Proxy.forward_packet(packet.nfqueue, packet.zone, action)
-#        self._forward_packet(packet.nfqueue, packet.zone, action)
+        # ip proxy will handle the drop of packet for icmp packets that do not need to be inspected by ips
+        if ((action is CONN.DROP and packet.protocol is PROTO.ICMP)
+                and (packet.icmp_type is not ICMP.ECHO or packet.direction is DIR.OUTBOUND)):
+            packet.nfqueue.drop()
 
-        # sending reset
-        if (action is CONN.DROP):
-            self._prepare_and_send(packet)
+        else:
+            self._Proxy.forward_packet(packet.nfqueue, packet.zone, action)
 
         # NOTE: this reduces overall logging when not blocking, by only logging for info if log level is
         # set high enough AND the remote ip falls within a country or reputation category. we could remove
@@ -135,31 +140,34 @@ class Inspect:
         if (Proxy.cat_enabled):
             category = IPP_CAT(_recursive_binary_search(packet.bin_data))
 
-            Log.debug(f'CAT LOOKUP | {packet.conn.tracked_ip}: {category}')
-
             # if category match, and category is configured to block in direction of conn/packet
             if (category is not IPP_CAT.NONE) and self._blocked_ip(category, packet):
                 action = CONN.DROP
 
-        # will cross reference geolocation network if enabled at not already blocked
+            Log.debug(f'CAT LOOKUP | {packet.conn.tracked_ip}: {category}')
+
+        # will cross reference geolocation network if enabled and not already blocked
         # NOTE: this is now using imported cython function factory
         if (action is CONN.ACCEPT and Proxy.geo_enabled):
             category = GEO(_linear_binary_search(packet.bin_data))
 
-            Log.debug(f'GEO LOOKUP | {packet.conn.tracked_ip}: {category}')
-
             # if category match and country is configurted to block in direction of conn/packet
             if (category is not GEO.NONE) and self._blocked_country(category, packet.direction):
                 action = CONN.DROP
+
+            Log.debug(f'GEO LOOKUP | {packet.conn.tracked_ip}: {category}')
 
         # NOTE: debugs are for testing.
         if (action is CONN.ACCEPT):
             Log.debug(f'IP PROXY | ACCEPTED | {packet.conn.local_ip} | {packet.conn.tracked_ip} | {packet.direction}')
 
         # if marked for drop, but ids mode is enabled decision will get changed to ACCEPT.
-        elif (action is CONN.DROP and Proxy.ids_mode): # NOTE: should only match if IDS mode enabled and sig match + cat enabled(direction match included)
-            Log.debug(f'IP PROXY | DETECTED | {packet.conn.local_ip} | {packet.conn.tracked_ip} | {packet.direction}')
+        # NOTE: should only match if IDS mode enabled and sig match + cat enabled(direction match included)
+                # this logic is also broken now that we are allowing all packets to be logged under informational.
+        elif (action is CONN.DROP and Proxy.ids_mode):
             action = CONN.ACCEPT
+
+            Log.debug(f'IP PROXY | DETECTED | {packet.conn.local_ip} | {packet.conn.tracked_ip} | {packet.direction}')
 
         elif (action is CONN.DROP):
             Log.debug(f'IP PROXY | DROPPED | {packet.conn.local_ip} | {packet.conn.tracked_ip} | {packet.direction}')
@@ -171,9 +179,15 @@ class Inspect:
         # flooring cat to its cat group for easier matching of tor nodes
         cat_group = IPP_CAT((category // 10) * 10)
         if (cat_group is IPP_CAT.TOR):
-            block_direction = self._Proxy.cat_settings[category]
-            if (packet.conn.local_ip in self._Proxy.tor_whitelist):
+
+            # only outbound traffic will match tor whitelist since this override is designed for a user to access
+            # tor and not to open a local machine to tor traffic.
+            # TODO: evaluate if we should have an inbound override, though i dont know who would ever want random
+            # tor users accessing their servers.
+            if (packet.direct is DIR.OUTBOUND and packet.conn.local_ip in self._Proxy.tor_whitelist):
                 return False
+
+            block_direction = self._Proxy.cat_settings[category]
 
         else:
             block_direction = self._Proxy.cat_settings[cat_group]

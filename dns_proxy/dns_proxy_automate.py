@@ -37,6 +37,9 @@ class Configuration:
     def __init__(self, name):
         self._initialize = Initialize(Log, name)
 
+        # this is setting the reference for the entire process/module since it is stored as a class variable.
+        ConfigurationManager.set_log_reference(Log)
+
     @classmethod
     def proxy_setup(cls, DNSProxy):
         '''start threads for tasks required by the DNS proxy. blocking until settings are loaded/initialized.'''
@@ -163,7 +166,11 @@ class Configuration:
         # if file has been modified the modified list will be referenced to make in place changes to memory
         # list, specifically around adding new rules and the new modified time will be returned. if not modified,
         # the last modified time is returned and not changes are made.
-        modified_time = os.stat(f'{HOME_DIR}/dnx_system/data/{cfg_file}')
+        try:
+            modified_time = os.stat(f'{HOME_DIR}/dnx_system/data/usr/{cfg_file}')
+        except FileNotFoundError:
+            modified_time = os.stat(f'{HOME_DIR}/dnx_system/data/{cfg_file}')
+
         if (modified_time == last_modified_time):
             return last_modified_time
 
@@ -360,7 +367,7 @@ class Reachability:
         self._tls_context.load_verify_locations(CERTIFICATE_STORE)
 
     def _set_udp_query(self):
-        self._udp_query = b''.join([
+        self._udp_query = byte_join([
             create_dns_query_header(dns_id=69, cd=1),
             b'\x07updates\x06dnxsec\x03com\x00\x00\x01\x00\x01'
         ])

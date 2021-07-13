@@ -17,6 +17,8 @@ from dnx_configure.dnx_exceptions import ValidationError
 from dnx_configure.dnx_iptables import IPTableManager
 from dnx_configure.dnx_system_info import System, Services
 
+NETMASKS = [*list(reversed(range(24,33))), 16, 8, 0]
+
 valid_zones = {
     'GLOBAL_INTERFACE': '1',
     'WAN_INTERFACE': '2',
@@ -31,16 +33,16 @@ zone_convert = {
     '4': 'LAN_INTERFACE'
 }
 
-valid_standard_rule_fields = [
+valid_standard_rule_fields = {
     'position','src_ip','src_netmask','dst_ip','dst_netmask','protocol','dst_port'
-]
+}
 
 def load_page():
     return {
         'firewall_rules': System.firewall_rules(),
         'dmz_dnat_rules': System.nat_rules(),
         'local_snat_rules': System.nat_rules(nat_type='SRCNAT'),
-        'netmasks': list(reversed(range(24,33)))
+        'netmasks': NETMASKS
     }
 
 # TODO: fix inconcistent variable names for nat rules
@@ -69,14 +71,12 @@ def update_page(form):
 
     # updating page data then returning. this is because we need to serve the content with the newly added
     # configuration item.
-    page_data = None
-    if not error:
-        page_data = {
-            'firewall_rules': System.firewall_rules(chain=zone),
-            'dmz_dnat_rules': System.nat_rules(),
-            'local_snat_rules': System.nat_rules(nat_type='SRCNAT'),
-            'netmasks': list(reversed(range(24,33)))
-        }
+    page_data = {
+        'netmasks': NETMASKS,
+        'firewall_rules': System.firewall_rules(chain=zone),
+        'dmz_dnat_rules': System.nat_rules(),
+        'local_snat_rules': System.nat_rules(nat_type='SRCNAT')
+    }
 
     print(f'RETURNING: {page_data}')
 
@@ -85,8 +85,7 @@ def update_page(form):
 def _firewall_rules(zone, action, form):
     error = None
     # moving form data into a simple namespace. this will allow us to validate and mutate it easier
-    # that its current state of immutable dict.
-    print(form)
+    # than its current state of immutable dict.
     fields = SimpleNamespace(**form)
     if (action == 'remove'):
         try:
@@ -134,6 +133,7 @@ def _firewall_rules(zone, action, form):
 
 def _dnat_rules(zone, action, form):
     error = None
+
     fields = SimpleNamespace(**form)
     if (action == 'remove'):
         try:
@@ -155,6 +155,9 @@ def _dnat_rules(zone, action, form):
 
             validate.ip_address(fields.host_ip)
 
+            if (fields.dst_ip != ''):
+                validate.ip_address(fields.dst_ip)
+
         except ValidationError as ve:
             error = ve
         else:
@@ -169,9 +172,8 @@ def _dnat_rules(zone, action, form):
 
 def _snat_rules(zone, action, form):
     error = None
-    print(333333, form)
-    fields = SimpleNamespace(**form)
 
+    fields = SimpleNamespace(**form)
     # TODO: make this code for snat (currently using dnat code as template)
     if (action == 'remove'):
         try:

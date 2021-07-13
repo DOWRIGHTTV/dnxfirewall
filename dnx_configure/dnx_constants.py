@@ -9,8 +9,8 @@ from ipaddress import IPv4Address as _IPv4Address
 
 fast_time  = _time.time
 fast_sleep = _time.sleep
-def write_err(err):
-    _sys.stdout.write(f'{err}\n')
+def write_log(entry):
+    _sys.stdout.write(f'{entry}\n')
     _sys.stdout.flush()
 
 byte_join = b''.join
