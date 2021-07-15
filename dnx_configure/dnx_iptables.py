@@ -118,11 +118,12 @@ class _Defaults:
 
         # IPS proper
         run(f'iptables -A FORWARD -m mark --mark {SEND_TO_IPS} -j NFQUEUE --queue-num 2', shell=True) # IPS TCP/UDP
-        # this should now be handled by the ip proxy. it will forward to the ips if needed. this was here to fill the gap when icmp
-        # was bypassing the ip proxy.
-#        run(f'iptables -A FORWARD -p icmp -m icmp --icmp-type 8 -m mark --mark {WAN_IN} -j NFQUEUE --queue-num 2', shell=True) # IPS ICMP - only type 8 will be checked, rest forwaded
 
-        # block WAN > LAN | explicit deny nat into LAN as an extra safety mechanism. NOTE: this should be evaled to see if this should be optional.
+        # NOTE: this should now be handled by the ip proxy. it will forward to the ips if needed. this was here to fill the gap when icmp
+        # was bypassing the ip proxy.
+        # run(f'iptables -A FORWARD -p icmp -m icmp --icmp-type 8 -m mark --mark {WAN_IN} -j NFQUEUE --queue-num 2', shell=True) # IPS ICMP - only type 8 will be checked, rest forwaded
+
+        # block WAN > LAN | implicit deny nat into LAN for users as an extra safety mechanism. NOTE: this should be evaled to see if this should be optional.
         run(f'iptables -A FORWARD -i {self._wan_int} -o {self._lan_int} -m mark --mark {SEND_TO_FIREWALL} -j DROP', shell=True)
 
         # NOTE: GLOBAL FIREWALL
@@ -151,34 +152,54 @@ class _Defaults:
         run(' iptables -P INPUT DROP', shell=True) # default DROP
         run(' iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT', shell=True) # Tracking connection state for return traffic from WAN back Firewall itself
 
-#        run(' iptables -A INPUT -p tcp --dport 22 -j ACCEPT', shell=True) # NOTE: SSH CONN FOR LAB TESTING
-        run(' iptables -A INPUT -p udp -d 127.0.0.53 --dport 53 -j ACCEPT', shell=True) # NOTE: TEMP FOR UBUNTU DNS SERVICE
+        # filtering out broadcast packets to the wan. These can be prevelent if in a double nat scenario and would never be
+        # used for anything. the ips current does checks to filter this. evaluate/see if we can depricate that for this.
+        run(f'iptables -A INPUT -i {self._wan_int} -m addrtype --dst-type BROADCAST -j DROP', shell=True)
 
-        # TODO: this should probably be modified for zone functionality, using WAN_ZONE mark. input mangle rule would need adjusting too.
-        # required for portscan and ddos protection logic
+        # NOTE: SSH CONN FOR LAB TESTING
+        # run(' iptables -A INPUT -p tcp --dport 22 -j ACCEPT', shell=True)
+
+        # NOTE: TEMP FOR UBUNTU DNS SERVICE
+        run(' iptables -A INPUT -p udp -d 127.0.0.53 --dport 53 -j ACCEPT', shell=True)
+
         run(f'iptables -A INPUT -i {self._wan_int} -p tcp -m mark --mark {SEND_TO_IPS} -j NFQUEUE --queue-num 2', shell=True)
         run(f'iptables -A INPUT -i {self._wan_int} -p udp -m mark --mark {SEND_TO_IPS} -j NFQUEUE --queue-num 2', shell=True)
         run(f'iptables -A INPUT -i {self._wan_int} -p icmp -m icmp --icmp-type 8 -m mark --mark {SEND_TO_IPS} -j NFQUEUE --queue-num 2', shell=True)
 
-        # dnxfirewall firewall services access (all local network interfaces). dhcp, dns, icmp, etc.
-        run(f'iptables -A INPUT ! -i {self._wan_int} -p icmp --icmp-type any -j ACCEPT', shell=True) # Allow ICMP to Firewall
-        run(f'iptables -A INPUT ! -i {self._wan_int} -s 127.0.0.1/24 -d 127.0.0.1/24 -j ACCEPT', shell=True) # PGRES SQL/ LOCAL SOCKETS
-        run(f'iptables -A INPUT ! -i {self._wan_int} -p udp --dport 67 -j ACCEPT', shell=True) # DHCP Server listening port
-        run(f'iptables -A INPUT ! -i {self._wan_int} -p udp --dport 53 -j ACCEPT', shell=True) # DNS Query(To firewall DNS Relay) is allowed in,
-        run(f'iptables -A INPUT ! -i {self._wan_int} -p tcp --dport 443 -j ACCEPT', shell=True) # Allowing HTTPS to Firewalls Web server (internal only)
-        run(f'iptables -A INPUT ! -i {self._wan_int} -p tcp --dport 80 -j ACCEPT', shell=True) # Allowing HTTP to Firewalls Web server (internal only)
+        # dnxfirewall services access (all local network interfaces). dhcp, dns, icmp, etc.
+
+        # implicit ICMP allow for users
+        run(f'iptables -A INPUT ! -i {self._wan_int} -p icmp --icmp-type any -j ACCEPT', shell=True)
+
+        # local socket communication
+        run(f'iptables -A INPUT ! -i {self._wan_int} -s 127.0.0.1/24 -d 127.0.0.1/24 -j ACCEPT', shell=True)
+
+        # DHCP server listener
+        run(f'iptables -A INPUT ! -i {self._wan_int} -p udp --dport 67 -j ACCEPT', shell=True)
+
+        # implicit DNS allow for users
+        run(f'iptables -A INPUT ! -i {self._wan_int} -p udp --dport 53 -j ACCEPT', shell=True)
+
+        # implicit http/s allow to dnx-web for users
+        run(f'iptables -A INPUT ! -i {self._wan_int} -p tcp --dport 443 -j ACCEPT', shell=True)
+        run(f'iptables -A INPUT ! -i {self._wan_int} -p tcp --dport 80 -j ACCEPT', shell=True)
 
     def main_output_set(self):
-        run('iptables -P OUTPUT ACCEPT', shell=True) # Default ALLOW
+
+        # default allow. NOTE: isnt this set by default?
+        run('iptables -P OUTPUT ACCEPT', shell=True)
 
     # TODO: implement commands to check source and dnat changes in nat table. what does this even mean?
     def nat(self):
-        # rules to check custom nat chains
+        # creating custom nat chains
         run(f'iptables -t nat -I POSTROUTING -j SRCNAT', shell=True)
         run(f'iptables -t nat -I PREROUTING -j DSTNAT', shell=True)
 
-        run(f'iptables -t nat -A POSTROUTING -o {self._wan_int} -j MASQUERADE', shell=True) # Main masquerade rule. Inside to Outside
-        run(f'iptables -t nat -I PREROUTING ! -i {self._wan_int} -p udp --dport 53 -j REDIRECT --to-port 53', shell=True) # internal zones dns redirct into proxy
+        # implicit masquerade rule for users. lan/dmz > wan
+        run(f'iptables -t nat -A POSTROUTING -o {self._wan_int} -j MASQUERADE', shell=True)
+
+        # internal zones dns redirct into proxy
+        run(f'iptables -t nat -I PREROUTING ! -i {self._wan_int} -p udp --dport 53 -j REDIRECT --to-port 53', shell=True)
 
 
 class IPTableManager:

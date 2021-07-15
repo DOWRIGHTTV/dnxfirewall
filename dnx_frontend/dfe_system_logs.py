@@ -8,12 +8,12 @@ sys.path.insert(0, HOME_DIR)
 from dnx_configure.dnx_file_operations import tail_file
 from dnx_configure.dnx_system_info import System
 
-def load_page():
+def load_page(uri_query):
     file_path = f'{HOME_DIR}/dnx_system/log/combined'
 
     log_files = [f'{file_path}/{file}' for file in reversed(os.listdir(file_path)[-7:])]
 
-    return get_log_entries(log_files)
+    return get_log_entries(log_files), '1', None
 
 def update_page(form):
     log_type = form.get('table', 'combined')

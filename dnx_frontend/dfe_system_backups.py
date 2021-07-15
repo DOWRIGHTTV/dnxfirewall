@@ -10,14 +10,14 @@ import dnx_configure.dnx_validate as validate
 
 from dnx_configure.dnx_constants import CFG, INVALID_FORM
 from dnx_configure.dnx_exceptions import ValidationError
+from dnx_configure.dnx_validate import convert_int, get_convert_int
 from dnx_configure.dnx_system_info import System
-from dnx_backups.bck_backups import BackupService
+from dnx_backups.bck_backups import BackupHandler
 
 _BACKUP_DISABLED = True
 
 def load_page():
-    backups_info = {}
-    current_backups = System.backups()
+    backups_info, current_backups = {}, System.backups()
 
     for backup, c_time in current_backups.items():
         c_time = System.calculate_time_offset(c_time)
@@ -29,31 +29,30 @@ def load_page():
 
 ## Called when front end post, parsing web forms, calling backup methods ##
 def update_page(form):
+
     if (_BACKUP_DISABLED):
         return 'configuration backups are currently disabled.'
 
-    elif ('cfg_backup_create' in form):
-        backup_type = form.get('cfg_backup_create')
-        name = form.get('backup_name', None)
-        action = CFG.ADD
-
-    elif ('cfg_backup_remove' in form):
-        backup_type = form.get('cfg_backup_remove')
-        name = form.get('backup_name', None)
-        action = CFG.DEL
-
-    elif ('cfg_backup_restore' in form):
-        backup_type = form.get('cfg_backup_restore')
-        name = form.get('backup_name', None)
-        action = 'RESTORE'
-
-    if (not backup_type or not name):
+    backup_type = get_convert_int(form, 'cfg_backup')
+    try:
+        backup_action = CFG(backup_type)
+    except:
         return INVALID_FORM
 
+    name = form.get('backup_name', None)
+
+    # only checking name if creating new backup
+    if (backup_action is CFG.ADD):
+        if (not name):
+            return INVALID_FORM
+
+        else:
+            try:
+                validate.standard(name)
+            except ValidationError as ve:
+                return ve
+
     try:
-        validate.standard(name)
-    except ValidationError as ae:
-        error = ae
-    else:
-        # TODO: fix this up one day | backups
-        BackupService().backup(backup_type, action, name)
+        BackupHandler.cfg_backup(name, backup_action)
+    except ValidationError as ve:
+        return ve

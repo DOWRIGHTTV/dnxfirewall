@@ -55,6 +55,7 @@ class DHCPServer(Listener):
         ClientRequest.set_server_reference(cls)
         cls.set_proxy_callback(func=cls.handle_dhcp)
 
+        # only local server ips or no server ip specified are valid. this is to filter responses to other servers within broadcast domain.
         cls._valid_idents = [*[intf['ip'].ip for intf in cls.intf_settings.values()], None]
 
     def _pre_inspect(self, packet):
@@ -190,13 +191,16 @@ class DHCPServer(Listener):
         # all cases, when 'giaddr' is zero, the server broadcasts any DHCPNAK
         # messages to 0xffffffff.
 
-    @staticmethod
-    def listener_sock(intf, intf_ip):
+    @classmethod
+    def listener_sock(cls, intf, intf_ip):
         l_sock = socket(AF_INET, SOCK_DGRAM)
         l_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR,1)
         l_sock.setsockopt(SOL_SOCKET, SO_BROADCAST,1)
         l_sock.setsockopt(SOL_SOCKET, SO_BINDTODEVICE, f'{intf}\0'.encode('utf-8'))
         l_sock.bind((str(INADDR_ANY), PROTO.DHCP_SVR))
+
+        # used for converting interface identity to socket object file descriptor number
+        cls.intf_settings[intf]['fileno'] = l_sock.fileno()
 
         return l_sock
 

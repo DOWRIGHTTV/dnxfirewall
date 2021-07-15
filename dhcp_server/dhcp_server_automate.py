@@ -24,6 +24,8 @@ _NULL_LEASE = (DHCP.AVAILABLE, None, None)
 ConfigurationManager.set_log_reference(Log)
 
 
+# TODO: figure out how to make dhcp interface disabling done in memory so a server restart wont be necessary.
+    # this could likely be done at the pre inspect in the server to silenty drop packets from a non enabled interface.
 class Configuration:
     _setup = False
 
@@ -51,15 +53,27 @@ class Configuration:
     def _get_settings(self, cfg_file):
         dhcp_settings = load_configuration(cfg_file)['dhcp_server']
 
-        # TODO: add a change detection check??
-
         # updating user configuration items per interface in memory.
         for settings in dhcp_settings['interfaces'].values():
-            # NOTE: probably temporary. same as below
-            if not settings['enabled']: continue
 
             # NOTE ex. ident: eth0, lo, enp0s3
             intf_identity = settings['ident']
+
+            # ternary to improve condition readability and sound more natural.
+            disabled = False if settings['enabled'] else True
+            enabled  = True if settings['enabled'] else False
+
+            # TODO: compare interface status in memory with what is loaded in. if it is different then the setting was just
+            # changed and needs to be acted on. implement register/unregister methods available to external callers and use
+            # them to act on the disable of an interfaces dhcp service. this should also be the most efficient in that if
+            # all listeners are disabled only the automate class will be actively processing on file changes.
+            # NOTE: .get is to cover server startup. do not change. test functionality.
+            sock_fd = self.DHCPServer.intf_settings['fileno']
+            if (disabled and self.DHCPServer.intf_settings[intf_identity].get('enabled', True)):
+                self.DHCPServer.deregister(sock_fd, intf_identity)
+
+            elif (enabled and not self.DHCPServer.intf_settings[intf_identity].get('enabled', False)):
+                self.DHCPServer.register(sock_fd, intf_identity)
 
             # identity will be kept in settings just in case, though they key is the identity also.
             self.DHCPServer.intf_settings[intf_identity].update(settings)
@@ -75,7 +89,7 @@ class Configuration:
         # if server options have not changed, the function can return
         if (server_options == self.DHCPServer.options): return
 
-        # will wait for 2 threads to checking before running code. this will allow the necessary settings
+        # will wait for 2 threads to check in before running code. this will allow the necessary settings
         # to be initialized on startup before this thread continues.
         self.initialize.wait_in_line(2)
 
@@ -84,13 +98,14 @@ class Configuration:
             # iterating over server interfaces and populated server option data sets NOTE: consider merging server
             # options with the interface settings since they are technically bound.
             for intf, settings in self.DHCPServer.intf_settings.items():
+
                 for _intf in interfaces.values():
 
                     # ensuring the iterfaces match since we cannot guarantee order
                     if (intf != _intf['ident']): continue
 
                     # NOTE: should be temporary, while dmz is not fully implemented
-                    if not settings['enabled']: continue
+                    # if not settings['enabled']: continue
 
                     # converting keys to integers (json keys are string only), then packing any
                     # option value that is in ip address form to raw bytes.
@@ -160,15 +175,17 @@ class Configuration:
 
         # interface ident eg. eth0
         for intf in self.DHCPServer._intfs:
+
             # interface friendly name eg. wan
             for _intf, settings in dhcp_intfs.items():
+
                 # ensuring the iterfaces match since we cannot guarantee order
                 if (intf != settings['ident']): continue
 
                 # passing over disabled server interfaces. NOTE: DEF temporary NOTE: no fuck you, we might
                 # want the user to be able to disable dhcp servers for multiple reasons (static only, separate
                 # dhcp server, security, etc.)
-                if not dhcp_intfs[_intf]['enabled']: continue
+                # if not dhcp_intfs[_intf]['enabled']: continue
 
                 # creating ipv4 interface object which will be associated with the ident in the config.
                 # this can then be used by the server to identify itself as well as generate its effective

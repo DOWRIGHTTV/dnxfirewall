@@ -33,8 +33,8 @@ INT_BANDWIDTH_TIMER = 5
 FILE_POLL_TIMER = 10
 
 # dnx user/group
-USER  = 'dnx'
-GROUP = 'dnx'
+USER  = 'free'
+GROUP = 'free'
 
 # Certificate authority store file
 CERTIFICATE_STORE = '/etc/ssl/certs/ca-certificates.crt'
@@ -60,6 +60,7 @@ class CFG(_IntEnum):
     DEL = 0
     ADD = 1
     ADD_DEL = 2
+    RESTORE = 3
 
 #protocols
 class DNX(_IntEnum):
