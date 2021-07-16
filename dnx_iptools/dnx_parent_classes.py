@@ -40,6 +40,7 @@ class Listener:
         get_intf('dmz')
     )
 
+    # stored as file descriptors to minimize lookups in listener queue.
     disabled_intfs = set()
 
     __slots__ = (
@@ -83,6 +84,9 @@ class Listener:
         cls.__registered_socks = {}
         cls.__epoll = select.epoll()
 
+        # child class hook to initialize higher level systems. NOTE: must stay after initial intf registration
+        cls._setup()
+
         # starting a registration thread for all available interfaces
         # upon registration the threads will exit
         for intf in cls._intfs:
@@ -93,13 +97,6 @@ class Listener:
         # make sure name mangling takes care of the reference issues if 2 classes inherit from
         # this class within the same process.
         self = cls(None, threaded)
-
-        # stored as file descriptors to minimize lookups in listener queue.
-        # self.disabled_intfs = set()
-
-        # child class hook to initialize higher level systems. NOTE: must stay after initial intf registration
-        cls._setup()
-
         threading.Thread(target=self.__listener).start()
 
     @classmethod
