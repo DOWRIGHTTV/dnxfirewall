@@ -114,7 +114,7 @@ class Listener:
     def disable(cls, sock_fd, intf):
         '''removes a file descriptor id to the disabled interface set. this effectively re-enables the server for the zone of the specified socket.'''
 
-        self.disabled_intfs.add(sock_fd)
+        cls.disabled_intfs.add(sock_fd)
 
         cls._Log.notice(f'{cls.__name__} | [{intf}] DHCP listener disabled..')
 
