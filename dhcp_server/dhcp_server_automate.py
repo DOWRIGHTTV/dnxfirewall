@@ -68,7 +68,7 @@ class Configuration:
             # them to act on the disable of an interfaces dhcp service. this should also be the most efficient in that if
             # all listeners are disabled only the automate class will be actively processing on file changes.
             # NOTE: .get is to cover server startup. do not change. test functionality.
-            sock_fd = self.DHCPServer.intf_settings['fileno']
+            sock_fd = self.DHCPServer.intf_settings[intf_identity]['fileno']
             if (disabled and self.DHCPServer.intf_settings[intf_identity].get('enabled', True)):
                 self.DHCPServer.deregister(sock_fd, intf_identity)
 
@@ -103,9 +103,6 @@ class Configuration:
 
                     # ensuring the iterfaces match since we cannot guarantee order
                     if (intf != _intf['ident']): continue
-
-                    # NOTE: should be temporary, while dmz is not fully implemented
-                    # if not settings['enabled']: continue
 
                     # converting keys to integers (json keys are string only), then packing any
                     # option value that is in ip address form to raw bytes.
@@ -182,11 +179,6 @@ class Configuration:
                 # ensuring the iterfaces match since we cannot guarantee order
                 if (intf != settings['ident']): continue
 
-                # passing over disabled server interfaces. NOTE: DEF temporary NOTE: no fuck you, we might
-                # want the user to be able to disable dhcp servers for multiple reasons (static only, separate
-                # dhcp server, security, etc.)
-                # if not dhcp_intfs[_intf]['enabled']: continue
-
                 # creating ipv4 interface object which will be associated with the ident in the config.
                 # this can then be used by the server to identify itself as well as generate its effective
                 # subnet based on netmask for ip handouts or membership tests.
@@ -197,7 +189,8 @@ class Configuration:
 
                 # updating general network information for interfaces on server class object. these will never change
                 # while the server is running. for interfaces changes, the server must be restarted.
-                self.DHCPServer.intf_settings[intf] = {'ip': intf_ip}
+                # initializing fileno key in the intf dict to make assignments easier in later calls.
+                self.DHCPServer.intf_settings[intf] = {'ip': intf_ip, 'fileno': 0}
 
 
 # custom dictionary to manage dhcp server leases including timeouts, updates, or persistence (store to disk)
