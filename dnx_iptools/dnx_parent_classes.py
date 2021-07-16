@@ -74,16 +74,22 @@ class Listener:
         return f'Listener/{self._name}(intf={self._intf})'
 
     @classmethod
-    def run(cls, Log, *, threaded=True):
+    def run(cls, Log, *, threaded=True, auto_enable=True):
         '''associating subclass Log reference with Listener class. registering all interfaces in _intfs and starting service listener loop. calling class method setup before to
         provide subclass specific code to run at class level before continueing.'''
         Log.notice(f'{cls.__name__} initialization started.')
-        # class setup
-        cls._Log = Log
-        cls._setup()
 
+        cls._Log = Log
         cls.__registered_socks = {}
         cls.__epoll = select.epoll()
+
+        # starting a registration thread for all available interfaces
+        # upon registration the threads will exit
+        for intf in cls._intfs:
+            threading.Thread(target=cls.__register, args=(intf, auto_enable)).start()
+
+        # child class hook to initialize higher level systems. NOTE: must stay after initial intf registration
+        cls._setup()
 
         # running main epoll/ socket loop. threaded so proxy and server can run side by side
         # NOTE/ TODO: should be able to convert this into a class object like RawPacket. just need to
@@ -91,25 +97,21 @@ class Listener:
         # this class within the same process.
         self = cls(None, threaded)
         threading.Thread(target=self.__listener).start()
-        # starting a registration thread for all available interfaces
-        # upon registration the threads will exit
-        for intf in cls._intfs:
-            threading.Thread(target=cls.__register, args=(intf,)).start()
 
     @classmethod
     def deregister(cls, sock_fd, intf):
         '''modifies/sets socket object events in epoll to 0. this effectively disables the server for the zone of the specified socket.'''
 
-        cls.__epoll.unregister(sock_fd)
+        cls.__epoll.modify(sock_fd, 0)
 
         cls._Log.notice(f'{cls.__name__} | {intf} deregistered.')
 
     @classmethod
-    def reregister(cls, sock_fd, intf):
+    def register(cls, sock_fd, intf):
         '''adds socket object to epoll using it's file descriptor. this effectively re-enables the server for the zone
         of the specified socket.'''
 
-        cls.__epoll.modify(sock_fd, intf)
+        cls.__epoll.modify(sock_fd, select.EPOLLIN)
 
         cls._Log.notice(f'{cls.__name__} | {intf} registered.')
 
@@ -134,7 +136,7 @@ class Listener:
     @classmethod
     # TODO: what happens if interface comes online, then immediately gets unplugged. the registration would fail potentially,
     # and would no longer be active so it would never happen if the interface was replugged after.
-    def __register(cls, intf):
+    def __register(cls, intf, auto_enable):
         '''will register interface with listener. requires subclass property for listener_sock returning valid socket object.
         once registration is complete the thread will exit.'''
         # this is being defined here the listener will be able to correlate socket back to interface and send in.
@@ -152,7 +154,7 @@ class Listener:
         # anymore yea? the fd and socket object is all we need, unless we need to get the source ip address. OH. does the
         # dns proxy need to grab its interface ip for sending to the client? i dont think so, right? it jsut needs to
         # spoof the original destination.
-        cls.__epoll.register(l_sock.fileno(), select.EPOLLIN)
+        cls.__epoll.register(l_sock.fileno(), auto_enable)
 
         cls._Log.notice(f'{cls.__name__} | {intf} registered.')
 
