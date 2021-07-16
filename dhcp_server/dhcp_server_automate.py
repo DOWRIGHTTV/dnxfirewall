@@ -286,4 +286,4 @@ class Leases(dict):
                 else: continue
 
                 # adding to queue for removal. no record notifies job handler to remove vs add.
-                self._storage.add(ip_address) # pylint: disable=no-member
+                self.modify(ip_address) # pylint: disable=no-member
