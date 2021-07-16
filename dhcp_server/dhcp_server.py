@@ -208,4 +208,4 @@ if __name__ == '__main__':
     Log.run(
         name=LOG_NAME
     )
-    DHCPServer.run(Log, threaded=False, auto_enable=False)
+    DHCPServer.run(Log, threaded=False)
