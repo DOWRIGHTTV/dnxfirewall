@@ -70,10 +70,12 @@ class Configuration:
             # NOTE: .get is to cover server startup. do not change. test functionality.
             sock_fd = self.DHCPServer.intf_settings[intf_identity]['fileno']
             if (disabled and self.DHCPServer.intf_settings[intf_identity].get('enabled', True)):
-                self.DHCPServer.deregister(sock_fd, intf_identity)
+#                self.DHCPServer.deregister(sock_fd, intf_identity)
+                self.DHCPServer.disabled_intfs.add(sock_fd)
 
             elif (enabled and not self.DHCPServer.intf_settings[intf_identity].get('enabled', False)):
-                self.DHCPServer.register(sock_fd, intf_identity)
+#                self.DHCPServer.register(sock_fd, intf_identity)
+                self.DHCPServer.disabled_intfs.remove(sock_fd)
 
             # identity will be kept in settings just in case, though they key is the identity also.
             self.DHCPServer.intf_settings[intf_identity].update(settings)

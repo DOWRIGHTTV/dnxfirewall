@@ -41,10 +41,9 @@ class Listener:
     )
 
     __slots__ = (
-        # standard vars
         '_intf', '_intf_ip', '_threaded', '_name',
+        'disabled_intfs',
 
-        # private vars
         '__epoll_poll', '__registered_socks_get'
     )
 
@@ -88,32 +87,36 @@ class Listener:
         for intf in cls._intfs:
             threading.Thread(target=cls.__register, args=(intf, auto_enable)).start()
 
-        # child class hook to initialize higher level systems. NOTE: must stay after initial intf registration
-        cls._setup()
-
         # running main epoll/ socket loop. threaded so proxy and server can run side by side
         # NOTE/ TODO: should be able to convert this into a class object like RawPacket. just need to
         # make sure name mangling takes care of the reference issues if 2 classes inherit from
         # this class within the same process.
         self = cls(None, threaded)
+
+        # stored as file descriptors to minimize lookups in listener queue.
+        self.disabled_intfs = set()
+
+        # child class hook to initialize higher level systems. NOTE: must stay after initial intf registration
+        cls._setup()
+
         threading.Thread(target=self.__listener).start()
 
-    @classmethod
-    def deregister(cls, sock_fd, intf):
-        '''modifies/sets socket object events in epoll to 0. this effectively disables the server for the zone of the specified socket.'''
+#    @classmethod
+#    def deregister(cls, sock_fd, intf):
+#        '''modifies/sets socket object events in epoll to 0. this effectively disables the server for the zone of the specified socket.'''
+#
+#       cls.__epoll.modify(sock_fd, 0)
+#
+#        cls._Log.notice(f'{cls.__name__} | {intf} deregistered.')
 
-        cls.__epoll.modify(sock_fd, 0)
-
-        cls._Log.notice(f'{cls.__name__} | {intf} deregistered.')
-
-    @classmethod
-    def register(cls, sock_fd, intf):
-        '''adds socket object to epoll using it's file descriptor. this effectively re-enables the server for the zone
-        of the specified socket.'''
-
-        cls.__epoll.modify(sock_fd, select.EPOLLIN)
-
-        cls._Log.notice(f'{cls.__name__} | {intf} registered.')
+#    @classmethod
+#    def register(cls, sock_fd, intf):
+#        '''adds socket object to epoll using it's file descriptor. this effectively re-enables the server for the zone
+#        of the specified socket.'''
+#
+#        cls.__epoll.modify(sock_fd, select.EPOLLIN)
+#
+#        cls._Log.notice(f'{cls.__name__} | {intf} registered.')
 
     @classmethod
     def send_to_client(cls, packet):
@@ -174,6 +177,7 @@ class Listener:
         while True:
             l_socks = epoll_poll()
             for fd, _ in l_socks:
+
                 sock_info = registered_socks_get(fd)
 
                 try:
@@ -182,7 +186,11 @@ class Listener:
                     pass
 
                 else:
-                    self.__parse_packet(data, address, sock_info)
+                    # this is being used as a mechanism to disable/enable interface listeners
+                    # TODO: figure out a better way to achieve this that doesnt involve reading the socket. multiple epoll
+                    # solutions have already been attempted, but they have barely missed mark.
+                    if (fd not in self_.disabled_intfs):
+                        self.__parse_packet(data, address, sock_info)
 
     def __parse_packet(self, data, address, sock_info):
         packet = self._packet_parser(data, address, sock_info)
