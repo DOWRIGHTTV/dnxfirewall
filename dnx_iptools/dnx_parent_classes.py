@@ -41,7 +41,7 @@ class Listener:
     )
 
     # stored as file descriptors to minimize lookups in listener queue.
-    disabled_intfs = set()
+    enabled_intfs = set()
 
     __slots__ = (
         '_intf', '_intf_ip', '_threaded', '_name',
@@ -103,7 +103,7 @@ class Listener:
     def enable(cls, sock_fd, intf):
         '''adds a file descriptor id to the disabled interface set. this effectively disables the server for the zone of the specified socket.'''
 
-        cls.disabled_intfs.remove(sock_fd)
+        cls.enabled_intfs.add(sock_fd)
 
         cls._Log.notice(f'{cls.__name__} | [{intf}] DHCP listener enabled.')
 
@@ -111,7 +111,11 @@ class Listener:
     def disable(cls, sock_fd, intf):
         '''removes a file descriptor id to the disabled interface set. this effectively re-enables the server for the zone of the specified socket.'''
 
-        cls.disabled_intfs.add(sock_fd)
+        # try block is to prevent key errors on initialization. after that, key errors should not be happening.
+        try:
+            cls.enabled_intfs.remove(sock_fd)
+        except KeyError
+            pass
 
         cls._Log.notice(f'{cls.__name__} | [{intf}] DHCP listener disabled..')
 
@@ -154,7 +158,7 @@ class Listener:
         # anymore yea? the fd and socket object is all we need, unless we need to get the source ip address. OH. does the
         # dns proxy need to grab its interface ip for sending to the client? i dont think so, right? it jsut needs to
         # spoof the original destination.
-        cls.__epoll.register(l_sock.fileno(), select.EPOLLIN)
+        cls.__epoll.register(l_sock.fileno())
 
         cls._Log.notice(f'{cls.__name__} | {intf} registered.')
 
@@ -185,7 +189,7 @@ class Listener:
                     # this is being used as a mechanism to disable/enable interface listeners
                     # TODO: figure out a better way to achieve this that doesnt involve reading the socket. multiple epoll
                     # solutions have already been attempted, but they have barely missed mark.
-                    if (fd not in self.disabled_intfs):
+                    if (fd in self.enabled_intfs):
                         self.__parse_packet(data, address, sock_info)
 
     def __parse_packet(self, data, address, sock_info):
