@@ -59,8 +59,6 @@ class Configuration:
             # NOTE ex. ident: eth0, lo, enp0s3
             intf_identity = settings['ident']
 
-            # ternary to improve condition readability and sound more natural.
-            disabled = False if settings['enabled'] else True
             enabled  = True if settings['enabled'] else False
 
             # TODO: compare interface status in memory with what is loaded in. if it is different then the setting was just
@@ -69,7 +67,7 @@ class Configuration:
             # all listeners are disabled only the automate class will be actively processing on file changes.
             # NOTE: .get is to cover server startup. do not change. test functionality.
             sock_fd = self.DHCPServer.intf_settings[intf_identity]['fileno']
-            if (disabled and self.DHCPServer.intf_settings[intf_identity].get('enabled', True)):
+            if (not enabled and self.DHCPServer.intf_settings[intf_identity].get('enabled', True)):
                 self.DHCPServer.disable(sock_fd, intf_identity)
 
             elif (enabled and not self.DHCPServer.intf_settings[intf_identity].get('enabled', False)):
@@ -91,7 +89,7 @@ class Configuration:
 
         # will wait for 2 threads to check in before running code. this will allow the necessary settings
         # to be initialized on startup before this thread continues.
-        self.initialize.wait_in_line(2)
+        self.initialize.wait_in_line(wait_for=2)
 
         with self.DHCPServer.options_lock:
 
