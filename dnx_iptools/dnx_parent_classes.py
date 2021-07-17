@@ -158,7 +158,7 @@ class Listener:
         # anymore yea? the fd and socket object is all we need, unless we need to get the source ip address. OH. does the
         # dns proxy need to grab its interface ip for sending to the client? i dont think so, right? it jsut needs to
         # spoof the original destination.
-        cls.__epoll.register(l_sock.fileno())
+        cls.__epoll.register(l_sock.fileno(), select.EPOLLIN)
 
         cls._Log.notice(f'{cls.__name__} | {intf} registered.')
 

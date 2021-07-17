@@ -67,11 +67,11 @@ class Configuration:
             # all listeners are disabled only the automate class will be actively processing on file changes.
             # NOTE: .get is to cover server startup. do not change. test functionality.
             sock_fd = self.DHCPServer.intf_settings[intf_identity]['fileno']
-            if (not enabled and self.DHCPServer.intf_settings[intf_identity].get('enabled', True)):
-                self.DHCPServer.disable(sock_fd, intf_identity)
-
-            elif (enabled and not self.DHCPServer.intf_settings[intf_identity].get('enabled', False)):
+            if (enabled and not self.DHCPServer.intf_settings[intf_identity].get('enabled', False)):
                 self.DHCPServer.enable(sock_fd, intf_identity)
+
+            elif (not enabled and self.DHCPServer.intf_settings[intf_identity].get('enabled', True)):
+                self.DHCPServer.disable(sock_fd, intf_identity)
 
             # identity will be kept in settings just in case, though they key is the identity also.
             self.DHCPServer.intf_settings[intf_identity].update(settings)
