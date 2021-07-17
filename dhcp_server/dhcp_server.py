@@ -192,17 +192,15 @@ class DHCPServer(Listener):
         # messages to 0xffffffff.
 
     @classmethod
-    def listener_sock(cls, intf, intf_ip):
-        l_sock = socket(AF_INET, SOCK_DGRAM)
+    def listener_sock(cls, intf, _):
+        l_sock = cls.intf_settings[intf].get('l_sock'))
+
         l_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR,1)
         l_sock.setsockopt(SOL_SOCKET, SO_BROADCAST,1)
         l_sock.setsockopt(SOL_SOCKET, SO_BINDTODEVICE, f'{intf}\0'.encode('utf-8'))
         l_sock.bind((str(INADDR_ANY), PROTO.DHCP_SVR))
 
-        # used for converting interface identity to socket object file descriptor number
-        cls.intf_settings[intf]['fileno'] = l_sock.fileno()
-
-        Log.debug(f'[{l_lock.fileno()}][{intf}] socket created | {cls.__name__} settings: {cls.intf_settings}')
+        Log.debug(f'[{l_sock.fileno()}][{intf}] bound to interface | {cls.__name__} settings: {cls.intf_settings}')
 
         return l_sock
 

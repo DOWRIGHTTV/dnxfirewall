@@ -188,9 +188,21 @@ class Configuration:
                 # updating general network information for interfaces on server class object. these will never change
                 # while the server is running. for interfaces changes, the server must be restarted.
                 # initializing fileno key in the intf dict to make assignments easier in later calls.
-                self.DHCPServer.intf_settings[intf] = {'ip': intf_ip, 'fileno': 0}
+                self.DHCPServer.intf_settings[intf] = {'ip': intf_ip, 'l_sock': _create_socket(intf)}
 
-        Log.debug(f'loaded interfaces from file: {self.DHCPServer.int_settings}')
+        Log.debug(f'loaded interfaces from file: {self.DHCPServer.intf_settings}')
+
+    # this is providing the first portion of creating a socket. this will allow the system to create the socket
+    # store the file descriptor id, and then bind when ready per normal registration logic.
+    def _create_socket(self, intf):
+        l_sock = socket(AF_INET, SOCK_DGRAM)
+
+        # used for converting interface identity to socket object file descriptor number
+        self.DHCPServer.intf_settings[intf].update({'fileno': l_sock.fileno()})
+
+        Log.debug(f'[{l_sock.fileno()}][{intf}] socket created | {cls.__name__} settings: {cls.intf_settings}')
+
+        return l_sock
 
 # custom dictionary to manage dhcp server leases including timeouts, updates, or persistence (store to disk)
 _STORED_RECORD = namedtuple('stored_record', 'ip record')
