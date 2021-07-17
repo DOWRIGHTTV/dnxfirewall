@@ -6,7 +6,7 @@ import json
 import threading
 
 from collections import deque, namedtuple
-from socket import inet_aton
+from socket import inet_aton, socket,  AF_INET, SOCK_DGRAM
 from ipaddress import IPv4Address, IPv4Network, IPv4Interface
 
 HOME_DIR = os.environ['HOME_DIR']
@@ -188,7 +188,9 @@ class Configuration:
                 # updating general network information for interfaces on server class object. these will never change
                 # while the server is running. for interfaces changes, the server must be restarted.
                 # initializing fileno key in the intf dict to make assignments easier in later calls.
-                self.DHCPServer.intf_settings[intf] = {'ip': intf_ip, 'l_sock': _create_socket(intf)}
+                self.DHCPServer.intf_settings[intf] = {'ip': intf_ip}
+
+                self._create_socket(intf)
 
         Log.debug(f'loaded interfaces from file: {self.DHCPServer.intf_settings}')
 
@@ -198,11 +200,12 @@ class Configuration:
         l_sock = socket(AF_INET, SOCK_DGRAM)
 
         # used for converting interface identity to socket object file descriptor number
-        self.DHCPServer.intf_settings[intf].update({'fileno': l_sock.fileno()})
+        self.DHCPServer.intf_settings[intf].update({
+            'l_sock': l_sock,
+            'fileno': l_sock.fileno()
+        })
 
         Log.debug(f'[{l_sock.fileno()}][{intf}] socket created | {cls.__name__} settings: {cls.intf_settings}')
-
-        return l_sock
 
 # custom dictionary to manage dhcp server leases including timeouts, updates, or persistence (store to disk)
 _STORED_RECORD = namedtuple('stored_record', 'ip record')

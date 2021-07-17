@@ -193,7 +193,7 @@ class DHCPServer(Listener):
 
     @classmethod
     def listener_sock(cls, intf, _):
-        l_sock = cls.intf_settings[intf].get('l_sock'))
+        l_sock = cls.intf_settings[intf].get('l_sock')
 
         l_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR,1)
         l_sock.setsockopt(SOL_SOCKET, SO_BROADCAST,1)
