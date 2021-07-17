@@ -105,7 +105,7 @@ class Listener:
 
         cls.enabled_intfs.add(sock_fd)
 
-        cls._Log.notice(f'{cls.__name__} | [{intf}] DHCP listener enabled.')
+        cls._Log.notice(f'{cls.__name__} | [{sock_fd}][{intf}] DHCP listener enabled.')
 
     @classmethod
     def disable(cls, sock_fd, intf):
@@ -117,7 +117,7 @@ class Listener:
         except KeyError:
             pass
 
-        cls._Log.notice(f'{cls.__name__} | [{intf}] DHCP listener disabled..')
+        cls._Log.notice(f'{cls.__name__} | [{sock_fd}][{intf}] DHCP listener disabled..')
 
     @classmethod
     def send_to_client(cls, packet):
@@ -160,7 +160,7 @@ class Listener:
         # spoof the original destination.
         cls.__epoll.register(l_sock.fileno(), select.EPOLLIN)
 
-        cls._Log.notice(f'{cls.__name__} | {intf} registered.')
+        cls._Log.notice(f'{cls.__name__} | [{l_sock.fileno()}][{intf}] registered.')
 
     @classmethod
     def set_proxy_callback(cls, *, func):
@@ -189,6 +189,7 @@ class Listener:
                     # this is being used as a mechanism to disable/enable interface listeners
                     # TODO: figure out a better way to achieve this that doesnt involve reading the socket. multiple epoll
                     # solutions have already been attempted, but they have barely missed mark.
+                    self._Log.debug(f'recv on fd: {fd} | enabled ints: {self.enabled_intfs}')
                     if (fd in self.enabled_intfs):
                         self.__parse_packet(data, address, sock_info)
 
