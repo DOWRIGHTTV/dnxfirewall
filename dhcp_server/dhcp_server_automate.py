@@ -190,6 +190,7 @@ class Configuration:
                 # initializing fileno key in the intf dict to make assignments easier in later calls.
                 self.DHCPServer.intf_settings[intf] = {'ip': intf_ip, 'fileno': 0}
 
+        Log.debug(f'loaded interfaces from file: {self.DHCPServer.int_settings}')
 
 # custom dictionary to manage dhcp server leases including timeouts, updates, or persistence (store to disk)
 _STORED_RECORD = namedtuple('stored_record', 'ip record')

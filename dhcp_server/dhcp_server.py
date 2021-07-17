@@ -202,6 +202,8 @@ class DHCPServer(Listener):
         # used for converting interface identity to socket object file descriptor number
         cls.intf_settings[intf]['fileno'] = l_sock.fileno()
 
+        Log.debug(f'[{l_lock.fileno()}][{intf}] socket created | {cls.__name__} settings: {cls.intf_settings}')
+
         return l_sock
 
 if __name__ == '__main__':
