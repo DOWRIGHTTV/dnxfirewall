@@ -114,7 +114,7 @@ class Listener:
         # try block is to prevent key errors on initialization. after that, key errors should not be happening.
         try:
             cls.enabled_intfs.remove(sock_fd)
-        except KeyError
+        except KeyError:
             pass
 
         cls._Log.notice(f'{cls.__name__} | [{intf}] DHCP listener disabled..')
