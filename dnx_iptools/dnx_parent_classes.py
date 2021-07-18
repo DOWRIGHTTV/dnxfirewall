@@ -44,7 +44,8 @@ class Listener:
     enabled_intfs = set()
 
     __slots__ = (
-        '_intf', '_intf_ip', '_threaded', '_name',
+        '_intf', '_intf_ip',
+        '_threaded', '_always_on', '_name',
 
         '__epoll_poll', '__registered_socks_get'
     )
@@ -63,6 +64,7 @@ class Listener:
         '''
         self._intf = intf
         self._threaded = threaded
+        self._always_on = always_on
 
         self._name = self.__class__.__name__
 
@@ -190,7 +192,7 @@ class Listener:
                     # TODO: figure out a better way to achieve this that doesnt involve reading the socket. multiple epoll
                     # solutions have already been attempted, but they have barely missed mark.
                     self._Log.debug(f'recv on fd: {fd} | enabled ints: {self.enabled_intfs}')
-                    if (self.always_on or fd in self.enabled_intfs):
+                    if (self._always_on or fd in self.enabled_intfs):
                         self.__parse_packet(data, address, sock_info)
 
     def __parse_packet(self, data, address, sock_info):
