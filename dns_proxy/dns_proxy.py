@@ -206,5 +206,5 @@ if __name__ == '__main__':
     Log.run(
         name=LOG_NAME
     )
-    DNSProxy.run(Log, threaded=True)
-    DNSServer.run(Log, threaded=False)
+    DNSProxy.run(Log, threaded=True, always_on=True)
+    DNSServer.run(Log, threaded=False, always_on=True)

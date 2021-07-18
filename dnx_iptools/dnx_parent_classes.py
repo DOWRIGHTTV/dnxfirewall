@@ -55,7 +55,7 @@ class Listener:
 
         return object.__new__(cls)
 
-    def __init__(self, intf, threaded):
+    def __init__(self, intf, threaded, always_on):
         '''general constructor. can only be reached through subclass.
 
         May be expanded.
@@ -75,7 +75,7 @@ class Listener:
         return f'Listener/{self._name}(intf={self._intf})'
 
     @classmethod
-    def run(cls, Log, *, threaded=True):
+    def run(cls, Log, *, threaded=True, always_on=True):
         '''associating subclass Log reference with Listener class. registering all interfaces in _intfs and starting service listener loop. calling class method setup before to
         provide subclass specific code to run at class level before continueing.'''
         Log.notice(f'{cls.__name__} initialization started.')
@@ -95,8 +95,8 @@ class Listener:
         # running main epoll/ socket loop. threaded so proxy and server can run side by side
         # NOTE/ TODO: should be able to convert this into a class object like RawPacket. just need to
         # make sure name mangling takes care of the reference issues if 2 classes inherit from
-        # this class within the same process.
-        self = cls(None, threaded)
+        # this class within the same process..
+        self = cls(None, threaded, always_on)
         threading.Thread(target=self.__listener).start()
 
     @classmethod
@@ -117,7 +117,7 @@ class Listener:
         except KeyError:
             pass
 
-        cls._Log.notice(f'{cls.__name__} | [{sock_fd}][{intf}] DHCP listener disabled..')
+        cls._Log.notice(f'{cls.__name__} | [{sock_fd}][{intf}] DHCP listener disabled.')
 
     @classmethod
     def send_to_client(cls, packet):
@@ -190,7 +190,7 @@ class Listener:
                     # TODO: figure out a better way to achieve this that doesnt involve reading the socket. multiple epoll
                     # solutions have already been attempted, but they have barely missed mark.
                     self._Log.debug(f'recv on fd: {fd} | enabled ints: {self.enabled_intfs}')
-                    if (fd in self.enabled_intfs):
+                    if (self.always_on or fd in self.enabled_intfs):
                         self.__parse_packet(data, address, sock_info)
 
     def __parse_packet(self, data, address, sock_info):
