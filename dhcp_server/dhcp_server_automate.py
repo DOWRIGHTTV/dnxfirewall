@@ -6,7 +6,7 @@ import json
 import threading
 
 from collections import deque, namedtuple
-from socket import inet_aton
+from socket import inet_aton, socket,  AF_INET, SOCK_DGRAM
 from ipaddress import IPv4Address, IPv4Network, IPv4Interface
 
 HOME_DIR = os.environ['HOME_DIR']
@@ -24,6 +24,8 @@ _NULL_LEASE = (DHCP.AVAILABLE, None, None)
 ConfigurationManager.set_log_reference(Log)
 
 
+# TODO: figure out how to make dhcp interface disabling done in memory so a server restart wont be necessary.
+    # this could likely be done at the pre inspect in the server to silenty drop packets from a non enabled interface.
 class Configuration:
     _setup = False
 
@@ -51,15 +53,25 @@ class Configuration:
     def _get_settings(self, cfg_file):
         dhcp_settings = load_configuration(cfg_file)['dhcp_server']
 
-        # TODO: add a change detection check??
-
         # updating user configuration items per interface in memory.
         for settings in dhcp_settings['interfaces'].values():
-            # NOTE: probably temporary. same as below
-            if not settings['enabled']: continue
 
             # NOTE ex. ident: eth0, lo, enp0s3
             intf_identity = settings['ident']
+
+            enabled  = True if settings['enabled'] else False
+
+            # TODO: compare interface status in memory with what is loaded in. if it is different then the setting was just
+            # changed and needs to be acted on. implement register/unregister methods available to external callers and use
+            # them to act on the disable of an interfaces dhcp service. this should also be the most efficient in that if
+            # all listeners are disabled only the automate class will be actively processing on file changes.
+            # NOTE: .get is to cover server startup. do not change. test functionality.
+            sock_fd = self.DHCPServer.intf_settings[intf_identity]['fileno']
+            if (enabled and not self.DHCPServer.intf_settings[intf_identity].get('enabled', False)):
+                self.DHCPServer.enable(sock_fd, intf_identity)
+
+            elif (not enabled and self.DHCPServer.intf_settings[intf_identity].get('enabled', True)):
+                self.DHCPServer.disable(sock_fd, intf_identity)
 
             # identity will be kept in settings just in case, though they key is the identity also.
             self.DHCPServer.intf_settings[intf_identity].update(settings)
@@ -75,22 +87,20 @@ class Configuration:
         # if server options have not changed, the function can return
         if (server_options == self.DHCPServer.options): return
 
-        # will wait for 2 threads to checking before running code. this will allow the necessary settings
+        # will wait for 2 threads to check in before running code. this will allow the necessary settings
         # to be initialized on startup before this thread continues.
-        self.initialize.wait_in_line(2)
+        self.initialize.wait_in_line(wait_for=2)
 
         with self.DHCPServer.options_lock:
 
             # iterating over server interfaces and populated server option data sets NOTE: consider merging server
             # options with the interface settings since they are technically bound.
             for intf, settings in self.DHCPServer.intf_settings.items():
+
                 for _intf in interfaces.values():
 
                     # ensuring the iterfaces match since we cannot guarantee order
                     if (intf != _intf['ident']): continue
-
-                    # NOTE: should be temporary, while dmz is not fully implemented
-                    if not settings['enabled']: continue
 
                     # converting keys to integers (json keys are string only), then packing any
                     # option value that is in ip address form to raw bytes.
@@ -160,15 +170,12 @@ class Configuration:
 
         # interface ident eg. eth0
         for intf in self.DHCPServer._intfs:
+
             # interface friendly name eg. wan
             for _intf, settings in dhcp_intfs.items():
+
                 # ensuring the iterfaces match since we cannot guarantee order
                 if (intf != settings['ident']): continue
-
-                # passing over disabled server interfaces. NOTE: DEF temporary NOTE: no fuck you, we might
-                # want the user to be able to disable dhcp servers for multiple reasons (static only, separate
-                # dhcp server, security, etc.)
-                if not dhcp_intfs[_intf]['enabled']: continue
 
                 # creating ipv4 interface object which will be associated with the ident in the config.
                 # this can then be used by the server to identify itself as well as generate its effective
@@ -180,8 +187,25 @@ class Configuration:
 
                 # updating general network information for interfaces on server class object. these will never change
                 # while the server is running. for interfaces changes, the server must be restarted.
+                # initializing fileno key in the intf dict to make assignments easier in later calls.
                 self.DHCPServer.intf_settings[intf] = {'ip': intf_ip}
 
+                self._create_socket(intf)
+
+        Log.debug(f'loaded interfaces from file: {self.DHCPServer.intf_settings}')
+
+    # this is providing the first portion of creating a socket. this will allow the system to create the socket
+    # store the file descriptor id, and then bind when ready per normal registration logic.
+    def _create_socket(self, intf):
+        l_sock = socket(AF_INET, SOCK_DGRAM)
+
+        # used for converting interface identity to socket object file descriptor number
+        self.DHCPServer.intf_settings[intf].update({
+            'l_sock': l_sock,
+            'fileno': l_sock.fileno()
+        })
+
+        Log.debug(f'[{l_sock.fileno()}][{intf}] socket created | {cls.__name__} settings: {cls.intf_settings}')
 
 # custom dictionary to manage dhcp server leases including timeouts, updates, or persistence (store to disk)
 _STORED_RECORD = namedtuple('stored_record', 'ip record')
@@ -275,4 +299,5 @@ class Leases(dict):
                 # unknown condition? maybe log?
                 else: continue
 
-                self._storage.add((ip_address, None)) # pylint: disable=no-member
+                # adding to queue for removal. no record notifies job handler to remove vs add.
+                self.modify(ip_address) # pylint: disable=no-member

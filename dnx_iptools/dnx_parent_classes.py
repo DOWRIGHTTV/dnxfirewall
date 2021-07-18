@@ -40,11 +40,12 @@ class Listener:
         get_intf('dmz')
     )
 
+    # stored as file descriptors to minimize lookups in listener queue.
+    enabled_intfs = set()
+
     __slots__ = (
-        # standard vars
         '_intf', '_intf_ip', '_threaded', '_name',
 
-        # private vars
         '__epoll_poll', '__registered_socks_get'
     )
 
@@ -78,12 +79,18 @@ class Listener:
         '''associating subclass Log reference with Listener class. registering all interfaces in _intfs and starting service listener loop. calling class method setup before to
         provide subclass specific code to run at class level before continueing.'''
         Log.notice(f'{cls.__name__} initialization started.')
-        # class setup
-        cls._Log = Log
-        cls._setup()
 
+        cls._Log = Log
         cls.__registered_socks = {}
         cls.__epoll = select.epoll()
+
+        # child class hook to initialize higher level systems. NOTE: must stay after initial intf registration
+        cls._setup()
+
+        # starting a registration thread for all available interfaces
+        # upon registration the threads will exit
+        for intf in cls._intfs:
+            threading.Thread(target=cls.__register, args=(intf,)).start()
 
         # running main epoll/ socket loop. threaded so proxy and server can run side by side
         # NOTE/ TODO: should be able to convert this into a class object like RawPacket. just need to
@@ -91,10 +98,26 @@ class Listener:
         # this class within the same process.
         self = cls(None, threaded)
         threading.Thread(target=self.__listener).start()
-        # starting a registration thread for all available interfaces
-        # upon registration the threads will exit
-        for intf in cls._intfs:
-            threading.Thread(target=cls.__register, args=(intf,)).start()
+
+    @classmethod
+    def enable(cls, sock_fd, intf):
+        '''adds a file descriptor id to the disabled interface set. this effectively disables the server for the zone of the specified socket.'''
+
+        cls.enabled_intfs.add(sock_fd)
+
+        cls._Log.notice(f'{cls.__name__} | [{sock_fd}][{intf}] DHCP listener enabled.')
+
+    @classmethod
+    def disable(cls, sock_fd, intf):
+        '''removes a file descriptor id to the disabled interface set. this effectively re-enables the server for the zone of the specified socket.'''
+
+        # try block is to prevent key errors on initialization. after that, key errors should not be happening.
+        try:
+            cls.enabled_intfs.remove(sock_fd)
+        except KeyError:
+            pass
+
+        cls._Log.notice(f'{cls.__name__} | [{sock_fd}][{intf}] DHCP listener disabled..')
 
     @classmethod
     def send_to_client(cls, packet):
@@ -137,7 +160,7 @@ class Listener:
         # spoof the original destination.
         cls.__epoll.register(l_sock.fileno(), select.EPOLLIN)
 
-        cls._Log.notice(f'{cls.__name__} | {intf} registered.')
+        cls._Log.notice(f'{cls.__name__} | [{l_sock.fileno()}][{intf}] registered.')
 
     @classmethod
     def set_proxy_callback(cls, *, func):
@@ -148,7 +171,6 @@ class Listener:
 
         cls._proxy_callback = func
 
-    # NOTE: currently dont like the looper decorator here. it just adds unneeded overhead to remove 1 nested level
     def __listener(self):
         epoll_poll = self.__epoll_poll
         registered_socks_get = self.__registered_socks_get
@@ -156,15 +178,20 @@ class Listener:
         while True:
             l_socks = epoll_poll()
             for fd, _ in l_socks:
-                sock_info = registered_socks_get(fd)
 
-                # TODO: see if we can tighten up this reference for a crispier loop
+                sock_info = registered_socks_get(fd)
                 try:
                     data, address = sock_info.recvfrom(4096)
                 except OSError:
                     pass
+
                 else:
-                    self.__parse_packet(data, address, sock_info)
+                    # this is being used as a mechanism to disable/enable interface listeners
+                    # TODO: figure out a better way to achieve this that doesnt involve reading the socket. multiple epoll
+                    # solutions have already been attempted, but they have barely missed mark.
+                    self._Log.debug(f'recv on fd: {fd} | enabled ints: {self.enabled_intfs}')
+                    if (fd in self.enabled_intfs):
+                        self.__parse_packet(data, address, sock_info)
 
     def __parse_packet(self, data, address, sock_info):
         packet = self._packet_parser(data, address, sock_info)
@@ -172,12 +199,15 @@ class Listener:
             packet.parse()
         except:
             traceback.print_exc()
+
         else:
-            if self._pre_inspect(packet):
-                if (self._threaded):
-                    threading.Thread(target=self._proxy_callback, args=(packet,)).start()
-                else:
-                    self._proxy_callback(packet)
+            # referring to child class for whether to continue processing the packet
+            if not self._pre_inspect(packet): return
+
+            if (self._threaded):
+                threading.Thread(target=self._proxy_callback, args=(packet,)).start()
+            else:
+                self._proxy_callback(packet)
 
     def _pre_inspect(self, packet):
         '''handle the request after packet is parsed and confirmed protocol match.
@@ -196,15 +226,10 @@ class Listener:
         '''
         raise NotImplementedError('the listener_sock method must be overriden in subclass.')
 
-    # TODO: should be able to be decommed
-    # @property
-    # def is_service_loop(self):
-    #     '''boolean value representing whether current instance is a listener.'''
-
-    #     return self._intf is None
-
 
 # TODO: test the new fail detection algo stuffs and ensure it is working as inteded or whatever ya know.
+# i have a feeling it may be having issues based on dot-relay, but im not sure if they share the same
+# code for fail detection anymore.
 class ProtoRelay:
     '''parent class for udp and tls relays providing standard built in methods to start, check status, or add
     jobs to the work queue. _dns_queue object must be overwritten by sub classes.'''

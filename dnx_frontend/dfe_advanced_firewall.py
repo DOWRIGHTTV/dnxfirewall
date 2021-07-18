@@ -78,8 +78,7 @@ def update_page(form):
         'local_snat_rules': System.nat_rules(nat_type='SRCNAT')
     }
 
-    print(f'RETURNING: {page_data}')
-
+    # print(f'RETURNING: {page_data}')
     return error, zone, page_data
 
 def _firewall_rules(zone, action, form):

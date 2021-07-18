@@ -60,6 +60,7 @@ class CFG(_IntEnum):
     DEL = 0
     ADD = 1
     ADD_DEL = 2
+    RESTORE = 3
 
 #protocols
 class DNX(_IntEnum):
@@ -165,8 +166,8 @@ class DNS(_IntEnum):
     CNAME = 5
     SOA   = 6
     PTR   = 12
+    AAAA  = 28
     OPT   = 41
-    AAAA  = 128
 
 class ICMP(_IntEnum):
     ECHO = 8
