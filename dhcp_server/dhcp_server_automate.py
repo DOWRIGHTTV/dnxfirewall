@@ -205,7 +205,7 @@ class Configuration:
             'fileno': l_sock.fileno()
         })
 
-        Log.debug(f'[{l_sock.fileno()}][{intf}] socket created | {cls.__name__} settings: {cls.intf_settings}')
+        Log.debug(f'[{l_sock.fileno()}][{intf}] socket created')
 
 # custom dictionary to manage dhcp server leases including timeouts, updates, or persistence (store to disk)
 _STORED_RECORD = namedtuple('stored_record', 'ip record')
