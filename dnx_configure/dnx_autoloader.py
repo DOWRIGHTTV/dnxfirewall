@@ -19,7 +19,7 @@ from dnx_configure.dnx_iptables import IPTableManager
 from dnx_logging.log_main import LogHandler as Log
 
 LOG_NAME = 'system'
-PROGRESS_TOTAL_COUNT = 15
+PROGRESS_TOTAL_COUNT = 12
 
 LINEBREAK = '-'*32
 
@@ -304,7 +304,7 @@ def set_permissions():
 
     # creating database file here so it can get its permissions modified. This will
     # ensure it wont be overriden by update pulls.
-    dnx_run('touch {HOME_DIR}/dnx_system/data/dnxfirewall.sqlite3')
+    dnx_run(f'touch {HOME_DIR}/dnx_system/data/dnxfirewall.sqlite3')
 
     # set owner to dnx user/group
     dnx_run(f'sudo chown -R dnx:dnx {USER_DIR}/dnxfirewall')
