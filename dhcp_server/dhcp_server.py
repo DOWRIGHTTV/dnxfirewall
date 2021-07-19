@@ -44,6 +44,11 @@ class DHCPServer(Listener):
 
     __slots__ = ()
 
+    # ensuring compatibility between all instance types of dhcp server class
+    def __init__(self, *args, **kwargs):
+        if (args or kwargs):
+            super().__init__(*args, **kwargs)
+
     @classmethod
     def _setup(cls):
         Configuration.setup(cls)
@@ -70,10 +75,7 @@ class DHCPServer(Listener):
         '''pseudo alternate constructer acting as a callback for the Parent/Listener class, but will not return
         the created instance. instead it will internally manage the instance and ensure the request gets handled.'''
 
-        # NOTE: sending in None to fulfill __init__ requirements in the parent. MAYBE. one day. we can decide if
-        # we can to remove the assignments in initialization and inject them via the alternate constructor, allowing
-        # classing doing a self callback (non external) to not need to fill in the gap needlessly.
-        self = cls(None, None)
+        self = cls()
         self._handle_request(packet)
 
     def _handle_request(self, client_request):
