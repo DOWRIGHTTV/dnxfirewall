@@ -232,17 +232,19 @@ class Leases(dict):
     def __missing__(self, key):
         return _NULL_LEASE
 
-    def modify(self, ip, record=_NULL_LEASE):
+    def modify(self, ip, record=_NULL_LEASE, clean_up=False):
         '''modifies a record in the lease table. this will automatically ensure changes get written to disk. if no record
-        is provided, a dhcp release is assumed.'''
+        is provided, a dhcp release is assumed.
+
+        clean_up=True should only be used by callers in an automated system that handle mutating the lease dict themselves.
+        '''
 
         # added change to disk storage queue for lease persistence across device/process shutdowns.
         # will only store leases. offers will be treated as volitile and not persist restarts
         if (record[0] is not DHCP.OFFERED):
             self._storage.add(_STORED_RECORD(f'{ip}', record)) # pylint: disable=no-member
 
-        # this lock is protecting the internal lease table dict from getting mutated while the cleanup thread is active.
-        with self._lease_table_lock:
+        if (not clean_up):
             self[ip] = record
 
     @dnx_queue(Log, name='Leases')
@@ -274,30 +276,32 @@ class Leases(dict):
     # TODO: TEST RESERVATIONS GET CLEANED UP
     # removing expired entries from lease table on a per interface basis.
     def _lease_table_cleanup(self):
-        current_time = fast_time()
-        # copying dictionary as list for local reference performance
+
+        # copying dictionary as list for local reference performance and to remove need for shared object locks
         leases_copy = list(self.items())
-        with self._lease_table_lock:
-            for ip_address, lease in leases_copy:
-                lease_type, lease_time, lease_mac = lease
-                if (lease_type in [DHCP.AVAILABLE]): continue
 
-                time_elapsed = current_time - lease_time
-                # ip reservation has been removed from system
-                if (lease_type == DHCP.RESERVATION and lease_mac not in self._ip_reservations):
-                    self[ip_address] = (DHCP.AVAILABLE, 0, 0)
+        for ip_address, lease in leases_copy:
+            lease_type, lease_time, lease_mac = lease
+            if (lease_type in [DHCP.AVAILABLE]): continue
 
-                # client did not accept our ip offer
-                elif (lease_type == DHCP.OFFERED and time_elapsed > ONE_MIN):
-                    self[ip_address] = (DHCP.AVAILABLE, 0, 0)
+            # current time - lease time = time elapsed since lease was handed out
+            time_elapsed = fast_time() - lease_time
 
-                # ip lease expired normally
-                # NOTE: consider moving this value to a global constant/ make configurable
-                elif (time_elapsed >= 86800):
-                    self[ip_address] = (DHCP.AVAILABLE, 0, 0)
+            # ip reservation has been removed from system
+            if (lease_type == DHCP.RESERVATION and lease_mac not in self._ip_reservations):
+                self[ip_address] = (DHCP.AVAILABLE, 0, 0)
 
-                # unknown condition? maybe log?
-                else: continue
+            # client did not accept our ip offer
+            elif (lease_type == DHCP.OFFERED and time_elapsed > ONE_MIN):
+                self[ip_address] = (DHCP.AVAILABLE, 0, 0)
 
-                # adding to queue for removal. no record notifies job handler to remove vs add.
-                self.modify(ip_address) # pylint: disable=no-member
+            # ip lease expired normally # NOTE: consider moving this value to a global constant/ make configurable
+            elif (time_elapsed >= 86800):
+                self[ip_address] = (DHCP.AVAILABLE, 0, 0)
+
+            # unknown condition? maybe log?
+            else: continue
+
+            # adding to queue for removal from stored leases on disk. no record notifies job handler to remove vs add.
+            # this only needs to adjust the disk since the iterator handles mutating the lease dict in memory.
+            self.modify(ip_address, clean_up=True) # pylint: disable=no-member
