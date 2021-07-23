@@ -14,7 +14,7 @@ from dnx_configure.dnx_validate import convert_int, get_convert_int
 from dnx_configure.dnx_system_info import System
 from dnx_backups.bck_backups import BackupHandler
 
-_BACKUP_DISABLED = True
+_BACKUP_DISABLED = False
 
 def load_page():
     backups_info, current_backups = {}, System.backups()

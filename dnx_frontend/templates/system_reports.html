@@ -7,12 +7,13 @@
 <!-- Tabs for statistics -->
 <section id="dropdown" class="section">
     <div class="container">
-        <div class="col s12 m12">
-            <div class="card-panel">
-                <h4 class="red-text">Detection Logs</h4>
+        <div class="col s12">
+            <div class="card-panel hoverable">
+                <h4 class="{{title_color}}">Detection Logs</h4>
                 <div class="row">
                     <form action="system/reports" method="POST">
                         <div class="input-field col s10 m4">
+                            <!-- this is gross. this should be able to be done with iterable -->
                             <select name="table" onchange="this.form.submit()">
                                 <option value="db_time" {% if menu=='1' %} selected {% endif %}
                                     >Domains Blocked (by time)</option>
@@ -49,7 +50,7 @@
                     </form>
                 </div>
                 <div class="row">
-                    <table class="striped">
+                    <table class="striped centered">
                         <!-- DNS Proxy Table -->
                         {% if table=='1' %}
                         <thead>
@@ -177,7 +178,7 @@
                         {% for entry in table_data %}
                         <tr>
                             <td>
-                                <a class="waves-effect waves-light btn modal-trigger" href="#rep-modal1-{{loop.index}}"><i class="material-icons">remove</i></a>
+                                <a class="btn-floating btn-small red waves-effect waves-light modal-trigger" href="#rep-modal1-{{loop.index}}"><i class="material-icons">remove</i></a>
                                 <div id="rep-modal1-{{loop.index}}" class="modal">
                                     <div class="modal-content">
                                         <h5 class="red-text">Are you sure you want to remove the infected client from the list? Is it now clean?</h5>

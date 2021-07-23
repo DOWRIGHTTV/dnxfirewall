@@ -3,9 +3,9 @@
 <!-- Tabs for statistics -->
 <section id="dropdown" class="section">
     <div class="container">
-        <div class="col s12 m12">
-            <div class="card-panel">
-                <h4 class="red-text">System Logs</h4>
+        <div class="col s12">
+            <div class="card-panel hoverable">
+                <h4 class="{{title_color}}">System Logs</h4>
                 <div class="row">
                     <form action="system/logs" method="POST">
                         <div class="input-field col s10 m6">
@@ -27,13 +27,13 @@
                     </form>
                 </div>
                 <div class="row">
-                    <table class="striped">
+                    <table class="striped centered">
                         <thead>
                             <tr>
-                                <th>Date/Time</th>
-                                <th>Service</th>
-                                <th>Level</th>
-                                <th>Log Entry</th>
+                                <th style="width:15%">Date/Time</th>
+                                <th style="width:10%">Service</th>
+                                <th style="width:10%">Level</th>
+                                <th style="width:65%">Log Entry</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -48,10 +48,9 @@
                             {% endfor %}
                             {% else %}
                             <tr>
+                                {% for i in range(4) %}
                                 <td></td>
-                                <td>No Logs</td>
-                                <td></td>
-                                <td></td>
+                                {% endfor %}
                             </tr>
                         </tbody>
                         {% endif %}
