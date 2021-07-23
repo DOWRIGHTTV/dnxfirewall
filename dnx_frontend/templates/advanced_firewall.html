@@ -26,7 +26,7 @@
                         <form action="advanced/firewall" method="POST">
                             <input type="hidden" name="tab" value="1">
                             <input type="hidden" name="change_interface">
-                            <div class="input-field col s66 m4">
+                            <div class="input-field col s6 m4">
                                 <select name="zone" onchange="this.form.submit()">
                                     {% for zone in zones %}
                                         {% if zone == selected[:-10] %}
@@ -83,7 +83,7 @@
                         </div>
                         <div class="row">
                             <div class="input-field col s3 m2">
-                                <input type="number" name="position" class="validate" value="1" min="1" max="{{firewall_settings['firewal_rules']|length + 1}}">
+                                <input type="number" name="position" class="validate" value="1" min="1" max="{{firewall_settings['firewall_rules']|length + 1}}">
                                 <label for="">Position</label>
                             </div>
                             <div class="input-field col s4 m3 center">

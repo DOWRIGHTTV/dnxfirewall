@@ -1,7 +1,7 @@
 <!-- idle timeout notification popup
 540000 for 9 minutes | 1.5m???? is for 25min LOL. -->
 <body onload="setTimeout(idleTimeout, 1500000)">
-    <form action="{{uri_path}}" method="POST">
+    <form action="/{{uri_path|join('/')}}" method="POST">
         <div id="idle-timeout-modal" class="modal modal-idle-timeout">
             <div class="modal-content center">
                 <script>var error = true;</script>

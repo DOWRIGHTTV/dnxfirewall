@@ -54,6 +54,8 @@ def load_page():
     return firewall_settings
 
 def update_page(form):
+    print(form)
+
     if ('ip_hosts_update' in form):
         category_settings = form.getlist('categories', None)
         if (not category_settings):
