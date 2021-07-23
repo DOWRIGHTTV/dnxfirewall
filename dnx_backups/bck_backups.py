@@ -17,10 +17,9 @@ LOG_NAME = 'system'
 
 class BackupHandler:
     '''This class provides a configuration backup service as well as automated backup for system files when
-    running updates
+    running updates.
 
-    This class is not process safe. A file lock should be implemented to ensure conflictions actions arent
-    done in the middle of eachother.
+    This class is not process safe. A file lock should be implemented to prevent any shared state corruption.
     '''
 
     @classmethod
@@ -66,7 +65,7 @@ class BackupHandler:
                 # NOTE: IMPORTANT. ensuring database does not get removed
                 if (file.endswith('.sqlite3') or file == 'temp'): continue
 
-                # exception to protect process just in case it is being remove by another user at the same time.
+                # exception to protect process just in case it is being removed by another user at the same time.
                 try:
                     os.remove(f'{usr_cfg_file_path}/{file}')
                 except FileNotFoundError:
@@ -75,11 +74,10 @@ class BackupHandler:
             Log.simple_write(LOG_NAME, 'notice', f'configuration restored to system defaults')
 
         else: #
-            # try:
-            print(name)
-            with tarfile.open(f'{HOME_DIR}/dnx_system/config_backups/{name}.tar', 'r') as tar:
-                tar.extractall(path=f'{HOME_DIR}/dnx_system/data/usr/')
-            # except:
+            try:
+                with tarfile.open(f'{HOME_DIR}/dnx_system/config_backups/{name}.tar', 'r') as tar:
+                    tar.extractall(path=f'{HOME_DIR}/dnx_system/data/usr/')
+            except:
                 raise ValidationError('Error while loading configuration. has the file been removed?')
 
             Log.simple_write(LOG_NAME, 'notice', f'configuration restored from file [{name}]')

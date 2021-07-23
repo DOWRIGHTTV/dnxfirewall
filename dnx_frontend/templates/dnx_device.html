@@ -8,20 +8,14 @@
         {% endif %}
     </div>
     <div class="row right">
-        <div class="input-field col s5 m5">
+        <div class="input-field col s5">
             <form action="/device/{{action}}" method="POST">
-                <button class="btn waves-effect waves-light">
-                    <input type="hidden" name="system_{{action}}" value="YES">
-                    <i class="material-icons">YES</i>
-                </button>
+                <button class="btn waves-effect waves-light" name="system_{{action}}" value="YES">YES</button>
             </form>
         </div>
-        <div class="input-field col s5 m5">
+        <div class="input-field col s5">
             <form action="/device/{{action}}" method="POST">
-                <button class="btn waves-effect waves-light">
-                    <input type="hidden" name="system_{{action}}" value="NO">
-                    <i class="material-icons">NO</i>
-                </button>
+                <button class="btn waves-effect waves-light" name="system_{{action}}" value="NO">NO</button>
             </form>
         </div>
     </div>
@@ -30,10 +24,9 @@
 <section id="why-me" class="section">
     <div class="container">
         {% if action == 'restart' %}
-        <h4 class="red-text">The system is now restarting. This can take a few minutes. </h4>
+        <h4 class="red-text">The system is now restarting. This can take a few minutes.</h4>
         {% elif action == 'shutdown' %}
-        <h4 class="red-text">The system is being shutdown. Please wait a few minutes before unplugging the device from
-            power. </h4>
+        <h4 class="red-text">The system is being shutdown. Please wait a few minutes before unplugging the device from power.</h4>
         {% endif %}
     </div>
 </section>

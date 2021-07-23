@@ -19,17 +19,15 @@
 <section id="categories" class="section">
     <div class="container">
         <div class="row">
-            <div class="col s12 m2"></div>
-            <div class="col s12 m8">
-                <div class="card-panel">
-                    <h4 class="red-text light-3">Reputation</h4>
+            <div class="col s12 m8 offset-m2">
+                <div class="card-panel hoverable">
+                    <h4 class="{{title_color}}">Reputation</h4>
                     <form action="/advanced/ip" method="post">
                         <input type="hidden" name="tab" value="1">
                         <input type="hidden" name="ip_hosts_update">
                         <div class="row">
                             {% for category, enabled in ip_settings['categories'].items() %}
-                            <div class="input-field col s1 m1"></div>
-                            <div class="input-field col s5 m5">
+                            <div class="input-field col s4 offset-s1">
                                 {{category.title().replace('_', ' ')}}
                                 <br>
                                 <select class="browser-default" name="categories" id="" onchange="this.form.submit()">
@@ -44,9 +42,7 @@
                         <noscript>
                             <div class="row">
                                 <div class="col s12 center">
-                                    <button class="btn waves-effect waves-light">
-                                        <i class="material-icons"></i> Update
-                                    </button>
+                                    <button class="btn waves-effect waves-light">Update</button>
                                 </div>
                             </div>
                         </noscript>
@@ -59,17 +55,15 @@
 <section id="geolocation" class="section">
     <div class="container">
         <div class="row">
-            <div class="col s12 m1"></div>
-            <div class="col s12 m10">
-                <div class="card-panel">
-                    <h4 class="red-text light-3">Geolocation</h4>
+            <div class="col s12 m10 offset-m1">
+                <div class="card-panel hoverable">
+                    <h4 class="{{title_color}}">Geolocation</h4>
                     <form action="/advanced/ip" method="post">
                         <input type="hidden" name="tab" value="2">
                         <input type="hidden" name="geo_lists_update">
                         <div class="row">
                             {% for country, enabled in ip_settings['geolocation'].items() %}
-                            <div class="input-field col s1 m1"></div>
-                            <div class="input-field col s3 m3">
+                            <div class="input-field col s3">
                                 {{country.title().replace('_', '. ')}}
                                 <br>
                                 <select class="browser-default" name="countries" id="" onchange="this.form.submit()">
@@ -84,9 +78,7 @@
                         <noscript>
                             <div class="row">
                                 <div class="col s12 center">
-                                    <button class="btn waves-effect waves-light">
-                                        <i class="material-icons"></i> Update
-                                    </button>
+                                    <button class="btn waves-effect waves-light">Update</button>
                                 </div>
                             </div>
                         </noscript>
@@ -99,13 +91,12 @@
 <section id="lan-restrict" class="section">
     <div class="container">
         <div class="row">
-            <div class="col s12 m3"></div>
-            <div class="col s12 m6">
-                <div class="card-panel">
-                    <h4 class="red-text light-3">LAN Restrict</h4>
+            <div class="col s12 m8 offset-m2">
+                <div class="card-panel hoverable">
+                    <h4 class="{{title_color}}">LAN Restrict</h4>
                     <form action="/advanced/ip" method="post">
                         <input type="hidden" name="tab" value="3">
-                        <div class="col s12 m12">
+                        <div class="col s12">
                             <h6>Start Time</h6>
                             <div class="row">
                                 <div class="input-field col s12 m3">
@@ -152,10 +143,7 @@
                         </div>
                         <div class="row">
                             <div class="col s12 center">
-                                <button class="btn waves-effect waves-light">
-                                    <input type="hidden" name="time_res_update">
-                                    <i class="material-icons"></i> Update
-                                </button>
+                                <button class="btn waves-effect waves-light" name="time_res_update">Update</button>
                             </div>
                         </div>
                     </form>

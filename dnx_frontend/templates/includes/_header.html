@@ -1,10 +1,11 @@
 <!-- header: navbar, slider content -->
 <header>
-    <nav class="red darken-3">
+    <nav class="blue-grey">
         <div class="container">
             <div class="nav-wrapper">
                 <a href="/dashboard" class="brand-logo"><img src="/static/assets/images/dnxlogo_v2.png"
-                        height="40px" style="display: block;"></a>
+                    height="40px" style="display: block;">
+                </a>
 
                 {% if login_btn %}
                 <a href="login"><i class="material-icons left">send</i>Login</a>
@@ -16,27 +17,27 @@
 
                 {% if user_role == 'admin' %}
                 <ul class="right remove-big-menu">
-                    <li><a href="dashboard"><i class="material-icons left">dashboard</i>Dashboard</a></li>
+                    <li><a href="dashboard"><i class="material-icons grey-text accent-2 left">dashboard</i>Dashboard</a></li>
                     <li><a href="" class="dropdown-trigger" data-target="settings-dropdown"><i
-                                class="material-icons left">settings</i>
+                                class="material-icons grey-text accent-2 left">settings</i>
                             Settings <i class="material-icons right">arrow_drop_down</i></a></li>
                     <li><a href="" class="dropdown-trigger" data-target="advanced-dropdown"><i
-                                class="material-icons left">security</i>
+                                class="material-icons red-text lighten-2 left">security</i>
                             Advanced <i class="material-icons right">arrow_drop_down</i></a></li>
                     <li><a href="" class="dropdown-trigger" data-target="system-dropdown"><i
-                                class="material-icons left">computer</i>
+                                class="material-icons grey-text lighten-3 left">computer</i>
                             System <i class="material-icons right">arrow_drop_down</i></a></li>
                     <li><a href="" class="dropdown-trigger" data-target="device-dropdown"><i
-                                class="material-icons left">power_settings_new</i>
+                                class="material-icons green-text accent-3 left">power_settings_new</i>
                             Device <i class="material-icons right">arrow_drop_down</i></a></li>
-                    <li><a href="logout"><i class="material-icons left">logout</i>Logout</a></li>
+                    <li><a href="logout"><i class="material-icons orange-text lighten-1 left">logout</i>Logout</a></li>
                 </ul>
 
                 {% elif user_role == 'user' %}
                 <ul class="right remove-big-menu">
-                    <li><a href="dashboard"><i class="material-icons left">dashboard</i>Dashboard</a></li>
+                    <li><a href="dashboard"><i class="material-icons grey-text accent-2 left">dashboard</i>Dashboard</a></li>
                     <li><a href="system/reports"><i class="material-icons left">assignment_late</i> Reports</a></li>
-                    <li><a href="logout"><i class="material-icons left">logout</i>Logout</a></li>
+                    <li><a href="logout"><i class="material-icons orange-text lighten-1 left">logout</i>Logout</a></li>
                 </ul>
                 {% endif %}
                 {% endif %}
@@ -57,39 +58,35 @@
         <li><a href="device/restart"><i class="material-icons left">refresh</i> Restart</a></li>
         <li><a href="device/shutdown"><i class="material-icons left">power_settings_new</i> Shutdown</a></li>
     </ul>
-    <ul id="advanced-dropdown" class="dropdown-content">
+    <ul id="advanced-dropdown" class="dropdown-content red lighten-2">
         <li><a href="/advanced/whitelist"><i class="material-icons">thumb_up</i> Whitelist</a></li>
         <li><a href="/advanced/blacklist"><i class="material-icons">thumb_down</i> Blacklist</a></li>
+        <li><a href="/advanced/firewall"><i class="material-icons">security</i> Firewall</a></li>
         <li><a href="/advanced/domain"><i class="material-icons">collections_bookmark</i> Domain</a></li>
         <li><a href="/advanced/ip"><i class="material-icons">verified_user</i> IP</a></li>
-        <li><a href="/advanced/firewall"><i class="material-icons">security</i> Firewall</a></li>
         <li><a href="/advanced/ips"><i class="material-icons">report</i> IPS/IDS</a></li>
     </ul>
     <ul id="system-dropdown" class="dropdown-content">
-        <li><a href="system/users"><i class="material-icons">group</i> Users</a></li>
-        <li><a href="system/reports"><i class="material-icons">assignment_late</i> Reports</a></li>
         <li><a href="system/logs"><i class="material-icons">assignment</i> Logs</a></li>
-        <li><a href="system/services"><i class="material-icons left">sync</i> Services</a></li>
+        <li><a href="system/reports"><i class="material-icons">assignment_late</i> Reports</a></li>
+        <li><a href="system/users"><i class="material-icons">group</i> Users</a></li>
         <li><a href="system/backups"><i class="material-icons left">backup</i> Backups</a></li>
+        <li><a href="system/services"><i class="material-icons left">sync</i> Services</a></li>
     </ul>
     <!-- end dropdown-->
 
     <!-- sidenav - small screens -->
     <ul class="sidenav" id="mobile-nav">
-        <li><a href="dashboard"><i class="material-icons left">dashboard</i>Dashboard</a></li>
-        <li><a href="" class="dropdown-trigger" data-target="sidenav-settings-dropdown"><i
-                    class="material-icons left">settings</i>
-                Settings <i class="material-icons right">arrow_drop_down</i></a></li>
-        <li><a href="" class="dropdown-trigger" data-target="sidenav-advanced-dropdown"><i
-                    class="material-icons left">security</i>
+        <li><a href="dashboard"><i class="material-icons grey-text accent-2 left">dashboard</i>Dashboard</a></li>
+        <li><a href="" class="dropdown-trigger" data-target="sidenav-settings-dropdown"><i class="material-icons left">settings</i>
+                Settings <i class="material-icons grey-text accent-2 right">arrow_drop_down</i></a></li>
+        <li><a href="" class="dropdown-trigger" data-target="sidenav-advanced-dropdown"><i class="material-icons red-text lighten-2 left">security</i>
                 Advanced <i class="material-icons right">arrow_drop_down</i></a></li>
-        <li><a href="" class="dropdown-trigger" data-target="sidenav-system-dropdown"><i
-                    class="material-icons left">computer</i>
-                System <i class="material-icons right">arrow_drop_down</i></a></li>
-        <li><a href="" class="dropdown-trigger" data-target="sidenav-device-dropdown"><i
-                    class="material-icons left">power_settings_new</i>
+        <li><a href="" class="dropdown-trigger" data-target="sidenav-system-dropdown"><i class="material-icons left">computer</i>
+                System <i class="material-icons grey-text accent-2 right">arrow_drop_down</i></a></li>
+        <li><a href="" class="dropdown-trigger" data-target="sidenav-device-dropdown"><i class="material-icons green-text accent-3 left">power_settings_new</i>
                 Device <i class="material-icons right">arrow_drop_down</i></a></li>
-        <li><a href="logout"><i class="material-icons left">logout</i>Logout</a></li>
+        <li><a href="logout"><i class="material-icons orange-text lighten-1 left">logout</i>Logout</a></li>
     </ul>
     <!-- sidenav dropdown -->
     <ul id="sidenav-settings-dropdown" class="dropdown-content">
@@ -104,20 +101,20 @@
         <li><a href="device/restart"><i class="material-icons left">refresh</i> Restart</a></li>
         <li><a href="device/shutdown"><i class="material-icons left">power_settings_new</i> Shutdown</a></li>
     </ul>
-    <ul id="sidenav-advanced-dropdown" class="dropdown-content red">
+    <ul id="sidenav-advanced-dropdown" class="dropdown-content red lighten-2">
         <li><a href="/advanced/whitelist"><i class="material-icons">thumb_up</i> Whitelist</a></li>
         <li><a href="/advanced/blacklist"><i class="material-icons">thumb_down</i> Blacklist</a></li>
+        <li><a href="/advanced/firewall"><i class="material-icons">security</i> Firewall</a></li>
         <li><a href="/advanced/domain"><i class="material-icons">collections_bookmark</i> Domain</a></li>
         <li><a href="/advanced/ip"><i class="material-icons">verified_user</i> IP</a></li>
-        <li><a href="/advanced/firewall"><i class="material-icons">security</i> Firewall</a></li>
         <li><a href="/advanced/ips"><i class="material-icons">report</i> IPS/IDS</a></li>
     </ul>
-    <ul id="sidenav-system-dropdown" class="dropdown-content red">
-        <li><a href="system/users"><i class="material-icons">group</i> Users</a></li>
-        <li><a href="system/reports"><i class="material-icons">assignment_late</i> Reports</a></li>
+    <ul id="sidenav-system-dropdown" class="dropdown-content">
         <li><a href="system/logs"><i class="material-icons">assignment</i> Logs</a></li>
-        <li><a href="system/services"><i class="material-icons left">sync</i> Services</a></li>
+        <li><a href="system/reports"><i class="material-icons">assignment_late</i> Reports</a></li>
+        <li><a href="system/users"><i class="material-icons">group</i> Users</a></li>
         <li><a href="system/backups"><i class="material-icons left">backup</i> Backups</a></li>
+        <li><a href="system/services"><i class="material-icons left">sync</i> Services</a></li>
     </ul>
     <!-- end sidenav dropdown -->
 

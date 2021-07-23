@@ -5,10 +5,10 @@
         <div class="row">
             <div class="col s12 m12">
                 <ul class="tabs">
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='1' %} class="active" {% endif %}
-                            href="#createcategory" onclick="activeTab(1)">Create Custom Category</a></li>
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='2' %} class="active" {% endif %}
-                            href="#categoryrules" onclick="activeTab(2)">Custom Category Rules</a></li>
+                    <li class="tab col s3 l4 xl2"><a {% if tab=='1' %} class="active" {% endif %}
+                        href="#createcategory" onclick="activeTab(1)">Create Custom Category</a></li>
+                    <li class="tab col s3 l4 xl2"><a {% if tab=='2' %} class="active" {% endif %}
+                        href="#categoryrules" onclick="activeTab(2)">Custom Category Rules</a></li>
                 </ul>
             </div>
         </div>
@@ -18,8 +18,8 @@
     <div class="container">
         <div class="row row-flex">
             <div class="col s12 m6">
-                <div class="card-panel card-panel-eql">
-                    <h4 class="red-text">Add Category Rule</h4>
+                <div class="card-panel card-panel-eql hoverable">
+                    <h4 class="{{title_color}}">Add Category Rule</h4>
                     <form action="/settings/categories" method="post">
                         <input type="hidden" name="tab" value="1">
                         <div class="row">
@@ -62,19 +62,17 @@
                 </div>
             </div>
             <div class="col s12 m6">
-                <div class="card-panel card-panel-eql">
-                    <h4 class="red-text">User Defined Categories</h4>
+                <div class="card-panel card-panel-eql hoverable">
+                    <h4 class="{{title_color}}">User Defined Categories</h4>
                     <form action="/settings/categories" method="POST">
                         <input type="hidden" name="tab" value="1">
                         <div class="row">
-                            <div class="input-field col s12 m12">
+                            <div class="input-field col s12">
                                 <input type="text" name="ud_category" class="validate" placeholder="social media"
                                     required>
                                 <label for="">Category Name</label>
                                 <input type="hidden" name="ud_cat_add">
-                                <button class="btn waves-effect waves-light col s2">
-                                    <i class="material-icons"></i> Add
-                                </button>
+                                <button class="btn waves-effect waves-light col s2">Add</button>
                             </div>
                         </div>
                     </form>
@@ -87,9 +85,7 @@
                                 <div class="input-field col s12">
                                     <input type="hidden" name="ud_cat_remove" value="{{cat}}">
                                     <input type="hidden" name="tab" value="1">
-                                    <button class="btn waves-effect waves-light">
-                                        <i class="material-icons"></i> Remove
-                                    </button>
+                                    <button class="btn waves-effect waves-light">Remove</button>
                                 </div>
                             </div>
                         </div>
@@ -103,9 +99,9 @@
 </section>
 <section id="categoryrules" class="section">
     <div class="container">
-        <div class="col s12 m12">
-            <div class="card-panel">
-                <h4 class="red-text">Custom Category Rules</h4>
+        <div class="col s12">
+            <div class="card-panel hoverable">
+                <h4 class="{{title_color}}">Custom Categories</h4>
                 <div class="row">
                     <form action="/settings/categories" method="POST">
                         <input type="hidden" name="tab" value="2">
@@ -132,7 +128,7 @@
                 </div>
                 {% if category_settings['ud_list'] %}
                 <div class="row">
-                    <table class="striped">
+                    <table class="striped centered">
                         <thead>
                             <tr>
                                 <th></th>
@@ -151,7 +147,7 @@
                                         <input type="hidden" name="category" value="{{category}}">
                                         <input type="hidden" name="cat_del_domain" value="{{rule[0]}}">
                                         <input type="hidden" name="tab" value="2">
-                                        <button class="btn waves-effect waves-light">
+                                        <button class="btn-floating btn-small red waves-effect waves-light">
                                             <i class="material-icons">remove</i>
                                         </button>
                                     </form>
@@ -163,7 +159,7 @@
                             {% else %}
                             <tr>
                                 <td></td>
-                                <td>No Rules</td>
+                                <td></td>
                                 <td></td>
                             </tr>
                             {% endif %}

@@ -3,10 +3,40 @@
 <section id="users">
     <div class="container">
         <div class="row">
-            <div class="col s12 m8">
-                <div class="card-panel">
-                    <h4 class="red-text">Current Users</h4>
-                    <table class="striped">
+            <div class="col s12">
+                <div class="card-panel hoverable">
+                    <h4 class="{{title_color}}">Create User</h4>
+                    <form action="/system/users" method="POST">
+                        <div class="row">
+                            <div class="input-field col s4">
+                                <input type="text" name="user_acct" class="validate" placeholder=admin required>
+                                <label for="">Username</label>
+                            </div>
+                            <div class="input-field col s4">
+                                <input type="password" name="user_password" class="validate" placeholder="password" required>
+                                <label for="">Password (minimum 8 chars)</label>
+                            </div>
+                            <div class="input-field col s4">
+                                <select name="user_role" id="">
+                                    <option value="admin">admin</option>
+                                    <option value="user">user</option>
+                                    <option value="cli">cli</option>
+                                </select>
+                                <label for="user_role">Role</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="input-field col s4 m2 offset-s4 offset-m5">
+                                <button class="btn waves-effect waves-light col s12" name="user_add">Add</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="col s12">
+                <div class="card-panel hoverable">
+                    <h4 class="{{title_color}}">Configured Users</h4>
+                    <table class="striped centered">
                         <thead>
                             <tr>
                                 <th></th>
@@ -18,8 +48,8 @@
                         <tbody>
                             {% for user, user_info in user_list.items() %}
                             <tr>
-                                <td>
-                                    <a class="waves-effect waves-light btn modal-trigger"
+                                <td style="width:10%">
+                                    <a class="btn-floating btn-small waves-effect waves-light red modal-trigger"
                                         href="#user-modal1-{{loop.index}}"><i class="material-icons">remove</i></a>
                                     <div id="user-modal1-{{loop.index}}" class="modal">
                                         <div class="modal-content">
@@ -35,49 +65,13 @@
                                         </form>
                                     </div>
                                 </td>
-                                <td>{{user}}</label></td>
-                                <td>{{user_info[1]}}</td>
-                                <td>{{user_info[0]}}</td>
+                                <td style="width:30%">{{user}}</label></td>
+                                <td style="width:30%">{{user_info[1]}}</td>
+                                <td style="width:30%">{{user_info[0]}}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
-                </div>
-            </div>
-            <div class="col s12 m4">
-                <div class="card-panel">
-                    <h4 class="red-text light-3">Add User</h4>
-                    <form action="/system/users" method="POST">
-                        <div class="row">
-                            <div class="input-field col s12">
-                                <input type="text" name="user_acct" class="validate" placeholder=admin required>
-                                <label for="">Username</label>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="input-field col s12">
-                                <input type="password" name="user_password" class="validate" placeholder=password
-                                    required>
-                                <label for="">Password (minimum 8 chars)</label>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="input-field col s12">
-                                <select name="user_role" id="">
-                                    <option value="admin">admin</option>
-                                    <option value="user">user</option>
-                                    <option value="cli">cli</option>
-                                </select>
-                                <label for="user_role">Role</label>
-                            </div>
-                            <div class="row">
-                                <div class="input-field col s12 m4">
-                                    <input type="hidden" name="user_add">
-                                    <button class="btn waves-effect waves-light col s12">
-                                        <i class="material-icons"></i> Add
-                                    </button>
-                                </div>
-                    </form>
                 </div>
             </div>
         </div>

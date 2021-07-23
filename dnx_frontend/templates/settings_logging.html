@@ -17,8 +17,8 @@
         <div class="row row-flex">
             <div class="col s12 m2"></div>
             <div class="col s12 m4">
-                <div class="card-panel card-panel-eql z-depth-2">
-                    <h4 class="red-text">Logging</h4>
+                <div class="card-panel card-panel-eql z-depth-2 hoverable">
+                    <h4 class="{{title_color}}">Logging</h4>
                     <form action="/settings/logging" method="POST">
                         <input type="hidden" name="tab" value="1">
                         <input type="hidden" name="logging_update">
@@ -56,9 +56,7 @@
                             <div class="row">
                                 <div class="input-field col s12 m4 center"></div>
                                 <div class="input-field col s12 m4 center">
-                                    <button class="btn waves-effect waves-light col s12">
-                                        <i class="material-icons"></i> Update
-                                    </button>
+                                    <button class="btn waves-effect waves-light col s12">Update</button>
                                 </div>
                             </div>
                         </noscript>
@@ -66,8 +64,8 @@
                 </div>
             </div>
             <div class="col s12 m4">
-                <div class="card-panel card-panel-eql z-depth-2">
-                    <h4 class="red-text">Select Time Offset</h4>
+                <div class="card-panel card-panel-eql z-depth-2 hoverable">
+                    <h4 class="{{title_color}}">Select Time Offset</h4>
                     <h6>System Time: {{logging_settings['system']}}</h6>
                     <h6>Time Offset: {{logging_settings['local']}}</h6>
                     <br>

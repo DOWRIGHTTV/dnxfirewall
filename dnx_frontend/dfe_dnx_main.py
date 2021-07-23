@@ -448,9 +448,9 @@ def dnx_blocked():
 ## --------------------------------------------- ##
 
 @app.route('/login', methods=['GET', 'POST'])
-# TODO: see about marking session username a list of username and role so we wont have to have a separate
+# TODO: see about making session username a list of username and role so we wont have to have a separate
 # role check every time the user logs in, out, or navigates to new page.
-# TODO: if user is already logged in
+# TODO: if user is already logged in... <--- what is this???
 def dnx_login():
     login_error = None
     if (request.method == 'POST'):
@@ -465,7 +465,7 @@ def dnx_login():
 
         login_error = 'Invalid Credentials. Please try again.'
 
-    return render_template('dnx_login.html', navi=True, login_btn=True, idle_timeout=False,
+    return render_template('dnx_login.html', navi=True, login_btn=False, idle_timeout=False,
         standard_error=False, login_error=login_error)
 
 @app.route('/license_agreement', methods=['GET', 'POST'])
@@ -571,13 +571,13 @@ def handle_system_action(page_settings):
             'login_btn': True
         })
 
-        Log.warning(f'DNX Firewall {action} initiated.')
+        Log.warning(f'dnxfirewall {action} initiated.')
 
         system_action_method = getattr(System, action)
         threading.Thread(target=system_action_method).start()
 
     elif (response == 'NO'):
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('dnx_dashboard'))
 
     return render_template('dnx_device.html', **page_settings)
 
