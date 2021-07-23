@@ -63,8 +63,8 @@ def dnx_dashboard(dnx_session_data):
 
     page_settings = {
         'navi': True, 'footer': True, 'standard_error': False,
-        'idle_timeout': True, 'uri_path': '/dashboard',
-        'dashboard': dashboard
+        'idle_timeout': True, 'dashboard': dashboard,
+        'uri_path': ['dashboard',]
     }
 
     page_settings.update(dnx_session_data)
@@ -80,8 +80,8 @@ def dnx_dashboard(dnx_session_data):
 def settings_dns(dnx_session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'uri_path': '/settings/dns'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['settings', 'dns']
     }
 
     page_settings.update(dnx_session_data)
@@ -96,8 +96,8 @@ def settings_dns(dnx_session_data):
 def settings_dhcp(dnx_session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'uri_path': '/settings/dhcp'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['settings', 'dhcp']
     }
 
     page_settings.update(dnx_session_data)
@@ -112,8 +112,8 @@ def settings_dhcp(dnx_session_data):
 def settings_interface(dnx_session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'uri_path': '/settings/interface'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['settings', 'interface']
     }
 
     page_settings.update(dnx_session_data)
@@ -128,8 +128,8 @@ def settings_interface(dnx_session_data):
 def settings_logging(dnx_session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'uri_path': '/settings/logging'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['settings', 'logging']
     }
 
     page_settings.update(dnx_session_data)
@@ -144,8 +144,8 @@ def settings_logging(dnx_session_data):
 def settings_syslog(dnx_session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'uri_path': '/settings/syslog'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['settings', 'syslog']
     }
 
     page_settings.update(dnx_session_data)
@@ -165,10 +165,10 @@ def settings_categories(dnx_session_data):
     settings = category_settings.load_page(menu_option)
 
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'cat_settings': True,
-        'uri_path': '/settings/categories',
-        'menu': menu_option, 'category_settings': settings
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'cat_settings': True, 'tab': tab, 'menu': menu_option,
+        'category_settings': settings,
+        'uri_path': ['settings', 'categories']
     }
 
     page_settings.update(dnx_session_data)
@@ -186,8 +186,8 @@ def settings_categories(dnx_session_data):
 def advanced_whitelist(dnx_session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'uri_path': '/advanced/whitelist'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['advanced', 'whitelist']
     }
 
     page_settings.update(dnx_session_data)
@@ -202,8 +202,8 @@ def advanced_whitelist(dnx_session_data):
 def advanced_blacklist(dnx_session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'uri_path': '/advanced/blacklist'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['advanced', 'blacklist']
     }
 
     page_settings.update(dnx_session_data)
@@ -218,8 +218,8 @@ def advanced_blacklist(dnx_session_data):
 def advanced_domain(dnx_session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'uri_path': '/advanced/domain'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['advanced', 'domain']
     }
 
     page_settings.update(dnx_session_data)
@@ -234,8 +234,8 @@ def advanced_domain(dnx_session_data):
 def advanced_ip(dnx_session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'uri_path': '/advanced/ip'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['advanced', 'ip']
     }
 
     page_settings.update(dnx_session_data)
@@ -252,11 +252,11 @@ def advanced_firewall(dnx_session_data):
     menu_option = request.args.get('menu', '1')
 
     page_settings = {
-        'navi': True, 'tab': tab, 'menu': menu_option,
-        'standard_error': None, 'idle_timeout': True,
-        'uri_path': '/advanced/firewall',
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'menu': menu_option,
         'selected': 'GLOBAL_INTERFACE',
-        'zones': ['GLOBAL', 'WAN', 'DMZ', 'LAN']
+        'zones': ['GLOBAL', 'WAN', 'DMZ', 'LAN'],
+        'uri_path': ['advanced', 'firewall']
     }
 
     page_settings.update(dnx_session_data)
@@ -271,8 +271,8 @@ def advanced_firewall(dnx_session_data):
 def advanced_ips(dnx_session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'uri_path': '/advanced/ips'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['advanced', 'ips']
     }
 
     page_settings.update(dnx_session_data)
@@ -290,8 +290,8 @@ def advanced_ips(dnx_session_data):
 @user_restrict('admin')
 def system_users(dnx_session_data):
     page_settings = {
-        'navi': True, 'standard_error': None, 'idle_timeout': True,
-        'uri_path': '/system/users'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'uri_path': ['system', 'users']
     }
 
     page_settings.update(dnx_session_data)
@@ -305,8 +305,9 @@ def system_users(dnx_session_data):
 @user_restrict('user', 'admin')
 def system_reports(dnx_session_data):
     page_settings = {
-        'navi': True, 'idle_timeout': True, 'log_timeout': True,
-        'uri_path': '/system/reports', 'menu': '1', 'table': '1'
+        'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
+        'menu': '1', 'table': '1',
+        'uri_path': ['system', 'reports']
     }
 
     page_settings.update(dnx_session_data)
@@ -319,9 +320,10 @@ def system_reports(dnx_session_data):
 @user_restrict('user', 'admin')
 def system_logs(dnx_session_data):
     page_settings = {
-        'navi': True, 'idle_timeout': True, 'log_timeout': True,
-        'uri_path': '/system/logs', 'menu': '1',
-        'log_files': ['combined', 'logins', 'web_app', 'system', 'dns_proxy', 'ip_proxy', 'ips', 'dhcp_server', 'syslog']
+        'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
+        'menu': '1',
+        'log_files': ['combined', 'logins', 'web_app', 'system', 'dns_proxy', 'ip_proxy', 'ips', 'dhcp_server', 'syslog'],
+        'uri_path': ['system', 'logs']
     }
 
     page_settings.update(dnx_session_data)
@@ -334,7 +336,8 @@ def system_logs(dnx_session_data):
 @user_restrict('admin')
 def system_services(dnx_session_data):
     page_settings = {
-        'navi': True, 'idle_timeout': True, 'standard_error': None
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'uri_path': ['system', 'services'],
     }
 
     page_settings.update(dnx_session_data)
@@ -348,8 +351,8 @@ def system_services(dnx_session_data):
 @user_restrict('admin')
 def system_backups(dnx_session_data):
     page_settings = {
-        'navi': True, 'standard_error': None, 'idle_timeout': True,
-        'uri_path': '/system/backups'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'uri_path': ['system', 'backups']
     }
 
     page_settings.update(dnx_session_data)

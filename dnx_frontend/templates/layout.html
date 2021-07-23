@@ -12,14 +12,15 @@
     <link rel="shortcut icon" href="{{ url_for('static', filename='assets/images/shield.png') }}">
 </head>
 <body>
+    <!-- web ui color vars. will later be configurable, but for now will be set directly from here.-->
+    {% set title_color = 'blue-grey-text darken-2' %}
+    {% set icon_color = 'blue-grey-text' %}
+    {% set tabs_color = 'red-text' %}
+
     {% include 'includes/_header.html' %}
 
     {% set ip_addr_validate = 'class=validate minlength=7 maxlength=15 size=15 pattern=^((\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.){3}(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])$' %}
     {% set port_validate = 'class=validate min=1 max=65535 pattern=^()([1-9]|[1-5]?[0-9]{2,4}|6[1-4][0-9]{3}|65[1-4][0-9]{2}|655[1-2][0-9]|6553[1-5])$' %}
-
-    <!-- web ui color vars. will later be configurable, but for now will be set directly from here.-->
-    {% set title_color = 'blue-grey-text darken-2' %}
-    {% set tabs_color = 'red-text' %}
 
     {% block body %}{% endblock body %}
 
