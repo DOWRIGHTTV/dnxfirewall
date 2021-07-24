@@ -5,8 +5,8 @@ import random
 import threading
 import traceback
 import ssl
-import socket
 
+from socket import socket, timeout, AF_INET, SOCK_STREAM, SOCK_DGRAM
 from copy import deepcopy
 from collections import deque
 
@@ -24,30 +24,25 @@ from dns_proxy.dns_proxy_packets import ClientRequest, ServerResponse
 
 from dnx_configure.dnx_code_profiler import profiler
 
+RELAY_TIMEOUT = 10
+
 
 class UDPRelay(ProtoRelay):
     _protocol = PROTO.UDP
 
     __slots__ = ()
 
-    @property
-    def standby_condition(self):
-        if (self._DNSServer.udp_fallback and not self._DNSServer.tls_up):
-            return True
-
-        return False
-
     def _register_new_socket(self):
-        with self._DNSServer.server_lock:
-            for dns_server in self._DNSServer.dns_servers:
-                # if server if down we will skip over it
-                if (not dns_server[self._protocol]): continue
+        for dns_server in self._DNSServer.dns_servers:
 
-                # never fail so will always return True
-                return self._create_socket(dns_server['ip'])
+            # if server if down we will skip over it
+            if (not dns_server[self._protocol]): continue
 
-            else:
-                Log.critical('NO UDP SERVER AVAILABLE.')
+            # never fail so will always return True
+            return self._create_socket(dns_server['ip'])
+
+        else:
+            Log.critical(f'No [{self._protocol}] dns servers available.')
 
     @dnx_queue(Log, name='UDPRelay')
     def relay(self, client_query):
@@ -61,21 +56,28 @@ class UDPRelay(ProtoRelay):
         while True:
             try:
                 data_from_server = conn_recv(1024)
-            except (socket.timeout, OSError) as e:
-                Log.error(f'RCV SOCKET ERROR: {e}')
+            except OSError:
                 break
-            else:
-                self._reset_fail_detection()
 
+            except timeout:
+                self.mark_server_down()
+                return
+
+            else:
                 # passing over empty udp payloads.
                 if (data_from_server):
                     responder_add(data_from_server)
 
+                self._reset_fail_detection()
+
         self._relay_conn.sock.close()
 
     def _create_socket(self, server_ip):
-        dns_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        dns_sock = socket(AF_INET, SOCK_DGRAM)
+
+        # udp connect allows send method to be used, but does not actually have an underlying connection
         dns_sock.connect((server_ip, PROTO.DNS))
+        dns_sock.settimeout(RELAY_TIMEOUT)
 
         self._relay_conn = RELAY_CONN(server_ip, dns_sock, dns_sock.send, dns_sock.recv, 'UDP')
 
@@ -99,40 +101,33 @@ class TLSRelay(ProtoRelay):
 
     @property
     def fail_condition(self):
-        return self._DNSServer.tls_up and self._DNSServer.udp_fallback
+        return not self._DNSServer.tls_up and self._DNSServer.udp_fallback
 
     # iterating over dns server list and calling to create a connection to first available server. this will only happen
     # if a socket connection isnt already established when attempting to send query.
     def _register_new_socket(self): #, client_query=None):
-        with self._DNSServer.server_lock:
-            for tls_server in self._DNSServer.dns_servers:
+        for tls_server in self._DNSServer.dns_servers:
 
-                # skipping over known down server
-                if (not tls_server[self._protocol]): continue
+            # skipping over known down server
+            if (not tls_server[self._protocol]): continue
 
-                # attempting to connect via tls. if successful will return True, otherwise mark server as
-                # down and try next server.
-                if self._tls_connect(tls_server['ip']): return True
+            # attempting to connect via tls. if successful will return True, otherwise mark server as
+            # down and try next server.
+            if self._tls_connect(tls_server['ip']): return True
 
-                self.mark_server_down()
+            self.mark_server_down()
 
-            else:
-                self._DNSServer.tls_up = False
+        else:
+            self._DNSServer.tls_up = False
 
-                # NOTE: i dont think this gets hit anymore??? investigate after two server fails,
-                # the client would have already asked again. this would probably not help anything
-                # even if it technically did get hit sometimes. after tls is marked down they will
-                # be pushed over to fallback by queue.
-                # sending to fallback relay(udp) if enabled and client_query is present
-                # if (self._DNSServer.udp_fallback and client_query):
-                #     self._send_to_fallback(client_query)
-
-                Log.error('NO SECURE SERVERS AVAILABLE!')
+            Log.error(f'No [{self._protocol}] dns servers available.')
 
     @dnx_queue(Log, name='TLSRelay')
     def relay(self, client_query):
-        if (self.fail_condition and self._fallback):
-            self._send_to_fallback(client_query)
+        # if servers are down and a fallback is configured, it will be forwarded to that relay queue, otherwise
+        # the request will be silently dropped here if fallback is not configured.
+        if (self.fail_condition and self._fallback_relay):
+            self._fallback_relay_add(client_query)
 
         else:
             self._send_query(client_query)
@@ -147,18 +142,19 @@ class TLSRelay(ProtoRelay):
         while True:
             try:
                 data_from_server = conn_recv(2048)
-
-            # TODO: i feel like this has to do a lookup everytime. if that is the case we should directly reference timeout
-            except (socket.timeout, OSError) as e:
-                Log.dprint(f'RECV HANDLER: {e}')
+            except OSError:
                 break
-            else:
-                self._reset_fail_detection()
 
+            except timeout:
+                self.mark_server_down()
+                return
+
+            else:
                 # if no data is received/EOF the remote end has closed the connection
                 if (not data_from_server):
-                    Log.dprint('RECV HANDLER: PIPELINE CLOSED BY REMOTE SERVER!')
                     break
+
+                self._reset_fail_detection()
 
             recv_buff_append(data_from_server)
             while recv_buffer:
@@ -185,8 +181,10 @@ class TLSRelay(ProtoRelay):
         self._relay_conn.sock.close()
 
     def _tls_connect(self, tls_server):
+
         Log.dprint(f'Opening Secure socket to {tls_server}: 853')
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock = socket(AF_INET, SOCK_STREAM)
+        sock.settimeout(RELAY_TIMEOUT)
 
         dns_sock = self._tls_context.wrap_socket(sock, server_hostname=tls_server)
         try:

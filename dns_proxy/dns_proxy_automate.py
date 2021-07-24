@@ -134,9 +134,10 @@ class Configuration:
 
         names = ['primary', 'secondary']
         dns_servers = dns_server['resolvers']
-        with DNSServer.server_lock:
-            for name, cfg_server, mem_server in zip(names, dns_servers.values(), DNSServer.dns_servers):
-                if (cfg_server['ip_address'] == mem_server.get('ip')): continue
+
+        for name, cfg_server, mem_server in zip(names, dns_servers.values(), DNSServer.dns_servers):
+
+            if (cfg_server['ip_address'] != mem_server.get('ip')):
 
                 getattr(DNSServer.dns_servers, name).update({
                     'ip': dns_servers[name]['ip_address'],
@@ -270,12 +271,19 @@ class Configuration:
 class Reachability:
     '''this class is used to determine whether a remote dns server has recovered from an outage or
     slow response times.'''
+
     __slots__ = (
-        'DNSServer', '_protocol', '_tls_context', '_udp_query'
+        '_protocol', 'DNSServer', '_initialize',
+
+
+        '_tls_context', '_udp_query'
     )
+
     def __init__(self, protocol, DNSServer):
         self._protocol = protocol
         self.DNSServer = DNSServer
+
+        self._initialize = Initialize(Log, DNSServer.__name__)
 
         self._create_tls_context()
 
@@ -292,38 +300,46 @@ class Reachability:
             elif (protocol is PROTO.DNS_TLS):
                 threading.Thread(target=self.tls).start()
 
+        self._initialize.wait_for_threads(count=2)
+
     @dynamic_looper
     def tls(self):
         if (not self.is_enabled): return TEN_SEC
 
         DNSServer = self.DNSServer
-        with DNSServer.server_lock:
-            for secure_server in DNSServer.dns_servers:
-                # no check needed if server/proto is known up
-                if (secure_server[self._protocol]): continue
 
-                # if server responds to connection attempt, it will be marked as available
-                if self._tls_reachable(secure_server):
-                    secure_server[PROTO.DNS_TLS] = True,
-                    DNSServer.tls_up = True
+        for secure_server in DNSServer.dns_servers:
 
-                    Log.notice('DNS server {} has recovered on {}.'.format(secure_server['ip'], self._protocol.name))
+            # no check needed if server/proto is known up
+            if (secure_server[self._protocol]): continue
 
-                    # will write server status change individually as its unlikely both will be down at same time
-                    write_configuration(DNSServer.dns_servers._asdict(), 'dns_server_status')
+            # if server responds to connection attempt, it will be marked as available
+            if self._tls_reachable(secure_server):
+                secure_server[PROTO.DNS_TLS] = True,
+                DNSServer.tls_up = True
 
-        return THIRTY_SEC
+                Log.notice('DNS server {} has recovered on {}.'.format(secure_server['ip'], self._protocol.name))
+
+                # will write server status change individually as its unlikely both will be down at same time
+                write_configuration(DNSServer.dns_servers._asdict(), 'dns_server_status')
+
+        self._initialize.done()
+
+        return TEN_SEC
 
     def _tls_reachable(self, secure_server):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(3)
+        sock.settimeout(2)
+
         secure_socket = self._tls_context.wrap_socket(sock, server_hostname=secure_server)
         try:
             secure_socket.connect((secure_server, PROTO.DNS_TLS))
         except (OSError, socket.timeout):
             return False
+
         else:
             return True
+
         finally:
             secure_socket.close()
 
@@ -332,36 +348,39 @@ class Reachability:
         if (not self.is_enabled and not self.DNSServer.udp_fallback): return TEN_SEC
 
         DNSServer = self.DNSServer
-        with DNSServer.server_lock:
-            for server in DNSServer.dns_servers:
-                # no check needed if server/proto is known up
-                if (server[self._protocol]): continue
 
-                # if server responds to connection attempt, it will be marked as available
-                if self._udp_reachable(server['ip']):
-                    server[PROTO.UDP] = True
+        for server in DNSServer.dns_servers:
+            # no check needed if server/proto is known up
+            if (server[self._protocol]): continue
 
-                    Log.notice('DNS server {} has recovered on {}.'.format(server['ip'], self._protocol.name))
+            # if server responds to connection attempt, it will be marked as available
+            if self._udp_reachable(server['ip']):
+                server[PROTO.UDP] = True
 
-                    write_configuration(self.DNSServer.dns_servers._asdict(), 'dns_server_status')
+                Log.notice('DNS server {} has recovered on {}.'.format(server['ip'], self._protocol.name))
 
-        return THIRTY_SEC
+                write_configuration(self.DNSServer.dns_servers._asdict(), 'dns_server_status')
+
+        self._initialize.done()
+
+        return TEN_SEC
 
     def _udp_reachable(self, server_ip):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.settimeout(3)
+        sock.settimeout(2)
         try:
             sock.sendto(self._udp_query, (server_ip, PROTO.DNS))
             sock.recv(1024)
         except socket.timeout:
             return False
+
         else:
             return True
+
         finally:
             sock.close()
 
     def _create_tls_context(self):
-#        self._tls_context = ssl.create_default_context() TODO: wait? pretty sure this isnt needed????
         self._tls_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         self._tls_context.verify_mode = ssl.CERT_REQUIRED
         self._tls_context.load_verify_locations(CERTIFICATE_STORE)
@@ -369,7 +388,7 @@ class Reachability:
     def _set_udp_query(self):
         self._udp_query = byte_join([
             create_dns_query_header(dns_id=69, cd=1),
-            b'\x07updates\x06dnxsec\x03com\x00\x00\x01\x00\x01'
+            b'\x0bdnxfirewall\x03com\x00\x00\x01\x00\x01'
         ])
 
     @property

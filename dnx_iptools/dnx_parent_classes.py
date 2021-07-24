@@ -239,11 +239,11 @@ class ProtoRelay:
 
     __slots__ = (
         # callbacks
-        '_DNSServer', '_fallback',
+        '_DNSServer', '_fallback_relay',
 
         # protected vars
         '_relay_conn', '_send_cnt', '_last_sent',
-        '_responder_add', '_fallback_add'
+        '_responder_add', '_fallback_relay_add'
     )
 
     def __new__(cls, *args, **kwargs):
@@ -252,14 +252,14 @@ class ProtoRelay:
 
         return object.__new__(cls)
 
-    def __init__(self, DNSServer, fallback):
+    def __init__(self, DNSServer, fallback_relay):
         '''general constructor. can only be reached through subclass.
 
         May be expanded.
 
         '''
         self._DNSServer = DNSServer
-        self._fallback = fallback
+        self._fallback_relay = fallback_relay
 
         sock = socket.socket()
         self._relay_conn = RELAY_CONN(None, sock, sock.send, sock.recv, None)
@@ -268,15 +268,15 @@ class ProtoRelay:
         self._last_sent = 0
 
         # direct reference for performance
-        if (fallback):
-            self._fallback_add = fallback.relay.add
+        if (fallback_relay):
+            self._fallback_relay_add = fallback_relay.add
 
     @classmethod
-    def run(cls, DNSServer, *, fallback=None):
+    def run(cls, DNSServer, *, fallback_relay=None):
         '''starts the protocol relay. DNSServer object is the class handling client side requests which
         we can call back to and fallback is a secondary relay that can get forwarded a request post failure.
         initialize will be called to run any subclass specific processing then query handler will run indefinately.'''
-        self = cls(DNSServer, fallback)
+        self = cls(DNSServer, fallback_relay)
 
         threading.Thread(target=self._fail_detection).start()
         threading.Thread(target=self.relay).start()
@@ -320,17 +320,15 @@ class ProtoRelay:
     # aquires lock then will mark server down if it is present in config
     # NOTE: i feel like this can be much better. investigate.
     def mark_server_down(self):
-        self._relay_conn.sock.close()
+        for server in self._DNSServer.dns_servers:
+            if (server['ip'] == self._relay_conn.remote_ip):
+                server[self._protocol] = False
 
-        with self._DNSServer.server_lock:
-            for server in self._DNSServer.dns_servers:
-                if (server['ip'] == self._relay_conn.remote_ip):
-                    server[self._protocol] = False
-
-    def _send_to_fallback(self, client_query):
-        '''allows for relay to fallback to a secondary relay. uses class object passed into run method.'''
-
-        self._fallback_add(client_query)
+                # keeping this under the remote ip/server ip match condition
+                try:
+                    self._relay_conn.sock.close()
+                except:
+                    write_log(f'failed to close socket while marking server ({self._relay_conn.remote_ip}) down.')
 
     def _reset_fail_detection(self):
         self._send_cnt = 0
@@ -343,21 +341,6 @@ class ProtoRelay:
     def is_enabled(self):
         '''set as true if the running classes protocol matches the currently configured protocol.'''
         return self._DNSServer.protocol is self._protocol
-
-    @property
-    def socket_available(self):
-        '''returns true if current relay socket object has not been closed.'''
-
-        return self._relay_conn.sock.fileno() != -1
-
-    @property
-    def standby_condition(self):
-        '''property to reduce length of delay in queue handler.
-
-        May be overridden.
-
-        '''
-        return False
 
     @property
     def fail_condition(self):
