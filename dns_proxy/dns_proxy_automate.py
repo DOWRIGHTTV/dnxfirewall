@@ -291,16 +291,20 @@ class Reachability:
     def run(cls, DNSServer):
         '''starting remote server responsiveness detection as a thread. the remote servers will only
         be checked for connectivity if they are mark as down during the polling interval.'''
-        for protocol in [PROTO.UDP, PROTO.DNS_TLS]:
-            self = cls(protocol, DNSServer)
-            if (protocol is PROTO.UDP):
-                self._set_udp_query()
-                threading.Thread(target=self.udp).start()
 
-            elif (protocol is PROTO.DNS_TLS):
-                threading.Thread(target=self.tls).start()
+        # initializing udp instance and starting thread
+        reach_udp = cls(PROTO.UDP, DNSServer)
+        reach_udp._set_udp_query()
 
-        self._initialize.wait_for_threads(count=2)
+        threading.Thread(target=reach_udp.udp).start()
+
+        # initializing tls instance and starting thread
+        reach_tls = cls(PROTO.DNS_TLS, DNSServer)
+        threading.Thread(target=reach_tls.tls).start()
+
+        # waiting for each thread to finish initial reachability check before returning
+        reach_udp._initialize.wait_for_threads(count=1)
+        reach_tls._initialize.wait_for_threads(count=1)
 
     @dynamic_looper
     def tls(self):
