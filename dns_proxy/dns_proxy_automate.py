@@ -304,24 +304,23 @@ class Reachability:
 
     @dynamic_looper
     def tls(self):
-        if (not self.is_enabled): return TEN_SEC
+        if (self.is_enabled):
 
-        DNSServer = self.DNSServer
+            DNSServer = self.DNSServer
+            for secure_server in DNSServer.dns_servers:
 
-        for secure_server in DNSServer.dns_servers:
+                # no check needed if server/proto is known up
+                if (secure_server[self._protocol]): continue
 
-            # no check needed if server/proto is known up
-            if (secure_server[self._protocol]): continue
+                # if server responds to connection attempt, it will be marked as available
+                if self._tls_reachable(secure_server):
+                    secure_server[PROTO.DNS_TLS] = True,
+                    DNSServer.tls_up = True
 
-            # if server responds to connection attempt, it will be marked as available
-            if self._tls_reachable(secure_server):
-                secure_server[PROTO.DNS_TLS] = True,
-                DNSServer.tls_up = True
+                    Log.notice('DNS server {} has recovered on {}.'.format(secure_server['ip'], self._protocol.name))
 
-                Log.notice('DNS server {} has recovered on {}.'.format(secure_server['ip'], self._protocol.name))
-
-                # will write server status change individually as its unlikely both will be down at same time
-                write_configuration(DNSServer.dns_servers._asdict(), 'dns_server_status')
+                    # will write server status change individually as its unlikely both will be down at same time
+                    write_configuration(DNSServer.dns_servers._asdict(), 'dns_server_status')
 
         self._initialize.done()
 
@@ -345,21 +344,20 @@ class Reachability:
 
     @dynamic_looper
     def udp(self):
-        if (not self.is_enabled and not self.DNSServer.udp_fallback): return TEN_SEC
+        if (self.is_enabled or self.DNSServer.udp_fallback):
 
-        DNSServer = self.DNSServer
+            DNSServer = self.DNSServer
+            for server in DNSServer.dns_servers:
+                # no check needed if server/proto is known up
+                if (server[self._protocol]): continue
 
-        for server in DNSServer.dns_servers:
-            # no check needed if server/proto is known up
-            if (server[self._protocol]): continue
+                # if server responds to connection attempt, it will be marked as available
+                if self._udp_reachable(server['ip']):
+                    server[PROTO.UDP] = True
 
-            # if server responds to connection attempt, it will be marked as available
-            if self._udp_reachable(server['ip']):
-                server[PROTO.UDP] = True
+                    Log.notice('DNS server {} has recovered on {}.'.format(server['ip'], self._protocol.name))
 
-                Log.notice('DNS server {} has recovered on {}.'.format(server['ip'], self._protocol.name))
-
-                write_configuration(self.DNSServer.dns_servers._asdict(), 'dns_server_status')
+                    write_configuration(self.DNSServer.dns_servers._asdict(), 'dns_server_status')
 
         self._initialize.done()
 
