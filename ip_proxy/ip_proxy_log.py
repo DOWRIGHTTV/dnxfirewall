@@ -52,7 +52,7 @@ class Log(LogHandler):
         # informational logging for all accepted connections
         # TODO: add category definition here. should just be able to define var, but make sure before switching from N/A.
         elif (cls.current_lvl >= LOG.INFO):
-            log = IPP_LOG(pkt.conn.local_ip, pkt.conn.tracked_ip, 'N/A', pkt.direction.name, 'allowed')
+            log = IPP_LOG(pkt.conn.local_ip, pkt.conn.tracked_ip, inspection.category.name, pkt.direction.name, 'allowed')
 
             return LOG.INFO, {'ipp': log}
 
