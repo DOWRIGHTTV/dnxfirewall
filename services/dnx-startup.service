@@ -1,5 +1,5 @@
 [Unit]
-Description=DNX Firewall Startup Tasks
+Description=DNXFIREWALL Startup Tasks
 
 [Service]
 Type=oneshot

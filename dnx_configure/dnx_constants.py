@@ -299,16 +299,36 @@ class IPP_CAT(_IntEnum):
 
 class GEO(_IntEnum):
     NONE   = 0
+    AFGHANISTAN = 4
     BRAZIL = 76
+    CANADA = 124
     CHINA  = 156
+    CUBA = 192
+    EGYPT = 818
+    GERMANY = 276
+    HONG_KONG = 344
     INDIA  = 356
     IRAN   = 364
-    JAPAN  = 392
-    N_KOREA = 408
-    S_KOREA = 410
+    IRAQ = 368
+    MEXICO = 484
     NETHERLANDS = 528
-    RUSSIA = 643
+    NORTH_KOREA = 408
+    PHILLIPINES = 608
+    PUERTO_RICO = 630
+    RUSSIAN_FEDERATION = 643
+    SOUTH_KOREA = 410
     SPAIN  = 724
+    SWITZERLAND = 756
+    TAIWAN = 158
+    UKRAINE = 804
+    UNITED_KINGDOM = 826
+    UNITED_STATES = 840
+    VENEZUELA = 862
+
+    # not implemented yet
+    JAPAN  = 392
     THAILAND = 764
     TURKEY = 792
-    VENEZUELA = 862
+    IRELAND = 372
+    ISRAEL = 376
+    PAKISTAN = 586

@@ -213,6 +213,27 @@ def advanced_blacklist(dnx_session_data):
 
     return page_action
 
+@app.route('/advanced/firewall', methods=['GET', 'POST'])
+@user_restrict('admin')
+def advanced_firewall(dnx_session_data):
+    tab = request.args.get('tab', '1')
+    menu_option = request.args.get('menu', '1')
+
+    page_settings = {
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'menu': menu_option,
+        'selected': 'GLOBAL_INTERFACE',
+        'zones': ['GLOBAL', 'WAN', 'DMZ', 'LAN'],
+        'uri_path': ['advanced', 'firewall']
+    }
+
+    page_settings.update(dnx_session_data)
+
+    page_action = firewall_page_logic(
+        dnx_firewall, page_settings, 'firewall_settings', page_name='advanced_firewall')
+
+    return page_action
+
 @app.route('/advanced/domain', methods=['GET', 'POST'])
 @user_restrict('admin')
 def advanced_domain(dnx_session_data):
@@ -242,27 +263,6 @@ def advanced_ip(dnx_session_data):
 
     page_action = standard_page_logic(
         ip_proxy, page_settings, 'ip_settings', page_name='advanced_ip')
-
-    return page_action
-
-@app.route('/advanced/firewall', methods=['GET', 'POST'])
-@user_restrict('admin')
-def advanced_firewall(dnx_session_data):
-    tab = request.args.get('tab', '1')
-    menu_option = request.args.get('menu', '1')
-
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'menu': menu_option,
-        'selected': 'GLOBAL_INTERFACE',
-        'zones': ['GLOBAL', 'WAN', 'DMZ', 'LAN'],
-        'uri_path': ['advanced', 'firewall']
-    }
-
-    page_settings.update(dnx_session_data)
-
-    page_action = firewall_page_logic(
-        dnx_firewall, page_settings, 'firewall_settings', page_name='advanced_firewall')
 
     return page_action
 
@@ -337,7 +337,7 @@ def system_logs(dnx_session_data):
 def system_services(dnx_session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'uri_path': ['system', 'services'],
+        'uri_path': ['system', 'services']
     }
 
     page_settings.update(dnx_session_data)
@@ -415,6 +415,8 @@ def dnx_logout(dnx_session_data):
 
 @app.route('/blocked')
 def dnx_blocked():
+    page_settings = {'navi': True, 'login_btn': True, 'idle_timeout': False}
+
     # checking for domain sent by nginx that is being redirected to firewall. if domain doesnt exist (user navigated to
     # this page manually) then a not authorized page will be served. If the domain is not a valid domain (regex) the request
     # will be ridirected back to blocked page without a domain. NOTE: this is a crazy bit of code that should be tested much
@@ -423,14 +425,14 @@ def dnx_blocked():
     if (not blocked_domain):
         session.pop('username', None)
 
-        return render_template('dnx_not_authorized.html', navi=True, login_btn=True, idle_timeout=False)
+        return render_template('dnx_not_authorized.html', **page_settings)
 
     try:
         validate.domain(blocked_domain)
     except ValidationError:
         session.pop('username', None)
 
-        return render_template('dnx_not_authorized.html', navi=True, login_btn=True, idle_timeout=False)
+        return render_template('dnx_not_authorized.html', **page_settings)
 
     with DBConnector() as ProxyDB:
         domain_info = ProxyDB.query_blocked(domain=blocked_domain, src_ip=request.remote_addr)
@@ -438,12 +440,11 @@ def dnx_blocked():
     if (not domain_info):
         session.pop('username', None)
 
-        return render_template('dnx_not_authorized.html', navi=True, login_btn=True, idle_timeout=False)
+        return render_template('dnx_not_authorized.html', **page_settings)
 
-    page_settings = {
-        'navi': True, 'login_btn': True, 'idle_timeout': False,
+    page_settings.update({
         'standard_error': False, 'src_ip': request.remote_addr, 'blocked': domain_info
-    }
+    })
 
     return render_template('dnx_blocked.html', **page_settings)
 
@@ -469,18 +470,18 @@ def dnx_login():
         login_error = 'Invalid Credentials. Please try again.'
 
     return render_template('dnx_login.html', navi=True, login_btn=False, idle_timeout=False,
-        standard_error=False, login_error=login_error)
+        standard_error=False, login_error=login_error, uri_path=['login'])
 
-@app.route('/license_agreement', methods=['GET', 'POST'])
-@user_restrict('user', 'admin')
-def license_agreement(dnx_session_data):
-    page_settings = {
-        'navi': True, 'idle_timeout': False
-    }
+# @app.route('/license_agreement', methods=['GET', 'POST'])
+# @user_restrict('user', 'admin')
+# def license_agreement(dnx_session_data):
+#     page_settings = {
+#         'navi': True, 'idle_timeout': False
+#     }
 
-    page_settings.update(dnx_session_data)
+#     page_settings.update(dnx_session_data)
 
-    return render_template('license_agreement.html', **page_settings)
+#     return render_template('license_agreement.html', **page_settings)
 
 ## --------------------------------------------- ##
 ## --------------------------------------------- ##

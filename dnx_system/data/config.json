@@ -24,6 +24,18 @@
                 "dhcp": true,
                 "mac_set": false
             }
+        },
+        "mgmt_access": {
+            "lan": {
+                "webui": true,
+                "cli": false,
+                "ssh": false
+            },
+            "dmz": {
+                "webui": true,
+                "cli": false,
+                "ssh": false
+            }
         }
     },
     "services": {
