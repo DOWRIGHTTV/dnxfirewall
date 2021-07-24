@@ -237,8 +237,7 @@ class ProxyRequest(RawPacket):
     def generate_proxy_response(self):
         # if AAAA record will set response code to refuse and not give an answer
         if (self.qtype == DNS.AAAA):
-            answer_count, response_code = 0, 3
-
+            answer_count, response_code = 0, 5 # TODO: this code might be wrong. validate.
         # standard query response to sinkhole
         else:
             answer_count, response_code = 1, 0

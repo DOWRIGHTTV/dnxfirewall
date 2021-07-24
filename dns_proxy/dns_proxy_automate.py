@@ -134,9 +134,10 @@ class Configuration:
 
         names = ['primary', 'secondary']
         dns_servers = dns_server['resolvers']
-        with DNSServer.server_lock:
-            for name, cfg_server, mem_server in zip(names, dns_servers.values(), DNSServer.dns_servers):
-                if (cfg_server['ip_address'] == mem_server.get('ip')): continue
+
+        for name, cfg_server, mem_server in zip(names, dns_servers.values(), DNSServer.dns_servers):
+
+            if (cfg_server['ip_address'] != mem_server.get('ip')):
 
                 getattr(DNSServer.dns_servers, name).update({
                     'ip': dns_servers[name]['ip_address'],
@@ -270,12 +271,19 @@ class Configuration:
 class Reachability:
     '''this class is used to determine whether a remote dns server has recovered from an outage or
     slow response times.'''
+
     __slots__ = (
-        'DNSServer', '_protocol', '_tls_context', '_udp_query'
+        '_protocol', 'DNSServer', '_initialize',
+
+
+        '_tls_context', '_udp_query'
     )
+
     def __init__(self, protocol, DNSServer):
         self._protocol = protocol
         self.DNSServer = DNSServer
+
+        self._initialize = Initialize(Log, DNSServer.__name__)
 
         self._create_tls_context()
 
@@ -283,22 +291,28 @@ class Reachability:
     def run(cls, DNSServer):
         '''starting remote server responsiveness detection as a thread. the remote servers will only
         be checked for connectivity if they are mark as down during the polling interval.'''
-        for protocol in [PROTO.UDP, PROTO.DNS_TLS]:
-            self = cls(protocol, DNSServer)
-            if (protocol is PROTO.UDP):
-                self._set_udp_query()
-                threading.Thread(target=self.udp).start()
 
-            elif (protocol is PROTO.DNS_TLS):
-                threading.Thread(target=self.tls).start()
+        # initializing udp instance and starting thread
+        reach_udp = cls(PROTO.UDP, DNSServer)
+        reach_udp._set_udp_query()
+
+        threading.Thread(target=reach_udp.udp).start()
+
+        # initializing tls instance and starting thread
+        reach_tls = cls(PROTO.DNS_TLS, DNSServer)
+        threading.Thread(target=reach_tls.tls).start()
+
+        # waiting for each thread to finish initial reachability check before returning
+        reach_udp._initialize.wait_for_threads(count=1)
+        reach_tls._initialize.wait_for_threads(count=1)
 
     @dynamic_looper
     def tls(self):
-        if (not self.is_enabled): return TEN_SEC
+        if (self.is_enabled):
 
-        DNSServer = self.DNSServer
-        with DNSServer.server_lock:
+            DNSServer = self.DNSServer
             for secure_server in DNSServer.dns_servers:
+
                 # no check needed if server/proto is known up
                 if (secure_server[self._protocol]): continue
 
@@ -312,27 +326,31 @@ class Reachability:
                     # will write server status change individually as its unlikely both will be down at same time
                     write_configuration(DNSServer.dns_servers._asdict(), 'dns_server_status')
 
-        return THIRTY_SEC
+        self._initialize.done()
+
+        return TEN_SEC
 
     def _tls_reachable(self, secure_server):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(3)
+        sock.settimeout(2)
+
         secure_socket = self._tls_context.wrap_socket(sock, server_hostname=secure_server)
         try:
             secure_socket.connect((secure_server, PROTO.DNS_TLS))
         except (OSError, socket.timeout):
             return False
+
         else:
             return True
+
         finally:
             secure_socket.close()
 
     @dynamic_looper
     def udp(self):
-        if (not self.is_enabled and not self.DNSServer.udp_fallback): return TEN_SEC
+        if (self.is_enabled or self.DNSServer.udp_fallback):
 
-        DNSServer = self.DNSServer
-        with DNSServer.server_lock:
+            DNSServer = self.DNSServer
             for server in DNSServer.dns_servers:
                 # no check needed if server/proto is known up
                 if (server[self._protocol]): continue
@@ -345,23 +363,26 @@ class Reachability:
 
                     write_configuration(self.DNSServer.dns_servers._asdict(), 'dns_server_status')
 
-        return THIRTY_SEC
+        self._initialize.done()
+
+        return TEN_SEC
 
     def _udp_reachable(self, server_ip):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.settimeout(3)
+        sock.settimeout(2)
         try:
             sock.sendto(self._udp_query, (server_ip, PROTO.DNS))
             sock.recv(1024)
         except socket.timeout:
             return False
+
         else:
             return True
+
         finally:
             sock.close()
 
     def _create_tls_context(self):
-#        self._tls_context = ssl.create_default_context() TODO: wait? pretty sure this isnt needed????
         self._tls_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         self._tls_context.verify_mode = ssl.CERT_REQUIRED
         self._tls_context.load_verify_locations(CERTIFICATE_STORE)
@@ -369,7 +390,7 @@ class Reachability:
     def _set_udp_query(self):
         self._udp_query = byte_join([
             create_dns_query_header(dns_id=69, cd=1),
-            b'\x07updates\x06dnxsec\x03com\x00\x00\x01\x00\x01'
+            b'\x0bdnxfirewall\x03com\x00\x00\x01\x00\x01'
         ])
 
     @property
