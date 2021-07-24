@@ -6,6 +6,51 @@
 {% endif %}
 <section id="dropdown" class="section">
     <div class="container">
+<div class="col s12">
+            <div class="card-panel hoverable">
+                <h4 class="{{title_color}}">Management Access</h4>
+                <table class="striped centered">
+                    <thead>
+                        <tr>
+                            <th>Zone</th>
+                            <th>WebUI</th>
+                            <th>CLI</th>
+                            <th>SSH (system)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for zone in ['lan', 'dmz'] %}
+                        <tr>
+                            <td style="width:25%"><h6>{{zone}}</h6></td>
+                            {% for mgmt_svc in ['webui', 'cli', 'ssh'] %}
+                            <td style="width:25%">
+                                <div class="input-field col s3 center">
+                                    <form action="/system/services" method="POST">
+                                        <div class="switch">
+                                            <label>
+                                                Off
+                                                {% if not service_info['mgmt_access'][zone][mgmt_svc] %}
+                                                <input type="hidden" name="update_mgmt_access" value="{{zone}},{{mgmt_svc}},1">
+                                                <input type="checkbox" onchange="this.form.submit()">
+                                                {% else %}
+                                                <input type="hidden" name="update_mgmt_access" value="{{zone}},{{mgmt_svc}},0">
+                                                <input type="checkbox" onchange="this.form.submit()" checked="checked"
+                                                    {% if zone == 'lan' and mgmt_svc == 'webui' %} disabled {% endif %}>
+                                                {% endif %}
+                                                <span class="lever"></span>
+                                                On
+                                            </label>
+                                        </div>
+                                    </form>
+                                </div>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
         <div class="col s12">
             <div class="card-panel hoverable">
                 <h4 class="{{title_color}}">System Services</h4>
@@ -19,7 +64,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for name, description, status in service_info %}
+                        {% for name, description, status in service_info['all_services'] %}
                         <tr>
                             <td style="width:15%"><h6>{{name}}</h6></td>
                             <td style="width:45%"><h6>{{description}}</h6></td>

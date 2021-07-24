@@ -1,5 +1,5 @@
 [Unit]
-Description=DNX Firewall Interface Service
+Description=DNXFIREWALL Interface Service
 After=dnx-database.service
 StartLimitIntervalSec=3
 

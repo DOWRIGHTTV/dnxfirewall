@@ -1,5 +1,5 @@
 [Unit]
-Description=DNX Firewall Web Application Service
+Description=DNXFIREWALL Web Application Service
 After=nginx.service dnx-log.service dnx-syslog.service
 StartLimitIntervalSec=3
 

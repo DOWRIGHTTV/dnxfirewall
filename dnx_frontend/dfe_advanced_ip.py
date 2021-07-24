@@ -50,7 +50,7 @@ def load_page():
     firewall_settings = {
         'categories': categories, 'geolocation': geolocation, 'tr_settings': tr_settings
    }
-
+    print(firewall_settings)
     return firewall_settings
 
 def update_page(form):

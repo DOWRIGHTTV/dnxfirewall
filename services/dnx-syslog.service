@@ -1,6 +1,6 @@
 [Unit]
-Description=DNX Firewall Syslog Client Service
-After=dnx-database.service
+Description=DNXFIREWALL Syslog Client Service
+After=dnx-database-sqlite.service
 StartLimitIntervalSec=3
 
 [Service]
