@@ -12,18 +12,18 @@
                 <table class="striped centered">
                     <thead>
                         <tr>
-                            <th>Zone</th>
-                            <th>WebUI</th>
-                            <th>CLI</th>
-                            <th>SSH (system)</th>
+                            <th style="width:25%">Zone</th>
+                            <th style="width:25%">WebUI</th>
+                            <th style="width:25%">CLI</th>
+                            <th style="width:25%">SSH (system)</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for zone in ['lan', 'dmz'] %}
                         <tr>
-                            <td style="width:25%"><h6>{{zone}}</h6></td>
+                            <td><h6>{{zone}}</h6></td>
                             {% for mgmt_svc in ['webui', 'cli', 'ssh'] %}
-                            <td style="width:25%">
+                            <td>
                                 <div class="input-field col s3 center">
                                     <form action="/system/services" method="POST">
                                         <div class="switch">
@@ -57,25 +57,25 @@
                 <table class="striped centered">
                     <thead>
                         <tr>
-                            <th>Service Name</th>
-                            <th>Description</th>
-                            <th>Status</th>
-                            <th>Control</th>
+                            <th style="width:15%">Service Name</th>
+                            <th style="width:45%">Description</th>
+                            <th style="width:10%">Status</th>
+                            <th style="width:30%">Control</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for name, description, status in service_info['all_services'] %}
                         <tr>
-                            <td style="width:15%"><h6>{{name}}</h6></td>
-                            <td style="width:45%"><h6>{{description}}</h6></td>
-                            <td style="width:10%">
+                            <td><h6>{{name}}</h6></td>
+                            <td><h6>{{description}}</h6></td>
+                            <td>
                                 {% if status %}
                                 <strong><h6 class="green-text">Up</h6></strong>
                                 {% else %}
                                 <strong><h6 class="red-text">Down</h6></strong>
                                 {% endif %}
                             </td>
-                            <td style="width:30%">
+                            <td>
                                 <div class="row">
                                     <div class="input-field col s12 l4">
                                         <form action="/system/services" method="POST">

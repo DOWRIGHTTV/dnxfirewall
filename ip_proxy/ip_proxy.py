@@ -184,7 +184,7 @@ class Inspect:
             # tor and not to open a local machine to tor traffic.
             # TODO: evaluate if we should have an inbound override, though i dont know who would ever want random
             # tor users accessing their servers.
-            if (packet.direct is DIR.OUTBOUND and packet.conn.local_ip in self._Proxy.tor_whitelist):
+            if (packet.direction is DIR.OUTBOUND and packet.conn.local_ip in self._Proxy.tor_whitelist):
                 return False
 
             block_direction = self._Proxy.cat_settings[category]

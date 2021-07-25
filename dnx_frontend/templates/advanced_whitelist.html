@@ -5,12 +5,12 @@
         <div class="row">
             <div class="col s12">
                 <ul class="tabs">
-                    <li class="tab col s3 l4 xl2"><a {% if tab=='1' %} class="active" {% endif %}
-                        href="#whitelists" onclick="activeTab(1)">Time Based Whitelist</a></li>
-                    <li class="tab col s3 l4 xl2"><a {% if tab=='2' %} class="active" {% endif %}
-                        href="#exceptions" onclick="activeTab(2)">Pre Proxy Exceptions</a></li>
-                    <li class="tab col s3 l4 xl2"><a {% if tab=='3' %} class="active" {% endif %}
-                        href="#ip-whitelist" onclick="activeTab(3)">IP Whitelist</a></li>
+                    <li class="{{tab_classes}}"><a {% if tab=='1' %} class="active" {% endif %}
+                        href="#whitelists" onclick="activeTab(1)">Time Based</a></li>
+                    <li class="{{tab_classes}}"><a {% if tab=='2' %} class="active" {% endif %}
+                        href="#exceptions" onclick="activeTab(2)">Pre Proxy</a></li>
+                    <li class="{{tab_classes}}"><a {% if tab=='3' %} class="active" {% endif %}
+                        href="#ip-whitelist" onclick="activeTab(3)">IP Based</a></li>
                 </ul>
             </div>
         </div>
@@ -31,7 +31,7 @@
                             </div>
                             <div class="input-field col s4 l3">
                                 <input type="text" name="rule_length" class="validate" placeholder="60" required>
-                                <label for="">Time to Expire (Minutes)</label>
+                                <label for="">Rule Life (Minutes)</label>
                             </div>
                             <div class="input-field col s4 l2 right">
                                 <input type="hidden" name="wl_add" value="whitelist">
@@ -43,14 +43,14 @@
             </div>
             <div class="col s12">
                 <div class="card-panel hoverable">
-                    <h4 class="{{title_color}}">Current Whitelist</h4>
+                    <h4 class="{{title_color}}">Active Rules</h4>
                     <table class="striped centered">
                         <thead>
                             <tr>
-                                <th></th>
-                                <th>Domain</th>
-                                <th>Time Entered</th>
-                                <th>Length (Minutes)</th>
+                                <th style="width:10%"></th>
+                                <th style="width:40%">Domain</th>
+                                <th style="width:20%">Time Entered</th>
+                                <th style="width:20%">Length (Minutes)</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -62,7 +62,7 @@
                                         href="#wl-modal1-{{loop.index}}"><i class="material-icons">remove</i></a>
                                     <div id="wl-modal1-{{loop.index}}" class="modal">
                                         <div class="modal-content">
-                                            <h5 class="red-text">Are you sure you want to remove whitelist rule?</h5>
+                                            <h5 class="red-text">Are you sure you want to remove the whitelist rule? </h5>
                                         </div>
                                         <form action="/advanced/whitelist" method="POST">
                                             <div class="modal-footer">
@@ -98,7 +98,7 @@
         <div class="row">
             <div class="col s12">
                 <div class="card-panel hoverable">
-                    <h4 class="{{title_color}}">Add Exception</h4>
+                    <h4 class="{{title_color}}">Add Override</h4>
                     <form action="/advanced/whitelist" method="POST">
                         <input type="hidden" name="tab" value="2">
                         <div class="row">
@@ -111,8 +111,7 @@
                                 <label for="">Reason</label>
                             </div>
                             <div class="input-field col s4 l2 right">
-                                <input type="hidden" name="exc_add" value="exception">
-                                <button class="btn waves-effect waves-light col s12">Add</button>
+                                <button class="btn waves-effect waves-light col s12" name="exc_add" value="exception">Add</button>
                             </div>
                         </div>
                     </form>
@@ -120,25 +119,25 @@
             </div>
             <div class="col s12">
                 <div class="card-panel hoverable">
-                    <h4 class="{{title_color}}">Current Exceptions</h4>
+                    <h4 class="{{title_color}}">Active Overrides</h4>
                     <table class="striped centered">
                         <thead>
                             <tr>
-                                <th></th>
-                                <th>Domain</th>
-                                <th>Reason</th>
+                                <th style="width:10%"></th>
+                                <th style="width:45%">Domain</th>
+                                <th style="width:45%">Reason</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% if whitelist_settings['exceptions'] %}
                             {% for domain, value in whitelist_settings['exceptions'].items() %}
                             <tr>
-                                <td>
+                                <td">
                                     <a class="btn-floating btn-small waves-effect waves-light red modal-trigger"
                                         href="#wl-modal2-{{loop.index}}"><i class="material-icons">remove</i></a>
                                     <div id="wl-modal2-{{loop.index}}" class="modal">
                                         <div class="modal-content">
-                                            <h5 class="red-text">Are you sure you want to remove the proxy exception?
+                                            <h5 class="red-text center">Are you sure you want to remove the whitelist rule? Service restart is required to take effect.
                                             </h5>
                                         </div>
                                         <form action="/advanced/whitelist" method="POST">
@@ -174,7 +173,7 @@
         <div class="row">
             <div class="col s12">
                 <div class="card-panel hoverable">
-                    <h4 class="{{title_color}}">Add IP Whitelist</h4>
+                    <h4 class="{{title_color}}">Add IP Address</h4>
                     <form action="/advanced/whitelist" method="POST">
                         <input type="hidden" name="tab" value="3">
                         <div class="row">
@@ -203,14 +202,14 @@
             </div>
             <div class="col s12">
                 <div class="card-panel hoverable">
-                    <h4 class="{{title_color}}">Current IP Whitelist</h4>
+                    <h4 class="{{title_color}}">Active Rules</h4>
                     <table class="striped centered">
                         <thead>
                             <tr>
-                                <th></th>
-                                <th>IP Address</th>
-                                <th>User</th>
-                                <th>Type</th>
+                                <th style="width:10%"></th>
+                                <th style="width:30%">IP Address</th>
+                                <th style="width:30%">User</th>
+                                <th style="width:30%">Type</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -222,7 +221,7 @@
                                         href="#wl-modal3-{{loop.index}}"><i class="material-icons">remove</i></a>
                                     <div id="wl-modal3-{{loop.index}}" class="modal">
                                         <div class="modal-content">
-                                            <h5 class="red-text">Are you sure you want to remove 'IP Whitelist Rule'?
+                                            <h5 class="red-text center">Are you sure you want to remove the IP whitelist?
                                             </h5>
                                         </div>
                                         <form action="/advanced/whitelist" method="POST">
