@@ -191,6 +191,11 @@ class TLSRelay(ProtoRelay):
             dns_sock.connect((tls_server, PROTO.DNS_TLS))
         except OSError:
             return None
+
+        except Exception as E:
+            Log.console(f'TLS context error while attemping to connect to server {tls_server}: {E}')
+            Log.debug(f'TLS context error while attemping to connect to server {tls_server}: {E}')
+
         else:
             self._relay_conn = RELAY_CONN(
                 tls_server, dns_sock, dns_sock.send, dns_sock.recv, dns_sock.version()
@@ -207,7 +212,7 @@ class TLSRelay(ProtoRelay):
         self.relay.add(self._dns_packet(KEEP_ALIVE_DOMAIN, self._protocol)) # pylint: disable=no-member
 
     def _create_tls_context(self):
-        self._tls_context = ssl.create_default_context()
+#        self._tls_context = ssl.create_default_context()
         self._tls_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         self._tls_context.verify_mode = ssl.CERT_REQUIRED
         self._tls_context.load_verify_locations(CERTIFICATE_STORE)

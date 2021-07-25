@@ -317,7 +317,6 @@ class ProtoRelay:
         if (fast_time() - self._last_sent >= FIVE_SEC and self._send_cnt >= HEARTBEAT_FAIL_LIMIT):
             self.mark_server_down()
 
-    # aquires lock then will mark server down if it is present in config
     # NOTE: i feel like this can be much better. investigate.
     def mark_server_down(self):
         for server in self._DNSServer.dns_servers:
