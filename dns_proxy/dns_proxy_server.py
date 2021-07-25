@@ -33,12 +33,13 @@ class DNSServer(Listener):
     protocol = PROTO.NOT_SET
     tls_up   = False
 
-    REQ_TRACKER = RequestTracker() # temporary while migrating away from per request threads to a queued single thread control
+    REQ_TRACKER = RequestTracker()
 
-    # REQ_RESULTS = {}
+    # NOTE: settings valued to None to denote initialization has not been completed.
     dns_records = {}
     dns_servers = DNS_SERVERS(
-        {}, {}
+        {'ip': None, PROTO.UDP: None, PROTO.DNS_TLS: None},
+        {'ip': None, PROTO.UDP: None, PROTO.DNS_TLS: None}
     )
 
     _request_map = {}

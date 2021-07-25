@@ -125,30 +125,29 @@ class Configuration:
     def _get_server_settings(self, cfg_file):
         DNSServer = self.DNSServer
 
-        dns_server = load_configuration(cfg_file)['dns_server']
+        dns_settings = load_configuration(cfg_file)['dns_server']
 
-        tls_enabled  = dns_server['tls']['enabled']
+        dns_servers = dns_settings['resolvers']
+        tls_enabled  = dns_settings['tls']['enabled']
+        DNSServer.udp_fallback = dns_settings['tls']['fallback']
+
         DNSServer.protocol = PROTO.DNS_TLS if tls_enabled else PROTO.UDP
 
-        DNSServer.udp_fallback = dns_server['tls']['fallback']
-
         names = ['primary', 'secondary']
-        dns_servers = dns_server['resolvers']
-
         for name, cfg_server, mem_server in zip(names, dns_servers.values(), DNSServer.dns_servers):
 
-            if (cfg_server['ip_address'] != mem_server.get('ip')):
+            if (cfg_server['ip_address'] != mem_server['ip']):
 
                 getattr(DNSServer.dns_servers, name).update({
                     'ip': dns_servers[name]['ip_address'],
                     PROTO.UDP: True, PROTO.DNS_TLS: True
                 })
 
-        DNSServer.dns_records = dns_server['records']
+        DNSServer.dns_records = dns_settings['records']
 
         # CLEAR DNS or TOP Domains cache
-        self.DNSCache.clear_dns_cache   = dns_server['cache']['standard']
-        self.DNSCache.clear_top_domains = dns_server['cache']['top_domains']
+        self.DNSCache.clear_dns_cache   = dns_settings['cache']['standard']
+        self.DNSCache.clear_top_domains = dns_settings['cache']['top_domains']
 
         self._initialize.done()
 
