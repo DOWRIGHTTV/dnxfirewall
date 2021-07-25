@@ -5,11 +5,11 @@
         <div class="row">
             <div class="col s12">
                 <ul class="tabs">
-                    <li class="tab col s3 l4 xl2"><a {% if tab=='1' %} class="active" {% endif %} href="#dnsservers"
+                    <li class="{{tab_classes}}"><a {% if tab=='1' %} class="active" {% endif %} href="#dnsservers"
                         onclick="activeTab(1)">Servers</a></li>
-                    <li class="tab col s3 l4 xl2"><a {% if tab=='2' %} class="active" {% endif %} href="#dnsrecords"
+                    <li class="{{tab_classes}}"><a {% if tab=='2' %} class="active" {% endif %} href="#dnsrecords"
                         onclick="activeTab(2)">Records</a></li>
-                    <li class="tab col s3 l4 xl2"><a {% if tab=='3' %} class="active" {% endif %} href="#dnscache"
+                    <li class="{{tab_classes}}"><a {% if tab=='3' %} class="active" {% endif %} href="#dnscache"
                         onclick="activeTab(3)">Cache</a></li>
                 </ul>
             </div>
@@ -25,20 +25,20 @@
                     <table class="striped centered">
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th>IP Address</th>
-                                <th>Status</th>
-                                <th>TLS</th>
+                                <th style="width:35%">Name</th>
+                                <th style="width:35%">IP Address</th>
+                                <th style="width:15%">Status</th>
+                                <th style="width:15%">TLS</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for server_info in dns_settings['dns_servers'].values() %}
                             <tr>
                                 <form action="/settings/dns" method="POST">
-                                    <td style="width:25%">
+                                    <td>
                                         <input type="text" name="dnsname{{loop.index}}" value="{{server_info['name']}}" class="validate center">
                                     </td>
-                                    <td style="width:25%">
+                                    <td>
                                         <input type="text" name="dnsserver{{loop.index}}" value="{{server_info['ip_address']}}" class="validate center">
                                     </td>
                                 <td>{{server_info['dns_up']}}</td>
@@ -52,14 +52,13 @@
                             <a class="waves-effect waves-light btn modal-trigger col s12" href="#dns-modal2">Update</a>
                             <div id="dns-modal2" class="modal">
                                 <div class="modal-content">
-                                    <h5 class="red-text">Changing DNS Servers will restart the WAN interface. Continue?</h5>
+                                    <h5 class="red-text">Changing DNS servers will restart the WAN interface. Continue?</h5>
                                 </div>
                                 <form action="/settings/dns" method="POST">
                                     <div class="modal-footer">
-                                        <button class="btn waves-effect waves-light">YES</button>
+                                        <button class="btn waves-effect waves-light" name="dns_update">YES</button>
                                         <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
                                         <input type="hidden" name="tab" value="1">
-                                        <input type="hidden" name="dns_update"">
                                     </div>
                                 </form>
                             </div>
@@ -155,9 +154,9 @@
                     <table class="striped centered">
                         <thead>
                             <tr>
-                                <th></th>
-                                <th>Domain Name</th>
-                                <th>IP Address</th>
+                                <th style="width:10%"></th>
+                                <th style="width:45%">Domain Name</th>
+                                <th style="width:45%">IP Address</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -262,21 +261,21 @@
                     <h4 class="{{title_color}}">Top Domains</h4>
                     <table class="striped centered">
                         <thead>
-                            <th>Position</th>
-                            <th>Domain</th>
+                            <th style="width:25%">Ranking</th>
+                            <th style="width:75%">Domain</th>
                         </thead>
                         <tbody>
                             {% if dns_settings['top_domains'] %}
                             {% for domain, count in dns_settings['top_domains'].items() %}
                             <tr>
-                                <td style="width:25%">{{count}}</td>
-                                <td style="width:75%">{{domain}}</td>
+                                <td>{{count}}</td>
+                                <td>{{domain}}</td>
                             </tr>
                             {% endfor %}
                             {% else %}
                             <tr>
-                                <td style="width:25%"></td>
-                                <td style="width:75%"></td>
+                                <td></td>
+                                <td></td>
                             </tr>
                             {% endif %}
                         </tbody>
