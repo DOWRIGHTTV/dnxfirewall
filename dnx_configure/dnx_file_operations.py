@@ -20,8 +20,8 @@ from dnx_configure.dnx_constants import DNS_BIN_OFFSET, DNS_CAT, IPP_CAT, GEO
 from dnx_configure.dnx_exceptions import ValidationError
 
 # definitions for ip proxy data structures. Consider moving to constants module (make name more specific)
-MSB = int(0b11111111111110000000000000000000)
-LSB = int(0b00000000000001111111111111111111)
+MSB = 0b11111111111110000000000000000000
+LSB = 0b00000000000001111111111111111111
 
 # will load json data from file, convert it to a python dict, then return as object
 # TODO: add usr config support, which will merge will loaded system defaults.
@@ -162,8 +162,12 @@ def load_ip_bitmap(Log):
 
     return tuple(nets)
 
+# being deprecated for new signature operations function.
 def load_geo_bitmap(Log):
     '''returns a bitmap trie for geolocation filtering loaded from the consolodated blocked.geo file.'''
+
+    raise DeprecationWarning('this function is being replaced by the signature operations module.')
+
     # temporary dict to generate dataset easier and local var for easier bin size adjustments
     dict_nets = defaultdict(list)
     with open(f'{HOME_DIR}/dnx_system/signatures/geo_lists/blocked.geo', 'r') as geo_sigs:
@@ -223,7 +227,6 @@ def load_geo_bitmap(Log):
 
     return tuple(nets)
 
-# TODO: when merging DO NOT let different country ranges merge!!!!!
 def _merge_geo_ranges(ls):
     temp_item, temp_list = [], []
     for t in ls:

@@ -10,9 +10,10 @@ from ipaddress import IPv4Network
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
+import dnx_configure.dnx_signature_operations as signature_operations
+
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
-from dnx_configure.dnx_file_operations import load_configuration, cfg_read_poller, load_geo_bitmap, load_ip_bitmap
-from dnx_configure.dnx_lists import ListFiles
+from dnx_configure.dnx_file_operations import load_configuration, cfg_read_poller, load_ip_bitmap
 from dnx_configure.dnx_iptables import IPTableManager
 from dnx_iptools.dnx_standard_tools import Initialize
 
@@ -43,6 +44,7 @@ class Configuration:
 
         self.initialize.wait_for_threads(count=3)
 
+    # TODO: this shouldnt be in use anymore. confirm and remove if so.
     def _load_interfaces(self):
         dnx_settings = load_configuration('config')['settings']
 
@@ -118,11 +120,12 @@ class Configuration:
     @staticmethod
     # Loading lists of interesting traffic into dictionaries and creating ip table rules for dns over https blocking
     def load_ip_signature_bitmaps():
-        list_files = ListFiles(Log=Log)
-        list_files.combine_ips()
-        list_files.combine_geolocation()
 
+        # NOTE: old method of created combined signature file and loaded seperately
+        signature_operations.combine_ips()
         ip_category_signatures = load_ip_bitmap(Log)
-        geolocation_signatures = load_geo_bitmap(Log)
+
+        # optimized merge, convert, and compress operation (currently does not compress contiguous networks)
+        geolocation_signatures = signature_operations.generate_geolocation(Log)
 
         return ip_category_signatures, geolocation_signatures

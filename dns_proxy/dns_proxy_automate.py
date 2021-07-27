@@ -6,19 +6,17 @@ import threading
 import socket
 import ssl
 
-from enum import Enum
-from copy import deepcopy
-
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dns_proxy.dns_proxy_log import Log
+import dnx_configure.dnx_signature_operations as signature_operations
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_configure.dnx_file_operations import * # pylint: disable=unused-wildcard-import
-from dnx_configure.dnx_lists import ListFiles
 from dnx_iptools.dnx_protocol_tools import create_dns_query_header, convert_string_to_bitmap
 from dnx_iptools.dnx_standard_tools import dynamic_looper, Initialize
+
+from dns_proxy.dns_proxy_log import Log
 
 
 class Configuration:
@@ -258,8 +256,9 @@ class Configuration:
 
     @staticmethod
     def load_dns_signature_bitmap():
-        ListFile = ListFiles(Log=Log)
-        ListFile.combine_domains()
+
+        # NOTE: old method of created combined signature file and loaded seperately
+        signature_operations.combine_domains()
 
         wl_exceptions = load_configuration('whitelist')['whitelist']['exception']
         bl_exceptions = load_configuration('blacklist')['blacklist']['exception']
