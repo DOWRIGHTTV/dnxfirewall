@@ -10,7 +10,7 @@ from struct import Struct
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import GEO
+from dnx_configure.dnx_constants import GEO, MSB, LSB
 from dnx_configure.dnx_file_operations import load_configuration
 
 __all__ = (
@@ -94,7 +94,7 @@ def combine_ips(Log):
             with open(f'{HOME_DIR}/dnx_system/signatures/ip_lists/{cat}.ips', 'r') as file:
                 ip_cat_signatures.extend([x.lower() for x in file.read().splitlines() if x and '#' not in x])
         except FileNotFoundError:
-            Log.alert(f'signature file missing: {sig} ips.'')
+            Log.alert(f'signature file missing: {sig} ips.')
 
     with open(f'{HOME_DIR}/dnx_system/signatures/ip_lists/blocked.ips', 'w+') as blocked:
         blocked.write('\n'.join(ip_cat_signatures))
