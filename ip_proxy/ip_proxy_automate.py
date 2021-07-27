@@ -122,7 +122,7 @@ class Configuration:
     def load_ip_signature_bitmaps():
 
         # NOTE: old method of created combined signature file and loaded seperately
-        signature_operations.combine_ips()
+        signature_operations.combine_ips(Log)
         ip_category_signatures = load_ip_bitmap(Log)
 
         # optimized merge, convert, and compress operation (currently does not compress contiguous networks)
