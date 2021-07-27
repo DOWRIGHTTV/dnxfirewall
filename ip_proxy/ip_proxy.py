@@ -11,7 +11,6 @@ sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_iptools.dnx_binary_search import generate_linear_binary_search, generate_recursive_binary_search # pylint: disable=import-error, no-name-in-module
-from dnx_configure.dnx_lists import ListFiles
 from dnx_configure.dnx_namedtuples import IPP_IP_INFO, IPP_INSPECTION_RESULTS, IPP_LOG, INFECTED_LOG
 from dnx_configure.dnx_file_operations import load_signatures
 from dnx_iptools.dnx_parent_classes import NFQueue
