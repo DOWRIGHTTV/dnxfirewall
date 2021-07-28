@@ -318,7 +318,7 @@ class Reachability:
                 Log.debug('[{}/{}] Checking reachability of remote DNS server.'.format(secure_server['ip'], self._protocol.name))
 
                 # if server responds to connection attempt, it will be marked as available
-                if self._tls_reachable(secure_server):
+                if self._tls_reachable(secure_server['ip']):
                     secure_server[PROTO.DNS_TLS] = True
                     self.DNSServer.tls_up = True
 

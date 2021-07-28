@@ -107,7 +107,7 @@ class Listener:
 
         cls.enabled_intfs.add(sock_fd)
 
-        cls._Log.notice(f'{cls.__name__} | [{sock_fd}][{intf}] DHCP listener enabled.')
+        cls._Log.notice(f'[{sock_fd}][{intf}] {cls.__name__} listener enabled.')
 
     @classmethod
     def disable(cls, sock_fd, intf):
@@ -119,7 +119,7 @@ class Listener:
         except KeyError:
             pass
 
-        cls._Log.notice(f'{cls.__name__} | [{sock_fd}][{intf}] DHCP listener disabled.')
+        cls._Log.notice(f'[{sock_fd}][{intf}] {cls.__name__} listener disabled.')
 
     @classmethod
     def send_to_client(cls, packet):
@@ -147,7 +147,7 @@ class Listener:
         once registration is complete the thread will exit.'''
         # this is being defined here the listener will be able to correlate socket back to interface and send in.
 
-        cls._Log.debug(f'{cls.__name__} started interface registration for {intf}')
+        cls._Log.debug(f'[{intf}] {cls.__name__} started interface registration.')
 
         wait_for_interface(interface=intf)
 
@@ -162,7 +162,7 @@ class Listener:
         # spoof the original destination.
         cls.__epoll.register(l_sock.fileno(), select.EPOLLIN)
 
-        cls._Log.notice(f'{cls.__name__} | [{l_sock.fileno()}][{intf}] registered.')
+        cls._Log.notice(f'[{l_sock.fileno()}][{intf}] {cls.__name__} interface registered.')
 
     @classmethod
     def set_proxy_callback(cls, *, func):
@@ -333,7 +333,7 @@ class ProtoRelay:
                 try:
                     self._relay_conn.sock.close()
                 except:
-                    write_log(f'failed to close socket while marking server ({self._relay_conn.remote_ip}) down.')
+                    write_log(f'[{self._relay_conn.remote_ip}] Failed to close socket while marking server down.')
 
     def _reset_fail_detection(self):
         self._last_rcvd = fast_time()
