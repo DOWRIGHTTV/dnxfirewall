@@ -319,7 +319,7 @@ class Reachability:
                     secure_server[PROTO.DNS_TLS] = True,
                     DNSServer.tls_up = True
 
-                    Log.notice('DNS server {} has recovered on {}.'.format(secure_server['ip'], self._protocol.name))
+                    Log.notice('[{}/{}] DNS server is reachable.'.format(secure_server['ip'], self._protocol.name))
 
                     # will write server status change individually as its unlikely both will be down at same time
                     write_configuration(DNSServer.dns_servers._asdict(), 'dns_server_status')
@@ -350,6 +350,7 @@ class Reachability:
 
             DNSServer = self.DNSServer
             for server in DNSServer.dns_servers:
+
                 # no check needed if server/proto is known up
                 if (server[self._protocol]): continue
 
@@ -357,7 +358,7 @@ class Reachability:
                 if self._udp_reachable(server['ip']):
                     server[PROTO.UDP] = True
 
-                    Log.notice('DNS server {} has recovered on {}.'.format(server['ip'], self._protocol.name))
+                    Log.notice('[{}/{}] DNS server is reachable.'.format(server['ip'], self._protocol.name))
 
                     write_configuration(self.DNSServer.dns_servers._asdict(), 'dns_server_status')
 

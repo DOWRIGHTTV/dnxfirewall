@@ -42,7 +42,7 @@ class UDPRelay(ProtoRelay):
             return self._create_socket(dns_server['ip'])
 
         else:
-            Log.critical(f'No [{self._protocol}] dns servers available.')
+            Log.critical(f'[{self._protocol}] No DNS servers available.')
 
     @dnx_queue(Log, name='UDPRelay')
     def relay(self, client_query):
@@ -120,7 +120,7 @@ class TLSRelay(ProtoRelay):
         else:
             self._DNSServer.tls_up = False
 
-            Log.error(f'No [{self._protocol}] dns servers available.')
+            Log.error(f'[{self._protocol}] No DNS servers available.')
 
     @dnx_queue(Log, name='TLSRelay')
     def relay(self, client_query):
@@ -147,6 +147,9 @@ class TLSRelay(ProtoRelay):
 
             except timeout:
                 self.mark_server_down()
+
+                Log.warning(f'[{tls_server}/{self._protocol.name}] Remote server connection timeout. Marking down.')
+
                 return
 
             else:
@@ -182,7 +185,7 @@ class TLSRelay(ProtoRelay):
 
     def _tls_connect(self, tls_server):
 
-        Log.dprint(f'Opening Secure socket to {tls_server}: 853')
+        Log.dprint(f'[{tls_server}/{self._protocol.name}] Opening secure socket.')
         sock = socket(AF_INET, SOCK_STREAM)
         sock.settimeout(RELAY_TIMEOUT)
 
@@ -190,11 +193,11 @@ class TLSRelay(ProtoRelay):
         try:
             dns_sock.connect((tls_server, PROTO.DNS_TLS))
         except OSError:
-            return None
+            Log.error('[{tls_server}/{self._protocol.name}] Failed to connect to server: {E}')
 
         except Exception as E:
-            Log.console(f'TLS context error while attemping to connect to server {tls_server}: {E}')
-            Log.debug(f'TLS context error while attemping to connect to server {tls_server}: {E}')
+            Log.console(f'[{tls_server}/{self._protocol.name}] TLS context error while attemping to connect to server: {E}')
+            Log.debug(f'[{tls_server}/{self._protocol.name}] TLS context error while attemping to connect to server: {E}')
 
         else:
             self._relay_conn = RELAY_CONN(
@@ -202,6 +205,8 @@ class TLSRelay(ProtoRelay):
             )
 
             return True
+
+        return None
 
     @looper(8)
     # will send a valid dns query every ^ seconds to ensure the pipe does not get closed by remote server for
