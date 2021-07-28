@@ -92,7 +92,7 @@ class DNSCache(dict):
         '''add query to cache after calculating expiration time.'''
         self[request] = data_to_cache
 
-        Log.debug(f'CACHE ADD | NAME: {request} TTL: {data_to_cache.ttl}')
+        Log.debug(f'[{request}:{data_to_cache.ttl}] Added to standard cache. ')
 
     def search(self, query_name):
         '''if client requested domain is present in cache, will return namedtuple of time left on ttl

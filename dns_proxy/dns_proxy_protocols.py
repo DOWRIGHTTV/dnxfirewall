@@ -35,14 +35,14 @@ class UDPRelay(ProtoRelay):
     def _register_new_socket(self):
         for dns_server in self._DNSServer.dns_servers:
 
-            # if server if down we will skip over it
+            # if server is down we will skip over it
             if (not dns_server[self._protocol]): continue
 
             # never fail so will always return True
             return self._create_socket(dns_server['ip'])
 
         else:
-            Log.critical(f'No [{self._protocol}] dns servers available.')
+            Log.critical(f'[{self._protocol}] No DNS servers available.')
 
     @dnx_queue(Log, name='UDPRelay')
     def relay(self, client_query):
@@ -61,6 +61,7 @@ class UDPRelay(ProtoRelay):
 
             except timeout:
                 self.mark_server_down()
+
                 return
 
             else:
@@ -115,12 +116,12 @@ class TLSRelay(ProtoRelay):
             # down and try next server.
             if self._tls_connect(tls_server['ip']): return True
 
-            self.mark_server_down()
+            self.mark_server_down(remote_server=tls_server['ip'])
 
         else:
             self._DNSServer.tls_up = False
 
-            Log.error(f'No [{self._protocol}] dns servers available.')
+            Log.error(f'[{self._protocol}] No DNS servers available.')
 
     @dnx_queue(Log, name='TLSRelay')
     def relay(self, client_query):
@@ -134,6 +135,7 @@ class TLSRelay(ProtoRelay):
 
     # receive data from server. if dns response will call parse method else will close the socket.
     def _recv_handler(self, recv_buffer=[]):
+        Log.debug(f'[{self._relay_conn.remote_ip}/{self._protocol.name}] Response handler opened.') # pylint: disable=no-member
         recv_buff_append = recv_buffer.append
         recv_buff_clear  = recv_buffer.clear
         conn_recv = self._relay_conn.recv
@@ -147,6 +149,9 @@ class TLSRelay(ProtoRelay):
 
             except timeout:
                 self.mark_server_down()
+
+                Log.warning(f'[{self._relay_conn.remote_ip}/{self._protocol.name}] Remote server connection timeout. Marking down.') # pylint: disable=no-member
+
                 return
 
             else:
@@ -182,7 +187,7 @@ class TLSRelay(ProtoRelay):
 
     def _tls_connect(self, tls_server):
 
-        Log.dprint(f'Opening Secure socket to {tls_server}: 853')
+        Log.dprint(f'[{tls_server}/{self._protocol.name}] Opening secure socket.') # pylint: disable=no-member
         sock = socket(AF_INET, SOCK_STREAM)
         sock.settimeout(RELAY_TIMEOUT)
 
@@ -190,11 +195,11 @@ class TLSRelay(ProtoRelay):
         try:
             dns_sock.connect((tls_server, PROTO.DNS_TLS))
         except OSError:
-            return None
+            Log.error('[{tls_server}/{self._protocol.name}] Failed to connect to server: {E}')
 
         except Exception as E:
-            Log.console(f'TLS context error while attemping to connect to server {tls_server}: {E}')
-            Log.debug(f'TLS context error while attemping to connect to server {tls_server}: {E}')
+            Log.console(f'[{tls_server}/{self._protocol.name}] TLS context error while attemping to connect to server: {E}') # pylint: disable=no-member
+            Log.debug(f'[{tls_server}/{self._protocol.name}] TLS context error while attemping to connect to server: {E}') # pylint: disable=no-member
 
         else:
             self._relay_conn = RELAY_CONN(
@@ -203,13 +208,15 @@ class TLSRelay(ProtoRelay):
 
             return True
 
+        return None
+
     @looper(8)
     # will send a valid dns query every ^ seconds to ensure the pipe does not get closed by remote server for
     # inactivity. this is only needed if servers are rapidly closing connections and can be enable/disabled.
     def _tls_keepalive(self):
-        if (not self.is_enabled or not self._keepalives): return
+        if (self.is_enabled and self._keepalives):
 
-        self.relay.add(self._dns_packet(KEEP_ALIVE_DOMAIN, self._protocol)) # pylint: disable=no-member
+            self.relay.add(self._dns_packet(KEEP_ALIVE_DOMAIN, self._protocol)) # pylint: disable=no-member
 
     def _create_tls_context(self):
 #        self._tls_context = ssl.create_default_context()

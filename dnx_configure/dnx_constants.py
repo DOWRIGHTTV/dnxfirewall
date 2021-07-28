@@ -52,6 +52,10 @@ LOCALHOST  = _IPv4Address('127.0.0.1')
 INADDR_ANY = _IPv4Address('0.0.0.0')
 BROADCAST  = _IPv4Address('255.255.255.255')
 
+# definitions for ip proxy data structures. most/lease significant bit.
+MSB = 0b11111111111110000000000000000000
+LSB = 0b00000000000001111111111111111111
+
 MAC_TEMPLATE = b'\x00\x00\x00\x00\x00\x00'
 L2_PROTO = 0x0800
 
