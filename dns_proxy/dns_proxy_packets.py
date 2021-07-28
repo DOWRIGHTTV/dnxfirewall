@@ -170,7 +170,7 @@ class ClientRequest:
 
     @classmethod
     def generate_keepalive(cls, request, protocol, cd=1):
-        '''alternate construct for creating locally generated keep alive queries.'''
+        '''alternate constructor for creating locally generated keep alive queries.'''
         self = cls(None, NULL_ADDR, None)
         # harcorded qtype can change if needed.
         self.request = request
@@ -415,11 +415,12 @@ class ServerResponse:
                 record.update('ttl', modified_ttl_packed)
                 send_data.append(byte_join(record))
 
-            # first enum iter filter(resource records) and ensuring its an a type, then creating cache data.
+            # first enumerate iteration filter(resource records) and ensuring its an "A" record, then creating cache data.
+            # NOTE: system will cache for full ttl. the server will override to configured amount responding sending to client.
             if (not i and original_ttl):
                 self.data_to_cache = CACHED_RECORD(
-                    int(fast_time()) + modified_ttl,
-                    modified_ttl, r_field['records']
+                    int(fast_time()) + original_ttl,
+                    original_ttl, r_field['records']
                 )
 
         # replacing dns head placeholder. needed new record counts calculated before header creation.
@@ -432,7 +433,7 @@ class ServerResponse:
         self.send_data = byte_join(send_data)
 
     def _get_new_ttl(self, record_ttl):
-        '''returns dns records original ttl, the rewritten ttl, and the packed for of the rewritten ttl.'''
+        '''returns dns records original ttl, the rewritten ttl, and the packed form of the rewritten ttl.'''
         record_ttl = long_unpack(record_ttl)[0]
         if (record_ttl < MINIMUM_TTL):
             new_record_ttl = MINIMUM_TTL
