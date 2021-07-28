@@ -136,9 +136,11 @@ class Configuration:
 
             if (cfg_server['ip_address'] != mem_server['ip']):
 
+                # setting server status as false on initialization or server change by user.
+                # this will require reachability to succeed before it will be actively used.
                 getattr(DNSServer.dns_servers, name).update({
                     'ip': dns_servers[name]['ip_address'],
-                    PROTO.UDP: True, PROTO.DNS_TLS: True
+                    PROTO.UDP: False, PROTO.DNS_TLS: False
                 })
 
         DNSServer.dns_records = dns_settings['records']
@@ -327,7 +329,7 @@ class Reachability:
 
         self._initialize.done()
 
-        return TEN_SEC
+        return FIVE_SEC
 
     def _tls_reachable(self, secure_server):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -366,7 +368,7 @@ class Reachability:
 
         self._initialize.done()
 
-        return TEN_SEC
+        return FIVE_SEC
 
     def _udp_reachable(self, server_ip):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
