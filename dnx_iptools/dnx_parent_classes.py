@@ -189,11 +189,11 @@ class Listener:
 
                 else:
                     # this is being used as a mechanism to disable/enable interface listeners
-                    # TODO: figure out a better way to achieve this that doesnt involve reading the socket. multiple epoll
-                    # solutions have already been attempted, but they have barely missed mark.
-                    self._Log.debug(f'recv on fd: {fd} | enabled ints: {self.enabled_intfs}')
                     if (self._always_on or fd in self.enabled_intfs):
                         self.__parse_packet(data, address, sock_info)
+
+                    else:
+                        self._Log.debug(f'recv on fd: {fd} | enabled ints: {self.enabled_intfs}')
 
     def __parse_packet(self, data, address, sock_info):
         packet = self._packet_parser(data, address, sock_info)
@@ -242,7 +242,7 @@ class ProtoRelay:
         '_DNSServer', '_fallback_relay',
 
         # protected vars
-        '_relay_conn', '_send_cnt', '_last_sent',
+        '_relay_conn', '_send_cnt', '_last_rcvd',
         '_responder_add', '_fallback_relay_add'
     )
 
@@ -265,7 +265,7 @@ class ProtoRelay:
         self._relay_conn = RELAY_CONN(None, sock, sock.send, sock.recv, None)
 
         self._send_cnt  = 0
-        self._last_sent = 0
+        self._last_rcvd = 0
 
         # direct reference for performance
         if (fallback_relay):
@@ -290,16 +290,19 @@ class ProtoRelay:
         for attempt in range(2):
             try:
                 self._relay_conn.send(client_query.send_data)
-            except OSError:
+            except OSError as ose:
+                write_log(f'[{self._relay_conn.remote_ip}/{self._relay_conn.version}] Send error: {ose}')
                 if not self._register_new_socket(): break
 
                 threading.Thread(target=self._recv_handler).start()
+
             else:
                 self._increment_fail_detection()
 
                 # NOTE: temporary | identifying connection version to terminal. when removing consider having the relay protocol
                 # show in the webui > system reports.
-                write_log(f'SENT {self._relay_conn.version}[{attempt}]: {client_query.request}\n') # pylint: disable=no-member
+                write_log(f'[{self._relay_conn.remote_ip}/{self._relay_conn.version}][{attempt}] Sent {client_query.request}\n') # pylint: disable=no-member
+
                 break
 
     def _recv_handler(self):
@@ -314,13 +317,16 @@ class ProtoRelay:
 
     @looper(FIVE_SEC)
     def _fail_detection(self):
-        if (fast_time() - self._last_sent >= FIVE_SEC and self._send_cnt >= HEARTBEAT_FAIL_LIMIT):
+        if (fast_time() - self._last_rcvd >= FIVE_SEC and self._send_cnt >= HEARTBEAT_FAIL_LIMIT):
             self.mark_server_down()
 
-    # NOTE: i feel like this can be much better. investigate.
-    def mark_server_down(self):
+    # processes that were unable to connect/ create a socket will send in the remote server ip that was attempted.
+    # if a remote server isnt specified the active relay socket connection's remote ip will be used.
+    def mark_server_down(self, *, remote_server=None):
+        remote_server = remote_server if remote_server else self._relay_conn.remote_ip
+
         for server in self._DNSServer.dns_servers:
-            if (server['ip'] == self._relay_conn.remote_ip):
+            if (server['ip'] == remote_server):
                 server[self._protocol] = False
 
                 # keeping this under the remote ip/server ip match condition
@@ -330,11 +336,11 @@ class ProtoRelay:
                     write_log(f'failed to close socket while marking server ({self._relay_conn.remote_ip}) down.')
 
     def _reset_fail_detection(self):
+        self._last_rcvd = fast_time()
         self._send_cnt = 0
 
     def _increment_fail_detection(self):
         self._send_cnt += 1
-        self._last_sent = fast_time()
 
     @property
     def is_enabled(self):

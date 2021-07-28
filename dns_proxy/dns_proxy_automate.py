@@ -258,7 +258,7 @@ class Configuration:
     def load_dns_signature_bitmap():
 
         # NOTE: old method of created combined signature file and loaded seperately
-        signature_operations.combine_domains()
+        signature_operations.combine_domains(Log)
 
         wl_exceptions = load_configuration('whitelist')['whitelist']['exception']
         bl_exceptions = load_configuration('blacklist')['blacklist']['exception']
@@ -308,21 +308,22 @@ class Reachability:
     def tls(self):
         if (self.is_enabled):
 
-            DNSServer = self.DNSServer
-            for secure_server in DNSServer.dns_servers:
+            for secure_server in self.DNSServer.dns_servers:
 
                 # no check needed if server/proto is known up
                 if (secure_server[self._protocol]): continue
 
+                Log.debug('[{}/{}] Checking reachability of remote DNS server.'.format(secure_server['ip'], self._protocol.name))
+
                 # if server responds to connection attempt, it will be marked as available
                 if self._tls_reachable(secure_server):
-                    secure_server[PROTO.DNS_TLS] = True,
-                    DNSServer.tls_up = True
+                    secure_server[PROTO.DNS_TLS] = True
+                    self.DNSServer.tls_up = True
 
                     Log.notice('[{}/{}] DNS server is reachable.'.format(secure_server['ip'], self._protocol.name))
 
                     # will write server status change individually as its unlikely both will be down at same time
-                    write_configuration(DNSServer.dns_servers._asdict(), 'dns_server_status')
+                    write_configuration(self.DNSServer.dns_servers._asdict(), 'dns_server_status')
 
         self._initialize.done()
 
@@ -348,11 +349,12 @@ class Reachability:
     def udp(self):
         if (self.is_enabled or self.DNSServer.udp_fallback):
 
-            DNSServer = self.DNSServer
-            for server in DNSServer.dns_servers:
+            for server in self.DNSServer.dns_servers:
 
                 # no check needed if server/proto is known up
                 if (server[self._protocol]): continue
+
+                Log.debug('[{}/{}] Checking reachability of remote DNS server.'.format(server['ip'], self._protocol.name))
 
                 # if server responds to connection attempt, it will be marked as available
                 if self._udp_reachable(server['ip']):

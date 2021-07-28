@@ -35,7 +35,7 @@ class UDPRelay(ProtoRelay):
     def _register_new_socket(self):
         for dns_server in self._DNSServer.dns_servers:
 
-            # if server if down we will skip over it
+            # if server is down we will skip over it
             if (not dns_server[self._protocol]): continue
 
             # never fail so will always return True
@@ -61,6 +61,7 @@ class UDPRelay(ProtoRelay):
 
             except timeout:
                 self.mark_server_down()
+
                 return
 
             else:
@@ -115,7 +116,7 @@ class TLSRelay(ProtoRelay):
             # down and try next server.
             if self._tls_connect(tls_server['ip']): return True
 
-            self.mark_server_down()
+            self.mark_server_down(remote_server=tls_server['ip'])
 
         else:
             self._DNSServer.tls_up = False
@@ -134,6 +135,7 @@ class TLSRelay(ProtoRelay):
 
     # receive data from server. if dns response will call parse method else will close the socket.
     def _recv_handler(self, recv_buffer=[]):
+        Log.debug(f'[{self._relay_conn.remote_ip}/{self._protocol.name}] Response handler opened.') # pylint: disable=no-member
         recv_buff_append = recv_buffer.append
         recv_buff_clear  = recv_buffer.clear
         conn_recv = self._relay_conn.recv
@@ -148,7 +150,7 @@ class TLSRelay(ProtoRelay):
             except timeout:
                 self.mark_server_down()
 
-                Log.warning(f'[{tls_server}/{self._protocol.name}] Remote server connection timeout. Marking down.')
+                Log.warning(f'[{self._relay_conn.remote_ip}/{self._protocol.name}] Remote server connection timeout. Marking down.') # pylint: disable=no-member
 
                 return
 
@@ -185,7 +187,7 @@ class TLSRelay(ProtoRelay):
 
     def _tls_connect(self, tls_server):
 
-        Log.dprint(f'[{tls_server}/{self._protocol.name}] Opening secure socket.')
+        Log.dprint(f'[{tls_server}/{self._protocol.name}] Opening secure socket.') # pylint: disable=no-member
         sock = socket(AF_INET, SOCK_STREAM)
         sock.settimeout(RELAY_TIMEOUT)
 
@@ -196,8 +198,8 @@ class TLSRelay(ProtoRelay):
             Log.error('[{tls_server}/{self._protocol.name}] Failed to connect to server: {E}')
 
         except Exception as E:
-            Log.console(f'[{tls_server}/{self._protocol.name}] TLS context error while attemping to connect to server: {E}')
-            Log.debug(f'[{tls_server}/{self._protocol.name}] TLS context error while attemping to connect to server: {E}')
+            Log.console(f'[{tls_server}/{self._protocol.name}] TLS context error while attemping to connect to server: {E}') # pylint: disable=no-member
+            Log.debug(f'[{tls_server}/{self._protocol.name}] TLS context error while attemping to connect to server: {E}') # pylint: disable=no-member
 
         else:
             self._relay_conn = RELAY_CONN(
@@ -212,9 +214,9 @@ class TLSRelay(ProtoRelay):
     # will send a valid dns query every ^ seconds to ensure the pipe does not get closed by remote server for
     # inactivity. this is only needed if servers are rapidly closing connections and can be enable/disabled.
     def _tls_keepalive(self):
-        if (not self.is_enabled or not self._keepalives): return
+        if (self.is_enabled and self._keepalives):
 
-        self.relay.add(self._dns_packet(KEEP_ALIVE_DOMAIN, self._protocol)) # pylint: disable=no-member
+            self.relay.add(self._dns_packet(KEEP_ALIVE_DOMAIN, self._protocol)) # pylint: disable=no-member
 
     def _create_tls_context(self):
 #        self._tls_context = ssl.create_default_context()
