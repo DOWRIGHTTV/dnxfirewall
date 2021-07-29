@@ -6,9 +6,9 @@ HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
 import dnx_configure.dnx_configure as configure
+import dnx_configure.dnx_validate as validate
 
-from dnx_configure.dnx_constants import INVALID_FORM
-from dnx_configure.dnx_validate import convert_int
+from dnx_configure.dnx_constants import INVALID_FORM, CFG
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_system_info import Services
 
@@ -35,13 +35,18 @@ def update_page(form):
         try:
             zone, service, action = form.get('update_mgmt_access').split(',')
 
+            action = CFG[validate.convert_int(action)]
         except:
             return INVALID_FORM
 
-        else:
-            action = convert_int(action)
+        try:
+            validate.management_access(zone, service)
+        except ValidationError as ve:
+            return ve
 
-            # TODO: write back end code to update file and add/remove iptables rules as needed.
+        else:
+
+            configure.modify_management_access(zone, service, action)
 
             return
 

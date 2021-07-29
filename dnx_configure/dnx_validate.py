@@ -375,6 +375,10 @@ def portscan_settings(portscan_settings):
             and not current_prevention):
         raise ValidationError('Prevention must be enabled to configure portscan reject.')
 
+def management_access(zone, service):
+    if (zone not in ['lan', 'dmz'] or service not in ['webui', 'cli', 'ssh']):
+        raise ValidationError('Invalid form.')
+
 def ips_passive_block_length(pb_length):
     pb_length = convert_int(pb_length)
     if (pb_length not in [0, 24, 48, 72]):

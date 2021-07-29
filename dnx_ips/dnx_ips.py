@@ -119,7 +119,7 @@ class IPS_IDS(NFQueue):
 
     @staticmethod
     def forward_packet(nfqueue):
-        nfqueue.set_mark(SEND_TO_FIREWALL)
+        nfqueue.set_mark(WAN_ZONE_FIREWALL)
         nfqueue.repeat()
 
     @property
@@ -164,6 +164,8 @@ class Inspect:
         if (self._IPS.ids_mode):
             Log.log(packet, IPS.LOGGED, engine=IPS.DDOS)
 
+        # TODO: see if changing the iptables table to RAW would be better. It should be able to do all the standard filtering and is
+        # processed even before mangle. to test, just inject rule into RAW and see if functonality is the same.
         elif (self._IPS.ddos_prevention):
             IPTableManager.proxy_add_rule(packet.conn.tracked_ip, table='mangle', chain='IPS')
 

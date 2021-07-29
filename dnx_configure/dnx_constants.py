@@ -33,8 +33,8 @@ INT_BANDWIDTH_TIMER = 5
 FILE_POLL_TIMER = 10
 
 # dnx user/group
-USER  = 'dnx'
-GROUP = 'dnx'
+USER  = 'free'
+GROUP = 'free'
 
 # Certificate authority store file
 CERTIFICATE_STORE = '/etc/ssl/certs/ca-certificates.crt'
@@ -52,7 +52,7 @@ LOCALHOST  = _IPv4Address('127.0.0.1')
 INADDR_ANY = _IPv4Address('0.0.0.0')
 BROADCAST  = _IPv4Address('255.255.255.255')
 
-# definitions for ip proxy data structures. most/lease significant bit.
+# definitions for ip proxy data structures. most/least significant bit
 MSB = 0b11111111111110000000000000000000
 LSB = 0b00000000000001111111111111111111
 
@@ -170,8 +170,8 @@ class DNS(_IntEnum):
     CNAME = 5
     SOA   = 6
     PTR   = 12
-    AAAA  = 28
     OPT   = 41
+    AAAA  = 128
 
 class ICMP(_IntEnum):
     ECHO = 8
@@ -240,9 +240,12 @@ LAN_IN = 10
 WAN_IN = 11
 DMZ_IN = 12
 
-SEND_TO_IPS      = 20
-IP_PROXY_DROP    = 25
-SEND_TO_FIREWALL = 30
+SEND_TO_IPS   = 21 # only inspecting wan, so set to wan identifier
+IP_PROXY_DROP = 25
+
+LAN_ZONE_FIREWALL = 30
+WAN_ZONE_FIREWALL = 31
+DMZ_ZONE_FIREWALL = 32
 
 DNS_BIN_OFFSET = 4 # NOTE: 4 seems to be a good compromise of len(bins) vs len(buckets)
 class DNS_CAT(_IntEnum):
