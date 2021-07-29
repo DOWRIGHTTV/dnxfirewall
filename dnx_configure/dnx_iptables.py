@@ -108,10 +108,10 @@ class _Defaults:
         run(f'iptables -A FORWARD -m mark --mark {SEND_TO_IPS} -j NFQUEUE --queue-num 2', shell=True) # IPS TCP/UDP
 
         # block WAN > LAN | implicit deny nat into LAN for users as an extra safety mechanism. NOTE: this should be evaled to see if this should be optional.
-        run(f'iptables -A FORWARD -i {self._wan_int} -o {self._lan_int} -m mark --mark {WAN_ZONE_FIREWALL} -j DROP', shell=True)
+        run(f'iptables -A FORWARD -o {self._lan_int} -m mark --mark {WAN_ZONE_FIREWALL} -j DROP', shell=True)
 
         # NOTE: GLOBAL FIREWALL
-        for zone in ['LAN_ZONE_FIREWALL', 'WAN_ZONE_FIREWALL', 'DMZ_ZONE_FIREWALL']:
+        for zone in [LAN_ZONE_FIREWALL, WAN_ZONE_FIREWALL, DMZ_ZONE_FIREWALL]:
             run(f'iptables -A FORWARD -m mark --mark {zone} -j GLOBAL_INTERFACE', shell=True)
 
         # ============================================
