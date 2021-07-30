@@ -76,7 +76,7 @@ class Configuration:
 
     @cfg_read_poller('dns_proxy')
     def _get_proxy_settings(self, cfg_file):
-        dns_proxy = load_configuration(cfg_file)['dns_proxy']
+        dns_proxy = load_configuration(cfg_file)
 
         signatures = self.DNSProxy.signatures
         # CATEGORY SETTINGS
@@ -123,7 +123,7 @@ class Configuration:
     def _get_server_settings(self, cfg_file):
         DNSServer = self.DNSServer
 
-        dns_settings = load_configuration(cfg_file)['dns_server']
+        dns_settings = load_configuration(cfg_file)
 
         dns_servers = dns_settings['resolvers']
         tls_enabled  = dns_settings['tls']['enabled']
