@@ -84,13 +84,8 @@ class Interface:
     @staticmethod
     def mac_address(interface):
         '''returns string form mac address for sent in interface.'''
-        output = run(f'ifconfig {interface}', shell=True, capture_output=True, text=True).stdout.splitlines(8)
-        for line in output:
-            if('ether' in line):
-                line = line.strip().split()
-                mac = line[1]
-#                print(mac)
-                return mac
+
+        return run(f'ifconfig {interface}', shell=True, capture_output=True, text=True).stdout.splitlines()[3].split()[1]
 
     @staticmethod
     def default_gateway(interface):

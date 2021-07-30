@@ -30,10 +30,10 @@ def set_default_mac_flag():
     with ConfigurationManager('config') as dnx:
         dnx_settings = dnx.load_configuration()
 
-        wan_settings = dnx_settings['interface']['wan']
+        wan_settings = dnx_settings['interfaces']['wan']
         if (not wan_settings['mac_set']):
             wan_settings.update({
-                'default_mac': interface.get_mac(interface=wan_settings['ident']),
+                'default_mac': Interface.mac_address(interface=wan_settings['ident']),
                 'mac_set': True
             })
 
