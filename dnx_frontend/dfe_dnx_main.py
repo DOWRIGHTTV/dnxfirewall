@@ -46,8 +46,7 @@ LOG_NAME = 'web_app'
 
 app = Flask(__name__, static_url_path='/static')
 
-flask_config = load_configuration('config.json')['settings']['flask']
-app.secret_key = flask_config.get('key')
+app.secret_key = load_configuration('config.json')['flask'].get('key')
 
 trusted_proxies = ['127.0.0.1']
 

@@ -14,12 +14,12 @@ os.environ['HOME_DIR'] = HOME_DIR
 sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import str_join
-from dnx_configure.dnx_file_operations import ConfigurationManager
-from dnx_configure.dnx_iptables import IPTableManager
+from dnx_configure.dnx_file_operations import ConfigurationManager, load_configuration, write_configuration, json_to_yaml
+from dnx_configure.dnx_iptables import IPTablesManager
 from dnx_logging.log_main import LogHandler as Log
 
 LOG_NAME = 'system'
-PROGRESS_TOTAL_COUNT = 12
+PROGRESS_TOTAL_COUNT = 15
 
 LINEBREAK = '-'*32
 
@@ -39,7 +39,7 @@ def eprint(string):
     '''error print. includes timestamp and alert before arg str.'''
     print(f'{time.strftime("%H:%M:%S")}| !!! {string}')
 
-    os._exit(1)
+    sys.exit()
 
 def dnx_run(string):
     '''convenience function, subprocess run wrapper adding additional args.'''
@@ -73,7 +73,7 @@ def check_clone_location():
 
 def check_already_ran():
     with ConfigurationManager('config') as dnx:
-        dnx_settings = dnx.load_configuration()['settings']
+        dnx_settings = dnx.load_configuration()
 
     if (dnx_settings['auto_loader']):
 
@@ -108,40 +108,35 @@ def progress(desc):
 # INTERFACE CONFIGURATION
 #============================
 
-# convenience function wrapper for phsysical interface to dnxfirewall zone association.
+# convenience function wrapper for physical interface to dnxfirewall zone association.
 def configure_interfaces():
-    with open(f'{HOME_DIR}/utils/intf_config.json', 'r') as intf_configs:
-        intf_configs = intf_configs.read()
-
     interfaces_detected = check_system_interfaces()
 
     user_intf_config = collect_interface_associations(interfaces_detected)
-
-    for intf_name, intf in user_intf_config.items():
-            intf_configs = intf_configs.replace(f'_{intf_name}_', intf)
-
-    write_net_config(intf_configs.replace('    ', '  '))
+    public_dns_servers = load_configuration('dns_server')['resolvers']
 
     set_dnx_interfaces(user_intf_config)
-
     set_dhcp_interfaces(user_intf_config)
 
+    with open(f'{HOME_DIR}/dnx_system/interfaces/intf_config_template.json', 'r') as intf_configs:
+        intf_configs = intf_configs.read()
+
+    for intf_name, intf in user_intf_config.items():
+        intf_configs = intf_configs.replace(f'_{intf_name}_', intf)
+
+    # storing modified template containing specified interface names. this will be used to configure
+    # wan interface via webui or change system level dns servers.
+    write_configuration(json.loads(intf_configs), 'intf_config', filepath='/dnx_system/interfaces')
+
+    # setting public dns servers on the interface so the system itself will use the user configured
+    # servers in the web ui.
+    for server, ip_addr in public_dns_servers.items():
+        intf_configs.replace(f'_{server.upper()}_', ip_addr)
+
+    write_net_config(intf_configs)
+
 def check_system_interfaces():
-
     interfaces_detected = [intf[1] for intf in socket.if_nameindex() if 'lo' not in intf[1]]
-
-    # output = run('sudo ifconfig -a', shell=True, capture_output=True)
-
-    # interfaces_detected = []
-    # for line in output.stdout.decode('utf-8').splitlines():
-
-    #     # used to detect first line of interface output
-    #     if ('flags' in line):
-    #         interface = line.split(':', 1)[0]
-
-    #         # filtering loopback interface from user choices
-    #         if (interface != 'lo'):
-    #             interfaces_detected.append(interface)
 
     if (len(interfaces_detected) < 3):
         eprint(f'at least 3 interfaces are required to deploy dnxfirewall. detected: {len(interfaces_detected)}.')
@@ -179,25 +174,26 @@ def collect_interface_associations(interfaces_detected):
 # takes interface config as dict, converts to yaml, then writes to system folder
 def write_net_config(interface_config):
     sprint('configuring netplan service...')
-    # print(interface_config)
-    str_replacement = ['{', '}', '"', ',']
-    for s in str_replacement:
-        interface_config = interface_config.replace(s, '')
 
-    yaml_output = [y for y in interface_config.splitlines() if y.strip()]
+    yaml_output = json_to_yaml(interface_config, is_string=True)
 
     # write config file to netplan
-    # print(yaml_output)
     with open('/etc/netplan/01-dnx-interfaces.yaml', 'w') as intf_config:
-        intf_config.write('\n'.join(yaml_output))
+        intf_config.write(yaml_output)
+
+    # removing configuration set during install.
+    os.remove('/etc/netplan/00-installer-config.yaml')
+
+    dnx_run('netplan apply')
 
 # modifying dnx configuration files with user specified interface names and their corresponding zones
 def set_dnx_interfaces(user_intf_config):
     sprint('setting dnx interface configurations...')
+
     with ConfigurationManager('config') as dnx:
         dnx_settings = dnx.load_configuration()
 
-        interface_settings = dnx_settings['settings']['interfaces']
+        interface_settings = dnx_settings['interfaces']
 
         for zone, intf  in user_intf_config.items():
             interface_settings[zone.lower()]['ident'] = intf
@@ -208,7 +204,7 @@ def set_dhcp_interfaces(user_intf_config):
     with ConfigurationManager('dhcp_server') as dhcp:
         dhcp_settings = dhcp.load_configuration()
 
-        interface_settings = dhcp_settings['dhcp_server']['interfaces']
+        interface_settings = dhcp_settings['interfaces']
 
         for zone in ['LAN', 'DMZ']:
 
@@ -304,7 +300,7 @@ def set_permissions():
 
     # creating database file here so it can get its permissions modified. This will
     # ensure it wont be overriden by update pulls.
-    dnx_run(f'touch {HOME_DIR}/dnx_system/data/dnxfirewall.sqlite3')
+    dnx_run('touch {HOME_DIR}/dnx_system/data/dnxfirewall.sqlite3')
 
     # set owner to dnx user/group
     dnx_run(f'sudo chown -R dnx:dnx {USER_DIR}/dnxfirewall')
@@ -325,7 +321,10 @@ def set_permissions():
         'dnx ALL = (root) NOPASSWD: /usr/sbin/iptables',
         'dnx ALL = (root) NOPASSWD: /usr/bin/systemctl',
         'dnx ALL = (root) NOPASSWD: /sbin/shutdown',
-        'dnx ALL = (root) NOPASSWD: /sbin/reboot'
+        'dnx ALL = (root) NOPASSWD: /sbin/reboot',
+        'dnx ALL = (root) NOPASSWD: /sbin/netplan'
+        'dnx ALL = (root) NOPASSWD: mv {HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml /etc/netplan/01-dnx-interfaces.yaml',
+        'dnx ALL = (root) NOPASSWD: ifconfig'
     ]
 
     for line in no_pass:
@@ -357,7 +356,7 @@ def set_services():
 def configure_iptables():
     progress('loading default iptables')
 
-    with IPTableManager() as iptables:
+    with IPTablesManager() as iptables:
         iptables.apply_defaults(suppress=True)
 
 #============================
@@ -368,9 +367,13 @@ def mark_completion_flag():
     with ConfigurationManager('config') as dnx:
         dnx_settings = dnx.load_configuration()
 
-        dnx_settings['settings']['auto_loader'] = True
+        dnx_settings['auto_loader'] = True
 
         dnx.write_configuration(dnx_settings)
+
+# TODO: add code to pull mac from wan interface and set it in the config file stored in the usr dir.
+def store_default_mac():
+    pass
 
 if __name__ == '__main__':
     # pre checks to make sure application can run properly
@@ -403,6 +406,8 @@ if __name__ == '__main__':
 
     progress('dnxfirewall deployment complete')
 
-    sprint('\nrestart system then navigate to https://dnx.firewall from LAN or DMZ to manage.')
-    sprint('ssh is allowed on WAN for setup. This should be removed prior to moving to production.')
-    os._exit(0)
+    sprint('\nrestart system then navigate to https://dnx.firewall from LAN manage.')
+    sprint('control of the wan interface configuration has been taken by dnxfirewall.')
+    sprint('use the webui to configure a static ip or enable ssh access if needed.')
+
+    sys.exit()

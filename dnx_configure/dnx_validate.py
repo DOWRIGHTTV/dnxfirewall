@@ -11,7 +11,7 @@ from ipaddress import IPv4Address, IPv4Network
 _HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, _HOME_DIR)
 
-from dnx_configure.dnx_constants import LOG, DATA, INVALID_FORM
+from dnx_configure.dnx_constants import LOG, CFG, DATA, INVALID_FORM
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 
@@ -375,16 +375,25 @@ def portscan_settings(portscan_settings):
             and not current_prevention):
         raise ValidationError('Prevention must be enabled to configure portscan reject.')
 
-def management_access(zone, service):
-    if (zone not in ['lan', 'dmz'] or service not in ['webui', 'cli', 'ssh']):
+def management_access(fields):
+    SERVICE_TO_PORT = {'webui': [80, 443], 'cli': [0], 'ssh': [22]}
+
+    if (fields.zone not in ['lan', 'dmz'] or fields.service not in ['webui', 'cli', 'ssh']):
         raise ValidationError('Invalid form.')
 
+    # convert_int will raise exception if issues with form data and ValueError will cover
+    # invalid CFG action key/vals
+    try:
+        action = CFG(convert_int(fields.action))
+    except ValueError:
+        raise ValidationError('Invalid form.')
+
+    fields.action = action
+    fields.service_ports = SERVICE_TO_PORT[fields.service]
+
 def ips_passive_block_length(pb_length):
-    pb_length = convert_int(pb_length)
     if (pb_length not in [0, 24, 48, 72]):
         raise ValidationError(INVALID_FORM)
-
-    return pb_length
 
 def add_ip_whitelist(whitelist_settings):
     # handling alphanum check. will raise exception if invalid.

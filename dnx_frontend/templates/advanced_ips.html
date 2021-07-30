@@ -5,9 +5,9 @@
         <div class="row">
             <div class="col s12">
                 <ul class="tabs">
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='1' %} class="active" {% endif %} 
+                    <li class="{{tab_classes}}"><a {% if tab=='1' %} class="active" {% endif %}
                         href="#ips" onclick="activeTab(1)">IPS/IDS</a></li>
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='2' %} class="active" {% endif %}
+                    <li class="{{tab_classes}}"><a {% if tab=='2' %} class="active" {% endif %}
                         href="#ips-whitelist" onclick="activeTab(2)">Whitelist</a></li>
                 </ul>
             </div>
@@ -48,7 +48,7 @@
                         <div class="row">
                             <div class="input-field col s12">
                                 <p class="range-field">
-                                    <input type="range" name="icmp_limit" min="20" max="100" 
+                                    <input type="range" name="icmp_limit" min="20" max="100"
                                         value="{{ips_settings['ddos']['icmp']}}">
                                     <label for="icmp_limit">ICMP Source Limit (packets/sec) | Current:
                                         {{ips_settings['ddos']['icmp']}}

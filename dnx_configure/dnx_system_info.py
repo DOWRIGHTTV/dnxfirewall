@@ -15,7 +15,7 @@ from subprocess import run, CalledProcessError, DEVNULL
 _HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, _HOME_DIR)
 
-from dnx_configure.dnx_constants import str_join
+from dnx_configure.dnx_constants import str_join, FIVE_SEC
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_iptools.dnx_protocol_tools import convert_mac_to_bytes
 
@@ -116,12 +116,12 @@ class System:
 
     @staticmethod
     def restart():
-        sleep(5)
+        sleep(FIVE_SEC)
         run('sudo reboot', shell=True)
 
     @staticmethod
     def shutdown():
-        sleep(5)
+        sleep(FIVE_SEC)
         run('sudo shutdown', shell=True)
 
     @staticmethod

@@ -208,7 +208,7 @@ class Inspect:
 
         return False
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     ip_cat_signatures, geoloc_signatures = Configuration.load_ip_signature_bitmaps()
 
     # using cython function factory to create binary search function with module specific signatures

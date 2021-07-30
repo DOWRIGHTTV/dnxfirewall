@@ -13,7 +13,7 @@ from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-impo
 from dnx_configure.dnx_file_operations import load_configuration
 
 __all__ = (
-    'IPTableManager'
+    'IPTablesManager'
 )
 
 _system = os.system
@@ -112,7 +112,7 @@ class _Defaults:
 
         # NOTE: GLOBAL FIREWALL
         for zone in [LAN_ZONE_FIREWALL, WAN_ZONE_FIREWALL, DMZ_ZONE_FIREWALL]:
-            run(f'iptables -A FORWARD -m mark --mark {zone} -j GLOBAL_INTERFACE', shell=True)
+            run(f'iptables -A FORWARD -m mark --mark {zone} -j GLOBAL_ZONE', shell=True)
 
         # ============================================
 
@@ -194,7 +194,7 @@ class _Defaults:
         run(f'iptables -t nat -I PREROUTING -m mark ! --mark {WAN_IN} -p udp --dport 53 -j REDIRECT --to-port 53', shell=True)
 
 
-class IPTableManager:
+class IPTablesManager:
     ''' This is the IP Table rule adjustment manager. if class is called in as a context manager, all method calls
     must be ran in the context where the class instance itself is returned as the object. Changes as part of a context
     will be automatically saved upon exit of the context, otherwise they will have to be saved manually.
@@ -247,7 +247,7 @@ class IPTableManager:
 
     # TODO: think about the duplicate rule check before running this as a safety for creating duplicate rules
     def apply_defaults(self, *, suppress=False):
-        ''' convenience function wrapper around the iptable Default class. all iptable default rules will
+        '''convenience function wrapper around the iptable Default class. all iptable default rules will
         be loaded. if used within the context manager (recommended), the iptables lock will be aquired
         before continuing (will block until done). iptable commit will be done on exit.
 
@@ -283,10 +283,15 @@ class IPTableManager:
     def delete_rule(self, rule):
         run(f'sudo iptables -D {rule.zone} {rule.position}', shell=True)
 
-    def modify_management_access(self, service, *, zone, action):
-        action = '-A' if action is CFG.ADD else '-D'
+    def modify_management_access(self, fields):
+        '''add or remove mangement access rule as configured by webui. ports must be a list, even if only one port is needed.'''
 
-        run(f'sudo iptables {action} MGMT -m mark --mark {zone} -p tcp --dport {service} -j ACCEPT', shell=True)
+        zone = globals()[f'{fields.zone.upper()}_IN']
+        action = '-A' if fields.action is CFG.ADD else '-D'
+
+        for port in fields.service_ports:
+
+            run(f'sudo iptables {action} MGMT -m mark --mark {zone} -p tcp --dport {port} -j ACCEPT', shell=True)
 
     def add_nat(self, rule):
         src_interface = self._zone_to_intf[f'{rule.src_zone}']
@@ -384,5 +389,5 @@ class IPTableManager:
         run(f'sudo iptables -F DOH', shell=True)
 
 if __name__ == '__main__':
-    with IPTableManager() as iptables:
+    with IPTablesManager() as iptables:
         iptables.apply_defaults()

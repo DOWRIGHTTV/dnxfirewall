@@ -1,41 +1,39 @@
 {
-    "settings": {
-        "auto_loader": false,
-        "flask": {
-            "key": "fZeH-XfuyhmEOfF63lO6xTpiGtnJ598tfHZwv3Pxajw"
+    "auto_loader": false,
+    "flask": {
+        "key": "fZeH-XfuyhmEOfF63lO6xTpiGtnJ598tfHZwv3Pxajw"
+    },
+    "interfaces": {
+        "lan": {
+            "ident": null,
+            "ip": "192.168.83.1",
+            "netmask": "255.255.255.0",
+            "subnet": "192.168.83.0/24"
         },
-        "interfaces": {
-            "lan": {
-                "ident": null,
-                "ip": "192.168.83.1",
-                "netmask": "255.255.255.0",
-                "subnet": "192.168.83.0/24"
-            },
-            "dmz": {
-                "ident": null,
-                "ip": "192.168.84.1",
-                "netmask": "255.255.255.0",
-                "subnet": "192.168.84.0/24"
-            },
-            "wan": {
-                "ident": null,
-                "default_mac": null,
-                "configured_mac": null,
-                "dhcp": true,
-                "mac_set": false
-            }
+        "dmz": {
+            "ident": null,
+            "ip": "192.168.84.1",
+            "netmask": "255.255.255.0",
+            "subnet": "192.168.84.0/24"
         },
-        "mgmt_access": {
-            "lan": {
-                "webui": true,
-                "cli": false,
-                "ssh": false
-            },
-            "dmz": {
-                "webui": true,
-                "cli": false,
-                "ssh": false
-            }
+        "wan": {
+            "ident": null,
+            "default_mac": null,
+            "configured_mac": null,
+            "mac_set": false,
+            "dhcp": true
+        }
+    },
+    "mgmt_access": {
+        "lan": {
+            "webui": true,
+            "cli": false,
+            "ssh": false
+        },
+        "dmz": {
+            "webui": true,
+            "cli": false,
+            "ssh": false
         }
     },
     "services": {

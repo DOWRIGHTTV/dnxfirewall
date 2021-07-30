@@ -7,6 +7,7 @@ HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
 import dnx_configure.dnx_configure as configure
+import dnx_iptools.dnx_interface as interface
 import dnx_configure.dnx_validate as validate
 
 from dnx_configure.dnx_constants import CFG, INVALID_FORM
@@ -18,39 +19,32 @@ from dnx_configure.dnx_system_info import System, Interface
 _IP_DISABLED = True
 
 def load_page():
-    interface_settings = load_configuration('config')['settings']
+    interface_settings = load_configuration('config')
 
-    wan_int = interface_settings['interfaces']['wan']
-    default_wan_mac = wan_int['default_mac']
-    configured_wan_mac = wan_int['configured_mac']
-    dhcp = wan_int['dhcp']
-    wan_int = wan_int['ident']
-
-    # TODO: migrate away from instace
-    Int = Interface()
-    wan_ip = Int.ip_address(wan_int)
-    wan_netmask = Int.netmask(wan_int)
-    wan_dfg = Int.default_gateway(wan_int)
-
-    current_wan_mac = default_wan_mac if not configured_wan_mac else configured_wan_mac
+    wan_settings = interface_settings['interfaces']['wan']
+    print(wan_settings)
 
     interface_settings = {
         'mac': {
-            'default': default_wan_mac,
-            'current': current_wan_mac
+            'default': wan_settings['default_mac'],
+            'current': wan_settings['default_mac'] if not wan_settings['configured_mac'] else wan_settings['configured_mac']
         },
         'ip': {
-            'dhcp': dhcp,
-            'ip_address': wan_ip,
-            'netmask': wan_netmask,
-            'default_gateway': wan_dfg
+            'dhcp': wan_settings['dhcp'],
+            'ip_address': f'{interface.get_ip_address(interface=wan_settings["ident"])}',
+            'netmask': f'{interface.get_netmask(interface=wan_settings["ident"])}',
+            'default_gateway': Interface.default_gateway(wan_settings["ident"])
         }
     }
 
     return interface_settings
 
 def update_page(form):
-    ## Matching wan MAC Address Update and sending to configuration method
+    print(form)
+
+    if (_IP_DISABLED):
+        return 'wan interface configuration currently disabled for system rework.'
+
     if ('wan_mac_update' in form):
         mac_address = form.get('ud_wan_mac', None)
         if (not mac_address):
@@ -63,12 +57,8 @@ def update_page(form):
         else:
             configure.set_wan_mac(CFG.ADD, mac_address=mac_address)
 
-    ## Matching wan MAC Address Restore to Default and sending to configuration method
     elif ('wan_mac_restore' in form):
         configure.set_wan_mac(CFG.DEL)
-
-    if (_IP_DISABLED):
-        return 'ip address configuration currently disabled for system rework.'
 
     elif ('wan_ip_update' in form):
         wan_ip = form.get('ud_wan_ip', None)

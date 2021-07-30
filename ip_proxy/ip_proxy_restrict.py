@@ -55,7 +55,7 @@ class LanRestrict:
 
     @cfg_read_poller('ip_proxy')
     def _get_settings(self, cfg_file):
-        ip_proxy = load_configuration(cfg_file)['ip_proxy']
+        ip_proxy = load_configuration(cfg_file)
 
         enabled = ip_proxy['time_restriction']['enabled']
         self._change_attribute('_enabled', enabled)
@@ -78,12 +78,12 @@ class LanRestrict:
                 and restriction_start < now < restriction_end):
             self._set_restriction_status(active=True)
 
-            Log.notice('LAN Time Restriction in effect.')
+            Log.notice('LAN restriction in effect.')
 
         elif (self.is_active and now > restriction_end):
             self._set_restriction_status(active=False)
 
-            Log.notice('LAN Time Restriction released.')
+            Log.notice('LAN restriction released.')
 
         self.initialize.done()
 
@@ -100,8 +100,7 @@ class LanRestrict:
         restriction_end = restriction_start + restriction_length
 
         if (self.is_active):
-            restriction_status = load_configuration('ip_proxy_timer')
-            restriction_end = restriction_status['time_restriction']['end']
+            restriction_end = load_configuration('ip_proxy_timer')['end']
 
         else:
             self._write_end_time(restriction_end)
@@ -114,13 +113,13 @@ class LanRestrict:
         with ConfigurationManager('ip_proxy_timer') as dnx:
             time_restriction = dnx.load_configuration()
 
-            time_restriction['time_restriction']['end'] = restriction_end
+            time_restriction['end'] = restriction_end
 
             dnx.write_configuration(time_restriction)
 
     def _load_restriction(self):
-        ip_proxy = load_configuration('ip_proxy')['ip_proxy']
-        logging = load_configuration('logging_client')['logging']
+        ip_proxy = load_configuration('ip_proxy')
+        logging = load_configuration('logging_client')
 
         restriction_start  = ip_proxy['time_restriction']['start']
         restriction_length = ip_proxy['time_restriction']['length']
@@ -136,17 +135,17 @@ class LanRestrict:
         self._change_attribute('_active', active)
 
         with ConfigurationManager('ip_proxy_timer') as dnx:
-            restriction_status = dnx.load_configuration()
+            time_restriction = dnx.load_configuration()
 
-            restriction_status['time_restriction']['active'] = active
+            time_restriction['active'] = active
 
-            dnx.write_configuration(restriction_status)
+            dnx.write_configuration(time_restriction)
 
     @classmethod
     def __load_status(cls):
         time_restriction = load_configuration('ip_proxy_timer')
 
-        cls._active = time_restriction['time_restriction']['active']
+        cls._active = time_restriction['active']
 
     @classmethod
     def _change_attribute(cls, name, status):

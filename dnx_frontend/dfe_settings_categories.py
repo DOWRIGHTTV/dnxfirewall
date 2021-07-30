@@ -14,7 +14,7 @@ from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 
 def load_page(menu_option):
-    dns_proxy = load_configuration('dns_proxy')['dns_proxy']
+    dns_proxy = load_configuration('dns_proxy')
     userdefined_category = dns_proxy['categories']['user_defined']
 
     ud_cat_lists = {}
@@ -128,7 +128,7 @@ def get_ud_category(menu_option):
     if (not menu_option):
         return None
 
-    dns_proxy = load_configuration('dns_proxy')['dns_proxy']
+    dns_proxy = load_configuration('dns_proxy')
 
     ud_categories = dns_proxy['categories']['user_defined']
     try:

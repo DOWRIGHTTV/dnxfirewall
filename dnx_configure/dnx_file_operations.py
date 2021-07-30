@@ -47,7 +47,7 @@ def load_configuration(filename, *, filepath='/dnx_system/data'):
 
 # TODO: write configs to usr folder keeping main system configs as defaults.
 def write_configuration(data, filename, *, filepath='/dnx_system/data/usr'):
-    '''write json data to file.'''
+    '''write json data object to file.'''
 
     if (not filename.endswith('.json')):
         filename = str_join([filename, '.json'])
@@ -55,9 +55,8 @@ def write_configuration(data, filename, *, filepath='/dnx_system/data/usr'):
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
         json.dump(data, settings, indent=4)
 
-def append_to_file(data, filename, *, filepath='/dnx_system/data'):
-    '''will append data to filepath must be ended with / for the directory
-    to be processed correctly.'''
+def append_to_file(data, filename, *, filepath='/dnx_system/data/usr'):
+    '''append data to filepath..'''
 
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'a') as settings:
         settings.write(data)
@@ -73,6 +72,22 @@ def change_file_owner(file_path):
 
     shutil.chown(file_path, user=USER, group=GROUP)
     os.chmod(file_path, 0o660)
+
+def json_to_yaml(data, *, is_string=False):
+    '''converts a string in json format or a dictionary into yaml syntax then returns as string. set "is_string" to True
+    to skip over object serialization.
+    '''
+
+    if (not is_string):
+        data = json.dumps(data)
+
+    str_replacement = ['{', '}', '"', ',']
+
+    data = data.replace('    ', '', 1)
+    for s in str_replacement:
+        data = data.replace(s, '')
+
+    return '\n'.join([y for y in data.splitlines() if y.strip()])
 
 # used to load ip and domain signatures. if whitelist exceptions are specified then they will not
 # get loaded into the proxy. the try/except block is used to ensure bad rules dont prevent proxy

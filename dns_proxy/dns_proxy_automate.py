@@ -211,7 +211,7 @@ class Configuration:
 
     def _modify_ip_whitelist(self, cfg_file):
         memory_ip_list = self.DNSProxy.whitelist.ip
-        loaded_ip_list = load_configuration(cfg_file)['whitelist']['ip_whitelist']
+        loaded_ip_list = load_configuration(cfg_file)['ip_whitelist']
 
         # iterating over ip rules in memory.
         for ip in memory_ip_list.copy():
@@ -262,8 +262,8 @@ class Configuration:
         # NOTE: old method of created combined signature file and loaded seperately
         signature_operations.combine_domains(Log)
 
-        wl_exceptions = load_configuration('whitelist')['whitelist']['exception']
-        bl_exceptions = load_configuration('blacklist')['blacklist']['exception']
+        wl_exceptions = load_configuration('whitelist')['exception']
+        bl_exceptions = load_configuration('blacklist')['exception']
 
         return load_dns_bitmap(Log, bl_exc=bl_exceptions, wl_exc=wl_exceptions)
 

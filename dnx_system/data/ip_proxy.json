@@ -1,43 +1,41 @@
 {
-    "ip_proxy": {
-        "ids_mode": false,
-        "categories": {
-            "malicious": 1,
-            "compromised": 0,
-            "tor_entry": 0,
-            "tor_exit": 0
-        },
-        "geolocation": {
-            "afghanistan": 0,
-            "brazil": 0,
-            "canada": 0,
-            "china": 1,
-            "cuba": 0,
-            "egypt": 0,
-            "germany": 0,
-            "hong_kong": 0,
-            "india": 0,
-            "iran": 1,
-            "iraq": 0,
-            "mexico": 0,
-            "netherlands": 1,
-            "north_korea": 1,
-            "phillipines": 0,
-            "puerto_rico": 0,
-            "russian_federation": 1,
-            "south_korea": 0,
-            "spain": 0,
-            "switzerland": 0,
-            "taiwan": 0,
-            "ukraine": 0,
-            "united_kingdom": 0,
-            "united_states": 0,
-            "venezuela": 1
-        },
-        "time_restriction": {
-            "enabled": false,
-            "start": "22:30",
-            "length": 30600
-        }
+    "ids_mode": false,
+    "categories": {
+        "malicious": 1,
+        "compromised": 0,
+        "tor_entry": 0,
+        "tor_exit": 0
+    },
+    "geolocation": {
+        "afghanistan": 0,
+        "brazil": 0,
+        "canada": 0,
+        "china": 1,
+        "cuba": 0,
+        "egypt": 0,
+        "germany": 0,
+        "hong_kong": 0,
+        "india": 0,
+        "iran": 1,
+        "iraq": 0,
+        "mexico": 0,
+        "netherlands": 1,
+        "north_korea": 1,
+        "phillipines": 0,
+        "puerto_rico": 0,
+        "russian_federation": 1,
+        "south_korea": 0,
+        "spain": 0,
+        "switzerland": 0,
+        "taiwan": 0,
+        "ukraine": 0,
+        "united_kingdom": 0,
+        "united_states": 0,
+        "venezuela": 1
+    },
+    "time_restriction": {
+        "enabled": false,
+        "start": "22:30",
+        "length": 30600
     }
 }

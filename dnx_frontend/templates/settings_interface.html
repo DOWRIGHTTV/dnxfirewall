@@ -5,25 +5,105 @@
         <div class="row">
             <div class="col s12 m12 l12 xl12">
                 <ul class="tabs">
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='1' %} class="active" {% endif %} href="#wan_mac"
-                            onclick="activeTab(1)">MAC Address</a></li>
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='2' %} class="active" {% endif %} href="#wan_ip"
-                            onclick="activeTab(2)">IP Address</a></li>
+                    <li class="{{tab_classes}}"><a {% if tab=='1' %} class="active" {% endif %} href="#wan_int"
+                            onclick="activeTab(1)">WAN Interface</a></li>
                 </ul>
             </div>
         </div>
     </div>
 </section>
-<section id="wan_mac">
+<section id="wan_int">
     <div class="container">
-        <div class="row">
-            <div class="col s12 m4"></div>
-            <div class="col s12 m4">
-                <div class="card-panel">
-                    <h4 class="red-text">WAN MAC Address</h4>
-                    <h6>Default MAC: {{interface_settings['mac']['default']}}</h6>
-                    <h6>Current MAC: {{interface_settings['mac']['current']}}</h6>
-                    <br>
+        <div class="row row-flex">
+            <div class="col s12 l6">
+                <div class="card-panel card-panel-eql">
+                    <h4 class="{{title_color}}">IP Address</h4>
+                    <p>
+                        <h6>IP: {{interface_settings['ip']['ip_address']}}</h6>
+                        <h6>Netmask: {{interface_settings['ip']['netmask']}}</h6>
+                        <h6>Gateway: {{interface_settings['ip']['default_gateway']}}</h6>
+                    </p>
+                    <form action="/settings/interface" method="POST">
+                        <input type="hidden" name="tab" value="1">
+                        <div class="row">
+                            <div class="input-field col s9">
+                                <input type="text" name="wan_ip" placeholder="192.168.1.11" {{ip_addr_validate}}
+                                    {% if interface_settings['ip']['dhcp'] %} disabled {% endif %}>
+                                <label for="">IP Address</label>
+                            </div>
+                            <div class="input-field col s3">
+                                <select name="wan_cidr" {% if interface_settings['ip']['dhcp'] %} disabled {% endif %}>
+                                    {% for i in range(24,31) %}
+                                    <option value="{{i}}">/{{i}}</option>
+                                    {% endfor %}
+                                </select>
+                                <label for="">Netmask</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="input-field col s12">
+                                <input type="text" name="wan_dfg" placeholder="192.168.1.1" {{ip_addr_validate}}
+                                    {% if interface_settings['ip']['dhcp'] %} disabled {% endif %}>
+                                <label for="">Default Gateway</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="input-field col s5 m3 offset-m2 center">
+                                <a class="waves-effect waves-light btn modal-trigger col s12" href="#wanint-modal1"
+                                    {% if interface_settings['ip']['dhcp'] %} disabled {% endif %}>Update</a>
+                            </div>
+                            <div id="wanint-modal1" class="modal">
+                                <div class="modal-content">
+                                    <h5 class="red-text center">Changing the WAN IP address may cause a brief service disruption. Continue?</h5>
+                                </div>
+                                <div class="modal-footer">
+                                    <button class="btn waves-effect waves-light" name="update_wan_dhcp">YES</button>
+                                    <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+                                </div>
+                            </div>
+                        </form>
+                        <form action="/settings/interface" method="POST">
+                            <div class="input-field col s4 m6 center">
+                                <div class="switch modal-trigger" href="#wanint-modal2">
+                                    <label>
+                                        DHCP
+                                        {% if interface_settings['ip']['dhcp'] %}
+                                        <input type="hidden" name="update_wan_dhcp" value="1">
+                                        <input type="checkbox" onchange="this.form.submit()">
+                                        {% else %}
+                                        <input type="hidden" name="update_wan_dhcp" value="0">
+                                        <input type="checkbox" onchange="this.form.submit()" checked="checked">
+                                        {% endif %}
+                                        <span class="lever"></span>
+                                        Static
+                                    </label>
+                                </div>
+                                <div id="wanint-modal2" class="modal">
+                                    <div class="modal-content">
+                                        {% if interface_settings['ip']['dhcp'] %}
+                                        <h5 class="red-text">Setting WAN interface to DHCP will clear the IP configuration. Continue?</h5>
+                                        {% else %}
+                                        <h5 class="red-text">Setting WAN interface to static requires manual IP address configuration. Continue?</h5>
+                                        {% endif %}
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button class="btn waves-effect waves-light">YES</button>
+                                        <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col s12 l6">
+                <div class="card-panel card-panel-eql">
+                    <h4 class="{{title_color}}">MAC Address</h4>
+                    <p>
+                        <h6>Default MAC: {{interface_settings['mac']['default']}}</h6>
+                        <h6>Current MAC: {{interface_settings['mac']['current']}}</h6>
+                        <br>
+                    </p>
                     <form action="/settings/interface" method="POST">
                         <input type="hidden" name="tab" value="1">
                         <div class="row">
@@ -33,19 +113,16 @@
                             </div>
                         </div>
                         <div class="row">
-                            <div class="input-field col s0 m2"></div>
-                            <div class="input-field col s5 m4 center">
-                                <a class="waves-effect waves-light btn modal-trigger col s12" href="#int-modal1"><i
+                            <div class="input-field col s5 m4 offset-m2 center">
+                                <a class="waves-effect waves-light btn modal-trigger col s12" href="#wanint-modal3"><i
                                         class="material-icons"></i>Update</a>
-                                <div id="int-modal1" class="modal">
+                                <div id="wanint-modal3" class="modal">
                                     <div class="modal-content">
-                                        <h5 class="red-text">Are you sure you want to change the WAN MAC Address? This
-                                            will restart the WAN Interface!</h5>
+                                        <h5 class="red-text">Changing the WAN MAC address will restart the interface. Continue?</h5>
                                     </div>
                                     <div class="modal-footer">
-                                        <button class="btn waves-effect waves-light">YES</button>
+                                        <button class="btn waves-effect waves-light" name="wan_mac_update">YES</button>
                                         <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                                        <input type="hidden" name="wan_mac_update">
                                     </div>
                                 </div>
                             </div>
@@ -53,90 +130,15 @@
                     <form action="/settings/interface" method="POST">
                         <input type="hidden" name="tab" value="1">
                         <div class="input-field col s5 m4 center">
-                            <a class="waves-effect waves-light btn modal-trigger col s12" href="#int-modal2"><i
+                            <a class="waves-effect waves-light btn modal-trigger col s12" href="#wanint-modal4"><i
                                     class="material-icons"></i>Restore</a>
-                            <div id="int-modal2" class="modal">
+                            <div id="wanint-modal4" class="modal">
                                 <div class="modal-content">
-                                    <h5 class="red-text">Are you sure you want to restore the default WAN MAC Address?
-                                        This will restart the WAN Interface!</h5>
+                                    <h5 class="red-text">Restoring the WAN MAC address will restart the interface. Continue?</h5>
                                 </div>
                                 <div class="modal-footer">
-                                    <button class="btn waves-effect waves-light">YES</button>
+                                    <button class="btn waves-effect waves-light" name="wan_mac_restore">YES</button>
                                     <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                                    <input type="hidden" name="wan_mac_restore">
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-    </div>
-</section>
-<section id="wan_ip">
-    <div class="container">
-        <div class="row">
-            <div class="col s12 m3"></div>
-            <div class="col s12 m6">
-                <div class="card-panel">
-                    <h4 class="red-text">WAN IP Address</h4>
-                    <h6>IP: {{interface_settings['ip']['ip_address']}}</h6>
-                    <h6>Netmask: {{interface_settings['ip']['netmask']}}</h6>
-                    <h6>Gateway: {{interface_settings['ip']['default_gateway']}}</h6>
-                    <br>
-                    <form action="/settings/interface" method="POST">
-                        <input type="hidden" name="tab" value="2">
-                        <div class="row">
-                            <div class="input-field col s9 m9">
-                                <input type="text" name="ud_wan_ip" class="validate" placeholder="192.168.1.11">
-                                <label for="">IP Address</label>
-                            </div>
-                            <div class="input-field col s3 m3">
-                                <select name="ud_wan_cidr" id="">
-                                    {% for i in range(24,31) %}
-                                    <option value="{{i}}">/{{i}}</option>
-                                    {% endfor %}
-                                </select>
-                                <label for="ud_wan_cidr">Netmask</label>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="input-field col s12">
-                                <input type="text" name="ud_wan_dfg" class="validate" placeholder="192.168.1.1">
-                                <label for="">Default Gateway</label>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="input-field col s0 m2"></div>
-                            <div class="input-field col s5 m3 center">
-                                <a class="waves-effect waves-light btn modal-trigger col s12" href="#int-modal3"><i
-                                        class="material-icons"></i>Update</a>
-                                <div id="int-modal3" class="modal">
-                                    <div class="modal-content">
-                                        <h5 class="red-text">Are you sure you want to change the WAN IP Address? This
-                                            will restart the WAN Interface and the IPS Module!</h5>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button class="btn waves-effect waves-light">YES</button>
-                                        <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                                        <input type="hidden" name="wan_ip_update">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="input-field col s5 m6 center">
-                                <br>
-                                <div class="switch">
-                                    <label>
-                                        DHCP
-                                        {% if interface_settings['ip']['dhcp'] %}
-                                        <input type="checkbox" name="static_wan">
-                                        {% else %}
-                                        <input type="checkbox" checked="checked" name="static_wan">
-                                        {% endif %}
-                                        <span class="lever"></span>
-                                        Static
-                                    </label>
                                 </div>
                             </div>
                         </div>

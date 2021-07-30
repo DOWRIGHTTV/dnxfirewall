@@ -1,0 +1,25 @@
+{
+    "network": {
+        "version": 2,
+        "ethernets": {
+            "_WAN_": {
+                "optional": "yes",
+                "dhcp4": "yes",
+                "dhcp_overrides": {
+                    "use-dns": false
+                },
+                "nameservers": {
+                    "addresses": "[_PRIMARY_, _SECONDARY_]"
+                }
+            },
+            "_LAN_": {
+                "optional": "yes",
+                "addresses": "[192.168.83.1/24]"
+            },
+            "_DMZ_": {
+                "optional": "yes",
+                "addresses": "[192.168.84.1/24]"
+            }
+        }
+    }
+}
