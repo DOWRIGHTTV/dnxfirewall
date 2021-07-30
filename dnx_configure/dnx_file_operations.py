@@ -269,7 +269,7 @@ def _merge_geo_ranges(ls):
     return temp_list
 
 def load_tlds():
-    dns_proxy = load_configuration('dns_proxy')['dns_proxy']
+    dns_proxy = load_configuration('dns_proxy')
 
     for tld, setting in dns_proxy['tlds'].items():
         yield (tld.strip('.'), setting)
@@ -279,6 +279,7 @@ def load_tlds():
 # will be ommited from the proxy.
 def load_keywords(Log):
     '''returns keyword set for enabled domain categories'''
+
     keywords = []
     try:
         with open(f'{HOME_DIR}/dnx_system/signatures/domain_lists/domain.keywords', 'r') as blocked_keywords:
@@ -305,6 +306,7 @@ def load_top_domains_filter():
 
 def calculate_file_hash(file_to_hash, *, path=f'{HOME_DIR}/', folder='data'):
     '''returns the sha256 secure hash of the file sent in'''
+
     with open(f'{path}{folder}/{file_to_hash}', 'rb') as f2h:
         file_hash = hashlib.sha256(f2h.read()).digest()
 
