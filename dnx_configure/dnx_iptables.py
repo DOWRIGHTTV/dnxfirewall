@@ -46,7 +46,7 @@ class _Defaults:
                     write_log(E)
 
     def get_settings(self):
-        dnx_settings = load_configuration('config')['settings']
+        dnx_settings = load_configuration('config')
 
         self._lan_int = dnx_settings['interfaces']['lan']['ident']
         self._wan_int = dnx_settings['interfaces']['wan']['ident']
@@ -207,7 +207,7 @@ class IPTablesManager:
     )
 
     def __init__(self):
-        dnx_intf_settigs = load_configuration('config')['settings']['interfaces']
+        dnx_intf_settigs = load_configuration('config')['interfaces']
 
         self._intf_to_zone = {
             dnx_intf_settigs[zone]['ident']: zone for zone in ['wan', 'lan', 'dmz']
