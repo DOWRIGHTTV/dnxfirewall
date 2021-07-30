@@ -159,7 +159,7 @@ class Configuration:
         # if a rule timeout is detected for an entry in memory. we will update the config file
         # to align with active rules, then we will remove the rules from memory.
         if (timeout_detected):
-            loaded_list = self._update_list_file(lname, cfg_file)
+            loaded_list = self._update_list_file(cfg_file)
 
             self._modify_memory(memory_list, loaded_list, action=CFG.DEL)
 
@@ -174,7 +174,7 @@ class Configuration:
         if (modified_time == last_modified_time):
             return last_modified_time
 
-        loaded_list = load_configuration(cfg_file)[lname]['domain']
+        loaded_list = load_configuration(cfg_file)['domain']
 
         self._modify_memory(memory_list, loaded_list, action=CFG.ADD)
 
@@ -241,12 +241,12 @@ class Configuration:
         return False
 
     # updating the file with necessary changes.
-    def _update_list_file(self, lname, cfg_file):
+    def _update_list_file(self, cfg_file):
         now = fast_time()
         with ConfigurationManager(cfg_file) as dnx:
             lists = dnx.load_configuration()
 
-            loaded_list = lists[lname]['domain']
+            loaded_list = lists['domain']
             for domain, info in loaded_list.copy().items():
                 if (now < info['expire']): continue
 
