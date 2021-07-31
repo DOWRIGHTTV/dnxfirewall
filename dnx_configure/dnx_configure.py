@@ -18,7 +18,7 @@ import dnx_iptools.dnx_interface as interface
 from dnx_configure.dnx_constants import CFG, INTF, INVALID_FORM, shell, fast_time, str_join
 from dnx_configure.dnx_file_operations import load_configuration, ConfigurationManager, json_to_yaml
 from dnx_configure.dnx_exceptions import ValidationError
-# from dnx_configure.dnx_iptables import IPTablesManager
+from dnx_system.sys_main import system_action
 from dnx_configure.dnx_system_info import System, Services, Interface
 from dnx_frontend.dfe_dnx_authentication import Authentication
 from dnx_logging.log_main import LogHandler as Log
@@ -45,13 +45,15 @@ def set_wan_mac(action, mac_address=None):
 
         wan_settings = dnx_settings['interfaces']['wan']
 
-        wan_int = wan_settings['ident']
-
         new_mac = mac_address if action is CFG.ADD else wan_settings['default_mac']
 
-        shell(f'sudo ifconfig {wan_int} down')
-        shell(f'sudo ifconfig {wan_int} hw ether {new_mac}')
-        shell(f'sudo ifconfig {wan_int} up')
+        wan_int = wan_settings['ident']
+        # iterating over the necessary command args, then sending over local socket
+        # for control service to issue the commands
+        args = [f'{wan_int} down', f'{wan_int} hw ether {new_mac}', f'{wan_int} up']
+        for arg in args:
+
+            system_action(module='webui', command='ifconfig', args=arg)
 
         wan_settings['configured_mac'] = mac_address
 
@@ -580,11 +582,14 @@ def set_wan_interface(intf_type=INTF.DHCP):
         with open(f'{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', 'w') as dnx_intfs:
             dnx_intfs.write(converted_config)
 
-        #shell(f'sudo mv {HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml /etc/netplan/')
+        cmd_args = ['{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', '/etc/netplan/01-dnx-interfaces.yaml']
+        system_action(module='webui', command='os.replace', args=cmd_args)
 
         # TODO: this isnt working for some reason. file is moved correctly, but settings dont change. if manually
-        # ran the settings change to what was set in the newly moved file, which should mean the issue is here. 
-        #shell(f'sudo netplan apply')
+        # ran the settings change to what was set in the newly moved file, which should mean the issue is here.
+        # NOTE: can it be that the move is still in buffer when the apply happens so the settings dont change.
+        # by the time it is manually entered, the file move has completed???
+        system_action(module='webui', command='netplan apply', args='')
 
 def set_wan_ip(wan_ip_settings):
     '''Modify configured WAN interface IP address.
@@ -605,8 +610,6 @@ def set_wan_ip(wan_ip_settings):
 
     intf_template = load_configuration('intf_config', filepath='dnx_system/interfaces')
 
-    #intf_template['network']['ethernets'][wan_int]['nameservers']['addresses'] = f'[{dns1},{dns2}]'
-
     # removing dhcp4 and dhcp_overrides keys, then adding ip address value
     wan_intf = intf_template['network']['ethernets'][wan_int]
 
@@ -625,8 +628,14 @@ def set_wan_ip(wan_ip_settings):
     with open(f'{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', 'w') as dnx_intfs:
         dnx_intfs.write(converted_config)
 
-    #shell(f'sudo mv {HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml /etc/netplan/')
-    #shell(f'sudo netplan apply')
+    cmd_args = ['{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', '/etc/netplan/01-dnx-interfaces.yaml']
+    system_action(module='webui', command='os.replace', args=cmd_args)
+
+    # TODO: this isnt working for some reason. file is moved correctly, but settings dont change. if manually
+    # ran the settings change to what was set in the newly moved file, which should mean the issue is here.
+    # NOTE: can it be that the move is still in buffer when the apply happens so the settings dont change.
+    # by the time it is manually entered, the file move has completed???
+    system_action(module='webui', command='netplan apply', args='')
 
 def add_open_wan_protocol(nat_info):
     with ConfigurationManager('ips') as dnx:

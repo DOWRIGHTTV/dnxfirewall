@@ -319,13 +319,7 @@ def set_permissions():
     # update sudoers to allow dnx user no pass for specific system functions
     no_pass = [
         'dnx ALL = (root) NOPASSWD: /usr/sbin/iptables-restore',
-        'dnx ALL = (root) NOPASSWD: /usr/sbin/iptables',
-        'dnx ALL = (root) NOPASSWD: /usr/bin/systemctl',
-        'dnx ALL = (root) NOPASSWD: /sbin/shutdown',
-        'dnx ALL = (root) NOPASSWD: /sbin/reboot',
-        'dnx ALL = (root) NOPASSWD: /sbin/netplan',
-        'dnx ALL = (root) NOPASSWD: /usr/bin/mv {HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml /etc/netplan/',
-        'dnx ALL = (root) NOPASSWD: /usr/sbin/ifconfig'
+        'dnx ALL = (root) NOPASSWD: /usr/sbin/iptables'
     ]
 
     for line in no_pass:

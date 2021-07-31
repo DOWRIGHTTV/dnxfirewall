@@ -47,6 +47,7 @@ def load_page():
 
 # TODO: fix inconcistent variable names for nat rules
 def update_page(form):
+    print(form)
     # initial input validation for presence of zone field
     zone = form.get('zone', None)
     if (zone not in valid_zones):
