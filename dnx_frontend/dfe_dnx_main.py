@@ -370,7 +370,8 @@ def system_backups(dnx_session_data):
 def system_restart(dnx_session_data):
     page_settings = {
         'navi':True, 'idle_timeout': False,
-        'control': True, 'action': 'restart'
+        'control': True, 'action': 'restart',
+        'uri_path': ['device', 'restart']
     }
 
     page_settings.update(dnx_session_data)
@@ -384,7 +385,8 @@ def system_restart(dnx_session_data):
 def system_shutdown(dnx_session_data):
     page_settings = {
         'navi': True, 'idle_timeout': False,
-        'control': True, 'action': 'shutdown'
+        'control': True, 'action': 'shutdown',
+        'uri_path': ['device', 'shutdown']
     }
 
     page_settings.update(dnx_session_data)
@@ -414,7 +416,10 @@ def dnx_logout(dnx_session_data):
 
 @app.route('/blocked')
 def dnx_blocked():
-    page_settings = {'navi': True, 'login_btn': True, 'idle_timeout': False}
+    page_settings = {
+        'navi': True, 'login_btn': True,
+        'idle_timeout': False, 'uri_path': ['blocked',]
+    }
 
     # checking for domain sent by nginx that is being redirected to firewall. if domain doesnt exist (user navigated to
     # this page manually) then a not authorized page will be served. If the domain is not a valid domain (regex) the request
@@ -508,7 +513,10 @@ def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
             'standard_error': error
         })
 
-    page_settings[data_key] = dnx_page.load_page()
+    try:
+        page_settings[data_key] = dnx_page.load_page()
+    except OSError as ose:
+            return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
 
     return render_template(f'{page_name}.html', **page_settings)
 
