@@ -15,7 +15,7 @@ sys.path.insert(0, HOME_DIR)
 
 import dnx_iptools.dnx_interface as interface
 
-from dnx_configure.dnx_constants import CFG, INTF, INVALID_FORM, fast_time, str_join
+from dnx_configure.dnx_constants import CFG, INTF, INVALID_FORM, shell, fast_time, str_join
 from dnx_configure.dnx_file_operations import load_configuration, ConfigurationManager, json_to_yaml
 from dnx_configure.dnx_exceptions import ValidationError
 # from dnx_configure.dnx_iptables import IPTablesManager
@@ -49,9 +49,9 @@ def set_wan_mac(action, mac_address=None):
 
         new_mac = mac_address if action is CFG.ADD else wan_settings['default_mac']
 
-        run(f'sudo ifconfig {wan_int} down', shell=True)
-        run(f'sudo ifconfig {wan_int} hw ether {new_mac}', shell=True)
-        run(f'sudo ifconfig {wan_int} up', shell=True)
+        shell(f'sudo ifconfig {wan_int} down')
+        shell(f'sudo ifconfig {wan_int} hw ether {new_mac}')
+        shell(f'sudo ifconfig {wan_int} up')
 
         wan_settings['configured_mac'] = mac_address
 
@@ -580,8 +580,11 @@ def set_wan_interface(intf_type=INTF.DHCP):
         with open(f'{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', 'w') as dnx_intfs:
             dnx_intfs.write(converted_config)
 
-        #run(f'sudo mv {HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml /etc/netplan/01-dnx-interfaces.yaml')
-        #run(f'sudo netplan apply')
+        #shell(f'sudo mv {HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml /etc/netplan/')
+
+        # TODO: this isnt working for some reason. file is moved correctly, but settings dont change. if manually
+        # ran the settings change to what was set in the newly moved file, which should mean the issue is here. 
+        #shell(f'sudo netplan apply')
 
 def set_wan_ip(wan_ip_settings):
     '''Modify configured WAN interface IP address.
@@ -622,8 +625,8 @@ def set_wan_ip(wan_ip_settings):
     with open(f'{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', 'w') as dnx_intfs:
         dnx_intfs.write(converted_config)
 
-    #run(f'sudo mv {HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml /etc/netplan/01-dnx-interfaces.yaml')
-    #run(f'sudo netplan apply')
+    #shell(f'sudo mv {HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml /etc/netplan/')
+    #shell(f'sudo netplan apply')
 
 def add_open_wan_protocol(nat_info):
     with ConfigurationManager('ips') as dnx:

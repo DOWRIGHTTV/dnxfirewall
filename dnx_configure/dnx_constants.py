@@ -5,6 +5,7 @@ import os as _os
 import sys as _sys
 
 from functools import partial as _partial
+from subprocess import run as _run, DEVNULL
 from enum import Enum as _Enum, IntEnum as _IntEnum
 from ipaddress import IPv4Address as _IPv4Address
 
@@ -12,6 +13,7 @@ fast_time  = _time.time
 fast_sleep = _time.sleep
 
 write_log = _partial(print, flush=True)
+shell = _partial(_run, shell=True, stdout=DEVNULL, stderr=DEVNULL)
 
 byte_join = b''.join
 str_join = ''.join

@@ -323,9 +323,9 @@ def set_permissions():
         'dnx ALL = (root) NOPASSWD: /usr/bin/systemctl',
         'dnx ALL = (root) NOPASSWD: /sbin/shutdown',
         'dnx ALL = (root) NOPASSWD: /sbin/reboot',
-        'dnx ALL = (root) NOPASSWD: /sbin/netplan'
-        'dnx ALL = (root) NOPASSWD: mv {HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml /etc/netplan/01-dnx-interfaces.yaml',
-        'dnx ALL = (root) NOPASSWD: ifconfig'
+        'dnx ALL = (root) NOPASSWD: /sbin/netplan',
+        'dnx ALL = (root) NOPASSWD: /usr/bin/mv {HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml /etc/netplan/',
+        'dnx ALL = (root) NOPASSWD: /usr/sbin/ifconfig'
     ]
 
     for line in no_pass:
