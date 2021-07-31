@@ -9,7 +9,7 @@
                     "use-dns": false
                 },
                 "nameservers": {
-                    "addresses": "[_PRIMARY_, _SECONDARY_]"
+                    "addresses": "[_PRIMARY__SECONDARY_]"
                 }
             },
             "_LAN_": {

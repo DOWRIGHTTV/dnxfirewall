@@ -126,7 +126,7 @@ def configure_interfaces():
 
     # storing modified template containing specified interface names. this will be used to configure
     # wan interface via webui or change system level dns servers.
-    write_configuration(json.loads(intf_configs), 'intf_config', filepath='/dnx_system/interfaces')
+    write_configuration(json.loads(intf_configs), 'intf_config', filepath='dnx_system/interfaces')
 
     # setting public dns servers on the interface so the system itself will use the user configured
     # servers in the web ui.

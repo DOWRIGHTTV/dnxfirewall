@@ -122,7 +122,7 @@ def update_page(form):
         except ValidationError as ve:
             return ve
         else:
-            configure.update_ips_ip_whitelist(whitelist_ip, whitelist_name, CFG.ADD)
+            configure.update_ips_ip_whitelist(whitelist_ip, whitelist_name, action=CFG.ADD)
 
     elif ('ips_wl_remove' in form):
         whitelist_ip = form.get('ips_wl_ip', None)
@@ -134,7 +134,7 @@ def update_page(form):
         except ValidationError as ve:
             return ve
         else:
-            configure.update_ips_ip_whitelist(whitelist_ip, None, CFG.DEL)
+            configure.update_ips_ip_whitelist(whitelist_ip, None, action=CFG.DEL)
 
     elif ('ips_wl_dns' in form):
         action = CFG.ADD if 'dns_enabled' in form else CFG.DEL

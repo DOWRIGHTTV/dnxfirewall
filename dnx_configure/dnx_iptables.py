@@ -6,7 +6,7 @@ import fcntl
 from subprocess import run, CalledProcessError, DEVNULL
 from types import SimpleNamespace as SName
 
-HOME_DIR = os.environ['HOME_DIR']
+HOME_DIR = os.environ.get('HOME_DIR', '/home/dnx/dnxfirewall')
 sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import

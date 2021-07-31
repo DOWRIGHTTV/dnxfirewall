@@ -21,7 +21,7 @@
             "default_mac": null,
             "configured_mac": null,
             "mac_set": false,
-            "dhcp": true
+            "state": 1
         }
     },
     "mgmt_access": {

@@ -15,7 +15,7 @@ sys.path.insert(0, HOME_DIR)
 
 import dnx_iptools.dnx_interface as interface
 
-from dnx_configure.dnx_constants import CFG, INVALID_FORM, fast_time, str_join
+from dnx_configure.dnx_constants import CFG, INTF, INVALID_FORM, fast_time, str_join
 from dnx_configure.dnx_file_operations import load_configuration, ConfigurationManager, json_to_yaml
 from dnx_configure.dnx_exceptions import ValidationError
 # from dnx_configure.dnx_iptables import IPTablesManager
@@ -224,7 +224,7 @@ def set_proxy_exception(exception_settings, *, ruleset):
     with ConfigurationManager(ruleset) as dnx:
         exceptions_list = dnx.load_configuration()
 
-        exceptions = exceptions_list[ruleset]['exception']
+        exceptions = exceptions_list['exception']
         if (exception_settings['action'] is CFG.ADD):
             exceptions[exception_settings['domain']]['reason'] = exception_settings['reason']
 
@@ -278,8 +278,7 @@ def add_proxy_domain(whitelist_settings, *, ruleset):
     with ConfigurationManager(ruleset) as dnx:
         domain_list = dnx.load_configuration()
 
-        domains = domain_list[ruleset]['domain']
-        domains.update({
+        domain_list['domain'].update({
             whitelist_settings['domain']: {
                 'time': input_time,
                 'rule_length': whitelist_settings['timer'],
@@ -290,12 +289,16 @@ def add_proxy_domain(whitelist_settings, *, ruleset):
         dnx.write_configuration(domain_list)
 
 def del_proxy_domain(domain, *, ruleset):
-    with ConfigurationManager(f'{ruleset}') as dnx:
+    with ConfigurationManager(ruleset) as dnx:
         domain_list = dnx.load_configuration()
 
-        domain_list[ruleset]['domain'].pop(domain)
+        result = domain_list['domain'].pop(domain, None)
 
-        dnx.write_configuration(domain_list)
+        # if domain was not present (likely removed in another process), there is
+        # no need to write file to disk
+        if (result is not None):
+
+            dnx.write_configuration(domain_list)
 
 def set_domain_tlds(update_tlds):
     with ConfigurationManager('dns_proxy') as dnx:
@@ -312,8 +315,7 @@ def add_proxy_ip_whitelist(whitelist_settings):
     with ConfigurationManager('whitelist') as dnx:
         whitelist = dnx.load_configuration()
 
-        ip_whitelist = whitelist['ip_whitelist']
-        ip_whitelist[whitelist_settings['ip']] = {
+        whitelist['ip_whitelist'][whitelist_settings['ip']] = {
             'user': whitelist_settings['user'],
             'type': whitelist_settings['type']
         }
@@ -324,11 +326,15 @@ def del_proxy_ip_whitelist(whitelist_ip):
     with ConfigurationManager('whitelist') as dnx:
         whitelist = dnx.load_configuration()
 
-        whitelist['ip_whitelist'].pop(whitelist_ip)
+        result = whitelist['ip_whitelist'].pop(whitelist_ip, None)
 
-        dnx.write_configuration(whitelist)
+        # if ip was not present (likely removed in another process), there is
+        # no need to write file to disk
+        if (result is not None):
 
-def update_ips_ip_whitelist(whitelist_ip, whitelist_name, action):
+            dnx.write_configuration(whitelist)
+
+def update_ips_ip_whitelist(whitelist_ip, whitelist_name, *, action):
     with ConfigurationManager('ips') as dnx:
         ips_settings = dnx.load_configuration()
 
@@ -337,7 +343,9 @@ def update_ips_ip_whitelist(whitelist_ip, whitelist_name, action):
             ips_whitelist[whitelist_ip] = whitelist_name
 
         elif (action is CFG.DEL):
-            ips_whitelist.pop(whitelist_ip)
+            result = ips_whitelist.pop(whitelist_ip, None)
+
+            if (result is None): return
 
         dnx.write_configuration(ips_settings)
 
@@ -379,7 +387,7 @@ def update_system_time_offset(new_offset_settings):
         offset = offset_settings['time_offset']
         offset.update({
             'direction': new_offset_settings['direction'],
-            'amount': int(new_offset_settings['time'])
+            'amount': new_offset_settings['time']
         })
 
         dnx.write_configuration(offset_settings)
@@ -434,7 +442,8 @@ def set_syslog_servers(syslog_servers):
                 server: {
                     'ip_address': server_info['ip_address'],
                     'port': int(server_info['port'])
-                }})
+                }
+            })
 
         dnx.write_configuration(syslog_settings)
 
@@ -454,28 +463,24 @@ def remove_syslog_server(syslog_server_number):
 
 def update_ip_restriction_settings(tr_settings):
     with ConfigurationManager('ip_proxy') as dnx:
-        time_restriction_settings = dnx.load_configuration()
+        ip_proxy_settings = dnx.load_configuration()
 
-        hour = tr_settings['hour']
-        if (tr_settings['suffix'] == 'PM'):
-            hour += 12
+        tr_settings['hour'] += 12 if tr_settings['suffix'] == 'PM' else tr_settings['hour']
 
-        minutes = tr_settings['minutes']
-        start_time = f'{hour}:{minutes}'
+        start_time = f'{tr_settings["hour"]}:{tr_settings["minutes"]}'
 
         tlen_hour = tr_settings['length_hour']
         min_fraction = str(tr_settings['length_minutes']/60).strip('0.')
         res_length = f'{tlen_hour}.{min_fraction}'
         res_length = int(float(res_length) * 3600)
 
-        time_restriction = time_restriction_settings['time_restriction']
-        time_restriction.update({
+        ip_proxy_settings['time_restriction'].update({
             'start': start_time,
             'length': res_length,
             'enabled': tr_settings['enabled']
-            })
+        })
 
-        dnx.write_configuration(time_restriction_settings)
+        dnx.write_configuration(ip_proxy_settings)
 
 def set_dns_cache_clear_flag(clear_dns_cache):
     with ConfigurationManager('dns_server') as dnx:
@@ -526,44 +531,97 @@ def set_ips_ddos_limits(ddos_limits):
 
         dnx.write_configuration(ips_settings)
 
-def set_wan_interface(settings=None):
+def set_wan_interface(intf_type=INTF.DHCP):
+    '''Change wan interface state between static or dhcp.
 
-    if settings['dhcp'] and settings['dhcp']:
-        return # dhcp already set. can return.
+    1. Configure interface type
+    2. Create netplan config from template
+    3. Move file to /etc/netplan
 
-    #Checking configured DNS Servers
-    dns_server_settings = load_configuration('dns_server')
-
-    resolvers = dns_server_settings['dns_server']['resolvers']
-    dns1 = resolvers['server1']['ip_address']
-    dns2 = resolvers['server2']['ip_address']
-
-
+    This does not configure an ip address of the interface when setting to static. see: set_wan_ip()
+    '''
 
     # changing dhcp status of wan interface in config file.
     with ConfigurationManager('config') as dnx:
         interface_settings = dnx.load_configuration()
 
-        wan_config = interface_settings['interfaces']['wan']
-        wan_config['dhcp'] = False if settings else True
+        wan = interface_settings['interfaces']['wan']
 
-        wan_int = wan_config['ident']
+        wan['state'] = intf_type
 
         dnx.write_configuration(interface_settings)
 
-    intf_template = load_configuration('intf_config', filepath='/dnx_system/interfaces')
-    if (settings['dhcp']):
-        intf_template['network']['ethernets'][wan_int]['nameservers']['addresses'] = f'[{dns1}, {dns2}]'
+        # grabbing configured dns servers
+        dns_server_settings = load_configuration('dns_server')
 
-    else:
-        pass
+        dns1 = dns_server_settings['resolvers']['primary']['ip_address']
+        dns2 = dns_server_settings['resolvers']['secondary']['ip_address']
+
+        intf_template = load_configuration('intf_config', filepath='dnx_system/interfaces')
+
+        # dns server replacement in template required for static or dhcp
+        intf_template['network']['ethernets'][wan['ident']]['nameservers']['addresses'] = f'[{dns1},{dns2}]'
+
+        # setting for static. removing dhcp4 and dhcp_overrides keys, then adding addresses with empty list
+        # NOTE: the ip configuration will unlock after the switch and can then be updated
+        if (intf_type is INTF.STATIC):
+            wan_intf = intf_template['network']['ethernets'][wan['ident']]
+
+            wan_intf.pop('dhcp4')
+            wan_intf.pop('dhcp_overrides')
+
+            # initializing static, but not configuring an ip address
+            wan_intf['addresses'] = '[]'
+
+        # writing file into dnx_system folder due to limited permissions by the front end. netplan and the specific
+        # mv args are configured as sudo/no-pass to get the config to netplan and it applied without a restart.
+        with open(f'{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', 'w') as dnx_intfs:
+            dnx_intfs.write(json_to_yaml(intf_template))
+
+        #run(f'sudo mv {HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml /etc/netplan/01-dnx-interfaces.yaml')
+        #run(f'sudo netplan apply')
+
+def set_wan_ip(wan_ip_settings):
+    '''Modify configured WAN interface IP address.
+
+    1. Loads configured DNS servers
+    2. Loads wan interface identity
+    3. Create netplan config from template
+    4. Move file to /etc/netplan
+    '''
+
+    wan_int = load_configuration('config')['interfaces']['wan']['ident']
+
+    # grabbing configured dns servers
+    dns_server_settings = load_configuration('dns_server')['resolvers']
+
+    dns1 = dns_server_settings['primary']['ip_address']
+    dns2 = dns_server_settings['secondary']['ip_address']
+
+    intf_template = load_configuration('intf_config', filepath='dnx_system/interfaces')
+
+    #intf_template['network']['ethernets'][wan_int]['nameservers']['addresses'] = f'[{dns1},{dns2}]'
+
+    # removing dhcp4 and dhcp_overrides keys, then adding ip address value
+    wan_intf = intf_template['network']['ethernets'][wan_int]
+
+    wan_intf.pop('dhcp4')
+    wan_intf.pop('dhcp_overrides')
+
+    # initializing static, but not configuring an ip address
+    wan_intf['addresses'] = f'[{wan_ip_settings["ip"]}/{wan_ip_settings["cidr"]}]'
+    wan_intf['gateway4']  = f'{wan_ip_settings["dfg"]}'
+
+    converted_config = json_to_yaml(intf_template)
+    converted_config = converted_config.replace('_PRIMARY__SECONDARY_', f'{dns1},{dns2}')
+
     # writing file into dnx_system folder due to limited permissions by the front end. netplan and the specific
     # mv args are configured as sudo/no-pass to get the config to netplan and it applied without a restart.
-    with open(f'{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml') as dnx_intfs:
-        dnx_intfs.write(json_to_yaml(intf_template))
+    with open(f'{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', 'w') as dnx_intfs:
+        dnx_intfs.write(converted_config)
 
-    run(f'sudo mv {HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml /etc/netplan/01-dnx-interfaces.yaml')
-    run(f'sudo netplan apply')
+    #run(f'sudo mv {HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml /etc/netplan/01-dnx-interfaces.yaml')
+    #run(f'sudo netplan apply')
 
 def add_open_wan_protocol(nat_info):
     with ConfigurationManager('ips') as dnx:

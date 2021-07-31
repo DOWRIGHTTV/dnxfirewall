@@ -172,7 +172,7 @@ class System:
     @staticmethod
     def calculate_time_offset(logged_time):
         '''returns modified time based on current time offset settings.'''
-        logging = load_configuration('logging_client')['logging']
+        logging = load_configuration('logging_client')
 
         offset = logging['time_offset']
         os_direction = offset['direction']
@@ -226,7 +226,7 @@ class System:
     @staticmethod
     def dns_status():
         dns_servers_status = load_configuration('dns_server_status')
-        dns_server = load_configuration('dns_server')['dns_server']
+        dns_server = load_configuration('dns_server')
 
         tls_enabled = dns_server['tls']['enabled']
         dns_servers = dns_server['resolvers']

@@ -4,14 +4,14 @@ import time as _time
 import os as _os
 import sys as _sys
 
+from functools import partial as _partial
 from enum import Enum as _Enum, IntEnum as _IntEnum
 from ipaddress import IPv4Address as _IPv4Address
 
 fast_time  = _time.time
 fast_sleep = _time.sleep
-def write_log(entry):
-    _sys.stdout.write(f'{entry}\n')
-    _sys.stdout.flush()
+
+write_log = _partial(print, flush=True)
 
 byte_join = b''.join
 str_join = ''.join
@@ -65,6 +65,11 @@ class CFG(_IntEnum):
     ADD = 1
     ADD_DEL = 2
     RESTORE = 3
+
+#interface states
+class INTF(_IntEnum):
+    STATIC = 0
+    DHCP = 1
 
 #protocols
 class DNX(_IntEnum):

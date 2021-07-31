@@ -19,7 +19,7 @@
                 <div class="card-panel card-panel-eql">
                     <h4 class="{{title_color}}">IP Address</h4>
                     <p>
-                        <h6>IP: {{interface_settings['ip']['ip_address']}}</h6>
+                        <h6>IP:      {{interface_settings['ip']['ip_address']}}</h6>
                         <h6>Netmask: {{interface_settings['ip']['netmask']}}</h6>
                         <h6>Gateway: {{interface_settings['ip']['default_gateway']}}</h6>
                     </p>
@@ -28,11 +28,11 @@
                         <div class="row">
                             <div class="input-field col s9">
                                 <input type="text" name="wan_ip" placeholder="192.168.1.11" {{ip_addr_validate}}
-                                    {% if interface_settings['ip']['dhcp'] %} disabled {% endif %}>
+                                    {% if interface_settings['ip']['state'] %} disabled {% endif %}>
                                 <label for="">IP Address</label>
                             </div>
                             <div class="input-field col s3">
-                                <select name="wan_cidr" {% if interface_settings['ip']['dhcp'] %} disabled {% endif %}>
+                                <select name="wan_cidr" {% if interface_settings['ip']['state'] %} disabled {% endif %}>
                                     {% for i in range(24,31) %}
                                     <option value="{{i}}">/{{i}}</option>
                                     {% endfor %}
@@ -43,21 +43,21 @@
                         <div class="row">
                             <div class="input-field col s12">
                                 <input type="text" name="wan_dfg" placeholder="192.168.1.1" {{ip_addr_validate}}
-                                    {% if interface_settings['ip']['dhcp'] %} disabled {% endif %}>
+                                    {% if interface_settings['ip']['state'] %} disabled {% endif %}>
                                 <label for="">Default Gateway</label>
                             </div>
                         </div>
                         <div class="row">
                             <div class="input-field col s5 m3 offset-m2 center">
                                 <a class="waves-effect waves-light btn modal-trigger col s12" href="#wanint-modal1"
-                                    {% if interface_settings['ip']['dhcp'] %} disabled {% endif %}>Update</a>
+                                    {% if interface_settings['ip']['state'] %} disabled {% endif %}>Update</a>
                             </div>
                             <div id="wanint-modal1" class="modal">
                                 <div class="modal-content">
                                     <h5 class="red-text center">Changing the WAN IP address may cause a brief service disruption. Continue?</h5>
                                 </div>
                                 <div class="modal-footer">
-                                    <button class="btn waves-effect waves-light" name="update_wan_dhcp">YES</button>
+                                    <button class="btn waves-effect waves-light" name="update_wan_ip">YES</button>
                                     <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
                                 </div>
                             </div>
@@ -66,21 +66,21 @@
                             <div class="input-field col s4 m6 center">
                                 <div class="switch modal-trigger" href="#wanint-modal2">
                                     <label>
-                                        DHCP
-                                        {% if interface_settings['ip']['dhcp'] %}
-                                        <input type="hidden" name="update_wan_dhcp" value="1">
+                                        Static
+                                        {% if not interface_settings['ip']['state'] %}
+                                        <input type="hidden" name="update_wan_state" value="1">
                                         <input type="checkbox" onchange="this.form.submit()">
                                         {% else %}
-                                        <input type="hidden" name="update_wan_dhcp" value="0">
+                                        <input type="hidden" name="update_wan_state" value="0">
                                         <input type="checkbox" onchange="this.form.submit()" checked="checked">
                                         {% endif %}
                                         <span class="lever"></span>
-                                        Static
+                                        DHCP
                                     </label>
                                 </div>
                                 <div id="wanint-modal2" class="modal">
                                     <div class="modal-content">
-                                        {% if interface_settings['ip']['dhcp'] %}
+                                        {% if not interface_settings['ip']['state'] %}
                                         <h5 class="red-text">Setting WAN interface to DHCP will clear the IP configuration. Continue?</h5>
                                         {% else %}
                                         <h5 class="red-text">Setting WAN interface to static requires manual IP address configuration. Continue?</h5>
