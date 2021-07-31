@@ -46,8 +46,7 @@ LOG_NAME = 'web_app'
 
 app = Flask(__name__, static_url_path='/static')
 
-flask_config = load_configuration('config.json')['settings']['flask']
-app.secret_key = flask_config.get('key')
+app.secret_key = load_configuration('config.json')['flask'].get('key')
 
 trusted_proxies = ['127.0.0.1']
 
@@ -496,7 +495,11 @@ def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
     if (request.method == 'POST' and 'extend_session_timer' not in request.form):
         tab = request.form.get('tab', '1')
 
-        error = dnx_page.update_page(request.form)
+        try:
+            error = dnx_page.update_page(request.form)
+        except OSError as ose:
+            return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
+
         if (not error):
             return redirect(url_for(page_name, tab=tab))
 

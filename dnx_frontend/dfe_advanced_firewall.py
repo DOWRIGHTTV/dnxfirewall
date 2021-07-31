@@ -14,23 +14,23 @@ import dnx_configure.dnx_validate as validate
 from dnx_configure.dnx_constants import INVALID_FORM
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
-from dnx_configure.dnx_iptables import IPTableManager
+from dnx_configure.dnx_iptables import IPTablesManager
 from dnx_configure.dnx_system_info import System, Services
 
 NETMASKS = [*list(reversed(range(24,33))), 16, 8, 0]
 
 valid_zones = {
-    'GLOBAL_INTERFACE': '1',
-    'WAN_INTERFACE': '2',
-    'DMZ_INTERFACE': '3',
-    'LAN_INTERFACE': '4'
+    'GLOBAL_ZONE': '1',
+    'WAN_ZONE': '2',
+    'DMZ_ZONE': '3',
+    'LAN_ZONE': '4'
 }
 
 zone_convert = {
-    '1': 'GLOBAL_INTERFACE',
-    '2': 'WAN_INTERFACE',
-    '3': 'DMZ_INTERFACE',
-    '4': 'LAN_INTERFACE'
+    '1': 'GLOBAL_ZONE',
+    '2': 'WAN_ZONE',
+    '3': 'DMZ_ZONE',
+    '4': 'LAN_ZONE'
 }
 
 valid_standard_rule_fields = {
@@ -50,7 +50,7 @@ def update_page(form):
     # initial input validation for presence of zone field
     zone = form.get('zone', None)
     if (zone not in valid_zones):
-        return INVALID_FORM, 'GLOBAL_INTERFACE', None
+        return INVALID_FORM, 'GLOBAL_ZONE', None
 
     # if firewall rule, None will be used for evaluation.
     action = form.get('action', None)
@@ -94,7 +94,7 @@ def _firewall_rules(zone, action, form):
             error = ve
 
         else:
-            with IPTableManager() as iptables:
+            with IPTablesManager() as iptables:
                 iptables.delete_rule(fields)
 
     elif (action =='add'):
@@ -122,7 +122,7 @@ def _firewall_rules(zone, action, form):
             if (not fields.src_ip):
                 fields.src_ip, fields.src_netmask = '0', '0'
 
-            with IPTableManager() as iptables:
+            with IPTablesManager() as iptables:
                 iptables.add_rule(fields)
 
     elif ('change_interface' not in form):
@@ -142,7 +142,7 @@ def _dnat_rules(zone, action, form):
             error = ve
 
         else:
-            with IPTableManager() as iptables:
+            with IPTablesManager() as iptables:
                 iptables.delete_nat(fields)
 
     elif (action == 'add'):
@@ -160,7 +160,7 @@ def _dnat_rules(zone, action, form):
         except ValidationError as ve:
             error = ve
         else:
-            with IPTableManager() as iptables:
+            with IPTablesManager() as iptables:
                 iptables.add_nat(fields)
 
             configure.add_open_wan_protocol(fields)
@@ -182,7 +182,7 @@ def _snat_rules(zone, action, form):
             error = ve
 
         else:
-            with IPTableManager() as iptables:
+            with IPTablesManager() as iptables:
                 iptables.delete_nat(fields)
 
     elif (action == 'add'):
@@ -194,7 +194,7 @@ def _snat_rules(zone, action, form):
         except ValidationError as ve:
             error = ve
         else:
-            with IPTableManager() as iptables:
+            with IPTablesManager() as iptables:
                 iptables.add_nat(fields)
 
     else:

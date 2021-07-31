@@ -76,7 +76,7 @@ class Configuration:
 
     @cfg_read_poller('dns_proxy')
     def _get_proxy_settings(self, cfg_file):
-        dns_proxy = load_configuration(cfg_file)['dns_proxy']
+        dns_proxy = load_configuration(cfg_file)
 
         signatures = self.DNSProxy.signatures
         # CATEGORY SETTINGS
@@ -123,7 +123,7 @@ class Configuration:
     def _get_server_settings(self, cfg_file):
         DNSServer = self.DNSServer
 
-        dns_settings = load_configuration(cfg_file)['dns_server']
+        dns_settings = load_configuration(cfg_file)
 
         dns_servers = dns_settings['resolvers']
         tls_enabled  = dns_settings['tls']['enabled']
@@ -159,7 +159,7 @@ class Configuration:
         # if a rule timeout is detected for an entry in memory. we will update the config file
         # to align with active rules, then we will remove the rules from memory.
         if (timeout_detected):
-            loaded_list = self._update_list_file(lname, cfg_file)
+            loaded_list = self._update_list_file(cfg_file)
 
             self._modify_memory(memory_list, loaded_list, action=CFG.DEL)
 
@@ -174,7 +174,7 @@ class Configuration:
         if (modified_time == last_modified_time):
             return last_modified_time
 
-        loaded_list = load_configuration(cfg_file)[lname]['domain']
+        loaded_list = load_configuration(cfg_file)['domain']
 
         self._modify_memory(memory_list, loaded_list, action=CFG.ADD)
 
@@ -211,7 +211,7 @@ class Configuration:
 
     def _modify_ip_whitelist(self, cfg_file):
         memory_ip_list = self.DNSProxy.whitelist.ip
-        loaded_ip_list = load_configuration(cfg_file)['whitelist']['ip_whitelist']
+        loaded_ip_list = load_configuration(cfg_file)['ip_whitelist']
 
         # iterating over ip rules in memory.
         for ip in memory_ip_list.copy():
@@ -241,12 +241,12 @@ class Configuration:
         return False
 
     # updating the file with necessary changes.
-    def _update_list_file(self, lname, cfg_file):
+    def _update_list_file(self, cfg_file):
         now = fast_time()
         with ConfigurationManager(cfg_file) as dnx:
             lists = dnx.load_configuration()
 
-            loaded_list = lists[lname]['domain']
+            loaded_list = lists['domain']
             for domain, info in loaded_list.copy().items():
                 if (now < info['expire']): continue
 
@@ -262,8 +262,8 @@ class Configuration:
         # NOTE: old method of created combined signature file and loaded seperately
         signature_operations.combine_domains(Log)
 
-        wl_exceptions = load_configuration('whitelist')['whitelist']['exception']
-        bl_exceptions = load_configuration('blacklist')['blacklist']['exception']
+        wl_exceptions = load_configuration('whitelist')['exception']
+        bl_exceptions = load_configuration('blacklist')['exception']
 
         return load_dns_bitmap(Log, bl_exc=bl_exceptions, wl_exc=wl_exceptions)
 

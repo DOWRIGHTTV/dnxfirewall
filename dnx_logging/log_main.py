@@ -107,8 +107,8 @@ class LogService:
 #        print('[+] Starting settings update poller.')
         log_settings = load_configuration(cfg_file)
 
-        self.log_length = log_settings['logging']['logging']['length']
-        self.logging_level = log_settings['logging']['logging']['level']
+        self.log_length = log_settings['logging']['length']
+        self.logging_level = log_settings['logging']['level']
 
         self._initialize.done()
 
@@ -199,7 +199,7 @@ class LogHandler:
     @classmethod
     def console(cls, message):
         '''print message to console. this is for all important console only events. use dprint for
-        non essential console output which is linked to verbose attribute.'''
+        non essential console output set by DEBUG log level.'''
         if (cls.console):
             write_log(f'{message}\n')
 
@@ -299,7 +299,7 @@ class LogHandler:
 
     @cfg_read_poller('logging_client', class_method=True)
     def _log_settings(cls, cfg_file):  # pylint: disable=no-self-argument
-        logging = load_configuration(cfg_file)['logging']
+        logging = load_configuration(cfg_file)
 
         cls._LEVEL = logging['logging']['level']
 
@@ -307,7 +307,7 @@ class LogHandler:
 
     @cfg_read_poller('syslog_client', class_method=True)
     def _slog_settings(cls, cfg_file):  # pylint: disable=no-self-argument
-        syslog = load_configuration(cfg_file)['syslog']
+        syslog = load_configuration(cfg_file)
 
         cls._syslog = syslog['enabled']
 

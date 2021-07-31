@@ -6,14 +6,14 @@ import fcntl
 from subprocess import run, CalledProcessError, DEVNULL
 from types import SimpleNamespace as SName
 
-HOME_DIR = os.environ['HOME_DIR']
+HOME_DIR = os.environ.get('HOME_DIR', '/home/dnx/dnxfirewall')
 sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_configure.dnx_file_operations import load_configuration
 
 __all__ = (
-    'IPTableManager'
+    'IPTablesManager'
 )
 
 _system = os.system
@@ -46,12 +46,12 @@ class _Defaults:
                     write_log(E)
 
     def get_settings(self):
-        dnx_settings = load_configuration('config')['settings']
+        dnx_settings = load_configuration('config')
 
         self._lan_int = dnx_settings['interfaces']['lan']['ident']
         self._wan_int = dnx_settings['interfaces']['wan']['ident']
 
-        self.custom_filter_chains = ['GLOBAL_INTERFACE', 'WAN_INTERFACE', 'LAN_INTERFACE', 'DMZ_INTERFACE', 'NAT', 'DOH']
+        self.custom_filter_chains = ['GLOBAL_ZONE', 'WAN_ZONE', 'LAN_ZONE', 'DMZ_ZONE', 'MGMT', 'NAT', 'DOH']
         self.custom_nat_chains = ['DSTNAT', 'SRCNAT']
 
     def create_new_chains(self):
@@ -91,23 +91,11 @@ class _Defaults:
         run('iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT', shell=True)
 
         # standard blocking for unwanted DNS protocol/ports to help prevent proxy bypass (all interal zones)
-        run(f'iptables -A FORWARD ! -i {self._wan_int} -p udp --dport 853 -j REJECT --reject-with icmp-port-unreachable', shell=True) # Block External DNS over TLS Queries UDP (Public Resolver)
-        run(f'iptables -A FORWARD ! -i {self._wan_int} -p tcp --dport 853 -j REJECT --reject-with tcp-reset', shell=True) # Block External DNS over TLS Queries TCP (Public Resolver)
-        run(f'iptables -A FORWARD ! -i {self._wan_int} -p tcp --dport  53 -j REJECT --reject-with tcp-reset', shell=True) # Block External DNS Queries TCP (Public Resolver)
-        run(f'iptables -A FORWARD ! -i {self._wan_int} -j DOH', shell=True)
+        run(f'iptables -A FORWARD -m mark ! --mark {WAN_IN} -p udp --dport 853 -j REJECT --reject-with icmp-port-unreachable', shell=True) # Block External DNS over TLS Queries UDP (Public Resolver)
+        run(f'iptables -A FORWARD -m mark ! --mark {WAN_IN} -p tcp --dport 853 -j REJECT --reject-with tcp-reset', shell=True) # Block External DNS over TLS Queries TCP (Public Resolver)
+        run(f'iptables -A FORWARD -m mark ! --mark {WAN_IN} -p tcp --dport  53 -j REJECT --reject-with tcp-reset', shell=True) # Block External DNS Queries TCP (Public Resolver)
+        run(f'iptables -A FORWARD -m mark ! --mark {WAN_IN} -j DOH', shell=True)
 
-        # TODO: ip proxy should inspect icmp to prevent blocked hosts from probing with icmp. currently the ips will check
-        #   for icmp flood. icmp is block by default inbound, but can be allowed by the user in the FIREWALL chain. if that happens,
-        #   we want to make sure the security modules vet the packet first like the other two protocols.
-        #       1. if blocked host detected
-        #           a. if INBOUND and icmp type 8, tag IP_PROXY_DROP then forward
-        #               alt: if not type 8, we can silently drop in the ip proxy
-        #           b. if OUTBOUND, silently drop in ip proxy
-        #       2. if not blocked host detected
-        #           a. if INBOUND and icmp type 8, tag SEND_TO_IPS
-        #           b. if OUTBOUND, SEND_TO_FIREWALL (can be controlled by user ip tables)
-        #
-        # run(f'iptables -A FORWARD -i {self._lan_int} -p icmp -j ACCEPT', shell=True) # ALLOW ICMP OUTBOUND
         for zone in [LAN_IN, WAN_IN, DMZ_IN]:
             run(f'iptables -A FORWARD -p tcp -m mark --mark {zone} -j NFQUEUE --queue-num 1', shell=True) # ip proxy TCP
             run(f'iptables -A FORWARD -p udp -m mark --mark {zone} -j NFQUEUE --queue-num 1', shell=True) # ip proxy UDP
@@ -119,34 +107,31 @@ class _Defaults:
         # IPS proper
         run(f'iptables -A FORWARD -m mark --mark {SEND_TO_IPS} -j NFQUEUE --queue-num 2', shell=True) # IPS TCP/UDP
 
-        # NOTE: this should now be handled by the ip proxy. it will forward to the ips if needed. this was here to fill the gap when icmp
-        # was bypassing the ip proxy.
-        # run(f'iptables -A FORWARD -p icmp -m icmp --icmp-type 8 -m mark --mark {WAN_IN} -j NFQUEUE --queue-num 2', shell=True) # IPS ICMP - only type 8 will be checked, rest forwaded
-
         # block WAN > LAN | implicit deny nat into LAN for users as an extra safety mechanism. NOTE: this should be evaled to see if this should be optional.
-        run(f'iptables -A FORWARD -i {self._wan_int} -o {self._lan_int} -m mark --mark {SEND_TO_FIREWALL} -j DROP', shell=True)
+        run(f'iptables -A FORWARD -o {self._lan_int} -m mark --mark {WAN_ZONE_FIREWALL} -j DROP', shell=True)
 
         # NOTE: GLOBAL FIREWALL
-        run(f'iptables -A FORWARD -m mark --mark {SEND_TO_FIREWALL} -j GLOBAL_INTERFACE', shell=True)
+        for zone in [LAN_ZONE_FIREWALL, WAN_ZONE_FIREWALL, DMZ_ZONE_FIREWALL]:
+            run(f'iptables -A FORWARD -m mark --mark {zone} -j GLOBAL_ZONE', shell=True)
 
         # ============================================
 
-        # NOTE: WAN INTERFACE FIREWALL
-        run(f'iptables -A FORWARD -i {self._wan_int} -m mark --mark {SEND_TO_FIREWALL} -j WAN_INTERFACE', shell=True)
-
-        # ============================================
-
-        # NOTE: LAN INTERFACE FIREWALL
-        run(f'iptables -A FORWARD -i {self._lan_int} -m mark --mark {SEND_TO_FIREWALL} -j LAN_INTERFACE', shell=True)
+        # NOTE: LAN ZONE FIREWALL
+        run(f'iptables -A FORWARD -m mark --mark {LAN_ZONE_FIREWALL} -j LAN_ZONE', shell=True)
 
         # IMPORTANT: default allow any outbound. this is to make the firewall plug and play for non power users source.
-        # ip network is hardcoded, but may change at a later date abd the setup does not allow user to change this value.
-        run(f'iptables -A LAN_INTERFACE -s 192.168.83.0/24 -d 0.0.0.0/0 -j ACCEPT', shell=True)
+        # ip network is hardcoded since the setup does not allow user to change this value, but may change at a later date
+        run(f'iptables -A LAN_ZONE -s 192.168.83.0/24 -d 0.0.0.0/0 -j ACCEPT', shell=True)
+
+        # ============================================
+
+        # NOTE: WAN ZONE FIREWALL
+        run(f'iptables -A FORWARD -m mark --mark {WAN_ZONE_FIREWALL} -j WAN_ZONE', shell=True)
 
         # ============================================
 
         # NOTE: DMZ INTERFACE FIREWALL
-        run(f'iptables -A FORWARD -i {self._dmz_int} -m mark --mark {SEND_TO_FIREWALL} -j DMZ_INTERFACE', shell=True) # pylint: disable=no-member
+        run(f'iptables -A FORWARD -m mark --mark {DMZ_ZONE_FIREWALL} -j DMZ_ZONE', shell=True) # pylint: disable=no-member
 
     def main_input_set(self):
         run(' iptables -P INPUT DROP', shell=True) # default DROP
@@ -162,27 +147,31 @@ class _Defaults:
         # NOTE: TEMP FOR UBUNTU DNS SERVICE
         run(' iptables -A INPUT -p udp -d 127.0.0.53 --dport 53 -j ACCEPT', shell=True)
 
-        run(f'iptables -A INPUT -i {self._wan_int} -p tcp -m mark --mark {SEND_TO_IPS} -j NFQUEUE --queue-num 2', shell=True)
-        run(f'iptables -A INPUT -i {self._wan_int} -p udp -m mark --mark {SEND_TO_IPS} -j NFQUEUE --queue-num 2', shell=True)
-        run(f'iptables -A INPUT -i {self._wan_int} -p icmp -m icmp --icmp-type 8 -m mark --mark {SEND_TO_IPS} -j NFQUEUE --queue-num 2', shell=True)
+        run(f'iptables -A INPUT -p tcp -m mark --mark {SEND_TO_IPS} -j NFQUEUE --queue-num 2', shell=True)
+        run(f'iptables -A INPUT -p udp -m mark --mark {SEND_TO_IPS} -j NFQUEUE --queue-num 2', shell=True)
+        run(f'iptables -A INPUT -p icmp -m icmp --icmp-type 8 -m mark --mark {SEND_TO_IPS} -j NFQUEUE --queue-num 2', shell=True)
 
         # dnxfirewall services access (all local network interfaces). dhcp, dns, icmp, etc.
 
-        # implicit ICMP allow for users
-        run(f'iptables -A INPUT ! -i {self._wan_int} -p icmp --icmp-type any -j ACCEPT', shell=True)
+        # implicit ICMP allow for users > firewall
+        run(f'iptables -A INPUT -m mark ! --mark {WAN_IN} -p icmp --icmp-type any -j ACCEPT', shell=True)
 
         # local socket communication
-        run(f'iptables -A INPUT ! -i {self._wan_int} -s 127.0.0.1/24 -d 127.0.0.1/24 -j ACCEPT', shell=True)
+        run(f'iptables -A INPUT -s 127.0.0.1/24 -d 127.0.0.1/24 -j ACCEPT', shell=True)
 
         # DHCP server listener
-        run(f'iptables -A INPUT ! -i {self._wan_int} -p udp --dport 67 -j ACCEPT', shell=True)
+        run(f'iptables -A INPUT -m mark ! --mark {WAN_IN} -p udp --dport 67 -j ACCEPT', shell=True)
 
-        # implicit DNS allow for users
-        run(f'iptables -A INPUT ! -i {self._wan_int} -p udp --dport 53 -j ACCEPT', shell=True)
+        # implicit DNS allow for local users
+        run(f'iptables -A INPUT -m mark ! --mark {WAN_IN} -p udp --dport 53 -j ACCEPT', shell=True)
 
-        # implicit http/s allow to dnx-web for users
-        run(f'iptables -A INPUT ! -i {self._wan_int} -p tcp --dport 443 -j ACCEPT', shell=True)
-        run(f'iptables -A INPUT ! -i {self._wan_int} -p tcp --dport 80 -j ACCEPT', shell=True)
+        # implicit http/s allow to dnx-web for local LAN users
+        run(f'iptables -A INPUT -m mark --mark {LAN_IN} -p tcp --dport 443 -j ACCEPT', shell=True)
+        run(f'iptables -A INPUT -m mark --mark {LAN_IN} -p tcp --dport 80 -j ACCEPT', shell=True)
+
+
+        # additional access to the system will checked here. access is set from web ui, but lan > web mgmt will always be allowed above.
+        run(f'iptables -A INPUT -m mark ! --mark {WAN_IN} -j MGMT', shell=True)
 
     def main_output_set(self):
 
@@ -199,10 +188,13 @@ class _Defaults:
         run(f'iptables -t nat -A POSTROUTING -o {self._wan_int} -j MASQUERADE', shell=True)
 
         # internal zones dns redirct into proxy
-        run(f'iptables -t nat -I PREROUTING ! -i {self._wan_int} -p udp --dport 53 -j REDIRECT --to-port 53', shell=True)
+        # TODO: add config option in dns server settings to define up to 2 internal servers (check for RFC1918) as internal recursive
+        # resolvers. dns requests to the configured servers will be exempt from this redirect. this will allow all internal zones
+        # to have access to a centralized local dns server (like windows dns in an active directory domain).
+        run(f'iptables -t nat -I PREROUTING -m mark ! --mark {WAN_IN} -p udp --dport 53 -j REDIRECT --to-port 53', shell=True)
 
 
-class IPTableManager:
+class IPTablesManager:
     ''' This is the IP Table rule adjustment manager. if class is called in as a context manager, all method calls
     must be ran in the context where the class instance itself is returned as the object. Changes as part of a context
     will be automatically saved upon exit of the context, otherwise they will have to be saved manually.
@@ -215,7 +207,7 @@ class IPTableManager:
     )
 
     def __init__(self):
-        dnx_intf_settigs = load_configuration('config')['settings']['interfaces']
+        dnx_intf_settigs = load_configuration('config')['interfaces']
 
         self._intf_to_zone = {
             dnx_intf_settigs[zone]['ident']: zone for zone in ['wan', 'lan', 'dmz']
@@ -255,7 +247,7 @@ class IPTableManager:
 
     # TODO: think about the duplicate rule check before running this as a safety for creating duplicate rules
     def apply_defaults(self, *, suppress=False):
-        ''' convenience function wrapper around the iptable Default class. all iptable default rules will
+        '''convenience function wrapper around the iptable Default class. all iptable default rules will
         be loaded. if used within the context manager (recommended), the iptables lock will be aquired
         before continuing (will block until done). iptable commit will be done on exit.
 
@@ -290,6 +282,16 @@ class IPTableManager:
 
     def delete_rule(self, rule):
         run(f'sudo iptables -D {rule.zone} {rule.position}', shell=True)
+
+    def modify_management_access(self, fields):
+        '''add or remove mangement access rule as configured by webui. ports must be a list, even if only one port is needed.'''
+
+        zone = globals()[f'{fields.zone.upper()}_IN']
+        action = '-A' if fields.action is CFG.ADD else '-D'
+
+        for port in fields.service_ports:
+
+            run(f'sudo iptables {action} MGMT -m mark --mark {zone} -p tcp --dport {port} -j ACCEPT', shell=True)
 
     def add_nat(self, rule):
         src_interface = self._zone_to_intf[f'{rule.src_zone}']
@@ -387,5 +389,5 @@ class IPTableManager:
         run(f'sudo iptables -F DOH', shell=True)
 
 if __name__ == '__main__':
-    with IPTableManager() as iptables:
+    with IPTablesManager() as iptables:
         iptables.apply_defaults()

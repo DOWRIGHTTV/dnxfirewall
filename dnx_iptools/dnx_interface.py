@@ -33,7 +33,7 @@ def ready_service(callback):
 def get_intf(intf):
     settings = load_configuration('config')
 
-    return settings['settings']['interfaces'][intf]['ident']
+    return settings['interfaces'][intf]['ident']
 
 def is_ready(interface):
     with open(f'/sys/class/net/{interface}/carrier', 'r') as carrier:

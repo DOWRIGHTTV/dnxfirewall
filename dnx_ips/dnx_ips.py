@@ -14,7 +14,7 @@ from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-impo
 from dnx_iptools.dnx_standard_tools import dynamic_looper
 from dnx_configure.dnx_namedtuples import IPS_SCAN_RESULTS, DDOS_TRACKERS, PSCAN_TRACKERS
 from dnx_configure.dnx_file_operations import load_configuration
-from dnx_configure.dnx_iptables import IPTableManager
+from dnx_configure.dnx_iptables import IPTablesManager
 
 from dnx_iptools.dnx_parent_classes import NFQueue
 from dnx_ips.dnx_ips_log import Log
@@ -119,7 +119,7 @@ class IPS_IDS(NFQueue):
 
     @staticmethod
     def forward_packet(nfqueue):
-        nfqueue.set_mark(SEND_TO_FIREWALL)
+        nfqueue.set_mark(WAN_ZONE_FIREWALL)
         nfqueue.repeat()
 
     @property
@@ -164,8 +164,10 @@ class Inspect:
         if (self._IPS.ids_mode):
             Log.log(packet, IPS.LOGGED, engine=IPS.DDOS)
 
+        # TODO: see if changing the iptables table to RAW would be better. It should be able to do all the standard filtering and is
+        # processed even before mangle. to test, just inject rule into RAW and see if functonality is the same.
         elif (self._IPS.ddos_prevention):
-            IPTableManager.proxy_add_rule(packet.conn.tracked_ip, table='mangle', chain='IPS')
+            IPTablesManager.proxy_add_rule(packet.conn.tracked_ip, table='mangle', chain='IPS')
 
             Log.log(packet, IPS.FILTERED, engine=IPS.DDOS)
 

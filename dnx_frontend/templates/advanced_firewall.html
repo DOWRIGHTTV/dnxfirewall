@@ -30,9 +30,9 @@
                                 <select name="zone" onchange="this.form.submit()">
                                     {% for zone in zones %}
                                         {% if zone == selected[:-10] %}
-                                        <option value="{{zone}}_INTERFACE" selected>{{zone}}</option>
+                                        <option value="{{zone}}_ZONE" selected>{{zone}}</option>
                                         {% else %}
-                                        <option value="{{zone}}_INTERFACE">{{zone}}</option>
+                                        <option value="{{zone}}_ZONE">{{zone}}</option>
                                         {% endif %}
                                     {% endfor %}
                                 </select>
@@ -191,7 +191,7 @@
                         <div class="row">
                             <div class="input-field col offset-m1 s3 m2">
                                 <select name="dst_zone" id="" disabled>
-                                    <option value="DMZ">DMZ</option>
+                                    <option value="dmz">DMZ</option>
                                 </select>
                                 <label for="">Dst Zone</label>
                             </div>
@@ -299,7 +299,7 @@
                             </div>
                             <div class="input-field col s3 m2">
                                 <select name="dst_zone" id="" disabled>
-                                    <option value="WAN_INTERFACE">WAN</option>
+                                    <option value="wan">WAN</option>
                                 </select>
                                 <label for="">Dst Zone</label>
                             </div>

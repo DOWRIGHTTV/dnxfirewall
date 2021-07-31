@@ -235,9 +235,10 @@ class ProxyRequest(RawPacket):
 
     # will create send data object for used by proxy.
     def generate_proxy_response(self):
-        # if AAAA record will set response code to refuse and not give an answer
+        # if AAAA record, set response code to "domain name does not exist" without record response
         if (self.qtype == DNS.AAAA):
-            answer_count, response_code = 0, 5 # TODO: this code might be wrong. validate.
+            answer_count, response_code = 0, 3
+
         # standard query response to sinkhole
         else:
             answer_count, response_code = 1, 0

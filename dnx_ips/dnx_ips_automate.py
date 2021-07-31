@@ -14,7 +14,7 @@ from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-impo
 from dnx_configure.dnx_system_info import Interface
 from dnx_iptools.dnx_standard_tools import looper, dynamic_looper, Initialize
 from dnx_configure.dnx_file_operations import load_configuration, cfg_read_poller
-from dnx_configure.dnx_iptables import IPTableManager
+from dnx_configure.dnx_iptables import IPTablesManager
 from dnx_ips.dnx_ips_log import Log
 
 
@@ -45,10 +45,10 @@ class Configuration:
         threading.Thread(target=self._clear_ip_tables).start()
 
     def _manage_ip_tables(self):
-        IPTableManager.purge_proxy_rules(table='mangle', chain='IPS')
+        IPTablesManager.purge_proxy_rules(table='mangle', chain='IPS')
 
     def _load_interfaces(self):
-        dnx_settings = load_configuration('config')['settings']
+        dnx_settings = load_configuration('config')
 
         wan_ident = dnx_settings['interfaces']['wan']['ident']
 
@@ -56,7 +56,7 @@ class Configuration:
 
     @cfg_read_poller('ips')
     def _get_settings(self, cfg_file):
-        ips = load_configuration(cfg_file)['ips']
+        ips = load_configuration(cfg_file)
 
         self.IPS.ids_mode = ips['ids_mode']
 
@@ -96,7 +96,7 @@ class Configuration:
     # the setting set in the decorator or remove the decorator entirely.
     @cfg_read_poller('ips')
     def _get_open_ports(self, cfg_file):
-        ips = load_configuration(cfg_file)['ips']
+        ips = load_configuration(cfg_file)
 
         self.IPS.open_ports = {
             PROTO.TCP: {
@@ -148,7 +148,7 @@ class Configuration:
 
         # TODO: look into a method that isnt linearly complext to clear firewall rules. its expected to be
         # somewhat small so its not terrible as is.
-        with IPTableManager() as iptables:
+        with IPTablesManager() as iptables:
             for tracked_ip, insertion_time in list(firewall_rules.items()):
                 if (now - insertion_time > block_length) and firewall_rules.pop(tracked_ip, None):
                     iptables.proxy_del_rule(tracked_ip, table='mangle', chain='IPS')

@@ -25,7 +25,7 @@ LSB = 0b00000000000001111111111111111111
 
 # will load json data from file, convert it to a python dict, then return as object
 # TODO: add usr config support, which will merge will loaded system defaults.
-def load_configuration(filename, *, filepath='/dnx_system/data'):
+def load_configuration(filename, *, filepath='dnx_system/data'):
     '''load json data from file, convert it to a python dict, then return as object.'''
     if (not filename.endswith('.json')):
         filename = str_join([filename, '.json'])
@@ -46,8 +46,8 @@ def load_configuration(filename, *, filepath='/dnx_system/data'):
     return system_settings
 
 # TODO: write configs to usr folder keeping main system configs as defaults.
-def write_configuration(data, filename, *, filepath='/dnx_system/data/usr'):
-    '''write json data to file.'''
+def write_configuration(data, filename, *, filepath='dnx_system/data/usr'):
+    '''write json data object to file.'''
 
     if (not filename.endswith('.json')):
         filename = str_join([filename, '.json'])
@@ -55,9 +55,8 @@ def write_configuration(data, filename, *, filepath='/dnx_system/data/usr'):
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
         json.dump(data, settings, indent=4)
 
-def append_to_file(data, filename, *, filepath='/dnx_system/data'):
-    '''will append data to filepath must be ended with / for the directory
-    to be processed correctly.'''
+def append_to_file(data, filename, *, filepath='dnx_system/data/usr'):
+    '''append data to filepath..'''
 
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'a') as settings:
         settings.write(data)
@@ -73,6 +72,21 @@ def change_file_owner(file_path):
 
     shutil.chown(file_path, user=USER, group=GROUP)
     os.chmod(file_path, 0o660)
+
+def json_to_yaml(data, *, is_string=False):
+    '''converts a string in json format or a dictionary into yaml syntax then returns as string. set "is_string" to True
+    to skip over object serialization.
+    '''
+
+    if (not is_string):
+        data = json.dumps(data, indent=4)
+
+    str_replacement = ['{', '}', '"', ',']
+    for s in str_replacement:
+        data = data.replace(s, '')
+
+    # removing empty lines and sliding indent back by 4 spaces
+    return '\n'.join([y[4:] for y in data.splitlines() if y.strip()])
 
 # used to load ip and domain signatures. if whitelist exceptions are specified then they will not
 # get loaded into the proxy. the try/except block is used to ensure bad rules dont prevent proxy
@@ -254,7 +268,7 @@ def _merge_geo_ranges(ls):
     return temp_list
 
 def load_tlds():
-    dns_proxy = load_configuration('dns_proxy')['dns_proxy']
+    dns_proxy = load_configuration('dns_proxy')
 
     for tld, setting in dns_proxy['tlds'].items():
         yield (tld.strip('.'), setting)
@@ -264,6 +278,7 @@ def load_tlds():
 # will be ommited from the proxy.
 def load_keywords(Log):
     '''returns keyword set for enabled domain categories'''
+
     keywords = []
     try:
         with open(f'{HOME_DIR}/dnx_system/signatures/domain_lists/domain.keywords', 'r') as blocked_keywords:
@@ -290,6 +305,7 @@ def load_top_domains_filter():
 
 def calculate_file_hash(file_to_hash, *, path=f'{HOME_DIR}/', folder='data'):
     '''returns the sha256 secure hash of the file sent in'''
+
     with open(f'{path}{folder}/{file_to_hash}', 'rb') as f2h:
         file_hash = hashlib.sha256(f2h.read()).digest()
 
@@ -381,11 +397,11 @@ class ConfigurationManager:
         # aquiring lock on shared lock file
         flock(self._config_lock, LOCK_EX)
 
-        self._temp_file_path = f'{HOME_DIR}/dnx_system/data/usr/{token_urlsafe(10)}.json'
+        # TEMP prefix is to wildcard match any orphaned files for deletion
+        self._temp_file_path = f'{HOME_DIR}/dnx_system/data/usr/TEMP_{token_urlsafe(10)}.json'
         self._temp_file = open(self._temp_file_path, 'w+')
 
-        # changing file permissions and settings owner to dnx:dnx to not cause permissions issues
-        # after copy.
+        # changing file permissions and settings owner to dnx:dnx to not cause permissions issues after copy.
         os.chmod(self._temp_file_path, 0o660)
         shutil.chown(self._temp_file_path, user=USER, group=GROUP)
 
@@ -419,7 +435,7 @@ class ConfigurationManager:
         elif (exc_type is not ValidationError):
             self.Log.error(f'configuration manager error: {exc_val}')
 
-            raise ValidationError('Unknown error. See log for details.')
+            raise OSError('Configuration manager was unable to update the requested file.')
 
     #will load json data from file, convert it to a python dict, then returned as object
     def load_configuration(self):

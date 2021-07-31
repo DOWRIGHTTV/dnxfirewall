@@ -14,8 +14,7 @@ from dnx_configure.dnx_constants import GEO, MSB, LSB
 from dnx_configure.dnx_file_operations import load_configuration
 
 __all__ = (
-    'combine_domains', 'combine_ips', 'combine_geolocation',
-    'generate_geolocation'
+    'combine_domains', 'combine_ips', 'generate_geolocation'
 )
 
 ip_unpack = Struct('>L').unpack
@@ -56,7 +55,7 @@ cidr_to_host_count = {
 }
 
 def combine_domains(Log):
-    dns_proxy = load_configuration('dns_proxy')['dns_proxy']
+    dns_proxy = load_configuration('dns_proxy')
 
     default_cats = dns_proxy['categories']['default']
     ud_cats      = dns_proxy['categories']['user_defined']
@@ -86,7 +85,7 @@ def combine_domains(Log):
     domain_signatures = []
 
 def combine_ips(Log):
-    ip_proxy = load_configuration('ip_proxy')['ip_proxy']
+    ip_proxy = load_configuration('ip_proxy')
 
     ip_cat_signatures = []
     for cat in ip_proxy['categories']:
@@ -94,7 +93,7 @@ def combine_ips(Log):
             with open(f'{HOME_DIR}/dnx_system/signatures/ip_lists/{cat}.ips', 'r') as file:
                 ip_cat_signatures.extend([x.lower() for x in file.read().splitlines() if x and '#' not in x])
         except FileNotFoundError:
-            Log.alert(f'signature file missing: {sig} ips.')
+            Log.alert(f'signature file missing: {cat} ips.')
 
     with open(f'{HOME_DIR}/dnx_system/signatures/ip_lists/blocked.ips', 'w+') as blocked:
         blocked.write('\n'.join(ip_cat_signatures))
@@ -103,7 +102,7 @@ def combine_ips(Log):
     ip_cat_signatures = []
 
 def _combine_geolocation(Log):
-    ip_proxy = load_configuration('ip_proxy')['ip_proxy']
+    ip_proxy = load_configuration('ip_proxy')
 
     ip_geo_signatures = []
     for country in ip_proxy['geolocation']:
