@@ -551,16 +551,8 @@ def set_wan_interface(intf_type=INTF.DHCP):
 
         dnx.write_configuration(interface_settings)
 
-        # grabbing configured dns servers
-        dns_server_settings = load_configuration('dns_server')
-
-        dns1 = dns_server_settings['resolvers']['primary']['ip_address']
-        dns2 = dns_server_settings['resolvers']['secondary']['ip_address']
-
+        # template used to generate yaml file with user configured fields
         intf_template = load_configuration('intf_config', filepath='dnx_system/interfaces')
-
-        # dns server replacement in template required for static or dhcp
-        intf_template['network']['ethernets'][wan['ident']]['nameservers']['addresses'] = f'[{dns1},{dns2}]'
 
         # setting for static. removing dhcp4 and dhcp_overrides keys, then adding addresses with empty list
         # NOTE: the ip configuration will unlock after the switch and can then be updated
@@ -568,15 +560,25 @@ def set_wan_interface(intf_type=INTF.DHCP):
             wan_intf = intf_template['network']['ethernets'][wan['ident']]
 
             wan_intf.pop('dhcp4')
-            wan_intf.pop('dhcp_overrides')
+            wan_intf.pop('dhcp4-overrides')
 
             # initializing static, but not configuring an ip address
             wan_intf['addresses'] = '[]'
 
+        # grabbing configured dns servers
+        dns_server_settings = load_configuration('dns_server')['resolvers']
+
+        dns1 = dns_server_settings['primary']['ip_address']
+        dns2 = dns_server_settings['secondary']['ip_address']
+
+        # dns server replacement in template required for static or dhcp
+        converted_config = json_to_yaml(intf_template)
+        converted_config = converted_config.replace('_PRIMARY__SECONDARY_', f'{dns1},{dns2}')
+
         # writing file into dnx_system folder due to limited permissions by the front end. netplan and the specific
         # mv args are configured as sudo/no-pass to get the config to netplan and it applied without a restart.
         with open(f'{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', 'w') as dnx_intfs:
-            dnx_intfs.write(json_to_yaml(intf_template))
+            dnx_intfs.write(converted_config)
 
         #run(f'sudo mv {HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml /etc/netplan/01-dnx-interfaces.yaml')
         #run(f'sudo netplan apply')
@@ -606,7 +608,7 @@ def set_wan_ip(wan_ip_settings):
     wan_intf = intf_template['network']['ethernets'][wan_int]
 
     wan_intf.pop('dhcp4')
-    wan_intf.pop('dhcp_overrides')
+    wan_intf.pop('dhcp4-overrides')
 
     # initializing static, but not configuring an ip address
     wan_intf['addresses'] = f'[{wan_ip_settings["ip"]}/{wan_ip_settings["cidr"]}]'

@@ -5,7 +5,7 @@
             "_WAN_": {
                 "optional": "yes",
                 "dhcp4": "yes",
-                "dhcp_overrides": {
+                "dhcp4-overrides": {
                     "use-dns": false
                 },
                 "nameservers": {

@@ -130,10 +130,13 @@ def configure_interfaces():
 
     # setting public dns servers on the interface so the system itself will use the user configured
     # servers in the web ui.
-    for server, ip_addr in public_dns_servers.items():
-        intf_configs.replace(f'_{server.upper()}_', ip_addr)
+    dns1 = public_dns_servers['primary']['ip_address']
+    dns2 = public_dns_servers['secondary']['ip_address']
 
-    write_net_config(intf_configs)
+    yaml_output = json_to_yaml(intf_configs, is_string=True)
+    yaml_output = yaml_output.replace('_PRIMARY__SECONDARY_', f'{dns1},{dns2}')
+
+    write_net_config(yaml_output)
 
 def check_system_interfaces():
     interfaces_detected = [intf[1] for intf in socket.if_nameindex() if 'lo' not in intf[1]]
@@ -172,14 +175,12 @@ def collect_interface_associations(interfaces_detected):
     return interface_config
 
 # takes interface config as dict, converts to yaml, then writes to system folder
-def write_net_config(interface_config):
+def write_net_config(interface_configs):
     sprint('configuring netplan service...')
-
-    yaml_output = json_to_yaml(interface_config, is_string=True)
 
     # write config file to netplan
     with open('/etc/netplan/01-dnx-interfaces.yaml', 'w') as intf_config:
-        intf_config.write(yaml_output)
+        intf_config.write(interface_configs)
 
     # removing configuration set during install.
     os.remove('/etc/netplan/00-installer-config.yaml')
