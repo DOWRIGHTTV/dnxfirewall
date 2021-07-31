@@ -11,7 +11,7 @@ from socket import socket, AF_INET, SOCK_DGRAM
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import shell, LOCALHOST, CONTROL_SOCKET, NO_DELAY
+from dnx_configure.dnx_constants import write_log, shell, LOCALHOST, CONTROL_SOCKET, NO_DELAY
 from dnx_iptools.dnx_standard_tools import looper
 
 MODULE_PERMISSIONS = {
@@ -52,8 +52,8 @@ class SystemControl:
     def _receive_control_socket(self):
         try:
             data = self._control_sock_recv(2048)
-        except OSError:
-            pass # log this eventually
+        except OSError as ose:
+            write_log(ose) # log this eventually
 
         else:
             #data format | module: command: args
@@ -65,8 +65,8 @@ class SystemControl:
                 control_ref = MODULE_PERMISSIONS[data['module']][data['command']]
 
                 cmd_args = data['args']
-            except KeyError:
-                pass # log eventually
+            except KeyError as ke:
+                write_log(ke) # log eventually
 
             else:
                 # calling returned reference based on string sent by module.
@@ -83,3 +83,6 @@ def system_action(*, module, command, args):
     sock = socket(AF_INET, SOCK_DGRAM)
 
     sock.sendto(dumps(locals()).encode('utf-8'), (LOCALHOST, CONTROL_SOCKET))
+
+if __name__ == '__main__':
+    SystemControl.run()
