@@ -589,6 +589,9 @@ def handle_system_action(page_settings):
 
         Log.warning(f'dnxfirewall {action} initiated.')
 
+        # i prefer the word restart so converting to system command here
+        action = 'reboot' if action == 'restart' else action
+
         # forwarding request to system control service via local socket for execution
         system_action(module='webui', command=action, args='')
 
