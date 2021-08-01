@@ -167,7 +167,7 @@ def dhcp_reservation(reservation_settings):
     mac_address(reservation_settings['mac'])
     _ip_address(reservation_settings['ip'])
 
-    dhcp_settings = load_configuration('config')['settings']
+    dhcp_settings = load_configuration('config')
 
     zone_net = IPv4Network(dhcp_settings['interfaces'][reservation_settings['zone'].lower()]['subnet'])
     if (IPv4Address(reservation_settings['ip']) not in zone_net.hosts()):
@@ -217,7 +217,7 @@ def time_offset(offset_settings):
         raise ValidationError('Selected timezone is not valid.')
 
 def syslog_settings(syslog_settings):
-    syslog = load_configuration('syslog_client')['syslog']
+    syslog = load_configuration('syslog_client')
 
     configured_syslog_servers = syslog['servers']
     if (not configured_syslog_servers):
@@ -247,7 +247,7 @@ def syslog_settings(syslog_settings):
             raise ValidationError('TLS must be enabled before TCP fallback.')
 
 def ip_proxy_settings(ip_hosts_settings, *, ruleset='categories'):
-    ip_proxy = load_configuration('ip_proxy')['ip_proxy']
+    ip_proxy = load_configuration('ip_proxy')
 
     valid_categories = ip_proxy[ruleset]
     for category in ip_hosts_settings:
@@ -280,7 +280,7 @@ def time_restriction(tr_settings):
         raise ValidationError('Restriction settings are not valid.')
 
 def dns_over_tls(dns_tls_settings):
-    dns_server = load_configuration('dns_server')['dns_server']
+    dns_server = load_configuration('dns_server')
 
     current_tls = dns_server['tls']['enabled']
     for item in dns_tls_settings['enabled']:
@@ -350,7 +350,7 @@ def add_dnat_rule(nat_rule):
         raise ValidationError('Ports 80,443 cannot be set as destination port when destination IP is not set.')
 
     if (nat_rule.protocol == 'icmp'):
-        open_protocols = load_configuration('ips')['ips']
+        open_protocols = load_configuration('ips')
 
         if (open_protocols['open_protocols']['icmp']):
             return 'Only one ICMP rule can be active at a time. Remove existing rule before adding another.'
@@ -364,7 +364,7 @@ def add_snat_rule(nat_rule):
         raise ValidationError('Invalid form.')
 
 def portscan_settings(portscan_settings):
-    ips = load_configuration('ips')['ips']
+    ips = load_configuration('ips')
 
     current_prevention = ips['port_scan']['enabled']
     for item in portscan_settings:
@@ -420,7 +420,7 @@ def domain_categories(categories, ruleset):
     if (ruleset == 'default' and not all(['malicious' in categories, 'cryptominer' in categories])):
         raise ValidationError('Malicious and cryptominer categories cannot be disabled.')
 
-    dns_proxy = load_configuration('dns_proxy')['dns_proxy']
+    dns_proxy = load_configuration('dns_proxy')
     if (ruleset in ['default', 'user_defined']):
         cat_list = dns_proxy['categories'][ruleset]
 
@@ -432,7 +432,7 @@ def domain_categories(categories, ruleset):
             raise ValidationError(INVALID_FORM)
 
 def domain_category_keywords(categories):
-    dns_proxy = load_configuration('dns_proxy')['dns_proxy']
+    dns_proxy = load_configuration('dns_proxy')
 
     domain_cats = dns_proxy['categories']['default']
     for cat in categories:
@@ -448,7 +448,7 @@ def dns_record_add(dns_record_name):
         raise ValidationError('Local dns record is not valid.')
 
 def dns_record_remove(dns_record_name):
-    dns_server = load_configuration('dns_server')['dns_server']
+    dns_server = load_configuration('dns_server')
 
     if (dns_record_name == 'dnx.firewall'):
         raise ValidationError('Cannot remove dnxfirewall dns record.')
