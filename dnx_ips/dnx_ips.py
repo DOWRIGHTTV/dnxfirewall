@@ -6,6 +6,7 @@ import threading
 import traceback
 
 from copy import copy
+from collections import defaultdict
 
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
@@ -24,6 +25,7 @@ from dnx_ips.dnx_ips_packets import IPSPacket, IPSResponse
 from dnx_configure.dnx_code_profiler import profiler
 
 LOG_NAME = 'ips'
+PORTSCAN_THRESHOLD = 4
 
 
 # TODO: CONVERT PROTOCOL TO ENUMS SINCE WE ARE RESTRICTING VIA IPTABLES/NFQUEUE TO ONLY PROTOCOLS WE CARE ABOUT!!!.
@@ -270,11 +272,11 @@ class Inspect:
             # this is the logic to determine whether a host is a scanner or not and for mapping local port to tcp sequence number
             # which will be used to retroactively reject scans on ports prior to the host being flagged. pre detect data will not
             # be inserted for packet that sets initial block status since we still have the packet data needed to respond.
-            if (len(tracked_ip['target']) >= 4) or (packet.protocol is PROTO.UDP and not packet.udp_payload):
+            if (len(tracked_ip['target']) >= PORTSCAN_THRESHOLD) or (packet.protocol is PROTO.UDP and not packet.udp_payload):
                 initial_block, scan_detected, tracked_ip['active_scanner'] = True, True, True
 
             elif (packet.protocol is PROTO.TCP):
-                tracked_ip['pre_detect'][packet.conn.local_port] = packet.seq_number
+                tracked_ip['pre_detect'][packet.conn.local_port].append(packet.seq_number)
 
             elif (packet.protocol is PROTO.UDP):
                 tracked_ip['pre_detect'][packet.conn.local_port] = packet.data
@@ -288,7 +290,7 @@ class Inspect:
         if (engine is IPS.PORTSCAN):
             tracker[packet.conn.tracked_ip] = {
                 'last_seen': packet.timestamp, 'active_scanner': False,
-                'pre_detect': {}, 'target': set([packet.conn.local_port])
+                'pre_detect': defaultdict(list), 'target': set([packet.conn.local_port])
             }
 
         elif (engine is IPS.DDOS):
@@ -304,10 +306,11 @@ class Inspect:
         if (initial_block):
             IPSResponse = self._IPSResponse
             if (packet.protocol is PROTO.TCP):
-                for port, seq_num in pre_detection_logging.items():
-                    IPSResponse.prepare_and_send(
-                        copy(packet).tcp_override(port, seq_num)
-                    )
+                for port, sequences in pre_detection_logging.items():
+                    for seq_num in sequences:
+                        IPSResponse.prepare_and_send(
+                            copy(packet).tcp_override(port, seq_num)
+                        )
 
             elif (packet.protocol is PROTO.UDP):
                 for port, icmp_payload in pre_detection_logging.items():
