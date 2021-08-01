@@ -266,7 +266,7 @@ class System:
 
     @staticmethod
     # TODO: this can be refactored to follow dnat/snat format for parsing
-    def firewall_rules(*, chain='GLOBAL_INTERFACE'):
+    def firewall_rules(*, chain='GLOBAL_ZONE'):
         # getting list of all rules in specified chain
         output = run(
             f'sudo iptables -nL {chain} --line-number', shell=True, capture_output=True, text=True

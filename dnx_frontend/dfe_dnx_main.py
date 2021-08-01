@@ -222,7 +222,7 @@ def advanced_firewall(dnx_session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': tab, 'menu': menu_option,
-        'selected': 'GLOBAL_INTERFACE',
+        'selected': 'GLOBAL_ZONE',
         'zones': ['GLOBAL', 'WAN', 'DMZ', 'LAN'],
         'uri_path': ['advanced', 'firewall']
     }
