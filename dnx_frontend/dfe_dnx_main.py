@@ -18,6 +18,7 @@ from dnx_configure.dnx_constants import CFG
 from dnx_configure.dnx_file_operations import load_configuration, ConfigurationManager
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_database.ddb_connector_sqlite import DBConnector
+from dnx_system.sys_main import system_action
 from dnx_configure.dnx_system_info import System
 from dnx_logging.log_main import LogHandler as Log
 
@@ -588,8 +589,8 @@ def handle_system_action(page_settings):
 
         Log.warning(f'dnxfirewall {action} initiated.')
 
-        system_action_method = getattr(System, action)
-        threading.Thread(target=system_action_method).start()
+        # forwarding request to system control service via local socket for execution
+        system_action(module='webui', command=action, args='')
 
     elif (response == 'NO'):
         return redirect(url_for('dnx_dashboard'))
