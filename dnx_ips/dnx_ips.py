@@ -201,7 +201,7 @@ class Inspect:
         if (tracked_ip['count']/elapsed_time < protocol_src_limit): return False
 
         # host is now marked as engaging in active d/dos attack.
-        Log.debug(f'[ddos/cps] {tracked_ip["count"]/elapsed_time}')
+        Log.informational(f'[ddos/cps] {tracked_ip["count"]/elapsed_time}')
 
         return True
 
@@ -288,7 +288,7 @@ class Inspect:
         if (engine is IPS.PORTSCAN):
             tracker[packet.conn.tracked_ip] = {
                 'last_seen': packet.timestamp, 'active_scanner': False,
-                'pre_detect': {}, 'target': set(packet.conn.local_port)
+                'pre_detect': {}, 'target': set([packet.conn.local_port])
             }
 
         elif (engine is IPS.DDOS):
@@ -320,12 +320,13 @@ class Inspect:
     # ports were blocked.
     # NOTE: later, this can be used to report on which specific protocol/port was missed
     def _get_block_status(self, pre_detection_logging, protocol):
-        missed_port = pre_detection_logging.keys() & self._IPS.open_ports.keys()
+        missed_port = pre_detection_logging.keys() & self._IPS.open_ports[protocol].keys()
         if (missed_port):
+            Log.informational(f'[pscan/missed ports] {missed_port}')
+
             return IPS.MISSED
 
         return IPS.BLOCKED
-
 
 if __name__ == '__main__':
     Log.run(
