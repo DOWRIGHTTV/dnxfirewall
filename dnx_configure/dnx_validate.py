@@ -350,7 +350,7 @@ def add_dnat_rule(nat_rule):
         raise ValidationError('Ports 80,443 cannot be set as destination port when destination IP is not set.')
 
     if (nat_rule.protocol == 'icmp'):
-        open_protocols = load_configuration('ips')['ips']
+        open_protocols = load_configuration('ips')
 
         if (open_protocols['open_protocols']['icmp']):
             return 'Only one ICMP rule can be active at a time. Remove existing rule before adding another.'
@@ -364,7 +364,7 @@ def add_snat_rule(nat_rule):
         raise ValidationError('Invalid form.')
 
 def portscan_settings(portscan_settings):
-    ips = load_configuration('ips')['ips']
+    ips = load_configuration('ips')
 
     current_prevention = ips['port_scan']['enabled']
     for item in portscan_settings:

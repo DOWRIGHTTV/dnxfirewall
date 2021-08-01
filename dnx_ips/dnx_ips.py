@@ -213,7 +213,7 @@ class Inspect:
             initial_block, active_scanner, pre_detection_logging = self._portscan_detect(pscan.tracker, packet)
 
         if (not active_scanner):
-            Log.debug(f'PROXY ACCEPT | {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
+            Log.debug(f'[accept] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
             IPS_IDS.forward_packet(packet.nfqueue)
 
             return
@@ -237,15 +237,10 @@ class Inspect:
 
         Log.debug(f'PROXY INITIAL SCANNER | {block_status.name} | {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
 
-        # NOTE: i think this is stupid. this would effectivly block all portscan logging while passive blocking is
-        # active, right???? if that is the case, we need to figure out a different way to deal with this. i think this
-        # was to ensure ddos wasnt logged as portscan first, but this doesnt sound like a good way to do this anymore.
-        if (not IPS_IDS.fw_rules):
-            scan_info = IPS_SCAN_RESULTS(initial_block, active_scanner, block_status)
-            Log.log(packet, scan_info, engine=IPS.PORTSCAN)
-
-        else: # NOTE: for testing purposes only
-            Log.debug('ACTIVE DDOS WHEN ATTEMPTING TO LOG PORTSCAN, LOG HAULTED.')
+        # NOTE: recently removed filter related to ddos engine. if portscan profile is matched and ddos is detected, both
+        # will be logged and independantly handled.
+        scan_info = IPS_SCAN_RESULTS(initial_block, active_scanner, block_status)
+        Log.log(packet, scan_info, engine=IPS.PORTSCAN)
 
     # makes a decision on connections/ packets on whether it meets the criteria of a portscanner. will return status as need to block (active_block)
     # or initiated block, but still seeing packets from host (scan_detected)
