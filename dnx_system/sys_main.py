@@ -6,12 +6,12 @@ import shutil
 
 from json import loads, dumps
 from socket import socket, AF_INET, SOCK_DGRAM
-from threading import Timer
+from threading import Thread
 
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import write_log, shell, LOCALHOST, CONTROL_SOCKET, NO_DELAY
+from dnx_configure.dnx_constants import *
 from dnx_iptools.dnx_standard_tools import looper
 
 __all__ = ('system_action')
@@ -88,7 +88,10 @@ class SystemControl:
                 else:
                     shell(f'{data["command"]} {cmd_args}')
 
-def _system_action(data_to_send):
+def _system_action(data_to_send, delay):
+    if (delay):
+        fast_sleep(delay)
+
     try:
         data_to_send = dumps(data_to_send)
     except Exception as e:
@@ -101,7 +104,8 @@ def _system_action(data_to_send):
 def system_action(*, delay=NO_DELAY, **kwargs):
     '''
     send requested system control action over local socket to SystemControl class/service. if no delay
-    is specified, 0/NO_DELAY will be set as default.
+    is specified, 0/NO_DELAY will be set as default, otherwise a the action will be handled in a thread
+    and executed one delay time is reached.
 
         expecting: module, command, args as keyword arguments
 
@@ -112,11 +116,11 @@ def system_action(*, delay=NO_DELAY, **kwargs):
     if (not isinstance(delay, int)):
         return
 
-    if not delay:
-        _system_action(kwargs)
+    if (delay):
+        Thread(target=_system_action, args=(kwargs, delay)).start()
 
     else:
-        Timer(delay, _system_action, kwargs).start()
+         _system_action(kwargs, delay)
 
 if __name__ == '__main__':
     SystemControl.run()

@@ -40,9 +40,10 @@
         "dnx-dns-proxy": "domain filter/server with local cache",
         "dnx-ip-proxy": "bi-directional ip filter",
         "dnx-ips": "dos and portscan mitigation",
-        "dnx-dhcp-server": "allocates ip addresses",
+        "dnx-dhcp-server": "allocate ip addresses",
         "dnx-log": "log cleanup and aggregation",
         "dnx-syslog": "send system or event logs over the network",
-        "dnx-database-sqlite": "security event management"
+        "dnx-database-sqlite": "security event management",
+        "dnx-syscontrol": "proxy for system level commands"
     }
 }
