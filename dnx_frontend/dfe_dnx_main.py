@@ -14,7 +14,7 @@ sys.path.insert(0, HOME_DIR)
 
 import dnx_configure.dnx_validate as validate
 
-from dnx_configure.dnx_constants import CFG
+from dnx_configure.dnx_constants import CFG, FIVE_SEC
 from dnx_configure.dnx_file_operations import load_configuration, ConfigurationManager
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_database.ddb_connector_sqlite import DBConnector
@@ -590,10 +590,10 @@ def handle_system_action(page_settings):
         Log.warning(f'dnxfirewall {action} initiated.')
 
         # i prefer the word restart so converting to system command here
-        action = 'reboot' if action == 'restart' else action
+        action = 'reboot' if action == 'restart' else f'{action} now'
 
         # forwarding request to system control service via local socket for execution
-        system_action(module='webui', command=action, args='')
+        system_action(delay=FIVE_SEC, module='webui', command=action)
 
     elif (response == 'NO'):
         return redirect(url_for('dnx_dashboard'))
