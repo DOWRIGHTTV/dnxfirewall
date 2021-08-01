@@ -628,14 +628,14 @@ def set_wan_ip(wan_ip_settings):
     with open(f'{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', 'w') as dnx_intfs:
         dnx_intfs.write(converted_config)
 
-    cmd_args = ['{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', '/etc/netplan/01-dnx-interfaces.yaml']
+    cmd_args = [f'{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', '/etc/netplan/01-dnx-interfaces.yaml']
     system_action(module='webui', command='os.replace', args=cmd_args)
 
     # TODO: this isnt working for some reason. file is moved correctly, but settings dont change. if manually
     # ran the settings change to what was set in the newly moved file, which should mean the issue is here.
     # NOTE: can it be that the move is still in buffer when the apply happens so the settings dont change.
     # by the time it is manually entered, the file move has completed???
-    system_action(module='webui', command='netplan apply', args='')
+    system_action(module='webui', command='netplan apply')
 
 def add_open_wan_protocol(nat_info):
     with ConfigurationManager('ips') as dnx:
