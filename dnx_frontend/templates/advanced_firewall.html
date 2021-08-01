@@ -29,7 +29,7 @@
                             <div class="input-field col s6 m4">
                                 <select name="zone" onchange="this.form.submit()">
                                     {% for zone in zones %}
-                                        {% if zone == selected[:-10] %}
+                                        {% if zone == selected[:-5] %}
                                         <option value="{{zone}}_ZONE" selected>{{zone}}</option>
                                         {% else %}
                                         <option value="{{zone}}_ZONE">{{zone}}</option>
@@ -106,7 +106,7 @@
             </div>
             <div class="col s12">
                 <div class="card-panel hoverable">
-                    <h4 class="{{title_color}}">Rule List ({{selected[:-10]}})</h4>
+                    <h4 class="{{title_color}}">Rule List ({{selected[:-5]}})</h4>
                         <table class="striped centered">
                             <thead>
                                 <tr>

@@ -14,10 +14,11 @@ sys.path.insert(0, HOME_DIR)
 
 import dnx_configure.dnx_validate as validate
 
-from dnx_configure.dnx_constants import CFG
+from dnx_configure.dnx_constants import CFG, FIVE_SEC
 from dnx_configure.dnx_file_operations import load_configuration, ConfigurationManager
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_database.ddb_connector_sqlite import DBConnector
+from dnx_system.sys_main import system_action
 from dnx_configure.dnx_system_info import System
 from dnx_logging.log_main import LogHandler as Log
 
@@ -370,7 +371,8 @@ def system_backups(dnx_session_data):
 def system_restart(dnx_session_data):
     page_settings = {
         'navi':True, 'idle_timeout': False,
-        'control': True, 'action': 'restart'
+        'control': True, 'action': 'restart',
+        'uri_path': ['device', 'restart']
     }
 
     page_settings.update(dnx_session_data)
@@ -384,7 +386,8 @@ def system_restart(dnx_session_data):
 def system_shutdown(dnx_session_data):
     page_settings = {
         'navi': True, 'idle_timeout': False,
-        'control': True, 'action': 'shutdown'
+        'control': True, 'action': 'shutdown',
+        'uri_path': ['device', 'shutdown']
     }
 
     page_settings.update(dnx_session_data)
@@ -414,7 +417,10 @@ def dnx_logout(dnx_session_data):
 
 @app.route('/blocked')
 def dnx_blocked():
-    page_settings = {'navi': True, 'login_btn': True, 'idle_timeout': False}
+    page_settings = {
+        'navi': True, 'login_btn': True,
+        'idle_timeout': False, 'uri_path': ['blocked',]
+    }
 
     # checking for domain sent by nginx that is being redirected to firewall. if domain doesnt exist (user navigated to
     # this page manually) then a not authorized page will be served. If the domain is not a valid domain (regex) the request
@@ -508,7 +514,10 @@ def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
             'standard_error': error
         })
 
-    page_settings[data_key] = dnx_page.load_page()
+    try:
+        page_settings[data_key] = dnx_page.load_page()
+    except OSError as ose:
+            return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
 
     return render_template(f'{page_name}.html', **page_settings)
 
@@ -580,8 +589,11 @@ def handle_system_action(page_settings):
 
         Log.warning(f'dnxfirewall {action} initiated.')
 
-        system_action_method = getattr(System, action)
-        threading.Thread(target=system_action_method).start()
+        # i prefer the word restart so converting to system command here
+        action = 'reboot' if action == 'restart' else f'{action} now'
+
+        # forwarding request to system control service via local socket for execution
+        system_action(delay=FIVE_SEC, module='webui', command=action)
 
     elif (response == 'NO'):
         return redirect(url_for('dnx_dashboard'))

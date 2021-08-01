@@ -48,13 +48,14 @@
                             </div>
                         </div>
                         <div class="row">
-                            <div class="input-field col s5 m3 offset-m2 center">
+                            <div class="input-field col s4 offset-s1 center">
                                 <a class="waves-effect waves-light btn modal-trigger col s12" href="#wanint-modal1"
                                     {% if interface_settings['ip']['state'] %} disabled {% endif %}>Update</a>
                             </div>
                             <div id="wanint-modal1" class="modal">
                                 <div class="modal-content">
-                                    <h5 class="red-text center">Changing the WAN IP address may cause a brief service disruption. Continue?</h5>
+                                    <h5 class="red-text center">Changing the WAN IP address may cause a brief service disruption and may not
+                                        take affect immediately. Continue?</h5>
                                 </div>
                                 <div class="modal-footer">
                                     <button class="btn waves-effect waves-light" name="update_wan_ip">YES</button>
@@ -63,7 +64,7 @@
                             </div>
                         </form>
                         <form action="/settings/interface" method="POST">
-                            <div class="input-field col s4 m6 center">
+                            <div class="input-field col s7 center">
                                 <div class="switch modal-trigger" href="#wanint-modal2">
                                     <label>
                                         Static
@@ -131,10 +132,11 @@
                         <input type="hidden" name="tab" value="1">
                         <div class="input-field col s5 m4 center">
                             <a class="waves-effect waves-light btn modal-trigger col s12" href="#wanint-modal4"><i
-                                    class="material-icons"></i>Restore</a>
+                                    class="material-icons"></i>Revert</a>
                             <div id="wanint-modal4" class="modal">
                                 <div class="modal-content">
-                                    <h5 class="red-text">Restoring the WAN MAC address will restart the interface. Continue?</h5>
+                                    <h5 class="red-text">Reverting the WAN MAC address to default will restart the interface.
+                                        Continue?</h5>
                                 </div>
                                 <div class="modal-footer">
                                     <button class="btn waves-effect waves-light" name="wan_mac_restore">YES</button>

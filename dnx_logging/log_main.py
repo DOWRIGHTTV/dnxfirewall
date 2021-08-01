@@ -22,17 +22,25 @@ from dnx_configure.dnx_system_info import System
 
 LOG_NAME = 'system'
 
+EXCLUDED_MODULES = ['combined', 'syslog']
+
 
 class LogService:
-    def __init__(self):
-        self.log_modules = [
-            'dhcp_server', 'dns_proxy', 'ip_proxy',
-            'ips', 'syslog', 'system', 'logins'
+    _log_modules = [
+            x for x in os.listdir(f'{HOME_DIR}/dnx_system/log') if x not in EXCLUDED_MODULES
         ]
 
+    __slots__ = (
+        'log_length', 'log_level', '_initialize'
+    )
+
+    def __init__(self):
         self._initialize = Initialize(Log, 'LogService')
 
-    def start(self):
+    @classmethod
+    def run(cls):
+        self = cls()
+
         threading.Thread(target=self.get_settings).start()
 
         self._initialize.wait_for_threads(count=1)
@@ -48,7 +56,7 @@ class LogService:
         log_entries = []
 
         date = str_join(System.date())
-        for module in self.log_modules:
+        for module in self._log_modules:
             module_entries = self.combine_logs(module, date)
             if (module_entries):
                 log_entries.extend(module_entries)
@@ -108,7 +116,7 @@ class LogService:
         log_settings = load_configuration(cfg_file)
 
         self.log_length = log_settings['logging']['length']
-        self.logging_level = log_settings['logging']['level']
+        self.log_level = log_settings['logging']['level']
 
         self._initialize.done()
 
@@ -312,12 +320,6 @@ class LogHandler:
         cls._syslog = syslog['enabled']
 
     @classmethod
-    # TODO: remove this and let the error handler create the socket on initial send, yes?
-    def _create_sockets(cls):
-        cls._create_syslog_sock()
-        cls._create_db_sock()
-
-    @classmethod
     def _create_syslog_sock(cls):
         cls._syslog_sock = socket(AF_INET, SOCK_DGRAM)
         cls._syslog_sock.connect((f'{LOCALHOST}', SYSLOG_SOCKET))
@@ -383,5 +385,4 @@ if __name__ == '__main__':
         name=LOG_NAME
     )
 
-    LogService = LogService()
-    LogService.start()
+    LogService.run()
