@@ -71,16 +71,15 @@ class Configuration:
         self.IPS.portscan_prevention = ips['port_scan']['enabled']
         self.IPS.portscan_reject = ips['port_scan']['reject']
 
-        # checking length(hours) to leave IP Table Rules in place for hosts part of ddos attacks
         if (self.IPS.ddos_prevention and not self.IPS.ids_mode):
+
+            # checking length(hours) to leave IP table rules in place for hosts part of ddos attacks
+            self.IPS.block_length = ips['passive_block_ttl'] * ONE_HOUR
 
             # NOTE: this will provide a simple way to ensure very recently blocked hosts do not get their
             # rule removed if passive blocking is disabled.
             if (not self.IPS.block_length):
                 self.IPS.block_length = FIVE_MIN
-
-            else:
-                self.IPS.block_length = ips['passive_block_ttl'] * ONE_HOUR
 
         # if ddos engine is disabled
         else:
@@ -94,6 +93,8 @@ class Configuration:
 
     # NOTE: determine whether default sleep timer is acceptible for this method. if not, figure out how to override
     # the setting set in the decorator or remove the decorator entirely.
+    # TODO: this doesnt seem to be working. a portscan that should have been reported as a miss was labeled as blocked.
+    #     see if these are getting cross referenced correctly by the portscan module and that the object types line up.
     @cfg_read_poller('ips')
     def _get_open_ports(self, cfg_file):
         ips = load_configuration(cfg_file)
