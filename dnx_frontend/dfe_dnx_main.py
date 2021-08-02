@@ -307,7 +307,8 @@ def system_reports(dnx_session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
         'menu': '1', 'table': '1',
-        'uri_path': ['system', 'reports']
+        'uri_path': ['system', 'reports'],
+        'table_types': ['dns_proxy', 'ip_proxy', 'intrusion_prevention', 'infected_clients']
     }
 
     page_settings.update(dnx_session_data)

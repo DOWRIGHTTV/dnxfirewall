@@ -173,22 +173,26 @@ class DBConnector:
 
         return top_domains
 
-    def unique_domain_count(self, *, table, action):
-        unique_domains = set()
-        unique_domain_count = 0
+    def query_geolocation(self, *, action):
         if (action in ['allow', 'blocked']):
-            self.c.execute(f'select * from {table} where action=%s', (action,))
+            self.c.execute('select category, count(*) from ipproxy where action=? group by category', (action,))
+
         elif (action in ['all']):
-            self.c.execute(f'select * from {table}')
+            self.c.execute(f'select category, count(*) from ipproxy group by category')
 
         results = self.c.fetchall()
-        if (not results): return 0
 
-        for entry in results:
-            domain = entry[1]
-            unique_domains.add(domain)
+        # get correct tor category names. i cant remember them off top since it recently changed.
+        return [(int(y), x) for x,y in results if x.lower() not in ['malicious', 'compromised', 'tor']]
 
-        return len(unique_domains)
+    def unique_domain_count(self, *, action):
+        if (action in ['allow', 'blocked']):
+            self.c.execute(f'select domain, count(*) from dnsproxy where action=? group by domain', (action,))
+
+        elif (action in ['all']):
+            self.c.execute(f'select domain, count(*) from dnsproxy group by domain')
+
+        return len(self.c.fetchall())
 
     def total_request_count(self, *, table, action):
         if (action in ['allow', 'blocked']):

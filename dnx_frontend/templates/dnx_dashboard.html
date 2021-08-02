@@ -2,44 +2,112 @@
 {% block body %}
 <section id="why-me" class="section scrollspy grey lighten-4 center">
     <div class="container">
-        <h4 class="red-text">Blocked (Last 30 Days)</h4>
         <div class="row row-flex">
             <div class="col s12 m6">
                 <div class="card-panel card-panel-eql hoverable">
-                    <i class="material-icons large orange-text">info_outline</i><br>
+                    <i class="material-icons medium orange-text">info_outline</i><br>
                     <h4>Unique Domains</h4>
-                    <ul>
-                        <h1>{{dashboard['domain_count']}}</h1>
-                    </ul>
+                    <div class="col s6">
+                        <ul>
+                            <li><h5>Blocked</h5></li>
+                            <li><h2>{{dashboard['domain_counts'][0]}}</h2></li>
+                        </ul>
+                    </div>
+                    <div class="col s6">
+                        <ul>
+                            <li><h5>Allowed</h5></li>
+                            <li><h2>{{dashboard['domain_counts'][1]}}</h2></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
             <div class="col s12 m6">
                 <div class="card-panel card-panel-eql hoverable">
-                    <i class="material-icons large red-text">cancel</i><br>
+                    <i class="material-icons medium red-text">cancel</i><br>
                     <h4>Total Requests</h4>
-                    <ul>
-                        <h1>{{dashboard['request_count']}}</h1>
-                    </ul>
+                    <div class="col s6">
+                        <ul>
+                            <li><h5>Blocked</h5></li>
+                            <li><h2>{{dashboard['request_counts'][0]}}</h2></li>
+                        </ul>
+                    </div>
+                    <div class="col s6">
+                        <ul>
+                            <li><h5>Allowed</h5></li>
+                            <li><h2>{{dashboard['request_counts'][1]}}</h2></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
-            <div class="col s12">
+            <div class="col s12 m6">
+                <div class="card-panel card-panel-eql hoverable">
+                    <i class="material-icons medium orange-text">feedback</i><br>
+                    <h4>Most Searched</h4>
+                    {% for action, data in dashboard['top_domains'] %}
+                    <h5>{{action.title()}}</h5>
+                    <table class="striped centered">
+                        <thead>
+                            <tr>
+                                <th style="width:10%"></th>
+                                <th style="width:45%">Domain</th>
+                                <th style="width:45%">Category</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if not data %}
+                            <tr>
+                                <td></td>
+                                <td>No domains {{action}}</td>
+                                <td></td>
+                            </tr>
+                            {% else %}
+                            {% for domain, category in data %}
+                            <tr>
+                                <td>{{loop.index}}.</td>
+                                <td>{{domain}}</td>
+                                <td>{{category}}</td>
+                            </tr>
+                            {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    </table>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="col s12 m6">
                 <div class="card-panel card-panel-eql hoverable">
                     <i class="material-icons large orange-text">feedback</i><br>
-                    <h4>Most Searched</h4>
-                    <ul>
-                        {% if not dashboard['top_domains'] %}
-                        <li>
-                            <span style="float: center">No domains blocked</span>
-                        </li>
-                        {% else %}
-                        {% for domain, category in dashboard['top_domains'].items() %}
-                        <li>
-                            <span style="float: left">{{domain}}</span><span class="badge">{{category}}</span>
-                        </li>
-                        <br>
-                        {% endfor %}
-                        {% endif %}
-                    </ul>
+                    <h4>Country Activity</h4>
+                    {% for action, countries in dashboard['top_countries'].items() %}
+                    <h5>{{action.title()}}</h5>
+                    <table class="striped centered">
+                        <thead>
+                            <tr>
+                                <th style="width:10%"></th>
+                                <th style="width:45%">Outbound</th>
+                                <th style="width:45%">Inbound</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if not countries %}
+                            <tr>
+                                <td></td>
+                                {% for i in range(2) %}
+                                <td>No known countries {{action}}</td>
+                                {% endfor %}
+                            </tr>
+                            {% else %}
+                            {% for c_out, c_in in countries %}
+                            <tr>
+                                <td>{{loop.index}}.</td>
+                                <td>{{c_out}}</td>
+                                <td>{{c_in}}</td>
+                            </tr>
+                            {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    </table>
+                    {% endfor %}
                 </div>
             </div>
             {% if dashboard['infected_hosts'] %}

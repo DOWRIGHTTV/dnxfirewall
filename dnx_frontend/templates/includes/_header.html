@@ -1,9 +1,9 @@
-<!-- header: navbar, slider content -->
+<!-- header: logo, navbar content -->
 <header>
     <nav class="blue-grey">
         <div class="container">
             <div class="nav-wrapper">
-                <a href="/dashboard" class="brand-logo"><img src="/static/assets/images/dnxlogo_v2.png"
+                <a href="/dashboard" class="brand-logo valign-center"><img src="/static/assets/images/dnxlogo_v2.png"
                     height="40px" style="display: block;">
                 </a>
 
@@ -53,6 +53,8 @@
                     <li>
                         <a href="logout"><i class="material-icons orange-text lighten-1 left">logout</i>Logout</a></li>
                 </ul>
+                {% else %}
+                <i class="material-icons grey-text lighten-1">lock_outline</i>
                 {% endif %}
                 {% endif %}
             </div>
