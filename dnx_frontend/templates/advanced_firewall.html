@@ -234,6 +234,7 @@
                                         <input type="hidden" name="zone" value="{{selected}}">
                                         <input type="hidden" name="nat_type" value="DSTNAT">
                                         <input type="hidden" name="position" value="{{i}}">
+                                        <input type="hidden" name="proto_port" value="{{rule['-p']}}/{{rule['--dport']}}">
                                         <button class="btn-floating btn-small waves-effect waves-light red" name="action" value="remove">
                                             <i class="material-icons">remove</i>
                                         </button>

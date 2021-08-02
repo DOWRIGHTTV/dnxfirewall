@@ -643,19 +643,17 @@ def add_open_wan_protocol(nat_info):
 
         dnx.write_configuration(open_protocol_settings)
 
-def del_open_wan_protocol(rule_number):
+def del_open_wan_protocol(nat_info):
     with ConfigurationManager('ips') as dnx:
         open_protocol_settings = dnx.load_configuration()
 
         open_protocols = open_protocol_settings['open_protocols']
-        rule = run(f'sudo iptables -t nat -nL NAT {rule_number}', shell=True, capture_output=True).stdout.split()
-        protocol = rule[1]
-        if (protocol in ['tcp', 'udp']):
-            dst_port = rule[6].split(':')[1]
-            open_protocols[protocol].pop(dst_port, None)
 
-        elif (protocol == 'icmp'):
-            open_protocols[protocol] = False
+        if (nat_info.protocol == 'icmp'):
+            open_protocols['icmp'] = False
+
+        else:
+            open_protocols[nat_info.protocol].pop(nat_info.port, None)
 
         dnx.write_configuration(open_protocol_settings)
 

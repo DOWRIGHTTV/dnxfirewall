@@ -62,10 +62,14 @@ class _Defaults:
         for chain in self.custom_nat_chains:
             shell(f'iptables -t nat -N {chain}')
 
-        # TODO: consider/ look into changing to RAW table.
-        shell('iptables -t mangle -N IPS') # DDOS prevention rule insertion location
+        # NOTE: retaining ips chain in mangle for backwards compatibility or easy switch between the two.
+        shell('iptables -t raw -N IPS') # ddos prevention rule insertion location
+
+        shell('iptables -t mangle -N IPS') # ddos prevention rule insertion location
 
     def prerouting_set(self):
+        shell('iptables -t raw -A PREROUTING -j IPS') # action to check custom ips chain
+
         shell('iptables -t mangle -A PREROUTING -j IPS') # action to check custom ips chain
 
     def mangle_set(self):

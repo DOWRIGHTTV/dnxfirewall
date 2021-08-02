@@ -43,7 +43,6 @@ class IPS_IDS(NFQueue):
     portscan_prevention = False
     portscan_reject = False
     ids_mode = False # TODO: implement this throughout
-    broadcast = None
 
     ddos_engine_enabled = False
     ps_engine_enabled   = False
@@ -103,16 +102,12 @@ class IPS_IDS(NFQueue):
 
             return False
 
-        # ternary operations to define local var for broadcast packet
-        broadcast = True if packet.dst_ip == self.broadcast else False
+        if (self.inspection_required in [IPS.BOTH, IPS.DDOS]):
+            threading.Thread(target=Inspect.ddos, args=(packet,)).start()
 
-        if (not broadcast):
-            if (self.inspection_required in [IPS.BOTH, IPS.DDOS]):
-                threading.Thread(target=Inspect.ddos, args=(packet,)).start()
-
-            # will mark for inspection by portscan if protocol is udp or tcp
-            if (packet.protocol is not PROTO.ICMP and self.inspection_required in [IPS.BOTH, IPS.PORTSCAN]):
-                return True
+        # will mark for inspection by portscan if protocol is udp or tcp
+        if (packet.protocol is not PROTO.ICMP and self.inspection_required in [IPS.BOTH, IPS.PORTSCAN]):
+            return True
 
         self.forward_packet(packet.nfqueue)
 
@@ -166,10 +161,8 @@ class Inspect:
         if (self._IPS.ids_mode):
             Log.log(packet, IPS.LOGGED, engine=IPS.DDOS)
 
-        # TODO: see if changing the iptables table to RAW would be better. It should be able to do all the standard filtering and is
-        # processed even before mangle. to test, just inject rule into RAW and see if functonality is the same.
         elif (self._IPS.ddos_prevention):
-            IPTablesManager.proxy_add_rule(packet.conn.tracked_ip, table='mangle', chain='IPS')
+            IPTablesManager.proxy_add_rule(packet.conn.tracked_ip, table='raw', chain='IPS')
 
             Log.log(packet, IPS.FILTERED, engine=IPS.DDOS)
 
@@ -184,7 +177,6 @@ class Inspect:
 
             # if conn limit exceeded and host is not already marked, returns active ddos and add ip to tracker
             if self._threshhold_exceeded(tracked_ip, packet):
-                Log.debug(f'[ddos/drop] {packet.conn.tracked_ip}')
 
                 # this is to supress log entries for ddos hosts that are being detected by the engine since there is a delay
                 # between detection and kernel offload or some packets are already in queue
@@ -240,8 +232,6 @@ class Inspect:
             if (not initial_block): return
 
             block_status = self._get_block_status(pre_detection_logging, packet.protocol)
-
-        Log.debug(f'[pscan/scan detected][{block_status.name}] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
 
         # NOTE: recently removed filter related to ddos engine. if portscan profile is matched and ddos is detected, both
         # will be logged and independantly handled.

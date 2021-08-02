@@ -34,8 +34,7 @@ class Configuration:
         self = cls(IPS.__name__)
         self.IPS = IPS
 
-        self._load_interfaces()
-        self._manage_ip_tables()
+        self._reset_passive_blocking()
         threading.Thread(target=self._get_settings).start()
         threading.Thread(target=self._get_open_ports).start()
         threading.Thread(target=self._update_system_vars).start()
@@ -44,15 +43,10 @@ class Configuration:
 
         threading.Thread(target=self._clear_ip_tables).start()
 
-    def _manage_ip_tables(self):
-        IPTablesManager.purge_proxy_rules(table='mangle', chain='IPS')
-
-    def _load_interfaces(self):
-        dnx_settings = load_configuration('config')
-
-        wan_ident = dnx_settings['interfaces']['wan']['ident']
-
-        self.IPS.broadcast = Interface.broadcast_address(wan_ident)
+    # this resets any passively blocked hosts in the system on startup. persisting this
+    # data through service or system restarts is not really worth the energy.
+    def _reset_passive_blocking(self):
+        IPTablesManager.purge_proxy_rules(table='raw', chain='IPS')
 
     @cfg_read_poller('ips')
     def _get_settings(self, cfg_file):
@@ -93,8 +87,6 @@ class Configuration:
 
     # NOTE: determine whether default sleep timer is acceptible for this method. if not, figure out how to override
     # the setting set in the decorator or remove the decorator entirely.
-    # TODO: this doesnt seem to be working. a portscan that should have been reported as a miss was labeled as blocked.
-    #     see if these are getting cross referenced correctly by the portscan module and that the object types line up.
     @cfg_read_poller('ips')
     def _get_open_ports(self, cfg_file):
         ips = load_configuration(cfg_file)
@@ -152,4 +144,4 @@ class Configuration:
         with IPTablesManager() as iptables:
             for tracked_ip, insertion_time in list(firewall_rules.items()):
                 if (now - insertion_time > block_length) and firewall_rules.pop(tracked_ip, None):
-                    iptables.proxy_del_rule(tracked_ip, table='mangle', chain='IPS')
+                    iptables.proxy_del_rule(tracked_ip, table='raw', chain='IPS')

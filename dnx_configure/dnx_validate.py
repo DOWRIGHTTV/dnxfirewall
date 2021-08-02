@@ -338,6 +338,21 @@ def del_nat_rule(nat_rule):
     if (convert_int(nat_rule.position) not in range(1, rule_count+1)):
         raise ValidationError('Selected rule is not valid and cannot be removed.')
 
+    # validating fields for removing the associated open protocol/port from the tracker
+    open_protocol_settings = load_configuration('ips')['open_protocols']
+    try:
+        nat_rule.protocol, nat_rule.port = nat_rule.proto_port.split('/')
+    except:
+        raise ValidationError(INVALID_FORM)
+
+    # tcp/udp checked first. if error, will check icmp format. if that doesnt match then
+    # exception is raised.
+    try:
+        open_protocol_settings[nat_rule.protocol][nat_rule.port]
+    except:
+        if (nat_rule.protocol != 'icmp' and nat_rule.port != '0'):
+            raise ValidationError(INVALID_FORM)
+
 def add_dnat_rule(nat_rule):
     # ensuring all necessary fields are present in the namespace before continuing.
     valid_fields = [

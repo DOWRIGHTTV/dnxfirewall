@@ -28,14 +28,14 @@ class Log(LogHandler):
         if (cls.current_lvl >= LOG.ALERT and scan_info is IPS.LOGGED):
             log = IPS_LOG(pkt.conn.tracked_ip, pkt.protocol.name, IPS.DDOS.name, 'logged') # pylint: disable=no-member
 
-            cls.debug(f'ACTIVE DOS LOGGED: {pkt.conn.tracked_ip}')
+            cls.debug(f'[ddos][logged] {pkt.conn.tracked_ip}')
 
             return LOG.ALERT, log
 
         if (cls.current_lvl >= LOG.CRITICAL and scan_info is IPS.FILTERED):
             log = IPS_LOG(pkt.conn.tracked_ip, pkt.protocol.name, IPS.DDOS.name, 'filtered') # pylint: disable=no-member
 
-            cls.debug(f'ACTIVE DOS FILTERED: {pkt.conn.tracked_ip}')
+            cls.debug(f'[ddos][filtered] {pkt.conn.tracked_ip}')
 
             return LOG.CRITICAL, log
 
@@ -49,7 +49,7 @@ class Log(LogHandler):
 
             log = IPS_LOG(pkt.conn.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, scan_info.block_status.name) # pylint: disable=no-member
 
-            cls.debug(f'ACTIVE SCAN LOGGED/MISSED: {pkt.conn.tracked_ip}')
+            cls.debug(f'[pscan/scan detected][{scan_info.block_status.name}] {pkt.conn.tracked_ip}')
 
             return LOG.WARNING, log
 
@@ -57,7 +57,7 @@ class Log(LogHandler):
         elif (scan_info.initial_block and scan_info.block_status is IPS.BLOCKED and cls.current_lvl >= LOG.NOTICE):
             log = IPS_LOG(pkt.conn.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, 'blocked') # pylint: disable=no-member
 
-            cls.debug(f'ACTIVE SCAN BLOCK: {pkt.conn.tracked_ip}')
+            cls.debug(f'[pscan/scan detected][blocked] {pkt.conn.tracked_ip}')
 
             return LOG.NOTICE, log
 
