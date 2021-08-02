@@ -53,10 +53,8 @@ def update_page(form):
     if (zone not in valid_zones):
         return INVALID_FORM, 'GLOBAL_ZONE', None
 
-    # first level validation for action field
-    action = form.get('action', DATA.INVALID)
-    if (action is DATA.INVALID):
-        return INVALID_FORM, 'GLOBAL_ZONE', None
+    # action field is not required for some functions, so will not be hard validated
+    action = form.get('action', DATA.MISSING)
 
     # firewall rule will not nat_type specified so None  can be used for identification
     nat_type = form.get('nat_type', None)
