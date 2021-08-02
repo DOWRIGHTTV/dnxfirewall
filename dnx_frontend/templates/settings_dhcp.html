@@ -19,9 +19,8 @@
 <section id="dhcpgen" class="section">
     <div class="container">
         <div class="row">
-            <div class="col s1"></div>
             {% for interface in ['lan', 'dmz'] %}
-            <div class="col s5">
+            <div class="col s6">
                 <div class="card-panel hoverable">
                     <h5 class="{}">{{interface.upper()}} Interface</h5>
                     <form action="/settings/dhcp" method="POST">

@@ -17,7 +17,7 @@
 <section id="ips" class="section">
     <div class="container">
         <div class="row">
-            <div class="col s12 m5 offset-m1">
+            <div class="col s12 m6">
                 <div class="card-panel hoverable">
                     <h4 class="{{title_color}}">Denial Of Service</h4>
                     <form action="/advanced/ips" method="POST">
@@ -57,7 +57,7 @@
                             </div>
                         </div>
                         <div class="row">
-                            <div class="input-field col s6 center">
+                            <div class="input-field col s7 center">
                                 <div class="switch">
                                     <label>
                                         Disabled
@@ -68,7 +68,7 @@
                                     </label>
                                 </div>
                             </div>
-                            <div class="input-field col s6 m4 offset-m1">
+                            <div class="input-field col s4">
                                 {% if ips_settings['ddos_notify'] %}
                                 <a class="waves-effect waves-light btn modal-trigger col s12" href="#ips-modal1">Update</a>
                                 <div id="ips-modal1" class="modal">
@@ -89,7 +89,7 @@
                     </form>
                 </div>
             </div>
-            <div class="col s12 m5">
+            <div class="col s12 m6">
                 <div class="card-panel hoverable">
                     <h4 class="{{title_color}}">General Settings</h4>
                     <form action="/advanced/ips" method="POST">

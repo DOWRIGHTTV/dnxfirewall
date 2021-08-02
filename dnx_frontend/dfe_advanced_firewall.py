@@ -11,7 +11,7 @@ sys.path.insert(0, HOME_DIR)
 import dnx_configure.dnx_configure as configure
 import dnx_configure.dnx_validate as validate
 
-from dnx_configure.dnx_constants import INVALID_FORM
+from dnx_configure.dnx_constants import INVALID_FORM, DATA
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_configure.dnx_iptables import IPTablesManager
@@ -53,8 +53,12 @@ def update_page(form):
     if (zone not in valid_zones):
         return INVALID_FORM, 'GLOBAL_ZONE', None
 
-    # if firewall rule, None will be used for evaluation.
-    action = form.get('action', None)
+    # first level validation for action field
+    action = form.get('action', DATA.INVALID)
+    if (action is DATA.INVALID):
+        return INVALID_FORM, 'GLOBAL_ZONE', None
+
+    # firewall rule will not nat_type specified so None  can be used for identification
     nat_type = form.get('nat_type', None)
     if (nat_type is None):
         error, zone = _firewall_rules(zone, action, form)
@@ -131,6 +135,15 @@ def _firewall_rules(zone, action, form):
 
     return error, zone
 
+# TODO: currently it is possible to put overlapping DNAT rules (same dst port, but different host port).
+    # this isnt normally an issue and could be left to the user, but the last one inserted with be
+    # the local port value, which if the lower rule, will be incorrect for portscan reject packets.
+    # a similar issue will also be for the local ports because they are flipped when loaded into the
+    # ips.
+        # NOTE: a possible solution would be to store the wan ip/wan port and local ip/ local port in a tuple
+        # or a splittable string. this could be the key/vals to the dict making each unique and would allow
+        # for any combination and still properly identify missed scans while also reliable generating reject
+        # packets.
 def _dnat_rules(zone, action, form):
     error = None
 
@@ -143,6 +156,8 @@ def _dnat_rules(zone, action, form):
             error = ve
 
         else:
+            configure.del_open_wan_protocol(fields)
+
             with IPTablesManager() as iptables:
                 iptables.delete_nat(fields)
 
@@ -161,10 +176,11 @@ def _dnat_rules(zone, action, form):
         except ValidationError as ve:
             error = ve
         else:
+            configure.add_open_wan_protocol(fields)
+
             with IPTablesManager() as iptables:
                 iptables.add_nat(fields)
 
-            configure.add_open_wan_protocol(fields)
     else:
         return INVALID_FORM, zone
 
