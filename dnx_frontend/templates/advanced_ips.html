@@ -9,6 +9,8 @@
                         href="#ips" onclick="activeTab(1)">IPS/IDS</a></li>
                     <li class="{{tab_classes}}"><a {% if tab=='2' %} class="active" {% endif %}
                         href="#ips-whitelist" onclick="activeTab(2)">Whitelist</a></li>
+                    <li class="{{tab_classes}}"><a {% if tab=='3' %} class="active" {% endif %}
+                        href="#ips-pbl" onclick="activeTab(3)">Block List</a></li>
                 </ul>
             </div>
         </div>
@@ -274,12 +276,11 @@
                                             <h5 class="red-text">Are you sure you want to remove the IPS whitelist rule?</h5>
                                         </div>
                                         <form action="/advanced/ips" method="POST">
+                                            <input type="hidden" name="tab" value="2">
+                                            <input type="hidden" name="ips_wl_ip" value="{{ip_address}}">
                                             <div class="modal-footer">
-                                                <button class="btn waves-effect waves-light">YES</button>
+                                                <button class="btn waves-effect waves-light" name="ips_wl_remove">YES</button>
                                                 <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                                                <input type="hidden" name="tab" value="2">
-                                                <input type="hidden" name="ips_wl_ip" value="{{ip_address}}">
-                                                <input type="hidden" name="ips_wl_remove">
                                             </div>
                                         </form>
                                     </div>
@@ -293,6 +294,56 @@
                                 {% for i in range(4) %}
                                 <td></td>
                                 {% endfor %}
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<section id="ips-pbl" class="section">
+    <div class="container">
+        <div class="row">
+            <div class="col s12">
+                <div class="card-panel hoverable">
+                    <h4 class="{{title_color}}">Passively Blocked Hosts</h4>
+                    <table class="striped centered">
+                        <thead>
+                            <th style="width:15%"></th>
+                            <th style="width:70%">Host IP Address</th>
+                            <th style="width:15%">Time Entered</th>
+                        </thead>
+                        <tbody>
+                            {% if ips_settings['passively_blocked_hosts'] %}
+                            {% for host, timestamp, ftime in ips_settings['passively_blocked_hosts'] %}
+                            <tr>
+                                <td>
+                                    <a class="btn-floating btn-small red waves-effect waves-light modal-trigger"
+                                        href="#ips-modal4-{{loop.index}}"><i class="material-icons">remove</i></a>
+                                    <div id="ips-modal4-{{loop.index}}" class="modal">
+                                        <div class="modal-content">
+                                            <h5 class="red-text">Are you sure you want to remove the passively blocked host?</h5>
+                                        </div>
+                                        <form action="/advanced/ips" method="POST">
+                                            <input type="hidden" name="tab" value="3">
+                                            <div class="modal-footer">
+                                                <button class="btn waves-effect waves-light" name="ips_pbl_remove" value="{{host}}/{{timestamp}}">YES</button>
+                                                <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </td>
+                                <td>{{host}}</td>
+                                <td>{{ftime}}</td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td></td>
+                                <td></td>
+                                <td></td>
                             </tr>
                             {% endif %}
                         </tbody>

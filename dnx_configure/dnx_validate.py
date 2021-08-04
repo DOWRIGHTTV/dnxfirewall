@@ -14,13 +14,14 @@ sys.path.insert(0, _HOME_DIR)
 from dnx_configure.dnx_constants import LOG, CFG, DATA, INVALID_FORM
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
+from dnx_configure.dnx_system_info import System
 
 # TODO: why no CSRF. :(
 
 __all__ = (
     'standard', 'syslog_dropdown', 'mac_address',
     'ip_address', 'default_gateway', 'domain',
-    'cidr', 'network_port', 'timer', 'license',
+    'cidr', 'network_port', 'timer',
     'account_creation', 'username', 'password',
     'user_role', 'dhcp_reservation', 'log_settings',
     'time_offset', 'syslog_settings', 'ip_proxy_settings',
@@ -48,7 +49,7 @@ def get_convert_int(form, key):
         return DATA.INVALID
 
 def convert_int(num):
-    '''converts argument into an integer, then returns. -1 will be returned on error.'''
+    '''converts argument into an integer, then returns. DATA.INVALID (-1) will be returned on error.'''
     try:
         return int(num)
     except:
@@ -72,16 +73,16 @@ def syslog_dropdown(syslog_time):
 
 def mac_address(mac):
     if (not _VALID_MAC.match(mac)):
-        raise ValidationError('MAC Address is not valid.')
+        raise ValidationError('MAC address is not valid.')
 
 def _ip_address(ip_addr):
     try:
         ip_addr = IPv4Address(ip_addr)
     except:
-        raise ValidationError('IP Address is not valid.')
+        raise ValidationError('IP address is not valid.')
 
     if (ip_addr.is_loopback):
-        raise ValidationError('IP Address cannot be 127.0.0.1/loopback.')
+        raise ValidationError('127.0.0.0/24 is reserved ip space and cannot be used.')
 
 # this is convienience wrapper around above function to allow for multiple ips to be checked with one func call.
 def ip_address(ip_addr=None, *, ip_iter=None):
@@ -122,16 +123,6 @@ def timer(timer):
     timer = convert_int(timer)
     if (not 1 < timer < 1440):
         raise ValidationError('Timer must be between 1 and 1440 (24 hours).')
-
-def license(user_input):
-    user_input = user_input.lower()
-    digits = set(string.digits)
-    let_lower = set(string.ascii_lowercase)
-    for letter in user_input:
-        if (letter == '-'): continue
-
-        if (letter not in digits and letter not in let_lower):
-            raise ValidationError('Standard fields can only contain alpha numeric characters.')
 
 def account_creation(account_info):
     username(account_info['username'])
@@ -358,15 +349,19 @@ def add_dnat_rule(nat_rule):
     valid_fields = [
         'src_zone', 'dst_ip', 'dst_port', 'host_ip', 'host_port', 'protocol'
     ]
+
     if not all([hasattr(nat_rule, x) for x in valid_fields]):
-        raise ValidationError('Invalid form.')
+        raise ValidationError(INVALID_FORM)
+
+    if (nat_rule.protocol not in ['tcp', 'udp', 'icmp']):
+        raise ValidationError(INVALID_FORM)
 
     if (not nat_rule.dst_ip and nat_rule.dst_port in ['443', '80']):
         raise ValidationError('Ports 80,443 cannot be set as destination port when destination IP is not set.')
 
     if (nat_rule.protocol == 'icmp'):
-        open_protocols = load_configuration('ips')
 
+        open_protocols = load_configuration('ips')
         if (open_protocols['open_protocols']['icmp']):
             return 'Only one ICMP rule can be active at a time. Remove existing rule before adding another.'
 
@@ -391,17 +386,17 @@ def portscan_settings(portscan_settings):
         raise ValidationError('Prevention must be enabled to configure portscan reject.')
 
 def management_access(fields):
-    SERVICE_TO_PORT = {'webui': [80, 443], 'cli': [0], 'ssh': [22]}
+    SERVICE_TO_PORT = {'webui': (80, 443), 'cli': (0,), 'ssh': (22,)}
 
     if (fields.zone not in ['lan', 'dmz'] or fields.service not in ['webui', 'cli', 'ssh']):
-        raise ValidationError('Invalid form.')
+        raise ValidationError(INVALID_FORM)
 
-    # convert_int will raise exception if issues with form data and ValueError will cover
+    # convert_int will return -1  if issues with form data and ValueError will cover
     # invalid CFG action key/vals
     try:
         action = CFG(convert_int(fields.action))
     except ValueError:
-        raise ValidationError('Invalid form.')
+        raise ValidationError(INVALID_FORM)
 
     fields.action = action
     fields.service_ports = SERVICE_TO_PORT[fields.service]

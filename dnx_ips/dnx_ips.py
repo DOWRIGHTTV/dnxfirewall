@@ -162,7 +162,7 @@ class Inspect:
             Log.log(packet, IPS.LOGGED, engine=IPS.DDOS)
 
         elif (self._IPS.ddos_prevention):
-            IPTablesManager.proxy_add_rule(packet.conn.tracked_ip, table='raw', chain='IPS')
+            IPTablesManager.proxy_add_rule(packet.conn.tracked_ip, packet.timestamp, table='raw', chain='IPS')
 
             Log.log(packet, IPS.FILTERED, engine=IPS.DDOS)
 

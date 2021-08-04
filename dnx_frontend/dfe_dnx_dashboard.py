@@ -20,6 +20,7 @@ def load_page():
             ProxyDB.unique_domain_count(action='allowed')
         )
 
+
         request_counts = (
             ProxyDB.total_request_count(table='dnsproxy', action='blocked'),
             ProxyDB.total_request_count(table='dnsproxy', action='allowed')
@@ -32,8 +33,8 @@ def load_page():
 
         top_countries = {}
         for action in ['blocked', 'allowed']:
-            outbound = ProxyDB.query_geolocation(5, action=action, direction='outbound')
-            inbound = ProxyDB.query_geolocation(5, action=action, direction='inbound')
+            outbound = ProxyDB.query_geolocation(5, action=action, direction='OUTBOUND')
+            inbound = ProxyDB.query_geolocation(5, action=action, direction='INBOUND')
 
             top_countries[action] = list(zip_longest(outbound, inbound, fillvalue=''))
 
@@ -60,7 +61,8 @@ def load_page():
     }
 
     dashboard = {
-        'domain_counts': domain_counts, 'request_counts': request_counts,
+        'domain_counts': domain_counts, 'dc_graph': _calculate_graphic(domain_counts),
+        'request_counts': request_counts, 'rc_graph': _calculate_graphic(request_counts),
         'top_domains': top_domains, 'top_countries': top_countries,
         'infected_hosts': inf_hosts,
 
@@ -69,3 +71,28 @@ def load_page():
     }
 
     return dashboard
+
+def _calculate_graphic(counts):
+    # bigger, smaller
+    graphic = ['u', 'u']
+
+    # indexes for easier conditionals
+    bigger, smaller = 0, 1
+
+    blocked, allowed = counts
+
+    # block majority
+    if (blocked > allowed):
+        graphic[bigger] = 'b'
+
+        if (allowed):
+            graphic[smaller] = 'a'
+
+    # allow majority
+    elif (allowed > blocked):
+        graphic[bigger] = 'a'
+
+        if (blocked):
+            graphic[smaller] = 'b'
+
+    return graphic

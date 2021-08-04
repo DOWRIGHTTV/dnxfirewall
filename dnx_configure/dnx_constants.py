@@ -35,8 +35,8 @@ INT_BANDWIDTH_TIMER = 5
 FILE_POLL_TIMER = 10
 
 # dnx user/group
-USER  = 'dnx'
-GROUP = 'dnx'
+USER  = 'free'
+GROUP = 'free'
 
 # Certificate authority store file
 CERTIFICATE_STORE = '/etc/ssl/certs/ca-certificates.crt'
@@ -302,6 +302,7 @@ class TLD_CAT(_IntEnum):
     ga = 16
 
 class IPP_CAT(_IntEnum):
+    DNL = -1 # did not look due to being geo filtered
     NONE = 0
     COMPROMISED = 10
     COMPROMISED_HOST = 11

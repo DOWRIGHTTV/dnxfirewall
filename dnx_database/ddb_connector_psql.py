@@ -153,37 +153,34 @@ class DBConnector:
 
         return self.c.fetchall()
 
-    def dashboard_query_top(self, count, *, table, action):
+    def dashboard_query_top(self, count, *, action):
         if (action in ['allowed', 'blocked']):
-            self.c.execute(f'select * from {table} where action=%s order by count desc limit 20', (action,))
+            self.c.execute(
+                f'select domain, category from dnsproxy where action=? group by domain order by count(*) desc limit {count}', (action,)
+            )
+
         elif (action in ['all']):
-            self.c.execute(f'select * from {table} order by count desc limit 20')
-        results = self.c.fetchall()
+            self.c.execute(f'select domain, category from dnsproxy group by domain order by count(*) desc limit {count}')
 
-        top_domains = {}
-        for result in results:
-            _, domain, category, *_ = result
-            if (domain not in top_domains):
-                if (len(domain) > 25):
-                    domain = domain[:25]
+        return self.c.fetchall()[:count]
 
-                top_domains[domain] = category
-
-            if (len(top_domains) == count): break
-
-        return top_domains
-
-    def query_geolocation(self, *, action):
+    def query_geolocation(self, count, *, action, direction):
+        lim = count + 5 # this will ensure there is always room even if results contain elements that will be filtered
         if (action in ['allow', 'blocked']):
-            self.c.execute('select category, count(*) from ipproxy where action=? group by category', (action,))
+            self.c.execute(
+                f'select category from ipproxy where action=? and direction=? group by category order by count(*) desc limit {lim}',
+                (action, direction)
+            )
 
         elif (action in ['all']):
-            self.c.execute(f'select category, count(*) from ipproxy group by category')
+            self.c.execute(
+                f'select category from ipproxy where direction=? group by category order by count(*) desc limit {lim}', (direction,)
+            )
 
         results = self.c.fetchall()
 
         # get correct tor category names. i cant remember them off top since it recently changed.
-        return [(int(y), x) for x,y in results if x.lower() not in ['malicious', 'compromised', 'tor']]
+        return [x for x in results if x.lower() not in ['malicious', 'compromised', 'tor']][:count]
 
     def unique_domain_count(self, *, action):
         if (action in ['allow', 'blocked']):

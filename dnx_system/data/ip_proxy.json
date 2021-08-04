@@ -1,6 +1,6 @@
 {
     "ids_mode": false,
-    "categories": {
+    "reputation": {
         "malicious": 1,
         "compromised": 0,
         "tor_entry": 0,

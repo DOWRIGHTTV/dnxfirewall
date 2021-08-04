@@ -13,8 +13,9 @@ from collections import namedtuple
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import SQL_VERSION, ONE_DAY, FIVE_MIN, fast_time, write_log
+from dnx_configure.dnx_constants import SQL_VERSION, ONE_DAY, FIVE_MIN, fast_time, write_log, str_join
 from dnx_configure.dnx_namedtuples import BLOCKED_DOM
+from dnx_configure.dnx_system_info import System
 
 __all__ = ('DBConnector',)
 
@@ -41,11 +42,16 @@ class _DBConnector:
         if (self._data_written):
             self._conn.commit()
 
-        self._conn.close()
+            # This should be logged through the logging system. Worst case use simple log if full logging is not easily in reach.
+            if (exc_type):
+                # this shouldnt need to be here if nested under data written since everything that writes to database will
+                # have a Log handler running and passed in. having as a precaution for now.
+                try:
+                    self._Log.error(f'error while writing to database: {exc_val}')
+                except:
+                    pass
 
-        # This should be logged through the logging system. Worst case use simple log if full logging is not easily in reach.
-        if (exc_type):
-            self._Log.error(f'error while writing to database: {exc_val}')
+        self._conn.close()
 
         return True
 
@@ -106,11 +112,13 @@ class _DBConnector:
 
         return self._c.fetchone()
 
-    # standard input for ip proxy module database entries. Supression built in to IP Proxy (will not log duplicate host until 30 timeout)
+    # standard input for ip proxy module database entries.
     def ipp_input(self, timestamp, log):
 
         self._c.execute(f'insert into ipproxy values (?, ?, ?, ?, ?, ?)',
-            (log.local_ip, log.tracked_ip, log.category, log.direction, log.action, timestamp))
+            (log.local_ip, log.tracked_ip, str_join(log.category), log.direction, log.action, timestamp))
+
+        # TODO: figure out the logic needed to write to the geolocation table
 
         self._data_written = True
 
@@ -134,6 +142,25 @@ class _DBConnector:
 
     def infected_remove(self, infected_client, detected_host, *, table):
         self._c.execute(f'delete from {table} where mac=? and detected_host=?', (infected_client, detected_host))
+
+    def geo_input(self, log):
+        month = ','.join(System.date()[:2])
+
+        # if this is the first time this country has been seen in the current month, it will be inserted with
+        # counts zerod out
+        if not self._geo_entry_check(log, month):
+            self._c.execute(f'insert into geolocation values (?, ?, ?, ?)', (month, log.country, 0, 0))
+
+        # incremented count of the actions specified in the log.
+        self._c.execute(f'update geolocation set {log.action}={log.action}+1 where month=? and country=?',
+                (month, log.country))
+
+    def _geo_entry_check(self, log, month):
+        self._c.execute(f'select * from geolocation where month=? and country=?', (month, log.country))
+        if self._c.fetchone():
+            return True
+
+        return False
 
     # query to authorize viewing of web block page and show block info for reference
     def query_blocked(self, *, domain, src_ip):
@@ -198,7 +225,7 @@ class _DBConnector:
         results = self._c.fetchall()
 
         # get correct tor category names. i cant remember them off top since it recently changed.
-        return [x for x in results if x.lower() not in ['malicious', 'compromised', 'tor']][:count]
+        return [x[0] for x in results if x[0].lower() not in ['malicious', 'compromised', 'tor']][:count]
 
     def unique_domain_count(self, *, action):
         if (action in ['allow', 'blocked']):
@@ -251,6 +278,7 @@ class _DBConnector:
         self._data_written = True
 
     def create_db_tables(self):
+        # dns proxy main
         self._c.execute(
             'create table if not exists dnsproxy '
             '(src_ip text not null, domain text not null, '
@@ -259,13 +287,7 @@ class _DBConnector:
             'last_seen int4 not null)'
         )
 
-        self._c.execute(
-            'create table if not exists infectedclients '
-            '(mac text not null, ip_address text not null, '
-            'detected_host text not null, reason text not null, '
-            'last_seen int4 not null)'
-        )
-
+        # ip proxy main
         self._c.execute(
             'create table if not exists ipproxy '
             '(local_ip text not null, tracked_ip text not null, '
@@ -273,25 +295,44 @@ class _DBConnector:
             'action text not null, last_seen int4 not null)'
         )
 
+        # ips/ids main
         self._c.execute(
             'create table if not exists ips '
             '(src_ip not null, protocol not null, '
             'attack_type not null, action not null, '
-            'last_seen not null)'
+            'last_seen int4 not null)'
         )
 
+        # infected cliented
+        self._c.execute(
+            'create table if not exists infectedclients '
+            '(mac text not null, ip_address text not null, '
+            'detected_host text not null, reason text not null, '
+            'last_seen int4 not null)'
+        )
+
+        # ip proxy - geolocation
+        #( 01,2021 | CHINA | 10 | 1)
+        self._c.execute(
+            'create table if not exists geolocation '
+            '(month not null, country not null, '
+            'blocked int4 not null, '
+            'allowed int4 not null)'
+        )
+
+        # dns proxy - blocked clients (for serving webui block page)
         self._c.execute(
             'create table if not exists blocked '
             '(src_ip not null, domain not null, '
             'category not null, reason not null, '
-            'timestamp not null)'
+            'timestamp int4 not null)'
         )
 
-if (SQL_VERSION == 1):
-    from dnx_database.ddb_connector_psql import DBConnector
+if (SQL_VERSION == 0):
+    DBConnector = _DBConnector
 
 else:
-    DBConnector = _DBConnector
+    from dnx_database.ddb_connector_psql import DBConnector
 
 if __name__ == '__main__':
     # NOTE: CREATE THE TABLES
