@@ -135,13 +135,17 @@ class LogHandler:
 
     @classmethod
     def run(cls, *, name, console=True):
-        '''initializes log handler settings and monitors system configs for changes
-        with log/syslog settings.'''
+        '''
+        initializes log handler settings and monitors system configs for changes
+        with log/syslog settings.
+
+        set console=True to enable Log.console outputs in terminal.
+        '''
         if (cls.is_running):
             raise RuntimeWarning('the log handler has already been started.')
 
         cls.name     = name
-        cls.console  = console
+        cls._console = console # NOTE: _ is a must. without it, it overlaps with method of same name
         cls._running = True
 
         cls._path += f'{name}'
@@ -208,7 +212,7 @@ class LogHandler:
     def console(cls, message):
         '''print message to console. this is for all important console only events. use dprint for
         non essential console output set by DEBUG log level.'''
-        if (cls.console):
+        if (cls._console):
             write_log(f'{message}\n')
 
     @classmethod

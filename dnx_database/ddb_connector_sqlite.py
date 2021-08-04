@@ -116,7 +116,7 @@ class _DBConnector:
     def ipp_input(self, timestamp, log):
 
         self._c.execute(f'insert into ipproxy values (?, ?, ?, ?, ?, ?)',
-            (log.local_ip, log.tracked_ip, str_join(log.category), log.direction, log.action, timestamp))
+            (log.local_ip, log.tracked_ip, '/'.join(log.category), log.direction, log.action, timestamp))
 
         # TODO: figure out the logic needed to write to the geolocation table
 
@@ -143,7 +143,8 @@ class _DBConnector:
     def infected_remove(self, infected_client, detected_host, *, table):
         self._c.execute(f'delete from {table} where mac=? and detected_host=?', (infected_client, detected_host))
 
-    def geo_input(self, log):
+    # first arg is for timestamp.
+    def geo_input(self, _, log):
         month = ','.join(System.date()[:2])
 
         # if this is the first time this country has been seen in the current month, it will be inserted with
