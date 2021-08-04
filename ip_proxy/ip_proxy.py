@@ -28,15 +28,15 @@ LOG_NAME = 'ip_proxy'
 class IPProxy(NFQueue):
     inspect_on     = False
     ids_mode       = False
-    cat_enabled    = False
-    cat_settings   = {}
 
-    geo_enabled    = False
-    geo_settings   = {}
+    reputation_enabled   = False
+    reputation_settings  = {}
+    geolocation_enabled  = True
+    geolocation_settings = {}
 
-    ip_whitelist   = {}
-    tor_whitelist  = {}
-    open_ports     = {
+    ip_whitelist  = {}
+    tor_whitelist = {}
+    open_ports    = {
         PROTO.TCP: {},
         PROTO.UDP: {}
     }
@@ -50,21 +50,6 @@ class IPProxy(NFQueue):
 
         cls.set_proxy_callback(func=Inspect.ip)
 
-    # NOTE: this may no be needed. we should be running the inspection engine at all times for
-    # geolocation (and maybe aditional things down the road). if all reputation cats are disabled
-    # then that signature set will be bypassed and set to None.
-    # # if nothing is enabled the packet will be forwarded based on mark of packet.
-    # def _pre_check(self, nfqueue):
-    #     # marked for parsing
-    #     if (self.inspect_on or LanRestrict.is_active):
-    #         return True
-
-    #     else:
-    #         self.forward_packet(nfqueue, nfqueue.get_mark())
-
-    #     # parse not needed
-    #     return False
-
     def _pre_inspect(self, packet):
         # if local ip is not in the ip whitelist, the packet will be dropped while time restriction is active.
         if (LanRestrict.is_active and packet.zone == LAN_IN
@@ -73,14 +58,6 @@ class IPProxy(NFQueue):
 
         else:
             return True
-
-        # # marked for further inspection
-        # elif (self.inspect_on):
-        #     return True
-
-        # # just in case proxy was disabled mid parse of packets
-        # else:
-        #     self.forward_packet(packet.nfqueue, packet.zone)
 
     @classmethod
     def forward_packet(cls, nfqueue, zone, action=CONN.ACCEPT):
@@ -174,10 +151,10 @@ class Inspect:
             if (packet.direction is DIR.OUTBOUND and packet.conn.local_ip in self._Proxy.tor_whitelist):
                 return CONN.ACCEPT
 
-            block_direction = self._Proxy.cat_settings[category]
+            block_direction = self._Proxy.reputation_settings[category]
 
         else:
-            block_direction = self._Proxy.cat_settings[rep_group]
+            block_direction = self._Proxy.reputation_settings[rep_group]
 
         # notify proxy the connection should be blocked
         if (block_direction in [packet.direction, DIR.BOTH]):
@@ -187,7 +164,7 @@ class Inspect:
         return CONN.ACCEPT
 
     def _country_action(self, category, direction):
-        if (self._Proxy.geo_settings[category] in [direction, DIR.BOTH]):
+        if (self._Proxy.geolocation_settings[category] in [direction, DIR.BOTH]):
             return CONN.DROP
 
         return CONN.ACCEPT

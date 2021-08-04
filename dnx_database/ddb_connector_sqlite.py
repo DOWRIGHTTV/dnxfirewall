@@ -149,11 +149,11 @@ class _DBConnector:
         # if this is the first time this country has been seen in the current month, it will be inserted with
         # counts zerod out
         if not self._geo_entry_check(log, month):
-            self._c.execute(f'insert into geolocation values (?, ?, ?, ?)', (month, log.country, 0, 0))
+            self._c.execute(f'insert into geolocation values (?, ?, ?, ?, ?)', (month, log.country, log.direction, 0, 0))
 
         # incremented count of the actions specified in the log.
-        self._c.execute(f'update geolocation set {log.action}={log.action}+1 where month=? and country=?',
-                (month, log.country))
+        self._c.execute(f'update geolocation set {log.action}={log.action}+1 where month=? and country=? and direction=?',
+                (month, log.country, log.direction))
 
     def _geo_entry_check(self, log, month):
         self._c.execute(f'select * from geolocation where month=? and country=?', (month, log.country))

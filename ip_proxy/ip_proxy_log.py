@@ -38,7 +38,7 @@ class Log(LogHandler):
                     get_arp_table(host=pkt.conn.local_ip), pkt.conn.local_ip, pkt.conn.tracked_ip, 'malware'
                 )
 
-                log3 = GEO_LOG(inspection.category[0], 'blocked')
+                log3 = GEO_LOG(inspection.category[0], pkt.direction.name, 'blocked')
 
                 return LOG.ALERT, {'ipp': log, 'infected': log2, 'geo': log3}
 
@@ -47,7 +47,7 @@ class Log(LogHandler):
                     pkt.conn.local_ip, pkt.conn.tracked_ip, inspection.category, pkt.direction.name, 'blocked'
                 )
 
-                log2 = GEO_LOG(inspection.category[0], 'blocked')
+                log2 = GEO_LOG(inspection.category[0], pkt.direction.name, 'blocked')
 
                 return LOG.WARNING, {'ipp': log, 'geo': log2}
 
@@ -55,9 +55,9 @@ class Log(LogHandler):
         elif (cls.current_lvl >= LOG.INFO):
             log = IPP_LOG(pkt.conn.local_ip, pkt.conn.tracked_ip, inspection.category, pkt.direction.name, 'allowed')
 
-            log2 = GEO_LOG(inspection.category[0], 'blocked')
+            log2 = GEO_LOG(inspection.category[0], pkt.direction.name, 'blocked')
 
             return LOG.INFO, {'ipp': log, 'geo': log2}
 
         # this contains all that is needed to get the country information input into the database.
-        return LOG.NONE, {'geo': GEO_LOG(inspection.category[0], 'allowed')}
+        return LOG.NONE, {'geo': GEO_LOG(inspection.category[0], pkt.direction.name, 'allowed')}
