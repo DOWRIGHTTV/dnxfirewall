@@ -56,7 +56,7 @@ def combine_ips(Log):
     ip_proxy = load_configuration('ip_proxy')
 
     ip_cat_signatures = []
-    for cat in ip_proxy['reputation']:
+    for cat in ip_proxy['categories']:
         try:
             with open(f'{HOME_DIR}/dnx_system/signatures/ip_lists/{cat}.ips', 'r') as file:
                 ip_cat_signatures.extend([x.lower() for x in file.read().splitlines() if x and '#' not in x])
