@@ -132,7 +132,7 @@ def generate_geolocation(Log):
         dict_nets[bin_id] = _merge_geo_ranges(sorted(containers))
 
     nets = [
-        (bin_id, tuple(array('l', host_container) for host_container in containers)) for bin_id, containers in dict_nets.items()
+        (bin_id, tuple(tuple(host_container) for host_container in containers)) for bin_id, containers in dict_nets.items()
     ]
     nets.sort()
 

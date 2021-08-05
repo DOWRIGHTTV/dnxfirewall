@@ -132,7 +132,7 @@ def load_dns_bitmap(Log, bl_exc=[], wl_exc=[]):
                     # overriding signature pre proxy
                     if (host in wl_exc): continue
 
-                    dict_nets[b_id].append(array('l', (h_id, cat)))
+                    dict_nets[b_id].append((h_id, cat))
 
         # in place sort of all containers prior to building the structure
         for containers in dict_nets.values():
@@ -166,7 +166,7 @@ def load_ip_bitmap(Log):
             bin_id  = ip_addr & MSB
             host_id = ip_addr & LSB
 
-            dict_nets[bin_id].append(array('l', (host_id, cat)))
+            dict_nets[bin_id].append((host_id, cat))
 
         # in place sort of all containers prior to building the structure
         for containers in dict_nets.values():
