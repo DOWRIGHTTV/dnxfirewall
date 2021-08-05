@@ -20,7 +20,6 @@ def load_page():
             ProxyDB.unique_domain_count(action='allowed')
         )
 
-
         request_counts = (
             ProxyDB.total_request_count(table='dnsproxy', action='blocked'),
             ProxyDB.total_request_count(table='dnsproxy', action='allowed')
@@ -40,25 +39,18 @@ def load_page():
 
         inf_hosts = ProxyDB.query_last(5, table='infectedclients', action='all')
 
-    print(top_countries)
-    # TODO: see if this is a candidate for a class method
-    Int = Interface()
-    intstat = Int.bandwidth()
+    intstat = Interface.bandwidth()
 
     uptime = System.uptime()
     cpu = System.cpu_usage()
     ram = System.ram_usage()
     dns_servers = System.dns_status()
 
-    # TODO: make this iterable
-    dns_proxy = Services.status('dnx-dns-proxy')
-    ip_proxy = Services.status('dnx-ip-proxy')
-    dhcp_server = Services.status('dnx-dhcp-server')
-    dnx_ips = Services.status('dnx-ips')
+    mod_status = {}
+    for svc in ['dns-proxy', 'ip-proxy', 'ips', 'dhcp-server']:
+        status = Services.status(f'dnx-{svc}')
 
-    mod_status = {
-        'dns_proxy': dns_proxy, 'ip_proxy': ip_proxy, 'dnx_ips': dnx_ips, 'dhcp_server': dhcp_server
-    }
+        mod_status[svc.replace('-', '_')] = status
 
     dashboard = {
         'domain_counts': domain_counts, 'dc_graph': _calculate_graphic(domain_counts),

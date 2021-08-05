@@ -20,7 +20,7 @@
     <div class="container">
         <div class="row">
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">DNS Servers</h4>
                     <table class="striped centered">
                         <thead>
@@ -65,7 +65,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Additional Options</h4>
                     <form action="/settings/dns" method="POST">
                         <input type="hidden" name="tab" value="1">
@@ -128,16 +128,16 @@
     <div class="container">
         <div class="row">
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Create (A) Record</h4>
                     <form action="/settings/dns" method="POST">
                         <input type="hidden" name="tab" value="2">
                         <div class="row">
-                            <div class="input-field col s4">
+                            <div class="input-field col s4 {{input_color}}">
                                 <input type="text" name="dns_record_name" class="validate" placeholder="homepc.local" required>
                                 <label for="">Domain Name</label>
                             </div>
-                            <div class="input-field col s4">
+                            <div class="input-field col s4 {{input_color}}">
                                 <input type="text" name="dns_record_ip" {{ip_addr_validate}} placeholder="192.168.83.67" required>
                                 <label for="">IP Address</label>
                             </div>
@@ -149,7 +149,7 @@
                 </div>
             </div>
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Record List</h4>
                     <table class="striped centered">
                         <thead>
@@ -203,7 +203,7 @@
     <div class="container">
         <div class="row">
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Clear Cache</h4>
                     <form action="/settings/dns" method="POST">
                         <input type="hidden" name="tab" value="3">
@@ -257,7 +257,7 @@
         </div>
         <div class="row">
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Top Domains</h4>
                     <table class="striped centered">
                         <thead>

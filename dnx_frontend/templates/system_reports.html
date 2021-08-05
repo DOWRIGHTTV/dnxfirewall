@@ -5,15 +5,14 @@
 {% include('slider.html') %}
 {% endif %}
 <!-- Tabs for statistics -->
-<section id="dropdown" class="section">
+<section id="dropdown" class="section {{main_section_color}}">
     <div class="container">
         <div class="col s12">
-            <div class="card-panel hoverable">
+            <div class="card-panel hoverable {{card_color}}">
                 <h4 class="{{title_color}}">Detection Logs</h4>
                 <div class="row">
                     <form action="system/reports" method="POST">
-                        <div class="input-field col s5 m3">
-                            <!-- this is gross. this should be able to be done with iterable -->
+                        <div class="input-field col s5 m3 {{input_color}}">
                             <select name="table" onchange="this.form.submit()">
                                 {% for table_type in table_types %}
                                 <option value="{{table_type}}/last" {% if table_type == table %} selected {% endif %}>{{table_type.replace("_", " ").upper()}}</option>
@@ -21,7 +20,7 @@
                             </select>
                             <label for="table">Module</label>
                         </div>
-                        <div class="input-field col s5 m3">
+                        <div class="input-field col s5 m3 {{input_color}}">
                             <select name="menu" onchange="this.form.submit()">
                                 {% if table in ['infected_clients', 'intrusion_prevention'] %}
                                 <option value="all">ALL</option>
@@ -94,11 +93,12 @@
                         {% elif table == 'ip_proxy' %}
                         <thead>
                         <tr>
-                            <th style="width:15%">Local IP</th>
-                            <th style="width:15%">Remote IP</th>
-                            <th style="width:20%">Category</th>
-                            <th style="width:15%">Direction</th>
-                            <th style="width:15%">Action</th>
+                            <th style="width:14%">Local IP</th>
+                            <th style="width:14%">Remote IP</th>
+                            <th style="width:14%">Geo</th>
+                            <th style="width:14%">Rep</th>
+                            <th style="width:12%">Direction</th>
+                            <th style="width:12%">Action</th>
                             <th style="width:20%">
                                 <form action="/system/reports" method="POST">
                                     <input type="hidden" name="table" value="{{table}}/last">
@@ -110,10 +110,12 @@
                         <tbody>
                         {% if table_data %}
                         {% for entry in table_data %}
+                        {% set geo, rep = entry[2].split('/') %}
                         <tr>
                             <td>{{entry[0]}}</td>
                             <td>{{entry[1]}}</td>
-                            <td>{{entry[2]}}</td>
+                            <td>{{geo}}</td>
+                            <td>{{rep}}</td>
                             <td>{{entry[3]}}</td>
                             <td>{{entry[4]}}</td>
                             <td>{{entry[5]}}</td>
@@ -122,7 +124,7 @@
                         {% endfor %}
                         {% else %}
                         <tr>
-                            {% for i in range(6) %}
+                            {% for i in range(7) %}
                             <td></td>
                             {% endfor %}
                         </tr>

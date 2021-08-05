@@ -14,15 +14,15 @@
         </div>
     </div>
 </section>
-<section id="createcategory" class="section">
+<section id="createcategory" class="section {{main_section_color}}">
     <div class="container">
         <div class="row row-flex">
             <div class="col s12 m6">
-                <div class="card-panel card-panel-eql hoverable">
+                <div class="card-panel card-panel-eql hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add Rule</h4>
                     <form action="/settings/categories" method="post">
                         <input type="hidden" name="tab" value="1">
-                        <div class="row">
+                        <div class="row {{input_color}}">
                             <div class="input-field col s12">
                                 <select name="menu" onchange="this.form.submit()">
                                     <!-- this is not an error, jinja is used to send correct value into javascript function-->
@@ -37,14 +37,14 @@
                                 <label for="menu">Categories</label>
                             </div>
                         </div>
-                        <div class="row">
+                        <div class="row {{input_color}}">
                             <div class="input-field col s12">
                                 <input type="text" name="ud_domain_name" id="ud_domain_name"
                                     placeholder="www.badsite.com" required>
                                 <label for="domain">Domain</label>
                             </div>
                         </div>
-                        <div class="row">
+                        <div class="row {{input_color}}">
                             <div class="input-field col s12">
                                 <input type="text" name="ud_domain_reason" id="reason" placeholder="malicious" required>
                                 <label for="reason">Reason</label>
@@ -60,11 +60,11 @@
                 </div>
             </div>
             <div class="col s12 m6">
-                <div class="card-panel card-panel-eql hoverable">
+                <div class="card-panel card-panel-eql hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Active Categories</h4>
                     <form action="/settings/categories" method="POST">
                         <input type="hidden" name="tab" value="1">
-                        <div class="row">
+                        <div class="row {{input_color}}">
                             <div class="input-field col s12">
                                 <input type="text" name="ud_category" class="validate" placeholder="social media"
                                     required>
@@ -93,15 +93,15 @@
         </div>
     </div>
 </section>
-<section id="categoryrules" class="section">
+<section id="categoryrules" class="section {{main_section_color}}">
     <div class="container">
         <div class="col s12">
-            <div class="card-panel hoverable">
+            <div class="card-panel hoverable {{card_color}}">
                 <h4 class="{{title_color}}">Configured Categories</h4>
                 <div class="row">
                     <form action="/settings/categories" method="POST">
                         <input type="hidden" name="tab" value="2">
-                        <div class="input-field col s10 m4">
+                        <div class="input-field col s10 m4 {{input_color}}">
                             <select name="menu" onchange="this.form.submit()">
                                 {% for cat in category_settings['ud_list'] %}
                                 {% if loop.index == menu %}

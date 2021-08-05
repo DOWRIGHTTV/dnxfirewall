@@ -15,15 +15,14 @@
 <section id="logging">
     <div class="container">
         <div class="row row-flex">
-            <div class="col s12 m2"></div>
-            <div class="col s12 m4">
-                <div class="card-panel card-panel-eql z-depth-2 hoverable">
+            <div class="col s12 m6">
+                <div class="card-panel card-panel-eql z-depth-2 hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Logging</h4>
                     <form action="/settings/logging" method="POST">
                         <input type="hidden" name="tab" value="1">
                         <input type="hidden" name="logging_update">
                         <div class="row">
-                            <div class="input-field col s12 m12">
+                            <div class="input-field col s12 {{input_color}}">
                                 <select name="length" onchange="this.form.submit()">
                                     <option value="30" {% if logging_settings['logging']['length']==30 %} selected
                                         {% endif %}>30</option>
@@ -38,7 +37,7 @@
                             </div>
                         </div>
                         <div class="row">
-                            <div class="input-field col s12 m12">
+                            <div class="input-field col s12 {{input_color}}">
                                 <select name="level" onchange="this.form.submit()">
                                     {% for level in logging_settings['logging']['log_levels'] %}
                                     {% set level_num = loop.index - 1 %}
@@ -62,8 +61,8 @@
                     </form>
                 </div>
             </div>
-            <div class="col s12 m4">
-                <div class="card-panel card-panel-eql z-depth-2 hoverable">
+            <div class="col s12 m6">
+                <div class="card-panel card-panel-eql z-depth-2 hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Select Time Offset</h4>
                     <h6>System Time: {{logging_settings['system']}}</h6>
                     <h6>Time Offset: {{logging_settings['local']}}</h6>
@@ -72,7 +71,7 @@
                         <input type="hidden" name="tab" value="2">
                         <input type="hidden" name="time_offset_update">
                         <div class="row">
-                            <div class="input-field col s6 m6">
+                            <div class="input-field col s6 {{input_color}}">
                                 <select name="dir_offset">
                                     {% if logging_settings['offset']['direction']=='+'
                                         or logging_settings['offset']['amount']==0 %}
@@ -81,12 +80,12 @@
                                     {% else %}
                                     <option value="+">+</option>
                                     <option value="-" selected>-</option>
-                                    
+
                                     {% endif %}
                                 </select>
                                 <label for="dir_offset">Direction</label>
                             </div>
-                            <div class="input-field col s6 m6">
+                            <div class="input-field col s6 {{input_color}}">
                                 <input type="number" name="time_offset" min="0" max="14" value="{{logging_settings['offset']['amount']}}">
                                 <label for="time_offset">Time Offset</label>
                             </div>

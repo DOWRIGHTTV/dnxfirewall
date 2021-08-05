@@ -16,17 +16,17 @@
         </div>
     </div>
 </section>
-<section id="ips" class="section">
+<section id="ips" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
             <div class="col s12 m6">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Denial Of Service</h4>
                     <form action="/advanced/ips" method="POST">
                         <input type="hidden" name="tab" value="1">
                         <input type="hidden" name="dnx_ddos_update">
                         <div class="row">
-                            <div class="input-field col s12">
+                            <div class="input-field col s12 {{input_color}}">
                                 <p class="range-field">
                                     <input type="range" name="tcp_limit" min="20" max="100"
                                         value="{{ips_settings['ddos']['tcp']}}">
@@ -37,7 +37,7 @@
                             </div>
                         </div>
                         <div class="row">
-                            <div class="input-field col s12">
+                            <div class="input-field col s12 {{input_color}}">
                                 <p class="range-field">
                                     <input type="range" name="udp_limit" min="20" max="100"
                                         value="{{ips_settings['ddos']['udp']}}">
@@ -48,7 +48,7 @@
                             </div>
                         </div>
                         <div class="row">
-                            <div class="input-field col s12">
+                            <div class="input-field col s12 {{input_color}}">
                                 <p class="range-field">
                                     <input type="range" name="icmp_limit" min="20" max="100"
                                         value="{{ips_settings['ddos']['icmp']}}">
@@ -92,7 +92,7 @@
                 </div>
             </div>
             <div class="col s12 m6">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">General Settings</h4>
                     <form action="/advanced/ips" method="POST">
                         <input type="hidden" name="tab" value="1">
@@ -111,7 +111,7 @@
                                     </label>
                                 </div>
                             </div>
-                            <div class="input-field col s6 left">
+                            <div class="input-field col s6 left {{input_color}}">
                                 <select name="passive_block_length" onchange="this.form.submit()">
                                     <option value="0" {% if ips_settings['length']==0 %} selected {% endif %}
                                         >disabled</option>
@@ -134,7 +134,7 @@
                         </noscript>
                     </form>
                 </div>
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Port Scan</h4>
                     <form action="/advanced/ips" method="POST">
                         <input type="hidden" name="tab" value="1">
@@ -198,20 +198,20 @@
         </div>
     </div>
 </section>
-<section id="ips-whitelist" class="section">
+<section id="ips-whitelist" class="section {{main_section_color}}">
     <div class="container">
         <div class="row row-flex">
             <div class="col s8">
-                <div class="card-panel card-panel-eql hoverable">
+                <div class="card-panel card-panel-eql hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add IPS Whitelist</h4>
                     <form action="/advanced/ips" method="POST">
                         <input type="hidden" name="tab" value="2">
                         <div class="row">
-                            <div class="input-field col s4">
+                            <div class="input-field col s4 {{input_color}}">
                                 <input type="text" name="ips_wl_ip" class="validate" placeholder="127.0.0.1" required>
                                 <label for="">IP Address</label>
                             </div>
-                            <div class="input-field col s4">
+                            <div class="input-field col s4 {{input_color}}">
                                 <input type="text" name="ips_wl_name" class="validate" placeholder=dns required>
                                 <label for="">Name</label>
                             </div>
@@ -224,7 +224,7 @@
                 </div>
             </div>
             <div class="col s4">
-                <div class="card-panel card-panel-eql hoverable">
+                <div class="card-panel card-panel-eql hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Includes</h4>
                     <form action="/advanced/ips" method="POST">
                         <input type="hidden" name="tab" value="2">
@@ -254,7 +254,7 @@
                 </div>
             </div>
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Current Whitelist</h4>
                     <table class="striped centered">
                         <thead>
@@ -303,11 +303,11 @@
         </div>
     </div>
 </section>
-<section id="ips-pbl" class="section">
+<section id="ips-pbl" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Passively Blocked Hosts</h4>
                     <table class="striped centered">
                         <thead>

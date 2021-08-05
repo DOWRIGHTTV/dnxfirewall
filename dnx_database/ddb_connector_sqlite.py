@@ -42,16 +42,16 @@ class _DBConnector:
         if (self._data_written):
             self._conn.commit()
 
-            # This should be logged through the logging system. Worst case use simple log if full logging is not easily in reach.
-            if (exc_type):
-                # this shouldnt need to be here if nested under data written since everything that writes to database will
-                # have a Log handler running and passed in. having as a precaution for now.
-                try:
-                    self._Log.error(f'error while writing to database: {exc_val}')
-                except:
-                    pass
-
         self._conn.close()
+
+        # This should be logged through the logging system. Worst case use simple log if full logging is not easily in reach.
+        if (exc_type):
+            # this shouldnt need to be here if nested under data written since everything that writes to database will
+            # have a Log handler running and passed in. having as a precaution for now.
+            try:
+                self._Log.error(f'error while writing to database: {exc_val}')
+            except:
+                write_log(f'error while writing to database: {exc_val}')
 
         return True
 
@@ -211,25 +211,22 @@ class _DBConnector:
         return self._c.fetchall()[:count]
 
     def query_geolocation(self, count, *, action, direction):
-        lim = count + 5 # this will ensure there is always room even if results contain elements that will be filtered
-        if (action in ['allow', 'blocked']):
-            self._c.execute(
-                f'select category from ipproxy where action=? and direction=? group by category order by count(*) desc limit {lim}',
-                (action, direction)
-            )
+        month = ','.join(System.date()[:2])
 
-        elif (action in ['all']):
-            self._c.execute(
-                f'select category from ipproxy where direction=? group by category order by count(*) desc limit {lim}', (direction,)
-            )
+        # adds an extra space to results for 'NONE' which is more common than normal since the geolocation db is not yet complete
+        count += 1
 
-        results = self._c.fetchall()
+        self._c.execute(
+            f'select country, {action} from geolocation where month=? and direction=? '
+            f'order by {action} desc limit {count}', (month, direction)
+        )
 
-        # get correct tor category names. i cant remember them off top since it recently changed.
-        return [x[0] for x in results if x[0].lower() not in ['malicious', 'compromised', 'tor']][:count]
+        # filtering out entries with no hits in the specified action. if those are returned, they have hits on the
+        # opposite action. currently filtering out 'NONE' since the geolocation database is not yet complete.
+        return [x[0].replace('_', ' ') for x in self._c.fetchall() if x[1] and x[0] != 'NONE']
 
     def unique_domain_count(self, *, action):
-        if (action in ['allow', 'blocked']):
+        if (action in ['allowed', 'blocked']):
             self._c.execute(f'select domain, count(*) from dnsproxy where action=? group by domain', (action,))
 
         elif (action in ['all']):
@@ -238,7 +235,7 @@ class _DBConnector:
         return len(self._c.fetchall())
 
     def total_request_count(self, *, table, action):
-        if (action in ['allow', 'blocked']):
+        if (action in ['allowed', 'blocked']):
             self._c.execute(f'select count from {table} where action=?', (action,))
 
         elif (action in ['all']):

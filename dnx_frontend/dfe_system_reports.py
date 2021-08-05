@@ -18,7 +18,7 @@ def load_page(uri_query=None):
     if uri_query is not None and uri_query.get('view_clients', None):
         return load_infected_clients(), 'all', 'infected_clients'
 
-    return get_table_data(action='all', table='dnsproxy', method='last'), 'all',  'dns_proxy'
+    return get_table_data(action='all', table='dnsproxy', method='last'), 'dns_proxy', 'all'
 
 def update_page(form):
     print(form)
@@ -50,18 +50,18 @@ def update_page(form):
 
     #domains blocked, viewed, or both
     if (table_type in ['dns_proxy']):
-        return get_table_data(action, table='dnsproxy', method=sort), action, table_type
+        return get_table_data(action, table='dnsproxy', method=sort), table_type, action # block or allow
 
     elif (table_type in ['ip_proxy']):
-        return get_table_data(action=action, table='ipproxy', method=sort), action, table_type
+        return get_table_data(action=action, table='ipproxy', method=sort), table_type, action
 
     elif (table_type in ['intrusion_prevention']):
-        return get_table_data(action='all', table='ips', method=sort), action, table_type
+        return get_table_data(action='all', table='ips', method=sort), table_type, action
 
     elif (table_type in ['infected_clients'] or 'i_client_remove' in form):
 
         # created function so load page could reuse code.
-        return load_infected_clients(), 'all', 'infected_clients'
+        return load_infected_clients(), 'infected_clients', 'all'
 
 def get_table_data(action, *, table, method, users=None):
     '''will query the database by using getattr(FirewallDB, f'query_{method}') on DB Connector context.
