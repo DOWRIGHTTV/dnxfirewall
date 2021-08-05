@@ -1,32 +1,27 @@
 {
-    "ips": {
-        "passive_block_ttl": 24,
-        "ids_mode": false,
-        "ddos": {
-            "enabled": 0,
-            "limits": {
-                "source": {
-                    "tcp": 100,
-                    "udp": 100,
-                    "icmp": 100
-                }
+    "passive_block_ttl": 24,
+    "ids_mode": false,
+    "ddos": {
+        "enabled": 0,
+        "limits": {
+            "source": {
+                "tcp": 50,
+                "udp": 50,
+                "icmp": 50
             }
-        },
-        "port_scan": {
-            "enabled": false,
-            "reject": false
-        },
-        "open_protocols": {
-            "icmp": false,
-            "tcp": {
-                "2222": "90",
-                "8989": "90"
-            },
-            "udp": {}
-        },
-        "whitelist": {
-            "dns_servers": 0,
-            "ip_whitelist": {}
         }
+    },
+    "port_scan": {
+        "enabled": false,
+        "reject": false
+    },
+    "open_protocols": {
+        "icmp": false,
+        "tcp": {},
+        "udp": {}
+    },
+    "whitelist": {
+        "dns_servers": 0,
+        "ip_whitelist": {}
     }
 }

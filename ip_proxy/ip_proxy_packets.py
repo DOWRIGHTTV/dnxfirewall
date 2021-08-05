@@ -13,8 +13,8 @@ from dnx_iptools.dnx_protocol_tools import checksum_ipv4, checksum_tcp, checksum
 from dnx_configure.dnx_namedtuples import IPP_SRC_INFO, IPP_DST_INFO, IPP_IP_INFO
 
 # definitions for ip proxy data structures. Consider moving to constants module (make name more specific)
-MSB = int(0b11111111111110000000000000000000)
-LSB = int(0b00000000000001111111111111111111)
+MSB = 0b11111111111110000000000000000000
+LSB = 0b00000000000001111111111111111111
 
 
 class IPPPacket(RawPacket):

@@ -4,14 +4,16 @@ import time as _time
 import os as _os
 import sys as _sys
 
+from functools import partial as _partial
+from subprocess import run as _run, DEVNULL as _DEVNULL
 from enum import Enum as _Enum, IntEnum as _IntEnum
 from ipaddress import IPv4Address as _IPv4Address
 
 fast_time  = _time.time
 fast_sleep = _time.sleep
-def write_log(entry):
-    _sys.stdout.write(f'{entry}\n')
-    _sys.stdout.flush()
+
+write_log = _partial(print, flush=True)
+shell = _partial(_run, shell=True, stdout=_DEVNULL, stderr=_DEVNULL)
 
 byte_join = b''.join
 str_join = ''.join
@@ -52,7 +54,7 @@ LOCALHOST  = _IPv4Address('127.0.0.1')
 INADDR_ANY = _IPv4Address('0.0.0.0')
 BROADCAST  = _IPv4Address('255.255.255.255')
 
-# definitions for ip proxy data structures. most/lease significant bit.
+# definitions for ip proxy data structures. most/least significant bit
 MSB = 0b11111111111110000000000000000000
 LSB = 0b00000000000001111111111111111111
 
@@ -65,6 +67,11 @@ class CFG(_IntEnum):
     ADD = 1
     ADD_DEL = 2
     RESTORE = 3
+
+#interface states
+class INTF(_IntEnum):
+    STATIC = 0
+    DHCP = 1
 
 #protocols
 class DNX(_IntEnum):
@@ -92,8 +99,9 @@ class PROTO(_IntEnum):
     DNS_TLS  = 853
 
 SYSLOG_TLS_PORT = 6514
-SYSLOG_SOCKET   = 6969 # LOCAL SOCKET
-DATABASE_SOCKET = 6970 # LOCAL SOCKET
+CONTROL_SOCKET  = 6969 # LOCAL SOCKET
+SYSLOG_SOCKET   = 6970 # LOCAL SOCKET
+DATABASE_SOCKET = 6971 # LOCAL SOCKET
 
 #syslog/logging
 class LOG(_IntEnum):
@@ -240,9 +248,12 @@ LAN_IN = 10
 WAN_IN = 11
 DMZ_IN = 12
 
-SEND_TO_IPS      = 20
-IP_PROXY_DROP    = 25
-SEND_TO_FIREWALL = 30
+SEND_TO_IPS   = 21 # only inspecting wan, so set to wan identifier
+IP_PROXY_DROP = 25
+
+LAN_ZONE_FIREWALL = 30
+WAN_ZONE_FIREWALL = 31
+DMZ_ZONE_FIREWALL = 32
 
 DNS_BIN_OFFSET = 4 # NOTE: 4 seems to be a good compromise of len(bins) vs len(buckets)
 class DNS_CAT(_IntEnum):

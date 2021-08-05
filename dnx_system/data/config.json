@@ -1,50 +1,49 @@
 {
-    "settings": {
-        "auto_loader": false,
-        "flask": {
-            "key": "fZeH-XfuyhmEOfF63lO6xTpiGtnJ598tfHZwv3Pxajw"
+    "auto_loader": false,
+    "flask": {
+        "key": "fZeH-XfuyhmEOfF63lO6xTpiGtnJ598tfHZwv3Pxajw"
+    },
+    "interfaces": {
+        "lan": {
+            "ident": null,
+            "ip": "192.168.83.1",
+            "netmask": "255.255.255.0",
+            "subnet": "192.168.83.0/24"
         },
-        "interfaces": {
-            "lan": {
-                "ident": null,
-                "ip": "192.168.83.1",
-                "netmask": "255.255.255.0",
-                "subnet": "192.168.83.0/24"
-            },
-            "dmz": {
-                "ident": null,
-                "ip": "192.168.84.1",
-                "netmask": "255.255.255.0",
-                "subnet": "192.168.84.0/24"
-            },
-            "wan": {
-                "ident": null,
-                "default_mac": null,
-                "configured_mac": null,
-                "dhcp": true,
-                "mac_set": false
-            }
+        "dmz": {
+            "ident": null,
+            "ip": "192.168.84.1",
+            "netmask": "255.255.255.0",
+            "subnet": "192.168.84.0/24"
         },
-        "mgmt_access": {
-            "lan": {
-                "webui": true,
-                "cli": false,
-                "ssh": false
-            },
-            "dmz": {
-                "webui": true,
-                "cli": false,
-                "ssh": false
-            }
+        "wan": {
+            "ident": null,
+            "default_mac": null,
+            "configured_mac": null,
+            "mac_set": false,
+            "state": 1
+        }
+    },
+    "mgmt_access": {
+        "lan": {
+            "webui": true,
+            "cli": false,
+            "ssh": false
+        },
+        "dmz": {
+            "webui": true,
+            "cli": false,
+            "ssh": false
         }
     },
     "services": {
         "dnx-dns-proxy": "domain filter/server with local cache",
         "dnx-ip-proxy": "bi-directional ip filter",
         "dnx-ips": "dos and portscan mitigation",
-        "dnx-dhcp-server": "allocates ip addresses",
+        "dnx-dhcp-server": "allocate ip addresses",
         "dnx-log": "log cleanup and aggregation",
         "dnx-syslog": "send system or event logs over the network",
-        "dnx-database-sqlite": "security event management"
+        "dnx-database-sqlite": "security event management",
+        "dnx-syscontrol": "proxy for system level commands"
     }
 }

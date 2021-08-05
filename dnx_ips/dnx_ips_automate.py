@@ -14,7 +14,7 @@ from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-impo
 from dnx_configure.dnx_system_info import Interface
 from dnx_iptools.dnx_standard_tools import looper, dynamic_looper, Initialize
 from dnx_configure.dnx_file_operations import load_configuration, cfg_read_poller
-from dnx_configure.dnx_iptables import IPTableManager
+from dnx_configure.dnx_iptables import IPTablesManager
 from dnx_ips.dnx_ips_log import Log
 
 
@@ -34,8 +34,7 @@ class Configuration:
         self = cls(IPS.__name__)
         self.IPS = IPS
 
-        self._load_interfaces()
-        self._manage_ip_tables()
+        self._reset_passive_blocking()
         threading.Thread(target=self._get_settings).start()
         threading.Thread(target=self._get_open_ports).start()
         threading.Thread(target=self._update_system_vars).start()
@@ -44,19 +43,14 @@ class Configuration:
 
         threading.Thread(target=self._clear_ip_tables).start()
 
-    def _manage_ip_tables(self):
-        IPTableManager.purge_proxy_rules(table='mangle', chain='IPS')
-
-    def _load_interfaces(self):
-        dnx_settings = load_configuration('config')['settings']
-
-        wan_ident = dnx_settings['interfaces']['wan']['ident']
-
-        self.IPS.broadcast = Interface.broadcast_address(wan_ident)
+    # this resets any passively blocked hosts in the system on startup. persisting this
+    # data through service or system restarts is not really worth the energy.
+    def _reset_passive_blocking(self):
+        IPTablesManager.purge_proxy_rules(table='raw', chain='IPS')
 
     @cfg_read_poller('ips')
     def _get_settings(self, cfg_file):
-        ips = load_configuration(cfg_file)['ips']
+        ips = load_configuration(cfg_file)
 
         self.IPS.ids_mode = ips['ids_mode']
 
@@ -71,16 +65,15 @@ class Configuration:
         self.IPS.portscan_prevention = ips['port_scan']['enabled']
         self.IPS.portscan_reject = ips['port_scan']['reject']
 
-        # checking length(hours) to leave IP Table Rules in place for hosts part of ddos attacks
         if (self.IPS.ddos_prevention and not self.IPS.ids_mode):
+
+            # checking length(hours) to leave IP table rules in place for hosts part of ddos attacks
+            self.IPS.block_length = ips['passive_block_ttl'] * ONE_HOUR
 
             # NOTE: this will provide a simple way to ensure very recently blocked hosts do not get their
             # rule removed if passive blocking is disabled.
             if (not self.IPS.block_length):
                 self.IPS.block_length = FIVE_MIN
-
-            else:
-                self.IPS.block_length = ips['passive_block_ttl'] * ONE_HOUR
 
         # if ddos engine is disabled
         else:
@@ -96,7 +89,7 @@ class Configuration:
     # the setting set in the decorator or remove the decorator entirely.
     @cfg_read_poller('ips')
     def _get_open_ports(self, cfg_file):
-        ips = load_configuration(cfg_file)['ips']
+        ips = load_configuration(cfg_file)
 
         self.IPS.open_ports = {
             PROTO.TCP: {
@@ -148,7 +141,7 @@ class Configuration:
 
         # TODO: look into a method that isnt linearly complext to clear firewall rules. its expected to be
         # somewhat small so its not terrible as is.
-        with IPTableManager() as iptables:
+        with IPTablesManager() as iptables:
             for tracked_ip, insertion_time in list(firewall_rules.items()):
                 if (now - insertion_time > block_length) and firewall_rules.pop(tracked_ip, None):
-                    iptables.proxy_del_rule(tracked_ip, table='mangle', chain='IPS')
+                    iptables.proxy_del_rule(tracked_ip, table='raw', chain='IPS')

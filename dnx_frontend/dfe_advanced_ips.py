@@ -15,7 +15,7 @@ from dnx_configure.dnx_exceptions import ValidationError
 from dnx_configure.dnx_system_info import Services
 
 def load_page():
-    ips = load_configuration('ips.json')['ips']
+    ips = load_configuration('ips.json')
 
     passive_block_ttl = ips['passive_block_ttl']
     ids_mode = ips['ids_mode']
@@ -41,19 +41,15 @@ def load_page():
     ip_whitelist = ips['whitelist']['ip_whitelist']
     dns_server_whitelist = ips['whitelist']['dns_servers']
 
-    ips_enabled = bool(ddos_enabled or portscan_prevention)
+    ips_enabled = ddos_enabled or portscan_prevention
 
     # TODO: clean this shit up.
     tcp_nat = ips['open_protocols']['tcp']
     udp_nat = ips['open_protocols']['udp']
 
     nats_configured = tcp_nat or udp_nat
-    if (not nats_configured):
-        ddos_notify = True if not ddos_enabled else False
-        ps_notify = True if not portscan_prevention else False
-    else:
-        ddos_notify = False
-        ps_notify = False
+    ddos_notify = False if ddos_enabled or nats_configured else True
+    ps_notify   = False if portscan_prevention or nats_configured else True
 
     ips_settings = {
         'enabled': ips_enabled, 'length': passive_block_ttl, 'ids_mode': ids_mode,
@@ -106,8 +102,9 @@ def update_page(form):
         if (not passive_block_length):
             return INVALID_FORM
 
+        pb_length = validate.convert_int(passive_block_length)
         try:
-            pb_length = validate.ips_passive_block_length(passive_block_length)
+            validate.ips_passive_block_length(pb_length)
         except ValidationError as ve:
            return ve
         else:
@@ -125,7 +122,7 @@ def update_page(form):
         except ValidationError as ve:
             return ve
         else:
-            configure.update_ips_ip_whitelist(whitelist_ip, whitelist_name, CFG.ADD)
+            configure.update_ips_ip_whitelist(whitelist_ip, whitelist_name, action=CFG.ADD)
 
     elif ('ips_wl_remove' in form):
         whitelist_ip = form.get('ips_wl_ip', None)
@@ -137,7 +134,7 @@ def update_page(form):
         except ValidationError as ve:
             return ve
         else:
-            configure.update_ips_ip_whitelist(whitelist_ip, None, CFG.DEL)
+            configure.update_ips_ip_whitelist(whitelist_ip, None, action=CFG.DEL)
 
     elif ('ips_wl_dns' in form):
         action = CFG.ADD if 'dns_enabled' in form else CFG.DEL

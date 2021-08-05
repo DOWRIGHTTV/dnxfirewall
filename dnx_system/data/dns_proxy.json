@@ -1,94 +1,96 @@
 {
-    "dns_proxy": {
-        "keyword": {
-            "enabled": []
-        },
-        "categories": {
-            "default": {
-                "malicious": {
-                    "enabled": true,
-                    "keyword": false
-                },
-                "cryptominer": {
-                    "enabled": true,
-                    "keyword": false
-                },
-                "telemetry": {
-                    "enabled": true,
-                    "keyword": false
-                },
-                "ads": {
-                    "enabled": false,
-                    "keyword": false
-                },
-                "vpn": {
-                    "enabled": false,
-                    "keyword": false
-                },
-                "mature": {
-                    "enabled": false,
-                    "keyword": false
-                },
-                "pornography": {
-                    "enabled": false,
-                    "keyword": false
-                },
-                "drugs": {
-                    "enabled": false,
-                    "keyword": false
-                },
-                "weapons": {
-                    "enabled": false,
-                    "keyword": false
-                },
-                "socialmedia": {
-                    "enabled": false,
-                    "keyword": false
-                },
-                "p2p": {
-                    "enabled": false,
-                    "keyword": false
-                },
-                "gambling": {
-                    "enabled": false,
-                    "keyword": false
-                },
-                "videogames": {
-                    "enabled": false,
-                    "keyword": false
-                },
-                "purchases": {
-                    "enabled": false,
-                    "keyword": false
-                },
-                "remotelogin": {
-                    "enabled": false,
-                    "keyword": false
-                },
-                "downloads": {
-                    "enabled": false,
-                    "keyword": false
-                }
+    "keyword": {
+        "enabled": []
+    },
+    "categories": {
+        "default": {
+            "malicious": {
+                "enabled": true,
+                "keyword": false
             },
-            "user_defined": {}
+            "cryptominer": {
+                "enabled": true,
+                "keyword": false
+            },
+            "telemetry": {
+                "enabled": true,
+                "keyword": false
+            },
+            "ads": {
+                "enabled": false,
+                "keyword": false
+            },
+            "vpn": {
+                "enabled": false,
+                "keyword": false
+            },
+            "mature": {
+                "enabled": false,
+                "keyword": false
+            },
+            "pornography": {
+                "enabled": false,
+                "keyword": false
+            },
+            "drugs": {
+                "enabled": false,
+                "keyword": false
+            },
+            "weapons": {
+                "enabled": false,
+                "keyword": false
+            },
+            "socialmedia": {
+                "enabled": false,
+                "keyword": false
+            },
+            "dyndns": {
+                "enabled": false,
+                "keyword": false
+            },
+            "p2p": {
+                "enabled": false,
+                "keyword": false
+            },
+            "gambling": {
+                "enabled": false,
+                "keyword": false
+            },
+            "videogames": {
+                "enabled": false,
+                "keyword": false
+            },
+            "purchases": {
+                "enabled": false,
+                "keyword": false
+            },
+            "remotelogin": {
+                "enabled": false,
+                "keyword": false
+            },
+            "downloads": {
+                "enabled": false,
+                "keyword": false
+            }
         },
-        "tlds": {
-            ".ru": false,
-            ".cn": false,
-            ".xxx": false,
-            ".porn": false,
-            ".adult": false,
-            ".ads": true,
-            ".click": true,
-            ".download": true,
-            ".top": true,
-            ".loan": true,
-            ".work": true,
-            ".men": true,
-            ".cf": true,
-            ".gq": true,
-            ".ml": true,
-            ".ga": true
-        }
+        "user_defined": {}
+    },
+    "tlds": {
+        ".ru": true,
+        ".cn": true,
+        ".xxx": false,
+        ".porn": false,
+        ".adult": false,
+        ".ads": true,
+        ".click": true,
+        ".download": true,
+        ".top": true,
+        ".loan": true,
+        ".work": true,
+        ".men": true,
+        ".cf": true,
+        ".gq": true,
+        ".ml": true,
+        ".ga": true
     }
 }

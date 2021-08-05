@@ -78,14 +78,18 @@ class IPProxy(NFQueue):
 
     @classmethod
     def forward_packet(cls, nfqueue, zone, action=CONN.ACCEPT):
-        if (zone == WAN_IN and action is CONN.DROP):
-            nfqueue.set_mark(IP_PROXY_DROP)
+        if (zone == LAN_IN):
+            nfqueue.set_mark(LAN_ZONE_FIREWALL)
 
-        elif (zone in [LAN_IN, DMZ_IN]):
-            nfqueue.set_mark(SEND_TO_FIREWALL)
+        elif(zone == DMZ_IN):
+            nfqueue.set_mark(DMZ_ZONE_FIREWALL)
 
         elif (zone == WAN_IN):
-            nfqueue.set_mark(SEND_TO_IPS)
+            if (action is CONN.DROP):
+                nfqueue.set_mark(IP_PROXY_DROP)
+
+            else:
+                nfqueue.set_mark(SEND_TO_IPS)
 
         # NOTE: this is to protect the repeat if no match. probably log??
         else:
@@ -204,7 +208,7 @@ class Inspect:
 
         return False
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     ip_cat_signatures, geoloc_signatures = Configuration.load_ip_signature_bitmaps()
 
     # using cython function factory to create binary search function with module specific signatures

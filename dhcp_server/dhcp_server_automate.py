@@ -51,7 +51,7 @@ class Configuration:
 
     @cfg_read_poller('dhcp_server')
     def _get_settings(self, cfg_file):
-        dhcp_settings = load_configuration(cfg_file)['dhcp_server']
+        dhcp_settings = load_configuration(cfg_file)
 
         # updating user configuration items per interface in memory.
         for settings in dhcp_settings['interfaces'].values():
@@ -80,7 +80,7 @@ class Configuration:
 
     @cfg_read_poller('dhcp_server')
     def _get_server_options(self, cfg_file):
-        dhcp_settings = load_configuration(cfg_file)['dhcp_server']
+        dhcp_settings = load_configuration(cfg_file)
         server_options = dhcp_settings['options']
         interfaces = dhcp_settings['interfaces']
 
@@ -128,7 +128,7 @@ class Configuration:
     # loading user configured dhcp reservations from json config file into memory.
     @cfg_read_poller('dhcp_server')
     def _get_reservations(self, cfg_file):
-        dhcp_settings = load_configuration(cfg_file)['dhcp_server']
+        dhcp_settings = load_configuration(cfg_file)
 
         # dict comp that retains all info of stored json data, but converts ip address into objects
         self.DHCPServer.reservations = {
@@ -163,10 +163,8 @@ class Configuration:
 
     # accessing class object via local instance to change overall DHCP server enabled ints tuple
     def _load_interfaces(self):
-        fw_settings     = load_configuration('config')['settings']
-        server_settings = load_configuration('dhcp_server')['dhcp_server']
-        fw_intf = fw_settings['interfaces']
-        dhcp_intfs = server_settings['interfaces']
+        fw_intf = load_configuration('config')['interfaces']
+        dhcp_intfs = load_configuration('dhcp_server')['interfaces']
 
         # interface ident eg. eth0
         for intf in self.DHCPServer._intfs:
@@ -252,7 +250,7 @@ class Leases(dict):
     def _storage(self, dhcp_lease):
         with ConfigurationManager('dhcp_server') as dnx:
             dhcp_settings = dnx.load_configuration()
-            leases = dhcp_settings['dhcp_server']['leases']
+            leases = dhcp_settings['leases']
 
             if (dhcp_lease.record is _NULL_LEASE):
                 leases.pop(dhcp_lease.ip, None)
@@ -267,7 +265,7 @@ class Leases(dict):
         # print('[+] Loading leases from file.')
         dhcp_settings = load_configuration('dhcp_server')
 
-        stored_leases = dhcp_settings['dhcp_server']['leases']
+        stored_leases = dhcp_settings['leases']
         self.update({
             IPv4Address(ip): lease_info for ip, lease_info in stored_leases.items()
         })

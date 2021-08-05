@@ -29,10 +29,10 @@
                             <div class="input-field col s6 m4">
                                 <select name="zone" onchange="this.form.submit()">
                                     {% for zone in zones %}
-                                        {% if zone == selected[:-10] %}
-                                        <option value="{{zone}}_INTERFACE" selected>{{zone}}</option>
+                                        {% if zone == selected[:-5] %}
+                                        <option value="{{zone}}_ZONE" selected>{{zone}}</option>
                                         {% else %}
-                                        <option value="{{zone}}_INTERFACE">{{zone}}</option>
+                                        <option value="{{zone}}_ZONE">{{zone}}</option>
                                         {% endif %}
                                     {% endfor %}
                                 </select>
@@ -106,7 +106,7 @@
             </div>
             <div class="col s12">
                 <div class="card-panel hoverable">
-                    <h4 class="{{title_color}}">Rule List ({{selected[:-10]}})</h4>
+                    <h4 class="{{title_color}}">Rule List ({{selected[:-5]}})</h4>
                         <table class="striped centered">
                             <thead>
                                 <tr>
@@ -191,7 +191,7 @@
                         <div class="row">
                             <div class="input-field col offset-m1 s3 m2">
                                 <select name="dst_zone" id="" disabled>
-                                    <option value="DMZ">DMZ</option>
+                                    <option value="dmz">DMZ</option>
                                 </select>
                                 <label for="">Dst Zone</label>
                             </div>
@@ -234,6 +234,7 @@
                                         <input type="hidden" name="zone" value="{{selected}}">
                                         <input type="hidden" name="nat_type" value="DSTNAT">
                                         <input type="hidden" name="position" value="{{i}}">
+                                        <input type="hidden" name="proto_port" value="{{rule['-p']}}/{{rule['--dport']}}">
                                         <button class="btn-floating btn-small waves-effect waves-light red" name="action" value="remove">
                                             <i class="material-icons">remove</i>
                                         </button>
@@ -299,7 +300,7 @@
                             </div>
                             <div class="input-field col s3 m2">
                                 <select name="dst_zone" id="" disabled>
-                                    <option value="WAN_INTERFACE">WAN</option>
+                                    <option value="wan">WAN</option>
                                 </select>
                                 <label for="">Dst Zone</label>
                             </div>

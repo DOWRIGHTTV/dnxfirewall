@@ -5,9 +5,9 @@
         <div class="row">
             <div class="col s12">
                 <ul class="tabs">
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='1' %} class="active" {% endif %} 
+                    <li class="{{tab_classes}}"><a {% if tab=='1' %} class="active" {% endif %}
                         href="#ips" onclick="activeTab(1)">IPS/IDS</a></li>
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='2' %} class="active" {% endif %}
+                    <li class="{{tab_classes}}"><a {% if tab=='2' %} class="active" {% endif %}
                         href="#ips-whitelist" onclick="activeTab(2)">Whitelist</a></li>
                 </ul>
             </div>
@@ -17,7 +17,7 @@
 <section id="ips" class="section">
     <div class="container">
         <div class="row">
-            <div class="col s12 m5 offset-m1">
+            <div class="col s12 m6">
                 <div class="card-panel hoverable">
                     <h4 class="{{title_color}}">Denial Of Service</h4>
                     <form action="/advanced/ips" method="POST">
@@ -48,7 +48,7 @@
                         <div class="row">
                             <div class="input-field col s12">
                                 <p class="range-field">
-                                    <input type="range" name="icmp_limit" min="20" max="100" 
+                                    <input type="range" name="icmp_limit" min="20" max="100"
                                         value="{{ips_settings['ddos']['icmp']}}">
                                     <label for="icmp_limit">ICMP Source Limit (packets/sec) | Current:
                                         {{ips_settings['ddos']['icmp']}}
@@ -57,7 +57,7 @@
                             </div>
                         </div>
                         <div class="row">
-                            <div class="input-field col s6 center">
+                            <div class="input-field col s7 center">
                                 <div class="switch">
                                     <label>
                                         Disabled
@@ -68,7 +68,7 @@
                                     </label>
                                 </div>
                             </div>
-                            <div class="input-field col s6 m4 offset-m1">
+                            <div class="input-field col s4">
                                 {% if ips_settings['ddos_notify'] %}
                                 <a class="waves-effect waves-light btn modal-trigger col s12" href="#ips-modal1">Update</a>
                                 <div id="ips-modal1" class="modal">
@@ -89,7 +89,7 @@
                     </form>
                 </div>
             </div>
-            <div class="col s12 m5">
+            <div class="col s12 m6">
                 <div class="card-panel hoverable">
                     <h4 class="{{title_color}}">General Settings</h4>
                     <form action="/advanced/ips" method="POST">
