@@ -237,7 +237,7 @@ def syslog_settings(syslog_settings):
         if ('tcp_fallback' in tls_settings):
             raise ValidationError('TLS must be enabled before TCP fallback.')
 
-def ip_proxy_settings(ip_hosts_settings, *, ruleset='categories'):
+def ip_proxy_settings(ip_hosts_settings, *, ruleset='reputation'):
     ip_proxy = load_configuration('ip_proxy')
 
     valid_categories = ip_proxy[ruleset]

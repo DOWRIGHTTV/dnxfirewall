@@ -365,7 +365,7 @@ def update_ips_dns_whitelist(action):
 
         dnx.write_configuration(ips_settings)
 
-def update_ip_proxy_settings(category_settings, *, ruleset='categories'):
+def update_ip_proxy_settings(category_settings, *, ruleset='reputation'):
     with ConfigurationManager('ip_proxy') as dnx:
         ip_proxy_settings = dnx.load_configuration()
 
