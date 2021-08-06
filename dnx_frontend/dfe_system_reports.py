@@ -73,6 +73,7 @@ def get_table_data(action, *, table, method, users=None):
     # NOTE: this is code to make newer ip proxy categorization backwards compatible.
     ##############################################
     if (table == 'ipproxy'):
+        table_data = [list(x) for x in table_data]
         for entry in table_data:
             if ('/' in entry[2]): continue
 
