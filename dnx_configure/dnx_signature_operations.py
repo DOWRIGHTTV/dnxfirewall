@@ -170,7 +170,7 @@ def _merge_geo_ranges(ls):
 
     # adding odd one out to merged container
     if (not merged_item or merged_item[-1] != l):
-        merged_containers.append(merged_item)
+        merged_containers.append(tuple(merged_item))
 
     # converting bin to tuple here. this should reduce list comprehension complexity on return.
     return tuple(merged_containers)
