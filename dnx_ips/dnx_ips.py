@@ -191,6 +191,9 @@ class Inspect:
         elapsed_time = packet.timestamp - tracked_ip['initial']
         if (elapsed_time < 2): return False
 
+        # NOTE: temporary while in WIP
+        Log.debug(f'[ddos/cps] {tracked_ip["count"]/elapsed_time}')
+
         protocol_src_limit = self._IPS.connection_limits[packet.protocol]
         if (tracked_ip['count']/elapsed_time < protocol_src_limit): return False
 
