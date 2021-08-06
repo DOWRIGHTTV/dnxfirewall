@@ -181,7 +181,7 @@ def write_net_config(interface_configs):
     # removing configuration set during install.
     os.remove('/etc/netplan/00-installer-config.yaml')
 
-    dnx_run('netplan apply')
+#    dnx_run('netplan apply')
 
 # modifying dnx configuration files with user specified interface names and their corresponding zones
 def set_dnx_interfaces(user_intf_config):
