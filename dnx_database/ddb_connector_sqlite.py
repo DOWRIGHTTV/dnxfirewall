@@ -314,6 +314,7 @@ class _DBConnector:
         self._c.execute(
             'create table if not exists geolocation '
             '(month not null, country not null, '
+            'direction not null, '
             'blocked int4 not null, '
             'allowed int4 not null)'
         )
