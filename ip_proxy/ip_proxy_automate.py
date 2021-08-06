@@ -85,7 +85,7 @@ class Configuration:
     def _get_ip_whitelist(self, cfg_file):
         whitelist = load_configuration(cfg_file)
 
-        whitelist = whitelist['ip_whitelist']
+        whitelist = whitelist['ip_bypass']
         self.IPProxy.ip_whitelist = {
             ip for ip, wl_info in whitelist.items() if wl_info['type'] == 'ip'
         }
