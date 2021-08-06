@@ -174,7 +174,7 @@ class Configuration:
         if (modified_time == last_modified_time):
             return last_modified_time
 
-        loaded_list = load_configuration(cfg_file)['domain']
+        loaded_list = load_configuration(cfg_file)['time_based']
 
         self._modify_memory(memory_list, loaded_list, action=CFG.ADD)
 
@@ -211,7 +211,7 @@ class Configuration:
 
     def _modify_ip_whitelist(self, cfg_file):
         memory_ip_list = self.DNSProxy.whitelist.ip
-        loaded_ip_list = load_configuration(cfg_file)['ip_whitelist']
+        loaded_ip_list = load_configuration(cfg_file)['ip_bypass']
 
         # iterating over ip rules in memory.
         for ip in memory_ip_list.copy():
@@ -246,7 +246,7 @@ class Configuration:
         with ConfigurationManager(cfg_file) as dnx:
             lists = dnx.load_configuration()
 
-            loaded_list = lists['domain']
+            loaded_list = lists['time_based']
             for domain, info in loaded_list.copy().items():
                 if (now < info['expire']): continue
 
@@ -262,8 +262,8 @@ class Configuration:
         # NOTE: old method of created combined signature file and loaded seperately
         signature_operations.combine_domains(Log)
 
-        wl_exceptions = load_configuration('whitelist')['exception']
-        bl_exceptions = load_configuration('blacklist')['exception']
+        wl_exceptions = load_configuration('whitelist')['pre_proxy']
+        bl_exceptions = load_configuration('blacklist')['pre_proxy']
 
         return load_dns_bitmap(Log, bl_exc=bl_exceptions, wl_exc=wl_exceptions)
 
