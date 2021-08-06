@@ -222,16 +222,22 @@ def configure_user_account(account_info, action):
 
         dnx.write_configuration(accounts)
 
-def set_proxy_exception(exception_settings, *, ruleset):
+def set_proxy_exception(exc_settings, *, ruleset):
     with ConfigurationManager(ruleset) as dnx:
         exceptions_list = dnx.load_configuration()
 
-        exceptions = exceptions_list['exception']
-        if (exception_settings['action'] is CFG.ADD):
-            exceptions[exception_settings['domain']]['reason'] = exception_settings['reason']
+        proxy_exceptions = exceptions_list['pre_proxy']
 
-        elif (exception_settings['action'] is CFG.DEL):
-            exceptions.pop(exception_settings['domain'])
+        action = exc_settings.pop('action')
+        if (action is CFG.ADD):
+
+            proxy_exceptions[exc_settings['domain']] = exc_settings['reason']
+
+        elif (action is CFG.DEL):
+            result = proxy_exceptions.pop(exc_settings['domain'], None)
+
+            # no need to write to disk if domain was already removed.
+            if (result is None): return
 
         dnx.write_configuration(exceptions_list)
 
@@ -273,17 +279,17 @@ def update_custom_category_domain(category, domain, reason=None, *, action):
         dnx.write_configuration(custom_category_domains)
 
 # adds a time based rule to whitelist/blacklist
-def add_proxy_domain(whitelist_settings, *, ruleset):
+def add_proxy_domain(settings, *, ruleset):
     input_time  = int(fast_time())
-    expire_time = input_time + whitelist_settings['timer'] * 60
+    expire_time = input_time + settings['timer'] * 60
 
     with ConfigurationManager(ruleset) as dnx:
         domain_list = dnx.load_configuration()
 
-        domain_list['domain'].update({
-            whitelist_settings['domain']: {
+        domain_list['time_based'].update({
+            settings['domain']: {
                 'time': input_time,
-                'rule_length': whitelist_settings['timer'],
+                'rule_length': settings['timer'],
                 'expire': expire_time
             }
         })
@@ -294,7 +300,7 @@ def del_proxy_domain(domain, *, ruleset):
     with ConfigurationManager(ruleset) as dnx:
         domain_list = dnx.load_configuration()
 
-        result = domain_list['domain'].pop(domain, None)
+        result = domain_list['time_based'].pop(domain, None)
 
         # if domain was not present (likely removed in another process), there is
         # no need to write file to disk
@@ -317,7 +323,7 @@ def add_proxy_ip_whitelist(whitelist_settings):
     with ConfigurationManager('whitelist') as dnx:
         whitelist = dnx.load_configuration()
 
-        whitelist['ip_whitelist'][whitelist_settings['ip']] = {
+        whitelist['ip_bypass'][whitelist_settings['ip']] = {
             'user': whitelist_settings['user'],
             'type': whitelist_settings['type']
         }
@@ -328,7 +334,7 @@ def del_proxy_ip_whitelist(whitelist_ip):
     with ConfigurationManager('whitelist') as dnx:
         whitelist = dnx.load_configuration()
 
-        result = whitelist['ip_whitelist'].pop(whitelist_ip, None)
+        result = whitelist['ip_bypass'].pop(whitelist_ip, None)
 
         # if ip was not present (likely removed in another process), there is
         # no need to write file to disk
@@ -359,7 +365,7 @@ def update_ips_dns_whitelist(action):
 
         dnx.write_configuration(ips_settings)
 
-def update_ip_proxy_settings(category_settings, *, ruleset='categories'):
+def update_ip_proxy_settings(category_settings, *, ruleset='reputation'):
     with ConfigurationManager('ip_proxy') as dnx:
         ip_proxy_settings = dnx.load_configuration()
 

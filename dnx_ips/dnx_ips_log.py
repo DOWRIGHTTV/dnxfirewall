@@ -45,21 +45,21 @@ class Log(LogHandler):
     def _generate_ps_log(cls,  pkt, scan_info):
         # will match if open ports are contained in pre detection logging (port was hit before flagged)
         if (scan_info.initial_block and scan_info.block_status in [IPS.LOGGED, IPS.MISSED]
-                and cls.current_lvl >= LOG.WARNING):
+                and cls.current_lvl >= LOG.ERROR):
 
             log = IPS_LOG(pkt.conn.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, scan_info.block_status.name) # pylint: disable=no-member
 
             cls.debug(f'[pscan/scan detected][{scan_info.block_status.name}] {pkt.conn.tracked_ip}')
 
-            return LOG.WARNING, log
+            return LOG.ERROR, log
 
         # will match if open ports are not contained in pre detection logging (port was hit before flagged)
-        elif (scan_info.initial_block and scan_info.block_status is IPS.BLOCKED and cls.current_lvl >= LOG.NOTICE):
+        elif (scan_info.initial_block and scan_info.block_status is IPS.BLOCKED and cls.current_lvl >= LOG.WARNING):
             log = IPS_LOG(pkt.conn.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, 'blocked') # pylint: disable=no-member
 
             cls.debug(f'[pscan/scan detected][blocked] {pkt.conn.tracked_ip}')
 
-            return LOG.NOTICE, log
+            return LOG.WARNING, log
 
         return LOG.NONE, None
 

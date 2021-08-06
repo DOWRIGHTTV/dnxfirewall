@@ -1,15 +1,15 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="why-me" class="section">
+<section id="why-me" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Create Backup</h4>
                     <div class="row">
                         <form action="/system/backups" method="POST">
                         <input type="hidden" name="active" value="1">
-                            <div class="input-field col s6 l4">
+                            <div class="input-field col s6 l4 {{input_color}}">
                                 <input type="text" name="backup_name" class="validate" placeholder="main_config">
                                 <label for="">Name</label>
                             </div>
@@ -22,7 +22,7 @@
                 </div>
             </div>
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <div class="row">
                         <div class="col s8 l9">
                             <h4 class="{{title_color}}">Configuration Backups</h4>
@@ -30,7 +30,7 @@
                         <div class="col s3">
                             <form action="/system/backups" method="POST">
                                 <div class="input-field col s12">
-                                    <a class="waves-effect waves-light btn modal-trigger s12" href="#bck-modal1-1">Restore Defaults</a>
+                                    <a class="btn modal-trigger waves-effect waves-light" href="#bck-modal1-1">Restore Defaults</a>
                                     <div id="bck-modal1-1" class="modal">
                                         <div class="modal-content">
                                             <h5 class="red-text center">Are you sure you want to restore default configurations? Any
@@ -64,7 +64,7 @@
                                 {% for backup, c_time in current_backups.items() %}
                                 <tr>
                                     <td>
-                                        <a class="btn-floating btn-medium red waves-effect waves-light modal-trigger" href="#bck-modal3-{{loop.index}}">
+                                        <a class="btn-floating btn-medium modal-trigger red waves-effect waves-light" href="#bck-modal3-{{loop.index}}">
                                             <i class="material-icons">remove</i>
                                         </a>
                                         <div id="bck-modal3-{{loop.index}}" class="modal">

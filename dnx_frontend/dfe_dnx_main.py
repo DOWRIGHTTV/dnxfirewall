@@ -14,7 +14,7 @@ sys.path.insert(0, HOME_DIR)
 
 import dnx_configure.dnx_validate as validate
 
-from dnx_configure.dnx_constants import CFG, FIVE_SEC
+from dnx_configure.dnx_constants import CFG, FIVE_SEC, DATA
 from dnx_configure.dnx_file_operations import load_configuration, ConfigurationManager
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_database.ddb_connector_sqlite import DBConnector
@@ -307,7 +307,8 @@ def system_reports(dnx_session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
         'menu': '1', 'table': '1',
-        'uri_path': ['system', 'reports']
+        'uri_path': ['system', 'reports'],
+        'table_types': ['dns_proxy', 'ip_proxy', 'intrusion_prevention', 'infected_clients']
     }
 
     page_settings.update(dnx_session_data)
@@ -405,9 +406,9 @@ def system_shutdown(dnx_session_data):
 # removing user from session dict then removing them from locally stored session tracker to allow
 # for cross session awareness of users/accts logged in.
 def dnx_logout(dnx_session_data):
-    username = session.pop('username', None)
-    if (username):
-        update_session_tracker(username, action=CFG.DEL)
+    user = session.pop('user', None)
+    if (user):
+        update_session_tracker(user, action=CFG.DEL)
 
     return redirect(url_for('dnx_login'))
 
@@ -428,14 +429,14 @@ def dnx_blocked():
     # more as it is possible to do a sql injection here if the validations below are bypassed.
     blocked_domain = request.args.get('dom', None)
     if (not blocked_domain):
-        session.pop('username', None)
+        session.pop('user', None)
 
         return render_template('dnx_not_authorized.html', **page_settings)
 
     try:
         validate.domain(blocked_domain)
     except ValidationError:
-        session.pop('username', None)
+        session.pop('user', None)
 
         return render_template('dnx_not_authorized.html', **page_settings)
 
@@ -443,7 +444,7 @@ def dnx_blocked():
         domain_info = ProxyDB.query_blocked(domain=blocked_domain, src_ip=request.remote_addr)
 
     if (not domain_info):
-        session.pop('username', None)
+        session.pop('user', None)
 
         return render_template('dnx_not_authorized.html', **page_settings)
 
@@ -465,8 +466,9 @@ def dnx_login():
     if (request.method == 'POST'):
         authenticated, username, user_role = Authentication.user_login(request.form, request.remote_addr)
         if (authenticated):
-            session['username'] = username
-            # session['expire_time'] = time.time() + 30
+            session['user'] = {
+                'name': username, 'role': user_role, 'remote_addr': request.remote_addr, 'dark_mode': 0
+            }
 
             update_session_tracker(username, user_role, request.remote_addr)
 
@@ -474,19 +476,8 @@ def dnx_login():
 
         login_error = 'Invalid Credentials. Please try again.'
 
-    return render_template('dnx_login.html', navi=True, login_btn=False, idle_timeout=False,
+    return render_template('dnx_login.html', navi=False, login_btn=False, idle_timeout=False,
         standard_error=False, login_error=login_error, uri_path=['login'])
-
-# @app.route('/license_agreement', methods=['GET', 'POST'])
-# @user_restrict('user', 'admin')
-# def license_agreement(dnx_session_data):
-#     page_settings = {
-#         'navi': True, 'idle_timeout': False
-#     }
-
-#     page_settings.update(dnx_session_data)
-
-#     return render_template('license_agreement.html', **page_settings)
 
 ## --------------------------------------------- ##
 ## --------------------------------------------- ##
@@ -498,7 +489,7 @@ def main():
 # all standard page loads use this logic to decide the page action/ call the correct
 # lower level functions residing in each pages Class
 def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
-    if (request.method == 'POST' and 'extend_session_timer' not in request.form):
+    if (request.method == 'POST'):
         tab = request.form.get('tab', '1')
 
         try:
@@ -522,10 +513,13 @@ def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
     return render_template(f'{page_name}.html', **page_settings)
 
 def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name):
-    if (request.method == 'POST' and 'extend_session_timer' not in request.form):
+    if (request.method == 'POST'):
         tab = request.form.get('tab', '1')
 
-        error, selected, page_data = dnx_page.update_page(request.form)
+        try:
+            error, selected, page_data = dnx_page.update_page(request.form)
+        except OSError as ose:
+            return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
 
         page_settings.update({
             'tab': tab,
@@ -542,23 +536,32 @@ def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name):
 def log_page_logic(log_page, page_settings, *, page_name):
     # can now accept redirects from other places on the webui to load specific tables directly on load
     # using uri queries
+
     if (request.method == 'GET'):
-        table_data, menu_option, table = log_page.load_page(request.args)
+        request_data, handler = request.args, log_page.load_page
 
     elif (request.method == 'POST'):
-        table_data, menu_option, table = log_page.update_page(request.form)
+        request_data, handler = request.form, log_page.update_page
+
+    try:
+        table_data, table, menu_option = handler(request_data)
+    except OSError as ose:
+        return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
 
     page_settings.update({
         'table_data': table_data,
-        'menu': menu_option,
-        'table': table
+        'table': table,
+        'menu': menu_option
     })
 
     return render_template(f'{page_name}.html', **page_settings)
 
 def categories_page_logic(update_page, page_settings):
     if (request.method == 'POST'):
-        error, menu_option = update_page(request.form)
+        try:
+            error, menu_option = update_page(request.form)
+        except OSError as ose:
+            return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
 
         tab = request.form.get('tab', '1')
         menu_option = request.form.get('menu', '1')
@@ -609,7 +612,7 @@ def update_session_tracker(username, user_role=None, remote_addr=None, *, action
 
         if (action is CFG.ADD):
             stored_tracker['active_users'][username] = {
-                'user_role': user_role,
+                'role': user_role,
                 'remote_addr': remote_addr,
                 'logged_in': time.time(), # NOTE: can probably make this human readable format here.
                 'last_seen': None
@@ -619,6 +622,54 @@ def update_session_tracker(username, user_role=None, remote_addr=None, *, action
             stored_tracker['active_users'].pop(username, None)
 
         session_tracker.write_configuration(stored_tracker)
+
+# checks form data for a color mode change and writes and configures accordingly. otherwise will load
+# the current dark mode setting for the active user and set flask.session['dark_mode] accordingly.
+@app.before_request
+def dark_mode():
+    '''
+    the configured value will be stored as session['dark_mode'] so it can be accessed directly by the
+    Flask template context.
+    '''
+    # dark mode settings will only apply to logged in users.
+    # NOTE: username validations are still required lower down to deal with log in/out transitions.
+    user = session.get('user', None)
+    if (not user):
+        return
+
+    dark_mode_update = request.args.get('dark_mode_update', DATA.MISSING)
+    # this ensure value conforms to system before configuring
+    if (dark_mode_update is not DATA.MISSING):
+        try:
+            dark_mode = CFG(validate.convert_int(dark_mode_update))
+        except:
+            return
+
+        with ConfigurationManager('logins', file_path='/dnx_frontend/data') as webui:
+            webui_settings = webui.load_configuration()
+
+            active_users = webui_settings['users']
+
+            # this check prevents issues with log in/out transitions
+            if (user['name'] not in active_users):
+                return
+
+            active_users[user['name']]['dark_mode'] = dark_mode
+
+            webui.write_configuration(webui_settings)
+
+    # standard request for page. did NOT submit dark mode fab.
+    else:
+        webui_settings = load_configuration('logins', filepath='dnx_frontend/data')
+
+        # this check prevents issues with log in/out transitions
+        user = webui_settings['users'].get(user['name'])
+        if (not user):
+            return
+
+        dark_mode = user['dark_mode']
+
+    session['dark_mode'] = dark_mode
 
 @app.before_request
 def user_timeout():

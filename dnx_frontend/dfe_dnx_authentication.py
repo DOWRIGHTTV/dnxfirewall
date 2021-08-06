@@ -121,23 +121,29 @@ def user_restrict(*authorized_roles):
         @wraps(function_to_wrap)
         def wrapper(*args):
             # will redirect to login page if user is not logged in
-            username = session.get('username', None)
+            user = session.get('user', None)
+            if not user:
+                return redirect(url_for('dnx_login'))
 
+            # NOTE: this is dnx local tracking of sessions. not to be confused with flask session tracking. they
+            # are essentially copies of eachother, but dnx is used to track all active sessions.
+            # NOTE: currently, dnx session data limits connections to 1 per user. this may change in the future, but
+            # some enterprise systems have similar restrictions or multiple tab restrictions.
             session_tracker = load_configuration('session_tracker', filepath='dnx_frontend/data')['active_users']
-            # NOTE: this is dnx local tracking of sessions. not to be confused with flask session tracking
-            dnx_session_data = session_tracker.get(username)
-            if not dnx_session_data or dnx_session_data['remote_addr'] != request.remote_addr:
+
+            dnx_session_data = session_tracker.get(user['name'])
+            if (not dnx_session_data or dnx_session_data['remote_addr'] != request.remote_addr):
                 return redirect(url_for('dnx_login'))
 
             # will redirect to not authorized page if the user role does not match
             # requirements for the page
             # user_role = Authentication.get_user_role(username) # NOTE: should be depricated by dnx session tracker
-            if (dnx_session_data['user_role'] not in authorized_roles):
-                session.pop('username', None)
+            if (dnx_session_data['role'] not in authorized_roles):
+                session.pop('user', None)
 
                 return render_template('dnx_not_authorized.html', navi=True, login_btn=True, idle_timeout=False)
 
-            dnx_session_data['username'] = username
+            dnx_session_data[user['name']] = user
 
             # flask page function
             page_action = function_to_wrap(dnx_session_data)

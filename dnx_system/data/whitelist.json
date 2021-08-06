@@ -1,5 +1,5 @@
 {
-    "domain": {},
-    "exception": {},
-    "ip_whitelist": {}
+    "time_based": {},
+    "pre_proxy": {},
+    "ip_bypass": {}
 }

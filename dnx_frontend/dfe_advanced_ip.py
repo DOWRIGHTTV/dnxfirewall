@@ -16,7 +16,7 @@ from dnx_configure.dnx_exceptions import ValidationError
 def load_page():
     ip_proxy = load_configuration('ip_proxy')
 
-    categories  = ip_proxy['categories']
+    categories  = ip_proxy['reputation']
     geolocation = ip_proxy['geolocation']
 
     tr_settings = ip_proxy['time_restriction']

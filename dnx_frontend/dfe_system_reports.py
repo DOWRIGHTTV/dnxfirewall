@@ -8,33 +8,22 @@ from flask import Flask, render_template, redirect, url_for, request, session
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
+from dnx_configure.dnx_constants import DATA
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_system_info import Interface, System, Services
 from dnx_database.ddb_connector_sqlite import DBConnector
 
-def load_page(uri_query):
+def load_page(uri_query=None):
     # if sent from dashboard link, infected clients table will open directly.
-    if uri_query.get('view_clients', None):
-        return load_infected_clients()
+    if uri_query is not None and uri_query.get('view_clients', None):
+        return load_infected_clients(), 'all', 'infected_clients'
 
-    return get_table_data(action='blocked', table='dnsproxy', method='last'), '1', '1'
+    return get_table_data(action='all', table='dnsproxy', method='last'), 'dns_proxy', 'all'
 
 def update_page(form):
-    table_type = form.get('table', 'db_time')
-    selected_num = {
-        'db_time': '1', 'db_count': '2', 'dv_time': '3', 'dv_count': '4',
-        'ad_time': '5', 'ad_count': '6',
-
-        'iph_block_time':'7',  'iph_view_time':'8',  'iph_all_time':'9',
-
-        'ips_time':'10',
-        'ic_all': '11'
-    }
-
+    print(form)
     # TODO: bring validation up to speed (ensure host is valid mac format). make database raise validation error if the when removing
-    # a client that isnt present in the db. this means some tomfoolery happened and we should return
-    # invalid form error.
-    menu_option = selected_num.get(table_type, '1')
+    # a client that isnt present in the db. this means some tomfoolery happened and we should return invalid form error.
     if ('i_client_remove' in form):
         infected_client = form.get('infected_client', None)
         detected_host = form.get('detected_host', None)
@@ -46,33 +35,33 @@ def update_page(form):
 
             FirewallDB.commit_entries()
 
-    if (table_type in ['db_time', 'db_count', 'iph_block_time']):
-        action = 'blocked'
+    # if form is invalid, will just resend default data for now.
+    try:
+        table_type, sort = form.get('table', DATA.INVALID).split('/')
+    except:
+        return load_page()
 
-    elif (table_type in ['dv_time', 'dv_count', 'iph_view_time']):
-        action = 'allowed'
+    if (sort not in ['last', 'top']):
+        return load_page()
 
-    elif (table_type in ['ad_time', 'ad_count', 'iph_all_time']):
-        action = 'all'
+    action = form.get('menu', DATA.INVALID)
+    if (action is DATA.INVALID):
+        return load_page()
 
     #domains blocked, viewed, or both
-    if (table_type in ['db_time', 'dv_time', 'ad_time']):
-        return get_table_data(action, table='dnsproxy', method='last'), menu_option, '1'
+    if (table_type in ['dns_proxy']):
+        return get_table_data(action, table='dnsproxy', method=sort), table_type, action # block or allow
 
-    #domains blocked, viewed, or both
-    elif (table_type in ['db_count', 'dv_count', 'ad_count']):
-        return get_table_data(action, table='dnsproxy', method='top'), menu_option, '1'
+    elif (table_type in ['ip_proxy']):
+        return get_table_data(action=action, table='ipproxy', method=sort), table_type, action
 
-    elif (table_type in ['iph_block_time', 'iph_view_time', 'iph_all_time']):
-        return get_table_data(action=action, table='ipproxy', method='last'), menu_option, '2'
+    elif (table_type in ['intrusion_prevention']):
+        return get_table_data(action='all', table='ips', method=sort), table_type, action
 
-    elif (table_type in ['ips_time']):
-        return get_table_data(action='all', table='ips', method='last'), menu_option, '3'
-
-    elif (table_type in ['ic_all'] or 'i_client_remove' in form):
+    elif (table_type in ['infected_clients'] or 'i_client_remove' in form):
 
         # created function so load page could reuse code.
-        return load_infected_clients()
+        return load_infected_clients(), 'infected_clients', 'all'
 
 def get_table_data(action, *, table, method, users=None):
     '''will query the database by using getattr(FirewallDB, f'query_{method}') on DB Connector context.
@@ -80,6 +69,16 @@ def get_table_data(action, *, table, method, users=None):
     with DBConnector() as FirewallDB:
         query_method = getattr(FirewallDB, f'query_{method}')
         table_data = query_method(100, table=table, action=action)
+
+    # NOTE: this is code to make newer ip proxy categorization backwards compatible.
+    ##############################################
+    if (table == 'ipproxy'):
+        table_data = [list(x) for x in table_data]
+        for entry in table_data:
+            if ('/' in entry[2]): continue
+
+            entry[2] = '/'.join([entry[2], 'dnl'])
+    ##############################################
 
     return [format_row(row, users) for row in table_data]
 
@@ -102,4 +101,4 @@ def load_infected_clients():
     dhcp_server = load_configuration('dhcp_server')
     users = dhcp_server['reservations']
 
-    return get_table_data(action='all', table='infectedclients', method='last', users=users), '11', '4'
+    return get_table_data(action='all', table='infectedclients', method='last', users=users)

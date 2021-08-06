@@ -4,19 +4,19 @@
     <div class="container">
         <div class="row">
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Create User</h4>
                     <form action="/system/users" method="POST">
                         <div class="row">
-                            <div class="input-field col s4">
+                            <div class="input-field col s4 {{input_color}}">
                                 <input type="text" name="user_acct" class="validate" placeholder=admin required>
                                 <label for="">Username</label>
                             </div>
-                            <div class="input-field col s4">
+                            <div class="input-field col s4 {{input_color}}">
                                 <input type="password" name="user_password" class="validate" placeholder="password" required>
                                 <label for="">Password (minimum 8 chars)</label>
                             </div>
-                            <div class="input-field col s4">
+                            <div class="input-field col s4 {{input_color}}">
                                 <select name="user_role" id="">
                                     <option value="admin">admin</option>
                                     <option value="user">user</option>
@@ -34,7 +34,7 @@
                 </div>
             </div>
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Configured Users</h4>
                     <table class="striped centered">
                         <thead>

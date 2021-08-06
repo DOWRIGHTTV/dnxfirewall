@@ -201,10 +201,6 @@ class _Defaults:
         shell(f'iptables -t nat -A POSTROUTING -o {self._wan_int} -j MASQUERADE')
 
 
-
-
-
-
 class IPTablesManager:
     ''' This is the IP Table rule adjustment manager. if class is called in as a context manager, all method calls
     must be ran in the context where the class instance itself is returned as the object. Changes as part of a context
@@ -346,6 +342,9 @@ class IPTablesManager:
     def delete_nat(self, rule):
         shell(f'sudo iptables -t nat -D {rule.nat_type} {rule.position}')
 
+    def remove_passive_block(self, host_ip, timestamp):
+        shell(f'sudo iptables -t raw -D IPS -s {host_ip} -j DROP -m comment --comment {timestamp}')
+
     @staticmethod
     # this allows forwarding through system, required for SNAT/MASQUERADE to work.
     def network_forwarding():
@@ -365,27 +364,27 @@ class IPTablesManager:
         shell(f'sudo iptables -t {table} -F {chain}')
 
     @staticmethod
-    def proxy_add_rule(ip_address, *, table, chain):
-        '''inject ip table rules into the sent in table and chain. the ip_address argument will be blocked
-        as a source or destination of traffic. both rules are sharing a single os.system call.'''
-        _system(
-            f'sudo iptables -t {table} -A {chain} -s {ip_address} -j DROP && '
-            f'sudo iptables -t {table} -A {chain} -d {ip_address} -j DROP'
-        )
+    def proxy_add_rule(ip_address, timestamp, *, table, chain):
+        '''inject iptable rule into the specified table and chain. the ip_address argument will be blocked
+        as a source and timestamp will be set as a comment.'''
+
+        comment = f'-m comment --comment {timestamp}'
+
+        _system(f'sudo iptables -t {table} -A {chain} -s {ip_address} -j DROP {comment}')
 
         # NOTE: this should be removed one day
-        write_log(f'RULE INSERTED: {ip_address} | {fast_time()}')
+        # write_log(f'RULE INSERTED: {ip_address} | {fast_time()}')
 
     @staticmethod
-    def proxy_del_rule(ip_address, *, table, chain):
-        '''remove ip table rules from sent in table and chain. both rules are sharing a single os.system call.'''
-        _system(
-            f'sudo iptables -t {table} -D {chain} -s {ip_address} -j DROP && '
-            f'sudo iptables -t {table} -D {chain} -d {ip_address} -j DROP'
-        )
+    def proxy_del_rule(ip_address, timestamp, *, table, chain):
+        '''remove iptable rule from specified table and chain.'''
+
+        comment = f'-m comment --comment {timestamp}'
+
+        _system(f'sudo iptables -t {table} -D {chain} -s {ip_address} -j DROP {comment}')
 
         # NOTE: this should be removed one day
-        write_log(f'RULE REMOVED: {ip_address} | {fast_time()}')
+        # write_log(f'RULE REMOVED: {ip_address} | {fast_time()}')
 
     @staticmethod
     def update_dns_over_https():

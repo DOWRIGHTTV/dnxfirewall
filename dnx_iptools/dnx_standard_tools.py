@@ -151,7 +151,7 @@ def dnx_queue(Log, name=None):
         # methods inherently. if that is the case does @classmethod decorator need to be on initial method?
         def wrapper(*args):
             if (Log):
-                Log.debug(f'{name}/dnx_queue started.')
+                Log.informational(f'{name}/dnx_queue started.')
 
             while True:
                 job_wait()

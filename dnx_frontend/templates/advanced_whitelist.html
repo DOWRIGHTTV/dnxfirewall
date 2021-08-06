@@ -16,20 +16,20 @@
         </div>
     </div>
 </section>
-<section id="whitelists" class="section">
+<section id="whitelists" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add Whitelist</h4>
                     <form action="/advanced/whitelist" method="POST">
                         <input type="hidden" name="tab" value="1">
                         <div class="row">
-                            <div class="input-field col s4 l3">
+                            <div class="input-field col s4 l3 {{input_color}}">
                                 <input type="text" name="domain" class="validate" placeholder=google.com required>
                                 <label for="">Domain</label>
                             </div>
-                            <div class="input-field col s4 l3">
+                            <div class="input-field col s4 l3 {{input_color}}">
                                 <input type="text" name="rule_length" class="validate" placeholder="60" required>
                                 <label for="">Rule Life (Minutes)</label>
                             </div>
@@ -42,7 +42,7 @@
                 </div>
             </div>
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Active Rules</h4>
                     <table class="striped centered">
                         <thead>
@@ -54,8 +54,8 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% if whitelist_settings['domain_whitelist'] %}
-                            {% for domain, info in whitelist_settings['domain_whitelist'].items() %}
+                            {% if whitelist_settings['time_based'] %}
+                            {% for domain, info in whitelist_settings['time_based'].items() %}
                             <tr>
                                 <td>
                                     <a class="btn-floating btn-small waves-effect waves-light red modal-trigger"
@@ -93,20 +93,20 @@
         </div>
     </div>
 </section>
-<section id="exceptions" class="section">
+<section id="exceptions" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add Override</h4>
                     <form action="/advanced/whitelist" method="POST">
                         <input type="hidden" name="tab" value="2">
                         <div class="row">
-                            <div class="input-field col s4 l3">
+                            <div class="input-field col s4 l3 {{input_color}}">
                                 <input type="text" name="domain" class="validate" placeholder="google.com" required>
                                 <label for="">Domain</label>
                             </div>
-                            <div class="input-field col s4 l3">
+                            <div class="input-field col s4 l3 {{input_color}}">
                                 <input type="text" name="reason" class="validate" placeholder="entertainment" required>
                                 <label for="">Reason</label>
                             </div>
@@ -118,7 +118,7 @@
                 </div>
             </div>
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Active Overrides</h4>
                     <table class="striped centered">
                         <thead>
@@ -129,15 +129,15 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% if whitelist_settings['exceptions'] %}
-                            {% for domain, value in whitelist_settings['exceptions'].items() %}
+                            {% if whitelist_settings['pre_proxy'] %}
+                            {% for domain, value in whitelist_settings['pre_proxy'].items() %}
                             <tr>
                                 <td">
                                     <a class="btn-floating btn-small waves-effect waves-light red modal-trigger"
                                         href="#wl-modal2-{{loop.index}}"><i class="material-icons">remove</i></a>
                                     <div id="wl-modal2-{{loop.index}}" class="modal">
                                         <div class="modal-content">
-                                            <h5 class="red-text center">Are you sure you want to remove the whitelist rule? Service restart is required to take effect.
+                                            <h5 class="red-text center">Are you sure you want to remove the override? Service restart is required to take effect.
                                             </h5>
                                         </div>
                                         <form action="/advanced/whitelist" method="POST">
@@ -168,27 +168,27 @@
         </div>
     </div>
 </section>
-<section id="ip-whitelist" class="section">
+<section id="ip-whitelist" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add IP Address</h4>
                     <form action="/advanced/whitelist" method="POST">
                         <input type="hidden" name="tab" value="3">
                         <div class="row">
-                            <div class="input-field col s5 offset-s1 l3">
+                            <div class="input-field col s5 offset-s1 l3 {{input_color}}">
                                 <input type="text" name="ip_wl_ip" class="validate" placeholder="127.0.0.1" required>
                                 <label for="">IP Address</label>
                             </div>
-                            <div class="input-field col s5 l3">
+                            <div class="input-field col s5 l3 {{input_color}}">
                                 <select name="ip_wl_type" id="">
                                     <option value="global">GLOBAL</option>
                                     <option value="tor">TOR</option>
                                 </select>
                                 <label for="ip_wl_type">Type</label>
                             </div>
-                            <div class="input-field col s5 offset-s1 l3">
+                            <div class="input-field col s5 offset-s1 l3 {{input_color}}">
                                 <input type="text" name="ip_wl_user" class="validate" placeholder=Jessica required>
                                 <label for="">User</label>
                             </div>
@@ -201,7 +201,7 @@
                 </div>
             </div>
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Active Rules</h4>
                     <table class="striped centered">
                         <thead>
@@ -213,15 +213,15 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% if whitelist_settings['ip_whitelist'] %}
-                            {% for ip_address, info in whitelist_settings['ip_whitelist'].items() %}
+                            {% if whitelist_settings['ip_bypass'] %}
+                            {% for ip_address, info in whitelist_settings['ip_bypass'].items() %}
                             <tr>
                                 <td>
                                     <a class="waves-effect waves-light btn modal-trigger"
                                         href="#wl-modal3-{{loop.index}}"><i class="material-icons">remove</i></a>
                                     <div id="wl-modal3-{{loop.index}}" class="modal">
                                         <div class="modal-content">
-                                            <h5 class="red-text center">Are you sure you want to remove the IP whitelist?
+                                            <h5 class="red-text center">Are you sure you want to remove the category bypass for this IP?
                                             </h5>
                                         </div>
                                         <form action="/advanced/whitelist" method="POST">

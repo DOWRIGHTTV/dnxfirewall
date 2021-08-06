@@ -161,7 +161,10 @@ def _dnat_rules(zone, action, form):
 
     elif (action == 'add'):
         try:
+            # checking all required fields are present and some other basic rules are followed
+            # before validating values of standard fields.
             validate.add_dnat_rule(fields)
+
             if (fields.protocol in ['tcp', 'udp']):
                 validate.network_port(fields.dst_port)
                 validate.network_port(fields.host_port)
