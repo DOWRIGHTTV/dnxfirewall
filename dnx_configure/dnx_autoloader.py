@@ -79,10 +79,6 @@ def check_already_ran():
 
         eprint('dnxfirewall auto loader has already been completed. exiting...')
 
-# installing net tools if not already present
-# def check_net_tools():
-#     dnx_run('sudo apt install net-tools -y', 'installing net-tools')
-
 #----------------------------
 # PROGRESS BAR
 #----------------------------
@@ -231,8 +227,6 @@ def install_packages():
 
     commands = [
         ('sudo apt install python3-pip -y', 'setting up python3'),
-#        ('sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 0', None),
-#        ('sudo update-alternatives --set python3 /usr/bin/python3.8', None),
         ('pip3 install flask uwsgi', 'installing python web app framework'),
         ('sudo apt install nginx -y', 'installing web server driver'),
         ('sudo apt install libnetfilter-queue-dev net-tools -y', 'installing networking components'),
@@ -377,7 +371,6 @@ if __name__ == '__main__':
     check_run_as_root()
     check_dnx_user()
     check_clone_location()
-    # check_net_tools()
 
     # intiializing log module which is required when using ConfigurationManager
     Log.run(
