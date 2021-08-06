@@ -19,14 +19,14 @@ from dnx_configure.dnx_system_info import System
 def load_page():
     whitelist = load_configuration('whitelist')
 
-    for domain, info in whitelist['domain'].items():
+    for domain, info in list(whitelist['time_based'].items()):
         st_offset = System.calculate_time_offset(info['time'])
 
-        domain['time'] = System.format_date_time(st_offset)
+        whitelist[domain]['time'] = System.format_date_time(st_offset)
 
     whitelist_settings = {
-        'domain_whitelist': whitelist['domain'], 'exceptions': whitelist['exception'],
-        'ip_whitelist':  whitelist['ip_whitelist']
+        'time_based': whitelist['time_based'], 'pre_proxy': whitelist['pre_proxy'],
+        'ip_bypass':  whitelist['ip_bypass']
     }
 
     return whitelist_settings

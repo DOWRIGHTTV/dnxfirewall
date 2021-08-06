@@ -54,8 +54,8 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% if whitelist_settings['domain_whitelist'] %}
-                            {% for domain, info in whitelist_settings['domain_whitelist'].items() %}
+                            {% if whitelist_settings['time_based'] %}
+                            {% for domain, info in whitelist_settings['time_based'].items() %}
                             <tr>
                                 <td>
                                     <a class="btn-floating btn-small waves-effect waves-light red modal-trigger"
@@ -129,15 +129,15 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% if whitelist_settings['exceptions'] %}
-                            {% for domain, value in whitelist_settings['exceptions'].items() %}
+                            {% if whitelist_settings['pre_proxy'] %}
+                            {% for domain, value in whitelist_settings['pre_proxy'].items() %}
                             <tr>
                                 <td">
                                     <a class="btn-floating btn-small waves-effect waves-light red modal-trigger"
                                         href="#wl-modal2-{{loop.index}}"><i class="material-icons">remove</i></a>
                                     <div id="wl-modal2-{{loop.index}}" class="modal">
                                         <div class="modal-content">
-                                            <h5 class="red-text center">Are you sure you want to remove the whitelist rule? Service restart is required to take effect.
+                                            <h5 class="red-text center">Are you sure you want to remove the override? Service restart is required to take effect.
                                             </h5>
                                         </div>
                                         <form action="/advanced/whitelist" method="POST">
@@ -213,15 +213,15 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% if whitelist_settings['ip_whitelist'] %}
-                            {% for ip_address, info in whitelist_settings['ip_whitelist'].items() %}
+                            {% if whitelist_settings['ip_bypass'] %}
+                            {% for ip_address, info in whitelist_settings['ip_bypass'].items() %}
                             <tr>
                                 <td>
                                     <a class="waves-effect waves-light btn modal-trigger"
                                         href="#wl-modal3-{{loop.index}}"><i class="material-icons">remove</i></a>
                                     <div id="wl-modal3-{{loop.index}}" class="modal">
                                         <div class="modal-content">
-                                            <h5 class="red-text center">Are you sure you want to remove the IP whitelist?
+                                            <h5 class="red-text center">Are you sure you want to remove the category bypass for this IP?
                                             </h5>
                                         </div>
                                         <form action="/advanced/whitelist" method="POST">
