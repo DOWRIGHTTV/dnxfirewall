@@ -70,6 +70,15 @@ def get_table_data(action, *, table, method, users=None):
         query_method = getattr(FirewallDB, f'query_{method}')
         table_data = query_method(100, table=table, action=action)
 
+    # NOTE: this is code to make newer ip proxy categorization backwards compatible.
+    ##############################################
+    if (table == 'ipproxy'):
+        for entry in table_data:
+            if ('/' in entry[2]): continue
+
+            entry[2] = '/'.join([entry[2], 'dnl'])
+    ##############################################
+
     return [format_row(row, users) for row in table_data]
 
 def format_row(row, users):
