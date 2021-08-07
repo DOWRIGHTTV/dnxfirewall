@@ -114,10 +114,14 @@ def cidr(cidr):
     if (cidr not in range(0,33)):
         raise ValidationError('Netmask must be in range 0-32.')
 
+# NOTE: split + iter is to support port ranges. limiting split to 1 to prevent 1:2:3 from being marked as valid.
 def network_port(port):
-    port = convert_int(port)
-    if (port not in range(0,65536)):
-        raise ValidationError('TCP/UDP port must be in range 1-65535.')
+    ports = port.split(':', 1)
+    for port in ports:
+
+        port = convert_int(port)
+        if (port not in range(1,65536)):
+            raise ValidationError('TCP/UDP port must be in range 1-65535.')
 
 def timer(timer):
     timer = convert_int(timer)
