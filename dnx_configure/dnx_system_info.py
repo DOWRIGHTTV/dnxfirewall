@@ -324,9 +324,10 @@ class System:
         for rule in output[2:]:
 
             modified_rule = [x for i, x in enumerate(rule.split()) if i not in [3, 6]]
-            # if ports are specified, it will be parsed then replaced with new value
+            # if ports are specified, it will be parsed then replaced with new value. after split
+            # either 80 or 80:90 is possible format becuase of restricted split count.
             if (len(modified_rule) == 6):
-                modified_rule[-1] = modified_rule[-1].lstrip('dpt:')
+                modified_rule[-1] = modified_rule[-1].split(':', 1)[1]
 
             elif (modified_rule[2] in ['icmp', 'all']):
                 modified_rule.append('N/A')
