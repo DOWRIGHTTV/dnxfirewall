@@ -75,21 +75,21 @@ class IPProxy(NFQueue):
                 packet.nfqueue.set_mark(SEND_TO_IPS)
 
             # send back through with new mark.
-            nfqueue.repeat()
+            packet.nfqueue.repeat()
 
         elif (action is CONN.DROP):
             if (zone == LAN_IN):
-                nfqueue.drop()
+                packet.nfqueue.drop()
 
             elif (zone == DMZ_IN):
-                nfqueue.drop()
+                packet.nfqueue.drop()
 
             # packets blocked on WAN will be deferred to the IPS to drop the packet. This
             # allows the IPS to inspect it for denial of service or port scanner profiling.
             elif (zone == WAN_IN):
-                nfqueue.set_mark(IP_PROXY_DROP)
+                packet.nfqueue.set_mark(IP_PROXY_DROP)
 
-                nfqueue.repeat()
+                packet.nfqueue.repeat()
 
             # if tcp or udp, we will send a kill conn packet.
             if (packet.protocol in [PROTO.TCP, PROTO.UDP]):
