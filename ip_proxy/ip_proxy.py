@@ -93,7 +93,7 @@ class IPProxy(NFQueue):
 
             # if tcp or udp, we will send a kill conn packet.
             if (packet.protocol in [PROTO.TCP, PROTO.UDP]):
-                _prepare_and_send(packet)
+                cls._prepare_and_send(packet)
 
 
 class Inspect:
