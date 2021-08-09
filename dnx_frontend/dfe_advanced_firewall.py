@@ -109,7 +109,7 @@ def _firewall_rules(zone, action, form):
         try:
             validate.add_firewall_rule(fields)
             if (fields.dst_port):
-                validate.network_port(fields.dst_port)
+                validate.network_port(fields.dst_port, port_range=True)
 
             if (fields.src_ip):
                 validate.ip_address(fields.src_ip)

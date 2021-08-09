@@ -127,7 +127,7 @@ def network_port(port, port_range=False):
         additional = ''
 
     if (len(ports) == 2):
-        if (port[0] >= port[1]):
+        if (ports[0] >= ports[1]):
             raise ValidationError('Invalid range, the start value must be less than the end. ex. 9001:9002')
 
     for port in ports:
