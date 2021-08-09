@@ -377,6 +377,24 @@ def update_ip_proxy_settings(category_settings, *, ruleset='reputation'):
 
         dnx.write_configuration(ip_proxy_settings)
 
+
+def update_geolocation(region, *, rtype='country'):
+    with ConfigurationManager('ip_proxy') as dnx:
+        ip_proxy_settings = dnx.load_configuration()
+
+        country_list = ip_proxy_settings['geolocation']
+
+        # setting individual country to user set value
+        if (rtype == 'country'):
+            country_list[region['country']] = region['direction']
+
+        # iterating over all countries within specified continent and setting their
+        # direction as the user set value # TODO: implement this
+        elif (rtype == 'continent'):
+            pass
+
+        dnx.write_configuration(ip_proxy_settings)
+
 def set_dns_keywords(action):
     with ConfigurationManager('dns_proxy') as dnx:
         keyword_settings = dnx.load_configuration()

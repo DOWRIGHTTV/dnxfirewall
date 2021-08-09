@@ -677,8 +677,18 @@ def user_timeout():
     app.permanent_session_lifetime = timedelta(minutes=30)
     session.modified = True
 
-## SETUP LOGGING CLASS
-Log.run(name=LOG_NAME)
+# jinja filters
+
+@app.template_filter('truncate')
+def truncate(string, limit):
+    '''returns string[:limit]... if greater than limit, otherwise original string will be returned.'''
+
+    string = f'{string[:limit]}...' if len(string) > limit else string
+
+    return string
 
 if __name__ == '__main__':
-   app.run(debug=True)
+    app.run(debug=True)
+
+    ## SETUP LOGGING CLASS
+    Log.run(name=LOG_NAME)

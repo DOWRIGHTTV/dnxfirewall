@@ -67,7 +67,7 @@ nav .brand-logo {
   font-size: 2.1rem;
   padding: 0; }
 
-/* navigation menu type size/pizel adjusmtnet override */
+/* navigation menu type size and pixel adjusmtnet override */
 @media only screen and (max-width: 1550px) {
     .remove-big-menu {
         display: none !important; } }
@@ -75,3 +75,21 @@ nav .brand-logo {
 @media only screen and (max-width: 1549px) {
     .show-mobile-menu {
         display: block !important; } }
+
+/* icon color change */
+i.icon-red {
+    color: red;
+}
+
+i.icon-green {
+    color: green;
+}
+
+i.icon-blue {
+    color: blue;
+}
+
+/* ipp selector */
+.select-wrapper {
+    position: absolute;
+}

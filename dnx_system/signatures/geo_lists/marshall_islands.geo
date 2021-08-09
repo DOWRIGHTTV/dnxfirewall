@@ -1,0 +1,15 @@
+103.202.148.0/22 marshall_islands
+104.28.18.143/32 marshall_islands
+104.28.18.144/32 marshall_islands
+104.28.29.75/32 marshall_islands
+104.28.29.76/32 marshall_islands
+104.28.35.88/31 marshall_islands
+104.28.72.24/31 marshall_islands
+104.28.84.93/32 marshall_islands
+104.28.84.94/32 marshall_islands
+104.28.100.89/32 marshall_islands
+104.28.100.90/32 marshall_islands
+104.28.102.89/32 marshall_islands
+104.28.102.90/32 marshall_islands
+117.103.88.0/21 marshall_islands
+203.78.152.0/22 marshall_islands

@@ -1,0 +1,9 @@
+104.28.18.115/32 cook_islands
+104.28.18.116/32 cook_islands
+104.28.29.39/32 cook_islands
+104.28.29.40/32 cook_islands
+104.28.35.46/31 cook_islands
+104.28.72.2/31 cook_islands
+104.28.90.50/31 cook_islands
+104.28.125.50/31 cook_islands
+202.65.32.0/19 cook_islands

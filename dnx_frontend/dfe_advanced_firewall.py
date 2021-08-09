@@ -154,10 +154,10 @@ def _dnat_rules(zone, action, form):
             error = ve
 
         else:
-            configure.del_open_wan_protocol(fields)
-
             with IPTablesManager() as iptables:
                 iptables.delete_nat(fields)
+
+                configure.del_open_wan_protocol(fields)
 
     elif (action == 'add'):
         try:
@@ -177,10 +177,10 @@ def _dnat_rules(zone, action, form):
         except ValidationError as ve:
             error = ve
         else:
-            configure.add_open_wan_protocol(fields)
-
             with IPTablesManager() as iptables:
                 iptables.add_nat(fields)
+
+                configure.add_open_wan_protocol(fields)
 
     else:
         return INVALID_FORM, zone
