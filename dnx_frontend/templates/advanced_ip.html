@@ -22,7 +22,7 @@
             <div class="col s12 m8 offset-m2">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Reputation</h4>
-                    <form action="/advanced/ip" method="post">
+                    <form method="POST">
                         <input type="hidden" name="tab" value="1">
                         <input type="hidden" name="ip_hosts_update">
                         <div class="row">
@@ -80,7 +80,7 @@
             <div class="col s12">
                 {% for continent, info in ip_settings['country_map'].items() %}
                 <div class="card-panel hoverable {{card_color}}">
-                    <h5 class="{{title_color}}">{{continent}}</h5>
+                    <h5 class="{{title_color}}">{{continent.title()}}</h5>
                     {% for country in info['countries'] %}
                     {% if loop.first or not loop.index % 6 %}<div class="row">{% endif %}
                     {% set enabled = ip_settings['geolocation'][country] %}

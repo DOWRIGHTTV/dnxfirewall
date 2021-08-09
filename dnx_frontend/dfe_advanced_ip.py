@@ -69,7 +69,7 @@ def update_page(form):
         else:
             configure.update_ip_proxy_settings(category_settings)
 
-    if ('country' in form):
+    elif ('country' in form):
         country_setting = {k: form.get(k, DATA.INVALID) for k in ['country', 'direction']}
 
         if (DATA.INVALID in country_setting.values()):
@@ -83,17 +83,8 @@ def update_page(form):
         else:
             configure.update_geolocation(country_setting, rtype='country')
 
-    elif ('geo_lists_update' in form):
-        country_settings = form.getlist('countries', None)
-        if (not country_settings):
-            return INVALID_FORM
-
-        try:
-            validate.ip_proxy_settings(country_settings, ruleset='geolocation')
-        except ValidationError as ve:
-            return ve
-        else:
-            configure.update_ip_proxy_settings(country_settings, ruleset='geolocation')
+    elif ('continent' in form):
+        return 'Bulk actions are still in development.'
 
     elif ('time_res_update' in form):
         hour    = form.get('hour', None)
