@@ -115,13 +115,26 @@ def cidr(cidr):
         raise ValidationError('Netmask must be in range 0-32.')
 
 # NOTE: split + iter is to support port ranges. limiting split to 1 to prevent 1:2:3 from being marked as valid.
-def network_port(port):
-    ports = port.split(':', 1)
+def network_port(port, port_range=False):
+    '''validates network ports 1-65535 or a range of 1-65535:1-65535'''
+
+    if (port_range):
+        ports = [convert_int(p) for p in port.split(':', 1)]
+        additional = ' or a range of 1-65535:1-65535 '
+
+    else:
+        ports = [port]
+        additional = ''
+
+    if (len(ports) == 2):
+        if (ports[0] >= ports[1]):
+            raise ValidationError('Invalid range, the start value must be less than the end. ex. 9001:9002')
+
     for port in ports:
 
         port = convert_int(port)
         if (port not in range(1,65536)):
-            raise ValidationError('TCP/UDP port must be in range 1-65535.')
+            raise ValidationError(f'TCP/UDP port must be between 1-65535{additional}.')
 
 def timer(timer):
     timer = convert_int(timer)
@@ -257,6 +270,20 @@ def ip_proxy_settings(ip_hosts_settings, *, ruleset='reputation'):
         direction = convert_int(direction)
         if (direction not in range(4)):
             raise ValidationError(INVALID_FORM)
+
+def geolocation(region, rtype='country'):
+    region['direction'] = convert_int(region['direction'])
+    if (region['direction'] not in range(4)):
+        raise ValidationError(INVALID_FORM)
+
+    if (rtype == 'country'):
+        valid_regions = load_configuration('ip_proxy')['geolocation']
+
+    elif (rtype == 'continent'):
+        valid_regions = load_configuration('geolocation', filepath='dnx_frontend/data')
+
+    if region[rtype] not in valid_regions:
+        raise ValidationError(INVALID_FORM)
 
 def time_restriction(tr_settings):
     tr_hour = convert_int(tr_settings['hour'])

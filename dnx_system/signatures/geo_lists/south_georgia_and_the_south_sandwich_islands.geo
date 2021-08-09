@@ -1,0 +1,2 @@
+104.28.22.119/32 south_georgia_and_the_south_sandwich_islands
+104.28.22.120/32 south_georgia_and_the_south_sandwich_islands

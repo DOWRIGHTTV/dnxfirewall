@@ -1,0 +1,16 @@
+70.36.0.0/20 saint_pierre_and_miquelon
+104.28.12.73/32 saint_pierre_and_miquelon
+104.28.12.74/32 saint_pierre_and_miquelon
+104.28.39.21/32 saint_pierre_and_miquelon
+104.28.39.22/32 saint_pierre_and_miquelon
+104.28.55.51/32 saint_pierre_and_miquelon
+104.28.55.52/32 saint_pierre_and_miquelon
+104.28.57.51/32 saint_pierre_and_miquelon
+104.28.57.52/32 saint_pierre_and_miquelon
+104.28.109.69/32 saint_pierre_and_miquelon
+104.28.109.70/32 saint_pierre_and_miquelon
+104.28.132.51/32 saint_pierre_and_miquelon
+104.28.132.52/32 saint_pierre_and_miquelon
+104.28.133.51/32 saint_pierre_and_miquelon
+104.28.133.52/32 saint_pierre_and_miquelon
+142.202.130.0/23 saint_pierre_and_miquelon

@@ -42,6 +42,9 @@ class IPProxy(NFQueue):
     }
     _packet_parser = IPPPacket.netfilter # alternate constructor
 
+    # direct reference to the proxy response method
+    _prepare_and_send = ProxyResponse.prepare_and_send
+
     @classmethod
     def _setup(cls):
         Configuration.setup(cls)
@@ -60,31 +63,41 @@ class IPProxy(NFQueue):
             return True
 
     @classmethod
-    def forward_packet(cls, nfqueue, zone, action=CONN.ACCEPT):
-        if (zone == LAN_IN):
-            nfqueue.set_mark(LAN_ZONE_FIREWALL)
+    def forward_packet(cls, packet, zone, action):
+        if (action is CONN.ACCEPT):
+            if (zone == LAN_IN):
+                packet.nfqueue.set_mark(LAN_ZONE_FIREWALL)
 
-        elif(zone == DMZ_IN):
-            nfqueue.set_mark(DMZ_ZONE_FIREWALL)
+            elif (zone == DMZ_IN):
+                packet.nfqueue.set_mark(DMZ_ZONE_FIREWALL)
 
-        elif (zone == WAN_IN):
-            if (action is CONN.DROP):
-                nfqueue.set_mark(IP_PROXY_DROP)
+            elif (zone == WAN_IN):
+                packet.nfqueue.set_mark(SEND_TO_IPS)
 
-            else:
-                nfqueue.set_mark(SEND_TO_IPS)
+            # send back through with new mark.
+            packet.nfqueue.repeat()
 
-        # NOTE: this is to protect the repeat if no match. probably log??
-        else:
-            nfqueue.drop()
-            return
+        elif (action is CONN.DROP):
+            if (zone == LAN_IN):
+                packet.nfqueue.drop()
 
-        nfqueue.repeat()
+            elif (zone == DMZ_IN):
+                packet.nfqueue.drop()
+
+            # packets blocked on WAN will be deferred to the IPS to drop the packet. This
+            # allows the IPS to inspect it for denial of service or port scanner profiling.
+            elif (zone == WAN_IN):
+                packet.nfqueue.set_mark(IP_PROXY_DROP)
+
+                packet.nfqueue.repeat()
+
+            # if tcp or udp, we will send a kill conn packet.
+            if (packet.protocol in [PROTO.TCP, PROTO.UDP]):
+                cls._prepare_and_send(packet)
 
 
 class Inspect:
     _Proxy = IPProxy
-    _ProxyResponse = ProxyResponse
 
     __slots__ = (
         '_packet', '_match'
@@ -92,9 +105,6 @@ class Inspect:
 
     # direct reference to the Proxy forward packet method
     _forward_packet = _Proxy.forward_packet
-
-    # direct reference to the proxy response method
-    _prepare_and_send = _ProxyResponse.prepare_and_send
 
     def __init__(self):
         self._match = None
@@ -104,13 +114,7 @@ class Inspect:
         self = cls()
         action, category = self._ip_inspect(self._Proxy, packet)
 
-        # ip proxy will handle the drop of packet for icmp packets that do not need to be inspected by ips
-        if ((action is CONN.DROP and packet.protocol is PROTO.ICMP)
-                and (packet.icmp_type is not ICMP.ECHO or packet.direction is DIR.OUTBOUND)):
-            packet.nfqueue.drop()
-
-        else:
-            self._Proxy.forward_packet(packet.nfqueue, packet.zone, action)
+        self._Proxy.forward_packet(packet, packet.zone, action)
 
         Log.log(packet, IPP_INSPECTION_RESULTS(category, action))
 
