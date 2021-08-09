@@ -154,6 +154,10 @@ class Inspect:
     # this method drives the overall logic of the ddos detection engine. it will try to conserve resources by not sending packets
     # that dont need to be checked or logged under normal conditions.
     def _ddos_inspect(self, packet):
+        # filter to make only icmp echo requests checked. This used to be done by the IP proxy, but after some optimizations
+        # it is much more suited here.
+        if (packet.protocol is PROTO.ICMP and packet.icmp_type is not ICMP.ECHO): return
+
         ddos = self.ddos_tracker[packet.protocol]
         with ddos.lock:
             if not self._ddos_detected(ddos.tracker, packet): return
