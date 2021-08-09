@@ -35,8 +35,8 @@ INT_BANDWIDTH_TIMER = 5
 FILE_POLL_TIMER = 10
 
 # dnx user/group
-USER  = 'free'
-GROUP = 'free'
+USER  = 'dnx'
+GROUP = 'dnx'
 
 # Certificate authority store file
 CERTIFICATE_STORE = '/etc/ssl/certs/ca-certificates.crt'
