@@ -12,11 +12,11 @@
         </div>
     </div>
 </section>
-<section id="wan_int">
+<section id="wan_int" class="section {{main_section_color}}">
     <div class="container">
         <div class="row row-flex">
             <div class="col s12 l6">
-                <div class="card-panel card-panel-eql">
+                <div class="card-panel card-panel-eql hoverable {{card_color}}">
                     <h4 class="{{title_color}}">IP Address</h4>
                     <p>
                         <h6>IP:      {{interface_settings['ip']['ip_address']}}</h6>
@@ -26,12 +26,12 @@
                     <form action="/settings/interface" method="POST">
                         <input type="hidden" name="tab" value="1">
                         <div class="row">
-                            <div class="input-field col s9">
+                            <div class="input-field col s9 {{input_color}}">
                                 <input type="text" name="wan_ip" placeholder="192.168.1.11" {{ip_addr_validate}}
                                     {% if interface_settings['ip']['state'] %} disabled {% endif %}>
                                 <label for="">IP Address</label>
                             </div>
-                            <div class="input-field col s3">
+                            <div class="input-field col s3 {{input_color}}">
                                 <select name="wan_cidr" {% if interface_settings['ip']['state'] %} disabled {% endif %}>
                                     {% for i in range(24,31) %}
                                     <option value="{{i}}">/{{i}}</option>
@@ -41,7 +41,7 @@
                             </div>
                         </div>
                         <div class="row">
-                            <div class="input-field col s12">
+                            <div class="input-field col s12 {{input_color}}">
                                 <input type="text" name="wan_dfg" placeholder="192.168.1.1" {{ip_addr_validate}}
                                     {% if interface_settings['ip']['state'] %} disabled {% endif %}>
                                 <label for="">Default Gateway</label>
@@ -98,7 +98,7 @@
                 </div>
             </div>
             <div class="col s12 l6">
-                <div class="card-panel card-panel-eql">
+                <div class="card-panel card-panel-eql hoverable {{card_color}}">
                     <h4 class="{{title_color}}">MAC Address</h4>
                     <p>
                         <h6>Default MAC: {{interface_settings['mac']['default']}}</h6>
@@ -108,7 +108,7 @@
                     <form action="/settings/interface" method="POST">
                         <input type="hidden" name="tab" value="1">
                         <div class="row">
-                            <div class="input-field col s12">
+                            <div class="input-field col s12 {{input_color}}">
                                 <input type="text" name="ud_wan_mac" class="validate" placeholder="aa:aa:aa:aa:aa:aa">
                                 <label for="">MAC Address</label>
                             </div>

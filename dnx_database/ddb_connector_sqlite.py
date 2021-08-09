@@ -13,8 +13,9 @@ from collections import namedtuple
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import SQL_VERSION, ONE_DAY, FIVE_MIN, fast_time, write_log
+from dnx_configure.dnx_constants import SQL_VERSION, ONE_DAY, FIVE_MIN, fast_time, write_log, str_join
 from dnx_configure.dnx_namedtuples import BLOCKED_DOM
+from dnx_configure.dnx_system_info import System
 
 __all__ = ('DBConnector',)
 
@@ -45,7 +46,12 @@ class _DBConnector:
 
         # This should be logged through the logging system. Worst case use simple log if full logging is not easily in reach.
         if (exc_type):
-            self._Log.error(f'error while writing to database: {exc_val}')
+            # this shouldnt need to be here if nested under data written since everything that writes to database will
+            # have a Log handler running and passed in. having as a precaution for now.
+            try:
+                self._Log.error(f'error while writing to database: {exc_val}')
+            except:
+                write_log(f'error while writing to database: {exc_val}')
 
         return True
 
@@ -106,11 +112,13 @@ class _DBConnector:
 
         return self._c.fetchone()
 
-    # standard input for ip proxy module database entries. Supression built in to IP Proxy (will not log duplicate host until 30 timeout)
+    # standard input for ip proxy module database entries.
     def ipp_input(self, timestamp, log):
 
         self._c.execute(f'insert into ipproxy values (?, ?, ?, ?, ?, ?)',
-            (log.local_ip, log.tracked_ip, log.category, log.direction, log.action, timestamp))
+            (log.local_ip, log.tracked_ip, '/'.join(log.category), log.direction, log.action, timestamp))
+
+        # TODO: figure out the logic needed to write to the geolocation table
 
         self._data_written = True
 
@@ -134,6 +142,26 @@ class _DBConnector:
 
     def infected_remove(self, infected_client, detected_host, *, table):
         self._c.execute(f'delete from {table} where mac=? and detected_host=?', (infected_client, detected_host))
+
+    # first arg is for timestamp.
+    def geo_input(self, _, log):
+        month = ','.join(System.date()[:2])
+
+        # if this is the first time this country has been seen in the current month, it will be inserted with
+        # counts zerod out
+        if not self._geo_entry_check(log, month):
+            self._c.execute(f'insert into geolocation values (?, ?, ?, ?, ?)', (month, log.country, log.direction, 0, 0))
+
+        # incremented count of the actions specified in the log.
+        self._c.execute(f'update geolocation set {log.action}={log.action}+1 where month=? and country=? and direction=?',
+                (month, log.country, log.direction))
+
+    def _geo_entry_check(self, log, month):
+        self._c.execute(f'select * from geolocation where month=? and country=?', (month, log.country))
+        if self._c.fetchone():
+            return True
+
+        return False
 
     # query to authorize viewing of web block page and show block info for reference
     def query_blocked(self, *, domain, src_ip):
@@ -171,49 +199,43 @@ class _DBConnector:
 
         return self._c.fetchall()
 
-    def dashboard_query_top(self, count, *, table, action):
+    def dashboard_query_top(self, count, *, action):
         if (action in ['allowed', 'blocked']):
-            self._c.execute(f'select * from {table} where action=? order by count desc limit 20', (action,))
+            self._c.execute(
+                f'select domain, category from dnsproxy where action=? order by count desc limit {count}', (action,)
+            )
 
         elif (action in ['all']):
-            self._c.execute(f'select * from {table} order by count desc limit 20')
-        results = self._c.fetchall()
+            self._c.execute(f'select domain, category from dnsproxy order by count desc limit {count}')
 
-        top_domains = {}
-        for result in results:
+        return self._c.fetchall()
 
-            _, domain, category, *_ = result
-            if (domain not in top_domains):
+    def query_geolocation(self, count, *, action, direction):
+        month = ','.join(System.date()[:2])
 
-                if (len(domain) > 41):
-                    domain = domain[:41]
+        # adds an extra space to results for 'NONE' which is more common than normal since the geolocation db is not yet complete
+        count += 1
 
-                top_domains[domain] = category
+        self._c.execute(
+            f'select country, {action} from geolocation where month=? and direction=? '
+            f'order by {action} desc limit {count}', (month, direction)
+        )
 
-            if (len(top_domains) == count): break
+        # filtering out entries with no hits in the specified action. if those are returned, they have hits on the
+        # opposite action. currently filtering out 'NONE' since the geolocation database is not yet complete.
+        return [x[0].replace('_', ' ') for x in self._c.fetchall() if x[1] and x[0] != 'NONE']
 
-        return top_domains
-
-    def unique_domain_count(self, *, table, action):
-        unique_domains = set()
-
-        if (action in ['allow', 'blocked']):
-            self._c.execute(f'select * from {table} where action=?', (action,))
+    def unique_domain_count(self, *, action):
+        if (action in ['allowed', 'blocked']):
+            self._c.execute(f'select domain, count(*) from dnsproxy where action=? group by domain', (action,))
 
         elif (action in ['all']):
-            self._c.execute(f'select * from {table}')
+            self._c.execute(f'select domain, count(*) from dnsproxy group by domain')
 
-        results = self._c.fetchall()
-        if (not results): return 0
-
-        for entry in results:
-            domain = entry[1]
-            unique_domains.add(domain)
-
-        return len(unique_domains)
+        return len(self._c.fetchall())
 
     def total_request_count(self, *, table, action):
-        if (action in ['allow', 'blocked']):
+        if (action in ['allowed', 'blocked']):
             self._c.execute(f'select count from {table} where action=?', (action,))
 
         elif (action in ['all']):
@@ -254,6 +276,7 @@ class _DBConnector:
         self._data_written = True
 
     def create_db_tables(self):
+        # dns proxy main
         self._c.execute(
             'create table if not exists dnsproxy '
             '(src_ip text not null, domain text not null, '
@@ -262,13 +285,7 @@ class _DBConnector:
             'last_seen int4 not null)'
         )
 
-        self._c.execute(
-            'create table if not exists infectedclients '
-            '(mac text not null, ip_address text not null, '
-            'detected_host text not null, reason text not null, '
-            'last_seen int4 not null)'
-        )
-
+        # ip proxy main
         self._c.execute(
             'create table if not exists ipproxy '
             '(local_ip text not null, tracked_ip text not null, '
@@ -276,25 +293,45 @@ class _DBConnector:
             'action text not null, last_seen int4 not null)'
         )
 
+        # ips/ids main
         self._c.execute(
             'create table if not exists ips '
             '(src_ip not null, protocol not null, '
             'attack_type not null, action not null, '
-            'last_seen not null)'
+            'last_seen int4 not null)'
         )
 
+        # infected cliented
+        self._c.execute(
+            'create table if not exists infectedclients '
+            '(mac text not null, ip_address text not null, '
+            'detected_host text not null, reason text not null, '
+            'last_seen int4 not null)'
+        )
+
+        # ip proxy - geolocation
+        #( 01,2021 | CHINA | 10 | 1)
+        self._c.execute(
+            'create table if not exists geolocation '
+            '(month not null, country not null, '
+            'direction not null, '
+            'blocked int4 not null, '
+            'allowed int4 not null)'
+        )
+
+        # dns proxy - blocked clients (for serving webui block page)
         self._c.execute(
             'create table if not exists blocked '
             '(src_ip not null, domain not null, '
             'category not null, reason not null, '
-            'timestamp not null)'
+            'timestamp int4 not null)'
         )
 
-if (SQL_VERSION == 1):
-    from dnx_database.ddb_connector_psql import DBConnector
+if (SQL_VERSION == 0):
+    DBConnector = _DBConnector
 
 else:
-    DBConnector = _DBConnector
+    from dnx_database.ddb_connector_psql import DBConnector
 
 if __name__ == '__main__':
     # NOTE: CREATE THE TABLES

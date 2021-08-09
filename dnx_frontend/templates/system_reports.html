@@ -5,63 +5,65 @@
 {% include('slider.html') %}
 {% endif %}
 <!-- Tabs for statistics -->
-<section id="dropdown" class="section">
+<section id="dropdown" class="section {{main_section_color}}">
     <div class="container">
         <div class="col s12">
-            <div class="card-panel hoverable">
+            <div class="card-panel hoverable {{card_color}}">
                 <h4 class="{{title_color}}">Detection Logs</h4>
                 <div class="row">
                     <form action="system/reports" method="POST">
-                        <div class="input-field col s10 m4">
-                            <!-- this is gross. this should be able to be done with iterable -->
+                        <div class="input-field col s5 m3 {{input_color}}">
                             <select name="table" onchange="this.form.submit()">
-                                <option value="db_time" {% if menu=='1' %} selected {% endif %}
-                                    >Domains Blocked (by time)</option>
-                                <option value="db_count" {% if menu=='2' %} selected {% endif %}
-                                    >Domains Blocked (by count)</option>
-                                <option value="dv_time" {% if menu=='3' %} selected {% endif %}
-                                    >Domains Viewed (by time)</option>
-                                <option value="dv_count" {% if menu=='4' %} selected {% endif %}
-                                    >Domains Viewed (by count)</option>
-                                <option value="ad_time" {% if menu=='5' %} selected {% endif %}
-                                    >All Domains (by time)</option>
-                                <option value="ad_count" {% if menu=='6' %} selected {% endif %}
-                                    >All Domains (by count)</option>
-                                <option value="iph_block_time" {% if menu=='7' %} selected {% endif %}
-                                    >IPs Blocked (by time)</option>
-                                <option value="iph_view_time" {% if menu=='8' %} selected {% endif %}
-                                    >IPs Viewed (by time)</option>
-                                <option value="iph_all_time" {% if menu=='9' %} selected {% endif %}
-                                    >All IPs (by time)</option>
-                                <option value="ips_time" {% if menu=='10' %} selected {% endif %}
-                                    >Intrusion Prevention (by time)</option>
-                                <option value="ic_all" {% if menu=='11' %} selected {% endif %}
-                                    >Infected Clients</option>
+                                {% for table_type in table_types %}
+                                <option value="{{table_type}}/last" {% if table_type == table %} selected {% endif %}>{{table_type.replace("_", " ").upper()}}</option>
+                                {% endfor %}
                             </select>
-                            <label for="table">Reports</label>
+                            <label for="table">Module</label>
                         </div>
-                        <noscript>
-                        <div class="input-field col s4 m2">
+                        <div class="input-field col s5 m3 {{input_color}}">
+                            <select name="menu" onchange="this.form.submit()">
+                                {% if table in ['infected_clients', 'intrusion_prevention'] %}
+                                <option value="all">ALL</option>
+                                {% else %}
+                                {% for action in ['all', 'blocked', 'allowed'] %}
+                                ><option value="{{action}}" {% if action == menu %} selected {% endif %}>{{action.upper()}}</option>
+                                {% endfor %}
+                                {% endif %}
+                            </select>
+                            <label for="table">Action</label>
+                        </div>
+                        <div class="input-field col s2">
                             <button class="btn waves-effect waves-light col">
-                                <i class="material-icons">cached</i>
+                                <i class="material-icons">refresh</i>
                             </button>
                         </div>
-                        </noscript>
                     </form>
                 </div>
                 <div class="row">
                     <table class="striped centered">
                         <!-- DNS Proxy Table -->
-                        {% if table=='1' %}
+                        {% if table == 'dns_proxy' %}
                         <thead>
                         <tr>
-                            <th>Source</th>
-                            <th>Domain</th>
-                            <th>Category</th>
-                            <th>Reason</th>
-                            <th>Action</th>
-                            <th>Count</th>
-                            <th>Last Seen</th>
+                            <th style="width:10%">Source</th>
+                            <th style="width:25%">Domain</th>
+                            <th style="width:20%">Category</th>
+                            <th style="width:10%">Reason</th>
+                            <th style="width:10%">Action</th>
+                            <th style="width:10%">
+                                <form action="/system/reports" method="POST">
+                                    <input type="hidden" name="table" value="{{table}}/top">
+                                    <button class="btn btn-small waves-effect waves-light" name="menu" value="{{menu}}">
+                                        <i class="material-icons tiny">arrow_drop_up</i></button> Ct.
+                                </form>
+                            </th>
+                            <th style="width:15%">
+                                <form action="/system/reports" method="POST">
+                                    <input type="hidden" name="table" value="{{table}}/last">
+                                    <button class="btn btn-small waves-effect waves-light" name="menu" value="{{menu}}">
+                                        <i class="material-icons tiny">arrow_drop_up</i></button> Last Seen
+                                </form>
+                            </th>
                         </tr>
                         </thead>
                         <tbody>
@@ -88,24 +90,32 @@
                         {% endif %}
                         </tbody>
                         <!-- IP HOSTS TABLE-->
-                        {% elif table=='2' %}
+                        {% elif table == 'ip_proxy' %}
                         <thead>
                         <tr>
-                            <th>Local IP</th>
-                            <th>Remote IP</th>
-                            <th>Category</th>
-                            <th>Direction</th>
-                            <th>Action</th>
-                            <th>Timestamp</th>
+                            <th style="width:14%">Local IP</th>
+                            <th style="width:14%">Remote IP</th>
+                            <th style="width:14%">Geo</th>
+                            <th style="width:14%">Rep</th>
+                            <th style="width:12%">Direction</th>
+                            <th style="width:12%">Action</th>
+                            <th style="width:20%">
+                                <form action="/system/reports" method="POST">
+                                    <input type="hidden" name="table" value="{{table}}/last">
+                                    <button class="btn btn-small waves-effect waves-light" name="menu" value="{{menu}}">
+                                        <i class="material-icons tiny">arrow_drop_up</i></button> Timestamp
+                                </form>
                         </tr>
                         </thead>
                         <tbody>
                         {% if table_data %}
                         {% for entry in table_data %}
+                        {% set geo, rep = entry[2].split('/') %}
                         <tr>
                             <td>{{entry[0]}}</td>
                             <td>{{entry[1]}}</td>
-                            <td>{{entry[2]}}</td>
+                            <td>{{geo}}</td>
+                            <td>{{rep}}</td>
                             <td>{{entry[3]}}</td>
                             <td>{{entry[4]}}</td>
                             <td>{{entry[5]}}</td>
@@ -114,21 +124,21 @@
                         {% endfor %}
                         {% else %}
                         <tr>
-                            {% for i in range(6) %}
+                            {% for i in range(7) %}
                             <td></td>
                             {% endfor %}
                         </tr>
                         </tbody>
                         {% endif %}
                         <!-- IPS TABLE -->
-                        {% elif table=='3' %}
+                        {% elif table == 'intrusion_prevention' %}
                         <thead>
                         <tr>
-                            <th>Source</th>
-                            <th>Protocol</th>
-                            <th>Attack Type</th>
-                            <th>Action</th>
-                            <th>Last Seen</th>
+                            <th style="width:20%">Source</th>
+                            <th style="width:20%">Protocol</th>
+                            <th style="width:20%">Attack Type</th>
+                            <th style="width:20%">Action</th>
+                            <th style="width:20%">Last Seen</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -151,16 +161,16 @@
                         </tr>
                         </tbody>
                         {% endif %}
-                        {% elif table=='4' %}
+                        {% elif table == 'infected_clients' %}
                         <thead>
                         <tr>
-                            <th></th>
-                            <th>Local MAC</th>
-                            <th>Local IP</th>
-                            <th>Detected Host</th>
-                            <th>Reason</th>
-                            <th>User</th>
-                            <th>Last Seen</th>
+                            <th style="width:10%"></th>
+                            <th style="width:20%">Local MAC</th>
+                            <th style="width:15%">Local IP</th>
+                            <th style="width:15%">Detected Host</th>
+                            <th style="width:15%">Reason</th>
+                            <th style="width:10%">User</th>
+                            <th style="width:15%">Last Seen</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -174,10 +184,9 @@
                                         <h5 class="red-text">Are you sure you want to remove the infected client from the list? Is it now clean?</h5>
                                     </div>
                                     <form action="/system/reports" method="POST">
-                                        <input type="hidden" name="i_client_remove">
-                                        <input type="hidden" name="table" value="ic_all">
+                                        <input type="hidden" name="menu" value="infected_clients/last">
                                         <div class="modal-footer">
-                                            <button class="btn waves-effect waves-light">YES</button>
+                                            <button class="btn waves-effect waves-light" name="i_client_remove">YES</button>
                                             <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
                                             <input type="hidden" name="infected_client" value="{{entry[0]}}">
                                             <input type="hidden" name="detected_host" value="{{entry[2]}}">
@@ -196,7 +205,7 @@
                         {% endfor %}
                         {% else %}
                         <tr>
-                            {% for i in range(6) %}
+                            {% for i in range(7) %}
                             <td></td>
                             {% endfor %}
                         </tr>

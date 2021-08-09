@@ -36,6 +36,7 @@ DDOS_TRACKERS  = _namedtuple('ddos', 'lock tracker')
 IPP_IP_INFO = _namedtuple('ipp_ip_info', 'tracked_ip local_ip')
 IPP_INSPECTION_RESULTS = _namedtuple('ipp_inspection_results', 'category action')
 IPP_LOG = _namedtuple('ipp_log', 'local_ip tracked_ip category direction action')
+GEO_LOG = _namedtuple('geo_log', 'country direction action')
 
 IPP_SRC_INFO = _namedtuple('src_info', 'protocol src_ip src_port')
 IPP_DST_INFO = _namedtuple('dst_info', 'protocol dst_ip dst_port')

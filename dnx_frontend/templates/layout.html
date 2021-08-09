@@ -11,18 +11,43 @@
     <link href="{{url_for('static', filename='assets/css/style.css')}}" rel="stylesheet">
     <link rel="shortcut icon" href="{{ url_for('static', filename='assets/images/shield.png') }}">
 </head>
-<body>
+<body style="background-color:{% if session['dark_mode'] %} #263238 {% else %} #e0e0e0 {% endif %}">
     {% set tab_classes = 'tab col s4 l3 xl2' %}
+    {% set dash_icon_std = 'height=65px width=65px' %}
+    {% set dash_icon_zoom = 'height=100px width=100px' %}
 
-    <!-- web ui color vars. will later be configurable, but for now will be set directly from here.-->
-    {% set title_color = 'blue-grey-text darken-2' %}
+
     {% set icon_color = 'blue-grey-text' %}
-    {% set tabs_color = 'red-text' %}
 
-    {% include 'includes/_header.html' %}
+    <!-- dark mode enabled -->
+    {% if session['dark_mode'] %}
+
+    {% set main_section_color = 'blue-grey darken-4' %}
+    {% set off_section_color = 'blue-grey lighten-4' %}
+    {% set card_color = 'blue-grey lighten-2' %}
+    {% set title_color = 'black-text' %}
+    {% set input_color = 'grey lighten-2' %}
+
+    <!-- default mode enabled -->
+    {% else %}
+
+    {% set main_section_color = 'grey lighten-2' %}
+    {% set off_section_color = 'grey lighten-5' %}
+    {% set card_color = 'grey lighten-4' %}
+    {% set title_color = 'blue-grey-text darken-2' %}
+
+    {% endif %}
 
     {% set ip_addr_validate = 'class=validate minlength=7 maxlength=15 size=15 pattern=^((\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.){3}(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])$' %}
-    {% set port_validate = 'class=validate min=1 max=65535 pattern=^()([1-9]|[1-5]?[0-9]{2,4}|6[1-4][0-9]{3}|65[1-4][0-9]{2}|655[1-2][0-9]|6553[1-5])$' %}
+    {% set port_validate = 'class=validate pattern=^([1-9]|[1-5]?[0-9]{2,4}|6[1-4][0-9]{3}|65[1-4][0-9]{2}|655[1-2][0-9]|6553[1-5]):([1-9]|[1-5]?[0-9]{2,4}|6[1-4][0-9]{3}|65[1-4][0-9]{2}|655[1-2][0-9]|6553[1-5])$)$' %}
+
+    <!-- includes -->
+    {% include 'includes/_header.html' %}
+
+    <!-- restricting webui to authenticated users -->
+    {% if navi %}
+    {% include 'includes/_fab.html' %}
+    {% endif %}
 
     {% block body %}{% endblock body %}
 
@@ -42,45 +67,47 @@
     <script src="{{url_for('static',filename='assets/js/materialize.min.js')}}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Initialized everything below OR you can individually initialize them + pass options
+            // Initialized everything OR you can override with options below
             M.AutoInit();
-
-            var modal = document.querySelector(".modal-pop");
-            var instance = M.Modal.init(modal);
-            if (error) {
-            instance.open();
-            };
-
-            const slider = document.querySelectorAll(".slider");
-            if(slider) M.Slider.init(slider, {
-                indicators: false,
-                height: 500,
-                transition: 500,
-                interval: 6000
-            });
         })
-        document.addEventListener('DOMContentLoaded', function() {
+
+        document.addEventListener('DOMContentLoaded', () => {
             var elems = document.querySelectorAll('.dropdown-trigger');
             var instances = M.Dropdown.init(elems, {
                 coverTrigger : false
             });
         })
 
-        function activeTab(n){
+        document.addEventListener('DOMContentLoaded', () => {
+            var modal = document.querySelector('.modal-pop');
+            var instance = M.Modal.init(modal);
+            if (error && modal) {
+                instance.open();
+            };
+        })
+
+        document.addEventListener('DOMContentLoaded', () => {
+            var elems = document.querySelectorAll('.fixed-action-btn');
+            var instances = M.FloatingActionButton.init(elems, {
+                // direction: 'left',
+                hoverEnabled: false
+            });
+        })
+
+        function activeTab(n) {
         history.replaceState(null, null, window.location.pathname+"?tab="+n);
         document.getElementById("timeout-tab").innerHTML = "<input type=hidden name=tab value="+n+">";
         }
 
-        function activeMenu(n){
+        function activeMenu(n) {
         document.getElementById("timeout-menu").innerHTML = "<input type=hidden name=menu value="+n+">";
         }
 
-        function idleTimeout(){
+        function idleTimeout() {
             var timeoutNotify = document.querySelector(".modal-idle-timeout");
             var notifyInstance = M.Modal.init(timeoutNotify);
             notifyInstance.open();
         }
-
     </script>
 </body>
 </html>

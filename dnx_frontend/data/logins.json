@@ -2,7 +2,8 @@
     "users": {
         "dnx": {
             "password": "31f6c46456443964775e8849d52c600f7ba5e63e596cbf2c3fa55c169576105d",
-            "role": "admin"
+            "role": "admin",
+            "dark_mode": 0
         }
     }
 }

@@ -55,28 +55,28 @@ class Configuration:
     def _get_settings(self, cfg_file):
         ip_proxy = load_configuration(cfg_file)
 
-        cat_settings = ip_proxy['categories']
+        rep_settings = ip_proxy['reputation']
         geo_settings = ip_proxy['geolocation']
 
-        cat_enabled = []
-        for cat, setting in cat_settings.items():
-            if (setting): cat_enabled.append(1)
+        reputation_enabled = []
+        for cat, setting in rep_settings.items():
+            if (setting): reputation_enabled.append(1)
 
-            self.IPProxy.cat_settings[IPP_CAT[cat.upper()]] = DIR(setting)
+            self.IPProxy.reputation_settings[IPP_CAT[cat.upper()]] = DIR(setting)
 
         geo_enabled = []
-        for cat, setting in geo_settings.items():
+        for country, setting in geo_settings.items():
             if (setting): geo_enabled.append(1)
 
             # using enum for category key and direction value
             try:
-                self.IPProxy.geo_settings[GEO[cat.upper()]] = DIR(setting)
+                self.IPProxy.geolocation_settings[GEO[country.upper()]] = DIR(setting)
             except KeyError:
                 continue # NOTE: temporary while not all enums/countries are populated
 
-        self.IPProxy.inspect_on  = bool(cat_enabled or geo_enabled)
-        self.IPProxy.cat_enabled = bool(cat_enabled)
-        self.IPProxy.geo_enabled = bool(geo_enabled)
+        # self.IPProxy.inspect_on  = bool(cat_enabled or geo_enabled)
+        self.IPProxy.reputation_enabled = bool(reputation_enabled)
+        self.IPProxy.geolocation_enabled = True # bool(geo_enabled) # NOTE: keeping as a var just in case, but hardcode active
         self.IPProxy.ids_mode = ip_proxy['ids_mode']
 
         self.initialize.done()
@@ -85,7 +85,7 @@ class Configuration:
     def _get_ip_whitelist(self, cfg_file):
         whitelist = load_configuration(cfg_file)
 
-        whitelist = whitelist['ip_whitelist']
+        whitelist = whitelist['ip_bypass']
         self.IPProxy.ip_whitelist = {
             ip for ip, wl_info in whitelist.items() if wl_info['type'] == 'ip'
         }

@@ -109,7 +109,7 @@ def _firewall_rules(zone, action, form):
         try:
             validate.add_firewall_rule(fields)
             if (fields.dst_port):
-                validate.network_port(fields.dst_port)
+                validate.network_port(fields.dst_port, port_range=True)
 
             if (fields.src_ip):
                 validate.ip_address(fields.src_ip)
@@ -154,14 +154,17 @@ def _dnat_rules(zone, action, form):
             error = ve
 
         else:
-            configure.del_open_wan_protocol(fields)
-
             with IPTablesManager() as iptables:
                 iptables.delete_nat(fields)
 
+                configure.del_open_wan_protocol(fields)
+
     elif (action == 'add'):
         try:
+            # checking all required fields are present and some other basic rules are followed
+            # before validating values of standard fields.
             validate.add_dnat_rule(fields)
+
             if (fields.protocol in ['tcp', 'udp']):
                 validate.network_port(fields.dst_port)
                 validate.network_port(fields.host_port)
@@ -174,10 +177,10 @@ def _dnat_rules(zone, action, form):
         except ValidationError as ve:
             error = ve
         else:
-            configure.add_open_wan_protocol(fields)
-
             with IPTablesManager() as iptables:
                 iptables.add_nat(fields)
+
+                configure.add_open_wan_protocol(fields)
 
     else:
         return INVALID_FORM, zone

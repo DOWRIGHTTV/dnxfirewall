@@ -24,7 +24,7 @@ def run():
     IPTables.network_forwarding()
 
     # changing default action for IPv6 to block everything on all chains in main table
-    IPTables.network_forwarding()
+    IPTables.block_ipv6()
 
     # loading IP Tables from file
     IPTables().restore()

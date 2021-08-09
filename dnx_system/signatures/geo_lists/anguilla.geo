@@ -1,0 +1,14 @@
+104.28.12.67/32 anguilla
+104.28.12.68/32 anguilla
+104.193.196.0/22 anguilla
+104.255.176.0/22 anguilla
+162.251.108.0/22 anguilla
+162.254.188.0/22 anguilla
+192.30.124.0/24 anguilla
+204.14.248.0/22 anguilla
+204.14.252.0/23 anguilla
+204.14.254.0/24 anguilla
+204.14.255.0/24 anguilla
+208.66.48.0/22 anguilla
+208.66.52.0/23 anguilla
+208.66.54.0/23 anguilla

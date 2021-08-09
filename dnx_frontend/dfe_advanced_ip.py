@@ -9,14 +9,16 @@ sys.path.insert(0, HOME_DIR)
 import dnx_configure.dnx_configure as configure
 import dnx_configure.dnx_validate as validate
 
-from dnx_configure.dnx_constants import INVALID_FORM
+from dnx_configure.dnx_constants import INVALID_FORM, DATA
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 
 def load_page():
     ip_proxy = load_configuration('ip_proxy')
 
-    categories  = ip_proxy['categories']
+    country_map = load_configuration('geolocation', filepath='dnx_frontend/data')
+
+    reputation  = ip_proxy['reputation']
     geolocation = ip_proxy['geolocation']
 
     tr_settings = ip_proxy['time_restriction']
@@ -47,17 +49,16 @@ def load_page():
         'suffix': suffix, 'enabled': tr_enabled
     }
 
-    firewall_settings = {
-        'categories': categories, 'geolocation': geolocation, 'tr_settings': tr_settings
+    ipp_settings = {
+        'reputation': reputation, 'geolocation': geolocation, 'tr_settings': tr_settings, 'country_map': country_map
    }
-    print(firewall_settings)
-    return firewall_settings
+
+    return ipp_settings
 
 def update_page(form):
     print(form)
-
     if ('ip_hosts_update' in form):
-        category_settings = form.getlist('categories', None)
+        category_settings = form.getlist('reputation', None)
         if (not category_settings):
             return INVALID_FORM
 
@@ -68,17 +69,22 @@ def update_page(form):
         else:
             configure.update_ip_proxy_settings(category_settings)
 
-    elif ('geo_lists_update' in form):
-        country_settings = form.getlist('countries', None)
-        if (not country_settings):
+    elif ('country' in form):
+        country_setting = {k: form.get(k, DATA.INVALID) for k in ['country', 'direction']}
+
+        if (DATA.INVALID in country_setting.values()):
             return INVALID_FORM
 
         try:
-            validate.ip_proxy_settings(country_settings, ruleset='geolocation')
+            validate.geolocation(country_setting, rtype='country') # NOTE: to know its country vs continent
         except ValidationError as ve:
             return ve
+
         else:
-            configure.update_ip_proxy_settings(country_settings, ruleset='geolocation')
+            configure.update_geolocation(country_setting, rtype='country')
+
+    elif ('continent' in form):
+        return 'Bulk actions are still in development.'
 
     elif ('time_res_update' in form):
         hour    = form.get('hour', None)

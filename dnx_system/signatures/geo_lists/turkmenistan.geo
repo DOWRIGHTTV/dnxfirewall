@@ -1,0 +1,13 @@
+95.85.96.0/19 turkmenistan
+104.28.18.103/32 turkmenistan
+104.28.18.104/32 turkmenistan
+104.28.38.186/31 turkmenistan
+104.28.51.229/32 turkmenistan
+104.28.51.230/32 turkmenistan
+104.28.75.66/31 turkmenistan
+104.28.81.22/31 turkmenistan
+104.28.106.236/31 turkmenistan
+185.69.184.0/22 turkmenistan
+185.246.72.0/22 turkmenistan
+195.191.230.0/23 turkmenistan
+217.174.224.0/20 turkmenistan

@@ -11,6 +11,7 @@ from fcntl import flock, LOCK_EX, LOCK_UN
 from secrets import token_urlsafe
 from collections import defaultdict
 from ipaddress import IPv4Address, IPv4Network
+from array import array
 
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
@@ -107,7 +108,8 @@ def load_signatures(Log, *, mod, exc=[]):
         return signatures
 
 def load_dns_bitmap(Log, bl_exc=[], wl_exc=[]):
-    dict_nets = {}
+    dict_nets = defaultdict(list)
+
     # converting blacklist exceptions (pre proxy) to be compatible with dnx signature syntax
     blacklist = [f'{domain} blacklist' for domain in bl_exc]
 
@@ -125,17 +127,19 @@ def load_dns_bitmap(Log, bl_exc=[], wl_exc=[]):
                     h_id = int(host_hash[DNS_BIN_OFFSET:])
                 except Exception as E:
                     print(f'bad signature detected in domain. | {E} | {sig}')
-                else:
-                    if (host in wl_exc): continue # overriding signature pre proxy
-                    try:
-                        dict_nets[b_id].append((h_id, cat))
-                    except Exception as E:
-                        dict_nets[b_id] = [(h_id, cat)]
-                    else:
-                        dict_nets[b_id].sort()
 
-    # converting to nested tuple and sorting, list > tuple done on return
-    nets = [(k, tuple(v)) for k,v in dict_nets.items()]
+                else:
+                    # overriding signature pre proxy
+                    if (host in wl_exc): continue
+
+                    dict_nets[b_id].append((h_id, cat))
+
+        # in place sort of all containers prior to building the structure
+        for containers in dict_nets.values():
+            containers.sort()
+
+    # converting to nested tuple and sorting, outermost list converted on return
+    nets = [(bin_id, tuple(containers)) for bin_id, containers in dict_nets.items()]
     nets.sort()
 
     dict_nets = None
@@ -164,108 +168,17 @@ def load_ip_bitmap(Log):
 
             dict_nets[bin_id].append((host_id, cat))
 
-            # NOTE: sorting items in the current bin. This could be moved to the end if we did a final
-            # iter pass over the dict_nets to sort. This would also prevent having to sort more times than needed.
-            dict_nets[bin_id].sort()
+        # in place sort of all containers prior to building the structure
+        for containers in dict_nets.values():
+            containers.sort()
 
-    # converting to nested tuple and sorting, list > tuple done on return
-    nets = [(k, tuple(v)) for k,v in dict_nets.items()]
+    # converting to nested tuple and sorting, outermost list converted on return
+    nets = [(bin_id, tuple(containers)) for bin_id, containers in dict_nets.items()]
     nets.sort()
 
-    dict_nets = None
+    dict_nets = {}
 
     return tuple(nets)
-
-# being deprecated for new signature operations function.
-def load_geo_bitmap(Log):
-    '''returns a bitmap trie for geolocation filtering loaded from the consolodated blocked.geo file.'''
-
-    raise DeprecationWarning('this function is being replaced by the signature operations module.')
-
-    # temporary dict to generate dataset easier and local var for easier bin size adjustments
-    dict_nets = defaultdict(list)
-    with open(f'{HOME_DIR}/dnx_system/signatures/geo_lists/blocked.geo', 'r') as geo_sigs:
-        geo_sigs = list(geo_sigs)
-
-    for net in geo_sigs:
-
-        # preventing disabled signatures from being loaded
-        if net.startswith('#'): continue
-
-        geo_signature = net.strip().split(maxsplit=1)
-        try:
-            net, country = IPv4Network(geo_signature[0]), int(GEO[geo_signature[1].upper()])
-        except Exception as E:
-            Log.warning(f'bad signature detected in geo. | {E} | {net}')
-            continue
-
-        # assigning vars for bin id, host ranges, and ip count
-        net_id = int(net.network_address)
-        ip_count = int(net.num_addresses) - 1
-        if (ip_count < LSB):
-            bin_id = net_id & MSB
-            host_id_start = net_id & LSB
-
-            dict_nets[bin_id].append(
-                (host_id_start, host_id_start+ip_count, country)
-            )
-
-        else:
-            offset = 0
-            while True:
-                current_ip_index = int(net[offset])
-                bin_id = current_ip_index & MSB
-
-                remaining_ips = ip_count - offset
-                if (remaining_ips <= LSB):
-                    dict_nets[bin_id].append(
-                        (current_ip_index, current_ip_index+remaining_ips, country)
-                    )
-
-                    break
-
-                else:
-                    dict_nets[bin_id].append((current_ip_index, LSB, country))
-
-                    offset += LSB
-
-        bin_contents = dict_nets[bin_id]
-        bin_contents.sort()
-
-        dict_nets[bin_id] = _merge_geo_ranges(bin_contents)
-
-    nets = [(k, tuple(v)) for k,v in dict_nets.items()]
-    nets.sort()
-
-    dict_nets, geo_sigs = None, None
-
-    return tuple(nets)
-
-def _merge_geo_ranges(ls):
-    temp_item, temp_list = [], []
-    for t in ls:
-        l = list(t)
-        # if we have a temp item, it means we have an ongoing contigous range. if the first element in the current list
-        # is equal to the last element in the temp list(+1), the networks are still contigous so we will merge them and
-        # update the temp item.
-        if (temp_item and l[0] == temp_item[1] + 1
-                and l[2] == temp_item[2]):
-            temp_item[1] = l[1]
-
-        # applying current item to temp item since it didnt exist
-        elif (not temp_item):
-            temp_item = l
-
-        # once a discontigious range is detected. the temp item for previous range will get appended to the list to be
-        # returned as well as the current list.
-        else:
-            temp_list.append(tuple(temp_item))
-            temp_item = l
-
-    if ls and (not temp_list or temp_list[-1] not in [t, l]):
-        temp_list.append(tuple(temp_item))
-
-    return temp_list
 
 def load_tlds():
     dns_proxy = load_configuration('dns_proxy')
@@ -287,13 +200,14 @@ def load_keywords(Log):
             ]
     except FileNotFoundError:
         Log.critical('domain keywords file not found. contact support immediately.')
-        return keywords
+
     else:
         for keyword_info in all_keywords:
             try:
                 keyword, category = keyword_info.split(maxsplit=1)
             except:
                 continue
+
             else:
                 keywords.append((keyword, DNS_CAT[category]))
 
@@ -342,7 +256,7 @@ def cfg_write_poller(list_function):
     the dns proxy module whitelist/blacklist read/write operations'''
 
     def wrapper(*args):
-        print(f'[+] Starting user defined {args[1]} timer')
+        # print(f'[+] Starting user defined {args[1]} timer')
         last_modified_time, new_args = 0, (*args, f'{args[1]}.json')
         # main loop calling the primary function for read/write change detection/polling
         # the recycle the saved hash file which is returned regardless of if it was changed or not

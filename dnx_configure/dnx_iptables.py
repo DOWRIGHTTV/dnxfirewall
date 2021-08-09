@@ -201,10 +201,6 @@ class _Defaults:
         shell(f'iptables -t nat -A POSTROUTING -o {self._wan_int} -j MASQUERADE')
 
 
-
-
-
-
 class IPTablesManager:
     ''' This is the IP Table rule adjustment manager. if class is called in as a context manager, all method calls
     must be ran in the context where the class instance itself is returned as the object. Changes as part of a context
@@ -249,12 +245,12 @@ class IPTablesManager:
         '''explicit, process safe, call to save iptables to backup file. this is not needed if using
         within a context manager as the commit happens on exit.'''
 
-        shell(f'sudo iptables-save > {HOME_DIR}/dnx_system/iptables/iptables_backup.cnf')
+        shell(f'sudo iptables-save > {HOME_DIR}/dnx_system/iptables/iptables_backup.cnf', check=True)
 
     def restore(self):
         '''process safe restore of iptable rules in/from backup file.'''
 
-        shell(f'sudo iptables-restore < {HOME_DIR}/dnx_system/iptables/iptables_backup.cnf')
+        shell(f'sudo iptables-restore < {HOME_DIR}/dnx_system/iptables/iptables_backup.cnf', check=True)
 
     # TODO: think about the duplicate rule check before running this as a safety for creating duplicate rules
     def apply_defaults(self, *, suppress=False):
@@ -289,10 +285,10 @@ class IPTablesManager:
                 f'-d {rule.dst_ip}/{rule.dst_netmask} --dport {rule.dst_port} -j {rule.action}'
             )
 
-        shell(firewall_rule)
+        shell(firewall_rule, check=True)
 
     def delete_rule(self, rule):
-        shell(f'sudo iptables -D {rule.zone} {rule.position}')
+        shell(f'sudo iptables -D {rule.zone} {rule.position}', check=True)
 
     def modify_management_access(self, fields):
         '''add or remove mangement access rule as configured by webui. ports must be a list, even if only one port is needed.'''
@@ -302,7 +298,7 @@ class IPTablesManager:
 
         for port in fields.service_ports:
 
-            shell(f'sudo iptables {action} MGMT -m mark --mark {zone} -p tcp --dport {port} -j ACCEPT')
+            shell(f'sudo iptables {action} MGMT -m mark --mark {zone} -p tcp --dport {port} -j ACCEPT', check=True)
 
     def add_nat(self, rule):
         src_interface = self._zone_to_intf[f'{rule.src_zone}']
@@ -341,10 +337,13 @@ class IPTablesManager:
 
         # TODO: make an auto creation firewall rule option
 
-        shell(nat_rule)
+        shell(nat_rule, check=True)
 
     def delete_nat(self, rule):
-        shell(f'sudo iptables -t nat -D {rule.nat_type} {rule.position}')
+        shell(f'sudo iptables -t nat -D {rule.nat_type} {rule.position}', check=True)
+
+    def remove_passive_block(self, host_ip, timestamp):
+        shell(f'sudo iptables -t raw -D IPS -s {host_ip} -j DROP -m comment --comment {timestamp}', check=True)
 
     @staticmethod
     # this allows forwarding through system, required for SNAT/MASQUERADE to work.
@@ -365,27 +364,27 @@ class IPTablesManager:
         shell(f'sudo iptables -t {table} -F {chain}')
 
     @staticmethod
-    def proxy_add_rule(ip_address, *, table, chain):
-        '''inject ip table rules into the sent in table and chain. the ip_address argument will be blocked
-        as a source or destination of traffic. both rules are sharing a single os.system call.'''
-        _system(
-            f'sudo iptables -t {table} -A {chain} -s {ip_address} -j DROP && '
-            f'sudo iptables -t {table} -A {chain} -d {ip_address} -j DROP'
-        )
+    def proxy_add_rule(ip_address, timestamp, *, table, chain):
+        '''inject iptable rule into the specified table and chain. the ip_address argument will be blocked
+        as a source and timestamp will be set as a comment.'''
+
+        comment = f'-m comment --comment {timestamp}'
+
+        _system(f'sudo iptables -t {table} -A {chain} -s {ip_address} -j DROP {comment}')
 
         # NOTE: this should be removed one day
-        write_log(f'RULE INSERTED: {ip_address} | {fast_time()}')
+        # write_log(f'RULE INSERTED: {ip_address} | {fast_time()}')
 
     @staticmethod
-    def proxy_del_rule(ip_address, *, table, chain):
-        '''remove ip table rules from sent in table and chain. both rules are sharing a single os.system call.'''
-        _system(
-            f'sudo iptables -t {table} -D {chain} -s {ip_address} -j DROP && '
-            f'sudo iptables -t {table} -D {chain} -d {ip_address} -j DROP'
-        )
+    def proxy_del_rule(ip_address, timestamp, *, table, chain):
+        '''remove iptable rule from specified table and chain.'''
+
+        comment = f'-m comment --comment {timestamp}'
+
+        _system(f'sudo iptables -t {table} -D {chain} -s {ip_address} -j DROP {comment}')
 
         # NOTE: this should be removed one day
-        write_log(f'RULE REMOVED: {ip_address} | {fast_time()}')
+        # write_log(f'RULE REMOVED: {ip_address} | {fast_time()}')
 
     @staticmethod
     def update_dns_over_https():
