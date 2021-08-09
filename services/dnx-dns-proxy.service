@@ -1,5 +1,5 @@
 [Unit]
-Description=DNX Firewall DNS Proxy Service
+Description=DNXFIREWALL DNS Proxy Service
 After=dnx-log.service dnx-syslog.service
 StartLimitIntervalSec=3
 

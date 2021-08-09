@@ -99,7 +99,7 @@ def format_row(row, users):
     return [str(x).lower().replace('_', ' ') for x in entries]
 
 def load_infected_clients():
-    dhcp_server = load_configuration('dhcp_server')['dhcp_server']
+    dhcp_server = load_configuration('dhcp_server')
     users = dhcp_server['reservations']
 
     return get_table_data(action='all', table='infectedclients', method='last', users=users), '11', '4'

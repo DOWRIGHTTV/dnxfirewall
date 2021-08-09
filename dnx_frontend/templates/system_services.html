@@ -6,31 +6,76 @@
 {% endif %}
 <section id="dropdown" class="section">
     <div class="container">
+<div class="col s12">
+            <div class="card-panel hoverable">
+                <h4 class="{{title_color}}">Management Access</h4>
+                <table class="striped centered">
+                    <thead>
+                        <tr>
+                            <th style="width:25%">Zone</th>
+                            <th style="width:25%">WebUI</th>
+                            <th style="width:25%">CLI</th>
+                            <th style="width:25%">SSH (system)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for zone in ['lan', 'dmz'] %}
+                        <tr>
+                            <td><h6>{{zone}}</h6></td>
+                            {% for mgmt_svc in ['webui', 'cli', 'ssh'] %}
+                            <td>
+                                <div class="input-field col s3 center">
+                                    <form action="/system/services" method="POST">
+                                        <div class="switch">
+                                            <label>
+                                                Off
+                                                {% if not service_info['mgmt_access'][zone][mgmt_svc] %}
+                                                <input type="hidden" name="update_mgmt_access" value="{{zone}},{{mgmt_svc}},1">
+                                                <input type="checkbox" onchange="this.form.submit()">
+                                                {% else %}
+                                                <input type="hidden" name="update_mgmt_access" value="{{zone}},{{mgmt_svc}},0">
+                                                <input type="checkbox" onchange="this.form.submit()" checked="checked"
+                                                    {% if zone == 'lan' and mgmt_svc == 'webui' %} disabled {% endif %}>
+                                                {% endif %}
+                                                <span class="lever"></span>
+                                                On
+                                            </label>
+                                        </div>
+                                    </form>
+                                </div>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
         <div class="col s12">
             <div class="card-panel hoverable">
                 <h4 class="{{title_color}}">System Services</h4>
                 <table class="striped centered">
                     <thead>
                         <tr>
-                            <th>Service Name</th>
-                            <th>Description</th>
-                            <th>Status</th>
-                            <th>Control</th>
+                            <th style="width:15%">Service Name</th>
+                            <th style="width:45%">Description</th>
+                            <th style="width:10%">Status</th>
+                            <th style="width:30%">Control</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for name, description, status in service_info %}
+                        {% for name, description, status in service_info['all_services'] %}
                         <tr>
-                            <td style="width:15%"><h6>{{name}}</h6></td>
-                            <td style="width:45%"><h6>{{description}}</h6></td>
-                            <td style="width:10%">
+                            <td><h6>{{name}}</h6></td>
+                            <td><h6>{{description}}</h6></td>
+                            <td>
                                 {% if status %}
                                 <strong><h6 class="green-text">Up</h6></strong>
                                 {% else %}
                                 <strong><h6 class="red-text">Down</h6></strong>
                                 {% endif %}
                             </td>
-                            <td style="width:30%">
+                            <td>
                                 <div class="row">
                                     <div class="input-field col s12 l4">
                                         <form action="/system/services" method="POST">

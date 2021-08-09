@@ -312,7 +312,7 @@ class ClientRequest:
         return dhcp_header_pack(
             2, 1, 6, 0, self.xID, p_time, 0, self.ciaddr.packed,
             self.handout_ip.packed, self.sock.ip.packed,
-            INADDR_ANY.packed, self.chaddr, b'DNX FIREWALL',
+            INADDR_ANY.packed, self.chaddr, b'dnxfirewall\x00',
             b'\x00'*180, 99, 130, 83, 99
         )
 

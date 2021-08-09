@@ -15,7 +15,7 @@ from subprocess import run, CalledProcessError, DEVNULL
 _HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, _HOME_DIR)
 
-from dnx_configure.dnx_constants import str_join
+from dnx_configure.dnx_constants import str_join, FIVE_SEC
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_iptools.dnx_protocol_tools import convert_mac_to_bytes
 
@@ -84,13 +84,8 @@ class Interface:
     @staticmethod
     def mac_address(interface):
         '''returns string form mac address for sent in interface.'''
-        output = run(f'ifconfig {interface}', shell=True, capture_output=True, text=True).stdout.splitlines(8)
-        for line in output:
-            if('ether' in line):
-                line = line.strip().split()
-                mac = line[1]
-#                print(mac)
-                return mac
+
+        return run(f'ifconfig {interface}', shell=True, capture_output=True, text=True).stdout.splitlines()[3].split()[1]
 
     @staticmethod
     def default_gateway(interface):
@@ -116,12 +111,12 @@ class System:
 
     @staticmethod
     def restart():
-        sleep(5)
+        sleep(FIVE_SEC)
         run('sudo reboot', shell=True)
 
     @staticmethod
     def shutdown():
-        sleep(5)
+        sleep(FIVE_SEC)
         run('sudo shutdown', shell=True)
 
     @staticmethod
@@ -177,7 +172,7 @@ class System:
     @staticmethod
     def calculate_time_offset(logged_time):
         '''returns modified time based on current time offset settings.'''
-        logging = load_configuration('logging_client')['logging']
+        logging = load_configuration('logging_client')
 
         offset = logging['time_offset']
         os_direction = offset['direction']
@@ -231,7 +226,7 @@ class System:
     @staticmethod
     def dns_status():
         dns_servers_status = load_configuration('dns_server_status')
-        dns_server = load_configuration('dns_server')['dns_server']
+        dns_server = load_configuration('dns_server')
 
         tls_enabled = dns_server['tls']['enabled']
         dns_servers = dns_server['resolvers']
@@ -271,7 +266,7 @@ class System:
 
     @staticmethod
     # TODO: this can be refactored to follow dnat/snat format for parsing
-    def firewall_rules(*, chain='GLOBAL_INTERFACE'):
+    def firewall_rules(*, chain='GLOBAL_ZONE'):
         # getting list of all rules in specified chain
         output = run(
             f'sudo iptables -nL {chain} --line-number', shell=True, capture_output=True, text=True

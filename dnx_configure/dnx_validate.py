@@ -11,7 +11,7 @@ from ipaddress import IPv4Address, IPv4Network
 _HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, _HOME_DIR)
 
-from dnx_configure.dnx_constants import LOG, DATA, INVALID_FORM
+from dnx_configure.dnx_constants import LOG, CFG, DATA, INVALID_FORM
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 
@@ -167,7 +167,7 @@ def dhcp_reservation(reservation_settings):
     mac_address(reservation_settings['mac'])
     _ip_address(reservation_settings['ip'])
 
-    dhcp_settings = load_configuration('config')['settings']
+    dhcp_settings = load_configuration('config')
 
     zone_net = IPv4Network(dhcp_settings['interfaces'][reservation_settings['zone'].lower()]['subnet'])
     if (IPv4Address(reservation_settings['ip']) not in zone_net.hosts()):
@@ -217,7 +217,7 @@ def time_offset(offset_settings):
         raise ValidationError('Selected timezone is not valid.')
 
 def syslog_settings(syslog_settings):
-    syslog = load_configuration('syslog_client')['syslog']
+    syslog = load_configuration('syslog_client')
 
     configured_syslog_servers = syslog['servers']
     if (not configured_syslog_servers):
@@ -247,7 +247,7 @@ def syslog_settings(syslog_settings):
             raise ValidationError('TLS must be enabled before TCP fallback.')
 
 def ip_proxy_settings(ip_hosts_settings, *, ruleset='categories'):
-    ip_proxy = load_configuration('ip_proxy')['ip_proxy']
+    ip_proxy = load_configuration('ip_proxy')
 
     valid_categories = ip_proxy[ruleset]
     for category in ip_hosts_settings:
@@ -280,7 +280,7 @@ def time_restriction(tr_settings):
         raise ValidationError('Restriction settings are not valid.')
 
 def dns_over_tls(dns_tls_settings):
-    dns_server = load_configuration('dns_server')['dns_server']
+    dns_server = load_configuration('dns_server')
 
     current_tls = dns_server['tls']['enabled']
     for item in dns_tls_settings['enabled']:
@@ -338,6 +338,21 @@ def del_nat_rule(nat_rule):
     if (convert_int(nat_rule.position) not in range(1, rule_count+1)):
         raise ValidationError('Selected rule is not valid and cannot be removed.')
 
+    # validating fields for removing the associated open protocol/port from the tracker
+    open_protocol_settings = load_configuration('ips')['open_protocols']
+    try:
+        nat_rule.protocol, nat_rule.port = nat_rule.proto_port.split('/')
+    except:
+        raise ValidationError(INVALID_FORM)
+
+    # tcp/udp checked first. if error, will check icmp format. if that doesnt match then
+    # exception is raised.
+    try:
+        open_protocol_settings[nat_rule.protocol][nat_rule.port]
+    except:
+        if (nat_rule.protocol != 'icmp' and nat_rule.port != '0'):
+            raise ValidationError(INVALID_FORM)
+
 def add_dnat_rule(nat_rule):
     # ensuring all necessary fields are present in the namespace before continuing.
     valid_fields = [
@@ -350,7 +365,7 @@ def add_dnat_rule(nat_rule):
         raise ValidationError('Ports 80,443 cannot be set as destination port when destination IP is not set.')
 
     if (nat_rule.protocol == 'icmp'):
-        open_protocols = load_configuration('ips')['ips']
+        open_protocols = load_configuration('ips')
 
         if (open_protocols['open_protocols']['icmp']):
             return 'Only one ICMP rule can be active at a time. Remove existing rule before adding another.'
@@ -364,7 +379,7 @@ def add_snat_rule(nat_rule):
         raise ValidationError('Invalid form.')
 
 def portscan_settings(portscan_settings):
-    ips = load_configuration('ips')['ips']
+    ips = load_configuration('ips')
 
     current_prevention = ips['port_scan']['enabled']
     for item in portscan_settings:
@@ -375,12 +390,25 @@ def portscan_settings(portscan_settings):
             and not current_prevention):
         raise ValidationError('Prevention must be enabled to configure portscan reject.')
 
+def management_access(fields):
+    SERVICE_TO_PORT = {'webui': [80, 443], 'cli': [0], 'ssh': [22]}
+
+    if (fields.zone not in ['lan', 'dmz'] or fields.service not in ['webui', 'cli', 'ssh']):
+        raise ValidationError('Invalid form.')
+
+    # convert_int will raise exception if issues with form data and ValueError will cover
+    # invalid CFG action key/vals
+    try:
+        action = CFG(convert_int(fields.action))
+    except ValueError:
+        raise ValidationError('Invalid form.')
+
+    fields.action = action
+    fields.service_ports = SERVICE_TO_PORT[fields.service]
+
 def ips_passive_block_length(pb_length):
-    pb_length = convert_int(pb_length)
     if (pb_length not in [0, 24, 48, 72]):
         raise ValidationError(INVALID_FORM)
-
-    return pb_length
 
 def add_ip_whitelist(whitelist_settings):
     # handling alphanum check. will raise exception if invalid.
@@ -407,7 +435,7 @@ def domain_categories(categories, ruleset):
     if (ruleset == 'default' and not all(['malicious' in categories, 'cryptominer' in categories])):
         raise ValidationError('Malicious and cryptominer categories cannot be disabled.')
 
-    dns_proxy = load_configuration('dns_proxy')['dns_proxy']
+    dns_proxy = load_configuration('dns_proxy')
     if (ruleset in ['default', 'user_defined']):
         cat_list = dns_proxy['categories'][ruleset]
 
@@ -419,7 +447,7 @@ def domain_categories(categories, ruleset):
             raise ValidationError(INVALID_FORM)
 
 def domain_category_keywords(categories):
-    dns_proxy = load_configuration('dns_proxy')['dns_proxy']
+    dns_proxy = load_configuration('dns_proxy')
 
     domain_cats = dns_proxy['categories']['default']
     for cat in categories:
@@ -435,7 +463,7 @@ def dns_record_add(dns_record_name):
         raise ValidationError('Local dns record is not valid.')
 
 def dns_record_remove(dns_record_name):
-    dns_server = load_configuration('dns_server')['dns_server']
+    dns_server = load_configuration('dns_server')
 
     if (dns_record_name == 'dnx.firewall'):
         raise ValidationError('Cannot remove dnxfirewall dns record.')

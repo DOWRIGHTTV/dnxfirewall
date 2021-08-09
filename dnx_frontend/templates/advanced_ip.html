@@ -5,11 +5,11 @@
         <div class="row">
             <div class="col s12 m12">
                 <ul class="tabs">
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='1' %} class="active" {% endif %} href="#categories"
+                    <li class="{{tab_classes}}"><a {% if tab=='1' %} class="active" {% endif %} href="#categories"
                             onclick="activeTab(1)">Categories</a></li>
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='2' %} class="active" {% endif %} href="#geolocation"
+                    <li class="{{tab_classes}}"><a {% if tab=='2' %} class="active" {% endif %} href="#geolocation"
                             onclick="activeTab(2)">Geolocation</a></li>
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='3' %} class="active" {% endif %}
+                    <li class="{{tab_classes}}"><a {% if tab=='3' %} class="active" {% endif %}
                             href="#lan-restrict" onclick="activeTab(3)">Lan Restrict</a></li>
                 </ul>
             </div>
@@ -62,10 +62,9 @@
                         <input type="hidden" name="tab" value="2">
                         <input type="hidden" name="geo_lists_update">
                         <div class="row">
-                            {% for country, enabled in ip_settings['geolocation'].items() %}
+                        {% for country, enabled in ip_settings['geolocation'].items() %}
                             <div class="input-field col s3">
-                                {{country.title().replace('_', '. ')}}
-                                <br>
+                                <h6 class="{{title_color}}">{{country.title().replace('_', ' ')}}</h6>
                                 <select class="browser-default" name="countries" id="" onchange="this.form.submit()">
                                     <option value="{{country}}_0" {% if enabled==0 %} selected {% endif %}>OFF</option>
                                     <option value="{{country}}_1" {% if enabled==1 %} selected {% endif %}>OUTBOUND</option>
@@ -73,7 +72,7 @@
                                     <option value="{{country}}_3" {% if enabled==3 %} selected {% endif %}>BOTH</option>
                                 </select>
                             </div>
-                            {% endfor %}
+                        {% endfor %}
                         </div>
                         <noscript>
                             <div class="row">

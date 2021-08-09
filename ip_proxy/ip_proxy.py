@@ -11,7 +11,6 @@ sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_iptools.dnx_binary_search import generate_linear_binary_search, generate_recursive_binary_search # pylint: disable=import-error, no-name-in-module
-from dnx_configure.dnx_lists import ListFiles
 from dnx_configure.dnx_namedtuples import IPP_IP_INFO, IPP_INSPECTION_RESULTS, IPP_LOG, INFECTED_LOG
 from dnx_configure.dnx_file_operations import load_signatures
 from dnx_iptools.dnx_parent_classes import NFQueue
@@ -79,14 +78,18 @@ class IPProxy(NFQueue):
 
     @classmethod
     def forward_packet(cls, nfqueue, zone, action=CONN.ACCEPT):
-        if (zone == WAN_IN and action is CONN.DROP):
-            nfqueue.set_mark(IP_PROXY_DROP)
+        if (zone == LAN_IN):
+            nfqueue.set_mark(LAN_ZONE_FIREWALL)
 
-        elif (zone in [LAN_IN, DMZ_IN]):
-            nfqueue.set_mark(SEND_TO_FIREWALL)
+        elif(zone == DMZ_IN):
+            nfqueue.set_mark(DMZ_ZONE_FIREWALL)
 
         elif (zone == WAN_IN):
-            nfqueue.set_mark(SEND_TO_IPS)
+            if (action is CONN.DROP):
+                nfqueue.set_mark(IP_PROXY_DROP)
+
+            else:
+                nfqueue.set_mark(SEND_TO_IPS)
 
         # NOTE: this is to protect the repeat if no match. probably log??
         else:
@@ -184,7 +187,7 @@ class Inspect:
             # tor and not to open a local machine to tor traffic.
             # TODO: evaluate if we should have an inbound override, though i dont know who would ever want random
             # tor users accessing their servers.
-            if (packet.direct is DIR.OUTBOUND and packet.conn.local_ip in self._Proxy.tor_whitelist):
+            if (packet.direction is DIR.OUTBOUND and packet.conn.local_ip in self._Proxy.tor_whitelist):
                 return False
 
             block_direction = self._Proxy.cat_settings[category]
@@ -205,7 +208,7 @@ class Inspect:
 
         return False
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     ip_cat_signatures, geoloc_signatures = Configuration.load_ip_signature_bitmaps()
 
     # using cython function factory to create binary search function with module specific signatures

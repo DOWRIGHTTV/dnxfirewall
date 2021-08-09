@@ -17,19 +17,16 @@ from dnx_configure.dnx_exceptions import ValidationError
 from dnx_configure.dnx_system_info import System
 
 def load_page():
-    blacklist = load_configuration('blacklist')['blacklist']
+    blacklist = load_configuration('blacklist')
 
-    exceptions = blacklist['exception']
-    domain_blacklist = blacklist['domain']
-
-    for domain, info in domain_blacklist.items():
+    for domain, info in blacklist['domain'].items():
         st_offset = System.calculate_time_offset(info['time'])
 
-        domain_blacklist[domain]['time'] = System.format_date_time(st_offset)
+        domain['time'] = System.format_date_time(st_offset)
 
     blacklist_settings = {
-        'domain_blacklist': domain_blacklist,
-        'exceptions': exceptions
+        'domain_blacklist': blacklist['domain'],
+        'exceptions': blacklist['exception']
     }
 
     return blacklist_settings

@@ -1,7 +1,5 @@
 {
-    "whitelist": {
-        "domain": {},
-        "exception": {},
-        "ip_whitelist": {}
-    }
+    "domain": {},
+    "exception": {},
+    "ip_whitelist": {}
 }

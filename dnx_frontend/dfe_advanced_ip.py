@@ -14,7 +14,7 @@ from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 
 def load_page():
-    ip_proxy = load_configuration('ip_proxy')['ip_proxy']
+    ip_proxy = load_configuration('ip_proxy')
 
     categories  = ip_proxy['categories']
     geolocation = ip_proxy['geolocation']
@@ -50,7 +50,7 @@ def load_page():
     firewall_settings = {
         'categories': categories, 'geolocation': geolocation, 'tr_settings': tr_settings
    }
-
+    print(firewall_settings)
     return firewall_settings
 
 def update_page(form):

@@ -107,7 +107,7 @@ class Listener:
 
         cls.enabled_intfs.add(sock_fd)
 
-        cls._Log.notice(f'{cls.__name__} | [{sock_fd}][{intf}] DHCP listener enabled.')
+        cls._Log.notice(f'[{sock_fd}][{intf}] {cls.__name__} listener enabled.')
 
     @classmethod
     def disable(cls, sock_fd, intf):
@@ -119,7 +119,7 @@ class Listener:
         except KeyError:
             pass
 
-        cls._Log.notice(f'{cls.__name__} | [{sock_fd}][{intf}] DHCP listener disabled.')
+        cls._Log.notice(f'[{sock_fd}][{intf}] {cls.__name__} listener disabled.')
 
     @classmethod
     def send_to_client(cls, packet):
@@ -147,7 +147,7 @@ class Listener:
         once registration is complete the thread will exit.'''
         # this is being defined here the listener will be able to correlate socket back to interface and send in.
 
-        cls._Log.debug(f'{cls.__name__} started interface registration for {intf}')
+        cls._Log.debug(f'[{intf}] {cls.__name__} started interface registration.')
 
         wait_for_interface(interface=intf)
 
@@ -162,7 +162,7 @@ class Listener:
         # spoof the original destination.
         cls.__epoll.register(l_sock.fileno(), select.EPOLLIN)
 
-        cls._Log.notice(f'{cls.__name__} | [{l_sock.fileno()}][{intf}] registered.')
+        cls._Log.notice(f'[{l_sock.fileno()}][{intf}] {cls.__name__} interface registered.')
 
     @classmethod
     def set_proxy_callback(cls, *, func):
@@ -189,11 +189,11 @@ class Listener:
 
                 else:
                     # this is being used as a mechanism to disable/enable interface listeners
-                    # TODO: figure out a better way to achieve this that doesnt involve reading the socket. multiple epoll
-                    # solutions have already been attempted, but they have barely missed mark.
-                    self._Log.debug(f'recv on fd: {fd} | enabled ints: {self.enabled_intfs}')
                     if (self._always_on or fd in self.enabled_intfs):
                         self.__parse_packet(data, address, sock_info)
+
+                    else:
+                        self._Log.debug(f'recv on fd: {fd} | enabled ints: {self.enabled_intfs}')
 
     def __parse_packet(self, data, address, sock_info):
         packet = self._packet_parser(data, address, sock_info)
@@ -239,11 +239,11 @@ class ProtoRelay:
 
     __slots__ = (
         # callbacks
-        '_DNSServer', '_fallback',
+        '_DNSServer', '_fallback_relay',
 
         # protected vars
-        '_relay_conn', '_send_cnt', '_last_sent',
-        '_responder_add', '_fallback_add'
+        '_relay_conn', '_send_cnt', '_last_rcvd',
+        '_responder_add', '_fallback_relay_add'
     )
 
     def __new__(cls, *args, **kwargs):
@@ -252,31 +252,31 @@ class ProtoRelay:
 
         return object.__new__(cls)
 
-    def __init__(self, DNSServer, fallback):
+    def __init__(self, DNSServer, fallback_relay):
         '''general constructor. can only be reached through subclass.
 
         May be expanded.
 
         '''
         self._DNSServer = DNSServer
-        self._fallback = fallback
+        self._fallback_relay = fallback_relay
 
         sock = socket.socket()
         self._relay_conn = RELAY_CONN(None, sock, sock.send, sock.recv, None)
 
         self._send_cnt  = 0
-        self._last_sent = 0
+        self._last_rcvd = 0
 
         # direct reference for performance
-        if (fallback):
-            self._fallback_add = fallback.relay.add
+        if (fallback_relay):
+            self._fallback_relay_add = fallback_relay.add
 
     @classmethod
-    def run(cls, DNSServer, *, fallback=None):
+    def run(cls, DNSServer, *, fallback_relay=None):
         '''starts the protocol relay. DNSServer object is the class handling client side requests which
         we can call back to and fallback is a secondary relay that can get forwarded a request post failure.
         initialize will be called to run any subclass specific processing then query handler will run indefinately.'''
-        self = cls(DNSServer, fallback)
+        self = cls(DNSServer, fallback_relay)
 
         threading.Thread(target=self._fail_detection).start()
         threading.Thread(target=self.relay).start()
@@ -290,16 +290,19 @@ class ProtoRelay:
         for attempt in range(2):
             try:
                 self._relay_conn.send(client_query.send_data)
-            except OSError:
+            except OSError as ose:
+                write_log(f'[{self._relay_conn.remote_ip}/{self._relay_conn.version}] Send error: {ose}')
                 if not self._register_new_socket(): break
 
                 threading.Thread(target=self._recv_handler).start()
+
             else:
                 self._increment_fail_detection()
 
                 # NOTE: temporary | identifying connection version to terminal. when removing consider having the relay protocol
                 # show in the webui > system reports.
-                write_log(f'SENT {self._relay_conn.version}[{attempt}]: {client_query.request}\n') # pylint: disable=no-member
+                write_log(f'[{self._relay_conn.remote_ip}/{self._relay_conn.version}][{attempt}] Sent {client_query.request}\n') # pylint: disable=no-member
+
                 break
 
     def _recv_handler(self):
@@ -314,50 +317,35 @@ class ProtoRelay:
 
     @looper(FIVE_SEC)
     def _fail_detection(self):
-        if (fast_time() - self._last_sent >= FIVE_SEC and self._send_cnt >= HEARTBEAT_FAIL_LIMIT):
+        if (fast_time() - self._last_rcvd >= FIVE_SEC and self._send_cnt >= HEARTBEAT_FAIL_LIMIT):
             self.mark_server_down()
 
-    # aquires lock then will mark server down if it is present in config
-    # NOTE: i feel like this can be much better. investigate.
-    def mark_server_down(self):
-        self._relay_conn.sock.close()
+    # processes that were unable to connect/ create a socket will send in the remote server ip that was attempted.
+    # if a remote server isnt specified the active relay socket connection's remote ip will be used.
+    def mark_server_down(self, *, remote_server=None):
+        remote_server = remote_server if remote_server else self._relay_conn.remote_ip
 
-        with self._DNSServer.server_lock:
-            for server in self._DNSServer.dns_servers:
-                if (server['ip'] == self._relay_conn.remote_ip):
-                    server[self._protocol] = False
+        for server in self._DNSServer.dns_servers:
+            if (server['ip'] == remote_server):
+                server[self._protocol] = False
 
-    def _send_to_fallback(self, client_query):
-        '''allows for relay to fallback to a secondary relay. uses class object passed into run method.'''
-
-        self._fallback_add(client_query)
+                # keeping this under the remote ip/server ip match condition
+                try:
+                    self._relay_conn.sock.close()
+                except:
+                    write_log(f'[{self._relay_conn.remote_ip}] Failed to close socket while marking server down.')
 
     def _reset_fail_detection(self):
+        self._last_rcvd = fast_time()
         self._send_cnt = 0
 
     def _increment_fail_detection(self):
         self._send_cnt += 1
-        self._last_sent = fast_time()
 
     @property
     def is_enabled(self):
         '''set as true if the running classes protocol matches the currently configured protocol.'''
         return self._DNSServer.protocol is self._protocol
-
-    @property
-    def socket_available(self):
-        '''returns true if current relay socket object has not been closed.'''
-
-        return self._relay_conn.sock.fileno() != -1
-
-    @property
-    def standby_condition(self):
-        '''property to reduce length of delay in queue handler.
-
-        May be overridden.
-
-        '''
-        return False
 
     @property
     def fail_condition(self):
