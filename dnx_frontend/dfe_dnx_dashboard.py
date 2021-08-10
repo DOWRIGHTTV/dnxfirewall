@@ -3,6 +3,7 @@
 import json
 import sys, os, time
 
+from itertools import zip_longest
 from flask import Flask, render_template, redirect, url_for, request, session
 
 HOME_DIR = os.environ['HOME_DIR']
@@ -14,34 +15,76 @@ from dnx_database.ddb_connector_sqlite import DBConnector
 
 def load_page():
     with DBConnector() as ProxyDB:
-        domain_count = ProxyDB.unique_domain_count(table='dnsproxy', action='blocked')
-        top_domains = ProxyDB.dashboard_query_top(5, table='dnsproxy', action='blocked')
-        request_count = ProxyDB.total_request_count(table='dnsproxy', action='blocked')
+        domain_counts = (
+            ProxyDB.unique_domain_count(action='blocked'),
+            ProxyDB.unique_domain_count(action='allowed')
+        )
+
+        request_counts = (
+            ProxyDB.total_request_count(table='dnsproxy', action='blocked'),
+            ProxyDB.total_request_count(table='dnsproxy', action='allowed')
+        )
+
+        top_domains = (
+            ('blocked', ProxyDB.dashboard_query_top(5, action='blocked')),
+            ('allowed', ProxyDB.dashboard_query_top(5, action='allowed'))
+        )
+
+        top_countries = {}
+        for action in ['blocked', 'allowed']:
+            outbound = ProxyDB.query_geolocation(5, action=action, direction='OUTBOUND')
+            inbound = ProxyDB.query_geolocation(5, action=action, direction='INBOUND')
+
+            top_countries[action] = list(zip_longest(outbound, inbound, fillvalue=''))
+
         inf_hosts = ProxyDB.query_last(5, table='infectedclients', action='all')
 
-    # TODO: see if this is a candidate for a class method
-    Int = Interface()
-    intstat = Int.bandwidth()
+    intstat = Interface.bandwidth()
 
     uptime = System.uptime()
     cpu = System.cpu_usage()
     ram = System.ram_usage()
     dns_servers = System.dns_status()
 
-    # TODO: make this iterable
-    dns_proxy = Services.status('dnx-dns-proxy')
-    ip_proxy = Services.status('dnx-ip-proxy')
-    dhcp_server = Services.status('dnx-dhcp-server')
-    dnx_ips = Services.status('dnx-ips')
+    mod_status = {}
+    for svc in ['dns-proxy', 'ip-proxy', 'ips', 'dhcp-server']:
+        status = Services.status(f'dnx-{svc}')
 
-    mod_status = {
-        'dns_proxy': dns_proxy, 'ip_proxy': ip_proxy, 'dnx_ips': dnx_ips, 'dhcp_server': dhcp_server
-    }
+        mod_status[svc.replace('-', '_')] = status
 
     dashboard = {
-        'domain_count': domain_count, 'infected_hosts': inf_hosts, 'top_domains': top_domains,
-        'request_count': request_count, 'interfaces': intstat, 'uptime': uptime, 'cpu': cpu,
+        'domain_counts': domain_counts, 'dc_graph': _calculate_graphic(domain_counts),
+        'request_counts': request_counts, 'rc_graph': _calculate_graphic(request_counts),
+        'top_domains': top_domains, 'top_countries': top_countries,
+        'infected_hosts': inf_hosts,
+
+        'interfaces': intstat, 'uptime': uptime, 'cpu': cpu,
         'ram': ram, 'dns_servers': dns_servers, 'module_status': mod_status
     }
 
     return dashboard
+
+def _calculate_graphic(counts):
+    # bigger, smaller
+    graphic = ['u', 'u']
+
+    # indexes for easier conditionals
+    bigger, smaller = 0, 1
+
+    blocked, allowed = counts
+
+    # block majority
+    if (blocked > allowed):
+        graphic[bigger] = 'b'
+
+        if (allowed):
+            graphic[smaller] = 'a'
+
+    # allow majority
+    elif (allowed > blocked):
+        graphic[bigger] = 'a'
+
+        if (blocked):
+            graphic[smaller] = 'b'
+
+    return graphic

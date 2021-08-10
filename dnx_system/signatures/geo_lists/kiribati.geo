@@ -1,0 +1,17 @@
+103.25.140.0/22 kiribati
+103.73.80.0/23 kiribati
+103.148.4.0/23 kiribati
+103.250.0.0/22 kiribati
+104.28.18.121/32 kiribati
+104.28.18.122/32 kiribati
+104.28.29.53/32 kiribati
+104.28.29.54/32 kiribati
+104.28.35.54/31 kiribati
+104.28.72.14/31 kiribati
+104.28.99.93/32 kiribati
+104.28.99.94/32 kiribati
+104.28.101.93/32 kiribati
+104.28.101.94/32 kiribati
+104.28.125.58/31 kiribati
+202.6.120.0/22 kiribati
+202.58.248.0/22 kiribati

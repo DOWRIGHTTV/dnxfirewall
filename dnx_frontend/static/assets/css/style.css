@@ -67,7 +67,7 @@ nav .brand-logo {
   font-size: 2.1rem;
   padding: 0; }
 
-/* navigation menu type size/pizel adjusmtnet override */
+/* navigation menu type size and pixel adjusmtnet override */
 @media only screen and (max-width: 1550px) {
     .remove-big-menu {
         display: none !important; } }
@@ -75,3 +75,27 @@ nav .brand-logo {
 @media only screen and (max-width: 1549px) {
     .show-mobile-menu {
         display: block !important; } }
+
+/* icon color change */
+i.icon-red {
+    color: red;
+}
+
+i.icon-green {
+    color: green;
+}
+
+i.icon-blue {
+    color: blue;
+}
+
+/* table striping and highlight override */
+
+table.striped > tbody > tr:nth-child(odd) {
+    background-color: rgba(11, 47, 47, 0.5); }
+
+table.striped > tbody > tr {
+    background-color: rgba(242, 242, 242, 0.5); }
+
+table.highlight > tbody > tr:hover {
+    background-color: rgba(122, 89, 39, 0.507); }

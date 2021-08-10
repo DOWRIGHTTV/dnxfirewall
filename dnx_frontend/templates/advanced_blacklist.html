@@ -14,20 +14,20 @@
         </div>
     </div>
 </section>
-<section id="blacklists" section="class">
+<section id="blacklists" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add Blacklist</h4>
                     <form action="/advanced/blacklist" method="POST">
                     <input type="hidden" name="tab" value="1">
                         <div class="row">
-                            <div class="input-field col s4 l3">
+                            <div class="input-field col s4 l3 {{input_color}}">
                                 <input type="text" name="domain" class="validate" placeholder="malicious.com" required>
                                 <label for="">Domain</label>
                             </div>
-                            <div class="input-field col s4 l3">
+                            <div class="input-field col s4 l3 {{input_color}}">
                                 <input type="text" name="rule_length" class="validate" placeholder="60" required>
                                 <label for="">Rule Life (Minutes)</label>
                             </div>
@@ -39,7 +39,7 @@
                 </div>
             </div>
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Active Rules</h4>
                     <table class="striped centered">
                         <thead>
@@ -51,15 +51,15 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% if blacklist_settings['domain_blacklist'] %}
-                            {% for domain, info in blacklist_settings['domain_blacklist'].items() %}
+                            {% if blacklist_settings['time_based'] %}
+                            {% for domain, info in blacklist_settings['time_based'].items() %}
                             <tr>
                                 <td>
                                     <a class="btn-floating btn-small red waves-effect waves-light modal-trigger" href="#bl-modal1-{{loop.index}}">
                                         <i class="material-icons">remove</i></a>
                                     <div id="bl-modal1-{{loop.index}}" class="modal">
                                         <div class="modal-content">
-                                        <h5 class="red-text">Are you sure you want to remove the blacklist rule?</h5>
+                                        <h5 class="red-text">Are you sure you want to remove the blacklisted domain early?</h5>
                                         </div>
                                         <form action="/advanced/blacklist" method="POST">
                                             <div class="modal-footer">
@@ -90,20 +90,20 @@
         </div>
     </div>
 </section>
-<section id="exceptions" section="class">
+<section id="exceptions" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add Override</h4>
                     <form action="/advanced/blacklist" method="POST">
                     <input type="hidden" name="tab" value="2">
                         <div class="row">
-                            <div class="input-field col s4 l3">
+                            <div class="input-field col s4 l3 {{input_color}}">
                                 <input type="text" name="domain" class="validate" placeholder="malicious.com" required>
                                 <label for="">Domain</label>
                             </div>
-                            <div class="input-field col s4 l3">
+                            <div class="input-field col s4 l3 {{input_color}}">
                                 <input type="text" name="reason" class="validate" placeholder="malicious" required>
                                 <label for="">Reason</label>
                             </div>
@@ -116,7 +116,7 @@
                 </div>
             </div>
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Active Overrides</h4>
                         <table class="striped centered">
                             <thead>
@@ -127,15 +127,15 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% if blacklist_settings['exceptions'] %}
-                                {% for domain, info in blacklist_settings['exceptions'].items() %}
+                                {% if blacklist_settings['pre_proxy'] %}
+                                {% for domain, info in blacklist_settings['pre_proxy'].items() %}
                                 <tr>
                                  <td>
                                     <a class="btn-floating btn-small red waves-effect waves-light modal-trigger" href="#bl-modal2-{{loop.index}}">
                                         <i class="material-icons">remove</i></a>
                                     <div id="bl-modal2-{{loop.index}}" class="modal">
                                         <div class="modal-content">
-                                        <h5 class="red-text center">Are you sure you want to remove the blacklist override? Service restart required to take effect.</h5>
+                                        <h5 class="red-text center">Are you sure you want to remove the override? Service restart required to take effect.</h5>
                                         </div>
                                         <form action="/advanced/blacklist" method="POST">
                                             <div class="modal-footer">

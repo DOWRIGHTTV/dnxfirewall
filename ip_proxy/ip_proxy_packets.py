@@ -48,10 +48,10 @@ class ProxyResponse(RawResponse):
 
     def _prepare_packet(self, packet, dnx_src_ip):
         # checking if dst port is associated with a nat. if so, will override necessary fields based on protocol
-        # and re assign in the packert object
+        # and re assign in the packet object
         # NOTE: can we please optimize this. PLEASE!
         port_override = self._Module.open_ports[packet.protocol].get(packet.dst_port)
-        if port_override:
+        if (port_override):
             self._packet_override(packet, dnx_src_ip, port_override)
 
         # 1a. generating tcp/pseudo header | iterating to calculate checksum

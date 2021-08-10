@@ -55,7 +55,7 @@ class DatabaseService:
     # TODO consider initialing LogHandler so we can send this into the queue. That would also allow us to send it into the
     # DBConnector context to log properly and be viewing in front end. this would probably require an additional log section
     # for database logs.
-    @dnx_queue(None, name='Database')
+    @dnx_queue(Log, name='Database')
     def _write_to_database(self, database, job):
         method, timestamp, log_info = job
 

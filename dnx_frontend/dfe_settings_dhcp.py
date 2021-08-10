@@ -18,7 +18,7 @@ from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_configure.dnx_system_info import Services, System
 
-def load_page():
+def load_page(form):
     dhcp_server = load_configuration('dhcp_server')
 
     dhcp_settings = dhcp_server['interfaces']

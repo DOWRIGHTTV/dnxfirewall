@@ -1,9 +1,9 @@
-<!-- header: navbar, slider content -->
+<!-- header: logo, navbar content -->
 <header>
     <nav class="blue-grey">
         <div class="container">
             <div class="nav-wrapper">
-                <a href="/dashboard" class="brand-logo"><img src="/static/assets/images/dnxlogo_v2.png"
+                <a href="/dashboard" class="brand-logo valign-center"><img src="/static/assets/images/dnxlogo_v2.png"
                     height="40px" style="display: block;">
                 </a>
 
@@ -15,7 +15,7 @@
                     <i class="material-icons">menu</i>
                 </a>
 
-                {% if user_role == 'admin' %}
+                {% if role == 'admin' %}
                 <ul class="right remove-big-menu">
                     <li {% if uri_path[0] == 'dashboard' %} class='active' {% endif %}>
                         <a href="dashboard"><i class="material-icons grey-text accent-2 left">dashboard</i>Dashboard</a></li>
@@ -42,7 +42,7 @@
                     <li><a href="logout"><i class="material-icons orange-text lighten-1 left">logout</i>Logout</a></li>
                 </ul>
 
-                {% elif user_role == 'user' %}
+                {% elif role == 'user' %}
                 <ul class="right remove-big-menu">
                     <li {% if uri_path[0] == 'dashboard' %} class='active' {% endif %}>
                         <a href="dashboard"><i class="material-icons grey-text accent-2 left">dashboard</i>Dashboard</a></li>
@@ -53,6 +53,8 @@
                     <li>
                         <a href="logout"><i class="material-icons orange-text lighten-1 left">logout</i>Logout</a></li>
                 </ul>
+                {% else %}
+                <i class="material-icons grey-text lighten-1">lock_outline</i>
                 {% endif %}
                 {% endif %}
             </div>
@@ -73,8 +75,8 @@
         <li {% if uri_path[1] == 'logging' %} class='active' {% endif %}>
             <a href="settings/logging"><i class="material-icons {{icon_color}}">description</i> Logging</a></li>
 
-        <li {% if uri_path[1] == 'syslog' %} class='active' {% endif %}>
-            <a href="settings/syslog"><i class="material-icons {{icon_color}}">file_copy</i> Syslog</a></li>
+    <!--    <li {% if uri_path[1] == 'syslog' %} class='active' {% endif %}>
+            <a href="settings/syslog"><i class="material-icons {{icon_color}}">file_copy</i> Syslog</a></li> -->
 
         <li {% if uri_path[1] == 'categories' %} class='active' {% endif %}>
             <a href="settings/categories"><i class="material-icons {{icon_color}}">library_books</i> Categories</a></li>
@@ -161,8 +163,8 @@
         <li {% if uri_path[1] == 'logging' %} class='active' {% endif %}>
             <a href="settings/logging"><i class="material-icons {{icon_color}}">description</i> Logging</a></li>
 
-        <li {% if uri_path[1] == 'syslog' %} class='active' {% endif %}>
-            <a href="settings/syslog"><i class="material-icons {{icon_color}}">file_copy</i> Syslog</a></li>
+    <!--    <li {% if uri_path[1] == 'syslog' %} class='active' {% endif %}>
+            <a href="settings/syslog"><i class="material-icons {{icon_color}}">file_copy</i> Syslog</a></li> -->
 
         <li {% if uri_path[1] == 'categories' %} class='active' {% endif %}>
             <a href="settings/categories"><i class="material-icons {{icon_color}}">library_books</i> Categories</a></li>

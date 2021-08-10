@@ -56,7 +56,7 @@ def combine_ips(Log):
     ip_proxy = load_configuration('ip_proxy')
 
     ip_cat_signatures = []
-    for cat in ip_proxy['categories']:
+    for cat in ip_proxy['reputation']:
         try:
             with open(f'{HOME_DIR}/dnx_system/signatures/ip_lists/{cat}.ips', 'r') as file:
                 ip_cat_signatures.extend([x.lower() for x in file.read().splitlines() if x and '#' not in x])
@@ -123,16 +123,16 @@ def generate_geolocation(Log):
         bin_id = net_id & MSB
         host_id_start = net_id & LSB
 
-        host_container = [host_id_start, host_id_start+ip_count, country]
-
-        dict_nets[bin_id].append(host_container)
+        dict_nets[bin_id].append([host_id_start, host_id_start+ip_count, country])
 
     # merging contiguous ranges if within same country
     for bin_id, containers in dict_nets.items():
         dict_nets[bin_id] = _merge_geo_ranges(sorted(containers))
 
+    # NOTE: reduced list comprehension now that extra compression is re implemented, which converts to
+    # tuple once it is completed with host containers, then again on the bin itself.
     nets = [
-        (bin_id, tuple(tuple(host_container) for host_container in containers)) for bin_id, containers in dict_nets.items()
+        (bin_id, containers) for bin_id, containers in dict_nets.items()
     ]
     nets.sort()
 
@@ -141,7 +141,7 @@ def generate_geolocation(Log):
     return tuple(nets)
 
 def _merge_geo_ranges(ls):
-    merged_item, merged_container = [], []
+    merged_item, merged_containers = [], []
     for l in ls:
 
         cur_net_id, cur_broadcast, cur_country = l
@@ -159,16 +159,18 @@ def _merge_geo_ranges(ls):
             if (cur_net_id == last_broadcast+1 and cur_country == last_country):
                 merged_item[1] = cur_broadcast
 
-            # once a discontiguous range or new country is detected, the merged_item will get added to the merged list. this
-            # finalized the container by incrementing the broadcast by 1 to accomodate range() non inclusivity, then
-            # replaces the value of the ongoing merged_item with the current iteration list.
+            # once a discontiguous range or new country is detected, the merged_item will get added to the merged list. convert
+            # host container to a tuple while we have it here now, which should reduce the list comprehension complexity.
+            # after, replace the value of the ongoing merged_item with the current iteration list to continue process.
+            # NOTE/TODO: this is where we can implement the array, instead of convering after returned.
             else:
-                merged_container.append(merged_item)
+                merged_containers.append(tuple(merged_item))
 
                 merged_item = l
 
     # adding odd one out to merged container
     if (not merged_item or merged_item[-1] != l):
-        merged_container.append(merged_item)
+        merged_containers.append(tuple(merged_item))
 
-    return merged_container
+    # converting bin to tuple here. this should reduce list comprehension complexity on return.
+    return tuple(merged_containers)

@@ -14,7 +14,7 @@ from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_configure.dnx_system_info import System
 
-def load_page():
+def load_page(form):
     logging_settings = load_configuration('logging_client')
 
     log = logging_settings['logging']

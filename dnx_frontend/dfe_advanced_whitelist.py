@@ -16,17 +16,17 @@ from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_configure.dnx_system_info import System
 
-def load_page():
+def load_page(form):
     whitelist = load_configuration('whitelist')
 
-    for domain, info in whitelist['domain'].items():
+    for info in whitelist['time_based'].values():
         st_offset = System.calculate_time_offset(info['time'])
 
-        domain['time'] = System.format_date_time(st_offset)
+        info['time'] = System.format_date_time(st_offset)
 
     whitelist_settings = {
-        'domain_whitelist': whitelist['domain'], 'exceptions': whitelist['exception'],
-        'ip_whitelist':  whitelist['ip_whitelist']
+        'time_based': whitelist['time_based'], 'pre_proxy': whitelist['pre_proxy'],
+        'ip_bypass':  whitelist['ip_bypass']
     }
 
     return whitelist_settings

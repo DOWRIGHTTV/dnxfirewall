@@ -16,17 +16,17 @@
         </div>
     </div>
 </section>
-<section id="fwall" class="section">
+<section id="fwall" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add Rule</h4>
                     <div class="row">
                         <form action="advanced/firewall" method="POST">
                             <input type="hidden" name="tab" value="1">
                             <input type="hidden" name="change_interface">
-                            <div class="input-field col s6 m4">
+                            <div class="input-field col s6 m4 {{input_color}}">
                                 <select name="zone" onchange="this.form.submit()">
                                     {% for zone in zones %}
                                         {% if zone == selected[:-5] %}
@@ -44,11 +44,11 @@
                         <input type="hidden" name="tab" value="1">
                         <input type="hidden" name="zone" value="{{selected}}">
                         <div class="row">
-                            <div class="input-field col s4 m3">
+                            <div class="input-field col s4 m3 {{input_color}}">
                                 <input type="text" name="src_ip" {{ip_addr_validate}} placeholder="127.0.0.1">
                                 <label for="">Source IP</label>
                             </div>
-                            <div class="input-field col s2 m1">
+                            <div class="input-field col s2 m1 {{input_color}}">
                                 <select name="src_netmask" id="">
                                     {% for cidr in firewall_settings['netmasks'] %}
                                     <option value="{{cidr}}">/{{cidr}}</option>
@@ -56,11 +56,11 @@
                                 </select>
                                 <label for="src_netmask">Netmask</label>
                             </div>
-                            <div class="input-field col s4 m3">
+                            <div class="input-field col s4 m3 {{input_color}}">
                                 <input type="text" name="dst_ip" {{ip_addr_validate}} placeholder="127.0.0.1" required>
                                 <label for="">Destination IP</label>
                             </div>
-                            <div class="input-field col s2 m1">
+                            <div class="input-field col s2 m1 {{input_color}}">
                                 <select name="dst_netmask">
                                     {% for cidr in firewall_settings['netmasks'] %}
                                     <option value="{{cidr}}">/{{cidr}}</option>
@@ -68,7 +68,7 @@
                                 </select>
                                 <label for="dst_netmask">Netmask</label>
                             </div>
-                            <div class="input-field col s2 m2">
+                            <div class="input-field col s2 m2 {{input_color}}">
                                 <select name="protocol">
                                     {% for opt in ['tcp', 'udp', 'icmp', 'any'] %}
                                     <option value="{{opt}}">{{opt.upper()}}</option>
@@ -76,13 +76,13 @@
                                 </select>
                                 <label for="protocol">Protocol</label>
                             </div>
-                            <div class="input-field col s2 m2">
+                            <div class="input-field col s2 m2 {{input_color}}">
                                 <input type="text" name="dst_port" {{port_validate}} placeholder="80">
                                 <label for="">Destination Port</label>
                             </div>
                         </div>
                         <div class="row">
-                            <div class="input-field col s3 m2">
+                            <div class="input-field col s3 m2 {{input_color}}">
                                 <input type="number" name="position" class="validate" value="1" min="1" max="{{firewall_settings['firewall_rules']|length + 1}}">
                                 <label for="">Position</label>
                             </div>
@@ -105,7 +105,7 @@
                 </div>
             </div>
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Rule List ({{selected[:-5]}})</h4>
                         <table class="striped centered">
                             <thead>
@@ -153,33 +153,33 @@
         </div>
     </div>
 </section>
-<section id="dmz-dnat" class="section">
+<section id="dmz-dnat" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add Rule</h4>
                     <form action="/advanced/firewall" method="POST">
                         <input type="hidden" name="tab" value="2">
                         <input type="hidden" name="zone" value="{{selected}}">
                         <input type="hidden" name="nat_type" value="DSTNAT">
                         <div class="row">
-                            <div class="input-field col offset-m1 s3 m2">
+                            <div class="input-field col offset-m1 s3 m2 {{input_color}}">
                                 <select name="src_zone" id="">
                                     <option value="wan">WAN</option>
                                     <option value="lan">LAN</option>
                                 </select>
                                 <label for="">Src Zone</label>
                             </div>
-                            <div class="input-field col s3 m2">
+                            <div class="input-field col s3 m2 {{input_color}}">
                                 <input type="text" name="dst_ip" {{ip_addr_validate}} placeholder="1.1.1.1">
                                 <label for="">Destination IP (Optional)</label>
                             </div>
-                            <div class="input-field col s3 m2">
+                            <div class="input-field col s3 m2 {{input_color}}">
                                 <input type="text" name="dst_port" {{port_validate}} placeholder="80" required>
                                 <label for="">Destination Port</label>
                             </div>
-                            <div class="input-field col offset-m2 s3 m2">
+                            <div class="input-field col offset-m2 s3 m2 {{input_color}}">
                                 <select name="protocol" id="">
                                     <option value="tcp">TCP</option>
                                     <option value="udp">UDP</option>
@@ -195,11 +195,11 @@
                                 </select>
                                 <label for="">Dst Zone</label>
                             </div>
-                            <div class="input-field col s3 m2">
+                            <div class="input-field col s3 m2 {{input_color}}">
                                 <input type="text" name="host_ip" {{ip_addr_validate}} placeholder="127.0.0.10" required>
                                 <label for="">Host IP</label>
                             </div>
-                            <div class="input-field col s3 m2">
+                            <div class="input-field col s3 m2 {{input_color}}">
                                 <input type="text" name="host_port" {{port_validate}} placeholder="80" required>
                                 <label for="">Host Port</label>
                             </div>
@@ -211,7 +211,7 @@
                 </div>
             </div>
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Rule List</h4>
                     <table class="striped centered">
                         <thead>
@@ -262,26 +262,26 @@
         </div>
     </div>
 </section>
-<section id="local-snat" class="section">
+<section id="local-snat" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add Rule</h4>
                     <form action="/advanced/firewall" method="POST">
                         <input type="hidden" name="tab" value="3">
                         <input type="hidden" name="zone" value="{{selected}}">
                         <input type="hidden" name="nat_type" value="SRCNAT">
                         <div class="row">
-                            <div class="input-field col offset-m1 s3 m2">
+                            <div class="input-field col offset-m1 s3 m2 {{input_color}}">
                                 <input type="text" name="orig_src_ip" {{ip_addr_validate}} placeholder="127.0.0.10">
                                 <label for="">Original Src IP</label>
                             </div>
-                            <div class="input-field col s3 m2">
+                            <div class="input-field col s3 m2 {{input_color}}">
                                 <input type="text" name="orig_src_port" placeholder="any" disabled>
                                 <label for="">Original Src Port</label>
                             </div>
-                            <div class="input-field col s3 m2">
+                            <div class="input-field col s3 m2 {{input_color}}">
                                 <select name="src_zone" id="">
                                     <option value="dmz">DMZ</option>
                                     <option value="lan">LAN</option>
@@ -290,15 +290,15 @@
                             </div>
                         </div>
                         <div class="row">
-                            <div class="input-field col offset-m1 s3 m2">
+                            <div class="input-field col offset-m1 s3 m2 {{input_color}}">
                                 <input type="text" name="new_src_ip" {{ip_addr_validate}} placeholder="127.0.0.10">
                                 <label for="">New Src IP</label>
                             </div>
-                            <div class="input-field col s3 m2" disabled>
+                            <div class="input-field col s3 m2 {{input_color}}" disabled>
                                 <input type="text" name="new_src_port" placeholder="original" disabled>
                                 <label for="">New Src Port</label>
                             </div>
-                            <div class="input-field col s3 m2">
+                            <div class="input-field col s3 m2 {{input_color}}">
                                 <select name="dst_zone" id="" disabled>
                                     <option value="wan">WAN</option>
                                 </select>
@@ -312,7 +312,7 @@
                 </div>
             </div>
             <div class="col s12">
-                <div class="card-panel hoverable">
+                <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">SNAT Rules</h4>
                     <table class="striped centered">
                         <thead>

@@ -9,12 +9,13 @@ sys.path.insert(0, HOME_DIR)
 import dnx_configure.dnx_configure as configure
 import dnx_configure.dnx_validate as validate
 
-from dnx_configure.dnx_constants import CFG, INVALID_FORM
+from dnx_configure.dnx_constants import CFG, DATA, INVALID_FORM
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
-from dnx_configure.dnx_system_info import Services
+from dnx_configure.dnx_system_info import Services, System
+from dnx_configure.dnx_iptables import IPTablesManager
 
-def load_page():
+def load_page(form):
     ips = load_configuration('ips.json')
 
     passive_block_ttl = ips['passive_block_ttl']
@@ -29,6 +30,12 @@ def load_page():
         'enabled': ddos_enabled, 'tcp': tcp_src_limit,
         'udp': udp_src_limit, 'icmp': icmp_src_limit
     }
+
+    # converting standard timestamp to front end readable string format
+    passively_blocked_hosts = []
+    pbh = System.ips_passively_blocked()
+    for host, timestamp in pbh:
+        passively_blocked_hosts.append((host, timestamp, System.offset_and_format(timestamp)))
 
     # portscan settings
     portscan_prevention = ips['port_scan']['enabled']
@@ -54,7 +61,8 @@ def load_page():
     ips_settings = {
         'enabled': ips_enabled, 'length': passive_block_ttl, 'ids_mode': ids_mode,
         'ddos': ddos_settings, 'port_scan': portscan_settings, 'ddos_notify': ddos_notify,
-        'ps_notify': ps_notify, 'ip_whitelist': ip_whitelist, 'dns_server_whitelist': dns_server_whitelist
+        'ps_notify': ps_notify, 'ip_whitelist': ip_whitelist, 'dns_server_whitelist': dns_server_whitelist,
+        'passively_blocked_hosts': passively_blocked_hosts
     }
 
     return ips_settings
@@ -140,6 +148,25 @@ def update_page(form):
         action = CFG.ADD if 'dns_enabled' in form else CFG.DEL
 
         configure.update_ips_dns_whitelist(action)
+
+    elif ('ips_pbl_remove' in form):
+        host_info = form.get('ips_pbl_remove', DATA.INVALID)
+        if (host_info is DATA.INVALID):
+            return INVALID_FORM
+
+        try:
+            host_ip, timestamp = host_info.split('/')
+
+            validate.ip_address(host_ip)
+        except:
+            return INVALID_FORM
+
+        if (validate.convert_int(timestamp) is DATA.INVALID):
+            return INVALID_FORM
+
+        else:
+            with IPTablesManager() as iptables:
+                iptables.remove_passive_block(host_ip, timestamp)
 
     else:
         return INVALID_FORM

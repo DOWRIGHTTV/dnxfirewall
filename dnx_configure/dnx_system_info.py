@@ -9,13 +9,14 @@ import fcntl
 from copy import deepcopy
 from time import time, ctime, sleep
 from ipaddress import IPv4Address
+from functools import partial
 from datetime import datetime, timedelta
 from subprocess import run, CalledProcessError, DEVNULL
 
 _HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, _HOME_DIR)
 
-from dnx_configure.dnx_constants import str_join, FIVE_SEC
+from dnx_configure.dnx_constants import str_join, NO_DELAY, FIVE_SEC, ONE_HOUR
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_iptools.dnx_protocol_tools import convert_mac_to_bytes
 
@@ -23,13 +24,15 @@ __all__ = (
     'Interface', 'System', 'Services'
 )
 
+util_shell = partial(run, shell=True, capture_output=True, text=True)
+
 
 class Interface:
     '''This class is being depricated and being replaced by dnx_interface module in iptools dir.'''
 
     @staticmethod
     def ip_address(interface):
-        output = run(f'ifconfig {interface}', shell=True, capture_output=True, text=True).stdout.splitlines(8)
+        output = util_shell(f'ifconfig {interface}').stdout.splitlines(8)
         for line in output:
             if('inet' in line):
                 line = line.strip().split()
@@ -39,7 +42,7 @@ class Interface:
 
     @staticmethod
     def mtu(interface):
-        output = run(f'ifconfig {interface}', shell=True, capture_output=True, text=True).stdout.splitlines(8)
+        output = util_shell(f'ifconfig {interface}').stdout.splitlines(8)
         for line in output:
             line = line.strip().split()
             if (line[3].isdigit()):
@@ -51,7 +54,7 @@ class Interface:
 
     @staticmethod
     def netmask(interface):
-        output = run(f'ifconfig {interface}', shell=True, capture_output=True, text=True).stdout.splitlines(8)
+        output = util_shell(f'ifconfig {interface}').stdout.splitlines(8)
         for line in output:
             if ('netmask' in line):
                 line = line.strip().split()
@@ -62,7 +65,7 @@ class Interface:
     @staticmethod
     def broadcast_address(interface):
         '''returns ip address object for the sent in interface networks broadcast address.'''
-        output = run(f'ifconfig {interface}', shell=True, capture_output=True, text=True).stdout.splitlines(8)
+        output = util_shell(f'ifconfig {interface}').stdout.splitlines(8)
         for line in output:
             if ('broadcast' in line):
                 line = line.strip().split()
@@ -85,11 +88,11 @@ class Interface:
     def mac_address(interface):
         '''returns string form mac address for sent in interface.'''
 
-        return run(f'ifconfig {interface}', shell=True, capture_output=True, text=True).stdout.splitlines()[3].split()[1]
+        return util_shell(f'ifconfig {interface}').stdout.splitlines()[3].split()[1]
 
     @staticmethod
     def default_gateway(interface):
-        output = run('ip route', shell=True, capture_output=True, text=True).stdout.splitlines(8)
+        output = util_shell('ip route').stdout.splitlines(8)
         for line in output:
             if('default' in line):
                 dfg = line.split()[2]
@@ -98,7 +101,7 @@ class Interface:
 
     @staticmethod
     def default_gateways_mac_address(default_gateway):
-        output = run('arp -n -e', shell=True, capture_output=True, text=True).stdout.splitlines(8)
+        output = util_shell('arp -n -e').stdout.splitlines(8)
         for line in output:
             line = line.split()
             if(line[0] == default_gateway):
@@ -115,6 +118,9 @@ class System:
         run('sudo reboot', shell=True)
 
     @staticmethod
+    # ^ same for restart
+    # TODO: check if the delay is still needed. it should be done via a delay on the caller side now.
+    # TODO: implement disk sync syscall to ensure all data is written to disk prior to shudown
     def shutdown():
         sleep(FIVE_SEC)
         run('sudo shutdown', shell=True)
@@ -170,6 +176,16 @@ class System:
         return ram
 
     @staticmethod
+    def offset_and_format(logged_time):
+        '''
+        convenience wrapper around System.calculate_time_offset and System.format_date_time.
+
+            System.format_date_time(System.calculate_time_offset(logged_time))
+        '''
+
+        return System.format_date_time(System.calculate_time_offset(logged_time))
+
+    @staticmethod
     def calculate_time_offset(logged_time):
         '''returns modified time based on current time offset settings.'''
         logging = load_configuration('logging_client')
@@ -177,7 +193,7 @@ class System:
         offset = logging['time_offset']
         os_direction = offset['direction']
         os_amount    = offset['amount']
-        offset       = int(f'{os_direction}{os_amount}') * 3600
+        offset       = int(f'{os_direction}{os_amount}') * ONE_HOUR
 
         return logged_time + offset
 
@@ -203,19 +219,23 @@ class System:
 
     @staticmethod
     def date(timestamp=None, string=False):
-        '''return list of year, month, day of current system time. use timestamp
-        argument to override. [2019, 06, 24]'''
+        '''
+        return list of year, month, day of current system time as a list of strings. ['2019', '06', '24']
+
+        use timestamp argument to override current date with date of timestamp.
+
+        setting string=True with return join the list before returning.
+
+        '''
         dt = datetime.now()
         if (timestamp):
             dt = datetime.fromtimestamp(timestamp)
 
-        yr = f'{dt.year}'
-        mo = f'{dt.month:02}'
-        dy = f'{dt.day:02}'
+        dt_list = [f'{dt.year}', f'{dt.month:02}', f'{dt.day:02}']
         if (string):
-            return str_join([yr, mo, dy])
+            return str_join(dt_list)
 
-        return [yr, mo, dy]
+        return dt_list
 
     @staticmethod
     def time():
@@ -265,21 +285,49 @@ class System:
         return backups
 
     @staticmethod
+    def ips_passively_blocked(*, table='raw', expire_stamp=NO_DELAY):
+        '''
+        return list of currently blocked hosts in the specific iptables table. default table is 'raw'.
+
+        if expire_stamp is defined, only hosts that have reached point of expiration will be returned.
+        expire_stamp should be an integer value of the current time - the amount of seconds that represent
+        the time to expire.
+
+            blocked_hosts = System.ips_passivley_blocked(expire_stamp=time.time()-100)
+        '''
+
+        # ACCEPT all -- 8.8.8.8(src) 0.0.0.0/0(dst) /* 123456 */L
+        host_list = []
+        output = util_shell(f'sudo iptables -t {table} -nL IPS').stdout.splitlines()
+        for line in output[2:]:
+            line = line.split()
+
+            blocked_host, timestamp = line[3], int(line[6])
+
+            # if an expire stamp is defined, check whether the host rule has reach point
+            # of expiration. if not, loop will continue
+            if (timestamp < expire_stamp):
+                continue
+
+            host_list.append((blocked_host, timestamp))
+
+        return host_list
+
+    @staticmethod
     # TODO: this can be refactored to follow dnat/snat format for parsing
     def firewall_rules(*, chain='GLOBAL_ZONE'):
         # getting list of all rules in specified chain
-        output = run(
-            f'sudo iptables -nL {chain} --line-number', shell=True, capture_output=True, text=True
-        ).stdout.splitlines()
+        output = util_shell(f'sudo iptables -nL {chain} --line-number').stdout.splitlines()
 
         # parsing output and formatting for use by front end
         firewallrules = []
         for rule in output[2:]:
 
             modified_rule = [x for i, x in enumerate(rule.split()) if i not in [3, 6]]
-            # if ports are specified, it will be parsed then replaced with new value
+            # if ports are specified, it will be parsed then replaced with new value. after split
+            # either 80 or 80:90 is possible format becuase of restricted split count.
             if (len(modified_rule) == 6):
-                modified_rule[-1] = modified_rule[-1].lstrip('dpt:')
+                modified_rule[-1] = modified_rule[-1].split(':', 1)[1]
 
             elif (modified_rule[2] in ['icmp', 'all']):
                 modified_rule.append('N/A')
@@ -301,9 +349,7 @@ class System:
     @staticmethod
     def nat_rules(*, nat_type='DSTNAT'):
         natrules = []
-        output = run(
-            f'sudo iptables -t nat --list-rules | grep "A {nat_type}"', shell=True, capture_output=True, text=True
-        ).stdout.splitlines()
+        output = util_shell(f'sudo iptables -t nat --list-rules | grep "A {nat_type}"').stdout.splitlines()
 
         for i, rule in enumerate(output, 1):
 
@@ -331,8 +377,6 @@ class System:
                             rule_d['--to-dest'] = value
                             rule_d['--to-port'] = rule_d['--dport']
 
-
-
             natrules.append((i, rule_d))
 
         # print(natrules)
@@ -341,7 +385,7 @@ class System:
     @staticmethod
     def ip_whitelist():
         ip_whitelist = {}
-        output = run('sudo iptables -nL IP_WHITELIST --line-number', shell=True, capture_output=True, text=True).stdout.splitlines()
+        output = util_shell('sudo iptables -nL IP_WHITELIST --line-number').stdout.splitlines()
         for rule in output:
             rule = rule.split()
             if (not rule[0].isdigit()): continue
@@ -360,23 +404,25 @@ class System:
         }[netmask]
 
 
+_svc_shell = partial(run, shell=True, stdout=DEVNULL)
+
 class Services:
 
     @staticmethod
     def status(service):
         try:
-            return run(f'sudo systemctl status {service}', shell=True, check=True, stdout=DEVNULL)
+            return _svc_shell(f'sudo systemctl status {service}', check=True)
         except CalledProcessError:
             return False
 
     @staticmethod
     def start(service):
-        run(f'sudo systemctl start {service}', shell=True, stdout=DEVNULL)
+        _svc_shell(f'sudo systemctl start {service}')
 
     @staticmethod
     def restart(service):
-        run(f'sudo systemctl restart {service}', shell=True, stdout=DEVNULL)
+        _svc_shell(f'sudo systemctl restart {service}')
 
     @staticmethod
     def stop(service):
-        run(f'sudo systemctl stop {service}', shell=True, stdout=DEVNULL)
+        _svc_shell(f'sudo systemctl stop {service}')

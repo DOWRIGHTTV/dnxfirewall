@@ -32,16 +32,16 @@ class Log(LogHandler):
             return LOG.ALERT, {'dns': log, 'blocked': log, 'infected': log2}
 
         # logs redirected/blocked requests
-        elif (req.redirect and cls.current_lvl >= LOG.NOTICE):
+        elif (req.redirect and cls.current_lvl >= LOG.WARNING):
             log = DNS_LOG(f'{pkt.src_ip}', pkt.request, req.category.name, req.reason, 'blocked')
 
-            return LOG.NOTICE, {'dns': log, 'blocked': log}
+            return LOG.WARNING, {'dns': log, 'blocked': log}
 
-        # logs all requests, regardless of action of proxy if not already logged
-        elif (not req.redirect and cls.current_lvl >= LOG.INFO):
-            log = DNS_LOG(f'{pkt.src_ip}', pkt.request, 'N/A', 'logging', 'allowed')
+        # NOTE: recent change to have allowed requests log enabled at NOTICE or above
+        elif (not req.redirect and cls.current_lvl >= LOG.NOTICE):
+            log = DNS_LOG(f'{pkt.src_ip}', pkt.request, req.category.name, 'logging', 'allowed')
 
-            return LOG.INFO, {'dns': log}
+            return LOG.NOTICE, {'dns': log}
 
         return LOG.NONE, {}
 
