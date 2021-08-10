@@ -174,6 +174,10 @@ class Inspect:
         return CONN.ACCEPT
 
 if __name__ == '__main__':
+    Log.run(
+        name=LOG_NAME
+    )
+
     ip_cat_signatures, geoloc_signatures = Configuration.load_ip_signature_bitmaps()
 
     # using cython function factory to create binary search function with module specific signatures
@@ -183,7 +187,4 @@ if __name__ == '__main__':
     _recursive_binary_search = generate_recursive_binary_search(ip_cat_signatures, ip_cat_signature_bounds)
     _linear_binary_search = generate_linear_binary_search(geoloc_signatures, geoloc_signature_bounds)
 
-    Log.run(
-        name=LOG_NAME
-    )
     IPProxy.run(Log, q_num=1)
