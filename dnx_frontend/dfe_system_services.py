@@ -55,7 +55,7 @@ def update_page(form):
             with IPTablesManager() as ipt:
                 ipt.modify_management_access(fields)
 
-            configure.modify_management_access(fields)
+                configure.modify_management_access(fields)
 
             return
 

@@ -336,11 +336,11 @@ def set_services():
     for service in services:
         if (service in ignore_list): continue
 
-        dnx_run(f'sudo cp {HOME_DIR}/services/{service} /etc/systemd/system/')
+        dnx_run(f'cp {HOME_DIR}/services/{service} /etc/systemd/system/')
 
-        dnx_run(f'sudo systemctl enable {service}')
+        dnx_run(f'systemctl enable {service}')
 
-    dnx_run(f'sudo systemctl enable nginx')
+    dnx_run(f'systemctl enable nginx')
 
 #============================
 # INITIAL IPTABLE SETUP
@@ -390,9 +390,9 @@ if __name__ == '__main__':
     install_packages()
     compile_extensions()
     configure_webui()
-    set_permissions()
     set_services()
     configure_iptables()
+    set_permissions()
 
     mark_completion_flag()
 
