@@ -473,7 +473,7 @@ def dnx_login():
 
         login_error = 'Invalid Credentials. Please try again.'
 
-    return render_template('dnx_login.html', navi=False, login_btn=False, idle_timeout=False,
+    return render_template('dnx_login.html', navi=True, login_btn=False, idle_timeout=False,
         standard_error=False, login_error=login_error, uri_path=['login'])
 
 ## --------------------------------------------- ##
