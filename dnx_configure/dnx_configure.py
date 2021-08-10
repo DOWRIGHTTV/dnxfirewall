@@ -386,7 +386,7 @@ def update_geolocation(region, *, rtype='country'):
 
         # setting individual country to user set value
         if (rtype == 'country'):
-            country_list[region['country']] = region['direction']
+            country_list[region['country']] = region['cfg_dir']
 
         # iterating over all countries within specified continent and setting their
         # direction as the user set value # TODO: implement this

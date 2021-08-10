@@ -19,7 +19,7 @@ from dnx_configure.dnx_iptables import IPTablesManager
 
 DISABLED_MANAGEMENT_SERVICES = ['cli']
 
-def load_page():
+def load_page(form):
     dnx_settings = load_configuration('config')
 
     all_services = []

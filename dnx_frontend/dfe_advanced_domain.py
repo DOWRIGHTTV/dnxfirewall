@@ -17,7 +17,7 @@ from dnx_configure.dnx_constants import UD_DOMAIN_HEIGHT, INVALID_FORM
 
 
 # TODO: if system category gets disabled that had keyword enabled. it does not disable the keyword search.
-def load_page():
+def load_page(form):
     dns_proxy = load_configuration('dns_proxy')
 
     list_settings = dns_proxy['categories']

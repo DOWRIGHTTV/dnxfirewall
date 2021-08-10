@@ -89,7 +89,13 @@ i.icon-blue {
     color: blue;
 }
 
-/* ipp selector */
-.select-wrapper {
-    position: absolute;
-}
+/* table striping and highlight override */
+
+table.striped > tbody > tr:nth-child(odd) {
+    background-color: rgba(11, 47, 47, 0.5); }
+
+table.striped > tbody > tr {
+    background-color: rgba(242, 242, 242, 0.5); }
+
+table.highlight > tbody > tr:hover {
+    background-color: rgba(122, 89, 39, 0.507); }
