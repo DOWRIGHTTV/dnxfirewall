@@ -685,8 +685,9 @@ def set_dns_over_tls(dns_tls_settings):
     with ConfigurationManager('dns_server') as dnx:
         dns_server_settings = dnx.load_configuration()
 
-        tls_settings = dns_server_settings['dns_server']['tls']
+        tls_settings = dns_server_settings['tls']
         enabled_settings = dns_tls_settings['enabled']
+
         if ('dns_over_tls' in enabled_settings and 'udp_fallback' not in enabled_settings):
             tls_enabled = True
             udp_fallback = False
