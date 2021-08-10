@@ -80,7 +80,7 @@ class Listener:
     def run(cls, Log, *, threaded=True, always_on=True):
         '''associating subclass Log reference with Listener class. registering all interfaces in _intfs and starting service listener loop. calling class method setup before to
         provide subclass specific code to run at class level before continueing.'''
-        Log.notice(f'{cls.__name__} initialization started.')
+        Log.informational(f'{cls.__name__} initialization started.')
 
         cls._Log = Log
         cls.__registered_socks = {}
@@ -162,7 +162,7 @@ class Listener:
         # spoof the original destination.
         cls.__epoll.register(l_sock.fileno(), select.EPOLLIN)
 
-        cls._Log.notice(f'[{l_sock.fileno()}][{intf}] {cls.__name__} interface registered.')
+        cls._Log.informational(f'[{l_sock.fileno()}][{intf}] {cls.__name__} interface registered.')
 
     @classmethod
     def set_proxy_callback(cls, *, func):
@@ -248,7 +248,7 @@ class ProtoRelay:
 
     def __new__(cls, *args, **kwargs):
         if (cls is ProtoRelay):
-            raise TypeError('Listener can only be used via inheritance.')
+            raise TypeError('ProtoRelay can only be used via inheritance.')
 
         return object.__new__(cls)
 
@@ -291,7 +291,9 @@ class ProtoRelay:
             try:
                 self._relay_conn.send(client_query.send_data)
             except OSError as ose:
+                # NOTE: temporary
                 write_log(f'[{self._relay_conn.remote_ip}/{self._relay_conn.version}] Send error: {ose}')
+
                 if not self._register_new_socket(): break
 
                 threading.Thread(target=self._recv_handler).start()
@@ -416,7 +418,7 @@ class NFQueue:
         try:
             nfqueue.run()
         except Exception:
-            self._Log.warning('Netfilter Queue error. Unbinding from queue and attempting to rebind.')
+            self._Log.alert('Netfilter Queue error. Unbinding from queue and attempting to rebind.')
             nfqueue.unbind()
 
         # TODO: remove the recursive call if possible maybe use threading even to wait for
@@ -443,6 +445,7 @@ class NFQueue:
             packet.parse()
         except Exception:
             traceback.print_exc()
+
         else:
             if self._pre_inspect(packet):
                 if (self.__threaded):
@@ -484,9 +487,9 @@ class RawPacket:
 
     '''
     __slots__ = (
-        # protected vars
         '_dlen', '_addr',
-        # public vars - init
+
+        # init vars
         'data',
         'timestamp', 'protocol',
         'nfqueue', 'zone',
@@ -496,7 +499,7 @@ class RawPacket:
         'src_ip', 'dst_ip', 'ip_header',
         'src_port', 'dst_port',
 
-        # public vars - tcp
+        # tcp
         'seq_number', 'ack_number',
 
         # udp
@@ -548,6 +551,7 @@ class RawPacket:
     @classmethod
     def interface(cls, data, address, sock_info):
         '''alternate constructor. used to start listener/proxy instances bound to physical interfaces(active socket).'''
+
         self = cls()
         self._addr = address
 
@@ -668,6 +672,7 @@ class RawResponse:
     def setup(cls, Module, Log):
         '''register all available interfaces in a separate thread for each. registration will wait for
         the interface to become available before finalizing.'''
+
         if (cls.__setup):
             raise RuntimeError('response handler setup can only be called once per process.')
         cls.__setup = True
@@ -697,7 +702,7 @@ class RawResponse:
         # sock sender is the direct reference to the socket send method
         cls._registered_socks[zone] = NFQ_SEND_SOCK(*intf, ip, cls.sock_sender(_intf))
 
-        cls._Log.notice(f'{cls.__name__}: {_intf} registered.')
+        cls._Log.informational(f'{cls.__name__}: {_intf} registered.')
 
     @classmethod
     def prepare_and_send(cls, packet):
