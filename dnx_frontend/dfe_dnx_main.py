@@ -162,18 +162,15 @@ def settings_categories(dnx_session_data):
     menu_option = request.args.get('menu', '1')
     menu_option = int(menu_option) if menu_option.isdigit() else '1'
 
-    settings = category_settings.load_page(menu_option)
-
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'cat_settings': True, 'tab': tab, 'menu': menu_option,
-        'category_settings': settings,
         'uri_path': ['settings', 'categories']
     }
 
     page_settings.update(dnx_session_data)
 
-    page_action = categories_page_logic(category_settings.update_page, page_settings)
+    page_action = categories_page_logic(category_settings, page_settings)
 
     return page_action
 
@@ -497,16 +494,13 @@ def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
         except OSError as ose:
             return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
 
-        if (not error):
-            return redirect(url_for(page_name, tab=tab))
-
         page_settings.update({
             'tab': tab,
             'standard_error': error
         })
 
     try:
-        page_settings[data_key] = dnx_page.load_page()
+        page_settings[data_key] = dnx_page.load_page(request.form)
     except OSError as ose:
             return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
 
@@ -556,10 +550,10 @@ def log_page_logic(log_page, page_settings, *, page_name):
 
     return render_template(f'{page_name}.html', **page_settings)
 
-def categories_page_logic(update_page, page_settings):
+def categories_page_logic(dnx_page, page_settings):
     if (request.method == 'POST'):
         try:
-            error, menu_option = update_page(request.form)
+            error, menu_option = dnx_page.update_page(request.form)
         except OSError as ose:
             return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
 
@@ -567,13 +561,18 @@ def categories_page_logic(update_page, page_settings):
         menu_option = request.form.get('menu', '1')
         menu_option = int(menu_option) if menu_option.isdigit() else '1'
 
-        if (not error):
-            return redirect(url_for('settings_categories', tab=tab, menu=menu_option))
-
         page_settings.update({
             'menu': menu_option,
+            'tab': tab,
             'standard_error': error
         })
+
+    try:
+        page_settings['category_settings'] = dnx_page.load_page(page_settings['menu'])
+    except OSError as ose:
+        return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
+
+    print(page_settings)
 
     return render_template('settings_categories.html', **page_settings)
 

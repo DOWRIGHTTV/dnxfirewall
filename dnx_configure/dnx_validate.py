@@ -272,8 +272,8 @@ def ip_proxy_settings(ip_hosts_settings, *, ruleset='reputation'):
             raise ValidationError(INVALID_FORM)
 
 def geolocation(region, rtype='country'):
-    region['direction'] = convert_int(region['direction'])
-    if (region['direction'] not in range(4)):
+    region['cfg_dir'] = convert_int(region['cfg_dir'])
+    if (region['cfg_dir'] not in range(4)):
         raise ValidationError(INVALID_FORM)
 
     if (rtype == 'country'):

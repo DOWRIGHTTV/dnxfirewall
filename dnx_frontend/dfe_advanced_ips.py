@@ -15,7 +15,7 @@ from dnx_configure.dnx_exceptions import ValidationError
 from dnx_configure.dnx_system_info import Services, System
 from dnx_configure.dnx_iptables import IPTablesManager
 
-def load_page():
+def load_page(form):
     ips = load_configuration('ips.json')
 
     passive_block_ttl = ips['passive_block_ttl']
