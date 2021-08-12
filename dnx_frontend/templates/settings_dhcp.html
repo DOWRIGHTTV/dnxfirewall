@@ -176,12 +176,13 @@
                                 <th></th>
                                 <th>IP Address</th>
                                 <th>Mac Address</th>
+                                <th>Hostname</th>
                                 <th>Time Given</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% if dhcp_settings['leases'] %}
-                            {% for ip, handout_time, mac in dhcp_settings['leases'] %}
+                            {% for ip, handout_time, mac, hostname in dhcp_settings['leases'] %}
                             <tr>
                                 <td>
                                     <a class="btn-floating btn-small waves-effect waves-light red modal-trigger"
@@ -202,6 +203,7 @@
                                 </td>
                                 <td>{{ip}}</td>
                                 <td>{{mac}}</td>
+                                <td>{{hostname}}</td>
                                 <td>{{handout_time}}</td>
                             </tr>
                             {% endfor %}
