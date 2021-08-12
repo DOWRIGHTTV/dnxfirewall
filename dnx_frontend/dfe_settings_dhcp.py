@@ -24,14 +24,14 @@ def load_page(form):
     dhcp_settings = dhcp_server['interfaces']
 
     leases = []
-    for ip, (status, handout_time, mac) in dhcp_server['leases'].items():
+    for ip, (status, handout_time, mac, hostname) in dhcp_server['leases'].items():
         # ensuring only leased status entries get included
         if (status != -4): continue
 
         offset_time = System.calculate_time_offset(handout_time)
         handout_time = System.format_date_time(offset_time)
 
-        leases.append((ip, handout_time, mac_str(mac)))
+        leases.append((ip, handout_time, mac_str(mac), hostname))
 
     leases.sort()
 

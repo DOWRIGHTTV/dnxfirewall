@@ -275,7 +275,7 @@ class ClientRequest:
             option_type, option_length = dhcp_opt_unpack(option_info)
 
             if (option_type == 12):
-                self.hostname = data[:option_length]
+                self.hostname = data[:option_length].decode(errors='replace')
 
             elif (option_type == 50):
                 self.req_ip = IPv4Address(data[:4]) # constant so hardcoded

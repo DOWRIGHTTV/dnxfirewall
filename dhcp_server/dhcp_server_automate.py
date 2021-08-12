@@ -18,14 +18,12 @@ from dnx_logging.log_main import LogHandler as Log
 from dnx_configure.dnx_file_operations import load_configuration, cfg_read_poller, ConfigurationManager
 from dnx_iptools.dnx_standard_tools import looper, dnx_queue, Initialize
 
-_NULL_LEASE = (DHCP.AVAILABLE, None, None)
+_NULL_LEASE = (DHCP.AVAILABLE, None, None, None)
 
 # required when using configuration manager.
 ConfigurationManager.set_log_reference(Log)
 
 
-# TODO: figure out how to make dhcp interface disabling done in memory so a server restart wont be necessary.
-    # this could likely be done at the pre inspect in the server to silenty drop packets from a non enabled interface.
 class Configuration:
     _setup = False
 
@@ -281,7 +279,7 @@ class Leases(dict):
 
         for ip_address, lease in active_leases:
 
-            lease_type, lease_time, lease_mac = lease
+            lease_type, lease_time, lease_mac, _ = lease
 
             # current time - lease time = time elapsed since lease was handed out
             time_elapsed = fast_time() - lease_time

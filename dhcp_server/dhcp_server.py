@@ -190,7 +190,7 @@ class DHCPServer(Listener):
         l_sock.setsockopt(SOL_SOCKET, SO_BINDTODEVICE, f'{intf}\0'.encode('utf-8'))
         l_sock.bind((str(INADDR_ANY), PROTO.DHCP_SVR))
 
-        Log.debug(f'[{l_sock.fileno()}][{intf}] bound to interface | {cls.__name__} settings: {cls.intf_settings}')
+        Log.debug(f'[{l_sock.fileno()}][{intf}] {cls.__name__} interface bound: {cls.intf_settings}')
 
         return l_sock
 
