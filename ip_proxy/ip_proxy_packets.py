@@ -81,11 +81,9 @@ class ProxyResponse(RawResponse):
             for i in range(2):
 
                 # packing the icmp header and payload, 1st iter 0 checksum, 2nd i actual
-                icmp_full = [icmp_header_pack(3, 3, checksum, 0, 0)]
-                if (packet.icmp_payload_override):
-                    icmp_full.append(packet.icmp_payload_override)
-                else:
-                    icmp_full.extend([packet.ip_header, packet.udp_header, packet.udp_payload])
+                icmp_full = [
+                    icmp_header_pack(3, 3, checksum, 0, 0), packet.ip_header, packet.udp_header, packet.udp_payload
+                ]
                 if i: break
 
                 checksum = checksum_icmp(byte_join(icmp_full))
