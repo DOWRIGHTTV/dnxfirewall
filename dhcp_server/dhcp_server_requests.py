@@ -69,10 +69,8 @@ class ServerResponse:
         if (reservation):
             return reservation
 
-        # NOTE: why is this lock here. this portion of the code is synchronous
-        # with self._svr.handout_lock:
-
         is_available, lease_mac = self._is_available(discover.req_ip, mac=True)
+
         # outcome 1/2 in rfc 2131
         if ((discover.ciaddr != INADDR_ANY)
                 and (lease_mac == discover.mac or is_available)):
@@ -221,7 +219,7 @@ class ClientRequest:
     __slots__ = (
         '_data', '_address', '_name',
         'init_time', 'server_ident', 'mtype', 'req_ip',
-        'handout_ip', 'requested_options', 'response_header',
+        'handout_ip', 'hostname', 'requested_options', 'response_header',
         'response_options', 'bcast', 'xID', 'ciaddr', 'chaddr', 'mac',
         '_response_mtype', 'send_data', 'sock', 'intf',
 
@@ -241,7 +239,6 @@ class ClientRequest:
         # NOTE: sock_info (namedtuple): name ip socket send sendto recvfrom
 
         self._data = data
-    #    self._address = address
         self.sock = sock_info
 
         self.init_time    = fast_time()
@@ -249,6 +246,7 @@ class ClientRequest:
         self.mtype        = None
         self.req_ip       = None
         self.handout_ip   = None
+        self.hostname     = ''
 
         self.requested_options = [54,51,58,59]
         self.response_header   = []
@@ -257,8 +255,6 @@ class ClientRequest:
         # assigning local reference to server callbacks through class alias object
         self._server_options_get  = self._Server.options[sock_info.name].get
         self._server_reservations = self._Server.reservations
-        # self._server_int_ip = self._Server.intf_settings[sock_info[1]]['ip'].ip # NOTE: depricate? i dont think we need
-            # a separate refence for ip now that it is stored as part of the socket info
 
     # TODO: look at other parent classes, but consider sending data in directly as arg instead of in constructor
     def parse(self):
@@ -277,7 +273,11 @@ class ClientRequest:
 
             option_info, data = data[:2], data[2:]
             option_type, option_length = dhcp_opt_unpack(option_info)
-            if (option_type == 50):
+
+            if (option_type == 12):
+                self.hostname = data[:option_length]
+
+            elif (option_type == 50):
                 self.req_ip = IPv4Address(data[:4]) # constant so hardcoded
 
             elif (option_type == 53):

@@ -17,6 +17,7 @@ sys.path.insert(0, HOME_DIR)
 import dnx_iptools.dnx_interface as interface
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
+from dnx_configure.dnx_namedtuples import DHCP_RECORD
 from dnx_iptools.dnx_parent_classes import Listener
 from dnx_iptools.dnx_structs import * # pylint: disable=unused-wildcard-import
 from dnx_iptools.dnx_standard_tools import looper
@@ -31,7 +32,7 @@ LOG_NAME = 'dhcp_server'
 class DHCPServer(Listener):
     intf_settings = {}
     options = {}
-    leases  = {} # NOTE: this is pissing me off. it conflicts with custom default dict
+    leases  = {}
     reservations = {}
     options_lock = threading.Lock()
     handout_lock = threading.Lock()
@@ -80,7 +81,7 @@ class DHCPServer(Listener):
 
     def _handle_request(self, client_request):
         request_id, server_mtype, record = (client_request.mac, client_request.xID), DHCP.NOT_SET, None
-        Log.debug(f'REQ | TYPE={client_request.mtype}, ID={request_id}')
+        Log.debug(f'[request] type={client_request.mtype}, id={request_id}')
 
         if (client_request.mtype == DHCP.RELEASE):
             self._release(client_request.ciaddr, client_request.mac)
@@ -94,7 +95,7 @@ class DHCPServer(Listener):
         # TODO: logging purposes only. probably isnt needed. the below condition are protected by
         # the initiated value being "DHCP.NOT_SET" so we dont need to cover for them.
         else:
-            Log.warning(f'Unknown request type from {client_request.mac}')
+            Log.debug(f'[request] Unknown mtype: type={client_request.mtype}, id={request_id}')
 
         # this is filtering out response types like dhcp nak | modifying lease before
         # sending to ensure a power failure will have persistent record data.
@@ -117,7 +118,7 @@ class DHCPServer(Listener):
             self.leases.modify(ip_address) # pylint: disable=no-member
 
         else:
-            Log.warning(f'Client {mac_address} attempted invalid release.')
+            Log.informational(f'[release][{mac_address}] Client attempted invalid release.')
 
     def _discover(self, request_id, client_request):
         dhcp = ServerResponse(client_request.sock.name, server=self)
@@ -125,15 +126,11 @@ class DHCPServer(Listener):
 
         client_request.handout_ip = dhcp.offer(client_request)
 
-        return DHCP.OFFER, (DHCP.OFFERED, fast_time(), client_request.mac)
+        # NOTE: the final record's hostname will be used so dont need it here
+        return DHCP.OFFER, DHCP_RECORD(DHCP.OFFERED, fast_time(), client_request.mac, '')
 
-    # TODO: troubleshoot this. it seems that requests to confirm or renew a lease are breaking causing a
-    # fatal exception. (none type cant be .packed()). look into how we are defining a handout_ip for
-    # renewals. we might be doing something wrong or out of order where the initialez value never get
-    # overwritten. it could also be the logic in this method is bad and doesnt correctly determine
-    # what to do (less likely as it is trying to respond back to requester)
     def _request(self, request_id, client_request):
-        # NOTE: assign get method on init?
+
         dhcp = self._ongoing.get(request_id, None)
         if (not dhcp):
             dhcp = ServerResponse(client_request.sock.name, server=self)
@@ -151,7 +148,7 @@ class DHCPServer(Listener):
         # responding with ACK
         elif (request_mtype in [DHCP.ACK, DHCP.RENEWING, DHCP.REBINDING]):
             client_request.handout_ip = handout_ip
-            record = (DHCP.LEASED, fast_time(), client_request.mac)
+            record = (DHCP.LEASED, fast_time(), client_request.mac, client_request.hostname)
 
         # protecting return on invalid dhcp types | TODO: validate if this even does anything. :)
         else:
@@ -163,28 +160,19 @@ class DHCPServer(Listener):
 
         return request_mtype, record
 
-    @property
-    # NOTE: might need to be adjusted due to new listener class
-    def is_enabled(self):
-        return True
-
-        # if self.intf_settings[self.name]['enabled']: return True
-
-        # return False
-
     @staticmethod
     # will send response to client over socket depending on host details it will decide unicast or broadcast
     def send_to_client(client_request, server_mtype):
         if (server_mtype is DHCP.RENEWING):
             client_request.sock.sendto(client_request.send_data, (f'{client_request.ciaddr}', 68))
 
-            Log.debug(f'Sent unicast to {client_request.ciaddr}:68')
+            Log.debug(f'[response][unicast] {client_request.ciaddr}')
 
         # NOTE: sending broadcast because fuck.
         else:
             client_request.sock.sendto(client_request.send_data, (f'{BROADCAST}', 68))
 
-            Log.debug(f'Sent broadcast for {client_request.handout_ip} to 255.255.255.255:68')
+            Log.debug(f'[response][broadcast] {client_request.handout_ip}')
 
         # NOTE: it seems we cannot support this unless we use raw sockets or inject a static arp entry through syscall
         # If the broadcast bit is not set and 'giaddr' is zero and
