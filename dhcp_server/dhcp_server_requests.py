@@ -53,7 +53,7 @@ class ServerResponse:
     # lease from table
     def release(self, ip_address, mac_address):
         '''release ip address lease stored in server. listener/server instance required.'''
-        _, lease_time, lease_mac = self._svr.leases[ip_address]
+        _, lease_time, lease_mac, _ = self._svr.leases[ip_address]
         if (lease_time != DHCP.RESERVATION and lease_mac == mac_address):
             return True
 
@@ -91,7 +91,7 @@ class ServerResponse:
 
     def ack(self, request):
         self._request = request
-        self._lease_time, _, lease_mac = self._svr.leases[request.req_ip]
+        self._lease_time, _, lease_mac, _ = self._svr.leases[request.req_ip]
 
         # DHCP.SELECTING
         if (self.selecting):
@@ -199,7 +199,7 @@ class ServerResponse:
     def _is_available(self, ip_address, mac=False):
         '''returns True if the ip address is available to lease out. if mac is set to True a tuple of status and
         associated mac, if any, will be returned.'''
-        lease_status, _, lease_mac = self._svr.leases[ip_address]
+        lease_status, _, lease_mac, _ = self._svr.leases[ip_address]
 
         status = True if lease_status is DHCP.AVAILABLE else False
 
