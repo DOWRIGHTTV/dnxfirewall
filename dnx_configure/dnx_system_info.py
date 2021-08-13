@@ -302,7 +302,7 @@ class System:
         for line in output[2:]:
             line = line.split()
 
-            blocked_host, timestamp = line[3], int(line[6])
+            blocked_host, timestamp = line[3], float(line[6])
 
             # if an expire stamp is defined, check whether the host rule has reach point
             # of expiration. if not, loop will continue
@@ -324,10 +324,9 @@ class System:
         for rule in output[2:]:
 
             modified_rule = [x for i, x in enumerate(rule.split()) if i not in [3, 6]]
-            # if ports are specified, it will be parsed then replaced with new value. after split
-            # either 80 or 80:90 is possible format becuase of restricted split count.
+            # if ports are specified, it will be parsed then replaced with new value
             if (len(modified_rule) == 6):
-                modified_rule[-1] = modified_rule[-1].split(':', 1)[1]
+                modified_rule[-1] = modified_rule[-1].lstrip('dpt:')
 
             elif (modified_rule[2] in ['icmp', 'all']):
                 modified_rule.append('N/A')

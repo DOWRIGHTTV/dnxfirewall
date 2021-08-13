@@ -115,7 +115,7 @@ class Configuration:
 
         self.IPS.ps_engine_enabled = True if self.IPS.portscan_prevention and open_ports else False
 
-        self.IPS.ddos_engine_enabled = True if self.IPS.ddos_engine_enabled else False
+        self.IPS.ddos_engine_enabled = True if self.IPS.ddos_prevention else False
 
         self.IPS.ins_engine_enabled = True if self.IPS.ps_engine_enabled or self.IPS.ddos_engine_enabled else False
 
