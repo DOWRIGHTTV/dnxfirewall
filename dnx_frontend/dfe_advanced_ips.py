@@ -85,8 +85,8 @@ def update_page(form):
             if (not limit):
                 return f'{protocol} limit must be an integer or left empty.'
 
-            if (not 10 <= limit <= 200):
-                return f'{protocol} limit must be in range 20-200.'
+            if (not 5 <= limit <= 200):
+                return f'{protocol} limit must be in range 5-200.'
 
             ddos_limits[protocol] = limit
 
