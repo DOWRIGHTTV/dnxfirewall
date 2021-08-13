@@ -302,7 +302,7 @@ class System:
         for line in output[2:]:
             line = line.split()
 
-            blocked_host, timestamp = line[3], int(float(line[6]))
+            blocked_host, timestamp = line[3], float(line[6])
 
             # if an expire stamp is defined, check whether the host rule has reach point
             # of expiration. if not, loop will continue
