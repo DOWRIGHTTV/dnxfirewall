@@ -48,6 +48,13 @@ def get_convert_int(form, key):
     except:
         return DATA.INVALID
 
+def convert_float(num):
+    '''converts argument into a float, then returns. DATA.INVALID (-1) will be returned on error.'''
+    try:
+        return float(num)
+    except:
+        return DATA.INVALID
+
 def convert_int(num):
     '''converts argument into an integer, then returns. DATA.INVALID (-1) will be returned on error.'''
     try:
