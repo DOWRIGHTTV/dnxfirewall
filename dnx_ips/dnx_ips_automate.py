@@ -126,9 +126,7 @@ class Configuration:
     # this should inherently make the passive blocking system persist service or system reboots.
     # TODO: consider using the fw_rule dict check before continuing to call System.
     def _clear_ip_tables(self):
-        expire_stamp = fast_time()-self.IPS.block_length
-
-        expired_hosts = System.ips_passively_blocked(expire_stamp=expire_stamp)
+        expired_hosts = System.ips_passively_blocked(block_length=self.IPS.block_length)
         if (not expired_hosts):
             return
 
