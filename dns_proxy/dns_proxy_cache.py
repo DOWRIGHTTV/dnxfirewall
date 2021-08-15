@@ -147,7 +147,7 @@ class DNSCache(dict):
         with ConfigurationManager('dns_server') as dnx:
             dns_settings = dnx.load_configuration()
 
-            dns_settings['dns_server']['cache'][cache_type] = False
+            dns_settings['cache'][cache_type] = False
 
             dnx.write_configuration(dns_settings)
 

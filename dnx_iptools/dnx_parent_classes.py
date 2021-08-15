@@ -77,7 +77,7 @@ class Listener:
         return f'Listener/{self._name}(intf={self._intf})'
 
     @classmethod
-    def run(cls, Log, *, threaded=True, always_on=True):
+    def run(cls, Log, *, threaded=True, always_on=False):
         '''associating subclass Log reference with Listener class. registering all interfaces in _intfs and starting service listener loop. calling class method setup before to
         provide subclass specific code to run at class level before continueing.'''
         Log.informational(f'{cls.__name__} initialization started.')
