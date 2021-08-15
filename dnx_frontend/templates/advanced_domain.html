@@ -64,8 +64,8 @@
                         <div class="row">
                             {% for category, settings in domain_settings['default'].items() %}
                             <div class="input-field col s4 m4 center">
-                                {{category}}
                                 <div class="switch">
+                                    <h6>{{category}}</h6>
                                     <label>
                                         Off
                                         {% if category in ['malicious', 'cryptominer'] %}
@@ -108,7 +108,7 @@
                             <div class="col s3 m3 center">
                                 <div class="row">
                                     <div class="input-field col s12">
-                                        {{tld}}
+                                        <h6>{{tld}}</h6>
                                         <div class="switch">
                                             <label>
                                                 Off
@@ -151,7 +151,7 @@
                             {% for category, settings in domain_settings['default'].items() %}
                             {% if settings['enabled'] %}
                             <div class="input-field col s3 m3 center">
-                                {{category}}
+                                <h6>{{category}}</h6>
                                 <div class="switch">
                                     <label>
                                         Off

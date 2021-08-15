@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import os, sys
 import threading
 
 from collections import Counter, OrderedDict, namedtuple
@@ -9,6 +8,7 @@ from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-impo
 from dnx_configure.dnx_namedtuples import DNS_CACHE, CACHED_RECORD
 from dnx_iptools.dnx_standard_tools import looper
 from dnx_configure.dnx_file_operations import ConfigurationManager, load_configuration, write_configuration, load_top_domains_filter
+
 from dns_proxy.dns_proxy_log import Log
 
 request_info = namedtuple('request_info', 'server proxy')
@@ -24,11 +24,11 @@ class DNSCache(dict):
         private dict - top domains cache storage
         private Counter - tracking number of times domains are queried
 
-    initialization is the same as a dict, with the addition of two required method calls for callback references
+    initialization is the same as a dict, with the addition of two required arguments for callback references
     to the dns server.
 
-        set_query_generator(*reference to packet class*)
-        set_query_handler(*reference to dns server request handler function*)
+        packet (*reference to packet class*)
+        request_handler (*reference to dns server request handler function*)
 
     if the above callbacks are not set the top domains caching system will NOT actively update records, though the counts
     will still be accurate/usable.
@@ -56,12 +56,6 @@ class DNSCache(dict):
         threading.Thread(target=self._auto_clear_cache).start()
         if (self._dns_packet and self._request_handler):
             threading.Thread(target=self._auto_top_domains).start()
-
-    def __str__(self):
-        return ' '.join([
-            f'TOP DOMAIN COUNT: {len(self._top_domains)} | TOP DOMAINS: {self._top_domains}',
-            f'CACHE SIZE: {sys.getsizeof(self)} | NUMBER OF RECORDS: {len(self)} | CACHE: {super().__str__()}'
-        ])
 
     # searching key directly will return calculated ttl and associated records
     def __getitem__(self, key):
@@ -122,9 +116,6 @@ class DNSCache(dict):
 
         for domain in expired:
             del self[domain]
-
-        # logging cache size information
-        Log.debug(self)
 
     @looper(THREE_MIN)
     # automated process to keep top 20 queried domains permanently in cache. it will use the current caches packet to generate

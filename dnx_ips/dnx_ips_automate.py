@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 import os, sys
-import json
-import time
 import threading
 
 from ipaddress import IPv4Address
@@ -77,7 +75,7 @@ class Configuration:
 
         # if ddos engine is disabled
         else:
-            self.IPS.block_length = 0
+            self.IPS.block_length = NO_DELAY
 
         # src ips that will not trigger ips
         self.IPS.ip_whitelist = set([IPv4Address(ip) for ip in ips['whitelist']['ip_whitelist']])
@@ -117,11 +115,9 @@ class Configuration:
 
         self.IPS.ddos_engine_enabled = True if self.IPS.ddos_prevention else False
 
-        self.IPS.ins_engine_enabled = True if self.IPS.ps_engine_enabled or self.IPS.ddos_engine_enabled else False
-
         self.initialize.done()
 
-    @looper(THIRTY_MIN)
+    @looper(FIVE_MIN)
     # NOTE: refactored function utilizing iptables + timestamp comment to identify rules to be expired.
     # this should inherently make the passive blocking system persist service or system reboots.
     # TODO: consider using the fw_rule dict check before continuing to call System.

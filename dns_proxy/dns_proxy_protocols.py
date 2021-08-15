@@ -1,28 +1,23 @@
 #!usr/bin/env python3
 
 import os, sys
-import random
 import threading
-import traceback
 import ssl
 
 from socket import socket, timeout, AF_INET, SOCK_STREAM, SOCK_DGRAM
-from copy import deepcopy
-from collections import deque
 
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_configure.dnx_namedtuples import RELAY_CONN
-from dnx_iptools.dnx_parent_classes import ProtoRelay
 from dnx_iptools.dnx_structs import short_unpackf
 from dnx_iptools.dnx_standard_tools import looper, dnx_queue
 
-from dns_proxy.dns_proxy_log import Log
+from dnx_iptools.dnx_parent_classes import ProtoRelay
 from dns_proxy.dns_proxy_packets import ClientRequest, ServerResponse
 
-from dnx_configure.dnx_code_profiler import profiler
+from dns_proxy.dns_proxy_log import Log
 
 RELAY_TIMEOUT = 10
 
@@ -195,7 +190,7 @@ class TLSRelay(ProtoRelay):
         try:
             dns_sock.connect((tls_server, PROTO.DNS_TLS))
         except OSError:
-            Log.error('[{tls_server}/{self._protocol.name}] Failed to connect to server: {E}')
+            Log.error(f'[{tls_server}/{self._protocol.name}] Failed to connect to server: {E}') # pylint: disable=no-member
 
         except Exception as E:
             Log.console(f'[{tls_server}/{self._protocol.name}] TLS context error while attemping to connect to server: {E}') # pylint: disable=no-member

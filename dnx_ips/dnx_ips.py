@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 
 import os, sys
-import time
 import threading
-import traceback
 
 from copy import copy
 from collections import defaultdict
@@ -18,18 +16,17 @@ from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_iptables import IPTablesManager
 
 from dnx_iptools.dnx_parent_classes import NFQueue
-from dnx_ips.dnx_ips_log import Log
 from dnx_ips.dnx_ips_automate import Configuration
 from dnx_ips.dnx_ips_packets import IPSPacket, IPSResponse
 
-from dnx_configure.dnx_code_profiler import profiler
+from dnx_ips.dnx_ips_log import Log
 
 LOG_NAME = 'ips'
+
+# global to adjust the unique local port count per host before triggering
 PORTSCAN_THRESHOLD = 4
 
 
-# TODO: CONVERT PROTOCOL TO ENUMS SINCE WE ARE RESTRICTING VIA IPTABLES/NFQUEUE TO ONLY PROTOCOLS WE CARE ABOUT!!!.
-# TODO: ENSURE WE CLEAN TIMED OUT HOSTS FROM HOST TRACKING DICTS AT X (10?) MIN INTERVALS!!
 class IPS_IDS(NFQueue):
     fw_rules = {}
     connection_limits = {}
@@ -64,34 +61,20 @@ class IPS_IDS(NFQueue):
         if (nfqueue.get_mark() == IP_PROXY_DROP):
             nfqueue.drop()
 
-            # if ddos engine is enabled we want to inspect regardless of ip proxy decision
+            # if ddos engine is enabled we want to inspect regardless of ip proxy marking for drop. This is
+            # only here to restrict the check to ddos engine only, whereas the condition below could match
+            # if ddos engine is disabled, but pscan engine is enabled.
             if (self.ddos_engine_enabled):
-                self.inspection_required = IPS.DDOS
-
                 return True
 
-            return False
+        # notifying to continue to look into packet
+        if (self.ps_engine_enabled or self.ddos_engine_enabled):
+            return True
 
-        # the following are to match the specific condition of the system to make it easier to deal with in the
-        # pre inspection method.
-        if (self.ps_engine_enabled and self.ddos_engine_enabled):
-            self.inspection_required = IPS.BOTH
+        # default action will forward packet, and notify no further action needed.
+        self.forward_packet(nfqueue)
 
-        elif (self.ps_engine_enabled):
-            self.inspection_required = IPS.PORTSCAN
-
-        # NOTE: we could forward the packet here, but as of right now i am feeling it to be in pre inspect after
-        # its conditions were simplified. we can look into the potential performance gain of doing it here later
-        # if it seems necessary.
-        elif (self.ddos_engine_enabled):
-            self.inspection_required = IPS.DDOS
-
-        else:
-            self.forward_packet(nfqueue)
-
-            return False
-
-        return True
+        return False
 
     def _pre_inspect(self, packet):
         # whilelisted source ip does not need to be inspected
@@ -102,16 +85,24 @@ class IPS_IDS(NFQueue):
 
             return False
 
-        if (self.inspection_required in [IPS.BOTH, IPS.DDOS]):
+        if (self.ddos_engine_enabled):
             threading.Thread(target=Inspect.ddos, args=(packet,)).start()
 
-        # will mark for inspection by portscan if protocol is udp or tcp
-        if (packet.protocol is not PROTO.ICMP and self.inspection_required in [IPS.BOTH, IPS.PORTSCAN]):
+        # redundant from pre check, but unsure of a better way to only have ddos engine inspect ip proxy packets
+        # flagged for drop. TODO: see about how this can be shared between the two check methods. the previous method
+        # was victim of a race condition and likely never worked as intended due to the value sharing state between
+        # any active threads.
+        if (packet.nfqueue.get_mark() == IP_PROXY_DROP):
+            return False
+
+        # filtering out icmp, then notifying to continue inspection
+        if (packet.protocol is not PROTO.ICMP and self.ps_engine_enabled):
             return True
 
+        # default action | forwarding packet/inspection not required, this will basically only cover icmp packets
+        # or any packet that made it here while settings were updating.
         self.forward_packet(packet.nfqueue)
 
-        # default action | inspection not required
         return False
 
     @staticmethod
@@ -119,14 +110,8 @@ class IPS_IDS(NFQueue):
         nfqueue.set_mark(WAN_ZONE_FIREWALL)
         nfqueue.repeat()
 
-    @property
-    def inspection_enabled(self):
-        if (self.ps_engine_enabled or self.ddos_engine_enabled):
-            return True
 
-        return False
-
-
+# TODO: ensure trackers are getting cleaned of timed out records at some set interval.
 class Inspect:
     _IPS = IPS_IDS
     _IPSResponse = IPSResponse

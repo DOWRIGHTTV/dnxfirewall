@@ -1,14 +1,8 @@
 #!/usr/bin/env python3
 
 import os, sys
-import time, subprocess
 import threading
-import struct
-import json
-import traceback
 
-from ipaddress import IPv4Address
-from socket import socket, error, inet_aton, AF_INET, SOCK_DGRAM
 from socket import SOL_SOCKET, SO_BROADCAST, SO_BINDTODEVICE, SO_REUSEADDR
 
 HOME_DIR = os.environ['HOME_DIR']
@@ -18,13 +12,14 @@ import dnx_iptools.dnx_interface as interface
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_configure.dnx_namedtuples import DHCP_RECORD
-from dnx_iptools.dnx_parent_classes import Listener
 from dnx_iptools.dnx_structs import * # pylint: disable=unused-wildcard-import
 from dnx_iptools.dnx_standard_tools import looper
 
-from dnx_logging.log_main import LogHandler as Log
+from dnx_iptools.dnx_parent_classes import Listener
 from dhcp_server.dhcp_server_requests import ServerResponse, ClientRequest
 from dhcp_server.dhcp_server_automate import Configuration, Leases
+
+from dnx_logging.log_main import LogHandler as Log
 
 LOG_NAME = 'dhcp_server'
 

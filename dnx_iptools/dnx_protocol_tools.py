@@ -111,15 +111,20 @@ def parse_query_name(data, dns_query=None, *, qname=False):
     query_name = []
     while True:
         length = data[0]
-        if (length == 0): # not length?
+        if (length == 0):
+
             if (not pointer_present):
                 offset += 1
+
             break
+
         # will break on pad or root name lookup
         if (_is_pointer(length)):
+
             data = dns_query[_calculate_pointer(data[:2]):]
             if (not pointer_present):
                 offset += 2
+
             pointer_present = True
             continue
 

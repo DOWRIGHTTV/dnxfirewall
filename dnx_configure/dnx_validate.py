@@ -149,9 +149,14 @@ def timer(timer):
         raise ValidationError('Timer must be between 1 and 1440 (24 hours).')
 
 def account_creation(account_info):
+    '''Convenience function wrapping username, passoword, and user_role input validation functions. Username value
+       will be updated to .lower() on successfull validation.'''
+
     username(account_info['username'])
     password(account_info['password'])
     user_role(account_info['role'])
+
+    account_info['username'] = account_info['username'].lower()
 
 def username(username):
     if (not username.isalnum()):

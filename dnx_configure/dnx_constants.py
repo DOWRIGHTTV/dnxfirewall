@@ -301,7 +301,7 @@ class TLD_CAT(_IntEnum):
     ml = 15
     ga = 16
 
-class IPP_CAT(_IntEnum):
+class REP(_IntEnum):
     DNL = -1 # did not look due to being geo filtered
     NONE = 0
     COMPROMISED = 10

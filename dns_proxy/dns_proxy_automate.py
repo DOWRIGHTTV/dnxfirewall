@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os, sys
-import time
 import threading
 import socket
 import ssl
@@ -28,7 +27,6 @@ class Configuration:
         # callbacks
         'DNSProxy', 'DNSServer', 'DNSCache',
 
-        # protected vars
         '_initialize',
     )
 
@@ -43,6 +41,7 @@ class Configuration:
         '''start threads for tasks required by the DNS proxy. blocking until settings are loaded/initialized.'''
         if (cls._proxy_setup):
             raise RuntimeError('proxy setup should only be called once.')
+
         cls._proxy_setup = True
 
         # NOTE: might be temporary, but this needed to be moved outside of the standard/bitmap sigs since they are
@@ -275,8 +274,7 @@ class Reachability:
     __slots__ = (
         '_protocol', 'DNSServer', '_initialize',
 
-
-        '_tls_context', '_udp_query'
+        '_tls_context', '_udp_query',
     )
 
     def __init__(self, protocol, DNSServer):

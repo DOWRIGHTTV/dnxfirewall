@@ -5,7 +5,6 @@ import threading
 import socket
 
 from random import randint
-from collections import Counter, deque
 
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
@@ -14,17 +13,16 @@ import dnx_iptools.dnx_interface as interface
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_configure.dnx_namedtuples import DNS_SERVERS, PROXY_DECISION
-from dnx_iptools.dnx_parent_classes import Listener
 from dnx_iptools.dnx_standard_tools import looper, dnx_queue
 from dnx_configure.dnx_file_operations import load_configuration, write_configuration, ConfigurationManager, load_top_domains_filter
 
-from dns_proxy.dns_proxy_log import Log
+from dnx_iptools.dnx_parent_classes import Listener
 from dns_proxy.dns_proxy_automate import Configuration, Reachability
 from dns_proxy.dns_proxy_cache import DNSCache, RequestTracker
 from dns_proxy.dns_proxy_protocols import UDPRelay, TLSRelay
 from dns_proxy.dns_proxy_packets import ClientRequest, ServerResponse
 
-from dnx_configure.dnx_code_profiler import profiler
+from dns_proxy.dns_proxy_log import Log
 
 
 # the socket returns after "connecting" to remote server, but the protocol is listed as 0. when the relay
@@ -48,6 +46,11 @@ class DNSServer(Listener):
 
     # dynamic inheritance reference
     _packet_parser = ClientRequest
+
+    __slots__ = (
+        '_request_map_pop', '_dns_records_get', '_records_cache_add',
+        '_records_cache_search', 'request_tracker_insert'
+    )
 
     @classmethod
     def _setup(cls):
@@ -106,7 +109,6 @@ class DNSServer(Listener):
             if (server_response.data_to_cache):
                 self._records_cache_add(client_query.request, server_response.data_to_cache)
 
-#    @profiler
     def _pre_inspect(self, client_query):
         if (client_query.qr != DNS.QUERY or client_query.qtype not in [DNS.A, DNS.NS]):
             return False

@@ -2,8 +2,9 @@
 
 from dnx_configure.dnx_constants import LOG, DIR, CONN, str_join
 from dnx_configure.dnx_namedtuples import IPP_LOG, GEO_LOG, INFECTED_LOG
-from dnx_logging.log_main import LogHandler
 from dnx_iptools.dnx_interface import get_arp_table
+
+from dnx_logging.log_main import LogHandler
 
 
 class Log(LogHandler):

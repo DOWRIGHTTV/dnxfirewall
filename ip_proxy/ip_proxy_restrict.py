@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 import os, sys
-import time
-import json
 import threading
 
 from datetime import datetime
@@ -28,6 +26,10 @@ class LanRestrict:
     '''
     _enabled = False
     _active  = False
+
+    __slots__ = (
+        'IPProxy', 'initialize'
+    )
 
     def __init__(self, name):
         self.initialize = Initialize(Log, name)
@@ -66,10 +68,10 @@ class LanRestrict:
     def _tracker(self):
         restriction_start, restriction_end, now = self._calculate_times()
 
-        Log.debug(f'ENABLED: {self.is_enabled} | ACTIVE: {self.is_active}')
-        Log.debug(f'START: {restriction_start}: {datetime.fromtimestamp(restriction_start)}')
-        Log.debug(f'NOW: {now}: {datetime.fromtimestamp(now)}')
-        Log.debug(f'END: {restriction_end}: {datetime.fromtimestamp(restriction_end)}')
+        # Log.debug(f'ENABLED: {self.is_enabled} | ACTIVE: {self.is_active}')
+        # Log.debug(f'START: {restriction_start}: {datetime.fromtimestamp(restriction_start)}')
+        # Log.debug(f'NOW: {now}: {datetime.fromtimestamp(now)}')
+        # Log.debug(f'END: {restriction_end}: {datetime.fromtimestamp(restriction_end)}')
         if (not self.is_enabled and self.is_active):
             self._set_restriction_status(active=False)
 
