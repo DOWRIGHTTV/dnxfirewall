@@ -208,7 +208,7 @@ class _DBConnector:
 
         elif (action in ['all']):
             self._c.execute(
-                f'select domain, category, sum(count) from dnsproxy group by domain order by count(*) desc limit {count}'
+                f'select domain, category, sum(count) from dnsproxy group by domain order by count desc limit {count}'
             )
 
         return tuple((x[0], x[1]) for x in self._c.fetchall())
