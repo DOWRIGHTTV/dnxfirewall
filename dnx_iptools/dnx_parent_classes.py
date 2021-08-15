@@ -241,7 +241,6 @@ class ProtoRelay:
         # callbacks
         '_DNSServer', '_fallback_relay',
 
-        # protected vars
         '_relay_conn', '_send_cnt', '_last_rcvd',
         '_responder_add', '_fallback_relay_add'
     )
@@ -404,27 +403,28 @@ class NFQueue:
 
     @classmethod
     def set_proxy_callback(cls, *, func):
-        '''takes a callback function to handle packets after parsing. the reference will be called
+        '''Takes a callback function to handle packets after parsing. the reference will be called
         as part of the packet flow with one argument passed in for "packet".'''
+
         if (not callable(func)):
-            raise TypeError('proxy callback must be a callable object.')
+            raise TypeError('Proxy callback must be a callable object.')
 
         cls._proxy_callback = func
 
     def __queue(self):
-        self._Log.notice('Starting netfilter queue. Packets can now be processed')
-        nfqueue = NetfilterQueue()
-        nfqueue.bind(self.__q_num, self.__nfqueue_callback)
-        try:
-            nfqueue.run()
-        except Exception:
-            self._Log.alert('Netfilter Queue error. Unbinding from queue and attempting to rebind.')
-            nfqueue.unbind()
+        while True:
+            nfqueue = NetfilterQueue()
+            nfqueue.bind(self.__q_num, self.__nfqueue_callback)
 
-        # TODO: remove the recursive call if possible maybe use threading even to wait for
-        # something to happen before calling.
-        time.sleep(1)
-        self.__queue()
+            self._Log.notice('Starting netfilter queue. Packets can now be processed')
+
+            try:
+                nfqueue.run()
+            except Exception:
+                self._Log.alert('Netfilter binding lost. Attempting to rebind.')
+                nfqueue.unbind()
+
+                time.sleep(1)
 
     def __nfqueue_callback(self, nfqueue):
         if self._pre_check(nfqueue):
@@ -523,6 +523,11 @@ class RawPacket:
 
         '''
         self.timestamp = fast_time()
+
+        # NOTE: recently moved these here. they are defined in the parents slots so it makes sense. I think these were
+        # in the child (ips) because the ip proxy does not need these initialized.
+        self.icmp_type = None
+        self.udp_payload = b''
 
         # TODO: this should probably be a class var since it MUST be set in the subclass || NOTE: what the fuck does this
         # even mean????

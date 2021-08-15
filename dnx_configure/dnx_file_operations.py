@@ -17,15 +17,13 @@ HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import USER, GROUP, LOG, FILE_POLL_TIMER, str_join
-from dnx_configure.dnx_constants import DNS_BIN_OFFSET, DNS_CAT, IPP_CAT, GEO
+from dnx_configure.dnx_constants import DNS_BIN_OFFSET, DNS_CAT, REP, GEO
 from dnx_configure.dnx_exceptions import ValidationError
-
-# definitions for ip proxy data structures. Consider moving to constants module (make name more specific)
-MSB = 0b11111111111110000000000000000000
-LSB = 0b00000000000001111111111111111111
 
 # will load json data from file, convert it to a python dict, then return as object
 # TODO: add usr config support, which will merge will loaded system defaults.
+    # !! currently supported, but in the case of nested dicts the user config overrides
+    # system settings, specifically if new keys were added which causing modules to break.
 def load_configuration(filename, *, filepath='dnx_system/data'):
     '''load json data from file, convert it to a python dict, then return as object.'''
     if (not filename.endswith('.json')):
@@ -89,24 +87,6 @@ def json_to_yaml(data, *, is_string=False):
     # removing empty lines and sliding indent back by 4 spaces
     return '\n'.join([y[4:] for y in data.splitlines() if y.strip()])
 
-# used to load ip and domain signatures. if whitelist exceptions are specified then they will not
-# get loaded into the proxy. the try/except block is used to ensure bad rules dont prevent proxy
-# from starting though the bad rule will be ommited from the proxy.
-def load_signatures(Log, *, mod, exc=[]):
-    signatures = {}
-    with open(f'{HOME_DIR}/dnx_system/signatures/{mod}_lists/blocked.{mod}s', 'r') as blocked_sigs:
-        for signature in blocked_sigs:
-            try:
-                host_signature = signature.strip().split(maxsplit=1)
-                host, category = host_signature
-            except:
-                Log.warning(f'bad signature detected in {mod}.')
-            else:
-                if (host not in exc):
-                    signatures[host] = category
-
-        return signatures
-
 def load_dns_bitmap(Log, bl_exc=[], wl_exc=[]):
     dict_nets = defaultdict(list)
 
@@ -143,40 +123,6 @@ def load_dns_bitmap(Log, bl_exc=[], wl_exc=[]):
     nets.sort()
 
     dict_nets = None
-
-    return tuple(nets)
-
-def load_ip_bitmap(Log):
-    '''returns a bitmap trie for ip host filtering loaded from the consolodated blocked.ips file.'''
-    dict_nets = defaultdict(list)
-    with open(f'{HOME_DIR}/dnx_system/signatures/ip_lists/blocked.ips', 'r') as ip_sigs:
-        for signature in ip_sigs:
-
-            # preventing disabled signatures from being loaded
-            if signature.startswith('#'): continue
-
-            sig = signature.strip().split(maxsplit=1)
-            try:
-                ip_addr = int(IPv4Address(sig[0]))
-                cat = int(IPP_CAT[sig[1].upper()])
-            except Exception as E:
-                Log.warning(f'bad signature detected in ip. | {E} | {signature}')
-                continue
-
-            bin_id  = ip_addr & MSB
-            host_id = ip_addr & LSB
-
-            dict_nets[bin_id].append((host_id, cat))
-
-        # in place sort of all containers prior to building the structure
-        for containers in dict_nets.values():
-            containers.sort()
-
-    # converting to nested tuple and sorting, outermost list converted on return
-    nets = [(bin_id, tuple(containers)) for bin_id, containers in dict_nets.items()]
-    nets.sort()
-
-    dict_nets = {}
 
     return tuple(nets)
 

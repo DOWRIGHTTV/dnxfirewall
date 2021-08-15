@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
 
 import os, sys
-import time
-import struct
-import traceback
 
 from socket import inet_aton
 from collections import namedtuple
-from ipaddress import IPv4Address
 
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
@@ -19,21 +15,21 @@ from dnx_iptools.dnx_structs import * # pylint: disable=unused-wildcard-import
 from dnx_iptools.dnx_protocol_tools import * # pylint: disable=unused-wildcard-import
 from dnx_iptools.dnx_standard_tools import bytecontainer
 from dnx_configure.dnx_namedtuples import CACHED_RECORD
+
 from dnx_iptools.dnx_parent_classes import RawPacket
 
 
 class ClientRequest:
     __slots__ = (
-        # protected vars
         '_data', '_dns_header', '_dns_query', '_arc',
 
-        # public vars - init
+        # init
         'address', 'sendto', 'top_domain',
         'keepalive', 'dom_local', 'fallback',
         'dns_id', 'request', 'send_data',
         'additional_data',
 
-        # public vars - dns
+        # dns
         'qr', 'op', 'aa', 'tc', 'rd',
         'ra', 'zz', 'ad', 'cd', 'rc',
 
@@ -49,7 +45,6 @@ class ClientRequest:
             self._dns_query  = data[12:]
 
         if (sock_info):
-            # NOTE: PROBLEM IS HERE | name ip socket send sendto recvfrom # NEW NOTE: WHAT??????
             self.sendto = sock_info.sendto # 5 object named tuple
 
         self.top_domain = False if address[0] else True
@@ -171,7 +166,9 @@ class ClientRequest:
     @classmethod
     def generate_keepalive(cls, request, protocol, cd=1):
         '''alternate constructor for creating locally generated keep alive queries.'''
+
         self = cls(None, NULL_ADDR, None)
+
         # harcorded qtype can change if needed.
         self.request = request
         self.qtype   = 1
@@ -184,14 +181,12 @@ class ClientRequest:
 
 class ProxyRequest(RawPacket):
     __slots__ = (
-        #protected vars
         '_dns_header', '_dns_query',
 
-        # public vars
         'request', 'requests', 'request_identifier',
         'dom_local', 'qtype', 'qclass', 'dns_id', 'question_record',
 
-        'qr', '_rd', '_cd', 'send_data'
+        'qr', '_rd', '_cd', 'send_data',
     )
 
     def __init__(self):
@@ -289,21 +284,23 @@ class ProxyRequest(RawPacket):
         r_len = len(rs)
 
         # tld > fqdn
-        requests = ['.'.join(rs[i:]) for i in range(-2, -r_len-1, -1)]
+        requests = tuple('.'.join(rs[i:]) for i in range(-2, -r_len-1, -1))
 
         # adjusting for local record as needed
         if (r_len > 1):
             t_reqs = [rs[-1]]
             self.dom_local = False
+
         else:
             t_reqs = [None]
             self.dom_local = True
 
+        fast_int = int
         # building bin/host id from hash for each enumerated name.
         for r in requests:
             r_hash = hash(r)
-            b_id = int(f'{r_hash}'[:4])
-            h_id = int(f'{r_hash}'[4:])
+            b_id = fast_int(f'{r_hash}'[:4])
+            h_id = fast_int(f'{r_hash}'[4:])
 
             t_reqs.append((b_id, h_id))
 

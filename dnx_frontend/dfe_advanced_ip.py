@@ -73,6 +73,7 @@ def load_page(form):
     return ipp_settings
 
 def update_page(form):
+    print(form)
     if ('ip_hosts_update' in form):
         category_settings = form.getlist('reputation', None)
         if (not category_settings):

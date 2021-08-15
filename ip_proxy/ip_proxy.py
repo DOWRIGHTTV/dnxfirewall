@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 
 import os, sys
-import time
-import threading
-
-from functools import lru_cache
 
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
@@ -12,7 +8,6 @@ sys.path.insert(0, HOME_DIR)
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_iptools.dnx_binary_search import generate_linear_binary_search, generate_recursive_binary_search # pylint: disable=import-error, no-name-in-module
 from dnx_configure.dnx_namedtuples import IPP_IP_INFO, IPP_INSPECTION_RESULTS, IPP_LOG, INFECTED_LOG
-from dnx_configure.dnx_file_operations import load_signatures
 from dnx_iptools.dnx_parent_classes import NFQueue
 
 from ip_proxy.ip_proxy_log import Log
@@ -26,8 +21,7 @@ LOG_NAME = 'ip_proxy'
 
 
 class IPProxy(NFQueue):
-    inspect_on     = False
-    ids_mode       = False
+    ids_mode   = False
 
     reputation_enabled   = False
     reputation_settings  = {}
@@ -100,14 +94,11 @@ class Inspect:
     _Proxy = IPProxy
 
     __slots__ = (
-        '_packet', '_match'
+        '_packet',
     )
 
     # direct reference to the Proxy forward packet method
     _forward_packet = _Proxy.forward_packet
-
-    def __init__(self):
-        self._match = None
 
     @classmethod
     def ip(cls, packet):
@@ -120,7 +111,7 @@ class Inspect:
 
     def _ip_inspect(self, Proxy, packet):
         action = CONN.ACCEPT
-        reputation = IPP_CAT.DNL
+        reputation = REP.DNL
 
         # running through geolocation signatures for a host match. NOTE: not all countries are included in the sig
         # set at this time. the additional compression algo needs to be re implemented before more countries can
@@ -134,10 +125,10 @@ class Inspect:
         # no need to check reputation of host if filtered by geolocation
         if (action is CONN.ACCEPT and Proxy.reputation_enabled):
 
-            reputation = IPP_CAT(_recursive_binary_search(packet.bin_data))
+            reputation = REP(_recursive_binary_search(packet.bin_data))
 
             # if category match, and category is configured to block in direction of conn/packet
-            if (reputation is not IPP_CAT.NONE):
+            if (reputation is not REP.NONE):
                 action = self._reputation_action(reputation, packet)
 
         return action, (f'{country.name}', f'{reputation.name}')
@@ -145,8 +136,8 @@ class Inspect:
     # category setting lookup. will match packet direction with configured dir for category/category group.
     def _reputation_action(self, category, packet):
         # flooring cat to its cat group for easier matching of tor nodes
-        rep_group = IPP_CAT((category // 10) * 10)
-        if (rep_group is IPP_CAT.TOR):
+        rep_group = REP((category // 10) * 10)
+        if (rep_group is REP.TOR):
 
             # only outbound traffic will match tor whitelist since this override is designed for a user to access
             # tor and not to open a local machine to tor traffic.

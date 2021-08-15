@@ -405,7 +405,7 @@ def system_shutdown(dnx_session_data):
 def dnx_logout(dnx_session_data):
     user = session.pop('user', None)
     if (user):
-        update_session_tracker(user, action=CFG.DEL)
+        update_session_tracker(user['name'], action=CFG.DEL)
 
     return redirect(url_for('dnx_login'))
 
@@ -603,6 +603,7 @@ def handle_system_action(page_settings):
     return render_template('dnx_device.html', **page_settings)
 
 def update_session_tracker(username, user_role=None, remote_addr=None, *, action=CFG.ADD):
+    print(username)
     if (action is CFG.ADD and not remote_addr):
         raise ValueError('remote_addr must be specified if action is set to add.')
 

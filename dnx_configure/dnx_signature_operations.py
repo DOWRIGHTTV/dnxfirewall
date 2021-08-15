@@ -12,11 +12,11 @@ from collections import defaultdict
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import GEO, MSB, LSB
+from dnx_configure.dnx_constants import GEO, REP, MSB, LSB
 from dnx_configure.dnx_file_operations import load_configuration
 
 __all__ = (
-    'combine_domains', 'combine_ips', 'generate_geolocation'
+    'combine_domains', 'generate_reputation', 'generate_geolocation',
 )
 
 cidr_to_host_count = {f'{i}': 2**x for i, x in enumerate(reversed(range(31)), 2)}
@@ -35,7 +35,7 @@ def combine_domains(Log):
            with open(f'{HOME_DIR}/dnx_system/signatures/domain_lists/{cat}.domains', 'r') as file:
                domain_signatures.extend([x.lower() for x in file.read().splitlines() if x and '#' not in x])
         except FileNotFoundError:
-            Log.alert('signature file missing: {cat} domains.')
+            Log.alert(f'signature file missing: {cat} domains.')
 
     with open(f'{HOME_DIR}/dnx_system/signatures/domain_lists/blocked.domains', 'w+') as blocked:
         blocked.write('\n'.join(domain_signatures))
@@ -52,22 +52,55 @@ def combine_domains(Log):
     # NOTE: nulling out signatures in memory so we dont have to wait for GC.
     domain_signatures = []
 
-def combine_ips(Log):
+def _combine_reputation(Log):
     ip_proxy = load_configuration('ip_proxy')
 
-    ip_cat_signatures = []
+    ip_rep_signatures = []
     for cat in ip_proxy['reputation']:
         try:
             with open(f'{HOME_DIR}/dnx_system/signatures/ip_lists/{cat}.ips', 'r') as file:
-                ip_cat_signatures.extend([x.lower() for x in file.read().splitlines() if x and '#' not in x])
+                ip_rep_signatures.extend([x.lower() for x in file.read().splitlines() if x and '#' not in x])
         except FileNotFoundError:
             Log.alert(f'signature file missing: {cat} ips.')
 
-    with open(f'{HOME_DIR}/dnx_system/signatures/ip_lists/blocked.ips', 'w+') as blocked:
-        blocked.write('\n'.join(ip_cat_signatures))
+    return ip_rep_signatures
 
-    # NOTE: nulling out signatures in memory so we dont have to wait for GC.
-    ip_cat_signatures = []
+def generate_reputation(Log):
+
+    # getting all enabled signatures
+    ip_rep_signatures = _combine_reputation(Log)
+
+    dict_nets = defaultdict(list)
+
+    for signature in ip_rep_signatures:
+
+        sig = signature.split()
+        try:
+            ip_addr = ip_unpack(inet_aton(sig[0]))[0]
+
+            cat = REP[sig[1].upper()]
+        except Exception as E:
+            Log.warning(f'invalid signature: {signature}, {E}')
+            continue
+
+        bin_id  = ip_addr & MSB
+        host_id = ip_addr & LSB
+
+        dict_nets[bin_id].append((host_id, cat))
+
+    # in place sort of all containers prior to building the structure
+    for containers in dict_nets.values():
+        containers.sort()
+
+    # converting to nested tuple and sorting, outermost list converted on return
+    nets = [
+        (bin_id, tuple(containers)) for bin_id, containers in dict_nets.items()
+    ]
+    nets.sort()
+
+    dict_nets, ip_rep_signatures = {}, []
+
+    return tuple(nets)
 
 def _combine_geolocation(Log):
     ip_proxy = load_configuration('ip_proxy')
@@ -92,11 +125,11 @@ def generate_geolocation(Log):
     converted_list = []
     cvl_append = converted_list.append
 
-    ## conversion logic
-    for line in ip_geo_signatures:
+    # conversion logic
+    for signature in ip_geo_signatures:
 
         try:
-            subnet, country = line.split()
+            subnet, country = signature.split()
 
             subnet = subnet.split('/')
             net_id = ip_unpack(inet_aton(subnet[0]))[0]
@@ -104,7 +137,7 @@ def generate_geolocation(Log):
 
             country = GEO[country.upper()]
         except Exception as E:
-            Log.warning(f'invalid signature: {line}, {E}')
+            Log.warning(f'invalid signature: {signature}, {E}')
 
         else:
             # NOTE: subtracting 1 to account for 0th value.

@@ -201,6 +201,7 @@ def update_dns_record(dns_record_name, action, dns_record_ip=None):
 
 def configure_user_account(account_info, action):
     acct = SimpleNamespace(**account_info)
+
     with ConfigurationManager('logins', file_path='/dnx_frontend/data') as dnx:
         accounts = dnx.load_configuration()
 
@@ -214,7 +215,8 @@ def configure_user_account(account_info, action):
             userlist.update({
                 acct.username: {
                     'password': hexpass,
-                    'role': acct.role
+                    'role': acct.role,
+                    'dark_mode': 0
                 }
             })
         else:
