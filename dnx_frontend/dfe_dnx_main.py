@@ -14,15 +14,15 @@ sys.path.insert(0, HOME_DIR)
 
 import dnx_configure.dnx_validate as validate
 
-from dnx_configure.dnx_constants import CFG, FIVE_SEC, DATA
+from dnx_configure.dnx_constants import CFG, DATA, FIVE_SEC
 from dnx_configure.dnx_file_operations import load_configuration, ConfigurationManager
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_database.ddb_connector_sqlite import DBConnector
 from dnx_system.sys_main import system_action
 from dnx_configure.dnx_system_info import System
-from dnx_logging.log_main import LogHandler as Log
 
 from dnx_frontend.dfe_dnx_authentication import Authentication, user_restrict
+from dnx_logging.log_main import LogHandler as Log
 
 import dnx_frontend.dfe_dnx_dashboard as dfe_dashboard
 import dnx_frontend.dfe_settings_dns as dns_settings
@@ -47,9 +47,16 @@ LOG_NAME = 'web_app'
 
 app = Flask(__name__, static_url_path='/static')
 
-app.secret_key = load_configuration('config.json')['flask'].get('key')
+# a new key is generated on every system start and stored in system config.
+app.secret_key = load_configuration('config')['flask'].get('key')
 
 trusted_proxies = ['127.0.0.1']
+
+# setup for system logging
+Log.run(name=LOG_NAME)
+
+# NOTE: this will allow the config manager to reference the Log class without an import. (cyclical import error)
+ConfigurationManager.set_log_reference(Log)
 
 ## ---------------------------------------------
 ## START OF NAVIGATION TABS
@@ -572,8 +579,6 @@ def categories_page_logic(dnx_page, page_settings):
     except OSError as ose:
         return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
 
-    print(page_settings)
-
     return render_template('settings_categories.html', **page_settings)
 
 #function called by restart/shutdown pages. will ensure the user specified operation gets executed
@@ -603,7 +608,7 @@ def handle_system_action(page_settings):
     return render_template('dnx_device.html', **page_settings)
 
 def update_session_tracker(username, user_role=None, remote_addr=None, *, action=CFG.ADD):
-    print(username)
+
     if (action is CFG.ADD and not remote_addr):
         raise ValueError('remote_addr must be specified if action is set to add.')
 
@@ -689,6 +694,3 @@ def truncate(string, limit):
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-    ## SETUP LOGGING CLASS
-    Log.run(name=LOG_NAME)

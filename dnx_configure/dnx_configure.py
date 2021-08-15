@@ -2,13 +2,8 @@
 
 
 import os, sys
-import collections
-import re
-import json
-import time
 
 from types import SimpleNamespace
-from subprocess import run, CalledProcessError
 
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
@@ -21,10 +16,8 @@ from dnx_configure.dnx_exceptions import ValidationError
 from dnx_system.sys_main import system_action
 from dnx_configure.dnx_system_info import System, Services, Interface
 from dnx_frontend.dfe_dnx_authentication import Authentication
-from dnx_logging.log_main import LogHandler as Log
 
-# NOTE: this will allow the config manager to reference the Log class without an import. (cyclical import error)
-ConfigurationManager.set_log_reference(Log)
+from dnx_logging.log_main import LogHandler as Log
 
 def set_default_mac_flag():
     with ConfigurationManager('config') as dnx:

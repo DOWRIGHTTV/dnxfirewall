@@ -32,7 +32,7 @@
                                 <div class="switch">
                                     <label>
                                         Off
-                                        <input type="checkbox" name="server_enabled" onchange="this.form.submit()"
+                                        <input type="checkbox" name="server_enabled"
                                             {% if dhcp_settings[interface.lower()]['enabled'] %} checked="checked" {% endif %}>
                                         <span class="lever"></span>
                                         On
@@ -44,7 +44,7 @@
                                 <div class="switch">
                                     <label>
                                         Disabled
-                                        <input type="checkbox" name="icmp_check" onchange="this.form.submit()"
+                                        <input type="checkbox" name="icmp_check"
                                             {% if dhcp_settings[interface.lower()]['icmp_check'] %} checked="checked" {% endif %}>
                                         <span class="lever"></span>
                                         Enabled

@@ -134,6 +134,10 @@ class ServerResponse:
             elif (self.rebinding):
                 return DHCP.REBINDING, request.ciaddr
 
+        # NOTE: sometimes a request falls outside of the standard RFC conditions. this will prevent
+        # the server from halting if so.
+        return DHCP.DROP, None
+
     @property
     def selecting(self):
         request = self._request
