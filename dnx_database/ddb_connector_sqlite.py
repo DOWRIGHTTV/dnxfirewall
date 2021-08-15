@@ -202,13 +202,16 @@ class _DBConnector:
     def dashboard_query_top(self, count, *, action):
         if (action in ['allowed', 'blocked']):
             self._c.execute(
-                f'select domain, category from dnsproxy where action=? order by count desc limit {count}', (action,)
+                f'select domain, category, sum(count) from dnsproxy where action=? group by domain order by count desc limit {count}',
+                (action,)
             )
 
         elif (action in ['all']):
-            self._c.execute(f'select domain, category from dnsproxy order by count desc limit {count}')
+            self._c.execute(
+                f'select domain, category, sum(count) from dnsproxy group by domain order by count desc limit {count}'
+            )
 
-        return self._c.fetchall()
+        return tuple((x[0], x[1]) for x in self._c.fetchall())
 
     def query_geolocation(self, count, *, action, direction):
         month = ','.join(System.date()[:2])
