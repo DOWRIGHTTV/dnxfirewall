@@ -8,9 +8,9 @@ from ipaddress import IPv4Address
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
+from dnx_configure.dnx_constants import *  # pylint: disable=unused-wildcard-import
 from dnx_configure.dnx_system_info import System
-from dnx_iptools.dnx_standard_tools import looper, dynamic_looper, Initialize
+from dnx_iptools.dnx_standard_tools import looper, Initialize
 from dnx_configure.dnx_file_operations import load_configuration, cfg_read_poller
 from dnx_configure.dnx_iptables import IPTablesManager
 from dnx_ips.dnx_ips_log import Log
@@ -18,6 +18,10 @@ from dnx_ips.dnx_ips_log import Log
 
 class Configuration:
     _setup = False
+
+    __slots__ = (
+        'initialize', '_cfg_change,'
+    )
 
     def __init__(self, name):
         self.initialize  = Initialize(Log, name)
@@ -27,6 +31,7 @@ class Configuration:
     def setup(cls, IPS):
         if (cls._setup):
             raise RuntimeError('configuration setup should only be called once.')
+
         cls._setup = True
 
         self = cls(IPS.__name__)
@@ -83,7 +88,7 @@ class Configuration:
         self._cfg_change.set()
         self.initialize.done()
 
-    # NOTE: determine whether default sleep timer is acceptible for this method. if not, figure out how to override
+    # NOTE: determine whether default sleep timer is acceptable for this method. if not, figure out how to override
     # the setting set in the decorator or remove the decorator entirely.
     @cfg_read_poller('ips')
     def _get_open_ports(self, cfg_file):
@@ -130,5 +135,5 @@ class Configuration:
             for host, timestamp in expired_hosts:
                 iptables.proxy_del_rule(host, timestamp, table='raw', chain='IPS')
 
-                # removing host from ips tracker/ supression dictionary
-                self.IPS.fw_rules.pop(IPv4Address(host), None) # should never return None
+                # removing host from ips tracker/ suppression dictionary
+                self.IPS.fw_rules.pop(IPv4Address(host), None)  # should never return None

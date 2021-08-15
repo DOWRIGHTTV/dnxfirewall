@@ -10,14 +10,12 @@ import subprocess
 from fcntl import flock, LOCK_EX, LOCK_UN
 from secrets import token_urlsafe
 from collections import defaultdict
-from ipaddress import IPv4Address, IPv4Network
-from array import array
 
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import USER, GROUP, LOG, FILE_POLL_TIMER, str_join
-from dnx_configure.dnx_constants import DNS_BIN_OFFSET, DNS_CAT, REP, GEO
+from dnx_configure.dnx_constants import USER, GROUP, FILE_POLL_TIMER, str_join
+from dnx_configure.dnx_constants import DNS_BIN_OFFSET, DNS_CAT
 from dnx_configure.dnx_exceptions import ValidationError
 
 # will load json data from file, convert it to a python dict, then return as object
@@ -73,7 +71,8 @@ def change_file_owner(file_path):
     os.chmod(file_path, 0o660)
 
 def json_to_yaml(data, *, is_string=False):
-    '''converts a string in json format or a dictionary into yaml syntax then returns as string. set "is_string" to True
+    '''
+    converts a string in json format or a dictionary into yaml syntax then returns as string. set "is_string" to True
     to skip over object serialization.
     '''
 
@@ -134,7 +133,7 @@ def load_tlds():
 
 # function to load in all keywords corresponding to enabled domain categories. the try/except
 # is used to ensure bad keywords do not prevent the proxy from starting, though the bad keyword
-# will be ommited from the proxy.
+# will be omitted from the proxy.
 def load_keywords(Log):
     '''returns keyword set for enabled domain categories'''
 
@@ -214,9 +213,10 @@ def cfg_write_poller(list_function):
 
 
 class ConfigurationManager:
-    ''' Class to ensure process safe operations on configuration files. This class is written
+    '''
+    Class to ensure process safe operations on configuration files. This class is written
     as a context manager and must be used as such. upon calling the context a file lock will
-    be obtained or block until it can aquire the lock and return the class object to the caller.
+    be obtained or block until it can acquire the lock and return the class object to the caller.
     '''
 
     Log = None
@@ -254,7 +254,7 @@ class ConfigurationManager:
     def __enter__(self):
         self._config_lock = open(self.config_lock_file, 'r+')
 
-        # aquiring lock on shared lock file
+        # acquiring lock on shared lock file
         flock(self._config_lock, LOCK_EX)
 
         # TEMP prefix is to wildcard match any orphaned files for deletion
@@ -265,7 +265,7 @@ class ConfigurationManager:
         os.chmod(self._temp_file_path, 0o660)
         shutil.chown(self._temp_file_path, user=USER, group=GROUP)
 
-        self.Log.debug(f'Config file lock aquired for {self._filename}.')
+        self.Log.debug(f'Config file lock acquired for {self._filename}.')
 
         return self
 
@@ -297,7 +297,7 @@ class ConfigurationManager:
 
             raise OSError('Configuration manager was unable to update the requested file.')
 
-    #will load json data from file, convert it to a python dict, then returned as object
+    # will load json data from file, convert it to a python dict, then returned as object
     def load_configuration(self):
         ''' returns python dictionary of configuration file contents'''
         with open(self._system_path_file, 'r') as system_settings:
@@ -315,7 +315,7 @@ class ConfigurationManager:
         return system_settings
 
     # accepts python dictionary to be serialized to json and written to file opened. will ensure
-    # data gets fully rewrittin and if short than original the excess gets truncated.
+    # data gets fully rewritten and if short than original the excess gets truncated.
     def write_configuration(self, data_to_write):
         '''writes configuration data as json to generated temporary file'''
         if (self._data_written):
@@ -346,7 +346,7 @@ class Watcher:
     def watch(self, *args):
         args = [*args, self._watch_file]
 
-        # NOTE: initial load of data to accomodate the new usr dir. This may change in the future.
+        # NOTE: initial load of data to  accommodate the new usr dir. This may change in the future.
         # TODO: see if this can be wrapped into the while loop or if this is most efficient.
         self._callback(*args)
 
