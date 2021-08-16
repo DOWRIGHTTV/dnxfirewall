@@ -19,26 +19,25 @@
 <section id="reputation" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
-            <div class="col s12 m8 offset-m2">
+            <div class="col s12 m10 offset-m1">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Reputation</h4>
-                    <form method="POST">
+                    <form action="/advanced/ip" method="post">
                         <input type="hidden" name="tab" value="1">
                         <input type="hidden" name="ip_hosts_update">
-                        <div class="row">
-                            {% for category, enabled in ip_settings['reputation'].items() %}
+                        {% for category, enabled in ip_settings['reputation'].items() %}
+                        {% if loop.index0 in range(0,10,2) %}<div class="row">{% endif %}
                             <div class="input-field col s4 offset-s1">
-                                {{category.title().replace('_', ' ')}}
-                                <br>
-                                <select class="browser-default" name="reputation" id="" onchange="this.form.submit()">
+                                <h6>{{category.title().replace('_', ' ')}}</h6>
+                                <select name="reputation" id="" onchange="this.form.submit()">
                                     <option value="{{category}}_0" {% if enabled==1 %} selected {% endif %}>OFF</option>
                                     <option value="{{category}}_1" {% if enabled==1 %} selected {% endif %}>OUTBOUND</option>
                                     <option value="{{category}}_2" {% if enabled==2 %} selected {% endif %}>INBOUND</option>
                                     <option value="{{category}}_3" {% if enabled==3 %} selected {% endif %}>BOTH</option>
                                 </select>
                             </div>
-                            {% endfor %}
-                        </div>
+                        {% if loop.last or loop.index0 in range(1,10,2)  %}</div>{% endif %}
+                        {% endfor %}
                         <noscript>
                             <div class="row">
                                 <div class="col s12 center">
@@ -54,59 +53,75 @@
 </section>
 <section id="geolocation" class="section {{main_section_color}}">
     <div class="container">
-        <div class="row">
-            <div class="col s12">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">By Continent</h4>
-                    {% for continent in ip_settings['country_map'] %}
-                    {% if loop.first or not loop.index % 4 %}<div class="row">{% endif %}
+        <div class="col s12">
+            <div class="card-panel hoverable {{card_color}}">
+                <h4 class="{{title_color}}">Geolocation</h4>
+                <div class="row">
                     <form method="POST">
                         <input type="hidden" name="tab" value="2">
-                        <input type="hidden" name="continent" value="{{continent}}">
-                        <div class="input-field col s3">
-                            <select name="direction" onchange="this.form.submit()">
-                                <option selected disabled>{{continent.title().replace('_', ' ')}}</option>
-                                <option value="0" data-icon="/static/assets/images/ipp_off.png">OFF</option>
-                                <option value="1" data-icon="/static/assets/images/ipp_up.png">OUTBOUND</option>
-                                <option value="2" data-icon="/static/assets/images/ipp_down.png">INBOUND</option>
-                                <option value="3" data-icon="/static/assets/images/ipp_up_down.png">BOTH</option>
+                        <input type="hidden" name="change_geo_view">
+                        <div class="input-field col s5 m3 offset-m1 {{input_color}}">
+                            <select name="region" onchange="this.form.submit()">
+                                {% for region in ip_settings['regions'] %}
+                                <option value="{{region}}" {% if region == ip_settings['geolocation']['region'] %} selected {% endif %}>{{region.replace('_', ' ').upper()}}</option>
+                                {% endfor %}
                             </select>
+                            <label for="table">Region</label>
+                        </div>
+                        <div class="input-field col s5 m3 {{input_color}}">
+                            <select name="menu_dir" onchange="this.form.submit()">
+                                {% for dir in ['off', 'outbound', 'inbound', 'both', 'all'] %}
+                                ><option value="{{loop.index0}}" {% if ip_settings['geolocation']['menu_dir'] == loop.index0 %} selected {% endif %}>{{dir.upper()}}</option>
+                                {% endfor %}
+                            </select>
+                            <label for="table">Direction</label>
                         </div>
                     </form>
-                    {% if loop.last or not loop.index % 4 %}</div>{% endif %}
-                    {% endfor %}
                 </div>
-            </div>
-            <div class="col s12">
-                {% for continent, info in ip_settings['country_map'].items() %}
-                <div class="card-panel hoverable {{card_color}}">
-                    <h5 class="{{title_color}}">{{continent.title()}}</h5>
-                    {% for country in info['countries'] %}
-                    {% if loop.first or not loop.index % 6 %}<div class="row">{% endif %}
-                    {% set enabled = ip_settings['geolocation'][country] %}
-                    <form method="POST">
-                        <input type="hidden" name="tab" value="2">
-                        <input type="hidden" name="country" value="{{country}}">
-                        <div class="input-field col s2">
-                            <label>
-                                <h6 class="{{title_color}}">{{country.title().replace('_', ' ')|truncate(20)}}</h6>
-                            </label><br><br>
-                            <select class="icons" name="direction" onchange="this.form.submit()">
-                                <option value="0" {% if enabled==0 %} selected {% endif %}
-                                    data-icon="/static/assets/images/ipp_off.png">OFF</option>
-                                <option value="1" {% if enabled==1 %} selected {% endif %}
-                                    data-icon="/static/assets/images/ipp_up.png">OUTBOUND</option>
-                                <option value="2" {% if enabled==2 %} selected {% endif %}
-                                    data-icon="/static/assets/images/ipp_down.png">INBOUND</option>
-                                <option value="3" {% if enabled==3 %} selected {% endif %}
-                                    data-icon="/static/assets/images/ipp_up_down.png">BOTH</option>
-                            </select>
-                        </div>
-                    </form>
-                    {% if loop.last or not loop.index % 6 %}</div>{% endif %}
-                    {% endfor %}
+                <div class="row">
+                    <table class="striped highlight">
+                        <thead>
+                        <tr>
+                            <th style="width:5%"></th>
+                            <th style="width:20%"></th>
+                            <th style="width:5%"></th>
+                            <th style="width:20%"></th>
+                            <th style="width:5%"></th>
+                            <th style="width:20%"></th>
+                            <th style="width:5%"></th>
+                            <th style="width:20%"></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for country, direction in ip_settings['geolocation']['countries'] %}
+                        {% if loop.index0 in range(0,100,4) %}<tr>{% endif %}
+                            <td>
+                                <form method="POST">
+                                    <input type="hidden" name="tab" value="2">
+                                    <input type="hidden" name="menu_dir" value="{{ip_settings['geolocation']['menu_dir']}}">
+                                    <input type="hidden" name="region" value="{{ip_settings['geolocation']['region']}}">
+                                    <input type="hidden" name="country" value="{{country}}">
+                                    <ul id="dd-{{loop.index}}" class="dropdown-content">
+                                        {% for dir, image in ip_settings['image_map'].items() %}
+                                        {% if dir != direction %}
+                                        <li>
+                                            <a><button name="cfg_dir" value="{{dir}}" style="background-color: Transparent; border: none; cursor:pointer;">
+                                            <img src="/static/assets/images/{{image}}" {{dash_icon_std}}></button></a>
+                                        </li>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </ul>
+                                    <img class="dropdown-trigger" data-target="dd-{{loop.index}}" src="/static/assets/images/{{ip_settings['image_map'][direction]}}" height="100%" width="100%">
+                                </form>
+                            </td>
+                            <td>
+                                <h6>{{country.title().replace('_', ' ')}}</h6>
+                            </td>
+                        {% if loop.last or loop.index0 in range(3,100,4)  %}</tr>{% endif %}
+                        {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
-                {% endfor %}
             </div>
         </div>
     </div>
@@ -114,7 +129,7 @@
 <section id="lan-restrict" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
-            <div class="col s12 m8 offset-m2">
+            <div class="col s12 m10 offset-m1">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">LAN Restrict</h4>
                     <form action="/advanced/ip" method="post">
@@ -130,7 +145,7 @@
                                     <input type="number" name="minutes" min="0" max="45" step="15" value="{{ip_settings['tr_settings']['minutes']}}">
                                     <label for="minute">Minute</label>
                                 </div>
-                                <div class="input-field col s12 m3 {{input_color}}">
+                                <div class="input-field col s12 m2 {{input_color}}">
                                     <select name="time_suffix" id="">
                                         <option value="AM" {% if ip_settings['tr_settings']['suffix']=='AM' %} selected
                                             {% endif %}>AM</option>

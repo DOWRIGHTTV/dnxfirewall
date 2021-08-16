@@ -15,7 +15,7 @@ from dnx_configure.dnx_exceptions import ValidationError
 from dnx_configure.dnx_system_info import Services, System
 from dnx_configure.dnx_iptables import IPTablesManager
 
-def load_page():
+def load_page(form):
     ips = load_configuration('ips.json')
 
     passive_block_ttl = ips['passive_block_ttl']
@@ -85,8 +85,8 @@ def update_page(form):
             if (not limit):
                 return f'{protocol} limit must be an integer or left empty.'
 
-            if (not 10 <= limit <= 200):
-                return f'{protocol} limit must be in range 20-200.'
+            if (not 5 <= limit <= 200):
+                return f'{protocol} limit must be in range 5-200.'
 
             ddos_limits[protocol] = limit
 
@@ -161,7 +161,7 @@ def update_page(form):
         except:
             return INVALID_FORM
 
-        if (validate.convert_int(timestamp) is DATA.INVALID):
+        if (validate.convert_float(timestamp) is DATA.INVALID):
             return INVALID_FORM
 
         else:

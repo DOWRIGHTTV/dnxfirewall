@@ -28,7 +28,7 @@
                         <div class="row">
                             <div class="input-field col s12 {{input_color}}">
                                 <p class="range-field">
-                                    <input type="range" name="tcp_limit" min="20" max="100"
+                                    <input type="range" name="tcp_limit" min="5" max="100"
                                         value="{{ips_settings['ddos']['tcp']}}">
                                     <label for="tcp_limit">TCP Source Limit (conns/sec) | Current:
                                         {{ips_settings['ddos']['tcp']}}
@@ -39,7 +39,7 @@
                         <div class="row">
                             <div class="input-field col s12 {{input_color}}">
                                 <p class="range-field">
-                                    <input type="range" name="udp_limit" min="20" max="100"
+                                    <input type="range" name="udp_limit" min="5" max="100"
                                         value="{{ips_settings['ddos']['udp']}}">
                                     <label for="udp_limit">UDP Source Limit (unique/sec) | Current:
                                         {{ips_settings['ddos']['udp']}}
@@ -50,7 +50,7 @@
                         <div class="row">
                             <div class="input-field col s12 {{input_color}}">
                                 <p class="range-field">
-                                    <input type="range" name="icmp_limit" min="20" max="100"
+                                    <input type="range" name="icmp_limit" min="5" max="100"
                                         value="{{ips_settings['ddos']['icmp']}}">
                                     <label for="icmp_limit">ICMP Source Limit (packets/sec) | Current:
                                         {{ips_settings['ddos']['icmp']}}
@@ -311,9 +311,9 @@
                     <h4 class="{{title_color}}">Passively Blocked Hosts</h4>
                     <table class="striped centered">
                         <thead>
-                            <th style="width:15%"></th>
-                            <th style="width:70%">Host IP Address</th>
-                            <th style="width:15%">Time Entered</th>
+                            <th style="width:25%"></th>
+                            <th style="width:50%">Host IP Address</th>
+                            <th style="width:25%">Time Entered</th>
                         </thead>
                         <tbody>
                             {% if ips_settings['passively_blocked_hosts'] %}

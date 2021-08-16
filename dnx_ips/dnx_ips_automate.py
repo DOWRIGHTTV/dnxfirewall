@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 import os, sys
-import json
-import time
 import threading
 
 from ipaddress import IPv4Address
@@ -10,9 +8,9 @@ from ipaddress import IPv4Address
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
+from dnx_configure.dnx_constants import *  # pylint: disable=unused-wildcard-import
 from dnx_configure.dnx_system_info import System
-from dnx_iptools.dnx_standard_tools import looper, dynamic_looper, Initialize
+from dnx_iptools.dnx_standard_tools import looper, Initialize
 from dnx_configure.dnx_file_operations import load_configuration, cfg_read_poller
 from dnx_configure.dnx_iptables import IPTablesManager
 from dnx_ips.dnx_ips_log import Log
@@ -20,6 +18,10 @@ from dnx_ips.dnx_ips_log import Log
 
 class Configuration:
     _setup = False
+
+    __slots__ = (
+        'initialize', '_cfg_change,'
+    )
 
     def __init__(self, name):
         self.initialize  = Initialize(Log, name)
@@ -29,6 +31,7 @@ class Configuration:
     def setup(cls, IPS):
         if (cls._setup):
             raise RuntimeError('configuration setup should only be called once.')
+
         cls._setup = True
 
         self = cls(IPS.__name__)
@@ -77,7 +80,7 @@ class Configuration:
 
         # if ddos engine is disabled
         else:
-            self.IPS.block_length = 0
+            self.IPS.block_length = NO_DELAY
 
         # src ips that will not trigger ips
         self.IPS.ip_whitelist = set([IPv4Address(ip) for ip in ips['whitelist']['ip_whitelist']])
@@ -85,7 +88,7 @@ class Configuration:
         self._cfg_change.set()
         self.initialize.done()
 
-    # NOTE: determine whether default sleep timer is acceptible for this method. if not, figure out how to override
+    # NOTE: determine whether default sleep timer is acceptable for this method. if not, figure out how to override
     # the setting set in the decorator or remove the decorator entirely.
     @cfg_read_poller('ips')
     def _get_open_ports(self, cfg_file):
@@ -115,20 +118,16 @@ class Configuration:
 
         self.IPS.ps_engine_enabled = True if self.IPS.portscan_prevention and open_ports else False
 
-        self.IPS.ddos_engine_enabled = True if self.IPS.ddos_engine_enabled else False
-
-        self.IPS.ins_engine_enabled = True if self.IPS.ps_engine_enabled or self.IPS.ddos_engine_enabled else False
+        self.IPS.ddos_engine_enabled = True if self.IPS.ddos_prevention else False
 
         self.initialize.done()
 
-    @looper(THIRTY_MIN)
+    @looper(FIVE_MIN)
     # NOTE: refactored function utilizing iptables + timestamp comment to identify rules to be expired.
     # this should inherently make the passive blocking system persist service or system reboots.
     # TODO: consider using the fw_rule dict check before continuing to call System.
     def _clear_ip_tables(self):
-        expire_stamp = fast_time()-self.IPS.block_length
-
-        expired_hosts = System.ips_passively_blocked(expire_stamp=expire_stamp)
+        expired_hosts = System.ips_passively_blocked(block_length=self.IPS.block_length)
         if (not expired_hosts):
             return
 
@@ -136,5 +135,5 @@ class Configuration:
             for host, timestamp in expired_hosts:
                 iptables.proxy_del_rule(host, timestamp, table='raw', chain='IPS')
 
-                # removing host from ips tracker/ supression dictionary
-                self.IPS.fw_rules.pop(IPv4Address(host), None) # should never return None
+                # removing host from ips tracker/ suppression dictionary
+                self.IPS.fw_rules.pop(IPv4Address(host), None)  # should never return None

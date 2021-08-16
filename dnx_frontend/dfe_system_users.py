@@ -11,11 +11,11 @@ sys.path.insert(0, HOME_DIR)
 import dnx_configure.dnx_configure as configure
 import dnx_configure.dnx_validate as validate
 
-from dnx_configure.dnx_constants import CFG, INVALID_FORM
+from dnx_configure.dnx_constants import CFG, INVALID_FORM, DATA
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 
-def load_page():
+def load_page(form):
     users = load_configuration('logins', filepath='/dnx_frontend/data')['users']
 
     userlist = {}
@@ -26,14 +26,15 @@ def load_page():
 
 def update_page(form):
     if ('user_add' in form):
-        username = form.get('user_acct', None)
-        password = form.get('user_password', None)
-        role = form.get('user_role', None)
+        account_info = {
+            'username': form.get('user_acct', DATA.INVALID),
+            'password': form.get('user_password', DATA.INVALID),
+            'role': form.get('user_role', DATA.INVALID)
+        }
 
-        if not all([username, password, role]):
+        if (DATA.INVALID in account_info.values()):
             return INVALID_FORM
 
-        account_info = {'username': username.lower(), 'password': password, 'role': role}
         try:
             validate.account_creation(account_info)
         except ValidationError as ve:
@@ -55,13 +56,12 @@ def update_page(form):
         if (not username):
             return INVALID_FORM
 
-        if (username == session['username']):
-            return 'Cannot delete logged in user.'
+        if (username != session['user']['name']):
+
+            configure.configure_user_account({'username': username}, action=CFG.DEL)
 
         else:
-            account_info = {'username': username}
-
-            configure.configure_user_account(account_info, action=CFG.DEL)
+            return 'Cannot delete the account you are currently logged in with.'
 
     else:
         return INVALID_FORM

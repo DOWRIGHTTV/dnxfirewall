@@ -39,7 +39,7 @@ def eprint(string):
     '''error print. includes timestamp and alert before arg str.'''
     print(f'{time.strftime("%H:%M:%S")}| !!! {string}')
 
-    sys.exit()
+    os._exit(1)
 
 def dnx_run(string):
     '''convenience function, subprocess run wrapper adding additional args.'''
@@ -179,8 +179,10 @@ def write_net_config(interface_configs):
         intf_config.write(interface_configs)
 
     # removing configuration set during install.
-    os.remove('/etc/netplan/00-installer-config.yaml')
-
+    try:
+        os.remove('/etc/netplan/00-installer-config.yaml')
+    except:
+        pass
 #    dnx_run('netplan apply')
 
 # modifying dnx configuration files with user specified interface names and their corresponding zones
@@ -295,20 +297,20 @@ def set_permissions():
 
     # creating database file here so it can get its permissions modified. This will
     # ensure it wont be overriden by update pulls.
-    dnx_run('touch {HOME_DIR}/dnx_system/data/dnxfirewall.sqlite3')
+    dnx_run(f'touch {HOME_DIR}/dnx_system/data/dnxfirewall.sqlite3')
 
     # set owner to dnx user/group
-    dnx_run(f'sudo chown -R dnx:dnx {USER_DIR}/dnxfirewall')
+    dnx_run(f'chown -R dnx:dnx {USER_DIR}/dnxfirewall')
 
     # apply file permissions 750 on folders, 640 on files
-    dnx_run(f'sudo chmod -R 750 {USER_DIR}/dnxfirewall')
-    dnx_run(f'sudo find {USER_DIR}/dnxfirewall -type f -print0|xargs -0 chmod 640')
+    dnx_run(f'chmod -R 750 {USER_DIR}/dnxfirewall')
+    dnx_run(f'find {USER_DIR}/dnxfirewall -type f -print0|xargs -0 chmod 640')
 
     # adding www-data user to dnx group
-    dnx_run('sudo usermod -aG dnx www-data')
+    dnx_run('usermod -aG dnx www-data')
 
     # reverse of above
-    dnx_run('sudo usermod -aG www-data dnx')
+    dnx_run('usermod -aG www-data dnx')
 
     # update sudoers to allow dnx user no pass for specific system functions
     no_pass = [
@@ -334,11 +336,11 @@ def set_services():
     for service in services:
         if (service in ignore_list): continue
 
-        dnx_run(f'sudo cp {HOME_DIR}/services/{service} /etc/systemd/system/')
+        dnx_run(f'cp {HOME_DIR}/services/{service} /etc/systemd/system/')
 
-        dnx_run(f'sudo systemctl enable {service}')
+        dnx_run(f'systemctl enable {service}')
 
-    dnx_run(f'sudo systemctl enable nginx')
+    dnx_run(f'systemctl enable nginx')
 
 #============================
 # INITIAL IPTABLE SETUP
@@ -388,9 +390,9 @@ if __name__ == '__main__':
     install_packages()
     compile_extensions()
     configure_webui()
-    set_permissions()
     set_services()
     configure_iptables()
+    set_permissions()
 
     mark_completion_flag()
 
@@ -400,4 +402,4 @@ if __name__ == '__main__':
     sprint('control of the wan interface configuration has been taken by dnxfirewall.')
     sprint('use the webui to configure a static ip or enable ssh access if needed.')
 
-    sys.exit()
+    os._exit(0)

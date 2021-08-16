@@ -56,3 +56,5 @@ cloudflare-dns.com doh
 doh.opendns.com doh
 ibksturm.synology.me doh
 dns10.quad9.net doh
+
+doh.test doh

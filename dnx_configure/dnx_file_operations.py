@@ -10,22 +10,18 @@ import subprocess
 from fcntl import flock, LOCK_EX, LOCK_UN
 from secrets import token_urlsafe
 from collections import defaultdict
-from ipaddress import IPv4Address, IPv4Network
-from array import array
 
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import USER, GROUP, LOG, FILE_POLL_TIMER, str_join
-from dnx_configure.dnx_constants import DNS_BIN_OFFSET, DNS_CAT, IPP_CAT, GEO
+from dnx_configure.dnx_constants import USER, GROUP, FILE_POLL_TIMER, str_join
+from dnx_configure.dnx_constants import DNS_BIN_OFFSET, DNS_CAT
 from dnx_configure.dnx_exceptions import ValidationError
-
-# definitions for ip proxy data structures. Consider moving to constants module (make name more specific)
-MSB = 0b11111111111110000000000000000000
-LSB = 0b00000000000001111111111111111111
 
 # will load json data from file, convert it to a python dict, then return as object
 # TODO: add usr config support, which will merge will loaded system defaults.
+    # !! currently supported, but in the case of nested dicts the user config overrides
+    # system settings, specifically if new keys were added which causing modules to break.
 def load_configuration(filename, *, filepath='dnx_system/data'):
     '''load json data from file, convert it to a python dict, then return as object.'''
     if (not filename.endswith('.json')):
@@ -75,7 +71,8 @@ def change_file_owner(file_path):
     os.chmod(file_path, 0o660)
 
 def json_to_yaml(data, *, is_string=False):
-    '''converts a string in json format or a dictionary into yaml syntax then returns as string. set "is_string" to True
+    '''
+    converts a string in json format or a dictionary into yaml syntax then returns as string. set "is_string" to True
     to skip over object serialization.
     '''
 
@@ -88,24 +85,6 @@ def json_to_yaml(data, *, is_string=False):
 
     # removing empty lines and sliding indent back by 4 spaces
     return '\n'.join([y[4:] for y in data.splitlines() if y.strip()])
-
-# used to load ip and domain signatures. if whitelist exceptions are specified then they will not
-# get loaded into the proxy. the try/except block is used to ensure bad rules dont prevent proxy
-# from starting though the bad rule will be ommited from the proxy.
-def load_signatures(Log, *, mod, exc=[]):
-    signatures = {}
-    with open(f'{HOME_DIR}/dnx_system/signatures/{mod}_lists/blocked.{mod}s', 'r') as blocked_sigs:
-        for signature in blocked_sigs:
-            try:
-                host_signature = signature.strip().split(maxsplit=1)
-                host, category = host_signature
-            except:
-                Log.warning(f'bad signature detected in {mod}.')
-            else:
-                if (host not in exc):
-                    signatures[host] = category
-
-        return signatures
 
 def load_dns_bitmap(Log, bl_exc=[], wl_exc=[]):
     dict_nets = defaultdict(list)
@@ -146,40 +125,6 @@ def load_dns_bitmap(Log, bl_exc=[], wl_exc=[]):
 
     return tuple(nets)
 
-def load_ip_bitmap(Log):
-    '''returns a bitmap trie for ip host filtering loaded from the consolodated blocked.ips file.'''
-    dict_nets = defaultdict(list)
-    with open(f'{HOME_DIR}/dnx_system/signatures/ip_lists/blocked.ips', 'r') as ip_sigs:
-        for signature in ip_sigs:
-
-            # preventing disabled signatures from being loaded
-            if signature.startswith('#'): continue
-
-            sig = signature.strip().split(maxsplit=1)
-            try:
-                ip_addr = int(IPv4Address(sig[0]))
-                cat = int(IPP_CAT[sig[1].upper()])
-            except Exception as E:
-                Log.warning(f'bad signature detected in ip. | {E} | {signature}')
-                continue
-
-            bin_id  = ip_addr & MSB
-            host_id = ip_addr & LSB
-
-            dict_nets[bin_id].append((host_id, cat))
-
-        # in place sort of all containers prior to building the structure
-        for containers in dict_nets.values():
-            containers.sort()
-
-    # converting to nested tuple and sorting, outermost list converted on return
-    nets = [(bin_id, tuple(containers)) for bin_id, containers in dict_nets.items()]
-    nets.sort()
-
-    dict_nets = {}
-
-    return tuple(nets)
-
 def load_tlds():
     dns_proxy = load_configuration('dns_proxy')
 
@@ -188,7 +133,7 @@ def load_tlds():
 
 # function to load in all keywords corresponding to enabled domain categories. the try/except
 # is used to ensure bad keywords do not prevent the proxy from starting, though the bad keyword
-# will be ommited from the proxy.
+# will be omitted from the proxy.
 def load_keywords(Log):
     '''returns keyword set for enabled domain categories'''
 
@@ -268,9 +213,10 @@ def cfg_write_poller(list_function):
 
 
 class ConfigurationManager:
-    ''' Class to ensure process safe operations on configuration files. This class is written
+    '''
+    Class to ensure process safe operations on configuration files. This class is written
     as a context manager and must be used as such. upon calling the context a file lock will
-    be obtained or block until it can aquire the lock and return the class object to the caller.
+    be obtained or block until it can acquire the lock and return the class object to the caller.
     '''
 
     Log = None
@@ -308,7 +254,7 @@ class ConfigurationManager:
     def __enter__(self):
         self._config_lock = open(self.config_lock_file, 'r+')
 
-        # aquiring lock on shared lock file
+        # acquiring lock on shared lock file
         flock(self._config_lock, LOCK_EX)
 
         # TEMP prefix is to wildcard match any orphaned files for deletion
@@ -319,7 +265,7 @@ class ConfigurationManager:
         os.chmod(self._temp_file_path, 0o660)
         shutil.chown(self._temp_file_path, user=USER, group=GROUP)
 
-        self.Log.debug(f'Config file lock aquired for {self._filename}.')
+        self.Log.debug(f'Config file lock acquired for {self._filename}.')
 
         return self
 
@@ -351,7 +297,7 @@ class ConfigurationManager:
 
             raise OSError('Configuration manager was unable to update the requested file.')
 
-    #will load json data from file, convert it to a python dict, then returned as object
+    # will load json data from file, convert it to a python dict, then returned as object
     def load_configuration(self):
         ''' returns python dictionary of configuration file contents'''
         with open(self._system_path_file, 'r') as system_settings:
@@ -369,7 +315,7 @@ class ConfigurationManager:
         return system_settings
 
     # accepts python dictionary to be serialized to json and written to file opened. will ensure
-    # data gets fully rewrittin and if short than original the excess gets truncated.
+    # data gets fully rewritten and if short than original the excess gets truncated.
     def write_configuration(self, data_to_write):
         '''writes configuration data as json to generated temporary file'''
         if (self._data_written):
@@ -400,7 +346,7 @@ class Watcher:
     def watch(self, *args):
         args = [*args, self._watch_file]
 
-        # NOTE: initial load of data to accomodate the new usr dir. This may change in the future.
+        # NOTE: initial load of data to  accommodate the new usr dir. This may change in the future.
         # TODO: see if this can be wrapped into the while loop or if this is most efficient.
         self._callback(*args)
 

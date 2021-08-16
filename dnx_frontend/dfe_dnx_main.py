@@ -14,15 +14,15 @@ sys.path.insert(0, HOME_DIR)
 
 import dnx_configure.dnx_validate as validate
 
-from dnx_configure.dnx_constants import CFG, FIVE_SEC, DATA
+from dnx_configure.dnx_constants import CFG, DATA, FIVE_SEC
 from dnx_configure.dnx_file_operations import load_configuration, ConfigurationManager
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_database.ddb_connector_sqlite import DBConnector
 from dnx_system.sys_main import system_action
 from dnx_configure.dnx_system_info import System
-from dnx_logging.log_main import LogHandler as Log
 
 from dnx_frontend.dfe_dnx_authentication import Authentication, user_restrict
+from dnx_logging.log_main import LogHandler as Log
 
 import dnx_frontend.dfe_dnx_dashboard as dfe_dashboard
 import dnx_frontend.dfe_settings_dns as dns_settings
@@ -47,9 +47,16 @@ LOG_NAME = 'web_app'
 
 app = Flask(__name__, static_url_path='/static')
 
-app.secret_key = load_configuration('config.json')['flask'].get('key')
+# a new key is generated on every system start and stored in system config.
+app.secret_key = load_configuration('config')['flask'].get('key')
 
 trusted_proxies = ['127.0.0.1']
+
+# setup for system logging
+Log.run(name=LOG_NAME)
+
+# NOTE: this will allow the config manager to reference the Log class without an import. (cyclical import error)
+ConfigurationManager.set_log_reference(Log)
 
 ## ---------------------------------------------
 ## START OF NAVIGATION TABS
@@ -162,18 +169,15 @@ def settings_categories(dnx_session_data):
     menu_option = request.args.get('menu', '1')
     menu_option = int(menu_option) if menu_option.isdigit() else '1'
 
-    settings = category_settings.load_page(menu_option)
-
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'cat_settings': True, 'tab': tab, 'menu': menu_option,
-        'category_settings': settings,
         'uri_path': ['settings', 'categories']
     }
 
     page_settings.update(dnx_session_data)
 
-    page_action = categories_page_logic(category_settings.update_page, page_settings)
+    page_action = categories_page_logic(category_settings, page_settings)
 
     return page_action
 
@@ -306,7 +310,7 @@ def system_users(dnx_session_data):
 def system_reports(dnx_session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu': '1', 'table': '1',
+        'menu': '1', 'table': '1', 'dnx_table': True,
         'uri_path': ['system', 'reports'],
         'table_types': ['dns_proxy', 'ip_proxy', 'intrusion_prevention', 'infected_clients']
     }
@@ -322,7 +326,7 @@ def system_reports(dnx_session_data):
 def system_logs(dnx_session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu': '1',
+        'menu': '1', 'dnx_table': True,
         'log_files': ['combined', 'logins', 'web_app', 'system', 'dns_proxy', 'ip_proxy', 'ips', 'dhcp_server', 'syslog'],
         'uri_path': ['system', 'logs']
     }
@@ -408,7 +412,7 @@ def system_shutdown(dnx_session_data):
 def dnx_logout(dnx_session_data):
     user = session.pop('user', None)
     if (user):
-        update_session_tracker(user, action=CFG.DEL)
+        update_session_tracker(user['name'], action=CFG.DEL)
 
     return redirect(url_for('dnx_login'))
 
@@ -476,7 +480,7 @@ def dnx_login():
 
         login_error = 'Invalid Credentials. Please try again.'
 
-    return render_template('dnx_login.html', navi=False, login_btn=False, idle_timeout=False,
+    return render_template('dnx_login.html', navi=True, login_btn=False, idle_timeout=False,
         standard_error=False, login_error=login_error, uri_path=['login'])
 
 ## --------------------------------------------- ##
@@ -497,16 +501,13 @@ def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
         except OSError as ose:
             return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
 
-        if (not error):
-            return redirect(url_for(page_name, tab=tab))
-
         page_settings.update({
             'tab': tab,
             'standard_error': error
         })
 
     try:
-        page_settings[data_key] = dnx_page.load_page()
+        page_settings[data_key] = dnx_page.load_page(request.form)
     except OSError as ose:
             return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
 
@@ -556,10 +557,10 @@ def log_page_logic(log_page, page_settings, *, page_name):
 
     return render_template(f'{page_name}.html', **page_settings)
 
-def categories_page_logic(update_page, page_settings):
+def categories_page_logic(dnx_page, page_settings):
     if (request.method == 'POST'):
         try:
-            error, menu_option = update_page(request.form)
+            error, menu_option = dnx_page.update_page(request.form)
         except OSError as ose:
             return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
 
@@ -567,13 +568,16 @@ def categories_page_logic(update_page, page_settings):
         menu_option = request.form.get('menu', '1')
         menu_option = int(menu_option) if menu_option.isdigit() else '1'
 
-        if (not error):
-            return redirect(url_for('settings_categories', tab=tab, menu=menu_option))
-
         page_settings.update({
             'menu': menu_option,
+            'tab': tab,
             'standard_error': error
         })
+
+    try:
+        page_settings['category_settings'] = dnx_page.load_page(page_settings['menu'])
+    except OSError as ose:
+        return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
 
     return render_template('settings_categories.html', **page_settings)
 
@@ -604,6 +608,7 @@ def handle_system_action(page_settings):
     return render_template('dnx_device.html', **page_settings)
 
 def update_session_tracker(username, user_role=None, remote_addr=None, *, action=CFG.ADD):
+
     if (action is CFG.ADD and not remote_addr):
         raise ValueError('remote_addr must be specified if action is set to add.')
 
@@ -689,6 +694,3 @@ def truncate(string, limit):
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-    ## SETUP LOGGING CLASS
-    Log.run(name=LOG_NAME)

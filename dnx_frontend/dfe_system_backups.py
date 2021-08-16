@@ -16,7 +16,7 @@ from dnx_backups.bck_backups import BackupHandler
 
 _BACKUP_DISABLED = False
 
-def load_page():
+def load_page(form):
     backups_info, current_backups = {}, System.backups()
 
     for backup, c_time in current_backups.items():

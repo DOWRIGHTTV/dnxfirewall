@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
+from typing import Optional, Tuple
+
+from dnx_configure.dnx_constants import *  # pylint: disable=unused-wildcard-import
 from dnx_configure.dnx_namedtuples import IPS_LOG
 
 from dnx_logging.log_main import LogHandler
@@ -42,12 +44,14 @@ class Log(LogHandler):
         return LOG.NONE, None
 
     @classmethod
-    def _generate_ps_log(cls,  pkt, scan_info):
+    def _generate_ps_log(cls, pkt, scan_info):
         # will match if open ports are contained in pre detection logging (port was hit before flagged)
         if (scan_info.initial_block and scan_info.block_status in [IPS.LOGGED, IPS.MISSED]
                 and cls.current_lvl >= LOG.ERROR):
 
-            log = IPS_LOG(pkt.conn.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, scan_info.block_status.name) # pylint: disable=no-member
+            log = IPS_LOG(
+                pkt.conn.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, scan_info.block_status.name
+            )  # pylint: disable=no-member
 
             cls.debug(f'[pscan/scan detected][{scan_info.block_status.name}] {pkt.conn.tracked_ip}')
 
@@ -55,7 +59,9 @@ class Log(LogHandler):
 
         # will match if open ports are not contained in pre detection logging (port was hit before flagged)
         elif (scan_info.initial_block and scan_info.block_status is IPS.BLOCKED and cls.current_lvl >= LOG.WARNING):
-            log = IPS_LOG(pkt.conn.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, 'blocked') # pylint: disable=no-member
+            log = IPS_LOG(
+                pkt.conn.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, 'blocked'
+            )  # pylint: disable=no-member
 
             cls.debug(f'[pscan/scan detected][blocked] {pkt.conn.tracked_ip}')
 

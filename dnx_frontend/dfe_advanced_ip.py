@@ -13,13 +13,24 @@ from dnx_configure.dnx_constants import INVALID_FORM, DATA
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 
-def load_page():
+def load_page(form):
     ip_proxy = load_configuration('ip_proxy')
 
     country_map = load_configuration('geolocation', filepath='dnx_frontend/data')
 
     reputation  = ip_proxy['reputation']
     geolocation = ip_proxy['geolocation']
+
+    # controlling whether to load defaults or user selected view. These are validated by the update function so it is safe to assume types.
+    geo_region = form.get('region', 'africa')
+    geo_direction = int(form.get('menu_dir', 4))
+
+    selected_region = set(country_map[geo_region]['countries'])
+
+    #print(selected_region)
+    geolocation = [
+        (country, dire) for country, dire in geolocation.items() if country in selected_region and (dire == geo_direction or geo_direction == 4)
+    ]
 
     tr_settings = ip_proxy['time_restriction']
     tr_length   = tr_settings['length']
@@ -50,8 +61,14 @@ def load_page():
     }
 
     ipp_settings = {
-        'reputation': reputation, 'geolocation': geolocation, 'tr_settings': tr_settings, 'country_map': country_map
-   }
+        'reputation': reputation, 'tr_settings': tr_settings, 'regions': sorted(list(country_map)),
+        'image_map': {0: 'allow_up-down.png', 1: 'block_up.png', 2: 'block_down.png', 3: 'block_up-down.png'},
+        'geolocation': {
+            'region': geo_region,
+            'menu_dir': geo_direction,
+            'countries': sorted(geolocation)
+        }
+    }
 
     return ipp_settings
 
@@ -66,11 +83,25 @@ def update_page(form):
             validate.ip_proxy_settings(category_settings)
         except ValidationError as ve:
             return ve
+
         else:
             configure.update_ip_proxy_settings(category_settings)
 
+    # no action needed for this at this time. in the future validations may be required, but the load page has been expanded to
+    # generate the user select data.
+    elif ('change_geo_view' in form):
+        geo_direction = validate.convert_int(form.get('menu_dir', DATA.INVALID))
+
+        if (geo_direction not in range(5)):
+            return INVALID_FORM
+
+        valid_regions = load_configuration('geolocation', filepath='dnx_frontend/data')
+
+        if (form.get('region') not in valid_regions):
+            return INVALID_FORM
+
     elif ('country' in form):
-        country_setting = {k: form.get(k, DATA.INVALID) for k in ['country', 'direction']}
+        country_setting = {k: form.get(k, DATA.INVALID) for k in ['country', 'cfg_dir']}
 
         if (DATA.INVALID in country_setting.values()):
             return INVALID_FORM

@@ -19,47 +19,8 @@
 <section id="categories" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
-            {% if not domain_settings['user_defined'] %}
-            <div class="col s12 m2"></div>
-            {% endif %}
-            <div class="col s12 m8">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">System Default</h4>
-                    <form action="/advanced/domain" method="post">
-                        <input type="hidden" name="tab" value="1">
-                        <input type="hidden" name="df_cat_update">
-                        <div class="row">
-                            {% for category, settings in domain_settings['default'].items() %}
-                            <div class="input-field col s4 m4 center">
-                                {{category}}
-                                <div class="switch">
-                                    <label>
-                                        Off
-                                        {% if category in ['malicious', 'cryptominer'] %}
-                                        <input disabled type="checkbox" checked="checked" name="category">
-                                        {% else %}
-                                        <input type="checkbox" {% if settings['enabled'] %} checked="checked"
-                                            {% endif %} name="category" value="{{category}}" onchange="this.form.submit()">
-                                        {% endif %}
-                                        <span class="lever"></span>
-                                        On
-                                    </label>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        <noscript>
-                            <div class="row">
-                                <div class="col s12 center">
-                                    <button class="btn waves-effect waves-light">Update</button>
-                                </div>
-                            </div>
-                        </noscript>
-                    </form>
-                </div>
-            </div>
             {% if domain_settings['user_defined'] %}
-            <div class="col s12 m4">
+            <div class="col s12 m10 offset-m1">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">User Defined</h4>
                     <form action="/advanced/domain" method="post">
@@ -91,7 +52,45 @@
                     </form>
                 </div>
             </div>
-            {% endif %}
+        </div>
+        {% endif %}
+        <div class="row">
+            <div class="col s12 m10 offset-m1">
+                <div class="card-panel hoverable {{card_color}}">
+                    <h4 class="{{title_color}}">System Default</h4>
+                    <form action="/advanced/domain" method="post">
+                        <input type="hidden" name="tab" value="1">
+                        <input type="hidden" name="df_cat_update">
+                        <div class="row">
+                            {% for category, settings in domain_settings['default'].items() %}
+                            <div class="input-field col s4 m4 center">
+                                <div class="switch">
+                                    <h6>{{category}}</h6>
+                                    <label>
+                                        Off
+                                        {% if category in ['malicious', 'cryptominer'] %}
+                                        <input disabled type="checkbox" checked="checked" name="category">
+                                        {% else %}
+                                        <input type="checkbox" {% if settings['enabled'] %} checked="checked"
+                                            {% endif %} name="category" value="{{category}}" onchange="this.form.submit()">
+                                        {% endif %}
+                                        <span class="lever"></span>
+                                        On
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <noscript>
+                            <div class="row">
+                                <div class="col s12 center">
+                                    <button class="btn waves-effect waves-light">Update</button>
+                                </div>
+                            </div>
+                        </noscript>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -109,7 +108,7 @@
                             <div class="col s3 m3 center">
                                 <div class="row">
                                     <div class="input-field col s12">
-                                        {{tld}}
+                                        <h6>{{tld}}</h6>
                                         <div class="switch">
                                             <label>
                                                 Off
@@ -152,7 +151,7 @@
                             {% for category, settings in domain_settings['default'].items() %}
                             {% if settings['enabled'] %}
                             <div class="input-field col s3 m3 center">
-                                {{category}}
+                                <h6>{{category}}</h6>
                                 <div class="switch">
                                     <label>
                                         Off

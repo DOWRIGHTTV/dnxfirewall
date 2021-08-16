@@ -17,11 +17,14 @@ from dnx_configure.dnx_namedtuples import IPS_IP_INFO
 # TODO: make sure iptable rule can allow for icmp echo/8 through forward. basically if host is doing a icmp flood
 # attack on an open port it will not be detected with current rules.
 class IPSPacket(RawPacket):
+
+    __slots__ = (
+        'conn', 'icmp_payload_override'
+    )
+
     def __init__(self):
         super().__init__()
 
-        self.icmp_type = None
-        self.udp_payload = b''
         self.icmp_payload_override = b''
 
     def tcp_override(self, dst_port, seq_num):
@@ -29,7 +32,7 @@ class IPSPacket(RawPacket):
         where a packet copy is used to send retroactive blocks.'''
 
         self.dst_port = dst_port
-        self.sequence_num = seq_num
+        self.seq_number = seq_num
 
         return self
 

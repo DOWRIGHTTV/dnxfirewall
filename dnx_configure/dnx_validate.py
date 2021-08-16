@@ -48,6 +48,13 @@ def get_convert_int(form, key):
     except:
         return DATA.INVALID
 
+def convert_float(num):
+    '''converts argument into a float, then returns. DATA.INVALID (-1) will be returned on error.'''
+    try:
+        return float(num)
+    except:
+        return DATA.INVALID
+
 def convert_int(num):
     '''converts argument into an integer, then returns. DATA.INVALID (-1) will be returned on error.'''
     try:
@@ -142,9 +149,14 @@ def timer(timer):
         raise ValidationError('Timer must be between 1 and 1440 (24 hours).')
 
 def account_creation(account_info):
+    '''Convenience function wrapping username, passoword, and user_role input validation functions. Username value
+       will be updated to .lower() on successfull validation.'''
+
     username(account_info['username'])
     password(account_info['password'])
     user_role(account_info['role'])
+
+    account_info['username'] = account_info['username'].lower()
 
 def username(username):
     if (not username.isalnum()):
@@ -272,8 +284,8 @@ def ip_proxy_settings(ip_hosts_settings, *, ruleset='reputation'):
             raise ValidationError(INVALID_FORM)
 
 def geolocation(region, rtype='country'):
-    region['direction'] = convert_int(region['direction'])
-    if (region['direction'] not in range(4)):
+    region['cfg_dir'] = convert_int(region['cfg_dir'])
+    if (region['cfg_dir'] not in range(4)):
         raise ValidationError(INVALID_FORM)
 
     if (rtype == 'country'):

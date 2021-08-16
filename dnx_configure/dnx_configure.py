@@ -2,29 +2,18 @@
 
 
 import os, sys
-import collections
-import re
-import json
-import time
 
 from types import SimpleNamespace
-from subprocess import run, CalledProcessError
 
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-import dnx_iptools.dnx_interface as interface
-
-from dnx_configure.dnx_constants import CFG, INTF, INVALID_FORM, shell, fast_time, str_join
+from dnx_configure.dnx_constants import CFG, INTF, INVALID_FORM, fast_time
 from dnx_configure.dnx_file_operations import load_configuration, ConfigurationManager, json_to_yaml
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_system.sys_main import system_action
-from dnx_configure.dnx_system_info import System, Services, Interface
+from dnx_configure.dnx_system_info import System, Interface
 from dnx_frontend.dfe_dnx_authentication import Authentication
-from dnx_logging.log_main import LogHandler as Log
-
-# NOTE: this will allow the config manager to reference the Log class without an import. (cyclical import error)
-ConfigurationManager.set_log_reference(Log)
 
 def set_default_mac_flag():
     with ConfigurationManager('config') as dnx:
@@ -113,7 +102,6 @@ def remove_dhcp_lease(ip_addr):
 
         dnx.write_configuration(dhcp_leases)
 
-
 def set_domain_categories(en_cats, *, ruleset):
     with ConfigurationManager('dns_proxy') as dnx:
         dns_proxy_categories = dnx.load_configuration()
@@ -147,19 +135,17 @@ def set_logging(log_settings):
 
         dnx.write_configuration(logging_settings)
 
-# NOTE: this may be incorrect for DHCP wan configuration. it appears if wan is dhcp
-# only the dnx config file will change, but the system one will not be changed
-# CHANGING DNS SERVERS MIGHT REQUIRE WAN RESTART WHICH WOULD. INVESTIGATE.
+# TODO: this needs to be redone.
 def set_dns_servers(dns_server_info):
     field = {1: 'primary', 2: 'secondary'}
 
     with ConfigurationManager('dns_server') as dnx:
         dns_server_settings = dnx.load_configuration()
 
-        public_resolvers = dns_server_settings['dns_server']['resolvers']
+        public_resolvers = dns_server_settings['resolvers']
 
         for i, (server_name, ip_address) in enumerate(dns_server_info.items(), 1):
-            if (not server_name and ip_address):
+            if (not server_name or not ip_address):
                 continue
 
             public_resolvers[field[i]].update({
@@ -168,23 +154,6 @@ def set_dns_servers(dns_server_info):
             })
 
         dnx.write_configuration(dns_server_settings)
-
-    wan_information = load_configuration('config')
-    interface = wan_information['interfaces']
-    wan_dhcp = interface['wan']['dhcp']
-    wan_int = interface['wan']['ident']
-    if (not wan_dhcp):
-        wan_ip = interface.get_ip_address(wan_int)
-
-        wan_dfg = Interface.default_gateway(wan_int)
-        cidr = System.standard_to_cidr(wan_netmask)
-
-        # TODO: convert this to new module
-        wan_netmask = Interface.netmask(wan_int)
-
-        set_wan_interface({
-            'ip_address': wan_ip, 'cidr': cidr, 'default_gateway': wan_dfg
-        })
 
 def update_dns_record(dns_record_name, action, dns_record_ip=None):
     with ConfigurationManager('dns_server') as dnx:
@@ -201,6 +170,7 @@ def update_dns_record(dns_record_name, action, dns_record_ip=None):
 
 def configure_user_account(account_info, action):
     acct = SimpleNamespace(**account_info)
+
     with ConfigurationManager('logins', file_path='/dnx_frontend/data') as dnx:
         accounts = dnx.load_configuration()
 
@@ -209,12 +179,13 @@ def configure_user_account(account_info, action):
             userlist.pop(acct.username)
 
         elif (action is CFG.ADD and acct.username not in userlist):
-            Account = Authentication()
-            hexpass = Account.hash_password(acct.username, acct.password)
+            account = Authentication()
+            hexpass = account.hash_password(acct.username, acct.password)
             userlist.update({
                 acct.username: {
                     'password': hexpass,
-                    'role': acct.role
+                    'role': acct.role,
+                    'dark_mode': 0
                 }
             })
         else:
@@ -316,7 +287,6 @@ def set_domain_tlds(update_tlds):
         for entry in tld_list:
             tld_list[entry] = True if entry in update_tlds else False
 
-
         dnx.write_configuration(proxy_settings)
 
 def add_proxy_ip_whitelist(whitelist_settings):
@@ -377,7 +347,6 @@ def update_ip_proxy_settings(category_settings, *, ruleset='reputation'):
 
         dnx.write_configuration(ip_proxy_settings)
 
-
 def update_geolocation(region, *, rtype='country'):
     with ConfigurationManager('ip_proxy') as dnx:
         ip_proxy_settings = dnx.load_configuration()
@@ -386,7 +355,7 @@ def update_geolocation(region, *, rtype='country'):
 
         # setting individual country to user set value
         if (rtype == 'country'):
-            country_list[region['country']] = region['direction']
+            country_list[region['country']] = region['cfg_dir']
 
         # iterating over all countries within specified continent and setting their
         # direction as the user set value # TODO: implement this
@@ -558,7 +527,8 @@ def set_ips_ddos_limits(ddos_limits):
         dnx.write_configuration(ips_settings)
 
 def set_wan_interface(intf_type=INTF.DHCP):
-    '''Change wan interface state between static or dhcp.
+    '''
+    Change wan interface state between static or dhcp.
 
     1. Configure interface type
     2. Create netplan config from template
@@ -611,7 +581,8 @@ def set_wan_interface(intf_type=INTF.DHCP):
         system_action(module='webui', command='netplan apply', args='')
 
 def set_wan_ip(wan_ip_settings):
-    '''Modify configured WAN interface IP address.
+    '''
+    Modify configured WAN interface IP address.
 
     1. Loads configured DNS servers
     2. Loads wan interface identity
@@ -635,7 +606,6 @@ def set_wan_ip(wan_ip_settings):
     wan_intf.pop('dhcp4')
     wan_intf.pop('dhcp4-overrides')
 
-    # initializing static, but not configuring an ip address
     wan_intf['addresses'] = f'[{wan_ip_settings["ip"]}/{wan_ip_settings["cidr"]}]'
     wan_intf['gateway4']  = f'{wan_ip_settings["dfg"]}'
 
@@ -685,14 +655,17 @@ def set_dns_over_tls(dns_tls_settings):
     with ConfigurationManager('dns_server') as dnx:
         dns_server_settings = dnx.load_configuration()
 
-        tls_settings = dns_server_settings['dns_server']['tls']
+        tls_settings = dns_server_settings['tls']
         enabled_settings = dns_tls_settings['enabled']
+
         if ('dns_over_tls' in enabled_settings and 'udp_fallback' not in enabled_settings):
             tls_enabled = True
             udp_fallback = False
+
         elif ('dns_over_tls' in enabled_settings and 'udp_fallback' in enabled_settings):
             tls_enabled = True
             udp_fallback = True
+
         else:
             udp_fallback = False
             tls_enabled = False

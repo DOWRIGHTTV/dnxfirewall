@@ -16,7 +16,7 @@ from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_configure.dnx_system_info import System
 
-def load_page():
+def load_page(form):
     whitelist = load_configuration('whitelist')
 
     for info in whitelist['time_based'].values():

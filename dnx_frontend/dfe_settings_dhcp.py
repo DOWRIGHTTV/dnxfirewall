@@ -18,20 +18,20 @@ from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_configure.dnx_system_info import Services, System
 
-def load_page():
+def load_page(form):
     dhcp_server = load_configuration('dhcp_server')
 
     dhcp_settings = dhcp_server['interfaces']
 
     leases = []
-    for ip, (status, handout_time, mac) in dhcp_server['leases'].items():
+    for ip, (status, handout_time, mac, hostname) in dhcp_server['leases'].items():
         # ensuring only leased status entries get included
         if (status != -4): continue
 
         offset_time = System.calculate_time_offset(handout_time)
         handout_time = System.format_date_time(offset_time)
 
-        leases.append((ip, handout_time, mac_str(mac)))
+        leases.append((ip, handout_time, mac_str(mac), hostname))
 
     leases.sort()
 

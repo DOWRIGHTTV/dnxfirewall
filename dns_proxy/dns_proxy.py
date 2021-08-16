@@ -3,23 +3,20 @@
 import os, sys
 import socket
 
-from functools import lru_cache
-
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
-from dnx_iptools.dnx_parent_classes import Listener
 from dnx_iptools.dnx_binary_search import generate_recursive_binary_search # pylint: disable=import-error, no-name-in-module
 from dnx_configure.dnx_namedtuples import DNS_REQUEST_RESULTS, PROXY_DECISION
 from dnx_configure.dnx_namedtuples import DNS_WHITELIST, DNS_BLACKLIST, DNS_SIGNATURES
 
-from dns_proxy.dns_proxy_log import Log
+from dnx_iptools.dnx_parent_classes import Listener
 from dns_proxy.dns_proxy_packets import ProxyRequest
 from dns_proxy.dns_proxy_server import DNSServer
 from dns_proxy.dns_proxy_automate import Configuration
 
-from dnx_configure.dnx_code_profiler import profiler
+from dns_proxy.dns_proxy_log import Log
 
 LOG_NAME = 'dns_proxy'
 
@@ -44,6 +41,10 @@ class DNSProxy(Listener):
     _packet_parser = ProxyRequest.interface # alternate constructor
     _dns_server    = DNSServer
     _request_tracker_insert = DNSServer.REQ_TRACKER.insert
+
+    __slots__ = (
+        '_dns_record_get',
+    )
 
     @classmethod
     def _setup(cls):
@@ -106,14 +107,6 @@ class Inspect:
     # NOTE: recently added these refs. look into doing the same for the proxy signatures
     _proxy_notify_server = _Proxy.notify_server
     _proxy_send_to_client = _Proxy.send_to_client
-
-    __slots__ = (
-        # protected vars
-        '_match'
-    )
-
-    def __init__(self):
-        self._match = None
 
     @classmethod
     def dns(cls, packet):

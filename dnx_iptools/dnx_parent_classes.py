@@ -77,10 +77,10 @@ class Listener:
         return f'Listener/{self._name}(intf={self._intf})'
 
     @classmethod
-    def run(cls, Log, *, threaded=True, always_on=True):
+    def run(cls, Log, *, threaded=True, always_on=False):
         '''associating subclass Log reference with Listener class. registering all interfaces in _intfs and starting service listener loop. calling class method setup before to
         provide subclass specific code to run at class level before continueing.'''
-        Log.notice(f'{cls.__name__} initialization started.')
+        Log.informational(f'{cls.__name__} initialization started.')
 
         cls._Log = Log
         cls.__registered_socks = {}
@@ -162,7 +162,7 @@ class Listener:
         # spoof the original destination.
         cls.__epoll.register(l_sock.fileno(), select.EPOLLIN)
 
-        cls._Log.notice(f'[{l_sock.fileno()}][{intf}] {cls.__name__} interface registered.')
+        cls._Log.informational(f'[{l_sock.fileno()}][{intf}] {cls.__name__} interface registered.')
 
     @classmethod
     def set_proxy_callback(cls, *, func):
@@ -241,14 +241,13 @@ class ProtoRelay:
         # callbacks
         '_DNSServer', '_fallback_relay',
 
-        # protected vars
         '_relay_conn', '_send_cnt', '_last_rcvd',
         '_responder_add', '_fallback_relay_add'
     )
 
     def __new__(cls, *args, **kwargs):
         if (cls is ProtoRelay):
-            raise TypeError('Listener can only be used via inheritance.')
+            raise TypeError('ProtoRelay can only be used via inheritance.')
 
         return object.__new__(cls)
 
@@ -291,7 +290,9 @@ class ProtoRelay:
             try:
                 self._relay_conn.send(client_query.send_data)
             except OSError as ose:
+                # NOTE: temporary
                 write_log(f'[{self._relay_conn.remote_ip}/{self._relay_conn.version}] Send error: {ose}')
+
                 if not self._register_new_socket(): break
 
                 threading.Thread(target=self._recv_handler).start()
@@ -402,27 +403,28 @@ class NFQueue:
 
     @classmethod
     def set_proxy_callback(cls, *, func):
-        '''takes a callback function to handle packets after parsing. the reference will be called
+        '''Takes a callback function to handle packets after parsing. the reference will be called
         as part of the packet flow with one argument passed in for "packet".'''
+
         if (not callable(func)):
-            raise TypeError('proxy callback must be a callable object.')
+            raise TypeError('Proxy callback must be a callable object.')
 
         cls._proxy_callback = func
 
     def __queue(self):
-        self._Log.notice('Starting netfilter queue. Packets can now be processed')
-        nfqueue = NetfilterQueue()
-        nfqueue.bind(self.__q_num, self.__nfqueue_callback)
-        try:
-            nfqueue.run()
-        except Exception:
-            self._Log.warning('Netfilter Queue error. Unbinding from queue and attempting to rebind.')
-            nfqueue.unbind()
+        while True:
+            nfqueue = NetfilterQueue()
+            nfqueue.bind(self.__q_num, self.__nfqueue_callback)
 
-        # TODO: remove the recursive call if possible maybe use threading even to wait for
-        # something to happen before calling.
-        time.sleep(1)
-        self.__queue()
+            self._Log.notice('Starting netfilter queue. Packets can now be processed')
+
+            try:
+                nfqueue.run()
+            except Exception:
+                self._Log.alert('Netfilter binding lost. Attempting to rebind.')
+                nfqueue.unbind()
+
+                time.sleep(1)
 
     def __nfqueue_callback(self, nfqueue):
         if self._pre_check(nfqueue):
@@ -443,6 +445,7 @@ class NFQueue:
             packet.parse()
         except Exception:
             traceback.print_exc()
+
         else:
             if self._pre_inspect(packet):
                 if (self.__threaded):
@@ -484,9 +487,9 @@ class RawPacket:
 
     '''
     __slots__ = (
-        # protected vars
         '_dlen', '_addr',
-        # public vars - init
+
+        # init vars
         'data',
         'timestamp', 'protocol',
         'nfqueue', 'zone',
@@ -496,7 +499,7 @@ class RawPacket:
         'src_ip', 'dst_ip', 'ip_header',
         'src_port', 'dst_port',
 
-        # public vars - tcp
+        # tcp
         'seq_number', 'ack_number',
 
         # udp
@@ -520,6 +523,11 @@ class RawPacket:
 
         '''
         self.timestamp = fast_time()
+
+        # NOTE: recently moved these here. they are defined in the parents slots so it makes sense. I think these were
+        # in the child (ips) because the ip proxy does not need these initialized.
+        self.icmp_type = None
+        self.udp_payload = b''
 
         # TODO: this should probably be a class var since it MUST be set in the subclass || NOTE: what the fuck does this
         # even mean????
@@ -548,6 +556,7 @@ class RawPacket:
     @classmethod
     def interface(cls, data, address, sock_info):
         '''alternate constructor. used to start listener/proxy instances bound to physical interfaces(active socket).'''
+
         self = cls()
         self._addr = address
 
@@ -668,6 +677,7 @@ class RawResponse:
     def setup(cls, Module, Log):
         '''register all available interfaces in a separate thread for each. registration will wait for
         the interface to become available before finalizing.'''
+
         if (cls.__setup):
             raise RuntimeError('response handler setup can only be called once per process.')
         cls.__setup = True
@@ -697,7 +707,7 @@ class RawResponse:
         # sock sender is the direct reference to the socket send method
         cls._registered_socks[zone] = NFQ_SEND_SOCK(*intf, ip, cls.sock_sender(_intf))
 
-        cls._Log.notice(f'{cls.__name__}: {_intf} registered.')
+        cls._Log.informational(f'{cls.__name__}: {_intf} registered.')
 
     @classmethod
     def prepare_and_send(cls, packet):

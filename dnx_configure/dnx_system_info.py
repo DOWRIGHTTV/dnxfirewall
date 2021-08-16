@@ -16,7 +16,7 @@ from subprocess import run, CalledProcessError, DEVNULL
 _HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, _HOME_DIR)
 
-from dnx_configure.dnx_constants import str_join, NO_DELAY, FIVE_SEC, ONE_HOUR
+from dnx_configure.dnx_constants import fast_time, str_join, NO_DELAY, FIVE_SEC, ONE_HOUR
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_iptools.dnx_protocol_tools import convert_mac_to_bytes
 
@@ -285,7 +285,7 @@ class System:
         return backups
 
     @staticmethod
-    def ips_passively_blocked(*, table='raw', expire_stamp=NO_DELAY):
+    def ips_passively_blocked(*, table='raw', block_length=NO_DELAY):
         '''
         return list of currently blocked hosts in the specific iptables table. default table is 'raw'.
 
@@ -296,17 +296,19 @@ class System:
             blocked_hosts = System.ips_passivley_blocked(expire_stamp=time.time()-100)
         '''
 
+        current_time = fast_time()
+
         # ACCEPT all -- 8.8.8.8(src) 0.0.0.0/0(dst) /* 123456 */L
         host_list = []
         output = util_shell(f'sudo iptables -t {table} -nL IPS').stdout.splitlines()
         for line in output[2:]:
             line = line.split()
 
-            blocked_host, timestamp = line[3], int(line[6])
+            blocked_host, timestamp = line[3], float(line[6])
 
-            # if an expire stamp is defined, check whether the host rule has reach point
-            # of expiration. if not, loop will continue
-            if (timestamp < expire_stamp):
+            # check whether the host rule has reach point of expiration. if not, loop will continue. for NO_DELAY
+            # this condition will eval to False immediately, which marks rule for deletion.
+            if (timestamp + block_length > current_time):
                 continue
 
             host_list.append((blocked_host, timestamp))
@@ -324,10 +326,9 @@ class System:
         for rule in output[2:]:
 
             modified_rule = [x for i, x in enumerate(rule.split()) if i not in [3, 6]]
-            # if ports are specified, it will be parsed then replaced with new value. after split
-            # either 80 or 80:90 is possible format becuase of restricted split count.
+            # if ports are specified, it will be parsed then replaced with new value
             if (len(modified_rule) == 6):
-                modified_rule[-1] = modified_rule[-1].split(':', 1)[1]
+                modified_rule[-1] = modified_rule[-1].lstrip('dpt:')
 
             elif (modified_rule[2] in ['icmp', 'all']):
                 modified_rule.append('N/A')

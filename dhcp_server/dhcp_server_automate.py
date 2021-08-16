@@ -18,14 +18,12 @@ from dnx_logging.log_main import LogHandler as Log
 from dnx_configure.dnx_file_operations import load_configuration, cfg_read_poller, ConfigurationManager
 from dnx_iptools.dnx_standard_tools import looper, dnx_queue, Initialize
 
-_NULL_LEASE = (DHCP.AVAILABLE, None, None)
+_NULL_LEASE = (DHCP.AVAILABLE, None, None, None)
 
 # required when using configuration manager.
 ConfigurationManager.set_log_reference(Log)
 
 
-# TODO: figure out how to make dhcp interface disabling done in memory so a server restart wont be necessary.
-    # this could likely be done at the pre inspect in the server to silenty drop packets from a non enabled interface.
 class Configuration:
     _setup = False
 
@@ -205,11 +203,10 @@ class Configuration:
 
         Log.debug(f'[{l_sock.fileno()}][{intf}] socket created')
 
-# custom dictionary to manage dhcp server leases including timeouts, updates, or persistence (store to disk)
-_STORED_RECORD = namedtuple('stored_record', 'ip record')
+# short lived container for queue/writing dhcp record to disk
+_RECORD_CONTAINER = namedtuple('record_container', 'ip record')
 
 
-# TODO: consider making a namedtuple for the record itself (r_type, expire_time, mac)
 class Leases(dict):
     _setup = False
 
@@ -237,16 +234,16 @@ class Leases(dict):
         clean_up=True should only be used by callers in an automated system that handle mutating the lease dict themselves.
         '''
 
-        # added change to disk storage queue for lease persistence across device/process shutdowns.
-        # will only store leases. offers will be treated as volitile and not persist restarts
+        # added change to storage queue for lease persistence across device/process shutdowns.
+        # will only store active leases. offers will be treated as volitile and not persist restarts
         if (record[0] is not DHCP.OFFERED):
-            self._storage.add(_STORED_RECORD(f'{ip}', record)) # pylint: disable=no-member
+            self._storage.add(_RECORD_CONTAINER(f'{ip}', record)) # pylint: disable=no-member
 
         if (not clean_up):
             self[ip] = record
 
     @dnx_queue(Log, name='Leases')
-    # store leases table changes to disk. if record is not present that indicates the record needs to be removed.
+    # store lease table changes to disk. if record is not present, it indicates the record needs to be removed.
     def _storage(self, dhcp_lease):
         with ConfigurationManager('dhcp_server') as dnx:
             dhcp_settings = dnx.load_configuration()
@@ -262,7 +259,7 @@ class Leases(dict):
 
     # loading dhcp leases from json file. will be called on startup only for lease persistence.
     def _load_leases(self):
-        # print('[+] Loading leases from file.')
+
         dhcp_settings = load_configuration('dhcp_server')
 
         stored_leases = dhcp_settings['leases']
@@ -272,15 +269,17 @@ class Leases(dict):
 
     @looper(ONE_MIN)
     # TODO: TEST RESERVATIONS GET CLEANED UP
-    # removing expired entries from lease table on a per interface basis.
     def _lease_table_cleanup(self):
 
-        # copying dictionary as list for local reference performance and to remove need for shared object locks
-        leases_copy = list(self.items())
+        # filtering list down to only active leases. list comp is more efficient and this also removes the need
+        # to check if lease is active in business logic.
+        active_leases = [
+            (ip_addr, lease) for ip_addr, lease in self.items() if lease[0] != DHCP.AVAILABLE
+        ]
 
-        for ip_address, lease in leases_copy:
-            lease_type, lease_time, lease_mac = lease
-            if (lease_type in [DHCP.AVAILABLE]): continue
+        for ip_address, lease in active_leases:
+
+            lease_type, lease_time, lease_mac, _ = lease
 
             # current time - lease time = time elapsed since lease was handed out
             time_elapsed = fast_time() - lease_time
@@ -301,5 +300,5 @@ class Leases(dict):
             else: continue
 
             # adding to queue for removal from stored leases on disk. no record notifies job handler to remove vs add.
-            # this only needs to adjust the disk since the iterator handles mutating the lease dict in memory.
+            # this is only needed to adjust the disk since the iterator handles mutating the lease dict in memory.
             self.modify(ip_address, clean_up=True) # pylint: disable=no-member

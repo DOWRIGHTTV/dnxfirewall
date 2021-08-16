@@ -32,7 +32,7 @@
                                 <div class="switch">
                                     <label>
                                         Off
-                                        <input type="checkbox" name="server_enabled" onchange="this.form.submit()"
+                                        <input type="checkbox" name="server_enabled"
                                             {% if dhcp_settings[interface.lower()]['enabled'] %} checked="checked" {% endif %}>
                                         <span class="lever"></span>
                                         On
@@ -44,7 +44,7 @@
                                 <div class="switch">
                                     <label>
                                         Disabled
-                                        <input type="checkbox" name="icmp_check" onchange="this.form.submit()"
+                                        <input type="checkbox" name="icmp_check"
                                             {% if dhcp_settings[interface.lower()]['icmp_check'] %} checked="checked" {% endif %}>
                                         <span class="lever"></span>
                                         Enabled
@@ -176,12 +176,13 @@
                                 <th></th>
                                 <th>IP Address</th>
                                 <th>Mac Address</th>
+                                <th>Hostname</th>
                                 <th>Time Given</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% if dhcp_settings['leases'] %}
-                            {% for ip, handout_time, mac in dhcp_settings['leases'] %}
+                            {% for ip, handout_time, mac, hostname in dhcp_settings['leases'] %}
                             <tr>
                                 <td>
                                     <a class="btn-floating btn-small waves-effect waves-light red modal-trigger"
@@ -202,6 +203,7 @@
                                 </td>
                                 <td>{{ip}}</td>
                                 <td>{{mac}}</td>
+                                <td>{{hostname}}</td>
                                 <td>{{handout_time}}</td>
                             </tr>
                             {% endfor %}
