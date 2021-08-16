@@ -64,7 +64,11 @@
     {% include 'includes/_footer.html' %}
     {% endif %}
 
+    <script src="{{url_for('static',filename='assets/js/jquery.min.js')}}"></script>
+
     {% if dnx_table %}
+    <!-- put stuff here -->
+
     <!-- dnx custom table with filtering/striping -->
     <script src="{{url_for('static',filename='assets/js/dnx_table.js')}}"></script>
     <script>
