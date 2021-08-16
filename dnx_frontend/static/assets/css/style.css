@@ -89,13 +89,20 @@ i.icon-blue {
     color: blue;
 }
 
-/* table striping and highlight override */
+/* highlight override */
+table.highlight > tbody > tr:hover {
+    background-color: rgba(122, 89, 39, 0.507); }
 
+/* table striping and  - css */
 table.striped > tbody > tr:nth-child(odd) {
     background-color: rgba(11, 47, 47, 0.5); }
 
 table.striped > tbody > tr {
     background-color: rgba(242, 242, 242, 0.5); }
 
-table.highlight > tbody > tr:hover {
-    background-color: rgba(122, 89, 39, 0.507); }
+/* table striping - javascript */
+.tr-odd {
+    background-color: rgba(11, 47, 47, 0.5); }
+
+.tr-even {
+    background-color: rgba(242, 242, 242, 0.5); }

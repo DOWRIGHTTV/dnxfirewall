@@ -135,9 +135,7 @@ def set_logging(log_settings):
 
         dnx.write_configuration(logging_settings)
 
-# NOTE: this may be incorrect for DHCP wan configuration. it appears if wan is dhcp
-# only the dnx config file will change, but the system one will not be changed
-# CHANGING DNS SERVERS MIGHT REQUIRE WAN RESTART WHICH WOULD. INVESTIGATE.
+# TODO: this needs to be redone.
 def set_dns_servers(dns_server_info):
     field = {1: 'primary', 2: 'secondary'}
 
@@ -528,7 +526,7 @@ def set_ips_ddos_limits(ddos_limits):
 
         dnx.write_configuration(ips_settings)
 
-def set_wan_interface(intf_type: INTF = INTF.DHCP) -> None:
+def set_wan_interface(intf_type=INTF.DHCP):
     '''
     Change wan interface state between static or dhcp.
 
@@ -663,9 +661,11 @@ def set_dns_over_tls(dns_tls_settings):
         if ('dns_over_tls' in enabled_settings and 'udp_fallback' not in enabled_settings):
             tls_enabled = True
             udp_fallback = False
+
         elif ('dns_over_tls' in enabled_settings and 'udp_fallback' in enabled_settings):
             tls_enabled = True
             udp_fallback = True
+
         else:
             udp_fallback = False
             tls_enabled = False

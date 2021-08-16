@@ -1,6 +1,5 @@
 {% extends('layout.html') %}
 {% block body %}
-<!-- Tabs for statistics -->
 <section id="dropdown" class="section {{main_section_color}}">
     <div class="container">
         <div class="col s12">
@@ -27,7 +26,10 @@
                     </form>
                 </div>
                 <div class="row">
-                    <table class="striped centered">
+                    <table class="centered highlight" id="filter-table">
+                        <div class="input-field col s12 m6 l5 xl3 {{input_color}}">
+                            <input type="text" id="filter-input" onkeyup="filterTable(1, 4)" placeholder="Search string">
+                        </div>
                         <thead>
                             <tr>
                                 <th style="width:15%">Date/Time</th>
@@ -37,7 +39,6 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% if table_data %}
                             {% for date_time, service, log_level, log_entry in table_data %}
                             <tr>
                                 <td>{{date_time}}</td>
@@ -45,15 +46,14 @@
                                 <td>{{log_level}}</td>
                                 <td>{{log_entry}}</td>
                             </tr>
-                            {% endfor %}
                             {% else %}
                             <tr>
                                 {% for i in range(4) %}
                                 <td></td>
                                 {% endfor %}
                             </tr>
+                            {% endfor %}
                         </tbody>
-                        {% endif %}
                     </table>
                 </div>
             </div>

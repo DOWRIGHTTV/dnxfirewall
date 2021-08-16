@@ -18,7 +18,6 @@
     {% set dash_icon_std = 'height=65px width=65px' %}
     {% set dash_icon_zoom = 'height=100px width=100px' %}
 
-
     {% set icon_color = 'blue-grey-text' %}
 
     <!-- dark mode enabled -->
@@ -65,8 +64,20 @@
     {% include 'includes/_footer.html' %}
     {% endif %}
 
+    {% if dnx_table %}
+    <!-- dnx custom table with filtering/striping -->
+    <script src="{{url_for('static',filename='assets/js/dnx_table.js')}}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTable();
+        })
+    </script>
+    {% endif %}
+
     <!-- materialize js-->
     <script src="{{url_for('static',filename='assets/js/materialize.min.js')}}"></script>
+
+    <!-- materialize overrides and basic custom functions -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // Initialized everything OR you can override with options below
@@ -110,6 +121,7 @@
             var notifyInstance = M.Modal.init(timeoutNotify);
             notifyInstance.open();
         }
+
     </script>
 </body>
 </html>
