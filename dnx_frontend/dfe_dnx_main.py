@@ -309,8 +309,9 @@ def system_logs(dnx_session_data):
 @app.route('/system/logs/get', methods=['POST',])
 @user_restrict('user', 'admin')
 def system_logs_get(dnx_session_data):
-
-    table_data, _, _ = dfe_logs.update_page(request.form)
+    json_data = request.get_json(force=True)
+    
+    table_data, _, _ = dfe_logs.update_page(json_data)
 
     return ajax_response(status=True, data=table_data)
 
@@ -640,8 +641,8 @@ def ajax_response(*, status, data):
     if (not isinstance(status, bool)):
         raise TypeError('Ajax response status must be a boolean.')
 
-    if (not isinstance(data, dict)):
-        raise TypeError('Ajax data must be a dictionary.')
+    # if (not isinstance(data, dict)):
+    #     raise TypeError('Ajax data must be a dictionary.')
 
     return jsonify({'success': status, 'result': data})
 

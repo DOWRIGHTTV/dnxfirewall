@@ -67,7 +67,8 @@
     <script src="{{url_for('static',filename='assets/js/jquery.min.js')}}"></script>
 
     {% if dnx_table %}
-    <!-- put stuff here -->
+    <!-- dnx custom ajax client by seeker1437 (WyteChocolate) -->
+    {% include 'includes/_dnx_ajax_client.js'%}
 
     <!-- dnx custom table with filtering/striping -->
     <script src="{{url_for('static',filename='assets/js/dnx_table.js')}}"></script>
