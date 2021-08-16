@@ -1,10 +1,5 @@
 {% extends('layout.html') %}
 {% block body %}
-<!-- slider (good UX however kind of pointless if you don't have anything to display that's really neat? -->
-{% if hasSlider %}
-{% include('slider.html') %}
-{% endif %}
-<!-- Tabs for statistics -->
 <section id="dropdown" class="section {{main_section_color}}">
     <div class="container">
         <div class="col s12">
@@ -20,7 +15,7 @@
                             </select>
                             <label for="table">Module</label>
                         </div>
-                        <div class="input-field col s5 m3 {{input_color}}">
+                        <div class="input-field col s5 m3 offset-m1 {{input_color}}">
                             <select name="menu" onchange="this.form.submit()">
                                 {% if table in ['infected_clients', 'intrusion_prevention'] %}
                                 <option value="all">ALL</option>
@@ -40,9 +35,12 @@
                     </form>
                 </div>
                 <div class="row">
-                    <table class="striped centered highlight">
+                    <table class="centered highlight" id="filter-table">
                         <!-- DNS Proxy Table -->
                         {% if table == 'dns_proxy' %}
+                        <div class="input-field col s12 m6 l5 xl3 {{input_color}}">
+                            <input type="text" id="filter-input" onkeyup="filterTable(0, 5)" placeholder="Search string">
+                        </div>
                         <thead>
                             <tr>
                                 <th style="width:10%">Source</th>
@@ -87,21 +85,24 @@
                         </tbody>
                         <!-- IP HOSTS TABLE-->
                         {% elif table == 'ip_proxy' %}
+                        <div class="input-field col s5 m3 {{input_color}}">
+                            <input type="text" id="filter-input" onkeyup="filterTable(0, 6)" placeholder="Search string">
+                        </div>
                         <thead>
-                        <tr>
-                            <th style="width:14%">Local IP</th>
-                            <th style="width:14%">Remote IP</th>
-                            <th style="width:14%">Geo</th>
-                            <th style="width:14%">Rep</th>
-                            <th style="width:12%">Direction</th>
-                            <th style="width:12%">Action</th>
-                            <th style="width:20%">
-                                <form action="/system/reports" method="POST">
-                                    <input type="hidden" name="table" value="{{table}}/last">
-                                    <button class="btn btn-small waves-effect waves-light" name="menu" value="{{menu}}">
-                                        <i class="material-icons tiny">arrow_drop_up</i></button> Timestamp
-                                </form>
-                        </tr>
+                            <tr>
+                                <th style="width:14%">Local IP</th>
+                                <th style="width:14%">Remote IP</th>
+                                <th style="width:14%">Geo</th>
+                                <th style="width:14%">Rep</th>
+                                <th style="width:12%">Direction</th>
+                                <th style="width:12%">Action</th>
+                                <th style="width:20%">
+                                    <form action="/system/reports" method="POST">
+                                        <input type="hidden" name="table" value="{{table}}/last">
+                                        <button class="btn btn-small waves-effect waves-light" name="menu" value="{{menu}}">
+                                            <i class="material-icons tiny">arrow_drop_up</i></button> Timestamp
+                                    </form>
+                            </tr>
                         </thead>
                         <tbody>
                             {% for entry in table_data %}
@@ -125,6 +126,9 @@
                         </tbody>
                         <!-- IPS TABLE -->
                         {% elif table == 'intrusion_prevention' %}
+                        <div class="input-field col s5 m3 {{input_color}}">
+                            <input type="text" id="filter-input" onkeyup="filterTable(0, 4)" placeholder="Search string">
+                        </div>
                         <thead>
                             <tr>
                                 <th style="width:20%">Source</th>
@@ -152,6 +156,9 @@
                             {% endfor %}
                         </tbody>
                         {% elif table == 'infected_clients' %}
+                        <div class="input-field col s5 m3 {{input_color}}">
+                            <input type="text" id="filter-input" onkeyup="filterTable(1, 6)" placeholder="Search string">
+                        </div>
                         <thead>
                             <tr>
                                 <th style="width:10%"></th>

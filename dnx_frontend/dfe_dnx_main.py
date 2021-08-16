@@ -310,7 +310,7 @@ def system_users(dnx_session_data):
 def system_reports(dnx_session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu': '1', 'table': '1',
+        'menu': '1', 'table': '1', 'dnx_table': True,
         'uri_path': ['system', 'reports'],
         'table_types': ['dns_proxy', 'ip_proxy', 'intrusion_prevention', 'infected_clients']
     }
@@ -326,7 +326,7 @@ def system_reports(dnx_session_data):
 def system_logs(dnx_session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu': '1',
+        'menu': '1', 'dnx_table': True,
         'log_files': ['combined', 'logins', 'web_app', 'system', 'dns_proxy', 'ip_proxy', 'ips', 'dhcp_server', 'syslog'],
         'uri_path': ['system', 'logs']
     }
