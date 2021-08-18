@@ -4,7 +4,9 @@ import os, sys
 import time
 import json
 import socket
+import argparse
 
+from sys import argv
 from subprocess import run, DEVNULL, CalledProcessError
 
 USER_DIR = '/home/dnx'
@@ -21,9 +23,7 @@ from dnx_logging.log_main import LogHandler as Log
 LOG_NAME = 'system'
 PROGRESS_TOTAL_COUNT = 15
 
-LINEBREAK = '-'*32
-
-VERBOSE = False
+LINEBREAK = '-' * 32
 
 # DID: use socket.if_nameindex() for interface identification and assignment, replace net-tools + subprocess
 
@@ -369,6 +369,12 @@ def store_default_mac():
     pass
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='automated deployment utility for DNXFIREWALL')
+    parser.add_argument('-v', '--verbose', help='prints output to screen', action='store_true')
+
+    args = parser.parse_args(argv[1:])
+    VERBOSE = args.verbose
+
     # pre checks to make sure application can run properly
     check_run_as_root()
     check_dnx_user()
