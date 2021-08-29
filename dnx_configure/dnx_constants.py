@@ -35,8 +35,8 @@ INT_BANDWIDTH_TIMER = 5
 FILE_POLL_TIMER = 10
 
 # dnx user/group
-USER  = 'dnx'
-GROUP = 'dnx'
+USER  = 'free'
+GROUP = 'free'
 
 # Certificate authority store file
 CERTIFICATE_STORE = '/etc/ssl/certs/ca-certificates.crt'
@@ -242,6 +242,28 @@ class DHCP(_IntEnum):
     REBINDING   = 14
     # option type
     END = 255
+
+# QUEUE NUMBERS
+class Queue(_IntEnum):
+    IP_PROXY = 1
+    IPS_IDS  = 2
+
+# =====================
+# NOTE: FUTURE USE
+class Module(_IntEnum):
+    IP_PROXY = 10
+    IPS = 20
+    FIREWALL = 30
+
+# ZONES
+class Zone(_IntEnum):
+    NONE = 0
+    LAN  = 1
+    WAN  = 2
+    DMZ  = 3
+
+# mark = (Module.IPS << 8 | Zone.LAN)
+# =====================
 
 # NFQUEUE packet actions | marking packet so it can be matched by next rules in order of operations
 LAN_IN = 10

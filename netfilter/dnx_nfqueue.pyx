@@ -42,29 +42,12 @@ cdef int nf_callback(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *dat
     with nogil:
         mark = packet.parse(qh, nfa)
 
-    # python callback hardcoded as this is currently set for subclassing.
     user_callback(packet, mark)
 
     return 1
 
 
 cdef class CPacket:
-    '''This should be subclassed to encapsulate the packet data/actions within a single object. The callback
-    should be set to a method in the subclass that will accept the packet object as "self" and the packet mark.
-
-    general logic:
-        class RawPacket(CPacket):
-            def packet_callback(self, mark):
-                *python level handling of packet data*
-
-        dnx_nfqueue.set_user_callback(RawPacket.packet_callback)
-
-        packet = CPacket()
-        with nogil:
-            mark = packet.parse(qh, nfa)
-
-        RawPacket.packet_callback(packet, mark)
-    '''
 
     def __cinit__(self):
         self._verdict_is_set = False
@@ -94,6 +77,7 @@ cdef class CPacket:
         # splitting packet by tcp/ip layers
         self._parse()
 
+        # returning mark for more direct access
         return self._mark
 
     cdef void _parse(self) nogil:
@@ -101,7 +85,7 @@ cdef class CPacket:
         self.ip_header = <iphdr*>self.data
 
         cdef u_int8_t iphdr_len
-        cdef u_int8_t protohdr_len
+        cdef u_int8_t protohdr_len = 0
 
         iphdr_len = (self.ip_header.ver_ihl & 15) * 4
 

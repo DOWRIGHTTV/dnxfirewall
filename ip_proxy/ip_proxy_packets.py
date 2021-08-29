@@ -7,35 +7,37 @@ sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_iptools.dnx_structs import * # pylint: disable=unused-wildcard-import
-from dnx_iptools.dnx_parent_classes import NewPacket, RawPacket, RawResponse
-from dnx_iptools.dnx_protocol_tools import checksum_ipv4, checksum_tcp, checksum_icmp
-from dnx_configure.dnx_namedtuples import IPP_SRC_INFO, IPP_DST_INFO, IPP_IP_INFO
+from dnx_iptools.dnx_parent_classes import NFPacket, RawResponse
+from dnx_iptools.dnx_protocol_tools import checksum_ipv4, checksum_tcp, checksum_icmp, int_to_ipaddr
+from dnx_configure.dnx_namedtuples import IPP_SRC_INFO, IPP_DST_INFO
 
 
-class IPPPacket(NewPacket):
+class IPPPacket(NFPacket):
 
     __slots__ = (
-        'direction', 'conn', 'bin_data'
+        'direction', 'bin_data',
+
+        'local_ip', 'tracked_ip',
     )
 
     def _before_exit(self):
         if (self.zone == WAN_IN):
             self.direction = DIR.INBOUND
-            # NOTE: this should only be needed for logging perposes. if so, see if we can get rid of it
-            # but replacing it with a more efficient mechanism
-            self.conn = IPP_IP_INFO(f'{self.src_ip}', f'{self.dst_ip}')
 
-            ip_addr = int(self.src_ip)
+            tracked_ip = self.src_ip
+
+            self.tracked_ip = int_to_ipaddr(tracked_ip)
+            self.local_ip = int_to_ipaddr(self.dst_ip)
 
         elif (self.zone in [LAN_IN, DMZ_IN]):
             self.direction = DIR.OUTBOUND
-            # NOTE: this should only be needed for logging perposes. if so, see if we can get rid of it
-            # but replacing it with a more efficient mechanism
-            self.conn = IPP_IP_INFO(f'{self.dst_ip}', f'{self.src_ip}')
 
-            ip_addr = int(self.dst_ip)
+            tracked_ip = self.dst_ip
 
-        self.bin_data = (ip_addr & MSB, ip_addr & LSB)
+            self.local_ip = int_to_ipaddr(self.src_ip)
+            self.tracked_ip = int_to_ipaddr(tracked_ip)
+
+        self.bin_data = (tracked_ip & MSB, tracked_ip & LSB)
 
 
 # TODO: test UDP / icmp dst unreachable packet!
@@ -64,7 +66,7 @@ class ProxyResponse(RawResponse):
 
                 # joining pseudo header with tcp header to calculate the tcp checksum
                 pseudo_header = [pseudo_header_pack(
-                    dnx_src_ip, packet.src_ip.packed, 0, 6, 20
+                    dnx_src_ip, long_pack(packet.src_ip), 0, 6, 20
                 ), tcp_header]
 
                 checksum = checksum_tcp(byte_join(pseudo_header))
@@ -94,7 +96,7 @@ class ProxyResponse(RawResponse):
             # packing ip header
             ip_header = ip_header_pack(
                 69, 0, ip_len, 0, 16384, 255, protocol,
-                checksum, dnx_src_ip, packet.src_ip.packed
+                checksum, dnx_src_ip, long_pack(packet.src_ip)
             )
             if i: break
 
@@ -130,12 +132,12 @@ class ProxyResponse(RawResponse):
             checksum = double_byte_pack(0,0)
             for i in range(2):
                 ip_header = ip_header_override_pack(
-                    packet.ip_header[:10], checksum, packet.src_ip.packed, dnx_src_ip
+                    packet.ip_header[:10], checksum, long_pack(packet.src_ip), dnx_src_ip
                 )
                 if i: break
                 checksum = checksum_ipv4(ip_header)
 
-            # overriding packet ip header after process is complete. this will make the loops more efficient that
+            # overriding packet ip header after process is complete. this will make the loops more efficient than
             # direct references to the instance object every time.
             packet.ip_header = ip_header
 

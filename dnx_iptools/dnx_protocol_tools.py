@@ -85,6 +85,11 @@ def checksum_dnx(msg):
     s += (s >> 16)
     return ~s & 0xffff
 
+def int_to_ipaddr(ip_addr):
+    ip_addr = long_pack(ip_addr)
+
+    return '.'.join([f'{b}' for b in ip_addr])
+
 def convert_mac_to_string(mac_address):
     string_mac = []
     while mac_address:
