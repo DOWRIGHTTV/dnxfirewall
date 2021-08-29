@@ -1,5 +1,22 @@
 
-function loadTable() {
+const loadTableData = (items) => {
+    const table = document.getElementById("filter-table-body");
+    items.forEach( item => {
+        let row = table.insertRow();
+        for (let i = 0; i < item.length; i++) {
+
+            let col = row.insertCell(i);
+            col.innerHTML = item[i];
+        }
+    });
+
+    // this should be able to be integrated into the load table data, but for now it is done
+    // after the fact.
+    colorizeTable();
+
+}
+
+function colorizeTable() {
     var table = document.getElementById("filter-table");
     var tr = table.getElementsByTagName("tr");
 
