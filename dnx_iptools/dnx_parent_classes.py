@@ -366,7 +366,6 @@ class NFQueue:
     _intfs = []
 
     __slots__ = (
-        # private vars
         '__q_num', '__threaded'
     )
 
@@ -416,7 +415,7 @@ class NFQueue:
         dnx_nfqueue.set_user_callback(self.__nfqueue_callback)
 
         while True:
-            nfqueue = NetfilterQueue()
+            nfqueue = dnx_nfqueue.NetfilterQueue()
             nfqueue.bind(self.__q_num)
 
             self._Log.notice('Starting netfilter queue. Packets can now be processed')
@@ -429,9 +428,9 @@ class NFQueue:
 
                 time.sleep(1)
 
-    def __nfqueue_callback(self, nfqueue):
+    def __nfqueue_callback(self, nfqueue, mark):
         #if self._pre_check(nfqueue):
-        self._parse_packet(nfqueue)
+        self._parse_packet(nfqueue, mark)
 
     def _pre_check(self, nfqueue):
         '''allowing code to be executed before parsing. return will be checked as a boolean where
@@ -442,7 +441,8 @@ class NFQueue:
         '''
         return True
 
-    def _parse_packet(self, packet):
+    def _parse_packet(self, nfqueue, mark):
+        packet = self._packet_parser(nfqueue, mark)
         try:
             packet.netfilter_rcv()
         except Exception:
@@ -474,7 +474,7 @@ class NFQueue:
         packet.nfqueue.accept()
 
 
-class NewPacket(dnx_nfqueue.CPacket):
+class NewPacket:
 
     __slots__ = (
         'zone',
@@ -500,22 +500,26 @@ class NewPacket(dnx_nfqueue.CPacket):
         'icmp_type'
     )
 
-    def netfilter_rcv(self, mark):
+    @classmethod
+    def netfilter_rcv(cls, packet, mark):
+        ''' Cython > Python attribute conversion'''
+
+        self = cls()
 
         self.zone = mark
 
-        hw_info = self.get_hw()
+        hw_info = packet.get_hw()
         self.in_intf   = hw_info[0]
         self.out_intf  = hw_info[1]
         self.src_mac   = hw_info[2]
         self.timestamp = hw_info[3]
 
-        ip_header = self.get_ip_header()
+        ip_header = packet.get_ip_header()
         self.protocol  = PROTO(ip_header[6])
         self.src_ip = IPv4Address(ip_header[8])
         self.dst_ip = IPv4Address(ip_header[9])
 
-        proto_header = self.get_proto_header()
+        proto_header = packet.get_proto_header()
         if self.protocol is PROTO.TCP:
             self.src_port   = proto_header[0]
             self.dst_port   = proto_header[1]

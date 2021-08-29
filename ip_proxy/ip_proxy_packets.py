@@ -7,12 +7,12 @@ sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_iptools.dnx_structs import * # pylint: disable=unused-wildcard-import
-from dnx_iptools.dnx_parent_classes import RawPacket, RawResponse
+from dnx_iptools.dnx_parent_classes import NewPacket, RawPacket, RawResponse
 from dnx_iptools.dnx_protocol_tools import checksum_ipv4, checksum_tcp, checksum_icmp
 from dnx_configure.dnx_namedtuples import IPP_SRC_INFO, IPP_DST_INFO, IPP_IP_INFO
 
 
-class IPPPacket(RawPacket):
+class IPPPacket(NewPacket):
 
     __slots__ = (
         'direction', 'conn', 'bin_data'

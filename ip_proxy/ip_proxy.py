@@ -34,7 +34,7 @@ class IPProxy(NFQueue):
         PROTO.TCP: {},
         PROTO.UDP: {}
     }
-    _packet_parser = IPPPacket.netfilter # alternate constructor
+    _packet_parser = IPPPacket.netfilter_rcv # alternate constructor
 
     # direct reference to the proxy response method
     _prepare_and_send = ProxyResponse.prepare_and_send
