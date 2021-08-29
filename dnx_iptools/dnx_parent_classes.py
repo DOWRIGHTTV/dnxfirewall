@@ -13,6 +13,7 @@ from collections import deque
 _HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, _HOME_DIR)
 
+import netfilter.dnx_nfqueue as dnx_nfqueue # pylint: disable=no-name-in-module, import-error
 from netfilter.netfilterqueue import NetfilterQueue # pylint: disable=no-name-in-module, import-error
 
 from dnx_iptools.dnx_interface import get_intf, wait_for_interface, wait_for_ip, get_mac, get_src_ip
@@ -412,9 +413,11 @@ class NFQueue:
         cls._proxy_callback = func
 
     def __queue(self):
+        dnx_nfqueue.set_user_callback(self.__nfqueue_callback)
+
         while True:
             nfqueue = NetfilterQueue()
-            nfqueue.bind(self.__q_num, self.__nfqueue_callback)
+            nfqueue.bind(self.__q_num)
 
             self._Log.notice('Starting netfilter queue. Packets can now be processed')
 
@@ -427,8 +430,8 @@ class NFQueue:
                 time.sleep(1)
 
     def __nfqueue_callback(self, nfqueue):
-        if self._pre_check(nfqueue):
-            self._parse_packet(nfqueue)
+        #if self._pre_check(nfqueue):
+        self._parse_packet(nfqueue)
 
     def _pre_check(self, nfqueue):
         '''allowing code to be executed before parsing. return will be checked as a boolean where
@@ -439,10 +442,9 @@ class NFQueue:
         '''
         return True
 
-    def _parse_packet(self, nfqueue):
-        packet = self._packet_parser(nfqueue)
+    def _parse_packet(self, packet):
         try:
-            packet.parse()
+            packet.netfilter_rcv()
         except Exception:
             traceback.print_exc()
 
@@ -470,6 +472,88 @@ class NFQueue:
 
         '''
         packet.nfqueue.accept()
+
+
+class NewPacket(dnx_nfqueue.CPacket):
+
+    __slots__ = (
+        'zone',
+
+        'in_intf', 'out_intf',
+        'src_mac', 'timestamp',
+
+        # ip header
+        'protocol',
+        'src_ip', 'dst_ip',
+
+        # proto headers
+        'src_port', 'dst_port',
+
+        # tcp
+        'seq_number', 'ack_number',
+
+        # udp
+        'udp_chk', 'udp_len',
+        'udp_header', 'udp_payload',
+
+        # icmp
+        'icmp_type'
+    )
+
+    def netfilter_rcv(self, mark):
+
+        self.zone = mark
+
+        hw_info = self.get_hw()
+        self.in_intf   = hw_info[0]
+        self.out_intf  = hw_info[1]
+        self.src_mac   = hw_info[2]
+        self.timestamp = hw_info[3]
+
+        ip_header = self.get_ip_header()
+        self.protocol  = PROTO(ip_header[6])
+        self.src_ip = IPv4Address(ip_header[8])
+        self.dst_ip = IPv4Address(ip_header[9])
+
+        proto_header = self.get_proto_header()
+        if self.protocol is PROTO.TCP:
+            self.src_port   = proto_header[0]
+            self.dst_port   = proto_header[1]
+            self.seq_number = proto_header[2]
+            self.ack_number = proto_header[3]
+
+        elif self.protocol is PROTO.UDP:
+            self.src_port = proto_header[0]
+            self.dst_port = proto_header[1]
+            udp_len       = proto_header[2]
+            self.udp_chk  = proto_header[3]
+
+            self.udp_len     = udp_len
+            self.udp_header  = proto_header[:8]
+            self.udp_payload = proto_header[8:udp_len]
+
+        elif self.protocol is PROTO.ICMP:
+            self.icmp_type = proto_header[0]
+
+        if (self.continue_condition):
+            self._before_exit()
+
+    def _before_exit(self):
+        '''executes before returning from parse call.
+
+        May be overridden.
+
+        '''
+        pass
+
+    @property
+    def continue_condition(self):
+        '''controls whether the _before_exit method gets called. must return a boolean.
+
+        May be overridden.
+
+        '''
+        return True
 
 
 class RawPacket:
