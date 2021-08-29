@@ -20,7 +20,7 @@ class Configuration:
     _setup = False
 
     __slots__ = (
-        'initialize', '_cfg_change,'
+        'initialize', 'IPS', '_cfg_change',
     )
 
     def __init__(self, name):

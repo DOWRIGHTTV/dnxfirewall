@@ -7,7 +7,7 @@ import time
 import threading
 
 from datetime import timedelta
-from flask import Flask, render_template, redirect, url_for, request, session
+from flask import Flask, render_template, redirect, url_for, request, session, jsonify
 
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
@@ -290,20 +290,30 @@ def advanced_ips(dnx_session_data):
 ## START OF SYSTEMS TAB
 ## ---------------------------------------------
 
-@app.route('/system/users', methods=['GET', 'POST'])
-@user_restrict('admin')
-def system_users(dnx_session_data):
+@app.route('/system/logs', methods=['GET', 'POST'])
+@user_restrict('user', 'admin')
+def system_logs(dnx_session_data):
     page_settings = {
-        'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'uri_path': ['system', 'users']
+        'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
+        'menu': '1', 'dnx_table': True,
+        'log_files': ['combined', 'logins', 'web_app', 'system', 'dns_proxy', 'ip_proxy', 'ips', 'dhcp_server', 'syslog'],
+        'uri_path': ['system', 'logs']
     }
 
     page_settings.update(dnx_session_data)
 
-    page_action = standard_page_logic(
-        dfe_users, page_settings, 'user_list', page_name='system_users')
+    page_action = log_page_logic(dfe_logs, page_settings, page_name='system_logs')
 
     return page_action
+
+@app.route('/system/logs/get', methods=['POST',])
+@user_restrict('user', 'admin')
+def system_logs_get(dnx_session_data):
+    json_data = request.get_json(force=True)
+    
+    table_data, _, _ = dfe_logs.update_page(json_data)
+
+    return ajax_response(status=True, data=table_data)
 
 @app.route('/system/reports', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
@@ -321,34 +331,18 @@ def system_reports(dnx_session_data):
 
     return page_action
 
-@app.route('/system/logs', methods=['GET', 'POST'])
-@user_restrict('user', 'admin')
-def system_logs(dnx_session_data):
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu': '1', 'dnx_table': True,
-        'log_files': ['combined', 'logins', 'web_app', 'system', 'dns_proxy', 'ip_proxy', 'ips', 'dhcp_server', 'syslog'],
-        'uri_path': ['system', 'logs']
-    }
-
-    page_settings.update(dnx_session_data)
-
-    page_action = log_page_logic(dfe_logs, page_settings, page_name='system_logs')
-
-    return page_action
-
-@app.route('/system/services', methods=['GET', 'POST'])
+@app.route('/system/users', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_services(dnx_session_data):
+def system_users(dnx_session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'uri_path': ['system', 'services']
+        'uri_path': ['system', 'users']
     }
 
     page_settings.update(dnx_session_data)
 
     page_action = standard_page_logic(
-        dnx_services, page_settings, 'service_info', page_name='system_services')
+        dfe_users, page_settings, 'user_list', page_name='system_users')
 
     return page_action
 
@@ -364,6 +358,21 @@ def system_backups(dnx_session_data):
 
     page_action = standard_page_logic(
         dfe_backups, page_settings, 'current_backups', page_name='system_backups')
+
+    return page_action
+
+@app.route('/system/services', methods=['GET', 'POST'])
+@user_restrict('admin')
+def system_services(dnx_session_data):
+    page_settings = {
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'uri_path': ['system', 'services']
+    }
+
+    page_settings.update(dnx_session_data)
+
+    page_action = standard_page_logic(
+        dnx_services, page_settings, 'service_info', page_name='system_services')
 
     return page_action
 
@@ -627,6 +636,15 @@ def update_session_tracker(username, user_role=None, remote_addr=None, *, action
             stored_tracker['active_users'].pop(username, None)
 
         session_tracker.write_configuration(stored_tracker)
+
+def ajax_response(*, status, data):
+    if (not isinstance(status, bool)):
+        raise TypeError('Ajax response status must be a boolean.')
+
+    # if (not isinstance(data, dict)):
+    #     raise TypeError('Ajax data must be a dictionary.')
+
+    return jsonify({'success': status, 'result': data})
 
 # checks form data for a color mode change and writes and configures accordingly. otherwise will load
 # the current dark mode setting for the active user and set flask.session['dark_mode] accordingly.
