@@ -15,6 +15,9 @@ from dnx_iptools.dnx_standard_tools import looper, classproperty, Initialize
 
 from ip_proxy.ip_proxy_log import Log
 
+# required when using ConfigurationManager context manager
+ConfigurationManager.set_log_reference(Log)
+
 
 class LanRestrict:
     '''lan restriction management is done within this class.

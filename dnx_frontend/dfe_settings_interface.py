@@ -22,7 +22,6 @@ def load_page(form):
     interface_settings = load_configuration('config')
 
     wan_settings = interface_settings['interfaces']['wan']
-    print(wan_settings)
 
     interface_settings = {
         'mac': {
@@ -40,8 +39,6 @@ def load_page(form):
     return interface_settings
 
 def update_page(form):
-    print(form)
-
     if ('update_wan_state' in form):
         wan_state = form.get('update_wan_state', DATA.INVALID)
         if wan_state is DATA.INVALID:

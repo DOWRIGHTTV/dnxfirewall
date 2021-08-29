@@ -13,7 +13,7 @@ def load_page(uri_query):
 
     log_files = [f'{file_path}/{file}' for file in reversed(os.listdir(file_path)[-7:])]
 
-    return get_log_entries(log_files), '1', None
+    return get_log_entries(log_files), 'combined', None
 
 def update_page(form):
     log_type = form.get('table', 'combined')
