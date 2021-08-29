@@ -525,6 +525,8 @@ class NFPacket:
         if (self.continue_condition):
             self._before_exit()
 
+        return self
+
     def _before_exit(self):
         '''executes before returning from parse call.
 
