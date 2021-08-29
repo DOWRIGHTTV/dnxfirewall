@@ -492,6 +492,8 @@ class NFPacket:
 
         self = cls()
 
+        # reference to allow higher level modules to call packet actions directly
+        self.nfqueue = cpacket
         self.zone = mark
 
         hw_info = cpacket.get_hw()
