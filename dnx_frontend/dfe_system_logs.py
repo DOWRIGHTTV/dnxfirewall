@@ -17,12 +17,19 @@ def load_page(uri_query):
 
 def update_page(form):
     log_type = form.get('table', 'combined')
+
+    # ternary to handle initial page load.
+    # TODO: this should be done better, but i am waitint until reports page gets converted to ajax to support both
+    log_type = 'combined' if log_type == 'default' else log_type
+
     if (log_type in ['combined', 'dhcp_server', 'dns_proxy', 'ip_proxy', 'ips', 'syslog', 'system', 'web_app', 'logins']):
         file_path = f'{HOME_DIR}/dnx_system/log/{log_type}'
 
         log_files = [f'{file_path}/{file}' for file in reversed(os.listdir(file_path)[-7:])]
 
     # returning none to fill the table_args var on the calling funtion to allow for reusablity with the reports page method
+    # TODO: this should potentially be wrapped in error handling at main.
+        # error will raise if table key is in form, but type is not in allowed list.
     return get_log_entries(log_files), log_type, None
 
 # TODO: make front end logging 4 fields. date/time, service, level, entry. this will make the presentation nicer
