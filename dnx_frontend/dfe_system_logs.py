@@ -39,9 +39,7 @@ def get_log_entries(file_path):
 
     temp_logs = []
     for file in log_files:
-        if (file.endswith('temp')): continue
-
-        temp_logs.extend(tail_file(file, line_count=100))
+        temp_logs.extend(tail_file(f'{file_path}/{file}', line_count=100))
 
         if len(temp_logs) >= 100:
             break
@@ -57,6 +55,6 @@ def get_log_entries(file_path):
         date_time = System.calculate_time_offset(int(epoch))
         date_time = System.format_log_time(date_time)
 
-        combined_logs_append.append((date_time, *log_entry))
+        combined_logs_append((date_time, *log_entry))
 
     return combined_logs

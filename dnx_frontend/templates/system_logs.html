@@ -8,7 +8,7 @@
                 <div class="row">
                     <form action="system/logs" method="POST">
                         <div class="input-field col s10 m6 l4 {{input_color}}">
-                            <select name="table" onchange="this.form.submit()">
+                            <select name="table" onchange="updateData(this.value)">
                                 {% for table_type in log_files %}
                                 <option value="{{table_type}}" {% if table_type==table %} selected {% endif %}
                                     >{{table_type.upper()|replace('_', ' ')}} LOG</option>
@@ -38,7 +38,7 @@
                                 <th style="width:65%">Log Entry</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="filter-table-body">
                             {% for date_time, service, log_level, log_entry in table_data %}
                             <tr>
                                 <td>{{date_time}}</td>

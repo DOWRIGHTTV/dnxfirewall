@@ -61,7 +61,7 @@ def append_to_file(data, filename, *, filepath='dnx_system/data/usr'):
 def tail_file(file, *, line_count):
     f = subprocess.run(['tail', '-n', f'{line_count}', file], capture_output=True)
 
-    return reversed(f.stdout.decode().splitlines())
+    return list(reversed(f.stdout.decode().splitlines()))
 
 def change_file_owner(file_path):
     if (os.getuid()):
