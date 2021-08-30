@@ -126,6 +126,7 @@ class LogService:
 # handler being intitialized.
 class LogHandler:
     _LEVEL   = 0
+    _initialized = False
     _syslog  = False
     _running = False
 
@@ -155,6 +156,10 @@ class LogHandler:
 
         # passing cls as arg because this is going through a generic decorator that strips the cls reference
         threading.Thread(target=cls._write_to_disk, args=(cls,)).start()
+
+        # waiting for log settings and methods to initialize before returning to caller
+        while not cls._initialized:
+            fast_sleep(ONE_SEC)
 
     @classproperty
     def is_root(cls): # pylint: disable=no-self-argument
@@ -304,7 +309,8 @@ class LogHandler:
 
         # log level is disabled
         else:
-            def log_method(_):
+            @classmethod
+            def log_method(*args):
                 pass
 
         setattr(cls, level_name, log_method)
@@ -316,6 +322,9 @@ class LogHandler:
         cls._LEVEL = logging['logging']['level']
 
         cls._add_logging_methods()
+
+        # used to inform run method that it can return to caller. This is is only relevant on initial start.
+        cls._initialized = True
 
     @cfg_read_poller('syslog_client', class_method=True)
     def _slog_settings(cls, cfg_file):  # pylint: disable=no-self-argument

@@ -21,7 +21,7 @@ from dnx_configure.dnx_exceptions import ValidationError
 # will load json data from file, convert it to a python dict, then return as object
 # TODO: add usr config support, which will merge will loaded system defaults.
     # !! currently supported, but in the case of nested dicts the user config overrides
-    # system settings, specifically if new keys were added which causing modules to break.
+    # system settings, specifically if new keys were added which cause modules to break.
 def load_configuration(filename, *, filepath='dnx_system/data'):
     '''load json data from file, convert it to a python dict, then return as object.'''
     if (not filename.endswith('.json')):
@@ -299,7 +299,8 @@ class ConfigurationManager:
 
     # will load json data from file, convert it to a python dict, then returned as object
     def load_configuration(self):
-        ''' returns python dictionary of configuration file contents'''
+        '''returns python dictionary of configuration file contents'''
+
         with open(self._system_path_file, 'r') as system_settings:
             system_settings = json.load(system_settings)
 
@@ -318,6 +319,7 @@ class ConfigurationManager:
     # data gets fully rewritten and if short than original the excess gets truncated.
     def write_configuration(self, data_to_write):
         '''writes configuration data as json to generated temporary file'''
+
         if (self._data_written):
             raise RuntimeWarning('configuration file has already been written to.')
 
@@ -330,6 +332,7 @@ class ConfigurationManager:
 
 class Watcher:
     '''this class is used to detect file changes, primarily configuration files.'''
+
     __slots__ = (
         '_watch_file', '_callback', '_full_path',
         '_last_modified_time'
