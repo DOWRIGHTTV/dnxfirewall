@@ -21,7 +21,7 @@ from dnx_iptools.dnx_interface import get_intf, wait_for_interface, wait_for_ip,
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_iptools.dnx_structs import * # pylint: disable=unused-wildcard-import
 from dnx_configure.dnx_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK
-from dnx_iptools.dnx_protocol_tools import checksum_ipv4, checksum_tcp, checksum_icmp
+from dnx_iptools.dnx_protocol_tools import int_to_ipaddr
 from dnx_iptools.dnx_standard_tools import looper
 
 __all__ = (
@@ -363,7 +363,6 @@ class NFQueue:
     _Log = None
     _packet_parser  = _NOT_IMPLEMENTED
     _proxy_callback = _NOT_IMPLEMENTED
-    _intfs = []
 
     __slots__ = (
         '__q_num', '__threaded'
@@ -553,9 +552,6 @@ class RawPacket:
 
     raw socket:
         packet = RawPacket.interface(data, address, socket)
-
-    nfqueue:
-        packet = RawPacket.netfilter(nfqueue)
 
     the before_exit method can be overridden to extend the parsing functionality, for example to group
     objects in namedtuples or to index application data.
@@ -795,7 +791,7 @@ class RawResponse:
         # calling hook for packet generation in subclass and sending over direct socket send ref
         send_data = self._prepare_packet(packet, dnx_src_ip)
         try:
-            intf.sock_sendto(send_data, (f'{packet.src_ip}', 0))
+            intf.sock_sendto(send_data, (int_to_ipaddr(packet.src_ip), 0))
         except OSError:
             pass
 

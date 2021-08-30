@@ -14,7 +14,7 @@ from dnx_iptools.dnx_structs import * # pylint: disable=unused-wildcard-import
 from dnx_configure.dnx_constants import byte_join
 
 __all__ = (
-    'checksum_dnx', 'checksum_icmp', 'checksum_ipv4', 'checksum_tcp',
+    'checksum_icmp', 'checksum_ipv4', 'checksum_tcp', 'int_to_ipaddr',
     'convert_dns_string_to_bytes', 'convert_mac_to_bytes',
     'convert_mac_to_string', 'convert_string_to_bitmap',
     'create_dns_query_header', 'create_dns_response_header',
