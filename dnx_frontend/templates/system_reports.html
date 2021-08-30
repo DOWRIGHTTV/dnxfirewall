@@ -7,7 +7,7 @@
                 <h4 class="{{title_color}}">Detection Logs</h4>
                 <div class="row">
                     <form action="system/reports" method="POST">
-                        <div class="input-field col s5 m3 offset-m1 {{input_color}}">
+                        <div class="input-field col s5 m3 {{input_color}}">
                             <select name="table" onchange="this.form.submit()">
                                 {% for table_type in table_types %}
                                 <option value="{{table_type}}/last" {% if table_type == table %} selected {% endif %}>{{table_type.replace("_", " ").upper()}}</option>
