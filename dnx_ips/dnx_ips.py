@@ -86,7 +86,7 @@ class IPS_IDS(NFQueue):
 
     @staticmethod
     def forward_packet(nfqueue):
-        nfqueue.set_mark(WAN_ZONE_FIREWALL)
+        nfqueue.update_mark(WAN_ZONE_FIREWALL)
         nfqueue.repeat()
 
 

@@ -66,6 +66,8 @@ class IPProxy(NFQueue):
                 packet.nfqueue.update_mark(DMZ_ZONE_FIREWALL)
 
             if (zone == WAN_IN):
+                packet.nfqueue.update_mark(SEND_TO_IPS)
+
                 packet.nfqueue.forward(Queue.IPS_IDS)
 
             else:

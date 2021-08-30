@@ -11,7 +11,6 @@ from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-impo
 from dnx_iptools.dnx_structs import * # pylint: disable=unused-wildcard-import
 from dnx_iptools.dnx_parent_classes import NFPacket, RawResponse
 from dnx_iptools.dnx_protocol_tools import checksum_ipv4, checksum_tcp, checksum_icmp, int_to_ipaddr
-from dnx_configure.dnx_namedtuples import IPS_IP_INFO
 
 
 # TODO: make sure iptable rule can allow for icmp echo/8 through forward. basically if host is doing a icmp flood
