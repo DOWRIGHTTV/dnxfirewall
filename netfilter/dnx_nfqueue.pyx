@@ -69,9 +69,7 @@ cdef class CPacket:
         # if self.payload_len < 0:
         #     raise OSError("Failed to get payload of packet.")
 
-        # timestamp gets assigned via pointer/struct -> time_val: (t_sec, t_usec).
-        nfq_get_timestamp(self._nfa, &self.timestamp)
-
+        self.timestamp = time(NULL)
         self._mark = nfq_get_nfmark(nfa)
 
         # splitting packet by tcp/ip layers
@@ -129,7 +127,7 @@ cdef class CPacket:
 
         self._verdict_is_set = True
 
-    cdef double get_timestamp(self):
+    cdef long get_timestamp(self):
 
         return self.timestamp.tv_sec + (self.timestamp.tv_usec / 1000000.0)
 
@@ -213,7 +211,7 @@ cdef class CPacket:
             in_interface,
             out_interface,
             mac_addr,
-            self.get_timestamp(),
+            self.get_timestamp,
         )
 
         return hw_info

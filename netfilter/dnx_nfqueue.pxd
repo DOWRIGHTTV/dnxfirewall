@@ -6,6 +6,10 @@ cdef extern from "sys/types.h":
 cdef extern from "<errno.h>":
     int errno
 
+cdef extern from "time.h" nogil:
+    ctypedef int time_t
+    time_t time(time_t*)
+
 # dummy defines from asm-generic/errno.h:
 cdef enum:
     EAGAIN = 11           # Try again
@@ -174,16 +178,15 @@ cdef class CPacket:
     cdef bint _verdict_is_set
     cdef u_int32_t _mark
 
-    # Packet details:
+    # Packet details
     cdef Py_ssize_t data_len
     cdef readonly unsigned char *data
     cdef readonly unsigned char *payload
-    cdef timeval timestamp
+    cdef time_t timestamp
 
     cdef u_int32_t parse(self, nfq_q_handle *qh, nfq_data *nfa) nogil
     cdef void _parse(self) nogil
     cdef void verdict(self, u_int32_t verdict)
-    cdef double get_timestamp(self)
     cpdef update_mark(self, u_int32_t mark)
     cpdef accept(self)
     cpdef drop(self)
