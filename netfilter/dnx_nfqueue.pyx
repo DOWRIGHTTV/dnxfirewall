@@ -5,12 +5,10 @@ This is a derivative work based on python-netfilterqueue.
 
 see: SOURCE-LICENSE.txt (MIT), https://github.com/kti/python-netfilterqueue
 
-As as derived work, see: DERIVATIVE-LICENSE.txt (AGPL3)
+As a derived work, see: DERIVATIVE-LICENSE.txt (AGPL3)
 '''
 
 import socket
-
-from libc.stdio cimport printf
 
 # Constants for module users
 cdef int COPY_NONE = 0
@@ -60,14 +58,8 @@ cdef class CPacket:
 
         self._hdr = nfq_get_msg_packet_hdr(nfa)
         self.id = ntohl(self._hdr.packet_id)
-        # NOTE: these are not needed at this moment.
-        # self.hw_protocol = ntohs(hdr.hw_protocol)
-        # self.hook = hdr.hook
 
         self.data_len = nfq_get_payload(self._nfa, &self.data)
-        # TODO: figure this out. cant use no gil if its here.
-        # if self.payload_len < 0:
-        #     raise OSError("Failed to get payload of packet.")
 
         self.timestamp = time(NULL)
         self._mark = nfq_get_nfmark(nfa)
@@ -111,7 +103,6 @@ cdef class CPacket:
     cdef void verdict(self, u_int32_t verdict):
         '''Call appropriate set_verdict function on packet.'''
 
-        # TODO: figure out what to do about this. maybe just printf instead?
         if self._verdict_is_set:
             raise RuntimeWarning('Verdict already given for this packet.')
 
@@ -176,7 +167,7 @@ cdef class CPacket:
         '''Return hardware information of the packet.
 
             hw_info = (
-                in_interface, out_interface, mac_addr, self.get_timestamp()
+                in_interface, out_interface, mac_addr, timestamp
             )
         '''
 
@@ -190,10 +181,8 @@ cdef class CPacket:
 
         self._hw = nfq_get_packet_hw(self._nfa)
         if self._hw == NULL:
-            print(f'HW ERROR: {self._hw.hw_addr}')
             # nfq_get_packet_hw doesn't work on OUTPUT and PREROUTING chains
-            # NOTE: making this a quick fail scenario since this would likely cause problems later in the packet
-            # parsing process and forcing error handling will ensure it is dealt with [properly].
+            # NOTE: forcing error handling will ensure it is dealt with [properly].
             raise OSError('MAC address not available in OUTPUT and PREROUTING chains')
 
         cdef u_int8_t[8] hw_addr = self._hw.hw_addr
@@ -207,7 +196,7 @@ cdef class CPacket:
             in_interface,
             out_interface,
             mac_addr,
-            self.get_timestamp,
+            self.timestamp,
         )
 
         return hw_info
@@ -271,6 +260,7 @@ cdef class CPacket:
 
             proto_header = (
                 self.icmp_header.type,
+                self.icmp_header.code,
             )
 
         else:
@@ -341,15 +331,10 @@ cdef class NetfilterQueue:
         self.qh = NULL
         # See warning about nfq _unbind_pf in __dealloc__ above.
 
-    def get_fd(self):
-        '''Get the file descriptor of the queue handler.'''
-
-        return nfq_fd(self.h)
-
     def run(self, bint block=True):
         '''Accept packets using recv.'''
 
-        cdef int fd = self.get_fd()
+        cdef int fd = nfq_fd(self.h)
         cdef char buf[4096]
         cdef int rv
         cdef int recv_flags = 0

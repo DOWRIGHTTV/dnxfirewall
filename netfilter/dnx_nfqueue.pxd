@@ -59,6 +59,7 @@ cdef struct udphdr:
 
 cdef struct icmphdr:
     u_int8_t type
+    u_int8_t code
 
 # from netinet/in.h:
 cdef enum:

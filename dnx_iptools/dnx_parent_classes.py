@@ -522,7 +522,7 @@ class NFPacket:
             self.udp_payload = cpacket.get_payload()
 
         elif (self.protocol is PROTO.ICMP):
-            self.icmp_type = proto_header[0]
+            self.icmp_type = ICMP(proto_header[0])
 
         if (self.continue_condition):
             self._before_exit()
