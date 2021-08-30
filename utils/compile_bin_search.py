@@ -2,12 +2,14 @@
 
 import os
 
-from setuptools import setup
+from setuptools import setup, Extension
 from Cython.Build import cythonize
+from Cython.Distutils import build_ext
 
-HOME_DIR = '/home/dnx/dnxfirewall'
-os.chdir(HOME_DIR)
+os.chdir('/home/dnx/dnxfirewall')
+
+cmd = {'build_ext': build_ext}
 
 setup(
-    ext_modules=cythonize('dnx_iptools/dnx_binary_search.pyx', language_level='3')
+    cmdclass=cmd, ext_modules=cythonize('dnx_iptools/dnx_binary_search.pyx', language_level='3')
 )
