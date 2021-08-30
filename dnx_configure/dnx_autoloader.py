@@ -245,7 +245,7 @@ def compile_extensions():
 
     commands = [
         (f'sudo python3 {HOME_DIR}/utils/compile_bin_search.py build_ext --inplace', 'compiling binary search C extension'),
-        (f'sudo python3 {HOME_DIR}/netfilter/setup.py build_ext --inplace', 'compiling dnx-nfqueue C extension')
+        (f'sudo python3 {HOME_DIR}/utils/compile_dnx_nfqueue.py build_ext --inplace', 'compiling dnx-nfqueue C extension')
     ]
 
     for command, desc in commands:

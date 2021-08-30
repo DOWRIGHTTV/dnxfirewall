@@ -16,7 +16,7 @@ folders = [
     'dhcp_server', 'ip_proxy'
     'dns_proxy', 'dnx_ips',
     'dnx_iptools', 'dnx_syslog',
-    'netfilter'
+    'dnx_netfilter'
     ]
 
 removal_count = 0

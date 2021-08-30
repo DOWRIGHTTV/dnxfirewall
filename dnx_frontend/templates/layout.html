@@ -64,6 +64,7 @@
     {% include 'includes/_footer.html' %}
     {% endif %}
 
+    <!-- jquery include. needed for ajax, and may be used by materialize vs builtin fallbacks -->
     <script src="{{url_for('static',filename='assets/js/jquery.min.js')}}"></script>
 
     {% if dnx_table %}
@@ -75,9 +76,13 @@
     {% include 'includes/_dnx_ajax_client.js' %}
 
     <script>
+    {% if ajax %}
         document.addEventListener('DOMContentLoaded', () => {
             updateData('default');
         })
+    {% else %}
+        colorizeTable()
+    {% endif %}
     </script>
 
     {% endif %}

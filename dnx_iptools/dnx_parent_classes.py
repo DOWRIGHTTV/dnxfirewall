@@ -13,16 +13,14 @@ from collections import deque
 _HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, _HOME_DIR)
 
-import netfilter.dnx_nfqueue as dnx_nfqueue # pylint: disable=no-name-in-module, import-error
-from netfilter.netfilterqueue import NetfilterQueue # pylint: disable=no-name-in-module, import-error
-
-from dnx_iptools.dnx_interface import get_intf, wait_for_interface, wait_for_ip, get_mac, get_src_ip
-
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_iptools.dnx_structs import * # pylint: disable=unused-wildcard-import
 from dnx_configure.dnx_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK
 from dnx_iptools.dnx_protocol_tools import int_to_ipaddr
 from dnx_iptools.dnx_standard_tools import looper
+
+from dnx_netfilter.dnx_nfqueue import set_user_callback, NetfilterQueue # pylint: disable=no-name-in-module, import-error
+from dnx_iptools.dnx_interface import get_intf, wait_for_interface, wait_for_ip, get_src_ip
 
 __all__ = (
     'Listener', 'ProtoRelay', 'NFQueue', 'RawPacket', 'RawResponse'
@@ -411,27 +409,30 @@ class NFQueue:
         cls._proxy_callback = func
 
     def __queue(self):
-        dnx_nfqueue.set_user_callback(self.__handle_packet)
+        set_user_callback(self.__handle_packet)
 
         while True:
-            nfqueue = dnx_nfqueue.NetfilterQueue()
+            nfqueue = NetfilterQueue()
             nfqueue.bind(self.__q_num)
 
-            self._Log.notice('Starting netfilter queue. Packets can now be processed')
+            self._Log.notice('Starting dnx_netfilter queue. Packets can now be processed')
 
             try:
                 nfqueue.run()
-            except Exception:
-                self._Log.alert('Netfilter binding lost. Attempting to rebind.')
+            except:
                 nfqueue.unbind()
 
-                time.sleep(1)
+                self._Log.alert('Netfilter binding lost. Attempting to rebind.')
+
+            time.sleep(1)
 
     def __handle_packet(self, nfqueue, mark):
         try:
             packet = self._packet_parser(nfqueue, mark)
-        except Exception:
-            traceback.print_exc()
+        except:
+            nfqueue.drop()
+
+            self._Log.error('failed to parse CPacket. Packet discarded.')
 
         else:
             if self._pre_inspect(packet):
