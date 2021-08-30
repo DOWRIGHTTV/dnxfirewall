@@ -13,6 +13,7 @@ from collections import deque
 _HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, _HOME_DIR)
 
+import netfilter.dnx_nfqueue as dnx_nfqueue # pylint: disable=no-name-in-module, import-error
 from netfilter.netfilterqueue import NetfilterQueue # pylint: disable=no-name-in-module, import-error
 
 from dnx_iptools.dnx_interface import get_intf, wait_for_interface, wait_for_ip, get_mac, get_src_ip
@@ -365,7 +366,6 @@ class NFQueue:
     _intfs = []
 
     __slots__ = (
-        # private vars
         '__q_num', '__threaded'
     )
 
@@ -412,9 +412,11 @@ class NFQueue:
         cls._proxy_callback = func
 
     def __queue(self):
+        dnx_nfqueue.set_user_callback(self.__handle_packet)
+
         while True:
-            nfqueue = NetfilterQueue()
-            nfqueue.bind(self.__q_num, self.__nfqueue_callback)
+            nfqueue = dnx_nfqueue.NetfilterQueue()
+            nfqueue.bind(self.__q_num)
 
             self._Log.notice('Starting netfilter queue. Packets can now be processed')
 
@@ -426,23 +428,9 @@ class NFQueue:
 
                 time.sleep(1)
 
-    def __nfqueue_callback(self, nfqueue):
-        if self._pre_check(nfqueue):
-            self._parse_packet(nfqueue)
-
-    def _pre_check(self, nfqueue):
-        '''allowing code to be executed before parsing. return will be checked as a boolean where
-        True will continue and False will return.
-
-        May be overridden.
-
-        '''
-        return True
-
-    def _parse_packet(self, nfqueue):
-        packet = self._packet_parser(nfqueue)
+    def __handle_packet(self, nfqueue, mark):
         try:
-            packet.parse()
+            packet = self._packet_parser(nfqueue, mark)
         except Exception:
             traceback.print_exc()
 
@@ -470,6 +458,93 @@ class NFQueue:
 
         '''
         packet.nfqueue.accept()
+
+
+class NFPacket:
+
+    __slots__ = (
+        'nfqueue', 'zone',
+
+        'in_intf', 'out_intf',
+        'src_mac', 'timestamp',
+
+        # ip header
+        'protocol',
+        'src_ip', 'dst_ip',
+
+        # proto headers
+        'src_port', 'dst_port',
+
+        # tcp
+        'seq_number', 'ack_number',
+
+        # udp
+        'udp_chk', 'udp_len',
+        'udp_header', 'udp_payload',
+
+        # icmp
+        'icmp_type'
+    )
+
+    @classmethod
+    def netfilter_rcv(cls, cpacket, mark):
+        '''Cython > Python attribute conversion'''
+
+        self = cls()
+
+        # reference to allow higher level modules to call packet actions directly
+        self.nfqueue = cpacket
+        self.zone = mark
+
+        hw_info = cpacket.get_hw()
+        self.in_intf   = hw_info[0]
+        self.out_intf  = hw_info[1]
+        self.src_mac   = hw_info[2]
+        self.timestamp = hw_info[3]
+
+        ip_header = cpacket.get_ip_header()
+        self.protocol  = PROTO(ip_header[6])
+        self.src_ip = ip_header[8]
+        self.dst_ip = ip_header[9]
+
+        proto_header = cpacket.get_proto_header()
+        if (self.protocol is PROTO.TCP):
+            self.src_port   = proto_header[0]
+            self.dst_port   = proto_header[1]
+            self.seq_number = proto_header[2]
+            self.ack_number = proto_header[3]
+
+        elif (self.protocol is PROTO.UDP):
+            self.src_port = proto_header[0]
+            self.dst_port = proto_header[1]
+
+            # only need payload for udp at the moment
+            self.udp_payload = cpacket.get_payload()
+
+        elif (self.protocol is PROTO.ICMP):
+            self.icmp_type = ICMP(proto_header[0])
+
+        if (self.continue_condition):
+            self._before_exit()
+
+        return self
+
+    def _before_exit(self):
+        '''executes before returning from parse call.
+
+        May be overridden.
+
+        '''
+        pass
+
+    @property
+    def continue_condition(self):
+        '''controls whether the _before_exit method gets called. must return a boolean.
+
+        May be overridden.
+
+        '''
+        return True
 
 
 class RawPacket:
@@ -535,23 +610,6 @@ class RawPacket:
 
     def __str__(self):
         return f'{self.__class__.__name__}(proto={self.protocol}, len={self._dlen})'
-
-    @classmethod
-    def netfilter(cls, nfqueue):
-        '''alternate constructor. used to start listener/proxy instances using nfqueue bindings.'''
-        self = cls()
-        self.nfqueue = nfqueue
-        self.zone    = nfqueue.get_mark()
-
-        # NOTE: source mac is only needed to identify infected/compromised local hosts
-        src_mac = nfqueue.get_hw()
-        self.src_mac = src_mac[:6] if src_mac else None
-
-        data = nfqueue.get_payload()
-        self.data = data
-        self._dlen = len(data)
-
-        return self
 
     @classmethod
     def interface(cls, data, address, sock_info):

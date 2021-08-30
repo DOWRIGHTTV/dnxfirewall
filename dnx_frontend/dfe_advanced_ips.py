@@ -161,7 +161,7 @@ def update_page(form):
         except:
             return INVALID_FORM
 
-        if (validate.convert_float(timestamp) is DATA.INVALID):
+        if (validate.convert_int(timestamp) is DATA.INVALID):
             return INVALID_FORM
 
         else:

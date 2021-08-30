@@ -27,14 +27,12 @@ DNS_BLACKLIST  = _namedtuple('blacklist', 'dns')
 
 # IPS
 IPS_WAN_INFO = _namedtuple('ips_wan_info', 'interface ip mac')
-IPS_IP_INFO  = _namedtuple('ips_ip_info', 'tracked_ip tracked_port local_port')
 IPS_SCAN_RESULTS = _namedtuple('ips_scan_results', 'initial_block scan_detected block_status')
 IPS_LOG = _namedtuple('ips_log', 'ip protocol attack_type action')
 PSCAN_TRACKERS = _namedtuple('portscan', 'lock tracker')
 DDOS_TRACKERS  = _namedtuple('ddos', 'lock tracker')
 
 #IP PROXY
-IPP_IP_INFO = _namedtuple('ipp_ip_info', 'tracked_ip local_ip')
 IPP_INSPECTION_RESULTS = _namedtuple('ipp_inspection_results', 'category action')
 IPP_LOG = _namedtuple('ipp_log', 'local_ip tracked_ip category direction action')
 GEO_LOG = _namedtuple('geo_log', 'country direction action')

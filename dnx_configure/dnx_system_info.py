@@ -289,11 +289,10 @@ class System:
         '''
         return list of currently blocked hosts in the specific iptables table. default table is 'raw'.
 
-        if expire_stamp is defined, only hosts that have reached point of expiration will be returned.
-        expire_stamp should be an integer value of the current time - the amount of seconds that represent
-        the time to expire.
+        if block_length is defined, only hosts that have reached point of expiration will be returned.
+        block_length should be an integer value of the amount of seconds that represent the time to expire.
 
-            blocked_hosts = System.ips_passivley_blocked(expire_stamp=time.time()-100)
+            blocked_hosts = System.ips_passivley_blocked(block_length=100)
         '''
 
         current_time = fast_time()
@@ -304,7 +303,7 @@ class System:
         for line in output[2:]:
             line = line.split()
 
-            blocked_host, timestamp = line[3], float(line[6])
+            blocked_host, timestamp = line[3], int(line[6])
 
             # check whether the host rule has reach point of expiration. if not, loop will continue. for NO_DELAY
             # this condition will eval to False immediately, which marks rule for deletion.

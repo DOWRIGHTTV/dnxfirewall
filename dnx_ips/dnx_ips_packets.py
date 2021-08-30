@@ -9,22 +9,22 @@ import dnx_iptools.dnx_interface as interface
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_iptools.dnx_structs import * # pylint: disable=unused-wildcard-import
-from dnx_iptools.dnx_parent_classes import RawPacket, RawResponse
-from dnx_iptools.dnx_protocol_tools import checksum_ipv4, checksum_tcp, checksum_icmp
-from dnx_configure.dnx_namedtuples import IPS_IP_INFO
+from dnx_iptools.dnx_parent_classes import NFPacket, RawResponse
+from dnx_iptools.dnx_protocol_tools import checksum_ipv4, checksum_tcp, checksum_icmp, int_to_ipaddr
 
 
 # TODO: make sure iptable rule can allow for icmp echo/8 through forward. basically if host is doing a icmp flood
 # attack on an open port it will not be detected with current rules.
-class IPSPacket(RawPacket):
+class IPSPacket(NFPacket):
 
     __slots__ = (
-        'conn', 'icmp_payload_override'
+        'tracked_ip', 'target_port', 'icmp_payload_override'
     )
 
     def __init__(self):
         super().__init__()
 
+        self.target_port = None
         self.icmp_payload_override = b''
 
     def tcp_override(self, dst_port, seq_num):
@@ -49,11 +49,9 @@ class IPSPacket(RawPacket):
         if (self.zone == SEND_TO_IPS):
             self.zone = WAN_IN
 
-        if (self.protocol is PROTO.ICMP):
-            self.conn = IPS_IP_INFO(f'{self.src_ip}', None, None)
-
-        else:
-            self.conn = IPS_IP_INFO(f'{self.src_ip}', self.src_port, self.dst_port)
+        self.tracked_ip = int_to_ipaddr(self.src_ip)
+        if (self.protocol is not PROTO.ICMP):
+            self.target_port = self.dst_port
 
 
 class IPSResponse(RawResponse):
@@ -83,7 +81,7 @@ class IPSResponse(RawResponse):
 
                 # packing pseudo header
                 pseudo_header = [pseudo_header_pack(
-                    dnx_src_ip, packet.src_ip.packed, 0, 6, 20
+                    dnx_src_ip, long_pack(packet.src_ip), 0, 6, 20
                 ), tcp_header]
 
                 checksum = checksum_tcp(byte_join(pseudo_header))
@@ -121,7 +119,7 @@ class IPSResponse(RawResponse):
             # packing ip header
             ip_header = ip_header_pack(
                 69, 0, ip_len, 0, 16384, 255, protocol,
-                checksum, dnx_src_ip, packet.src_ip.packed
+                checksum, dnx_src_ip, long_pack(packet.src_ip)
             )
             if i: break
 
@@ -149,12 +147,12 @@ class IPSResponse(RawResponse):
             checksum = double_byte_pack(0,0)
             for i in range(2):
                 ip_header = ip_header_override_pack(
-                    packet.ip_header[:10], checksum, packet.src_ip.packed, dnx_src_ip
+                    packet.ip_header[:10], checksum, long_pack(packet.src_ip), dnx_src_ip
                 )
                 if i: break
                 checksum = checksum_ipv4(ip_header)
 
-            # overriding packet ip header after process is complete. this will make the loops more efficient that
+            # overriding packet ip header after process is complete. this will make the loops more efficient than
             # direct references to the instance object every time.
             packet.ip_header = ip_header
 

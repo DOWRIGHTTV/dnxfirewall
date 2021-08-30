@@ -145,7 +145,7 @@ class _Defaults:
         shell(' iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT') # Tracking connection state for return traffic from WAN back Firewall itself
 
         # filtering out broadcast packets to the wan. These can be prevelent if in a double nat scenario and would never be
-        # used for anything. the ips current does checks to filter this. evaluate/see if we can depricate that for this.
+        # used for anything.
         shell(f'iptables -A INPUT -i {self._wan_int} -m addrtype --dst-type BROADCAST -j DROP')
 
         # local ubuntu DNS proxy
@@ -154,27 +154,36 @@ class _Defaults:
         # local socket communication
         shell(f'iptables -A INPUT -s 127.0.0.1/24 -d 127.0.0.1/24 -j ACCEPT')
 
+        # NOTE: straight to IPS on input chain.
         shell(f'iptables -A INPUT -p tcp -m mark --mark {SEND_TO_IPS} -j NFQUEUE --queue-num 2')
         shell(f'iptables -A INPUT -p udp -m mark --mark {SEND_TO_IPS} -j NFQUEUE --queue-num 2')
         shell(f'iptables -A INPUT -p icmp -m icmp --icmp-type 8 -m mark --mark {SEND_TO_IPS} -j NFQUEUE --queue-num 2')
 
         # dnxfirewall services access (all local network interfaces). dhcp, dns, icmp, etc.
-
-        # implicit ICMP allow for users > firewall
-        shell(f'iptables -A INPUT -m mark ! --mark {WAN_IN} -p icmp --icmp-type any -j ACCEPT')
+        # NOTE: WAN_IN is not used on the INPUT chain, and all traffic goes straight to IPS, so !SEND_TO_IPS ise used here.
 
         # DHCP discover/request allow
-        shell(f'iptables -A INPUT -m mark ! --mark {WAN_IN} -p udp --dport 67 -j ACCEPT')
+        shell(f'iptables -A INPUT -m mark ! --mark {SEND_TO_IPS} -p udp --dport 67 -j ACCEPT')
 
         # implicit DNS allow for local users
-        shell(f'iptables -A INPUT -m mark ! --mark {WAN_IN} -p udp --dport 53 -j ACCEPT')
+        shell(f'iptables -A INPUT -m mark ! --mark {SEND_TO_IPS} -p udp --dport 53 -j ACCEPT')
 
         # implicit http/s allow to dnx-web for local LAN users
         shell(f'iptables -A INPUT -m mark --mark {LAN_IN} -p tcp --dport 443 -j ACCEPT')
         shell(f'iptables -A INPUT -m mark --mark {LAN_IN} -p tcp --dport 80 -j ACCEPT')
 
         # additional access to the system is checked here. access set via web ui, but lan > web mgmt will always be allowed above.
-        shell(f'iptables -A INPUT -m mark ! --mark {WAN_IN} -j MGMT')
+        shell(f'iptables -A INPUT -m mark ! --mark {SEND_TO_IPS} -j MGMT')
+
+        # NOTE: these are default settings of user defined options. these can be removed from the webui after setup and are only
+        # here for convenience.
+
+        # dnxfirewall LAN interface ping allow
+        shell(f'iptables -A INPUT -m mark --mark {LAN_IN} -p icmp -m icmp --icmp-type 8 -j ACCEPT')
+
+        # DMZ webui access
+        shell(f'iptables -A INPUT -m mark --mark {DMZ_IN} -p tcp --dport 443 -j ACCEPT')
+        shell(f'iptables -A INPUT -m mark --mark {DMZ_IN} -p tcp --dport 80 -j ACCEPT')
 
     def main_output_set(self):
 
@@ -295,6 +304,12 @@ class IPTablesManager:
 
         zone = globals()[f'{fields.zone.upper()}_IN']
         action = '-A' if fields.action is CFG.ADD else '-D'
+
+        # icmp/ping rule is one off check.
+        if fields.service_ports == 1:
+            shell(f'sudo iptables {action} MGMT -m mark --mark {zone} -p icmp --icmp-type 8 -j ACCEPT', check=True)
+
+            return
 
         for port in fields.service_ports:
 

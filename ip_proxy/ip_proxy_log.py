@@ -32,11 +32,11 @@ class Log(LogHandler):
         if (inspection.action is CONN.DROP):
             if (inspection.category in cls._infected_cats and pkt.direction is DIR.OUTBOUND and cls.current_lvl >= LOG.ALERT):
                 log = IPP_LOG(
-                    pkt.conn.local_ip, pkt.conn.tracked_ip, inspection.category, pkt.direction.name, 'blocked'
+                    pkt.local_ip, pkt.tracked_ip, inspection.category, pkt.direction.name, 'blocked'
                 )
 
                 log2 = INFECTED_LOG(
-                    get_arp_table(host=pkt.conn.local_ip), pkt.conn.local_ip, pkt.conn.tracked_ip, 'malware'
+                    get_arp_table(host=pkt.local_ip), pkt.local_ip, pkt.tracked_ip, 'malware'
                 )
 
                 log3 = GEO_LOG(inspection.category[0], pkt.direction.name, 'blocked')
@@ -45,7 +45,7 @@ class Log(LogHandler):
 
             elif (cls.current_lvl >= LOG.WARNING):
                 log = IPP_LOG(
-                    pkt.conn.local_ip, pkt.conn.tracked_ip, inspection.category, pkt.direction.name, 'blocked'
+                    pkt.local_ip, pkt.tracked_ip, inspection.category, pkt.direction.name, 'blocked'
                 )
 
                 log2 = GEO_LOG(inspection.category[0], pkt.direction.name, 'blocked')
@@ -54,9 +54,9 @@ class Log(LogHandler):
 
         # informational logging for all accepted connections
         elif (cls.current_lvl >= LOG.INFO):
-            log = IPP_LOG(pkt.conn.local_ip, pkt.conn.tracked_ip, inspection.category, pkt.direction.name, 'allowed')
+            log = IPP_LOG(pkt.local_ip, pkt.tracked_ip, inspection.category, pkt.direction.name, 'allowed')
 
-            log2 = GEO_LOG(inspection.category[0], pkt.direction.name, 'blocked')
+            log2 = GEO_LOG(inspection.category[0], pkt.direction.name, 'allowed')
 
             return LOG.INFO, {'ipp': log, 'geo': log2}
 

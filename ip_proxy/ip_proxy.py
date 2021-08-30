@@ -7,7 +7,7 @@ sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_iptools.dnx_binary_search import generate_linear_binary_search, generate_recursive_binary_search # pylint: disable=import-error, no-name-in-module
-from dnx_configure.dnx_namedtuples import IPP_IP_INFO, IPP_INSPECTION_RESULTS, IPP_LOG, INFECTED_LOG
+from dnx_configure.dnx_namedtuples import IPP_INSPECTION_RESULTS, IPP_LOG, INFECTED_LOG
 from dnx_iptools.dnx_parent_classes import NFQueue
 
 from ip_proxy.ip_proxy_log import Log
@@ -34,7 +34,7 @@ class IPProxy(NFQueue):
         PROTO.TCP: {},
         PROTO.UDP: {}
     }
-    _packet_parser = IPPPacket.netfilter # alternate constructor
+    _packet_parser = IPPPacket.netfilter_rcv # alternate constructor
 
     # direct reference to the proxy response method
     _prepare_and_send = ProxyResponse.prepare_and_send
@@ -60,16 +60,19 @@ class IPProxy(NFQueue):
     def forward_packet(cls, packet, zone, action):
         if (action is CONN.ACCEPT):
             if (zone == LAN_IN):
-                packet.nfqueue.set_mark(LAN_ZONE_FIREWALL)
+                packet.nfqueue.update_mark(LAN_ZONE_FIREWALL)
 
             elif (zone == DMZ_IN):
-                packet.nfqueue.set_mark(DMZ_ZONE_FIREWALL)
+                packet.nfqueue.update_mark(DMZ_ZONE_FIREWALL)
 
-            elif (zone == WAN_IN):
-                packet.nfqueue.set_mark(SEND_TO_IPS)
+            if (zone == WAN_IN):
+                packet.nfqueue.update_mark(SEND_TO_IPS)
 
-            # send back through with new mark.
-            packet.nfqueue.repeat()
+                packet.nfqueue.forward(Queue.IPS_IDS)
+
+            else:
+                # send back through with new mark.
+                packet.nfqueue.repeat()
 
         elif (action is CONN.DROP):
             if (zone == LAN_IN):
@@ -81,9 +84,10 @@ class IPProxy(NFQueue):
             # packets blocked on WAN will be deferred to the IPS to drop the packet. This
             # allows the IPS to inspect it for denial of service or port scanner profiling.
             elif (zone == WAN_IN):
-                packet.nfqueue.set_mark(IP_PROXY_DROP)
+                packet.nfqueue.update_mark(IP_PROXY_DROP)
 
-                packet.nfqueue.repeat()
+                # NOTE: this is now sending directly to queue instead of using repeat function.
+                packet.nfqueue.forward(Queue.IPS_IDS)
 
             # if tcp or udp, we will send a kill conn packet.
             if (packet.protocol in [PROTO.TCP, PROTO.UDP]):

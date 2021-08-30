@@ -28,12 +28,14 @@
         "lan": {
             "webui": true,
             "cli": false,
-            "ssh": false
+            "ssh": false,
+            "ping": true
         },
         "dmz": {
             "webui": true,
             "cli": false,
-            "ssh": false
+            "ssh": false,
+            "ping": false
         }
     },
     "services": {

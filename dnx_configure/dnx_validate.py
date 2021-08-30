@@ -429,9 +429,9 @@ def portscan_settings(portscan_settings):
         raise ValidationError('Prevention must be enabled to configure portscan reject.')
 
 def management_access(fields):
-    SERVICE_TO_PORT = {'webui': (80, 443), 'cli': (0,), 'ssh': (22,)}
+    SERVICE_TO_PORT = {'webui': (80, 443), 'cli': (0,), 'ssh': (22,), 'ping': 1}
 
-    if (fields.zone not in ['lan', 'dmz'] or fields.service not in ['webui', 'cli', 'ssh']):
+    if (fields.zone not in ['lan', 'dmz'] or fields.service not in ['webui', 'cli', 'ssh', 'ping']):
         raise ValidationError(INVALID_FORM)
 
     # convert_int will return -1  if issues with form data and ValueError will cover

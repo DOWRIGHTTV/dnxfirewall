@@ -12,24 +12,25 @@
                 <table class="striped centered">
                     <thead>
                         <tr>
-                            <th style="width:25%">Zone</th>
-                            <th style="width:25%">WebUI</th>
-                            <th style="width:25%">CLI</th>
-                            <th style="width:25%">SSH (system)</th>
+                            <th style="width:20%">Zone</th>
+                            <th style="width:20%">WebUI</th>
+                            <th style="width:20%">CLI</th>
+                            <th style="width:20%">SSH (system)</th>
+                            <th style="width:20%">Ping</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for zone in ['lan', 'dmz'] %}
+                        {% for zone, mgmt_services in service_info['mgmt_access'].items() %}
                         <tr>
                             <td><h6>{{zone}}</h6></td>
-                            {% for mgmt_svc in ['webui', 'cli', 'ssh'] %}
+                            {% for mgmt_svc, enabled in mgmt_services.items() %}
                             <td>
                                 <div class="input-field col s3 center">
                                     <form action="/system/services" method="POST">
                                         <div class="switch">
                                             <label>
                                                 Off
-                                                {% if not service_info['mgmt_access'][zone][mgmt_svc] %}
+                                                {% if not enabled %}
                                                 <input type="hidden" name="update_mgmt_access" value="{{zone}},{{mgmt_svc}},1">
                                                 <input type="checkbox" onchange="this.form.submit()">
                                                 {% else %}

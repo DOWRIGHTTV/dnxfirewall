@@ -26,16 +26,16 @@ class Log(LogHandler):
     @classmethod
     def _generate_ddos_log(cls, pkt, scan_info):
         if (cls.current_lvl >= LOG.ALERT and scan_info is IPS.LOGGED):
-            log = IPS_LOG(pkt.conn.tracked_ip, pkt.protocol.name, IPS.DDOS.name, 'logged') # pylint: disable=no-member
+            log = IPS_LOG(pkt.tracked_ip, pkt.protocol.name, IPS.DDOS.name, 'logged') # pylint: disable=no-member
 
-            cls.debug(f'[ddos][logged] {pkt.conn.tracked_ip}')
+            cls.debug(f'[ddos][logged] {pkt.tracked_ip}')
 
             return LOG.ALERT, log
 
         if (cls.current_lvl >= LOG.CRITICAL and scan_info is IPS.FILTERED):
-            log = IPS_LOG(pkt.conn.tracked_ip, pkt.protocol.name, IPS.DDOS.name, 'filtered') # pylint: disable=no-member
+            log = IPS_LOG(pkt.tracked_ip, pkt.protocol.name, IPS.DDOS.name, 'filtered') # pylint: disable=no-member
 
-            cls.debug(f'[ddos][filtered] {pkt.conn.tracked_ip}')
+            cls.debug(f'[ddos][filtered] {pkt.tracked_ip}')
 
             return LOG.CRITICAL, log
 
@@ -48,20 +48,20 @@ class Log(LogHandler):
                 and cls.current_lvl >= LOG.ERROR):
 
             log = IPS_LOG(
-                pkt.conn.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, scan_info.block_status.name # pylint: disable=no-member
+                pkt.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, scan_info.block_status.name # pylint: disable=no-member
             )
 
-            cls.debug(f'[pscan/scan detected][{scan_info.block_status.name}] {pkt.conn.tracked_ip}')
+            cls.debug(f'[pscan/scan detected][{scan_info.block_status.name}] {pkt.tracked_ip}')
 
             return LOG.ERROR, log
 
         # will match if open ports are not contained in pre detection logging (port was hit before flagged)
         elif (scan_info.initial_block and scan_info.block_status is IPS.BLOCKED and cls.current_lvl >= LOG.WARNING):
             log = IPS_LOG(
-                pkt.conn.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, 'blocked' # pylint: disable=no-member
+                pkt.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, 'blocked' # pylint: disable=no-member
             )
 
-            cls.debug(f'[pscan/scan detected][blocked] {pkt.conn.tracked_ip}')
+            cls.debug(f'[pscan/scan detected][blocked] {pkt.tracked_ip}')
 
             return LOG.WARNING, log
 
