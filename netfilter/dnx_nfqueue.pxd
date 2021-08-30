@@ -7,8 +7,15 @@ cdef extern from "<errno.h>":
     int errno
 
 cdef extern from "time.h" nogil:
-    ctypedef int time_t
+    ctypedef long time_t
     time_t time(time_t*)
+
+    struct timeval:
+        time_t tv_sec
+        time_t tv_usec
+
+    struct timezone:
+        pass
 
 # dummy defines from asm-generic/errno.h:
 cdef enum:
@@ -62,15 +69,6 @@ cdef enum:
 
 cdef extern from "Python.h":
     object PyBytes_FromStringAndSize(char *s, Py_ssize_t len)
-
-cdef extern from "sys/time.h":
-    ctypedef long time_t
-    struct timeval:
-        time_t tv_sec
-        time_t tv_usec
-
-    struct timezone:
-        pass
 
 cdef extern from "netinet/in.h":
     u_int32_t ntohl (u_int32_t __netlong) nogil
