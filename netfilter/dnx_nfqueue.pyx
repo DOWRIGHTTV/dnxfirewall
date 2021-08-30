@@ -127,10 +127,6 @@ cdef class CPacket:
 
         self._verdict_is_set = True
 
-    cdef long get_timestamp(self):
-
-        return self.timestamp.tv_sec + (self.timestamp.tv_usec / 1000000.0)
-
     cpdef update_mark(self, u_int32_t mark):
         '''Modifies the running mark of the packet.'''
 
