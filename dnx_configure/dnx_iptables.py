@@ -179,11 +179,11 @@ class _Defaults:
         # here for convenience.
 
         # dnxfirewall LAN interface ping allow
-        shell(f'iptables -A INPUT -m mark --mark {LAN_IN} -p icmp -m icmp --icmp-type 8 -j ACCEPT')
+        shell(f'iptables -A MGMT -m mark --mark {LAN_IN} -p icmp -m icmp --icmp-type 8 -j ACCEPT')
 
         # DMZ webui access
-        shell(f'iptables -A INPUT -m mark --mark {DMZ_IN} -p tcp --dport 443 -j ACCEPT')
-        shell(f'iptables -A INPUT -m mark --mark {DMZ_IN} -p tcp --dport 80 -j ACCEPT')
+        shell(f'iptables -A MGMT -m mark --mark {DMZ_IN} -p tcp --dport 443 -j ACCEPT')
+        shell(f'iptables -A MGMT -m mark --mark {DMZ_IN} -p tcp --dport 80 -j ACCEPT')
 
     def main_output_set(self):
 
@@ -201,7 +201,6 @@ class _Defaults:
 
         # user defined chain for dnat
         shell(f'iptables -t nat -A PREROUTING -j DSTNAT')
-
 
         # user defined chain for src nat
         shell(f'iptables -t nat -A POSTROUTING -j SRCNAT')
@@ -306,7 +305,7 @@ class IPTablesManager:
         action = '-A' if fields.action is CFG.ADD else '-D'
 
         # icmp/ping rule is one off check.
-        if fields.service_ports == 1:
+        if (fields.service_ports == 1):
             shell(f'sudo iptables {action} MGMT -m mark --mark {zone} -p icmp --icmp-type 8 -j ACCEPT', check=True)
 
             return
