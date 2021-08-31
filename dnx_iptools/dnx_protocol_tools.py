@@ -18,7 +18,7 @@ __all__ = (
     'convert_dns_string_to_bytes', 'convert_mac_to_bytes',
     'convert_mac_to_string', 'convert_string_to_bitmap',
     'create_dns_query_header', 'create_dns_response_header',
-    'create_dnx_proto_packet', 'icmp_reachable', 'parse_query_name'
+    'icmp_reachable', 'parse_query_name'
 )
 
 # will ping specified host. to be used to prevent duplicate ip address handouts.
@@ -48,14 +48,16 @@ def checksum_ipv4(header):
 # calculates and return tcp header checksum
 def checksum_tcp(msg):
     s = 0
+    msg_len = len(msg)
+
     # loop taking 2 characters at a time
-    for i in range(0, len(msg), 2):
-        if ((i+1) < len(msg)):
+    for i in range(0, msg_len, 2):
+        if ((i + 1) < msg_len):
             a = msg[i]
             b = msg[i+1]
-            s = s + (a+(b << 8))
+            s = s + (a + (b << 8))
 
-        elif ((i+1) == len(msg)):
+        elif ((i + 1) == msg_len):
             s += msg[i]
 
     s = s + (s >> 16)
@@ -134,7 +136,7 @@ def parse_query_name(data, dns_query=None, *, qname=False):
             continue
 
         if (not pointer_present):
-            offset += length + 1 # name len + interger value of initial length
+            offset += length + 1 # name len + integer value of initial length
 
         query_name.append(data[1:1+length].decode())
         data = data[length+1:]
@@ -145,7 +147,8 @@ def parse_query_name(data, dns_query=None, *, qname=False):
     return offset
 
 def _is_pointer(data):
-    return True if 192 & data == 192 else False
+    '''returns whether sent in byte is a dns pointer or not.'''
+    return 192 & data == 192
 
 def _calculate_pointer(data):
     '''returns the integer value of the sum of 0-15 bits on 2 byte value. the integer value
@@ -157,13 +160,13 @@ def convert_dns_string_to_bytes(domain_name):
     if (not domain_name):
         return b'\x00'
 
-    split_domain = domain_name.split('.')
     domain_bytes = []
-    for part in split_domain:
-        domain_bytes.append(byte_pack(len(part)))
-        domain_bytes.append(part.encode('utf-8'))
+    db_append = domain_bytes.append
+    for part in domain_name.split('.'):
+        db_append(byte_pack(len(part)))
+        db_append(part.encode('utf-8'))
     else:
-        domain_bytes.append(b'\x00')
+        db_append(b'\x00')
 
     return byte_join(domain_bytes)
 

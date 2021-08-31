@@ -479,7 +479,6 @@ class NFPacket:
         'seq_number', 'ack_number',
 
         # udp
-        'udp_chk', 'udp_len',
         'udp_header', 'udp_payload',
 
         # icmp
@@ -503,18 +502,21 @@ class NFPacket:
         self.timestamp = hw_info[3]
 
         ip_header = cpacket.get_ip_header()
-        self.protocol  = PROTO(ip_header[6])
+        self.protocol = PROTO(ip_header[6])
         self.src_ip = ip_header[8]
         self.dst_ip = ip_header[9]
 
-        proto_header = cpacket.get_proto_header()
         if (self.protocol is PROTO.TCP):
+            proto_header = cpacket.get_tcp_header()
+
             self.src_port   = proto_header[0]
             self.dst_port   = proto_header[1]
             self.seq_number = proto_header[2]
             self.ack_number = proto_header[3]
 
         elif (self.protocol is PROTO.UDP):
+            proto_header = cpacket.get_udp_header()
+
             self.src_port = proto_header[0]
             self.dst_port = proto_header[1]
 
@@ -522,6 +524,8 @@ class NFPacket:
             self.udp_payload = cpacket.get_payload()
 
         elif (self.protocol is PROTO.ICMP):
+            proto_header = cpacket.get_icmp_header()
+
             self.icmp_type = ICMP(proto_header[0])
 
         if (self.continue_condition):

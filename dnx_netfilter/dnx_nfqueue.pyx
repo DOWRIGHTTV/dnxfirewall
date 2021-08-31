@@ -28,6 +28,7 @@ cdef u_int32_t SockRcvSize = 1024 * 4796 // 2
 cdef object user_callback
 def set_user_callback(ref):
     '''Set required reference which will be called after packet data is parsed into C structs.'''
+
     global user_callback
 
     user_callback = ref
@@ -48,21 +49,20 @@ cdef int nf_callback(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *dat
 cdef class CPacket:
 
     def __cinit__(self):
-        self._verdict_is_set = False
+        self._verdict = False
         self._mark = 0
 
     cdef u_int32_t parse(self, nfq_q_handle *qh, nfq_data *nfa) nogil:
+
+        self._timestamp = time(NULL)
+        self._mark = nfq_get_nfmark(nfa)
+        self._data_len = nfq_get_payload(nfa, &self.data)
 
         self._qh = qh
         self._nfa = nfa
 
         self._hdr = nfq_get_msg_packet_hdr(nfa)
-        self.id = ntohl(self._hdr.packet_id)
-
-        self.data_len = nfq_get_payload(self._nfa, &self.data)
-
-        self.timestamp = time(NULL)
-        self._mark = nfq_get_nfmark(nfa)
+        self._id = ntohl(self._hdr.packet_id)
 
         # splitting packet by tcp/ip layers
         self._parse()
@@ -96,27 +96,27 @@ cdef class CPacket:
 
             protohdr_len = 4
 
-        self.cmbhdr_len = protohdr_len + 20
+        self._cmbhdr_len = protohdr_len + 20
 
-        self.payload = &self.data[self.cmbhdr_len]
+        self.payload = &self.data[self._cmbhdr_len]
 
     cdef void verdict(self, u_int32_t verdict):
         '''Call appropriate set_verdict function on packet.'''
 
-        if self._verdict_is_set:
+        if self._verdict:
             raise RuntimeWarning('Verdict already given for this packet.')
 
         if self._mark:
             nfq_set_verdict2(
-                self._qh, self.id, verdict, self._mark, self.data_len, self.data
+                self._qh, self._id, verdict, self._mark, self._data_len, self.data
             )
 
         else:
             nfq_set_verdict(
-                self._qh, self.id, verdict, self.data_len, self.data
+                self._qh, self._id, verdict, self._data_len, self.data
             )
 
-        self._verdict_is_set = True
+        self._verdict = True
 
     cpdef update_mark(self, u_int32_t mark):
         '''Modifies the running mark of the packet.'''
@@ -171,13 +171,10 @@ cdef class CPacket:
             )
         '''
 
-        cdef object mac_addr
-        cdef tuple hw_info
-        cdef int in_interface
-        cdef int out_interface
+        cdef (u_int32_t, u_int32_t, char*, double) hw_info
 
-        in_interface = nfq_get_indev(self._nfa)
-        out_interface = nfq_get_outdev(self._nfa)
+        cdef u_int32_t in_interface = nfq_get_indev(self._nfa)
+        cdef u_int32_t out_interface = nfq_get_outdev(self._nfa)
 
         self._hw = nfq_get_packet_hw(self._nfa)
         if self._hw == NULL:
@@ -185,18 +182,14 @@ cdef class CPacket:
             # NOTE: forcing error handling will ensure it is dealt with [properly].
             raise OSError('MAC address not available in OUTPUT and PREROUTING chains')
 
-        cdef u_int8_t[8] hw_addr = self._hw.hw_addr
-
-        # NOTE: this is 8 bytes in source and lib_netfilter_queue, but unsure why since mac addresses are only 6
-        # bytes. the last two bytes may be padding, but either way removing here so it will not need to be done
-        # on the python side.
-        mac_addr = PyBytes_FromStringAndSize(<char*>hw_addr, 6)
+        # casting to bytestring to be compatible with ctuple.
+        cdef char* mac_addr = <char*>self._hw.hw_addr
 
         hw_info = (
             in_interface,
             out_interface,
             mac_addr,
-            self.timestamp,
+            self._timestamp,
         )
 
         return hw_info
@@ -204,12 +197,13 @@ cdef class CPacket:
     def get_raw_packet(self):
         '''Return layer 3-7 of packet data.'''
 
-        return self.data[:self.data_len]
+        return self.data[:<Py_ssize_t>self._data_len]
 
     def get_ip_header(self):
         '''Return layer3 of packet data as a tuple converted directly from C struct.'''
 
-        cdef tuple ip_header
+        cdef (u_int8_t, u_int8_t, u_int16_t, u_int16_t, u_int16_t,
+                u_int8_t, u_int8_t, u_int16_t, u_int32_t, u_int32_t) ip_header
 
         ip_header = (
             self.ip_header.ver_ihl,
@@ -226,52 +220,56 @@ cdef class CPacket:
 
         return ip_header
 
-    def get_proto_header(self):
-        '''Return layer4 of packet data as a tuple converted directly from C struct.'''
+    def get_tcp_header(self):
+        '''Return layer4 (TCP) of packet data as a tuple converted directly from C struct.'''
 
-        cdef tuple proto_header
+        cdef (u_int16_t, u_int16_t, u_int32_t, u_int32_t,
+                u_int8_t, u_int8_t, u_int16_t, u_int16_t, u_int16_t) tcp_header
 
-        if (self.ip_header.protocol == IPPROTO_TCP):
+        tcp_header = (
+            ntohs(self.tcp_header.th_sport),
+            ntohs(self.tcp_header.th_dport),
+            ntohl(self.tcp_header.th_seq),
+            ntohl(self.tcp_header.th_ack),
+            self.tcp_header.th_off,
+            self.tcp_header.th_flags,
+            ntohs(self.tcp_header.th_win),
+            ntohs(self.tcp_header.th_sum),
+            ntohs(self.tcp_header.th_urp),
+        )
 
-            proto_header = (
-                ntohs(self.tcp_header.th_sport),
-                ntohs(self.tcp_header.th_dport),
-                ntohl(self.tcp_header.th_seq),
-                ntohl(self.tcp_header.th_ack),
+        return tcp_header
 
-                self.tcp_header.th_off,
+    def get_udp_header(self):
+        '''Return layer4 (UDP) of packet data as a tuple converted directly from C struct.'''
 
-                self.tcp_header.th_flags,
-                ntohs(self.tcp_header.th_win),
-                ntohs(self.tcp_header.th_sum),
-                ntohs(self.tcp_header.th_urp),
-            )
+        cdef (u_int16_t, u_int16_t, u_int16_t, u_int16_t) udp_header
 
-        elif (self.ip_header.protocol == IPPROTO_UDP):
+        udp_header = (
+            ntohs(self.udp_header.uh_sport),
+            ntohs(self.udp_header.uh_dport),
+            ntohs(self.udp_header.uh_ulen),
+            ntohs(self.udp_header.uh_sum),
+        )
 
-            proto_header = (
-                ntohs(self.udp_header.uh_sport),
-                ntohs(self.udp_header.uh_dport),
-                ntohs(self.udp_header.uh_ulen),
-                ntohs(self.udp_header.uh_sum),
-            )
+        return udp_header
 
-        elif (self.ip_header.protocol == IPPROTO_ICMP):
+    def get_udp_header(self):
+        '''Return layer4 (ICMP) of packet data as a tuple converted directly from C struct.'''
 
-            proto_header = (
-                self.icmp_header.type,
-                self.icmp_header.code,
-            )
+        cdef (u_int8_t, u_int8_t) icmp_header
 
-        else:
-            proto_header = ()
+        icmp_header = (
+            self.icmp_header.type,
+            self.icmp_header.code,
+        )
 
-        return proto_header
+        return icmp_header
 
     def get_payload(self):
         '''Return payload (>layer4) as Python bytes.'''
 
-        cdef Py_ssize_t payload_len = self.data_len - self.cmbhdr_len
+        cdef Py_ssize_t payload_len = self._data_len - self._cmbhdr_len
 
         return self.payload[:payload_len]
 
