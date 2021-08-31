@@ -238,10 +238,10 @@ class Inspect:
                 initial_block, scan_detected, tracked_ip['active_scanner'] = True, True, True
 
             elif (packet.protocol is PROTO.TCP):
-                tracked_ip['pre_detect'][packet.target_port].append(packet.seq_number)
+                tracked_ip['pre_detect'][packet.target_port].append((packet.src_port, packet.seq_number))
 
             elif (packet.protocol is PROTO.UDP):
-                tracked_ip['pre_detect'][packet.target_port] = packet.data
+                tracked_ip['pre_detect'][packet.target_port] = (packet.ip_header, packet.udp_header)
 
         # returning scan tracker to be used by reject to retroactively handle ports before marked as a scanner.
         return initial_block, scan_detected, tracked_ip['pre_detect']
@@ -266,18 +266,24 @@ class Inspect:
         self._IPSResponse.prepare_and_send(packet)
 
         if (initial_block):
+
             ips_response = self._IPSResponse
+
             if (packet.protocol is PROTO.TCP):
-                for port, sequences in pre_detection_logging.items():
-                    for seq_num in sequences:
+
+                for dst_port, conns in pre_detection_logging.items():
+
+                    # some scanners may send to the same port twice
+                    for src_port, seq_num in conns:
                         ips_response.prepare_and_send(
-                            copy(packet).tcp_override(port, seq_num)
+                            copy(packet).tcp_override(dst_port, src_port, seq_num)
                         )
 
             elif (packet.protocol is PROTO.UDP):
-                for port, icmp_payload in pre_detection_logging.items():
+
+                for ip_header, udp_header in pre_detection_logging.items():
                     ips_response.prepare_and_send(
-                        copy(packet).udp_override(icmp_payload)
+                        copy(packet).udp_override(ip_header, udp_header)
                     )
 
     # checking intersection between pre detection and open port keys. missed_port will

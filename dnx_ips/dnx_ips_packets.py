@@ -18,31 +18,33 @@ from dnx_iptools.dnx_protocol_tools import checksum_ipv4, checksum_tcp, checksum
 class IPSPacket(NFPacket):
 
     __slots__ = (
-        'tracked_ip', 'target_port', 'icmp_payload_override'
+        'tracked_ip', 'target_port'
     )
 
     def __init__(self):
         super().__init__()
 
         self.target_port = None
-        self.icmp_payload_override = b''
 
-    def tcp_override(self, dst_port, seq_num):
+    def tcp_override(self, dst_port, src_port, seq_num):
         '''returns packet instance with the overriden values modified. this is to be used by the response system
         where a packet copy is used to send retroactive blocks.'''
 
-        self.dst_port = dst_port
+        self.dst_port   = dst_port
+        self.src_port   = src_port
         self.seq_number = seq_num
 
         return self
 
-    def udp_override(self, icmp_payload):
+    def udp_override(self, ip_header, udp_header):
         '''returns packet instance with the overriden values modified. this is to be used by the response system
         where a packet copy is used to send retroactive blocks.'''
 
-        self.icmp_payload_override = icmp_payload
+        self.ip_header  = ip_header_pack(ip_header)
+        self.udp_header = udp_header_pack(udp_header)
 
         return self
+
 
     # building named tuple with tracked_ip, tracked_port, and local_port variables
     def _before_exit(self):
@@ -63,12 +65,13 @@ class IPSResponse(RawResponse):
         # checking if dst port is associated with a nat. if so, will override necessary fields based on protocol
         # and re assign in the packert object
         # NOTE: can we please optimize this. PLEASE!
-        port_override = self._Module.open_ports[packet.protocol].get(packet.dst_port)
-        if port_override:
-            self._packet_override(packet, dnx_src_ip, port_override)
+        natted_port = self._Module.open_ports[packet.protocol].get(packet.dst_port)
 
         # 1a. generating tcp/pseudo header | iterating to calculate checksum
         if (packet.protocol is PROTO.TCP):
+            if (natted_port):
+                packet.dst_port = natted_port
+
             protocol, checksum = PROTO.TCP, double_byte_pack(0,0)
             for i in range(2):
 
@@ -91,17 +94,19 @@ class IPSResponse(RawResponse):
 
         # 1b. generating icmp header and payload iterating to calculate checksum
         elif (packet.protocol is PROTO.UDP):
+
+            # recently moved from a general condition at top of function. this can still be optimized more, but it
+            # is quite a bit better than before and includes support for newly implemented CPacket. this will use packet
+            # ref to update header values
+            if (natted_port):
+                self._nat_override(packet, dnx_src_ip, natted_port)
+
             protocol, checksum = PROTO.ICMP, double_byte_pack(0,0)
             for i in range(2):
 
-                # packing icmp full
-                if (packet.icmp_payload_override):
-                    icmp_full = [icmp_header_pack(3, 3, checksum, 0, 0), packet.icmp_payload_override]
-
-                else:
-                    icmp_full = [
-                        icmp_header_pack(3, 3, checksum, 0, 0), packet.ip_header, packet.udp_header, packet.udp_payload
-                    ]
+                icmp_full = [
+                    icmp_header_pack(3, 3, checksum, 0, 0), packet.ip_header, packet.udp_header
+                ]
 
                 icmp_full = byte_join(icmp_full)
                 if i: break
@@ -136,25 +141,20 @@ class IPSResponse(RawResponse):
         # returning with joined data from above
         return byte_join(reversed(send_data))
 
-    def _packet_override(self, packet, dnx_src_ip, port_override):
-        if (packet.protocol is PROTO.TCP):
-            packet.dst_port = port_override
-
-        elif (packet.protocol is PROTO.UDP):
-            packet.udp_header = udp_header_pack(
-                packet.src_port, port_override, packet.udp_len, packet.udp_chk
+    def _nat_override(self, packet, dnx_src_ip, port_override):
+        packet.udp_header = udp_header_pack(
+            packet.src_port, port_override, packet.udp_len, packet.udp_chk
+        )
+        checksum = double_byte_pack(0,0)
+        for i in range(2):
+            ip_header = ip_header_override_pack(
+                packet.ip_header[:10], checksum, long_pack(packet.src_ip), dnx_src_ip
             )
-            checksum = double_byte_pack(0,0)
-            for i in range(2):
-                ip_header = ip_header_override_pack(
-                    packet.ip_header[:10], checksum, long_pack(packet.src_ip), dnx_src_ip
-                )
-                if i: break
-                checksum = checksum_ipv4(ip_header)
+            if i: break
+            checksum = checksum_ipv4(ip_header)
 
-            # overriding packet ip header after process is complete. this will make the loops more efficient than
-            # direct references to the instance object every time.
-            packet.ip_header = ip_header
+        # assigning post loop to reduce lookups
+        packet.ip_header = ip_header
 
     #all packets need to be further examined in override method
     def _override_needed(self, packet):
