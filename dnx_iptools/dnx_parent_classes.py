@@ -469,7 +469,7 @@ class NFPacket:
         'src_mac', 'timestamp',
 
         # ip header
-        'protocol',
+        'ip_header', 'protocol',
         'src_ip', 'dst_ip',
 
         # proto headers
@@ -479,8 +479,8 @@ class NFPacket:
         'seq_number', 'ack_number',
 
         # udp
-        'udp_chk', 'udp_len',
-        'udp_header', 'udp_payload',
+        'udp_header', 'udp_chk', 'udp_len',
+        'udp_payload',
 
         # icmp
         'icmp_type'
@@ -503,9 +503,9 @@ class NFPacket:
         self.timestamp = hw_info[3]
 
         ip_header = cpacket.get_ip_header()
-        self.protocol  = PROTO(ip_header[6])
-        self.src_ip = ip_header[8]
-        self.dst_ip = ip_header[9]
+        self.protocol = PROTO(ip_header[6])
+        self.src_ip   = ip_header[8]
+        self.dst_ip   = ip_header[9]
 
         proto_header = cpacket.get_proto_header()
         if (self.protocol is PROTO.TCP):
@@ -518,7 +518,9 @@ class NFPacket:
             self.src_port = proto_header[0]
             self.dst_port = proto_header[1]
 
-            # only need payload for udp at the moment
+            # only for IPS and udp at the moment. it shouldnt really affect ip proxy.
+            self.ip_header   = ip_header
+            self.udp_header  = proto_header
             self.udp_payload = cpacket.get_payload()
 
         elif (self.protocol is PROTO.ICMP):
