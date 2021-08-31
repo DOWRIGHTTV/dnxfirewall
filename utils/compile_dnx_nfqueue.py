@@ -6,11 +6,11 @@ from setuptools import setup, Extension
 from Cython.Build import cythonize
 from Cython.Distutils import build_ext
 
-os.chdir('/home/dnx/dnxfirewall')
+os.chdir('/home/dnx/dnxfirewall/dnx_netfilter')
 
 cmd = {'build_ext': build_ext}
 ext = Extension(
-    'dnx_nfqueue', sources=['dnx_netfilter/dnx_nfqueue.pyx'], libraries=['netfilter_queue']
+    'dnx_nfqueue', sources=['dnx_nfqueue.pyx'], libraries=['netfilter_queue']
 )
 
 setup(
