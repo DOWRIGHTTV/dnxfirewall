@@ -183,7 +183,7 @@ cdef class CPacket:
             raise OSError('MAC address not available in OUTPUT and PREROUTING chains')
 
         # casting to bytestring to be compatible with ctuple.
-        cdef char* mac_addr = <char*>self._hw.hw_addr
+        cdef char *mac_addr = <char*>self._hw.hw_addr
 
         hw_info = (
             in_interface,

@@ -170,7 +170,7 @@ def calculate_file_hash(file_to_hash, *, path=f'{HOME_DIR}/', folder='data'):
 
     return file_hash
 
-def cfg_read_poller(watch_file, class_method=False):
+def cfg_read_poller(watch_file, alt_path=None, class_method=False):
     '''Automate Class configuration file poll decorator. apply this decorator to all functions
     that will update configurations loaded in memory from json files. config file must be sent
     in via decorator argument. set class_method argument to true if being used with a class method.'''
@@ -184,13 +184,13 @@ def cfg_read_poller(watch_file, class_method=False):
     def decorator(function_to_wrap):
         if (not class_method):
             def wrapper(*args):
-                watcher = Watcher(watch_file, callback=function_to_wrap)
+                watcher = Watcher(watch_file, alt_path, callback=function_to_wrap)
                 watcher.watch(*args)
 
         else:
             @classmethod
             def wrapper(*args):
-                watcher = Watcher(watch_file, callback=function_to_wrap)
+                watcher = Watcher(watch_file, alt_path, callback=function_to_wrap)
                 watcher.watch(*args)
 
         return wrapper
@@ -338,10 +338,14 @@ class Watcher:
         '_last_modified_time'
     )
 
-    def __init__(self, watch_file, callback):
+    def __init__(self, watch_file, alt_path, *, callback):
         self._watch_file = watch_file
         self._callback   = callback
-        self._full_path  = f'{HOME_DIR}/dnx_system/data/usr/{watch_file}'
+
+        if (alt_path):
+            self._full_path = f'{HOME_DIR}/{alt_path}/{watch_file}'
+        else:
+            self._full_path  = f'{HOME_DIR}/dnx_system/data/usr/{watch_file}'
 
         self._last_modified_time = 0
 
