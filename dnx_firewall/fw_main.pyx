@@ -307,7 +307,7 @@ cdef class CFirewall:
     # PYTHON ACCESSIBLE FUNCTIONS
     def nf_run(self, bint bypass=0):
         ''' calls internal C run method to engage nfqueue processes. this call will run forever, but will
-        release the GIL prior to entering C and never try to reaquire it.'''
+        release the GIL prior to entering C and never try to reacquire it.'''
 
         global BYPASS
 
@@ -337,8 +337,8 @@ cdef class CFirewall:
         nfq_close(self.h)
 
     cpdef int update_zones(self, Py_Array zone_map) with gil:
-        '''aquires FWrule lock then updates the zone values by interface index. max slots defined by
-        FW_MAX_ZONE_COUNT.
+        '''acquires FWrule lock then updates the zone values by interface index. max slots defined by
+        FW_MAX_ZONE_COUNT. the GIL will be acquired before any code execution.
         '''
         printf('[update/zones] attempting to aquire lock\n')
 
@@ -354,13 +354,14 @@ cdef class CFirewall:
         return 0
 
     cpdef int update_ruleset(self, int ruleset, list rulelist) with gil:
-        '''aquires FWrule lock then rewrites the corresponding section ruleset. the current length var
-        will also be update while the lock is held.'''
+        '''acquires FWrule lock then rewrites the corresponding section ruleset. the current length var
+        will also be update while the lock is held. the GIL will be acquired before any code execution.
+        '''
 
         printf('[update/ruleset] called\n')
 
         cdef int i, rule_count
-#        cdef Py_Array *rule
+
         cdef unsigned long[:] rule
 
         rule_count = len(rulelist)
@@ -375,6 +376,8 @@ cdef class CFirewall:
 
             self._set_FWrule(ruleset, rule, i)
 
+        # updating rule count in global tracker. this is very important in that it establishes the right side bound for
+        # firewall ruleset iteration operations.
         CUR_RULE_COUNTS[ruleset] = rule_count
 
         pthread_mutex_unlock(&FWrulelock)
