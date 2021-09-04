@@ -1,3 +1,8 @@
+from cpython cimport array
+import array
+
+ctypedef array.array Py_Array
+
 cdef extern from "sys/types.h":
     ctypedef unsigned char u_int8_t
     ctypedef unsigned short int u_int16_t
@@ -22,6 +27,16 @@ cdef enum:
     EAGAIN = 11           # Try again
     EWOULDBLOCK = EAGAIN
     ENOBUFS = 105         # No buffer space available
+
+cdef extern from "pthread.h" nogil:
+    ctypedef struct pthread_mutex_t:
+        pass
+
+    cdef int pthread_mutex_init(pthread_mutex_t *, void *)
+    cdef int pthread_mutex_lock(pthread_mutex_t *)
+    cdef int pthread_mutex_trylock(pthread_mutex_t *)
+    cdef int pthread_mutex_unlock(pthread_mutex_t *)
+    cdef int pthread_mutex_destroy(pthread_mutex_t *)
 
 cdef extern from "netinet/in.h":
     u_int32_t ntohl (u_int32_t __netlong) nogil
@@ -142,6 +157,10 @@ cdef enum:
 
 #     cdef void modify(self)
 
+# used for dynamic allocation of array containing security profile settings
+# ip proxy, ips_ids
+DEF SECURITY_PROFILE_COUNT = 2
+
 cdef struct FWrule:
     # source
     u_int8_t protocol
@@ -151,7 +170,7 @@ cdef struct FWrule:
     u_int16_t s_port_start
     u_int16_t s_port_end
 
-    #desitnation
+    #destination
     u_int8_t d_zone
     u_int32_t d_net_id
     u_int32_t d_net_mask
@@ -160,8 +179,10 @@ cdef struct FWrule:
 
     # profiles - forward traffic only
     u_int8_t action # 0 drop, 1 accept (if profile set, and action is allow, action will be changed to forward)
-    u_int8_t ip_proxy # 0 off, > 1 profile number
-    u_int8_t ips_ids # 0 off, 1 on
+    u_int8_t log
+    u_int8_t[SECURITY_PROFILE_COUNT] sec_profiles
+        # ip_proxy - 0 off, > 1 profile number
+        # ips_ids - 0 off, 1 on
 
 cdef struct hw_info:
     u_int8_t in_intf
@@ -189,9 +210,10 @@ cdef struct protohdr:
 DEF FW_RULE_COUNT = 1000
 
 cdef class CFirewall:
-    cdef FWrule *ruleset[FW_RULE_COUNT]
-
     cdef nfq_handle *h # Handle to NFQueue library
     cdef nfq_q_handle *qh # A handle to the queue
 
     cdef void _run(self) nogil
+    cdef void _set_FWrule(self, int ruleset, unsigned long[:] rule, int pos)
+    cpdef int update_zones(self, Py_Array zone_map) with gil
+    cpdef int update_ruleset(self, int ruleset, list rulelist) with gil

@@ -1,64 +1,74 @@
 #!/usr/bin/env python3
 
-from libc.stdlib cimport malloc
+from libc.stdlib cimport malloc, calloc, free
 from libc.stdio cimport printf
 
-DEF FW_RULE_COUNT = 1000
+DEF FW_SECTION_COUNT = 3
+DEF FW_BEFORE_MAX_RULE_COUNT = 100
+DEF FW_MAIN_MAX_RULE_COUNT = 1000
+DEF FW_AFTER_MAX_RULE_COUNT = 100
+
+DEF FW_MAX_ZONE_COUNT = 16
 DEF FW_RULE_SIZE = 14
 
-CUR_RULE_SIZE = 1
+DEF SECURITY_PROFILE_COUNT = 2
 
-cdef int BYPASS = 1
+cdef bint BYPASS = 0
 
-cdef u_int16_t[FW_RULE_SIZE] r0 = [6, 0, 0, 0, 1, 65535, 0, 0, 0, 1, 65535, 1, 0, 0]
+# cdef u_int16_t[SECURITY_PROFILE_COUNT]
 
-cdef FWrule *firewall_rules[FW_RULE_COUNT]
+# stores zone(integer value) at index, which corresponds to if_nametoindex() / value returned from get_in/outdev()
+cdef u_int16_t[FW_MAX_ZONE_COUNT] INTF_ZONE_MAP
 
-cdef FWrule r1 = init_FWrule(r0, 1)
+# Firewall rules lock. Must be held
+# to read from or make changes to
+# "*firewall_rules[]"
+# ================================== #
+cdef pthread_mutex_t FWrulelock
 
-printf('rule returned\n')
+pthread_mutex_init(&FWrulelock, NULL)
+# ================================== #
 
-firewall_rules[0] = &r1
+# initializing global array and size tracker. contains pointers to arrays of pointers to FWrule
+cdef FWrule **firewall_rules[FW_SECTION_COUNT]
 
-# to make position more intuitive, this will subtract 1 from sent in value to for index.
-cdef FWrule init_FWrule(u_int16_t[FW_RULE_SIZE] rule, int pos):
-    pos = pos - 1
+cdef FWrule *fw_before_section[FW_BEFORE_MAX_RULE_COUNT]
+fw_before_section = <FWrule[]*>calloc(FW_BEFORE_MAX_RULE_COUNT, sizeof(FWrule*))
 
-    cdef FWrule firewall_rule
+cdef FWrule *fw_main_section[FW_MAIN_MAX_RULE_COUNT]
+fw_main_section = <FWrule[]*>calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(FWrule*))
 
-    firewall_rule.protocol     = rule[0]
-    firewall_rule.s_zone       = rule[1]
-    firewall_rule.s_net_id     = rule[2]
-    firewall_rule.s_net_mask   = rule[3]
-    firewall_rule.s_port_start = rule[4]
-    firewall_rule.s_port_end   = rule[5]
+cdef FWrule *fw_after_section[FW_AFTER_MAX_RULE_COUNT]
+fw_after_section = <FWrule[]*>calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(FWrule*))
 
-    #destination
-    firewall_rule.d_zone       = rule[6]
-    firewall_rule.d_net_id     = rule[7]
-    firewall_rule.d_net_mask   = rule[8]
-    firewall_rule.d_port_start = rule[9]
-    firewall_rule.d_port_end   = rule[10]
+firewall_rules[0] = <FWrule**>&fw_before_section
+firewall_rules[1] = <FWrule**>&fw_main_section
+firewall_rules[2] = <FWrule**>&fw_after_section
 
-    firewall_rule.action       = rule[11]
-    firewall_rule.ip_proxy     = rule[12]
-    firewall_rule.ips_ids      = rule[13]
+# index corresponds to index of sections in firewall rules. this will allow us to skip over sections that are
+# empty and know how far to iterate over. NOTE: since we track this we may be able to get away without resetting
+# pointers of dangling rules since they will be out of bounds of specified iteration. otherwise we would need
+# to reset to pointer to NULL then check for this every time we grab a rule pointer.
+cdef u_int32_t CUR_RULE_COUNTS[3]
 
-    printf('rule updated. pos=%u\n', pos)
-
-    return firewall_rule
+CUR_RULE_COUNTS[0] = 0 # BEFORE_CUR_RULE_COUNT
+CUR_RULE_COUNTS[1] = 0 # MAIN_CUR_RULE_COUNT
+CUR_RULE_COUNTS[2] = 0 # AFTER_CUR_RULE_COUNT
 
 # NOTE: this is likely temporary. just a convenience wrapper/callback target.
 cdef int nf_callback(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *data):
 
-    printf('packet received!\n')
-    with nogil:
-        parse(qh, nfa)
+    parse(qh, nfa)
 
     return 1
 
-# arr[firewall_rule, firewall_rule, firewall_rule]*
 cdef void parse(nfq_q_handle *qh, nfq_data *nfa) nogil:
+
+    cdef protohdr proto
+    proto.s_port = 0
+    proto.d_port = 0
+
+    cdef protohdr *proto_ptr = &proto
 
     cdef nfqnl_msg_packet_hdr *hdr = nfq_get_msg_packet_hdr(nfa)
     cdef u_int32_t id = ntohl(hdr.packet_id)
@@ -66,32 +76,50 @@ cdef void parse(nfq_q_handle *qh, nfq_data *nfa) nogil:
     cdef nfqnl_msg_packet_hw *_hw = nfq_get_packet_hw(nfa)
     cdef char *m_addr = <char*>_hw.hw_addr
 
-    cdef hw_info *hw = <hw_info*>malloc(sizeof(hw_info))
+    cdef hw_info hw
     hw.in_intf  = nfq_get_indev(nfa)
     hw.out_intf = nfq_get_outdev(nfa)
     hw.mac_addr = m_addr
     hw.timestamp = time(NULL)
 
+    # define pointer and send to get payload. L3+ packet data will be accessible via this pointer.
     cdef unsigned char *data_ptr
     cdef int data_len = nfq_get_payload(nfa, &data_ptr)
 
-    cdef iphdr* ip_header = <iphdr*>data_ptr
+    # assigning ip_header to first index of data casted to iphdr struct and calculate ip header len.
+    cdef iphdr *ip_header = <iphdr*>data_ptr
     cdef u_int8_t iphdr_len = (ip_header.ver_ihl & 15) * 4
 
-    cdef unsigned char *_data = &data_ptr[iphdr_len]
-    cdef protohdr *proto = NULL
+    # assign _data pointer to index 0 of protocol header.
+    # cdef unsigned char *_data = &data_ptr[iphdr_len]
+
+    printf('ip header len=%u | %u, %u, %u, %u\n', iphdr_len, data_ptr[iphdr_len], data_ptr[iphdr_len+1], data_ptr[iphdr_len+2], data_ptr[iphdr_len+3])
+    # tcp/udp will reassign the pointer to their header data
     if ip_header.protocol != IPPROTO_ICMP:
-        proto = <protohdr*>_data
+        proto_ptr = <protohdr*>&data_ptr[iphdr_len]
 
-    cdef u_int32_t mark = check_filter(hw, ip_header, proto) | IP_PROXY
+    # nulling out fields if icmp (this will be done on rule creation also to match)
+    else:
+        proto.s_port = 0
+        proto.d_port = 0
 
-    ## this is where me set the verdict. ip proxy is next in line regardless of action. (for geolocation data)
+    # LOCKING ACCESS TO FIREWALL RULESETS.
+    # this is currently only designed to prevent the manager thread from updating firewall rules as users configure them.
+    pthread_mutex_lock(&FWrulelock)
+
+    cdef u_int32_t mark = check_filter(&hw, ip_header, proto_ptr) | IP_PROXY
+
+    pthread_mutex_unlock(&FWrulelock)
+
+    # this is where me set the verdict. ip proxy is next in line regardless of action. (for geolocation data)
     # we could likely make that a separate function within the ip proxy inspection engine that runs reduced code.
     # if action is drop it would send it it lightweight inspection and bypass standard.
 
     cdef u_int32_t verdict
+    # NOTE: this will invoke the the rule action without forwarding to another queue. only to be used for testing and
+    # can be controlled via an argument to nf_run().
     if BYPASS:
-        verdict = NF_ACCEPT
+        verdict = mark >> 4 & 15
 
     else:
         verdict = (mark & 15) << 16 | NF_QUEUE
@@ -100,89 +128,97 @@ cdef void parse(nfq_q_handle *qh, nfq_data *nfa) nogil:
         qh, id, verdict, mark, data_len, data_ptr
             )
 
-    printf('verdict sent: %d\n', verdict)
+    printf('packet action: %u\n', mark >> 4 & 15)
+    printf('packet verdict: %u\n', verdict)
 
 cdef u_int32_t check_filter(hw_info *hw, iphdr *ip_header, protohdr *proto) nogil:
 
+    cdef u_int32_t gi, i
     cdef u_int32_t a = 0
+    cdef FWrule **section
     cdef FWrule *rule
-    cdef u_int32_t mark = DROP
+    cdef u_int32_t mark, section_count
 
-    #for i in range(0, FW_RULE_COUNT):
-    for i in range(CUR_RULE_SIZE):
+    for gi in range(FW_SECTION_COUNT):
 
-        rule = firewall_rules[i]
-
-        a += 1
-        # source matching
-        printf('RULE CHECK: %d\n', a)
-
-        # printf(
-        #     '%u,%u,%d,%d,%d,%d,%u,%d,%d,%d,%d,%u,%u,%u\n',
-        #     rule.protocol,
-        #     rule.s_zone,
-        #     rule.s_net_id,
-        #     rule.s_net_mask,
-        #     rule.s_port_start,
-        #     rule.s_port_end,
-
-        #     #desitnation
-        #     rule.d_zone,
-        #     rule.d_net_id,
-        #     rule.d_net_mask,
-        #     rule.d_port_start,
-        #     rule.d_port_end,
-
-        #     # profiles - forward traffic only
-        #     rule.action, # 0 drop, 1 accept (if profile set, and action is allow, action will be changed to forward)
-        #     rule.ip_proxy, # 0 off, > 1 profile number
-        #     rule.ips_ids
-        # )
-
-        # zone / currently tied to interface and designated LAN, WAN, DMZ
-        # printf('in_int=%u, s_zone=%u\n', hw.in_intf, rule.s_zone)
-        if hw.in_intf != rule.s_zone and rule.s_zone != 0:
+        section_count = CUR_RULE_COUNTS[gi]
+        if section_count < 1: # in case there becomes a purpose for < 0 values
             continue
 
-        # subnet
-        # printf('source ip=%d, ip_n_id=%d, rule ip=%d, rule net id=%d\n', ip_header.saddr, ip_header.saddr & rule.s_net_mask, rule.s_net_id)
-        if ip_header.saddr & rule.s_net_mask != rule.s_net_id:
-            continue
+        #for i in range(0, FW_RULE_COUNT):
+        for i in range(section_count):
 
-        # printf('header_proto=%u, rule_proto=%u\n', ip_header.protocol, rule.protocol)
-        if ip_header.protocol != rule.protocol:
-            continue
+            rule = firewall_rules[gi][i]
 
-        # printf('s_port_start=%d, s_port=%d, s_port_end=%d\n', rule.s_port_start, proto.s_port, rule.s_port_end)
-        # ICMP will always match since all port vals will be set to 0
-        if not rule.s_port_start <= proto.s_port <= rule.s_port_end:
-            continue
+            a += 1
+            printf(
+                'RULE CHECK: %d > %u,%u,%u,%u,%d,%d,%u,%u,%u,%d,%d,%i,%i,%u,%u\n',
+                a,
+                rule.protocol,
+                rule.s_zone,
+                rule.s_net_id,
+                rule.s_net_mask,
+                rule.s_port_start,
+                rule.s_port_end,
 
-        # destination matching
-        # printf('out_int=%u, d_zone=%u\n', hw.out_intf, rule.d_zone)
-        # zone / currently tied to interface and designated LAN, WAN, DMZ
-        if hw.out_intf != rule.d_zone and rule.d_zone != 0:
-            continue
+                #desitnation
+                rule.d_zone,
+                rule.d_net_id,
+                rule.d_net_mask,
+                rule.d_port_start,
+                rule.d_port_end,
 
-        # subnet
-        if ip_header.daddr & rule.d_net_mask != rule.d_net_id:
-            continue
+                # profiles - forward traffic only
+                rule.action, # 0 drop, 1 accept (if profile set, and action is allow, action will be changed to forward)
+                rule.log,
 
-        # printf('d_port_start=%d, d_port=%d, d_port_end=%d\n', rule.d_port_start, proto.d_port, rule.d_port_end)
-        # ICMP will always match since all port vals will be set to 0
-        if not rule.d_port_start <= proto.d_port <= rule.d_port_end:
-            continue
+                rule.sec_profiles[0], # 0 off, > 1 profile number
+                rule.sec_profiles[1]
+            )
 
-        # drop will inherently forward to ip proxy for geo inspection. ip proxy will call drop.
-        # TODO: see if drop can be called here and still forwarded to IPP, where it inspects but no action taken.
-        if rule.action == ACCEPT:
-            mark = (rule.ips_ids << 12 | rule.ip_proxy << 8 | ACCEPT << 4)
+            # source matching
 
-            printf('FULL PACKET MATCH.\n')
+            # zone / currently tied to interface and designated LAN, WAN, DMZ
+            # printf('in_int=%u, s_zone=%u\n', hw.in_intf, rule.s_zone)
+            if hw.in_intf != rule.s_zone and rule.s_zone != 0:
+                continue
 
-        break
+            # subnet
+            # printf('source ip=%u, ip_n_id=%u, rule ip=%u, rule netmask=%u\n', ip_header.saddr, ip_header.saddr & rule.s_net_mask, rule.s_net_id, rule.s_net_mask)
+            if ip_header.saddr & rule.s_net_mask != rule.s_net_id:
+                continue
 
-    return mark
+            printf('header_proto=%u, rule_proto=%u\n', ip_header.protocol, rule.protocol)
+            if ip_header.protocol != rule.protocol and rule.protocol != 0:
+                continue
+
+            printf('s_port_start=%u, s_port=%u, s_port_end=%u\n', rule.s_port_start, ntohs(proto.s_port), rule.s_port_end)
+            # ICMP will always match since all port vals will be set to 0
+            if not rule.s_port_start <= ntohs(proto.s_port) <= rule.s_port_end:
+                continue
+
+            # destination matching
+            # printf('out_int=%u, d_zone=%u\n', hw.out_intf, rule.d_zone)
+            # zone / currently tied to interface and designated LAN, WAN, DMZ
+            if hw.out_intf != rule.d_zone and rule.d_zone != 0:
+                continue
+
+            # subnet
+            if ip_header.daddr & rule.d_net_mask != rule.d_net_id:
+                continue
+
+            printf('d_port_start=%u, d_port=%u, d_port_end=%u\n', rule.d_port_start, ntohs(proto.d_port), rule.d_port_end)
+            # ICMP will always match since all port vals will be set to 0
+            if not rule.d_port_start <= ntohs(proto.d_port) <= rule.d_port_end:
+                continue
+
+            printf('rule action: %i\n', rule.action)
+            # drop will inherently forward to ip proxy for geo inspection. ip proxy will call drop.
+            # printf('FULL PACKET MATCH.\n')
+
+            return (rule.sec_profiles[1] << 12 | rule.sec_profiles[0] << 8 | rule.action << 4)
+
+        return DROP
 
 cdef u_int32_t MAX_COPY_SIZE = 4016 # 4096(buf) - 80
 cdef u_int32_t DEFAULT_MAX_QUEUELEN = 8192
@@ -193,7 +229,6 @@ cdef u_int32_t SOCK_RCV_SIZE = 1024 * 4796 // 2
 
 
 cdef class CFirewall:
-    cdef FWrule *ruleset[FW_RULE_COUNT]
 
     cdef void _run(self) nogil:
         '''Accept packets using recv.'''
@@ -204,8 +239,7 @@ cdef class CFirewall:
         cdef int recv_flags = 0
 
         while True:
-            with nogil:
-                rv = recv(fd, buf, sizeof(buf), recv_flags)
+            rv = recv(fd, buf, sizeof(buf), recv_flags)
 
             if (rv >= 0):
                 nfq_handle_packet(self.h, buf, rv)
@@ -214,10 +248,73 @@ cdef class CFirewall:
                 if errno != ENOBUFS:
                     break
 
+    cdef void _set_FWrule(self, int ruleset, unsigned long[:] rule, int pos):
+
+        cdef FWrule **fw_section
+        cdef FWrule *fw_rule
+
+        printf('[set/FWrule] %u > rule rcvd\n', pos)
+        print(ruleset, rule, pos)
+
+        # allows us to access rule pointer array to check if position has already been
+        # initialized with a pointer. all uninitialized positions will be set to 0.
+        fw_section = firewall_rules[ruleset]
+
+        # initial rule/pointer init for this position.
+        # allocate new memory to hold rule, then assign address to pointer held in section array.
+        if fw_section[pos] == NULL:
+            fw_rule = <FWrule*>malloc(sizeof(FWrule))
+
+            fw_section[pos] = fw_rule
+
+        # rule already has memory allocated and pointer has been initialized and set.
+        else:
+            fw_rule = fw_section[pos]
+
+        printf('[set/FWrule] %u > ruleset location loaded, first item=%p\n', pos, fw_section[0])
+
+        # general
+        fw_rule.protocol = <u_int8_t>rule[0]
+
+        # source
+        fw_rule.s_zone       = <u_int8_t> rule[1]
+        fw_rule.s_net_id     = <u_int32_t>rule[2]
+        fw_rule.s_net_mask   = <u_int32_t>rule[3]
+        fw_rule.s_port_start = <u_int16_t>rule[4]
+        fw_rule.s_port_end   = <u_int16_t>rule[5]
+
+        #destination
+        fw_rule.d_zone       = <u_int8_t> rule[6]
+        fw_rule.d_net_id     = <u_int32_t>rule[7]
+        fw_rule.d_net_mask   = <u_int32_t>rule[8]
+        fw_rule.d_port_start = <u_int16_t>rule[9]
+        fw_rule.d_port_end   = <u_int16_t>rule[10]
+
+        printf('[set/FWrule] %u > standard fields set\n', pos)
+
+        # handling
+        fw_rule.action = <u_int8_t>rule[11]
+        fw_rule.log    = <u_int8_t>rule[12]
+
+        printf('[set/FWrule] %u > action fields set\n', pos)
+
+        # security profiles
+        fw_rule.sec_profiles[0] = <u_int8_t>rule[13]
+        fw_rule.sec_profiles[1] = <u_int8_t>rule[14]
+
+        printf('[set/FWrule] %u > security profiles set\n', pos)
+
     # PYTHON ACCESSIBLE FUNCTIONS
-    def nf_run(self):
-        #with nogil:
-        self._run()
+    def nf_run(self, bint bypass=0):
+        ''' calls internal C run method to engage nfqueue processes. this call will run forever, but will
+        release the GIL prior to entering C and never try to reaquire it.'''
+
+        global BYPASS
+
+        BYPASS = bypass
+
+        with nogil:
+            self._run()
 
     def nf_set(self, u_int16_t queue_num):
         self.h = nfq_open()
@@ -238,3 +335,49 @@ cdef class CFirewall:
             nfq_destroy_queue(self.qh)
 
         nfq_close(self.h)
+
+    cpdef int update_zones(self, Py_Array zone_map) with gil:
+        '''aquires FWrule lock then updates the zone values by interface index. max slots defined by
+        FW_MAX_ZONE_COUNT.
+        '''
+        printf('[update/zones] attempting to aquire lock\n')
+
+        pthread_mutex_lock(&FWrulelock)
+        printf('[update/zones] aquired lock\n')
+
+        for i in range(FW_MAX_ZONE_COUNT):
+            INTF_ZONE_MAP[i] = zone_map[i]
+
+        pthread_mutex_unlock(&FWrulelock)
+        printf('[update/zones] released lock\n')
+
+        return 0
+
+    cpdef int update_ruleset(self, int ruleset, list rulelist) with gil:
+        '''aquires FWrule lock then rewrites the corresponding section ruleset. the current length var
+        will also be update while the lock is held.'''
+
+        printf('[update/ruleset] called\n')
+
+        cdef int i, rule_count
+#        cdef Py_Array *rule
+        cdef unsigned long[:] rule
+
+        rule_count = len(rulelist)
+
+        printf('[update/ruleset] attempting to aquire lock\n')
+
+        pthread_mutex_lock(&FWrulelock)
+
+        printf('[update/ruleset] aquired lock\n')
+        for i in range(rule_count):
+            rule = rulelist[i]
+
+            self._set_FWrule(ruleset, rule, i)
+
+        CUR_RULE_COUNTS[ruleset] = rule_count
+
+        pthread_mutex_unlock(&FWrulelock)
+        printf('[update/ruleset] released lock\n')
+
+        return 0

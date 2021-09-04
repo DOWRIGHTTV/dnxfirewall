@@ -79,6 +79,8 @@ cdef class CPacket:
 
         iphdr_len = (self.ip_header.ver_ihl & 15) * 4
 
+        # NOTE: shouldnt be needed and can reference address directly without assigning
+        # new ptr
         cdef unsigned char *_data = &self.data[iphdr_len]
 
         if (self.ip_header.protocol == IPPROTO_TCP):

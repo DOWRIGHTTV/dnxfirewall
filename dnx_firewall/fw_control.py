@@ -4,13 +4,15 @@ import os, sys
 import json
 import threading
 
-from socket import socket, AF_INET, SOCK_DGRAM
+from array import array
+# from socket import socket, AF_INET, SOCK_DGRAM
 
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import LOCALHOST
 from dnx_configure.dnx_file_operations import cfg_read_poller, load_configuration, ConfigurationManager
+from dnx_iptools.dnx_standard_tools import Initialize
 from dnx_logging.log_main import LogHandler as Log
 
 FW_CONTROL = 9001
@@ -57,7 +59,7 @@ class FirewallManage:
                 temp_rules = [*temp_rules[:pos], rule, *temp_rules[pos+1:]]
 
                 # assigning section with new ruleset
-                firewall[section] = {f'{i}': rule for rule in enumerate(temp_rules)}
+                firewall[section] = {f'{i}': rule for i, rule in enumerate(temp_rules)}
 
             dnx_fw.write_configuration(firewall)
 
@@ -124,13 +126,18 @@ class FirewallManage:
 class FirewallControl:
 
     __slots__ = (
-        'cfirewall',
+        'cfirewall', '_initialize',
 
         # firewall sections (heirarchy)
+        # NOTE: these are used primarily to detect config changes to prevent
+        # the amount of work/ data conversions that need to be done to load
+        # the settings into C data structures.
         'BEFORE', 'MAIN', 'AFTER'
     )
 
     def __init__(self, *, cfirewall):
+        self._initialize = Initialize(Log, 'FirewallControl')
+
         self.BEFORE = {}
         self.MAIN   = {}
         self.AFTER  = {}
@@ -145,36 +152,61 @@ class FirewallControl:
     # the current settigs here. the only issue would be if they become unsynced somehow.
     def run(self):
 
-        self._initialize_rules()
-
+        threading.Thread(target=self.monitor_zones).start()
         threading.Thread(target=self.monitor_rules).start()
 
-    @cfg_read_poller('firewall', alt_path='system/iptables')
+        self._initialize.wait_for_threads(count=2)
+
+    @cfg_read_poller('zone_map', alt_path='dnx_system/iptables')
+    # zone int values are arbritrary / randomly selected on zone creation.
+    # TODO: see why this is making a second iteration
+    def monitor_zones(self, fw_rules):
+        '''calls to Cython are made from within this method block. the GIL must be manually
+        aquired on the Cython side or the Python interpreter will crash.'''
+
+        dnx_zones = load_configuration(fw_rules, filepath='dnx_system/iptables')
+
+        # converting list to python array, then sending to Cython to modify C array.
+        # this format is required due to transitioning between python and C. python arrays are
+        # compatible in C via memory views and Cython can handle the initial list.
+        dnx_zones = array('i', dnx_zones)
+
+        print(f'sending zones to CFirewall: {dnx_zones}')
+
+        # NOTE: gil must be aquired on the other side of this call
+        error = self.cfirewall.update_zones(dnx_zones)
+        if (error):
+            pass # TODO: do something here
+
+        self._initialize.done()
+
+    @cfg_read_poller('firewall', alt_path='dnx_system/iptables')
     def monitor_rules(self, fw_rules):
-        dnx_fw = load_configuration(fw_rules, filepath='system_iptables')
+        '''calls to Cython are made from within this method block. the GIL must be manually
+        aquired on the Cython side or the Python interpreter will crash.'''
+
+        dnx_fw = load_configuration(fw_rules, filepath='dnx_system/iptables')
 
         # splitting out sections then determine which one has changed. this is to reduce
-        # amount of work done on the C side.
-
-        # before = dnx_fw['BEFORE']
-        # main   = dnx_fw['MAIN']
-        # after  = dnx_fw['AFTER']
-
-        for section in ['BEFORE', 'MAIN', 'AFTER']:
+        # amount of work done on the C side. not for performance, but more for ease of programming.
+        for i, section in enumerate(['BEFORE', 'MAIN', 'AFTER']):
             current_section = getattr(self, section)
             new_section = dnx_fw[section]
 
             # unchanged rulesets
             if (current_section == new_section): continue
 
-            # updating ruleset
+            # updating ruleset to reflect changes
             setattr(self, section, new_section)
-            break
 
-        ## we need to get the changes over the CPacket. How do we do this?
+            # converting dict to list and each rule into a py array. this format is required due to
+            # transitioning between python and C. python arrays are compatible in C via memory views
+            # and Cython can handle the initial list.
+            ruleset = [array('L', rule) for rule in new_section.values()]
 
+            # NOTE: gil must be aquired on the other side of this call
+            error = self.cfirewall.update_ruleset(i, ruleset)
+            if (error):
+                pass # TODO: do something here
 
-    def _initialize_rules(self):
-        '''set rulesets on startup of system'''
-
-        pass
+        self._initialize.done()
