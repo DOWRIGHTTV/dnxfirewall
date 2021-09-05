@@ -202,7 +202,7 @@ class FirewallControl:
         # converting list to python array, then sending to Cython to modify C array.
         # this format is required due to transitioning between python and C. python arrays are
         # compatible in C via memory views and Cython can handle the initial list.
-        dnx_zones = array('i', dnx_zones)
+        dnx_zones = array('i', dnx_zones['map'])
 
         print(f'sending zones to CFirewall: {dnx_zones}')
 
