@@ -20,6 +20,7 @@ from dnx_configure.dnx_exceptions import ValidationError
 from dnx_database.ddb_connector_sqlite import DBConnector
 from dnx_system.sys_main import system_action
 from dnx_configure.dnx_system_info import System
+from dnx_firewall.fw_control import FirewallManage
 
 from dnx_frontend.dfe_dnx_authentication import Authentication, user_restrict
 from dnx_logging.log_main import LogHandler as Log
@@ -35,7 +36,7 @@ import dnx_frontend.dfe_advanced_whitelist as whitelist
 import dnx_frontend.dfe_advanced_blacklist as blacklist
 import dnx_frontend.dfe_advanced_domain as dns_proxy
 import dnx_frontend.dfe_advanced_ip as ip_proxy
-import dnx_frontend.dfe_advanced_firewall as dnx_firewall
+import dnx_frontend.dfe_advanced_firewall as dnx_fwall
 import dnx_frontend.dfe_advanced_ips as dnx_ips
 import dnx_frontend.dfe_system_users as dfe_users
 import dnx_frontend.dfe_system_backups as dfe_backups
@@ -54,6 +55,13 @@ trusted_proxies = ['127.0.0.1']
 
 # setup for system logging
 Log.run(name=LOG_NAME)
+
+# initialize cfirewall manager, which interfaces with cfirewall control class through a fd.
+cfirewall = FirewallManage()
+
+# setting ref class var to instance. this will allow any webui module to access firewall
+# state without passing around object.
+FirewallManage.cfirewall = cfirewall
 
 # NOTE: this will allow the config manager to reference the Log class without an import. (cyclical import error)
 ConfigurationManager.set_log_reference(Log)
@@ -226,15 +234,15 @@ def advanced_firewall(dnx_session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': tab, 'menu': menu_option,
-        'selected': 'GLOBAL_ZONE',
-        'zones': ['GLOBAL', 'WAN', 'DMZ', 'LAN'],
+        'selected': 'MAIN',
+        'sections': ['BEFORE', 'MAIN', 'AFTER'],
         'uri_path': ['advanced', 'firewall']
     }
 
     page_settings.update(dnx_session_data)
 
     page_action = firewall_page_logic(
-        dnx_firewall, page_settings, 'firewall_settings', page_name='advanced_firewall')
+        dnx_fwall, page_settings, 'firewall_settings', page_name='advanced_firewall')
 
     return page_action
 
@@ -310,7 +318,7 @@ def system_logs(dnx_session_data):
 @user_restrict('user', 'admin')
 def system_logs_get(dnx_session_data):
     json_data = request.get_json(force=True)
-    
+
     table_data, _, _ = dfe_logs.update_page(json_data)
 
     return ajax_response(status=True, data=table_data)
@@ -540,6 +548,8 @@ def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name):
 
     else:
         page_settings[data_key] = dnx_page.load_page()
+
+    print(page_settings)
 
     return render_template(f'{page_name}.html', **page_settings)
 

@@ -136,5 +136,13 @@
         }
 
     </script>
+
+    <!-- allowing each row in table to be clicked. this should be used to edit table data in a popup.-->
+    <script>
+    $('tr[data-href]').on("click", function() {
+        document.location = $(this).data('href');
+    });
+    </script>
+
 </body>
 </html>

@@ -16,6 +16,8 @@ from dnx_iptools.dnx_standard_tools import Initialize
 from dnx_logging.log_main import LogHandler as Log
 
 FW_CONTROL = 9001
+DEF_VERION = 'firewall_pending'
+DEF_USR_PATH = 'dnx_system/iptables/usr'
 
 ConfigurationManager.set_log_reference(Log)
 
@@ -28,19 +30,27 @@ class FirewallManage:
     firewall = FirewallManage()
     print(firewall.firewall)
 
+    print(firewall.firewall['MAIN'])
+
     '''
 
     __slots__ = (
         'firewall',
     )
 
+    # store main instance reference here so it be accessed throughout web ui
+    cfirewall = None
+
+    versions = ['pending', 'active']
+    sections = ['BEFORE', 'MAIN', 'AFTER']
+
     def __init__(self):
-        self.firewall = load_configuration('firewall', filepath='dnx_system/iptables')
+        self.firewall = load_configuration(DEF_VERION, filepath=DEF_USR_PATH)
 
     def add(self, pos, rule, *, section):
         '''insert or append operation of new firewall rule to the specified section.'''
 
-        with ConfigurationManager('firewall', file_path='dnx_system/iptables') as dnx_fw:
+        with ConfigurationManager(DEF_VERION, file_path=DEF_USR_PATH) as dnx_fw:
             firewall = dnx_fw.load_configuration()
 
             ruleset = firewall[section]
@@ -72,7 +82,7 @@ class FirewallManage:
 
     def remove(self, pos, *, section):
 
-        with ConfigurationManager('firewall', file_path='dnx_system/iptables') as dnx_fw:
+        with ConfigurationManager(DEF_VERION, file_path=DEF_USR_PATH) as dnx_fw:
             firewall = dnx_fw.load_configuration()
 
             ruleset = firewall[section]
@@ -101,7 +111,7 @@ class FirewallManage:
 
         '''
 
-        with ConfigurationManager('firewall', file_path='dnx_system/iptables') as dnx_fw:
+        with ConfigurationManager(DEF_VERION, file_path=DEF_USR_PATH) as dnx_fw:
             firewall = dnx_fw.load_configuration()
 
             ruleset = firewall[section]
@@ -121,6 +131,29 @@ class FirewallManage:
             return True
 
         return False
+
+    def view_ruleset(self, section='MAIN', version='pending'):
+        '''returns dict of requested ruleset in raw form. additional processing is required for web ui
+        or cli formats.
+
+        args:
+
+        section > will change which ruleset is returned.\n
+        version > PENDING or ACTIVE rule tables.
+        '''
+
+        if (version not in self.versions):
+            raise ValueError(f'{version} is not a valid version.')
+
+        if (section not in self.sections):
+            raise ValueError(f'{version} is not a valid section.')
+
+        with ConfigurationManager(f'firewall_{version}', file_path=DEF_USR_PATH) as dnx_fw:
+            firewall = dnx_fw.load_configuration()
+
+            # print(firewall)
+
+            return firewall[section]
 
 
 class FirewallControl:

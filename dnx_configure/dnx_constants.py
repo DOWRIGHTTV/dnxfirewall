@@ -266,15 +266,15 @@ class Zone(_IntEnum):
 # =====================
 
 # NFQUEUE packet actions | marking packet so it can be matched by next rules in order of operations
-LAN_IN = 10
-WAN_IN = 11
+WAN_IN = 10
+LAN_IN = 11
 DMZ_IN = 12
 
-SEND_TO_IPS   = 21 # only inspecting wan, so set to wan identifier
+SEND_TO_IPS   = 20 # only inspecting wan, so set to wan identifier
 IP_PROXY_DROP = 25
 
-LAN_ZONE_FIREWALL = 30
-WAN_ZONE_FIREWALL = 31
+WAN_ZONE_FIREWALL = 30
+LAN_ZONE_FIREWALL = 31
 DMZ_ZONE_FIREWALL = 32
 
 DNS_BIN_OFFSET = 4 # NOTE: 4 seems to be a good compromise of len(bins) vs len(buckets)
