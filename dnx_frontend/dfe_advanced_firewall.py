@@ -36,7 +36,6 @@ zone_manager = {'builtins': {}, 'user-defined': {}}
 
 # including 0/any since it is not an actual zone definition
 _zone_map = {0: 'any'}
-error = None
 
 def load_page(section='MAIN'):
     dnx_settings = load_configuration('config')
@@ -68,10 +67,8 @@ def load_page(section='MAIN'):
         'firewall_rules': firewall_rules
     }
 
-# TODO: fix inconcistent variable names for nat rules
 def update_page(form):
-
-    print(form)
+    error = None
 
     # initial input validation for presence of zone field
     section = form.get('section', None)
@@ -83,7 +80,6 @@ def update_page(form):
         pass
 
     elif ('create_rule' in form):
-        print(f'create: {form}')
         fw_rule = SimpleNamespace(**form)
         try:
             converted_rule = validate.manage_firewall_rule(fw_rule)
@@ -95,6 +91,21 @@ def update_page(form):
 
     elif ('modify_rule' in form):
         print(f'modify: {form}')
+        fw_rule = SimpleNamespace(**form)
+        try:
+            converted_rule = validate.manage_firewall_rule(fw_rule)
+        except ValidationError as ve:
+            error = ve
+
+        else:
+            FirewallManage.cfirewall.modify(fw_rule.position, converted_rule, section=section)
+
+    elif ('remove_rule' in form):
+        pos = form.get('position', None)
+        if (not pos):
+            return INVALID_FORM, section, None
+
+        FirewallManage.cfirewall.remove(pos, section=section)
 
     else:
         return INVALID_FORM, 'MAIN', None

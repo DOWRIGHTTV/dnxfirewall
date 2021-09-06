@@ -50,27 +50,29 @@ class FirewallManage:
     def add(self, pos, rule, *, section):
         '''insert or append operation of new firewall rule to the specified section.'''
 
+        # for comparison operators, but will use str as key as required for json.
+        pos_int = int(pos)
+
         with ConfigurationManager(DEF_VERION, file_path=DEF_USR_PATH) as dnx_fw:
             firewall = dnx_fw.load_configuration()
 
             ruleset = firewall[section]
-
             # should need this since it is covered by form validations on front end.
             # if (pos > len(ruleset) + 1) or (pos < 1):
             #     raise ValueError(f'position {pos} is out of bounds.')
 
             # position is after last element so can add to end of dict directly.
-            if (pos == len(ruleset) + 1):
+            if (pos_int == len(ruleset) + 1):
                 ruleset[pos] = rule
 
             # position falls somewhere within already allocated memory. using slices to split open position.
             else:
                 temp_rules = list(ruleset.values())
 
-                temp_rules = [*temp_rules[:pos], rule, *temp_rules[pos+1:]]
+                temp_rules = [*temp_rules[:pos_int], rule, *temp_rules[pos_int+1:]]
 
                 # assigning section with new ruleset
-                firewall[section] = {f'{i}': rule for i, rule in enumerate(temp_rules)}
+                firewall[section] = {f'{i}': rule for i, rule in enumerate(temp_rules, 1)}
 
             dnx_fw.write_configuration(firewall)
 
@@ -133,6 +135,12 @@ class FirewallManage:
 
         return False
 
+    def commit(self):
+        '''Copies pending changes to active ruleset which is being monitored by Control class
+        to load into cfirewall.'''
+
+        pass
+
     def view_ruleset(self, section='MAIN', version='pending'):
         '''returns dict of requested ruleset in raw form. additional processing is required for web ui
         or cli formats.
@@ -144,10 +152,12 @@ class FirewallManage:
         '''
 
         if (version not in self.versions):
-            raise ValueError(f'{version} is not a valid version.')
+            return None
+            # raise ValueError(f'{version} is not a valid version.')
 
         if (section not in self.sections):
-            raise ValueError(f'{version} is not a valid section.')
+            return None
+            # raise ValueError(f'{version} is not a valid section.')
 
         with ConfigurationManager(f'firewall_{version}', file_path=DEF_USR_PATH) as dnx_fw:
             firewall = dnx_fw.load_configuration()

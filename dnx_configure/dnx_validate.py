@@ -14,7 +14,7 @@ sys.path.insert(0, _HOME_DIR)
 from dnx_configure.dnx_constants import LOG, CFG, DATA, INVALID_FORM
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
-from dnx_configure.dnx_system_info import System
+from dnx_firewall.fw_control import FirewallManage
 
 # TODO: why no CSRF. :(
 
@@ -175,7 +175,7 @@ def proto_port(port_str):
 
     else:
         # this puts single port in range syntax
-        ports[1] = ports[0]
+        ports.append(ports[0])
 
         error = f'TCP/UDP port must be between 1-65535. ex udp/9001'
 
@@ -389,10 +389,8 @@ def manage_firewall_rule(fw_rule):
 
     action = 1 if fw_rule.action == 'ACCEPT' else 0
 
-    firewall_rules = load_configuration('firewall_pending', filepath='dnx_system/iptables/usr')
-
-    rule_list = firewall_rules.get(fw_rule.section)
-    if (not rule_list):
+    rule_list = FirewallManage.cfirewall.view_ruleset(section=fw_rule.section)
+    if (rule_list is None):
         raise ValidationError(INVALID_FORM)
 
     rule_count = len(rule_list) + 2 # 1 for add and 1 for range non inclusivity
@@ -413,12 +411,13 @@ def manage_firewall_rule(fw_rule):
     d_net, d_p_len = ip_network(fw_rule.dst_ip)
     d_proto, d_ports = proto_port(fw_rule.dst_port)
 
-    dnx_interfaces = load_configuration('config')['interfaces']
+    dnx_interfaces = load_configuration('config')['interfaces']['builtins']
     zone_map = {zone_name: zone_info['zone'] for zone_name, zone_info in dnx_interfaces.items()}
+    zone_map['any'] = 0
 
     s_zone = zone_map.get(fw_rule.src_zone, None)
     d_zone = zone_map.get(fw_rule.dst_zone, None)
-    if (not s_zone or not d_zone):
+    if (s_zone is None or d_zone is None):
         raise ValidationError(INVALID_FORM)
 
     # en | zone | netid | mask | proto << p1 | p2 ---->    | action | log | ipp | ips

@@ -64,9 +64,9 @@
                                     <td>
                                         <form action="/advanced/firewall" method="POST">
                                             <input type="hidden" name="tab" value="1">
-                                            <input type="hidden" name="position" value="{{rule[0]}}">
-                                            <input type="hidden" name="zone" value="{{selected}}">
-                                            <button class="btn-floating btn-small waves-effect waves-light red" name="action" value="remove">
+                                            <input type="hidden" name="position" value="{{loop.index}}">
+                                            <input type="hidden" name="section" value="{{selected}}">
+                                            <button class="btn-floating btn-small waves-effect waves-light red" name="remove_rule">
                                                 <i class="material-icons">remove</i>
                                             </button>
                                         </form>
