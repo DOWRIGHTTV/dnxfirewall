@@ -33,6 +33,8 @@ __all__ = (
     'ValidationError'
 )
 
+_proto_map = {'any': 0, 'icmp': 1, 'tcp': 6, 'udp': 17}
+
 # TODO: mac regex allows trailing characters. it should hard cut after the exact char length.
 _VALID_MAC = re.compile('(?:[0-9a-fA-F]:?){12}')
 _VALID_DOMAIN = re.compile('(//|\\s+|^)(\\w\\.|\\w[A-Za-z0-9-]{0,61}\\w\\.){1,3}[A-Za-z]{2,6}')
@@ -103,6 +105,16 @@ def ip_address(ip_addr=None, *, ip_iter=None):
     for ip in ip_iter:
         _ip_address(ip)
 
+def ip_network(ip_netw):
+    '''take ip network string, validates, then returns ip network string. the return string will always be the network
+    id of the subnet.'''
+    try:
+        ip_netw = IPv4Network(ip_netw)
+    except:
+        raise ValidationError('IP network is not valid.')
+
+    return int(ip_netw.network_address), ip_netw.prefixlen
+
 def default_gateway(ip_addr):
     try:
         ip_addr = IPv4Address(ip_addr)
@@ -130,7 +142,7 @@ def network_port(port, port_range=False):
         additional = ' or a range of 1-65535:1-65535 '
 
     else:
-        ports = [port]
+        ports = [convert_int(port)]
         additional = ''
 
     if (len(ports) == 2):
@@ -139,9 +151,40 @@ def network_port(port, port_range=False):
 
     for port in ports:
 
-        port = convert_int(port)
-        if (port not in range(1,65536)):
+        if (port not in range(1, 65536)):
             raise ValidationError(f'TCP/UDP port must be between 1-65535{additional}.')
+
+def proto_port(port_str):
+
+    port_str = port_str.split('/')
+
+    if (len(port_str) != 2):
+        raise ValidationError('Invalid protocol/port definition. ex tcp/80 or udp/500-550')
+
+    proto_int = _proto_map.get(port_str[0], None)
+    if (not proto_int):
+        raise ValidationError('Invalid protocol. Use [any, tcp, udp, icmp].')
+
+    ports = [convert_int(p) for p in port_str[1].split('-', 1)]
+
+    if (len(ports) == 2):
+        if (ports[0] >= ports[1]):
+            raise ValidationError('Invalid port range. The start value must be less than the end. ex. 9001-9002')
+
+        error = f'TCP/UDP port range must be between within range 1-65535. ex tcp/500-550'
+
+    else:
+        # this puts single port in range syntax
+        ports[1] = ports[0]
+
+        error = f'TCP/UDP port must be between 1-65535. ex udp/9001'
+
+    for port in ports:
+
+        if (port not in range(1, 65536)):
+            raise ValidationError(error)
+
+    return proto_int, ports
 
 def timer(timer):
     timer = convert_int(timer)
@@ -326,6 +369,69 @@ def dns_over_tls(dns_tls_settings):
             and 'dns_over_tls' not in dns_tls_settings['enabled']):
         raise ValidationError('DNS over TLS must be enabled to configure UDP fallback.')
 
+# NOTE: log and security profiles are disabled in form. they will be set here as default for the time being.
+def manage_firewall_rule(fw_rule):
+    # ('position', '1'),
+    # ('src_zone', 'lan'), ('src_ip', '192.168.83.0/24'), ('src_port', 'tcp/0'),
+    # ('dst_zone', 'any'), ('dst_ip', '0.0.0.0/0'), ('dst_port', 'tcp/80'),
+    # ('action', 'ACCEPT')
+    # ensuring all necessary fields are present in the namespace before continuing.
+    valid_fields = [
+        'position', 'section', 'action',
+        'src_zone', 'src_ip', 'src_port',
+        'dst_zone', 'dst_ip', 'dst_port'
+    ]
+    if not all([hasattr(fw_rule, x) for x in valid_fields]):
+        raise ValidationError(INVALID_FORM)
+
+    if (fw_rule.action not in ['ACCEPT', 'DROP']):
+        raise ValidationError(INVALID_FORM)
+
+    action = 1 if fw_rule.action == 'ACCEPT' else 0
+
+    firewall_rules = load_configuration('firewall_pending', 'dnx_system/iptables/usr')
+
+    rule_list = firewall_rules.get(fw_rule.section)
+    if (not rule_list):
+        raise ValidationError(INVALID_FORM)
+
+    rule_count = len(rule_list) + 2 # 1 for add and 1 for range non inclusivity
+    if (convert_int(fw_rule.position) not in range(1, rule_count)):
+        raise ValidationError(INVALID_FORM)
+
+    # appending /32 if / not present in string. the network test will catch malformed networks beyond that.
+    if ('/' not in fw_rule.src_ip):
+        fw_rule.src_ip += '/32'
+
+    s_net, s_p_len = ip_network(fw_rule.src_ip)
+    s_proto, s_ports = proto_port(fw_rule.src_port)
+
+    # appending /32 if / not present in string. the network test will catch malformed networks beyond that.
+    if ('/' not in fw_rule.dst_ip):
+        fw_rule.dst_ip += '/32'
+
+    d_net, d_p_len = ip_network(fw_rule.dst_ip)
+    d_proto, d_ports = proto_port(fw_rule.dst_port)
+
+    dnx_interfaces = load_configuration('config')['interfaces']
+    zone_map = {zone_name: zone_info['zone'] for zone_name, zone_info in dnx_interfaces.items()}
+
+    s_zone = zone_map.get(fw_rule.src_zone, None)
+    d_zone = zone_map.get(fw_rule.dst_zone, None)
+    if (not s_zone or not d_zone):
+        raise ValidationError(INVALID_FORM)
+
+    # en | zone | netid | mask | proto << p1 | p2 ---->    | action | log | ipp | ips
+    # [1, 12, 4294967295, 32, 393217, 65535, 10, 4294967295, 32, 458751, 65535, 1, 0, 1, 1],
+
+    return [
+        1,
+        s_zone, s_net, s_p_len, s_proto << 16 | s_ports[0], s_ports[1],
+        d_zone, d_net, d_p_len, d_proto << 16 | d_ports[0], d_ports[1],
+        action, 0, 1, 1
+    ]
+
+# NOTE: this will be deprecated with cfirewall implementation.
 def del_firewall_rule(fw_rule):
     output = run(
         f'sudo iptables -nL {fw_rule.zone} --line-number', shell=True, capture_output=True
@@ -335,6 +441,7 @@ def del_firewall_rule(fw_rule):
     if (convert_int(fw_rule.position) not in range(1, rule_count)):
         raise ValidationError('Selected rule is not valid and cannot be removed.')
 
+# NOTE: this will be deprecated with cfirewall implementation.
 def add_firewall_rule(fw_rule):
     # ensuring all necessary fields are present in the namespace before continuing.
     valid_fields = [

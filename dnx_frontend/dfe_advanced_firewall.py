@@ -17,7 +17,6 @@ from dnx_configure.dnx_constants import INVALID_FORM, DATA
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_configure.dnx_iptables import IPTablesManager
-from dnx_configure.dnx_system_info import System, Services
 
 from dnx_firewall.fw_control import FirewallManage
 
@@ -85,6 +84,14 @@ def update_page(form):
 
     elif ('create_rule' in form):
         print(f'create: {form}')
+        fw_rule = SimpleNamespace(**form)
+        try:
+            converted_rule = validate.create_rule(fw_rule)
+        except ValidationError as ve:
+            error = ve
+
+        else:
+            FirewallManage.cfirewall.add(fw_rule.position, converted_rule, section=section)
 
     elif ('modify_rule' in form):
         print(f'modify: {form}')

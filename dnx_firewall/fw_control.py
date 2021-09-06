@@ -55,8 +55,9 @@ class FirewallManage:
 
             ruleset = firewall[section]
 
-            if (pos > len(ruleset) + 1) or (pos < 1):
-                raise ValueError(f'position {pos} is out of bounds.')
+            # should need this since it is covered by form validations on front end.
+            # if (pos > len(ruleset) + 1) or (pos < 1):
+            #     raise ValueError(f'position {pos} is out of bounds.')
 
             # position is after last element so can add to end of dict directly.
             if (pos == len(ruleset) + 1):
