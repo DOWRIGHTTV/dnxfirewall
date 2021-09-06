@@ -177,11 +177,11 @@
                     <label for="src_zone">Zone</label>
                 </div>
                 <div class="input-field col s4 offset-s1 {{input_color}}">
-                    <input type="text" name="src_ip" {{ip_addr_validate}} placeholder="127.0.0.1/32">
+                    <input type="text" name="src_ip" {{ip_net_validate}} placeholder="127.0.0.1/32">
                     <label for="src_ip">Network/Mask</label>
                 </div>
                 <div class="input-field col s3 {{input_color}}">
-                    <input type="text" name="src_port" {{port_validate}} placeholder="tcp/80">
+                    <input type="text" name="src_port" placeholder="tcp/80">
                     <label for="src_port">Port/s</label>
                 </div>
             </div>
@@ -199,11 +199,11 @@
                     <label for="dst_zone">Zone</label>
                 </div>
                 <div class="input-field col s4 offset-s1 {{input_color}}">
-                    <input type="text" name="dst_ip" {{ip_addr_validate}} placeholder="127.0.0.1/32" required>
+                    <input type="text" name="dst_ip" {{ip_net_validate}} placeholder="127.0.0.1/32" required>
                     <label for="dst_ip">Network/Mask</label>
                 </div>
                 <div class="input-field col s3 {{input_color}}">
-                    <input type="text" name="dst_port" {{port_validate}} placeholder="tcp/80">
+                    <input type="text" name="dst_port" placeholder="tcp/80">
                     <label for="dst_port">Port/s</label>
                 </div>
             </div>
@@ -278,11 +278,11 @@
                     <label for="src_zone">Zone</label>
                 </div>
                 <div class="input-field col s4 offset-s1 {{input_color}}">
-                    <input type="text" name="src_ip" {{ip_addr_validate}} placeholder="127.0.0.1/32">
+                    <input type="text" name="src_ip" {{ip_net_validate}} placeholder="127.0.0.1/32">
                     <label for="src_ip">Network/Mask</label>
                 </div>
                 <div class="input-field col s3 {{input_color}}">
-                    <input type="text" name="src_port" {{port_validate}} placeholder="tcp/80">
+                    <input type="text" name="src_port" placeholder="tcp/80">
                     <label for="src_port">Port/s</label>
                 </div>
             </div>
@@ -300,11 +300,11 @@
                     <label for="dst_zone">Zone</label>
                 </div>
                 <div class="input-field col s4 offset-s1 {{input_color}}">
-                    <input type="text" name="dst_ip" {{ip_addr_validate}} placeholder="127.0.0.1/32" required>
+                    <input type="text" name="dst_ip" {{ip_net_validate}} placeholder="127.0.0.1/32" required>
                     <label for="dst_ip">Network/Mask</label>
                 </div>
                 <div class="input-field col s3 {{input_color}}">
-                    <input type="text" name="dst_port" {{port_validate}} placeholder="tcp/80">
+                    <input type="text" name="dst_port" placeholder="tcp/80">
                     <label for="dst_port">Port/s</label>
                 </div>
             </div>
