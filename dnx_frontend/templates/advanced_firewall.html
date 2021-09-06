@@ -38,13 +38,14 @@
                             </div>
                         </form>
                         <a class="btn waves-effect waves-light modal-trigger right"
-                            href="#user-modal69"><i class="material-icons"></i>Create Rule</a>
+                           href="#FWrule-creator"><i class="material-icons"></i>Create Rule</a>
                     </div>
                     <div class="row">
                         <table class="striped centered">
                             <thead>
                                 <tr>
                                     <th></th>
+                                    <th>Pos</th>
                                     <th>S Zone</th>
                                     <th>S Net</th>
                                     <th>Proto/Port</th>
@@ -59,7 +60,7 @@
                             </thead>
                             <tbody>
                                 {% for rule in firewall_settings['firewall_rules'] %}
-                                <tr data-href="" {% if not rule[0] %} style="opacity: .4" {% endif %}>
+                                <tr id="r{{loop.index}}" data-fw-modal="r{{loop.index}}" {% if not rule[0] %} style="opacity: .4" {% endif %}>
                                     <td>
                                         <form action="/advanced/firewall" method="POST">
                                             <input type="hidden" name="tab" value="1">
@@ -70,13 +71,14 @@
                                             </button>
                                         </form>
                                     </td>
+                                    <td>{{loop.index}}</td>
                                     {% for field in rule[1:] %}
                                     <td>{{field}}</td>
                                     {% endfor %}
                                 </tr>
                                 {% else %}
                                 <tr>
-                                    {% for i in range(11) %}
+                                    {% for i in range(12) %}
                                     <td></td>
                                     {% endfor %}
                                 </tr>
@@ -145,7 +147,7 @@
         </div>
     </div>
 </section>
-<div id="user-modal69" class="modal z-depth-5">
+<div id="FWrule-creator" class="modal z-depth-5">
     <div class="popout-form">
         <form action="/advanced/firewall" method="POST">
             <input type="hidden" name="tab" value="1">
@@ -168,8 +170,8 @@
                 </div>
                 <div class="input-field col s2 offset-s1 {{input_color}}">
                     <select name="src_zone">
-                        {% for opt in ['z1', 'z2', 'z3'] %}
-                        <option value="{{opt}}">{{opt.upper()}}</option>
+                        {% for zone in merge_items('any', firewall_settings['zone_manager']['builtins'].keys()) %}
+                        <option value="{{zone}}">{{zone.upper()}}</option>
                         {% endfor %}
                     </select>
                     <label for="src_zone">Zone</label>
@@ -189,9 +191,9 @@
                     <h6 class="{{title_color}}" style="float: left;">Dst:</h6>
                 </div>
                 <div class="input-field col s2 offset-s1 {{input_color}}">
-                    <select name="src_zone">
-                        {% for opt in ['z1', 'z2', 'z3'] %}
-                        <option value="{{opt}}">{{opt.upper()}}</option>
+                    <select name="dst_zone">
+                        {% for zone in merge_items('any', firewall_settings['zone_manager']['builtins'].keys()) %}
+                        <option value="{{zone}}">{{zone.upper()}}</option>
                         {% endfor %}
                     </select>
                     <label for="dst_zone">Zone</label>
@@ -220,7 +222,7 @@
                 <div class="input-field col s2">
                     <p>
                       <label>
-                        <input type="checkbox" name="log">
+                        <input type="checkbox" name="log" disabled>
                         <span>Log</span>
                       </label>
                     </p>
@@ -229,17 +231,118 @@
                     <h6 class="{{title_color}}" style="float: left;">Sec:</h6>
                 </div>
                 <div class="input-field col s2 offset-s1 {{input_color}}">
-                    <input type="number" name="sec-p1" class="validate" value="1" min="1" max="1">
+                    <input type="number" name="sec-p1" class="validate" value="1" min="1" max="1" disabled>
                     <label for="sec-p1">IPProxy</label>
                 </div>
                 <div class="input-field col s2 {{input_color}}">
-                    <input type="number" name="sec-p2" class="validate" value="1" min="1" max="1">
+                    <input type="number" name="sec-p2" class="validate" value="1" min="1" max="1" disabled>
                     <label for="sec-p2">IPS/IDS</label>
                 </div>
             </div>
             <div class="row">
                 <div class="modal-footer">
-                    <button class="btn waves-effect waves-light" name="type" value="add">Submit</button>
+                    <button class="btn waves-effect waves-light" name="create_rule">Submit</button>
+                    <a class="btn-flat modal-close waves-effect waves-green">Cancel</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<div id="FWrule-editor" class="modal z-depth-5">
+    <div class="popout-form">
+        <form action="/advanced/firewall" method="POST">
+            <input type="hidden" name="tab" value="1">
+            <input type="hidden" name="zone" value="{{selected}}">
+            <div class="row">
+                <div>
+                    <h6 class="{{title_color}}" style="float: left;">Pos:</h6>
+                </div>
+                <div class="input-field col s2 offset-s1 {{input_color}}">
+                    <input type="number" name="position" class="validate" value="1" min="1" max="{{firewall_settings['firewall_rules']|length + 1}}">
+                </div>
+                <div>
+                    <h4 class="{{title_color}}" style="float: right;">Create Rule</h4>
+                </div>
+            </div>
+            <!-- source network fields-->
+            <div class="row">
+                <div>
+                    <h6 class="{{title_color}}" style="float: left;">Src:</h6>
+                </div>
+                <div class="input-field col s2 offset-s1 {{input_color}}">
+                    <select name="src_zone">
+                        {% for zone in merge_items('any', firewall_settings['zone_manager']['builtins'].keys()) %}
+                        <option value="{{zone}}">{{zone.upper()}}</option>
+                        {% endfor %}
+                    </select>
+                    <label for="src_zone">Zone</label>
+                </div>
+                <div class="input-field col s4 offset-s1 {{input_color}}">
+                    <input type="text" name="src_ip" {{ip_addr_validate}} placeholder="127.0.0.1/32">
+                    <label for="src_ip">Network/Mask</label>
+                </div>
+                <div class="input-field col s3 {{input_color}}">
+                    <input type="text" name="src_port" {{port_validate}} placeholder="tcp/80">
+                    <label for="src_port">Port/s</label>
+                </div>
+            </div>
+            <!-- destination network fields-->
+            <div class="row">
+                <div>
+                    <h6 class="{{title_color}}" style="float: left;">Dst:</h6>
+                </div>
+                <div class="input-field col s2 offset-s1 {{input_color}}">
+                    <select name="dst_zone">
+                        {% for zone in merge_items('any', firewall_settings['zone_manager']['builtins'].keys()) %}
+                        <option value="{{zone}}">{{zone.upper()}}</option>
+                        {% endfor %}
+                    </select>
+                    <label for="dst_zone">Zone</label>
+                </div>
+                <div class="input-field col s4 offset-s1 {{input_color}}">
+                    <input type="text" name="dst_ip" {{ip_addr_validate}} placeholder="127.0.0.1/32" required>
+                    <label for="dst_ip">Network/Mask</label>
+                </div>
+                <div class="input-field col s3 {{input_color}}">
+                    <input type="text" name="dst_port" {{port_validate}} placeholder="tcp/80">
+                    <label for="dst_port">Port/s</label>
+                </div>
+            </div>
+            <!-- packet decision fields-->
+            <div class="row">
+                <div>
+                    <h6 class="{{title_color}}" style="float: left;">Act:</h6>
+                </div>
+                <div class="input-field col s2 offset-s1 {{input_color}}">
+                    <select name="action">
+                        {% for opt in ['ACCEPT', 'DROP'] %}
+                        <option value="{{opt}}">{{opt.upper()}}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="input-field col s2">
+                    <p>
+                      <label>
+                        <input type="checkbox" name="log" disabled>
+                        <span>Log</span>
+                      </label>
+                    </p>
+                </div>
+                <div>
+                    <h6 class="{{title_color}}" style="float: left;">Sec:</h6>
+                </div>
+                <div class="input-field col s2 offset-s1 {{input_color}}">
+                    <input type="number" name="sec-p1" class="validate" value="1" min="1" max="1" disabled>
+                    <label for="sec-p1">IPProxy</label>
+                </div>
+                <div class="input-field col s2 {{input_color}}">
+                    <input type="number" name="sec-p2" class="validate" value="1" min="1" max="1" disabled>
+                    <label for="sec-p2">IPS/IDS</label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="modal-footer">
+                    <button class="btn waves-effect waves-light" name="modify_rule">Submit</button>
                     <a class="btn-flat modal-close waves-effect waves-green">Cancel</a>
                 </div>
             </div>

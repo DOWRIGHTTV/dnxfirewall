@@ -246,6 +246,27 @@ def advanced_firewall(dnx_session_data):
 
     return page_action
 
+@app.route('/advanced/nat', methods=['GET', 'POST'])
+@user_restrict('admin')
+def advanced_nat(dnx_session_data):
+    tab = request.args.get('tab', '1')
+    menu_option = request.args.get('menu', '1')
+
+    page_settings = {
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'menu': menu_option,
+        'selected': 'WAN_ZONE',
+        'zones': ['WAN', 'DMZ', 'LAN'],
+        'uri_path': ['advanced', 'nat']
+    }
+
+    page_settings.update(dnx_session_data)
+
+    page_action = firewall_page_logic(
+        dnx_fwall, page_settings, 'nat_settings', page_name='advanced_nat')
+
+    return page_action
+
 @app.route('/advanced/domain', methods=['GET', 'POST'])
 @user_restrict('admin')
 def advanced_domain(dnx_session_data):
@@ -549,8 +570,6 @@ def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name):
     else:
         page_settings[data_key] = dnx_page.load_page()
 
-    print(page_settings)
-
     return render_template(f'{page_name}.html', **page_settings)
 
 def log_page_logic(log_page, page_settings, *, page_name):
@@ -719,6 +738,33 @@ def truncate(string, limit):
     string = f'{string[:limit]}...' if len(string) > limit else string
 
     return string
+
+def merge_items(a1, a2):
+    ''' accepts 2 arguments of item or list and merges them into one list.
+
+        valid combinations. int can be replaced with any singular object.
+            (int, list)
+            (int, int)
+            (list,list)
+            (list, int)
+    '''
+
+    new_list = []
+
+    for arg in [a1, a2]:
+
+        if not isinstance(arg, str) and hasattr(arg, '__iter__'):
+            new_list.extend(arg)
+
+        else:
+            new_list.append(arg)
+
+    print(new_list)
+
+    return new_list
+
+app.add_template_global(merge_items, name='merge_items')
+
 
 if __name__ == '__main__':
     app.run(debug=True)

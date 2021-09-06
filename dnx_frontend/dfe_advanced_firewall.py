@@ -35,13 +35,15 @@ reference_counts = defaultdict(int)
 zone_map = {'builtins': {}, 'extended': {}}
 zone_manager = {'builtins': {}, 'user-defined': {}}
 
-def load_page():
+# including 0/any since it is not an actual zone definition
+_zone_map = {0: 'any'}
+error = None
+
+def load_page(section='MAIN'):
     dnx_settings = load_configuration('config')
 
     dnx_intfs = dnx_settings['interfaces']
     dnx_zones = dnx_settings['zones']
-
-    firewall_rules = get_and_format_rules()
 
     # building out interface to zone map NOTE: builtins only for now
     for intf_type in ['builtins', 'extended']:
@@ -53,40 +55,44 @@ def load_page():
     # building zone list and reference counts NOTE: builtins only for now
     for zone_type in ['builtins', 'user-defined']:
         for zone_name, (zone_ident, zone_desc) in dnx_zones[zone_type].items():
+
+            # need to make converting zone ident/int to name easier in format function
+            _zone_map[zone_ident] = zone_name
+
             zone_manager[zone_type][zone_name] = [reference_counts[zone_ident], zone_desc]
 
+    firewall_rules = get_and_format_rules(section)
+
     return {
-        'firewall_rules': firewall_rules,
         'zone_map': zone_map,
-        'zone_manager': zone_manager
+        'zone_manager': zone_manager,
+        'firewall_rules': firewall_rules
     }
 
 # TODO: fix inconcistent variable names for nat rules
 def update_page(form):
 
-    error = None
+    print(form)
+
     # initial input validation for presence of zone field
-    section  = form.get('section', None)
+    section = form.get('section', None)
     if (section not in valid_sections):
         return INVALID_FORM, 'MAIN', None
 
-    # action field is not required for some functions, so will not be hard validated
-    action = form.get('action', DATA.MISSING)
+    # logic below will do all that is needed for now.
+    if ('change_section' in form):
+        pass
 
-    # firewall rule will not nat_type specified so None  can be used for identification
-    # error, zone = _firewall_rules(zone, action, form)
+    elif ('create_rule' in form):
+        print(f'create: {form}')
 
-    # else:
-    #     return INVALID_FORM, zone, None
+    elif ('modify_rule' in form):
+        print(f'modify: {form}')
 
-    # updating page data then returning. this is because we need to serve the content with the newly added
-    # configuration item.
-    page_data = {
-        'firewall_rules': get_and_format_rules(section=section),
-    }
+    else:
+        return INVALID_FORM, 'MAIN', None
 
-    # print(f'RETURNING: {page_data}')
-    return error, section, page_data
+    return error, section, load_page(section)
 
 def _firewall_rules(zone, action, form):
     error = None
@@ -137,7 +143,7 @@ def _firewall_rules(zone, action, form):
 
     return error, zone
 
-def get_and_format_rules(section='MAIN', version='pending'):
+def get_and_format_rules(section, version='pending'):
     proto_map = {0: 'any', 1: 'icmp', 6: 'tcp', 17: 'udp'}
 
     firewall_rules = FirewallManage.cfirewall.view_ruleset(section, version)
@@ -154,10 +160,10 @@ def get_and_format_rules(section='MAIN', version='pending'):
         reference_counts[rule[1]] += 1
         reference_counts[rule[6]] += 1
 
-        rule[1] = rule[1] if rule[1] else 'any'
-        # creeped me out.
-        if (not rule[6]):
-            rule[6] = 'any'
+        # error is for initial testing period to make it easier to detect if zone manager and
+        # firewall rules get unsynced.
+        rule[1] = _zone_map.get(rule[1], 'ERROR')
+        rule[6] = _zone_map.get(rule[6], 'ERROR')
 
         rule[11] = 'accept' if rule[11] else 'drop'
         rule[12] = 'Y' if rule[12] else 'N'

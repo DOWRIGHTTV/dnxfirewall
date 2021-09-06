@@ -98,6 +98,9 @@
         <li {% if uri_path[1] == 'firewall' %} class='active' {% endif %}>
             <a href="/advanced/firewall"><i class="material-icons {{icon_color}}">security</i> Firewall</a></li>
 
+        <li {% if uri_path[1] == 'nat' %} class='active' {% endif %}>
+            <a href="/advanced/nat"><i class="material-icons {{icon_color}}">call_split</i> NAT</a></li>
+
         <li {% if uri_path[1] == 'domain' %} class='active' {% endif %}>
             <a href="/advanced/domain"><i class="material-icons {{icon_color}}">collections_bookmark</i> Domain</a></li>
 
@@ -185,6 +188,9 @@
 
         <li {% if uri_path[1] == 'firewall' %} class='active' {% endif %}>
             <a href="/advanced/firewall"><i class="material-icons {{icon_color}}">security</i> Firewall</a></li>
+
+        <li {% if uri_path[1] == 'firewall' %} class='active' {% endif %}>
+            <a href="/advanced/nat"><i class="material-icons {{icon_color}}">call_split</i> NAT</a></li>
 
         <li {% if uri_path[1] == 'domain' %} class='active' {% endif %}>
             <a href="/advanced/domain"><i class="material-icons {{icon_color}}">collections_bookmark</i> Domain</a></li>

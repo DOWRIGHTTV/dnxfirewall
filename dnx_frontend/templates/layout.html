@@ -129,18 +129,65 @@
         document.getElementById("timeout-menu").innerHTML = "<input type=hidden name=menu value="+n+">";
         }
 
-        function idleTimeout() {
+        function idleTimeoutWarning() {
             var timeoutNotify = document.querySelector(".modal-idle-timeout");
             var notifyInstance = M.Modal.init(timeoutNotify);
             notifyInstance.open();
+        }
+
+        function idleTimeout() {
+            window.location.href = 'login';
         }
 
     </script>
 
     <!-- allowing each row in table to be clicked. this should be used to edit table data in a popup.-->
     <script>
-    $('tr[data-href]').on("click", function() {
-        document.location = $(this).data('href');
+    $('tr[data-fw-modal]').on("click", function(ruleID) {
+
+        if (ruleID == 'r0') {
+            $('#FWrule-creator').modal('open');
+
+        } else {
+
+            var ruleForm = document.getElementById('FWrule-editor');
+            var ruleData = ruleID.currentTarget.getElementsByTagName('td');
+            var formInputs = ruleForm.getElementsByTagName('input');
+            var formSelects = ruleForm.getElementsByTagName('select');
+
+            for (let i = 2; i < formInputs.length; ++i) {
+
+                let fi = 0
+                var formField = formInputs[i]
+
+                if (formField.name) {
+                formInputs[i].value = ruleData[i-1].innerHTML
+
+                } else {
+
+                    let selectOptions = formSelects[fi].options
+                    console.log(111111, formInputs[i]);
+
+                    for (let oi = 0; oi < selectOptions.length; ++oi) {
+
+                        let opt = selectOptions[oi];
+
+                        if (opt.value == ruleData[i-1].innerHTML) {
+                            // formInputs[i].remove(oi);
+
+                            formInputs[i].value = opt.value;
+
+                        }
+                    }
+
+                    ++fi;
+                }
+            }
+
+            $('#FWrule-editor').modal('open');
+
+        }
+
     });
     </script>
 
