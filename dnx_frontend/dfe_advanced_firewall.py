@@ -86,7 +86,7 @@ def update_page(form):
         print(f'create: {form}')
         fw_rule = SimpleNamespace(**form)
         try:
-            converted_rule = validate.create_rule(fw_rule)
+            converted_rule = validate.manage_firewall_rule(fw_rule)
         except ValidationError as ve:
             error = ve
 
