@@ -389,7 +389,7 @@ def manage_firewall_rule(fw_rule):
 
     action = 1 if fw_rule.action == 'ACCEPT' else 0
 
-    firewall_rules = load_configuration('firewall_pending', 'dnx_system/iptables/usr')
+    firewall_rules = load_configuration('firewall_pending', filepath='dnx_system/iptables/usr')
 
     rule_list = firewall_rules.get(fw_rule.section)
     if (not rule_list):
