@@ -26,10 +26,6 @@ valid_sections = {
     'AFTER': '3',
 }
 
-valid_standard_rule_fields = {
-    'position','src_ip','src_netmask','dst_ip','dst_netmask','protocol','dst_port'
-}
-
 reference_counts = defaultdict(int)
 zone_map = {'builtins': {}, 'extended': {}}
 zone_manager = {'builtins': {}, 'user-defined': {}}
@@ -90,7 +86,6 @@ def update_page(form):
             FirewallManage.cfirewall.add(fw_rule.position, converted_rule, section=section)
 
     elif ('modify_rule' in form):
-        print(f'modify: {form}')
         fw_rule = SimpleNamespace(**form)
         try:
             converted_rule = validate.manage_firewall_rule(fw_rule)
@@ -98,7 +93,7 @@ def update_page(form):
             error = ve
 
         else:
-            FirewallManage.cfirewall.modify(fw_rule.position, converted_rule, section=section)
+            FirewallManage.cfirewall.modify(fw_rule.static_pos, fw_rule.position, converted_rule, section=section)
 
     elif ('remove_rule' in form):
         pos = form.get('position', None)
@@ -112,55 +107,6 @@ def update_page(form):
 
     return error, section, load_page(section)
 
-def _firewall_rules(zone, action, form):
-    error = None
-    # moving form data into a simple namespace. this will allow us to validate and mutate it easier
-    # than its current state of immutable dict.
-    fields = SimpleNamespace(**form)
-    if (action == 'remove'):
-        try:
-            # NOTE: validation needs to know the zone so it can ensure the position is valid
-            validate.del_firewall_rule(fields)
-        except ValidationError as ve:
-            error = ve
-
-        else:
-            with IPTablesManager() as iptables:
-                iptables.delete_rule(fields)
-
-    elif (action =='add'):
-        if not all([x in form for x in valid_standard_rule_fields]):
-            return INVALID_FORM, zone
-
-        fields.action = 'ACCEPT' if 'accept' in form else 'DROP'
-
-        try:
-            validate.add_firewall_rule(fields)
-            if (fields.dst_port):
-                validate.network_port(fields.dst_port, port_range=True)
-
-            if (fields.src_ip):
-                validate.ip_address(fields.src_ip)
-                validate.cidr(fields.src_netmask)
-
-            validate.ip_address(fields.dst_ip)
-            validate.cidr(fields.dst_netmask)
-
-        except ValidationError as ve:
-            error = ve
-
-        else:
-            if (not fields.src_ip):
-                fields.src_ip, fields.src_netmask = '0', '0'
-
-            with IPTablesManager() as iptables:
-                iptables.add_rule(fields)
-
-    elif ('change_interface' not in form):
-        return INVALID_FORM, zone
-
-    return error, zone
-
 def get_and_format_rules(section, version='pending'):
     proto_map = {0: 'any', 1: 'icmp', 6: 'tcp', 17: 'udp'}
 
@@ -172,7 +118,7 @@ def get_and_format_rules(section, version='pending'):
     # convert rules into a friendly format
     for rule in firewall_rules.values():
 
-        #"2": [1, 0, 4294967295, 32, 65537, 65535, 0, 4294967295, 32, 131071, 65535, 1, 0, 0, 0],
+        # "2": [1, 0, 4294967295, 32, 65537, 65535, 0, 4294967295, 32, 131071, 65535, 1, 0, 0, 0],
 
         # counting amount of times a zone is seen in a rule. default dict protects new zones ints.
         reference_counts[rule[1]] += 1
@@ -183,7 +129,7 @@ def get_and_format_rules(section, version='pending'):
         rule[1] = _zone_map.get(rule[1], 'ERROR')
         rule[6] = _zone_map.get(rule[6], 'ERROR')
 
-        rule[11] = 'accept' if rule[11] else 'drop'
+        rule[11] = 'accept' if rule[11] else 'deny' # this could probably get removed since 0/1 is ok for this.
         rule[12] = 'Y' if rule[12] else 'N'
 
         rule[13] = rule[13] if rule[13] else ' '

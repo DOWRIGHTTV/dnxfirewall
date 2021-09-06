@@ -156,26 +156,34 @@
             var formInputs = ruleForm.getElementsByTagName('input');
             var formSelects = ruleForm.getElementsByTagName('select');
 
-            for (let i = 2; i < formInputs.length; ++i) {
+            let offset = 2
+            for (let i = 3; i < formInputs.length; ++i) {
 
                 let fi = 0
                 var formField = formInputs[i]
 
                 if (formField.name) {
-                formInputs[i].value = ruleData[i-1].innerHTML
+                    if (formField.name == 'rule_state') {
+                        ++offset;
+
+                    } else {
+                        formInputs[i].value = ruleData[i-offset].innerHTML
+                    }
+
+                    if (formField.name == 'position') {
+                        // settings static pos at index 2 to match position.
+                        formInputs[2].value = ruleData[i-offset].innerHTML;
+                    }
 
                 } else {
 
                     let selectOptions = formSelects[fi].options
-                    console.log(111111, formInputs[i]);
 
                     for (let oi = 0; oi < selectOptions.length; ++oi) {
 
                         let opt = selectOptions[oi];
 
-                        if (opt.value == ruleData[i-1].innerHTML) {
-                            // formInputs[i].remove(oi);
-
+                        if (opt.value == ruleData[i-2].innerHTML) {
                             formInputs[i].value = opt.value;
 
                         }

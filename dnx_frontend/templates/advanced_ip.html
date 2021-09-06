@@ -29,8 +29,8 @@
                         {% if loop.index0 in range(0,10,2) %}<div class="row">{% endif %}
                             <div class="input-field col s4 offset-s1">
                                 <h6>{{category.title().replace('_', ' ')}}</h6>
-                                <select name="reputation" id="" onchange="this.form.submit()">
-                                    <option value="{{category}}_0" {% if enabled==1 %} selected {% endif %}>OFF</option>
+                                <select name="reputation" onchange="this.form.submit()">
+                                    <option value="{{category}}_0" {% if enabled==0 %} selected {% endif %}>OFF</option>
                                     <option value="{{category}}_1" {% if enabled==1 %} selected {% endif %}>OUTBOUND</option>
                                     <option value="{{category}}_2" {% if enabled==2 %} selected {% endif %}>INBOUND</option>
                                     <option value="{{category}}_3" {% if enabled==3 %} selected {% endif %}>BOTH</option>

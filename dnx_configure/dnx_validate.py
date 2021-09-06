@@ -16,6 +16,10 @@ from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_firewall.fw_control import FirewallManage
 
+MIN_PORT = 1
+MAX_PORT = 65535
+MAX_PORT_RANGE = 65536
+
 # TODO: why no CSRF. :(
 
 __all__ = (
@@ -179,9 +183,14 @@ def proto_port(port_str):
 
         error = f'TCP/UDP port must be between 1-65535. ex udp/9001'
 
+    # converting 0 port vals to cover full range (0 is an alias for any)
+    ports[0] = 1 if ports[0] == 0 else ports[0]
+    ports[1] = 65535 if ports[1] == 0 else ports[1]
+
     for port in ports:
 
-        if (port not in range(1, 65536)):
+        # port 0 is used to denote "any" port
+        if (port not in range(65536)):
             raise ValidationError(error)
 
     return proto_int, ports
@@ -377,23 +386,31 @@ def manage_firewall_rule(fw_rule):
     # ('action', 'ACCEPT')
     # ensuring all necessary fields are present in the namespace before continuing.
     valid_fields = [
-        'position', 'section', 'action',
+        'static_pos', 'position', 'section',
         'src_zone', 'src_ip', 'src_port',
-        'dst_zone', 'dst_ip', 'dst_port'
+        'dst_zone', 'dst_ip', 'dst_port',
+        'action',
     ]
     if not all([hasattr(fw_rule, x) for x in valid_fields]):
         raise ValidationError(INVALID_FORM)
 
-    if (fw_rule.action not in ['ACCEPT', 'DROP']):
+    if (fw_rule.action not in ['accept', 'deny']):
         raise ValidationError(INVALID_FORM)
 
-    action = 1 if fw_rule.action == 'ACCEPT' else 0
+    action = 1 if fw_rule.action == 'accept' else 0
 
     rule_list = FirewallManage.cfirewall.view_ruleset(section=fw_rule.section)
     if (rule_list is None):
         raise ValidationError(INVALID_FORM)
 
-    rule_count = len(rule_list) + 2 # 1 for add and 1 for range non inclusivity
+    rule_count = len(rule_list) + 1 # 1 for add and 1 for range non inclusivity
+    if (convert_int(fw_rule.static_pos) not in range(1, rule_count)):
+        raise ValidationError(INVALID_FORM)
+
+    # this will allow for rule to be place beyond the last rule in list.
+    if hasattr(fw_rule, 'create_rule'):
+        rule_count += 1
+
     if (convert_int(fw_rule.position) not in range(1, rule_count)):
         raise ValidationError(INVALID_FORM)
 

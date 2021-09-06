@@ -160,6 +160,17 @@
                     <input type="number" name="position" class="validate" value="1" min="1" max="{{firewall_settings['firewall_rules']|length + 1}}">
                 </div>
                 <div>
+                    <h6 class="{{title_color}}" style="float: left;">Use:</h6>
+                </div>
+                <div class="input-field col s3 offset-s1 {{input_color}}">
+                    <label>
+                        Off
+                        <input type="checkbox" checked="checked" name="rule_state" value="1" disabled>
+                        <span class="lever"></span>
+                        On
+                    </label>
+                </div>
+                <div>
                     <h4 class="{{title_color}}" style="float: right;">Create Rule</h4>
                 </div>
             </div>
@@ -214,7 +225,7 @@
                 </div>
                 <div class="input-field col s2 offset-s1 {{input_color}}">
                     <select name="action">
-                        {% for opt in ['ACCEPT', 'DROP'] %}
+                        {% for opt in ['accept', 'deny'] %}
                         <option value="{{opt}}">{{opt.upper()}}</option>
                         {% endfor %}
                     </select>
@@ -253,12 +264,24 @@
         <form action="/advanced/firewall" method="POST">
             <input type="hidden" name="tab" value="1">
             <input type="hidden" name="section" value="{{selected}}">
+            <input type="hidden" name="static_pos" value="1">
             <div class="row">
                 <div>
                     <h6 class="{{title_color}}" style="float: left;">Pos:</h6>
                 </div>
                 <div class="input-field col s2 offset-s1 {{input_color}}">
                     <input type="number" name="position" class="validate" value="1" min="1" max="{{firewall_settings['firewall_rules']|length + 1}}">
+                </div>
+                <div>
+                    <h6 class="{{title_color}}" style="float: left;">Use:</h6>
+                </div>
+                <div class="input-field col s3 offset-s1 {{input_color}}">
+                    <label>
+                        Off
+                        <input type="checkbox" checked="checked" name="rule_state" value="1" disabled>
+                        <span class="lever"></span>
+                        On
+                    </label>
                 </div>
                 <div>
                     <h4 class="{{title_color}}" style="float: right;">Create Rule</h4>
@@ -315,7 +338,7 @@
                 </div>
                 <div class="input-field col s2 offset-s1 {{input_color}}">
                     <select name="action">
-                        {% for opt in ['ACCEPT', 'DROP'] %}
+                        {% for opt in ['accept', 'deny'] %}
                         <option value="{{opt}}">{{opt.upper()}}</option>
                         {% endfor %}
                     </select>

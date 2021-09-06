@@ -57,12 +57,17 @@ class FirewallManage:
             firewall = dnx_fw.load_configuration()
 
             ruleset = firewall[section]
-            # should need this since it is covered by form validations on front end.
-            # if (pos > len(ruleset) + 1) or (pos < 1):
-            #     raise ValueError(f'position {pos} is out of bounds.')
+
+            # position is at the beginning of the ruleset. this is needed because the slice functions dont work
+            # correctly for pos 1 insertions.
+            if (pos_int == 1):
+                temp_rules = [rule, *ruleset.values()]
+
+                # assigning section with new ruleset
+                firewall[section] = {f'{i}': rule for i, rule in enumerate(temp_rules, 1)}
 
             # position is after last element so can add to end of dict directly.
-            if (pos_int == len(ruleset) + 1):
+            elif (pos_int == len(ruleset) + 1):
                 ruleset[pos] = rule
 
             # position falls somewhere within already allocated memory. using slices to split open position.
@@ -79,10 +84,6 @@ class FirewallManage:
             # updating instance variable for direct access
             self.firewall = firewall
 
-            return True
-
-        return False
-
     def remove(self, pos, *, section):
 
         with ConfigurationManager(DEF_VERION, file_path=DEF_USR_PATH) as dnx_fw:
@@ -90,50 +91,45 @@ class FirewallManage:
 
             ruleset = firewall[section]
 
-            if (not ruleset.pop(pos, None)):
-                raise ValueError(f'unable to remove position {pos}.')
+            # this is safe if it fails, because the context will exit
+            ruleset.pop(pos)
 
-            firewall[section] = {f'{i}': rule for i, rule in enumerate(ruleset)}
+            firewall[section] = {f'{i}': rule for i, rule in enumerate(ruleset.values(), 1)}
 
             dnx_fw.write_configuration(firewall)
 
             # updating instance variable for direct access
             self.firewall = firewall
 
-            return True
-
-        return False
-
-    def modify(self, pos, rule, *, section):
+    def modify(self, static_pos, pos, rule, *, section):
         '''send new definition of rule and rule position to underlying firewall to be updated.
 
             section (rule type): BEFORE, MAIN, AFTER (will likely be an enum)
-
-        returns True if rule has been written to disk. NOTE: this doesnt mean lower system has
-        put it into effect yet, only that it should be completed soon.
-
         '''
+
+        move = True if pos != static_pos else False
 
         with ConfigurationManager(DEF_VERION, file_path=DEF_USR_PATH) as dnx_fw:
             firewall = dnx_fw.load_configuration()
 
             ruleset = firewall[section]
 
-            # doing validation here for now just as a safety mechanism. this can likely be removed
-            # later when the framework has matured.
-            if (pos not in ruleset):
-                raise ValueError(f'rule with position {pos} does not exist.')
+            # update rule first using static_pos, then remove from list if it needs to move. cannot call add method from
+            # here due to file lock being held by this current context (its not re entrant).
+            ruleset[static_pos] = rule
+            if (move):
+                rule_to_move = ruleset.pop(static_pos)
 
-            section[pos] = rule
-
+            # write config even if it needs to move since external functional will handle move operation.
             dnx_fw.write_configuration(firewall)
 
             # updating instance variable for direct access
             self.firewall = firewall
 
-            return True
+        # now that we are out of the context we can use add method to re insert the rule in specified place
+        if (move):
+            self.add(pos, rule_to_move, section=section)
 
-        return False
 
     def commit(self):
         '''Copies pending changes to active ruleset which is being monitored by Control class
