@@ -10,7 +10,7 @@ os.chdir('/home/dnx/dnxfirewall/dnx_iptools')
 
 cmd = {'build_ext': build_ext}
 ext = Extension(
-    'dnx_binary_search', sources=['dnx_binary_search.pyx']
+    'dnx_binary_search', sources=['dnx_trie_search.pyx']
 )
 
 setup(

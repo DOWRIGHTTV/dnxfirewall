@@ -8,7 +8,7 @@ import ipaddress
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import SHELL_SPACE
+from dnx_sysmods.configure.def_constants import SHELL_SPACE
 
 
 class Standard:

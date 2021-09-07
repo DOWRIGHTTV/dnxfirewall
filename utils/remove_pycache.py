@@ -10,11 +10,11 @@ if (os.geteuid() != 0):
     exit("You need to have root privileges to run this script.\nPlease try again, this time using 'sudo'. Exiting.")
 
 folders = [
-    'dnx_backups', 'dnx_configure',
-    'dnx_database', 'dnx_frontend',
-    'dnx_logging', 'dnx_system',
+    'backups', 'configure',
+    'database', 'dnx_webui',
+    'logging', 'dnx_system',
     'dhcp_server', 'ip_proxy'
-    'dns_proxy', 'dnx_ips',
+    'dns_proxy', 'ips_ids',
     'dnx_iptools', 'dnx_syslog',
     'dnx_netfilter'
     ]
