@@ -13,10 +13,9 @@ sys.path.insert(0, HOME_DIR)
 import dnx_configure.dnx_configure as configure
 import dnx_configure.dnx_validate as validate
 
-from dnx_configure.dnx_constants import INVALID_FORM, DATA
-from dnx_configure.dnx_file_operations import load_configuration
+from dnx_configure.dnx_constants import INVALID_FORM
+from dnx_configure.dnx_file_operations import load_configuration, calculate_file_hash
 from dnx_configure.dnx_exceptions import ValidationError
-from dnx_configure.dnx_iptables import IPTablesManager
 
 from dnx_firewall.fw_control import FirewallManage
 
@@ -60,7 +59,8 @@ def load_page(section='MAIN'):
     return {
         'zone_map': zone_map,
         'zone_manager': zone_manager,
-        'firewall_rules': firewall_rules
+        'firewall_rules': firewall_rules,
+        'pending_changes': compare_rule_files()
     }
 
 def update_page(form):
@@ -101,6 +101,12 @@ def update_page(form):
             return INVALID_FORM, section, None
 
         FirewallManage.cfirewall.remove(pos, section=section)
+
+    elif ('commit_rules' in form):
+        FirewallManage.cfirewall.commit()
+
+    elif ('revert_rules' in form):
+        FirewallManage.cfirewall.revert()
 
     else:
         return INVALID_FORM, 'MAIN', None
@@ -156,3 +162,9 @@ def get_and_format_rules(section, version='pending'):
         converted_rules_append(cv_rule)
 
     return converted_rules
+
+def compare_rule_files():
+    active = calculate_file_hash('firewall_active.json', path=f'{HOME_DIR}/dnx_system/iptables/usr')
+    pending = calculate_file_hash('firewall_pending.json', path=f'{HOME_DIR}/dnx_system/iptables/usr')
+
+    return active != pending

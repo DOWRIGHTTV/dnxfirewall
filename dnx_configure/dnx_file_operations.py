@@ -225,7 +225,7 @@ class ConfigurationManager:
     __slots__ = (
         '_config_lock', '_filename', '_data_written',
         '_std_path', '_system_path_file', '_usr_path_file',
-        '_temp_file', '_temp_file_path'
+        '_temp_file', '_temp_file_path', '_config_file',
     )
 
     @classmethod
@@ -234,20 +234,31 @@ class ConfigurationManager:
 
         cls.Log = ref
 
-    def __init__(self, config_file, file_path=None):
-        self._data_written = False
-        self._std_path = True
-        if (file_path):
-            self._std_path = False
+    def __init__(self, config_file='', file_path=None):
+        '''Config file can be omitted to allow for configuration lock to be used with
+        external operations.'''
+
+        self._config_file = config_file
+
+        # initialization isnt required if config file is not specified.
+        if (config_file):
+            self._data_written = False
+            self._std_path = True
+            if (file_path):
+                self._std_path = False
+
+            else:
+                file_path = 'dnx_system/data'
+
+            # backwards compatibility between specifying file ext and not.
+            self._filename = config_file if config_file.endswith('.json') else f'{config_file}.json'
+
+            self._system_path_file = f'{HOME_DIR}/{file_path}/{self._filename}'
+            self._usr_path_file = f'{HOME_DIR}/dnx_system/data/usr/{self._filename}'
 
         else:
-            file_path = 'dnx_system/data'
-
-        # backwards compatibility between specifying file ext and not.
-        self._filename = config_file if config_file.endswith('.json') else f'{config_file}.json'
-
-        self._system_path_file = f'{HOME_DIR}/{file_path}/{self._filename}'
-        self._usr_path_file = f'{HOME_DIR}/dnx_system/data/usr/{self._filename}'
+            # make debug log complete if in lock only mode
+            self._filename = 'config manager'
 
     # attempts to acquire lock on system config lock (blocks until acquired), then opens a temporary
     # file which the new configuration will be written to, and finally returns the class object.
@@ -257,13 +268,15 @@ class ConfigurationManager:
         # acquiring lock on shared lock file
         flock(self._config_lock, LOCK_EX)
 
-        # TEMP prefix is to wildcard match any orphaned files for deletion
-        self._temp_file_path = f'{HOME_DIR}/dnx_system/data/usr/TEMP_{token_urlsafe(10)}.json'
-        self._temp_file = open(self._temp_file_path, 'w+')
+        # setup isnt required if config file is not specified.
+        if (self._config_file):
+            # TEMP prefix is to wildcard match any orphaned files for deletion
+            self._temp_file_path = f'{HOME_DIR}/dnx_system/data/usr/TEMP_{token_urlsafe(10)}.json'
+            self._temp_file = open(self._temp_file_path, 'w+')
 
-        # changing file permissions and settings owner to dnx:dnx to not cause permissions issues after copy.
-        os.chmod(self._temp_file_path, 0o660)
-        shutil.chown(self._temp_file_path, user=USER, group=GROUP)
+            # changing file permissions and settings owner to dnx:dnx to not cause permissions issues after copy.
+            os.chmod(self._temp_file_path, 0o660)
+            shutil.chown(self._temp_file_path, user=USER, group=GROUP)
 
         self.Log.debug(f'Config file lock acquired for {self._filename}.')
 
@@ -273,9 +286,9 @@ class ConfigurationManager:
     # file will be renamed over the configuration file sent in by the caller. if an exception is raised
     # the temporary file will be deleted. The file lock will be released upon exiting
     def __exit__(self, exc_type, exc_val, traceback):
-        replace_target = self._usr_path_file if self._std_path else self._system_path_file
-
         if (exc_type is None and self._data_written):
+            replace_target = self._usr_path_file if self._std_path else self._system_path_file
+
             os.replace(self._temp_file_path, replace_target)
 
         else:
@@ -301,6 +314,9 @@ class ConfigurationManager:
     def load_configuration(self):
         '''returns python dictionary of configuration file contents'''
 
+        if (not self._config_file):
+            raise RuntimeError('Configuration Manager methods are disabled in lock only mode.')
+
         with open(self._system_path_file, 'r') as system_settings:
             system_settings = json.load(system_settings)
 
@@ -319,6 +335,9 @@ class ConfigurationManager:
     # data gets fully rewritten and if short than original the excess gets truncated.
     def write_configuration(self, data_to_write):
         '''writes configuration data as json to generated temporary file'''
+
+        if (not self._config_file):
+            raise RuntimeError('Configuration Manager methods are disabled in lock only mode.')
 
         if (self._data_written):
             raise RuntimeWarning('configuration file has already been written to.')

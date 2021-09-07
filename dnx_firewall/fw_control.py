@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 
 import os, sys
-import json
+import shutil
 import threading
 
 from array import array
-# from socket import socket, AF_INET, SOCK_DGRAM
 
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import LOCALHOST
 from dnx_configure.dnx_file_operations import cfg_read_poller, load_configuration, ConfigurationManager
 from dnx_iptools.dnx_standard_tools import Initialize
 from dnx_logging.log_main import LogHandler as Log
@@ -18,6 +16,9 @@ from dnx_logging.log_main import LogHandler as Log
 FW_CONTROL = 9001
 DEF_VERION = 'firewall_pending'
 DEF_USR_PATH = 'dnx_system/iptables/usr'
+PENDING_RULE_FILE = f'{HOME_DIR}/{DEF_USR_PATH}/firewall_pending.json'
+ACTIVE_RULE_FILE  = f'{HOME_DIR}/{DEF_USR_PATH}/firewall_active.json'
+COPY_RULE_FILE    = f'{HOME_DIR}/{DEF_USR_PATH}/firewall_copy.json'
 
 ConfigurationManager.set_log_reference(Log)
 
@@ -132,10 +133,21 @@ class FirewallManage:
 
 
     def commit(self):
-        '''Copies pending changes to active ruleset which is being monitored by Control class
+        '''Copies pending configuration to active, which is being monitored by Control class
         to load into cfirewall.'''
 
-        pass
+        with ConfigurationManager():
+            shutil.copy(PENDING_RULE_FILE, COPY_RULE_FILE)
+
+            os.replace(COPY_RULE_FILE, ACTIVE_RULE_FILE)
+
+    def revert(self):
+        '''Copies active configuration to pending, which effectively wipes any uncommitted changes.'''
+
+        with ConfigurationManager():
+            shutil.copy(ACTIVE_RULE_FILE, COPY_RULE_FILE)
+
+            os.replace(COPY_RULE_FILE, PENDING_RULE_FILE)
 
     def view_ruleset(self, section='MAIN', version='pending'):
         '''returns dict of requested ruleset in raw form. additional processing is required for web ui

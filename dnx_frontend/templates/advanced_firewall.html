@@ -37,8 +37,12 @@
                                 <label for="section">Ruleset</label>
                             </div>
                         </form>
+                        <a class="btn waves-effect waves-light modal-trigger" href="#revert-modal" name="revert_rules"
+                           {% if not firewall_settings['pending_changes'] %} disabled {% endif %}>Revert</a>
+                        <a class="btn waves-effect waves-light modal-trigger" href="#revert-modal" name="revert_rules"
+                           {% if not firewall_settings['pending_changes'] %} disabled {% endif %}>Commit</a>
                         <a class="btn waves-effect waves-light modal-trigger right"
-                           href="#FWrule-creator"><i class="material-icons"></i>Create Rule</a>
+                           href="#FWrule-creator">Create Rule</a>
                     </div>
                     <div class="row">
                         <table class="striped centered">
@@ -147,6 +151,34 @@
         </div>
     </div>
 </section>
+<div id="revert-modal" class="modal">
+    <div class="modal-content">
+    <h5 class="red-text center">Are you sure you want to revert the pending firewall rule changes?
+        This action cannot be undone.</h5>
+    </div>
+    <form action="/advanced/firewall" method="POST">
+        <div class="modal-footer">
+            <button class="btn waves-effect waves-light">YES</button>
+            <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+            <input type="hidden" name="tab" value="1">
+            <input type="hidden" name="section" value="{{selected}}">
+        </div>
+    </form>
+</div>
+<div id="commit-modal" class="modal">
+    <div class="modal-content">
+    <h5 class="red-text center">Are you sure you want to commit the pending firewall rule changes? The rules will take
+        effect after a short processing delay. This action cannot be undone.</h5>
+    </div>
+    <form action="/advanced/firewall" method="POST">
+        <div class="modal-footer">
+            <button class="btn waves-effect waves-light">YES</button>
+            <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+            <input type="hidden" name="tab" value="1">
+            <input type="hidden" name="section" value="{{selected}}">
+        </div>
+    </form>
+</div>
 <div id="FWrule-creator" class="modal z-depth-5">
     <div class="popout-form">
         <form action="/advanced/firewall" method="POST">
