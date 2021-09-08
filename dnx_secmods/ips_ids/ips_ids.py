@@ -14,10 +14,10 @@ from dnx_sysmods.configure.def_namedtuples import IPS_SCAN_RESULTS, DDOS_TRACKER
 from dnx_sysmods.configure.iptables import IPTablesManager
 
 from dnx_iptools.packet_classes import NFQueue
-from dnx_secmods.ips_ids.dnx_ips_automate import Configuration
-from dnx_secmods.ips_ids.dnx_ips_packets import IPSPacket, IPSResponse
+from dnx_secmods.ips_ids.ips_ids_automate import Configuration
+from dnx_secmods.ips_ids.ips_ids_packets import IPSPacket, IPSResponse
 
-from dnx_secmods.ips_ids.dnx_ips_log import Log
+from dnx_secmods.ips_ids.ips_ids_log import Log
 
 LOG_NAME = 'ips'
 
@@ -56,38 +56,29 @@ class IPS_IDS(NFQueue):
     # if nothing is enabled the packet will be sent back to iptables for further inspection
     def _pre_inspect(self, packet):
         # dropping packet from ip proxy is flagged. this takes priority over ips whitelist since due to module heirarchy.
-        if (packet.zone == IP_PROXY_DROP):
+        if (packet.action is CONN.DROP):
             packet.nfqueue.drop()
 
-            # proxy deny > ips inspect
+            # ip proxy deny > ips inspect
             if (self.ddos_engine_enabled):
                 threading.Thread(target=Inspect.ddos, args=(packet,)).start()
 
         # auto permit configured whitelisted hosts (source ip check only)
         elif (packet.src_ip in self.ip_whitelist):
-            self.forward_packet(packet.nfqueue)
-
-            return False
+            packet.nfqueue.accept()
 
         else:
-            # proxy allow > ips inspect
+            # ip proxy accept > ips inspect
             if (self.ddos_engine_enabled):
+                packet.nfqueue.accept()
+
                 threading.Thread(target=Inspect.ddos, args=(packet,)).start()
 
             # notify tcp/udp to be inspected by portscan engine
             if (self.ps_engine_enabled and packet.protocol is not PROTO.ICMP):
                 return True
 
-        # default action | forwarding packet/inspection not required, this will cover icmp packets or all packets
-        # when the portscan engine is disabled.
-        self.forward_packet(packet.nfqueue)
-
         return False
-
-    @staticmethod
-    def forward_packet(nfqueue):
-        nfqueue.update_mark(WAN_ZONE_FIREWALL)
-        nfqueue.repeat()
 
 
 # TODO: ensure trackers are getting cleaned of timed out records at some set interval.
@@ -180,14 +171,16 @@ class Inspect:
         # accepting connections from hosts that's don't meet active scanner criteria then returning.
         if (not active_scanner):
             Log.debug(f'[pscan/accept] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
-            IPS_IDS.forward_packet(packet.nfqueue)
+
+            packet.nfqueue.accept()
 
             return
 
         # prevents connections from being blocked, but will be logged.
         # NOTE: this may be noisy and log multiple times per single scan. validate.
         if (IPS_IDS.ids_mode):
-            IPS_IDS.forward_packet(packet.nfqueue)
+            packet.nfqueue.accept()
+
             block_status = IPS.LOGGED
 
         # dropping packet then checking for further action if necessary.

@@ -12,13 +12,7 @@ DEF FW_AFTER_MAX_RULE_COUNT = 100
 DEF FW_MAX_ZONE_COUNT = 16
 DEF FW_RULE_SIZE = 15
 
-DEF SECURITY_PROFILE_COUNT = 2
-
 cdef bint BYPASS = 0
-
-# cdef u_int16_t[SECURITY_PROFILE_COUNT]
-
-
 
 # Firewall rules lock. Must be held
 # to read from or make changes to
@@ -122,24 +116,22 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # this is currently only designed to prevent the manager thread from updating firewall rules as users configure them.
     pthread_mutex_lock(&FWrulelock)
 
-    # X | X | X | X | ips | ipp | action | direction | module_identifier (corresponds to queue num)
-    cdef u_int32_t mark = cfirewall_inspect(&hw, ip_header, proto_ptr) | direction << 4 | IP_PROXY
+    # X | X | X | X | ips | ipp | direction | action
+    cdef u_int32_t mark = cfirewall_inspect(&hw, ip_header, proto_ptr) | direction << 4
 
     pthread_mutex_unlock(&FWrulelock)
     # =============================== #
 
-    # this is where we set the verdict. ip proxy is next in line regardless of action. (for geolocation data)
-    # we could likely make that a separate function within the ip proxy inspection engine that runs reduced code.
-    # if action is drop it would send to a lightweight inspection and bypass standard.
+    # this is where we set the verdict. ip proxy is next in line regardless of action to gather geolocation data
 
     cdef u_int32_t verdict
     # NOTE: this will invoke the the rule action without forwarding to another queue. only to be used for testing and
     # can be controlled via an argument to nf_run().
     if BYPASS:
-        verdict = mark >> 4 & 15
+        verdict = mark & 15
 
     else:
-        verdict = (mark & 15) << 16 | NF_QUEUE
+        verdict = (IP_PROXY & 15) << 16 | NF_QUEUE
 
     nfq_set_verdict2(
         qh, id, verdict, mark, data_len, data_ptr
@@ -206,7 +198,7 @@ cdef u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto)
 
             # printf('rule action: %i\n', rule.action)
             # drop will inherently forward to ip proxy for geo inspection. ip proxy will call drop.
-            return (rule.sec_profiles[1] << 16 | rule.sec_profiles[0] << 12 | rule.action << 8)
+            return (rule.sec_profiles[1] << 12 | rule.sec_profiles[0] << 8 | rule.action)
 
         return DROP
 

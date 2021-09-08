@@ -4,7 +4,9 @@ import os
 
 HOME_DIR = os.environ['HOME_DIR']
 
-from subprocess import run, DEVNULL
+from subprocess import run, SubprocessError, DEVNULL
+
+exit('currently disabled. sorry!')
 
 if (os.geteuid() != 0):
     exit("You need to have root privileges to run this script.\nPlease try again, this time using 'sudo'. Exiting.")

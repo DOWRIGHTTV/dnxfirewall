@@ -463,9 +463,9 @@ class NFQueue:
 class NFPacket:
 
     __slots__ = (
-        'nfqueue', 'zone',
+        'nfqueue',
 
-        'in_intf', 'out_intf',
+        'in_zone', 'out_zone',
         'src_mac', 'timestamp',
 
         # ip header
