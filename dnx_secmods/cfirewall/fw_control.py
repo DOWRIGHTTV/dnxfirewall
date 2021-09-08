@@ -207,7 +207,7 @@ class FirewallControl:
 
         self._initialize.wait_for_threads(count=2)
 
-    @cfg_read_poller('zone_map', alt_path='dnx_system/iptables')
+    @cfg_read_poller('zone_map', alt_path='dnx_system/iptables/usr')
     # zone int values are arbritrary / randomly selected on zone creation.
     # TODO: see why this is making a second iteration
     def monitor_zones(self, fw_rules):
@@ -215,7 +215,7 @@ class FirewallControl:
         side or the Python interpreter will crash. Monitors the firewall zone file for changes and loads updates to
         cfirewall.'''
 
-        dnx_zones = load_configuration(fw_rules, filepath='dnx_system/iptables')
+        dnx_zones = load_configuration(fw_rules, filepath='dnx_system/iptables/usr')
 
         # converting list to python array, then sending to Cython to modify C array.
         # this format is required due to transitioning between python and C. python arrays are
@@ -231,13 +231,13 @@ class FirewallControl:
 
         self._initialize.done()
 
-    @cfg_read_poller('firewall_active', alt_path='dnx_system/iptables')
+    @cfg_read_poller('firewall_active', alt_path='dnx_system/iptables/usr')
     def monitor_rules(self, fw_rules):
         '''calls to Cython are made from within this method block. the GIL must be manually acquired on the Cython
         side or the Python interpreter will crash. Monitors the active firewall rules file for changes and loads
         updates to cfirewall.'''
 
-        dnx_fw = load_configuration(fw_rules, filepath='dnx_system/iptables')
+        dnx_fw = load_configuration(fw_rules, filepath='dnx_system/iptables/usr')
 
         # splitting out sections then determine which one has changed. this is to reduce
         # amount of work done on the C side. not for performance, but more for ease of programming.
