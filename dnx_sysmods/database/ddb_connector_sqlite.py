@@ -334,7 +334,7 @@ if (SQL_VERSION == 0):
     DBConnector = _DBConnector
 
 else:
-    from dnx_sysmods.database import DBConnector
+    from dnx_sysmods.database.ddb_connector_psql import DBConnector
 
 if __name__ == '__main__':
     # NOTE: CREATE THE TABLES

@@ -15,7 +15,7 @@ import dnx_sysmods.configure.def_namedtuples as dnx_nt
 from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
 from dnx_gentools.standard_tools import dnx_queue, looper
 from dnx_sysmods.logging.log_main import LogHandler as Log
-from dnx_sysmods.database import DBConnector
+from dnx_sysmods.database.ddb_connector_sqlite import DBConnector
 
 LOG_NAME = 'system'
 
