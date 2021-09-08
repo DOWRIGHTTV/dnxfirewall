@@ -3,7 +3,7 @@
 import time
 import socket
 
-from csv import read as csv_reader
+from csv import reader as csv_reader
 from ipaddress import IPv4Address
 from fcntl import ioctl
 from socket import socket, inet_aton, AF_INET, SOCK_DGRAM
