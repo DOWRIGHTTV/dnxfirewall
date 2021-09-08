@@ -12,7 +12,7 @@ sys.path.insert(0, HOME_DIR)
 from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
 from dnx_gentools.standard_tools import looper, classproperty, dnx_queue, Initialize
 from dnx_sysmods.configure.file_operations import load_configuration, cfg_read_poller, change_file_owner
-from dnx_sysmods.database import DBConnector
+from dnx_sysmods.database.ddb_connector_sqlite import DBConnector
 from dnx_sysmods.configure.system_info import System
 
 LOG_NAME = 'system'
