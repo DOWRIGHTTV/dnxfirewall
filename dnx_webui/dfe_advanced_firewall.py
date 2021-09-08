@@ -15,7 +15,7 @@ from dnx_sysmods.configure.def_constants import INVALID_FORM
 from dnx_sysmods.configure.file_operations import load_configuration, calculate_file_hash
 from dnx_sysmods.configure.exceptions import ValidationError
 
-from dnx_secmods.cfirewall.dnx_firewall import FirewallManage
+from dnx_secmods.cfirewall.fw_control import FirewallManage
 
 valid_sections = {
     'BEFORE': '1',
