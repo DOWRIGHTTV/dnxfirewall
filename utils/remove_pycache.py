@@ -2,7 +2,7 @@
 
 import os
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-2]))
+HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
 
 from subprocess import run, SubprocessError, DEVNULL
 

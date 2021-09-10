@@ -8,7 +8,7 @@ import traceback
 from types import SimpleNamespace as SName
 from collections import namedtuple
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-2]))
+HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
 sys.path.insert(0, HOME_DIR)
 
 from dnx_sysmods.configure.def_constants import ONE_DAY, FIVE_MIN, write_log, fast_time

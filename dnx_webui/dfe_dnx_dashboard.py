@@ -5,7 +5,7 @@ import sys, os, time
 
 from itertools import zip_longest
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-2]))
+HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
 sys.path.insert(0, HOME_DIR)
 
 from dnx_sysmods.configure.file_operations import load_configuration
