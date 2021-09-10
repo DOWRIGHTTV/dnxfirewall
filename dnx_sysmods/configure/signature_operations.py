@@ -9,7 +9,7 @@ from struct import Struct
 from array import array
 from collections import defaultdict
 
-HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('..'))
+HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('.'))
 sys.path.insert(0, HOME_DIR)
 
 from dnx_sysmods.configure.def_constants import GEO, REP, MSB, LSB

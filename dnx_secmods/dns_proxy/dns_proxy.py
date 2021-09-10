@@ -4,7 +4,7 @@ import os
 import socket
 import sys
 
-HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('..'))
+HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('.'))
 sys.path.insert(0, HOME_DIR)
 
 from dnx_sysmods.configure.def_constants import *  # pylint: disable=unused-wildcard-import

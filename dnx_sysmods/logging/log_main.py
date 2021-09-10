@@ -6,7 +6,7 @@ import json
 
 from socket import socket, AF_INET, SOCK_DGRAM
 
-HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('..'))
+HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('.'))
 sys.path.insert(0, HOME_DIR)
 
 from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import

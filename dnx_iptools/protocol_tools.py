@@ -7,7 +7,7 @@ import binascii
 
 from subprocess import run, CalledProcessError, DEVNULL
 
-_HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('..'))
+_HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('.'))
 sys.path.insert(0, _HOME_DIR)
 
 from dnx_iptools.def_structs import * # pylint: disable=unused-wildcard-import

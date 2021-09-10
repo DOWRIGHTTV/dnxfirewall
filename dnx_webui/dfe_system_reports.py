@@ -5,7 +5,7 @@ import sys, os, time
 
 from flask import Flask, render_template, redirect, url_for, request, session
 
-HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('..'))
+HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('.'))
 sys.path.insert(0, HOME_DIR)
 
 from dnx_sysmods.configure.def_constants import DATA

@@ -6,7 +6,7 @@ from time import sleep
 from json import dump
 from subprocess import check_output
 
-HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('..'))
+HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('.'))
 sys.path.insert(0, HOME_DIR)
 
 from dnx_sysmods.configure.def_constants import NO_DELAY, INT_BANDWIDTH_TIMER
