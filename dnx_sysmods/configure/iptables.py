@@ -159,13 +159,13 @@ class IPTablesManager:
     '''
 
     __slots__ = (
-       '_intf_to_zone', '_zone_to_intf',
+        '_intf_to_zone', '_zone_to_intf',
 
         '_iptables_lock_file', '_iptables_lock'
     )
 
     def __init__(self):
-        dnx_intf_settigs = load_configuration('config')['interfaces']
+        dnx_intf_settigs = load_configuration('config')['interfaces']['builtins']
 
         self._intf_to_zone = {
             dnx_intf_settigs[zone]['ident']: zone for zone in ['wan', 'lan', 'dmz']

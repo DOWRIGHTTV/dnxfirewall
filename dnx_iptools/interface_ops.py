@@ -3,7 +3,7 @@
 import time
 import socket
 
-from csv import read as csv_reader
+from csv import reader as csv_reader
 from ipaddress import IPv4Address
 from fcntl import ioctl
 from socket import socket, inet_aton, AF_INET, SOCK_DGRAM
@@ -21,7 +21,7 @@ __all__ = (
 def get_intf(intf):
     settings = load_configuration('config')
 
-    return settings['interfaces'][intf]['ident']
+    return settings['interfaces']['builtins'][intf]['ident']
 
 def _is_ready(interface):
     with open(f'/sys/class/net/{interface}/carrier', 'r') as carrier:

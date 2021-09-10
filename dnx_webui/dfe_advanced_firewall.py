@@ -33,7 +33,7 @@ _zone_map = {0: 'any'}
 def load_page(section='MAIN'):
     dnx_settings = load_configuration('config')
 
-    dnx_intfs = dnx_settings['interfaces']
+    dnx_intfs = dnx_settings['interfaces']['builtins']
     dnx_zones = dnx_settings['zones']
 
     # building out interface to zone map NOTE: builtins only for now

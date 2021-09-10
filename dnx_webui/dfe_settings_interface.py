@@ -21,7 +21,7 @@ _IP_DISABLED = True
 def load_page(form):
     interface_settings = load_configuration('config')
 
-    wan_settings = interface_settings['interfaces']['wan']
+    wan_settings = interface_settings['interfaces']['builtins']['wan']
 
     interface_settings = {
         'mac': {

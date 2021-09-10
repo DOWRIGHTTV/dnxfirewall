@@ -194,7 +194,7 @@ def set_dnx_interfaces(user_intf_config):
     with ConfigurationManager('config') as dnx:
         dnx_settings = dnx.load_configuration()
 
-        interface_settings = dnx_settings['interfaces']
+        interface_settings = dnx_settings['interfaces']['builtins']
 
         for zone, intf  in user_intf_config.items():
             interface_settings[zone.lower()]['ident'] = intf
@@ -205,7 +205,7 @@ def set_dhcp_interfaces(user_intf_config):
     with ConfigurationManager('dhcp_server') as dhcp:
         dhcp_settings = dhcp.load_configuration()
 
-        interface_settings = dhcp_settings['interfaces']
+        interface_settings = dhcp_settings['interfaces']['builtins']
 
         for zone in ['LAN', 'DMZ']:
 

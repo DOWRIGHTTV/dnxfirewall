@@ -12,7 +12,7 @@ sys.path.insert(0, _HOME_DIR)
 from dnx_sysmods.configure.def_constants import LOG, CFG, DATA, INVALID_FORM
 from dnx_sysmods.configure.file_operations import load_configuration
 from dnx_sysmods.configure.exceptions import ValidationError
-from dnx_secmods.cfirewall.dnx_firewall import FirewallManage
+from dnx_secmods.cfirewall.fw_control import FirewallManage
 
 MIN_PORT = 1
 MAX_PORT = 65535
@@ -239,7 +239,7 @@ def dhcp_reservation(reservation_settings):
 
     dhcp_settings = load_configuration('config')
 
-    zone_net = IPv4Network(dhcp_settings['interfaces'][reservation_settings['zone'].lower()]['subnet'])
+    zone_net = IPv4Network(dhcp_settings['interfaces']['builtins'][reservation_settings['zone'].lower()]['subnet'])
     if (IPv4Address(reservation_settings['ip']) not in zone_net.hosts()):
         raise ValidationError(f'IP Address must fall within {str(zone_net)} range.')
 

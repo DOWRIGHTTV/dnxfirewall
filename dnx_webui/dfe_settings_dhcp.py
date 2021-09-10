@@ -21,7 +21,7 @@ from dnx_sysmods.configure.system_info import Services, System
 def load_page(form):
     dhcp_server = load_configuration('dhcp_server')
 
-    dhcp_settings = dhcp_server['interfaces']
+    dhcp_settings = dhcp_server['interfaces']['builtins']
 
     leases = []
     for ip, (status, handout_time, mac, hostname) in dhcp_server['leases'].items():

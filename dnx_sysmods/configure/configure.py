@@ -12,14 +12,14 @@ from dnx_sysmods.configure.def_constants import CFG, INTF, INVALID_FORM, fast_ti
 from dnx_sysmods.configure.file_operations import load_configuration, ConfigurationManager, json_to_yaml
 from dnx_sysmods.configure.exceptions import ValidationError
 from dnx_system.sys_main import system_action
-from dnx_sysmods.configure.system_info import System, Interface
+from dnx_sysmods.configure.system_info import Interface
 from dnx_webui.dfe_dnx_authentication import Authentication
 
 def set_default_mac_flag():
     with ConfigurationManager('config') as dnx:
         dnx_settings = dnx.load_configuration()
 
-        wan_settings = dnx_settings['interfaces']['wan']
+        wan_settings = dnx_settings['interfaces']['builtins']['wan']
         if (not wan_settings['mac_set']):
             wan_settings.update({
                 'default_mac': Interface.mac_address(interface=wan_settings['ident']),
@@ -32,7 +32,7 @@ def set_wan_mac(action, mac_address=None):
     with ConfigurationManager('config') as dnx:
         dnx_settings = dnx.load_configuration()
 
-        wan_settings = dnx_settings['interfaces']['wan']
+        wan_settings = dnx_settings['interfaces']['builtins']['wan']
 
         new_mac = mac_address if action is CFG.ADD else wan_settings['default_mac']
 
@@ -541,7 +541,7 @@ def set_wan_interface(intf_type=INTF.DHCP):
     with ConfigurationManager('config') as dnx:
         interface_settings = dnx.load_configuration()
 
-        wan = interface_settings['interfaces']['wan']
+        wan = interface_settings['interfaces']['builtins']['wan']
 
         wan['state'] = intf_type
 
@@ -590,7 +590,7 @@ def set_wan_ip(wan_ip_settings):
     4. Move file to /etc/netplan
     '''
 
-    wan_int = load_configuration('config')['interfaces']['wan']['ident']
+    wan_int = load_configuration('config')['interfaces']['builtins']['wan']['ident']
 
     # grabbing configured dns servers
     dns_server_settings = load_configuration('dns_server')['resolvers']

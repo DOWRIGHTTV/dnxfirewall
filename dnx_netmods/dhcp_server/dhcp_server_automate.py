@@ -95,7 +95,7 @@ class Configuration:
 
                 for _intf in interfaces.values():
 
-                    # ensuring the iterfaces match since we cannot guarantee order
+                    # ensuring the interfaces match since we cannot guarantee order
                     if (intf != _intf['ident']): continue
 
                     # converting keys to integers (json keys are string only), then packing any
@@ -159,7 +159,7 @@ class Configuration:
 
     # accessing class object via local instance to change overall DHCP server enabled ints tuple
     def _load_interfaces(self):
-        fw_intf = load_configuration('config')['interfaces']
+        fw_intf = load_configuration('config')['interfaces']['builtins']
         dhcp_intfs = load_configuration('dhcp_server')['interfaces']
 
         # interface ident eg. eth0
@@ -277,7 +277,7 @@ class Leases(dict):
 
         for ip_address, lease in active_leases:
 
-            lease_type, lease_time, lease_mac, _ = lease
+            lease_type, lease_time, lease_mac = lease
 
             # current time - lease time = time elapsed since lease was handed out
             time_elapsed = fast_time() - lease_time
