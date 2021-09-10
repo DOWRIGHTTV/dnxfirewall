@@ -9,7 +9,7 @@ import random
 from ipaddress import IPv4Address
 from subprocess import run, CalledProcessError, DEVNULL
 
-HOME_DIR = os.environ['HOME_DIR']
+HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('..'))
 sys.path.insert(0, HOME_DIR)
 
 from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
@@ -202,7 +202,10 @@ class ServerResponse:
     def _is_available(self, ip_address, mac=False):
         '''returns True if the ip address is available to lease out. if mac is set to True a tuple of status and
         associated mac, if any, will be returned.'''
-        lease_status, _, lease_mac = self._svr.leases[ip_address]
+        try:
+            lease_status, _, lease_mac, _ = self._svr.leases[ip_address]
+        except ValueError:
+            Log.error(f'[dhcp/requests] lease lookup error. returned={self._svr.leases[ip_address]}')
 
         status = True if lease_status is DHCP.AVAILABLE else False
 

@@ -7,7 +7,7 @@ from collections import namedtuple
 from socket import socket,  AF_INET, SOCK_DGRAM
 from ipaddress import IPv4Address, IPv4Interface
 
-HOME_DIR = os.environ['HOME_DIR']
+HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('..'))
 sys.path.insert(0, HOME_DIR)
 
 from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
@@ -277,22 +277,22 @@ class Leases(dict):
 
         for ip_address, lease in active_leases:
 
-            lease_type, lease_time, lease_mac = lease
+            lease_type, lease_time, lease_mac, _ = lease
 
             # current time - lease time = time elapsed since lease was handed out
             time_elapsed = fast_time() - lease_time
 
             # ip reservation has been removed from system
             if (lease_type == DHCP.RESERVATION and lease_mac not in self._ip_reservations):
-                self[ip_address] = (DHCP.AVAILABLE, 0, 0)
+                self[ip_address] = (DHCP.AVAILABLE, 0, 0, 0)
 
             # client did not accept our ip offer
             elif (lease_type == DHCP.OFFERED and time_elapsed > ONE_MIN):
-                self[ip_address] = (DHCP.AVAILABLE, 0, 0)
+                self[ip_address] = (DHCP.AVAILABLE, 0, 0, 0)
 
             # ip lease expired normally # NOTE: consider moving this value to a global constant/ make configurable
             elif (time_elapsed >= 86800):
-                self[ip_address] = (DHCP.AVAILABLE, 0, 0)
+                self[ip_address] = (DHCP.AVAILABLE, 0, 0, 0)
 
             # unknown condition? maybe log?
             else: continue

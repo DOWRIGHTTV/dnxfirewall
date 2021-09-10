@@ -6,7 +6,7 @@ import re
 from subprocess import run
 from ipaddress import IPv4Address, IPv4Network
 
-_HOME_DIR = os.environ['HOME_DIR']
+_HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('..'))
 sys.path.insert(0, _HOME_DIR)
 
 from dnx_sysmods.configure.def_constants import LOG, CFG, DATA, INVALID_FORM

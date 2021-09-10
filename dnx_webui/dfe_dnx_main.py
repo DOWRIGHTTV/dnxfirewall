@@ -6,7 +6,7 @@ import time
 from datetime import timedelta
 from flask import Flask, render_template, redirect, url_for, request, session, jsonify
 
-HOME_DIR = os.environ['HOME_DIR']
+HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('..'))
 sys.path.insert(0, HOME_DIR)
 
 import dnx_sysmods.configure.web_validate as validate

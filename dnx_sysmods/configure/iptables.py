@@ -65,8 +65,8 @@ class _Defaults:
 
     def mangle_set(self):
         # zones need mark on input for either dropped packets to wan, or device access from inside.
-        shell(f'iptables -t mangle -A PREROUTING -i {self._wan_int} -j MARK --set-mark {WAN_IN}') # wan > closed port/ips
-        shell(f'iptables -t mangle -A PREROUTING -i {self._lan_int} -j MARK --set-mark {LAN_IN}')
+        shell(f'iptables -t mangle -A PREROUTING -i {self._wan_int} -j MARK --set-mark {WAN_IN}') # pylint: disable=no-member
+        shell(f'iptables -t mangle -A PREROUTING -i {self._lan_int} -j MARK --set-mark {LAN_IN}') # pylint: disable=no-member
         shell(f'iptables -t mangle -A PREROUTING -i {self._dmz_int} -j MARK --set-mark {DMZ_IN}') # pylint: disable=no-member
 
     def main_forward_set(self):
@@ -93,7 +93,7 @@ class _Defaults:
 
         # filtering out broadcast packets to the wan. These can be prevelent if in a double nat scenario and would never be
         # used for anything.
-        shell(f'iptables -A INPUT -i {self._wan_int} -m addrtype --dst-type BROADCAST -j DROP')
+        shell(f'iptables -A INPUT -i {self._wan_int} -m addrtype --dst-type BROADCAST -j DROP') # pylint: disable=no-member
 
         # local socket communication | local ubuntu dns allow
         shell(f'iptables -A INPUT -s 127.0.0.0/24 -d 127.0.0.0/24 -j ACCEPT')
@@ -149,7 +149,7 @@ class _Defaults:
         shell(f'iptables -t nat -A POSTROUTING -j SRCNAT')
 
         # implicit masquerade rule for users. lan/dmz > wan
-        shell(f'iptables -t nat -A POSTROUTING -o {self._wan_int} -j MASQUERADE')
+        shell(f'iptables -t nat -A POSTROUTING -o {self._wan_int} -j MASQUERADE') # pylint: disable=no-member
 
 
 class IPTablesManager:

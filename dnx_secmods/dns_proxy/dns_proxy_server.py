@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import os, sys
 import threading
@@ -6,7 +6,7 @@ import socket
 
 from random import randint
 
-HOME_DIR = os.environ['HOME_DIR']
+HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('..'))
 sys.path.insert(0, HOME_DIR)
 
 from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import

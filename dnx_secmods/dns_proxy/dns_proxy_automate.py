@@ -5,7 +5,7 @@ import threading
 import socket
 import ssl
 
-HOME_DIR = os.environ['HOME_DIR']
+HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('..'))
 sys.path.insert(0, HOME_DIR)
 
 import dnx_sysmods.configure.signature_operations as signature_operations

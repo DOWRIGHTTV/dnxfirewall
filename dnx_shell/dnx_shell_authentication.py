@@ -5,7 +5,7 @@ import json
 import hashlib
 import threading
 
-HOME_DIR = os.environ['HOME_DIR']
+HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('..'))
 
 class Authentication:
     def __init__(self):

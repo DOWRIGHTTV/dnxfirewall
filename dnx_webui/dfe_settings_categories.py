@@ -3,7 +3,7 @@
 
 import os, sys
 
-HOME_DIR = os.environ['HOME_DIR']
+HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('..'))
 sys.path.insert(0, HOME_DIR)
 
 import dnx_sysmods.configure.configure as configure

@@ -1,22 +1,22 @@
 #!/usr/bin/python3
 
-import os, sys
+import os
 import socket
+import sys
 
-HOME_DIR = os.environ['HOME_DIR']
+HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('..'))
 sys.path.insert(0, HOME_DIR)
 
-from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
-from dnx_iptools.dnx_trie_search import generate_recursive_binary_search # pylint: disable=import-error, no-name-in-module
-from dnx_sysmods.configure.def_namedtuples import DNS_REQUEST_RESULTS
-from dnx_sysmods.configure.def_namedtuples import DNS_WHITELIST, DNS_BLACKLIST, DNS_SIGNATURES
+from dnx_sysmods.configure.def_constants import *  # pylint: disable=unused-wildcard-import
+from dnx_sysmods.configure.def_namedtuples import DNS_BLACKLIST, DNS_REQUEST_RESULTS, DNS_SIGNATURES, DNS_WHITELIST
 
-from dnx_iptools.packet_classes import Listener
+from dnx_secmods.dns_proxy.dns_proxy_automate import Configuration
+from dnx_secmods.dns_proxy.dns_proxy_log import Log
 from dnx_secmods.dns_proxy.dns_proxy_packets import ProxyRequest
 from dnx_secmods.dns_proxy.dns_proxy_server import DNSServer
-from dnx_secmods.dns_proxy.dns_proxy_automate import Configuration
 
-from dnx_secmods.dns_proxy.dns_proxy_log import Log
+from dnx_iptools.dnx_trie_search import generate_recursive_binary_search  # pylint: disable=import-error, no-name-in-module
+from dnx_iptools.packet_classes import Listener
 
 LOG_NAME = 'dns_proxy'
 

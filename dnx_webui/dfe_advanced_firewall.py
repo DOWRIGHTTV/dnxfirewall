@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from ipaddress import IPv4Network
 from collections import defaultdict
 
-HOME_DIR = os.environ['HOME_DIR']
+HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('..'))
 sys.path.insert(0, HOME_DIR)
 
 import dnx_sysmods.configure.web_validate as validate
