@@ -9,17 +9,19 @@ from collections import deque
 from socket import socket, AF_INET, SOCK_DGRAM
 from socket import SOL_SOCKET, SO_REUSEADDR
 
-HOME_DIR = os.environ.get('HOME_DIR', os.path.dirname(os.path.dirname((os.path.realpath('__file__')))))
+HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-2]))
 sys.path.insert(0, HOME_DIR)
 
 import dnx_iptools.interface_ops as interface
 
 from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
 from dnx_sysmods.configure.def_namedtuples import SYSLOG_SERVERS
-from dnx_gentools.standard_tools import dnx_queue
 from dnx_sysmods.logging.log_main import LogHandler as Log
+
 from dnx_netmods.syslog_client.syl_format import SyslogFormat
 from dnx_netmods.syslog_client.syl_protocols import UDPMessage, TCPMessage
+
+from dnx_gentools.standard_tools import dnx_queue
 
 LOG_MOD = 'syslog'
 

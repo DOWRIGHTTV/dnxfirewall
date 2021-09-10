@@ -7,7 +7,7 @@ from secrets import token_urlsafe
 from pathlib import Path
 from subprocess import Popen
 
-HOME_DIR = os.environ.get('HOME_DIR', os.path.dirname(os.path.dirname((os.path.realpath('__file__')))))
+HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-2]))
 sys.path.insert(0, HOME_DIR)
 
 import dnx_sysmods.configure.configure as configure

@@ -5,17 +5,19 @@ import threading
 import socket
 import ssl
 
-HOME_DIR = os.environ.get('HOME_DIR', os.path.dirname(os.path.dirname((os.path.realpath('__file__')))))
-sys.path.insert(0, HOME_DIR)
+from ipaddress import IPv4Address
 
-import dnx_sysmods.configure.signature_operations as signature_operations
+HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-2]))
+sys.path.insert(0, HOME_DIR)
 
 from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
 from dnx_sysmods.configure.file_operations import * # pylint: disable=unused-wildcard-import
-from dnx_iptools.protocol_tools import create_dns_query_header, convert_string_to_bitmap
-from dnx_gentools.standard_tools import dynamic_looper, Initialize
+from dnx_sysmods.configure.signature_operations import combine_domains
 
 from dnx_secmods.dns_proxy.dns_proxy_log import Log
+
+from dnx_iptools.protocol_tools import create_dns_query_header, convert_string_to_bitmap
+from dnx_gentools.standard_tools import dynamic_looper, Initialize
 
 
 class Configuration:
@@ -259,7 +261,7 @@ class Configuration:
     def load_dns_signature_bitmap():
 
         # NOTE: old method of created combined signature file and loaded seperately
-        signature_operations.combine_domains(Log)
+        combine_domains(Log)
 
         wl_exceptions = load_configuration('whitelist')['pre_proxy']
         bl_exceptions = load_configuration('blacklist')['pre_proxy']

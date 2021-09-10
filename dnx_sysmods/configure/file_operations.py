@@ -11,7 +11,7 @@ from fcntl import flock, LOCK_EX, LOCK_UN
 from secrets import token_urlsafe
 from collections import defaultdict
 
-HOME_DIR = os.environ.get('HOME_DIR', os.path.dirname(os.path.dirname((os.path.realpath('__file__')))))
+HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-2]))
 sys.path.insert(0, HOME_DIR)
 
 from dnx_sysmods.configure.def_constants import USER, GROUP, FILE_POLL_TIMER, str_join
