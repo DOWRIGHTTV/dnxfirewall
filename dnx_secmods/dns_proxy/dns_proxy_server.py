@@ -6,7 +6,7 @@ import socket
 
 from random import randint
 
-HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('.'))
+HOME_DIR = os.environ.get('HOME_DIR', os.path.dirname(os.path.dirname((os.path.realpath('__file__')))))
 sys.path.insert(0, HOME_DIR)
 
 from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import

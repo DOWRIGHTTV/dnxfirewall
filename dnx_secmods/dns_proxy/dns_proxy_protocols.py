@@ -6,7 +6,7 @@ import ssl
 
 from socket import socket, timeout, AF_INET, SOCK_STREAM, SOCK_DGRAM
 
-HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('.'))
+HOME_DIR = os.environ.get('HOME_DIR', os.path.dirname(os.path.dirname((os.path.realpath('__file__')))))
 sys.path.insert(0, HOME_DIR)
 
 from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import

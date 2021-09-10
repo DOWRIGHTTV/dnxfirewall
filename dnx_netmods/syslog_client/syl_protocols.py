@@ -8,7 +8,7 @@ import traceback
 
 from socket import socket, error, AF_INET, SOCK_DGRAM, SOCK_STREAM
 
-HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('.'))
+HOME_DIR = os.environ.get('HOME_DIR', os.path.dirname(os.path.dirname((os.path.realpath('__file__')))))
 sys.path.insert(0, HOME_DIR)
 
 # pylint: disable=unused-wildcard-import

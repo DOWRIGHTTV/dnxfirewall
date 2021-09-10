@@ -5,12 +5,14 @@ import threading
 
 from datetime import datetime
 
-HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('.'))
+
+
+HOME_DIR = os.environ.get('HOME_DIR', os.path.dirname(os.path.dirname((os.path.realpath('__file__')))))
 sys.path.insert(0, HOME_DIR)
 
 from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
 from dnx_sysmods.configure.file_operations import load_configuration, cfg_read_poller, ConfigurationManager
-from dnx_sysmods.configure.configure import System
+from dnx_sysmods.configure.system_info import System
 from dnx_gentools.standard_tools import looper, classproperty, Initialize
 
 from dnx_secmods.ip_proxy.ip_proxy_log import Log

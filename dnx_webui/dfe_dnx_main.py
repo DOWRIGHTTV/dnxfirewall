@@ -6,7 +6,7 @@ import time
 from datetime import timedelta
 from flask import Flask, render_template, redirect, url_for, request, session, jsonify
 
-HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('.'))
+HOME_DIR = os.environ.get('HOME_DIR', os.path.dirname(os.path.dirname((os.path.realpath('__file__')))))
 sys.path.insert(0, HOME_DIR)
 
 import dnx_sysmods.configure.web_validate as validate
@@ -16,7 +16,7 @@ from dnx_sysmods.configure.file_operations import load_configuration, Configurat
 from dnx_sysmods.configure.exceptions import ValidationError
 from dnx_sysmods.database.ddb_connector_sqlite import DBConnector
 from dnx_system.sys_main import system_action
-from dnx_secmods.cfirewall.dnx_firewall import FirewallManage
+from dnx_secmods.cfirewall.fw_control import FirewallManage
 
 from dnx_webui.dfe_dnx_authentication import Authentication, user_restrict
 from dnx_sysmods.logging.log_main import LogHandler as Log

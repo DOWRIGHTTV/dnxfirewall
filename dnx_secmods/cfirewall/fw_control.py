@@ -6,7 +6,7 @@ import threading
 
 from array import array
 
-HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('.'))
+HOME_DIR = os.environ.get('HOME_DIR', os.path.dirname(os.path.dirname((os.path.realpath('__file__')))))
 sys.path.insert(0, HOME_DIR)
 
 from dnx_sysmods.configure.file_operations import cfg_read_poller, load_configuration, ConfigurationManager

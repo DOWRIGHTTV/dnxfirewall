@@ -7,7 +7,7 @@ import traceback
 from socket import socket, AF_INET, SOCK_DGRAM
 from json import loads
 
-HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('.'))
+HOME_DIR = os.environ.get('HOME_DIR', os.path.dirname(os.path.dirname((os.path.realpath('__file__')))))
 sys.path.insert(0, HOME_DIR)
 
 import dnx_sysmods.configure.def_namedtuples as dnx_nt

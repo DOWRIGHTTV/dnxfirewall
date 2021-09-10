@@ -3,7 +3,7 @@
 import os, sys
 import threading
 
-HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('.'))
+HOME_DIR = os.environ.get('HOME_DIR', os.path.dirname(os.path.dirname((os.path.realpath('__file__')))))
 sys.path.insert(0, HOME_DIR)
 
 import dnx_sysmods.configure.signature_operations as signature_operations

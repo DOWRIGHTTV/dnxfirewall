@@ -7,7 +7,7 @@ import time
 import sqlite3
 import traceback
 
-HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('.'))
+HOME_DIR = os.environ.get('HOME_DIR', os.path.dirname(os.path.dirname((os.path.realpath('__file__')))))
 
 valid_commands = set(['select',])
 

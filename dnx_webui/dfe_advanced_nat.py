@@ -4,7 +4,7 @@ import sys, os
 
 from types import SimpleNamespace
 
-HOME_DIR = os.environ.get('HOME_DIR', os.path.realpath('.'))
+HOME_DIR = os.environ.get('HOME_DIR', os.path.dirname(os.path.dirname((os.path.realpath('__file__')))))
 sys.path.insert(0, HOME_DIR)
 
 import dnx_sysmods.configure.configure as configure
