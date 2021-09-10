@@ -18,7 +18,7 @@ from dnx_sysmods.configure.def_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_S
 from dnx_iptools.protocol_tools import int_to_ipaddr
 from dnx_gentools.standard_tools import looper
 
-from dnx_netmods.dnx_netfilter import set_user_callback, NetfilterQueue # pylint: disable=no-name-in-module, import-error
+from dnx_netmods.dnx_netfilter.dnx_nfqueue import set_user_callback, NetfilterQueue # pylint: disable=no-name-in-module, import-error
 from dnx_iptools.interface_ops import get_intf, wait_for_interface, wait_for_ip, get_src_ip
 
 __all__ = (
@@ -463,9 +463,9 @@ class NFQueue:
 class NFPacket:
 
     __slots__ = (
-        'nfqueue', 'zone',
+        'nfqueue',
 
-        'in_intf', 'out_intf',
+        'in_zone', 'out_zone',
         'src_mac', 'timestamp',
 
         # ip header

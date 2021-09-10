@@ -166,8 +166,8 @@ cdef struct FWrule:
         # ips_ids - 0 off, 1 on
 
 cdef struct hw_info:
-    u_int8_t in_intf
-    u_int8_t out_intf
+    u_int8_t in_zone
+    u_int8_t out_zone
     char* mac_addr
     double timestamp
 

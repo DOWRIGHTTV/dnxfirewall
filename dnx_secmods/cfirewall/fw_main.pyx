@@ -12,13 +12,7 @@ DEF FW_AFTER_MAX_RULE_COUNT = 100
 DEF FW_MAX_ZONE_COUNT = 16
 DEF FW_RULE_SIZE = 15
 
-DEF SECURITY_PROFILE_COUNT = 2
-
 cdef bint BYPASS = 0
-
-# cdef u_int16_t[SECURITY_PROFILE_COUNT]
-
-
 
 # Firewall rules lock. Must be held
 # to read from or make changes to
@@ -33,7 +27,7 @@ pthread_mutex_init(&FWrulelock, NULL)
 cdef FWrule **firewall_rules[FW_SECTION_COUNT]
 
 cdef FWrule *fw_system_section[FW_SYSTEM_MAX_RULE_COUNT]
-fw_before_section = <FWrule[]*>calloc(FW_SYSTEM_MAX_RULE_COUNT, sizeof(FWrule*))
+fw_system_section = <FWrule[]*>calloc(FW_SYSTEM_MAX_RULE_COUNT, sizeof(FWrule*))
 
 cdef FWrule *fw_before_section[FW_BEFORE_MAX_RULE_COUNT]
 fw_before_section = <FWrule[]*>calloc(FW_BEFORE_MAX_RULE_COUNT, sizeof(FWrule*))
@@ -66,11 +60,7 @@ cdef u_int16_t[FW_MAX_ZONE_COUNT] INTF_ZONE_MAP
 cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
 
     cdef protohdr proto
-    proto.s_port = 0
-    proto.d_port = 0
-
-    # initial mark will be used to determine connection direction for now
-    cdef int mark = nfq_get_nfmark(nfa)
+    cdef u_int8_t direction
 
     # creating ptr and assign uninitialized var proto. vals will be set lower.
     cdef protohdr *proto_ptr = &proto
@@ -111,35 +101,33 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
 
     # DIRECTION SET
     # looks at initial mark of packet to determine the stateful direction of the conn
-    if mark != WAN_IN:
-        direction = 1 # INBOUND
+    if hw.in_zone == WAN_IN:
+        direction = INBOUND
 
     else:
-        direction = 2 # OUTBOUND
+        direction = OUTBOUND
 
     # =============================== #
     # LOCKING ACCESS TO FIREWALL.
     # this is currently only designed to prevent the manager thread from updating firewall rules as users configure them.
     pthread_mutex_lock(&FWrulelock)
 
-    # X | X | X | X | ips | ipp | action | direction | module_identifier (corresponds to queue num)
-    cdef u_int32_t mark = cfirewall_inspect(&hw, ip_header, proto_ptr) | direction << 4 | IP_PROXY
+    # X | X | X | X | ips | ipp | direction | action
+    cdef u_int32_t mark = cfirewall_inspect(&hw, ip_header, proto_ptr) | direction << 4
 
     pthread_mutex_unlock(&FWrulelock)
     # =============================== #
 
-    # this is where we set the verdict. ip proxy is next in line regardless of action. (for geolocation data)
-    # we could likely make that a separate function within the ip proxy inspection engine that runs reduced code.
-    # if action is drop it would send to a lightweight inspection and bypass standard.
+    # this is where we set the verdict. ip proxy is next in line regardless of action to gather geolocation data
 
     cdef u_int32_t verdict
     # NOTE: this will invoke the the rule action without forwarding to another queue. only to be used for testing and
     # can be controlled via an argument to nf_run().
     if BYPASS:
-        verdict = mark >> 4 & 15
+        verdict = mark & 15
 
     else:
-        verdict = (mark & 15) << 16 | NF_QUEUE
+        verdict = (IP_PROXY & 15) << 16 | NF_QUEUE
 
     nfq_set_verdict2(
         qh, id, verdict, mark, data_len, data_ptr
@@ -154,7 +142,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
 
 cdef u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto) nogil:
 
-    cdef u_int32_t gi, i
+    cdef u_int32_t gi, i, rule_src_protocol, rule_dst_protocol
     cdef FWrule **section
     cdef FWrule *rule
     cdef u_int32_t mark, section_count
@@ -180,8 +168,9 @@ cdef u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto)
             if ip_header.saddr & rule.s_net_mask != rule.s_net_id:
                 continue
 
+            rule_src_protocol = rule.s_port_start >> 16
             # printf('header_proto=%u, rule_proto=%u\n', ip_header.protocol, rule.protocol)
-            if ip_header.protocol != rule.protocol and rule.protocol != 0:
+            if ip_header.protocol != rule_src_protocol and rule_src_protocol != 0:
                 continue
 
             # printf('s_port_start=%u, s_port=%u, s_port_end=%u\n', rule.s_port_start, ntohs(proto.s_port), rule.s_port_end)
@@ -192,11 +181,16 @@ cdef u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto)
             # destination matching
             # printf('out_int=%u, d_zone=%u\n', hw.out_intf, rule.d_zone)
             # zone / currently tied to interface and designated LAN, WAN, DMZ
-            if hw.out_out != rule.d_zone and rule.d_zone != 0:
+            if hw.out_zone != rule.d_zone and rule.d_zone != 0:
                 continue
 
             # subnet
             if ip_header.daddr & rule.d_net_mask != rule.d_net_id:
+                continue
+
+            rule_dst_protocol = rule.d_port_start >> 16
+            # printf('header_proto=%u, rule_proto=%u\n', ip_header.protocol, rule.protocol)
+            if ip_header.protocol != rule_dst_protocol and rule_dst_protocol != 0:
                 continue
 
             # printf('d_port_start=%u, d_port=%u, d_port_end=%u\n', rule.d_port_start, ntohs(proto.d_port), rule.d_port_end)
@@ -206,7 +200,7 @@ cdef u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto)
 
             # printf('rule action: %i\n', rule.action)
             # drop will inherently forward to ip proxy for geo inspection. ip proxy will call drop.
-            return (rule.sec_profiles[1] << 16 | rule.sec_profiles[0] << 12 | rule.action << 8)
+            return (rule.sec_profiles[1] << 12 | rule.sec_profiles[0] << 8 | rule.action)
 
         return DROP
 
@@ -260,33 +254,32 @@ cdef class CFirewall:
 
         # general
         fw_rule.enabled  = <u_int8_t>rule[0]
-        fw_rule.protocol = <u_int8_t>rule[1]
 
         # source
-        fw_rule.s_zone       = <u_int8_t> rule[2]
-        fw_rule.s_net_id     = <u_int32_t>rule[3]
-        fw_rule.s_net_mask   = <u_int32_t>rule[4]
-        fw_rule.s_port_start = <u_int16_t>rule[5]
-        fw_rule.s_port_end   = <u_int16_t>rule[6]
+        fw_rule.s_zone       = <u_int8_t> rule[1]
+        fw_rule.s_net_id     = <u_int32_t>rule[2]
+        fw_rule.s_net_mask   = <u_int32_t>rule[3]
+        fw_rule.s_port_start = <u_int16_t>rule[4]
+        fw_rule.s_port_end   = <u_int16_t>rule[5]
 
         #destination
-        fw_rule.d_zone       = <u_int8_t> rule[7]
-        fw_rule.d_net_id     = <u_int32_t>rule[8]
-        fw_rule.d_net_mask   = <u_int32_t>rule[9]
-        fw_rule.d_port_start = <u_int16_t>rule[10]
-        fw_rule.d_port_end   = <u_int16_t>rule[11]
+        fw_rule.d_zone       = <u_int8_t> rule[6]
+        fw_rule.d_net_id     = <u_int32_t>rule[7]
+        fw_rule.d_net_mask   = <u_int32_t>rule[8]
+        fw_rule.d_port_start = <u_int16_t>rule[9]
+        fw_rule.d_port_end   = <u_int16_t>rule[10]
 
         # printf('[set/FWrule] %u > standard fields set\n', pos)
 
         # handling
-        fw_rule.action = <u_int8_t>rule[12]
-        fw_rule.log    = <u_int8_t>rule[13]
+        fw_rule.action = <u_int8_t>rule[11]
+        fw_rule.log    = <u_int8_t>rule[12]
 
         # printf('[set/FWrule] %u > action fields set\n', pos)
 
         # security profiles
-        fw_rule.sec_profiles[0] = <u_int8_t>rule[14]
-        fw_rule.sec_profiles[1] = <u_int8_t>rule[15]
+        fw_rule.sec_profiles[0] = <u_int8_t>rule[13]
+        fw_rule.sec_profiles[1] = <u_int8_t>rule[14]
 
         # printf('[set/FWrule] %u > security profiles set\n', pos)
 

@@ -13,12 +13,12 @@ from dnx_iptools.packet_classes import NFPacket, RawResponse
 from dnx_iptools.protocol_tools import checksum_ipv4, checksum_tcp, checksum_icmp, int_to_ipaddr
 
 
-# TODO: make sure iptable rule can allow for icmp echo/8 through forward. basically if host is doing a icmp flood
-# attack on an open port it will not be detected with current rules.
 class IPSPacket(NFPacket):
 
     __slots__ = (
-        'tracked_ip', 'target_port', 'icmp_payload_override'
+        'tracked_ip', 'target_port', 'icmp_payload_override', 'mark',
+
+        'action', 'direction', 'ipp_profile', 'ips_profile',
     )
 
     def __init__(self):
@@ -45,9 +45,15 @@ class IPSPacket(NFPacket):
         return self
 
     # building named tuple with tracked_ip, tracked_port, and local_port variables
-    def _before_exit(self):
-        if (self.zone == SEND_TO_IPS):
-            self.zone = WAN_IN
+    def _before_exit(self, mark):
+        # X | X | X | X | ips | ipp | direction | action
+        self.mark = mark
+
+        self.action      = CONN(mark & 15)
+        self.direction   = DIR( mark >> 4 & 15)
+
+        self.ipp_profile = mark >>  8 & 15
+        self.ips_profile = mark >> 12 & 15
 
         self.tracked_ip = int_to_ipaddr(self.src_ip)
         if (self.protocol is not PROTO.ICMP):

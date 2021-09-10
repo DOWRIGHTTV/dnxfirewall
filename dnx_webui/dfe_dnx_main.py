@@ -14,7 +14,7 @@ import dnx_sysmods.configure.web_validate as validate
 from dnx_sysmods.configure.def_constants import CFG, DATA, FIVE_SEC
 from dnx_sysmods.configure.file_operations import load_configuration, ConfigurationManager
 from dnx_sysmods.configure.exceptions import ValidationError
-from dnx_sysmods.database import DBConnector
+from dnx_sysmods.database.ddb_connector_sqlite import DBConnector
 from dnx_system.sys_main import system_action
 from dnx_secmods.cfirewall.dnx_firewall import FirewallManage
 

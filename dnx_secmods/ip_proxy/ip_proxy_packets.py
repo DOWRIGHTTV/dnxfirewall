@@ -24,12 +24,13 @@ class IPPPacket(NFPacket):
 
     def _before_exit(self, mark):
 
-        # X | X | X | X | ips | ipp | action | direction | mark
+        # X | X | X | X | ips | ipp | direction | action
 
+        self.action      = CONN(mark & 15)
         self.direction   = DIR( mark >> 4 & 15)
-        self.action      = CONN(mark >> 8 & 15)
-        self.ipp_profile = mark >> 12 & 15
-        self.ips_profile = mark >> 16 & 15
+
+        self.ipp_profile = mark >>  8 & 15
+        self.ips_profile = mark >> 12 & 15
 
         if (self.direction == DIR.INBOUND):
             tracked_ip = self.src_ip
@@ -37,7 +38,7 @@ class IPPPacket(NFPacket):
             self.tracked_ip = int_to_ipaddr(tracked_ip)
             self.local_ip = int_to_ipaddr(self.dst_ip)
 
-        # self.direction = DIR.OUTBOUND
+        # elif self.direction = DIR.OUTBOUND:
         else:
             tracked_ip = self.dst_ip
 

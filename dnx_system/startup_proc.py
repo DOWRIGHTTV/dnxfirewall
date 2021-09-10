@@ -15,7 +15,7 @@ import dnx_sysmods.configure.configure as configure
 from dnx_sysmods.logging.log_main import LogHandler as Log
 from dnx_sysmods.configure.file_operations import ConfigurationManager
 from dnx_sysmods.configure.iptables import IPTablesManager as IPTables
-from dnx_sysmods.database import DBConnector
+from dnx_sysmods.database.ddb_connector_sqlite import DBConnector
 
 LOG_NAME = 'system'
 

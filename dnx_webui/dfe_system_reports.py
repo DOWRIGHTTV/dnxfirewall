@@ -11,7 +11,7 @@ sys.path.insert(0, HOME_DIR)
 from dnx_sysmods.configure.def_constants import DATA
 from dnx_sysmods.configure.file_operations import load_configuration
 from dnx_sysmods.configure.system_info import Interface, System, Services
-from dnx_sysmods.database import DBConnector
+from dnx_sysmods.database.ddb_connector_sqlite import DBConnector
 
 def load_page(uri_query=None):
     # if sent from dashboard link, infected clients table will open directly.

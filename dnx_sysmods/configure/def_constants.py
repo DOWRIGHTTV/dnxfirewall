@@ -211,8 +211,9 @@ class DIR(_Enum):
 
 class CONN(_Enum):
     # decisions
-    DROP   = 5
-    ACCEPT = 6
+    ACCEPT = 7
+    DROP   = 8
+    REJECT = 9
 
 # dhcp server message types
 class DHCP(_IntEnum):

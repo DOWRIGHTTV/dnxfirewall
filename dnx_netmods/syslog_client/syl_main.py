@@ -18,8 +18,8 @@ from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildc
 from dnx_sysmods.configure.def_namedtuples import SYSLOG_SERVERS
 from dnx_gentools.standard_tools import dnx_queue
 from dnx_sysmods.logging.log_main import LogHandler as Log
-from dnx_netmods.dnx_syslog.syl_format import SyslogFormat
-from dnx_netmods.dnx_syslog.syl_protocols import UDPMessage, TCPMessage
+from dnx_netmods.syslog_client.syl_format import SyslogFormat
+from dnx_netmods.syslog_client.syl_protocols import UDPMessage, TCPMessage
 
 LOG_MOD = 'syslog'
 

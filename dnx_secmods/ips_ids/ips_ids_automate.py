@@ -13,7 +13,7 @@ from dnx_sysmods.configure.system_info import System
 from dnx_gentools.standard_tools import looper, Initialize
 from dnx_sysmods.configure.file_operations import load_configuration, cfg_read_poller
 from dnx_sysmods.configure.iptables import IPTablesManager
-from dnx_secmods.ips_ids.dnx_ips_log import Log
+from dnx_secmods.ips_ids.ips_ids_log import Log
 
 
 class Configuration:
