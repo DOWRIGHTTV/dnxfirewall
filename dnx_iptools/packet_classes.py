@@ -12,14 +12,16 @@ from ipaddress import IPv4Address
 _HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
 sys.path.insert(0, _HOME_DIR)
 
-from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
-from dnx_iptools.def_structs import * # pylint: disable=unused-wildcard-import
+from dnx_sysmods.configure.def_constants import *
+from dnx_iptools.def_structs import *
+
 from dnx_sysmods.configure.def_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK
-from dnx_iptools.protocol_tools import int_to_ipaddr
-from dnx_gentools.standard_tools import looper
 
 from dnx_netmods.dnx_netfilter.dnx_nfqueue import set_user_callback, NetfilterQueue # pylint: disable=no-name-in-module, import-error
 from dnx_iptools.interface_ops import get_intf, wait_for_interface, wait_for_ip, get_src_ip
+from dnx_iptools.protocol_tools import int_to_ipaddr
+from dnx_gentools.standard_tools import looper
+
 
 __all__ = (
     'Listener', 'ProtoRelay', 'NFQueue', 'NFPacket', 'RawPacket', 'RawResponse'
@@ -432,6 +434,7 @@ class NFQueue:
         except:
             nfqueue.drop()
 
+            traceback.print_exc()
             self._Log.error('failed to parse CPacket. Packet discarded.')
 
         else:
@@ -498,7 +501,7 @@ class NFPacket:
         self.in_zone   = hw_info[0]
         self.out_zone  = hw_info[1]
         self.src_mac   = hw_info[2]
-        self.timestamp = hw_info[3]
+        self.timestamp = hw_info[3].split('.')[0] # TODO: this shouldnt be a float, but it is?????
 
         ip_header = cpacket.get_ip_header()
         self.protocol = PROTO(ip_header[6])

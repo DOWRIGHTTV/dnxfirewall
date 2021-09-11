@@ -6,18 +6,15 @@ import ssl
 
 from socket import socket, timeout, AF_INET, SOCK_STREAM, SOCK_DGRAM
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
-from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
+from dnx_sysmods.configure.def_constants import *
 from dnx_sysmods.configure.def_namedtuples import RELAY_CONN
-from dnx_iptools.def_structs import short_unpackf
-from dnx_gentools.standard_tools import looper, dnx_queue
+
+from dnx_secmods.dns_proxy.dns_proxy_packets import ClientRequest
+from dnx_secmods.dns_proxy.dns_proxy_log import Log
 
 from dnx_iptools.packet_classes import ProtoRelay
-from dnx_secmods.dns_proxy.dns_proxy_packets import ClientRequest
-
-from dnx_secmods.dns_proxy.dns_proxy_log import Log
+from dnx_iptools.def_structs import short_unpackf
+from dnx_gentools.standard_tools import looper, dnx_queue
 
 RELAY_TIMEOUT = 10
 

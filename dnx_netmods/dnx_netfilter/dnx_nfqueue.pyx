@@ -256,7 +256,7 @@ cdef class CPacket:
 
         return udp_header
 
-    def get_udp_header(self):
+    def get_icmp_header(self):
         '''Return layer4 (ICMP) of packet data as a tuple converted directly from C struct.'''
 
         cdef (u_int8_t, u_int8_t) icmp_header

@@ -1,11 +1,8 @@
 #!/usr/bin/python3
 
-import sys, os
+import os, sys
 
 from types import SimpleNamespace
-
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
 
 import dnx_sysmods.configure.configure as configure
 import dnx_sysmods.configure.web_validate as validate
@@ -15,14 +12,6 @@ from dnx_sysmods.configure.exceptions import ValidationError
 from dnx_sysmods.configure.iptables import IPTablesManager
 from dnx_sysmods.configure.system_info import System
 
-valid_sections = {
-    'WAN': '1',
-    'LAN': '2',
-    'DMZ': '3',
-}
-
-error = None
-
 def load_page():
     return {
         'dmz_dnat_rules': System.nat_rules(),
@@ -31,11 +20,7 @@ def load_page():
 
 # TODO: fix inconcistent variable names for nat rules
 def update_page(form):
-
-    # initial input validation for presence of zone field
-    zone = form.get('zone', None)
-    if (zone not in valid_sections):
-        return INVALID_FORM, 'WAN_ZONE', None
+    error = None
 
     # action field is not required for some functions, so will not be hard validated
     action = form.get('action', DATA.MISSING)
@@ -44,13 +29,13 @@ def update_page(form):
     if (nat_type in ['DSTNAT', 'SRCNAT']):
 
         if (nat_type == 'DSTNAT'):
-            error, zone = _dnat_rules(zone, action, form)
+            error = _dnat_rules(action, form)
 
         elif (nat_type == 'SRCNAT'):
-            error, zone = _snat_rules(zone, action, form)
+            error = _snat_rules(action, form)
 
     else:
-        return INVALID_FORM, zone, None
+        return INVALID_FORM, None, None
 
     # updating page data then returning. this is because we need to serve the content with the newly added
     # configuration item.
@@ -60,7 +45,7 @@ def update_page(form):
     }
 
     # print(f'RETURNING: {page_data}')
-    return error, zone, page_data
+    return error, None, page_data
 
 # TODO: currently it is possible to put overlapping DNAT rules (same dst port, but different host port).
     # this isnt normally an issue and could be left to the user, but the last one inserted with be
@@ -71,7 +56,9 @@ def update_page(form):
         # or a splittable string. this could be the key/vals to the dict making each unique and would allow
         # for any combination and still properly identify missed scans while also reliable generating reject
         # packets.
-def _dnat_rules(zone, action, form):
+def _dnat_rules(action, form):
+    error = None
+
     fields = SimpleNamespace(**form)
     if (action == 'remove'):
         try:
@@ -110,11 +97,11 @@ def _dnat_rules(zone, action, form):
                 configure.add_open_wan_protocol(fields)
 
     else:
-        return INVALID_FORM, zone
+        return INVALID_FORM
 
-    return error, zone
+    return error
 
-def _snat_rules(zone, action, form):
+def _snat_rules(action, form):
     fields = SimpleNamespace(**form)
     # TODO: make this code for snat (currently using dnat code as template)
     if (action == 'remove'):
@@ -141,6 +128,6 @@ def _snat_rules(zone, action, form):
                 iptables.add_nat(fields)
 
     else:
-        return INVALID_FORM, zone
+        return INVALID_FORM
 
-    return error, zone
+    return error

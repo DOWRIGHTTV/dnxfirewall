@@ -6,20 +6,17 @@ import socket
 
 from random import randint
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
-from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
+from dnx_sysmods.configure.def_constants import *
 from dnx_sysmods.configure.def_namedtuples import DNS_SERVERS
-from dnx_gentools.standard_tools import dnx_queue
 
-from dnx_iptools.packet_classes import Listener
 from dnx_secmods.dns_proxy.dns_proxy_automate import Configuration, Reachability
 from dnx_secmods.dns_proxy.dns_proxy_cache import DNSCache, RequestTracker
 from dnx_secmods.dns_proxy.dns_proxy_protocols import UDPRelay, TLSRelay
 from dnx_secmods.dns_proxy.dns_proxy_packets import ClientRequest, ServerResponse
-
 from dnx_secmods.dns_proxy.dns_proxy_log import Log
+
+from dnx_iptools.packet_classes import Listener
+from dnx_gentools.standard_tools import dnx_queue
 
 
 # the socket returns after "connecting" to remote server, but the protocol is listed as 0. when the relay

@@ -18,7 +18,13 @@ shell = _partial(_run, shell=True, stdout=_DEVNULL, stderr=_DEVNULL)
 byte_join = b''.join
 str_join = ''.join
 
+# dnx user/group
+USER  = 'dnx'
+GROUP = 'dnx'
+
 ROOT = True if not _os.getuid() else False
+
+HOME_DIR = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-3]))
 
 # globally sets which sql to use | sqlite3 = 0, psql = 1
 SQL_VERSION = 0
@@ -33,10 +39,6 @@ INT_BANDWIDTH_TIMER = 5
 
 # general settings
 FILE_POLL_TIMER = 10
-
-# dnx user/group
-USER  = 'dnx'
-GROUP = 'dnx'
 
 # Certificate authority store file
 CERTIFICATE_STORE = '/etc/ssl/certs/ca-certificates.crt'
@@ -211,9 +213,9 @@ class DIR(_Enum):
 
 class CONN(_Enum):
     # decisions
-    ACCEPT = 7
-    DROP   = 8
-    REJECT = 9
+    REJECT = -1
+    DROP   = 0
+    ACCEPT = 1
 
 # dhcp server message types
 class DHCP(_IntEnum):

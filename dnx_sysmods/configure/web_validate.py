@@ -484,6 +484,27 @@ def add_firewall_rule(fw_rule):
     if (fw_rule.protocol in ['any', 'icmp'] and fw_rule.dst_port):
         raise ValidationError('Only TCP/UDP use destination port field.')
 
+def add_dnat_rule(nat_rule):
+    # ensuring all necessary fields are present in the namespace before continuing.
+    valid_fields = [
+        'src_zone', 'dst_ip', 'dst_port', 'host_ip', 'host_port', 'protocol'
+    ]
+
+    if not all([hasattr(nat_rule, x) for x in valid_fields]):
+        raise ValidationError(INVALID_FORM)
+
+    if (nat_rule.protocol not in ['tcp', 'udp', 'icmp']):
+        raise ValidationError(INVALID_FORM)
+
+    if (not nat_rule.dst_ip and nat_rule.dst_port in ['443', '80']):
+        raise ValidationError('Ports 80,443 cannot be set as destination port when destination IP is not set.')
+
+    if (nat_rule.protocol == 'icmp'):
+
+        open_protocols = load_configuration('ips')
+        if (open_protocols['open_protocols']['icmp']):
+            return 'Only one ICMP rule can be active at a time. Remove existing rule before adding another.'
+
 def del_nat_rule(nat_rule):
     output = run(
         f'sudo iptables -t nat -nL {nat_rule.nat_type} --line-number', shell=True, capture_output=True
@@ -507,27 +528,6 @@ def del_nat_rule(nat_rule):
     except:
         if (nat_rule.protocol != 'icmp' and nat_rule.port != '0'):
             raise ValidationError(INVALID_FORM)
-
-def add_dnat_rule(nat_rule):
-    # ensuring all necessary fields are present in the namespace before continuing.
-    valid_fields = [
-        'src_zone', 'dst_ip', 'dst_port', 'host_ip', 'host_port', 'protocol'
-    ]
-
-    if not all([hasattr(nat_rule, x) for x in valid_fields]):
-        raise ValidationError(INVALID_FORM)
-
-    if (nat_rule.protocol not in ['tcp', 'udp', 'icmp']):
-        raise ValidationError(INVALID_FORM)
-
-    if (not nat_rule.dst_ip and nat_rule.dst_port in ['443', '80']):
-        raise ValidationError('Ports 80,443 cannot be set as destination port when destination IP is not set.')
-
-    if (nat_rule.protocol == 'icmp'):
-
-        open_protocols = load_configuration('ips')
-        if (open_protocols['open_protocols']['icmp']):
-            return 'Only one ICMP rule can be active at a time. Remove existing rule before adding another.'
 
 def add_snat_rule(nat_rule):
     # ensuring all necessary fields are present in the namespace before continuing.

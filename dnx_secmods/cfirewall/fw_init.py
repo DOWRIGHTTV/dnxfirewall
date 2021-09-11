@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
-import os, sys
+import __init__
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
+import os, sys
 
 from dnx_sysmods.configure.def_constants import Queue
 from dnx_sysmods.logging.log_main import LogHandler as Log

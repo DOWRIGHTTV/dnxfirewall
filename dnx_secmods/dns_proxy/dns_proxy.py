@@ -1,13 +1,12 @@
 #!/usr/bin/python3
 
+import __init__
+
 import os
 import socket
 import sys
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
-from dnx_sysmods.configure.def_constants import *  # pylint: disable=unused-wildcard-import
+from dnx_sysmods.configure.def_constants import *
 from dnx_sysmods.configure.def_namedtuples import DNS_BLACKLIST, DNS_REQUEST_RESULTS, DNS_SIGNATURES, DNS_WHITELIST
 
 from dnx_secmods.dns_proxy.dns_proxy_automate import Configuration

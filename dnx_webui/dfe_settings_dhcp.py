@@ -4,11 +4,6 @@ import sys, os
 import time
 import json
 
-from types import SimpleNamespace
-
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
 import dnx_sysmods.configure.configure as configure
 import dnx_sysmods.configure.web_validate as validate
 

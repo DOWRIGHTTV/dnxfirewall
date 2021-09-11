@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 
+import __init__
+
 import os, sys
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
-from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
-from dnx_iptools.dnx_trie_search import generate_linear_binary_search, generate_recursive_binary_search # pylint: disable=import-error, no-name-in-module
+from dnx_sysmods.configure.def_constants import *
 from dnx_sysmods.configure.def_namedtuples import IPP_INSPECTION_RESULTS
-from dnx_iptools.packet_classes import NFQueue
 
-from dnx_secmods.ip_proxy.ip_proxy_log import Log
 from dnx_secmods.ip_proxy.ip_proxy_packets import IPPPacket, ProxyResponse
 from dnx_secmods.ip_proxy.ip_proxy_restrict import LanRestrict
 from dnx_secmods.ip_proxy.ip_proxy_automate import Configuration
+from dnx_secmods.ip_proxy.ip_proxy_log import Log
+
+from dnx_iptools.packet_classes import NFQueue
+from dnx_iptools.dnx_trie_search import generate_linear_binary_search, generate_recursive_binary_search # pylint: disable=import-error, no-name-in-module
 
 LOG_NAME = 'ip_proxy'
 

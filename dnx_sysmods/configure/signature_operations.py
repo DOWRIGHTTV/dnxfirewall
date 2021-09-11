@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 
 import os, sys
-import json
 
-from subprocess import run
 from socket import inet_aton
 from struct import Struct
-from array import array
 from collections import defaultdict
 
 HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))

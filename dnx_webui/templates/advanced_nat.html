@@ -20,9 +20,8 @@
             <div class="col s12">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add Rule</h4>
-                    <form action="/advanced/firewall" method="POST">
+                    <form action="/advanced/nat" method="POST">
                         <input type="hidden" name="tab" value="1">
-                        <input type="hidden" name="zone" value="{{selected}}">
                         <input type="hidden" name="nat_type" value="DSTNAT">
                         <div class="row">
                             <div class="input-field col offset-m1 s3 m2 {{input_color}}">
@@ -90,9 +89,8 @@
                             {% for i, rule in nat_settings['dmz_dnat_rules'] %}
                             <tr>
                                 <td>
-                                    <form action="/advanced/firewall" method="POST">
+                                    <form action="/advanced/nat" method="POST">
                                         <input type="hidden" name="tab" value="1">
-                                        <input type="hidden" name="zone" value="{{selected}}">
                                         <input type="hidden" name="nat_type" value="DSTNAT">
                                         <input type="hidden" name="position" value="{{i}}">
                                         <input type="hidden" name="proto_port" value="{{rule['-p']}}/{{rule['--dport']}}">
@@ -129,9 +127,8 @@
             <div class="col s12">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add Rule</h4>
-                    <form action="/advanced/firewall" method="POST">
+                    <form action="/advanced/nat" method="POST">
                         <input type="hidden" name="tab" value="2">
-                        <input type="hidden" name="zone" value="{{selected}}">
                         <input type="hidden" name="nat_type" value="SRCNAT">
                         <div class="row">
                             <div class="input-field col offset-m1 s3 m2 {{input_color}}">
@@ -191,9 +188,8 @@
                             {% for i, rule in nat_settings['local_snat_rules'] %}
                             <tr>
                                 <td>
-                                    <form action="/advanced/firewall" method="POST">
+                                    <form action="/advanced/nat" method="POST">
                                         <input type="hidden" name="tab" value="2">
-                                        <input type="hidden" name="zone" value="{{selected}}">
                                         <input type="hidden" name="nat_type" value="SRCNAT">
                                         <input type="hidden" name="position" value="{{i}}">
                                         <button class="btn-floating btn-small waves-effect waves-light red" name="action" value="remove">

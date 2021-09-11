@@ -3,10 +3,7 @@
 import os, sys
 import fcntl
 
-from subprocess import run, CalledProcessError, DEVNULL
-from types import SimpleNamespace as SName
-
-HOME_DIR = os.environ.get('HOME_DIR', '/home/dnx/dnxfirewall')
+HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
 sys.path.insert(0, HOME_DIR)
 
 from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
@@ -242,7 +239,7 @@ class IPTablesManager:
         shell(f'sudo iptables -D {rule.zone} {rule.position}', check=True)
 
     def modify_management_access(self, fields):
-        '''add or remove mangement access rule as configured by webui. ports must be a list, even if only one port is needed.'''
+        '''add or remove management access rule as configured by webui. ports must be a list, even if only one port is needed.'''
 
         zone = globals()[f'{fields.zone.upper()}_IN']
         action = '-A' if fields.action is CFG.ADD else '-D'

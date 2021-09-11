@@ -7,11 +7,8 @@ import ssl
 
 from ipaddress import IPv4Address
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
-from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
-from dnx_sysmods.configure.file_operations import * # pylint: disable=unused-wildcard-import
+from dnx_sysmods.configure.def_constants import *
+from dnx_sysmods.configure.file_operations import *
 from dnx_sysmods.configure.signature_operations import combine_domains
 
 from dnx_secmods.dns_proxy.dns_proxy_log import Log

@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
+import __init__
+
 import os, sys
 import time
 
 from datetime import timedelta
 from flask import Flask, render_template, redirect, url_for, request, session, jsonify
-
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
 
 import dnx_sysmods.configure.web_validate as validate
 
@@ -15,10 +14,6 @@ from dnx_sysmods.configure.def_constants import CFG, DATA, FIVE_SEC
 from dnx_sysmods.configure.file_operations import load_configuration, ConfigurationManager
 from dnx_sysmods.configure.exceptions import ValidationError
 from dnx_sysmods.database.ddb_connector_sqlite import DBConnector
-from dnx_system.sys_main import system_action
-from dnx_secmods.cfirewall.fw_control import FirewallManage
-
-from dnx_webui.dfe_dnx_authentication import Authentication, user_restrict
 from dnx_sysmods.logging.log_main import LogHandler as Log
 
 import dnx_webui.dfe_dnx_dashboard as dfe_dashboard
@@ -30,15 +25,21 @@ import dnx_webui.dfe_settings_syslog as syslog_settings
 import dnx_webui.dfe_settings_categories as category_settings
 import dnx_webui.dfe_advanced_whitelist as whitelist
 import dnx_webui.dfe_advanced_blacklist as blacklist
+import dnx_webui.dfe_advanced_firewall as dnx_fwall
+import dnx_webui.dfe_advanced_nat as dnx_nat
 import dnx_webui.dfe_advanced_domain as dns_proxy
 import dnx_webui.dfe_advanced_ip as ip_proxy
-import dnx_webui.dfe_advanced_firewall as dnx_fwall
 import dnx_webui.dfe_advanced_ips as dnx_ips
+import dnx_webui.dfe_system_logs as dfe_logs
+import dnx_webui.dfe_system_reports as proxy_reports
 import dnx_webui.dfe_system_users as dfe_users
 import dnx_webui.dfe_system_backups as dfe_backups
-import dnx_webui.dfe_system_reports as proxy_reports
-import dnx_webui.dfe_system_logs as dfe_logs
 import dnx_webui.dfe_system_services as dnx_services
+
+from dnx_webui.dfe_dnx_authentication import Authentication, user_restrict
+
+from dnx_system.sys_main import system_action
+from dnx_secmods.cfirewall.fw_control import FirewallManage
 
 LOG_NAME = 'web_app'
 
@@ -259,7 +260,7 @@ def advanced_nat(dnx_session_data):
     page_settings.update(dnx_session_data)
 
     page_action = firewall_page_logic(
-        dnx_fwall, page_settings, 'nat_settings', page_name='advanced_nat')
+        dnx_nat, page_settings, 'nat_settings', page_name='advanced_nat')
 
     return page_action
 

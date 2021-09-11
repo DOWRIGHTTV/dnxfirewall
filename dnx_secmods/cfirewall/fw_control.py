@@ -6,12 +6,11 @@ import threading
 
 from array import array
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
+from dnx_sysmods.configure.def_constants import HOME_DIR
 from dnx_sysmods.configure.file_operations import cfg_read_poller, load_configuration, ConfigurationManager
-from dnx_gentools.standard_tools import Initialize
 from dnx_sysmods.logging.log_main import LogHandler as Log
+
+from dnx_gentools.standard_tools import Initialize
 
 FW_CONTROL = 9001
 DEF_VERION = 'firewall_pending'
@@ -160,11 +159,11 @@ class FirewallManage:
         '''
 
         if (version not in self.versions):
-            return None
+            return {}
             # raise ValueError(f'{version} is not a valid version.')
 
         if (section not in self.sections):
-            return None
+            return {}
             # raise ValueError(f'{version} is not a valid section.')
 
         with ConfigurationManager(f'firewall_{version}', file_path=DEF_USR_PATH) as dnx_fw:

@@ -5,12 +5,9 @@ import os, sys
 from socket import inet_aton
 from collections import namedtuple
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
-from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
-from dnx_iptools.def_structs import * # pylint: disable=unused-wildcard-import
-from dnx_iptools.protocol_tools import * # pylint: disable=unused-wildcard-import
+from dnx_sysmods.configure.def_constants import *
+from dnx_iptools.def_structs import *
+from dnx_iptools.protocol_tools import *
 from dnx_gentools.standard_tools import bytecontainer
 from dnx_sysmods.configure.def_namedtuples import CACHED_RECORD
 

@@ -217,7 +217,7 @@ class LogHandler:
 
     @classmethod
     def dprint(cls, message):
-        '''print function alternative to supress/show terminal output.'''
+        '''print function alternative to suppress/show terminal output.'''
         if (LOG.DEBUG):
             write_log(f'{message}\n')
 
@@ -276,7 +276,7 @@ class LogHandler:
 
     @classmethod
     def _add_logging_methods(cls):
-        '''dynamicly overrides default log level methods depending on current log settings.'''
+        '''dynamically overrides default log level methods depending on current log settings.'''
 
         mapping = Format.convert_level()
 

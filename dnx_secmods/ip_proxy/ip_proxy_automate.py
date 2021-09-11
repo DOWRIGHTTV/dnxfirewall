@@ -3,17 +3,15 @@
 import os, sys
 import threading
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
 import dnx_sysmods.configure.signature_operations as signature_operations
 
-from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
+from dnx_sysmods.configure.def_constants import *
 from dnx_sysmods.configure.file_operations import load_configuration, cfg_read_poller
 from dnx_sysmods.configure.iptables import IPTablesManager
-from dnx_gentools.standard_tools import Initialize
 
 from dnx_secmods.ip_proxy.ip_proxy_log import Log
+
+from dnx_gentools.standard_tools import Initialize
 
 
 class Configuration:
