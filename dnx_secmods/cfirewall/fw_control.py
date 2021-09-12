@@ -12,12 +12,11 @@ from dnx_sysmods.logging.log_main import LogHandler as Log
 
 from dnx_gentools.standard_tools import Initialize
 
-FW_CONTROL = 9001
-DEF_VERION = 'firewall_pending'
-DEF_USR_PATH = 'dnx_system/iptables/usr'
-PENDING_RULE_FILE = f'{HOME_DIR}/{DEF_USR_PATH}/firewall_pending.json'
-ACTIVE_RULE_FILE  = f'{HOME_DIR}/{DEF_USR_PATH}/firewall_active.json'
-COPY_RULE_FILE    = f'{HOME_DIR}/{DEF_USR_PATH}/firewall_copy.json'
+DEFAULT_VERION = 'firewall_pending'
+DEFAULT_PATH = 'dnx_system/iptables'
+PENDING_RULE_FILE = f'{HOME_DIR}/{DEFAULT_PATH}/usr/firewall_pending.json'
+ACTIVE_RULE_FILE  = f'{HOME_DIR}/{DEFAULT_PATH}/usr/firewall_active.json'
+COPY_RULE_FILE    = f'{HOME_DIR}/{DEFAULT_PATH}/usr/firewall_copy.json'
 
 ConfigurationManager.set_log_reference(Log)
 
@@ -45,7 +44,7 @@ class FirewallManage:
     sections = ['BEFORE', 'MAIN', 'AFTER']
 
     def __init__(self):
-        self.firewall = load_configuration(DEF_VERION, filepath=DEF_USR_PATH)
+        self.firewall = load_configuration(DEFAULT_VERION, filepath=DEFAULT_PATH)
 
     def add(self, pos, rule, *, section):
         '''insert or append operation of new firewall rule to the specified section.'''
@@ -53,7 +52,7 @@ class FirewallManage:
         # for comparison operators, but will use str as key as required for json.
         pos_int = int(pos)
 
-        with ConfigurationManager(DEF_VERION, file_path=DEF_USR_PATH) as dnx_fw:
+        with ConfigurationManager(DEFAULT_VERION, file_path=DEFAULT_PATH) as dnx_fw:
             firewall = dnx_fw.load_configuration()
 
             ruleset = firewall[section]
@@ -86,7 +85,7 @@ class FirewallManage:
 
     def remove(self, pos, *, section):
 
-        with ConfigurationManager(DEF_VERION, file_path=DEF_USR_PATH) as dnx_fw:
+        with ConfigurationManager(DEFAULT_VERION, file_path=DEFAULT_PATH) as dnx_fw:
             firewall = dnx_fw.load_configuration()
 
             ruleset = firewall[section]
@@ -109,7 +108,7 @@ class FirewallManage:
 
         move = True if pos != static_pos else False
 
-        with ConfigurationManager(DEF_VERION, file_path=DEF_USR_PATH) as dnx_fw:
+        with ConfigurationManager(DEFAULT_VERION, file_path=DEFAULT_PATH) as dnx_fw:
             firewall = dnx_fw.load_configuration()
 
             ruleset = firewall[section]
@@ -166,7 +165,7 @@ class FirewallManage:
             return {}
             # raise ValueError(f'{version} is not a valid section.')
 
-        with ConfigurationManager(f'firewall_{version}', file_path=DEF_USR_PATH) as dnx_fw:
+        with ConfigurationManager(f'firewall_{version}', file_path=DEFAULT_PATH) as dnx_fw:
             firewall = dnx_fw.load_configuration()
 
             return firewall[section]
@@ -196,9 +195,7 @@ class FirewallControl:
         # by the inspection function callbacks
         self.cfirewall = cfirewall
 
-    # threads will be started here. i want to keep the firewall rules here so it can return them easily
-    # upon request AND NOTE: we may be able to get away with one way communication to firewall if we manage
-    # the current settigs here. the only issue would be if they become unsynced somehow.
+    # threads will be started here.
     def run(self):
 
         threading.Thread(target=self.monitor_zones).start()
@@ -206,15 +203,15 @@ class FirewallControl:
 
         self._initialize.wait_for_threads(count=2)
 
-    @cfg_read_poller('zone_map', alt_path='dnx_system/iptables/usr')
+    @cfg_read_poller('zone_map', folder='iptables')
     # zone int values are arbritrary / randomly selected on zone creation.
     # TODO: see why this is making a second iteration
-    def monitor_zones(self, fw_rules):
+    def monitor_zones(self, zone_map):
         '''calls to Cython are made from within this method block. the GIL must be manually acquired on the Cython
         side or the Python interpreter will crash. Monitors the firewall zone file for changes and loads updates to
         cfirewall.'''
 
-        dnx_zones = load_configuration(fw_rules, filepath='dnx_system/iptables/usr')
+        dnx_zones = load_configuration(zone_map, filepath='dnx_system/iptables')
 
         # converting list to python array, then sending to Cython to modify C array.
         # this format is required due to transitioning between python and C. python arrays are
@@ -230,13 +227,13 @@ class FirewallControl:
 
         self._initialize.done()
 
-    @cfg_read_poller('firewall_active', alt_path='dnx_system/iptables/usr')
+    @cfg_read_poller('firewall_active', folder='iptables')
     def monitor_rules(self, fw_rules):
         '''calls to Cython are made from within this method block. the GIL must be manually acquired on the Cython
         side or the Python interpreter will crash. Monitors the active firewall rules file for changes and loads
         updates to cfirewall.'''
 
-        dnx_fw = load_configuration(fw_rules, filepath='dnx_system/iptables/usr')
+        dnx_fw = load_configuration(fw_rules, filepath='dnx_system/iptables')
 
         # splitting out sections then determine which one has changed. this is to reduce
         # amount of work done on the C side. not for performance, but more for ease of programming.

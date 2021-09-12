@@ -8,9 +8,10 @@ from itertools import zip_longest
 from dnx_sysmods.configure.file_operations import load_configuration
 from dnx_sysmods.configure.system_info import Interface, System, Services
 from dnx_sysmods.database.ddb_connector_sqlite import DBConnector
+from dnx_sysmods.logging.log_main import LogHandler as Log
 
 def load_page():
-    with DBConnector() as ProxyDB:
+    with DBConnector(Log) as ProxyDB:
         domain_counts = (
             ProxyDB.unique_domain_count(action='blocked'),
             ProxyDB.unique_domain_count(action='allowed')

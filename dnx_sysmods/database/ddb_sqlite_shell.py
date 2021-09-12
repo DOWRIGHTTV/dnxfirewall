@@ -2,12 +2,14 @@
 
 # A minimal SQLite shell for experiments | https://docs.python.org/3.8/library/sqlite3.html
 
+import __init__
+
 import os, sys
 import time
 import sqlite3
 import traceback
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
+from dnx_sysmods.configure.def_constants import HOME_DIR
 
 valid_commands = set(['select',])
 
@@ -21,6 +23,8 @@ print('-'*36)
 def sqlite_shell():
 
     while True:
+
+        # set to reset buffer after each line. (no multi-line commands)
         line, buffer = input(': '), ''
         if (not line):
             break

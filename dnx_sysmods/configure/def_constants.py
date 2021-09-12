@@ -18,9 +18,15 @@ shell = _partial(_run, shell=True, stdout=_DEVNULL, stderr=_DEVNULL)
 byte_join = b''.join
 str_join = ''.join
 
+# this is a dev helper to when switching between appliance and dev box
+__current_user = _run('whoami', shell=True, text=True, capture_output=True).stdout.strip()
 # dnx user/group
-USER  = 'dnx'
-GROUP = 'dnx'
+if __current_user == 'free':
+    USER  = 'free'
+    GROUP = 'free'
+else:
+    USER  = 'dnx'
+    GROUP = 'dnx'
 
 ROOT = True if not _os.getuid() else False
 

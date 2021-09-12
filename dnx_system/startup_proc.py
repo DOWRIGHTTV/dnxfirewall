@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 
-import os, sys
+import __init__
+
+import os
 import json
 
 from secrets import token_urlsafe
-from pathlib import Path
-from subprocess import Popen
-
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
 
 import dnx_sysmods.configure.configure as configure
 

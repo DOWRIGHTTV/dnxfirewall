@@ -49,7 +49,7 @@ firewall_rules[3] = <FWrule**>&fw_after_section
 # to reset to pointer to NULL then check for this every time we grab a rule pointer.
 cdef u_int32_t CUR_RULE_COUNTS[FW_SECTION_COUNT]
 
-CUR_RULE_COUNTS[0] = 0 # SYSTEN_CUR_RULE_COUNT
+CUR_RULE_COUNTS[0] = 0 # SYSTEM_CUR_RULE_COUNT
 CUR_RULE_COUNTS[1] = 0 # BEFORE_CUR_RULE_COUNT
 CUR_RULE_COUNTS[2] = 0 # MAIN_CUR_RULE_COUNT
 CUR_RULE_COUNTS[3] = 0 # AFTER_CUR_RULE_COUNT
@@ -119,7 +119,6 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # =============================== #
 
     # this is where we set the verdict. ip proxy is next in line regardless of action to gather geolocation data
-
     cdef u_int32_t verdict
     # NOTE: this will invoke the the rule action without forwarding to another queue. only to be used for testing and
     # can be controlled via an argument to nf_run().

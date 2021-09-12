@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
-import os, sys
+if (__name__ == '__main__'):
+    import __init__
+
+import os
 
 from json import loads, dumps
 from socket import socket, AF_INET, SOCK_DGRAM
 from threading import Thread
-
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
 
 from dnx_sysmods.configure.def_constants import *
 from dnx_gentools.standard_tools import looper

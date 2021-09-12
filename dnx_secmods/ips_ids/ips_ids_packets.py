@@ -161,7 +161,3 @@ class IPSResponse(RawResponse):
             # overriding packet ip header after process is complete. this will make the loops more efficient than
             # direct references to the instance object every time.
             packet.ip_header = ip_header
-
-    #all packets need to be further examined in override method
-    def _override_needed(self, packet):
-        return True

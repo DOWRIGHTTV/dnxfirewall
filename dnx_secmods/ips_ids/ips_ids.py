@@ -55,7 +55,7 @@ class IPS_IDS(NFQueue):
 
     # if nothing is enabled the packet will be sent back to iptables for further inspection
     def _pre_inspect(self, packet):
-        # dropping packet from ip proxy is flagged. this takes priority over ips whitelist since due to module heirarchy.
+        # dropping packet from ip proxy if flagged. this takes priority over ips whitelist due to module heirarchy.
         if (packet.action is CONN.DROP):
             packet.nfqueue.drop()
 

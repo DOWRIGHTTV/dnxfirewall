@@ -19,7 +19,8 @@
         <div class="row">
             <div class="col s12">
                 <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">Rule List (**Pending)</h4>
+                    <h4 class="{{title_color}}">Rule List
+                    {% if firewall_settings['pending_changes'] %} (*Changes Pending) {% endif %}</h4>
                     <div class="row">
                         <form action="advanced/firewall" method="POST">
                             <input type="hidden" name="tab" value="1">
@@ -194,16 +195,27 @@
                 <div class="input-field col s2 offset-s1 {{input_color}}">
                     <input type="number" name="position" class="validate" value="1" min="1" max="{{firewall_settings['firewall_rules']|length + 1}}">
                 </div>
-                <div>
-                    <h6 class="{{title_color}}" style="float: left;">Use:</h6>
+                <div class="input-field col offset-s1">
+                    <h6 class="{{title_color}}">Log:</h6>
                 </div>
-                <div class="input-field col s3 offset-s1 {{input_color}}">
+                <div class="input-field col s1">
                     <label>
-                        Off
-                        <input type="checkbox" checked="checked" name="rule_state" value="1" disabled>
-                        <span class="lever"></span>
-                        On
+                        <input type="checkbox" name="log" disabled>
+                        <span></span>
                     </label>
+                </div>
+                <div class="input-field col">
+                    <h6 class="{{title_color}}">Use:</h6>
+                </div>
+                <div class="input-field col s3 {{input_color}}">
+                    <div class="switch">
+                        <label>
+                            Off
+                            <input type="checkbox" checked="checked" name="rule_state" value="1" disabled>
+                            <span class="lever"></span>
+                            On
+                        </label>
+                    </div>
                 </div>
                 <div>
                     <h4 class="{{title_color}}" style="float: right;">Create Rule</h4>
@@ -265,15 +277,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="input-field col s2">
-                    <p>
-                      <label>
-                        <input type="checkbox" name="log" disabled>
-                        <span>Log</span>
-                      </label>
-                    </p>
-                </div>
-                <div>
+                <div class="input-field col offset-s1">
                     <h6 class="{{title_color}}" style="float: left;">Sec:</h6>
                 </div>
                 <div class="input-field col s2 offset-s1 {{input_color}}">
@@ -307,16 +311,27 @@
                 <div class="input-field col s2 offset-s1 {{input_color}}">
                     <input type="number" name="position" class="validate" value="1" min="1" max="{{firewall_settings['firewall_rules']|length + 1}}">
                 </div>
-                <div>
-                    <h6 class="{{title_color}}" style="float: left;">Use:</h6>
+                <div class="input-field col offset-s1">
+                    <h6 class="{{title_color}}">Log:</h6>
+                </div>
+                <div class="input-field col s1">
+                    <label>
+                        <input type="checkbox" name="log" disabled>
+                        <span></span>
+                    </label>
+                </div>
+                <div class="input-field col">
+                    <h6 class="{{title_color}}">Use:</h6>
                 </div>
                 <div class="input-field col s3 offset-s1 {{input_color}}">
-                    <label>
-                        Off
-                        <input type="checkbox" checked="checked" name="rule_state" value="1" disabled>
-                        <span class="lever"></span>
-                        On
-                    </label>
+                    <div class="switch">
+                        <label>
+                            Off
+                            <input type="checkbox" checked="checked" name="rule_state" value="1" disabled>
+                            <span class="lever"></span>
+                            On
+                        </label>
+                    </div>
                 </div>
                 <div>
                     <h4 class="{{title_color}}" style="float: right;">Create Rule</h4>
@@ -378,15 +393,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="input-field col s2">
-                    <p>
-                      <label>
-                        <input type="checkbox" name="log" disabled>
-                        <span>Log</span>
-                      </label>
-                    </p>
-                </div>
-                <div>
+                <div class="input-field col offset-s1">
                     <h6 class="{{title_color}}" style="float: left;">Sec:</h6>
                 </div>
                 <div class="input-field col s2 offset-s1 {{input_color}}">

@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
 
-import os, sys
+import __init__
 
 from time import sleep
 from json import dump
 from subprocess import check_output
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
 from dnx_sysmods.configure.def_constants import NO_DELAY, INT_BANDWIDTH_TIMER
-from dnx_gentools.standard_tools import looper
 from dnx_sysmods.logging.log_main import LogHandler as Log
+
+from dnx_gentools.standard_tools import looper
 
 LOG_NAME = 'system'
 

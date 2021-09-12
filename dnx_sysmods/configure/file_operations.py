@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os, sys
+import os
 import json
 import time
 import shutil
@@ -11,10 +11,7 @@ from fcntl import flock, LOCK_EX, LOCK_UN
 from secrets import token_urlsafe
 from collections import defaultdict
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
-from dnx_sysmods.configure.def_constants import USER, GROUP, FILE_POLL_TIMER, str_join
+from dnx_sysmods.configure.def_constants import HOME_DIR, USER, GROUP, FILE_POLL_TIMER, str_join
 from dnx_sysmods.configure.def_constants import DNS_BIN_OFFSET, DNS_CAT
 from dnx_sysmods.configure.exceptions import ValidationError
 
@@ -162,15 +159,19 @@ def load_top_domains_filter():
     with open(f'{HOME_DIR}/dnx_system/signatures/domain_lists/valid_top.domains', 'r') as tdf:
         return [s.strip() for s in tdf.readlines() if s.strip() and '#' not in s]
 
-def calculate_file_hash(file_to_hash, *, path=f'{HOME_DIR}/dnx_system', folder='data'):
+def calculate_file_hash(file_to_hash, *, path=f'dnx_system', folder='data'):
     '''returns the sha256 secure hash of the file sent in'''
 
-    with open(f'{path}/{folder}/{file_to_hash}', 'rb') as f2h:
-        file_hash = hashlib.sha256(f2h.read()).digest()
+    try:
+        with open(f'{HOME_DIR}/{path}/{folder}/{file_to_hash}', 'rb') as f2h:
+            file_hash = hashlib.sha256(f2h.read()).digest()
+
+    except FileNotFoundError:
+        return None
 
     return file_hash
 
-def cfg_read_poller(watch_file, alt_path=None, class_method=False):
+def cfg_read_poller(watch_file, folder='dnx_system/data', class_method=False):
     '''Automate Class configuration file poll decorator. apply this decorator to all functions
     that will update configurations loaded in memory from json files. config file must be sent
     in via decorator argument. set class_method argument to true if being used with a class method.'''
@@ -184,13 +185,13 @@ def cfg_read_poller(watch_file, alt_path=None, class_method=False):
     def decorator(function_to_wrap):
         if (not class_method):
             def wrapper(*args):
-                watcher = Watcher(watch_file, alt_path, callback=function_to_wrap)
+                watcher = Watcher(watch_file, folder, callback=function_to_wrap)
                 watcher.watch(*args)
 
         else:
             @classmethod
             def wrapper(*args):
-                watcher = Watcher(watch_file, alt_path, callback=function_to_wrap)
+                watcher = Watcher(watch_file, folder, callback=function_to_wrap)
                 watcher.watch(*args)
 
         return wrapper
@@ -224,7 +225,7 @@ class ConfigurationManager:
 
     __slots__ = (
         '_config_lock', '_filename', '_data_written',
-        '_std_path', '_system_path_file', '_usr_path_file',
+        '_file_path', '_system_path_file', '_usr_path_file',
         '_temp_file', '_temp_file_path', '_config_file',
     )
 
@@ -242,23 +243,21 @@ class ConfigurationManager:
 
         # initialization isnt required if config file is not specified.
         if (config_file):
-            self._std_path = True
+            self._file_path = file_path
             self._data_written = False
-            if (file_path):
-                self._std_path = False
 
-            else:
+            if (not file_path):
                 file_path = 'dnx_system/data'
 
             # backwards compatibility between specifying file ext and not.
             self._filename = config_file if config_file.endswith('.json') else f'{config_file}.json'
 
             self._system_path_file = f'{HOME_DIR}/{file_path}/{self._filename}'
-            self._usr_path_file = f'{HOME_DIR}/dnx_system/data/usr/{self._filename}'
+            self._usr_path_file = f'{HOME_DIR}/{file_path}/usr/{self._filename}'
 
         else:
             # make debug log complete if in lock only mode
-            self._filename = 'config manager'
+            self._filename = 'ConfigurationManager'
 
     # attempts to acquire lock on system config lock (blocks until acquired), then opens a temporary
     # file which the new configuration will be written to, and finally returns the class object.
@@ -271,7 +270,7 @@ class ConfigurationManager:
         # setup isnt required if config file is not specified.
         if (self._config_file):
             # TEMP prefix is to wildcard match any orphaned files for deletion
-            self._temp_file_path = f'{HOME_DIR}/dnx_system/data/usr/TEMP_{token_urlsafe(10)}.json'
+            self._temp_file_path = f'{HOME_DIR}/{self._file_path}/usr/TEMP_{token_urlsafe(10)}.json'
             self._temp_file = open(self._temp_file_path, 'w+')
 
             # changing file permissions and settings owner to dnx:dnx to not cause permissions issues after copy.
@@ -291,9 +290,7 @@ class ConfigurationManager:
             pass
 
         elif (exc_type is None and self._data_written):
-            replace_target = self._usr_path_file if self._std_path else self._system_path_file
-
-            os.replace(self._temp_file_path, replace_target)
+            os.replace(self._temp_file_path, self._usr_path_file)
 
         else:
             self._temp_file.close()
@@ -324,7 +321,7 @@ class ConfigurationManager:
         with open(self._system_path_file, 'r') as system_settings:
             system_settings = json.load(system_settings)
 
-        if (self._std_path) and os.path.exists(self._usr_path_file):
+        if os.path.exists(self._usr_path_file):
 
             # loading user configurations (if exists)
             with open(self._usr_path_file, 'r') as usr_settings:
@@ -361,14 +358,11 @@ class Watcher:
         '_last_modified_time'
     )
 
-    def __init__(self, watch_file, alt_path, *, callback):
+    def __init__(self, watch_file, folder, *, callback):
         self._watch_file = watch_file
         self._callback   = callback
 
-        if (alt_path):
-            self._full_path = f'{HOME_DIR}/{alt_path}/{watch_file}'
-        else:
-            self._full_path  = f'{HOME_DIR}/dnx_system/data/usr/{watch_file}'
+        self._full_path = f'{HOME_DIR}/dnx_system/{folder}/usr/{watch_file}'
 
         self._last_modified_time = 0
 
@@ -376,11 +370,8 @@ class Watcher:
     def watch(self, *args):
         args = [*args, self._watch_file]
 
-        # NOTE: initial load of data to  accommodate the new usr dir. This may change in the future.
-        # TODO: see if this can be wrapped into the while loop or if this is most efficient.
-        self._callback(*args)
-
         while True:
+
             if (self.is_modified):
                 self._callback(*args)
 
@@ -391,6 +382,15 @@ class Watcher:
     # if watch file has been modified will update modified time and return True, else return False
     def is_modified(self):
         if not os.path.isfile(self._full_path):
+
+            # condition to allow initial load to happen without the usr file being present.
+            # NOTE: the load configuration function used loads system defaults prior to user settings
+            # so there will be no ussue marking a non existent file as modified.
+            if (not self._last_modified_time):
+                self._last_modified_time = 1
+
+                return True
+
             return False
 
         modified_time = os.stat(self._full_path).st_mtime

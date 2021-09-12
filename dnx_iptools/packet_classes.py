@@ -35,6 +35,9 @@ class Listener:
     _Log = None
     _packet_parser  = _NOT_IMPLEMENTED
     _proxy_callback = _NOT_IMPLEMENTED
+
+    # TODO: make this more dynamic. builtins can stay somewhat static, but code can be done in a way
+    # that doesnt explicitly mentions the intf identities.
     _intfs = (
         get_intf('lan'),
         get_intf('dmz')
@@ -229,9 +232,6 @@ class Listener:
         raise NotImplementedError('the listener_sock method must be overriden in subclass.')
 
 
-# TODO: test the new fail detection algo stuffs and ensure it is working as inteded or whatever ya know.
-# i have a feeling it may be having issues based on dot-relay, but im not sure if they share the same
-# code for fail detection anymore.
 class ProtoRelay:
     '''parent class for udp and tls relays providing standard built in methods to start, check status, or add
     jobs to the work queue. _dns_queue object must be overwritten by sub classes.'''
@@ -545,8 +545,11 @@ class NFPacket:
 
 
 class RawPacket:
-    '''parent class designed to index/parse full tcp/ip packets (including ethernet). two alternate
-    constructors are supplied to support nfqueue or raw sockets.
+    '''NOTICE: this class has been significantly reduced in use. this should probably be reduced
+    in code as well or a new class should be derived from it for the dns proxy.
+
+    parent class designed to index/parse full tcp/ip packets (including ethernet). alternate
+    constructors are supplied to support different listener types eg. raw sockets.
 
     raw socket:
         packet = RawPacket.interface(data, address, socket)
@@ -555,17 +558,19 @@ class RawPacket:
     objects in namedtuples or to index application data.
 
     '''
+    # this will never be set as a class var, but each instance will set this locally depending
+    # on the specific packet received.
+    protocol = PROTO.NOT_SET
+
     __slots__ = (
         '_dlen', '_addr',
 
         # init vars
-        'data',
-        'timestamp', 'protocol',
-        'nfqueue', 'zone',
+        'data', 'timestamp', 'protocol',
         'sendto', 'intf_ip',
-        'src_mac', 'dst_mac',
-        'sf_octet', 'df_octet',
-        'src_ip', 'dst_ip', 'ip_header',
+
+        # ip
+        'ip_header', 'src_ip', 'dst_ip',
         'src_port', 'dst_port',
 
         # tcp
@@ -598,10 +603,6 @@ class RawPacket:
         self.icmp_type = None
         self.udp_payload = b''
 
-        # TODO: this should probably be a class var since it MUST be set in the subclass || NOTE: what the fuck does this
-        # even mean????
-        self.protocol = PROTO.NOT_SET
-
     def __str__(self):
         return f'{self.__class__.__name__}(proto={self.protocol}, len={self._dlen})'
 
@@ -614,10 +615,6 @@ class RawPacket:
 
         self.intf_ip = sock_info[1].packed
         self.sendto  = sock_info[4]
-
-        # NOTE: source mac is only needed to identify infected/compromised local hosts
-        # currently using arp at time of log to identify mac address of infected host
-        # self.src_mac = address
 
         self._dlen = len(data)
         self.data = data
@@ -704,15 +701,17 @@ class RawResponse:
     _Log = None
     _Module = None
     _registered_socks = {}
+
+    # TODO: make this more dynamic. builtins can stay somewhat static, but code can be done in a way
+    # that doesnt explicitly mentions the intf identities.
     _intfs  = (
-        (LAN_IN, get_intf('lan')),
         (WAN_IN, get_intf('wan')),
+        (LAN_IN, get_intf('lan')),
         (DMZ_IN, get_intf('dmz'))
     )
 
     __slots__ = (
-        '_intf', '_packet',
-        '_dnx_src_ip', 'send_data'
+        '_packet', 'send_data'
     )
 
     def __new__(cls, *args, **kwargs):
@@ -732,6 +731,7 @@ class RawResponse:
 
         if (cls.__setup):
             raise RuntimeError('response handler setup can only be called once per process.')
+
         cls.__setup = True
 
         cls._Module = Module
@@ -756,8 +756,9 @@ class RawResponse:
         wait_for_interface(interface=_intf)
         ip = wait_for_ip(interface=_intf)
 
-        # sock sender is the direct reference to the socket send method
-        cls._registered_socks[zone] = NFQ_SEND_SOCK(*intf, ip, cls.sock_sender(_intf))
+        # sock sender is the direct reference to the socket send/to method, adding zone into value for easier
+        # reference in prepare and send method.
+        cls._registered_socks[zone] = NFQ_SEND_SOCK(zone, ip, cls.sock_sender(_intf))
 
         cls._Log.informational(f'{cls.__name__}: {_intf} registered.')
 
@@ -769,24 +770,20 @@ class RawResponse:
         Do not override.
 
         '''
-        zone = packet.zone
 
         self = cls(packet)
 
-        intf = self._registered_socks_get(zone)
+        intf = self._registered_socks_get(packet.in_zone)
 
-        # NOTE: if the wan interface has a static ip address we can use the ip assigned during registration
+        # NOTE: if the wan interface has a static ip address we can use the ip assigned during registration.
         # this will need a condition to check, but wont need to masquerade
-        if (zone == WAN_IN):
+        if (intf.zone == WAN_IN):
             dnx_src_ip = get_src_ip(dst_ip=packet.src_ip, packed=True)
 
         else:
             dnx_src_ip = packet.dst_ip.packed
 
-        # if (self._override_needed(packet)):
-        #     self._packet_override(packet)
-
-        # calling hook for packet generation in subclass and sending over direct socket send ref
+        # calling hook for packet generation in subclass then sending via direct socket sendto ref
         send_data = self._prepare_packet(packet, dnx_src_ip)
         try:
             intf.sock_sendto(send_data, (int_to_ipaddr(packet.src_ip), 0))
@@ -800,23 +797,6 @@ class RawResponse:
 
         '''
         raise NotImplementedError('_prepare_packet method needs to be overridden by subclass.')
-
-    def _packet_override(self, packet):
-        '''overrides protocol information to reverse pre route nat changes.
-
-        May be overridden.
-
-        '''
-        pass
-
-    def _override_needed(self, packet):
-        '''property representing packet override condition, if this returns True the override method
-        will be called from prepare and send. default is False.
-
-        May be overriden.
-
-        '''
-        return False
 
     @staticmethod
     def sock_sender(intf):

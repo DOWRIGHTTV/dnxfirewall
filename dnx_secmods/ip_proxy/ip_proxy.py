@@ -53,7 +53,13 @@ class IPProxy(NFQueue):
 
         # flag for drop by cfirewall > inspect geo only
         elif (packet.action is CONN.DROP):
-            packet.nfqueue.drop()
+
+            # forwarding packet to ips for ddos inspection
+            if (direction is DIR.INBOUND and packet.ips_profile):
+                packet.nfqueue.forward(Queue.IPS_IDS)
+
+            else:
+                packet.nfqueue.drop()
 
             # quick path to log geo data.
             Inspect.geo_only(packet)
@@ -79,7 +85,7 @@ class IPProxy(NFQueue):
             # re-mark needed to notify ips to drop the packet and do ddos inspection only if enabled.
             if (direction is DIR.INBOUND and packet.ips_profile):
 
-                # bitwise op resets first 4 bits (allocated for action) to 0 then re set the bits for drop.
+                # bitwise op resets first 4 bits (allocated for action) to 0 then set the bits for drop.
                 packet.nfqueue.update_mark(packet.mark & 65520 | CONN.DROP)
 
                 packet.nfqueue.forward(Queue.IPS_IDS)

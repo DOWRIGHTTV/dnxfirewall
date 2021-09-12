@@ -1,7 +1,5 @@
 #!/usr/bin/python3
 
-import sys, os
-
 from types import SimpleNamespace
 from ipaddress import IPv4Network
 from collections import defaultdict
@@ -30,7 +28,7 @@ _zone_map = {0: 'any'}
 def load_page(section='MAIN'):
     dnx_settings = load_configuration('config')
 
-    dnx_intfs = dnx_settings['interfaces']['builtins']
+    dnx_intfs = dnx_settings['interfaces']
     dnx_zones = dnx_settings['zones']
 
     # building out interface to zone map NOTE: builtins only for now
@@ -55,7 +53,7 @@ def load_page(section='MAIN'):
         'zone_map': zone_map,
         'zone_manager': zone_manager,
         'firewall_rules': firewall_rules,
-        'pending_changes': compare_rule_files()
+        'pending_changes': is_pending_changes()
     }
 
 def update_page(form):
@@ -155,8 +153,13 @@ def get_and_format_rules(section, version='pending'):
 
     return converted_rules
 
-def compare_rule_files():
+def is_pending_changes():
     active = calculate_file_hash('firewall_active.json', folder='iptables/usr')
     pending = calculate_file_hash('firewall_pending.json', folder='iptables/usr')
+
+    # if user has never modified rules, there is no pending changes. active file can be none
+    # if pending is present since a commit will write the active file.
+    if (pending is None):
+        return False
 
     return active != pending

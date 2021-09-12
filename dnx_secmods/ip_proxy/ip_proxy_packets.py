@@ -146,7 +146,3 @@ class ProxyResponse(RawResponse):
             # overriding packet ip header after process is complete. this will make the loops more efficient than
             # direct references to the instance object every time.
             packet.ip_header = ip_header
-
-    def _override_needed(self, packet):
-        # override only required on WAN -> local nets (lan, dmz)
-        return packet.direction is DIR.INBOUND

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-import __init__
+# for running with flask dev server
+if (__name__ == '__main__'):
+    import __init__
 
 import os, sys
 import time
@@ -761,7 +763,6 @@ def merge_items(a1, a2):
     return new_list
 
 app.add_template_global(merge_items, name='merge_items')
-
 
 if __name__ == '__main__':
     app.run(debug=True)

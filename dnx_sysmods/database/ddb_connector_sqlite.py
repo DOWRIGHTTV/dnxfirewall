@@ -1,5 +1,8 @@
 #!/usr/bin/python3
 
+if (__name__ == '__main__'):
+    import __init__
+
 import os, sys
 import time
 import json
@@ -10,10 +13,7 @@ import traceback
 from types import SimpleNamespace as SName
 from collections import namedtuple
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
-from dnx_sysmods.configure.def_constants import SQL_VERSION, ONE_DAY, FIVE_MIN, fast_time, write_log, str_join
+from dnx_sysmods.configure.def_constants import *
 from dnx_sysmods.configure.def_namedtuples import BLOCKED_DOM
 from dnx_sysmods.configure.system_info import System
 

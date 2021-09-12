@@ -223,7 +223,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for interface, speed in dashboard['interfaces']['builtins'].items() %}
+                        {% for interface, speed in dashboard['interfaces'].items() %}
                         <tr>
                             <td>{{interface}}</td>
                             <td>{{speed[0]}}</td>
