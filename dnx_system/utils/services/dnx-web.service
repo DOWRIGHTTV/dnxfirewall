@@ -1,6 +1,6 @@
 [Unit]
 Description=DNXFIREWALL Web Application Service
-After=nginx.service dnx-log.service dnx-syslog.service
+After=nginx.service dnx-log.service
 StartLimitIntervalSec=3
 
 [Service]
