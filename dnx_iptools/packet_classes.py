@@ -560,7 +560,7 @@ class RawPacket:
     '''
 
     __slots__ = (
-        '_dlen', '_addr',
+        '_dlen', '_addr', 'protocol',
 
         # init vars
         'data', 'timestamp',
