@@ -164,7 +164,7 @@ def proto_port(port_str):
         raise ValidationError('Invalid protocol/port definition. ex tcp/80 or udp/500-550')
 
     proto_int = _proto_map.get(port_str[0], None)
-    if (not proto_int):
+    if (proto_int is None):
         raise ValidationError('Invalid protocol. Use [any, tcp, udp, icmp].')
 
     ports = [convert_int(p) for p in port_str[1].split('-', 1)]

@@ -758,8 +758,6 @@ def merge_items(a1, a2):
         else:
             new_list.append(arg)
 
-    print(new_list)
-
     return new_list
 
 app.add_template_global(merge_items, name='merge_items')

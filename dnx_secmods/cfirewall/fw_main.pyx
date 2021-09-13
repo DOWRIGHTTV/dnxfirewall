@@ -155,49 +155,53 @@ cdef u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto)
         for i in range(current_rule_count):
 
             rule = firewall_rules[gi][i]
-            # source matching
 
-            # zone / currently tied to interface and designated LAN, WAN, DMZ
-            # printf('in_int=%u, s_zone=%u\n', hw.in_intf, rule.s_zone)
+            # NOTE: inspection order: src > dst | zone, ip_addr, protocol, port
+
+            # ================================================================== #
+            # ZONE MATCHING
+            # ================================================================== #
+            # currently tied to interface and designated LAN, WAN, DMZ
             if hw.in_zone != rule.s_zone and rule.s_zone != 0:
                 continue
 
-            # subnet
-            # printf('source ip=%u, ip_n_id=%u, rule ip=%u, rule netmask=%u\n', ip_header.saddr, ip_header.saddr & rule.s_net_mask, rule.s_net_id, rule.s_net_mask)
-            if ip_header.saddr & rule.s_net_mask != rule.s_net_id:
-                continue
-
-            rule_src_protocol = rule.s_port_start >> 16
-            # printf('header_proto=%u, rule_proto=%u\n', ip_header.protocol, rule.protocol)
-            if ip_header.protocol != rule_src_protocol and rule_src_protocol != 0:
-                continue
-
-            # printf('s_port_start=%u, s_port=%u, s_port_end=%u\n', rule.s_port_start, ntohs(proto.s_port), rule.s_port_end)
-            # ICMP will always match since all port vals will be set to 0
-            if not rule.s_port_start <= ntohs(proto.s_port) <= rule.s_port_end:
-                continue
-
-            # destination matching
-            # printf('out_int=%u, d_zone=%u\n', hw.out_intf, rule.d_zone)
-            # zone / currently tied to interface and designated LAN, WAN, DMZ
             if hw.out_zone != rule.d_zone and rule.d_zone != 0:
                 continue
 
-            # subnet
+            # ================================================================== #
+            # IP/NETMASK
+            # ================================================================== #
+            if ip_header.saddr & rule.s_net_mask != rule.s_net_id:
+                continue
+
             if ip_header.daddr & rule.d_net_mask != rule.d_net_id:
                 continue
 
+            # ================================================================== #
+            # PROTOCOL
+            # ================================================================== #
+            rule_src_protocol = rule.s_port_start >> 16
+            if ip_header.protocol != rule_src_protocol and rule_src_protocol != 0:
+                continue
+
             rule_dst_protocol = rule.d_port_start >> 16
-            # printf('header_proto=%u, rule_proto=%u\n', ip_header.protocol, rule.protocol)
             if ip_header.protocol != rule_dst_protocol and rule_dst_protocol != 0:
                 continue
 
-            # printf('d_port_start=%u, d_port=%u, d_port_end=%u\n', rule.d_port_start, ntohs(proto.d_port), rule.d_port_end)
+            # ================================================================== #
+            # PORT
+            # ================================================================== #
             # ICMP will always match since all port vals will be set to 0
-            if not rule.d_port_start <= ntohs(proto.d_port) <= rule.d_port_end:
+            if not rule.s_port_start <= ntohs(proto.s_port) <= rule.s_port_end and rule.s_port_start != 0:
                 continue
 
-            # printf('rule action: %i\n', rule.action)
+            # ICMP will always match since all port vals will be set to 0
+            if not rule.d_port_start <= ntohs(proto.d_port) <= rule.d_port_end and rule.d_port_start != 0:
+                continue
+
+            # ================================================================== #
+            # ACTION | return rule options
+            # ================================================================== #
             # drop will inherently forward to ip proxy for geo inspection. ip proxy will call drop.
             return (rule.sec_profiles[1] << 12 | rule.sec_profiles[0] << 8 | rule.action)
 
