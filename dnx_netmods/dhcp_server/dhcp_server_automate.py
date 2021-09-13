@@ -168,7 +168,7 @@ class Configuration:
             # interface friendly name eg. wan
             for _intf, settings in dhcp_intfs.items():
 
-                # ensuring the iterfaces match since we cannot guarantee order
+                # ensuring the interfaces match since we cannot guarantee order
                 if (intf != settings['ident']): continue
 
                 # creating ipv4 interface object which will be associated with the ident in the config.
@@ -233,7 +233,7 @@ class Leases(dict):
         '''
 
         # added change to storage queue for lease persistence across device/process shutdowns.
-        # will only store active leases. offers will be treated as volitile and not persist restarts
+        # will only store active leases. offers will be treated as volatile and not persist restarts
         if (record[0] is not DHCP.OFFERED):
             self._storage.add(_RECORD_CONTAINER(f'{ip}', record)) # pylint: disable=no-member
 

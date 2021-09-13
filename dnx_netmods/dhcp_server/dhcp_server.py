@@ -64,7 +64,7 @@ class DHCPServer(Listener):
 
     @classmethod
     def handle_dhcp(cls, packet):
-        '''pseudo alternate constructer acting as a callback for the Parent/Listener class, but will not return
+        '''pseudo alternate constructor acting as a callback for the Parent/Listener class, but will not return
         the created instance. instead it will internally manage the instance and ensure the request gets handled.'''
 
         self = cls()
