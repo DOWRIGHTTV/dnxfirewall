@@ -243,11 +243,12 @@ class ConfigurationManager:
 
         # initialization isnt required if config file is not specified.
         if (config_file):
-            self._file_path = file_path
             self._data_written = False
 
             if (not file_path):
                 file_path = 'dnx_system/data'
+
+            self._file_path = file_path
 
             # backwards compatibility between specifying file ext and not.
             self._filename = config_file if config_file.endswith('.json') else f'{config_file}.json'

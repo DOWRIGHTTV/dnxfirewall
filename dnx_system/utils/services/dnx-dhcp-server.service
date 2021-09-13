@@ -1,6 +1,6 @@
 [Unit]
-Description=DNXFIREWALL DNS Proxy Service
-After=dnx-log.service dnx-syslog.service
+Description=DNXFIREWALL DHCP Server Service
+After=dnx-log.service
 StartLimitIntervalSec=3
 
 [Service]
@@ -8,7 +8,7 @@ Type=simple
 Restart=always
 RestartSec=3
 User=root
-ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_secmods/dns_proxy/dns_proxy.py
+ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_netmods/dhcp_server/dhcp_server.py
 Environment=HOME_DIR=/home/dnx/dnxfirewall
 
 [Install]

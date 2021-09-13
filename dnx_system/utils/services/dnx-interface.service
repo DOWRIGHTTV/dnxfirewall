@@ -1,6 +1,6 @@
 [Unit]
 Description=DNXFIREWALL Interface Service
-After=dnx-database.service
+After=dnx-database-sqlite.service
 StartLimitIntervalSec=3
 
 [Service]

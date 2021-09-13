@@ -566,7 +566,7 @@ class RawPacket:
         '_dlen', '_addr',
 
         # init vars
-        'data', 'timestamp', 'protocol',
+        'data', 'timestamp',
         'sendto', 'intf_ip',
 
         # ip
