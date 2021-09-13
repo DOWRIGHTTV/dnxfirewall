@@ -122,7 +122,7 @@ def user_restrict(*authorized_roles):
                 return redirect(url_for('dnx_login'))
 
             # NOTE: this is dnx local tracking of sessions. not to be confused with flask session tracking. they
-            # are essentially copies of eachother, but dnx is used to track all active sessions.
+            # are essentially copies of each other, but dnx is used to track all active sessions.
             # NOTE: currently, dnx session data limits connections to 1 per user. this may change in the future, but
             # some enterprise systems have similar restrictions or multiple tab restrictions.
             session_tracker = load_configuration('session_tracker', filepath='dnx_webui/data')['active_users']
@@ -133,7 +133,7 @@ def user_restrict(*authorized_roles):
 
             # will redirect to not authorized page if the user role does not match
             # requirements for the page
-            # user_role = Authentication.get_user_role(username) # NOTE: should be depricated by dnx session tracker
+            # user_role = Authentication.get_user_role(username) # NOTE: should be deprecated by dnx session tracker
             if (dnx_session_data['role'] not in authorized_roles):
                 session.pop('user', None)
 

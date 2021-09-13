@@ -27,6 +27,6 @@ server {
 
         location / {
                 include uwsgi_params;
-                uwsgi_pass unix:/home/dnx/dnxfirewall/dnx_frontend/dnx_web.sock;
+                uwsgi_pass unix:/home/dnx/dnxfirewall/dnx_webui/webui.sock;
 	}
 }

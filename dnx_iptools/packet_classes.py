@@ -558,9 +558,6 @@ class RawPacket:
     objects in namedtuples or to index application data.
 
     '''
-    # this will never be set as a class var, but each instance will set this locally depending
-    # on the specific packet received.
-    protocol = PROTO.NOT_SET
 
     __slots__ = (
         '_dlen', '_addr',
@@ -597,6 +594,10 @@ class RawPacket:
 
         '''
         self.timestamp = fast_time()
+
+        # this is needed only to ensure the str method is supported.
+        # TODO: consider ditching this along with __str__
+        self.protocol = PROTO.NOT_SET
 
         # NOTE: recently moved these here. they are defined in the parents slots so it makes sense. I think these were
         # in the child (ips) because the ip proxy does not need these initialized.
