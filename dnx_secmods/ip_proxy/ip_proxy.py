@@ -55,7 +55,7 @@ class IPProxy(NFQueue):
         elif (packet.action is CONN.DROP):
 
             # forwarding packet to ips for ddos inspection
-            if (direction is DIR.INBOUND and packet.ips_profile):
+            if (packet.direction is DIR.INBOUND and packet.ips_profile):
                 packet.nfqueue.forward(Queue.IPS_IDS)
 
             else:

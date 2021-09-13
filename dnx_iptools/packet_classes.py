@@ -501,7 +501,7 @@ class NFPacket:
         self.in_zone   = hw_info[0]
         self.out_zone  = hw_info[1]
         self.src_mac   = hw_info[2]
-        self.timestamp = hw_info[3].split('.')[0] # TODO: this shouldnt be a float, but it is?????
+        self.timestamp = hw_info[3]
 
         ip_header = cpacket.get_ip_header()
         self.protocol = PROTO(ip_header[6])

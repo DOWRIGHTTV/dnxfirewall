@@ -173,9 +173,9 @@ cdef class CPacket:
             )
         '''
 
-        cdef (u_int32_t, u_int32_t, char*, double) hw_info
+        cdef (u_int32_t, u_int32_t, char*, u_int32_t) hw_info
 
-        cdef u_int32_t in_interface = nfq_get_indev(self._nfa)
+        cdef u_int32_t in_interface  = nfq_get_indev(self._nfa)
         cdef u_int32_t out_interface = nfq_get_outdev(self._nfa)
 
         self._hw = nfq_get_packet_hw(self._nfa)
