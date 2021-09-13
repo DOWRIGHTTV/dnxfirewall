@@ -9,7 +9,7 @@ from ipaddress import IPv4Address, IPv4Network
 _HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
 sys.path.insert(0, _HOME_DIR)
 
-from dnx_sysmods.configure.def_constants import LOG, CFG, DATA, INVALID_FORM
+from dnx_sysmods.configure.def_constants import LOG, CFG, DATA, PROTO, INVALID_FORM
 from dnx_sysmods.configure.file_operations import load_configuration
 from dnx_sysmods.configure.exceptions import ValidationError
 from dnx_secmods.cfirewall.fw_control import FirewallManage
@@ -158,22 +158,28 @@ def network_port(port, port_range=False):
 
 def proto_port(port_str):
 
-    port_str = port_str.split('/')
-
-    if (len(port_str) != 2):
+    try:
+        proto, port = port_str.split('/')
+    except:
         raise ValidationError('Invalid protocol/port definition. ex tcp/80 or udp/500-550')
 
-    proto_int = _proto_map.get(port_str[0], None)
+    proto_int = _proto_map.get(proto, None)
     if (proto_int is None):
         raise ValidationError('Invalid protocol. Use [any, tcp, udp, icmp].')
 
-    ports = [convert_int(p) for p in port_str[1].split('-', 1)]
+    # ensuring icmp definitions conform to required format.
+    if (proto_int == PROTO.ICMP and convert_int(port) != 0):
+        raise ValidationError('ICMP does not support ports. Use icmp/0.')
+
+    # splitting str after the "/" on "-" which is port range operator. this will make range or singular definition
+    # handling the same.
+    ports = [convert_int(p) for p in port.split('-', 1)]
 
     if (len(ports) == 2):
         if (ports[0] > ports[1]):
             raise ValidationError('Invalid port range. The start value must be less than the end. ex. 9001-9002')
 
-        error = f'TCP/UDP port range must be between within range 1-65535. ex tcp/500-550'
+        error = f'TCP/UDP port range must be between within range 1-65535 or 0 for any. ex tcp/500-550, udp/0'
 
     else:
         # this puts single port in range syntax
@@ -181,13 +187,15 @@ def proto_port(port_str):
 
         error = f'TCP/UDP port must be between 1-65535. ex udp/9001'
 
-    # converting 0 port vals to cover full range (0 is an alias for any)
-    ports[0] = 1 if ports[0] == 0 else ports[0]
-    ports[1] = 65535 if ports[1] == 0 else ports[1]
+    # converting 0 port values to cover full range (0 is an alias for any). ICMP will not be converted to ensure
+    # compatibility between icmp definitions vs any.
+    if (proto_int != PROTO.ICMP):
+        ports[0] = 1 if ports[0] == 0 else ports[0]
+        ports[1] = 65535 if ports[1] == 0 else ports[1]
 
     for port in ports:
 
-        # port 0 is used to denote "any" port
+        # port 0 is used by icmp. if 0 is used outside of icmp it gets converted to a range.
         if (port not in range(65536)):
             raise ValidationError(error)
 
