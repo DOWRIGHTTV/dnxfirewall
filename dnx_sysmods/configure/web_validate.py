@@ -188,10 +188,13 @@ def proto_port(port_str):
         error = f'TCP/UDP port must be between 1-65535. ex udp/9001'
 
     # converting 0 port values to cover full range (0 is an alias for any). ICMP will not be converted to ensure
-    # compatibility between icmp definitions vs any.
-    if (proto_int != PROTO.ICMP):
-        ports[0] = 1 if ports[0] == 0 else ports[0]
-        ports[1] = 65535 if ports[1] == 0 else ports[1]
+    # compatibility between icmp service definition vs any service. Any protocol will not be converted for same reason.
+    if (proto_int not in [PROTO.ICMP, PROTO.ANY]):
+        ports[0] = ports[0] if ports[0] != 0 else 1
+
+    # expanding the range out for any. this does not cause issues with icmp since it does not use ports so the second
+    # value in a port range is is N/A for icmp, but in this case just letting it do what the others do.
+    ports[1] = ports[1] if ports[1] != 0 else 65535
 
     for port in ports:
 
@@ -207,8 +210,8 @@ def timer(timer):
         raise ValidationError('Timer must be between 1 and 1440 (24 hours).')
 
 def account_creation(account_info):
-    '''Convenience function wrapping username, passoword, and user_role input validation functions. Username value
-       will be updated to .lower() on successfull validation.'''
+    '''Convenience function wrapping username, password, and user_role input validation functions. Username value
+       will be updated to .lower() on successful validation.'''
 
     username(account_info['username'])
     password(account_info['password'])

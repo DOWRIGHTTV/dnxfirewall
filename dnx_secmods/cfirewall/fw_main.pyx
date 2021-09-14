@@ -191,12 +191,11 @@ cdef u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto)
             # ================================================================== #
             # PORT
             # ================================================================== #
-            # ICMP will always match since all port vals will be set to 0
-            if not rule.s_port_start <= ntohs(proto.s_port) <= rule.s_port_end and rule.s_port_start != 0:
+            # ICMP will match on the first port start value (looking for 0)
+            if not rule.s_port_start <= ntohs(proto.s_port) <= rule.s_port_end:
                 continue
 
-            # ICMP will always match since all port vals will be set to 0
-            if not rule.d_port_start <= ntohs(proto.d_port) <= rule.d_port_end and rule.d_port_start != 0:
+            if not rule.d_port_start <= ntohs(proto.d_port) <= rule.d_port_end:
                 continue
 
             # ================================================================== #

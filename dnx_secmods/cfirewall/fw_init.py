@@ -36,4 +36,5 @@ fw_control.run()
 try:
     dnxfirewall.nf_run(bypass=1)
 except:
+    dnxfirewall.nf_break()
     os._exit(1)
