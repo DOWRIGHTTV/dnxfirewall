@@ -155,29 +155,31 @@
             var ruleData = ruleID.currentTarget.getElementsByTagName('td');
             var formInputs = ruleForm.getElementsByTagName('input');
             var formSelects = ruleForm.getElementsByTagName('select');
+            var staticPOS = ruleID.currentTarget.getElementsByName('static_pos');
 
-            let offset = 2
+            let offset = 3;
             for (let i = 3; i < formInputs.length; ++i) {
 
-                let fi = 0
-                var formField = formInputs[i]
+                let fi = 0;
+                formField = formInputs[i];
 
                 if (formField.name) {
                     if (formField.name == 'rule_state') {
                         ++offset;
 
                     } else {
-                        formInputs[i].value = ruleData[i-offset].innerHTML
+                        formInputs[i].value = ruleData[i-offset].innerHTML;
                     }
 
                     if (formField.name == 'position') {
-                        // settings static pos at index 2 to match position.
+                        // settings static pos at index 3 to match position.
                         formInputs[2].value = ruleData[i-offset].innerHTML;
+                        ++offset;
                     }
 
                 } else {
 
-                    let selectOptions = formSelects[fi].options
+                    let selectOptions = formSelects[fi].options;
 
                     for (let oi = 0; oi < selectOptions.length; ++oi) {
 

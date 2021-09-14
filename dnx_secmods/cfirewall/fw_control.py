@@ -73,7 +73,7 @@ class FirewallManage:
             else:
                 temp_rules = list(ruleset.values())
 
-                temp_rules = [*temp_rules[:pos_int], rule, *temp_rules[pos_int+1:]]
+                temp_rules = [*temp_rules[:pos_int], rule, *temp_rules[pos_int:]]
 
                 # assigning section with new ruleset
                 firewall[section] = {f'{i}': rule for i, rule in enumerate(temp_rules, 1)}

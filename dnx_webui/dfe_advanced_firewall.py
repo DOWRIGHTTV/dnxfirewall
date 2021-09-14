@@ -75,6 +75,8 @@ def update_page(form):
             FirewallManage.cfirewall.add(fw_rule.position, converted_rule, section=section)
 
     elif ('modify_rule' in form):
+        return 'Rule modification is currently disabled.', section, load_page(section)
+
         fw_rule = SimpleNamespace(**form)
         try:
             converted_rule = validate.manage_firewall_rule(fw_rule)

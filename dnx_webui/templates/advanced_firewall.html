@@ -193,7 +193,8 @@
                     <h6 class="{{title_color}}" style="float: left;">Pos:</h6>
                 </div>
                 <div class="input-field col s2 offset-s1 {{input_color}}">
-                    <input type="number" name="position" class="validate" value="1" min="1" max="{{firewall_settings['firewall_rules']|length + 1}}">
+                    {% set max_pos = firewall_settings['firewall_rules']|length + 1 %}
+                    <input type="number" name="position" class="validate" value="{{max_pos}}" min="1" max="{{max_pos}}">
                 </div>
                 <div class="input-field col offset-s1">
                     <h6 class="{{title_color}}">Log:</h6>
@@ -334,7 +335,7 @@
                     </div>
                 </div>
                 <div>
-                    <h4 class="{{title_color}}" style="float: right;">Create Rule</h4>
+                    <h4 class="{{title_color}}" style="float: right;">Modify Rule</h4>
                 </div>
             </div>
             <!-- source network fields-->
