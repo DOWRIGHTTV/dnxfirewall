@@ -12,7 +12,6 @@ ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_system/startup_proc.py
 Environment=HOME_DIR=/home/dnx/dnxfirewall
 RemainAfterExit=yes
 
-
 [Install]
 WantedBy=network.target
 

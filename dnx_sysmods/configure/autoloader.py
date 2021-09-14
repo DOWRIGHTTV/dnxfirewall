@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import __init__
+
 import os, sys
 import time
 import json
@@ -9,34 +11,25 @@ import argparse
 from sys import argv
 from subprocess import run, DEVNULL, CalledProcessError
 
-USER_DIR = '/home/dnx'
-HOME_DIR = f'{USER_DIR}/dnxfirewall'
-
-os.environ['HOME_DIR'] = HOME_DIR
-sys.path.insert(0, HOME_DIR)
-
-from dnx_sysmods.configure.def_constants import str_join
+from dnx_sysmods.configure.def_constants import HOME_DIR, str_join
 from dnx_sysmods.configure.file_operations import ConfigurationManager, load_configuration, write_configuration, json_to_yaml
 from dnx_sysmods.configure.iptables import IPTablesManager
 from dnx_sysmods.logging.log_main import LogHandler as Log
 
 LOG_NAME = 'system'
-PROGRESS_TOTAL_COUNT = 15
+PROGRESS_TOTAL_COUNT = 16
 
 LINEBREAK = '-' * 32
 
-# DID: use socket.if_nameindex() for interface identification and assignment, replace net-tools + subprocess
+UTILITY_DIR = f'{HOME_DIR}/dnx_system/utils'
 
-#----------------------------
+# ----------------------------
 # UTILS
-#----------------------------
-
+# ----------------------------
 def sprint(string):
     '''setup print. includes timestamp before arg str.'''
     print(f'{time.strftime("%H:%M:%S")}| {string}')
 
-
-# noinspection PyProtectedMember
 def eprint(string):
     '''error print. includes timestamp and alert before arg str.'''
     print(f'{time.strftime("%H:%M:%S")}| !!! {string}')
@@ -81,10 +74,9 @@ def check_already_ran():
 
         eprint('dnxfirewall auto loader has already been completed. exiting...')
 
-#----------------------------
+# ----------------------------
 # PROGRESS BAR
-#----------------------------
-
+# ----------------------------
 # starting at -1 to compensate for first process
 completed_count, p_total = -1, PROGRESS_TOTAL_COUNT
 def progress(desc):
@@ -102,10 +94,9 @@ def progress(desc):
     sys.stdout.write(f'{completed_count}/{p_total} || [{bar}] {percents}% || {desc}\r')
     sys.stdout.flush()
 
-#============================
+# ============================
 # INTERFACE CONFIGURATION
-#============================
-
+# ============================
 # convenience function wrapper for physical interface to dnxfirewall zone association.
 def configure_interfaces():
     interfaces_detected = check_system_interfaces()
@@ -185,7 +176,6 @@ def write_net_config(interface_configs):
         os.remove('/etc/netplan/00-installer-config.yaml')
     except:
         pass
-#    dnx_run('netplan apply')
 
 # modifying dnx configuration files with user specified interface names and their corresponding zones
 def set_dnx_interfaces(user_intf_config):
@@ -205,7 +195,7 @@ def set_dhcp_interfaces(user_intf_config):
     with ConfigurationManager('dhcp_server') as dhcp:
         dhcp_settings = dhcp.load_configuration()
 
-        interface_settings = dhcp_settings['interfaces']['builtins']
+        interface_settings = dhcp_settings['interfaces']
 
         for zone in ['LAN', 'DMZ']:
 
@@ -246,8 +236,9 @@ def install_packages():
 def compile_extensions():
 
     commands = [
-        (f'sudo python3 {HOME_DIR}/utils/compile_bin_search.py build_ext --inplace', 'compiling binary search C extension'),
-        (f'sudo python3 {HOME_DIR}/utils/compile_dnx_nfqueue.py build_ext --inplace', 'compiling dnx-nfqueue C extension')
+        (f'sudo python3 {UTILITY_DIR}/compile_trie_search.py build_ext --inplace', 'compiling trie search C extension'),
+        (f'sudo python3 {UTILITY_DIR}/compile_dnx_nfqueue.py build_ext --inplace', 'compiling dnx-nfqueue C extension'),
+        (f'sudo python3 {UTILITY_DIR}/compile_cfirewall.py build_ext --inplace', 'compiling primary firewall')
     ]
 
     for command, desc in commands:
@@ -298,15 +289,15 @@ def set_permissions():
     progress('configuring dnxfirewall permissions')
 
     # creating database file here so it can get its permissions modified. This will
-    # ensure it wont be overriden by update pulls.
+    # ensure it wont be overridden by update pulls.
     dnx_run(f'touch {HOME_DIR}/dnx_system/data/dnxfirewall.sqlite3')
 
     # set owner to dnx user/group
-    dnx_run(f'chown -R dnx:dnx {USER_DIR}/dnxfirewall')
+    dnx_run(f'chown -R dnx:dnx {HOME_DIR}')
 
     # apply file permissions 750 on folders, 640 on files
-    dnx_run(f'chmod -R 750 {USER_DIR}/dnxfirewall')
-    dnx_run(f'find {USER_DIR}/dnxfirewall -type f -print0|xargs -0 chmod 640')
+    dnx_run(f'chmod -R 750 {HOME_DIR}')
+    dnx_run(f'find {HOME_DIR} -type f -print0|xargs -0 chmod 640')
 
     # adding www-data user to dnx group
     dnx_run('usermod -aG dnx www-data')
@@ -325,39 +316,36 @@ def set_permissions():
     for line in no_pass:
         dnx_run(f'echo "{line}" | sudo EDITOR="tee -a" visudo')
 
-#============================
+# ============================
 # SERVICE FILE SETUP
-#============================
-
+# ============================
 def set_services():
     ignore_list = ['dnx-database-psql.service', 'dnx-syslog.service']
 
     progress('creating dnxfirewall services')
 
-    services = os.listdir(f'{HOME_DIR}/services')
+    services = os.listdir(f'{UTILITY_DIR}/services')
     for service in services:
         if (service in ignore_list): continue
 
-        dnx_run(f'cp {HOME_DIR}/services/{service} /etc/systemd/system/')
+        dnx_run(f'cp {UTILITY_DIR}/services/{service} /etc/systemd/system/')
 
         dnx_run(f'systemctl enable {service}')
 
     dnx_run(f'systemctl enable nginx')
 
-#============================
-# INITIAL IPTABLE SETUP
-#============================
-
+# ============================
+# INITIAL IPTABLES SETUP
+# ============================
 def configure_iptables():
     progress('loading default iptables')
 
     with IPTablesManager() as iptables:
         iptables.apply_defaults(suppress=True)
 
-#============================
+# ============================
 # CLEANUP
-#============================
-
+# ============================
 def mark_completion_flag():
     with ConfigurationManager('config') as dnx:
         dnx_settings = dnx.load_configuration()
@@ -382,7 +370,7 @@ if __name__ == '__main__':
     check_dnx_user()
     check_clone_location()
 
-    # intiializing log module which is required when using ConfigurationManager
+    # initializing log module which is required when using ConfigurationManager
     Log.run(
         name=LOG_NAME
     )
