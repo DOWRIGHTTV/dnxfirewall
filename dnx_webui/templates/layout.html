@@ -155,7 +155,6 @@
             var ruleData = ruleID.currentTarget.getElementsByTagName('td');
             var formInputs = ruleForm.getElementsByTagName('input');
             var formSelects = ruleForm.getElementsByTagName('select');
-            var staticPOS = ruleID.currentTarget.getElementsByName('static_pos');
 
             let offset = 3;
             for (let i = 3; i < formInputs.length; ++i) {
@@ -168,7 +167,7 @@
                         ++offset;
 
                     } else {
-                        formInputs[i].value = ruleData[i-offset].innerHTML;
+                        formField.value = ruleData[i-offset].innerHTML;
                     }
 
                     if (formField.name == 'position') {
@@ -186,7 +185,7 @@
                         let opt = selectOptions[oi];
 
                         if (opt.value == ruleData[i-2].innerHTML) {
-                            formInputs[i].value = opt.value;
+                            formField.value = opt.value;
 
                         }
                     }
