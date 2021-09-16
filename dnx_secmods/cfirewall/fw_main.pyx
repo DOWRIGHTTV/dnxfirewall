@@ -26,22 +26,10 @@ pthread_mutex_init(&FWrulelock, NULL)
 # initializing global array and size tracker. contains pointers to arrays of pointers to FWrule
 cdef FWrule **firewall_rules[FW_SECTION_COUNT]
 
-cdef FWrule *fw_system_section[FW_SYSTEM_MAX_RULE_COUNT]
-fw_system_section = <FWrule[]*>calloc(FW_SYSTEM_MAX_RULE_COUNT, sizeof(FWrule*))
-
-cdef FWrule *fw_before_section[FW_BEFORE_MAX_RULE_COUNT]
-fw_before_section = <FWrule[]*>calloc(FW_BEFORE_MAX_RULE_COUNT, sizeof(FWrule*))
-
-cdef FWrule *fw_main_section[FW_MAIN_MAX_RULE_COUNT]
-fw_main_section = <FWrule[]*>calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(FWrule*))
-
-cdef FWrule *fw_after_section[FW_AFTER_MAX_RULE_COUNT]
-fw_after_section = <FWrule[]*>calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(FWrule*))
-
-firewall_rules[0] = <FWrule**>&fw_system_section
-firewall_rules[1] = <FWrule**>&fw_before_section
-firewall_rules[2] = <FWrule**>&fw_main_section
-firewall_rules[3] = <FWrule**>&fw_after_section
+firewall_rules[0] = <FWrule**>calloc(FW_SYSTEM_MAX_RULE_COUNT, sizeof(FWrule*))
+firewall_rules[1] = <FWrule**>calloc(FW_BEFORE_MAX_RULE_COUNT, sizeof(FWrule*))
+firewall_rules[2] = <FWrule**>calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(FWrule*))
+firewall_rules[3] = <FWrule**>calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(FWrule*))
 
 # index corresponds to index of sections in firewall rules. this will allow us to skip over sections that are
 # empty and know how far to iterate over. NOTE: since we track this we may be able to get away without resetting
@@ -136,7 +124,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # printf('packet verdict: %u\n', verdict)
 
     # libnfnetlink.c return >> libnetfiler_queue return >> CFirewall._run.
-    # < 0 vals are errors, but return is being ignored by CFrirewall._run.
+    # < 0 vals are errors, but return is being ignored by CFirewall._run.
     return 1
 
 cdef u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto) nogil:
@@ -255,7 +243,7 @@ cdef class CFirewall:
             fw_rule = fw_section[pos]
 
         # general
-        fw_rule.enabled  = <u_int8_t>rule[0]
+        fw_rule.enabled = <u_int8_t>rule[0]
 
         # source
         fw_rule.s_zone       = <u_int8_t> rule[1]
@@ -286,7 +274,7 @@ cdef class CFirewall:
         # printf('[set/FWrule] %u > security profiles set\n', pos)
 
     # PYTHON ACCESSIBLE FUNCTIONS
-    def nf_run(self, bint bypass=0):
+    def nf_run(self, bint bypass):
         ''' calls internal C run method to engage nfqueue processes. this call will run forever, but will
         release the GIL prior to entering C and never try to reacquire it.'''
 
@@ -324,7 +312,7 @@ cdef class CFirewall:
         '''
 
         pthread_mutex_lock(&FWrulelock)
-        # printf('[update/zones] aquired lock\n')
+        # printf('[update/zones] acquired lock\n')
 
         for i in range(FW_MAX_ZONE_COUNT):
             INTF_ZONE_MAP[i] = zone_map[i]
@@ -347,7 +335,7 @@ cdef class CFirewall:
 
         pthread_mutex_lock(&FWrulelock)
 
-        # printf('[update/ruleset] aquired lock\n')
+        # printf('[update/ruleset] acquired lock\n')
         for i in range(rule_count):
             rule = rulelist[i]
 

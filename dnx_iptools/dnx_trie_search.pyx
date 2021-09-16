@@ -1,7 +1,102 @@
+#!/usr/bin/env python3
+
+from libc.stdlib cimport malloc, calloc, free
 
 import threading as _threading
 
 from functools import lru_cache as _lru_cache
+
+cdef class TrieRecurvSearch:
+
+    # L1 CONTAINER = [<CONTAINER_ID | L2_CONTAINER_PTR>]
+
+    # L2 CONTAINER = [<CONTAINER_ID | HOST_CATEGORY>]
+
+    def generate_trie_structure(self, tuple signatures):
+
+        # will be accessed from other methods
+        self.L1_SIZE = len(signatures)
+        self.L1_CONTAINER = <l1_content*>malloc(sizeof(l1_content) * self.L1_SIZE)
+
+        for i in range(self.L1_SIZE):
+
+            # accessed via pointer stored in L1 container
+            L2_SIZE = len(signatures[i][1])
+            L2_CONTAINER = <l2_content*>malloc(sizeof(l2_content) * L2_SIZE)
+
+            for xi in range(L2_SIZE):
+
+                L2_CONTAINER[xi].id = <u_int32_t>signatures[i][1][xi][0]
+                L2_CONTAINER[xi].host_category = <u_int32_t>signatures[i][1][xi][1]
+
+            self.L1_CONTAINER[i].id = < u_int32_t > signatures[i][0]
+            self.L1_CONTAINER[i].l2_ptr = L2_CONTAINER[0]
+
+    @_lru_cache(maxsize=4096)
+    def trie_search(self, (u_int32_t, u_int32_t) host):
+
+        cdef u_int32_t search_result
+
+        with nogil:
+            search_result = self._l1_trie_search(host)
+
+        return search_result
+
+    cdef u_int32_t _l1_trie_search(self, (u_int32_t, u_int32_t) container_ids) nogil:
+
+        cdef:
+            u_int32_t left = 0
+            u_int32_t right = self.L1_SIZE
+
+            u_int32_t mid
+
+            l1_content l1_container
+
+        while left <= right:
+            mid = left + (right - left) // 2
+            l1_container = self.L1_CONTAINER[mid]
+
+            # excluding left half
+            if (l1_container.id < container_ids[0]):
+                left = mid + 1
+
+            # excluding right half
+            elif (l1_container.id > container_ids[0]):
+                right = mid - 1
+
+            # on bin match, assign var of dataset then recursively call to check host ids
+            else:
+                return self._l2_trie_search(container_ids[1], l1_container.l2_ptr)
+        else:
+            return 0
+
+    cdef u_int32_t _l2_trie_search(self, u_int32_t container_id, l2_content *L2_CONTAINER) nogil:
+
+        cdef:
+            u_int32_t left = 0
+            u_int32_t right = sizeof(L2_CONTAINER) // sizeof(l2_content)
+
+            u_int32_t mid
+
+            l2_content l2_container
+
+        while left <= right:
+            mid = left + (right - left) // 2
+            l2_container = L2_CONTAINER[mid]
+
+            # excluding left half
+            if (l2_container.id < container_id):
+                left = mid + 1
+
+            # excluding right half
+            elif (l2_container.id > container_id):
+                right = mid - 1
+
+            # on bin match, assign var of dataset then recursively call to check host ids
+            else:
+                return l2_container.host_category
+        else:
+            return 0
 
 def generate_recursive_binary_search(tuple signatures, (int, int) bounds):
 

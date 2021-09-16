@@ -398,7 +398,7 @@ def manage_firewall_rule(fw_rule):
         'static_pos', 'position', 'section',
         'src_zone', 'src_ip', 'src_port',
         'dst_zone', 'dst_ip', 'dst_port',
-        'action',
+        'action', 'sec-prof1', 'sec-prof2',
     ]
     if not all([hasattr(fw_rule, x) for x in valid_fields]):
         raise ValidationError(INVALID_FORM)
@@ -446,6 +446,11 @@ def manage_firewall_rule(fw_rule):
     if (s_zone is None or d_zone is None):
         raise ValidationError(INVALID_FORM)
 
+    ip_proxy_profile = convert_int(fw_rule.sec1_prof)
+    ips_ids_profile  = convert_int(fw_rule.sec2_prof)
+    if not all([x in [0, 1] for x in [ip_proxy_profile, ips_ids_profile]]):
+        raise ValidationError('Invalid security profile.')
+
     # en | zone | netid | mask | proto << p1 | p2 ---->    | action | log | ipp | ips
     # [1, 12, 4294967295, 32, 393217, 65535, 10, 4294967295, 32, 458751, 65535, 1, 0, 1, 1],
 
@@ -453,7 +458,7 @@ def manage_firewall_rule(fw_rule):
         1,
         s_zone, s_net, s_p_len, s_proto << 16 | s_ports[0], s_ports[1],
         d_zone, d_net, d_p_len, d_proto << 16 | d_ports[0], d_ports[1],
-        action, 0, 1, 1
+        action, 0, ip_proxy_profile, ips_ids_profile
     ]
 
 # NOTE: this will be deprecated with cfirewall implementation.

@@ -98,6 +98,7 @@ class SOCK(_IntEnum):
 
 class PROTO(_IntEnum):
     NOT_SET  = 0
+    ANY      = 0 # alias
     ICMP     = 1
     TCP      = 6
     UDP      = 17

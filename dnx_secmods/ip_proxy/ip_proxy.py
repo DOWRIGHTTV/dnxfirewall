@@ -51,47 +51,43 @@ class IPProxy(NFQueue):
 
             return False
 
-        # flag for drop by cfirewall > inspect geo only
-        elif (packet.action is CONN.DROP):
+        # standard ip proxy inspect. further action decided post inspection.
+        if (packet.action is CONN.ACCEPT and packet.ip_proxy_profile):
+            return True
 
-            # forwarding packet to ips for ddos inspection
-            if (packet.direction is DIR.INBOUND and packet.ips_profile):
-                packet.nfqueue.forward(Queue.IPS_IDS)
+        # forwarding packet to ips for portscan/ddos inspection
+        if (packet.direction is DIR.INBOUND and packet.ips_profile):
+            packet.nfqueue.forward(Queue.IPS_IDS)
 
-            else:
-                packet.nfqueue.drop()
+        # dropped by cfirewall > inspect geo only
+        else:
+            packet.nfqueue.drop()
 
-            # quick path to log geo data.
-            Inspect.geo_only(packet)
+        # quick path to log geo data. doing this post action since its a log only path.
+        Inspect.geo_only(packet)
 
-            return False
-
-        return True
+        return False
 
     @classmethod
     def forward_packet(cls, packet, direction, action):
-        # inbound traffic with a configured ips profile will get sent directly to ips/ids.
-        if (action is CONN.ACCEPT):
 
-            # no re-mark is required with new cfirewall mark encoding on accepted packets
-            if (direction is DIR.INBOUND and packet.ips_profile):
-                packet.nfqueue.forward(Queue.IPS_IDS)
-
-            else:
-                packet.nfqueue.accept()
-
-        elif (action is CONN.DROP):
+        # TODO: update mark seems to be broken causing IPS to fail. IPS is logging profile "10" or bit "1010". this
+        #  may require ntoh
+        if (direction is DIR.INBOUND and packet.ips_profile):
 
             # re-mark needed to notify ips to drop the packet and do ddos inspection only if enabled.
-            if (direction is DIR.INBOUND and packet.ips_profile):
-
-                # bitwise op resets first 4 bits (allocated for action) to 0 then set the bits for drop.
+            # bitwise op resets first 4 bits (allocated for action) to 0 then set the bits for drop.
+            if (action is CONN.DROP):
                 packet.nfqueue.update_mark(packet.mark & 65520 | CONN.DROP)
 
-                packet.nfqueue.forward(Queue.IPS_IDS)
+            packet.nfqueue.forward(Queue.IPS_IDS)
 
-            else:
-                packet.nfqueue.drop()
+        elif (action is CONN.ACCEPT):
+            packet.nfqueue.accept()
+
+        # explicit condition to reduce chance of confusion
+        elif (action is CONN.DROP):
+            packet.nfqueue.drop()
 
 
 class Inspect:
