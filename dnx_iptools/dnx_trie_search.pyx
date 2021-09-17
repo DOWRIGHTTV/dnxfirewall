@@ -6,51 +6,72 @@ import threading as _threading
 
 from functools import lru_cache as _lru_cache
 
-cdef class TrieRecurvSearch:
 
-    # L1 CONTAINER = [<CONTAINER_ID | L2_CONTAINER_PTR>]
+# ================================================ #
+# C STRUCTURES - converted from python tuples
+# ================================================ #
+cdef class RecurveTrie:
 
-    # L2 CONTAINER = [<CONTAINER_ID | HOST_CATEGORY>]
+    # L1 CONTAINER = [<CONTAINER_ID, L2_CONTAINER_SIZE, L2_CONTAINER_PTR>]
+    # L2 CONTAINER = [<CONTAINER_ID, HOST_CATEGORY>]
 
-    def generate_trie_structure(self, tuple signatures):
+    cdef l2_recurve* make_l2(self, (long, long) l2_entry):
+        '''allocates memory for a single L2 content struct, assigns members from l2_entry, then
+        returns pointer.'''
 
-        # will be accessed from other methods
-        self.L1_SIZE = len(signatures)
-        self.L1_CONTAINER = <l1_content*>malloc(sizeof(l1_content) * self.L1_SIZE)
+        cdef l2_recurve *L2_CONTENT
+
+        L2_CONTENT = <l2_recurve*>malloc(sizeof(l2_recurve))
+
+        L2_CONTENT.id = l2_entry[0]
+        L2_CONTENT.host_category = l2_entry[1]
+
+        return L2_CONTENT
+
+    def generate_structure(self, tuple py_signatures):
+
+        # allocating memory for L1 container. this will be accessed from l1_search method.
+        # L1 container will be iterated over, being checked for id match. if a match is found
+        # the reference stored at that index will be used to check for l2 container id match.
+        self.L1_SIZE = len(py_signatures)
+        self.L1_CONTAINER = <l1_recurve*>malloc(sizeof(l1_recurve) * self.L1_SIZE)
 
         for i in range(self.L1_SIZE):
 
             # accessed via pointer stored in L1 container
-            L2_SIZE = len(signatures[i][1])
-            L2_CONTAINER = <l2_content*>malloc(sizeof(l2_content) * L2_SIZE)
+            L2_SIZE = len(py_signatures[i][1])
 
+            # allocating memory for indivual L2 containers
+            L2_CONTAINER = <l2_recurve*>malloc(sizeof(l2_recurve) * L2_SIZE)
+
+            # calling make function for l2 content struct for each entry in current py_l2 container
             for xi in range(L2_SIZE):
+                L2_CONTAINER[xi] = self.make_l2(py_signatures[i][1][xi])[0]
 
-                L2_CONTAINER[xi].id = <u_int32_t>signatures[i][1][xi][0]
-                L2_CONTAINER[xi].host_category = <u_int32_t>signatures[i][1][xi][1]
-
-            self.L1_CONTAINER[i].id = < u_int32_t > signatures[i][0]
-            self.L1_CONTAINER[i].l2_ptr = L2_CONTAINER[0]
+            # assigning struct members to current index of L1 container.
+            self.L1_CONTAINER[i].id = <long>py_signatures[i][0]
+            self.L1_CONTAINER[i].l2_size = L2_SIZE
+            self.L1_CONTAINER[i].l2_ptr = L2_CONTAINER
 
     @_lru_cache(maxsize=4096)
-    def trie_search(self, (u_int32_t, u_int32_t) host):
+    def search(self, (long, long) host):
 
-        cdef u_int32_t search_result
+        cdef long search_result
 
         with nogil:
-            search_result = self._l1_trie_search(host)
+            search_result = self._l1_search(host)
 
         return search_result
 
-    cdef u_int32_t _l1_trie_search(self, (u_int32_t, u_int32_t) container_ids) nogil:
+    cdef long _l1_search(self, (long, long) container_ids) nogil:
 
         cdef:
-            u_int32_t left = 0
-            u_int32_t right = self.L1_SIZE
+            long left = 0
+            long right = self.L1_SIZE
 
-            u_int32_t mid
+            long mid
 
-            l1_content l1_container
+            l1_recurve l1_container
 
         while left <= right:
             mid = left + (right - left) // 2
@@ -64,25 +85,27 @@ cdef class TrieRecurvSearch:
             elif (l1_container.id > container_ids[0]):
                 right = mid - 1
 
-            # on bin match, assign var of dataset then recursively call to check host ids
+            # l1.id match. calling l2_search with ptr to l2_containers looking for l2.id match
             else:
-                return self._l2_trie_search(container_ids[1], l1_container.l2_ptr)
+                return self._l2_search(container_ids[1], l1_container.l2_size, &l1_container.l2_ptr)
+
+        # iteration completed with no match.
         else:
             return 0
 
-    cdef u_int32_t _l2_trie_search(self, u_int32_t container_id, l2_content *L2_CONTAINER) nogil:
+    cdef long _l2_search(self, long container_id, short l2_size, l2_recurve **L2_CONTAINER) nogil:
 
         cdef:
-            u_int32_t left = 0
-            u_int32_t right = sizeof(L2_CONTAINER) // sizeof(l2_content)
+            short left = 0
+            short right = l2_size
 
-            u_int32_t mid
+            short mid
 
-            l2_content l2_container
+            l2_recurve l2_container
 
         while left <= right:
             mid = left + (right - left) // 2
-            l2_container = L2_CONTAINER[mid]
+            l2_container = L2_CONTAINER[0][mid]
 
             # excluding left half
             if (l2_container.id < container_id):
@@ -92,12 +115,107 @@ cdef class TrieRecurvSearch:
             elif (l2_container.id > container_id):
                 right = mid - 1
 
-            # on bin match, assign var of dataset then recursively call to check host ids
+            # l2.id match. returning struct value
             else:
                 return l2_container.host_category
+
+        # iteration completed with no match.
         else:
             return 0
 
+
+cdef class RangeTrie:
+
+    # L1 CONTAINER = [<CONTAINER_ID, L2_CONTAINER_SIZE, L2_CONTAINER_PTR>]
+    # L2 CONTAINER = [<NETWORK_ID, BROADCAST_ID, HOST_COUNTRY>]
+
+    cdef l2_range* make_l2(self, (long, long, short) l2_entry):
+        '''allocates memory for a single L2 content struct, assigns members from l2_entry, then
+        returns pointer.'''
+
+        cdef l2_range *L2_CONTENT
+
+        L2_CONTENT = <l2_range*>malloc(sizeof(l2_range))
+
+        L2_CONTENT.network_id   = l2_entry[0]
+        L2_CONTENT.broadcast_id = l2_entry[1]
+        L2_CONTENT.country_code = l2_entry[2]
+
+        return L2_CONTENT
+
+    def generate_structure(self, tuple py_signatures):
+
+        # allocating memory for L1 container. this will be accessed from l1_search method.
+        # L1 container will be iterated over, being checked for id match. if a match is found
+        # the reference stored at that index will be used to check for l2 container id match.
+        self.L1_SIZE = len(py_signatures)
+        self.L1_CONTAINER = <l1_range*>malloc(sizeof(l1_range) * self.L1_SIZE)
+
+        for i in range(self.L1_SIZE):
+
+            # accessed via pointer stored in L1 container
+            L2_SIZE = len(py_signatures[i][1])
+
+            # allocating memory for indivual L2 containers
+            L2_CONTAINER = <l2_range*>malloc(sizeof(l2_range) * L2_SIZE)
+
+            # calling make function for l2 content struct for each entry in current py_l2 container
+            for xi in range(L2_SIZE):
+                L2_CONTAINER[xi] = self.make_l2(py_signatures[i][1][xi])[0]
+
+            # assigning struct members to current index of L1 container.
+            self.L1_CONTAINER[i].id = <long>py_signatures[i][0]
+            self.L1_CONTAINER[i].l2_size = L2_SIZE
+            self.L1_CONTAINER[i].l2_ptr = L2_CONTAINER
+
+    @_lru_cache(maxsize=4096)
+    def search(self, (long, long) host):
+
+        cdef long search_result
+
+        with nogil:
+            search_result = self._search(host)
+
+        return search_result
+
+    cdef long _search(self, (long, long) container_ids) nogil:
+
+        cdef:
+            long left = 0
+            long right = self.L1_SIZE
+
+            long mid
+
+            l1_range l1_container
+            l2_range l2_container
+
+        while left <= right:
+            mid = left + (right - left) // 2
+            l1_container = self.L1_CONTAINER[mid]
+
+            # excluding left half
+            if (l1_container.id < container_ids[0]):
+                left = mid + 1
+
+            # excluding right half
+            elif (l1_container.id > container_ids[0]):
+                right = mid - 1
+
+            # l1.id match. iterating over l2_containers looking for l2.id match
+            else:
+                for i in range(l1_container.l2_size):
+
+                    l2_container = l1_container.l2_ptr[i]
+                    if l2_container.network_id <= container_ids[1] <= l2_container.broadcast_id:
+                        return l2_container.country_code
+
+        # iteration completed with no match.
+        else:
+            return 0
+
+# ================================================ #
+# TYPED PYTHON STRUCTURES - keeping as alternative
+# ================================================ #
 def generate_recursive_binary_search(tuple signatures, (int, int) bounds):
 
     cdef tuple sigs = signatures

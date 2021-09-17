@@ -13,7 +13,7 @@ from dnx_secmods.ip_proxy.ip_proxy_automate import Configuration
 from dnx_secmods.ip_proxy.ip_proxy_log import Log
 
 from dnx_iptools.packet_classes import NFQueue
-from dnx_iptools.dnx_trie_search import generate_linear_binary_search, generate_recursive_binary_search # pylint: disable=import-error, no-name-in-module
+from dnx_iptools.dnx_trie_search import RecurveTrie, RangeTrie # pylint: disable=import-error, no-name-in-module
 
 LOG_NAME = 'ip_proxy'
 
@@ -105,7 +105,7 @@ class Inspect:
 
     @classmethod
     def geo_only(cls, packet):
-        country = GEO(_linear_binary_search(packet.bin_data))
+        country = GEO(_range_trie_search(packet.bin_data))
 
         Log.log(packet, IPP_INSPECTION_RESULTS(country.name, ''), geo_only=True)
 
@@ -130,7 +130,7 @@ class Inspect:
         # running through geolocation signatures for a host match. NOTE: not all countries are included in the sig
         # set at this time. the additional compression algo needs to be re implemented before more countries can
         # be added due to memory cost.
-        country = GEO(_linear_binary_search(packet.bin_data))
+        country = GEO(_range_trie_search(packet.bin_data))
 
         # if category match and country is configured to block in direction of conn/packet
         if (country is not GEO.NONE):
@@ -139,7 +139,7 @@ class Inspect:
         # no need to check reputation of host if filtered by geolocation
         if (action is CONN.ACCEPT and Proxy.reputation_enabled):
 
-            reputation = REP(_recursive_binary_search(packet.bin_data))
+            reputation = REP(_recurve_trie_search(packet.bin_data))
 
             # if category match, and category is configured to block in direction of conn/packet
             if (reputation is not REP.NONE):
@@ -172,8 +172,7 @@ class Inspect:
             if (packet.protocol is ICMP):
                 return CONN.DROP
 
-            else:
-                return CONN.REJECT
+            return CONN.REJECT
 
         # default action is allow due to category not being enabled
         return CONN.ACCEPT
@@ -185,8 +184,7 @@ class Inspect:
             if (packet.protocol is ICMP):
                 return CONN.DROP
 
-            else:
-                return CONN.REJECT
+            return CONN.REJECT
 
         return CONN.ACCEPT
 
@@ -195,13 +193,21 @@ if __name__ == '__main__':
         name=LOG_NAME
     )
 
-    ip_cat_signatures, geoloc_signatures = Configuration.load_ip_signature_bitmaps()
+    reputation_signatures, geolocation_signatures = Configuration.load_signature_tries()
 
-    # using cython function factory to create binary search function with module specific signatures
-    ip_cat_signature_bounds = (0, len(ip_cat_signatures)-1)
-    geoloc_signature_bounds = (0, len(geoloc_signatures)-1)
+    # initializing C/Cython extension, converting python structures to native C array/struct,
+    # and assigning direct reference to search method [which calls underlying C without GIL]
+    recurve_trie = RecurveTrie()
+    recurve_trie.generate_structure(reputation_signatures)
 
-    _recursive_binary_search = generate_recursive_binary_search(ip_cat_signatures, ip_cat_signature_bounds)
-    _linear_binary_search = generate_linear_binary_search(geoloc_signatures, geoloc_signature_bounds)
+    range_trie = RangeTrie()
+    range_trie.generate_structure(geolocation_signatures)
+
+    _recurve_trie_search = recurve_trie.search
+    _range_trie_search = range_trie.search
+
+    # memory allocation was done manually within C extension for its structures. python structures
+    # are no longer needed at this point so freeing memory.
+    del reputation_signatures, geolocation_signatures
 
     IPProxy.run(Log, q_num=1)

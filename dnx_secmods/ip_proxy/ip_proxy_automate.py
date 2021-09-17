@@ -64,7 +64,7 @@ class Configuration:
             try:
                 self.IPProxy.geolocation_settings[GEO[country.upper()]] = DIR(setting)
             except KeyError:
-                continue # NOTE: temporary while not all enums/countries are populated
+                continue # not all enums/countries are populated
 
         self.IPProxy.reputation_enabled = bool(reputation_enabled)
 
@@ -100,13 +100,14 @@ class Configuration:
 
         self.initialize.done()
 
-    def _manage_ip_tables(self):
+    @staticmethod
+    def _manage_ip_tables():
         IPTablesManager.clear_dns_over_https()
         IPTablesManager.update_dns_over_https()
 
     @staticmethod
-    # Loading lists of interesting traffic into dictionaries and creating ip table rules for dns over https blocking
-    def load_ip_signature_bitmaps():
+    # loading lists of interesting traffic into dictionaries and creating ip table rules for dns over https blocking
+    def load_signature_tries():
 
         ip_reputation_signatures = signature_operations.generate_reputation(Log)
         geolocation_signatures = signature_operations.generate_geolocation(Log)

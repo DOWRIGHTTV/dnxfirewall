@@ -26,7 +26,7 @@ def combine_domains(Log):
     ud_cats      = dns_proxy['categories']['user_defined']
 
     domain_signatures = []
-    # iterating over list of categories + DoH to load signaure sets.
+    # iterating over list of categories + DoH to load signature sets.
     for cat in [*default_cats, 'dns-over-https']:
         try:
            with open(f'{HOME_DIR}/dnx_system/signatures/domain_lists/{cat}.domains', 'r') as file:
@@ -47,7 +47,7 @@ def combine_domains(Log):
                 blocked.write(f'{signature} {cat}\n'.lower())
 
     # NOTE: nulling out signatures in memory so we dont have to wait for GC.
-    domain_signatures = []
+    del domain_signatures
 
 def _combine_reputation(Log):
     ip_proxy = load_configuration('ip_proxy')
@@ -95,7 +95,7 @@ def generate_reputation(Log):
     ]
     nets.sort()
 
-    dict_nets, ip_rep_signatures = {}, []
+    del dict_nets, ip_rep_signatures
 
     return tuple(nets)
 
@@ -166,7 +166,7 @@ def generate_geolocation(Log):
     ]
     nets.sort()
 
-    dict_nets = {}
+    del dict_nets
 
     return tuple(nets)
 
