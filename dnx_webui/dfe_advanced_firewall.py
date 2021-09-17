@@ -75,7 +75,7 @@ def update_page(form):
             FirewallManage.cfirewall.add(fw_rule.position, converted_rule, section=section)
 
     elif ('modify_rule' in form):
-        return 'Rule modification is currently disabled.', section, load_page(section)
+        # return 'Rule modification is currently disabled.', section, load_page(section)
 
         fw_rule = SimpleNamespace(**form)
         try:
@@ -130,8 +130,8 @@ def get_and_format_rules(section, version='pending'):
         rule[11] = 'accept' if rule[11] else 'deny' # this could probably get removed since 0/1 is ok for this.
         rule[12] = 'Y' if rule[12] else 'N'
 
-        rule[13] = rule[13] if rule[13] else ' '
-        rule[14] = rule[14] if rule[14] else ' '
+        # rule[13] = rule[13] if rule[13] else ' '
+        # rule[14] = rule[14] if rule[14] else ' '
 
         # merging ip/netmask and converting > ip address > str
         rule[2] = f'{IPv4Network((rule[2], rule[3]))}'

@@ -146,57 +146,32 @@
     <script>
     $('tr[data-fw-modal]').on("click", function(ruleID) {
 
-        if (ruleID == 'r0') {
-            $('#FWrule-creator').modal('open');
-
-        } else {
+        if (ruleID != 'r0') {
+            var ruleData = ruleID.currentTarget.getElementsByTagName('td');
 
             var ruleForm = document.getElementById('FWrule-editor');
-            var ruleData = ruleID.currentTarget.getElementsByTagName('td');
             var formInputs = ruleForm.getElementsByTagName('input');
-            var formSelects = ruleForm.getElementsByTagName('select');
 
-            let offset = 2;
-            for (let i = 3; i < formInputs.length; ++i) {
+            formInputs[2].value = ruleData[1].innerHTML; //static position
+            formInputs[3].value = ruleData[1].innerHTML; //position
+            formInputs[4].value = ruleData[9].innerHTML; //log
+            //rule_state
 
-                let fi = 0;
-                formField = formInputs[i];
+            formInputs[6].value = ruleData[2].innerHTML.toUpperCase(); //src_zone
+            formInputs[7].value = ruleData[3].innerHTML; //src_ip
+            formInputs[8].value = ruleData[4].innerHTML; //src_port
 
-                if (formField.name) {
-                    if (formField.name == 'rule_state') {
-                        ++offset;
+            formInputs[9].value = ruleData[5].innerHTML.toUpperCase(); //dst_zone
+            formInputs[10].value = ruleData[6].innerHTML; //dst_ip
+            formInputs[11].value = ruleData[7].innerHTML; //dst_port
 
-                    } else {
-                        formField.value = ruleData[i-offset].innerHTML;
-                    }
+            formInputs[12].value = ruleData[8].innerHTML.toUpperCase(); //action
+            formInputs[13].value = ruleData[10].innerHTML; //sec1_prof
+            formInputs[14].value = ruleData[11].innerHTML; //sec2_prof
 
-                    if (formField.name == 'position') {
-                        // settings static pos at index 3 to match position.
-                        formInputs[2].value = ruleData[i-offset].innerHTML;
-                        ++offset;
-                    }
+         }
 
-                } else {
-
-                    let selectOptions = formSelects[fi].options;
-
-                    for (let oi = 0; oi < selectOptions.length; ++oi) {
-
-                        let opt = selectOptions[oi];
-
-                        if (opt.value == ruleData[i-2].innerHTML) {
-                            formField.value = opt.value;
-
-                        }
-                    }
-
-                    ++fi;
-                }
-            }
-
-            $('#FWrule-editor').modal('open');
-
-        }
+        $('#FWrule-editor').modal('open');
 
     });
     </script>

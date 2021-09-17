@@ -398,30 +398,30 @@ def manage_firewall_rule(fw_rule):
         'static_pos', 'position', 'section',
         'src_zone', 'src_ip', 'src_port',
         'dst_zone', 'dst_ip', 'dst_port',
-        'action', 'sec-prof1', 'sec-prof2',
+        'action', 'sec1_prof', 'sec2_prof',
     ]
     if not all([hasattr(fw_rule, x) for x in valid_fields]):
-        raise ValidationError(INVALID_FORM)
+        raise ValidationError(f'{INVALID_FORM} [fields]')
 
     if (fw_rule.action not in ['accept', 'deny']):
-        raise ValidationError(INVALID_FORM)
+        raise ValidationError(f'{INVALID_FORM} [action]')
 
     action = 1 if fw_rule.action == 'accept' else 0
 
     rule_list = FirewallManage.cfirewall.view_ruleset(section=fw_rule.section)
     if (rule_list is None):
-        raise ValidationError(INVALID_FORM)
+        raise ValidationError(f'{INVALID_FORM} [section]')
 
     rule_count = len(rule_list) + 1 # 1 for add and 1 for range non inclusivity
     if (convert_int(fw_rule.static_pos) not in range(1, rule_count)):
-        raise ValidationError(INVALID_FORM)
+        raise ValidationError(f'{INVALID_FORM} [position][1]')
 
     # this will allow for rule to be place beyond the last rule in list.
     if hasattr(fw_rule, 'create_rule'):
         rule_count += 1
 
     if (convert_int(fw_rule.position) not in range(1, rule_count)):
-        raise ValidationError(INVALID_FORM)
+        raise ValidationError(f'{INVALID_FORM} [position][2]')
 
     # appending /32 if / not present in string. the network test will catch malformed networks beyond that.
     if ('/' not in fw_rule.src_ip):
@@ -444,7 +444,7 @@ def manage_firewall_rule(fw_rule):
     s_zone = zone_map.get(fw_rule.src_zone, None)
     d_zone = zone_map.get(fw_rule.dst_zone, None)
     if (s_zone is None or d_zone is None):
-        raise ValidationError(INVALID_FORM)
+        raise ValidationError(f'{INVALID_FORM} [zone]')
 
     ip_proxy_profile = convert_int(fw_rule.sec1_prof)
     ips_ids_profile  = convert_int(fw_rule.sec2_prof)

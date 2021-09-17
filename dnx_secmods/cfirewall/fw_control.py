@@ -73,7 +73,8 @@ class FirewallManage:
             else:
                 temp_rules = list(ruleset.values())
 
-                temp_rules = [*temp_rules[:pos_int], rule, *temp_rules[pos_int:]]
+                # offset to adjust for rule num vs index
+                temp_rules.insert(pos_int-1, rule)
 
                 # assigning section with new ruleset
                 firewall[section] = {f'{i}': rule for i, rule in enumerate(temp_rules, 1)}
