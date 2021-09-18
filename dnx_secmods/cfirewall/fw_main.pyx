@@ -130,10 +130,13 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
 # explicit inline declaration needed for compiler to know to inline this function
 cdef inline u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto) nogil:
 
-    cdef u_int32_t gi, i, rule_src_protocol, rule_dst_protocol
-    cdef FWrule **section
-    cdef FWrule *rule
-    cdef u_int32_t mark, section_count
+    cdef:
+        FWrule *rule, **section
+        u_int16_t iph_src_netid, iph_dst_netid
+
+        # 32 bit needed due to proto being stored within upper 16 bits of 32 bit port definition (port max is 16)
+        u_int32_t rule_src_protocol, rule_dst_protocol
+        u_int32_t gi, i
 
     for gi in range(FW_SECTION_COUNT):
 
@@ -162,17 +165,20 @@ cdef inline u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             # ================================================================== #
             # IP/NETMASK
             # ================================================================== #
-            vprint('p-s ip=%u,', ip_header.saddr, 'p-s netid=%u,', ip_header.saddr & rule.s_net_mask, 'r-s netid=%u\n', rule.s_net_id)
-            vprint('p-d ip=%u,', ip_header.daddr, 'p-d netid=%u,', ip_header.daddr & rule.d_net_mask, 'r-d netid=%u\n', rule.d_net_id)
+            iph_src_netid = ntoh(ip_header.saddr) & rule.s_net_mask
+            vprint('p-s ip=%u,', ip_header.saddr, 'p-s netid=%u,', iph_src_netid, 'r-s netid=%u\n', rule.s_net_id)
             if ip_header.saddr & rule.s_net_mask != rule.s_net_id:
                 continue
 
+            iph_dst_netid = ntoh(ip_header.daddr) & rule.d_net_mask
+            vprint('p-d ip=%u,', ip_header.daddr, 'p-d netid=%u,', iph_dst_netid, 'r-d netid=%u\n', rule.d_net_id)
             if ip_header.daddr & rule.d_net_mask != rule.d_net_id:
                 continue
 
             # ================================================================== #
             # PROTOCOL
             # ================================================================== #
+            vprint('p proto=%u,', ip_header.protocol, 'r proto=%u,', rule_src_protocol)
             rule_src_protocol = rule.s_port_start >> 16
             if ip_header.protocol != rule_src_protocol and rule_src_protocol != 0:
                 continue
@@ -368,12 +374,12 @@ cdef class CFirewall:
 
         return 0
 
-cdef inline void vprint(char *msg1, u_int32_t one, char *msg2='', u_int32_t two=0, char *msg3='', u_int32_t thr=0) nogil:
+cdef inline void vprint(char *msg1, u_int32_t one, char *msg2='', long two=-1, char *msg3='', long thr=-1) nogil:
     if VERBOSE:
         printf(msg1, one)
 
-        if two:
+        if two != -1:
             printf(msg2, two)
 
-        if thr:
+        if thr != -1:
             printf(msg3, thr)
