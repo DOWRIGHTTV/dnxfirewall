@@ -225,9 +225,9 @@ cdef class CFirewall:
     cdef u_int32_t cidr_to_int(self, long cidr):
 
         cdef u_int32_t integer_mask = 0
-        cdef u_int8_t  mask_index = 32
+        cdef u_int8_t  mask_index = 31 # 1 + 31 shifts = 32 bits
 
-        for i in range(cidr):
+        for i in range(cidr+1):
             integer_mask |= 1 << mask_index
 
             mask_index -= 1
@@ -260,14 +260,14 @@ cdef class CFirewall:
         # source
         fw_rule.s_zone       = <u_int8_t> rule[1]
         fw_rule.s_net_id     = <u_int32_t>rule[2]
-        fw_rule.s_net_mask   = cidr_to_int(rule[3]) # converting CIDR to integer. pow(2, rule[3])
+        fw_rule.s_net_mask   = self.cidr_to_int(rule[3]) # converting CIDR to integer. pow(2, rule[3])
         fw_rule.s_port_start = <u_int16_t>rule[4]
         fw_rule.s_port_end   = <u_int16_t>rule[5]
 
         #destination
         fw_rule.d_zone       = <u_int8_t> rule[6]
         fw_rule.d_net_id     = <u_int32_t>rule[7]
-        fw_rule.d_net_mask   = <u_int32_t>cidr_to_int(rule[8]) # converting CIDR to integer. pow(2, rule[3])
+        fw_rule.d_net_mask   = self.cidr_to_int(rule[8]) # converting CIDR to integer. pow(2, rule[3])
         fw_rule.d_port_start = <u_int16_t>rule[9]
         fw_rule.d_port_end   = <u_int16_t>rule[10]
 
