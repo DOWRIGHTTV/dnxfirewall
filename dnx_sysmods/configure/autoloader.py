@@ -21,6 +21,7 @@ PROGRESS_TOTAL_COUNT = 16
 
 LINEBREAK = '-' * 32
 
+SYSTEM_DIR  = f'{HOME_DIR}/dnx_system'
 UTILITY_DIR = f'{HOME_DIR}/dnx_system/utils'
 
 # ----------------------------
@@ -115,7 +116,7 @@ def configure_interfaces():
     set_dnx_interfaces(user_intf_config)
     set_dhcp_interfaces(user_intf_config)
 
-    with open(f'{HOME_DIR}/dnx_system/interfaces/intf_config_template.json', 'r') as intf_configs:
+    with open(f'{SYSTEM_DIR}/interfaces/intf_config_template.json', 'r') as intf_configs:
         intf_configs = intf_configs.read()
 
     for intf_name, intf in user_intf_config.items():
@@ -268,14 +269,14 @@ def configure_webui():
 
     generate_cert_commands = [
         f'sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048',
-        f'-keyout {HOME_DIR}/dnx_system/ssl/dnx-web.key',
-        f'-out {HOME_DIR}/dnx_system/ssl/dnx-web.crt',
+        f'-keyout {SYSTEM_DIR}/ssl/dnx-web.key',
+        f'-out {SYSTEM_DIR}/ssl/dnx-web.crt',
         f'-subj {cert_subject}'
     ]
 
     commands = [
         (' '.join(generate_cert_commands), 'generating dnx webui ssl certificate'),
-        (f'sudo cp {HOME_DIR}/utils/dnx_web /etc/nginx/sites-available/', 'configuring management webui'),
+        (f'sudo cp {UTILITY_DIR}/dnx_web /etc/nginx/sites-available/', 'configuring management webui'),
         ('ln -s /etc/nginx/sites-available/dnx_web /etc/nginx/sites-enabled/', None),
         ('sudo rm /etc/nginx/sites-enabled/default', None)
     ]
@@ -298,7 +299,7 @@ def set_permissions():
 
     # creating database file here so it can get its permissions modified. This will
     # ensure it wont be overridden by update pulls.
-    dnx_run(f'touch {HOME_DIR}/dnx_system/data/dnxfirewall.sqlite3')
+    dnx_run(f'touch {SYSTEM_DIR}/data/dnxfirewall.sqlite3')
 
     # set owner to dnx user/group
     dnx_run(f'chown -R dnx:dnx {HOME_DIR}')
