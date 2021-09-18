@@ -80,11 +80,13 @@ cdef class CPacket:
 
         self.payload = &self.data[self._cmbhdr_len]
 
-    cdef void verdict(self, u_int32_t verdict):
+    cdef void verdict(self, u_int32_t verdict) nogil:
         '''Call appropriate set_verdict function on packet.'''
 
         if self._verdict:
-            raise RuntimeWarning('Verdict already given for this packet.')
+            printf('[C/warning] Multiple verdicts issued to a single packet.')
+
+            return
 
         if self._mark:
             nfq_set_verdict2(
@@ -104,28 +106,29 @@ cdef class CPacket:
         self._mark = mark
 
     cpdef accept(self):
-        '''Accept the packet.'''
 
-        self.verdict(NF_ACCEPT)
+        with nogil:
+            self.verdict(NF_ACCEPT)
 
     cpdef drop(self):
-        '''Drop the packet.'''
 
-        self.verdict(NF_DROP)
+        with nogil:
+            self.verdict(NF_DROP)
 
     cpdef forward(self, u_int16_t queue_num):
-        '''Send the packet to a different queue.'''
+        '''Send instance packet to a different queue.'''
 
         cdef u_int32_t forward_to_queue
 
-        forward_to_queue = queue_num << 16 | NF_QUEUE
+        with nogil:
+            forward_to_queue = queue_num << 16 | NF_QUEUE
 
-        self.verdict(forward_to_queue)
+            self.verdict(forward_to_queue)
 
     cpdef repeat(self):
-        '''Repeat the packet.'''
 
-        self.verdict(NF_REPEAT)
+        with nogil:
+            self.verdict(NF_REPEAT)
 
     def get_inint_name(self):
 
@@ -256,7 +259,7 @@ cdef class CPacket:
 
 cdef class NetfilterQueue:
 
-    cdef void _run(self) nogil:
+    cdef void _run(self):
 
         cdef int fd = nfq_fd(self.h)
         cdef char buf[4096]
@@ -264,7 +267,8 @@ cdef class NetfilterQueue:
         cdef int recv_flags = 0
 
         while True:
-            rv = recv(fd, buf, sizeof(buf), recv_flags)
+            with nogil:
+                rv = recv(fd, buf, sizeof(buf), recv_flags)
 
             if (rv >= 0):
                 nfq_handle_packet(self.h, buf, rv)
@@ -274,11 +278,10 @@ cdef class NetfilterQueue:
                     break
 
     def nf_run(self):
-        ''' calls internal C run method to engage nfqueue processes. this call will run forever, but will
-        release the GIL prior to entering C and reacquire it before passing to user callback.'''
+        ''' calls internal C run method to engage nfqueue processes. this call will run forever, but parsing operations
+        will release the GIL prior to and acquire before returning to user callback.'''
 
-        with nogil:
-            self._run()
+        self._run()
 
     def nf_set(self, u_int16_t queue_num):
         self.h = nfq_open()

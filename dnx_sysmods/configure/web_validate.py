@@ -412,13 +412,13 @@ def manage_firewall_rule(fw_rule):
     if (rule_list is None):
         raise ValidationError(f'{INVALID_FORM} [section]')
 
-    rule_count = len(rule_list) + 1 # 1 for add and 1 for range non inclusivity
-    if (convert_int(fw_rule.static_pos) not in range(1, rule_count)):
-        raise ValidationError(f'{INVALID_FORM} [position][1]')
-
+    rule_count = len(rule_list) + 1 # +1 to account for non exclusivity
     # this will allow for rule to be place beyond the last rule in list.
     if hasattr(fw_rule, 'create_rule'):
         rule_count += 1
+
+    if (convert_int(fw_rule.static_pos) not in range(1, rule_count)):
+        raise ValidationError(f'{INVALID_FORM} [position][1]')
 
     if (convert_int(fw_rule.position) not in range(1, rule_count)):
         raise ValidationError(f'{INVALID_FORM} [position][2]')

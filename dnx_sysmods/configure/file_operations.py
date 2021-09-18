@@ -386,7 +386,7 @@ class Watcher:
 
             # condition to allow initial load to happen without the usr file being present.
             # NOTE: the load configuration function used loads system defaults prior to user settings
-            # so there will be no ussue marking a non existent file as modified.
+            # so there will be no issue marking a non existent file as modified.
             if (not self._last_modified_time):
                 self._last_modified_time = 1
 

@@ -52,7 +52,7 @@ class IPProxy(NFQueue):
             return False
 
         # standard ip proxy inspect. further action decided post inspection.
-        if (packet.action is CONN.ACCEPT and packet.ip_proxy_profile):
+        if (packet.action is CONN.ACCEPT and packet.ipp_profile):
             return True
 
         # forwarding packet to ips for portscan/ddos inspection

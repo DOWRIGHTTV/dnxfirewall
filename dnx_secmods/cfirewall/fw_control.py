@@ -221,7 +221,7 @@ class FirewallControl:
 
         print(f'sending zones to CFirewall: {dnx_zones}')
 
-        # NOTE: gil must be aquired on the other side of this call
+        # NOTE: gil must be acquired on the other side of this call
         error = self.cfirewall.update_zones(dnx_zones)
         if (error):
             pass # TODO: do something here
@@ -253,7 +253,7 @@ class FirewallControl:
             # and Cython can handle the initial list.
             ruleset = [array('L', rule) for rule in new_section.values()]
 
-            # NOTE: gil must be aquired on the other side of this call
+            # NOTE: gil must be acquired on the other side of this call
             error = self.cfirewall.update_ruleset(i, ruleset)
             if (error):
                 pass # TODO: do something here

@@ -222,7 +222,19 @@ cdef class CFirewall:
                 if errno != ENOBUFS:
                     break
 
-    cdef void _set_FWrule(self, int ruleset, unsigned long[:] rule, int pos):
+    cdef u_int32_t cidr_to_int(self, long cidr):
+
+        cdef u_int32_t integer_mask = 0
+        cdef u_int8_t  mask_index = 32
+
+        for i in range(cidr):
+            integer_mask |= 1 << mask_index
+
+            mask_index -= 1
+
+        return integer_mask
+
+    cdef void set_FWrule(self, int ruleset, unsigned long[:] rule, int pos):
 
         cdef FWrule **fw_section
         cdef FWrule *fw_rule
@@ -248,14 +260,14 @@ cdef class CFirewall:
         # source
         fw_rule.s_zone       = <u_int8_t> rule[1]
         fw_rule.s_net_id     = <u_int32_t>rule[2]
-        fw_rule.s_net_mask   = <u_int32_t>rule[3]
+        fw_rule.s_net_mask   = cidr_to_int(rule[3]) # converting CIDR to integer. pow(2, rule[3])
         fw_rule.s_port_start = <u_int16_t>rule[4]
         fw_rule.s_port_end   = <u_int16_t>rule[5]
 
         #destination
         fw_rule.d_zone       = <u_int8_t> rule[6]
         fw_rule.d_net_id     = <u_int32_t>rule[7]
-        fw_rule.d_net_mask   = <u_int32_t>rule[8]
+        fw_rule.d_net_mask   = <u_int32_t>cidr_to_int(rule[8]) # converting CIDR to integer. pow(2, rule[3])
         fw_rule.d_port_start = <u_int16_t>rule[9]
         fw_rule.d_port_end   = <u_int16_t>rule[10]
 
@@ -339,7 +351,7 @@ cdef class CFirewall:
         for i in range(rule_count):
             rule = rulelist[i]
 
-            self._set_FWrule(ruleset, rule, i)
+            self.set_FWrule(ruleset, rule, i)
 
         # updating rule count in global tracker. this is very important in that it establishes the right side bound for
         # firewall ruleset iteration operations.

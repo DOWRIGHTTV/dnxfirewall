@@ -188,13 +188,12 @@ cdef struct protohdr:
     u_int16_t s_port
     u_int16_t d_port
 
-DEF FW_RULE_COUNT = 1000
-
 cdef class CFirewall:
     cdef nfq_handle *h # Handle to NFQueue library
     cdef nfq_q_handle *qh # A handle to the queue
 
     cdef void _run(self) nogil
-    cdef void _set_FWrule(self, int ruleset, unsigned long[:] rule, int pos)
+    cdef u_int32_t cidr_to_int(self, long cidr)
+    cdef void set_FWrule(self, int ruleset, unsigned long[:] rule, int pos)
     cpdef int update_zones(self, Py_Array zone_map) with gil
     cpdef int update_ruleset(self, int ruleset, list rulelist) with gil

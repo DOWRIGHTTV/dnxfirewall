@@ -179,7 +179,7 @@ cdef class CPacket:
 
     cdef u_int32_t parse(self, nfq_q_handle *qh, nfq_data *nfa) nogil
     cdef void _parse(self) nogil
-    cdef void verdict(self, u_int32_t verdict)
+    cdef void verdict(self, u_int32_t verdict) nogil
     cpdef update_mark(self, u_int32_t mark)
     cpdef accept(self)
     cpdef drop(self)
@@ -190,4 +190,4 @@ cdef class NetfilterQueue:
     cdef nfq_handle *h # Handle to NFQueue library
     cdef nfq_q_handle *qh # A handle to the queue
 
-    cdef void _run(self) nogil
+    cdef void _run(self)
