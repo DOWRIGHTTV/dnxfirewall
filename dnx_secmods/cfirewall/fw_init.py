@@ -24,7 +24,7 @@ Log.run(
     name=LOG_NAME
 )
 
-dnxfirewall = CFirewall()
+dnxfirewall = CFirewall(args.bypass, args.verbose)
 error = dnxfirewall.nf_set(Queue.CFIREWALL)
 if (error):
     Log.error(f'failed to bind to queue {Queue.CFIREWALL}')
@@ -42,7 +42,7 @@ fw_control.run()
 # system operations and will never retake the gil. #NOTE: setting bypass will tell the process to invoke
 # firewall action(DROP or ACCEPT) directly without forwarding to other modules.
 try:
-    dnxfirewall.nf_run(args.bypass, args.verbose)
+    dnxfirewall.nf_run()
 except:
     dnxfirewall.nf_break()
     os._exit(1)

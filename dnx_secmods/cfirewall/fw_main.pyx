@@ -215,6 +215,12 @@ cdef u_int32_t SOCK_RCV_SIZE = 1024 * 4796 // 2
 
 cdef class CFirewall:
 
+    def __cinit__(self, bint bypass, bint verbose):
+        global BYPASS, VERBOSE
+
+        BYPASS  = bypass
+        VERBOSE = verbose
+
     cdef void _run(self) nogil:
         '''Accept packets using recv.'''
 
@@ -300,14 +306,9 @@ cdef class CFirewall:
         # printf('[set/FWrule] %u > security profiles set\n', pos)
 
     # PYTHON ACCESSIBLE FUNCTIONS
-    def nf_run(self, bint bypass, bint verbose):
+    def nf_run(self):
         ''' calls internal C run method to engage nfqueue processes. this call will run forever, but will
         release the GIL prior to entering C and never try to reacquire it.'''
-
-        global BYPASS, VERBOSE
-
-        BYPASS  = bypass
-        VERBOSE = verbose
 
         # release gil and never look back.
         with nogil:
