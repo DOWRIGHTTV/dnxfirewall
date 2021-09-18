@@ -133,9 +133,9 @@ cdef inline u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
     cdef:
         FWrule **section
         FWrule *rule
-        u_int16_t iph_src_netid, iph_dst_netid
+        u_int32_t iph_src_netid, iph_dst_netid
         u_int32_t rule_src_protocol, rule_dst_protocol # <16 bit proto | 16 bit port>
-        u_int32_t gi, i
+        u_int16_t gi, i
 
     for gi in range(FW_SECTION_COUNT):
 
