@@ -131,11 +131,10 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
 cdef inline u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto) nogil:
 
     cdef:
-        FWrule *rule, **section
+        FWrule **section
+        FWrule *rule
         u_int16_t iph_src_netid, iph_dst_netid
-
-        # 32 bit needed due to proto being stored within upper 16 bits of 32 bit port definition (port max is 16)
-        u_int32_t rule_src_protocol, rule_dst_protocol
+        u_int32_t rule_src_protocol, rule_dst_protocol # <16 bit proto | 16 bit port>
         u_int32_t gi, i
 
     for gi in range(FW_SECTION_COUNT):
@@ -178,12 +177,13 @@ cdef inline u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             # ================================================================== #
             # PROTOCOL
             # ================================================================== #
-            vprint('p proto=%u,', ip_header.protocol, 'r proto=%u,', rule_src_protocol)
             rule_src_protocol = rule.s_port_start >> 16
+            vprint('p proto=%u,', ip_header.protocol, 'r-s proto=%u,', rule_src_protocol)
             if ip_header.protocol != rule_src_protocol and rule_src_protocol != 0:
                 continue
 
             rule_dst_protocol = rule.d_port_start >> 16
+            vprint('p proto=%u,', ip_header.protocol, 'r-d proto=%u,', rule_dst_protocol)
             if ip_header.protocol != rule_dst_protocol and rule_dst_protocol != 0:
                 continue
 
