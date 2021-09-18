@@ -121,7 +121,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         qh, id, verdict, mark, data_len, data_ptr
             )
 
-    vprint('[C/packet] action=%u,', mark >> 4 & 15, 'verdict=%u\n', verdict)
+    vprint('[C/packet] action=%u,', mark & 15, 'verdict=%u\n', verdict)
 
     # libnfnetlink.c return >> libnetfiler_queue return >> CFirewall._run.
     # < 0 vals are errors, but return is being ignored by CFirewall._run.
@@ -151,6 +151,8 @@ cdef inline u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             # ZONE MATCHING
             # ================================================================== #
             # currently tied to interface and designated LAN, WAN, DMZ
+            vprint('p-i zone=%u,', hw.in_zone, 'r-i zone=%u\n', rule.s_zone)
+            vprint('p-o zone=%u,', hw.out_zone, 'r-o zone=%u\n', rule.d_zone)
             if hw.in_zone != rule.s_zone and rule.s_zone != 0:
                 continue
 
@@ -160,6 +162,8 @@ cdef inline u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             # ================================================================== #
             # IP/NETMASK
             # ================================================================== #
+            vprint('p-s ip=%u,', ip_header.saddr, 'p-s netid=%u,', ip_header.saddr & rule.s_net_mask, 'r-s netid=%u\n', rule.s_net_id)
+            vprint('p-d ip=%u,', ip_header.daddr, 'p-d netid=%u,', ip_header.daddr & rule.d_net_mask, 'r-d netid=%u\n', rule.d_net_id)
             if ip_header.saddr & rule.s_net_mask != rule.s_net_id:
                 continue
 
@@ -369,7 +373,7 @@ cdef inline void vprint(char *msg1, u_int32_t one, char *msg2=0, u_int32_t two=0
         printf(msg1, one)
 
         if two:
-            printf(ms2, two)
+            printf(msg2, two)
 
         if thr:
             printf(msg3, thr)
