@@ -368,7 +368,7 @@ cdef class CFirewall:
 
         return 0
 
-cdef inline void vprint(char *msg1, u_int32_t one, char *msg2=0, u_int32_t two=0, char *msg3=0, u_int32_t thr=0) nogil:
+cdef inline void vprint(char *msg1, u_int32_t one, char *msg2='', u_int32_t two=0, char *msg3='', u_int32_t thr=0) nogil:
     if VERBOSE:
         printf(msg1, one)
 
