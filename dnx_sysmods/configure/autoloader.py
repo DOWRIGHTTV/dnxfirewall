@@ -17,7 +17,7 @@ from dnx_sysmods.configure.iptables import IPTablesManager
 from dnx_sysmods.logging.log_main import LogHandler as Log
 
 LOG_NAME = 'system'
-PROGRESS_TOTAL_COUNT = 16
+PROGRESS_TOTAL_COUNT = 13
 
 LINEBREAK = '-' * 32
 
