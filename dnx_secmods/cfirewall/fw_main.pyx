@@ -243,7 +243,9 @@ cdef class CFirewall:
 
             mask_index -= 1
 
-        vprint(f'cidr={cidr}, integer_mask=%u\n', integer_mask)
+        if VERBOSE:
+            print(f'cidr={cidr}, integer_mask={integer_mask}')
+
         return integer_mask
 
     cdef void set_FWrule(self, int ruleset, unsigned long[:] rule, int pos):
