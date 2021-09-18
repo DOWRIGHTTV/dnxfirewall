@@ -17,10 +17,8 @@ parser = argparse.ArgumentParser(description='DNXFIREWALL/CFirewall command line
 parser.add_argument('--bypass', help='sets cfirewall to bypass security modules', action='store_true')
 
 args = parser.parse_args(argv[1:])
-BYPASS = args.bypass
 
 LOG_NAME = 'firewall'
-
 Log.run(
     name=LOG_NAME
 )
@@ -43,7 +41,7 @@ fw_control.run()
 # system operations and will never retake the gil. #NOTE: setting bypass will tell the process to invoke
 # firewall action(DROP or ACCEPT) directly without forwarding to other modules.
 try:
-    dnxfirewall.nf_run(bypass=BYPASS)
+    dnxfirewall.nf_run(args.bypass)
 except:
     dnxfirewall.nf_break()
     os._exit(1)

@@ -415,14 +415,16 @@ class NFQueue:
 
         while True:
             nfqueue = NetfilterQueue()
-            nfqueue.bind(self.__q_num)
+            nfqueue.nf_set(self.__q_num)
 
             self._Log.notice('Starting dnx_netfilter queue. Packets can now be processed')
 
+            # this is a blocking call which interacts with system via callback. while loop is to re establish the
+            # queue handle after an uncaught exception (hopefully maintaining system uptime)
             try:
-                nfqueue.run()
+                nfqueue.nf_run()
             except:
-                nfqueue.unbind()
+                nfqueue.nf_break()
 
                 self._Log.alert('Netfilter binding lost. Attempting to rebind.')
 
