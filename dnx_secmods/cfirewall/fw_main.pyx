@@ -244,7 +244,7 @@ cdef class CFirewall:
         cdef u_int32_t integer_mask = 0
         cdef u_int8_t  mask_index = 31 # 1 + 31 shifts = 32 bits
 
-        for i in range(cidr+1):
+        for i in range(cidr):
             integer_mask |= 1 << mask_index
 
             mask_index -= 1
