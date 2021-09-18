@@ -15,18 +15,17 @@ def set_user_callback(ref):
 
     user_callback = ref
 
-cdef int nf_callback(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *data) nogil:
+cdef int nf_callback(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *data):
 
     cdef CPacket packet
     cdef u_int32_t mark
 
-    with gil:
-        packet = CPacket()
+    packet = CPacket()
 
-    mark = packet.parse(qh, nfa)
+    with nogil:
+        mark = packet.parse(qh, nfa)
 
-    with gil:
-        user_callback(packet, mark)
+    user_callback(packet, mark)
 
     return 1
 
