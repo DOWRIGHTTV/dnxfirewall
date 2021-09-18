@@ -33,8 +33,16 @@ def sprint(string):
 def eprint(string):
     '''error print. includes timestamp and alert before arg str.'''
     print(f'{time.strftime("%H:%M:%S")}| !!! {string}')
+    while True:
+        answer = input('continue? [y/N]: ')
+        if (answer.lower() == 'y'):
+            return
 
-    os._exit(1)
+        elif (answer.lower() in ['n', '']):
+            os._exit(1)
+
+        else:
+            print('!invalid selection.')
 
 def dnx_run(string):
     '''convenience function, subprocess run wrapper adding additional args.'''
@@ -171,7 +179,7 @@ def write_net_config(interface_configs):
     with open('/etc/netplan/01-dnx-interfaces.yaml', 'w') as intf_config:
         intf_config.write(interface_configs)
 
-    # removing configuration set during install.
+    # removing configuration set during os install.
     try:
         os.remove('/etc/netplan/00-installer-config.yaml')
     except:
