@@ -12,7 +12,8 @@ DEF FW_AFTER_MAX_RULE_COUNT = 100
 DEF FW_MAX_ZONE_COUNT = 16
 DEF FW_RULE_SIZE = 15
 
-cdef bint BYPASS = 0
+cdef bint BYPASS  = 0
+cdef bint VERBOSE = 0
 
 # Firewall rules lock. Must be held
 # to read from or make changes to
@@ -120,8 +121,8 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         qh, id, verdict, mark, data_len, data_ptr
             )
 
-    # printf('packet action: %u\n', mark >> 4 & 15)
-    # printf('packet verdict: %u\n', verdict)
+    if VERBOSE:
+        printf('[C/packet] action=%u, verdict=%u\n', mark >> 4 & 15, verdict)
 
     # libnfnetlink.c return >> libnetfiler_queue return >> CFirewall._run.
     # < 0 vals are errors, but return is being ignored by CFirewall._run.
@@ -286,13 +287,14 @@ cdef class CFirewall:
         # printf('[set/FWrule] %u > security profiles set\n', pos)
 
     # PYTHON ACCESSIBLE FUNCTIONS
-    def nf_run(self, bint bypass):
+    def nf_run(self, bint bypass, bint verbose):
         ''' calls internal C run method to engage nfqueue processes. this call will run forever, but will
         release the GIL prior to entering C and never try to reacquire it.'''
 
-        global BYPASS
+        global BYPASS, VERBOSE
 
-        BYPASS = bypass
+        BYPASS  = bypass
+        VERBOSE = verbose
 
         # release gil and never look back.
         with nogil:
@@ -361,3 +363,7 @@ cdef class CFirewall:
         # printf('[update/ruleset] released lock\n')
 
         return 0
+
+cdef void vprint(char *message) nogil:
+    if VERBOSE:
+        printf('%s\n', message)

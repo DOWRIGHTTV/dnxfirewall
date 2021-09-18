@@ -15,6 +15,7 @@ from dnx_secmods.cfirewall.fw_control import FirewallControl
 
 parser = argparse.ArgumentParser(description='DNXFIREWALL/CFirewall command line executor')
 parser.add_argument('--bypass', help='sets cfirewall to bypass security modules', action='store_true')
+parser.add_argument('--verbose', help='prints informational messages', action='store_true')
 
 args = parser.parse_args(argv[1:])
 
@@ -41,7 +42,7 @@ fw_control.run()
 # system operations and will never retake the gil. #NOTE: setting bypass will tell the process to invoke
 # firewall action(DROP or ACCEPT) directly without forwarding to other modules.
 try:
-    dnxfirewall.nf_run(args.bypass)
+    dnxfirewall.nf_run(args.bypass, args.verbose)
 except:
     dnxfirewall.nf_break()
     os._exit(1)
