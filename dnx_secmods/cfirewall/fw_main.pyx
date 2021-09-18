@@ -153,8 +153,8 @@ cdef inline u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             # ZONE MATCHING
             # ================================================================== #
             # currently tied to interface and designated LAN, WAN, DMZ
-            vprint('p-i zone=%u,', hw.in_zone, 'r-i zone=%u\n', rule.s_zone)
-            vprint('p-o zone=%u,', hw.out_zone, 'r-o zone=%u\n', rule.d_zone)
+            vprint('p-i zone=%u, ', hw.in_zone, 'r-i zone=%u\n', rule.s_zone)
+            vprint('p-o zone=%u, ', hw.out_zone, 'r-o zone=%u\n', rule.d_zone)
             if hw.in_zone != rule.s_zone and rule.s_zone != 0:
                 continue
 
@@ -165,12 +165,12 @@ cdef inline u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             # IP/NETMASK
             # ================================================================== #
             iph_src_netid = ntohl(ip_header.saddr) & rule.s_net_mask
-            vprint('p-s ip=%u,', ntohl(ip_header.saddr), 'p-s netid=%u,', iph_src_netid, 'r-s netid=%u\n', rule.s_net_id)
+            vprint('p-s ip=%u, ', ntohl(ip_header.saddr), 'p-s netid=%u, ', iph_src_netid, 'r-s netid=%u\n', rule.s_net_id)
             if ip_header.saddr & rule.s_net_mask != rule.s_net_id:
                 continue
 
             iph_dst_netid = ntohl(ip_header.daddr) & rule.d_net_mask
-            vprint('p-d ip=%u,', ntohl(ip_header.daddr), 'p-d netid=%u,', iph_dst_netid, 'r-d netid=%u\n', rule.d_net_id)
+            vprint('p-d ip=%u, ', ntohl(ip_header.daddr), 'p-d netid=%u, ', iph_dst_netid, 'r-d netid=%u\n', rule.d_net_id)
             if ip_header.daddr & rule.d_net_mask != rule.d_net_id:
                 continue
 
@@ -178,12 +178,12 @@ cdef inline u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             # PROTOCOL
             # ================================================================== #
             rule_src_protocol = rule.s_port_start >> 16
-            vprint('p proto=%u,', ip_header.protocol, 'r-s proto=%u,', rule_src_protocol)
+            vprint('p proto=%u, ', ip_header.protocol, 'r-s proto=%u\n', rule_src_protocol)
             if ip_header.protocol != rule_src_protocol and rule_src_protocol != 0:
                 continue
 
             rule_dst_protocol = rule.d_port_start >> 16
-            vprint('p proto=%u,', ip_header.protocol, 'r-d proto=%u,', rule_dst_protocol)
+            vprint('p proto=%u, ', ip_header.protocol, 'r-d proto=%u\n', rule_dst_protocol)
             if ip_header.protocol != rule_dst_protocol and rule_dst_protocol != 0:
                 continue
 
@@ -243,6 +243,7 @@ cdef class CFirewall:
 
             mask_index -= 1
 
+        vprint(f'cidr={cidr}, integer_mask=%u\n', integer_mask)
         return integer_mask
 
     cdef void set_FWrule(self, int ruleset, unsigned long[:] rule, int pos):
