@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from libc.stdlib cimport malloc, calloc, free
-from libc.stdio cimport printf
+from libc.stdio cimport printf, sprintf
 
 DEF FW_SECTION_COUNT = 4
 DEF FW_SYSTEM_MAX_RULE_COUNT = 50
@@ -121,14 +121,14 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         qh, id, verdict, mark, data_len, data_ptr
             )
 
-    if VERBOSE:
-        printf('[C/packet] action=%u, verdict=%u\n', mark >> 4 & 15, verdict)
+    vprint('[C/packet] action=%u,', mark >> 4 & 15, 'verdict=%u\n', verdict)
 
     # libnfnetlink.c return >> libnetfiler_queue return >> CFirewall._run.
     # < 0 vals are errors, but return is being ignored by CFirewall._run.
     return 1
 
-cdef u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto) nogil:
+# explicit inline declaration needed for compiler to know to inline this function
+cdef inline u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto) nogil:
 
     cdef u_int32_t gi, i, rule_src_protocol, rule_dst_protocol
     cdef FWrule **section
@@ -364,6 +364,12 @@ cdef class CFirewall:
 
         return 0
 
-cdef void vprint(char *message) nogil:
+cdef inline void vprint(char *msg1, u_int32_t one, char *msg2=0, u_int32_t two=0, char *msg3=0, u_int32_t thr=0) nogil:
     if VERBOSE:
-        printf('%s\n', message)
+        printf(msg1, one)
+
+        if two:
+            printf(ms2, two)
+
+        if thr:
+            printf(msg3, thr)
