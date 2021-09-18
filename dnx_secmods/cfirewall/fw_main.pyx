@@ -166,12 +166,12 @@ cdef inline u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             # ================================================================== #
             iph_src_netid = ntohl(ip_header.saddr) & rule.s_net_mask
             vprint('p-s ip=%u, ', ntohl(ip_header.saddr), 'p-s netid=%u, ', iph_src_netid, 'r-s netid=%u\n', rule.s_net_id)
-            if ip_header.saddr & rule.s_net_mask != rule.s_net_id:
+            if iph_src_netid != rule.s_net_id:
                 continue
 
             iph_dst_netid = ntohl(ip_header.daddr) & rule.d_net_mask
             vprint('p-d ip=%u, ', ntohl(ip_header.daddr), 'p-d netid=%u, ', iph_dst_netid, 'r-d netid=%u\n', rule.d_net_id)
-            if ip_header.daddr & rule.d_net_mask != rule.d_net_id:
+            if iph_dst_netid != rule.d_net_id:
                 continue
 
             # ================================================================== #
