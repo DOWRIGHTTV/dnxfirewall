@@ -2,6 +2,8 @@
 
 cimport cython
 
+from libc.stdio cimport printf
+
 cdef u_int32_t MAX_COPY_SIZE = 4016 # 4096(buf) - 80
 cdef u_int32_t DEFAULT_MAX_QUEUELEN = 8192
 
