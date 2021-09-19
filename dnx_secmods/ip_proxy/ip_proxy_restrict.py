@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# TODO: move this module to cfirewall.
+
 import os, sys
 import threading
 

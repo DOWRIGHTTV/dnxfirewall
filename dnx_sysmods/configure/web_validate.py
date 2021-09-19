@@ -206,7 +206,7 @@ def proto_port(port_str):
 
 def timer(timer):
     timer = convert_int(timer)
-    if (not 1 < timer < 1440):
+    if (not 1 <= timer <= 1440):
         raise ValidationError('Timer must be between 1 and 1440 (24 hours).')
 
 def account_creation(account_info):
@@ -228,20 +228,17 @@ def password(password):
     if (len(password) < 8):
         raise ValidationError('Password does not meet length requirement of 8 characters.')
 
-    # searching for digits
-    if (not re.search(r'\d', password)
-            # searching for uppercase
-            or not re.search(r'[A-Z]', password)
-            # searching for lowercase
-            or not re.search(r'[a-z]', password)
-            # searching for symbols
-            or not re.search(r'\W', password)):
+    criteria = (
+        re.search(r'\d', password), re.search(r'[A-Z]', password), # searching for digits & uppercase
+        re.search(r'[a-z]', password), re.search(r'\W', password) # searching for lowercase & symbols
+    )
 
+    if not all(criteria):
         raise ValidationError('Password does not meet complexity requirements.')
 
 def user_role(user_role):
     if (user_role not in ['admin', 'user', 'cli']):
-        raise ValidationError('User settings are not valid.')
+        raise ValidationError('Invalid user settings.')
 
 def dhcp_reservation(reservation_settings):
     standard(reservation_settings['description'], override=[' '])
@@ -275,27 +272,27 @@ def dhcp_general_settings(server_settings):
 
 def log_settings(log_settings):
     if (log_settings['length'] not in [30, 45, 60, 90]):
-        raise ValidationError('Log settings are not valid.')
+        raise ValidationError('Invalid log settings.')
 
     try:
         LOG(log_settings['level'])
     except ValueError:
-        raise ValidationError('Log settings are not valid.')
+        raise ValidationError('Invalid log settings.')
 
 def time_offset(offset_settings):
     dir_offset = offset_settings['direction']
     if (dir_offset not in [' ', '-', '+']):
-        raise ValidationError('Time offset direction is not valid.')
+        raise ValidationError('Invalid time offset sign.')
 
     time_offset = offset_settings['time']
     if (time_offset not in range(0,15)):
-        raise ValidationError('Time offset amount is not valid.')
+        raise ValidationError('Invalid time offset value.')
 
     if (dir_offset == ' ' and time_offset != 0):
         raise ValidationError('Direction cannot be empty if amount is not zero.')
 
     elif (dir_offset == '-' and time_offset in [13, 14]):
-        raise ValidationError('Selected timezone is not valid.')
+        raise ValidationError('Invalid timezone/ time offset.')
 
 def syslog_settings(syslog_settings):
     syslog = load_configuration('syslog_client')
@@ -455,7 +452,7 @@ def manage_firewall_rule(fw_rule):
     # [1, 12, 4294967295, 32, 393217, 65535, 10, 4294967295, 32, 458751, 65535, 1, 0, 1, 1],
 
     return [
-        1,
+        int(hasattr(fw_rule, 'rule_state')), # returns boolean so will evaluate directly
         s_zone, s_net, s_p_len, s_proto << 16 | s_ports[0], s_ports[1],
         d_zone, d_net, d_p_len, d_proto << 16 | d_ports[0], d_ports[1],
         action, 0, ip_proxy_profile, ips_ids_profile

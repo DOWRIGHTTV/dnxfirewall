@@ -91,7 +91,7 @@ class FirewallManage:
 
             ruleset = firewall[section]
 
-            # this is safe if it fails, because the context will exit
+            # this is safe if it fails because the context will immediately exit gracefully
             ruleset.pop(pos)
 
             firewall[section] = {f'{i}': rule for i, rule in enumerate(ruleset.values(), 1)}
@@ -120,13 +120,17 @@ class FirewallManage:
             if (move):
                 rule_to_move = ruleset.pop(static_pos)
 
-            # write config even if it needs to move since external functional will handle move operation.
+            # write config even if it needs to move since external function will handle move operation (in the form of insertion).
             dnx_fw.write_configuration(firewall)
 
             # updating instance variable for direct access
             self.firewall = firewall
 
         # now that we are out of the context we can use add method to re insert the rule in specified place
+        # NOTE: since the lock has been released it is possible for another process to get the lock and modify the firewall
+        #  rules before the move can happen. only on rare cases would this even cause an issue, and of course, only the
+        #  pending config will be effected and can be reverted if need be. in the future maybe we can figure out a way to
+        #  deal with this operation without releasing the lock without having to duplicate code.
         if (move):
             self.add(pos, rule_to_move, section=section)
 

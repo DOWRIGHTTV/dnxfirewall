@@ -20,8 +20,8 @@
 
     {% set icon_color = 'blue-grey-text' %}
 
-    <!-- dark mode enabled -->
     {% if session['dark_mode'] %}
+    <!-- dark mode enabled -->
 
     {% set main_section_color = 'blue-grey darken-4' %}
     {% set off_section_color = 'blue-grey lighten-4' %}
@@ -29,8 +29,8 @@
     {% set title_color = 'black-text' %}
     {% set input_color = 'grey lighten-2' %}
 
-    <!-- default mode enabled -->
     {% else %}
+    <!-- default mode enabled -->
 
     {% set main_section_color = 'grey lighten-2' %}
     {% set off_section_color = 'grey lighten-5' %}
@@ -142,6 +142,7 @@
 
     </script>
 
+    {% if firewall %}
     <!-- allowing each row in table to be clicked. this should be used to edit table data in a popup.-->
     <script>
     $('tr[data-fw-modal]').on("click", function(ruleID) {
@@ -152,16 +153,20 @@
             var ruleForm = document.getElementById('FWrule-editor');
             var formInputs = ruleForm.getElementsByTagName('input');
 
+            const enabled = parseInt(ruleData[0].getAttribute('data-enabled'));
+
             formInputs[2].value = ruleData[1].innerHTML; //static position
             formInputs[3].value = ruleData[1].innerHTML; //position
             formInputs[4].value = ruleData[9].innerHTML; //log
-            //rule_state
+            formInputs[5].checked = !!enabled; //rule_state
 
             formInputs[6].value = ruleData[2].innerHTML.toUpperCase(); //src_zone
+
+            console.log(formInputs[6].attributes);
             formInputs[7].value = ruleData[3].innerHTML; //src_ip
             formInputs[8].value = ruleData[4].innerHTML; //src_port
 
-            formInputs[9].value = ruleData[5].innerHTML.toUpperCase(); //dst_zone
+            formInputs[9].value  = ruleData[5].innerHTML.toUpperCase(); //dst_zone
             formInputs[10].value = ruleData[6].innerHTML; //dst_ip
             formInputs[11].value = ruleData[7].innerHTML; //dst_port
 
@@ -175,6 +180,7 @@
 
     });
     </script>
+    {% endif %}
 
 </body>
 </html>

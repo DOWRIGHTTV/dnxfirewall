@@ -228,11 +228,10 @@ def advanced_blacklist(dnx_session_data):
 @user_restrict('admin')
 def advanced_firewall(dnx_session_data):
     tab = request.args.get('tab', '1')
-    menu_option = request.args.get('menu', '1')
 
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'menu': menu_option,
+        'tab': tab, 'dnx_table': True, 'firewall': True,
         'selected': 'MAIN',
         'sections': ['BEFORE', 'MAIN', 'AFTER'],
         'uri_path': ['advanced', 'firewall']

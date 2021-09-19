@@ -148,6 +148,8 @@ cdef inline u_int32_t cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             rule = firewall_rules[gi][i]
 
             # NOTE: inspection order: src > dst | zone, ip_addr, protocol, port
+            if not rule.enabled:
+                continue
 
             # ================================================================== #
             # ZONE MATCHING

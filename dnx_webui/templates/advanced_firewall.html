@@ -45,8 +45,11 @@
                         <a class="btn waves-effect waves-light modal-trigger right"
                            href="#FWrule-creator">Create Rule</a>
                     </div>
+                    <div class="input-field col s12 m6 l5 xl3 {{input_color}}">
+                        <input type="text" id="filter-input" onkeyup="filterTable(1, 4)" placeholder="Search string">
+                    </div>
                     <div class="row">
-                        <table class="striped centered">
+                        <table class="centered highlight" id="filter-table">
                             <thead>
                                 <tr>
                                     <th></th>
@@ -63,10 +66,10 @@
                                     <th>IPS/IDS</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="filter-table-body">
                                 {% for rule in firewall_settings['firewall_rules'] %}
                                 <tr id="r{{loop.index}}" data-fw-modal="r{{loop.index}}" {% if not rule[0] %} style="opacity: .4" {% endif %}>
-                                    <td>
+                                    <td data-enabled="{{rule[0]}}">
                                         <form action="/advanced/firewall" method="POST">
                                             <input type="hidden" name="tab" value="1">
                                             <input type="hidden" name="position" value="{{loop.index}}">
@@ -212,7 +215,7 @@
                     <div class="switch">
                         <label>
                             Off
-                            <input type="checkbox" checked="checked" name="rule_state" value="1" disabled>
+                            <input type="checkbox" checked="checked" name="rule_state">
                             <span class="lever"></span>
                             On
                         </label>
@@ -328,7 +331,7 @@
                     <div class="switch">
                         <label>
                             Off
-                            <input type="checkbox" checked="checked" name="rule_state" value="1" disabled>
+                            <input id="modify-enabled" type="checkbox" name="rule_state" value="1">
                             <span class="lever"></span>
                             On
                         </label>
