@@ -55,9 +55,15 @@ class IPProxy(NFQueue):
         if (packet.action is CONN.ACCEPT and packet.ipp_profile):
             return True
 
-        # forwarding packet to ips for portscan/ddos inspection
-        if (packet.direction is DIR.INBOUND and packet.ips_profile):
+        # forwarding packet to ips for portscan/ddos inspection. accept or deny actions are both capable of being
+        # inspected by ips/ids. if ips/ids inspection is needed, the ip proxy will defer verdict and forward.
+        elif (packet.direction is DIR.INBOUND and packet.ips_profile):
             packet.nfqueue.forward(Queue.IPS_IDS)
+
+        # if packet is not dropped at this point, neither the ips/ids and ip proxy profiles are set. in this case
+        # the ip proxy will issue the accept verdict.
+        elif (packet.action is CONN.ACCEPT and not packet.ipp_profile):
+            packet.nfqueue.accept()
 
         # dropped by cfirewall > inspect geo only
         else:
