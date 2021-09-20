@@ -132,7 +132,7 @@ class _Defaults:
 
     # TODO: implement commands to check source and dnat changes in nat table. what does this even mean?
     def nat(self):
-        # internal zones dns redirct into proxy
+        # internal zones dns redirect into proxy
         shell('iptables -t nat -A PREROUTING -j REDIRECT_OVERRIDE')
         # TODO: add config option in dns server settings to define up to 2 internal servers (check for RFC1918) as internal recursive
         # resolvers. dns requests to the configured servers will be exempt from this redirect. this will allow all internal zones

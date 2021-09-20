@@ -384,7 +384,7 @@ class NFQueue:
         self.__threaded = threaded
 
     @classmethod
-    def run(cls, Log, *, q_num, threaded=False):
+    def run(cls, Log, *, q_num, threaded=True):
         cls._setup()
         cls._Log = Log
 
