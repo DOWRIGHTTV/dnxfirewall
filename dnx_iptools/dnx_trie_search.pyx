@@ -89,9 +89,8 @@ cdef class RecurveTrie:
             else:
                 return self._l2_search(container_ids[1], l1_container.l2_size, &l1_container.l2_ptr)
 
-        # iteration completed with no match.
-        else:
-            return 0
+        # iteration completed with no l1 match
+        return 0
 
     cdef long _l2_search(self, long container_id, short l2_size, l2_recurve **L2_CONTAINER) nogil:
 
@@ -119,9 +118,8 @@ cdef class RecurveTrie:
             else:
                 return l2_container.host_category
 
-        # iteration completed with no match.
-        else:
-            return 0
+        # iteration completed with no l2 match
+        return 0
 
 
 cdef class RangeTrie:
@@ -163,7 +161,7 @@ cdef class RangeTrie:
             for xi in range(L2_SIZE):
                 L2_CONTAINER[xi] = self.make_l2(py_signatures[i][1][xi])[0]
 
-            # assigning struct members to current index of L1 container.
+            # assigning struct members to current index of L1 container
             self.L1_CONTAINER[i].id = <long>py_signatures[i][0]
             self.L1_CONTAINER[i].l2_size = L2_SIZE
             self.L1_CONTAINER[i].l2_ptr = L2_CONTAINER
@@ -209,9 +207,11 @@ cdef class RangeTrie:
                     if l2_container.network_id <= container_ids[1] <= l2_container.broadcast_id:
                         return l2_container.country_code
 
-        # iteration completed with no match.
-        else:
-            return 0
+                # iteration completed with no l2 match
+                return 0
+
+        # iteration completed with no match l1 match
+        return 0
 
 # ================================================ #
 # TYPED PYTHON STRUCTURES - keeping as alternative
