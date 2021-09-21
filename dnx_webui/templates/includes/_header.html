@@ -1,0 +1,233 @@
+<!-- header: logo, navbar content -->
+<header>
+    <nav class="blue-grey">
+        <div class="container">
+            <div class="nav-wrapper">
+                <a href="/dashboard" class="brand-logo valign-center"><img src="/static/assets/images/dnxlogo_v2.png"
+                    height="40px" style="display: block;">
+                </a>
+
+                {% if login_btn %}
+                <a href="login"><i class="material-icons left">send</i>Login</a>
+
+                {% elif navi %}
+                <a href="dashboard" data-target="mobile-nav" class="sidenav-trigger show-mobile-menu">
+                    <i class="material-icons">menu</i>
+                </a>
+
+                {% if role == 'admin' %}
+                <ul class="right remove-big-menu">
+                    <li {% if uri_path[0] == 'dashboard' %} class='active' {% endif %}>
+                        <a href="dashboard"><i class="material-icons grey-text accent-2 left">dashboard</i>Dashboard</a></li>
+
+                    <li {% if uri_path[0] == 'settings' %} class='active' {% endif %}>
+                        <a href="" class="dropdown-trigger" data-target="settings-dropdown"><i
+                                class="material-icons grey-text accent-2 left">settings</i>
+                            Settings <i class="material-icons right">arrow_drop_down</i></a></li>
+
+                    <li {% if uri_path[0] == 'advanced' %} class='active' {% endif %}>
+                        <a href="" class="dropdown-trigger" data-target="advanced-dropdown"><i
+                                class="material-icons red-text lighten-2 left">security</i>
+                            Advanced <i class="material-icons right">arrow_drop_down</i></a></li>
+
+                    <li {% if uri_path[0] == 'system' %} class='active' {% endif %}>
+                        <a href="" class="dropdown-trigger" data-target="system-dropdown"><i
+                                class="material-icons grey-text lighten-3 left">computer</i>
+                            System <i class="material-icons right">arrow_drop_down</i></a></li>
+
+                    <li><a href="" class="dropdown-trigger" data-target="device-dropdown"><i
+                                class="material-icons green-text accent-3 left">power_settings_new</i>
+                            Device <i class="material-icons right">arrow_drop_down</i></a></li>
+
+                    <li><a href="logout"><i class="material-icons orange-text lighten-1 left">logout</i>Logout</a></li>
+                </ul>
+
+                {% elif role == 'user' %}
+                <ul class="right remove-big-menu">
+                    <li {% if uri_path[0] == 'dashboard' %} class='active' {% endif %}>
+                        <a href="dashboard"><i class="material-icons grey-text accent-2 left">dashboard</i>Dashboard</a></li>
+
+                    <li {% if uri_path[0] == 'system' and uri_path[1] == 'reports' %} class='active' {% endif %}>
+                        <a href="system/reports"><i class="material-icons left">assignment_late</i> Reports</a></li>
+
+                    <li>
+                        <a href="logout"><i class="material-icons orange-text lighten-1 left">logout</i>Logout</a></li>
+                </ul>
+                {% else %}
+                <i class="material-icons grey-text lighten-1">lock_outline</i>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- full nav dropdown - large screens -->
+    <ul id="settings-dropdown" class="dropdown-content">
+        <li {% if uri_path[1] == 'dns' %} class='active' {% endif %}>
+            <a href="settings/dns"><i class="material-icons {{icon_color}}">dns</i> DNS</a></li>
+
+        <li {% if uri_path[1] == 'dhcp' %} class='active' {% endif %}>
+            <a href="settings/dhcp"><i class="material-icons {{icon_color}}">filter_b_and_w</i> DHCP</a></li>
+
+        <li {% if uri_path[1] == 'interface' %} class='active' {% endif %}>
+            <a href="settings/interface"><i class="material-icons {{icon_color}}">format_italic</i> Interface</a></li>
+
+        <li {% if uri_path[1] == 'logging' %} class='active' {% endif %}>
+            <a href="settings/logging"><i class="material-icons {{icon_color}}">description</i> Logging</a></li>
+
+    <!--    <li {% if uri_path[1] == 'syslog' %} class='active' {% endif %}>
+            <a href="settings/syslog"><i class="material-icons {{icon_color}}">file_copy</i> Syslog</a></li> -->
+
+        <li {% if uri_path[1] == 'categories' %} class='active' {% endif %}>
+            <a href="settings/categories"><i class="material-icons {{icon_color}}">library_books</i> Categories</a></li>
+    </ul>
+    <ul id="device-dropdown" class="dropdown-content">
+        <li {% if uri_path[1] == 'restart' %} class='active' {% endif %}>
+            <a href="device/restart"><i class="material-icons {{icon_color}}">refresh</i> Restart</a></li>
+
+        <li {% if uri_path[1] == 'shutdown' %} class='active' {% endif %}>
+            <a href="device/shutdown"><i class="material-icons {{icon_color}}">power_settings_new</i> Shutdown</a></li>
+    </ul>
+    <ul id="advanced-dropdown" class="dropdown-content">
+        <li {% if uri_path[1] == 'whitelist' %} class='active' {% endif %}>
+            <a href="/advanced/whitelist"><i class="material-icons {{icon_color}}">thumb_up</i> Whitelist</a></li>
+
+        <li {% if uri_path[1] == 'blacklist' %} class='active' {% endif %}>
+            <a href="/advanced/blacklist"><i class="material-icons {{icon_color}}">thumb_down</i> Blacklist</a></li>
+
+        <li {% if uri_path[1] == 'firewall' %} class='active' {% endif %}>
+            <a href="/advanced/firewall"><i class="material-icons {{icon_color}}">security</i> Firewall</a></li>
+
+        <li {% if uri_path[1] == 'nat' %} class='active' {% endif %}>
+            <a href="/advanced/nat"><i class="material-icons {{icon_color}}">call_split</i> NAT</a></li>
+
+        <li {% if uri_path[1] == 'domain' %} class='active' {% endif %}>
+            <a href="/advanced/domain"><i class="material-icons {{icon_color}}">collections_bookmark</i> Domain</a></li>
+
+        <li {% if uri_path[1] == 'ip' %} class='active' {% endif %}>
+            <a href="/advanced/ip"><i class="material-icons {{icon_color}}">verified_user</i> IP</a></li>
+
+        <li {% if uri_path[1] == 'ips' %} class='active' {% endif %}>
+            <a href="/advanced/ips"><i class="material-icons {{icon_color}}">report</i> IPS/IDS</a></li>
+    </ul>
+    <ul id="system-dropdown" class="dropdown-content">
+        <li {% if uri_path[1] == 'logs' %} class='active' {% endif %}>
+            <a href="system/logs"><i class="material-icons {{icon_color}}">assignment</i> Logs</a></li>
+
+        <li {% if uri_path[1] == 'reports' %} class='active' {% endif %}>
+            <a href="system/reports"><i class="material-icons {{icon_color}}">assignment_late</i> Reports</a></li>
+
+        <li {% if uri_path[1] == 'users' %} class='active' {% endif %}>
+            <a href="system/users"><i class="material-icons {{icon_color}}">group</i> Users</a></li>
+
+        <li {% if uri_path[1] == 'backups' %} class='active' {% endif %}>
+            <a href="system/backups"><i class="material-icons {{icon_color}}">backup</i> Backups</a></li>
+
+        <li {% if uri_path[1] == 'services' %} class='active' {% endif %}>
+            <a href="system/services"><i class="material-icons {{icon_color}}">sync</i> Services</a></li>
+    </ul>
+    <!-- end dropdown-->
+
+    <!-- sidenav - small screens -->
+    <ul class="sidenav" id="mobile-nav">
+        <li {% if uri_path[0] == 'dashboard' %} class='active' {% endif %}>
+            <a href="dashboard"><i class="material-icons grey-text accent-2 left">dashboard</i>Dashboard</a></li>
+
+        <li {% if uri_path[0] == 'settings' %} class='active' {% endif %}>
+            <a href="" class="dropdown-trigger" data-target="sidenav-settings-dropdown"><i class="material-icons left">settings</i>
+                Settings <i class="material-icons grey-text accent-2 right">arrow_drop_down</i></a></li>
+
+        <li {% if uri_path[0] == 'advanced' %} class='active' {% endif %}>
+            <a href="" class="dropdown-trigger" data-target="sidenav-advanced-dropdown"><i class="material-icons red-text lighten-2 left">security</i>
+                Advanced <i class="material-icons right">arrow_drop_down</i></a></li>
+
+        <li {% if uri_path[0] == 'system' %} class='active' {% endif %}>
+            <a href="" class="dropdown-trigger" data-target="sidenav-system-dropdown"><i class="material-icons left">computer</i>
+                System <i class="material-icons grey-text accent-2 right">arrow_drop_down</i></a></li>
+
+        <li {% if uri_path[0] == 'device' %} class='active' {% endif %}>
+            <a href="" class="dropdown-trigger" data-target="sidenav-device-dropdown"><i class="material-icons green-text accent-3 left">power_settings_new</i>
+                Device <i class="material-icons right">arrow_drop_down</i></a></li>
+
+        <li>
+            <a href="logout"><i class="material-icons orange-text lighten-1 left">logout</i>Logout</a></li>
+    </ul>
+    <!-- sidenav dropdown -->
+    <ul id="sidenav-settings-dropdown" class="dropdown-content">
+        <li {% if uri_path[1] == 'dns' %} class='active' {% endif %}>
+            <a href="settings/dns"><i class="material-icons {{icon_color}}">dns</i> DNS</a></li>
+
+        <li {% if uri_path[1] == 'dhcp' %} class='active' {% endif %}>
+            <a href="settings/dhcp"><i class="material-icons {{icon_color}}">filter_b_and_w</i> DHCP</a></li>
+
+        <li {% if uri_path[1] == 'interface' %} class='active' {% endif %}>
+            <a href="settings/interface"><i class="material-icons {{icon_color}}">format_italic</i> Interface</a></li>
+
+        <li {% if uri_path[1] == 'logging' %} class='active' {% endif %}>
+            <a href="settings/logging"><i class="material-icons {{icon_color}}">description</i> Logging</a></li>
+
+    <!--    <li {% if uri_path[1] == 'syslog' %} class='active' {% endif %}>
+            <a href="settings/syslog"><i class="material-icons {{icon_color}}">file_copy</i> Syslog</a></li> -->
+
+        <li {% if uri_path[1] == 'categories' %} class='active' {% endif %}>
+            <a href="settings/categories"><i class="material-icons {{icon_color}}">library_books</i> Categories</a></li>
+    </ul>
+    <ul id="sidenav-device-dropdown" class="dropdown-content">
+        <li {% if uri_path[1] == 'restart' %} class='active' {% endif %}>
+            <a href="device/restart"><i class="material-icons {{icon_color}}">refresh</i> Restart</a></li>
+
+        <li {% if uri_path[1] == 'shutdown' %} class='active' {% endif %}>
+            <a href="device/shutdown"><i class="material-icons {{icon_color}}">power_settings_new</i> Shutdown</a></li>
+    </ul>
+    <ul id="sidenav-advanced-dropdown" class="dropdown-content">
+        <li {% if uri_path[1] == 'whitelist' %} class='active' {% endif %}>
+            <a href="/advanced/whitelist"><i class="material-icons {{icon_color}}">thumb_up</i> Whitelist</a></li>
+
+        <li {% if uri_path[1] == 'blacklist' %} class='active' {% endif %}>
+            <a href="/advanced/blacklist"><i class="material-icons {{icon_color}}">thumb_down</i> Blacklist</a></li>
+
+        <li {% if uri_path[1] == 'firewall' %} class='active' {% endif %}>
+            <a href="/advanced/firewall"><i class="material-icons {{icon_color}}">security</i> Firewall</a></li>
+
+        <li {% if uri_path[1] == 'firewall' %} class='active' {% endif %}>
+            <a href="/advanced/nat"><i class="material-icons {{icon_color}}">call_split</i> NAT</a></li>
+
+        <li {% if uri_path[1] == 'domain' %} class='active' {% endif %}>
+            <a href="/advanced/domain"><i class="material-icons {{icon_color}}">collections_bookmark</i> Domain</a></li>
+
+        <li {% if uri_path[1] == 'ip' %} class='active' {% endif %}>
+            <a href="/advanced/ip"><i class="material-icons {{icon_color}}">verified_user</i> IP</a></li>
+
+        <li {% if uri_path[1] == 'ips' %} class='active' {% endif %}>
+            <a href="/advanced/ips"><i class="material-icons {{icon_color}}">report</i> IPS/IDS</a></li>
+    </ul>
+    <ul id="sidenav-system-dropdown" class="dropdown-content">
+        <li {% if uri_path[1] == 'logs' %} class='active' {% endif %}>
+            <a href="system/logs"><i class="material-icons {{icon_color}}">assignment</i> Logs</a></li>
+
+        <li {% if uri_path[1] == 'reports' %} class='active' {% endif %}>
+            <a href="system/reports"><i class="material-icons {{icon_color}}">assignment_late</i> Reports</a></li>
+
+        <li {% if uri_path[1] == 'users' %} class='active' {% endif %}>
+            <a href="system/users"><i class="material-icons {{icon_color}}">group</i> Users</a></li>
+
+        <li {% if uri_path[1] == 'backups' %} class='active' {% endif %}>
+            <a href="system/backups"><i class="material-icons {{icon_color}}">backup</i> Backups</a></li>
+
+        <li {% if uri_path[1] == 'services' %} class='active' {% endif %}>
+            <a href="system/services"><i class="material-icons {{icon_color}}">sync</i> Services</a></li>
+    </ul>
+    <!-- end sidenav dropdown -->
+
+    <!-- sidenav role > USER -->
+    <ul class="sidenav" id="mobile-nav-user">
+        <li {% if uri_path[0] == 'dashboard' %} class='active' {% endif %}>
+            <a href="dashboard"><i class="material-icons left">dashboard</i>Dashboard</a></li>
+
+        <li {% if uri_path[0] == 'system' and uri_path[1] == 'reports' %} class='active' {% endif %}>
+            <a href="system/reports"><i class="material-icons">assignment_late</i> Reports</a></li>
+
+        <li>
+            <a href="logout"><i class="material-icons left">logout</i>Logout</a></li>
+    </ul>
+</header>

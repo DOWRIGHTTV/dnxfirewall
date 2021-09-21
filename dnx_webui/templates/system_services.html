@@ -1,0 +1,115 @@
+{% extends('layout.html') %}
+{% block body %}
+<!-- slider (good UX however kind of pointless if you don't have anything to display that's really neat? -->
+{% if hasSlider %}
+{% include('slider.html') %}
+{% endif %}
+<section id="dropdown" class="section {{main_section_color}}">
+    <div class="container">
+<div class="col s12">
+            <div class="card-panel hoverable {{card_color}}">
+                <h4 class="{{title_color}}">Management Access</h4>
+                <table class="striped centered">
+                    <thead>
+                        <tr>
+                            <th style="width:20%">Zone</th>
+                            <th style="width:20%">WebUI</th>
+                            <th style="width:20%">CLI</th>
+                            <th style="width:20%">SSH (system)</th>
+                            <th style="width:20%">Ping</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for zone, mgmt_services in service_info['mgmt_access'].items() %}
+                        <tr>
+                            <td><h6>{{zone}}</h6></td>
+                            {% for mgmt_svc, enabled in mgmt_services.items() %}
+                            <td>
+                                <div class="input-field col s3 center">
+                                    <form action="/system/services" method="POST">
+                                        <div class="switch">
+                                            <label>
+                                                Off
+                                                {% if not enabled %}
+                                                <input type="hidden" name="update_mgmt_access" value="{{zone}},{{mgmt_svc}},1">
+                                                <input type="checkbox" onchange="this.form.submit()">
+                                                {% else %}
+                                                <input type="hidden" name="update_mgmt_access" value="{{zone}},{{mgmt_svc}},0">
+                                                <input type="checkbox" onchange="this.form.submit()" checked="checked"
+                                                    {% if zone == 'lan' and mgmt_svc == 'webui' %} disabled {% endif %}>
+                                                {% endif %}
+                                                <span class="lever"></span>
+                                                On
+                                            </label>
+                                        </div>
+                                    </form>
+                                </div>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="col s12">
+            <div class="card-panel hoverable {{card_color}}">
+                <h4 class="{{title_color}}">System Services</h4>
+                <table class="striped centered">
+                    <thead>
+                        <tr>
+                            <th style="width:15%">Service Name</th>
+                            <th style="width:45%">Description</th>
+                            <th style="width:10%">Status</th>
+                            <th style="width:30%">Control</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for name, description, status in service_info['all_services'] %}
+                        <tr>
+                            <td><h6>{{name}}</h6></td>
+                            <td><h6>{{description}}</h6></td>
+                            <td>
+                                {% if status %}
+                                <strong><h6 class="green-text">Up</h6></strong>
+                                {% else %}
+                                <strong><h6 class="red-text">Down</h6></strong>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="row">
+                                    <div class="input-field col s12 l4">
+                                        <form action="/system/services" method="POST">
+                                            <input type="hidden" name="start_svc" value="{{name}}">
+                                            <button class="btn-floating green btn-large waves-effect waves-light">
+                                                <i class="material-icons">play_arrow</i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                    <div class="input-field col s12 l4">
+                                        <form action="/system/services" method="POST">
+                                            <input type="hidden" name="restart_svc" value="{{name}}">
+                                            <button class="btn-floating btn-large orange waves-effect waves-light">
+                                                <i class="material-icons">autorenew</i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                    <div class="input-field col s12 l4">
+                                        <form action="/system/services" method="POST">
+                                            <input type="hidden" name="stop_svc" value="{{name}}">
+                                            <button class="btn-floating btn-large red waves-effect waves-light">
+                                                <i class="material-icons">stop</i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

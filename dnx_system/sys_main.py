@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 
-import os, sys
-import time
-import shutil
+if (__name__ == '__main__'):
+    import __init__
+
+import os
 
 from json import loads, dumps
 from socket import socket, AF_INET, SOCK_DGRAM
 from threading import Thread
 
-HOME_DIR = os.environ['HOME_DIR']
-sys.path.insert(0, HOME_DIR)
-
-from dnx_configure.dnx_constants import *
-from dnx_iptools.dnx_standard_tools import looper
+from dnx_sysmods.configure.def_constants import *
+from dnx_gentools.standard_tools import looper
 
 __all__ = ('system_action')
 
