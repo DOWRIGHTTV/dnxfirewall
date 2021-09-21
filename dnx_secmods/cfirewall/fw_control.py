@@ -210,7 +210,6 @@ class FirewallControl:
 
     @cfg_read_poller('zone_map', folder='iptables')
     # zone int values are arbritrary / randomly selected on zone creation.
-    # TODO: see why this is making a second iteration
     def monitor_zones(self, zone_map):
         '''calls to Cython are made from within this method block. the GIL must be manually acquired on the Cython
         side or the Python interpreter will crash. Monitors the firewall zone file for changes and loads updates to
@@ -225,7 +224,7 @@ class FirewallControl:
 
         print(f'sending zones to CFirewall: {dnx_zones}')
 
-        # NOTE: gil must be acquired on the other side of this call
+        # NOTE: gil must be held on the other side of this call
         error = self.cfirewall.update_zones(dnx_zones)
         if (error):
             pass # TODO: do something here
@@ -242,7 +241,7 @@ class FirewallControl:
 
         # splitting out sections then determine which one has changed. this is to reduce
         # amount of work done on the C side. not for performance, but more for ease of programming.
-        for i, section in enumerate(['BEFORE', 'MAIN', 'AFTER']):
+        for i, section in enumerate(['BEFORE', 'MAIN', 'AFTER'], 1):
             current_section = getattr(self, section)
             new_section = dnx_fw[section]
 
@@ -257,7 +256,7 @@ class FirewallControl:
             # and Cython can handle the initial list.
             ruleset = [array('L', rule) for rule in new_section.values()]
 
-            # NOTE: gil must be acquired on the other side of this call
+            # NOTE: gil must be held on the other side of this call
             error = self.cfirewall.update_ruleset(i, ruleset)
             if (error):
                 pass # TODO: do something here
