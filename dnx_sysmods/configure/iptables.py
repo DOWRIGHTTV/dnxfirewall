@@ -71,10 +71,6 @@ class _Defaults:
 
         shell('iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
 
-        # standard blocking for unwanted DNS protocol/ports to help prevent proxy bypass (all interal zones)
-        shell(f'iptables -A FORWARD -m mark ! --mark {WAN_IN} -p udp --dport 853 -j REJECT --reject-with icmp-port-unreachable') # Block External DNS over TLS Queries UDP (Public Resolver)
-        shell(f'iptables -A FORWARD -m mark ! --mark {WAN_IN} -p tcp --dport 853 -j REJECT --reject-with tcp-reset') # Block External DNS over TLS Queries TCP (Public Resolver)
-        shell(f'iptables -A FORWARD -m mark ! --mark {WAN_IN} -p tcp --dport  53 -j REJECT --reject-with tcp-reset') # Block External DNS Queries TCP (Public Resolver)
         shell(f'iptables -A FORWARD -m mark ! --mark {WAN_IN} -j DOH')
 
         # cfirewall will deal with all tcp, udp, and icmp packet as a basic ip/protocol filter and as a security module
@@ -203,7 +199,7 @@ class IPTablesManager:
     # TODO: think about the duplicate rule check before running this as a safety for creating duplicate rules
     def apply_defaults(self, *, suppress=False):
         '''convenience function wrapper around the iptable Default class. all iptable default rules will
-        be loaded. if used within the context manager (recommended), the iptables lock will be aquired
+        be loaded. if used within the context manager (recommended), the iptables lock will be acquired
         before continuing (will block until done). iptable commit will be done on exit.
 
         NOTE: this method should not be called more than once during system operation or duplicate rules

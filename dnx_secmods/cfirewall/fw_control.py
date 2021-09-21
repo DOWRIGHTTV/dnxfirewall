@@ -181,7 +181,7 @@ class FirewallControl:
     __slots__ = (
         'cfirewall', '_initialize',
 
-        # firewall sections (heirarchy)
+        # firewall sections (hierarchy)
         # NOTE: these are used primarily to detect config changes to prevent
         # the amount of work/ data conversions that need to be done to load
         # the settings into C data structures.
@@ -203,14 +203,15 @@ class FirewallControl:
     # threads will be started here.
     def run(self):
 
+        self._init_system_rules()
+
         threading.Thread(target=self.monitor_zones).start()
         threading.Thread(target=self.monitor_rules).start()
 
         self._initialize.wait_for_threads(count=2)
 
     @cfg_read_poller('zone_map', folder='iptables')
-    # zone int values are arbritrary / randomly selected on zone creation.
-    # TODO: see why this is making a second iteration
+    # zone int values are arbitrary / randomly selected on zone creation.
     def monitor_zones(self, zone_map):
         '''calls to Cython are made from within this method block. the GIL must be manually acquired on the Cython
         side or the Python interpreter will crash. Monitors the firewall zone file for changes and loads updates to
@@ -242,7 +243,8 @@ class FirewallControl:
 
         # splitting out sections then determine which one has changed. this is to reduce
         # amount of work done on the C side. not for performance, but more for ease of programming.
-        for i, section in enumerate(['BEFORE', 'MAIN', 'AFTER']):
+        # NOTE: index 1 start is needed because SYSTEM rules are held at index 0.
+        for i, section in enumerate(['BEFORE', 'MAIN', 'AFTER'], 1):
             current_section = getattr(self, section)
             new_section = dnx_fw[section]
 
@@ -257,9 +259,23 @@ class FirewallControl:
             # and Cython can handle the initial list.
             ruleset = [array('L', rule) for rule in new_section.values()]
 
-            # NOTE: gil must be acquired on the other side of this call
+            # NOTE: gil must be held throughout this call
             error = self.cfirewall.update_ruleset(i, ruleset)
             if (error):
                 pass # TODO: do something here
 
         self._initialize.done()
+
+    def _init_system_rules(self):
+        # standard blocking for unwanted DNS protocol/ports to help prevent proxy bypass (all internal zones)
+        SYSTEM_RULES = [
+            array('L', [1, 0, 0, 0, 1114113, 65535, 10, 0, 0, 1114965, 853, 0, 0, 0, 0]), # deny DoT (UDP, bypass prevention)
+            array('L', [1, 0, 0, 0, 393217, 65535, 10, 0, 0, 394069, 853, 0, 0, 0, 0]), # deny DoT (TCP, bypass prevention)
+            array('L', [1, 0, 0, 0, 393217, 65535, 10, 0, 0, 393269, 53, 0, 0, 0, 0]) # deny DNS (TCP, bypass prevention)
+        ]
+
+        # NOTE: gil must be held throughout this call
+        error = self.cfirewall.update_ruleset(0, SYSTEM_RULES)
+        if (error):
+            pass  # TODO: do something here
+
