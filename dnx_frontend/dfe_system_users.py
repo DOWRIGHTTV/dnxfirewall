@@ -15,8 +15,8 @@ from dnx_configure.dnx_constants import CFG, INVALID_FORM
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 
-def load_page():
-    users = load_configuration('logins')['users']
+def load_page(form):
+    users = load_configuration('logins', filepath='/dnx_frontend/data')['users']
 
     userlist = {}
     for account, info in users.items():

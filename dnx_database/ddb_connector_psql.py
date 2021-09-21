@@ -11,7 +11,7 @@ from collections import namedtuple
 HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import FIVE_MIN, ONE_DAY, fast_time
+from dnx_configure.dnx_constants import ONE_DAY, FIVE_MIN, write_log, fast_time
 from dnx_configure.dnx_namedtuples import BLOCKED_DOM
 
 USER = 'dnx'
@@ -25,7 +25,7 @@ except:
 
 # TODO: make sure the fixes done to sqlite connector are translated to this module as well.
 class DBConnector:
-    def __init__(self, table=None):
+    def __init__(self, Log=None, *, table=None):
         self.table = table
 
         self.data_written = False
@@ -132,7 +132,7 @@ class DBConnector:
                 time.sleep(1)
         # NOTE: log this to front end
         else:
-            sys.stderr.write('BLOCKED QUERY LOOKUP ERROR!!')
+            write_log('BLOCKED QUERY LOOKUP ERROR!!')
 
     def query_last(self, count, src_ip=None, *, table, action):
         if (action in ['allowed', 'blocked']):
@@ -153,42 +153,43 @@ class DBConnector:
 
         return self.c.fetchall()
 
-    def dashboard_query_top(self, count, *, table, action):
+    def dashboard_query_top(self, count, *, action):
         if (action in ['allowed', 'blocked']):
-            self.c.execute(f'select * from {table} where action=%s order by count desc limit 20', (action,))
+            self.c.execute(
+                f'select domain, category from dnsproxy where action=? group by domain order by count(*) desc limit {count}', (action,)
+            )
+
         elif (action in ['all']):
-            self.c.execute(f'select * from {table} order by count desc limit 20')
-        results = self.c.fetchall()
+            self.c.execute(f'select domain, category from dnsproxy group by domain order by count(*) desc limit {count}')
 
-        top_domains = {}
-        for result in results:
-            _, domain, category, *_ = result
-            if (domain not in top_domains):
-                if (len(domain) > 25):
-                    domain = domain[:25]
+        return self.c.fetchall()[:count]
 
-                top_domains[domain] = category
-
-            if (len(top_domains) == count): break
-
-        return top_domains
-
-    def unique_domain_count(self, *, table, action):
-        unique_domains = set()
-        unique_domain_count = 0
+    def query_geolocation(self, count, *, action, direction):
+        lim = count + 5 # this will ensure there is always room even if results contain elements that will be filtered
         if (action in ['allow', 'blocked']):
-            self.c.execute(f'select * from {table} where action=%s', (action,))
+            self.c.execute(
+                f'select category from ipproxy where action=? and direction=? group by category order by count(*) desc limit {lim}',
+                (action, direction)
+            )
+
         elif (action in ['all']):
-            self.c.execute(f'select * from {table}')
+            self.c.execute(
+                f'select category from ipproxy where direction=? group by category order by count(*) desc limit {lim}', (direction,)
+            )
 
         results = self.c.fetchall()
-        if (not results): return 0
 
-        for entry in results:
-            domain = entry[1]
-            unique_domains.add(domain)
+        # get correct tor category names. i cant remember them off top since it recently changed.
+        return [x for x in results if x.lower() not in ['malicious', 'compromised', 'tor']][:count]
 
-        return len(unique_domains)
+    def unique_domain_count(self, *, action):
+        if (action in ['allow', 'blocked']):
+            self.c.execute(f'select domain, count(*) from dnsproxy where action=? group by domain', (action,))
+
+        elif (action in ['all']):
+            self.c.execute(f'select domain, count(*) from dnsproxy group by domain')
+
+        return len(self.c.fetchall())
 
     def total_request_count(self, *, table, action):
         if (action in ['allow', 'blocked']):

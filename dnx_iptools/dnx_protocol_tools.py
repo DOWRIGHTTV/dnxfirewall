@@ -11,6 +11,7 @@ _HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, _HOME_DIR)
 
 from dnx_iptools.dnx_structs import * # pylint: disable=unused-wildcard-import
+from dnx_configure.dnx_constants import byte_join
 
 __all__ = (
     'checksum_dnx', 'checksum_icmp', 'checksum_ipv4', 'checksum_tcp',
@@ -154,7 +155,7 @@ def convert_dns_string_to_bytes(domain_name):
     else:
         domain_bytes.append(b'\x00')
 
-    return b''.join(domain_bytes)
+    return byte_join(domain_bytes)
 
 # will create dns header specific to response. default resource record count is 1
 def create_dns_response_header(dns_id, record_count=1, *, rd=1, ad=0, cd=0, rc=0):
@@ -181,6 +182,6 @@ def create_dnx_proto_packet(data, *, ident, dtype, lcv=0, cnv=0):
             dnx_header_pack(ident, v_byte, data_len, checksum), data
         ]
         if i: break
-        checksum = checksum_pack(checksum_dnx(b''.join(send_data)))
+        checksum = checksum_pack(checksum_dnx(byte_join(send_data)))
 
     return send_data

@@ -14,8 +14,8 @@ from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_configure.dnx_system_info import System
 
-def load_page():
-    logging_settings = load_configuration('logging_client')['logging']
+def load_page(form):
+    logging_settings = load_configuration('logging_client')
 
     log = logging_settings['logging']
 
@@ -61,7 +61,7 @@ def update_page(form):
     elif ('time_offset_update' in form):
         offset_settings = {
             'direction': form.get('dir_offset', DATA.INVALID),
-            'time': validate.get_convert_int(form, 'time')
+            'time': validate.get_convert_int(form, 'time_offset')
         }
         if (DATA.INVALID in offset_settings.values()):
             return INVALID_FORM

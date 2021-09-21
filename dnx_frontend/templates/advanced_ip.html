@@ -5,34 +5,32 @@
         <div class="row">
             <div class="col s12 m12">
                 <ul class="tabs">
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='1' %} class="active" {% endif %} href="#categories"
-                            onclick="activeTab(1)">Categories</a></li>
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='2' %} class="active" {% endif %} href="#geolocation"
-                            onclick="activeTab(2)">Geolocation</a></li>
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='3' %} class="active" {% endif %}
-                            href="#lan-restrict" onclick="activeTab(3)">Lan Restrict</a></li>
+                    <li class="{{tab_classes}}"><a {% if tab=='1' %} class="active" {% endif %} href="#reputation"
+                        onclick="activeTab(1)">Reputation</a></li>
+                    <li class="{{tab_classes}}"><a {% if tab=='2' %} class="active" {% endif %} href="#geolocation"
+                        onclick="activeTab(2)">Geolocation</a></li>
+                    <li class="{{tab_classes}}"><a {% if tab=='3' %} class="active" {% endif %} href="#lan-restrict"
+                        onclick="activeTab(3)">Lan Restrict</a></li>
                 </ul>
             </div>
         </div>
     </div>
 </section>
-<section id="categories" class="section">
+<section id="reputation" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
-            <div class="col s12 m2"></div>
-            <div class="col s12 m8">
-                <div class="card-panel">
-                    <h4 class="red-text light-3">Reputation</h4>
+            <div class="col s12 m8 offset-m2">
+                <div class="card-panel hoverable {{card_color}}">
+                    <h4 class="{{title_color}}">Reputation</h4>
                     <form action="/advanced/ip" method="post">
                         <input type="hidden" name="tab" value="1">
                         <input type="hidden" name="ip_hosts_update">
                         <div class="row">
-                            {% for category, enabled in ip_settings['categories'].items() %}
-                            <div class="input-field col s1 m1"></div>
-                            <div class="input-field col s5 m5">
+                            {% for category, enabled in ip_settings['reputation'].items() %}
+                            <div class="input-field col s4 offset-s1">
                                 {{category.title().replace('_', ' ')}}
                                 <br>
-                                <select class="browser-default" name="categories" id="" onchange="this.form.submit()">
+                                <select class="browser-default" name="reputation" id="" onchange="this.form.submit()">
                                     <option value="{{category}}_0" {% if enabled==1 %} selected {% endif %}>OFF</option>
                                     <option value="{{category}}_1" {% if enabled==1 %} selected {% endif %}>OUTBOUND</option>
                                     <option value="{{category}}_2" {% if enabled==2 %} selected {% endif %}>INBOUND</option>
@@ -44,9 +42,7 @@
                         <noscript>
                             <div class="row">
                                 <div class="col s12 center">
-                                    <button class="btn waves-effect waves-light">
-                                        <i class="material-icons"></i> Update
-                                    </button>
+                                    <button class="btn waves-effect waves-light">Update</button>
                                 </div>
                             </div>
                         </noscript>
@@ -56,67 +52,100 @@
         </div>
     </div>
 </section>
-<section id="geolocation" class="section">
+<section id="geolocation" class="section {{main_section_color}}">
     <div class="container">
-        <div class="row">
-            <div class="col s12 m1"></div>
-            <div class="col s12 m10">
-                <div class="card-panel">
-                    <h4 class="red-text light-3">Geolocation</h4>
-                    <form action="/advanced/ip" method="post">
+        <div class="col s12">
+            <div class="card-panel hoverable {{card_color}}">
+                <h4 class="{{title_color}}">Geolocation</h4>
+                <div class="row">
+                    <form method="POST">
                         <input type="hidden" name="tab" value="2">
-                        <input type="hidden" name="geo_lists_update">
-                        <div class="row">
-                            {% for country, enabled in ip_settings['geolocation'].items() %}
-                            <div class="input-field col s1 m1"></div>
-                            <div class="input-field col s3 m3">
-                                {{country.title().replace('_', '. ')}}
-                                <br>
-                                <select class="browser-default" name="countries" id="" onchange="this.form.submit()">
-                                    <option value="{{country}}_0" {% if enabled==0 %} selected {% endif %}>OFF</option>
-                                    <option value="{{country}}_1" {% if enabled==1 %} selected {% endif %}>OUTBOUND</option>
-                                    <option value="{{country}}_2" {% if enabled==2 %} selected {% endif %}>INBOUND</option>
-                                    <option value="{{country}}_3" {% if enabled==3 %} selected {% endif %}>BOTH</option>
-                                </select>
-                            </div>
-                            {% endfor %}
+                        <input type="hidden" name="change_geo_view">
+                        <div class="input-field col s5 m3 {{input_color}}">
+                            <select name="region" onchange="this.form.submit()">
+                                {% for region in ip_settings['regions'] %}
+                                <option value="{{region}}" {% if region == ip_settings['geolocation']['region'] %} selected {% endif %}>{{region.replace('_', ' ').upper()}}</option>
+                                {% endfor %}
+                            </select>
+                            <label for="table">Region</label>
                         </div>
-                        <noscript>
-                            <div class="row">
-                                <div class="col s12 center">
-                                    <button class="btn waves-effect waves-light">
-                                        <i class="material-icons"></i> Update
-                                    </button>
-                                </div>
-                            </div>
-                        </noscript>
+                        <div class="input-field col s5 m3 {{input_color}}">
+                            <select name="menu_dir" onchange="this.form.submit()">
+                                {% for dir in ['off', 'outbound', 'inbound', 'both', 'all'] %}
+                                ><option value="{{loop.index0}}" {% if ip_settings['geolocation']['menu_dir'] == loop.index0 %} selected {% endif %}>{{dir.upper()}}</option>
+                                {% endfor %}
+                            </select>
+                            <label for="table">Direction</label>
+                        </div>
                     </form>
+                </div>
+                <div class="row">
+                    <table class="striped highlight">
+                        <thead>
+                        <tr>
+                            <th style="width:5%"></th>
+                            <th style="width:20%"></th>
+                            <th style="width:5%"></th>
+                            <th style="width:20%"></th>
+                            <th style="width:5%"></th>
+                            <th style="width:20%"></th>
+                            <th style="width:5%"></th>
+                            <th style="width:20%"></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for country, direction in ip_settings['geolocation']['countries'] %}
+                        {% if loop.index0 in range(0,100,4) %}<tr>{% endif %}
+                            <td>
+                                <form method="POST"">
+                                    <input type="hidden" name="tab" value="2">
+                                    <input type="hidden" name="tab" value="{{ip_settings['geolocation']['menu_dir']}}">
+                                    <input type="hidden" name="country" value="{{country}}">
+                                    <ul id="dd-{{loop.index}}" class="dropdown-content">
+                                        {% for dir, image in ip_settings['image_map'].items() %}
+                                        {% if dir != direction %}
+                                        <li>
+                                            <a><button name="cfg_dir" value="{{dir}}" style="background-color: Transparent; border: none; cursor:pointer;">
+                                            <img src="/static/assets/images/{{image}}" {{dash_icon_std}}></button></a>
+                                        </li>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </ul>
+                                    <img class="dropdown-trigger" data-target="dd-{{loop.index}}" src="/static/assets/images/{{ip_settings['image_map'][direction]}}" height="100%" width="100%">
+                                </form>
+                            </td>
+                            <td>
+                                <h6>{{country.title().replace('_', ' ')}}</h6>
+                            </td>
+                        {% if loop.last or loop.index0 in range(3,100,4)  %}</tr>{% endif %}
+                        {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 </section>
-<section id="lan-restrict" class="section">
+<section id="lan-restrict" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
-            <div class="col s12 m3"></div>
-            <div class="col s12 m6">
-                <div class="card-panel">
-                    <h4 class="red-text light-3">LAN Restrict</h4>
+            <div class="col s12 m8 offset-m2">
+                <div class="card-panel hoverable {{card_color}}">
+                    <h4 class="{{title_color}}">LAN Restrict</h4>
                     <form action="/advanced/ip" method="post">
                         <input type="hidden" name="tab" value="3">
-                        <div class="col s12 m12">
+                        <div class="col s12">
                             <h6>Start Time</h6>
                             <div class="row">
-                                <div class="input-field col s12 m3">
+                                <div class="input-field col s12 m3 {{input_color}}">
                                     <input type="number" name="hour" min="0" max="12" value="{{ip_settings['tr_settings']['hour']}}">
                                     <label for="hour">Hour</label>
                                 </div>
-                                <div class="input-field col s12 m3">
-                                    <input type="number" name="minute" min="0" max="45" step="15" value="{{ip_settings['tr_settings']['minutes']}}">
+                                <div class="input-field col s12 m3 {{input_color}}">
+                                    <input type="number" name="minutes" min="0" max="45" step="15" value="{{ip_settings['tr_settings']['minutes']}}">
                                     <label for="minute">Minute</label>
                                 </div>
-                                <div class="input-field col s12 m3">
+                                <div class="input-field col s12 m3 {{input_color}}">
                                     <select name="time_suffix" id="">
                                         <option value="AM" {% if ip_settings['tr_settings']['suffix']=='AM' %} selected
                                             {% endif %}>AM</option>
@@ -128,11 +157,11 @@
                             </div>
                             <h6>Duration</h6>
                             <div class="row">
-                                <div class="input-field col s12 m3">
+                                <div class="input-field col s12 m3 {{input_color}}">
                                     <input type="number" name="tlen_hour" min="0" max="11" value="{{ip_settings['tr_settings']['length_hour']}}">
                                     <label for="tlen_hour">Hours</label>
                                 </div>
-                                <div class="input-field col s12 m3">
+                                <div class="input-field col s12 m3 {{input_color}}">
                                     <input type="number" name="tlen_minutes" min="0" max="45" step="15" value="{{ip_settings['tr_settings']['length_minutes']}}">
                                     <label for="tlen_minutes">Minutes</label>
                                 </div>
@@ -152,10 +181,7 @@
                         </div>
                         <div class="row">
                             <div class="col s12 center">
-                                <button class="btn waves-effect waves-light">
-                                    <input type="hidden" name="time_res_update">
-                                    <i class="material-icons"></i> Update
-                                </button>
+                                <button class="btn waves-effect waves-light" name="time_res_update">Update</button>
                             </div>
                         </div>
                     </form>

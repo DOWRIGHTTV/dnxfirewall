@@ -16,20 +16,17 @@ from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_configure.dnx_system_info import System
 
-def load_page():
-    blacklist = load_configuration('blacklist')['blacklist']
+def load_page(form):
+    blacklist = load_configuration('blacklist')
 
-    exceptions = blacklist['exception']
-    domain_blacklist = blacklist['domain']
-
-    for domain, info in domain_blacklist.items():
+    for info in blacklist['time_based'].values():
         st_offset = System.calculate_time_offset(info['time'])
 
-        domain_blacklist[domain]['time'] = System.format_date_time(st_offset)
+        info['time'] = System.format_date_time(st_offset)
 
     blacklist_settings = {
-        'domain_blacklist': domain_blacklist,
-        'exceptions': exceptions
+        'time_based': blacklist['time_based'],
+        'pre_proxy': blacklist['pre_proxy']
     }
 
     return blacklist_settings

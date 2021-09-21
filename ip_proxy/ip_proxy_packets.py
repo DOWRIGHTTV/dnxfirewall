@@ -12,6 +12,10 @@ from dnx_iptools.dnx_parent_classes import RawPacket, RawResponse
 from dnx_iptools.dnx_protocol_tools import checksum_ipv4, checksum_tcp, checksum_icmp
 from dnx_configure.dnx_namedtuples import IPP_SRC_INFO, IPP_DST_INFO, IPP_IP_INFO
 
+# definitions for ip proxy data structures. Consider moving to constants module (make name more specific)
+MSB = 0b11111111111110000000000000000000
+LSB = 0b00000000000001111111111111111111
+
 
 class IPPPacket(RawPacket):
     __slots__ = (
@@ -25,8 +29,7 @@ class IPPPacket(RawPacket):
             # but replacing it with a more efficient mechanism
             self.conn = IPP_IP_INFO(f'{self.src_ip}', f'{self.dst_ip}')
 
-            bin_data = f'{int(self.src_ip)}'
-            self.bin_data = (int(bin_data[:-5]), int(bin_data[-5:]))
+            ip_addr = int(self.src_ip)
 
         elif (self.zone in [LAN_IN, DMZ_IN]):
             self.direction = DIR.OUTBOUND
@@ -34,8 +37,9 @@ class IPPPacket(RawPacket):
             # but replacing it with a more efficient mechanism
             self.conn = IPP_IP_INFO(f'{self.dst_ip}', f'{self.src_ip}')
 
-            bin_data = f'{int(self.dst_ip)}'
-            self.bin_data = (int(bin_data[:-5]), int(bin_data[-5:]))
+            ip_addr = int(self.dst_ip)
+
+        self.bin_data = (ip_addr & MSB, ip_addr & LSB)
 
 
 # TODO: test UDP / icmp dst unreachable packet!
@@ -44,10 +48,10 @@ class ProxyResponse(RawResponse):
 
     def _prepare_packet(self, packet, dnx_src_ip):
         # checking if dst port is associated with a nat. if so, will override necessary fields based on protocol
-        # and re assign in the packert object
+        # and re assign in the packet object
         # NOTE: can we please optimize this. PLEASE!
         port_override = self._Module.open_ports[packet.protocol].get(packet.dst_port)
-        if port_override:
+        if (port_override):
             self._packet_override(packet, dnx_src_ip, port_override)
 
         # 1a. generating tcp/pseudo header | iterating to calculate checksum
@@ -77,11 +81,9 @@ class ProxyResponse(RawResponse):
             for i in range(2):
 
                 # packing the icmp header and payload, 1st iter 0 checksum, 2nd i actual
-                icmp_full = [icmp_header_pack(3, 3, checksum, 0, 0)]
-                if (packet.icmp_payload_override):
-                    icmp_full.append(packet.icmp_payload_override)
-                else:
-                    icmp_full.extend([packet.ip_header, packet.udp_header, packet.udp_payload])
+                icmp_full = [
+                    icmp_header_pack(3, 3, checksum, 0, 0), packet.ip_header, packet.udp_header, packet.udp_payload
+                ]
                 if i: break
 
                 checksum = checksum_icmp(byte_join(icmp_full))

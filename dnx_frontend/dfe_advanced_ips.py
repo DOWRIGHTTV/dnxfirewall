@@ -9,13 +9,14 @@ sys.path.insert(0, HOME_DIR)
 import dnx_configure.dnx_configure as configure
 import dnx_configure.dnx_validate as validate
 
-from dnx_configure.dnx_constants import CFG, INVALID_FORM
+from dnx_configure.dnx_constants import CFG, DATA, INVALID_FORM
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
-from dnx_configure.dnx_system_info import Services
+from dnx_configure.dnx_system_info import Services, System
+from dnx_configure.dnx_iptables import IPTablesManager
 
-def load_page():
-    ips = load_configuration('ips.json')['ips']
+def load_page(form):
+    ips = load_configuration('ips.json')
 
     passive_block_ttl = ips['passive_block_ttl']
     ids_mode = ips['ids_mode']
@@ -30,6 +31,12 @@ def load_page():
         'udp': udp_src_limit, 'icmp': icmp_src_limit
     }
 
+    # converting standard timestamp to front end readable string format
+    passively_blocked_hosts = []
+    pbh = System.ips_passively_blocked()
+    for host, timestamp in pbh:
+        passively_blocked_hosts.append((host, timestamp, System.offset_and_format(timestamp)))
+
     # portscan settings
     portscan_prevention = ips['port_scan']['enabled']
     portscan_reject = ips['port_scan']['reject']
@@ -41,24 +48,21 @@ def load_page():
     ip_whitelist = ips['whitelist']['ip_whitelist']
     dns_server_whitelist = ips['whitelist']['dns_servers']
 
-    ips_enabled = bool(ddos_enabled or portscan_prevention)
+    ips_enabled = ddos_enabled or portscan_prevention
 
     # TODO: clean this shit up.
     tcp_nat = ips['open_protocols']['tcp']
     udp_nat = ips['open_protocols']['udp']
 
     nats_configured = tcp_nat or udp_nat
-    if (not nats_configured):
-        ddos_notify = True if not ddos_enabled else False
-        ps_notify = True if not portscan_prevention else False
-    else:
-        ddos_notify = False
-        ps_notify = False
+    ddos_notify = False if ddos_enabled or nats_configured else True
+    ps_notify   = False if portscan_prevention or nats_configured else True
 
     ips_settings = {
         'enabled': ips_enabled, 'length': passive_block_ttl, 'ids_mode': ids_mode,
         'ddos': ddos_settings, 'port_scan': portscan_settings, 'ddos_notify': ddos_notify,
-        'ps_notify': ps_notify, 'ip_whitelist': ip_whitelist, 'dns_server_whitelist': dns_server_whitelist
+        'ps_notify': ps_notify, 'ip_whitelist': ip_whitelist, 'dns_server_whitelist': dns_server_whitelist,
+        'passively_blocked_hosts': passively_blocked_hosts
     }
 
     return ips_settings
@@ -106,8 +110,9 @@ def update_page(form):
         if (not passive_block_length):
             return INVALID_FORM
 
+        pb_length = validate.convert_int(passive_block_length)
         try:
-            pb_length = validate.ips_passive_block_length(passive_block_length)
+            validate.ips_passive_block_length(pb_length)
         except ValidationError as ve:
            return ve
         else:
@@ -125,7 +130,7 @@ def update_page(form):
         except ValidationError as ve:
             return ve
         else:
-            configure.update_ips_ip_whitelist(whitelist_ip, whitelist_name, CFG.ADD)
+            configure.update_ips_ip_whitelist(whitelist_ip, whitelist_name, action=CFG.ADD)
 
     elif ('ips_wl_remove' in form):
         whitelist_ip = form.get('ips_wl_ip', None)
@@ -137,12 +142,31 @@ def update_page(form):
         except ValidationError as ve:
             return ve
         else:
-            configure.update_ips_ip_whitelist(whitelist_ip, None, CFG.DEL)
+            configure.update_ips_ip_whitelist(whitelist_ip, None, action=CFG.DEL)
 
     elif ('ips_wl_dns' in form):
         action = CFG.ADD if 'dns_enabled' in form else CFG.DEL
 
         configure.update_ips_dns_whitelist(action)
+
+    elif ('ips_pbl_remove' in form):
+        host_info = form.get('ips_pbl_remove', DATA.INVALID)
+        if (host_info is DATA.INVALID):
+            return INVALID_FORM
+
+        try:
+            host_ip, timestamp = host_info.split('/')
+
+            validate.ip_address(host_ip)
+        except:
+            return INVALID_FORM
+
+        if (validate.convert_float(timestamp) is DATA.INVALID):
+            return INVALID_FORM
+
+        else:
+            with IPTablesManager() as iptables:
+                iptables.remove_passive_block(host_ip, timestamp)
 
     else:
         return INVALID_FORM

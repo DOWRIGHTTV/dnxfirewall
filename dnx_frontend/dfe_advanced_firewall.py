@@ -11,47 +11,52 @@ sys.path.insert(0, HOME_DIR)
 import dnx_configure.dnx_configure as configure
 import dnx_configure.dnx_validate as validate
 
-from dnx_configure.dnx_constants import INVALID_FORM
+from dnx_configure.dnx_constants import INVALID_FORM, DATA
 from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
-from dnx_configure.dnx_iptables import IPTableManager
+from dnx_configure.dnx_iptables import IPTablesManager
 from dnx_configure.dnx_system_info import System, Services
 
+NETMASKS = [*list(reversed(range(24,33))), 16, 8, 0]
+
 valid_zones = {
-    'GLOBAL_INTERFACE': '1',
-    'WAN_INTERFACE': '2',
-    'DMZ_INTERFACE': '3',
-    'LAN_INTERFACE': '4'
+    'GLOBAL_ZONE': '1',
+    'WAN_ZONE': '2',
+    'DMZ_ZONE': '3',
+    'LAN_ZONE': '4'
 }
 
 zone_convert = {
-    '1': 'GLOBAL_INTERFACE',
-    '2': 'WAN_INTERFACE',
-    '3': 'DMZ_INTERFACE',
-    '4': 'LAN_INTERFACE'
+    '1': 'GLOBAL_ZONE',
+    '2': 'WAN_ZONE',
+    '3': 'DMZ_ZONE',
+    '4': 'LAN_ZONE'
 }
 
-valid_standard_rule_fields = [
+valid_standard_rule_fields = {
     'position','src_ip','src_netmask','dst_ip','dst_netmask','protocol','dst_port'
-]
+}
 
 def load_page():
     return {
         'firewall_rules': System.firewall_rules(),
         'dmz_dnat_rules': System.nat_rules(),
         'local_snat_rules': System.nat_rules(nat_type='SRCNAT'),
-        'netmasks': list(reversed(range(24,33)))
+        'netmasks': NETMASKS
     }
 
 # TODO: fix inconcistent variable names for nat rules
 def update_page(form):
+    print(form)
     # initial input validation for presence of zone field
     zone = form.get('zone', None)
     if (zone not in valid_zones):
-        return INVALID_FORM, 'GLOBAL_INTERFACE', None
+        return INVALID_FORM, 'GLOBAL_ZONE', None
 
-    # if firewall rule, None will be used for evaluation.
-    action = form.get('action', None)
+    # action field is not required for some functions, so will not be hard validated
+    action = form.get('action', DATA.MISSING)
+
+    # firewall rule will not nat_type specified so None  can be used for identification
     nat_type = form.get('nat_type', None)
     if (nat_type is None):
         error, zone = _firewall_rules(zone, action, form)
@@ -69,24 +74,20 @@ def update_page(form):
 
     # updating page data then returning. this is because we need to serve the content with the newly added
     # configuration item.
-    page_data = None
-    if not error:
-        page_data = {
-            'firewall_rules': System.firewall_rules(chain=zone),
-            'dmz_dnat_rules': System.nat_rules(),
-            'local_snat_rules': System.nat_rules(nat_type='SRCNAT'),
-            'netmasks': list(reversed(range(24,33)))
-        }
+    page_data = {
+        'netmasks': NETMASKS,
+        'firewall_rules': System.firewall_rules(chain=zone),
+        'dmz_dnat_rules': System.nat_rules(),
+        'local_snat_rules': System.nat_rules(nat_type='SRCNAT')
+    }
 
-    print(f'RETURNING: {page_data}')
-
+    # print(f'RETURNING: {page_data}')
     return error, zone, page_data
 
 def _firewall_rules(zone, action, form):
     error = None
     # moving form data into a simple namespace. this will allow us to validate and mutate it easier
-    # that its current state of immutable dict.
-    print(form)
+    # than its current state of immutable dict.
     fields = SimpleNamespace(**form)
     if (action == 'remove'):
         try:
@@ -96,7 +97,7 @@ def _firewall_rules(zone, action, form):
             error = ve
 
         else:
-            with IPTableManager() as iptables:
+            with IPTablesManager() as iptables:
                 iptables.delete_rule(fields)
 
     elif (action =='add'):
@@ -108,7 +109,7 @@ def _firewall_rules(zone, action, form):
         try:
             validate.add_firewall_rule(fields)
             if (fields.dst_port):
-                validate.network_port(fields.dst_port)
+                validate.network_port(fields.dst_port, port_range=True)
 
             if (fields.src_ip):
                 validate.ip_address(fields.src_ip)
@@ -124,7 +125,7 @@ def _firewall_rules(zone, action, form):
             if (not fields.src_ip):
                 fields.src_ip, fields.src_netmask = '0', '0'
 
-            with IPTableManager() as iptables:
+            with IPTablesManager() as iptables:
                 iptables.add_rule(fields)
 
     elif ('change_interface' not in form):
@@ -132,8 +133,18 @@ def _firewall_rules(zone, action, form):
 
     return error, zone
 
+# TODO: currently it is possible to put overlapping DNAT rules (same dst port, but different host port).
+    # this isnt normally an issue and could be left to the user, but the last one inserted with be
+    # the local port value, which if the lower rule, will be incorrect for portscan reject packets.
+    # a similar issue will also be for the local ports because they are flipped when loaded into the
+    # ips.
+        # NOTE: a possible solution would be to store the wan ip/wan port and local ip/ local port in a tuple
+        # or a splittable string. this could be the key/vals to the dict making each unique and would allow
+        # for any combination and still properly identify missed scans while also reliable generating reject
+        # packets.
 def _dnat_rules(zone, action, form):
     error = None
+
     fields = SimpleNamespace(**form)
     if (action == 'remove'):
         try:
@@ -143,25 +154,34 @@ def _dnat_rules(zone, action, form):
             error = ve
 
         else:
-            with IPTableManager() as iptables:
+            with IPTablesManager() as iptables:
                 iptables.delete_nat(fields)
+
+                configure.del_open_wan_protocol(fields)
 
     elif (action == 'add'):
         try:
+            # checking all required fields are present and some other basic rules are followed
+            # before validating values of standard fields.
             validate.add_dnat_rule(fields)
+
             if (fields.protocol in ['tcp', 'udp']):
                 validate.network_port(fields.dst_port)
                 validate.network_port(fields.host_port)
 
             validate.ip_address(fields.host_ip)
 
+            if (fields.dst_ip != ''):
+                validate.ip_address(fields.dst_ip)
+
         except ValidationError as ve:
             error = ve
         else:
-            with IPTableManager() as iptables:
+            with IPTablesManager() as iptables:
                 iptables.add_nat(fields)
 
-            configure.add_open_wan_protocol(fields)
+                configure.add_open_wan_protocol(fields)
+
     else:
         return INVALID_FORM, zone
 
@@ -169,9 +189,8 @@ def _dnat_rules(zone, action, form):
 
 def _snat_rules(zone, action, form):
     error = None
-    print(333333, form)
-    fields = SimpleNamespace(**form)
 
+    fields = SimpleNamespace(**form)
     # TODO: make this code for snat (currently using dnat code as template)
     if (action == 'remove'):
         try:
@@ -181,7 +200,7 @@ def _snat_rules(zone, action, form):
             error = ve
 
         else:
-            with IPTableManager() as iptables:
+            with IPTablesManager() as iptables:
                 iptables.delete_nat(fields)
 
     elif (action == 'add'):
@@ -193,7 +212,7 @@ def _snat_rules(zone, action, form):
         except ValidationError as ve:
             error = ve
         else:
-            with IPTableManager() as iptables:
+            with IPTablesManager() as iptables:
                 iptables.add_nat(fields)
 
     else:

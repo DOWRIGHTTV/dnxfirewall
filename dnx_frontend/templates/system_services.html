@@ -4,54 +4,99 @@
 {% if hasSlider %}
 {% include('slider.html') %}
 {% endif %}
-<section id="dropdown" class="section">
+<section id="dropdown" class="section {{main_section_color}}">
     <div class="container">
-        <div class="col s12 m12">
-            <div class="card-panel">
-                <h4 class="red-text">System Services</h4>
-                <table class="striped center">
+<div class="col s12">
+            <div class="card-panel hoverable {{card_color}}">
+                <h4 class="{{title_color}}">Management Access</h4>
+                <table class="striped centered">
                     <thead>
                         <tr>
-                            <th>Service Name</th>
-                            <th>Description</th>
-                            <th>Status</th>
-                            <th>Control</th>
+                            <th style="width:25%">Zone</th>
+                            <th style="width:25%">WebUI</th>
+                            <th style="width:25%">CLI</th>
+                            <th style="width:25%">SSH (system)</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for name, description, status in service_info %}
+                        {% for zone in ['lan', 'dmz'] %}
+                        <tr>
+                            <td><h6>{{zone}}</h6></td>
+                            {% for mgmt_svc in ['webui', 'cli', 'ssh'] %}
+                            <td>
+                                <div class="input-field col s3 center">
+                                    <form action="/system/services" method="POST">
+                                        <div class="switch">
+                                            <label>
+                                                Off
+                                                {% if not service_info['mgmt_access'][zone][mgmt_svc] %}
+                                                <input type="hidden" name="update_mgmt_access" value="{{zone}},{{mgmt_svc}},1">
+                                                <input type="checkbox" onchange="this.form.submit()">
+                                                {% else %}
+                                                <input type="hidden" name="update_mgmt_access" value="{{zone}},{{mgmt_svc}},0">
+                                                <input type="checkbox" onchange="this.form.submit()" checked="checked"
+                                                    {% if zone == 'lan' and mgmt_svc == 'webui' %} disabled {% endif %}>
+                                                {% endif %}
+                                                <span class="lever"></span>
+                                                On
+                                            </label>
+                                        </div>
+                                    </form>
+                                </div>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="col s12">
+            <div class="card-panel hoverable {{card_color}}">
+                <h4 class="{{title_color}}">System Services</h4>
+                <table class="striped centered">
+                    <thead>
+                        <tr>
+                            <th style="width:15%">Service Name</th>
+                            <th style="width:45%">Description</th>
+                            <th style="width:10%">Status</th>
+                            <th style="width:30%">Control</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for name, description, status in service_info['all_services'] %}
                         <tr>
                             <td><h6>{{name}}</h6></td>
-                            <td>{{description}}</td>
+                            <td><h6>{{description}}</h6></td>
                             <td>
                                 {% if status %}
-                                <h6 class="green-text">Up</h6>
+                                <strong><h6 class="green-text">Up</h6></strong>
                                 {% else %}
-                                <h6 class="red-text">Down</h6>
+                                <strong><h6 class="red-text">Down</h6></strong>
                                 {% endif %}
                             </td>
                             <td>
                                 <div class="row">
-                                    <div class="input-field col s3 m3 l2">
+                                    <div class="input-field col s12 l4">
                                         <form action="/system/services" method="POST">
                                             <input type="hidden" name="start_svc" value="{{name}}">
-                                            <button class="btn waves-effect waves-light col s12">
+                                            <button class="btn-floating green btn-large waves-effect waves-light">
                                                 <i class="material-icons">play_arrow</i>
                                             </button>
                                         </form>
                                     </div>
-                                    <div class="input-field col s3 m3 l2">
+                                    <div class="input-field col s12 l4">
                                         <form action="/system/services" method="POST">
                                             <input type="hidden" name="restart_svc" value="{{name}}">
-                                            <button class="btn waves-effect waves-light col s12">
+                                            <button class="btn-floating btn-large orange waves-effect waves-light">
                                                 <i class="material-icons">autorenew</i>
                                             </button>
                                         </form>
                                     </div>
-                                    <div class="input-field col s3 m3 l2">
+                                    <div class="input-field col s12 l4">
                                         <form action="/system/services" method="POST">
                                             <input type="hidden" name="stop_svc" value="{{name}}">
-                                            <button class="btn waves-effect waves-light col s12">
+                                            <button class="btn-floating btn-large red waves-effect waves-light">
                                                 <i class="material-icons">stop</i>
                                             </button>
                                         </form>

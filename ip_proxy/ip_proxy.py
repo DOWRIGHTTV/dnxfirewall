@@ -11,7 +11,6 @@ sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
 from dnx_iptools.dnx_binary_search import generate_linear_binary_search, generate_recursive_binary_search # pylint: disable=import-error, no-name-in-module
-from dnx_configure.dnx_lists import ListFiles
 from dnx_configure.dnx_namedtuples import IPP_IP_INFO, IPP_INSPECTION_RESULTS, IPP_LOG, INFECTED_LOG
 from dnx_configure.dnx_file_operations import load_signatures
 from dnx_iptools.dnx_parent_classes import NFQueue
@@ -29,19 +28,22 @@ LOG_NAME = 'ip_proxy'
 class IPProxy(NFQueue):
     inspect_on     = False
     ids_mode       = False
-    cat_enabled    = False
-    cat_settings   = {}
 
-    geo_enabled    = False
-    geo_settings   = {}
+    reputation_enabled   = False
+    reputation_settings  = {}
+    geolocation_enabled  = True
+    geolocation_settings = {}
 
-    ip_whitelist   = {}
-    tor_whitelist  = {}
-    open_ports     = {
+    ip_whitelist  = {}
+    tor_whitelist = {}
+    open_ports    = {
         PROTO.TCP: {},
         PROTO.UDP: {}
     }
     _packet_parser = IPPPacket.netfilter # alternate constructor
+
+    # direct reference to the proxy response method
+    _prepare_and_send = ProxyResponse.prepare_and_send
 
     @classmethod
     def _setup(cls):
@@ -51,50 +53,51 @@ class IPProxy(NFQueue):
 
         cls.set_proxy_callback(func=Inspect.ip)
 
-    # if nothing is enabled the packet will be forwarded based on mark of packet.
-    def _pre_check(self, nfqueue):
-        if (self.inspect_on or LanRestrict.is_active):
-            return True # marked for parsing
-        else:
-            self.forward_packet(nfqueue, nfqueue.get_mark())
-
-        return False # parse not needed
-
     def _pre_inspect(self, packet):
         # if local ip is not in the ip whitelist, the packet will be dropped while time restriction is active.
         if (LanRestrict.is_active and packet.zone == LAN_IN
                 and packet.src_ip not in self.ip_whitelist):
             packet.nfqueue.drop()
 
-        elif (self.inspect_on):
-            return True # marked for further inspection
-
-        # just in case proxy was disabled mid parse of packets
         else:
-            self.forward_packet(packet.nfqueue, packet.zone)
+            return True
 
     @classmethod
-    def forward_packet(cls, nfqueue, zone, action=CONN.ACCEPT):
-        if (zone == WAN_IN and action is CONN.DROP):
-            nfqueue.set_mark(IP_PROXY_DROP)
+    def forward_packet(cls, packet, zone, action):
+        if (action is CONN.ACCEPT):
+            if (zone == LAN_IN):
+                packet.nfqueue.set_mark(LAN_ZONE_FIREWALL)
 
-        elif (zone in [LAN_IN, DMZ_IN]):
-            nfqueue.set_mark(SEND_TO_FIREWALL)
+            elif (zone == DMZ_IN):
+                packet.nfqueue.set_mark(DMZ_ZONE_FIREWALL)
 
-        elif (zone == WAN_IN):
-            nfqueue.set_mark(SEND_TO_IPS)
+            elif (zone == WAN_IN):
+                packet.nfqueue.set_mark(SEND_TO_IPS)
 
-        # NOTE: this is to protect the repeat if no match. probably log??
-        else:
-            nfqueue.drop()
-            return
+            # send back through with new mark.
+            packet.nfqueue.repeat()
 
-        nfqueue.repeat()
+        elif (action is CONN.DROP):
+            if (zone == LAN_IN):
+                packet.nfqueue.drop()
+
+            elif (zone == DMZ_IN):
+                packet.nfqueue.drop()
+
+            # packets blocked on WAN will be deferred to the IPS to drop the packet. This
+            # allows the IPS to inspect it for denial of service or port scanner profiling.
+            elif (zone == WAN_IN):
+                packet.nfqueue.set_mark(IP_PROXY_DROP)
+
+                packet.nfqueue.repeat()
+
+            # if tcp or udp, we will send a kill conn packet.
+            if (packet.protocol in [PROTO.TCP, PROTO.UDP]):
+                cls._prepare_and_send(packet)
 
 
 class Inspect:
     _Proxy = IPProxy
-    _ProxyResponse = ProxyResponse
 
     __slots__ = (
         '_packet', '_match'
@@ -102,9 +105,6 @@ class Inspect:
 
     # direct reference to the Proxy forward packet method
     _forward_packet = _Proxy.forward_packet
-
-    # direct reference to the proxy response method
-    _prepare_and_send = _ProxyResponse.prepare_and_send
 
     def __init__(self):
         self._match = None
@@ -114,84 +114,70 @@ class Inspect:
         self = cls()
         action, category = self._ip_inspect(self._Proxy, packet)
 
-        self._Proxy.forward_packet(packet.nfqueue, packet.zone, action)
-#        self._forward_packet(packet.nfqueue, packet.zone, action)
+        self._Proxy.forward_packet(packet, packet.zone, action)
 
-        # sending reset
-        if (action is CONN.DROP):
-            self._prepare_and_send(packet)
-
-        # NOTE: this reduces overall logging when not blocking, by only logging for info if log level is
-        # set high enough AND the remote ip falls within a country or reputation category. we could remove
-        # this restriction, which would log all connections being made, which may be more inline with how
-        # it should function.
-        if (category):
-            Log.log(packet, IPP_INSPECTION_RESULTS(category, action))
+        Log.log(packet, IPP_INSPECTION_RESULTS(category, action))
 
     def _ip_inspect(self, Proxy, packet):
-        action = CONN.ACCEPT # setting default action
+        action = CONN.ACCEPT
+        reputation = IPP_CAT.DNL
 
-        # will cross reference category based ips if enabled
-        if (Proxy.cat_enabled):
-            category = IPP_CAT(_recursive_binary_search(packet.bin_data))
+        # running through geolocation signatures for a host match. NOTE: not all countries are included in the sig
+        # set at this time. the additional compression algo needs to be re implemented before more countries can
+        # be added due to memory cost.
+        country = GEO(_linear_binary_search(packet.bin_data))
 
-            Log.debug(f'CAT LOOKUP | {packet.conn.tracked_ip}: {category}')
+        # if category match and country is configurted to block in direction of conn/packet
+        if (country is not GEO.NONE):
+            action = self._country_action(country, packet.direction)
+
+        # no need to check reputation of host if filtered by geolocation
+        if (action is CONN.ACCEPT and Proxy.reputation_enabled):
+
+            reputation = IPP_CAT(_recursive_binary_search(packet.bin_data))
 
             # if category match, and category is configured to block in direction of conn/packet
-            if (category is not IPP_CAT.NONE) and self._blocked_ip(category, packet):
-                action = CONN.DROP
+            if (reputation is not IPP_CAT.NONE):
+                action = self._reputation_action(reputation, packet)
 
-        # will cross reference geolocation network if enabled at not already blocked
-        # NOTE: this is now using imported cython function factory
-        if (action is CONN.ACCEPT and Proxy.geo_enabled):
-            category = GEO(_linear_binary_search(packet.bin_data))
-
-            Log.debug(f'GEO LOOKUP | {packet.conn.tracked_ip}: {category}')
-
-            # if category match and country is configurted to block in direction of conn/packet
-            if (category is not GEO.NONE) and self._blocked_country(category, packet.direction):
-                action = CONN.DROP
-
-        # NOTE: debugs are for testing.
-        if (action is CONN.ACCEPT):
-            Log.debug(f'IP PROXY | ACCEPTED | {packet.conn.tracked_ip}: {packet.direction}')
-
-        # if marked for drop, but id mode is enabled decision will get changed to ACCEPT.
-        elif (action is CONN.DROP and Proxy.ids_mode): # NOTE: should only match if IDS mode enabled and sig match + cat enabled(direction match included)
-            Log.debug(f'IP PROXY | DETECTED | {packet.conn.tracked_ip}: {packet.direction}.')
-            action = CONN.ACCEPT
-
-        elif (action is CONN.DROP):
-            Log.debug(f'IP PROXY | DROPPED | {packet.conn.tracked_ip}: {packet.direction}')
-
-        return action, category
+        return action, (f'{country.name}', f'{reputation.name}')
 
     # category setting lookup. will match packet direction with configured dir for category/category group.
-    def _blocked_ip(self, category, packet):
+    def _reputation_action(self, category, packet):
         # flooring cat to its cat group for easier matching of tor nodes
-        cat_group = IPP_CAT((category // 10) * 10)
-        if (cat_group is IPP_CAT.TOR):
-            block_direction = self._Proxy.cat_settings[category]
-            if (packet.conn.local_ip in self._Proxy.tor_whitelist):
-                return False
+        rep_group = IPP_CAT((category // 10) * 10)
+        if (rep_group is IPP_CAT.TOR):
+
+            # only outbound traffic will match tor whitelist since this override is designed for a user to access
+            # tor and not to open a local machine to tor traffic.
+            # TODO: evaluate if we should have an inbound override, though i dont know who would ever want random
+            # tor users accessing their servers.
+            if (packet.direction is DIR.OUTBOUND and packet.conn.local_ip in self._Proxy.tor_whitelist):
+                return CONN.ACCEPT
+
+            block_direction = self._Proxy.reputation_settings[category]
 
         else:
-            block_direction = self._Proxy.cat_settings[cat_group]
+            block_direction = self._Proxy.reputation_settings[rep_group]
 
         # notify proxy the connection should be blocked
         if (block_direction in [packet.direction, DIR.BOTH]):
-            return True
+            return CONN.DROP
 
         # default action is allow due to category not being enabled
-        return False
+        return CONN.ACCEPT
 
-    def _blocked_country(self, category, direction):
-        if (self._Proxy.geo_settings[category] in [direction, DIR.BOTH]):
-            return True
+    def _country_action(self, category, direction):
+        if (self._Proxy.geolocation_settings[category] in [direction, DIR.BOTH]):
+            return CONN.DROP
 
-        return False
+        return CONN.ACCEPT
 
-if __name__ == "__main__":
+if __name__ == '__main__':
+    Log.run(
+        name=LOG_NAME
+    )
+
     ip_cat_signatures, geoloc_signatures = Configuration.load_ip_signature_bitmaps()
 
     # using cython function factory to create binary search function with module specific signatures
@@ -201,7 +187,4 @@ if __name__ == "__main__":
     _recursive_binary_search = generate_recursive_binary_search(ip_cat_signatures, ip_cat_signature_bounds)
     _linear_binary_search = generate_linear_binary_search(geoloc_signatures, geoloc_signature_bounds)
 
-    Log.run(
-        name=LOG_NAME
-    )
     IPProxy.run(Log, q_num=1)

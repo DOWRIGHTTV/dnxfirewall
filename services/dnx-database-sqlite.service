@@ -1,5 +1,7 @@
+# After=postgresql.service needed when using psql
+
 [Unit]
-Description=DNX Firewall Database Entry Service (used by security modules)
+Description=DNXFIREWALL Database Entry Service (used by security modules)
 After=network.target
 StartLimitIntervalSec=3
 

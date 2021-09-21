@@ -1,0 +1,15 @@
+[Unit]
+Description=DNXFIREWALL System Control Service (issue system level commands)
+After=network.target
+StartLimitIntervalSec=3
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=3
+User=root
+ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_system/sys_main.py
+Environment=HOME_DIR=/home/dnx/dnxfirewall
+
+[Install]
+WantedBy=multi-user.target

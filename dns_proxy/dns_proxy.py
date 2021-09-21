@@ -34,7 +34,7 @@ class DNSProxy(Listener):
     )
     # en_dns | dns | tld | keyword | NOTE: dns signatures are now contained within the binary search extension as a closure
     signatures = DNS_SIGNATURES(
-        set(), {}, []
+        set([DNS_CAT.doh]), {}, []
     )
 
     _dns_sig_ref = None
@@ -80,8 +80,8 @@ class DNSProxy(Listener):
 
         # refusing ipv6 dns record types as policy
         if (packet.qtype == DNS.AAAA):
-            packet.generate_proxy_response() # NOTE: complete
-            self.send_to_client(packet) # NOTE: complete
+            packet.generate_proxy_response()
+            self.send_to_client(packet)
 
         return False
 
@@ -136,6 +136,7 @@ class Inspect:
     # via the request tracker upon returning signature scan result
     def _dns_inspect(self, Proxy, packet):
         whitelisted = self._ip_whitelist_get(packet.src_ip, False)
+        enum_categories = []
 
         # signature/ blacklist check.
         # DNS_REQUEST_RESULTS(redirect, block type, category)
@@ -157,26 +158,31 @@ class Inspect:
 
             # ip whitelist overrides configured blacklist
             if (not whitelisted and enum_request in Proxy.blacklist.dns):
-                Log.dprint(f'Blacklist Block: {packet.request}')
 
                 return DNS_REQUEST_RESULTS(True, 'blacklist', DNS_CAT.time_based)
 
             # pulling domain category if signature present. | NOTE: this is now using imported cython function factory
             category = DNS_CAT(_recursive_binary_search(enum_request))
             if (category is not DNS_CAT.NONE) and self._block_query(category, whitelisted):
-                Log.dprint(f'Category Block: {packet.request}')
 
                 return DNS_REQUEST_RESULTS(True, 'category', category)
+
+            # adding returned cat to enum list. this will be used to identify categories
+            # for allowed requests.
+            enum_categories.append(category)
 
         # Keyword search within domain || block if match
         for keyword, category in Proxy.signatures.keyword:
             if (keyword in packet.request):
-                Log.dprint(f'Keyword Block: {packet.request}')
 
                 return DNS_REQUEST_RESULTS(True, 'keyword', category)
 
+        # pulling most specific category that is not none otherwise returned value will be DNS_CAT.NONE.
+        for category in enum_categories:
+            if category is not DNS_CAT.NONE: break
+
         # DEFAULT ACTION | ALLOW
-        return DNS_REQUEST_RESULTS(False, None, None)
+        return DNS_REQUEST_RESULTS(False, None, category)
 
     # # grabbing the request category and determining whether the request should be blocked. if so, returns general
     # # information for further processing
@@ -206,5 +212,5 @@ if __name__ == '__main__':
     Log.run(
         name=LOG_NAME
     )
-    DNSProxy.run(Log, threaded=True)
-    DNSServer.run(Log, threaded=False)
+    DNSProxy.run(Log, threaded=True, always_on=True)
+    DNSServer.run(Log, threaded=False, always_on=True)

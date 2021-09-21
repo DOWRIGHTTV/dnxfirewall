@@ -11,10 +11,10 @@ HOME_DIR = os.environ['HOME_DIR']
 sys.path.insert(0, HOME_DIR)
 
 from dnx_configure.dnx_constants import * # pylint: disable=unused-wildcard-import
-from dnx_configure.dnx_system_info import Interface
+from dnx_configure.dnx_system_info import System
 from dnx_iptools.dnx_standard_tools import looper, dynamic_looper, Initialize
 from dnx_configure.dnx_file_operations import load_configuration, cfg_read_poller
-from dnx_configure.dnx_iptables import IPTableManager
+from dnx_configure.dnx_iptables import IPTablesManager
 from dnx_ips.dnx_ips_log import Log
 
 
@@ -34,8 +34,7 @@ class Configuration:
         self = cls(IPS.__name__)
         self.IPS = IPS
 
-        self._load_interfaces()
-        self._manage_ip_tables()
+        self._load_passive_blocking()
         threading.Thread(target=self._get_settings).start()
         threading.Thread(target=self._get_open_ports).start()
         threading.Thread(target=self._update_system_vars).start()
@@ -44,19 +43,14 @@ class Configuration:
 
         threading.Thread(target=self._clear_ip_tables).start()
 
-    def _manage_ip_tables(self):
-        IPTableManager.purge_proxy_rules(table='mangle', chain='IPS')
-
-    def _load_interfaces(self):
-        dnx_settings = load_configuration('config')['settings']
-
-        wan_ident = dnx_settings['interfaces']['wan']['ident']
-
-        self.IPS.broadcast = Interface.broadcast_address(wan_ident)
+    # this resets any passively blocked hosts in the system on startup. persisting this
+    # data through service or system restarts is not really worth the energy.
+    def _load_passive_blocking(self):
+        self.IPS.fw_rules = dict(System.ips_passively_blocked())
 
     @cfg_read_poller('ips')
     def _get_settings(self, cfg_file):
-        ips = load_configuration(cfg_file)['ips']
+        ips = load_configuration(cfg_file)
 
         self.IPS.ids_mode = ips['ids_mode']
 
@@ -71,16 +65,15 @@ class Configuration:
         self.IPS.portscan_prevention = ips['port_scan']['enabled']
         self.IPS.portscan_reject = ips['port_scan']['reject']
 
-        # checking length(hours) to leave IP Table Rules in place for hosts part of ddos attacks
         if (self.IPS.ddos_prevention and not self.IPS.ids_mode):
+
+            # checking length(hours) to leave IP table rules in place for hosts part of ddos attacks
+            self.IPS.block_length = ips['passive_block_ttl'] * ONE_HOUR
 
             # NOTE: this will provide a simple way to ensure very recently blocked hosts do not get their
             # rule removed if passive blocking is disabled.
             if (not self.IPS.block_length):
                 self.IPS.block_length = FIVE_MIN
-
-            else:
-                self.IPS.block_length = ips['passive_block_ttl'] * ONE_HOUR
 
         # if ddos engine is disabled
         else:
@@ -96,7 +89,7 @@ class Configuration:
     # the setting set in the decorator or remove the decorator entirely.
     @cfg_read_poller('ips')
     def _get_open_ports(self, cfg_file):
-        ips = load_configuration(cfg_file)['ips']
+        ips = load_configuration(cfg_file)
 
         self.IPS.open_ports = {
             PROTO.TCP: {
@@ -115,40 +108,33 @@ class Configuration:
         # waiting for any thread to report a change in configuration.
         self._cfg_change.wait()
 
-        #resetting the config change event.
+        # resetting the config change event.
         self._cfg_change.clear()
 
         open_ports = self.IPS.open_ports[PROTO.TCP] or self.IPS.open_ports[PROTO.UDP]
-        if (self.IPS.ddos_prevention or (self.IPS.portscan_prevention and open_ports)):
-            self.IPS.ins_engine_enabled = True
-        else:
-            self.IPS.ins_engine_enabled = False
 
-        if (self.IPS.portscan_prevention and open_ports):
-            self.IPS.ps_engine_enabled = True
-        else:
-            self.IPS.ps_engine_enabled = False
+        self.IPS.ps_engine_enabled = True if self.IPS.portscan_prevention and open_ports else False
 
-        if (self.IPS.ddos_prevention):
-            self.IPS.ddos_engine_enabled = True
-        else:
-            self.IPS.ddos_engine_enabled = False
+        self.IPS.ddos_engine_enabled = True if self.IPS.ddos_prevention else False
+
+        self.IPS.ins_engine_enabled = True if self.IPS.ps_engine_enabled or self.IPS.ddos_engine_enabled else False
 
         self.initialize.done()
 
     @looper(THIRTY_MIN)
-    # TODO: consider making this work off of a thread event. then we can convert the dynamic looper
-    # to a standard looper and method will block until an actual host has been blocked.
+    # NOTE: refactored function utilizing iptables + timestamp comment to identify rules to be expired.
+    # this should inherently make the passive blocking system persist service or system reboots.
+    # TODO: consider using the fw_rule dict check before continuing to call System.
     def _clear_ip_tables(self):
-        # quick check to see if any firewall rules exist
-        firewall_rules = self.IPS.fw_rules
-        if (not firewall_rules): return
+        expire_stamp = fast_time()-self.IPS.block_length
 
-        block_length, now = self.IPS.block_length, fast_time()
+        expired_hosts = System.ips_passively_blocked(expire_stamp=expire_stamp)
+        if (not expired_hosts):
+            return
 
-        # TODO: look into a method that isnt linearly complext to clear firewall rules. its expected to be
-        # somewhat small so its not terrible as is.
-        with IPTableManager() as iptables:
-            for tracked_ip, insertion_time in list(firewall_rules.items()):
-                if (now - insertion_time > block_length) and firewall_rules.pop(tracked_ip, None):
-                    iptables.proxy_del_rule(tracked_ip, table='mangle', chain='IPS')
+        with IPTablesManager() as iptables:
+            for host, timestamp in expired_hosts:
+                iptables.proxy_del_rule(host, timestamp, table='raw', chain='IPS')
+
+                # removing host from ips tracker/ supression dictionary
+                self.IPS.fw_rules.pop(IPv4Address(host), None) # should never return None

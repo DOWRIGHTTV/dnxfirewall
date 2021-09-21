@@ -1,8 +1,13 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="why-me" class="section">
+<section id="why-me" class="section {{main_section_color}}">
     <div class="container">
-        <h4 class="red-text">You are not authorized to access this page. If logged in you will be logged out. BYE FELICIA. </h4>
+        <div class="col s12 center">
+            <i class="material-icons large orange-text">warning</i>
+        </div>
+        <h5 class="black-text center">You are not authorized to access this page directly. If you were redirected to this page and are seeing this
+            message, the system may have detached from the database. If it happens again, try restarting the device.
+        </h5>
     </div>
 </section>
 {% endblock %}

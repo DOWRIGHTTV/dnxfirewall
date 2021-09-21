@@ -1,8 +1,19 @@
-# -------------------------------------------------------
-# Free IP2Location Firewall List by Country
-# Source: https://www.ip2location.com/free/visitor-blocker
-# Last Generated: 25 Apr 2020 21:44:00 GMT
-# [Important] Please update this list every month
-# -------------------------------------------------------
-175.45.176.0/22 n_korea
-202.72.96.4/30 n_korea
+104.28.67.232/31 north_korea
+104.28.67.234/32 north_korea
+104.28.70.232/31 north_korea
+104.28.70.234/32 north_korea
+104.28.74.82/31 north_korea
+104.28.74.84/32 north_korea
+104.28.84.2/31 north_korea
+104.28.84.4/32 north_korea
+104.28.99.253/32 north_korea
+104.28.99.254/32 north_korea
+104.28.100.0/32 north_korea
+104.28.101.253/32 north_korea
+104.28.101.254/32 north_korea
+104.28.102.0/32 north_korea
+104.28.118.226/31 north_korea
+104.28.118.228/32 north_korea
+104.28.121.226/31 north_korea
+104.28.121.228/32 north_korea
+175.45.176.0/22 north_korea

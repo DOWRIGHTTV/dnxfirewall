@@ -5,6 +5,7 @@ from collections import namedtuple as _namedtuple
 #DHCP SERVER
 DHCP_REQUEST_INFO  = _namedtuple('dhcp_request_info' ,'message_type, xID, server_identifier, mac_address, client_address, requested_ip')
 DHCP_RESPONSE_INFO = _namedtuple('dhcp_response_info', 'xID mac_address ciaddr handout_ip options')
+DHCP_RECORD = _namedtuple('server_record', 'rtype timestamp mac hostname')
 
 #SYSLOG CLIENT
 SYSLOG_SERVERS = _namedtuple('syslog_servers', 'primary secondary')
@@ -36,6 +37,7 @@ DDOS_TRACKERS  = _namedtuple('ddos', 'lock tracker')
 IPP_IP_INFO = _namedtuple('ipp_ip_info', 'tracked_ip local_ip')
 IPP_INSPECTION_RESULTS = _namedtuple('ipp_inspection_results', 'category action')
 IPP_LOG = _namedtuple('ipp_log', 'local_ip tracked_ip category direction action')
+GEO_LOG = _namedtuple('geo_log', 'country direction action')
 
 IPP_SRC_INFO = _namedtuple('src_info', 'protocol src_ip src_port')
 IPP_DST_INFO = _namedtuple('dst_info', 'protocol dst_ip dst_port')

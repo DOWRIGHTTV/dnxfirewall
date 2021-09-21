@@ -33,7 +33,7 @@ def ready_service(callback):
 def get_intf(intf):
     settings = load_configuration('config')
 
-    return settings['settings']['interfaces'][intf]['ident']
+    return settings['interfaces'][intf]['ident']
 
 def is_ready(interface):
     with open(f'/sys/class/net/{interface}/carrier', 'r') as carrier:
@@ -130,10 +130,32 @@ def get_netmask(*, interface):
     finally:
         s.close()
 
-def get_arp_table():
+def get_arp_table(*, modify=False, host=None):
+    '''return arp table as dictionary
+
+        {IPv4Address(ip): mac} = get_arp_table(modify=True)
+
+    if modify is set to True, the ":" will be removed from the mac addresses.
+
+    if host is specified, return just the mac address of the host sent in. If no host is present
+    returns None
+    '''
+
     with open('/proc/net/arp') as arp_table:
         #'IP address', 'HW type', 'Flags', 'HW address', 'Mask', 'Device'
-        reader = csv.reader(
-            arp_table, skipinitialspace=True, delimiter=' ')
+        arp_table = list(
+            csv.reader(arp_table, skipinitialspace=True, delimiter=' ')
+        )
 
-        return {a[0]: a[3].replace(':', '') for a in reader}
+    if (modify):
+        arp_table = {IPv4Address(a[0]): a[3].replace(':', '') for a in arp_table[1:]}
+
+    else:
+        arp_table = {IPv4Address(a[0]): a[3] for a in arp_table[1:]}
+
+
+    if (host):
+        return arp_table.get(host, None)
+
+    else:
+        return arp_table

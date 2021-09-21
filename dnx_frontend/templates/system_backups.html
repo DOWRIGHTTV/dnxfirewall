@@ -1,84 +1,121 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="why-me" class="section">
+<section id="why-me" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
-            <div class="col s12 m8">
-                <div class="card-panel">
-                    <h4 class="red-text">Configuration Backups</h4>
-                    <table class="striped">
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th></th>
-                                <th>Name</th>
-                                <th>Time</th>
-                                <th>Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for backup, c_time in current_backups.items() %}
-                            <tr>
-                                <td>
-                                    <a class="waves-effect waves-light btn modal-trigger" href="#bck-modal1-{{loop.index}}">Restore</a>
-                                    <div id="bck-modal1-{{loop.index}}" class="modal">
-                                        <div class="modal-content">
-                                        <h5 class="red-text">Are you sure you want to load settings from backup?</h5>
-                                        </div>
-                                        <form action="/system/backups" method="POST">
-                                            <div class="modal-footer">
-                                                <button class="btn waves-effect waves-light">YES</button>
-                                                <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                                                <input type="hidden" name="backup_name" value="{{backup}}">
-                                                <input type="hidden" name="cfg_backup_restore" value="Config">
-                                            </div>
-                                        </form>
-                                    </div>
-                                </td>
-                                <td>
-                                    <a class="waves-effect waves-light btn modal-trigger" href="#bck-modal2-{{loop.index}}">Remove</a>
-                                    <div id="bck-modal2-{{loop.index}}" class="modal">
-                                        <div class="modal-content">
-                                        <h5 class="red-text">Are you sure you want to delete configuration backup?</h5>
-                                        </div>
-                                        <form action="/system/backups" method="POST">
-                                            <div class="modal-footer">
-                                                <button class="btn waves-effect waves-light">YES</button>
-                                                <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                                                <input type="hidden" name="backup_name" value="{{backup}}">
-                                                <input type="hidden" name="cfg_backup_remove" value="Config">
-                                            </div>
-                                        </form>
-                                    </div>
-                                </td>
-                                <td>{{backup}}</label></td>
-                                <td>{{c_time[0]}}</td>
-                                <td>{{c_time[1]}}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="col s12 m4">
-                <div class="card-panel">
-                    <h4 class="red-text light-3">Create Backup</h4>
-                    <form action="/system/backups" method="POST">
-                    <input type="hidden" name="active" value="1">
-                        <div class="row">
-                            <div class="input-field col s12">
-                                <input type="text" name="backup_name" class="validate" placeholder=main_config>
+            <div class="col s12">
+                <div class="card-panel hoverable {{card_color}}">
+                    <h4 class="{{title_color}}">Create Backup</h4>
+                    <div class="row">
+                        <form action="/system/backups" method="POST">
+                        <input type="hidden" name="active" value="1">
+                            <div class="input-field col s6 l4 {{input_color}}">
+                                <input type="text" name="backup_name" class="validate" placeholder="main_config">
                                 <label for="">Name</label>
                             </div>
+                            <div class="input-field col s3 l2">
+                                <input type="hidden" name="cfg_backup" value="1">
+                                <button class="btn waves-effect waves-light s12">Create</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col s12">
+                <div class="card-panel hoverable {{card_color}}">
+                    <div class="row">
+                        <div class="col s8 l9">
+                            <h4 class="{{title_color}}">Configuration Backups</h4>
                         </div>
-                        <div class="row">
-                            <div class="input-field col s12 m4">
-                            <input type="hidden" name="cfg_backup_create" value="Config">
-                            <button class="btn waves-effect waves-light col s12">
-                                <i class="material-icons"></i> Add
-                            </button>
+                        <div class="col s3">
+                            <form action="/system/backups" method="POST">
+                                <div class="input-field col s12">
+                                    <a class="btn modal-trigger waves-effect waves-light" href="#bck-modal1-1">Restore Defaults</a>
+                                    <div id="bck-modal1-1" class="modal">
+                                        <div class="modal-content">
+                                            <h5 class="red-text center">Are you sure you want to restore default configurations? Any
+                                                unsaved changes will be lost. Continue with caution!
+                                            </h5>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button class="btn waves-effect waves-light">RESTORE DEFAULTS</button>
+                                            <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+                                            <input type="hidden" name="backup_name" value="system_default">
+                                            <input type="hidden" name="cfg_backup" value="3">
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
                         </div>
-                    </form>
+                    </div>
+                    <div class="row">
+                        <table class="striped centered">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th></th>
+                                    <th>Name</th>
+                                    <th>Time</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if current_backups %}
+                                {% for backup, c_time in current_backups.items() %}
+                                <tr>
+                                    <td>
+                                        <a class="btn-floating btn-medium modal-trigger red waves-effect waves-light" href="#bck-modal3-{{loop.index}}">
+                                            <i class="material-icons">remove</i>
+                                        </a>
+                                        <div id="bck-modal3-{{loop.index}}" class="modal">
+                                            <div class="modal-content">
+                                                <h5 class="red-text center">Are you sure you want to delete the saved configuration?</h5>
+                                            </div>
+                                            <form action="/system/backups" method="POST">
+                                                <div class="modal-footer">
+                                                    <button class="btn waves-effect waves-light">YES</button>
+                                                        <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+                                                    <input type="hidden" name="backup_name" value="{{backup}}">
+                                                    <input type="hidden" name="cfg_backup" value="0">
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <a class="btn-floating btn-medium waves-effect waves-light modal-trigger" href="#bck-modal2-{{loop.index}}">
+                                            <i class="material-icons">get_app</i>
+                                        </a>
+                                        <div id="bck-modal2-{{loop.index}}" class="modal">
+                                            <div class="modal-content">
+                                            <h5 class="red-text center">Are you sure you want to restore configuration from from backup? All unsaved changes
+                                                will be lost.
+                                            </h5>
+                                            </div>
+                                            <form action="/system/backups" method="POST">
+                                                <div class="modal-footer">
+                                                    <button class="btn waves-effect waves-light">YES</button>
+                                                    <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+                                                    <input type="hidden" name="backup_name" value="{{backup}}">
+                                                    <input type="hidden" name="cfg_backup" value="3">
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </td>
+                                    <td>{{backup}}</td>
+                                    <td>{{c_time[0]}}</td>
+                                    <td>{{c_time[1]}}</td>
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                <tr>
+                                    {% for i in range(5) %}
+                                    <td></td>
+                                    {% endfor %}
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>

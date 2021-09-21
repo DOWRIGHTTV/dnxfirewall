@@ -53,25 +53,24 @@ class ServerResponse:
     # lease from table
     def release(self, ip_address, mac_address):
         '''release ip address lease stored in server. listener/server instance required.'''
-        _, lease_time, lease_mac = self._svr.leases[ip_address]
+        _, lease_time, lease_mac, _ = self._svr.leases[ip_address]
         if (lease_time != DHCP.RESERVATION and lease_mac == mac_address):
             return True
 
         return False
 
     # TODO: ensure that if lease range gets changed while running, any client outside of new range
-    # will have their requested ip ignored if it falls outside of the new range.
+        # will have their requested ip ignored if it falls outside of the new range.
     # TODO: only allow one lease per host. when i host is given a new lease, check that it doesnt
-    # already have one (looking at you linux). if multiple are present, clear out all but most recent.
+        # already have one (looking at you linux). if multiple are present, clear out all but most recent.
+        # this can potentially just be a recurring clean up job instead of at the time of handout.
     def offer(self, discover):
         reservation = discover.reservation(self._net_hosts)
         if (reservation):
             return reservation
 
-        # NOTE: why is this lock here. this portion of the code is synchronous
-        # with self._svr.handout_lock:
-
         is_available, lease_mac = self._is_available(discover.req_ip, mac=True)
+
         # outcome 1/2 in rfc 2131
         if ((discover.ciaddr != INADDR_ANY)
                 and (lease_mac == discover.mac or is_available)):
@@ -92,7 +91,7 @@ class ServerResponse:
 
     def ack(self, request):
         self._request = request
-        self._lease_time, _, lease_mac = self._svr.leases[request.req_ip]
+        self._lease_time, _, lease_mac, _ = self._svr.leases[request.req_ip]
 
         # DHCP.SELECTING
         if (self.selecting):
@@ -200,7 +199,7 @@ class ServerResponse:
     def _is_available(self, ip_address, mac=False):
         '''returns True if the ip address is available to lease out. if mac is set to True a tuple of status and
         associated mac, if any, will be returned.'''
-        lease_status, _, lease_mac = self._svr.leases[ip_address]
+        lease_status, _, lease_mac, _ = self._svr.leases[ip_address]
 
         status = True if lease_status is DHCP.AVAILABLE else False
 
@@ -220,7 +219,7 @@ class ClientRequest:
     __slots__ = (
         '_data', '_address', '_name',
         'init_time', 'server_ident', 'mtype', 'req_ip',
-        'handout_ip', 'requested_options', 'response_header',
+        'handout_ip', 'hostname', 'requested_options', 'response_header',
         'response_options', 'bcast', 'xID', 'ciaddr', 'chaddr', 'mac',
         '_response_mtype', 'send_data', 'sock', 'intf',
 
@@ -240,7 +239,6 @@ class ClientRequest:
         # NOTE: sock_info (namedtuple): name ip socket send sendto recvfrom
 
         self._data = data
-    #    self._address = address
         self.sock = sock_info
 
         self.init_time    = fast_time()
@@ -248,6 +246,7 @@ class ClientRequest:
         self.mtype        = None
         self.req_ip       = None
         self.handout_ip   = None
+        self.hostname     = ''
 
         self.requested_options = [54,51,58,59]
         self.response_header   = []
@@ -256,8 +255,6 @@ class ClientRequest:
         # assigning local reference to server callbacks through class alias object
         self._server_options_get  = self._Server.options[sock_info.name].get
         self._server_reservations = self._Server.reservations
-        # self._server_int_ip = self._Server.intf_settings[sock_info[1]]['ip'].ip # NOTE: depricate? i dont think we need
-            # a separate refence for ip now that it is stored as part of the socket info
 
     # TODO: look at other parent classes, but consider sending data in directly as arg instead of in constructor
     def parse(self):
@@ -276,7 +273,11 @@ class ClientRequest:
 
             option_info, data = data[:2], data[2:]
             option_type, option_length = dhcp_opt_unpack(option_info)
-            if (option_type == 50):
+
+            if (option_type == 12):
+                self.hostname = data[:option_length].decode(errors='replace')
+
+            elif (option_type == 50):
                 self.req_ip = IPv4Address(data[:4]) # constant so hardcoded
 
             elif (option_type == 53):
@@ -303,7 +304,7 @@ class ClientRequest:
         with self._Server.options_lock:
             send_data.append(self._generate_server_options(response_mtype))
 
-        self.send_data = b''.join(send_data)
+        self.send_data = byte_join(send_data)
 
     def _generate_dhcp_header(self):
         p_time = int(fast_time() - self.init_time)
@@ -311,7 +312,7 @@ class ClientRequest:
         return dhcp_header_pack(
             2, 1, 6, 0, self.xID, p_time, 0, self.ciaddr.packed,
             self.handout_ip.packed, self.sock.ip.packed,
-            INADDR_ANY.packed, self.chaddr, b'DNX FIREWALL',
+            INADDR_ANY.packed, self.chaddr, b'dnxfirewall\x00',
             b'\x00'*180, 99, 130, 83, 99
         )
 
@@ -331,7 +332,7 @@ class ClientRequest:
 
         response_options.append(double_byte_pack(255, 0))
 
-        return b''.join(response_options)
+        return byte_join(response_options)
 
     # NOTE: recently changed this to ensure reversations arent used if they are for a network
     # different that what the request came in on.

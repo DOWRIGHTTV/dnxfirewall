@@ -1,5 +1,5 @@
 [Unit]
-Description=DNX Firewall DHCP Server Service
+Description=DNXFIREWALL DHCP Server Service
 After=dnx-log.service dnx-syslog.service
 StartLimitIntervalSec=3
 

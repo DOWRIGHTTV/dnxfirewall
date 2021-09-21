@@ -1,18 +1,18 @@
 {% extends('layout.html') %}
 {% block body %}
 <!-- Tabs for statistics -->
-<section id="dropdown" class="section">
+<section id="dropdown" class="section {{main_section_color}}">
     <div class="container">
-        <div class="col s12 m12">
-            <div class="card-panel">
-                <h4 class="red-text">System Logs</h4>
+        <div class="col s12">
+            <div class="card-panel hoverable {{card_color}}">
+                <h4 class="{{title_color}}">System Logs</h4>
                 <div class="row">
                     <form action="system/logs" method="POST">
-                        <div class="input-field col s10 m6">
+                        <div class="input-field col s10 m6 l4 {{input_color}}">
                             <select name="table" onchange="this.form.submit()">
-                                {% for selection in log_files %}
-                                <option value="{{selection}}" {% if menu==loop.index|string %} selected {% endif %}
-                                    >{{selection.upper()|replace('_', ' ')}} LOG</option>
+                                {% for table_type in log_files %}
+                                <option value="{{table_type}}" {% if table_type==table %} selected {% endif %}
+                                    >{{table_type.upper()|replace('_', ' ')}} LOG</option>
                                 {% endfor %}
                             </select>
                             <label for="table">Log Files</label>
@@ -27,13 +27,13 @@
                     </form>
                 </div>
                 <div class="row">
-                    <table class="striped">
+                    <table class="striped centered">
                         <thead>
                             <tr>
-                                <th>Date/Time</th>
-                                <th>Service</th>
-                                <th>Level</th>
-                                <th>Log Entry</th>
+                                <th style="width:15%">Date/Time</th>
+                                <th style="width:10%">Service</th>
+                                <th style="width:10%">Level</th>
+                                <th style="width:65%">Log Entry</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -48,10 +48,9 @@
                             {% endfor %}
                             {% else %}
                             <tr>
+                                {% for i in range(4) %}
                                 <td></td>
-                                <td>No Logs</td>
-                                <td></td>
-                                <td></td>
+                                {% endfor %}
                             </tr>
                         </tbody>
                         {% endif %}

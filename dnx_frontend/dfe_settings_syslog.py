@@ -18,7 +18,7 @@ _SYSLOG_DISABLED = True
 def load_page():
     # syslog_server_status = load_configuration('syslog_server_status')
 
-    syslog = load_configuration('syslog_client')['syslog']
+    syslog = load_configuration('syslog_client')
 
     syslog_servers = syslog['servers']
 

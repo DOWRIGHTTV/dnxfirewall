@@ -14,10 +14,11 @@ sys.path.insert(0, HOME_DIR)
 
 import dnx_configure.dnx_validate as validate
 
-from dnx_configure.dnx_constants import CFG
+from dnx_configure.dnx_constants import CFG, FIVE_SEC, DATA
 from dnx_configure.dnx_file_operations import load_configuration, ConfigurationManager
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_database.ddb_connector_sqlite import DBConnector
+from dnx_system.sys_main import system_action
 from dnx_configure.dnx_system_info import System
 from dnx_logging.log_main import LogHandler as Log
 
@@ -46,8 +47,7 @@ LOG_NAME = 'web_app'
 
 app = Flask(__name__, static_url_path='/static')
 
-flask_config = load_configuration('config.json')['settings']['flask']
-app.secret_key = flask_config.get('key')
+app.secret_key = load_configuration('config.json')['flask'].get('key')
 
 trusted_proxies = ['127.0.0.1']
 
@@ -63,8 +63,8 @@ def dnx_dashboard(dnx_session_data):
 
     page_settings = {
         'navi': True, 'footer': True, 'standard_error': False,
-        'idle_timeout': True, 'uri_path': '/dashboard',
-        'dashboard': dashboard
+        'idle_timeout': True, 'dashboard': dashboard,
+        'uri_path': ['dashboard',]
     }
 
     page_settings.update(dnx_session_data)
@@ -80,8 +80,8 @@ def dnx_dashboard(dnx_session_data):
 def settings_dns(dnx_session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'uri_path': '/settings/dns'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['settings', 'dns']
     }
 
     page_settings.update(dnx_session_data)
@@ -96,8 +96,8 @@ def settings_dns(dnx_session_data):
 def settings_dhcp(dnx_session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'uri_path': '/settings/dhcp'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['settings', 'dhcp']
     }
 
     page_settings.update(dnx_session_data)
@@ -112,8 +112,8 @@ def settings_dhcp(dnx_session_data):
 def settings_interface(dnx_session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'uri_path': '/settings/interface'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['settings', 'interface']
     }
 
     page_settings.update(dnx_session_data)
@@ -128,8 +128,8 @@ def settings_interface(dnx_session_data):
 def settings_logging(dnx_session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'uri_path': '/settings/logging'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['settings', 'logging']
     }
 
     page_settings.update(dnx_session_data)
@@ -144,8 +144,8 @@ def settings_logging(dnx_session_data):
 def settings_syslog(dnx_session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'uri_path': '/settings/syslog'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['settings', 'syslog']
     }
 
     page_settings.update(dnx_session_data)
@@ -162,18 +162,15 @@ def settings_categories(dnx_session_data):
     menu_option = request.args.get('menu', '1')
     menu_option = int(menu_option) if menu_option.isdigit() else '1'
 
-    settings = category_settings.load_page(menu_option)
-
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'cat_settings': True,
-        'uri_path': '/settings/categories',
-        'menu': menu_option, 'category_settings': settings
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'cat_settings': True, 'tab': tab, 'menu': menu_option,
+        'uri_path': ['settings', 'categories']
     }
 
     page_settings.update(dnx_session_data)
 
-    page_action = categories_page_logic(category_settings.update_page, page_settings)
+    page_action = categories_page_logic(category_settings, page_settings)
 
     return page_action
 
@@ -186,8 +183,8 @@ def settings_categories(dnx_session_data):
 def advanced_whitelist(dnx_session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'uri_path': '/advanced/whitelist'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['advanced', 'whitelist']
     }
 
     page_settings.update(dnx_session_data)
@@ -202,8 +199,8 @@ def advanced_whitelist(dnx_session_data):
 def advanced_blacklist(dnx_session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'uri_path': '/advanced/blacklist'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['advanced', 'blacklist']
     }
 
     page_settings.update(dnx_session_data)
@@ -213,13 +210,34 @@ def advanced_blacklist(dnx_session_data):
 
     return page_action
 
+@app.route('/advanced/firewall', methods=['GET', 'POST'])
+@user_restrict('admin')
+def advanced_firewall(dnx_session_data):
+    tab = request.args.get('tab', '1')
+    menu_option = request.args.get('menu', '1')
+
+    page_settings = {
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'menu': menu_option,
+        'selected': 'GLOBAL_ZONE',
+        'zones': ['GLOBAL', 'WAN', 'DMZ', 'LAN'],
+        'uri_path': ['advanced', 'firewall']
+    }
+
+    page_settings.update(dnx_session_data)
+
+    page_action = firewall_page_logic(
+        dnx_firewall, page_settings, 'firewall_settings', page_name='advanced_firewall')
+
+    return page_action
+
 @app.route('/advanced/domain', methods=['GET', 'POST'])
 @user_restrict('admin')
 def advanced_domain(dnx_session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'uri_path': '/advanced/domain'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['advanced', 'domain']
     }
 
     page_settings.update(dnx_session_data)
@@ -234,8 +252,8 @@ def advanced_domain(dnx_session_data):
 def advanced_ip(dnx_session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'uri_path': '/advanced/ip'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['advanced', 'ip']
     }
 
     page_settings.update(dnx_session_data)
@@ -245,34 +263,13 @@ def advanced_ip(dnx_session_data):
 
     return page_action
 
-@app.route('/advanced/firewall', methods=['GET', 'POST'])
-@user_restrict('admin')
-def advanced_firewall(dnx_session_data):
-    tab = request.args.get('tab', '1')
-    menu_option = request.args.get('menu', '1')
-
-    page_settings = {
-        'navi': True, 'tab': tab, 'menu': menu_option,
-        'standard_error': None, 'idle_timeout': True,
-        'uri_path': '/advanced/firewall',
-        'selected': 'GLOBAL_INTERFACE',
-        'zones': ['GLOBAL', 'WAN', 'DMZ', 'LAN']
-    }
-
-    page_settings.update(dnx_session_data)
-
-    page_action = firewall_page_logic(
-        dnx_firewall, page_settings, 'firewall_settings', page_name='advanced_firewall')
-
-    return page_action
-
 @app.route('/advanced/ips', methods=['GET', 'POST'])
 @user_restrict('admin')
 def advanced_ips(dnx_session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
-        'navi': True, 'tab': tab, 'standard_error': None,
-        'idle_timeout': True, 'uri_path': '/advanced/ips'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['advanced', 'ips']
     }
 
     page_settings.update(dnx_session_data)
@@ -290,8 +287,8 @@ def advanced_ips(dnx_session_data):
 @user_restrict('admin')
 def system_users(dnx_session_data):
     page_settings = {
-        'navi': True, 'standard_error': None, 'idle_timeout': True,
-        'uri_path': '/system/users'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'uri_path': ['system', 'users']
     }
 
     page_settings.update(dnx_session_data)
@@ -305,8 +302,10 @@ def system_users(dnx_session_data):
 @user_restrict('user', 'admin')
 def system_reports(dnx_session_data):
     page_settings = {
-        'navi': True, 'idle_timeout': True, 'log_timeout': True,
-        'uri_path': '/system/reports', 'menu': '1', 'table': '1'
+        'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
+        'menu': '1', 'table': '1',
+        'uri_path': ['system', 'reports'],
+        'table_types': ['dns_proxy', 'ip_proxy', 'intrusion_prevention', 'infected_clients']
     }
 
     page_settings.update(dnx_session_data)
@@ -319,9 +318,10 @@ def system_reports(dnx_session_data):
 @user_restrict('user', 'admin')
 def system_logs(dnx_session_data):
     page_settings = {
-        'navi': True, 'idle_timeout': True, 'log_timeout': True,
-        'uri_path': '/system/logs', 'menu': '1',
-        'log_files': ['combined', 'logins', 'web_app', 'system', 'dns_proxy', 'ip_proxy', 'ips', 'dhcp_server', 'syslog']
+        'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
+        'menu': '1',
+        'log_files': ['combined', 'logins', 'web_app', 'system', 'dns_proxy', 'ip_proxy', 'ips', 'dhcp_server', 'syslog'],
+        'uri_path': ['system', 'logs']
     }
 
     page_settings.update(dnx_session_data)
@@ -334,7 +334,8 @@ def system_logs(dnx_session_data):
 @user_restrict('admin')
 def system_services(dnx_session_data):
     page_settings = {
-        'navi': True, 'idle_timeout': True, 'standard_error': None
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'uri_path': ['system', 'services']
     }
 
     page_settings.update(dnx_session_data)
@@ -348,8 +349,8 @@ def system_services(dnx_session_data):
 @user_restrict('admin')
 def system_backups(dnx_session_data):
     page_settings = {
-        'navi': True, 'standard_error': None, 'idle_timeout': True,
-        'uri_path': '/system/backups'
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'uri_path': ['system', 'backups']
     }
 
     page_settings.update(dnx_session_data)
@@ -368,7 +369,8 @@ def system_backups(dnx_session_data):
 def system_restart(dnx_session_data):
     page_settings = {
         'navi':True, 'idle_timeout': False,
-        'control': True, 'action': 'restart'
+        'control': True, 'action': 'restart',
+        'uri_path': ['device', 'restart']
     }
 
     page_settings.update(dnx_session_data)
@@ -382,7 +384,8 @@ def system_restart(dnx_session_data):
 def system_shutdown(dnx_session_data):
     page_settings = {
         'navi': True, 'idle_timeout': False,
-        'control': True, 'action': 'shutdown'
+        'control': True, 'action': 'shutdown',
+        'uri_path': ['device', 'shutdown']
     }
 
     page_settings.update(dnx_session_data)
@@ -400,9 +403,9 @@ def system_shutdown(dnx_session_data):
 # removing user from session dict then removing them from locally stored session tracker to allow
 # for cross session awareness of users/accts logged in.
 def dnx_logout(dnx_session_data):
-    username = session.pop('username', None)
-    if (username):
-        update_session_tracker(username, action=CFG.DEL)
+    user = session.pop('user', None)
+    if (user):
+        update_session_tracker(user, action=CFG.DEL)
 
     return redirect(url_for('dnx_login'))
 
@@ -412,35 +415,39 @@ def dnx_logout(dnx_session_data):
 
 @app.route('/blocked')
 def dnx_blocked():
+    page_settings = {
+        'navi': True, 'login_btn': True,
+        'idle_timeout': False, 'uri_path': ['blocked',]
+    }
+
     # checking for domain sent by nginx that is being redirected to firewall. if domain doesnt exist (user navigated to
     # this page manually) then a not authorized page will be served. If the domain is not a valid domain (regex) the request
     # will be ridirected back to blocked page without a domain. NOTE: this is a crazy bit of code that should be tested much
     # more as it is possible to do a sql injection here if the validations below are bypassed.
     blocked_domain = request.args.get('dom', None)
     if (not blocked_domain):
-        session.pop('username', None)
+        session.pop('user', None)
 
-        return render_template('dnx_not_authorized.html', navi=True, login_btn=True, idle_timeout=False)
+        return render_template('dnx_not_authorized.html', **page_settings)
 
     try:
         validate.domain(blocked_domain)
     except ValidationError:
-        session.pop('username', None)
+        session.pop('user', None)
 
-        return render_template('dnx_not_authorized.html', navi=True, login_btn=True, idle_timeout=False)
+        return render_template('dnx_not_authorized.html', **page_settings)
 
     with DBConnector() as ProxyDB:
         domain_info = ProxyDB.query_blocked(domain=blocked_domain, src_ip=request.remote_addr)
 
     if (not domain_info):
-        session.pop('username', None)
+        session.pop('user', None)
 
-        return render_template('dnx_not_authorized.html', navi=True, login_btn=True, idle_timeout=False)
+        return render_template('dnx_not_authorized.html', **page_settings)
 
-    page_settings = {
-        'navi': True, 'login_btn': True, 'idle_timeout': False,
+    page_settings.update({
         'standard_error': False, 'src_ip': request.remote_addr, 'blocked': domain_info
-    }
+    })
 
     return render_template('dnx_blocked.html', **page_settings)
 
@@ -448,16 +455,17 @@ def dnx_blocked():
 ## --------------------------------------------- ##
 
 @app.route('/login', methods=['GET', 'POST'])
-# TODO: see about marking session username a list of username and role so we wont have to have a separate
+# TODO: see about making session username a list of username and role so we wont have to have a separate
 # role check every time the user logs in, out, or navigates to new page.
-# TODO: if user is already logged in
+# TODO: if user is already logged in... <--- what is this???
 def dnx_login():
     login_error = None
     if (request.method == 'POST'):
         authenticated, username, user_role = Authentication.user_login(request.form, request.remote_addr)
         if (authenticated):
-            session['username'] = username
-            # session['expire_time'] = time.time() + 30
+            session['user'] = {
+                'name': username, 'role': user_role, 'remote_addr': request.remote_addr, 'dark_mode': 0
+            }
 
             update_session_tracker(username, user_role, request.remote_addr)
 
@@ -465,19 +473,8 @@ def dnx_login():
 
         login_error = 'Invalid Credentials. Please try again.'
 
-    return render_template('dnx_login.html', navi=True, login_btn=True, idle_timeout=False,
-        standard_error=False, login_error=login_error)
-
-@app.route('/license_agreement', methods=['GET', 'POST'])
-@user_restrict('user', 'admin')
-def license_agreement(dnx_session_data):
-    page_settings = {
-        'navi': True, 'idle_timeout': False
-    }
-
-    page_settings.update(dnx_session_data)
-
-    return render_template('license_agreement.html', **page_settings)
+    return render_template('dnx_login.html', navi=True, login_btn=False, idle_timeout=False,
+        standard_error=False, login_error=login_error, uri_path=['login'])
 
 ## --------------------------------------------- ##
 ## --------------------------------------------- ##
@@ -489,27 +486,34 @@ def main():
 # all standard page loads use this logic to decide the page action/ call the correct
 # lower level functions residing in each pages Class
 def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
-    if (request.method == 'POST' and 'extend_session_timer' not in request.form):
+    if (request.method == 'POST'):
         tab = request.form.get('tab', '1')
 
-        error = dnx_page.update_page(request.form)
-        if (not error):
-            return redirect(url_for(page_name, tab=tab))
+        try:
+            error = dnx_page.update_page(request.form)
+        except OSError as ose:
+            return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
 
         page_settings.update({
             'tab': tab,
             'standard_error': error
         })
 
-    page_settings[data_key] = dnx_page.load_page()
+    try:
+        page_settings[data_key] = dnx_page.load_page(request.form)
+    except OSError as ose:
+            return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
 
     return render_template(f'{page_name}.html', **page_settings)
 
 def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name):
-    if (request.method == 'POST' and 'extend_session_timer' not in request.form):
+    if (request.method == 'POST'):
         tab = request.form.get('tab', '1')
 
-        error, selected, page_data = dnx_page.update_page(request.form)
+        try:
+            error, selected, page_data = dnx_page.update_page(request.form)
+        except OSError as ose:
+            return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
 
         page_settings.update({
             'tab': tab,
@@ -524,36 +528,51 @@ def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name):
     return render_template(f'{page_name}.html', **page_settings)
 
 def log_page_logic(log_page, page_settings, *, page_name):
-    # menu_option = page_settings['menu'] # NOTE: why this here?
+    # can now accept redirects from other places on the webui to load specific tables directly on load
+    # using uri queries
+
     if (request.method == 'GET'):
-        page_settings['table_data'] = log_page.load_page()
+        request_data, handler = request.args, log_page.load_page
 
     elif (request.method == 'POST'):
-        table_data, menu_option, table = log_page.update_page(request.form)
+        request_data, handler = request.form, log_page.update_page
 
-        page_settings.update({
-            'table_data': table_data,
-            'menu': menu_option,
-            'table': table
-        })
+    try:
+        table_data, table, menu_option = handler(request_data)
+    except OSError as ose:
+        return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
+
+    page_settings.update({
+        'table_data': table_data,
+        'table': table,
+        'menu': menu_option
+    })
 
     return render_template(f'{page_name}.html', **page_settings)
 
-def categories_page_logic(update_page, page_settings):
+def categories_page_logic(dnx_page, page_settings):
     if (request.method == 'POST'):
-        error, menu_option = update_page(request.form)
+        try:
+            error, menu_option = dnx_page.update_page(request.form)
+        except OSError as ose:
+            return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
 
         tab = request.form.get('tab', '1')
         menu_option = request.form.get('menu', '1')
         menu_option = int(menu_option) if menu_option.isdigit() else '1'
 
-        if (not error):
-            return redirect(url_for('settings_categories', tab=tab, menu=menu_option))
-
         page_settings.update({
             'menu': menu_option,
+            'tab': tab,
             'standard_error': error
         })
+
+    try:
+        page_settings['category_settings'] = dnx_page.load_page(page_settings['menu'])
+    except OSError as ose:
+        return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
+
+    print(page_settings)
 
     return render_template('settings_categories.html', **page_settings)
 
@@ -570,13 +589,16 @@ def handle_system_action(page_settings):
             'login_btn': True
         })
 
-        Log.warning(f'DNX Firewall {action} initiated.')
+        Log.warning(f'dnxfirewall {action} initiated.')
 
-        system_action_method = getattr(System, action)
-        threading.Thread(target=system_action_method).start()
+        # i prefer the word restart so converting to system command here
+        action = 'reboot' if action == 'restart' else f'{action} now'
+
+        # forwarding request to system control service via local socket for execution
+        system_action(delay=FIVE_SEC, module='webui', command=action)
 
     elif (response == 'NO'):
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('dnx_dashboard'))
 
     return render_template('dnx_device.html', **page_settings)
 
@@ -584,12 +606,12 @@ def update_session_tracker(username, user_role=None, remote_addr=None, *, action
     if (action is CFG.ADD and not remote_addr):
         raise ValueError('remote_addr must be specified if action is set to add.')
 
-    with ConfigurationManager('session_tracker', file_path='dnx_frontend') as session_tracker:
+    with ConfigurationManager('session_tracker', file_path='dnx_frontend/data') as session_tracker:
         stored_tracker = session_tracker.load_configuration()
 
         if (action is CFG.ADD):
             stored_tracker['active_users'][username] = {
-                'user_role': user_role,
+                'role': user_role,
                 'remote_addr': remote_addr,
                 'logged_in': time.time(), # NOTE: can probably make this human readable format here.
                 'last_seen': None
@@ -600,14 +622,72 @@ def update_session_tracker(username, user_role=None, remote_addr=None, *, action
 
         session_tracker.write_configuration(stored_tracker)
 
+# checks form data for a color mode change and writes and configures accordingly. otherwise will load
+# the current dark mode setting for the active user and set flask.session['dark_mode] accordingly.
+@app.before_request
+def dark_mode():
+    '''
+    the configured value will be stored as session['dark_mode'] so it can be accessed directly by the
+    Flask template context.
+    '''
+    # dark mode settings will only apply to logged in users.
+    # NOTE: username validations are still required lower down to deal with log in/out transitions.
+    user = session.get('user', None)
+    if (not user):
+        return
+
+    dark_mode_update = request.args.get('dark_mode_update', DATA.MISSING)
+    # this ensure value conforms to system before configuring
+    if (dark_mode_update is not DATA.MISSING):
+        try:
+            dark_mode = CFG(validate.convert_int(dark_mode_update))
+        except:
+            return
+
+        with ConfigurationManager('logins', file_path='/dnx_frontend/data') as webui:
+            webui_settings = webui.load_configuration()
+
+            active_users = webui_settings['users']
+
+            # this check prevents issues with log in/out transitions
+            if (user['name'] not in active_users):
+                return
+
+            active_users[user['name']]['dark_mode'] = dark_mode
+
+            webui.write_configuration(webui_settings)
+
+    # standard request for page. did NOT submit dark mode fab.
+    else:
+        webui_settings = load_configuration('logins', filepath='dnx_frontend/data')
+
+        # this check prevents issues with log in/out transitions
+        user = webui_settings['users'].get(user['name'])
+        if (not user):
+            return
+
+        dark_mode = user['dark_mode']
+
+    session['dark_mode'] = dark_mode
+
 @app.before_request
 def user_timeout():
     session.permanent = True
     app.permanent_session_lifetime = timedelta(minutes=30)
     session.modified = True
 
-## SETUP LOGGING CLASS
-Log.run(name=LOG_NAME)
+# jinja filters
+
+@app.template_filter('truncate')
+def truncate(string, limit):
+    '''returns string[:limit]... if greater than limit, otherwise original string will be returned.'''
+
+    string = f'{string[:limit]}...' if len(string) > limit else string
+
+    return string
 
 if __name__ == '__main__':
-   app.run(debug=True)
+    app.run(debug=True)
+
+    ## SETUP LOGGING CLASS
+    Log.run(name=LOG_NAME)

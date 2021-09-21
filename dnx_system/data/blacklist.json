@@ -1,6 +1,6 @@
 {
-    "blacklist": {
-        "domain": {},
-        "exception": {}
-    }
+
+    "time_based": {},
+    "pre_proxy": {}
+
 }

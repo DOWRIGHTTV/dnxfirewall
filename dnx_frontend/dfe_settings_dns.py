@@ -18,8 +18,8 @@ from dnx_configure.dnx_file_operations import load_configuration
 from dnx_configure.dnx_exceptions import ValidationError
 from dnx_configure.dnx_system_info import Services
 
-def load_page():
-    dns_server = load_configuration('dns_server')['dns_server']
+def load_page(form):
+    dns_server = load_configuration('dns_server')
     dns_cache  = load_configuration('dns_cache')
     servers_status = load_configuration('dns_server_status')
 

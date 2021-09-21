@@ -1,5 +1,5 @@
 [Unit]
-Description=DNX Firewall IPS Service
+Description=DNXFIREWALL IPS Service
 After=dnx-log.service dnx-syslog.service
 StartLimitIntervalSec=3
 

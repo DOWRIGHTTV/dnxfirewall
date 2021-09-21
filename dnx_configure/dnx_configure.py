@@ -15,10 +15,10 @@ sys.path.insert(0, HOME_DIR)
 
 import dnx_iptools.dnx_interface as interface
 
-from dnx_configure.dnx_constants import CFG, INVALID_FORM, fast_time, str_join
-from dnx_configure.dnx_file_operations import load_configuration, ConfigurationManager
+from dnx_configure.dnx_constants import CFG, INTF, INVALID_FORM, shell, fast_time, str_join
+from dnx_configure.dnx_file_operations import load_configuration, ConfigurationManager, json_to_yaml
 from dnx_configure.dnx_exceptions import ValidationError
-from dnx_configure.dnx_iptables import IPTableManager
+from dnx_system.sys_main import system_action
 from dnx_configure.dnx_system_info import System, Services, Interface
 from dnx_frontend.dfe_dnx_authentication import Authentication
 from dnx_logging.log_main import LogHandler as Log
@@ -30,11 +30,10 @@ def set_default_mac_flag():
     with ConfigurationManager('config') as dnx:
         dnx_settings = dnx.load_configuration()
 
-        wan_settings = dnx_settings['settings']['interface']['wan']
+        wan_settings = dnx_settings['interfaces']['wan']
         if (not wan_settings['mac_set']):
-            default_mac = interface.get_mac(interface=wan_settings['ident'])
             wan_settings.update({
-                'default_mac': default_mac,
+                'default_mac': Interface.mac_address(interface=wan_settings['ident']),
                 'mac_set': True
             })
 
@@ -44,21 +43,19 @@ def set_wan_mac(action, mac_address=None):
     with ConfigurationManager('config') as dnx:
         dnx_settings = dnx.load_configuration()
 
-        wan_settings = dnx_settings['settings']['interfaces']['wan']
-        default_wan_mac = wan_settings['default_mac']
+        wan_settings = dnx_settings['interfaces']['wan']
+
+        new_mac = mac_address if action is CFG.ADD else wan_settings['default_mac']
+
         wan_int = wan_settings['ident']
-        wan_mac = wan_settings['configured_mac']
+        # iterating over the necessary command args, then sending over local socket
+        # for control service to issue the commands
+        args = [f'{wan_int} down', f'{wan_int} hw ether {new_mac}', f'{wan_int} up']
+        for arg in args:
 
-        run(f'sudo ifconfig {wan_int} down', shell=True)
-        if (action is CFG.ADD):
-            wan_mac['configured_mac'] = mac_address
-            run(f'sudo ifconfig {wan_int} hw ether {mac_address}', shell=True)
+            system_action(module='webui', command='ifconfig', args=arg)
 
-        elif (action is CFG.DEL):
-            wan_mac['configured_mac'] = None
-            run(f'sudo ifconfig {wan_int} hw ether {default_wan_mac}', shell=True)
-
-        run(f'sudo ifconfig {wan_int} up', shell=True)
+        wan_settings['configured_mac'] = mac_address
 
         dnx.write_configuration(dnx_settings)
 
@@ -66,8 +63,8 @@ def set_dhcp_reservation(dhcp_settings, action):
     with ConfigurationManager('dhcp_server') as dnx:
         dhcp_server_settings = dnx.load_configuration()
 
-        leases = dhcp_server_settings['dhcp_server']['leases']
-        reservations = dhcp_server_settings['dhcp_server']['reservations']
+        leases = dhcp_server_settings['leases']
+        reservations = dhcp_server_settings['reservations']
         reserved_ips = set([info['ip_address'] for info in reservations.values()])
 
         if (action is CFG.ADD):
@@ -80,7 +77,7 @@ def set_dhcp_reservation(dhcp_settings, action):
 
             # ensuring mac address and ip address are unique
             if (dhcp_settings['mac'] in reservations or dhcp_settings['ip'] in reserved_ips):
-                raise ValidationError('IP Address already has a reservation.')
+                raise ValidationError(f'{dhcp_settings["ip"]} is already reserved.')
 
             reservations.update({
                 dhcp_settings['mac']: {
@@ -101,7 +98,7 @@ def set_dhcp_settings(dhcp_settings):
 
         interface = dhcp_settings.pop('interface')
 
-        dhcp_server_settings['dhcp_server']['interfaces'][interface].update(dhcp_settings)
+        dhcp_server_settings['interfaces'][interface].update(dhcp_settings)
 
         dnx.write_configuration(dhcp_server_settings)
 
@@ -109,7 +106,7 @@ def remove_dhcp_lease(ip_addr):
     with ConfigurationManager('dhcp_server') as dnx:
         dhcp_leases = dnx.load_configuration()
 
-        leases = dhcp_leases['dhcp_server']['leases']
+        leases = dhcp_leases['leases']
 
         if not leases.pop(ip_addr, None):
             raise ValidationError(INVALID_FORM)
@@ -121,7 +118,7 @@ def set_domain_categories(en_cats, *, ruleset):
     with ConfigurationManager('dns_proxy') as dnx:
         dns_proxy_categories = dnx.load_configuration()
 
-        categories = dns_proxy_categories['dns_proxy']['categories']
+        categories = dns_proxy_categories['categories']
         if (ruleset in ['default', 'user_defined']):
             domain_cats = categories[ruleset]
 
@@ -136,7 +133,7 @@ def set_domain_category_keywords(en_keywords):
     with ConfigurationManager('dns_proxy') as dnx:
         dns_proxy_categories = dnx.load_configuration()
 
-        domain_cats = dns_proxy_categories['dns_proxy']['categories']['default']
+        domain_cats = dns_proxy_categories['categories']['default']
         for cat, settings in domain_cats.items():
             settings['keyword'] = True if cat in en_keywords else False
 
@@ -146,7 +143,7 @@ def set_logging(log_settings):
     with ConfigurationManager('logging_client') as dnx:
         logging_settings = dnx.load_configuration()
 
-        logging_settings['logging']['logging'] = log_settings
+        logging_settings['logging'] = log_settings
 
         dnx.write_configuration(logging_settings)
 
@@ -172,7 +169,7 @@ def set_dns_servers(dns_server_info):
 
         dnx.write_configuration(dns_server_settings)
 
-    wan_information = load_configuration('config')['settings']
+    wan_information = load_configuration('config')
     interface = wan_information['interfaces']
     wan_dhcp = interface['wan']['dhcp']
     wan_int = interface['wan']['ident']
@@ -204,7 +201,7 @@ def update_dns_record(dns_record_name, action, dns_record_ip=None):
 
 def configure_user_account(account_info, action):
     acct = SimpleNamespace(**account_info)
-    with ConfigurationManager('logins') as dnx:
+    with ConfigurationManager('logins', file_path='/dnx_frontend/data') as dnx:
         accounts = dnx.load_configuration()
 
         userlist = accounts['users']
@@ -225,16 +222,22 @@ def configure_user_account(account_info, action):
 
         dnx.write_configuration(accounts)
 
-def set_proxy_exception(exception_settings, *, ruleset):
+def set_proxy_exception(exc_settings, *, ruleset):
     with ConfigurationManager(ruleset) as dnx:
         exceptions_list = dnx.load_configuration()
 
-        exceptions = exceptions_list[ruleset]['exception']
-        if (exception_settings['action'] is CFG.ADD):
-            exceptions[exception_settings['domain']]['reason'] = exception_settings['reason']
+        proxy_exceptions = exceptions_list['pre_proxy']
 
-        elif (exception_settings['action'] is CFG.DEL):
-            exceptions.pop(exception_settings['domain'])
+        action = exc_settings.pop('action')
+        if (action is CFG.ADD):
+
+            proxy_exceptions[exc_settings['domain']] = exc_settings['reason']
+
+        elif (action is CFG.DEL):
+            result = proxy_exceptions.pop(exc_settings['domain'], None)
+
+            # no need to write to disk if domain was already removed.
+            if (result is None): return
 
         dnx.write_configuration(exceptions_list)
 
@@ -243,7 +246,7 @@ def update_custom_category(category, *, action):
     with ConfigurationManager('dns_proxy') as dnx:
         custom_category_lists = dnx.load_configuration()
 
-        ud_cats = custom_category_lists['dns_proxy']['categories']['user_defined']
+        ud_cats = custom_category_lists['categories']['user_defined']
         if (action is CFG.DEL and category != 'enabled'):
             ud_cats.pop(category, None)
 
@@ -263,7 +266,7 @@ def update_custom_category_domain(category, domain, reason=None, *, action):
     with ConfigurationManager('dns_proxy') as dnx:
         custom_category_domains = dnx.load_configuration()
 
-        ud_cats = custom_category_domains['dns_proxy']['categories']['user_defined']
+        ud_cats = custom_category_domains['categories']['user_defined']
         if (action is CFG.DEL and category != 'enabled'):
             ud_cats[category].pop(domain, None)
 
@@ -276,18 +279,17 @@ def update_custom_category_domain(category, domain, reason=None, *, action):
         dnx.write_configuration(custom_category_domains)
 
 # adds a time based rule to whitelist/blacklist
-def add_proxy_domain(whitelist_settings, *, ruleset):
+def add_proxy_domain(settings, *, ruleset):
     input_time  = int(fast_time())
-    expire_time = input_time + whitelist_settings['timer'] * 60
+    expire_time = input_time + settings['timer'] * 60
 
     with ConfigurationManager(ruleset) as dnx:
         domain_list = dnx.load_configuration()
 
-        domains = domain_list[ruleset]['domain']
-        domains.update({
-            whitelist_settings['domain']: {
+        domain_list['time_based'].update({
+            settings['domain']: {
                 'time': input_time,
-                'rule_length': whitelist_settings['timer'],
+                'rule_length': settings['timer'],
                 'expire': expire_time
             }
         })
@@ -295,18 +297,22 @@ def add_proxy_domain(whitelist_settings, *, ruleset):
         dnx.write_configuration(domain_list)
 
 def del_proxy_domain(domain, *, ruleset):
-    with ConfigurationManager(f'{ruleset}') as dnx:
+    with ConfigurationManager(ruleset) as dnx:
         domain_list = dnx.load_configuration()
 
-        domain_list[ruleset]['domain'].pop(domain)
+        result = domain_list['time_based'].pop(domain, None)
 
-        dnx.write_configuration(domain_list)
+        # if domain was not present (likely removed in another process), there is
+        # no need to write file to disk
+        if (result is not None):
+
+            dnx.write_configuration(domain_list)
 
 def set_domain_tlds(update_tlds):
     with ConfigurationManager('dns_proxy') as dnx:
         proxy_settings = dnx.load_configuration()
 
-        tld_list = proxy_settings['dns_proxy']['tlds']
+        tld_list = proxy_settings['tlds']
         for entry in tld_list:
             tld_list[entry] = True if entry in update_tlds else False
 
@@ -317,8 +323,7 @@ def add_proxy_ip_whitelist(whitelist_settings):
     with ConfigurationManager('whitelist') as dnx:
         whitelist = dnx.load_configuration()
 
-        ip_whitelist = whitelist['whitelist']['ip_whitelist']
-        ip_whitelist[whitelist_settings['ip']] = {
+        whitelist['ip_bypass'][whitelist_settings['ip']] = {
             'user': whitelist_settings['user'],
             'type': whitelist_settings['type']
         }
@@ -329,20 +334,26 @@ def del_proxy_ip_whitelist(whitelist_ip):
     with ConfigurationManager('whitelist') as dnx:
         whitelist = dnx.load_configuration()
 
-        whitelist['whitelist']['ip_whitelist'].pop(whitelist_ip)
+        result = whitelist['ip_bypass'].pop(whitelist_ip, None)
 
-        dnx.write_configuration(whitelist)
+        # if ip was not present (likely removed in another process), there is
+        # no need to write file to disk
+        if (result is not None):
 
-def update_ips_ip_whitelist(whitelist_ip, whitelist_name, action):
+            dnx.write_configuration(whitelist)
+
+def update_ips_ip_whitelist(whitelist_ip, whitelist_name, *, action):
     with ConfigurationManager('ips') as dnx:
         ips_settings = dnx.load_configuration()
 
-        ips_whitelist = ips_settings['ips']['whitelist']['ip_whitelist']
+        ips_whitelist = ips_settings['ip_whitelist']
         if (action is CFG.ADD):
             ips_whitelist[whitelist_ip] = whitelist_name
 
         elif (action is CFG.DEL):
-            ips_whitelist.pop(whitelist_ip)
+            result = ips_whitelist.pop(whitelist_ip, None)
+
+            if (result is None): return
 
         dnx.write_configuration(ips_settings)
 
@@ -350,15 +361,15 @@ def update_ips_dns_whitelist(action):
     with ConfigurationManager('ips') as dnx:
         ips_settings = dnx.load_configuration()
 
-        ips_settings['ips']['whitelist']['dns_servers'] = action
+        ips_settings['dns_servers'] = action
 
         dnx.write_configuration(ips_settings)
 
-def update_ip_proxy_settings(category_settings, *, ruleset='categories'):
+def update_ip_proxy_settings(category_settings, *, ruleset='reputation'):
     with ConfigurationManager('ip_proxy') as dnx:
         ip_proxy_settings = dnx.load_configuration()
 
-        category_lists = ip_proxy_settings['ip_proxy'][ruleset]
+        category_lists = ip_proxy_settings[ruleset]
         for category in category_settings:
             category, direction = category[:-2], int(category[-1])
 
@@ -366,11 +377,29 @@ def update_ip_proxy_settings(category_settings, *, ruleset='categories'):
 
         dnx.write_configuration(ip_proxy_settings)
 
+
+def update_geolocation(region, *, rtype='country'):
+    with ConfigurationManager('ip_proxy') as dnx:
+        ip_proxy_settings = dnx.load_configuration()
+
+        country_list = ip_proxy_settings['geolocation']
+
+        # setting individual country to user set value
+        if (rtype == 'country'):
+            country_list[region['country']] = region['cfg_dir']
+
+        # iterating over all countries within specified continent and setting their
+        # direction as the user set value # TODO: implement this
+        elif (rtype == 'continent'):
+            pass
+
+        dnx.write_configuration(ip_proxy_settings)
+
 def set_dns_keywords(action):
     with ConfigurationManager('dns_proxy') as dnx:
         keyword_settings = dnx.load_configuration()
 
-        keyword_settings['dns_proxy']['keyword']['enabled'] = action
+        keyword_settings['keyword']['enabled'] = action
 
         dnx.write_configuration(keyword_settings)
 
@@ -381,19 +410,27 @@ def update_system_time_offset(new_offset_settings):
         if (new_offset_settings['time'] == 0):
             new_offset_settings['direction'] = '+'
 
-        offset = offset_settings['logging']['time_offset']
+        offset = offset_settings['time_offset']
         offset.update({
             'direction': new_offset_settings['direction'],
-            'amount': int(new_offset_settings['time'])
+            'amount': new_offset_settings['time']
         })
 
         dnx.write_configuration(offset_settings)
+
+def modify_management_access(fields):
+    with ConfigurationManager('config') as dnx:
+        mgmt_settings = dnx.load_configuration()
+
+        mgmt_settings['mgmt_access'][fields.zone][fields.service] = fields.action
+
+        dnx.write_configuration(mgmt_settings)
 
 def set_syslog_settings(syslog_settings):
     with ConfigurationManager('syslog_client') as dnx:
         stored_syslog_settings = dnx.load_configuration()
 
-        syslog = stored_syslog_settings['syslog']
+        syslog = stored_syslog_settings
         tls_settings = syslog['tls']
         tcp_settings = syslog['tcp']
 
@@ -411,8 +448,8 @@ def set_syslog_settings(syslog_settings):
             else:
                 syslog[protocol]['fallback'] = False
 
-        syslog['protocol'] = 6 if 'syslog_protocol' in syslog_settings['syslog'] else 17
-        syslog['enabled'] = True if 'syslog_enabled' in syslog_settings['syslog'] else False
+        syslog['protocol'] = 6 if 'syslog_protocol' in syslog_settings else 17
+        syslog['enabled'] = True if 'syslog_enabled' in syslog_settings else False
 
         tls_settings['retry'] = int(syslog_settings['tls_retry']) * 60
         tcp_settings['retry'] = int(syslog_settings['tcp_retry']) * 60
@@ -423,7 +460,7 @@ def set_syslog_servers(syslog_servers):
     with ConfigurationManager('syslog_client') as dnx:
         syslog_settings = dnx.load_configuration()
 
-        servers = syslog_settings['syslog']['servers']
+        servers = syslog_settings['servers']
         for server, server_info in syslog_servers.items():
             if (not server_info['ip_address']): continue
 
@@ -431,7 +468,8 @@ def set_syslog_servers(syslog_servers):
                 server: {
                     'ip_address': server_info['ip_address'],
                     'port': int(server_info['port'])
-                }})
+                }
+            })
 
         dnx.write_configuration(syslog_settings)
 
@@ -440,7 +478,7 @@ def remove_syslog_server(syslog_server_number):
     with ConfigurationManager('syslog_client') as dnx:
         syslog_settings = dnx.load_configuration()
 
-        servers = syslog_settings['syslog']['servers']
+        servers = syslog_settings['servers']
         result = servers.pop(f'Server{syslog_server_number}', False)
         if (result and 'server2' in servers):
             servers['server1'] = servers.pop('server2')
@@ -451,28 +489,24 @@ def remove_syslog_server(syslog_server_number):
 
 def update_ip_restriction_settings(tr_settings):
     with ConfigurationManager('ip_proxy') as dnx:
-        time_restriction_settings = dnx.load_configuration()
+        ip_proxy_settings = dnx.load_configuration()
 
-        hour = tr_settings['hour']
-        if (tr_settings['suffix'] == 'PM'):
-            hour += 12
+        tr_settings['hour'] += 12 if tr_settings['suffix'] == 'PM' else tr_settings['hour']
 
-        minutes = tr_settings['minutes']
-        start_time = f'{hour}:{minutes}'
+        start_time = f'{tr_settings["hour"]}:{tr_settings["minutes"]}'
 
         tlen_hour = tr_settings['length_hour']
         min_fraction = str(tr_settings['length_minutes']/60).strip('0.')
         res_length = f'{tlen_hour}.{min_fraction}'
         res_length = int(float(res_length) * 3600)
 
-        time_restriction = time_restriction_settings['ip_proxy']['time_restriction']
-        time_restriction.update({
+        ip_proxy_settings['time_restriction'].update({
             'start': start_time,
             'length': res_length,
             'enabled': tr_settings['enabled']
-            })
+        })
 
-        dnx.write_configuration(time_restriction_settings)
+        dnx.write_configuration(ip_proxy_settings)
 
 def set_dns_cache_clear_flag(clear_dns_cache):
     with ConfigurationManager('dns_server') as dnx:
@@ -489,7 +523,7 @@ def set_ips_ddos(action):
     with ConfigurationManager('ips') as dnx:
         ips_settings = dnx.load_configuration()
 
-        ips_settings['ips']['ddos']['enabled'] = action
+        ips_settings['ddos']['enabled'] = action
 
         dnx.write_configuration(ips_settings)
 
@@ -497,7 +531,7 @@ def set_ips_portscan(portscan_settings):
     with ConfigurationManager('ips') as dnx:
         ips_settings = dnx.load_configuration()
 
-        ps_settings = ips_settings['ips']['port_scan']
+        ps_settings = ips_settings['port_scan']
 
         ps_settings['enabled'] = True if 'enabled' in portscan_settings else False
         ps_settings['reject']  = True if 'reject' in portscan_settings else False
@@ -508,8 +542,8 @@ def set_ips_general_settings(pb_length, ids_mode):
     with ConfigurationManager('ips') as dnx:
         ips_settings = dnx.load_configuration()
 
-        ips_settings['ips']['passive_block_ttl'] = pb_length
-        ips_settings['ips']['ids_mode'] = ids_mode
+        ips_settings['passive_block_ttl'] = pb_length
+        ips_settings['ids_mode'] = ids_mode
 
         dnx.write_configuration(ips_settings)
 
@@ -517,71 +551,111 @@ def set_ips_ddos_limits(ddos_limits):
     with ConfigurationManager('ips') as dnx:
         ips_settings = dnx.load_configuration()
 
-        limits = ips_settings['ips']['ddos']['limits']['source']
+        limits = ips_settings['ddos']['limits']['source']
         for protocol, limit in ddos_limits.items():
             limits[protocol] = limit
 
         dnx.write_configuration(ips_settings)
 
-# TODO: this is code halfway between new and old format. probably needs some work. for now its ok
-# since this only controls internal system dns queries (clients on network go through software proxy)
-# True > User Config | False > restore DHCP
-def set_wan_interface(settings=None):
-    ## Opening Config JASON file and updating WAN Interface information to be
-    ## viewed by the front end
+def set_wan_interface(intf_type=INTF.DHCP):
+    '''Change wan interface state between static or dhcp.
+
+    1. Configure interface type
+    2. Create netplan config from template
+    3. Move file to /etc/netplan
+
+    This does not configure an ip address of the interface when setting to static. see: set_wan_ip()
+    '''
+
+    # changing dhcp status of wan interface in config file.
     with ConfigurationManager('config') as dnx:
         interface_settings = dnx.load_configuration()
 
-        interface = interface_settings['settings']['interface']
-        wan_config = interface['wan']
+        wan = interface_settings['interfaces']['wan']
 
-        #Checking configured DNS Servers
-        dns_server_settings = load_configuration('dns_server')
+        wan['state'] = intf_type
 
-        resolvers = dns_server_settings['dns_server']['resolvers']
-        dns1 = resolvers['server1']['ip_address']
-        dns2 = resolvers['server2']['ip_address']
+        dnx.write_configuration(interface_settings)
 
-        #Settings DHCP to false in json file for use by front end
-        wan_config['dhcp'] = False if settings else True
+        # template used to generate yaml file with user configured fields
+        intf_template = load_configuration('intf_config', filepath='dnx_system/interfaces')
 
-        ## setting local copy of wan interface configuration to user defined options
-        ## then moving the file to the systemd/network folder and finally restarting
-        ## networkd service for changes to take affect
-        with open(f'{HOME_DIR}/dnx_system/interface/wan_template', 'r') as wan_template_file:
-            wan_template = wan_template_file.readlines()
+        # setting for static. removing dhcp4 and dhcp_overrides keys, then adding addresses with empty list
+        # NOTE: the ip configuration will unlock after the switch and can then be updated
+        if (intf_type is INTF.STATIC):
+            wan_intf = intf_template['network']['ethernets'][wan['ident']]
 
-        dns_counter = 1
-        with open(f'{HOME_DIR}/dnx_system/interface/wan.network', 'w') as wan_settings:
-            for line in wan_template:
-                if ('Address' in line and settings):
-                    wan_ip = settings['ip_address']
-                    wan_cidr = settings['cidr']
-                    wan_address = f'{wan_ip}/{wan_cidr}'
-                    line = line.replace('NULL', wan_address)
-                elif ('Gateway' in line and settings):
-                    line = line.replace('NULL', settings['default_gateway'])
-                elif ('DNS' in line):
-                    #NOTE: i dont care
-                    line = line.replace('NULL', eval(f'dns{dns_counter}'))
-                    dns_counter += 1
-                wan_settings.write(line)
+            wan_intf.pop('dhcp4')
+            wan_intf.pop('dhcp4-overrides')
 
-        # NOTE: python should be able to do this safer, also make the front end notify user of error and log!!!
-        try:
-            int_change = run(f'sudo mv {HOME_DIR}/dnx_system/interface/wan.network /etc/systemd/network/wan.network', shell=True)
-            int_change.check_returncode()
-        except CalledProcessError as cpe:
-            return cpe
-        else:
-            Services.restart('systemd-networkd')
-            dnx.write_configuration(interface_settings)
+            # initializing static, but not configuring an ip address
+            wan_intf['addresses'] = '[]'
+
+        # grabbing configured dns servers
+        dns_server_settings = load_configuration('dns_server')['resolvers']
+
+        dns1 = dns_server_settings['primary']['ip_address']
+        dns2 = dns_server_settings['secondary']['ip_address']
+
+        # dns server replacement in template required for static or dhcp
+        converted_config = json_to_yaml(intf_template)
+        converted_config = converted_config.replace('_PRIMARY__SECONDARY_', f'{dns1},{dns2}')
+
+        # writing file into dnx_system folder due to limited permissions by the front end. netplan and the specific
+        # mv args are configured as sudo/no-pass to get the config to netplan and it applied without a restart.
+        with open(f'{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', 'w') as dnx_intfs:
+            dnx_intfs.write(converted_config)
+
+        cmd_args = ['{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', '/etc/netplan/01-dnx-interfaces.yaml']
+        system_action(module='webui', command='os.replace', args=cmd_args)
+        system_action(module='webui', command='netplan apply', args='')
+
+def set_wan_ip(wan_ip_settings):
+    '''Modify configured WAN interface IP address.
+
+    1. Loads configured DNS servers
+    2. Loads wan interface identity
+    3. Create netplan config from template
+    4. Move file to /etc/netplan
+    '''
+
+    wan_int = load_configuration('config')['interfaces']['wan']['ident']
+
+    # grabbing configured dns servers
+    dns_server_settings = load_configuration('dns_server')['resolvers']
+
+    dns1 = dns_server_settings['primary']['ip_address']
+    dns2 = dns_server_settings['secondary']['ip_address']
+
+    intf_template = load_configuration('intf_config', filepath='dnx_system/interfaces')
+
+    # removing dhcp4 and dhcp_overrides keys, then adding ip address value
+    wan_intf = intf_template['network']['ethernets'][wan_int]
+
+    wan_intf.pop('dhcp4')
+    wan_intf.pop('dhcp4-overrides')
+
+    # initializing static, but not configuring an ip address
+    wan_intf['addresses'] = f'[{wan_ip_settings["ip"]}/{wan_ip_settings["cidr"]}]'
+    wan_intf['gateway4']  = f'{wan_ip_settings["dfg"]}'
+
+    converted_config = json_to_yaml(intf_template)
+    converted_config = converted_config.replace('_PRIMARY__SECONDARY_', f'{dns1},{dns2}')
+
+    # writing file into dnx_system folder due to limited permissions by the front end. netplan and the specific
+    # mv args are configured as sudo/no-pass to get the config to netplan and it applied without a restart.
+    with open(f'{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', 'w') as dnx_intfs:
+        dnx_intfs.write(converted_config)
+
+    cmd_args = [f'{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', '/etc/netplan/01-dnx-interfaces.yaml']
+    system_action(module='webui', command='os.replace', args=cmd_args)
+    system_action(module='webui', command='netplan apply')
 
 def add_open_wan_protocol(nat_info):
     with ConfigurationManager('ips') as dnx:
         open_protocol_settings = dnx.load_configuration()
 
-        open_protocols = open_protocol_settings['ips']['open_protocols']
+        open_protocols = open_protocol_settings['open_protocols']
 
         # if dst port is present protocol is tcp/udp
         if (nat_info.dst_port):
@@ -593,19 +667,17 @@ def add_open_wan_protocol(nat_info):
 
         dnx.write_configuration(open_protocol_settings)
 
-def del_open_wan_protocol(rule_number):
+def del_open_wan_protocol(nat_info):
     with ConfigurationManager('ips') as dnx:
         open_protocol_settings = dnx.load_configuration()
 
-        open_protocols = open_protocol_settings['ips']['open_protocols']
-        rule = run(f'sudo iptables -t nat -nL NAT {rule_number}', shell=True, capture_output=True).stdout.split()
-        protocol = rule[1]
-        if (protocol in ['tcp', 'udp']):
-            dst_port = rule[6].split(':')[1]
-            open_protocols[protocol].pop(dst_port, None)
+        open_protocols = open_protocol_settings['open_protocols']
 
-        elif (protocol == 'icmp'):
-            open_protocols[protocol] = False
+        if (nat_info.protocol == 'icmp'):
+            open_protocols['icmp'] = False
+
+        else:
+            open_protocols[nat_info.protocol].pop(nat_info.port, None)
 
         dnx.write_configuration(open_protocol_settings)
 
@@ -613,8 +685,9 @@ def set_dns_over_tls(dns_tls_settings):
     with ConfigurationManager('dns_server') as dnx:
         dns_server_settings = dnx.load_configuration()
 
-        tls_settings = dns_server_settings['dns_server']['tls']
+        tls_settings = dns_server_settings['tls']
         enabled_settings = dns_tls_settings['enabled']
+
         if ('dns_over_tls' in enabled_settings and 'udp_fallback' not in enabled_settings):
             tls_enabled = True
             udp_fallback = False

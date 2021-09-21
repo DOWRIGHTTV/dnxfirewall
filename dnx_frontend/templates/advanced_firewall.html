@@ -10,36 +10,104 @@
                     <li class="tab col s3 m3 l4 xl2"><a {% if tab=='2' %} class="active" {% endif %} href="#dmz-dnat"
                         onclick="activeTab(2)">DMZ DNAT</a></li>
                     <li class="tab col s3 m3 l4 xl2"><a {% if tab=='3' %} class="active" {% endif %} href="#local-snat"
-                        onclick="activeTab(2)">Local SNAT </a></li>
+                        onclick="activeTab(3)">Local SNAT </a></li>
                 </ul>
             </div>
         </div>
     </div>
 </section>
-<section id="fwall" class="section">
+<section id="fwall" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
-            <div class="col s12 m8">
-                <div class="card-panel">
-                    <h4 class="red-text">Zone Rules</h4>
+            <div class="col s12">
+                <div class="card-panel hoverable {{card_color}}">
+                    <h4 class="{{title_color}}">Add Rule</h4>
                     <div class="row">
                         <form action="advanced/firewall" method="POST">
                             <input type="hidden" name="tab" value="1">
                             <input type="hidden" name="change_interface">
-                            <div class="input-field col s10 m4">
+                            <div class="input-field col s6 m4 {{input_color}}">
                                 <select name="zone" onchange="this.form.submit()">
                                     {% for zone in zones %}
-                                        {% if zone == selected[:-10] %}
-                                        <option value="{{zone}}_INTERFACE" selected>{{zone}}</option>
+                                        {% if zone == selected[:-5] %}
+                                        <option value="{{zone}}_ZONE" selected>{{zone}}</option>
                                         {% else %}
-                                        <option value="{{zone}}_INTERFACE">{{zone}}</option>
+                                        <option value="{{zone}}_ZONE">{{zone}}</option>
                                         {% endif %}
                                     {% endfor %}
                                 </select>
-                                <label for="zone">Interface</label>
+                                <label for="zone">Zone</label>
                             </div>
                         </form>
-                        <table class="striped">
+                    </div>
+                    <form action="/advanced/firewall" method="POST">
+                        <input type="hidden" name="tab" value="1">
+                        <input type="hidden" name="zone" value="{{selected}}">
+                        <div class="row">
+                            <div class="input-field col s4 m3 {{input_color}}">
+                                <input type="text" name="src_ip" {{ip_addr_validate}} placeholder="127.0.0.1">
+                                <label for="">Source IP</label>
+                            </div>
+                            <div class="input-field col s2 m1 {{input_color}}">
+                                <select name="src_netmask" id="">
+                                    {% for cidr in firewall_settings['netmasks'] %}
+                                    <option value="{{cidr}}">/{{cidr}}</option>
+                                    {% endfor %}
+                                </select>
+                                <label for="src_netmask">Netmask</label>
+                            </div>
+                            <div class="input-field col s4 m3 {{input_color}}">
+                                <input type="text" name="dst_ip" {{ip_addr_validate}} placeholder="127.0.0.1" required>
+                                <label for="">Destination IP</label>
+                            </div>
+                            <div class="input-field col s2 m1 {{input_color}}">
+                                <select name="dst_netmask">
+                                    {% for cidr in firewall_settings['netmasks'] %}
+                                    <option value="{{cidr}}">/{{cidr}}</option>
+                                    {% endfor %}
+                                </select>
+                                <label for="dst_netmask">Netmask</label>
+                            </div>
+                            <div class="input-field col s2 m2 {{input_color}}">
+                                <select name="protocol">
+                                    {% for opt in ['tcp', 'udp', 'icmp', 'any'] %}
+                                    <option value="{{opt}}">{{opt.upper()}}</option>
+                                    {% endfor %}
+                                </select>
+                                <label for="protocol">Protocol</label>
+                            </div>
+                            <div class="input-field col s2 m2 {{input_color}}">
+                                <input type="text" name="dst_port" {{port_validate}} placeholder="80">
+                                <label for="">Destination Port</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="input-field col s3 m2 {{input_color}}">
+                                <input type="number" name="position" class="validate" value="1" min="1" max="{{firewall_settings['firewall_rules']|length + 1}}">
+                                <label for="">Position</label>
+                            </div>
+                            <div class="input-field col s4 m3 center">
+                                <h6 class="black-text light-3">Rule Type</h6>
+                                <div class="switch">
+                                    <label>
+                                        DROP
+                                        <input type="checkbox" name="accept">
+                                        <span class="lever"></span>
+                                        ACCEPT
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="input-field col s3 m2 offset-s4 offset-m5">
+                                <button class="btn waves-effect waves-light col s12" name="action" value="add">Add</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="col s12">
+                <div class="card-panel hoverable {{card_color}}">
+                    <h4 class="{{title_color}}">Rule List ({{selected[:-5]}})</h4>
+                        <table class="striped centered">
                             <thead>
                                 <tr>
                                     <th></th>
@@ -49,7 +117,6 @@
                                     <th>Protocol</th>
                                     <th>Destination Port</th>
                                     <th>Action</th>
-                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -61,25 +128,21 @@
                                             <input type="hidden" name="tab" value="1">
                                             <input type="hidden" name="position" value="{{rule[0]}}">
                                             <input type="hidden" name="zone" value="{{selected}}">
-                                            <button class="btn waves-effect waves-light" name="action" value="remove">
+                                            <button class="btn-floating btn-small waves-effect waves-light red" name="action" value="remove">
                                                 <i class="material-icons">remove</i>
                                             </button>
                                         </form>
                                     </td>
                                     {% for field in rule %}
-                                    <td>{{field}}</td>
+                                    <td class="center">{{field}}</td>
                                     {% endfor %}
                                 </tr>
                                 {% endfor %}
                                 {% else %}
                                 <tr>
+                                    {% for i in range(7) %}
                                     <td></td>
-                                    <td></td>
-                                    <td>No Firewall Rules</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
+                                    {% endfor %}
                                 </tr>
                                 {% endif %}
                             </tbody>
@@ -87,159 +150,36 @@
                     </div>
                 </div>
             </div>
-            <div class="col s12 m4">
-                <div class="card-panel">
-                    <form action="/advanced/firewall" method="POST">
-                        <input type="hidden" name="tab" value="1">
-                        <input type="hidden" name="zone" value="{{selected}}">
-                        <h4 class="red-text light-3">Add Firewall Rule</h4>
-                        <div class="row">
-                            <div class="input-field col s6">
-                                <input type="text" name="position" class="validate" placeholder=7>
-                                <label for="">Position</label>
-                            </div>
-                            <div class="col s6">
-                                <label>Zone</label>
-                                <h6 class="black-text">{{selected[:-10]}}</h6>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="input-field col s9 m9">
-                                <input type="text" name="src_ip" class="validate" placeholder="127.0.0.1">
-                                <label for="">Source IP</label>
-                            </div>
-                            <div class="input-field col s3 m3">
-                                <select name="src_netmask" id="">
-                                    {% for cidr in firewall_settings['netmasks'] %}
-                                    <option value="{{cidr}}">/{{cidr}}</option>
-                                    {% endfor %}
-                                    <option value="16">/16</option>
-                                    <option value="8">/8</option>
-                                    <option value="0">/0</option>
-                                </select>
-                                <label for="src_netmask">Netmask</label>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="input-field col s9 m9">
-                                <input type="text" name="dst_ip" class="validate" placeholder="127.0.0.1" required>
-                                <label for="">Destination IP</label>
-                            </div>
-                            <div class="input-field col s3 m3">
-                                <select name="dst_netmask" id="">
-                                    {% for cidr in firewall_settings['netmasks'] %}
-                                    <option value="{{cidr}}">/{{cidr}}</option>
-                                    {% endfor %}
-                                    <option value="16">/16</option>
-                                    <option value="8">/8</option>
-                                    <option value="0">/0</option>
-                                </select>
-                                <label for="dst_netmask">Netmask</label>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="input-field col s8">
-                                <select name="protocol" id="">
-                                    <option value="tcp">TCP</option>
-                                    <option value="udp">UDP</option>
-                                    <option value="icmp">ICMP</option>
-                                    <option value="any">ANY</option>
-                                </select>
-                                <label for="protocol">Protocol</label>
-                            </div>
-                            <div class="input-field col s4">
-                                <input type="text" name="dst_port" class="validate" placeholder="80">
-                                <label for="">Destination Port</label>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="input-field col s12 m4">
-                                <button class="btn waves-effect waves-light col s12" name="action" value="add">
-                                    <i class="material-icons"></i> Add
-                                </button>
-                            </div>
-                            <div class="input-field col s12 m1"></div>
-                            <div class="input-field col s12 m7">
-                                Rule Type<br>
-                                <div class="switch">
-                                    <label>
-                                        DROP
-                                        <input type="checkbox" name="accept">
-                                        <span class="lever"></span>
-                                        ACCEPT
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
         </div>
     </div>
 </section>
-<section id="dmz-dnat" class="section">
+<section id="dmz-dnat" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
-            <div class="col s12 m8">
-                <div class="card-panel s12 m3">
-                    <h4 class="red-text">DNAT Rules</h4>
-                    <table class="striped">
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th></th>
-                                <th>Protocol</th>
-                                <th>Dest Port</th>
-                                <th>Host IP</th>
-                                <th>Host Port</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if firewall_settings['dmz_dnat_rules'] %}
-                            {% for rule in firewall_settings['dmz_dnat_rules'] %}
-                            <tr>
-                                <td>
-                                    <form action="/advanced/firewall" method="POST">
-                                        <input type="hidden" name="tab" value="2">
-                                        <input type="hidden" name="zone" value="{{selected}}">
-                                        <input type="hidden" name="nat_type" value="DSTNAT">
-                                        <input type="hidden" name="position" value="{{rule[0]}}">
-                                        <button class="btn waves-effect waves-light" name="action" value="remove">
-                                            <i class="material-icons">remove</i>
-                                        </button>
-                                    </form>
-                                </td>
-                                <td>{{rule[0]}}</td>
-                                <td>{{rule[1]}}</td>
-                                <td>{{rule[2]}}</td>
-                                <td>{{rule[3]}}</td>
-                                <td>{{rule[4]}}</td>
-                            </tr>
-                            {% endfor %}
-                            {% else %}
-                            <tr>
-                                <td></td>
-                                <td></td>
-                                <td>No DNAT Rules</td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                            </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
-                    </form>
-                </div>
-            </div>
-            <div class="col s12 m4">
-                <div class="card-panel">
-                    <h4 class="red-text light-3">Add DNAT Rule</h4>
+            <div class="col s12">
+                <div class="card-panel hoverable {{card_color}}">
+                    <h4 class="{{title_color}}">Add Rule</h4>
                     <form action="/advanced/firewall" method="POST">
                         <input type="hidden" name="tab" value="2">
                         <input type="hidden" name="zone" value="{{selected}}">
                         <input type="hidden" name="nat_type" value="DSTNAT">
                         <div class="row">
-                            <div class="input-field col s4">
+                            <div class="input-field col offset-m1 s3 m2 {{input_color}}">
+                                <select name="src_zone" id="">
+                                    <option value="wan">WAN</option>
+                                    <option value="lan">LAN</option>
+                                </select>
+                                <label for="">Src Zone</label>
+                            </div>
+                            <div class="input-field col s3 m2 {{input_color}}">
+                                <input type="text" name="dst_ip" {{ip_addr_validate}} placeholder="1.1.1.1">
+                                <label for="">Destination IP (Optional)</label>
+                            </div>
+                            <div class="input-field col s3 m2 {{input_color}}">
+                                <input type="text" name="dst_port" {{port_validate}} placeholder="80" required>
+                                <label for="">Destination Port</label>
+                            </div>
+                            <div class="input-field col offset-m2 s3 m2 {{input_color}}">
                                 <select name="protocol" id="">
                                     <option value="tcp">TCP</option>
                                     <option value="udp">UDP</option>
@@ -247,91 +187,71 @@
                                 </select>
                                 <label for="">Protocol</label>
                             </div>
-                            <div class="input-field col s4">
-                                <input type="text" name="dst_port" class="validate" placeholder="80" required>
-                                <label for="">Destination Port</label>
-                            </div>
-                            <div class="input-field col s4">
-                                <select name="src_zone" id="">
-                                    <option value="WAN">WAN</option>
-                                    <option value="LAN">LAN</option>
-                                </select>
-                                <label for="">Src Zone</label>
-                            </div>
                         </div>
                         <div class="row">
-                            <div class="input-field col s4">
-                                <input type="text" name="host_ip" class="validate" placeholder="127.0.0.10" required>
-                                <label for="">Host IP</label>
-                            </div>
-                            <div class="input-field col s4">
-                                <input type="text" name="host_port" class="validate" placeholder=80 required>
-                                <label for="">Host Port</label>
-                            </div>
-                            <div class="input-field col s4">
+                            <div class="input-field col offset-m1 s3 m2">
                                 <select name="dst_zone" id="" disabled>
-                                    <option value="DMZ">DMZ</option>
+                                    <option value="dmz">DMZ</option>
                                 </select>
                                 <label for="">Dst Zone</label>
                             </div>
-                        </div>
-                        <div class="row">
-                            <div class="input-field col s12 m4">
-                                <button class="btn waves-effect waves-light col s12" name="action" value="add">
-                                    <i class="material-icons"></i> Add
-                                </button>
+                            <div class="input-field col s3 m2 {{input_color}}">
+                                <input type="text" name="host_ip" {{ip_addr_validate}} placeholder="127.0.0.10" required>
+                                <label for="">Host IP</label>
+                            </div>
+                            <div class="input-field col s3 m2 {{input_color}}">
+                                <input type="text" name="host_port" {{port_validate}} placeholder="80" required>
+                                <label for="">Host Port</label>
+                            </div>
+                            <div class="input-field col offset-m2 s3 m2">
+                                <button class="btn waves-effect waves-light col s12" name="action" value="add">Add</button>
                             </div>
                         </div>
                     </form>
                 </div>
             </div>
-        </div>
-    </div>
-</section>
-<section id="local-snat" class="section">
-    <div class="container">
-        <div class="row">
-            <div class="col s12 m8">
-                <div class="card-panel s12 m3">
-                    <h4 class="red-text">SNAT Rules</h4>
-                    <table class="striped">
+            <div class="col s12">
+                <div class="card-panel hoverable {{card_color}}">
+                    <h4 class="{{title_color}}">Rule List</h4>
+                    <table class="striped centered">
                         <thead>
                             <tr>
                                 <th></th>
-                                <th></th>
-                                <th>Original Source</th>
-                                <th>New Source</th>
+                                <th>#</th>
+                                <th>Protocol</th>
+                                <th>In Interface</th>
+                                <th>Dest IP:Port
+                                <th>Host IP:Port</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% if firewall_settings['local_snat_rules'] %}
-                            {% for rule in firewall_settings['local_snat_rules'] %}
+                            {% if firewall_settings['dmz_dnat_rules'] %}
+                            {% for i, rule in firewall_settings['dmz_dnat_rules'] %}
                             <tr>
                                 <td>
                                     <form action="/advanced/firewall" method="POST">
-                                        <input type="hidden" name="tab" value="3">
+                                        <input type="hidden" name="tab" value="2">
                                         <input type="hidden" name="zone" value="{{selected}}">
-                                        <input type="hidden" name="nat_type" value="SRCNAT">
-                                        <input type="hidden" name="position" value="{{rule[0]}}">
-                                        <button class="btn waves-effect waves-light" name="action" value="remove">
+                                        <input type="hidden" name="nat_type" value="DSTNAT">
+                                        <input type="hidden" name="position" value="{{i}}">
+                                        <input type="hidden" name="proto_port" value="{{rule['-p']}}/{{rule['--dport']}}">
+                                        <button class="btn-floating btn-small waves-effect waves-light red" name="action" value="remove">
                                             <i class="material-icons">remove</i>
                                         </button>
                                     </form>
                                 </td>
-                                <td>{{rule[0]}}</td>
-                                <td>{{rule[1]}}</td>
-                                <td>{{rule[2]}}</td>
+                                <td>{{i}}</td>
+                                <td>{{rule['-p']}}</td>
+                                <td>{{rule['-i']}}</td>
+                                <td>{{rule.get('-d', 'interface').rstrip('/32')}}:{{rule['--dport']}}</td>
+                                <td>{{rule['--to-dest']}}:{{rule['--to-port']}}</td>
                             </tr>
                             {% endfor %}
                             {% else %}
                             <tr>
+                                {% for i in range(6) %}
                                 <td></td>
-                                <td></td>
-                                <td>No SNAT Rules</td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
+                                {% endfor %}
                             </tr>
                             {% endif %}
                         </tbody>
@@ -339,53 +259,103 @@
                     </form>
                 </div>
             </div>
-            <div class="col s12 m4">
-                <div class="card-panel">
-                    <h4 class="red-text light-3">Add SNAT Rule</h4>
+        </div>
+    </div>
+</section>
+<section id="local-snat" class="section {{main_section_color}}">
+    <div class="container">
+        <div class="row">
+            <div class="col s12">
+                <div class="card-panel hoverable {{card_color}}">
+                    <h4 class="{{title_color}}">Add Rule</h4>
                     <form action="/advanced/firewall" method="POST">
                         <input type="hidden" name="tab" value="3">
                         <input type="hidden" name="zone" value="{{selected}}">
                         <input type="hidden" name="nat_type" value="SRCNAT">
                         <div class="row">
-                            <div class="input-field col s4">
-                                <input type="text" name="orig_src_ip" class="validate" placeholder="127.0.0.10">
+                            <div class="input-field col offset-m1 s3 m2 {{input_color}}">
+                                <input type="text" name="orig_src_ip" {{ip_addr_validate}} placeholder="127.0.0.10">
                                 <label for="">Original Src IP</label>
                             </div>
-                            <div class="input-field col s4">
+                            <div class="input-field col s3 m2 {{input_color}}">
                                 <input type="text" name="orig_src_port" placeholder="any" disabled>
                                 <label for="">Original Src Port</label>
                             </div>
-                            <div class="input-field col s4">
+                            <div class="input-field col s3 m2 {{input_color}}">
                                 <select name="src_zone" id="">
-                                    <option value="DMZ">DMZ</option>
-                                    <option value="LAN">LAN</option>
+                                    <option value="dmz">DMZ</option>
+                                    <option value="lan">LAN</option>
                                 </select>
                                 <label for="">Src Zone</label>
                             </div>
                         </div>
                         <div class="row">
-                            <div class="input-field col s4">
-                                <input type="text" name="new_src_ip" class="validate" placeholder="127.0.0.10">
+                            <div class="input-field col offset-m1 s3 m2 {{input_color}}">
+                                <input type="text" name="new_src_ip" {{ip_addr_validate}} placeholder="127.0.0.10">
                                 <label for="">New Src IP</label>
                             </div>
-                            <div class="input-field col s4" disabled>
+                            <div class="input-field col s3 m2 {{input_color}}" disabled>
                                 <input type="text" name="new_src_port" placeholder="original" disabled>
                                 <label for="">New Src Port</label>
                             </div>
-                            <div class="input-field col s4">
+                            <div class="input-field col s3 m2 {{input_color}}">
                                 <select name="dst_zone" id="" disabled>
-                                    <option value="WAN_INTERFACE">WAN</option>
+                                    <option value="wan">WAN</option>
                                 </select>
                                 <label for="">Dst Zone</label>
                             </div>
-                        </div>
-                        <div class="row">
-                            <div class="input-field col s12 m4">
-                                <button class="btn waves-effect waves-light col s12" name="action" value="add">
-                                    <i class="material-icons"></i> Add
-                                </button>
+                            <div class="input-field col offset-m2 s3 m2">
+                                <button class="btn waves-effect waves-light col s12" name="action" value="add">Add</button>
                             </div>
                         </div>
+                    </form>
+                </div>
+            </div>
+            <div class="col s12">
+                <div class="card-panel hoverable {{card_color}}">
+                    <h4 class="{{title_color}}">SNAT Rules</h4>
+                    <table class="striped centered">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>#</th>
+                                <th>In Interface</th>
+                                <th>Original Source</th>
+                                <th>Out Interface</th>
+                                <th>New Source</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if firewall_settings['local_snat_rules'] %}
+                            {% for i, rule in firewall_settings['local_snat_rules'] %}
+                            <tr>
+                                <td>
+                                    <form action="/advanced/firewall" method="POST">
+                                        <input type="hidden" name="tab" value="3">
+                                        <input type="hidden" name="zone" value="{{selected}}">
+                                        <input type="hidden" name="nat_type" value="SRCNAT">
+                                        <input type="hidden" name="position" value="{{i}}">
+                                        <button class="btn-floating btn-small waves-effect waves-light red" name="action" value="remove">
+                                            <i class="material-icons">remove</i>
+                                        </button>
+                                    </form>
+                                </td>
+                                <td>{{i}}</td>
+                                <td>{{rule['-i']}}</td>
+                                <td>{{rule['-s']}}</td>
+                                <td>{{rule['-o']}}</td>
+                                <td>{{rule['--to-source']}}</td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                {% for i in range(6) %}
+                                <td></td>
+                                {% endfor %}
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
                     </form>
                 </div>
             </div>

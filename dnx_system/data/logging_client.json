@@ -1,12 +1,10 @@
 {
+    "time_offset": {
+        "direction": "+",
+        "amount": 0
+    },
     "logging": {
-        "time_offset": {
-            "direction": "+",
-            "amount": 0
-        },
-        "logging": {
-            "length": 30,
-            "level": 4
-        }
+        "length": 30,
+        "level": 4
     }
 }

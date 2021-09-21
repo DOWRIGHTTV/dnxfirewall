@@ -23,6 +23,7 @@ dns
 http
 telemetry
 wpad
+ssl
 
 # digits
 0

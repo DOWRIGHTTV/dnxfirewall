@@ -12,57 +12,46 @@ sys.path.insert(0, HOME_DIR)
 
 import dnx_configure.dnx_configure as configure
 from dnx_logging.log_main import LogHandler as Log
-from dnx_configure.dnx_interface_services import interface_bandwidth
 from dnx_configure.dnx_file_operations import ConfigurationManager
-from dnx_configure.dnx_iptables import IPTableManager as IPTables
+from dnx_configure.dnx_iptables import IPTablesManager as IPTables
 from dnx_database.ddb_connector_sqlite import DBConnector
-from dnx_logging.log_main import LogHandler
-
-__all__ = (
-    'Startup'
-)
 
 # TODO: initialize Log
 LOG_MOD = 'system'
 
-_run_script = False
-
-class Startup:
-    def run(self):
-        self.apply_network_forwarding()
-        self.configure_ipv6_iptables()
-        self.restore_iptables()
-        self.reset_flask_key()
-        self.create_database_tables()
-
+def run():
     # ensuring system allows forwarding. NOTE: probably not required for hardware unit as this is enabled by default.
-    def apply_network_forwarding(self):
-        IPTables.network_forwarding()
+    IPTables.network_forwarding()
 
     # changing default action for IPv6 to block everything on all chains in main table
-    def configure_ipv6_iptables(self):
-        IPTables.block_ipv6()
+    IPTables.block_ipv6()
 
     # loading IP Tables from file
-    def restore_iptables(self):
-        IPTables().restore()
+    IPTables().restore()
 
-    def reset_flask_key(self):
-        with ConfigurationManager('config') as dnx:
-            flask_settings = dnx.load_configuration()
+    reset_flask_key()
 
-            flask_config = flask_settings['settings']['flask']
-            flask_config['key'] = token_urlsafe(32)
+    # ensuring the default mac address of the wan interface is set. this should only change first time the system initializes
+    # setting the mac from None > interface mac. Once the flag has been set, it will not longer change modify default mac value
+    configure.set_default_mac_flag()
 
-            dnx.write_configuration(flask_settings)
+    create_database_tables()
 
-    # creating all DB tables if not already done
-    def create_database_tables(self):
-        with DBConnector() as database:
-            database.create_db_tables()
+def reset_flask_key():
+    with ConfigurationManager('config') as dnx:
+        flask_settings = dnx.load_configuration()
 
-            database.commit_entries()
+        flask_config = flask_settings['flask']
+        flask_config['key'] = token_urlsafe(32)
+
+        dnx.write_configuration(flask_settings)
+
+# creating all DB tables if not already done
+def create_database_tables():
+    with DBConnector() as database:
+        database.create_db_tables()
+
+        database.commit_entries()
 
 if __name__ == '__main__':
-    Start = Startup()
-    Start.run()
+    run()

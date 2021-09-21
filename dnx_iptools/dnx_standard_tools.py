@@ -79,7 +79,6 @@ class Initialize:
 
         self.has_ran = True
         self._is_initializing = False
-        self._thread_ready = None
 
         self._Log.notice(f'{self._name} setup complete.')
 
@@ -91,8 +90,11 @@ class Initialize:
 
         self._Log.debug(f'{self._name} thread checkin.')
 
-    def wait_in_line(self, position):
+    def wait_in_line(self, *, wait_for):
         '''blocking call to wait for all lower number threads to complete before checking in and returning.
+
+            initialize = Initialize(*args, **kwargs)
+            initialize.wait_in_line(wait_for=2)
 
         this call has the potential to deadlock. positions must be sequential work as intended, but are not
         required to be called in order.
@@ -100,7 +102,7 @@ class Initialize:
         '''
         if (not self._is_initializing): return
 
-        while not position == len(self._thread_ready):
+        while wait_for < len(self._thread_ready):
             fast_sleep(1)
 
     @property
@@ -149,7 +151,7 @@ def dnx_queue(Log, name=None):
         # methods inherently. if that is the case does @classmethod decorator need to be on initial method?
         def wrapper(*args):
             if (Log):
-                Log.debug(f'{name}/dnx_queue started.')
+                Log.informational(f'{name}/dnx_queue started.')
 
             while True:
                 job_wait()
