@@ -266,16 +266,19 @@ class FirewallControl:
 
         self._initialize.done()
 
-    def _init_system_rules(self):
-        # standard blocking for unwanted DNS protocol/ports to help prevent proxy bypass (all internal zones)
-        SYSTEM_RULES = [
-            array('L', [1, 0, 0, 0, 1114113, 65535, 10, 0, 0, 1114965, 853, 0, 0, 0, 0]), # deny DoT (UDP, bypass prevention)
-            array('L', [1, 0, 0, 0, 393217, 65535, 10, 0, 0, 394069, 853, 0, 0, 0, 0]), # deny DoT (TCP, bypass prevention)
-            array('L', [1, 0, 0, 0, 393217, 65535, 10, 0, 0, 393269, 53, 0, 0, 0, 0]) # deny DNS (TCP, bypass prevention)
-        ]
+    @cfg_read_poller('firewall_system', folder='iptables')
+    def monitor_system_rules(self, system_rules):
+        # 0-9: reserverd
+        # 10-159: zone mgmt rules. tens place designates interface index
+        #   - 0: webui, 1: cli, 2: ssh, 3: ping
+        # 160+: system control (proxy bypass prevention)
+
+        ruleset = load_configuration(system_rules, filepath='dnx_system/iptables')
+
+        # sorting merged dict (system + usr), then taking values to convert into python arrays
+        ruleset = [array('L', rule) for rule in dict(sorted(ruleset)).values()]
 
         # NOTE: gil must be held throughout this call
-        error = self.cfirewall.update_ruleset(0, SYSTEM_RULES)
+        error = self.cfirewall.update_ruleset(0, ruleset)
         if (error):
             pass  # TODO: do something here
-

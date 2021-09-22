@@ -58,29 +58,26 @@ class _Defaults:
     def prerouting_set(self):
         shell('iptables -t raw -A PREROUTING -j IPS') # action to check custom ips chain
 
-        shell('iptables -t mangle -A PREROUTING -j IPS') # action to check custom ips chain
-
     def mangle_set(self):
-        # zones need mark on input for either dropped packets to wan, or device access from inside.
-        shell(f'iptables -t mangle -A PREROUTING -i {self._wan_int} -j MARK --set-mark {WAN_IN}') # pylint: disable=no-member
-        shell(f'iptables -t mangle -A PREROUTING -i {self._lan_int} -j MARK --set-mark {LAN_IN}') # pylint: disable=no-member
-        shell(f'iptables -t mangle -A PREROUTING -i {self._dmz_int} -j MARK --set-mark {DMZ_IN}') # pylint: disable=no-member
-
-    def main_forward_set(self):
-        shell('iptables -P FORWARD DROP') # Default DROP
-
-        shell('iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
-
-        shell(f'iptables -A FORWARD -m mark ! --mark {WAN_IN} -j DOH')
+        shell('iptables -t mangle -A PREROUTING -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
 
         # cfirewall will deal with all tcp, udp, and icmp packet as a basic ip/protocol filter and as a security module
         # inspection pre preprocessor.
-        shell(f'iptables -A FORWARD -p tcp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
-        shell(f'iptables -A FORWARD -p udp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
-        shell(f'iptables -A FORWARD -p icmp -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+        shell(f'iptables -t mangle -A PREROUTING -p tcp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+        shell(f'iptables -t mangle -A PREROUTING -p udp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+        shell(f'iptables -t mangle -A PREROUTING -p icmp -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+
+        # zones need mark on input for either dropped packets to wan, or device access from inside.
+        # shell(f'iptables -t mangle -A PREROUTING -i {self._wan_int} -j MARK --set-mark {WAN_IN}') # pylint: disable=no-member
+        # shell(f'iptables -t mangle -A PREROUTING -i {self._lan_int} -j MARK --set-mark {LAN_IN}') # pylint: disable=no-member
+        # shell(f'iptables -t mangle -A PREROUTING -i {self._dmz_int} -j MARK --set-mark {DMZ_IN}') # pylint: disable=no-member
+
+    def default_drop_set(self):
+        shell('iptables -P FORWARD DROP') # Default DROP
+        shell('iptables -P INPUT DROP') # default DROP
 
     def main_input_set(self):
-        shell(' iptables -P INPUT DROP') # default DROP
+
 
         shell(' iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT') # Tracking connection state for return traffic from WAN back Firewall itself
 
