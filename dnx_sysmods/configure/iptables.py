@@ -30,12 +30,12 @@ class _Defaults:
         for zone, intf in interfaces.items():
             setattr(self, f'_{zone}_int', intf)
 
-        self.custom_filter_chains = ['MGMT', 'DOH']
         self.custom_nat_chains = ['DSTNAT', 'SRCNAT', 'REDIRECT_OVERRIDE']
 
    # calling all methods in the class dict.
     @classmethod
     def load(cls, interfaces):
+
         # initializing instance of self Class. this is to allow caller to not have to initialize class instance.
         self = cls(interfaces)
         for n, f in cls.__dict__.items():
@@ -46,90 +46,49 @@ class _Defaults:
                     write_log(E)
 
     def create_new_chains(self):
-        # creating custom chains for user defined rules
-        for chain in self.custom_filter_chains:
-            shell(f'iptables -N {chain}')
-
         for chain in self.custom_nat_chains:
             shell(f'iptables -t nat -N {chain}')
 
         shell('iptables -t raw -N IPS') # ddos prevention rule insertion location
 
-    def prerouting_set(self):
-        shell('iptables -t raw -A PREROUTING -j IPS') # action to check custom ips chain
-
-    def mangle_set(self):
-        shell('iptables -t mangle -A PREROUTING -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
-
-        # cfirewall will deal with all tcp, udp, and icmp packet as a basic ip/protocol filter and as a security module
-        # inspection pre preprocessor.
-        shell(f'iptables -t mangle -A PREROUTING -p tcp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
-        shell(f'iptables -t mangle -A PREROUTING -p udp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
-        shell(f'iptables -t mangle -A PREROUTING -p icmp -j NFQUEUE --queue-num {Queue.CFIREWALL}')
-
-        # zones need mark on input for either dropped packets to wan, or device access from inside.
-        # shell(f'iptables -t mangle -A PREROUTING -i {self._wan_int} -j MARK --set-mark {WAN_IN}') # pylint: disable=no-member
-        # shell(f'iptables -t mangle -A PREROUTING -i {self._lan_int} -j MARK --set-mark {LAN_IN}') # pylint: disable=no-member
-        # shell(f'iptables -t mangle -A PREROUTING -i {self._dmz_int} -j MARK --set-mark {DMZ_IN}') # pylint: disable=no-member
-
-    def default_drop_set(self):
+    def default_actions(self):
         shell('iptables -P FORWARD DROP') # Default DROP
-        shell('iptables -P INPUT DROP') # default DROP
-
-    def main_input_set(self):
-
-
-        shell(' iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT') # Tracking connection state for return traffic from WAN back Firewall itself
-
-        # filtering out broadcast packets to the wan. These can be prevelent if in a double nat scenario and would never be
-        # used for anything.
-        shell(f'iptables -A INPUT -i {self._wan_int} -m addrtype --dst-type BROADCAST -j DROP') # pylint: disable=no-member
-
-        # local socket communication | local ubuntu dns allow
-        shell(f'iptables -A INPUT -s 127.0.0.0/24 -d 127.0.0.0/24 -j ACCEPT')
-
-        # NOTE: iptables will manage INPUT chain forwarding to IPS/IDS.
-        shell(f'iptables -A INPUT -p tcp -m mark --mark {WAN_IN} -j NFQUEUE --queue-num 2')
-        shell(f'iptables -A INPUT -p udp -m mark --mark {WAN_IN} -j NFQUEUE --queue-num 2')
-        shell(f'iptables -A INPUT -p icmp -m icmp --icmp-type 8 -m mark --mark {WAN_IN} -j NFQUEUE --queue-num 2')
-
-        # dnxfirewall services access (all local network interfaces). dhcp, dns, icmp, etc.
-
-        # DHCP discover/request allow
-        shell(f'iptables -A INPUT -m mark ! --mark {WAN_IN} -p udp --dport 67 -j ACCEPT')
-
-        # implicit DNS allow for local users
-        shell(f'iptables -A INPUT -m mark ! --mark {WAN_IN} -p udp --dport 53 -j ACCEPT')
-
-        # implicit http/s allow to dnx-web for local LAN users
-        shell(f'iptables -A INPUT -m mark --mark {LAN_IN} -p tcp --dport 443 -j ACCEPT')
-        shell(f'iptables -A INPUT -m mark --mark {LAN_IN} -p tcp --dport 80 -j ACCEPT')
-
-        # additional access to the system is checked here. access set via web ui, but lan > web mgmt will always be allowed above.
-        shell(f'iptables -A INPUT -m mark ! --mark {WAN_IN} -j MGMT')
-
-        # NOTE: these are default settings of user defined options. these can be removed from the webui after setup and are only
-        # here for convenience.
-
-        # dnxfirewall LAN interface ping allow
-        shell(f'iptables -A MGMT -m mark --mark {LAN_IN} -p icmp -m icmp --icmp-type 8 -j ACCEPT')
-
-        # DMZ webui access
-        shell(f'iptables -A MGMT -m mark --mark {DMZ_IN} -p tcp --dport 443 -j ACCEPT')
-        shell(f'iptables -A MGMT -m mark --mark {DMZ_IN} -p tcp --dport 80 -j ACCEPT')
-
-    def main_output_set(self):
+        shell('iptables -P INPUT DROP') # default
 
         # default allow just in case it was changed prior.
         shell('iptables -P OUTPUT ACCEPT')
 
+    def cfirewall_hook(self):
+        # standard conntrack permit. cfirewall will deal with all tcp, udp, and icmp packet as a basic ip/protocol
+        # filter and as a security module inspection pre preprocessor.
+        # FORWARD #
+        shell('iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
+
+        shell(f'iptables -A FORWARD -A PREROUTING -p tcp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+        shell(f'iptables -A FORWARD -A PREROUTING -p udp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+        shell(f'iptables -A FORWARD -A PREROUTING -p icmp -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+
+        # INPUT #
+        shell(' iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
+
+        shell(f'iptables -A INPUT -A PREROUTING -p tcp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+        shell(f'iptables -A INPUT -A PREROUTING -p udp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+        shell(f'iptables -A INPUT -A PREROUTING -p icmp -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+
+    def prefilter_set(self):
+        # filtering out broadcast packets to the wan. These can be prevelent if in a double nat scenario and would never be
+        # used for anything.
+        shell(f'iptables -A INPUT -i {self._wan_int} -m addrtype --dst-type BROADCAST -j DROP') # pylint: disable=no-member
+
     # TODO: implement commands to check source and dnat changes in nat table. what does this even mean?
     def nat(self):
+        shell('iptables -t raw -A PREROUTING -j IPS')  # action to check custom ips chain
+
         # internal zones dns redirect into proxy
         shell('iptables -t nat -A PREROUTING -j REDIRECT_OVERRIDE')
         # TODO: add config option in dns server settings to define up to 2 internal servers (check for RFC1918) as internal recursive
-        # resolvers. dns requests to the configured servers will be exempt from this redirect. this will allow all internal zones
-        # to have access to a centralized local dns server (like windows dns in an active directory domain).
+        #  resolvers. dns requests to the configured servers will be exempt from this redirect. this will allow all internal zones
+        #  to have access to a centralized local dns server (like windows dns in an active directory domain).
         shell(f'iptables -t nat -A PREROUTING -m mark ! --mark {WAN_IN} -p udp --dport 53 -j REDIRECT --to-port 53')
 
         # user defined chain for dnat

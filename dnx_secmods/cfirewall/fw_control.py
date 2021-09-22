@@ -268,10 +268,32 @@ class FirewallControl:
 
     @cfg_read_poller('firewall_system', folder='iptables')
     def monitor_system_rules(self, system_rules):
-        # 0-9: reserverd
+        # 0-9: reserved - dns, dhcp, loopback, etc
         # 10-159: zone mgmt rules. tens place designates interface index
         #   - 0: webui, 1: cli, 2: ssh, 3: ping
         # 160+: system control (proxy bypass prevention)
+
+        # dnxfirewall services access (all local network interfaces). dhcp, dns, icmp, etc.
+
+        # DHCP discover/request allow
+        shell(f'iptables -A INPUT -m mark ! --mark {WAN_IN} -p udp --dport 67 -j ACCEPT')
+
+        # implicit DNS allow for local users
+        shell(f'iptables -A INPUT -m mark ! --mark {WAN_IN} -p udp --dport 53 -j ACCEPT')
+
+        # implicit http/s allow to dnx-web for local LAN users
+        shell(f'iptables -A INPUT -m mark --mark {LAN_IN} -p tcp --dport 443 -j ACCEPT')
+        shell(f'iptables -A INPUT -m mark --mark {LAN_IN} -p tcp --dport 80 -j ACCEPT')
+
+        # NOTE: these are default settings of user defined options. these can be removed from the webui after setup and are only
+        # here for convenience.
+
+        # dnxfirewall LAN interface ping allow
+        shell(f'iptables -A MGMT -m mark --mark {LAN_IN} -p icmp -m icmp --icmp-type 8 -j ACCEPT')
+
+        # DMZ webui access
+        shell(f'iptables -A MGMT -m mark --mark {DMZ_IN} -p tcp --dport 443 -j ACCEPT')
+        shell(f'iptables -A MGMT -m mark --mark {DMZ_IN} -p tcp --dport 80 -j ACCEPT')
 
         ruleset = load_configuration(system_rules, filepath='dnx_system/iptables')
 
