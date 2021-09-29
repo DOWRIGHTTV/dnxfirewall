@@ -3,11 +3,11 @@
 import os, sys
 
 from dnx_sysmods.configure.def_constants import *
-from dnx_sysmods.configure.def_namedtuples import IPP_SRC_INFO, IPP_DST_INFO
 
 from dnx_iptools.def_structs import *
 from dnx_iptools.packet_classes import NFPacket, RawResponse
 from dnx_iptools.protocol_tools import checksum_ipv4, checksum_tcp, checksum_icmp, int_to_ipaddr
+from dnx_gentools.standard_tools import bytecontainer
 
 
 class IPPPacket(NFPacket):
@@ -46,9 +46,73 @@ class IPPPacket(NFPacket):
         self.bin_data = (tracked_ip & MSB, tracked_ip & LSB)
 
 
+PR_IP_HDR   = bytecontainer('ip_header', 'B,ver_ihl B,tos H,tl H,ident H,flags_fro B,ttl B,proto H,checksum L,src_ip L,dst_ip')
+PR_TCP_HDR  = bytecontainer('tcp_header', 'L,dst_port L,src_port L,seq_num L,ack_num H,offset_control H,window H,checksum H,urg_ptr')
+PR_ICMP_HDR = bytecontainer('udp_header', 'B,type B,code H,checksum')
+
+PR_TCP_PSEUDO_HDR = bytecontainer('tcp_pseudo_header', 'L,src_ip L,dst_ip B,reserved B,proto H,tcp_len')
+
+# TODO: add pre defined fields (will need to allow for __call__ to accept kwargs)
+tcp_header_template = PR_TCP_HDR()
+icmp_header_template = PR_ICMP_HDR()
+pseudo_header_template = PR_TCP_PSEUDO_HDR()
+ip_header_template = PR_IP_HDR()
+
 # TODO: test UDP / icmp dst unreachable packet!
 # TODO: test inbound connections/ reject having correct src port
 class ProxyResponse(RawResponse):
+
+    # TODO: ensure dnx_src_ip is in integer form. consider sending in dst also since it is referenced alot.
+    def _prepare_packet2(self, packet, dnx_src_ip):
+
+        # TCP HEADER
+        if (packet.protocol is PROTO.TCP):
+
+            # new instance of header byte container template
+            proto_header = tcp_header_template()
+
+            # assigning missing fields
+            proto_header.dst_port = packet.dst_port
+            proto_header.src_port = packet.src_port
+            proto_header.ack_num  = packet.seq_number+1
+
+            pseudo_header = PR_TCP_PSEUDO_HDR()
+            pseudo_header.src_ip = dnx_src_ip
+            pseudo_header.dst_ip = packet.src_ip
+
+            # calculating checksum of container
+            proto_header.checksum = checksum_tcp(pseudo_header.assemble() + proto_header.assemble())
+
+            proto_len = len(proto_header)
+
+        # ICMP HEADER
+        elif (packet.protocol is PROTO.UDP):
+            proto_header = icmp_header_template()
+
+            # per icmp, ip header and first 8 bytes of rcvd payload are including in icmp response payload
+            icmp_payload = packet.ip_header + packet.udp_header
+            proto_header.checksum = checksum_icmp(
+                 byte_join(proto_header.assemble() + icmp_payload)
+            )
+
+            proto_len = len(proto_header) + len(icmp_payload)
+
+        # IP HEADER
+        ip_header = ip_header_template()
+
+        ip_header.tl = 20 + proto_len
+        ip_header.protocol = packet.protocol
+        ip_header.src_ip = dnx_src_ip
+        ip_header.dst_ip = packet.src_ip
+
+        ip_header.checksum = checksum_ipv4(ip_header.assemble())
+
+        packet_data = [ip_header.assemble(), proto_header.assemble()]
+        if (packet.protocol is PROTO.UDP):
+            packet_data.append(icmp_payload)
+
+        # final assembly with calculated checksums and combining data.
+        return byte_join(packet_data)
 
     def _prepare_packet(self, packet, dnx_src_ip):
         # checking if dst port is associated with a nat. if so, will override necessary fields based on protocol

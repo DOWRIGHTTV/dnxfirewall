@@ -215,6 +215,12 @@ cdef u_int32_t DEFAULT_MAX_QUEUELEN = 8192
 cdef u_int32_t SOCK_RCV_SIZE = 1024 * 4796 // 2
 
 
+
+struct pkt_buff* pktb_alloc	(int family, void *data, size_t len, size_t extra)
+
+size_t MAX_PACKET_SIZE = 2048
+size_t PACKET_BUFFER_EXTRA_SIZE = 1024
+
 cdef class CFirewall:
 
     def __cinit__(self, bint bypass, bint verbose):
@@ -226,8 +232,13 @@ cdef class CFirewall:
     cdef void _run(self) nogil:
         '''Accept packets using recv.'''
 
+        cdef char data[2048]
+
+        cdef pkt_buff *packet_buffer = pktb_alloc(AF_BRIDGE, &data, MAX_PACKET_SIZE, PACKET_BUFFER_EXTRA_SIZE)
+
+
         cdef int fd = nfq_fd(self.h)
-        cdef char buf[4096]
+
         cdef int rv
         cdef int recv_flags = 0
 

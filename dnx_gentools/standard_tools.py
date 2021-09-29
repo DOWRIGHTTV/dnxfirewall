@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 
-import time
-import struct
 import threading
 
 from copy import copy
 from collections import deque
 
-from dnx_sysmods.configure.def_constants import MSEC, fast_time, fast_sleep
+from dnx_iptools.def_structs import byte_pack, short_pack, long_pack
+from dnx_sysmods.configure.def_constants import MSEC, fast_time, fast_sleep, byte_join
 
 __all__ = (
     'looper', 'dynamic_looper',
-    'Initialize', 'dnx_queue', 'DNXQueue',
-    'bytecontainer', 'classproperty', 'keep_info'
+    'Initialize', 'dnx_queue',
+    'bytecontainer', 'classproperty'
 )
 
 def looper(sleep_len):
@@ -74,7 +73,7 @@ class Initialize:
         self._Log.notice(f'{self._name} setup waiting for threads: {count}.')
 
         # blocking until all threads check in by individually calling done method
-        while not self._initial_load_complete:
+        while not self._initial_load_complete and not self._timeout_reached:
             fast_sleep(1)
 
         self.has_ran = True
@@ -113,7 +112,6 @@ class Initialize:
         return False
 
     @property
-    # TODO: this is broken. it doesnt track based on iniactivity either???
     def _timeout_reached(self):
         if (not self._timeout):
             return False
@@ -124,11 +122,8 @@ class Initialize:
         return False
 
 def dnx_queue(Log, name=None):
-    '''decorator to add custom queue mechanism for any queue handling functions. This
-    is a direct replacement for dynamic_looper for queues.
-
-
-    WTF IS THIS -> if used on a class method set class_method argument to True.
+    '''decorator to add custom queue mechanism for any queue handling functions. This is a direct replacement of
+    dynamic_looper for queues.
 
     example:
         @dnx_queue(Log, name='Server')
@@ -148,7 +143,7 @@ def dnx_queue(Log, name=None):
         job_set = job_available.set
 
         # TODO: is this code compatible with class methods? the *args should make this compatible with class
-        # methods inherently. if that is the case does @classmethod decorator need to be on initial method?
+        #  methods inherently. if that is the case does @classmethod decorator need to be on initial method?
         def wrapper(*args):
             if (Log):
                 Log.informational(f'{name}/dnx_queue started.')
@@ -161,8 +156,6 @@ def dnx_queue(Log, name=None):
                 while queue:
                     job = queue_get()
                     try:
-                        # TODO: see if we should just send in the queue reference and perform the pop in the called func. if
-                        # we do this we would probably want it to be optional and use a conditional set on start to identify.
                         func(*args, job)
                     except Exception as E:
                         if (Log):
@@ -182,119 +175,111 @@ def dnx_queue(Log, name=None):
     return decorator
 
 
-class DNXQueue:
-    '''small class to provide a custom queue mechanism for any queue handling functions. This
-    is a direct replacement for dynamic_looper for queues. this is to be used as a decorator,
-    but it requires an active instance prior to decoration.
+def bytecontainer(obj_name, fields):
+    '''named tuple like class factory for storing int values of raw byte sections with named fields. calling
+    len on the container will return sum of all bytes stored not amount of fields. slots are being used to speed up
+    attribute access. attribute type is not checked and can be truncated if incorrectly specified.
 
-    example:
-        dnx_queue = DNXQueue(Log)
+    note: currently < 1 byte attributes are not supported. some for of eval partial will likely be implemented in the
+    near future.'''
 
-        @dnx_queue
-        def some_func(job):
-            process(job)
+    if not isinstance(fields, list):
+        fields = fields.split()
 
-    '''
-    __slots__ = (
-        '_Log', '_queue', '_func', '_job_available', '_name'
-    )
+    _pack_refs = {
+        'B': (1, byte_pack),
+        'H': (2, short_pack),
+        'L': (4, long_pack),
+    }
 
-    def __init__(self, Log, name=None):
-        self._Log   = Log
-        self._name  = name
-        self._queue = deque()
+    # parsing arguments, splitting format with field name and building list(converted to tuple after) for each, and
+    # calculating the container size as it is in packed byte form.
+    size_of, field_count, field_packs, field_names, field_formats = 0, len(fields), [], [], []
+    for field in fields:
+        try:
+            field_format, field_name = field.split(',')
+        except:
+            raise SyntaxError('incorrect syntax of field. ex L,long_field')
 
-        self._job_available = threading.Event()
+        if field_format not in _pack_refs:
+            raise ValueError(f'unsupported integer format. use {list(_pack_refs)}')
 
-    def __call__(self, func):
-        self._func = func
+        _field_size, _pack_ref = _pack_refs.get(field_format)
 
-        return self._looper
+        size_of += _field_size
+        field_packs.append(_pack_ref)
+        field_names.append(field_name)
+        field_formats.append(field_format)
 
-    def _looper(self, instance):
-        '''waiting for job to become available. once available the, event will be reset
-        and the decorated function will be called with the return of queue pop as an
-        argument. runs forever.'''
-        self._Log.debug(f'{self._name}/{self.__class__.__name__} started.')
-        while True:
-            self._job_available.wait()
-            # processing all available jobs
-            self._job_available.clear()
-            while self._queue:
-                try:
-                    job = self._queue.popleft()
-                    self._func(instance, job)
-                except Exception as E:
-                    self._Log.warning(f'error while processing a {self._name}/{self.__class__.__name__} job. | {E}')
-                    fast_sleep(.001)
-
-    def add(self, job):
-        '''adds job to work queue, then marks event indicating a job is available.'''
-        self._queue.append(job)
-        self._job_available.set()
-
-
-def bytecontainer(obj_name, field_names):
-    '''named tuple like class factory for storing raw byte sections with named fields. calling
-    len on the container will return sum of all bytes stored not amount of fields. slots are
-    being used to speed up attribute access.'''
-
-    if not isinstance(field_names, list):
-        field_names = field_names.split()
+    field_packs = tuple(field_packs)
+    field_names = tuple(field_names)
+    field_formats = tuple(field_formats)
 
     class ByteContainer:
 
-        __slots__ = (
-            '_obj_name', '_field_names', '_len_fields',
-            *field_names
-        )
+        __slots__ = (*field_names,)
 
-        def __init__(self, obj_name, field_names):
-            self._obj_name = obj_name
-            self._field_names = field_names
+        def __init__(self):
+
             for name in field_names:
-                setattr(self, name, '')
-
-            self._len_fields = len(field_names)
+                setattr(self, name, 0)
 
         def __repr__(self):
-            return f"{self.__class__.__name__}({self._obj_name}, '{' '.join(self._field_names)}')"
+            return f"{self.__class__.__name__}({obj_name}, '{' '.join(field_names)}')"
 
         def __str__(self):
             fast_get = self.__getattribute__
-            fields = [f'{n}={fast_get(n)}' for n in self._field_names]
 
-            return f"{self._obj_name}({', '.join(fields)})"
+            fields = [f'{n}={fast_get(n)}({f})' for n, f in zip(field_names, field_formats)]
+
+            return f"{obj_name}({', '.join(fields)})"
 
         def __call__(self, *args):
-            if (len(args) != self._len_fields):
-                raise TypeError(f'Expected {self._len_fields} arguments, got {len(args)}')
+            if (args and len(args) != self._field_count):
+                raise TypeError(f'Expected {self._field_count} arguments, got {len(args)}')
 
             new_container = copy(self)
-            for name, value in zip(self._field_names, args):
-                setattr(new_container, name, value)
+
+            # set args in new instance if specified. this will overwrite any pre set attributes.
+            if (args):
+                for name, value in zip(field_names, args):
+                    setattr(new_container, name, value)
 
             return new_container
 
         def __len__(self):
-            fast_get = self.__getattribute__
 
-            return sum([len(fast_get(field_name)) for field_name in self._field_names])
+            return size_of
 
         def __getitem__(self, position):
-            return getattr(self, f'{self._field_names[position]}')
+            return getattr(self, f'{field_names[position]}')
 
         def __iter__(self):
             fast_get = self.__getattribute__
 
-            yield from [fast_get(x) for x in self._field_names]
+            yield from [fast_get(x) for x in field_names]
 
-        # NOTE: consider removing this for direct access. this used to provide some input validation, but now that
-        # it has been removed, the method call itself is pretty worthless.
-        def update(self, field_name, new_value):
-           setattr(self, field_name, new_value)
+        def pre_set_attributes(self, **kwargs):
+            '''specify attributes to set as a pre processor function. these values will get copied over to new containers
+            of the same type. a good use case for this is to fill out fields that are constants and can be streamlined
+            to simplify external byte string creation logic.'''
 
-    return ByteContainer(obj_name, field_names)
+            for k, v in kwargs:
+
+                # if key doesnt exist, will raise error. this method is a pre process so this will allow for quicker
+                # debugging of code that to wait for some point in runtime to realise there was an invalid attr.
+                if k not in field_names:
+                    raise ValueError(f'attribute {k} does not exist in this container.')
+
+                setattr(self, k, v)
+
+        def assemble(self):
+            '''returns merged attributes in specified order as a single byte string (char array). this is not stored
+            and is recalculated on every call.'''
+
+            return byte_join([pack(getattr(self, name)) for pack, name in zip(field_packs, field_names)])
+
+    return ByteContainer()
 
 
 class classproperty:
@@ -304,19 +289,3 @@ class classproperty:
 
     def __get__(self, owner_self, owner_class):
         return self._fget(owner_class)
-
-# FROM PYTHON.ORG DECORATOR LIBRARY # NOTE: does this work???
-def keep_info(decorator):
-    '''Simply apply @keep_info to your decorator and it will automatically preserve
-    the docstring and function attributes of functions to which it is applied.'''
-    def new_decorator(f):
-        g = decorator(f)
-        g.__name__ = f.__name__
-        g.__doc__ = f.__doc__
-        g.__dict__.update(f.__dict__)
-        return g
-
-    new_decorator.__name__ = decorator.__name__
-    new_decorator.__doc__ = decorator.__doc__
-    new_decorator.__dict__.update(decorator.__dict__)
-    return new_decorator
