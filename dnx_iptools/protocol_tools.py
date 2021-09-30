@@ -52,10 +52,7 @@ def checksum_tcp(data):
     for chunk in chunks:
         sum += chunk[0]
 
-    while sum >> 16:
-        sum = (sum & 0xffff) + (sum >> 16)
-
-    return ~sum
+    return ~(sum + (sum >> 16)) & 0xffff
 
 # calculates and return icmp header checksum
 def checksum_icmp(data):

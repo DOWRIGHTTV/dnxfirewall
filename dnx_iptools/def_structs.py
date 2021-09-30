@@ -17,7 +17,7 @@ double_byte_pack  = _Struct('!2B').pack
 double_short_pack = _Struct('!2H').pack
 
 checksum_pack = _Struct('<H').pack
-checksum_iunpack = _Struct('!H').iter_unpack
+checksum_iunpack = _Struct('<H').iter_unpack
 fcntl_pack = _Struct('24s').pack
 
 mac_unpack = _Struct('!6s').unpack
