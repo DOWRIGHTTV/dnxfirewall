@@ -17,7 +17,7 @@ from dnx_sysmods.configure.iptables import IPTablesManager
 from dnx_sysmods.logging.log_main import LogHandler as Log
 
 LOG_NAME = 'system'
-PROGRESS_TOTAL_COUNT = 13
+PROGRESS_TOTAL_COUNT = 15
 
 LINEBREAK = '-' * 32
 
@@ -232,7 +232,9 @@ def install_packages():
         ('sudo apt install python3-pip -y', 'setting up python3'),
         ('pip3 install flask uwsgi', 'installing python web app framework'),
         ('sudo apt install nginx -y', 'installing web server driver'),
-        ('sudo apt install libnetfilter-queue-dev net-tools -y', 'installing networking components'),
+        ('sudo apt install libnetfilter-queue-dev libnetfilter-conntrack-dev libmnl-dev net-tools -y',
+            'installing networking components'),
+
         ('pip3 install Cython', 'installing C extension language (Cython)')
     ]
 

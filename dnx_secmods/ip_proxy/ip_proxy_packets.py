@@ -7,7 +7,6 @@ from dnx_sysmods.configure.def_constants import *
 from dnx_iptools.def_structs import *
 from dnx_iptools.packet_classes import NFPacket, RawResponse
 from dnx_iptools.protocol_tools import checksum_ipv4, checksum_tcp, checksum_icmp, int_to_ipaddr
-from dnx_gentools.standard_tools import bytecontainer
 
 
 class IPPPacket(NFPacket):
@@ -46,17 +45,12 @@ class IPPPacket(NFPacket):
         self.bin_data = (tracked_ip & MSB, tracked_ip & LSB)
 
 
-PR_IP_HDR   = bytecontainer('ip_header', 'B,ver_ihl B,tos H,tl H,ident H,flags_fro B,ttl B,proto H,checksum L,src_ip L,dst_ip')
-PR_TCP_HDR  = bytecontainer('tcp_header', 'L,dst_port L,src_port L,seq_num L,ack_num H,offset_control H,window H,checksum H,urg_ptr')
-PR_ICMP_HDR = bytecontainer('udp_header', 'B,type B,code H,checksum')
-
-PR_TCP_PSEUDO_HDR = bytecontainer('tcp_pseudo_header', 'L,src_ip L,dst_ip B,reserved B,proto H,tcp_len')
-
 # TODO: add pre defined fields (will need to allow for __call__ to accept kwargs)
-tcp_header_template = PR_TCP_HDR()
-icmp_header_template = PR_ICMP_HDR()
-pseudo_header_template = PR_TCP_PSEUDO_HDR()
 ip_header_template = PR_IP_HDR()
+tcp_header_template = PR_TCP_HDR({})
+pseudo_header_template = PR_TCP_PSEUDO_HDR()
+icmp_header_template = PR_ICMP_HDR()
+
 
 # TODO: test UDP / icmp dst unreachable packet!
 # TODO: test inbound connections/ reject having correct src port

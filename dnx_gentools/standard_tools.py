@@ -194,7 +194,7 @@ def bytecontainer(obj_name, fields):
 
     # parsing arguments, splitting format with field name and building list(converted to tuple after) for each, and
     # calculating the container size as it is in packed byte form.
-    size_of, field_count, field_packs, field_names, field_formats = 0, len(fields), [], [], []
+    size_of, field_packs, field_names, field_formats = 0, [], [], []
     for field in fields:
         try:
             field_format, field_name = field.split(',')
@@ -215,6 +215,7 @@ def bytecontainer(obj_name, fields):
     field_names = tuple(field_names)
     field_formats = tuple(field_formats)
 
+
     class ByteContainer:
 
         __slots__ = (*field_names,)
@@ -234,15 +235,17 @@ def bytecontainer(obj_name, fields):
 
             return f"{obj_name}({', '.join(fields)})"
 
-        def __call__(self, *args):
-            if (args and len(args) != self._field_count):
-                raise TypeError(f'Expected {self._field_count} arguments, got {len(args)}')
-
+        def __call__(self, **kwargs):
             new_container = copy(self)
 
-            # set args in new instance if specified. this will overwrite any pre set attributes.
-            if (args):
-                for name, value in zip(field_names, args):
+            # set args in new instance if specified. this will overwrite any pre set attributes. kwargs can be used to
+            # pre define values at creation of new container.
+            if (kwargs):
+                for name, value in kwargs.items():
+
+                    if (name not in field_names):
+                        raise ValueError(f'attribute {name} does not exist in this container.')
+
                     setattr(new_container, name, value)
 
             return new_container
@@ -262,16 +265,17 @@ def bytecontainer(obj_name, fields):
         def pre_set_attributes(self, **kwargs):
             '''specify attributes to set as a pre processor function. these values will get copied over to new containers
             of the same type. a good use case for this is to fill out fields that are constants and can be streamlined
-            to simplify external byte string creation logic.'''
+            to simplify external byte string creation logic. This is an alternative method to assignment at container
+            creation.'''
 
-            for k, v in kwargs:
+            for name, value in kwargs.items():
 
                 # if key doesnt exist, will raise error. this method is a pre process so this will allow for quicker
                 # debugging of code that to wait for some point in runtime to realise there was an invalid attr.
-                if k not in field_names:
-                    raise ValueError(f'attribute {k} does not exist in this container.')
+                if name not in field_names:
+                    raise ValueError(f'attribute {name} does not exist in this container.')
 
-                setattr(self, k, v)
+                setattr(self, name, value)
 
         def assemble(self):
             '''returns merged attributes in specified order as a single byte string (char array). this is not stored

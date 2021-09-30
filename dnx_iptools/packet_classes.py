@@ -18,7 +18,7 @@ from dnx_iptools.def_structs import *
 from dnx_sysmods.configure.def_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK
 
 from dnx_netmods.dnx_netfilter.dnx_nfqueue import set_user_callback, NetfilterQueue # pylint: disable=no-name-in-module, import-error
-from dnx_iptools.interface_ops import get_intf, wait_for_interface, wait_for_ip, get_src_ip
+from dnx_iptools.interface_ops import get_intf_builtin, load_interfaces, wait_for_interface, wait_for_ip, get_src_ip
 from dnx_iptools.protocol_tools import int_to_ipaddr
 from dnx_gentools.standard_tools import looper
 
@@ -38,10 +38,7 @@ class Listener:
 
     # TODO: make this more dynamic. builtins can stay somewhat static, but code can be done in a way
     # that doesnt explicitly mentions the intf identities.
-    _intfs = (
-        get_intf('lan'),
-        get_intf('dmz')
-    )
+    _intfs = load_interfaces(exclude=['wan'])
 
     # stored as file descriptors to minimize lookups in listener queue.
     enabled_intfs = set()
@@ -59,6 +56,7 @@ class Listener:
 
         return object.__new__(cls)
 
+    # TODO: this looks kinda jacked up. why does intf need to be in init??
     def __init__(self, intf, threaded, always_on):
         '''general constructor. can only be reached through subclass.
 
@@ -148,16 +146,20 @@ class Listener:
     def __register(cls, intf):
         '''will register interface with listener. requires subclass property for listener_sock returning valid socket object.
         once registration is complete the thread will exit.'''
+
         # this is being defined here the listener will be able to correlate socket back to interface and send in.
+        # NOTE: we can probably _ the first 2 vars, but they may actually come in handy for something so check to see
+        # if they can be used to simplify the file descriptor tracking we had to implement awhile back.
+        intf_index, zone, _intf = intf
 
-        cls._Log.debug(f'[{intf}] {cls.__name__} started interface registration.')
+        cls._Log.debug(f'[{_intf}] {cls.__name__} started interface registration.')
 
-        wait_for_interface(interface=intf)
+        wait_for_interface(interface=_intf)
 
-        intf_ip = wait_for_ip(interface=intf)
+        intf_ip = wait_for_ip(interface=_intf)
 
-        l_sock = cls.listener_sock(intf, intf_ip)
-        cls.__registered_socks[l_sock.fileno()] = L_SOCK(intf, intf_ip, l_sock, l_sock.send, l_sock.sendto, l_sock.recvfrom)
+        l_sock = cls.listener_sock(_intf, intf_ip)
+        cls.__registered_socks[l_sock.fileno()] = L_SOCK(_intf, intf_ip, l_sock, l_sock.send, l_sock.sendto, l_sock.recvfrom)
 
         # TODO: if we dont re register, and im pretty sure i got rid of that, we shouldnt need to track the interface
         # anymore yea? the fd and socket object is all we need, unless we need to get the source ip address. OH. does the
@@ -192,6 +194,7 @@ class Listener:
 
                 else:
                     # this is being used as a mechanism to disable/enable interface listeners
+                    # TODO: consider locally assigning var for this.
                     if (self._always_on or fd in self.enabled_intfs):
                         self.__parse_packet(data, address, sock_info)
 
@@ -238,7 +241,6 @@ class ProtoRelay:
     _protocol  = PROTO.NOT_SET
 
     __slots__ = (
-        # callbacks
         '_DNSServer', '_fallback_relay',
 
         '_relay_conn', '_send_cnt', '_last_rcvd',
@@ -695,7 +697,6 @@ class RawPacket:
         return True
 
 
-# TODO: handle log reference situation
 class RawResponse:
     '''base class for managing raw socket operations for sending data only. interfaces will be registered
     on startup to associate interface, zone, mac, ip, and active socket.'''
@@ -705,13 +706,8 @@ class RawResponse:
     _Module = None
     _registered_socks = {}
 
-    # TODO: make this more dynamic. builtins can stay somewhat static, but code can be done in a way
-    # that doesnt explicitly mentions the intf identities.
-    _intfs  = (
-        (WAN_IN, get_intf('wan')),
-        (LAN_IN, get_intf('lan')),
-        (DMZ_IN, get_intf('dmz'))
-    )
+    # interface operation function to dynamically provide function. default returns builtins.
+    _intfs  = load_interfaces()
 
     __slots__ = (
         '_packet', 'send_data'
@@ -728,7 +724,7 @@ class RawResponse:
         self.send_data = b''
 
     @classmethod
-    def setup(cls, Module, Log):
+    def setup(cls, Log, Module):
         '''register all available interfaces in a separate thread for each. registration will wait for
         the interface to become available before finalizing.'''
 
@@ -737,8 +733,8 @@ class RawResponse:
 
         cls.__setup = True
 
-        cls._Module = Module
         cls._Log = Log
+        cls._Module = Module
 
         # direct assignment for perf
         cls._registered_socks_get = cls._registered_socks.get
@@ -754,14 +750,14 @@ class RawResponse:
         Do not override.
 
         '''
-        zone, _intf = intf
+        intf_index, zone, _intf = intf
 
         wait_for_interface(interface=_intf)
         ip = wait_for_ip(interface=_intf)
 
         # sock sender is the direct reference to the socket send/to method, adding zone into value for easier
         # reference in prepare and send method.
-        cls._registered_socks[zone] = NFQ_SEND_SOCK(zone, ip, cls.sock_sender(_intf))
+        cls._registered_socks[intf_index] = NFQ_SEND_SOCK(zone, ip, cls.sock_sender(_intf))
 
         cls._Log.informational(f'{cls.__name__}: {_intf} registered.')
 
@@ -776,10 +772,12 @@ class RawResponse:
 
         self = cls(packet)
 
+        # in_zone is actually interface index, but zones are linked through this identifier
         intf = self._registered_socks_get(packet.in_zone)
 
         # NOTE: if the wan interface has a static ip address we can use the ip assigned during registration.
-        # this will need a condition to check, but wont need to masquerade
+        # this will need a condition to check, but wont need to masquerade.
+        # TODO: this needs to be fixed to properly support interger based ip addresses instead of objects or str
         if (intf.zone == WAN_IN):
             dnx_src_ip = get_src_ip(dst_ip=packet.src_ip, packed=True)
 

@@ -79,7 +79,10 @@ class CFG(_IntEnum):
 #interface states
 class INTF(_IntEnum):
     STATIC = 0
-    DHCP = 1
+    DHCP   = 1
+
+    BUILTINS = 69
+    EXTENDED = 70
 
 #protocols
 class DNX(_IntEnum):

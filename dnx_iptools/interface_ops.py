@@ -6,22 +6,63 @@ import socket
 from csv import reader as csv_reader
 from ipaddress import IPv4Address
 from fcntl import ioctl
-from socket import socket, inet_aton, AF_INET, SOCK_DGRAM
+from socket import socket, inet_aton, if_nameindex, AF_INET, SOCK_DGRAM
 
-from dnx_sysmods.configure.def_constants import ONE_SEC
+from dnx_sysmods.configure.def_constants import ONE_SEC, INTF
 from dnx_sysmods.configure.file_operations import load_configuration
 from dnx_iptools.def_structs import fcntl_pack
 
 __all__ = (
-    'get_intf', 'wait_for_interface', 'wait_for_ip',
-    'get_src_ip', 'get_mac', 'get_ip_address',
-    'get_netmask', 'get_arp_table'
+    'get_intf_builtin', 'load_interfaces', 'wait_for_interface', 'wait_for_ip',
+    'get_src_ip', 'get_mac', 'get_ip_address', 'get_netmask', 'get_arp_table'
 )
 
-def get_intf(intf):
-    settings = load_configuration('config')
+# NOTE: this may no longer be need even though it was recently overhauled. the inclusion of the exclude
+# filter in the load_interfaces() function should be able to replace this function. keep for now just in case.
+def get_intf_builtin(zone_name):
+    intf_settings = load_configuration('config')['interfaces']
 
-    return settings['interfaces']['builtins'][intf]['ident']
+    intf_info = intf_settings['interfaces']['builtins'][zone_name]
+    system_interfaces = {v: k for k, v in if_nameindex()[1:]}
+
+    ident = intf_info['ident']
+    intf_index = system_interfaces.get(ident, None)
+    if (not intf_index):
+        raise RuntimeError('failed to determine interface from provided builtin zone.')
+
+    return {intf_index: (intf_info['zone'], ident)}
+
+def load_interfaces(intf_type=INTF.BUILTINS, *, exclude=[]):
+    '''
+    return list of tuples of specified interface type.
+
+        [(intf_index, zone, ident)]
+    '''
+    intf_settings = load_configuration('config')['interfaces']
+
+    dnx_interfaces = intf_settings[intf_type.name.lower()]
+
+    # filtering out loopback during dict comprehension
+    system_interfaces = {v: k for k, v in if_nameindex()[1:]}
+
+    collected_intfs = []
+    if (intf_type is INTF.BUILTINS):
+
+        for intf_name, intf_info in dnx_interfaces.items():
+
+            ident = intf_info['ident']
+            zone  = intf_info['zone']
+            intf_index = system_interfaces.get(ident)
+            if (not intf_index):
+                raise RuntimeError('failed to determine associate builtin <> system interfaces.')
+
+            if (intf_name not in exclude):
+                collected_intfs.append((intf_index, zone, ident))
+
+    else:
+        raise NotImplementedError('only builtin interfaces are currently supported.')
+
+    return collected_intfs
 
 def _is_ready(interface):
     with open(f'/sys/class/net/{interface}/carrier', 'r') as carrier:

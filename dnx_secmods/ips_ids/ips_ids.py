@@ -47,7 +47,7 @@ class IPS_IDS(NFQueue):
     @classmethod
     def _setup(cls):
         Configuration.setup(cls)
-        IPSResponse.setup(cls, Log)
+        IPSResponse.setup(Log, cls)
 
         cls.set_proxy_callback(func=Inspect.portscan) # this will get called after parsing is complete.
 

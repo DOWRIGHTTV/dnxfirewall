@@ -37,7 +37,7 @@ class IPProxy(NFQueue):
     @classmethod
     def _setup(cls):
         Configuration.setup(cls)
-        ProxyResponse.setup(cls, Log)
+        ProxyResponse.setup(Log, cls)
         LanRestrict.run(cls)
 
         cls.set_proxy_callback(func=Inspect.ip)
