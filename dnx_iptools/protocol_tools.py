@@ -31,7 +31,7 @@ def checksum_ipv4(data, packed=False):
 
     sum = 0
     for chunk in chunks:
-        sum += chunk
+        sum += chunk[0]
 
     sum = (sum >> 16) + (sum & 0xffff)
     sum = ~(sum + (sum >> 16)) & 0xffff
@@ -50,7 +50,7 @@ def checksum_tcp(data):
     sum = 0
     # loop taking 2 characters at a time
     for chunk in chunks:
-        sum += chunk
+        sum += chunk[0]
 
     sum = (sum & 0xffff) + (sum >> 16)
     sum += (sum >> 16)
@@ -65,7 +65,7 @@ def checksum_icmp(data):
 
     sum = 0
     for chunk in chunks:
-        sum += chunk
+        sum += chunk[0]
 
     return ~(sum + (sum >> 16)) & 0xffff
 
