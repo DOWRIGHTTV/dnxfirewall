@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 
-import os, sys
+import __init__
+
 import threading
 
 from copy import copy
 from collections import defaultdict
-
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
 
 from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
 from dnx_sysmods.configure.def_namedtuples import IPS_SCAN_RESULTS, DDOS_TRACKERS, PSCAN_TRACKERS

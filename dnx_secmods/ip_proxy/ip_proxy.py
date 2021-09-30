@@ -2,8 +2,6 @@
 
 import __init__
 
-import os, sys
-
 from dnx_sysmods.configure.def_constants import *
 from dnx_sysmods.configure.def_namedtuples import IPP_INSPECTION_RESULTS
 

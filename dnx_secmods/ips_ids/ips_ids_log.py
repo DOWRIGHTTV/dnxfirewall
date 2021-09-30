@@ -2,7 +2,6 @@
 
 from dnx_sysmods.configure.def_constants import *  # pylint: disable=unused-wildcard-import
 from dnx_sysmods.configure.def_namedtuples import IPS_LOG
-
 from dnx_sysmods.logging.log_main import LogHandler
 
 

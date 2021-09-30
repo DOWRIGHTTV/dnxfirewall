@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
 
-import time
-import socket
-
-from csv import reader as csv_reader
 from ipaddress import IPv4Address
 from fcntl import ioctl
 from socket import socket, inet_aton, if_nameindex, AF_INET, SOCK_DGRAM
+from csv import reader as csv_reader
 
-from dnx_sysmods.configure.def_constants import ONE_SEC, INTF
+from dnx_sysmods.configure.def_constants import ONE_SEC, INTF, fast_sleep
 from dnx_sysmods.configure.file_operations import load_configuration
-from dnx_iptools.def_structs import fcntl_pack
+from dnx_iptools.def_structs import fcntl_pack, long_unpack
 
 __all__ = (
     'get_intf_builtin', 'load_interfaces', 'wait_for_interface', 'wait_for_ip',
-    'get_src_ip', 'get_mac', 'get_ip_address', 'get_netmask', 'get_arp_table'
+    'get_masquerade_ip', 'get_mac', 'get_ip_address', 'get_netmask', 'get_arp_table'
 )
 
 # NOTE: this may no longer be need even though it was recently overhauled. the inclusion of the exclude
@@ -79,10 +76,10 @@ def wait_for_interface(interface, delay=ONE_SEC):
     while True:
         if _is_ready(interface): break
 
-        time.sleep(delay)
+        fast_sleep(delay)
 
-# once the lan interface ip address is configured after interface is brought online, the loop will break. this will allow
-# the server to continue the startup process.
+# once the lan interface ip address is configured after interface is brought online, the loop will break. this will
+# allow the server to continue the startup process.
 def wait_for_ip(interface):
     '''will wait for interface ip address configuration then return ip address object
     for corresponding ip.'''
@@ -91,30 +88,26 @@ def wait_for_ip(interface):
         ipa = get_ip_address(interface=interface)
         if (ipa): return ipa
 
-        time.sleep(ONE_SEC)
+        fast_sleep(ONE_SEC)
 
-def get_src_ip(*, dst_ip, packed=False):
+def get_masquerade_ip(*, dst_ip, packed=False):
     '''return correct source ip address for a particular destination ip address based on routing table.
 
-    return will be bytes if packed is True or an ipv4address object otherwise. a zerod ip will be returned if error.'''
+    return will be bytes if packed is True or an integer otherwise. a zeroed ip will be returned if error.'''
 
     s = socket(AF_INET, SOCK_DGRAM)
     s.connect((f'{dst_ip}', 0))
-    if (packed):
-        try:
-            return inet_aton(s.getsockname()[0])
-        except:
-            return b'\x00'*4
-        finally:
-            s.close()
+
+    try:
+        ip_addr = inet_aton(s.getsockname()[0])
+    except:
+        return b'\x00'*4 if packed else 0
 
     else:
-        try:
-            return IPv4Address(s.getsockname()[0])
-        except:
-            return IPv4Address('0.0.0.0')
-        finally:
-            s.close()
+        return ip_addr if packed else long_unpack(ip_addr)[0]
+
+    finally:
+        s.close()
 
 def get_mac(*, interface):
     '''return raw byte mac address for sent in interface. will return None on OSError.'''
@@ -129,6 +122,7 @@ def get_mac(*, interface):
 
 def get_ip_address(*, interface):
     '''return ip address object for current ip address for sent in interface. will return None on OSError.'''
+
     s = socket(AF_INET, SOCK_DGRAM)
     try:
         return IPv4Address(
@@ -151,7 +145,8 @@ def get_netmask(*, interface):
         s.close()
 
 def get_arp_table(*, modify=False, host=None):
-    '''return arp table as dictionary
+    '''
+    return arp table as dictionary
 
         {IPv4Address(ip): mac} = get_arp_table(modify=True)
 
@@ -161,7 +156,7 @@ def get_arp_table(*, modify=False, host=None):
     '''
 
     with open('/proc/net/arp') as arp_table:
-        #'IP address', 'HW type', 'Flags', 'HW address', 'Mask', 'Device'
+        # 'IP address', 'HW type', 'Flags', 'HW address', 'Mask', 'Device'
         arp_table = list(
             csv_reader(arp_table, skipinitialspace=True, delimiter=' ')
         )

@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import os, sys
-
 from dnx_sysmods.configure.def_constants import *
 
 from dnx_iptools.def_structs import *
@@ -23,8 +21,8 @@ class IPPPacket(NFPacket):
 
         # X | X | X | X | ips | ipp | direction | action
 
-        self.action      = CONN(mark & 15)
-        self.direction   = DIR( mark >> 4 & 15)
+        self.action    = CONN(mark & 15)
+        self.direction = DIR( mark >> 4 & 15)
 
         self.ipp_profile = mark >>  8 & 15
         self.ips_profile = mark >> 12 & 15
@@ -45,19 +43,25 @@ class IPPPacket(NFPacket):
         self.bin_data = (tracked_ip & MSB, tracked_ip & LSB)
 
 
-# TODO: add pre defined fields (will need to allow for __call__ to accept kwargs)
-ip_header_template = PR_IP_HDR()
-tcp_header_template = PR_TCP_HDR({})
-pseudo_header_template = PR_TCP_PSEUDO_HDR()
-icmp_header_template = PR_ICMP_HDR()
+# pre defined fields which are functionally constants for the purpose of connection resets
+ip_header_template = PR_IP_HDR({'ver_ihl': 69, 'tos': 0, 'ident': 0, 'flags_fro': 16384, 'ttl': 255})
+tcp_header_template = PR_TCP_HDR({'seq_num': 696969, 'offset_control': 20500, 'window': 0, 'urg_ptr': 0})
+pseudo_header_template = PR_TCP_PSEUDO_HDR({'reserved': 0, 'proto': 6, 'tcp_len': 20})
+icmp_header_template = PR_ICMP_HDR({'type': 3, 'code': 3})
 
 
 # TODO: test UDP / icmp dst unreachable packet!
 # TODO: test inbound connections/ reject having correct src port
 class ProxyResponse(RawResponse):
 
-    # TODO: ensure dnx_src_ip is in integer form. consider sending in dst also since it is referenced alot.
+    # NOTE: consider sending in dst also since it is referenced a 2+ times.
     def _prepare_packet2(self, packet, dnx_src_ip):
+        # checking if dst port is associated with a nat. if so, will override necessary fields based on protocol
+        # and re assign in the packet object
+        # NOTE: can we please optimize this. PLEASE!
+        port_override = self._Module.open_ports[packet.protocol].get(packet.dst_port)
+        if (port_override):
+            self._packet_override(packet, dnx_src_ip, port_override)
 
         # TCP HEADER
         if (packet.protocol is PROTO.TCP):
@@ -178,9 +182,9 @@ class ProxyResponse(RawResponse):
         return byte_join(reversed(send_data))
 
     # TODO: go back over this. this seems kinda wonky. i might just be in sleepboi brain mode but
-    # it seems weird that we override, but then do nothin with ip header. i think we en up sending
-    # the old ip header in this case. EVEN MORE SURE NOW. pretty sure we havent tested udp scans
-    # or blocks anytime recent.
+    #  it seems weird that we override, but then do nothin with ip header. i think we en up sending
+    #  the old ip header in this case. EVEN MORE SURE NOW. pretty sure we havent tested udp scans
+    #  or blocks anytime recent.
     def _packet_override(self, packet, dnx_src_ip, port_override):
         if (packet.protocol is PROTO.TCP):
             packet.dst_port = port_override
@@ -190,9 +194,9 @@ class ProxyResponse(RawResponse):
                 packet.src_port, port_override, packet.udp_len, packet.udp_check
             )
             # TODO: this doesnt seem right for some reason. we are assigning ip_header, but
-            # we are doing nothin with it????? this should be assigned within packet yes???
-            # if so once its complete we can assign it instead of while iterating.
-            # this would also apply to the IPS!
+            #  we are doing nothin with it????? this should be assigned within packet yes???
+            #  if so once its complete we can assign it instead of while iterating.
+            #  this would also apply to the IPS!
             checksum = double_byte_pack(0,0)
             for i in range(2):
                 ip_header = ip_header_override_pack(

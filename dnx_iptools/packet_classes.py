@@ -18,7 +18,7 @@ from dnx_iptools.def_structs import *
 from dnx_sysmods.configure.def_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK
 
 from dnx_netmods.dnx_netfilter.dnx_nfqueue import set_user_callback, NetfilterQueue # pylint: disable=no-name-in-module, import-error
-from dnx_iptools.interface_ops import get_intf_builtin, load_interfaces, wait_for_interface, wait_for_ip, get_src_ip
+from dnx_iptools.interface_ops import load_interfaces, wait_for_interface, wait_for_ip, get_masquerade_ip
 from dnx_iptools.protocol_tools import int_to_ipaddr
 from dnx_gentools.standard_tools import looper
 
@@ -36,8 +36,6 @@ class Listener:
     _packet_parser  = _NOT_IMPLEMENTED
     _proxy_callback = _NOT_IMPLEMENTED
 
-    # TODO: make this more dynamic. builtins can stay somewhat static, but code can be done in a way
-    # that doesnt explicitly mentions the intf identities.
     _intfs = load_interfaces(exclude=['wan'])
 
     # stored as file descriptors to minimize lookups in listener queue.
@@ -707,7 +705,7 @@ class RawResponse:
     _registered_socks = {}
 
     # interface operation function to dynamically provide function. default returns builtins.
-    _intfs  = load_interfaces()
+    _intfs = load_interfaces()
 
     __slots__ = (
         '_packet', 'send_data'
@@ -777,15 +775,11 @@ class RawResponse:
 
         # NOTE: if the wan interface has a static ip address we can use the ip assigned during registration.
         # this will need a condition to check, but wont need to masquerade.
-        # TODO: this needs to be fixed to properly support interger based ip addresses instead of objects or str
-        if (intf.zone == WAN_IN):
-            dnx_src_ip = get_src_ip(dst_ip=packet.src_ip, packed=True)
-
-        else:
-            dnx_src_ip = packet.dst_ip.packed
+        # TODO: this needs to be fixed to properly support integer based ip addresses instead of objects or str
+        dnx_src_ip = packet.dst_ip if intf.zone != WAN_IN else get_masquerade_ip(dst_ip=packet.src_ip)
 
         # calling hook for packet generation in subclass then sending via direct socket sendto ref
-        send_data = self._prepare_packet(packet, dnx_src_ip)
+        send_data = self._prepare_packet2(packet, dnx_src_ip)
         try:
             intf.sock_sendto(send_data, (int_to_ipaddr(packet.src_ip), 0))
         except OSError:

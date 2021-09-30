@@ -26,7 +26,7 @@ mac_pack   = _Struct('!6s').pack
 eth_header_pack    = _Struct('!6s6sH').pack
 ip_header_pack     = _Struct('!2B3H2B2s4s4s').pack
 udp_header_pack    = _Struct('!4H').pack
-icmp_header_pack   = _Struct('!2B2s2H').pack
+icmp_header_pack   = _Struct('!2B2s').pack
 tcp_header_pack    = _Struct('!2H2L2BH2sH').pack
 pseudo_header_pack = _Struct('!4s4s2BH').pack
 ip_header_override_pack = _Struct('!10s2s4s4s').pack
@@ -56,7 +56,7 @@ dnx_header_pack   = _Struct('!2B2H').pack
 
 # BYTE CONTAINERS
 PR_IP_HDR   = _bytecontainer('ip_header', 'B,ver_ihl B,tos H,tl H,ident H,flags_fro B,ttl B,proto H,checksum L,src_ip L,dst_ip')
-PR_TCP_HDR  = _bytecontainer('tcp_header', 'L,dst_port L,src_port L,seq_num L,ack_num H,offset_control H,window H,checksum H,urg_ptr')
+PR_TCP_HDR  = _bytecontainer('tcp_header', 'H,dst_port H,src_port L,seq_num L,ack_num H,offset_control H,window H,checksum H,urg_ptr')
 PR_ICMP_HDR = _bytecontainer('udp_header', 'B,type B,code H,checksum')
 
 PR_TCP_PSEUDO_HDR = _bytecontainer('tcp_pseudo_header', 'L,src_ip L,dst_ip B,reserved B,proto H,tcp_len')

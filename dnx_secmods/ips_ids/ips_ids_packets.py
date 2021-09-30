@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
 
-import os, sys
-
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
-import dnx_iptools.interface_ops as interface
-
 from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
+
 from dnx_iptools.def_structs import * # pylint: disable=unused-wildcard-import
 from dnx_iptools.packet_classes import NFPacket, RawResponse
 from dnx_iptools.protocol_tools import checksum_ipv4, checksum_tcp, checksum_icmp, int_to_ipaddr
+from dnx_iptools.interface_ops import load_interfaces
 
 
 class IPSPacket(NFPacket):
@@ -60,10 +55,73 @@ class IPSPacket(NFPacket):
             self.target_port = self.dst_port
 
 
+# pre defined fields which are functionally constants for the purpose of connection resets
+ip_header_template = PR_IP_HDR({'ver_ihl': 69, 'tos': 0, 'ident': 0, 'flags_fro': 16384, 'ttl': 255})
+tcp_header_template = PR_TCP_HDR({'seq_num': 696969, 'offset_control': 20500, 'window': 0, 'urg_ptr': 0})
+pseudo_header_template = PR_TCP_PSEUDO_HDR({'reserved': 0, 'proto': 6, 'tcp_len': 20})
+icmp_header_template = PR_ICMP_HDR({'type': 3, 'code': 3})
+
+
 class IPSResponse(RawResponse):
-    _intfs = (
-        (WAN_IN, interface.get_intf('wan')),
-    )
+    _intfs = load_interfaces(exclude=['lan', 'dmz'])
+
+    # TODO: ensure dnx_src_ip is in integer form. consider sending in dst also since it is referenced alot.
+    def _prepare_packet2(self, packet, dnx_src_ip):
+        # checking if dst port is associated with a nat. if so, will override necessary fields based on protocol
+        # and re assign in the packet object
+        # NOTE: can we please optimize this. PLEASE!
+        port_override = self._Module.open_ports[packet.protocol].get(packet.dst_port)
+        if (port_override):
+            self._packet_override(packet, dnx_src_ip, port_override)
+
+        # TCP HEADER
+        if (packet.protocol is PROTO.TCP):
+
+            # new instance of header byte container template
+            proto_header = tcp_header_template()
+
+            # assigning missing fields
+            proto_header.dst_port = packet.dst_port
+            proto_header.src_port = packet.src_port
+            proto_header.ack_num = packet.seq_number + 1
+
+            pseudo_header = PR_TCP_PSEUDO_HDR()
+            pseudo_header.src_ip = dnx_src_ip
+            pseudo_header.dst_ip = packet.src_ip
+
+            # calculating checksum of container
+            proto_header.checksum = checksum_tcp(pseudo_header.assemble() + proto_header.assemble())
+
+            proto_len = len(proto_header)
+
+        # ICMP HEADER
+        elif (packet.protocol is PROTO.UDP):
+            proto_header = icmp_header_template()
+
+            # per icmp, ip header and first 8 bytes of rcvd payload are including in icmp response payload
+            icmp_payload = packet.ip_header + packet.udp_header
+            proto_header.checksum = checksum_icmp(
+                byte_join(proto_header.assemble() + icmp_payload)
+            )
+
+            proto_len = len(proto_header) + len(icmp_payload)
+
+        # IP HEADER
+        ip_header = ip_header_template()
+
+        ip_header.tl = 20 + proto_len
+        ip_header.protocol = packet.protocol
+        ip_header.src_ip = dnx_src_ip
+        ip_header.dst_ip = packet.src_ip
+
+        ip_header.checksum = checksum_ipv4(ip_header.assemble())
+
+        packet_data = [ip_header.assemble(), proto_header.assemble()]
+        if (packet.protocol is PROTO.UDP):
+            packet_data.append(icmp_payload)
+
+        # final assembly with calculated checksums and combining data.
+        return byte_join(packet_data)
 
     def _prepare_packet(self, packet, dnx_src_ip):
         # checking if dst port is associated with a nat. if so, will override necessary fields based on protocol
