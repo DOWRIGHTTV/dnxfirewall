@@ -17,6 +17,7 @@ double_byte_pack  = _Struct('!2B').pack
 double_short_pack = _Struct('!2H').pack
 
 checksum_pack = _Struct('<H').pack
+checksum_iunpack = _Struct('!H').iter_unpack
 fcntl_pack = _Struct('24s').pack
 
 mac_unpack = _Struct('!6s').unpack
@@ -49,6 +50,3 @@ resource_record_pack = _Struct('!3HLH4s').pack
 tls_unpack = _Struct('!B2HB').unpack_from
 handshake_unpack = _Struct('!2B2H').unpack_from
 cert_len_unpack = _Struct('!H').unpack_from
-
-dnx_header_unpack = _Struct('!2B2H').unpack_from
-dnx_header_pack   = _Struct('!2B2H').pack

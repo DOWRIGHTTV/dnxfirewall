@@ -24,45 +24,50 @@ def icmp_reachable(host_ip):
         return False
 
 # calculates and returns ipv4 header checksum
-def checksum_ipv4(header, packed=False):
-    if (len(header) & 1):
-        header += '\0'
+def checksum_ipv4(data, packed=False):
 
-    words = array('h', header)
+    # unpacking in chunks of H(short)/ 16 bit/ 2 byte increments in network order
+    chunks = checksum_iunpack(data)
 
     sum = 0
-    for word in words:
-        sum += (word & 0xffff)
+    for chunk in chunks:
+        sum += chunk
 
-    sum =  (sum >> 16) + (sum & 0xffff)
+    sum = (sum >> 16) + (sum & 0xffff)
     sum = ~(sum + (sum >> 16)) & 0xffff
 
     return checksum_pack(sum) if packed else sum
 
 # calculates and return tcp header checksum
-def checksum_tcp(msg):
-    msg_len = len(msg)
+def checksum_tcp(data):
+    # if data length is odd, this will pad it with 1 byte to complete final chunk
+    if (len(data) & 1):
+        data += b'\x00'
 
-    s = 0
+    # unpacking in chunks of H(short)/ 16 bit/ 2 byte increments in network order
+    chunks = checksum_iunpack(data)
+
+    sum = 0
     # loop taking 2 characters at a time
-    for i in range(0, msg_len, 2):
+    for chunk in chunks:
+        sum += chunk
 
-        if ((i + 1) < msg_len):
-            s += (msg[i] + (msg[i+1] << 8))
+    sum = (sum & 0xffff) + (sum >> 16)
+    sum += (sum >> 16)
 
-        elif ((i + 1) == msg_len):
-            s += msg[i]
-
-    return ~(s + (s >> 16)) & 0xffff
+    return ~sum
 
 # calculates and return icmp header checksum
-def checksum_icmp(msg):
+def checksum_icmp(data):
 
-    s = 0
-    for i in range(0, len(msg), 2):
-        s += (msg[i] + (msg[i+1] << 8))
+    # unpacking in chunks of H(short)/ 16 bit/ 2 byte increments in network order
+    chunks = checksum_iunpack(data)
 
-    return ~(s + (s >> 16)) & 0xffff
+    sum = 0
+    for chunk in chunks:
+        sum += chunk
+
+    return ~(sum + (sum >> 16)) & 0xffff
 
 def int_to_ipaddr(ip_addr):
 
