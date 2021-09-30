@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import __init__
+
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import IPP_INSPECTION_RESULTS
 
