@@ -2,7 +2,7 @@
 
 import binascii
 
-from array import array
+from socket import htons
 from subprocess import run, CalledProcessError, DEVNULL
 
 from dnx_iptools.def_structs import *
@@ -52,7 +52,9 @@ def checksum_tcp(data):
     for chunk in chunks:
         sum += chunk[0]
 
-    return ~(sum + (sum >> 16)) & 0xffff
+    sum = ~(sum + (sum >> 16)) & 0xffff
+
+    return htons(sum)
 
 # calculates and return icmp header checksum
 def checksum_icmp(data):
@@ -64,6 +66,7 @@ def checksum_icmp(data):
     for chunk in chunks:
         sum += chunk[0]
 
+    # NOTE: does this need to be converted to network order?
     return ~(sum + (sum >> 16)) & 0xffff
 
 def int_to_ipaddr(ip_addr):
