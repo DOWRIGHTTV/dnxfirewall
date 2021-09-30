@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
 
-import os, sys
 import threading
 
 from collections import namedtuple
 from socket import socket,  AF_INET, SOCK_DGRAM
 from ipaddress import IPv4Address, IPv4Interface
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
-from dnx_gentools.def_constants import * # pylint: disable=unused-wildcard-import
+from dnx_gentools.def_constants import *
 from dnx_iptools.interface_ops import get_netmask
 from dnx_sysmods.logging.log_main import LogHandler as Log
 from dnx_sysmods.configure.file_operations import load_configuration, cfg_read_poller, ConfigurationManager

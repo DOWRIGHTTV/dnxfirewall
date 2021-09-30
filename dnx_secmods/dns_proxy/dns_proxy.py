@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+import __init__
+
 import socket
 
 from dnx_gentools.def_constants import *

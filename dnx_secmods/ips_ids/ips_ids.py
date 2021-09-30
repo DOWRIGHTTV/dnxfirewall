@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import __init__
+
 import threading
 
 from copy import copy

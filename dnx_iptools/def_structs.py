@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from struct import Struct as _Struct
-from dnx_gentools.standard_tools import bytecontainer as _bytecontainer
 
 short_unpackf = _Struct('!H').unpack_from
 
