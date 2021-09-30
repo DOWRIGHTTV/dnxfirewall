@@ -52,8 +52,8 @@ def checksum_tcp(data):
     for chunk in chunks:
         sum += chunk[0]
 
-    sum = (sum & 0xffff) + (sum >> 16)
-    sum += (sum >> 16)
+    while sum >> 16:
+        sum = (sum & 0xffff) + (sum >> 16)
 
     return ~sum
 
