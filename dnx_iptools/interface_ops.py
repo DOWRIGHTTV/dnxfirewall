@@ -5,7 +5,7 @@ from fcntl import ioctl
 from socket import socket, inet_aton, if_nameindex, AF_INET, SOCK_DGRAM
 from csv import reader as csv_reader
 
-from dnx_sysmods.configure.def_constants import ONE_SEC, INTF, fast_sleep
+from dnx_gentools.def_constants import ONE_SEC, INTF, fast_sleep
 from dnx_sysmods.configure.file_operations import load_configuration
 from dnx_iptools.def_structs import fcntl_pack, long_unpack
 

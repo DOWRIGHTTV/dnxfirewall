@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-from dnx_sysmods.configure.def_constants import LOG, DIR, CONN, str_join
-from dnx_sysmods.configure.def_namedtuples import IPP_LOG, GEO_LOG, INFECTED_LOG
+from dnx_gentools.def_constants import LOG, DIR, CONN, str_join
+from dnx_gentools.def_namedtuples import IPP_LOG, GEO_LOG, INFECTED_LOG
 from dnx_sysmods.logging.log_main import LogHandler
 
 from dnx_iptools.interface_ops import get_arp_table

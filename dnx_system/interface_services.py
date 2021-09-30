@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 
-import __init__
-
 from time import sleep
 from json import dump
 from subprocess import check_output
 
-from dnx_sysmods.configure.def_constants import NO_DELAY, INT_BANDWIDTH_TIMER
+from dnx_gentools.def_constants import NO_DELAY, INT_BANDWIDTH_TIMER
 from dnx_sysmods.logging.log_main import LogHandler as Log
 
 from dnx_gentools.standard_tools import looper

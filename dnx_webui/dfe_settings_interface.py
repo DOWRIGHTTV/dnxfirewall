@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
 import sys, os
-import time
 
 HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
 sys.path.insert(0, HOME_DIR)
@@ -10,10 +9,10 @@ import dnx_sysmods.configure.configure as configure
 import dnx_iptools.interface_ops as interface
 import dnx_sysmods.configure.web_validate as validate
 
-from dnx_sysmods.configure.def_constants import CFG, DATA, INTF, INVALID_FORM
+from dnx_gentools.def_constants import CFG, DATA, INTF, INVALID_FORM
 from dnx_sysmods.configure.file_operations import load_configuration
 from dnx_sysmods.configure.exceptions import ValidationError
-from dnx_sysmods.configure.system_info import System, Interface
+from dnx_sysmods.configure.system_info import Interface
 
 
 _IP_DISABLED = True

@@ -1,13 +1,9 @@
 #!/usr/bin/python3
 
-import __init__
-
-import os
 import socket
-import sys
 
-from dnx_sysmods.configure.def_constants import *
-from dnx_sysmods.configure.def_namedtuples import DNS_BLACKLIST, DNS_REQUEST_RESULTS, DNS_SIGNATURES, DNS_WHITELIST
+from dnx_gentools.def_constants import *
+from dnx_gentools.def_namedtuples import DNS_BLACKLIST, DNS_REQUEST_RESULTS, DNS_SIGNATURES, DNS_WHITELIST
 
 from dnx_secmods.dns_proxy.dns_proxy_automate import Configuration
 from dnx_secmods.dns_proxy.dns_proxy_log import Log

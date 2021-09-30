@@ -14,8 +14,8 @@ sys.path.insert(0, HOME_DIR)
 
 import dnx_iptools.interface_ops as interface
 
-from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
-from dnx_sysmods.configure.def_namedtuples import SYSLOG_SERVERS
+from dnx_gentools.def_constants import * # pylint: disable=unused-wildcard-import
+from dnx_gentools.def_namedtuples import SYSLOG_SERVERS
 from dnx_sysmods.logging.log_main import LogHandler as Log
 
 from dnx_netmods.syslog_client.syl_format import SyslogFormat

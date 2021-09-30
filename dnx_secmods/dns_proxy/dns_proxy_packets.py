@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 
-import os, sys
-
 from socket import inet_aton
 from collections import namedtuple
 
-from dnx_sysmods.configure.def_constants import *
+from dnx_gentools.def_constants import *
 from dnx_iptools.def_structs import *
 from dnx_iptools.protocol_tools import *
 from dnx_gentools.standard_tools import bytecontainer
-from dnx_sysmods.configure.def_namedtuples import CACHED_RECORD
+from dnx_gentools.def_namedtuples import CACHED_RECORD
 
 from dnx_iptools.packet_classes import RawPacket
 

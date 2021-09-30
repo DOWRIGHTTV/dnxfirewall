@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
-import os, sys
 import threading
 import socket
 
 from random import randint
 
-from dnx_sysmods.configure.def_constants import *
-from dnx_sysmods.configure.def_namedtuples import DNS_SERVERS
+from dnx_gentools.def_constants import *
+from dnx_gentools.def_namedtuples import DNS_SERVERS
 
 from dnx_secmods.dns_proxy.dns_proxy_automate import Configuration, Reachability
 from dnx_secmods.dns_proxy.dns_proxy_cache import DNSCache, RequestTracker

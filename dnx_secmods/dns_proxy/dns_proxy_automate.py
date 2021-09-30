@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
-import os, sys
 import threading
 import socket
 import ssl
 
 from ipaddress import IPv4Address
 
-from dnx_sysmods.configure.def_constants import *
+from dnx_gentools.def_constants import *
 from dnx_sysmods.configure.file_operations import *
 from dnx_sysmods.configure.signature_operations import combine_domains
 

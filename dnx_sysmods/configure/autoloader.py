@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import __init__
-
 import os, sys
 import time
 import json
@@ -11,7 +9,7 @@ import argparse
 from sys import argv
 from subprocess import run, DEVNULL, CalledProcessError
 
-from dnx_sysmods.configure.def_constants import HOME_DIR, str_join
+from dnx_gentools.def_constants import HOME_DIR, str_join
 from dnx_sysmods.configure.file_operations import ConfigurationManager, load_configuration, write_configuration, json_to_yaml
 from dnx_sysmods.configure.iptables import IPTablesManager
 from dnx_sysmods.logging.log_main import LogHandler as Log

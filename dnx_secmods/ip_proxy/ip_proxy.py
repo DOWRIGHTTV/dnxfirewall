@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 
-import __init__
-
-from dnx_sysmods.configure.def_constants import *
-from dnx_sysmods.configure.def_namedtuples import IPP_INSPECTION_RESULTS
+from dnx_gentools.def_constants import *
+from dnx_gentools.def_namedtuples import IPP_INSPECTION_RESULTS
 
 from dnx_secmods.ip_proxy.ip_proxy_packets import IPPPacket, ProxyResponse
 from dnx_secmods.ip_proxy.ip_proxy_restrict import LanRestrict

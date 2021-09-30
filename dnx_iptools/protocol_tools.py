@@ -2,7 +2,6 @@
 
 import os, sys
 import array
-import struct
 import binascii
 
 from subprocess import run, CalledProcessError, DEVNULL
@@ -11,7 +10,7 @@ _HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split
 sys.path.insert(0, _HOME_DIR)
 
 from dnx_iptools.def_structs import * # pylint: disable=unused-wildcard-import
-from dnx_sysmods.configure.def_constants import byte_join
+from dnx_gentools.def_constants import byte_join
 
 __all__ = (
     'checksum_icmp', 'checksum_ipv4', 'checksum_tcp', 'int_to_ipaddr',

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
-import os, sys
+import os
 import shutil
 import threading
 
 from array import array
 
-from dnx_sysmods.configure.def_constants import HOME_DIR
+from dnx_gentools.def_constants import HOME_DIR
 from dnx_sysmods.configure.file_operations import cfg_read_poller, load_configuration, ConfigurationManager
 from dnx_sysmods.logging.log_main import LogHandler as Log
 

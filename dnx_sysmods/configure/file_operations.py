@@ -11,8 +11,8 @@ from fcntl import flock, LOCK_EX, LOCK_UN
 from secrets import token_urlsafe
 from collections import defaultdict
 
-from dnx_sysmods.configure.def_constants import HOME_DIR, USER, GROUP, FILE_POLL_TIMER, str_join
-from dnx_sysmods.configure.def_constants import DNS_BIN_OFFSET, DNS_CAT
+from dnx_gentools.def_constants import HOME_DIR, USER, GROUP, FILE_POLL_TIMER, str_join
+from dnx_gentools.def_constants import DNS_BIN_OFFSET, DNS_CAT
 from dnx_sysmods.configure.exceptions import ValidationError
 
 # will load json data from file, convert it to a python dict, then return as object

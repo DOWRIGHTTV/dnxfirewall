@@ -8,8 +8,8 @@ from socket import SOL_SOCKET, SO_BROADCAST, SO_BINDTODEVICE, SO_REUSEADDR
 HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
 sys.path.insert(0, HOME_DIR)
 
-from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
-from dnx_sysmods.configure.def_namedtuples import DHCP_RECORD
+from dnx_gentools.def_constants import * # pylint: disable=unused-wildcard-import
+from dnx_gentools.def_namedtuples import DHCP_RECORD
 
 from dnx_iptools.packet_classes import Listener
 from dnx_netmods.dhcp_server.dhcp_server_requests import ServerResponse, ClientRequest

@@ -7,7 +7,7 @@ HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split(
 sys.path.insert(0, HOME_DIR)
 
 
-from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
+from dnx_gentools.def_constants import * # pylint: disable=unused-wildcard-import
 from dnx_sysmods.logging.log_main import LogHandler as Log
 from dnx_gentools.standard_tools import Initialize
 from dnx_sysmods.configure.file_operations import cfg_read_poller, load_configuration

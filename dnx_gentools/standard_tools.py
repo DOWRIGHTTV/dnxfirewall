@@ -6,7 +6,7 @@ from copy import copy
 from collections import deque
 
 from dnx_iptools.def_structs import byte_pack, short_pack, long_pack
-from dnx_sysmods.configure.def_constants import MSEC, fast_time, fast_sleep, byte_join
+from dnx_gentools.def_constants import MSEC, fast_time, fast_sleep, byte_join
 
 __all__ = (
     'looper', 'dynamic_looper',

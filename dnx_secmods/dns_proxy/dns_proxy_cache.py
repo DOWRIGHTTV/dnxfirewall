@@ -4,8 +4,8 @@ import threading
 
 from collections import Counter, OrderedDict, namedtuple
 
-from dnx_sysmods.configure.def_constants import *
-from dnx_sysmods.configure.def_namedtuples import DNS_CACHE
+from dnx_gentools.def_constants import *
+from dnx_gentools.def_namedtuples import DNS_CACHE
 from dnx_sysmods.configure.file_operations import ConfigurationManager, load_configuration, write_configuration, load_top_domains_filter
 
 from dnx_secmods.dns_proxy.dns_proxy_log import Log

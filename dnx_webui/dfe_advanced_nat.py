@@ -1,13 +1,11 @@
 #!/usr/bin/python3
 
-import os, sys
-
 from types import SimpleNamespace
 
 import dnx_sysmods.configure.configure as configure
 import dnx_sysmods.configure.web_validate as validate
 
-from dnx_sysmods.configure.def_constants import INVALID_FORM, DATA
+from dnx_gentools.def_constants import INVALID_FORM, DATA
 from dnx_sysmods.configure.exceptions import ValidationError
 from dnx_sysmods.configure.iptables import IPTablesManager
 from dnx_sysmods.configure.system_info import System

@@ -6,7 +6,7 @@ from collections import defaultdict
 
 import dnx_sysmods.configure.web_validate as validate
 
-from dnx_sysmods.configure.def_constants import INVALID_FORM
+from dnx_gentools.def_constants import INVALID_FORM
 from dnx_sysmods.configure.file_operations import load_configuration, calculate_file_hash
 from dnx_sysmods.configure.exceptions import ValidationError
 

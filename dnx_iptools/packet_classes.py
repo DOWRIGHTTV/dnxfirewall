@@ -12,10 +12,10 @@ from ipaddress import IPv4Address
 _HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
 sys.path.insert(0, _HOME_DIR)
 
-from dnx_sysmods.configure.def_constants import *
+from dnx_gentools.def_constants import *
 from dnx_iptools.def_structs import *
 
-from dnx_sysmods.configure.def_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK
+from dnx_gentools.def_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK
 
 from dnx_netmods.dnx_netfilter.dnx_nfqueue import set_user_callback, NetfilterQueue # pylint: disable=no-name-in-module, import-error
 from dnx_iptools.interface_ops import load_interfaces, wait_for_interface, wait_for_ip, get_masquerade_ip

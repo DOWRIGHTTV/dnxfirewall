@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 if (__name__ == '__main__'):
-    import __init__
+    pass
 
 import os
 
@@ -9,7 +9,7 @@ from json import loads, dumps
 from socket import socket, AF_INET, SOCK_DGRAM
 from threading import Thread
 
-from dnx_sysmods.configure.def_constants import *
+from dnx_gentools.def_constants import *
 from dnx_gentools.standard_tools import looper
 
 __all__ = ('system_action')

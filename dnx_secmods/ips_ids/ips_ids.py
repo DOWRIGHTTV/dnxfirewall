@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 
-import __init__
-
 import threading
 
 from copy import copy
 from collections import defaultdict
 
-from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
-from dnx_sysmods.configure.def_namedtuples import IPS_SCAN_RESULTS, DDOS_TRACKERS, PSCAN_TRACKERS
+from dnx_gentools.def_constants import * # pylint: disable=unused-wildcard-import
+from dnx_gentools.def_namedtuples import IPS_SCAN_RESULTS, DDOS_TRACKERS, PSCAN_TRACKERS
 from dnx_sysmods.configure.iptables import IPTablesManager
 
 from dnx_iptools.packet_classes import NFQueue

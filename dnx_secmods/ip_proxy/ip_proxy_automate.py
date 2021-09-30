@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
-import os, sys
 import threading
 
 import dnx_sysmods.configure.signature_operations as signature_operations
 
-from dnx_sysmods.configure.def_constants import *
+from dnx_gentools.def_constants import *
 from dnx_sysmods.configure.file_operations import load_configuration, cfg_read_poller
 from dnx_sysmods.configure.iptables import IPTablesManager
 

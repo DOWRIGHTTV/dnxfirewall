@@ -9,7 +9,7 @@ from socket import socket, AF_INET, SOCK_DGRAM
 HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
 sys.path.insert(0, HOME_DIR)
 
-from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
+from dnx_gentools.def_constants import * # pylint: disable=unused-wildcard-import
 from dnx_gentools.standard_tools import looper, classproperty, dnx_queue, Initialize
 from dnx_sysmods.configure.file_operations import load_configuration, cfg_read_poller, change_file_owner
 from dnx_sysmods.database.ddb_connector_sqlite import DBConnector

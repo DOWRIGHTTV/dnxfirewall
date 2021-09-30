@@ -1,17 +1,13 @@
 #!/usr/bin/python3
 
-import sys, os
-import time
-import json
-
 import dnx_sysmods.configure.configure as configure
 import dnx_sysmods.configure.web_validate as validate
 
-from dnx_sysmods.configure.def_constants import CFG, DATA, INVALID_FORM, DHCP
+from dnx_gentools.def_constants import CFG, DATA, INVALID_FORM
 from dnx_iptools.protocol_tools import convert_mac_to_string as mac_str
 from dnx_sysmods.configure.file_operations import load_configuration
 from dnx_sysmods.configure.exceptions import ValidationError
-from dnx_sysmods.configure.system_info import Services, System
+from dnx_sysmods.configure.system_info import System
 
 def load_page(form):
     dhcp_server = load_configuration('dhcp_server')

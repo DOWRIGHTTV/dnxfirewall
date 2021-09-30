@@ -2,9 +2,8 @@
 
 # for running with flask dev server
 if (__name__ == '__main__'):
-    import __init__
+    pass
 
-import os, sys
 import time
 
 from datetime import timedelta
@@ -12,7 +11,7 @@ from flask import Flask, render_template, redirect, url_for, request, session, j
 
 import dnx_sysmods.configure.web_validate as validate
 
-from dnx_sysmods.configure.def_constants import CFG, DATA, FIVE_SEC
+from dnx_gentools.def_constants import CFG, DATA, FIVE_SEC
 from dnx_sysmods.configure.file_operations import load_configuration, ConfigurationManager
 from dnx_sysmods.configure.exceptions import ValidationError
 from dnx_sysmods.database.ddb_connector_sqlite import DBConnector

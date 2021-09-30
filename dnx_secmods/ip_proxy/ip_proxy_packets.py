@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
-from dnx_sysmods.configure.def_constants import *
+from dnx_gentools.def_constants import *
 
 from dnx_iptools.def_structs import *
+from dnx_iptools.def_bytecontainers import *
 from dnx_iptools.packet_classes import NFPacket, RawResponse
 from dnx_iptools.protocol_tools import checksum_ipv4, checksum_tcp, checksum_icmp, int_to_ipaddr
 
