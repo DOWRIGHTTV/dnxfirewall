@@ -45,10 +45,10 @@ class IPPPacket(NFPacket):
 
 
 # pre defined fields which are functionally constants for the purpose of connection resets
-ip_header_template = PR_IP_HDR({'ver_ihl': 69, 'tos': 0, 'ident': 0, 'flags_fro': 16384, 'ttl': 255})
-tcp_header_template = PR_TCP_HDR({'seq_num': 696969, 'offset_control': 20500, 'window': 0, 'urg_ptr': 0})
-pseudo_header_template = PR_TCP_PSEUDO_HDR({'reserved': 0, 'proto': 6, 'tcp_len': 20})
-icmp_header_template = PR_ICMP_HDR({'type': 3, 'code': 3})
+ip_header_template = PR_IP_HDR(**{'ver_ihl': 69, 'tos': 0, 'ident': 0, 'flags_fro': 16384, 'ttl': 255})
+tcp_header_template = PR_TCP_HDR(**{'seq_num': 696969, 'offset_control': 20500, 'window': 0, 'urg_ptr': 0})
+pseudo_header_template = PR_TCP_PSEUDO_HDR(**{'reserved': 0, 'protocol': 6, 'tcp_len': 20})
+icmp_header_template = PR_ICMP_HDR(**{'type': 3, 'code': 3})
 
 
 # TODO: test UDP / icmp dst unreachable packet!

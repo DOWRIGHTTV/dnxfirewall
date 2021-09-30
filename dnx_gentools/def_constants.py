@@ -30,7 +30,7 @@ else:
 
 ROOT = True if not _os.getuid() else False
 
-HOME_DIR = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-3]))
+HOME_DIR = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-2]))
 
 # globally sets which sql to use | sqlite3 = 0, psql = 1
 SQL_VERSION = 0

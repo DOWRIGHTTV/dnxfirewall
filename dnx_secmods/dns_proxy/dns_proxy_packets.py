@@ -223,6 +223,7 @@ class ProxyRequest(RawPacket):
         self.question_record = dns_query[:offset+4] # ofsset + 4 byte info
 
     # will create send data object for used by proxy.
+    # TODO: convert this to new bytecontainer packet generation
     def generate_proxy_response(self):
         # if AAAA record, set response code to "domain name does not exist" without record response
         if (self.qtype == DNS.AAAA):
@@ -250,7 +251,7 @@ class ProxyRequest(RawPacket):
             self.dst_port, self.src_port, udp_len, 0
         ))
 
-        # 3. generating ip header with loop to create header, calculate zerod checksum, then rebuild
+        # 3. generating ip header with loop to create header, calculate zeroed checksum, then rebuild
         # with correct checksum | append to send data
         ip_len, checksum = 20 + udp_len, double_byte_pack(0,0)
         for i in range(2):
@@ -260,7 +261,7 @@ class ProxyRequest(RawPacket):
             )
             if i: break
 
-            checksum = checksum_ipv4(ip_header)
+            checksum = checksum_ipv4(ip_header, packed=True)
 
         send_data.append(ip_header)
 

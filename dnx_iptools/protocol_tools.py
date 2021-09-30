@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 
-import os, sys
-import array
 import binascii
 
+from array import array
 from subprocess import run, CalledProcessError, DEVNULL
 
-_HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, _HOME_DIR)
-
-from dnx_iptools.def_structs import * # pylint: disable=unused-wildcard-import
+from dnx_iptools.def_structs import *
 from dnx_gentools.def_constants import byte_join
 
 __all__ = (
@@ -28,58 +24,49 @@ def icmp_reachable(host_ip):
         return False
 
 # calculates and returns ipv4 header checksum
-def checksum_ipv4(header):
+def checksum_ipv4(header, packed=False):
     if (len(header) & 1):
-        header = header + '\0'
-    words = array.array('h', header)
+        header += '\0'
+
+    words = array('h', header)
 
     sum = 0
     for word in words:
-        sum = sum + (word & 0xffff)
+        sum += (word & 0xffff)
 
-    hi  = sum >> 16
-    lo  = sum & 0xffff
-    sum = hi + lo
-    sum = sum + (sum >> 16)
+    sum =  (sum >> 16) + (sum & 0xffff)
+    sum = ~(sum + (sum >> 16)) & 0xffff
 
-    return checksum_pack((~sum) & 0xffff)
+    return checksum_pack(sum) if packed else sum
 
 # calculates and return tcp header checksum
 def checksum_tcp(msg):
-    s = 0
     msg_len = len(msg)
 
+    s = 0
     # loop taking 2 characters at a time
     for i in range(0, msg_len, 2):
+
         if ((i + 1) < msg_len):
-            a = msg[i]
-            b = msg[i+1]
-            s = s + (a + (b << 8))
+            s += (msg[i] + (msg[i+1] << 8))
 
         elif ((i + 1) == msg_len):
             s += msg[i]
 
-    s = s + (s >> 16)
-    s = ~s & 0xffff
-
-    return checksum_pack(s)
+    return ~(s + (s >> 16)) & 0xffff
 
 # calculates and return icmp header checksum
 def checksum_icmp(msg):
+
     s = 0
-    while msg:
-        s  += (msg[0] + (msg[1] << 8))
-        msg = msg[2:]
+    for i in range(0, len(msg), 2):
+        s += (msg[i] + (msg[i+1] << 8))
 
-    s += (s >> 16)
-    s  = ~s & 0xffff
-
-    return checksum_pack(s)
+    return ~(s + (s >> 16)) & 0xffff
 
 def int_to_ipaddr(ip_addr):
-    ip_addr = long_pack(ip_addr)
 
-    return '.'.join([f'{b}' for b in ip_addr])
+    return '.'.join([f'{b}' for b in long_pack(ip_addr)])
 
 def convert_mac_to_string(mac_address):
     string_mac = []
