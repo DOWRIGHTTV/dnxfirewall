@@ -243,7 +243,7 @@ class ProxyRequest(RawPacket):
         else:
             resource_record = std_resource_record_template()
 
-            resource_record.r_data = int(self.intf_ip)
+            resource_record.r_data = btoia(self.intf_ip)
 
             dns_data = [
                 create_dns_response_header(self.dns_id, rd=self._rd, ad=1, cd=self._cd),
