@@ -10,7 +10,7 @@ PR_TCP_HDR  = _bytecontainer('tcp_header', 'H,dst_port H,src_port L,seq_num L,ac
 PR_TCP_PSEUDO_HDR = _bytecontainer('tcp_pseudo_header', 'L,src_ip L,dst_ip B,reserved B,protocol H,tcp_len')
 
 # UDP
-PR_UDP_HDR = _bytecontainer('udp_header', 'H,src_port H,dst_port, H,len H,checksum')
+PR_UDP_HDR = _bytecontainer('udp_header', 'H,src_port H,dst_port H,len H,checksum')
 
 # ICMP
 PR_ICMP_HDR = _bytecontainer('udp_header', 'B,type B,code H,checksum L,unused')
