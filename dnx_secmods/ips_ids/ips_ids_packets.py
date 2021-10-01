@@ -87,12 +87,14 @@ class IPSResponse(RawResponse):
             proto_header.src_port = packet.src_port
             proto_header.ack_num = packet.seq_number + 1
 
-            pseudo_header = PR_TCP_PSEUDO_HDR()
+            pseudo_header = pseudo_header_template()
             pseudo_header.src_ip = dnx_src_ip
             pseudo_header.dst_ip = packet.src_ip
 
             # calculating checksum of container
-            proto_header.checksum = checksum_tcp(pseudo_header.assemble() + proto_header.assemble())
+            proto_header.checksum = checksum_tcp(
+                byte_join([pseudo_header.assemble(), proto_header.assemble()])
+            )
 
             proto_len = len(proto_header)
 
