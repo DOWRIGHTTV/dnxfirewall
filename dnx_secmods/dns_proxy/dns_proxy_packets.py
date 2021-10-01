@@ -268,7 +268,7 @@ class ProxyRequest(RawPacket):
 
         ip_header.checksum = checksum_ipv4(ip_header.assemble())
 
-        return byte_join([ip_header.assemble(), udp_header.assemble(), udp_payload])
+        self.send_data = byte_join([ip_header.assemble(), udp_header.assemble(), udp_payload])
 
     def _enumerate_request(self, request):
         rs = request.split('.')
