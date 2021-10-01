@@ -11,7 +11,8 @@ from dnx_gentools.def_constants import MSEC, fast_time, fast_sleep, byte_join
 __all__ = (
     'looper', 'dynamic_looper',
     'Initialize', 'dnx_queue',
-    'bytecontainer', 'classproperty'
+    'bytecontainer', 'structure',
+    'classproperty'
 )
 
 def looper(sleep_len):
@@ -175,7 +176,7 @@ def dnx_queue(Log, name=None):
     return decorator
 
 
-def bytecontainer(obj_name, fields):
+def structure(obj_name, fields):
     '''named tuple like class factory for storing int values of raw byte sections with named fields. calling
     len on the container will return sum of all bytes stored not amount of fields. slots are being used to speed up
     attribute access. attribute type is not checked and can be truncated if incorrectly specified.
@@ -216,7 +217,7 @@ def bytecontainer(obj_name, fields):
     field_formats = tuple(field_formats)
 
 
-    class ByteContainer:
+    class Structure:
 
         __slots__ = (*field_names,)
 
@@ -283,8 +284,60 @@ def bytecontainer(obj_name, fields):
 
             return byte_join([pack(getattr(self, name)) for pack, name in zip(field_packs, field_names)])
 
-    return ByteContainer()
+    return Structure()
 
+def bytecontainer(obj_name, field_names):
+    '''named tuple like class factory for storing raw byte sections with named fields. calling
+    len on the container will return sum of all bytes stored not amount of fields. slots are
+    being used to speed up attribute access.'''
+
+    if not isinstance(field_names, list):
+        field_names = field_names.split()
+
+    len_fields = len(field_names)
+
+    class ByteContainer:
+
+        __slots__ = (*field_names,)
+
+        def __init__(self):
+            for name in field_names:
+                setattr(self, name, b'')
+
+        def __repr__(self):
+            return f"{self.__class__.__name__}({obj_name}, '{' '.join(field_names)}')"
+
+        def __str__(self):
+            fast_get = self.__getattribute__
+
+            fields = [f'{fn}={fast_get(fn)}' for fn in field_names]
+
+            return f"{obj_name}({', '.join(fields)})"
+
+        def __call__(self, *args):
+            if (len(args) != len_fields):
+                raise TypeError(f'Expected {len_fields} arguments, got {len(args)}')
+
+            new_container = copy(self)
+            for name, value in zip(field_names, args):
+                setattr(new_container, name, value)
+
+            return new_container
+
+        def __len__(self):
+            fast_get = self.__getattribute__
+
+            return sum([len(fast_get(field_name)) for field_name in field_names])
+
+        def __getitem__(self, position):
+            return getattr(self, f'{field_names[position]}')
+
+        def __iter__(self):
+            fast_get = self.__getattribute__
+
+            yield from [fast_get(fn) for fn in field_names]
+
+    return ByteContainer()
 
 class classproperty:
     '''class used as a decorator to allow class methods to be used as properties.'''

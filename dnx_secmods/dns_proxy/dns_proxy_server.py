@@ -98,7 +98,7 @@ class DNSServer(Listener):
             if (not client_query.top_domain):
                 self.send_to_client(server_response, client_query)
 
-            #NOTE: will is valid check prevent empty RRs from being cached.??
+            # NOTE: will is valid check prevent empty RRs from being cached.??
             if (server_response.data_to_cache):
                 self._records_cache_add(client_query.request, server_response.data_to_cache)
 
@@ -122,7 +122,7 @@ class DNSServer(Listener):
 
         return True
 
-    # thread to handle all received requests from the listerner.
+    # thread to handle all received requests from the listener.
     def _request_queue(self):
         return_ready = self.REQ_TRACKER.return_ready
 
@@ -173,7 +173,7 @@ class DNSServer(Listener):
 
         with cls._id_lock:
             # NOTE: maybe tune this number. under high load collisions could occur and we dont want it to waste time
-            # because other requests must wait for this process to complete since we are now using a queue system for
+            # because other requests must wait for this process to complete since we are now using a queue system
             # while waiting for a decision instead of individual threads.
             for _ in range(100):
             # while True:

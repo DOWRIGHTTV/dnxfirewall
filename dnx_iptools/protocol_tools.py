@@ -3,18 +3,24 @@
 import binascii
 
 from socket import htons
+from functools import partial
 from subprocess import run, CalledProcessError, DEVNULL
 
 from dnx_iptools.def_structs import *
 from dnx_gentools.def_constants import byte_join
 
 __all__ = (
+    'btoia', 'itoba',
+
     'checksum_icmp', 'checksum_ipv4', 'checksum_tcp', 'int_to_ipaddr',
     'convert_dns_string_to_bytes', 'convert_mac_to_bytes',
     'convert_mac_to_string', 'convert_string_to_bitmap',
     'create_dns_query_header', 'create_dns_response_header',
     'icmp_reachable', 'parse_query_name'
 )
+
+btoia = partial(int.from_bytes, byteorder='big', signed=False)
+itoba = partial(int.to_bytes, byteorder='big', signed=False)
 
 # will ping specified host. to be used to prevent duplicate ip address handouts.
 def icmp_reachable(host_ip):
