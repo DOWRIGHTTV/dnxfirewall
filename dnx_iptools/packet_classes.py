@@ -527,8 +527,8 @@ class NFPacket:
 
             # ip/udp header are only needed for icmp response payloads [at this time]
             # packing into bytes to make icmp response generation more streamlined if needed
-            self.ip_header = ip_header_pack(ip_header)
-            self.udp_header = udp_header_pack(proto_header)
+            self.ip_header = ip_header_pack(*ip_header)
+            self.udp_header = udp_header_pack(*proto_header)
 
             # data payload only used by IPS/IDS (portscan detection) [at this time]
             self.udp_payload = cpacket.get_payload()
