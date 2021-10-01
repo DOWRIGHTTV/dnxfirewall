@@ -89,9 +89,9 @@ class ProxyResponse(RawResponse):
             proto_header = icmp_header_template()
 
             # per icmp, ip header and first 8 bytes of rcvd payload are including in icmp response payload
-            icmp_payload = packet.ip_header + packet.udp_header
+            icmp_payload = byte_join([packet.ip_header, packet.udp_header])
             proto_header.checksum = checksum_icmp(
-                 byte_join(proto_header.assemble() + icmp_payload)
+                byte_join([proto_header.assemble(), icmp_payload])
             )
 
             proto_len = len(proto_header) + len(icmp_payload)
