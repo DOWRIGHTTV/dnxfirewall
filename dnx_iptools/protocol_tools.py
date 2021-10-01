@@ -66,8 +66,10 @@ def checksum_icmp(data):
     for chunk in chunks:
         sum += chunk[0]
 
+    sum = ~(sum + (sum >> 16)) & 0xffff
+
     # NOTE: does this need to be converted to network order?
-    return ~(sum + (sum >> 16)) & 0xffff
+    return htons(sum)
 
 def int_to_ipaddr(ip_addr):
 
