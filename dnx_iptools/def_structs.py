@@ -24,7 +24,7 @@ mac_unpack = _Struct('!6s').unpack
 mac_pack   = _Struct('!6s').pack
 
 eth_header_pack    = _Struct('!6s6sH').pack
-ip_header_pack     = _Struct('!2B3H2B2s4s4s').pack
+ip_header_pack     = _Struct('!2B3H2BH2L').pack
 udp_header_pack    = _Struct('!4H').pack
 icmp_header_pack   = _Struct('!2B2s').pack
 tcp_header_pack    = _Struct('!2H2L2BH2sH').pack

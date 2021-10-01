@@ -77,8 +77,8 @@ class Listener:
 
     @classmethod
     def run(cls, Log, *, threaded=True, always_on=False):
-        '''associating subclass Log reference with Listener class. registering all interfaces in _intfs and starting service listener loop. calling class method setup before to
-        provide subclass specific code to run at class level before continueing.'''
+        '''associating subclass Log reference with Listener class. registering all interfaces in _intfs and starting service listener loop.
+        calling class method setup before to provide subclass specific code to run at class level before continuing.'''
         Log.informational(f'{cls.__name__} initialization started.')
 
         cls._Log = Log
@@ -140,7 +140,7 @@ class Listener:
 
     @classmethod
     # TODO: what happens if interface comes online, then immediately gets unplugged. the registration would fail potentially,
-    # and would no longer be active so it would never happen if the interface was replugged after.
+    #  and would no longer be active so it would never happen if the interface was replugged after.
     def __register(cls, intf):
         '''will register interface with listener. requires subclass property for listener_sock returning valid socket object.
         once registration is complete the thread will exit.'''
@@ -160,9 +160,9 @@ class Listener:
         cls.__registered_socks[l_sock.fileno()] = L_SOCK(_intf, intf_ip, l_sock, l_sock.send, l_sock.sendto, l_sock.recvfrom)
 
         # TODO: if we dont re register, and im pretty sure i got rid of that, we shouldnt need to track the interface
-        # anymore yea? the fd and socket object is all we need, unless we need to get the source ip address. OH. does the
-        # dns proxy need to grab its interface ip for sending to the client? i dont think so, right? it jsut needs to
-        # spoof the original destination.
+        #  anymore yea? the fd and socket object is all we need, unless we need to get the source ip address. OH. does the
+        #  dns proxy need to grab its interface ip for sending to the client? i dont think so, right? it just needs to
+        #  spoof the original destination.
         cls.__epoll.register(l_sock.fileno(), select.EPOLLIN)
 
         cls._Log.informational(f'[{l_sock.fileno()}][{intf}] {cls.__name__} interface registered.')
@@ -474,10 +474,11 @@ class NFPacket:
         'src_mac', 'timestamp',
 
         # ip header
-        'protocol',
+        'ip_header', 'protocol',
         'src_ip', 'dst_ip',
 
         # proto headers
+        'udp_header',
         'src_port', 'dst_port',
 
         # tcp
@@ -524,7 +525,12 @@ class NFPacket:
             self.src_port = proto_header[0]
             self.dst_port = proto_header[1]
 
-            # only need payload for udp at the moment
+            # ip/udp header are only needed for icmp response payloads [at this time]
+            # packing into bytes to make icmp response generation more streamlined if needed
+            self.ip_header = ip_header_pack(ip_header)
+            self.udp_header = udp_header_pack(proto_header)
+
+            # data payload only used by IPS/IDS (portscan detection) [at this time]
             self.udp_payload = cpacket.get_payload()
 
         elif (self.protocol is PROTO.ICMP):

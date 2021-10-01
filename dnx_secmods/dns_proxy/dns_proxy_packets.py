@@ -6,7 +6,7 @@ from collections import namedtuple
 from dnx_gentools.def_constants import *
 from dnx_iptools.def_structs import *
 from dnx_iptools.protocol_tools import *
-from dnx_gentools.standard_tools import bytecontainer
+from dnx_iptools.def_bytecontainers import *
 from dnx_gentools.def_namedtuples import CACHED_RECORD
 
 from dnx_iptools.packet_classes import RawPacket
@@ -162,7 +162,7 @@ class ClientRequest:
 
         self = cls(None, NULL_ADDR, None)
 
-        # harcorded qtype can change if needed.
+        # hardcorded qtype can change if needed.
         self.request = request
         self.qtype   = 1
         self.cd      = cd
@@ -171,6 +171,13 @@ class ClientRequest:
 
         return self
 
+
+ip_header_template = PR_IP_HDR(
+    **{'ver_ihl': 69, 'tos': 0, 'ident': 0, 'flags_fro': 16384, 'ttl': 255, 'protocol': PROTO.UDP}
+)
+udp_header_template = PR_UDP_HDR(**{'checksum': 0})
+
+std_resource_record_template = DNS_STD_RR(**{'ptr': 49164, 'type': 1, 'class': 1, 'ttl': 300, 'rd_len': 4})
 
 class ProxyRequest(RawPacket):
 
@@ -225,54 +232,44 @@ class ProxyRequest(RawPacket):
     # will create send data object for used by proxy.
     # TODO: convert this to new bytecontainer packet generation
     def generate_proxy_response(self):
-        # if AAAA record, set response code to "domain name does not exist" without record response
+        # DNS HEADER + PAYLOAD
+        # AAAA record set r code to "domain name does not exist" without record response ac=0, rc=3
         if (self.qtype == DNS.AAAA):
-            answer_count, response_code = 0, 3
+            dns_data = [
+                create_dns_response_header(self.dns_id, 0, rd=self._rd, ad=1, cd=self._cd, rc=3),
+                self.question_record
+            ]
 
-        # standard query response to sinkhole
+        # standard query response to sinkhole. default answer count and response code
         else:
-            answer_count, response_code = 1, 0
+            resource_record = std_resource_record_template()
 
-        # 1. generating dns header, appending original question and our response if applicable | append to send data
-        dns_data = [create_dns_response_header(
-            self.dns_id, answer_count, rd=self._rd, ad=1, cd=self._cd, rc=response_code
-            ), self.question_record]
+            resource_record.r_data = int(self.intf_ip)
 
-        if (answer_count):
-            dns_data.append(resource_record_pack(
-                49164, 1, 1, 300, 4, self.intf_ip
-            ))
+            dns_data = [
+                create_dns_response_header(self.dns_id, rd=self._rd, ad=1, cd=self._cd),
+                self.question_record, resource_record.assemble()
+            ]
 
-        send_data = [byte_join(dns_data)]
+        udp_payload = byte_join(dns_data)
 
-        # 2. generating udp header, getting length from join on build data | append to send data
-        udp_len = 8 + len(byte_join(send_data))
-        send_data.append(udp_header_pack(
-            self.dst_port, self.src_port, udp_len, 0
-        ))
+        # UDP HEADER
+        udp_header = udp_header_template()
 
-        # 3. generating ip header with loop to create header, calculate zeroed checksum, then rebuild
-        # with correct checksum | append to send data
-        ip_len, checksum = 20 + udp_len, double_byte_pack(0,0)
-        for i in range(2):
-            ip_header = ip_header_pack(
-                69, 0, ip_len, 0, 16384, 255, PROTO.UDP,
-                checksum, self.dst_ip.packed, self.src_ip.packed
-            )
-            if i: break
+        udp_header.src_port = self.dst_port
+        udp_header.dst_port = self.src_port
+        udp_header.len = 8 + len(udp_payload)
 
-            checksum = checksum_ipv4(ip_header, packed=True)
+        # IP HEADER
+        ip_header = ip_header_template()
 
-        send_data.append(ip_header)
+        ip_header.tl = 28 + len(udp_payload)
+        ip_header.src_ip = int(self.dst_ip)
+        ip_header.dst_ip = int(self.src_ip)
 
-        #NOTE: we shouldnt have to track ethernet headers anymore
-        # # 4. generating ethernet header | append to send data
-        # send_data.append(eth_header_pack(
-        #     self.src_mac, self.dst_mac, L2_PROTO
-        # ))
+        ip_header.checksum = checksum_ipv4(ip_header.assemble())
 
-        # assigning joined data from above with correct byte order
-        self.send_data = byte_join(reversed(send_data))
+        return byte_join([ip_header.assemble(), udp_header.assemble(), udp_payload])
 
     def _enumerate_request(self, request):
         rs = request.split('.')

@@ -48,7 +48,7 @@ class IPPPacket(NFPacket):
 ip_header_template = PR_IP_HDR(**{'ver_ihl': 69, 'tos': 0, 'ident': 0, 'flags_fro': 16384, 'ttl': 255})
 tcp_header_template = PR_TCP_HDR(**{'seq_num': 696969, 'offset_control': 20500, 'window': 0, 'urg_ptr': 0})
 pseudo_header_template = PR_TCP_PSEUDO_HDR(**{'reserved': 0, 'protocol': 6, 'tcp_len': 20})
-icmp_header_template = PR_ICMP_HDR(**{'type': 3, 'code': 3})
+icmp_header_template = PR_ICMP_HDR(**{'type': 3, 'code': 3, 'unused': 0})
 
 
 # TODO: test UDP / icmp dst unreachable packet!
