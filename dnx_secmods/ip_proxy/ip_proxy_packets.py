@@ -66,6 +66,7 @@ class ProxyResponse(RawResponse):
 
         # TCP HEADER
         if (packet.protocol is PROTO.TCP):
+            response_protocol = PROTO.TCP
 
             # new instance of header byte container template
             proto_header = tcp_header_template()
@@ -86,6 +87,8 @@ class ProxyResponse(RawResponse):
 
         # ICMP HEADER
         elif (packet.protocol is PROTO.UDP):
+            response_protocol = PROTO.ICMP
+
             proto_header = icmp_header_template()
 
             # per icmp, ip header and first 8 bytes of rcvd payload are including in icmp response payload
@@ -100,7 +103,7 @@ class ProxyResponse(RawResponse):
         ip_header = ip_header_template()
 
         ip_header.tl = 20 + proto_len
-        ip_header.protocol = packet.protocol
+        ip_header.protocol = response_protocol
         ip_header.src_ip = dnx_src_ip
         ip_header.dst_ip = packet.src_ip
 
