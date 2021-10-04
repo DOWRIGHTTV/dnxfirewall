@@ -99,15 +99,17 @@ class Configuration:
         # ensure the index stay correct.
         mem_keywords, offset = signatures.keyword.copy(), 0
         for i, signature in enumerate(mem_keywords):
+
             _, cat = signature
-            if cat not in enabled_keywords:
+            if (cat not in enabled_keywords):
                 signatures.keyword.pop(i-offset)
                 offset += 1
 
         # iterating over keywords from the signature set. if the keyword category is enabled and the current
         # signature is not already in memory it will be added.
         for signature, cat in self._keywords:
-            if cat in enabled_keywords and signature not in signatures.keyword:
+
+            if (cat in enabled_keywords and signature not in signatures.keyword):
                 signatures.keyword.append((signature, cat))
 
         # TLD SETTINGS | generator
@@ -200,6 +202,8 @@ class Configuration:
 
             # iterating over rules/signature in memory
             for rule, settings in memory_list.copy().items():
+
+                # TODO: why is this not being used? is this broken or was it not needed and i forget to remove it?
                 bitmap_key = convert_string_to_bitmap(rule, DNS_BIN_OFFSET)
 
                 # if rule is not present in config file it will be removed from memory
@@ -245,9 +249,9 @@ class Configuration:
 
             loaded_list = lists['time_based']
             for domain, info in loaded_list.copy().items():
-                if (now < info['expire']): continue
 
-                loaded_list.pop(domain, None)
+                if (now >= info['expire']):
+                    loaded_list.pop(domain, None)
 
             dnx.write_configuration(lists)
 

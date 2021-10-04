@@ -17,8 +17,8 @@ from dnx_sysmods.configure.exceptions import ValidationError
 
 # will load json data from file, convert it to a python dict, then return as object
 # TODO: add usr config support, which will merge will loaded system defaults.
-    # !! currently supported, but in the case of nested dicts the user config overrides
-    # system settings, specifically if new keys were added which cause modules to break.
+#  !! currently supported, but in the case of nested dicts the user config overrides
+#  system settings, specifically if new keys were added which cause modules to break.
 def load_configuration(filename, *, filepath='dnx_system/data'):
     '''load json data from file, convert it to a python dict, then return as object.'''
     if (not filename.endswith('.json')):
@@ -39,7 +39,6 @@ def load_configuration(filename, *, filepath='dnx_system/data'):
 
     return system_settings
 
-# TODO: write configs to usr folder keeping main system configs as defaults.
 def write_configuration(data, filename, *, filepath='dnx_system/data/usr'):
     '''write json data object to file.'''
 
@@ -85,11 +84,12 @@ def json_to_yaml(data, *, is_string=False):
 
 def load_dns_bitmap(Log, bl_exc=[], wl_exc=[]):
     dict_nets = defaultdict(list)
+    blocked_file = f'{HOME_DIR}/dnx_system/signatures/domain_lists/blocked.domains'
 
     # converting blacklist exceptions (pre proxy) to be compatible with dnx signature syntax
     blacklist = [f'{domain} blacklist' for domain in bl_exc]
 
-    with open(f'{HOME_DIR}/dnx_system/signatures/domain_lists/blocked.domains', 'r') as sigs:
+    with open(blocked_file, 'r') as sigs:
         for sig_set in [sigs, blacklist]:
             for sig in sig_set:
                 try:
@@ -102,13 +102,12 @@ def load_dns_bitmap(Log, bl_exc=[], wl_exc=[]):
                     b_id = int(host_hash[:DNS_BIN_OFFSET])
                     h_id = int(host_hash[DNS_BIN_OFFSET:])
                 except Exception as E:
-                    print(f'bad signature detected in domain. | {E} | {sig}')
+                    Log.warning(f'bad signature detected | {E} | {sig}')
 
                 else:
-                    # overriding signature pre proxy
-                    if (host in wl_exc): continue
-
-                    dict_nets[b_id].append((h_id, cat))
+                    # pre proxy override check before adding
+                    if (host not in wl_exc):
+                        dict_nets[b_id].append((h_id, cat))
 
         # in place sort of all containers prior to building the structure
         for containers in dict_nets.values():
@@ -118,7 +117,8 @@ def load_dns_bitmap(Log, bl_exc=[], wl_exc=[]):
     nets = [(bin_id, tuple(containers)) for bin_id, containers in dict_nets.items()]
     nets.sort()
 
-    dict_nets = None
+    # no longer needed so ensuring memory gets freed
+    del dict_nets
 
     return tuple(nets)
 
@@ -159,7 +159,7 @@ def load_top_domains_filter():
     with open(f'{HOME_DIR}/dnx_system/signatures/domain_lists/valid_top.domains', 'r') as tdf:
         return [s.strip() for s in tdf.readlines() if s.strip() and '#' not in s]
 
-def calculate_file_hash(file_to_hash, *, path=f'dnx_system', folder='data'):
+def calculate_file_hash(file_to_hash, *, path='dnx_system', folder='data'):
     '''returns the sha256 secure hash of the file sent in'''
 
     try:
@@ -171,7 +171,7 @@ def calculate_file_hash(file_to_hash, *, path=f'dnx_system', folder='data'):
 
     return file_hash
 
-def cfg_read_poller(watch_file, folder='dnx_system/data', class_method=False):
+def cfg_read_poller(watch_file, folder='data', class_method=False):
     '''Automate Class configuration file poll decorator. apply this decorator to all functions
     that will update configurations loaded in memory from json files. config file must be sent
     in via decorator argument. set class_method argument to true if being used with a class method.'''
@@ -241,7 +241,7 @@ class ConfigurationManager:
 
         self._config_file = config_file
 
-        # initialization isnt required if config file is not specified.
+        # initialization isn't required if config file is not specified.
         if (config_file):
             self._data_written = False
 
@@ -268,7 +268,7 @@ class ConfigurationManager:
         # acquiring lock on shared lock file
         flock(self._config_lock, LOCK_EX)
 
-        # setup isnt required if config file is not specified.
+        # setup isn't required if config file is not specified.
         if (self._config_file):
             # TEMP prefix is to wildcard match any orphaned files for deletion
             self._temp_file_path = f'{HOME_DIR}/{self._file_path}/usr/TEMP_{token_urlsafe(10)}.json'

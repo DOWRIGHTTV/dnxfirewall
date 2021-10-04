@@ -187,6 +187,7 @@ def structure(obj_name, fields):
     if not isinstance(fields, list):
         fields = fields.split()
 
+    # used to lock in size of structure and associate struct packing functions for each field
     _pack_refs = {
         'B': (1, byte_pack),
         'H': (2, short_pack),
@@ -212,10 +213,16 @@ def structure(obj_name, fields):
         field_names.append(field_name)
         field_formats.append(field_format)
 
+    # converting lists to tuple for smaller memory footprint and immutability
     field_packs = tuple(field_packs)
     field_names = tuple(field_names)
     field_formats = tuple(field_formats)
 
+    # defining globals as closure for lookup performance (almost 2x faster)
+    _zip = zip
+    _sum = sum
+    _setattr = setattr
+    _getattr = getattr
 
     class Structure:
 
@@ -224,7 +231,7 @@ def structure(obj_name, fields):
         def __init__(self):
 
             for name in field_names:
-                setattr(self, name, 0)
+                _setattr(self, name, 0)
 
         def __repr__(self):
             return f"{self.__class__.__name__}({obj_name}, '{' '.join(field_names)}')"
@@ -232,7 +239,7 @@ def structure(obj_name, fields):
         def __str__(self):
             fast_get = self.__getattribute__
 
-            fields = [f'{n}={fast_get(n)}({f})' for n, f in zip(field_names, field_formats)]
+            fields = [f'{n}={fast_get(n)}({f})' for n, f in _zip(field_names, field_formats)]
 
             return f"{obj_name}({', '.join(fields)})"
 
@@ -247,7 +254,7 @@ def structure(obj_name, fields):
                     if (name not in field_names):
                         raise ValueError(f'attribute {name} does not exist in this container.')
 
-                    setattr(new_container, name, value)
+                    _setattr(new_container, name, value)
 
             return new_container
 
@@ -256,7 +263,7 @@ def structure(obj_name, fields):
             return size_of
 
         def __getitem__(self, position):
-            return getattr(self, f'{field_names[position]}')
+            return _getattr(self, f'{field_names[position]}')
 
         def __iter__(self):
             fast_get = self.__getattribute__
@@ -273,16 +280,16 @@ def structure(obj_name, fields):
 
                 # if key doesnt exist, will raise error. this method is a pre process so this will allow for quicker
                 # debugging of code that to wait for some point in runtime to realise there was an invalid attr.
-                if name not in field_names:
+                if (name not in field_names):
                     raise ValueError(f'attribute {name} does not exist in this container.')
 
-                setattr(self, name, value)
+                _setattr(self, name, value)
 
         def assemble(self):
             '''returns merged attributes in specified order as a single byte string (char array). this is not stored
             and is recalculated on every call.'''
 
-            return byte_join([pack(getattr(self, name)) for pack, name in zip(field_packs, field_names)])
+            return byte_join([pack(_getattr(self, name)) for pack, name in _zip(field_packs, field_names)])
 
     return Structure()
 
@@ -296,13 +303,19 @@ def bytecontainer(obj_name, field_names):
 
     len_fields = len(field_names)
 
+    _len = len
+    _zip = zip
+    _sum = sum
+    _setattr = setattr
+    _getattr = getattr
+
     class ByteContainer:
 
         __slots__ = (*field_names,)
 
         def __init__(self):
             for name in field_names:
-                setattr(self, name, b'')
+                _setattr(self, name, b'')
 
         def __repr__(self):
             return f"{self.__class__.__name__}({obj_name}, '{' '.join(field_names)}')"
@@ -315,22 +328,22 @@ def bytecontainer(obj_name, field_names):
             return f"{obj_name}({', '.join(fields)})"
 
         def __call__(self, *args):
-            if (len(args) != len_fields):
-                raise TypeError(f'Expected {len_fields} arguments, got {len(args)}')
+            if (_len(args) != len_fields):
+                raise TypeError(f'Expected {len_fields} arguments, got {_len(args)}')
 
             new_container = copy(self)
-            for name, value in zip(field_names, args):
-                setattr(new_container, name, value)
+            for name, value in _zip(field_names, args):
+                _setattr(new_container, name, value)
 
             return new_container
 
         def __len__(self):
             fast_get = self.__getattribute__
 
-            return sum([len(fast_get(field_name)) for field_name in field_names])
+            return _sum([_len(fast_get(field_name)) for field_name in field_names])
 
         def __getitem__(self, position):
-            return getattr(self, f'{field_names[position]}')
+            return _getattr(self, f'{field_names[position]}')
 
         def __iter__(self):
             fast_get = self.__getattribute__

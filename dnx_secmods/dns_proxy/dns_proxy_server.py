@@ -18,8 +18,6 @@ from dnx_iptools.packet_classes import Listener
 from dnx_gentools.standard_tools import dnx_queue
 
 
-# the socket returns after "connecting" to remote server, but the protocol is listed as 0. when the relay
-# attempts to send the requests, we get no return (prob cuz tcp handshake never happened)
 class DNSServer(Listener):
     protocol = PROTO.NOT_SET
     tls_up   = False
