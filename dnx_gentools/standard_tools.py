@@ -59,6 +59,7 @@ class Initialize:
         self._initial_time = fast_time()
 
         self.has_ran = False
+        self._timeout = None
         self._is_initializing = True
         self._thread_count = 0
         self._thread_ready = set()

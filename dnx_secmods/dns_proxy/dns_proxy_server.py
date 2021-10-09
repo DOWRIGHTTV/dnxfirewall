@@ -60,7 +60,7 @@ class DNSServer(Listener):
             request_handler=cls._handle_query
         )
 
-    # must extend parent method
+    # extending parent method because we need to passthrough threaded and always on attrs.
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -70,7 +70,6 @@ class DNSServer(Listener):
         # assigning object methods to prevent lookup
         self._request_map_pop = self._request_map.pop
         self._dns_records_get = self.dns_records.get
-        # self._req_results_pop = self.REQ_RESULTS.pop
         self._records_cache_add = self._records_cache.add
         self._records_cache_search = self._records_cache.search
 
@@ -131,7 +130,7 @@ class DNSServer(Listener):
 
             for client_query, decision in requests:
 
-                # if request is allowed, search cache before sending sending to relay.
+                # if request is allowed, search cache before sending to relay.
                 if decision is DNS.ALLOWED and not self._cached_response(client_query):
                     self._handle_query(client_query)
 
@@ -174,7 +173,7 @@ class DNSServer(Listener):
             # because other requests must wait for this process to complete since we are now using a queue system
             # while waiting for a decision instead of individual threads.
             for _ in range(100):
-            # while True:
+
                 dns_id = randint(70, 32000)
                 if (dns_id not in request_map):
 

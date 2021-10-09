@@ -52,19 +52,20 @@ class LogService:
 
         date = str_join(System.date())
         for module in self._log_modules:
-            module_entries = self.combine_logs(module, date)
+            module_entries = self._combine_logs(module, date)
             if (module_entries):
                 log_entries.extend(module_entries)
 
         sorted_log_entries = sorted(log_entries)
         if (sorted_log_entries):
-            self.write_combined_logs(sorted_log_entries, date)
+            self._write_combined_logs(sorted_log_entries, date)
 
-        log_entries = None # overwriting var to regain system memory
+        del log_entries  # to reclaim system memory
 
     # grabbing the log from the sent in module, splitting the lines, and returning a list
     # TODO: see if we can load file as generator
-    def combine_logs(self, module, date):
+    @staticmethod
+    def _combine_logs(module, date):
         file_entries = []
 
         if not os.path.isfile(f'{HOME_DIR}/dnx_system/log/{module}/{date}-{module}.log'):
@@ -80,9 +81,10 @@ class LogService:
         return file_entries
 
     # writing the log entries to the combined log
-    def write_combined_logs(self, sorted_log_entries, date):
+    @staticmethod
+    def _write_combined_logs(sorted_log_entries, date):
         with open(f'{HOME_DIR}/dnx_system/log/combined/{date}-combined.log', 'w+') as system_log:
-#            print(f'writing {HOME_DIR}/dnx_system/log/combined/{date[0]}{date[1]}{date[2]}-combined.log')
+            # print(f'writing {HOME_DIR}/dnx_system/log/combined/{date[0]}{date[1]}{date[2]}-combined.log')
             for log in sorted_log_entries:
                 system_log.write(f'{log}\n')
 
@@ -138,7 +140,7 @@ class LogHandler:
         set console=True to enable Log.console outputs in terminal.
         '''
         if (cls.is_running):
-            raise RuntimeWarning('the log handler has already been started.')
+            raise RuntimeError('the log handler has already been started.')
 
         cls.name     = name
         cls._console = console # NOTE: _ is a must. without it, it overlaps with method of same name
@@ -176,35 +178,35 @@ class LogHandler:
         '''returns True if syslog is configured in the system else False.'''
         return cls._syslog
 
-    def emergency(self):
+    def emergency(self, message):
         '''system is unusable.'''
         pass
 
-    def alert(self):
+    def alert(self, message):
         '''action must be taken immediately.'''
         pass
 
-    def critical(self):
+    def critical(self, message):
         '''critical conditions.'''
         pass
 
-    def error(self):
+    def error(self, message):
         '''error conditions.'''
         pass
 
-    def warning(self):
+    def warning(self, message):
         '''warning conditions.'''
         pass
 
-    def notice(self):
+    def notice(self, message):
         '''normal but significant condition.'''
         pass
 
-    def informational(self):
+    def informational(self, message):
         '''informational messages.'''
         pass
 
-    def debug(self):
+    def debug(self, message):
         '''debug-level messages.'''
         pass
 

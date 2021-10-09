@@ -11,10 +11,11 @@ short_pack   = _Struct('!H').pack
 long_pack    = _Struct('!L').pack
 int_unpack   = _Struct('I').unpack
 
-double_bite_unpack = _Struct('!2B').unpack_from
+double_byte_unpack  = _Struct('!2B').unpack_from
 double_short_unpack = _Struct('!2H').unpack_from
 double_byte_pack  = _Struct('!2B').pack
 double_short_pack = _Struct('!2H').pack
+ip_addrs_unpack   = _Struct('!2L').unpack
 
 checksum_pack = _Struct('<H').pack
 checksum_iunpack = _Struct('<H').iter_unpack

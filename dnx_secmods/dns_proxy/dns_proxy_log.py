@@ -21,7 +21,7 @@ class Log(LogHandler):
 
     @classmethod
     def _generate_event_log(cls, pkt, req):
-        # supressing logs for dns over https. these are blocked in the backgrounds and should not notify the user.
+        # suppressing logs for dns over https. these are blocked in the background and should not notify the user.
         if (req.category in [DNS_CAT.doh]): pass
 
         # log to infected clients db table if matching malicious type categories

@@ -94,9 +94,9 @@ class Configuration:
                     signatures.en_dns.remove(dns_cat)
 
         # KEYWORD SETTINGS
-        # copying keyword signature list in memory to a local object. iterating over list. if the current item
-        # category is not an enabled category the signature will get removed and offset will get adjustest to
-        # ensure the index stay correct.
+        # copying keyword signature list in memory to a local object. iterating over list. if the current item category
+        # is not an enabled category the signature will get removed and offset will get adjusted to ensure the index
+        # stay correct.
         mem_keywords, offset = signatures.keyword.copy(), 0
         for i, signature in enumerate(mem_keywords):
 
@@ -235,9 +235,9 @@ class Configuration:
     def _check_for_timeout(self, lname):
         now = fast_time()
         for info in getattr(self.DNSProxy, lname).dns.values():
-            if (now < info['expire']): continue
 
-            return True
+            if (now >= info['expire']):
+                return True
 
         return False
 
@@ -260,7 +260,7 @@ class Configuration:
     @staticmethod
     def load_dns_signature_bitmap():
 
-        # NOTE: old method of created combined signature file and loaded seperately
+        # NOTE: old method of created combined signature file and loaded separately
         combine_domains(Log)
 
         wl_exceptions = load_configuration('whitelist')['pre_proxy']
@@ -285,12 +285,11 @@ class Reachability:
 
         self._initialize = Initialize(Log, DNSServer.__name__)
 
-        self._create_tls_context()
-
     @classmethod
     def run(cls, DNSServer):
-        '''starting remote server responsiveness detection as a thread. the remote servers will only
-        be checked for connectivity if they are mark as down during the polling interval.'''
+        '''starting remote server responsiveness detection as a thread. the remote servers will only be checked for
+        connectivity if they are marked as down during the polling interval. both UDP and TLS(TCP) will be started
+        with one call to run.'''
 
         # initializing udp instance and starting thread
         reach_udp = cls(PROTO.UDP, DNSServer)
@@ -300,6 +299,8 @@ class Reachability:
 
         # initializing tls instance and starting thread
         reach_tls = cls(PROTO.DNS_TLS, DNSServer)
+        reach_tls._create_tls_context()
+
         threading.Thread(target=reach_tls.tls).start()
 
         # waiting for each thread to finish initial reachability check before returning
@@ -315,14 +316,14 @@ class Reachability:
                 # no check needed if server/proto is known up
                 if (secure_server[self._protocol]): continue
 
-                Log.debug('[{}/{}] Checking reachability of remote DNS server.'.format(secure_server['ip'], self._protocol.name))
+                Log.debug(f'[{secure_server["ip"]}/{self._protocol.name}] Checking reachability of remote DNS server.')
 
                 # if server responds to connection attempt, it will be marked as available
                 if self._tls_reachable(secure_server['ip']):
                     secure_server[PROTO.DNS_TLS] = True
                     self.DNSServer.tls_up = True
 
-                    Log.notice('[{}/{}] DNS server is reachable.'.format(secure_server['ip'], self._protocol.name))
+                    Log.notice(f'[{secure_server["ip"]}/{self._protocol.name}] DNS server is reachable.')
 
                     # will write server status change individually as its unlikely both will be down at same time
                     write_configuration(self.DNSServer.dns_servers._asdict(), 'dns_server_status')
@@ -356,13 +357,13 @@ class Reachability:
                 # no check needed if server/proto is known up
                 if (server[self._protocol]): continue
 
-                Log.debug('[{}/{}] Checking reachability of remote DNS server.'.format(server['ip'], self._protocol.name))
+                Log.debug(f'[{server["ip"]}/{self._protocol.name}] Checking reachability of remote DNS server.')
 
                 # if server responds to connection attempt, it will be marked as available
                 if self._udp_reachable(server['ip']):
                     server[PROTO.UDP] = True
 
-                    Log.notice('[{}/{}] DNS server is reachable.'.format(server['ip'], self._protocol.name))
+                    Log.notice(f'[{server["ip"]}/{self._protocol.name}] DNS server is reachable.')
 
                     write_configuration(self.DNSServer.dns_servers._asdict(), 'dns_server_status')
 
