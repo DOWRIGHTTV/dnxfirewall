@@ -764,11 +764,10 @@ class RawResponse:
 
         # NOTE: if the wan interface has a static ip address we can use the ip assigned during registration.
         # this will need a condition to check, but wont need to masquerade.
-        # TODO: this needs to be fixed to properly support integer based ip addresses instead of objects or str
         dnx_src_ip = packet.dst_ip if intf.zone != WAN_IN else get_masquerade_ip(dst_ip=packet.src_ip)
 
         # calling hook for packet generation in subclass then sending via direct socket sendto ref
-        send_data = self._prepare_packet2(packet, dnx_src_ip)
+        send_data = self._prepare_packet(packet, dnx_src_ip)
         try:
             intf.sock_sendto(send_data, (int_to_ipaddr(packet.src_ip), 0))
         except OSError:

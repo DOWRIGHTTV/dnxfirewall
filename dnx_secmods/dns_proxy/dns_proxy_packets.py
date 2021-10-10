@@ -210,7 +210,7 @@ class ProxyRequest(RawPacket):
             if (self.qr == DNS.QUERY):
                 self._query(self.udp_payload[12:self.udp_len]) # 13+ is query data
 
-                self.request_identifier = (inet_ntoa(self.src_ip), self.src_port, self.dns_id)
+                self.request_identifier = (int_to_ipaddr(self.src_ip), self.src_port, self.dns_id)
 
     # dns header
     def _header(self, dns_header):

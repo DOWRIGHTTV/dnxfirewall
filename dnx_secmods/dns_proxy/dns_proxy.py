@@ -65,7 +65,7 @@ class DNSProxy(Listener):
     @classmethod
     def send_to_client(cls, packet):
         try:
-            packet.sendto(packet.send_data, (f'{packet.src_ip}', 0))
+            packet.sendto(packet.send_data, (int_to_ipaddr(packet.src_ip), 0))
         except OSError:
             pass
 
@@ -125,7 +125,10 @@ class Inspect:
     # this is where the system decides whether to block dns query/sinkhole or to allow. notification will be done
     # via the request tracker upon returning signature scan result
     def _dns_inspect(self, Proxy, packet):
-        whitelisted = self._ip_whitelist_get(packet.src_ip, False)
+        # NOTE: request identifier is a string representation of ip addresses. this is currently needed as the whitelists
+        # are stored in this format and we have since moved away from this format on the back end.
+        # TODO: in the nearish future, consider storing ip whitelists as integers to conform to newer standards.
+        whitelisted = self._ip_whitelist_get(packet.request_identifier[0], False)
         enum_categories = []
 
         # signature/ blacklist check.

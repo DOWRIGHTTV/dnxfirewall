@@ -6,8 +6,11 @@ from socket import socket, inet_aton, if_nameindex, AF_INET, SOCK_DGRAM
 from csv import reader as csv_reader
 
 from dnx_gentools.def_constants import ONE_SEC, INTF, fast_sleep
-from dnx_sysmods.configure.file_operations import load_configuration
+
 from dnx_iptools.def_structs import fcntl_pack, long_unpack
+from dnx_iptools.protocol_tools import int_to_ipaddr
+
+from dnx_sysmods.configure.file_operations import load_configuration
 
 __all__ = (
     'get_intf_builtin', 'load_interfaces', 'wait_for_interface', 'wait_for_ip',
@@ -96,7 +99,7 @@ def get_masquerade_ip(*, dst_ip, packed=False):
     return will be bytes if packed is True or an integer otherwise. a zeroed ip will be returned if error.'''
 
     s = socket(AF_INET, SOCK_DGRAM)
-    s.connect((f'{dst_ip}', 0))
+    s.connect((int_to_ipaddr(dst_ip), 0))
 
     try:
         ip_addr = inet_aton(s.getsockname()[0])

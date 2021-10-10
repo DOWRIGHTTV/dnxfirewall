@@ -35,7 +35,7 @@ class Authentication:
 
         threading.Thread(target=self._login_timer).start()
 
-        authorized, username, user_role = self._user_login(form, login_ip)
+        authorized, username, user_role = self._user_login(form)
         if (authorized):
             Log.simple_write(
                 LOG_NAME, 'notice', f'User {username} successfully logged in from {login_ip}.'
@@ -51,7 +51,7 @@ class Authentication:
 
         return authorized, username, user_role
 
-    def _user_login(self, form, login_ip):
+    def _user_login(self, form):
         password = form.get('password', None)
         username = form.get('username', '').lower()
         if (not username or not password):
@@ -73,18 +73,22 @@ class Authentication:
         salt_one = len(username)
         salt_two = len(password)
 
+        # salt value will be placed at the calculated index in username
         if (salt_two > salt_one):
             salt = salt_two/salt_one
         else:
             salt = salt_one/salt_two
 
-        index = int(float(salt_one/2))
+        # floor division to index ~midway point of username
+        index = salt_one//2
         part_one = username[:index]
         part_two = username[index:]
 
+        # salt is compounded from username and initial salt value then appended to password
         salt = f'{part_one}{salt}{part_two}'
         password = f'{password}{salt}'.encode('utf-8')
 
+        # calculate the hash, then use a part of the hash as salt for the final hashed value
         hash_object = hashlib.sha256(password).hexdigest()
         hash_part = f'{hash_object}'[:salt_one*2]
 
@@ -133,7 +137,6 @@ def user_restrict(*authorized_roles):
 
             # will redirect to not authorized page if the user role does not match
             # requirements for the page
-            # user_role = Authentication.get_user_role(username) # NOTE: should be deprecated by dnx session tracker
             if (dnx_session_data['role'] not in authorized_roles):
                 session.pop('user', None)
 
