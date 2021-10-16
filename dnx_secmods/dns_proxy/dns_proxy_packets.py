@@ -135,7 +135,7 @@ class ClientRequest:
         #  the pre assignment length bytes. make sure insert scenario is looked at.
         send_data = [
             b'\x00\x00', create_dns_query_header(dns_id, self._arc, cd=self.cd),
-            convert_dns_string_to_bytes(self.request), double_short_pack(self.qtype, 1), self.additional_data
+            domain_stob(self.request), double_short_pack(self.qtype, 1), self.additional_data
         ]
 
         if (protocol is PROTO.DNS_TLS):

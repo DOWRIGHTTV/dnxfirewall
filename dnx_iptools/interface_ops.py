@@ -17,7 +17,7 @@ __all__ = (
     'get_masquerade_ip', 'get_mac', 'get_ip_address', 'get_netmask', 'get_arp_table'
 )
 
-# NOTE: this may no longer be need even though it was recently overhauled. the inclusion of the exclude
+# NOTE: this may no longer be needed even though it was recently overhauled. the inclusion of the exclude
 # filter in the load_interfaces() function should be able to replace this function. keep for now just in case.
 def get_intf_builtin(zone_name):
     intf_settings = load_configuration('config')['interfaces']
@@ -54,7 +54,7 @@ def load_interfaces(intf_type=INTF.BUILTINS, *, exclude=[]):
             zone  = intf_info['zone']
             intf_index = system_interfaces.get(ident)
             if (not intf_index):
-                raise RuntimeError('failed to determine associate builtin <> system interfaces.')
+                raise RuntimeError('failed to associate builtin <> system interfaces.')
 
             if (intf_name not in exclude):
                 collected_intfs.append((intf_index, zone, ident))
@@ -89,7 +89,8 @@ def wait_for_ip(interface):
 
     while True:
         ipa = get_ip_address(interface=interface)
-        if (ipa): return ipa
+        if (ipa):
+            return ipa
 
         fast_sleep(ONE_SEC)
 
@@ -155,7 +156,7 @@ def get_arp_table(*, modify=False, host=None):
 
     if modify is set to True, the ":" will be removed from the mac addresses.
 
-    if host is specified, return just the mac address of the host sent in and returns None if no host is present.
+    if host is specified, return just the mac address of the host sent in, returning None if host is not present.
     '''
 
     with open('/proc/net/arp') as arp_table:

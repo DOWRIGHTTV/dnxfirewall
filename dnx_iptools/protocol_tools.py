@@ -12,11 +12,13 @@ from dnx_gentools.def_constants import byte_join
 __all__ = (
     'btoia', 'itoba',
 
-    'checksum_icmp', 'checksum_ipv4', 'checksum_tcp', 'int_to_ipaddr',
-    'convert_dns_string_to_bytes', 'convert_mac_to_bytes',
-    'convert_mac_to_string', 'convert_string_to_bitmap',
+    'icmp_reachable',
+
+    'checksum_icmp', 'checksum_ipv4', 'checksum_tcp',
+    'int_to_ipaddr', 'domain_stob', 'mac_stob',
+    'mac_add_sep', 'convert_string_to_bitmap',
     'create_dns_query_header', 'create_dns_response_header',
-    'icmp_reachable', 'parse_query_name'
+    'parse_query_name'
 )
 
 btoia = partial(int.from_bytes, byteorder='big', signed=False)
@@ -81,15 +83,16 @@ def int_to_ipaddr(ip_addr):
 
     return '.'.join([f'{b}' for b in long_pack(ip_addr)])
 
-def convert_mac_to_string(mac_address):
+def mac_add_sep(mac_address, sep=':'):
     string_mac = []
     string_mac_append = string_mac.append
     for i in range(0, 12, 2):
         string_mac_append(mac_address[i:i+2])
 
-    return ':'.join(string_mac)
+    return sep.join(string_mac)
 
-def convert_mac_to_bytes(mac_address):
+def mac_stob(mac_address):
+
     return binascii.unhexlify(mac_address.replace(':', ''))
 
 def convert_string_to_bitmap(rule, offset):
@@ -148,7 +151,7 @@ def _calculate_pointer(data):
 
     return 16383 & short_unpack(data)[0] - 12
 
-def convert_dns_string_to_bytes(domain_name):
+def domain_stob(domain_name):
     if (not domain_name):
         return b'\x00'
 
