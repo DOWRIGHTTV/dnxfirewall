@@ -178,37 +178,45 @@ class LogHandler:
         '''returns True if syslog is configured in the system else False.'''
         return cls._syslog
 
-    def emergency(self, message):
+    @classmethod
+    def emergency(cls, message):
         '''system is unusable.'''
-        pass
+        return
 
-    def alert(self, message):
+    @classmethod
+    def alert(cls, message):
         '''action must be taken immediately.'''
-        pass
+        return
 
-    def critical(self, message):
+    @classmethod
+    def critical(cls, message):
         '''critical conditions.'''
-        pass
+        return
 
-    def error(self, message):
+    @classmethod
+    def error(cls, message):
         '''error conditions.'''
-        pass
+        return
 
-    def warning(self, message):
+    @classmethod
+    def warning(cls, message):
         '''warning conditions.'''
-        pass
+        return
 
-    def notice(self, message):
+    @classmethod
+    def notice(cls, message):
         '''normal but significant condition.'''
-        pass
+        return
 
-    def informational(self, message):
+    @classmethod
+    def informational(cls, message):
         '''informational messages.'''
-        pass
+        return
 
-    def debug(self, message):
+    @classmethod
+    def debug(cls, message):
         '''debug-level messages.'''
-        pass
+        return
 
     @classmethod
     def console(cls, message):
