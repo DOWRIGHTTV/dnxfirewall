@@ -116,6 +116,9 @@ class Configuration:
 
         self.IPS.ddos_engine_enabled = True if self.IPS.ddos_prevention else False
 
+        # makes some conditions easier when determining what to do with the packet.
+        self.IPS.all_engines_enabled = self.IPS.ps_engine_enabled and self.IPS.ddos_engine_enabled
+
         self.initialize.done()
 
     @looper(FIVE_MIN)

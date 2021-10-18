@@ -39,6 +39,7 @@ class IPS_IDS(NFQueue):
 
     ddos_engine_enabled = False
     ps_engine_enabled   = False
+    all_engines_enabled = False
 
     _packet_parser = IPSPacket.netfilter_rcv # alternate constructor, but does not return self
 
@@ -47,13 +48,12 @@ class IPS_IDS(NFQueue):
         Configuration.setup(cls)
         IPSResponse.setup(Log, cls)
 
-        cls.set_proxy_callback(func=Inspect.portscan) # this will get called after parsing is complete.
+        cls.set_proxy_callback(func=Inspect.portscan)
 
         Log.notice(f'{cls.__name__} initialization complete.')
 
-    # if nothing is enabled the packet will be sent back to iptables for further inspection
     def _pre_inspect(self, packet):
-        # dropping packet from ip proxy if flagged. this takes priority over ips whitelist due to module heirarchy.
+        # dropping packet from ip proxy if flagged. this takes priority over ips whitelist due to module hierarchy.
         if (packet.action is CONN.DROP):
             packet.nfqueue.drop()
 
@@ -66,15 +66,36 @@ class IPS_IDS(NFQueue):
             packet.nfqueue.accept()
 
         else:
-            # ip proxy accept > ips inspect
-            if (self.ddos_engine_enabled):
+            if (self.all_engines_enabled):
+
+                # ddos inspection is independent of pscan and does not invoke action on packets
+                threading.Thread(target=Inspect.ddos, args=(packet,)).start()
+
+                # pscan engine is primary engine which can invoke control so the decision will be deferred until after
+                # inspection has taken place.
+                if (packet.protocol is not PROTO.ICMP):
+                    return True
+
+            # ip proxy accept > ddos inspect. must accept packet here since packet will not be sent through pscan engine
+            # so a packet decision will not be made unless we do it here.
+            elif (self.ddos_engine_enabled):
+
                 packet.nfqueue.accept()
 
                 threading.Thread(target=Inspect.ddos, args=(packet,)).start()
 
-            # notify tcp/udp to be inspected by portscan engine
-            if (self.ps_engine_enabled and packet.protocol is not PROTO.ICMP):
-                return True
+            # ip proxy accept > portscan inspect if tcp or udp. icmp will be forwarded without inspection since the
+            # protocol is not compatible with server ports.
+            elif (self.ps_engine_enabled):
+
+                # notify tcp/udp to be inspected by portscan engine
+                if (packet.protocol is not PROTO.ICMP):
+                    return True
+
+                # icmp will just be accepted here, since nothing have objected to it. default return of do not inspect
+                # will handle this condition
+                else:
+                    packet.nfqueue.accept()
 
         return False
 
@@ -102,7 +123,7 @@ class Inspect:
     # NOTE: not passing in _IPS object since it doesnt seem to be worth it. maybe can for consistency though.
     def ddos(cls, packet):
         self = cls()
-        self._ddos_inspect(packet)
+        self._dd3os_inspect(packet)
 
     # this method drives the overall logic of the ddos detection engine. it will try to conserve resources by not
     # sending packets that don't need to be checked or logged under normal conditions.
