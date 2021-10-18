@@ -9,6 +9,7 @@ from dnx_gentools.def_namedtuples import DNS_BLACKLIST, DNS_REQUEST_RESULTS, DNS
 
 from dnx_iptools.dnx_trie_search import generate_recursive_binary_search  # pylint: disable=import-error, no-name-in-module
 from dnx_iptools.packet_classes import Listener
+from dnx_iptools.protocol_tools import int_to_ipaddr
 
 from dnx_secmods.dns_proxy.dns_proxy_automate import Configuration
 from dnx_secmods.dns_proxy.dns_proxy_log import Log
