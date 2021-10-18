@@ -55,7 +55,7 @@ class IPProxy(NFQueue):
 
         # forwarding packet to ips for portscan/ddos inspection. accept or deny actions are both capable of being
         # inspected by ips/ids. if ips/ids inspection is needed, the ip proxy will defer verdict and forward.
-        elif (packet.direction is DIR.INBOUND and packet.ips_profile):
+        if (packet.direction is DIR.INBOUND and packet.ips_profile):
             packet.nfqueue.forward(Queue.IPS_IDS)
 
         # if packet is not dropped at this point, neither the ips/ids and ip proxy profiles are set. in this case
