@@ -159,7 +159,7 @@ class Configuration:
         dhcp_intfs = load_configuration('dhcp_server')['interfaces']
 
         # interface ident eg. eth0
-        for intf in self.DHCPServer._intfs:
+        for *_, intf in self.DHCPServer._intfs:
 
             # interface friendly name eg. wan
             for _intf, settings in dhcp_intfs.items():

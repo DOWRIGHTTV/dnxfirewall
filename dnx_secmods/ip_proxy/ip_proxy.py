@@ -5,13 +5,13 @@ import __init__
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import IPP_INSPECTION_RESULTS
 
+from dnx_iptools.packet_classes import NFQueue
+from dnx_iptools.dnx_trie_search import RecurveTrie, RangeTrie # pylint: disable=import-error, no-name-in-module
+
 from dnx_secmods.ip_proxy.ip_proxy_packets import IPPPacket, ProxyResponse
 from dnx_secmods.ip_proxy.ip_proxy_restrict import LanRestrict
 from dnx_secmods.ip_proxy.ip_proxy_automate import Configuration
 from dnx_secmods.ip_proxy.ip_proxy_log import Log
-
-from dnx_iptools.packet_classes import NFQueue
-from dnx_iptools.dnx_trie_search import RecurveTrie, RangeTrie # pylint: disable=import-error, no-name-in-module
 
 LOG_NAME = 'ip_proxy'
 

@@ -45,11 +45,24 @@ class IPSPacket(NFPacket):
         # X | X | X | X | ips | ipp | direction | action
         self.mark = mark
 
-        self.action      = CONN(mark & 15)
-        self.direction   = DIR( mark >> 4 & 15)
+        # quick fix for packets received on INPUT chain which is currently not policed by cfirewall. if/when INPUT is policed
+        # by cfirewall, this may be to be retained in some form to notify ips that this packet is and informational packet/
+        # host profile packet where it is gauranteed dropped.
 
-        self.ipp_profile = mark >>  8 & 15
-        self.ips_profile = mark >> 12 & 15
+        # TODO: this also highlights and interesting issue. if there is no active ips profiles configured on a rule, this
+        # the INPUT chain inspection will be a waste of resources. We should probably implement an tracker IPS/IDS state that
+        # will be a boolean of whether at least 1 firewall rule has an ips policy or not.
+        if (mark == WAN_IN):
+            self.action = CONN.DROP
+
+            self.ips_profile = 1
+
+        else:
+            self.action = CONN(mark & 15)
+            # self.direction   = DIR( mark >> 4 & 15) # NOTE: currently not used by IPS/IDS
+
+            # self.ipp_profile = mark >>  8 & 15
+            self.ips_profile = mark >> 12 & 15
 
         self.tracked_ip = int_to_ipaddr(self.src_ip)
         if (self.protocol is not PROTO.ICMP):
