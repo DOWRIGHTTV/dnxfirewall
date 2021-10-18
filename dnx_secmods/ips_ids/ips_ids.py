@@ -174,6 +174,10 @@ class Inspect:
 
     def _threshold_exceeded(self, tracked_ip, packet):
         elapsed_time = packet.timestamp - tracked_ip['initial']
+
+        # filter to ensure tracked host's initial packet was received 2 seconds or more ago. this is needed to
+        # prevent the cps/pps calculation from calculating average on fractional values which result in multiplication
+        # instead of division causing the result to be greater than the total count itself.
         if (elapsed_time < 2): return False
 
         # NOTE: temporary while in WIP
@@ -196,11 +200,12 @@ class Inspect:
 
         # accepting connections from hosts that's don't meet active scanner criteria then returning.
         if (not active_scanner):
-            Log.debug(f'[pscan/accept] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
 
             # CONN.INSPECT was dropped in pre_inspect and only needed to inspect for profiling purposes
             if (packet.action is not CONN.INSPECT):
                 packet.nfqueue.accept()
+
+                Log.debug(f'[pscan/accept] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
 
             return
 
@@ -257,6 +262,7 @@ class Inspect:
         else:
             tracked_ip['target'].add(packet.target_port)
 
+            # ===================================================================================================
             # this is the logic to determine whether a host is a scanner or not and for mapping local port to tcp
             # sequence number which will be used to retroactively reject scans on ports prior to the host being
             # flagged. pre detect data will not be inserted for packet that sets initial block status since we still
@@ -269,6 +275,8 @@ class Inspect:
 
             elif (packet.protocol is PROTO.UDP):
                 tracked_ip['pre_detect'][packet.target_port] = packet.data
+
+            # ===================================================================================================
 
         # returning scan tracker to be used by reject to retroactively handle ports before marked as a scanner.
         return initial_block, scan_detected, tracked_ip['pre_detect']
@@ -287,8 +295,8 @@ class Inspect:
                 'count': 1, 'initial': packet.timestamp, 'last_seen': packet.timestamp
             }
 
-    # sending packet response. if initial block is set, then pre detection logging will be use to
-    # generate responses for packets prior to being flagged a scanner.
+    # sending packet response. if initial block is set, then pre detection logging will be use to generate responses
+    # for packets prior to being flagged a scanner.
     def _portscan_reject(self, pre_detection_logging, packet, initial_block):
         self._IPSResponse.prepare_and_send(packet)
 
@@ -307,9 +315,8 @@ class Inspect:
                         copy(packet).udp_override(icmp_payload)
                     )
 
-    # checking intersection between pre detection and open port keys. missed_port will
-    # contain any port that was scanned before host was marked as scanner. if empty, all
-    # ports were blocked.
+    # checking intersection between pre detection and open port keys. missed_port will contain any port that was
+    # scanned before host was marked as scanner. if empty, all ports were blocked.
     # NOTE: later, this can be used to report on which specific protocol/port was missed
     def _get_block_status(self, pre_detection_logging, protocol) -> IPS:
         missed_port = pre_detection_logging.keys() & self._IPS.open_ports[protocol].keys()
