@@ -64,9 +64,9 @@ FirewallManage.cfirewall = cfirewall
 # NOTE: this will allow the config manager to reference the Log class without an import. (cyclical import error)
 ConfigurationManager.set_log_reference(Log)
 
-## ---------------------------------------------
-## START OF NAVIGATION TABS
-## ---------------------------------------------
+# --------------------------------------------- #
+#  START OF NAVIGATION TABS
+# --------------------------------------------- #
 
 # TODO: figure out best visually pleasing way to inject current logged in user info on each page.
 @app.route('/dashboard', methods=['GET', 'POST'])
@@ -84,9 +84,9 @@ def dnx_dashboard(dnx_session_data):
 
     return render_template('dnx_dashboard.html', **page_settings)
 
-## ---------------------------------------------
-## START OF SETTINGS TAB
-## ---------------------------------------------
+# --------------------------------------------- #
+#  START OF SETTINGS TAB
+# --------------------------------------------- #
 
 @app.route('/settings/dns', methods=['GET', 'POST'])
 @user_restrict('admin')
@@ -187,9 +187,9 @@ def settings_categories(dnx_session_data):
 
     return page_action
 
-## ---------------------------------------------
-## START OF ADVANCED TAB
-## ---------------------------------------------
+# --------------------------------------------- #
+#  START OF ADVANCED TAB
+# --------------------------------------------- #
 
 @app.route('/advanced/whitelist', methods=['GET', 'POST'])
 @user_restrict('admin')
@@ -312,9 +312,9 @@ def advanced_ips(dnx_session_data):
 
     return page_action
 
-## ---------------------------------------------
-## START OF SYSTEMS TAB
-## ---------------------------------------------
+# --------------------------------------------- #
+#  START OF SYSTEMS TAB
+# --------------------------------------------- #
 
 @app.route('/system/logs', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
@@ -322,7 +322,9 @@ def system_logs(dnx_session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
         'menu': '1', 'dnx_table': True, 'ajax': True,
-        'log_files': ['combined', 'logins', 'web_app', 'system', 'dns_proxy', 'ip_proxy', 'ips', 'dhcp_server', 'syslog'],
+        'log_files': [
+            'combined', 'logins', 'web_app', 'system', 'dns_proxy', 'ip_proxy', 'ips', 'dhcp_server', 'syslog'
+        ],
         'uri_path': ['system', 'logs']
     }
 
@@ -402,15 +404,15 @@ def system_services(dnx_session_data):
 
     return page_action
 
-## ---------------------------------------------
-## START OF DEVICE TAB
-## ---------------------------------------------
+# --------------------------------------------- #
+#  START OF DEVICE TAB
+# --------------------------------------------- #
 
 @app.route('/device/restart', methods=['GET', 'POST'])
 @user_restrict('admin')
 def system_restart(dnx_session_data):
     page_settings = {
-        'navi':True, 'idle_timeout': False,
+        'navi': True, 'idle_timeout': False,
         'control': True, 'action': 'restart',
         'uri_path': ['device', 'restart']
     }
@@ -436,9 +438,9 @@ def system_shutdown(dnx_session_data):
 
     return system_action
 
-## ---------------------------------------------
-## START OF LOGOUT TAB
-## ---------------------------------------------
+# --------------------------------------------- #
+#  START OF LOGOUT TAB
+# --------------------------------------------- #
 
 @app.route('/logout', methods=['GET'])
 @user_restrict('user', 'admin')
@@ -451,21 +453,21 @@ def dnx_logout(dnx_session_data):
 
     return redirect(url_for('dnx_login'))
 
-## ---------------------------------------------
-## BLOCKED PAGE | dns redirect
-## ---------------------------------------------
+# --------------------------------------------- #
+#  BLOCKED PAGE | dns redirect
+# --------------------------------------------- #
 
 @app.route('/blocked')
 def dnx_blocked():
     page_settings = {
         'navi': True, 'login_btn': True,
-        'idle_timeout': False, 'uri_path': ['blocked',]
+        'idle_timeout': False, 'uri_path': ['blocked']
     }
 
     # checking for domain sent by nginx that is being redirected to firewall. if domain doesnt exist (user navigated to
-    # this page manually) then a not authorized page will be served. If the domain is not a valid domain (regex) the request
-    # will be ridirected back to blocked page without a domain. NOTE: this is a crazy bit of code that should be tested much
-    # more as it is possible to do a sql injection here if the validations below are bypassed.
+    # this page manually) then a not authorized page will be served. If the domain is not a valid domain (regex) the
+    # request will be redirected back to blocked page without a domain. NOTE: this is a crazy bit of code that should be
+    # tested much more as it is possible to do a sql injection here if the validations below are bypassed.
     blocked_domain = request.args.get('dom', None)
     if (not blocked_domain):
         session.pop('user', None)
@@ -493,14 +495,16 @@ def dnx_blocked():
 
     return render_template('dnx_blocked.html', **page_settings)
 
-## --------------------------------------------- ##
-## --------------------------------------------- ##
+# --------------------------------------------- #
+# --------------------------------------------- #
 
 @app.route('/login', methods=['GET', 'POST'])
-# TODO: see about making session username a list of username and role so we wont have to have a separate
-# role check every time the user logs in, out, or navigates to new page.
-# TODO: if user is already logged in... <--- what is this???
 def dnx_login():
+
+    # user already has an active authenticated session so we can just drop them back to the dashboard.
+    if (session.get('user', None)):
+        return redirect(url_for('dnx_dashboard'))
+
     login_error = None
     if (request.method == 'POST'):
         authenticated, username, user_role = Authentication.user_login(request.form, request.remote_addr)
@@ -515,16 +519,18 @@ def dnx_login():
 
         login_error = 'Invalid Credentials. Please try again.'
 
-    return render_template('dnx_login.html', navi=True, login_btn=False, idle_timeout=False,
-        standard_error=False, login_error=login_error, uri_path=['login'])
+    return render_template(
+        'dnx_login.html', navi=False, login_btn=False, idle_timeout=False,
+        standard_error=False, login_error=login_error, uri_path=['login']
+    )
 
-## --------------------------------------------- ##
-## --------------------------------------------- ##
+# --------------------------------------------- #
+# --------------------------------------------- #
 @app.route('/', methods=['GET'])
 def main():
     return redirect(url_for('dnx_login'))
 
-## --------------------------------------------- ##
+# --------------------------------------------- #
 # all standard page loads use this logic to decide the page action/ call the correct
 # lower level functions residing in each pages Class
 def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
@@ -616,7 +622,7 @@ def categories_page_logic(dnx_page, page_settings):
 
     return render_template('settings_categories.html', **page_settings)
 
-#function called by restart/shutdown pages. will ensure the user specified operation gets executed
+# function called by restart/shutdown pages. will ensure the user specified operation gets executed
 def handle_system_action(page_settings):
     action = page_settings['action']
 
@@ -667,12 +673,9 @@ def ajax_response(*, status, data):
     if (not isinstance(status, bool)):
         raise TypeError('Ajax response status must be a boolean.')
 
-    # if (not isinstance(data, dict)):
-    #     raise TypeError('Ajax data must be a dictionary.')
-
     return jsonify({'success': status, 'result': data})
 
-# checks form data for a color mode change and writes and configures accordingly. otherwise will load
+# checks form data for a color mode change and writes/ configures accordingly. otherwise will load
 # the current dark mode setting for the active user and set flask.session['dark_mode] accordingly.
 @app.before_request
 def dark_mode():
@@ -728,6 +731,7 @@ def user_timeout():
 
 # jinja filters
 
+# TODO: this can be removed since it is a standard function in jinja right?
 @app.template_filter('truncate')
 def truncate(string, limit):
     '''returns string[:limit]... if greater than limit, otherwise original string will be returned.'''
