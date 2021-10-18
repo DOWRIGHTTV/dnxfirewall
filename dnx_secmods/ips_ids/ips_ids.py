@@ -77,7 +77,7 @@ class IPS_IDS(NFQueue):
             if (packet.action is CONN.ACCEPT):
                 packet.nfqueue.accept()
 
-            elif (packet.action is CONN.DROP):
+            else:
                 packet.nfqueue.drop()
 
             threading.Thread(target=Inspect.ddos, args=(packet,)).start()
@@ -101,9 +101,13 @@ class IPS_IDS(NFQueue):
             else:
                 packet.nfqueue.drop()
 
-        # no inspection engines are enabled so the packet will be accepted and default action no inspect applied
-        else:
+        # no inspection, packet accepted. default action no inspect applied
+        elif packet.action is CONN.ACCEPT:
             packet.nfqueue.accept()
+
+        # no inspection, but action is drop or inspect. default no inspect applied.
+        else:
+            packet.nfqueue.drop()
 
         return False
 
