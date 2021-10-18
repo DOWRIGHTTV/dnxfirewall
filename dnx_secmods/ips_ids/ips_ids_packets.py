@@ -53,7 +53,7 @@ class IPSPacket(NFPacket):
         #  this the INPUT chain inspection will be a waste of resources. We should probably implement an tracker IPS/IDS
         #  state that will be a boolean of whether at least 1 firewall rule has an ips policy or not.
         if (mark == WAN_IN):
-            self.action = CONN.DROP
+            self.action = CONN.INSPECT
 
             self.ips_profile = 1
 

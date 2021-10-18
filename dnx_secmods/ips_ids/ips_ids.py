@@ -65,6 +65,7 @@ class IPS_IDS(NFQueue):
         elif (packet.src_ip in self.ip_whitelist):
             packet.nfqueue.accept()
 
+        # CONN.ACCEPT or CONN.INSPECT
         else:
             if (self.all_engines_enabled):
 
@@ -80,7 +81,8 @@ class IPS_IDS(NFQueue):
             # so a packet decision will not be made unless we do it here.
             elif (self.ddos_engine_enabled):
 
-                packet.nfqueue.accept()
+                if (packet.action is CONN.ACCEPT):
+                    packet.nfqueue.accept()
 
                 threading.Thread(target=Inspect.ddos, args=(packet,)).start()
 
@@ -92,10 +94,15 @@ class IPS_IDS(NFQueue):
                 if (packet.protocol is not PROTO.ICMP):
                     return True
 
-                # icmp will just be accepted here, since nothing have objected to it. default return of do not inspect
-                # will handle this condition
-                else:
+                # icmp will just be accepted here as long as the packet wasn't received from the INPUT chain since
+                # nothing have objected to it. default return of do not inspect will handle this condition.
+                elif (packet.action is CONN.ACCEPT):
                     packet.nfqueue.accept()
+
+                # CONN.INSPECT is the only current state that will match here. this will drop the packet so it doesnt
+                # become orphaned in the kernel or get accepted and hit the wan interface.
+                else:
+                    packet.nfqueue.drop()
 
         return False
 
@@ -191,27 +198,35 @@ class Inspect:
         if (not active_scanner):
             Log.debug(f'[pscan/accept] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
 
-            packet.nfqueue.accept()
+            # CONN.INSPECT was dropped in pre_inspect and only needed to inspect for profiling purposes
+            if (packet.action is not CONN.INSPECT):
+                packet.nfqueue.accept()
 
             return
 
         # prevents connections from being blocked, but will be logged.
         # NOTE: this may be noisy and log multiple times per single scan. validate.
-        if (IPS_IDS.ids_mode):
-            packet.nfqueue.accept()
+        elif (IPS_IDS.ids_mode):
+
+            # CONN.INSPECT was dropped in pre_inspect and only needed to inspect for profiling purposes
+            if (packet.action is not CONN.INSPECT):
+                packet.nfqueue.accept()
 
             block_status = IPS.LOGGED
 
         # dropping packet then checking for further action if necessary.
         elif (IPS_IDS.portscan_prevention):
-            packet.nfqueue.drop()
+
+            # CONN.INSPECT was dropped in pre_inspect and only needed to inspect for profiling purposes
+            if (packet.action is not CONN.INSPECT):
+                packet.nfqueue.drop()
 
             # if rejection is enabled on top of prevention port unreachable packets will be sent back to the scanner.
             if (IPS_IDS.portscan_reject):
                 self._portscan_reject(pre_detection_logging, packet, initial_block)
 
-            # if initial block is not set then the current host has already been effectively blocked and does not need
-            # to do anything beyond this point.
+            # if initial block is not set then the current host has already been effectively blocked and the engine does
+            # not need to do anything beyond this point.
             if (not initial_block): return
 
             block_status = self._get_block_status(pre_detection_logging, packet.protocol)

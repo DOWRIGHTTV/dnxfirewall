@@ -203,7 +203,6 @@ class TLS(_IntEnum):
     SERVER_HELLO_DONE = 14
 
 # ips detection engines
-# return status of detected portscans
 class IPS(_Enum):
     DISABLED = 0
     DDOS     = 1
@@ -223,9 +222,10 @@ class DIR(_Enum):
 
 class CONN(_Enum):
     # decisions
-    REJECT = -1
-    DROP   = 0
-    ACCEPT = 1
+    REJECT  = -2
+    INSPECT = -1 # drop with full inspection
+    DROP    = 0
+    ACCEPT  = 1
 
 # dhcp server message types
 class DHCP(_IntEnum):
