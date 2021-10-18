@@ -135,7 +135,7 @@ class Inspect:
     # NOTE: not passing in _IPS object since it doesnt seem to be worth it. maybe can for consistency though.
     def ddos(cls, packet):
         self = cls()
-        self._dd3os_inspect(packet)
+        self._ddos_inspect(packet)
 
     # this method drives the overall logic of the ddos detection engine. it will try to conserve resources by not
     # sending packets that don't need to be checked or logged under normal conditions.
