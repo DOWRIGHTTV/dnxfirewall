@@ -53,56 +53,57 @@ class IPS_IDS(NFQueue):
         Log.notice(f'{cls.__name__} initialization complete.')
 
     def _pre_inspect(self, packet):
-        # dropping packet from ip proxy if flagged. this takes priority over ips whitelist due to module hierarchy.
-        if (packet.action is CONN.DROP):
-            packet.nfqueue.drop()
-
-            # ip proxy deny > ips inspect
-            if (self.ddos_engine_enabled):
-                threading.Thread(target=Inspect.ddos, args=(packet,)).start()
-
-        # auto permit configured whitelisted hosts (source ip check only)
-        elif (packet.src_ip in self.ip_whitelist):
+        # permit configured whitelisted hosts (source ip check only)
+        if (packet.src_ip in self.ip_whitelist):
             packet.nfqueue.accept()
 
+            return False
+
         # CONN.ACCEPT or CONN.INSPECT
+        if (self.all_engines_enabled):
+
+            # ddos inspection is independent of pscan and does not invoke action on packets
+            threading.Thread(target=Inspect.ddos, args=(packet,)).start()
+
+            # pscan engine is primary engine which can invoke control so the decision will be deferred until after
+            # inspection has taken place.
+            if (packet.protocol is not PROTO.ICMP):
+                return True
+
+        # ip proxy accept > ddos inspect. must invoke packet action here since packet will not be sent through pscan
+        # engine so a packet decision will not be made unless we do it here.
+        elif (self.ddos_engine_enabled):
+
+            if (packet.action is CONN.ACCEPT):
+                packet.nfqueue.accept()
+
+            elif (packet.action is CONN.DROP):
+                packet.nfqueue.drop()
+
+            threading.Thread(target=Inspect.ddos, args=(packet,)).start()
+
+        # ip proxy accept > portscan inspect if tcp or udp. icmp will be forwarded without inspection since the
+        # protocol is not compatible with server ports.
+        elif (self.ps_engine_enabled):
+
+            # notify tcp/udp to be inspected by portscan engine
+            if (packet.protocol is not PROTO.ICMP):
+                return True
+
+            # icmp will just be accepted here as long as the packet wasn't received from the INPUT chain since
+            # nothing have objected to it. default return of do not inspect will handle this condition.
+            elif (packet.action is CONN.ACCEPT):
+                packet.nfqueue.accept()
+
+            # this will drop the packet so it doesnt become orphaned in the kernel or get accepted and hit the
+            # wan interface. this will match CONN.DROP or CONN.INSPECT, both having same packet action, but
+            # different inspection logic.
+            else:
+                packet.nfqueue.drop()
+
+        # no inspection engines are enabled so the packet will be accepted and default action no inspect applied
         else:
-            if (self.all_engines_enabled):
-
-                # ddos inspection is independent of pscan and does not invoke action on packets
-                threading.Thread(target=Inspect.ddos, args=(packet,)).start()
-
-                # pscan engine is primary engine which can invoke control so the decision will be deferred until after
-                # inspection has taken place.
-                if (packet.protocol is not PROTO.ICMP):
-                    return True
-
-            # ip proxy accept > ddos inspect. must accept packet here since packet will not be sent through pscan engine
-            # so a packet decision will not be made unless we do it here.
-            elif (self.ddos_engine_enabled):
-
-                if (packet.action is CONN.ACCEPT):
-                    packet.nfqueue.accept()
-
-                threading.Thread(target=Inspect.ddos, args=(packet,)).start()
-
-            # ip proxy accept > portscan inspect if tcp or udp. icmp will be forwarded without inspection since the
-            # protocol is not compatible with server ports.
-            elif (self.ps_engine_enabled):
-
-                # notify tcp/udp to be inspected by portscan engine
-                if (packet.protocol is not PROTO.ICMP):
-                    return True
-
-                # icmp will just be accepted here as long as the packet wasn't received from the INPUT chain since
-                # nothing have objected to it. default return of do not inspect will handle this condition.
-                elif (packet.action is CONN.ACCEPT):
-                    packet.nfqueue.accept()
-
-                # CONN.INSPECT is the only current state that will match here. this will drop the packet so it doesnt
-                # become orphaned in the kernel or get accepted and hit the wan interface.
-                else:
-                    packet.nfqueue.drop()
+            packet.nfqueue.accept()
 
         return False
 
@@ -206,6 +207,11 @@ class Inspect:
                 packet.nfqueue.accept()
 
                 Log.debug(f'[pscan/accept] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
+
+            # for tshooting purposes. will likely leave since this is valuable information for a user if they are trying
+            # to see what is going on with their ips configurations if things are not working as intended.
+            else:
+                Log.debug(f'[pscan/profile] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
 
             return
 
