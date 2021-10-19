@@ -2,7 +2,7 @@
 
 <h1 align="center">
 	<br>
-	<img src="https://github.com/DOWRIGHTTV/dnxfirewall/blob/dnxfirewall/dnx_frontend/static/assets/images/dnxlogo_v2.png" alt="dnxfirewall logo">
+	<img src="https://raw.githubusercontent.com/DOWRIGHTTV/dnxfirewall/dnxfirewall/dnx_webui/static/assets/images/dnxlogo_v2.png" alt="dnxfirewall logo">
 	<br>
 </h1>
 
@@ -26,6 +26,13 @@ A low level "architecture, system design" video will be created at some point to
 
 <strong>NEW: Auto deployment utility (auto loader) is now live. This should be used to deploy the system on any compatible distro. See compatible distro list for more details. </strong>
 
+<strong>NEW: full zone based firewall rules (source and destination) and per rule based security profiles.
+
+- Custom packet handler
+   - stateful or stateless packet inspection
+   - complex packet decisions (sends to security modules)
+   - implemented in C
+
 - DNS proxy
    - category based blocking (general, TLD, substring matching)
    - user added whitelist/blacklist or custom general category creation
@@ -35,8 +42,8 @@ A low level "architecture, system design" video will be created at some point to
    - 2 level record caching
 
 - IP proxy (transparent) bi-directional
-   - reputation based host filtering
-   - geolocation filter (country blocking)
+   - reputation based host filtering (detection implemented in C)
+   - geolocation filter (country blocking, detection implemented in C)
    - lan restriction (disables internet access to the LAN for all IPs not whitelisted) | Parental Control
 
 - IPS/IDS (WAN/inbound)
@@ -105,8 +112,6 @@ A low level "architecture, system design" video will be created at some point to
 
 <br>
 <h4>External code sources</h4>
-
-https://github.com/kti/python-netfilterqueue | cython <-> python C extension for binding to linux kernel [netfilter]
 
 https://www.ip2location.com/free/visitor-blocker | geolocation filtering datasets (ip address assignments by country)
 

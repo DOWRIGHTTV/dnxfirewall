@@ -226,7 +226,7 @@ class FirewallControl:
 
         print(f'sending zones to CFirewall: {dnx_zones}')
 
-        # NOTE: gil must be acquired on the other side of this call
+        # NOTE: gil must be held on the other side of this call
         error = self.cfirewall.update_zones(dnx_zones)
         if (error):
             pass # TODO: do something here
