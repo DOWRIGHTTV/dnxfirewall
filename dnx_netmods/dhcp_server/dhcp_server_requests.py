@@ -1,20 +1,13 @@
 #!/usr/bin/env python3
 
-import os, sys
-import time
-import json
-import threading
 import random
 
 from ipaddress import IPv4Address
-from subprocess import run, CalledProcessError, DEVNULL
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
+from dnx_gentools.def_constants import *
+from dnx_iptools.def_structs import *
+from dnx_iptools.protocol_tools import icmp_reachable, btoia
 
-from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
-from dnx_iptools.def_structs import * # pylint: disable=unused-wildcard-import
-from dnx_iptools.protocol_tools import icmp_reachable
 from dnx_sysmods.logging.log_main import LogHandler as Log
 
 _NULL_OPT = (0,'')
@@ -267,7 +260,7 @@ class ClientRequest:
         data = self._data
 
         self.xID    = data[4:8]
-        self.bcast  = short_unpack(data[10:12])[0] >> 15
+        self.bcast  = btoia(data[10:12]) >> 15
         self.ciaddr = IPv4Address(data[12:16]) # ciaddr
         self.chaddr = data[28:44]
         self.mac    = data[28:34].hex()

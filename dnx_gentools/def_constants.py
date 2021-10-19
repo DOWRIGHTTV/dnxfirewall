@@ -30,7 +30,7 @@ else:
 
 ROOT = True if not _os.getuid() else False
 
-HOME_DIR = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-3]))
+HOME_DIR = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-2]))
 
 # globally sets which sql to use | sqlite3 = 0, psql = 1
 SQL_VERSION = 0
@@ -79,7 +79,10 @@ class CFG(_IntEnum):
 #interface states
 class INTF(_IntEnum):
     STATIC = 0
-    DHCP = 1
+    DHCP   = 1
+
+    BUILTINS = 69
+    EXTENDED = 70
 
 #protocols
 class DNX(_IntEnum):
@@ -200,7 +203,6 @@ class TLS(_IntEnum):
     SERVER_HELLO_DONE = 14
 
 # ips detection engines
-# return status of detected portscans
 class IPS(_Enum):
     DISABLED = 0
     DDOS     = 1
@@ -220,9 +222,10 @@ class DIR(_Enum):
 
 class CONN(_Enum):
     # decisions
-    REJECT = -1
-    DROP   = 0
-    ACCEPT = 1
+    REJECT  = -2
+    INSPECT = -1 # drop with full inspection
+    DROP    = 0
+    ACCEPT  = 1
 
 # dhcp server message types
 class DHCP(_IntEnum):

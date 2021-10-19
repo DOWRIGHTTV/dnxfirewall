@@ -8,7 +8,7 @@ from types import SimpleNamespace
 HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
 sys.path.insert(0, HOME_DIR)
 
-from dnx_sysmods.configure.def_constants import CFG, INTF, INVALID_FORM, fast_time
+from dnx_gentools.def_constants import CFG, INTF, INVALID_FORM, fast_time
 from dnx_sysmods.configure.file_operations import load_configuration, ConfigurationManager, json_to_yaml
 from dnx_sysmods.configure.exceptions import ValidationError
 from dnx_system.sys_main import system_action

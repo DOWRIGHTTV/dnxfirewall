@@ -4,8 +4,8 @@ import threading
 
 from collections import Counter, OrderedDict, namedtuple
 
-from dnx_sysmods.configure.def_constants import *
-from dnx_sysmods.configure.def_namedtuples import DNS_CACHE
+from dnx_gentools.def_constants import *
+from dnx_gentools.def_namedtuples import DNS_CACHE
 from dnx_sysmods.configure.file_operations import ConfigurationManager, load_configuration, write_configuration, load_top_domains_filter
 
 from dnx_secmods.dns_proxy.dns_proxy_log import Log
@@ -41,22 +41,21 @@ class DNSCache(dict):
         '_dns_packet', '_request_handler',
 
         '_dom_counter', '_top_domains',
-        '_cnter_lock', '_top_dom_filter'
+        '_counter_lock', '_top_dom_filter'
     )
 
-    def __init__(self, *, packet=None, request_handler=None):
+    def __init__(self, *, packet, request_handler):
         self._dns_packet = packet
         self._request_handler = request_handler
 
         self._dom_counter = Counter()
         self._top_domains = {}
         self._top_dom_filter = []
-        self._cnter_lock  = threading.Lock()
+        self._counter_lock  = threading.Lock()
 
         self._load_top_domains()
         threading.Thread(target=self._auto_clear_cache).start()
-        if (self._dns_packet and self._request_handler):
-            threading.Thread(target=self._auto_top_domains).start()
+        threading.Thread(target=self._auto_top_domains).start()
 
     # searching key directly will return calculated ttl and associated records
     def __getitem__(self, key):
@@ -99,11 +98,11 @@ class DNSCache(dict):
         return self[query_name]
 
     def _increment_if_valid_top(self, domain):
-        for fltr in self._top_dom_filter:
-            if (fltr in domain): break
-        else:
-            with self._cnter_lock:
-                self._dom_counter[domain] += 1
+        # list comp to built in any test for match. match will not increment top domain counter.
+        if any([fltr in domain for fltr in self._top_dom_filter]): return
+
+        with self._counter_lock:
+            self._dom_counter[domain] += 1
 
     @looper(THREE_MIN)
     # automated process to flush the cache if expire time has been reached.
@@ -119,17 +118,18 @@ class DNSCache(dict):
             del self[domain]
 
     @looper(THREE_MIN)
-    # automated process to keep top 20 queried domains permanently in cache. it will use the current caches packet to generate
-    # a new packet and add to the standard tls queue. the recieving end will know how to handle this by settings the client address
-    # to none in the session tracker.
+    # automated process to keep top 20 queried domains permanently in cache. it will use the current caches packet to
+    # generate a new packet and add to the standard tls queue. the receiving end will know how to handle this by
+    # settings the client address to none in the session tracker.
     def _auto_top_domains(self):
         if (self.clear_top_domains):
             self._dom_counter = Counter()
             self._reset_flag('top_domains')
 
         most_common_doms = self._dom_counter.most_common
-        self._top_domains = {dom[0]:cnt for cnt, dom
-            in enumerate(most_common_doms(TOP_DOMAIN_COUNT), 1)}
+        self._top_domains = {
+            dom[0]: cnt for cnt, dom in enumerate(most_common_doms(TOP_DOMAIN_COUNT), 1)
+        }
 
         request_handler, dns_packet = self._request_handler, self._dns_packet
         for domain in self._top_domains:
@@ -142,7 +142,7 @@ class DNSCache(dict):
 
     @classmethod
     # method called to reset dictionary cache for sent in value (standard or top domains) and then reset the flag in the
-    # json file back to false.
+    # json file back to false. needed class method since the structures are stored within the class scope.
     def _reset_flag(cls, cache_type):
         setattr(cls, f'clear_{cache_type}', False)
         with ConfigurationManager('dns_server') as dnx:
@@ -164,90 +164,95 @@ class DNSCache(dict):
         self._top_dom_filter = set(load_top_domains_filter())
 
 
-class RequestTracker(OrderedDict):
+# TODO: refactor name to be lowercase maybe.
+def RequestTracker():
     ''' Tracks DNS Server requests and allows for either DNS Proxy or Server to add initial client address key
     on a first come basis and the second one will update the corresponding value index with info directly.
 
         RequestTracker([request_identifier: [client_query, decision, timestamp]])
     '''
 
-    __slots__ = (
-        'insert_lock', 'counter_lock',
+    # storing as closure for lookup performance.
+    # NOTE: only one request tracker will be active at a time so shared reference isn't a concern
+    insert_lock = threading.Lock()
+    counter_lock = threading.Lock()
 
-        'ready_count',
+    request_ready = threading.Event()
+    request_wait = request_ready.wait
+    request_set = request_ready.set
+    request_clear = request_ready.clear
 
-        'request_wait', 'request_set', 'request_clear'
-    )
+    _list = list
 
-    def __init__(self):
-        self.insert_lock = threading.Lock()
-        self.counter_lock = threading.Lock()
+    class _RequestTracker(OrderedDict):
 
-        self.ready_count = 0
+        __slots__ = ('ready_count',)
 
-        request_ready = threading.Event()
-        self.request_wait  = request_ready.wait
-        self.request_set   = request_ready.set
-        self.request_clear = request_ready.clear
+        def __init__(self):
+            self.ready_count = 0
 
-    # TODO: figure out why sometimes the count never reaches 0 OR the Event never gets cleared. sometimes
-    # it seems to loop endlessly/immediately between dns server > return ready > request wait > server
+        # TODO: figure out why sometimes the count never reaches 0 OR the Event never gets cleared. sometimes
+        #  it seems to loop endlessly/immediately between dns server > return ready > request wait > server
+        #  NOTE: is this still relevant?
 
-    # blocks until the request ready flag has been set, then iterates over dict and appends any client adress with
-    # both values present. (client_query class instance object and decision)
-    def return_ready(self):
-        self.request_wait()
+        # blocks until the request ready flag has been set, then iterates over dict and appends any client address with
+        # both values present. (client_query class instance object and decision)
+        def return_ready(self):
+            request_wait()
 
-        ready_requests = []
-        for request_identifier, (client_query, decision, timestamp) in list(self.items()):
+            ready_requests = []
+            for request_identifier, (client_query, decision, timestamp) in _list(self.items()):
 
-            # using inverse because it has potential to be more efficient if both are not present. decision is more
-            # likely to be input first, so it will be evaled only if client_query is present.
-            if (not client_query or not decision):
+                # using inverse because it has potential to be more efficient if both are not present. decision is more
+                # likely to be input first, so it will be evaled only if client_query is present.
+                if (not client_query or not decision):
 
-                # removes entry from tracker if not finalized within 1 second
-                if (fast_time() - timestamp >= ONE_SEC):
-                    del self[request_identifier]
+                    # removes entry from tracker if not finalized within 1 second
+                    if (fast_time() - timestamp >= ONE_SEC):
+                        del self[request_identifier]
 
-                continue
+                    continue
 
-            ready_requests.append((client_query, decision))
+                ready_requests.append((client_query, decision))
 
-            # lock protects count, which is also accessed by server and proxy via insert method.
-            with self.counter_lock:
-                self.ready_count -= 1
+                # lock protects count, which is also accessed by server and proxy via insert method.
+                with counter_lock:
+                    self.ready_count -= 1
 
-            # removes entry from tracker if request is ready for forwarding.
-            del self[request_identifier]
+                # removes entry from tracker if request is ready for forwarding.
+                del self[request_identifier]
 
-        if (not self.ready_count):
-            self.request_clear()
+            if (not self.ready_count):
+                request_clear()
 
-        # here temporarily for testing implementation
-        elif self.ready_count < 0:
-            raise RuntimeError('Request Tracker ready count dropped below 0. probably fatal. yay me.')
+            # here temporarily for testing implementation
+            elif self.ready_count < 0:
+                raise RuntimeError('Request Tracker ready count dropped below 0. probably fatal. yay me.')
 
-        return ready_requests
+            return ready_requests
 
-    # this is a thread safe method to add entries to the request tracker dictionary. this will ensure the key
-    # exists before updatin the value. a default dict cannot be used (from what i can tell) because an empty
-    # list would raise an index error if it was trying to set decision before request.
-    def insert(self, request_identifier, data, *, module_index):
-        with self.insert_lock:
+        # this is a thread safe method to add entries to the request tracker dictionary. this will ensure the key
+        # exists before updating the value. a default dict cannot be used (from what i can tell) because an empty
+        # list would raise an index error if it was trying to set decision before request.
+        def insert(self, request_identifier, data, *, module_index):
+            with insert_lock:
 
-            tracked_request = self.get(request_identifier, None)
-            # if client address is not already present, it will be added before updating the module index value
-            if (not tracked_request):
-                # default entry: 1. client request instance 2. proxy decision, 3. timestamp
-                self[request_identifier] = [None, None, fast_time()]
-                self[request_identifier][module_index] = data
+                tracked_request = self.get(request_identifier, None)
+                # if client address is not already present, it will be added before updating the module index value
+                if (not tracked_request):
+                    # default entry: 1. client request instance 2. proxy decision, 3. timestamp
+                    self[request_identifier] = [None, None, fast_time()]
+                    self[request_identifier][module_index] = data
 
-            # if present 1/2 entries exist so after this condition 2/2 will be present and request will be ready
-            # for forwarding. setting thread event to allow return ready to unblock and start processing.
-            elif (tracked_request[module_index] is None):
-                with self.counter_lock:
-                    self.ready_count += 1
+                # if present 1/2 entries exist so after this condition 2/2 will be present and request will be ready
+                # for forwarding. setting thread event to allow return ready to unblock and start processing.
+                elif (tracked_request[module_index] is None):
+                    with counter_lock:
+                        self.ready_count += 1
 
-                self[request_identifier][module_index] = data
+                    self[request_identifier][module_index] = data
 
-                self.request_set()
+                    # notifying return_ready there is a query ready to forwarding
+                    request_set()
+
+    return _RequestTracker()

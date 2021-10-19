@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
 
-import os, sys
 import threading
 
 from collections import namedtuple
 from socket import socket,  AF_INET, SOCK_DGRAM
 from ipaddress import IPv4Address, IPv4Interface
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
-from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
+from dnx_gentools.def_constants import *
 from dnx_iptools.interface_ops import get_netmask
 from dnx_sysmods.logging.log_main import LogHandler as Log
 from dnx_sysmods.configure.file_operations import load_configuration, cfg_read_poller, ConfigurationManager
@@ -163,7 +159,7 @@ class Configuration:
         dhcp_intfs = load_configuration('dhcp_server')['interfaces']
 
         # interface ident eg. eth0
-        for intf in self.DHCPServer._intfs:
+        for *_, intf in self.DHCPServer._intfs:
 
             # interface friendly name eg. wan
             for _intf, settings in dhcp_intfs.items():

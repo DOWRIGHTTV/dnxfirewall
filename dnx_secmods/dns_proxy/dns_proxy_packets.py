@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 
-import os, sys
-
-from socket import inet_aton
+from socket import inet_aton, inet_ntoa
 from collections import namedtuple
 
-from dnx_sysmods.configure.def_constants import *
+from dnx_gentools.def_constants import *
+from dnx_gentools.standard_tools import bytecontainer
+from dnx_gentools.def_namedtuples import CACHED_RECORD
+
 from dnx_iptools.def_structs import *
 from dnx_iptools.protocol_tools import *
-from dnx_gentools.standard_tools import bytecontainer
-from dnx_sysmods.configure.def_namedtuples import CACHED_RECORD
-
+from dnx_iptools.def_structures import *
 from dnx_iptools.packet_classes import RawPacket
 
 
@@ -89,8 +88,8 @@ class ClientRequest:
             self.dom_local = True
 
         self.qtype, self.qclass = double_short_unpack(dns_query[offset:])
-        self.question_record = dns_query[:offset+4] # ofsset + 4 byte info
-        self.additional_data = dns_query[offset+4:]
+        self.question_record = dns_query[:offset + 4] # offset + 4 byte info
+        self.additional_data = dns_query[offset + 4:]
 
     def generate_record_response(self, host_ip=None, configured_ttl=THIRTY_MIN):
         '''builds a dns server response for locally configured records. if no record is found, an empty
@@ -104,9 +103,9 @@ class ClientRequest:
         ]
 
         if (host_ip):
-            send_data.append(resource_record_pack(
-                49164, 1, 1, configured_ttl, 4, inet_aton(host_ip)
-            ))
+            send_data.append(
+                resource_record_pack(49164, 1, 1, configured_ttl, 4, inet_aton(host_ip))
+            )
 
         self.send_data = byte_join(send_data)
 
@@ -114,12 +113,12 @@ class ClientRequest:
         if (self.send_data):
             raise RuntimeWarning('send data has already been created for this query.')
 
-        send_data = [create_dns_response_header(
-            self.dns_id, len(cached_dom.records), rd=self.rd, cd=self.cd
-        )]
-        send_data.append(self.question_record)
+        send_data = [
+            create_dns_response_header(self.dns_id, len(cached_dom.records), rd=self.rd, cd=self.cd), self.question_record
+        ]
+
         for record in cached_dom.records:
-            record.update('ttl', long_pack(cached_dom.ttl))
+            record.ttl = long_pack(cached_dom.ttl)
             send_data.append(byte_join(record))
 
         self.send_data = byte_join(send_data)
@@ -133,11 +132,11 @@ class ClientRequest:
             self._arc = 1
 
         # TODO: see what the list bounds are for having to resize. if the header + length fits, we can remove
-        # the pre assignment length bytes. make sure insert scenario is looked at.
-        send_data = [b'\x00\x00', create_dns_query_header(dns_id, self._arc, cd=self.cd)]
-        send_data.append(convert_dns_string_to_bytes(self.request))
-        send_data.append(double_short_pack(self.qtype, 1))
-        send_data.append(self.additional_data)
+        #  the pre assignment length bytes. make sure insert scenario is looked at.
+        send_data = [
+            b'\x00\x00', create_dns_query_header(dns_id, self._arc, cd=self.cd),
+            domain_stob(self.request), double_short_pack(self.qtype, 1), self.additional_data
+        ]
 
         if (protocol is PROTO.DNS_TLS):
             send_data[0] = short_pack(len(byte_join(send_data[1:])))
@@ -151,7 +150,7 @@ class ClientRequest:
         '''alternate constructor for creating locally generated queries (top domains).'''
 
         self = cls(None, NULL_ADDR, None)
-        # harcorded qtype can change if needed.
+        # hardcoded qtype can change if needed.
         self.request = request
         self.qtype   = 1
         self.cd      = cd
@@ -164,7 +163,7 @@ class ClientRequest:
 
         self = cls(None, NULL_ADDR, None)
 
-        # harcorded qtype can change if needed.
+        # hardcoded qtype can change if needed.
         self.request = request
         self.qtype   = 1
         self.cd      = cd
@@ -173,6 +172,13 @@ class ClientRequest:
 
         return self
 
+
+ip_header_template = PR_IP_HDR(
+    **{'ver_ihl': 69, 'tos': 0, 'ident': 0, 'flags_fro': 16384, 'ttl': 255, 'protocol': PROTO.UDP}
+)
+udp_header_template = PR_UDP_HDR(**{'checksum': 0})
+
+std_resource_record_template = DNS_STD_RR(**{'ptr': 49164, 'type': 1, 'class': 1, 'ttl': 300, 'rd_len': 4})
 
 class ProxyRequest(RawPacket):
 
@@ -197,15 +203,14 @@ class ProxyRequest(RawPacket):
     def continue_condition(self):
         return True if self.protocol is PROTO.UDP else False
 
-    # extension from parent class.
     def _before_exit(self):
         if (self.dst_port == PROTO.DNS):
             self._header(self.udp_payload[:12]) # first 12 bytes are header
 
             if (self.qr == DNS.QUERY):
-                self._query(self.udp_payload[12:]) # 13+ is query data
+                self._query(self.udp_payload[12:self.udp_len]) # 13+ is query data
 
-                self.request_identifier = (f'{self.src_ip}', self.src_port, self.dns_id)
+                self.request_identifier = (int_to_ipaddr(self.src_ip), self.src_port, self.dns_id)
 
     # dns header
     def _header(self, dns_header):
@@ -222,58 +227,48 @@ class ProxyRequest(RawPacket):
         self.requests = self._enumerate_request(request)
 
         self.qtype, self.qclass = double_short_unpack(dns_query[offset:])
-        self.question_record = dns_query[:offset+4] # ofsset + 4 byte info
+        self.question_record = dns_query[:offset+4] # offset + 4 byte info
 
     # will create send data object for used by proxy.
     def generate_proxy_response(self):
-        # if AAAA record, set response code to "domain name does not exist" without record response
+        # DNS HEADER + PAYLOAD
+        # AAAA record set r code to "domain name does not exist" without record response ac=0, rc=3
         if (self.qtype == DNS.AAAA):
-            answer_count, response_code = 0, 3
+            dns_data = [
+                create_dns_response_header(self.dns_id, 0, rd=self._rd, ad=1, cd=self._cd, rc=3),
+                self.question_record
+            ]
 
-        # standard query response to sinkhole
+        # standard query response to sinkhole. default answer count and response code
         else:
-            answer_count, response_code = 1, 0
+            resource_record = std_resource_record_template()
 
-        # 1. generating dns header, appending original question and our response if applicable | append to send data
-        dns_data = [create_dns_response_header(
-            self.dns_id, answer_count, rd=self._rd, ad=1, cd=self._cd, rc=response_code
-            ), self.question_record]
+            resource_record.rd_data = btoia(self.intf_ip)
 
-        if (answer_count):
-            dns_data.append(resource_record_pack(
-                49164, 1, 1, 300, 4, self.intf_ip
-            ))
+            dns_data = [
+                create_dns_response_header(self.dns_id, rd=self._rd, ad=1, cd=self._cd),
+                self.question_record, resource_record.assemble()
+            ]
 
-        send_data = [byte_join(dns_data)]
+        udp_payload = byte_join(dns_data)
 
-        # 2. generating udp header, getting length from join on build data | append to send data
-        udp_len = 8 + len(byte_join(send_data))
-        send_data.append(udp_header_pack(
-            self.dst_port, self.src_port, udp_len, 0
-        ))
+        # UDP HEADER
+        udp_header = udp_header_template()
 
-        # 3. generating ip header with loop to create header, calculate zerod checksum, then rebuild
-        # with correct checksum | append to send data
-        ip_len, checksum = 20 + udp_len, double_byte_pack(0,0)
-        for i in range(2):
-            ip_header = ip_header_pack(
-                69, 0, ip_len, 0, 16384, 255, PROTO.UDP,
-                checksum, self.dst_ip.packed, self.src_ip.packed
-            )
-            if i: break
+        udp_header.src_port = self.dst_port
+        udp_header.dst_port = self.src_port
+        udp_header.len = 8 + len(udp_payload)
 
-            checksum = checksum_ipv4(ip_header)
+        # IP HEADER
+        ip_header = ip_header_template()
 
-        send_data.append(ip_header)
+        ip_header.tl = 28 + len(udp_payload)
+        ip_header.src_ip = self.dst_ip
+        ip_header.dst_ip = self.src_ip
 
-        #NOTE: we shouldnt have to track ethernet headers anymore
-        # # 4. generating ethernet header | append to send data
-        # send_data.append(eth_header_pack(
-        #     self.src_mac, self.dst_mac, L2_PROTO
-        # ))
+        ip_header.checksum = checksum_ipv4(ip_header.assemble())
 
-        # assigning joined data from above with correct byte order
-        self.send_data = byte_join(reversed(send_data))
+        self.send_data = byte_join([ip_header.assemble(), udp_header.assemble(), udp_payload])
 
     def _enumerate_request(self, request):
         rs = request.split('.')
@@ -354,11 +349,11 @@ class ServerResponse:
         offset = parse_query_name(dns_query) # www.micro.com or micro.com || sd.micro.com
 
         self.qtype, self.qclass = double_short_unpack(dns_query[offset:])
-        self.question_record = dns_query[:offset+4] # ofsset + 4 byte info
+        self.question_record = dns_query[:offset+4] # offset + 4 byte info
         self.resource_record = dns_query[offset+4:]
 
-    # grabbing the records contained in the packet and appending them to their designated lists to be inspected by other methods.
-    # count of records is being grabbed/used from the header information
+    # grabbing the records contained in the packet and appending them to their designated lists to be inspected by other
+    # methods. count of records is being grabbed/used from the header information
     def _resource_record_handler(self):
         a_record_count, offset = 0, 0
 
@@ -366,7 +361,7 @@ class ServerResponse:
         for r_field in self.records:
 
             # iterating once for every record based on count sent. if this number is forged/tampered with
-            # it will cause the parsing to fail. NOTE: ensure this isnt fatal
+            # it will cause the parsing to fail. NOTE: ensure this isn't fatal
             for _ in range(r_field['rcv_count']):
                 record_type, record, offset = self._parse_resource_record(offset)
 
@@ -386,16 +381,23 @@ class ServerResponse:
         local_record = self.resource_record[total_offset:]
 
         offset = parse_query_name(local_record, self._dns_query)
-        name   = local_record[:offset]
-        qtype  = local_record[offset:offset+2]
-        qclass = local_record[offset+2:offset+4]
-        ttl    = local_record[offset+4:offset+8]
-        dt_len = short_unpack(local_record[offset+8:offset+10])[0]
-        data   = local_record[offset+8:offset+10+dt_len]
 
-        total_offset += offset + dt_len + 10 # length of data + 2 bytes(length field) + 8 bytes(type, class, ttl)
+        # resource record data len. generally 4 for ip address, but can vary. calculating first so we can single shot
+        # create byte container below.
+        dt_len = btoia(local_record[offset + 8:offset + 10])
 
-        return short_unpack(qtype)[0], _RESOURCE_RECORD(name, qtype, qclass, ttl, data), total_offset
+        resource_record = _RESOURCE_RECORD(
+            local_record[:offset],
+            local_record[offset:offset + 2],
+            local_record[offset + 2:offset + 4],
+            local_record[offset + 4:offset + 8],
+            local_record[offset + 8:offset + 10 + dt_len]
+        )
+
+        # name len + 2 bytes(length field) + 8 bytes(type, class, ttl) + data len
+        total_offset += offset + 10 + dt_len
+
+        return btoia(resource_record.qtype), resource_record, total_offset
 
     def generate_server_response(self, dns_id):
         send_data, original_ttl = [b'\x00'*14, self.question_record], 0
@@ -405,19 +407,20 @@ class ServerResponse:
 
             # ttl rewrite to configured bounds (clamping)
             for record in r_field['records']:
-                original_ttl, modified_ttl, modified_ttl_packed = self._get_new_ttl(record.ttl)
-                record.update('ttl', modified_ttl_packed)
+                original_ttl, modified_ttl = self._get_new_ttl(record.ttl)
+                record.ttl = modified_ttl
+
                 send_data.append(byte_join(record))
 
-            # first enumerate iteration filter(resource records) and ensuring its an "A" record, then creating cache data.
-            # NOTE: system will cache for full ttl. the server will override to configured amount responding sending to client.
+            # first iter filter(resource records) and ensuring its an "A" record, then creating cache data.
+            # NOTE: firewall cache for full ttl, but will use clamped amount when responding sending to client.
             if (not i and original_ttl):
                 self.data_to_cache = CACHED_RECORD(
                     int(fast_time()) + original_ttl,
                     original_ttl, r_field['records']
                 )
 
-        # replacing dns head placeholder. needed new record counts calculated before header creation.
+        # replacing dns header placeholder. delayed creation needed to assign modified record counts properly
         send_data[0] = self._create_header(dns_id)
 
         # additional records will remain intact until otherwise needed
@@ -427,8 +430,8 @@ class ServerResponse:
         self.send_data = byte_join(send_data)
 
     def _get_new_ttl(self, record_ttl):
-        '''returns dns records original ttl, the rewritten ttl, and the packed form of the rewritten ttl.'''
-        record_ttl = long_unpack(record_ttl)[0]
+        '''returns dns records original ttl and the packed form of the rewritten ttl.'''
+        record_ttl = btoia(record_ttl)
         if (record_ttl < MINIMUM_TTL):
             new_record_ttl = MINIMUM_TTL
 
@@ -440,7 +443,7 @@ class ServerResponse:
         else:
             new_record_ttl = record_ttl
 
-        return record_ttl, new_record_ttl, long_pack(new_record_ttl)
+        return record_ttl, long_pack(new_record_ttl)
 
     def _create_header(self, dns_id):
         return dns_header_pack(

@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 
-import json
-import sys, os
-
 import dnx_sysmods.configure.configure as configure
 import dnx_sysmods.configure.web_validate as validate
 from dnx_sysmods.configure.file_operations import load_configuration
 from dnx_sysmods.configure.exceptions import ValidationError
-from dnx_sysmods.configure.system_info import Services
-from dnx_sysmods.configure.def_constants import UD_DOMAIN_HEIGHT, INVALID_FORM
+from dnx_gentools.def_constants import INVALID_FORM
 
 
 # TODO: if system category gets disabled that had keyword enabled. it does not disable the keyword search.

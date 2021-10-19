@@ -227,15 +227,16 @@ cdef class CFirewall:
         '''Accept packets using recv.'''
 
         cdef int fd = nfq_fd(self.h)
-        cdef char buf[4096]
-        cdef int rv
+        cdef char packet_buf[4096]
+        cdef size_t sizeof_buf = sizeof(buf)
+        cdef int data_len
         cdef int recv_flags = 0
 
         while True:
-            rv = recv(fd, buf, sizeof(buf), recv_flags)
+            data_len = recv(fd, packet_buf, sizeof_buf, recv_flags)
 
-            if (rv >= 0):
-                nfq_handle_packet(self.h, buf, rv)
+            if (data_len >= 0):
+                nfq_handle_packet(self.h, packet_buf, data_len)
 
             else:
                 if errno != ENOBUFS:

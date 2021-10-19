@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 
-import os, sys, time
-import json
-import threading
+import os, sys
 import tarfile
 
 HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
 sys.path.insert(0, HOME_DIR)
 
-from dnx_sysmods.configure.def_constants import CFG
+from dnx_gentools.def_constants import CFG
 from dnx_sysmods.logging.log_main import LogHandler as Log
 from dnx_sysmods.configure.exceptions import ValidationError
 

@@ -2,14 +2,9 @@
 
 # A minimal SQLite shell for experiments | https://docs.python.org/3.8/library/sqlite3.html
 
-import __init__
-
-import os, sys
-import time
 import sqlite3
-import traceback
 
-from dnx_sysmods.configure.def_constants import HOME_DIR
+from dnx_gentools.def_constants import HOME_DIR
 
 valid_commands = set(['select',])
 

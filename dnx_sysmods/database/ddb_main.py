@@ -10,9 +10,9 @@ from json import loads
 HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
 sys.path.insert(0, HOME_DIR)
 
-import dnx_sysmods.configure.def_namedtuples as dnx_nt
+import dnx_gentools.def_namedtuples as dnx_nt
 
-from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
+from dnx_gentools.def_constants import * # pylint: disable=unused-wildcard-import
 from dnx_gentools.standard_tools import dnx_queue, looper
 from dnx_sysmods.logging.log_main import LogHandler as Log
 from dnx_sysmods.database.ddb_connector_sqlite import DBConnector

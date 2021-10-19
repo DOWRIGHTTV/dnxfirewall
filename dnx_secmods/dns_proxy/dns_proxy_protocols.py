@@ -1,13 +1,12 @@
 #!usr/bin/env python3
 
-import os, sys
 import threading
 import ssl
 
 from socket import socket, timeout, AF_INET, SOCK_STREAM, SOCK_DGRAM
 
-from dnx_sysmods.configure.def_constants import *
-from dnx_sysmods.configure.def_namedtuples import RELAY_CONN
+from dnx_gentools.def_constants import *
+from dnx_gentools.def_namedtuples import RELAY_CONN
 
 from dnx_secmods.dns_proxy.dns_proxy_packets import ClientRequest
 from dnx_secmods.dns_proxy.dns_proxy_log import Log

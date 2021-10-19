@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 
-import os, sys
+import __init__
+
 import threading
 
 from copy import copy
 from collections import defaultdict
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
-from dnx_sysmods.configure.def_constants import * # pylint: disable=unused-wildcard-import
-from dnx_sysmods.configure.def_namedtuples import IPS_SCAN_RESULTS, DDOS_TRACKERS, PSCAN_TRACKERS
+from dnx_gentools.def_constants import * # pylint: disable=unused-wildcard-import
+from dnx_gentools.def_namedtuples import IPS_SCAN_RESULTS, DDOS_TRACKERS, PSCAN_TRACKERS
 from dnx_sysmods.configure.iptables import IPTablesManager
 
 from dnx_iptools.packet_classes import NFQueue
@@ -41,42 +39,75 @@ class IPS_IDS(NFQueue):
 
     ddos_engine_enabled = False
     ps_engine_enabled   = False
+    all_engines_enabled = False
 
     _packet_parser = IPSPacket.netfilter_rcv # alternate constructor, but does not return self
 
     @classmethod
     def _setup(cls):
         Configuration.setup(cls)
-        IPSResponse.setup(cls, Log)
+        IPSResponse.setup(Log, cls)
 
-        cls.set_proxy_callback(func=Inspect.portscan) # this will get called after parsing is complete.
+        cls.set_proxy_callback(func=Inspect.portscan)
 
         Log.notice(f'{cls.__name__} initialization complete.')
 
-    # if nothing is enabled the packet will be sent back to iptables for further inspection
     def _pre_inspect(self, packet):
-        # dropping packet from ip proxy if flagged. this takes priority over ips whitelist due to module heirarchy.
-        if (packet.action is CONN.DROP):
-            packet.nfqueue.drop()
-
-            # ip proxy deny > ips inspect
-            if (self.ddos_engine_enabled):
-                threading.Thread(target=Inspect.ddos, args=(packet,)).start()
-
-        # auto permit configured whitelisted hosts (source ip check only)
-        elif (packet.src_ip in self.ip_whitelist):
+        # permit configured whitelisted hosts (source ip check only)
+        if (packet.src_ip in self.ip_whitelist):
             packet.nfqueue.accept()
 
-        else:
-            # ip proxy accept > ips inspect
-            if (self.ddos_engine_enabled):
+            return False
+
+        # CONN.ACCEPT or CONN.INSPECT
+        if (self.all_engines_enabled):
+
+            # ddos inspection is independent of pscan and does not invoke action on packets
+            threading.Thread(target=Inspect.ddos, args=(packet,)).start()
+
+            # pscan engine is primary engine which can invoke control so the decision will be deferred until after
+            # inspection has taken place.
+            if (packet.protocol is not PROTO.ICMP):
+                return True
+
+        # ip proxy accept > ddos inspect. must invoke packet action here since packet will not be sent through pscan
+        # engine so a packet decision will not be made unless we do it here.
+        elif (self.ddos_engine_enabled):
+
+            if (packet.action is CONN.ACCEPT):
                 packet.nfqueue.accept()
 
-                threading.Thread(target=Inspect.ddos, args=(packet,)).start()
+            else:
+                packet.nfqueue.drop()
+
+            threading.Thread(target=Inspect.ddos, args=(packet,)).start()
+
+        # ip proxy accept > portscan inspect if tcp or udp. icmp will be forwarded without inspection since the
+        # protocol is not compatible with server ports.
+        elif (self.ps_engine_enabled):
 
             # notify tcp/udp to be inspected by portscan engine
-            if (self.ps_engine_enabled and packet.protocol is not PROTO.ICMP):
+            if (packet.protocol is not PROTO.ICMP):
                 return True
+
+            # icmp will just be accepted here as long as the packet wasn't received from the INPUT chain since
+            # nothing have objected to it. default return of do not inspect will handle this condition.
+            elif (packet.action is CONN.ACCEPT):
+                packet.nfqueue.accept()
+
+            # this will drop the packet so it doesnt become orphaned in the kernel or get accepted and hit the
+            # wan interface. this will match CONN.DROP or CONN.INSPECT, both having same packet action, but
+            # different inspection logic.
+            else:
+                packet.nfqueue.drop()
+
+        # no inspection, packet accepted. default action no inspect applied
+        elif packet.action is CONN.ACCEPT:
+            packet.nfqueue.accept()
+
+        # no inspection, but action is drop or inspect. default no inspect applied.
+        else:
+            packet.nfqueue.drop()
 
         return False
 
@@ -148,6 +179,10 @@ class Inspect:
 
     def _threshold_exceeded(self, tracked_ip, packet):
         elapsed_time = packet.timestamp - tracked_ip['initial']
+
+        # filter to ensure tracked host's initial packet was received 2 seconds or more ago. this is needed to
+        # prevent the cps/pps calculation from calculating average on fractional values which result in multiplication
+        # instead of division causing the result to be greater than the total count itself.
         if (elapsed_time < 2): return False
 
         # NOTE: temporary while in WIP
@@ -170,29 +205,43 @@ class Inspect:
 
         # accepting connections from hosts that's don't meet active scanner criteria then returning.
         if (not active_scanner):
-            Log.debug(f'[pscan/accept] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
 
-            packet.nfqueue.accept()
+            # CONN.INSPECT was dropped in pre_inspect and only needed to inspect for profiling purposes
+            if (packet.action is not CONN.INSPECT):
+                packet.nfqueue.accept()
+
+                Log.debug(f'[pscan/accept] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
+
+            # for tshooting purposes. will likely leave since this is valuable information for a user if they are trying
+            # to see what is going on with their ips configurations if things are not working as intended.
+            else:
+                Log.debug(f'[pscan/profile] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
 
             return
 
         # prevents connections from being blocked, but will be logged.
         # NOTE: this may be noisy and log multiple times per single scan. validate.
-        if (IPS_IDS.ids_mode):
-            packet.nfqueue.accept()
+        elif (IPS_IDS.ids_mode):
+
+            # CONN.INSPECT was dropped in pre_inspect and only needed to inspect for profiling purposes
+            if (packet.action is not CONN.INSPECT):
+                packet.nfqueue.accept()
 
             block_status = IPS.LOGGED
 
         # dropping packet then checking for further action if necessary.
         elif (IPS_IDS.portscan_prevention):
-            packet.nfqueue.drop()
+
+            # CONN.INSPECT was dropped in pre_inspect and only needed to inspect for profiling purposes
+            if (packet.action is not CONN.INSPECT):
+                packet.nfqueue.drop()
 
             # if rejection is enabled on top of prevention port unreachable packets will be sent back to the scanner.
             if (IPS_IDS.portscan_reject):
                 self._portscan_reject(pre_detection_logging, packet, initial_block)
 
-            # if initial block is not set then the current host has already been effectively blocked and does not need
-            # to do anything beyond this point.
+            # if initial block is not set then the current host has already been effectively blocked and the engine does
+            # not need to do anything beyond this point.
             if (not initial_block): return
 
             block_status = self._get_block_status(pre_detection_logging, packet.protocol)
@@ -223,6 +272,7 @@ class Inspect:
         else:
             tracked_ip['target'].add(packet.target_port)
 
+            # ===================================================================================================
             # this is the logic to determine whether a host is a scanner or not and for mapping local port to tcp
             # sequence number which will be used to retroactively reject scans on ports prior to the host being
             # flagged. pre detect data will not be inserted for packet that sets initial block status since we still
@@ -235,6 +285,8 @@ class Inspect:
 
             elif (packet.protocol is PROTO.UDP):
                 tracked_ip['pre_detect'][packet.target_port] = packet.data
+
+            # ===================================================================================================
 
         # returning scan tracker to be used by reject to retroactively handle ports before marked as a scanner.
         return initial_block, scan_detected, tracked_ip['pre_detect']
@@ -253,8 +305,8 @@ class Inspect:
                 'count': 1, 'initial': packet.timestamp, 'last_seen': packet.timestamp
             }
 
-    # sending packet response. if initial block is set, then pre detection logging will be use to
-    # generate responses for packets prior to being flagged a scanner.
+    # sending packet response. if initial block is set, then pre detection logging will be use to generate responses
+    # for packets prior to being flagged a scanner.
     def _portscan_reject(self, pre_detection_logging, packet, initial_block):
         self._IPSResponse.prepare_and_send(packet)
 
@@ -273,9 +325,8 @@ class Inspect:
                         copy(packet).udp_override(icmp_payload)
                     )
 
-    # checking intersection between pre detection and open port keys. missed_port will
-    # contain any port that was scanned before host was marked as scanner. if empty, all
-    # ports were blocked.
+    # checking intersection between pre detection and open port keys. missed_port will contain any port that was
+    # scanned before host was marked as scanner. if empty, all ports were blocked.
     # NOTE: later, this can be used to report on which specific protocol/port was missed
     def _get_block_status(self, pre_detection_logging, protocol) -> IPS:
         missed_port = pre_detection_logging.keys() & self._IPS.open_ports[protocol].keys()

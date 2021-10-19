@@ -2,20 +2,19 @@
 
 import __init__
 
-import os
 import socket
-import sys
 
-from dnx_sysmods.configure.def_constants import *
-from dnx_sysmods.configure.def_namedtuples import DNS_BLACKLIST, DNS_REQUEST_RESULTS, DNS_SIGNATURES, DNS_WHITELIST
+from dnx_gentools.def_constants import *
+from dnx_gentools.def_namedtuples import DNS_BLACKLIST, DNS_REQUEST_RESULTS, DNS_SIGNATURES, DNS_WHITELIST
+
+from dnx_iptools.dnx_trie_search import generate_recursive_binary_search  # pylint: disable=import-error, no-name-in-module
+from dnx_iptools.packet_classes import Listener
+from dnx_iptools.protocol_tools import int_to_ipaddr
 
 from dnx_secmods.dns_proxy.dns_proxy_automate import Configuration
 from dnx_secmods.dns_proxy.dns_proxy_log import Log
 from dnx_secmods.dns_proxy.dns_proxy_packets import ProxyRequest
 from dnx_secmods.dns_proxy.dns_proxy_server import DNSServer
-
-from dnx_iptools.dnx_trie_search import generate_recursive_binary_search  # pylint: disable=import-error, no-name-in-module
-from dnx_iptools.packet_classes import Listener
 
 LOG_NAME = 'dns_proxy'
 
@@ -28,14 +27,14 @@ class DNSProxy(Listener):
     blacklist = DNS_BLACKLIST(
         {}
     )
-    # en_dns | dns | tld | keyword | NOTE: dns signatures are now contained within the binary search extension as a closure
+    # en_dns | tld | keyword | NOTE: dns signatures are contained within the binary search extension as a closure
     signatures = DNS_SIGNATURES(
         {DNS_CAT.doh}, {}, []
     )
 
     _dns_sig_ref = None
 
-    # assigning locally so make the code alittle more maintainable if class or methods change outside of the
+    # assigning locally to make the code a little more maintainable if class or methods change outside of the
     # proxy which would otherwise require [potential] extreme internal modification.
     _packet_parser = ProxyRequest.interface # alternate constructor
     _dns_server    = DNSServer
@@ -67,7 +66,7 @@ class DNSProxy(Listener):
     @classmethod
     def send_to_client(cls, packet):
         try:
-            packet.sendto(packet.send_data, (f'{packet.src_ip}', 0))
+            packet.sendto(packet.send_data, (int_to_ipaddr(packet.src_ip), 0))
         except OSError:
             pass
 
@@ -127,7 +126,10 @@ class Inspect:
     # this is where the system decides whether to block dns query/sinkhole or to allow. notification will be done
     # via the request tracker upon returning signature scan result
     def _dns_inspect(self, Proxy, packet):
-        whitelisted = self._ip_whitelist_get(packet.src_ip, False)
+        # NOTE: request identifier is a string representation of ip addresses. this is currently needed as the whitelists
+        # are stored in this format and we have since moved away from this format on the back end.
+        # TODO: in the nearish future, consider storing ip whitelists as integers to conform to newer standards.
+        whitelisted = self._ip_whitelist_get(packet.request_identifier[0], False)
         enum_categories = []
 
         # signature/ blacklist check.
@@ -196,9 +198,11 @@ if __name__ == '__main__':
     # using cython function factory to create binary search function with module specific signatures
     signature_bounds = (0, len(dns_cat_signatures)-1)
 
-    # TODO: collisions were found in the geolocation filtering data structure. this has been fixed
-    # for geolocation and standard ip category filtering, but has not been investigated for dns signatures.
-    # run through the signatures, generate bin and host id, then check for host id collisions within a bin.
+    # TODO: collisions were found in the geolocation filtering data structure. this has been fixed for geolocation and
+    #  standard ip category filtering, but has not been investigated for dns signatures. due to the way the signatures
+    #  are compressed, it is much less likely to happen to dns signatures. (main issue were values in multiples of 10
+    #  because of the multiple 0s contained).
+    #  to be safe, run through the signatures, generate bin and host id, then check for host id collisions within a bin.
     _recursive_binary_search = generate_recursive_binary_search(dns_cat_signatures, signature_bounds)
 
     Log.run(

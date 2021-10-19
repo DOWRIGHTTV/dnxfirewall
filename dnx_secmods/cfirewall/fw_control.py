@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
-import os, sys
+import os
 import shutil
 import threading
 
 from array import array
 
-from dnx_sysmods.configure.def_constants import HOME_DIR
+from dnx_gentools.def_constants import HOME_DIR
 from dnx_sysmods.configure.file_operations import cfg_read_poller, load_configuration, ConfigurationManager
 from dnx_sysmods.logging.log_main import LogHandler as Log
 
@@ -181,7 +181,7 @@ class FirewallControl:
     __slots__ = (
         'cfirewall', '_initialize',
 
-        # firewall sections (heirarchy)
+        # firewall sections (hierarchy)
         # NOTE: these are used primarily to detect config changes to prevent
         # the amount of work/ data conversions that need to be done to load
         # the settings into C data structures.
@@ -203,13 +203,15 @@ class FirewallControl:
     # threads will be started here.
     def run(self):
 
+        self._init_system_rules()
+
         threading.Thread(target=self.monitor_zones).start()
         threading.Thread(target=self.monitor_rules).start()
 
         self._initialize.wait_for_threads(count=2)
 
     @cfg_read_poller('zone_map', folder='iptables')
-    # zone int values are arbritrary / randomly selected on zone creation.
+    # zone int values are arbitrary / randomly selected on zone creation.
     def monitor_zones(self, zone_map):
         '''calls to Cython are made from within this method block. the GIL must be manually acquired on the Cython
         side or the Python interpreter will crash. Monitors the firewall zone file for changes and loads updates to
@@ -241,6 +243,7 @@ class FirewallControl:
 
         # splitting out sections then determine which one has changed. this is to reduce
         # amount of work done on the C side. not for performance, but more for ease of programming.
+        # NOTE: index 1 start is needed because SYSTEM rules are held at index 0.
         for i, section in enumerate(['BEFORE', 'MAIN', 'AFTER'], 1):
             current_section = getattr(self, section)
             new_section = dnx_fw[section]
@@ -256,9 +259,48 @@ class FirewallControl:
             # and Cython can handle the initial list.
             ruleset = [array('L', rule) for rule in new_section.values()]
 
-            # NOTE: gil must be held on the other side of this call
+            # NOTE: gil must be held throughout this call
             error = self.cfirewall.update_ruleset(i, ruleset)
             if (error):
                 pass # TODO: do something here
 
         self._initialize.done()
+
+    @cfg_read_poller('firewall_system', folder='iptables')
+    def monitor_system_rules(self, system_rules):
+        # 0-9: reserved - dns, dhcp, loopback, etc
+        # 10-159: zone mgmt rules. tens place designates interface index
+        #   - 0: webui, 1: cli, 2: ssh, 3: ping
+        # 160+: system control (proxy bypass prevention)
+
+        # dnxfirewall services access (all local network interfaces). dhcp, dns, icmp, etc.
+
+        # DHCP discover/request allow
+        shell(f'iptables -A INPUT -m mark ! --mark {WAN_IN} -p udp --dport 67 -j ACCEPT')
+
+        # implicit DNS allow for local users
+        shell(f'iptables -A INPUT -m mark ! --mark {WAN_IN} -p udp --dport 53 -j ACCEPT')
+
+        # implicit http/s allow to dnx-web for local LAN users
+        shell(f'iptables -A INPUT -m mark --mark {LAN_IN} -p tcp --dport 443 -j ACCEPT')
+        shell(f'iptables -A INPUT -m mark --mark {LAN_IN} -p tcp --dport 80 -j ACCEPT')
+
+        # NOTE: these are default settings of user defined options. these can be removed from the webui after setup and are only
+        # here for convenience.
+
+        # dnxfirewall LAN interface ping allow
+        shell(f'iptables -A MGMT -m mark --mark {LAN_IN} -p icmp -m icmp --icmp-type 8 -j ACCEPT')
+
+        # DMZ webui access
+        shell(f'iptables -A MGMT -m mark --mark {DMZ_IN} -p tcp --dport 443 -j ACCEPT')
+        shell(f'iptables -A MGMT -m mark --mark {DMZ_IN} -p tcp --dport 80 -j ACCEPT')
+
+        ruleset = load_configuration(system_rules, filepath='dnx_system/iptables')
+
+        # sorting merged dict (system + usr), then taking values to convert into python arrays
+        ruleset = [array('L', rule) for rule in dict(sorted(ruleset)).values()]
+
+        # NOTE: gil must be held throughout this call
+        error = self.cfirewall.update_ruleset(0, ruleset)
+        if (error):
+            pass  # TODO: do something here

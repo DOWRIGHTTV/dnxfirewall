@@ -11,21 +11,23 @@ short_pack   = _Struct('!H').pack
 long_pack    = _Struct('!L').pack
 int_unpack   = _Struct('I').unpack
 
-double_bite_unpack = _Struct('!2B').unpack_from
+double_byte_unpack  = _Struct('!2B').unpack_from
 double_short_unpack = _Struct('!2H').unpack_from
 double_byte_pack  = _Struct('!2B').pack
 double_short_pack = _Struct('!2H').pack
+ip_addrs_unpack   = _Struct('!2L').unpack
 
 checksum_pack = _Struct('<H').pack
+checksum_iunpack = _Struct('<H').iter_unpack
 fcntl_pack = _Struct('24s').pack
 
 mac_unpack = _Struct('!6s').unpack
 mac_pack   = _Struct('!6s').pack
 
 eth_header_pack    = _Struct('!6s6sH').pack
-ip_header_pack     = _Struct('!2B3H2B2s4s4s').pack
+ip_header_pack     = _Struct('!2B3H2BH2L').pack
 udp_header_pack    = _Struct('!4H').pack
-icmp_header_pack   = _Struct('!2B2s2H').pack
+icmp_header_pack   = _Struct('!2B2s').pack
 tcp_header_pack    = _Struct('!2H2L2BH2sH').pack
 pseudo_header_pack = _Struct('!4s4s2BH').pack
 ip_header_override_pack = _Struct('!10s2s4s4s').pack
@@ -49,6 +51,3 @@ resource_record_pack = _Struct('!3HLH4s').pack
 tls_unpack = _Struct('!B2HB').unpack_from
 handshake_unpack = _Struct('!2B2H').unpack_from
 cert_len_unpack = _Struct('!H').unpack_from
-
-dnx_header_unpack = _Struct('!2B2H').unpack_from
-dnx_header_pack   = _Struct('!2B2H').pack

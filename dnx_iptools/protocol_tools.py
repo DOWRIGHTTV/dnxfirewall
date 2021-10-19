@@ -1,25 +1,28 @@
 #!/usr/bin/env python3
 
-import os, sys
-import array
-import struct
 import binascii
 
+from socket import htons
+from functools import partial
 from subprocess import run, CalledProcessError, DEVNULL
 
-_HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, _HOME_DIR)
-
-from dnx_iptools.def_structs import * # pylint: disable=unused-wildcard-import
-from dnx_sysmods.configure.def_constants import byte_join
+from dnx_iptools.def_structs import *
+from dnx_gentools.def_constants import byte_join
 
 __all__ = (
-    'checksum_icmp', 'checksum_ipv4', 'checksum_tcp', 'int_to_ipaddr',
-    'convert_dns_string_to_bytes', 'convert_mac_to_bytes',
-    'convert_mac_to_string', 'convert_string_to_bitmap',
+    'btoia', 'itoba',
+
+    'icmp_reachable',
+
+    'checksum_icmp', 'checksum_ipv4', 'checksum_tcp',
+    'int_to_ipaddr', 'domain_stob', 'mac_stob',
+    'mac_add_sep', 'convert_string_to_bitmap',
     'create_dns_query_header', 'create_dns_response_header',
-    'icmp_reachable', 'parse_query_name'
+    'parse_query_name'
 )
+
+btoia = partial(int.from_bytes, byteorder='big', signed=False)
+itoba = partial(int.to_bytes, byteorder='big', signed=False)
 
 # will ping specified host. to be used to prevent duplicate ip address handouts.
 def icmp_reachable(host_ip):
@@ -29,68 +32,67 @@ def icmp_reachable(host_ip):
         return False
 
 # calculates and returns ipv4 header checksum
-def checksum_ipv4(header):
-    if (len(header) & 1):
-        header = header + '\0'
-    words = array.array('h', header)
+def checksum_ipv4(data, packed=False):
+
+    # unpacking in chunks of H(short)/ 16 bit/ 2 byte increments in network order
+    chunks = checksum_iunpack(data)
 
     sum = 0
-    for word in words:
-        sum = sum + (word & 0xffff)
+    for chunk in chunks:
+        sum += chunk[0]
 
-    hi  = sum >> 16
-    lo  = sum & 0xffff
-    sum = hi + lo
-    sum = sum + (sum >> 16)
+    sum = (sum >> 16) + (sum & 0xffff)
+    sum = ~(sum + (sum >> 16)) & 0xffff
 
-    return checksum_pack((~sum) & 0xffff)
+    return checksum_pack(sum) if packed else sum
 
 # calculates and return tcp header checksum
-def checksum_tcp(msg):
-    s = 0
-    msg_len = len(msg)
+def checksum_tcp(data):
+    # if data length is odd, this will pad it with 1 byte to complete final chunk
+    if (len(data) & 1):
+        data += b'\x00'
 
+    # unpacking in chunks of H(short)/ 16 bit/ 2 byte increments in network order
+    chunks = checksum_iunpack(data)
+
+    sum = 0
     # loop taking 2 characters at a time
-    for i in range(0, msg_len, 2):
-        if ((i + 1) < msg_len):
-            a = msg[i]
-            b = msg[i+1]
-            s = s + (a + (b << 8))
+    for chunk in chunks:
+        sum += chunk[0]
 
-        elif ((i + 1) == msg_len):
-            s += msg[i]
+    sum = ~(sum + (sum >> 16)) & 0xffff
 
-    s = s + (s >> 16)
-    s = ~s & 0xffff
-
-    return checksum_pack(s)
+    return htons(sum)
 
 # calculates and return icmp header checksum
-def checksum_icmp(msg):
-    s = 0
-    while msg:
-        s  += (msg[0] + (msg[1] << 8))
-        msg = msg[2:]
+def checksum_icmp(data):
 
-    s += (s >> 16)
-    s  = ~s & 0xffff
+    # unpacking in chunks of H(short)/ 16 bit/ 2 byte increments in network order
+    chunks = checksum_iunpack(data)
 
-    return checksum_pack(s)
+    sum = 0
+    for chunk in chunks:
+        sum += chunk[0]
+
+    sum = ~(sum + (sum >> 16)) & 0xffff
+
+    # NOTE: does this need to be converted to network order?
+    return htons(sum)
 
 def int_to_ipaddr(ip_addr):
-    ip_addr = long_pack(ip_addr)
 
-    return '.'.join([f'{b}' for b in ip_addr])
+    return '.'.join([f'{b}' for b in long_pack(ip_addr)])
 
-def convert_mac_to_string(mac_address):
+def mac_add_sep(mac_address, sep=':'):
     string_mac = []
     string_mac_append = string_mac.append
     for i in range(0, 12, 2):
         string_mac_append(mac_address[i:i+2])
 
-    return ':'.join(string_mac)
+    return sep.join(string_mac)
 
-def convert_mac_to_bytes(mac_address):
+def mac_stob(mac_address):
+
     return binascii.unhexlify(mac_address.replace(':', ''))
 
 def convert_string_to_bitmap(rule, offset):
@@ -149,7 +151,7 @@ def _calculate_pointer(data):
 
     return 16383 & short_unpack(data)[0] - 12
 
-def convert_dns_string_to_bytes(domain_name):
+def domain_stob(domain_name):
     if (not domain_name):
         return b'\x00'
 

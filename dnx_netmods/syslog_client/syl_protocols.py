@@ -2,18 +2,16 @@
 
 import os, sys
 import time
-import json
 import ssl
 import traceback
 
-from socket import socket, error, AF_INET, SOCK_DGRAM, SOCK_STREAM
+from socket import socket, AF_INET, SOCK_DGRAM, SOCK_STREAM
 
 HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
 sys.path.insert(0, HOME_DIR)
 
 # pylint: disable=unused-wildcard-import
-from dnx_sysmods.configure.def_constants import *
-from dnx_sysmods.configure.system_info import System as Sys
+from dnx_gentools.def_constants import *
 
 LINEBREAK = b'\r\n'
 

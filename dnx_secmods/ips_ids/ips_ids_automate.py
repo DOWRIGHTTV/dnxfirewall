@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 
-import os, sys
 import threading
 
 from ipaddress import IPv4Address
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
-from dnx_sysmods.configure.def_constants import *  # pylint: disable=unused-wildcard-import
+from dnx_gentools.def_constants import *  # pylint: disable=unused-wildcard-import
 from dnx_sysmods.configure.system_info import System
 from dnx_gentools.standard_tools import looper, Initialize
 from dnx_sysmods.configure.file_operations import load_configuration, cfg_read_poller
@@ -119,6 +115,9 @@ class Configuration:
         self.IPS.ps_engine_enabled = True if self.IPS.portscan_prevention and open_ports else False
 
         self.IPS.ddos_engine_enabled = True if self.IPS.ddos_prevention else False
+
+        # makes some conditions easier when determining what to do with the packet.
+        self.IPS.all_engines_enabled = self.IPS.ps_engine_enabled and self.IPS.ddos_engine_enabled
 
         self.initialize.done()
 

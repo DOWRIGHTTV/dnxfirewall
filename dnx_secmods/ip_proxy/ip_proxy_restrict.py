@@ -2,12 +2,11 @@
 
 # TODO: move this module to cfirewall.
 
-import os, sys
 import threading
 
 from datetime import datetime
 
-from dnx_sysmods.configure.def_constants import *
+from dnx_gentools.def_constants import *
 from dnx_sysmods.configure.file_operations import load_configuration, cfg_read_poller, ConfigurationManager
 from dnx_sysmods.configure.system_info import System
 

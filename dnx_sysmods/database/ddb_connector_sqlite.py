@@ -1,20 +1,13 @@
 #!/usr/bin/python3
 
 if (__name__ == '__main__'):
-    import __init__
+    pass
 
-import os, sys
 import time
-import json
 import sqlite3
-import datetime
-import traceback
 
-from types import SimpleNamespace as SName
-from collections import namedtuple
-
-from dnx_sysmods.configure.def_constants import *
-from dnx_sysmods.configure.def_namedtuples import BLOCKED_DOM
+from dnx_gentools.def_constants import *
+from dnx_gentools.def_namedtuples import BLOCKED_DOM
 from dnx_sysmods.configure.system_info import System
 
 __all__ = ('DBConnector',)

@@ -9,7 +9,7 @@ from ipaddress import IPv4Address, IPv4Network
 _HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
 sys.path.insert(0, _HOME_DIR)
 
-from dnx_sysmods.configure.def_constants import LOG, CFG, DATA, PROTO, INVALID_FORM
+from dnx_gentools.def_constants import LOG, CFG, DATA, PROTO, INVALID_FORM
 from dnx_sysmods.configure.file_operations import load_configuration
 from dnx_sysmods.configure.exceptions import ValidationError
 from dnx_secmods.cfirewall.fw_control import FirewallManage

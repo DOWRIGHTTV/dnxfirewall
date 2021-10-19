@@ -2,18 +2,16 @@
 
 import __init__
 
-import os, sys
+from dnx_gentools.def_constants import *
+from dnx_gentools.def_namedtuples import IPP_INSPECTION_RESULTS
 
-from dnx_sysmods.configure.def_constants import *
-from dnx_sysmods.configure.def_namedtuples import IPP_INSPECTION_RESULTS
+from dnx_iptools.packet_classes import NFQueue
+from dnx_iptools.dnx_trie_search import RecurveTrie, RangeTrie # pylint: disable=import-error, no-name-in-module
 
 from dnx_secmods.ip_proxy.ip_proxy_packets import IPPPacket, ProxyResponse
 from dnx_secmods.ip_proxy.ip_proxy_restrict import LanRestrict
 from dnx_secmods.ip_proxy.ip_proxy_automate import Configuration
 from dnx_secmods.ip_proxy.ip_proxy_log import Log
-
-from dnx_iptools.packet_classes import NFQueue
-from dnx_iptools.dnx_trie_search import RecurveTrie, RangeTrie # pylint: disable=import-error, no-name-in-module
 
 LOG_NAME = 'ip_proxy'
 
@@ -37,7 +35,7 @@ class IPProxy(NFQueue):
     @classmethod
     def _setup(cls):
         Configuration.setup(cls)
-        ProxyResponse.setup(cls, Log)
+        ProxyResponse.setup(Log, cls)
         LanRestrict.run(cls)
 
         cls.set_proxy_callback(func=Inspect.ip)
@@ -57,7 +55,7 @@ class IPProxy(NFQueue):
 
         # forwarding packet to ips for portscan/ddos inspection. accept or deny actions are both capable of being
         # inspected by ips/ids. if ips/ids inspection is needed, the ip proxy will defer verdict and forward.
-        elif (packet.direction is DIR.INBOUND and packet.ips_profile):
+        if (packet.direction is DIR.INBOUND and packet.ips_profile):
             packet.nfqueue.forward(Queue.IPS_IDS)
 
         # if packet is not dropped at this point, neither the ips/ids and ip proxy profiles are set. in this case

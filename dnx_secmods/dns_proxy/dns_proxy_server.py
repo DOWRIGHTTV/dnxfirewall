@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
-import os, sys
 import threading
 import socket
 
 from random import randint
 
-from dnx_sysmods.configure.def_constants import *
-from dnx_sysmods.configure.def_namedtuples import DNS_SERVERS
+from dnx_gentools.def_constants import *
+from dnx_gentools.def_namedtuples import DNS_SERVERS
 
 from dnx_secmods.dns_proxy.dns_proxy_automate import Configuration, Reachability
 from dnx_secmods.dns_proxy.dns_proxy_cache import DNSCache, RequestTracker
@@ -19,8 +18,6 @@ from dnx_iptools.packet_classes import Listener
 from dnx_gentools.standard_tools import dnx_queue
 
 
-# the socket returns after "connecting" to remote server, but the protocol is listed as 0. when the relay
-# attempts to send the requests, we get no return (prob cuz tcp handshake never happened)
 class DNSServer(Listener):
     protocol = PROTO.NOT_SET
     tls_up   = False
@@ -63,7 +60,7 @@ class DNSServer(Listener):
             request_handler=cls._handle_query
         )
 
-    # must extend parent method
+    # extending parent method because we need to passthrough threaded and always on attrs.
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -73,7 +70,6 @@ class DNSServer(Listener):
         # assigning object methods to prevent lookup
         self._request_map_pop = self._request_map.pop
         self._dns_records_get = self.dns_records.get
-        # self._req_results_pop = self.REQ_RESULTS.pop
         self._records_cache_add = self._records_cache.add
         self._records_cache_search = self._records_cache.search
 
@@ -99,7 +95,7 @@ class DNSServer(Listener):
             if (not client_query.top_domain):
                 self.send_to_client(server_response, client_query)
 
-            #NOTE: will is valid check prevent empty RRs from being cached.??
+            # NOTE: will is valid check prevent empty RRs from being cached.??
             if (server_response.data_to_cache):
                 self._records_cache_add(client_query.request, server_response.data_to_cache)
 
@@ -123,7 +119,7 @@ class DNSServer(Listener):
 
         return True
 
-    # thread to handle all received requests from the listerner.
+    # thread to handle all received requests from the listener.
     def _request_queue(self):
         return_ready = self.REQ_TRACKER.return_ready
 
@@ -134,7 +130,7 @@ class DNSServer(Listener):
 
             for client_query, decision in requests:
 
-                # if request is allowed, search cache before sending sending to relay.
+                # if request is allowed, search cache before sending to relay.
                 if decision is DNS.ALLOWED and not self._cached_response(client_query):
                     self._handle_query(client_query)
 
@@ -174,10 +170,10 @@ class DNSServer(Listener):
 
         with cls._id_lock:
             # NOTE: maybe tune this number. under high load collisions could occur and we dont want it to waste time
-            # because other requests must wait for this process to complete since we are now using a queue system for
+            # because other requests must wait for this process to complete since we are now using a queue system
             # while waiting for a decision instead of individual threads.
             for _ in range(100):
-            # while True:
+
                 dns_id = randint(70, 32000)
                 if (dns_id not in request_map):
 

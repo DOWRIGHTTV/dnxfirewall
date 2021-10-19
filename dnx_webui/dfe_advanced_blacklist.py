@@ -1,12 +1,9 @@
 #!/usr/bin/python3
 
-import json
-import sys, os
-
 import dnx_sysmods.configure.configure as configure
 import dnx_sysmods.configure.web_validate as validate
 
-from dnx_sysmods.configure.def_constants import CFG, DATA, INVALID_FORM
+from dnx_gentools.def_constants import CFG, DATA, INVALID_FORM
 from dnx_sysmods.configure.file_operations import load_configuration
 from dnx_sysmods.configure.exceptions import ValidationError
 from dnx_sysmods.configure.system_info import System
