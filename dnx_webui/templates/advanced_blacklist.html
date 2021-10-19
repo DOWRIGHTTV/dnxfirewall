@@ -1,0 +1,169 @@
+{% extends('layout.html') %}
+{% block body %}
+<section id="tabs-bar" class="tabsbar">
+    <div class="container">
+        <div class="row">
+            <div class="col s12">
+                <ul class="tabs">
+                    <li class="{{tab_classes}}"><a {% if tab=='1' %} class="active" {% endif %}
+                        href="#blacklists" onclick="activeTab(1)">Time Based</a></li>
+                    <li class="{{tab_classes}}"><a {% if tab=='2' %} class="active" {% endif %}
+                        href="#exceptions" onclick="activeTab(2)">Pre Proxy</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+<section id="blacklists" class="section {{main_section_color}}">
+    <div class="container">
+        <div class="row">
+            <div class="col s12">
+                <div class="card-panel hoverable {{card_color}}">
+                    <h4 class="{{title_color}}">Add Blacklist</h4>
+                    <form action="/advanced/blacklist" method="POST">
+                    <input type="hidden" name="tab" value="1">
+                        <div class="row">
+                            <div class="input-field col s4 l3 {{input_color}}">
+                                <input type="text" name="domain" class="validate" placeholder="malicious.com" required>
+                                <label for="domain">Domain</label>
+                            </div>
+                            <div class="input-field col s4 l3 {{input_color}}">
+                                <input type="text" name="rule_length" class="validate" placeholder="60" required>
+                                <label for="rule_length">Rule Life (Minutes)</label>
+                            </div>
+                            <div class="input-field col s4 l2 offset-l4">
+                                <button class="btn waves-effect waves-light col s12" name="bl_add" value="blacklist">Add</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="col s12">
+                <div class="card-panel hoverable {{card_color}}">
+                    <h4 class="{{title_color}}">Active Rules</h4>
+                    <table class="striped centered">
+                        <thead>
+                            <tr>
+                                <th style="width:10%"></th>
+                                <th style="width:40%">Domain</th>
+                                <th style="width:25%">Time Entered</th>
+                                <th style="width:25%">Length (Minutes)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if blacklist_settings['time_based'] %}
+                            {% for domain, info in blacklist_settings['time_based'].items() %}
+                            <tr>
+                                <td>
+                                    <a class="btn-floating btn-small red waves-effect waves-light modal-trigger" href="#bl-modal1-{{loop.index}}">
+                                        <i class="material-icons">remove</i></a>
+                                    <div id="bl-modal1-{{loop.index}}" class="modal">
+                                        <div class="modal-content">
+                                        <h5 class="red-text">Are you sure you want to remove the blacklisted domain early?</h5>
+                                        </div>
+                                        <form action="/advanced/blacklist" method="POST">
+                                            <div class="modal-footer">
+                                                <button class="btn waves-effect waves-light">YES</button>
+                                                <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+                                                <input type="hidden" name="tab" value="1">
+                                                <input type="hidden" name="bl_remove" value="{{domain}}">
+                                            </div>
+                                        </form>
+                                    </div>
+                                </td>
+                                <td>{{domain}}</td>
+                                <td>{{info['time']}}</td>
+                                <td>{{info['rule_length']}}</td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                {% for i in range(7) %}
+                                <td></td>
+                                {% endfor %}
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<section id="exceptions" class="section {{main_section_color}}">
+    <div class="container">
+        <div class="row">
+            <div class="col s12">
+                <div class="card-panel hoverable {{card_color}}">
+                    <h4 class="{{title_color}}">Add Override</h4>
+                    <form action="/advanced/blacklist" method="POST">
+                    <input type="hidden" name="tab" value="2">
+                        <div class="row">
+                            <div class="input-field col s4 l3 {{input_color}}">
+                                <input type="text" name="domain" class="validate" placeholder="malicious.com" required>
+                                <label for="domain">Domain</label>
+                            </div>
+                            <div class="input-field col s4 l3 {{input_color}}">
+                                <input type="text" name="reason" class="validate" placeholder="malicious" required>
+                                <label for="reason">Reason</label>
+                            </div>
+                            <div class="input-field col s4 l2 offset-l4">
+                                <input type="hidden" name="exc_add" value="exception">
+                                <button class="btn waves-effect waves-light col s12">Add</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="col s12">
+                <div class="card-panel hoverable {{card_color}}">
+                    <h4 class="{{title_color}}">Active Overrides</h4>
+                        <table class="striped centered">
+                            <thead>
+                                <tr>
+                                 <th style="width:10%"></th>
+                                 <th style="width:45%">Domain</th>
+                                 <th style="width:45%">Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if blacklist_settings['pre_proxy'] %}
+                                {% for domain, info in blacklist_settings['pre_proxy'].items() %}
+                                <tr>
+                                 <td>
+                                    <a class="btn-floating btn-small red waves-effect waves-light modal-trigger" href="#bl-modal2-{{loop.index}}">
+                                        <i class="material-icons">remove</i></a>
+                                    <div id="bl-modal2-{{loop.index}}" class="modal">
+                                        <div class="modal-content">
+                                        <h5 class="red-text center">Are you sure you want to remove the override? Service restart required to take effect.</h5>
+                                        </div>
+                                        <form action="/advanced/blacklist" method="POST">
+                                            <div class="modal-footer">
+                                                <button class="btn waves-effect waves-light">YES</button>
+                                                <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+                                                <input type="hidden" name="tab" value="2">
+                                                <input type="hidden" name="exc_remove" value="{{domain}}">
+                                            </div>
+                                        </form>
+                                    </div>
+                                 </td>
+                                 <td>{{domain}}</td>
+                                 <td>{{info['reason']}}</td>
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

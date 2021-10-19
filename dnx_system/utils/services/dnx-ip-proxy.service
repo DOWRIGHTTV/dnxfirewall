@@ -1,0 +1,15 @@
+[Unit]
+Description=DNXFIREWALL IP Proxy Service
+After=dnx-log.service
+StartLimitIntervalSec=3
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=3
+User=root
+ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_secmods/ip_proxy/ip_proxy.py
+Environment=HOME_DIR=/home/dnx/dnxfirewall
+
+[Install]
+WantedBy=multi-user.target

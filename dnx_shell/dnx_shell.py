@@ -2,15 +2,11 @@
 
 from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
 import os, sys
-import json
 import threading
 
-from subprocess import check_output
-
-HOME_DIR = os.environ['HOME_DIR']
+HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
 sys.path.insert(0, HOME_DIR)
 
-from dnx_configure.dnx_constants import SHELL_SPACE
 from dnx_shell.dnx_shell_main import TopLevel
 from dnx_shell.dnx_shell_authentication import Authentication
 
