@@ -283,3 +283,5 @@ class FirewallControl:
         error = self.cfirewall.update_ruleset(0, ruleset)
         if (error):
             pass  # TODO: do something here
+
+        self._initialize.done()
