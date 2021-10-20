@@ -73,6 +73,9 @@ class _Defaults:
         # INPUT #
         shell(' iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
 
+        # local socket allow
+        shell(f'iptables -I INPUT -s 127.0.0.0/24 -d 127.0.0.0/24 -j ACCEPT')
+
         # user configured services access will be kept as iptables for now. note: the implicit allows like dhcp and dns
         # will be handled by cfirewall from this point on. mark filter to ensure wan doesnt match as extra precaution.
         shell(f'iptables -m mark ! --mark {WAN_IN} -j MGMT ')

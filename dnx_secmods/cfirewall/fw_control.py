@@ -268,6 +268,7 @@ class FirewallControl:
     @cfg_read_poller('firewall_system', folder='iptables')
     def _monitor_system_rules(self, system_rules):
         # 0-99: system reserved - 1. loopback 10/11. dhcp, 20/21. dns, 30/31. http, 40/41. https, etc
+        #   - loopback will be left in iptables for now
         # 100-1059: zone mgmt rules. 100s place designates interface index
         #   - 0/1: webui, 2: cli, 3: ssh, 4: ping
         #   - NOTE: int index will be used to do zone lookup. if zone changes, these will stop working and would need
