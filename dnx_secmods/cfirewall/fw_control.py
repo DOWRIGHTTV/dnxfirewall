@@ -203,16 +203,15 @@ class FirewallControl:
     # threads will be started here.
     def run(self):
 
-        self._init_system_rules()
-
-        threading.Thread(target=self.monitor_zones).start()
-        threading.Thread(target=self.monitor_rules).start()
+        threading.Thread(target=self._monitor_zones).start()
+        threading.Thread(target=self._monitor_standard_rules).start()
+        threading.Thread(target=self._monitor_system_rules).start()
 
         self._initialize.wait_for_threads(count=2)
 
     @cfg_read_poller('zone_map', folder='iptables')
     # zone int values are arbitrary / randomly selected on zone creation.
-    def monitor_zones(self, zone_map):
+    def _monitor_zones(self, zone_map):
         '''calls to Cython are made from within this method block. the GIL must be manually acquired on the Cython
         side or the Python interpreter will crash. Monitors the firewall zone file for changes and loads updates to
         cfirewall.'''
@@ -234,7 +233,7 @@ class FirewallControl:
         self._initialize.done()
 
     @cfg_read_poller('firewall_active', folder='iptables')
-    def monitor_rules(self, fw_rules):
+    def _monitor_standard_rules(self, fw_rules):
         '''calls to Cython are made from within this method block. the GIL must be manually acquired on the Cython
         side or the Python interpreter will crash. Monitors the active firewall rules file for changes and loads
         updates to cfirewall.'''
@@ -267,7 +266,7 @@ class FirewallControl:
         self._initialize.done()
 
     @cfg_read_poller('firewall_system', folder='iptables')
-    def monitor_system_rules(self, system_rules):
+    def _monitor_system_rules(self, system_rules):
         # 0-99: system reserved - 1. loopback 10/11. dhcp, 20/21. dns, 30/31. http, 40/41. https, etc
         # 100-1059: zone mgmt rules. 100s place designates interface index
         #   - 0/1: webui, 2: cli, 3: ssh, 4: ping
