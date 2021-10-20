@@ -75,7 +75,7 @@ class _Defaults:
 
         # user configured services access will be kept as iptables for now. note: the implicit allows like dhcp and dns
         # will be handled by cfirewall from this point on. mark filter to ensure wan doesnt match as extra precaution.
-        shell(' iptables -m mark ! --mark 10 -j MGMT ')
+        shell(f'iptables -m mark ! --mark {WAN_IN} -j MGMT ')
 
         shell(f'iptables -A INPUT -p tcp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
         shell(f'iptables -A INPUT -p udp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
