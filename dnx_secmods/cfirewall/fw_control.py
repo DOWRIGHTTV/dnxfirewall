@@ -275,12 +275,11 @@ class FirewallControl:
         #       to be reset. this is ok for now since we only support builtin zones that cant change.
         # 2000+: system control (proxy bypass prevention)
 
-        ruleset = load_configuration(system_rules, filepath='dnx_system/iptables')
+        ruleset = load_configuration(system_rules, filepath='dnx_system/iptables')['BUILTIN']
 
-        # sorting merged dict (system + usr), then taking values to convert into python arrays
-        ruleset = [array('L', rule) for rule in dict(sorted(ruleset)).values()]
+        ruleset = [array('L', rule) for rule in ruleset.values()]
 
-        # NOTE: gil must be held throughout this call
+        # NOTE: gil must be held throughout this call. 0 is index of SYSTEM RULES
         error = self.cfirewall.update_ruleset(0, ruleset)
         if (error):
             pass  # TODO: do something here
