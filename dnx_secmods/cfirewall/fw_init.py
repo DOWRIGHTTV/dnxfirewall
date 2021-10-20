@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 
+import __init__
+
 import os
 import argparse
 
 from sys import argv
 
 from dnx_gentools.def_constants import Queue
+
 from dnx_sysmods.logging.log_main import LogHandler as Log
 
 from dnx_secmods.cfirewall.fw_main import CFirewall # pylint: disable=import-error, no-name-in-module
