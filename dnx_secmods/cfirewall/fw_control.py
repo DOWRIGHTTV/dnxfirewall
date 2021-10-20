@@ -203,11 +203,11 @@ class FirewallControl:
     # threads will be started here.
     def run(self):
 
+        threading.Thread(target=self._monitor_system_rules).start()
         threading.Thread(target=self._monitor_zones).start()
         threading.Thread(target=self._monitor_standard_rules).start()
-        threading.Thread(target=self._monitor_system_rules).start()
 
-        self._initialize.wait_for_threads(count=2)
+        self._initialize.wait_for_threads(count=3)
 
     @cfg_read_poller('zone_map', folder='iptables')
     # zone int values are arbitrary / randomly selected on zone creation.
