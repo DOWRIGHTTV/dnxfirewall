@@ -43,10 +43,10 @@
             "webui": true,
             "cli": false,
             "ssh": false,
-            "ping": true
+            "ping": false
         },
         "dmz": {
-            "webui": true,
+            "webui": false,
             "cli": false,
             "ssh": false,
             "ping": false

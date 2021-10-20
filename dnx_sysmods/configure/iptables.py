@@ -49,6 +49,7 @@ class _Defaults:
         for chain in self.custom_nat_chains:
             shell(f'iptables -t nat -N {chain}')
 
+        shell('iptables -N MGMT')
         shell('iptables -t raw -N IPS') # ddos prevention rule insertion location
 
     def default_actions(self):
@@ -61,24 +62,29 @@ class _Defaults:
     def cfirewall_hook(self):
         # standard conntrack permit. cfirewall will deal with all tcp, udp, and icmp packet as a basic ip/protocol
         # filter and as a security module inspection pre preprocessor.
+
         # FORWARD #
         shell('iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
 
-        shell(f'iptables -A FORWARD -A PREROUTING -p tcp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
-        shell(f'iptables -A FORWARD -A PREROUTING -p udp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
-        shell(f'iptables -A FORWARD -A PREROUTING -p icmp -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+        shell(f'iptables -A FORWARD -p tcp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+        shell(f'iptables -A FORWARD -p udp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+        shell(f'iptables -A FORWARD -p icmp -j NFQUEUE --queue-num {Queue.CFIREWALL}')
 
         # INPUT #
         shell(' iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
 
-        shell(f'iptables -A INPUT -A PREROUTING -p tcp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
-        shell(f'iptables -A INPUT -A PREROUTING -p udp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
-        shell(f'iptables -A INPUT -A PREROUTING -p icmp -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+        # user configured services access will be kept as iptables for now. note: the implicit allows like dhcp and dns
+        # will be handled by cfirewall from this point on. mark filter to ensure wan doesnt match as extra precaution.
+        shell(' iptables -m mark ! --mark 10 -j MGMT ')
+
+        shell(f'iptables -A INPUT -p tcp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+        shell(f'iptables -A INPUT -p udp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+        shell(f'iptables -A INPUT -p icmp -j NFQUEUE --queue-num {Queue.CFIREWALL}')
 
     def prefilter_set(self):
-        # filtering out broadcast packets to the wan. These can be prevelent if in a double nat scenario and would never be
-        # used for anything.
-        shell(f'iptables -A INPUT -i {self._wan_int} -m addrtype --dst-type BROADCAST -j DROP') # pylint: disable=no-member
+        # filtering out broadcast packets to the wan. These can be prevalent if in a double nat scenario and would never
+        # be used for anything.
+        shell(f'iptables -I INPUT -i {self._wan_int} -m addrtype --dst-type BROADCAST -j DROP') # pylint: disable=no-member
 
     # TODO: implement commands to check source and dnat changes in nat table. what does this even mean?
     def nat(self):
@@ -86,9 +92,10 @@ class _Defaults:
 
         # internal zones dns redirect into proxy
         shell('iptables -t nat -A PREROUTING -j REDIRECT_OVERRIDE')
-        # TODO: add config option in dns server settings to define up to 2 internal servers (check for RFC1918) as internal recursive
-        #  resolvers. dns requests to the configured servers will be exempt from this redirect. this will allow all internal zones
-        #  to have access to a centralized local dns server (like windows dns in an active directory domain).
+        # TODO: add config option in dns server settings to define up to 2 internal servers (check for RFC1918) as
+        #  internal recursive resolvers. dns requests to the configured servers will be exempt from this redirect. this
+        #  will allow all internal zones to have access to a centralized local dns server (like windows dns in an active
+        #  directory domain).
         shell(f'iptables -t nat -A PREROUTING -m mark ! --mark {WAN_IN} -p udp --dport 53 -j REDIRECT --to-port 53')
 
         # user defined chain for dnat
@@ -202,6 +209,7 @@ class IPTablesManager:
 
             return
 
+        # iterate over ports to make it easier to deal with singular or multiple port cases
         for port in fields.service_ports:
 
             shell(f'sudo iptables {action} MGMT -m mark --mark {zone} -p tcp --dport {port} -j ACCEPT', check=True)
@@ -278,9 +286,6 @@ class IPTablesManager:
 
         _system(f'sudo iptables -t {table} -A {chain} -s {ip_address} -j DROP {comment}')
 
-        # NOTE: this should be removed one day
-        # write_log(f'RULE INSERTED: {ip_address} | {fast_time()}')
-
     @staticmethod
     def proxy_del_rule(ip_address, timestamp, *, table, chain):
         '''remove iptable rule from specified table and chain.'''
@@ -288,9 +293,6 @@ class IPTablesManager:
         comment = f'-m comment --comment {timestamp}'
 
         _system(f'sudo iptables -t {table} -D {chain} -s {ip_address} -j DROP {comment}')
-
-        # NOTE: this should be removed one day
-        # write_log(f'RULE REMOVED: {ip_address} | {fast_time()}')
 
     @staticmethod
     def update_dns_over_https():

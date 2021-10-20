@@ -41,6 +41,9 @@ def update_page(form):
         except:
             return INVALID_FORM
 
+        if (service in DISABLED_MANAGEMENT_SERVICES):
+            return f'{service.upper()} is disabled by the system and cannot be enabled at this time.'
+
         fields = SimpleNamespace(**{'zone': zone, 'service': service, 'action': action})
 
         try:
@@ -49,9 +52,6 @@ def update_page(form):
             return ve
 
         else:
-            if (service in DISABLED_MANAGEMENT_SERVICES):
-                return f'{service.upper()} is disabled by the system and cannot be enabled at this time.'
-
             with IPTablesManager() as ipt:
                 ipt.modify_management_access(fields)
 

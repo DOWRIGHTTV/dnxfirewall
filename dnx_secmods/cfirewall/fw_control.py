@@ -268,32 +268,12 @@ class FirewallControl:
 
     @cfg_read_poller('firewall_system', folder='iptables')
     def monitor_system_rules(self, system_rules):
-        # 0-9: reserved - dns, dhcp, loopback, etc
-        # 10-159: zone mgmt rules. tens place designates interface index
-        #   - 0: webui, 1: cli, 2: ssh, 3: ping
-        # 160+: system control (proxy bypass prevention)
-
-        # dnxfirewall services access (all local network interfaces). dhcp, dns, icmp, etc.
-
-        # DHCP discover/request allow
-        shell(f'iptables -A INPUT -m mark ! --mark {WAN_IN} -p udp --dport 67 -j ACCEPT')
-
-        # implicit DNS allow for local users
-        shell(f'iptables -A INPUT -m mark ! --mark {WAN_IN} -p udp --dport 53 -j ACCEPT')
-
-        # implicit http/s allow to dnx-web for local LAN users
-        shell(f'iptables -A INPUT -m mark --mark {LAN_IN} -p tcp --dport 443 -j ACCEPT')
-        shell(f'iptables -A INPUT -m mark --mark {LAN_IN} -p tcp --dport 80 -j ACCEPT')
-
-        # NOTE: these are default settings of user defined options. these can be removed from the webui after setup and are only
-        # here for convenience.
-
-        # dnxfirewall LAN interface ping allow
-        shell(f'iptables -A MGMT -m mark --mark {LAN_IN} -p icmp -m icmp --icmp-type 8 -j ACCEPT')
-
-        # DMZ webui access
-        shell(f'iptables -A MGMT -m mark --mark {DMZ_IN} -p tcp --dport 443 -j ACCEPT')
-        shell(f'iptables -A MGMT -m mark --mark {DMZ_IN} -p tcp --dport 80 -j ACCEPT')
+        # 0-99: system reserved - 1. loopback 10/11. dhcp, 20/21. dns, 30/31. http, 40/41. https, etc
+        # 100-1059: zone mgmt rules. 100s place designates interface index
+        #   - 0/1: webui, 2: cli, 3: ssh, 4: ping
+        #   - NOTE: int index will be used to do zone lookup. if zone changes, these will stop working and would need
+        #       to be reset. this is ok for now since we only support builtin zones that cant change.
+        # 2000+: system control (proxy bypass prevention)
 
         ruleset = load_configuration(system_rules, filepath='dnx_system/iptables')
 

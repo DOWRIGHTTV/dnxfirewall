@@ -448,8 +448,9 @@ def manage_firewall_rule(fw_rule):
     if not all([x in [0, 1] for x in [ip_proxy_profile, ips_ids_profile]]):
         raise ValidationError('Invalid security profile.')
 
-    # en | zone | netid | mask | proto << p1 | p2 ---->    | action | log | ipp | ips
-    # [1, 12, 4294967295, 32, 393217, 65535, 10, 4294967295, 32, 458751, 65535, 1, 0, 1, 1],
+    # en | zone | netid | mask | proto << port1 | port2 | action | log | ipp | ips
+    # [1,  12, 4294967295, 32,      393217,       65535,
+    #      10, 4294967295, 32,      458751,       65535,    1,      0,    1,    1],
 
     return [
         int(hasattr(fw_rule, 'rule_state')), # returns boolean so will evaluate directly
