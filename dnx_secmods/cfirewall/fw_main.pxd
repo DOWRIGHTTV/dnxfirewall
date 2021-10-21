@@ -138,6 +138,13 @@ cdef enum:
     INBOUND  = 2
 
     WAN_IN = 10
+
+cdef enum:
+    SYSTEM_RULES
+    BEFORE_RULES
+    MAIN_RULES
+    AFTER_RULES
+
 # used for dynamic allocation of array containing security profile settings
 # ip proxy, ips_ids
 DEF SECURITY_PROFILE_COUNT = 2
@@ -187,6 +194,10 @@ cdef struct iphdr:
 cdef struct protohdr:
     u_int16_t s_port
     u_int16_t d_port
+
+cdef struct res_tuple:
+    u_int16_t fw_section
+    u_int32_t action
 
 cdef class CFirewall:
     cdef nfq_handle *h # Handle to NFQueue library

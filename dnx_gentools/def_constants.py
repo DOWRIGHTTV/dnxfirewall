@@ -2,7 +2,6 @@
 
 import time as _time
 import os as _os
-import sys as _sys
 
 from functools import partial as _partial
 from subprocess import run as _run, DEVNULL as _DEVNULL
@@ -12,6 +11,7 @@ from ipaddress import IPv4Address as _IPv4Address
 fast_time  = _time.time
 fast_sleep = _time.sleep
 
+hard_out = _partial(_os._exit, 1)
 write_log = _partial(print, flush=True)
 shell = _partial(_run, shell=True, stdout=_DEVNULL, stderr=_DEVNULL)
 
@@ -21,7 +21,7 @@ str_join = ''.join
 # this is a dev helper to when switching between appliance and dev box
 __current_user = _run('whoami', shell=True, text=True, capture_output=True).stdout.strip()
 # dnx user/group
-if __current_user == 'free':
+if (__current_user == 'free'):
     USER  = 'free'
     GROUP = 'free'
 else:

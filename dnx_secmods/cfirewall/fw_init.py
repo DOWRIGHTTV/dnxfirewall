@@ -7,7 +7,7 @@ import argparse
 
 from sys import argv
 
-from dnx_gentools.def_constants import Queue
+from dnx_gentools.def_constants import hard_out, Queue
 
 from dnx_sysmods.logging.log_main import LogHandler as Log
 
@@ -20,30 +20,29 @@ parser.add_argument('--verbose', help='prints informational messages', action='s
 
 args = parser.parse_args(argv[1:])
 
-LOG_NAME = 'firewall'
-Log.run(
-    name=LOG_NAME
-)
+Log.run(name='firewall')
 
 dnxfirewall = CFirewall(args.bypass, args.verbose)
 error = dnxfirewall.nf_set(Queue.CFIREWALL)
 if (error):
     Log.error(f'failed to bind to queue {Queue.CFIREWALL}')
-    os._exit(1)
+    hard_out()
 
-# initializing python processes for detecting configuration changes to zone or firewall rulesets and
-# also handles necessary calls into Cython via cfirewall reference for making the actual config change.
-# these will run in Python threads and some may call into Cython. These functions should be explicitly
-# identified since they will require the gil to be acquired on the Cython side or else the Python interpreter
-# will crash.
+# initializing python processes for detecting configuration changes to zone or firewall rulesets and also handles
+# necessary calls into Cython via cfirewall reference for making the actual config change. these will run in Python
+# threads and some may call into Cython. These functions should be explicitly identified since they will require the gil
+# to be acquired on the Cython side or else the Python interpreter will crash.
 fw_control = FirewallControl(cfirewall=dnxfirewall)
-fw_control.run()
+try:
+    fw_control.run()
+except:
+    hard_out()
 
-# this is a blocking call but is ran in pure C. This call releases the GIL before running the low level
-# system operations and will never retake the gil. #NOTE: setting bypass will tell the process to invoke
-# firewall action(DROP or ACCEPT) directly without forwarding to other modules.
+# this is a blocking call but is ran in pure C, releases the GIL before running the low level system operations, and
+# will never retake the gil. NOTE: setting bypass will tell the process to invoke firewall action (DROP or ACCEPT)
+# directly without forwarding to other modules.
 try:
     dnxfirewall.nf_run()
 except:
     dnxfirewall.nf_break()
-    os._exit(1)
+    hard_out()

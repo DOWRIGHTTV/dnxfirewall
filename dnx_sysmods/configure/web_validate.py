@@ -436,7 +436,9 @@ def manage_firewall_rule(fw_rule):
 
     dnx_interfaces = load_configuration('config')['interfaces']['builtins']
     zone_map = {zone_name: zone_info['zone'] for zone_name, zone_info in dnx_interfaces.items()}
-    zone_map['any'] = 0
+
+    # 99 used to specify wildcard/any zone match
+    zone_map['any'] = 99
 
     s_zone = zone_map.get(fw_rule.src_zone, None)
     d_zone = zone_map.get(fw_rule.dst_zone, None)
