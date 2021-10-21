@@ -85,6 +85,10 @@ class _Defaults:
         shell(f'iptables -A INPUT -p icmp -j NFQUEUE --queue-num {Queue.CFIREWALL}')
 
     def prefilter_set(self):
+        # marking traffic entering wan interface. this is currently used for directionality comparisons and to restrict
+        # system access.
+        shell(f'iptables -t mangle -A INPUT -i {self._wan_int} -j MARK --set-mark {WAN_IN}')
+
         # filtering out broadcast packets to the wan. These can be prevalent if in a double nat scenario and would never
         # be used for anything.
         shell(f'iptables -I INPUT -i {self._wan_int} -m addrtype --dst-type BROADCAST -j DROP') # pylint: disable=no-member

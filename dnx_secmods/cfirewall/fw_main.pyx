@@ -255,7 +255,7 @@ cdef class CFirewall:
                 if errno != ENOBUFS:
                     break
 
-    cdef u_int32_t cidr_to_int(self, long cidr):
+    cdef inline u_int32_t cidr_to_int(self, long cidr):
 
         cdef u_int32_t integer_mask = 0
         cdef u_int8_t  mask_index = 31 # 1 + 31 shifts = 32 bits
@@ -356,13 +356,13 @@ cdef class CFirewall:
         '''
 
         pthread_mutex_lock(&FWrulelock)
-        # printf('[update/zones] acquired lock\n')
+        printf('[update/zones] acquired lock\n')
 
         for i in range(FW_MAX_ZONE_COUNT):
             INTF_ZONE_MAP[i] = zone_map[i]
 
         pthread_mutex_unlock(&FWrulelock)
-        # printf('[update/zones] released lock\n')
+        printf('[update/zones] released lock\n')
 
         return 0
 
@@ -379,7 +379,7 @@ cdef class CFirewall:
 
         pthread_mutex_lock(&FWrulelock)
 
-        # printf('[update/ruleset] acquired lock\n')
+        printf('[update/ruleset] acquired lock\n')
         for i in range(rule_count):
             rule = rulelist[i]
 
@@ -390,7 +390,7 @@ cdef class CFirewall:
         CUR_RULE_COUNTS[ruleset] = rule_count
 
         pthread_mutex_unlock(&FWrulelock)
-        # printf('[update/ruleset] released lock\n')
+        printf('[update/ruleset] released lock\n')
 
         return 0
 
