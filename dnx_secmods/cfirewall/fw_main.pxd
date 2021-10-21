@@ -198,6 +198,7 @@ cdef struct protohdr:
 cdef struct res_tuple:
     u_int16_t fw_section
     u_int32_t action
+    u_int32_t mark
 
 cdef class CFirewall:
     cdef nfq_handle *h # Handle to NFQueue library

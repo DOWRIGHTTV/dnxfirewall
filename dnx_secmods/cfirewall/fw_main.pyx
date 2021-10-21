@@ -78,8 +78,8 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         ]
 
         u_int8_t direction
-        u_int32_t mark, verdict
         res_tuple inspection_res
+        u_int32_t mark, verdict = DROP
 
         # define pointer and pass in to get payload. L3+ packet data will be accessible via this pointer.
         unsigned char *data_ptr
@@ -241,7 +241,7 @@ cdef class CFirewall:
 
         cdef int fd = nfq_fd(self.h)
         cdef char packet_buf[4096]
-        cdef size_t sizeof_buf = sizeof(buf)
+        cdef size_t sizeof_buf = sizeof(packet_buf)
         cdef int data_len
         cdef int recv_flags = 0
 
