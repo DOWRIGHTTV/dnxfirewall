@@ -115,7 +115,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # SYSTEM RULES will have cfirewall invoke action directly since this traffic does not need further inspection
     if (inspection_res.fw_section == SYSTEM_RULES):
 
-        printf('[SYSTEM RULE] proto=%u, port=%u\n', ip_header.protocol, proto_header.d_port)
+        printf('[SYSTEM RULE] proto=%u, port=%u\n', ip_header.protocol, ntohs(proto_header.d_port))
 
         nfq_set_verdict(qh, id, inspection_res.action, pktdata_len, pktdata)
 
@@ -227,7 +227,7 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
 
             return results
 
-        return results
+    return results
 
 cdef u_int32_t MAX_COPY_SIZE = 4016 # 4096(buf) - 80
 cdef u_int32_t DEFAULT_MAX_QUEUELEN = 8192
