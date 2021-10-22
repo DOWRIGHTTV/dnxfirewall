@@ -52,15 +52,24 @@ cdef u_int16_t[FW_MAX_ZONE_COUNT] INTF_ZONE_MAP
 
 cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
 
+    # definitions or default assignments
+    cdef:
+        unsigned char *data
+        iphdr *ip_header
+        protohdr *proto_header
+
+        # default proto_header values for icmp. will be replaced with protocol specific values if applicable
+        protohdr _proto_header = [0, 0]
+
+        u_int8_t direction, iphdr_len
+        int data_len
+        res_tuple inspection_res
+        u_int32_t mark, verdict = DROP
+
+    # definition + assignment with function calls
     cdef:
         nfqnl_msg_packet_hdr *hdr = nfq_get_msg_packet_hdr(nfa)
         u_int32_t id = ntohl(hdr.packet_id)
-
-        # default values for icmp.
-        protohdr proto = [0, 0]
-
-        # creating ptr and assign uninitialized var proto. vals will be set lower.
-        protohdr * proto_ptr = &proto
 
         # interface index which corresponds to zone map index
         u_int8_t in_intf = nfq_get_indev(nfa)
@@ -77,23 +86,17 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
             time(NULL)
         ]
 
-        u_int8_t direction
-        res_tuple inspection_res
-        u_int32_t mark, verdict = DROP
+    # passing ptr of uninitialized data ptr to func. L3+ packet data will be placed at and accessible by this pointer.
+    data_len = nfq_get_payload(nfa, &data)
 
-        # define pointer and pass in to get payload. L3+ packet data will be accessible via this pointer.
-        unsigned char *data_ptr
-        int data_len = nfq_get_payload(nfa, &data_ptr)
-
-        # IP HEADER
-        # assigning ip_header to first index of data casted to iphdr struct and calculate ip header len.
-        iphdr *ip_header = <iphdr*>data_ptr
-        u_int8_t iphdr_len = (ip_header.ver_ihl & 15) * 4
+    # IP HEADER
+    # assigning ip_header to first index of data casted to iphdr struct and calculate ip header len.
+    ip_header = <iphdr*>data_ptr
+    iphdr_len = (ip_header.ver_ihl & 15) * 4
 
     # PROTOCOL HEADER
     # tcp/udp will reassign the pointer to their header data
-    if (ip_header.protocol != IPPROTO_ICMP):
-        proto_ptr = <protohdr*>&data_ptr[iphdr_len]
+    proto_header_ptr = <protohdr*>&data_ptr[iphdr_len] if ip_header.protocol != IPPROTO_ICMP else &proto_header
 
     # DIRECTION SET
     # uses initial mark of packet to determine the stateful direction of the conn
@@ -112,17 +115,19 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # SYSTEM RULES will have cfirewall invoke action directly since this traffic does not need further inspection
     if (inspection_res.fw_section == SYSTEM_RULES):
 
+        printf('[SYSTEM RULE] proto=%u, port=%u\n', ip_header.protocol, proto_ptr.d_port)
+
         nfq_set_verdict(qh, id, inspection_res.action, data_len, data_ptr)
 
     else:
-        # X | X | X | X | ips | ipp | direction | action
+        # X | X | X | X | ips | ipp | direction | action. direction bits set after mark is returned.
         mark = inspection_res.mark | direction << 4
 
         # verdict is defined here based on BYPASS flag.
         # if not BYPASS, ip proxy is next in line regardless of action to gather geolocation data
         # if BYPASS, invoke the rule action without forwarding to another queue. only to be used for testing and
         #   - can be controlled via an argument to nf_run().
-        verdict = inspection_res.action if BYPASS else (IP_PROXY & 15) << 16 | NF_QUEUE
+        verdict = inspection_res.action if BYPASS else IP_PROXY << 16 | NF_QUEUE
 
         nfq_set_verdict2(qh, id, verdict, mark, data_len, data_ptr)
 

@@ -89,6 +89,11 @@ class _Defaults:
         # system access.
         shell(f'iptables -t mangle -A INPUT -i {self._wan_int} -j MARK --set-mark {WAN_IN}')
 
+        # builtin lan and dmz interface/ zones will continue to be marked while iptables has partial control over system
+        # service access
+        shell(f'iptables -t mangle -A INPUT -i {self._lan_int} -j MARK --set-mark {LAN_IN}')
+        shell(f'iptables -t mangle -A INPUT -i {self._dmz_int} -j MARK --set-mark {DMZ_IN}')
+
         # filtering out broadcast packets to the wan. These can be prevalent if in a double nat scenario and would never
         # be used for anything.
         shell(f'iptables -I INPUT -i {self._wan_int} -m addrtype --dst-type BROADCAST -j DROP') # pylint: disable=no-member
