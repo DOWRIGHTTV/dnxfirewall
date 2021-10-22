@@ -16,6 +16,13 @@ DEF ANY_ZONE = 99
 DEF NO_SECTION = 99
 DEF ANY_PROTOCOL = 0
 
+DEF OK  = 0
+DEF ERR = 1
+
+DEF TWO_BYTES = 16
+DEF FOUR_BITS = 4
+DEF FOUR_BIT_MASK = 15
+
 cdef bint BYPASS  = 0
 cdef bint VERBOSE = 0
 
@@ -92,7 +99,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # IP HEADER
     # assigning ip_header to first index of data casted to iphdr struct and calculate ip header len.
     ip_header = <iphdr*>pktdata
-    iphdr_len = (ip_header.ver_ihl & 15) * 4
+    iphdr_len = (ip_header.ver_ihl & FOUR_BIT_MASK) * 4
 
     # PROTOCOL HEADER
     # tcp/udp will reassign the pointer to their header data
@@ -121,21 +128,24 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
 
     else:
         # X | X | X | X | ips | ipp | direction | action. direction bits set after mark is returned.
-        mark = inspection_res.mark | direction << 4
+        mark = inspection_res.mark | direction << FOUR_BITS
 
         # verdict is defined here based on BYPASS flag.
         # if not BYPASS, ip proxy is next in line regardless of action to gather geolocation data
         # if BYPASS, invoke the rule action without forwarding to another queue. only to be used for testing and
         #   - can be controlled via an argument to nf_run().
-        verdict = inspection_res.action if BYPASS else IP_PROXY << 16 | NF_QUEUE
+        verdict = inspection_res.action if BYPASS else IP_PROXY << TWO_BYTES | NF_QUEUE
 
         nfq_set_verdict2(qh, id, verdict, mark, pktdata_len, pktdata)
 
-    vprint('[C/packet] action=%u,', inspection_res.action, 'verdict=%u\n', verdict)
+    # verdict is being used to eval whether packet matched a system rule. 0 verdict infers this also, but for ease
+    # of reading, ill have both.
+    if (VERBOSE):
+        printf('[C/packet] action=%u, verdict=%u, system_rule=', inspection_res.action, verdict, verdict & 1)
 
     # libnfnetlink.c return >> libnetfiler_queue return >> CFirewall._run.
     # < 0 vals are errors, but return is being ignored by CFirewall._run.
-    return 1
+    return OK
 
 # explicit inline declaration needed for compiler to know to inline this function
 cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto_header) nogil:
@@ -188,11 +198,11 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             # ================================================================== #
             # PROTOCOL
             # ================================================================== #
-            rule_src_protocol = rule.s_port_start >> 16
+            rule_src_protocol = rule.s_port_start >> TWO_BYTES
             if (ip_header.protocol != rule_src_protocol and rule_src_protocol != ANY_PROTOCOL):
                 continue
 
-            rule_dst_protocol = rule.d_port_start >> 16
+            rule_dst_protocol = rule.d_port_start >> TWO_BYTES
             if (ip_header.protocol != rule_dst_protocol and rule_dst_protocol != ANY_PROTOCOL):
                 continue
 
@@ -207,7 +217,17 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
                 continue
 
             # ================================================================== #
-            # ACTION | return rule options
+            # VERBOSE MATCH OUTPUT | only showing matches due to too much output
+            # ================================================================== #
+            if (VERBOSE):
+                printf('pkt-in zone=%u, rule-in zone=%u, ', hw.in_zone, rule.s_zone)
+                printf('pkt-out zone=%u, rule-out zone=%u\n', hw.out_zone, rule.d_zone)
+                printf('pkt-src ip=%u, pkt-src netid=%u, rule-s netid=%u\n', ntohl(ip_header.saddr), iph_src_netid, rule.s_net_id)
+                printf('pkt-dst ip=%u, pkt-dst netid=%u, rule-d netid=%u\n', ntohl(ip_header.daddr), iph_dst_netid, rule.d_net_id)
+                printf('pkt proto=%u, rule-s proto=%u, rule-d proto=%u\n', ip_header.protocol, rule_src_protocol, rule_dst_protocol)
+
+            # ================================================================== #
+            # MATCH ACTION | return rule options
             # ================================================================== #
             # drop will inherently forward to ip proxy for geo inspection. ip proxy will call drop.
             # notify caller which section match was in. this will be used to skip inspection for system access rules
@@ -215,19 +235,13 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             results.action = rule.action
             results.mark = rule.sec_profiles[1] << 12 | rule.sec_profiles[0] << 8 | rule.action
 
-            # ================================================================== #
-            # VERBOSE MATCH OUTPUT | only showing matches due to too much output
-            # ================================================================== #
-            vprint('p-i zone=%u, ', hw.in_zone, 'r-i zone=%u, ', rule.s_zone)
-            vprint('p-o zone=%u, ', hw.out_zone, 'r-o zone=%u\n', rule.d_zone)
-            vprint('p-s ip=%u, ', ntohl(ip_header.saddr), 'p-s netid=%u, ', iph_src_netid, 'r-s netid=%u\n', rule.s_net_id)
-            vprint('p-d ip=%u, ', ntohl(ip_header.daddr), 'p-d netid=%u, ', iph_dst_netid, 'r-d netid=%u\n', rule.d_net_id)
-            vprint('p proto=%u, ', ip_header.protocol, 'r-s proto=%u, ', rule_src_protocol)
-            vprint('p proto=%u, ', ip_header.protocol, 'r-d proto=%u\n', rule_dst_protocol)
-
             return results
 
+    # ================================================================== #
+    # DEFAULT ACTION
+    # ================================================================== #
     return results
+
 
 cdef u_int32_t MAX_COPY_SIZE = 4016 # 4096(buf) - 80
 cdef u_int32_t DEFAULT_MAX_QUEUELEN = 8192
@@ -261,6 +275,8 @@ cdef class CFirewall:
                 nfq_handle_packet(self.h, packet_buf, data_len)
 
             else:
+                # TODO: i believe we can get rid of this and set up a lower level ignore of this. this might require
+                #  the libmnl implementation version though.
                 if (errno != ENOBUFS):
                     break
 
@@ -328,7 +344,7 @@ cdef class CFirewall:
         fw_rule.sec_profiles[0] = <u_int8_t>rule[13]
         fw_rule.sec_profiles[1] = <u_int8_t>rule[14]
 
-        # printf('[set/FWrule] %u > security profiles set\n', pos)
+        # printf('[set/FWrule] %u/%u > security profiles set\n', ruleset, pos)
 
     # PYTHON ACCESSIBLE FUNCTIONS
     def nf_run(self):
@@ -345,7 +361,7 @@ cdef class CFirewall:
         self.qh = nfq_create_queue(self.h, queue_num, <nfq_callback*>cfirewall_rcv, <void*>self)
 
         if (self.qh == NULL):
-            return 1
+            return ERR
 
         nfq_set_mode(self.qh, NFQNL_COPY_PACKET, MAX_COPY_SIZE)
 
@@ -373,7 +389,7 @@ cdef class CFirewall:
         pthread_mutex_unlock(&FWrulelock)
         printf('[update/zones] released lock\n')
 
-        return 0
+        return OK
 
     cpdef int update_ruleset(self, int ruleset, list rulelist) with gil:
         '''acquires FWrule lock then rewrites the corresponding section ruleset. the current length var
@@ -401,14 +417,4 @@ cdef class CFirewall:
         pthread_mutex_unlock(&FWrulelock)
         printf('[update/ruleset] released lock\n')
 
-        return 0
-
-cdef inline void vprint(char *msg1, u_int32_t one, char *msg2='', long two=-1, char *msg3='', long thr=-1) nogil:
-    if (VERBOSE):
-        printf(msg1, one)
-
-        if (two != -1):
-            printf(msg2, two)
-
-        if (thr != -1):
-            printf(msg3, thr)
+        return OK
