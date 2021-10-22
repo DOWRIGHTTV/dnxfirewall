@@ -141,7 +141,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # verdict is being used to eval whether packet matched a system rule. 0 verdict infers this also, but for ease
     # of reading, ill have both.
     if (VERBOSE):
-        printf('[C/packet] action=%u, verdict=%u, system_rule=', inspection_res.action, verdict, verdict & 1)
+        printf('[C/packet] action=%u, verdict=%u, system_rule=%u\n', inspection_res.action, verdict, verdict & 1)
 
     # libnfnetlink.c return >> libnetfiler_queue return >> CFirewall._run.
     # < 0 vals are errors, but return is being ignored by CFirewall._run.
