@@ -54,7 +54,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
 
     # definitions or default assignments
     cdef:
-        unsigned char *data
+        unsigned char *pktdata
         iphdr *ip_header
         protohdr *proto_header
 
@@ -62,7 +62,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         protohdr _proto_header = [0, 0]
 
         u_int8_t direction, iphdr_len
-        int data_len
+        int pktdata_len
         res_tuple inspection_res
         u_int32_t mark, verdict = DROP
 
@@ -87,16 +87,16 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         ]
 
     # passing ptr of uninitialized data ptr to func. L3+ packet data will be placed at and accessible by this pointer.
-    data_len = nfq_get_payload(nfa, &data)
+    pktdata_len = nfq_get_payload(nfa, &pktdata)
 
     # IP HEADER
     # assigning ip_header to first index of data casted to iphdr struct and calculate ip header len.
-    ip_header = <iphdr*>data_ptr
+    ip_header = <iphdr*>pktdata
     iphdr_len = (ip_header.ver_ihl & 15) * 4
 
     # PROTOCOL HEADER
     # tcp/udp will reassign the pointer to their header data
-    proto_header_ptr = <protohdr*>&data_ptr[iphdr_len] if ip_header.protocol != IPPROTO_ICMP else &proto_header
+    proto_header = <protohdr*>&pktdata[iphdr_len] if ip_header.protocol != IPPROTO_ICMP else &_proto_header
 
     # DIRECTION SET
     # uses initial mark of packet to determine the stateful direction of the conn
@@ -107,7 +107,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # this is currently only designed to prevent the manager thread from updating firewall rules as users configure them.
     pthread_mutex_lock(&FWrulelock)
 
-    inspection_res = cfirewall_inspect(&hw, ip_header, proto_ptr)
+    inspection_res = cfirewall_inspect(&hw, ip_header, proto_header)
 
     pthread_mutex_unlock(&FWrulelock)
     # =============================== #
@@ -115,9 +115,9 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # SYSTEM RULES will have cfirewall invoke action directly since this traffic does not need further inspection
     if (inspection_res.fw_section == SYSTEM_RULES):
 
-        printf('[SYSTEM RULE] proto=%u, port=%u\n', ip_header.protocol, proto_ptr.d_port)
+        printf('[SYSTEM RULE] proto=%u, port=%u\n', ip_header.protocol, proto_header.d_port)
 
-        nfq_set_verdict(qh, id, inspection_res.action, data_len, data_ptr)
+        nfq_set_verdict(qh, id, inspection_res.action, pktdata_len, pktdata)
 
     else:
         # X | X | X | X | ips | ipp | direction | action. direction bits set after mark is returned.
@@ -129,7 +129,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         #   - can be controlled via an argument to nf_run().
         verdict = inspection_res.action if BYPASS else IP_PROXY << 16 | NF_QUEUE
 
-        nfq_set_verdict2(qh, id, verdict, mark, data_len, data_ptr)
+        nfq_set_verdict2(qh, id, verdict, mark, pktdata_len, pktdata)
 
     vprint('[C/packet] action=%u,', inspection_res.action, 'verdict=%u\n', verdict)
 
@@ -138,7 +138,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     return 1
 
 # explicit inline declaration needed for compiler to know to inline this function
-cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto) nogil:
+cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto_header) nogil:
 
     cdef:
         FWrule **section
@@ -206,10 +206,10 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             # PORT
             # ================================================================== #
             # ICMP will match on the first port start value (looking for 0)
-            if (not rule.s_port_start <= ntohs(proto.s_port) <= rule.s_port_end):
+            if (not rule.s_port_start <= ntohs(proto_header.s_port) <= rule.s_port_end):
                 continue
 
-            if (not rule.d_port_start <= ntohs(proto.d_port) <= rule.d_port_end):
+            if (not rule.d_port_start <= ntohs(proto_header.d_port) <= rule.d_port_end):
                 continue
 
             # ================================================================== #
