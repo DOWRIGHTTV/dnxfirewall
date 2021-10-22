@@ -168,8 +168,6 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             # ZONE MATCHING
             # ================================================================== #
             # currently tied to interface and designated LAN, WAN, DMZ
-            vprint('p-i zone=%u, ', hw.in_zone, 'r-i zone=%u\n', rule.s_zone)
-            vprint('p-o zone=%u, ', hw.out_zone, 'r-o zone=%u\n', rule.d_zone)
             if (hw.in_zone != rule.s_zone and rule.s_zone != ANY_ZONE):
                 continue
 
@@ -180,12 +178,10 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             # IP/NETMASK
             # ================================================================== #
             iph_src_netid = ntohl(ip_header.saddr) & rule.s_net_mask
-            vprint('p-s ip=%u, ', ntohl(ip_header.saddr), 'p-s netid=%u, ', iph_src_netid, 'r-s netid=%u\n', rule.s_net_id)
             if (iph_src_netid != rule.s_net_id):
                 continue
 
             iph_dst_netid = ntohl(ip_header.daddr) & rule.d_net_mask
-            vprint('p-d ip=%u, ', ntohl(ip_header.daddr), 'p-d netid=%u, ', iph_dst_netid, 'r-d netid=%u\n', rule.d_net_id)
             if (iph_dst_netid != rule.d_net_id):
                 continue
 
@@ -193,12 +189,10 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             # PROTOCOL
             # ================================================================== #
             rule_src_protocol = rule.s_port_start >> 16
-            vprint('p proto=%u, ', ip_header.protocol, 'r-s proto=%u\n', rule_src_protocol)
             if (ip_header.protocol != rule_src_protocol and rule_src_protocol != ANY_PROTOCOL):
                 continue
 
             rule_dst_protocol = rule.d_port_start >> 16
-            vprint('p proto=%u, ', ip_header.protocol, 'r-d proto=%u\n', rule_dst_protocol)
             if (ip_header.protocol != rule_dst_protocol and rule_dst_protocol != ANY_PROTOCOL):
                 continue
 
@@ -220,6 +214,16 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             results.fw_section = section_num
             results.action = rule.action
             results.mark = rule.sec_profiles[1] << 12 | rule.sec_profiles[0] << 8 | rule.action
+
+            # ================================================================== #
+            # VERBOSE MATCH OUTPUT | only showing matches due to too much output
+            # ================================================================== #
+            vprint('p-i zone=%u, ', hw.in_zone, 'r-i zone=%u, ', rule.s_zone)
+            vprint('p-o zone=%u, ', hw.out_zone, 'r-o zone=%u\n', rule.d_zone)
+            vprint('p-s ip=%u, ', ntohl(ip_header.saddr), 'p-s netid=%u, ', iph_src_netid, 'r-s netid=%u\n', rule.s_net_id)
+            vprint('p-d ip=%u, ', ntohl(ip_header.daddr), 'p-d netid=%u, ', iph_dst_netid, 'r-d netid=%u\n', rule.d_net_id)
+            vprint('p proto=%u, ', ip_header.protocol, 'r-s proto=%u, ', rule_src_protocol)
+            vprint('p proto=%u, ', ip_header.protocol, 'r-d proto=%u\n', rule_dst_protocol)
 
             return results
 
@@ -257,7 +261,7 @@ cdef class CFirewall:
                 nfq_handle_packet(self.h, packet_buf, data_len)
 
             else:
-                if errno != ENOBUFS:
+                if (errno != ENOBUFS):
                     break
 
     cdef inline u_int32_t cidr_to_int(self, long cidr):
@@ -271,7 +275,7 @@ cdef class CFirewall:
             mask_index -= 1
 
         if (VERBOSE):
-            print(f'cidr={cidr}, integer_mask={integer_mask}')
+            printf('cidr=%ld, integer_mask=%u\n', cidr, integer_mask)
 
         return integer_mask
 
@@ -403,8 +407,8 @@ cdef inline void vprint(char *msg1, u_int32_t one, char *msg2='', long two=-1, c
     if (VERBOSE):
         printf(msg1, one)
 
-        if two != -1:
+        if (two != -1):
             printf(msg2, two)
 
-        if thr != -1:
+        if (thr != -1):
             printf(msg3, thr)
