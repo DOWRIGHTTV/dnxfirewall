@@ -219,7 +219,8 @@ def structure(obj_name, fields):
     field_names = tuple(field_names)
     field_formats = tuple(field_formats)
 
-    # defining globals as closure for lookup performance (almost 2x faster)
+    # defining globals/builtins as closure for lookup performance (almost 2x faster)
+    _copy = copy
     _zip = zip
     _sum = sum
     _setattr = setattr
@@ -240,12 +241,12 @@ def structure(obj_name, fields):
         def __str__(self):
             fast_get = self.__getattribute__
 
-            fields = [f'{n}={fast_get(n)}({f})' for n, f in _zip(field_names, field_formats)]
+            _fields = [f'{n}={fast_get(n)}({f})' for n, f in _zip(field_names, field_formats)]
 
-            return f"{obj_name}({', '.join(fields)})"
+            return f"{obj_name}({', '.join(_fields)})"
 
         def __call__(self, **kwargs):
-            new_container = copy(self)
+            new_container = _copy(self)
 
             # set args in new instance if specified. this will overwrite any pre set attributes. kwargs can be used to
             # pre define values at creation of new container.
@@ -264,6 +265,7 @@ def structure(obj_name, fields):
             return size_of
 
         def __getitem__(self, position):
+
             return _getattr(self, f'{field_names[position]}')
 
         def __iter__(self):
@@ -272,7 +274,7 @@ def structure(obj_name, fields):
             yield from [fast_get(x) for x in field_names]
 
         def pre_set_attributes(self, **kwargs):
-            '''specify attributes to set as a pre processor function. these values will get copied over to new containers
+            '''specify attributes to set as pre processor function. these values will get copied over to new containers
             of the same type. a good use case for this is to fill out fields that are constants and can be streamlined
             to simplify external byte string creation logic. This is an alternative method to assignment at container
             creation.'''
@@ -280,19 +282,23 @@ def structure(obj_name, fields):
             for name, value in kwargs.items():
 
                 # if key doesnt exist, will raise error. this method is a pre process so this will allow for quicker
-                # debugging of code that to wait for some point in runtime to realise there was an invalid attr.
+                # debugging of code vs finding out some point in runtime there is an invalid attr.
                 if (name not in field_names):
                     raise ValueError(f'attribute {name} does not exist in this container.')
 
                 _setattr(self, name, value)
 
         def assemble(self):
-            '''returns merged attributes in specified order as a single byte string (char array). this is not stored
-            and is recalculated on every call.'''
+            '''returns merged attributes in specified order as a single byte array. this is not stored and is
+             recalculated on every call.'''
 
-            return byte_join([pack(_getattr(self, name)) for pack, name in _zip(field_packs, field_names)])
+            fast_get = self.__getattribute__
 
-    return Structure()
+            return byte_join([pack(fast_get(name)) for pack, name in _zip(field_packs, field_names)])
+
+    struct = Structure()
+
+    return struct
 
 def bytecontainer(obj_name, field_names):
     '''named tuple like class factory for storing raw byte sections with named fields. calling
@@ -304,6 +310,7 @@ def bytecontainer(obj_name, field_names):
 
     len_fields = len(field_names)
 
+    _copy = copy
     _len = len
     _zip = zip
     _sum = sum
@@ -316,14 +323,12 @@ def bytecontainer(obj_name, field_names):
 
         def __init__(self):
             for name in field_names:
-                _setattr(self, name, b'')
+                fast_set(name, b'')
 
         def __repr__(self):
             return f"{self.__class__.__name__}({obj_name}, '{' '.join(field_names)}')"
 
         def __str__(self):
-            fast_get = self.__getattribute__
-
             fields = [f'{fn}={fast_get(fn)}' for fn in field_names]
 
             return f"{obj_name}({', '.join(fields)})"
@@ -332,24 +337,24 @@ def bytecontainer(obj_name, field_names):
             if (_len(args) != len_fields):
                 raise TypeError(f'Expected {len_fields} arguments, got {_len(args)}')
 
-            new_container = copy(self)
+            new_container = _copy(self)
             for name, value in _zip(field_names, args):
                 _setattr(new_container, name, value)
 
             return new_container
 
         def __len__(self):
-            fast_get = self.__getattribute__
-
             return _sum([_len(fast_get(field_name)) for field_name in field_names])
 
         def __getitem__(self, position):
-            return _getattr(self, f'{field_names[position]}')
+            return fast_get(f'{field_names[position]}')
 
         def __iter__(self):
-            fast_get = self.__getattribute__
-
             yield from [fast_get(fn) for fn in field_names]
+
+    container = ByteContainer()
+    fast_get = container.__getattribute__
+    fast_set = container.__setattr__
 
     return ByteContainer()
 

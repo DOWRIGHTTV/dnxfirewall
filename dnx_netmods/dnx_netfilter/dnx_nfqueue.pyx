@@ -280,10 +280,10 @@ cdef class NetfilterQueue:
                 data_len = recv(fd, packet_buf, sizeof_buf, 0)
 
             if (data_len >= 0):
-                nfq_handle_packet(self.h, buf, data_len)
+                nfq_handle_packet(self.h, packet_buf, data_len)
 
             else:
-                if errno != ENOBUFS:
+                if (errno != ENOBUFS):
                     break
 
     def nf_run(self):

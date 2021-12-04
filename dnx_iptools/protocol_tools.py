@@ -106,64 +106,56 @@ def convert_string_to_bitmap(rule, offset):
 def parse_query_name(data, dns_query=None, *, qname=False):
     '''parses dns name from sent in data. uses overall dns query to follow pointers. will return
     name and offset integer value if qname arg is True otherwise will only return offset.'''
+    offset, contains_pointer, query_name = 0, False, []
 
-    offset, pointer_present = 0, False
-    query_name = []
-    while True:
-        length = data[0]
-        if (length == 0):
+    # TODO: this could be problematic since we slice down data. from what i my limited brain understands at the moment,
+    #  data should never be an emtpy byte string if non malformed. the last iteration would have a null byte which is
+    #  what this condition is actually testing against for when to stop iteration.
+    #       // testing suggests this is fine for now
+    while data[0]:
 
-            if (not pointer_present):
-                offset += 1
+        # adding 1 to section_len to account for itself
+        section_len, data = data[0], data[1:]
 
-            break
+        # pointer value check. this used to be a separate function, but it felt like a waste so merged it.
+        # NOTE: is this a problem is we don't pass in the reference query? is it possible for a pointer to be present in
+        # cases where this function is used for non primary purposes?
+        if (section_len & 192 == 192):
 
-        # will break on pad or root name lookup
-        if (_is_pointer(length)):
+            # calculates the value of the pointer then uses value as original dns query index. this used to be a
+            # separate function, but it felt like a waste so merged it. (-12 accounts for header not included)
+            data = dns_query[((section_len << 8 | data[0]) & 16383) - 12:]
 
-            data = dns_query[_calculate_pointer(data[:2]):]
-            if (not pointer_present):
-                offset += 2
+            contains_pointer = True
 
-            pointer_present = True
-            continue
+        else:
+            # name len + integer value of initial length
+            offset += section_len + 1 if not contains_pointer else 0
 
-        if (not pointer_present):
-            offset += length + 1 # name len + integer value of initial length
+            query_name.append(data[:section_len].decode())
 
-        query_name.append(data[1:1+length].decode())
-        data = data[length+1:]
+            # slicing out processed section
+            data = data[section_len:]
+
+    # increment offset +2 for pointer length or +1 for termination byte if name did not contain a pointer
+    offset += 2 if contains_pointer else 1
+
+    # evaluating qname for .local domain or non fqdn
+    local_domain = True if len(query_name) == 1 or (query_name and query_name[-1] == 'local') else False
 
     if (qname):
-        return '.'.join(query_name), offset
+        return offset, local_domain, '.'.join(query_name)
 
-    return offset
-
-def _is_pointer(data):
-    '''returns whether sent in byte is a dns pointer or not.'''
-
-    return 192 & data == 192
-
-def _calculate_pointer(data):
-    '''returns the integer value of the sum of 0-15 bits on 2 byte value. the integer value
-    represents the string index of place to look for dns data. 12 bytes will be subtracted
-    from the result since we are not including dns header in reference data.'''
-
-    return 16383 & short_unpack(data)[0] - 12
+    return offset, local_domain
 
 def domain_stob(domain_name):
-    if (not domain_name):
-        return b'\x00'
+    domain_bytes = byte_join([
+        byte_pack(len(part)) + part.encode('utf-8') for part in domain_name.split('.')
+    ])
 
-    domain_bytes = []
-    db_append = domain_bytes.append
-    for part in domain_name.split('.'):
-        db_append(byte_pack(len(part)))
-        db_append(part.encode('utf-8'))
-    else:
-        db_append(b'\x00')
-
-    return byte_join(domain_bytes)
+    # root query (empty string) gets eval'd to length 0 and doesnt need a term byte. ternary will add term byte, if the
+    # domain name is not a null value.
+    return domain_bytes + b'\x00' if domain_name else domain_bytes
 
 # will create dns header specific to response. default resource record count is 1
 def create_dns_response_header(dns_id, record_count=1, *, rd=1, ad=0, cd=0, rc=0):

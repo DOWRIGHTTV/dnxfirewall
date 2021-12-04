@@ -63,8 +63,8 @@ class DNSProxy(Listener):
 
         cls._request_tracker_insert(request_identifier, decision, module_index=DNS.PROXY)
 
-    @classmethod
-    def send_to_client(cls, packet):
+    @staticmethod
+    def send_to_client(packet):
         try:
             packet.sendto(packet.send_data, (int_to_ipaddr(packet.src_ip), 0))
         except OSError:

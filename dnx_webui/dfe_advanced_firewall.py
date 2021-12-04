@@ -23,7 +23,7 @@ zone_map = {'builtins': {}, 'extended': {}}
 zone_manager = {'builtins': {}, 'user-defined': {}}
 
 # including 0/any since it is not an actual zone definition
-_zone_map = {0: 'any'}
+_zone_map = {99: 'any'}
 
 def load_page(section='MAIN'):
     dnx_settings = load_configuration('config')

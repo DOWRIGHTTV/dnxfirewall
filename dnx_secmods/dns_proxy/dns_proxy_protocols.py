@@ -47,20 +47,24 @@ class UDPRelay(ProtoRelay):
         while True:
             try:
                 data_from_server = conn_recv(1024)
-            except OSError:
-                break
 
             except timeout:
                 self.mark_server_down()
 
                 return
 
-            else:
-                # passing over empty udp payloads.
-                if (data_from_server):
-                    responder_add(data_from_server)
+            except OSError:
+                break
 
-                self._reset_fail_detection()
+            # passing over empty udp payloads.
+            if (not data_from_server):
+                continue
+
+            responder_add(data_from_server)
+
+            # resetting fail detection
+            self._last_rcvd = fast_time()
+            self._send_cnt = 0
 
         self._relay_conn.sock.close()
 
@@ -88,7 +92,11 @@ class TLSRelay(ProtoRelay):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._create_tls_context()
+        # create tls context
+        self._tls_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        self._tls_context.verify_mode = ssl.CERT_REQUIRED
+        self._tls_context.load_verify_locations(CERTIFICATE_STORE)
+
         threading.Thread(target=self._tls_keepalive).start()
 
     @property
@@ -96,8 +104,8 @@ class TLSRelay(ProtoRelay):
         return not self._DNSServer.tls_up and self._DNSServer.udp_fallback
 
     # iterating over dns server list and calling to create a connection to first available server. this will only happen
-    # if a socket connection isnt already established when attempting to send query.
-    def _register_new_socket(self): #, client_query=None):
+    # if a socket connection isn't already established when attempting to send query.
+    def _register_new_socket(self):
         for tls_server in self._DNSServer.dns_servers:
 
             # skipping over known down server
@@ -126,31 +134,34 @@ class TLSRelay(ProtoRelay):
 
     # receive data from server. if dns response will call parse method else will close the socket.
     def _recv_handler(self, recv_buffer=[]):
-        Log.debug(f'[{self._relay_conn.remote_ip}/{self._protocol.name}] Response handler opened.') # pylint: disable=no-member
+        Log.debug(f'[{self._relay_conn.remote_ip}/{self._protocol.name}] Response handler opened.')
         recv_buff_append = recv_buffer.append
         recv_buff_clear  = recv_buffer.clear
         conn_recv = self._relay_conn.recv
+
         responder_add = self._DNSServer.responder.add
 
         while True:
             try:
                 data_from_server = conn_recv(2048)
-            except OSError:
-                break
 
             except timeout:
                 self.mark_server_down()
 
-                Log.warning(f'[{self._relay_conn.remote_ip}/{self._protocol.name}] Remote server connection timeout. Marking down.') # pylint: disable=no-member
+                Log.warning(f'[{self._relay_conn.remote_ip}/{self._protocol.name}] Remote server connection timeout. Marking down.')
 
                 return
 
-            else:
-                # if no data is received/EOF the remote end has closed the connection
-                if (not data_from_server):
-                    break
+            except OSError:
+                break
 
-                self._reset_fail_detection()
+            # if no data is received/EOF the remote end has closed the connection
+            if (not data_from_server):
+                break
+
+            # resetting fail detection
+            self._last_rcvd = fast_time()
+            self._send_cnt = 0
 
             recv_buff_append(data_from_server)
             while recv_buffer:
@@ -158,7 +169,7 @@ class TLSRelay(ProtoRelay):
                 data_len, data = short_unpackf(current_data)[0], current_data[2:]
 
                 # more data is needed for a complete response. NOTE: this scenario is kind of dumb
-                # and shouldnt happen unless the server sends length of record and record seperately.
+                # and shouldn't happen unless the server sends length of record and record separately.
                 if (len(data) < data_len): break
 
                 # clearing the buffer since we either have nothing left to process or we will re add
@@ -178,7 +189,7 @@ class TLSRelay(ProtoRelay):
 
     def _tls_connect(self, tls_server):
 
-        Log.dprint(f'[{tls_server}/{self._protocol.name}] Opening secure socket.') # pylint: disable=no-member
+        Log.dprint(f'[{tls_server}/{self._protocol.name}] Opening secure socket.')
         sock = socket(AF_INET, SOCK_STREAM)
         sock.settimeout(RELAY_TIMEOUT)
 
@@ -186,11 +197,11 @@ class TLSRelay(ProtoRelay):
         try:
             dns_sock.connect((tls_server, PROTO.DNS_TLS))
         except OSError:
-            Log.error(f'[{tls_server}/{self._protocol.name}] Failed to connect to server: {E}') # pylint: disable=no-member
+            Log.error(f'[{tls_server}/{self._protocol.name}] Failed to connect to {E}.')
 
         except Exception as E:
-            Log.console(f'[{tls_server}/{self._protocol.name}] TLS context error while attemping to connect to server: {E}') # pylint: disable=no-member
-            Log.debug(f'[{tls_server}/{self._protocol.name}] TLS context error while attemping to connect to server: {E}') # pylint: disable=no-member
+            Log.console(f'[{tls_server}/{self._protocol.name}] TLS context error while attempting to connect to {E}.')
+            Log.debug(f'[{tls_server}/{self._protocol.name}] TLS context error while attempting to connect to {E}.')
 
         else:
             self._relay_conn = RELAY_CONN(
@@ -208,9 +219,3 @@ class TLSRelay(ProtoRelay):
         if (self.is_enabled and self._keepalives):
 
             self.relay.add(self._dns_packet(KEEP_ALIVE_DOMAIN, self._protocol)) # pylint: disable=no-member
-
-    def _create_tls_context(self):
-#        self._tls_context = ssl.create_default_context()
-        self._tls_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        self._tls_context.verify_mode = ssl.CERT_REQUIRED
-        self._tls_context.load_verify_locations(CERTIFICATE_STORE)

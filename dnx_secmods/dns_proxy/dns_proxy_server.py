@@ -7,15 +7,16 @@ from random import randint
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import DNS_SERVERS
+from dnx_gentools.standard_tools import dnx_queue
+
+from dnx_iptools.def_structs import short_unpackf
+from dnx_iptools.packet_classes import Listener
 
 from dnx_secmods.dns_proxy.dns_proxy_automate import Configuration, Reachability
 from dnx_secmods.dns_proxy.dns_proxy_cache import DNSCache, RequestTracker
 from dnx_secmods.dns_proxy.dns_proxy_protocols import UDPRelay, TLSRelay
-from dnx_secmods.dns_proxy.dns_proxy_packets import ClientRequest, ServerResponse
+from dnx_secmods.dns_proxy.dns_proxy_packets import ClientRequest, ttl_rewrite
 from dnx_secmods.dns_proxy.dns_proxy_log import Log
-
-from dnx_iptools.packet_classes import Listener
-from dnx_gentools.standard_tools import dnx_queue
 
 
 class DNSServer(Listener):
@@ -24,7 +25,7 @@ class DNSServer(Listener):
 
     REQ_TRACKER = RequestTracker()
 
-    # NOTE: settings valued to None to denote initialization has not been completed.
+    # NOTE: settings values to None to denote initialization has not been completed.
     dns_records = {}
     dns_servers = DNS_SERVERS(
         {'ip': None, PROTO.UDP: None, PROTO.DNS_TLS: None},
@@ -79,26 +80,6 @@ class DNSServer(Listener):
     def receive_request(self, client_query):
         self.request_tracker_insert(client_query.request_identifier, client_query, module_index=DNS.SERVER)
 
-    @dnx_queue(Log, name='DNSServer')
-    def responder(self, server_response):
-        server_response = ServerResponse(server_response)
-        try:
-            server_response.parse()
-        except Exception:
-            raise
-        else:
-            client_query = self._request_map_pop(server_response.dns_id, None)
-            if (not client_query): return
-
-            # generate response for client, if top domain generate for cache storage
-            server_response.generate_server_response(client_query.dns_id)
-            if (not client_query.top_domain):
-                self.send_to_client(server_response, client_query)
-
-            # NOTE: will is valid check prevent empty RRs from being cached.??
-            if (server_response.data_to_cache):
-                self._records_cache_add(client_query.request, server_response.data_to_cache)
-
     def _pre_inspect(self, client_query):
         if (client_query.qr != DNS.QUERY or client_query.qtype not in [DNS.A, DNS.NS]):
             return False
@@ -108,13 +89,13 @@ class DNSServer(Listener):
         # generating server response and sending to client. client query is passed in twice for compatibility
         # with external lookups using a separate class/instance to generate the data.
         if (local_record):
-            client_query.generate_record_response(local_record)
-            self.send_to_client(client_query, client_query)
+            query_response = client_query.generate_record_response(local_record)
+            self.send_to_client(query_response, client_query)
 
             return False
 
         # if domain is local (example.local or no tld) and it was not in local records, we can ignore.
-        elif (client_query.dom_local):
+        elif (client_query.local_domain):
             return False
 
         return True
@@ -142,8 +123,8 @@ class DNSServer(Listener):
 
         cached_dom = self._records_cache_search(client_query.request)
         if (cached_dom.records):
-            client_query.generate_cached_response(cached_dom)
-            self.send_to_client(client_query, client_query)
+            query_response = client_query.generate_cached_response(cached_dom)
+            self.send_to_client(query_response, client_query)
 
             return True
 
@@ -181,10 +162,30 @@ class DNSServer(Listener):
 
                     return dns_id
 
-    @staticmethod
-    def send_to_client(server_response, client_query):
+    @dnx_queue(Log, name='DNSServer')
+    def responder(self, received_data):
+        # dns id is the first 2 bytes in the dns header
+        dns_id = short_unpackf(received_data)[0]
+
+        client_query = self._request_map_pop(dns_id, None)
+        if (not client_query):
+            return
+
         try:
-            client_query.sendto(server_response.send_data, client_query.address)
+            query_response, cache_data = ttl_rewrite(received_data, client_query.dns_id)
+        except Exception as E:
+            Log.error(f'[parser/server response] {E}')
+        else:
+            if (not client_query.top_domain):
+                self.send_to_client(query_response, client_query)
+
+            if (cache_data):
+                self._records_cache_add(client_query.qname, cache_data)
+
+    @staticmethod
+    def send_to_client(query_response, client_query):
+        try:
+            client_query.sendto(query_response, client_query.address)
         except OSError:
             pass
 
