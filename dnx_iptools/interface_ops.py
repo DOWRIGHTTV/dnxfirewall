@@ -17,6 +17,9 @@ __all__ = (
     'get_masquerade_ip', 'get_mac', 'get_ip_address', 'get_netmask', 'get_arp_table'
 )
 
+s = socket(AF_INET, SOCK_DGRAM)
+DESCRIPTOR = s.fileno()
+
 # NOTE: this may no longer be needed even though it was recently overhauled. the inclusion of the exclude
 # filter in the load_interfaces() function should be able to replace this function. keep for now just in case.
 def get_intf_builtin(zone_name):
@@ -68,24 +71,22 @@ def _is_ready(interface):
     with open(f'/sys/class/net/{interface}/carrier', 'r') as carrier:
         result = int(carrier.read().strip())
 
-    if (result): return True
-
-    return False
+    return True if result else False
 
 # once interface is powered on from cable being plugged in and a remote device on the other end, the loop will break
 def wait_for_interface(interface, delay=ONE_SEC):
-    '''will wait for interface to show powered on and waiting for network. will sleep for delay length after each check.'''
+    '''waits for interface to show powered on and waiting for network. will sleep for delay length after each check.'''
 
     while True:
-        if _is_ready(interface): break
+        if _is_ready(interface):
+            break
 
         fast_sleep(delay)
 
 # once the lan interface ip address is configured after interface is brought online, the loop will break. this will
 # allow the server to continue the startup process.
 def wait_for_ip(interface):
-    '''will wait for interface ip address configuration then return ip address object
-    for corresponding ip.'''
+    '''waits for interface ip address configuration then return ip address object for corresponding ip.'''
 
     while True:
         ipa = get_ip_address(interface=interface)
@@ -114,39 +115,24 @@ def get_masquerade_ip(*, dst_ip, packed=False):
         s.close()
 
 def get_mac(*, interface):
-    '''return raw byte mac address for sent in interface. will return None on OSError.'''
-
-    s = socket(AF_INET, SOCK_DGRAM)
+    '''return raw byte mac address for sent in interface. return None on OSError.'''
     try:
-        return ioctl(s.fileno(), 0x8927,  fcntl_pack(bytes(interface, 'utf-8')))[18:24]
+        return ioctl(DESCRIPTOR, 0x8927,  fcntl_pack(bytes(interface, 'utf-8')))[18:24]
     except OSError:
         return None
-    finally:
-        s.close()
 
 def get_ip_address(*, interface):
-    '''return ip address object for current ip address for sent in interface. will return None on OSError.'''
-
-    s = socket(AF_INET, SOCK_DGRAM)
+    '''return ip address object for current ip address for sent in interface. return None on OSError.'''
     try:
-        return IPv4Address(
-            ioctl(s.fileno(), 0x8915, fcntl_pack(bytes(interface, 'utf-8')))[20:24]
-        )
+        return IPv4Address(ioctl(DESCRIPTOR, 0x8915, fcntl_pack(bytes(interface, 'utf-8')))[20:24])
     except OSError:
         return None
-    finally:
-        s.close()
 
 def get_netmask(*, interface):
-    s = socket(AF_INET, SOCK_DGRAM)
     try:
-        return IPv4Address(
-            ioctl(s.fileno(), 0x891b, fcntl_pack(bytes(interface, 'utf-8')))[20:24]
-        )
+        return IPv4Address(ioctl(DESCRIPTOR, 0x891b, fcntl_pack(bytes(interface, 'utf-8')))[20:24])
     except OSError:
         return None
-    finally:
-        s.close()
 
 def get_arp_table(*, modify=False, host=None):
     '''

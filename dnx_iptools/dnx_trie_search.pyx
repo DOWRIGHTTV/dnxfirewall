@@ -128,8 +128,7 @@ cdef class RangeTrie:
     # L2 CONTAINER = [<NETWORK_ID, BROADCAST_ID, HOST_COUNTRY>]
 
     cdef l2_range* make_l2(self, (long, long, short) l2_entry):
-        '''allocates memory for a single L2 content struct, assigns members from l2_entry, then
-        returns pointer.'''
+        '''allocates memory for a single L2 content struct, assigns members from l2_entry, then returns pointer.'''
 
         cdef l2_range *L2_CONTENT
 
