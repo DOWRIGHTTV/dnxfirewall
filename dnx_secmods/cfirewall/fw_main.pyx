@@ -3,6 +3,8 @@
 from libc.stdlib cimport malloc, calloc, free
 from libc.stdio cimport printf, sprintf
 
+from dnx_iptools.dnx_trie_search cimport RangeTrie
+
 DEF FW_SECTION_COUNT = 4
 DEF FW_SYSTEM_MAX_RULE_COUNT = 50
 DEF FW_BEFORE_MAX_RULE_COUNT = 100
@@ -35,6 +37,15 @@ cdef pthread_mutex_t FWrulelock
 pthread_mutex_init(&FWrulelock, NULL)
 # ================================== #
 
+# Geolocation constants and data structures
+# ================================== #
+cdef long MSB, LSB = 0
+
+cdef RangeTrie *GEO_SEARCH = NULL
+
+# ================================== #
+
+
 # initializing global array and size tracker. contains pointers to arrays of pointers to FWrule
 cdef FWrule **firewall_rules[FW_SECTION_COUNT]
 
@@ -46,7 +57,7 @@ firewall_rules[AFTER_RULES] = <FWrule**>calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(F
 # index corresponds to index of sections in firewall rules. this will allow us to skip over sections that are
 # empty and know how far to iterate over. NOTE: since we track this we may be able to get away without resetting
 # pointers of dangling rules since they will be out of bounds of specified iteration. otherwise we would need
-# to reset to pointer to NULL then check for this every time we grab a rule pointer.
+# to reset pointer to NULL then check for this every time we grab a rule pointer.
 cdef u_int32_t CUR_RULE_COUNTS[FW_SECTION_COUNT]
 
 CUR_RULE_COUNTS[SYSTEM_RULES] = 0 # SYSTEM_CUR_RULE_COUNT
@@ -374,6 +385,9 @@ cdef class CFirewall:
             nfq_destroy_queue(self.qh)
 
         nfq_close(self.h)
+
+    cpdef void prepare_geolocation(self, RangeTrie range_trie, long msb, long lsb):
+
 
     cpdef int update_zones(self, Py_Array zone_map) with gil:
         '''acquires FWrule lock then updates the zone values by interface index. max slots defined by

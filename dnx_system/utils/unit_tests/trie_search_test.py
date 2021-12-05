@@ -1,16 +1,20 @@
 #!usr/bin/env python3
 
-import __init__
+import __init__ # pylint: disable=import-error
 
+import os
 import time
-import threading
+
+from ipaddress import IPv4Address
 
 import pyximport; pyximport.install()
 
-from dnx_iptools.dnx_trie_search import RecurveTrie, RangeTrie, generate_recursive_binary_search, generate_linear_binary_search
+from dnx_gentools import signature_operations
+from dnx_iptools.dnx_trie_search import RecurveTrie, RangeTrie, generate_recursive_binary_search, generate_linear_binary_search  # pylint: disable=import-error, no-name-in-module
 
-from ipaddress import IPv4Address
-from dnx_sysmods.configure import signature_operations
+from dnx_sysmods.logging.log_main import LogHandler as Log
+
+Log.run(name='_test')
 
 line = '='*32
 
@@ -19,8 +23,8 @@ f_time = time.perf_counter_ns
 MSB = 0b11111111111110000000000000000000
 LSB = 0b00000000000001111111111111111111
 
-rep_sigs = signature_operations.generate_reputation(None)
-geo_sigs = signature_operations.generate_geolocation(None)
+rep_sigs = signature_operations.generate_reputation(Log)
+geo_sigs = signature_operations.generate_geolocation(Log)
 
 recurve_trie = RecurveTrie()
 recurve_trie.generate_structure(rep_sigs)
@@ -178,5 +182,8 @@ def old_trie_geo():
 range_trie_geo()
 old_trie_geo()
 
-# old_trie_rep()
-# recurve_trie_rep()
+old_trie_rep()
+recurve_trie_rep()
+
+
+os._exit(1)

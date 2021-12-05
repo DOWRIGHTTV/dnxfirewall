@@ -2,7 +2,7 @@
 
 import threading
 
-import dnx_sysmods.configure.signature_operations as signature_operations
+import dnx_gentools.signature_operations as signature_operations
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.standard_tools import Initialize

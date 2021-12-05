@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import __init__
+import __init__ # pylint: disable=import-error
 
 import os
 import argparse

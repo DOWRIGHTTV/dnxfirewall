@@ -6,11 +6,14 @@ import threading
 
 from array import array
 
-from dnx_gentools.def_constants import HOME_DIR
+from dnx_gentools.def_constants import HOME_DIR, MSB, LSB
+from dnx_gentools.standard_tools import Initialize
+from dnx_gentools.signature_operations import generate_geolocation
+
+from dnx_iptools.dnx_trie_search import RangeTrie # pylint: disable=import-error, no-name-in-module
+
 from dnx_sysmods.configure.file_operations import cfg_read_poller, load_configuration, ConfigurationManager
 from dnx_sysmods.logging.log_main import LogHandler as Log
-
-from dnx_gentools.standard_tools import Initialize
 
 DEFAULT_VERION = 'firewall_pending'
 DEFAULT_PATH = 'dnx_system/iptables'
@@ -195,13 +198,19 @@ class FirewallControl:
         self.MAIN   = {}
         self.AFTER  = {}
 
-        # reference to extension CFirewall, which handles nfqueue and initial packet rcv.
-        # we will use this reference to modify firewall rules which will be internally accessed
-        # by the inspection function callbacks
+        # reference to extension CFirewall, which handles nfqueue and initial packet rcv. # we will use this
+        # reference to modify firewall objects which will be internally accessed by the inspection function callbacks
         self.cfirewall = cfirewall
 
-    # threads will be started here.
+    # threads will be started and other basic setup functions will be done before releasing control back to the
+    # inspection context.
     def run(self):
+
+        # initially geolocation trie search, storing data into C struct, then passing over to cfirewall
+        range_trie = RangeTrie()
+        range_trie.generate_structure(generate_geolocation(Log))
+
+        cfirewall.prepare_geolocation(range_trie, MSB, LSB)
 
         threading.Thread(target=self._monitor_system_rules).start()
         threading.Thread(target=self._monitor_zones).start()

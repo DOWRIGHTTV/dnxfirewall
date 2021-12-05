@@ -53,6 +53,7 @@ cdef class RecurveTrie:
             self.L1_CONTAINER[i].l2_size = L2_SIZE
             self.L1_CONTAINER[i].l2_ptr = L2_CONTAINER
 
+
     @_lru_cache(maxsize=4096)
     def search(self, (long, long) host):
 
@@ -63,6 +64,7 @@ cdef class RecurveTrie:
 
         return search_result
 
+    # this can be called directly by cfirewall or any other native c processes
     cdef long _l1_search(self, (long, long) container_ids) nogil:
 
         cdef:

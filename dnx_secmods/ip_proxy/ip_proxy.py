@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import __init__
+import __init__ # pylint: disable=import-error
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import IPP_INSPECTION_RESULTS

@@ -112,9 +112,12 @@ def _combine_geolocation(Log):
 
     return ip_geo_signatures
 
-# NOTE: new method to convert standard signatures into a compressed integer format. This will completely replace file operations function since we are
-# no longer generating a combined file and will do the merge and convert in memory before returning compressed structure.
 def generate_geolocation(Log):
+    '''
+    Convert standard signatures into a compressed integer format. This will completely replace file operations function
+    since we are no longer generating a combined file and will do the merge and convert in memory before returning
+    compressed structure.
+    '''
 
     # getting all enabled signatures
     ip_geo_signatures = _combine_geolocation(Log)
