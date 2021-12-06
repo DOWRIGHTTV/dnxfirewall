@@ -166,7 +166,7 @@ cdef class RangeTrie:
                 for i in range(l1_container.l2_size):
 
                     l2_container = l1_container.l2_ptr[i]
-                    if l2_container.network_id <= container_ids[1] <= l2_container.broadcast_id:
+                    if l2_container.network_id <= host_id <= l2_container.broadcast_id:
                         return l2_container.country_code
 
                 # iteration completed with no l2 match
