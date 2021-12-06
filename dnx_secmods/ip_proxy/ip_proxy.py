@@ -68,28 +68,29 @@ class IPProxy(NFQueue):
             packet.nfqueue.drop()
 
         # quick path to log geo data. doing this post action since its a log only path.
-        Inspect.geo_only(packet)
+        Inspect.log_geolocation(packet)
 
         return False
 
     @classmethod
     def forward_packet(cls, packet, direction, action):
 
-        # TODO: update mark seems to be broken causing IPS to fail. IPS is logging profile "10" or bit "1010". this
-        #  may require ntoh
+        # NOTE: this condition restricts ips inspection to INBOUND only to emulate prior functionality. if ips profile
+        # is set on a rule for outbound traffic, it will be ignored.
+        # TODO: look into what would be needed to expand ips inspection to lan to wan or lan to lan rules.
         if (direction is DIR.INBOUND and packet.ips_profile):
 
-            # re-mark needed to notify ips to drop the packet and do ddos inspection only if enabled.
-            # bitwise op resets first 4 bits (allocated for action) to 0 then set the bits for drop.
+            # re-mark needed to notify ips to drop the packet, but inspect under specified profile
+            # bitwise and resets first 2 bits (allocated for action) to 0 then set the bits for drop.
             if (action is CONN.DROP):
-                packet.nfqueue.update_mark(packet.mark & 65520 | CONN.DROP)
+                packet.nfqueue.update_mark(packet.mark & 65532 | CONN.DROP)
 
             packet.nfqueue.forward(Queue.IPS_IDS)
 
         elif (action is CONN.ACCEPT):
             packet.nfqueue.accept()
 
-        # explicit condition to reduce chance of confusion
+        # explicit condition match for readability
         elif (action is CONN.DROP):
             packet.nfqueue.drop()
 
@@ -108,8 +109,10 @@ class Inspect:
     _prepare_and_send = ProxyResponse.prepare_and_send
 
     @classmethod
-    def geo_only(cls, packet):
-        country = GEO(_range_trie_search(packet.bin_data))
+    def log_geolocation(cls, packet):
+
+        # country of tracked (external) passed from cfirewall via packet mark
+        country = GEO(packet.tracked_geo)
 
         Log.log(packet, IPP_INSPECTION_RESULTS(country.name, ''), geo_only=True)
 
@@ -131,12 +134,11 @@ class Inspect:
         action = CONN.ACCEPT
         reputation = REP.DNL
 
-        # running through geolocation signatures for a host match. NOTE: not all countries are included in the sig
-        # set at this time. the additional compression algo needs to be re implemented before more countries can
-        # be added due to memory cost.
-        country = GEO(_range_trie_search(packet.bin_data))
+        # NOTE: geo search is now done by cfirewall. based on direction it will pass on country of tracked_ip
+        country = GEO(packet.tracked_geo)
 
         # if category match and country is configured to block in direction of conn/packet
+        # TODO: consider option to configure default action for unknown countries
         if (country is not GEO.NONE):
             action = self._country_action(country, packet)
 

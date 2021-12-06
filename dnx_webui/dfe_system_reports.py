@@ -20,8 +20,9 @@ def load_page(uri_query=None):
 
 def update_page(form):
     print(form)
-    # TODO: bring validation up to speed (ensure host is valid mac format). make database raise validation error if the when removing
-    # a client that isnt present in the db. this means some tomfoolery happened and we should return invalid form error.
+    # TODO: bring validation up to speed (ensure host is valid mac format). make database raise validation error if
+    #  when removing a client that isnt present in the db. this means some tomfoolery happened and we should return
+    #  invalid form error.
     if ('i_client_remove' in form):
         infected_client = form.get('infected_client', None)
         detected_host = form.get('detected_host', None)

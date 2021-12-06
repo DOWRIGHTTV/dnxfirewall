@@ -53,8 +53,10 @@ class _Defaults:
         shell('iptables -t raw -N IPS') # ddos prevention rule insertion location
 
     def default_actions(self):
-        shell('iptables -P FORWARD DROP') # Default DROP
-        shell('iptables -P INPUT DROP') # default
+        # these arent needed anymore since cfirewall has a default action. this makes it easier to configure the file
+        # or when doing dev functions like swapping code or manually editing system configurations.
+        # shell('iptables -P FORWARD DROP')
+        # shell('iptables -P INPUT DROP')
 
         # default allow just in case it was changed prior.
         shell('iptables -P OUTPUT ACCEPT')

@@ -9,7 +9,7 @@ from collections import defaultdict
 HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
 sys.path.insert(0, HOME_DIR)
 
-from dnx_gentools.def_constants import GEO, REP, MSB, LSB
+from dnx_gentools.def_constants import GEO, REP, MSB, LSB, RFC1918
 from dnx_sysmods.configure.file_operations import load_configuration
 
 __all__ = (
@@ -38,7 +38,7 @@ def combine_domains(Log):
         blocked.write('\n'.join(domain_signatures))
 
         # TODO: user defined categories will break the enum load on proxy / FIX
-        # looping over all user defined categories. ALSO. i think this will require a proxy restart if sigs change
+        #   looping over all user defined categories. ALSO. i think this will require a proxy restart if sigs change
         for cat, settings in ud_cats:
             if (not settings['enabled']): continue
 
@@ -100,10 +100,15 @@ def generate_reputation(Log):
     return tuple(nets)
 
 def _combine_geolocation(Log):
-    ip_proxy = load_configuration('ip_proxy')
+    geo_settings = load_configuration('ip_proxy')['geolocation']
+
+    # adding private ip space signatures because they are currently excluded from webui. (by design... for now)
+    geo_settings.update(RFC1918)
 
     ip_geo_signatures = []
-    for country in ip_proxy['geolocation']:
+    # restricting iteration to explicitly defined rules in configuration file instead of assuming all files in signature
+    # folder are good to load in.
+    for country in geo_settings:
         try:
             with open(f'{HOME_DIR}/dnx_system/signatures/geo_lists/{country}.geo', 'r') as file:
                 ip_geo_signatures.extend([x for x in file.read().splitlines() if x and '#' not in x])
@@ -143,8 +148,8 @@ def generate_geolocation(Log):
             # NOTE: subtracting 1 to account for 0th value.
             cvl_append(f'{net_id} {host_count-1} {country}')
 
-    # NOTE: nulling out signatures in memory so we dont have to wait for GC.
-    ip_geo_signatures = []
+    # NOTE: wiping raw signatures in memory so we dont have to wait for GC.
+    del ip_geo_signatures
 
     # compression logic
     dict_nets = defaultdict(list)
@@ -187,15 +192,16 @@ def _merge_geo_ranges(ls):
         else:
             _, last_broadcast, last_country = merged_item
 
-            # the networks are contiguous so we will merge them and update the temp item unless the countries are different
-            # which treat the current container as non contiguous
+            # the networks are contiguous so we will merge them and update the temp item unless the countries are
+            # different which treat the current container as non contiguous
             if (cur_net_id == last_broadcast+1 and cur_country == last_country):
                 merged_item[1] = cur_broadcast
 
-            # once a discontiguous range or new country is detected, the merged_item will get added to the merged list. convert
-            # host container to a tuple while we have it here now, which should reduce the list comprehension complexity.
-            # after, replace the value of the ongoing merged_item with the current iteration list to continue process.
-            # NOTE/TODO: this is where we can implement the array, instead of convering after returned.
+            # once a discontiguous range or new country is detected, the merged_item will get added to the merged list.
+            # convert host container to a tuple while we have it here now, which should reduce the list comprehension
+            # complexity. after, replace the value of the ongoing merged_item with the current iteration list to
+            # continue process.
+            # NOTE/TODO: this is where we can implement the array, instead of converting after returned.
             else:
                 merged_containers.append(tuple(merged_item))
 

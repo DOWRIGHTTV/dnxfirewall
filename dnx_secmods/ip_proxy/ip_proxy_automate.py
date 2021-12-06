@@ -49,19 +49,20 @@ class Configuration:
         rep_settings = ip_proxy['reputation']
         geo_settings = ip_proxy['geolocation']
 
+        # needed to
+        geo_settings.update(RFC1918)
+
         reputation_enabled = []
         for cat, setting in rep_settings.items():
             if (setting): reputation_enabled.append(1)
 
             self.IPProxy.reputation_settings[REP[cat.upper()]] = DIR(setting)
 
-        geo_enabled = []
-        for country, setting in geo_settings.items():
-            if (setting): geo_enabled.append(1)
-
+        for country, direction in geo_settings.items():
+            
             # using enum for category key and direction value
             try:
-                self.IPProxy.geolocation_settings[GEO[country.upper()]] = DIR(setting)
+                self.IPProxy.geolocation_settings[GEO[country.upper()]] = DIR(direction)
             except KeyError:
                 continue # not all enums/countries are populated
 

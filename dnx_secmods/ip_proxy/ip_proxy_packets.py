@@ -15,18 +15,19 @@ class IPPPacket(NFPacket):
         'ipp_profile', 'ips_profile',
 
         'local_ip', 'tracked_ip',
-        'bin_data',
+        'tracked_geo', 'bin_data',
     )
 
     def _before_exit(self, mark):
 
-        # X | X | X | X | ips | ipp | direction | action
+        # X | X | X | ips (4b) | ipp (4b) | geoloc (8b) | direction (2b) | action (2b)
 
-        self.action    = CONN(mark & 15)
-        self.direction = DIR( mark >> 4 & 15)
+        self.action    = CONN(mark & 3)
+        self.direction =  DIR(mark >> 2 & 3)
 
-        self.ipp_profile = mark >>  8 & 15
-        self.ips_profile = mark >> 12 & 15
+        self.tracked_geo = mark >>  4 & 255
+        self.ipp_profile = mark >> 12 & 15
+        self.ips_profile = mark >> 16 & 15
 
         if (self.direction == DIR.INBOUND):
             tracked_ip = self.src_ip

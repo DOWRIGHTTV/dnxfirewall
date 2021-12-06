@@ -17,12 +17,19 @@ DEF FW_RULE_SIZE = 15
 DEF ANY_ZONE = 99
 DEF NO_SECTION = 99
 DEF ANY_PROTOCOL = 0
+DEF COUNTRY_NOT_DEFINED = 0
 
 DEF OK  = 0
 DEF ERR = 1
 
-DEF TWO_BYTES = 16
+
+DEF TWO_BITS = 2
 DEF FOUR_BITS = 4
+DEF ONE_BYTE = 8
+DEF TWELVE_BITS = 12
+DEF TWO_BYTES = 16
+
+DEF TWO_BIT_MASK = 3
 DEF FOUR_BIT_MASK = 15
 
 cdef bint BYPASS  = 0
@@ -37,14 +44,12 @@ cdef pthread_mutex_t FWrulelock
 pthread_mutex_init(&FWrulelock, NULL)
 # ================================== #
 
-# Geolocation constants and data structures
+# Geolocation assignments
 # ================================== #
-cdef long MSB, LSB = 0
+cdef long MSB, LSB
 
-cdef RangeTrie *GEO_SEARCH = NULL
-
+cdef RangeTrie *GEO_SEARCH
 # ================================== #
-
 
 # initializing global array and size tracker. contains pointers to arrays of pointers to FWrule
 cdef FWrule **firewall_rules[FW_SECTION_COUNT]
@@ -138,13 +143,10 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         nfq_set_verdict(qh, id, inspection_res.action, pktdata_len, pktdata)
 
     else:
-        # X | X | X | X | ips | ipp | direction | action. direction bits set after mark is returned.
-        mark = inspection_res.mark | direction << FOUR_BITS
-
         # verdict is defined here based on BYPASS flag.
         # if not BYPASS, ip proxy is next in line regardless of action to gather geolocation data
         # if BYPASS, invoke the rule action without forwarding to another queue. only to be used for testing and
-        #   - can be controlled via an argument to nf_run().
+        #   toggled via an argument to nf_run().
         verdict = inspection_res.action if BYPASS else IP_PROXY << TWO_BYTES | NF_QUEUE
 
         nfq_set_verdict2(qh, id, verdict, mark, pktdata_len, pktdata)
@@ -159,14 +161,26 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     return OK
 
 # explicit inline declaration needed for compiler to know to inline this function
-cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto_header) nogil:
+cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto_header, u_int8_t direction) nogil:
 
     cdef:
         FWrule **section
         FWrule *rule
-        u_int32_t iph_src_netid, iph_dst_netid
         u_int32_t rule_src_protocol, rule_dst_protocol # <16 bit proto | 16 bit port>
         u_int16_t section_num, rule_num
+
+        # normalizing src/dst ip in header to host order
+        u_int32_t iph_src_ip = ntohl(ip_header.saddr)
+        u_int32_t iph_dst_ip = ntohl(ip_header.daddr)
+
+        # ip > country code. NOTE: this will be calculated regardless of a rule match so this process can take over
+        # geolocation processing for all modules. ip proxy will still do the logging and profile blocking it just wont
+        # need to pull the country code anymore.
+        u_int16_t src_country = GEO_SEARCH(iph_src_ip & MSB, iph_src_ip & LSB)
+        u_int16_t dst_country = GEO_SEARCH(iph_dst_ip & MSB, iph_dst_ip & LSB)
+
+        # value used by ip proxy which is normalized and always represents the external ip address
+        u_int16_t tracked_geo = src_country if direction == INBOUND else dst_country
 
         # default action pre set. will be overridden if rule match.
         res_tuple results = [NO_SECTION, DROP, DROP]
@@ -196,11 +210,31 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
                 continue
 
             # ================================================================== #
-            # IP/NETMASK
+            # GEOLOCATION or IP/NETMASK
             # ================================================================== #
-            iph_src_netid = ntohl(ip_header.saddr) & rule.s_net_mask
-            if (iph_src_netid != rule.s_net_id):
-                continue
+            # geolocation matching repurposes network id and netmask fields in the firewall rule. net id of -1 flags
+            # the rule as a geolocation rule with the country code using the netmask field. NOTE: just as with networks,
+            # only a single country is currently supported per firewall rule src and dst.
+            if (rule.s_net_id == GEO_MARKER):
+
+                if (src_country != rule.s_net_mask):
+                    continue
+
+            else:
+
+                # using rules mask to floor source ip in header and checking against rules network id
+                if (iph_src_ip & rule.s_net_mask != rule.s_net_id):
+                    continue
+
+            if (rule.d_net_id == GEO_MARKER):
+                if (dst_country != rule.d_net_mask):
+                    continue
+
+            else:
+
+                # using rules mask to floor ip in header and checking against rules network id
+                if (iph_dst_ip & rule.d_net_mask != rule.d_net_id):
+                    continue
 
             iph_dst_netid = ntohl(ip_header.daddr) & rule.d_net_mask
             if (iph_dst_netid != rule.d_net_id):
@@ -244,7 +278,8 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             # notify caller which section match was in. this will be used to skip inspection for system access rules
             results.fw_section = section_num
             results.action = rule.action
-            results.mark = rule.sec_profiles[1] << 12 | rule.sec_profiles[0] << 8 | rule.action
+            results.mark = rule.sec_profiles[1] << TWO_BYTES | rule.sec_profiles[0] << TWELVE_BITS | \
+                tracked_geo << FOUR_BITS | direction << TWO_BITS | rule.action
 
             return results
 
@@ -338,7 +373,7 @@ cdef class CFirewall:
 
         #destination
         fw_rule.d_zone       = <u_int8_t> rule[6]
-        fw_rule.d_net_id     = <u_int32_t>rule[7]
+        fw_rule.d_net_id     = <long>rule[7] # need signed for -1/geolocation marker
         fw_rule.d_net_mask   = self.cidr_to_int(rule[8]) # converting CIDR to integer. pow(2, rule[3])
         fw_rule.d_port_start = <u_int16_t>rule[9]
         fw_rule.d_port_end   = <u_int16_t>rule[10]
@@ -388,6 +423,13 @@ cdef class CFirewall:
 
     cpdef void prepare_geolocation(self, RangeTrie range_trie, long msb, long lsb):
 
+        # assigning directly to the search function so we can reference directly in firewall inspection. currently we
+        # skip over the public search method because it uses GIL requiring lru_cache decorator.
+        # TODO: implement lru caching compatible with cfirewall
+        GEO_SEARCH = &range_trie._search
+
+        MSB = msb
+        LSB = lsb
 
     cpdef int update_zones(self, Py_Array zone_map) with gil:
         '''acquires FWrule lock then updates the zone values by interface index. max slots defined by

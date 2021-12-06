@@ -60,12 +60,12 @@ cdef class RecurveTrie:
         cdef long search_result
 
         with nogil:
-            search_result = self._l1_search(host)
+            search_result = self._l1_search(host[0], host[1])
 
         return search_result
 
     # this can be called directly by cfirewall or any other native c processes
-    cdef long _l1_search(self, (long, long) container_ids) nogil:
+    cdef long _l1_search(self, long container_id, long host_id) nogil:
 
         cdef:
             long left = 0
@@ -80,16 +80,16 @@ cdef class RecurveTrie:
             l1_container = self.L1_CONTAINER[mid]
 
             # excluding left half
-            if (l1_container.id < container_ids[0]):
+            if (l1_container.id < container_id):
                 left = mid + 1
 
             # excluding right half
-            elif (l1_container.id > container_ids[0]):
+            elif (l1_container.id > container_id):
                 right = mid - 1
 
             # l1.id match. calling l2_search with ptr to l2_containers looking for l2.id match
             else:
-                return self._l2_search(container_ids[1], l1_container.l2_size, &l1_container.l2_ptr)
+                return self._l2_search(host_id, l1_container.l2_size, &l1_container.l2_ptr)
 
         # iteration completed with no l1 match
         return 0
@@ -173,11 +173,11 @@ cdef class RangeTrie:
         cdef long search_result
 
         with nogil:
-            search_result = self._search(host)
+            search_result = self._search(host[0], host[1])
 
         return search_result
 
-    cdef long _search(self, (long, long) container_ids) nogil:
+    cdef long _search(self, long container_id, long host_id) nogil:
 
         cdef:
             long left = 0
@@ -193,11 +193,11 @@ cdef class RangeTrie:
             l1_container = self.L1_CONTAINER[mid]
 
             # excluding left half
-            if (l1_container.id < container_ids[0]):
+            if (l1_container.id < container_id):
                 left = mid + 1
 
             # excluding right half
-            elif (l1_container.id > container_ids[0]):
+            elif (l1_container.id > container_id):
                 right = mid - 1
 
             # l1.id match. iterating over l2_containers looking for l2.id match

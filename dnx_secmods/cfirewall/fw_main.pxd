@@ -160,7 +160,7 @@ cdef struct FWrule:
 
     # destination
     u_int8_t  d_zone
-    u_int32_t d_net_id
+    long d_net_id
     u_int32_t d_net_mask
     u_int32_t d_port_start # extra 16 bits to include protocol. bitwise when eval tcp/80(webui) > 6/80
     u_int16_t d_port_end
