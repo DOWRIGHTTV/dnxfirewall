@@ -110,6 +110,5 @@ class Configuration:
     def load_signature_tries():
 
         ip_reputation_signatures = signature_operations.generate_reputation(Log)
-        geolocation_signatures = signature_operations.generate_geolocation(Log)
 
-        return ip_reputation_signatures, geolocation_signatures
+        return ip_reputation_signatures

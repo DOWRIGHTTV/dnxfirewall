@@ -6,7 +6,7 @@ from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import IPP_INSPECTION_RESULTS
 
 from dnx_iptools.packet_classes import NFQueue
-from dnx_iptools.dnx_trie_search import RecurveTrie, RangeTrie # pylint: disable=import-error, no-name-in-module
+from dnx_iptools.dnx_trie_search import RecurveTrie # pylint: disable=import-error, no-name-in-module
 
 from dnx_secmods.ip_proxy.ip_proxy_packets import IPPPacket, ProxyResponse
 from dnx_secmods.ip_proxy.ip_proxy_restrict import LanRestrict
@@ -160,10 +160,10 @@ class Inspect:
         rep_group = REP((category // 10) * 10)
         if (rep_group is REP.TOR):
 
-            # only outbound traffic will match tor whitelist since this override is designed for a user to access
-            # tor and not to open a local machine to tor traffic.
-            # TODO: evaluate if we should have an inbound override, though i dont know who would ever want random
-            # tor users accessing their servers.
+            # only outbound traffic will match tor whitelist since this override is designed for a user to access tor
+            # and not to open a local machine to tor traffic.
+            # TODO: evaluate if we should have an inbound override, though i dont know who would ever want random tor
+            #  users accessing their servers.
             if (packet.direction is DIR.OUTBOUND and packet.conn.local_ip in self._Proxy.tor_whitelist):
                 return CONN.ACCEPT
 
@@ -172,9 +172,9 @@ class Inspect:
         else:
             block_direction = self._Proxy.reputation_settings[rep_group]
 
-        # notify proxy the connection should be blocked
-        if (block_direction in [packet.direction, DIR.BOTH]):
-            # hardcorded for icmp to drop and tcp/udp to reject. # TODO: consider making this configurable.
+        # notify proxy the connection should be blocked. dir enum is Flag with bitwise ops.
+        if (packet.direction & block_direction):
+            # hardcoded for icmp to drop and tcp/udp to reject. # TODO: consider making this configurable.
             if (packet.protocol is ICMP):
                 return CONN.DROP
 
@@ -185,8 +185,10 @@ class Inspect:
 
     # TODO: expand for profiles. geolocation_settings[profile][category]
     def _country_action(self, category, packet):
-        if (self._Proxy.geolocation_settings[category] in [packet.direction, DIR.BOTH]):
-            # hardcorded for icmp to drop and tcp/udp to reject. # TODO: consider making this configurable.
+
+        # dir enum is _Flag with bitwise ops. this makes comparison much easier.
+        if (packet.direction & self._Proxy.geolocation_settings[category]):
+            # hardcoded for icmp to drop and tcp/udp to reject. # TODO: consider making this configurable.
             if (packet.protocol is ICMP):
                 return CONN.DROP
 
@@ -199,21 +201,17 @@ if __name__ == '__main__':
         name=LOG_NAME
     )
 
-    reputation_signatures, geolocation_signatures = Configuration.load_signature_tries()
+    reputation_signatures = Configuration.load_signature_tries()
 
     # initializing C/Cython extension, converting python structures to native C array/struct,
     # and assigning direct reference to search method [which calls underlying C without GIL]
     recurve_trie = RecurveTrie()
     recurve_trie.generate_structure(reputation_signatures)
 
-    range_trie = RangeTrie()
-    range_trie.generate_structure(geolocation_signatures)
-
     _recurve_trie_search = recurve_trie.search
-    _range_trie_search = range_trie.search
 
     # memory allocation was done manually within C extension for its structures. python structures
     # are no longer needed at this point so freeing memory.
-    del reputation_signatures, geolocation_signatures
+    del reputation_signatures
 
     IPProxy.run(Log, q_num=1)

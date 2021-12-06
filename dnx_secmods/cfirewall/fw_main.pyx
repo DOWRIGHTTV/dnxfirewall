@@ -263,8 +263,8 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             if (VERBOSE):
                 printf('pkt-in zone=%u, rule-in zone=%u, ', hw.in_zone, rule.s_zone)
                 printf('pkt-out zone=%u, rule-out zone=%u\n', hw.out_zone, rule.d_zone)
-                printf('pkt-src ip=%u, pkt-src netid=%u, rule-s netid=%u\n', ntohl(ip_header.saddr), iph_src_ip & rule.s_net_mask, rule.s_net_id)
-                printf('pkt-dst ip=%u, pkt-dst netid=%u, rule-d netid=%u\n', ntohl(ip_header.daddr), iph_dst_ip & rule.d_net_mask, rule.d_net_id)
+                printf('pkt-src ip=%u, pkt-src netid=%u, rule-s netid=%lu\n', ntohl(ip_header.saddr), iph_src_ip & rule.s_net_mask, rule.s_net_id)
+                printf('pkt-dst ip=%u, pkt-dst netid=%u, rule-d netid=%lu\n', ntohl(ip_header.daddr), iph_dst_ip & rule.d_net_mask, rule.d_net_id)
                 printf('pkt proto=%u, rule-s proto=%u, rule-d proto=%u\n', ip_header.protocol, rule_src_protocol, rule_dst_protocol)
 
             # ================================================================== #
@@ -362,7 +362,7 @@ cdef class CFirewall:
 
         # source
         fw_rule.s_zone       = <u_int8_t> rule[1]
-        fw_rule.s_net_id     = <u_int32_t>rule[2]
+        fw_rule.s_net_id     = <long>rule[2]
         fw_rule.s_net_mask   = self.cidr_to_int(rule[3]) # converting CIDR to integer. pow(2, rule[3])
         fw_rule.s_port_start = <u_int16_t>rule[4]
         fw_rule.s_port_end   = <u_int16_t>rule[5]
