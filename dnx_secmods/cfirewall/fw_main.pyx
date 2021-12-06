@@ -1,9 +1,7 @@
-#!/usr/bin/env python3
-
 from libc.stdlib cimport malloc, calloc, free
 from libc.stdio cimport printf, sprintf
 
-from dnx_trie_search cimport RangeTrie
+from dnx_iptools.dnx_trie_search cimport RangeTrie
 
 DEF FW_SECTION_COUNT = 4
 DEF FW_SYSTEM_MAX_RULE_COUNT = 50

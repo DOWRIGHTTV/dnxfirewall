@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from libc.stdlib cimport malloc, calloc, free
 
 import threading as _threading
