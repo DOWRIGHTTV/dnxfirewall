@@ -6,7 +6,6 @@ from socket import inet_aton
 from struct import Struct
 from collections import defaultdict
 
-
 from dnx_gentools.def_constants import HOME_DIR, GEO, REP, MSB, LSB, RFC1918
 from dnx_sysmods.configure.file_operations import load_configuration
 

@@ -82,10 +82,12 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         # default proto_header values for icmp. will be replaced with protocol specific values if applicable
         protohdr _proto_header = [0, 0]
 
+        bint system_rule 0
+
         u_int8_t direction, iphdr_len
         int pktdata_len
         res_tuple inspection_res
-        u_int32_t verdict = DROP
+        u_int32_t verdict =
 
     # definition + assignment with function calls
     cdef:
@@ -136,7 +138,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # SYSTEM RULES will have cfirewall invoke action directly since this traffic does not need further inspection
     if (inspection_res.fw_section == SYSTEM_RULES):
 
-        printf('[SYSTEM RULE] proto=%u, port=%u\n', ip_header.protocol, ntohs(proto_header.d_port))
+        system_rule = 1 # only used by verbose logging.
 
         nfq_set_verdict(qh, id, inspection_res.action, pktdata_len, pktdata)
 
@@ -152,10 +154,11 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # verdict is being used to eval whether packet matched a system rule. 0 verdict infers this also, but for ease
     # of reading, ill have both.
     if (VERBOSE):
-        printf('[C/packet] action=%u, verdict=%u, system_rule=%u\n', inspection_res.action, verdict, verdict & 1)
+        printf('[C/packet] action=%u, verdict=%u, system_rule=%u\n', inspection_res.action, verdict, system_rule)
 
     # libnfnetlink.c return >> libnetfiler_queue return >> CFirewall._run.
-    # < 0 vals are errors, but return is being ignored by CFirewall._run.
+    # < 0 vals are errors, but return is being ignored by CFirewall._run. there may be a use for sending messages
+    # back to socket loop, but who knows.
     return OK
 
 # explicit inline declaration needed for compiler to know to inline this function
@@ -259,11 +262,14 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             # VERBOSE MATCH OUTPUT | only showing matches due to too much output
             # ================================================================== #
             if (VERBOSE):
+                printf('VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV')
                 printf('pkt-in zone=%u, rule-in zone=%u, ', hw.in_zone, rule.s_zone)
                 printf('pkt-out zone=%u, rule-out zone=%u\n', hw.out_zone, rule.d_zone)
                 printf('pkt-src ip=%u, pkt-src netid=%u, rule-s netid=%lu\n', ntohl(ip_header.saddr), iph_src_ip & rule.s_net_mask, rule.s_net_id)
                 printf('pkt-dst ip=%u, pkt-dst netid=%u, rule-d netid=%lu\n', ntohl(ip_header.daddr), iph_dst_ip & rule.d_net_mask, rule.d_net_id)
-                printf('pkt proto=%u, rule-s proto=%u, rule-d proto=%u\n', ip_header.protocol, rule_src_protocol, rule_dst_protocol)
+                printf('pkt-proto=%u, rule-s proto=%u, rule-d proto=%u\n', ip_header.protocol, rule_src_protocol, rule_dst_protocol)
+                printf('pkt-src geo=%u, pkt-dst geo=%u\n', src_country, dst_country)
+                printf('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
 
             # ================================================================== #
             # MATCH ACTION | return rule options

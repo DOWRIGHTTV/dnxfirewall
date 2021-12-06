@@ -578,4 +578,4 @@ _GEO_LIST = [
     'ZIMBABWE'
 ]
 
-GEO = _IntEnum('GEO', _GEO_LIST)
+GEO = _IntEnum('GEO', _GEO_LIST, start=0)

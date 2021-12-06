@@ -49,7 +49,7 @@ class Configuration:
         rep_settings = ip_proxy['reputation']
         geo_settings = ip_proxy['geolocation']
 
-        # needed to
+        # used for categorizing private ip addresses
         geo_settings.update(RFC1918)
 
         reputation_enabled = []
