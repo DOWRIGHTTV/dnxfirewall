@@ -1,6 +1,8 @@
 from cpython cimport array
 import array
 
+from dnx_trie_search cimport RangeTrie
+
 ctypedef array.array Py_Array
 
 cdef extern from "sys/types.h":
