@@ -419,6 +419,8 @@ cdef class CFirewall:
         '''initializes Cython Extension RangeTrie passing in py_trie provided then assigning reference globally to be
         used by cfirewall inspection. also globally assigns MSB and LSB definitions.'''
 
+        global GEOLOCATION, MSB, LSB
+
         # TODO: implement lru caching compatible with cfirewall
         GEOLOCATION = RangeTrie()
 

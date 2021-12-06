@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 
-import os, sys
+import __init__
 
 from socket import inet_aton
 from struct import Struct
 from collections import defaultdict
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
 
-from dnx_gentools.def_constants import GEO, REP, MSB, LSB, RFC1918
+from dnx_gentools.def_constants import HOME_DIR, GEO, REP, MSB, LSB, RFC1918
 from dnx_sysmods.configure.file_operations import load_configuration
 
 __all__ = (
@@ -40,13 +38,13 @@ def combine_domains(Log):
         # TODO: user defined categories will break the enum load on proxy / FIX
         #   looping over all user defined categories. ALSO. i think this will require a proxy restart if sigs change
         for cat, settings in ud_cats:
-            if (not settings['enabled']): continue
 
             # writing signatures to block file
-            for signature in settings[1:]:
-                blocked.write(f'{signature} {cat}\n'.lower())
+            if (settings['enabled']):
 
-    # NOTE: nulling out signatures in memory so we dont have to wait for GC.
+                for signature in settings[1:]:
+                    blocked.write(f'{signature} {cat}\n'.lower())
+
     del domain_signatures
 
 def _combine_reputation(Log):
@@ -58,7 +56,7 @@ def _combine_reputation(Log):
             with open(f'{HOME_DIR}/dnx_system/signatures/ip_lists/{cat}.ips', 'r') as file:
                 ip_rep_signatures.extend([x.lower() for x in file.read().splitlines() if x and '#' not in x])
         except FileNotFoundError:
-            Log.alert(f'[reputation] signature file missing: {cat}.')
+            Log.alert(f'[reputation] signature file missing: {cat}')
 
     return ip_rep_signatures
 
@@ -113,7 +111,7 @@ def _combine_geolocation(Log):
             with open(f'{HOME_DIR}/dnx_system/signatures/geo_lists/{country}.geo', 'r') as file:
                 ip_geo_signatures.extend([x for x in file.read().splitlines() if x and '#' not in x])
         except FileNotFoundError:
-            Log.alert(f'[geolocation] signature file missing: {country}.')
+            Log.alert(f'[geolocation] signature file missing: {country}')
 
     return ip_geo_signatures
 
@@ -148,7 +146,6 @@ def generate_geolocation(Log):
             # NOTE: subtracting 1 to account for 0th value.
             cvl_append(f'{net_id} {host_count-1} {country}')
 
-    # NOTE: wiping raw signatures in memory so we dont have to wait for GC.
     del ip_geo_signatures
 
     # compression logic
