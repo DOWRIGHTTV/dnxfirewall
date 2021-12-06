@@ -86,7 +86,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         u_int8_t direction, iphdr_len
         int pktdata_len
         res_tuple inspection_res
-        u_int32_t mark, verdict = DROP
+        u_int32_t verdict = DROP
 
     # definition + assignment with function calls
     cdef:
@@ -148,7 +148,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         #   toggled via an argument to nf_run().
         verdict = inspection_res.action if BYPASS else IP_PROXY << TWO_BYTES | NF_QUEUE
 
-        nfq_set_verdict2(qh, id, verdict, mark, pktdata_len, pktdata)
+        nfq_set_verdict2(qh, id, verdict, inspection_res.mark, pktdata_len, pktdata)
 
     # verdict is being used to eval whether packet matched a system rule. 0 verdict infers this also, but for ease
     # of reading, ill have both.
