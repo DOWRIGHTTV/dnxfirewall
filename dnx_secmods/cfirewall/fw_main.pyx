@@ -415,7 +415,7 @@ cdef class CFirewall:
 
         nfq_close(self.h)
 
-    cpdef void prepare_geolocation(self, tuple geolocation_trie, long msb, long lsb):
+    cpdef void prepare_geolocation(self, tuple geolocation_trie, long msb, long lsb) with gil:
         '''initializes Cython Extension RangeTrie passing in py_trie provided then assigning reference globally to be
         used by cfirewall inspection. also globally assigns MSB and LSB definitions.'''
 

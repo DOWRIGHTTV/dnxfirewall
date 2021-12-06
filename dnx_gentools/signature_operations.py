@@ -58,7 +58,7 @@ def _combine_reputation(Log):
             with open(f'{HOME_DIR}/dnx_system/signatures/ip_lists/{cat}.ips', 'r') as file:
                 ip_rep_signatures.extend([x.lower() for x in file.read().splitlines() if x and '#' not in x])
         except FileNotFoundError:
-            Log.alert(f'signature file missing: {cat} ips.')
+            Log.alert(f'[reputation] signature file missing: {cat}.')
 
     return ip_rep_signatures
 
@@ -113,7 +113,7 @@ def _combine_geolocation(Log):
             with open(f'{HOME_DIR}/dnx_system/signatures/geo_lists/{country}.geo', 'r') as file:
                 ip_geo_signatures.extend([x for x in file.read().splitlines() if x and '#' not in x])
         except FileNotFoundError:
-            Log.alert(f'signature file missing: {country} geolocation.')
+            Log.alert(f'[geolocation] signature file missing: {country}.')
 
     return ip_geo_signatures
 

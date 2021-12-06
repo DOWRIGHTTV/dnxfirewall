@@ -207,6 +207,6 @@ cdef class CFirewall:
     cdef void _run(self) nogil
     cdef u_int32_t cidr_to_int(self, long cidr)
     cdef void set_FWrule(self, int ruleset, unsigned long[:] rule, int pos)
-    cpdef void prepare_geolocation(self, tuple geolocation_trie, long msb, long lsb)
+    cpdef void prepare_geolocation(self, tuple geolocation_trie, long msb, long lsb) with gil
     cpdef int update_zones(self, Py_Array zone_map) with gil
     cpdef int update_ruleset(self, int ruleset, list rulelist) with gil
