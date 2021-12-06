@@ -45,8 +45,9 @@ pthread_mutex_init(&FWrulelock, NULL)
 
 # Geolocation definitions
 # ================================== #
-cdef long MSB, LSB
+DEF GEO_MARKER = -1
 
+cdef long MSB, LSB
 cdef RangeTrie GEOLOCATION
 # ================================== #
 
