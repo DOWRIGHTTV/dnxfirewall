@@ -123,20 +123,19 @@ class FirewallManage:
             if (move):
                 rule_to_move = ruleset.pop(static_pos)
 
-            # write config even if it needs to move since external function will handle move operation (in the form of insertion).
+            # writes even if it needs to move since external func will handle move operation (in the form of insertion).
             dnx_fw.write_configuration(firewall)
 
             # updating instance variable for direct access
             self.firewall = firewall
 
         # now that we are out of the context we can use add method to re insert the rule in specified place
-        # NOTE: since the lock has been released it is possible for another process to get the lock and modify the firewall
-        #  rules before the move can happen. only on rare cases would this even cause an issue, and of course, only the
-        #  pending config will be effected and can be reverted if need be. in the future maybe we can figure out a way to
-        #  deal with this operation without releasing the lock without having to duplicate code.
+        # NOTE: since the lock has been released it is possible for another process to get the lock and modify firewall
+        #  rules before the move can happen. only on rare cases would this even cause an issue and only the pending
+        #  config will be effected and can be reverted if need be. in the future maybe we can figure out a way to deal
+        #  with this operation without releasing the lock without having to duplicate code.
         if (move):
             self.add(pos, rule_to_move, section=section)
-
 
     def commit(self):
         '''Copies pending configuration to active, which is being monitored by Control class
@@ -185,9 +184,8 @@ class FirewallControl:
         'cfirewall', '_initialize',
 
         # firewall sections (hierarchy)
-        # NOTE: these are used primarily to detect config changes to prevent
-        # the amount of work/ data conversions that need to be done to load
-        # the settings into C data structures.
+        # NOTE: these are used primarily to detect config changes to prevent the amount of work/ data conversions that
+        # need to be done to load the settings into C data structures.
         'BEFORE', 'MAIN', 'AFTER'
     )
 
@@ -206,11 +204,10 @@ class FirewallControl:
     # inspection context.
     def run(self):
 
-        # initially geolocation trie search, storing data into C struct, then passing over to cfirewall
-        range_trie = RangeTrie()
-        range_trie.generate_structure(generate_geolocation(Log))
+        # generating py_trie for geolocation signatures, cfirewall will initialize the extension natively
+        geo_trie = generate_geolocation(Log)
 
-        cfirewall.prepare_geolocation(range_trie, MSB, LSB)
+        self.cfirewall.prepare_geolocation(geo_trie, MSB, LSB)
 
         threading.Thread(target=self._monitor_system_rules).start()
         threading.Thread(target=self._monitor_zones).start()

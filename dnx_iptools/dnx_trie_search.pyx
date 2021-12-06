@@ -15,45 +15,6 @@ cdef class RecurveTrie:
     # L1 CONTAINER = [<CONTAINER_ID, L2_CONTAINER_SIZE, L2_CONTAINER_PTR>]
     # L2 CONTAINER = [<CONTAINER_ID, HOST_CATEGORY>]
 
-    cdef l2_recurve* make_l2(self, (long, long) l2_entry):
-        '''allocates memory for a single L2 content struct, assigns members from l2_entry, then
-        returns pointer.'''
-
-        cdef l2_recurve *L2_CONTENT
-
-        L2_CONTENT = <l2_recurve*>malloc(sizeof(l2_recurve))
-
-        L2_CONTENT.id = l2_entry[0]
-        L2_CONTENT.host_category = l2_entry[1]
-
-        return L2_CONTENT
-
-    def generate_structure(self, tuple py_signatures):
-
-        # allocating memory for L1 container. this will be accessed from l1_search method.
-        # L1 container will be iterated over, being checked for id match. if a match is found
-        # the reference stored at that index will be used to check for l2 container id match.
-        self.L1_SIZE = len(py_signatures)
-        self.L1_CONTAINER = <l1_recurve*>malloc(sizeof(l1_recurve) * self.L1_SIZE)
-
-        for i in range(self.L1_SIZE):
-
-            # accessed via pointer stored in L1 container
-            L2_SIZE = len(py_signatures[i][1])
-
-            # allocating memory for indivual L2 containers
-            L2_CONTAINER = <l2_recurve*>malloc(sizeof(l2_recurve) * L2_SIZE)
-
-            # calling make function for l2 content struct for each entry in current py_l2 container
-            for xi in range(L2_SIZE):
-                L2_CONTAINER[xi] = self.make_l2(py_signatures[i][1][xi])[0]
-
-            # assigning struct members to current index of L1 container.
-            self.L1_CONTAINER[i].id = <long>py_signatures[i][0]
-            self.L1_CONTAINER[i].l2_size = L2_SIZE
-            self.L1_CONTAINER[i].l2_ptr = L2_CONTAINER
-
-
     @_lru_cache(maxsize=4096)
     def search(self, (long, long) host):
 
@@ -64,7 +25,6 @@ cdef class RecurveTrie:
 
         return search_result
 
-    # this can be called directly by cfirewall or any other native c processes
     cdef long _l1_search(self, long container_id, long host_id) nogil:
 
         cdef:
@@ -123,49 +83,49 @@ cdef class RecurveTrie:
         # iteration completed with no l2 match
         return 0
 
+    cpdef void generate_structure(self, tuple py_trie):
+
+        # allocating memory for L1 container. this will be accessed from l1_search method.
+        # L1 container will be iterated over, being checked for id match. if a match is found
+        # the reference stored at that index will be used to check for l2 container id match.
+        self.L1_SIZE = len(py_trie)
+        self.L1_CONTAINER = <l1_recurve*>malloc(sizeof(l1_recurve) * self.L1_SIZE)
+
+        for i in range(self.L1_SIZE):
+
+            # accessed via pointer stored in L1 container
+            L2_SIZE = len(py_trie[i][1])
+
+            # allocating memory for individual L2 containers
+            L2_CONTAINER = <l2_recurve*>malloc(sizeof(l2_recurve) * L2_SIZE)
+
+            # calling make function for l2 content struct for each entry in current py_l2 container
+            for xi in range(L2_SIZE):
+                L2_CONTAINER[xi] = self._make_l2(py_trie[i][1][xi])[0]
+
+            # assigning struct members to current index of L1 container.
+            self.L1_CONTAINER[i].id = <long>py_trie[i][0]
+            self.L1_CONTAINER[i].l2_size = L2_SIZE
+            self.L1_CONTAINER[i].l2_ptr = L2_CONTAINER
+
+    cdef l2_recurve* _make_l2(self, (long, long) l2_entry):
+        '''allocates memory for a single L2 content struct, assigns members from l2_entry, then
+        returns pointer.'''
+
+        cdef l2_recurve *L2_CONTENT
+
+        L2_CONTENT = <l2_recurve*>malloc(sizeof(l2_recurve))
+
+        L2_CONTENT.id = l2_entry[0]
+        L2_CONTENT.host_category = l2_entry[1]
+
+        return L2_CONTENT
+
 
 cdef class RangeTrie:
 
     # L1 CONTAINER = [<CONTAINER_ID, L2_CONTAINER_SIZE, L2_CONTAINER_PTR>]
     # L2 CONTAINER = [<NETWORK_ID, BROADCAST_ID, HOST_COUNTRY>]
-
-    cdef l2_range* make_l2(self, (long, long, short) l2_entry):
-        '''allocates memory for a single L2 content struct, assigns members from l2_entry, then returns pointer.'''
-
-        cdef l2_range *L2_CONTENT
-
-        L2_CONTENT = <l2_range*>malloc(sizeof(l2_range))
-
-        L2_CONTENT.network_id   = l2_entry[0]
-        L2_CONTENT.broadcast_id = l2_entry[1]
-        L2_CONTENT.country_code = l2_entry[2]
-
-        return L2_CONTENT
-
-    def generate_structure(self, tuple py_signatures):
-
-        # allocating memory for L1 container. this will be accessed from l1_search method.
-        # L1 container will be iterated over, being checked for id match. if a match is found
-        # the reference stored at that index will be used to check for l2 container id match.
-        self.L1_SIZE = len(py_signatures)
-        self.L1_CONTAINER = <l1_range*>malloc(sizeof(l1_range) * self.L1_SIZE)
-
-        for i in range(self.L1_SIZE):
-
-            # accessed via pointer stored in L1 container
-            L2_SIZE = len(py_signatures[i][1])
-
-            # allocating memory for indivual L2 containers
-            L2_CONTAINER = <l2_range*>malloc(sizeof(l2_range) * L2_SIZE)
-
-            # calling make function for l2 content struct for each entry in current py_l2 container
-            for xi in range(L2_SIZE):
-                L2_CONTAINER[xi] = self.make_l2(py_signatures[i][1][xi])[0]
-
-            # assigning struct members to current index of L1 container
-            self.L1_CONTAINER[i].id = <long>py_signatures[i][0]
-            self.L1_CONTAINER[i].l2_size = L2_SIZE
-            self.L1_CONTAINER[i].l2_ptr = L2_CONTAINER
 
     @_lru_cache(maxsize=4096)
     def search(self, (long, long) host):
@@ -177,6 +137,7 @@ cdef class RangeTrie:
 
         return search_result
 
+    # NOTE: this will be called directly from cfirewall until lru_cache is ported with no gil needed
     cdef long _search(self, long container_id, long host_id) nogil:
 
         cdef:
@@ -213,6 +174,44 @@ cdef class RangeTrie:
 
         # iteration completed with no match l1 match
         return 0
+
+    cpdef void generate_structure(self, tuple py_trie):
+
+        # allocating memory for L1 container. this will be accessed from l1_search method.
+        # L1 container will be iterated over, being checked for id match. if a match is found
+        # the reference stored at that index will be used to check for l2 container id match.
+        self.L1_SIZE = len(py_trie)
+        self.L1_CONTAINER = <l1_range*>malloc(sizeof(l1_range) * self.L1_SIZE)
+
+        for i in range(self.L1_SIZE):
+
+            # accessed via pointer stored in L1 container
+            L2_SIZE = len(py_trie[i][1])
+
+            # allocating memory for individual L2 containers
+            L2_CONTAINER = <l2_range*>malloc(sizeof(l2_range) * L2_SIZE)
+
+            # calling make function for l2 content struct for each entry in current py_l2 container
+            for xi in range(L2_SIZE):
+                L2_CONTAINER[xi] = self._make_l2(py_trie[i][1][xi])[0]
+
+            # assigning struct members to current index of L1 container
+            self.L1_CONTAINER[i].id = <long>py_trie[i][0]
+            self.L1_CONTAINER[i].l2_size = L2_SIZE
+            self.L1_CONTAINER[i].l2_ptr = L2_CONTAINER
+
+    cdef l2_range* _make_l2(self, (long, long, short) l2_entry):
+        '''allocates memory for a single L2 content struct, assigns members from l2_entry, then returns pointer.'''
+
+        cdef l2_range *L2_CONTENT
+
+        L2_CONTENT = <l2_range*>malloc(sizeof(l2_range))
+
+        L2_CONTENT.network_id   = l2_entry[0]
+        L2_CONTENT.broadcast_id = l2_entry[1]
+        L2_CONTENT.country_code = l2_entry[2]
+
+        return L2_CONTENT
 
 # ================================================ #
 # TYPED PYTHON STRUCTURES - keeping as alternative

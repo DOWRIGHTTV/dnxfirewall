@@ -22,7 +22,6 @@ DEF COUNTRY_NOT_DEFINED = 0
 DEF OK  = 0
 DEF ERR = 1
 
-
 DEF TWO_BITS = 2
 DEF FOUR_BITS = 4
 DEF ONE_BYTE = 8
@@ -44,7 +43,7 @@ cdef pthread_mutex_t FWrulelock
 pthread_mutex_init(&FWrulelock, NULL)
 # ================================== #
 
-# Geolocation assignments
+# Geolocation definitions
 # ================================== #
 cdef long MSB, LSB
 
@@ -130,7 +129,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # this is currently only designed to prevent the manager thread from updating firewall rules as users configure them.
     pthread_mutex_lock(&FWrulelock)
 
-    inspection_res = cfirewall_inspect(&hw, ip_header, proto_header, &direction)
+    inspection_res = cfirewall_inspect(&hw, ip_header, proto_header, direction)
 
     pthread_mutex_unlock(&FWrulelock)
     # =============================== #
@@ -161,7 +160,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     return OK
 
 # explicit inline declaration needed for compiler to know to inline this function
-cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto_header, u_int8_t *direction) nogil:
+cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto_header, u_int8_t direction) nogil:
 
     cdef:
         FWrule **section
@@ -176,8 +175,8 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
         # ip > country code. NOTE: this will be calculated regardless of a rule match so this process can take over
         # geolocation processing for all modules. ip proxy will still do the logging and profile blocking it just wont
         # need to pull the country code anymore.
-        u_int16_t src_country = GEO_SEARCH(iph_src_ip & MSB, iph_src_ip & LSB)
-        u_int16_t dst_country = GEO_SEARCH(iph_dst_ip & MSB, iph_dst_ip & LSB)
+        u_int16_t src_country = GEOLOCATION._search(iph_src_ip & MSB, iph_src_ip & LSB)
+        u_int16_t dst_country = GEOLOCATION._search(iph_dst_ip & MSB, iph_dst_ip & LSB)
 
         # value used by ip proxy which is normalized and always represents the external ip address
         u_int16_t tracked_geo = src_country if direction == INBOUND else dst_country
@@ -421,12 +420,14 @@ cdef class CFirewall:
 
         nfq_close(self.h)
 
-    cpdef void prepare_geolocation(self, RangeTrie range_trie, long msb, long lsb):
+    cpdef void prepare_geolocation(self, tuple geolocation_trie, long msb, long lsb):
+        '''initializes Cython Extension RangeTrie passing in py_trie provided then assigning reference globally to be
+        used by cfirewall inspection. also globally assigns MSB and LSB definitions.'''
 
-        # assigning directly to the search function so we can reference directly in firewall inspection. currently we
-        # skip over the public search method because it uses GIL requiring lru_cache decorator.
         # TODO: implement lru caching compatible with cfirewall
-        GEOLOCATION = range_trie
+        GEOLOCATION = RangeTrie()
+
+        GEOLOCATION.generate_structure(geolocation_trie)
 
         MSB = msb
         LSB = lsb
