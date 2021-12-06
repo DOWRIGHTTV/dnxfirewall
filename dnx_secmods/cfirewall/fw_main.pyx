@@ -236,10 +236,6 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
                 if (iph_dst_ip & rule.d_net_mask != rule.d_net_id):
                     continue
 
-            iph_dst_netid = ntohl(ip_header.daddr) & rule.d_net_mask
-            if (iph_dst_netid != rule.d_net_id):
-                continue
-
             # ================================================================== #
             # PROTOCOL
             # ================================================================== #
@@ -267,8 +263,8 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             if (VERBOSE):
                 printf('pkt-in zone=%u, rule-in zone=%u, ', hw.in_zone, rule.s_zone)
                 printf('pkt-out zone=%u, rule-out zone=%u\n', hw.out_zone, rule.d_zone)
-                printf('pkt-src ip=%u, pkt-src netid=%u, rule-s netid=%u\n', ntohl(ip_header.saddr), iph_src_netid, rule.s_net_id)
-                printf('pkt-dst ip=%u, pkt-dst netid=%u, rule-d netid=%u\n', ntohl(ip_header.daddr), iph_dst_netid, rule.d_net_id)
+                printf('pkt-src ip=%u, pkt-src netid=%u, rule-s netid=%u\n', ntohl(ip_header.saddr), iph_src_ip & rule.s_net_mask, rule.s_net_id)
+                printf('pkt-dst ip=%u, pkt-dst netid=%u, rule-d netid=%u\n', ntohl(ip_header.daddr), iph_dst_ip & rule.d_net_mask, rule.d_net_id)
                 printf('pkt proto=%u, rule-s proto=%u, rule-d proto=%u\n', ip_header.protocol, rule_src_protocol, rule_dst_protocol)
 
             # ================================================================== #
