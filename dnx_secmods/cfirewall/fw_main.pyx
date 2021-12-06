@@ -3,7 +3,7 @@
 from libc.stdlib cimport malloc, calloc, free
 from libc.stdio cimport printf, sprintf
 
-from dnx_iptools.dnx_trie_search cimport RangeTrie
+from dnx_trie_search cimport RangeTrie
 
 DEF FW_SECTION_COUNT = 4
 DEF FW_SYSTEM_MAX_RULE_COUNT = 50
@@ -48,7 +48,7 @@ pthread_mutex_init(&FWrulelock, NULL)
 # ================================== #
 cdef long MSB, LSB
 
-cdef RangeTrie *GEO_SEARCH
+cdef RangeTrie GEOLOCATION
 # ================================== #
 
 # initializing global array and size tracker. contains pointers to arrays of pointers to FWrule
@@ -130,7 +130,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # this is currently only designed to prevent the manager thread from updating firewall rules as users configure them.
     pthread_mutex_lock(&FWrulelock)
 
-    inspection_res = cfirewall_inspect(&hw, ip_header, proto_header)
+    inspection_res = cfirewall_inspect(&hw, ip_header, proto_header, &direction)
 
     pthread_mutex_unlock(&FWrulelock)
     # =============================== #
@@ -161,7 +161,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     return OK
 
 # explicit inline declaration needed for compiler to know to inline this function
-cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto_header, u_int8_t direction) nogil:
+cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto_header, u_int8_t *direction) nogil:
 
     cdef:
         FWrule **section
@@ -426,7 +426,7 @@ cdef class CFirewall:
         # assigning directly to the search function so we can reference directly in firewall inspection. currently we
         # skip over the public search method because it uses GIL requiring lru_cache decorator.
         # TODO: implement lru caching compatible with cfirewall
-        GEO_SEARCH = &range_trie._search
+        GEOLOCATION = range_trie
 
         MSB = msb
         LSB = lsb
