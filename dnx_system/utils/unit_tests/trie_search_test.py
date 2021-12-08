@@ -53,6 +53,7 @@ hosts_to_test = [
     '1.1.1.1', # DoH
     '104.244.75.143', # tor entry
     '71.19.148.20', # tor exit
+    '34.107.220.220', # USA
 ]
 
 def recurve_trie_rep():
@@ -78,7 +79,7 @@ def recurve_trie_rep():
     print('RECURV TRIE RESULTS')
     print(line)
     for i, res in enumerate(results):
-        print(hosts_to_test[i], f'> time={res[0]}, rep={res[1]}')
+        print(hosts_to_test[i], f'> time={res[0]}, {res[1]}')
 
     no_cache_average = sum([x[0] for x in results[:6]])/(len(results)/2)
     cached_average = sum([x[0] for x in results[6:12]])/(len(results)/2)
@@ -109,7 +110,7 @@ def old_trie_rep():
     print('OLD TRIE RESULTS')
     print(line)
     for i, res in enumerate(results):
-        print(hosts_to_test[i], f'> time={res[0]} ns, rep={res[1]}')
+        print(hosts_to_test[i], f'> time={res[0]} ns, {res[1]}')
 
     no_cache_average = sum([x[0] for x in results[:6]])/(len(results)/2)
     cached_average = sum([x[0] for x in results[6:12]])/(len(results)/2)
@@ -134,13 +135,13 @@ def range_trie_geo():
 
         total_time = f_time() - start
 
-        results.append((total_time, f'rep={result}', f'MSB={o}', f'LSB={t}'))
+        results.append((total_time, f'geo={result}', f'MSB={o}', f'LSB={t}'))
 
     print(line)
     print('RANGE TRIE RESULTS')
     print(line)
     for i, res in enumerate(results):
-        print(hosts_to_test[i], f'> time={res[0]}, rep={res[1]}')
+        print(hosts_to_test[i], f'> time={res[0]}, {res[1]}')
 
     no_cache_average = sum([x[0] for x in results[:6]])/(len(results)/2)
     cached_average = sum([x[0] for x in results[6:12]])/(len(results)/2)
@@ -165,13 +166,13 @@ def old_trie_geo():
 
         total_time = f_time() - start
 
-        results.append((total_time, f'rep={result}', f'MSB={o}', f'LSB={t}'))
+        results.append((total_time, f'geo={result}', f'MSB={o}', f'LSB={t}'))
 
     print(line)
     print('OLD TRIE GEO RESULTS')
     print(line)
     for i, res in enumerate(results):
-        print(hosts_to_test[i], f'> time={res[0]} ns, rep={res[1]}')
+        print(hosts_to_test[i], f'> time={res[0]} ns, {res[1]}')
 
     no_cache_average = sum([x[0] for x in results[:6]])/(len(results)/2)
     cached_average = sum([x[0] for x in results[6:12]])/(len(results)/2)
