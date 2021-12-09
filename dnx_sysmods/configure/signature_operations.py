@@ -46,7 +46,6 @@ def combine_domains(Log):
             for signature in settings[1:]:
                 blocked.write(f'{signature} {cat}\n'.lower())
 
-    # NOTE: nulling out signatures in memory so we dont have to wait for GC.
     del domain_signatures
 
 def _combine_reputation(Log):
@@ -112,8 +111,9 @@ def _combine_geolocation(Log):
 
     return ip_geo_signatures
 
-# NOTE: new method to convert standard signatures into a compressed integer format. This will completely replace file operations function since we are
-# no longer generating a combined file and will do the merge and convert in memory before returning compressed structure.
+# NOTE: new method to convert standard signatures into a compressed integer format. This will completely replace file
+# operations function since we are no longer generating a combined file and will do the merge and convert in memory
+# before returning compressed structure.
 def generate_geolocation(Log):
 
     # getting all enabled signatures
@@ -137,11 +137,17 @@ def generate_geolocation(Log):
             Log.warning(f'invalid signature: {signature}, {E}')
 
         else:
-            # NOTE: subtracting 1 to account for 0th value.
+            # needed to account for MSB/bin_id overflows
+            while host_count > LSB+1:
+                cvl_append(f'{net_id} {LSB} {country}')
+
+                host_count -= (LSB+1)
+                net_id += (LSB+1)
+
+            # NOTE: -1 to step down to bcast value
             cvl_append(f'{net_id} {host_count-1} {country}')
 
-    # NOTE: nulling out signatures in memory so we dont have to wait for GC.
-    ip_geo_signatures = []
+    del ip_geo_signatures
 
     # compression logic
     dict_nets = defaultdict(list)
@@ -156,7 +162,7 @@ def generate_geolocation(Log):
         dict_nets[bin_id].append([host_id_start, host_id_start+ip_count, country])
 
     # merging contiguous ranges if within same country
-    for bin_id, containers in dict_nets.items():
+    for bin_id, containers in list(dict_nets.items()):
         dict_nets[bin_id] = _merge_geo_ranges(sorted(containers))
 
     # NOTE: reduced list comprehension now that extra compression is re implemented, which converts to
@@ -184,14 +190,15 @@ def _merge_geo_ranges(ls):
         else:
             _, last_broadcast, last_country = merged_item
 
-            # the networks are contiguous so we will merge them and update the temp item unless the countries are different
-            # which treat the current container as non contiguous
+            # the networks are contiguous so we will merge them and update the temp item unless the countries are
+            # different which treat the current container as non contiguous
             if (cur_net_id == last_broadcast+1 and cur_country == last_country):
                 merged_item[1] = cur_broadcast
 
-            # once a discontiguous range or new country is detected, the merged_item will get added to the merged list. convert
-            # host container to a tuple while we have it here now, which should reduce the list comprehension complexity.
-            # after, replace the value of the ongoing merged_item with the current iteration list to continue process.
+            # once a discontiguous range or new country is detected, the merged_item will get added to the merged list.
+            # convert host container to a tuple while we have it here now, which should reduce the list comprehension
+            # complexity. after, replace the value of the ongoing merged_item with the current iteration list to
+            # continue process.
             # NOTE/TODO: this is where we can implement the array, instead of convering after returned.
             else:
                 merged_containers.append(tuple(merged_item))
