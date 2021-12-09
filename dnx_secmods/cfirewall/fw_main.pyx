@@ -82,12 +82,12 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         # default proto_header values for icmp. will be replaced with protocol specific values if applicable
         protohdr _proto_header = [0, 0]
 
-        bint system_rule 0
+        bint system_rule = 0
 
         u_int8_t direction, iphdr_len
         int pktdata_len
         res_tuple inspection_res
-        u_int32_t verdict =
+        u_int32_t verdict
 
     # definition + assignment with function calls
     cdef:
@@ -183,8 +183,8 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
         # value used by ip proxy which is normalized and always represents the external ip address
         u_int16_t tracked_geo = src_country if direction == INBOUND else dst_country
 
-        # default action pre set. will be overridden if rule match.
-        res_tuple results = [NO_SECTION, DROP, DROP]
+        # return struct (section | action | mark)
+        res_tuple results
 
     for section_num in range(FW_SECTION_COUNT):
 
@@ -286,6 +286,10 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
     # ================================================================== #
     # DEFAULT ACTION
     # ================================================================== #
+    results.fw_section = NO_SECTION
+    results.action = DROP
+    results.mark = tracked_geo << FOUR_BITS | direction << TWO_BITS | DROP
+
     return results
 
 
