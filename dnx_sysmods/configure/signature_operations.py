@@ -137,7 +137,14 @@ def generate_geolocation(Log):
             Log.warning(f'invalid signature: {signature}, {E}')
 
         else:
-            # NOTE: subtracting 1 to account for 0th value.
+            # needed to account for MSB/bin_id overflows
+            while host_count > LSB+1:
+                cvl_append(f'{net_id} {LSB} {country}')
+
+                host_count -= (LSB+1)
+                net_id += (LSB+1)
+
+            # NOTE: -1 to step down to bcast value
             cvl_append(f'{net_id} {host_count-1} {country}')
 
     # NOTE: nulling out signatures in memory so we dont have to wait for GC.
