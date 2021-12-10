@@ -59,6 +59,7 @@ cdef class HashTrie:
         trie_map *TRIE_MAP
         l2_range *TRIE_VALUE
 
+        long INDEX_MASK
         size_t VALUE_LEN
 
     cdef l2_range* _make_l2(self, (long, long, short) l2_entry)
