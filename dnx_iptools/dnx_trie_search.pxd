@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+cdef extern from "sys/types.h":
+    ctypedef unsigned char u_int8_t
+    ctypedef unsigned short int u_int16_t
+    ctypedef unsigned int u_int32_t
+
 cdef struct l1_recurve:
     long id
     short l2_size
@@ -20,8 +25,14 @@ cdef struct l2_range:
     short country_code
 
 cdef struct trie_map:
-    short len
-    l2_range *ranges
+    u_int16_t len
+    trie_range *ranges
+
+cdef struct trie_range:
+    u_int32_t key
+    u_int32_t net_id
+    u_int32_t bcast
+    u_int8_t country
 
 cdef class RecurveTrie:
 
@@ -57,11 +68,15 @@ cdef class HashTrie:
     cdef:
 
         trie_map *TRIE_MAP
-        l2_range *TRIE_VALUE
+        trie_range *TRIE_VALUE_RANGES
 
-        long INDEX_MASK
+        u_int32_t MAX_KEYS
+        u_int32_t INDEX_MASK
         size_t VALUE_LEN
 
-    cdef l2_range* _make_l2(self, (long, long, short) l2_entry)
-    cdef long search(self, long container_id, long host_id) nogil
+        u_int32_t TRIE_KEY
+        u_int32_t TRIE_KEY_HASH
+
+    cdef trie_range* _make_l2(self, u_int32_t trie_key, (u_int32_t, u_int32_t, u_int16_t) l2_entry)
+    cdef u_int8_t _search(self, u_int32_t container_id, u_int32_t host_id)
     cpdef void generate_structure(self, tuple py_trie)

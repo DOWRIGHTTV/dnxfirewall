@@ -10,7 +10,7 @@ from ipaddress import IPv4Address
 import pyximport; pyximport.install()
 
 from dnx_gentools import signature_operations
-from dnx_iptools.dnx_trie_search import RecurveTrie, RangeTrie, generate_recursive_binary_search, generate_linear_binary_search  # pylint: disable=import-error, no-name-in-module
+from dnx_iptools.dnx_trie_search import HashTrie, RecurveTrie, RangeTrie, generate_recursive_binary_search, generate_linear_binary_search  # pylint: disable=import-error, no-name-in-module
 
 from dnx_sysmods.logging.log_main import LogHandler as Log
 
@@ -32,6 +32,9 @@ recurve_trie.generate_structure(rep_sigs)
 range_trie = RangeTrie()
 range_trie.generate_structure(geo_sigs)
 
+hash_trie = HashTrie()
+hash_trie.generate_structure(geo_sigs)
+
 rep_bounds = (0, len(rep_sigs)-1)
 geo_bounds = (0, len(geo_sigs)-1)
 
@@ -43,6 +46,7 @@ _linear_binary_search = generate_linear_binary_search(geo_sigs, geo_bounds)
 hosts_to_test = [
     '14.204.211.122', # malware
     '69.69.69.69', # not found
+    '192.168.69.69', # rfc1918 (private)
     '193.164.216.238', # compromised host
     '1.1.1.1', # DoH
     '104.244.75.143', # tor entry
@@ -180,11 +184,52 @@ def old_trie_geo():
     print(f'\nno cache avg: {no_cache_average} ns')
     print(f'cached avg: {cached_average} ns')
 
-range_trie_geo()
-old_trie_geo()
+def hash_trie_geo():
+    results = []
 
-old_trie_rep()
-recurve_trie_rep()
+    for ip in hosts_to_test:
 
+        ip_addr = int(IPv4Address(ip))
+
+        o = ip_addr & MSB
+        t = ip_addr & LSB
+
+        host = (o, t)
+
+        start = f_time()
+        result = hash_trie.search(host)
+
+        total_time = f_time() - start
+
+        results.append((total_time, f'geo={result}', f'MSB={o}', f'LSB={t}'))
+
+    print(line)
+    print('HASH TRIE RESULTS')
+    print(line)
+    for i, res in enumerate(results):
+        print(hosts_to_test[i], f'> time={res[0]}, {res[1]}')
+
+    no_cache = sorted(results[:6])
+    cache = sorted(results[6:12])
+    normalize_no_cache = no_cache[:-1]
+    normalize_cache = cache[:-1]
+
+    no_cache_average = sum([x[0] for x in normalize_no_cache])/(len(results)-1/2)
+    cached_average = sum([x[0] for x in normalize_cache])/(len(results)-1/2)
+
+    print(f'\nno cache avg: {no_cache_average} ns, excluded: {no_cache[-1]}')
+    print(f'cached avg: {cached_average} ns, excluded: {cache[-1]}')
+
+for i in range(2):
+
+    print(line)
+    print(f'ITERATION {i}')
+    print(line)
+    hash_trie_geo()
+#    range_trie_geo()
+#    old_trie_geo()
+
+# old_trie_rep()
+# recurve_trie_rep()
 
 os._exit(1)

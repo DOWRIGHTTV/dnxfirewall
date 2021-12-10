@@ -1,4 +1,5 @@
 from libc.stdlib cimport malloc, calloc, free
+from libc.stdio cimport printf
 
 import threading as _threading
 from math import log as _log
@@ -215,66 +216,101 @@ cdef class RangeTrie:
 
 cdef class HashTrie:
 
-    cdef long search(self, long trie_key, long host_id) nogil:
+    @_lru_cache(maxsize=4096)
+    def search(self, (long, long) host):
+
+        cdef long search_result
+
+        # with nogil:
+        search_result = self._search(host[0], host[1])
+
+        return search_result
+
+    cdef u_int8_t _search(self, u_int32_t trie_key, u_int32_t host_id):
 
         cdef:
-            long trie_key_hash = trie_key & self.INDEX_MASK
+            size_t trie_key_hash = trie_key % self.INDEX_MASK
 
             trie_map trie_value = self.TRIE_MAP[trie_key_hash]
 
         # no l1 match
-        if (trie_value == NULL):
+        if (trie_value.len == 0):
+#            print('no match, quick return.')
             return 0
 
+#        print(self.INDEX_MASK)
+#        print(trie_key_hash, f'{(trie_key, trie_value.ranges[0])}')
         for i in range(trie_value.len):
 
-            if trie_value.ranges[i].network_id <= host_id <= trie_value.ranges[i].broadcast_id:
-                return trie_value.ranges[i].country_code
+#            print(f'[{i}] value_len={trie_value.len}')
+            # this is needed because collisions are possible by design so matching the unhashed key will guarantee the 
+            # correct range is being evaluated.
+            if (trie_value.ranges[i].key != trie_key):
+#                print(f'[{i}] key mismatch. key={trie_key} range_key={trie_value.ranges[i].key}')
+
+                continue
+
+            if trie_value.ranges[i].net_id <= host_id <= trie_value.ranges[i].bcast:
+#                print(f'host match: {host_id}')
+                return trie_value.ranges[i].country
 
         # iteration completed with no l2 match
         return 0
 
-    cdef l2_range* _make_l2(self, (long, long, short) l2_entry):
+    cdef trie_range* _make_l2(self, u_int32_t trie_key, (u_int32_t, u_int32_t, u_int16_t) l2_entry):
         '''allocates memory for a single L2 content struct, assigns members from l2_entry, then returns pointer.'''
 
-        cdef l2_range *L2_CONTENT
+        cdef trie_range *TRIE_RANGE
 
-        L2_CONTENT = <l2_range*>malloc(sizeof(l2_range))
+        TRIE_RANGE = <trie_range*>malloc(sizeof(trie_range))
 
-        L2_CONTENT.network_id   = l2_entry[0]
-        L2_CONTENT.broadcast_id = l2_entry[1]
-        L2_CONTENT.country_code = l2_entry[2]
+#        print('creating: ', trie_key, l2_entry)
 
-        return L2_CONTENT
+        TRIE_RANGE.key     = trie_key
+        TRIE_RANGE.net_id  = l2_entry[0]
+        TRIE_RANGE.bcast   = l2_entry[1]
+        TRIE_RANGE.country = l2_entry[2]
 
-    cpdef void generate_structure(self, tuple py_signatures):
+        return TRIE_RANGE
+
+    cpdef void generate_structure(self, tuple py_trie):
 
         # allocating memory for L1 container. this will be accessed from l1_search method.
         # the reference stored at index will contain l2 data.
-        MAX_KEYS = 2**round(_log(x, 2))
+        MAX_KEYS = 2**round(_log(len(py_trie), 2))
 
         self.INDEX_MASK = MAX_KEYS - 1
-        self.TRIE_MAP = <trie_map*>malloc(sizeof(trie_map) * MAX_KEYS)
+        self.TRIE_MAP = <trie_map*>calloc(MAX_KEYS, sizeof(trie_map))
 
-        for i in range(MAX_KEYS):
+#        printf('[')
+#        for i in range(MAX_KEYS):
+#            printf('%u,', self.TRIE_MAP[i].len)
+#        printf(']\n')
+
+
+#        print([x.len for x in self.TRIE_MAP[:MAX_KEYS]])
+        for i in range(len(py_trie)):
 
             # accessed via pointer stored in L1 container
-            VALUE_LEN = len(py_signatures[i][1])
-
-            # allocating memory for L2 container
-            TRIE_VALUE = <l2_range*>malloc(sizeof(l2_range) * VALUE_LEN)
-
-            # make function for l2 content struct for each range in py_l2
-            for xi in range(L2_SIZE):
-                TRIE_VALUE[xi] = self._make_l2(py_signatures[i][1][xi])[0]
+            VALUE_LEN = len(py_trie[i][1])
 
             # assigning l2 container reference to calculated hash index
-            TRIE_KEY = <long>py_signatures[i][0]
-            TRIE_KEY_HASH = container_id & self.INDEX_MASK
+            TRIE_KEY = <long>py_trie[i][0]
+            TRIE_KEY_HASH = TRIE_KEY % self.INDEX_MASK
 
-            self.TRIE_MAP[TRIE_KEY_HASH] = [
-                VALUE_LEN, TRIE_VALUE
-            ]
+#            print(TRIE_KEY_HASH, f'{(TRIE_KEY, TRIE_VALUE[0])}')
+
+            # allocating memory for trie_ranges
+            TRIE_VALUE_RANGES = <trie_range*>malloc(sizeof(trie_range*) * VALUE_LEN)
+
+            # make function for trie_range struct for each range in py_l2
+            for xi in range(VALUE_LEN):
+                TRIE_VALUE_RANGES[xi] = self._make_l2(TRIE_KEY, py_trie[i][1][xi])[0]
+
+            self.TRIE_MAP[TRIE_KEY_HASH].len = VALUE_LEN
+            self.TRIE_MAP[TRIE_KEY_HASH].ranges = TRIE_VALUE_RANGES
+
+#        print([x.len for x in self.TRIE_MAP[:MAX_KEYS]])
 
 # ================================================ #
 # TYPED PYTHON STRUCTURES - keeping as alternative
