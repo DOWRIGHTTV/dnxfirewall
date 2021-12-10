@@ -234,7 +234,7 @@ cdef class HashTrie:
         # iteration completed with no l2 match
         return 0
 
-    cdef l2_range* make_l2(self, (long, long, short) l2_entry):
+    cdef l2_range* _make_l2(self, (long, long, short) l2_entry):
         '''allocates memory for a single L2 content struct, assigns members from l2_entry, then returns pointer.'''
 
         cdef l2_range *L2_CONTENT
@@ -266,7 +266,7 @@ cdef class HashTrie:
 
             # make function for l2 content struct for each range in py_l2
             for xi in range(L2_SIZE):
-                TRIE_VALUE[xi] = self.make_l2(py_signatures[i][1][xi])[0]
+                TRIE_VALUE[xi] = self._make_l2(py_signatures[i][1][xi])[0]
 
             # assigning l2 container reference to calculated hash index
             TRIE_KEY = <long>py_signatures[i][0]
