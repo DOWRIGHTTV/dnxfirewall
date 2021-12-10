@@ -228,7 +228,7 @@ cdef class HashTrie:
 
         for i in range(trie_value.len):
 
-            if trie_value.ranges[i].network_id <= container_ids[1] <= trie_value.ranges[i].broadcast_id:
+            if trie_value.ranges[i].network_id <= host_id <= trie_value.ranges[i].broadcast_id:
                 return trie_value.ranges[i].country_code
 
         # iteration completed with no l2 match
