@@ -3,15 +3,17 @@
 import __init__ # pylint: disable=import-error
 
 import os
+import sys
 import time
+import argparse
 
 from ipaddress import IPv4Address
 
 import pyximport; pyximport.install()
 
 from dnx_gentools import signature_operations
-from dnx_iptools.dnx_trie_search import HashTrie, RecurveTrie, RangeTrie, generate_recursive_binary_search, generate_linear_binary_search  # pylint: disable=import-error, no-name-in-module
-
+from dnx_iptools.dnx_trie_search import HashTrie, RecurveTrie, RangeTrie # pylint: disable=import-error, no-name-in-module
+from dnx_iptools.dnx_trie_search import generate_recursive_binary_search, generate_linear_binary_search # pylint: disable=import-error, no-name-in-module
 from dnx_sysmods.logging.log_main import LogHandler as Log
 
 Log.run(name='_test')
@@ -79,17 +81,7 @@ def recurve_trie_rep():
 
         results.append((total_time, f'rep={result}', f'MSB={o}', f'LSB={t}'))
 
-    print(line)
-    print('RECURV TRIE RESULTS')
-    print(line)
-    for i, res in enumerate(results):
-        print(hosts_to_test[i], f'> time={res[0]}, {res[1]}')
-
-    no_cache_average = sum([x[0] for x in results[:6]])/(len(results)/2)
-    cached_average = sum([x[0] for x in results[6:12]])/(len(results)/2)
-
-    print(f'\nno cache avg: {no_cache_average} ns')
-    print(f'cached avg: {cached_average} ns')
+    _process_results(results, 'RECURVE TRIE RESULTS - REP')
 
 def old_trie_rep():
     results = []
@@ -110,17 +102,7 @@ def old_trie_rep():
 
         results.append((total_time, f'rep={result}', f'MSB={o}', f'LSB={t}'))
 
-    print(line)
-    print('OLD TRIE RESULTS')
-    print(line)
-    for i, res in enumerate(results):
-        print(hosts_to_test[i], f'> time={res[0]} ns, {res[1]}')
-
-    no_cache_average = sum([x[0] for x in results[:6]])/(len(results)/2)
-    cached_average = sum([x[0] for x in results[6:12]])/(len(results)/2)
-
-    print(f'\nno cache avg: {no_cache_average} ns')
-    print(f'cached avg: {cached_average} ns')
+    _process_results(results, 'OLD TRIE RESULTS - REP')
 
 def range_trie_geo():
     results = []
@@ -141,17 +123,7 @@ def range_trie_geo():
 
         results.append((total_time, f'geo={result}', f'MSB={o}', f'LSB={t}'))
 
-    print(line)
-    print('RANGE TRIE RESULTS')
-    print(line)
-    for i, res in enumerate(results):
-        print(hosts_to_test[i], f'> time={res[0]}, {res[1]}')
-
-    no_cache_average = sum([x[0] for x in results[:6]])/(len(results)/2)
-    cached_average = sum([x[0] for x in results[6:12]])/(len(results)/2)
-
-    print(f'\nno cache avg: {no_cache_average} ns')
-    print(f'cached avg: {cached_average} ns')
+    _process_results(results, 'RANGE TRIE RESULTS - GEO')
 
 def old_trie_geo():
     results = []
@@ -172,17 +144,7 @@ def old_trie_geo():
 
         results.append((total_time, f'geo={result}', f'MSB={o}', f'LSB={t}'))
 
-    print(line)
-    print('OLD TRIE GEO RESULTS')
-    print(line)
-    for i, res in enumerate(results):
-        print(hosts_to_test[i], f'> time={res[0]} ns, {res[1]}')
-
-    no_cache_average = sum([x[0] for x in results[:6]])/(len(results)/2)
-    cached_average = sum([x[0] for x in results[6:12]])/(len(results)/2)
-
-    print(f'\nno cache avg: {no_cache_average} ns')
-    print(f'cached avg: {cached_average} ns')
+    _process_results(results, 'OLD TRIE RESULTS - GEO')
 
 def hash_trie_geo():
     results = []
@@ -203,12 +165,9 @@ def hash_trie_geo():
 
         results.append((total_time, f'geo={result}', f'MSB={o}', f'LSB={t}'))
 
-    print(line)
-    print('HASH TRIE RESULTS')
-    print(line)
-    for i, res in enumerate(results):
-        print(hosts_to_test[i], f'> time={res[0]}, {res[1]}')
+    _process_results(results, 'HASH TRIE RESULTS - GEO')
 
+def _process_results(results, descriptor):
     no_cache = sorted(results[:6])
     cache = sorted(results[6:12])
     normalize_no_cache = no_cache[:-1]
@@ -217,19 +176,45 @@ def hash_trie_geo():
     no_cache_average = sum([x[0] for x in normalize_no_cache])/(len(results)-1/2)
     cached_average = sum([x[0] for x in normalize_cache])/(len(results)-1/2)
 
+    print(line)
+    print(descriptor)
+    print(line)
+
+    for i, res in enumerate(results):
+        print(hosts_to_test[i], f'> time={res[0]}, {res[1]}')
+
     print(f'\nno cache avg: {no_cache_average} ns, excluded: {no_cache[-1]}')
     print(f'cached avg: {cached_average} ns, excluded: {cache[-1]}')
 
-for i in range(2):
+if (__name__ == '__main__'):
+    parser = argparse.ArgumentParser(description='DNX TRIE unit test utility')
 
-    print(line)
-    print(f'ITERATION {i}')
-    print(line)
-    hash_trie_geo()
-#    range_trie_geo()
-#    old_trie_geo()
+    parser.add_argument('--rep', help='run through rep signatures', action='store_true')
+    parser.add_argument('-h', help='trie map(hash trie) test', action='store_true')
+    parser.add_argument('-r', help='range of recurve trie test', action='store_true')
+    parser.add_argument('-o', help='old range or recurve trie test', action='store_true')
 
-# old_trie_rep()
-# recurve_trie_rep()
+    args = parser.parse_args(sys.argv[1:])
 
-os._exit(1)
+    for i in range(2):
+
+        print(line)
+        print(f'ITERATION {i}')
+        print(line)
+
+        if (args.h):
+            hash_trie_geo()
+
+        if (args.r):
+            range_trie_geo()
+
+            if (args.rep):
+                recurve_trie_rep()
+
+        if (args.o):
+            old_trie_geo()
+
+            if (args.rep):
+                old_trie_rep()
+
+    os._exit(1)
