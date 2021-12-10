@@ -194,6 +194,9 @@ if (__name__ == '__main__'):
 
     args = parser.parse_args(sys.argv[1:])
 
+    if args.h:
+        print('oh')
+
     import pyximport; pyximport.install()
 
     for i in range(2):
