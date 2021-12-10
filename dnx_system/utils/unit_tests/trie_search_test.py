@@ -9,8 +9,6 @@ import argparse
 
 from ipaddress import IPv4Address
 
-import pyximport; pyximport.install()
-
 from dnx_gentools import signature_operations
 from dnx_iptools.dnx_trie_search import HashTrie, RecurveTrie, RangeTrie # pylint: disable=import-error, no-name-in-module
 from dnx_iptools.dnx_trie_search import generate_recursive_binary_search, generate_linear_binary_search # pylint: disable=import-error, no-name-in-module
@@ -195,6 +193,8 @@ if (__name__ == '__main__'):
     parser.add_argument('-o', help='old range or recurve trie test', action='store_true')
 
     args = parser.parse_args(sys.argv[1:])
+
+    import pyximport; pyximport.install()
 
     for i in range(2):
 
