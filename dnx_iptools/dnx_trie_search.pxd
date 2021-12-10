@@ -19,6 +19,9 @@ cdef struct l2_range:
     long broadcast_id
     short country_code
 
+cdef struct trie_map:
+    short len
+    l2_range *ranges
 
 cdef class RecurveTrie:
 
@@ -47,4 +50,17 @@ cdef class RangeTrie:
 
     cdef l2_range* _make_l2(self, (long, long, short) l2_entry)
     cdef long _search(self, long container_id, long host_id) nogil
+    cpdef void generate_structure(self, tuple py_trie)
+
+cdef class HashTrie:
+
+    cdef:
+
+        trie_map *TRIE_MAP
+        l2_range *TRIE_VALUE
+
+        size_t VALUE_LEN
+
+    cdef l2_range* _make_l2(self, (long, long, short) l2_entry)
+    cdef long search(self, long container_id, long host_id) nogil
     cpdef void generate_structure(self, tuple py_trie)

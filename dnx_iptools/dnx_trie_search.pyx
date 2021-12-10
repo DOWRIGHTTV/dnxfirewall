@@ -1,6 +1,7 @@
 from libc.stdlib cimport malloc, calloc, free
 
 import threading as _threading
+from math import log as _log
 
 from functools import lru_cache as _lru_cache
 
@@ -210,6 +211,70 @@ cdef class RangeTrie:
         L2_CONTENT.country_code = l2_entry[2]
 
         return L2_CONTENT
+
+
+cdef class HashTrie:
+
+    cdef long search(self, long trie_key, long host_id) nogil:
+
+        cdef:
+            long trie_key_hash = trie_key & self.INDEX_MASK
+
+            trie_map trie_value = self.TRIE_MAP[trie_key_hash]
+
+        # no l1 match
+        if (trie_value == NULL):
+            return 0
+
+        for i in range(trie_value.len):
+
+            if trie_value.ranges[i].network_id <= container_ids[1] <= trie_value.ranges[i].broadcast_id:
+                return trie_value.ranges[i].country_code
+
+        # iteration completed with no l2 match
+        return 0
+
+    cdef l2_range* make_l2(self, (long, long, short) l2_entry):
+        '''allocates memory for a single L2 content struct, assigns members from l2_entry, then returns pointer.'''
+
+        cdef l2_range *L2_CONTENT
+
+        L2_CONTENT = <l2_range*>malloc(sizeof(l2_range))
+
+        L2_CONTENT.network_id   = l2_entry[0]
+        L2_CONTENT.broadcast_id = l2_entry[1]
+        L2_CONTENT.country_code = l2_entry[2]
+
+        return L2_CONTENT
+
+    cpdef void generate_structure(self, tuple py_signatures):
+
+        # allocating memory for L1 container. this will be accessed from l1_search method.
+        # the reference stored at index will contain l2 data.
+        MAX_KEYS = 2**round(_log(x, 2))
+
+        self.INDEX_MASK = MAX_KEYS - 1
+        self.TRIE_MAP = <trie_map*>malloc(sizeof(trie_map) * MAX_KEYS)
+
+        for i in range(MAX_KEYS):
+
+            # accessed via pointer stored in L1 container
+            VALUE_LEN = len(py_signatures[i][1])
+
+            # allocating memory for L2 container
+            TRIE_VALUE = <l2_range*>malloc(sizeof(l2_range) * VALUE_LEN)
+
+            # make function for l2 content struct for each range in py_l2
+            for xi in range(L2_SIZE):
+                TRIE_VALUE[xi] = self.make_l2(py_signatures[i][1][xi])[0]
+
+            # assigning l2 container reference to calculated hash index
+            TRIE_KEY = <long>py_signatures[i][0]
+            TRIE_KEY_HASH = container_id & self.INDEX_MASK
+
+            self.TRIE_MAP[TRIE_KEY_HASH] = [
+                VALUE_LEN, TRIE_VALUE
+            ]
 
 # ================================================ #
 # TYPED PYTHON STRUCTURES - keeping as alternative
