@@ -188,7 +188,7 @@ if (__name__ == '__main__'):
     parser = argparse.ArgumentParser(description='DNX TRIE unit test utility')
 
     parser.add_argument('--rep', help='run through rep signatures', action='store_true')
-    parser.add_argument('-h', help='trie map(hash trie) test', action='store_true')
+    parser.add_argument('-ha', help='trie map(hash trie) test', action='store_true')
     parser.add_argument('-r', help='range of recurve trie test', action='store_true')
     parser.add_argument('-o', help='old range or recurve trie test', action='store_true')
 
@@ -202,7 +202,7 @@ if (__name__ == '__main__'):
         print(f'ITERATION {i}')
         print(line)
 
-        if (args.h):
+        if (args.ha):
             hash_trie_geo()
 
         if (args.r):
