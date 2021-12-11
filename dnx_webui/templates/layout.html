@@ -51,8 +51,6 @@
     {% include 'includes/_fab.html' %}
     {% endif %}
 
-    {% block body %}{% endblock body %}
-
     {% if standard_error %}
     {% include 'includes/_error_notify.html' %}
     {% endif %}
@@ -71,6 +69,10 @@
 
     <!-- jquery include. needed for ajax, and may be used by materialize vs builtin fallbacks -->
     <script src="{{url_for('static',filename='assets/js/jquery.min.js')}}"></script>
+
+    <!-- ^^ BEFORE PAGE TEMPLATE ^^ -->
+    {% block body %}{% endblock body %}
+    <!-- vv AFTER PAGE TEMPLATE vv -->
 
     {% if dnx_table %}
     <!-- dnx custom table with filtering/striping -->

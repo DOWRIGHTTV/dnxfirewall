@@ -1,6 +1,6 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="tabs-bar" class="tabsbar">
+<section id="tabs-bar" class="tabsbar" xmlns="http://www.w3.org/1999/html">
     <div class="container">
         <div class="row">
             <div class="col s12 m12 l12 xl12">
@@ -227,12 +227,6 @@
             </div>
             <!-- source network fields-->
             <div class="row">
-                <div class="input-field col s2 {{input_color}}">
-                    <button class="src_cty_toggle"></button>
-                </div>
-                <input type=”text” name=”src_country” class="src_cty" id=”favorite_team” list=”geo_list”>
-            </div>
-            <div class="row">
                 <div>
                     <h6 class="{{title_color}}" style="float: left;">Src:</h6>
                 </div>
@@ -244,7 +238,15 @@
                     </select>
                     <label for="src_zone">Zone</label>
                 </div>
-                <div class="input-field col s4 {{input_color}}">
+                <div class="input-field col s1 {{input_color}}">
+                    <button type="button" class="btn waves-effect waves-light"class="src_geo_toggle">
+                        <i class="material-icons">language</i>
+                    </button>
+                </div>
+                <div class="input-field col s4 {{input_color}} src_geo">
+                    <input type=”text” name=”src_geo” class="src_geo" list=”geo_list”>
+                </div>
+                <div class="input-field col s4 {{input_color}} src_net">
                     <input type="text" name="src_ip" {{ip_net_validate}} placeholder="127.0.0.1/32">
                     <label for="src_ip">Network/Mask</label>
                 </div>
@@ -266,7 +268,15 @@
                     </select>
                     <label for="dst_zone">Zone</label>
                 </div>
-                <div class="input-field col s4 offset-s1 {{input_color}}">
+                <div class="input-field col s1 {{input_color}} dst_geo">
+                    <button type="button" class="btn waves-effect waves-light"class="src_dst_toggle">
+                        <i class="material-icons">language</i>
+                    </button>
+                </div>
+                <div class="input-field col s4 {{input_color}} dst_geo">
+                    <input type=”text” name=”dst_geo” class="dst_geo" list=”geo_list”>
+                </div>
+                <div class="input-field col s4 offset {{input_color}} dst_net">
                     <input type="text" name="dst_ip" {{ip_net_validate}} placeholder="127.0.0.1/32" required>
                     <label for="dst_ip">Network/Mask</label>
                 </div>
@@ -425,19 +435,20 @@
     </div>
 </div>
 <style>
-    .src_net,
-    .src_cty {
-        display: none;
-    },
-    .dst_net,
-    .dst_cty {
+    .src_geo,
+    .dst_geo {
         display: none;
     }
 </style>
 <script>
     $(function() {
         $('.src_geo_toggle, .dst_geo_toggle').click(function() {
-            $('.src_cty, .src_net, .dst_cty, .dst_net').next().toggle();
+            $('.src_geo, .src_net,).toggle();
+        });
+    });
+    $(function() {
+        $('.dst_geo_toggle').click(function() {
+            $('.dst_geo, .dst_net').toggle();
         });
     });
 </script>
