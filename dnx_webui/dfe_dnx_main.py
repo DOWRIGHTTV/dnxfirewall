@@ -231,6 +231,7 @@ def advanced_firewall(dnx_session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': tab, 'dnx_table': True, 'firewall': True,
+        'geolocation': True,
         'selected': 'MAIN',
         'sections': ['BEFORE', 'MAIN', 'AFTER'],
         'uri_path': ['advanced', 'firewall']

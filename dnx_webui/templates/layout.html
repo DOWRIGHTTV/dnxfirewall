@@ -65,6 +65,10 @@
     {% include 'includes/_footer.html' %}
     {% endif %}
 
+    {% if geolocation %}
+    {% include 'includes/_geolocation.html' %}
+    {% endif %}
+
     <!-- jquery include. needed for ajax, and may be used by materialize vs builtin fallbacks -->
     <script src="{{url_for('static',filename='assets/js/jquery.min.js')}}"></script>
 
