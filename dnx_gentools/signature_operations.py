@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-import __init__
+if (__name__ == '__main__'):
+    import __init__
 
 from socket import inet_aton
 from struct import Struct
