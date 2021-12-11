@@ -227,6 +227,9 @@
             </div>
             <!-- source network fields-->
             <div class="row">
+                <div class="input-field col s2 {{input_color}}">
+                    <button class="src_cty_toggle"></button>
+                </div>
                 <input type=”text” name=”src_country” class="src_cty" id=”favorite_team” list=”geo_list”>
             </div>
             <div class="row">
@@ -240,9 +243,6 @@
                         {% endfor %}
                     </select>
                     <label for="src_zone">Zone</label>
-                </div>
-                <div class="input-field col s1 {{input_color}}">
-                    <button class="src_cty_toggle"></button>
                 </div>
                 <div class="input-field col s4 {{input_color}}">
                     <input type="text" name="src_ip" {{ip_net_validate}} placeholder="127.0.0.1/32">
