@@ -227,7 +227,7 @@
             </div>
             <!-- source network fields-->
             <div class="row">
-                <input type=”text” name=”src_country” id=”favorite_team” list=”geo_list”>
+                <input type=”text” name=”src_country” class="src_cty" id=”favorite_team” list=”geo_list”>
             </div>
             <div class="row">
                 <div>
@@ -241,7 +241,10 @@
                     </select>
                     <label for="src_zone">Zone</label>
                 </div>
-                <div class="input-field col s4 offset-s1 {{input_color}}">
+                <div class="input-field col s1 {{input_color}}">
+                    <button class="src_cty_toggle"></button>
+                </div>
+                <div class="input-field col s4 {{input_color}}">
                     <input type="text" name="src_ip" {{ip_net_validate}} placeholder="127.0.0.1/32">
                     <label for="src_ip">Network/Mask</label>
                 </div>
@@ -421,4 +424,21 @@
         </form>
     </div>
 </div>
+<style>
+    .src_net,
+    .src_cty {
+        display: none;
+    },
+    .dst_net,
+    .dst_cty {
+        display: none;
+    }
+</style>
+<script>
+    $(function() {
+        $('.src_geo_toggle, .dst_geo_toggle').click(function() {
+            $('.src_cty, .src_net, .dst_cty, .dst_net').next().toggle();
+        });
+    });
+</script>
 {% endblock %}
