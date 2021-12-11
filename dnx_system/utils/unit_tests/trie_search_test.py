@@ -14,8 +14,6 @@ from dnx_iptools.dnx_trie_search import HashTrie, RecurveTrie, RangeTrie # pylin
 from dnx_iptools.dnx_trie_search import generate_recursive_binary_search, generate_linear_binary_search # pylint: disable=import-error, no-name-in-module
 from dnx_sysmods.logging.log_main import LogHandler as Log
 
-Log.run(name='_test')
-
 line = '='*32
 
 f_time = time.perf_counter_ns
@@ -23,42 +21,18 @@ f_time = time.perf_counter_ns
 MSB = 0b11111111111110000000000000000000
 LSB = 0b00000000000001111111111111111111
 
-rep_sigs = signature_operations.generate_reputation(Log)
-geo_sigs = signature_operations.generate_geolocation(Log)
-
-recurve_trie = RecurveTrie()
-recurve_trie.generate_structure(rep_sigs)
-
-range_trie = RangeTrie()
-range_trie.generate_structure(geo_sigs)
-
-hash_trie = HashTrie()
-hash_trie.generate_structure(geo_sigs)
-
-rep_bounds = (0, len(rep_sigs)-1)
-geo_bounds = (0, len(geo_sigs)-1)
-
-_recursive_binary_search = generate_recursive_binary_search(rep_sigs, rep_bounds)
-_linear_binary_search = generate_linear_binary_search(geo_sigs, geo_bounds)
-
-# del sigs
-
-hosts_to_test = [
+host_list = [
     '14.204.211.122', # malware
     '69.69.69.69', # not found
+    '193.164.216.238', # compromised host
+    '1.1.1.1', # DoH
+    '104.244.75.143', # tor entry
     '192.168.69.69', # rfc1918 (private)
-    '193.164.216.238', # compromised host
-    '1.1.1.1', # DoH
-    '104.244.75.143', # tor entry
-    '71.19.148.20', # tor exit
-    '14.204.211.122', # malware
-    '69.69.69.69', # not found
-    '193.164.216.238', # compromised host
-    '1.1.1.1', # DoH
-    '104.244.75.143', # tor entry
-    '71.19.148.20', # tor exit
     '34.107.220.220', # USA
 ]
+
+# this is to get every ip to be searched twice which guarantee LRU cache hits if active in specific trie.
+hosts_to_test = [*host_list, *host_list]
 
 def recurve_trie_rep():
     results = []
@@ -166,8 +140,8 @@ def hash_trie_geo():
     _process_results(results, 'HASH TRIE RESULTS - GEO')
 
 def _process_results(results, descriptor):
-    no_cache = sorted(results[:6])
-    cache = sorted(results[6:12])
+    no_cache = sorted(results[:len(host_list)])
+    cache = sorted(results[len(host_list):len(hosts_to_test)])
     normalize_no_cache = no_cache[:-1]
     normalize_cache = cache[:-1]
 
@@ -194,10 +168,27 @@ if (__name__ == '__main__'):
 
     args = parser.parse_args(sys.argv[1:])
 
-    if args.h:
-        print('oh')
-
     import pyximport; pyximport.install()
+
+    Log.run(name='_test')
+
+    rep_sigs = signature_operations.generate_reputation(Log)
+    geo_sigs = signature_operations.generate_geolocation(Log)
+
+    recurve_trie = RecurveTrie()
+    recurve_trie.generate_structure(rep_sigs)
+
+    range_trie = RangeTrie()
+    range_trie.generate_structure(geo_sigs)
+
+    hash_trie = HashTrie()
+    hash_trie.generate_structure(geo_sigs)
+
+    rep_bounds = (0, len(rep_sigs)-1)
+    geo_bounds = (0, len(geo_sigs)-1)
+
+    _recursive_binary_search = generate_recursive_binary_search(rep_sigs, rep_bounds)
+    _linear_binary_search = generate_linear_binary_search(geo_sigs, geo_bounds)
 
     for i in range(2):
 
