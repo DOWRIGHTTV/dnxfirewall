@@ -239,7 +239,7 @@
                     <label for="src_zone">Zone</label>
                 </div>
                 <div class="input-field col s1 {{input_color}}">
-                    <button type="button" class="btn waves-effect waves-light"class="src_geo_toggle">
+                    <button type="button" class="btn waves-effect waves-light src_geo_toggle">
                         <i class="material-icons">language</i>
                     </button>
                 </div>
@@ -269,7 +269,7 @@
                     <label for="dst_zone">Zone</label>
                 </div>
                 <div class="input-field col s1 {{input_color}} dst_geo">
-                    <button type="button" class="btn waves-effect waves-light"class="src_dst_toggle">
+                    <button type="button" class="btn waves-effect waves-light src_dst_toggle">
                         <i class="material-icons">language</i>
                     </button>
                 </div>
@@ -442,7 +442,7 @@
 </style>
 <script>
     $(function() {
-        $('.src_geo_toggle, .dst_geo_toggle').click(function() {
+        $('.src_geo_toggle').click(function() {
             $('.src_geo, .src_net,).toggle();
         });
     });
