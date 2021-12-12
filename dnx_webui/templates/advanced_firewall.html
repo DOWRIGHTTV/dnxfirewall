@@ -239,12 +239,14 @@
                     <label for="src_zone">Zone</label>
                 </div>
                 <div class="input-field col s1 {{input_color}}">
-                    <button type="button" class="btn waves-effect waves-light src_geo_toggle">
+                    <button type="button" class="btn waves-effect waves-light src_geo_toggle tooltipped"
+                            data-position="bottom" data-tooltip="toggle geo-filtering">
                         <i class="material-icons">language</i>
                     </button>
                 </div>
                 <div class="input-field col s4 {{input_color}} src_geo">
                     <input type=”text” name=”src_geo” class="src_geo" list=”geo_list”>
+                    <label for="src_geo">Country</label>
                 </div>
                 <div class="input-field col s4 {{input_color}} src_net">
                     <input type="text" name="src_ip" {{ip_net_validate}} placeholder="127.0.0.1/32">
@@ -268,13 +270,15 @@
                     </select>
                     <label for="dst_zone">Zone</label>
                 </div>
-                <div class="input-field col s1 {{input_color}} dst_geo">
-                    <button type="button" class="btn waves-effect waves-light dst_geo_toggle">
+                <div class="input-field col s1 {{input_color}}">
+                    <button type="button" class="btn waves-effect waves-light dst_geo_toggle tooltipped"
+                            data-position="bottom" data-tooltip="toggle dst geo-filtering">
                         <i class="material-icons">language</i>
                     </button>
                 </div>
                 <div class="input-field col s4 {{input_color}} dst_geo">
                     <input type=”text” name=”dst_geo” class="dst_geo" list=”geo_list”>
+                    <label for="dst_geo">Country</label>
                 </div>
                 <div class="input-field col s4 offset {{input_color}} dst_net">
                     <input type="text" name="dst_ip" {{ip_net_validate}} placeholder="127.0.0.1/32" required>
