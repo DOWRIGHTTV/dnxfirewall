@@ -231,7 +231,7 @@
                     <h6 class="{{title_color}}" style="float: left;">Src:</h6>
                 </div>
                 <div class="input-field col s2 offset-s1 {{input_color}}">
-                    <select name="src_zone">
+                    <select name="src_zone" id="src_zone">
                         {% for zone in merge_items('any', firewall_settings['zone_manager']['builtins'].keys()) %}
                         <option value="{{zone}}">{{zone.upper()}}</option>
                         {% endfor %}
@@ -244,16 +244,16 @@
                         <i class="material-icons">language</i>
                     </button>
                 </div>
-                <div class="input-field col s4 {{input_color}} src_geo">
-                    <input type=”text” name=”src_geo” class="src_geo" list=”geo_list”>
+                <div class="input-field col s4 src_geo">
+                    <input type="text" id="src_geo" class="geo-autocomplete">
                     <label for="src_geo">Country</label>
                 </div>
                 <div class="input-field col s4 {{input_color}} src_net">
-                    <input type="text" name="src_ip" {{ip_net_validate}} placeholder="127.0.0.1/32">
-                    <label for="src_ip">Network/Mask</label>
+                    <input type="text" name="src_ip" id="src_net" {{ip_net_validate}} placeholder="127.0.0.1/32">
+                    <label for="src_net">Network/Mask</label>
                 </div>
                 <div class="input-field col s3 {{input_color}}">
-                    <input type="text" name="src_port" placeholder="tcp/80">
+                    <input type="text" name="src_port" id="src_port" placeholder="tcp/80">
                     <label for="src_port">Port/s</label>
                 </div>
             </div>
@@ -263,7 +263,7 @@
                     <h6 class="{{title_color}}" style="float: left;">Dst:</h6>
                 </div>
                 <div class="input-field col s2 offset-s1 {{input_color}}">
-                    <select name="dst_zone">
+                    <select name="dst_zone" id="dst_zone">
                         {% for zone in merge_items('any', firewall_settings['zone_manager']['builtins'].keys()) %}
                         <option value="{{zone}}">{{zone.upper()}}</option>
                         {% endfor %}
@@ -276,16 +276,16 @@
                         <i class="material-icons">language</i>
                     </button>
                 </div>
-                <div class="input-field col s4 {{input_color}} dst_geo">
-                    <input type=”text” name=”dst_geo” class="dst_geo" list=”geo_list”>
+                <div class="input-field col s4 src_geo">
+                    <input type="text" name="dst_geo" id="dst_geo" class="geo-autocomplete">
                     <label for="dst_geo">Country</label>
                 </div>
                 <div class="input-field col s4 offset {{input_color}} dst_net">
-                    <input type="text" name="dst_ip" {{ip_net_validate}} placeholder="127.0.0.1/32" required>
-                    <label for="dst_ip">Network/Mask</label>
+                    <input type="text" name="dst_ip" id="dst_net" {{ip_net_validate}} placeholder="127.0.0.1/32" required>
+                    <label for="dst_net">Network/Mask</label>
                 </div>
                 <div class="input-field col s3 {{input_color}}">
-                    <input type="text" name="dst_port" placeholder="tcp/80">
+                    <input type="text" name="dst_port" id="dst_port" placeholder="tcp/80">
                     <label for="dst_port">Port/s</label>
                 </div>
             </div>
@@ -305,11 +305,11 @@
                     <h6 class="{{title_color}}" style="float: left;">Sec:</h6>
                 </div>
                 <div class="input-field col s2 offset-s1 {{input_color}}">
-                    <input type="number" name="sec1_prof" class="validate" value="0" min="0" max="1">
+                    <input type="number" name="sec1_prof" id="sec1_prof" class="validate" value="0" min="0" max="1">
                     <label for="sec1_prof">IPProxy</label>
                 </div>
                 <div class="input-field col s2 {{input_color}}">
-                    <input type="number" name="sec2_prof" class="validate" value="0" min="0" max="1">
+                    <input type="number" name="sec2_prof" id="sec2_prof" class="validate" value="0" min="0" max="1">
                     <label for="sec2_prof">IPS/IDS</label>
                 </div>
             </div>

@@ -63,10 +63,6 @@
     {% include 'includes/_footer.html' %}
     {% endif %}
 
-    {% if geolocation %}
-    {% include 'includes/_geolocation.html' %}
-    {% endif %}
-
     <!-- jquery include. needed for ajax, and may be used by materialize vs builtin fallbacks -->
     <script src="{{url_for('static',filename='assets/js/jquery.min.js')}}"></script>
 
@@ -75,29 +71,46 @@
     <!-- vv AFTER PAGE TEMPLATE vv -->
 
     {% if dnx_table %}
-    <!-- dnx custom table with filtering/striping -->
-    <script src="{{url_for('static',filename='assets/js/dnx_table.js')}}"></script>
+        <!-- dnx custom table with filtering/striping -->
+        <script src="{{url_for('static',filename='assets/js/dnx_table.js')}}"></script>
 
-    <!-- dnx custom ajax client by seeker1437 (WyteChocolate) NOTE: this is being done as an html include to take
-        advantage of jinja templating  -->
-    {% include 'includes/_dnx_ajax_client.js' %}
+        <!-- dnx custom ajax client by seeker1437 (WyteChocolate) NOTE: this is being done as an html include to take
+            advantage of jinja templating  -->
+        {% include 'includes/_dnx_ajax_client.js' %}
 
-    <script>
-    {% if ajax %}
-        document.addEventListener('DOMContentLoaded', () => {
-            updateData('default');
-        })
-    {% else %}
-        colorizeTable()
+        <script>
+        {% if ajax %}
+            document.addEventListener('DOMContentLoaded', () => {
+                updateData('default');
+            })
+        {% else %}
+
+            colorizeTable()
+
+        {% endif %}
+        </script>
+
     {% endif %}
-    </script>
+
+    <!-- auto complete input for geolocation (country list). page setting needs to be set to include this on page -->
+    {% if geolocation %}
+
+        document.addEventListener('DOMContentLoaded', () => {
+            var elems = document.querySelectorAll('.geo-autocomplete');
+
+            {% include 'includes/_geolocation.html' %}
+
+            var instances = M.Autocomplete.init(elems, {
+                data: geolocation_data
+            });
+        })
 
     {% endif %}
 
     <!-- materialize js-->
     <script src="{{url_for('static',filename='assets/js/materialize.min.js')}}"></script>
 
-    <!-- materialize overrides and basic custom functions -->
+    <!-- materialize overrides and basic custom functions used globally-->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // Initialized everything OR you can override with options below
