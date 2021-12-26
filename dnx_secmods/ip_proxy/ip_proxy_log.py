@@ -2,7 +2,7 @@
 
 from dnx_gentools.def_constants import LOG, DIR, CONN, str_join
 from dnx_gentools.def_namedtuples import IPP_LOG, GEO_LOG, INFECTED_LOG
-from dnx_sysmods.logging.log_main import LogHandler
+from dnx_routines.logging.log_main import LogHandler
 
 from dnx_iptools.interface_ops import get_arp_table
 
@@ -49,7 +49,7 @@ class Log(LogHandler):
 
                 log3 = GEO_LOG(inspection.category[0], pkt.direction.name, 'blocked')
 
-                return LOG.ALERT, {'ipp': log, 'infected': log2, 'geo': log3}
+                return LOG.ALERT, {'ipp_event': log, 'infected_event': log2, 'geo_record': log3}
 
             elif (cls.current_lvl >= LOG.WARNING):
                 log = IPP_LOG(
@@ -58,7 +58,7 @@ class Log(LogHandler):
 
                 log2 = GEO_LOG(inspection.category[0], pkt.direction.name, 'blocked')
 
-                return LOG.WARNING, {'ipp': log, 'geo': log2}
+                return LOG.WARNING, {'ipp_event': log, 'geo_record': log2}
 
         # informational logging for all accepted connections
         elif (cls.current_lvl >= LOG.INFO):
@@ -66,7 +66,7 @@ class Log(LogHandler):
 
             log2 = GEO_LOG(inspection.category[0], pkt.direction.name, 'allowed')
 
-            return LOG.INFO, {'ipp': log, 'geo': log2}
+            return LOG.INFO, {'ipp_event': log, 'geo_record': log2}
 
         # this contains all that is needed to get the country information input into the database.
-        return LOG.NONE, {'geo': GEO_LOG(inspection.category[0], pkt.direction.name, 'allowed')}
+        return LOG.NONE, {'geo_record': GEO_LOG(inspection.category[0], pkt.direction.name, 'allowed')}

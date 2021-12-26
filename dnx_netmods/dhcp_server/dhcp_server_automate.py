@@ -8,8 +8,8 @@ from ipaddress import IPv4Address, IPv4Interface
 
 from dnx_gentools.def_constants import *
 from dnx_iptools.interface_ops import get_netmask
-from dnx_sysmods.logging.log_main import LogHandler as Log
-from dnx_sysmods.configure.file_operations import load_configuration, cfg_read_poller, ConfigurationManager
+from dnx_routines.logging.log_main import LogHandler as Log
+from dnx_gentools.file_operations import load_configuration, cfg_read_poller, ConfigurationManager
 from dnx_gentools.standard_tools import looper, dnx_queue, Initialize
 
 _NULL_LEASE = (DHCP.AVAILABLE, None, None, None)

@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-import os, sys
 import time
 import hashlib
 import threading
@@ -8,8 +7,8 @@ import threading
 from functools import wraps
 from flask import request, redirect, url_for, render_template, session
 
-from dnx_sysmods.configure.file_operations import load_configuration
-from dnx_sysmods.logging.log_main import LogHandler as Log
+from dnx_gentools.file_operations import load_configuration
+from dnx_routines.logging.log_main import LogHandler as Log
 
 LOG_NAME = 'logins'
 

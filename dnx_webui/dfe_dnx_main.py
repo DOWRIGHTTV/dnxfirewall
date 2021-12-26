@@ -2,20 +2,20 @@
 
 # for running with flask dev server
 if (__name__ == '__main__'):
-    pass
+    import __init__
 
 import time
 
 from datetime import timedelta
 from flask import Flask, render_template, redirect, url_for, request, session, jsonify
 
-import dnx_sysmods.configure.web_validate as validate
+import dnx_routines.configure.web_validate as validate
 
 from dnx_gentools.def_constants import CFG, DATA, FIVE_SEC
-from dnx_sysmods.configure.file_operations import load_configuration, ConfigurationManager
-from dnx_sysmods.configure.exceptions import ValidationError
-from dnx_sysmods.database.ddb_connector_sqlite import DBConnector
-from dnx_sysmods.logging.log_main import LogHandler as Log
+from dnx_gentools.file_operations import load_configuration, ConfigurationManager
+from dnx_routines.configure.exceptions import ValidationError
+from dnx_routines.database.ddb_connector_sqlite import DBConnector
+from dnx_routines.logging.log_main import LogHandler as Log
 
 import dnx_webui.dfe_dnx_dashboard as dfe_dashboard
 import dnx_webui.dfe_settings_dns as dns_settings
@@ -322,7 +322,7 @@ def advanced_ips(dnx_session_data):
 def system_logs(dnx_session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu': '1', 'dnx_table': True, 'ajax': True,
+        'menu': '1', 'dnx_table': True, 'ajax': True, 'auto_colorize': True,
         'log_files': [
             'combined', 'logins', 'web_app', 'system', 'dns_proxy', 'ip_proxy', 'ips', 'dhcp_server', 'syslog'
         ],
@@ -349,7 +349,7 @@ def system_logs_get(dnx_session_data):
 def system_reports(dnx_session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu': '1', 'table': '1', 'dnx_table': True, 'ajax': False,
+        'menu': '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
         'uri_path': ['system', 'reports'],
         'table_types': ['dns_proxy', 'ip_proxy', 'intrusion_prevention', 'infected_clients']
     }
@@ -482,8 +482,8 @@ def dnx_blocked():
 
         return render_template('dnx_not_authorized.html', **page_settings)
 
-    with DBConnector() as ProxyDB:
-        domain_info = ProxyDB.query_blocked(domain=blocked_domain, src_ip=request.remote_addr)
+    with DBConnector() as firewall_db:
+        domain_info = firewall_db.execute('blocked_domain', domain=blocked_domain, src_ip=request.remote_addr)
 
     if (not domain_info):
         session.pop('user', None)
@@ -641,6 +641,7 @@ def handle_system_action(page_settings):
         # i prefer the word restart so converting to system command here
         action = 'reboot' if action == 'restart' else f'{action} now'
 
+        # TODO: make sure this is authenticated
         # forwarding request to system control service via local socket for execution
         system_action(delay=FIVE_SEC, module='webui', command=action)
 
@@ -731,18 +732,8 @@ def user_timeout():
     session.modified = True
 
 # jinja filters
-
-# TODO: this can be removed since it is a standard function in jinja right?
-@app.template_filter('truncate')
-def truncate(string, limit):
-    '''returns string[:limit]... if greater than limit, otherwise original string will be returned.'''
-
-    string = f'{string[:limit]}...' if len(string) > limit else string
-
-    return string
-
 def merge_items(a1, a2):
-    ''' accepts 2 arguments of item or list and merges them into one list.
+    '''accepts 2 arguments of item or list and merges them into one list.
 
         valid combinations. int can be replaced with any singular object.
             (int, list)

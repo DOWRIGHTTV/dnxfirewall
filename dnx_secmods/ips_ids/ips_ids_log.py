@@ -2,14 +2,14 @@
 
 from dnx_gentools.def_constants import *  # pylint: disable=unused-wildcard-import
 from dnx_gentools.def_namedtuples import IPS_LOG
-from dnx_sysmods.logging.log_main import LogHandler
+from dnx_routines.logging.log_main import LogHandler
 
 
 class Log(LogHandler):
 
     @classmethod
     # TODO: if we relocate standard log method into parent LogHandler, this would need to stay/override since
-    # it does not conform to proxy structure.
+    #  it does not conform to proxy structure.
     def log(cls, pkt, scan_info=None, *, engine):
         if (engine is IPS.DDOS):
             lvl, log = cls._generate_ddos_log(pkt, scan_info)
@@ -18,7 +18,7 @@ class Log(LogHandler):
             lvl, log = cls._generate_ps_log(pkt, scan_info)
 
         if (log):
-            cls.event_log(pkt.timestamp, log, method='ips')
+            cls.event_log(pkt.timestamp, log, method='ips_event')
             if (cls.syslog_enabled):
                 cls.slog_log(LOG.EVENT, lvl, cls.generate_syslog_message(log))
 
@@ -47,7 +47,7 @@ class Log(LogHandler):
                 and cls.current_lvl >= LOG.ERROR):
 
             log = IPS_LOG(
-                pkt.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, scan_info.block_status.name # pylint: disable=no-member
+                pkt.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, scan_info.block_status.name
             )
 
             cls.debug(f'[pscan/scan detected][{scan_info.block_status.name}] {pkt.tracked_ip}')
@@ -56,8 +56,9 @@ class Log(LogHandler):
 
         # will match if open ports are not contained in pre detection logging (port was hit before flagged)
         elif (scan_info.initial_block and scan_info.block_status is IPS.BLOCKED and cls.current_lvl >= LOG.WARNING):
+
             log = IPS_LOG(
-                pkt.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, 'blocked' # pylint: disable=no-member
+                pkt.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, 'blocked'
             )
 
             cls.debug(f'[pscan/scan detected][blocked] {pkt.tracked_ip}')

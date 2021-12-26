@@ -10,7 +10,7 @@ from dnx_gentools.def_constants import ONE_SEC, INTF, fast_sleep
 from dnx_iptools.def_structs import fcntl_pack, long_unpack
 from dnx_iptools.protocol_tools import int_to_ipaddr
 
-from dnx_sysmods.configure.file_operations import load_configuration
+from dnx_gentools.file_operations import load_configuration
 
 __all__ = (
     'get_intf_builtin', 'load_interfaces', 'wait_for_interface', 'wait_for_ip',

@@ -1,14 +1,16 @@
 #!/usr/bin/python3
 
+import csv
+
 from types import SimpleNamespace
 from ipaddress import IPv4Network
 from collections import defaultdict
 
-import dnx_sysmods.configure.web_validate as validate
+import dnx_routines.configure.web_validate as validate
 
-from dnx_gentools.def_constants import INVALID_FORM
-from dnx_sysmods.configure.file_operations import load_configuration, calculate_file_hash
-from dnx_sysmods.configure.exceptions import ValidationError
+from dnx_gentools.def_constants import HOME_DIR, INVALID_FORM
+from dnx_gentools.file_operations import load_configuration, calculate_file_hash
+from dnx_routines.configure.exceptions import ValidationError
 
 from dnx_secmods.cfirewall.fw_control import FirewallManage
 
@@ -49,9 +51,12 @@ def load_page(section='MAIN'):
 
     firewall_rules = get_and_format_rules(section)
 
+    firewall_objects = load_temporary_objects()
+
     return {
         'zone_map': zone_map,
         'zone_manager': zone_manager,
+        'firewall_objects': firewall_objects,
         'firewall_rules': firewall_rules,
         'pending_changes': is_pending_changes()
     }
@@ -123,7 +128,7 @@ def get_and_format_rules(section, version='pending'):
         reference_counts[rule[6]] += 1
 
         # error is for initial testing period to make it easier to detect if zone manager and
-        # firewall rules get unsynced.
+        # firewall rules get desynced.
         rule[1] = _zone_map.get(rule[1], 'ERROR')
         rule[6] = _zone_map.get(rule[6], 'ERROR')
 
@@ -165,3 +170,10 @@ def is_pending_changes():
         return False
 
     return active != pending
+
+def load_temporary_objects():
+    with open(f'{HOME_DIR}/dnx_webui/data/builtin_fw_objects.csv') as fw_objects:
+        object_list = [x for x in csv.reader(fw_objects) if x and '#' not in x]
+
+    # slicing out keys
+    return object_list[1:]

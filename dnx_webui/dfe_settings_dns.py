@@ -1,15 +1,12 @@
 #!/usr/bin/python3
 
-import sys, os
-import time
-
-import dnx_sysmods.configure.configure as configure
-import dnx_sysmods.configure.web_validate as validate
+import dnx_routines.configure.configure as configure
+import dnx_routines.configure.web_validate as validate
 
 from dnx_gentools.def_constants import INVALID_FORM, CFG, DATA
-from dnx_sysmods.configure.file_operations import load_configuration
-from dnx_sysmods.configure.exceptions import ValidationError
-from dnx_sysmods.configure.system_info import Services
+from dnx_gentools.file_operations import load_configuration
+from dnx_routines.configure.exceptions import ValidationError
+
 
 def load_page(form):
     dns_server = load_configuration('dns_server')

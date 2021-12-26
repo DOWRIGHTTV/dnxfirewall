@@ -2,6 +2,7 @@
 
 import time as _time
 import os as _os
+import pwd as _pwd
 
 from functools import partial as _partial
 from subprocess import run as _run, DEVNULL as _DEVNULL
@@ -40,7 +41,7 @@ class DATA(_IntEnum):
     INVALID = -1
     MISSING = -2
 
-#interface bandwidth
+# interface bandwidth
 INT_BANDWIDTH_TIMER = 5
 
 # general settings
@@ -49,12 +50,12 @@ FILE_POLL_TIMER = 10
 # Certificate authority store file
 CERTIFICATE_STORE = '/etc/ssl/certs/ca-certificates.crt'
 
-#front end domain height counts
+# front end domain height counts
 DF_DOMAIN_HEIGHT = 6
 UD_DOMAIN_HEIGHT = 3
 TLD_HEIGHT       = 4
 
-#dnx shell
+# dnx shell
 SHELL_SPACE = 30
 
 # ip addresses
@@ -69,14 +70,14 @@ LSB = 0b00000000000001111111111111111111
 MAC_TEMPLATE = b'\x00\x00\x00\x00\x00\x00'
 L2_PROTO = 0x0800
 
-#CFG
 class CFG(_IntEnum):
-    DEL = 0
-    ADD = 1
-    ADD_DEL = 2
-    RESTORE = 3
+    RESTORE = 0
 
-#interface states
+    DEL = 1
+    ADD = 2
+    ADD_DEL = 3
+
+# interface states
 class INTF(_IntEnum):
     STATIC = 0
     DHCP   = 1
@@ -84,7 +85,7 @@ class INTF(_IntEnum):
     BUILTINS = 69
     EXTENDED = 70
 
-#protocols
+# protocols
 class DNX(_IntEnum):
     INIT  = 0
     CONT  = 1
@@ -100,22 +101,30 @@ class SOCK(_IntEnum):
     UDP = 17
 
 class PROTO(_IntEnum):
-    NOT_SET  = 0
-    ANY      = 0 # alias
-    ICMP     = 1
-    TCP      = 6
-    UDP      = 17
+    NOT_SET = 0
+
+    # IP
+    ANY     = 0 # alias
+    ICMP    = 1
+    TCP     = 6
+    UDP     = 17
+    TCP_UDP = 23 # bitwise in cfirewall
+
+    # TCP/UDP
     DNS      = 53
     DHCP_SVR = 67
     HTTPS    = 443
     DNS_TLS  = 853
 
 SYSLOG_TLS_PORT = 6514
-CONTROL_SOCKET  = 6969 # LOCAL SOCKET
+CONTROL_SOCKET  = bytes(f'{HOME_DIR}/dnx_routines/dnx_system/control_sock') # LOCAL SOCKET
+DATABASE_SOCKET = bytes(f'{HOME_DIR}/dnx_routines/database/ddb_sock') # LOCAL SOCKET
 SYSLOG_SOCKET   = 6970 # LOCAL SOCKET
-DATABASE_SOCKET = 6971 # LOCAL SOCKET
 
-#syslog/logging
+# process, user, group
+DNX_AUTHENTICATION = (_os.getpid(), _pwd.getpwnam(USER).pw_uid, _pwd.getpwnam(USER).pw_gid)
+
+# syslog/logging
 class LOG(_IntEnum):
     SYSTEM  = 3
     EVENT   = 14
@@ -169,7 +178,7 @@ KEEP_ALIVE_DOMAIN = 'dnxfirewall.com'
 NULL_ADDR = (None,None)
 
 class DNS(_IntEnum):
-    #dns relay decisions
+    # dns relay decisions
     ALLOWED    = -1
     FLAGGED    = -2
     TIMED_OUT  = -3
@@ -178,11 +187,11 @@ class DNS(_IntEnum):
     # module identifiers
     SERVER = 0
     PROXY  = 1
-    #dns query types
+    # dns query types
     QUERY     = 0
     RESPONSE  = 1
     KEEPALIVE = 69
-    #dns record types
+    # dns record types
     LOCAL = 0
     ROOT  = 0
     A     = 1

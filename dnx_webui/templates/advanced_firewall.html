@@ -1,6 +1,6 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="tabs-bar" class="tabsbar" xmlns="http://www.w3.org/1999/html">
+<section id="tabs-bar" class="tabsbar">
     <div class="container">
         <div class="row">
             <div class="col s12 m12 l12 xl12">
@@ -9,6 +9,8 @@
                         onclick="activeTab(1)">Rulesets</a></li>
                     <li class="tab col s3 m3 l4 xl2"><a {% if tab=='2' %} class="active" {% endif %} href="#zones"
                         onclick="activeTab(2)">Zones</a></li>
+                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='3' %} class="active" {% endif %} href="#objects"
+                        onclick="activeTab(3)">Objects</a></li>
                 </ul>
             </div>
         </div>
@@ -26,7 +28,7 @@
                             <input type="hidden" name="tab" value="1">
                             <input type="hidden" name="change_section">
                             <div class="input-field col s4 m2 {{input_color}}">
-                                <select name="section" onchange="this.form.submit()">
+                                <select name="section" id="section" onchange="this.form.submit()">
                                     {% for section in sections %}
                                         {% if section == selected %}
                                         <option value="{{section}}" selected>{{section}}</option>
@@ -46,7 +48,7 @@
                            href="#FWrule-creator">Create Rule</a>
                     </div>
                     <div class="input-field col s12 m6 l5 xl3 {{input_color}}">
-                        <input type="text" id="filter-input" onkeyup="filterTable(1, 4)" placeholder="Search string">
+                        <input type="text" id="filter-input" onkeyup="filterTable(1, 4)" placeholder="Filter">
                     </div>
                     <div class="row">
                         <table class="centered highlight" id="filter-table">
@@ -68,7 +70,7 @@
                             </thead>
                             <tbody id="filter-table-body">
                                 {% for rule in firewall_settings['firewall_rules'] %}
-                                <tr id="r{{loop.index}}" data-fw-modal="r{{loop.index}}" {% if not rule[0] %} style="opacity: .4" {% endif %}>
+                                <tr id="r{{loop.index}}" {% if not rule[0] %} style="opacity: .4" {% endif %}>
                                     <td data-enabled="{{rule[0]}}">
                                         <form action="/advanced/firewall" method="POST">
                                             <input type="hidden" name="tab" value="1">
@@ -79,9 +81,10 @@
                                             </button>
                                         </form>
                                     </td>
-                                    <td>{{loop.index}}</td>
+                                    {% set rule_num = loop.index %}
+                                    <td data-fw-modal="r{{rule_num}}-0">{{loop.index}}</td>
                                     {% for field in rule[1:] %}
-                                    <td>{{field}}</td>
+                                    <td data-fw-modal="r{{rule_num}}-{{loop.index}}">{{field}}</td>
                                     {% endfor %}
                                 </tr>
                                 {% else %}
@@ -146,6 +149,60 @@
                                 <td>built-in</td>
                                 <td>{{zone_info[0]}}</td>
                                 <td>{{zone_info[1]}}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<section id="objects" class="section {{main_section_color}}">
+    <div class="container">
+        <div class="col s12">
+            <div class="card-panel hoverable {{card_color}}">
+                <h4 class="{{title_color}}">Object Manager</h4>
+                <div class="row">
+                    <div class="input-field col s12 m6 l5 xl3 {{input_color}}">
+                        <input type="text" id="filter-input2" onkeyup="filterTable(2, 5, 2)" placeholder="Filter">
+                    </div>
+                    <a class="btn waves-effect waves-light modal-trigger right" href="#obj-creator">Create Object</a>
+                </div>
+                <div class="row">
+                    <table class="centered highlight" id="filter-table2">
+                        <thead>
+                            <tr>
+                                <th hidden></th>
+                                <th style="width:10%"></th>
+                                <th style="width:15%">Name</th>
+                                <th style="width:10%">Type</th>
+                                <th style="width:10%">Value</th>
+                                <th style="width:55%">Description</th>
+                            </tr>
+                        </thead>
+                        <tbody id="filter-table-body2">
+                            {% for id, name, type, value, description in obj_list %}
+                            <tr style="height: 33px;">
+                                <td>{{id}}</td>
+                                <td>
+                                    <form action="/advanced/firewall" method="POST">
+                                        <input type="hidden" name="tab" value="3">
+                                        <button class="btn-floating btn-small waves-effect waves-light red" name="remove_obj">
+                                            <i class="material-icons">remove</i>
+                                        </button>
+                                    </form>
+                                </td>
+                                <td class="fw-obj">{{name}}</td>
+                                <td class="fw-obj">{{type}}</td>
+                                <td class="fw-obj">{{value}}</td>
+                                <td class="fw-obj">{{description}}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                {% for i in range(5) %}
+                                <td></td>
+                                {% endfor %}
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -240,7 +297,7 @@
                 </div>
                 <div class="input-field col s1 {{input_color}}">
                     <button type="button" class="btn waves-effect waves-light src_geo_toggle tooltipped"
-                            data-position="bottom" data-tooltip="toggle geo-filtering">
+                            data-position="bottom" data-tooltip="toggle src geo-filtering">
                         <i class="material-icons">language</i>
                     </button>
                 </div>
@@ -276,7 +333,7 @@
                         <i class="material-icons">language</i>
                     </button>
                 </div>
-                <div class="input-field col s4 src_geo">
+                <div class="input-field col s4 dst_geo">
                     <input type="text" name="dst_geo" id="dst_geo" class="geo-autocomplete">
                     <label for="dst_geo">Country</label>
                 </div>
@@ -374,8 +431,18 @@
                     </select>
                     <label for="src_zone">Zone</label>
                 </div>
+                <div class="input-field col s1 {{input_color}}">
+                    <button type="button" class="btn waves-effect waves-light src_geo_toggle-edit tooltipped"
+                            data-position="bottom" data-tooltip="toggle src geo-filtering">
+                        <i class="material-icons">language</i>
+                    </button>
+                </div>
+                <div class="input-field col s4 src_geo-edit">
+                    <input type="text" id="src_geo-edit" class="geo-autocomplete">
+                    <label for="src_geo">Country</label>
+                </div>
                 <div class="input-field col s4 offset-s1 {{input_color}}">
-                    <input type="text" name="src_ip" {{ip_net_validate}} placeholder="127.0.0.1/32">
+                    <input type="text" name="src_ip" id="src_ip" {{ip_net_validate}} placeholder="127.0.0.1/32">
                     <label for="src_ip">Network/Mask</label>
                 </div>
                 <div class="input-field col s3 {{input_color}}">
@@ -396,8 +463,18 @@
                     </select>
                     <label for="dst_zone">Zone</label>
                 </div>
+                <div class="input-field col s1 {{input_color}}">
+                    <button type="button" class="btn waves-effect waves-light dst_geo_toggle-edit tooltipped"
+                            data-position="bottom" data-tooltip="toggle dst geo-filtering">
+                        <i class="material-icons">language</i>
+                    </button>
+                </div>
+                <div class="input-field col s4 dst_geo-edit">
+                    <input type="text" name="dst_geo" id="dst_geo-edit" class="geo-autocomplete">
+                    <label for="dst_geo">Country</label>
+                </div>
                 <div class="input-field col s4 offset-s1 {{input_color}}">
-                    <input type="text" name="dst_ip" {{ip_net_validate}} placeholder="127.0.0.1/32" required>
+                    <input type="text" name="dst_ip" id="dst_ip" {{ip_net_validate}} placeholder="127.0.0.1/32" required>
                     <label for="dst_ip">Network/Mask</label>
                 </div>
                 <div class="input-field col s3 {{input_color}}">
@@ -426,7 +503,7 @@
                 </div>
                 <div class="input-field col s2 {{input_color}}">
                     <input type="number" name="sec2_prof" class="validate" value="0"  min="0" max="1">
-                    <label for="sec2-prof">IPS/IDS</label>
+                    <label for="sec2_prof">IPS/IDS</label>
                 </div>
             </div>
             <div class="row">
@@ -440,11 +517,14 @@
 </div>
 <style>
     .src_geo,
-    .dst_geo {
+    .dst_geo,
+    .src_geo-edit,
+    .dst_geo-edit {
         display: none;
     }
 </style>
 <script>
+    colorizeTable(2);
     $(function() {
         $('.src_geo_toggle').click(function() {
             $('.src_geo, .src_net').toggle();
@@ -453,6 +533,16 @@
     $(function() {
         $('.dst_geo_toggle').click(function() {
             $('.dst_geo, .dst_net').toggle();
+        });
+    });
+    $(function() {
+        $('.src_geo_toggle-edit').click(function() {
+            $('.src_geo-edit, .src_net-edit').toggle();
+        });
+    });
+    $(function() {
+        $('.dst_geo_toggle-edit').click(function() {
+            $('.dst_geo-edit, .dst_net-edit').toggle();
         });
     });
 </script>

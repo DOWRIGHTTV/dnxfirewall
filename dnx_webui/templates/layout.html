@@ -21,21 +21,20 @@
     {% set icon_color = 'blue-grey-text' %}
 
     {% if session['dark_mode'] %}
-    <!-- dark mode enabled -->
-
-    {% set main_section_color = 'blue-grey darken-4' %}
-    {% set off_section_color = 'blue-grey lighten-4' %}
-    {% set card_color = 'blue-grey lighten-2' %}
-    {% set title_color = 'black-text' %}
-    {% set input_color = 'grey lighten-2' %}
+        <!-- dark mode enabled -->
+        {% set main_section_color = 'blue-grey darken-4' %}
+        {% set off_section_color = 'blue-grey lighten-4' %}
+        {% set card_color = 'blue-grey lighten-2' %}
+        {% set title_color = 'black-text' %}
+        {% set input_color = 'grey lighten-2' %}
 
     {% else %}
-    <!-- default mode enabled -->
+        <!-- default mode enabled -->
 
-    {% set main_section_color = 'grey lighten-2' %}
-    {% set off_section_color = 'grey lighten-5' %}
-    {% set card_color = 'grey lighten-4' %}
-    {% set title_color = 'blue-grey-text darken-2' %}
+        {% set main_section_color = 'grey lighten-2' %}
+        {% set off_section_color = 'grey lighten-5' %}
+        {% set card_color = 'grey lighten-4' %}
+        {% set title_color = 'blue-grey-text darken-2' %}
 
     {% endif %}
 
@@ -46,160 +45,167 @@
     <!-- includes -->
     {% include 'includes/_header.html' %}
 
-    <!-- restricting webui to authenticated users -->
     {% if navi %}
-    {% include 'includes/_fab.html' %}
+        {% include 'includes/_fab.html' %}
     {% endif %}
 
     {% if standard_error %}
-    {% include 'includes/_error_notify.html' %}
+        {% include 'includes/_error_notify.html' %}
     {% endif %}
 
     {% if idle_timeout %}
-    {% include 'includes/_idle_timeout.html' %}
+        {% include 'includes/_idle_timeout.html' %}
     {% endif %}
 
     {% if footer %}
-    {% include 'includes/_footer.html' %}
+        {% include 'includes/_footer.html' %}
     {% endif %}
 
     <!-- jquery include. needed for ajax, and may be used by materialize vs builtin fallbacks -->
     <script src="{{url_for('static',filename='assets/js/jquery.min.js')}}"></script>
 
-    <!-- ^^ BEFORE PAGE TEMPLATE ^^ -->
-    {% block body %}{% endblock body %}
-    <!-- vv AFTER PAGE TEMPLATE vv -->
-
     {% if dnx_table %}
         <!-- dnx custom table with filtering/striping -->
         <script src="{{url_for('static',filename='assets/js/dnx_table.js')}}"></script>
 
+    {% endif %}
+
+    <!-- ^^ BEFORE PAGE TEMPLATE ^^ -->
+    {% block body %}{% endblock body %}
+    <!-- vv AFTER PAGE TEMPLATE vv -->
+
+    {% if ajax %}
         <!-- dnx custom ajax client by seeker1437 (WyteChocolate) NOTE: this is being done as an html include to take
-            advantage of jinja templating  -->
+            advantage of jinja templating -->
         {% include 'includes/_dnx_ajax_client.js' %}
 
         <script>
-        {% if ajax %}
             document.addEventListener('DOMContentLoaded', () => {
                 updateData('default');
             })
-        {% else %}
-
-            colorizeTable()
-
-        {% endif %}
         </script>
 
     {% endif %}
 
-    <!-- auto complete input for geolocation (country list). page setting needs to be set to include this on page -->
-    {% if geolocation %}
-
-        document.addEventListener('DOMContentLoaded', () => {
-            var elems = document.querySelectorAll('.geo-autocomplete');
-
-            {% include 'includes/_geolocation.html' %}
-
-            var instances = M.Autocomplete.init(elems, {
-                data: geolocation_data
-            });
-        })
+    {% if auto_colorize %}
+        <!-- handles a single table as quick enable. additional need to be called within individual page template. -->
+        colorizeTable()
 
     {% endif %}
 
-    <!-- materialize js-->
-    <script src="{{url_for('static',filename='assets/js/materialize.min.js')}}"></script>
+    {% if geolocation %}
+        <!-- auto complete input for geolocation (country list). page setting needs to be set to include this on page -->
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                var elems = document.querySelectorAll('.geo-autocomplete');
 
-    <!-- materialize overrides and basic custom functions used globally-->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Initialized everything OR you can override with options below
-            M.AutoInit();
-        })
+                {% include 'includes/_geolocation.html' %}
 
-        document.addEventListener('DOMContentLoaded', () => {
-            var elems = document.querySelectorAll('.dropdown-trigger');
-            var instances = M.Dropdown.init(elems, {
-                coverTrigger : false
-            });
-        })
+                var instances = M.Autocomplete.init(elems, {
+                    data: geolocation_data
+                });
+            })
+        </script>
+    {% endif %}
 
-        document.addEventListener('DOMContentLoaded', () => {
-            var modal = document.querySelector('.modal-pop');
-            var instance = M.Modal.init(modal);
-            if (error && modal) {
-                instance.open();
-            };
-        })
+    {% if navi %}
+        <!-- materialize js-->
+        <script src="{{url_for('static',filename='assets/js/materialize.min.js')}}"></script>
 
-        document.addEventListener('DOMContentLoaded', () => {
-            var elems = document.querySelectorAll('.fixed-action-btn');
-            var instances = M.FloatingActionButton.init(elems, {
-                // direction: 'left',
-                hoverEnabled: false
-            });
-        })
+        <!-- materialize overrides and basic custom functions used globally-->
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                // Initialized everything OR you can override with options below
+                M.AutoInit();
+            })
 
-        function activeTab(n) {
-        history.replaceState(null, null, window.location.pathname+"?tab="+n);
-        document.getElementById("timeout-tab").innerHTML = "<input type=hidden name=tab value="+n+">";
-        }
+            document.addEventListener('DOMContentLoaded', () => {
+                var elems = document.querySelectorAll('.dropdown-trigger');
+                var instances = M.Dropdown.init(elems, {
+                    coverTrigger : false
+                });
+            })
 
-        function activeMenu(n) {
-        document.getElementById("timeout-menu").innerHTML = "<input type=hidden name=menu value="+n+">";
-        }
+            document.addEventListener('DOMContentLoaded', () => {
+                var modal = document.querySelector('.modal-pop');
+                var instance = M.Modal.init(modal);
+                if (error && modal) {
+                    instance.open();
+                };
+            })
 
-        function idleTimeoutWarning() {
-            var timeoutNotify = document.querySelector(".modal-idle-timeout");
-            var notifyInstance = M.Modal.init(timeoutNotify);
-            notifyInstance.open();
-        }
+            document.addEventListener('DOMContentLoaded', () => {
+                var elems = document.querySelectorAll('.fixed-action-btn');
+                var instances = M.FloatingActionButton.init(elems, {
+                    // direction: 'left',
+                    hoverEnabled: false
+                });
+            })
 
-        function idleTimeout() {
-            window.location.href = 'login';
-        }
+            function activeTab(n) {
+            history.replaceState(null, null, window.location.pathname+"?tab="+n);
+            document.getElementById("timeout-tab").innerHTML = "<input type=hidden name=tab value="+n+">";
+            }
 
-    </script>
+            function activeMenu(n) {
+            document.getElementById("timeout-menu").innerHTML = "<input type=hidden name=menu value="+n+">";
+            }
+
+            function idleTimeoutWarning() {
+                var timeoutNotify = document.querySelector(".modal-idle-timeout");
+                var notifyInstance = M.Modal.init(timeoutNotify);
+                notifyInstance.open();
+            }
+
+            function idleTimeout() {
+                window.location.href = 'login';
+            }
+        </script>
+    {% endif %}
 
     {% if firewall %}
-    <!-- allowing each row in table to be clicked. this should be used to edit table data in a popup.-->
-    <script>
-    $('tr[data-fw-modal]').on("click", function(ruleID) {
+        <!-- allowing each row in table to be clicked. this should be used to edit table data in a popup.-->
+        <script>
+            $('tr[data-fw-modal]').on("click", function(ruleID) {
 
-        if (ruleID != 'r0') {
-            var ruleData = ruleID.currentTarget.getElementsByTagName('td');
+                // no popup on button remove
+                if (ruleID.target.getAttribute('data-enabled') != null) {
+                    return;
+                }
 
-            var ruleForm = document.getElementById('FWrule-editor');
-            var formInputs = ruleForm.getElementsByTagName('input');
+                if (ruleID != 'r0') {
+                    var ruleData = ruleID.currentTarget.getElementsByTagName('td');
 
-            const enabled = parseInt(ruleData[0].getAttribute('data-enabled'));
+                    var ruleForm = document.getElementById('FWrule-editor');
+                    var formInputs = ruleForm.getElementsByTagName('input');
 
-            formInputs[2].value = ruleData[1].innerHTML; //static position
-            formInputs[3].value = ruleData[1].innerHTML; //position
-            formInputs[4].value = ruleData[9].innerHTML; //log
-            formInputs[5].checked = !!enabled; //rule_state
+                    const enabled = parseInt(ruleData[0].getAttribute('data-enabled'));
 
-            formInputs[6].value = ruleData[2].innerHTML.toUpperCase(); //src_zone
+                    formInputs[2].value = ruleData[1].innerHTML; //static position
+                    formInputs[3].value = ruleData[1].innerHTML; //position
+                    formInputs[4].value = ruleData[9].innerHTML; //log
+                    formInputs[5].checked = !!enabled; //rule_state
 
-            console.log(formInputs[6].attributes);
-            formInputs[7].value = ruleData[3].innerHTML; //src_ip
-            formInputs[8].value = ruleData[4].innerHTML; //src_port
+                    formInputs[6].value = ruleData[2].innerHTML.toUpperCase(); //src_zone
 
-            formInputs[9].value  = ruleData[5].innerHTML.toUpperCase(); //dst_zone
-            formInputs[10].value = ruleData[6].innerHTML; //dst_ip
-            formInputs[11].value = ruleData[7].innerHTML; //dst_port
+                    console.log(formInputs[6].attributes);
+                    formInputs[7].value = ruleData[3].innerHTML; //src_ip
+                    formInputs[8].value = ruleData[4].innerHTML; //src_port
 
-            formInputs[12].value = ruleData[8].innerHTML.toUpperCase(); //action
-            formInputs[13].value = ruleData[10].innerHTML; //sec1_prof
-            formInputs[14].value = ruleData[11].innerHTML; //sec2_prof
+                    formInputs[9].value  = ruleData[5].innerHTML.toUpperCase(); //dst_zone
+                    formInputs[10].value = ruleData[6].innerHTML; //dst_ip
+                    formInputs[11].value = ruleData[7].innerHTML; //dst_port
 
-         }
+                    formInputs[12].value = ruleData[8].innerHTML.toUpperCase(); //action
+                    formInputs[13].value = ruleData[10].innerHTML; //sec1_prof
+                    formInputs[14].value = ruleData[11].innerHTML; //sec2_prof
 
-        $('#FWrule-editor').modal('open');
+                 }
 
-    });
-    </script>
+                $('#FWrule-editor').modal('open');
+
+            });
+        </script>
     {% endif %}
-
 </body>
 </html>

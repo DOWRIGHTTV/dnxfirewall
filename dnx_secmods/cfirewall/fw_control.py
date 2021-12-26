@@ -10,10 +10,8 @@ from dnx_gentools.def_constants import HOME_DIR, MSB, LSB
 from dnx_gentools.standard_tools import Initialize
 from dnx_gentools.signature_operations import generate_geolocation
 
-from dnx_iptools.dnx_trie_search import HashTrie # pylint: disable=import-error, no-name-in-module
-
-from dnx_sysmods.configure.file_operations import cfg_read_poller, load_configuration, ConfigurationManager
-from dnx_sysmods.logging.log_main import LogHandler as Log
+from dnx_gentools.file_operations import cfg_read_poller, load_configuration, ConfigurationManager
+from dnx_routines.logging.log_main import LogHandler as Log
 
 DEFAULT_VERION = 'firewall_pending'
 DEFAULT_PATH = 'dnx_system/iptables'

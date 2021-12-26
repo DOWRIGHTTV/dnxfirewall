@@ -7,8 +7,8 @@ import dnx_gentools.signature_operations as signature_operations
 from dnx_gentools.def_constants import *
 from dnx_gentools.standard_tools import Initialize
 
-from dnx_sysmods.configure.file_operations import load_configuration, cfg_read_poller
-from dnx_sysmods.configure.iptables import IPTablesManager
+from dnx_gentools.file_operations import load_configuration, cfg_read_poller
+from dnx_routines.configure.iptables import IPTablesManager
 
 from dnx_secmods.ip_proxy.ip_proxy_log import Log
 

@@ -7,12 +7,12 @@ from flask import session
 HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
 sys.path.insert(0, HOME_DIR)
 
-import dnx_sysmods.configure.configure as configure
-import dnx_sysmods.configure.web_validate as validate
+import dnx_routines.configure.configure as configure
+import dnx_routines.configure.web_validate as validate
 
 from dnx_gentools.def_constants import CFG, INVALID_FORM, DATA
-from dnx_sysmods.configure.file_operations import load_configuration
-from dnx_sysmods.configure.exceptions import ValidationError
+from dnx_gentools.file_operations import load_configuration
+from dnx_routines.configure.exceptions import ValidationError
 
 def load_page(form):
     users = load_configuration('logins', filepath='/dnx_webui/data')['users']

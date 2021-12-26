@@ -111,3 +111,9 @@ table.striped > tbody > tr {
 div .popout-form {
     padding: 1em;
 }
+
+/* firewall obj table */
+.fw-obj {
+    padding: 1px;
+    margin: 0px;
+}

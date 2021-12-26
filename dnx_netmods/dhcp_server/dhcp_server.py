@@ -13,7 +13,7 @@ from dnx_iptools.packet_classes import Listener
 from dnx_netmods.dhcp_server.dhcp_server_requests import ServerResponse, ClientRequest
 from dnx_netmods.dhcp_server.dhcp_server_automate import Configuration, Leases
 
-from dnx_sysmods.logging.log_main import LogHandler as Log
+from dnx_routines.logging.log_main import LogHandler as Log
 
 LOG_NAME = 'dhcp_server'
 
@@ -46,11 +46,12 @@ class DHCPServer(Listener):
         # initializing the lease table dictionary and giving a reference to the reservations
         cls.leases = Leases(cls.reservations)
 
-        # so we dont need to import/ hardcore the server class reference.
+        # so we don't need to import/ hardcore the server class reference.
         ClientRequest.set_server_reference(cls)
         cls.set_proxy_callback(func=cls.handle_dhcp)
 
-        # only local server ips or no server ip specified are valid. this is to filter responses to other servers within broadcast domain.
+        # only local server ips or no server ip specified are valid. this is to filter responses to other servers
+        # within broadcast domain.
         cls._valid_idents = [*[intf['ip'].ip for intf in cls.intf_settings.values()], None]
 
     def _pre_inspect(self, packet):
@@ -81,8 +82,8 @@ class DHCPServer(Listener):
         elif (client_request.mtype == DHCP.REQUEST):
             server_mtype, record = self._request(request_id, client_request)
 
-        # TODO: logging purposes only. probably isnt needed. the below condition are protected by
-        # the initiated value being "DHCP.NOT_SET" so we dont need to cover for them.
+        # TODO: logging purposes only. probably isn't needed. the below condition are protected by
+        # the initiated value being "DHCP.NOT_SET" so we don't need to cover for them.
         else:
             Log.debug(f'[request] Unknown mtype: type={client_request.mtype}, id={request_id}')
 

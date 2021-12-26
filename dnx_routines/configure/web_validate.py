@@ -10,15 +10,13 @@ _HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split
 sys.path.insert(0, _HOME_DIR)
 
 from dnx_gentools.def_constants import LOG, CFG, DATA, PROTO, INVALID_FORM
-from dnx_sysmods.configure.file_operations import load_configuration
-from dnx_sysmods.configure.exceptions import ValidationError
+from dnx_gentools.file_operations import load_configuration
+from dnx_routines.configure.exceptions import ValidationError
 from dnx_secmods.cfirewall.fw_control import FirewallManage
 
 MIN_PORT = 1
 MAX_PORT = 65535
 MAX_PORT_RANGE = 65536
-
-# TODO: why no CSRF. :(
 
 __all__ = (
     'standard', 'syslog_dropdown', 'mac_address',
@@ -27,10 +25,8 @@ __all__ = (
     'account_creation', 'username', 'password',
     'user_role', 'dhcp_reservation', 'log_settings',
     'time_offset', 'syslog_settings', 'ip_proxy_settings',
-    'time_restriction', 'dns_over_tls', 'del_firewall_rule',
-    'add_firewall_rule', 'portscan_settings',
-    'ips_passive_block_length', 'add_ip_whitelist',
-    'main_services', 'domain_categories',
+    'time_restriction', 'dns_over_tls', 'portscan_settings',
+    'ips_passive_block_length', 'add_ip_whitelist', 'domain_categories',
     'dns_record_add', 'dns_record_remove', # NOTE: these names should be flipped
     'ValidationError'
 )
@@ -71,8 +67,7 @@ def standard(user_input, *, override=[]):
         if (not char.isalnum() and char not in override):
             override = ', '.join(override)
 
-            # TODO: FUCK ENGLISH. MAKE THIS MAKE SENSE PLEASE GOD. FUCK.
-            raise ValidationError(f'Standard fields can only contain alpha numeric {override}.')
+            raise ValidationError(f'Standard fields can only contain alpha numeric characters or the following {override}.')
 
 def syslog_dropdown(syslog_time):
     syslog_time = convert_int(syslog_time)
@@ -95,7 +90,7 @@ def _ip_address(ip_addr):
     if (ip_addr.is_loopback):
         raise ValidationError('127.0.0.0/24 is reserved ip space and cannot be used.')
 
-# this is convienience wrapper around above function to allow for multiple ips to be checked with one func call.
+# this is a convenience wrapper around above function to allow for multiple ips to be checked with one func call.
 def ip_address(ip_addr=None, *, ip_iter=None):
     ip_iter = [] if not ip_iter else ip_iter
     if (not isinstance(ip_iter, list)):
@@ -126,13 +121,13 @@ def default_gateway(ip_addr):
     if (ip_addr.is_loopback):
         raise ValidationError('Default gateway cannot be 127.0.0.1/loopback.')
 
-def domain(domain):
-    if (not _VALID_DOMAIN.match(domain)):
+def domain(dom, /):
+    if (not _VALID_DOMAIN.match(dom)):
         raise ValidationError('Domain is not valid.')
 
-def cidr(cidr):
-    cidr = convert_int(cidr)
-    if (cidr not in range(0,33)):
+def cidr(cd, /):
+    cd = convert_int(cd)
+    if (cd not in range(0, 33)):
         raise ValidationError('Netmask must be in range 0-32.')
 
 # NOTE: split + iter is to support port ranges. limiting split to 1 to prevent 1:2:3 from being marked as valid.
@@ -204,9 +199,9 @@ def proto_port(port_str):
 
     return proto_int, ports
 
-def timer(timer):
-    timer = convert_int(timer)
-    if (not 1 <= timer <= 1440):
+def timer(val, /):
+    val = convert_int(val)
+    if (not 1 <= val <= 1440):
         raise ValidationError('Timer must be between 1 and 1440 (24 hours).')
 
 def account_creation(account_info):
@@ -217,20 +212,21 @@ def account_creation(account_info):
     password(account_info['password'])
     user_role(account_info['role'])
 
+    # setting username to lowercase seems cleaner here
     account_info['username'] = account_info['username'].lower()
 
-def username(username):
-    if (not username.isalnum()):
+def username(user, /):
+    if (not user.isalnum()):
         raise ValidationError('Username can only be alpha numeric characters.')
 
-def password(password):
+def password(passwd, /):
     # calculating the length
-    if (len(password) < 8):
+    if (len(passwd) < 8):
         raise ValidationError('Password does not meet length requirement of 8 characters.')
 
     criteria = (
-        re.search(r'\d', password), re.search(r'[A-Z]', password), # searching for digits & uppercase
-        re.search(r'[a-z]', password), re.search(r'\W', password) # searching for lowercase & symbols
+        re.search(r'\d', passwd), re.search(r'[A-Z]', passwd), # searching for digits & uppercase
+        re.search(r'[a-z]', passwd), re.search(r'\W', passwd) # searching for lowercase & symbols
     )
 
     if not all(criteria):
@@ -270,65 +266,66 @@ def dhcp_general_settings(server_settings):
     if (lease_range['start'] >= lease_range['end']):
         raise ValidationError('DHCP pool start value must be less than the end value.')
 
-def log_settings(log_settings):
-    if (log_settings['length'] not in [30, 45, 60, 90]):
+def log_settings(settings, /):
+    if (settings['length'] not in [30, 45, 60, 90]):
         raise ValidationError('Invalid log settings.')
 
     try:
-        LOG(log_settings['level'])
+        LOG(settings['level'])
     except ValueError:
         raise ValidationError('Invalid log settings.')
 
-def time_offset(offset_settings):
-    dir_offset = offset_settings['direction']
-    if (dir_offset not in [' ', '-', '+']):
+def time_offset(settings, /):
+    direction = settings['direction']
+    if (direction not in [' ', '-', '+']):
         raise ValidationError('Invalid time offset sign.')
 
-    time_offset = offset_settings['time']
-    if (time_offset not in range(0,15)):
+    offset = settings['time']
+    if (offset not in range(0,15)):
         raise ValidationError('Invalid time offset value.')
 
-    if (dir_offset == ' ' and time_offset != 0):
+    if (direction == ' ' and offset != 0):
         raise ValidationError('Direction cannot be empty if amount is not zero.')
 
-    elif (dir_offset == '-' and time_offset in [13, 14]):
+    elif (direction == '-' and offset in [13, 14]):
         raise ValidationError('Invalid timezone/ time offset.')
 
-def syslog_settings(syslog_settings):
+def syslog_settings(settings, /):
     syslog = load_configuration('syslog_client')
 
-    configured_syslog_servers = syslog['servers']
-    if (not configured_syslog_servers):
-        raise ValidationError('Syslog servers must be configured before modifying client settings.')
+    return
+    # configured_syslog_servers = syslog['servers']
+    # if (not configured_syslog_servers):
+    #     raise ValidationError('Syslog servers must be configured before modifying client settings.')
+    #
+    # tls_retry = convert_int(settings['tls_retry'])
+    # tcp_retry = convert_int(settings['tcp_retry'])
+    # tls_settings = settings['tls']
+    # syslog_settings = settings['syslog']
+    #
+    # if (tls_retry not in [5, 10, 60] and tcp_retry not in [5, 10, 30]):
+    #     raise ValidationError('Syslog settings are not valid.')
+    #
+    # for item in tls_settings:
+    #     if (item not in ['enabled', 'tcp_fallback', 'udp_fallback', 'self_signed']):
+    #         raise ValidationError('Syslog settings are not valid.')
+    #
+    # for item in syslog_settings:
+    #     if (item not in ['syslog_enabled', 'syslog_protocol']):
+    #         raise ValidationError('Syslog settings are not valid.')
+    #
+    # if ('syslog_protocol' not in syslog_settings):
+    #     if ('encrypted_syslog' in tls_settings):
+    #         raise ValidationError('TCP must be enabled to enable TLS.')
+    #
+    #     if ('tcp_fallback' in tls_settings):
+    #         raise ValidationError('TLS must be enabled before TCP fallback.')
 
-    tls_retry = convert_int(syslog_settings['tls_retry'])
-    tcp_retry = convert_int(syslog_settings['tcp_retry'])
-    tls_settings = syslog_settings['tls']
-    syslog_settings = syslog_settings['syslog']
-
-    if (tls_retry not in [5, 10, 60] and tcp_retry not in [5, 10, 30]):
-        raise ValidationError('Syslog settings are not valid.')
-
-    for item in tls_settings:
-        if (item not in ['enabled', 'tcp_fallback', 'udp_fallback', 'self_signed']):
-            raise ValidationError('Syslog settings are not valid.')
-
-    for item in syslog_settings:
-        if (item not in ['syslog_enabled', 'syslog_protocol']):
-            raise ValidationError('Syslog settings are not valid.')
-
-    if ('syslog_protocol' not in syslog_settings):
-        if ('encrypted_syslog' in tls_settings):
-            raise ValidationError('TCP must be enabled to enable TLS.')
-
-        if ('tcp_fallback' in tls_settings):
-            raise ValidationError('TLS must be enabled before TCP fallback.')
-
-def ip_proxy_settings(ip_hosts_settings, *, ruleset='reputation'):
+def ip_proxy_settings(host_categories, *, ruleset='reputation'):
     ip_proxy = load_configuration('ip_proxy')
 
     valid_categories = ip_proxy[ruleset]
-    for category in ip_hosts_settings:
+    for category in host_categories:
         try:
             category, direction = category[:-2], category[-1]
         except:
@@ -346,6 +343,9 @@ def geolocation(region, rtype='country'):
     if (region['cfg_dir'] not in range(4)):
         raise ValidationError(INVALID_FORM)
 
+    if (rtype not in ['country', 'continent']):
+        raise ValidationError(INVALID_FORM)
+
     if (rtype == 'country'):
         valid_regions = load_configuration('ip_proxy')['geolocation']
 
@@ -355,20 +355,20 @@ def geolocation(region, rtype='country'):
     if region[rtype] not in valid_regions:
         raise ValidationError(INVALID_FORM)
 
-def time_restriction(tr_settings):
-    tr_hour = convert_int(tr_settings['hour'])
-    tr_min  = convert_int(tr_settings['minutes'])
+def time_restriction(settings, /):
+    tr_hour = convert_int(settings['hour'])
+    tr_min  = convert_int(settings['minutes'])
 
-    if (tr_hour not in range(1,13) or tr_min not in [00, 15, 30, 45]):
+    if (tr_hour not in range(1, 13) or tr_min not in [00, 15, 30, 45]):
         raise ValidationError('Restriction settings are not valid.')
 
-    tr_hour_len = convert_int(tr_settings['length_hour'])
-    tr_min_len  = convert_int(tr_settings['length_minutes'])
+    tr_hour_len = convert_int(settings['length_hour'])
+    tr_min_len  = convert_int(settings['length_minutes'])
 
     if (tr_hour_len not in range(1,13) and tr_min_len not in [00, 15, 30, 45]):
         raise ValidationError('Restriction settings are not valid.')
 
-    if (tr_settings['suffix'] not in ['AM', 'PM']):
+    if (settings['suffix'] not in ['AM', 'PM']):
         raise ValidationError('Restriction settings are not valid.')
 
 def dns_over_tls(dns_tls_settings):
@@ -379,7 +379,7 @@ def dns_over_tls(dns_tls_settings):
         if (item not in ['dns_over_tls', 'udp_fallback']):
             raise ValidationError(INVALID_FORM)
 
-    # NOTE: current_tls shouldnt matter since tls will be in form if enabled regardless
+    # NOTE: current_tls shouldn't matter since tls will be in form if enabled regardless
     if (not current_tls and 'udp_fallback' in dns_tls_settings['enabled']
             and 'dns_over_tls' not in dns_tls_settings['enabled']):
         raise ValidationError('DNS over TLS must be enabled to configure UDP fallback.')
@@ -461,108 +461,68 @@ def manage_firewall_rule(fw_rule):
         action, 0, ip_proxy_profile, ips_ids_profile
     ]
 
-# NOTE: this will be deprecated with cfirewall implementation.
-def del_firewall_rule(fw_rule):
-    output = run(
-        f'sudo iptables -nL {fw_rule.zone} --line-number', shell=True, capture_output=True
-    ).stdout.splitlines()
-
-    rule_count = len(output) + 2
-    if (convert_int(fw_rule.position) not in range(1, rule_count)):
-        raise ValidationError('Selected rule is not valid and cannot be removed.')
-
-# NOTE: this will be deprecated with cfirewall implementation.
-def add_firewall_rule(fw_rule):
-    # ensuring all necessary fields are present in the namespace before continuing.
-    valid_fields = [
-        'action', 'dst_ip', 'dst_netmask', 'dst_port', 'position',
-        'protocol', 'src_ip', 'src_netmask', 'tab', 'zone'
-    ]
-    if not all([hasattr(fw_rule, x) for x in valid_fields]):
-        raise ValidationError('Invalid form.')
-
-    # grabbing list of configured iptable rules for the specified chain.
-    output = run(
-        f'sudo iptables -nL {fw_rule.zone} --line-number', shell=True, capture_output=True
-    ).stdout.splitlines()[1:]
-
-    rule_count = len(output)
-    fw_rule.position = convert_int(fw_rule.position)
-    if (not rule_count and fw_rule.position != 1):
-        raise ValidationError('First firewall rule must have position 1.')
-
-    if (not 0 < fw_rule.position <= rule_count+1):
-        raise ValidationError(f'Position outside of valid range. (1-{rule_count+1})')
-
-    if (fw_rule.protocol not in ['any', 'tcp', 'udp', 'icmp']):
-        raise ValidationError('Network protocol is not valid.')
-
-    if (fw_rule.protocol in ['any', 'icmp'] and fw_rule.dst_port):
-        raise ValidationError('Only TCP/UDP use destination port field.')
-
-def add_dnat_rule(nat_rule):
+def add_dnat_rule(rule, /):
     # ensuring all necessary fields are present in the namespace before continuing.
     valid_fields = [
         'src_zone', 'dst_ip', 'dst_port', 'host_ip', 'host_port', 'protocol'
     ]
 
-    if not all([hasattr(nat_rule, x) for x in valid_fields]):
+    if not all([hasattr(rule, x) for x in valid_fields]):
         raise ValidationError(INVALID_FORM)
 
-    if (nat_rule.protocol not in ['tcp', 'udp', 'icmp']):
+    if (rule.protocol not in ['tcp', 'udp', 'icmp']):
         raise ValidationError(INVALID_FORM)
 
-    if (not nat_rule.dst_ip and nat_rule.dst_port in ['443', '80']):
+    if (not rule.dst_ip and rule.dst_port in ['443', '80']):
         raise ValidationError('Ports 80,443 cannot be set as destination port when destination IP is not set.')
 
-    if (nat_rule.protocol == 'icmp'):
+    if (rule.protocol == 'icmp'):
 
         open_protocols = load_configuration('ips')
         if (open_protocols['open_protocols']['icmp']):
             return 'Only one ICMP rule can be active at a time. Remove existing rule before adding another.'
 
-def del_nat_rule(nat_rule):
+def del_nat_rule(rule, /):
     output = run(
-        f'sudo iptables -t nat -nL {nat_rule.nat_type} --line-number', shell=True, capture_output=True
+        f'sudo iptables -t nat -nL {rule.nat_type} --line-number', shell=True, capture_output=True
     ).stdout.splitlines()[1:]
 
     rule_count = len(output)
-    if (convert_int(nat_rule.position) not in range(1, rule_count+1)):
+    if (convert_int(rule.position) not in range(1, rule_count+1)):
         raise ValidationError('Selected rule is not valid and cannot be removed.')
 
     # validating fields for removing the associated open protocol/port from the tracker
     open_protocol_settings = load_configuration('ips')['open_protocols']
     try:
-        nat_rule.protocol, nat_rule.port = nat_rule.proto_port.split('/')
+        rule.protocol, rule.port = rule.proto_port.split('/')
     except:
         raise ValidationError(INVALID_FORM)
 
     # tcp/udp checked first. if error, will check icmp format. if that doesnt match then
     # exception is raised.
     try:
-        open_protocol_settings[nat_rule.protocol][nat_rule.port]
+        open_protocol_settings[rule.protocol][rule.port]
     except:
-        if (nat_rule.protocol != 'icmp' and nat_rule.port != '0'):
+        if (rule.protocol != 'icmp' and rule.port != '0'):
             raise ValidationError(INVALID_FORM)
 
-def add_snat_rule(nat_rule):
+def add_snat_rule(rule, /):
     # ensuring all necessary fields are present in the namespace before continuing.
     valid_fields = [
         'src_zone', 'orig_src_ip', 'new_src_ip',
     ]
-    if not all([hasattr(nat_rule, x) for x in valid_fields]):
+    if not all([hasattr(rule, x) for x in valid_fields]):
         raise ValidationError('Invalid form.')
 
-def portscan_settings(portscan_settings):
+def portscan_settings(settings, /):
     ips = load_configuration('ips')
 
     current_prevention = ips['port_scan']['enabled']
-    for item in portscan_settings:
+    for item in settings:
         if (item not in ['enabled', 'reject']):
             raise ValidationError(INVALID_FORM)
 
-    if ('reject' in portscan_settings and 'drop' not in portscan_settings
-            and not current_prevention):
+    if ('reject' in portscan_settings and 'drop' not in settings and not current_prevention):
         raise ValidationError('Prevention must be enabled to configure portscan reject.')
 
 def management_access(fields):
@@ -581,30 +541,19 @@ def management_access(fields):
     fields.action = action
     fields.service_ports = SERVICE_TO_PORT[fields.service]
 
-def ips_passive_block_length(pb_length):
-    if (pb_length not in [0, 24, 48, 72]):
+def ips_passive_block_length(length, /):
+    if (length not in [0, 24, 48, 72]):
         raise ValidationError(INVALID_FORM)
 
-def add_ip_whitelist(whitelist_settings):
+def add_ip_whitelist(settings, /):
     # handling alphanum check. will raise exception if invalid.
-    standard(whitelist_settings['user'])
+    standard(settings['user'])
 
-    if (whitelist_settings['type'] not in ['global', 'tor']):
+    if (settings['type'] not in ['global', 'tor']):
         raise ValidationError(INVALID_FORM)
 
     # if ip is valid this will return, otherwise a ValidationError will be raised.
-    _ip_address(whitelist_settings['user'])
-
-def main_services(services_form):
-    valid_services = ['dnx-dns-proxy', 'dnx-fw-proxy', 'dnx-dhcp-server', 'dnx-updates']
-    service = services_form['service']
-    ruleset = services_form['ruleset']
-
-    if (service not in valid_services):
-        raise ValidationError(INVALID_FORM)
-
-    if (service in ['dnx-dns-proxy', 'dnx-ip-proxy'] and ruleset is None):
-        raise ValidationError(INVALID_FORM)
+    _ip_address(settings['user'])
 
 def domain_categories(categories, ruleset):
     if (ruleset == 'default' and not all(['malicious' in categories, 'cryptominer' in categories])):

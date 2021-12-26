@@ -12,7 +12,7 @@ from ipaddress import IPv4Address
 from dnx_gentools import signature_operations
 from dnx_iptools.dnx_trie_search import HashTrie, RecurveTrie, RangeTrie # pylint: disable=import-error, no-name-in-module
 from dnx_iptools.dnx_trie_search import generate_recursive_binary_search, generate_linear_binary_search # pylint: disable=import-error, no-name-in-module
-from dnx_sysmods.logging.log_main import LogHandler as Log
+from dnx_routines.logging.log_main import LogHandler as Log
 
 line = '='*32
 

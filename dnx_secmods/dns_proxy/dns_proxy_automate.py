@@ -7,13 +7,13 @@ import ssl
 from ipaddress import IPv4Address
 
 from dnx_gentools.def_constants import *
-from dnx_sysmods.configure.file_operations import *
-from dnx_sysmods.configure.signature_operations import combine_domains
+from dnx_gentools.file_operations import *
+from dnx_gentools.signature_operations import combine_domains
 
 from dnx_secmods.dns_proxy.dns_proxy_log import Log
 
 from dnx_iptools.protocol_tools import create_dns_query_header, convert_string_to_bitmap
-from dnx_gentools.standard_tools import dynamic_looper, Initialize
+from dnx_gentools.standard_tools import looper, Initialize
 
 
 class Configuration:
@@ -151,10 +151,11 @@ class Configuration:
         self._initialize.done()
 
     @cfg_write_poller
-    # handles updating user defined signatures in memory/propogated changes to disk.
+    # handles updating user defined signatures in memory/propagated changes to disk.
     def _get_list(self, lname, cfg_file, last_modified_time):
-        timeout_detected = self._check_for_timeout(lname)
         memory_list = getattr(self.DNSProxy, lname).dns
+
+        timeout_detected = self._check_for_timeout(memory_list)
         # if a rule timeout is detected for an entry in memory. we will update the config file
         # to align with active rules, then we will remove the rules from memory.
         if (timeout_detected):
@@ -177,17 +178,18 @@ class Configuration:
 
         self._modify_memory(memory_list, loaded_list, action=CFG.ADD)
 
-        # ip whitelist specific. will do an inplace swap of all rules needing to be added or removed the memory.
+        # ip whitelist specific. will do an inplace swap of all rules needing to be added or removed in memory.
         if (lname == 'whitelist'):
-            self._modify_ip_whitelist(cfg_file)
+            self._modify_ip_whitelist(cfg_file, self.DNSProxy.whitelist.ip)
 
         self._initialize.done()
 
         return modified_time
 
-    def _modify_memory(self, memory_list, loaded_list, *, action):
+    @staticmethod
+    def _modify_memory(memory_list, loaded_list, *, action):
         '''removing/adding signature/rule from memory as needed.'''
-        if (action in [CFG.ADD, CFG.ADD_DEL]):
+        if (action is CFG.ADD):
 
             # iterating over rules/signatures pulled from file
             for rule, settings in loaded_list.items():
@@ -198,7 +200,7 @@ class Configuration:
                     settings['key'] = rule
                     memory_list[bitmap_key] = settings
 
-        if (action in [CFG.DEL, CFG.ADD_DEL]):
+        if (action is CFG.DEL):
 
             # iterating over rules/signature in memory
             for rule, settings in memory_list.copy().items():
@@ -210,8 +212,8 @@ class Configuration:
                 if (settings['key'] not in loaded_list):
                     memory_list.pop(rule)
 
-    def _modify_ip_whitelist(self, cfg_file):
-        memory_ip_list = self.DNSProxy.whitelist.ip
+    @staticmethod
+    def _modify_ip_whitelist(cfg_file, memory_ip_list):
         loaded_ip_list = load_configuration(cfg_file)['ip_bypass']
 
         # iterating over ip rules in memory.
@@ -230,19 +232,21 @@ class Configuration:
             if (ip not in memory_ip_list and settings['type'] == 'global'):
                 memory_ip_list[ip] = True
 
+    @staticmethod
     # checking corresponding list file for any time based rules timing out. will return True if timeout
     # is detected otherwise return False.
-    def _check_for_timeout(self, lname):
+    def _check_for_timeout(lname_dns):
         now = fast_time()
-        for info in getattr(self.DNSProxy, lname).dns.values():
+        for info in lname_dns.values():
 
             if (now >= info['expire']):
                 return True
 
         return False
 
+    @staticmethod
     # updating the file with necessary changes.
-    def _update_list_file(self, cfg_file):
+    def _update_list_file(cfg_file):
         now = fast_time()
         with ConfigurationManager(cfg_file) as dnx:
             lists = dnx.load_configuration()
@@ -258,6 +262,7 @@ class Configuration:
             return loaded_list
 
     @staticmethod
+    # TODO: migrate this to signature operations
     def load_dns_signature_bitmap():
 
         # NOTE: old method of created combined signature file and loaded separately
@@ -307,7 +312,7 @@ class Reachability:
         reach_udp._initialize.wait_for_threads(count=1)
         reach_tls._initialize.wait_for_threads(count=1)
 
-    @dynamic_looper
+    @looper(FIVE_SEC)
     def tls(self):
         if (self.is_enabled):
 
@@ -330,8 +335,6 @@ class Reachability:
 
         self._initialize.done()
 
-        return FIVE_SEC
-
     def _tls_reachable(self, secure_server):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(2)
@@ -339,7 +342,7 @@ class Reachability:
         secure_socket = self._tls_context.wrap_socket(sock, server_hostname=secure_server)
         try:
             secure_socket.connect((secure_server, PROTO.DNS_TLS))
-        except (OSError, socket.timeout):
+        except OSError:
             return False
 
         else:
@@ -348,7 +351,7 @@ class Reachability:
         finally:
             secure_socket.close()
 
-    @dynamic_looper
+    @looper(FIVE_SEC)
     def udp(self):
         if (self.is_enabled or self.DNSServer.udp_fallback):
 
@@ -369,15 +372,13 @@ class Reachability:
 
         self._initialize.done()
 
-        return FIVE_SEC
-
     def _udp_reachable(self, server_ip):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.settimeout(2)
         try:
             sock.sendto(self._udp_query, (server_ip, PROTO.DNS))
             sock.recv(1024)
-        except socket.timeout:
+        except OSError:
             return False
 
         else:
@@ -392,10 +393,9 @@ class Reachability:
         self._tls_context.load_verify_locations(CERTIFICATE_STORE)
 
     def _set_udp_query(self):
-        self._udp_query = byte_join([
-            create_dns_query_header(dns_id=69, cd=1),
-            b'\x0bdnxfirewall\x03com\x00\x00\x01\x00\x01'
-        ])
+        self._udp_query = bytearray(
+            create_dns_query_header(dns_id=69, cd=1)
+        ) + b'\x0bdnxfirewall\x03com\x00\x00\x01\x00\x01'
 
     @property
     def is_enabled(self):

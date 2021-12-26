@@ -2,11 +2,10 @@
 
 import os, sys
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
 
-from dnx_sysmods.configure.file_operations import tail_file
-from dnx_sysmods.configure.system_info import System
+from dnx_gentools.def_constants import HOME_DIR
+from dnx_gentools.file_operations import tail_file
+from dnx_routines.configure.system_info import System
 
 # NOTE: this will likely not be needed anymore with ajax client implemented
 def load_page(uri_query):
@@ -24,13 +23,13 @@ def update_page(form):
     if (log_type in ['combined', 'dhcp_server', 'dns_proxy', 'ip_proxy', 'ips', 'syslog', 'system', 'web_app', 'logins']):
         file_path = f'{HOME_DIR}/dnx_system/log/{log_type}'
 
-    # returning none to fill the table_args var on the calling funtion to allow for reusablity with the reports page method
+    # returning none to fill table_args var on the calling function to allow reuse with the reports page method
     # TODO: this should potentially be wrapped in error handling at main.
         # error will raise if table key is in form, but type is not in allowed list.
     return get_log_entries(file_path), log_type, None
 
 # TODO: make front end logging 4 fields. date/time, service, level, entry. this will make the presentation nicer
-# and will still allow for service identification on the combined system log.
+#  and will still allow for service identification on the combined system log.
     # NOTE: it looks like not all long entries, especially debug have the service identified in the log currently.
     # would probably be a good idea to just use the log/service name defined in module so each entry does not need
     # to worry about it.

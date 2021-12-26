@@ -5,10 +5,10 @@ import threading
 from ipaddress import IPv4Address
 
 from dnx_gentools.def_constants import *  # pylint: disable=unused-wildcard-import
-from dnx_sysmods.configure.system_info import System
+from dnx_routines.configure.system_info import System
 from dnx_gentools.standard_tools import looper, Initialize
-from dnx_sysmods.configure.file_operations import load_configuration, cfg_read_poller
-from dnx_sysmods.configure.iptables import IPTablesManager
+from dnx_gentools.file_operations import load_configuration, cfg_read_poller
+from dnx_routines.configure.iptables import IPTablesManager
 from dnx_secmods.ips_ids.ips_ids_log import Log
 
 

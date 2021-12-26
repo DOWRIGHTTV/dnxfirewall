@@ -9,10 +9,11 @@ HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split(
 sys.path.insert(0, HOME_DIR)
 
 from dnx_gentools.def_constants import CFG, INTF, INVALID_FORM, fast_time
-from dnx_sysmods.configure.file_operations import load_configuration, ConfigurationManager, json_to_yaml
-from dnx_sysmods.configure.exceptions import ValidationError
+from dnx_gentools.file_operations import load_configuration, ConfigurationManager, json_to_yaml
+from dnx_routines.configure.exceptions import ValidationError
+from dnx_routines.configure.system_info import Interface
+
 from dnx_system.sys_main import system_action
-from dnx_sysmods.configure.system_info import Interface
 from dnx_webui.dfe_dnx_authentication import Authentication
 
 def set_default_mac_flag():

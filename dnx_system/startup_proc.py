@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
 
-import __init__
-
 import os
-import json
 
 from secrets import token_urlsafe
 
-import dnx_sysmods.configure.configure as configure
+import dnx_routines.configure.configure as configure
 
-from dnx_sysmods.logging.log_main import LogHandler as Log
-from dnx_sysmods.configure.file_operations import ConfigurationManager
-from dnx_sysmods.configure.iptables import IPTablesManager as IPTables
-from dnx_sysmods.database.ddb_connector_sqlite import DBConnector
+from dnx_routines.logging.log_main import LogHandler as Log
+from dnx_gentools.file_operations import ConfigurationManager
+from dnx_routines.configure.iptables import IPTablesManager as IPTables
+from dnx_routines.database.ddb_connector_sqlite import DBConnector
 
 LOG_NAME = 'system'
 
@@ -66,6 +63,7 @@ def create_database_tables():
     with DBConnector() as database:
         database.create_db_tables()
 
+        # only standard db writes auto commit
         database.commit_entries()
 
 if __name__ == '__main__':

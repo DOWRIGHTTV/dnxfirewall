@@ -6,7 +6,7 @@ from collections import Counter, OrderedDict, namedtuple
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import DNS_CACHE
-from dnx_sysmods.configure.file_operations import ConfigurationManager, load_configuration, write_configuration, load_top_domains_filter
+from dnx_gentools.file_operations import ConfigurationManager, load_configuration, write_configuration, load_top_domains_filter
 
 from dnx_secmods.dns_proxy.dns_proxy_log import Log
 
@@ -184,23 +184,21 @@ def RequestTracker():
 
     _list = list
 
+    # modified by class
+    ready_count = 0
+
     class _RequestTracker(OrderedDict):
-
-        __slots__ = ('ready_count',)
-
-        def __init__(self):
-            self.ready_count = 0
-
-        # TODO: figure out why sometimes the count never reaches 0 OR the Event never gets cleared. sometimes
-        #  it seems to loop endlessly/immediately between dns server > return ready > request wait > server
-        #  NOTE: is this still relevant?
 
         # blocks until the request ready flag has been set, then iterates over dict and appends any client address with
         # both values present. (client_query class instance object and decision)
         def return_ready(self):
+            nonlocal ready_count
+
             request_wait()
 
             ready_requests = []
+            ready_requests_append = ready_requests.append
+            # iterating over a copy by passing dict into list
             for request_identifier, (client_query, decision, timestamp) in _list(self.items()):
 
                 # using inverse because it has potential to be more efficient if both are not present. decision is more
@@ -213,20 +211,20 @@ def RequestTracker():
 
                     continue
 
-                ready_requests.append((client_query, decision))
+                ready_requests_append((client_query, decision))
 
                 # lock protects count, which is also accessed by server and proxy via insert method.
                 with counter_lock:
-                    self.ready_count -= 1
+                    ready_count -= 1
 
                 # removes entry from tracker if request is ready for forwarding.
                 del self[request_identifier]
 
-            if (not self.ready_count):
+            if (not ready_count):
                 request_clear()
 
-            # here temporarily for testing implementation
-            elif self.ready_count < 0:
+            # NOTE: here temporarily for testing implementation
+            elif (ready_count < 0):
                 raise RuntimeError('Request Tracker ready count dropped below 0. probably fatal. yay me.')
 
             return ready_requests
@@ -235,6 +233,8 @@ def RequestTracker():
         # exists before updating the value. a default dict cannot be used (from what i can tell) because an empty
         # list would raise an index error if it was trying to set decision before request.
         def insert(self, request_identifier, data, *, module_index):
+            nonlocal ready_count
+
             with insert_lock:
 
                 tracked_request = self.get(request_identifier, None)
@@ -245,10 +245,11 @@ def RequestTracker():
                     self[request_identifier][module_index] = data
 
                 # if present 1/2 entries exist so after this condition 2/2 will be present and request will be ready
-                # for forwarding. setting thread event to allow return ready to unblock and start processing.
+                # for forwarding. setting thread event to allow return ready to unblock and start processing. checking
+                # for None to prevent duplicate from triggering request ready.
                 elif (tracked_request[module_index] is None):
                     with counter_lock:
-                        self.ready_count += 1
+                        ready_count += 1
 
                     self[request_identifier][module_index] = data
 

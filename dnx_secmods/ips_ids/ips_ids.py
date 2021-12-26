@@ -9,7 +9,7 @@ from collections import defaultdict
 
 from dnx_gentools.def_constants import * # pylint: disable=unused-wildcard-import
 from dnx_gentools.def_namedtuples import IPS_SCAN_RESULTS, DDOS_TRACKERS, PSCAN_TRACKERS
-from dnx_sysmods.configure.iptables import IPTablesManager
+from dnx_routines.configure.iptables import IPTablesManager
 
 from dnx_iptools.packet_classes import NFQueue
 from dnx_secmods.ips_ids.ips_ids_automate import Configuration

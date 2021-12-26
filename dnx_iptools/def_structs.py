@@ -36,6 +36,7 @@ eth_header_unpack = _Struct('!6s6sH').unpack_from
 ip_header_unpack  = _Struct('!2B3H2B').unpack_from
 tcp_header_unpack = _Struct('!2H2LB').unpack_from
 udp_header_unpack = _Struct('!4H').unpack_from
+icmp_header_unpack = _Struct('!2B3H').unpack_from
 
 dhcp_opt_unpack  = _Struct('!2B').unpack
 dhcp_header_pack = _Struct('!4B4s2H4s4s4s4s16s12s180s4B').pack
@@ -51,3 +52,6 @@ resource_record_pack = _Struct('!3HLH4s').pack
 tls_unpack = _Struct('!B2HB').unpack_from
 handshake_unpack = _Struct('!2B2H').unpack_from
 cert_len_unpack = _Struct('!H').unpack_from
+
+# user with AF_UNIX sockets
+unpack_scm_creds = _Struct('3i').unpack

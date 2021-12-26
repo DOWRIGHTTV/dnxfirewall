@@ -7,8 +7,8 @@ HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split(
 sys.path.insert(0, HOME_DIR)
 
 from dnx_gentools.def_constants import CFG
-from dnx_sysmods.logging.log_main import LogHandler as Log
-from dnx_sysmods.configure.exceptions import ValidationError
+from dnx_routines.logging.log_main import LogHandler as Log
+from dnx_routines.configure.exceptions import ValidationError
 
 LOG_NAME = 'system'
 

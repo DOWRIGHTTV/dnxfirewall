@@ -1,4 +1,3 @@
-<!-- header: logo, navbar content -->
 <header>
     <nav class="blue-grey">
         <div class="container">
@@ -7,60 +6,62 @@
                     height="40px" style="display: block;">
                 </a>
 
-                {% if login_btn %}
-                <a href="login"><i class="material-icons left">send</i>Login</a>
-
-                {% elif navi %}
-                <a href="dashboard" data-target="mobile-nav" class="sidenav-trigger show-mobile-menu">
-                    <i class="material-icons">menu</i>
-                </a>
+                {% if navi %}
+                    <a href="dashboard" data-target="mobile-nav" class="sidenav-trigger show-mobile-menu">
+                        <i class="material-icons">menu</i>
+                    </a>
 
                 {% if role == 'admin' %}
-                <ul class="right remove-big-menu">
-                    <li {% if uri_path[0] == 'dashboard' %} class='active' {% endif %}>
-                        <a href="dashboard"><i class="material-icons grey-text accent-2 left">dashboard</i>Dashboard</a></li>
+                    <ul class="right remove-big-menu">
+                        <li {% if uri_path[0] == 'dashboard' %} class='active' {% endif %}>
+                            <a href="dashboard"><i class="material-icons grey-text accent-2 left">dashboard</i>Dashboard</a></li>
 
-                    <li {% if uri_path[0] == 'settings' %} class='active' {% endif %}>
-                        <a href="" class="dropdown-trigger" data-target="settings-dropdown"><i
-                                class="material-icons grey-text accent-2 left">settings</i>
-                            Settings <i class="material-icons right">arrow_drop_down</i></a></li>
+                        <li {% if uri_path[0] == 'settings' %} class='active' {% endif %}>
+                            <a href="" class="dropdown-trigger" data-target="settings-dropdown"><i
+                                    class="material-icons grey-text accent-2 left">settings</i>
+                                Settings <i class="material-icons right">arrow_drop_down</i></a></li>
 
-                    <li {% if uri_path[0] == 'advanced' %} class='active' {% endif %}>
-                        <a href="" class="dropdown-trigger" data-target="advanced-dropdown"><i
-                                class="material-icons red-text lighten-2 left">security</i>
-                            Advanced <i class="material-icons right">arrow_drop_down</i></a></li>
+                        <li {% if uri_path[0] == 'advanced' %} class='active' {% endif %}>
+                            <a href="" class="dropdown-trigger" data-target="advanced-dropdown"><i
+                                    class="material-icons red-text lighten-2 left">security</i>
+                                Advanced <i class="material-icons right">arrow_drop_down</i></a></li>
 
-                    <li {% if uri_path[0] == 'system' %} class='active' {% endif %}>
-                        <a href="" class="dropdown-trigger" data-target="system-dropdown"><i
-                                class="material-icons grey-text lighten-3 left">computer</i>
-                            System <i class="material-icons right">arrow_drop_down</i></a></li>
+                        <li {% if uri_path[0] == 'system' %} class='active' {% endif %}>
+                            <a href="" class="dropdown-trigger" data-target="system-dropdown"><i
+                                    class="material-icons grey-text lighten-3 left">computer</i>
+                                System <i class="material-icons right">arrow_drop_down</i></a></li>
 
-                    <li><a href="" class="dropdown-trigger" data-target="device-dropdown"><i
-                                class="material-icons green-text accent-3 left">power_settings_new</i>
-                            Device <i class="material-icons right">arrow_drop_down</i></a></li>
+                        <li><a href="" class="dropdown-trigger" data-target="device-dropdown"><i
+                                    class="material-icons green-text accent-3 left">power_settings_new</i>
+                                Device <i class="material-icons right">arrow_drop_down</i></a></li>
 
-                    <li><a href="logout"><i class="material-icons orange-text lighten-1 left">logout</i>Logout</a></li>
-                </ul>
+                        <li><a href="logout"><i class="material-icons orange-text lighten-1 left">logout</i>Logout</a></li>
+                    </ul>
 
                 {% elif role == 'user' %}
-                <ul class="right remove-big-menu">
-                    <li {% if uri_path[0] == 'dashboard' %} class='active' {% endif %}>
-                        <a href="dashboard"><i class="material-icons grey-text accent-2 left">dashboard</i>Dashboard</a></li>
+                    <ul class="right remove-big-menu">
+                        <li {% if uri_path[0] == 'dashboard' %} class='active' {% endif %}>
+                            <a href="dashboard"><i class="material-icons grey-text accent-2 left">dashboard</i>Dashboard</a></li>
 
-                    <li {% if uri_path[0] == 'system' and uri_path[1] == 'reports' %} class='active' {% endif %}>
-                        <a href="system/reports"><i class="material-icons left">assignment_late</i> Reports</a></li>
+                        <li {% if uri_path[0] == 'system' and uri_path[1] == 'reports' %} class='active' {% endif %}>
+                            <a href="system/reports"><i class="material-icons left">assignment_late</i> Reports</a></li>
 
-                    <li>
-                        <a href="logout"><i class="material-icons orange-text lighten-1 left">logout</i>Logout</a></li>
-                </ul>
+                        <li>
+                            <a href="logout"><i class="material-icons orange-text lighten-1 left">logout</i>Logout</a></li>
+                    </ul>
                 {% endif %}
+
+                {% elif login_btn %}
+                    <a href="login"><i class="material-icons left">send</i>Login</a>
+
                 {% else %}
-                <i class="material-icons grey-text lighten-1">lock_outline</i>
+                    <i class="material-icons grey-text lighten-1">lock_outline</i>
                 {% endif %}
             </div>
         </div>
     </nav>
 
+    {% if navi %}
     <!-- full nav dropdown - large screens -->
     <ul id="settings-dropdown" class="dropdown-content">
         <li {% if uri_path[1] == 'dns' %} class='active' {% endif %}>
@@ -230,4 +231,5 @@
         <li>
             <a href="logout"><i class="material-icons left">logout</i>Logout</a></li>
     </ul>
+    {% endif %}
 </header>

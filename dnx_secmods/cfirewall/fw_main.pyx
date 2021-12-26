@@ -262,7 +262,7 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             # VERBOSE MATCH OUTPUT | only showing matches due to too much output
             # ================================================================== #
             if (VERBOSE):
-                printf('VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV\n')
+                printf('vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n')
                 printf('pkt-in zone=%u, rule-in zone=%u, ', hw.in_zone, rule.s_zone)
                 printf('pkt-out zone=%u, rule-out zone=%u\n', hw.out_zone, rule.d_zone)
                 printf('pkt-src ip=%u, pkt-src netid=%u, rule-s netid=%lu\n', ntohl(ip_header.saddr), iph_src_ip & rule.s_net_mask, rule.s_net_id)

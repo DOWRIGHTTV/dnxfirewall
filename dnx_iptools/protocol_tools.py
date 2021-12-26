@@ -2,12 +2,14 @@
 
 import binascii
 
-from socket import htons
 from functools import partial
+from random import getrandbits as _randid
+from socket import htons, socket, AF_INET, SOCK_RAW
 from subprocess import run, CalledProcessError, DEVNULL
 
+from dnx_gentools.def_constants import byte_join, PROTO
 from dnx_iptools.def_structs import *
-from dnx_gentools.def_constants import byte_join
+from dnx_iptools.def_structures import PR_ICMP_HDR
 
 __all__ = (
     'btoia', 'itoba',
@@ -172,3 +174,55 @@ def create_dns_query_header(dns_id, arc=0, *, cd):
         (ra <<  7) | (zz <<  6) | (ad <<  5) | (cd << 4) | (rc << 0)
 
     return dns_header_pack(dns_id, f, 1, 0, 0, arc)
+
+
+_icmp_header_template = PR_ICMP_HDR(**{'type': 8, 'code': 0})
+
+def init_ping(timeout=.25):
+    '''function factory that returns a ping function object optimized for speed. not thread safe within a single ping
+     object, but is thread safe between multiple ping objects.'''
+
+    ping_sock = socket(AF_INET, SOCK_RAW, PROTO.ICMP)
+    ping_sock.settimeout(timeout)
+
+    ping_send = ping_sock.sendto
+    ping_recv = ping_sock.recvfrom
+
+    def ping(target, *, count=1, OSError=OSError):
+
+        icmp = _icmp_header_template()
+        icmp.id = _randid(16)
+
+        replies_rcvd = 0
+        for i in range(count):
+
+            icmp.sequence = i
+            icmp.checksum = checksum_icmp(icmp.assemble())
+
+            try:
+                ping_send(icmp.assemble(), (target, 0))
+            except OSError:
+                pass
+
+            else:
+                while True:
+                    try:
+                        echo_reply, addr = ping_recv(2048)
+                    except OSError:
+                        pass
+
+                    else:
+                        iphdr_len = (echo_reply[0] & 15) * 4
+
+                        type, code, checksum, id, seq = icmp_header_unpack(echo_reply[iphdr_len:])
+                        if (type == 0 and id == icmp.id and i == seq):
+                            replies_rcvd += 1
+
+                            break
+
+            # need to reset if doing more than 1 echo request. figure out a way to skip if only doing 1.
+            icmp.checksum = 0
+
+        return replies_rcvd/count > .5
+
+    return ping

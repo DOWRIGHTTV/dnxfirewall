@@ -5,13 +5,13 @@ import os, sys
 HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
 sys.path.insert(0, HOME_DIR)
 
-import dnx_sysmods.configure.web_validate as validate
+import dnx_routines.configure.web_validate as validate
 
 from dnx_gentools.def_constants import CFG, INVALID_FORM
-from dnx_sysmods.configure.exceptions import ValidationError
-from dnx_sysmods.configure.web_validate import get_convert_int
-from dnx_sysmods.configure.system_info import System
-from dnx_sysmods.backups.bck_backups import BackupHandler
+from dnx_routines.configure.exceptions import ValidationError
+from dnx_routines.configure.web_validate import get_convert_int
+from dnx_routines.configure.system_info import System
+from dnx_routines.backups.bck_backups import BackupHandler
 
 _BACKUP_DISABLED = False
 

@@ -6,7 +6,7 @@ from dnx_gentools.def_namedtuples import DNS_LOG, INFECTED_LOG
 from dnx_iptools.interface_ops import get_arp_table
 from dnx_iptools.protocol_tools import int_to_ipaddr
 
-from dnx_sysmods.logging.log_main import LogHandler
+from dnx_routines.logging.log_main import LogHandler
 
 
 class Log(LogHandler):
@@ -19,7 +19,7 @@ class Log(LogHandler):
             cls.event_log(pkt.timestamp, log, method=method)
 
         if (cls.syslog_enabled and logs):
-            cls.slog_log(LOG.EVENT, lvl, cls.generate_syslog_message(logs['dns']))
+            cls.slog_log(LOG.EVENT, lvl, cls.generate_syslog_message(logs['dns_request']))
 
     @classmethod
     def _generate_event_log(cls, pkt, req):
@@ -30,23 +30,23 @@ class Log(LogHandler):
         elif (req.category in [DNS_CAT.malicious, DNS_CAT.cryptominer] and cls.current_lvl >= LOG.ALERT):
             client_ip = pkt.request_identifier[0]
 
-            log = DNS_LOG(client_ip, pkt.request, req.category.name, req.reason, 'blocked')
+            log = DNS_LOG(client_ip, pkt.request, req.category.name, req.reason, 'dns_blocked')
 
             log2 = INFECTED_LOG(get_arp_table(host=client_ip), client_ip, pkt.request, req.category.name)
 
-            return LOG.ALERT, {'dns': log, 'blocked': log, 'infected': log2}
+            return LOG.ALERT, {'dns_request': log, 'dns_blocked': log, 'infected_event': log2}
 
         # logs redirected/blocked requests
         elif (req.redirect and cls.current_lvl >= LOG.WARNING):
             log = DNS_LOG(pkt.request_identifier[0], pkt.request, req.category.name, req.reason, 'blocked')
 
-            return LOG.WARNING, {'dns': log, 'blocked': log}
+            return LOG.WARNING, {'dns_request': log, 'dns_blocked': log}
 
         # NOTE: recent change to have allowed requests log enabled at NOTICE or above
         elif (not req.redirect and cls.current_lvl >= LOG.NOTICE):
             log = DNS_LOG(pkt.request_identifier[0], pkt.request, req.category.name, 'logging', 'allowed')
 
-            return LOG.NOTICE, {'dns': log}
+            return LOG.NOTICE, {'dns_request': log}
 
         return LOG.NONE, {}
 

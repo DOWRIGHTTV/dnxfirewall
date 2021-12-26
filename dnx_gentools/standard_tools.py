@@ -296,9 +296,7 @@ def structure(obj_name, fields):
 
             return byte_join([pack(fast_get(name)) for pack, name in _zip(field_packs, field_names)])
 
-    struct = Structure()
-
-    return struct
+    return Structure()
 
 def bytecontainer(obj_name, field_names):
     '''named tuple like class factory for storing raw byte sections with named fields. calling

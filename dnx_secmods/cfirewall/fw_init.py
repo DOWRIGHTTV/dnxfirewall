@@ -9,7 +9,7 @@ from sys import argv
 
 from dnx_gentools.def_constants import hard_out, Queue
 
-from dnx_sysmods.logging.log_main import LogHandler as Log
+from dnx_routines.logging.log_main import LogHandler as Log
 
 from dnx_secmods.cfirewall.fw_main import CFirewall # pylint: disable=import-error, no-name-in-module
 from dnx_secmods.cfirewall.fw_control import FirewallControl

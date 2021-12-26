@@ -7,8 +7,8 @@ import threading
 from datetime import datetime
 
 from dnx_gentools.def_constants import *
-from dnx_sysmods.configure.file_operations import load_configuration, cfg_read_poller, ConfigurationManager
-from dnx_sysmods.configure.system_info import System
+from dnx_gentools.file_operations import load_configuration, cfg_read_poller, ConfigurationManager
+from dnx_routines.configure.system_info import System
 
 from dnx_secmods.ip_proxy.ip_proxy_log import Log
 

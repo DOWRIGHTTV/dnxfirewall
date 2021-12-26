@@ -196,7 +196,7 @@ class Inspect:
 
         return CONN.ACCEPT
 
-if __name__ == '__main__':
+if (__name__ == '__main__'):
     Log.run(
         name=LOG_NAME
     )

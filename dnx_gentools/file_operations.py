@@ -13,7 +13,7 @@ from collections import defaultdict
 
 from dnx_gentools.def_constants import HOME_DIR, USER, GROUP, FILE_POLL_TIMER, str_join
 from dnx_gentools.def_constants import DNS_BIN_OFFSET, DNS_CAT
-from dnx_sysmods.configure.exceptions import ValidationError
+from dnx_routines.configure.exceptions import ValidationError
 
 # will load json data from file, convert it to a python dict, then return as object
 # TODO: add usr config support, which will merge will loaded system defaults.

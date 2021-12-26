@@ -1,47 +1,37 @@
 #!/usr/bin/python3
 
-import json
-import sys, os, time
-
 from itertools import zip_longest
 
-from dnx_sysmods.configure.file_operations import load_configuration
-from dnx_sysmods.configure.system_info import Interface, System, Services
-from dnx_sysmods.database.ddb_connector_sqlite import DBConnector
-from dnx_sysmods.logging.log_main import LogHandler as Log
+from dnx_routines.configure.system_info import Interface, System, Services
+from dnx_routines.database.ddb_connector_sqlite import DBConnector
+from dnx_routines.logging.log_main import LogHandler as Log
 
 def load_page():
-    with DBConnector(Log) as ProxyDB:
+    # TODO: implement executemany for back to back calls
+    with DBConnector(Log) as firewall_db:
         domain_counts = (
-            ProxyDB.unique_domain_count(action='blocked'),
-            ProxyDB.unique_domain_count(action='allowed')
+            firewall_db.execute('unique_domain_count', action='blocked'),
+            firewall_db.execute('unique_domain_count', action='allowed')
         )
 
         request_counts = (
-            ProxyDB.total_request_count(table='dnsproxy', action='blocked'),
-            ProxyDB.total_request_count(table='dnsproxy', action='allowed')
+            firewall_db.execute('total_request_count', table='dnsproxy', action='blocked'),
+            firewall_db.execute('total_request_count', table='dnsproxy', action='allowed')
         )
 
         top_domains = (
-            ('blocked', ProxyDB.dashboard_query_top(5, action='blocked')),
-            ('allowed', ProxyDB.dashboard_query_top(5, action='allowed'))
+            ('blocked', firewall_db.execute('top_dashboard', 5, action='blocked')),
+            ('allowed', firewall_db.execute('top_dashboard', 5, action='allowed'))
         )
 
         top_countries = {}
         for action in ['blocked', 'allowed']:
-            outbound = ProxyDB.query_geolocation(5, action=action, direction='OUTBOUND')
-            inbound = ProxyDB.query_geolocation(5, action=action, direction='INBOUND')
+            outbound = firewall_db.execute('top_geolocation', 5, action=action, direction='OUTBOUND')
+            inbound = firewall_db.execute('top_geolocation', 5, action=action, direction='INBOUND')
 
             top_countries[action] = list(zip_longest(outbound, inbound, fillvalue=''))
 
-        inf_hosts = ProxyDB.query_last(5, table='infectedclients', action='all')
-
-    intstat = Interface.bandwidth()
-
-    uptime = System.uptime()
-    cpu = System.cpu_usage()
-    ram = System.ram_usage()
-    dns_servers = System.dns_status()
+        inf_hosts = firewall_db.execute('last', 5, table='infectedclients', action='all')
 
     mod_status = {}
     for svc in ['dns-proxy', 'ip-proxy', 'ips', 'dhcp-server']:
@@ -55,8 +45,8 @@ def load_page():
         'top_domains': top_domains, 'top_countries': top_countries,
         'infected_hosts': inf_hosts,
 
-        'interfaces': intstat, 'uptime': uptime, 'cpu': cpu,
-        'ram': ram, 'dns_servers': dns_servers, 'module_status': mod_status
+        'interfaces': Interface.bandwidth(), 'uptime': System.uptime(), 'cpu': System.cpu_usage(),
+        'ram': System.ram_usage(), 'dns_servers': System.dns_status(), 'module_status': mod_status
     }
 
     return dashboard

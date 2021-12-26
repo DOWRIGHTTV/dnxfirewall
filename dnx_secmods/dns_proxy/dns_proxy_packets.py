@@ -154,12 +154,16 @@ class ClientRequest:
         return self
 
 
+# ======================================
+# PROXY - FULL INSPECTION, DIRECT SOCKET
+# ======================================
 ip_header_template = PR_IP_HDR(
     **{'ver_ihl': 69, 'tos': 0, 'ident': 0, 'flags_fro': 16384, 'ttl': 255, 'protocol': PROTO.UDP}
 )
 udp_header_template = PR_UDP_HDR(**{'checksum': 0})
 
 std_resource_record_template = DNS_STD_RR(**{'ptr': 49164, 'type': 1, 'class': 1, 'ttl': 300, 'rd_len': 4})
+
 
 class ProxyRequest(RawPacket):
 
@@ -247,7 +251,7 @@ class ProxyRequest(RawPacket):
 
         self.send_data = ip_header.assemble() + udp_header.assemble() + udp_payload
 
-    def _enumerate_request(self, request):
+    def _enumerate_request(self, request, fast_int=int, fast_hash=hash):
         rs = request.split('.')
         r_len = len(rs)
 
@@ -263,10 +267,9 @@ class ProxyRequest(RawPacket):
             t_reqs = [None]
             self.dom_local = True
 
-        fast_int = int
         # building bin/host id from hash for each enumerated name.
         for r in requests:
-            r_hash = hash(r)
+            r_hash = fast_hash(r)
             b_id = fast_int(f'{r_hash}'[:4])
             h_id = fast_int(f'{r_hash}'[4:])
 

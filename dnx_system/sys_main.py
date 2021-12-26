@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
 if (__name__ == '__main__'):
-    pass
+    import __init__
 
 import os
 
 from json import loads, dumps
-from socket import socket, AF_INET, SOCK_DGRAM
+from socket import socket, AF_UNIX, SOCK_DGRAM
 from threading import Thread
 
 from dnx_gentools.def_constants import *
@@ -27,6 +27,15 @@ MODULE_PERMISSIONS = {
         'os.replace': os.replace
     }
 }
+
+# ====================
+# CONTROL MSG HANDLER
+# ====================
+
+_control_service = socket(AF_UNIX, SOCK_DGRAM)
+_control_service.bind(CONTROL_SOCKET)
+
+_control_service_sendmsg = _control_service.sendmsg
 
 
 class SystemControl:
@@ -51,10 +60,6 @@ class SystemControl:
 
         self._receive_control_socket()
 
-    def _create_control_sock(self):
-        self._control_sock = socket(AF_INET, SOCK_DGRAM)
-        self._control_sock.bind((f'{LOCALHOST}', CONTROL_SOCKET))
-
     @looper(NO_DELAY)
     def _receive_control_socket(self):
         try:
@@ -63,11 +68,11 @@ class SystemControl:
             write_log(ose) # log this eventually
 
         else:
-            #data format | module: command: args
+            # data format | module: command: args
             data = loads(data.decode())
 
             # this may seem redundant, but is mainly for input validation/ ensuring properly formatted data
-            # is recvd.
+            # is rcvd.
             try:
                 control_ref = MODULE_PERMISSIONS[data['module']][data['command']]
             except KeyError as ke:
@@ -86,18 +91,26 @@ class SystemControl:
                 else:
                     shell(f'{data["command"]} {cmd_args}')
 
+# ==================
+# CONTROLS UTILITIES
+# ===================
+
+_control_client = socket(AF_UNIX, SOCK_DGRAM)
+_control_client.connect(CONTROL_SOCKET)
+
+_control_client_sendmsg = _control_client.sendmsg
+
 def _system_action(data_to_send, delay):
     if (delay):
         fast_sleep(delay)
 
     try:
-        data_to_send = dumps(data_to_send)
+        data_to_send = dumps(data_to_send).encode('utf-8')
     except Exception as e:
         write_log(e)
 
     else:
-        sock = socket(AF_INET, SOCK_DGRAM)
-        sock.sendto(data_to_send.encode('utf-8'), (f'{LOCALHOST}', CONTROL_SOCKET))
+        _control_client_sendmsg(data_to_send, DNX_AUTHENTICATION)
 
 def system_action(*, delay=NO_DELAY, **kwargs):
     '''
@@ -118,7 +131,7 @@ def system_action(*, delay=NO_DELAY, **kwargs):
         Thread(target=_system_action, args=(kwargs, delay)).start()
 
     else:
-         _system_action(kwargs, delay)
+        _system_action(kwargs, delay)
 
-if __name__ == '__main__':
+if (__name__ == '__main__'):
     SystemControl.run()

@@ -7,7 +7,7 @@ HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split(
 sys.path.insert(0, HOME_DIR)
 
 from dnx_shell.dnx_shell_standard import Standard
-from dnx_sysmods.configure.system_info import Interface as Int
+from dnx_routines.configure.system_info import Interface as Int
 
 
 class Interface:

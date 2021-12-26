@@ -7,7 +7,7 @@ HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split(
 sys.path.insert(0, HOME_DIR)
 
 from dnx_gentools.def_constants import * # pylint: disable=unused-wildcard-import
-from dnx_sysmods.configure.file_operations import load_configuration
+from dnx_gentools.file_operations import load_configuration
 
 __all__ = (
     'IPTablesManager'
@@ -15,13 +15,7 @@ __all__ = (
 
 _system = os.system
 
-# TODO: reverse inspection order for forward chain.
-# PROXY ACCEPT MARK WILL BE AT TOP OF CHAIN | is this some kind of weird optimization?
-# 1. internal to wan ip proxy
-#    - source zone/ip/port to dst zone/ip/port
-#       a. deny, drop packet
-#       b. accept, forward packet
-#       c. ip proxy, send to ip proxy queue, if no policy vio mark proxy accept, then repeat
+
 class _Defaults:
     '''class containing methods to build default iptable rulesets.'''
 
@@ -32,7 +26,7 @@ class _Defaults:
 
         self.custom_nat_chains = ['DSTNAT', 'SRCNAT', 'REDIRECT_OVERRIDE']
 
-   # calling all methods in the class dict.
+    # calling all methods in the class dict.
     @classmethod
     def load(cls, interfaces):
 
@@ -135,14 +129,14 @@ class IPTablesManager:
     )
 
     def __init__(self):
-        dnx_intf_settigs = load_configuration('config')['interfaces']['builtins']
+        interfaces = load_configuration('config')['interfaces']['builtins']
 
         self._intf_to_zone = {
-            dnx_intf_settigs[zone]['ident']: zone for zone in ['wan', 'lan', 'dmz']
+            interfaces[zone]['ident']: zone for zone in ['wan', 'lan', 'dmz']
         }
 
         self._zone_to_intf = {
-            zone: dnx_intf_settigs[zone]['ident'] for zone in ['wan', 'lan', 'dmz']
+            zone: interfaces[zone]['ident'] for zone in ['wan', 'lan', 'dmz']
         }
 
         self._iptables_lock_file = f'{HOME_DIR}/dnx_system/iptables/iptables.lock'
@@ -187,32 +181,8 @@ class IPTablesManager:
         if (not suppress):
             write_log('dnxfirewall iptable defaults applied.')
 
-    def add_rule(self, rule):
-        if (rule.protocol == 'any'):
-            firewall_rule = (
-                f'sudo iptables -I {rule.zone} {rule.position} -s {rule.src_ip}/{rule.src_netmask} '
-                f'-d {rule.dst_ip}/{rule.dst_netmask} -j {rule.action}'
-            )
-
-        elif (rule.protocol == 'icmp'):
-            firewall_rule = (
-                f'sudo iptables -I {rule.zone} {rule.position} -p icmp -s {rule.src_ip}/{rule.src_netmask} '
-                f'-d {rule.dst_ip}/{rule.dst_netmask} -j {rule.action}'
-            )
-
-        elif (rule.protocol in ['tcp', 'udp']):
-            firewall_rule = (
-                f'sudo iptables -I {rule.zone} {rule.position} -p {rule.protocol} -s {rule.src_ip}/{rule.src_netmask} '
-                f'-d {rule.dst_ip}/{rule.dst_netmask} --dport {rule.dst_port} -j {rule.action}'
-            )
-
-        shell(firewall_rule, check=True)
-
-    def delete_rule(self, rule):
-        shell(f'sudo iptables -D {rule.zone} {rule.position}', check=True)
-
     def modify_management_access(self, fields):
-        '''add or remove management access rule as configured by webui. ports must be a list, even if only one port is needed.'''
+        '''set management access as configured in webui. ports must be a list, even if only one port is needed.'''
 
         zone = globals()[f'{fields.zone.upper()}_IN']
         action = '-A' if fields.action is CFG.ADD else '-D'
@@ -262,6 +232,10 @@ class IPTablesManager:
                 f'-i {src_interface} -o {self._zone_to_intf["wan"]} '
                 f'-s {rule.orig_src_ip}  -j SNAT --to-source {rule.new_src_ip}'
             )
+
+        # covering unexpected conditions. this should be redundant to webui input validations, but piece of mind
+        else:
+            raise ValueError
 
         # TODO: make an auto creation firewall rule option
 
@@ -320,6 +294,6 @@ class IPTablesManager:
     def clear_dns_over_https():
         shell(f'sudo iptables -F DOH')
 
-if __name__ == '__main__':
+if (__name__ == '__main__'):
     with IPTablesManager() as iptables:
         iptables.apply_defaults()

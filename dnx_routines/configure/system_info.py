@@ -14,7 +14,7 @@ _HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split
 sys.path.insert(0, _HOME_DIR)
 
 from dnx_gentools.def_constants import fast_time, str_join, NO_DELAY, FIVE_SEC, ONE_HOUR
-from dnx_sysmods.configure.file_operations import load_configuration
+from dnx_gentools.file_operations import load_configuration
 
 __all__ = (
     'Interface', 'System', 'Services'
@@ -24,7 +24,7 @@ util_shell = partial(run, shell=True, capture_output=True, text=True)
 
 
 class Interface:
-    '''This class is being depricated and being replaced by dnx_interface module in iptools dir.'''
+    '''This class is being deprecated and being replaced by dnx_interface module in iptools dir.'''
 
     @staticmethod
     def ip_address(interface):

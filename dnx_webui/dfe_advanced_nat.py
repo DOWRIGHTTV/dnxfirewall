@@ -2,13 +2,13 @@
 
 from types import SimpleNamespace
 
-import dnx_sysmods.configure.configure as configure
-import dnx_sysmods.configure.web_validate as validate
+import dnx_routines.configure.configure as configure
+import dnx_routines.configure.web_validate as validate
 
 from dnx_gentools.def_constants import INVALID_FORM, DATA
-from dnx_sysmods.configure.exceptions import ValidationError
-from dnx_sysmods.configure.iptables import IPTablesManager
-from dnx_sysmods.configure.system_info import System
+from dnx_routines.configure.exceptions import ValidationError
+from dnx_routines.configure.iptables import IPTablesManager
+from dnx_routines.configure.system_info import System
 
 def load_page():
     return {

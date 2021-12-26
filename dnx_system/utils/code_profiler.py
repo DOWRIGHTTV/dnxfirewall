@@ -11,7 +11,7 @@ from pstats import Stats as _Stats, SortKey as _SortKey
 HOME_DIR = _os.environ['HOME_DIR']
 _sys.path.insert(0, HOME_DIR)
 
-from dnx_sysmods.configure.file_operations import append_to_file
+from dnx_gentools.file_operations import append_to_file
 
 _fast_time_ns = _time.perf_counter_ns
 _CUMU = _SortKey.CUMULATIVE

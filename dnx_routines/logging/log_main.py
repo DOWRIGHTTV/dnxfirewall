@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 
-import os, sys
+if (__name__ == '__main__'):
+    import __init__
+
+import os
 import threading
 import json
 
-from socket import socket, AF_INET, SOCK_DGRAM
+from socket import socket, AF_UNIX, SOCK_DGRAM
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
-from dnx_gentools.def_constants import * # pylint: disable=unused-wildcard-import
+from dnx_gentools.def_constants import *
 from dnx_gentools.standard_tools import looper, classproperty, dnx_queue, Initialize
-from dnx_sysmods.configure.file_operations import load_configuration, cfg_read_poller, change_file_owner
-from dnx_sysmods.database.ddb_connector_sqlite import DBConnector
-from dnx_sysmods.configure.system_info import System
+from dnx_gentools.file_operations import load_configuration, cfg_read_poller, change_file_owner
+from dnx_routines.database.ddb_connector_sqlite import DBConnector
+from dnx_routines.configure.system_info import System
 
 LOG_NAME = 'system'
 
@@ -29,70 +29,52 @@ class LogService:
         'log_length', 'log_level', '_initialize'
     )
 
-    def __init__(self):
-        self._initialize = Initialize(Log, 'LogService')
-
     @classmethod
     def run(cls):
         self = cls()
+
+        self.organize()
+
+    def __init__(self):
+        self._initialize = Initialize(Log, 'LogService')
 
         threading.Thread(target=self.get_settings).start()
 
         self._initialize.wait_for_threads(count=1)
 
-        threading.Thread(target=self.organize).start()
         threading.Thread(target=self.clean_db_tables).start()
         threading.Thread(target=self.clean_blocked_table).start()
 
-    # Recurring logic to gather all log files and add the mto a signle file (combined logs) every 5 minutes
     @looper(THREE_MIN)
     def organize(self):
-        # print('[+] Starting organize operation.')
         log_entries = []
 
         date = str_join(System.date())
         for module in self._log_modules:
-            module_entries = self._combine_logs(module, date)
-            if (module_entries):
-                log_entries.extend(module_entries)
 
-        sorted_log_entries = sorted(log_entries)
-        if (sorted_log_entries):
-            self._write_combined_logs(sorted_log_entries, date)
+            log_entries.extend(self._pull_recent_logs(module, date))
 
-        del log_entries  # to reclaim system memory
+        if (not log_entries): return
 
-    # grabbing the log from the sent in module, splitting the lines, and returning a list
-    # TODO: see if we can load file as generator
-    @staticmethod
-    def _combine_logs(module, date):
-        file_entries = []
-
-        if not os.path.isfile(f'{HOME_DIR}/dnx_system/log/{module}/{date}-{module}.log'):
-            return None
-
-        with open(f'{HOME_DIR}/dnx_system/log/{module}/{date}-{module}.log', 'r') as log_file:
-            for _ in range(20):
-                line = log_file.readline().strip()
-                if not line: break
-
-                file_entries.append(line)
-
-        return file_entries
-
-    # writing the log entries to the combined log
-    @staticmethod
-    def _write_combined_logs(sorted_log_entries, date):
         with open(f'{HOME_DIR}/dnx_system/log/combined/{date}-combined.log', 'w+') as system_log:
-            # print(f'writing {HOME_DIR}/dnx_system/log/combined/{date[0]}{date[1]}{date[2]}-combined.log')
-            for log in sorted_log_entries:
-                system_log.write(f'{log}\n')
+            system_log.write('\n'.join(sorted(log_entries)))
+
+        del log_entries # to reclaim system memory
+
+    @staticmethod
+    def _pull_recent_logs(module, date):
+        log_path = f'{HOME_DIR}/dnx_system/log/{module}/{date}-{module}.log'
+
+        if not os.path.isfile(log_path):
+            return []
+
+        with open(log_path, 'r') as log_file:
+            return [x.strip() for x in log_file.readlines(2048)[:20]]
 
     @looper(ONE_DAY)
     def clean_db_tables(self):
-        # print('[+] Starting general DB table cleaner.')
         with DBConnector(Log) as FirewallDB:
-            for table in ['dnsproxy', 'ipproxy' , 'ips', 'infectedclients']:
+            for table in ['dnsproxy', 'ipproxy', 'ips', 'infectedclients']:
                 FirewallDB.table_cleaner(self.log_length, table=table)
 
         # NOTE: consider moving this into the DBConnector so it can report if no exc are raised.
@@ -100,7 +82,6 @@ class LogService:
 
     @looper(THREE_MIN)
     def clean_blocked_table(self):
-        # print('[+] Starting DB blocked table cleaner.')
         with DBConnector(Log) as FirewallDB:
             FirewallDB.blocked_cleaner(table='blocked')
 
@@ -109,7 +90,6 @@ class LogService:
 
     @cfg_read_poller('logging_client')
     def get_settings(self, cfg_file):
-#        print('[+] Starting settings update poller.')
         log_settings = load_configuration(cfg_file)
 
         self.log_length = log_settings['logging']['length']
@@ -117,10 +97,19 @@ class LogService:
 
         self._initialize.done()
 
-# LOG HANDLING PARENT CLASS
 
-# TODO: create a function that can be used to write logs for system errors that happen prior to log
-# handler being intitialized.
+# ==========================
+# LOG HANDLING PARENT CLASS
+# ==========================
+# NOTE: keeping sockets in the global space for performance and easier initialization/ handling.
+
+_db_client = socket(AF_UNIX, SOCK_DGRAM)
+_db_client.connect(DATABASE_SOCKET)
+
+_db_sendmsg = _db_client.sendmsg
+
+
+# TODO: create function to write logs for system errors that happen prior to log handler being initialized.
 class LogHandler:
     _LEVEL   = 0
     _initialized = False
@@ -128,7 +117,6 @@ class LogHandler:
     _running = False
 
     _path    = f'{HOME_DIR}/dnx_system/log/'
-    _db_sock = socket()
     _syslog_sock = socket()
 
     @classmethod
@@ -262,13 +250,8 @@ class LogHandler:
         '''
 
         log_data = Format.db_message(timestamp, log, method)
-        for _ in range(2):
-            try:
-                cls._db_sock.send(log_data)
-            except OSError:
-                cls._create_db_sock()
-            else:
-                break
+
+        _db_sendmsg(log_data, DNX_AUTHENTICATION)
 
     @classmethod
     def slog_log(cls, mtype, level, message):
@@ -337,15 +320,10 @@ class LogHandler:
 
         cls._syslog = syslog['enabled']
 
-    @classmethod
-    def _create_syslog_sock(cls):
-        cls._syslog_sock = socket(AF_INET, SOCK_DGRAM)
-        cls._syslog_sock.connect((f'{LOCALHOST}', SYSLOG_SOCKET))
-
-    @classmethod
-    def _create_db_sock(cls):
-        cls._db_sock = socket(AF_INET, SOCK_DGRAM)
-        cls._db_sock.connect((f'{LOCALHOST}', DATABASE_SOCKET))
+    # @classmethod
+    # def _create_syslog_sock(cls):
+    #     cls._syslog_sock = socket(AF_INET, SOCK_DGRAM)
+    #     cls._syslog_sock.connect((f'{LOCALHOST}', SYSLOG_SOCKET))
 
 
 class Format:

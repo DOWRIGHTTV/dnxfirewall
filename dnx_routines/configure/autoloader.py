@@ -10,9 +10,9 @@ from sys import argv
 from subprocess import run, DEVNULL, CalledProcessError
 
 from dnx_gentools.def_constants import HOME_DIR, str_join
-from dnx_sysmods.configure.file_operations import ConfigurationManager, load_configuration, write_configuration, json_to_yaml
-from dnx_sysmods.configure.iptables import IPTablesManager
-from dnx_sysmods.logging.log_main import LogHandler as Log
+from dnx_gentools.file_operations import ConfigurationManager, load_configuration, write_configuration, json_to_yaml
+from dnx_routines.configure.iptables import IPTablesManager
+from dnx_routines.logging.log_main import LogHandler as Log
 
 LOG_NAME = 'system'
 PROGRESS_TOTAL_COUNT = 15
@@ -334,6 +334,7 @@ def set_services():
 
     services = os.listdir(f'{UTILITY_DIR}/services')
     for service in services:
+
         if (service in ignore_list): continue
 
         dnx_run(f'cp {UTILITY_DIR}/services/{service} /etc/systemd/system/')
@@ -379,9 +380,7 @@ if __name__ == '__main__':
     check_clone_location()
 
     # initializing log module which is required when using ConfigurationManager
-    Log.run(
-        name=LOG_NAME
-    )
+    Log.run(name=LOG_NAME)
     ConfigurationManager.set_log_reference(Log)
 
     check_already_ran()
