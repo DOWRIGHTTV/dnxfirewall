@@ -6,13 +6,10 @@ import re
 from subprocess import run
 from ipaddress import IPv4Address, IPv4Network
 
-_HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, _HOME_DIR)
-
 from dnx_gentools.def_constants import LOG, CFG, DATA, PROTO, INVALID_FORM
 from dnx_gentools.file_operations import load_configuration
 from dnx_routines.configure.exceptions import ValidationError
-from dnx_secmods.cfirewall.fw_control import FirewallManage
+from dnx_secmods.cfirewall.fw_manage import FirewallManage
 
 MIN_PORT = 1
 MAX_PORT = 65535
@@ -74,7 +71,7 @@ def syslog_dropdown(syslog_time):
     if (syslog_time):
         raise ValidationError('Dropdown values must be an integer.')
 
-    if (syslog_time not in [5,10,60]):
+    if (syslog_time not in [5, 10, 60]):
         raise ValidationError('Dropdown values can only be 5, 10, or 60.')
 
 def mac_address(mac):
@@ -188,12 +185,12 @@ def proto_port(port_str):
         ports[0] = ports[0] if ports[0] != 0 else 1
 
     # expanding the range out for any. this does not cause issues with icmp since it does not use ports so the second
-    # value in a port range is is N/A for icmp, but in this case just letting it do what the others do.
+    # value in a port range is N/A for icmp, but in this case just letting it do what the others do.
     ports[1] = ports[1] if ports[1] != 0 else 65535
 
     for port in ports:
 
-        # port 0 is used by icmp. if 0 is used outside of icmp it gets converted to a range.
+        # port 0 is used by icmp. if 0 is used outside icmp it gets converted to a range.
         if (port not in range(65536)):
             raise ValidationError(error)
 
@@ -232,8 +229,8 @@ def password(passwd, /):
     if not all(criteria):
         raise ValidationError('Password does not meet complexity requirements.')
 
-def user_role(user_role):
-    if (user_role not in ['admin', 'user', 'cli']):
+def user_role(role, /):
+    if (role not in ['admin', 'user', 'cli']):
         raise ValidationError('Invalid user settings.')
 
 def dhcp_reservation(reservation_settings):
@@ -352,7 +349,10 @@ def geolocation(region, rtype='country'):
     elif (rtype == 'continent'):
         valid_regions = load_configuration('geolocation', filepath='dnx_webui/data')
 
-    if region[rtype] not in valid_regions:
+    else:
+        raise ValidationError(INVALID_FORM)
+
+    if (region[rtype] not in valid_regions):
         raise ValidationError(INVALID_FORM)
 
 def time_restriction(settings, /):
@@ -385,7 +385,7 @@ def dns_over_tls(dns_tls_settings):
         raise ValidationError('DNS over TLS must be enabled to configure UDP fallback.')
 
 # NOTE: log and security profiles are disabled in form. they will be set here as default for the time being.
-def manage_firewall_rule(fw_rule):
+def manage_firewall_rule(fw_rule, /):
     # ('position', '1'),
     # ('src_zone', 'lan'), ('src_ip', '192.168.83.0/24'), ('src_port', 'tcp/0'),
     # ('dst_zone', 'any'), ('dst_ip', '0.0.0.0/0'), ('dst_port', 'tcp/80'),
@@ -565,6 +565,9 @@ def domain_categories(categories, ruleset):
 
     elif (ruleset in ['tlds']):
         cat_list = dns_proxy['tlds']
+
+    else:
+        raise ValidationError(INVALID_FORM)
 
     for category in categories:
         if category not in cat_list:

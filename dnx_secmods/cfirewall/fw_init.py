@@ -32,7 +32,7 @@ if (error):
 # necessary calls into Cython via cfirewall reference for making the actual config change. these will run in Python
 # threads and some may call into Cython. These functions should be explicitly identified since they will require the gil
 # to be acquired on the Cython side or else the Python interpreter will crash.
-fw_control = FirewallControl(cfirewall=dnxfirewall)
+fw_control = FirewallControl(Log, cfirewall=dnxfirewall)
 try:
     fw_control.run()
 except:

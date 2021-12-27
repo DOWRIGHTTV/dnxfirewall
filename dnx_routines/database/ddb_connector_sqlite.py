@@ -5,13 +5,13 @@ if (__name__ == '__main__'):
 
 import sqlite3
 
-import dnx_routines.database.ddb_routines # routines will be set within DBConnector class
-
 from dnx_gentools.def_constants import *
 
 __all__ = ('DBConnector',)
 
 NO_ROUTINE = [None, None]
+
+print('db_conn', __name__)
 
 
 class _DBConnector:
@@ -173,6 +173,8 @@ DBConnector = _DBConnector
 
 #else:
 #    from dnx_routines.database.ddb_connector_psql import DBConnector
+
+import dnx_routines.database.ddb_routines # routines will be set within DBConnector class
 
 if __name__ == '__main__':
     # NOTE: CREATE THE TABLES

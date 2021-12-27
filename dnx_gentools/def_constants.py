@@ -117,8 +117,8 @@ class PROTO(_IntEnum):
     DNS_TLS  = 853
 
 SYSLOG_TLS_PORT = 6514
-CONTROL_SOCKET  = bytes(f'{HOME_DIR}/dnx_routines/dnx_system/control_sock') # LOCAL SOCKET
-DATABASE_SOCKET = bytes(f'{HOME_DIR}/dnx_routines/database/ddb_sock') # LOCAL SOCKET
+CONTROL_SOCKET  = bytes(f'{HOME_DIR}/dnx_routines/dnx_system/control_sock', 'utf-8') # LOCAL SOCKET
+DATABASE_SOCKET = bytes(f'{HOME_DIR}/dnx_routines/database/ddb_sock', 'utf-8') # LOCAL SOCKET
 SYSLOG_SOCKET   = 6970 # LOCAL SOCKET
 
 # process, user, group

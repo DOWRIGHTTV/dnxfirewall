@@ -12,7 +12,7 @@ from dnx_gentools.def_constants import HOME_DIR, INVALID_FORM
 from dnx_gentools.file_operations import load_configuration, calculate_file_hash
 from dnx_routines.configure.exceptions import ValidationError
 
-from dnx_secmods.cfirewall.fw_control import FirewallManage
+from dnx_secmods.cfirewall.fw_manage import FirewallManage
 
 valid_sections = {
     'BEFORE': '1',

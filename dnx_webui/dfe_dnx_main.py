@@ -40,7 +40,7 @@ import dnx_webui.dfe_system_services as dnx_services
 from dnx_webui.dfe_dnx_authentication import Authentication, user_restrict
 
 from dnx_system.sys_main import system_action
-from dnx_secmods.cfirewall.fw_control import FirewallManage
+from dnx_secmods.cfirewall.fw_manage import FirewallManage
 
 LOG_NAME = 'web_app'
 

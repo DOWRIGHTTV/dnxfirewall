@@ -19,11 +19,20 @@
 #   it will be passed through connector without
 #   accessing the data.
 
+import dnx_routines.database.ddb_connector_sqlite as db_conn
+
 from dnx_gentools.def_constants import fast_sleep
 from dnx_gentools.def_namedtuples import BLOCKED_DOM
 from dnx_routines.configure.system_info import System
 
-from dnx_routines.database.ddb_connector_sqlite import DBConnector as db
+try:
+    i += 1
+except:
+    i = 1
+
+print(f'routines {i}', __name__)
+
+db = db_conn.DBConnector
 
 # ========================================
 # INSERT ROUTINES

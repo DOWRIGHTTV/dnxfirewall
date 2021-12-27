@@ -96,7 +96,10 @@ class SystemControl:
 # ===================
 
 _control_client = socket(AF_UNIX, SOCK_DGRAM)
-_control_client.connect(CONTROL_SOCKET)
+try:
+    _control_client.connect(CONTROL_SOCKET)
+except FileNotFoundError:
+    print('control socket conn failed.')
 
 _control_client_sendmsg = _control_client.sendmsg
 
