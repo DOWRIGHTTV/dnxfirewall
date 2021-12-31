@@ -4,11 +4,11 @@ import os
 import shutil
 
 from dnx_gentools.def_constants import HOME_DIR
-from dnx_gentools.file_operations import ConfigurationManager
+from dnx_gentools.file_operations import ConfigurationManager, load_configuration
 
 from dnx_routines.logging.log_main import LogHandler as Log
 
-DEFAULT_VERION = 'firewall_pending'
+DEFAULT_VERSION = 'firewall_pending'
 DEFAULT_PATH = 'dnx_system/iptables'
 PENDING_RULE_FILE = f'{HOME_DIR}/{DEFAULT_PATH}/usr/firewall_pending.json'
 ACTIVE_RULE_FILE  = f'{HOME_DIR}/{DEFAULT_PATH}/usr/firewall_active.json'
@@ -43,7 +43,7 @@ class FirewallManage:
     sections = ['BEFORE', 'MAIN', 'AFTER']
 
     def __init__(self):
-        self.firewall = load_configuration(DEFAULT_VERION, filepath=DEFAULT_PATH)
+        self.firewall = load_configuration(DEFAULT_VERSION, filepath=DEFAULT_PATH)
 
     def add(self, pos, rule, *, section):
         '''insert or append operation of new firewall rule to the specified section.'''
@@ -51,11 +51,7 @@ class FirewallManage:
         # for comparison operators, but will use str as key as required for json.
         pos_int = int(pos)
 
-        with ConfigurationManager(DEFAULT_VERION, file_path=DEFAULT_PATH) as dnx_fw:
-            firewall = dnx_fw.load_configuration()
-
-
-        with ConfigurationManager(DEFAULT_VERION, file_path=DEFAULT_PATH) as dnx_fw:
+        with ConfigurationManager(DEFAULT_VERSION, file_path=DEFAULT_PATH) as dnx_fw:
             firewall = dnx_fw.load_configuration()
 
             ruleset = firewall[section]
@@ -89,7 +85,7 @@ class FirewallManage:
 
     def remove(self, pos, *, section):
 
-        with ConfigurationManager(DEFAULT_VERION, file_path=DEFAULT_PATH) as dnx_fw:
+        with ConfigurationManager(DEFAULT_VERSION, file_path=DEFAULT_PATH) as dnx_fw:
             firewall = dnx_fw.load_configuration()
 
             ruleset = firewall[section]
@@ -112,17 +108,19 @@ class FirewallManage:
 
         move = True if pos != static_pos else False
 
-        with ConfigurationManager(DEFAULT_VERION, file_path=DEFAULT_PATH) as dnx_fw:
+        with ConfigurationManager(DEFAULT_VERSION, file_path=DEFAULT_PATH) as dnx_fw:
             firewall = dnx_fw.load_configuration()
 
             ruleset = firewall[section]
 
-            # update rule first using static_pos, then remove from list if it needs to move. cannot call add method from            # here due to file lock being held by this current context (its not re entrant).
+            # update rule first using static_pos, then remove from list if it needs to move. cannot call add method from
+            # here due to file lock being held by this current context (its not re entrant).
             ruleset[static_pos] = rule
             if (move):
                 rule_to_move = ruleset.pop(static_pos)
 
-            # writes even if it needs to move since external func will handle move operation (in the form of insertion).            dnx_fw.write_configuration(firewall)
+            # writes even if it needs to move since external func will handle move operation (in the form of insertion).
+            # dnx_fw.write_configuration(firewall)
 
             # updating instance variable for direct access
             self.firewall = firewall
@@ -174,5 +172,3 @@ class FirewallManage:
             firewall = dnx_fw.load_configuration()
 
             return firewall[section]
-
-
