@@ -52,7 +52,7 @@ app.secret_key = load_configuration('config')['flask'].get('key')
 trusted_proxies = ['127.0.0.1']
 
 # setup for system logging
-Log.run(name=LOG_NAME)
+Log = Log.run(name=LOG_NAME)
 
 # initialize cfirewall manager, which interfaces with cfirewall control class through a fd.
 cfirewall = FirewallManage()

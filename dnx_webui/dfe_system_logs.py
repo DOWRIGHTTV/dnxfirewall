@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
-import os, sys
-
+import os
 
 from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.file_operations import tail_file
@@ -24,8 +23,8 @@ def update_page(form):
         file_path = f'{HOME_DIR}/dnx_system/log/{log_type}'
 
     # returning none to fill table_args var on the calling function to allow reuse with the reports page method
-    # TODO: this should potentially be wrapped in error handling at main.
-        # error will raise if table key is in form, but type is not in allowed list.
+    # TODO: this should potentially be wrapped in error handling at main. error will raise if table key is in form,
+    #  but type is not in allowed list.
     return get_log_entries(file_path), log_type, None
 
 # TODO: make front end logging 4 fields. date/time, service, level, entry. this will make the presentation nicer

@@ -104,7 +104,7 @@ class LogService:
 # GENERIC LIGHTWEIGHT FUNCTIONS
 # =============================================
 
-def simple_write(m_name, level_name, message):
+def direct_log(m_name, level_name, message, int=int):
     '''alternate system log method. this can be used to override global module log name if needed and does not
     require LogHandler initialization.'''
 
@@ -125,9 +125,7 @@ def message(mod_name, mtype, level, log_msg):
 
     # using system/UTC time
     # 20140624|19:08:15|EVENT|DNSProxy:Informational|192.168.83.1|*MESSAGE*
-    log_msg = f'{date}|{timestamp}|{mtype.name}|{mod_name}:{level}|{system_ip}|{log_msg}'
-
-    return log_msg.encode('utf-8')
+    return f'{date}|{timestamp}|{mtype.name}|{mod_name}:{level}|{system_ip}|{log_msg}'.encode('utf-8')
 
 def db_message(timestamp, log_msg, method):
     log_data = {
@@ -155,20 +153,18 @@ def convert_level(level=None):
 
     return levels if level is None else levels[level][0]
 
-# ==========================
-# LOG HANDLING PARENT CLASS
-# ==========================
-# keeping sockets in the global space for performance and easier initialization/ handling. wrapped in function to
-# prevent every import from creating a socket. this will likely be replaced with a nonlocal class factory solution
-# when the there is time to optimize LogHandler further.
+# =================================
+# LOG HANDLING CLASS FACTORY
+# =================================
+# process wide "instance" of LogHandler class, which can be used directly or subclassed.
 
-def log_handler(*, name, console=False):
+def _log_handler():
 
     _LEVEL = 0
-    _name = name
-    _console = console
+    _name = None
+    _console = False
 
-    _path = f'{HOME_DIR}/dnx_system/log/{name}'
+    _path = f'{HOME_DIR}/dnx_system/log/'
 
     _initialized = False
     _syslog = False
@@ -237,7 +233,7 @@ def log_handler(*, name, console=False):
     class LogHandler:
 
         @classmethod
-        def run(cls):
+        def run(cls, *, name, console=False):
             '''
             initializes log handler settings and monitors system configs for changes
             with log/syslog settings.
@@ -245,8 +241,14 @@ def log_handler(*, name, console=False):
             set console=True to enable Log.console outputs in terminal.
             '''
 
+            nonlocal _name, _console, _path
+
             if (_initialized):
                 raise RuntimeError('the log handler has already been started.')
+
+            _name = name
+            _console = console
+            _path += name
 
             threading.Thread(target=cls._log_settings).start()
             threading.Thread(target=cls._slog_settings).start()
@@ -255,7 +257,7 @@ def log_handler(*, name, console=False):
 
             # waiting for log settings and methods to initialize before returning to caller
             while not _initialized:
-                fast_sleep(1)
+                fast_sleep(ONE_SEC)
 
         @classproperty
         def current_lvl(_):
@@ -369,9 +371,11 @@ def log_handler(*, name, console=False):
 
     return LogHandler
 
+LogHandler = _log_handler()
+
 if (__name__ == '__main__'):
     # aliasing to keep log service conventions the same as other modules
-    Log = log_handler(name=LOG_NAME)
-    Log.run()
+    Log = LogHandler()
+    Log.run(name=LOG_NAME)
 
     LogService.run()

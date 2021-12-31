@@ -8,7 +8,7 @@ from functools import wraps
 from flask import request, redirect, url_for, render_template, session
 
 from dnx_gentools.file_operations import load_configuration
-from dnx_routines.logging.log_main import LogHandler as Log
+from dnx_routines.logging.log_main import simple_log
 
 LOG_NAME = 'logins'
 
@@ -18,7 +18,7 @@ class Authentication:
         self._time_expired = threading.Event()
 
     @staticmethod
-    ## see if this is safe. if use returns something outside of dictionary, error will occur.
+    # see if this is safe. if use returns something outside of dictionary, error will occur.
     def get_user_role(username):
         local_accounts = load_configuration('logins', filepath='dnx_webui/data')['users']
         try:
@@ -36,12 +36,12 @@ class Authentication:
 
         authorized, username, user_role = self._user_login(form)
         if (authorized):
-            Log.simple_write(
+            direct_log(
                 LOG_NAME, 'notice', f'User {username} successfully logged in from {login_ip}.'
             )
 
         else:
-            Log.simple_write(
+            direct_log(
                 LOG_NAME, 'warning', f'Failed login attempt for user {username} from {login_ip}.'
             )
 
