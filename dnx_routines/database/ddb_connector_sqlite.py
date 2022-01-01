@@ -11,8 +11,6 @@ __all__ = ('DBConnector',)
 
 NO_ROUTINE = [None, None]
 
-print('db_conn', __name__)
-
 
 class _DBConnector:
     DB_PATH = f'{HOME_DIR}/dnx_system/data/dnxfirewall.sqlite3'
@@ -34,23 +32,39 @@ class _DBConnector:
 
         name_in_use = cls._routines.get(routine_name)
         if (name_in_use):
-            raise FileExistsError(f'routing with name {routine_name} already exists')
+            raise FileExistsError(f'routine with name {routine_name} already exists')
 
-        def wrapper(func_ref):
+        def registration(func_ref):
 
+            print(f'FUNC_REF {func_ref}')
+            # converting routine function to static method
             registered_routine = staticmethod(func_ref)
 
+            print(f'REGISTERED FUNC_REF {registered_routine}')
+            # define static method as db connector class attribute
             setattr(cls, routine_name, registered_routine)
 
-            cls._routines[routine_name] = [routine_type, registered_routine]
+            # storing routines in class dictionary to make it easier to associate name, type and function ref. getattr
+            # is used to store the staticmethod reference as it's bounded to the class.
+            cls._routines[routine_name] = [routine_type, getattr(cls, routine_name)]
 
-        return wrapper
+            print(f'REGISTERED {routine_name}')
+
+            # returning callable to make the decorator happy. the function will be called via reference and not by name.
+            def wrapper(*args, **kwargs):
+
+                func_ref(args, **kwargs)
+
+            return wrapper
+
+        print(f'RETURNING REGISTRATION FOR {routine_name}')
+
+        return registration
 
     # NOTE: if Log is not sent in, calling any method configured to log will error out, but likely not cause
     # significant impact as it is covered by the context.
     def __init__(self, Log=None, *, table=None):
         self._Log = Log
-
         self._table = table
 
         self._data_written = False
@@ -67,14 +81,15 @@ class _DBConnector:
         if (self._data_written):
             self._conn.commit()
 
-        self._conn.close()
-
-        # should be logged through the logging system. Worst case use simple log if full logging is not easily in reach.
         if (exc_type):
+
+            print(exc_val)
             try:
-                self._Log.error(f'error while writing to database: {exc_val}')
+                self._Log.error(f'database failure: {exc_val}')
             except:
-                write_log(f'error while writing to database: {exc_val}')
+                write_log(f'database failure: {exc_val}')
+
+        self._conn.close()
 
         return True
 
@@ -175,6 +190,8 @@ DBConnector = _DBConnector
 #    from dnx_routines.database.ddb_connector_psql import DBConnector
 
 import dnx_routines.database.ddb_routines # routines will be set within DBConnector class
+
+print(DBConnector.__dict__)
 
 if __name__ == '__main__':
     # NOTE: CREATE THE TABLES

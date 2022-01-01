@@ -173,7 +173,6 @@
                     <table class="centered highlight" id="filter-table2">
                         <thead>
                             <tr>
-                                <th hidden></th>
                                 <th style="width:10%"></th>
                                 <th style="width:15%">Name</th>
                                 <th style="width:10%">Type</th>
@@ -182,21 +181,25 @@
                             </tr>
                         </thead>
                         <tbody id="filter-table-body2">
-                            {% for id, name, type, value, description in obj_list %}
-                            <tr style="height: 33px;">
-                                <td>{{id}}</td>
+                            {% for id, name, type, value, description in firewall_settings['firewall_objects'] %}
+                            <tr style="height: 25px;">
+                            {% if 'built-in' in type %}
+                                <td>X</td>
+                            {% else %}
                                 <td>
                                     <form action="/advanced/firewall" method="POST">
                                         <input type="hidden" name="tab" value="3">
+                                        <input type="hidden" name="obj_id" value="{{id}}">
                                         <button class="btn-floating btn-small waves-effect waves-light red" name="remove_obj">
                                             <i class="material-icons">remove</i>
                                         </button>
                                     </form>
                                 </td>
+                            {% endif %}
                                 <td class="fw-obj">{{name}}</td>
                                 <td class="fw-obj">{{type}}</td>
                                 <td class="fw-obj">{{value}}</td>
-                                <td class="fw-obj">{{description}}</td>
+                                <td class="fw-obj" style="text-align:left">{{description}}</td>
                             </tr>
                             {% else %}
                             <tr>

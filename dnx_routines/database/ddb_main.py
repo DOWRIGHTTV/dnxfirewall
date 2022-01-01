@@ -51,7 +51,6 @@ class DatabaseService:
         '_service_socket', '_svc_sock_recvmsg', '_add_to_db_queue')
 
     @classmethod
-    # finally ensures database socket
     def run(cls):
 
         self = cls()

@@ -13,7 +13,7 @@ from dnx_gentools.file_operations import load_configuration, ConfigurationManage
 from dnx_routines.configure.exceptions import ValidationError
 from dnx_routines.configure.system_info import Interface
 
-from dnx_system.sys_main import system_action
+from dnx_system.sys_action import system_action
 from dnx_webui.dfe_dnx_authentication import Authentication
 
 def set_default_mac_flag():

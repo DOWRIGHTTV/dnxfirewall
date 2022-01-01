@@ -351,7 +351,7 @@ def _log_handler():
 
             _LEVEL = logging['logging']['level']
 
-            _add_logging_methods()
+            _add_logging_methods(cls)
 
             # after initial load, this dones nothing
             _initialized = True

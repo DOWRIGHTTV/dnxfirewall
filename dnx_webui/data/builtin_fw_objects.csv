@@ -1,27 +1,27 @@
 id,name,type,value,description
 
 # SERVICES
-9001,tcp_any,service,tcp/0,all TCP ports (1-65535)
-9002,udp_any,service,udp/0,all UDP ports (1-65535)
-9003,icmp,service,icmp/0,commonly: Ping
-9004,tcp_22,service,tcp/22,commonly: Secure Shell (SSH)
-9005,tcp_25,service,tcp/25,commonly: Simple Mail Transfer Protocol (SMTP)
-9006,udp_53,service,udp/53,commonly: Domain Name System (DNS)
-9007,udp_67,service,udp/67,commonly: Dynamic Host Configuration Protocol (DHCP) Server
-9008,udp_68,service,udp/68,commonly: Dynamic Host Configuration Protocol (DHCP) Client
-9009,tcp_80,service,tcp/80,commonly: Hypertext Transfer Protocol (HTTP)
-9010,tcp_110,service,tcp/110,commonly: Post Office Protocol (POP) version 3
-9011,udp_123,service,udp/123,commonly: Network Time Protocol (NTP)
-9012,tcp_143,service,tcp/143,commonly: Internet Message Access Protocol (IMAP)
-9013,udp_161,service,udp/161,commonly: Simple Network Management Protocol (SNMP)
-9014,udp_162,service,udp/162,commonly: Simple Network Management Protocol Traps (SNMP-Traps)
-9015,udp_389,service,udp/389,commonly: Connectionless Lightweight Directory Access Protocol (CLDAP)
-9016,tcp_389,service,tcp/389,commonly: Lightweight Directory Access Protocol (LDAP)
-9017,tcp_443,service,tcp/443,commonly: Hypertext Transfer Protocol over SSL/TLS (HTTPS)
-9018,tcp_636,service,tcp/636,commonly: Lightweight Directory Access Protocol over SSL/TLS (LDAPS)
-9019,tcp_993,service,tcp/993,commonly: Internet Message Access Protocol Secure (IMAPS)
-9020,tcp_587,service,tcp/587,commonly: Message Submission for SMTP
+9001,tcp_any,built-in service,tcp/0,all TCP ports (1-65535)
+9002,udp_any,built-in service,udp/0,all UDP ports (1-65535)
+9003,icmp,built-in service,icmp/0,commonly: Ping
+9004,tcp_22,built-in service,tcp/22,commonly: Secure Shell (SSH)
+9005,tcp_25,built-in service,tcp/25,commonly: Simple Mail Transfer Protocol (SMTP)
+9006,udp_53,built-in service,udp/53,commonly: Domain Name System (DNS)
+9007,udp_67,built-in service,udp/67,commonly: Dynamic Host Configuration Protocol (DHCP) Server
+9008,udp_68,built-in service,udp/68,commonly: Dynamic Host Configuration Protocol (DHCP) Client
+9009,tcp_80,built-in service,tcp/80,commonly: Hypertext Transfer Protocol (HTTP)
+9010,tcp_110,built-in service,tcp/110,commonly: Post Office Protocol (POP) version 3
+9011,udp_123,built-in service,udp/123,commonly: Network Time Protocol (NTP)
+9012,tcp_143,built-in service,tcp/143,commonly: Internet Message Access Protocol (IMAP)
+9013,udp_161,built-in service,udp/161,commonly: Simple Network Management Protocol (SNMP)
+9014,udp_162,built-in service,udp/162,commonly: Simple Network Management Protocol Traps (SNMP-Traps)
+9015,udp_389,built-in service,udp/389,commonly: Connectionless Lightweight Directory Access Protocol (CLDAP)
+9016,tcp_389,built-in service,tcp/389,commonly: Lightweight Directory Access Protocol (LDAP)
+9017,tcp_443,built-in service,tcp/443,commonly: Hypertext Transfer Protocol over SSL/TLS (HTTPS)
+9018,tcp_636,built-in service,tcp/636,commonly: Lightweight Directory Access Protocol over SSL/TLS (LDAPS)
+9019,tcp_993,built-in service,tcp/993,commonly: Internet Message Access Protocol Secure (IMAPS)
+9020,tcp_587,built-in service,tcp/587,commonly: Message Submission for SMTP
 
 # ADDRESSES
-9021,lan_network,address,192.168.83.0/24,
-9022,dmz_network,address,192.168.84.0/24,
+9021,lan_network,built-in address,192.168.83.0/24,
+9022,dmz_network,built-in address,192.168.84.0/24,

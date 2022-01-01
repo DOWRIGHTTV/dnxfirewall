@@ -4,7 +4,6 @@ from dnx_gentools.def_constants import LOG, DNS_CAT, str_join
 from dnx_gentools.def_namedtuples import DNS_LOG, INFECTED_LOG
 
 from dnx_iptools.interface_ops import get_arp_table
-from dnx_iptools.protocol_tools import int_to_ipaddr
 
 from dnx_routines.logging.log_main import LogHandler
 

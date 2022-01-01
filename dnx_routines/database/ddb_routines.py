@@ -25,20 +25,13 @@ from dnx_gentools.def_constants import fast_sleep
 from dnx_gentools.def_namedtuples import BLOCKED_DOM
 from dnx_routines.configure.system_info import System
 
-try:
-    i += 1
-except:
-    i = 1
-
-print(f'routines {i}', __name__)
-
 db = db_conn.DBConnector
 
 # ========================================
 # INSERT ROUTINES
 # ========================================
 
-db.register('dns_request', routine_type='write')
+@db.register('dns_request', routine_type='write')
 # standard input for dns proxy module database entries
 def dns_request(cur, timestamp, log):
     cur.execute(
@@ -60,7 +53,7 @@ def dns_request(cur, timestamp, log):
 
     return True
 
-db.register('dns_blocked', routine_type='write')
+@db.register('dns_blocked', routine_type='write')
 # used by dns proxy to authorize front end block page access.
 def dns_blocked(cur, timestamp, log):
     cur.execute(
@@ -69,7 +62,7 @@ def dns_blocked(cur, timestamp, log):
 
     return True
 
-db.register('ips_event', routine_type='write')
+@db.register('ips_event', routine_type='write')
 # standard input for ips module database entries
 def ips_event(cur, timestamp, log):
     cur.execute(f'select * from ips where src_ip=? and attack_type=? order by last_seen desc limit 1',
@@ -92,7 +85,7 @@ def ips_event(cur, timestamp, log):
 
     return True
 
-db.register('ipp_event', routine_type='write')
+@db.register('ipp_event', routine_type='write')
 # standard input for ip proxy module database entries.
 def ipp_event(cur, timestamp, log):
     cur.execute(f'insert into ipproxy values (?, ?, ?, ?, ?, ?)',
@@ -100,7 +93,7 @@ def ipp_event(cur, timestamp, log):
 
     return True
 
-db.register('infected_event', routine_type='write')
+@db.register('infected_event', routine_type='write')
 def infected_event(cur, timestamp, log):
     cur.execute(f'select * from infectedclients where mac=? and detected_host=?',
         (log.infected_client, log.detected_host)
@@ -120,7 +113,7 @@ def infected_event(cur, timestamp, log):
 
     return True
 
-db.register('geo_record', routine_type='write')
+@db.register('geo_record', routine_type='write')
 # first arg is timestamp. this can likely go away with new DB API.
 def geo_record(cur, _, log):
     month = ','.join(System.date()[:2])
@@ -143,7 +136,7 @@ def geo_record(cur, _, log):
 # REMOVE / CLEAR ROUTINES
 # ===============================
 
-db.register('clear_infected', routine_type='clear')
+@db.register('clear_infected', routine_type='clear')
 # TODO: see why this want being committed. i feel like that it was an oversight.
 def clear_infected(cur, infected_client, detected_host):
     cur.execute(f'delete from infectedclients where mac=? and detected_host=?', (infected_client, detected_host))
@@ -154,7 +147,7 @@ def clear_infected(cur, infected_client, detected_host):
 # QUERY ROUTINES
 # ================================
 
-db.register('blocked_domain', routine_type='query')
+@db.register('blocked_domain', routine_type='query')
 # query to authorize viewing of web block page and show block info for reference
 def blocked_domain(cur, *, domain, src_ip):
     for _ in range(6):
@@ -164,7 +157,7 @@ def blocked_domain(cur, *, domain, src_ip):
         except TypeError:
             fast_sleep(.25)
 
-db.register('last', routine_type='query')
+@db.register('last', routine_type='query')
 # most recent X matching rows
 def last(cur, count, src_ip=None, *, table, action):
     if (action in ['allowed', 'blocked']):
@@ -180,7 +173,7 @@ def last(cur, count, src_ip=None, *, table, action):
 
     return cur.fetchall()
 
-db.register('top', routine_type='query')
+@db.register('top', routine_type='query')
 def top(self, count, *, table, action):
     if (action in ['allowed', 'blocked']):
         self._c.execute(f'select * from {table} where action=? order by count desc limit {count}', (action,))
@@ -190,7 +183,7 @@ def top(self, count, *, table, action):
 
     return self._c.fetchall()
 
-db.register('top_dashboard', routine_type='query')
+@db.register('top_dashboard', routine_type='query')
 def top_dashboard(cur, count, *, action):
     if (action in ['allowed', 'blocked']):
         cur.execute(
@@ -206,7 +199,7 @@ def top_dashboard(cur, count, *, action):
 
     return tuple((x[0], x[1]) for x in cur.fetchall())
 
-db.register('top_geolocation', routine_type='query')
+@db.register('top_geolocation', routine_type='query')
 def top_geolocation(cur, count, *, action, direction):
     month = ','.join(System.date()[:2])
 
@@ -222,7 +215,7 @@ def top_geolocation(cur, count, *, action, direction):
     # opposite action. currently filtering out 'NONE' since the geolocation database is not yet complete.
     return [x[0].replace('_', ' ') for x in cur.fetchall() if x[1] and x[0] != 'NONE']
 
-db.register('unique_domain_count', routine_type='query')
+@db.register('unique_domain_count', routine_type='query')
 # TODO: see if this should use sum() instead of len() on the results
 def unique_domain_count(cur, *, action):
     if (action in ['allowed', 'blocked']):
@@ -233,7 +226,7 @@ def unique_domain_count(cur, *, action):
 
     return len(cur.fetchall())
 
-db.register('total_request_count', routine_type='query')
+@db.register('total_request_count', routine_type='query')
 # TODO: see if this should use sum() instead of iter add
 def total_request_count(cur, *, table, action):
     if (action in ['allowed', 'blocked']):
@@ -251,7 +244,7 @@ def total_request_count(cur, *, table, action):
 
     return count
 
-db.register('malware_count', routine_type='query')
+@db.register('malware_count', routine_type='query')
 # TODO: see if this should use sum() instead of iter add
 def malware_count(cur, *, table):
     cur.execute(f'select * from {table} where action=? and category=? or category=?',

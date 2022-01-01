@@ -39,7 +39,7 @@ import dnx_webui.dfe_system_services as dnx_services
 
 from dnx_webui.dfe_dnx_authentication import Authentication, user_restrict
 
-from dnx_system.sys_main import system_action
+from dnx_system.sys_action import system_action
 from dnx_secmods.cfirewall.fw_manage import FirewallManage
 
 LOG_NAME = 'web_app'
@@ -52,7 +52,7 @@ app.secret_key = load_configuration('config')['flask'].get('key')
 trusted_proxies = ['127.0.0.1']
 
 # setup for system logging
-Log = Log.run(name=LOG_NAME)
+Log.run(name=LOG_NAME)
 
 # initialize cfirewall manager, which interfaces with cfirewall control class through a fd.
 cfirewall = FirewallManage()

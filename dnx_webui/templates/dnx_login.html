@@ -7,7 +7,7 @@
                 <div class="row">
                     <div class="input-field col s12 center">
                         <h3 class="center red-text">Please Login</h3>
-                        <p>In order to proceed futher, you must login.</p>
+                        <p>In order to proceed further, you must login.</p>
                         {% if login_error %}
                         <h6 class="red-text center">{{login_error}}</h6>
                         {% endif %}
@@ -16,15 +16,15 @@
                 <div class="row">
                     <div class="input-field col s12">
                         <i class="material-icons prefix">person_outline</i>
-                        <input name="username" type="text" class="validate" id="username" autocorrect="off"
+                        <input type="text" name="username" class="validate" id="username"
                             autocapitalize="none" autocomplete="off" required>
-                        <label for="username" class="center-align">Username</label>
+                        <label for="username">Username</label>
                     </div>
                 </div>
                 <div class="row">
                     <div class="input-field col s12">
                         <i class="material-icons prefix">lock_outline</i>
-                        <input name="password" id="password" type="password" class="validate" required>
+                        <input type="password" name="password" id="password" class="validate" required>
                         <label for="password">Password</label>
                     </div>
                 </div>

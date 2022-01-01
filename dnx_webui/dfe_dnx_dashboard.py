@@ -2,12 +2,9 @@
 
 from itertools import zip_longest
 
-import dnx_routines.logging.log_main as log
-
 from dnx_routines.configure.system_info import Interface, System, Services
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
-
-Log = log.get_logger()
+from dnx_routines.logging.log_main import LogHandler as Log
 
 def load_page():
     # TODO: implement executemany for back to back calls

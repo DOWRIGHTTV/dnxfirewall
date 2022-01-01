@@ -14,7 +14,7 @@ from dnx_gentools.def_constants import INVALID_FORM
 from dnx_routines.configure.exceptions import ValidationError
 from dnx_gentools.file_operations import load_configuration
 from dnx_routines.configure.system_info import Services
-from dnx_system.sys_main import system_action
+from dnx_system.sys_action import system_action
 from dnx_routines.configure.iptables import IPTablesManager
 
 DISABLED_MANAGEMENT_SERVICES = ['cli']

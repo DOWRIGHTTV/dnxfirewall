@@ -8,7 +8,7 @@ from functools import wraps
 from flask import request, redirect, url_for, render_template, session
 
 from dnx_gentools.file_operations import load_configuration
-from dnx_routines.logging.log_main import simple_log
+from dnx_routines.logging.log_main import direct_log
 
 LOG_NAME = 'logins'
 
@@ -18,7 +18,7 @@ class Authentication:
         self._time_expired = threading.Event()
 
     @staticmethod
-    # see if this is safe. if use returns something outside of dictionary, error will occur.
+    # see if this is safe. if this returns something outside of dictionary, error will occur.
     def get_user_role(username):
         local_accounts = load_configuration('logins', filepath='dnx_webui/data')['users']
         try:
@@ -28,8 +28,8 @@ class Authentication:
 
     @classmethod
     def user_login(cls, form, login_ip):
-        '''function to authenticate user to the dnx web frontend. pass in flask form and source ip. return
-        will be a boolean representing whether user is authenticated/authorized or not.'''
+        '''function to authenticate user to the dnx web frontend. pass in flask form and source ip. return will be a
+        boolean representing whether user is authenticated/authorized or not.'''
         self = cls()
 
         threading.Thread(target=self._login_timer).start()
@@ -56,7 +56,7 @@ class Authentication:
         if (not username or not password):
             return False, None, None
 
-        hexpass = self.hash_password(username, password)
+        hexpass = self._hash_password(username, password)
 
         if not self._user_authorized(username, hexpass):
             return False, username, None
@@ -68,7 +68,8 @@ class Authentication:
 
         return True, username, user_role
 
-    def hash_password(self, username, password):
+    @staticmethod
+    def _hash_password(username, password):
         salt_one = len(username)
         salt_two = len(password)
 
@@ -96,7 +97,8 @@ class Authentication:
 
         return hash_total.hexdigest()
 
-    def _user_authorized(self, username, hexpass):
+    @staticmethod
+    def _user_authorized(username, hexpass):
         local_accounts = load_configuration('logins', filepath='dnx_webui/data')['users']
         try:
             password = local_accounts[username]['password']
@@ -110,7 +112,7 @@ class Authentication:
         time.sleep(.6)
         self._time_expired.set()
 
-# web ui page autorization handler
+# web ui page authorization handler
 def user_restrict(*authorized_roles):
     '''user authorization decorator to limit access according to account roles. apply this decorator
     to any flask function associated with page route with the user rules in decorator argument.'''
@@ -118,7 +120,7 @@ def user_restrict(*authorized_roles):
     def decorator(function_to_wrap):
 
         @wraps(function_to_wrap)
-        def wrapper(*args):
+        def wrapper(*_):
             # will redirect to login page if user is not logged in
             user = session.get('user', None)
             if not user:

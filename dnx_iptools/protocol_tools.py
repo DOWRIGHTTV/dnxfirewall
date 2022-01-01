@@ -3,7 +3,7 @@
 import binascii
 
 from functools import partial
-from random import getrandbits as _randid
+from random import getrandbits
 from socket import htons, socket, AF_INET, SOCK_RAW
 from subprocess import run, CalledProcessError, DEVNULL
 
@@ -105,6 +105,7 @@ def convert_string_to_bitmap(rule, offset):
 
     return (b_id, h_id)
 
+_dns_join = b'.'.join
 def parse_query_name(data, dns_query=None, *, qname=False):
     '''parses dns name from sent in data. uses overall dns query to follow pointers. will return
     name and offset integer value if qname arg is True otherwise will only return offset.'''
@@ -121,7 +122,7 @@ def parse_query_name(data, dns_query=None, *, qname=False):
 
         # pointer value check. this used to be a separate function, but it felt like a waste so merged it.
         # NOTE: is this a problem is we don't pass in the reference query? is it possible for a pointer to be present in
-        # cases where this function is used for non primary purposes?
+        # cases where this function is used for non-primary purposes?
         if (section_len & 192 == 192):
 
             # calculates the value of the pointer then uses value as original dns query index. this used to be a
@@ -134,7 +135,7 @@ def parse_query_name(data, dns_query=None, *, qname=False):
             # name len + integer value of initial length
             offset += section_len + 1 if not contains_pointer else 0
 
-            query_name.append(data[:section_len].decode())
+            query_name.append(data[:section_len])
 
             # slicing out processed section
             data = data[section_len:]
@@ -146,7 +147,7 @@ def parse_query_name(data, dns_query=None, *, qname=False):
     local_domain = True if len(query_name) == 1 or (query_name and query_name[-1] == 'local') else False
 
     if (qname):
-        return offset, local_domain, '.'.join(query_name)
+        return offset, local_domain, _dns_join(query_name).decode()
 
     return offset, local_domain
 
@@ -188,13 +189,16 @@ def init_ping(timeout=.25):
     ping_send = ping_sock.sendto
     ping_recv = ping_sock.recvfrom
 
+    _randid = getrandbits
+    _range = range
+
     def ping(target, *, count=1, OSError=OSError):
 
         icmp = _icmp_header_template()
         icmp.id = _randid(16)
 
         replies_rcvd = 0
-        for i in range(count):
+        for i in _range(count):
 
             icmp.sequence = i
             icmp.checksum = checksum_icmp(icmp.assemble())
@@ -205,6 +209,7 @@ def init_ping(timeout=.25):
                 pass
 
             else:
+                # TODO: this might need a mechanism to break if we don't receive a matching response after X reads.
                 while True:
                     try:
                         echo_reply, addr = ping_recv(2048)

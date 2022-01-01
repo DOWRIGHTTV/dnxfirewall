@@ -113,6 +113,7 @@ class FirewallManage:
 
             ruleset = firewall[section]
 
+            # TODO: make lock re entrant
             # update rule first using static_pos, then remove from list if it needs to move. cannot call add method from
             # here due to file lock being held by this current context (its not re entrant).
             ruleset[static_pos] = rule
@@ -125,7 +126,7 @@ class FirewallManage:
             # updating instance variable for direct access
             self.firewall = firewall
 
-        # now that we are out of the context we can use add method to re insert the rule in specified place
+        # now that we are out of the context we can use add method to re-insert the rule in specified place
         # NOTE: since the lock has been released it is possible for another process to get the lock and modify firewall
         #  rules before the move can happen. only on rare cases would this even cause an issue and only the pending
         #  config will be effected and can be reverted if need be. in the future maybe we can figure out a way to deal
@@ -162,11 +163,9 @@ class FirewallManage:
 
         if (version not in self.versions):
             return {}
-            # raise ValueError(f'{version} is not a valid version.')
 
         if (section not in self.sections):
             return {}
-            # raise ValueError(f'{version} is not a valid section.')
 
         with ConfigurationManager(f'firewall_{version}', file_path=DEFAULT_PATH) as dnx_fw:
             firewall = dnx_fw.load_configuration()

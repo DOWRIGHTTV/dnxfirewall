@@ -108,40 +108,43 @@
         </script>
     {% endif %}
 
+    <!-- materialize js-->
+    <script src="{{url_for('static',filename='assets/js/materialize.min.js')}}"></script>
+
+    <!-- materialize overrides -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialized everything OR you can override with options below
+            M.AutoInit();
+        })
+
+        document.addEventListener('DOMContentLoaded', () => {
+            var elems = document.querySelectorAll('.dropdown-trigger');
+            var instances = M.Dropdown.init(elems, {
+                coverTrigger : false
+            });
+        })
+
+        document.addEventListener('DOMContentLoaded', () => {
+            var modal = document.querySelector('.modal-pop');
+            var instance = M.Modal.init(modal);
+            if (error && modal) {
+                instance.open();
+            };
+        })
+
+        document.addEventListener('DOMContentLoaded', () => {
+            var elems = document.querySelectorAll('.fixed-action-btn');
+            var instances = M.FloatingActionButton.init(elems, {
+                // direction: 'left',
+                hoverEnabled: false
+            });
+        })
+    </script>
+
     {% if navi %}
-        <!-- materialize js-->
-        <script src="{{url_for('static',filename='assets/js/materialize.min.js')}}"></script>
-
-        <!-- materialize overrides and basic custom functions used globally-->
+        <!-- custom functions for client side functionality-->
         <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                // Initialized everything OR you can override with options below
-                M.AutoInit();
-            })
-
-            document.addEventListener('DOMContentLoaded', () => {
-                var elems = document.querySelectorAll('.dropdown-trigger');
-                var instances = M.Dropdown.init(elems, {
-                    coverTrigger : false
-                });
-            })
-
-            document.addEventListener('DOMContentLoaded', () => {
-                var modal = document.querySelector('.modal-pop');
-                var instance = M.Modal.init(modal);
-                if (error && modal) {
-                    instance.open();
-                };
-            })
-
-            document.addEventListener('DOMContentLoaded', () => {
-                var elems = document.querySelectorAll('.fixed-action-btn');
-                var instances = M.FloatingActionButton.init(elems, {
-                    // direction: 'left',
-                    hoverEnabled: false
-                });
-            })
-
             function activeTab(n) {
             history.replaceState(null, null, window.location.pathname+"?tab="+n);
             document.getElementById("timeout-tab").innerHTML = "<input type=hidden name=tab value="+n+">";

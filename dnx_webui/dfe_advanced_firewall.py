@@ -135,9 +135,6 @@ def get_and_format_rules(section, version='pending'):
         rule[11] = 'accept' if rule[11] else 'deny' # this could probably get removed since 0/1 is ok for this.
         rule[12] = 'Y' if rule[12] else 'N'
 
-        # rule[13] = rule[13] if rule[13] else ' '
-        # rule[14] = rule[14] if rule[14] else ' '
-
         # merging ip/netmask and converting > ip address > str
         rule[2] = f'{IPv4Network((rule[2], rule[3]))}'
         rule[7] = f'{IPv4Network((rule[7], rule[8]))}'
@@ -146,8 +143,8 @@ def get_and_format_rules(section, version='pending'):
         for i in [4, 9]:
 
             proto = rule[i] >> 16
-            p_1   = rule[i] & 65535
-            p_2   = rule[i+1] & 65535
+            p_1 = rule[i] & 65535
+            p_2 = rule[i+1] & 65535
 
             rule[i] = f'{proto_map[proto]}/{p_1}'
             if (p_1 < p_2):
@@ -173,7 +170,7 @@ def is_pending_changes():
 
 def load_temporary_objects():
     with open(f'{HOME_DIR}/dnx_webui/data/builtin_fw_objects.csv') as fw_objects:
-        object_list = [x for x in csv.reader(fw_objects) if x and '#' not in x]
+        object_list = [x for x in csv.reader(fw_objects) if x and '#' not in x[0]]
 
     # slicing out keys
     return object_list[1:]
