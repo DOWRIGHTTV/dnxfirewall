@@ -32,26 +32,31 @@ DEF FOUR_BIT_MASK = 15
 cdef bint BYPASS  = 0
 cdef bint VERBOSE = 0
 
-# Firewall rules lock. Must be held
-# to read from or make changes to
-# "*firewall_rules[]"
 # ================================== #
+# Firewall rules lock
+# ================================== #
+# Must be held to read from or make
+# changes to "*firewall_rules[]"
+# ---------------------------------- #
 cdef pthread_mutex_t FWrulelock
 
 pthread_mutex_init(&FWrulelock, NULL)
-# ================================== #
 
+# ================================== #
 # Geolocation definitions
 # ================================== #
 DEF GEO_MARKER = -1
 
 cdef long MSB, LSB
 cdef RangeTrie GEOLOCATION
-# ================================== #
 
-# initializing global array and size tracker. contains pointers to arrays of pointers to FWrule
+# ================================== #
+# ARRAY INITIALIZATION
+# ================================== #
+# contains pointers to arrays of pointers to FWrule
 cdef FWrule **firewall_rules[FW_SECTION_COUNT]
 
+# arrays of pointers to FWrule
 firewall_rules[SYSTEM_RULES] = <FWrule**>calloc(FW_SYSTEM_MAX_RULE_COUNT, sizeof(FWrule*))
 firewall_rules[BEFORE_RULES] = <FWrule**>calloc(FW_BEFORE_MAX_RULE_COUNT, sizeof(FWrule*))
 firewall_rules[MAIN_RULES] = <FWrule**>calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(FWrule*))
@@ -89,7 +94,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         res_tuple inspection_res
         u_int32_t verdict
 
-    # definition + assignment with function calls
+    # definition w/ assignment via function calls
     cdef:
         nfqnl_msg_packet_hdr *hdr = nfq_get_msg_packet_hdr(nfa)
         u_int32_t id = ntohl(hdr.packet_id)
@@ -127,7 +132,8 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
 
     # =============================== #
     # LOCKING ACCESS TO FIREWALL.
-    # this is currently only designed to prevent the manager thread from updating firewall rules as users configure them.
+    # ------------------------------- #
+    # prevents the manager thread from updating firewall rules as users configure them.
     pthread_mutex_lock(&FWrulelock)
 
     inspection_res = cfirewall_inspect(&hw, ip_header, proto_header, direction)
@@ -200,80 +206,53 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
             if (not rule.enabled):
                 continue
 
-            # ================================================================== #
+            # ------------------------------------------------------------------ #
             # ZONE MATCHING
-            # ================================================================== #
+            # ------------------------------------------------------------------ #
             # currently tied to interface and designated LAN, WAN, DMZ
-            if (hw.in_zone != rule.s_zone and rule.s_zone != ANY_ZONE):
+            if not zone_match(rule.s_zones, hw.in_zone):
                 continue
 
-            if (hw.out_zone != rule.d_zone and rule.d_zone != ANY_ZONE):
+            if not zone_match(rule.d_zones, hw.out_zone):
                 continue
 
-            # ================================================================== #
+            # ------------------------------------------------------------------ #
             # GEOLOCATION or IP/NETMASK
-            # ================================================================== #
+            # ------------------------------------------------------------------ #
             # geolocation matching repurposes network id and netmask fields in the firewall rule. net id of -1 flags
             # the rule as a geolocation rule with the country code using the netmask field. NOTE: just as with networks,
             # only a single country is currently supported per firewall rule src and dst.
-            if (rule.s_net_id == GEO_MARKER):
-
-                if (src_country != rule.s_net_mask):
-                    continue
-
-            else:
-
-                # using rules mask to floor source ip in header and checking against rules network id
-                if (iph_src_ip & rule.s_net_mask != rule.s_net_id):
-                    continue
-
-            if (rule.d_net_id == GEO_MARKER):
-                if (dst_country != rule.d_net_mask):
-                    continue
-
-            else:
-
-                # using rules mask to floor ip in header and checking against rules network id
-                if (iph_dst_ip & rule.d_net_mask != rule.d_net_id):
-                    continue
-
-            # ================================================================== #
-            # PROTOCOL
-            # ================================================================== #
-            rule_src_protocol = rule.s_port_start >> TWO_BYTES
-            if (ip_header.protocol != rule_src_protocol and rule_src_protocol != ANY_PROTOCOL):
+            if not network_match(rule.s_networks, iph_src_ip, src_country):
                 continue
 
-            rule_dst_protocol = rule.d_port_start >> TWO_BYTES
-            if (ip_header.protocol != rule_dst_protocol and rule_dst_protocol != ANY_PROTOCOL):
+            if not network_match(rule.d_networks, iph_dst_ip, dst_country):
                 continue
 
-            # ================================================================== #
-            # PORT
-            # ================================================================== #
-            # ICMP will match on the first port start value (looking for 0)
-            if (not rule.s_port_start <= ntohs(proto_header.s_port) <= rule.s_port_end):
+            # ------------------------------------------------------------------ #
+            # PROTOCOL / PORT (now supports objects + object groups)
+            # ------------------------------------------------------------------ #
+            if not service_match(rule.s_services, ip_header.protocol, ntohs(proto_header.s_port)):
                 continue
 
-            if (not rule.d_port_start <= ntohs(proto_header.d_port) <= rule.d_port_end):
+            if not service_match(rule.d_services, ip_header.protocol, ntohs(proto_header.d_port)):
                 continue
 
-            # ================================================================== #
+            # ------------------------------------------------------------------ #
             # VERBOSE MATCH OUTPUT | only showing matches due to too much output
-            # ================================================================== #
+            # ------------------------------------------------------------------ #
             if (VERBOSE):
                 printf('vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n')
                 printf('pkt-in zone=%u, rule-in zone=%u, ', hw.in_zone, rule.s_zone)
                 printf('pkt-out zone=%u, rule-out zone=%u\n', hw.out_zone, rule.d_zone)
-                printf('pkt-src ip=%u, pkt-src netid=%u, rule-s netid=%lu\n', ntohl(ip_header.saddr), iph_src_ip & rule.s_net_mask, rule.s_net_id)
-                printf('pkt-dst ip=%u, pkt-dst netid=%u, rule-d netid=%lu\n', ntohl(ip_header.daddr), iph_dst_ip & rule.d_net_mask, rule.d_net_id)
-                printf('pkt-proto=%u, rule-s proto=%u, rule-d proto=%u\n', ip_header.protocol, rule_src_protocol, rule_dst_protocol)
+                # printf('pkt-src ip=%u, pkt-src netid=%u, rule-s netid=%lu\n', ntohl(ip_header.saddr), iph_src_ip & rule.s_net_mask, rule.s_net_id)
+                # printf('pkt-dst ip=%u, pkt-dst netid=%u, rule-d netid=%lu\n', ntohl(ip_header.daddr), iph_dst_ip & rule.d_net_mask, rule.d_net_id)
+                # printf('pkt-proto=%u, rule-s proto=%u, rule-d proto=%u\n', ip_header.protocol, rule_src_protocol, rule_dst_protocol)
                 printf('pkt-src geo=%u, pkt-dst geo=%u\n', src_country, dst_country)
                 printf('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n')
 
-            # ================================================================== #
+            # ------------------------------------------------------------------ #
             # MATCH ACTION | return rule options
-            # ================================================================== #
+            # ------------------------------------------------------------------ #
             # drop will inherently forward to ip proxy for geo inspection. ip proxy will call drop.
             # notify caller which section match was in. this will be used to skip inspection for system access rules
             results.fw_section = section_num
@@ -283,15 +262,102 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
 
             return results
 
-    # ================================================================== #
+    # ------------------------------------------------------------------ #
     # DEFAULT ACTION
-    # ================================================================== #
+    # ------------------------------------------------------------------ #
     results.fw_section = NO_SECTION
     results.action = DROP
     results.mark = tracked_geo << FOUR_BITS | direction << TWO_BITS | DROP
 
     return results
 
+# ================================================================== #
+# Firewall matching functions (inline)
+# ================================================================== #
+
+# generic function for src/dst zone matching
+cdef inline bint zone_match(zone_obj rule_defs[], u_int8_t pkt_zone) nogil:
+
+    cdef:
+        u_int8_t i
+        size_t num_zones
+
+    # zone set to any is guaranteed match
+    if (rule_defs[0] == ANY_ZONE):
+        return 1
+
+    # iterating over all zones defined in rule
+    num_zones = sizeof(rule_defs / rule_defs[0])
+    for i in range(num_zones):
+
+        # continue on no match, blocking return
+        if (pkt_zone != rule_defs[i]):
+            continue
+
+        # zone match
+        return 1
+
+    # default action, no match
+    return 0
+
+# generic function for source OR destination network obj matching
+cdef inline bint network_match(network_obj rule_defs[], u_int32_t iph_ip, u_int16_t country) nogil:
+
+    cdef:
+        u_int8_t i
+        network_obj network
+
+        size_t num_networks = sizeof(rule_defs) / sizeof(network_obj)
+
+    for i in range(num_networks):
+
+        network = rule_def[i]
+
+        if (network.netid == GEO_MARKER):
+
+            if (src_country != network.netmask):
+                continue
+
+        # using rules mask to floor source ip in header and checking against rules network id
+        elif (iph_ip & network.netmask != network.netid):
+            continue
+
+        # network match
+        return 1
+
+    # default action, no match
+    return 0
+
+# generic function that can handle source OR destination proto/port matching
+cdef inline bint service_match(service_obj rule_defs[], u_int16_t pkt_protocol, u_int16_t pkt_port) nogil:
+
+    cdef:
+        u_int8_t i
+        service_obj service
+
+        size_t num_objs = sizeof(rule_defs) / sizeof(service_obj)
+
+    for i in range(num_objs):
+
+        service = rule_defs[i]
+
+        # PROTOCOL
+        if (pkt_protocol != service.protocol and service.protocol != ANY_PROTOCOL):
+            continue
+
+        # PORTS, ICMP will match on the first port start value (looking for 0)
+        if (not service.port_start <= pkt_port <= service.port_end):
+            continue
+
+        # matching protocol/port rule definition for ip header values
+        return 1
+
+    # default action, no match
+    return 0
+
+# ============================================
+# C EXTENSION - Python Communication Pipeline
+# ============================================
 
 cdef u_int32_t MAX_COPY_SIZE = 4016 # 4096(buf) - 80
 cdef u_int32_t DEFAULT_MAX_QUEUELEN = 8192

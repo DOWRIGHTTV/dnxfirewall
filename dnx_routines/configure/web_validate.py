@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import os, sys
 import re
 
 from subprocess import run
@@ -24,7 +23,7 @@ __all__ = (
     'time_offset', 'syslog_settings', 'ip_proxy_settings',
     'time_restriction', 'dns_over_tls', 'portscan_settings',
     'ips_passive_block_length', 'add_ip_whitelist', 'domain_categories',
-    'dns_record_add', 'dns_record_remove', # NOTE: these names should be flipped
+    'dns_record_add', 'dns_record_remove',  # NOTE: these names should be flipped
     'ValidationError'
 )
 
@@ -99,7 +98,7 @@ def ip_address(ip_addr=None, *, ip_iter=None):
     for ip in ip_iter:
         _ip_address(ip)
 
-def ip_network(ip_netw):
+def ip_network(ip_netw, /):
     '''take ip network string, validates, then returns ip network string. the return string will always be the network
     id of the subnet.'''
     try:
@@ -109,7 +108,7 @@ def ip_network(ip_netw):
 
     return int(ip_netw.network_address), ip_netw.prefixlen
 
-def default_gateway(ip_addr):
+def default_gateway(ip_addr, /):
     try:
         ip_addr = IPv4Address(ip_addr)
     except:
@@ -384,7 +383,7 @@ def dns_over_tls(dns_tls_settings):
             and 'dns_over_tls' not in dns_tls_settings['enabled']):
         raise ValidationError('DNS over TLS must be enabled to configure UDP fallback.')
 
-# NOTE: log and security profiles are disabled in form. they will be set here as default for the time being.
+# NOTE: log disabled in form. they will be set here as default for the time being.
 def manage_firewall_rule(fw_rule, /):
     # ('position', '1'),
     # ('src_zone', 'lan'), ('src_ip', '192.168.83.0/24'), ('src_port', 'tcp/0'),
@@ -415,24 +414,24 @@ def manage_firewall_rule(fw_rule, /):
         rule_count += 1
 
     if (convert_int(fw_rule.static_pos) not in range(1, rule_count)):
-        raise ValidationError(f'{INVALID_FORM} [position][1]')
+        raise ValidationError(f'{INVALID_FORM} position[1]')
 
     if (convert_int(fw_rule.position) not in range(1, rule_count)):
-        raise ValidationError(f'{INVALID_FORM} [position][2]')
+        raise ValidationError(f'{INVALID_FORM} position[2]')
 
     # appending /32 if / not present in string. the network test will catch malformed networks beyond that.
     if ('/' not in fw_rule.src_ip):
         fw_rule.src_ip += '/32'
 
-    s_net, s_p_len = ip_network(fw_rule.src_ip)
-    s_proto, s_ports = proto_port(fw_rule.src_port)
+    s_net, s_plen = ip_network(fw_rule.src_ip)
+    s_proto, s_port = proto_port(fw_rule.src_port)
 
     # appending /32 if / not present in string. the network test will catch malformed networks beyond that.
     if ('/' not in fw_rule.dst_ip):
         fw_rule.dst_ip += '/32'
 
-    d_net, d_p_len = ip_network(fw_rule.dst_ip)
-    d_proto, d_ports = proto_port(fw_rule.dst_port)
+    d_net, d_plen = ip_network(fw_rule.dst_ip)
+    d_proto, d_port = proto_port(fw_rule.dst_port)
 
     dnx_interfaces = load_configuration('config')['interfaces']['builtins']
     zone_map = {zone_name: zone_info['zone'] for zone_name, zone_info in dnx_interfaces.items()}
@@ -454,12 +453,34 @@ def manage_firewall_rule(fw_rule, /):
     # [1,  12, 4294967295, 32,      393217,       65535,
     #      10, 4294967295, 32,      458751,       65535,    1,      0,    1,    1],
 
-    return [
-        int(hasattr(fw_rule, 'rule_state')), # returns boolean so will evaluate directly
-        s_zone, s_net, s_p_len, s_proto << 16 | s_ports[0], s_ports[1],
-        d_zone, d_net, d_p_len, d_proto << 16 | d_ports[0], d_ports[1],
-        action, 0, ip_proxy_profile, ips_ids_profile
-    ]
+    return {
+        'enabled': int(hasattr(fw_rule, 'rule_state')),
+        'src_zone': [s_zone],
+        'src_network': [
+            [s_net, s_plen]
+        ],
+        'src_service': [
+            [s_proto, s_port[0], s_port[1]]
+        ],
+        'dst_zone': [d_zone],
+        'dst_network': [
+            [d_net, d_plen]
+        ],
+        'dst_service': [
+            [d_proto, d_port[0], d_port[1]]
+        ],
+        'action': action,
+        'log': 0,
+        'ipp_profile': ip_proxy_profile,
+        'ips_profile': ips_ids_profile
+    }
+
+    # return [
+    #     int(hasattr(fw_rule, 'rule_state')),  # returns boolean so will evaluate directly
+    #     s_zone, s_net, s_plen, s_proto << 16 | s_port[0], s_port[1],
+    #     d_zone, d_net, d_plen, d_proto << 16 | d_port[0], d_port[1],
+    #     action, 0, ip_proxy_profile, ips_ids_profile
+    # ]
 
 def add_dnat_rule(rule, /):
     # ensuring all necessary fields are present in the namespace before continuing.

@@ -17,15 +17,6 @@ class Authentication:
     def __init__(self):
         self._time_expired = threading.Event()
 
-    @staticmethod
-    # see if this is safe. if this returns something outside of dictionary, error will occur.
-    def get_user_role(username):
-        local_accounts = load_configuration('logins', filepath='dnx_webui/data')['users']
-        try:
-            return local_accounts[username]['role']
-        except KeyError:
-            return None
-
     @classmethod
     def user_login(cls, form, login_ip):
         '''function to authenticate user to the dnx web frontend. pass in flask form and source ip. return will be a
@@ -50,26 +41,17 @@ class Authentication:
 
         return authorized, username, user_role
 
-    def _user_login(self, form):
-        password = form.get('password', None)
-        username = form.get('username', '').lower()
-        if (not username or not password):
-            return False, None, None
-
-        hexpass = self._hash_password(username, password)
-
-        if not self._user_authorized(username, hexpass):
-            return False, username, None
-
-        # checking for web ui authorization (admins/users only. cli accounts will fail.)
-        user_role = self.get_user_role(username)
-        if user_role not in ['admin', 'user']:
-            return False, username, None
-
-        return True, username, user_role
+    @staticmethod
+    # see if this is safe. if this returns something outside of dictionary, error will occur.
+    def get_user_role(username):
+        local_accounts = load_configuration('logins', filepath='dnx_webui/data')['users']
+        try:
+            return local_accounts[username]['role']
+        except KeyError:
+            return None
 
     @staticmethod
-    def _hash_password(username, password):
+    def hash_password(username, password):
         salt_one = len(username)
         salt_two = len(password)
 
@@ -96,6 +78,24 @@ class Authentication:
         hash_total = hashlib.sha256(hash_total)
 
         return hash_total.hexdigest()
+
+    def _user_login(self, form):
+        password = form.get('password', None)
+        username = form.get('username', '').lower()
+        if (not username or not password):
+            return False, None, None
+
+        hexpass = self.hash_password(username, password)
+
+        if not self._user_authorized(username, hexpass):
+            return False, username, None
+
+        # checking for web ui authorization (admins/users only. cli accounts will fail.)
+        user_role = self.get_user_role(username)
+        if user_role not in ['admin', 'user']:
+            return False, username, None
+
+        return True, username, user_role
 
     @staticmethod
     def _user_authorized(username, hexpass):

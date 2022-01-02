@@ -145,27 +145,36 @@ cdef enum:
     MAIN_RULES
     AFTER_RULES
 
+struct service_obj:
+    u_int16_t protocol
+    u_int16_t start_port
+    u_int16_t end_port
+
 # used for dynamic allocation of array containing security profile settings
 # ip proxy, ips_ids
 DEF SECURITY_PROFILE_COUNT = 2
 
+cdef struct network_obj:
+    long      netid
+    u_int32_t netmask
+
+cdef struct service_obj:
+
+
 cdef struct FWrule:
-    # source
-    bint      enabled # enable or disable rule from being matched against
-    u_int8_t  s_zone
-    long      s_net_id
-    u_int32_t s_net_mask
-    u_int32_t s_port_start # extra 16 bits to include protocol. bitwise when eval tcp/80(webui) > 6/80
-    u_int16_t s_port_end
+    bint        enabled # enable or disable rule from being matched against
 
-    # destination
-    u_int8_t  d_zone
-    long      d_net_id
-    u_int32_t d_net_mask
-    u_int32_t d_port_start # extra 16 bits to include protocol. bitwise when eval tcp/80(webui) > 6/80
-    u_int16_t d_port_end
+    # SOURCE
+    u_int8_t[]    *s_zones
+    network_obj[] *s_networks
+    service_obj[] *s_services
 
-    # profiles - forward traffic only
+    # DESTINATION
+    u_int8_t[]    *d_zones
+    network_obj[] *d_networks
+    service_obj[] *d_services
+
+    # PROFILES
     u_int8_t action # 0 drop, 1 accept
     u_int8_t log # standard traffic logging, not event based.
     u_int8_t[SECURITY_PROFILE_COUNT] sec_profiles

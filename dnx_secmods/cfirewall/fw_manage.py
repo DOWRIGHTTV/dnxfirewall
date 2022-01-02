@@ -56,7 +56,7 @@ class FirewallManage:
 
             ruleset = firewall[section]
 
-            # position is at the beginning of the ruleset. this is needed because the slice functions dont work
+            # position is at the beginning of the ruleset. this is needed because the slice functions don't work
             # correctly for pos 1 insertions.
             if (pos_int == 1):
                 temp_rules = [rule, *ruleset.values()]
@@ -157,7 +157,7 @@ class FirewallManage:
 
         args:
 
-        section > will change which ruleset is returned.\n
+        section > will change which ruleset is returned.
         version > PENDING or ACTIVE rule tables.
         '''
 
