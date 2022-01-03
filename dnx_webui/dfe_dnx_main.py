@@ -754,7 +754,16 @@ def merge_items(a1, a2):
 
     return new_list
 
+def get_obj_icon(obj_type, /):
+    return {'geolocation': 'language', 'address': 'tv', 'service': 'track_changes'}[obj_type]
+
+def is_list(li, /):
+    return isinstance(li, list)
+
+
 app.add_template_global(merge_items, name='merge_items')
+app.add_template_global(get_obj_icon, name='get_obj_icon')
+app.add_template_global(is_list, name='is_list')
 
 if __name__ == '__main__':
     app.run(debug=True)

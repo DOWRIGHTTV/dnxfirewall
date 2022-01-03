@@ -15,9 +15,7 @@ from dnx_routines.logging.log_main import LogHandler as Log
 # CONTROL - used within cfirewall process
 # ========================================
 
-
 class FirewallControl:
-
     __slots__ = (
         'cfirewall', '_initialize',
 
@@ -31,8 +29,8 @@ class FirewallControl:
         self._initialize = Initialize(Log, 'FirewallControl')
 
         self.BEFORE = {}
-        self.MAIN   = {}
-        self.AFTER  = {}
+        self.MAIN = {}
+        self.AFTER = {}
 
         # reference to extension CFirewall, which handles nfqueue and initial packet rcv. # we will use this
         # reference to modify firewall objects which will be internally accessed by the inspection function callbacks
@@ -67,12 +65,10 @@ class FirewallControl:
         # compatible in C via memory views and Cython can handle the initial list.
         dnx_zones = array('i', dnx_zones['map'])
 
-        print(f'sending zones to CFirewall: {dnx_zones}')
-
         # NOTE: gil must be held on the other side of this call
         error = self.cfirewall.update_zones(dnx_zones)
         if (error):
-            pass # TODO: do something here
+            pass  # TODO: do something here
 
         self._initialize.done()
 
@@ -84,8 +80,8 @@ class FirewallControl:
 
         dnx_fw = load_configuration(fw_rules, filepath='dnx_system/iptables')
 
-        # splitting out sections then determine which one has changed. this is to reduce
-        # amount of work done on the C side. not for performance, but more for ease of programming.
+        # splitting out sections then determine which one has changed. this is to reduce amount of work done on the C
+        # side. not for performance, but more for ease of programming.
         # NOTE: index 1 start is needed because SYSTEM rules are held at index 0.
         for i, section in enumerate(['BEFORE', 'MAIN', 'AFTER'], 1):
             current_section = getattr(self, section)
@@ -97,15 +93,15 @@ class FirewallControl:
             # updating ruleset to reflect changes
             setattr(self, section, new_section)
 
-            # converting dict to list and each rule into a py array. this format is required due to
-            # transitioning between python and C. python arrays are compatible in C via memory views
-            # and Cython can handle the initial list.
-            ruleset = [array('L', rule) for rule in new_section.values()]
+            # converting dict to list and each rule into a list of PyArrays. this format is required due to
+            # transitioning between python and C. python arrays are compatible in C via memory views and Cython can
+            # handle the initial list.
+            ruleset = self._format_rules(new_section.values())
 
             # NOTE: gil must be held throughout this call
             error = self.cfirewall.update_ruleset(i, ruleset)
             if (error):
-                pass # TODO: do something here
+                pass  # TODO: do something here
 
         self._initialize.done()
 
@@ -116,12 +112,12 @@ class FirewallControl:
         # 100-1059: zone mgmt rules. 100s place designates interface index
         #   - 0/1: webui, 2: cli, 3: ssh, 4: ping
         #   - NOTE: int index will be used to do zone lookup. if zone changes, these will stop working and would need
-        #       to be reset. this is ok for now since we only support builtin zones that cant change.
+        #       to be reset. this is ok for now since we only support builtin zones that can't change.
         # 2000+: system control (proxy bypass prevention)
 
         ruleset = load_configuration(system_rules, filepath='dnx_system/iptables')['BUILTIN']
 
-        ruleset = [array('L', rule) for rule in ruleset.values()]
+        ruleset = self._format_rules(ruleset.values())
 
         # NOTE: gil must be held throughout this call. 0 is index of SYSTEM RULES
         error = self.cfirewall.update_ruleset(0, ruleset)
@@ -129,3 +125,45 @@ class FirewallControl:
             pass  # TODO: do something here
 
         self._initialize.done()
+
+    @staticmethod
+    # TODO: figure out a way to merge each object to a single PyArray making only 4 needed.
+    # TODO: this method is assuming that the fw objects are already converted from id to definition. make sure this
+    #  is dealt with somewhere.
+    def _format_rules(section_rules, /):
+        '''converts dictionary representation of firewall rules to PyArrays. each rule is contained within a list
+        with each rule field type having its own PyArray (7 total per rule).'''
+
+        ruleset = []
+        ruleset_append = ruleset.append
+
+        for rule in section_rules:
+            rule_get = rule.get
+
+            flag_array = array('B', [rule_get(x) for x in ['enabled', 'action', 'log', 'ipp_profile', 'ips_profile']])
+            s_zone_array = array('B', [x for x in rule_get('src_zone')])
+            d_zone_array = array('B', [x for x in rule_get('dst_zone')])
+
+            s_net_array = array('L')
+            for net in rule_get('src_network'):
+                s_net_array.extend(net)
+
+            d_net_array = array('L')
+            for net in rule_get('dst_network'):
+                d_net_array.extend(net)
+
+            s_svc_array = array('H')
+            for svc in rule_get('src_service'):
+                s_svc_array.extend(svc)
+
+            d_svc_array = array('H')
+            for svc in rule_get('dst_service'):
+                d_svc_array.extend(svc)
+
+            ruleset_append([
+                flag_array,
+                s_zone_array, s_net_array, s_svc_array,
+                d_zone_array, d_net_array, d_svc_array
+            ])
+
+        return ruleset

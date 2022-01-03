@@ -408,7 +408,7 @@ def manage_firewall_rule(fw_rule, /):
     if (rule_list is None):
         raise ValidationError(f'{INVALID_FORM} [section]')
 
-    rule_count = len(rule_list) + 1 # +1 to account for non exclusivity
+    rule_count = len(rule_list) + 1  # +1 to account for non exclusivity
     # this will allow for rule to be place beyond the last rule in list.
     if hasattr(fw_rule, 'create_rule'):
         rule_count += 1
@@ -453,34 +453,32 @@ def manage_firewall_rule(fw_rule, /):
     # [1,  12, 4294967295, 32,      393217,       65535,
     #      10, 4294967295, 32,      458751,       65535,    1,      0,    1,    1],
 
+    # limited to single objects per field for now.
     return {
-        'enabled': int(hasattr(fw_rule, 'rule_state')),
-        'src_zone': [s_zone],
+        'name': None,
+        'id': None,
+        'enabled': int(
+            hasattr(fw_rule, 'rule_state')   # 1
+        ),
+        'src_zone': [s_zone],                # [12]
         'src_network': [
-            [s_net, s_plen]
+            [s_net, s_plen]                  # [4294967295, 32]
         ],
         'src_service': [
-            [s_proto, s_port[0], s_port[1]]
+            [s_proto, s_port[0], s_port[1]]  # [6, 0, 65535]
         ],
-        'dst_zone': [d_zone],
+        'dst_zone': [d_zone],                # [11]
         'dst_network': [
-            [d_net, d_plen]
+            [d_net, d_plen]                  # [4294967295, 32]
         ],
         'dst_service': [
-            [d_proto, d_port[0], d_port[1]]
+            [d_proto, d_port[0], d_port[1]]  # [6, 22, 22]
         ],
-        'action': action,
+        'action': action,                    # 1
         'log': 0,
         'ipp_profile': ip_proxy_profile,
         'ips_profile': ips_ids_profile
     }
-
-    # return [
-    #     int(hasattr(fw_rule, 'rule_state')),  # returns boolean so will evaluate directly
-    #     s_zone, s_net, s_plen, s_proto << 16 | s_port[0], s_port[1],
-    #     d_zone, d_net, d_plen, d_proto << 16 | d_port[0], d_port[1],
-    #     action, 0, ip_proxy_profile, ips_ids_profile
-    # ]
 
 def add_dnat_rule(rule, /):
     # ensuring all necessary fields are present in the namespace before continuing.

@@ -70,6 +70,17 @@
 
     {% endif %}
 
+    {% if firewall %}
+        <script>
+            function dnxChips(name) {
+                document.addEventListener('DOMContentLoaded', () => {
+                    var elems = document.querySelectorAll(`.${name}`);
+                    var instances = M.Chips.init(elems, {});
+                });
+            }
+        </script>
+    {% endif %}
+
     <!-- ^^ BEFORE PAGE TEMPLATE ^^ -->
     {% block body %}{% endblock body %}
     <!-- vv AFTER PAGE TEMPLATE vv -->
@@ -146,12 +157,12 @@
         <!-- custom functions for client side functionality-->
         <script>
             function activeTab(n) {
-            history.replaceState(null, null, window.location.pathname+"?tab="+n);
-            document.getElementById("timeout-tab").innerHTML = "<input type=hidden name=tab value="+n+">";
+                history.replaceState(null, null, window.location.pathname+"?tab="+n);
+                document.getElementById("timeout-tab").innerHTML = "<input type=hidden name=tab value="+n+">";
             }
 
             function activeMenu(n) {
-            document.getElementById("timeout-menu").innerHTML = "<input type=hidden name=menu value="+n+">";
+                document.getElementById("timeout-menu").innerHTML = "<input type=hidden name=menu value="+n+">";
             }
 
             function idleTimeoutWarning() {

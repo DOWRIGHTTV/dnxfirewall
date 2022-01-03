@@ -17,7 +17,7 @@
     </div>
 </section>
 <section id="fwall" class="section {{main_section_color}}">
-    <div class="container">
+    <div class="fw-container">
         <div class="row">
             <div class="col s12">
                 <div class="card-panel hoverable {{card_color}}">
@@ -54,14 +54,20 @@
                         <table class="centered highlight" id="filter-table">
                             <thead>
                                 <tr>
-                                    <th></th>
-                                    <th>Pos</th>
-                                    <th>S Zone</th>
-                                    <th>S Net</th>
-                                    <th>Proto/Port</th>
-                                    <th>D Zone</th>
-                                    <th>D Net</th>
-                                    <th>Proto/Port</th>
+                                    <th colspan="2">ID</th>
+                                    <th colspan="3">Source</th>
+                                    <th colspan="3">Destination</th>
+                                    <th colspan="4">Options</th>
+                                </tr>
+                                <tr>
+                                    <th>Move</th>
+                                    <th>Name</th>
+                                    <th>Zones</th>
+                                    <th>Networks</th>
+                                    <th>Services</th>
+                                    <th>Zones</th>
+                                    <th>Networks</th>
+                                    <th>Services</th>
                                     <th>Action</th>
                                     <th>Log</th>
                                     <th>IPProxy</th>
@@ -71,20 +77,19 @@
                             <tbody id="filter-table-body">
                                 {% for rule in firewall_settings['firewall_rules'] %}
                                 <tr id="r{{loop.index}}" {% if not rule[0] %} style="opacity: .4" {% endif %}>
-                                    <td data-enabled="{{rule[0]}}">
-                                        <form action="/advanced/firewall" method="POST">
-                                            <input type="hidden" name="tab" value="1">
-                                            <input type="hidden" name="position" value="{{loop.index}}">
-                                            <input type="hidden" name="section" value="{{selected}}">
-                                            <button class="btn-floating btn-small waves-effect waves-light red" name="remove_rule">
-                                                <i class="material-icons">remove</i>
-                                            </button>
-                                        </form>
-                                    </td>
                                     {% set rule_num = loop.index %}
-                                    <td data-fw-modal="r{{rule_num}}-0">{{loop.index}}</td>
+                                    <td data-enabled="{{rule[0]}}" data-fw-modal="r{{rule_num}}-0"><i class="material-icons">reorder</i></td>
                                     {% for field in rule[1:] %}
+                                    {% if is_list(field) %}
+                                    <td data-fw-modal="r{{rule_num}}-{{loop.index}}">
+                                    {% for subfield in field %}
+                                        <div class="chip tooltipped" data-html="true" data-tooltip="{{subfield[2]}}<br>{{subfield[3]}}</h5>">
+                                            <a class="material-icons tiny">{{get_obj_icon(subfield[2])}}</a>{{subfield[0]}}</div>
+                                    {% endfor %}
+                                    </td>
+                                    {% else %}
                                     <td data-fw-modal="r{{rule_num}}-{{loop.index}}">{{field}}</td>
+                                    {% endif %}
                                     {% endfor %}
                                 </tr>
                                 {% else %}
@@ -175,15 +180,16 @@
                             <tr>
                                 <th style="width:10%"></th>
                                 <th style="width:15%">Name</th>
+                                <th style="width:10%">Group</th>
                                 <th style="width:10%">Type</th>
                                 <th style="width:10%">Value</th>
-                                <th style="width:55%">Description</th>
+                                <th style="width:45%">Description</th>
                             </tr>
                         </thead>
                         <tbody id="filter-table-body2">
-                            {% for id, name, type, value, description in firewall_settings['firewall_objects'] %}
+                            {% for id, name, group, type, value, description in firewall_settings['firewall_objects'] %}
                             <tr style="height: 25px;">
-                            {% if 'built-in' in type %}
+                            {% if not 'built-in' in type %}
                                 <td>X</td>
                             {% else %}
                                 <td>
@@ -197,9 +203,10 @@
                                 </td>
                             {% endif %}
                                 <td class="fw-obj">{{name}}</td>
+                                <td class="fw-obj">{{group}}</td>
                                 <td class="fw-obj">{{type}}</td>
                                 <td class="fw-obj">{{value}}</td>
-                                <td class="fw-obj" style="text-align:left">{{description}}</td>
+                                <td class="fw-obj grab" style="text-align:left">{{description}}</td>
                             </tr>
                             {% else %}
                             <tr>
@@ -287,6 +294,8 @@
             </div>
             <!-- source network fields-->
             <div class="row">
+                <input name="src_network" type="hidden" id="address-obj-src-input">
+                <input name="src_service" type="hidden" id="service-obj-src-input">
                 <div>
                     <h6 class="{{title_color}}" style="float: left;">Src:</h6>
                 </div>
@@ -298,27 +307,17 @@
                     </select>
                     <label for="src_zone">Zone</label>
                 </div>
-                <div class="input-field col s1 {{input_color}}">
-                    <button type="button" class="btn waves-effect waves-light src_geo_toggle tooltipped"
-                            data-position="bottom" data-tooltip="toggle src geo-filtering">
-                        <i class="material-icons">language</i>
-                    </button>
+                <div class="chips col s3 offset-s1 address-obj-src" onload="dnxChips(address-obj-src)">
+                    <input placeholder="Networks">
                 </div>
-                <div class="input-field col s4 src_geo">
-                    <input type="text" id="src_geo" class="geo-autocomplete">
-                    <label for="src_geo">Country</label>
-                </div>
-                <div class="input-field col s4 {{input_color}} src_net">
-                    <input type="text" name="src_ip" id="src_net" {{ip_net_validate}} placeholder="127.0.0.1/32">
-                    <label for="src_net">Network/Mask</label>
-                </div>
-                <div class="input-field col s3 {{input_color}}">
-                    <input type="text" name="src_port" id="src_port" placeholder="tcp/80">
-                    <label for="src_port">Port/s</label>
+                <div class="chips col s3 service-obj-src" onload="dnxChips(service-obj-src)">
+                    <input id="service-obj-src" placeholder="Services">
                 </div>
             </div>
             <!-- destination network fields-->
             <div class="row">
+                <input name="dst_network" type="hidden" id="address-obj-dst-input">
+                <input name="dst_service" type="hidden" id="service-obj-dst-input">
                 <div>
                     <h6 class="{{title_color}}" style="float: left;">Dst:</h6>
                 </div>
@@ -330,23 +329,11 @@
                     </select>
                     <label for="dst_zone">Zone</label>
                 </div>
-                <div class="input-field col s1 {{input_color}}">
-                    <button type="button" class="btn waves-effect waves-light dst_geo_toggle tooltipped"
-                            data-position="bottom" data-tooltip="toggle dst geo-filtering">
-                        <i class="material-icons">language</i>
-                    </button>
+                <div class="chips col s3 offset-s1 address-obj-dst">
+                    <input placeholder="Networks">
                 </div>
-                <div class="input-field col s4 dst_geo">
-                    <input type="text" name="dst_geo" id="dst_geo" class="geo-autocomplete">
-                    <label for="dst_geo">Country</label>
-                </div>
-                <div class="input-field col s4 offset {{input_color}} dst_net">
-                    <input type="text" name="dst_ip" id="dst_net" {{ip_net_validate}} placeholder="127.0.0.1/32" required>
-                    <label for="dst_net">Network/Mask</label>
-                </div>
-                <div class="input-field col s3 {{input_color}}">
-                    <input type="text" name="dst_port" id="dst_port" placeholder="tcp/80">
-                    <label for="dst_port">Port/s</label>
+                <div class="chips col s3 service-obj-dst">
+                    <input placeholder="Services">
                 </div>
             </div>
             <!-- packet decision fields-->
@@ -375,8 +362,8 @@
             </div>
             <div class="row">
                 <div class="modal-footer">
-                    <button class="btn waves-effect waves-light" name="create_rule">Submit</button>
-                    <a class="btn-flat modal-close waves-effect waves-green">Cancel</a>
+                    <button class="btn waves-effect waves-light" name="create_rule" onclick="applyObjects()">Submit</button>
+                    <a class="btn-flat modal-close waves-effect waves-green" >Cancel</a>
                 </div>
             </div>
         </form>
@@ -528,25 +515,68 @@
 </style>
 <script>
     colorizeTable(2);
-    $(function() {
-        $('.src_geo_toggle').click(function() {
-            $('.src_geo, .src_net').toggle();
+    dnxChips('address-obj-dst');
+</script>
+<script>
+    $(".grab").mousedown(function(e) {
+      var tr = $(e.target).closest("TR"),
+        si = tr.index(),
+        sy = e.pageY,
+        b = $(document.body),
+        drag;
+      if (si == 0) return;
+      b.addClass("grabCursor").css("userSelect", "none");
+      tr.addClass("grabbed");
+
+      function move(e) {
+        if (!drag && Math.abs(e.pageY - sy) < 10) return;
+        drag = true;
+        tr.siblings().each(function() {
+          var s = $(this),
+            i = s.index(),
+            y = s.offset().top;
+          if (i > 0 && e.pageY >= y && e.pageY < y + s.outerHeight()) {
+            if (i < tr.index())
+              tr.insertAfter(s);
+            else
+              tr.insertBefore(s);
+            return false;
+          }
         });
+      }
+
+      function up(e) {
+        if (drag && si != tr.index()) {
+          drag = false;
+          alert("moved!");
+        }
+        $(document).unbind("mousemove", move).unbind("mouseup", up);
+        b.removeClass("grabCursor").css("userSelect", "none");
+        tr.removeClass("grabbed");
+      }
+      $(document).mousemove(move).mouseup(up);
     });
-    $(function() {
-        $('.dst_geo_toggle').click(function() {
-            $('.dst_geo, .dst_net').toggle();
-        });
-    });
-    $(function() {
-        $('.src_geo_toggle-edit').click(function() {
-            $('.src_geo-edit, .src_net-edit').toggle();
-        });
-    });
-    $(function() {
-        $('.dst_geo_toggle-edit').click(function() {
-            $('.dst_geo-edit, .dst_net-edit').toggle();
-        });
-    });
+
+function joinObjects(fwObjects) {
+    var tempArray = []
+
+    for (let obj of fwObjects) {
+        tempArray.push(obj.tag);
+    }
+
+    return tempArray.join(',')
+}
+
+function applyObjects() {
+    var s1 = M.Chips.getInstance($('.address-obj-src')).chipsData;
+    var s2 = M.Chips.getInstance($('.service-obj-src')).chipsData;
+    var d1 = M.Chips.getInstance($('.address-obj-dst')).chipsData;
+    var d2 = M.Chips.getInstance($('.service-obj-dst')).chipsData;
+
+    document.getElementById('address-obj-src-input').value = joinObjects(s1);
+    document.getElementById('service-obj-src-input').value = joinObjects(s2);
+    document.getElementById('address-obj-dst-input').value = joinObjects(d1);
+    document.getElementById('service-obj-dst-input').value = joinObjects(d2);
+}
 </script>
 {% endblock %}

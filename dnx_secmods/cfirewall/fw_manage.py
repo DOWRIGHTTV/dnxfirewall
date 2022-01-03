@@ -36,7 +36,7 @@ class FirewallManage:
         'firewall',
     )
 
-    # store main instance reference here so it be accessed throughout web ui
+    # store main instance reference here so it can be accessed throughout webui
     cfirewall = None
 
     versions = ['pending', 'active']
@@ -80,7 +80,7 @@ class FirewallManage:
 
             dnx_fw.write_configuration(firewall)
 
-            # updating instance variable for direct access
+            # updating instance/ mem-copy of variable for fast access
             self.firewall = firewall
 
     def remove(self, pos, *, section):
@@ -97,7 +97,7 @@ class FirewallManage:
 
             dnx_fw.write_configuration(firewall)
 
-            # updating instance variable for direct access
+            # updating instance/ mem-copy of variable for fast access
             self.firewall = firewall
 
     def modify(self, static_pos, pos, rule, *, section):
@@ -113,7 +113,7 @@ class FirewallManage:
 
             ruleset = firewall[section]
 
-            # TODO: make lock re entrant
+            # TODO: make lock re entrant (non exclusive?)
             # update rule first using static_pos, then remove from list if it needs to move. cannot call add method from
             # here due to file lock being held by this current context (its not re entrant).
             ruleset[static_pos] = rule
@@ -123,7 +123,7 @@ class FirewallManage:
             # writes even if it needs to move since external func will handle move operation (in the form of insertion).
             # dnx_fw.write_configuration(firewall)
 
-            # updating instance variable for direct access
+            # updating instance/ mem-copy of variable for fast access
             self.firewall = firewall
 
         # now that we are out of the context we can use add method to re-insert the rule in specified place
@@ -134,7 +134,8 @@ class FirewallManage:
         if (move):
             self.add(pos, rule_to_move, section=section)
 
-    def commit(self):
+    @staticmethod
+    def commit():
         '''Copies pending configuration to active, which is being monitored by Control class
         to load into cfirewall.'''
 
@@ -143,7 +144,8 @@ class FirewallManage:
 
             os.replace(COPY_RULE_FILE, ACTIVE_RULE_FILE)
 
-    def revert(self):
+    @staticmethod
+    def revert():
         '''Copies active configuration to pending, which effectively wipes any uncommitted changes.'''
 
         with ConfigurationManager():
@@ -169,5 +171,7 @@ class FirewallManage:
 
         with ConfigurationManager(f'firewall_{version}', file_path=DEFAULT_PATH) as dnx_fw:
             firewall = dnx_fw.load_configuration()
+
+            print(firewall)
 
             return firewall[section]

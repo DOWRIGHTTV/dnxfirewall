@@ -112,6 +112,11 @@ div .popout-form {
     padding: 1em;
 }
 
+.fw-container {
+    margin: 0 auto;
+    width: 85%;
+}
+
 /* firewall obj table */
 .fw-obj {
     padding: 1px;

@@ -464,7 +464,7 @@ cdef class CFirewall:
 
     # PYTHON ACCESSIBLE FUNCTIONS
     def nf_run(self):
-        ''' calls internal C run method to engage nfqueue processes. this call will run forever, but will
+        '''calls internal C run method to engage nfqueue processes. this call will run forever, but will
         release the GIL prior to entering C and never try to reacquire it.'''
 
         # release gil and never look back.
@@ -497,7 +497,6 @@ cdef class CFirewall:
 
         global GEOLOCATION, MSB, LSB
 
-        # TODO: implement lru caching compatible with cfirewall
         GEOLOCATION = RangeTrie()
 
         GEOLOCATION.generate_structure(geolocation_trie)
