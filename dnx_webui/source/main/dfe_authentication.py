@@ -145,7 +145,8 @@ def user_restrict(*authorized_roles):
             if (persistent_session_data['role'] not in authorized_roles):
                 session.pop('user', None)
 
-                return render_template('dnx_not_authorized.html', navi=True, login_btn=True, idle_timeout=False)
+                return render_template(
+                    f'{Flask.template_path}/main/not_authorized.html', navi=True, login_btn=True, idle_timeout=False)
 
             Flask.app.dnx_session_data[user] = user
 

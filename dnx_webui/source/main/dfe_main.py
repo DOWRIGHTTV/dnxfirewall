@@ -17,39 +17,32 @@ from dnx_routines.configure.exceptions import ValidationError
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 from dnx_routines.logging.log_main import LogHandler as Log
 
-import dnx_webui.source.main.dfe_dnx_dashboard as dfe_dashboard
-import dnx_webui.source.settings.dfe_settings_dns as dns_settings
-import dnx_webui.source.settings.dfe_settings_dhcp as dhcp_settings
-import dnx_webui.source.settings.dfe_settings_interface as interface_settings
-import dnx_webui.source.settings.dfe_settings_logging as logging_settings
-import dnx_webui.source.settings.dfe_settings_syslog as syslog_settings
-import dnx_webui.source.settings.dfe_settings_categories as category_settings
-import dnx_webui.source.advanced.dfe_advanced_whitelist as whitelist
-import dnx_webui.source.advanced.dfe_advanced_blacklist as blacklist
-import dnx_webui.source.advanced.dfe_advanced_firewall as dnx_fwall
-import dnx_webui.source.advanced.dfe_advanced_nat as dnx_nat
-import dnx_webui.source.advanced.dfe_advanced_domain as dns_proxy
-import dnx_webui.source.advanced.dfe_advanced_ip as ip_proxy
-import dnx_webui.source.advanced.dfe_advanced_ips as dnx_ips
-import dnx_webui.source.system.dfe_system_logs as dfe_logs
-import dnx_webui.source.system.dfe_system_reports as proxy_reports
-import dnx_webui.source.system.dfe_system_users as dfe_users
-import dnx_webui.source.system.dfe_system_backups as dfe_backups
-import dnx_webui.source.system.dfe_system_services as dnx_services
+import dnx_webui.source.main.dfe_dashboard as dfe_dashboard
+import dnx_webui.source.settings.dfe_dns as dns_settings
+import dnx_webui.source.settings.dfe_dhcp as dhcp_settings
+import dnx_webui.source.settings.dfe_interface as interface_settings
+import dnx_webui.source.settings.dfe_logging as logging_settings
+import dnx_webui.source.settings.dfe_syslog as syslog_settings
+import dnx_webui.source.settings.dfe_categories as category_settings
+import dnx_webui.source.advanced.dfe_whitelist as whitelist
+import dnx_webui.source.advanced.dfe_blacklist as blacklist
+import dnx_webui.source.advanced.dfe_firewall as dnx_fwall
+import dnx_webui.source.advanced.dfe_nat as dnx_nat
+import dnx_webui.source.advanced.dfe_domain as dns_proxy
+import dnx_webui.source.advanced.dfe_ip as ip_proxy
+import dnx_webui.source.advanced.dfe_ips as dnx_ips
+import dnx_webui.source.system.dfe_logs as dfe_logs
+import dnx_webui.source.system.dfe_reports as proxy_reports
+import dnx_webui.source.system.dfe_users as dfe_users
+import dnx_webui.source.system.dfe_backups as dfe_backups
+import dnx_webui.source.system.dfe_services as dnx_services
 
-from dnx_webui.source.main.dfe_dnx_authentication import Authentication, user_restrict
+from dnx_webui.source.main.dfe_authentication import Authentication, user_restrict
 
 from dnx_system.sys_action import system_action
 from dnx_secmods.cfirewall.fw_manage import FirewallManage
 
 LOG_NAME = 'web_app'
-
-app = Flask(__name__, static_url_path='../../static')
-
-# a new key is generated on every system start and stored in system config.
-app.secret_key = load_configuration('config')['flask'].get('key')
-
-trusted_proxies = ['127.0.0.1']
 
 # setup for system logging
 Log.run(name=LOG_NAME)
@@ -64,6 +57,22 @@ FirewallManage.cfirewall = cfirewall
 # NOTE: this will allow the config manager to reference the Log class without an import. (cyclical import error)
 ConfigurationManager.set_log_reference(Log)
 
+# ========================================
+# FLASK API - APP INSTANCE INITIALIZATION
+# ========================================
+app = Flask(__name__, static_url_path='/../../static')
+template_path = '/../../templates'
+
+application_error_page = f'{template_path}/main/general_error.html'
+
+# a new key is generated on every system start and stored in system config.
+app.secret_key = load_configuration('config')['flask'].get('key')
+app.dnx_session_data = {}  # NOTE: potentially not needed anymore
+app.dnx_object_database = None
+
+Flask.app = app
+Flask.template_path = template_path
+
 # --------------------------------------------- #
 #  START OF NAVIGATION TABS
 # --------------------------------------------- #
@@ -77,12 +86,12 @@ def dnx_dashboard(session_data):
     page_settings = {
         'navi': True, 'footer': True, 'standard_error': False,
         'idle_timeout': True, 'dashboard': dashboard,
-        'uri_path': ['dashboard',]
+        'uri_path': ['dashboard']
     }
 
     page_settings.update(session_data)
 
-    return render_template('dnx_dashboard.html', **page_settings)
+    return render_template(f'{template_path}/main/dashboard.html', **page_settings)
 
 # --------------------------------------------- #
 #  START OF SETTINGS TAB
@@ -100,7 +109,7 @@ def settings_dns(session_data):
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        dns_settings, page_settings, 'dns_settings' , page_name='settings_dns')
+        dns_settings, page_settings, 'dns_settings' , page_name='settings/dns')
 
     return page_action
 
@@ -116,7 +125,7 @@ def settings_dhcp(session_data):
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        dhcp_settings, page_settings, 'dhcp_settings' , page_name='settings_dhcp')
+        dhcp_settings, page_settings, 'dhcp_settings' , page_name='settings/dhcp')
 
     return page_action
 
@@ -132,7 +141,7 @@ def settings_interface(session_data):
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        interface_settings, page_settings, 'interface_settings', page_name='settings_interface')
+        interface_settings, page_settings, 'interface_settings', page_name='settings/interface')
 
     return page_action
 
@@ -148,7 +157,7 @@ def settings_logging(session_data):
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        logging_settings, page_settings, 'logging_settings', page_name='settings_logging')
+        logging_settings, page_settings, 'logging_settings', page_name='settings/logging')
 
     return page_action
 
@@ -164,7 +173,7 @@ def settings_syslog(session_data):
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        syslog_settings, page_settings, 'syslog_settings', page_name='settings_syslog')
+        syslog_settings, page_settings, 'syslog_settings', page_name='settings/syslog')
 
     return page_action
 
@@ -203,7 +212,7 @@ def advanced_whitelist(session_data):
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        whitelist, page_settings, 'whitelist_settings', page_name='advanced_whitelist')
+        whitelist, page_settings, 'whitelist_settings', page_name='advanced/whitelist')
 
     return page_action
 
@@ -219,7 +228,7 @@ def advanced_blacklist(session_data):
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        blacklist, page_settings, 'blacklist_settings', page_name='advanced_blacklist')
+        blacklist, page_settings, 'blacklist_settings', page_name='advanced/blacklist')
 
     return page_action
 
@@ -240,7 +249,7 @@ def advanced_firewall(session_data):
     page_settings.update(session_data)
 
     page_action = firewall_page_logic(
-        dnx_fwall, page_settings, 'firewall_settings', page_name='advanced_firewall')
+        dnx_fwall, page_settings, 'firewall_settings', page_name='advanced/firewall')
 
     return page_action
 
@@ -261,7 +270,7 @@ def advanced_nat(session_data):
     page_settings.update(session_data)
 
     page_action = firewall_page_logic(
-        dnx_nat, page_settings, 'nat_settings', page_name='advanced_nat')
+        dnx_nat, page_settings, 'nat_settings', page_name='advanced/nat')
 
     return page_action
 
@@ -277,7 +286,7 @@ def advanced_domain(session_data):
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        dns_proxy, page_settings, 'domain_settings', page_name='advanced_domain')
+        dns_proxy, page_settings, 'domain_settings', page_name='advanced/domain')
 
     return page_action
 
@@ -293,7 +302,7 @@ def advanced_ip(session_data):
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        ip_proxy, page_settings, 'ip_settings', page_name='advanced_ip')
+        ip_proxy, page_settings, 'ip_settings', page_name='advanced/ip')
 
     return page_action
 
@@ -309,7 +318,7 @@ def advanced_ips(session_data):
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        dnx_ips, page_settings, 'ips_settings', page_name='advanced_ips')
+        dnx_ips, page_settings, 'ips_settings', page_name='advanced/ips')
 
     return page_action
 
@@ -331,7 +340,7 @@ def system_logs(session_data):
 
     page_settings.update(session_data)
 
-    page_action = log_page_logic(dfe_logs, page_settings, page_name='system_logs')
+    page_action = log_page_logic(dfe_logs, page_settings, page_name='system/logs')
 
     return page_action
 
@@ -356,7 +365,7 @@ def system_reports(session_data):
 
     page_settings.update(session_data)
 
-    page_action = log_page_logic(proxy_reports, page_settings, page_name='system_reports')
+    page_action = log_page_logic(proxy_reports, page_settings, page_name='system/reports')
 
     return page_action
 
@@ -371,7 +380,7 @@ def system_users(session_data):
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        dfe_users, page_settings, 'user_list', page_name='system_users')
+        dfe_users, page_settings, 'user_list', page_name='system/users')
 
     return page_action
 
@@ -386,7 +395,7 @@ def system_backups(session_data):
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        dfe_backups, page_settings, 'current_backups', page_name='system_backups')
+        dfe_backups, page_settings, 'current_backups', page_name='system/backups')
 
     return page_action
 
@@ -401,7 +410,7 @@ def system_services(session_data):
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        dnx_services, page_settings, 'service_info', page_name='system_services')
+        dnx_services, page_settings, 'service_info', page_name='system/services')
 
     return page_action
 
@@ -473,28 +482,30 @@ def dnx_blocked():
     if (not blocked_domain):
         session.pop('user', None)
 
-        return render_template('dnx_not_authorized.html', **page_settings)
+        return render_template(f'{template_path}/main/not_authorized.html', **page_settings)
 
     try:
         validate.domain(blocked_domain)
     except ValidationError:
         session.pop('user', None)
 
-        return render_template('dnx_not_authorized.html', **page_settings)
+        return render_template(f'{template_path}/main/not_authorized.html', **page_settings)
 
     with DBConnector() as firewall_db:
-        domain_info = firewall_db.execute('blocked_domain', domain=blocked_domain, src_ip=request.remote_addr)
+        domain_info = firewall_db.execute(
+            f'{template_path}/main/blocked_domain', domain=blocked_domain, src_ip=request.remote_addr
+        )
 
     if (not domain_info):
         session.pop('user', None)
 
-        return render_template('dnx_not_authorized.html', **page_settings)
+        return render_template('not_authorized.html', **page_settings)
 
     page_settings.update({
         'standard_error': False, 'src_ip': request.remote_addr, 'blocked': domain_info
     })
 
-    return render_template('dnx_blocked.html', **page_settings)
+    return render_template(f'{template_path}/main/blocked.html', **page_settings)
 
 # --------------------------------------------- #
 # --------------------------------------------- #
@@ -518,7 +529,7 @@ def dnx_login():
         login_error = 'Invalid Credentials. Please try again.'
 
     return render_template(
-        'dnx_login.html', navi=False, login_btn=False, idle_timeout=False,
+        f'{template_path}/main/login.html', navi=False, login_btn=False, idle_timeout=False,
         standard_error=False, login_error=login_error, uri_path=['login']
     )
 
@@ -538,7 +549,7 @@ def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
         try:
             error = dnx_page.update_page(request.form)
         except OSError as ose:
-            return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
+            return render_template(application_error_page, general_error=ose, **page_settings)
 
         page_settings.update({
             'tab': tab,
@@ -548,9 +559,9 @@ def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
     try:
         page_settings[data_key] = dnx_page.load_page(request.form)
     except OSError as ose:
-            return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
+            return render_template(application_error_page, general_error=ose, **page_settings)
 
-    return render_template(f'{page_name}.html', **page_settings)
+    return render_template(f'{template_path}/{page_name}.html', **page_settings)
 
 def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name):
     if (request.method == 'POST'):
@@ -559,7 +570,7 @@ def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name):
         try:
             error, selected, page_data = dnx_page.update_page(request.form)
         except OSError as ose:
-            return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
+            return render_template(application_error_page, general_error=ose, **page_settings)
 
         page_settings.update({
             'tab': tab,
@@ -571,7 +582,7 @@ def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name):
     else:
         page_settings[data_key] = dnx_page.load_page()
 
-    return render_template(f'{page_name}.html', **page_settings)
+    return render_template(f'{template_path}/{page_name}.html', **page_settings)
 
 def log_page_logic(log_page, page_settings, *, page_name):
     # can now accept redirects from other places on the webui to load specific tables directly on load
@@ -586,7 +597,7 @@ def log_page_logic(log_page, page_settings, *, page_name):
     try:
         table_data, table, menu_option = handler(request_data)
     except OSError as ose:
-        return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
+        return render_template(application_error_page, general_error=ose, **page_settings)
 
     page_settings.update({
         'table_data': table_data,
@@ -594,14 +605,14 @@ def log_page_logic(log_page, page_settings, *, page_name):
         'menu': menu_option
     })
 
-    return render_template(f'{page_name}.html', **page_settings)
+    return render_template(f'{template_path}/{page_name}.html', **page_settings)
 
 def categories_page_logic(dnx_page, page_settings):
     if (request.method == 'POST'):
         try:
             error, menu_option = dnx_page.update_page(request.form)
         except OSError as ose:
-            return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
+            return render_template(application_error_page, general_error=ose, **page_settings)
 
         tab = request.form.get('tab', '1')
         menu_option = request.form.get('menu', '1')
@@ -616,9 +627,9 @@ def categories_page_logic(dnx_page, page_settings):
     try:
         page_settings['category_settings'] = dnx_page.load_page(page_settings['menu'])
     except OSError as ose:
-        return render_template(f'dnx_general_error.html', general_error=ose, **page_settings)
+        return render_template(application_error_page, general_error=ose, **page_settings)
 
-    return render_template('settings_categories.html', **page_settings)
+    return render_template(f'{template_path}/settings/categories.html', **page_settings)
 
 # function called by restart/shutdown pages. will ensure the user specified operation gets executed
 def handle_system_action(page_settings):
@@ -645,7 +656,7 @@ def handle_system_action(page_settings):
     elif (response == 'NO'):
         return redirect(url_for('dnx_dashboard'))
 
-    return render_template('dnx_device.html', **page_settings)
+    return render_template('device.html', **page_settings)
 
 def update_session_tracker(username, user_role=None, remote_addr=None, *, action=CFG.ADD):
 
@@ -673,14 +684,6 @@ def ajax_response(*, status, data):
         raise TypeError('Ajax response status must be a boolean.')
 
     return jsonify({'success': status, 'result': data})
-
-
-# =================================
-# FLASK API - APP INSTANCE GLOBALS
-# =================================
-Flask.app = app
-app.dnx_session_data = {}
-app.dnx_object_database = None
 
 # =================================
 # FLASK API - REQUEST MODS
