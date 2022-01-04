@@ -4,6 +4,7 @@
 if (__name__ == '__main__'):
     pass
 
+import os
 import time
 
 from datetime import timedelta
@@ -60,10 +61,13 @@ ConfigurationManager.set_log_reference(Log)
 # ========================================
 # FLASK API - APP INSTANCE INITIALIZATION
 # ========================================
-app = Flask(__name__, static_url_path='/../../static')
-template_path = '/../../templates'
+HOME_DIR = os.environ.get('HOME_DIR', '/home/dnx/dnxfirewall')
 
-application_error_page = f'{template_path}/main/general_error.html'
+app = Flask(
+    __name__, static_folder=f'{HOME_DIR}/dnx_webui/static', template_folder=f'{HOME_DIR}/dnx_webui/templates'
+)
+
+application_error_page = 'main/general_error.html'
 
 # a new key is generated on every system start and stored in system config.
 app.secret_key = load_configuration('config')['flask'].get('key')
@@ -71,7 +75,6 @@ app.dnx_session_data = {}  # NOTE: potentially not needed anymore
 app.dnx_object_database = None
 
 Flask.app = app
-Flask.template_path = template_path
 
 # --------------------------------------------- #
 #  START OF NAVIGATION TABS
@@ -91,7 +94,7 @@ def dnx_dashboard(session_data):
 
     page_settings.update(session_data)
 
-    return render_template(f'{template_path}/main/dashboard.html', **page_settings)
+    return render_template('main/dashboard.html', **page_settings)
 
 # --------------------------------------------- #
 #  START OF SETTINGS TAB
@@ -429,9 +432,7 @@ def system_restart(session_data):
 
     page_settings.update(session_data)
 
-    system_action = handle_system_action(page_settings)
-
-    return system_action
+    return handle_system_action(page_settings)
 
 @app.route('/device/shutdown', methods=['GET', 'POST'])
 @user_restrict('admin')
@@ -444,9 +445,7 @@ def system_shutdown(session_data):
 
     page_settings.update(session_data)
 
-    system_action = handle_system_action(page_settings)
-
-    return system_action
+    return handle_system_action(page_settings)
 
 # --------------------------------------------- #
 #  START OF LOGOUT TAB
@@ -482,30 +481,30 @@ def dnx_blocked():
     if (not blocked_domain):
         session.pop('user', None)
 
-        return render_template(f'{template_path}/main/not_authorized.html', **page_settings)
+        return render_template('main/not_authorized.html', **page_settings)
 
     try:
         validate.domain(blocked_domain)
     except ValidationError:
         session.pop('user', None)
 
-        return render_template(f'{template_path}/main/not_authorized.html', **page_settings)
+        return render_template('main/not_authorized.html', **page_settings)
 
     with DBConnector() as firewall_db:
         domain_info = firewall_db.execute(
-            f'{template_path}/main/blocked_domain', domain=blocked_domain, src_ip=request.remote_addr
+            'main/blocked_domain', domain=blocked_domain, src_ip=request.remote_addr
         )
 
     if (not domain_info):
         session.pop('user', None)
 
-        return render_template('not_authorized.html', **page_settings)
+        return render_template('main/not_authorized.html', **page_settings)
 
     page_settings.update({
         'standard_error': False, 'src_ip': request.remote_addr, 'blocked': domain_info
     })
 
-    return render_template(f'{template_path}/main/blocked.html', **page_settings)
+    return render_template('main/blocked.html', **page_settings)
 
 # --------------------------------------------- #
 # --------------------------------------------- #
@@ -524,12 +523,14 @@ def dnx_login():
         if (authenticated):
             update_session_tracker(username, user_role, request.remote_addr)
 
+            session['user'] = username
+
             return redirect(url_for('dnx_dashboard'))
 
         login_error = 'Invalid Credentials. Please try again.'
 
     return render_template(
-        f'{template_path}/main/login.html', navi=False, login_btn=False, idle_timeout=False,
+        'main/login.html', navi=False, login_btn=False, idle_timeout=False,
         standard_error=False, login_error=login_error, uri_path=['login']
     )
 
@@ -561,7 +562,7 @@ def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
     except OSError as ose:
             return render_template(application_error_page, general_error=ose, **page_settings)
 
-    return render_template(f'{template_path}/{page_name}.html', **page_settings)
+    return render_template(f'{page_name}.html', **page_settings)
 
 def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name):
     if (request.method == 'POST'):
@@ -582,7 +583,7 @@ def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name):
     else:
         page_settings[data_key] = dnx_page.load_page()
 
-    return render_template(f'{template_path}/{page_name}.html', **page_settings)
+    return render_template(f'{page_name}.html', **page_settings)
 
 def log_page_logic(log_page, page_settings, *, page_name):
     # can now accept redirects from other places on the webui to load specific tables directly on load
@@ -605,7 +606,7 @@ def log_page_logic(log_page, page_settings, *, page_name):
         'menu': menu_option
     })
 
-    return render_template(f'{template_path}/{page_name}.html', **page_settings)
+    return render_template(f'{page_name}.html', **page_settings)
 
 def categories_page_logic(dnx_page, page_settings):
     if (request.method == 'POST'):
@@ -629,7 +630,7 @@ def categories_page_logic(dnx_page, page_settings):
     except OSError as ose:
         return render_template(application_error_page, general_error=ose, **page_settings)
 
-    return render_template(f'{template_path}/settings/categories.html', **page_settings)
+    return render_template('settings/categories.html', **page_settings)
 
 # function called by restart/shutdown pages. will ensure the user specified operation gets executed
 def handle_system_action(page_settings):
@@ -656,7 +657,7 @@ def handle_system_action(page_settings):
     elif (response == 'NO'):
         return redirect(url_for('dnx_dashboard'))
 
-    return render_template('device.html', **page_settings)
+    return render_template('main/device.html', **page_settings)
 
 def update_session_tracker(username, user_role=None, remote_addr=None, *, action=CFG.ADD):
 

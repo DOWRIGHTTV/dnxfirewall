@@ -158,7 +158,7 @@ def user_restrict(*authorized_roles):
                 # Flask.app.dnx_object_database = DBConnector(table='notsureyet', readonly=True, connect=False)
 
                 with open(f'{HOME_DIR}/dnx_webui/data/builtin_fw_objects.csv') as fw_objects:
-                    Flask.app.dnx_object_database = [x for x in csv.reader(fw_objects) if x and '#' not in x[0]]
+                    Flask.app.dnx_object_database = [x for x in csv.reader(fw_objects) if x and '#' not in x[0]][1:]
 
             # flask page function
             page_action = function_to_wrap(persistent_session_data)
