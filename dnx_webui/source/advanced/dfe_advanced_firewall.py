@@ -3,8 +3,8 @@
 import csv
 
 from types import SimpleNamespace
-from ipaddress import IPv4Network
 from collections import defaultdict
+from flask import Flask
 
 import dnx_routines.configure.web_validate as validate
 
@@ -51,7 +51,7 @@ def load_page(section='MAIN'):
 
             zone_manager[zone_type][zone_name] = [reference_counts[zone_ident], zone_desc]
 
-    firewall_objects = load_temporary_objects()
+    firewall_objects = Flask.app.dnx_object_database
 
     fw_obj_dict = {int(x[0]): x[1:] for x in firewall_objects}
 

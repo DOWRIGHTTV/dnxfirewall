@@ -14,7 +14,7 @@ from dnx_routines.configure.exceptions import ValidationError
 from dnx_routines.configure.system_info import Interface
 
 from dnx_system.sys_action import system_action
-from dnx_webui.dfe_dnx_authentication import Authentication
+from dnx_webui.source.main.dfe_dnx_authentication import Authentication
 
 def set_default_mac_flag():
     with ConfigurationManager('config') as dnx:

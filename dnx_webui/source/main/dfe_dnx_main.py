@@ -2,12 +2,12 @@
 
 # for running with flask dev server
 if (__name__ == '__main__'):
-    import __init__
+    pass
 
 import time
 
 from datetime import timedelta
-from flask import Flask, render_template, redirect, url_for, request, session, jsonify
+from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 
 import dnx_routines.configure.web_validate as validate
 
@@ -17,34 +17,34 @@ from dnx_routines.configure.exceptions import ValidationError
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 from dnx_routines.logging.log_main import LogHandler as Log
 
-import dnx_webui.dfe_dnx_dashboard as dfe_dashboard
-import dnx_webui.dfe_settings_dns as dns_settings
-import dnx_webui.dfe_settings_dhcp as dhcp_settings
-import dnx_webui.dfe_settings_interface as interface_settings
-import dnx_webui.dfe_settings_logging as logging_settings
-import dnx_webui.dfe_settings_syslog as syslog_settings
-import dnx_webui.dfe_settings_categories as category_settings
-import dnx_webui.dfe_advanced_whitelist as whitelist
-import dnx_webui.dfe_advanced_blacklist as blacklist
-import dnx_webui.dfe_advanced_firewall as dnx_fwall
-import dnx_webui.dfe_advanced_nat as dnx_nat
-import dnx_webui.dfe_advanced_domain as dns_proxy
-import dnx_webui.dfe_advanced_ip as ip_proxy
-import dnx_webui.dfe_advanced_ips as dnx_ips
-import dnx_webui.dfe_system_logs as dfe_logs
-import dnx_webui.dfe_system_reports as proxy_reports
-import dnx_webui.dfe_system_users as dfe_users
-import dnx_webui.dfe_system_backups as dfe_backups
-import dnx_webui.dfe_system_services as dnx_services
+import dnx_webui.source.main.dfe_dnx_dashboard as dfe_dashboard
+import dnx_webui.source.settings.dfe_settings_dns as dns_settings
+import dnx_webui.source.settings.dfe_settings_dhcp as dhcp_settings
+import dnx_webui.source.settings.dfe_settings_interface as interface_settings
+import dnx_webui.source.settings.dfe_settings_logging as logging_settings
+import dnx_webui.source.settings.dfe_settings_syslog as syslog_settings
+import dnx_webui.source.settings.dfe_settings_categories as category_settings
+import dnx_webui.source.advanced.dfe_advanced_whitelist as whitelist
+import dnx_webui.source.advanced.dfe_advanced_blacklist as blacklist
+import dnx_webui.source.advanced.dfe_advanced_firewall as dnx_fwall
+import dnx_webui.source.advanced.dfe_advanced_nat as dnx_nat
+import dnx_webui.source.advanced.dfe_advanced_domain as dns_proxy
+import dnx_webui.source.advanced.dfe_advanced_ip as ip_proxy
+import dnx_webui.source.advanced.dfe_advanced_ips as dnx_ips
+import dnx_webui.source.system.dfe_system_logs as dfe_logs
+import dnx_webui.source.system.dfe_system_reports as proxy_reports
+import dnx_webui.source.system.dfe_system_users as dfe_users
+import dnx_webui.source.system.dfe_system_backups as dfe_backups
+import dnx_webui.source.system.dfe_system_services as dnx_services
 
-from dnx_webui.dfe_dnx_authentication import Authentication, user_restrict
+from dnx_webui.source.main.dfe_dnx_authentication import Authentication, user_restrict
 
 from dnx_system.sys_action import system_action
 from dnx_secmods.cfirewall.fw_manage import FirewallManage
 
 LOG_NAME = 'web_app'
 
-app = Flask(__name__, static_url_path='/static')
+app = Flask(__name__, static_url_path='../../static')
 
 # a new key is generated on every system start and stored in system config.
 app.secret_key = load_configuration('config')['flask'].get('key')
@@ -71,7 +71,7 @@ ConfigurationManager.set_log_reference(Log)
 # TODO: figure out best visually pleasing way to inject current logged in user info on each page.
 @app.route('/dashboard', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
-def dnx_dashboard(dnx_session_data):
+def dnx_dashboard(session_data):
     dashboard = dfe_dashboard.load_page()
 
     page_settings = {
@@ -80,7 +80,7 @@ def dnx_dashboard(dnx_session_data):
         'uri_path': ['dashboard',]
     }
 
-    page_settings.update(dnx_session_data)
+    page_settings.update(session_data)
 
     return render_template('dnx_dashboard.html', **page_settings)
 
@@ -90,14 +90,14 @@ def dnx_dashboard(dnx_session_data):
 
 @app.route('/settings/dns', methods=['GET', 'POST'])
 @user_restrict('admin')
-def settings_dns(dnx_session_data):
+def settings_dns(session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': tab, 'uri_path': ['settings', 'dns']
     }
 
-    page_settings.update(dnx_session_data)
+    page_settings.update(session_data)
 
     page_action = standard_page_logic(
         dns_settings, page_settings, 'dns_settings' , page_name='settings_dns')
@@ -106,14 +106,14 @@ def settings_dns(dnx_session_data):
 
 @app.route('/settings/dhcp', methods=['GET', 'POST'])
 @user_restrict('admin')
-def settings_dhcp(dnx_session_data):
+def settings_dhcp(session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': tab, 'uri_path': ['settings', 'dhcp']
     }
 
-    page_settings.update(dnx_session_data)
+    page_settings.update(session_data)
 
     page_action = standard_page_logic(
         dhcp_settings, page_settings, 'dhcp_settings' , page_name='settings_dhcp')
@@ -122,14 +122,14 @@ def settings_dhcp(dnx_session_data):
 
 @app.route('/settings/interface', methods=['GET', 'POST'])
 @user_restrict('admin')
-def settings_interface(dnx_session_data):
+def settings_interface(session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': tab, 'uri_path': ['settings', 'interface']
     }
 
-    page_settings.update(dnx_session_data)
+    page_settings.update(session_data)
 
     page_action = standard_page_logic(
         interface_settings, page_settings, 'interface_settings', page_name='settings_interface')
@@ -138,14 +138,14 @@ def settings_interface(dnx_session_data):
 
 @app.route('/settings/logging', methods=['GET', 'POST'])
 @user_restrict('admin')
-def settings_logging(dnx_session_data):
+def settings_logging(session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': tab, 'uri_path': ['settings', 'logging']
     }
 
-    page_settings.update(dnx_session_data)
+    page_settings.update(session_data)
 
     page_action = standard_page_logic(
         logging_settings, page_settings, 'logging_settings', page_name='settings_logging')
@@ -154,14 +154,14 @@ def settings_logging(dnx_session_data):
 
 @app.route('/settings/syslog', methods=['GET', 'POST'])
 @user_restrict('admin')
-def settings_syslog(dnx_session_data):
+def settings_syslog(session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': tab, 'uri_path': ['settings', 'syslog']
     }
 
-    page_settings.update(dnx_session_data)
+    page_settings.update(session_data)
 
     page_action = standard_page_logic(
         syslog_settings, page_settings, 'syslog_settings', page_name='settings_syslog')
@@ -170,7 +170,7 @@ def settings_syslog(dnx_session_data):
 
 @app.route('/settings/categories', methods=['GET', 'POST'])
 @user_restrict('admin')
-def settings_categories(dnx_session_data):
+def settings_categories(session_data):
     tab = request.args.get('tab', '1')
     menu_option = request.args.get('menu', '1')
     menu_option = int(menu_option) if menu_option.isdigit() else '1'
@@ -181,7 +181,7 @@ def settings_categories(dnx_session_data):
         'uri_path': ['settings', 'categories']
     }
 
-    page_settings.update(dnx_session_data)
+    page_settings.update(session_data)
 
     page_action = categories_page_logic(category_settings, page_settings)
 
@@ -193,14 +193,14 @@ def settings_categories(dnx_session_data):
 
 @app.route('/advanced/whitelist', methods=['GET', 'POST'])
 @user_restrict('admin')
-def advanced_whitelist(dnx_session_data):
+def advanced_whitelist(session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': tab, 'uri_path': ['advanced', 'whitelist']
     }
 
-    page_settings.update(dnx_session_data)
+    page_settings.update(session_data)
 
     page_action = standard_page_logic(
         whitelist, page_settings, 'whitelist_settings', page_name='advanced_whitelist')
@@ -209,14 +209,14 @@ def advanced_whitelist(dnx_session_data):
 
 @app.route('/advanced/blacklist', methods=['GET', 'POST'])
 @user_restrict('admin')
-def advanced_blacklist(dnx_session_data):
+def advanced_blacklist(session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': tab, 'uri_path': ['advanced', 'blacklist']
     }
 
-    page_settings.update(dnx_session_data)
+    page_settings.update(session_data)
 
     page_action = standard_page_logic(
         blacklist, page_settings, 'blacklist_settings', page_name='advanced_blacklist')
@@ -225,7 +225,7 @@ def advanced_blacklist(dnx_session_data):
 
 @app.route('/advanced/firewall', methods=['GET', 'POST'])
 @user_restrict('admin')
-def advanced_firewall(dnx_session_data):
+def advanced_firewall(session_data):
     tab = request.args.get('tab', '1')
 
     page_settings = {
@@ -237,7 +237,7 @@ def advanced_firewall(dnx_session_data):
         'uri_path': ['advanced', 'firewall']
     }
 
-    page_settings.update(dnx_session_data)
+    page_settings.update(session_data)
 
     page_action = firewall_page_logic(
         dnx_fwall, page_settings, 'firewall_settings', page_name='advanced_firewall')
@@ -246,7 +246,7 @@ def advanced_firewall(dnx_session_data):
 
 @app.route('/advanced/nat', methods=['GET', 'POST'])
 @user_restrict('admin')
-def advanced_nat(dnx_session_data):
+def advanced_nat(session_data):
     tab = request.args.get('tab', '1')
     menu_option = request.args.get('menu', '1')
 
@@ -258,7 +258,7 @@ def advanced_nat(dnx_session_data):
         'uri_path': ['advanced', 'nat']
     }
 
-    page_settings.update(dnx_session_data)
+    page_settings.update(session_data)
 
     page_action = firewall_page_logic(
         dnx_nat, page_settings, 'nat_settings', page_name='advanced_nat')
@@ -267,14 +267,14 @@ def advanced_nat(dnx_session_data):
 
 @app.route('/advanced/domain', methods=['GET', 'POST'])
 @user_restrict('admin')
-def advanced_domain(dnx_session_data):
+def advanced_domain(session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': tab, 'uri_path': ['advanced', 'domain']
     }
 
-    page_settings.update(dnx_session_data)
+    page_settings.update(session_data)
 
     page_action = standard_page_logic(
         dns_proxy, page_settings, 'domain_settings', page_name='advanced_domain')
@@ -283,14 +283,14 @@ def advanced_domain(dnx_session_data):
 
 @app.route('/advanced/ip', methods=['GET', 'POST'])
 @user_restrict('admin')
-def advanced_ip(dnx_session_data):
+def advanced_ip(session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': tab, 'uri_path': ['advanced', 'ip']
     }
 
-    page_settings.update(dnx_session_data)
+    page_settings.update(session_data)
 
     page_action = standard_page_logic(
         ip_proxy, page_settings, 'ip_settings', page_name='advanced_ip')
@@ -299,14 +299,14 @@ def advanced_ip(dnx_session_data):
 
 @app.route('/advanced/ips', methods=['GET', 'POST'])
 @user_restrict('admin')
-def advanced_ips(dnx_session_data):
+def advanced_ips(session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': tab, 'uri_path': ['advanced', 'ips']
     }
 
-    page_settings.update(dnx_session_data)
+    page_settings.update(session_data)
 
     page_action = standard_page_logic(
         dnx_ips, page_settings, 'ips_settings', page_name='advanced_ips')
@@ -319,7 +319,7 @@ def advanced_ips(dnx_session_data):
 
 @app.route('/system/logs', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
-def system_logs(dnx_session_data):
+def system_logs(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
         'menu': '1', 'dnx_table': True, 'ajax': True, 'auto_colorize': True,
@@ -329,7 +329,7 @@ def system_logs(dnx_session_data):
         'uri_path': ['system', 'logs']
     }
 
-    page_settings.update(dnx_session_data)
+    page_settings.update(session_data)
 
     page_action = log_page_logic(dfe_logs, page_settings, page_name='system_logs')
 
@@ -337,7 +337,7 @@ def system_logs(dnx_session_data):
 
 @app.route('/system/logs/get', methods=['POST',])
 @user_restrict('user', 'admin')
-def system_logs_get(dnx_session_data):
+def system_logs_get(session_data):
     json_data = request.get_json(force=True)
 
     table_data, _, _ = dfe_logs.update_page(json_data)
@@ -346,7 +346,7 @@ def system_logs_get(dnx_session_data):
 
 @app.route('/system/reports', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
-def system_reports(dnx_session_data):
+def system_reports(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
         'menu': '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
@@ -354,7 +354,7 @@ def system_reports(dnx_session_data):
         'table_types': ['dns_proxy', 'ip_proxy', 'intrusion_prevention', 'infected_clients']
     }
 
-    page_settings.update(dnx_session_data)
+    page_settings.update(session_data)
 
     page_action = log_page_logic(proxy_reports, page_settings, page_name='system_reports')
 
@@ -362,13 +362,13 @@ def system_reports(dnx_session_data):
 
 @app.route('/system/users', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_users(dnx_session_data):
+def system_users(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'uri_path': ['system', 'users']
     }
 
-    page_settings.update(dnx_session_data)
+    page_settings.update(session_data)
 
     page_action = standard_page_logic(
         dfe_users, page_settings, 'user_list', page_name='system_users')
@@ -377,13 +377,13 @@ def system_users(dnx_session_data):
 
 @app.route('/system/backups', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_backups(dnx_session_data):
+def system_backups(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'uri_path': ['system', 'backups']
     }
 
-    page_settings.update(dnx_session_data)
+    page_settings.update(session_data)
 
     page_action = standard_page_logic(
         dfe_backups, page_settings, 'current_backups', page_name='system_backups')
@@ -392,13 +392,13 @@ def system_backups(dnx_session_data):
 
 @app.route('/system/services', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_services(dnx_session_data):
+def system_services(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'uri_path': ['system', 'services']
     }
 
-    page_settings.update(dnx_session_data)
+    page_settings.update(session_data)
 
     page_action = standard_page_logic(
         dnx_services, page_settings, 'service_info', page_name='system_services')
@@ -411,14 +411,14 @@ def system_services(dnx_session_data):
 
 @app.route('/device/restart', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_restart(dnx_session_data):
+def system_restart(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': False,
         'control': True, 'action': 'restart',
         'uri_path': ['device', 'restart']
     }
 
-    page_settings.update(dnx_session_data)
+    page_settings.update(session_data)
 
     system_action = handle_system_action(page_settings)
 
@@ -426,14 +426,14 @@ def system_restart(dnx_session_data):
 
 @app.route('/device/shutdown', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_shutdown(dnx_session_data):
+def system_shutdown(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': False,
         'control': True, 'action': 'shutdown',
         'uri_path': ['device', 'shutdown']
     }
 
-    page_settings.update(dnx_session_data)
+    page_settings.update(session_data)
 
     system_action = handle_system_action(page_settings)
 
@@ -447,7 +447,7 @@ def system_shutdown(dnx_session_data):
 @user_restrict('user', 'admin')
 # removing user from session dict then removing them from locally stored session tracker to allow
 # for cross session awareness of users/accts logged in.
-def dnx_logout(dnx_session_data):
+def dnx_logout(session_data):
     user = session.pop('user', None)
     if (user):
         update_session_tracker(user['name'], action=CFG.DEL)
@@ -509,11 +509,8 @@ def dnx_login():
     login_error = None
     if (request.method == 'POST'):
         authenticated, username, user_role = Authentication.user_login(request.form, request.remote_addr)
-        if (authenticated):
-            session['user'] = {
-                'name': username, 'role': user_role, 'remote_addr': request.remote_addr, 'dark_mode': 0
-            }
 
+        if (authenticated):
             update_session_tracker(username, user_role, request.remote_addr)
 
             return redirect(url_for('dnx_dashboard'))
@@ -656,26 +653,43 @@ def update_session_tracker(username, user_role=None, remote_addr=None, *, action
         raise ValueError('remote_addr must be specified if action is set to add.')
 
     with ConfigurationManager('session_tracker', file_path='dnx_webui/data') as session_tracker:
-        stored_tracker = session_tracker.load_configuration()
+        persistent_tracker = session_tracker.load_configuration()
 
         if (action is CFG.ADD):
-            stored_tracker['active_users'][username] = {
+            persistent_tracker['active_users'][username] = {
                 'role': user_role,
                 'remote_addr': remote_addr,
-                'logged_in': time.time(), # NOTE: can probably make this human readable format here.
+                'logged_in': time.time(),  # NOTE: can probably make this human readable format here.
                 'last_seen': None
             }
 
         elif (action is CFG.DEL):
-            stored_tracker['active_users'].pop(username, None)
+            persistent_tracker['active_users'].pop(username, None)
 
-        session_tracker.write_configuration(stored_tracker)
+        session_tracker.write_configuration(persistent_tracker)
 
 def ajax_response(*, status, data):
     if (not isinstance(status, bool)):
         raise TypeError('Ajax response status must be a boolean.')
 
     return jsonify({'success': status, 'result': data})
+
+
+# =================================
+# FLASK API - APP INSTANCE GLOBALS
+# =================================
+Flask.app = app
+app.dnx_session_data = {}
+app.dnx_object_database = None
+
+# =================================
+# FLASK API - REQUEST MODS
+# =================================
+@app.before_request
+def user_timeout():
+    session.permanent = True
+    app.permanent_session_lifetime = timedelta(minutes=30)
+    session.modified = True
 
 # checks form data for a color mode change and writes/ configures accordingly. otherwise will load
 # the current dark mode setting for the active user and set flask.session['dark_mode] accordingly.
@@ -705,10 +719,10 @@ def dark_mode():
             active_users = webui_settings['users']
 
             # this check prevents issues with log in/out transitions
-            if (user['name'] not in active_users):
+            if (user not in active_users):
                 return
 
-            active_users[user['name']]['dark_mode'] = dark_mode
+            active_users[user]['dark_mode'] = dark_mode
 
             webui.write_configuration(webui_settings)
 
@@ -717,7 +731,7 @@ def dark_mode():
         webui_settings = load_configuration('logins', filepath='dnx_webui/data')
 
         # this check prevents issues with log in/out transitions
-        user = webui_settings['users'].get(user['name'])
+        user = webui_settings['users'].get(user)
         if (not user):
             return
 
@@ -725,13 +739,9 @@ def dark_mode():
 
     session['dark_mode'] = dark_mode
 
-@app.before_request
-def user_timeout():
-    session.permanent = True
-    app.permanent_session_lifetime = timedelta(minutes=30)
-    session.modified = True
-
-# jinja filters
+# ====================================
+# FLASK API - JINJA FILTER FUNCTIONS
+# ====================================
 def merge_items(a1, a2):
     '''accepts 2 arguments of item or list and merges them into one list.
 
@@ -755,7 +765,7 @@ def merge_items(a1, a2):
     return new_list
 
 def get_obj_icon(obj_type, /):
-    return {'geolocation': 'language', 'address': 'tv', 'service': 'track_changes'}[obj_type]
+    return {'country': 'language', 'address': 'tv', 'service': 'track_changes'}[obj_type]
 
 def is_list(li, /):
     return isinstance(li, list)
