@@ -437,7 +437,7 @@ cdef inline void obj_print(int name, void *object) nogil:
 
         printf('network_obj, netid=%l, netmask=%u\n', obj.netid, obj.netmask)
 
-    elif:
+    elif (name == SERVICE):
         service_obj *obj = <service_obj*>object
 
         printf('service_obj, protocol=%u, start_port=%u, end_port=%u\n', obj.protocol, obj.start_port, obj.end_port)
@@ -445,95 +445,95 @@ cdef inline void obj_print(int name, void *object) nogil:
 # ============================================
 # C CONVERSION / INIT FUNCTIONS
 # ============================================
-    cdef void process_traffic() nogil:
+cdef void process_traffic() nogil:
 
-        cdef int fd = nfq_fd(self.h)
-        cdef char packet_buf[4096]
-        cdef size_t sizeof_buf = sizeof(packet_buf)
-        cdef int data_len
-        cdef int recv_flags = 0
+    cdef int fd = nfq_fd(self.h)
+    cdef char packet_buf[4096]
+    cdef size_t sizeof_buf = sizeof(packet_buf)
+    cdef int data_len
+    cdef int recv_flags = 0
 
-        while True:
-            data_len = recv(fd, packet_buf, sizeof_buf, recv_flags)
+    while True:
+        data_len = recv(fd, packet_buf, sizeof_buf, recv_flags)
 
-            if (data_len >= 0):
-                nfq_handle_packet(self.h, packet_buf, data_len)
+        if (data_len >= 0):
+            nfq_handle_packet(self.h, packet_buf, data_len)
 
-            else:
-                # TODO: i believe we can get rid of this and set up a lower level ignore of this. this might require
-                #  the libmnl implementation version though.
-                if (errno != ENOBUFS):
-                    break
+        else:
+            # TODO: i believe we can get rid of this and set up a lower level ignore of this. this might require
+            #  the libmnl implementation version though.
+            if (errno != ENOBUFS):
+                break
 
-    cpdef void set_FWrule(self, size_t ruleset, dict rule, size_t pos):
+cpdef void set_FWrule(self, size_t ruleset, dict rule, size_t pos):
 
-        cdef:
-            size_t i
+    cdef:
+        size_t i
 
-            FWrule fw_rule = <FWrule*>calloc(1, sizeof(FWrule))
+        FWrule fw_rule = <FWrule*>calloc(1, sizeof(FWrule))
 
-        firewall_rules[ruleset][pos] = fw_rule
+    firewall_rules[ruleset][pos] = fw_rule
 
-        fw_rule.enabled = <bint>rule['enabled']
+    fw_rule.enabled = <bint>rule['enabled']
 
-        # ======
-        # SOURCE
-        # ======
-        fw_rule.s_zones.len = <size_t>len(rule['src_zone'])
-        for i in range(fw_rule.s_zones.len):
-            fw_rule.s_zones.objects[i] = <u_int8_t>rule['src_zone'][i]
+    # ======
+    # SOURCE
+    # ======
+    fw_rule.s_zones.len = <size_t>len(rule['src_zone'])
+    for i in range(fw_rule.s_zones.len):
+        fw_rule.s_zones.objects[i] = <u_int8_t>rule['src_zone'][i]
 
-        fw_rule.s_networks.len = <size_t>len(rule['src_network'])
-        for i in range(fw_rule.s_networks.len):
-            fw_rule.s_networks.objects[i].netid   = <long>rule['src_network'][i][0]
-            fw_rule.s_networks.objects[i].netmask = <u_int32_t>rule['src_network'][i][1]
+    fw_rule.s_networks.len = <size_t>len(rule['src_network'])
+    for i in range(fw_rule.s_networks.len):
+        fw_rule.s_networks.objects[i].netid   = <long>rule['src_network'][i][0]
+        fw_rule.s_networks.objects[i].netmask = <u_int32_t>rule['src_network'][i][1]
 
-        fw_rule.s_services.len = <size_t>len(rule['src_service'])
-        for i in range(fw_rule.s_services.len):
-            fw_rule.s_services.objects[i].protocol   = <u_int16_t>rule['src_service'][i][0]
-            fw_rule.s_services.objects[i].start_port = <u_int16_t>rule['src_service'][i][1]
-            fw_rule.s_services.objects[i].end_port   = <u_int16_t>rule['src_service'][i][2]
+    fw_rule.s_services.len = <size_t>len(rule['src_service'])
+    for i in range(fw_rule.s_services.len):
+        fw_rule.s_services.objects[i].protocol   = <u_int16_t>rule['src_service'][i][0]
+        fw_rule.s_services.objects[i].start_port = <u_int16_t>rule['src_service'][i][1]
+        fw_rule.s_services.objects[i].end_port   = <u_int16_t>rule['src_service'][i][2]
 
-        # ===========
-        # DESTINATION
-        # ===========
-        fw_rule.d_zones.len = <size_t>len(rule['dst_zone'])
-        for i in range(fw_rule.d_zones.len):
-            fw_rule.d_zones.objects[i] = <u_int8_t>rule['dst_zone'][i]
+    # ===========
+    # DESTINATION
+    # ===========
+    fw_rule.d_zones.len = <size_t>len(rule['dst_zone'])
+    for i in range(fw_rule.d_zones.len):
+        fw_rule.d_zones.objects[i] = <u_int8_t>rule['dst_zone'][i]
 
-        fw_rule.d_networks.len = <size_t>len(rule['dst_network'])
-        for i in range(fw_rule.d_networks.len):
-            fw_rule.d_networks.objects[i].netid   = <long>rule['dst_network'][i][0]
-            fw_rule.d_networks.objects[i].netmask = <u_int16_t>rule['dst_network'][i][1]
+    fw_rule.d_networks.len = <size_t>len(rule['dst_network'])
+    for i in range(fw_rule.d_networks.len):
+        fw_rule.d_networks.objects[i].netid   = <long>rule['dst_network'][i][0]
+        fw_rule.d_networks.objects[i].netmask = <u_int16_t>rule['dst_network'][i][1]
 
-        fw_rule.d_services.len = <size_t>len(rule['dst_service'])
-        for i in range(fw_rule.d_services.len):
-            fw_rule.d_services.objects[i].protocol   = <u_int16_t>rule['dst_service'][i][0]
-            fw_rule.d_services.objects[i].start_port = <u_int16_t>rule['dst_service'][i][1]
-            fw_rule.d_services.objects[i].end_port   = <u_int16_t>rule['dst_service'][i][2]
+    fw_rule.d_services.len = <size_t>len(rule['dst_service'])
+    for i in range(fw_rule.d_services.len):
+        fw_rule.d_services.objects[i].protocol   = <u_int16_t>rule['dst_service'][i][0]
+        fw_rule.d_services.objects[i].start_port = <u_int16_t>rule['dst_service'][i][1]
+        fw_rule.d_services.objects[i].end_port   = <u_int16_t>rule['dst_service'][i][2]
 
-        fw_rule.action = <u_int8_t>rule['action']
-        fw_rule.log    = <u_int8_t>rule['log']
+    fw_rule.action = <u_int8_t>rule['action']
+    fw_rule.log    = <u_int8_t>rule['log']
 
-        fw_rule.sec_profiles[0] = <u_int8_t>rule['ipp_profile']
-        fw_rule.sec_profiles[1] = <u_int8_t>rule['dns_profile']
-        fw_rule.sec_profiles[2] = <u_int8_t>rule['ips_profile']
+    fw_rule.sec_profiles[0] = <u_int8_t>rule['ipp_profile']
+    fw_rule.sec_profiles[1] = <u_int8_t>rule['dns_profile']
+    fw_rule.sec_profiles[2] = <u_int8_t>rule['ips_profile']
 
-    # NOTE: shouldn't need this anymore since the object manager will handle conversions from objects to firewall vals
-    # cdef inline u_int32_t cidr_to_int(long cidr):
-    #
-    #     cdef u_int32_t integer_mask = 0
-    #     cdef u_int8_t  mask_index = 31 # 1 + 31 shifts = 32 bits
-    #
-    #     for i in range(cidr):
-    #         integer_mask |= 1 << mask_index
-    #
-    #         mask_index -= 1
-    #
-    #     if (VERBOSE):
-    #         printf('cidr=%ld, integer_mask=%u\n', cidr, integer_mask)
-    #
-    #     return integer_mask
+# NOTE: shouldn't need this anymore since the object manager will handle conversions from objects to firewall vals
+# cdef inline u_int32_t cidr_to_int(long cidr):
+#
+#     cdef u_int32_t integer_mask = 0
+#     cdef u_int8_t  mask_index = 31 # 1 + 31 shifts = 32 bits
+#
+#     for i in range(cidr):
+#         integer_mask |= 1 << mask_index
+#
+#         mask_index -= 1
+#
+#     if (VERBOSE):
+#         printf('cidr=%ld, integer_mask=%u\n', cidr, integer_mask)
+#
+#     return integer_mask
 
 # ============================================
 # C EXTENSION - Python Communication Pipeline
