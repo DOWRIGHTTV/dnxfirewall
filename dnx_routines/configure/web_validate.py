@@ -5,6 +5,8 @@ import re
 from subprocess import run
 from ipaddress import IPv4Address, IPv4Network
 
+from flask import Flask
+
 from dnx_gentools.def_constants import LOG, CFG, DATA, PROTO, INVALID_FORM
 from dnx_gentools.file_operations import load_configuration
 from dnx_routines.configure.exceptions import ValidationError
@@ -392,8 +394,8 @@ def manage_firewall_rule(fw_rule, /):
     # ensuring all necessary fields are present in the namespace before continuing.
     valid_fields = [
         'static_pos', 'position', 'section',
-        'src_zone', 'src_ip', 'src_port',
-        'dst_zone', 'dst_ip', 'dst_port',
+        'src_zone', 'src_network', 'src_service',
+        'dst_zone', 'dst_network', 'dst_service',
         'action', 'sec1_prof', 'sec2_prof',
     ]
     if not all([hasattr(fw_rule, x) for x in valid_fields]):
@@ -404,35 +406,38 @@ def manage_firewall_rule(fw_rule, /):
 
     action = 1 if fw_rule.action == 'accept' else 0
 
-    rule_list = FirewallManage.cfirewall.view_ruleset(section=fw_rule.section)
-    if (rule_list is None):
+    rule_count = FirewallManage.cfirewall.ruleset_len(section=fw_rule.section)
+    if (not rule_count):
         raise ValidationError(f'{INVALID_FORM} [section]')
 
-    rule_count = len(rule_list) + 1  # +1 to account for non exclusivity
-    # this will allow for rule to be place beyond the last rule in list.
-    if hasattr(fw_rule, 'create_rule'):
-        rule_count += 1
+    # +1 to account for rule inserted behind last position
+    rule_count += 1 if hasattr(fw_rule, 'create_rule') else 0
 
-    if (convert_int(fw_rule.static_pos) not in range(1, rule_count)):
+    if (not 1 <= convert_int(fw_rule.static_pos) <= rule_count):
         raise ValidationError(f'{INVALID_FORM} position[1]')
 
-    if (convert_int(fw_rule.position) not in range(1, rule_count)):
+    if (not 1 <= convert_int(fw_rule.position) <= rule_count):
         raise ValidationError(f'{INVALID_FORM} position[2]')
 
-    # appending /32 if / not present in string. the network test will catch malformed networks beyond that.
-    if ('/' not in fw_rule.src_ip):
-        fw_rule.src_ip += '/32'
+    check = Flask.app.dnx_object_manager.iter_validate
 
-    s_net, s_plen = ip_network(fw_rule.src_ip)
-    s_proto, s_port = proto_port(fw_rule.src_port)
+    src_network = check([x.split(',') for x in fw_rule.src_network])
+    if (None in src_network):
+        raise ValidationError('A source network object was not found.')
 
-    # appending /32 if / not present in string. the network test will catch malformed networks beyond that.
-    if ('/' not in fw_rule.dst_ip):
-        fw_rule.dst_ip += '/32'
+    src_service = check([x.split(',') for x in fw_rule.src_service])
+    if (None in src_service):
+        raise ValidationError('A source service object was not found.')
 
-    d_net, d_plen = ip_network(fw_rule.dst_ip)
-    d_proto, d_port = proto_port(fw_rule.dst_port)
+    dst_network = check([x.split(',') for x in fw_rule.dst_network])
+    if (None in dst_network):
+        raise ValidationError('A destination network object was not found.')
 
+    dst_service = check([x.split(',') for x in fw_rule.src_service])
+    if (None in dst_service):
+        raise ValidationError('A destination service object was not found.')
+
+    # TODO: make zone map integrated better
     dnx_interfaces = load_configuration('config')['interfaces']['builtins']
     zone_map = {zone_name: zone_info['zone'] for zone_name, zone_info in dnx_interfaces.items()}
 
@@ -449,36 +454,26 @@ def manage_firewall_rule(fw_rule, /):
     if not all([x in [0, 1] for x in [ip_proxy_profile, ips_ids_profile]]):
         raise ValidationError('Invalid security profile.')
 
-    # en | zone | netid | mask | proto << port1 | port2 | action | log | ipp | ips
-    # [1,  12, 4294967295, 32,      393217,       65535,
-    #      10, 4294967295, 32,      458751,       65535,    1,      0,    1,    1],
-
-    # limited to single objects per field for now.
-    return {
+    rule = {
         'name': None,
         'id': None,
         'enabled': int(
             hasattr(fw_rule, 'rule_state')   # 1
         ),
         'src_zone': [s_zone],                # [12]
-        'src_network': [
-            [s_net, s_plen]                  # [4294967295, 32]
-        ],
-        'src_service': [
-            [s_proto, s_port[0], s_port[1]]  # [6, 0, 65535]
-        ],
+        'src_network': src_network,
+        'src_service': src_service,
         'dst_zone': [d_zone],                # [11]
-        'dst_network': [
-            [d_net, d_plen]                  # [4294967295, 32]
-        ],
-        'dst_service': [
-            [d_proto, d_port[0], d_port[1]]  # [6, 22, 22]
-        ],
+        'dst_network': dst_network,
+        'dst_service': dst_service,
         'action': action,                    # 1
         'log': 0,
         'ipp_profile': ip_proxy_profile,
         'ips_profile': ips_ids_profile
     }
+
+    print(rule)
+    return rule
 
 def add_dnat_rule(rule, /):
     # ensuring all necessary fields are present in the namespace before continuing.

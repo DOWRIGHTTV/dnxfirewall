@@ -96,7 +96,7 @@ class FirewallControl:
             # converting dict to list and each rule into a list of PyArrays. this format is required due to
             # transitioning between python and C. python arrays are compatible in C via memory views and Cython can
             # handle the initial list.
-            ruleset = self._format_rules(new_section.values())
+            # ruleset = self._format_rules(new_section.values())
 
             # NOTE: gil must be held throughout this call
             error = self.cfirewall.update_ruleset(i, ruleset)
@@ -117,7 +117,7 @@ class FirewallControl:
 
         ruleset = load_configuration(system_rules, filepath='dnx_system/iptables')['BUILTIN']
 
-        ruleset = self._format_rules(ruleset.values())
+        # ruleset = self._format_rules(ruleset.values())
 
         # NOTE: gil must be held throughout this call. 0 is index of SYSTEM RULES
         error = self.cfirewall.update_ruleset(0, ruleset)

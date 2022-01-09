@@ -83,8 +83,7 @@
                                     {% if is_list(field) %}
                                     <td data-fw-modal="r{{rule_num}}-{{loop.index}}">
                                     {% for subfield in field %}
-                                        <div class="chip tooltipped" data-html="true" data-tooltip="{{subfield[2]}}<br>{{subfield[3]}}</h5>">
-                                            <a class="material-icons tiny">{{get_obj_icon(subfield[2])}}</a>{{subfield[0]}}</div>
+                                        {{format_fw_obj(subfield)|safe}}
                                     {% endfor %}
                                     </td>
                                     {% else %}
@@ -188,11 +187,11 @@
                         </thead>
                         <tbody id="filter-table-body2">
                             {% for id, name, group, type, value, description in firewall_settings['firewall_objects'] %}
-                            <tr style="height: 25px;">
+                            <tr name="obj_{{name}}" id="{{id}}" style="height: 25px;">
                             {% if not 'built-in' in type %}
-                                <td>X</td>
+                                <td class="fw_obj">X</td>
                             {% else %}
-                                <td>
+                                <td class="fw-obj">
                                     <form action="/advanced/firewall" method="POST">
                                         <input type="hidden" name="tab" value="3">
                                         <input type="hidden" name="obj_id" value="{{id}}">
@@ -294,8 +293,6 @@
             </div>
             <!-- source network fields-->
             <div class="row">
-                <input name="src_network" type="hidden" id="address-obj-src-input">
-                <input name="src_service" type="hidden" id="service-obj-src-input">
                 <div>
                     <h6 class="{{title_color}}" style="float: left;">Src:</h6>
                 </div>
@@ -307,17 +304,11 @@
                     </select>
                     <label for="src_zone">Zone</label>
                 </div>
-                <div class="chips col s3 offset-s1 address-obj-src" onload="dnxChips(address-obj-src)">
-                    <input placeholder="Networks">
-                </div>
-                <div class="chips col s3 service-obj-src" onload="dnxChips(service-obj-src)">
-                    <input id="service-obj-src" placeholder="Services">
-                </div>
+                <div class="network-chips col s3 offset-s1" id="src_network"></div>
+                <div class="service-chips col s3" id="src_service"></div>
             </div>
             <!-- destination network fields-->
             <div class="row">
-                <input name="dst_network" type="hidden" id="address-obj-dst-input">
-                <input name="dst_service" type="hidden" id="service-obj-dst-input">
                 <div>
                     <h6 class="{{title_color}}" style="float: left;">Dst:</h6>
                 </div>
@@ -329,12 +320,8 @@
                     </select>
                     <label for="dst_zone">Zone</label>
                 </div>
-                <div class="chips col s3 offset-s1 address-obj-dst">
-                    <input placeholder="Networks">
-                </div>
-                <div class="chips col s3 service-obj-dst">
-                    <input placeholder="Services">
-                </div>
+                <div class="network-chips col s3 offset-s1" id="dst_network"></div>
+                <div class="service-chips col s3" id="dst_service"></div>
             </div>
             <!-- packet decision fields-->
             <div class="row">
@@ -505,17 +492,10 @@
         </form>
     </div>
 </div>
-<style>
-    .src_geo,
-    .dst_geo,
-    .src_geo-edit,
-    .dst_geo-edit {
-        display: none;
-    }
-</style>
 <script>
     colorizeTable(2);
-    dnxChips('address-obj-dst');
+    initDNXChips("network");
+    initDNXChips("service");
 </script>
 <script>
     $(".grab").mousedown(function(e) {
@@ -557,11 +537,16 @@
       $(document).mousemove(move).mouseup(up);
     });
 
-function joinObjects(fwObjects) {
+function reconcileObjects(objectNames) {
     var tempArray = []
 
-    for (let obj of fwObjects) {
-        tempArray.push(obj.tag);
+    for (let obj of objectNames) {
+
+        console.log(obj)
+        console.log(obj.tag)
+        var objectID = document.getElementsByName(`obj_${obj.tag}`)[0].id
+
+        tempArray.push(objectID);
     }
 
     return tempArray.join(',')
@@ -573,10 +558,10 @@ function applyObjects() {
     var d1 = M.Chips.getInstance($('.address-obj-dst')).chipsData;
     var d2 = M.Chips.getInstance($('.service-obj-dst')).chipsData;
 
-    document.getElementById('address-obj-src-input').value = joinObjects(s1);
-    document.getElementById('service-obj-src-input').value = joinObjects(s2);
-    document.getElementById('address-obj-dst-input').value = joinObjects(d1);
-    document.getElementById('service-obj-dst-input').value = joinObjects(d2);
+    document.getElementById('address-obj-src-input').value = reconcileObjects(s1);
+    document.getElementById('service-obj-src-input').value = reconcileObjects(s2);
+    document.getElementById('address-obj-dst-input').value = reconcileObjects(d1);
+    document.getElementById('service-obj-dst-input').value = reconcileObjects(d2);
 }
 </script>
 {% endblock %}

@@ -4,7 +4,7 @@ import csv
 
 from types import SimpleNamespace
 from collections import defaultdict
-from flask import Flask
+from flask import Flask, jsonify
 
 import dnx_routines.configure.web_validate as validate
 
@@ -51,16 +51,22 @@ def load_page(section='MAIN'):
 
             zone_manager[zone_type][zone_name] = [reference_counts[zone_ident], zone_desc]
 
-    firewall_objects = Flask.app.dnx_object_database
+    version, firewall_objects = Flask.app.dnx_object_manager.get_objects()
 
-    fw_obj_dict = {int(x[0]): x[1:] for x in firewall_objects}
+    fw_object_map = {obj.name: {'type': obj.type, 'id': obj.id} for obj in firewall_objects}
 
-    firewall_rules = get_and_format_rules(section, fw_obj_dict)
+    network_autofill = {k.name: None for k in firewall_objects if k.type in ['country', 'address']}
+    service_autofill = {k.name: None for k in firewall_objects if k.type in ['service']}
+
+    firewall_rules = get_and_format_rules(section)
 
     return {
         'zone_map': zone_map,
         'zone_manager': zone_manager,
         'firewall_objects': firewall_objects,
+        'fw_object_map': fw_object_map,
+        'network_autofill': network_autofill,
+        'service_autofill': service_autofill,
         'firewall_rules': firewall_rules,
         'pending_changes': is_pending_changes()
     }
@@ -77,6 +83,12 @@ def update_page(form):
 
     elif ('create_rule' in form):
         fw_rule = SimpleNamespace(**form)
+
+        fw_rule.src_network = form.getlist('src_network')
+        fw_rule.src_service = form.getlist('src_service')
+        fw_rule.dst_network = form.getlist('dst_network')
+        fw_rule.dst_service = form.getlist('dst_service')
+
         try:
             converted_rule = validate.manage_firewall_rule(fw_rule)
         except ValidationError as ve:
@@ -116,23 +128,18 @@ def update_page(form):
 
     return error, section, load_page(section)
 
-def get_and_format_rules(section, fw_obj_dict, version='pending'):
-    proto_map = {0: 'any', 1: 'icmp', 6: 'tcp', 17: 'udp'}
-
-    firewall_rules = FirewallManage.cfirewall.view_ruleset(section, version)
+def get_and_format_rules(section):
+    firewall_rules = FirewallManage.cfirewall.view_ruleset(section)
 
     converted_rules = []
     converted_rules_append = converted_rules.append
 
     zone_map_get = _zone_map.get
-    obj_get = fw_obj_dict.get
+    obj_lookup = Flask.app.dnx_object_manager.lookup
 
     # convert rules into a friendly format
     for rule in firewall_rules.values():
 
-        # print(rule)
-
-        # "2": [1, 0, 4294967295, 32, 65537, 65535, 0, 4294967295, 32, 131071, 65535, 1, 0, 0, 0],
         src_zone = zone_map_get(rule['src_zone'][0], 'ERROR')
         dst_zone = zone_map_get(rule['dst_zone'][0], 'ERROR')
 
@@ -144,40 +151,14 @@ def get_and_format_rules(section, fw_obj_dict, version='pending'):
             rule['enabled'], rule['name'],
 
             src_zone,
-            [obj_get(x) for x in rule['src_network']], [obj_get(x) for x in rule['src_service']],
+            [obj_lookup(x) for x in rule['src_network']], [obj_lookup(x) for x in rule['src_service']],
 
             dst_zone,
-            [obj_get(x) for x in rule['dst_network']], [obj_get(x) for x in rule['dst_service']],
+            [obj_lookup(x) for x in rule['dst_network']], [obj_lookup(x) for x in rule['dst_service']],
 
             rule['action'], rule['log'],
             rule['ipp_profile'], rule['ips_profile']
         ]
-
-        # # error is for initial testing period to make it easier to detect if zone manager and
-        # # firewall rules get desynced.
-        # rule[1] = _zone_map.get(rule[1], 'ERROR')
-        # rule[6] = _zone_map.get(rule[6], 'ERROR')
-        #
-        # rule[11] = 'accept' if rule[11] else 'deny' # this could probably get removed since 0/1 is ok for this.
-        # rule[12] = 'Y' if rule[12] else 'N'
-        #
-        # # merging ip/netmask and converting > ip address > str
-        # rule[2] = f'{IPv4Network((rule[2], rule[3]))}'
-        # rule[7] = f'{IPv4Network((rule[7], rule[8]))}'
-        #
-        # # src and dst port conversion
-        # for i in [4, 9]:
-        #
-        #     proto = rule[i] >> 16
-        #     p_1 = rule[i] & 65535
-        #     p_2 = rule[i+1] & 65535
-        #
-        #     rule[i] = f'{proto_map[proto]}/{p_1}'
-        #     if (p_1 < p_2):
-        #         rule[i] += f'-{p_2}'
-        #
-        # # removing fields for items that were merged into another field
-        # cv_rule = [x for i, x in enumerate(rule) if i not in [3, 5, 8, 10]]
 
         print(t_rule)
 
@@ -185,6 +166,7 @@ def get_and_format_rules(section, fw_obj_dict, version='pending'):
 
     return converted_rules
 
+# TODO: move this to firewall manager
 def is_pending_changes():
     active = calculate_file_hash('firewall_active.json', folder='iptables/usr')
     pending = calculate_file_hash('firewall_pending.json', folder='iptables/usr')
@@ -195,10 +177,3 @@ def is_pending_changes():
         return False
 
     return active != pending
-
-def load_temporary_objects():
-    with open(f'{HOME_DIR}/dnx_webui/data/builtin_fw_objects.csv') as fw_objects:
-        object_list = [x for x in csv.reader(fw_objects) if x and '#' not in x[0]]
-
-    # slicing out keys
-    return object_list[1:]

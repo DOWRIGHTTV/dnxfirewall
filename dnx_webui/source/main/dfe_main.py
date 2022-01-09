@@ -8,7 +8,6 @@ import os
 import time
 
 from datetime import timedelta
-from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 
 import dnx_routines.configure.web_validate as validate
 
@@ -18,6 +17,53 @@ from dnx_routines.configure.exceptions import ValidationError
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 from dnx_routines.logging.log_main import LogHandler as Log
 
+# ========================================
+# FLASK API - APP INSTANCE INITIALIZATION
+# ========================================
+from flask import Flask, jsonify, redirect, render_template, request, session, url_for
+
+HOME_DIR = os.environ.get('HOME_DIR', '/home/dnx/dnxfirewall')
+
+app = Flask(
+    __name__, static_folder=f'{HOME_DIR}/dnx_webui/static', template_folder=f'{HOME_DIR}/dnx_webui/templates'
+)
+
+# easy access to app instance by outer components
+Flask.app = app
+
+application_error_page = 'main/general_error.html'
+
+# a new key is generated on every system start and stored in system config.
+app.secret_key = load_configuration('config')['flask'].get('key')
+
+# =========================================
+# DNX API - LOGGING / FIREWALL / CONFIG
+# =========================================
+from dnx_system.sys_action import system_action
+from dnx_secmods.cfirewall.fw_manage import FirewallManage
+
+import dnx_webui.source.main.dfe_obj_manager as dnx_object_manager
+
+LOG_NAME = 'web_app'
+
+# setup for system logging
+Log.run(name=LOG_NAME)
+
+# initialize cfirewall manager, which interfaces with cfirewall control class through a fd.
+cfirewall = FirewallManage()
+
+# setting ref class var to instance. this will allow any webui module to access firewall
+# state without passing around object.
+FirewallManage.cfirewall = cfirewall
+
+# NOTE: this will allow the config manager to reference the Log class without an import. (cyclical import error)
+ConfigurationManager.set_log_reference(Log)
+
+app.dnx_object_manager = dnx_object_manager.initialize(HOME_DIR)
+
+# =========================================
+# WEBUI COMPONENTS
+# =========================================
 import dnx_webui.source.main.dfe_dashboard as dfe_dashboard
 import dnx_webui.source.settings.dfe_dns as dns_settings
 import dnx_webui.source.settings.dfe_dhcp as dhcp_settings
@@ -40,46 +86,9 @@ import dnx_webui.source.system.dfe_services as dnx_services
 
 from dnx_webui.source.main.dfe_authentication import Authentication, user_restrict
 
-from dnx_system.sys_action import system_action
-from dnx_secmods.cfirewall.fw_manage import FirewallManage
-
-LOG_NAME = 'web_app'
-
-# setup for system logging
-Log.run(name=LOG_NAME)
-
-# initialize cfirewall manager, which interfaces with cfirewall control class through a fd.
-cfirewall = FirewallManage()
-
-# setting ref class var to instance. this will allow any webui module to access firewall
-# state without passing around object.
-FirewallManage.cfirewall = cfirewall
-
-# NOTE: this will allow the config manager to reference the Log class without an import. (cyclical import error)
-ConfigurationManager.set_log_reference(Log)
-
-# ========================================
-# FLASK API - APP INSTANCE INITIALIZATION
-# ========================================
-HOME_DIR = os.environ.get('HOME_DIR', '/home/dnx/dnxfirewall')
-
-app = Flask(
-    __name__, static_folder=f'{HOME_DIR}/dnx_webui/static', template_folder=f'{HOME_DIR}/dnx_webui/templates'
-)
-
-application_error_page = 'main/general_error.html'
-
-# a new key is generated on every system start and stored in system config.
-app.secret_key = load_configuration('config')['flask'].get('key')
-app.dnx_session_data = {}  # NOTE: potentially not needed anymore
-app.dnx_object_database = None
-
-Flask.app = app
-
 # --------------------------------------------- #
 #  START OF NAVIGATION TABS
 # --------------------------------------------- #
-
 # TODO: figure out best visually pleasing way to inject current logged in user info on each page.
 @app.route('/dashboard', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
@@ -243,7 +252,8 @@ def advanced_firewall(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': tab, 'dnx_table': True, 'firewall': True,
-        'geolocation': True,
+        'dnx_network_objects': {},
+        'dnx_service_objects': {},
         'selected': 'MAIN',
         'sections': ['BEFORE', 'MAIN', 'AFTER'],
         'uri_path': ['advanced', 'firewall']
@@ -566,7 +576,6 @@ def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
 
 def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name):
     if (request.method == 'POST'):
-        tab = request.form.get('tab', '1')
 
         try:
             error, selected, page_data = dnx_page.update_page(request.form)
@@ -574,7 +583,7 @@ def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name):
             return render_template(application_error_page, general_error=ose, **page_settings)
 
         page_settings.update({
-            'tab': tab,
+            'tab': request.form.get('tab', '1'),
             'selected': selected,
             'standard_error': error,
             data_key: page_data
@@ -710,7 +719,7 @@ def dark_mode():
         return
 
     dark_mode_update = request.args.get('dark_mode_update', DATA.MISSING)
-    # this ensure value conforms to system before configuring
+    # this ensures value conforms to system before configuring
     if (dark_mode_update is not DATA.MISSING):
         try:
             dark_mode = CFG(validate.convert_int(dark_mode_update))
@@ -768,16 +777,25 @@ def merge_items(a1, a2):
 
     return new_list
 
-def get_obj_icon(obj_type, /):
-    return {'country': 'language', 'address': 'tv', 'service': 'track_changes'}[obj_type]
+def format_fw_obj(fw_obj, /):
+    properties = {'country': ['red', 'language'], 'address': ['blue lighten-2', 'tv'], 'service': ['orange lighten-2', 'track_changes']}.get(fw_obj[3], ['', ''])
+
+    return (f'<div class="chip tooltipped {properties[0]}" data-html="true"'
+                f'data-tooltip="<p style=width:160px> {fw_obj[2]}<br>{fw_obj[3]}<br>{fw_obj[4]}<br>{fw_obj[5]}</p>">'
+                f'<i class="material-icons tiny {properties[0]} valign-center">{properties[1]}</i> <big>{fw_obj[1]}</big>'
+             '</div>')
 
 def is_list(li, /):
     return isinstance(li, list)
 
+def _debug(obj, /):
+    print(obj)
+
 
 app.add_template_global(merge_items, name='merge_items')
-app.add_template_global(get_obj_icon, name='get_obj_icon')
+app.add_template_global(format_fw_obj, name='format_fw_obj')
 app.add_template_global(is_list, name='is_list')
+app.add_template_global(_debug, name='debug')
 
 if __name__ == '__main__':
     app.run(debug=True)

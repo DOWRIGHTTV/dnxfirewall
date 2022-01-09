@@ -72,11 +72,42 @@
 
     {% if firewall %}
         <script>
-            function dnxChips(name) {
+            var fwObjectMap = {{firewall_settings.fw_object_map|tojson}}
+            var objFormatMap =  {country: ['red', 'language'], address: ['blue lighten-2', 'tv'], service: ['orange lighten-2', 'track_changes']}
+            var network_autofill = {{firewall_settings.network_autofill|tojson}}
+            var service_autofill = {{firewall_settings.service_autofill|tojson}}
+
+            function caddCallback(e, chip) {
+                var field = e[0].id
+
+                var chipDef = fwObjectMap[chip.innerText.split('\n')[0]]
+                var chipFormat = objFormatMap[chipDef.type]
+
+                chip.className += ` ${chipFormat[0]}`
+                chip.innerHTML = `<i class=material-icons tiny valign-center>${chipFormat[1]}</i>` + chip.innerHTML + `<input type=hidden name=${field} value=${chipDef.id},${chipDef.type}>`;
+                
+                console.log(chip);
+            }
+
+            function initDNXChips(field_type) {
                 document.addEventListener('DOMContentLoaded', () => {
-                    var elems = document.querySelectorAll(`.${name}`);
-                    var instances = M.Chips.init(elems, {});
-                });
+                    var elem = document.querySelectorAll(`.${field_type}-chips`);
+
+                    if (field_type == 'service') {
+                        var set = service_autofill;
+                    } else {
+                        var set = network_autofill;
+                    }
+
+                    var instance = M.Chips.init(elem, {
+                        autocompleteOptions: {
+                            data: set
+                        },
+                        autocompleteOnly: true,
+                        limit: 4,
+                        onChipAdd: caddCallback,
+                    });
+                })
             }
         </script>
     {% endif %}
@@ -102,21 +133,6 @@
         <!-- handles a single table as quick enable. additional need to be called within individual page template. -->
         colorizeTable()
 
-    {% endif %}
-
-    {% if geolocation %}
-        <!-- auto complete input for geolocation (country list). page setting needs to be set to include this on page -->
-        <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                var elems = document.querySelectorAll('.geo-autocomplete');
-
-                {% include 'includes/_geolocation.html' %}
-
-                var instances = M.Autocomplete.init(elems, {
-                    data: geolocation_data
-                });
-            })
-        </script>
     {% endif %}
 
     <!-- materialize js-->

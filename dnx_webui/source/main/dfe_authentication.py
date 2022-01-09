@@ -146,19 +146,7 @@ def user_restrict(*authorized_roles):
                 session.pop('user', None)
 
                 return render_template(
-                    f'{Flask.template_path}/main/not_authorized.html', navi=True, login_btn=True, idle_timeout=False)
-
-            Flask.app.dnx_session_data[user] = user
-
-            # ==================================
-            # open db connection if not already
-            # ==================================
-            # TODO: make sure this is thread safe
-            if (Flask.app.dnx_object_database is None):
-                # Flask.app.dnx_object_database = DBConnector(table='notsureyet', readonly=True, connect=False)
-
-                with open(f'{HOME_DIR}/dnx_webui/data/builtin_fw_objects.csv') as fw_objects:
-                    Flask.app.dnx_object_database = [x for x in csv.reader(fw_objects) if x and '#' not in x[0]][1:]
+                    'main/not_authorized.html', navi=True, login_btn=True, idle_timeout=False)
 
             # flask page function
             page_action = function_to_wrap(persistent_session_data)
