@@ -183,7 +183,7 @@ cdef struct FWrule:
     # PROFILES
     u_int8_t action
     u_int8_t log
-    u_int8_t[SECURITY_PROFILE_COUNT] sec_profiles
+    u_int8_t sec_profiles[SECURITY_PROFILE_COUNT]
         # ip_proxy - 0 off, > 1 profile number
         # ips_ids - 0 off, 1 on
 
@@ -219,9 +219,6 @@ cdef class CFirewall:
     cdef nfq_handle *h # Handle to NFQueue library
     cdef nfq_q_handle *qh # A handle to the queue
 
-    cdef void _run(self) nogil
-    cdef u_int32_t cidr_to_int(self, long cidr)
-    cpdef void set_FWrule(self, int ruleset, dict rule, int pos)
     cpdef void prepare_geolocation(self, tuple geolocation_trie, long msb, long lsb) with gil
     cpdef int update_zones(self, Py_Array zone_map) with gil
     cpdef int update_ruleset(self, int ruleset, list rulelist) with gil
