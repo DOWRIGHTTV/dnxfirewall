@@ -142,7 +142,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     pktdata_len = nfq_get_payload(nfa, &pktdata)
 
     # IP HEADER
-    # assigning ip_header to first index of data casted to iphdr struct and calculate ip header len.
+    # assigning ip_header to first index of data cast to iphdr struct and calculate ip header len.
     ip_header = <iphdr*>pktdata
     iphdr_len = (ip_header.ver_ihl & FOUR_BIT_MASK) * 4
 
@@ -151,8 +151,11 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     proto_header = <protohdr*>&pktdata[iphdr_len] if ip_header.protocol != IPPROTO_ICMP else &_proto_header
 
     # DIRECTION SET
-    # uses initial mark of packet to determine the stateful direction of the conn
+    # uses initial mark of packet to determine the stateful direction of the connection
     direction = OUTBOUND if hw.in_zone != WAN_IN else INBOUND
+
+    if (VERBOSE):
+        pkt_print(ip_header, proto_header)
 
     # =============================== #
     # LOCKING ACCESS TO FIREWALL.
@@ -410,6 +413,7 @@ cdef inline void pkt_print(iphdr *ip_header, protohdr *proto_header) nogil:
     printf('dst-ip=%u, dst-netid=%u\n', ntohl(ip_header.daddr), iph_dst_ip & rule.d_net_mask)
     printf('pkt-proto=%u\n', ip_header.protocol)
     printf('src-geo=%u, dst-geo=%u\n', src_country, dst_country)
+    printf('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n')
 
 # TODO: make this able to print new rule structure
 cdef inline void rule_print(FWrule *rule) nogil:
