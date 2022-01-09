@@ -442,7 +442,7 @@ cdef class CFirewall:
                 if (errno != ENOBUFS):
                     break
 
-    cdef inline u_int32_t cidr_to_int(self, long cidr):
+    cdef u_int32_t cidr_to_int(self, long cidr):
 
         cdef u_int32_t integer_mask = 0
         cdef u_int8_t  mask_index = 31 # 1 + 31 shifts = 32 bits
@@ -460,7 +460,7 @@ cdef class CFirewall:
     cpdef void set_FWrule(self, int ruleset, dict rule, int pos):
 
         cdef:
-            int i
+            size_t i
             FWrule **fw_section
             FWrule *fw_rule
 
@@ -486,37 +486,45 @@ cdef class CFirewall:
         # SOURCE
         # ======
         # zone
-        fw_rule.s_zones.len = len(rule['src_zone'])
+        fw_rule.s_zones.len = <size_t>len(rule['src_zone'])
         for i in range(fw_rule.s_zones.len):
             fw_rule.s_zones.objects[i] = <u_int8_t>rule['src_zone'][i]
 
-        # network | TODO: make sure py list is being converted to struct properly
-        fw_rule.s_networks.len = len(rule['src_network'])
+        # network
+        fw_rule.s_networks.len = <size_t>len(rule['src_network'])
         for i in range(fw_rule.s_networks.len):
-            fw_rule.s_networks.objects[i] = rule['src_network'][i]
+            fw_rule.s_networks.objects[i].protocol   = <u_int16_t>rule['src_network'][i][0]
+            fw_rule.s_networks.objects[i].start_port = <u_int16_t>rule['src_network'][i][1]
+            fw_rule.s_networks.objects[i].end_port   = <u_int16_t>rule['src_network'][i][2]
 
-        # service | TODO: make sure py list is being converted to struct properly
-        fw_rule.s_services.len = len(rule['src_service'])
+        # service
+        fw_rule.s_services.len = <size_t>len(rule['src_service'])
         for i in range(fw_rule.s_services.len):
-            fw_rule.s_services.objects[i] = rule['src_service'][i]
+            fw_rule.s_services.objects[i].protocol   = <u_int16_t>rule['src_service'][i][0]
+            fw_rule.s_services.objects[i].start_port = <u_int16_t>rule['src_service'][i][1]
+            fw_rule.s_services.objects[i].end_port   = <u_int16_t>rule['src_service'][i][2]
 
         # ===========
         # DESTINATION
         # ===========
         # zone
-        fw_rule.d_zones.len = len(rule['dst_zone'])
+        fw_rule.d_zones.len = <size_t>len(rule['dst_zone'])
         for i in range(fw_rule.d_zones.len):
-            fw_rule.d_zones.objects[i] = rule['dst_zone'][i]
+            fw_rule.d_zones.objects[i] = <u_int8_t>rule['dst_zone'][i]
 
-        # network | TODO: make sure py list is being converted to struct properly
-        fw_rule.s_networks.len = len(rule['src_network'])
-        for i in range(fw_rule.s_networks.len):
-            fw_rule.s_networks.objects[i] = rule['src_network'][i]
+        # network
+        fw_rule.d_networks.len = <size_t>len(rule['dst_network'])
+        for i in range(fw_rule.d_network.len):
+            fw_rule.d_networks.objects[i].protocol   = <u_int16_t>rule['dst_network'][i][0]
+            fw_rule.d_networks.objects[i].start_port = <u_int16_t>rule['dst_network'][i][1]
+            fw_rule.d_networks.objects[i].end_port   = <u_int16_t>rule['dst_network'][i][2]
 
-        # service | TODO: make sure py list is being converted to struct properly
-        fw_rule.d_services.len = len(rule['dst_service'])
+        # service
+        fw_rule.d_services.len = <size_t>len(rule['dst_service'])
         for i in range(fw_rule.d_services.len):
-            fw_rule.d_services.objects[i] = rule['dst_service'][i]
+            fw_rule.d_services.objects[i].protocol   = <u_int16_t>rule['dst_service'][i][0]
+            fw_rule.d_services.objects[i].start_port = <u_int16_t>rule['dst_service'][i][1]
+            fw_rule.d_services.objects[i].end_port   = <u_int16_t>rule['dst_service'][i][2]
 
         # printf('[set/FWrule] %u > standard fields set\n', pos)
 
@@ -616,7 +624,7 @@ cdef class CFirewall:
 
         return OK
 
-    # TODO: see if this requires the qil
+    # TODO: see if this requires the gil
     cpdef int remove_blockedlist(self, u_int32_t host_ip):
 
         cdef: 

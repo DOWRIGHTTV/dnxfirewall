@@ -196,7 +196,7 @@ DBConnector = _DBConnector
 
 import dnx_routines.database.ddb_routines # routines will be set within DBConnector class
 
-print(DBConnector.__dict__)
+# print(DBConnector.__dict__)
 
 if __name__ == '__main__':
     # NOTE: CREATE THE TABLES
