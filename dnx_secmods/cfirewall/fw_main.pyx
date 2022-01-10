@@ -551,7 +551,7 @@ cdef class CFirewall:
 
         # release gil and never look back.
         with nogil:
-            process_traffic()
+            process_traffic(self.h)
 
     def nf_set(self, u_int16_t queue_num):
         self.h = nfq_open()
