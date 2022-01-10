@@ -159,7 +159,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     direction = OUTBOUND if hw.in_zone != WAN_IN else INBOUND
 
     if (VERBOSE):
-        pkt_print(ip_header, proto_header)
+        pkt_print(&hw, ip_header, proto_header)
 
     # =============================== #
     # LOCKING ACCESS TO FIREWALL.
@@ -410,11 +410,11 @@ cdef inline bint service_match(service_arr rule_defs, u_int16_t pkt_protocol, u_
 # ============================================
 # PRINT FUNCTIONS
 # ============================================
-cdef inline void pkt_print(iphdr *ip_header, protohdr *proto_header) nogil:
+cdef inline void pkt_print(hw_info *hw, iphdr *ip_header, protohdr *proto_header) nogil:
     printf('vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv-PACKET-vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n')
-    # printf('in-zone=%u, out-zone=%u\n', hw.in_zone, hw.out_zone)
-    printf('proto=%u\n', ip_header.protocol)
-    printf('%u:%u > %u:%u\n',
+    printf('in-zone=%u, out-zone=%u \n', hw.in_zone, hw.out_zone)
+    printf('proto=%u \n', ip_header.protocol)
+    printf('%u:%u > %u:%u \n',
            ntohl(ip_header.saddr), ntohs(proto_header.s_port), ntohl(ip_header.daddr), ntohs(proto_header.d_port)
     )
     # printf('src-geo=%u, dst-geo=%u\n', src_country, dst_country)
@@ -438,7 +438,7 @@ cdef inline void obj_print(int name, void *object) nogil:
     if (name == NETWORK):
         net_obj = <network_obj*>object
 
-        printf('network_obj, netid=%l netmask=%u\n', net_obj.netid, net_obj.netmask)
+        printf('network_obj, netid=%lu netmask=%u\n', net_obj.netid, net_obj.netmask)
 
     elif (name == SERVICE):
         svc_obj = <service_obj*>object
