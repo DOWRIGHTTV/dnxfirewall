@@ -448,7 +448,7 @@ cdef inline void obj_print(int name, void *object) nogil:
 # ============================================
 # C CONVERSION / INIT FUNCTIONS
 # ============================================
-cdef void process_traffic(nf_handle *h) nogil:
+cdef void process_traffic(nfq_handle *h) nogil:
 
     cdef int fd = nfq_fd(h)
     cdef char packet_buf[4096]
@@ -468,7 +468,7 @@ cdef void process_traffic(nf_handle *h) nogil:
             if (errno != ENOBUFS):
                 break
 
-cpdef void set_FWrule(self, size_t ruleset, dict rule, size_t pos):
+cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
 
     cdef:
         size_t i
