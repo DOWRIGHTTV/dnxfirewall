@@ -438,12 +438,12 @@ cdef inline void obj_print(int name, void *object) nogil:
     if (name == NETWORK):
         net_obj = <network_obj*>object
 
-        printf('network_obj, netid=%l, netmask=%u\n', net_obj.netid, net_obj.netmask)
+        printf('network_obj, netid=%l netmask=%u\n', net_obj.netid, net_obj.netmask)
 
     elif (name == SERVICE):
         svc_obj = <service_obj*>object
 
-        printf('service_obj, protocol=%u, start_port=%u, end_port=%u\n', svc_obj.protocol, svc_obj.start_port, svc_obj.end_port)
+        printf('service_obj, protocol=%u start_port=%u end_port=%u\n', svc_obj.protocol, svc_obj.start_port, svc_obj.end_port)
 
 # ============================================
 # C CONVERSION / INIT FUNCTIONS
