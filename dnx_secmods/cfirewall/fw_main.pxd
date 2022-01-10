@@ -214,12 +214,3 @@ cdef struct res_tuple:
     u_int16_t fw_section
     u_int32_t action
     u_int32_t mark
-
-cdef class CFirewall:
-    cdef nfq_handle *h # Handle to NFQueue library
-    cdef nfq_q_handle *qh # A handle to the queue
-
-    cpdef void prepare_geolocation(self, tuple geolocation_trie, long msb, long lsb) with gil
-    cpdef int update_zones(self, Py_Array zone_map) with gil
-    cpdef int update_ruleset(self, int ruleset, list rulelist) with gil
-    cpdef int remove_blockedlist(self, u_int32_t host_ip)

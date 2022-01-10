@@ -105,6 +105,13 @@ def convert_string_to_bitmap(rule, offset):
 
     return (b_id, h_id)
 
+def cidr_to_int(cidr):
+
+    # using hostmask to shift to the start of network bits
+    hostmask = 32 - cidr
+
+    return ~((1 << hostmask) - 1) & (2**32 - 1)
+
 _dns_join = b'.'.join
 def parse_query_name(data, dns_query=None, *, qname=False):
     '''parses dns name from sent in data. uses overall dns query to follow pointers. will return
@@ -156,7 +163,7 @@ def domain_stob(domain_name):
         byte_pack(len(part)) + part.encode('utf-8') for part in domain_name.split('.')
     ])
 
-    # root query (empty string) gets eval'd to length 0 and doesnt need a term byte. ternary will add term byte, if the
+    # root query (empty string) gets eval'd to length 0 and doesn't need a term byte. ternary will add term byte, if the
     # domain name is not a null value.
     return domain_bytes + b'\x00' if domain_name else domain_bytes
 

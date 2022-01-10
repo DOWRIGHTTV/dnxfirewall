@@ -40,8 +40,12 @@ DEF PROFILE_STOP = (SECURITY_PROFILE_COUNT * 4) + 8 + 1 # +1 for range
 DEF TWO_BIT_MASK = 3
 DEF FOUR_BIT_MASK = 15
 
+DEF NETWORK = 1
+DEF SERVICE = 2
+
 cdef bint BYPASS  = 0
 cdef bint VERBOSE = 0
+
 
 # ================================== #
 # Firewall rules lock
@@ -408,11 +412,12 @@ cdef inline bint service_match(service_arr rule_defs, u_int16_t pkt_protocol, u_
 # ============================================
 cdef inline void pkt_print(iphdr *ip_header, protohdr *proto_header) nogil:
     printf('vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv-PACKET-vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n')
-    printf('in-zone=%u, out-zone=%u\n', hw.in_zone, hw.out_zone)
-    printf('src-ip=%u, src-netid=%u\n', ntohl(ip_header.saddr), iph_src_ip & rule.s_net_mask)
-    printf('dst-ip=%u, dst-netid=%u\n', ntohl(ip_header.daddr), iph_dst_ip & rule.d_net_mask)
-    printf('pkt-proto=%u\n', ip_header.protocol)
-    printf('src-geo=%u, dst-geo=%u\n', src_country, dst_country)
+    # printf('in-zone=%u, out-zone=%u\n', hw.in_zone, hw.out_zone)
+    printf('proto=%u\n', ip_header.protocol)
+    printf('%u:%u > %u:%u\n',
+           ntohl(ip_header.saddr), ntohs(proto_header.s_port), ntohl(ip_header.daddr), ntohs(proto_header.d_port)
+    )
+    # printf('src-geo=%u, dst-geo=%u\n', src_country, dst_country)
     printf('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n')
 
 # TODO: make this able to print new rule structure
@@ -424,30 +429,28 @@ cdef inline void rule_print(FWrule *rule) nogil:
     # printf('rule-s proto=%u, rule-d proto=%u\n', rule_src_protocol, rule_dst_protocol)
     printf('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n')
 
-DEF NETWORK = 1
-DEF SERVICE = 2
 cdef inline void obj_print(int name, void *object) nogil:
 
     cdef:
-        network_obj net_obj
-        service_obj svc_obj
+        network_obj *net_obj
+        service_obj *svc_obj
 
     if (name == NETWORK):
-        network_obj *obj = <network_obj*>object
+        net_obj = <network_obj*>object
 
         printf('network_obj, netid=%l, netmask=%u\n', obj.netid, obj.netmask)
 
     elif (name == SERVICE):
-        service_obj *obj = <service_obj*>object
+        svc_obj = <service_obj*>object
 
         printf('service_obj, protocol=%u, start_port=%u, end_port=%u\n', obj.protocol, obj.start_port, obj.end_port)
 
 # ============================================
 # C CONVERSION / INIT FUNCTIONS
 # ============================================
-cdef void process_traffic() nogil:
+cdef void process_traffic(nf_handle *h) nogil:
 
-    cdef int fd = nfq_fd(self.h)
+    cdef int fd = nfq_fd(h)
     cdef char packet_buf[4096]
     cdef size_t sizeof_buf = sizeof(packet_buf)
     cdef int data_len
@@ -457,7 +460,7 @@ cdef void process_traffic() nogil:
         data_len = recv(fd, packet_buf, sizeof_buf, recv_flags)
 
         if (data_len >= 0):
-            nfq_handle_packet(self.h, packet_buf, data_len)
+            nfq_handle_packet(h, packet_buf, data_len)
 
         else:
             # TODO: i believe we can get rid of this and set up a lower level ignore of this. this might require
@@ -470,9 +473,7 @@ cpdef void set_FWrule(self, size_t ruleset, dict rule, size_t pos):
     cdef:
         size_t i
 
-        FWrule fw_rule = <FWrule*>calloc(1, sizeof(FWrule))
-
-    firewall_rules[ruleset][pos] = fw_rule
+        FWrule *fw_rule = &firewall_rules[ruleset][pos]
 
     fw_rule.enabled = <bint>rule['enabled']
 
@@ -519,22 +520,6 @@ cpdef void set_FWrule(self, size_t ruleset, dict rule, size_t pos):
     fw_rule.sec_profiles[1] = <u_int8_t>rule['dns_profile']
     fw_rule.sec_profiles[2] = <u_int8_t>rule['ips_profile']
 
-# NOTE: shouldn't need this anymore since the object manager will handle conversions from objects to firewall vals
-# cdef inline u_int32_t cidr_to_int(long cidr):
-#
-#     cdef u_int32_t integer_mask = 0
-#     cdef u_int8_t  mask_index = 31 # 1 + 31 shifts = 32 bits
-#
-#     for i in range(cidr):
-#         integer_mask |= 1 << mask_index
-#
-#         mask_index -= 1
-#
-#     if (VERBOSE):
-#         printf('cidr=%ld, integer_mask=%u\n', cidr, integer_mask)
-#
-#     return integer_mask
-
 # ============================================
 # C EXTENSION - Python Communication Pipeline
 # ============================================
@@ -548,6 +533,10 @@ cdef u_int32_t SOCK_RCV_SIZE = 1024 * 4796 // 2
 
 
 cdef class CFirewall:
+
+    cdef:
+        nfq_handle *h
+        nfq_q_handle *qh
 
     def __cinit__(self, bint bypass, bint verbose):
         global BYPASS, VERBOSE
