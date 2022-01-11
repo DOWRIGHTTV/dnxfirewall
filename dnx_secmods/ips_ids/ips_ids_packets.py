@@ -14,7 +14,7 @@ class IPSPacket(NFPacket):
     __slots__ = (
         'tracked_ip', 'target_port', 'icmp_payload_override', 'mark',
 
-        'action', 'direction', 'ipp_profile', 'ips_profile',
+        'action', 'direction', 'ipp_profile', 'dns_profile', 'ips_profile',
     )
 
     def __init__(self):
@@ -42,7 +42,7 @@ class IPSPacket(NFPacket):
 
     # building named tuple with tracked_ip, tracked_port, and local_port variables
     def _before_exit(self, mark):
-        # X | X | X | ips (4b) | ipp (4b) | geoloc (8b) | direction (2b) | action (2b)
+        # X | X | ips (4b) | dns (4b) | ipp (4b) | geoloc (8b) | direction (2b) | action (2b)
         self.mark = mark
 
         self.action = CONN(mark & 3)
@@ -50,7 +50,8 @@ class IPSPacket(NFPacket):
 
         # self.tracked_geo = mark >> 4 & 255
         # self.ipp_profile = mark >> 12 & 15
-        self.ips_profile = mark >> 16 & 15
+        # self.dns_profile = mark >> 16 & 15
+        self.ips_profile = mark >> 20 & 15
 
         # NOTE: subject to change. this assumes ip restricted to inbound traffic only.
         self.tracked_ip = int_to_ipaddr(self.src_ip)

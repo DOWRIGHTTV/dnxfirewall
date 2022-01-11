@@ -33,7 +33,7 @@ class FirewallManage:
     '''
 
     __slots__ = (
-        'firewall',
+        '_firewall',
     )
 
     # store main instance reference here so it can be accessed throughout webui
@@ -43,7 +43,7 @@ class FirewallManage:
     sections = ['BEFORE', 'MAIN', 'AFTER']
 
     def __init__(self):
-        self.firewall = load_configuration(DEFAULT_VERSION, filepath=DEFAULT_PATH)
+        self._firewall = load_configuration(DEFAULT_VERSION, filepath=DEFAULT_PATH)
 
     def add(self, pos, rule, *, section):
         '''insert or append operation of new firewall rule to the specified section.'''
@@ -81,7 +81,7 @@ class FirewallManage:
             dnx_fw.write_configuration(firewall)
 
             # updating instance/ mem-copy of variable for fast access
-            self.firewall = firewall
+            self._firewall = firewall
 
     def remove(self, pos, *, section):
 
@@ -98,7 +98,7 @@ class FirewallManage:
             dnx_fw.write_configuration(firewall)
 
             # updating instance/ mem-copy of variable for fast access
-            self.firewall = firewall
+            self._firewall = firewall
 
     def modify(self, static_pos, pos, rule, *, section):
         '''send new definition of rule and rule position to underlying firewall to be updated.
@@ -124,7 +124,7 @@ class FirewallManage:
             # dnx_fw.write_configuration(firewall)
 
             # updating instance/ mem-copy of variable for fast access
-            self.firewall = firewall
+            self._firewall = firewall
 
         # now that we are out of the context we can use add method to re-insert the rule in specified place
         # NOTE: since the lock has been released it is possible for another process to get the lock and modify firewall
@@ -153,25 +153,24 @@ class FirewallManage:
 
             os.replace(COPY_RULE_FILE, PENDING_RULE_FILE)
 
-    def view_ruleset(self, section='MAIN', version='pending'):
-        '''returns dict of requested ruleset in raw form. additional processing is required for web ui
-        or cli formats.
+    def view_ruleset(self, section='MAIN'):
+        '''returns dict of requested "firewall_pending" ruleset in raw form. additional processing is required for
+        web ui or cli formats.
 
         args:
 
         section > will change which ruleset is returned.
-        version > PENDING or ACTIVE rule tables.
         '''
 
-        if (version not in self.versions):
+        try:
+            return self._firewall[section]
+        except KeyError:
             return {}
 
-        if (section not in self.sections):
-            return {}
+    def ruleset_len(self, section='MAIN'):
+        '''returns len of firewall_pending ruleset. defaults to main and returns 0 on error.'''
 
-        with ConfigurationManager(f'firewall_{version}', file_path=DEFAULT_PATH) as dnx_fw:
-            firewall = dnx_fw.load_configuration()
-
-            print(firewall)
-
-            return firewall[section]
+        try:
+            return len(self._firewall[section])
+        except:
+            return 0

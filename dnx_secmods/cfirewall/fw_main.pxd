@@ -110,7 +110,7 @@ cdef extern from "libnetfilter_queue/libnetfilter_queue.h":
     u_int8_t nfq_get_outdev(nfq_data *nfad) nogil
     nfnl_handle *nfq_nfnlh(nfq_handle *h)
 
-# Dummy defines from linux/netfilter.h
+# mirrored defines from linux/netfilter.h
 cdef enum:
     NF_DROP
     NF_ACCEPT
@@ -120,12 +120,6 @@ cdef enum:
     NF_STOP
     NF_MAX_VERDICT = NF_STOP
 
-# MARK PROTOCOL
-# 4 bits per, right to left, any not specified is currently undefined
-# action is being passed because still want to gather geolocation data on even implicit denies.
-# these would not be logged as events, but part of country activity metric.
-# X | X | X | X | ips | ipp | action | direction | module_identifier (corresponds to queue num)
-
 cdef enum:
     NONE     = 0
     IP_PROXY = 1
@@ -133,6 +127,7 @@ cdef enum:
 
     DROP   = 0
     ACCEPT = 1
+    REJECT = 2
 
     OUTBOUND = 1
     INBOUND  = 2
@@ -145,39 +140,50 @@ cdef enum:
     MAIN_RULES
     AFTER_RULES
 
-struct service_obj:
+# used for dynamic allocation of array containing security profile settings
+# ip proxy, ips_ids
+DEF SECURITY_PROFILE_COUNT = 3
+DEF MAX_ZONES = 16
+DEF MAX_OBJECTS = 100
+
+cdef struct zone_arr:
+    size_t len
+    u_int8_t objects[MAX_OBJECTS]
+
+cdef struct network_obj:
+    long      netid # must be signed for geo marker (-1)
+    u_int32_t netmask
+
+cdef struct network_arr:
+    size_t len
+    network_obj objects[MAX_OBJECTS]
+
+cdef struct service_obj:
     u_int16_t protocol
     u_int16_t start_port
     u_int16_t end_port
 
-# used for dynamic allocation of array containing security profile settings
-# ip proxy, ips_ids
-DEF SECURITY_PROFILE_COUNT = 2
-
-cdef struct network_obj:
-    long      netid
-    u_int32_t netmask
-
-cdef struct service_obj:
-
+cdef struct service_arr:
+    size_t len
+    service_obj objects[MAX_OBJECTS]
 
 cdef struct FWrule:
-    bint        enabled # enable or disable rule from being matched against
+    bint enabled
 
     # SOURCE
-    u_int8_t[]    *s_zones
-    network_obj[] *s_networks
-    service_obj[] *s_services
+    zone_arr    s_zones
+    network_arr s_networks
+    service_arr s_services
 
     # DESTINATION
-    u_int8_t[]    *d_zones
-    network_obj[] *d_networks
-    service_obj[] *d_services
+    zone_arr    d_zones
+    network_arr d_networks
+    service_arr d_services
 
     # PROFILES
-    u_int8_t action # 0 drop, 1 accept
-    u_int8_t log # standard traffic logging, not event based.
-    u_int8_t[SECURITY_PROFILE_COUNT] sec_profiles
+    u_int8_t action
+    u_int8_t log
+    u_int8_t sec_profiles[SECURITY_PROFILE_COUNT]
         # ip_proxy - 0 off, > 1 profile number
         # ips_ids - 0 off, 1 on
 
@@ -208,14 +214,3 @@ cdef struct res_tuple:
     u_int16_t fw_section
     u_int32_t action
     u_int32_t mark
-
-cdef class CFirewall:
-    cdef nfq_handle *h # Handle to NFQueue library
-    cdef nfq_q_handle *qh # A handle to the queue
-
-    cdef void _run(self) nogil
-    cdef u_int32_t cidr_to_int(self, long cidr)
-    cdef void set_FWrule(self, int ruleset, unsigned long[:] rule, int pos)
-    cpdef void prepare_geolocation(self, tuple geolocation_trie, long msb, long lsb) with gil
-    cpdef int update_zones(self, Py_Array zone_map) with gil
-    cpdef int update_ruleset(self, int ruleset, list rulelist) with gil
