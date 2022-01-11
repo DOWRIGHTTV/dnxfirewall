@@ -5,6 +5,7 @@ import os as _os
 import pwd as _pwd
 
 from functools import partial as _partial
+from itertools import repeat as _repeat
 from subprocess import run as _run, DEVNULL as _DEVNULL
 from enum import Enum as _Enum, IntEnum as _IntEnum, Flag as _Flag
 from ipaddress import IPv4Address as _IPv4Address
@@ -15,6 +16,8 @@ fast_sleep = _time.sleep
 hard_out = _partial(_os._exit, 1)
 write_log = _partial(print, flush=True)
 shell = _partial(_run, shell=True, stdout=_DEVNULL, stderr=_DEVNULL)
+
+RUN_FOREVER = _partial(_repeat, 1)
 
 byte_join = b''.join
 str_join = ''.join

@@ -51,7 +51,7 @@
                         <input type="text" id="filter-input" onkeyup="filterTable(1, 4)" placeholder="Filter">
                     </div>
                     <div class="row">
-                        <table class="centered highlight" id="filter-table">
+                        <table style="cursor:default" class="centered highlight" id="filter-table">
                             <thead>
                                 <tr>
                                     <th colspan="2">ID</th>
@@ -76,9 +76,9 @@
                             </thead>
                             <tbody id="filter-table-body">
                                 {% for rule in firewall_settings['firewall_rules'] %}
-                                <tr id="r{{loop.index}}" {% if not rule[0] %} style="opacity: .4" {% endif %}>
+                                <tr class="grab" id="r{{loop.index}}" {% if not rule[0] %} style="opacity: .4" {% endif %}>
                                     {% set rule_num = loop.index %}
-                                    <td data-enabled="{{rule[0]}}" data-fw-modal="r{{rule_num}}-0"><i class="material-icons">reorder</i></td>
+                                    <td style="cursor:pointer" data-enabled="{{rule[0]}}" data-fw-modal="r{{rule_num}}-0"><i class="material-icons grab">reorder</i></td>
                                     {% for field in rule[1:] %}
                                     {% if is_list(field) %}
                                     <td data-fw-modal="r{{rule_num}}-{{loop.index}}">
@@ -499,7 +499,7 @@
 </script>
 <script>
     $(".grab").mousedown(function(e) {
-      var tr = $(e.target).closest("TR"),
+      var tr = $(e.target).closest("tr"),
         si = tr.index(),
         sy = e.pageY,
         b = $(document.body),
