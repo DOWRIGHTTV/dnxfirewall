@@ -5,7 +5,7 @@ from ipaddress import IPv4Address
 from fcntl import ioctl
 from socket import socket, inet_aton, if_nameindex, AF_INET, SOCK_DGRAM
 
-from dnx_gentools.def_constants import HOME_DIR, INTF, fast_sleep, ONE_SEC
+from dnx_gentools.def_constants import HOME_DIR, INTF, CFG, fast_sleep, ONE_SEC
 from dnx_gentools.file_operations import load_configuration, ConfigurationManager, json_to_yaml
 
 from dnx_iptools.def_structs import fcntl_pack, long_unpack
@@ -14,12 +14,15 @@ from dnx_iptools.protocol_tools import int_to_ipaddr
 from dnx_system.sys_action import system_action
 
 __all__ = (
-    'get_intf_builtin', 'load_interfaces', 'wait_for_interface', 'wait_for_ip',
-    'get_masquerade_ip', 'get_mac', 'get_ip_address', 'get_netmask', 'get_arp_table'
+    'get_intf_builtin', 'load_interfaces',
+    'set_wan_interface', 'set_wan_mac', 'set_wan_ip',
+    'wait_for_interface', 'wait_for_ip',
+    'get_mac', 'get_netmask', 'get_ip_address', 'get_masquerade_ip',
+    'get_arp_table'
 )
 
-s = socket(AF_INET, SOCK_DGRAM)
-DESCRIPTOR = s.fileno()
+_s = socket(AF_INET, SOCK_DGRAM)
+DESCRIPTOR = _s.fileno()
 
 # NOTE: this may no longer be needed even though it was recently overhauled. the inclusion of the exclude
 # filter in the load_interfaces() function should be able to replace this function. keep for now just in case.
@@ -185,9 +188,7 @@ def set_wan_ip(wan_ip_settings):
 
 def _is_ready(interface):
     with open(f'/sys/class/net/{interface}/carrier', 'r') as carrier:
-        result = int(carrier.read().strip())
-
-    return True if result else False
+        return bool(int(carrier.read().strip()))
 
 # once interface is powered on from cable being plugged in and a remote device on the other end, the loop will break
 def wait_for_interface(interface, delay=ONE_SEC):
@@ -250,7 +251,7 @@ def get_netmask(*, interface):
     except OSError:
         return None
 
-def get_arp_table(*, modify=False, host=None):
+def get_arp_table(*, modify=False, host=None, open=open):
     '''
     return arp table as dictionary
 
@@ -263,15 +264,15 @@ def get_arp_table(*, modify=False, host=None):
 
     with open('/proc/net/arp') as arp_table:
         # 'IP address', 'HW type', 'Flags', 'HW address', 'Mask', 'Device'
-        arp_table = list(
-            csv_reader(arp_table, skipinitialspace=True, delimiter=' ')
-        )
+        arp_table = [
+            x for x in csv_reader(arp_table, skipinitialspace=True, delimiter=' ')
+        ][1:]
 
     if (modify):
-        arp_table = {IPv4Address(a[0]): a[3].replace(':', '') for a in arp_table[1:]}
+        arp_table = {IPv4Address(a[0]): a[3].replace(':', '') for a in arp_table}
 
     else:
-        arp_table = {IPv4Address(a[0]): a[3] for a in arp_table[1:]}
+        arp_table = {IPv4Address(a[0]): a[3] for a in arp_table}
 
     if (host):
         return arp_table.get(host, None)

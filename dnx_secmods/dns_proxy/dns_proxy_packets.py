@@ -34,7 +34,7 @@ class ClientRequest:
     def __init__(self, address, sock_info):
         self.address = address
         if (sock_info):
-            self.sendto = sock_info.sendto # 5 object named tuple
+            self.sendto = sock_info.sendto  # 5 object namedtuple
 
         self.local_domain = False
         self.top_domain = False if address[0] else True
@@ -53,10 +53,8 @@ class ClientRequest:
         return f'dns_query(host={self.address[0]}, port={self.address[1]}, request={self.request})'
 
     # TODO: see if we should validate whether there is an indicated question record before continuing
-    #  is the exception even relevant anymore as a fail fast scenario or can we ditch it?
+    # TODO: implement DNS label/name validity checks and drop packet if fail. do same on response
     def parse(self, data):
-        if (not data):
-            raise TypeError(f'{__class__.__name__} cannot parse data set to None.')
 
         _dns_header, dns_query = data[:12], data[12:]
 
@@ -80,7 +78,7 @@ class ClientRequest:
         self.question_record    = dns_query[:offset + 4]
         self.additional_records = dns_query[offset + 4:]
 
-        self.request_identifier = (*self.address, dns_header[0]) # dns_id
+        self.request_identifier = (*self.address, dns_header[0])  # dns_id
 
     def generate_record_response(self, host_ip=None, configured_ttl=THIRTY_MIN):
         '''builds a dns query response for locally configured records. if host_ip is not passed in, the resource record
@@ -215,7 +213,7 @@ class ProxyRequest(RawPacket):
         self.question_record = dns_query[:offset+4] # offset + 4 byte info
 
     # will create send data object for used by proxy.
-    def generate_proxy_response(self):
+    def generate_proxy_response(self, len=len, bytearray=bytearray):
         # DNS HEADER + PAYLOAD
         # AAAA record set r code to "domain name does not exist" without record response ac=0, rc=3
         udp_payload = bytearray()
@@ -251,17 +249,16 @@ class ProxyRequest(RawPacket):
 
         self.send_data = ip_header.assemble() + udp_header.assemble() + udp_payload
 
-    def _enumerate_request(self, request, fast_int=int, fast_hash=hash):
+    def _enumerate_request(self, request, len=len, int=int, hash=hash):
         rs = request.split('.')
-        r_len = len(rs)
 
         # tld > fqdn
-        requests = tuple('.'.join(rs[i:]) for i in range(-2, -r_len-1, -1))
+        requests = [dot_join(rs[i:]) for i in range(-2, -len(rs)-1, -1)]
 
         # adjusting for local record as needed
-        if (r_len > 1):
+        if (len(rs) > 1):
             t_reqs = [rs[-1]]
-            self.dom_local = False
+            self.dom_local = False # TODO: this should probably emulate server for how this is defined
 
         else:
             t_reqs = [None]
@@ -269,13 +266,13 @@ class ProxyRequest(RawPacket):
 
         # building bin/host id from hash for each enumerated name.
         for r in requests:
-            r_hash = fast_hash(r)
-            b_id = fast_int(f'{r_hash}'[:4])
-            h_id = fast_int(f'{r_hash}'[4:])
+            r_hash = hash(r)
+            b_id = int(f'{r_hash}'[:4])
+            h_id = int(f'{r_hash}'[4:])
 
             t_reqs.append((b_id, h_id))
 
-        return tuple(t_reqs)
+        return t_reqs
 
 
 # ================
@@ -321,7 +318,7 @@ def ttl_rewrite(data, dns_id):
     resource_records = dns_payload[offset + 4:]
 
     # offset is reset to prevent carry over from above.
-    offset, record_cache = 0, []
+    offset, original_ttl, record_cache = 0, 0, []
 
     # parsing standard and authority records
     for record_count in [resource_count, authority_count]:
@@ -335,13 +332,13 @@ def ttl_rewrite(data, dns_id):
             # first, followed by A records so the original_ttl var will be whatever the last A record ttl parsed is.
             # generally all A records have the same ttl. CNAME ttl can differ, but will get clamped with A so will
             # likely end up the same as A records.
-            if (record_type in [DNS.AR, DNS.CNAME]):
+            if (record_type in [DNS.A, DNS.CNAME]):
                 original_ttl, record.ttl = _get_new_ttl(record)
 
                 send_data += record
 
-                # limits A record caching so we arent caching excessive amount of records with the same qname
-                if (len(record_cache) < MAX_A_RECORD_COUNT or record_type != DNS.AR):
+                # limits A record caching, so we aren't caching excessive amount of records with the same qname
+                if (len(record_cache) < MAX_A_RECORD_COUNT or record_type != DNS.A):
                     record_cache.append(record)
 
             # dns system level, mail, and txt records don't need to be clamped and will be relayed to client as is

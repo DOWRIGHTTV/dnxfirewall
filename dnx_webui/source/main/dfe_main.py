@@ -522,7 +522,7 @@ def dnx_blocked():
 @app.route('/login', methods=['GET', 'POST'])
 def dnx_login():
 
-    # user already has an active authenticated session so we can just drop them back to the dashboard.
+    # user has an active authenticated session, so we can drop them back to the dashboard.
     if (session.get('user', None)):
         return redirect(url_for('dnx_dashboard'))
 

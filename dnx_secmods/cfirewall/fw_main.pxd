@@ -1,3 +1,5 @@
+#!/usr/bin/env Cython
+
 from cpython cimport array
 import array
 

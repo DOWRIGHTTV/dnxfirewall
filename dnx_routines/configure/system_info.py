@@ -220,7 +220,7 @@ class System:
 
         use timestamp argument to override current date with date of timestamp.
 
-        setting string=True with return join the list before returning.
+        setting string=True will return joined list.
 
         '''
         dt = datetime.now()
