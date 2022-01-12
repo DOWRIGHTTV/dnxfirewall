@@ -55,7 +55,7 @@ class SystemControl:
         try:
             data, *_ = _control_service_recv(2048)
         except OSError as ose:
-            write_log(ose) # log this eventually
+            console_log(ose) # log this eventually
 
         else:
             # data format | module: command: args
@@ -66,7 +66,7 @@ class SystemControl:
             try:
                 control_ref = MODULE_PERMISSIONS[data['module']][data['command']]
             except KeyError as ke:
-                write_log(ke) # log eventually
+                console_log(ke) # log eventually
 
             else:
                 # this allows args to not be specified in kwargs by caller if not needed.

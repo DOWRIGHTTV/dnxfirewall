@@ -209,7 +209,7 @@ def _log_handler():
                 def log_method(log_msg):
                     log_msg = f'{_round(fast_time())}|{_name}|{level_name}|{log_msg}\n'
 
-                    write_log(log_msg)
+                    console_log(log_msg)
 
                     _queue_write(log_msg)
 
@@ -313,7 +313,7 @@ def _log_handler():
         def console(log_msg):
             '''print message to console. this is for all important console only events.'''
             if (_console):
-                write_log(f'{log_msg}\n')
+                console_log(f'{log_msg}\n')
 
         @staticmethod
         def event_log(timestamp, log, method):

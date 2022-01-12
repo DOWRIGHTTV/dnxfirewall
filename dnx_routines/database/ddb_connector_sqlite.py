@@ -92,7 +92,7 @@ class _DBConnector:
             try:
                 self._Log.error(f'database failure: {exc_val}')
             except:
-                write_log(f'database failure: {exc_val}')
+                console_log(f'database failure: {exc_val}')
 
         self._conn.close()
 

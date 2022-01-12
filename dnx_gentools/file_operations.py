@@ -11,9 +11,11 @@ from fcntl import flock, LOCK_EX, LOCK_UN
 from secrets import token_urlsafe
 from collections import defaultdict
 
-from dnx_gentools.def_constants import HOME_DIR, USER, GROUP, FILE_POLL_TIMER, str_join
+from dnx_gentools.def_constants import HOME_DIR, USER, GROUP, str_join
 from dnx_gentools.def_constants import DNS_BIN_OFFSET, DNS_CAT
 from dnx_routines.configure.exceptions import ValidationError
+
+FILE_POLL_TIMER = 10
 
 # will load json data from file, convert it to a python dict, then return as object
 # TODO: add usr config support, which will merge will loaded system defaults.

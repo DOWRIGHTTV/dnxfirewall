@@ -29,7 +29,7 @@ def _system_action(data_to_send, delay):
     try:
         data_to_send = dumps(data_to_send).encode('utf-8')
     except Exception as e:
-        write_log(e)
+        console_log(e)
 
     else:
         _control_client_sendmsg(data_to_send, DNX_AUTHENTICATION)

@@ -6,7 +6,7 @@ import time
 HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
 sys.path.insert(0, HOME_DIR)
 
-from dnx_gentools.def_constants import ONE_DAY, FIVE_MIN, write_log, fast_time
+from dnx_gentools.def_constants import ONE_DAY, FIVE_MIN, console_log, fast_time
 from dnx_gentools.def_namedtuples import BLOCKED_DOM
 
 USER = 'dnx'
@@ -127,7 +127,7 @@ class DBConnector:
                 time.sleep(1)
         # NOTE: log this to front end
         else:
-            write_log('BLOCKED QUERY LOOKUP ERROR!!')
+            console_log('BLOCKED QUERY LOOKUP ERROR!!')
 
     def query_last(self, count, src_ip=None, *, table, action):
         if (action in ['allowed', 'blocked']):

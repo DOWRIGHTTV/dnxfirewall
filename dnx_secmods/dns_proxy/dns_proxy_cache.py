@@ -6,12 +6,12 @@ from collections import Counter, OrderedDict, namedtuple
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import DNS_CACHE
+from dnx_gentools.standard_tools import looper
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, write_configuration, load_top_domains_filter
 
 from dnx_secmods.dns_proxy.dns_proxy_log import Log
 
-from dnx_gentools.standard_tools import looper
-
+NOT_VALID = -1
 request_info = namedtuple('request_info', 'server proxy')
 
 # NOTE: normal_cache boolean is not working correctly. top domains are showing up as True

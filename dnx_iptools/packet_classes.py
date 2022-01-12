@@ -285,7 +285,7 @@ class ProtoRelay:
                 self._relay_conn.send(client_query.send_data)
             except OSError as ose:
                 # NOTE: temporary
-                write_log(f'[{self._relay_conn.remote_ip}/{self._relay_conn.version}] Send error: {ose}')
+                console_log(f'[{self._relay_conn.remote_ip}/{self._relay_conn.version}] Send error: {ose}')
 
                 if not self._register_new_socket(): break
 
@@ -296,7 +296,7 @@ class ProtoRelay:
 
                 # NOTE: temp | identifying connection version to terminal. when removing consider having the relay
                 # protocol show in the webui > system reports.
-                write_log(f'[{self._relay_conn.remote_ip}/{self._relay_conn.version}][{attempt}] Sent {client_query.request}\n') # pylint: disable=no-member
+                console_log(f'[{self._relay_conn.remote_ip}/{self._relay_conn.version}][{attempt}] Sent {client_query.request}\n') # pylint: disable=no-member
 
                 break
 
@@ -328,7 +328,7 @@ class ProtoRelay:
                 try:
                     self._relay_conn.sock.close()
                 except:
-                    write_log(f'[{self._relay_conn.remote_ip}] Failed to close socket while marking server down.')
+                    console_log(f'[{self._relay_conn.remote_ip}] Failed to close socket while marking server down.')
 
     def _increment_fail_detection(self):
         self._send_cnt += 1

@@ -1,19 +1,12 @@
 #!/usr/bin/python3
 
-
-import os, sys
-
 from types import SimpleNamespace
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
-from dnx_gentools.def_constants import CFG, INTF, INVALID_FORM, fast_time
-from dnx_gentools.file_operations import load_configuration, ConfigurationManager, json_to_yaml
+from dnx_gentools.def_constants import CFG, INVALID_FORM, fast_time
+from dnx_gentools.file_operations import ConfigurationManager
 from dnx_routines.configure.exceptions import ValidationError
 from dnx_routines.configure.system_info import Interface
 
-from dnx_system.sys_action import system_action
 from dnx_webui.source.main.dfe_authentication import Authentication
 
 def set_default_mac_flag():
@@ -26,26 +19,6 @@ def set_default_mac_flag():
                 'default_mac': Interface.mac_address(interface=wan_settings['ident']),
                 'mac_set': True
             })
-
-        dnx.write_configuration(dnx_settings)
-
-def set_wan_mac(action, mac_address=None):
-    with ConfigurationManager('config') as dnx:
-        dnx_settings = dnx.load_configuration()
-
-        wan_settings = dnx_settings['interfaces']['builtins']['wan']
-
-        new_mac = mac_address if action is CFG.ADD else wan_settings['default_mac']
-
-        wan_int = wan_settings['ident']
-        # iterating over the necessary command args, then sending over local socket
-        # for control service to issue the commands
-        args = [f'{wan_int} down', f'{wan_int} hw ether {new_mac}', f'{wan_int} up']
-        for arg in args:
-
-            system_action(module='webui', command='ifconfig', args=arg)
-
-        wan_settings['configured_mac'] = mac_address
 
         dnx.write_configuration(dnx_settings)
 
@@ -526,101 +499,6 @@ def set_ips_ddos_limits(ddos_limits):
             limits[protocol] = limit
 
         dnx.write_configuration(ips_settings)
-
-def set_wan_interface(intf_type=INTF.DHCP):
-    '''
-    Change wan interface state between static or dhcp.
-
-    1. Configure interface type
-    2. Create netplan config from template
-    3. Move file to /etc/netplan
-
-    This does not configure an ip address of the interface when setting to static. see: set_wan_ip()
-    '''
-
-    # changing dhcp status of wan interface in config file.
-    with ConfigurationManager('config') as dnx:
-        interface_settings = dnx.load_configuration()
-
-        wan = interface_settings['interfaces']['builtins']['wan']
-
-        wan['state'] = intf_type
-
-        dnx.write_configuration(interface_settings)
-
-        # template used to generate yaml file with user configured fields
-        intf_template = load_configuration('intf_config', filepath='dnx_system/interfaces')
-
-        # setting for static. removing dhcp4 and dhcp_overrides keys, then adding addresses with empty list
-        # NOTE: the ip configuration will unlock after the switch and can then be updated
-        if (intf_type is INTF.STATIC):
-            wan_intf = intf_template['network']['ethernets'][wan['ident']]
-
-            wan_intf.pop('dhcp4')
-            wan_intf.pop('dhcp4-overrides')
-
-            # initializing static, but not configuring an ip address
-            wan_intf['addresses'] = '[]'
-
-        # grabbing configured dns servers
-        dns_server_settings = load_configuration('dns_server')['resolvers']
-
-        dns1 = dns_server_settings['primary']['ip_address']
-        dns2 = dns_server_settings['secondary']['ip_address']
-
-        # dns server replacement in template required for static or dhcp
-        converted_config = json_to_yaml(intf_template)
-        converted_config = converted_config.replace('_PRIMARY__SECONDARY_', f'{dns1},{dns2}')
-
-        # writing file into dnx_system folder due to limited permissions by the front end. netplan and the specific
-        # mv args are configured as sudo/no-pass to get the config to netplan and it applied without a restart.
-        with open(f'{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', 'w') as dnx_intfs:
-            dnx_intfs.write(converted_config)
-
-        cmd_args = ['{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', '/etc/netplan/01-dnx-interfaces.yaml']
-        system_action(module='webui', command='os.replace', args=cmd_args)
-        system_action(module='webui', command='netplan apply', args='')
-
-def set_wan_ip(wan_ip_settings):
-    '''
-    Modify configured WAN interface IP address.
-
-    1. Loads configured DNS servers
-    2. Loads wan interface identity
-    3. Create netplan config from template
-    4. Move file to /etc/netplan
-    '''
-
-    wan_int = load_configuration('config')['interfaces']['builtins']['wan']['ident']
-
-    # grabbing configured dns servers
-    dns_server_settings = load_configuration('dns_server')['resolvers']
-
-    dns1 = dns_server_settings['primary']['ip_address']
-    dns2 = dns_server_settings['secondary']['ip_address']
-
-    intf_template = load_configuration('intf_config', filepath='dnx_system/interfaces')
-
-    # removing dhcp4 and dhcp_overrides keys, then adding ip address value
-    wan_intf = intf_template['network']['ethernets'][wan_int]
-
-    wan_intf.pop('dhcp4')
-    wan_intf.pop('dhcp4-overrides')
-
-    wan_intf['addresses'] = f'[{wan_ip_settings["ip"]}/{wan_ip_settings["cidr"]}]'
-    wan_intf['gateway4']  = f'{wan_ip_settings["dfg"]}'
-
-    converted_config = json_to_yaml(intf_template)
-    converted_config = converted_config.replace('_PRIMARY__SECONDARY_', f'{dns1},{dns2}')
-
-    # writing file into dnx_system folder due to limited permissions by the front end. netplan and the specific
-    # mv args are configured as sudo/no-pass to get the config to netplan and it applied without a restart.
-    with open(f'{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', 'w') as dnx_intfs:
-        dnx_intfs.write(converted_config)
-
-    cmd_args = [f'{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', '/etc/netplan/01-dnx-interfaces.yaml']
-    system_action(module='webui', command='os.replace', args=cmd_args)
-    system_action(module='webui', command='netplan apply')
 
 def add_open_wan_protocol(nat_info):
     with ConfigurationManager('ips') as dnx:

@@ -5,7 +5,6 @@ import sys, os
 HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
 sys.path.insert(0, HOME_DIR)
 
-import dnx_routines.configure.configure as configure
 import dnx_iptools.interface_ops as interface
 import dnx_routines.configure.web_validate as validate
 
@@ -13,7 +12,6 @@ from dnx_gentools.def_constants import CFG, DATA, INTF, INVALID_FORM
 from dnx_gentools.file_operations import load_configuration
 from dnx_routines.configure.exceptions import ValidationError
 from dnx_routines.configure.system_info import Interface
-
 
 _IP_DISABLED = True
 
@@ -49,7 +47,7 @@ def update_page(form):
             return INVALID_FORM
 
         else:
-            configure.set_wan_interface(wan_state)
+            interfaceset_wan_interface(wan_state)
 
     elif ('update_wan_ip' in form):
         wan_ip_settings = {
@@ -68,7 +66,7 @@ def update_page(form):
         except ValidationError as ve:
             return ve
 
-        configure.set_wan_ip(wan_ip_settings)
+        interface.set_wan_ip(wan_ip_settings)
 
     elif (_IP_DISABLED):
         return 'wan interface configuration currently disabled for system rework.'
@@ -96,11 +94,11 @@ def update_page(form):
                 wan_settings = {
                     'ip_address': wan_ip, 'cidr': cidr, 'default_gateway': default_gateway
                 }
-                configure.set_wan_interface(wan_settings)
+                interface.set_wan_interface(wan_settings)
 
         else:
             # no arg indicates dynamic ip/dhcp assignment
-            configure.set_wan_interface()
+            interface.set_wan_interface()
 
     elif ('wan_mac_update' in form):
         mac_address = form.get('ud_wan_mac', None)
@@ -112,10 +110,10 @@ def update_page(form):
         except ValidationError as ve:
             return ve
         else:
-            configure.set_wan_mac(CFG.ADD, mac_address=mac_address)
+            interface.set_wan_mac(CFG.ADD, mac_address=mac_address)
 
     elif ('wan_mac_restore' in form):
-        configure.set_wan_mac(CFG.DEL)
+        interface.set_wan_mac(CFG.DEL)
 
     else:
         return INVALID_FORM

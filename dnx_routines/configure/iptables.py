@@ -1,19 +1,16 @@
 #!/usr/bin/python3
 
-import os, sys
 import fcntl
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
+if (__name__ == '__main__'):
+    import __init__
 
-from dnx_gentools.def_constants import * # pylint: disable=unused-wildcard-import
+from dnx_gentools.def_constants import *
 from dnx_gentools.file_operations import load_configuration
 
 __all__ = (
     'IPTablesManager'
 )
-
-_system = os.system
 
 
 class _Defaults:
@@ -37,7 +34,7 @@ class _Defaults:
                 try:
                     f(self)
                 except Exception as E:
-                    write_log(E)
+                    console_log(E)
 
     def create_new_chains(self):
         for chain in self.custom_nat_chains:
@@ -179,7 +176,7 @@ class IPTablesManager:
         _Defaults.load(self._zone_to_intf)
 
         if (not suppress):
-            write_log('dnxfirewall iptable defaults applied.')
+            console_log('dnxfirewall iptable defaults applied.')
 
     def modify_management_access(self, fields):
         '''set management access as configured in webui. ports must be a list, even if only one port is needed.'''
@@ -272,7 +269,7 @@ class IPTablesManager:
 
         comment = f'-m comment --comment {timestamp}'
 
-        _system(f'sudo iptables -t {table} -A {chain} -s {ip_address} -j DROP {comment}')
+        shell(f'sudo iptables -t {table} -A {chain} -s {ip_address} -j DROP {comment}')
 
     @staticmethod
     def proxy_del_rule(ip_address, timestamp, *, table, chain):
@@ -280,7 +277,7 @@ class IPTablesManager:
 
         comment = f'-m comment --comment {timestamp}'
 
-        _system(f'sudo iptables -t {table} -D {chain} -s {ip_address} -j DROP {comment}')
+        shell(f'sudo iptables -t {table} -D {chain} -s {ip_address} -j DROP {comment}')
 
     @staticmethod
     def update_dns_over_https():
