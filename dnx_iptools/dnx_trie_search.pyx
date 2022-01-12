@@ -1,10 +1,15 @@
-from libc.stdlib cimport malloc, calloc, free
-from libc.stdio cimport printf
+#!/usr/bin/env Cython
+
+from libc.stdlib cimport malloc, calloc
+# from libc.stdio cimport printf
 
 import threading as _threading
 from math import log as _log
 
 from functools import lru_cache as _lru_cache
+
+DEF EMPTY_CONTAINER = 0
+DEF NO_MATCH = 0
 
 
 # ================================================ #
@@ -14,6 +19,12 @@ cdef class RecurveTrie:
 
     # L1 CONTAINER = [<CONTAINER_ID, L2_CONTAINER_SIZE, L2_CONTAINER_PTR>]
     # L2 CONTAINER = [<CONTAINER_ID, HOST_CATEGORY>]
+    cdef:
+        l1_recurve *L1_CONTAINER
+        l2_recurve *L2_CONTAINER
+
+        size_t L1_SIZE
+        size_t L2_SIZE
 
     @_lru_cache(maxsize=4096)
     def search(self, (long, long) host):
@@ -51,8 +62,8 @@ cdef class RecurveTrie:
             else:
                 return self._l2_search(host_id, l1_container.l2_size, &l1_container.l2_ptr)
 
-        # iteration completed with no l1 match
-        return 0
+        # L1 default
+        return NO_MATCH
 
     cdef long _l2_search(self, long container_id, short l2_size, l2_recurve **L2_CONTAINER) nogil:
 
@@ -80,8 +91,8 @@ cdef class RecurveTrie:
             else:
                 return l2_container.host_category
 
-        # iteration completed with no l2 match
-        return 0
+        # L2 default
+        return NO_MATCH
 
     cpdef void generate_structure(self, tuple py_trie):
 
@@ -126,6 +137,13 @@ cdef class RangeTrie:
 
     # L1 CONTAINER = [<CONTAINER_ID, L2_CONTAINER_SIZE, L2_CONTAINER_PTR>]
     # L2 CONTAINER = [<NETWORK_ID, BROADCAST_ID, HOST_COUNTRY>]
+
+    cdef:
+        l1_range *L1_CONTAINER
+        l2_range *L2_CONTAINER
+
+        size_t L1_SIZE
+        size_t L2_SIZE
 
     @_lru_cache(maxsize=4096)
     def search(self, (long, long) host):
@@ -216,17 +234,29 @@ cdef class RangeTrie:
 
 cdef class HashTrie:
 
+    cdef:
+        trie_map *TRIE_MAP
+        trie_range *TRIE_VALUE_RANGES
+
+        size_t MAX_KEYS
+        size_t INDEX_MASK
+        size_t VALUE_LEN
+
+        u_int32_t TRIE_KEY
+        u_int32_t TRIE_KEY_HASH
+
     @_lru_cache(maxsize=4096)
+    # using this instead of cpdef so we can release gil and take advantage of lru_cache
     def search(self, (long, long) host):
 
         cdef long search_result
 
-        # with nogil:
-        search_result = self._search(host[0], host[1])
+        with nogil:
+            search_result = self._search(host[0], host[1])
 
         return search_result
 
-    cdef u_int8_t _search(self, u_int32_t trie_key, u_int32_t host_id):
+    cdef u_int8_t _search(self, u_int32_t trie_key, u_int32_t host_id) nogil:
 
         cdef:
             size_t trie_key_hash = trie_key % self.INDEX_MASK
@@ -234,9 +264,9 @@ cdef class HashTrie:
             trie_map trie_value = self.TRIE_MAP[trie_key_hash]
 
         # no l1 match
-        if (trie_value.len == 0):
+        if (trie_value.len == EMPTY_CONTAINER):
 #            print('no match, quick return.')
-            return 0
+            return NO_MATCH
 
 #        print(self.INDEX_MASK)
 #        print(trie_key_hash, f'{(trie_key, trie_value.ranges[0])}')
@@ -255,7 +285,7 @@ cdef class HashTrie:
                 return trie_value.ranges[i].country
 
         # iteration completed with no l2 match
-        return 0
+        return NO_MATCH
 
     cdef trie_range* _make_l2(self, u_int32_t trie_key, (u_int32_t, u_int32_t, u_int16_t) l2_entry):
         '''allocates memory for a single L2 content struct, assigns members from l2_entry, then returns pointer.'''

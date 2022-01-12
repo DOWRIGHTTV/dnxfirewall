@@ -1,3 +1,5 @@
+#!/usr/bin/env Cython
+
 from libc.stdlib cimport malloc, calloc, free
 from libc.stdio cimport printf, sprintf
 
@@ -31,11 +33,11 @@ DEF ONE_BYTE = 8
 DEF TWELVE_BITS = 12
 DEF TWO_BYTES = 16
 
-DEF SECURITY_PROFILE_COUNT = 3 # TODO: figure out how to pull this from pxd
+DEF SECURITY_PROFILE_COUNT = 3  # TODO: figure out how to pull this from pxd
 
-DEF PROFILE_SIZE = 4 # bits
+DEF PROFILE_SIZE = 4  # bits
 DEF PROFILE_START = 12
-DEF PROFILE_STOP = (SECURITY_PROFILE_COUNT * 4) + 8 + 1 # +1 for range
+DEF PROFILE_STOP = (SECURITY_PROFILE_COUNT * 4) + 8 + 1  # +1 for range
 
 DEF TWO_BIT_MASK = 3
 DEF FOUR_BIT_MASK = 15
@@ -110,10 +112,9 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     cdef:
         unsigned char *pktdata
         iphdr *ip_header
-        protohdr *proto_header
 
-        # default proto_header values for icmp. will be replaced with protocol specific values if applicable
-        protohdr _proto_header = [0, 0]
+        # default proto_header values (used by icmp) and replaced with protocol specific values
+        protohdr proto_header = [0, 0]
 
         bint system_rule = 0
 
@@ -142,24 +143,25 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
             time(NULL)
         ]
 
-    # passing ptr of uninitialized data ptr to func. L3+ packet data will be placed at and accessible by this pointer.
+    # passing ptr of uninitialized data ptr to func. L3+ packet data will be assigned via this pointer
     pktdata_len = nfq_get_payload(nfa, &pktdata)
 
     # IP HEADER
-    # assigning ip_header to first index of data cast to iphdr struct and calculate ip header len.
+    # assigning ip_header to first index of data (cast to iphdr struct) then calculate ip header len.
     ip_header = <iphdr*>pktdata
     iphdr_len = (ip_header.ver_ihl & FOUR_BIT_MASK) * 4
 
     # PROTOCOL HEADER
     # tcp/udp will reassign the pointer to their header data
-    proto_header = <protohdr*>&pktdata[iphdr_len] if ip_header.protocol != IPPROTO_ICMP else &_proto_header
+    if (ip_header.protocol != IPPROTO_ICMP):
+        proto_header = <protohdr>pktdata[iphdr_len]
 
     # DIRECTION SET
     # uses initial mark of packet to determine the stateful direction of the connection
     direction = OUTBOUND if hw.in_zone != WAN_IN else INBOUND
 
     if (VERBOSE):
-        pkt_print(&hw, ip_header, proto_header)
+        pkt_print(&hw, ip_header, &proto_header)
 
     # =============================== #
     # LOCKING ACCESS TO FIREWALL.
@@ -167,7 +169,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # prevents the manager thread from updating firewall rules during a packets inspection
     pthread_mutex_lock(&FWrulelock)
 
-    inspection_res = cfirewall_inspect(&hw, ip_header, proto_header, direction)
+    inspection_res = cfirewall_inspect(&hw, ip_header, &proto_header, direction)
 
     pthread_mutex_unlock(&FWrulelock)
     # =============================== #
