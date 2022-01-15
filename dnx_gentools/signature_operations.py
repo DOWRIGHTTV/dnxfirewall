@@ -196,7 +196,7 @@ def _merge_geo_ranges(ls):
         else:
             _, last_broadcast, last_country = merged_item
 
-            # the networks are contiguous so we will merge them and update the temp item unless the countries are
+            # the networks are contiguous, so we will merge them and update the temp item unless the countries are
             # different which treat the current container as non contiguous
             if (cur_net_id == last_broadcast+1 and cur_country == last_country):
                 merged_item[1] = cur_broadcast

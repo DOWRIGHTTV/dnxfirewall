@@ -239,6 +239,7 @@ cdef class HashTrie:
 
     @_lru_cache(maxsize=4096)
     # using this instead of cpdef so we can release gil and take advantage of lru_cache
+    # this will probably not be used since geolocation lookups will be exclusively native C calls.
     def search(self, (long, long) host):
 
         cdef long search_result

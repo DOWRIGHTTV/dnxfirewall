@@ -274,14 +274,14 @@ def structure(obj_name, fields):
             yield from [fast_get(x) for x in field_names]
 
         def pre_set_attributes(self, **kwargs):
-            '''specify attributes to set as pre processor function. these values will get copied over to new containers
+            '''specify attributes to set as pre-processor function. these values will get copied over to new containers
             of the same type. a good use case for this is to fill out fields that are constants and can be streamlined
             to simplify external byte string creation logic. This is an alternative method to assignment at container
             creation.'''
 
             for name, value in kwargs.items():
 
-                # if key doesnt exist, will raise error. this method is a pre process so this will allow for quicker
+                # if key doesn't exist, will raise error. this method is a pre-process so this will allow for quicker
                 # debugging of code vs finding out some point in runtime there is an invalid attr.
                 if (name not in field_names):
                     raise ValueError(f'attribute {name} does not exist in this container.')
@@ -321,13 +321,13 @@ def bytecontainer(obj_name, field_names):
 
         def __init__(self):
             for name in field_names:
-                fast_set(name, b'')
+                _setattr(self, name, b'')
 
         def __repr__(self):
             return f"{self.__class__.__name__}({obj_name}, '{' '.join(field_names)}')"
 
         def __str__(self):
-            fields = [f'{fn}={fast_get(fn)}' for fn in field_names]
+            fields = [f'{fn}={_getattr(self, fn)}' for fn in field_names]
 
             return f"{obj_name}({', '.join(fields)})"
 
@@ -342,17 +342,13 @@ def bytecontainer(obj_name, field_names):
             return new_container
 
         def __len__(self):
-            return _sum([_len(fast_get(field_name)) for field_name in field_names])
+            return _sum([_len(_getattr(self, field_name)) for field_name in field_names])
 
         def __getitem__(self, position):
-            return fast_get(f'{field_names[position]}')
+            return _getattr(self, f'{field_names[position]}')
 
         def __iter__(self):
-            yield from [fast_get(fn) for fn in field_names]
-
-    container = ByteContainer()
-    fast_get = container.__getattribute__
-    fast_set = container.__setattr__
+            yield from [_getattr(self, fn) for fn in field_names]
 
     return ByteContainer()
 

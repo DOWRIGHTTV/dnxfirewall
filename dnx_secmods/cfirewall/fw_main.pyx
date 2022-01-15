@@ -3,7 +3,7 @@
 from libc.stdlib cimport malloc, calloc, free
 from libc.stdio cimport printf, sprintf
 
-from dnx_iptools.dnx_trie_search cimport RangeTrie
+from dnx_iptools.dnx_trie_search cimport HashTrie
 
 DEF FW_SECTION_COUNT = 4
 DEF FW_SYSTEM_MAX_RULE_COUNT = 50
@@ -71,7 +71,7 @@ pthread_mutex_init(&FWblocklistlock, NULL)
 DEF GEO_MARKER = -1
 
 cdef long MSB, LSB
-cdef RangeTrie GEOLOCATION
+cdef HashTrie GEOLOCATION
 
 # ================================== #
 # ARRAY INITIALIZATION
@@ -581,7 +581,7 @@ cdef class CFirewall:
 
         global GEOLOCATION, MSB, LSB
 
-        GEOLOCATION = RangeTrie()
+        GEOLOCATION = HashTrie()
 
         GEOLOCATION.generate_structure(geolocation_trie)
 

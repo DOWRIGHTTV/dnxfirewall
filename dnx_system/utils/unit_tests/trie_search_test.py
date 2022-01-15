@@ -65,8 +65,10 @@ def _process_results(results, descriptor):
     normalize_no_cache = no_cache[:-1]
     normalize_cache = cache[:-1]
 
-    no_cache_average = sum([x[0] for x in normalize_no_cache])/(len(results)-1/2)
-    cached_average = sum([x[0] for x in normalize_cache])/(len(results)-1/2)
+    no_cache_average = sum([x[0] for x in normalize_no_cache])/(len(results)/2)-1
+    cached_average = sum([x[0] for x in normalize_cache])/(len(results)/2)-1
+
+    # print(f'{sum([x[0] for x in normalize_no_cache])}/{(len(results)/2)-1}')
 
     print(f'{line}\n{descriptor}\n{line}')
 
@@ -106,9 +108,9 @@ if (__name__ == '__main__'):
     _recursive_binary_search = generate_recursive_binary_search(rep_sigs, (0, len(rep_sigs)-1))
     _linear_binary_search = generate_linear_binary_search(geo_sigs, (0, len(geo_sigs)-1))
 
-    for _ in range(2):
+    for x in range(2):
 
-        print(f'{line}\nITERATION {i}\n{line}')
+        print(f'{line}\nITERATION {x}\n{line}')
 
         if (args.ha):
             _test_search('v3 GEO (HASH)', 'geo', hash_trie.search)
