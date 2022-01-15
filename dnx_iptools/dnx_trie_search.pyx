@@ -15,6 +15,87 @@ DEF NO_MATCH = 0
 # ================================================ #
 # C STRUCTURES - converted from python tuples
 # ================================================ #
+cdef class HashTrie:
+
+    cdef:
+        trie_map *TRIE_MAP
+
+        size_t MAX_KEYS
+        size_t INDEX_MASK
+
+    cpdef void generate_structure(self, tuple py_trie):
+
+        cdef:
+            size_t value_len
+
+            u_int32_t TRIE_KEY
+            u_int32_t TRIE_KEY_HASH
+
+            trie_range *trie_value_ranges
+
+        # allocating memory for L1 container. this will be accessed from l1_search method.
+        # the reference stored at index will point to l2 data.
+        MAX_KEYS = 2 ** round(_log(len(py_trie), 2))
+
+        self.INDEX_MASK = MAX_KEYS - 1
+        self.TRIE_MAP = <trie_map*> calloc(MAX_KEYS, sizeof(trie_map))
+
+        for i in range(len(py_trie)):
+
+            # accessed via pointer stored in L1 container
+            value_len = len(py_trie[i][1])
+
+            # assigning l2 container reference to calculated hash index
+            TRIE_KEY = <long>py_trie[i][0]
+            TRIE_KEY_HASH = TRIE_KEY % self.INDEX_MASK
+
+            # allocating memory for trie_ranges
+            trie_value_ranges = <trie_range*>malloc(sizeof(trie_range*) * value_len)
+
+            # make function for trie_range struct for each range in py_l2
+            for xi in range(value_len):
+                trie_value_ranges[xi] = self._make_l2(TRIE_KEY, py_trie[i][1][xi])[0]
+
+            self.TRIE_MAP[TRIE_KEY_HASH].len = value_len
+            self.TRIE_MAP[TRIE_KEY_HASH].ranges = trie_value_ranges
+
+    cdef u_int8_t _search(self, u_int32_t trie_key, u_int32_t host_id) nogil:
+
+        cdef:
+            size_t trie_key_hash = trie_key % self.INDEX_MASK
+            trie_map trie_value  = self.TRIE_MAP[trie_key_hash]
+
+        # no l1 match
+        if (trie_value.len == EMPTY_CONTAINER):
+            return NO_MATCH
+
+        for i in range(trie_value.len):
+
+            # this is needed because collisions are possible by design so matching the unhashed key will guarantee the
+            # correct range is being evaluated.
+            if (trie_value.ranges[i].key != trie_key):
+                continue
+
+            if (trie_value.ranges[i].net_id <= host_id <= trie_value.ranges[i].bcast):
+                return trie_value.ranges[i].country
+
+        # iteration completed with no l2 match
+        return NO_MATCH
+
+    cdef trie_range* _make_l2(self, u_int32_t trie_key, (u_int32_t, u_int32_t, u_int16_t) l2_entry):
+        '''allocates memory for a single L2 content struct, assigns members from l2_entry, then returns pointer.'''
+
+        cdef trie_range *l2_content
+
+        l2_content = <trie_range*>malloc(sizeof(trie_range))
+
+        l2_content.key     = trie_key
+        l2_content.net_id  = l2_entry[0]
+        l2_content.bcast   = l2_entry[1]
+        l2_content.country = l2_entry[2]
+
+        return l2_content
+
 cdef class RecurveTrie:
     '''
     L1 CONTAINER = [<CONTAINER_ID, L2_CONTAINER_SIZE, L2_CONTAINER_PTR>]
@@ -58,12 +139,12 @@ cdef class RecurveTrie:
             # TODO: why are we sending in a ptr to the ptr? should be able to pass first.
             # l1.id match. calling l2_search with ptr to l2_containers looking for l2.id match
             else:
-                return self._l2_search(host_id, l1_container.l2_size, &l1_container.l2_ptr)
+                return self._l2_search(host_id, l1_container.l2_size, l1_container.l2_ptr)
 
         # L1 default
         return NO_MATCH
 
-    cdef long _l2_search(self, long container_id, short l2_size, l2_recurve **L2_CONTAINER) nogil:
+    cdef long _l2_search(self, long container_id, short l2_size, l2_recurve *L2_CONTAINER) nogil:
 
         cdef:
             short left = 0
@@ -74,7 +155,7 @@ cdef class RecurveTrie:
 
         while left <= right:
             mid = left + (right - left) // 2
-            l2_container = L2_CONTAINER[0][mid]
+            l2_container = L2_CONTAINER[mid]
 
             # excluding left half
             if (l2_container.id < container_id):
@@ -124,12 +205,14 @@ cdef class RecurveTrie:
         '''allocates memory for a single L2 content struct, assigns members from l2_entry, then
         returns pointer.'''
 
-        cdef l2_recurve L2_CONTENT
+        cdef l2_recurve *l2_content
 
-        L2_CONTENT.id = l2_entry[0]
-        L2_CONTENT.host_category = l2_entry[1]
+        l2_content = <l2_recurve*>malloc(sizeof(l2_content))
 
-        return &L2_CONTENT
+        l2_content.id = l2_entry[0]
+        l2_content.host_category = l2_entry[1]
+
+        return l2_content
 
 
 cdef class RangeTrie:
@@ -150,43 +233,6 @@ cdef class RangeTrie:
             search_result = self._search(host[0], host[1])
 
         return search_result
-
-    # NOTE: this will be called directly from cfirewall until lru_cache is ported with no gil needed
-    cdef long _search(self, long container_id, long host_id) nogil:
-
-        cdef:
-            long left = 0
-            long mid
-            long right = self.L1_SIZE
-
-            l1_range l1_container
-            l2_range l2_container
-
-        while left <= right:
-            mid = left + (right - left) // 2
-            l1_container = self.L1_CONTAINER[mid]
-
-            # excluding left half
-            if (l1_container.id < container_id):
-                left = mid + 1
-
-            # excluding right half
-            elif (l1_container.id > container_id):
-                right = mid - 1
-
-            # l1.id match. iterating over l2_containers looking for l2.id match
-            else:
-                for i in range(l1_container.l2_size):
-
-                    l2_container = l1_container.l2_ptr[i]
-                    if l2_container.network_id <= host_id <= l2_container.broadcast_id:
-                        return l2_container.country_code
-
-                # l2 default > can probably remove and use l1 default below
-                return NO_MATCH
-
-        # l1 match
-        return NO_MATCH
 
     cpdef void generate_structure(self, tuple py_trie):
 
@@ -217,110 +263,57 @@ cdef class RangeTrie:
             self.L1_CONTAINER[i].l2_size = L2_SIZE
             self.L1_CONTAINER[i].l2_ptr  = L2_CONTAINER
 
+    # NOTE: this will be called directly from cfirewall until lru_cache is ported with no gil needed
+    cdef long _search(self, long container_id, long host_id) nogil:
+
+        cdef:
+            long left = 0
+            long mid
+            long right = self.L1_SIZE
+
+            l1_range l1_container
+            l2_range l2_container
+
+        while left <= right:
+            mid = left + (right - left) // 2
+            l1_container = self.L1_CONTAINER[mid]
+
+            # excluding left half
+            if (l1_container.id < container_id):
+                left = mid + 1
+
+            # excluding right half
+            elif (l1_container.id > container_id):
+                right = mid - 1
+
+            # l1.id match. iterating over l2_containers looking for l2.id match
+            else:
+                for i in range(l1_container.l2_size):
+
+                    l2_container = l1_container.l2_ptr[i]
+
+                    if (l2_container.network_id <= host_id <= l2_container.broadcast_id):
+                        return l2_container.country_code
+
+                # l2 default > can probably remove and use l1 default below
+                return NO_MATCH
+
+        # l1 match
+        return NO_MATCH
+
     cdef l2_range* _make_l2(self, (long, long, short) l2_entry):
         '''allocates memory for a single L2 content struct, assigns members from l2_entry, then returns pointer.'''
 
-        cdef l2_range L2_CONTENT
+        cdef l2_range *l2_content
 
-        L2_CONTENT.network_id   = l2_entry[0]
-        L2_CONTENT.broadcast_id = l2_entry[1]
-        L2_CONTENT.country_code = l2_entry[2]
+        l2_content = <l2_range*>malloc(sizeof(l2_range))
 
-        return &L2_CONTENT
+        l2_content.network_id   = l2_entry[0]
+        l2_content.broadcast_id = l2_entry[1]
+        l2_content.country_code = l2_entry[2]
 
+        return l2_content
 
-cdef class HashTrie:
-
-    cdef:
-        trie_map *TRIE_MAP
-
-        size_t MAX_KEYS
-        size_t INDEX_MASK
-
-    @_lru_cache(maxsize=4096)
-    # using this instead of cpdef so we can release gil and take advantage of lru_cache
-    # this will probably not be used since geolocation lookups will be exclusively native C calls.
-    def search(self, (long, long) host):
-
-        cdef long search_result
-
-        with nogil:
-            search_result = self._search(host[0], host[1])
-
-        return search_result
-
-    cdef u_int8_t _search(self, u_int32_t trie_key, u_int32_t host_id) nogil:
-
-        cdef:
-            size_t trie_key_hash = trie_key % self.INDEX_MASK
-            trie_map trie_value  = self.TRIE_MAP[trie_key_hash]
-
-        # no l1 match
-        if (trie_value.len == EMPTY_CONTAINER):
-            return NO_MATCH
-
-        for i in range(trie_value.len):
-
-            # this is needed because collisions are possible by design so matching the unhashed key will guarantee the 
-            # correct range is being evaluated.
-            if (trie_value.ranges[i].key != trie_key):
-                continue
-
-            if (trie_value.ranges[i].net_id <= host_id <= trie_value.ranges[i].bcast):
-                return trie_value.ranges[i].country
-
-        # iteration completed with no l2 match
-        return NO_MATCH
-
-    cdef trie_range* _make_l2(self, u_int32_t trie_key, (u_int32_t, u_int32_t, u_int16_t) l2_entry):
-        '''allocates memory for a single L2 content struct, assigns members from l2_entry, then returns pointer.'''
-
-        cdef trie_range TRIE_RANGE
-
-        TRIE_RANGE.key     = trie_key
-        TRIE_RANGE.net_id  = l2_entry[0]
-        TRIE_RANGE.bcast   = l2_entry[1]
-        TRIE_RANGE.country = l2_entry[2]
-
-        return &TRIE_RANGE
-
-    cpdef void generate_structure(self, tuple py_trie):
-
-        cdef:
-            trie_range *TRIE_VALUE_RANGES
-
-            size_t value_len
-
-            u_int32_t TRIE_KEY
-            u_int32_t TRIE_KEY_HASH
-
-        # allocating memory for L1 container. this will be accessed from l1_search method.
-        # the reference stored at index will point to l2 data.
-        MAX_KEYS = 2**round(_log(len(py_trie), 2))
-
-        self.INDEX_MASK = MAX_KEYS - 1
-        self.TRIE_MAP   = <trie_map*>calloc(MAX_KEYS, sizeof(trie_map))
-
-        for i in range(len(py_trie)):
-
-            # accessed via pointer stored in L1 container
-            value_len = len(py_trie[i][1])
-
-            # assigning l2 container reference to calculated hash index
-            TRIE_KEY      = <long>py_trie[i][0]
-            TRIE_KEY_HASH = TRIE_KEY % self.INDEX_MASK
-
-#            print(TRIE_KEY_HASH, f'{(TRIE_KEY, TRIE_VALUE[0])}')
-
-            # allocating memory for trie_ranges
-            TRIE_VALUE_RANGES = <trie_range*>malloc(sizeof(trie_range*) * value_len)
-
-            # make function for trie_range struct for each range in py_l2
-            for xi in range(value_len):
-                TRIE_VALUE_RANGES[xi] = self._make_l2(TRIE_KEY, py_trie[i][1][xi])[0]
-
-            self.TRIE_MAP[TRIE_KEY_HASH].len    = value_len
-            self.TRIE_MAP[TRIE_KEY_HASH].ranges = TRIE_VALUE_RANGES
 
 # ================================================ #
 # TYPED PYTHON STRUCTURES - keeping as alternative
