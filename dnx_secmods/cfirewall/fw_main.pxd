@@ -221,3 +221,8 @@ cdef class CFirewall:
     cdef:
         nfq_handle *h
         nfq_q_handle *qh
+
+    cpdef void prepare_geolocation(self, tuple geolocation_trie, long msb, long lsb) with gil
+    cpdef int update_zones(self, Py_Array zone_map) with gil
+    cpdef int update_ruleset(self, size_t ruleset, list rulelist) with gil
+    cpdef int remove_blockedlist(self, u_int32_t host_ip)
