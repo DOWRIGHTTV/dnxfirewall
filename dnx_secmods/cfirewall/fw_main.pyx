@@ -114,7 +114,8 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         iphdr *ip_header
 
         # default proto_header values (used by icmp) and replaced with protocol specific values
-        protohdr proto_header = [0, 0]
+        protohdr proto_def = [0, 0]
+        protohdr *proto_header = &proto_def
 
         bint system_rule = 0
 
@@ -154,14 +155,14 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # PROTOCOL HEADER
     # tcp/udp will reassign the pointer to their header data
     if (ip_header.protocol != IPPROTO_ICMP):
-        proto_header = <protohdr>pktdata[iphdr_len]
+        proto_header = <protohdr*>pktdata[iphdr_len]
 
     # DIRECTION SET
     # uses initial mark of packet to determine the stateful direction of the connection
     direction = OUTBOUND if hw.in_zone != WAN_IN else INBOUND
 
     if (VERBOSE):
-        pkt_print(&hw, ip_header, &proto_header)
+        pkt_print(&hw, ip_header, proto_header)
 
     # =============================== #
     # LOCKING ACCESS TO FIREWALL.
@@ -169,7 +170,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # prevents the manager thread from updating firewall rules during a packets inspection
     pthread_mutex_lock(&FWrulelock)
 
-    inspection_res = cfirewall_inspect(&hw, ip_header, &proto_header, direction)
+    inspection_res = cfirewall_inspect(&hw, ip_header, proto_header, direction)
 
     pthread_mutex_unlock(&FWrulelock)
     # =============================== #
