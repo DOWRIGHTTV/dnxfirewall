@@ -88,6 +88,9 @@ DATABASE_SOCKET = bytes(f'{HOME_DIR}/dnx_routines/database/ddb_sock', 'utf-8') #
 # ================================
 # DNS PROXY DEFS (CONSIDER MOVING)
 # ================================
+CONNECT_TIMEOUT = 2
+RELAY_TIMEOUT   = 30
+
 MAX_A_RECORD_COUNT = 3
 MINIMUM_TTL        = 300
 DEFAULT_TTL        = 300

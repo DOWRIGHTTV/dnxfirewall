@@ -318,17 +318,21 @@ class ProtoRelay:
     # processes that were unable to connect/ create a socket will send in the remote server ip that was attempted.
     # if a remote server isn't specified the active relay socket connection's remote ip will be used.
     def mark_server_down(self, *, remote_server=None):
-        remote_server = remote_server if remote_server else self._relay_conn.remote_ip
+        if (not remote_server):
+            remote_server = self._relay_conn.remote_ip
 
-        for server in self._DNSServer.dns_servers:
-            if (server['ip'] == remote_server):
-                server[self._protocol] = False
+        # more likely case is primary server going down so will use as baseline condition
+        primary = self._DNSServer.dns_servers.primary
 
-                # keeping this under the remote ip/server ip match condition
-                try:
-                    self._relay_conn.sock.close()
-                except:
-                    console_log(f'[{self._relay_conn.remote_ip}] Failed to close socket while marking server down.')
+        # if servers could change during runtime, this has a slight race condition potential, but it shouldn't matter
+        # because when changing a server it would be initially set to down (essentially a no-op)
+        server = primary if primary['ip'] == remote_server else self._DNSServer.dns_servers.secondary
+        server[PROTO.DNS_TLS] = False
+
+        try:
+            self._relay_conn.sock.close()
+        except OSError:
+            console_log(f'[{self._relay_conn.remote_ip}] Failed to close socket while marking server down.')
 
     def _increment_fail_detection(self):
         self._send_cnt += 1

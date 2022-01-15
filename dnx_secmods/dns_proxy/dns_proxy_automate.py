@@ -9,11 +9,11 @@ from ipaddress import IPv4Address
 from dnx_gentools.def_constants import *
 from dnx_gentools.file_operations import *
 from dnx_gentools.signature_operations import combine_domains
-
-from dnx_secmods.dns_proxy.dns_proxy_log import Log
+from dnx_gentools.standard_tools import looper, Initialize
 
 from dnx_iptools.protocol_tools import create_dns_query_header, convert_string_to_bitmap
-from dnx_gentools.standard_tools import looper, Initialize
+
+from dnx_secmods.dns_proxy.dns_proxy_log import Log
 
 
 class Configuration:
@@ -337,7 +337,7 @@ class Reachability:
 
     def _tls_reachable(self, secure_server):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(2)
+        sock.settimeout(CONNECT_TIMEOUT)
 
         secure_socket = self._tls_context.wrap_socket(sock, server_hostname=secure_server)
         try:

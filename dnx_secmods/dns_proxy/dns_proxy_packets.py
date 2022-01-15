@@ -15,7 +15,7 @@ from dnx_iptools.packet_classes import RawPacket
 
 class ClientRequest:
     __slots__ = (
-        '_data', '_dns_header', '_dns_query', '_arc',
+        '_data', '_dns_header', '_dns_query',
 
         # init
         'address', 'sendto', 'top_domain',
@@ -46,7 +46,6 @@ class ClientRequest:
         self.send_data = b''
 
         # OPT record defaults # TODO: add better support for this
-        self._arc = 0
         self.additional_records = b''
 
     def __str__(self):
@@ -113,10 +112,12 @@ class ClientRequest:
         # initializing byte array with (2) bytes. these get overwritten with query len actual after processing
         send_data = bytearray(2)
 
-        send_data += create_dns_query_header(dns_id, self._arc, cd=self.cd)
-        send_data += domain_stob(self.request), double_short_pack(self.qtype, 1)
+        send_data += create_dns_query_header(dns_id, arc, cd=self.cd)
+        send_data += domain_stob(self.request)
+        send_data += double_short_pack(self.qtype, 1)
         send_data += self.additional_records
 
+        # ternary looked gross so using standard if statement
         if (protocol is PROTO.DNS_TLS):
             send_data[:2] = short_pack(len(send_data)-2)
         else:
@@ -213,7 +214,7 @@ class ProxyRequest(RawPacket):
         self.question_record = dns_query[:offset+4] # offset + 4 byte info
 
     # will create send data object for used by proxy.
-    def generate_proxy_response(self, len=len, bytearray=bytearray):
+    def generate_proxy_response(self, len=len):
         # DNS HEADER + PAYLOAD
         # AAAA record set r code to "domain name does not exist" without record response ac=0, rc=3
         udp_payload = bytearray()
@@ -285,7 +286,7 @@ _RESOURCE_RECORD = bytecontainer('resource_record', 'name qtype qclass ttl data'
 _MINIMUM_TTL = long_pack(MINIMUM_TTL)
 _DEFAULT_TTL = long_pack(DEFAULT_TTL)
 
-def ttl_rewrite(data, dns_id):
+def ttl_rewrite(data, dns_id, len=len, min=min, max=max):
     dns_header, dns_payload = data[:12], data[12:]
 
     # converting external/unique dns id back to original dns id of client
@@ -333,7 +334,10 @@ def ttl_rewrite(data, dns_id):
             # generally all A records have the same ttl. CNAME ttl can differ, but will get clamped with A so will
             # likely end up the same as A records.
             if (record_type in [DNS.A, DNS.CNAME]):
-                original_ttl, record.ttl = _get_new_ttl(record)
+                original_ttl = long_unpack(record.ttl)[0]
+                record.ttl = long_pack(
+                    max(MINIMUM_TTL, min(original_ttl, DEFAULT_TTL))
+                )
 
                 send_data += record
 
@@ -375,16 +379,3 @@ def _parse_record(resource_records, total_offset, dns_query):
     total_offset += offset + 10 + dt_len
 
     return btoia(resource_record.qtype), resource_record, total_offset
-
-def _get_new_ttl(record):
-    '''returns dns records original ttl, the rewritten ttl, and the packed form of the rewritten ttl.'''
-    record_ttl = long_unpack(record.ttl)[0]
-    if (record_ttl < MINIMUM_TTL):
-        return record_ttl, _MINIMUM_TTL
-
-    # rewriting ttl to the remaining amount that was calculated from cached packet or to the maximum defined TTL
-    if (record_ttl > DEFAULT_TTL):
-        return record_ttl, _DEFAULT_TTL
-
-    # anything in between the min and max TTL will be retained
-    return record_ttl, long_pack(record_ttl)
