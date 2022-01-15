@@ -84,7 +84,7 @@ class TLSRelay(ProtoRelay):
     _dns_packet = ClientRequest.generate_keepalive
 
     __slots__ = (
-        '_tls_context'
+        '_tls_context', '_keepalive_status'
     )
 
     def __init__(self, *args, **kwargs):
@@ -95,8 +95,8 @@ class TLSRelay(ProtoRelay):
         self._tls_context.verify_mode = ssl.CERT_REQUIRED
         self._tls_context.load_verify_locations(CERTIFICATE_STORE)
 
-        # tls connection keepalive. hardset to 8 seconds, but can be enabled/disabled
-        self.keepalive_status = threading.Event()
+        # tls connection keepalive. hard set to 8 seconds, but can be enabled/disabled
+        self._keepalive_status = threading.Event()
         threading.Thread(target=self._keepalive_run).start()
 
     @property
@@ -137,7 +137,7 @@ class TLSRelay(ProtoRelay):
         Log.debug(f'[{self._relay_conn.remote_ip}/{self._protocol.name}] Response handler opened.')
 
         conn_recv = self._relay_conn.recv
-        keepalive_reset = self.keepalive_status.set
+        keepalive_reset = self._keepalive_status.set
 
         recv_buff_append = recv_buffer.append
         recv_buff_clear = recv_buffer.clear
@@ -215,8 +215,8 @@ class TLSRelay(ProtoRelay):
     # settings will take effect on next iteration
     def _keepalive_run(self):
         keepalive_interval = self._DNSServer.keepalive_interval
-        keepalive_timer = self.keepalive_status.wait
-        keepalive_continue = self.keepalive_status.clear
+        keepalive_timer = self._keepalive_status.wait
+        keepalive_continue = self._keepalive_status.clear
 
         relay_add = self.relay.add
 
