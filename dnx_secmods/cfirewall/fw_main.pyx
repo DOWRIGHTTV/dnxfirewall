@@ -533,10 +533,6 @@ cdef u_int32_t SOCK_RCV_SIZE = 1024 * 4796 // 2
 
 cdef class CFirewall:
 
-    cdef:
-        nfq_handle *h
-        nfq_q_handle *qh
-
     def __cinit__(self, bint bypass, bint verbose):
         global BYPASS, VERBOSE
 

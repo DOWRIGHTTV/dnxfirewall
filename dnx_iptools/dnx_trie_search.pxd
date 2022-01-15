@@ -33,3 +33,20 @@ cdef struct trie_range:
     u_int32_t net_id
     u_int32_t bcast
     u_int8_t country
+
+cdef class HashTrie:
+    cdef:
+        trie_map *TRIE_MAP
+
+        size_t MAX_KEYS
+        size_t INDEX_MASK
+
+cdef class RecurveTrie:
+    cdef:
+        size_t L1_SIZE
+        l1_recurve *L1_CONTAINER
+
+cdef class RangeTrie:
+    cdef:
+        size_t L1_SIZE
+        l1_range *L1_CONTAINER

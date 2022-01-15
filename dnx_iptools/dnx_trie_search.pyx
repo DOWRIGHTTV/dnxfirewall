@@ -17,12 +17,6 @@ DEF NO_MATCH = 0
 # ================================================ #
 cdef class HashTrie:
 
-    cdef:
-        trie_map *TRIE_MAP
-
-        size_t MAX_KEYS
-        size_t INDEX_MASK
-
     cpdef void generate_structure(self, tuple py_trie):
 
         cdef:
@@ -101,9 +95,6 @@ cdef class RecurveTrie:
     L1 CONTAINER = [<CONTAINER_ID, L2_CONTAINER_SIZE, L2_CONTAINER_PTR>]
     L2 CONTAINER = [<CONTAINER_ID, HOST_CATEGORY>]
     '''
-    cdef:
-        size_t L1_SIZE
-        l1_recurve *L1_CONTAINER
 
     @_lru_cache(maxsize=4096)
     def search(self, (long, long) host):
@@ -220,9 +211,6 @@ cdef class RangeTrie:
     L1 CONTAINER = [<CONTAINER_ID, L2_CONTAINER_SIZE, L2_CONTAINER_PTR>]
     L2 CONTAINER = [<NETWORK_ID, BROADCAST_ID, HOST_COUNTRY>]
     '''
-    cdef:
-        size_t L1_SIZE
-        l1_range *L1_CONTAINER
 
     @_lru_cache(maxsize=4096)
     def search(self, (long, long) host):
