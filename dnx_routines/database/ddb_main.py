@@ -55,7 +55,7 @@ class DatabaseService:
 
         self = cls()
 
-        self._add_to_db_queue = self._receive_requests.add  # pylint: disable=no-member
+        self._add_to_db_queue = self._request_handler.add  # pylint: disable=no-member
 
         threading.Thread(target=self._receive_requests).start()
 
