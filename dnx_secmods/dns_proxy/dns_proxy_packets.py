@@ -128,7 +128,7 @@ class ClientRequest:
     def generate_local_query(cls, request, cd=1):
         '''alternate constructor for creating locally generated queries (top domains).'''
 
-        self = cls(None, NULL_ADDR, None)
+        self = cls(NULL_ADDR, None)
         # hardcoded qtype can change if needed.
         self.request = request
         self.qtype   = 1
@@ -140,7 +140,7 @@ class ClientRequest:
     def generate_keepalive(cls, request, protocol, cd=1):
         '''alternate constructor for creating locally generated keep alive queries.'''
 
-        self = cls(None, NULL_ADDR, None)
+        self = cls(NULL_ADDR, None)
 
         # hardcoded qtype can change if needed.
         self.request = request
