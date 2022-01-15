@@ -139,7 +139,7 @@ class Inspect:
             # TLD (top level domain) block | after first index will pass nested to allow for continue
             if (not i):
                 if self._tld_get(enum_request):
-                    Log.dprint(f'TLD Block: {packet.request}')
+                    # Log.console(f'TLD Block: {packet.request}')
 
                     return DNS_REQUEST_RESULTS(True, 'tld filter', TLD_CAT[enum_request])
 

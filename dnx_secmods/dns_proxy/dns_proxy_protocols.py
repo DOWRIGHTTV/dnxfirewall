@@ -187,7 +187,7 @@ class TLSRelay(ProtoRelay):
 
     def _tls_connect(self, tls_server):
 
-        Log.dprint(f'[{tls_server}/{self._protocol.name}] Opening secure socket.')
+        Log.informational(f'[{tls_server}/{self._protocol.name}] Opening secure socket.')
 
         sock = socket(AF_INET, SOCK_STREAM)
         sock.settimeout(CONNECT_TIMEOUT)

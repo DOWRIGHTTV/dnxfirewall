@@ -358,25 +358,25 @@ cdef inline bint network_match(network_arr rule_defs, u_int32_t iph_ip, u_int16_
 
     cdef:
         size_t i
-        network_obj network
+        network_obj rule
 
     for i in range(rule_defs.len):
 
-        network = rule_defs.objects[i]
+        rule = rule_defs.objects[i]
 
         if (VERBOSE):
-            obj_print(NETWORK, &network)
+            obj_print(NETWORK, &rule)
 
-        if (network.netid == GEO_MARKER):
+        # geolocation objects use address object fields. we know it's a geo object when netid is -1
+        if (rule.netid == GEO_MARKER):
 
-            if (country != network.netmask):
-                continue
+            # country code/id comparison
+            if (country == rule.netmask):
+                return MATCH
 
-        # using rules mask to floor source ip in header and checking against rules network id
-        elif (iph_ip & network.netmask != network.netid):
-            continue
-
-        return MATCH
+        # using rules mask to floor source ip in header and checking against FWrule network id
+        elif (iph_ip & rule.netmask == rule.netid):
+            return MATCH
 
     # default action
     return NO_MATCH
@@ -386,25 +386,22 @@ cdef inline bint service_match(service_arr rule_defs, u_int16_t pkt_protocol, u_
 
     cdef:
         size_t i
-        service_obj service
+        service_obj rule
 
     for i in range(rule_defs.len):
 
-        service = rule_defs.objects[i]
+        rule = rule_defs.objects[i]
 
         if (VERBOSE):
-            obj_print(SERVICE, &service)
+            obj_print(SERVICE, &rule)
 
         # PROTOCOL
-        if (pkt_protocol != service.protocol and service.protocol != ANY_PROTOCOL):
+        if (pkt_protocol != rule.protocol and rule.protocol != ANY_PROTOCOL):
             continue
 
         # PORTS, ICMP will match on the first port start value (looking for 0)
-        if (not service.start_port <= pkt_port <= service.end_port):
-            continue
-
-        # full match of protocol/port rule definition for ip header values
-        return MATCH
+        if (rule.start_port <= pkt_port <= rule.end_port):
+            return MATCH
 
     # default action
     return NO_MATCH
