@@ -148,14 +148,14 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     pktdata_len = nfq_get_payload(nfa, &pktdata)
 
     # IP HEADER
-    # assigning ip_header to first index of data (cast to iphdr struct) then calculate ip header len.
+    # assigning ip_header to ptr to data[0] (cast to iphdr struct) then calculate ip header len.
     ip_header = <iphdr*>pktdata
     iphdr_len = (ip_header.ver_ihl & FOUR_BIT_MASK) * 4
 
     # PROTOCOL HEADER
     # tcp/udp will reassign the pointer to their header data
     if (ip_header.protocol != IPPROTO_ICMP):
-        proto_header = <protohdr*>pktdata[iphdr_len]
+        proto_header = <protohdr*>&pktdata[iphdr_len]
 
     # DIRECTION SET
     # uses initial mark of packet to determine the stateful direction of the connection
