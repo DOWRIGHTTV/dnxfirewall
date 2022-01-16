@@ -55,4 +55,5 @@ handshake_unpack = _Struct('!2B2H').unpack_from
 cert_len_unpack = _Struct('!H').unpack_from
 
 # user with AF_UNIX sockets
+scm_creds_pack = _Struct('3i').pack
 unpack_scm_creds = _Struct('3i').unpack

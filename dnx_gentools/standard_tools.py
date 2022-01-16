@@ -5,8 +5,8 @@ import threading
 from copy import copy
 from collections import deque
 
+from dnx_gentools.def_constants import RUN_FOREVER, MSEC, fast_time, fast_sleep, byte_join
 from dnx_iptools.def_structs import byte_pack, short_pack, long_pack
-from dnx_gentools.def_constants import MSEC, fast_time, fast_sleep, byte_join
 
 __all__ = (
     'looper', 'dynamic_looper',
@@ -15,9 +15,16 @@ __all__ = (
     'classproperty'
 )
 
-def looper(sleep_len):
-    '''loop decorator calling sleeping for specified length. length is sent in on decorator argument. if no value
-    is sent in the loop will continue immediately.'''
+def looper(sleep_len, **kwargs):
+    '''
+    loop decorator calling sleeping for specified length. length is sent in on decorator argument. if no value
+    is sent in the loop will continue immediately. kwargs can be sent in to provide locally assigned var access. the
+    kwargs will be converted to args before passing to function.
+
+        @looper(NO_DELAY, some_var=10)
+        def func(some_var):
+            do something
+    '''
     if not isinstance(sleep_len, int):
         raise TypeError('sleep length must be an integer.')
 
@@ -25,11 +32,26 @@ def looper(sleep_len):
         raise ValueError('sleep length must be >= 0.')
 
     def decorator(loop_function):
-        def wrapper(*args):
-            while True:
-                loop_function(*args)
 
-                if (sleep_len):
+        # pre-wrap optimization to remove sleep_len condition after every iteration if not set.
+        if (not sleep_len):
+            def wrapper(*args):
+
+                # allowing kwargs in decorator setup to be pass into wrapped function. this will allow for local
+                # assignments of variables to tighten the loop a bit.
+                args.extend([v for v in kwargs.values()])
+
+                for _ in RUN_FOREVER():
+                    loop_function(*args)
+
+        else:
+            def wrapper(*args):
+
+                args.extend([v for v in kwargs.values()])
+
+                for _ in RUN_FOREVER():
+                    loop_function(*args)
+
                     fast_sleep(sleep_len)
 
         return wrapper

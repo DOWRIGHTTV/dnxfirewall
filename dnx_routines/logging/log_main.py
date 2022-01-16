@@ -6,7 +6,7 @@ if (__name__ == '__main__'):
 import os
 import threading
 
-from socket import socket, AF_UNIX, SOCK_DGRAM
+from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SCM_CREDENTIALS  #, SO_PASSCREDS
 from json import dumps
 
 from dnx_gentools.def_constants import *
@@ -326,11 +326,11 @@ def _log_handler():
 
             log_data = [db_message(timestamp, log, method)]
 
-            _db_sendmsg(log_data, DNX_AUTHENTICATION)
+            _db_sendmsg(log_data, [(SOL_SOCKET, SCM_CREDENTIALS, DNX_AUTHENTICATION)])
 
         @staticmethod
         def slog_log(mtype, level, log_msg):
-            return # NOTE: to not mess up decorator
+            return  # NOTE: to not mess up decorator
 
             # message = Format.message(cls_name, mtype, level, message)
             # for attempt in range(2):
