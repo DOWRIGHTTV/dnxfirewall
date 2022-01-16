@@ -365,25 +365,26 @@ def ttl_rewrite(data, dns_id, len=len, min=min, max=max):
 
     return send_data, None
 
-def _parse_record(dns_payload, total_offset):
-    offset = parse_query_name(dns_payload, total_offset)
+def _parse_record(dns_payload, cur_offset):
+    new_offset = cur_offset + parse_query_name(dns_payload, cur_offset)
 
-    # slicing out current pointer index for ease faster reference
-    record_ptr = dns_payload[total_offset:]
+    # slicing out current ptr index for faster reference
+    record_name = dns_payload[cur_offset: new_offset]
+    record_values = dns_payload[new_offset:]
 
     # resource record data len. generally 4 for ip address, but can vary. calculating first so we can single shot
     # create byte container below.
-    dt_len = btoia(record_ptr[offset + 8:offset + 10])
+    dt_len = btoia(record_values[8:10])
 
     resource_record = _RESOURCE_RECORD(
-        record_ptr[:offset],
-        record_ptr[offset:offset + 2],
-        record_ptr[offset + 2:offset + 4],
-        record_ptr[offset + 4:offset + 8],
-        record_ptr[offset + 8:offset + 10 + dt_len]
+        record_name,
+        record_values[:2],
+        record_values[2:4],
+        record_values[4:8],
+        record_values[8:10 + dt_len]
     )
 
     # name len + 2 bytes(length field) + 8 bytes(type, class, ttl) + data len
-    total_offset += offset + 10 + dt_len
+    new_offset += 10 + dt_len
 
-    return btoia(resource_record.qtype), resource_record, total_offset
+    return btoia(resource_record.qtype), resource_record, new_offset
