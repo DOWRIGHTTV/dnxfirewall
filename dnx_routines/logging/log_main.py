@@ -248,7 +248,7 @@ def _log_handler():
         # after initial load, this dones nothing
         _initialized = True
 
-    @cfg_read_poller('syslog_client', class_method=True)
+    @cfg_read_poller('syslog_client')
     def _slog_settings(cfg_file):
         nonlocal _syslog
 
