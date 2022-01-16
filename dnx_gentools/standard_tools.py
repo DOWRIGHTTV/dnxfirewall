@@ -39,7 +39,7 @@ def looper(sleep_len, **kwargs):
 
                 # allowing kwargs in decorator setup to be pass into wrapped function. this will allow for local
                 # assignments of variables to tighten the loop a bit.
-                args.extend([v for v in kwargs.values()])
+                args = (*args, *[v for v in kwargs.values()])
 
                 for _ in RUN_FOREVER():
                     loop_function(*args)
@@ -47,7 +47,7 @@ def looper(sleep_len, **kwargs):
         else:
             def wrapper(*args):
 
-                args.extend([v for v in kwargs.values()])
+                args = (*args, *[v for v in kwargs.values()])
 
                 for _ in RUN_FOREVER():
                     loop_function(*args)
