@@ -129,7 +129,7 @@ def parse_query_name(data, offset=0, *, qname=False):
             break
 
         # label ptr check
-        if (data_ptr & 192 == 192):
+        if (data_ptr[0] & 192 == 192):
 
             # calculates dns ptr value then uses dns payload slice index. (-12 accounts for header not included)
             label_ptr = data[(short_unpackf(data_ptr)[0] & 16383) - 12:]
