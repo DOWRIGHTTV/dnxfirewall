@@ -506,7 +506,7 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
     fw_rule.d_networks.len = <size_t>len(rule['dst_network'])
     for i in range(fw_rule.d_networks.len):
         fw_rule.d_networks.objects[i].netid   = <long>rule['dst_network'][i][0]
-        fw_rule.d_networks.objects[i].netmask = <u_int16_t>rule['dst_network'][i][1]
+        fw_rule.d_networks.objects[i].netmask = <u_int32_t>rule['dst_network'][i][1]
 
     fw_rule.d_services.len = <size_t>len(rule['dst_service'])
     for i in range(fw_rule.d_services.len):

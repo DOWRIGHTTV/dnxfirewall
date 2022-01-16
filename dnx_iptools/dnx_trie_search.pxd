@@ -6,33 +6,33 @@ cdef extern from "sys/types.h":
     ctypedef unsigned int u_int32_t
 
 cdef struct l1_recurve:
-    long id
-    short l2_size
-    l2_recurve *l2_ptr
+    u_int32_t   id
+    size_t      l2_size
+    l2_recurve  *l2_ptr
 
 cdef struct l2_recurve:
-    long id
-    short host_category
+    u_int32_t   id
+    u_int16_t   host_cat
 
 cdef struct l1_range:
-    long id
-    short l2_size
-    l2_range *l2_ptr
+    u_int32_t   id
+    size_t      l2_size
+    l2_range    *l2_ptr
 
 cdef struct l2_range:
-    long network_id
-    long broadcast_id
-    short country_code
+    u_int32_t   netid
+    u_int32_t   bcast
+    u_int8_t    country
 
 cdef struct trie_map:
-    u_int16_t len
-    trie_range *ranges
+    size_t      len
+    trie_range  *ranges
 
 cdef struct trie_range:
-    u_int32_t key
-    u_int32_t net_id
-    u_int32_t bcast
-    u_int8_t country
+    u_int32_t   key
+    u_int32_t   net_id
+    u_int32_t   bcast
+    u_int8_t    country
 
 cdef class HashTrie:
     cdef:

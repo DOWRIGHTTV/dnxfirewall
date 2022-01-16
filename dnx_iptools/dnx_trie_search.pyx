@@ -70,7 +70,7 @@ cdef class HashTrie:
             if (trie_value.ranges[i].key != trie_key):
                 continue
 
-            if (trie_value.ranges[i].net_id <= host_id <= trie_value.ranges[i].bcast):
+            if (trie_value.ranges[i].netid <= host_id <= trie_value.ranges[i].bcast):
                 return trie_value.ranges[i].country
 
         # iteration completed with no l2 match
@@ -82,7 +82,7 @@ cdef class HashTrie:
         cdef trie_range *l2_content = <trie_range*>malloc(sizeof(trie_range))
 
         l2_content.key     = trie_key
-        l2_content.net_id  = l2_entry[0]
+        l2_content.netid  = l2_entry[0]
         l2_content.bcast   = l2_entry[1]
         l2_content.country = l2_entry[2]
 
@@ -129,7 +129,7 @@ cdef class RecurveTrie:
                 L2_CONTAINER[xi] = self._make_l2(py_trie[i][1][xi])[0]
 
             # assigning struct members to current index of L1 container.
-            self.L1_CONTAINER[i].id = <long>py_trie[i][0]
+            self.L1_CONTAINER[i].id = <u_int32_t>py_trie[i][0]
             self.L1_CONTAINER[i].l2_size = L2_SIZE
             self.L1_CONTAINER[i].l2_ptr  = L2_CONTAINER
 
@@ -185,7 +185,7 @@ cdef class RecurveTrie:
 
             # l2.id match. returning struct value
             else:
-                return l2_container.host_category
+                return l2_container.host_cat
 
         # L2 default
         return NO_MATCH
@@ -197,7 +197,7 @@ cdef class RecurveTrie:
         cdef l2_recurve *l2_content = <l2_recurve*>malloc(sizeof(l2_recurve))
 
         l2_content.id = l2_entry[0]
-        l2_content.host_category = l2_entry[1]
+        l2_content.host_cat = l2_entry[1]
 
         return l2_content
 
@@ -222,7 +222,6 @@ cdef class RangeTrie:
 
         cdef:
             size_t L2_SIZE
-            l2_range *L2_CONTAINER
 
         # allocating memory for L1 container. this will be accessed from l1_search method.
         # L1 container will be iterated over, being checked for id match. if a match is found
@@ -232,20 +231,18 @@ cdef class RangeTrie:
 
         for i in range(self.L1_SIZE):
 
-            # accessed via pointer stored in L1 container
             L2_SIZE = len(py_trie[i][1])
 
+            # assigning struct members to current index of L1 container
+            self.L1_CONTAINER[i].id = <u_int32_t>py_trie[i][0]
+            self.L1_CONTAINER[i].l2_size = L2_SIZE
+
             # allocating memory for individual L2 containers
-            L2_CONTAINER = <l2_range*>malloc(sizeof(l2_range) * L2_SIZE)
+            self.L1_CONTAINER[i].l2_ptr = <l2_range*>malloc(sizeof(l2_range) * L2_SIZE)
 
             # calling make function for l2 content struct for each entry in current py_l2 container
             for xi in range(L2_SIZE):
-                L2_CONTAINER[xi] = self._make_l2(py_trie[i][1][xi])[0]
-
-            # assigning struct members to current index of L1 container
-            self.L1_CONTAINER[i].id = <long>py_trie[i][0]
-            self.L1_CONTAINER[i].l2_size = L2_SIZE
-            self.L1_CONTAINER[i].l2_ptr  = L2_CONTAINER
+                self.L1_CONTAINER[i][xi] = self._make_l2(py_trie[i][1][xi])[0]
 
     # NOTE: this will be called directly from cfirewall until lru_cache is ported with no gil needed
     cdef long _search(self, long container_id, long host_id) nogil:
@@ -276,8 +273,8 @@ cdef class RangeTrie:
 
                     l2_container = l1_container.l2_ptr[i]
 
-                    if (l2_container.network_id <= host_id <= l2_container.broadcast_id):
-                        return l2_container.country_code
+                    if (l2_container.netid <= host_id <= l2_container.bcast):
+                        return l2_container.country
 
                 # l2 default > can probably remove and use l1 default below
                 return NO_MATCH
@@ -290,9 +287,9 @@ cdef class RangeTrie:
 
         cdef l2_range *l2_content = <l2_range*>malloc(sizeof(l2_range))
 
-        l2_content.network_id   = l2_entry[0]
-        l2_content.broadcast_id = l2_entry[1]
-        l2_content.country_code = l2_entry[2]
+        l2_content.netid   = l2_entry[0]
+        l2_content.bcast   = l2_entry[1]
+        l2_content.country = l2_entry[2]
 
         return l2_content
 
