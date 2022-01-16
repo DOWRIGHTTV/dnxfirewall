@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from socket import inet_aton, inet_ntoa
+from socket import inet_aton
 from collections import namedtuple
 
 from dnx_gentools.def_constants import *
@@ -71,7 +71,8 @@ class ClientRequest:
         self.rc = dns_header[1]       & 15
 
         # www.micro.com or micro.com || sd.micro.com
-        offset, self.local_domain, self.request = parse_query_name(dns_query, qname=True)
+        offset, query_info = parse_query_name(dns_query, qname=True)
+        self.request, self.local_domain = query_info
 
         self.qtype, self.qclass = double_short_unpack(dns_query[offset:])
         self.question_record    = dns_query[:offset + 4]
@@ -170,7 +171,7 @@ class ProxyRequest(RawPacket):
         '_dns_header', '_dns_query',
 
         'request', 'requests', 'request_identifier',
-        'dom_local', 'qtype', 'qclass', 'dns_id', 'question_record',
+        'local_domain', 'qtype', 'qclass', 'dns_id', 'question_record',
 
         'qr', '_rd', '_cd', 'send_data',
     )
@@ -192,7 +193,10 @@ class ProxyRequest(RawPacket):
         if (self.dst_port != PROTO.DNS):
             return
 
-        dns_header = dns_header_unpack(self.udp_payload[:12])  # 12 bytes for dns header
+        # ===========================
+        # DNS HEADER (12 bytes)
+        # ===========================
+        dns_header = dns_header_unpack(self.udp_payload[:12])
 
         # filtering out non query flags. this would also imply malformed payload.
         self.qr = dns_header[1] >> 15 & 1
@@ -204,14 +208,24 @@ class ProxyRequest(RawPacket):
         self._rd = dns_header[1] >> 8 & 1
         self._cd = dns_header[1] >> 4 & 1
 
+        # ===========================
+        # QUESTION RECORD (index 12+)
+        # ===========================
         dns_query = self.udp_payload[12:self.udp_len]  # 13+ is query data
 
-        offset, _, self.request = parse_query_name(dns_query, qname=True)  # www.micro.com or micro.com
-        self.requests = self._enumerate_request(self.request)
+        # parsing dns name queried and byte offset due to variable length | ex www.micro.com or micro.com
+        offset, query_info = parse_query_name(dns_query, qname=True)
 
+        # defining question record
+        self.question_record = dns_query[:offset + 4]
+
+        # defining questions record fields
+        self.request, self.local_domain = query_info
         self.qtype, self.qclass = double_short_unpack(dns_query[offset:])
-        self.question_record = dns_query[:offset + 4]  # offset + 4 byte info
 
+        # hashing queried name enumerating any subdomains (signature matching)
+        # defining unique tuple for informing dns server of inspection results
+        self.requests = _enumerate_request(*query_info)
         self.request_identifier = (int_to_ipaddr(self.src_ip), self.src_port, self.dns_id)
 
     # will create send data object for used by proxy.
@@ -251,30 +265,25 @@ class ProxyRequest(RawPacket):
 
         self.send_data = ip_header.assemble() + udp_header.assemble() + udp_payload
 
-    def _enumerate_request(self, request, len=len, int=int, hash=hash):
-        rs = request.split('.')
 
-        # tld > fqdn
-        requests = [dot_join(rs[i:]) for i in range(-2, -len(rs)-1, -1)]
+def _enumerate_request(request, local_domain, len=len, int=int, hash=hash):
+    rs = request.split('.')
 
-        # adjusting for local record as needed
-        if (len(rs) > 1):
-            t_reqs = [rs[-1]]
-            self.dom_local = False  # TODO: this should probably emulate server for how this is defined
+    # tld > fqdn
+    requests = [dot_join(rs[i:]) for i in range(-2, -len(rs)-1, -1)]
 
-        else:
-            t_reqs = [None]
-            self.dom_local = True
+    # adjusting for local record as needed
+    req_ids = [rs[-1]] if local_domain else [None]
 
-        # building bin/host id from hash for each enumerated name.
-        for r in requests:
-            r_hash = hash(r)
-            b_id = int(f'{r_hash}'[:4])
-            h_id = int(f'{r_hash}'[4:])
+    # building bin/host id from hash for each enumerated name.
+    for r in requests:
+        r_hash = hash(r)
+        b_id = int(f'{r_hash}'[:4])
+        h_id = int(f'{r_hash}'[4:])
 
-            t_reqs.append((b_id, h_id))
+        req_ids.append((b_id, h_id))
 
-        return t_reqs
+    return req_ids
 
 
 # ================
@@ -308,19 +317,16 @@ def ttl_rewrite(data, dns_id, len=len, min=min, max=max):
     # QUESTION RECORD
     # ================
     # www.micro.com or micro.com || sd.micro.com
-    offset, _ = parse_query_name(dns_payload)
+    offset = parse_query_name(dns_payload)
 
-    question_record = dns_payload[:offset + 4]
-
-    send_data += question_record
+    send_data += dns_payload[:offset + 4]
 
     # ================
     # RESOURCE RECORD
     # ================
-    resource_records = dns_payload[offset + 4:]
+    # resource_records = dns_payload[offset + 4:]
 
-    # offset is reset to prevent carry over from above.
-    offset, original_ttl, record_cache = 0, 0, []
+    original_ttl, record_cache = 0, []
 
     # parsing standard and authority records
     for record_count in [resource_count, authority_count]:
@@ -328,7 +334,7 @@ def ttl_rewrite(data, dns_id, len=len, min=min, max=max):
         # iterating once for every record based on provided record count. if this number is forged/tampered with it
         # will cause the parsing to fail. NOTE: ensure this isn't fatal.
         for _ in range(record_count):
-            record_type, record, offset = _parse_record(resource_records, offset, dns_payload)
+            record_type, record, offset = _parse_record(dns_payload, offset)
 
             # TTL rewrite done on A records which functionally clamps TTLs between a min and max value. CNAME is listed
             # first, followed by A records so the original_ttl var will be whatever the last A record ttl parsed is.
@@ -352,28 +358,29 @@ def ttl_rewrite(data, dns_id, len=len, min=min, max=max):
 
     # keeping any additional records intact
     # TODO: see if modifying/ manipulating additional records would be beneficial or even useful in any way
-    send_data += resource_records[offset:]
+    send_data += dns_payload[offset:]
 
     if (record_cache):
         return send_data, CACHED_RECORD(int(fast_time()) + original_ttl, original_ttl, record_cache)
 
     return send_data, None
 
-def _parse_record(resource_records, total_offset, dns_query):
-    current_record = resource_records[total_offset:]
+def _parse_record(dns_payload, total_offset):
+    offset = parse_query_name(dns_payload, total_offset)
 
-    offset, _ = parse_query_name(current_record, dns_query)
+    # slicing out current pointer index for ease faster reference
+    record_ptr = dns_payload[total_offset:]
 
     # resource record data len. generally 4 for ip address, but can vary. calculating first so we can single shot
     # create byte container below.
-    dt_len = btoia(current_record[offset + 8:offset + 10])
+    dt_len = btoia(record_ptr[offset + 8:offset + 10])
 
     resource_record = _RESOURCE_RECORD(
-        current_record[:offset],
-        current_record[offset:offset + 2],
-        current_record[offset + 2:offset + 4],
-        current_record[offset + 4:offset + 8],
-        current_record[offset + 8:offset + 10 + dt_len]
+        record_ptr[:offset],
+        record_ptr[offset:offset + 2],
+        record_ptr[offset + 2:offset + 4],
+        record_ptr[offset + 4:offset + 8],
+        record_ptr[offset + 8:offset + 10 + dt_len]
     )
 
     # name len + 2 bytes(length field) + 8 bytes(type, class, ttl) + data len

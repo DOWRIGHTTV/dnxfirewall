@@ -113,54 +113,49 @@ def cidr_to_int(cidr):
 
     return ~((1 << hostmask) - 1) & (2**32 - 1)
 
-def parse_query_name(data, dns_query=None, *, qname=False):
+def parse_query_name(data, offset=0, *, qname=False):
     '''parses dns name from sent in data. uses overall dns query to follow pointers. will return
     name and offset integer value if qname arg is True otherwise will only return offset.'''
 
-    offset, has_ptr, query_name = 0, False, []
+    label_ct = 0
+    query_name = bytearray()
 
     for _ in RUN_FOREVER():
 
-        label_len = data[0]
-
-        # pointer check
-        if (label_len & 192 == 192):
-
-            # calculates the value of the pointer then uses value as original dns query index. this used to be a
-            # separate function, but it felt like a waste so merged it. (-12 accounts for header not included)
-            data = dns_query[(label_len << 8 | data[1] & 16383) - 12:]
-
-            has_ptr = True
-
-        # not root domain
-        elif (label_len):
-            label_len += 1
-
-            offset += label_len if not has_ptr else 0
-
-            query_name.append(data[:label_len])
-
-            # slicing out processed section
-            data = data[label_len:]
+        data_ptr = data[offset:]
 
         # root domain/ null terminated
-        else:
+        if (not data_ptr[0]):
             break
 
-    # increment offset +2 for pointer length or +1 for termination byte if name did not contain a pointer
-    offset += 2 if has_ptr else 1
+        # label ptr check
+        if (data_ptr & 192 == 192):
 
-    # evaluating qname for .local domain or non fqdn.
-    # TODO: think about this more. only root lookup will cause this to error out.
-    try:
-        local_domain = len(query_name) == 1 or query_name[-1] == 'local'
-    except IndexError:
-        local_domain = False
+            # calculates dns ptr value then uses dns payload slice index. (-12 accounts for header not included)
+            label_ptr = data[(short_unpackf(data_ptr)[0] & 16383) - 12:]
+
+            query_name += label_ptr[1:label_ptr[0] + 1]
+            query_name += b'.'
+
+            offset += 2
+
+        # standard label
+        else:
+            # used to identify local domains
+            label_ct += 1
+
+            query_name += data_ptr[1:data_ptr[0] + 1]
+            query_name += b'.'
+
+            offset += data_ptr[0] + 1
+
+    # increment offset +1 for termination byte. see if this can be moved
+    offset += 1
 
     if (qname):
-        return offset, local_domain, dot_join(query_name).decode()
+        return offset, (query_name[:-1].decode(), label_ct == 1)
 
-    return offset, local_domain
+    return offset
 
 def domain_stob(domain_name):
     domain_bytes = byte_join([
