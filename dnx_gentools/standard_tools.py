@@ -336,6 +336,7 @@ def bytecontainer(obj_name, field_names):
     _sum = sum
     _setattr = setattr
     _getattr = getattr
+    _bytearray = bytearray
 
     class ByteContainer:
 
@@ -371,6 +372,20 @@ def bytecontainer(obj_name, field_names):
 
         def __iter__(self):
             yield from [_getattr(self, fn) for fn in field_names]
+
+        def __add__(self, other):
+            ba = _bytearray()
+            for name in field_names:
+                ba += _getattr(self, name)
+
+            return ba + other
+
+        def __radd__(self, other):
+            ba = _bytearray()
+            for name in field_names:
+                ba += _getattr(self, name)
+
+            return other + ba
 
     return ByteContainer()
 

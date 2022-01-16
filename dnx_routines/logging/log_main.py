@@ -171,6 +171,9 @@ def _log_handler():
 
     # _syslog_sock = socket()
 
+    # ==============================
+    # DB SERVICE SOCKET CONNECT
+    # ==============================
     _db_client = socket(AF_UNIX, SOCK_DGRAM)
     try:
         _db_client.connect(DATABASE_SOCKET)
@@ -179,6 +182,9 @@ def _log_handler():
 
     _db_sendmsg = _db_client.sendmsg
 
+    # ==============================
+    # STANDARD FUNCTIONS
+    # ==============================
     # TODO: consider having this offloaded so the security modules don't have to waste cycles on writing to disk.
     #  also, check to see how often they even log, it might not be often after first startup.
     @dnx_queue(None, name='LogHandler')
@@ -202,7 +208,7 @@ def _log_handler():
 
             level_name, _ = level_info
 
-            # if debug is enabled all entries will be logged and printed to terminal
+            # all entries will be logged and printed to terminal
             if (_LEVEL is LOG.DEBUG):
 
                 @staticmethod
@@ -229,8 +235,29 @@ def _log_handler():
 
             setattr(cls, level_name, log_method)
 
+    @cfg_read_poller('logging_client')
+    def _log_settings(cfg_file):
+        nonlocal _LEVEL, _initialized
+
+        logging = load_configuration(cfg_file)
+
+        _LEVEL = logging['logging']['level']
+
+        _add_logging_methods(Handler)
+
+        # after initial load, this dones nothing
+        _initialized = True
+
+    @cfg_read_poller('syslog_client', class_method=True)
+    def _slog_settings(cfg_file):
+        nonlocal _syslog
+
+        syslog = load_configuration(cfg_file)
+
+        _syslog = syslog['enabled']
+
     # TODO: create function to write logs for system errors that happen prior to log handler being initialized.
-    class LogHandler:
+    class Handler:
 
         @classmethod
         def run(cls, *, name, console=False):
@@ -250,8 +277,8 @@ def _log_handler():
             _console = console
             _path += name
 
-            threading.Thread(target=cls._log_settings).start()
-            threading.Thread(target=cls._slog_settings).start()
+            threading.Thread(target=_log_settings).start()
+            threading.Thread(target=_slog_settings).start()
 
             threading.Thread(target=_write_to_disk).start()
 
@@ -259,13 +286,13 @@ def _log_handler():
             while not _initialized:
                 fast_sleep(ONE_SEC)
 
-        @classproperty
-        def current_lvl(_):
+        @staticmethod
+        def current_lvl():
             '''returns current system log settings level.'''
             return _LEVEL
 
-        @classproperty
-        def syslog_enabled(_):
+        @staticmethod
+        def syslog_enabled():
             '''returns True if syslog is configured in the system else False.'''
             return _syslog
 
@@ -342,34 +369,12 @@ def _log_handler():
             #         # NOTE: should log to front end
             #         break
 
-        # TODO: see what we can do for the read pollers + decorators, specifically staticmethod.
-        @cfg_read_poller('logging_client', class_method=True)
-        def _log_settings(cls, cfg_file):
-            nonlocal _LEVEL, _initialized
-
-            logging = load_configuration(cfg_file)
-
-            _LEVEL = logging['logging']['level']
-
-            _add_logging_methods(cls)
-
-            # after initial load, this dones nothing
-            _initialized = True
-
-        @cfg_read_poller('syslog_client', class_method=True)
-        def _slog_settings(cls, cfg_file):
-            nonlocal _syslog
-
-            syslog = load_configuration(cfg_file)
-
-            _syslog = syslog['enabled']
-
         # @classmethod
         # def _create_syslog_sock(cls):
         #     cls._syslog_sock = socket(AF_INET, SOCK_DGRAM)
         #     cls._syslog_sock.connect((f'{LOCALHOST}', SYSLOG_SOCKET))
 
-    return LogHandler
+    return Handler
 
 LogHandler = _log_handler()
 

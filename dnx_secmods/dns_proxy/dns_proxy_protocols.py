@@ -180,7 +180,7 @@ class TLSRelay(ProtoRelay):
                     recv_buff_append(data[data_len:])
 
                 # ignoring internally generated connection keepalive
-                if (data[0] != DNS.KEEPALIVE):
+                if (short_unpackf(data)[0] != DNS.KEEPALIVE):
                     responder_add(data[:data_len])
 
         self._relay_conn.sock.close()
