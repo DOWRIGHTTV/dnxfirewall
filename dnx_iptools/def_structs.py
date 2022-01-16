@@ -13,6 +13,7 @@ int_unpack   = _Struct('I').unpack
 
 double_byte_unpack  = _Struct('!2B').unpack_from
 double_short_unpack = _Struct('!2H').unpack_from
+double_long_unpack = _Struct('!2L').unpack_from
 double_byte_pack  = _Struct('!2B').pack
 double_short_pack = _Struct('!2H').pack
 ip_addrs_unpack   = _Struct('!2L').unpack
@@ -34,7 +35,7 @@ ip_header_override_pack = _Struct('!10s2s4s4s').pack
 
 eth_header_unpack = _Struct('!6s6sH').unpack_from
 ip_header_unpack  = _Struct('!2B3H2B').unpack_from
-tcp_header_unpack = _Struct('!2H2LB').unpack_from
+tcp_header_unpack = _Struct('!2H2L').unpack_from
 udp_header_unpack = _Struct('!4H').unpack_from
 icmp_header_unpack = _Struct('!2B3H').unpack_from
 

@@ -70,7 +70,7 @@ class DNSProxy(Listener):
         except OSError:
             pass
 
-    # pre check will filter out invalid packets or local dns records/ .local.
+    # pre-check will filter out invalid packets or local dns records/ .local.
     def _pre_inspect(self, packet):
         if (packet.qr != DNS.QUERY): return False
 

@@ -188,30 +188,29 @@ class ProxyRequest(RawPacket):
         return True if self.protocol is PROTO.UDP else False
 
     def _before_exit(self):
-        if (self.dst_port == PROTO.DNS):
-            self._header(self.udp_payload[:12]) # first 12 bytes are header
+        # filtering down to dns protocol
+        if (self.dst_port != PROTO.DNS): return
 
-            if (self.qr == DNS.QUERY):
-                self._query(self.udp_payload[12:self.udp_len]) # 13+ is query data
+        dns_header = dns_header_unpack(self.udp_payload[:12]) # first 12 bytes are header
+        self.qr = dns_header[1] >> 15 & 1
 
-                self.request_identifier = (int_to_ipaddr(self.src_ip), self.src_port, self.dns_id)
+        # filtering out non query flags. this would also imply malformed payload.
+        if (self.qr != DNS.QUERY): return
 
-    # dns header
-    def _header(self, dns_header):
-        dns_header = dns_header_unpack(dns_header)
+        # finishing up parse of dns header post filter
         self.dns_id = dns_header[0]
-        self.qr  = dns_header[1] >> 15 & 1
-        self._rd = dns_header[1] >> 8  & 1
-        self._cd = dns_header[1] >> 4  & 1
+        self._rd = dns_header[1] >> 8 & 1
+        self._cd = dns_header[1] >> 4 & 1
 
-    # dns query
-    def _query(self, dns_query):
-        offset, _, request = parse_query_name(dns_query, qname=True) # www.micro.com or micro.com || sd.micro.com
-        self.request  = request
-        self.requests = self._enumerate_request(request)
+        dns_query = self.udp_payload[12:self.udp_len]  # 13+ is query data
+
+        offset, _, self.request = parse_query_name(dns_query, qname=True)  # www.micro.com or micro.com
+        self.requests = self._enumerate_request(self.request)
 
         self.qtype, self.qclass = double_short_unpack(dns_query[offset:])
-        self.question_record = dns_query[:offset+4] # offset + 4 byte info
+        self.question_record = dns_query[:offset + 4]  # offset + 4 byte info
+
+        self.request_identifier = (int_to_ipaddr(self.src_ip), self.src_port, self.dns_id)
 
     # will create send data object for used by proxy.
     def generate_proxy_response(self, len=len):
