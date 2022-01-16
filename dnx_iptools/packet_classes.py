@@ -641,6 +641,7 @@ class RawPacket:
 
             # udp header 8 bytes
             elif (self.protocol is PROTO.UDP):
+
                 self.udp_len, self.udp_chk = double_short_unpack(data[4:8])
 
                 self.udp_header  = data[:8]

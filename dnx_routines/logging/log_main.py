@@ -286,13 +286,13 @@ def _log_handler():
             while not _initialized:
                 fast_sleep(ONE_SEC)
 
-        @staticmethod
-        def current_lvl():
+        @classproperty
+        def current_lvl(_):
             '''returns current system log settings level.'''
             return _LEVEL
 
-        @staticmethod
-        def syslog_enabled():
+        @classproperty
+        def syslog_enabled(_):
             '''returns True if syslog is configured in the system else False.'''
             return _syslog
 

@@ -189,15 +189,17 @@ class ProxyRequest(RawPacket):
 
     def _before_exit(self):
         # filtering down to dns protocol
-        if (self.dst_port != PROTO.DNS): return
+        if (self.dst_port != PROTO.DNS):
+            return
 
-        dns_header = dns_header_unpack(self.udp_payload[:12]) # first 12 bytes are header
-        self.qr = dns_header[1] >> 15 & 1
+        dns_header = dns_header_unpack(self.udp_payload[:12])  # 12 bytes for dns header
 
         # filtering out non query flags. this would also imply malformed payload.
-        if (self.qr != DNS.QUERY): return
+        self.qr = dns_header[1] >> 15 & 1
+        if (self.qr != DNS.QUERY):
+            return
 
-        # finishing up parse of dns header post filter
+        # finishing parse of dns header post filter
         self.dns_id = dns_header[0]
         self._rd = dns_header[1] >> 8 & 1
         self._cd = dns_header[1] >> 4 & 1
@@ -258,7 +260,7 @@ class ProxyRequest(RawPacket):
         # adjusting for local record as needed
         if (len(rs) > 1):
             t_reqs = [rs[-1]]
-            self.dom_local = False # TODO: this should probably emulate server for how this is defined
+            self.dom_local = False  # TODO: this should probably emulate server for how this is defined
 
         else:
             t_reqs = [None]
