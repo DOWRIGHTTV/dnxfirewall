@@ -114,6 +114,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         iphdr *ip_header
 
         # default proto_header values (used by icmp) and replaced with protocol specific values
+        # not using calloc to keep mem allocation handle on stack
         protohdr proto_def = [0, 0]
         protohdr *proto_header = &proto_def
 

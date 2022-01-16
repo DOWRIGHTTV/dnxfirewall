@@ -79,9 +79,7 @@ cdef class HashTrie:
     cdef trie_range* _make_l2(self, u_int32_t trie_key, (u_int32_t, u_int32_t, u_int16_t) l2_entry):
         '''allocates memory for a single L2 content struct, assigns members from l2_entry, then returns pointer.'''
 
-        cdef trie_range *l2_content
-
-        l2_content = <trie_range*>malloc(sizeof(trie_range))
+        cdef trie_range *l2_content = <trie_range*>malloc(sizeof(trie_range))
 
         l2_content.key     = trie_key
         l2_content.net_id  = l2_entry[0]
@@ -196,9 +194,7 @@ cdef class RecurveTrie:
         '''allocates memory for a single L2 content struct, assigns members from l2_entry, then
         returns pointer.'''
 
-        cdef l2_recurve *l2_content
-
-        l2_content = <l2_recurve*>malloc(sizeof(l2_recurve))
+        cdef l2_recurve *l2_content = <l2_recurve*>malloc(sizeof(l2_recurve))
 
         l2_content.id = l2_entry[0]
         l2_content.host_category = l2_entry[1]
@@ -292,9 +288,7 @@ cdef class RangeTrie:
     cdef l2_range* _make_l2(self, (long, long, short) l2_entry):
         '''allocates memory for a single L2 content struct, assigns members from l2_entry, then returns pointer.'''
 
-        cdef l2_range *l2_content
-
-        l2_content = <l2_range*>malloc(sizeof(l2_range))
+        cdef l2_range *l2_content = <l2_range*>malloc(sizeof(l2_range))
 
         l2_content.network_id   = l2_entry[0]
         l2_content.broadcast_id = l2_entry[1]
