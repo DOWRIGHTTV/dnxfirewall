@@ -324,7 +324,7 @@ def _log_handler():
 
             '''
 
-            log_data = db_message(timestamp, log, method)
+            log_data = [db_message(timestamp, log, method)]
 
             _db_sendmsg(log_data, DNX_AUTHENTICATION)
 

@@ -78,12 +78,12 @@ DNS_BIN_OFFSET = 4  # NOTE: 4 seems to be a good compromise of len(bins) vs len(
 # LOCAL SOCKET DEFINITIONS
 # ============================
 # process, user, group
-DNX_AUTHENTICATION = (_os.getpid(), _pwd.getpwnam(USER).pw_uid, _pwd.getpwnam(USER).pw_gid)
+DNX_AUTHENTICATION = [(_os.getpid(), _pwd.getpwnam(USER).pw_uid, _pwd.getpwnam(USER).pw_gid)]
 
 # SYSLOG_TLS_PORT = 6514
 # SYSLOG_SOCKET   = 6970 # LOCAL SOCKET
-CONTROL_SOCKET  = bytes(f'{HOME_DIR}/dnx_routines/dnx_system/control_sock', 'utf-8') # LOCAL SOCKET
-DATABASE_SOCKET = bytes(f'{HOME_DIR}/dnx_routines/database/ddb_sock', 'utf-8') # LOCAL SOCKET
+CONTROL_SOCKET  = bytes(f'{HOME_DIR}/dnx_routines/dnx_system/control_sock', 'utf-8')  # LOCAL SOCKET
+DATABASE_SOCKET = bytes(f'{HOME_DIR}/dnx_routines/database/ddb_sock', 'utf-8')  # LOCAL SOCKET
 
 # ================================
 # DNS PROXY DEFS (CONSIDER MOVING)
