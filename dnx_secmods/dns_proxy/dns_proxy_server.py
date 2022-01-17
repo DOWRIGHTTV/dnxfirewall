@@ -22,6 +22,7 @@ from dnx_secmods.dns_proxy.dns_proxy_log import Log
 class DNSServer(Listener):
     protocol = PROTO.NOT_SET
     tls_up   = False
+    keepalive_interval = 8
 
     REQ_TRACKER = RequestTracker()
 
@@ -129,17 +130,18 @@ class DNSServer(Listener):
             return True
 
     @classmethod
-    def _handle_query(cls, client_query):
+    # top_domain will now be set by caller, so we don't have to track that within the query object.
+    def _handle_query(cls, client_query, *, top_domain=False):
         new_dns_id = cls._get_unique_id()
-        cls._request_map[new_dns_id] = client_query
+        cls._request_map[new_dns_id] = (top_domain, client_query)
 
-        # TODO: lets put a direct reference to relay add for perf!!!
         client_query.generate_dns_query(new_dns_id, cls.protocol)
+        # TODO: consider a direct reference to relay add for perf
         if (cls.protocol is PROTO.UDP):
-            UDPRelay.relay.add(client_query) # pylint: disable=no-member
+            UDPRelay.relay.add(client_query)
 
         elif (cls.protocol is PROTO.DNS_TLS):
-            TLSRelay.relay.add(client_query) # pylint: disable=no-member
+            TLSRelay.relay.add(client_query)
         else:
             # TODO: raise exception fatal, log
             pass
@@ -150,7 +152,7 @@ class DNSServer(Listener):
         request_map = cls._request_map
 
         with cls._id_lock:
-            # NOTE: maybe tune this number. under high load collisions could occur and we dont want it to waste time
+            # NOTE: maybe tune this number. under high load collisions could occur and we don't want it to waste time
             # because other requests must wait for this process to complete since we are now using a queue system
             # while waiting for a decision instead of individual threads.
             for _ in range(100):
@@ -167,7 +169,7 @@ class DNSServer(Listener):
         # dns id is the first 2 bytes in the dns header
         dns_id = short_unpackf(received_data)[0]
 
-        client_query = self._request_map_pop(dns_id, None)
+        top_domain, client_query = self._request_map_pop(dns_id, (None, None))
         if (not client_query):
             return
 
@@ -176,7 +178,7 @@ class DNSServer(Listener):
         except Exception as E:
             Log.error(f'[parser/server response] {E}')
         else:
-            if (not client_query.top_domain):
+            if (not top_domain):
                 self.send_to_client(query_response, client_query)
 
             if (cache_data):

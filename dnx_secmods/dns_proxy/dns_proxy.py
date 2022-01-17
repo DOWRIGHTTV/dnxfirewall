@@ -70,7 +70,7 @@ class DNSProxy(Listener):
         except OSError:
             pass
 
-    # pre check will filter out invalid packets or local dns records/ .local.
+    # pre-check will filter out invalid packets or local dns records/ .local.
     def _pre_inspect(self, packet):
         if (packet.qr != DNS.QUERY): return False
 
@@ -139,7 +139,7 @@ class Inspect:
             # TLD (top level domain) block | after first index will pass nested to allow for continue
             if (not i):
                 if self._tld_get(enum_request):
-                    Log.dprint(f'TLD Block: {packet.request}')
+                    # Log.console(f'TLD Block: {packet.request}')
 
                     return DNS_REQUEST_RESULTS(True, 'tld filter', TLD_CAT[enum_request])
 

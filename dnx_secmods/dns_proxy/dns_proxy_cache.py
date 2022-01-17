@@ -16,7 +16,7 @@ request_info = namedtuple('request_info', 'server proxy')
 
 # NOTE: normal_cache boolean is not working correctly. top domains are showing up as True
 # fix or remove. might not be needed anymore as it was initial implemented to assist with
-# ensuring the top domains system was actually working as intended.
+# ensuring the 'top domains' system was actually working as intended.
 class DNSCache(dict):
     '''subclass of dict to provide a custom data structure for dealing with the local caching of dns records.
 
@@ -133,7 +133,7 @@ class DNSCache(dict):
 
         request_handler, dns_packet = self._request_handler, self._dns_packet
         for domain in self._top_domains:
-            request_handler(dns_packet(domain))
+            request_handler(dns_packet(domain), top_domain=True)
             fast_sleep(.1)
 
         Log.debug('top domains refreshed')
@@ -202,7 +202,7 @@ def RequestTracker():
             for request_identifier, (client_query, decision, timestamp) in _list(self.items()):
 
                 # using inverse because it has potential to be more efficient if both are not present. decision is more
-                # likely to be input first, so it will be evaled only if client_query is present.
+                # likely to be input first, so it will be eval'd only if client_query is present.
                 if (not client_query or not decision):
 
                     # removes entry from tracker if not finalized within 1 second

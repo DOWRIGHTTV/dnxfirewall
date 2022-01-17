@@ -5,8 +5,8 @@ import threading
 from copy import copy
 from collections import deque
 
+from dnx_gentools.def_constants import RUN_FOREVER, MSEC, fast_time, fast_sleep, byte_join
 from dnx_iptools.def_structs import byte_pack, short_pack, long_pack
-from dnx_gentools.def_constants import MSEC, fast_time, fast_sleep, byte_join
 
 __all__ = (
     'looper', 'dynamic_looper',
@@ -15,9 +15,16 @@ __all__ = (
     'classproperty'
 )
 
-def looper(sleep_len):
-    '''loop decorator calling sleeping for specified length. length is sent in on decorator argument. if no value
-    is sent in the loop will continue immediately.'''
+def looper(sleep_len, **kwargs):
+    '''
+    loop decorator calling sleeping for specified length. length is sent in on decorator argument. if no value
+    is sent in the loop will continue immediately. kwargs can be sent in to provide locally assigned var access. the
+    kwargs will be converted to args before passing to function.
+
+        @looper(NO_DELAY, some_var=10)
+        def func(some_var):
+            do something
+    '''
     if not isinstance(sleep_len, int):
         raise TypeError('sleep length must be an integer.')
 
@@ -25,11 +32,26 @@ def looper(sleep_len):
         raise ValueError('sleep length must be >= 0.')
 
     def decorator(loop_function):
-        def wrapper(*args):
-            while True:
-                loop_function(*args)
 
-                if (sleep_len):
+        # pre-wrap optimization to remove sleep_len condition after every iteration if not set.
+        if (not sleep_len):
+            def wrapper(*args):
+
+                # allowing kwargs in decorator setup to be pass into wrapped function. this will allow for local
+                # assignments of variables to tighten the loop a bit.
+                args = (*args, *[v for v in kwargs.values()])
+
+                for _ in RUN_FOREVER():
+                    loop_function(*args)
+
+        else:
+            def wrapper(*args):
+
+                args = (*args, *[v for v in kwargs.values()])
+
+                for _ in RUN_FOREVER():
+                    loop_function(*args)
+
                     fast_sleep(sleep_len)
 
         return wrapper
@@ -274,14 +296,14 @@ def structure(obj_name, fields):
             yield from [fast_get(x) for x in field_names]
 
         def pre_set_attributes(self, **kwargs):
-            '''specify attributes to set as pre processor function. these values will get copied over to new containers
+            '''specify attributes to set as pre-processor function. these values will get copied over to new containers
             of the same type. a good use case for this is to fill out fields that are constants and can be streamlined
             to simplify external byte string creation logic. This is an alternative method to assignment at container
             creation.'''
 
             for name, value in kwargs.items():
 
-                # if key doesnt exist, will raise error. this method is a pre process so this will allow for quicker
+                # if key doesn't exist, will raise error. this method is a pre-process so this will allow for quicker
                 # debugging of code vs finding out some point in runtime there is an invalid attr.
                 if (name not in field_names):
                     raise ValueError(f'attribute {name} does not exist in this container.')
@@ -314,6 +336,7 @@ def bytecontainer(obj_name, field_names):
     _sum = sum
     _setattr = setattr
     _getattr = getattr
+    _bytearray = bytearray
 
     class ByteContainer:
 
@@ -321,13 +344,13 @@ def bytecontainer(obj_name, field_names):
 
         def __init__(self):
             for name in field_names:
-                fast_set(name, b'')
+                _setattr(self, name, b'')
 
         def __repr__(self):
             return f"{self.__class__.__name__}({obj_name}, '{' '.join(field_names)}')"
 
         def __str__(self):
-            fields = [f'{fn}={fast_get(fn)}' for fn in field_names]
+            fields = [f'{fn}={_getattr(self, fn)}' for fn in field_names]
 
             return f"{obj_name}({', '.join(fields)})"
 
@@ -342,17 +365,27 @@ def bytecontainer(obj_name, field_names):
             return new_container
 
         def __len__(self):
-            return _sum([_len(fast_get(field_name)) for field_name in field_names])
+            return _sum([_len(_getattr(self, field_name)) for field_name in field_names])
 
         def __getitem__(self, position):
-            return fast_get(f'{field_names[position]}')
+            return _getattr(self, f'{field_names[position]}')
 
         def __iter__(self):
-            yield from [fast_get(fn) for fn in field_names]
+            yield from [_getattr(self, fn) for fn in field_names]
 
-    container = ByteContainer()
-    fast_get = container.__getattribute__
-    fast_set = container.__setattr__
+        def __add__(self, other):
+            ba = _bytearray()
+            for name in field_names:
+                ba += _getattr(self, name)
+
+            return ba + other
+
+        def __radd__(self, other):
+            ba = _bytearray()
+            for name in field_names:
+                ba += _getattr(self, name)
+
+            return other + ba
 
     return ByteContainer()
 

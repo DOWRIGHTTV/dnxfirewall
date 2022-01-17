@@ -65,8 +65,10 @@ def _process_results(results, descriptor):
     normalize_no_cache = no_cache[:-1]
     normalize_cache = cache[:-1]
 
-    no_cache_average = sum([x[0] for x in normalize_no_cache])/(len(results)-1/2)
-    cached_average = sum([x[0] for x in normalize_cache])/(len(results)-1/2)
+    no_cache_average = sum([x[0] for x in normalize_no_cache])/(len(results)/2)-1
+    cached_average = sum([x[0] for x in normalize_cache])/(len(results)/2)-1
+
+    # print(f'{sum([x[0] for x in normalize_no_cache])}/{(len(results)/2)-1}')
 
     print(f'{line}\n{descriptor}\n{line}')
 

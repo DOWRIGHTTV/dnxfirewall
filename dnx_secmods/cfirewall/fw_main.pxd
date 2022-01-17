@@ -6,24 +6,24 @@ import array
 ctypedef array.array Py_Array
 
 cdef extern from "sys/types.h":
-    ctypedef unsigned char u_int8_t
+    ctypedef unsigned char      u_int8_t
     ctypedef unsigned short int u_int16_t
-    ctypedef unsigned int u_int32_t
+    ctypedef unsigned int       u_int32_t
 
 cdef extern from "<errno.h>":
-    int errno
+    int     errno
 
 cdef extern from "time.h" nogil:
-    ctypedef long time_t
-    time_t time(time_t*)
+    ctypedef    long time_t
+    time_t      time(time_t*)
 
     struct timeval:
-        time_t tv_sec
-        time_t tv_usec
+        time_t  tv_sec
+        time_t  tv_usec
 
 cdef extern from "sys/socket.h":
-    ssize_t recv(int __fd, void *__buf, size_t __n, int __flags) nogil
-    int MSG_DONTWAIT
+    ssize_t     recv(int __fd, void *__buf, size_t __n, int __flags) nogil
+    int         MSG_DONTWAIT
 
 cdef enum:
     EAGAIN = 11           # Try again
@@ -55,9 +55,9 @@ cdef enum:
 
 cdef extern from "libnfnetlink/linux_nfnetlink.h":
     struct nfgenmsg:
-        u_int8_t nfgen_family
-        u_int8_t version
-        u_int16_t res_id
+        u_int8_t    nfgen_family
+        u_int8_t    version
+        u_int16_t   res_id
 
 cdef extern from "libnfnetlink/libnfnetlink.h":
     struct nfnl_handle:
@@ -72,9 +72,9 @@ cdef extern from "libnetfilter_queue/linux_nfnetlink_queue.h":
         NFQNL_COPY_PACKET
 
     struct nfqnl_msg_packet_hdr:
-        u_int32_t packet_id
-        u_int16_t hw_protocol
-        u_int8_t hook
+        u_int32_t   packet_id
+        u_int16_t   hw_protocol
+        u_int8_t    hook
 
 cdef extern from "libnetfilter_queue/libnetfilter_queue.h":
     struct nfq_handle:
@@ -87,7 +87,7 @@ cdef extern from "libnetfilter_queue/libnetfilter_queue.h":
         pass
 
     struct nfqnl_msg_packet_hw:
-        u_int8_t hw_addr[8]
+        u_int8_t    hw_addr[8]
 
     nfq_handle *nfq_open()
     int nfq_close(nfq_handle *h)
@@ -149,28 +149,28 @@ DEF MAX_ZONES = 16
 DEF MAX_OBJECTS = 100
 
 cdef struct zone_arr:
-    size_t len
-    u_int8_t objects[MAX_OBJECTS]
+    size_t      len
+    u_int8_t    objects[MAX_OBJECTS]
 
 cdef struct network_obj:
-    long      netid # must be signed for geo marker (-1)
-    u_int32_t netmask
+    long        netid # must be signed for geo marker (-1)
+    u_int32_t   netmask
 
 cdef struct network_arr:
-    size_t len
+    size_t      len
     network_obj objects[MAX_OBJECTS]
 
 cdef struct service_obj:
-    u_int16_t protocol
-    u_int16_t start_port
-    u_int16_t end_port
+    u_int16_t   protocol
+    u_int16_t   start_port
+    u_int16_t   end_port
 
 cdef struct service_arr:
-    size_t len
+    size_t      len
     service_obj objects[MAX_OBJECTS]
 
 cdef struct FWrule:
-    bint enabled
+    bint        enabled
 
     # SOURCE
     zone_arr    s_zones
@@ -183,36 +183,46 @@ cdef struct FWrule:
     service_arr d_services
 
     # PROFILES
-    u_int8_t action
-    u_int8_t log
-    u_int8_t sec_profiles[SECURITY_PROFILE_COUNT]
+    u_int8_t    action
+    u_int8_t    log
+    u_int8_t    sec_profiles[SECURITY_PROFILE_COUNT]
         # ip_proxy - 0 off, > 1 profile number
         # ips_ids - 0 off, 1 on
 
 cdef struct hw_info:
-    u_int8_t in_zone
-    u_int8_t out_zone
-    char* mac_addr
-    double timestamp
+    u_int8_t    in_zone
+    u_int8_t    out_zone
+    char*       mac_addr
+    double      timestamp
 
 # cython define
 cdef struct iphdr:
-    u_int8_t  ver_ihl
-    u_int8_t  tos
-    u_int16_t tot_len
-    u_int16_t id
-    u_int16_t frag_off
-    u_int8_t  ttl
-    u_int8_t  protocol
-    u_int16_t check
-    u_int32_t saddr
-    u_int32_t daddr
+    u_int8_t    ver_ihl
+    u_int8_t    tos
+    u_int16_t   tot_len
+    u_int16_t   id
+    u_int16_t   frag_off
+    u_int8_t    ttl
+    u_int8_t    protocol
+    u_int16_t   check
+    u_int32_t   saddr
+    u_int32_t   daddr
 
 cdef struct protohdr:
-    u_int16_t s_port
-    u_int16_t d_port
+    u_int16_t   s_port
+    u_int16_t   d_port
 
 cdef struct res_tuple:
-    u_int16_t fw_section
-    u_int32_t action
-    u_int32_t mark
+    u_int16_t   fw_section
+    u_int32_t   action
+    u_int32_t   mark
+
+cdef class CFirewall:
+    cdef:
+        nfq_handle   *h
+        nfq_q_handle *qh
+
+    cpdef void prepare_geolocation(self, tuple geolocation_trie, long msb, long lsb) with gil
+    cpdef int update_zones(self, Py_Array zone_map) with gil
+    cpdef int update_ruleset(self, size_t ruleset, list rulelist) with gil
+    cpdef int remove_blockedlist(self, u_int32_t host_ip)

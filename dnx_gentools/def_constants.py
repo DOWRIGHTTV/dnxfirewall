@@ -10,6 +10,8 @@ from subprocess import run as _run, DEVNULL as _DEVNULL
 from enum import Enum as _Enum, IntEnum as _IntEnum, Flag as _Flag
 from ipaddress import IPv4Address as _IPv4Address
 
+from dnx_iptools.def_structs import scm_creds_pack as _scm_creds_pack
+
 fast_time  = _time.time
 fast_sleep = _time.sleep
 
@@ -78,16 +80,19 @@ DNS_BIN_OFFSET = 4  # NOTE: 4 seems to be a good compromise of len(bins) vs len(
 # LOCAL SOCKET DEFINITIONS
 # ============================
 # process, user, group
-DNX_AUTHENTICATION = (_os.getpid(), _pwd.getpwnam(USER).pw_uid, _pwd.getpwnam(USER).pw_gid)
+DNX_AUTHENTICATION = _scm_creds_pack(_os.getpid(), _pwd.getpwnam(USER).pw_uid, _pwd.getpwnam(USER).pw_gid)
 
 # SYSLOG_TLS_PORT = 6514
 # SYSLOG_SOCKET   = 6970 # LOCAL SOCKET
-CONTROL_SOCKET  = bytes(f'{HOME_DIR}/dnx_routines/dnx_system/control_sock', 'utf-8') # LOCAL SOCKET
-DATABASE_SOCKET = bytes(f'{HOME_DIR}/dnx_routines/database/ddb_sock', 'utf-8') # LOCAL SOCKET
+CONTROL_SOCKET  = bytes(f'{HOME_DIR}/dnx_routines/dnx_system/control_sock', 'utf-8')  # LOCAL SOCKET
+DATABASE_SOCKET = bytes(f'{HOME_DIR}/dnx_routines/database/ddb_sock', 'utf-8')  # LOCAL SOCKET
 
 # ================================
 # DNS PROXY DEFS (CONSIDER MOVING)
 # ================================
+CONNECT_TIMEOUT = 2
+RELAY_TIMEOUT   = 30
+
 MAX_A_RECORD_COUNT = 3
 MINIMUM_TTL        = 300
 DEFAULT_TTL        = 300

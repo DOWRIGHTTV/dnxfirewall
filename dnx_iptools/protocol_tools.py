@@ -7,7 +7,7 @@ from random import getrandbits
 from socket import htons, socket, AF_INET, SOCK_RAW
 from subprocess import run, CalledProcessError, DEVNULL
 
-from dnx_gentools.def_constants import byte_join, PROTO
+from dnx_gentools.def_constants import RUN_FOREVER, PROTO, byte_join, dot_join
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import PR_ICMP_HDR
 
@@ -39,14 +39,14 @@ def checksum_ipv4(data, packed=False):
     # unpacking in chunks of H(short)/ 16 bit/ 2 byte increments in network order
     chunks = checksum_iunpack(data)
 
-    sum = 0
+    csum = 0
     for chunk in chunks:
-        sum += chunk[0]
+        csum += chunk[0]
 
-    sum = (sum >> 16) + (sum & 0xffff)
-    sum = ~(sum + (sum >> 16)) & 0xffff
+    csum = (csum >> 16) + (csum & 0xffff)
+    csum = ~(csum + (csum >> 16)) & 0xffff
 
-    return checksum_pack(sum) if packed else sum
+    return checksum_pack(csum) if packed else csum
 
 # calculates and return tcp header checksum
 def checksum_tcp(data):
@@ -57,33 +57,34 @@ def checksum_tcp(data):
     # unpacking in chunks of H(short)/ 16 bit/ 2 byte increments in network order
     chunks = checksum_iunpack(data)
 
-    sum = 0
+    csum = 0
     # loop taking 2 characters at a time
     for chunk in chunks:
-        sum += chunk[0]
+        csum += chunk[0]
 
-    sum = ~(sum + (sum >> 16)) & 0xffff
+    csum = ~(csum + (csum >> 16)) & 0xffff
 
-    return htons(sum)
+    return htons(csum)
 
 # calculates and return icmp header checksum
+# TODO: why is this identical to tcp?
 def checksum_icmp(data):
 
     # unpacking in chunks of H(short)/ 16 bit/ 2 byte increments in network order
     chunks = checksum_iunpack(data)
 
-    sum = 0
+    csum = 0
     for chunk in chunks:
-        sum += chunk[0]
+        csum += chunk[0]
 
-    sum = ~(sum + (sum >> 16)) & 0xffff
+    csum = ~(csum + (csum >> 16)) & 0xffff
 
     # NOTE: does this need to be converted to network order?
-    return htons(sum)
+    return htons(csum)
 
 def int_to_ipaddr(ip_addr):
 
-    return '.'.join([f'{b}' for b in long_pack(ip_addr)])
+    return dot_join([f'{b}' for b in long_pack(ip_addr)])
 
 def mac_add_sep(mac_address, sep=':'):
     string_mac = []
@@ -112,51 +113,50 @@ def cidr_to_int(cidr):
 
     return ~((1 << hostmask) - 1) & (2**32 - 1)
 
-_dns_join = b'.'.join
-def parse_query_name(data, dns_query=None, *, qname=False):
+def parse_query_name(data, offset=0, *, qname=False):
     '''parses dns name from sent in data. uses overall dns query to follow pointers. will return
     name and offset integer value if qname arg is True otherwise will only return offset.'''
-    offset, contains_pointer, query_name = 0, False, []
 
-    # TODO: this could be problematic since we slice down data. from what i my limited brain understands at the moment,
-    #  data should never be an emtpy byte string if non malformed. the last iteration would have a null byte which is
-    #  what this condition is actually testing against for when to stop iteration.
-    #       // testing suggests this is fine for now
-    while data[0]:
+    idx = offset
+    has_ptr = False
+    label_ct = 0
+    query_name = bytearray()
 
-        # adding 1 to section_len to account for itself
-        section_len, data = data[0], data[1:]
+    for _ in RUN_FOREVER():
 
-        # pointer value check. this used to be a separate function, but it felt like a waste so merged it.
-        # NOTE: is this a problem is we don't pass in the reference query? is it possible for a pointer to be present in
-        # cases where this function is used for non-primary purposes?
-        if (section_len & 192 == 192):
+        label_len, label_ptr = data[idx], data[idx+1:]
 
-            # calculates the value of the pointer then uses value as original dns query index. this used to be a
-            # separate function, but it felt like a waste so merged it. (-12 accounts for header not included)
-            data = dns_query[((section_len << 8 | data[0]) & 16383) - 12:]
+        # root/ null terminated
+        if (not label_len):
+            break
 
-            contains_pointer = True
+        # std label
+        if (label_len < 64):
+            query_name += label_ptr[:label_len] + b'.'
+            label_ct += 1
+
+            if (not has_ptr):
+                offset += label_len + 1
+
+        # label ptr
+        elif (label_len >= 192):
+
+            # calculates ptr/idx of label (-12 for missing header)
+            idx = ((label_len << 8 | label_ptr[0]) & 16383) - 12
+
+            # this ensures standard label parsing won't inc offset
+            has_ptr = True
 
         else:
-            # name len + integer value of initial length
-            offset += section_len + 1 if not contains_pointer else 0
+            raise ValueError('invalid label found in dns record.')
 
-            query_name.append(data[:section_len])
-
-            # slicing out processed section
-            data = data[section_len:]
-
-    # increment offset +2 for pointer length or +1 for termination byte if name did not contain a pointer
-    offset += 2 if contains_pointer else 1
-
-    # evaluating qname for .local domain or non fqdn
-    local_domain = True if len(query_name) == 1 or (query_name and query_name[-1] == 'local') else False
+    # offset +2 for ptr or +1 for root
+    offset += 2 if has_ptr else 1
 
     if (qname):
-        return offset, local_domain, _dns_join(query_name).decode()
+        return offset, (query_name[:-1].decode(), label_ct == 1)
 
-    return offset, local_domain
+    return offset
 
 def domain_stob(domain_name):
     domain_bytes = byte_join([

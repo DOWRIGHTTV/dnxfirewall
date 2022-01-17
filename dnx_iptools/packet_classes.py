@@ -92,8 +92,8 @@ class Listener:
 
     @classmethod
     def enable(cls, sock_fd, intf):
-        '''adds a file descriptor id to the disabled interface set. this effectively disables the server for the zone of
-        the specified socket.'''
+        '''adds a file descriptor id to the disabled interface set. this effectively re-enables the server for the
+        zone of the specified socket.'''
 
         cls.enabled_intfs.add(sock_fd)
 
@@ -101,7 +101,7 @@ class Listener:
 
     @classmethod
     def disable(cls, sock_fd, intf):
-        '''removes a file descriptor id to the disabled interface set. this effectively re-enables the server for the
+        '''removes a file descriptor id to the disabled interface set. this effectively disables the server for the
         zone of the specified socket.'''
 
         # try block is to prevent key errors on initialization. after that, key errors should not be happening.
@@ -114,7 +114,7 @@ class Listener:
 
     @classmethod
     def _setup(cls):
-        '''called prior to creating listener interface instances. module wide code can be ran here.
+        '''called prior to creating listener interface instances. module wide code can be run here.
 
         May be overridden.
 
@@ -318,17 +318,21 @@ class ProtoRelay:
     # processes that were unable to connect/ create a socket will send in the remote server ip that was attempted.
     # if a remote server isn't specified the active relay socket connection's remote ip will be used.
     def mark_server_down(self, *, remote_server=None):
-        remote_server = remote_server if remote_server else self._relay_conn.remote_ip
+        if (not remote_server):
+            remote_server = self._relay_conn.remote_ip
 
-        for server in self._DNSServer.dns_servers:
-            if (server['ip'] == remote_server):
-                server[self._protocol] = False
+        # more likely case is primary server going down so will use as baseline condition
+        primary = self._DNSServer.dns_servers.primary
 
-                # keeping this under the remote ip/server ip match condition
-                try:
-                    self._relay_conn.sock.close()
-                except:
-                    console_log(f'[{self._relay_conn.remote_ip}] Failed to close socket while marking server down.')
+        # if servers could change during runtime, this has a slight race condition potential, but it shouldn't matter
+        # because when changing a server it would be initially set to down (essentially a no-op)
+        server = primary if primary['ip'] == remote_server else self._DNSServer.dns_servers.secondary
+        server[PROTO.DNS_TLS] = False
+
+        try:
+            self._relay_conn.sock.close()
+        except OSError:
+            console_log(f'[{self._relay_conn.remote_ip}] Failed to close socket while marking server down.')
 
     def _increment_fail_detection(self):
         self._send_cnt += 1
@@ -593,7 +597,7 @@ class RawPacket:
         '''
         self.timestamp = fast_time()
 
-        # NOTE: recently moved these here. they are defined in the parents slots so it makes sense. I think these were
+        # NOTE: recently moved these here. they are defined in the parents slots, so it makes sense. I think these were
         # in the child (ips) because the ip proxy does not need these initialized.
         self.icmp_type = None
         self.udp_payload = b''
@@ -603,7 +607,7 @@ class RawPacket:
         '''alternate constructor. used to start listener/proxy instances bound to physical interfaces(active socket).'''
 
         self = cls()
-        self._addr = address # TODO: see if this can be removed
+        self._addr = address  # TODO: see if this can be removed
 
         # intf_ip used to fill sinkhole query response with firewall interface ip (of intf received on)
         self.intf_ip = sock_info[1].packed
@@ -617,35 +621,31 @@ class RawPacket:
         the before_exit method will be called before returning. this can be used to create
         subclass specific objects like namedtuples or application layer data.'''
 
+        self.protocol = PROTO(data[9])
         self.src_ip, self.dst_ip = ip_addrs_unpack(data[12:20])
 
-        iphdr_len = (data[0] & 15) * 4
-        self.protocol  = PROTO(data[9])
-        self.ip_header = data[:iphdr_len]
+        # calculating iphdr len then slicing out
+        data = data[(data[0] & 15) * 4:]
 
-        # tcp header max len 32 bytes
-        if (self.protocol is PROTO.TCP):
+        if (self.protocol is PROTO.ICMP):
+            self.icmp_type = data[0]
 
-            tcp_header = tcp_header_unpack(data[iphdr_len:])
-            self.src_port = tcp_header[0]
-            self.dst_port = tcp_header[1]
-            self.seq_number = tcp_header[2]
-            self.ack_number = tcp_header[3]
+        else:
 
-        # udp header 8 bytes
-        elif (self.protocol is PROTO.UDP):
+            self.src_port, self.dst_port = double_short_unpack(data[:4])
 
-            udp_header = udp_header_unpack(data[iphdr_len:])
-            self.src_port = udp_header[0]
-            self.dst_port = udp_header[1]
-            self.udp_len  = udp_header[2]
-            self.udp_chk  = udp_header[3]
+            # tcp header max len 32 bytes
+            if (self.protocol is PROTO.TCP):
 
-            self.udp_header  = data[:8]
-            self.udp_payload = data[8:]
+                self.seq_number, self.ack_number = double_long_unpack(data[4:8])
 
-        elif (self.protocol is PROTO.ICMP):
-            self.icmp_type = data[iphdr_len]
+            # udp header 8 bytes
+            elif (self.protocol is PROTO.UDP):
+
+                self.udp_len, self.udp_chk = double_short_unpack(data[4:8])
+
+                self.udp_header  = data[:8]
+                self.udp_payload = data[8:]
 
         if (self.continue_condition):
             self._before_exit()

@@ -3,7 +3,7 @@
 from libc.stdlib cimport malloc, calloc, free
 from libc.stdio cimport printf, sprintf
 
-from dnx_iptools.dnx_trie_search cimport RangeTrie
+from dnx_iptools.dnx_trie_search cimport HashTrie
 
 DEF FW_SECTION_COUNT = 4
 DEF FW_SYSTEM_MAX_RULE_COUNT = 50
@@ -71,7 +71,7 @@ pthread_mutex_init(&FWblocklistlock, NULL)
 DEF GEO_MARKER = -1
 
 cdef long MSB, LSB
-cdef RangeTrie GEOLOCATION
+cdef HashTrie GEOLOCATION
 
 # ================================== #
 # ARRAY INITIALIZATION
@@ -114,7 +114,9 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         iphdr *ip_header
 
         # default proto_header values (used by icmp) and replaced with protocol specific values
-        protohdr proto_header = [0, 0]
+        # not using calloc to keep mem allocation handle on stack
+        protohdr proto_def = [0, 0]
+        protohdr *proto_header = &proto_def
 
         bint system_rule = 0
 
@@ -147,21 +149,21 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     pktdata_len = nfq_get_payload(nfa, &pktdata)
 
     # IP HEADER
-    # assigning ip_header to first index of data (cast to iphdr struct) then calculate ip header len.
+    # assigning ip_header to ptr to data[0] (cast to iphdr struct) then calculate ip header len.
     ip_header = <iphdr*>pktdata
     iphdr_len = (ip_header.ver_ihl & FOUR_BIT_MASK) * 4
 
     # PROTOCOL HEADER
     # tcp/udp will reassign the pointer to their header data
     if (ip_header.protocol != IPPROTO_ICMP):
-        proto_header = <protohdr>pktdata[iphdr_len]
+        proto_header = <protohdr*>&pktdata[iphdr_len]
 
     # DIRECTION SET
     # uses initial mark of packet to determine the stateful direction of the connection
     direction = OUTBOUND if hw.in_zone != WAN_IN else INBOUND
 
     if (VERBOSE):
-        pkt_print(&hw, ip_header, &proto_header)
+        pkt_print(&hw, ip_header, proto_header)
 
     # =============================== #
     # LOCKING ACCESS TO FIREWALL.
@@ -169,7 +171,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # prevents the manager thread from updating firewall rules during a packets inspection
     pthread_mutex_lock(&FWrulelock)
 
-    inspection_res = cfirewall_inspect(&hw, ip_header, &proto_header, direction)
+    inspection_res = cfirewall_inspect(&hw, ip_header, proto_header, direction)
 
     pthread_mutex_unlock(&FWrulelock)
     # =============================== #
@@ -358,25 +360,25 @@ cdef inline bint network_match(network_arr rule_defs, u_int32_t iph_ip, u_int16_
 
     cdef:
         size_t i
-        network_obj network
+        network_obj rule
 
     for i in range(rule_defs.len):
 
-        network = rule_defs.objects[i]
+        rule = rule_defs.objects[i]
 
         if (VERBOSE):
-            obj_print(NETWORK, &network)
+            obj_print(NETWORK, &rule)
 
-        if (network.netid == GEO_MARKER):
+        # geolocation objects use address object fields. we know it's a geo object when netid is -1
+        if (rule.netid == GEO_MARKER):
 
-            if (country != network.netmask):
-                continue
+            # country code/id comparison
+            if (country == rule.netmask):
+                return MATCH
 
-        # using rules mask to floor source ip in header and checking against rules network id
-        elif (iph_ip & network.netmask != network.netid):
-            continue
-
-        return MATCH
+        # using rules mask to floor source ip in header and checking against FWrule network id
+        elif (iph_ip & rule.netmask == rule.netid):
+            return MATCH
 
     # default action
     return NO_MATCH
@@ -386,25 +388,22 @@ cdef inline bint service_match(service_arr rule_defs, u_int16_t pkt_protocol, u_
 
     cdef:
         size_t i
-        service_obj service
+        service_obj rule
 
     for i in range(rule_defs.len):
 
-        service = rule_defs.objects[i]
+        rule = rule_defs.objects[i]
 
         if (VERBOSE):
-            obj_print(SERVICE, &service)
+            obj_print(SERVICE, &rule)
 
         # PROTOCOL
-        if (pkt_protocol != service.protocol and service.protocol != ANY_PROTOCOL):
+        if (pkt_protocol != rule.protocol and rule.protocol != ANY_PROTOCOL):
             continue
 
         # PORTS, ICMP will match on the first port start value (looking for 0)
-        if (not service.start_port <= pkt_port <= service.end_port):
-            continue
-
-        # full match of protocol/port rule definition for ip header values
-        return MATCH
+        if (rule.start_port <= pkt_port <= rule.end_port):
+            return MATCH
 
     # default action
     return NO_MATCH
@@ -507,7 +506,7 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
     fw_rule.d_networks.len = <size_t>len(rule['dst_network'])
     for i in range(fw_rule.d_networks.len):
         fw_rule.d_networks.objects[i].netid   = <long>rule['dst_network'][i][0]
-        fw_rule.d_networks.objects[i].netmask = <u_int16_t>rule['dst_network'][i][1]
+        fw_rule.d_networks.objects[i].netmask = <u_int32_t>rule['dst_network'][i][1]
 
     fw_rule.d_services.len = <size_t>len(rule['dst_service'])
     for i in range(fw_rule.d_services.len):
@@ -535,10 +534,6 @@ cdef u_int32_t SOCK_RCV_SIZE = 1024 * 4796 // 2
 
 
 cdef class CFirewall:
-
-    cdef:
-        nfq_handle *h
-        nfq_q_handle *qh
 
     def __cinit__(self, bint bypass, bint verbose):
         global BYPASS, VERBOSE
@@ -581,7 +576,7 @@ cdef class CFirewall:
 
         global GEOLOCATION, MSB, LSB
 
-        GEOLOCATION = RangeTrie()
+        GEOLOCATION = HashTrie()
 
         GEOLOCATION.generate_structure(geolocation_trie)
 

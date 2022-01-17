@@ -135,6 +135,7 @@ class FirewallManage:
             self.add(pos, rule_to_move, section=section)
 
     @staticmethod
+    # TODO: rules need to be converted from object based to true values before replacing active rule file
     def commit():
         '''Copies pending configuration to active, which is being monitored by Control class
         to load into cfirewall.'''
