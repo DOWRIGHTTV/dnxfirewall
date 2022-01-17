@@ -106,9 +106,9 @@ if (__name__ == '__main__'):
     _recursive_binary_search = generate_recursive_binary_search(rep_sigs, (0, len(rep_sigs)-1))
     _linear_binary_search = generate_linear_binary_search(geo_sigs, (0, len(geo_sigs)-1))
 
-    for _ in range(2):
+    for x in range(2):
 
-        print(f'{line}\nITERATION {i}\n{line}')
+        print(f'{line}\nITERATION {x}\n{line}')
 
         if (args.ha):
             _test_search('v3 GEO (HASH)', 'geo', hash_trie.search)
