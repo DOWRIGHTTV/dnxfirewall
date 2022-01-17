@@ -117,40 +117,41 @@ def parse_query_name(data, offset=0, *, qname=False):
     '''parses dns name from sent in data. uses overall dns query to follow pointers. will return
     name and offset integer value if qname arg is True otherwise will only return offset.'''
 
+    idx = offset
+    has_ptr = False
     label_ct = 0
     query_name = bytearray()
 
     for _ in RUN_FOREVER():
 
-        data_ptr = data[offset:]
+        label_len, label_ptr = data[idx], data[idx+1:]
 
-        # root domain/ null terminated
-        if (not data_ptr[0]):
+        # root/ null terminated
+        if (not label_len):
             break
 
-        # label ptr check
-        if (data_ptr[0] & 192 == 192):
-
-            # calculates dns ptr value then uses dns payload slice index. (-12 accounts for header not included)
-            label_ptr = data[(short_unpackf(data_ptr)[0] & 16383) - 12:]
-
-            query_name += label_ptr[1:label_ptr[0] + 1]
-            query_name += b'.'
-
-            offset += 2
-
-        # standard label
-        else:
-            # used to identify local domains
+        # std label
+        if (label_len < 64):
+            query_name += label_ptr[:label_len] + b'.'
             label_ct += 1
 
-            query_name += data_ptr[1:data_ptr[0] + 1]
-            query_name += b'.'
+            if (not has_ptr):
+                offset += label_len + 1
 
-            offset += data_ptr[0] + 1
+        # label ptr
+        elif (label_len >= 192):
 
-    # increment offset +1 for termination byte. see if this can be moved
-    offset += 1
+            # calculates ptr/idx of label (-12 for missing header)
+            idx = ((label_len << 8 | label_ptr[0]) & 16383) - 12
+
+            # this ensures standard label parsing won't inc offset
+            has_ptr = True
+
+        else:
+            raise ValueError('invalid label found in dns record.')
+
+    # offset +2 for ptr or +1 for root
+    offset += 2 if has_ptr else 1
 
     if (qname):
         return offset, (query_name[:-1].decode(), label_ct == 1)

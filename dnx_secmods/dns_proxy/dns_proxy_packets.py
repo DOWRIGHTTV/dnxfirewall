@@ -296,8 +296,8 @@ _RESOURCE_RECORD = bytecontainer('resource_record', 'name qtype qclass ttl data'
 _MINIMUM_TTL = long_pack(MINIMUM_TTL)
 _DEFAULT_TTL = long_pack(DEFAULT_TTL)
 
-def ttl_rewrite(data, dns_id, len=len, min=min, max=max):
-    dns_header, dns_payload = data[:12], data[12:]
+def ttl_rewrite(data, dns_id, len=len, min=min, max=max, bytearray=bytearray):
+    dns_header, dns_payload = data[:12], bytearray(data[12:])
 
     # converting external/unique dns id back to original dns id of client
     send_data = bytearray(short_pack(dns_id))
@@ -317,9 +317,9 @@ def ttl_rewrite(data, dns_id, len=len, min=min, max=max):
     # QUESTION RECORD
     # ================
     # www.micro.com or micro.com || sd.micro.com
-    offset = parse_query_name(dns_payload)
+    offset = parse_query_name(dns_payload) + 4
 
-    send_data += dns_payload[:offset + 4]
+    send_data += dns_payload[:offset]
 
     # ================
     # RESOURCE RECORD
