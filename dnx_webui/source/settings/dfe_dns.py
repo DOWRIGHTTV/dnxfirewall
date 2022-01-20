@@ -30,13 +30,13 @@ def load_page(form):
             dns = 'Waiting'
         else:
             dns = 'UP' if status['dns_up'] else 'Down'
-            tls = 'UP' if status['tls_up'] else 'Down'
+            tls = 'Down' if status['tls_down'] else 'Up'
 
         if (not tls_enabled):
             tls = 'Disabled'
 
         dns_servers[server]['dns_up'] = dns
-        dns_servers[server]['tls_up'] = tls
+        dns_servers[server]['tls_down'] = tls
 
     dns_settings = {
         'dns_servers': dns_servers, 'dns_records': dns_records,
@@ -49,7 +49,7 @@ def load_page(form):
     return dns_settings
 
 def update_page(form):
-    # TODO: i dont like this. fix this. i did alittle, but more can be done
+    # TODO: i dont like this. fix this. i did a little, but more can be done
 
     if ('dns_update' in form):
         dns_servers = {

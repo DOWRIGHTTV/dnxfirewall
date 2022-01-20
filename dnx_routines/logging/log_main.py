@@ -376,7 +376,22 @@ def _log_handler():
 
     return Handler
 
+
 LogHandler = _log_handler()
+
+# ===========================
+# DIRECT ACCESS FUNCTIONS
+# ===========================
+# TODO: test direct access functions after a log level is changed and methods are reset.
+emergency = LogHandler.emergency
+alert = LogHandler.alert
+critical = LogHandler.critical
+error = LogHandler.error
+warning = LogHandler.warning
+notice = LogHandler.notice
+informational = LogHandler.informational
+debug = LogHandler.debug
+console = LogHandler.console
 
 if (__name__ == '__main__'):
     # aliasing to keep log service conventions the same as other modules

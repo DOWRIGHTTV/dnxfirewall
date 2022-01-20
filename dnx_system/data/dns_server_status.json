@@ -1,10 +1,10 @@
 {
     "1.1.1.1": {
-        "dns_up": true,
-        "tls_up": true
+        "dns_up": false,
+        "tls_down": true
     },
     "1.0.0.1": {
-        "dns_up": true,
-        "tls_up": true
+        "dns_up": false,
+        "tls_down": true
     }
 }

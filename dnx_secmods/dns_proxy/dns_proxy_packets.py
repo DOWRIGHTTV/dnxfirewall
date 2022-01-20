@@ -59,16 +59,17 @@ class ClientRequest:
 
         dns_header = dns_header_unpack(_dns_header)
         self.dns_id = dns_header[0]
-        self.qr = dns_header[1] >> 15 & 1
-        self.op = dns_header[1] >> 11 & 15
-        self.aa = dns_header[1] >> 10 & 1
-        self.tc = dns_header[1] >> 9  & 1
-        self.rd = dns_header[1] >> 8  & 1
-        self.ra = dns_header[1] >> 7  & 1
-        self.zz = dns_header[1] >> 6  & 1
-        self.ad = dns_header[1] >> 5  & 1
-        self.cd = dns_header[1] >> 4  & 1
-        self.rc = dns_header[1]       & 15
+
+        self.qr = dns_header[1] & DNS_MASK.QR
+        self.op = dns_header[1] & DNS_MASK.OP
+        self.aa = dns_header[1] & DNS_MASK.AA
+        self.tc = dns_header[1] & DNS_MASK.TC
+        self.rd = dns_header[1] & DNS_MASK.RD
+        self.ra = dns_header[1] & DNS_MASK.RA
+        self.zz = dns_header[1] & DNS_MASK.ZZ
+        self.ad = dns_header[1] & DNS_MASK.AD
+        self.cd = dns_header[1] & DNS_MASK.CD
+        self.rc = dns_header[1] & DNS_MASK.RC
 
         # www.micro.com or micro.com || sd.micro.com
         offset, query_info = parse_query_name(dns_query, qname=True)
@@ -84,9 +85,9 @@ class ClientRequest:
         '''builds a dns query response for locally configured records. if host_ip is not passed in, the resource record
         section of the payload will not be generated.'''
 
-        send_data = bytearray(
-            create_dns_response_header(self.dns_id, rd=self.rd, cd=self.cd)
-        )
+        flags = 32896 | self.rd | self.ad | self.cd | self.rc
+
+        send_data = bytearray(dns_header_pack(self.dns_id, flags, 1, 1, 0, 0))
         send_data += self.question_record
 
         if (host_ip):
@@ -95,8 +96,9 @@ class ClientRequest:
         return send_data
 
     def generate_cached_response(self, cached_dom):
+
         send_data = bytearray(
-            create_dns_response_header(self.dns_id, len(cached_dom.records), rd=self.rd, cd=self.cd)
+            dns_header_pack(self.dns_id, 32896 | self.rd | self.cd, 1, len(cached_dom.records), 0, 0)
         )
         send_data += self.question_record
 
@@ -113,7 +115,7 @@ class ClientRequest:
         # initializing byte array with (2) bytes. these get overwritten with query len actual after processing
         send_data = bytearray(2)
 
-        send_data += create_dns_query_header(dns_id, arc, cd=self.cd)
+        send_data += dns_header_pack(dns_id, self.rd | self.ad | self.cd, 1, 0, 0, arc)
         send_data += domain_stob(self.request)
         send_data += double_short_pack(self.qtype, 1)
         send_data += self.additional_records
@@ -173,7 +175,7 @@ class ProxyRequest(RawPacket):
         'request', 'requests', 'request_identifier',
         'local_domain', 'qtype', 'qclass', 'dns_id', 'question_record',
 
-        'qr', '_rd', '_cd', 'send_data',
+        'qr', '_rd', '_ad', '_cd', 'send_data',
     )
 
     def __init__(self):
@@ -183,6 +185,8 @@ class ProxyRequest(RawPacket):
         self.qtype  = None
         self.qclass = None
         self.request_identifier = None
+
+        self.send_data = b''
 
     @property
     def continue_condition(self):
@@ -205,8 +209,9 @@ class ProxyRequest(RawPacket):
 
         # finishing parse of dns header post filter
         self.dns_id = dns_header[0]
-        self._rd = dns_header[1] >> 8 & 1
-        self._cd = dns_header[1] >> 4 & 1
+        self._rd = dns_header[1] & DNS_MASK.RD
+        self._ad = dns_header[1] & DNS_MASK.AD
+        self._cd = dns_header[1] & DNS_MASK.CD
 
         # ===========================
         # QUESTION RECORD (index 12+)
@@ -234,7 +239,7 @@ class ProxyRequest(RawPacket):
         # AAAA record set r code to "domain name does not exist" without record response ac=0, rc=3
         udp_payload = bytearray()
         if (self.qtype == DNS.AAAA):
-            udp_payload += create_dns_response_header(self.dns_id, 0, rd=self._rd, ad=1, cd=self._cd, rc=3)
+            udp_payload += dns_header_pack(self.dns_id, 32899 | self._rd | self._ad | self._cd, 1, 0, 0, 0)
             udp_payload += self.question_record
 
         # standard query response to sinkhole. default answer count and response code
@@ -243,7 +248,7 @@ class ProxyRequest(RawPacket):
 
             resource_record.rd_data = btoia(self.intf_ip)
 
-            udp_payload += create_dns_response_header(self.dns_id, rd=self._rd, ad=1, cd=self._cd)
+            udp_payload += dns_header_pack(self.dns_id, 32896 | self._rd | self._ad | self._cd, 1, 0, 0, 0)
             udp_payload += self.question_record
             udp_payload += resource_record.assemble()
 
@@ -296,8 +301,10 @@ _RESOURCE_RECORD = bytecontainer('resource_record', 'name qtype qclass ttl data'
 _MINIMUM_TTL = long_pack(MINIMUM_TTL)
 _DEFAULT_TTL = long_pack(DEFAULT_TTL)
 
-def ttl_rewrite(data, dns_id, len=len, min=min, max=max, bytearray=bytearray):
-    dns_header, dns_payload = data[:12], bytearray(data[12:])
+def ttl_rewrite(data, dns_id, len=len, min=min, max=max):
+
+    mem_data = memoryview(data)
+    dns_header, dns_payload = mem_data[:12], mem_data[12:]
 
     # converting external/unique dns id back to original dns id of client
     send_data = bytearray(short_pack(dns_id))
