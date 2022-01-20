@@ -9,7 +9,7 @@ from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import DNS_SERVERS
 from dnx_gentools.standard_tools import dnx_queue
 
-from dnx_iptools.def_structs import short_unpackf
+from dnx_iptools.protocol_tools import btoia
 from dnx_iptools.packet_classes import Listener
 
 from dnx_secmods.dns_proxy.dns_proxy_automate import Configuration, Reachability
@@ -21,7 +21,7 @@ from dnx_secmods.dns_proxy.dns_proxy_log import Log
 
 class DNSServer(Listener):
     protocol = PROTO.NOT_SET
-    tls_up   = False
+    tls_down = True
     keepalive_interval = 8
 
     REQ_TRACKER = RequestTracker()
@@ -167,7 +167,11 @@ class DNSServer(Listener):
     @dnx_queue(Log, name='DNSServer')
     def responder(self, received_data):
         # dns id is the first 2 bytes in the dns header
-        dns_id = short_unpackf(received_data)[0]
+        dns_id = btoia(received_data[:2])
+
+        # recently moved here for clarity. silently drops keepalive responses since they are not needed.
+        if (dns_id == DNS.KEEPALIVE):
+            return
 
         top_domain, client_query = self._request_map_pop(dns_id, (None, None))
         if (not client_query):

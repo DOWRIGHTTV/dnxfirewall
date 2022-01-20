@@ -255,13 +255,13 @@ class System:
                 dns = 'Waiting'
             else:
                 dns = 'UP' if status['dns_up'] else 'Down'
-                tls = 'UP' if status['tls_up'] else 'Down'
+                tls = 'Down' if status['tls_down'] else 'Up'
 
             if (not tls_enabled):
                 tls = 'Disabled'
 
             dns_servers[server]['dns_up'] = dns
-            dns_servers[server]['tls_up'] = tls
+            dns_servers[server]['tls_down'] = tls
 
 #        print(dnsstatus)
         return dns_servers

@@ -142,7 +142,7 @@ class Listener:
         l_sock = cls.listener_sock(_intf, intf_ip)
         cls.__registered_socks[l_sock.fileno()] = L_SOCK(_intf, intf_ip, l_sock, l_sock.send, l_sock.sendto, l_sock.recvfrom)
 
-        # TODO: if we dont re register, and im pretty sure i got rid of that, we shouldnt need to track the interface
+        # TODO: if we dont re register, and im pretty sure i got rid of that, we shouldn't need to track the interface
         #  anymore yea? the fd and socket object is all we need, unless we need to get the source ip address. OH. does
         #  the dns proxy need to grab its interface ip for sending to the client? i dont think so, right? it just needs
         #  to spoof the original destination.
@@ -166,7 +166,7 @@ class Listener:
 
         parse_packet = self.__parse_packet
 
-        while True:
+        for _ in RUN_FOREVER():
             l_socks = epoll_poll()
             for fd, _ in l_socks:
 
@@ -203,7 +203,7 @@ class Listener:
     def _pre_inspect(self, packet):
         '''handle the request after packet is parsed and confirmed protocol match.
 
-        Must be overriden.
+        Must be overridden.
 
         '''
         raise NotImplementedError('the _pre_inspect method must be overridden in subclass.')
@@ -254,6 +254,7 @@ class ProtoRelay:
         self._DNSServer = DNSServer
         self._fallback_relay = fallback_relay
 
+        # dummy sock setup
         sock = socket.socket()
         self._relay_conn = RELAY_CONN(None, sock, sock.send, sock.recv, None)
 
@@ -280,7 +281,7 @@ class ProtoRelay:
         raise NotImplementedError('relay must be implemented in the subclass.')
 
     def _send_query(self, client_query):
-        for attempt in range(2):
+        for attempt in ATTEMPTS:
             try:
                 self._relay_conn.send(client_query.send_data)
             except OSError as ose:
@@ -296,7 +297,9 @@ class ProtoRelay:
 
                 # NOTE: temp | identifying connection version to terminal. when removing consider having the relay
                 # protocol show in the webui > system reports.
-                console_log(f'[{self._relay_conn.remote_ip}/{self._relay_conn.version}][{attempt}] Sent {client_query.request}\n') # pylint: disable=no-member
+                console_log(
+                    f'[{self._relay_conn.remote_ip}/{self._relay_conn.version}][{attempt}] Sent {client_query.request}'
+                )
 
                 break
 
@@ -327,7 +330,7 @@ class ProtoRelay:
         # if servers could change during runtime, this has a slight race condition potential, but it shouldn't matter
         # because when changing a server it would be initially set to down (essentially a no-op)
         server = primary if primary['ip'] == remote_server else self._DNSServer.dns_servers.secondary
-        server[PROTO.DNS_TLS] = False
+        server[PROTO.DNS_TLS] = True
 
         try:
             self._relay_conn.sock.close()
@@ -387,9 +390,9 @@ class NFQueue:
 
     @classmethod
     def _setup(cls):
-        '''called prior to creating listener interface instances. module wide code can be ran here.
+        '''called prior to creating listener interface instances. module wide code can be run here.
 
-        May be overriden.
+        May be overridden.
 
         '''
         pass
@@ -407,13 +410,13 @@ class NFQueue:
     def __queue(self):
         set_user_callback(self.__handle_packet)
 
-        while True:
+        for _ in RUN_FOREVER():
             nfqueue = NetfilterQueue()
             nfqueue.nf_set(self.__q_num)
 
             self._Log.notice('Starting dnx_netfilter queue. Packets can now be processed')
 
-            # this is a blocking call which interacts with system via callback. while loop is to re establish the
+            # this is a blocking call which interacts with system via callback. while loop is to re-establish the
             # queue handle after an uncaught exception (hopefully maintaining system uptime)
             try:
                 nfqueue.nf_run()
@@ -746,7 +749,7 @@ class RawResponse:
         intf = self._registered_socks_get(packet.in_zone)
 
         # NOTE: if the wan interface has a static ip address we can use the ip assigned during registration.
-        # this will need a condition to check, but wont need to masquerade.
+        # this will need a condition to check, but won't need to masquerade.
         dnx_src_ip = packet.dst_ip if intf.zone != WAN_IN else get_masquerade_ip(dst_ip=packet.src_ip)
 
         # calling hook for packet generation in subclass then sending via direct socket sendto ref

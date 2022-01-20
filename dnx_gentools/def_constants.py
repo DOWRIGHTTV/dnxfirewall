@@ -7,7 +7,7 @@ import pwd as _pwd
 from functools import partial as _partial
 from itertools import repeat as _repeat
 from subprocess import run as _run, DEVNULL as _DEVNULL
-from enum import Enum as _Enum, IntEnum as _IntEnum, Flag as _Flag
+from enum import Enum as _Enum, IntEnum as _IntEnum, Flag as _Flag, IntFlag as _IntFlag
 from ipaddress import IPv4Address as _IPv4Address
 
 from dnx_iptools.def_structs import scm_creds_pack as _scm_creds_pack
@@ -20,6 +20,9 @@ console_log = _partial(print, flush=True)
 shell = _partial(_run, shell=True, stdout=_DEVNULL, stderr=_DEVNULL)
 
 RUN_FOREVER = _partial(_repeat, 1)
+
+# used by socket sender loops
+ATTEMPTS = [1, 2]
 
 byte_join = b''.join
 str_join = ''.join
@@ -161,10 +164,10 @@ class LOG(_IntEnum):
 
 class DNS(_IntEnum):
     # dns relay decisions
-    ALLOWED    = -1
-    FLAGGED    = -2
-    TIMED_OUT  = -3
-    NO_NOTICE  = -4
+    ALLOWED   = -1
+    FLAGGED   = -2
+    TIMED_OUT = -3
+    NO_NOTICE = -4
 
     # module identifiers
     SERVER = 0
@@ -183,6 +186,18 @@ class DNS(_IntEnum):
     PTR   = 12
     AAAA  = 28
     OPT   = 41
+
+class DNS_MASK(_IntFlag):
+    QR = 0b1000000000000000
+    OP = 0b0111100000000000
+    AA = 0b0000010000000000
+    TC = 0b0000001000000000
+    RD = 0b0000000100000000
+    RA = 0b0000000010000000
+    ZZ = 0b0000000001000000
+    AD = 0b0000000000100000
+    CD = 0b0000000000010000
+    RC = 0b0000000000001111
 
 class ICMP(_IntEnum):
     ECHO = 8

@@ -3,17 +3,17 @@
 import threading
 import ssl
 
-from socket import socket, timeout, AF_INET, SOCK_STREAM, SOCK_DGRAM
+from socket import socket, AF_INET, SOCK_DGRAM, SOCK_STREAM
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import RELAY_CONN
+from dnx_gentools.standard_tools import dnx_queue
+
+from dnx_iptools.protocol_tools import btoia
+from dnx_iptools.packet_classes import ProtoRelay
 
 from dnx_secmods.dns_proxy.dns_proxy_packets import ClientRequest
 from dnx_secmods.dns_proxy.dns_proxy_log import Log
-
-from dnx_iptools.packet_classes import ProtoRelay
-from dnx_iptools.def_structs import short_unpackf
-from dnx_gentools.standard_tools import dnx_queue
 
 
 class UDPRelay(ProtoRelay):
@@ -25,7 +25,7 @@ class UDPRelay(ProtoRelay):
         for dns_server in self._DNSServer.dns_servers:
 
             # if server is down we will skip over it
-            if (not dns_server[self._protocol]): continue
+            if (not dns_server[PROTO.UDP]): continue
 
             # never fail so will always return True
             return self._create_socket(dns_server['ip'])
@@ -42,15 +42,9 @@ class UDPRelay(ProtoRelay):
         conn_recv = self._relay_conn.recv
         responder_add = self._DNSServer.responder.add
 
-        while True:
+        for _ in RUN_FOREVER():
             try:
                 data_from_server = conn_recv(1024)
-
-            except timeout:
-                self.mark_server_down()
-
-                return
-
             except OSError:
                 break
 
@@ -78,10 +72,15 @@ class UDPRelay(ProtoRelay):
         return True
 
 
+# ============================
+# TLS sender/receiver
+# ============================
+# direct reference to alternate constructor
+_keepalive = ClientRequest.generate_keepalive
+
+
 class TLSRelay(ProtoRelay):
     _protocol   = PROTO.DNS_TLS
-    _keepalives = False
-    _dns_packet = ClientRequest.generate_keepalive
 
     __slots__ = (
         '_tls_context', '_keepalive_status'
@@ -101,15 +100,15 @@ class TLSRelay(ProtoRelay):
 
     @property
     def fail_condition(self):
-        return not self._DNSServer.tls_up and self._DNSServer.udp_fallback
+        return self._DNSServer.tls_down and self._DNSServer.udp_fallback
 
     # iterating over dns server list and calling to create a connection to first available server. this will only happen
     # if a socket connection isn't already established when attempting to send query.
     def _register_new_socket(self):
         for tls_server in self._DNSServer.dns_servers:
 
-            # skipping over known down server
-            if (not tls_server[self._protocol]): continue
+            # skipping over known down server. NOTE: using self._protocol is not needed here.
+            if (not tls_server[PROTO.DNS_TLS]): continue
 
             # attempting to connect via tls. if successful will return True, otherwise mark server as
             # down and try next server.
@@ -118,40 +117,46 @@ class TLSRelay(ProtoRelay):
             self.mark_server_down(remote_server=tls_server['ip'])
 
         else:
-            self._DNSServer.tls_up = False
+            self._DNSServer.tls_down = True
 
             Log.error(f'[{self._protocol}] No DNS servers available.')
 
     @dnx_queue(Log, name='TLSRelay')
     def relay(self, client_query):
         # if servers are down and a fallback is configured, it will be forwarded to that relay queue, otherwise
-        # the request will be silently dropped here if fallback is not configured.
-        if (self.fail_condition and self._fallback_relay):
-            self._fallback_relay_add(client_query)
-
-        else:
+        # the request will be silently dropped.
+        if (not self.fail_condition):
             self._send_query(client_query)
 
-    # receive data from server. if dns response will call parse method else will close the socket.
-    def _recv_handler(self, recv_buffer=[], len=len):
+        elif (self._fallback_relay):
+            self._fallback_relay_add(client_query)
+
+    # receive data from server and call parse method when valid message is recvd, else will close the socket.
+    def _recv_handler(self, recv_buffer=bytearray(2048), bytes=bytes):
         Log.debug(f'[{self._relay_conn.remote_ip}/{self._protocol.name}] Response handler opened.')
 
         conn_recv = self._relay_conn.recv
         keepalive_reset = self._keepalive_status.set
 
-        recv_buff_append = recv_buffer.append
-        recv_buff_clear = recv_buffer.clear
-
         responder_add = self._DNSServer.responder.add
 
-        while True:
+        # allocating 4096 bytes of memory as bytearray, then building memory view. access to memory via byte array will
+        # not be needed. 4096 gives space for 8 max length sized udp dns messages (not sure if dot mirrors)
+        processing_buffer = memoryview(bytearray(4096))
+        b_ct = 0
+
+        for _ in RUN_FOREVER():
             try:
-                data_from_server = conn_recv(2048)
+                # recv_into | no need to specify amount to return and mtu covers max len
+                # not inplace adding byte count to protect against cases where a public resolves sends a single
+                # response over multiple packets and connection is closed in between (this is highly unlikely since
+                # most cases it would be via timeout, but I have seen worse.)
+                nbytes = conn_recv(recv_buffer)
             except OSError:
                 break
 
             # if no data is received/EOF the remote end has closed the connection
-            if (not data_from_server):
+            if (not nbytes):
                 break
 
             # resetting fail detection
@@ -161,28 +166,42 @@ class TLSRelay(ProtoRelay):
             # breaking keepalive timer from blocking, which will effectively reset the timer.
             keepalive_reset()
 
-            recv_buff_append(data_from_server)
-            while recv_buffer:
-                current_data = byte_join(recv_buffer)
-                data_len, data = short_unpackf(current_data)[0], current_data[2:]
+            # transferring data from single packet buffer to general processing buffer, memoryview()
+            processing_buffer[b_ct:] = recv_buffer[:nbytes]
 
-                # more data is needed for a complete response. NOTE: this scenario is kind of dumb
-                # and shouldn't happen unless the server sends length of record and record separately.
-                if (len(data) < data_len): break
+            # incrementing amount of filled bytes in processing buffer accounting for 2 byte len field
+            b_ct += nbytes - 2
 
-                # clearing the buffer since we either have nothing left to process or we will re add
-                # the leftover bytes back with the next condition.
-                recv_buff_clear()
+            # =========================
+            # PROCESSING BUFFER LOGIC
+            # =========================
+            # loop is needed to cover cases where dns responses are split over multiple packets or multiple responses
+            # are contained within a single packet.
+            for _ in RUN_FOREVER():
+
+                data_len, data = btoia(processing_buffer[:2]), processing_buffer[2:]
+
+                # normal case - exactly 1 complete dns response in buffer
+                if (b_ct == data_len):
+
+                    # using memoryview() so need to copy response data, or it will be corrupted by subsequent operations
+                    responder_add(bytes(data[:data_len]))
 
                 # if expected data length is greater than local buffer, multiple records were returned
                 # in a batch so appending leftover bytes after removing the current records' data from buffer.
-                if (len(data) > data_len):
-                    recv_buff_append(data[data_len:])
+                elif (b_ct > data_len):
+                    extra_bytes = processing_buffer[data_len:b_ct]
 
-                # ignoring internally generated connection keepalive
-                if (short_unpackf(data)[0] != DNS.KEEPALIVE):
-                    responder_add(data[:data_len])
+                    b_ct -= data_len
 
+                    processing_buffer[:b_ct] = extra_bytes
+
+                # more data is needed for a complete response. NOTE: this scenario is kind of dumb
+                # and shouldn't happen unless the server sends length of record and record separately.
+                # elif (b_ct < data_len): break
+                else: break
+
+        # main loop exited, cleaning up socket.
         self._relay_conn.sock.close()
 
     def _tls_connect(self, tls_server):
@@ -198,6 +217,7 @@ class TLSRelay(ProtoRelay):
         except OSError:
             Log.error(f'[{tls_server}/{self._protocol.name}] Failed to connect to {tls_server}.')
 
+        # TODO: will this even catch anything other than programmer errors?
         except Exception as E:
             Log.debug(f'[{tls_server}/{self._protocol.name}] TLS context error while attempting to connect to {E}.')
 
@@ -205,7 +225,7 @@ class TLSRelay(ProtoRelay):
             dot_sock.settimeout(RELAY_TIMEOUT)
 
             self._relay_conn = RELAY_CONN(
-                tls_server, dot_sock, dot_sock.send, dot_sock.recv, dot_sock.version()
+                tls_server, dot_sock, dot_sock.send, dot_sock.recv_into, dot_sock.version()
             )
 
             return True
@@ -220,9 +240,10 @@ class TLSRelay(ProtoRelay):
 
         relay_add = self.relay.add
 
-        while True:
+        for _ in RUN_FOREVER():
+
             # if tls_relay OR keepalive is disabled
-            if (not self.is_enabled or not keepalive_interval):
+            if not (self.is_enabled or keepalive_interval):
                 fast_sleep(TEN_SEC)
 
                 continue
@@ -233,6 +254,6 @@ class TLSRelay(ProtoRelay):
                 keepalive_continue()
 
             else:
-                relay_add(self._dns_packet(KEEP_ALIVE_DOMAIN, self._protocol))  # pylint: disable=no-member
+                relay_add(_keepalive(KEEP_ALIVE_DOMAIN, PROTO.DNS_TLS))
 
                 Log.debug(f'[keepalive][{keepalive_interval}] Added to relay queue and cleared')

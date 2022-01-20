@@ -41,8 +41,9 @@
                                     <td>
                                         <input type="text" name="dnsserver{{loop.index}}" value="{{server_info['ip_address']}}" class="validate center">
                                     </td>
+                                </form>
                                 <td>{{server_info['dns_up']}}</td>
-                                <td>{{server_info['tls_up']}}</td>
+                                <td>{{server_info['tls_down']}}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
