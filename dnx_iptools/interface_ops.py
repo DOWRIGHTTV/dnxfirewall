@@ -188,7 +188,7 @@ def set_wan_ip(wan_ip_settings):
 
 def _is_ready(interface):
     with open(f'/sys/class/net/{interface}/carrier', 'r') as carrier:
-        return bool(int(carrier.read().strip()))
+        return int(carrier.read().strip())
 
 # once interface is powered on from cable being plugged in and a remote device on the other end, the loop will break
 def wait_for_interface(interface, delay=ONE_SEC):

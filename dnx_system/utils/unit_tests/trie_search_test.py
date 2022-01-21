@@ -112,8 +112,9 @@ if (__name__ == '__main__'):
 
         print(f'{line}\nITERATION {x}\n{line}')
 
+        # TODO: figure out how general test can call this.
         if (args.ha):
-            _test_search('v3 GEO (HASH)', 'geo', hash_trie.search)
+            _test_search('v3 GEO (HASH)', 'geo', hash_trie._search)
 
         if (args.r):
             _test_search('v2 GEO (RANGE)', 'geo', range_trie.search)
