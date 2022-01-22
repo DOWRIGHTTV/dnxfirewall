@@ -6,171 +6,169 @@ from collections import Counter, OrderedDict, namedtuple
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import DNS_CACHE
+from dnx_gentools.file_operations import *
 from dnx_gentools.standard_tools import looper
-from dnx_gentools.file_operations import ConfigurationManager, load_configuration, write_configuration, load_top_domains_filter
 
 from dnx_secmods.dns_proxy.dns_proxy_log import Log
 
 NOT_VALID = -1
 request_info = namedtuple('request_info', 'server proxy')
 
-# NOTE: normal_cache boolean is not working correctly. top domains are showing up as True
-# fix or remove. might not be needed anymore as it was initial implemented to assist with
-# ensuring the 'top domains' system was actually working as intended.
-class DNSCache(dict):
-    '''subclass of dict to provide a custom data structure for dealing with the local caching of dns records.
+def DNSCache(*, dns_packet, request_handler):
+    _top_domains = load_configuration('dns_cache')
 
-    containers handled by class:
-        general dict - standard cache storage
-        private dict - top domains cache storage
-        private Counter - tracking number of times domains are queried
+    domain_counter = Counter({dom: cnt for cnt, dom in enumerate(reversed(_top_domains))})
+    counter_lock = threading.Lock()
 
-    initialization is the same as a dict, with the addition of two required arguments for callback references
-    to the dns server.
+    top_domain_filter = set(load_top_domains_filter())
 
-        packet (*reference to packet class*)
-        request_handler (*reference to dns server request handler function*)
+    # not needed once loaded into Counter
+    del _top_domains
 
-    if the above callbacks are not set the top domains caching system will NOT actively update records, though the counts
-    will still be accurate/usable.
-    '''
-    clear_dns_cache   = False
-    clear_top_domains = False
+    dict_get = dict.__getitem__
 
-    __slots__ = (
-        '_dns_packet', '_request_handler',
+    @cfg_read_poller('dns_cache')
+    def manual_clear(cache, cfg_file):
+        dns_cache = load_configuration(cfg_file)
 
-        '_dom_counter', '_top_domains',
-        '_counter_lock', '_top_dom_filter'
-    )
+        clear_dns_cache   = dns_cache['clear']['standard']
+        clear_top_domains = dns_cache['clear']['top_domains']
 
-    def __init__(self, *, packet, request_handler):
-        self._dns_packet = packet
-        self._request_handler = request_handler
+        # when new top domains or standard cache (future) are written to disk, the poller will trigger whether the
+        # flags are set or not. this will ensure we only run through the code if needed.
+        if not (clear_dns_cache or clear_top_domains):
+            return
 
-        self._dom_counter = Counter()
-        self._top_domains = {}
-        self._top_dom_filter = []
-        self._counter_lock  = threading.Lock()
+        # if clearing cache, we do not need to check for expired records since they will have been cleared already
+        if (clear_dns_cache):
+            cache.clear()
+            clear_dns_cache = False
 
-        self._load_top_domains()
-        threading.Thread(target=self._auto_clear_cache).start()
-        threading.Thread(target=self._auto_top_domains).start()
+            Log.notice('dns cache has been cleared.')
 
-    # searching key directly will return calculated ttl and associated records
-    def __getitem__(self, key):
-        # filtering root lookups from checking cache
-        if (not key):
-            return DNS_CACHE(NOT_VALID, None)
+        # if clearing top domains, we do not need to check for expired records since they will have been cleared already
+        if (clear_top_domains):
+            domain_counter.clear()
+            clear_top_domains = False
 
-        record = dict.__getitem__(self, key)
-        # not present
-        if (record == NOT_VALID):
-            return DNS_CACHE(NOT_VALID, None)
+            Log.notice('top domains cache has been cleared.')
 
-        calcd_ttl = record.expire - int(fast_time())
-        if (calcd_ttl > DEFAULT_TTL):
-            return DNS_CACHE(DEFAULT_TTL, record.records)
+        with ConfigurationManager('dns_server') as dnx:
+            dns_settings = dnx.load_configuration()
 
-        elif (calcd_ttl > 0):
-            return DNS_CACHE(calcd_ttl, record.records)
-        # expired
-        else:
-            return DNS_CACHE(NOT_VALID, None)
+            dns_settings['clear']['standard'] = clear_dns_cache
+            dns_settings['clear']['top_domains'] = clear_top_domains
 
-    # if missing will return an expired result
-    def __missing__(self, key):
-        return NOT_VALID
-
-    def add(self, request, data_to_cache):
-        '''add query to cache after calculating expiration time.'''
-        self[request] = data_to_cache
-
-        Log.debug(f'[{request}:{data_to_cache.ttl}] Added to standard cache. ')
-
-    def search(self, query_name):
-        '''if client requested domain is present in cache, will return namedtuple of time left on ttl
-        and the dns records, otherwise will return None. top domain count will get automatically
-        incremented if it passes filter.'''
-        if (query_name):
-            self._increment_if_valid_top(query_name)
-
-        return self[query_name]
-
-    def _increment_if_valid_top(self, domain):
-        # list comp to built in any test for match. match will not increment top domain counter.
-        if any([fltr in domain for fltr in self._top_dom_filter]): return
-
-        with self._counter_lock:
-            self._dom_counter[domain] += 1
+            dnx.write_configuration(dns_settings)
 
     @looper(THREE_MIN)
     # automated process to flush the cache if expire time has been reached.
-    def _auto_clear_cache(self):
-        cache, now = self.items, fast_time()
-        if (self.clear_dns_cache):
-            self.clear()
-            self._reset_flag('dns_cache')
+    def auto_clear(cache):
 
-        expired = [dom for dom, record in cache() if now > record.expire]
+        # =============
+        # STANDARD
+        # =============
+        # locking in starting time since per loop accuracy is not necessary
+        now = fast_time()
+        expired = [dom for dom, record in list(cache.items) if now > record.expire]
 
         for domain in expired:
-            del self[domain]
+            del cache[domain]
 
-    @looper(THREE_MIN)
-    # automated process to keep top 20 queried domains permanently in cache. it will use the current caches packet to
-    # generate a new packet and add to the standard tls queue. the receiving end will know how to handle this by
-    # settings the client address to none in the session tracker.
-    def _auto_top_domains(self):
-        if (self.clear_top_domains):
-            self._dom_counter = Counter()
-            self._reset_flag('top_domains')
+        # =============
+        # TOP 20
+        # =============
+        # keep top XX queried domains permanently in cache. uses current cached packet to generate a new request and
+        # forward to handler. response will be identified by "None" as client address in session tracker.
+        top_domains = [
+            dom[0] for dom in domain_counter.most_common(TOP_DOMAIN_COUNT)
+        ]
 
-        most_common_doms = self._dom_counter.most_common
-        self._top_domains = {
-            dom[0]: cnt for cnt, dom in enumerate(most_common_doms(TOP_DOMAIN_COUNT), 1)
-        }
+        # updating persistent file first then sending requests
+        with ConfigurationManager('dns_server') as dnx:
+            dns_settings = dnx.load_configuration()
 
-        request_handler, dns_packet = self._request_handler, self._dns_packet
-        for domain in self._top_domains:
+            dns_settings['top_domains'] = top_domains
+
+        write_configuration(dns_settings, 'dns_cache')
+
+        for domain in top_domains:
             request_handler(dns_packet(domain), top_domain=True)
             fast_sleep(.1)
 
         Log.debug('top domains refreshed')
 
-        write_configuration(self._top_domains, 'dns_cache')
+    class _DNSCache(dict):
+        '''subclass of dict to provide a custom data structure for dealing with the local caching of dns records.
 
-    @classmethod
-    # method called to reset dictionary cache for sent in value (standard or top domains) and then reset the flag in the
-    # json file back to false. needed class method since the structures are stored within the class scope.
-    def _reset_flag(cls, cache_type):
-        setattr(cls, f'clear_{cache_type}', False)
-        with ConfigurationManager('dns_server') as dnx:
-            dns_settings = dnx.load_configuration()
+        containers handled by class:
+            general dict - standard cache storage
+            private dict - top domains cache storage
+            private Counter - tracking number of times domains are queried
 
-            dns_settings['cache'][cache_type] = False
+        initialization is the same as a dict, with the addition of two required arguments for callback references
+        to the dns server.
 
-            dnx.write_configuration(dns_settings)
+            packet (*reference to packet class*)
+            request_handler (*reference to dns server request handler function*)
 
-        Log.notice(f'{cache_type.replace("_", " ")} has been cleared.')
+        if the above callbacks are not set the top domains caching system will NOT actively update records, though the
+        counts will still be accurate/usable.
+        '''
 
-    # loads top domains from file for persistence between restarts/shutdowns and top domains filter
-    def _load_top_domains(self):
-        self._top_domains = load_configuration('dns_cache')
+        __slots__ = ()
 
-        dom_list = reversed(list(self._top_domains))
-        self._dom_counter = Counter({dom: cnt for cnt, dom in enumerate(dom_list)})
+        # searching key directly will return calculated ttl and associated records
+        def __getitem__(self, key):
+            record = dict_get(self, key)
+            # not present or root lookup
+            if (record == NOT_VALID):
+                return DNS_CACHE(NOT_VALID, None)
 
-        self._top_dom_filter = set(load_top_domains_filter())
+            calcd_ttl = record.expire - int(fast_time())
+            if (calcd_ttl > DEFAULT_TTL):
+                return DNS_CACHE(DEFAULT_TTL, record.records)
+
+            elif (calcd_ttl > 0):
+                return DNS_CACHE(calcd_ttl, record.records)
+
+            # expired
+            else:
+                return DNS_CACHE(NOT_VALID, None)
+
+        # if missing will return an expired result
+        def __missing__(self, key):
+            return NOT_VALID
+
+        def add(self, request, data_to_cache):
+            '''add query to cache after calculating expiration time.'''
+            self[request] = data_to_cache
+
+            Log.debug(f'[{request}:{data_to_cache.ttl}] Added to standard cache. ')
+
+        def search(self, query_name):
+            '''if client requested domain is present in cache, will return namedtuple of time left on ttl
+            and the dns records, otherwise will return None. top domain count will get automatically
+            incremented if it passes filter.'''
+            if (query_name):
+                # list comp to built in any test for match. match will not increment top domain counter.
+                if not any([fltr in query_name for fltr in top_domain_filter]):
+
+                    with counter_lock:
+                        domain_counter[query_name] += 1
+
+            return self[query_name]
+
+    _cache = _DNSCache()
+
+    threading.Thread(target=auto_clear, args=(_cache,)).start()
+    threading.Thread(target=manual_clear, args=(_cache,)).start()
 
 
 # TODO: refactor name to be lowercase maybe.
 def RequestTracker():
     ''' Tracks DNS Server requests and allows for either DNS Proxy or Server to add initial client address key
     on a first come basis and the second one will update the corresponding value index with info directly.
-
-    warning: Multiple instances of this will cause major issues due to nonlocal scope being used heavily. If multiple
-    needed copying the function factory reference prior to call may resolve that.
 
         RequestTracker([request_identifier: [client_query, decision, timestamp]])
     '''
@@ -191,18 +189,25 @@ def RequestTracker():
     ready_count = 0
     request_tracker = OrderedDict()
 
+    ready_requests = []
+    ready_requests_append = ready_requests.append
+    ready_requests_clear  = ready_requests.clear
+
     class _RequestTracker:
 
         @staticmethod
         # blocks until the request ready flag has been set, then iterates over dict and appends any client address with
         # both values present. (client_query class instance object and decision)
         def return_ready():
-            nonlocal ready_count
+            nonlocal ready_count, ready_requests
 
+            # blocking until an at least one request has been received
             request_wait()
 
-            ready_requests = []
-            ready_requests_append = ready_requests.append
+            # clearing list from previously processed requests. this is new and replaced making a new list ever call
+            # to return ready + direct ref to append
+            ready_requests_clear()
+
             # iterating over a copy by passing dict into list
             for request_identifier, (client_query, decision, timestamp) in _list(request_tracker.items()):
 
@@ -259,7 +264,7 @@ def RequestTracker():
 
                     request_tracker[request_identifier][module_index] = data
 
-                    # notifying return_ready there is a query ready to forwarding
+                    # notifying return_ready there is a query ready to forward
                     request_set()
 
     return _RequestTracker()

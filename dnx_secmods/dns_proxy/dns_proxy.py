@@ -6,8 +6,9 @@ import socket
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import DNS_BLACKLIST, DNS_REQUEST_RESULTS, DNS_SIGNATURES, DNS_WHITELIST
+from dnx_gentools.signature_operations import generate_domain
 
-from dnx_iptools.dnx_trie_search import generate_recursive_binary_search  # pylint: disable=import-error, no-name-in-module
+from dnx_iptools.dnx_trie_search import generate_recursive_binary_search
 from dnx_iptools.packet_classes import Listener
 from dnx_iptools.protocol_tools import int_to_ipaddr
 
@@ -18,6 +19,9 @@ from dnx_secmods.dns_proxy.dns_proxy_server import DNSServer
 
 LOG_NAME = 'dns_proxy'
 
+
+dns_record_get = DNSServer.dns_records.get
+request_tracker_insert = DNSServer.REQ_TRACKER.insert
 
 class DNSProxy(Listener):
     # dns | ip
@@ -33,12 +37,7 @@ class DNSProxy(Listener):
     )
 
     _dns_sig_ref = None
-
-    # assigning locally to make the code a little more maintainable if class or methods change outside of the
-    # proxy which would otherwise require [potential] extreme internal modification.
-    _packet_parser = ProxyRequest.interface # alternate constructor
-    _dns_server    = DNSServer
-    _request_tracker_insert = DNSServer.REQ_TRACKER.insert
+    _packet_parser = ProxyRequest.interface  # alternate constructor
 
     __slots__ = (
         '_dns_record_get',
@@ -47,40 +46,22 @@ class DNSProxy(Listener):
     @classmethod
     def _setup(cls):
         Configuration.proxy_setup(cls)
-        cls.set_proxy_callback(func=Inspect.dns)
+        cls.set_proxy_callback(func=inspect)
 
         Log.notice(f'{cls.__name__} initialization complete.')
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self._dns_record_get = self._dns_server.dns_records.get
-
-    @classmethod
-    def notify_server(cls, request_identifier, decision):
-        '''add the client address and proxy decision to the reference request results dictionary. this reference
-        is controlled through a local class variable assignment.'''
-
-        cls._request_tracker_insert(request_identifier, decision, module_index=DNS.PROXY)
-
-    @staticmethod
-    def send_to_client(packet):
-        try:
-            packet.sendto(packet.send_data, (int_to_ipaddr(packet.src_ip), 0))
-        except OSError:
-            pass
-
-    # pre-check will filter out invalid packets or local dns records/ .local.
+    # pre-check will filter out invalid packets or local dns records (no tld)
     def _pre_inspect(self, packet):
-        if (packet.qr != DNS.QUERY): return False
+        if (packet.qr != DNS.QUERY):
+            return False
 
-        if (packet.qtype in [DNS.A, DNS.NS] and not self._dns_record_get(packet.request)):
+        if (packet.qtype in [DNS.A, DNS.NS] and not dns_record_get(packet.request)):
             return True
 
         # refusing ipv6 dns record types as policy
         if (packet.qtype == DNS.AAAA):
             packet.generate_proxy_response()
-            self.send_to_client(packet)
+            send_to_client(packet)
 
         return False
 
@@ -89,111 +70,127 @@ class DNSProxy(Listener):
         l_sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP)
 
         l_sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
-        l_sock.setblocking(0)
+        l_sock.setblocking(False)
 
         l_sock.bind((f'{intf_ip}', 0))
 
         return l_sock
 
 
-class Inspect:
-    _Proxy = DNSProxy
+# GENERAL PROXY FUNCTIONS
+def notify_server(request_identifier, decision):
+    '''add the client address and proxy decision to the reference request results dictionary. this reference
+    is controlled through a local class variable assignment.'''
 
-    _ip_whitelist_get = _Proxy.whitelist.ip.get
-    _tld_get = _Proxy.signatures.tld.get
+    request_tracker_insert(request_identifier, decision, module_index=DNS.PROXY)
 
-    # NOTE: recently added these refs. look into doing the same for the proxy signatures
-    _proxy_notify_server = _Proxy.notify_server
-    _proxy_send_to_client = _Proxy.send_to_client
+def send_to_client(packet):
+    try:
+        packet.sendto(packet.send_data, (int_to_ipaddr(packet.src_ip), 0))
+    except OSError:
+        pass
 
-    @classmethod
-    def dns(cls, packet):
-        self = cls()
-        request_results = self._dns_inspect(self._Proxy, packet)
-        # NOTE: accessing class var through instance is 7-10% faster
-        if (not request_results.redirect):
-            self._proxy_notify_server(packet.request_identifier, decision=DNS.ALLOWED)
 
-        else:
-            self._proxy_notify_server(packet.request_identifier, decision=DNS.FLAGGED)
+# =================
+# INSPECTION LOGIC
+# =================
+# direct references to proxy class data structure methods
+_ip_whitelist_get = DNSProxy.whitelist.ip.get
+_tld_get = DNSProxy.signatures.tld.get
+_enabled_categories = DNSProxy.signatures.en_dns
 
-            packet.generate_proxy_response()
+_dns_whitelist = DNSProxy.whitelist.dns
+_dns_blacklist = DNSProxy.blacklist.dns
+_dns_keywords  = DNSProxy.signatures.keyword
 
-            self._proxy_send_to_client(packet)
+def inspect(packet):
 
-        Log.log(packet, request_results)
+    request_results = _inspect(packet)
 
-    # this is where the system decides whether to block dns query/sinkhole or to allow. notification will be done
-    # via the request tracker upon returning signature scan result
-    def _dns_inspect(self, Proxy, packet):
-        # NOTE: request_ident[0] is a string representation of ip addresses. this is currently needed as the whitelists
-        # are stored in this format and we have since moved away from this format on the back end.
-        # TODO: in the nearish future, consider storing ip whitelists as integers to conform to newer standards.
-        whitelisted = self._ip_whitelist_get(packet.request_identifier[0], False)
-        enum_categories = []
+    if (not request_results.redirect):
+        notify_server(packet.request_identifier, decision=DNS.ALLOWED)
 
-        # signature/ blacklist check.
-        # DNS_REQUEST_RESULTS(redirect, block type, category)
-        # NOTE: dns whitelist does not override tld blocks at the moment | this is most likely the desired setup
-        for i, enum_request in enumerate(packet.requests):
-            # TLD (top level domain) block | after first index will pass nested to allow for continue
-            if (not i):
-                if self._tld_get(enum_request):
-                    # Log.console(f'TLD Block: {packet.request}')
+    else:
+        notify_server(packet.request_identifier, decision=DNS.FLAGGED)
 
-                    return DNS_REQUEST_RESULTS(True, 'tld filter', TLD_CAT[enum_request])
+        packet.generate_proxy_response()
 
-                continue
+        send_to_client(packet)
 
-            # NOTE: allowing malicious category overrides (for false positives)
-            if (enum_request in Proxy.whitelist.dns):
+    Log.log(packet, request_results)
 
-                return DNS_REQUEST_RESULTS(False, None, None)
+# this is where the system decides whether to block dns query/sinkhole or to allow. notification will be done
+# via the request tracker upon returning signature scan result
+def _inspect(packet):
+    # NOTE: request_ident[0] is a string representation of ip addresses. this is currently needed as the whitelists
+    # are stored in this format and we have since moved away from this format on the back end.
+    # TODO: in the near-ish future, consider storing ip whitelists as integers to conform to newer standards.
+    whitelisted = _ip_whitelist_get(packet.request_identifier[0], False)
+    enum_categories = []
 
-            # ip whitelist overrides configured blacklist
-            if (not whitelisted and enum_request in Proxy.blacklist.dns):
+    requests = packet.requests
 
-                return DNS_REQUEST_RESULTS(True, 'blacklist', DNS_CAT.time_based)
+    # NOTE: dns whitelist does not override tld blocks at the moment. this is most likely the desired setup
+    # TLD (top level domain) block | after first index will pass nested to allow for continue
+    if _tld_get(requests[0]):
+        # Log.console(f'TLD Block: {packet.request}')
 
-            # pulling domain category if signature present. | NOTE: this is now using imported cython function factory
-            category = DNS_CAT(_recursive_binary_search(enum_request))
-            if (category is not DNS_CAT.NONE) and self._block_query(category, whitelisted):
+        return DNS_REQUEST_RESULTS(True, 'tld filter', TLD_CAT[requests[0]])
 
-                return DNS_REQUEST_RESULTS(True, 'category', category)
+    # signature/ blacklist check.
+    # DNS_REQUEST_RESULTS(redirect, block type, category)
+    for enum_request in requests[1:]:
 
-            # adding returned cat to enum list. this will be used to identify categories
-            # for allowed requests.
-            enum_categories.append(category)
+        # NOTE: allowing malicious category overrides (for false positives)
+        if (enum_request in _dns_whitelist):
 
-        # Keyword search within domain || block if match
-        for keyword, category in Proxy.signatures.keyword:
-            if (keyword in packet.request):
+            return DNS_REQUEST_RESULTS(False, None, None)
 
-                return DNS_REQUEST_RESULTS(True, 'keyword', category)
+        # ip whitelist overrides configured blacklist
+        if (not whitelisted and enum_request in _dns_blacklist):
 
-        # pulling most specific category that is not none otherwise returned value will be DNS_CAT.NONE.
-        for category in enum_categories:
-            if category is not DNS_CAT.NONE: break
+            return DNS_REQUEST_RESULTS(True, 'blacklist', DNS_CAT.time_based)
 
-        # DEFAULT ACTION | ALLOW
-        return DNS_REQUEST_RESULTS(False, None, category)
+        # pulling domain category if signature present. | NOTE: this is now using imported cython function factory
+        category = DNS_CAT(_recursive_binary_search(enum_request))
+        if (category is not DNS_CAT.NONE) and _block_query(category, whitelisted):
 
-    # # grabbing the request category and determining whether the request should be blocked. if so, returns general
-    # # information for further processing
-    def _block_query(self, category, whitelisted):
-        # signature match, but blocking disabled for the category | ALLOW
-        if (category not in self._Proxy.signatures.en_dns):
-            return False
+            return DNS_REQUEST_RESULTS(True, 'category', category)
 
-        # signature match, not whitelisted, or whitelisted and cat is bad | BLOCK
-        if (not whitelisted or category in [DNS_CAT.malicious, DNS_CAT.cryptominer]):
-            return True
+        # adding returned cat to enum list. this will be used to identify categories
+        # for allowed requests.
+        enum_categories.append(category)
 
-        # default action | ALLOW
+    # Keyword search within domain || block if match
+    for keyword, category in _dns_keywords:
+        if (keyword in packet.request):
+
+            return DNS_REQUEST_RESULTS(True, 'keyword', category)
+
+    # pulling most specific category that is not none otherwise returned value will be DNS_CAT.NONE.
+    for category in enum_categories:
+        if category is not DNS_CAT.NONE: break
+
+    # DEFAULT ACTION | ALLOW
+    return DNS_REQUEST_RESULTS(False, None, category)
+
+# grabbing the request category and determining whether the request should be blocked. if so, returns general
+# information for further processing
+def _block_query(category, whitelisted):
+    # signature match, but blocking disabled for the category | ALLOW
+    if (category not in _enabled_categories):
         return False
 
+    # signature match, not whitelisted, or whitelisted and cat is bad | BLOCK
+    if (not whitelisted or category in [DNS_CAT.malicious, DNS_CAT.cryptominer]):
+        return True
+
+    # default action | ALLOW
+    return False
+
+
 if __name__ == '__main__':
-    dns_cat_signatures = Configuration.load_dns_signature_bitmap()
+    dns_cat_signatures = generate_domain()
 
     # using cython function factory to create binary search function with module specific signatures
     signature_bounds = (0, len(dns_cat_signatures)-1)

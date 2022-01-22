@@ -347,6 +347,7 @@ def ttl_rewrite(data, dns_id, len=len, min=min, max=max):
             # first, followed by A records so the original_ttl var will be whatever the last A record ttl parsed is.
             # generally all A records have the same ttl. CNAME ttl can differ, but will get clamped with A so will
             # likely end up the same as A records.
+            # NOTE: only caching A and CNAME records
             if (record_type in [DNS.A, DNS.CNAME]):
                 original_ttl = long_unpack(record.ttl)[0]
                 record.ttl = long_pack(
@@ -359,7 +360,7 @@ def ttl_rewrite(data, dns_id, len=len, min=min, max=max):
                 if (len(record_cache) < MAX_A_RECORD_COUNT or record_type != DNS.A):
                     record_cache.append(record)
 
-            # dns system level, mail, and txt records don't need to be clamped and will be relayed to client as is
+            # dns system level, ns, mail, and txt records don't need to be clamped and will be relayed to client as is
             else:
                 send_data += record
 

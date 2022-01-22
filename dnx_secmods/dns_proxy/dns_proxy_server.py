@@ -18,6 +18,8 @@ from dnx_secmods.dns_proxy.dns_proxy_protocols import UDPRelay, TLSRelay
 from dnx_secmods.dns_proxy.dns_proxy_packets import ClientRequest, ttl_rewrite
 from dnx_secmods.dns_proxy.dns_proxy_log import Log
 
+INVALID_RESPONSE = (None, None)
+
 
 class DNSServer(Listener):
     protocol = PROTO.NOT_SET
@@ -26,7 +28,7 @@ class DNSServer(Listener):
 
     REQ_TRACKER = RequestTracker()
 
-    # NOTE: settings values to None to denote initialization has not been completed.
+    # NOTE: setting values to None to denote initialization has not been completed.
     dns_records = {}
     dns_servers = DNS_SERVERS(
         {'ip': None, PROTO.UDP: None, PROTO.DNS_TLS: None},
@@ -37,7 +39,7 @@ class DNSServer(Listener):
     _records_cache = None
     _id_lock = threading.Lock()
 
-    # dynamic inheritance reference
+    # dynamic inheritance reference... ??? wtf is this comment
     _packet_parser = ClientRequest
 
     __slots__ = (
@@ -47,7 +49,7 @@ class DNSServer(Listener):
 
     @classmethod
     def _setup(cls):
-        Configuration.server_setup(cls, DNSCache)
+        Configuration.server_setup(cls)
 
         # setting parent class callback to allow custom actions on subclasses
         cls.set_proxy_callback(func=cls.receive_request)
@@ -58,7 +60,7 @@ class DNSServer(Listener):
 
         # initializing dns cache/ sending in reference to needed methods for top domains
         cls._records_cache = DNSCache(
-            packet=ClientRequest.generate_local_query,
+            dns_packet=ClientRequest.generate_local_query,
             request_handler=cls._handle_query
         )
 
@@ -81,6 +83,7 @@ class DNSServer(Listener):
     def receive_request(self, client_query):
         self.request_tracker_insert(client_query.request_identifier, client_query, module_index=DNS.SERVER)
 
+    # TODO: A, NS records are supported only. consider expanding
     def _pre_inspect(self, client_query):
         if (client_query.qr != DNS.QUERY or client_query.qtype not in [DNS.A, DNS.NS]):
             return False
@@ -91,11 +94,11 @@ class DNSServer(Listener):
         # with external lookups using a separate class/instance to generate the data.
         if (local_record):
             query_response = client_query.generate_record_response(local_record)
-            self.send_to_client(query_response, client_query)
+            send_to_client(query_response, client_query)
 
             return False
 
-        # if domain is local (example.local or no tld) and it was not in local records, we can ignore.
+        # if domain is local (no tld) and it was not in local records, we can ignore.
         elif (client_query.local_domain):
             return False
 
@@ -105,7 +108,7 @@ class DNSServer(Listener):
     def _request_queue(self):
         return_ready = self.REQ_TRACKER.return_ready
 
-        while True:
+        for _ in RUN_FOREVER():
 
             # this blocks until request tracker returns (at least 1 client query has been inspected)
             requests = return_ready()
@@ -116,53 +119,39 @@ class DNSServer(Listener):
                 if decision is DNS.ALLOWED and not self._cached_response(client_query):
                     self._handle_query(client_query)
 
-                    Log.debug(f'{self.protocol.name} Relay ALLOWED | {client_query}') # pylint: disable=no-member
+                    Log.debug(f'{self.protocol.name} Relay ALLOWED | {client_query}')
 
     def _cached_response(self, client_query):
         '''searches cache for query name. if a cached record is found, a response will be generated
         and sent back to the client.'''
 
+        # only A, CNAME records are cached and CNAMEs are always attached to A record query responses.
+        if (client_query.qtype != DNS.A):
+            return False
+
         cached_dom = self._records_cache_search(client_query.request)
         if (cached_dom.records):
             query_response = client_query.generate_cached_response(cached_dom)
-            self.send_to_client(query_response, client_query)
+            send_to_client(query_response, client_query)
 
             return True
 
     @classmethod
     # top_domain will now be set by caller, so we don't have to track that within the query object.
     def _handle_query(cls, client_query, *, top_domain=False):
-        new_dns_id = cls._get_unique_id()
-        cls._request_map[new_dns_id] = (top_domain, client_query)
 
-        client_query.generate_dns_query(new_dns_id, cls.protocol)
-        # TODO: consider a direct reference to relay add for perf
+        # generating dns query packet data
+        client_query.generate_dns_query(
+            # returns new unique id after storing {id: request info} in request map
+            get_unique_id(cls._request_map, (top_domain, client_query)), cls.protocol
+        )
+
+        # send query instance to currently enabled protocol/relay for sending to external resolver.
         if (cls.protocol is PROTO.UDP):
             UDPRelay.relay.add(client_query)
 
         elif (cls.protocol is PROTO.DNS_TLS):
             TLSRelay.relay.add(client_query)
-        else:
-            # TODO: raise exception fatal, log
-            pass
-
-    @classmethod
-    # NOTE: maybe put a sleep on iteration, use a for loop?
-    def _get_unique_id(cls):
-        request_map = cls._request_map
-
-        with cls._id_lock:
-            # NOTE: maybe tune this number. under high load collisions could occur and we don't want it to waste time
-            # because other requests must wait for this process to complete since we are now using a queue system
-            # while waiting for a decision instead of individual threads.
-            for _ in range(100):
-
-                dns_id = randint(70, 32000)
-                if (dns_id not in request_map):
-
-                    request_map[dns_id] = 1
-
-                    return dns_id
 
     @dnx_queue(Log, name='DNSServer')
     def responder(self, received_data):
@@ -173,7 +162,7 @@ class DNSServer(Listener):
         if (dns_id == DNS.KEEPALIVE):
             return
 
-        top_domain, client_query = self._request_map_pop(dns_id, (None, None))
+        top_domain, client_query = self._request_map_pop(dns_id, INVALID_RESPONSE)
         if (not client_query):
             return
 
@@ -183,25 +172,42 @@ class DNSServer(Listener):
             Log.error(f'[parser/server response] {E}')
         else:
             if (not top_domain):
-                self.send_to_client(query_response, client_query)
+                send_to_client(query_response, client_query)
 
             if (cache_data):
                 self._records_cache_add(client_query.qname, cache_data)
-
-    @staticmethod
-    def send_to_client(query_response, client_query):
-        try:
-            client_query.sendto(query_response, client_query.address)
-        except OSError:
-            pass
 
     @staticmethod
     def listener_sock(intf, intf_ip):
         l_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         l_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        l_sock.setblocking(0)
+        l_sock.setblocking(False)
 
         l_sock.bind((f'{intf_ip}', PROTO.DNS))
 
         return l_sock
+
+
+# DNS ID generation. this value is guaranteed unique for the life of the request.
+_id_lock = threading.Lock()
+
+def get_unique_id(request_map, request_info):
+
+    with _id_lock:
+        # NOTE: maybe tune this number. under high load collisions could occur and other requests must wait for this
+        # process to complete since we are now using a queue system for checking decision instead of individual threads.
+        for _ in RUN_FOREVER:
+
+            dns_id = randint(70, 32000)
+            if (dns_id not in request_map):
+
+                request_map[dns_id] = request_info
+
+                return dns_id
+
+def send_to_client(query_response, client_query):
+    try:
+        client_query.sendto(query_response, client_query.address)
+    except OSError:
+        pass

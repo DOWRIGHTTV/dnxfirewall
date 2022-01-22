@@ -104,11 +104,3 @@ class Configuration:
     def _manage_ip_tables():
         IPTablesManager.clear_dns_over_https()
         IPTablesManager.update_dns_over_https()
-
-    @staticmethod
-    # loading lists of interesting traffic into dictionaries and creating ip table rules for dns over https blocking
-    def load_signature_tries():
-
-        ip_reputation_signatures = signature_operations.generate_reputation(Log)
-
-        return ip_reputation_signatures

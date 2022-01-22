@@ -9,10 +9,6 @@
             "ip_address": "1.0.0.1"
         }
     },
-    "cache": {
-        "standard": false,
-        "top_domains": false
-    },
     "tls": {
         "enabled": true,
         "fallback": false

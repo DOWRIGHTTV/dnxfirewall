@@ -24,7 +24,7 @@ FILE_POLL_TIMER = 10
 def load_configuration(filename, *, filepath='dnx_system/data'):
     '''load json data from file, convert it to a python dict, then return as object.'''
     if (not filename.endswith('.json')):
-        filename = str_join([filename, '.json'])
+        filename += '.json'
 
     # loading system default configs
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'r') as system_settings:
@@ -45,7 +45,7 @@ def write_configuration(data, filename, *, filepath='dnx_system/data/usr'):
     '''write json data object to file.'''
 
     if (not filename.endswith('.json')):
-        filename = str_join([filename, '.json'])
+        filename += '.json'
 
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
         json.dump(data, settings, indent=4)
@@ -83,46 +83,6 @@ def json_to_yaml(data, *, is_string=False):
 
     # removing empty lines and sliding indent back by 4 spaces
     return '\n'.join([y[4:] for y in data.splitlines() if y.strip()])
-
-def load_dns_bitmap(Log, bl_exc=[], wl_exc=[]):
-    dict_nets = defaultdict(list)
-    blocked_file = f'{HOME_DIR}/dnx_system/signatures/domain_lists/blocked.domains'
-
-    # converting blacklist exceptions (pre proxy) to be compatible with dnx signature syntax
-    blacklist = [f'{domain} blacklist' for domain in bl_exc]
-
-    with open(blocked_file, 'r') as sigs:
-        for sig_set in [sigs, blacklist]:
-            for sig in sig_set:
-                try:
-                    si = sig.strip().split(maxsplit=1)
-
-                    host = si[0]
-                    host_hash = f'{hash(si[0])}'
-                    cat = int(DNS_CAT[si[1]])
-
-                    b_id = int(host_hash[:DNS_BIN_OFFSET])
-                    h_id = int(host_hash[DNS_BIN_OFFSET:])
-                except Exception as E:
-                    Log.warning(f'bad signature detected | {E} | {sig}')
-
-                else:
-                    # pre proxy override check before adding
-                    if (host not in wl_exc):
-                        dict_nets[b_id].append((h_id, cat))
-
-        # in place sort of all containers prior to building the structure
-        for containers in dict_nets.values():
-            containers.sort()
-
-    # converting to nested tuple and sorting, outermost list converted on return
-    nets = [(bin_id, tuple(containers)) for bin_id, containers in dict_nets.items()]
-    nets.sort()
-
-    # no longer needed so ensuring memory gets freed
-    del dict_nets
-
-    return tuple(nets)
 
 def load_tlds():
     dns_proxy = load_configuration('dns_proxy')
@@ -182,7 +142,7 @@ def cfg_read_poller(watch_file, folder='data', class_method=False):
         raise TypeError('watch file must be a string.')
 
     if (not watch_file.endswith('.json')):
-        watch_file = str_join([watch_file, '.json'])
+        watch_file += '.json'
 
     def decorator(function_to_wrap):
         if (not class_method):
@@ -336,7 +296,7 @@ class ConfigurationManager:
         return system_settings
 
     # accepts python dictionary to be serialized to json and written to file opened. will ensure
-    # data gets fully rewritten and if short than original the excess gets truncated.
+    # data gets fully rewritten and if shorter than original the excess gets truncated.
     def write_configuration(self, data_to_write):
         '''writes configuration data as json to generated temporary file'''
 
@@ -387,8 +347,8 @@ class Watcher:
         if not os.path.isfile(self._full_path):
 
             # condition to allow initial load to happen without the usr file being present.
-            # NOTE: the load configuration function used loads system defaults prior to user settings
-            # so there will be no issue marking a non existent file as modified.
+            # NOTE: the load configuration function loads system defaults prior to user settings
+            # so there will be no issue marking a non-existent file as modified.
             if (not self._last_modified_time):
                 self._last_modified_time = 1
 

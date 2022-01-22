@@ -8,7 +8,6 @@ from ipaddress import IPv4Address
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.file_operations import *
-from dnx_gentools.signature_operations import combine_domains
 from dnx_gentools.standard_tools import looper, Initialize
 
 from dnx_iptools.protocol_tools import create_dns_query_header, convert_string_to_bitmap
@@ -23,7 +22,7 @@ class Configuration:
 
     __slots__ = (
         # callbacks
-        'DNSProxy', 'DNSServer', 'DNSCache',
+        'DNSProxy', 'DNSServer',
 
         '_initialize',
     )
@@ -42,7 +41,7 @@ class Configuration:
 
         cls._proxy_setup = True
 
-        # NOTE: might be temporary, but this needed to be moved outside of the standard/bitmap sigs since they are
+        # NOTE: might be temporary, but this needed to be moved outside the standard/bitmap sigs since they are
         # now being handled by an external C extension (cython)
         cls._keywords = load_keywords(Log=Log)
 
@@ -56,7 +55,7 @@ class Configuration:
         self._initialize.wait_for_threads(count=3)
 
     @classmethod
-    def server_setup(cls, DNSServer, DNSCache):
+    def server_setup(cls, DNSServer):
         '''start threads for tasks required by the DNS server. This will ensure all automated threads
         get started, including reachability. blocking until settings are loaded/initialized.'''
         if (cls._server_setup):
@@ -64,10 +63,8 @@ class Configuration:
         cls._server_setup = True
 
         self = cls(DNSServer.__name__)
-        self.DNSServer = DNSServer
-        self.DNSCache  = DNSCache
 
-        threading.Thread(target=self._get_server_settings).start()
+        threading.Thread(target=self._get_server_settings, args=(DNSServer,)).start()
 
         self._initialize.wait_for_threads(count=1)
 
@@ -119,13 +116,11 @@ class Configuration:
         self._initialize.done()
 
     @cfg_read_poller('dns_server')
-    def _get_server_settings(self, cfg_file):
-        DNSServer = self.DNSServer
-
+    def _get_server_settings(self, DNSServer, cfg_file):
         dns_settings = load_configuration(cfg_file)
 
         dns_servers = dns_settings['resolvers']
-        tls_enabled  = dns_settings['tls']['enabled']
+        tls_enabled = dns_settings['tls']['enabled']
         DNSServer.udp_fallback = dns_settings['tls']['fallback']
 
         DNSServer.protocol = PROTO.DNS_TLS if tls_enabled else PROTO.UDP
@@ -143,10 +138,6 @@ class Configuration:
                 })
 
         DNSServer.dns_records = dns_settings['records']
-
-        # CLEAR DNS or TOP Domains cache
-        self.DNSCache.clear_dns_cache   = dns_settings['cache']['standard']
-        self.DNSCache.clear_top_domains = dns_settings['cache']['top_domains']
 
         self._initialize.done()
 
@@ -260,18 +251,6 @@ class Configuration:
             dnx.write_configuration(lists)
 
             return loaded_list
-
-    @staticmethod
-    # TODO: migrate this to signature operations
-    def load_dns_signature_bitmap():
-
-        # NOTE: old method of created combined signature file and loaded separately
-        combine_domains(Log)
-
-        wl_exceptions = load_configuration('whitelist')['pre_proxy']
-        bl_exceptions = load_configuration('blacklist')['pre_proxy']
-
-        return load_dns_bitmap(Log, bl_exc=bl_exceptions, wl_exc=wl_exceptions)
 
 
 class Reachability:

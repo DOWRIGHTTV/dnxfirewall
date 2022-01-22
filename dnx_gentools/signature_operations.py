@@ -7,45 +7,82 @@ from socket import inet_aton
 from struct import Struct
 from collections import defaultdict
 
-from dnx_gentools.def_constants import HOME_DIR, GEO, REP, MSB, LSB, RFC1918
+from dnx_gentools.def_constants import HOME_DIR, GEO, REP, DNS_CAT, MSB, LSB, DNS_BIN_OFFSET, RFC1918
 from dnx_gentools.file_operations import load_configuration
 
 __all__ = (
-    'combine_domains', 'generate_reputation', 'generate_geolocation',
+    'generate_domain', 'generate_reputation', 'generate_geolocation',
 )
 
 cidr_to_host_count = {f'{i}': 2**x for i, x in enumerate(reversed(range(31)), 2)}
 ip_unpack = Struct('>L').unpack
 
-def combine_domains(Log):
+def _combine_domain(Log):
     dns_proxy = load_configuration('dns_proxy')
 
-    default_cats = dns_proxy['categories']['default']
-    ud_cats      = dns_proxy['categories']['user_defined']
-
     domain_signatures = []
+
+    default_cats = dns_proxy['categories']['default']
     # iterating over list of categories + DoH to load signature sets.
     for cat in [*default_cats, 'dns-over-https']:
         try:
-           with open(f'{HOME_DIR}/dnx_system/signatures/domain_lists/{cat}.domains', 'r') as file:
-               domain_signatures.extend([x.lower() for x in file.read().splitlines() if x and '#' not in x])
+            file = open(f'{HOME_DIR}/dnx_system/signatures/domain_lists/{cat}.domains')
         except FileNotFoundError:
-            Log.alert(f'signature file missing: {cat} domains.')
+            Log.alert(f'[missing] signature file: {cat} domains.')
+        else:
+            domain_signatures.extend([x.lower() for x in file.read().splitlines() if x and '#' not in x])
+            file.close()
 
-    with open(f'{HOME_DIR}/dnx_system/signatures/domain_lists/blocked.domains', 'w+') as blocked:
-        blocked.write('\n'.join(domain_signatures))
+    ud_cats = dns_proxy['categories']['user_defined']
+    # TODO: user defined categories will break the enum load on proxy / FIX
+    #   looping over all user defined categories. ALSO. i think this will require a proxy restart if sigs change
+    for cat, settings in ud_cats:
 
-        # TODO: user defined categories will break the enum load on proxy / FIX
-        #   looping over all user defined categories. ALSO. i think this will require a proxy restart if sigs change
-        for cat, settings in ud_cats:
+        if (settings['enabled']):
 
-            # writing signatures to block file
-            if (settings['enabled']):
+            for signature in settings[1:]:
+                domain_signatures.append(f'{signature} {cat}'.lower())
 
-                for signature in settings[1:]:
-                    blocked.write(f'{signature} {cat}\n'.lower())
+    return domain_signatures
 
-    del domain_signatures
+def generate_domain(Log):
+    # getting all enabled signatures
+    domain_signatures = _combine_domain(Log)
+
+    wl_exceptions = load_configuration('whitelist')['pre_proxy']
+    bl_exceptions = load_configuration('blacklist')['pre_proxy']
+
+    dict_nets = defaultdict(list)
+
+    # converting blacklist exceptions (pre proxy) to be compatible with dnx signature syntax
+    domain_signatures.extend([f'{domain} blacklist' for domain in bl_exceptions])
+
+    for signature in domain_signatures:
+
+        sig = signature.strip().split(maxsplit=1)
+        try:
+            host_hash = f'{hash(sig[0])}'
+            cat = int(DNS_CAT[sig[1]])
+        except Exception as E:
+            Log.warning(f'bad signature detected | {E} | {sig}')
+
+        else:
+            # pre proxy override check before adding
+            if (sig[0] not in wl_exceptions):
+                dict_nets[int(host_hash[:DNS_BIN_OFFSET])].append((int(host_hash[DNS_BIN_OFFSET:], cat)))
+
+    # in place sort of all containers prior to building the structure
+    for containers in dict_nets.values():
+        containers.sort()
+
+    # converting to nested tuple and sorting, outermost list converted on return
+    nets = [(bin_id, tuple(containers)) for bin_id, containers in dict_nets.items()]
+    nets.sort()
+
+    # no longer needed so ensuring memory gets freed
+    del dict_nets
+
+    return tuple(nets)
 
 def _combine_reputation(Log):
     ip_proxy = load_configuration('ip_proxy')

@@ -4,9 +4,10 @@ import __init__ # pylint: disable=import-error
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import IPP_INSPECTION_RESULTS
+from dnx_gentools.signature_operations import generate_reputation
 
 from dnx_iptools.packet_classes import NFQueue
-from dnx_iptools.dnx_trie_search import RecurveTrie # pylint: disable=import-error, no-name-in-module
+from dnx_iptools.dnx_trie_search import RecurveTrie
 
 from dnx_secmods.ip_proxy.ip_proxy_packets import IPPPacket, ProxyResponse
 from dnx_secmods.ip_proxy.ip_proxy_restrict import LanRestrict
@@ -201,7 +202,7 @@ if (__name__ == '__main__'):
         name=LOG_NAME
     )
 
-    reputation_signatures = Configuration.load_signature_tries()
+    reputation_signatures = generate_reputation(Log)
 
     # initializing C/Cython extension, converting python structures to native C array/struct,
     # and assigning direct reference to search method [which calls underlying C without GIL]
