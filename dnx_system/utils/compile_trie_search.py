@@ -6,8 +6,7 @@ from setuptools import setup, Extension
 from Cython.Build import cythonize
 from Cython.Distutils import build_ext
 
-#os.chdir('/home/dnx/dnxfirewall/dnx_iptools')
-os.chdir('/home/free/Desktop/new_repos/dnxfirewall-cmd/dnx_iptools')
+os.chdir('/home/dnx/dnxfirewall/dnx_iptools')
 
 cmd = {'build_ext': build_ext}
 ext = Extension(

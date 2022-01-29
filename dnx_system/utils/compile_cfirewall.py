@@ -6,10 +6,7 @@ from setuptools import setup, Extension
 from Cython.Build import cythonize
 from Cython.Distutils import build_ext
 
-# os.chdir('/home/free/Desktop/new_repos/dnxfirewall-cmd/dnx_secmods/cfirewall')
-
 HOME_DIR = '/home/dnx/dnxfirewall'
-
 os.chdir(f'{HOME_DIR}/dnx_secmods/cfirewall')
 
 cmd = {'build_ext': build_ext}

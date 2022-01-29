@@ -262,9 +262,19 @@ def advanced_firewall(session_data):
     page_settings.update(session_data)
 
     page_action = firewall_page_logic(
-        dnx_fwall, page_settings, 'firewall_settings', page_name='advanced/firewall')
+        dnx_fwall, page_settings, 'firewall_settings', page_name='advanced/firewall/firewall')
 
     return page_action
+
+@app.route('/advanced/firewall/commit', methods=['POST'])
+@user_restrict('admin')
+def advanced_firewall_commit(session_data):
+    json_data = request.get_json(force=True)
+
+    print(json_data)
+    # table_data, _, _ = dfe_logs.commit_rules(json_data)
+
+    return ajax_response(status=True, data='{}')
 
 @app.route('/advanced/nat', methods=['GET', 'POST'])
 @user_restrict('admin')

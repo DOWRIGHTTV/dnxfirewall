@@ -22,7 +22,7 @@ function colorizeTable(id='') {
 
     for (let i = 0; i < tr.length; i++) {
 
-        if (i % 2 == 0) {
+        if (i % 2 === 0) {
             tr[i].className = "tr-even";
         } else {
             tr[i].className = "tr-odd";
@@ -40,9 +40,9 @@ function filterTable(n1, n2, id='') {
     for (let i = 0; i < tr.length; i++) {
         let td = tr[i].getElementsByTagName("td");
 
-        if (td.length == 0) { continue; }
+        if (td.length === 0) { continue; }
 
-        if (r % 2 == 0) {
+        if (r % 2 === 0) {
             tr[i].className = "tr-even";
         } else {
             tr[i].className = "tr-odd";

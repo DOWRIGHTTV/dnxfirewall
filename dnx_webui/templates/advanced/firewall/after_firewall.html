@@ -1,0 +1,260 @@
+<script>
+    colorizeTable(2);
+</script>
+<script>
+function MoveUp(id) {
+    let prev = id.previousElementSibling;
+    if (prev == null) return;
+
+    id.setAttribute("class", "ease-in");
+    prev.parentNode.insertBefore(id,prev);
+}
+function MoveDown(id) {
+    let next = id.nextElementSibling;
+    if (next == null) return;
+
+    id.setAttribute('class', 'ease-in');
+
+    let next2 = next.nextElementSibling;
+    if (next2 == null) {
+        id.parentNode.append(id);
+    } else {
+        next2.parentNode.insertBefore(id,next2);
+    }
+}
+function reconcileObjects(objectNames) {
+    var tempArray = []
+
+    for (let obj of objectNames) {
+
+        console.log(obj)
+        console.log(obj.tag)
+        var objectID = document.getElementsByName(`obj_${obj.tag}`)[0].id
+
+        tempArray.push(objectID);
+    }
+
+    return tempArray.join(',')
+}
+
+function newRule() {
+    let FWrules = document.getElementById('filter-table-body')
+    let ruleCount = FWrules.children.length+1
+
+    let defaultChip = '<div class="chip">none<i class="close material-icons">close</i></div>'
+
+    // TODO: add classes for each td
+
+    let rule_template = `<tr id="r${ruleCount}" style="opacity: .4" data-enabled="0">` +
+        '<td>' +
+            '<div class="row">' +
+                `<a class="btn btn-floating btn-small waves-light" onclick="MoveUp(${ruleCount})">` +
+                    '<i class="material-icons blue-grey">arrow_upward</i>' +
+                '</a>' +
+                `<a class="btn btn-floating btn-small waves-light" onclick="MoveDown(${ruleCount})">` +
+                    '<i class="material-icons red darken-2">arrow_downward</i>' +
+                '</a>' +
+            '</div>' +
+        '</td>' +
+        '<td class="rname">new_rule</td>' +
+        '<td class="rsrc_zone">any</td>' +
+        `<td class="rsrc_network">${defaultChip}</td>` +
+        `<td class="rsrc_service">${defaultChip}</td>` +
+        '<td class="rdst_zone">any</td>' +
+        `<td class="rdst_network">${defaultChip}</td>` +
+        `<td class="rdst_service">${defaultChip}</td>` +
+        '<td class="raction">0</td>' +
+        '<td class="rlog">0</td>' +
+        '<td class="rsec1_prof">0</td>' +
+        '<td class="rsec2_prof">0</td>' +
+    '</tr>'
+
+    FWrules.insertAdjacentHTML('beforeend', rule_template)
+
+}
+</script>
+<script>
+{# watching for firewall rule to be clicked for editing, populates the form, then shows the modal. #}
+let ruleEditor = document.querySelector('.rule-editor');
+ruleEditor.addEventListener('click', function(click) {
+
+//    console.log(click)
+    if (click.target.cellIndex == null || click.target.cellIndex < 1) return;
+
+    let ruleRow = click.target.parentNode;
+    let ruleEditor = document.querySelector('#FWrule-editor');
+    let editRule = M.Modal.init(ruleEditor, {});
+
+    fillEditor(ruleEditor, ruleRow);
+
+    editRule.open();
+  });
+
+function fillEditor(ruleEditor, ruleRow) {
+
+    const fields = ['name', 'log', 'enabled', 'src_zone', 'src_network',
+            'src_service', 'dst_zone', 'dst_network', 'dst_service', 'action', 'sec1_prof', 'sec2_prof']
+
+    for (let x in fields) {
+        let i = parseInt(x)
+        let field = fields[i]
+        let editor_field = ruleEditor.querySelector(`.e${field}`)
+        let rule_field = ruleRow.querySelector(`.r${field}`)
+
+
+        try {
+            if ([0,1,9,10,11].includes(i)) {
+                editor_field.setAttribute('value', rule_field.innerText)
+                editor_field.parentNode.querySelector('label').setAttribute('class', 'active')
+            }
+            else if (i === 2) {
+                const enabled = parseInt(ruleRow.getAttribute('data-enabled'));
+                console.log(enabled)
+                editor_field.checked = !!enabled;
+            }
+            else if ([3,6].includes(i)) {
+                editor_field.querySelector('input').value = rule_field.innerHTML.toUpperCase();
+            } else {
+                let dnxChips = editor_field.parentNode;
+                let chipArray = dnxChips.querySelectorAll('.chip');
+
+                chipArray.forEach((x) => {x.remove()});
+                dnxChips.insertAdjacentHTML('afterbegin', rule_field.innerHTML);
+                
+                chipArray = dnxChips.querySelectorAll('.chip');
+                chipArray.forEach((x) => {x.insertAdjacentHTML('beforeend', '<i class="material-icons close" onclick="cRemove(this)">close</i>')});
+            }
+        }
+        catch (e) {
+            console.log(e)
+        }
+        finally {}
+    }
+
+    ruleEditor.children[0].id = `e${ruleRow.id}`
+}
+
+function updateRule() {
+
+    const ruleEditor = document.querySelector('#FWrule-editor');
+    const ruleData = ruleEditor.querySelectorAll('.fwrule-field');
+    const rid = ruleEditor.children[0].id.substring(1);
+
+    let row = document.createElement("tr")
+
+    let state;
+    if (ruleEditor.querySelector('.eenabled').checked) {
+        setAttributes(row, {"data-enabled": "1", "id": rid})
+    } else {
+        row.style.opacity = ".4"
+        setAttributes(row, {"data-enabled": "0", "id": rid})
+    }
+
+    const fields = [
+        'rmove', 'rname',
+        'rsrc_zone', 'rsrc_network', 'rsrc_service',
+        'rdst_zone', 'rdst_network', 'rdst_service',
+        'raction', 'rlog', 'rsec1_prof', 'rsec2_prof'
+    ]
+
+    let i, field;
+    for (let x in fields) {
+        i = parseInt(x);
+        field = fields[i];
+
+        row.appendChild(document.createElement("td"));
+        row.children[i].setAttribute("class", field);
+    }        
+    console.log(row)
+
+    let col = row.children
+    col[0].innerHTML = "<div class=row>" +
+                `<a class="btn btn-floating btn-small waves-light" onclick="MoveUp(${rid})">` +
+                    '<i class="material-icons blue-grey">arrow_upward</i></a>' +
+                `<a class="btn btn-floating btn-small waves-light" onclick="MoveDown(${rid})">` +
+                    '<i class="material-icons red darken-2">arrow_downward</i></a></div>'
+
+    col[1].innerHTML = ruleEditor.querySelector(".ename").value;
+    col[2].innerHTML = ruleEditor.querySelector(".esrc_zone").querySelector('input').value.toLowerCase();
+    col[5].innerHTML = ruleEditor.querySelector(".edst_zone").querySelector('input').value.toLowerCase();
+    col[8].innerHTML = ruleEditor.querySelector(".eaction") === 1 ? "ACCEPT" : "DROP";
+    col[9].innerHTML = ruleEditor.querySelector(".elog").value;
+    col[10].innerHTML = ruleEditor.querySelector(".esec1_prof").value;
+    col[11].innerHTML = ruleEditor.querySelector(".esec2_prof").value;
+
+    let rData;
+    for (let fStr of ["src_network", "src_service", "dst_network", "dst_service"]) {
+        field = row.querySelector(`.r${fStr}`);
+        console.log("field", field)
+
+        rData = ruleEditor.querySelector(`.e${fStr}`).parentNode.querySelectorAll('.chip');
+        console.log("rData", rData)
+        rData.forEach((x) => {field.insertAdjacentHTML('beforeend', x.outerHTML)});
+    }
+
+    let close = row.querySelectorAll(".close")
+    close.forEach((x) => {x.remove()})
+
+    let FWrule = document.getElementById(rid)
+    FWrule.outerHTML = row.outerHTML
+
+    M.Modal.getInstance(ruleEditor).close();
+}
+</script>
+<script>
+var fwObjectMap = {{firewall_settings.fw_object_map|tojson}}
+var objFormatMap =  {country: ['red', 'language'], address: ['blue lighten-2', 'tv'], service: ['orange lighten-2', 'track_changes']}
+var network_autofill = {{firewall_settings.network_autofill|tojson}}
+var service_autofill = {{firewall_settings.service_autofill|tojson}}
+
+function cAddCallback(e, chip) {
+
+    // setting up remove function
+    chip.children[0].setAttribute('onclick', 'cRemove(this)'); // [0] icon, [1] close
+    console.log(chip.children[0])
+
+    //adding icon and color to object
+    var chipDef = fwObjectMap[chip.innerText.split('\n')[0]]
+    var chipFormat = objFormatMap[chipDef.type]
+
+    chip.className += ` ${chipFormat[0]}`
+    chip.innerHTML = `<i class="material-icons tiny">${chipFormat[1]}</i>` + chip.innerHTML 
+    chip.innerHTML += `<input type="hidden" name="${e[0].id}" value="${chipDef.id},${chipDef.type}">`;
+}
+function cSelectCallback(e, chip) {
+
+    console.log('SELECTED BITCH')
+}
+function cRemove(btn) {
+    // using as function to allow for hooks or other functionality to be added if needed.
+
+    btn.parentNode.remove()
+}
+
+function initDNXChips(field_type) {
+    var elem = document.querySelectorAll(`.${field_type}-chips`);
+    var set;
+
+    if (field_type === 'service') {
+        set = service_autofill;
+    } else {
+        set = network_autofill;
+    }
+
+    var instance = M.Chips.init(elem, {
+        onChipAdd: cAddCallback,
+        onChipSelect: () => console.log('selected'),
+//        onChipDelete: cRemoveCallback,
+        limit: 4,
+        autocompleteOnly: true,
+        autocompleteOptions: {
+            data: set
+        }
+    })
+    {#console.log('returning', instance)#}
+    return instance
+}
+
+var networkChips = initDNXChips("network")
+var serviceChips = initDNXChips("service")
+</script>

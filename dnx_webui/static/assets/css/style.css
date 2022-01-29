@@ -67,7 +67,7 @@ nav .brand-logo {
   font-size: 2.1rem;
   padding: 0; }
 
-/* navigation menu type size and pixel adjusmtnet override */
+/* navigation menu type size and pixel adjustment override */
 @media only screen and (max-width: 1550px) {
     .remove-big-menu {
         display: none !important; } }
@@ -106,19 +106,3 @@ table.striped > tbody > tr {
 
 .tr-even {
     background-color: rgba(242, 242, 242, 0.5); }
-
-/* popup window */
-div .popout-form {
-    padding: 1em;
-}
-
-.fw-container {
-    margin: 0 auto;
-    width: 85%;
-}
-
-/* firewall obj table */
-.fw-obj {
-    padding: 1px;
-    margin: 0px;
-}

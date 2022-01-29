@@ -38,12 +38,14 @@ class AjaxClient {
         }
     }
 }
+</script>
+<script>
 const ajaxClient = new AjaxClient('/{{"/".join(uri_path)}}');
-
-//move this to its own area for logging page. the above is generic and can be used by any page.
-const updateData =
-    async (table_type) => {
-        let response = await ajaxClient.post('/get', { table: `${table_type}` });
+const commitRules =
+    async (table_id) => {
+        let FWsection = document.getElementById('section').value
+        let FWrules = tableToJson(table_id)
+        let response = await ajaxClient.post('/commit', { 'section': `${FWsection}`, 'rules': `${FWrules}` });
 
         if (response) {
             // this needs to be worked on to differentiate whether a page update or a new table load. if new table
@@ -54,18 +56,28 @@ const updateData =
             }
 
             // Data do something with it.
-            // console.log(response);
-
-            // temp conditional for resetting table data if new table is requested. otherwise, data will get appended.
-            if (1) {
-                document.getElementById('filter-table-body').innerHTML = '';
-            }
-
-            loadTableData(response);
+            console.log(response);
         }
 }
+function tableToJson(table_id) {
+    var table = document.getElementById(`${table_id}`)
+    console.log(table)
+    var data = {};
 
-document.addEventListener('DOMContentLoaded', () => {
-    updateData('default');
-})
+    for (var i=0; i<table.rows.length; i++) {
+
+        var tableRow = table.rows[i];
+        var rowData = [];
+
+        for (var j=1; j<tableRow.cells.length; j++) {
+            rowData.push((tableRow.cells[j].innerText.replace(' ', ',')));
+
+        }
+
+        data[i] = rowData;
+    }
+
+    return JSON.stringify(data);
+}
 </script>
+
