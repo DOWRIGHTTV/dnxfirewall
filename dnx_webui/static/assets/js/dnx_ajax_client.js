@@ -38,4 +38,3 @@ class AjaxClient {
     }
 }
 const ajaxClient = new AjaxClient(location.pathname);
-

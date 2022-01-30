@@ -178,7 +178,7 @@ def commit_rules(json_data):
     try:
         validated_rules = validate.firewall_commit(json_data['rules'])
     except ValidationError as ve:
-        return False, {'error': True, 'message': ve}
+        return False, {'error': True, 'message': str(ve)}
 
     else:
         pass

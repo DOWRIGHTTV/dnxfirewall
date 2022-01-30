@@ -1,7 +1,5 @@
-<script src="{{url_for('static',filename='assets/js/_dnx_ajax_client.js')}}"></script>
 <script>
-const commitRules =
-    async (table_id) => {
+async function commitRules(table_id) {
         let FWsection = document.getElementById('section').value
         let FWrules = tableToJson(table_id)
         let response = await ajaxClient.post('/commit', { 'section': `${FWsection}`, 'rules': `${FWrules}` });
@@ -15,7 +13,9 @@ const commitRules =
             }
 
             // Data do something with it.
-            console.log(response);
+            console.log('[server/response]: ',response);
+        } else {
+            console.log('no response from server.')
         }
 }
 function tableToJson(table_id) {
@@ -26,11 +26,10 @@ function tableToJson(table_id) {
     for (let i=0; i<table.rows.length; i++) {
 
         let tableRow = table.rows[i];
-        let rowData = [];
+        let rowData = [tableRow.attributes['data-enabled'].value];
 
         for (let j=1; j<tableRow.cells.length; j++) {
-            rowData.push((tableRow.cells[j].innerText.replace(' ', ',')));
-
+            rowData.push((tableRow.cells[j].innerText)); // .replace(' ', ',') replace only does first occurrence
         }
 
         data[i] = rowData;

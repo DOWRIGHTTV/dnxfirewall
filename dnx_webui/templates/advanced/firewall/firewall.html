@@ -47,24 +47,33 @@
                         <a class="btn waves-effect waves-light modal-trigger blue-grey" href="#commit-modal">Commit</a>
                         <a class="btn waves-effect waves-light right" onclick="newRule()">Create Rule</a>
                     </div>
-                    <div class="input-field col s12 m6 l5 xl3 {{input_color}}">
-                        <input type="text" id="filter-input" onkeyup="filterTable(1, 4)" placeholder="Filter">
+                    <div class="row">
+                        <a class="btn waves-effect green darken-2" onclick="enableRules()">Enable</a>
+                        <a class="btn waves-effect blue-grey" onclick="disableRules()">Disable</a>
+                        <a class="btn waves-effect red darken-2" onclick="removeRules()">Remove</a>
+                        <div class="col s12 m6 l5 xl3 {{input_color}} right">
+                            <input type="text" id="filter-input" onkeyup="filterTable(1, 4)" placeholder="Filter">
+                        </div>
                     </div>
                     <div class="row">
                         <table style="cursor:default" class="centered" id="filter-table">
                             <colgroup>
                                 <col span="2" style="background-color:#eceff1">
-                                <col span="6" style="background-color:#cfd8dc">
+                                <col span="1" style="background-color:#90a4ae">
+                                <col span="3" style="background-color:#cfd8dc">
+                                <col span="3" style="background-color:#b0bec5">
                                 <col span="4" style="background-color:#eceff1">
                             </colgroup>
                             <thead>
                                 <tr>
-                                    <th colspan="2">ID</th>
+                                    <th colspan="2">Control</th>
+                                    <th colspan="1">ID</th>
                                     <th colspan="3">Source</th>
                                     <th colspan="3">Destination</th>
                                     <th colspan="4">Options</th>
                                 </tr>
                                 <tr>
+                                    <th>Select</th>
                                     <th>Move</th>
                                     <th>Name</th>
                                     <th>Zones</th>
@@ -82,7 +91,7 @@
                             <tbody id="filter-table-body" class="rule-editor">
                                 {%- for rule in firewall_settings['firewall_rules'] -%}
                                 <tr id="r{{loop.index}}" {% if not rule[0] %} style="opacity: .4" {% endif -%} data-enabled="{{rule[0]}}">
-                                    {% set rule_num = loop.index -%}
+                                    <td><label><input type="checkbox" class="filled-in rule-select"><span></span></label></td>
                                     <td>
                                         <div class="row">
                                             <a class="btn btn-floating btn-small waves-light" onclick="MoveUp(r{{loop.index}})"><i

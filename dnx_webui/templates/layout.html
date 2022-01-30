@@ -61,7 +61,7 @@
     {% endif -%}
 
     {# jquery include. needed for ajax, and may be used by materialize, but is no longer a dependency #}
-    <script src="{{url_for('static',filename='assets/js/jquery.min.js')}}"></script>
+{#    <script src="{{url_for('static',filename='assets/js/jquery.min.js')}}"></script>#}
 
     {# dnx custom table with filtering/striping #}
     {% if dnx_table %}
@@ -142,7 +142,7 @@
     {# dnx custom ajax client by seeker1437 (WyteChocolate) NOTE: this is being done as an html include to take
     advantage of jinja templating #}
     {% if ajax %}
-        {% include 'includes/_dnx_ajax_client.js' %}
+        <script src="{{url_for('static',filename='assets/js/dnx_ajax_client.js')}}"></script>
     {%- endif -%}
 
     {# handles a single table as quick enable. additional need to be called within individual page template. #}

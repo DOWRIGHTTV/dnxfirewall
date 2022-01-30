@@ -10,6 +10,8 @@ debug = pprint.PrettyPrinter(indent=4).pprint
 
 _FW_OBJECT = namedtuple('fw_object', 'id name origin type value description')
 
+_icon_to_type = {'tv': 'address', 'language': 'country', 'track_changes': 'service'}
+
 def _object_manager(object_list):
 
     _object_version = 0
@@ -22,35 +24,50 @@ def _object_manager(object_list):
     _id_to_idx = {x[0]: i for i, x in enumerate(_object_definitions)}
     _id_to_idx_get = _id_to_idx.get
 
-    debug(_id_to_idx)
+    _name_to_idx = {x[1]: i for i, x in enumerate(_object_definitions)}
+    _name_to_idx_get = _name_to_idx.get
+
+    # debug(_id_to_idx)
 
     class ObjectManager:
 
         __slots__ = ()
 
         @staticmethod
-        def validate(obj_id, input_field):
+        def validate(icon, obj_name):
             '''returns object id if valid, otherwise returns None'''
 
-            idx = _id_to_idx_get(obj_id, None)
-
-            print(_id_to_idx)
+            idx = _name_to_idx_get(obj_name, None)
             print(f'index found: {idx}')
 
             if (not idx):
                 return None
 
-            fw_obj_type = _object_definitions[idx][3]
-            print(f'obj type: {fw_obj_type}, input_field: {input_field}')
-            if (input_field == fw_obj_type):
-                return obj_id
+            input_type = _icon_to_type.get(icon, None)
+            fw_obj_type = _object_definitions[idx].type
+            print(f'obj type: {fw_obj_type}, input_field: {input_type}')
+
+            if (input_type == fw_obj_type):
+                return _object_definitions[idx].id
 
             else:
                 return None
 
+        # None return is in list for compatibility with normal process
         def iter_validate(self, fw_objects):
 
-            print(fw_objects)
+            fw_objects = fw_objects.split()
+            if (not fw_objects):
+                return [None]
+
+            # making list of icon, obj_name pairs from raw string representation of data
+            try:
+                fw_objects = [fw_objects[i:i + 2] for i in range(0, len(fw_objects), 2)]
+            except Exception:  # TODO: consider making this more specific. probably not though lol.
+                return [None]
+
+            print('after reformat', fw_objects)
+
             results = []
             for obj in fw_objects:
 

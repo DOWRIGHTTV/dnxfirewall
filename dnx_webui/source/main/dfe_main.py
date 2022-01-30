@@ -121,7 +121,7 @@ def settings_dns(session_data):
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        dns_settings, page_settings, 'dns_settings' , page_name='settings/dns')
+        dns_settings, page_settings, 'dns_settings', page_name='settings/dns')
 
     return page_action
 
@@ -251,7 +251,7 @@ def advanced_firewall(session_data):
 
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'dnx_table': True, 'firewall': True,
+        'tab': tab, 'firewall': True, 'ajax': True, 'dnx_table': True,  # TODO: dnx_table can probably be removed
         'dnx_network_objects': {},
         'dnx_service_objects': {},
         'selected': 'MAIN',
@@ -276,6 +276,8 @@ def advanced_firewall_commit(session_data):
     print(json_data)
 
     status, err_data = dnx_fwall.commit_rules(json_data)
+
+    print(f'[commit/response] status={status}, err_data={err_data}')
 
     return ajax_response(status=status, data=err_data)
 
