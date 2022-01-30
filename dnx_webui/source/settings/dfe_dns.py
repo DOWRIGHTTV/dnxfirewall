@@ -5,46 +5,25 @@ import dnx_routines.configure.web_validate as validate
 
 from dnx_gentools.def_constants import INVALID_FORM, CFG, DATA
 from dnx_gentools.file_operations import load_configuration
+from dnx_routines.configure.system_info import System
 from dnx_routines.configure.exceptions import ValidationError
 
 
 def load_page(form):
     dns_server = load_configuration('dns_server')
     dns_cache  = load_configuration('dns_cache')
-    servers_status = load_configuration('dns_server_status')
-
-    dns_servers = dns_server['resolvers']
-    dns_records = dns_server['records']
-
-    top_domains_clear_pending = dns_server['cache']['top_domains']
-    cache_clear_pending = dns_server['cache']['standard']
 
     tls_settings = dns_server['tls']
-    tls_enabled  = tls_settings['enabled']
-    udp_fallback = tls_settings['fallback']
-
-    for server, server_info in list(dns_servers.items()):
-        status = servers_status.get(server_info['ip_address'], None)
-        if (not status):
-            tls = 'Waiting'
-            dns = 'Waiting'
-        else:
-            dns = 'UP' if status['dns_up'] else 'Down'
-            tls = 'Down' if status['tls_down'] else 'Up'
-
-        if (not tls_enabled):
-            tls = 'Disabled'
-
-        dns_servers[server]['dns_up'] = dns
-        dns_servers[server]['tls_down'] = tls
 
     dns_settings = {
-        'dns_servers': dns_servers, 'dns_records': dns_records,
-        'tls': tls_enabled, 'udp_fallback': udp_fallback, 'top_domains': dns_cache,
+        'dns_servers': System.dns_status(), 'dns_records': dns_server['records'],
+        'tls': tls_settings['enabled'], 'udp_fallback': tls_settings['fallback'],
+        'top_domains': dns_cache,
         'cache': {
-            'clear_top_domains': top_domains_clear_pending,
-            'clear_dns_cache': cache_clear_pending}
+            'clear_top_domains': dns_server['cache']['top_domains'],
+            'clear_dns_cache': dns_server['cache']['standard']
         }
+    }
 
     return dns_settings
 
@@ -82,7 +61,7 @@ def update_page(form):
             return INVALID_FORM
 
         try:
-            validate.dns_record_add(dns_record_name)
+            validate.dns_record(dns_record_name, action=CFG.ADD)
             validate.ip_address(dns_record_ip)
         except ValidationError as ve:
             return ve
@@ -96,7 +75,7 @@ def update_page(form):
             return INVALID_FORM
 
         try:
-            validate.dns_record_remove(dns_record_name)
+            validate.dns_record(dns_record_name, action=CFG.DEL)
         except ValidationError as ve:
             return ve
 

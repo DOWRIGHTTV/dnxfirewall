@@ -3,6 +3,7 @@
 import re
 
 from subprocess import run
+from collections import namedtuple
 from ipaddress import IPv4Address, IPv4Network
 
 from flask import Flask
@@ -25,7 +26,7 @@ __all__ = (
     'time_offset', 'syslog_settings', 'ip_proxy_settings',
     'time_restriction', 'dns_over_tls', 'portscan_settings',
     'ips_passive_block_length', 'add_ip_whitelist', 'domain_categories',
-    'dns_record_add', 'dns_record_remove',  # NOTE: these names should be flipped
+    'add_dns_record', 'remove_dns_record',  # NOTE: these names should be flipped
     'ValidationError'
 )
 
@@ -385,57 +386,58 @@ def dns_over_tls(dns_tls_settings):
             and 'dns_over_tls' not in dns_tls_settings['enabled']):
         raise ValidationError('DNS over TLS must be enabled to configure UDP fallback.')
 
-# NOTE: log disabled in form. they will be set here as default for the time being.
-def manage_firewall_rule(fw_rule, /):
-    # ('position', '1'),
-    # ('src_zone', 'lan'), ('src_ip', '192.168.83.0/24'), ('src_port', 'tcp/0'),
-    # ('dst_zone', 'any'), ('dst_ip', '0.0.0.0/0'), ('dst_port', 'tcp/80'),
-    # ('action', 'ACCEPT')
-    # ensuring all necessary fields are present in the namespace before continuing.
-    valid_fields = [
-        'static_pos', 'position', 'section',
+def firewall_commit(fw_rules, /):
+    # ["lan_dhcp_allow", "lan", "tv,lan_network tv,dmz_network", "track_changes,udp_any", "any",
+    #  "tv,lan_network tv,dmz_network", "track_changes,udp_67", "ACCEPT", "OFF", "0", "0"]
+
+    rule_structure = namedtuple('rule_structure', [
+        'name',
         'src_zone', 'src_network', 'src_service',
         'dst_zone', 'dst_network', 'dst_service',
-        'action', 'sec1_prof', 'sec2_prof',
-    ]
-    if not all([hasattr(fw_rule, x) for x in valid_fields]):
-        raise ValidationError(f'{INVALID_FORM} [fields]')
+        'action', 'log', 'sec1_prof', 'sec2_prof'
+    ])
 
-    if (fw_rule.action not in ['accept', 'deny']):
-        raise ValidationError(f'{INVALID_FORM} [action]')
+    validated_rules = []
 
-    action = 1 if fw_rule.action == 'accept' else 0
+    # index/ enumerate is for providing better feedback if issues are detected.
+    for i, rule in enumerate(fw_rules.values(), 1):
+        try:
+            rule = rule_structure(*rule)
+        except ValueError:  # i think its a value error
+            raise ValidationError(f'Format error found in rule #{i}')
 
-    rule_count = FirewallManage.cfirewall.ruleset_len(section=fw_rule.section)
-    if (not rule_count):
-        raise ValidationError(f'{INVALID_FORM} [section]')
+        try:
+            validated_rules.append(manage_firewall_rule(i, rule))
+        except ValidationError:
+            raise
 
-    # +1 to account for rule inserted behind last position
-    rule_count += 1 if hasattr(fw_rule, 'create_rule') else 0
+    return validated_rules
 
-    if (not 1 <= convert_int(fw_rule.static_pos) <= rule_count):
-        raise ValidationError(f'{INVALID_FORM} position[1]')
+# NOTE: log disabled in form and set here as default for the time being.
+def manage_firewall_rule(rule_num, fw_rule, /):
 
-    if (not 1 <= convert_int(fw_rule.position) <= rule_count):
-        raise ValidationError(f'{INVALID_FORM} position[2]')
+    if (fw_rule.action not in ['ACCEPT', 'DENY']):
+        raise ValidationError(f'{INVALID_FORM} [rule #{rule_num}/action]')
+
+    action = 1 if fw_rule.action == 'ACCEPT' else 0
 
     check = Flask.app.dnx_object_manager.iter_validate
 
     src_network = check([x.split(',') for x in fw_rule.src_network])
     if (None in src_network):
-        raise ValidationError('A source network object was not found.')
+        raise ValidationError(f'A source network object was not found for rule #{rule_num}.')
 
     src_service = check([x.split(',') for x in fw_rule.src_service])
     if (None in src_service):
-        raise ValidationError('A source service object was not found.')
+        raise ValidationError(f'A source service object was not found for rule #{rule_num}.')
 
     dst_network = check([x.split(',') for x in fw_rule.dst_network])
     if (None in dst_network):
-        raise ValidationError('A destination network object was not found.')
+        raise ValidationError(f'A destination network object was not found for rule #{rule_num}.')
 
     dst_service = check([x.split(',') for x in fw_rule.src_service])
     if (None in dst_service):
-        raise ValidationError('A destination service object was not found.')
+        raise ValidationError(f'A destination service object was not found for rule #{rule_num}.')
 
     # TODO: make zone map integrated better
     dnx_interfaces = load_configuration('config')['interfaces']['builtins']
@@ -447,18 +449,18 @@ def manage_firewall_rule(fw_rule, /):
     s_zone = zone_map.get(fw_rule.src_zone, None)
     d_zone = zone_map.get(fw_rule.dst_zone, None)
     if (s_zone is None or d_zone is None):
-        raise ValidationError(f'{INVALID_FORM} [zone]')
+        raise ValidationError(f'{INVALID_FORM} [rule #{rule_num}/zone]')
 
     ip_proxy_profile = convert_int(fw_rule.sec1_prof)
     ips_ids_profile  = convert_int(fw_rule.sec2_prof)
     if not all([x in [0, 1] for x in [ip_proxy_profile, ips_ids_profile]]):
-        raise ValidationError('Invalid security profile.')
+        raise ValidationError(f'Invalid security profile for rule #{rule_num}.')
 
     rule = {
-        'name': None,
+        'name': fw_rule.name,
         'id': None,
         'enabled': int(
-            hasattr(fw_rule, 'rule_state')   # 1
+            hasattr(fw_rule, 'rule_state')   # 1 TODO: this is broken
         ),
         'src_zone': [s_zone],                # [12]
         'src_network': src_network,
@@ -598,16 +600,18 @@ def domain_category_keywords(categories):
         if (not domain_cats[cat]['enabled']):
             raise ValidationError(INVALID_FORM)
 
-def dns_record_add(dns_record_name):
-    if (not _VALID_DOMAIN.match(dns_record_name)
-            and not dns_record_name.isalnum()):
-        raise ValidationError('Local dns record is not valid.')
+def dns_record(query_name, *, action):
 
-def dns_record_remove(dns_record_name):
-    dns_server = load_configuration('dns_server')
+    if (action is CFG.ADD):
 
-    if (dns_record_name == 'dnx.firewall'):
-        raise ValidationError('Cannot remove dnxfirewall dns record.')
+        if (not _VALID_DOMAIN.match(query_name) and not query_name.isalnum()):
+            raise ValidationError('Local DNS record is not valid.')
 
-    if (dns_record_name not in dns_server['records']):
-        raise ValidationError(INVALID_FORM)
+    elif (action is CFG.DEL):
+        dns_server = load_configuration('dns_server')
+
+        if (query_name == 'dnx.firewall'):
+            raise ValidationError('Cannot remove dnxfirewall dns record.')
+
+        if (query_name not in dns_server['records']):
+            raise ValidationError(INVALID_FORM)

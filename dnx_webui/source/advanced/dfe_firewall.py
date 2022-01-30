@@ -166,12 +166,30 @@ def get_and_format_rules(section):
 
     return converted_rules
 
+def commit_rules(json_data):
+
+    if not json_data.get('section', None):
+        return False, {'error': True, 'message': 'missing section data'}
+
+    if not json_data.get('rules', None):
+        return False, {'error': True, 'message': 'missing rule data'}
+
+    # NOTE: all rules must be validated for any changes to be applied. validation will raise exception on first error.
+    try:
+        validated_rules = validate.firewall_commit(json_data['rules'])
+    except ValidationError as ve:
+        return False, {'error': True, 'message': ve}
+
+    else:
+        pass
+        # TODO: send to firewall manager
+
 # TODO: move this to firewall manager
 def is_pending_changes():
     active = calculate_file_hash('firewall_active.json', folder='iptables/usr')
     pending = calculate_file_hash('firewall_pending.json', folder='iptables/usr')
 
-    # if user has never modified rules, there is no pending changes. active file can be none
+    # if user has never modified rules there is no pending change. active file can be none
     # if pending is present since a commit will write the active file.
     if (pending is None):
         return False

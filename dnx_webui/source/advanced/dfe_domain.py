@@ -23,12 +23,10 @@ def load_page(form):
 
     return domain_settings
 
-#---------------------------------------------------------------------#
-## -- Category List Configure -- ##
 def update_page(form):
     if ('df_cat_update' in form):
         categories = form.getlist('category', None)
-        # hardcoding required cats into list since they dont show up due to being html disabled
+        # hard coding required cats into list since they don't show up due to being html disabled
         categories.extend(['malicious', 'cryptominer'])
         try:
             validate.domain_categories(categories, ruleset='default')

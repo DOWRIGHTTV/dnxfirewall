@@ -1,4 +1,5 @@
 {% extends('layout.html') %}
+<script src="{{url_for('templates', 'system/logs/logs.js')}}"></script>
 {% block body %}
 <section id="slog" class="section {{main_section_color}}">
     <div class="container">
@@ -60,4 +61,5 @@
         </div>
     </div>
 </section>
+{{include }}
 {% endblock %}

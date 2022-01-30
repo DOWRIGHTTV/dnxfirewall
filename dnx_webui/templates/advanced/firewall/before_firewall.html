@@ -1,46 +1,5 @@
+<script src="{{url_for('static',filename='assets/js/_dnx_ajax_client.js')}}"></script>
 <script>
-class AjaxClient {
-    constructor(baseUri, onErrorCallback = null) {
-        this._baseUrl = baseUri;
-        this._onErrorCallback = onErrorCallback;
-    }
-
-    get baseUrl() {
-        return this._baseUrl;
-    }
-
-    async post(url = '', data = {}) {
-        const response =
-            await fetch(this.baseUrl + url, {
-                method : 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            })
-
-        return await this.__handleResponse(response);
-    }
-
-    async __handleResponse(response) {
-        if (response.ok) {
-            let ajaxResponse = await response.json();
-
-            if (ajaxResponse.success) {
-                return ajaxResponse.result;
-            }
-
-            if (this._onErrorCallback) {
-                this._onErrorCallback(ajaxResponse.error);
-            }
-
-            return null;
-        }
-    }
-}
-</script>
-<script>
-const ajaxClient = new AjaxClient('/{{"/".join(uri_path)}}');
 const commitRules =
     async (table_id) => {
         let FWsection = document.getElementById('section').value
@@ -60,16 +19,16 @@ const commitRules =
         }
 }
 function tableToJson(table_id) {
-    var table = document.getElementById(`${table_id}`)
+    const table = document.getElementById(`${table_id}`)
     console.log(table)
-    var data = {};
+    let data = {};
 
-    for (var i=0; i<table.rows.length; i++) {
+    for (let i=0; i<table.rows.length; i++) {
 
-        var tableRow = table.rows[i];
-        var rowData = [];
+        let tableRow = table.rows[i];
+        let rowData = [];
 
-        for (var j=1; j<tableRow.cells.length; j++) {
+        for (let j=1; j<tableRow.cells.length; j++) {
             rowData.push((tableRow.cells[j].innerText.replace(' ', ',')));
 
         }

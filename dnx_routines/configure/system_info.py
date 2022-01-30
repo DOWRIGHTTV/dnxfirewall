@@ -246,16 +246,14 @@ class System:
 
         tls_enabled = dns_server['tls']['enabled']
         dns_servers = dns_server['resolvers']
-        dns_servers_copy = deepcopy(dns_servers)
 
-        for server, server_info in dns_servers_copy.items():
-            status = dns_servers_status.get(server_info['ip_address'], None)
-            if (not status):
-                tls = 'Waiting'
-                dns = 'Waiting'
-            else:
-                dns = 'UP' if status['dns_up'] else 'Down'
-                tls = 'Down' if status['tls_down'] else 'Up'
+        for server, server_info in dns_servers.items():
+            tls, dns = 'Waiting', 'Waiting'
+
+            active_servers = dns_servers_status.get(server_info['ip_address'], None)
+            if (active_servers):
+                dns = 'UP' if active_servers['dns_up'] else 'Down'
+                tls = 'Down' if active_servers['tls_down'] else 'Up'
 
             if (not tls_enabled):
                 tls = 'Disabled'
@@ -263,7 +261,6 @@ class System:
             dns_servers[server]['dns_up'] = dns
             dns_servers[server]['tls_down'] = tls
 
-#        print(dnsstatus)
         return dns_servers
 
     @staticmethod

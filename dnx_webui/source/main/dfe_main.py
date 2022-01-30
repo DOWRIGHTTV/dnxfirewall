@@ -269,12 +269,15 @@ def advanced_firewall(session_data):
 @app.route('/advanced/firewall/commit', methods=['POST'])
 @user_restrict('admin')
 def advanced_firewall_commit(session_data):
+
+    # TODO: get user and ip information so we can log the commit (warning?)
+
     json_data = request.get_json(force=True)
-
     print(json_data)
-    # table_data, _, _ = dfe_logs.commit_rules(json_data)
 
-    return ajax_response(status=True, data='{}')
+    status, err_data = dnx_fwall.commit_rules(json_data)
+
+    return ajax_response(status=status, data=err_data)
 
 @app.route('/advanced/nat', methods=['GET', 'POST'])
 @user_restrict('admin')
@@ -580,7 +583,7 @@ def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
     try:
         page_settings[data_key] = dnx_page.load_page(request.form)
     except OSError as ose:
-            return render_template(application_error_page, general_error=ose, **page_settings)
+        return render_template(application_error_page, general_error=ose, **page_settings)
 
     return render_template(f'{page_name}.html', **page_settings)
 
