@@ -102,3 +102,9 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+#dnxfirewall
+usr
+TEMP_*
+*.c
+dnxfirewall.sqlite3
