@@ -401,7 +401,7 @@ def firewall_commit(fw_rules, /):
         'action', 'log', 'sec1_prof', 'sec2_prof'
     ])
 
-    validated_rules = []
+    validated_rules = {}
 
     # index/ enumerate is for providing better feedback if issues are detected.
     for i, rule in enumerate(fw_rules.values(), 1):
@@ -412,7 +412,7 @@ def firewall_commit(fw_rules, /):
             raise ValidationError(f'Format error found in rule #{i}')
 
         try:
-            validated_rules.append(manage_firewall_rule(i, rule))
+            validated_rules[i] = manage_firewall_rule(i, rule)
         except ValidationError:
             raise
 
