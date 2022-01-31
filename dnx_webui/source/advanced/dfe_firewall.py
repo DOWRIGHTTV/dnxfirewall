@@ -115,7 +115,8 @@ def get_and_format_rules(section):
 
 def commit_rules(json_data):
 
-    if not json_data.get('section', None):
+    section = json_data.get('section', None)
+    if (not section or section not in valid_sections):
         return False, {'error': True, 'message': 'missing section data'}
 
     if not json_data.get('rules', None):
@@ -123,7 +124,7 @@ def commit_rules(json_data):
 
     # NOTE: all rules must be validated for any changes to be applied. validation will raise exception on first error.
     try:
-        validated_rules = validate.firewall_commit(json_data['rules'])
+        validated_rules = {section: validate.firewall_commit(json_data['rules'])}
     except ValidationError as ve:
         return False, {'error': True, 'message': str(ve)}
 
