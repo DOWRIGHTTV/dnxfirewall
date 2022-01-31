@@ -129,3 +129,5 @@ def commit_rules(json_data):
 
     else:
         FirewallManage.commit(validated_rules)
+
+    return True, {'error': False, 'message': None}
