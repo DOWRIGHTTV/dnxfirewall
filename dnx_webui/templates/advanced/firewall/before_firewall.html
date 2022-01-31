@@ -28,7 +28,7 @@ function tableToJson(table_id) {
         let tableRow = table.rows[i];
         let rowData = [tableRow.attributes['data-enabled'].value];
 
-        for (let j=1; j<tableRow.cells.length; j++) {
+        for (let j=2; j<tableRow.cells.length; j++) {
             rowData.push((tableRow.cells[j].innerText)); // .replace(' ', ',') replace only does first occurrence
         }
 
