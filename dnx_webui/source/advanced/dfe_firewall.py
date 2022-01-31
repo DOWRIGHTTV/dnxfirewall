@@ -1,15 +1,12 @@
 #!/usr/bin/python3
 
-import csv
-
-from types import SimpleNamespace
 from collections import defaultdict
 from flask import Flask, jsonify
 
 import dnx_routines.configure.web_validate as validate
 
-from dnx_gentools.def_constants import HOME_DIR, INVALID_FORM
-from dnx_gentools.file_operations import load_configuration, calculate_file_hash
+from dnx_gentools.def_constants import INVALID_FORM
+from dnx_gentools.file_operations import load_configuration
 from dnx_routines.configure.exceptions import ValidationError
 
 from dnx_secmods.cfirewall.fw_manage import FirewallManage
@@ -68,65 +65,17 @@ def load_page(section='MAIN'):
         'network_autofill': network_autofill,
         'service_autofill': service_autofill,
         'firewall_rules': firewall_rules,
-        'pending_changes': is_pending_changes()
+        'pending_changes': FirewallManage.is_pending_changes()
     }
 
 def update_page(form):
-    print(form)
-
-    error = None
 
     # initial input validation for presence of zone field
     section = form.get('section', None)
-    if (section not in valid_sections):
+    if (section not in valid_sections or 'change_section' not in form):
         return INVALID_FORM, 'MAIN', load_page(section)
 
-    elif ('create_rule' in form):
-        fw_rule = SimpleNamespace(**form)
-
-        fw_rule.src_network = form.getlist('src_network')
-        fw_rule.src_service = form.getlist('src_service')
-        fw_rule.dst_network = form.getlist('dst_network')
-        fw_rule.dst_service = form.getlist('dst_service')
-
-        try:
-            converted_rule = validate.manage_firewall_rule(fw_rule)
-        except ValidationError as ve:
-            error = ve
-
-        else:
-            FirewallManage.cfirewall.add(fw_rule.position, converted_rule, section=section)
-
-    elif ('modify_rule' in form):
-        # return 'Rule modification is currently disabled.', section, load_page(section)
-
-        fw_rule = SimpleNamespace(**form)
-        try:
-            converted_rule = validate.manage_firewall_rule(fw_rule)
-        except ValidationError as ve:
-            error = ve
-
-        else:
-            FirewallManage.cfirewall.modify(fw_rule.static_pos, fw_rule.position, converted_rule, section=section)
-
-    elif ('remove_rule' in form):
-        pos = form.get('position', None)
-        if (not pos):
-            return INVALID_FORM, section, load_page(section)
-
-        FirewallManage.cfirewall.remove(pos, section=section)
-
-    elif ('commit_rules' in form):
-        FirewallManage.cfirewall.commit()
-
-    elif ('revert_rules' in form):
-        FirewallManage.cfirewall.revert()
-
-    # functional else minus change section request.
-    elif ('change_section' not in form):
-        return INVALID_FORM, 'MAIN', load_page(section)
-
-    return error, section, load_page(section)
+    return None, section, load_page(section)
 
 def get_and_format_rules(section):
     firewall_rules = FirewallManage.cfirewall.view_ruleset(section)
@@ -160,8 +109,6 @@ def get_and_format_rules(section):
             rule['ipp_profile'], rule['ips_profile']
         ]
 
-        print(t_rule)
-
         converted_rules_append(t_rule)
 
     return converted_rules
@@ -181,17 +128,4 @@ def commit_rules(json_data):
         return False, {'error': True, 'message': str(ve)}
 
     else:
-        pass
-        # TODO: send to firewall manager
-
-# TODO: move this to firewall manager
-def is_pending_changes():
-    active = calculate_file_hash('firewall_active.json', folder='iptables/usr')
-    pending = calculate_file_hash('firewall_pending.json', folder='iptables/usr')
-
-    # if user has never modified rules there is no pending change. active file can be none
-    # if pending is present since a commit will write the active file.
-    if (pending is None):
-        return False
-
-    return active != pending
+        FirewallManage.commit(validated_rules)
