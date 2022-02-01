@@ -88,8 +88,7 @@ def _object_manager(object_list):
 
         @staticmethod
         def get_objects():
-            '''returns current version and full object list. a version comparison can be done to rectify changes
-               if needed'''
+            '''returns current version and full object list.'''
 
             return _object_version, _object_definitions
 

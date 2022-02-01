@@ -5,7 +5,7 @@ from dnx_gentools.def_constants import *
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import *
 from dnx_iptools.packet_classes import NFPacket, RawResponse
-from dnx_iptools.protocol_tools import checksum_ipv4, checksum_tcp, checksum_icmp, int_to_ipaddr
+from dnx_iptools.protocol_tools import calc_checksum, int_to_ipaddr
 
 
 class IPPPacket(NFPacket):
@@ -60,7 +60,7 @@ class ProxyResponse(RawResponse):
     # NOTE: consider sending in dst also since it is referenced a 2+ times.
     def _prepare_packet(self, packet, dnx_src_ip):
         # checking if dst port is associated with a nat. if so, will override necessary fields based on protocol
-        # and re assign in the packet object
+        # and re-assign in the packet object
         # NOTE: can we please optimize this. PLEASE!
         port_override = self._Module.open_ports[packet.protocol].get(packet.dst_port)
         if (port_override):
@@ -83,7 +83,7 @@ class ProxyResponse(RawResponse):
             pseudo_header.dst_ip = packet.src_ip
 
             # calculating checksum of container
-            proto_header.checksum = checksum_tcp(
+            proto_header.checksum = calc_checksum(
                 byte_join([pseudo_header.assemble(), proto_header.assemble()])
             )
 
@@ -97,7 +97,7 @@ class ProxyResponse(RawResponse):
 
             # per icmp, ip header and first 8 bytes of rcvd payload are included in icmp response payload
             icmp_payload = byte_join([packet.ip_header, packet.udp_header])
-            proto_header.checksum = checksum_icmp(
+            proto_header.checksum = calc_checksum(
                 byte_join([proto_header.assemble(), icmp_payload])
             )
 
@@ -111,7 +111,7 @@ class ProxyResponse(RawResponse):
         ip_header.src_ip = dnx_src_ip
         ip_header.dst_ip = packet.src_ip
 
-        ip_header.checksum = checksum_ipv4(ip_header.assemble())
+        ip_header.checksum = calc_checksum(ip_header.assemble())
 
         packet_data = [ip_header.assemble(), proto_header.assemble()]
         if (packet.protocol is PROTO.UDP):
@@ -132,17 +132,14 @@ class ProxyResponse(RawResponse):
             packet.udp_header = udp_header_pack(
                 packet.src_port, port_override, packet.udp_len, packet.udp_check
             )
-            # TODO: this doesnt seem right for some reason. we are assigning ip_header, but
-            #  we are doing nothin with it????? this should be assigned within packet yes???
-            #  if so once its complete we can assign it instead of while iterating.
-            #  this would also apply to the IPS!
-            checksum = double_byte_pack(0,0)
+
+            csum = double_byte_pack(0,0)
             for i in range(2):
                 ip_header = ip_header_override_pack(
-                    packet.ip_header[:10], checksum, long_pack(packet.src_ip), dnx_src_ip
+                    packet.ip_header[:10], csum, long_pack(packet.src_ip), dnx_src_ip
                 )
                 if i: break
-                checksum = checksum_ipv4(ip_header)
+                csum = calc_checksum(ip_header)
 
             # overriding packet ip header after process is complete. this will make the loops more efficient than
             # direct references to the instance object every time.

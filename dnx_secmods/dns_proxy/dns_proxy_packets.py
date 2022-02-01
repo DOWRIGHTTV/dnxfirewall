@@ -266,7 +266,7 @@ class ProxyRequest(RawPacket):
         ip_header.src_ip = self.dst_ip
         ip_header.dst_ip = self.src_ip
 
-        ip_header.checksum = checksum_ipv4(ip_header.assemble())
+        ip_header.checksum = calc_checksum(ip_header.assemble())
 
         self.send_data = ip_header.assemble() + udp_header.assemble() + udp_payload
 

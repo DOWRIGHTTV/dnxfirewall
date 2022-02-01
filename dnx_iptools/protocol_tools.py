@@ -16,7 +16,7 @@ __all__ = (
 
     'icmp_reachable',
 
-    'checksum_icmp', 'checksum_ipv4', 'checksum_tcp',
+    'calc_checksum',
     'int_to_ipaddr', 'domain_stob', 'mac_stob',
     'mac_add_sep', 'convert_string_to_bitmap',
     'create_dns_query_header', 'create_dns_response_header',
@@ -33,28 +33,12 @@ def icmp_reachable(host_ip):
     except CalledProcessError:
         return False
 
-# calculates and returns ipv4 header checksum
-def checksum_ipv4(data, packed=False):
-
-    # unpacking in chunks of H(short)/ 16 bit/ 2 byte increments in network order
-    chunks = checksum_iunpack(data)
-
-    csum = 0
-    for chunk in chunks:
-        csum += chunk[0]
-
-    csum = (csum >> 16) + (csum & 0xffff)
-    csum = ~(csum + (csum >> 16)) & 0xffff
-
-    return checksum_pack(csum) if packed else csum
-
-# calculates and return tcp header checksum
-def checksum_tcp(data):
+def calc_checksum(data, len=len):
     # if data length is odd, this will pad it with 1 byte to complete final chunk
     if (len(data) & 1):
         data += b'\x00'
 
-    # unpacking in chunks of H(short)/ 16 bit/ 2 byte increments in network order
+    # unpacking in chunks of H(short)/ 16 bit/ 2 byte increments in < order
     chunks = checksum_iunpack(data)
 
     csum = 0
@@ -62,25 +46,11 @@ def checksum_tcp(data):
     for chunk in chunks:
         csum += chunk[0]
 
-    csum = ~(csum + (csum >> 16)) & 0xffff
+    # fold 32-bit sum to 16 bits (x2) then bitwise NOT for inverse
+    csum = (csum >> 16) + (csum & 65535)
+    csum += (csum >> 16)
 
-    return htons(csum)
-
-# calculates and return icmp header checksum
-# TODO: why is this identical to tcp?
-def checksum_icmp(data):
-
-    # unpacking in chunks of H(short)/ 16 bit/ 2 byte increments in network order
-    chunks = checksum_iunpack(data)
-
-    csum = 0
-    for chunk in chunks:
-        csum += chunk[0]
-
-    csum = ~(csum + (csum >> 16)) & 0xffff
-
-    # NOTE: does this need to be converted to network order?
-    return htons(csum)
+    return htons(~csum)
 
 def int_to_ipaddr(ip_addr):
 
@@ -98,7 +68,7 @@ def mac_stob(mac_address):
 
     return binascii.unhexlify(mac_address.replace(':', ''))
 
-def convert_string_to_bitmap(rule, offset):
+def convert_string_to_bitmap(rule, offset, hash=hash, int=int):
     host_hash = hash(rule)
 
     b_id = int(f'{host_hash}'[:offset])
@@ -114,7 +84,7 @@ def cidr_to_int(cidr):
     return ~((1 << hostmask) - 1) & (2**32 - 1)
 
 def parse_query_name(data, offset=0, *, qname=False):
-    '''parses dns name from sent in data. uses overall dns query to follow pointers. will return
+    '''parse dns name from sent in data. uses overall dns query to follow pointers. will return
     name and offset integer value if qname arg is True otherwise will only return offset.'''
 
     idx = offset
@@ -208,7 +178,7 @@ def init_ping(timeout=.25):
         for i in _range(count):
 
             icmp.sequence = i
-            icmp.checksum = checksum_icmp(icmp.assemble())
+            icmp.checksum = calc_checksum(icmp.assemble())
 
             try:
                 ping_send(icmp.assemble(), (target, 0))

@@ -3,8 +3,10 @@
 import os
 import shutil
 
+from flask import Flask
+
 from dnx_gentools.def_constants import HOME_DIR
-from dnx_gentools.file_operations import ConfigurationManager, load_configuration, calculate_file_hash
+from dnx_gentools.file_operations import ConfigurationManager, load_configuration, write_configuration, calculate_file_hash
 
 from dnx_routines.logging.log_main import LogHandler as Log
 
@@ -26,9 +28,113 @@ class FirewallManage:
     Front end <> FirewallManage <file monitoring> FirewallControl <> CFirewall
 
     firewall = FirewallManage()
-    print(firewall.firewall)
+    print(firewall.view_ruleset())
 
-    print(firewall.firewall['MAIN'])
+    print(firewall.view_ruleset('BEFORE'))
+
+    '''
+
+    __slots__ = (
+        '_firewall',
+    )
+
+    # store main instance reference here so it can be accessed throughout webui
+    cfirewall = None
+
+    versions = ['pending', 'active']
+    sections = ['BEFORE', 'MAIN', 'AFTER']
+
+    def __init__(self):
+        self._firewall = load_configuration(DEFAULT_VERSION, filepath=DEFAULT_PATH)
+
+    @classmethod
+    def commit(cls, firewall_rules):
+        '''Updates pending configuration file with sent in firewall rules data. This is a replace operation on disk and
+        thread and process safe.'''
+
+        with ConfigurationManager(DEFAULT_VERSION, file_path=DEFAULT_PATH) as dnx_fw:
+            dnx_fw.write_configuration(firewall_rules)
+
+    @staticmethod
+    # TODO: rules need to be converted from object based to true values before replacing active rule file
+    def push():
+        '''Copies pending configuration to active, which is being monitored by Control class to load into cfirewall.'''
+
+        with ConfigurationManager():
+            shutil.copy(PENDING_RULE_FILE, COPY_RULE_FILE)
+
+            # ==============================
+            # OBJECT ID > VALUE CONVERSIONS
+            # ==============================
+            obj_lookup = Flask.app.dnx_object_manager.lookup
+
+            # using standalone functions due to config manager not being compatible with these operations
+            fw_rules = load_configuration('firewall_copy', filepath='dnx_system/iptables')
+
+            for rule in fw_rules.values():
+
+                rule['src_network'] = [obj_lookup(x).value for x in rule['src_network']]
+                rule['src_service'] = [obj_lookup(x).value for x in rule['src_service']]
+
+                rule['dst_network'] = [obj_lookup(x).value for x in rule['dst_network']]
+                rule['dst_service'] = [obj_lookup(x).value for x in rule['dst_service']]
+
+            write_configuration(fw_rules, 'firewall_copy', filepath='dnx_system/iptables')
+
+            os.replace(COPY_RULE_FILE, ACTIVE_RULE_FILE)
+
+    @staticmethod
+    def revert():
+        '''Copies active configuration to pending, which effectively wipes any unpushed changes.'''
+
+        with ConfigurationManager():
+            shutil.copy(ACTIVE_RULE_FILE, COPY_RULE_FILE)
+
+            os.replace(COPY_RULE_FILE, PENDING_RULE_FILE)
+
+    def convert_ruleset(self):
+        pass
+
+    def view_ruleset(self, section='MAIN'):
+        '''returns dict of requested "firewall_pending" ruleset in raw form. additional processing is required for webui
+         or cli formats.
+
+        args:
+
+        section > will change which ruleset is returned.
+        '''
+
+        try:
+            return self._firewall[section]
+        except KeyError:
+            return {}
+
+    def ruleset_len(self, section='MAIN'):
+        '''returns len of firewall_pending ruleset. defaults to main and returns 0 on error.'''
+
+        try:
+            return len(self._firewall[section])
+        except:
+            return 0
+
+    @staticmethod
+    def is_pending_changes():
+        active = calculate_file_hash('firewall_active.json', folder='iptables/usr')
+        pending = calculate_file_hash('firewall_pending.json', folder='iptables/usr')
+
+        # if user has never modified rules there is not a pending change. active file can be none
+        # if pending is present. a commit will write the active file.
+        if (pending is None):
+            return False
+
+        return active != pending
+
+
+
+class FirewallManageLegacy:
+    '''intermediary between front end and underlying C firewall code.
+
+    Front end <> FirewallManageLegacy <file monitoring> FirewallControl <> CFirewall
 
     '''
 
@@ -133,62 +239,3 @@ class FirewallManage:
         #  with this operation without releasing the lock without having to duplicate code.
         if (move):
             self.add(pos, rule_to_move, section=section)
-
-    @classmethod
-    def commit(cls, firewall_rules):
-
-        with ConfigurationManager(DEFAULT_VERSION, file_path=DEFAULT_PATH) as dnx_fw:
-            dnx_fw.write_configuration(firewall_rules)
-
-    @staticmethod
-    # TODO: rules need to be converted from object based to true values before replacing active rule file
-    def push():
-        '''Copies pending configuration to active, which is being monitored by Control class to load into cfirewall.'''
-
-        with ConfigurationManager():
-            shutil.copy(PENDING_RULE_FILE, COPY_RULE_FILE)
-
-            os.replace(COPY_RULE_FILE, ACTIVE_RULE_FILE)
-
-    @staticmethod
-    def revert():
-        '''Copies active configuration to pending, which effectively wipes any unpushed changes.'''
-
-        with ConfigurationManager():
-            shutil.copy(ACTIVE_RULE_FILE, COPY_RULE_FILE)
-
-            os.replace(COPY_RULE_FILE, PENDING_RULE_FILE)
-
-    def view_ruleset(self, section='MAIN'):
-        '''returns dict of requested "firewall_pending" ruleset in raw form. additional processing is required for webui
-         or cli formats.
-
-        args:
-
-        section > will change which ruleset is returned.
-        '''
-
-        try:
-            return self._firewall[section]
-        except KeyError:
-            return {}
-
-    def ruleset_len(self, section='MAIN'):
-        '''returns len of firewall_pending ruleset. defaults to main and returns 0 on error.'''
-
-        try:
-            return len(self._firewall[section])
-        except:
-            return 0
-
-    @staticmethod
-    def is_pending_changes():
-        active = calculate_file_hash('firewall_active.json', folder='iptables/usr')
-        pending = calculate_file_hash('firewall_pending.json', folder='iptables/usr')
-
-        # if user has never modified rules there is not a pending change. active file can be none
-        # if pending is present. a commit will write the active file.
-        if (pending is None):
-            return False
-
-        return active != pending

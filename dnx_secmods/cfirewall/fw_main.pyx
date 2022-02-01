@@ -451,17 +451,17 @@ cdef inline void obj_print(int name, void *object) nogil:
 # ============================================
 cdef void process_traffic(nfq_handle *h) nogil:
 
-    cdef int fd = nfq_fd(h)
-    cdef char packet_buf[4096]
-    cdef size_t sizeof_buf = sizeof(packet_buf)
-    cdef int data_len
-    cdef int recv_flags = 0
+    cdef:
+        int fd = nfq_fd(h)
+        char packet_buf[4096]
+        int recv_flags = 0
+        size_t dlen
 
     while True:
-        data_len = recv(fd, packet_buf, sizeof_buf, recv_flags)
+        dlen = recv(fd, packet_buf, sizeof(packet_buf), recv_flags)
 
-        if (data_len >= 0):
-            nfq_handle_packet(h, packet_buf, data_len)
+        if (dlen >= 0):
+            nfq_handle_packet(h, packet_buf, dlen)
 
         else:
             # TODO: i believe we can get rid of this and set up a lower level ignore of this. this might require

@@ -96,7 +96,7 @@ def get_and_format_rules(section):
         reference_counts[src_zone] += 1
         reference_counts[dst_zone] += 1
 
-        t_rule = [
+        converted_rules_append([
             rule['enabled'], rule['name'],
 
             src_zone,
@@ -107,9 +107,7 @@ def get_and_format_rules(section):
 
             rule['action'], rule['log'],
             rule['ipp_profile'], rule['ips_profile']
-        ]
-
-        converted_rules_append(t_rule)
+        ])
 
     return converted_rules
 
