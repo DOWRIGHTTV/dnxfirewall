@@ -49,17 +49,19 @@ LOG_NAME = 'web_app'
 # setup for system logging
 Log.run(name=LOG_NAME)
 
-# initialize cfirewall manager, which interfaces with cfirewall control class through a fd.
-cfirewall = FirewallManage()
-
-# setting ref class var to instance. this will allow any webui module to access firewall
-# state without passing around object.
-FirewallManage.cfirewall = cfirewall
-
 # NOTE: this will allow the config manager to reference the Log class without an import. (cyclical import error)
 ConfigurationManager.set_log_reference(Log)
 
 app.dnx_object_manager = dnx_object_manager.initialize(HOME_DIR)
+
+# initialize cfirewall manager, which interfaces with cfirewall control class through a fd.
+cfirewall = FirewallManage()
+
+# setting FirewallManager instance as class var within FirewallManager to access instance through webui
+FirewallManage.cfirewall = cfirewall
+
+# setting object manager instance as class var within FirewallManager for direct access
+FirewallManage.object_manager = app.dnx_object_manager
 
 # =========================================
 # WEBUI COMPONENTS

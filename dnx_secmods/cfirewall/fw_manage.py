@@ -40,6 +40,7 @@ class FirewallManage:
 
     # store main instance reference here so it can be accessed throughout webui
     cfirewall = None
+    object_manager = None
 
     versions = ['pending', 'active']
     sections = ['BEFORE', 'MAIN', 'AFTER']
@@ -55,9 +56,9 @@ class FirewallManage:
         with ConfigurationManager(DEFAULT_VERSION, file_path=DEFAULT_PATH) as dnx_fw:
             dnx_fw.write_configuration(firewall_rules)
 
-    @staticmethod
+    @classmethod
     # TODO: rules need to be converted from object based to true values before replacing active rule file
-    def push():
+    def push(cls):
         '''Copies pending configuration to active, which is being monitored by Control class to load into cfirewall.'''
 
         with ConfigurationManager():
@@ -66,18 +67,19 @@ class FirewallManage:
             # ==============================
             # OBJECT ID > VALUE CONVERSIONS
             # ==============================
-            obj_lookup = Flask.app.dnx_object_manager.lookup
+            obj_lookup = cls.object_manager.lookup
 
             # using standalone functions due to config manager not being compatible with these operations
-            fw_rules = load_configuration('firewall_copy', filepath='dnx_system/iptables')
+            fw_rules = load_configuration('firewall_pending', filepath='dnx_system/iptables')
 
-            for rule in fw_rules.values():
+            for section in cls.sections:
 
-                rule['src_network'] = [obj_lookup(x).value for x in rule['src_network']]
-                rule['src_service'] = [obj_lookup(x).value for x in rule['src_service']]
+                for rule in fw_rules[section].values():
+                    rule['src_network'] = [obj_lookup(x).value for x in rule['src_network']]
+                    rule['src_service'] = [obj_lookup(x).value for x in rule['src_service']]
 
-                rule['dst_network'] = [obj_lookup(x).value for x in rule['dst_network']]
-                rule['dst_service'] = [obj_lookup(x).value for x in rule['dst_service']]
+                    rule['dst_network'] = [obj_lookup(x).value for x in rule['dst_network']]
+                    rule['dst_service'] = [obj_lookup(x).value for x in rule['dst_service']]
 
             write_configuration(fw_rules, 'firewall_copy', filepath='dnx_system/iptables')
 
@@ -128,7 +130,6 @@ class FirewallManage:
             return False
 
         return active != pending
-
 
 
 class FirewallManageLegacy:

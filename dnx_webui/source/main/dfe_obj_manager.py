@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
 import csv
+import pprint
 
 from copy import copy
 from collections import namedtuple
-import pprint
-#
+
+from dnx_iptools.protocol_tools import cidr_to_int
+
 debug = pprint.PrettyPrinter(indent=4).pprint
 
 _FW_OBJECT = namedtuple('fw_object', 'id name origin type value description')
@@ -28,6 +30,24 @@ def _object_manager(object_list):
     _name_to_idx_get = _name_to_idx.get
 
     # debug(_id_to_idx)
+    def convert_object(obj, /):
+        if (obj.type == 'address'):
+            ip, netmask = obj.value.split('/')
+
+
+
+            cidr_to_int(netmask)
+
+        elif (obj.type == 'country'):
+            pass
+
+        elif (obj.type == 'service'):
+            pass
+
+        # not implemented at this time
+        elif (obj.type == 'zone'):
+            pass
+
 
     class ObjectManager:
 
@@ -77,7 +97,7 @@ def _object_manager(object_list):
             return results
 
         @staticmethod
-        def lookup(id):
+        def lookup(id, convert=False):
             '''return index of object associated with sent in object id. if id does not exist, None will be returned.'''
 
             idx = _id_to_idx_get(id, None)

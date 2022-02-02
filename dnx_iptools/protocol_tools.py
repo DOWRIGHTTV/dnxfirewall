@@ -17,7 +17,8 @@ __all__ = (
     'icmp_reachable',
 
     'calc_checksum',
-    'int_to_ipaddr', 'domain_stob', 'mac_stob',
+    'int_to_ipaddr', 'cidr_to_int',
+    'domain_stob', 'mac_stob',
     'mac_add_sep', 'convert_string_to_bitmap',
     'create_dns_query_header', 'create_dns_response_header',
     'parse_query_name'
@@ -56,6 +57,9 @@ def int_to_ipaddr(ip_addr):
 
     return dot_join([f'{b}' for b in long_pack(ip_addr)])
 
+def ipaddr_to_int(ip_addr):
+    pass
+
 def mac_add_sep(mac_address, sep=':'):
     string_mac = []
     string_mac_append = string_mac.append
@@ -76,10 +80,10 @@ def convert_string_to_bitmap(rule, offset, hash=hash, int=int):
 
     return (b_id, h_id)
 
-def cidr_to_int(cidr):
+def cidr_to_int(cidr, int=int):
 
-    # using hostmask to shift to the start of network bits
-    hostmask = 32 - cidr
+    # using hostmask to shift to the start of network bits. int conversion to cover string values.
+    hostmask = 32 - int(cidr)
 
     return ~((1 << hostmask) - 1) & (2**32 - 1)
 
