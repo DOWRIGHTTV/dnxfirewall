@@ -19,7 +19,7 @@ from dnx_gentools.def_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK
 
 from dnx_netmods.dnx_netfilter.dnx_nfqueue import set_user_callback, NetfilterQueue # pylint: disable=no-name-in-module, import-error
 from dnx_iptools.interface_ops import load_interfaces, wait_for_interface, wait_for_ip, get_masquerade_ip
-from dnx_iptools.protocol_tools import int_to_ipaddr
+from dnx_iptools.protocol_tools import int_to_ip
 from dnx_gentools.standard_tools import looper
 
 
@@ -745,7 +745,7 @@ class RawResponse:
         # calling hook for packet generation in subclass then sending via direct socket sendto ref
         send_data = self._prepare_packet(packet, dnx_src_ip)
         try:
-            intf.sock_sendto(send_data, (int_to_ipaddr(packet.src_ip), 0))
+            intf.sock_sendto(send_data, (int_to_ip(packet.src_ip), 0))
         except OSError:
             pass
 

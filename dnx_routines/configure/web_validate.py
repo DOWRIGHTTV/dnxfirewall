@@ -423,7 +423,7 @@ def firewall_commit(fw_rules, /):
 def manage_firewall_rule(rule_num, fw_rule, /):
 
     # FASTER CHECKS FIRST
-    if (fw_rule.action not in ['ACCEPT', 'DENY']):
+    if (fw_rule.action not in ['ACCEPT', 'DROP']):
         raise ValidationError(f'{INVALID_FORM} [rule #{rule_num}/action]')
 
     action = 1 if fw_rule.action == 'ACCEPT' else 0

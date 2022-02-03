@@ -110,8 +110,12 @@
         {# custom functions for client side functionality. tied to nav since any page with nav, these will apply #}
         <script>
             document.addEventListener('DOMContentLoaded', () => {
-                var modal = document.querySelector('.modal-pop');
-                var instance = M.Modal.init(modal);
+                let modal = document.querySelector('.modal-pop');
+                let instance = M.Modal.init(
+                    modal, {
+                        dismissible: false
+                    }
+                );
 
                 if (error && modal) {
                     instance.open();

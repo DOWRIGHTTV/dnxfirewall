@@ -231,7 +231,7 @@ class ProxyRequest(RawPacket):
         # hashing queried name enumerating any subdomains (signature matching)
         # defining unique tuple for informing dns server of inspection results
         self.requests = _enumerate_request(*query_info)
-        self.request_identifier = (int_to_ipaddr(self.src_ip), self.src_port, self.dns_id)
+        self.request_identifier = (int_to_ip(self.src_ip), self.src_port, self.dns_id)
 
     # will create send data object for used by proxy.
     def generate_proxy_response(self, len=len):

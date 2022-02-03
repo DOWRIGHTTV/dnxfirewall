@@ -5,7 +5,7 @@ from dnx_gentools.def_constants import *
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import *
 from dnx_iptools.packet_classes import NFPacket, RawResponse
-from dnx_iptools.protocol_tools import calc_checksum, int_to_ipaddr
+from dnx_iptools.protocol_tools import calc_checksum, int_to_ip
 
 
 class IPPPacket(NFPacket):
@@ -33,15 +33,15 @@ class IPPPacket(NFPacket):
         if (self.direction == DIR.INBOUND):
             tracked_ip = self.src_ip
 
-            self.tracked_ip = int_to_ipaddr(tracked_ip)
-            self.local_ip = int_to_ipaddr(self.dst_ip)
+            self.tracked_ip = int_to_ip(tracked_ip)
+            self.local_ip = int_to_ip(self.dst_ip)
 
         # elif self.direction = DIR.OUTBOUND:
         else:
             tracked_ip = self.dst_ip
 
-            self.local_ip = int_to_ipaddr(self.src_ip)
-            self.tracked_ip = int_to_ipaddr(tracked_ip)
+            self.local_ip = int_to_ip(self.src_ip)
+            self.tracked_ip = int_to_ip(tracked_ip)
 
         self.bin_data = (tracked_ip & MSB, tracked_ip & LSB)
 

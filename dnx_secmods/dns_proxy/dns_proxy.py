@@ -10,7 +10,7 @@ from dnx_gentools.signature_operations import generate_domain
 
 from dnx_iptools.dnx_trie_search import generate_recursive_binary_search
 from dnx_iptools.packet_classes import Listener
-from dnx_iptools.protocol_tools import int_to_ipaddr
+from dnx_iptools.protocol_tools import int_to_ip
 
 from dnx_secmods.dns_proxy.dns_proxy_automate import Configuration
 from dnx_secmods.dns_proxy.dns_proxy_log import Log
@@ -86,7 +86,7 @@ def notify_server(request_identifier, decision):
 
 def send_to_client(packet):
     try:
-        packet.sendto(packet.send_data, (int_to_ipaddr(packet.src_ip), 0))
+        packet.sendto(packet.send_data, (int_to_ip(packet.src_ip), 0))
     except OSError:
         pass
 

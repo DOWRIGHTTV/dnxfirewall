@@ -138,7 +138,7 @@ function newRule() {
     let FWrules = document.getElementById('filter-table-body')
     let ruleCount = FWrules.children.length+1
 
-    let defaultChip = '<div class="chip">none<i class="close material-icons">close</i></div>'
+    let defaultChip = '<div class="chip">none</div>'
 
     // TODO: add classes for each td
 
@@ -149,7 +149,7 @@ function newRule() {
                 `<a class="btn btn-floating btn-small waves-light" onclick="MoveUp(${ruleCount})">` +
                     '<i class="material-icons blue-grey">arrow_upward</i>' +
                 '</a>' +
-                `<a class="btn btn-floating btn-small waves-light" onclick="MoveDown(${ruleCount})">` +
+                `<a class="btn btn-floating btn-small waves-light valign-wrapper" onclick="MoveDown(${ruleCount})">` +
                     '<i class="material-icons red darken-2">arrow_downward</i>' +
                 '</a>' +
             '</div>' +
@@ -274,7 +274,7 @@ function cAddCallback(e, chip) {
     let chipFormat = objFormatMap[chipDef.type]
 
     chip.className += ` ${chipFormat[0]}`
-    chip.innerHTML = `<i class="material-icons tiny">${chipFormat[1]}</i>` + chip.innerHTML 
+    chip.innerHTML = `<i class="material-icons tiny">${chipFormat[1]}</i>` + '  ' + chip.innerHTML
     chip.innerHTML += `<input type="hidden" name="${e[0].id}" value="${chipDef.id},${chipDef.type}">`;
 }
 function cSelectCallback(e, chip) {

@@ -6,7 +6,8 @@ import pprint
 from copy import copy
 from collections import namedtuple
 
-from dnx_iptools.protocol_tools import cidr_to_int
+from dnx_gentools.def_constants import GEO, DATA
+from dnx_iptools.protocol_tools import cidr_to_int, ip_to_int
 
 debug = pprint.PrettyPrinter(indent=4).pprint
 
@@ -29,25 +30,33 @@ def _object_manager(object_list):
     _name_to_idx = {x[1]: i for i, x in enumerate(_object_definitions)}
     _name_to_idx_get = _name_to_idx.get
 
-    # debug(_id_to_idx)
-    def convert_object(obj, /):
+    proto_convert = {'icmp': 1, 'tcp': 6, 'udp': 17}
+
+    def convert_object(obj, /, len=len):
         if (obj.type == 'address'):
             ip, netmask = obj.value.split('/')
 
-
-
-            cidr_to_int(netmask)
+            return [ip_to_int(ip), cidr_to_int(netmask)]
 
         elif (obj.type == 'country'):
-            pass
+            return [-1, GEO[obj.value.upper()].value]
 
         elif (obj.type == 'service'):
-            pass
+
+            proto, port = obj.value.split('/')
+
+            ports = [int(p) for p in port.split('-')]
+            if (len(ports) == 1):
+
+                # single port will be defined as a range starting and ending with itself.
+                return [proto_convert[proto], ports[0], ports[0]]
+
+            else:
+                return [proto_convert[proto], ports[0], ports[1]]
 
         # not implemented at this time
         elif (obj.type == 'zone'):
             pass
-
 
     class ObjectManager:
 
@@ -57,10 +66,10 @@ def _object_manager(object_list):
         def validate(icon, obj_name):
             '''returns object id if valid, otherwise returns None'''
 
-            idx = _name_to_idx_get(obj_name, None)
+            idx = _name_to_idx_get(obj_name, DATA.MISSING)
             print(f'index found: {idx}')
 
-            if (not idx):
+            if (idx is DATA.MISSING):
                 return None
 
             input_type = _icon_to_type.get(icon, None)
@@ -100,11 +109,16 @@ def _object_manager(object_list):
         def lookup(id, convert=False):
             '''return index of object associated with sent in object id. if id does not exist, None will be returned.'''
 
-            idx = _id_to_idx_get(id, None)
+            idx = _id_to_idx_get(id, DATA.MISSING)
+            if (idx is DATA.MISSING):
+                return None
 
-            print(f'[lookup] id={id}, idx={idx}')
+            obj = _object_definitions[idx]
 
-            return _object_definitions[idx] if idx else None
+            if (convert):
+                return convert_object(obj)
+
+            return obj
 
         @staticmethod
         def get_objects():

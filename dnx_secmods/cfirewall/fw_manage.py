@@ -75,15 +75,17 @@ class FirewallManage:
             for section in cls.sections:
 
                 for rule in fw_rules[section].values():
-                    rule['src_network'] = [obj_lookup(x).value for x in rule['src_network']]
-                    rule['src_service'] = [obj_lookup(x).value for x in rule['src_service']]
+                    rule['src_network'] = [obj_lookup(x, convert=True) for x in rule['src_network']]
+                    rule['src_service'] = [obj_lookup(x, convert=True) for x in rule['src_service']]
 
-                    rule['dst_network'] = [obj_lookup(x).value for x in rule['dst_network']]
-                    rule['dst_service'] = [obj_lookup(x).value for x in rule['dst_service']]
+                    rule['dst_network'] = [obj_lookup(x, convert=True) for x in rule['dst_network']]
+                    rule['dst_service'] = [obj_lookup(x, convert=True) for x in rule['dst_service']]
 
             write_configuration(fw_rules, 'firewall_copy', filepath='dnx_system/iptables')
 
-            os.replace(COPY_RULE_FILE, ACTIVE_RULE_FILE)
+            print('FUTURE ACTIVE', fw_rules)
+
+#            os.replace(COPY_RULE_FILE, ACTIVE_RULE_FILE)
 
     @staticmethod
     def revert():

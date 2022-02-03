@@ -223,7 +223,7 @@ class DIR(_Flag):
 class CONN(_Enum):
     # decisions
     REJECT  = -2
-    INSPECT = -1 # drop with full inspection
+    INSPECT = -1  # drop with full inspection
     DROP    = 0
     ACCEPT  = 1
 
@@ -233,11 +233,11 @@ class DHCP(_IntEnum):
     DISCOVER = 1
     OFFER    = 2
     REQUEST  = 3
-    DECLINE  = 4 # allow better support for this without fully conforming to RFC
+    DECLINE  = 4  # allow better support for this without fully conforming to RFC
     ACK      = 5
     NAK      = 6
     RELEASE  = 7
-    INFORM   = 8 # Add support
+    INFORM   = 8  # Add support
     DROP     = 9
     # dhcp lease types | these are required ints
     AVAILABLE   = -1

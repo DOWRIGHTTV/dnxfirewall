@@ -4,7 +4,7 @@ import binascii
 
 from functools import partial
 from random import getrandbits
-from socket import htons, socket, AF_INET, SOCK_RAW
+from socket import socket, htons, inet_aton, AF_INET, SOCK_RAW
 from subprocess import run, CalledProcessError, DEVNULL
 
 from dnx_gentools.def_constants import RUN_FOREVER, PROTO, byte_join, dot_join
@@ -17,7 +17,7 @@ __all__ = (
     'icmp_reachable',
 
     'calc_checksum',
-    'int_to_ipaddr', 'cidr_to_int',
+    'int_to_ip', 'ip_to_int', 'cidr_to_int',
     'domain_stob', 'mac_stob',
     'mac_add_sep', 'convert_string_to_bitmap',
     'create_dns_query_header', 'create_dns_response_header',
@@ -53,12 +53,13 @@ def calc_checksum(data, len=len):
 
     return htons(~csum)
 
-def int_to_ipaddr(ip_addr):
+def int_to_ip(ip, /):
 
-    return dot_join([f'{b}' for b in long_pack(ip_addr)])
+    return dot_join([f'{b}' for b in long_pack(ip)])
 
-def ipaddr_to_int(ip_addr):
-    pass
+def ip_to_int(ip, /):
+
+    return btoia(inet_aton(ip))
 
 def mac_add_sep(mac_address, sep=':'):
     string_mac = []
@@ -170,16 +171,13 @@ def init_ping(timeout=.25):
     ping_send = ping_sock.sendto
     ping_recv = ping_sock.recvfrom
 
-    _randid = getrandbits
-    _range = range
-
     def ping(target, *, count=1, OSError=OSError):
 
         icmp = _icmp_header_template()
-        icmp.id = _randid(16)
+        icmp.id = getrandbits(16)
 
         replies_rcvd = 0
-        for i in _range(count):
+        for i in range(count):
 
             icmp.sequence = i
             icmp.checksum = calc_checksum(icmp.assemble())
@@ -191,7 +189,7 @@ def init_ping(timeout=.25):
 
             else:
                 # TODO: this might need a mechanism to break if we don't receive a matching response after X reads.
-                while True:
+                for _ in RUN_FOREVER():
                     try:
                         echo_reply, addr = ping_recv(2048)
                     except OSError:

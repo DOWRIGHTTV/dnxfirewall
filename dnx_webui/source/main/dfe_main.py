@@ -567,6 +567,12 @@ def dnx_login():
 def main():
     return redirect(url_for('dnx_login'))
 
+# TODO: make this use a new non application error page because explanation doesnt make sense. also transfer session
+# of logged in users.
+@app.route('/<path>', methods=['GET'])
+def default(path):
+    return render_template(application_error_page, general_error='page not found.')
+
 # --------------------------------------------- #
 # all standard page loads use this logic to decide the page action/ call the correct
 # lower level functions residing in each pages Class
@@ -710,6 +716,8 @@ def ajax_response(*, status, data):
     if (not isinstance(status, bool)):
         raise TypeError('Ajax response status must be a boolean.')
 
+    print(jsonify({'success': status, 'result': data}))
+
     return jsonify({'success': status, 'result': data})
 
 # =================================
@@ -795,12 +803,14 @@ def merge_items(a1, a2):
     return new_list
 
 def format_fw_obj(fw_obj, /):
-    properties = {'country': ['red', 'language'], 'address': ['blue lighten-2', 'tv'], 'service': ['orange lighten-2', 'track_changes']}.get(fw_obj[3], ['', ''])
+    properties = {
+        'country': ['red', 'language'], 'address': ['blue lighten-2', 'tv'],
+        'service': ['orange lighten-2', 'track_changes']
+    }.get(fw_obj[3], ['', ''])
 
     return (f'<div class="chip tooltipped {properties[0]}" data-html="true"'
-                f'data-tooltip="<p style=width:160px> {fw_obj[2]}<br>{fw_obj[3]}<br>{fw_obj[4]}<br>{fw_obj[5]}</p>">'
-                f'<i class="material-icons tiny {properties[0]} valign-center">{properties[1]}</i> <big>{fw_obj[1]}</big>'
-             '</div>')
+            f'data-tooltip="<p style=width:160px> {fw_obj[2]}<br>{fw_obj[3]}<br>{fw_obj[4]}<br>{fw_obj[5]}</p>">'
+            f'<i class="material-icons tiny {properties[0]} valign-center">{properties[1]}</i>  {fw_obj[1]}</div>')
 
 def is_list(li, /):
     return isinstance(li, list)

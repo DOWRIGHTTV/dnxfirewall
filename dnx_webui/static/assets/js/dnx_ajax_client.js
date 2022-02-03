@@ -18,23 +18,31 @@ class AjaxClient {
                 body: JSON.stringify(data)
             })
 
-        return await this.__handleResponse(response);
-    }
-
-    async __handleResponse(response) {
         if (response.ok) {
             let ajaxResponse = await response.json();
 
-            if (ajaxResponse.success) {
-                return ajaxResponse.result;
-            }
-
-            if (this._onErrorCallback) {
-                this._onErrorCallback(ajaxResponse.error);
-            }
-
-            return null;
+            return ajaxResponse.result;
         }
+
+//        return await this.__handleResponse(response);
     }
+
+//    async __handleResponse(response) {
+//        if (response.ok) {
+//            let ajaxResponse = await response.json();
+
+
+//            console.log(ajaxResponse)
+//            if (ajaxResponse.success) {
+//                return ajaxResponse.result;
+//            }
+
+//            if (this._onErrorCallback) {
+//                this._onErrorCallback(ajaxResponse.error);
+//            }
+
+//            return null;
+//        }
+//    }
 }
 const ajaxClient = new AjaxClient(location.pathname);

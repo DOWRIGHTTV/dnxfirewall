@@ -4,18 +4,20 @@ async function commitRules(table_id) {
         let FWrules = tableToJson(table_id)
         let response = await ajaxClient.post('/commit', { 'section': `${FWsection}`, 'rules': `${FWrules}` });
 
-        if (response) {
-            // this needs to be worked on to differentiate whether a page update or a new table load. if new table
-            // the table body should be reset, data retained and (notify of no more data? grey out more data btn?)
-            if (response.length === 0) {
-                console.log('No data!')
-                return;
-            }
+        if (response.error) {
+            let commitError = document.querySelector('#commit-error-modal');
+            commitError.querySelector('h5').innerText = response.message;
 
-            // Data do something with it.
-            console.log('[server/response]: ',response);
+            errorModal = M.Modal.init(
+                commitError, {
+                    dismissible: false
+                }
+            );
+            errorModal.open();
+
+            console.log('[server/response]: ', response);
         } else {
-            console.log('no response from server.')
+            console.log('[server/response]: successful commit.')
         }
 }
 function tableToJson(table_id) {

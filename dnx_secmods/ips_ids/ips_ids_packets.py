@@ -5,7 +5,7 @@ from dnx_gentools.def_constants import *
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import *
 from dnx_iptools.packet_classes import NFPacket, RawResponse
-from dnx_iptools.protocol_tools import calc_checksum, int_to_ipaddr
+from dnx_iptools.protocol_tools import calc_checksum, int_to_ip
 from dnx_iptools.interface_ops import load_interfaces
 
 
@@ -54,7 +54,7 @@ class IPSPacket(NFPacket):
         self.ips_profile = mark >> 20 & 15
 
         # NOTE: subject to change. this assumes ip restricted to inbound traffic only.
-        self.tracked_ip = int_to_ipaddr(self.src_ip)
+        self.tracked_ip = int_to_ip(self.src_ip)
         if (self.protocol is not PROTO.ICMP):
             self.target_port = self.dst_port
 
