@@ -33,7 +33,7 @@ DEF ONE_BYTE = 8
 DEF TWELVE_BITS = 12
 DEF TWO_BYTES = 16
 
-DEF SECURITY_PROFILE_COUNT = 3  # TODO: figure out how to pull this from pxd
+# DEF SECURITY_PROFILE_COUNT = 3  # TODO: figure out how to pull this from pxd
 
 DEF PROFILE_SIZE = 4  # bits
 DEF PROFILE_START = 12
@@ -111,18 +111,18 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # definitions or default assignments
     cdef:
         unsigned char *pktdata
-        iphdr *ip_header
+        IPhdr *ip_header
 
         # default proto_header values (used by icmp) and replaced with protocol specific values
         # not using calloc to keep mem allocation handle on stack
-        protohdr proto_def = [0, 0]
-        protohdr *proto_header = &proto_def
+        Protohdr proto_def = [0, 0]
+        Protohdr *proto_header = &proto_def
 
         bint system_rule = 0
 
         u_int8_t direction, iphdr_len
         int pktdata_len
-        res_tuple inspection_res
+        InspectionResults inspection_results
         u_int32_t verdict
 
     # definition w/ assignment via function calls
@@ -138,7 +138,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         nfqnl_msg_packet_hw *_hw = nfq_get_packet_hw(nfa)
         char *m_addr = <char*>_hw.hw_addr
 
-        hw_info hw = [
+        HWinfo hw = [
             INTF_ZONE_MAP[in_intf],
             INTF_ZONE_MAP[out_intf],
             m_addr,
@@ -150,13 +150,13 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
 
     # IP HEADER
     # assigning ip_header to ptr to data[0] (cast to iphdr struct) then calculate ip header len.
-    ip_header = <iphdr*>pktdata
+    ip_header = <IPhdr*>pktdata
     iphdr_len = (ip_header.ver_ihl & FOUR_BIT_MASK) * 4
 
     # PROTOCOL HEADER
     # tcp/udp will reassign the pointer to their header data
     if (ip_header.protocol != IPPROTO_ICMP):
-        proto_header = <protohdr*>&pktdata[iphdr_len]
+        proto_header = <Protohdr*>&pktdata[iphdr_len]
 
     # DIRECTION SET
     # uses initial mark of packet to determine the stateful direction of the connection
@@ -171,31 +171,31 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # prevents the manager thread from updating firewall rules during a packets inspection
     pthread_mutex_lock(&FWrulelock)
 
-    inspection_res = cfirewall_inspect(&hw, ip_header, proto_header, direction)
+    inspection_results = cfirewall_inspect(&hw, ip_header, proto_header, direction)
 
     pthread_mutex_unlock(&FWrulelock)
     # =============================== #
 
     # SYSTEM RULES will have cfirewall invoke action directly since this traffic does not need further inspection
-    if (inspection_res.fw_section == SYSTEM_RULES):
+    if (inspection_results.fw_section == SYSTEM_RULES):
 
         system_rule = 1 # only used by verbose logging.
 
-        nfq_set_verdict(qh, id, inspection_res.action, pktdata_len, pktdata)
+        nfq_set_verdict(qh, id, inspection_results.action, pktdata_len, pktdata)
 
     else:
         # verdict is defined here based on BYPASS flag.
         # if not BYPASS, ip proxy is next in line regardless of action to gather geolocation data
         # if BYPASS, invoke the rule action without forwarding to another queue. only to be used for testing and
         #   toggled via an argument to nf_run().
-        verdict = inspection_res.action if BYPASS else IP_PROXY << TWO_BYTES | NF_QUEUE
+        verdict = inspection_results.action if BYPASS else IP_PROXY << TWO_BYTES | NF_QUEUE
 
-        nfq_set_verdict2(qh, id, verdict, inspection_res.mark, pktdata_len, pktdata)
+        nfq_set_verdict2(qh, id, verdict, inspection_results.mark, pktdata_len, pktdata)
 
     # verdict is being used to eval whether packet matched a system rule. 0 verdict infers this also, but for ease
     # of reading, ill have both.
     if (VERBOSE):
-        printf('[C/packet] action=%u, verdict=%u, system_rule=%u\n', inspection_res.action, verdict, system_rule)
+        printf('[C/packet] action=%u, verdict=%u, system_rule=%u\n', inspection_results.action, verdict, system_rule)
 
     # libnfnetlink.c return >> libnetfiler_queue return >> CFirewall._run.
     # < 0 vals are errors, but return is being ignored by CFirewall._run. there may be a use for sending messages
@@ -203,7 +203,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     return OK
 
 # explicit inline declaration needed for compiler to know to inline this function
-cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr *proto_header, u_int8_t direction) nogil:
+cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header, u_int8_t direction) nogil:
 
     cdef:
         FWrule rule
@@ -225,7 +225,7 @@ cdef inline res_tuple cfirewall_inspect(hw_info *hw, iphdr *ip_header, protohdr 
         u_int16_t tracked_geo = src_country if direction == INBOUND else dst_country
 
         # return struct (section | action | mark)
-        res_tuple results
+        InspectionResults results
 
         # security profile loop
         size_t i, idx
@@ -334,7 +334,7 @@ cdef inline bint in_blocklist(u_int32_t src_host) nogil:
     return NO_MATCH
 
 # generic function for src/dst zone matching
-cdef inline bint zone_match(zone_arr rule_defs, u_int8_t pkt_zone) nogil:
+cdef inline bint zone_match(ZoneArray rule_defs, u_int8_t pkt_zone) nogil:
 
     cdef size_t i
 
@@ -356,53 +356,53 @@ cdef inline bint zone_match(zone_arr rule_defs, u_int8_t pkt_zone) nogil:
     return NO_MATCH
 
 # generic function for source OR destination network obj matching
-cdef inline bint network_match(network_arr rule_defs, u_int32_t iph_ip, u_int16_t country) nogil:
+cdef inline bint network_match(NetworkArray rule_defs, u_int32_t iph_ip, u_int16_t country) nogil:
 
     cdef:
         size_t i
-        network_obj rule
+        NetworkObj net_defs
 
     for i in range(rule_defs.len):
 
-        rule = rule_defs.objects[i]
+        net_defs = rule_defs.objects[i]
 
         if (VERBOSE):
-            obj_print(NETWORK, &rule)
+            obj_print(NETWORK, &net_defs)
 
         # geolocation objects use address object fields. we know it's a geo object when netid is -1
-        if (rule.netid == GEO_MARKER):
+        if (net_defs.netid == GEO_MARKER):
 
             # country code/id comparison
-            if (country == rule.netmask):
+            if (country == net_defs.netmask):
                 return MATCH
 
         # using rules mask to floor source ip in header and checking against FWrule network id
-        elif (iph_ip & rule.netmask == rule.netid):
+        elif (iph_ip & net_defs.netmask == net_defs.netid):
             return MATCH
 
     # default action
     return NO_MATCH
 
 # generic function that can handle source OR destination proto/port matching
-cdef inline bint service_match(service_arr rule_defs, u_int16_t pkt_protocol, u_int16_t pkt_port) nogil:
+cdef inline bint service_match(ServiceArray rule_defs, u_int16_t pkt_protocol, u_int16_t pkt_port) nogil:
 
     cdef:
         size_t i
-        service_obj rule
+        ServiceObj svc_defs
 
     for i in range(rule_defs.len):
 
-        rule = rule_defs.objects[i]
+        svc_defs = rule_defs.objects[i]
 
         if (VERBOSE):
-            obj_print(SERVICE, &rule)
+            obj_print(SERVICE, &svc_defs)
 
         # PROTOCOL
-        if (pkt_protocol != rule.protocol and rule.protocol != ANY_PROTOCOL):
+        if (pkt_protocol != svc_defs.protocol and svc_defs.protocol != ANY_PROTOCOL):
             continue
 
         # PORTS, ICMP will match on the first port start value (looking for 0)
-        if (rule.start_port <= pkt_port <= rule.end_port):
+        if (svc_defs.start_port <= pkt_port <= svc_defs.end_port):
             return MATCH
 
     # default action
@@ -411,7 +411,7 @@ cdef inline bint service_match(service_arr rule_defs, u_int16_t pkt_protocol, u_
 # ============================================
 # PRINT FUNCTIONS
 # ============================================
-cdef inline void pkt_print(hw_info *hw, iphdr *ip_header, protohdr *proto_header) nogil:
+cdef inline void pkt_print(HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header) nogil:
     printf('vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv-PACKET-vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n')
     printf('in-zone=%u, out-zone=%u \n', hw.in_zone, hw.out_zone)
     printf('proto=%u \n', ip_header.protocol)
@@ -433,16 +433,16 @@ cdef inline void rule_print(FWrule *rule) nogil:
 cdef inline void obj_print(int name, void *object) nogil:
 
     cdef:
-        network_obj *net_obj
-        service_obj *svc_obj
+        NetworkObj *net_obj
+        ServiceObj *svc_obj
 
     if (name == NETWORK):
-        net_obj = <network_obj*>object
+        net_obj = <NetworkObj*>object
 
         printf('network_obj, netid=%lu netmask=%u\n', net_obj.netid, net_obj.netmask)
 
     elif (name == SERVICE):
-        svc_obj = <service_obj*>object
+        svc_obj = <ServiceObj*>object
 
         printf('service_obj, protocol=%u start_port=%u end_port=%u\n', svc_obj.protocol, svc_obj.start_port, svc_obj.end_port)
 
@@ -583,7 +583,7 @@ cdef class CFirewall:
         MSB = msb
         LSB = lsb
 
-    cpdef int update_zones(self, Py_Array zone_map) with gil:
+    cpdef int update_zones(self, PyArray zone_map) with gil:
         '''acquires FWrule lock then updates the zone values by interface index. max slots defined by
         FW_MAX_ZONE_COUNT. the GIL will be acquired before any code execution.
         '''

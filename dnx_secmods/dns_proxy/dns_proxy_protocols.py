@@ -12,7 +12,7 @@ from dnx_gentools.standard_tools import dnx_queue
 from dnx_iptools.protocol_tools import btoia
 from dnx_iptools.packet_classes import ProtoRelay
 
-from dnx_secmods.dns_proxy.dns_proxy_packets import ClientRequest
+from dnx_secmods.dns_proxy.dns_proxy_packets import ClientQuery
 from dnx_secmods.dns_proxy.dns_proxy_log import Log
 
 
@@ -76,7 +76,7 @@ class UDPRelay(ProtoRelay):
 # TLS sender/receiver
 # ============================
 # direct reference to alternate constructor
-_keepalive = ClientRequest.generate_keepalive
+_keepalive = ClientQuery.generate_keepalive
 
 
 class TLSRelay(ProtoRelay):

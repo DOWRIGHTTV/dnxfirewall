@@ -3,7 +3,7 @@
 from cpython cimport array
 import array
 
-ctypedef array.array Py_Array
+ctypedef array.array PyArray
 
 cdef extern from "sys/types.h":
     ctypedef unsigned char      u_int8_t
@@ -143,60 +143,61 @@ cdef enum:
     AFTER_RULES
 
 # used for dynamic allocation of array containing security profile settings
-# ip proxy, ips_ids
-DEF SECURITY_PROFILE_COUNT = 3
+# ip proxy, ips_ids, dns_proxy
+cdef u_int8_t SECURITY_PROFILE_COUNT = 3
 DEF MAX_ZONES = 16
 DEF MAX_OBJECTS = 100
 
-cdef struct zone_arr:
+cdef struct ZoneArray:
     size_t      len
     u_int8_t    objects[MAX_OBJECTS]
 
-cdef struct network_obj:
+cdef struct NetworkObj:
     long        netid # must be signed for geo marker (-1)
     u_int32_t   netmask
 
-cdef struct network_arr:
+cdef struct NetworkArray:
     size_t      len
-    network_obj objects[MAX_OBJECTS]
+    NetworkObj  objects[MAX_OBJECTS]
 
-cdef struct service_obj:
+cdef struct ServiceObj:
     u_int16_t   protocol
     u_int16_t   start_port
     u_int16_t   end_port
 
-cdef struct service_arr:
+cdef struct ServiceArray:
     size_t      len
-    service_obj objects[MAX_OBJECTS]
+    ServiceObj objects[MAX_OBJECTS]
 
 cdef struct FWrule:
     bint        enabled
 
     # SOURCE
-    zone_arr    s_zones
-    network_arr s_networks
-    service_arr s_services
+    ZoneArray    s_zones
+    NetworkArray s_networks
+    ServiceArray s_services
 
     # DESTINATION
-    zone_arr    d_zones
-    network_arr d_networks
-    service_arr d_services
+    ZoneArray    d_zones
+    NetworkArray d_networks
+    ServiceArray d_services
 
     # PROFILES
-    u_int8_t    action
-    u_int8_t    log
-    u_int8_t    sec_profiles[SECURITY_PROFILE_COUNT]
+    u_int8_t     action
+    u_int8_t     log
+    u_int8_t     sec_profiles[SECURITY_PROFILE_COUNT]
         # ip_proxy - 0 off, > 1 profile number
         # ips_ids - 0 off, 1 on
+        # dns_proxy - 0 off, > 1 profile number
 
-cdef struct hw_info:
+cdef struct HWinfo:
     u_int8_t    in_zone
     u_int8_t    out_zone
     char*       mac_addr
     double      timestamp
 
 # cython define
-cdef struct iphdr:
+cdef struct IPhdr:
     u_int8_t    ver_ihl
     u_int8_t    tos
     u_int16_t   tot_len
@@ -208,11 +209,11 @@ cdef struct iphdr:
     u_int32_t   saddr
     u_int32_t   daddr
 
-cdef struct protohdr:
+cdef struct Protohdr:
     u_int16_t   s_port
     u_int16_t   d_port
 
-cdef struct res_tuple:
+cdef struct InspectionResults:
     u_int16_t   fw_section
     u_int32_t   action
     u_int32_t   mark
@@ -223,6 +224,6 @@ cdef class CFirewall:
         nfq_q_handle *qh
 
     cpdef void prepare_geolocation(self, tuple geolocation_trie, long msb, long lsb) with gil
-    cpdef int update_zones(self, Py_Array zone_map) with gil
+    cpdef int update_zones(self, PyArray zone_map) with gil
     cpdef int update_ruleset(self, size_t ruleset, list rulelist) with gil
     cpdef int remove_blockedlist(self, u_int32_t host_ip)

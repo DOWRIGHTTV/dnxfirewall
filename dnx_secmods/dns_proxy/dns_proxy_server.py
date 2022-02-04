@@ -4,6 +4,8 @@ import threading
 import socket
 
 from random import randint
+from ipaddress import IPv4Address
+from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_REUSEADDR
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import DNS_SERVERS
@@ -15,18 +17,22 @@ from dnx_iptools.packet_classes import Listener
 from dnx_secmods.dns_proxy.dns_proxy_automate import Configuration, Reachability
 from dnx_secmods.dns_proxy.dns_proxy_cache import DNSCache, RequestTracker
 from dnx_secmods.dns_proxy.dns_proxy_protocols import UDPRelay, TLSRelay
-from dnx_secmods.dns_proxy.dns_proxy_packets import ClientRequest, ttl_rewrite
+from dnx_secmods.dns_proxy.dns_proxy_packets import ClientQuery, ttl_rewrite
 from dnx_secmods.dns_proxy.dns_proxy_log import Log
 
 INVALID_RESPONSE = (None, None)
+
+REQ_TRACKER = RequestTracker()
+REQ_TRACKER_INSERT = REQ_TRACKER.insert
+
+udp_relay_add = UDPRelay.relay.add
+tls_relay_add = TLSRelay.relay.add
 
 
 class DNSServer(Listener):
     protocol = PROTO.NOT_SET
     tls_down = True
     keepalive_interval = 8
-
-    REQ_TRACKER = RequestTracker()
 
     # NOTE: setting values to None to denote initialization has not been completed.
     dns_records = {}
@@ -39,8 +45,7 @@ class DNSServer(Listener):
     _records_cache = None
     _id_lock = threading.Lock()
 
-    # dynamic inheritance reference... ??? wtf is this comment
-    _packet_parser = ClientRequest
+    _packet_parser = ClientQuery
 
     __slots__ = (
         '_request_map_pop', '_dns_records_get', '_records_cache_add',
@@ -48,11 +53,11 @@ class DNSServer(Listener):
     )
 
     @classmethod
-    def _setup(cls):
+    def _setup(cls) -> None:
         Configuration.server_setup(cls)
 
         # setting parent class callback to allow custom actions on subclasses
-        cls.set_proxy_callback(func=cls.receive_request)
+        cls.set_proxy_callback(func=REQ_TRACKER_INSERT)
 
         Reachability.run(cls)
         TLSRelay.run(cls, fallback_relay=UDPRelay.relay)
@@ -60,7 +65,7 @@ class DNSServer(Listener):
 
         # initializing dns cache/ sending in reference to needed methods for top domains
         cls._records_cache = DNSCache(
-            dns_packet=ClientRequest.generate_local_query,
+            dns_packet=ClientQuery.generate_local_query,
             request_handler=cls._handle_query
         )
 
@@ -77,14 +82,13 @@ class DNSServer(Listener):
         self._records_cache_add = self._records_cache.add
         self._records_cache_search = self._records_cache.search
 
-        self.request_tracker_insert = self.REQ_TRACKER.insert
-
-    # NOTE: this is the callback assigned on start and is called by the listener parent class after parsing.
-    def receive_request(self, client_query):
-        self.request_tracker_insert(client_query.request_identifier, client_query, module_index=DNS.SERVER)
+    # @staticmethod
+    # # NOTE: this is the callback assigned on start and is called by the listener parent class after parsing.
+    # def receive_request(client_query: ClientQuery) -> None:
+    #     REQ_TRACKER_INSERT(client_query)
 
     # TODO: A, NS records are supported only. consider expanding
-    def _pre_inspect(self, client_query):
+    def _pre_inspect(self, client_query: ClientQuery) -> bool:
         if (client_query.qr != DNS.QUERY or client_query.qtype not in [DNS.A, DNS.NS]):
             return False
 
@@ -94,7 +98,7 @@ class DNSServer(Listener):
         # with external lookups using a separate class/instance to generate the data.
         if (local_record):
             query_response = client_query.generate_record_response(local_record)
-            send_to_client(query_response, client_query)
+            send_to_client(client_query, query_response)
 
             return False
 
@@ -105,23 +109,20 @@ class DNSServer(Listener):
         return True
 
     # thread to handle all received requests from the listener.
-    def _request_queue(self):
-        return_ready = self.REQ_TRACKER.return_ready
+    def _request_queue(self) -> None:
+        return_ready = REQ_TRACKER.return_ready
 
         for _ in RUN_FOREVER():
 
-            # this blocks until request tracker returns (at least 1 client query has been inspected)
-            requests = return_ready()
+            # generator that blocks until at least 1 request is in the queue. if multiple requests are present, they
+            # will be yielded back until the queue is empty.
+            for client_query in return_ready():
 
-            for client_query, decision in requests:
-
-                # if request is allowed, search cache before sending to relay.
-                if decision is DNS.ALLOWED and not self._cached_response(client_query):
+                # search cache before sending to relay.
+                if not self._cached_response(client_query):
                     self._handle_query(client_query)
 
-                    Log.debug(f'{self.protocol.name} Relay ALLOWED | {client_query}')
-
-    def _cached_response(self, client_query):
+    def _cached_response(self, client_query: ClientQuery) -> bool:
         '''searches cache for query name. if a cached record is found, a response will be generated
         and sent back to the client.'''
 
@@ -132,14 +133,14 @@ class DNSServer(Listener):
         cached_dom = self._records_cache_search(client_query.request)
         if (cached_dom.records):
             query_response = client_query.generate_cached_response(cached_dom)
-            send_to_client(query_response, client_query)
+            send_to_client(client_query, query_response)
 
             return True
 
     @classmethod
     # top_domain will now be set by caller, so we don't have to track that within the query object.
-    def _handle_query(cls, client_query, *, top_domain=False):
-
+    def _handle_query(cls, client_query: ClientQuery, *, top_domain: bool = False) -> None:
+        
         # generating dns query packet data
         client_query.generate_dns_query(
             # returns new unique id after storing {id: request info} in request map
@@ -148,13 +149,13 @@ class DNSServer(Listener):
 
         # send query instance to currently enabled protocol/relay for sending to external resolver.
         if (cls.protocol is PROTO.UDP):
-            UDPRelay.relay.add(client_query)
+            udp_relay_add(client_query)
 
         elif (cls.protocol is PROTO.DNS_TLS):
-            TLSRelay.relay.add(client_query)
+            tls_relay_add(client_query)
 
     @dnx_queue(Log, name='DNSServer')
-    def responder(self, received_data):
+    def responder(self, received_data: bytearray) -> None:
         # dns id is the first 2 bytes in the dns header
         dns_id = btoia(received_data[:2])
 
@@ -172,16 +173,16 @@ class DNSServer(Listener):
             Log.error(f'[parser/server response] {E}')
         else:
             if (not top_domain):
-                send_to_client(query_response, client_query)
+                send_to_client(client_query, query_response)
 
             if (cache_data):
                 self._records_cache_add(client_query.qname, cache_data)
 
     @staticmethod
-    def listener_sock(intf, intf_ip):
-        l_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    def listener_sock(intf: str, intf_ip: IPv4Address) -> socket:
+        l_sock = socket(AF_INET, SOCK_DGRAM)
 
-        l_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        l_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         l_sock.setblocking(False)
 
         l_sock.bind((f'{intf_ip}', PROTO.DNS))
@@ -192,7 +193,7 @@ class DNSServer(Listener):
 # DNS ID generation. this value is guaranteed unique for the life of the request.
 _id_lock = threading.Lock()
 
-def get_unique_id(request_map, request_info):
+def get_unique_id(request_map: dict, request_info: tuple) -> int:
 
     with _id_lock:
         # NOTE: maybe tune this number. under high load collisions could occur and other requests must wait for this
@@ -206,7 +207,7 @@ def get_unique_id(request_map, request_info):
 
                 return dns_id
 
-def send_to_client(query_response, client_query):
+def send_to_client(client_query: ClientQuery, query_response: bytearray) -> None:
     try:
         client_query.sendto(query_response, client_query.address)
     except OSError:

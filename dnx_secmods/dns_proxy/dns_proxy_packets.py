@@ -10,10 +10,10 @@ from dnx_gentools.def_namedtuples import CACHED_RECORD
 from dnx_iptools.def_structs import *
 from dnx_iptools.protocol_tools import *
 from dnx_iptools.def_structures import *
-from dnx_iptools.packet_classes import RawPacket
+from dnx_iptools.packet_classes import NFPacket
 
 
-class ClientRequest:
+class ClientQuery:
     __slots__ = (
         '_data', '_dns_header', '_dns_query',
 
@@ -167,7 +167,7 @@ udp_header_template = PR_UDP_HDR(**{'checksum': 0})
 std_resource_record_template = DNS_STD_RR(**{'ptr': 49164, 'type': 1, 'class': 1, 'ttl': 300, 'rd_len': 4})
 
 
-class ProxyRequest(RawPacket):
+class ProxyRequest(NFPacket):
 
     __slots__ = (
         '_dns_header', '_dns_query',
@@ -179,8 +179,6 @@ class ProxyRequest(RawPacket):
     )
 
     def __init__(self):
-        super().__init__()
-
         self.qr     = None
         self.qtype  = None
         self.qclass = None
@@ -188,11 +186,7 @@ class ProxyRequest(RawPacket):
 
         self.send_data = b''
 
-    @property
-    def continue_condition(self):
-        return True if self.protocol is PROTO.UDP else False
-
-    def _before_exit(self):
+    def _before_exit(self, mark):
         # filtering down to dns protocol
         if (self.dst_port != PROTO.DNS):
             return

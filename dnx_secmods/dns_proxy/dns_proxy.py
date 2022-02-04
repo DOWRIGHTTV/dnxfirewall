@@ -2,14 +2,12 @@
 
 import __init__
 
-import socket
-
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import DNS_BLACKLIST, DNS_REQUEST_RESULTS, DNS_SIGNATURES, DNS_WHITELIST
 from dnx_gentools.signature_operations import generate_domain
 
 from dnx_iptools.dnx_trie_search import generate_recursive_binary_search
-from dnx_iptools.packet_classes import Listener
+from dnx_iptools.packet_classes import NFQueue
 from dnx_iptools.protocol_tools import int_to_ip
 
 from dnx_secmods.dns_proxy.dns_proxy_automate import Configuration
@@ -23,7 +21,7 @@ LOG_NAME = 'dns_proxy'
 dns_record_get = DNSServer.dns_records.get
 request_tracker_insert = DNSServer.REQ_TRACKER.insert
 
-class DNSProxy(Listener):
+class DNSProxy(NFQueue):
     # dns | ip
     whitelist = DNS_WHITELIST(
         {}, {}
@@ -37,7 +35,7 @@ class DNSProxy(Listener):
     )
 
     _dns_sig_ref = None
-    _packet_parser = ProxyRequest.interface  # alternate constructor
+    _packet_parser = ProxyRequest.netfilter_recv  # alternate constructor
 
     __slots__ = (
         '_dns_record_get',
@@ -65,24 +63,12 @@ class DNSProxy(Listener):
 
         return False
 
-    @staticmethod
-    def listener_sock(intf, intf_ip):
-        l_sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP)
-
-        l_sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
-        l_sock.setblocking(False)
-
-        l_sock.bind((f'{intf_ip}', 0))
-
-        return l_sock
-
-
 # GENERAL PROXY FUNCTIONS
-def notify_server(request_identifier, decision):
-    '''add the client address and proxy decision to the reference request results dictionary. this reference
-    is controlled through a local class variable assignment.'''
-
-    request_tracker_insert(request_identifier, decision, module_index=DNS.PROXY)
+# def notify_server(request_identifier, decision):
+#     '''add the client address and proxy decision to the reference request results dictionary. this reference
+#     is controlled through a local class variable assignment.'''
+#
+#     request_tracker_insert(request_identifier, decision, module_index=DNS.PROXY)
 
 def send_to_client(packet):
     try:
@@ -108,10 +94,10 @@ def inspect(packet):
     request_results = _inspect(packet)
 
     if (not request_results.redirect):
-        notify_server(packet.request_identifier, decision=DNS.ALLOWED)
+        packet.nfqueue.accept()
 
     else:
-        notify_server(packet.request_identifier, decision=DNS.FLAGGED)
+        packet.nfqueue.drop()
 
         packet.generate_proxy_response()
 
@@ -133,7 +119,6 @@ def _inspect(packet):
     # NOTE: dns whitelist does not override tld blocks at the moment. this is most likely the desired setup
     # TLD (top level domain) block | after first index will pass nested to allow for continue
     if _tld_get(requests[0]):
-        # Log.console(f'TLD Block: {packet.request}')
 
         return DNS_REQUEST_RESULTS(True, 'tld filter', TLD_CAT[requests[0]])
 
@@ -190,7 +175,7 @@ def _block_query(category, whitelisted):
 
 
 if __name__ == '__main__':
-    dns_cat_signatures = generate_domain()
+    dns_cat_signatures = generate_domain(Log)
 
     # using cython function factory to create binary search function with module specific signatures
     signature_bounds = (0, len(dns_cat_signatures)-1)
@@ -205,5 +190,5 @@ if __name__ == '__main__':
     Log.run(
         name=LOG_NAME
     )
-    DNSProxy.run(Log, threaded=True, always_on=True)
+    DNSProxy.run(Log, q_num=Queue.DNS_PROXY)
     DNSServer.run(Log, threaded=False, always_on=True)

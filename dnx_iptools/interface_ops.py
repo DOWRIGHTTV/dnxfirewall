@@ -4,6 +4,7 @@ from csv import reader as csv_reader
 from ipaddress import IPv4Address
 from fcntl import ioctl
 from socket import socket, inet_aton, if_nameindex, AF_INET, SOCK_DGRAM
+from typing import Optional
 
 from dnx_gentools.def_constants import HOME_DIR, INTF, CFG, fast_sleep, ONE_SEC
 from dnx_gentools.file_operations import load_configuration, ConfigurationManager, json_to_yaml
@@ -39,7 +40,7 @@ def get_intf_builtin(zone_name):
 
     return {intf_index: (intf_info['zone'], ident)}
 
-def load_interfaces(intf_type=INTF.BUILTINS, *, exclude=[]):
+def load_interfaces(intf_type: INTF = INTF.BUILTINS, *, exclude: list = []) -> list:
     '''
     return list of tuples of specified interface type.
 
@@ -202,7 +203,7 @@ def wait_for_interface(interface, delay=ONE_SEC):
 
 # once the lan interface ip address is configured after interface is brought online, the loop will break. this will
 # allow the server to continue the startup process.
-def wait_for_ip(interface):
+def wait_for_ip(interface: str) -> Optional[IPv4Address]:
     '''waits for interface ip address configuration then return ip address object for corresponding ip.'''
 
     while True:

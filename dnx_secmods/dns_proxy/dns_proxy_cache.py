@@ -2,7 +2,7 @@
 
 import threading
 
-from collections import Counter, OrderedDict, namedtuple
+from collections import Counter, deque, namedtuple
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import DNS_CACHE
@@ -10,6 +10,7 @@ from dnx_gentools.file_operations import *
 from dnx_gentools.standard_tools import looper
 
 from dnx_secmods.dns_proxy.dns_proxy_log import Log
+from dnx_secmods.dns_proxy.dns_proxy_packets import ClientQuery
 
 NOT_VALID = -1
 request_info = namedtuple('request_info', 'server proxy')
@@ -167,104 +168,48 @@ def DNSCache(*, dns_packet, request_handler):
 
 # TODO: refactor name to be lowercase maybe.
 def RequestTracker():
-    ''' Tracks DNS Server requests and allows for either DNS Proxy or Server to add initial client address key
-    on a first come basis and the second one will update the corresponding value index with info directly.
-
-        RequestTracker([request_identifier: [client_query, decision, timestamp]])
+    '''Basic queueing mechanism for DNS requests received by the server. The main feature of the queue is to provide
+    efficient thread blocking via Thread Events over a busy loop. This is a very lightweight version of the standard lib
+    Queue and uses a deque as its primary data structure.
     '''
 
-    # storing as closure for lookup performance.
-    # NOTE: only one request tracker will be active at a time so shared reference isn't a concern
-    insert_lock = threading.Lock()
-    counter_lock = threading.Lock()
-
     request_ready = threading.Event()
-    request_wait = request_ready.wait
+    wait_for_request = request_ready.wait
     request_set = request_ready.set
-    request_clear = request_ready.clear
+    reset_wait = request_ready.clear
 
     _list = list
 
-    # modified by class
-    ready_count = 0
-    request_tracker = OrderedDict()
-
-    ready_requests = []
-    ready_requests_append = ready_requests.append
-    ready_requests_clear  = ready_requests.clear
+    request_tracker = deque()
+    request_tracker_append = request_tracker.append
+    request_tracker_get = request_tracker.popleft
 
     class _RequestTracker:
 
         @staticmethod
         # blocks until the request ready flag has been set, then iterates over dict and appends any client address with
         # both values present. (client_query class instance object and decision)
-        def return_ready():
-            nonlocal ready_count, ready_requests
+        def return_ready() -> ClientQuery:
+            nonlocal request_tracker
 
             # blocking until an at least one request has been received
-            request_wait()
+            wait_for_request()
 
-            # clearing list from previously processed requests. this is new and replaced making a new list ever call
-            # to return ready + direct ref to append
-            ready_requests_clear()
+            # immediately clearing event so we don't have to worry about it after loop. this prevents having to deal
+            # with scenarios where a request was received in just after while loop, but just before reset. in this case
+            # the request would be stuck until another was received.
+            reset_wait()
 
-            # iterating over a copy by passing dict into list
-            for request_identifier, (client_query, decision, timestamp) in _list(request_tracker.items()):
-
-                # using inverse because it has potential to be more efficient if both are not present. decision is more
-                # likely to be input first, so it will be eval'd only if client_query is present.
-                if (not client_query or not decision):
-
-                    # removes entry from tracker if not finalized within 1 second
-                    if (fast_time() - timestamp >= ONE_SEC):
-                        del request_tracker[request_identifier]
-
-                    continue
-
-                ready_requests_append((client_query, decision))
-
-                # lock protects count, which is also accessed by server and proxy via insert method.
-                with counter_lock:
-                    ready_count -= 1
-
-                # removes entry from tracker if request is ready for forwarding.
-                del request_tracker[request_identifier]
-
-            if (not ready_count):
-                request_clear()
-
-            # NOTE: here temporarily for testing implementation
-            elif (ready_count < 0):
-                raise RuntimeError('Request Tracker ready count dropped below 0. probably fatal. yay me.')
-
-            return ready_requests
+            while request_tracker:
+                yield request_tracker_get()
 
         @staticmethod
-        # this is a thread safe method to add entries to the request tracker dictionary. this will ensure the key
-        # exists before updating the value. a default dict cannot be used (from what i can tell) because an empty
-        # list would raise an index error if it was trying to set decision before request.
-        def insert(request_identifier, data, *, module_index):
-            nonlocal ready_count
+        def insert(client_query: ClientQuery) -> None:
+            nonlocal request_tracker
 
-            with insert_lock:
+            request_tracker_append(client_query)
 
-                tracked_request = request_tracker.get(request_identifier, None)
-                # if client address is not already present, it will be added before updating the module index value
-                if (not tracked_request):
-                    # default entry: 1. client request instance 2. proxy decision, 3. timestamp
-                    request_tracker[request_identifier] = [None, None, fast_time()]
-                    request_tracker[request_identifier][module_index] = data
-
-                # if present 1/2 entries exist so after this condition 2/2 will be present and request will be ready
-                # for forwarding. setting thread event to allow return ready to unblock and start processing. checking
-                # for None to prevent duplicate from triggering request ready.
-                elif (tracked_request[module_index] is None):
-                    with counter_lock:
-                        ready_count += 1
-
-                    request_tracker[request_identifier][module_index] = data
-
-                    # notifying return_ready there is a query ready to forward
-                    request_set()
+            # notifying return_ready there is a query ready to forward
+            request_set()
 
     return _RequestTracker()

@@ -220,7 +220,7 @@ class DIR(_Flag):
     INBOUND  = 2
     BOTH     = 3
 
-class CONN(_Enum):
+class CONN(_IntEnum):
     # decisions
     REJECT  = -2
     INSPECT = -1  # drop with full inspection
@@ -256,6 +256,7 @@ class DHCP(_IntEnum):
 class Queue(_IntEnum):
     IP_PROXY  = 1
     IPS_IDS   = 2
+    DNS_PROXY = 3
     CFIREWALL = 69
 
 class DNS_CAT(_IntEnum):

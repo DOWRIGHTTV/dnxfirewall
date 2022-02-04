@@ -20,15 +20,15 @@ class IPPPacket(NFPacket):
 
     def _before_exit(self, mark):
 
-        # X | X | ips (4b) | dns (4b) | ipp (4b) | geoloc (8b) | direction (2b) | action (2b)
+        # X | X | dns (4b) | ips (4b) | ipp (4b) | geoloc (8b) | direction (2b) | action (2b)
 
         self.action    = CONN(mark & 3)
         self.direction =  DIR(mark >> 2 & 3)
 
         self.tracked_geo = mark >>  4 & 255
         self.ipp_profile = mark >> 12 & 15
-        # self.dns_profile = mark >> 16 & 15
-        self.ips_profile = mark >> 20 & 15
+        self.ips_profile = mark >> 16 & 15
+        self.dns_profile = mark >> 20 & 15
 
         if (self.direction == DIR.INBOUND):
             tracked_ip = self.src_ip
@@ -46,7 +46,7 @@ class IPPPacket(NFPacket):
         self.bin_data = (tracked_ip & MSB, tracked_ip & LSB)
 
 
-# pre defined fields which are functionally constants for the purpose of connection resets
+# pre-defined fields which are functionally constants for the purpose of connection resets
 ip_header_template = PR_IP_HDR(**{'ver_ihl': 69, 'tos': 0, 'ident': 0, 'flags_fro': 16384, 'ttl': 255})
 tcp_header_template = PR_TCP_HDR(**{'seq_num': 696969, 'offset_control': 20500, 'window': 0, 'urg_ptr': 0})
 pseudo_header_template = PR_TCP_PSEUDO_HDR(**{'reserved': 0, 'protocol': 6, 'tcp_len': 20})

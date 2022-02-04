@@ -479,7 +479,7 @@ class NFPacket:
     )
 
     @classmethod
-    def netfilter_rcv(cls, cpacket, mark):
+    def netfilter_recv(cls, cpacket, mark):
         '''Cython > Python attribute conversion'''
 
         self = cls()

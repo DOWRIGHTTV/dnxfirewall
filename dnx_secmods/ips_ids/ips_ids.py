@@ -41,7 +41,7 @@ class IPS_IDS(NFQueue):
     ps_engine_enabled   = False
     all_engines_enabled = False
 
-    _packet_parser = IPSPacket.netfilter_rcv # alternate constructor, but does not return self
+    _packet_parser = IPSPacket.netfilter_recv # alternate constructor, but does not return self
 
     @classmethod
     def _setup(cls):
@@ -347,4 +347,4 @@ if __name__ == '__main__':
     Log.run(
         name=LOG_NAME
     )
-    IPS_IDS.run(Log, q_num=2)
+    IPS_IDS.run(Log, q_num=Queue.IPS_IDS)
