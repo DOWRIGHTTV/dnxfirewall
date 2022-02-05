@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from typing import Optional
+from typing import Optional, Tuple
 
 from socket import inet_aton
 from collections import namedtuple
@@ -138,8 +138,10 @@ class ClientQuery:
         # hardcoded qtype can change if needed.
         self.request = request
         self.qtype   = 1
-        self.cd      = DNS_MASK.CD
-        self.rd      = DNS_MASK.RD
+
+        self.rd = DNS_MASK.RD
+        self.ad = DNS_MASK.AD
+        self.cd = DNS_MASK.CD
 
         # keepalive are TLS only so we can hardcode the proto
         if (keepalive):
@@ -359,7 +361,7 @@ def ttl_rewrite(data: bytearray, dns_id: int, len=len, min=min, max=max) -> tupl
 
     return send_data, None
 
-def _parse_record(dns_payload: memoryview, cur_offset: int) -> tuple[int, namedtuple, int]:
+def _parse_record(dns_payload: memoryview, cur_offset: int) -> Tuple[int, namedtuple, int]:
     new_offset = cur_offset + parse_query_name(dns_payload, cur_offset)
 
     # slicing out current ptr index for faster reference

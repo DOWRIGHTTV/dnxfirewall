@@ -183,5 +183,7 @@ if __name__ == '__main__':
     Log.run(
         name=LOG_NAME
     )
-    DNSProxy.run(Log, q_num=Queue.DNS_PROXY)
+
+    # starting server before proxy because proxy will block server will not
     DNSServer.run(Log, threaded=False, always_on=True)
+    DNSProxy.run(Log, q_num=Queue.DNS_PROXY)
