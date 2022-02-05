@@ -3,6 +3,8 @@
 if (__name__ == '__main__'):
     import __init__
 
+from typing import Union
+
 import os
 import threading
 
@@ -62,7 +64,7 @@ class LogService:
         with open(f'{HOME_DIR}/dnx_system/log/combined/{date}-combined.log', 'w+') as system_log:
             system_log.write('\n'.join(sorted(log_entries)))
 
-        del log_entries # to reclaim system memory
+        del log_entries  # to reclaim system memory
 
     @staticmethod
     def _pull_recent_logs(module, date):
@@ -104,19 +106,19 @@ class LogService:
 # GENERIC LIGHTWEIGHT FUNCTIONS
 # =============================================
 
-def direct_log(m_name, level_name, message, int=int):
+def direct_log(m_name: str, level_name: str, msg: str):
     '''alternate system log method. this can be used to override global module log name if needed and does not
     require LogHandler initialization.'''
 
     path = f'{HOME_DIR}/dnx_system/log/{m_name}/{_system_date(string=True)}-{m_name}.log'
     with open(path, 'a+') as log:
-        log.write(f'{int(fast_time())}|{m_name}|{level_name}|{message}\n')
+        log.write(f'{int(fast_time())}|{m_name}|{level_name}|{msg}\n')
 
     if (ROOT):
         change_file_owner(path)
 
 # system time/UTC will be used.
-def message(mod_name, mtype, level, log_msg):
+def message(mod_name: str, mtype: LOG, level: LOG, log_msg: str) -> bytes:
     date = _system_date(string=True)
     timestamp = _format_time(fast_time())
     level = convert_level(level)
@@ -127,7 +129,7 @@ def message(mod_name, mtype, level, log_msg):
     # 20140624|19:08:15|EVENT|DNSProxy:Informational|192.168.83.1|*MESSAGE*
     return f'{date}|{timestamp}|{mtype.name}|{mod_name}:{level}|{system_ip}|{log_msg}'.encode('utf-8')
 
-def db_message(timestamp, log_msg, method):
+def db_message(timestamp: int, log_msg: str, method: callable) -> bytes:
     log_data = {
         'method': method,
         'timestamp': timestamp,
@@ -136,7 +138,7 @@ def db_message(timestamp, log_msg, method):
 
     return dumps(log_data).encode('utf-8')
 
-def convert_level(level=None):
+def convert_level(level: LOG = None) -> Union[dict, str]:
     '''converts log level as integer to string. valid input: 0-7. if level is None the entire
     dict will be returned.'''
 
@@ -297,53 +299,53 @@ def _log_handler():
             return _syslog
 
         @staticmethod
-        def emergency(log_msg):
+        def emergency(log_msg: str):
             '''system is unusable.'''
             return
 
         @staticmethod
-        def alert(log_msg):
+        def alert(log_msg: str):
             '''action must be taken immediately.'''
             return
 
         @staticmethod
-        def critical(log_msg):
+        def critical(log_msg: str):
             '''critical conditions.'''
             return
 
         @staticmethod
-        def error(log_msg):
+        def error(log_msg: str):
             '''error conditions.'''
             return
 
         @staticmethod
-        def warning(log_msg):
+        def warning(log_msg: str):
             '''warning conditions.'''
             return
 
         @staticmethod
-        def notice(log_msg):
+        def notice(log_msg: str):
             '''normal but significant condition.'''
             return
 
         @staticmethod
-        def informational(log_msg):
+        def informational(log_msg: str):
             '''informational messages.'''
             return
 
         @staticmethod
-        def debug(log_msg):
+        def debug(log_msg: str):
             '''debug-level messages.'''
             return
 
         @staticmethod
-        def console(log_msg):
+        def console(log_msg: str):
             '''print message to console. this is for all important console only events.'''
             if (_console):
                 console_log(f'{log_msg}\n')
 
         @staticmethod
-        def event_log(timestamp, log, method):
+        def event_log(timestamp: int, log: str, method: callable):
             '''log security events to database. uses local socket controlled by log service
             to aggregate messages across all modules.
 

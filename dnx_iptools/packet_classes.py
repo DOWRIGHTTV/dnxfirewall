@@ -43,7 +43,7 @@ class Listener:
 
     __slots__ = (
         '_intf', '_intf_ip',
-        '_threaded', '_always_on', '_name',
+        '_threaded', '_always_on',
 
         '__epoll_poll', '__registered_socks_get'
     )

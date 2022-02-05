@@ -54,7 +54,7 @@ def DNSCache(*, dns_packet, request_handler):
 
             Log.notice('top domains cache has been cleared.')
 
-        with ConfigurationManager('dns_server') as dnx:
+        with ConfigurationManager('dns_cache') as dnx:
             dns_settings = dnx.load_configuration()
 
             dns_settings['clear']['standard'] = clear_dns_cache

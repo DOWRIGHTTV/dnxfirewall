@@ -102,15 +102,17 @@ def parse_query_name(data, offset=0, *, qname=False):
         label_len, label_ptr = data[idx], data[idx+1:]
 
         # std label
-        if (label_len < 64):
+        if (0 < label_len < 64):
             query_name += label_ptr[:label_len] + b'.'
             label_ct += 1
 
             if (not has_ptr):
                 offset += label_len + 1
 
+            idx += label_len + 1
+
         # root/ null terminated
-        elif (not label_len):
+        elif (label_len == 0):
             break
 
         # label ptr

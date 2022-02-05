@@ -14,6 +14,8 @@ from dnx_iptools.protocol_tools import create_dns_query_header, convert_string_t
 
 from dnx_secmods.dns_proxy.dns_proxy_log import Log
 
+ConfigurationManager.set_log_reference(Log)
+
 
 class Configuration:
     _proxy_setup  = False

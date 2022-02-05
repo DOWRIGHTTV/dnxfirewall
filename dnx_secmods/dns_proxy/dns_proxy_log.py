@@ -7,6 +7,10 @@ from dnx_iptools.interface_ops import get_arp_table
 
 from dnx_routines.logging.log_main import LogHandler
 
+# DIRECT ACCESS FUNCTIONS
+from dnx_routines.logging.log_main import (
+    emergency, alert, critical, error, warning, notice, informational, debug, console
+)
 
 class Log(LogHandler):
 
@@ -25,7 +29,7 @@ class Log(LogHandler):
         # suppressing logs for dns over https. these are blocked in the background and should not notify the user.
         if (req.category in [DNS_CAT.doh]): pass
 
-        # log to infected clients db table if matching malicious type categories
+        # log to infected client db table if matching malicious type categories
         elif (req.category in [DNS_CAT.malicious, DNS_CAT.cryptominer] and cls.current_lvl >= LOG.ALERT):
             client_ip = pkt.request_identifier[0]
 
@@ -52,7 +56,7 @@ class Log(LogHandler):
     @staticmethod
     # for sending message to the syslog service
     def generate_syslog_message(log):
-        message  = [
+        message = [
             f'src.ip={log.src_ip}; request={log.request}; category={log.category}; ',
             f'filter={log.reason}; action={log.action}'
         ]

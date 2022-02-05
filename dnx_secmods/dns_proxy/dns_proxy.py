@@ -18,8 +18,6 @@ from dnx_secmods.dns_proxy.dns_proxy_server import DNSServer
 
 LOG_NAME = 'dns_proxy'
 
-ConfigurationManager.set_log_reference(Log)
-
 dns_record_get = DNSServer.dns_records.get
 
 class DNSProxy(NFQueue):
@@ -50,7 +48,7 @@ class DNSProxy(NFQueue):
         Log.notice(f'{cls.__name__} initialization complete.')
 
     # pre-check will filter out invalid packets or local dns records (no tld)
-    def _pre_inspect(self, packet):
+    def _pre_inspect(self, packet: ProxyRequest) -> bool:
         if (packet.qr != DNS.QUERY):
             return False
 
@@ -65,7 +63,7 @@ class DNSProxy(NFQueue):
         return False
 
 # GENERAL PROXY FUNCTIONS
-def send_to_client(packet):
+def send_to_client(packet: ProxyRequest):
     try:
         packet.sendto(packet.send_data, (int_to_ip(packet.src_ip), 0))
     except OSError:
@@ -84,7 +82,7 @@ _dns_whitelist = DNSProxy.whitelist.dns
 _dns_blacklist = DNSProxy.blacklist.dns
 _dns_keywords  = DNSProxy.signatures.keyword
 
-def inspect(packet):
+def inspect(packet: ProxyRequest):
 
     request_results = _inspect(packet)
 
@@ -102,7 +100,7 @@ def inspect(packet):
 
 # this is where the system decides whether to block dns query/sinkhole or to allow. notification will be done
 # via the request tracker upon returning signature scan result
-def _inspect(packet):
+def _inspect(packet: ProxyRequest) -> DNS_REQUEST_RESULTS:
     # NOTE: request_ident[0] is a string representation of ip addresses. this is currently needed as the whitelists
     # are stored in this format and we have since moved away from this format on the back end.
     # TODO: in the near-ish future, consider storing ip whitelists as integers to conform to newer standards.
@@ -151,12 +149,14 @@ def _inspect(packet):
     for category in enum_categories:
         if category is not DNS_CAT.NONE: break
 
+    else: category = DNS_CAT.NONE
+
     # DEFAULT ACTION | ALLOW
     return DNS_REQUEST_RESULTS(False, None, category)
 
 # grabbing the request category and determining whether the request should be blocked. if so, returns general
 # information for further processing
-def _block_query(category, whitelisted):
+def _block_query(category: DNS_CAT, whitelisted: bool) -> bool:
     # signature match, but blocking disabled for the category | ALLOW
     if (category not in _enabled_categories):
         return False
