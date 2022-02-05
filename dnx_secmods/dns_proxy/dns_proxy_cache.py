@@ -179,8 +179,8 @@ def RequestTracker():
 
     request_ready = threading.Event()
     wait_for_request = request_ready.wait
-    request_set = request_ready.set
-    reset_wait = request_ready.clear
+    notify_ready = request_ready.set
+    clear_ready = request_ready.clear
 
     _list = list
 
@@ -194,7 +194,6 @@ def RequestTracker():
         # blocks until the request ready flag has been set, then iterates over dict and appends any client address with
         # both values present. (client_query class instance object and decision)
         def return_ready() -> ClientQuery:
-            nonlocal request_tracker
 
             # blocking until an at least one request has been received
             wait_for_request()
@@ -202,18 +201,17 @@ def RequestTracker():
             # immediately clearing event so we don't have to worry about it after loop. this prevents having to deal
             # with scenarios where a request was received in just after while loop, but just before reset. in this case
             # the request would be stuck until another was received.
-            reset_wait()
+            clear_ready()
 
             while request_tracker:
                 yield request_tracker_get()
 
         @staticmethod
         def insert(client_query: ClientQuery) -> None:
-            nonlocal request_tracker
 
             request_tracker_append(client_query)
 
             # notifying return_ready there is a query ready to forward
-            request_set()
+            notify_ready()
 
     return _RequestTracker()
