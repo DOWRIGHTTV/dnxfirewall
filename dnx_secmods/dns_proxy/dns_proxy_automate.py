@@ -30,9 +30,6 @@ class Configuration:
     def __init__(self, name):
         self._initialize = Initialize(Log, name)
 
-        # this is setting the reference for the entire process/module since it is stored as a class variable.
-        ConfigurationManager.set_log_reference(Log)
-
     @classmethod
     def proxy_setup(cls, DNSProxy):
         '''start threads for tasks required by the DNS proxy. blocking until settings are loaded/initialized.'''

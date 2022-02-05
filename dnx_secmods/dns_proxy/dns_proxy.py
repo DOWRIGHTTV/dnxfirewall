@@ -4,6 +4,7 @@ import __init__
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import DNS_BLACKLIST, DNS_REQUEST_RESULTS, DNS_SIGNATURES, DNS_WHITELIST
+from dnx_gentools.file_operations import ConfigurationManager
 from dnx_gentools.signature_operations import generate_domain
 
 from dnx_iptools.dnx_trie_search import generate_recursive_binary_search
@@ -17,6 +18,7 @@ from dnx_secmods.dns_proxy.dns_proxy_server import DNSServer
 
 LOG_NAME = 'dns_proxy'
 
+ConfigurationManager.set_log_reference(Log)
 
 dns_record_get = DNSServer.dns_records.get
 
