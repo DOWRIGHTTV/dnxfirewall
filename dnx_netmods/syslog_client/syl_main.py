@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import os, sys
 import time
 import threading
 import traceback
@@ -9,12 +8,9 @@ from collections import deque
 from socket import socket, AF_INET, SOCK_DGRAM
 from socket import SOL_SOCKET, SO_REUSEADDR
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
 import dnx_iptools.interface_ops as interface
 
-from dnx_gentools.def_constants import * # pylint: disable=unused-wildcard-import
+from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import SYSLOG_SERVERS
 from dnx_routines.logging.log_main import LogHandler as Log
 
@@ -151,6 +147,7 @@ class SyslogHandler:
         self.handler_sock.bind((LOCALHOST, 0))
         self.handler_sock.connect((LOCALHOST, SYSLOG_SOCKET))
 
-if __name__ == '__main__':
+
+def RUN_MODULE():
     Syslog = SyslogService()
     Syslog.start()

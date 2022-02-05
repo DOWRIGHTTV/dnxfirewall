@@ -1,10 +1,6 @@
 #!/usr/bin/python3
 
-import os, sys
 import time
-
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
 
 from dnx_gentools.def_constants import ONE_DAY, FIVE_MIN, console_log, fast_time
 from dnx_gentools.def_namedtuples import BLOCKED_DOM

@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
 
-import os, sys
 import threading
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
-
-from dnx_gentools.def_constants import * # pylint: disable=unused-wildcard-import
+from dnx_gentools.def_constants import *
 from dnx_routines.logging.log_main import LogHandler as Log
 from dnx_gentools.standard_tools import Initialize
 from dnx_gentools.file_operations import cfg_read_poller, load_configuration

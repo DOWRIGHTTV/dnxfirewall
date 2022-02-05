@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
-import __init__
-
 import os
+
 from json import loads
 from socket import socket, AF_UNIX, SOCK_DGRAM
 
@@ -81,5 +80,6 @@ class SystemControl:
                 else:
                     shell(f'{data["command"]} {cmd_args}')
 
-if (__name__ == '__main__'):
+
+def RUN_MODULE():
     SystemControl.run()

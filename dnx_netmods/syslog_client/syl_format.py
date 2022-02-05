@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 
-import os, sys
 import time
-
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
 
 from dnx_routines.configure.system_info import System
 

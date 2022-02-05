@@ -206,8 +206,7 @@ def RequestTracker():
             while request_tracker:
                 yield request_tracker_get()
 
-        @staticmethod
-        def insert(client_query: ClientQuery) -> None:
+        def insert(self, client_query: ClientQuery):
 
             request_tracker_append(client_query)
 

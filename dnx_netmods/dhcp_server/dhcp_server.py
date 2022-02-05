@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import __init__
-
 import threading
 
 from socket import SOL_SOCKET, SO_BROADCAST, SO_BINDTODEVICE, SO_REUSEADDR
@@ -10,10 +8,10 @@ from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import DHCP_RECORD
 
 from dnx_iptools.packet_classes import Listener
+from dnx_routines.logging.log_main import LogHandler as Log
+
 from dnx_netmods.dhcp_server.dhcp_server_requests import ServerResponse, ClientRequest
 from dnx_netmods.dhcp_server.dhcp_server_automate import Configuration, Leases
-
-from dnx_routines.logging.log_main import LogHandler as Log
 
 LOG_NAME = 'dhcp_server'
 
@@ -184,7 +182,8 @@ class DHCPServer(Listener):
 
         return l_sock
 
-if __name__ == '__main__':
+
+def RUN_MODULE():
     Log.run(
         name=LOG_NAME
     )

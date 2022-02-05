@@ -22,7 +22,7 @@ shell = _partial(_run, shell=True, stdout=_DEVNULL, stderr=_DEVNULL)
 RUN_FOREVER = _partial(_repeat, 1)
 
 # used by socket sender loops
-ATTEMPTS = [1, 2]
+ATTEMPTS = (1, 2)
 
 byte_join = b''.join
 str_join = ''.join

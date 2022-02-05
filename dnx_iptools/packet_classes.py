@@ -7,11 +7,6 @@ import threading
 import socket
 import select
 
-from ipaddress import IPv4Address
-
-_HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, _HOME_DIR)
-
 from dnx_gentools.def_constants import *
 from dnx_iptools.def_structs import *
 

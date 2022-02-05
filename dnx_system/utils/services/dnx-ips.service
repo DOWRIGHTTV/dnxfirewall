@@ -8,7 +8,7 @@ Type=simple
 Restart=always
 RestartSec=3
 User=root
-ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_secmods/ips_ids/ips_ids.py
+ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_run.py ips_ids
 Environment=HOME_DIR=/home/dnx/dnxfirewall
 
 [Install]

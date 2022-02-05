@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 
-if (__name__ == '__main__'):
-    import __init__
-
 from typing import Union
 
 import os
 import threading
 
-from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SCM_CREDENTIALS  #, SO_PASSCREDS
+from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SCM_CREDENTIALS
 from json import dumps
 
 from dnx_gentools.def_constants import *
@@ -380,6 +377,7 @@ def _log_handler():
 
 
 LogHandler = _log_handler()
+Log = LogHandler  # alias
 
 # ===========================
 # DIRECT ACCESS FUNCTIONS
@@ -395,8 +393,8 @@ informational = LogHandler.informational
 debug = LogHandler.debug
 console = LogHandler.console
 
-if (__name__ == '__main__'):
-    # aliasing to keep log service conventions the same as other modules
+def RUN_MODULE():
+    # overwriting alias above to keep conventions consistent
     Log = LogHandler()
     Log.run(name=LOG_NAME)
 

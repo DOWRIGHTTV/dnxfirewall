@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import __init__
-
 import os
 import pwd
 import threading
@@ -126,7 +124,7 @@ def _receive_requests(queue_for_db):
         queue_for_db((name, data['timestamp'], log_entry))
 
 
-if (__name__ == '__main__'):
+def RUN_MODULE():
     Log.run(name=LOG_NAME)
 
     try:

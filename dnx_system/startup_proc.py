@@ -36,8 +36,9 @@ def run():
 
     Log.notice('[startup] Webui/Flask key regenerated.')
 
-    # ensuring the default mac address of the wan interface is set. this should only change first time the system initializes
-    # setting the mac from None > interface mac. Once the flag has been set, it will not longer change modify default mac value
+    # ensuring the default mac address of the wan interface is set. this should only change first time the system
+    # initializes setting the mac from None > interface mac. Once the flag has been set, it will not longer change
+    # modify default mac value
     configure.set_default_mac_flag()
 
     Log.debug('[startup] default mac flag check.')
@@ -66,7 +67,7 @@ def create_database_tables():
         # only standard db writes auto commit
         database.commit_entries()
 
-if __name__ == '__main__':
+def RUN_MODULE():
     Log.run(
         name=LOG_NAME
     )

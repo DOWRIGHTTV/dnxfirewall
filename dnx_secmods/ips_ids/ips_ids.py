@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
-import __init__
 
 import threading
 
 from copy import copy
 from collections import defaultdict
 
-from dnx_gentools.def_constants import * # pylint: disable=unused-wildcard-import
+from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import IPS_SCAN_RESULTS, DDOS_TRACKERS, PSCAN_TRACKERS
 from dnx_routines.configure.iptables import IPTablesManager
 
@@ -343,7 +342,8 @@ class Inspect:
 
         return IPS.BLOCKED
 
-if __name__ == '__main__':
+
+def RUN_MODULE():
     Log.run(
         name=LOG_NAME
     )

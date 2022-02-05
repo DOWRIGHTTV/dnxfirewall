@@ -9,8 +9,8 @@ Restart=always
 RestartSec=3
 User=dnx
 Group=dnx
-WorkingDirectory=/home/dnx/dnxfirewall/dnx_webui
-ExecStart=/usr/local/bin/uwsgi --enable-threads --ini webui.ini
+WorkingDirectory=/home/dnx/dnxfirewall
+ExecStart=/usr/local/bin/uwsgi --enable-threads --ini dnx_webui/webui.ini
 Environment=HOME_DIR=/home/dnx/dnxfirewall
 Environment=SYSTEMD_PAGER=
 

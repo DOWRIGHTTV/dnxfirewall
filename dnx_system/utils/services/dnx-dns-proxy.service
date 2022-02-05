@@ -8,7 +8,7 @@ Type=simple
 Restart=always
 RestartSec=3
 User=root
-ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_secmods/dns_proxy/dns_proxy.py
+ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_secmods/dnx_run.py dns_proxy
 Environment=HOME_DIR=/home/dnx/dnxfirewall
 
 [Install]

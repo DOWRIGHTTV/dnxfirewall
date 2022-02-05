@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
 
-import os, sys
+import os
 import datetime
 
-from copy import deepcopy
 from time import ctime, sleep
 from ipaddress import IPv4Address
 from functools import partial
 from datetime import datetime, timedelta
 from subprocess import run, CalledProcessError, DEVNULL
-
-_HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, _HOME_DIR)
 
 from dnx_gentools.def_constants import fast_time, str_join, NO_DELAY, FIVE_SEC, ONE_HOUR
 from dnx_gentools.file_operations import load_configuration

@@ -8,7 +8,7 @@ Type=simple
 Restart=always
 RestartSec=3
 User=root
-ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_secmods/cfirewall/fw_init.py
+ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_run.py cfirewall
 Environment=HOME_DIR=/home/dnx/dnxfirewall
 
 [Install]

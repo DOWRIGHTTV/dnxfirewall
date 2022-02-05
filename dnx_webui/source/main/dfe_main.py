@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 
-# for running with flask dev server
-if (__name__ == '__main__'):
-    pass
-
-import os
+import os, sys
 import time
 
 from datetime import timedelta
@@ -23,6 +19,7 @@ from dnx_routines.logging.log_main import LogHandler as Log
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 
 HOME_DIR = os.environ.get('HOME_DIR', '/home/dnx/dnxfirewall')
+print(os.getcwd(), sys.path)
 
 app = Flask(
     __name__, static_folder=f'{HOME_DIR}/dnx_webui/static', template_folder=f'{HOME_DIR}/dnx_webui/templates'
@@ -824,5 +821,5 @@ app.add_template_global(format_fw_obj, name='format_fw_obj')
 app.add_template_global(is_list, name='is_list')
 app.add_template_global(_debug, name='debug')
 
-if __name__ == '__main__':
+if (__name__ == '__main__'):
     app.run(debug=True)

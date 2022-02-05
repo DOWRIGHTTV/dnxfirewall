@@ -53,5 +53,5 @@ def get_current_bytes():
         sleep(1)
 
 
-if (__name__ == '__main__'):
+def RUN_MODULE():
     interface_bandwidth()

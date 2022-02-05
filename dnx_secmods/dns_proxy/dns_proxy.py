@@ -1,10 +1,7 @@
 #!/usr/bin/python3
 
-import __init__
-
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import DNS_BLACKLIST, DNS_REQUEST_RESULTS, DNS_SIGNATURES, DNS_WHITELIST
-from dnx_gentools.file_operations import ConfigurationManager
 from dnx_gentools.signature_operations import generate_domain
 
 from dnx_iptools.dnx_trie_search import generate_recursive_binary_search
@@ -169,7 +166,7 @@ def _block_query(category: DNS_CAT, whitelisted: bool) -> bool:
     return False
 
 
-if __name__ == '__main__':
+def RUN_MODULE():
     dns_cat_signatures = generate_domain(Log)
 
     # using cython function factory to create binary search function with module specific signatures

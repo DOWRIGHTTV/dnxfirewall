@@ -1,10 +1,5 @@
 #!/usr/bin/python3
 
-import os, sys
-
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
 from dnx_gentools.def_constants import DATA
 from dnx_gentools.file_operations import load_configuration
 from dnx_routines.configure.system_info import System

@@ -4,9 +4,6 @@ import os, sys
 import time
 import json
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
 from dnx_shell.dnx_shell_standard import Standard
 
 

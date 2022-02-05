@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import __init__ # pylint: disable=import-error
-
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import IPP_INSPECTION_RESULTS
 from dnx_gentools.signature_operations import generate_reputation
@@ -209,7 +207,7 @@ class Inspect:
         return CONN.ACCEPT
 
 
-if (__name__ == '__main__'):
+def RUN_MODULE():
     Log.run(
         name=LOG_NAME
     )

@@ -8,7 +8,7 @@ Type=simple
 Restart=always
 RestartSec=3
 User=dnx
-ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_system/interface_services.py
+ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_run.py interface
 Environment=HOME_DIR=/home/dnx/dnxfirewall
 
 [Install]
