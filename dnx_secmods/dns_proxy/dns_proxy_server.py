@@ -140,7 +140,7 @@ class DNSServer(Listener):
     @classmethod
     # top_domain will now be set by caller, so we don't have to track that within the query object.
     def _handle_query(cls, client_query: ClientQuery, *, top_domain: bool = False) -> None:
-        
+
         # generating dns query packet data
         client_query.generate_dns_query(
             # returns new unique id after storing {id: request info} in request map
@@ -198,7 +198,7 @@ def get_unique_id(request_map: dict, request_info: tuple) -> int:
     with _id_lock:
         # NOTE: maybe tune this number. under high load collisions could occur and other requests must wait for this
         # process to complete since we are now using a queue system for checking decision instead of individual threads.
-        for _ in RUN_FOREVER:
+        for _ in RUN_FOREVER():
 
             dns_id = randint(70, 32000)
             if (dns_id not in request_map):

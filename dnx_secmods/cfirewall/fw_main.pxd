@@ -144,7 +144,7 @@ cdef enum:
 
 # used for dynamic allocation of array containing security profile settings
 # ip proxy, ips_ids, dns_proxy
-cdef u_int8_t SECURITY_PROFILE_COUNT = 3
+DEF SECURITY_PROFILE_COUNT = 3
 DEF MAX_ZONES = 16
 DEF MAX_OBJECTS = 100
 

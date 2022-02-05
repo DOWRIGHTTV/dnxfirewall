@@ -19,7 +19,6 @@ LOG_NAME = 'dns_proxy'
 
 
 dns_record_get = DNSServer.dns_records.get
-request_tracker_insert = DNSServer.REQ_TRACKER.insert
 
 class DNSProxy(NFQueue):
     # dns | ip
@@ -64,12 +63,6 @@ class DNSProxy(NFQueue):
         return False
 
 # GENERAL PROXY FUNCTIONS
-# def notify_server(request_identifier, decision):
-#     '''add the client address and proxy decision to the reference request results dictionary. this reference
-#     is controlled through a local class variable assignment.'''
-#
-#     request_tracker_insert(request_identifier, decision, module_index=DNS.PROXY)
-
 def send_to_client(packet):
     try:
         packet.sendto(packet.send_data, (int_to_ip(packet.src_ip), 0))

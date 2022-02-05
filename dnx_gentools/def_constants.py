@@ -255,8 +255,8 @@ class DHCP(_IntEnum):
 # QUEUE NUMBERS
 class Queue(_IntEnum):
     IP_PROXY  = 1
-    IPS_IDS   = 2
-    DNS_PROXY = 3
+    DNS_PROXY = 2
+    IPS_IDS   = 3
     CFIREWALL = 69
 
 class DNS_CAT(_IntEnum):

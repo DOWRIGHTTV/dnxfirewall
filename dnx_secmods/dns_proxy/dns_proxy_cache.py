@@ -16,7 +16,7 @@ NOT_VALID = -1
 request_info = namedtuple('request_info', 'server proxy')
 
 def DNSCache(*, dns_packet, request_handler):
-    _top_domains = load_configuration('dns_cache')
+    _top_domains = load_configuration('dns_cache')['top_domains']
 
     domain_counter = Counter({dom: cnt for cnt, dom in enumerate(reversed(_top_domains))})
     counter_lock = threading.Lock()
@@ -71,7 +71,7 @@ def DNSCache(*, dns_packet, request_handler):
         # =============
         # locking in starting time since per loop accuracy is not necessary
         now = fast_time()
-        expired = [dom for dom, record in list(cache.items) if now > record.expire]
+        expired = [dom for dom, record in list(cache.items()) if now > record.expire]
 
         for domain in expired:
             del cache[domain]
@@ -86,7 +86,7 @@ def DNSCache(*, dns_packet, request_handler):
         ]
 
         # updating persistent file first then sending requests
-        with ConfigurationManager('dns_server') as dnx:
+        with ConfigurationManager('dns_cache') as dnx:
             dns_settings = dnx.load_configuration()
 
             dns_settings['top_domains'] = top_domains
@@ -120,7 +120,7 @@ def DNSCache(*, dns_packet, request_handler):
         __slots__ = ()
 
         # searching key directly will return calculated ttl and associated records
-        def __getitem__(self, key):
+        def __getitem__(self, key: str) -> DNS_CACHE:
             record = dict_get(self, key)
             # not present or root lookup
             if (record == NOT_VALID):
@@ -141,16 +141,18 @@ def DNSCache(*, dns_packet, request_handler):
         def __missing__(self, key):
             return NOT_VALID
 
-        def add(self, request, data_to_cache):
+        def add(self, request: str, data_to_cache):
             '''add query to cache after calculating expiration time.'''
+
             self[request] = data_to_cache
 
             Log.debug(f'[{request}:{data_to_cache.ttl}] Added to standard cache. ')
 
-        def search(self, query_name):
+        def search(self, query_name: str) -> DNS_CACHE:
             '''if client requested domain is present in cache, will return namedtuple of time left on ttl
             and the dns records, otherwise will return None. top domain count will get automatically
             incremented if it passes filter.'''
+
             if (query_name):
                 # list comp to built in any test for match. match will not increment top domain counter.
                 if not any([fltr in query_name for fltr in top_domain_filter]):
@@ -164,6 +166,8 @@ def DNSCache(*, dns_packet, request_handler):
 
     threading.Thread(target=auto_clear, args=(_cache,)).start()
     threading.Thread(target=manual_clear, args=(_cache,)).start()
+
+    return _cache
 
 
 # TODO: refactor name to be lowercase maybe.

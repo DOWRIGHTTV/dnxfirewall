@@ -34,7 +34,7 @@ class UDPRelay(ProtoRelay):
             Log.critical(f'[{self._protocol}] No DNS servers available.')
 
     @dnx_queue(Log, name='UDPRelay')
-    def relay(self, client_query):
+    def relay(self, client_query: ClientQuery):
         self._send_query(client_query)
 
     # receive data from server. if dns response will call parse method else will close the socket.
@@ -60,7 +60,7 @@ class UDPRelay(ProtoRelay):
 
         self._relay_conn.sock.close()
 
-    def _create_socket(self, server_ip):
+    def _create_socket(self, server_ip: str) -> bool:
         dns_sock = socket(AF_INET, SOCK_DGRAM)
 
         # udp connect allows 'send' method to be used, but does not actually have an underlying connection
@@ -76,11 +76,11 @@ class UDPRelay(ProtoRelay):
 # TLS sender/receiver
 # ============================
 # direct reference to alternate constructor
-_keepalive = ClientQuery.generate_keepalive
+_keepalive = ClientQuery.generate_local_query
 
 
 class TLSRelay(ProtoRelay):
-    _protocol   = PROTO.DNS_TLS
+    _protocol = PROTO.DNS_TLS
 
     __slots__ = (
         '_tls_context', '_keepalive_status'
@@ -99,7 +99,7 @@ class TLSRelay(ProtoRelay):
         threading.Thread(target=self._keepalive_run).start()
 
     @property
-    def fail_condition(self):
+    def fail_condition(self) -> bool:
         return self._DNSServer.tls_down and self._DNSServer.udp_fallback
 
     # iterating over dns server list and calling to create a connection to first available server. this will only happen
@@ -122,7 +122,7 @@ class TLSRelay(ProtoRelay):
             Log.error(f'[{self._protocol}] No DNS servers available.')
 
     @dnx_queue(Log, name='TLSRelay')
-    def relay(self, client_query):
+    def relay(self, client_query: ClientQuery):
         # if servers are down and a fallback is configured, it will be forwarded to that relay queue, otherwise
         # the request will be silently dropped.
         if (not self.fail_condition):
@@ -132,7 +132,7 @@ class TLSRelay(ProtoRelay):
             self._fallback_relay_add(client_query)
 
     # receive data from server and call parse method when valid message is recvd, else will close the socket.
-    def _recv_handler(self, recv_buffer=bytearray(2048), bytes=bytes):
+    def _recv_handler(self, recv_buffer: bytearray = bytearray(2048), bytes=bytes):
         Log.debug(f'[{self._relay_conn.remote_ip}/{self._protocol.name}] Response handler opened.')
 
         conn_recv = self._relay_conn.recv
@@ -204,7 +204,7 @@ class TLSRelay(ProtoRelay):
         # main loop exited, cleaning up socket.
         self._relay_conn.sock.close()
 
-    def _tls_connect(self, tls_server):
+    def _tls_connect(self, tls_server: str) -> bool:
 
         Log.informational(f'[{tls_server}/{self._protocol.name}] Opening secure socket.')
 
@@ -230,7 +230,7 @@ class TLSRelay(ProtoRelay):
 
             return True
 
-        return None
+        return False
 
     # settings will take effect on next iteration
     def _keepalive_run(self):
@@ -254,6 +254,6 @@ class TLSRelay(ProtoRelay):
                 keepalive_continue()
 
             else:
-                relay_add(_keepalive(KEEP_ALIVE_DOMAIN, PROTO.DNS_TLS))
+                relay_add(_keepalive(KEEP_ALIVE_DOMAIN, keepalive=True))
 
                 Log.debug(f'[keepalive][{keepalive_interval}] Added to relay queue and cleared')

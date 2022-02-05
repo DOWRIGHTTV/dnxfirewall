@@ -404,7 +404,7 @@ class NFQueue:
             nfqueue = NetfilterQueue()
             nfqueue.nf_set(self.__q_num)
 
-            self._Log.notice('Starting dnx_netfilter queue. Packets can now be processed')
+            self._Log.notice('Starting dnx_netfilter queue. Packets will be processed shortly')
 
             # this is a blocking call which interacts with system via callback. while loop is to re-establish the
             # queue handle after an uncaught exception (hopefully maintaining system uptime)

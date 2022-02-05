@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from typing import Optional
+
 from socket import inet_aton
 from collections import namedtuple
 
@@ -53,7 +55,7 @@ class ClientQuery:
 
     # TODO: see if we should validate whether there is an indicated question record before continuing
     # TODO: implement DNS label/name validity checks and drop packet if fail. do same on response
-    def parse(self, data):
+    def parse(self, data: bytes):
 
         _dns_header, dns_query = data[:12], data[12:]
 
@@ -81,7 +83,7 @@ class ClientQuery:
 
         self.request_identifier = (*self.address, dns_header[0])  # dns_id
 
-    def generate_record_response(self, host_ip=None, configured_ttl=THIRTY_MIN):
+    def generate_record_response(self, host_ip: str = None, configured_ttl: int = THIRTY_MIN) -> bytearray:
         '''builds a dns query response for locally configured records. if host_ip is not passed in, the resource record
         section of the payload will not be generated.'''
 
@@ -108,7 +110,7 @@ class ClientQuery:
 
         return send_data
 
-    def generate_dns_query(self, dns_id, protocol):
+    def generate_dns_query(self, dns_id: int, protocol: PROTO):
         # setting additional data flag in dns header if detected
         arc = 1 if self.additional_records else 0
 
@@ -129,29 +131,19 @@ class ClientQuery:
         self.send_data = send_data
 
     @classmethod
-    def generate_local_query(cls, request, cd=1):
+    def generate_local_query(cls, request: str, keepalive: bool = True):
         '''alternate constructor for creating locally generated queries (top domains).'''
 
         self = cls(NULL_ADDR, None)
         # hardcoded qtype can change if needed.
         self.request = request
         self.qtype   = 1
-        self.cd      = cd
+        self.cd      = DNS_MASK.CD
+        self.rd      = DNS_MASK.RD
 
-        return self
-
-    @classmethod
-    def generate_keepalive(cls, request, protocol, cd=1):
-        '''alternate constructor for creating locally generated keep alive queries.'''
-
-        self = cls(NULL_ADDR, None)
-
-        # hardcoded qtype can change if needed.
-        self.request = request
-        self.qtype   = 1
-        self.cd      = cd
-
-        self.generate_dns_query(DNS.KEEPALIVE, protocol)
+        # keepalive are TLS only so we can hardcode the proto
+        if (keepalive):
+            self.generate_dns_query(DNS.KEEPALIVE, PROTO.DNS_TLS)
 
         return self
 
@@ -186,7 +178,7 @@ class ProxyRequest(NFPacket):
 
         self.send_data = b''
 
-    def _before_exit(self, mark):
+    def _before_exit(self, mark: int):
         # filtering down to dns protocol
         if (self.dst_port != PROTO.DNS):
             return
@@ -265,7 +257,7 @@ class ProxyRequest(NFPacket):
         self.send_data = ip_header.assemble() + udp_header.assemble() + udp_payload
 
 
-def _enumerate_request(request, local_domain, len=len, int=int, hash=hash):
+def _enumerate_request(request: str, local_domain: bool, len=len, int=int, hash=hash) -> list:
     rs = request.split('.')
 
     # tld > fqdn
@@ -295,7 +287,7 @@ _RESOURCE_RECORD = bytecontainer('resource_record', 'name qtype qclass ttl data'
 _MINIMUM_TTL = long_pack(MINIMUM_TTL)
 _DEFAULT_TTL = long_pack(DEFAULT_TTL)
 
-def ttl_rewrite(data, dns_id, len=len, min=min, max=max):
+def ttl_rewrite(data: bytearray, dns_id: int, len=len, min=min, max=max) -> tuple[bytearray, Optional[CACHED_RECORD]]:
 
     mem_data = memoryview(data)
     dns_header, dns_payload = mem_data[:12], mem_data[12:]
@@ -367,7 +359,7 @@ def ttl_rewrite(data, dns_id, len=len, min=min, max=max):
 
     return send_data, None
 
-def _parse_record(dns_payload, cur_offset):
+def _parse_record(dns_payload: memoryview, cur_offset: int) -> tuple[int, namedtuple, int]:
     new_offset = cur_offset + parse_query_name(dns_payload, cur_offset)
 
     # slicing out current ptr index for faster reference
