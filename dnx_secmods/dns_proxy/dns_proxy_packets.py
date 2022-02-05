@@ -289,7 +289,7 @@ _RESOURCE_RECORD = bytecontainer('resource_record', 'name qtype qclass ttl data'
 _MINIMUM_TTL = long_pack(MINIMUM_TTL)
 _DEFAULT_TTL = long_pack(DEFAULT_TTL)
 
-def ttl_rewrite(data: bytearray, dns_id: int, len=len, min=min, max=max) -> tuple[bytearray, Optional[CACHED_RECORD]]:
+def ttl_rewrite(data: bytearray, dns_id: int, len=len, min=min, max=max) -> Tuple[bytearray, Optional[CACHED_RECORD]]:
 
     mem_data = memoryview(data)
     dns_header, dns_payload = mem_data[:12], mem_data[12:]

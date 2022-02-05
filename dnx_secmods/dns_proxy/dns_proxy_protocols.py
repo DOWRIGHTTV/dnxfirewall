@@ -167,7 +167,7 @@ class TLSRelay(ProtoRelay):
             keepalive_reset()
 
             # transferring data from single packet buffer to general processing buffer, memoryview()
-            processing_buffer[b_ct:] = recv_buffer[:nbytes]
+            processing_buffer[b_ct:b_ct + nbytes] = recv_buffer[:nbytes]
 
             # incrementing amount of filled bytes in processing buffer accounting for 2 byte len field
             b_ct += nbytes - 2
@@ -186,6 +186,10 @@ class TLSRelay(ProtoRelay):
 
                     # using memoryview() so need to copy response data, or it will be corrupted by subsequent operations
                     responder_add(bytes(data[:data_len]))
+
+                    b_ct = 0
+
+                    break
 
                 # if expected data length is greater than local buffer, multiple records were returned
                 # in a batch so appending leftover bytes after removing the current records' data from buffer.
