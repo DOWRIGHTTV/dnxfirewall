@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-import os, sys
+import os
+import sys
 import time
 
 from datetime import timedelta
@@ -19,7 +20,6 @@ from dnx_routines.logging.log_main import LogHandler as Log
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 
 HOME_DIR = os.environ.get('HOME_DIR', '/home/dnx/dnxfirewall')
-print(os.getcwd(), sys.path)
 
 app = Flask(
     __name__, static_folder=f'{HOME_DIR}/dnx_webui/static', template_folder=f'{HOME_DIR}/dnx_webui/templates'
@@ -63,27 +63,27 @@ FirewallManage.object_manager = app.dnx_object_manager
 # =========================================
 # WEBUI COMPONENTS
 # =========================================
-import dnx_webui.source.main.dfe_dashboard as dfe_dashboard
-import dnx_webui.source.settings.dfe_dns as dns_settings
-import dnx_webui.source.settings.dfe_dhcp as dhcp_settings
-import dnx_webui.source.settings.dfe_interface as interface_settings
-import dnx_webui.source.settings.dfe_logging as logging_settings
-import dnx_webui.source.settings.dfe_syslog as syslog_settings
-import dnx_webui.source.settings.dfe_categories as category_settings
-import dnx_webui.source.advanced.dfe_whitelist as whitelist
-import dnx_webui.source.advanced.dfe_blacklist as blacklist
-import dnx_webui.source.advanced.dfe_firewall as dnx_fwall
-import dnx_webui.source.advanced.dfe_nat as dnx_nat
-import dnx_webui.source.advanced.dfe_domain as dns_proxy
-import dnx_webui.source.advanced.dfe_ip as ip_proxy
-import dnx_webui.source.advanced.dfe_ips as dnx_ips
-import dnx_webui.source.system.dfe_logs as dfe_logs
-import dnx_webui.source.system.dfe_reports as proxy_reports
-import dnx_webui.source.system.dfe_users as dfe_users
-import dnx_webui.source.system.dfe_backups as dfe_backups
-import dnx_webui.source.system.dfe_services as dnx_services
+import source.main.dfe_dashboard as dfe_dashboard
+import source.settings.dfe_dns as dns_settings
+import source.settings.dfe_dhcp as dhcp_settings
+import source.settings.dfe_interface as interface_settings
+import source.settings.dfe_logging as logging_settings
+import source.settings.dfe_syslog as syslog_settings
+import source.settings.dfe_categories as category_settings
+import source.advanced.dfe_whitelist as whitelist
+import source.advanced.dfe_blacklist as blacklist
+import source.advanced.dfe_firewall as dnx_fwall
+import source.advanced.dfe_nat as dnx_nat
+import source.advanced.dfe_domain as dns_proxy
+import source.advanced.dfe_ip as ip_proxy
+import source.advanced.dfe_ips as dnx_ips
+import source.system.dfe_logs as dfe_logs
+import source.system.dfe_reports as proxy_reports
+import source.system.dfe_users as dfe_users
+import source.system.dfe_backups as dfe_backups
+import source.system.dfe_services as dnx_services
 
-from dnx_webui.source.main.dfe_authentication import Authentication, user_restrict
+from source.main.dfe_authentication import Authentication, user_restrict
 
 # --------------------------------------------- #
 #  START OF NAVIGATION TABS
@@ -820,6 +820,3 @@ app.add_template_global(merge_items, name='merge_items')
 app.add_template_global(format_fw_obj, name='format_fw_obj')
 app.add_template_global(is_list, name='is_list')
 app.add_template_global(_debug, name='debug')
-
-if (__name__ == '__main__'):
-    app.run(debug=True)
