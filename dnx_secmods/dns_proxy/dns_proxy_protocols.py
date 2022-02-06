@@ -132,13 +132,15 @@ class TLSRelay(ProtoRelay):
             self._fallback_relay_add(client_query)
 
     # receive data from server and call parse method when valid message is recvd, else will close the socket.
-    def _recv_handler(self, recv_buffer: bytearray = bytearray(2048), bytes=bytes):
+    def _recv_handler(self, recv_buf: bytearray = bytearray(2048), bytes=bytes):
         Log.debug(f'[{self._relay_conn.remote_ip}/{self._protocol.name}] Response handler opened.')
 
         conn_recv = self._relay_conn.recv
         keepalive_reset = self._keepalive_status.set
 
         responder_add = self._DNSServer.responder.add
+
+        recv_buffer = memoryview(recv_buf)
 
         # allocating 4096 bytes of memory as bytearray, then building memory view. access to memory via byte array will
         # not be needed. 4096 gives space for 8 max length sized udp dns messages (not sure if dot mirrors)
@@ -170,7 +172,7 @@ class TLSRelay(ProtoRelay):
             processing_buffer[b_ct:b_ct + nbytes] = recv_buffer[:nbytes]
 
             # incrementing amount of filled bytes in processing buffer accounting for 2 byte len field
-            b_ct += nbytes - 2
+            b_ct += nbytes
 
             # =========================
             # PROCESSING BUFFER LOGIC
@@ -182,8 +184,10 @@ class TLSRelay(ProtoRelay):
 
                 data_len, data = btoia(processing_buffer[:2]), processing_buffer[2:]
 
+                request_len = data_len + 2  # adding 2 byte len field
+
                 # normal case - exactly 1 complete dns response in buffer
-                if (b_ct == data_len):
+                if (b_ct == request_len):
 
                     # using memoryview() so need to copy response data, or it will be corrupted by subsequent operations
                     responder_add(bytes(data[:data_len]))
@@ -194,10 +198,10 @@ class TLSRelay(ProtoRelay):
 
                 # if expected data length is greater than local buffer, multiple records were returned
                 # in a batch so appending leftover bytes after removing the current records' data from buffer.
-                elif (b_ct > data_len):
-                    extra_bytes = processing_buffer[data_len:b_ct]
+                elif (b_ct > request_len):
+                    extra_bytes = processing_buffer[request_len:b_ct]
 
-                    b_ct -= data_len
+                    b_ct -= request_len
 
                     processing_buffer[:b_ct] = extra_bytes
 

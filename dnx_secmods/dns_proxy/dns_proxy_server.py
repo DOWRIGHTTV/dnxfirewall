@@ -108,7 +108,7 @@ class DNSServer(Listener):
         return True
 
     @dnx_queue(Log, name='DNSServer')
-    def responder(self, received_data: bytearray) -> None:
+    def responder(self, received_data: bytes) -> None:
         # dns id is the first 2 bytes in the dns header
         dns_id = btoia(received_data[:2])
 
@@ -174,6 +174,7 @@ class DNSServer(Listener):
         l_sock.bind((f'{intf_ip}', PROTO.DNS))
 
         return l_sock
+
 
 # ======================
 # DNS RECORD CACHE DICT
