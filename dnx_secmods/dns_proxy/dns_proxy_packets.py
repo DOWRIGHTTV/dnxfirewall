@@ -368,7 +368,7 @@ def _parse_record(dns_payload: memoryview, cur_offset: int) -> Tuple[int, namedt
     record_name = dns_payload[cur_offset: new_offset]
     record_values = dns_payload[new_offset:]
 
-    # resource record data len. generally 4 for ip address, but can vary. calculating first so we can single shot
+    # resource record data len. generally 4 for ip address, but can vary. calculating first, so we can single shot
     # create byte container below.
     dt_len = btoia(record_values[8:10])
 

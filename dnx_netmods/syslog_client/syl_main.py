@@ -60,7 +60,7 @@ class SyslogService:
         threading.Thread(target=self.process_message_queue).start()
 
     @dnx_queue(Log, name='SyslogClient')
-    # Checking the syslog message queue for entries. if entries it will connection to the configured server over the
+    # Checking the syslog message queue for entries. if entries it will connect to the configured server over the
     # configured protocol/ports, then send the sockets to the protocol classes to actually send the messages
     def process_message_queue(self):
         if (self.syslog_protocol == PROTO.TCP):
@@ -103,7 +103,7 @@ class SyslogService:
 
         self._main()
 
-    # using loopback so shouldnt have problems, but just taking precautions.
+    # using loopback so shouldn't have problems, but just taking precautions.
     def _create_service_socket(self):
         self.service_sock = socket(AF_INET, SOCK_DGRAM)
         self.service_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)

@@ -62,7 +62,7 @@ class DHCPServer(Listener):
     @classmethod
     def handle_dhcp(cls, packet):
         '''pseudo alternate constructor acting as a callback for the Parent/Listener class, but will not return
-        the created instance. instead it will internally manage the instance and ensure the request gets handled.'''
+        the created instance. instead, it will internally manage the instance and ensure the request gets handled.'''
 
         self = cls()
         self._handle_request(packet)
@@ -114,7 +114,7 @@ class DHCPServer(Listener):
 
         client_request.handout_ip = dhcp.offer(client_request)
 
-        # NOTE: the final record's hostname will be used so dont need it here
+        # NOTE: the final record's hostname will be used so don't need it here
         return DHCP.OFFER, DHCP_RECORD(DHCP.OFFERED, fast_time(), client_request.mac, '')
 
     def _request(self, request_id, client_request):

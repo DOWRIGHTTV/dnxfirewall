@@ -113,7 +113,7 @@ class TCPMessage:
         sock = socket(AF_INET, SOCK_STREAM)
         # NOTE: this should improve sending performance since we expect a dns record to only be a small
         # portion of available bytes in MTU/max bytes(1500). seems to provide no improvement after 1 run.
-        # there could be other bottlenecks in play so we can re evaluate later.
+        # there could be other bottlenecks in play, so we can re-evaluate later.
         # sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         secure_socket = self._tls_context.wrap_socket(sock, server_hostname=secure_server)
         try:

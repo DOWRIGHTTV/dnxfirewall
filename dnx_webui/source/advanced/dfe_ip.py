@@ -15,7 +15,8 @@ def load_page(form):
     reputation  = ip_proxy['reputation']
     geolocation = ip_proxy['geolocation']
 
-    # controlling whether to load defaults or user selected view. These are validated by the update function so it is safe to assume types.
+    # controlling whether to load defaults or user selected view. These are validated by the update function, so it is
+    # safe to assume types.
     geo_region = form.get('region', 'africa')
     geo_direction = int(form.get('menu_dir', 4))
 

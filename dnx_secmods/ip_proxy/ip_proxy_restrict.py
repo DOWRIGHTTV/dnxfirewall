@@ -37,11 +37,11 @@ class LanRestrict:
         self.initialize = Initialize(Log, name)
 
     @classproperty
-    def is_enabled(cls): # pylint: disable=no-self-argument
+    def is_enabled(cls):
         return cls._enabled
 
     @classproperty
-    def is_active(cls): # pylint: disable=no-self-argument
+    def is_active(cls):
         return cls._active
 
     @classmethod

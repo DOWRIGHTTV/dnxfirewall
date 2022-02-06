@@ -176,17 +176,6 @@ class DNSServer(Listener):
         return l_sock
 
 
-# ======================
-# DNS RECORD CACHE DICT
-# ======================
-# initializing dns cache/ sending in reference to needed methods for top domains
-DNS_CACHE = DNSCache(
-    dns_packet=ClientQuery.generate_local_query,
-    request_handler=DNSServer.handle_query
-)
-dns_cache_add = DNS_CACHE.add
-dns_cache_search = DNS_CACHE.search
-
 # DNS ID generation. this value is guaranteed unique for the life of the request.
 _id_lock = threading.Lock()
 
@@ -209,3 +198,15 @@ def send_to_client(client_query: ClientQuery, query_response: bytearray) -> None
         client_query.sendto(query_response, client_query.address)
     except OSError:
         pass
+
+
+# ======================
+# DNS RECORD CACHE DICT
+# ======================
+# initializing dns cache/ sending in reference to needed methods for top domains
+DNS_CACHE = DNSCache(
+    dns_packet=ClientQuery.generate_local_query,
+    request_handler=DNSServer.handle_query
+)
+dns_cache_add = DNS_CACHE.add
+dns_cache_search = DNS_CACHE.search

@@ -17,8 +17,8 @@ const loadTableData = (items) => {
 }
 
 function colorizeTable(id='') {
-    var table = document.getElementById(`filter-table${id}`);
-    var tr = table.getElementsByTagName("tr");
+    const table = document.getElementById(`filter-table${id}`);
+    let tr = table.getElementsByTagName("tr");
 
     for (let i = 0; i < tr.length; i++) {
 
@@ -31,10 +31,10 @@ function colorizeTable(id='') {
 }
 
 function filterTable(n1, n2, id='') {
-    var input = document.getElementById(`filter-input${id}`);
-    var filter = input.value.toUpperCase();
-    var table = document.getElementById(`filter-table${id}`);
-    var tr = table.getElementsByTagName("tr");
+    let input = document.getElementById(`filter-input${id}`);
+    let filter = input.value.toUpperCase();
+    let table = document.getElementById(`filter-table${id}`);
+    let tr = table.getElementsByTagName("tr");
 
     let r = 1
     for (let i = 0; i < tr.length; i++) {

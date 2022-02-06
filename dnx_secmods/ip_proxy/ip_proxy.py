@@ -48,7 +48,7 @@ class IPProxy(NFQueue):
 
             return False
 
-        # standard ip proxy inspect. further action decided post inspection.
+        # standard ip proxy inspect, further action decided post inspection.
         if (packet.action is CONN.ACCEPT and packet.ipp_profile):
             return True
 
@@ -66,7 +66,7 @@ class IPProxy(NFQueue):
         else:
             packet.nfqueue.drop()
 
-        # quick path to log geo data. doing this post action since its a log only path.
+        # quick path to log geo data. doing this post action since it's a log only path.
         log_geolocation(packet)
 
         return False

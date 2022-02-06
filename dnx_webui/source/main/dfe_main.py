@@ -572,7 +572,7 @@ def default(path):
 
 # --------------------------------------------- #
 # all standard page loads use this logic to decide the page action/ call the correct
-# lower level functions residing in each pages Class
+# lower level functions residing in each page's Class
 def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
     if (request.method == 'POST'):
         tab = request.form.get('tab', '1')
@@ -676,7 +676,7 @@ def handle_system_action(page_settings):
 
         Log.warning(f'dnxfirewall {action} initiated.')
 
-        # i prefer the word restart so converting to system command here
+        # I prefer the word restart so converting to system command here
         action = 'reboot' if action == 'restart' else f'{action} now'
 
         # TODO: make sure this is authenticated
@@ -700,7 +700,7 @@ def update_session_tracker(username, user_role=None, remote_addr=None, *, action
             persistent_tracker['active_users'][username] = {
                 'role': user_role,
                 'remote_addr': remote_addr,
-                'logged_in': time.time(),  # NOTE: can probably make this human readable format here.
+                'logged_in': time.time(),  # NOTE: can probably make this human-readable format here.
                 'last_seen': None
             }
 
@@ -726,7 +726,7 @@ def user_timeout():
     app.permanent_session_lifetime = timedelta(minutes=30)
     session.modified = True
 
-# checks form data for a color mode change and writes/ configures accordingly. otherwise will load
+# checks form data for a color mode change and writes/ configures accordingly. otherwise, will load
 # the current dark mode setting for the active user and set flask.session['dark_mode] accordingly.
 @app.before_request
 def dark_mode():
@@ -734,7 +734,7 @@ def dark_mode():
     the configured value will be stored as session['dark_mode'] so it can be accessed directly by the
     Flask template context.
     '''
-    # dark mode settings will only apply to logged in users.
+    # dark mode settings will only apply to logged-in users.
     # NOTE: username validations are still required lower down to deal with log in/out transitions.
     user = session.get('user', None)
     if (not user):

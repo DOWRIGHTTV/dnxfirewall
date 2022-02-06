@@ -48,7 +48,7 @@ class BackupHandler:
                 tar.add(filename, arcname=os.path.basename(filename))
 
     @staticmethod
-    # extracting config backup files to temp folder so they can be merged with running configs
+    # extracting config backup files to temp folder, so they can be merged with running configs
     def _restore_configuration(name):
 
         # restoring system default consists of deleting all usr config files

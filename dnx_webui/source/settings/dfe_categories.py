@@ -36,8 +36,8 @@ def load_page(menu_option):
             if (category != 'enabled'):
                 userdefined_categories.append(category)
 
-        for i, cat in enumerate(userdefined_category, 1):
-            if (i == menu_option):
+        for x, cat in enumerate(userdefined_category, 1):
+            if (x == menu_option):
                 loaded_ud_category = {cat: {}}
                 load_category_rules = userdefined_category[cat]
                 for i, rule in enumerate(load_category_rules):

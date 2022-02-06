@@ -214,8 +214,8 @@ class Listener:
 
 class ProtoRelay:
     '''parent class for udp and tls relays providing standard built in methods to start, check status, or add
-    jobs to the work queue. _dns_queue object must be overwritten by sub classes.'''
-    _protocol  = PROTO.NOT_SET
+    jobs to the work queue. _dns_queue object must be overwritten by subclasses.'''
+    _protocol = PROTO.NOT_SET
 
     __slots__ = (
         '_DNSServer', '_fallback_relay',
@@ -539,7 +539,7 @@ class RawPacket:
     in code as well or a new class should be derived from it for the dns proxy.
 
     parent class designed to index/parse full tcp/ip packets (including ethernet). alternate
-    constructors are supplied to support different listener types eg. raw sockets.
+    constructors are supplied to support different listener types e.g. raw sockets.
 
     raw socket:
         packet = RawPacket.interface(data, address, socket)
@@ -647,8 +647,8 @@ class RawPacket:
         pass
 
     @property
-    def continue_condition(self):
-        '''controls whether the _before_exit method gets called. must return a boolean.
+    def continue_condition(self) -> bool:
+        '''controls whether the _before_exit method gets called.
 
         May be overridden.
 

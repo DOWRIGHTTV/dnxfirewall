@@ -21,7 +21,7 @@ MAX_PORT_RANGE = 65536
 __all__ = (
     'standard', 'syslog_dropdown', 'mac_address',
     'ip_address', 'default_gateway', 'domain',
-    'cidr', 'network_port', 'timer',
+    'cidr', 'network_port', 'timer', 'get_convert_int'
     'account_creation', 'username', 'password',
     'user_role', 'dhcp_reservation', 'log_settings',
     'time_offset', 'syslog_settings', 'ip_proxy_settings',
@@ -521,7 +521,7 @@ def del_nat_rule(rule, /):
     except:
         raise ValidationError(INVALID_FORM)
 
-    # tcp/udp checked first. if error, will check icmp format. if that doesnt match then
+    # tcp/udp checked first. if error, will check icmp format. if that doesn't match then
     # exception is raised.
     try:
         open_protocol_settings[rule.protocol][rule.port]

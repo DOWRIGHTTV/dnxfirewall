@@ -225,11 +225,11 @@ def _merge_geo_ranges(ls):
 
         cur_net_id, cur_broadcast, cur_country = l
 
-        # applying current item to temp item since it didnt exist
+        # applying current item to temp item since it didn't exist
         if (not merged_item):
             merged_item = l
 
-        # currently have ongoing contiguous range.
+        # ongoing contiguous range.
         else:
             _, last_broadcast, last_country = merged_item
 

@@ -296,8 +296,8 @@ def set_permissions():
 
     progress('configuring dnxfirewall permissions')
 
-    # creating database file here so it can get its permissions modified. This will
-    # ensure it wont be overridden by update pulls.
+    # creating database file here, so it can get its permissions modified. This will
+    # ensure it won't be overridden by update pulls.
     dnx_run(f'touch {SYSTEM_DIR}/data/dnxfirewall.sqlite3')
 
     # set owner to dnx user/group
@@ -374,7 +374,7 @@ if __name__ == '__main__':
     args = parser.parse_args(argv[1:])
     VERBOSE = args.verbose
 
-    # pre checks to make sure application can run properly
+    # pre-checks to make sure application can run properly
     check_run_as_root()
     check_dnx_user()
     check_clone_location()

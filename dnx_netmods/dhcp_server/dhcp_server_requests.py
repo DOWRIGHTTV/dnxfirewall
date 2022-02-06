@@ -126,7 +126,7 @@ class ServerResponse:
             elif (self.rebinding):
                 return DHCP.REBINDING, request.ciaddr
 
-        # NOTE: sometimes a request falls outside of the standard RFC conditions. this will prevent
+        # NOTE: sometimes a request falls outside the standard RFC conditions. this will prevent
         # the server from halting if so.
         return DHCP.DROP, None
 
@@ -229,7 +229,7 @@ class ClientRequest:
 
     @classmethod
     def set_server_reference(cls, server_reference):
-        '''setting the class object alias "_Server" as the sent in reference object. this is required as all
+        '''setting the class object alias "_Server" as the passed in reference object. this is required as all
         methods in this class rely on the alias reference.'''
 
         cls._Server = server_reference
@@ -333,7 +333,7 @@ class ClientRequest:
 
         return byte_join(response_options)
 
-    # NOTE: recently changed this to ensure reversations arent used if they are for a network
+    # NOTE: recently changed this to ensure reservations aren't used if they are for a network
     # different that what the request came in on.
     def reservation(self, network_hosts):
         try:

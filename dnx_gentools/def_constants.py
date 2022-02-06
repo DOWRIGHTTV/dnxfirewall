@@ -72,7 +72,7 @@ BROADCAST  = _IPv4Address('255.255.255.255')
 MSB = 0b11111111111110000000000000000000
 LSB = 0b00000000000001111111111111111111
 
-# NFQUEUE packet actions | marking packet so it can be matched by next rules in order of operations
+# NFQUEUE packet actions | marking packet, so it can be matched by next rules in order of operations
 WAN_IN = 10  # used for limiting certain internal functions from applying to wan > inside traffic
 LAN_IN = 11  # used for management access traffic matching
 DMZ_IN = 12  # used for management access traffic matching

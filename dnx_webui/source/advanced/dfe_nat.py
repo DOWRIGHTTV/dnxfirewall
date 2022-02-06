@@ -60,7 +60,7 @@ def _dnat_rules(action, form):
     fields = SimpleNamespace(**form)
     if (action == 'remove'):
         try:
-            # NOTE: validation needs to know the zone so it can ensure the position is valid
+            # NOTE: validation needs to know the zone, so it can ensure the position is valid
             validate.del_nat_rule(fields)
         except ValidationError as ve:
             error = ve
@@ -104,7 +104,7 @@ def _snat_rules(action, form):
     # TODO: make this code for snat (currently using dnat code as template)
     if (action == 'remove'):
         try:
-            # NOTE: validation needs to know the zone so it can ensure the position is valid
+            # NOTE: validation needs to know the zone, so it can ensure the position is valid
             validate.del_nat_rule(fields)
         except ValidationError as ve:
             error = ve

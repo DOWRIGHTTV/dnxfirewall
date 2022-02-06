@@ -6,7 +6,7 @@ from dnx_routines.configure.system_info import System
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 
 def load_page(uri_query=None):
-    # if sent from dashboard link, infected clients table will open directly.
+    # if sent from dashboard link, infected-clients table will open directly.
     if uri_query is not None and uri_query.get('view_clients', None):
         return load_infected_clients(), 'all', 'infected_clients'
 

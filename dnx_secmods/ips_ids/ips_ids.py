@@ -94,7 +94,7 @@ class IPS_IDS(NFQueue):
             elif (packet.action is CONN.ACCEPT):
                 packet.nfqueue.accept()
 
-            # this will drop the packet so it doesnt become orphaned in the kernel or get accepted and hit the
+            # this will drop the packet so it doesn't become orphaned in the kernel or get accepted and hit the
             # wan interface. this will match CONN.DROP or CONN.INSPECT, both having same packet action, but
             # different inspection logic.
             else:
@@ -131,7 +131,7 @@ class Inspect:
         self._portscan_inspect(cls._IPS, packet)
 
     @classmethod
-    # NOTE: not passing in _IPS object since it doesnt seem to be worth it. maybe can for consistency though.
+    # NOTE: not passing in _IPS object since it doesn't seem to be worth it. maybe can for consistency though.
     def ddos(cls, packet):
         self = cls()
         self._ddos_inspect(packet)
@@ -290,7 +290,7 @@ class Inspect:
         # returning scan tracker to be used by reject to retroactively handle ports before marked as a scanner.
         return initial_block, scan_detected, tracked_ip['pre_detect']
 
-    # NOTE: target is now a set. i believe at one point the values had a purpose, but now they do not. a set
+    # NOTE: target is now a set. I believe at one point the values had a purpose, but now they do not. a set
     # reduces complexity and performs the same.
     def _add_to_tracker(self, tracker, packet, *, engine):
         if (engine is IPS.PORTSCAN):
@@ -304,7 +304,7 @@ class Inspect:
                 'count': 1, 'initial': packet.timestamp, 'last_seen': packet.timestamp
             }
 
-    # sending packet response. if initial block is set, then pre detection logging will be use to generate responses
+    # sending packet response. if initial block is set, then pre detection logging will be used to generate responses
     # for packets prior to being flagged a scanner.
     def _portscan_reject(self, pre_detection_logging, packet, initial_block):
         self._IPSResponse.prepare_and_send(packet)

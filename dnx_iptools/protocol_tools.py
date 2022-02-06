@@ -73,7 +73,7 @@ def mac_stob(mac_address):
 
     return binascii.unhexlify(mac_address.replace(':', ''))
 
-def convert_string_to_bitmap(rule, offset, hash=hash, int=int):
+def convert_string_to_bitmap(rule: str, offset: int, hash=hash, int=int) -> Tuple[int, int]:
     host_hash = hash(rule)
 
     b_id = int(f'{host_hash}'[:offset])
@@ -88,7 +88,8 @@ def cidr_to_int(cidr, int=int):
 
     return ~((1 << hostmask) - 1) & (2**32 - 1)
 
-def parse_query_name(data, offset=0, *, qname=False):
+def parse_query_name(data: Union[bytes, memoryview], offset: int = 0, *,
+                     qname: bool = False) -> Union[int, Tuple[int, Tuple[bytearray, int]]]:
     '''parse dns name from sent in data. uses overall dns query to follow pointers. will return
     name and offset integer value if qname arg is True otherwise will only return offset.'''
 
@@ -101,19 +102,19 @@ def parse_query_name(data, offset=0, *, qname=False):
 
         label_len, label_ptr = data[idx], data[idx+1:]
 
+        # root/ null terminated
+        if (label_len == 0):
+            break
+
         # std label
-        if (0 < label_len < 64):
-            query_name += label_ptr[:label_len] + b'.'
+        elif (label_len < 64):
+            query_name += bytes(label_ptr[:label_len]) + b'.'
             label_ct += 1
 
             if (not has_ptr):
                 offset += label_len + 1
 
             idx += label_len + 1
-
-        # root/ null terminated
-        elif (label_len == 0):
-            break
 
         # label ptr
         elif (label_len >= 192):
@@ -146,7 +147,7 @@ def domain_stob(domain_name):
 
 # will create dns header specific to response. default resource record count is 1
 def create_dns_response_header(dns_id, record_count=1, *, rd=1, ad=0, cd=0, rc=0):
-    qr, op, aa, tc, ra, zz = 1,0,0,0,1,0
+    qr, op, aa, tc, ra, zz = 1, 0, 0, 0, 1, 0
     f = (qr << 15) | (op << 11) | (aa << 10) | (tc << 9) | (rd << 8) | \
         (ra <<  7) | (zz <<  6) | (ad <<  5) | (cd << 4) | (rc << 0)
 
@@ -154,7 +155,7 @@ def create_dns_response_header(dns_id, record_count=1, *, rd=1, ad=0, cd=0, rc=0
 
 # will create dns header specific to request/query. default resource record count is 1, additional record count optional
 def create_dns_query_header(dns_id, arc=0, *, cd):
-    qr, op, aa, tc, rd, ra, zz, ad, rc = 0,0,0,0,1,0,0,0,0
+    qr, op, aa, tc, rd, ra, zz, ad, rc = 0, 0, 0, 0, 1, 0, 0, 0, 0
     f = (qr << 15) | (op << 11) | (aa << 10) | (tc << 9) | (rd << 8) | \
         (ra <<  7) | (zz <<  6) | (ad <<  5) | (cd << 4) | (rc << 0)
 

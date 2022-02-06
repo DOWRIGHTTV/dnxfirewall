@@ -79,7 +79,7 @@ class LogService:
             for table in ['dnsproxy', 'ipproxy', 'ips', 'infectedclients']:
                 FirewallDB.table_cleaner(self.log_length, table=table)
 
-        # NOTE: consider moving this into the DBConnector so it can report if no exc are raised.
+        # NOTE: consider moving this into the DBConnector, so it can report if no exc are raised.
         Log.notice('completed daily database cleaning')
 
     @looper(THREE_MIN)
@@ -87,7 +87,7 @@ class LogService:
         with DBConnector(Log) as FirewallDB:
             FirewallDB.blocked_cleaner(table='blocked')
 
-        # NOTE: consider moving this into the DBConnector so it can report if no exc are raised.
+        # NOTE: consider moving this into the DBConnector, so it can report if no exc are raised.
         Log.debug('completed blocked database cleaning')
 
     @cfg_read_poller('logging_client')

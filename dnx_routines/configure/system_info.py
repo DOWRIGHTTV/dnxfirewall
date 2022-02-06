@@ -56,7 +56,7 @@ class Interface:
 
     @staticmethod
     def broadcast_address(interface):
-        '''returns ip address object for the sent in interface networks broadcast address.'''
+        '''returns ip address object for the passed in interface networks broadcast address.'''
         output = util_shell(f'ifconfig {interface}').stdout.splitlines(8)
         for line in output:
             if ('broadcast' in line):

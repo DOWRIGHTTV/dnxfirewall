@@ -198,7 +198,7 @@ def RequestTracker():
             # blocking until an at least one request has been received
             wait_for_request()
 
-            # immediately clearing event so we don't have to worry about it after loop. this prevents having to deal
+            # immediately clearing event, so we don't have to worry about it after loop. this prevents having to deal
             # with scenarios where a request was received in just after while loop, but just before reset. in this case
             # the request would be stuck until another was received.
             clear_ready()

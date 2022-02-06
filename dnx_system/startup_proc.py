@@ -37,7 +37,7 @@ def run():
     Log.notice('[startup] Webui/Flask key regenerated.')
 
     # ensuring the default mac address of the wan interface is set. this should only change first time the system
-    # initializes setting the mac from None > interface mac. Once the flag has been set, it will not longer change
+    # initializes setting the mac from None > interface mac. Once the flag has been set, it will no longer change
     # modify default mac value
     configure.set_default_mac_flag()
 

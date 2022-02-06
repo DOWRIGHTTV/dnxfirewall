@@ -25,7 +25,7 @@ __all__ = (
 _s = socket(AF_INET, SOCK_DGRAM)
 DESCRIPTOR = _s.fileno()
 
-# NOTE: this may no longer be needed even though it was recently overhauled. the inclusion of the exclude
+# NOTE: this may no longer be needed even though it was recently overhauled. the inclusion of the excluded
 # filter in the load_interfaces() function should be able to replace this function. keep for now just in case.
 def get_intf_builtin(zone_name):
     intf_settings = load_configuration('config')['interfaces']

@@ -38,7 +38,7 @@ class FirewallManage:
         '_firewall',
     )
 
-    # store main instance reference here so it can be accessed throughout webui
+    # store main instance reference here, so it can be accessed throughout webui
     cfirewall = None
     object_manager = None
 
@@ -145,7 +145,7 @@ class FirewallManageLegacy:
         '_firewall',
     )
 
-    # store main instance reference here so it can be accessed throughout webui
+    # store main instance reference here, so it can be accessed throughout webui
     cfirewall = None
 
     versions = ['pending', 'active']

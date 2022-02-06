@@ -141,7 +141,7 @@ class Configuration:
         dhcp_leases = self.DHCPServer.leases
         for ip, record in dhcp_leases.items():
 
-            # record[0] is record type. cross referencing ip reservation list with current lease table
+            # record[0] is record type. cross-referencing ip reservation list with current lease table
             # to reset any leased record placeholders for the reserved ip.
             if (record[0] is DHCP.RESERVATION and IPv4Address(ip) not in reserved_ips):
                 dhcp_leases[ip] = _NULL_LEASE
@@ -161,7 +161,7 @@ class Configuration:
         # interface ident eg. eth0
         for *_, intf in self.DHCPServer._intfs:
 
-            # interface friendly name eg. wan
+            # interface friendly name e.g. wan
             for _intf, settings in dhcp_intfs.items():
 
                 # ensuring the interfaces match since we cannot guarantee order
@@ -172,7 +172,7 @@ class Configuration:
                 # subnet based on netmask for ip handouts or membership tests.
                 intf_ip = IPv4Interface(str(fw_intf[_intf]['ip']) + '/' + str(fw_intf[_intf]['netmask']))
 
-                # initializing server options so the auto loader doesnt have to worry about it.
+                # initializing server options so the autoloader doesn't have to worry about it.
                 self.DHCPServer.options[intf] = {}
 
                 # updating general network information for interfaces on server class object. these will never change
@@ -197,9 +197,9 @@ class Configuration:
 
         Log.debug(f'[{l_sock.fileno()}][{intf}] socket created')
 
-# short lived container for queue/writing dhcp record to disk
-_RECORD_CONTAINER = namedtuple('record_container', 'ip record')
 
+# short-lived container for queue/writing dhcp record to disk
+_RECORD_CONTAINER = namedtuple('record_container', 'ip record')
 
 class Leases(dict):
     _setup = False

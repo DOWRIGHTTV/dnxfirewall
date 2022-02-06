@@ -87,7 +87,7 @@ class Initialize:
         self._thread_ready = set()
 
     def wait_for_threads(self, *, count, timeout=None):
-        '''will block until the checked in thread count has reach the sent in count.'''
+        '''will block until the checked in thread count has reach the passed in count.'''
         if (not self._is_initializing or self.has_ran):
             raise RuntimeError('run has already been called for this self.')
 
@@ -270,7 +270,7 @@ def structure(obj_name, fields):
         def __call__(self, **kwargs):
             new_container = _copy(self)
 
-            # set args in new instance if specified. this will overwrite any pre set attributes. kwargs can be used to
+            # set args in new instance if specified. this will overwrite any pre-set attributes. kwargs can be used to
             # pre define values at creation of new container.
             if (kwargs):
                 for name, value in kwargs.items():

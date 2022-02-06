@@ -121,7 +121,7 @@ class IP:
 
         if (arg == 'lists'):
             category = setting['ip_proxy']['lists']
-            for cat, status in category.items():
+            for cat, _ in category.items():
                 if (cat == 'tor'):
                     for node, status in category[cat].items():
                         if (status['enabled']):

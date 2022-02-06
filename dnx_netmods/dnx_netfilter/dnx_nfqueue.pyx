@@ -36,7 +36,7 @@ cdef int nf_callback(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *dat
 
 
 # pre allocating memory for 8 instance. instances are created and destroyed sequentially so only one instance
-# will be active at a time, but this is to make a point to myself that this module could be multi threaded within
+# will be active at a time, but this is to make a point to myself that this module could be multithreaded within
 # C one day.
 @cython.freelist(8)
 cdef class CPacket:

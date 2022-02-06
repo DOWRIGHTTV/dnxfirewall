@@ -15,7 +15,7 @@
 #   whether data was successfully written
 #
 #   all reading routing must return a single var
-#   this can be list, dict, int, bool, etc since
+#   this can be list, dict, int, bool, etc. since
 #   it will be passed through connector without
 #   accessing the data.
 
@@ -212,7 +212,7 @@ def top_geolocation(cur, count, *, action, direction):
     )
 
     # filtering out entries with no hits in the specified action. if those are returned, they have hits on the
-    # opposite action. currently filtering out 'NONE' since the geolocation database is not yet complete.
+    # opposite action. currently, filtering out 'NONE' since the geolocation database is not yet complete.
     return [x[0].replace('_', ' ') for x in cur.fetchall() if x[1] and x[0] != 'NONE']
 
 @db.register('unique_domain_count', routine_type='query')

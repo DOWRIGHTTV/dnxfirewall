@@ -6,7 +6,7 @@ import sqlite3
 
 from dnx_gentools.def_constants import HOME_DIR
 
-valid_commands = set(['select',])
+valid_commands = {'select'}
 
 conn = sqlite3.connect(f'{HOME_DIR}/dnx_system/data/dnxfirewall.sqlite3')
 cur = conn.cursor()

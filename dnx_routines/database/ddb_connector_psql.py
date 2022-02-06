@@ -170,7 +170,7 @@ class DBConnector:
 
         results = self.c.fetchall()
 
-        # get correct tor category names. i cant remember them off top since it recently changed.
+        # get correct tor category names. I can't remember them off top since it recently changed.
         return [x for x in results if x.lower() not in ['malicious', 'compromised', 'tor']][:count]
 
     def unique_domain_count(self, *, action):

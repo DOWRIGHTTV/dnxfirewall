@@ -44,7 +44,7 @@ class _Defaults:
         shell('iptables -t raw -N IPS') # ddos prevention rule insertion location
 
     def default_actions(self):
-        # these arent needed anymore since cfirewall has a default action. this makes it easier to configure the file
+        # these aren't needed anymore since cfirewall has a default action. this makes it easier to configure the file
         # or when doing dev functions like swapping code or manually editing system configurations.
         # shell('iptables -P FORWARD DROP')
         # shell('iptables -P INPUT DROP')
@@ -70,7 +70,7 @@ class _Defaults:
         shell(f'iptables -A INPUT -s 127.0.0.0/24 -d 127.0.0.0/24 -j ACCEPT')
 
         # user configured services access will be kept as iptables for now. note: the implicit allows like dhcp and dns
-        # will be handled by cfirewall from this point on. mark filter to ensure wan doesnt match as extra precaution.
+        # will be handled by cfirewall from this point on. mark filter to ensure wan doesn't match as extra precaution.
         shell(f'iptables -A INPUT -m mark ! --mark {WAN_IN} -j MGMT')
 
         shell(f'iptables -A INPUT -p tcp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
@@ -116,7 +116,7 @@ class _Defaults:
 
 class IPTablesManager:
     ''' This is the IP Table rule adjustment manager. if class is called in as a context manager, all method calls
-    must be ran in the context where the class instance itself is returned as the object. Changes as part of a context
+    must be run in the context where the class instance itself is returned as the object. Changes as part of a context
     will be automatically saved upon exit of the context, otherwise they will have to be saved manually.
     '''
 
@@ -155,7 +155,7 @@ class IPTablesManager:
         return True
 
     def commit(self):
-        '''explicit, process safe, call to save iptables to backup file. this is not needed if using
+        '''explicit, process safe, call to save iptables to back up file. this is not needed if using
         within a context manager as the commit happens on exit.'''
 
         shell(f'sudo iptables-save > {HOME_DIR}/dnx_system/iptables/iptables_backup.cnf', check=True)
@@ -258,7 +258,7 @@ class IPTablesManager:
 
     @staticmethod
     def purge_proxy_rules(*, table, chain):
-        '''removing all rules from the sent in table and chain. this should be used only be called during
+        '''removing all rules from the passed in table and chain. this should be used only be called during
         proxy initialization.'''
 
         shell(f'sudo iptables -t {table} -F {chain}')

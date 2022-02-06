@@ -91,15 +91,13 @@
 
         {# materialize overrides #}
         document.addEventListener('DOMContentLoaded', () => {
-            var elems = document.querySelectorAll('.dropdown-trigger');
-            var instances = M.Dropdown.init(elems, {
-                coverTrigger : false
-            });
+            let elems = document.querySelectorAll('.dropdown-trigger');
+            M.Dropdown.init(elems, {coverTrigger : false});
         })
 
         document.addEventListener('DOMContentLoaded', () => {
-            var elems = document.querySelectorAll('.fixed-action-btn');
-            var instances = M.FloatingActionButton.init(elems, {
+            let elems = document.querySelectorAll('.fixed-action-btn');
+            M.FloatingActionButton.init(elems, {
                 // direction: 'left',
                 hoverEnabled: false
             });
@@ -132,8 +130,8 @@
             }
 
             function idleTimeoutWarning() {
-                var timeoutNotify = document.querySelector(".modal-idle-timeout");
-                var notifyInstance = M.Modal.init(timeoutNotify);
+                let timeoutNotify = document.querySelector(".modal-idle-timeout");
+                let notifyInstance = M.Modal.init(timeoutNotify);
                 notifyInstance.open();
             }
 
