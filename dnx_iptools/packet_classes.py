@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-import os, sys
+import os
+import sys
 import time
 import traceback
 import threading
@@ -8,15 +9,15 @@ import socket
 import select
 
 from dnx_gentools.def_constants import *
-from dnx_iptools.def_structs import *
-
+from dnx_gentools.def_typing import *
+from dnx_gentools.standard_tools import looper
 from dnx_gentools.def_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK
 
-from dnx_netmods.dnx_netfilter.dnx_nfqueue import set_user_callback, NetfilterQueue # pylint: disable=no-name-in-module, import-error
-from dnx_iptools.interface_ops import load_interfaces, wait_for_interface, wait_for_ip, get_masquerade_ip
+from dnx_iptools.def_structs import *
 from dnx_iptools.protocol_tools import int_to_ip
-from dnx_gentools.standard_tools import looper
+from dnx_iptools.interface_ops import load_interfaces, wait_for_interface, wait_for_ip, get_masquerade_ip
 
+from dnx_netmods.dnx_netfilter.dnx_nfqueue import set_user_callback, NetfilterQueue
 
 __all__ = (
     'Listener', 'ProtoRelay', 'NFQueue', 'NFPacket', 'RawPacket', 'RawResponse'
@@ -59,7 +60,7 @@ class Listener:
         self._always_on = always_on
 
     @classmethod
-    def run(cls, Log, *, threaded=True, always_on=False):
+    def run(cls, Log, *, threaded: bool = True, always_on: bool = False):
         '''associating subclass Log reference with Listener class. registering all interfaces in _intfs and starting
         service listener loop. calling class method setup before to provide subclass specific code to run at class level
         before continuing.'''
@@ -86,7 +87,7 @@ class Listener:
         threading.Thread(target=self.__listener).start()
 
     @classmethod
-    def enable(cls, sock_fd, intf):
+    def enable(cls, sock_fd: int, intf: str):
         '''adds a file descriptor id to the disabled interface set. this effectively re-enables the server for the
         zone of the specified socket.'''
 
@@ -95,7 +96,7 @@ class Listener:
         cls._Log.notice(f'[{sock_fd}][{intf}] {cls.__name__} listener enabled.')
 
     @classmethod
-    def disable(cls, sock_fd, intf):
+    def disable(cls, sock_fd: int, intf: str):
         '''removes a file descriptor id to the disabled interface set. this effectively disables the server for the
         zone of the specified socket.'''
 
@@ -119,7 +120,7 @@ class Listener:
     @classmethod
     # TODO: what happens if interface comes online, then immediately gets unplugged. the registration would fail
     #  potentially and would no longer be active so it would never happen if the interface was replugged after.
-    def __register(cls, intf):
+    def __register(cls, intf: str):
         '''will register interface with listener. requires subclass property for listener_sock returning valid socket
         object. once registration is complete the thread will exit.'''
 
@@ -145,7 +146,7 @@ class Listener:
         cls._Log.informational(f'[{l_sock.fileno()}][{intf}] {cls.__name__} interface registered.')
 
     @classmethod
-    def set_proxy_callback(cls, *, func):
+    def set_proxy_callback(cls, *, func: Callable):
         '''takes a callback function to handle packets after parsing. the reference will be called
         as part of the packet flow with one argument passed in for "packet".'''
 
@@ -178,7 +179,7 @@ class Listener:
                     else:
                         self._Log.debug(f'recv on fd: {fd} | enabled ints: {self.enabled_intfs}')
 
-    def __parse_packet(self, data, address, sock_info):
+    def __parse_packet(self, data: bytes, address: Tuple[str, int], sock_info: NamedTuple):
         packet = self._packet_parser(address, sock_info)
         try:
             packet.parse(data)
@@ -203,7 +204,7 @@ class Listener:
         raise NotImplementedError('the _pre_inspect method must be overridden in subclass.')
 
     @staticmethod
-    def listener_sock(intf, intf_ip):
+    def listener_sock(intf: str, intf_ip: IPv4Address):
         '''returns instance level listener socket.
 
         Must be overridden.

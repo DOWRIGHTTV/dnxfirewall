@@ -12,7 +12,7 @@ from subprocess import run, DEVNULL, CalledProcessError
 from dnx_gentools.def_constants import HOME_DIR, str_join
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, write_configuration, json_to_yaml
 from dnx_routines.configure.iptables import IPTablesManager
-from dnx_routines.logging.log_main import LogHandler as Log
+from dnx_routines.logging.log_client import LogHandler as Log
 
 LOG_NAME = 'system'
 PROGRESS_TOTAL_COUNT = 15

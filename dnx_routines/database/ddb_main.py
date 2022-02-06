@@ -20,7 +20,7 @@ from dnx_gentools.def_constants import *
 from dnx_gentools.standard_tools import dnx_queue, looper
 from dnx_iptools.def_structs import unpack_scm_creds
 
-from dnx_routines.logging.log_main import LogHandler as Log
+from dnx_routines.logging.log_client import LogHandler as Log
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 
 LOG_NAME = 'system'

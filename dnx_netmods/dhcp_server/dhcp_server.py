@@ -8,7 +8,7 @@ from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import DHCP_RECORD
 
 from dnx_iptools.packet_classes import Listener
-from dnx_routines.logging.log_main import LogHandler as Log
+from dnx_routines.logging.log_client import LogHandler as Log
 
 from dnx_netmods.dhcp_server.dhcp_server_requests import ServerResponse, ClientRequest
 from dnx_netmods.dhcp_server.dhcp_server_automate import Configuration, Leases

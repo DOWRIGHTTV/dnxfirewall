@@ -5,10 +5,10 @@ from dnx_gentools.def_namedtuples import DNS_LOG, INFECTED_LOG
 
 from dnx_iptools.interface_ops import get_arp_table
 
-from dnx_routines.logging.log_main import LogHandler
+from dnx_routines.logging.log_client import LogHandler
 
 # DIRECT ACCESS FUNCTIONS
-from dnx_routines.logging.log_main import (
+from dnx_routines.logging.log_client import (
     emergency, alert, critical, error, warning, notice, informational, debug, console
 )
 

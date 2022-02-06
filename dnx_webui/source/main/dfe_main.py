@@ -12,7 +12,7 @@ from dnx_gentools.def_constants import CFG, DATA, FIVE_SEC
 from dnx_gentools.file_operations import load_configuration, ConfigurationManager
 from dnx_routines.configure.exceptions import ValidationError
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
-from dnx_routines.logging.log_main import LogHandler as Log
+from dnx_routines.logging.log_client import LogHandler as Log
 
 # ========================================
 # FLASK API - APP INSTANCE INITIALIZATION

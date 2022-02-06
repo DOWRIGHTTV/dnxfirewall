@@ -3,7 +3,7 @@
 import threading
 
 from dnx_gentools.def_constants import *
-from dnx_routines.logging.log_main import LogHandler as Log
+from dnx_routines.logging.log_client import LogHandler as Log
 from dnx_gentools.standard_tools import Initialize
 from dnx_gentools.file_operations import cfg_read_poller, load_configuration
 

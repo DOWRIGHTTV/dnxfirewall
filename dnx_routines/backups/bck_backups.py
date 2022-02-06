@@ -4,7 +4,7 @@ import os
 import tarfile
 
 from dnx_gentools.def_constants import CFG
-from dnx_routines.logging.log_main import LogHandler as Log
+from dnx_routines.logging.log_client import LogHandler as Log
 from dnx_routines.configure.exceptions import ValidationError
 
 LOG_NAME = 'system'

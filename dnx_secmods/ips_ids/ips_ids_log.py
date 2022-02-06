@@ -2,7 +2,7 @@
 
 from dnx_gentools.def_constants import *  # pylint: disable=unused-wildcard-import
 from dnx_gentools.def_namedtuples import IPS_LOG
-from dnx_routines.logging.log_main import LogHandler
+from dnx_routines.logging.log_client import LogHandler
 
 
 class Log(LogHandler):

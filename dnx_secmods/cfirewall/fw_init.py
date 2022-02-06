@@ -2,7 +2,7 @@
 
 from dnx_gentools.def_constants import hard_out, Queue
 
-from dnx_routines.logging.log_main import LogHandler as Log
+from dnx_routines.logging.log_client import LogHandler as Log
 
 from dnx_secmods.cfirewall.fw_main import CFirewall
 from dnx_secmods.cfirewall.fw_control import FirewallControl

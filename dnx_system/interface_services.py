@@ -5,7 +5,7 @@ from json import dump
 from subprocess import check_output
 
 from dnx_gentools.def_constants import NO_DELAY, HOME_DIR
-from dnx_routines.logging.log_main import LogHandler as Log
+from dnx_routines.logging.log_client import LogHandler as Log
 
 from dnx_gentools.standard_tools import looper
 

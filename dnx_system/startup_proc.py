@@ -6,7 +6,7 @@ from secrets import token_urlsafe
 
 import dnx_routines.configure.configure as configure
 
-from dnx_routines.logging.log_main import LogHandler as Log
+from dnx_routines.logging.log_client import LogHandler as Log
 from dnx_gentools.file_operations import ConfigurationManager
 from dnx_routines.configure.iptables import IPTablesManager as IPTables
 from dnx_routines.database.ddb_connector_sqlite import DBConnector

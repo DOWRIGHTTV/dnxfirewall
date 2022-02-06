@@ -8,7 +8,7 @@ from dnx_gentools.def_constants import *
 from dnx_iptools.def_structs import *
 from dnx_iptools.protocol_tools import icmp_reachable, btoia
 
-from dnx_routines.logging.log_main import LogHandler as Log
+from dnx_routines.logging.log_client import LogHandler as Log
 
 _NULL_OPT = (0,'')
 _fast_choice = random.choice

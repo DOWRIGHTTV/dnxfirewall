@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
-from typing import Optional, Tuple
-
 from socket import inet_aton
 from collections import namedtuple
 
 from dnx_gentools.def_constants import *
+from dnx_gentools.def_typing import *
 from dnx_gentools.standard_tools import bytecontainer
 from dnx_gentools.def_namedtuples import CACHED_RECORD
 
@@ -60,18 +59,18 @@ class ClientQuery:
         _dns_header, dns_query = data[:12], data[12:]
 
         dns_header = dns_header_unpack(_dns_header)
-        self.dns_id = dns_header[0]
+        self.dns_id: int = dns_header[0]
 
-        self.qr = dns_header[1] & DNS_MASK.QR
-        self.op = dns_header[1] & DNS_MASK.OP
-        self.aa = dns_header[1] & DNS_MASK.AA
-        self.tc = dns_header[1] & DNS_MASK.TC
-        self.rd = dns_header[1] & DNS_MASK.RD
-        self.ra = dns_header[1] & DNS_MASK.RA
-        self.zz = dns_header[1] & DNS_MASK.ZZ
-        self.ad = dns_header[1] & DNS_MASK.AD
-        self.cd = dns_header[1] & DNS_MASK.CD
-        self.rc = dns_header[1] & DNS_MASK.RC
+        self.qr: int = dns_header[1] & DNS_MASK.QR
+        self.op: int = dns_header[1] & DNS_MASK.OP
+        self.aa: int = dns_header[1] & DNS_MASK.AA
+        self.tc: int = dns_header[1] & DNS_MASK.TC
+        self.rd: int = dns_header[1] & DNS_MASK.RD
+        self.ra: int = dns_header[1] & DNS_MASK.RA
+        self.zz: int = dns_header[1] & DNS_MASK.ZZ
+        self.ad: int = dns_header[1] & DNS_MASK.AD
+        self.cd: int = dns_header[1] & DNS_MASK.CD
+        self.rc: int = dns_header[1] & DNS_MASK.RC
 
         # www.micro.com or micro.com || sd.micro.com
         offset, query_info = parse_query_name(dns_query, qname=True)
@@ -97,7 +96,7 @@ class ClientQuery:
 
         return send_data
 
-    def generate_cached_response(self, cached_dom):
+    def generate_cached_response(self, cached_dom) -> bytearray:
 
         send_data = bytearray(
             dns_header_pack(self.dns_id, 32896 | self.rd | self.cd, 1, len(cached_dom.records), 0, 0)
@@ -266,7 +265,7 @@ def _enumerate_request(request: str, local_domain: bool, len=len, int=int, hash=
     requests = [dot_join(rs[i:]) for i in range(-2, -len(rs)-1, -1)]
 
     # adjusting for local record as needed
-    req_ids = [rs[-1]] if local_domain else [None]
+    req_ids: list = [rs[-1]] if local_domain else [None]
 
     # building bin/host id from hash for each enumerated name.
     for r in requests:
