@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from socket import inet_aton
-from collections import namedtuple
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_typing import *

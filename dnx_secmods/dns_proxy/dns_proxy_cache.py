@@ -12,7 +12,7 @@ from dnx_gentools.def_namedtuples import DNS_CACHE
 from dnx_gentools.file_operations import *
 from dnx_gentools.standard_tools import looper
 
-from dnx_secmods.dns_proxy.dns_proxy_log import Log
+from dns_proxy_log import Log
 
 NOT_VALID = -1
 request_info = namedtuple('request_info', 'server proxy')

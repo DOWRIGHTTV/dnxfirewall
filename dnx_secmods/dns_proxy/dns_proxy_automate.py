@@ -13,7 +13,7 @@ from dnx_gentools.standard_tools import looper, Initialize
 
 from dnx_iptools.protocol_tools import create_dns_query_header, convert_string_to_bitmap
 
-from dnx_secmods.dns_proxy.dns_proxy_log import Log
+from dns_proxy_log import Log
 
 ConfigurationManager.set_log_reference(Log)
 

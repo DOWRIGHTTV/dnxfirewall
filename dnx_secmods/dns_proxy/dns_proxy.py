@@ -8,10 +8,10 @@ from dnx_iptools.dnx_trie_search import generate_recursive_binary_search
 from dnx_iptools.packet_classes import NFQueue
 from dnx_iptools.protocol_tools import int_to_ip
 
-from dnx_secmods.dns_proxy.dns_proxy_automate import Configuration
-from dnx_secmods.dns_proxy.dns_proxy_log import Log
-from dnx_secmods.dns_proxy.dns_proxy_packets import ProxyRequest
-from dnx_secmods.dns_proxy.dns_proxy_server import DNSServer
+from dns_proxy_automate import Configuration
+from dns_proxy_log import Log
+from dns_proxy_packets import ProxyRequest
+from dns_proxy_server import DNSServer
 
 LOG_NAME = 'dns_proxy'
 

@@ -12,8 +12,8 @@ from dnx_gentools.standard_tools import dnx_queue
 from dnx_iptools.protocol_tools import btoia
 from dnx_iptools.packet_classes import ProtoRelay
 
-from dnx_secmods.dns_proxy.dns_proxy_packets import ClientQuery
-from dnx_secmods.dns_proxy.dns_proxy_log import Log
+from dns_proxy_packets import ClientQuery
+from dns_proxy_log import Log
 
 
 class UDPRelay(ProtoRelay):
