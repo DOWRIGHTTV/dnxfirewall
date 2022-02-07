@@ -22,7 +22,7 @@ class UDPRelay(ProtoRelay):
     __slots__ = ()
 
     def _register_new_socket(self):
-        for dns_server in self._DNSServer.dns_servers:
+        for dns_server in self._dns_server.dns_servers:
 
             # if server is down we will skip over it
             if (not dns_server[PROTO.UDP]): continue
@@ -40,7 +40,7 @@ class UDPRelay(ProtoRelay):
     # receive data from server. if dns response will call parse method else will close the socket.
     def _recv_handler(self):
         conn_recv = self._relay_conn.recv
-        responder_add = self._DNSServer.responder.add
+        responder_add = self._dns_server.responder.add
 
         for _ in RUN_FOREVER():
             try:
@@ -100,12 +100,12 @@ class TLSRelay(ProtoRelay):
 
     @property
     def fail_condition(self) -> bool:
-        return self._DNSServer.tls_down and self._DNSServer.udp_fallback
+        return self._dns_server.tls_down and self._dns_server.udp_fallback
 
     # iterating over dns server list and calling to create a connection to first available server. this will only happen
     # if a socket connection isn't already established when attempting to send query.
     def _register_new_socket(self):
-        for tls_server in self._DNSServer.dns_servers:
+        for tls_server in self._dns_server.dns_servers:
 
             # skipping over known down server. NOTE: using self._protocol is not needed here.
             if (not tls_server[PROTO.DNS_TLS]): continue
@@ -117,7 +117,7 @@ class TLSRelay(ProtoRelay):
             self.mark_server_down(remote_server=tls_server['ip'])
 
         else:
-            self._DNSServer.tls_down = True
+            self._dns_server.tls_down = True
 
             Log.error(f'[{self._protocol}] No DNS servers available.')
 
@@ -132,13 +132,13 @@ class TLSRelay(ProtoRelay):
             self._fallback_relay_add(client_query)
 
     # receive data from server and call parse method when valid message is recvd, else will close the socket.
-    def _recv_handler(self, recv_buf: bytearray = bytearray(2048), bytes=bytes):
+    def _recv_handler(self, recv_buf: bytearray = bytearray(2048)):
         Log.debug(f'[{self._relay_conn.remote_ip}/{self._protocol.name}] Response handler opened.')
 
         conn_recv = self._relay_conn.recv
         keepalive_reset = self._keepalive_status.set
 
-        responder_add = self._DNSServer.responder.add
+        responder_add = self._dns_server.responder.add
 
         recv_buffer = memoryview(recv_buf)
 
@@ -177,7 +177,6 @@ class TLSRelay(ProtoRelay):
             # =========================
             # PROCESSING BUFFER LOGIC
             # =========================
-            # TODO: something wrong with responder_add call
             # loop is needed to cover cases where dns responses are split over multiple packets or multiple responses
             # are contained within a single packet.
             for _ in RUN_FOREVER():
@@ -189,15 +188,16 @@ class TLSRelay(ProtoRelay):
                 # normal case - exactly 1 complete dns response in buffer
                 if (b_ct == request_len):
 
-                    # using memoryview() so need to copy response data, or it will be corrupted by subsequent operations
+                    # using memoryview(), so need to copy response data or it will be corrupted by subsequent operations
+                    # which are running concurrent to the receiving processor.
                     responder_add(bytes(data[:data_len]))
 
                     b_ct = 0
 
                     break
 
-                # if expected data length is greater than local buffer, multiple records were returned
-                # in a batch so appending leftover bytes after removing the current records' data from buffer.
+                # if expected data length is greater than local buffer, multiple records were returned in a batch so
+                # appending leftover bytes after removing the current records' data from buffer.
                 elif (b_ct > request_len):
                     extra_bytes = processing_buffer[request_len:b_ct]
 
@@ -243,7 +243,7 @@ class TLSRelay(ProtoRelay):
 
     # settings will take effect on next iteration
     def _keepalive_run(self):
-        keepalive_interval = self._DNSServer.keepalive_interval
+        keepalive_interval = self._dns_server.keepalive_interval
         keepalive_timer = self._keepalive_status.wait
         keepalive_continue = self._keepalive_status.clear
 

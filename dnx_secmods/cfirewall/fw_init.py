@@ -1,17 +1,28 @@
 #!/usr/bin/env python3
 
-from dnx_gentools.def_constants import hard_out, Queue
+import sys
+import argparse
+
+from dnx_gentools.def_constants import hard_out, INIT_MODULE, Queue
 
 from dnx_routines.logging.log_client import LogHandler as Log
 
 from dnx_secmods.cfirewall.fw_main import CFirewall
 from dnx_secmods.cfirewall.fw_control import FirewallControl
 
-def RUN_MODULE(bypass: bool = False, verbose: bool = False):
+if (INIT_MODULE):
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--bypass', action='store_true')
+    parser.add_argument('--verbose', action='store_true')
+
+    args = parser.parse_args(sys.argv[2:])
 
     Log.run(name='firewall')
 
-    dnxfirewall = CFirewall(bypass, verbose)
+    dnxfirewall = CFirewall()
+    dnxfirewall.set_options(args.bypass, args.verbose)
+
     error = dnxfirewall.nf_set(Queue.CFIREWALL)
     if (error):
         Log.error(f'failed to bind to queue {Queue.CFIREWALL}')
@@ -28,8 +39,9 @@ def RUN_MODULE(bypass: bool = False, verbose: bool = False):
         hard_out()
 
     # this is a blocking call but is running in pure C. the GIL is released before running the low level system
-    # operations and will never retake the gil. NOTE: setting bypass will tell the process to invoke firewall action
-    # (DROP or ACCEPT) directly without forwarding to other modules.
+    # operations and will never retake the gil.
+    # NOTE: setting bypass will tell the process to invoke firewall action (DROP or ACCEPT) directly without
+    #  forwarding to other modules.
     try:
         dnxfirewall.nf_run()
     except:

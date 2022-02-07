@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import threading
 
 from collections import Counter, deque, namedtuple
 
 from dnx_gentools.def_constants import *
+from dnx_gentools.def_typing import *
 from dnx_gentools.def_namedtuples import DNS_CACHE
 from dnx_gentools.file_operations import *
 from dnx_gentools.standard_tools import looper
 
 from dnx_secmods.dns_proxy.dns_proxy_log import Log
-from dnx_secmods.dns_proxy.dns_proxy_packets import ClientQuery
 
 NOT_VALID = -1
 request_info = namedtuple('request_info', 'server proxy')
 
-def DNSCache(*, dns_packet, request_handler):
+def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
     _top_domains = load_configuration('dns_cache')['top_domains']
 
     domain_counter = Counter({dom: cnt for cnt, dom in enumerate(reversed(_top_domains))})
@@ -29,11 +31,11 @@ def DNSCache(*, dns_packet, request_handler):
     dict_get = dict.__getitem__
 
     @cfg_read_poller('dns_cache')
-    def manual_clear(cache, cfg_file):
-        dns_cache = load_configuration(cfg_file)
+    def manual_clear(cache: DNSCache, cfg_file: str):
+        cache_settings = load_configuration(cfg_file)
 
-        clear_dns_cache   = dns_cache['clear']['standard']
-        clear_top_domains = dns_cache['clear']['top_domains']
+        clear_dns_cache   = cache_settings['clear']['standard']
+        clear_top_domains = cache_settings['clear']['top_domains']
 
         # when new top domains or standard cache (future) are written to disk, the poller will trigger whether the
         # flags are set or not. this will ensure we only run through the code if needed.
@@ -55,16 +57,16 @@ def DNSCache(*, dns_packet, request_handler):
             Log.notice('top domains cache has been cleared.')
 
         with ConfigurationManager('dns_cache') as dnx:
-            dns_settings = dnx.load_configuration()
+            cache_settings = dnx.load_configuration()
 
-            dns_settings['clear']['standard'] = clear_dns_cache
-            dns_settings['clear']['top_domains'] = clear_top_domains
+            cache_settings['clear']['standard'] = clear_dns_cache
+            cache_settings['clear']['top_domains'] = clear_top_domains
 
-            dnx.write_configuration(dns_settings)
+            dnx.write_configuration(cache_settings)
 
     @looper(THREE_MIN)
     # automated process to flush the cache if expire time has been reached.
-    def auto_clear(cache):
+    def auto_clear(cache: DNSCache):
 
         # =============
         # STANDARD
@@ -87,11 +89,11 @@ def DNSCache(*, dns_packet, request_handler):
 
         # updating persistent file first then sending requests
         with ConfigurationManager('dns_cache') as dnx:
-            dns_settings = dnx.load_configuration()
+            cache_storage = dnx.load_configuration()
 
-            dns_settings['top_domains'] = top_domains
+            cache_storage['top_domains'] = top_domains
 
-        write_configuration(dns_settings, 'dns_cache')
+        write_configuration(cache_storage, 'dns_cache')
 
         for domain in top_domains:
             request_handler(dns_packet(domain), top_domain=True)
@@ -99,7 +101,7 @@ def DNSCache(*, dns_packet, request_handler):
 
         Log.debug('top domains refreshed')
 
-    class _DNSCache(dict):
+    class DNSCache(dict):
         '''subclass of dict to provide a custom data structure for dealing with the local caching of dns records.
 
         containers handled by class:
@@ -138,10 +140,10 @@ def DNSCache(*, dns_packet, request_handler):
                 return DNS_CACHE(NOT_VALID, None)
 
         # if missing will return an expired result
-        def __missing__(self, key):
+        def __missing__(self, key: str) -> int:
             return NOT_VALID
 
-        def add(self, request: str, data_to_cache):
+        def add(self, request: str, data_to_cache: CACHED_RECORD):
             '''add query to cache after calculating expiration time.'''
 
             self[request] = data_to_cache
@@ -162,7 +164,7 @@ def DNSCache(*, dns_packet, request_handler):
 
             return self[query_name]
 
-    _cache = _DNSCache()
+    _cache = DNSCache()
 
     threading.Thread(target=auto_clear, args=(_cache,)).start()
     threading.Thread(target=manual_clear, args=(_cache,)).start()
@@ -170,8 +172,7 @@ def DNSCache(*, dns_packet, request_handler):
     return _cache
 
 
-# TODO: refactor name to be lowercase maybe.
-def RequestTracker():
+def request_tracker() -> RequestTracker:
     '''Basic queueing mechanism for DNS requests received by the server. The main feature of the queue is to provide
     efficient thread blocking via Thread Events over a busy loop. This is a very lightweight version of the standard lib
     Queue and uses a deque as its primary data structure.
@@ -184,11 +185,11 @@ def RequestTracker():
 
     _list = list
 
-    request_tracker = deque()
-    request_tracker_append = request_tracker.append
-    request_tracker_get = request_tracker.popleft
+    req_tracker = deque()
+    request_tracker_append = req_tracker.append
+    request_tracker_get = req_tracker.popleft
 
-    class _RequestTracker:
+    class RequestTracker:
 
         @staticmethod
         # blocks until the request ready flag has been set, then iterates over dict and appends any client address with
@@ -213,4 +214,4 @@ def RequestTracker():
             # notifying return_ready there is a query ready to forward
             notify_ready()
 
-    return _RequestTracker()
+    return RequestTracker()

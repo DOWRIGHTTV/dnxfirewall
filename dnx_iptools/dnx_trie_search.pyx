@@ -1,11 +1,10 @@
 #!/usr/bin/env Cython
 
 from libc.stdlib cimport malloc, calloc
+from libc.math cimport log
 # from libc.stdio cimport printf
 
 import threading as _threading
-from math import log as _log
-
 from functools import lru_cache as _lru_cache
 
 DEF EMPTY_CONTAINER = 0
@@ -24,14 +23,12 @@ cdef class HashTrie:
 
             u_int32_t TRIE_KEY
             u_int32_t TRIE_KEY_HASH
-
             trie_range *trie_value_ranges
 
-        # allocating memory for L1 container. this will be accessed from l1_search method.
-        # the reference stored at index will point to l2 data.
-        MAX_KEYS = 2 ** round(_log(len(py_trie), 2))
+            size_t MAX_KEYS = 2 ** log(len(py_trie), 2)
 
         self.INDEX_MASK = MAX_KEYS - 1
+
         self.TRIE_MAP = <trie_map*> calloc(MAX_KEYS, sizeof(trie_map))
 
         for i in range(len(py_trie)):
@@ -53,7 +50,7 @@ cdef class HashTrie:
             self.TRIE_MAP[TRIE_KEY_HASH].len = value_len
             self.TRIE_MAP[TRIE_KEY_HASH].ranges = trie_value_ranges
 
-    cdef u_int8_t _search(self, u_int32_t trie_key, u_int32_t host_id) nogil:
+    cdef u_int8_t search(self, u_int32_t trie_key, u_int32_t host_id) nogil:
 
         cdef:
             size_t trie_key_hash = trie_key % self.INDEX_MASK
@@ -82,7 +79,7 @@ cdef class HashTrie:
         cdef trie_range *l2_content = <trie_range*>malloc(sizeof(trie_range))
 
         l2_content.key     = trie_key
-        l2_content.netid  = l2_entry[0]
+        l2_content.netid   = l2_entry[0]
         l2_content.bcast   = l2_entry[1]
         l2_content.country = l2_entry[2]
 

@@ -38,7 +38,6 @@ cdef class HashTrie:
     cdef:
         trie_map *TRIE_MAP
 
-        size_t MAX_KEYS
         size_t INDEX_MASK
 
     cpdef void generate_structure(self, tuple py_trie)

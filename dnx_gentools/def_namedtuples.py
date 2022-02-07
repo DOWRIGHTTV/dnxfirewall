@@ -3,7 +3,9 @@
 from collections import namedtuple as _namedtuple
 
 # DHCP SERVER
-DHCP_REQUEST_INFO  = _namedtuple('dhcp_request_info' ,'message_type, xID, server_identifier, mac_address, client_address, requested_ip')
+DHCP_REQUEST_INFO  = _namedtuple(
+    'dhcp_request_info', 'message_type, xID, server_identifier, mac_address, client_address, requested_ip'
+)
 DHCP_RESPONSE_INFO = _namedtuple('dhcp_response_info', 'xID mac_address ciaddr handout_ip options')
 DHCP_RECORD = _namedtuple('server_record', 'rtype timestamp mac hostname')
 

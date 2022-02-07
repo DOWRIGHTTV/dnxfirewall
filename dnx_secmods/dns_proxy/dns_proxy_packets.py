@@ -16,7 +16,7 @@ from dnx_iptools.packet_classes import NFPacket
 
 class ClientQuery:
     __slots__ = (
-        '_data', '_dns_header', '_dns_query',
+        '_dns_header', '_dns_query',
 
         # init
         'address', 'sendto', 'top_domain',
@@ -54,7 +54,7 @@ class ClientQuery:
 
     # TODO: see if we should validate whether there is an indicated question record before continuing
     # TODO: implement DNS label/name validity checks and drop packet if fail. do same on response
-    def parse(self, data: bytes):
+    def parse(self, data: memoryview):
 
         _dns_header, dns_query = data[:12], data[12:]
 
@@ -130,8 +130,8 @@ class ClientQuery:
         self.send_data = send_data
 
     @classmethod
-    def generate_local_query(cls, request: str, keepalive: bool = True):
-        '''alternate constructor for creating locally generated queries (top domains).'''
+    def generate_local_query(cls, request: str, keepalive: bool = False):
+        '''alternate constructor for creating locally generated queries (top domain or keepalive requests).'''
 
         self = cls(NULL_ADDR, None)
         # hardcoded qtype can change if needed.
@@ -165,7 +165,7 @@ class ProxyRequest(NFPacket):
     __slots__ = (
         '_dns_header', '_dns_query',
 
-        'request', 'requests', 'request_identifier',
+        'request', 'requests', 'tld', 'request_identifier',
         'local_domain', 'qtype', 'qclass', 'dns_id', 'question_record',
 
         'qr', '_rd', '_ad', '_cd', 'send_data',
@@ -217,7 +217,7 @@ class ProxyRequest(NFPacket):
 
         # hashing queried name enumerating any subdomains (signature matching)
         # defining unique tuple for informing dns server of inspection results
-        self.requests = _enumerate_request(*query_info)
+        self.requests, self.tld = _enumerate_request(*query_info)
         self.request_identifier = (int_to_ip(self.src_ip), self.src_port, self.dns_id)
 
     # will create send data object for used by proxy.
@@ -258,14 +258,15 @@ class ProxyRequest(NFPacket):
         self.send_data = ip_header.assemble() + udp_header.assemble() + udp_payload
 
 
-def _enumerate_request(request: str, local_domain: bool, len=len, int=int, hash=hash) -> list:
+def _enumerate_request(request: str, local_domain: bool, int=int, hash=hash) -> Tuple[List[Tuple[int]], Optional[str]]:
     rs = request.split('.')
 
     # tld > fqdn
-    requests = [dot_join(rs[i:]) for i in range(-2, -len(rs)-1, -1)]
+    requests: List[str] = [dot_join(rs[i:]) for i in range(-2, -len(rs)-1, -1)]
 
     # adjusting for local record as needed
-    req_ids: list = [rs[-1]] if local_domain else [None]
+    req_ids: list = []
+    tld: Optional[str] = None if local_domain else rs[-1]
 
     # building bin/host id from hash for each enumerated name.
     for r in requests:
@@ -275,14 +276,12 @@ def _enumerate_request(request: str, local_domain: bool, len=len, int=int, hash=
 
         req_ids.append((b_id, h_id))
 
-    return req_ids
+    return req_ids, tld
 
 
 # ================
 # SERVER RESPONSE
 # ================
-_records_container = namedtuple('record_container', 'counts records')
-_resource_records = namedtuple('resource_records', 'resource authority')
 _RESOURCE_RECORD = bytecontainer('resource_record', 'name qtype qclass ttl data')
 
 _MINIMUM_TTL = long_pack(MINIMUM_TTL)
@@ -291,18 +290,19 @@ _DEFAULT_TTL = long_pack(DEFAULT_TTL)
 def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> Tuple[bytearray, Optional[CACHED_RECORD]]:
 
     mem_data = memoryview(data)
-    dns_header, dns_payload = mem_data[:12], mem_data[12:]
+    dns_header:  memoryview = mem_data[:12]
+    dns_payload: memoryview = mem_data[12:]
 
     # converting external/unique dns id back to original dns id of client
-    send_data = bytearray(short_pack(dns_id))
+    send_data: bytearray = bytearray(short_pack(dns_id))
 
     # ================
     # HEADER
     # ================
-    _dns_header = dns_header_unpack(dns_header)
+    _dns_header: tuple = dns_header_unpack(dns_header)
 
-    resource_count = _dns_header[3]
-    authority_count = _dns_header[4]
+    resource_count:  int = _dns_header[3]
+    authority_count: int = _dns_header[4]
     # additional_count = _dns_header[5]
 
     send_data += dns_header[2:]
@@ -311,7 +311,7 @@ def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> Tuple[by
     # QUESTION RECORD
     # ================
     # www.micro.com or micro.com || sd.micro.com
-    offset = parse_query_name(dns_payload) + 4
+    offset: int = parse_query_name(dns_payload) + 4
 
     send_data += dns_payload[:offset]
 
@@ -320,7 +320,8 @@ def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> Tuple[by
     # ================
     # resource_records = dns_payload[offset + 4:]
 
-    original_ttl, record_cache = 0, []
+    original_ttl: int = 0
+    record_cache: list = []
 
     # parsing standard and authority records
     for record_count in [resource_count, authority_count]:
@@ -360,7 +361,7 @@ def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> Tuple[by
 
     return send_data, None
 
-def _parse_record(dns_payload: memoryview, cur_offset: int) -> Tuple[int, namedtuple, int]:
+def _parse_record(dns_payload: memoryview, cur_offset: int) -> Tuple[int, _RESOURCE_RECORD, int]:
     new_offset = cur_offset + parse_query_name(dns_payload, cur_offset)
 
     # slicing out current ptr index for faster reference

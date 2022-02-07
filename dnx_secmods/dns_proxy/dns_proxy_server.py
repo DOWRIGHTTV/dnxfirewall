@@ -15,7 +15,7 @@ from dnx_iptools.protocol_tools import btoia
 from dnx_iptools.packet_classes import Listener
 
 from dnx_secmods.dns_proxy.dns_proxy_automate import Configuration, Reachability
-from dnx_secmods.dns_proxy.dns_proxy_cache import DNSCache, RequestTracker
+from dnx_secmods.dns_proxy.dns_proxy_cache import dns_cache, RequestTracker
 from dnx_secmods.dns_proxy.dns_proxy_protocols import UDPRelay, TLSRelay
 from dnx_secmods.dns_proxy.dns_proxy_packets import ClientQuery, ttl_rewrite
 from dnx_secmods.dns_proxy.dns_proxy_log import Log
@@ -32,6 +32,7 @@ tls_relay_add = TLSRelay.relay.add
 class DNSServer(Listener):
     protocol = PROTO.NOT_SET
     tls_down = True
+    udp_fallback = False
     keepalive_interval = 8
 
     # NOTE: setting values to None to denote initialization has not been completed.
@@ -204,7 +205,7 @@ def send_to_client(client_query: ClientQuery, query_response: bytearray) -> None
 # DNS RECORD CACHE DICT
 # ======================
 # initializing dns cache/ sending in reference to needed methods for top domains
-DNS_CACHE = DNSCache(
+DNS_CACHE = dns_cache(
     dns_packet=ClientQuery.generate_local_query,
     request_handler=DNSServer.handle_query
 )

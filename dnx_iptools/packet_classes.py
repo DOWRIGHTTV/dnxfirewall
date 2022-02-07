@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import os
-import sys
 import time
 import traceback
 import threading
@@ -28,6 +26,9 @@ def _NOT_IMPLEMENTED(*args, **kwargs):
 
 
 class Listener:
+    __registered_socks = {}
+    __epoll = select.epoll()
+
     _Log = None
     _packet_parser  = _NOT_IMPLEMENTED
     _proxy_callback = _NOT_IMPLEMENTED
@@ -50,7 +51,7 @@ class Listener:
 
         return object.__new__(cls)
 
-    def __init__(self, threaded, always_on):
+    def __init__(self, threaded: bool, always_on: bool):
         '''general constructor. can only be reached through subclass.
 
         May be expanded.
@@ -60,7 +61,7 @@ class Listener:
         self._always_on = always_on
 
     @classmethod
-    def run(cls, Log, *, threaded: bool = True, always_on: bool = False):
+    def run(cls, Log: Type[LogHandler], *, threaded: bool = True, always_on: bool = False):
         '''associating subclass Log reference with Listener class. registering all interfaces in _intfs and starting
         service listener loop. calling class method setup before to provide subclass specific code to run at class level
         before continuing.'''
@@ -68,8 +69,6 @@ class Listener:
         Log.informational(f'{cls.__name__} initialization started.')
 
         cls._Log = Log
-        cls.__registered_socks = {}
-        cls.__epoll = select.epoll()
 
         # child class hook to initialize higher level systems. NOTE: must stay after initial intf registration
         cls._setup()
@@ -120,7 +119,7 @@ class Listener:
     @classmethod
     # TODO: what happens if interface comes online, then immediately gets unplugged. the registration would fail
     #  potentially and would no longer be active so it would never happen if the interface was replugged after.
-    def __register(cls, intf: str):
+    def __register(cls, intf: Tuple[int, int, str]):
         '''will register interface with listener. requires subclass property for listener_sock returning valid socket
         object. once registration is complete the thread will exit.'''
 
@@ -135,18 +134,16 @@ class Listener:
         intf_ip = wait_for_ip(interface=_intf)
 
         l_sock = cls.listener_sock(_intf, intf_ip)
-        cls.__registered_socks[l_sock.fileno()] = L_SOCK(_intf, intf_ip, l_sock, l_sock.send, l_sock.sendto, l_sock.recvfrom)
+        cls.__registered_socks[l_sock.fileno()] = L_SOCK(
+            _intf, intf_ip, l_sock, l_sock.send, l_sock.sendto, l_sock.recvfrom_into
+        )
 
-        # TODO: if we dont re register, and im pretty sure i got rid of that, we shouldn't need to track the interface
-        #  anymore yea? the fd and socket object is all we need, unless we need to get the source ip address. OH. does
-        #  the dns proxy need to grab its interface ip for sending to the client? i dont think so, right? it just needs
-        #  to spoof the original destination.
         cls.__epoll.register(l_sock.fileno(), select.EPOLLIN)
 
         cls._Log.informational(f'[{l_sock.fileno()}][{intf}] {cls.__name__} interface registered.')
 
     @classmethod
-    def set_proxy_callback(cls, *, func: Callable):
+    def set_proxy_callback(cls, *, func: ProxyCallback):
         '''takes a callback function to handle packets after parsing. the reference will be called
         as part of the packet flow with one argument passed in for "packet".'''
 
@@ -155,45 +152,56 @@ class Listener:
 
         cls._proxy_callback = func
 
-    def __listener(self):
+    def __listener(self, recv_buf: bytearray = bytearray(2048)):
+
+        # assigning all instance attrs as a local var for perf
         epoll_poll = self.__epoll.poll
         registered_socks_get = self.__registered_socks.get
 
-        parse_packet = self.__parse_packet
+        # methods
+        packet_parser  = self._packet_parser
+        proxy_callback = self._proxy_callback
+        pre_inspect = self._pre_inspect
 
+        # flags
+        always_on = self._always_on
+        enabled_intfs = self.enabled_intfs
+        threaded = self._threaded
+
+        recv_buffer = memoryview(recv_buf)
+
+        # custom generator
         for _ in RUN_FOREVER():
             l_socks = epoll_poll()
             for fd, _ in l_socks:
 
                 sock_info = registered_socks_get(fd)
                 try:
-                    data, address = sock_info.recvfrom(4096)
+                    nbytes, address = sock_info.recvfrom(recv_buffer)
                 except OSError:
-                    pass
+                    continue
+
+                # this is being used as a mechanism to disable/enable interface listeners
+                # NOTE: since this portion is sequential, we can utilize memory view throughout the initial parse
+                if (always_on or fd in enabled_intfs):
+                    packet = packet_parser(address, sock_info)
+                    try:
+                        packet.parse(recv_buffer[:nbytes])
+                    except:
+                        traceback.print_exc()
+                        continue
+
+                    # referring to child class for whether to continue processing the packet
+                    if not pre_inspect(packet):
+                        return
+
+                    if (threaded):
+                        threading.Thread(target=proxy_callback, args=(packet,)).start()
+                    else:
+                        proxy_callback(packet)
 
                 else:
-                    # this is being used as a mechanism to disable/enable interface listeners
-                    if (self._always_on or fd in self.enabled_intfs):
-                        parse_packet(data, address, sock_info)
-
-                    else:
-                        self._Log.debug(f'recv on fd: {fd} | enabled ints: {self.enabled_intfs}')
-
-    def __parse_packet(self, data: bytes, address: Tuple[str, int], sock_info: NamedTuple):
-        packet = self._packet_parser(address, sock_info)
-        try:
-            packet.parse(data)
-        except:
-            traceback.print_exc()
-
-        else:
-            # referring to child class for whether to continue processing the packet
-            if not self._pre_inspect(packet): return
-
-            if (self._threaded):
-                threading.Thread(target=self._proxy_callback, args=(packet,)).start()
-            else:
-                self._proxy_callback(packet)
+                    self._Log.debug(f'recv on fd: {fd} | enabled ints: {self.enabled_intfs}')
 
     def _pre_inspect(self, packet):
         '''handle the request after packet is parsed and confirmed protocol match.
@@ -219,7 +227,7 @@ class ProtoRelay:
     _protocol = PROTO.NOT_SET
 
     __slots__ = (
-        '_DNSServer', '_fallback_relay',
+        '_dns_server', '_fallback_relay',
 
         '_relay_conn', '_send_cnt', '_last_rcvd',
         '_responder_add', '_fallback_relay_add'
@@ -231,13 +239,13 @@ class ProtoRelay:
 
         return object.__new__(cls)
 
-    def __init__(self, DNSServer, fallback_relay):
+    def __init__(self, dns_server: Type[DNSServer], fallback_relay: Optional[Callable]):
         '''general constructor. can only be reached through subclass.
 
         May be expanded.
 
         '''
-        self._DNSServer = DNSServer
+        self._dns_server = dns_server
         self._fallback_relay = fallback_relay
 
         # dummy sock setup
@@ -252,11 +260,11 @@ class ProtoRelay:
             self._fallback_relay_add = fallback_relay.add
 
     @classmethod
-    def run(cls, DNSServer, *, fallback_relay=None):
+    def run(cls, dns_server: Type[DNSServer], *, fallback_relay: Optional[Callable] = None):
         '''starts the protocol relay. DNSServer object is the class handling client side requests which
         we can call back to and fallback is a secondary relay that can get forwarded a request post failure.
         initialize will be called to run any subclass specific processing then query handler will run indefinitely.'''
-        self = cls(DNSServer, fallback_relay)
+        self = cls(dns_server, fallback_relay)
 
         threading.Thread(target=self._fail_detection).start()
         threading.Thread(target=self.relay).start()
@@ -266,7 +274,7 @@ class ProtoRelay:
 
         raise NotImplementedError('relay must be implemented in the subclass.')
 
-    def _send_query(self, client_query):
+    def _send_query(self, client_query: ClientQuery):
         for attempt in ATTEMPTS:
             try:
                 self._relay_conn.send(client_query.send_data)
@@ -306,16 +314,16 @@ class ProtoRelay:
 
     # processes that were unable to connect/ create a socket will send in the remote server ip that was attempted.
     # if a remote server isn't specified the active relay socket connection's remote ip will be used.
-    def mark_server_down(self, *, remote_server=None):
+    def mark_server_down(self, *, remote_server: str = None):
         if (not remote_server):
             remote_server = self._relay_conn.remote_ip
 
         # more likely case is primary server going down so will use as baseline condition
-        primary = self._DNSServer.dns_servers.primary
+        primary = self._dns_server.dns_servers.primary
 
         # if servers could change during runtime, this has a slight race condition potential, but it shouldn't matter
         # because when changing a server it would be initially set to down (essentially a no-op)
-        server = primary if primary['ip'] == remote_server else self._DNSServer.dns_servers.secondary
+        server = primary if primary['ip'] == remote_server else self._dns_server.dns_servers.secondary
         server[PROTO.DNS_TLS] = True
 
         try:
@@ -327,13 +335,13 @@ class ProtoRelay:
         self._send_cnt += 1
 
     @property
-    def is_enabled(self):
+    def is_enabled(self) -> bool:
         '''set as true if the running classes protocol matches the currently configured protocol.'''
 
-        return self._DNSServer.protocol is self._protocol
+        return self._dns_server.protocol is self._protocol
 
     @property
-    def fail_condition(self):
+    def fail_condition(self) -> bool:
         '''property to streamline fallback action if condition is met. returns False by default.
 
         May be overridden.
@@ -357,7 +365,7 @@ class NFQueue:
 
         return object.__new__(cls)
 
-    def __init__(self, q_num, threaded):
+    def __init__(self, q_num: int, threaded: bool):
         '''Constructor. can only be reached if called through subclass.
 
         May be extended.
@@ -367,7 +375,7 @@ class NFQueue:
         self.__threaded = threaded
 
     @classmethod
-    def run(cls, Log, *, q_num, threaded=True):
+    def run(cls, Log: LogHandler, *, q_num: int, threaded: bool = True):
         cls._setup()
         cls._Log = Log
 
@@ -384,7 +392,7 @@ class NFQueue:
         pass
 
     @classmethod
-    def set_proxy_callback(cls, *, func):
+    def set_proxy_callback(cls, *, func: ProxyCallback):
         '''Takes a callback function to handle packets after parsing. the reference will be called
         as part of the packet flow with one argument passed in for "packet".'''
 
@@ -413,7 +421,7 @@ class NFQueue:
 
             time.sleep(1)
 
-    def __handle_packet(self, nfqueue, mark):
+    def __handle_packet(self, nfqueue: CPacket, mark: int):
         try:
             packet = self._packet_parser(nfqueue, mark)
         except:
@@ -429,7 +437,7 @@ class NFQueue:
                 else:
                     self._proxy_callback(packet)
 
-    def _pre_inspect(self, packet):
+    def _pre_inspect(self, packet) -> bool:
         '''automatically called after parsing. used to determine course of action for packet. nfqueue drop, accept, or repeat can be called within
         this scope. return will be checked as a boolean where True will continue and False will do nothing.
 

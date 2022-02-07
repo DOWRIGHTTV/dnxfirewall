@@ -108,7 +108,7 @@ def _inspect(packet: ProxyRequest) -> DNS_REQUEST_RESULTS:
 
     # NOTE: dns whitelist does not override tld blocks at the moment. this is most likely the desired setup
     # TLD (top level domain) block | after first index will pass nested to allow for continue
-    if _tld_get(requests[0]):
+    if _tld_get(packet.tld):
 
         return DNS_REQUEST_RESULTS(True, 'tld filter', TLD_CAT[requests[0]])
 
@@ -166,7 +166,7 @@ def _block_query(category: DNS_CAT, whitelisted: bool) -> bool:
     return False
 
 
-def RUN_MODULE():
+if (INIT_MODULE):
     dns_cat_signatures = generate_domain(Log)
 
     # using cython function factory to create binary search function with module specific signatures

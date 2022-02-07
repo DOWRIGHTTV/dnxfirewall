@@ -47,7 +47,6 @@ DEF SERVICE = 2
 cdef bint BYPASS  = 0
 cdef bint VERBOSE = 0
 
-
 # ================================== #
 # Firewall rules lock
 # ================================== #
@@ -120,7 +119,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         bint system_rule = 0
 
         u_int8_t direction, iphdr_len
-        int pktdata_len
+        size_t pktdata_len
         InspectionResults inspection_results
         u_int32_t verdict
 
@@ -217,8 +216,8 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
         # ip > country code. NOTE: this will be calculated regardless of a rule match so this process can take over
         # geolocation processing for all modules. ip proxy will still do the logging and profile blocking it just won't
         # need to pull the country code anymore.
-        u_int16_t src_country = GEOLOCATION._search(iph_src_ip & MSB, iph_src_ip & LSB)
-        u_int16_t dst_country = GEOLOCATION._search(iph_dst_ip & MSB, iph_dst_ip & LSB)
+        u_int16_t src_country = GEOLOCATION.search(iph_src_ip & MSB, iph_src_ip & LSB)
+        u_int16_t dst_country = GEOLOCATION.search(iph_dst_ip & MSB, iph_dst_ip & LSB)
 
         # value used by ip proxy which is normalized and always represents the external ip address
         u_int16_t tracked_geo = src_country if direction == INBOUND else dst_country
@@ -411,23 +410,23 @@ cdef inline bint service_match(ServiceArray rule_defs, u_int16_t pkt_protocol, u
 # PRINT FUNCTIONS
 # ============================================
 cdef inline void pkt_print(HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header) nogil:
-    printf('vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv-PACKET-vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n')
+    printf(<char*>'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv-PACKET-vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n')
     printf('in-zone=%u, out-zone=%u \n', hw.in_zone, hw.out_zone)
     printf('proto=%u \n', ip_header.protocol)
     printf('%u:%u > %u:%u \n',
            ntohl(ip_header.saddr), ntohs(proto_header.s_port), ntohl(ip_header.daddr), ntohs(proto_header.d_port)
     )
     # printf('src-geo=%u, dst-geo=%u\n', src_country, dst_country)
-    printf('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n')
+    printf(<char*>'^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n')
 
 # TODO: make this able to print new rule structure
 cdef inline void rule_print(FWrule *rule) nogil:
-    printf('vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv-RULE-vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n')
+    printf(<char*>'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv-RULE-vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n')
     # printf('in-zone=%u, out-zone=%u', rule.s_zones, rule.d_zones)
     # printf('rule-s netid=%lu\n', rule.s_net_id)
     # printf('rule-d netid=%lu\n', rule.d_net_id)
     # printf('rule-s proto=%u, rule-d proto=%u\n', rule_src_protocol, rule_dst_protocol)
-    printf('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n')
+    printf(<char*>'^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n')
 
 cdef inline void obj_print(int name, void *object) nogil:
 
@@ -534,13 +533,12 @@ cdef u_int32_t SOCK_RCV_SIZE = 1024 * 4796 // 2
 
 cdef class CFirewall:
 
-    def __cinit__(self, bint bypass, bint verbose):
+    def set_options(self, bint bypass, bint verbose):
         global BYPASS, VERBOSE
 
         BYPASS  = bypass
         VERBOSE = verbose
 
-    # PYTHON ACCESSIBLE FUNCTIONS
     def nf_run(self):
         '''calls internal C run method to engage nfqueue processes. this call will run forever, but will
         release the GIL prior to entering C and never try to reacquire it.'''
@@ -590,13 +588,13 @@ cdef class CFirewall:
         cdef size_t i
 
         pthread_mutex_lock(&FWrulelock)
-        printf('[update/zones] acquired lock\n')
+        printf(<char*>'[update/zones] acquired lock\n')
 
         for i in range(FW_MAX_ZONE_COUNT):
             INTF_ZONE_MAP[i] = zone_map[i]
 
         pthread_mutex_unlock(&FWrulelock)
-        printf('[update/zones] released lock\n')
+        printf(<char*>'[update/zones] released lock\n')
 
         return OK
 
@@ -605,23 +603,25 @@ cdef class CFirewall:
         will also be update while the lock is held. the GIL will be acquired before any code execution.
         '''
 
-        cdef size_t i, rule_count
-
-        rule_count = len(rulelist)
+        cdef:
+            size_t i
+            dict fw_rule
+            size_t rule_count = len(rulelist)
 
         pthread_mutex_lock(&FWrulelock)
 
-        printf('[update/ruleset] acquired lock\n')
+        printf(<char*>'[update/ruleset] acquired lock\n')
         for i in range(rule_count):
+            fw_rule = rulelist[i]
 
-            set_FWrule(ruleset, rulelist[i], i)
+            set_FWrule(ruleset, fw_rule, i)
 
         # updating rule count in global tracker. this is very important in that it establishes the right side bound for
         # firewall ruleset iteration operations.
         CUR_RULE_COUNTS[ruleset] = rule_count
 
         pthread_mutex_unlock(&FWrulelock)
-        printf('[update/ruleset] released lock\n')
+        printf(<char*>'[update/ruleset] released lock\n')
 
         return OK
 
