@@ -4,12 +4,15 @@ cimport cython
 
 from libc.stdio cimport printf
 
-cdef u_int32_t MAX_COPY_SIZE = 4016 # 4096(buf) - 80
-cdef u_int32_t DEFAULT_MAX_QUEUELEN = 8192
+DEF OK  = 0
+DEF ERR = 1
+
+DEF MAX_COPY_SIZE = 4016 # 4096(buf) - 80
+DEF DEFAULT_MAX_QUEUELEN = 8192
 
 # Socket queue should hold max number of packets of copy size bytes
 # formula: DEF_MAX_QUEUELEN * (MaxCopySize+SockOverhead) / 2
-cdef u_int32_t SOCK_RCV_SIZE = 1024 * 4796 // 2
+DEF SOCK_RCV_SIZE = 1024 * 4796 // 2
 
 cdef object user_callback
 def set_user_callback(ref):
@@ -32,12 +35,11 @@ cdef int nf_callback(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *dat
 
     user_callback(packet, mark)
 
-    return 1
+    return OK
 
 
-# pre allocating memory for 8 instance. instances are created and destroyed sequentially so only one instance
-# will be active at a time, but this is to make a point to myself that this module could be multithreaded within
-# C one day.
+# pre allocating memory for 8 instance. instances are created and destroyed sequentially so only one instance will be
+# active at a time, but this is to make a point to myself that this module could be multithreading within C one day.
 @cython.freelist(8)
 cdef class CPacket:
 
@@ -62,7 +64,7 @@ cdef class CPacket:
         # returning mark for more direct access
         return nfq_get_nfmark(nfa)
 
-    cdef void _parse(self) nogil:
+    cdef inline void _parse(self) nogil:
 
         self.ip_header = <iphdr*>self.data
 
@@ -92,12 +94,12 @@ cdef class CPacket:
     cdef void verdict(self, u_int32_t verdict) nogil:
         '''Call appropriate set_verdict function on packet.'''
 
-        if self._verdict:
+        if (self._verdict):
             printf('[C/warning] Multiple verdicts issued to a single packet.')
 
             return
 
-        if self._mark:
+        if (self._mark):
             nfq_set_verdict2(
                 self._qh, self._id, verdict, self._mark, self._data_len, self.data
             )
@@ -294,20 +296,16 @@ cdef class NetfilterQueue:
 
     def nf_set(self, u_int16_t queue_num):
         self.h = nfq_open()
-
         self.qh = nfq_create_queue(self.h, queue_num, <nfq_callback*>nf_callback, <void*>self)
-
-        if self.qh == NULL:
-            return 1
+        if (self.qh == NULL):
+            return ERR
 
         nfq_set_mode(self.qh, NFQNL_COPY_PACKET, MAX_COPY_SIZE)
-
         nfq_set_queue_maxlen(self.qh, DEFAULT_MAX_QUEUELEN)
-
         nfnl_rcvbufsiz(nfq_nfnlh(self.h), SOCK_RCV_SIZE)
 
     def nf_break(self):
-        if self.qh != NULL:
+        if (self.qh != NULL):
             nfq_destroy_queue(self.qh)
 
         nfq_close(self.h)

@@ -12,7 +12,8 @@ from dnx_gentools.standard_tools import looper
 from dnx_gentools.def_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK
 
 from dnx_iptools.def_structs import *
-from dnx_iptools.protocol_tools import int_to_ip
+from dnx_iptools.def_structures import *
+from dnx_iptools.protocol_tools import int_to_ip, calc_checksum
 from dnx_iptools.interface_ops import load_interfaces, wait_for_interface, wait_for_ip, get_masquerade_ip
 
 from dnx_netmods.dnx_netfilter.dnx_nfqueue import set_user_callback, NetfilterQueue
@@ -665,6 +666,15 @@ class RawPacket:
         return True
 
 
+# ==========================
+# PROXY RESPONSE BASE CLASS
+# ==========================
+# pre-defined fields which are functionally constants for the purpose of connection resets
+_ip_header_template = PR_IP_HDR(**{'ver_ihl': 69, 'tos': 0, 'ident': 0, 'flags_fro': 16384, 'ttl': 255, 'checksum': 0})
+_tcp_header_template = PR_TCP_HDR(**{'seq_num': 696969, 'offset_control': 20500, 'window': 0, 'urg_ptr': 0})
+_pseudo_header_template = PR_TCP_PSEUDO_HDR(**{'reserved': 0, 'protocol': 6, 'tcp_len': 20})
+_icmp_header_template = PR_ICMP_HDR(**{'type': 3, 'code': 3, 'unused': 0})
+
 class RawResponse:
     '''base class for managing raw socket operations for sending data only. interfaces will be registered
     on startup to associate interface, zone, mac, ip, and active socket.'''
@@ -674,11 +684,11 @@ class RawResponse:
     _Module = None
     _registered_socks = {}
 
-    # interface operation function to dynamically provide function. default returns builtins.
+    # dynamically provide interfaces. default returns builtins.
     _intfs = load_interfaces()
 
     __slots__ = (
-        '_packet', 'send_data'
+        '_packet',
     )
 
     def __new__(cls, *args, **kwargs):
@@ -687,12 +697,11 @@ class RawResponse:
 
         return object.__new__(cls)
 
-    def __init__(self, packet):
+    def __init__(self, packet: ProxyPacket):
         self._packet = packet
-        self.send_data = b''
 
     @classmethod
-    def setup(cls, Log, Module):
+    def setup(cls, Log: LogHandler, Module) -> None:
         '''register all available interfaces in a separate thread for each. registration will wait for the interface to
         become available before finalizing.'''
 
@@ -705,13 +714,14 @@ class RawResponse:
         cls._Module = Module
 
         # direct assignment for perf
+        cls._open_ports = Module.open_ports
         cls._registered_socks_get = cls._registered_socks.get
 
         for intf in cls._intfs:
             threading.Thread(target=cls.__register, args=(intf,)).start()
 
     @classmethod
-    def __register(cls, intf):
+    def __register(cls, intf: Tuple[int, int, str]):
         '''will register interface with ip and socket. a new socket will be used every time this method is called.
 
         Do not override.
@@ -729,7 +739,7 @@ class RawResponse:
         cls._Log.informational(f'{cls.__name__}: {_intf} registered.')
 
     @classmethod
-    def prepare_and_send(cls, packet):
+    def prepare_and_send(cls, packet: ProxyPacket):
         '''obtains socket object based on interface/zone received then prepares a raw packet (all layers).
         internal _send method will be called once finished.
 
@@ -746,20 +756,103 @@ class RawResponse:
         # this will need a condition to check, but won't need to masquerade.
         dnx_src_ip = packet.dst_ip if intf.zone != WAN_IN else get_masquerade_ip(dst_ip=packet.src_ip)
 
-        # calling hook for packet generation in subclass then sending via direct socket sendto ref
+        # calling hook for packet generation. this can be overloaded by subclass.
         send_data = self._prepare_packet(packet, dnx_src_ip)
         try:
             intf.sock_sendto(send_data, (int_to_ip(packet.src_ip), 0))
         except OSError:
             pass
 
-    def _prepare_packet(self, packet, dnx_src_ip):
-        '''generates send data based on received packet data and interface/zone.
+    # TODO: ensure dnx_src_ip is in integer form. consider sending in dst also since it is referenced alot.
+    # TODO: make it so checksum just replaces the index location of the byte array so we dont re assemble the structures
+    #  every time
+    def _prepare_packet(self, packet: ProxyPacket, dnx_src_ip: int) -> bytearray:
+        # checking if dst port is associated with a nat. if so, will override necessary fields based on protocol
+        # and re-assign in the packet object
+        # NOTE: can we please optimize this. PLEASE!
+        port_override = self._Module.open_ports[packet.protocol].get(packet.dst_port)
+        if (port_override):
+            self._packet_override(packet, dnx_src_ip, port_override)
 
-        Must be overridden.
+        # TCP HEADER
+        if (packet.protocol is PROTO.TCP):
+            response_protocol = PROTO.TCP
 
-        '''
-        raise NotImplementedError('_prepare_packet method needs to be overridden by subclass.')
+            # new instance of header byte container template
+            protohdr = _tcp_header_template()
+
+            # assigning missing fields
+            protohdr.dst_port = packet.dst_port
+            protohdr.src_port = packet.src_port
+            protohdr.ack_num  = packet.seq_number + 1
+
+            proto_header = protohdr.assemble()
+
+            # using creation/call to handle field update and buffer assembly
+            pseudo_header = _pseudo_header_template({'src_ip': dnx_src_ip, 'dst_ip': packet.src_ip})
+
+            # calculating checksum of container
+            proto_header[16:18] = calc_checksum(pseudo_header.buf + proto_header)
+
+            # TODO: this should be able to be hard coded since the fields are hard set to 20 bytes
+            proto_len = len(proto_header)
+
+        # ICMP HEADER
+        # elif (packet.protocol is PROTO.UDP):
+        else:
+            response_protocol = PROTO.ICMP
+
+            # new instance of header byte container template
+            proto_header = _icmp_header_template()
+
+            # per icmp, ip header and first 8 bytes of rcvd payload are included in icmp response payload
+            icmp_payload = packet.ip_header + packet.udp_header
+
+            # icmp pre-assemble covers this
+            proto_header[2:4] = calc_checksum(proto_header + icmp_payload, pack=True)
+
+            # TODO: this should be able to be hard coded since the fields are hard set to 8 bytes
+            proto_len = len(proto_header) + len(icmp_payload)
+
+        # IP HEADER
+        iphdr = _ip_header_template()
+
+        iphdr.tl = 20 + proto_len
+        iphdr.protocol = response_protocol
+        iphdr.src_ip = dnx_src_ip
+        iphdr.dst_ip = packet.src_ip
+
+        ip_header = iphdr.assemble()
+        ip_header[10:12] = calc_checksum(ip_header, pack=True)
+
+        # ASSEMBLY
+        send_data = ip_header + proto_header
+
+        if (response_protocol is PROTO.ICMP):
+            send_data += icmp_payload
+
+        return send_data
+
+    @staticmethod
+    def _packet_override(packet: ProxyPacket, dnx_src_ip: int, port_override: int):
+        if (packet.protocol is PROTO.TCP):
+            packet.dst_port = port_override
+
+        elif (packet.protocol is PROTO.UDP):
+            packet.udp_header = udp_header_pack(
+                packet.src_port, port_override, packet.udp_len, packet.udp_chk
+            )
+            csum = double_byte_pack(0, 0)
+            for i in ATTEMPTS:
+                ip_header = ip_header_override_pack(
+                    packet.ip_header[:10], csum, long_pack(packet.src_ip), dnx_src_ip
+                )
+                if i: break
+                csum = calc_checksum(ip_header)
+
+            # overriding packet ip header after process is complete. this will make the loops more efficient than
+            # direct references to the instance object every time.
+            packet.ip_header = ip_header
 
     @staticmethod
     def sock_sender(intf):

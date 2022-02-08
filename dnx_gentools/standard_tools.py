@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 
+# from __future__ import annotations
+
 import threading
 
 from copy import copy
 from collections import deque
+from struct import Struct
 
-from dnx_gentools.def_constants import RUN_FOREVER, MSEC, fast_time, fast_sleep, byte_join
-from dnx_iptools.def_structs import byte_pack, short_pack, long_pack
+from dnx_gentools.def_constants import RUN_FOREVER, MSEC, fast_time, fast_sleep, str_join, space_join, comma_join
+from dnx_gentools.def_typing import *
 
 __all__ = (
     'looper', 'dynamic_looper',
@@ -198,8 +201,7 @@ def dnx_queue(Log, name=None):
 
     return decorator
 
-
-def structure(obj_name, fields):
+def structure(obj_name: str, fields: Union[List, str]) -> Structure:
     '''named tuple like class factory for storing int values of raw byte sections with named fields. calling
     len on the container will return sum of all bytes stored not amount of fields. slots are being used to speed up
     attribute access. attribute type is not checked and can be truncated if incorrectly specified.
@@ -211,35 +213,31 @@ def structure(obj_name, fields):
         fields = fields.split()
 
     # used to lock in size of structure and associate struct packing functions for each field
-    _pack_refs = {
-        'B': (1, byte_pack),
-        'H': (2, short_pack),
-        'L': (4, long_pack),
-    }
+    _formats = {'B': 1, 'H': 2, 'L': 4}
 
     # parsing arguments, splitting format with field name and building list(converted to tuple after) for each, and
     # calculating the container size as it is in packed byte form.
-    size_of, field_packs, field_names, field_formats = 0, [], [], []
+    size_of, field_names, field_formats = 0, [], []
     for field in fields:
         try:
             field_format, field_name = field.split(',')
         except:
             raise SyntaxError('incorrect syntax of field. ex L,long_field')
 
-        if field_format not in _pack_refs:
-            raise ValueError(f'unsupported integer format. use {list(_pack_refs)}')
+        if (field_format not in _formats):
+            raise ValueError(f'unsupported integer format. use {list(_formats)}')
 
-        _field_size, _pack_ref = _pack_refs.get(field_format)
-
-        size_of += _field_size
-        field_packs.append(_pack_ref)
+        size_of += _formats[field_format]
         field_names.append(field_name)
         field_formats.append(field_format)
 
     # converting lists to tuple for smaller memory footprint and immutability
-    field_packs = tuple(field_packs)
     field_names = tuple(field_names)
     field_formats = tuple(field_formats)
+
+    # allo
+    format_str = '>' + str_join([field_formats])
+    pack_fields = Struct(format_str).pack_into
 
     # defining globals/builtins as closure for lookup performance (almost 2x faster)
     _copy = copy
@@ -247,27 +245,39 @@ def structure(obj_name, fields):
     _sum = sum
     _setattr = setattr
     _getattr = getattr
+    _bytearray = bytearray
 
-    class Structure:
+    class _Structure(dict):
 
-        __slots__ = (*field_names,)
+        '''
+        @var self: TypedDict[str, int]
+        '''
+
+        __slots__ = ('buf',)
 
         def __init__(self):
 
+            self.buf: bytearray = _bytearray(size_of)
+
             for name in field_names:
-                _setattr(self, name, 0)
+                self[name] = 0
 
-        def __repr__(self):
-            return f"{self.__class__.__name__}({obj_name}, '{' '.join(field_names)}')"
+        def __repr__(self) -> str:
+            return f'{self.__class__.__name__}({obj_name}, "{space_join(field_names)}")'
 
-        def __str__(self):
-            fast_get = self.__getattribute__
+        def __str__(self) -> str:
 
-            _fields = [f'{n}={fast_get(n)}({f})' for n, f in _zip(field_names, field_formats)]
+            _fields = [f'{n}={v}({f})' for (n, v), f in _zip(self.items(), field_formats)]
 
-            return f"{obj_name}({', '.join(_fields)})"
+            return f'{obj_name}({comma_join(_fields)})'
 
-        def __call__(self, **kwargs):
+        def __call__(self, **kwargs) -> Structure:
+            '''returns a copy of current field assignments. kwargs can be used to insert updated values which will be
+            copied over to new containers of the same type. a good use case for this is to fill out fields that are
+            constants and can be streamlined to simplify external byte string creation logic. This is an alternative
+            method to assignment at container creation.
+            '''
+
             new_container = _copy(self)
 
             # set args in new instance if specified. this will overwrite any pre-set attributes. kwargs can be used to
@@ -278,49 +288,51 @@ def structure(obj_name, fields):
                     if (name not in field_names):
                         raise ValueError(f'attribute {name} does not exist in this container.')
 
-                    _setattr(new_container, name, value)
+                    new_container[name] = value
+
+                # pre packing the buffer with updated field values
+                new_container.assemble()
 
             return new_container
 
-        def __len__(self):
+        def __len__(self) -> int:
 
             return size_of
 
-        def __getitem__(self, position):
+        def __add__(self, other: bytearray) -> bytearray:
 
-            return _getattr(self, f'{field_names[position]}')
+            return self.buf + other
+
+        def __radd__(self, other: bytearray) -> bytearray:
+
+            return other + self.buf
 
         def __iter__(self):
-            fast_get = self.__getattribute__
 
-            yield from [fast_get(x) for x in field_names]
+            yield from self.values()
 
-        def pre_set_attributes(self, **kwargs):
-            '''specify attributes to set as pre-processor function. these values will get copied over to new containers
-            of the same type. a good use case for this is to fill out fields that are constants and can be streamlined
-            to simplify external byte string creation logic. This is an alternative method to assignment at container
-            creation.'''
+        def __setattr__(self, key: str, value: int) -> None:
+            if (key not in self):
+                raise ValueError(f'attribute {key} does not exist in this container.')
 
-            for name, value in kwargs.items():
+            self[key] = value
 
-                # if key doesn't exist, will raise error. this method is a pre-process so this will allow for quicker
-                # debugging of code vs finding out some point in runtime there is an invalid attr.
-                if (name not in field_names):
-                    raise ValueError(f'attribute {name} does not exist in this container.')
+        def __getattr__(self, item: str) -> int:
 
-                _setattr(self, name, value)
+            return self[item]
 
-        def assemble(self):
-            '''returns merged attributes in specified order as a single byte array. this is not stored and is
-             recalculated on every call.'''
+        def assemble(self) -> bytearray:
+            '''pack attributes into slotted buf with creation order preserved then returns buf reference. alternatively,
+            buf can be accessed directly for quick changes and can be restored by a subsequent call to assemble.
+            '''
 
-            fast_get = self.__getattribute__
+            pack_fields(self.buf, 0, self.values())
 
-            return byte_join([pack(fast_get(name)) for pack, name in _zip(field_packs, field_names)])
+            return self.buf
 
-    return Structure()
+    return _Structure()
 
-def bytecontainer(obj_name, field_names):
+def bytecontainer(obj_name: str, field_names: Union[List, str]) -> ByteContainer:
     '''named tuple like class factory for storing raw byte sections with named fields. calling
     len on the container will return sum of all bytes stored not amount of fields. slots are
     being used to speed up attribute access.'''
@@ -338,7 +350,7 @@ def bytecontainer(obj_name, field_names):
     _getattr = getattr
     _bytearray = bytearray
 
-    class ByteContainer:
+    class _ByteContainer:
 
         __slots__ = (*field_names,)
 
@@ -387,7 +399,7 @@ def bytecontainer(obj_name, field_names):
 
             return other + ba
 
-    return ByteContainer()
+    return _ByteContainer()
 
 class classproperty:
     '''class used as a decorator to allow class methods to be used as properties.'''

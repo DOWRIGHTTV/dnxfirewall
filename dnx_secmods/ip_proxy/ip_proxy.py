@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
+from typing import Tuple, Union, Any
 
 from dnx_gentools.def_constants import *
+from dnx_gentools.def_constants import CONN
+from dnx_gentools.def_typing import *
 from dnx_gentools.def_namedtuples import IPP_INSPECTION_RESULTS
 from dnx_gentools.signature_operations import generate_reputation
 
@@ -37,7 +40,7 @@ class IPProxy(NFQueue):
         ProxyResponse.setup(Log, cls)
         LanRestrict.run(cls)
 
-        cls.set_proxy_callback(func=Inspect.ip)
+        cls.set_proxy_callback(func=inspect)
 
     def _pre_inspect(self, packet):
         # TODO: this can and should be moved to cfirewall
@@ -120,94 +123,87 @@ _geolocation_settings = IPProxy.geolocation_settings
 
 _tor_whitelist = IPProxy.tor_whitelist
 
-# TODO: reduce class down to functions
-class Inspect:
-    __slots__ = (
-        '_packet',
-    )
+def inspect(packet: IPPPacket):
 
-    @classmethod
-    def ip(cls, packet):
-        self = cls()
-        action, category = self._ip_inspect(packet)
+    action, category = _inspect(packet)
 
-        _forward_packet(packet, packet.direction, action)
+    _forward_packet(packet, packet.direction, action)
 
-        # RECENTLY MOVED: thought it more fitting here than in the forward method
-        # if tcp or udp, we will send a kill conn packet.
-        if (action is CONN.REJECT):
-            _prepare_and_send(packet)
+    # RECENTLY MOVED: thought it more fitting here than in the forward method
+    # if tcp or udp, we will send a kill conn packet.
+    if (action is CONN.REJECT):
+        _prepare_and_send(packet)
 
-        Log.log(packet, IPP_INSPECTION_RESULTS(category, action))
+    Log.log(packet, IPP_INSPECTION_RESULTS(category, action))
 
-    def _ip_inspect(self, packet):
-        action = CONN.ACCEPT
-        reputation = REP.DNL
+def _inspect(packet: IPPPacket) -> Tuple[Union[CONN, Any], Tuple[Any, str]]:
+    action = CONN.ACCEPT
+    reputation = REP.DNL
 
-        # NOTE: geo search is now done by cfirewall. based on direction it will pass on country of tracked_ip
-        country = GEO(packet.tracked_geo)
+    # NOTE: geo search is now done by cfirewall. based on direction it will pass on country of tracked_ip
+    country = GEO(packet.tracked_geo)
 
-        # if category match and country is configured to block in direction of conn/packet
-        # TODO: consider option to configure default action for unknown countries
-        if (country is not GEO.NONE):
-            action = self._country_action(country, packet)
+    # if category match and country is configured to block in direction of conn/packet
+    # TODO: consider option to configure default action for unknown countries
+    if (country is not GEO.NONE):
+        action = _country_action(country, packet)
 
-        # no need to check reputation of host if filtered by geolocation
-        if (action is CONN.ACCEPT and _reputation_enabled):
+    # no need to check reputation of host if filtered by geolocation
+    if (action is CONN.ACCEPT and _reputation_enabled):
 
-            reputation = REP(_recurve_trie_search(packet.bin_data))
+        reputation = REP(_recurve_trie_search(packet.bin_data))
 
-            # if category match, and category is configured to block in direction of conn/packet
-            if (reputation is not REP.NONE):
-                action = self._reputation_action(reputation, packet)
+        # if category match, and category is configured to block in direction of conn/packet
+        if (reputation is not REP.NONE):
+            action = _reputation_action(reputation, packet)
 
-        return action, (country.name, reputation.name)
+    return action, (country.name, reputation.name)
 
-    # TODO: expand for profiles. reputation_settings[profile][category]
-    # category setting lookup. will match packet direction with configured dir for category/category group.
-    def _reputation_action(self, category, packet):
-        # flooring cat to its cat group for easier matching of tor nodes
-        rep_group = REP((category // 10) * 10)
-        if (rep_group is REP.TOR):
+# TODO: expand for profiles. reputation_settings[profile][category]
+# category setting lookup. will match packet direction with configured dir for category/category group.
+def _reputation_action(category: REP, packet: IPPPacket) -> CONN:
+    # flooring cat to its cat group for easier matching of tor nodes
+    rep_group = REP((category // 10) * 10)
+    if (rep_group is REP.TOR):
 
-            # only outbound traffic will match tor whitelist since this override is designed for a user to access tor
-            # and not to open a local machine to tor traffic.
-            # TODO: evaluate if we should have an inbound override, though i dont know who would ever want random tor
-            #  users accessing their servers.
-            if (packet.direction is DIR.OUTBOUND and packet.conn.local_ip in _tor_whitelist):
-                return CONN.ACCEPT
+        # only outbound traffic will match tor whitelist since this override is designed for a user to access tor
+        # and not to open a local machine to tor traffic.
+        # TODO: evaluate if we should have an inbound override, though i dont know who would ever want random tor
+        #  users accessing their servers.
+        if (packet.direction is DIR.OUTBOUND and packet.conn.local_ip in _tor_whitelist):
+            return CONN.ACCEPT
 
-            block_direction = _reputation_settings[category]
+        block_direction = _reputation_settings[category]
 
-        else:
-            block_direction = _reputation_settings[rep_group]
+    else:
+        block_direction = _reputation_settings[rep_group]
 
-        # notify proxy the connection should be blocked. dir enum is Flag with bitwise ops.
-        if (packet.direction & block_direction):
-            # hardcoded for icmp to drop and tcp/udp to reject. # TODO: consider making this configurable.
-            if (packet.protocol is ICMP):
-                return CONN.DROP
+    # notify proxy the connection should be blocked. dir enum is Flag with bitwise ops.
+    if (packet.direction & block_direction):
+        # hardcoded for icmp to drop and tcp/udp to reject. # TODO: consider making this configurable.
+        if (packet.protocol is ICMP):
+            return CONN.DROP
 
-            return CONN.REJECT
+        return CONN.REJECT
 
-        # default action is allow due to category not being enabled
-        return CONN.ACCEPT
+    # default action is allow due to category not being enabled
+    return CONN.ACCEPT
 
-    # TODO: expand for profiles. geolocation_settings[profile][category]
-    def _country_action(self, category, packet):
+# TODO: expand for profiles. geolocation_settings[profile][category]
+def _country_action(category, packet):
 
-        # dir enum is _Flag with bitwise ops. this makes comparison much easier.
-        if (packet.direction & _geolocation_settings[category]):
-            # hardcoded for icmp to drop and tcp/udp to reject. # TODO: consider making this configurable.
-            if (packet.protocol is ICMP):
-                return CONN.DROP
+    # dir enum is _Flag with bitwise ops. this makes comparison much easier.
+    if (packet.direction & _geolocation_settings[category]):
+        # hardcoded for icmp to drop and tcp/udp to reject. # TODO: consider making this configurable.
+        if (packet.protocol is ICMP):
+            return CONN.DROP
 
-            return CONN.REJECT
+        return CONN.REJECT
 
-        return CONN.ACCEPT
+    return CONN.ACCEPT
 
 
-def RUN_MODULE():
+if (INIT_MODULE):
     Log.run(
         name=LOG_NAME
     )

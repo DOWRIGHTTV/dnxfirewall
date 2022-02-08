@@ -10,12 +10,12 @@ from dnx_iptools.protocol_tools import int_to_ip
 
 from dns_proxy_automate import Configuration
 from dns_proxy_log import Log
-from dns_proxy_packets import ProxyRequest
+from dns_proxy_packets import DNSPacket
 from dns_proxy_server import DNSServer
 
 LOG_NAME = 'dns_proxy'
 
-dns_record_get = DNSServer.dns_records.get
+LOCAL_RECORD = DNSServer.dns_records.get
 
 class DNSProxy(NFQueue):
     # dns | ip
@@ -31,7 +31,7 @@ class DNSProxy(NFQueue):
     )
 
     _dns_sig_ref = None
-    _packet_parser = ProxyRequest.netfilter_recv  # alternate constructor
+    _packet_parser = DNSPacket.netfilter_recv  # alternate constructor
 
     __slots__ = (
         '_dns_record_get',
@@ -45,11 +45,11 @@ class DNSProxy(NFQueue):
         Log.notice(f'{cls.__name__} initialization complete.')
 
     # pre-check will filter out invalid packets or local dns records (no tld)
-    def _pre_inspect(self, packet: ProxyRequest) -> bool:
+    def _pre_inspect(self, packet: DNSPacket) -> bool:
         if (packet.qr != DNS.QUERY):
             return False
 
-        if (packet.qtype in [DNS.A, DNS.NS] and not dns_record_get(packet.request)):
+        if (packet.qtype in [DNS.A, DNS.NS] and not LOCAL_RECORD(packet.request)):
             return True
 
         # refusing ipv6 dns record types as policy
@@ -60,7 +60,7 @@ class DNSProxy(NFQueue):
         return False
 
 # GENERAL PROXY FUNCTIONS
-def send_to_client(packet: ProxyRequest):
+def send_to_client(packet: DNSPacket):
     try:
         packet.sendto(packet.send_data, (int_to_ip(packet.src_ip), 0))
     except OSError:
@@ -79,7 +79,7 @@ _dns_whitelist = DNSProxy.whitelist.dns
 _dns_blacklist = DNSProxy.blacklist.dns
 _dns_keywords  = DNSProxy.signatures.keyword
 
-def inspect(packet: ProxyRequest):
+def inspect(packet: DNSPacket):
 
     request_results = _inspect(packet)
 
@@ -97,7 +97,7 @@ def inspect(packet: ProxyRequest):
 
 # this is where the system decides whether to block dns query/sinkhole or to allow. notification will be done
 # via the request tracker upon returning signature scan result
-def _inspect(packet: ProxyRequest) -> DNS_REQUEST_RESULTS:
+def _inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
     # NOTE: request_ident[0] is a string representation of ip addresses. this is currently needed as the whitelists
     # are stored in this format and we have since moved away from this format on the back end.
     # TODO: in the near-ish future, consider storing ip whitelists as integers to conform to newer standards.

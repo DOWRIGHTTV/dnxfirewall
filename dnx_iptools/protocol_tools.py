@@ -29,13 +29,13 @@ btoia = partial(int.from_bytes, byteorder='big', signed=False)
 itoba = partial(int.to_bytes, byteorder='big', signed=False)
 
 # will ping specified host. to be used to prevent duplicate ip address handouts.
-def icmp_reachable(host_ip):
+def icmp_reachable(host_ip: str) -> Union[Any, bool]:
     try:
         return run(f'ping -c 2 {host_ip}', stdout=DEVNULL, shell=True, check=True)
     except CalledProcessError:
         return False
 
-def calc_checksum(data, len=len):
+def calc_checksum(data: Union[bytes, bytearray], pack: bool = False) -> Union[int, bytes]:
     # if data length is odd, this will pad it with 1 byte to complete final chunk
     if (len(data) & 1):
         data += b'\x00'
@@ -52,17 +52,17 @@ def calc_checksum(data, len=len):
     csum = (csum >> 16) + (csum & 65535)
     csum += (csum >> 16)
 
-    return htons(~csum)
+    return checksum_pack if pack else htons(~csum)
 
-def int_to_ip(ip, /):
+def int_to_ip(ip: int, /) -> str:
 
     return dot_join([f'{b}' for b in long_pack(ip)])
 
-def ip_to_int(ip, /):
+def ip_to_int(ip: str, /) -> int:
 
     return btoia(inet_aton(ip))
 
-def mac_add_sep(mac_address, sep=':'):
+def mac_add_sep(mac_address: str, sep: str = ':') -> str:
     string_mac = []
     string_mac_append = string_mac.append
     for i in range(0, 12, 2):
@@ -70,7 +70,7 @@ def mac_add_sep(mac_address, sep=':'):
 
     return sep.join(string_mac)
 
-def mac_stob(mac_address):
+def mac_stob(mac_address: str) -> bytes:
 
     return binascii.unhexlify(mac_address.replace(':', ''))
 
@@ -80,9 +80,9 @@ def convert_string_to_bitmap(rule: str, offset: int, hash=hash, int=int) -> Tupl
     b_id = int(f'{host_hash}'[:offset])
     h_id = int(f'{host_hash}'[offset:])
 
-    return (b_id, h_id)
+    return b_id, h_id
 
-def cidr_to_int(cidr, int=int):
+def cidr_to_int(cidr: int, int=int) -> int:
 
     # using hostmask to shift to the start of network bits. int conversion to cover string values.
     hostmask = 32 - int(cidr)
@@ -90,7 +90,7 @@ def cidr_to_int(cidr, int=int):
     return ~((1 << hostmask) - 1) & (2**32 - 1)
 
 def parse_query_name(data: Union[bytes, memoryview], offset: int = 0, *,
-                     qname: bool = False) -> Union[int, Tuple[int, Tuple[bytearray, int]]]:
+                     qname: bool = False) -> Union[int, Tuple[int, Tuple[str, int]]]:
     '''parse dns name from sent in data. uses overall dns query to follow pointers. will return
     name and offset integer value if qname arg is True otherwise will only return offset.'''
 
@@ -137,7 +137,7 @@ def parse_query_name(data: Union[bytes, memoryview], offset: int = 0, *,
 
     return offset
 
-def domain_stob(domain_name):
+def domain_stob(domain_name: str) -> bytes:
     domain_bytes = byte_join([
         byte_pack(len(part)) + part.encode('utf-8') for part in domain_name.split('.')
     ])
@@ -165,7 +165,7 @@ def create_dns_query_header(dns_id, arc=0, *, cd):
 
 _icmp_header_template = PR_ICMP_HDR(**{'type': 8, 'code': 0})
 
-def init_ping(timeout=.25):
+def init_ping(timeout: float = .25) -> Callable:
     '''function factory that returns a ping function object optimized for speed. not thread safe within a single ping
      object, but is thread safe between multiple ping objects.'''
 
@@ -175,7 +175,7 @@ def init_ping(timeout=.25):
     ping_send = ping_sock.sendto
     ping_recv = ping_sock.recvfrom
 
-    def ping(target, *, count=1, OSError=OSError):
+    def ping(target: str, *, count: int = 1, OSError=OSError) -> bool:
 
         icmp = _icmp_header_template()
         icmp.id = getrandbits(16)

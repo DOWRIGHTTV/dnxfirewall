@@ -4,9 +4,9 @@ from csv import reader as csv_reader
 from ipaddress import IPv4Address
 from fcntl import ioctl
 from socket import socket, inet_aton, if_nameindex, AF_INET, SOCK_DGRAM
-from typing import Optional
 
 from dnx_gentools.def_constants import HOME_DIR, INTF, CFG, fast_sleep, ONE_SEC
+from dnx_gentools.def_typing import *
 from dnx_gentools.file_operations import load_configuration, ConfigurationManager, json_to_yaml
 
 from dnx_iptools.def_structs import fcntl_pack, long_unpack
@@ -40,7 +40,7 @@ def get_intf_builtin(zone_name):
 
     return {intf_index: (intf_info['zone'], ident)}
 
-def load_interfaces(intf_type: INTF = INTF.BUILTINS, *, exclude: list = []) -> list:
+def load_interfaces(intf_type: INTF = INTF.BUILTINS, *, exclude: list = []) -> List[Optional[Tuple[int, int, str]]]:
     '''
     return list of tuples of specified interface type.
 
@@ -51,16 +51,16 @@ def load_interfaces(intf_type: INTF = INTF.BUILTINS, *, exclude: list = []) -> l
     dnx_interfaces = intf_settings[intf_type.name.lower()]
 
     # filtering out loopback during dict comprehension
-    system_interfaces = {v: k for k, v in if_nameindex()[1:]}
+    system_interfaces: dict = {v: k for k, v in if_nameindex()[1:]}
 
-    collected_intfs = []
+    collected_intfs: list = []
     if (intf_type is INTF.BUILTINS):
 
         for intf_name, intf_info in dnx_interfaces.items():
 
-            ident = intf_info['ident']
-            zone  = intf_info['zone']
-            intf_index = system_interfaces.get(ident)
+            ident: str = intf_info['ident']
+            zone:  int = intf_info['zone']
+            intf_index: int = system_interfaces.get(ident)
             if (not intf_index):
                 raise RuntimeError('failed to associate builtin <> system interfaces.')
 
@@ -72,7 +72,7 @@ def load_interfaces(intf_type: INTF = INTF.BUILTINS, *, exclude: list = []) -> l
 
     return collected_intfs
 
-def set_wan_interface(intf_type=INTF.DHCP):
+def set_wan_interface(intf_type: INTF = INTF.DHCP):
     '''
     Change wan interface state between static or dhcp.
 
@@ -126,7 +126,7 @@ def set_wan_interface(intf_type=INTF.DHCP):
         system_action(module='webui', command='os.replace', args=cmd_args)
         system_action(module='webui', command='netplan apply', args='')
 
-def set_wan_mac(action, mac_address=None):
+def set_wan_mac(action: CFG, mac_address: Optional[str] = None):
     with ConfigurationManager('config') as dnx:
         dnx_settings = dnx.load_configuration()
 
@@ -146,7 +146,7 @@ def set_wan_mac(action, mac_address=None):
 
         dnx.write_configuration(dnx_settings)
 
-def set_wan_ip(wan_ip_settings):
+def set_wan_ip(wan_ip_settings: dict):
     '''
     Modify configured WAN interface IP address.
 
@@ -187,12 +187,12 @@ def set_wan_ip(wan_ip_settings):
     system_action(module='webui', command='os.replace', args=cmd_args)
     system_action(module='webui', command='netplan apply')
 
-def _is_ready(interface):
+def _is_ready(interface: str) -> int:
     with open(f'/sys/class/net/{interface}/carrier', 'r') as carrier:
         return int(carrier.read().strip())
 
 # once interface is powered on from cable being plugged in and a remote device on the other end, the loop will break
-def wait_for_interface(interface, delay=ONE_SEC):
+def wait_for_interface(interface:str , delay: int = ONE_SEC):
     '''waits for interface to show powered on and waiting for network. will sleep for delay length after each check.'''
 
     while True:
@@ -213,11 +213,12 @@ def wait_for_ip(interface: str) -> Optional[IPv4Address]:
 
         fast_sleep(ONE_SEC)
 
-def get_masquerade_ip(*, dst_ip, packed=False):
+def get_masquerade_ip(*, dst_ip: int, packed: bool = False) -> Union[bytes, int]:
     '''return correct source ip address for a particular destination ip address based on routing table.
 
     return will be bytes if packed is True or an integer otherwise. a zeroed ip will be returned if error.'''
 
+    # TODO: see if we can reuse DESCRIPTOR socket
     s = socket(AF_INET, SOCK_DGRAM)
     s.connect((int_to_ip(dst_ip), 0))
 
@@ -232,27 +233,27 @@ def get_masquerade_ip(*, dst_ip, packed=False):
     finally:
         s.close()
 
-def get_mac(*, interface):
+def get_mac(*, interface: str) -> Optional[bytes]:
     '''return raw byte mac address for sent in interface. return None on OSError.'''
     try:
         return ioctl(DESCRIPTOR, 0x8927,  fcntl_pack(bytes(interface, 'utf-8')))[18:24]
     except OSError:
         return None
 
-def get_ip_address(*, interface):
+def get_ip_address(*, interface: str) -> Optional[IPv4Address]:
     '''return ip address object for current ip address for sent in interface. return None on OSError.'''
     try:
         return IPv4Address(ioctl(DESCRIPTOR, 0x8915, fcntl_pack(bytes(interface, 'utf-8')))[20:24])
     except OSError:
         return None
 
-def get_netmask(*, interface):
+def get_netmask(*, interface: str) -> Optional[IPv4Address]:
     try:
         return IPv4Address(ioctl(DESCRIPTOR, 0x891b, fcntl_pack(bytes(interface, 'utf-8')))[20:24])
     except OSError:
         return None
 
-def get_arp_table(*, modify=False, host=None, open=open):
+def get_arp_table(*, modify: bool = False, host: Optional[str] = None, open=open) -> Union[dict, str]:
     '''
     return arp table as dictionary
 

@@ -23,13 +23,13 @@ cdef class HashTrie:
 
             u_int32_t TRIE_KEY
             u_int32_t TRIE_KEY_HASH
-            trie_range *trie_value_ranges
+            TrieRange *trie_value_ranges
 
             size_t MAX_KEYS = 2 ** log(len(py_trie), 2)
 
         self.INDEX_MASK = MAX_KEYS - 1
 
-        self.TRIE_MAP = <trie_map*> calloc(MAX_KEYS, sizeof(trie_map))
+        self.TRIE_MAP = <TrieMap*>calloc(MAX_KEYS, sizeof(TrieMap))
 
         for i in range(len(py_trie)):
 
@@ -41,7 +41,7 @@ cdef class HashTrie:
             TRIE_KEY_HASH = TRIE_KEY % self.INDEX_MASK
 
             # allocating memory for trie_ranges
-            trie_value_ranges = <trie_range*>malloc(sizeof(trie_range) * value_len)
+            trie_value_ranges = <TrieRange*>malloc(sizeof(TrieRange) * value_len)
 
             # make function for trie_range struct for each range in py_l2
             for xi in range(value_len):
@@ -54,7 +54,7 @@ cdef class HashTrie:
 
         cdef:
             size_t trie_key_hash = trie_key % self.INDEX_MASK
-            trie_map trie_value  = self.TRIE_MAP[trie_key_hash]
+            TrieMap trie_value   = self.TRIE_MAP[trie_key_hash]
 
         # no l1 match
         if (trie_value.len == EMPTY_CONTAINER):
@@ -73,10 +73,10 @@ cdef class HashTrie:
         # iteration completed with no l2 match
         return NO_MATCH
 
-    cdef trie_range* _make_l2(self, u_int32_t trie_key, (u_int32_t, u_int32_t, u_int16_t) l2_entry):
+    cdef TrieRange* _make_l2(self, u_int32_t trie_key, (u_int32_t, u_int32_t, u_int16_t) l2_entry):
         '''allocates memory for a single L2 content struct, assigns members from l2_entry, then returns pointer.'''
 
-        cdef trie_range *l2_content = <trie_range*>malloc(sizeof(trie_range))
+        cdef TrieRange *l2_content = <TrieRange*>malloc(sizeof(TrieRange))
 
         l2_content.key     = trie_key
         l2_content.netid   = l2_entry[0]
@@ -105,13 +105,13 @@ cdef class RecurveTrie:
 
         cdef:
             size_t L2_SIZE
-            l2_recurve *L2_CONTAINER
+            L2Recurve *L2_CONTAINER
 
         # allocating memory for L1 container. this will be accessed from l1_search method.
         # L1 container will be iterated over, being checked for id match. if a match is found
         # the reference stored at that index will be used to check for l2 container id match.
         self.L1_SIZE = len(py_trie)
-        self.L1_CONTAINER = <l1_recurve*>malloc(sizeof(l1_recurve) * self.L1_SIZE)
+        self.L1_CONTAINER = <L1Recurve*>malloc(sizeof(L1Recurve) * self.L1_SIZE)
 
         for i in range(self.L1_SIZE):
 
@@ -119,7 +119,7 @@ cdef class RecurveTrie:
             L2_SIZE = len(py_trie[i][1])
 
             # allocating memory for individual L2 containers
-            L2_CONTAINER = <l2_recurve*>malloc(sizeof(l2_recurve) * L2_SIZE)
+            L2_CONTAINER = <L2Recurve*>malloc(sizeof(L2Recurve) * L2_SIZE)
 
             # calling make function for l2 content struct for each entry in current py_l2 container
             for xi in range(L2_SIZE):
@@ -137,7 +137,7 @@ cdef class RecurveTrie:
             long mid
             long right = self.L1_SIZE
 
-            l1_recurve l1_container
+            L1Recurve l1_container
 
         while left <= right:
             mid = left + (right - left) // 2
@@ -159,14 +159,14 @@ cdef class RecurveTrie:
         # L1 default
         return NO_MATCH
 
-    cdef long _l2_search(self, long container_id, short l2_size, l2_recurve *L2_CONTAINER) nogil:
+    cdef long _l2_search(self, long container_id, short l2_size, L2Recurve *L2_CONTAINER) nogil:
 
         cdef:
             short left = 0
             short mid
             short right = l2_size
 
-            l2_recurve l2_container
+            L2Recurve l2_container
 
         while left <= right:
             mid = left + (right - left) // 2
@@ -187,11 +187,11 @@ cdef class RecurveTrie:
         # L2 default
         return NO_MATCH
 
-    cdef l2_recurve* _make_l2(self, (long, long) l2_entry):
+    cdef L2Recurve* _make_l2(self, (long, long) l2_entry):
         '''allocates memory for a single L2 content struct, assigns members from l2_entry, then
         returns pointer.'''
 
-        cdef l2_recurve *l2_content = <l2_recurve*>malloc(sizeof(l2_recurve))
+        cdef L2Recurve *l2_content = <L2Recurve*>malloc(sizeof(L2Recurve))
 
         l2_content.id = l2_entry[0]
         l2_content.host_cat = l2_entry[1]
@@ -224,7 +224,7 @@ cdef class RangeTrie:
         # L1 container will be iterated over, being checked for id match. if a match is found
         # the reference stored at that index will be used to check for l2 container id match.
         self.L1_SIZE = len(py_trie)
-        self.L1_CONTAINER = <l1_range*>malloc(sizeof(l1_range) * self.L1_SIZE)
+        self.L1_CONTAINER = <L1Range*>malloc(sizeof(L1Range) * self.L1_SIZE)
 
         for i in range(self.L1_SIZE):
 
@@ -235,7 +235,7 @@ cdef class RangeTrie:
             self.L1_CONTAINER[i].l2_size = L2_SIZE
 
             # allocating memory for individual L2 containers
-            self.L1_CONTAINER[i].l2_ptr = <l2_range*>malloc(sizeof(l2_range) * L2_SIZE)
+            self.L1_CONTAINER[i].l2_ptr = <L2Range*>malloc(sizeof(L2Range) * L2_SIZE)
 
             # calling make function for l2 content struct for each entry in current py_l2 container
             for xi in range(L2_SIZE):
@@ -249,8 +249,8 @@ cdef class RangeTrie:
             long mid
             long right = self.L1_SIZE
 
-            l1_range l1_container
-            l2_range l2_container
+            L1Range l1_container
+            L2Range l2_container
 
         while left <= right:
             mid = left + (right - left) // 2
@@ -279,10 +279,10 @@ cdef class RangeTrie:
         # l1 match
         return NO_MATCH
 
-    cdef l2_range* _make_l2(self, (long, long, short) l2_entry):
+    cdef L2Range* _make_l2(self, (long, long, short) l2_entry):
         '''allocates memory for a single L2 content struct, assigns members from l2_entry, then returns pointer.'''
 
-        cdef l2_range *l2_content = <l2_range*>malloc(sizeof(l2_range))
+        cdef L2Range *l2_content = <L2Range*>malloc(sizeof(L2Range))
 
         l2_content.netid   = l2_entry[0]
         l2_content.bcast   = l2_entry[1]
@@ -335,7 +335,7 @@ def generate_recursive_binary_search(tuple signatures, (int, int) bounds):
                     with recursion_lock:
                         bin_match = h_ranges
 
-                        return recursive_binary_search((hh_id, 0), recursion=1)
+                        return recursive_binary_search((hh_id, 0), recursion=<bint>1)
             else:
                 return null
 

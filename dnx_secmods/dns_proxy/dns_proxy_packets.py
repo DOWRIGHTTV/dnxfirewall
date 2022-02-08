@@ -10,7 +10,7 @@ from dnx_gentools.def_namedtuples import CACHED_RECORD
 from dnx_iptools.def_structs import *
 from dnx_iptools.protocol_tools import *
 from dnx_iptools.def_structures import *
-from dnx_iptools.packet_classes import NFPacket
+from dnx_iptools.packet_classes import NFPacket, RawResponse
 
 
 class ClientQuery:
@@ -159,7 +159,7 @@ udp_header_template = PR_UDP_HDR(**{'checksum': 0})
 std_resource_record_template = DNS_STD_RR(**{'ptr': 49164, 'type': 1, 'class': 1, 'ttl': 300, 'rd_len': 4})
 
 
-class ProxyRequest(NFPacket):
+class DNSPacket(NFPacket):
 
     __slots__ = (
         '_dns_header', '_dns_query',
@@ -218,43 +218,6 @@ class ProxyRequest(NFPacket):
         # defining unique tuple for informing dns server of inspection results
         self.requests, self.tld = _enumerate_request(*query_info)
         self.request_identifier = (int_to_ip(self.src_ip), self.src_port, self.dns_id)
-
-    # will create send data object for used by proxy.
-    def generate_proxy_response(self, len=len):
-        # DNS HEADER + PAYLOAD
-        # AAAA record set r code to "domain name does not exist" without record response ac=0, rc=3
-        udp_payload = bytearray()
-        if (self.qtype == DNS.AAAA):
-            udp_payload += dns_header_pack(self.dns_id, 32899 | self._rd | self._ad | self._cd, 1, 0, 0, 0)
-            udp_payload += self.question_record
-
-        # standard query response to sinkhole. default answer count and response code
-        else:
-            resource_record = std_resource_record_template()
-
-            resource_record.rd_data = btoia(self.intf_ip)
-
-            udp_payload += dns_header_pack(self.dns_id, 32896 | self._rd | self._ad | self._cd, 1, 0, 0, 0)
-            udp_payload += self.question_record
-            udp_payload += resource_record.assemble()
-
-        # UDP HEADER
-        udp_header = udp_header_template()
-
-        udp_header.src_port = self.dst_port
-        udp_header.dst_port = self.src_port
-        udp_header.len = 8 + len(udp_payload)
-
-        # IP HEADER
-        ip_header = ip_header_template()
-
-        ip_header.tl = 28 + len(udp_payload)
-        ip_header.src_ip = self.dst_ip
-        ip_header.dst_ip = self.src_ip
-
-        ip_header.checksum = calc_checksum(ip_header.assemble())
-
-        self.send_data = ip_header.assemble() + udp_header.assemble() + udp_payload
 
 
 def _enumerate_request(request: str, local_domain: bool, int=int, hash=hash) -> Tuple[List[Tuple[int]], Optional[str]]:
@@ -383,3 +346,44 @@ def _parse_record(dns_payload: memoryview, cur_offset: int) -> Tuple[int, _RESOU
     new_offset += 10 + dt_len
 
     return btoia(resource_record.qtype), resource_record, new_offset
+
+# ===============
+# PROXY RESPONSE
+# ===============
+class ProxyResponse(RawResponse):
+
+    def _prepare_packet(self, packet: ProxyPacket, dnx_src_ip: int) -> bytearray:
+        # DNS HEADER + PAYLOAD
+        # AAAA record set r code to "domain name does not exist" without record response ac=0, rc=3
+        udp_payload = bytearray()
+        if (packet.qtype == DNS.AAAA):
+            udp_payload += dns_header_pack(packet.dns_id, 32899 | packet._rd | packet._ad | packet._cd, 1, 0, 0, 0)
+            udp_payload += packet.question_record
+
+        # standard query response to sinkhole. default answer count and response code
+        else:
+            resource_record = std_resource_record_template()
+
+            resource_record.rd_data = btoia(self.intf_ip)
+
+            udp_payload += dns_header_pack(packet.dns_id, 32896 | packet._rd | packet._ad | packet._cd, 1, 0, 0, 0)
+            udp_payload += packet.question_record
+            udp_payload += resource_record.assemble()
+
+        # UDP HEADER
+        udp_header = udp_header_template()
+
+        udp_header.src_port = self.dst_port
+        udp_header.dst_port = self.src_port
+        udp_header.len = 8 + len(udp_payload)
+
+        # IP HEADER
+        ip_header = ip_header_template()
+
+        ip_header.tl = 28 + len(udp_payload)
+        ip_header.src_ip = self.dst_ip
+        ip_header.dst_ip = self.src_ip
+
+        ip_header.checksum = calc_checksum(ip_header.assemble())
+
+        self.send_data = ip_header.assemble() + udp_header.assemble() + udp_payload
