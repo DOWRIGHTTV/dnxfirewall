@@ -2,9 +2,9 @@
 
 import threading
 
-import dnx_gentools.signature_operations as signature_operations
-
-from dnx_gentools.def_constants import *
+from dnx_gentools.def_constants import RFC1918
+from dnx_gentools.def_typing import *
+from dnx_gentools.def_enums import PROTO, DIR, REP, GEO
 from dnx_gentools.standard_tools import Initialize
 
 from dnx_gentools.file_operations import load_configuration, cfg_read_poller
@@ -14,24 +14,24 @@ from dnx_secmods.ip_proxy.ip_proxy_log import Log
 
 
 class Configuration:
-    _setup = False
+    _setup: bool = False
 
     __slots__ = (
-        'IPProxy', 'initialize',
+        'ip_proxy', 'initialize',
     )
 
-    def __init__(self, name):
+    def __init__(self, name: str):
         self.initialize = Initialize(Log, name)
 
     @classmethod
-    def setup(cls, IPProxy):
+    def setup(cls, ip_proxy: Type[IPProxy]) -> None:
         if (cls._setup):
             raise RuntimeError('configuration setup should only be called once.')
 
         cls._setup = True
 
-        self = cls(IPProxy.__name__)
-        self.IPProxy = IPProxy
+        self: Configuration = cls(ip_proxy.__name__)
+        self.ip_proxy = ip_proxy
 
         self._manage_ip_tables()
         threading.Thread(target=self._get_settings).start()
@@ -41,10 +41,10 @@ class Configuration:
         self.initialize.wait_for_threads(count=3)
 
     @cfg_read_poller('ip_proxy')
-    def _get_settings(self, cfg_file):
+    def _get_settings(self, cfg_file: str) -> None:
         ip_proxy = load_configuration(cfg_file)
 
-        self.IPProxy.ids_mode = ip_proxy['ids_mode']
+        self.ip_proxy.ids_mode = ip_proxy['ids_mode']
 
         rep_settings = ip_proxy['reputation']
         geo_settings = ip_proxy['geolocation']
@@ -56,40 +56,40 @@ class Configuration:
         for cat, setting in rep_settings.items():
             if (setting): reputation_enabled.append(1)
 
-            self.IPProxy.reputation_settings[REP[cat.upper()]] = DIR(setting)
+            self.ip_proxy.reputation_settings[REP[cat.upper()]] = DIR(setting)
 
         for country, direction in geo_settings.items():
             
             # using enum for category key and direction value
             try:
-                self.IPProxy.geolocation_settings[GEO[country.upper()]] = DIR(direction)
+                self.ip_proxy.geolocation_settings[GEO[country.upper()]] = DIR(direction)
             except KeyError:
                 continue # not all enums/countries are populated
 
-        self.IPProxy.reputation_enabled = bool(reputation_enabled)
+        self.ip_proxy.reputation_enabled = bool(reputation_enabled)
 
         self.initialize.done()
 
     @cfg_read_poller('whitelist')
-    def _get_ip_whitelist(self, cfg_file):
+    def _get_ip_whitelist(self, cfg_file: str) -> None:
         whitelist = load_configuration(cfg_file)
 
         whitelist = whitelist['ip_bypass']
-        self.IPProxy.ip_whitelist = {
+        self.ip_proxy.ip_whitelist = {
             ip for ip, wl_info in whitelist.items() if wl_info['type'] == 'ip'
         }
 
-        self.IPProxy.tor_whitelist = {
+        self.ip_proxy.tor_whitelist = {
             ip for ip, wl_info in whitelist.items() if wl_info['type'] == 'tor'
         }
 
         self.initialize.done()
 
     @cfg_read_poller('ips')
-    def _get_open_ports(self, cfg_file):
+    def _get_open_ports(self, cfg_file: str) -> None:
         ips = load_configuration(cfg_file)
 
-        self.IPProxy.open_ports = {
+        self.ip_proxy.open_ports = {
             PROTO.TCP: {
                 int(local_port): int(wan_port) for wan_port, local_port in ips['open_protocols']['tcp'].items()
             },

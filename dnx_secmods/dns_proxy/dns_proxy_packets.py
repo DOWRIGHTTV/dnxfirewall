@@ -167,7 +167,7 @@ class DNSPacket(NFPacket):
         'request', 'requests', 'tld', 'request_identifier',
         'local_domain', 'qtype', 'qclass', 'dns_id', 'question_record',
 
-        'qr', '_rd', '_ad', '_cd', 'send_data',
+        'qr', 'rd', 'ad', 'cd',
     )
 
     def __init__(self):
@@ -175,8 +175,6 @@ class DNSPacket(NFPacket):
         self.qtype  = None
         self.qclass = None
         self.request_identifier = None
-
-        self.send_data = b''
 
     def _before_exit(self, mark: int):
         # filtering down to dns protocol
@@ -189,20 +187,21 @@ class DNSPacket(NFPacket):
         dns_header = dns_header_unpack(self.udp_payload[:12])
 
         # filtering out non query flags. this would also imply malformed payload.
+        # TODO: make this int flags enum
         self.qr = dns_header[1] >> 15 & 1
         if (self.qr != DNS.QUERY):
             return
 
         # finishing parse of dns header post filter
         self.dns_id = dns_header[0]
-        self._rd = dns_header[1] & DNS_MASK.RD
-        self._ad = dns_header[1] & DNS_MASK.AD
-        self._cd = dns_header[1] & DNS_MASK.CD
+        self.rd = dns_header[1] & DNS_MASK.RD
+        self.ad = dns_header[1] & DNS_MASK.AD
+        self.cd = dns_header[1] & DNS_MASK.CD
 
         # ===========================
         # QUESTION RECORD (index 12+)
         # ===========================
-        dns_query = self.udp_payload[12:self.udp_len]  # 13+ is query data
+        dns_query = self.udp_payload[12:]  # 13+ is query data
 
         # parsing dns name queried and byte offset due to variable length | ex www.micro.com or micro.com
         offset, query_info = parse_query_name(dns_query, qname=True)
@@ -357,7 +356,7 @@ class ProxyResponse(RawResponse):
         # AAAA record set r code to "domain name does not exist" without record response ac=0, rc=3
         udp_payload = bytearray()
         if (packet.qtype == DNS.AAAA):
-            udp_payload += dns_header_pack(packet.dns_id, 32899 | packet._rd | packet._ad | packet._cd, 1, 0, 0, 0)
+            udp_payload += dns_header_pack(packet.dns_id, 32899 | packet.rd | packet.ad | packet.cd, 1, 0, 0, 0)
             udp_payload += packet.question_record
 
         # standard query response to sinkhole. default answer count and response code
@@ -366,7 +365,7 @@ class ProxyResponse(RawResponse):
 
             resource_record.rd_data = btoia(self.intf_ip)
 
-            udp_payload += dns_header_pack(packet.dns_id, 32896 | packet._rd | packet._ad | packet._cd, 1, 0, 0, 0)
+            udp_payload += dns_header_pack(packet.dns_id, 32896 | packet.rd | packet.ad | packet.cd, 1, 0, 0, 0)
             udp_payload += packet.question_record
             udp_payload += resource_record.assemble()
 
@@ -386,4 +385,4 @@ class ProxyResponse(RawResponse):
 
         ip_header.checksum = calc_checksum(ip_header.assemble())
 
-        self.send_data = ip_header.assemble() + udp_header.assemble() + udp_payload
+        return ip_header.assemble() + udp_header.assemble() + udp_payload

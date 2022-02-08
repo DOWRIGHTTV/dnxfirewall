@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 
 from dnx_gentools.def_constants import *
+from dnx_gentools.def_typing import *
+from dnx_gentools.def_enums import Queue, DNS, DNS_CAT
 from dnx_gentools.def_namedtuples import DNS_BLACKLIST, DNS_REQUEST_RESULTS, DNS_SIGNATURES, DNS_WHITELIST
 from dnx_gentools.signature_operations import generate_domain
 
@@ -10,7 +12,7 @@ from dnx_iptools.protocol_tools import int_to_ip
 
 from dns_proxy_automate import Configuration
 from dns_proxy_log import Log
-from dns_proxy_packets import DNSPacket
+from dns_proxy_packets import DNSPacket, ProxyResponse
 from dns_proxy_server import DNSServer
 
 LOG_NAME = 'dns_proxy'
@@ -19,19 +21,19 @@ LOCAL_RECORD = DNSServer.dns_records.get
 
 class DNSProxy(NFQueue):
     # dns | ip
-    whitelist = DNS_WHITELIST(
+    whitelist: ClassVar[NamedTuple[dict, dict]] = DNS_WHITELIST(
         {}, {}
     )
-    blacklist = DNS_BLACKLIST(
+    blacklist: ClassVar[NamedTuple[dict]] = DNS_BLACKLIST(
         {}
     )
     # en_dns | tld | keyword | NOTE: dns signatures are contained within the binary search extension as a closure
-    signatures = DNS_SIGNATURES(
+    signatures: ClassVar[NamedTuple[dict, dict, dict]] = DNS_SIGNATURES(
         {DNS_CAT.doh}, {}, []
     )
 
-    _dns_sig_ref = None
-    _packet_parser = DNSPacket.netfilter_recv  # alternate constructor
+    _dns_sig_ref: ClassVar[Optional] = None
+    _packet_parser: ClassVar[ProxyParser] = DNSPacket.netfilter_recv  # alternate constructor
 
     __slots__ = (
         '_dns_record_get',
@@ -41,6 +43,8 @@ class DNSProxy(NFQueue):
     def _setup(cls):
         Configuration.proxy_setup(cls)
         cls.set_proxy_callback(func=inspect)
+
+        ProxyResponse.setup(Log, cls)
 
         Log.notice(f'{cls.__name__} initialization complete.')
 

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from enum import Enum as _Enum, Flag as _Flag, IntEnum as _IntEnum, IntFlag as _IntFlag
+
 
 class DATA(_IntEnum):
     INVALID = -1
@@ -50,6 +52,9 @@ class LOG(_IntEnum):
     NOTICE    = 5
     INFO      = 6
     DEBUG     = 7
+
+class PROFILE_MASK(_IntFlag):
+    pass
 
 class DNS(_IntEnum):
     # dns relay decisions

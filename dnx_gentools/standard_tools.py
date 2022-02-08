@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-# from __future__ import annotations
-
 import threading
 
 from copy import copy
@@ -18,7 +16,7 @@ __all__ = (
     'classproperty'
 )
 
-def looper(sleep_len, **kwargs):
+def looper(sleep_len: int, **kwargs):
     '''
     loop decorator calling sleeping for specified length. length is sent in on decorator argument. if no value
     is sent in the loop will continue immediately. kwargs can be sent in to provide locally assigned var access. the
@@ -60,11 +58,11 @@ def looper(sleep_len, **kwargs):
         return wrapper
     return decorator
 
-def dynamic_looper(loop_function):
+def dynamic_looper(loop_function: Callable):
     '''loop decorator that will sleep for the returned integer amount. functions returning None will
     not sleep on next iter and returning "break" will cancel the loop.'''
     def wrapper(*args):
-        while True:
+        for _ in RUN_FOREVER():
             sleep_amount = loop_function(*args)
             if (sleep_amount == 'break'): break
             elif (not sleep_amount): continue
@@ -77,19 +75,20 @@ def dynamic_looper(loop_function):
 class Initialize:
     '''class used to handle system module thread synchronization on process startup. this will ensure all
     threads have completed one loop before returning control to the caller. will block until condition is met.'''
-    def __init__(self, Log, name):
+
+    def __init__(self, Log: LogHandler, name: str):
         self._Log  = Log
         self._name = name
 
         self._initial_time = fast_time()
 
-        self.has_ran = False
-        self._timeout = None
-        self._is_initializing = True
-        self._thread_count = 0
+        self.has_ran: bool = False
+        self._timeout: Optional[int] = None
+        self._is_initializing: bool = True
+        self._thread_count: int = 0
         self._thread_ready = set()
 
-    def wait_for_threads(self, *, count, timeout=None):
+    def wait_for_threads(self, *, count: int, timeout: Optional[int] = None) -> None:
         '''will block until the checked in thread count has reach the passed in count.'''
         if (not self._is_initializing or self.has_ran):
             raise RuntimeError('run has already been called for this self.')
@@ -108,7 +107,7 @@ class Initialize:
 
         self._Log.notice(f'{self._name} setup complete.')
 
-    def done(self):
+    def done(self) -> None:
         '''inform the handler a thread has been initialized. using default thread name as dict key.'''
         if (not self._is_initializing): return
 
@@ -116,7 +115,7 @@ class Initialize:
 
         self._Log.debug(f'{self._name} thread checkin.')
 
-    def wait_in_line(self, *, wait_for):
+    def wait_in_line(self, *, wait_for: int) -> None:
         '''blocking call to wait for all lower number threads to complete before checking in and returning.
 
             initialize = Initialize(*args, **kwargs)
@@ -132,14 +131,14 @@ class Initialize:
             fast_sleep(1)
 
     @property
-    def _initial_load_complete(self):
+    def _initial_load_complete(self) -> bool:
         if (self._thread_count == len(self._thread_ready)):
             return True
 
         return False
 
     @property
-    def _timeout_reached(self):
+    def _timeout_reached(self) -> bool:
         if (not self._timeout):
             return False
 
@@ -148,7 +147,7 @@ class Initialize:
 
         return False
 
-def dnx_queue(Log, name=None):
+def dnx_queue(Log: LogHandler, name: str = None):
     '''decorator to add custom queue mechanism for any queue handling functions. This is a direct replacement of
     dynamic_looper for queues.
 
@@ -175,7 +174,7 @@ def dnx_queue(Log, name=None):
             if (Log):
                 Log.informational(f'{name}/dnx_queue started.')
 
-            while True:
+            for _ in RUN_FOREVER():
                 job_wait()
                 # clearing job notification
                 job_clear()

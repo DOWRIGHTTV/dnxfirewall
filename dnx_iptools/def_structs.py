@@ -27,7 +27,9 @@ mac_pack   = _Struct('!6s').pack
 
 eth_header_pack    = _Struct('!6s6sH').pack
 ip_header_pack     = _Struct('!2B3H2BH2L').pack
+iphdr_pack_into    = _Struct('!2B3H2BH2L').pack_into
 udp_header_pack    = _Struct('!4H').pack
+udphdr_pack_into   = _Struct('!4H').pack_into
 icmp_header_pack   = _Struct('!2B2s').pack
 tcp_header_pack    = _Struct('!2H2L2BH2sH').pack
 pseudo_header_pack = _Struct('!4s4s2BH').pack

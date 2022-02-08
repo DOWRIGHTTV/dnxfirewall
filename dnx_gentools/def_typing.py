@@ -20,3 +20,4 @@ if (TYPE_CHECKING):
 
 ProxyCallback = Callable[..., None]
 ProxyPacket   = Union[IPPPacket, IPSPacket, DNSPacket]
+ProxyParser   = Callable[CPacket, int, ..., ProxyPacket]

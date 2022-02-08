@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import time
 import traceback
-import threading
 import socket
 import select
+
+from threading import Thread
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_typing import *
@@ -27,12 +30,12 @@ def _NOT_IMPLEMENTED(*args, **kwargs):
 
 
 class Listener:
-    __registered_socks = {}
+    __registered_socks: ClassVar[dict] = {}
     __epoll = select.epoll()
 
-    _Log = None
-    _packet_parser  = _NOT_IMPLEMENTED
-    _proxy_callback = _NOT_IMPLEMENTED
+    _Log: ClassVar[Optional[Type[LogHandler]]] = None
+    _packet_parser: ClassVar[ProxyParser] = _NOT_IMPLEMENTED
+    _proxy_callback: ClassVar[ProxyCallback] = _NOT_IMPLEMENTED
 
     _intfs = load_interfaces(exclude=['wan'])
 
@@ -77,14 +80,14 @@ class Listener:
         # starting a registration thread for all available interfaces
         # upon registration the threads will exit
         for intf in cls._intfs:
-            threading.Thread(target=cls.__register, args=(intf,)).start()
+            Thread(target=cls.__register, args=(intf,)).start()
 
         # running main epoll/ socket loop. threaded so proxy and server can run side by side
         # TODO: should be able to convert this into a class object like RawPacket. just need to
         #  make sure name mangling takes care of the reference issues if 2 classes inherit from
         #  this class within the same process..
         self = cls(threaded, always_on)
-        threading.Thread(target=self.__listener).start()
+        Thread(target=self.__listener).start()
 
     @classmethod
     def enable(cls, sock_fd: int, intf: str):
@@ -197,7 +200,7 @@ class Listener:
                         return
 
                     if (threaded):
-                        threading.Thread(target=proxy_callback, args=(packet,)).start()
+                        Thread(target=proxy_callback, args=(packet,)).start()
                     else:
                         proxy_callback(packet)
 
@@ -225,7 +228,8 @@ class Listener:
 class ProtoRelay:
     '''parent class for udp and tls relays providing standard built in methods to start, check status, or add
     jobs to the work queue. _dns_queue object must be overwritten by subclasses.'''
-    _protocol = PROTO.NOT_SET
+
+    _protocol: ClassVar[PROTO] = PROTO.NOT_SET
 
     __slots__ = (
         '_dns_server', '_fallback_relay',
@@ -267,8 +271,8 @@ class ProtoRelay:
         initialize will be called to run any subclass specific processing then query handler will run indefinitely.'''
         self = cls(dns_server, fallback_relay)
 
-        threading.Thread(target=self._fail_detection).start()
-        threading.Thread(target=self.relay).start()
+        Thread(target=self._fail_detection).start()
+        Thread(target=self.relay).start()
 
     def relay(self):
         '''main relay process for handling the relay queue. will block and run forever.'''
@@ -285,7 +289,7 @@ class ProtoRelay:
 
                 if not self._register_new_socket(): break
 
-                threading.Thread(target=self._recv_handler).start()
+                Thread(target=self._recv_handler).start()
 
             else:
                 self._increment_fail_detection()
@@ -352,9 +356,9 @@ class ProtoRelay:
 
 
 class NFQueue:
-    _Log = None
-    _packet_parser  = _NOT_IMPLEMENTED
-    _proxy_callback = _NOT_IMPLEMENTED
+    _Log: ClassVar[Optional[Type[LogHandler]]] = None
+    _packet_parser: ClassVar[ProxyParser] = _NOT_IMPLEMENTED
+    _proxy_callback: ClassVar[ProxyCallback] = _NOT_IMPLEMENTED
 
     __slots__ = (
         '__q_num', '__threaded'
@@ -434,33 +438,25 @@ class NFQueue:
         else:
             if self._pre_inspect(packet):
                 if (self.__threaded):
-                    threading.Thread(target=self._proxy_callback, args=(packet,)).start()
+                    Thread(target=self._proxy_callback, args=(packet,)).start()
                 else:
                     self._proxy_callback(packet)
 
     def _pre_inspect(self, packet) -> bool:
-        '''automatically called after parsing. used to determine course of action for packet. nfqueue drop, accept, or repeat can be called within
-        this scope. return will be checked as a boolean where True will continue and False will do nothing.
+        '''automatically called after parsing. used to determine course of action for packet. nfqueue drop, accept, or
+        repeat can be called within this scope. return will be checked as a boolean where True will continue and
+        False will do nothing.
 
         May be overridden.
 
         '''
         return True
 
-    def _handle_request(self, packet):
-        '''primary logic for dealing with packet actions. nfqueue drop, accept, or repeat should be
-        called within this scope if not already called in pre inspect.
-
-        May be overridden.
-
-        '''
-        packet.nfqueue.accept()
-
 
 class NFPacket:
 
     __slots__ = (
-        'nfqueue',
+        'nfqueue', 'mark',
 
         'in_zone', 'out_zone',
         'src_mac', 'timestamp',
@@ -484,13 +480,16 @@ class NFPacket:
     )
 
     @classmethod
-    def netfilter_recv(cls, cpacket, mark):
+    def netfilter_recv(cls, cpacket: CPacket, mark: int) -> NFPacket:
         '''Cython > Python attribute conversion'''
 
         self = cls()
 
         # reference to allow higher level modules to call packet actions directly
         self.nfqueue = cpacket
+
+        # creating isntance attr so it can be modified if needed
+        self.mark = mark
 
         hw_info = cpacket.get_hw()
         self.in_zone   = hw_info[0]
@@ -519,10 +518,13 @@ class NFPacket:
 
             # ip/udp header are only needed for icmp response payloads [at this time]
             # packing into bytes to make icmp response generation more streamlined if needed
-            self.ip_header = ip_header_pack(*ip_header)
-            self.udp_header = udp_header_pack(*proto_header)
+            self.ip_header = bytearray(20)
+            self.udp_header = bytearray(8)
 
-            # data payload only used by IPS/IDS (portscan detection) [at this time]
+            iphdr_pack_into(self.ip_header, 0, *ip_header)
+            udphdr_pack_into(self.udp_header, 0, *proto_header)
+
+            # data payload used by IPS/IDS (portscan detection) and DNSProxy
             self.udp_payload = cpacket.get_payload()
 
         elif (self.protocol is PROTO.ICMP):
@@ -545,8 +547,7 @@ class NFPacket:
 
 
 class RawPacket:
-    '''NOTICE: this class has been significantly reduced in use. this should probably be reduced
-    in code as well or a new class should be derived from it for the dns proxy.
+    '''NOTICE: this class has been significantly reduced in use. [no current modules subclassing]
 
     parent class designed to index/parse full tcp/ip packets (including ethernet). alternate
     constructors are supplied to support different listener types e.g. raw sockets.
@@ -679,10 +680,11 @@ class RawResponse:
     '''base class for managing raw socket operations for sending data only. interfaces will be registered
     on startup to associate interface, zone, mac, ip, and active socket.'''
 
-    __setup = False
-    _Log = None
+    __setup: ClassVar[bool] = False
+    _Log: ClassVar[Optional[Type[LogHandler]]] = None
     _Module = None
-    _registered_socks = {}
+
+    _registered_socks: ClassVar[dict] = {}
 
     # dynamically provide interfaces. default returns builtins.
     _intfs = load_interfaces()
@@ -718,15 +720,11 @@ class RawResponse:
         cls._registered_socks_get = cls._registered_socks.get
 
         for intf in cls._intfs:
-            threading.Thread(target=cls.__register, args=(intf,)).start()
+            Thread(target=cls.__register, args=(intf,)).start()
 
     @classmethod
     def __register(cls, intf: Tuple[int, int, str]):
-        '''will register interface with ip and socket. a new socket will be used every time this method is called.
-
-        Do not override.
-
-        '''
+        '''will register interface with ip and socket. a new socket will be used every time this method is called.'''
         intf_index, zone, _intf = intf
 
         wait_for_interface(interface=_intf)
@@ -734,7 +732,7 @@ class RawResponse:
 
         # sock sender is the direct reference to the socket send/to method, adding zone into value for easier
         # reference in prepare and send method.
-        cls._registered_socks[intf_index] = NFQ_SEND_SOCK(zone, ip, cls.sock_sender(_intf))
+        cls._registered_socks[intf_index] = NFQ_SEND_SOCK(zone, ip, cls.sock_sender())
 
         cls._Log.informational(f'{cls.__name__}: {_intf} registered.')
 
@@ -794,8 +792,7 @@ class RawResponse:
             # calculating checksum of container
             proto_header[16:18] = calc_checksum(pseudo_header.buf + proto_header)
 
-            # TODO: this should be able to be hard coded since the fields are hard set to 20 bytes
-            proto_len = len(proto_header)
+            proto_len = 20
 
         # ICMP HEADER
         # elif (packet.protocol is PROTO.UDP):
@@ -811,8 +808,7 @@ class RawResponse:
             # icmp pre-assemble covers this
             proto_header[2:4] = calc_checksum(proto_header + icmp_payload, pack=True)
 
-            # TODO: this should be able to be hard coded since the fields are hard set to 8 bytes
-            proto_len = len(proto_header) + len(icmp_payload)
+            proto_len = 8 + 28
 
         # IP HEADER
         iphdr = _ip_header_template()
@@ -838,24 +834,23 @@ class RawResponse:
         if (packet.protocol is PROTO.TCP):
             packet.dst_port = port_override
 
+        # in byte form since they are included in icmp payload in raw form
         elif (packet.protocol is PROTO.UDP):
-            packet.udp_header = udp_header_pack(
-                packet.src_port, port_override, packet.udp_len, packet.udp_chk
-            )
-            csum = double_byte_pack(0, 0)
-            for i in ATTEMPTS:
-                ip_header = ip_header_override_pack(
-                    packet.ip_header[:10], csum, long_pack(packet.src_ip), dnx_src_ip
-                )
-                if i: break
-                csum = calc_checksum(ip_header)
+            packet.udp_header[2:4] = short_pack(port_override)
 
-            # overriding packet ip header after process is complete. this will make the loops more efficient than
-            # direct references to the instance object every time.
-            packet.ip_header = ip_header
+            # NOTE: did we skip udp checksum because its not required?? prob should do it to be "legit" someday
+
+            # slicing operations will change the referenced object directly
+            ip_header = packet.ip_header
+
+            ip_header[10:12] = b'\x00\x00'
+            ip_header[12:16] = long_pack(packet.src_ip)
+            ip_header[16:20] = long_pack(dnx_src_ip)
+
+            ip_header[10:12] = calc_checksum(ip_header, pack=True)
 
     @staticmethod
-    def sock_sender(intf):
+    def sock_sender():
         '''returns new socket object to be used with interface registration.
 
         May be overridden.

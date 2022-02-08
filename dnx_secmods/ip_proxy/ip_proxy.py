@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-from typing import Tuple, Union, Any
 
 from dnx_gentools.def_constants import *
-from dnx_gentools.def_constants import CONN
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_enums import CONN
 from dnx_gentools.def_namedtuples import IPP_INSPECTION_RESULTS
 from dnx_gentools.signature_operations import generate_reputation
 
@@ -19,20 +18,21 @@ LOG_NAME = 'ip_proxy'
 
 
 class IPProxy(NFQueue):
-    ids_mode   = False
+    ids_mode: bool = False
 
-    reputation_enabled   = False
-    reputation_settings  = {}
-    geolocation_enabled  = True
-    geolocation_settings = {}
+    reputation_enabled:   bool = False
+    reputation_settings:  dict = {}
+    geolocation_enabled:  bool = True
+    geolocation_settings: dict = {}
 
-    ip_whitelist  = {}
-    tor_whitelist = {}
-    open_ports    = {
+    ip_whitelist:  dict = {}
+    tor_whitelist: dict = {}
+
+    open_ports: dict[PROTO, dict] = {
         PROTO.TCP: {},
         PROTO.UDP: {}
     }
-    _packet_parser = IPPPacket.netfilter_recv  # alternate constructor
+    _packet_parser: ProxyParser = IPPPacket.netfilter_recv  # alternate constructor
 
     @classmethod
     def _setup(cls):
@@ -42,7 +42,7 @@ class IPProxy(NFQueue):
 
         cls.set_proxy_callback(func=inspect)
 
-    def _pre_inspect(self, packet):
+    def _pre_inspect(self, packet: IPPPacket) -> bool:
         # TODO: this can and should be moved to cfirewall
         # if local ip is not in the ip whitelist, the packet will be dropped while time restriction is active.
         if (LanRestrict.is_active and packet.in_zone == LAN_IN
@@ -75,7 +75,7 @@ class IPProxy(NFQueue):
         return False
 
     @classmethod
-    def forward_packet(cls, packet, direction, action):
+    def forward_packet(cls, packet: IPPPacket, direction: DIR, action: CONN):
 
         # NOTE: this condition restricts ips inspection to INBOUND only to emulate prior functionality. if ips profile
         # is set on a rule for outbound traffic, it will be ignored.
@@ -101,7 +101,7 @@ class IPProxy(NFQueue):
 
 
 # GENERAL PROXY FUNCTIONS
-def log_geolocation(packet):
+def log_geolocation(packet: IPPPacket):
 
     # country of tracked (external) passed from cfirewall via packet mark
     country = GEO(packet.tracked_geo)
@@ -136,7 +136,7 @@ def inspect(packet: IPPPacket):
 
     Log.log(packet, IPP_INSPECTION_RESULTS(category, action))
 
-def _inspect(packet: IPPPacket) -> Tuple[Union[CONN, Any], Tuple[Any, str]]:
+def _inspect(packet: IPPPacket) -> Tuple[CONN, Tuple[str, str]]:
     action = CONN.ACCEPT
     reputation = REP.DNL
 
@@ -170,7 +170,7 @@ def _reputation_action(category: REP, packet: IPPPacket) -> CONN:
         # and not to open a local machine to tor traffic.
         # TODO: evaluate if we should have an inbound override, though i dont know who would ever want random tor
         #  users accessing their servers.
-        if (packet.direction is DIR.OUTBOUND and packet.conn.local_ip in _tor_whitelist):
+        if (packet.direction is DIR.OUTBOUND and packet.local_ip in _tor_whitelist):
             return CONN.ACCEPT
 
         block_direction = _reputation_settings[category]
@@ -190,7 +190,7 @@ def _reputation_action(category: REP, packet: IPPPacket) -> CONN:
     return CONN.ACCEPT
 
 # TODO: expand for profiles. geolocation_settings[profile][category]
-def _country_action(category, packet):
+def _country_action(category: GEO, packet: IPPPacket) -> CONN:
 
     # dir enum is _Flag with bitwise ops. this makes comparison much easier.
     if (packet.direction & _geolocation_settings[category]):
@@ -212,7 +212,7 @@ if (INIT_MODULE):
 
     # initializing C/Cython extension, converting python structures to native C array/struct,
     # and assigning direct reference to search method [which calls underlying C without GIL]
-    recurve_trie = RecurveTrie()
+    recurve_trie: RecurveTrie = RecurveTrie()
     recurve_trie.generate_structure(reputation_signatures)
 
     _recurve_trie_search = recurve_trie.search
