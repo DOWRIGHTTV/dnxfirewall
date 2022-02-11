@@ -209,17 +209,14 @@ class _DBConnector:
     def query_geolocation(self, count, *, action, direction):
         month = ','.join(System.date()[:2])
 
-        # adds an extra space to results for 'NONE' which is more common than normal since the geolocation db is not yet complete
-        count += 1
+    # table has a separate column for allowed and blocked. this is why we select and sort on the action directly.
+    cur.execute(
+        f'select country from geolocation where month=? and direction=? and {action} > 0 '
+        f'order by {action} desc limit {count}', (month, direction, action)
+    )
 
-        self._c.execute(
-            f'select country from geolocation where month=? and direction=? and action=? '
-            f'order by count desc limit {count}', (month, direction, action)
-        )
-
-        # filtering out entries with no hits in the specified action. if those are returned, they have hits on the
-        # opposite action. currently filtering out 'NONE' since the geolocation database is not yet complete.
-        return [x.replace('_', ' ') for x in self._c.fetchall() if x != 'NONE']
+    # filtering out entries with no hits in the specified action.
+    return [x.replace('_', ' ') for x in cur.fetchall()]
 
     def unique_domain_count(self, *, action):
         if (action in ['allowed', 'blocked']):
