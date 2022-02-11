@@ -166,13 +166,13 @@ def get_arp_table(*, modify=False, host=None):
         )
 
     if (modify):
-        arp_table = {IPv4Address(a[0]): a[3].replace(':', '') for a in arp_table[1:]}
+        arp_table = {a[0]: a[3].replace(':', '') for a in arp_table[1:]}
 
     else:
-        arp_table = {IPv4Address(a[0]): a[3] for a in arp_table[1:]}
+        arp_table = {a[0]: a[3] for a in arp_table[1:]}
 
     if (host):
-        return arp_table.get(host, None)
+        return arp_table.get(host, 'unknown')
 
     else:
         return arp_table

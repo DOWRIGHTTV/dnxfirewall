@@ -213,13 +213,13 @@ class _DBConnector:
         count += 1
 
         self._c.execute(
-            f'select country, {action} from geolocation where month=? and direction=? '
-            f'order by {action} desc limit {count}', (month, direction)
+            f'select country from geolocation where month=? and direction=? and action=? '
+            f'order by count desc limit {count}', (month, direction, action)
         )
 
         # filtering out entries with no hits in the specified action. if those are returned, they have hits on the
         # opposite action. currently filtering out 'NONE' since the geolocation database is not yet complete.
-        return [x[0].replace('_', ' ') for x in self._c.fetchall() if x[1] and x[0] != 'NONE']
+        return [x.replace('_', ' ') for x in self._c.fetchall() if x != 'NONE']
 
     def unique_domain_count(self, *, action):
         if (action in ['allowed', 'blocked']):

@@ -15,6 +15,7 @@ from dnx_iptools.packet_classes import ProtoRelay
 from dnx_iptools.def_structs import short_unpackf
 from dnx_gentools.standard_tools import looper, dnx_queue
 
+CONNECTION_TIMEOUT = 2
 RELAY_TIMEOUT = 10
 
 
@@ -139,9 +140,7 @@ class TLSRelay(ProtoRelay):
                 break
 
             except timeout:
-                self.mark_server_down()
-
-                Log.warning(f'[{self._relay_conn.remote_ip}/{self._protocol.name}] Remote server connection timeout. Marking down.') # pylint: disable=no-member
+                Log.warning(f'[{self._relay_conn.remote_ip}/{self._protocol.name}] Remote server connection timeout.') # pylint: disable=no-member
 
                 return
 
@@ -180,19 +179,20 @@ class TLSRelay(ProtoRelay):
 
         Log.dprint(f'[{tls_server}/{self._protocol.name}] Opening secure socket.') # pylint: disable=no-member
         sock = socket(AF_INET, SOCK_STREAM)
-        sock.settimeout(RELAY_TIMEOUT)
+        sock.settimeout(CONNECTION_TIMEOUT)
 
         dns_sock = self._tls_context.wrap_socket(sock, server_hostname=tls_server)
         try:
             dns_sock.connect((tls_server, PROTO.DNS_TLS))
         except OSError:
-            Log.error(f'[{tls_server}/{self._protocol.name}] Failed to connect to server: {E}') # pylint: disable=no-member
+            Log.error(f'[{tls_server}/{self._protocol.name}] Unable to connect.') # pylint: disable=no-member
 
         except Exception as E:
             Log.console(f'[{tls_server}/{self._protocol.name}] TLS context error while attemping to connect to server: {E}') # pylint: disable=no-member
             Log.debug(f'[{tls_server}/{self._protocol.name}] TLS context error while attemping to connect to server: {E}') # pylint: disable=no-member
 
         else:
+            sock.settimeout(RELAY_TIMEOUT)
             self._relay_conn = RELAY_CONN(
                 tls_server, dns_sock, dns_sock.send, dns_sock.recv, dns_sock.version()
             )
