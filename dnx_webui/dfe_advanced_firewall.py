@@ -26,6 +26,8 @@ zone_manager = {'builtins': {}, 'user-defined': {}}
 _zone_map = {0: 'any'}
 
 def load_page(section='MAIN'):
+    global _zone_map
+
     dnx_settings = load_configuration('config')
 
     dnx_intfs = dnx_settings['interfaces']
