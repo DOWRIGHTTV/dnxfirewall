@@ -1,0 +1,15 @@
+[Unit]
+Description=DNXFIREWALL Syslog Client Service
+After=dnx-database-sqlite.service
+StartLimitIntervalSec=3
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=3
+User=dnx
+ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_netmods/syslog_client/syl_main.py
+Environment=HOME_DIR=/home/dnx/dnxfirewall
+
+[Install]
+WantedBy=multi-user.target
