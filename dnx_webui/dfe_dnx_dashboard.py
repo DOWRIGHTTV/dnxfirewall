@@ -11,30 +11,7 @@ from dnx_sysmods.database.ddb_connector_sqlite import DBConnector
 from dnx_sysmods.logging.log_main import LogHandler as Log
 
 def load_page():
-    with DBConnector(Log) as ProxyDB:
-        domain_counts = (
-            ProxyDB.unique_domain_count(action='blocked'),
-            ProxyDB.unique_domain_count(action='allowed')
-        )
-
-        request_counts = (
-            ProxyDB.total_request_count(table='dnsproxy', action='blocked'),
-            ProxyDB.total_request_count(table='dnsproxy', action='allowed')
-        )
-
-        top_domains = (
-            ('blocked', ProxyDB.dashboard_query_top(5, action='blocked')),
-            ('allowed', ProxyDB.dashboard_query_top(5, action='allowed'))
-        )
-
-        top_countries = {}
-        for action in ['blocked', 'allowed']:
-            outbound = ProxyDB.query_geolocation(5, action=action, direction='OUTBOUND')
-            inbound = ProxyDB.query_geolocation(5, action=action, direction='INBOUND')
-
-            top_countries[action] = list(zip_longest(outbound, inbound, fillvalue=''))
-
-        inf_hosts = ProxyDB.query_last(5, table='infectedclients', action='all')
+    domain_counts, request_counts, top_domains, top_countries, inf_hosts = query_database()
 
     intstat = Interface.bandwidth()
 
@@ -85,3 +62,42 @@ def _calculate_graphic(counts):
             graphic[smaller] = 'b'
 
     return graphic
+
+def query_database():
+    domain_counts = (0,0)
+    request_counts = (0,0)
+
+    top_domains = (('blocked', ()), ('allowed', ()))
+
+    top_countries = {
+        'blocked': [],
+        'allowed': []
+    }
+
+    inf_hosts = []
+
+    with DBConnector(Log) as ProxyDB:
+        domain_counts = (
+            ProxyDB.unique_domain_count(action='blocked'),
+            ProxyDB.unique_domain_count(action='allowed')
+        )
+
+        request_counts = (
+            ProxyDB.total_request_count(table='dnsproxy', action='blocked'),
+            ProxyDB.total_request_count(table='dnsproxy', action='allowed')
+        )
+
+        top_domains = (
+            ('blocked', ProxyDB.dashboard_query_top(5, action='blocked')),
+            ('allowed', ProxyDB.dashboard_query_top(5, action='allowed'))
+        )
+
+        for action in ['blocked', 'allowed']:
+            outbound = ProxyDB.query_geolocation(5, action=action, direction='OUTBOUND')
+            inbound = ProxyDB.query_geolocation(5, action=action, direction='INBOUND')
+
+            top_countries[action] = list(zip_longest(outbound, inbound, fillvalue=''))
+
+        inf_hosts = ProxyDB.query_last(5, table='infectedclients', action='all')
+
+    return domain_counts, request_counts, top_domains, top_countries, inf_hosts

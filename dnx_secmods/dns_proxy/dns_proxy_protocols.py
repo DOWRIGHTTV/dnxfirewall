@@ -137,12 +137,9 @@ class TLSRelay(ProtoRelay):
             try:
                 data_from_server = conn_recv(2048)
             except OSError:
-                break
-
-            except timeout:
                 Log.warning(f'[{self._relay_conn.remote_ip}/{self._protocol.name}] Remote server connection timeout.') # pylint: disable=no-member
 
-                return
+                break
 
             else:
                 # if no data is received/EOF the remote end has closed the connection
@@ -210,7 +207,7 @@ class TLSRelay(ProtoRelay):
             self.relay.add(self._dns_packet(KEEP_ALIVE_DOMAIN, self._protocol)) # pylint: disable=no-member
 
     def _create_tls_context(self):
-#        self._tls_context = ssl.create_default_context()
+
         self._tls_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         self._tls_context.verify_mode = ssl.CERT_REQUIRED
         self._tls_context.load_verify_locations(CERTIFICATE_STORE)
