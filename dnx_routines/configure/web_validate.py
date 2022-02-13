@@ -324,7 +324,7 @@ def manage_firewall_rule(rule_num, fw_rule, /):
         raise ValidationError(f'A destination service object was not found for rule #{rule_num}.')
 
     # TODO: make zone map integrated better
-    dnx_interfaces = load_configuration('config').get_items('interfaces->builtins')
+    dnx_interfaces = load_configuration('system').get_items('interfaces->builtins')
     zone_map = {zone_name: zone_info['zone'] for zone_name, zone_info in dnx_interfaces}
 
     # 99 used to specify wildcard/any zone match

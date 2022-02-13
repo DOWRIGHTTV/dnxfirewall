@@ -2,11 +2,8 @@
 
 import fcntl
 
-if (__name__ == '__main__'):
-    import __init__
-
 from dnx_gentools.def_constants import *
-from dnx_gentools.file_operations import load_configuration
+from dnx_gentools.file_operations import load_data
 
 __all__ = (
     'IPTablesManager'
@@ -127,7 +124,7 @@ class IPTablesManager:
     )
 
     def __init__(self):
-        interfaces = load_configuration('config')['interfaces']['builtins']
+        interfaces = load_data('system')['interfaces']['builtins']
 
         self._intf_to_zone = {
             interfaces[zone]['ident']: zone for zone in ['wan', 'lan', 'dmz']

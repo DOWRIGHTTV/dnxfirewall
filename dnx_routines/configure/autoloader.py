@@ -76,7 +76,7 @@ def check_clone_location():
         eprint('dnxfirewall filesystem must be located at /home/dnx.')
 
 def check_already_ran():
-    with ConfigurationManager('config') as dnx:
+    with ConfigurationManager('system') as dnx:
         dnx_settings = dnx.load_configuration()
 
     if (dnx_settings['auto_loader']):
@@ -191,7 +191,7 @@ def write_net_config(interface_configs):
 def set_dnx_interfaces(user_intf_config):
     sprint('setting dnx interface configurations...')
 
-    with ConfigurationManager('config') as dnx:
+    with ConfigurationManager('system') as dnx:
         dnx_settings = dnx.load_configuration()
 
         for zone, intf in user_intf_config.items():
@@ -354,7 +354,7 @@ def configure_iptables():
 # CLEANUP
 # ============================
 def mark_completion_flag():
-    with ConfigurationManager('config') as dnx:
+    with ConfigurationManager('system') as dnx:
         dnx_settings = dnx.load_configuration()
 
         dnx_settings['auto_loader'] = True
