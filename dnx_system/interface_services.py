@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 from time import sleep
 from json import dump
 from subprocess import check_output

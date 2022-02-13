@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 from json import dumps
 from threading import Thread
 from socket import socket, AF_UNIX, SOCK_DGRAM

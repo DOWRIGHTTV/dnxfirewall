@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import time
 
 from dnx_routines.configure.system_info import System

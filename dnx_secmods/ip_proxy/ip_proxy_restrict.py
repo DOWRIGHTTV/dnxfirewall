@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 # TODO: move this module to cfirewall.
 
 import threading

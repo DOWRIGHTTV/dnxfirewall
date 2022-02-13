@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import time as _time
 
 from io import StringIO as _StringIO

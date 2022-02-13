@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import json
 
 from dnx_shell.dnx_shell_standard import Standard

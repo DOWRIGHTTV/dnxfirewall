@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import re
 import json
 
-from subprocess import run
 from collections import namedtuple
 from ipaddress import IPv4Network
 

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 from dnx_gentools.def_constants import LOG, DNS_CAT, str_join
 from dnx_gentools.def_namedtuples import DNS_LOG, INFECTED_LOG
 

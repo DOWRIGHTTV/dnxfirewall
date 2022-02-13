@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 from dnx_gentools.def_constants import MSB, LSB
 from dnx_gentools.def_enums import CONN, DIR
 

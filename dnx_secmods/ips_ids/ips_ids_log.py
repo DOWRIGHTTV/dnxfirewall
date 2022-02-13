@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 from dnx_gentools.def_constants import *  # pylint: disable=unused-wildcard-import
 from dnx_gentools.def_namedtuples import IPS_LOG
 from dnx_routines.logging.log_client import LogHandler

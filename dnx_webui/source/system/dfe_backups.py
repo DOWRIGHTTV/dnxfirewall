@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import dnx_routines.configure.web_validate as validate
 
 from dnx_gentools.def_constants import CFG, INVALID_FORM

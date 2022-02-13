@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 from csv import reader as csv_reader
 from ipaddress import IPv4Address
 from fcntl import ioctl

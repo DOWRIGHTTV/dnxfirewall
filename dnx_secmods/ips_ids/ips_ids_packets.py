@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 from dnx_gentools.def_constants import *
 
 from dnx_iptools.packet_classes import NFPacket, RawResponse

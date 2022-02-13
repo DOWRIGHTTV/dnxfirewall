@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from __future__ import annotations
+
 import time as _time
 import os as _os
 import pwd as _pwd
@@ -11,9 +13,9 @@ from itertools import repeat as _repeat
 from subprocess import run as _run, DEVNULL as _DEVNULL
 from ipaddress import IPv4Address as _IPv4Address
 
-from dnx_iptools.def_structs import scm_creds_pack as _scm_creds_pack
+from dnx_gentools.def_typing import *
 
-from def_typing import *
+from dnx_iptools.def_structs import scm_creds_pack as _scm_creds_pack
 
 # if set, module code dependencies will run. values are stored as strings
 INIT_MODULE: bool = bool(_os.environ.get('INIT_MODULE', False))

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 from dnx_gentools.standard_tools import structure as _structure
 
 # IP

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 from enum import Enum as _Enum, Flag as _Flag, IntEnum as _IntEnum, IntFlag as _IntFlag
 
 

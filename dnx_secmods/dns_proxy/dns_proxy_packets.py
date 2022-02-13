@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 from socket import inet_aton
 
 from dnx_gentools.def_constants import *

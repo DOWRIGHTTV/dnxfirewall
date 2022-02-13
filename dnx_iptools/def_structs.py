@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 from struct import Struct as _Struct
 
 short_unpackf = _Struct('!H').unpack_from

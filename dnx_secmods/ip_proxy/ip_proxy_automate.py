@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import threading
 
 from dnx_gentools.def_constants import RFC1918
