@@ -33,7 +33,7 @@ Flask.app = app
 application_error_page = 'main/general_error.html'
 
 # a new key is generated on every system start and stored in system config.
-app_config = load_configuration('config')
+app_config = load_configuration('system')
 app.secret_key = app_config['flask->key']
 
 # =========================================

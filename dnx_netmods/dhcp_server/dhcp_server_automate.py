@@ -157,7 +157,7 @@ class Configuration:
 
     # accessing class object via local instance to change overall DHCP server enabled ints tuple
     def _load_interfaces(self):
-        fw_intf = load_configuration('config')['interfaces']['builtins']
+        fw_intf = load_configuration('system')['interfaces']['builtins']
         dhcp_intfs = load_configuration('dhcp_server')['interfaces']
 
         # interface ident eg. eth0

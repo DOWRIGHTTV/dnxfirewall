@@ -17,7 +17,7 @@ from dnx_system.sys_action import system_action
 DISABLED_MANAGEMENT_SERVICES = ['cli']
 
 def load_page(form):
-    dnx_settings = load_configuration('config')
+    dnx_settings = load_configuration('system')
 
     all_services = []
     for service, desc in dnx_settings.get_items('services'):
@@ -55,7 +55,7 @@ def update_page(form):
 
     # start/stop/restart services parsing.
 
-    valid_services = load_configuration('config')['services']
+    valid_services = load_configuration('system')['services']
 
     if ('restart_svc' in form):
         service = form.get('restart_svc')
@@ -115,7 +115,7 @@ def validate_management_access(fields: config) -> Optional[ValidationError]:
 # ==============
 
 def configure_management_access(fields: config):
-    with ConfigurationManager('config') as dnx:
+    with ConfigurationManager('system') as dnx:
         mgmt_settings = dnx.load_configuration()
 
         mgmt_settings[f'mgmt_access->{fields.zone}->{fields.service}'] = fields.action

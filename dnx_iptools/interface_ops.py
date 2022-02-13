@@ -29,7 +29,7 @@ DESCRIPTOR = _s.fileno()
 # NOTE: this may no longer be needed even though it was recently overhauled. the inclusion of the excluded
 # filter in the load_interfaces() function should be able to replace this function. keep for now just in case.
 def get_intf_builtin(zone_name):
-    intf_settings = load_configuration('config')
+    intf_settings = load_configuration('system')
 
     intf_path = f'interfaces->builtins->{zone_name}'
     system_interfaces = {v: k for k, v in if_nameindex()[1:]}
@@ -46,7 +46,7 @@ def load_interfaces(intf_type: INTF = INTF.BUILTINS, *, exclude: list = []) -> L
 
         [(intf_index, zone, ident)]
     '''
-    intf_settings = load_configuration('config')
+    intf_settings = load_configuration('system')
 
     dnx_interfaces = intf_settings.get_items(f'interfaces->{intf_type.name.lower()}')
 
@@ -85,7 +85,7 @@ def set_wan_interface(intf_type: INTF = INTF.DHCP):
     '''
 
     # changing dhcp status of wan interface in config file.
-    with ConfigurationManager('config') as dnx:
+    with ConfigurationManager('system') as dnx:
         interface_settings = dnx.load_configuration()
 
         wan = interface_settings['interfaces']['builtins']['wan']
@@ -129,7 +129,7 @@ def set_wan_interface(intf_type: INTF = INTF.DHCP):
 
 # TODO: fix this later
 def set_wan_mac(action: CFG, mac_address: Optional[str] = None):
-    with ConfigurationManager('config') as dnx:
+    with ConfigurationManager('system') as dnx:
         dnx_settings = dnx.load_configuration()
 
         wan_settings = dnx_settings['interfaces']['builtins']['wan']
@@ -159,7 +159,7 @@ def set_wan_ip(wan_ip_settings: dict):
     4. Move file to /etc/netplan
     '''
 
-    wan_int = load_configuration('config')['interfaces']['builtins']['wan']['ident']
+    wan_int = load_configuration('system')['interfaces']['builtins']['wan']['ident']
 
     # grabbing configured dns servers
     dns_server_settings = load_configuration('dns_server')['resolvers']

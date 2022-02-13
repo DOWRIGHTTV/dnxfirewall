@@ -138,7 +138,7 @@ def validate_reservation(res, /) -> Optional[ValidationError]:
     mac_address(res.mac)
     ip_address(res.ip)
 
-    dhcp_settings = load_configuration('config')
+    dhcp_settings = load_configuration('system')
 
     zone_net = IPv4Network(dhcp_settings[f'interfaces->builtins{res.zone.lower()}->subnet'])
     if (IPv4Address(res.ip) not in zone_net.hosts()):

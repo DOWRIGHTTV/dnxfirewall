@@ -27,7 +27,7 @@ _zone_map = {99: 'any'}
 def load_page(section='MAIN'):
     global _zone_map
 
-    dnx_settings = load_configuration('config')
+    dnx_settings = load_configuration('system')
 
     # building out interface to zone map NOTE: builtins only for now
     for intf_type in ['builtins', 'extended']:
