@@ -9,7 +9,8 @@ from datetime import timedelta
 
 import dnx_routines.configure.web_validate as validate
 
-from dnx_gentools.def_constants import CFG, DATA, FIVE_SEC
+from dnx_gentools.def_constants import FIVE_SEC
+from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import load_configuration, ConfigurationManager
 from dnx_routines.configure.exceptions import ValidationError
 from dnx_routines.database.ddb_connector_sqlite import DBConnector

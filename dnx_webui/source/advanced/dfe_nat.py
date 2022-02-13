@@ -3,8 +3,8 @@
 from typing import Optional
 from subprocess import run
 
-from dnx_gentools.def_constants import INVALID_FORM, DATA
-from dnx_gentools.def_enums import CFG
+from dnx_gentools.def_constants import INVALID_FORM
+from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
 from dnx_routines.configure.web_validate import ValidationError, ip_address, network_port

@@ -8,7 +8,7 @@ import pprint
 from copy import copy
 from collections import namedtuple
 
-from dnx_gentools.def_constants import GEO, DATA
+from dnx_gentools.def_enums import GEO, DATA
 from dnx_iptools.protocol_tools import cidr_to_int, ip_to_int
 
 debug = pprint.PrettyPrinter(indent=4).pprint

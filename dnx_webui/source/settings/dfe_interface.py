@@ -3,7 +3,8 @@
 import dnx_iptools.interface_ops as interface
 import dnx_routines.configure.web_validate as validate
 
-from dnx_gentools.def_constants import CFG, DATA, INTF, INVALID_FORM
+from dnx_gentools.def_constants import INVALID_FORM
+from dnx_gentools.def_enums import CFG, DATA, INTF
 from dnx_gentools.file_operations import load_configuration
 from dnx_routines.configure.exceptions import ValidationError
 from dnx_routines.configure.system_info import Interface

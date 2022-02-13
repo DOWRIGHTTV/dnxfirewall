@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from csv import reader as csv_reader
-from ipaddress import IPv4Address
 from fcntl import ioctl
 from socket import socket, inet_aton, if_nameindex, AF_INET, SOCK_DGRAM
 
-from dnx_gentools.def_constants import HOME_DIR, INTF, CFG, fast_sleep, ONE_SEC
+from dnx_gentools.def_constants import HOME_DIR, fast_sleep, ONE_SEC
 from dnx_gentools.def_typing import *
 from dnx_gentools.file_operations import load_configuration, ConfigurationManager, json_to_yaml
 

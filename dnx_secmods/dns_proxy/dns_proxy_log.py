@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_constants import LOG, DNS_CAT, str_join
+from dnx_gentools.def_constants import str_join
+from dnx_gentools.def_enums import LOG, DNS_CAT
 from dnx_gentools.def_namedtuples import DNS_LOG, INFECTED_LOG
 
 from dnx_iptools.interface_ops import get_arp_table

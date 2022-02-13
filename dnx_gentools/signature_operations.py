@@ -9,7 +9,8 @@ from socket import inet_aton
 from struct import Struct
 from collections import defaultdict
 
-from dnx_gentools.def_constants import HOME_DIR, GEO, REP, DNS_CAT, MSB, LSB, DNS_BIN_OFFSET, RFC1918
+from dnx_gentools.def_constants import HOME_DIR, MSB, LSB, DNS_BIN_OFFSET, RFC1918
+from dnx_gentools.def_enums import GEO, REP, DNS_CAT
 from dnx_gentools.file_operations import load_configuration
 
 __all__ = (

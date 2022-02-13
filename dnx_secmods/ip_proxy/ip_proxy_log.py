@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_constants import LOG, DIR, CONN, str_join
+from dnx_gentools.def_constants import str_join
+from dnx_gentools.def_enums import LOG, DIR, CONN
 from dnx_gentools.def_namedtuples import IPP_LOG, GEO_LOG, INFECTED_LOG
 from dnx_routines.logging.log_client import LogHandler
 

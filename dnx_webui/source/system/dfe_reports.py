@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from dnx_gentools.def_constants import DATA
+from dnx_gentools.def_enums import DATA
 from dnx_gentools.file_operations import load_configuration
 from dnx_routines.configure.system_info import System
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
