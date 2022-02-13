@@ -99,7 +99,7 @@ def parse_query_name(data: Union[bytes, memoryview], offset: int = 0, *,
     label_ct = 0
     query_name = bytearray()
 
-    for _ in RUN_FOREVER():
+    for _ in RUN_FOREVER:
 
         label_len, label_ptr = data[idx], data[idx+1:]
 
@@ -193,7 +193,7 @@ def init_ping(timeout: float = .25) -> Callable:
 
             else:
                 # TODO: this might need a mechanism to break if we don't receive a matching response after X reads.
-                for _ in RUN_FOREVER():
+                for _ in RUN_FOREVER:
                     try:
                         echo_reply, addr = ping_recv(2048)
                     except OSError:

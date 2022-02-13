@@ -78,7 +78,7 @@ class DNSServer(Listener):
     def _request_queue(self) -> None:
         return_ready = REQ_TRACKER.return_ready
 
-        for _ in RUN_FOREVER():
+        for _ in RUN_FOREVER:
 
             # generator that blocks until at least 1 request is in the queue. if multiple requests are present, they
             # will be yielded back until the queue is empty.
@@ -185,7 +185,7 @@ def get_unique_id(request_map: dict, request_info: tuple) -> int:
     with _id_lock:
         # NOTE: maybe tune this number. under high load collisions could occur and other requests must wait for this
         # process to complete since we are now using a queue system for checking decision instead of individual threads.
-        for _ in RUN_FOREVER():
+        for _ in RUN_FOREVER:
 
             dns_id = randint(70, 32000)
             if (dns_id not in request_map):

@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import threading
 
 from copy import copy
 from collections import deque
 from struct import Struct
+from functools import wraps
 
 from dnx_gentools.def_constants import RUN_FOREVER, MSEC, fast_time, fast_sleep, str_join, space_join, comma_join
 from dnx_gentools.def_typing import *
@@ -13,7 +16,7 @@ __all__ = (
     'looper', 'dynamic_looper',
     'Initialize', 'dnx_queue',
     'bytecontainer', 'structure',
-    'classproperty'
+    'config', 'classproperty'
 )
 
 def looper(sleep_len: int, **kwargs):
@@ -42,7 +45,7 @@ def looper(sleep_len: int, **kwargs):
                 # assignments of variables to tighten the loop a bit.
                 args = (*args, *[v for v in kwargs.values()])
 
-                for _ in RUN_FOREVER():
+                for _ in RUN_FOREVER:
                     loop_function(*args)
 
         else:
@@ -50,7 +53,7 @@ def looper(sleep_len: int, **kwargs):
 
                 args = (*args, *[v for v in kwargs.values()])
 
-                for _ in RUN_FOREVER():
+                for _ in RUN_FOREVER:
                     loop_function(*args)
 
                     fast_sleep(sleep_len)
@@ -62,7 +65,7 @@ def dynamic_looper(loop_function: Callable):
     '''loop decorator that will sleep for the returned integer amount. functions returning None will
     not sleep on next iter and returning "break" will cancel the loop.'''
     def wrapper(*args):
-        for _ in RUN_FOREVER():
+        for _ in RUN_FOREVER:
             sleep_amount = loop_function(*args)
             if (sleep_amount == 'break'): break
             elif (not sleep_amount): continue
@@ -76,8 +79,8 @@ class Initialize:
     '''class used to handle system module thread synchronization on process startup. this will ensure all
     threads have completed one loop before returning control to the caller. will block until condition is met.'''
 
-    def __init__(self, Log: LogHandler, name: str):
-        self._Log  = Log
+    def __init__(self, log: LogHandler, name: str):
+        self._log  = log
         self._name = name
 
         self._initial_time = fast_time()
@@ -96,7 +99,7 @@ class Initialize:
         self._thread_count = count
         self._timeout = timeout
 
-        self._Log.notice(f'{self._name} setup waiting for threads: {count}.')
+        self._log.notice(f'{self._name} setup waiting for threads: {count}.')
 
         # blocking until all threads check in by individually calling done method
         while not self._initial_load_complete and not self._timeout_reached:
@@ -105,7 +108,7 @@ class Initialize:
         self.has_ran = True
         self._is_initializing = False
 
-        self._Log.notice(f'{self._name} setup complete.')
+        self._log.notice(f'{self._name} setup complete.')
 
     def done(self) -> None:
         '''inform the handler a thread has been initialized. using default thread name as dict key.'''
@@ -113,7 +116,7 @@ class Initialize:
 
         self._thread_ready.add(threading.get_ident())
 
-        self._Log.debug(f'{self._name} thread checkin.')
+        self._log.debug(f'{self._name} thread checkin.')
 
     def wait_in_line(self, *, wait_for: int) -> None:
         '''blocking call to wait for all lower number threads to complete before checking in and returning.
@@ -147,7 +150,7 @@ class Initialize:
 
         return False
 
-def dnx_queue(Log: LogHandler, name: str = None):
+def dnx_queue(log: LogHandler, name: str = None):
     '''decorator to add custom queue mechanism for any queue handling functions. This is a direct replacement of
     dynamic_looper for queues.
 
@@ -155,8 +158,8 @@ def dnx_queue(Log: LogHandler, name: str = None):
         @dnx_queue(Log, name='Server')
         def some_func(job):
             process(job)
-
     '''
+
     def decorator(func):
 
         queue = deque()
@@ -168,13 +171,11 @@ def dnx_queue(Log: LogHandler, name: str = None):
         job_clear = job_available.clear
         job_set = job_available.set
 
-        # TODO: is this code compatible with class methods? the *args should make this compatible with class
-        #  methods inherently. if that is the case does @classmethod decorator need to be on initial method?
         def wrapper(*args):
-            if (Log):
-                Log.informational(f'{name}/dnx_queue started.')
+            if (log):
+                log.informational(f'{name}/dnx_queue started.')
 
-            for _ in RUN_FOREVER():
+            for _ in RUN_FOREVER:
                 job_wait()
                 # clearing job notification
                 job_clear()
@@ -184,8 +185,8 @@ def dnx_queue(Log: LogHandler, name: str = None):
                     try:
                         func(*args, job)
                     except Exception as E:
-                        if (Log):
-                            Log.warning(f'error while processing a {name}/dnx_queue started job. | {E}')
+                        if (log):
+                            log.warning(f'error while processing a {name}/dnx_queue started job. | {E}')
 
                         fast_sleep(MSEC)
 
@@ -234,7 +235,6 @@ def structure(obj_name: str, fields: Union[List, str]) -> Structure:
     field_names = tuple(field_names)
     field_formats = tuple(field_formats)
 
-    # allo
     format_str = '>' + str_join([field_formats])
     pack_fields = Struct(format_str).pack_into
 
@@ -247,10 +247,6 @@ def structure(obj_name: str, fields: Union[List, str]) -> Structure:
     _bytearray = bytearray
 
     class _Structure(dict):
-
-        '''
-        @var self: TypedDict[str, int]
-        '''
 
         __slots__ = ('buf',)
 
@@ -399,6 +395,20 @@ def bytecontainer(obj_name: str, field_names: Union[List, str]) -> ByteContainer
             return other + ba
 
     return _ByteContainer()
+
+class config(dict):
+
+    def __init__(self, **kwargs: dict[str, Union[str, int, bool]]):
+
+        for k, v in kwargs.items():
+            self[k] = v
+
+    def __getattr__(self, item: str) -> Any:
+        return self[item]
+
+    def __setattr__(self, key: str, value: Union[str, int, bool]):
+        self[key] = value
+
 
 class classproperty:
     '''class used as a decorator to allow class methods to be used as properties.'''

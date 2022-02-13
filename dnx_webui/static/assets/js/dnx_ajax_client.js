@@ -23,26 +23,26 @@ class AjaxClient {
 
             return ajaxResponse.result;
         }
-
-//        return await this.__handleResponse(response);
     }
 
-//    async __handleResponse(response) {
-//        if (response.ok) {
-//            let ajaxResponse = await response.json();
+   handleResponse(response, field) {
+       if (response.error) {
+           let commitError = document.querySelector("#ajax-error-modal");
+           commitError.querySelector("h5").innerText = response.message;
 
+           let errorModal = M.Modal.init(
+               commitError, {
+                   dismissible: false
+               }
+           );
+           errorModal.open();
 
-//            console.log(ajaxResponse)
-//            if (ajaxResponse.success) {
-//                return ajaxResponse.result;
-//            }
+           field.reset()
 
-//            if (this._onErrorCallback) {
-//                this._onErrorCallback(ajaxResponse.error);
-//            }
-
-//            return null;
-//        }
-//    }
+           console.log("[server/response]: ", response);
+       } else {
+           console.log("[server/response]: successful update.");
+       }
+   }
 }
 const ajaxClient = new AjaxClient(location.pathname);

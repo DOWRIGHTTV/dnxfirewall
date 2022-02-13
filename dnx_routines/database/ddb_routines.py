@@ -197,23 +197,20 @@ def top_dashboard(cur, count, *, action):
             f'select domain, category, sum(count) from dnsproxy group by domain order by count desc limit {count}'
         )
 
-    return tuple((x[0], x[1]) for x in cur.fetchall())
+    return [(x[0], x[1]) for x in cur.fetchall()]
 
 @db.register('top_geolocation', routine_type='query')
 def top_geolocation(cur, count, *, action, direction):
     month = ','.join(System.date()[:2])
 
-    # adds additional item to results for 'NONE' which is more common since the geolocation db is not yet complete
-    count += 1
-
+    # table has a separate column for allowed and blocked. this is why we select and sort on the action directly.
     cur.execute(
-        f'select country, {action} from geolocation where month=? and direction=? '
-        f'order by {action} desc limit {count}', (month, direction)
+        f'select country from geolocation where month=? and direction=? and {action} > 0 '
+        f'order by {action} desc limit {count}', (month, direction, action)
     )
 
-    # filtering out entries with no hits in the specified action. if those are returned, they have hits on the
-    # opposite action. currently, filtering out 'NONE' since the geolocation database is not yet complete.
-    return [x[0].replace('_', ' ') for x in cur.fetchall() if x[1] and x[0] != 'NONE']
+    # filtering out entries with no hits in the specified action.
+    return [x.replace('_', ' ') for x in cur.fetchall()]
 
 @db.register('unique_domain_count', routine_type='query')
 # TODO: see if this should use sum() instead of len() on the results

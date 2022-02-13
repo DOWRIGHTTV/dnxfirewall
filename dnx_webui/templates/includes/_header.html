@@ -21,10 +21,13 @@
                                     class="material-icons grey-text accent-2 left">settings</i>
                                 Settings <i class="material-icons right">arrow_drop_down</i></a></li>
 
+                        <li {% if uri_path[0] == 'firewall' %} class='active' {% endif %}>
+                            <a href="firewall"><i class="material-icons red-text lighten-2 left">security</i>Firewall</a></li>
+
                         <li {% if uri_path[0] == 'advanced' %} class='active' {% endif %}>
                             <a href="" class="dropdown-trigger" data-target="advanced-dropdown"><i
                                     class="material-icons red-text lighten-2 left">security</i>
-                                Advanced <i class="material-icons right">arrow_drop_down</i></a></li>
+                                IPS/IDS <i class="material-icons right">arrow_drop_down</i></a></li>
 
                         <li {% if uri_path[0] == 'system' %} class='active' {% endif %}>
                             <a href="" class="dropdown-trigger" data-target="system-dropdown"><i

@@ -1,32 +1,14 @@
 #!/usr/bin/env python3
 
+from typing import Optional
+
+
 class DNXError(Exception):
     '''Base error for all other DNX errors. '''
 
-class IPProtocolError(DNXError):
-    '''Error raised when proxy detected ip protocol (e.g. TCP) that is different
-    that what the specific proxy is looking for. Helps performance by halting further
-    processing of packet as soon as possible. '''
-
-class TCPProtocolError(DNXError):
-    '''Error raised when proxy detected tcp protocol (e.g HTTPS)that is different
-    that what the specific proxy is looking for. Helps performance by halting further
-    processing of packet as soon as possible. '''
-
-class UDPProtocolError(DNXError):
-    '''Error raised when proxy detected tcp protocol (e.g DNS) that is different
-    that what the specific proxy is looking for. Helps performance by halting further
-    processing of packet as soon as possible. '''
-
-class DNSProtocolError(DNXError):
-    '''Error raised when proxy detected DNS protocol, but DNS message type is not type
-    1 which indicates the client is doing an ipv4 query. '''
-
-class DNXProtocolError(DNXError):
-    '''Base error raised when licence/update client.'''
-
-class ChecksumMismatch(DNXProtocolError):
-    '''Error raised when DNX protocol header checksum does not match the calculated checksum.'''
+    @property
+    def message(self) -> Optional[str]:
+        return self.args[0]
 
 class ValidationError(DNXError):
     '''Error raised when front end validations fail to notify the user/front end there

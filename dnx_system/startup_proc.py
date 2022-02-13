@@ -4,10 +4,11 @@ import os
 
 from secrets import token_urlsafe
 
-import dnx_routines.configure.configure as configure
+import dnx_iptools.interface_ops as interface
+
+from dnx_gentools.file_operations import ConfigurationManager
 
 from dnx_routines.logging.log_client import LogHandler as Log
-from dnx_gentools.file_operations import ConfigurationManager
 from dnx_routines.configure.iptables import IPTablesManager as IPTables
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 
@@ -39,7 +40,7 @@ def run():
     # ensuring the default mac address of the wan interface is set. this should only change first time the system
     # initializes setting the mac from None > interface mac. Once the flag has been set, it will no longer change
     # modify default mac value
-    configure.set_default_mac_flag()
+    set_default_mac_flag()
 
     Log.debug('[startup] default mac flag check.')
 
@@ -54,10 +55,22 @@ def reset_flask_key():
     with ConfigurationManager('config') as dnx:
         flask_settings = dnx.load_configuration()
 
-        flask_config = flask_settings['flask']
-        flask_config['key'] = token_urlsafe(32)
+        flask_settings['flask->key'] = token_urlsafe(32)
 
-        dnx.write_configuration(flask_settings)
+        dnx.write_configuration(flask_settings.expanded_user_data)
+
+def set_default_mac_flag():
+    with ConfigurationManager('config') as dnx:
+        dnx_settings = dnx.load_configuration()
+
+        if (not dnx_settings['interfaces->builtins->wan->mac_set']):
+
+            wan_intf = dnx_settings['interfaces->builtins->wan->ident']
+
+            dnx_settings['interfaces->builtins->wan->default_mac'] = interface.get_mac(interface=wan_intf)
+            dnx_settings['interfaces->builtins->wan->mac_set'] = True
+
+        dnx.write_configuration(dnx_settings.expanded_user_data)
 
 # creating all DB tables if not already done
 def create_database_tables():

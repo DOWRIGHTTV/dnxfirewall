@@ -10,10 +10,10 @@ class IP:
         self.Main = Main
         self.conn = Main.conn
 
-        with open(f'{HOME_DIR}/dnx_shell/commands.json', 'r') as commands:
+        with open(f'{HOME_DIR}/dnx_shell/commands.cfg', 'r') as commands:
             valid_commands = json.load(commands)
 
-        with open(f'{HOME_DIR}/dnx_system/data/ip_proxy.json', 'r') as settings:
+        with open(f'{HOME_DIR}/dnx_system/data/ip_proxy.cfg', 'r') as settings:
             setting = json.load(settings)
 
         self.valid = valid_commands['main']['configuration']['ip']
@@ -116,7 +116,7 @@ class IP:
         return True
 
     def ShowStatus(self, arg):
-        with open(f'{HOME_DIR}/dnx_system/data/ip_proxy.json', 'r') as settings:
+        with open(f'{HOME_DIR}/dnx_system/data/ip_proxy.cfg', 'r') as settings:
             setting = json.load(settings)
 
         if (arg == 'lists'):
@@ -153,7 +153,7 @@ class IP:
                 self.conn.send(f'{cat_status}\n'.encode('utf-8'))
 
     def ChangeStatus(self, comm, arg, option):
-        with open(f'{HOME_DIR}/dnx_system/data/ip_proxy.json', 'r') as settings:
+        with open(f'{HOME_DIR}/dnx_system/data/ip_proxy.cfg', 'r') as settings:
             setting = json.load(settings)
 
         if (option == {'tor_entry', 'tor_exit'}):
@@ -174,13 +174,13 @@ class IP:
             self.Standard.SendNotice(f'{arg} {option} already {comm}d.')
         else:
             syntax = self.valid['settings'][arg]['syntax']
-            with open(f'{HOME_DIR}/dnx_system/data/ip_proxy.json', 'w') as settings:
+            with open(f'{HOME_DIR}/dnx_system/data/ip_proxy.cfg', 'w') as settings:
                 json.dump(setting, settings, indent=4)
 
             self.Standard.SendNotice(f'{comm}d {option}. use "show {syntax}" command to check current status.')
 
     def ChangeDirection(self, option, option2):
-        with open(f'{HOME_DIR}/dnx_system/data/ip_proxy.json', 'r') as settings:
+        with open(f'{HOME_DIR}/dnx_system/data/ip_proxy.cfg', 'r') as settings:
             setting = json.load(settings)
         directions = setting['ip_proxy']['directions']
 
@@ -190,7 +190,7 @@ class IP:
         else:
             directions.update({option: option2})
 
-            with open(f'{HOME_DIR}/dnx_system/data/ip_proxy.json', 'w') as settings:
+            with open(f'{HOME_DIR}/dnx_system/data/ip_proxy.cfg', 'w') as settings:
                 json.dump(setting, settings, indent=4)
 
             self.Standard.SendNotice(f'{option} direction set to {option2}. use "show directions" command to check current status.')

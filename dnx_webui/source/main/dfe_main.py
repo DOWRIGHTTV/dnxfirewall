@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-import sys
 import time
 
 from datetime import timedelta
@@ -31,7 +30,8 @@ Flask.app = app
 application_error_page = 'main/general_error.html'
 
 # a new key is generated on every system start and stored in system config.
-app.secret_key = load_configuration('config')['flask'].get('key')
+app_config = load_configuration('config')
+app.secret_key = app_config['flask->key']
 
 # =========================================
 # DNX API - LOGGING / FIREWALL / CONFIG
@@ -70,8 +70,7 @@ import source.settings.dfe_interface as interface_settings
 import source.settings.dfe_logging as logging_settings
 import source.settings.dfe_syslog as syslog_settings
 import source.settings.dfe_categories as category_settings
-import source.advanced.dfe_whitelist as whitelist
-import source.advanced.dfe_blacklist as blacklist
+import source.advanced.dfe_xlist as xlist
 import source.advanced.dfe_firewall as dnx_fwall
 import source.advanced.dfe_nat as dnx_nat
 import source.advanced.dfe_domain as dns_proxy
@@ -223,7 +222,7 @@ def advanced_whitelist(session_data):
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        whitelist, page_settings, 'whitelist_settings', page_name='advanced/whitelist')
+        xlist, page_settings, 'whitelist_settings', page_name='advanced/whitelist')
 
     return page_action
 
@@ -239,29 +238,29 @@ def advanced_blacklist(session_data):
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        blacklist, page_settings, 'blacklist_settings', page_name='advanced/blacklist')
+        xlist, page_settings, 'blacklist_settings', page_name='advanced/blacklist')
 
     return page_action
 
-@app.route('/advanced/firewall', methods=['GET', 'POST'])
+@app.route('/firewall', methods=['GET', 'POST'])
 @user_restrict('admin')
-def advanced_firewall(session_data):
+def firewall(session_data):
     tab = request.args.get('tab', '1')
 
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'firewall': True, 'ajax': True, 'dnx_table': True,  # TODO: dnx_table can probably be removed
+        'tab': tab, 'firewall': True, 'ajax': True,
         'dnx_network_objects': {},
         'dnx_service_objects': {},
         'selected': 'MAIN',
         'sections': ['BEFORE', 'MAIN', 'AFTER'],
-        'uri_path': ['advanced', 'firewall']
+        'uri_path': ['firewall']
     }
 
     page_settings.update(session_data)
 
     page_action = firewall_page_logic(
-        dnx_fwall, page_settings, 'firewall_settings', page_name='advanced/firewall/firewall')
+        dnx_fwall, page_settings, 'firewall_settings', page_name='firewall/firewall')
 
     return page_action
 
@@ -307,6 +306,7 @@ def advanced_domain(session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'ajax': True,
         'tab': tab, 'uri_path': ['advanced', 'domain']
     }
 
@@ -317,7 +317,20 @@ def advanced_domain(session_data):
 
     return page_action
 
-@app.route('/advanced/ip', methods=['GET', 'POST'])
+@app.post('/advanced/domain')
+@user_restrict('admin')
+def advanced_domain_post(session_data):
+
+    json_data = request.get_json(force=True)
+    print(json_data)
+
+    status, err_data = ip_proxy.update_page(json_data)
+
+    print(f'[commit/response] status={status}, err_data={err_data}')
+
+    return ajax_response(status=status, data=err_data)
+
+@app.get('/advanced/ip')
 @user_restrict('admin')
 def advanced_ip(session_data):
     tab = request.args.get('tab', '1')
@@ -332,6 +345,17 @@ def advanced_ip(session_data):
         ip_proxy, page_settings, 'ip_settings', page_name='advanced/ip')
 
     return page_action
+
+@app.post('/advanced/ip/post')
+@user_restrict('admin')
+def advanced_ip_post(session_data):
+
+    json_data = request.get_json(force=True)
+    print(json_data)
+
+    status, err_data = ip_proxy.update_field(json_data)
+
+    print(f'[commit/response] status={status}, err_data={err_data}')
 
 @app.route('/advanced/ips', methods=['GET', 'POST'])
 @user_restrict('admin')
@@ -696,18 +720,20 @@ def update_session_tracker(username, user_role=None, remote_addr=None, *, action
     with ConfigurationManager('session_tracker', file_path='dnx_webui/data') as session_tracker:
         persistent_tracker = session_tracker.load_configuration()
 
+        user_path = f'active_users->{username}'
         if (action is CFG.ADD):
-            persistent_tracker['active_users'][username] = {
-                'role': user_role,
-                'remote_addr': remote_addr,
-                'logged_in': time.time(),  # NOTE: can probably make this human-readable format here.
-                'last_seen': None
-            }
+            persistent_tracker[f'{user_path}->role'] = user_role,
+            persistent_tracker[f'{user_path}->remote_addr'] = remote_addr,
+            persistent_tracker[f'{user_path}->logged_in'] = time.time(),  # NOTE: can probably make this human-readable format here.
+            persistent_tracker[f'{user_path}->last_seen'] = None
 
         elif (action is CFG.DEL):
-            persistent_tracker['active_users'].pop(username, None)
+            try:
+                del persistent_tracker[f'active_users->{username}']
+            except KeyError:
+                pass
 
-        session_tracker.write_configuration(persistent_tracker)
+        session_tracker.write_configuration(persistent_tracker.expanded_user_data)
 
 def ajax_response(*, status, data):
     if (not isinstance(status, bool)):
@@ -751,22 +777,23 @@ def dark_mode():
         with ConfigurationManager('logins', file_path='/dnx_webui/data') as webui:
             webui_settings = webui.load_configuration()
 
-            active_users = webui_settings['users']
+            active_users = webui_settings.get_list('users')
 
             # this check prevents issues with log in/out transitions
             if (user not in active_users):
                 return
 
-            active_users[user]['dark_mode'] = dark_mode
+            webui_settings[f'active_users->{user}->dark_mode'] = dark_mode
 
-            webui.write_configuration(webui_settings)
+            webui.write_configuration(webui_settings.expanded_user_data)
 
     # standard request for page. did NOT submit dark mode fab.
     else:
         webui_settings = load_configuration('logins', filepath='dnx_webui/data')
 
+        # TODO: implement .get for ConfigChain dict
         # this check prevents issues with log in/out transitions
-        user = webui_settings['users'].get(user)
+        user = webui_settings.get(f'users->{user}')
         if (not user):
             return
 

@@ -175,7 +175,7 @@ class Listener:
         recv_buffer = memoryview(recv_buf)
 
         # custom generator
-        for _ in RUN_FOREVER():
+        for _ in RUN_FOREVER:
             l_socks = epoll_poll()
             for fd, _ in l_socks:
 
@@ -409,7 +409,7 @@ class NFQueue:
     def __queue(self):
         set_user_callback(self.__handle_packet)
 
-        for _ in RUN_FOREVER():
+        for _ in RUN_FOREVER:
             nfqueue = NetfilterQueue()
             nfqueue.nf_set(self.__q_num)
 
@@ -761,14 +761,11 @@ class RawResponse:
         except OSError:
             pass
 
-    # TODO: ensure dnx_src_ip is in integer form. consider sending in dst also since it is referenced alot.
-    # TODO: make it so checksum just replaces the index location of the byte array so we dont re assemble the structures
-    #  every time
     def _prepare_packet(self, packet: ProxyPacket, dnx_src_ip: int) -> bytearray:
         # checking if dst port is associated with a nat. if so, will override necessary fields based on protocol
         # and re-assign in the packet object
         # NOTE: can we please optimize this. PLEASE!
-        port_override = self._Module.open_ports[packet.protocol].get(packet.dst_port)
+        port_override = self._open_ports[packet.protocol].get(packet.dst_port)
         if (port_override):
             self._packet_override(packet, dnx_src_ip, port_override)
 

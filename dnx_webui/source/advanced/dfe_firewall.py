@@ -29,19 +29,16 @@ def load_page(section='MAIN'):
 
     dnx_settings = load_configuration('config')
 
-    dnx_intfs = dnx_settings['interfaces']
-    dnx_zones = dnx_settings['zones']
-
     # building out interface to zone map NOTE: builtins only for now
     for intf_type in ['builtins', 'extended']:
-        for intf_name, intf_info in dnx_intfs[intf_type].items():
+        for intf_name, intf_info in dnx_settings.get_items(f'interfaces->{intf_type}'):
             ident = intf_info['ident']
 
             zone_map[intf_type][ident] = intf_name
 
     # building zone list and reference counts NOTE: builtins only for now
     for zone_type in ['builtins', 'user-defined']:
-        for zone_name, (zone_ident, zone_desc) in dnx_zones[zone_type].items():
+        for zone_name, (zone_ident, zone_desc) in dnx_settings.get_items(f'zones->{zone_type}'):
 
             # need to make converting zone ident/int to name easier in format function
             _zone_map[zone_ident] = zone_name
@@ -131,6 +128,5 @@ def commit_rules(json_data):
 
     # temporary for testing
     FirewallManage.push()
-
 
     return True, {'error': False, 'message': None}

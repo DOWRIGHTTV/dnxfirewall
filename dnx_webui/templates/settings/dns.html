@@ -77,9 +77,9 @@
                                 <div class="switch">
                                     <label>
                                         Off
-                                        <input type="checkbox" {% if dns_settings['tls'] %} checked="checked"
-                                            {% endif %} name="dns-protocol-settings" value="dns_over_tls"
-                                            onchange="this.form.submit()">
+                                        {% set val = "0" if dns_settings['tls'] else "1" %}
+                                        <input type="checkbox" name="dns_over_tls" value="{{val}}" onchange="this.form.submit()"
+                                            {% if dns_settings['tls'] %} checked="checked" {% endif %}>
                                         <span class="lever"></span>
                                         On
                                     </label>
@@ -91,11 +91,11 @@
                                     <label>
                                         Off
                                         {% if not dns_settings['tls'] %}
-                                        <input disabled type="checkbox">
+                                        <input disabled type="checkbox" name="udp_fallback" value="0">
                                         {% else %}
-                                        <input type="checkbox" {% if dns_settings['udp_fallback'] %} checked="checked"
-                                            {% endif %} name="dns-protocol-settings" value="udp_fallback"
-                                            onchange="this.form.submit()">
+                                        {% set val = "0" if dns_settings['tls'] else "1" %}
+                                        <input type="checkbox" name="udp_fallback" value="{{val}}" onchange="this.form.submit()"
+                                            {% if dns_settings['udp_fallback'] %} checked="checked" {% endif %}>
                                         {% endif %}
                                         <span class="lever"></span>
                                         On
@@ -103,22 +103,6 @@
                                 </div>
                             </div>
                         </div>
-                        <noscript>
-                            <div class="row">
-                                <div class="input-field col s12 m2 offset-m5 center">
-                                    <a class="waves-effect waves-light btn modal-trigger col s12" href="#dns-modal1">Update</a>
-                                    <div id="dns-modal1" class="modal">
-                                        <div class="modal-content">
-                                            <h5 class="red-text">Are you sure you want to change the DNS protocol?</h5>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button class="btn waves-effect waves-light">Continue</button>
-                                            <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </noscript>
                     </form>
                 </div>
             </div>
@@ -215,9 +199,9 @@
                                 <div class="switch">
                                     <label>
                                         {% if dns_settings['cache']['clear_top_domains'] %}
-                                        <input type="checkbox" checked="checked" name="clear_top_domains">
+                                        <input type="checkbox" checked="checked" name="top_domains" value="0">
                                         {% else %}
-                                        <input type="checkbox" name="clear_top_domains">
+                                        <input type="checkbox" name="top_domains" value="1">
                                         {% endif %}
                                         <span class="lever"></span>
                                         Clear
@@ -229,9 +213,9 @@
                                 <div class="switch">
                                     <label>
                                         {% if dns_settings['cache']['clear_dns_cache'] %}
-                                        <input type="checkbox" checked="checked" name="clear_dns_cache">
+                                        <input type="checkbox" checked="checked" name="dns_cache" value="0">
                                         {% else %}
-                                        <input type="checkbox" name="clear_dns_cache">
+                                        <input type="checkbox" name="dns_cache" value="0">
                                         {% endif %}
                                         <span class="lever"></span>
                                         Clear

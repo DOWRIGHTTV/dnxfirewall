@@ -9,8 +9,8 @@ import argparse
 from sys import argv
 from subprocess import run, DEVNULL, CalledProcessError
 
-from dnx_gentools.def_constants import HOME_DIR, str_join
-from dnx_gentools.file_operations import ConfigurationManager, load_configuration, write_configuration, json_to_yaml
+from dnx_gentools.def_constants import HOME_DIR, hard_out, str_join
+from dnx_gentools.file_operations import ConfigurationManager, load_data, write_configuration, json_to_yaml
 from dnx_routines.configure.iptables import IPTablesManager
 from dnx_routines.logging.log_client import LogHandler as Log
 
@@ -38,7 +38,7 @@ def eprint(string):
             return
 
         elif (answer.lower() in ['n', '']):
-            os._exit(1)
+            hard_out()
 
         else:
             print('!invalid selection.')
@@ -81,6 +81,7 @@ def check_already_ran():
 
         eprint('dnxfirewall auto loader has already been completed. exiting...')
 
+
 # ----------------------------
 # PROGRESS BAR
 # ----------------------------
@@ -109,12 +110,12 @@ def configure_interfaces():
     interfaces_detected = check_system_interfaces()
 
     user_intf_config = collect_interface_associations(interfaces_detected)
-    public_dns_servers = load_configuration('dns_server')['resolvers']
+    public_dns_servers = load_data('dns_server')['resolvers']
 
     set_dnx_interfaces(user_intf_config)
     set_dhcp_interfaces(user_intf_config)
 
-    with open(f'{SYSTEM_DIR}/interfaces/intf_config_template.json', 'r') as intf_configs:
+    with open(f'{SYSTEM_DIR}/interfaces/intf_config_template.cfg', 'r') as intf_configs:
         intf_configs = intf_configs.read()
 
     for intf_name, intf in user_intf_config.items():
@@ -191,24 +192,20 @@ def set_dnx_interfaces(user_intf_config):
     with ConfigurationManager('config') as dnx:
         dnx_settings = dnx.load_configuration()
 
-        interface_settings = dnx_settings['interfaces']['builtins']
+        for zone, intf in user_intf_config.items():
+            dnx_settings[f'interfaces->builtins->{zone.lower()}->ident'] = intf
 
-        for zone, intf  in user_intf_config.items():
-            interface_settings[zone.lower()]['ident'] = intf
-
-        dnx.write_configuration(dnx_settings)
+        dnx.write_configuration(dnx_settings.expanded_user_data)
 
 def set_dhcp_interfaces(user_intf_config):
     with ConfigurationManager('dhcp_server') as dhcp:
         dhcp_settings = dhcp.load_configuration()
 
-        interface_settings = dhcp_settings['interfaces']
-
         for zone in ['LAN', 'DMZ']:
 
-            interface_settings[zone.lower()]['ident'] = user_intf_config[zone]
+            dhcp_settings[f'interfaces->{zone.lower()}->ident'] = user_intf_config[zone]
 
-        dhcp.write_configuration(dhcp_settings)
+        dhcp.write_configuration(dhcp_settings.expanded_user_data)
 
 def confirm_interfaces(interface_config):
     print(' '.join([f'{zone}={intf}' for zone, intf in interface_config.items()]))
@@ -220,10 +217,9 @@ def confirm_interfaces(interface_config):
         else:
             return False
 
-#============================
+# ============================
 # INSTALL PACKAGES
-#============================
-
+# ============================
 def install_packages():
 
     commands = [
@@ -288,9 +284,9 @@ def configure_webui():
 
         dnx_run(command)
 
-#============================
+# ============================
 # PERMISSION CONFIGURATION
-#============================
+# ============================
 
 def set_permissions():
 
@@ -361,13 +357,14 @@ def mark_completion_flag():
 
         dnx_settings['auto_loader'] = True
 
-        dnx.write_configuration(dnx_settings)
+        dnx.write_configuration(dnx_settings.expanded_user_data)
 
 # TODO: add code to pull mac from wan interface and set it in the config file stored in the usr dir.
 def store_default_mac():
     pass
 
-if __name__ == '__main__':
+
+if (__name__ == '__main__'):
     parser = argparse.ArgumentParser(description='automated deployment utility for DNXFIREWALL')
     parser.add_argument('-v', '--verbose', help='prints output to screen', action='store_true')
 
@@ -405,4 +402,4 @@ if __name__ == '__main__':
     sprint('control of the wan interface configuration has been taken by dnxfirewall.')
     sprint('use the webui to configure a static ip or enable ssh access if needed.')
 
-    os._exit(0)
+    hard_out()

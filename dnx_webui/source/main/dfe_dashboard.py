@@ -7,6 +7,33 @@ from dnx_routines.database.ddb_connector_sqlite import DBConnector
 from dnx_routines.logging.log_client import LogHandler as Log
 
 def load_page():
+    domain_counts, request_counts, top_domains, top_countries, inf_hosts = query_database()
+
+    mod_status = {}
+    for svc in ['dns-proxy', 'ip-proxy', 'ips', 'dhcp-server']:
+        status = Services.status(f'dnx-{svc}')
+
+        mod_status[svc.replace('-', '_')] = status
+
+    dashboard = {
+        'domain_counts': domain_counts, 'dc_graph': _calculate_graphic(domain_counts),
+        'request_counts': request_counts, 'rc_graph': _calculate_graphic(request_counts),
+        'top_domains': top_domains, 'top_countries': top_countries,
+        'infected_hosts': inf_hosts,
+
+        'interfaces': Interface.bandwidth(), 'uptime': System.uptime(), 'cpu': System.cpu_usage(),
+        'ram': System.ram_usage(), 'dns_servers': System.dns_status(), 'module_status': mod_status
+    }
+
+    return dashboard
+
+def query_database():
+    domain_counts = (0, 0)
+    request_counts = (0, 0)
+    top_domains = (('blocked', ()), ('allowed', ()))
+    top_countries = {'blocked': [], 'allowed': []}
+    inf_hosts = []
+
     # TODO: implement executemany for back to back calls
     with DBConnector(Log) as firewall_db:
         domain_counts = (
@@ -33,23 +60,7 @@ def load_page():
 
         inf_hosts = firewall_db.execute('last', 5, table='infectedclients', action='all')
 
-    mod_status = {}
-    for svc in ['dns-proxy', 'ip-proxy', 'ips', 'dhcp-server']:
-        status = Services.status(f'dnx-{svc}')
-
-        mod_status[svc.replace('-', '_')] = status
-
-    dashboard = {
-        'domain_counts': domain_counts, 'dc_graph': _calculate_graphic(domain_counts),
-        'request_counts': request_counts, 'rc_graph': _calculate_graphic(request_counts),
-        'top_domains': top_domains, 'top_countries': top_countries,
-        'infected_hosts': inf_hosts,
-
-        'interfaces': Interface.bandwidth(), 'uptime': System.uptime(), 'cpu': System.cpu_usage(),
-        'ram': System.ram_usage(), 'dns_servers': System.dns_status(), 'module_status': mod_status
-    }
-
-    return dashboard
+    return domain_counts, request_counts, top_domains, top_countries, inf_hosts
 
 def _calculate_graphic(counts):
     # bigger, smaller

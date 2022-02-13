@@ -28,17 +28,16 @@ DESCRIPTOR = _s.fileno()
 # NOTE: this may no longer be needed even though it was recently overhauled. the inclusion of the excluded
 # filter in the load_interfaces() function should be able to replace this function. keep for now just in case.
 def get_intf_builtin(zone_name):
-    intf_settings = load_configuration('config')['interfaces']
+    intf_settings = load_configuration('config')
 
-    intf_info = intf_settings['interfaces']['builtins'][zone_name]
+    intf_path = f'interfaces->builtins->{zone_name}'
     system_interfaces = {v: k for k, v in if_nameindex()[1:]}
 
-    ident = intf_info['ident']
-    intf_index = system_interfaces.get(ident, None)
+    intf_index = system_interfaces.get(intf_settings[f'{intf_path}->ident'], None)
     if (not intf_index):
         raise RuntimeError('failed to determine interface from provided builtin zone.')
 
-    return {intf_index: (intf_info['zone'], ident)}
+    return {intf_index: (intf_settings[f'{intf_path}->zone'], intf_settings[f'{intf_path}->ident'])}
 
 def load_interfaces(intf_type: INTF = INTF.BUILTINS, *, exclude: list = []) -> List[Optional[Tuple[int, int, str]]]:
     '''
@@ -46,9 +45,9 @@ def load_interfaces(intf_type: INTF = INTF.BUILTINS, *, exclude: list = []) -> L
 
         [(intf_index, zone, ident)]
     '''
-    intf_settings = load_configuration('config')['interfaces']
+    intf_settings = load_configuration('config')
 
-    dnx_interfaces = intf_settings[intf_type.name.lower()]
+    dnx_interfaces = intf_settings.get_items(f'interfaces->{intf_type.name.lower()}')
 
     # filtering out loopback during dict comprehension
     system_interfaces: dict = {v: k for k, v in if_nameindex()[1:]}
@@ -56,7 +55,7 @@ def load_interfaces(intf_type: INTF = INTF.BUILTINS, *, exclude: list = []) -> L
     collected_intfs: list = []
     if (intf_type is INTF.BUILTINS):
 
-        for intf_name, intf_info in dnx_interfaces.items():
+        for intf_name, intf_info in dnx_interfaces:
 
             ident: str = intf_info['ident']
             zone:  int = intf_info['zone']
@@ -72,6 +71,7 @@ def load_interfaces(intf_type: INTF = INTF.BUILTINS, *, exclude: list = []) -> L
 
     return collected_intfs
 
+# TODO: fix this later
 def set_wan_interface(intf_type: INTF = INTF.DHCP):
     '''
     Change wan interface state between static or dhcp.
@@ -126,6 +126,7 @@ def set_wan_interface(intf_type: INTF = INTF.DHCP):
         system_action(module='webui', command='os.replace', args=cmd_args)
         system_action(module='webui', command='netplan apply', args='')
 
+# TODO: fix this later
 def set_wan_mac(action: CFG, mac_address: Optional[str] = None):
     with ConfigurationManager('config') as dnx:
         dnx_settings = dnx.load_configuration()
@@ -146,6 +147,7 @@ def set_wan_mac(action: CFG, mac_address: Optional[str] = None):
 
         dnx.write_configuration(dnx_settings)
 
+# TODO: fix this later
 def set_wan_ip(wan_ip_settings: dict):
     '''
     Modify configured WAN interface IP address.
@@ -253,15 +255,15 @@ def get_netmask(*, interface: str) -> Optional[IPv4Address]:
     except OSError:
         return None
 
-def get_arp_table(*, modify: bool = False, host: Optional[str] = None, open=open) -> Union[dict, str]:
+def get_arp_table(*, modify: bool = False, host: Optional[str] = None) -> Union[dict, str]:
     '''
     return arp table as dictionary
 
-        {IPv4Address(ip): mac} = get_arp_table(modify=True)
+        {ip_addr: mac} = get_arp_table(modify=True)
 
     if modify is set to True, the ":" will be removed from the mac addresses.
 
-    if host is specified, return just the mac address of the host sent in, returning None if host is not present.
+    if host is specified, return just the mac address of the host passed in, returning "unknown" if host is not present.
     '''
 
     with open('/proc/net/arp') as arp_table:
@@ -271,13 +273,13 @@ def get_arp_table(*, modify: bool = False, host: Optional[str] = None, open=open
         ][1:]
 
     if (modify):
-        arp_table = {IPv4Address(a[0]): a[3].replace(':', '') for a in arp_table}
+        arp_table = {a[0]: a[3].replace(':', '') for a in arp_table}
 
     else:
-        arp_table = {IPv4Address(a[0]): a[3] for a in arp_table}
+        arp_table = {a[0]: a[3] for a in arp_table}
 
     if (host):
-        return arp_table.get(host, None)
+        return arp_table.get(host, 'unknown')
 
     else:
         return arp_table

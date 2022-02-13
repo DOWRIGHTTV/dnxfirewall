@@ -10,10 +10,10 @@ class DNS:
         self.Main = Main
         self.conn = Main.conn
 
-        with open(f'{HOME_DIR}/dnx_shell/commands.json', 'r') as commands:
+        with open(f'{HOME_DIR}/dnx_shell/commands.cfg', 'r') as commands:
             valid_commands = json.load(commands)
 
-        with open(f'{HOME_DIR}/dnx_system/data/dns_server.json', 'r') as categories:
+        with open(f'{HOME_DIR}/dnx_system/data/dns_server.cfg', 'r') as categories:
             category = json.load(categories)
 
         self.valid = valid_commands['main']['configuration']['dns']
@@ -128,10 +128,10 @@ class DNS:
                         self.ConfigureServer(arg, option, option2)
 
     def ShowStatus(self, arg):
-        with open(f'{HOME_DIR}/dnx_system/data/dns_server.json', 'r') as settings:
+        with open(f'{HOME_DIR}/dnx_system/data/dns_server.cfg', 'r') as settings:
             setting = json.load(settings)
 
-        with open(f'{HOME_DIR}/dnx_system/data/dns_cache.json', 'r') as dns_cache:
+        with open(f'{HOME_DIR}/dnx_system/data/dns_cache.cfg', 'r') as dns_cache:
             cache = json.load(dns_cache)
 
         if (arg == 'servers'):
@@ -175,7 +175,7 @@ class DNS:
             self.Standard.ShowSend(arg, retry_time)
 
     def ChangeStatus(self, comm, arg, option):
-        with open(f'{HOME_DIR}/dnx_system/data/dns_server.json', 'r') as settings:
+        with open(f'{HOME_DIR}/dnx_system/data/dns_server.cfg', 'r') as settings:
             setting = json.load(settings)
 
         if (comm == 'set' and arg == 'tls-retry'):
@@ -187,7 +187,7 @@ class DNS:
             else:
                 tls.update({'retry': retry_amount})
 
-                with open(f'{HOME_DIR}/dnx_system/data/dns_server.json', 'w') as settings:
+                with open(f'{HOME_DIR}/dnx_system/data/dns_server.cfg', 'w') as settings:
                     json.dump(setting, settings, indent=4)
 
                 self.Standard.SendNotice(f'set {arg} to {option} minutes. use "show tls-retry" command to check current status.')
@@ -210,13 +210,13 @@ class DNS:
         if (old_status == new_status):
             self.Standard.SendNotice(f'{arg} already {comm}d.')
         else:
-            with open(f'{HOME_DIR}/dnx_system/data/dns_server.json', 'w') as settings:
+            with open(f'{HOME_DIR}/dnx_system/data/dns_server.cfg', 'w') as settings:
                 json.dump(setting, settings, indent=4)
 
             self.Standard.SendNotice(f'{comm}d {arg}. use "show {arg2}" command to check current status.')
 
     def ConfigureServer(self, arg, option, option2):
-        with open(f'{HOME_DIR}/dnx_system/data/dns_server.json', 'r') as settings:
+        with open(f'{HOME_DIR}/dnx_system/data/dns_server.cfg', 'r') as settings:
             setting = json.load(settings)
 
         dns_server = setting['dns_server']['resolvers'][arg]
@@ -225,7 +225,7 @@ class DNS:
         else:
             dns_server.update({'name': option2, 'ip_address': option})
 
-            with open(f'{HOME_DIR}/dnx_system/data/dns_server.json', 'w') as settings:
+            with open(f'{HOME_DIR}/dnx_system/data/dns_server.cfg', 'w') as settings:
                 json.dump(setting, settings, indent=4)
 
             self.Standard.SendNotice(f'set {arg} to {option}. use "show servers" command to check current status.')

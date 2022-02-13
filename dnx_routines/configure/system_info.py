@@ -68,19 +68,13 @@ class Interface:
     @staticmethod
     def bandwidth():
         intstat = {}
-        interface_bandwidth = load_configuration('interface_speed.json')
+        interface_bandwidth = load_configuration('interface.stat')
         for interface, value in interface_bandwidth.items():
             rx = str(round(int(value[0])/1024, 2)) + ' MB/s'
             tx = str(round(int(value[1])/1024, 2)) + ' MB/s'
             intstat[interface] = [rx, tx]
 #        print(intstat)
         return intstat
-
-    @staticmethod
-    def mac_address(interface):
-        '''returns string form mac address for sent in interface.'''
-
-        return util_shell(f'ifconfig {interface}').stdout.splitlines()[3].split()[1]
 
     @staticmethod
     def default_gateway(interface):
@@ -112,7 +106,7 @@ class System:
     @staticmethod
     # ^ same for restart
     # TODO: check if the delay is still needed. it should be done via a delay on the caller side now.
-    # TODO: implement disk sync syscall to ensure all data is written to disk prior to shudown
+    # TODO: implement disk sync syscall to ensure all data is written to disk prior to shutdown
     def shutdown():
         sleep(FIVE_SEC)
         run('sudo shutdown', shell=True)
@@ -182,9 +176,8 @@ class System:
         '''returns modified time based on current time offset settings.'''
         logging = load_configuration('logging_client')
 
-        offset = logging['time_offset']
-        os_direction = offset['direction']
-        os_amount    = offset['amount']
+        os_direction = logging['time_offset->direction']
+        os_amount    = logging['time_offset->amount']
         offset       = int(f'{os_direction}{os_amount}') * ONE_HOUR
 
         return logged_time + offset
@@ -398,20 +391,22 @@ _svc_shell = partial(run, shell=True, stdout=DEVNULL)
 class Services:
 
     @staticmethod
-    def status(service):
+    def status(service: str) -> bool:
         try:
-            return _svc_shell(f'sudo systemctl status {service}', check=True)
+            _svc_shell(f'sudo systemctl status {service}', check=True)
         except CalledProcessError:
             return False
+        else:
+            return True
 
     @staticmethod
-    def start(service):
+    def start(service: str):
         _svc_shell(f'sudo systemctl start {service}')
 
     @staticmethod
-    def restart(service):
+    def restart(service: str):
         _svc_shell(f'sudo systemctl restart {service}')
 
     @staticmethod
-    def stop(service):
+    def stop(service: str):
         _svc_shell(f'sudo systemctl stop {service}')

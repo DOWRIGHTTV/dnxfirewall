@@ -12,7 +12,7 @@ class Services:
         self.Main = Main
         self.conn = Main.conn
 
-        with open(f'{HOME_DIR}/dnx_shell/commands.json', 'r') as commands:
+        with open(f'{HOME_DIR}/dnx_shell/commands.cfg', 'r') as commands:
             valid_commands = json.load(commands)
 
         self.valid = valid_commands['main']['configuration']['services']

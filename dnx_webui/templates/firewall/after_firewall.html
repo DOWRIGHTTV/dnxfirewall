@@ -5,7 +5,7 @@
 function selectedRules() {
     let selected_rules = [];
 
-    let fw_rules = document.querySelectorAll('.rule-select');
+    let fw_rules = document.querySelectorAll(".rule-select");
     for (let rule of fw_rules) {
 
         if (rule.checked) {
@@ -22,9 +22,9 @@ function uncheckRules(rules) {
 function enableRules() {
     let checkedRules = selectedRules();
 
-    console.log('enabling > ', checkedRules);
+    console.log("enabling > ", checkedRules);
     for (let rule of checkedRules) {
-        setAttributes(rule.closest('tr'), {"data-enabled": "1", "style": "opacity: 1"})
+        setAttributes(rule.closest("tr"), {"data-enabled": "1", "style": "opacity: 1"})
     }
 
     uncheckRules(checkedRules);
@@ -32,9 +32,9 @@ function enableRules() {
 function disableRules() {
     let checkedRules = selectedRules();
 
-    console.log('disabling > ', checkedRules);
+    console.log("disabling > ", checkedRules);
     for (let rule of checkedRules) {
-        setAttributes(rule.closest('tr'), {"data-enabled": "0", "style": "opacity: .4"})
+        setAttributes(rule.closest("tr"), {"data-enabled": "0", "style": "opacity: .4"})
     }
 
     uncheckRules(checkedRules);
@@ -42,9 +42,9 @@ function disableRules() {
 function removeRules() {
     let checkedRules = selectedRules();
 
-    console.log('removing > ', checkedRules);
+    console.log("removing > ", checkedRules);
     for (let rule of checkedRules) {
-        rule.closest('tr').remove()
+        rule.closest("tr").remove()
     }
 
     uncheckRules(checkedRules);
@@ -71,12 +71,12 @@ function MoveDown(id) {
 }
 function updateRule() {
 
-    const ruleEditor = document.querySelector('#FWrule-editor');
+    const ruleEditor = document.querySelector("#FWrule-editor");
     const rid = ruleEditor.children[0].id.substring(1);
 
     let row = document.createElement("tr")
 
-    if (ruleEditor.querySelector('.eenabled').checked) {
+    if (ruleEditor.querySelector(".eenabled").checked) {
         setAttributes(row, {"data-enabled": "1", "id": rid})
     } else {
         row.style.opacity = ".4"
@@ -84,10 +84,10 @@ function updateRule() {
     }
 
     const fields = [
-        'rselect', 'rmove', 'rname',
-        'rsrc_zone', 'rsrc_network', 'rsrc_service',
-        'rdst_zone', 'rdst_network', 'rdst_service',
-        'raction', 'rlog', 'rsec1_prof', 'rsec2_prof'
+        "rselect", "rmove", "rname",
+        "rsrc_zone", "rsrc_network", "rsrc_service",
+        "rdst_zone", "rdst_network", "rdst_service",
+        "raction", "rlog", "rsec1_prof", "rsec2_prof"
     ]
 
     let i, field;
@@ -109,8 +109,8 @@ function updateRule() {
                     '<i class="material-icons red darken-2">arrow_downward</i></a></div>'
 
     col[2].innerHTML = ruleEditor.querySelector(".ename").value;
-    col[3].innerHTML = ruleEditor.querySelector(".esrc_zone").querySelector('input').value.toLowerCase();
-    col[6].innerHTML = ruleEditor.querySelector(".edst_zone").querySelector('input').value.toLowerCase();
+    col[3].innerHTML = ruleEditor.querySelector(".esrc_zone").querySelector("input").value.toLowerCase();
+    col[6].innerHTML = ruleEditor.querySelector(".edst_zone").querySelector("input").value.toLowerCase();
     col[9].innerHTML = ruleEditor.querySelector(".eaction") === "1" ? "ACCEPT" : "DROP";
     col[10].innerHTML = ruleEditor.querySelector(".elog").value;
     col[11].innerHTML = ruleEditor.querySelector(".esec1_prof").value;
@@ -121,7 +121,7 @@ function updateRule() {
         field = row.querySelector(`.r${fStr}`);
         console.log("field", field)
 
-        rData = ruleEditor.querySelector(`.e${fStr}`).parentNode.querySelectorAll('.chip');
+        rData = ruleEditor.querySelector(`.e${fStr}`).parentNode.querySelectorAll(".chip");
         console.log("rData", rData)
         rData.forEach((x) => {field.insertAdjacentHTML("beforeend", x.outerHTML)});
     }
@@ -135,7 +135,7 @@ function updateRule() {
     M.Modal.getInstance(ruleEditor).close();
 }
 function newRule() {
-    let FWrules = document.getElementById('filter-table-body')
+    let FWrules = document.getElementById("filter-table-body")
     let ruleCount = FWrules.children.length+1
 
     let defaultChip = '<div class="chip">none</div>'
@@ -167,18 +167,18 @@ function newRule() {
         '<td class="rsec2_prof">0</td>' +
     '</tr>'
 
-    FWrules.insertAdjacentHTML('beforeend', rule_template)
+    FWrules.insertAdjacentHTML("beforeend", rule_template)
 }
 </script>
 <script>
 {# watching for firewall rule to be clicked for editing, populates the form, then shows the modal. #}
-let ruleEditor = document.querySelector('.rule-editor');
-ruleEditor.addEventListener('click', function(click) {
+let ruleEditor = document.querySelector(".rule-editor");
+ruleEditor.addEventListener("click", function(click) {
 
     if (click.target.cellIndex == null || click.target.cellIndex < 2) return;
 
     let ruleRow = click.target.parentNode;
-    let ruleEditor = document.querySelector('#FWrule-editor');
+    let ruleEditor = document.querySelector("#FWrule-editor");
     let editRule = M.Modal.init(ruleEditor, {});
 
     fillEditor(ruleEditor, ruleRow);
@@ -188,8 +188,8 @@ ruleEditor.addEventListener('click', function(click) {
 
 function fillEditor(ruleEditor, ruleRow) {
 
-    const fields = ['name', 'log', 'enabled', 'src_zone', 'src_network',
-            'src_service', 'dst_zone', 'dst_network', 'dst_service', 'action', 'sec1_prof', 'sec2_prof']
+    const fields = ["name", "log", "enabled", "src_zone", "src_network",
+            "src_service", "dst_zone", "dst_network", "dst_service", "action", "sec1_prof", "sec2_prof"]
 
     for (let x in fields) {
         let i = parseInt(x)
@@ -200,25 +200,25 @@ function fillEditor(ruleEditor, ruleRow) {
 
         try {
             if ([0,1,9,10,11].includes(i)) {
-                editor_field.setAttribute('value', rule_field.innerText)
-                editor_field.parentNode.querySelector('label').setAttribute('class', 'active')
+                editor_field.setAttribute("value", rule_field.innerText)
+                editor_field.parentNode.querySelector("label").setAttribute("class", "active")
             }
             else if (i === 2) {
-                const enabled = parseInt(ruleRow.getAttribute('data-enabled'));
+                const enabled = parseInt(ruleRow.getAttribute("data-enabled"));
                 console.log(enabled)
                 editor_field.checked = !!enabled;
             }
             else if ([3,6].includes(i)) {
-                editor_field.querySelector('input').value = rule_field.innerHTML.toUpperCase();
+                editor_field.querySelector("input").value = rule_field.innerHTML.toUpperCase();
             } else {
                 let dnxChips = editor_field.parentNode;
-                let chipArray = dnxChips.querySelectorAll('.chip');
+                let chipArray = dnxChips.querySelectorAll(".chip");
 
                 chipArray.forEach((x) => {x.remove()});
-                dnxChips.insertAdjacentHTML('afterbegin', rule_field.innerHTML);
+                dnxChips.insertAdjacentHTML("afterbegin", rule_field.innerHTML);
                 
-                chipArray = dnxChips.querySelectorAll('.chip');
-                chipArray.forEach((x) => {x.insertAdjacentHTML('beforeend', '<i class="material-icons close" onclick="cRemove(this)">close</i>')});
+                chipArray = dnxChips.querySelectorAll(".chip");
+                chipArray.forEach((x) => {x.insertAdjacentHTML("beforeend", '<i class="material-icons close" onclick="cRemove(this)">close</i>')});
             }
         }
         catch (e) {
@@ -232,7 +232,7 @@ function fillEditor(ruleEditor, ruleRow) {
 </script>
 <script>
 const fwObjectMap = {{firewall_settings.fw_object_map|tojson}}
-const objFormatMap =  {country: ['red', 'language'], address: ['blue lighten-2', 'tv'], service: ['orange lighten-2', 'track_changes']}
+const objFormatMap =  {country: ["red", "language"], address: ["blue lighten-2", "tv"], service: ["orange lighten-2", "track_changes"]}
 const network_autofill = {{firewall_settings.network_autofill|tojson}}
 const service_autofill = {{firewall_settings.service_autofill|tojson}}
 
@@ -240,15 +240,15 @@ function initDNXChips(field_type) {
     let elem = document.querySelectorAll(`.${field_type}-chips`);
     let set;
 
-    if (field_type === 'service') {
+    if (field_type === "service") {
         set = service_autofill;
     } else {
         set = network_autofill;
     }
 
-    let instance = M.Chips.init(elem, {
+    return M.Chips.init(elem, {
         onChipAdd: cAddCallback,
-        onChipSelect: () => console.log('selected'),
+        onChipSelect: () => console.log("selected"),
 //        onChipDelete: cRemoveCallback,
         limit: 4,
         autocompleteOnly: true,
@@ -256,8 +256,6 @@ function initDNXChips(field_type) {
             data: set
         }
     })
-    {#console.log('returning', instance)#}
-    return instance
 }
 
 var networkChips = initDNXChips("network")
@@ -266,20 +264,20 @@ var serviceChips = initDNXChips("service")
 function cAddCallback(e, chip) {
 
     // setting up remove function
-    chip.children[0].setAttribute('onclick', 'cRemove(this)'); // [0] icon, [1] close
+    chip.children[0].setAttribute("onclick", "cRemove(this)"); // [0] icon, [1] close
     console.log(chip.children[0])
 
     //adding icon and color to object
-    let chipDef = fwObjectMap[chip.innerText.split('\n')[0]]
+    let chipDef = fwObjectMap[chip.innerText.split("\n")[0]]
     let chipFormat = objFormatMap[chipDef.type]
 
     chip.className += ` ${chipFormat[0]}`
-    chip.innerHTML = `<i class="material-icons tiny">${chipFormat[1]}</i>` + '  ' + chip.innerHTML
+    chip.innerHTML = `<i class="material-icons tiny">${chipFormat[1]}</i>` + "  " + chip.innerHTML
     chip.innerHTML += `<input type="hidden" name="${e[0].id}" value="${chipDef.id},${chipDef.type}">`;
 }
 function cSelectCallback(e, chip) {
 
-    console.log('SELECTED BITCH')
+    console.log("SELECTED BITCH")
 }
 function cRemove(btn) {
     // using as function to allow for hooks or other functionality to be added if needed.

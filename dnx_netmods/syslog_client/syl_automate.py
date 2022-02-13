@@ -57,7 +57,7 @@ class Configuration:
                 })
 
     def get_interface_settings(self):
-        interface_settings = load_configuration('config.json')
+        interface_settings = load_configuration('system.cfg')
         self.lan_int = interface_settings['settings']['interface']['inside']
 
 class Reachability:
@@ -84,6 +84,6 @@ class Reachability:
     #                 message = (f'Syslog Server {server_ip} reachability status changed to {current_status}.')
     #                 self.SyslogService.Log.add_to_queue(message)
 
-    #         write_configuration(self.SyslogService.syslog_servers, 'syslog_server_status.json')
+    #         write_configuration(self.SyslogService.syslog_servers, 'syslog_server.stat')
 
     #         time.sleep(TEN_SEC)

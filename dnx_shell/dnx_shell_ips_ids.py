@@ -10,7 +10,7 @@ class IPS:
         self.Main = Main
         self.conn = Main.conn
 
-        with open(f'{HOME_DIR}/dnx_shell/commands.json', 'r') as commands:
+        with open(f'{HOME_DIR}/dnx_shell/commands.cfg', 'r') as commands:
             valid_commands = json.load(commands)
 
         self.valid = valid_commands['main']['configuration']['ips']
@@ -129,7 +129,7 @@ class IPS:
                 self.ConfigureOption(arg, option, option2)
 
     def ShowStatus(self, arg):
-        with open(f'{HOME_DIR}/dnx_system/data/ips.json', 'r') as settings:
+        with open(f'{HOME_DIR}/dnx_system/data/ips.cfg', 'r') as settings:
             setting = json.load(settings)
 
         if (arg == 'whitelist'):
@@ -184,7 +184,7 @@ class IPS:
                     self.conn.send(f'{protocol_pps}\n'.encode('utf-8'))
 
     def ChangeStatus(self, comm, arg, option):
-        with open(f'{HOME_DIR}/dnx_system/data/ips.json', 'r') as settings:
+        with open(f'{HOME_DIR}/dnx_system/data/ips.cfg', 'r') as settings:
             setting = json.load(settings)
 
         if (arg == 'portscan'):
@@ -208,13 +208,13 @@ class IPS:
         if (old_status == new_status):
             self.Standard.SendNotice(f'{arg} {option} already {comm}d.')
         else:
-            with open(f'{HOME_DIR}/dnx_system/data/ips.json', 'w') as settings:
+            with open(f'{HOME_DIR}/dnx_system/data/ips.cfg', 'w') as settings:
                 json.dump(setting, settings, indent=4)
 
             self.Standard.SendNotice(f'{comm}d {arg} {option}. use "show {arg}" command to check current status.')
 
     def ConfigureOption(self, arg, option, option2):
-        with open(f'{HOME_DIR}/dnx_system/data/ips.json', 'r') as settings:
+        with open(f'{HOME_DIR}/dnx_system/data/ips.cfg', 'r') as settings:
             setting = json.load(settings)
 
         option_setting = setting[arg]
@@ -229,7 +229,7 @@ class IPS:
             if (old_status == new_status):
                 self.Standard.SendNotice(f'{arg} {option} already set to {option2}.')
             else:
-                with open(f'{HOME_DIR}/dnx_system/data/ips.json', 'w') as settings:
+                with open(f'{HOME_DIR}/dnx_system/data/ips.cfg', 'w') as settings:
                     json.dump(setting, settings, indent=4)
 
                 self.Standard.SendNotice(f'{arg} {option} set to {option2}. use "show {arg}" command to check current status.')

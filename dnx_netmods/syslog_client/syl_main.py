@@ -123,7 +123,7 @@ class SyslogHandler:
         self._create_socket()
 
     def start(self):
-        threading.Thread(target=self._get_settings, args=('syslog_client.json',)).start()
+        threading.Thread(target=self._get_settings, args=('syslog_client.cfg',)).start()
 
     def add_to_queue(self, msg_type, msg_level, message):
         message = self.Format.message(self.process.lan_ip, self.module, msg_type, msg_level, message)

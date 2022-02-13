@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import os
 import json
 import time
@@ -7,70 +9,84 @@ import shutil
 import hashlib
 import subprocess
 
+from copy import copy
 from fcntl import flock, LOCK_EX, LOCK_UN
 from secrets import token_urlsafe
-from collections import defaultdict
+from collections import namedtuple
 
-from dnx_gentools.def_constants import HOME_DIR, USER, GROUP, str_join
-from dnx_gentools.def_constants import DNS_BIN_OFFSET, DNS_CAT
+from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER
+from dnx_gentools.def_typing import *
+from dnx_gentools.def_enums import DNS_CAT
 from dnx_routines.configure.exceptions import ValidationError
 
 FILE_POLL_TIMER = 10
 
-# will load json data from file, convert it to a python dict, then return as object
-# TODO: add usr config support, which will merge will loaded system defaults.
-#  !! currently supported, but in the case of nested dicts the user config overrides
-#  system settings, specifically if new keys were added which cause modules to break.
-def load_configuration(filename, *, filepath='dnx_system/data'):
+file_exists = os.path.exists
+
+def load_configuration(filename: str, *, filepath: str = 'dnx_system/data') -> ConfigChain:
     '''load json data from file, convert it to a python dict, then return as object.'''
-    if (not filename.endswith('.json')):
-        filename += '.json'
+    if (not filename.endswith('.cfg')):
+        filename += '.cfg'
 
     # loading system default configs
-    with open(f'{HOME_DIR}/{filepath}/{filename}', 'r') as system_settings:
-        system_settings = json.load(system_settings)
+    with open(f'{HOME_DIR}/{filepath}/{filename}', 'r') as system_settings_io:
+        system_settings: dict = json.load(system_settings_io)
 
-    if os.path.exists(f'{HOME_DIR}/{filepath}/usr/{filename}'):
+    # i like the path check more than try/except block
+    if not os.path.exists(f'{HOME_DIR}/{filepath}/usr/{filename}'):
+        user_settings = {}
 
-        # loading user configurations (if exists)
-        with open(f'{HOME_DIR}/{filepath}/usr/{filename}', 'r') as usr_settings:
-            usr_settings = json.load(usr_settings)
+    else:
+        # loading user configurations
+        with open(f'{HOME_DIR}/{filepath}/usr/{filename}', 'r') as user_settings_io:
+            user_settings: dict = json.load(user_settings_io)
 
-        # updating system settings dict with user settings to be used in memory/ by modules only.
-        system_settings.update(usr_settings)
+    return ConfigChain(system_settings, user_settings)
 
-    return system_settings
-
-def write_configuration(data, filename, *, filepath='dnx_system/data/usr'):
+def write_configuration(data: dict, filename: str, *, filepath: str = 'dnx_system/data/usr') -> None:
     '''write json data object to file.'''
 
-    if (not filename.endswith('.json')):
-        filename += '.json'
+    if (not filename.endswith('.cfg')):
+        filename += '.cfg'
 
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
         json.dump(data, settings, indent=4)
 
-def append_to_file(data, filename, *, filepath='dnx_system/data/usr'):
+# will load json data from file, convert it to a python dict, then return as object
+def load_data(filename: str, *, filepath: str = 'dnx_system/data') -> dict:
+
+    with open(f'{HOME_DIR}/{filepath}/{filename}', 'r') as system_settings_io:
+        system_settings: dict = json.load(system_settings_io)
+
+    return system_settings
+
+# will load json data from file, convert it to a python dict, then return as object
+def write_data(data: dict, filename: str, *, filepath: str = 'dnx_system/data') -> None:
+
+    with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
+        json.dump(data, settings, indent=4)
+
+def append_to_file(data: str, filename: str, *, filepath: str = 'dnx_system/data/usr') -> None:
     '''append data to filepath..'''
 
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'a') as settings:
         settings.write(data)
 
-def tail_file(file, *, line_count):
-    f = subprocess.run(['tail', '-n', f'{line_count}', file], capture_output=True)
+def tail_file(file: str, *, line_count: int) -> list:
+    f = subprocess.run(['tail', '-n', f'{line_count}', file], capture_output=True, text=True)
 
-    return list(reversed(f.stdout.decode().splitlines()))
+    return list(reversed(f.stdout.splitlines()))
 
-def change_file_owner(file_path):
-    if (os.getuid()):
+def change_file_owner(file_path: str) -> None:
+    if (not ROOT):
         raise RuntimeError('process must be ran as root user to change file owner.')
 
     shutil.chown(file_path, user=USER, group=GROUP)
     os.chmod(file_path, 0o660)
 
-def json_to_yaml(data, *, is_string=False):
+def json_to_yaml(data: Union[str, dict], *, is_string: bool = False) -> str:
     '''
-    converts a string in json format or a dictionary into yaml syntax then returns as string. set "is_string" to True
+    converts a json string or dictionary into yaml syntax and returns as string. set "is_string" to True
     to skip over object serialization.
     '''
 
@@ -84,7 +100,7 @@ def json_to_yaml(data, *, is_string=False):
     # removing empty lines and sliding indent back by 4 spaces
     return '\n'.join([y[4:] for y in data.splitlines() if y.strip()])
 
-def load_tlds():
+def load_tlds() -> Generator[Tuple[str, int]]:
     dns_proxy = load_configuration('dns_proxy')
 
     for tld, setting in dns_proxy['tlds'].items():
@@ -93,7 +109,7 @@ def load_tlds():
 # function to load in all keywords corresponding to enabled domain categories. the try/except
 # is used to ensure bad keywords do not prevent the proxy from starting, though the bad keyword
 # will be omitted from the proxy.
-def load_keywords(Log):
+def load_keywords(log: LogHandler) -> tuple:
     '''returns keyword set for enabled domain categories'''
 
     keywords = []
@@ -103,7 +119,7 @@ def load_keywords(Log):
                 x.strip() for x in blocked_keywords.readlines() if x.strip() and '#' not in x
             ]
     except FileNotFoundError:
-        Log.critical('domain keywords file not found. contact support immediately.')
+        log.critical('domain keywords file not found.')
 
     else:
         for keyword_info in all_keywords:
@@ -117,23 +133,23 @@ def load_keywords(Log):
 
     return tuple(keywords)
 
-def load_top_domains_filter():
+def load_top_domains_filter() -> list:
     with open(f'{HOME_DIR}/dnx_system/signatures/domain_lists/valid_top.domains', 'r') as tdf:
         return [s.strip() for s in tdf.readlines() if s.strip() and '#' not in s]
 
-def calculate_file_hash(file_to_hash, *, path='dnx_system', folder='data'):
-    '''returns the sha256 secure hash of the file sent in'''
+def calculate_file_hash(file_to_hash: str, *, path: str = 'dnx_system', folder: str = 'data') -> Optional[str]:
+    '''returns the sha256 secure hash of passed in file.'''
 
-    try:
-        with open(f'{HOME_DIR}/{path}/{folder}/{file_to_hash}', 'rb') as f2h:
-            file_hash = hashlib.sha256(f2h.read()).digest()
-
-    except FileNotFoundError:
+    filepath = f'{HOME_DIR}/{path}/{folder}/{file_to_hash}'
+    if not os.path.exists(filepath):
         return None
+
+    with open(filepath, 'rb') as f2h:
+        file_hash = hashlib.sha256(f2h.read()).hexdigest()
 
     return file_hash
 
-def cfg_read_poller(watch_file, folder='data', class_method=False):
+def cfg_read_poller(watch_file: str, folder: str = 'data', class_method: bool = False):
     '''Automate Class configuration file poll decorator. apply this decorator to all functions
     that will update configurations loaded in memory from json files. config file must be sent
     in via decorator argument. set class_method argument to true if being used with a class method.'''
@@ -141,8 +157,8 @@ def cfg_read_poller(watch_file, folder='data', class_method=False):
     if not isinstance(watch_file, str):
         raise TypeError('watch file must be a string.')
 
-    if (not watch_file.endswith('.json')):
-        watch_file += '.json'
+    if (not watch_file.endswith('.cfg')):
+        watch_file += '.cfg'
 
     def decorator(function_to_wrap):
         if (not class_method):
@@ -159,20 +175,155 @@ def cfg_read_poller(watch_file, folder='data', class_method=False):
         return wrapper
     return decorator
 
-def cfg_write_poller(list_function):
+def cfg_write_poller(list_function: DNSListHandler) -> Wrapper:
     '''Automate class configuration file poll decorator. this decorator is only compatible with
     the dns proxy module whitelist/blacklist read/write operations'''
 
     def wrapper(*args):
         # print(f'[+] Starting user defined {args[1]} timer')
-        last_modified_time, new_args = 0, (*args, f'{args[1]}.json')
+        last_modified_time, new_args = 0, (*args, f'{args[1]}.cfg')
         # main loop calling the primary function for read/write change detection/polling
         # the recycle the saved hash file which is returned regardless of if it was changed or not
-        while True:
+        for _ in RUN_FOREVER:
             last_modified_time = list_function(*new_args, last_modified_time)
 
             time.sleep(FILE_POLL_TIMER)
     return wrapper
+
+
+_item = namedtuple('item', 'key value')
+
+class ConfigChain:
+
+    _sep: ClassVar[str] = '->'
+
+    __slots__ = (
+        '__config', '__flat_config', '__mutable_config'
+    )
+
+    def __init__(self, system: dict, user: dict):
+
+        self.__config = (user, system)
+        self.__flat_config = (
+            self._flatten(user), self._flatten(system)
+        )
+
+        self.__mutable_config = copy(self.__flat_config[0])
+
+    def __getitem__(self, key: str) -> Optional[Union[int, str, list]]:
+
+        for cfg in self.__flat_config:
+
+            value = cfg.get(key, DATA.MISSING)
+            if (value is not DATA.MISSING):
+                return value
+
+        raise KeyError(f'{key} not found in configuration chain.')
+
+    def __setitem__(self, key: str, value: Optional[Union[int, str, list]]):
+
+        self.__mutable_config[key] = value
+
+    def __delitem__(self, key: str) -> None:
+
+        key_matches = [k for k in self.__mutable_config if k.startswith(key)]
+        for k in key_matches:
+            del self.__mutable_config[k]
+
+    def get_list(self, key: str) -> list[str]:
+        '''return list of child keys 1 level lower than passed in key. returns empty list if not found.
+
+            config.get_list('interfaces->builtins')
+        '''
+
+        keys = key.split(self._sep)
+        search_data = self.__config[1]
+
+        for k in keys:
+            try:
+                search_data = search_data[k]
+            except KeyError:
+                return []
+
+        return list(search_data)
+
+    def get_items(self, key: str) -> list[tuple]:
+        '''return list of namedtuples containing key: value pairs of child keys 1 level lower than passed in key.
+        returns empty list if not found.
+
+            config.get_items('interfaces->builtins')
+        '''
+
+        keys = key.split(self._sep)
+        search_data = self.__config[1]
+
+        for k in keys:
+            try:
+                search_data = search_data[k]
+            except KeyError:
+                return []
+
+        return [_item(k, v) for k, v in search_data]
+
+    @property
+    def searchable_system_data(self) -> dict:
+        '''returns copy of original pre-flattened system config dictionary.'''
+
+        return copy(self.__config[1])
+
+    @property
+    def searchable_user_data(self) -> dict:
+        '''returns copy of original pre-flattened user config dictionary.'''
+
+        return copy(self.__config[0])
+
+    @property
+    def user_data(self) -> dict:
+        '''returns mutable flattened user config dictionary.'''
+
+        return self.__mutable_config
+
+    @property
+    def expanded_user_data(self) -> dict:
+        '''returns snapshot of expanded user config dictionary. additional calls are required to reflect changes to user
+         data'''
+
+        return self._expand(self.__mutable_config)
+
+    def _flatten(self, cfg: dict, /, parent_key: str = '') -> dict:
+        flat_d = {}
+        for key, value in cfg.items():
+
+            # > 1st level
+            if (parent_key):
+                key = f'{parent_key}{self._sep}{key}'
+
+            # not a dict or empty dict
+            if not isinstance(value, dict) or not value:
+                flat_d[key] = value
+
+            else:
+                flat_d = {**flat_d, **self._flatten(value, key)}
+
+        return flat_d
+
+    def _expand(self, cfg: dict, /) -> dict:
+        expand_d = {}
+
+        for key, value in cfg.items():
+
+            key_path = key.split(self._sep)
+            nested = expand_d
+
+            for nkey in key_path[:-1]:
+                try:
+                    nested = nested[nkey]
+                except KeyError:
+                    nested[nkey] = nested = {}
+
+            nested[key_path[-1]] = value
+
+        return expand_d
 
 
 class ConfigurationManager:
@@ -182,8 +333,8 @@ class ConfigurationManager:
     be obtained or block until it can acquire the lock and return the class object to the caller.
     '''
 
-    Log = None
-    config_lock_file = f'{HOME_DIR}/dnx_system/config.lock'
+    log: ClassVar[Optional[LogHandler]] = None
+    config_lock_file: str = f'{HOME_DIR}/dnx_system/config.lock'
 
     __slots__ = (
         '_config_lock', '_filename', '_data_written',
@@ -192,12 +343,12 @@ class ConfigurationManager:
     )
 
     @classmethod
-    def set_log_reference(cls, ref):
+    def set_log_reference(cls, ref: LogHandler) -> None:
         '''sets logging class reference for configuration manager specific errors.'''
 
-        cls.Log = ref
+        cls.log = ref
 
-    def __init__(self, config_file='', file_path=None):
+    def __init__(self, config_file: str = '', file_path: Optional[str] = None) -> None:
         '''Config file can be omitted to allow for configuration lock to be used with
         external operations.'''
 
@@ -211,9 +362,7 @@ class ConfigurationManager:
                 file_path = 'dnx_system/data'
 
             self._file_path = file_path
-
-            # backwards compatibility between specifying file ext and not.
-            self._filename = config_file if config_file.endswith('.json') else f'{config_file}.json'
+            self._filename = f'{config_file}.cfg'
 
             self._system_path_file = f'{HOME_DIR}/{file_path}/{self._filename}'
             self._usr_path_file = f'{HOME_DIR}/{file_path}/usr/{self._filename}'
@@ -224,7 +373,7 @@ class ConfigurationManager:
 
     # attempts to acquire lock on system config lock (blocks until acquired), then opens a temporary
     # file which the new configuration will be written to, and finally returns the class object.
-    def __enter__(self):
+    def __enter__(self) -> ConfigurationManager:
         self._config_lock = open(self.config_lock_file, 'r+')
 
         # acquiring lock on shared lock file
@@ -233,21 +382,21 @@ class ConfigurationManager:
         # setup isn't required if config file is not specified.
         if (self._config_file):
             # TEMP prefix is to wildcard match any orphaned files for deletion
-            self._temp_file_path = f'{HOME_DIR}/{self._file_path}/usr/TEMP_{token_urlsafe(10)}.json'
+            self._temp_file_path = f'{HOME_DIR}/{self._file_path}/usr/TEMP_{token_urlsafe(10)}.cfg'
             self._temp_file = open(self._temp_file_path, 'w+')
 
             # changing file permissions and settings owner to dnx:dnx to not cause permissions issues after copy.
             os.chmod(self._temp_file_path, 0o660)
             shutil.chown(self._temp_file_path, user=USER, group=GROUP)
 
-        self.Log.debug(f'Config file lock acquired for {self._filename}.')
+        self.log.debug(f'Config file lock acquired for {self._filename}.')
 
         return self
 
     # if there is no exception on leaving the context and data was written to the temp file the temporary
     # file will be renamed over the configuration file sent in by the caller. if an exception is raised
     # the temporary file will be deleted. The file lock will be released upon exiting
-    def __exit__(self, exc_type, exc_val, traceback):
+    def __exit__(self, exc_type, exc_val, traceback) -> bool:
         # lock only mode
         if (not self._config_file):
             pass
@@ -264,40 +413,28 @@ class ConfigurationManager:
 
         # closing file after unlock to allow reference to be cleaned up.
         self._config_lock.close()
-        self.Log.debug(f'file lock released for {self._filename}')
+        self.log.debug(f'file lock released for {self._filename}')
 
         if (exc_type is None):
             return True
 
         elif (exc_type is not ValidationError):
-            self.Log.error(f'configuration manager error: {exc_val}')
+            self.log.error(f'configuration manager error: {exc_val}')
 
             raise OSError('Configuration manager was unable to update the requested file.')
 
     # will load json data from file, convert it to a python dict, then returned as object
-    def load_configuration(self):
+    def load_configuration(self) -> ConfigChain:
         '''returns python dictionary of configuration file contents'''
 
         if (not self._config_file):
             raise RuntimeError('Configuration Manager methods are disabled in lock only mode.')
 
-        with open(self._system_path_file, 'r') as system_settings:
-            system_settings = json.load(system_settings)
-
-        if os.path.exists(self._usr_path_file):
-
-            # loading user configurations (if exists)
-            with open(self._usr_path_file, 'r') as usr_settings:
-                usr_settings = json.load(usr_settings)
-
-            # updating system settings dict with user settings to be used in memory/ by modules only.
-            system_settings.update(usr_settings)
-
-        return system_settings
+        return load_configuration(self._filename, filepath=self._file_path)
 
     # accepts python dictionary to be serialized to json and written to file opened. will ensure
     # data gets fully rewritten and if shorter than original the excess gets truncated.
-    def write_configuration(self, data_to_write):
+    def write_configuration(self, data_to_write: dict):
         '''writes configuration data as json to generated temporary file'''
 
         if (not self._config_file):
@@ -330,10 +467,10 @@ class Watcher:
         self._last_modified_time = 0
 
     # will check file for change in set intervals, currently using global constant for config file polling
-    def watch(self, *args):
+    def watch(self, *args) -> None:
         args = [*args, self._watch_file]
 
-        while True:
+        for _ in RUN_FOREVER:
 
             if (self.is_modified):
                 self._callback(*args)
@@ -343,7 +480,7 @@ class Watcher:
 
     @property
     # if watch file has been modified will update modified time and return True, else return False
-    def is_modified(self):
+    def is_modified(self) -> bool:
         if not os.path.isfile(self._full_path):
 
             # condition to allow initial load to happen without the usr file being present.

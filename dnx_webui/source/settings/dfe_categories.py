@@ -1,30 +1,29 @@
 #!/usr/bin/env python3
 
-import dnx_routines.configure.configure as configure
-import dnx_routines.configure.web_validate as validate
+from dnx_gentools.def_constants import INVALID_FORM
+from dnx_gentools.def_enums import CFG
+from dnx_gentools.file_operations import ConfigurationManager, load_configuration
+from dnx_routines.configure.web_validate import ValidationError, standard
 
-from dnx_gentools.def_constants import CFG, INVALID_FORM
-from dnx_gentools.file_operations import load_configuration
-from dnx_routines.configure.exceptions import ValidationError
+DISABLED = True
 
 def load_page(menu_option):
     dns_proxy = load_configuration('dns_proxy')
-    userdefined_category = dns_proxy['categories']['user_defined']
+    userdefined_category = dns_proxy.get_items('categories->user_defined')
 
     ud_cat_lists = {}
     loaded_ud_category = {}
     userdefined_categories = []
 
-    if (userdefined_category):
+    # TODO: fix this shit. its annoyingly bad right now.
+    if (userdefined_category and not DISABLED):
         index = 0
-        for i, entry in enumerate(userdefined_category):
-            cat_enabled = userdefined_category[entry]['enabled']
+        for i, entry, info in enumerate(userdefined_category):
             if (i % 3 == 0):
                 ud_cat_list = {}
-            if (cat_enabled):
-                ud_cat_list[entry] = True
-            else:
-                ud_cat_list[entry] = False
+
+            ud_cat_list[entry] = bool(info['enabled'])
+
             if (len(ud_cat_list) == 3):
                 ud_cat_lists[index] = ud_cat_list
                 index += 1
@@ -37,9 +36,11 @@ def load_page(menu_option):
                 userdefined_categories.append(category)
 
         for x, cat in enumerate(userdefined_category, 1):
+
             if (x == menu_option):
                 loaded_ud_category = {cat: {}}
                 load_category_rules = userdefined_category[cat]
+
                 for i, rule in enumerate(load_category_rules):
                     if (rule != 'enabled'):
                         reason = userdefined_category[cat][rule]
@@ -52,11 +53,13 @@ def load_page(menu_option):
 
     return category_settings
 
-#---------------------------------------------------------------------#
-## -- Category List Configure -- ##
 def update_page(form):
+
+    if (DISABLED):
+        return 'user categories disabled for rework', 1
+
     menu_option = form.get('menu', '1')
-    print(form)
+
     if ('ud_cat_add' in form):
         category = form.get('ud_category', None)
         if (not category):
@@ -64,7 +67,7 @@ def update_page(form):
 
         print(f'validating the shit {category}')
         try:
-            validate.standard(category)
+            standard(category)
             # validation errors can be raised here so keeping within try block
             configure.update_custom_category(category, action=CFG.ADD)
         except ValidationError as ve:
@@ -88,9 +91,9 @@ def update_page(form):
             return INVALID_FORM, 1 # NOTE: get correct value for menu option
 
         try:
-            validate.standard(category)
-            validate.domain(domain)
-            validate.standard(reason)
+            standard(category)
+            domain(domain)
+            standard(reason)
 
             # validation errors can be raised here so keeping within try block
             configure.update_custom_category_domain(category, domain, reason, action=CFG.ADD)
@@ -130,3 +133,42 @@ def get_ud_category(menu_option):
         return list(ud_categories)[menu_option-1]
     except Exception:
         return None
+
+# ==============
+# CONFIGURATION
+# ==============
+
+def configure_category(category, *, action):
+    with ConfigurationManager('dns_proxy') as dnx:
+        custom_category_lists = dnx.load_configuration()
+
+        ud_cats = custom_category_lists['categories']['user_defined']
+        if (action is CFG.DEL and category != 'enabled'):
+            ud_cats.pop(category, None)
+
+        elif (action is CFG.ADD):
+            if (len(ud_cats) >= 6):
+                raise ValidationError('Only support for maximum of 6 custom categories.')
+
+            elif (category in ud_cats):
+                raise ValidationError('Custom category already exists.')
+
+            ud_cats[category] = {'enabled': False}
+
+        dnx.write_configuration(custom_category_lists)
+
+def configure_category_domain(category, domain, reason=None, *, action):
+    with ConfigurationManager('dns_proxy') as dnx:
+        custom_category_domains = dnx.load_configuration()
+
+        ud_cats = custom_category_domains['categories']['user_defined']
+        if (action is CFG.DEL and category != 'enabled'):
+            ud_cats[category].pop(domain, None)
+
+        elif (action is CFG.ADD):
+            if (domain in ud_cats[category]):
+                raise ValidationError('Domain rule already exists for this category.')
+            else:
+                ud_cats[category][domain] = reason
+
+        dnx.write_configuration(custom_category_domains)

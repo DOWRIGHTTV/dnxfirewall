@@ -42,7 +42,7 @@ class UDPRelay(ProtoRelay):
         conn_recv = self._relay_conn.recv
         responder_add = self._dns_server.responder.add
 
-        for _ in RUN_FOREVER():
+        for _ in RUN_FOREVER:
             try:
                 data_from_server = conn_recv(1024)
             except OSError:
@@ -147,7 +147,7 @@ class TLSRelay(ProtoRelay):
         processing_buffer = memoryview(bytearray(4096))
         b_ct = 0
 
-        for _ in RUN_FOREVER():
+        for _ in RUN_FOREVER:
             try:
                 # recv_into | no need to specify amount to return and mtu covers max len
                 # not inplace adding byte count to protect against cases where a public resolves sends a single
@@ -179,7 +179,7 @@ class TLSRelay(ProtoRelay):
             # =========================
             # loop is needed to cover cases where dns responses are split over multiple packets or multiple responses
             # are contained within a single packet.
-            for _ in RUN_FOREVER():
+            for _ in RUN_FOREVER:
 
                 data_len, data = btoia(processing_buffer[:2]), processing_buffer[2:]
 
@@ -249,7 +249,7 @@ class TLSRelay(ProtoRelay):
 
         relay_add = self.relay.add
 
-        for _ in RUN_FOREVER():
+        for _ in RUN_FOREVER:
 
             # if tls_relay OR keepalive is disabled
             if not (self.is_enabled or keepalive_interval):

@@ -8,5 +8,4 @@ if (TYPE_CHECKING):
 
     from standard_tools import *
 
-    Structure = structure('Structure', 'field_a field_b field_n')
     ByteContainer = bytecontainer('ByteContainer', 'field_a field_b field_n')
