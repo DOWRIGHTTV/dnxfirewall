@@ -237,7 +237,7 @@ def structure(obj_name: str, fields: Union[List, str]) -> Structure:
     field_names = tuple(field_names)
     field_formats = tuple(field_formats)
 
-    format_str = '>' + str_join([field_formats])
+    format_str = '>' + str_join(field_formats)
     pack_fields = Struct(format_str).pack_into
 
     # defining globals/builtins as closure for lookup performance (almost 2x faster)
