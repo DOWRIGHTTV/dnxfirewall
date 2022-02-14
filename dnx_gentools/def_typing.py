@@ -3,9 +3,11 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
+DISABLED = True
+
 # NOTE: splitting if statements as import organization
 # standard lib imports
-if (TYPE_CHECKING):
+if (TYPE_CHECKING and not DISABLED):
 
     from typing import *
 
@@ -14,7 +16,7 @@ if (TYPE_CHECKING):
     Wrapper = Callable([...], None)
 
 # dnx class imports for use as Types
-if (TYPE_CHECKING):
+if (TYPE_CHECKING and not DISABLED):
 
     # module packs
     from dnx_gentools import *

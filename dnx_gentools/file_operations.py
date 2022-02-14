@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from __future__ import annotations
-
 import os
 import json
 import time
@@ -18,7 +16,7 @@ from collections import namedtuple
 
 from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_enums import DNS_CAT
+from dnx_gentools.def_enums import DNS_CAT, DATA
 from dnx_routines.configure.exceptions import ValidationError
 
 FILE_POLL_TIMER = 10
@@ -105,7 +103,7 @@ def json_to_yaml(data: Union[str, dict], *, is_string: bool = False) -> str:
 def load_tlds() -> Generator[Tuple[str, int]]:
     dns_proxy = load_configuration('dns_proxy')
 
-    for tld, setting in dns_proxy['tlds'].items():
+    for tld, setting in dns_proxy.get_items('tlds'):
         yield (tld.strip('.'), setting)
 
 # function to load in all keywords corresponding to enabled domain categories. the try/except

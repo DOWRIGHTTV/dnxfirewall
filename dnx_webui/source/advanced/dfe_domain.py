@@ -19,7 +19,7 @@ def load_page(form):
     domain_settings = {
         'default': dns_proxy['categories->default'],
         'user_defined': dns_proxy['categories->user_defined'],
-        'tlds': dns_proxy['tlds']
+        'tld': dns_proxy.get_list('tld')
     }
 
     return domain_settings
@@ -66,7 +66,7 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[Va
     elif (ruleset in ['tld']):
         cat_list = dns_proxy.get_list('tld')
 
-    elif (ruleset in ['keywords']):
+    elif (ruleset in ['keyword']):
         domain_cats = dns_proxy.get_list('categories->default')
 
         if (category.name not in domain_cats):
