@@ -87,7 +87,8 @@ function updateRule() {
         "rselect", "rmove", "rname",
         "rsrc_zone", "rsrc_network", "rsrc_service",
         "rdst_zone", "rdst_network", "rdst_service",
-        "raction", "rlog", "rsec1_prof", "rsec2_prof"
+        "raction", "rlog",
+        "rsec1_prof", "rsec2_prof", "rsec3_prof"
     ]
 
     let i, field;
@@ -115,6 +116,7 @@ function updateRule() {
     col[10].innerHTML = ruleEditor.querySelector(".elog").value;
     col[11].innerHTML = ruleEditor.querySelector(".esec1_prof").value;
     col[12].innerHTML = ruleEditor.querySelector(".esec2_prof").value;
+    col[13].innerHTML = ruleEditor.querySelector(".esec3_prof").value;
 
     let rData;
     for (let fStr of ["src_network", "src_service", "dst_network", "dst_service"]) {
@@ -142,7 +144,7 @@ function newRule() {
 
     // TODO: add classes for each td
 
-    let rule_template = `<tr id="r${ruleCount}" style="opacity: .4" data-enabled="0">` +
+    let rule_template = `<tr id="r${ruleCount}" style="opacity: .4;" data-enabled="0">` +
         '<td><label><input type="checkbox" class="filled-in rule-select"><span></span></label></td>' +
         '<td>' +
             '<div class="row">' +
@@ -165,13 +167,14 @@ function newRule() {
         '<td class="rlog">0</td>' +
         '<td class="rsec1_prof">0</td>' +
         '<td class="rsec2_prof">0</td>' +
+        '<td class="rsec3_prof">0</td>' +
     '</tr>'
 
     FWrules.insertAdjacentHTML("beforeend", rule_template)
 }
 </script>
 <script>
-{# watching for firewall rule to be clicked for editing, populates the form, then shows the modal. #}
+{# watching for rules rule to be clicked for editing, populates the form, then shows the modal. #}
 let ruleEditor = document.querySelector(".rule-editor");
 ruleEditor.addEventListener("click", function(click) {
 
@@ -258,8 +261,8 @@ function initDNXChips(field_type) {
     })
 }
 
-var networkChips = initDNXChips("network")
-var serviceChips = initDNXChips("service")
+let networkChips = initDNXChips("network")
+let serviceChips = initDNXChips("service")
 
 function cAddCallback(e, chip) {
 
@@ -267,7 +270,7 @@ function cAddCallback(e, chip) {
     chip.children[0].setAttribute("onclick", "cRemove(this)"); // [0] icon, [1] close
     console.log(chip.children[0])
 
-    //adding icon and color to object
+    //adding icon and color to an object
     let chipDef = fwObjectMap[chip.innerText.split("\n")[0]]
     let chipFormat = objFormatMap[chipDef.type]
 
@@ -277,7 +280,7 @@ function cAddCallback(e, chip) {
 }
 function cSelectCallback(e, chip) {
 
-    console.log("SELECTED BITCH")
+    console.log(`SELECTED ${e} ${chip}`)
 }
 function cRemove(btn) {
     // using as function to allow for hooks or other functionality to be added if needed.

@@ -244,7 +244,7 @@ def compile_extensions():
     commands = [
         (f'sudo python3 {UTILITY_DIR}/compile_trie_search.py build_ext --inplace', 'compiling trie search C extension'),
         (f'sudo python3 {UTILITY_DIR}/compile_dnx_nfqueue.py build_ext --inplace', 'compiling dnx-nfqueue C extension'),
-        (f'sudo python3 {UTILITY_DIR}/compile_cfirewall.py build_ext --inplace', 'compiling primary firewall')
+        (f'sudo python3 {UTILITY_DIR}/compile_cfirewall.py build_ext --inplace', 'compiling primary rules')
     ]
 
     for command, desc in commands:
@@ -260,7 +260,7 @@ def configure_webui():
         '/L=cyberspace',
         '/O=dnxfirewall',
         '/OU=security',
-        '/CN=dnx.firewall',
+        '/CN=dnx.rules',
         '/emailAddress=help@dnxfirewall.com'
     ])
 

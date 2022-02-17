@@ -48,8 +48,9 @@ class Configuration:
 
         self.ip_proxy.ids_mode = ip_proxy['ids_mode']
 
-        rep_settings = ip_proxy['reputation']
-        geo_settings = ip_proxy['geolocation']
+        # converting list[items] > dict
+        rep_settings = dict(ip_proxy.get_items('reputation'))
+        geo_settings = dict(ip_proxy.get_items('geolocation'))
 
         # used for categorizing private ip addresses
         geo_settings.update(RFC1918)
@@ -76,13 +77,12 @@ class Configuration:
     def _get_ip_whitelist(self, cfg_file: str) -> None:
         whitelist = load_configuration(cfg_file)
 
-        whitelist = whitelist['ip_bypass']
         self.ip_proxy.ip_whitelist = {
-            ip for ip, wl_info in whitelist.items() if wl_info['type'] == 'ip'
+            ip for ip, wl_info in whitelist.get_items('ip_bypass') if wl_info['type'] == 'ip'
         }
 
         self.ip_proxy.tor_whitelist = {
-            ip for ip, wl_info in whitelist.items() if wl_info['type'] == 'tor'
+            ip for ip, wl_info in whitelist.get_items('ip_bypass') if wl_info['type'] == 'tor'
         }
 
         self.initialize.done()
@@ -93,10 +93,10 @@ class Configuration:
 
         self.ip_proxy.open_ports = {
             PROTO.TCP: {
-                int(local_port): int(wan_port) for wan_port, local_port in ips['open_protocols']['tcp'].items()
+                int(local_port): int(wan_port) for wan_port, local_port in ips.get_items('open_protocols->tcp')
             },
             PROTO.UDP: {
-                int(local_port): int(wan_port) for wan_port, local_port in ips['open_protocols']['udp'].items()
+                int(local_port): int(wan_port) for wan_port, local_port in ips.get_items('open_protocols->udp')
             }
         }
 

@@ -5,11 +5,11 @@ from typing import TYPE_CHECKING
 
 DISABLED = True
 
+from typing import *
+
 # NOTE: splitting if statements as import organization
 # standard lib imports
 if (TYPE_CHECKING and not DISABLED):
-
-    from typing import *
 
     from ipaddress import IPv4Address
 

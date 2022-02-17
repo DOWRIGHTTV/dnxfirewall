@@ -20,7 +20,7 @@
             <div class="col s12 m6">
                 <div class="card-panel card-panel-eql hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add Rule</h4>
-                    <form action="/settings/categories" method="post">
+                    <form action="/intrusion/domain/categories" method="post">
                         <input type="hidden" name="tab" value="1">
                         <div class="row {{input_color}}">
                             <div class="input-field col s12">
@@ -62,7 +62,7 @@
             <div class="col s12 m6">
                 <div class="card-panel card-panel-eql hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Active Categories</h4>
-                    <form action="/settings/categories" method="POST">
+                    <form action="/intrusion/domain/categories" method="POST">
                         <input type="hidden" name="tab" value="1">
                         <div class="row {{input_color}}">
                             <div class="input-field col s12">
@@ -75,7 +75,7 @@
                     </form>
                     {% for cat_list in category_settings['user_defined'].values() %}
                     {% for cat in cat_list %}
-                    <form action="/settings/categories" method="POST">
+                    <form action="/intrusion/domain/categories" method="POST">
                         <div class="input-field col s4 center">
                             {{cat}} domains
                             <div class="row">
@@ -99,7 +99,7 @@
             <div class="card-panel hoverable {{card_color}}">
                 <h4 class="{{title_color}}">Configured Categories</h4>
                 <div class="row">
-                    <form action="/settings/categories" method="POST">
+                    <form action="/intrusion/domain/categories" method="POST">
                         <input type="hidden" name="tab" value="2">
                         <div class="input-field col s10 m4 {{input_color}}">
                             <select name="menu" onchange="this.form.submit()">
@@ -133,7 +133,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <form action="/settings/categories" method="POST">
+                            <form action="/intrusion/domain/categories" method="POST">
                                 <input type="hidden" name="menu" value="{{menu}}">
                                 <input type="hidden" name="category" value="{{category}}">
                                 <input type="hidden" name="tab" value="2">

@@ -1,24 +1,35 @@
 <!-- idle timeout notification popup
 1.5 mil: 25 min, 1.8 mil: 30 min -->
-<body onload="setTimeout(idleTimeoutWarning, 1500000); setTimeout(idleTimeout, 1800000);">
-    <form method="PUT">
-        <div id="idle-timeout-modal" class="modal modal-idle-timeout">
-            <div class="modal-content center">
-                <script>var error = true;</script>
-                <h5 class="red-text">Your session is about to expire. Do you need more time?</h5>
-            </div>
-            <div class="modal-footer">
-                <button class="btn waves-effect waves-light" name="active" value="1">YES</button>
-                <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-            </div>
+<form method="PUT">
+    <div id="idle-timeout-modal" class="modal modal-idle-timeout">
+        <div class="modal-content center">
+            <h5 class="red-text">Your session is about to expire. Do you need more time?</h5>
         </div>
-        {% if log_timeout %}
-        <input type="hidden" name="table" value="{{table}}">
-        {% elif tab %}
-        <input id="timeout-tab" type="hidden" name="tab" value="{{tab}}">
-        {% endif %}
-        {% if menu %}
-        <input id="timeout-menu" type="hidden" name="menu" value="{{menu}}">
-        {% endif %}
-    </form>
-</body>
+        <div class="modal-footer">
+            <button class="btn waves-effect waves-light" name="active" value="1">YES</button>
+            <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+        </div>
+    </div>
+    {% if log_timeout %}
+    <input type="hidden" name="table" value="{{table}}">
+    {% elif tab %}
+    <input id="timeout-tab" type="hidden" name="tab" value="{{tab}}">
+    {% endif %}
+    {% if menu %}
+    <input id="timeout-menu" type="hidden" name="menu" value="{{menu}}">
+    {% endif %}
+</form>
+<script>
+    function idleTimeoutWarning() {
+        let timeoutNotify = document.querySelector(".modal-idle-timeout");
+        let notifyInstance = M.Modal.init(timeoutNotify);
+
+        notifyInstance.open();
+    }
+
+    function idleTimeout() {
+        window.location.href = 'login';
+    }
+
+     document.addEventListener('DOMContentLoaded', () => {setTimeout(idleTimeoutWarning, 1500000); setTimeout(idleTimeout, 1800000);})
+</script>

@@ -232,7 +232,7 @@ class IPTablesManager:
         else:
             raise ValueError
 
-        # TODO: make an auto creation firewall rule option
+        # TODO: make an auto creation rules rule option
 
         shell(nat_rule, check=True)
 

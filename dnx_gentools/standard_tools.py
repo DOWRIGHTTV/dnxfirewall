@@ -18,7 +18,7 @@ __all__ = (
     'looper', 'dynamic_looper',
     'Initialize', 'dnx_queue',
     'bytecontainer', 'structure',
-    'config', 'classproperty'
+    'classproperty'
 )
 
 def looper(sleep_len: int, **kwargs):
@@ -309,21 +309,29 @@ def structure(obj_name: str, fields: Union[List, str]) -> Structure:
             yield from self.values()
 
         def __setattr__(self, key: str, value: int) -> None:
-            if (key not in self):
-                raise ValueError(f'attribute {key} does not exist in this container.')
 
-            self[key] = value
+            if (key == 'buf'):
+                super().__setattr__('buf', _bytearray(size_of))
 
-        def __getattr__(self, item: str) -> int:
+            elif (key not in self):
+                raise AttributeError(f'attribute {key} does not exist in this container.')
 
-            return self[item]
+            else:
+                self[key] = value
+
+        def __getattr__(self, key: str) -> int:
+
+            try:
+                return self.buf if key == 'buf' else self[key]
+            except KeyError:
+                raise AttributeError(f'attribute {key} does not exist in this container.')
 
         def assemble(self) -> bytearray:
             '''pack attributes into slotted buf with creation order preserved then returns buf reference. alternatively,
             buf can be accessed directly for quick changes and can be restored by a subsequent call to assemble.
             '''
 
-            pack_fields(self.buf, 0, self.values())
+            pack_fields(self.buf, 0, *self.values())
 
             return self.buf
 
@@ -397,20 +405,6 @@ def bytecontainer(obj_name: str, field_names: Union[List, str]) -> ByteContainer
             return other + ba
 
     return _ByteContainer()
-
-class config(dict):
-
-    def __init__(self, **kwargs: dict[str, Union[str, int, bool]]):
-
-        for k, v in kwargs.items():
-            self[k] = v
-
-    def __getattr__(self, item: str) -> Any:
-        return self[item]
-
-    def __setattr__(self, key: str, value: Union[str, int, bool]):
-        self[key] = value
-
 
 class classproperty:
     '''class used as a decorator to allow class methods to be used as properties.'''

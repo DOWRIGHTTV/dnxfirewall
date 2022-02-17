@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
-if (__name__ == '__main__'):
-    import __init__
+from __future__ import annotations
 
 import sqlite3
 
@@ -16,25 +15,23 @@ class _DBConnector:
     DB_PATH = f'{HOME_DIR}/dnx_system/data/dnxfirewall.sqlite3'
 
     __slots__ = (
-        '_Log', '_table', '_data_written',
-
+        '_log', '_table', '_data_written',
         '_conn', '_cur', '_readonly',
-
-        '_routines_get'
+        '_routines_get', 'failed',
     )
 
     # format: {'func name': [routine_type('write/query/clear'), ref(function pointer)]}
     _routines = {}
 
     @classmethod
-    def register(cls, routine_name, *, routine_type):
-        '''register routine with database connector that can be called with the "execute" method.'''
+    def register(cls, routine_name: str, *, routine_type: str):
+        '''register routine with database connector that can be called initiated with the "execute" method.'''
 
         name_in_use = cls._routines.get(routine_name)
         if (name_in_use):
             raise FileExistsError(f'routine with name {routine_name} already exists')
 
-        def registration(func_ref):
+        def registration(func_ref: Callable):
 
             # print(f'FUNC_REF {func_ref}')
             # converting routine function to static method
@@ -63,8 +60,13 @@ class _DBConnector:
 
     # NOTE: if Log is not sent in, calling any method configured to log will error out, but likely not cause
     # significant impact as it is covered by the context.
-    def __init__(self, Log=None, *, table=None, readonly=False, connect=False):
-        self._Log = Log
+    def __init__(self, log: LogHandler = None, *, table: str = None, readonly: bool = False, connect: bool = False):
+
+        # used to notify a calling process whether a failure occurred within the context.
+        # this does not distinguish if multiple calls/returns are done.
+        self.failed = False
+
+        self._log = log
         self._table = table
         self._readonly = readonly
 
@@ -76,21 +78,20 @@ class _DBConnector:
             self._conn = sqlite3.connect(self.DB_PATH)
             self._cur = self._conn.cursor()
 
-    def __enter__(self):
+    def __enter__(self) -> DBConnector:
         self._conn = sqlite3.connect(self.DB_PATH)
         self._cur = self._conn.cursor()
 
         return self
 
-    def __exit__(self, exc_type, exc_val, traceback):
+    def __exit__(self, exc_type, exc_val, traceback) -> bool:
         if (self._data_written):
             self._conn.commit()
 
         if (exc_type):
-
-            print(exc_val)
+            self.failed = True
             try:
-                self._Log.error(f'database failure: {exc_val}')
+                self._log.error(f'database failure: {exc_val}')
             except:
                 console_log(f'database failure: {exc_val}')
 
@@ -98,7 +99,8 @@ class _DBConnector:
 
         return True
 
-    def execute(self, routine_name, *args, **kwargs):
+    # TODO: see if we can set the Any to a list
+    def execute(self, routine_name: str, *args, **kwargs) -> Optional[Any]:
 
         routine_type, routine = self._routines_get(routine_name, NO_ROUTINE)
         if (not routine):
@@ -116,19 +118,19 @@ class _DBConnector:
     def commit_entries(self):
         self._conn.commit()
 
-    def blocked_cleaner(self, table):
+    def blocked_cleaner(self, table: str) -> None:
         expire_threshold = int(fast_time()) - FIVE_MIN
         self._cur.execute(f'delete from {table} where timestamp < {expire_threshold}')
 
         self._data_written = True
 
-    def table_cleaner(self, log_length, table):
+    def table_cleaner(self, log_length: int, table: str) -> None:
         expire_threshold = int(fast_time()) - (ONE_DAY * log_length)
         self._cur.execute(f'delete from {table} where last_seen < {expire_threshold}')
 
         self._data_written = True
 
-    def create_db_tables(self):
+    def create_db_tables(self) -> None:
         # dns proxy main
         self._cur.execute(
             'create table if not exists dnsproxy '

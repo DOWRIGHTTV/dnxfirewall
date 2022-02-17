@@ -11,12 +11,16 @@ from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SCM_CREDENTIALS
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_enums import LOG
 from dnx_gentools.standard_tools import classproperty, dnx_queue
 from dnx_gentools.file_operations import change_file_owner, load_configuration, cfg_read_poller
 
 from dnx_routines.configure.system_info import System
 
-__all__ = ('LogHandler', 'Log')
+__all__ = (
+    'LogHandler', 'Log', 'direct_log',
+    'message', 'db_message', 'convert_level'
+)
 
 _system_date = System.date
 _format_time = System.format_time
@@ -162,7 +166,7 @@ def _log_handler():
 
         logging = load_configuration(cfg_file)
 
-        _LEVEL = logging['logging']['level']
+        _LEVEL = logging['logging->level']
 
         _add_logging_methods(Handler)
 

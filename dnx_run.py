@@ -36,6 +36,7 @@ MODULE_MAPPING = {
     'startup': 'dnx_system.startup_proc',
     'interface': 'dnx_system.interface_services',
     'syscontrol': 'dnx_system.sys_control'
+
 }
 
 valid_module = MODULE_MAPPING.get(args.module, False)

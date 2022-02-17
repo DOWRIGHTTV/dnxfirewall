@@ -5,12 +5,12 @@
         <div class="row">
             <div class="col s12 m12">
                 <ul class="tabs">
-                    <li class="{{tab_classes}}"><a {% if tab=='1' %} class="active" {% endif %} href="#reputation"
-                        onclick="activeTab(1)">Reputation</a></li>
-                    <li class="{{tab_classes}}"><a {% if tab=='2' %} class="active" {% endif %} href="#geolocation"
-                        onclick="activeTab(2)">Geolocation</a></li>
-                    <li class="{{tab_classes}}"><a {% if tab=='3' %} class="active" {% endif %} href="#lan-restrict"
-                        onclick="activeTab(3)">Lan Restrict</a></li>
+                    <li class="{{tab_classes}}"><a class="{{tab_text_color}}" {% if tab=='1' %} class="active" {% endif %}
+                        href="#reputation" onclick="activeTab(1)">Reputation</a></li>
+                    <li class="{{tab_classes}}"><a class="{{tab_text_color}}" {% if tab=='2' %} class="active" {% endif %}
+                        href="#geolocation" onclick="activeTab(2)">Geolocation</a></li>
+                    <li class="{{tab_classes}}"><a class="{{tab_text_color}}" {% if tab=='3' %} class="active" {% endif %}
+                        href="#lan-restrict" onclick="activeTab(3)">Lan Restrict</a></li>
                 </ul>
             </div>
         </div>
@@ -22,7 +22,7 @@
             <div class="col s12 m10 offset-m1">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Reputation</h4>
-                    {% for category, enabled in ip_settings['reputation'].items() %}
+                    {% for category, enabled in ip_settings['reputation'] %}
                     {% if loop.index0 in range(0,10,2) %}<div class="row">{% endif %}
                         <div class="input-field col s4 offset-s1">
                             <h6>{{category.title().replace('_', ' ')}}</h6>
@@ -90,7 +90,7 @@
                                     {% if dir != direction %}
                                     <li>
                                         <a><button name="country" value="{{country}}_{{dir}}" onclick="updateCategory(this)"
-                                            style="background-color: Transparent; border: none; cursor:pointer;">
+                                            static_value="{{direction}}" style="background-color: Transparent; border: none; cursor:pointer;">
                                         <img src="/static/assets/images/{{image}}" {{dash_icon_std}}></button></a>
                                     </li>
                                     {% endif %}
@@ -117,7 +117,7 @@
             <div class="col s12 m10 offset-m1">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">LAN Restrict</h4>
-                    <form action="/advanced/ip" method="post">
+                    <form action="/intrusion/ip" method="post">
                         <input type="hidden" name="tab" value="3">
                         <div class="col s12">
                             <h6>Start Time</h6>
@@ -176,14 +176,24 @@
     </div>
 </section>
 <script>
+let imageMap = {"0": "allow_up-down", "1": "block_up", "2": "block_down", "3": "block_up-down"}
 async function updateCategory(category) {
 
-    const cat_info = category.split("_")
+    console.log(category)
+
+    const cat_info = category.value.split("_")
     const cat_value = cat_info[0].replace("_", " ").toUpperCase()
 
     let response = await ajaxClient.post('/post', {'type': category.name, 'category': cat_value, 'direction': cat_info[1]});
 
-    ajaxClient.handleResponse(response, category)
+    let error = ajaxClient.handleResponse(response, category)
+
+    // sets the image accordingly
+    if (!error) {
+        let image = category.closest("td").querySelector(".dropdown-trigger")
+
+        image.setAttribute("src", `/static/assets/images/${imageMap[cat_info[1]]}.png`)
+    }
 }
 </script>
 {% endblock %}

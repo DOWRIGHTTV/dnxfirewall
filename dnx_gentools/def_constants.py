@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from __future__ import annotations
-
 import time as _time
 import os as _os
 import pwd as _pwd
@@ -12,10 +10,13 @@ from functools import partial as _partial
 from itertools import repeat as _repeat
 from subprocess import run as _run, DEVNULL as _DEVNULL
 from ipaddress import IPv4Address as _IPv4Address
+from pprint import PrettyPrinter as _PrettyPrinter
 
 from dnx_gentools.def_typing import *
 
 from dnx_iptools.def_structs import scm_creds_pack as _scm_creds_pack
+
+ppt = _PrettyPrinter(sort_dicts=False).pprint
 
 # if set, module code dependencies will run. values are stored as strings
 INIT_MODULE: bool = bool(_os.environ.get('INIT_MODULE', False))
@@ -32,11 +33,11 @@ RUN_FOREVER: Iterator = _repeat(1)
 # used by socket sender loops
 ATTEMPTS: tuple[int, int] = (0, 1)
 
-byte_join:  Callable[[Iterable[bytes]], bytes] = b''.join
-str_join:   Callable[[Iterable[str]], str] = ''.join
-dot_join:   Callable[[Iterable[str]], str] = '.'.join
-space_join: Callable[[Iterable[str]], str] = ' '.join
-comma_join: Callable[[Iterable[str]], str] = ', '.join
+byte_join:  Callable[[list[bytes]], bytes] = b''.join
+str_join:   Callable[[list[str]], str] = ''.join
+dot_join:   Callable[[list[str]], str] = '.'.join
+space_join: Callable[[list[str]], str] = ' '.join
+comma_join: Callable[[list[str]], str] = ', '.join
 
 HOME_DIR: str = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-2]))
 

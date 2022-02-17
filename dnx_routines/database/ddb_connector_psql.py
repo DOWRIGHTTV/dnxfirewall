@@ -6,7 +6,7 @@ from dnx_gentools.def_constants import ONE_DAY, FIVE_MIN, console_log, fast_time
 from dnx_gentools.def_namedtuples import BLOCKED_DOM
 
 USER = 'dnx'
-PASSWORD = 'firewall'
+PASSWORD = 'rules'
 
 try:
     import pg8000

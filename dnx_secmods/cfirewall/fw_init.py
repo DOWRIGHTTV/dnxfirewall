@@ -21,7 +21,7 @@ if (INIT_MODULE):
 
     args = parser.parse_args(sys.argv[2:])
 
-    Log.run(name='firewall')
+    Log.run(name='rules')
 
     dnxfirewall = CFirewall()
     dnxfirewall.set_options(args.bypass, args.verbose)
@@ -31,7 +31,7 @@ if (INIT_MODULE):
         Log.error(f'failed to bind to queue {Queue.CFIREWALL}')
         hard_out()
 
-    # initializing python processes for detecting configuration changes to zone or firewall rule sets and also handles
+    # initializing python processes for detecting configuration changes to zone or rules rule sets and also handles
     # necessary calls into Cython via cfirewall reference for making the actual config change. these will run in Python
     # threads and some may call into Cython. These functions should be explicitly identified since they will require the
     # gil to be acquired on the Cython side or else the Python interpreter will crash.
@@ -43,7 +43,7 @@ if (INIT_MODULE):
 
     # this is a blocking call but is running in pure C. the GIL is released before running the low level system
     # operations and will never retake the gil.
-    # NOTE: setting bypass will tell the process to invoke firewall action (DROP or ACCEPT) directly without
+    # NOTE: setting bypass will tell the process to invoke rules action (DROP or ACCEPT) directly without
     #  forwarding to other modules.
     try:
         dnxfirewall.nf_run()

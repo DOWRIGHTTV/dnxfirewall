@@ -13,7 +13,7 @@ from dnx_routines.configure.system_info import System
 
 def load_page(form):
     dhcp_server = load_configuration('dhcp_server')
-    dhcp_leases = load_data('dhcp_server.leases')
+    dhcp_leases = load_data('dhcp_server.lease')
 
     leases = []
     for ip, (status, handout_time, mac, hostname) in dhcp_leases.items():
@@ -28,7 +28,7 @@ def load_page(form):
     leases.sort()
 
     dhcp_settings = {
-        'interfaces': dhcp_server.get_items('interfaces'),
+        'interfaces': dhcp_server.get_dict('interfaces'),
         'reservations': [(mac_str(mac), info) for mac, info in dhcp_server.get_items('reservations')],
         'leases': leases
     }
@@ -36,8 +36,8 @@ def load_page(form):
     return dhcp_settings
 
 # TODO: figure out a way to ensure duplicate ip addresses cannot have a reservation created. currently we
-# use the mac address as the key/identifier which would allow for different macs to be configured with the
-# same ip address.
+#  use the mac address as the key/identifier which would allow for different macs to be configured with the
+#  same ip address.
 def update_page(form):
 
     if ('general_settings' in form):

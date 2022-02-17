@@ -83,7 +83,7 @@ class SyslogService:
                 self.SyslogUDP.send_queue(udp_socket)
 
     @looper(NO_DELAY)
-    # local socket receiving messages to be sent over syslog from all processes firewall wide. once a message is
+    # local socket receiving messages to be sent over syslog from all processes rules wide. once a message is
     # received it will add it to the queue to be handled by a separate method.
     def _main(self):
         try:

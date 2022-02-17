@@ -94,8 +94,8 @@ class LogService:
     def get_settings(self, cfg_file):
         log_settings = load_configuration(cfg_file)
 
-        self.log_length = log_settings['logging']['length']
-        self.log_level = log_settings['logging']['level']
+        self.log_length = log_settings['logging->length']
+        self.log_level = log_settings['logging->level']
 
         self._initialize.done()
 

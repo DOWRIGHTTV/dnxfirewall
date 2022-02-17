@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import namedtuple as _namedtuple
 
 # DHCP SERVER
-DHCP_REQUEST_INFO  = _namedtuple(
+DHCP_REQUEST_INFO = _namedtuple(
     'dhcp_request_info', 'message_type, xID, server_identifier, mac_address, client_address, requested_ip'
 )
 DHCP_RESPONSE_INFO = _namedtuple('dhcp_response_info', 'xID mac_address ciaddr handout_ip options')
@@ -18,7 +18,7 @@ SYSLOG_SERVERS = _namedtuple('syslog_servers', 'primary secondary')
 DNS_SERVERS = _namedtuple('dns_servers', 'primary secondary')
 PROXY_DECISION = _namedtuple('proxy_decision', 'name decision')
 RELAY_CONN = _namedtuple('relay_conn', 'remote_ip sock send recv version')
-DNS_CACHE  = _namedtuple('dns_cache', 'ttl records')
+DNS_CACHE = _namedtuple('dns_cache', 'ttl records')
 CACHED_RECORD = _namedtuple('cached_record', 'expire ttl records')
 DNS_REQUEST_INFO = _namedtuple('request_info', 'client_address request, request2')
 DNS_REQUEST_RESULTS = _namedtuple('request_results', 'redirect, reason, category')

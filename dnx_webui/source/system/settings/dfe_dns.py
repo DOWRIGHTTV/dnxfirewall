@@ -1,28 +1,27 @@
 #!/usr/bin/python3
 
-import dnx_routines.configure.web_validate as validate
+from typing import Optional
 
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_enums import CFG, DATA
-from dnx_gentools.standard_tools import config
-from dnx_gentools.file_operations import ConfigurationManager, load_configuration
+from dnx_gentools.file_operations import ConfigurationManager, config, load_configuration
 
 from dnx_routines.configure.system_info import System
-from dnx_routines.configure.exceptions import ValidationError
+from dnx_routines.configure.web_validate import ValidationError, VALID_DOMAIN, get_convert_bint
 
 
 def load_page(form):
     dns_server = load_configuration('dns_server')
-    dns_cache  = load_configuration('dns_cache')
+    dns_cache  = load_configuration('dns_server', ext_override='.cache')
 
     dns_settings = {
-        'dns_servers': System.dns_status(), 'dns_records': dns_server['records'],
+        'dns_servers': System.dns_status(), 'dns_records': dns_server.get_items('records'),
         'tls': dns_server['tls->enabled'], 'udp_fallback': dns_server['tls->fallback'],
-        'top_domains': dns_cache,
+        'top_domains': dns_cache.get_items('top_domains'),
         'cache': {
-            'clear_top_domains': dns_server['cache->top_domains'],
-            'clear_dns_cache': dns_server['cache->standard']
+            'clear_top_domains': dns_cache['clear->top_domains'],
+            'clear_dns_cache': dns_cache['clear->standard']
         }
     }
 
@@ -89,24 +88,25 @@ def update_page(form):
         update_dns_record(dns_record)
 
     elif ('dns_protocol_update' in form):
-        dns_tls = config(**{
-            'dns_over_tls': validate.get_convert_int(form, 'dns_over_tls'),
-            'udp_fallback': validate.get_convert_int(form, 'udp_fallback')
+        print(form)
+        protocol_settings = config(**{
+            'dns_over_tls': get_convert_bint(form, 'dns_over_tls'),
+            'udp_fallback': get_convert_bint(form, 'udp_fallback')
         })
-
-        if any([opt in [DATA.MISSING, DATA.INVALID] for opt in dns_tls.values()]):
+        print(protocol_settings)
+        if any([opt in [DATA.MISSING, DATA.INVALID] for opt in protocol_settings.values()]):
             return INVALID_FORM
 
-        error = validate_proto_update(dns_tls)
+        error = validate_proto_update(protocol_settings)
         if (error):
             return error
 
-        set_dns_over_tls(dns_tls)
+        configure_protocol_options(protocol_settings)
 
     elif ('dns_cache_clear' in form):
         clear_dns_cache = config(**{
-            'top_domains': validate.get_convert_bint(form, 'top_domains'),
-            'dns_cache': validate.get_convert_bint(form, 'dns_cache')
+            'top_domains': get_convert_bint(form, 'top_domains'),
+            'dns_cache': get_convert_bint(form, 'dns_cache')
         })
 
         # only one is required, so will only be invalid if both are missing.
@@ -126,19 +126,21 @@ def validate_dns_record(query_name: str, *, action: CFG) -> Optional[ValidationE
 
     if (action is CFG.ADD):
 
-        if (not _VALID_DOMAIN.match(query_name) and not query_name.isalnum()):
+        if (not VALID_DOMAIN.match(query_name) and not query_name.isalnum()):
             return ValidationError('Local DNS record is not valid.')
 
     elif (action is CFG.DEL):
         dns_server = load_configuration('dns_server').searchable_user_data
 
-        if (query_name == 'dnx.firewall'):
+        if (query_name == 'dnx.rules'):
             return ValidationError('Cannot remove dnxfirewall dns record.')
 
         if (query_name not in dns_server['records']):
             return ValidationError(INVALID_FORM)
 
 def validate_proto_update(settings: config) -> Optional[ValidationError]:
+
+    print(settings)
     if any([x not in (0, 1) for x in settings.values()]):
         return ValidationError(INVALID_FORM)
 
@@ -161,24 +163,15 @@ def update_dns_record(dns_record: config):
 
         dnx.write_configuration(dns_records.expanded_user_data)
 
-def set_dns_over_tls(dns_tls):
+def configure_protocol_options(settings: config) -> None:
     with ConfigurationManager('dns_server') as dnx:
         dns_server_settings = dnx.load_configuration()
 
-        if ('dns_over_tls' in dns_tls.enabled and 'udp_fallback' not in dns_tls.enabled):
-            tls_enabled = True
-            udp_fallback = False
+        if (settings.udp_fallback and not settings.dns_over_tls):
+            settings.udp_fallback = 0
 
-        elif ('dns_over_tls' in dns_tls.enabled and 'udp_fallback' in dns_tls.enabled):
-            tls_enabled = True
-            udp_fallback = True
-
-        else:
-            udp_fallback = False
-            tls_enabled = False
-
-        dns_server_settings['tls->enabled'] = tls_enabled
-        dns_server_settings['tls->fallback'] = udp_fallback
+        dns_server_settings['tls->enabled'] = settings.dns_over_tls
+        dns_server_settings['tls->fallback'] = settings.udp_fallback
 
         dnx.write_configuration(dns_server_settings.expanded_user_data)
 

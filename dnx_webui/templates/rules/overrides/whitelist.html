@@ -22,7 +22,7 @@
             <div class="col s12">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add Whitelist</h4>
-                    <form action="/advanced/whitelist" method="POST">
+                    <form action="/rules/overrides/whitelist" method="POST">
                         <input type="hidden" name="tab" value="1">
                         <div class="row">
                             <div class="input-field col s4 l3 {{input_color}}">
@@ -64,7 +64,7 @@
                                         <div class="modal-content">
                                             <h5 class="red-text">Are you sure you want to remove the whitelist rule? </h5>
                                         </div>
-                                        <form action="/advanced/whitelist" method="POST">
+                                        <form action="/rules/overrides/whitelist" method="POST">
                                             <div class="modal-footer">
                                                 <button class="btn waves-effect waves-light">YES</button>
                                                 <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
@@ -99,7 +99,7 @@
             <div class="col s12">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add Override</h4>
-                    <form action="/advanced/whitelist" method="POST">
+                    <form action="/rules/overrides/whitelist" method="POST">
                         <input type="hidden" name="tab" value="2">
                         <div class="row">
                             <div class="input-field col s4 l3 {{input_color}}">
@@ -140,7 +140,7 @@
                                             <h5 class="red-text center">Are you sure you want to remove the override? Service restart is required to take effect.
                                             </h5>
                                         </div>
-                                        <form action="/advanced/whitelist" method="POST">
+                                        <form action="/rules/overrides/whitelist" method="POST">
                                             <div class="modal-footer">
                                                 <button class="btn waves-effect waves-light">YES</button>
                                                 <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
@@ -174,7 +174,7 @@
             <div class="col s12">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add IP Address</h4>
-                    <form action="/advanced/whitelist" method="POST">
+                    <form action="/rules/overrides/whitelist" method="POST">
                         <input type="hidden" name="tab" value="3">
                         <div class="row">
                             <div class="input-field col s5 offset-s1 l3 {{input_color}}">
@@ -224,7 +224,7 @@
                                             <h5 class="red-text center">Are you sure you want to remove the category bypass for this IP?
                                             </h5>
                                         </div>
-                                        <form action="/advanced/whitelist" method="POST">
+                                        <form action="/rules/overrides/whitelist" method="POST">
                                             <div class="modal-footer">
                                                 <button class="btn waves-effect waves-light">YES</button>
                                                 <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>

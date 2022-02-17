@@ -11,8 +11,8 @@ from functools import partial
 from datetime import datetime, timedelta
 from subprocess import run, CalledProcessError, DEVNULL
 
-from dnx_gentools.def_constants import fast_time, str_join, NO_DELAY, FIVE_SEC, ONE_HOUR
-from dnx_gentools.file_operations import load_configuration
+from dnx_gentools.def_constants import HOME_DIR, fast_time, str_join, NO_DELAY, FIVE_SEC, ONE_HOUR
+from dnx_gentools.file_operations import load_configuration, load_data
 
 __all__ = (
     'Interface', 'System', 'Services'
@@ -70,7 +70,7 @@ class Interface:
     @staticmethod
     def bandwidth():
         intstat = {}
-        interface_bandwidth = load_configuration('interface.stat')
+        interface_bandwidth = load_data('interface.stat')
         for interface, value in interface_bandwidth.items():
             rx = str(round(int(value[0])/1024, 2)) + ' MB/s'
             tx = str(round(int(value[1])/1024, 2)) + ' MB/s'
@@ -232,11 +232,11 @@ class System:
 
     @staticmethod
     def dns_status():
-        dns_servers_status = load_configuration('dns_server_status')
+        dns_servers_status = load_data('dns_server.stat')
         dns_server = load_configuration('dns_server')
 
-        tls_enabled = dns_server['tls']['enabled']
-        dns_servers = dns_server['resolvers']
+        tls_enabled = dns_server['tls->enabled']
+        dns_servers = dict(dns_server.get_items('resolvers'))
 
         for server, server_info in dns_servers.items():
             tls, dns = 'Waiting', 'Waiting'
@@ -257,7 +257,7 @@ class System:
     @staticmethod
     def backups():
         backups = {}
-        backup_dir = f'{_HOME_DIR}/dnx_system/config_backups'
+        backup_dir = f'{HOME_DIR}/dnx_system/config_backups'
         files = os.listdir(backup_dir)
         for file in files:
             name = file.replace('.tar', '')

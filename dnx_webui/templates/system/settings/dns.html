@@ -33,18 +33,18 @@
                         </thead>
                         <tbody>
                             {% for server_info in dns_settings['dns_servers'].values() %}
-                            <tr>
-                                <form action="/settings/dns" method="POST">
+                            <form action="/settings/dns" method="POST">
+                                <tr>
                                     <td>
                                         <input type="text" name="dnsname{{loop.index}}" value="{{server_info['name']}}" class="validate center">
                                     </td>
                                     <td>
                                         <input type="text" name="dnsserver{{loop.index}}" value="{{server_info['ip_address']}}" class="validate center">
                                     </td>
-                                </form>
-                                <td>{{server_info['dns_up']}}</td>
-                                <td>{{server_info['tls_down']}}</td>
-                            </tr>
+                                    <td>{{server_info['dns_up']}}</td>
+                                    <td>{{server_info['tls_down']}}</td>
+                                </tr>
+                            </form>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -91,9 +91,10 @@
                                     <label>
                                         Off
                                         {% if not dns_settings['tls'] %}
-                                        <input disabled type="checkbox" name="udp_fallback" value="0">
+                                        <input disabled type="checkbox" name="udp_f">
+                                        <input type="hidden" name="udp_fallback">
                                         {% else %}
-                                        {% set val = "0" if dns_settings['tls'] else "1" %}
+                                        {% set val = "0" if dns_settings['udp_fallback'] else "1" %}
                                         <input type="checkbox" name="udp_fallback" value="{{val}}" onchange="this.form.submit()"
                                             {% if dns_settings['udp_fallback'] %} checked="checked" {% endif %}>
                                         {% endif %}
@@ -145,12 +146,11 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% if dns_settings['dns_records'] %}
-                            {% for name, ip_address in dns_settings['dns_records'].items() %}
+                            {% for name, ip_address in dns_settings['dns_records'] %}
                             <tr>
                                 <td>
                                     <a class="btn-floating btn-small red waves-effect waves-light modal-trigger
-                                    {% if name == 'dnx.firewall' %} disabled {% endif %}"
+                                    {% if name == 'dnx.rules' %} disabled {% endif %}"
                                         href="#dns-modal3-{{loop.index}}"><i class="material-icons">remove</i></a>
                                     <div id="dns-modal3-{{loop.index}}" class="modal">
                                         <div class="modal-content">
@@ -169,14 +169,13 @@
                                 <td>{{name}}</td>
                                 <td>{{ip_address}}</td>
                             </tr>
-                            {% endfor %}
                             {% else %}
                             <tr>
                                 <td></td>
                                 <td></td>
                                 <td></td>
                             </tr>
-                            {% endif %}
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -198,11 +197,9 @@
                                 TOP DOMAINS
                                 <div class="switch">
                                     <label>
-                                        {% if dns_settings['cache']['clear_top_domains'] %}
-                                        <input type="checkbox" checked="checked" name="top_domains" value="0">
-                                        {% else %}
-                                        <input type="checkbox" name="top_domains" value="1">
-                                        {% endif %}
+                                        {% set val = "0" if dns_settings['cache']['clear_top_domains'] else "1" %}
+                                        <input type="checkbox" name="top_domains" value="{{val}}"
+                                        {% if dns_settings['cache']['clear_top_domains'] %} checked="checked" {% endif %}>
                                         <span class="lever"></span>
                                         Clear
                                     </label>
@@ -212,11 +209,9 @@
                                 STANDARD
                                 <div class="switch">
                                     <label>
-                                        {% if dns_settings['cache']['clear_dns_cache'] %}
-                                        <input type="checkbox" checked="checked" name="dns_cache" value="0">
-                                        {% else %}
-                                        <input type="checkbox" name="dns_cache" value="0">
-                                        {% endif %}
+                                        {% set val = "0" if dns_settings['cache']['clear_dns_cache'] else "1" %}
+                                        <input type="checkbox" name="dns_cache" value="{{val}}"
+                                        {% if dns_settings['cache']['clear_dns_cache'] %} checked="checked" {% endif %}>
                                         <span class="lever"></span>
                                         Clear
                                     </label>
@@ -250,19 +245,17 @@
                             <th style="width:75%">Domain</th>
                         </thead>
                         <tbody>
-                            {% if dns_settings['top_domains'] %}
-                            {% for domain, count in dns_settings['top_domains'].items() %}
+                            {% for domain, count in dns_settings['top_domains'] %}
                             <tr>
                                 <td>{{count}}</td>
                                 <td>{{domain}}</td>
                             </tr>
-                            {% endfor %}
                             {% else %}
                             <tr>
                                 <td></td>
                                 <td></td>
                             </tr>
-                            {% endif %}
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>

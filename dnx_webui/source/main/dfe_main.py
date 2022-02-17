@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Optional
+
 import os
+import sys
 import time
 
 from datetime import timedelta
@@ -14,7 +17,8 @@ from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import load_configuration, ConfigurationManager
 from dnx_routines.configure.exceptions import ValidationError
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
-from dnx_routines.logging.log_client import LogHandler as Log
+
+from dnx_routines.logging import LogHandler as Log
 
 # ========================================
 # FLASK API - APP INSTANCE INITIALIZATION
@@ -22,6 +26,8 @@ from dnx_routines.logging.log_client import LogHandler as Log
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 
 HOME_DIR = os.environ.get('HOME_DIR', '/home/dnx/dnxfirewall')
+sys.path.insert(0, HOME_DIR)
+sys.path.insert(0, f'{HOME_DIR}/dnx_webui')
 
 app = Flask(
     __name__, static_folder=f'{HOME_DIR}/dnx_webui/static', template_folder=f'{HOME_DIR}/dnx_webui/templates'
@@ -44,10 +50,8 @@ from dnx_secmods.cfirewall.fw_manage import FirewallManage
 
 import dnx_webui.source.main.dfe_obj_manager as dnx_object_manager
 
-LOG_NAME = 'web_app'
-
 # setup for system logging
-Log.run(name=LOG_NAME)
+Log.run(name='web_app')
 
 # NOTE: this will allow the config manager to reference the Log class without an import. (cyclical import error)
 ConfigurationManager.set_log_reference(Log)
@@ -67,18 +71,18 @@ FirewallManage.object_manager = app.dnx_object_manager
 # WEBUI COMPONENTS
 # =========================================
 import source.main.dfe_dashboard as dfe_dashboard
-import source.settings.dfe_dns as dns_settings
-import source.settings.dfe_dhcp as dhcp_settings
-import source.settings.dfe_interface as interface_settings
-import source.settings.dfe_logging as logging_settings
-import source.settings.dfe_syslog as syslog_settings
-import source.settings.dfe_categories as category_settings
-import source.advanced.dfe_xlist as xlist
-import source.advanced.dfe_firewall as dnx_fwall
-import source.advanced.dfe_nat as dnx_nat
-import source.advanced.dfe_domain as dns_proxy
-import source.advanced.dfe_ip as ip_proxy
-import source.advanced.dfe_ips as dnx_ips
+import source.rules.dfe_firewall as dnx_fwall
+import source.rules.dfe_nat as dnx_nat
+import source.rules.dfe_xlist as xlist
+import source.intrusion.dfe_ip as ip_proxy
+import source.intrusion.domain.dfe_domain as dns_proxy
+import source.intrusion.domain.dfe_categories as category_settings
+import source.intrusion.dfe_ips as dnx_ips
+import source.system.settings.dfe_dns as dns_settings
+import source.system.settings.dfe_dhcp as dhcp_settings
+import source.system.settings.dfe_interface as interface_settings
+import source.system.settings.dfe_logging as logging_settings
+import source.system.settings.dfe_syslog as syslog_settings
 import source.system.dfe_logs as dfe_logs
 import source.system.dfe_reports as proxy_reports
 import source.system.dfe_users as dfe_users
@@ -103,173 +107,38 @@ def dnx_dashboard(session_data):
     }
 
     page_settings.update(session_data)
+    print(page_settings)
 
     return render_template('main/dashboard.html', **page_settings)
 
 # --------------------------------------------- #
-#  START OF SETTINGS TAB
+#  START OF RULES TAB
 # --------------------------------------------- #
-
-@app.route('/settings/dns', methods=['GET', 'POST'])
+@app.route('/rules/firewall', methods=['GET', 'POST'])
 @user_restrict('admin')
-def settings_dns(session_data):
-    tab = request.args.get('tab', '1')
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'uri_path': ['settings', 'dns']
-    }
-
-    page_settings.update(session_data)
-
-    page_action = standard_page_logic(
-        dns_settings, page_settings, 'dns_settings', page_name='settings/dns')
-
-    return page_action
-
-@app.route('/settings/dhcp', methods=['GET', 'POST'])
-@user_restrict('admin')
-def settings_dhcp(session_data):
-    tab = request.args.get('tab', '1')
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'uri_path': ['settings', 'dhcp']
-    }
-
-    page_settings.update(session_data)
-
-    page_action = standard_page_logic(
-        dhcp_settings, page_settings, 'dhcp_settings' , page_name='settings/dhcp')
-
-    return page_action
-
-@app.route('/settings/interface', methods=['GET', 'POST'])
-@user_restrict('admin')
-def settings_interface(session_data):
-    tab = request.args.get('tab', '1')
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'uri_path': ['settings', 'interface']
-    }
-
-    page_settings.update(session_data)
-
-    page_action = standard_page_logic(
-        interface_settings, page_settings, 'interface_settings', page_name='settings/interface')
-
-    return page_action
-
-@app.route('/settings/logging', methods=['GET', 'POST'])
-@user_restrict('admin')
-def settings_logging(session_data):
-    tab = request.args.get('tab', '1')
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'uri_path': ['settings', 'logging']
-    }
-
-    page_settings.update(session_data)
-
-    page_action = standard_page_logic(
-        logging_settings, page_settings, 'logging_settings', page_name='settings/logging')
-
-    return page_action
-
-@app.route('/settings/syslog', methods=['GET', 'POST'])
-@user_restrict('admin')
-def settings_syslog(session_data):
-    tab = request.args.get('tab', '1')
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'uri_path': ['settings', 'syslog']
-    }
-
-    page_settings.update(session_data)
-
-    page_action = standard_page_logic(
-        syslog_settings, page_settings, 'syslog_settings', page_name='settings/syslog')
-
-    return page_action
-
-@app.route('/settings/categories', methods=['GET', 'POST'])
-@user_restrict('admin')
-def settings_categories(session_data):
-    tab = request.args.get('tab', '1')
-    menu_option = request.args.get('menu', '1')
-    menu_option = int(menu_option) if menu_option.isdigit() else '1'
-
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'cat_settings': True, 'tab': tab, 'menu': menu_option,
-        'uri_path': ['settings', 'categories']
-    }
-
-    page_settings.update(session_data)
-
-    page_action = categories_page_logic(category_settings, page_settings)
-
-    return page_action
-
-# --------------------------------------------- #
-#  START OF ADVANCED TAB
-# --------------------------------------------- #
-
-@app.route('/advanced/whitelist', methods=['GET', 'POST'])
-@user_restrict('admin')
-def advanced_whitelist(session_data):
-    tab = request.args.get('tab', '1')
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'uri_path': ['advanced', 'whitelist']
-    }
-
-    page_settings.update(session_data)
-
-    page_action = standard_page_logic(
-        xlist, page_settings, 'whitelist_settings', page_name='advanced/whitelist')
-
-    return page_action
-
-@app.route('/advanced/blacklist', methods=['GET', 'POST'])
-@user_restrict('admin')
-def advanced_blacklist(session_data):
-    tab = request.args.get('tab', '1')
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'uri_path': ['advanced', 'blacklist']
-    }
-
-    page_settings.update(session_data)
-
-    page_action = standard_page_logic(
-        xlist, page_settings, 'blacklist_settings', page_name='advanced/blacklist')
-
-    return page_action
-
-@app.route('/firewall', methods=['GET', 'POST'])
-@user_restrict('admin')
-def firewall(session_data):
+def rules_firewall(session_data):
     tab = request.args.get('tab', '1')
 
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'firewall': True, 'ajax': True,
+        'tab': tab, 'ajax': True,
         'dnx_network_objects': {},
         'dnx_service_objects': {},
         'selected': 'MAIN',
         'sections': ['BEFORE', 'MAIN', 'AFTER'],
-        'uri_path': ['firewall']
+        'uri_path': ['rules', 'firewall']
     }
 
     page_settings.update(session_data)
 
     page_action = firewall_page_logic(
-        dnx_fwall, page_settings, 'firewall_settings', page_name='firewall/firewall')
+        dnx_fwall, page_settings, 'firewall_settings', page_name='rules/firewall/firewall')
 
     return page_action
 
-@app.route('/advanced/firewall/commit', methods=['POST'])
+@app.route('/rules/firewall/commit', methods=['POST'])
 @user_restrict('admin')
-def advanced_firewall_commit(session_data):
+def rules_firewall_commit(session_data):
 
     # TODO: get user and ip information so we can log the commit (warning?)
 
@@ -282,9 +151,9 @@ def advanced_firewall_commit(session_data):
 
     return ajax_response(status=status, data=err_data)
 
-@app.route('/advanced/nat', methods=['GET', 'POST'])
+@app.route('/rules/nat', methods=['GET', 'POST'])
 @user_restrict('admin')
-def advanced_nat(session_data):
+def rules_nat(session_data):
     tab = request.args.get('tab', '1')
     menu_option = request.args.get('menu', '1')
 
@@ -293,65 +162,72 @@ def advanced_nat(session_data):
         'tab': tab, 'menu': menu_option,
         'selected': 'WAN_ZONE',
         'zones': ['WAN', 'DMZ', 'LAN'],
-        'uri_path': ['advanced', 'nat']
+        'uri_path': ['rules', 'nat']
     }
 
     page_settings.update(session_data)
 
     page_action = firewall_page_logic(
-        dnx_nat, page_settings, 'nat_settings', page_name='advanced/nat')
+        dnx_nat, page_settings, 'nat_settings', page_name='rules/nat')
 
     return page_action
 
-@app.route('/advanced/domain', methods=['GET', 'POST'])
+@app.route('/rules/overrides/whitelist', methods=['GET', 'POST'])
 @user_restrict('admin')
-def advanced_domain(session_data):
+def rules_overrides_whitelist(session_data):
+    tab = request.args.get('tab', '1')
+    page_settings = {
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['rules', 'overrides', 'whitelist']
+    }
+
+    page_settings.update(session_data)
+
+    page_action = standard_page_logic(
+        xlist, page_settings, 'whitelist_settings', page_name='rules/overrides/whitelist')
+
+    return page_action
+
+@app.route('/rules/overrides/blacklist', methods=['GET', 'POST'])
+@user_restrict('admin')
+def rules_overrides_blacklist(session_data):
+    tab = request.args.get('tab', '1')
+    page_settings = {
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['rules', 'overrides', 'blacklist']
+    }
+
+    page_settings.update(session_data)
+
+    page_action = standard_page_logic(
+        xlist, page_settings, 'blacklist_settings', page_name='rules/overrides/blacklist')
+
+    return page_action
+
+# --------------------------------------------- #
+#  START OF INTRUSION TAB
+# --------------------------------------------- #
+@app.route('/intrusion/ip', methods=['GET', 'POST'])
+@user_restrict('admin')
+def intrusion_ip(session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'ajax': True,
-        'tab': tab, 'uri_path': ['advanced', 'domain']
+        'tab': tab, 'uri_path': ['intrusion', 'ip']
     }
 
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        dns_proxy, page_settings, 'domain_settings', page_name='advanced/domain')
+        ip_proxy, page_settings, 'ip_settings', page_name='intrusion/ip')
 
     return page_action
 
-@app.post('/advanced/domain')
+# TODO: work on proper response
+@app.post('/intrusion/ip/post')
 @user_restrict('admin')
-def advanced_domain_post(session_data):
-
-    json_data = request.get_json(force=True)
-    print(json_data)
-
-    status, err_data = ip_proxy.update_page(json_data)
-
-    print(f'[commit/response] status={status}, err_data={err_data}')
-
-    return ajax_response(status=status, data=err_data)
-
-@app.get('/advanced/ip')
-@user_restrict('admin')
-def advanced_ip(session_data):
-    tab = request.args.get('tab', '1')
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'uri_path': ['advanced', 'ip']
-    }
-
-    page_settings.update(session_data)
-
-    page_action = standard_page_logic(
-        ip_proxy, page_settings, 'ip_settings', page_name='advanced/ip')
-
-    return page_action
-
-@app.post('/advanced/ip/post')
-@user_restrict('admin')
-def advanced_ip_post(session_data):
+def intrusion_ip_post(session_data):
 
     json_data = request.get_json(force=True)
     print(json_data)
@@ -360,29 +236,167 @@ def advanced_ip_post(session_data):
 
     print(f'[commit/response] status={status}, err_data={err_data}')
 
-@app.route('/advanced/ips', methods=['GET', 'POST'])
+    return ajax_response(status=status, data=err_data)
+
+@app.route('/intrusion/domain', methods=['GET', 'POST'])
 @user_restrict('admin')
-def advanced_ips(session_data):
+def intrusion_domain(session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'uri_path': ['advanced', 'ips']
+        'ajax': True,
+        'tab': tab, 'uri_path': ['intrusion', 'domain']
     }
 
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        dnx_ips, page_settings, 'ips_settings', page_name='advanced/ips')
+        dns_proxy, page_settings, 'domain_settings', page_name='intrusion/domain/domain')
+
+    return page_action
+
+@app.post('/intrusion/domain/post')
+@user_restrict('admin')
+def intrusion_domain_post(session_data):
+
+    json_data = request.get_json(force=True)
+    print(json_data)
+
+    status, err_data = dns_proxy.update_page(json_data)
+
+    print(f'[commit/response] status={status}, err_data={err_data}')
+
+    return ajax_response(status=status, data=err_data)
+
+    #  START OF DOMAIN SUB MENU
+    # ----------------------------------------- #
+@app.route('/intrusion/domain/categories', methods=['GET', 'POST'])
+@user_restrict('admin')
+def intrusion_domain_categories(session_data):
+    tab = request.args.get('tab', '1')
+    menu_option = request.args.get('menu', '1')
+    menu_option = int(menu_option) if menu_option.isdigit() else '1'
+
+    page_settings = {
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'cat_settings': True, 'tab': tab, 'menu': menu_option,
+        'uri_path': ['intrusion', 'domain', 'categories']
+    }
+
+    page_settings.update(session_data)
+
+    page_action = categories_page_logic(category_settings, page_settings)
+
+    return page_action
+
+    #  END OF DOMAIN SUB MENU
+    # ----------------------------------------- #
+@app.route('/intrusion/ips', methods=['GET', 'POST'])
+@user_restrict('admin')
+def intrusion_ips(session_data):
+    tab = request.args.get('tab', '1')
+    page_settings = {
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['intrusion', 'ips']
+    }
+
+    page_settings.update(session_data)
+
+    page_action = standard_page_logic(
+        dnx_ips, page_settings, 'ips_settings', page_name='intrusion/ips')
 
     return page_action
 
 # --------------------------------------------- #
-#  START OF SYSTEMS TAB
+#  START OF SYSTEMS MENU
 # --------------------------------------------- #
+    #  START OF SETTINGS SUB MENU
+    # ----------------------------------------- #
+@app.route('/system/settings/dns', methods=['GET', 'POST'])
+@user_restrict('admin')
+def system_settings_dns(session_data):
+    tab = request.args.get('tab', '1')
+    page_settings = {
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['system', 'settings', 'dns']
+    }
 
+    page_settings.update(session_data)
+
+    page_action = standard_page_logic(
+        dns_settings, page_settings, 'dns_settings', page_name='system/settings/dns')
+
+    return page_action
+
+@app.route('/system/settings/dhcp', methods=['GET', 'POST'])
+@user_restrict('admin')
+def system_settings_dhcp(session_data):
+    tab = request.args.get('tab', '1')
+    page_settings = {
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['system', 'settings', 'dhcp']
+    }
+
+    page_settings.update(session_data)
+
+    page_action = standard_page_logic(
+        dhcp_settings, page_settings, 'dhcp_settings', page_name='system/settings/dhcp')
+
+    return page_action
+
+@app.route('/system/settings/interface', methods=['GET', 'POST'])
+@user_restrict('admin')
+def system_settings_interface(session_data):
+    tab = request.args.get('tab', '1')
+    page_settings = {
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['system', 'settings', 'interface']
+    }
+
+    page_settings.update(session_data)
+
+    page_action = standard_page_logic(
+        interface_settings, page_settings, 'interface_settings', page_name='system/settings/interface')
+
+    return page_action
+
+@app.route('/system/settings/logging', methods=['GET', 'POST'])
+@user_restrict('admin')
+def system_settings_logging(session_data):
+    tab = request.args.get('tab', '1')
+    page_settings = {
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['system', 'settings', 'logging']
+    }
+
+    page_settings.update(session_data)
+
+    page_action = standard_page_logic(
+        logging_settings, page_settings, 'logging_settings', page_name='system/settings/logging')
+
+    return page_action
+
+@app.route('/system/settings/syslog', methods=['GET', 'POST'])
+@user_restrict('admin')
+def system_settings_syslog(session_data):
+    tab = request.args.get('tab', '1')
+    page_settings = {
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': tab, 'uri_path': ['system', 'settings', 'syslog']
+    }
+
+    page_settings.update(session_data)
+
+    page_action = standard_page_logic(
+        syslog_settings, page_settings, 'syslog_settings', page_name='system/settings/syslog')
+
+    return page_action
+
+    # END OF SETTINGS SUB MENU
+    # ----------------------------------------- #
 @app.route('/system/logs', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
-def system_logs(session_data):
+def system_system_logs(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
         'menu': '1', 'dnx_table': True, 'ajax': True, 'auto_colorize': True,
@@ -394,11 +408,11 @@ def system_logs(session_data):
 
     page_settings.update(session_data)
 
-    page_action = log_page_logic(dfe_logs, page_settings, page_name='system/logs')
+    page_action = log_page_logic(dfe_logs, page_settings, page_name='system/logs/logs')
 
     return page_action
 
-@app.route('/system/logs/get', methods=['POST',])
+@app.post('/system/logs/get')
 @user_restrict('user', 'admin')
 def system_logs_get(session_data):
     json_data = request.get_json(force=True)
@@ -469,9 +483,8 @@ def system_services(session_data):
     return page_action
 
 # --------------------------------------------- #
-#  START OF DEVICE TAB
+#  START OF DEVICE MENU
 # --------------------------------------------- #
-
 @app.route('/device/restart', methods=['GET', 'POST'])
 @user_restrict('admin')
 def system_restart(session_data):
@@ -499,13 +512,12 @@ def system_shutdown(session_data):
     return handle_system_action(page_settings)
 
 # --------------------------------------------- #
-#  START OF LOGOUT TAB
+#  START OF LOGOUT MENU
 # --------------------------------------------- #
-
 @app.route('/logout', methods=['GET'])
 @user_restrict('user', 'admin')
-# removing user from session dict then removing them from locally stored session tracker to allow
-# for cross session awareness of users/accts logged in.
+# removing user from session dict then removing them from locally stored session tracker to allow for cross session
+# awareness of users/accounts logged in.
 def dnx_logout(session_data):
     user = session.pop('user', None)
     if (user):
@@ -516,7 +528,6 @@ def dnx_logout(session_data):
 # --------------------------------------------- #
 #  BLOCKED PAGE | dns redirect
 # --------------------------------------------- #
-
 @app.route('/blocked')
 def dnx_blocked():
     page_settings = {
@@ -524,10 +535,11 @@ def dnx_blocked():
         'idle_timeout': False, 'uri_path': ['blocked']
     }
 
-    # checking for domain sent by nginx that is being redirected to firewall. if domain doesnt exist (user navigated to
+    # checking for domain sent by nginx that is being redirected to rules. if domain doesnt exist (user navigated to
     # this page manually) then a not authorized page will be served. If the domain is not a valid domain (regex) the
-    # request will be redirected back to blocked page without a domain. NOTE: this is a crazy bit of code that should be
-    # tested much more as it is possible to do a sql injection here if the validations below are bypassed.
+    # request will be redirected back to blocked page without a domain.
+    # NOTE: this is a crazy bit of code that should be tested much more as it is possible to do a sql injection here
+    #  if the validations below are bypassed.
     blocked_domain = request.args.get('dom', None)
     if (not blocked_domain):
         session.pop('user', None)
@@ -535,7 +547,7 @@ def dnx_blocked():
         return render_template('main/not_authorized.html', **page_settings)
 
     try:
-        validate.domain(blocked_domain)
+        validate.domain_name(blocked_domain)
     except ValidationError:
         session.pop('user', None)
 
@@ -587,15 +599,26 @@ def dnx_login():
 
 # --------------------------------------------- #
 # --------------------------------------------- #
-@app.route('/', methods=['GET'])
+@app.get('/')
 def main():
     return redirect(url_for('dnx_login'))
 
 # TODO: make this use a new non application error page because explanation doesnt make sense. also transfer session
-# of logged in users.
-@app.route('/<path>', methods=['GET'])
+#  of logged in users.
+@app.route('/<path>', methods=['GET', 'POST'])
 def default(path):
-    return render_template(application_error_page, general_error='page not found.')
+
+    return render_template(application_error_page, general_error=f'{path} not found.')
+
+@app.route('/<path_a>/<path_b>', methods=['GET', 'POST'])
+def default_sub(path_a, path_b):
+
+    return render_template(application_error_page, general_error=f'{path_a}/{path_b} not found.')
+
+@app.route('/<path_a>/<path_b>/<path_c>', methods=['GET', 'POST'])
+def default_sub_sub(path_a, path_b, path_c):
+
+    return render_template(application_error_page, general_error=f'{path_a}/{path_b}/{path_c} not found.')
 
 # --------------------------------------------- #
 # all standard page loads use this logic to decide the page action/ call the correct
@@ -651,6 +674,8 @@ def log_page_logic(log_page, page_settings, *, page_name):
     elif (request.method == 'POST'):
         request_data, handler = request.form, log_page.update_page
 
+    else: return
+
     try:
         table_data, table, menu_option = handler(request_data)
     except OSError as ose:
@@ -686,7 +711,7 @@ def categories_page_logic(dnx_page, page_settings):
     except OSError as ose:
         return render_template(application_error_page, general_error=ose, **page_settings)
 
-    return render_template('settings/categories.html', **page_settings)
+    return render_template('intrusion/domain/categories.html', **page_settings)
 
 # function called by restart/shutdown pages. will ensure the user specified operation gets executed
 def handle_system_action(page_settings):
@@ -703,7 +728,7 @@ def handle_system_action(page_settings):
 
         Log.warning(f'dnxfirewall {action} initiated.')
 
-        # I prefer the word restart so converting to system command here
+        # I prefer the word restart, so converting to system command here
         action = 'reboot' if action == 'restart' else f'{action} now'
 
         # TODO: make sure this is authenticated
@@ -715,7 +740,8 @@ def handle_system_action(page_settings):
 
     return render_template('main/device.html', **page_settings)
 
-def update_session_tracker(username, user_role=None, remote_addr=None, *, action=CFG.ADD):
+def update_session_tracker(username: str, user_role: Optional[str] = None, remote_addr: Optional[str] = None,
+                           *, action: CFG = CFG.ADD):
 
     if (action is CFG.ADD and not remote_addr):
         raise ValueError('remote_addr must be specified if action is set to add.')
@@ -725,9 +751,10 @@ def update_session_tracker(username, user_role=None, remote_addr=None, *, action
 
         user_path = f'active_users->{username}'
         if (action is CFG.ADD):
-            persistent_tracker[f'{user_path}->role'] = user_role,
-            persistent_tracker[f'{user_path}->remote_addr'] = remote_addr,
-            persistent_tracker[f'{user_path}->logged_in'] = time.time(),  # NOTE: can probably make this human-readable format here.
+
+            persistent_tracker[f'{user_path}->role'] = user_role
+            persistent_tracker[f'{user_path}->remote_addr'] = remote_addr
+            persistent_tracker[f'{user_path}->logged_in'] = time.time()  # NOTE: make human-readable?
             persistent_tracker[f'{user_path}->last_seen'] = None
 
         elif (action is CFG.DEL):
@@ -770,10 +797,10 @@ def dark_mode():
         return
 
     dark_mode_update = request.args.get('dark_mode_update', DATA.MISSING)
-    # this ensures value conforms to system before configuring
+    # this ensures value conforms to the system before configuring
     if (dark_mode_update is not DATA.MISSING):
         try:
-            dark_mode = CFG(validate.convert_int(dark_mode_update))
+            dark_mode_config = CFG(validate.convert_int(dark_mode_update))
         except:
             return
 
@@ -786,7 +813,7 @@ def dark_mode():
             if (user not in active_users):
                 return
 
-            webui_settings[f'active_users->{user}->dark_mode'] = dark_mode
+            webui_settings[f'active_users->{user}->dark_mode'] = dark_mode_config
 
             webui.write_configuration(webui_settings.expanded_user_data)
 
@@ -796,13 +823,11 @@ def dark_mode():
 
         # TODO: implement .get for ConfigChain dict
         # this check prevents issues with log in/out transitions
-        user = webui_settings.get(f'users->{user}')
-        if (not user):
+        dark_mode_config = webui_settings.get(f'users->{user}->dark_mode')
+        if (not dark_mode_config):
             return
 
-        dark_mode = user['dark_mode']
-
-    session['dark_mode'] = dark_mode
+    session['dark_mode'] = dark_mode_config
 
 # ====================================
 # FLASK API - JINJA FILTER FUNCTIONS

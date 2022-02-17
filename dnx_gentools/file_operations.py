@@ -23,16 +23,20 @@ FILE_POLL_TIMER = 10
 
 file_exists = os.path.exists
 
-def load_configuration(filename: str, *, filepath: str = 'dnx_system/data') -> ConfigChain:
+def load_configuration(filename: str, *, filepath: str = 'dnx_system/data', ext_override: str = '') -> ConfigChain:
     '''load json data from file, convert it to a python dict, then return as object.'''
-    if (not filename.endswith('.cfg')):
+
+    if (ext_override):
+        filename += ext_override
+
+    elif (not filename.endswith('.cfg')):
         filename += '.cfg'
 
     # loading system default configs
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'r') as system_settings_io:
         system_settings: dict = json.load(system_settings_io)
 
-    # i like the path check more than try/except block
+    # I like the path check more than try/except block
     if not os.path.exists(f'{HOME_DIR}/{filepath}/usr/{filename}'):
         user_settings = {}
 
@@ -190,6 +194,19 @@ def cfg_write_poller(list_function: DNSListHandler) -> Wrapper:
             time.sleep(FILE_POLL_TIMER)
     return wrapper
 
+class config(dict):
+
+    def __init__(self, **kwargs: dict[str, Union[str, int, bool]]):
+
+        for k, v in kwargs.items():
+            self[k] = v
+
+    def __getattr__(self, item: str) -> Any:
+        return self[item]
+
+    def __setattr__(self, key: str, value: Union[str, int, bool]):
+        self[key] = value
+
 
 _item = namedtuple('item', 'key value')
 
@@ -220,7 +237,9 @@ class ConfigChain:
 
         raise KeyError(f'{key} not found in configuration chain.')
 
-    def __setitem__(self, key: str, value: Optional[Union[int, str, list]]):
+    def __setitem__(self, key: str, value: Union[int, str, list, None]):
+
+        # print('setting ->', value)
 
         self.__mutable_config[key] = value
 
@@ -230,14 +249,43 @@ class ConfigChain:
         for k in key_matches:
             del self.__mutable_config[k]
 
-    def get_list(self, key: str) -> list[str]:
+    def get(self, key: str, ret_val: Any = None) -> Union[Optional[Union[int, str, list]], Optional[Any]]:
+
+        for cfg in self.__flat_config:
+
+            value = cfg.get(key, DATA.MISSING)
+            if (value is not DATA.MISSING):
+                return value
+
+        return ret_val
+
+    def get_dict(self, key: Optional[str] = None) -> dict[str, Any]:
+        '''return dict of children 1 level lower than passed in key.
+
+         returns empty if not found.
+
+            config.get_dict('interfaces->builtins')
+        '''
+
+        keys = [] if key is None else key.split(self._sep)
+        search_data = self._merge_expand()
+
+        for k in keys:
+            try:
+                search_data = search_data[k]
+            except KeyError:
+                return {}
+
+        return search_data
+
+    def get_list(self, key: Optional[str] = None) -> list[str]:
         '''return list of child keys 1 level lower than passed in key. returns empty list if not found.
 
             config.get_list('interfaces->builtins')
         '''
 
-        keys = key.split(self._sep)
-        search_data = self.__config[1]
+        keys = [] if key is None else key.split(self._sep)
+        search_data = self._merge_expand()
 
         for k in keys:
             try:
@@ -247,7 +295,7 @@ class ConfigChain:
 
         return list(search_data)
 
-    def get_items(self, key: str) -> list[tuple]:
+    def get_items(self, key: str) -> list[Optional[_item]]:
         '''return list of namedtuples containing key: value pairs of child keys 1 level lower than passed in key.
         returns empty list if not found.
 
@@ -255,7 +303,7 @@ class ConfigChain:
         '''
 
         keys = key.split(self._sep)
-        search_data = self.__config[1]
+        search_data = self._merge_expand()
 
         for k in keys:
             try:
@@ -263,7 +311,25 @@ class ConfigChain:
             except KeyError:
                 return []
 
-        return [_item(k, v) for k, v in search_data]
+        return [_item(k, v) for k, v in search_data.items()]
+
+    def get_values(self, key: str) -> list:
+        '''return list of namedtuples containing key: value pairs of child keys 1 level lower than passed in key.
+        returns empty list if not found.
+
+            config.get_items('interfaces->builtins')
+        '''
+
+        keys = key.split(self._sep)
+        search_data = self._merge_expand()
+
+        for k in keys:
+            try:
+                search_data = search_data[k]
+            except KeyError:
+                return []
+
+        return list(search_data.values())
 
     @property
     def searchable_system_data(self) -> dict:
@@ -290,6 +356,15 @@ class ConfigChain:
 
         return self._expand(self.__mutable_config)
 
+    def _merge_expand(self) -> dict:
+        '''overloads system config with user data then expands and returns dictionary.'''
+
+        combined_config = copy(self.__flat_config[1])
+
+        combined_config.update(self.__flat_config[0])
+
+        return self._expand(combined_config)
+
     def _flatten(self, cfg: dict, /, parent_key: str = '') -> dict:
         flat_d = {}
         for key, value in cfg.items():
@@ -310,10 +385,15 @@ class ConfigChain:
     def _expand(self, cfg: dict, /) -> dict:
         expand_d = {}
 
+        # print(cfg)
         for key, value in cfg.items():
+
+            # print(key, value)
 
             key_path = key.split(self._sep)
             nested = expand_d
+
+            # print(key_path)
 
             for nkey in key_path[:-1]:
                 try:

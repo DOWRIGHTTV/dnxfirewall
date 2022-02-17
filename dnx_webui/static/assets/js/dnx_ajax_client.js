@@ -25,7 +25,7 @@ class AjaxClient {
         }
     }
 
-   handleResponse(response, field) {
+   handleResponse(response, field = null) {
        if (response.error) {
            let commitError = document.querySelector("#ajax-error-modal");
            commitError.querySelector("h5").innerText = response.message;
@@ -37,9 +37,11 @@ class AjaxClient {
            );
            errorModal.open();
 
-           field.reset()
-
            console.log("[server/response]: ", response);
+
+           // notifying of error so field can be reset
+           return true;
+
        } else {
            console.log("[server/response]: successful update.");
        }

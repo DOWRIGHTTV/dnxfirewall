@@ -1,12 +1,12 @@
 #!/usr/bin/python3
 
 import dnx_iptools.interface_ops as interface
-import dnx_routines.configure.web_validate as validate
 
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA, INTF
-from dnx_gentools.file_operations import load_configuration
-from dnx_routines.configure.exceptions import ValidationError
+from dnx_gentools.file_operations import load_configuration, config
+
+from dnx_routines.configure.web_validate import ValidationError, convert_int, ip_address, cidr
 from dnx_routines.configure.system_info import Interface
 
 _IP_DISABLED = True
@@ -14,51 +14,54 @@ _IP_DISABLED = True
 def load_page(form):
     interface_settings = load_configuration('system')
 
-    wan_settings = interface_settings['interfaces']['builtins']['wan']
+    wan_ident = interface_settings['interfaces->builtins->wan->ident']
+    wan_state = interface_settings['interfaces->builtins->wan->state']
+    default_mac = interface_settings['interfaces->builtins->wan->default_mac']
+    configured_mac = interface_settings['interfaces->builtins->wan->default_mac']
 
     interface_settings = {
         'mac': {
-            'default': wan_settings['default_mac'],
-            'current': wan_settings['default_mac'] if not wan_settings['configured_mac'] else wan_settings['configured_mac']
+            'default': default_mac,
+            'current': configured_mac if configured_mac else default_mac
         },
         'ip': {
-            'state': wan_settings['state'],
-            'ip_address': f'{interface.get_ip_address(interface=wan_settings["ident"])}',
-            'netmask': f'{interface.get_netmask(interface=wan_settings["ident"])}',
-            'default_gateway': Interface.default_gateway(wan_settings["ident"])
+            'state': wan_state,
+            'ip_address': f'{interface.get_ip_address(interface=wan_ident)}',
+            'netmask': f'{interface.get_netmask(interface=wan_ident)}',
+            'default_gateway': Interface.default_gateway(wan_ident)
         }
     }
 
     return interface_settings
 
-def update_page(form):
+def update_page(form: dict):
     if ('update_wan_state' in form):
-        wan_state = form.get('update_wan_state', DATA.INVALID)
-        if wan_state is DATA.INVALID:
+        wan_state = form.get('update_wan_state', DATA.MISSING)
+        if (wan_state is DATA.MISSING):
             return INVALID_FORM
 
         try:
-            wan_state = INTF(validate.convert_int(wan_state))
+            wan_state = INTF(convert_int(wan_state))
         except (ValidationError, KeyError):
             return INVALID_FORM
 
         else:
-            interfaceset_wan_interface(wan_state)
+            interface.set_wan_interface(wan_state)
 
     elif ('update_wan_ip' in form):
-        wan_ip_settings = {
-            'ip': form.get('wan_ip', DATA.INVALID),
-            'cidr': form.get('wan_cidr', DATA.INVALID),
-            'dfg': form.get('wan_dfg', DATA.INVALID)
-        }
+        wan_ip_settings = config(**{
+            'ip': form.get('wan_ip', DATA.MISSING),
+            'cidr': form.get('wan_cidr', DATA.MISSING),
+            'dfg': form.get('wan_dfg', DATA.MISSING)
+        })
 
-        if (DATA.INVALID in wan_ip_settings.values()):
+        if (DATA.MISSING in wan_ip_settings.values()):
             return INVALID_FORM
 
         try:
-            validate.ip_address(wan_ip_settings['ip'])
-            validate.cidr(wan_ip_settings['cidr'])
-            validate.ip_address(wan_ip_settings['dfg'])
+            ip_address(wan_ip_settings.ip)
+            cidr(wan_ip_settings.cidr)
+            ip_address(wan_ip_settings.dfg)
         except ValidationError as ve:
             return ve
 

@@ -1,5 +1,6 @@
 {% extends('layout.html') %}
 {% block body %}
+{% include 'rules/firewall/before_firewall.html' %}
 <section id="tabs-bar" class="tabsbar">
     <div class="container">
         <div class="row">
@@ -24,7 +25,7 @@
                     <h4 class="{{title_color}}">Rule List
                     {% if firewall_settings['pending_changes'] %} (*Changes Pending) {% endif -%}</h4>
                     <div class="row">
-                        <form action="advanced/firewall" method="POST">
+                        <form action="rules/firewall" method="POST">
                             <input type="hidden" name="tab" value="1">
                             <input type="hidden" name="change_section">
                             <div class="input-field col s4 m2 {{input_color}}">
@@ -62,7 +63,7 @@
                                 <col span="1" style="background-color:#90a4ae">
                                 <col span="3" style="background-color:#cfd8dc">
                                 <col span="3" style="background-color:#b0bec5">
-                                <col span="4" style="background-color:#eceff1">
+                                <col span="5" style="background-color:#eceff1">
                             </colgroup>
                             <thead>
                                 <tr>
@@ -70,7 +71,7 @@
                                     <th colspan="1">ID</th>
                                     <th colspan="3">Source</th>
                                     <th colspan="3">Destination</th>
-                                    <th colspan="4">Options</th>
+                                    <th colspan="5">Options</th>
                                 </tr>
                                 <tr>
                                     <th>Select</th>
@@ -84,8 +85,9 @@
                                     <th>Services</th>
                                     <th>Action</th>
                                     <th>Log</th>
-                                    <th>IPProxy</th>
-                                    <th>IPS/IDS</th>
+                                    <th>IPP</th>
+                                    <th>DNS</th>
+                                    <th>IPS</th>
                                 </tr>
                             </thead>
                             <tbody id="filter-table-body" class="rule-editor">
@@ -127,6 +129,7 @@
                                     <td class="rlog">{{'ON' if rule[9] else 'OFF'}}</td>
                                     <td class="rsec1_prof">{{rule[10]}}</td>
                                     <td class="rsec2_prof">{{rule[11]}}</td>
+                                    <td class="rsec3_prof">{{rule[12]}}</td>
                                 </tr>
                                 {% endfor -%}
                             </tbody>
@@ -223,7 +226,7 @@
                                 <td class="fw_obj">X</td>
                             {% else -%}
                                 <td class="fw-obj">
-                                    <form action="/advanced/firewall" method="POST">
+                                    <form action="/rules/firewall" method="POST">
                                         <input type="hidden" name="tab" value="3">
                                         <input type="hidden" name="obj_id" value="{{id}}">
                                         <button class="btn-floating btn-small waves-effect waves-light red" name="remove_obj">
@@ -252,7 +255,8 @@
         </div>
     </div>
 </section>
-{% include 'advanced/firewall/fw_style.html' %}
-{% include 'advanced/firewall/btn_modals.html' %}
-{% include 'advanced/firewall/fwrule_editor.html' %}
+{% include 'rules/firewall/fw_style.html' %}
+{% include 'rules/firewall/btn_modals.html' %}
+{% include 'rules/firewall/fwrule_editor.html' %}
+{% include 'rules/firewall/after_firewall.html' %}
 {% endblock %}

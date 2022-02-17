@@ -610,7 +610,7 @@ class RawPacket:
         self = cls()
         self._addr = address  # TODO: see if this can be removed
 
-        # intf_ip used to fill sinkhole query response with firewall interface ip (of intf received on)
+        # intf_ip used to fill sinkhole query response with rules interface ip (of intf received on)
         self.intf_ip = sock_info[1].packed
         self.sendto  = sock_info[4]
 

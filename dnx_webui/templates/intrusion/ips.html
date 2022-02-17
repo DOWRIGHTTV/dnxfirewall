@@ -22,7 +22,7 @@
             <div class="col s12 m6">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Denial Of Service</h4>
-                    <form action="/advanced/ips" method="POST">
+                    <form action="/intrusion/ips" method="POST">
                         <input type="hidden" name="tab" value="1">
                         <input type="hidden" name="dnx_ddos_update">
                         <div class="row">
@@ -94,7 +94,7 @@
             <div class="col s12 m6">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">General Settings</h4>
-                    <form action="/advanced/ips" method="POST">
+                    <form action="/intrusion/ips" method="POST">
                         <input type="hidden" name="tab" value="1">
                         <input type="hidden" name="general_settings">
                         <div class="row">
@@ -136,7 +136,7 @@
                 </div>
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Port Scan</h4>
-                    <form action="/advanced/ips" method="POST">
+                    <form action="/intrusion/ips" method="POST">
                         <input type="hidden" name="tab" value="1">
                         <input type="hidden" name="dnx_portscan_update">
                         <div class="row">
@@ -204,7 +204,7 @@
             <div class="col s8">
                 <div class="card-panel card-panel-eql hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add IPS Whitelist</h4>
-                    <form action="/advanced/ips" method="POST">
+                    <form action="/intrusion/ips" method="POST">
                         <input type="hidden" name="tab" value="2">
                         <div class="row">
                             <div class="input-field col s4 {{input_color}}">
@@ -226,7 +226,7 @@
             <div class="col s4">
                 <div class="card-panel card-panel-eql hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Includes</h4>
-                    <form action="/advanced/ips" method="POST">
+                    <form action="/intrusion/ips" method="POST">
                         <input type="hidden" name="tab" value="2">
                         <input type="hidden" name="ips_wl_dns">
                         <div class="row">
@@ -275,7 +275,7 @@
                                         <div class="modal-content">
                                             <h5 class="red-text">Are you sure you want to remove the IPS whitelist rule?</h5>
                                         </div>
-                                        <form action="/advanced/ips" method="POST">
+                                        <form action="/intrusion/ips" method="POST">
                                             <input type="hidden" name="tab" value="2">
                                             <input type="hidden" name="ips_wl_ip" value="{{ip_address}}">
                                             <div class="modal-footer">
@@ -326,7 +326,7 @@
                                         <div class="modal-content">
                                             <h5 class="red-text">Are you sure you want to remove the passively blocked host?</h5>
                                         </div>
-                                        <form action="/advanced/ips" method="POST">
+                                        <form action="/intrusion/ips" method="POST">
                                             <input type="hidden" name="tab" value="3">
                                             <div class="modal-footer">
                                                 <button class="btn waves-effect waves-light" name="ips_pbl_remove" value="{{host}}/{{timestamp}}">YES</button>

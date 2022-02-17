@@ -3,12 +3,7 @@
 from __future__ import annotations
 
 import re
-import json
-
-from collections import namedtuple
 from ipaddress import IPv4Network
-
-from flask import Flask
 
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_typing import *
@@ -21,6 +16,7 @@ MAX_PORT = 65535
 MAX_PORT_RANGE = MAX_PORT + 1
 
 __all__ = (
+    'INVALID_FORM',
     'standard',
     'convert_int', 'get_convert_int',
     'convert_bint', 'get_convert_bint',
@@ -45,8 +41,9 @@ VALID_MAC = re.compile('(?:[0-9a-fA-F]:?){12}')
 VALID_DOMAIN = re.compile('(//|\\s+|^)(\\w\\.|\\w[A-Za-z0-9-]{0,61}\\w\\.){1,3}[A-Za-z]{2,6}')
 
 def get_convert_int(form, key):
-    '''gets string value from submitted form then converts into an integer and returns. If key is not present
-    or string cannot be converted an IntEnum representing the error will be returned.'''
+    '''gets string value from submitted form then converts into an integer and returns.
+
+    If key is not present or string cannot be converted, an IntEnum representing the error will be returned.'''
 
     try:
         value = form.get(key, DATA.MISSING)
@@ -56,13 +53,15 @@ def get_convert_int(form, key):
         return DATA.INVALID
 
 def get_convert_bint(form, key: str) -> Union[int, DATA]:
-    '''gets string value from submitted form then converts into an integer representation of bool and returns. If key
-    is not present or string cannot be converted an IntEnum representing the error will be returned.'''
+    '''gets string value from submitted form and converts into an integer representation of bool.
+
+    If the key is not present 0 (False) will be returned.
+    If string cannot be converted, error will be returned.'''
 
     try:
         value = form.get(key, DATA.MISSING)
 
-        return value if value == DATA.MISSING else int(value) & 1
+        return 0 if value == DATA.MISSING else int(value) & 1
     except:
         return DATA.INVALID
 
@@ -104,7 +103,7 @@ def syslog_dropdown(syslog_time):
         raise ValidationError('Dropdown values can only be 5, 10, or 60.')
 
 def mac_address(mac):
-    if (not _VALID_MAC.match(mac)):
+    if (not VALID_MAC.match(mac)):
         raise ValidationError('MAC address is not valid.')
 
 def _ip_address(ip_addr):
@@ -128,11 +127,9 @@ def ip_address(ip_addr=None, *, ip_iter=None):
     for ip in ip_iter:
         _ip_address(ip)
 
-def ip_network(ip_netw, /):
-    '''take ip network string, validates, then returns ip network string. the return string will always be the network
-    id of the subnet.'''
+def ip_network(net: str, /) -> tuple[int, int]:
     try:
-        ip_netw = IPv4Network(ip_netw)
+        ip_netw = IPv4Network(net)
     except:
         raise ValidationError('IP network is not valid.')
 
@@ -151,9 +148,8 @@ def domain_name(dom: str, /):
     if (not VALID_DOMAIN.match(dom)):
         raise ValidationError('Domain is not valid.')
 
-def cidr(cd, /):
-    cd = convert_int(cd)
-    if (cd not in range(0, 33)):
+def cidr(cd: str, /) -> None:
+    if (convert_int(cd) not in range(0, 33)):
         raise ValidationError('Netmask must be in range 0-32.')
 
 # NOTE: split + iter is to support port ranges. limiting split to 1 to prevent 1:2:3 from being marked as valid.
@@ -255,103 +251,6 @@ def syslog_settings(settings, /):
     #
     #     if ('tcp_fallback' in tls_settings):
     #         raise ValidationError('TLS must be enabled before TCP fallback.')
-
-def firewall_commit(fw_rules, /):
-    # ["1", "lan_dhcp_allow", "lan", "tv,lan_network tv,dmz_network", "track_changes,udp_any", "any",
-    #  "tv,lan_network tv,dmz_network", "track_changes,udp_67", "ACCEPT", "OFF", "0", "0"]
-
-    fw_rules = json.loads(fw_rules)
-
-    # TODO: move this somewhere else. maybe top of file.
-    rule_structure = namedtuple('rule_structure', [
-        'enabled', 'name',
-        'src_zone', 'src_network', 'src_service',
-        'dst_zone', 'dst_network', 'dst_service',
-        'action', 'log', 'sec1_prof', 'sec2_prof'
-    ])
-
-    validated_rules = {}
-
-    # index/ enumerate is for providing better feedback if issues are detected.
-    for i, rule in enumerate(fw_rules.values(), 1):
-
-        try:
-            rule = rule_structure(*rule)
-        except ValueError:  # i think its a value error
-            raise ValidationError(f'Format error found in rule #{i}')
-
-        try:
-            validated_rules[i] = manage_firewall_rule(i, rule)
-        except ValidationError:
-            raise
-
-    print(validated_rules)
-    return validated_rules
-
-# NOTE: log disabled in form and set here as default for the time being.
-def manage_firewall_rule(rule_num, fw_rule, /):
-
-    # FASTER CHECKS FIRST
-    if (fw_rule.action not in ['ACCEPT', 'DROP']):
-        raise ValidationError(f'{INVALID_FORM} [rule #{rule_num}/action]')
-
-    action = 1 if fw_rule.action == 'ACCEPT' else 0
-
-    ip_proxy_profile = convert_int(fw_rule.sec1_prof)
-    ips_ids_profile  = convert_int(fw_rule.sec2_prof)
-    if not all([x in [0, 1] for x in [ip_proxy_profile, ips_ids_profile]]):
-        raise ValidationError(f'Invalid security profile for rule #{rule_num}.')
-
-    enabled = convert_int(fw_rule.enabled)
-
-    # OBJECT VALIDATIONS
-    check = Flask.app.dnx_object_manager.iter_validate
-
-    src_network = check(fw_rule.src_network)
-    if (None in src_network):
-        raise ValidationError(f'A source network object was not found for rule #{rule_num}.')
-
-    src_service = check(fw_rule.src_service)
-    if (None in src_service):
-        raise ValidationError(f'A source service object was not found for rule #{rule_num}.')
-
-    dst_network = check(fw_rule.dst_network)
-    if (None in dst_network):
-        raise ValidationError(f'A destination network object was not found for rule #{rule_num}.')
-
-    dst_service = check(fw_rule.src_service)
-    if (None in dst_service):
-        raise ValidationError(f'A destination service object was not found for rule #{rule_num}.')
-
-    # TODO: make zone map integrated better
-    dnx_interfaces = load_configuration('system').get_items('interfaces->builtins')
-    zone_map = {zone_name: zone_info['zone'] for zone_name, zone_info in dnx_interfaces}
-
-    # 99 used to specify wildcard/any zone match
-    zone_map['any'] = 99
-
-    s_zone = zone_map.get(fw_rule.src_zone, None)
-    d_zone = zone_map.get(fw_rule.dst_zone, None)
-    if (s_zone is None or d_zone is None):
-        raise ValidationError(f'{INVALID_FORM} [rule #{rule_num}/zone]')
-
-    rule = {
-        'name': fw_rule.name,
-        'id': None,
-        'enabled': enabled,
-        'src_zone': [s_zone],                # [12]
-        'src_network': src_network,
-        'src_service': src_service,
-        'dst_zone': [d_zone],                # [11]
-        'dst_network': dst_network,
-        'dst_service': dst_service,
-        'action': action,                    # 1
-        'log': 0,
-        'ipp_profile': ip_proxy_profile,
-        'ips_profile': ips_ids_profile
-    }
-
-    return rule
 
 def management_access(fields):
     SERVICE_TO_PORT = {'webui': (80, 443), 'cli': (0,), 'ssh': (22,), 'ping': 1}

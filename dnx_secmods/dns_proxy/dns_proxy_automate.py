@@ -121,21 +121,20 @@ class Configuration:
     def _get_server_settings(self, dns_server: Type[DNSServer], cfg_file: str):
         dns_settings = load_configuration(cfg_file)
 
-        dns_servers = dns_settings['resolvers']
-        tls_enabled = dns_settings['tls']['enabled']
-        dns_server.udp_fallback = dns_settings['tls']['fallback']
+        tls_enabled = dns_settings['tls->enabled']
+        dns_server.udp_fallback = dns_settings['tls->fallback']
 
         dns_server.protocol = PROTO.DNS_TLS if tls_enabled else PROTO.UDP
 
         names = ['primary', 'secondary']
-        for name, cfg_server, mem_server in zip(names, dns_servers.values(), dns_server.dns_servers):
+        for name, cfg_server, mem_server in zip(names, dns_settings.get_values('resolvers'), dns_server.dns_servers):
 
             if (cfg_server['ip_address'] != mem_server['ip']):
 
                 # setting server status as false on initialization or server change by user.
                 # this will require reachability to succeed before it will be actively used.
                 getattr(dns_server.dns_servers, name).update({
-                    'ip': dns_servers[name]['ip_address'],
+                    'ip': dns_settings[f'resolvers->{name}->ip_address'],
                     PROTO.UDP: False, PROTO.DNS_TLS: False
                 })
 
@@ -167,7 +166,7 @@ class Configuration:
         if (modified_time == last_modified_time):
             return last_modified_time
 
-        loaded_list = load_configuration(cfg_file)['time_based']
+        loaded_list = load_configuration(cfg_file)
 
         self._modify_memory(memory_list, loaded_list, action=CFG.ADD)
 
@@ -180,12 +179,12 @@ class Configuration:
         return modified_time
 
     @staticmethod
-    def _modify_memory(memory_list: Dict, loaded_list: Dict, *, action: CFG):
+    def _modify_memory(memory_list: Dict, loaded_list: ConfigChain, *, action: CFG):
         '''removing/adding signature/rule from memory as needed.'''
         if (action is CFG.ADD):
 
             # iterating over rules/signatures pulled from file
-            for rule, settings in loaded_list.items():
+            for rule, settings in loaded_list.get_items('time_based'):
                 bitmap_key = convert_string_to_bitmap(rule, DNS_BIN_OFFSET)
 
                 # adding rule/signature to memory if not present
@@ -207,7 +206,7 @@ class Configuration:
 
     @staticmethod
     def _modify_ip_whitelist(cfg_file: str, memory_ip_list: Dict):
-        loaded_ip_list = load_configuration(cfg_file)['ip_bypass']
+        loaded_ip_list = load_configuration(cfg_file)
 
         # iterating over ip rules in memory.
         for ip in memory_ip_list.copy():
@@ -217,7 +216,7 @@ class Configuration:
                 memory_ip_list.pop(ip)
 
         # iterating over ip rules in configuration file
-        for ip, settings in loaded_ip_list.items():
+        for ip, settings in loaded_ip_list.get_items('ip_bypass'):
             # convert to ip address object which is the type stored as key
             ip = IPv4Address(ip)
 
@@ -239,20 +238,20 @@ class Configuration:
 
     @staticmethod
     # updating the file with necessary changes.
-    def _update_list_file(cfg_file: str) -> Dict:
+    def _update_list_file(cfg_file: str) -> ConfigChain:
         now = fast_time()
         with ConfigurationManager(cfg_file) as dnx:
             lists = dnx.load_configuration()
 
-            loaded_list = lists['time_based']
-            for domain, info in loaded_list.copy().items():
+            loaded_list = lists.get_items('time_based')
+            for domain, info in loaded_list:
 
                 if (now >= info['expire']):
-                    loaded_list.pop(domain, None)
+                    del lists[f'time_based->{domain}']
 
-            dnx.write_configuration(lists)
+            dnx.write_configuration(lists.expanded_user_data)
 
-            return loaded_list
+            return lists
 
 
 class Reachability:

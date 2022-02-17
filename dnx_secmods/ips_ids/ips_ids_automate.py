@@ -55,16 +55,16 @@ class Configuration:
 
         self.IPS.ids_mode = ips['ids_mode']
 
-        self.IPS.ddos_prevention = ips['ddos']['enabled']
+        self.IPS.ddos_prevention = ips['ddos->enabled']
         # ddos CPS configured thresholds
         self.IPS.connection_limits = {
-            PROTO.ICMP: ips['ddos']['limits']['source']['icmp'],
-            PROTO.TCP:  ips['ddos']['limits']['source']['tcp'],
-            PROTO.UDP:  ips['ddos']['limits']['source']['udp']
+            PROTO.ICMP: ips['ddos->limits->source->icmp'],
+            PROTO.TCP:  ips['ddos->limits->source->tcp'],
+            PROTO.UDP:  ips['ddos->limits->source->udp']
         }
 
-        self.IPS.portscan_prevention = ips['port_scan']['enabled']
-        self.IPS.portscan_reject = ips['port_scan']['reject']
+        self.IPS.portscan_prevention = ips['port_scan->enabled']
+        self.IPS.portscan_reject = ips['port_scan->reject']
 
         if (self.IPS.ddos_prevention and not self.IPS.ids_mode):
 
@@ -80,8 +80,8 @@ class Configuration:
         else:
             self.IPS.block_length = NO_DELAY
 
-        # src ips that will not trigger ips
-        self.IPS.ip_whitelist = set([IPv4Address(ip) for ip in ips['whitelist']['ip_whitelist']])
+        # src ips that will not trigger ips # TODO: does this even work? we use integer for ip addr now.
+        self.IPS.ip_whitelist = set([IPv4Address(ip) for ip in ips['whitelist->ip_whitelist']])
 
         self._cfg_change.set()
         self.initialize.done()
@@ -94,10 +94,10 @@ class Configuration:
 
         self.IPS.open_ports = {
             PROTO.TCP: {
-                int(local_port): int(wan_port) for wan_port, local_port in ips['open_protocols']['tcp'].items()
+                int(local_port): int(wan_port) for wan_port, local_port in ips.get_items('open_protocols->tcp')
             },
             PROTO.UDP: {
-                int(local_port): int(wan_port) for wan_port, local_port in ips['open_protocols']['udp'].items()
+                int(local_port): int(wan_port) for wan_port, local_port in ips.get_items('open_protocols->udp')
             }
         }
 

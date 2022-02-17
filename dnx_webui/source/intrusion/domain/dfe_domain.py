@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from __future__ import annotations
-
 from typing import Optional
 
 from dnx_gentools.def_constants import INVALID_FORM, ppt

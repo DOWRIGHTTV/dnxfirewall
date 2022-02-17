@@ -6,18 +6,20 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>dnxfirewall - Admin Panel</title>
     <base href="/">
+    <link href="{{url_for('static', filename='assets/css/style.css')}}" rel="stylesheet">
     <link href="{{url_for('static', filename='assets/fonts/roboto.css')}}" rel="stylesheet">
     <link href="{{url_for('static', filename='assets/css/icons.css')}}" rel="stylesheet">
-    <link href="{{url_for('static', filename='assets/css/style.css')}}" rel="stylesheet">
     <link rel="shortcut icon" href="{{ url_for('static', filename='assets/images/shield.png') }}">
 </head>
 <body style="background-color:{% if session['dark_mode'] %} #263238 {% else %} #e0e0e0 {% endif %}">
-    {% set tab_classes = 'tab col s4 l3 xl2' -%}
+    {% set tab_classes = 'tab col s4 l3 xl2 blue-grey-text lighten-3' -%}
+    {% set tab_text_color = 'blue-grey-text lighten-3' %}
     {% set icon_tiny = 'height=25px width=25px' -%}
     {% set icon_small = 'height=52px width=52px' -%}
     {% set dash_icon_std = 'height=65px width=65px' -%}
     {% set dash_icon_zoom = 'height=100px width=100px' -%}
 
+    {% set nav_text_color = 'blue-grey-text darken-4' %}
     {% set icon_color = 'blue-grey-text' -%}
 
     {% if session['dark_mode'] -%}
@@ -52,32 +54,6 @@
         {% include 'includes/_error_notify.html' %}
     {% endif -%}
 
-    {% if idle_timeout %}
-        {% include 'includes/_idle_timeout.html' %}
-    {% endif -%}
-
-    {% if footer %}
-        {% include 'includes/_footer.html' %}
-    {% endif -%}
-
-    {# dnx custom table with filtering/striping #}
-    {% if dnx_table %}
-        <script src="{{url_for('static',filename='assets/js/dnx_table.js')}}"></script>
-    {% endif -%}
-
-    {% if firewall %}
-        {% include 'advanced/firewall/before_firewall.html' %}
-    {% endif -%}
-    {# basic functions -#}
-    <script>
-    function setAttributes(el, attrs) {
-        Object.keys(attrs).forEach(key => el.setAttribute(key, attrs[key]));
-    }
-    </script>
-    <!-- ^^ BEFORE PAGE TEMPLATE ^^ -->
-    {% block body %}{% endblock body -%}
-    <!-- vv AFTER PAGE TEMPLATE vv -->
-
     {# materialize js #}
     <script src="{{url_for('static',filename='assets/js/materialize.min.js')}}"></script>
     <script>
@@ -88,31 +64,113 @@
 
         {# materialize overrides #}
         document.addEventListener('DOMContentLoaded', () => {
-            let elems = document.querySelectorAll('.dropdown-trigger');
-            M.Dropdown.init(elems, {coverTrigger : false});
+            let elems = document.querySelectorAll('.dropdown-trigger-hoverable');
+            M.Dropdown.init(elems, {
+                coverTrigger : false,
+                hover: true
+            });
         })
-
+        document.addEventListener('DOMContentLoaded', () => {
+            let elems = document.querySelectorAll('.dropdown-trigger');
+            M.Dropdown.init(elems, {
+                coverTrigger : false
+            });
+        })
         document.addEventListener('DOMContentLoaded', () => {
             let elems = document.querySelectorAll('.fixed-action-btn');
             M.FloatingActionButton.init(elems, {
                 // direction: 'left',
-                hoverEnabled: false
+                hoverEnabled: false,
+                closeOnClick: false,
+                constrainWidth: false
             });
         })
     </script>
+    {# dnx custom table with filtering/striping #}
+    {% if dnx_table %}
+        <script src="{{url_for('static',filename='assets/js/dnx_table.js')}}"></script>
+    {% endif -%}
+
+    {# basic functions -#}
+    <script>
+    function setAttributes(el, attrs) {
+        Object.keys(attrs).forEach(key => el.setAttribute(key, attrs[key]));
+    }
+
+    function dropdownCallbackStart(el) {
+
+        let dropdown = document.querySelector(`#${el.getAttribute("data-target")}`)
+        let nestedTrigger = dropdown.getElementsByClassName("dropdown-trigger-nested")[0]
+        console.log(111111111, nestedTrigger)
+        if (!nestedTrigger) {
+            return;
+        }
+
+        nestedTrigger.addEventListener('mouseenter', nestedTriggerOpen)
+        nestedTrigger.addEventListener('mouseleave', nestedTriggerClose)
+
+    {#    console.log(el)#}
+    {#    if (!el.classList.contains("dropdown-trigger-nested")) {#}
+    {#        console.log('not tier2, returning.')#}
+    {#        return#}
+    {#    }#}
+        {#if (!el.hasClass('dropdown-nested-trigger')) {#}
+        {#    return#}
+    {#    let nested_dropdown = document.querySelector(`#${el.getAttribute("data-target")}`)#}
+    {##}
+    {#    nested_dropdown.style.display = "block";#}
+        {#let test = document.querySelector('#domain-dropdown');#}
+    {##}
+    {#    console.log('adding event for ->', nested_dropdown);#}
+    {##}
+    {#    nested_dropdown.addEventListener('mouseleave', dropdownCloseNested)#}
+    }
+
+    function nestedTriggerOpen() {
+        let dropdown = document.querySelector(`#${this.getAttribute("data-target")}`);
+
+        dropdown.style.display = "block";
+        console.log('opening ->', dropdown);
+
+        this.append(dropdown)
+        {#if (el.currentTarget.classList.contains("dropdown-trigger-nested")) {#}
+        {#    console.log(this, el)#}
+        {##}
+        {##}
+        {##}
+        {#    console.log("returning")#}
+        {##}
+        {# else #}
+        {#if (this.classList.contains("dropdown-content-nested")) {#}
+        {#    let nestedTrigger = this.previousSibling;#}
+        {#    nestedTrigger.addEventListener('mouseleave', dropdownCloseNested);#}
+        {##}
+        {#this.style.display = "none";#}
+    }
+    function nestedTriggerClose() {
+
+        let dropdown = document.querySelector(`#${this.getAttribute("data-target")}`);
+
+        console.log('closing ->', dropdown);
+
+        dropdown.style.display = "none";
+    }
+    </script>
+    <!-- ^^ BEFORE PAGE TEMPLATE ^^ -->
+    {% block body %}{% endblock body -%}
+    <!-- vv AFTER PAGE TEMPLATE vv -->
 
     {%- if navi %}
         {# custom functions for client side functionality. tied to nav since any page with nav, these will apply #}
         <script>
             document.addEventListener('DOMContentLoaded', () => {
                 let modal = document.querySelector('.modal-pop');
-                let instance = M.Modal.init(
-                    modal, {
-                        dismissible: false
-                    }
-                );
-
-                if (error && modal) {
+                if (modal) {
+                    let instance = M.Modal.init(
+                        modal, {
+                            dismissible: false
+                        }
+                    );
                     instance.open();
                 }
             })
@@ -125,17 +183,12 @@
             function activeMenu(n) {
                 document.getElementById("timeout-menu").innerHTML = "<input type=hidden name=menu value="+n+">";
             }
-
-            function idleTimeoutWarning() {
-                let timeoutNotify = document.querySelector(".modal-idle-timeout");
-                let notifyInstance = M.Modal.init(timeoutNotify);
-                notifyInstance.open();
-            }
-
-            function idleTimeout() {
-                window.location.href = 'login';
-            }
         </script>
+    {% endif -%}
+    {% if idle_timeout %}
+    <script>
+        {% include 'includes/_idle_timeout.html' %}
+    </script>
     {% endif -%}
 
     {# dnx custom ajax client by seeker1437 (WyteChocolate) #}
@@ -146,11 +199,12 @@
 
     {# handles a single table as quick enable. additional need to be called within individual page template. #}
     {% if auto_colorize %}
-        colorizeTable()
+        <script>colorizeTable()</script>
     {%- endif %}
 
-    {% if firewall %}
-        {% include 'firewall/after_firewall.html' %}
-    {% endif %}
+    {# PAGE FOOTER - DO NOT MOVE #}
+    {% if footer %}
+        {% include 'includes/_footer.html' %}
+    {% endif -%}
 </body>
 </html>

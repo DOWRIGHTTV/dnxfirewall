@@ -24,7 +24,7 @@
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">User Defined</h4>
                     <div class="row">
-                        {% for category, settings in domain_settings['user_defined'].items() %}
+                        {% for category, settings in domain_settings['user_defined'] %}
                         <div class="input-field col s4 m4 center">
                             {{category}}
                             <div class="switch">
@@ -48,7 +48,7 @@
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">System Default</h4>
                     <div class="row">
-                        {% for category, settings in domain_settings['default'].items() %}
+                        {% for category, settings in domain_settings['default'] %}
                         <div class="input-field col s4 m4 center">
                             <div class="switch">
                                 <h6>{{category}}</h6>
@@ -79,7 +79,7 @@
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Top Level Domains</h4>
                     <div class="row">
-                        {% for tld, status in domain_settings['tlds'].items() %}
+                        {% for tld, status in domain_settings['tld'] %}
                         <div class="col s3 m3 center">
                             <div class="row">
                                 <div class="input-field col s12">
@@ -110,7 +110,7 @@
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Keyword Search</h4>
                     <div class="row">
-                        {% for category, settings in domain_settings['default'].items() %}
+                        {% for category, settings in domain_settings['default'] %}
                         {% if settings['enabled'] %}
                         <div class="input-field col s3 m3 center">
                             <h6>{{category}}</h6>
@@ -118,7 +118,7 @@
                                 <label>
                                     Off
                                     <input type="checkbox" {% if settings['keyword'] %} checked="checked"
-                                        {% endif %} name="keyword" value={{category}} onchange="this.form.submit()">
+                                        {% endif %} name="keyword" value="{{category}}" onchange="this.form.submit()">
                                     <span class="lever"></span>
                                     On
                                 </label>

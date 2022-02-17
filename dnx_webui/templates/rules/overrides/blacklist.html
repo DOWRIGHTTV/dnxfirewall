@@ -20,7 +20,7 @@
             <div class="col s12">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add Blacklist</h4>
-                    <form action="/advanced/blacklist" method="POST">
+                    <form action="/rules/overrides/blacklist" method="POST">
                     <input type="hidden" name="tab" value="1">
                         <div class="row">
                             <div class="input-field col s4 l3 {{input_color}}">
@@ -61,7 +61,7 @@
                                         <div class="modal-content">
                                         <h5 class="red-text">Are you sure you want to remove the blacklisted domain early?</h5>
                                         </div>
-                                        <form action="/advanced/blacklist" method="POST">
+                                        <form action="/rules/overrides/blacklist" method="POST">
                                             <div class="modal-footer">
                                                 <button class="btn waves-effect waves-light">YES</button>
                                                 <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
@@ -96,7 +96,7 @@
             <div class="col s12">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add Override</h4>
-                    <form action="/advanced/blacklist" method="POST">
+                    <form action="/rules/overrides/blacklist" method="POST">
                     <input type="hidden" name="tab" value="2">
                         <div class="row">
                             <div class="input-field col s4 l3 {{input_color}}">
@@ -137,7 +137,7 @@
                                         <div class="modal-content">
                                         <h5 class="red-text center">Are you sure you want to remove the override? Service restart required to take effect.</h5>
                                         </div>
-                                        <form action="/advanced/blacklist" method="POST">
+                                        <form action="/rules/overrides/blacklist" method="POST">
                                             <div class="modal-footer">
                                                 <button class="btn waves-effect waves-light">YES</button>
                                                 <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>

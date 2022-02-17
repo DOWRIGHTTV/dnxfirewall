@@ -83,7 +83,7 @@ firewall_rules[BEFORE_RULES] = <FWrule*>calloc(FW_BEFORE_MAX_RULE_COUNT, sizeof(
 firewall_rules[MAIN_RULES]   = <FWrule*>calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(FWrule))
 firewall_rules[AFTER_RULES]  = <FWrule*>calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(FWrule))
 
-# index corresponds to index of sections in firewall rules. this will allow us to skip over sections that are
+# index corresponds to index of sections in rules rules. this will allow us to skip over sections that are
 # empty and know how far to iterate over. tracking this allows ability to not clear pointers of dangling rules
 # since they will be out of bounds of specified iteration.
 cdef u_int32_t CUR_RULE_COUNTS[FW_SECTION_COUNT]
@@ -166,7 +166,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # =============================== #
     # LOCKING ACCESS TO FIREWALL.
     # ------------------------------- #
-    # prevents the manager thread from updating firewall rules during a packets inspection
+    # prevents the manager thread from updating rules rules during a packets inspection
     pthread_mutex_lock(&FWrulelock)
 
     inspection_results = cfirewall_inspect(&hw, ip_header, proto_header, direction)
@@ -255,9 +255,9 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
             # ------------------------------------------------------------------ #
             # GEOLOCATION or IP/NETMASK
             # ------------------------------------------------------------------ #
-            # geolocation matching repurposes network id and netmask fields in the firewall rule. net id of -1 flags
+            # geolocation matching repurposes network id and netmask fields in the rules rule. net id of -1 flags
             # the rule as a geolocation rule with the country code using the netmask field. NOTE: just as with networks,
-            # only a single country is currently supported per firewall rule src and dst.
+            # only a single country is currently supported per rules rule src and dst.
             if not network_match(rule.s_networks, iph_src_ip, src_country):
                 continue
 
@@ -617,7 +617,7 @@ cdef class CFirewall:
             set_FWrule(ruleset, fw_rule, i)
 
         # updating rule count in global tracker. this is very important in that it establishes the right side bound for
-        # firewall ruleset iteration operations.
+        # rules ruleset iteration operations.
         CUR_RULE_COUNTS[ruleset] = rule_count
 
         pthread_mutex_unlock(&FWrulelock)
