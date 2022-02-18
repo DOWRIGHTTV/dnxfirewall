@@ -2,6 +2,8 @@
 
 import json
 
+from typing import Optional, Any
+
 from collections import defaultdict, namedtuple
 from flask import Flask
 
@@ -24,7 +26,7 @@ zone_manager = {'builtins': {}, 'user-defined': {}}
 # including 0/any since it is not an actual zone definition
 _zone_map = {99: 'any'}
 
-def load_page(section='MAIN'):
+def load_page(section: str = 'MAIN') -> dict[str, Any]:
     global _zone_map
 
     dnx_settings = load_configuration('system')
@@ -65,16 +67,16 @@ def load_page(section='MAIN'):
         'pending_changes': FirewallManage.is_pending_changes()
     }
 
-def update_page(form):
+def update_page(form: dict) -> tuple[Optional[str], str]:
 
     # initial input validation for presence of zone field
     section = form.get('section', None)
     if (section not in valid_sections or 'change_section' not in form):
-        return INVALID_FORM, 'MAIN', load_page(section)
+        return INVALID_FORM, 'MAIN'
 
-    return None, section, load_page(section)
+    return None, section
 
-def get_and_format_rules(section):
+def get_and_format_rules(section: str) -> list[Optional[list]]:
     firewall_rules = FirewallManage.cfirewall.view_ruleset(section)
 
     converted_rules = []

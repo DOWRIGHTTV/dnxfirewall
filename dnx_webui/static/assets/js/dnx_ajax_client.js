@@ -1,6 +1,7 @@
 class AjaxClient {
-    constructor(baseUri, onErrorCallback = null) {
+    constructor(baseUri, onSuccessCallback = null, onErrorCallback = null) {
         this._baseUrl = baseUri;
+        this._onSuccessCallback = onSuccessCallback;
         this._onErrorCallback = onErrorCallback;
     }
 
@@ -8,7 +9,16 @@ class AjaxClient {
         return this._baseUrl;
     }
 
+    get onSuccessCallback() {
+        return this._onSuccessCallback;
+    }
+
+    get onErrorCallback() {
+        return this._onErrorCallback;
+    }
+
     async post(url = '', data = {}) {
+
         const response =
             await fetch(this.baseUrl + url, {
                 method : 'POST',
@@ -21,14 +31,18 @@ class AjaxClient {
         if (response.ok) {
             let ajaxResponse = await response.json();
 
+            if (this.onSuccessCallback) {
+                this.onSuccessCallback.call(ajaxResponse);
+            }
+
             return ajaxResponse.result;
         }
     }
 
    handleResponse(response, field = null) {
        if (response.error) {
-           let commitError = document.querySelector("#ajax-error-modal");
-           commitError.querySelector("h5").innerText = response.message;
+           let commitError = document.querySelector('#ajax-error-modal');
+           commitError.querySelector('h5').innerText = response.message;
 
            let errorModal = M.Modal.init(
                commitError, {
@@ -37,14 +51,13 @@ class AjaxClient {
            );
            errorModal.open();
 
-           console.log("[server/response]: ", response);
+           console.log('[server/response]: ', response);
 
            // notifying of error so field can be reset
            return true;
 
        } else {
-           console.log("[server/response]: successful update.");
+           console.log('[server/response]: successful update.');
        }
    }
 }
-const ajaxClient = new AjaxClient(location.pathname);

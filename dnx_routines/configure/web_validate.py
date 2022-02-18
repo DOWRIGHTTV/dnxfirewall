@@ -40,27 +40,25 @@ _proto_map = {'any': 0, 'icmp': 1, 'tcp': 6, 'udp': 17}
 VALID_MAC = re.compile('(?:[0-9a-fA-F]:?){12}')
 VALID_DOMAIN = re.compile('(//|\\s+|^)(\\w\\.|\\w[A-Za-z0-9-]{0,61}\\w\\.){1,3}[A-Za-z]{2,6}')
 
-def get_convert_int(form, key):
+def get_convert_int(form: dict, key: str) -> Union[int, DATA]:
     '''gets string value from submitted form then converts into an integer and returns.
 
     If key is not present or string cannot be converted, an IntEnum representing the error will be returned.'''
 
+    value = form.get(key, DATA.MISSING)
     try:
-        value = form.get(key, DATA.MISSING)
-
         return value if value == DATA.MISSING else int(value)
     except:
         return DATA.INVALID
 
-def get_convert_bint(form, key: str) -> Union[int, DATA]:
+def get_convert_bint(form: dict, key: str) -> Union[int, DATA]:
     '''gets string value from submitted form and converts into an integer representation of bool.
 
     If the key is not present 0 (False) will be returned.
     If string cannot be converted, error will be returned.'''
 
+    value = form.get(key, DATA.MISSING)
     try:
-        value = form.get(key, DATA.MISSING)
-
         return 0 if value == DATA.MISSING else int(value) & 1
     except:
         return DATA.INVALID
@@ -81,11 +79,28 @@ def convert_float(num: str) -> Union[float, DATA]:
         return DATA.INVALID
 
 def convert_int(num: Union[str, bool]) -> Union[int, DATA]:
-    '''converts argument into an integer, then returns. DATA.INVALID (-1) will be returned on error.'''
+    '''converts argument into an integer, then returns.
+
+    if optional default arg is provided, it will be returned on error, otherwise DATA.INVALID (-1) will be returned.'''
     try:
         return int(num)
     except:
         return DATA.INVALID
+
+def check_digit(dig: str, /, *, default: Optional[str] = '1') -> str:
+
+    if (dig.isdigit()):
+        return dig
+
+    return default
+
+def get_check_digit(form: dict, dig: str, /, *, default: Optional[str] = '1') -> str:
+
+    value = form.get(dig, default)
+    if (value.isdigit()):
+        return dig
+
+    return default
 
 def standard(user_input, *, override=[]):
     for char in user_input:

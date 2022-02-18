@@ -15,6 +15,7 @@ import dnx_routines.configure.web_validate as validate
 from dnx_gentools.def_constants import FIVE_SEC
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import load_configuration, ConfigurationManager
+
 from dnx_routines.configure.exceptions import ValidationError
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 
@@ -36,7 +37,8 @@ app = Flask(
 # easy access to app instance by outer components
 Flask.app = app
 
-application_error_page = 'main/general_error.html'
+general_error_page = 'main/general_error.html'
+application_error_page = 'main/application_error.html'
 
 # a new key is generated on every system start and stored in system config.
 app_config = load_configuration('system')
@@ -117,11 +119,10 @@ def dnx_dashboard(session_data):
 @app.route('/rules/firewall', methods=['GET', 'POST'])
 @user_restrict('admin')
 def rules_firewall(session_data):
-    tab = request.args.get('tab', '1')
-
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'ajax': True,
+        'ajax': True,
+        'tab': validate.get_check_digit(request.form, 'tab'),
         'dnx_network_objects': {},
         'dnx_service_objects': {},
         'selected': 'MAIN',
@@ -132,7 +133,8 @@ def rules_firewall(session_data):
     page_settings.update(session_data)
 
     page_action = firewall_page_logic(
-        dnx_fwall, page_settings, 'firewall_settings', page_name='rules/firewall/firewall')
+        dnx_fwall, page_settings, 'firewall_settings', page_name='rules/firewall/firewall'
+    )
 
     return page_action
 
@@ -159,7 +161,8 @@ def rules_nat(session_data):
 
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'menu': menu_option,
+        'tab': validate.get_check_digit(request.form, 'tab'),
+        'menu': validate.get_check_digit(request.form, 'menu'),
         'selected': 'WAN_ZONE',
         'zones': ['WAN', 'DMZ', 'LAN'],
         'uri_path': ['rules', 'nat']
@@ -168,39 +171,42 @@ def rules_nat(session_data):
     page_settings.update(session_data)
 
     page_action = firewall_page_logic(
-        dnx_nat, page_settings, 'nat_settings', page_name='rules/nat')
+        dnx_nat, page_settings, 'nat_settings', page_name='rules/nat'
+    )
 
     return page_action
 
 @app.route('/rules/overrides/whitelist', methods=['GET', 'POST'])
 @user_restrict('admin')
 def rules_overrides_whitelist(session_data):
-    tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'uri_path': ['rules', 'overrides', 'whitelist']
+        'tab': validate.get_check_digit(request.form, 'tab'),
+        'uri_path': ['rules', 'overrides', 'whitelist']
     }
 
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        xlist, page_settings, 'whitelist_settings', page_name='rules/overrides/whitelist')
+        xlist, page_settings, 'whitelist_settings', page_name='rules/overrides/whitelist'
+    )
 
     return page_action
 
 @app.route('/rules/overrides/blacklist', methods=['GET', 'POST'])
 @user_restrict('admin')
 def rules_overrides_blacklist(session_data):
-    tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'uri_path': ['rules', 'overrides', 'blacklist']
+        'tab': validate.get_check_digit(request.form, 'tab'),
+        'uri_path': ['rules', 'overrides', 'blacklist']
     }
 
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        xlist, page_settings, 'blacklist_settings', page_name='rules/overrides/blacklist')
+        xlist, page_settings, 'blacklist_settings', page_name='rules/overrides/blacklist'
+    )
 
     return page_action
 
@@ -210,17 +216,18 @@ def rules_overrides_blacklist(session_data):
 @app.route('/intrusion/ip', methods=['GET', 'POST'])
 @user_restrict('admin')
 def intrusion_ip(session_data):
-    tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'ajax': True,
-        'tab': tab, 'uri_path': ['intrusion', 'ip']
+        'tab': validate.get_check_digit(request.form, 'tab'),
+        'uri_path': ['intrusion', 'ip']
     }
 
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        ip_proxy, page_settings, 'ip_settings', page_name='intrusion/ip')
+        ip_proxy, page_settings, 'ip_settings', page_name='intrusion/ip'
+    )
 
     return page_action
 
@@ -241,17 +248,18 @@ def intrusion_ip_post(session_data):
 @app.route('/intrusion/domain', methods=['GET', 'POST'])
 @user_restrict('admin')
 def intrusion_domain(session_data):
-    tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'ajax': True,
-        'tab': tab, 'uri_path': ['intrusion', 'domain']
+        'tab': validate.get_check_digit(request.form, 'tab'),
+        'uri_path': ['intrusion', 'domain']
     }
 
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        dns_proxy, page_settings, 'domain_settings', page_name='intrusion/domain/domain')
+        dns_proxy, page_settings, 'domain_settings', page_name='intrusion/domain/domain'
+    )
 
     return page_action
 
@@ -273,13 +281,11 @@ def intrusion_domain_post(session_data):
 @app.route('/intrusion/domain/categories', methods=['GET', 'POST'])
 @user_restrict('admin')
 def intrusion_domain_categories(session_data):
-    tab = request.args.get('tab', '1')
-    menu_option = request.args.get('menu', '1')
-    menu_option = int(menu_option) if menu_option.isdigit() else '1'
-
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'cat_settings': True, 'tab': tab, 'menu': menu_option,
+        'tab': validate.get_check_digit(request.form, 'tab'),
+        'menu': validate.get_check_digit(request.form, 'menu'),
+        'cat_settings': True,
         'uri_path': ['intrusion', 'domain', 'categories']
     }
 
@@ -294,16 +300,17 @@ def intrusion_domain_categories(session_data):
 @app.route('/intrusion/ips', methods=['GET', 'POST'])
 @user_restrict('admin')
 def intrusion_ips(session_data):
-    tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'uri_path': ['intrusion', 'ips']
+        'tab': validate.get_check_digit(request.form, 'tab'),
+        'uri_path': ['intrusion', 'ips']
     }
 
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        dnx_ips, page_settings, 'ips_settings', page_name='intrusion/ips')
+        dnx_ips, page_settings, 'ips_settings', page_name='intrusion/ips.html'
+    )
 
     return page_action
 
@@ -315,48 +322,51 @@ def intrusion_ips(session_data):
 @app.route('/system/settings/dns', methods=['GET', 'POST'])
 @user_restrict('admin')
 def system_settings_dns(session_data):
-    tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'uri_path': ['system', 'settings', 'dns']
+        'tab': validate.get_check_digit(request.form, 'tab'),
+        'uri_path': ['system', 'settings', 'dns']
     }
 
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        dns_settings, page_settings, 'dns_settings', page_name='system/settings/dns')
+        dns_settings, page_settings, 'dns_settings', page_name='system/settings/dns.html'
+    )
 
     return page_action
 
 @app.route('/system/settings/dhcp', methods=['GET', 'POST'])
 @user_restrict('admin')
 def system_settings_dhcp(session_data):
-    tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'uri_path': ['system', 'settings', 'dhcp']
+        'tab': validate.get_check_digit(request.form, 'tab'),
+        'uri_path': ['system', 'settings', 'dhcp']
     }
 
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        dhcp_settings, page_settings, 'dhcp_settings', page_name='system/settings/dhcp')
+        dhcp_settings, page_settings, 'dhcp_settings', page_name='system/settings/dhcp.html'
+    )
 
     return page_action
 
 @app.route('/system/settings/interface', methods=['GET', 'POST'])
 @user_restrict('admin')
 def system_settings_interface(session_data):
-    tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'uri_path': ['system', 'settings', 'interface']
+        'tab': validate.get_check_digit(request.form, 'tab'),
+        'uri_path': ['system', 'settings', 'interface']
     }
 
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        interface_settings, page_settings, 'interface_settings', page_name='system/settings/interface')
+        interface_settings, page_settings, 'interface_settings', page_name='system/settings/interface.html'
+    )
 
     return page_action
 
@@ -366,29 +376,32 @@ def system_settings_logging(session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'uri_path': ['system', 'settings', 'logging']
+        'tab': validate.get_check_digit(request.form, 'tab'),
+        'uri_path': ['system', 'settings', 'logging']
     }
 
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        logging_settings, page_settings, 'logging_settings', page_name='system/settings/logging')
+        logging_settings, page_settings, 'logging_settings', page_name='system/settings/logging.html'
+    )
 
     return page_action
 
 @app.route('/system/settings/syslog', methods=['GET', 'POST'])
 @user_restrict('admin')
 def system_settings_syslog(session_data):
-    tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': tab, 'uri_path': ['system', 'settings', 'syslog']
+        'tab': validate.get_check_digit(request.form, 'tab'),
+        'uri_path': ['system', 'settings', 'syslog']
     }
 
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        syslog_settings, page_settings, 'syslog_settings', page_name='system/settings/syslog')
+        syslog_settings, page_settings, 'syslog_settings', page_name='system/settings/syslog.html'
+    )
 
     return page_action
 
@@ -408,7 +421,7 @@ def system_system_logs(session_data):
 
     page_settings.update(session_data)
 
-    page_action = log_page_logic(dfe_logs, page_settings, page_name='system/logs/logs')
+    page_action = log_page_logic(dfe_logs, page_settings, page_name='system/logs/logs.html')
 
     return page_action
 
@@ -427,13 +440,13 @@ def system_reports(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
         'menu': '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
-        'uri_path': ['system', 'reports'],
-        'table_types': ['dns_proxy', 'ip_proxy', 'intrusion_prevention', 'infected_clients']
+        'table_types': ['dns_proxy', 'ip_proxy', 'intrusion_prevention', 'infected_clients'],
+        'uri_path': ['system', 'reports']
     }
 
     page_settings.update(session_data)
 
-    page_action = log_page_logic(proxy_reports, page_settings, page_name='system/reports')
+    page_action = log_page_logic(proxy_reports, page_settings, page_name='system/reports.html')
 
     return page_action
 
@@ -448,7 +461,8 @@ def system_users(session_data):
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        dfe_users, page_settings, 'user_list', page_name='system/users')
+        dfe_users, page_settings, 'user_list', page_name='system/users.html'
+    )
 
     return page_action
 
@@ -463,7 +477,7 @@ def system_backups(session_data):
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        dfe_backups, page_settings, 'current_backups', page_name='system/backups')
+        dfe_backups, page_settings, 'current_backups', page_name='system/backups.html')
 
     return page_action
 
@@ -478,7 +492,7 @@ def system_services(session_data):
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        dnx_services, page_settings, 'service_info', page_name='system/services')
+        dnx_services, page_settings, 'service_info', page_name='system/services.html')
 
     return page_action
 
@@ -531,8 +545,8 @@ def dnx_logout(session_data):
 @app.route('/blocked')
 def dnx_blocked():
     page_settings = {
-        'navi': True, 'login_btn': True,
-        'idle_timeout': False, 'uri_path': ['blocked']
+        'navi': True, 'login_btn': True, 'idle_timeout': False,
+        'uri_path': ['blocked']
     }
 
     # checking for domain sent by nginx that is being redirected to rules. if domain doesnt exist (user navigated to
@@ -597,6 +611,12 @@ def dnx_login():
         standard_error=False, login_error=login_error, uri_path=['login']
     )
 
+@app.post('/refresh/session')
+@user_restrict('user', 'admin')
+def refresh_session(dnx_session):
+
+    return ajax_response(status=True, data={'error': 0, 'message': None})
+
 # --------------------------------------------- #
 # --------------------------------------------- #
 @app.get('/')
@@ -608,61 +628,61 @@ def main():
 @app.route('/<path>', methods=['GET', 'POST'])
 def default(path):
 
-    return render_template(application_error_page, general_error=f'{path} not found.')
+    return render_template(general_error_page, general_error=f'{path} not found.')
 
 @app.route('/<path_a>/<path_b>', methods=['GET', 'POST'])
 def default_sub(path_a, path_b):
 
-    return render_template(application_error_page, general_error=f'{path_a}/{path_b} not found.')
+    return render_template(general_error_page, general_error=f'{path_a}/{path_b} not found.')
 
 @app.route('/<path_a>/<path_b>/<path_c>', methods=['GET', 'POST'])
 def default_sub_sub(path_a, path_b, path_c):
 
-    return render_template(application_error_page, general_error=f'{path_a}/{path_b}/{path_c} not found.')
+    return render_template(general_error_page, general_error=f'{path_a}/{path_b}/{path_c} not found.')
 
 # --------------------------------------------- #
 # all standard page loads use this logic to decide the page action/ call the correct
 # lower level functions residing in each page's Class
 def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
-    if (request.method == 'POST'):
-        tab = request.form.get('tab', '1')
 
+    if (request.method == 'POST'):
         try:
             error = dnx_page.update_page(request.form)
         except OSError as ose:
-            return render_template(application_error_page, general_error=ose, **page_settings)
+            return render_template(application_error_page, application_error=ose, **page_settings)
 
         page_settings.update({
-            'tab': tab,
+            'tab': validate.get_check_digit(request.form, 'tab'),
             'standard_error': error
         })
 
     try:
         page_settings[data_key] = dnx_page.load_page(request.form)
     except OSError as ose:
-        return render_template(application_error_page, general_error=ose, **page_settings)
+        return render_template(application_error_page, application_error=ose, **page_settings)
 
-    return render_template(f'{page_name}.html', **page_settings)
+    return render_template(page_name, **page_settings)
 
 def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name):
-    if (request.method == 'POST'):
 
+    if (request.method == 'POST'):
         try:
-            error, selected, page_data = dnx_page.update_page(request.form)
+            error, selected = dnx_page.update_page(request.form)
         except OSError as ose:
-            return render_template(application_error_page, general_error=ose, **page_settings)
+            return render_template(application_error_page, application_error=ose, **page_settings)
 
         page_settings.update({
-            'tab': request.form.get('tab', '1'),
+            'tab': validate.get_check_digit(request.form, 'tab'),
             'selected': selected,
-            'standard_error': error,
-            data_key: page_data
+            'standard_error': error
         })
 
-    else:
+    try:
         page_settings[data_key] = dnx_page.load_page()
+    except OSError as ose:
+        return render_template(application_error_page, application_error=ose, **page_settings)
 
-    return render_template(f'{page_name}.html', **page_settings)
+    return render_template(page_name, **page_settings)
 
 def log_page_logic(log_page, page_settings, *, page_name):
     # can now accept redirects from other places on the webui to load specific tables directly on load
@@ -679,37 +699,33 @@ def log_page_logic(log_page, page_settings, *, page_name):
     try:
         table_data, table, menu_option = handler(request_data)
     except OSError as ose:
-        return render_template(application_error_page, general_error=ose, **page_settings)
+        return render_template(application_error_page, application_error=ose, **page_settings)
 
     page_settings.update({
-        'table_data': table_data,
+        'menu': menu_option,
         'table': table,
-        'menu': menu_option
+        'table_data': table_data
     })
 
-    return render_template(f'{page_name}.html', **page_settings)
+    return render_template(page_name, **page_settings)
 
 def categories_page_logic(dnx_page, page_settings):
     if (request.method == 'POST'):
         try:
             error, menu_option = dnx_page.update_page(request.form)
         except OSError as ose:
-            return render_template(application_error_page, general_error=ose, **page_settings)
-
-        tab = request.form.get('tab', '1')
-        menu_option = request.form.get('menu', '1')
-        menu_option = int(menu_option) if menu_option.isdigit() else '1'
+            return render_template(application_error_page, application_error=ose, **page_settings)
 
         page_settings.update({
-            'menu': menu_option,
-            'tab': tab,
+            'tab': validate.get_check_digit(request.form, 'tab'),
+            'menu': validate.get_check_digit(request.form, 'menu'),
             'standard_error': error
         })
 
     try:
         page_settings['category_settings'] = dnx_page.load_page(page_settings['menu'])
     except OSError as ose:
-        return render_template(application_error_page, general_error=ose, **page_settings)
+        return render_template(application_error_page, application_error=ose, **page_settings)
 
     return render_template('intrusion/domain/categories.html', **page_settings)
 

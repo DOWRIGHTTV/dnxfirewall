@@ -176,13 +176,13 @@
     </div>
 </section>
 <script>
-let imageMap = {"0": "allow_up-down", "1": "block_up", "2": "block_down", "3": "block_up-down"}
+let imageMap = {'0': 'allow_up-down', '1': 'block_up', '2': 'block_down', '3': 'block_up-down'}
 async function updateCategory(category) {
 
     console.log(category)
 
-    const cat_info = category.value.split("_")
-    const cat_value = cat_info[0].replace("_", " ").toUpperCase()
+    const cat_info = category.value.split('_')
+    const cat_value = cat_info[0].replace('_', ' ').toUpperCase()
 
     let response = await ajaxClient.post('/post', {'type': category.name, 'category': cat_value, 'direction': cat_info[1]});
 
@@ -190,9 +190,9 @@ async function updateCategory(category) {
 
     // sets the image accordingly
     if (!error) {
-        let image = category.closest("td").querySelector(".dropdown-trigger")
+        let image = category.closest('td').querySelector('.dropdown-trigger')
 
-        image.setAttribute("src", `/static/assets/images/${imageMap[cat_info[1]]}.png`)
+        image.setAttribute('src', `/static/assets/images/${imageMap[cat_info[1]]}.png`)
     }
 }
 </script>

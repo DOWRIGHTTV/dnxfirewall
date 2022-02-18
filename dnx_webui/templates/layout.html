@@ -36,7 +36,6 @@
         {% set off_section_color = 'grey lighten-5' -%}
         {% set card_color = 'grey lighten-4' -%}
         {% set title_color = 'blue-grey-text darken-2' -%}
-
     {%- endif -%}
 
     {% set ip_net_validate = 'class=validate pattern=^([0-9]{1,3}\.){3}[0-9]{1,3}(\/([0-9]|[1-2][0-9]|3[0-2]))?$' -%}
@@ -52,6 +51,15 @@
 
     {% if standard_error %}
         {% include 'includes/_error_notify.html' %}
+        <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            let modal = document.querySelector('.standard-error-modal');
+
+            if (!modal) return;
+
+            M.Modal.init(modal, {dismissible: false}).open();
+        })
+        </script>
     {% endif -%}
 
     {# materialize js #}
@@ -85,76 +93,27 @@
                 constrainWidth: false
             });
         })
+
     </script>
     {# dnx custom table with filtering/striping #}
     {% if dnx_table %}
         <script src="{{url_for('static',filename='assets/js/dnx_table.js')}}"></script>
     {% endif -%}
 
-    {# basic functions -#}
+    {# dnx custom ajax client by seeker1437 (WyteChocolate) #}
+    <script src="{{url_for('static',filename='assets/js/dnx_ajax_client.js')}}"></script>
+    {% include 'includes/_ajax_error.html' %}
+
+    {% if ajax %}
+        <script>const ajaxClient = new AjaxClient(location.pathname);</script>
+    {% endif %}
+
+    {# general functions -#}
     <script>
     function setAttributes(el, attrs) {
         Object.keys(attrs).forEach(key => el.setAttribute(key, attrs[key]));
     }
 
-    function dropdownCallbackStart(el) {
-
-        let dropdown = document.querySelector(`#${el.getAttribute("data-target")}`)
-        let nestedTrigger = dropdown.getElementsByClassName("dropdown-trigger-nested")[0]
-        console.log(111111111, nestedTrigger)
-        if (!nestedTrigger) {
-            return;
-        }
-
-        nestedTrigger.addEventListener('mouseenter', nestedTriggerOpen)
-        nestedTrigger.addEventListener('mouseleave', nestedTriggerClose)
-
-    {#    console.log(el)#}
-    {#    if (!el.classList.contains("dropdown-trigger-nested")) {#}
-    {#        console.log('not tier2, returning.')#}
-    {#        return#}
-    {#    }#}
-        {#if (!el.hasClass('dropdown-nested-trigger')) {#}
-        {#    return#}
-    {#    let nested_dropdown = document.querySelector(`#${el.getAttribute("data-target")}`)#}
-    {##}
-    {#    nested_dropdown.style.display = "block";#}
-        {#let test = document.querySelector('#domain-dropdown');#}
-    {##}
-    {#    console.log('adding event for ->', nested_dropdown);#}
-    {##}
-    {#    nested_dropdown.addEventListener('mouseleave', dropdownCloseNested)#}
-    }
-
-    function nestedTriggerOpen() {
-        let dropdown = document.querySelector(`#${this.getAttribute("data-target")}`);
-
-        dropdown.style.display = "block";
-        console.log('opening ->', dropdown);
-
-        this.append(dropdown)
-        {#if (el.currentTarget.classList.contains("dropdown-trigger-nested")) {#}
-        {#    console.log(this, el)#}
-        {##}
-        {##}
-        {##}
-        {#    console.log("returning")#}
-        {##}
-        {# else #}
-        {#if (this.classList.contains("dropdown-content-nested")) {#}
-        {#    let nestedTrigger = this.previousSibling;#}
-        {#    nestedTrigger.addEventListener('mouseleave', dropdownCloseNested);#}
-        {##}
-        {#this.style.display = "none";#}
-    }
-    function nestedTriggerClose() {
-
-        let dropdown = document.querySelector(`#${this.getAttribute("data-target")}`);
-
-        console.log('closing ->', dropdown);
-
-        dropdown.style.display = "none";
-    }
     </script>
     <!-- ^^ BEFORE PAGE TEMPLATE ^^ -->
     {% block body %}{% endblock body -%}
@@ -163,39 +122,20 @@
     {%- if navi %}
         {# custom functions for client side functionality. tied to nav since any page with nav, these will apply #}
         <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                let modal = document.querySelector('.modal-pop');
-                if (modal) {
-                    let instance = M.Modal.init(
-                        modal, {
-                            dismissible: false
-                        }
-                    );
-                    instance.open();
-                }
-            })
-
             function activeTab(n) {
                 history.replaceState(null, null, window.location.pathname+"?tab="+n);
-                document.getElementById("timeout-tab").innerHTML = "<input type=hidden name=tab value="+n+">";
+                document.getElementById("timeout-tab").innerHTML = "<input type=hidden name=tab value=" + n + ">";
             }
 
             function activeMenu(n) {
-                document.getElementById("timeout-menu").innerHTML = "<input type=hidden name=menu value="+n+">";
+                document.getElementById("timeout-menu").innerHTML = "<input type=hidden name=menu value=" + n + ">";
             }
         </script>
     {% endif -%}
-    {% if idle_timeout %}
-    <script>
-        {% include 'includes/_idle_timeout.html' %}
-    </script>
-    {% endif -%}
 
-    {# dnx custom ajax client by seeker1437 (WyteChocolate) #}
-    {% if ajax %}
-        <script src="{{url_for('static',filename='assets/js/dnx_ajax_client.js')}}"></script>
-        {% include 'includes/_ajax_error.html' %}
-    {%- endif -%}
+    {% if idle_timeout %}
+        {% include 'includes/_idle_timeout.html' %}
+    {% endif -%}
 
     {# handles a single table as quick enable. additional need to be called within individual page template. #}
     {% if auto_colorize %}
