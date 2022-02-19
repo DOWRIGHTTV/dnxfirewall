@@ -27,9 +27,11 @@ MODULE_PERMISSIONS = {
 # ====================
 # CONTROL MSG HANDLER
 # ====================
+if os.path.exists(CONTROL_SOCKET):
+    os.remove(CONTROL_SOCKET)
 
 _control_service = socket(AF_UNIX, SOCK_DGRAM)
-_control_service.bind(CONTROL_SOCKET)
+_control_service.bind(CONTROL_SOCKET.encode())
 
 _control_service_recv = _control_service.recvmsg
 _control_service_sendmsg = _control_service.sendmsg

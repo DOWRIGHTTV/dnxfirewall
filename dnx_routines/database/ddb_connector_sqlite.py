@@ -60,7 +60,7 @@ class _DBConnector:
 
     # NOTE: if Log is not sent in, calling any method configured to log will error out, but likely not cause
     # significant impact as it is covered by the context.
-    def __init__(self, log: LogHandler = None, *, table: str = None, readonly: bool = False, connect: bool = False):
+    def __init__(self, log: Type[LogHandler] = None, *, table: str = None, readonly: bool = False, connect: bool = False):
 
         # used to notify a calling process whether a failure occurred within the context.
         # this does not distinguish if multiple calls/returns are done.

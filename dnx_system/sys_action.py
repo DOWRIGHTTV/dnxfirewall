@@ -14,7 +14,7 @@ from dnx_gentools.def_constants import *
 
 _control_client = socket(AF_UNIX, SOCK_DGRAM)
 try:
-    _control_client.connect(CONTROL_SOCKET)
+    _control_client.connect(CONTROL_SOCKET.encode())
 except FileNotFoundError:
     print('control socket conn failed.')
 

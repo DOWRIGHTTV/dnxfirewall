@@ -39,7 +39,7 @@ if os.path.exists(DATABASE_SOCKET):
 _db_service = socket(AF_UNIX, SOCK_DGRAM)
 _db_service.setsockopt(SOL_SOCKET, SO_PASSCRED, 1)
 
-_db_service.bind(DATABASE_SOCKET)
+_db_service.bind(DATABASE_SOCKET.encode())
 
 # NOTE: direct reference to recvmsg method for perf
 _db_service_recvmsg = _db_service.recvmsg

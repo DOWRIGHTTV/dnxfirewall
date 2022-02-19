@@ -382,7 +382,7 @@ class NFQueue:
         self.__threaded = threaded
 
     @classmethod
-    def run(cls, Log: LogHandler, *, q_num: int, threaded: bool = True) -> None:
+    def run(cls, Log: Type[LogHandler], *, q_num: int, threaded: bool = True) -> None:
         cls._setup()
         cls._Log = Log
 
@@ -705,7 +705,7 @@ class RawResponse:
         self._packet = packet
 
     @classmethod
-    def setup(cls, log: LogHandler, Module) -> None:
+    def setup(cls, log: Type[LogHandler], Module) -> None:
         '''register all available interfaces in a separate thread for each. registration will wait for the interface to
         become available before finalizing.'''
 

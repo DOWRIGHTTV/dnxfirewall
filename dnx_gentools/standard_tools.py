@@ -81,7 +81,7 @@ class Initialize:
     '''class used to handle system module thread synchronization on process startup. this will ensure all
     threads have completed one loop before returning control to the caller. will block until condition is met.'''
 
-    def __init__(self, log: LogHandler, name: str):
+    def __init__(self, log: Type[LogHandler], name: str):
         self._log  = log
         self._name = name
 
@@ -152,7 +152,7 @@ class Initialize:
 
         return False
 
-def dnx_queue(log: LogHandler, name: str = None):
+def dnx_queue(log: Type[LogHandler], name: str = None) -> Callable:
     '''decorator to add custom queue mechanism for any queue handling functions. This is a direct replacement of
     dynamic_looper for queues.
 
@@ -174,8 +174,7 @@ def dnx_queue(log: LogHandler, name: str = None):
         job_set = job_available.set
 
         def wrapper(*args):
-            if (log):
-                log.informational(f'{name}/dnx_queue started.')
+            log.informational(f'{name}/dnx_queue started.')
 
             for _ in RUN_FOREVER:
                 job_wait()
@@ -187,8 +186,7 @@ def dnx_queue(log: LogHandler, name: str = None):
                     try:
                         func(*args, job)
                     except Exception as E:
-                        if (log):
-                            log.warning(f'error while processing a {name}/dnx_queue started job. | {E}')
+                        log.warning(f'error while processing a {name}/dnx_queue started job. | {E}')
 
                         fast_sleep(MSEC)
 

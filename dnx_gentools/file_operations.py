@@ -113,7 +113,7 @@ def load_tlds() -> Generator[Tuple[str, int]]:
 # function to load in all keywords corresponding to enabled domain categories. the try/except
 # is used to ensure bad keywords do not prevent the proxy from starting, though the bad keyword
 # will be omitted from the proxy.
-def load_keywords(log: LogHandler) -> tuple:
+def load_keywords(log: Type[LogHandler]) -> tuple:
     '''returns keyword set for enabled domain categories'''
 
     keywords = []
@@ -423,7 +423,7 @@ class ConfigurationManager:
     )
 
     @classmethod
-    def set_log_reference(cls, ref: LogHandler) -> None:
+    def set_log_reference(cls, ref: Type[LogHandler]) -> None:
         '''sets logging class reference for configuration manager specific errors.'''
 
         cls.log = ref

@@ -97,89 +97,11 @@ def _log_handler():
     # _syslog_sock = socket()
 
     # ==============================
-    # DB SERVICE SOCKET CONNECT
+    # DB SERVICE SOCKET
     # ==============================
     _db_client = socket(AF_UNIX, SOCK_DGRAM)
-    try:
-        _db_client.connect(DATABASE_SOCKET)
-    except FileNotFoundError:
-        print('db socket conn failed.')
 
     _db_sendmsg = _db_client.sendmsg
-
-    # ==============================
-    # STANDARD FUNCTIONS
-    # ==============================
-    # TODO: consider having this offloaded so the security modules don't have to waste cycles on writing to disk.
-    #  also, check to see how often they even log, it might not be often after first startup.
-    @dnx_queue(None, name='LogHandler')
-    def _write_to_disk(job):
-
-        path = f'{_path}/{_system_date(string=True)}-{_name}.log'
-
-        with open(_path, 'a+') as log:
-            log.write(job)
-
-        if (ROOT):
-            change_file_owner(path)
-
-    def _add_logging_methods(cls):
-        '''dynamically overrides default log level methods depending on current log settings.'''
-
-        _round = round
-        _queue_write = _write_to_disk.add
-
-        for level_number, level_info in convert_level().items():
-
-            level_name, _ = level_info
-
-            # all entries will be logged and printed to terminal
-            if (_LEVEL is LOG.DEBUG):
-
-                @staticmethod
-                def log_method(log_msg):
-                    log_msg = f'{_round(fast_time())}|{_name}|{level_name}|{log_msg}\n'
-
-                    console_log(log_msg)
-
-                    _queue_write(log_msg)
-
-            # entry will be logged to file
-            elif (level_number <= _LEVEL):
-
-                @staticmethod
-                def log_method(log_msg):
-
-                    _queue_write(f'{_round(fast_time())}|{_name}|{level_name}|{log_msg}\n')
-
-            # log level is disabled
-            else:
-                @staticmethod
-                def log_method(*_):
-                    pass
-
-            setattr(cls, level_name, log_method)
-
-    @cfg_read_poller('logging_client')
-    def _log_settings(cfg_file):
-        nonlocal _LEVEL, _initialized
-
-        logging = load_configuration(cfg_file)
-
-        _LEVEL = logging['logging->level']
-
-        _add_logging_methods(Handler)
-
-        # after initial load, this dones nothing
-        _initialized = True
-
-    @cfg_read_poller('syslog_client')
-    def _slog_settings(cfg_file):
-        nonlocal _syslog
-
-        syslog = load_configuration(cfg_file)
-
-        _syslog = syslog['enabled']
 
     # TODO: create function to write logs for system errors that happen prior to log handler being initialized.
     class Handler:
@@ -187,13 +109,12 @@ def _log_handler():
         @classmethod
         def run(cls, *, name: str, console_output: bool = False):
             '''
-            initializes log handler settings and monitors system configs for changes
-            with log/syslog settings.
+            initializes log handler settings and monitors system configs for changes with log/syslog settings.
 
             set console=True to enable Log.console outputs in terminal.
             '''
 
-            nonlocal _name, _console, _path
+            nonlocal _name, _console, _path, _db_client
 
             if (_initialized):
                 raise RuntimeError('the log handler has already been started.')
@@ -206,6 +127,12 @@ def _log_handler():
             threading.Thread(target=_slog_settings).start()
 
             threading.Thread(target=_write_to_disk).start()
+
+            # connecting here as a deferred action so services loading before log handler will not have issues.
+            try:
+                _db_client.connect(DATABASE_SOCKET.encode())
+            except (FileNotFoundError, ConnectionRefusedError):
+                critical('failed to connect to database. event logs will be lost.')
 
             # waiting for log settings and methods to initialize before returning to caller
             while not _initialized:
@@ -278,7 +205,12 @@ def _log_handler():
 
             log_data = [db_message(timestamp, log, method)]
 
-            _db_sendmsg(log_data, [(SOL_SOCKET, SCM_CREDENTIALS, DNX_AUTHENTICATION)])
+            try:
+                _db_sendmsg(log_data, [(SOL_SOCKET, SCM_CREDENTIALS, DNX_AUTHENTICATION)])
+
+            # deferred connect for processes
+            except ConnectionRefusedError:
+                _db_client.connect(DATABASE_SOCKET.encode())
 
         @staticmethod
         def slog_log(mtype, level, log_msg):
@@ -294,10 +226,86 @@ def _log_handler():
             #         # NOTE: should log to front end
             #         break
 
-        # @classmethod
-        # def _create_syslog_sock(cls):
-        #     cls._syslog_sock = socket(AF_INET, SOCK_DGRAM)
-        #     cls._syslog_sock.connect((f'{LOCALHOST}', SYSLOG_SOCKET))
+        @classmethod
+        def _create_syslog_sock(cls):
+            return
+
+            # cls._syslog_sock = socket(AF_INET, SOCK_DGRAM)
+            # cls._syslog_sock.connect((f'{LOCALHOST}', SYSLOG_SOCKET))
+
+    # ==============================
+    # STANDARD FUNCTIONS
+    # ==============================
+    # TODO: consider having this offloaded so the security modules don't have to waste cycles on writing to disk.
+    #  also, check to see how often they even log, it might not be often after first startup.
+    @dnx_queue(Log, name='LogHandler')
+    def _write_to_disk(job):
+
+        path = f'{_path}/{_system_date(string=True)}-{_name}.log'
+
+        with open(_path, 'a+') as log:
+            log.write(job)
+
+        if (ROOT):
+            change_file_owner(path)
+
+    def _add_logging_methods(cls) -> None:
+        '''dynamically overrides default log level methods depending on current log settings.'''
+
+        _round = round
+        _queue_write = _write_to_disk.add
+
+        for level_number, level_info in convert_level().items():
+
+            level_name, _ = level_info
+
+            # all entries will be logged and printed to terminal
+            if (_LEVEL is LOG.DEBUG):
+
+                @staticmethod
+                def log_method(log_msg):
+                    log_msg = f'{_round(fast_time())}|{_name}|{level_name}|{log_msg}\n'
+
+                    console_log(log_msg)
+
+                    _queue_write(log_msg)
+
+            # entry will be logged to file
+            elif (level_number <= _LEVEL):
+
+                @staticmethod
+                def log_method(log_msg):
+
+                    _queue_write(f'{_round(fast_time())}|{_name}|{level_name}|{log_msg}\n')
+
+            # log level is disabled
+            else:
+                @staticmethod
+                def log_method(*_):
+                    pass
+
+            setattr(cls, level_name, log_method)
+
+    @cfg_read_poller('logging_client')
+    def _log_settings(cfg_file: str) -> None:
+        nonlocal _LEVEL, _initialized
+
+        logging = load_configuration(cfg_file)
+
+        _LEVEL = logging['logging->level']
+
+        _add_logging_methods(Handler)
+
+        # after initial load, this dones nothing
+        _initialized = True
+
+    @cfg_read_poller('syslog_client')
+    def _slog_settings(cfg_file: str) -> None:
+        nonlocal _syslog
+
+        syslog = load_configuration(cfg_file)
+
+        _syslog = syslog['enabled']
 
     return Handler
 

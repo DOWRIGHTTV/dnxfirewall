@@ -7,13 +7,16 @@ import sys
 import argparse
 import importlib
 
+from subprocess import run, DEVNULL
+
 parser = argparse.ArgumentParser(description='DNXFIREWALL utility to start an included module.')
 parser.add_argument('module', metavar='mod', type=str)
+parser.add_argument('-s', metavar='service', type=str, choices=['start', 'stop', 'restart'], default='')
 
-print(sys.argv)
+args = parser.parse_args(sys.argv[1:3])
 
-args = parser.parse_args(sys.argv[1:2])
-print(args)
+if os.getuid():
+    exit('\nDNXFIREWALL run utility must be ran as root.\n')
 
 # =========================
 # MOD NAME -> MOD LOCATION
@@ -41,6 +44,10 @@ MODULE_MAPPING = {
 
 valid_module = MODULE_MAPPING.get(args.module, False)
 if (valid_module):
-    os.environ['INIT_MODULE'] = 'YES'
+    if (not args.s):
+        os.environ['INIT_MODULE'] = 'YES'
 
-    importlib.import_module(valid_module)
+        importlib.import_module(valid_module)
+
+    else:
+        run(['systemctl', valid_module, args.s], stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
