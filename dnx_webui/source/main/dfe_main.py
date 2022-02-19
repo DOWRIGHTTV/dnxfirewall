@@ -4,15 +4,11 @@ from __future__ import annotations
 
 from typing import Optional
 
-import os
-import sys
-import time
-
 from datetime import timedelta
 
 import dnx_routines.configure.web_validate as validate
 
-from dnx_gentools.def_constants import FIVE_SEC
+from dnx_gentools.def_constants import HOME_DIR, FIVE_SEC, fast_time
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import load_configuration, ConfigurationManager
 
@@ -25,10 +21,6 @@ from dnx_routines.logging import LogHandler as Log
 # FLASK API - APP INSTANCE INITIALIZATION
 # ========================================
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
-
-HOME_DIR = os.environ.get('HOME_DIR', '/home/dnx/dnxfirewall')
-sys.path.insert(0, HOME_DIR)
-sys.path.insert(0, f'{HOME_DIR}/dnx_webui')
 
 app = Flask(
     __name__, static_folder=f'{HOME_DIR}/dnx_webui/static', template_folder=f'{HOME_DIR}/dnx_webui/templates'
@@ -770,7 +762,7 @@ def update_session_tracker(username: str, user_role: Optional[str] = None, remot
 
             persistent_tracker[f'{user_path}->role'] = user_role
             persistent_tracker[f'{user_path}->remote_addr'] = remote_addr
-            persistent_tracker[f'{user_path}->logged_in'] = time.time()  # NOTE: make human-readable?
+            persistent_tracker[f'{user_path}->logged_in'] = fast_time()  # NOTE: make human-readable?
             persistent_tracker[f'{user_path}->last_seen'] = None
 
         elif (action is CFG.DEL):

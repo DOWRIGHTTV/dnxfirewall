@@ -1,12 +1,13 @@
 [Unit]
 Description=DNXFIREWALL IPS Service
 After=dnx-log.service
-StartLimitIntervalSec=3
+StartLimitIntervalSec=10
 
 [Service]
 Type=simple
 Restart=always
 RestartSec=3
+StartLimitBurst=3
 User=root
 ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_run.py ips_ids
 Environment=HOME_DIR=/home/dnx/dnxfirewall
