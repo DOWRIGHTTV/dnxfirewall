@@ -30,7 +30,7 @@ cdef struct TrieMap:
 
 cdef struct TrieRange:
     u_int32_t   key
-    u_int32_t   net_id
+    u_int32_t   netid
     u_int32_t   bcast
     u_int8_t    country
 
