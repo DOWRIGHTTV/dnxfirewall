@@ -1,7 +1,7 @@
 #!/usr/bin/env Cython
 
 from libc.stdlib cimport malloc, calloc
-from libc.math cimport log
+from libc.math cimport log2
 # from libc.stdio cimport printf
 
 import threading as _threading
@@ -16,7 +16,7 @@ DEF NO_MATCH = 0
 # ================================================ #
 cdef class HashTrie:
 
-    cpdef void generate_structure(self, tuple py_trie):
+    cpdef void generate_structure(self, tuple py_trie, size_t py_trie_len):
 
         cdef:
             size_t value_len
@@ -25,13 +25,13 @@ cdef class HashTrie:
             u_int32_t TRIE_KEY_HASH
             TrieRange *trie_value_ranges
 
-            size_t MAX_KEYS = 2 ** log(len(py_trie), 2)
+            size_t MAX_KEYS = 2 ** log2(py_trie_len)
 
         self.INDEX_MASK = MAX_KEYS - 1
 
         self.TRIE_MAP = <TrieMap*>calloc(MAX_KEYS, sizeof(TrieMap))
 
-        for i in range(len(py_trie)):
+        for i in range(py_trie_len):
 
             # accessed via pointer stored in L1 container
             value_len = len(py_trie[i][1])

@@ -574,9 +574,11 @@ cdef class CFirewall:
 
         global GEOLOCATION, MSB, LSB
 
+        cdef size_t trie_len = len(geolocation_trie)
+
         GEOLOCATION = HashTrie()
 
-        GEOLOCATION.generate_structure(geolocation_trie)
+        GEOLOCATION.generate_structure(geolocation_trie, trie_len)
 
         MSB = msb
         LSB = lsb
