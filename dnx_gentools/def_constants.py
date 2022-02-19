@@ -24,7 +24,7 @@ INIT_MODULE: bool = bool(_os.environ.get('INIT_MODULE', False))
 fast_time:  Callable[[], float] = _time.time
 fast_sleep: Callable[[float], None] = _time.sleep
 
-hard_out: Callable[[], None] = _partial(_os._exit, 1)
+hardout: Callable[[], None] = _partial(_os._exit, 1)
 console_log: Callable[[str], None] = _partial(print, flush=True)
 shell: Callable[[str], None] = _partial(_run, shell=True, stdout=_DEVNULL, stderr=_DEVNULL)
 

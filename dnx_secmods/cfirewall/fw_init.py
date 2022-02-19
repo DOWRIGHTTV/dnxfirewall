@@ -19,7 +19,7 @@ if (INIT_MODULE):
     parser.add_argument('--bypass', action='store_true')
     parser.add_argument('--verbose', action='store_true')
 
-    args = parser.parse_args(sys.argv[2:])
+    args = parser.parse_args(sys.argv)
 
     Log.run(name='rules')
 
@@ -29,7 +29,7 @@ if (INIT_MODULE):
     error = dnxfirewall.nf_set(Queue.CFIREWALL)
     if (error):
         Log.error(f'failed to bind to queue {Queue.CFIREWALL}')
-        hard_out()
+        hardout()
 
     # initializing python processes for detecting configuration changes to zone or rules rule sets and also handles
     # necessary calls into Cython via cfirewall reference for making the actual config change. these will run in Python
@@ -39,7 +39,7 @@ if (INIT_MODULE):
     try:
         fw_control.run()
     except:
-        hard_out()
+        hardout()
 
     # this is a blocking call but is running in pure C. the GIL is released before running the low level system
     # operations and will never retake the gil.
@@ -49,4 +49,4 @@ if (INIT_MODULE):
         dnxfirewall.nf_run()
     except:
         dnxfirewall.nf_break()
-        hard_out()
+        hardout()

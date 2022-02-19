@@ -40,7 +40,7 @@ def eprint(string):
             return
 
         elif (answer.lower() in ['n', '']):
-            hard_out()
+            hardout()
 
         else:
             print('!invalid selection.')
@@ -404,4 +404,4 @@ if (__name__ == '__main__'):
     sprint('control of the wan interface configuration has been taken by dnxfirewall.')
     sprint('use the webui to configure a static ip or enable ssh access if needed.')
 
-    hard_out()
+    hardout()
