@@ -126,7 +126,7 @@ def _receive_requests(queue_for_db):
         queue_for_db((name, data['timestamp'], log_entry))
 
 
-def RUN_MODULE():
+if (INIT_MODULE):
     Log.run(name=LOG_NAME)
 
     try:
