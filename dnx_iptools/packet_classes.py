@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from __future__ import annotations
-
 import time
 import traceback
 import socket
@@ -228,8 +226,10 @@ class Listener:
 
 
 class ProtoRelay:
-    '''parent class for udp and tls relays providing standard built in methods to start, check status, or add
-    jobs to the work queue. _dns_queue object must be overwritten by subclasses.'''
+    '''parent class for udp and tls relays.
+
+    provides standard built in methods to start, check status, or add jobs to the work queue. _dns_queue object must
+    be overwritten by subclasses.'''
 
     _protocol: ClassVar[PROTO] = PROTO.NOT_SET
 
@@ -268,9 +268,11 @@ class ProtoRelay:
 
     @classmethod
     def run(cls, dns_server: Type[DNSServer], *, fallback_relay: Optional[Callable] = None):
-        '''starts the protocol relay. DNSServer object is the class handling client side requests which
-        we can call back to and fallback is a secondary relay that can get forwarded a request post failure.
-        initialize will be called to run any subclass specific processing then query handler will run indefinitely.'''
+        '''starts the protocol relay.
+
+        DNSServer object is the class handling client side requests which we can call back to and fallback is a
+        secondary relay that can get forwarded a request post failure. initialize will be called to run any subclass
+        specific processing then query handler will run indefinitely.'''
         self = cls(dns_server, fallback_relay)
 
         Thread(target=self._fail_detection).start()
@@ -281,13 +283,11 @@ class ProtoRelay:
 
         raise NotImplementedError('relay must be implemented in the subclass.')
 
-    def _send_query(self, client_query: ClientQuery):
+    def _send_query(self, send_data: bytearray, request: str) -> None:
         for attempt in ATTEMPTS:
             try:
-                self._relay_conn.send(client_query.send_data)
-            except OSError as ose:
-                # NOTE: temporary
-                console_log(f'[{self._relay_conn.remote_ip}/{self._relay_conn.version}] Send error: {ose}')
+                self._relay_conn.send(send_data)
+            except OSError:
 
                 if not self._register_new_socket(): break
 
@@ -299,7 +299,7 @@ class ProtoRelay:
                 # NOTE: temp | identifying connection version to terminal. when removing consider having the relay
                 # protocol show in the webui > system reports.
                 console_log(
-                    f'[{self._relay_conn.remote_ip}/{self._relay_conn.version}][{attempt}] Sent {client_query.request}'
+                    f'[{self._relay_conn.remote_ip}/{self._relay_conn.version}][{attempt}] Sent {request}'
                 )
 
                 break
@@ -382,7 +382,7 @@ class NFQueue:
         self.__threaded = threaded
 
     @classmethod
-    def run(cls, Log: LogHandler, *, q_num: int, threaded: bool = True):
+    def run(cls, Log: LogHandler, *, q_num: int, threaded: bool = True) -> None:
         cls._setup()
         cls._Log = Log
 
@@ -399,7 +399,7 @@ class NFQueue:
         pass
 
     @classmethod
-    def set_proxy_callback(cls, *, func: ProxyCallback):
+    def set_proxy_callback(cls, *, func: ProxyCallback) -> None:
         '''Takes a callback function to handle packets after parsing. the reference will be called
         as part of the packet flow with one argument passed in for "packet".'''
 
@@ -408,7 +408,7 @@ class NFQueue:
 
         cls._proxy_callback = func
 
-    def __queue(self):
+    def __queue(self) -> None:
         set_user_callback(self.__handle_packet)
 
         for _ in RUN_FOREVER:
@@ -683,7 +683,7 @@ class RawResponse:
     on startup to associate interface, zone, mac, ip, and active socket.'''
 
     __setup: ClassVar[bool] = False
-    _Log: ClassVar[Optional[Type[LogHandler]]] = None
+    _log: ClassVar[Optional[Type[LogHandler]]] = None
     _Module = None
 
     _registered_socks: ClassVar[dict] = {}
@@ -705,7 +705,7 @@ class RawResponse:
         self._packet = packet
 
     @classmethod
-    def setup(cls, Log: LogHandler, Module) -> None:
+    def setup(cls, log: LogHandler, Module) -> None:
         '''register all available interfaces in a separate thread for each. registration will wait for the interface to
         become available before finalizing.'''
 
@@ -714,7 +714,7 @@ class RawResponse:
 
         cls.__setup = True
 
-        cls._Log = Log
+        cls._log = log
         cls._Module = Module
 
         # direct assignment for perf
@@ -736,7 +736,7 @@ class RawResponse:
         # reference in prepare and send method.
         cls._registered_socks[intf_index] = NFQ_SEND_SOCK(zone, ip, cls.sock_sender())
 
-        cls._Log.informational(f'{cls.__name__}: {_intf} registered.')
+        cls._log.informational(f'{cls.__name__}: {_intf} registered.')
 
     @classmethod
     def prepare_and_send(cls, packet: ProxyPacket):
@@ -837,7 +837,7 @@ class RawResponse:
         elif (packet.protocol is PROTO.UDP):
             packet.udp_header[2:4] = short_pack(port_override)
 
-            # NOTE: did we skip udp checksum because its not required?? prob should do it to be "legit" someday
+            # NOTE: did we skip udp checksum because its not required?? prob should do it to be "legit"... someday
 
             # slicing operations will change the referenced object directly
             ip_header = packet.ip_header

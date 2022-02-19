@@ -83,7 +83,7 @@ firewall_rules[BEFORE_RULES] = <FWrule*>calloc(FW_BEFORE_MAX_RULE_COUNT, sizeof(
 firewall_rules[MAIN_RULES]   = <FWrule*>calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(FWrule))
 firewall_rules[AFTER_RULES]  = <FWrule*>calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(FWrule))
 
-# index corresponds to index of sections in rules rules. this will allow us to skip over sections that are
+# index corresponds to index of sections in firewall rules. this will allow us to skip over sections that are
 # empty and know how far to iterate over. tracking this allows ability to not clear pointers of dangling rules
 # since they will be out of bounds of specified iteration.
 cdef u_int32_t CUR_RULE_COUNTS[FW_SECTION_COUNT]
@@ -108,25 +108,26 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
 
     # definitions or default assignments
     cdef:
-        unsigned char *pktdata
+        u_int8_t *pktdata
         IPhdr *ip_header
 
         # default proto_header values (used by icmp) and replaced with protocol specific values
-        # not using calloc to keep mem allocation handle on stack
+        # not using calloc to keep mem allocation handled on stack
         Protohdr proto_def = [0, 0]
         Protohdr *proto_header = &proto_def
 
         bint system_rule = 0
 
-        u_int8_t direction, iphdr_len
-        size_t pktdata_len
+        u_int8_t direction
+        size_t pktdata_len, iphdr_len
+
         InspectionResults inspection_results
         u_int32_t verdict
 
     # definition w/ assignment via function calls
     cdef:
         nfqnl_msg_packet_hdr *hdr = nfq_get_msg_packet_hdr(nfa)
-        u_int32_t id = ntohl(hdr.packet_id)
+        u_int32_t pktid = ntohl(hdr.packet_id)
 
         # interface index which corresponds to zone map index
         u_int8_t in_intf = nfq_get_indev(nfa)
@@ -166,7 +167,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # =============================== #
     # LOCKING ACCESS TO FIREWALL.
     # ------------------------------- #
-    # prevents the manager thread from updating rules rules during a packets inspection
+    # prevents the manager thread from updating firewall rules during a packets inspection
     pthread_mutex_lock(&FWrulelock)
 
     inspection_results = cfirewall_inspect(&hw, ip_header, proto_header, direction)
@@ -177,9 +178,9 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # SYSTEM RULES will have cfirewall invoke action directly since this traffic does not need further inspection
     if (inspection_results.fw_section == SYSTEM_RULES):
 
-        system_rule = 1 # only used by verbose logging.
+        nfq_set_verdict(qh, pktid, inspection_results.action, pktdata_len, pktdata)
 
-        nfq_set_verdict(qh, id, inspection_results.action, pktdata_len, pktdata)
+        system_rule = 1  # only used by verbose logging.
 
     else:
         # verdict is defined here based on BYPASS flag.
@@ -188,7 +189,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         #   toggled via an argument to nf_run().
         verdict = inspection_results.action if BYPASS else IP_PROXY << TWO_BYTES | NF_QUEUE
 
-        nfq_set_verdict2(qh, id, verdict, inspection_results.mark, pktdata_len, pktdata)
+        nfq_set_verdict2(qh, pktid, verdict, inspection_results.mark, pktdata_len, pktdata)
 
     # verdict is being used to eval whether packet matched a system rule. 0 verdict infers this also, but for ease
     # of reading, ill have both.
@@ -213,9 +214,10 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
         u_int32_t iph_src_ip = ntohl(ip_header.saddr)
         u_int32_t iph_dst_ip = ntohl(ip_header.daddr)
 
-        # ip > country code. NOTE: this will be calculated regardless of a rule match so this process can take over
-        # geolocation processing for all modules. ip proxy will still do the logging and profile blocking it just won't
-        # need to pull the country code anymore.
+        # ip > country code
+        # NOTE: this will be calculated regardless of a rule match so this process can take over geolocation
+        #  processing for all modules. ip proxy will still do the logging and profile blocking it just won't need to
+        #  lookup the country code.
         u_int16_t src_country = GEOLOCATION.search(iph_src_ip & MSB, iph_src_ip & LSB)
         u_int16_t dst_country = GEOLOCATION.search(iph_dst_ip & MSB, iph_dst_ip & LSB)
 
@@ -255,9 +257,8 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
             # ------------------------------------------------------------------ #
             # GEOLOCATION or IP/NETMASK
             # ------------------------------------------------------------------ #
-            # geolocation matching repurposes network id and netmask fields in the rules rule. net id of -1 flags
-            # the rule as a geolocation rule with the country code using the netmask field. NOTE: just as with networks,
-            # only a single country is currently supported per rules rule src and dst.
+            # geolocation matching repurposes network id and netmask fields in the firewall rule. net id of -1 flags
+            # the rule as a geolocation rule with the country code using the netmask field.
             if not network_match(rule.s_networks, iph_src_ip, src_country):
                 continue
 
@@ -617,7 +618,7 @@ cdef class CFirewall:
             set_FWrule(ruleset, fw_rule, i)
 
         # updating rule count in global tracker. this is very important in that it establishes the right side bound for
-        # rules ruleset iteration operations.
+        # firewall ruleset iteration operations.
         CUR_RULE_COUNTS[ruleset] = rule_count
 
         pthread_mutex_unlock(&FWrulelock)

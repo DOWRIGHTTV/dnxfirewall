@@ -204,12 +204,13 @@ def dnx_queue(log: LogHandler, name: str = None):
     return decorator
 
 def structure(obj_name: str, fields: Union[List, str]) -> Structure:
-    '''named tuple like class factory for storing int values of raw byte sections with named fields. calling
-    len on the container will return sum of all bytes stored not amount of fields. slots are being used to speed up
-    attribute access. attribute type is not checked and can be truncated if incorrectly specified.
+    '''named tuple like class factory for storing int values of raw byte sections with named fields.
 
-    note: currently < 1 byte attributes are not supported. some for of eval partial will likely be implemented in the
-    near future.'''
+    calling len on the container will return sum of all bytes stored not amount of fields. slots are being used to
+    speed up attribute access. attribute type is not checked and can be truncated if incorrectly specified.
+
+    note: currently < 1 byte attributes are not supported. some form of eval partial will likely be implemented.
+    '''
 
     if not isinstance(fields, list):
         fields = fields.split()
@@ -269,10 +270,11 @@ def structure(obj_name: str, fields: Union[List, str]) -> Structure:
             return f'{obj_name}({comma_join(_fields)})'
 
         def __call__(self, **kwargs) -> Structure:
-            '''returns a copy of current field assignments. kwargs can be used to insert updated values which will be
-            copied over to new containers of the same type. a good use case for this is to fill out fields that are
-            constants and can be streamlined to simplify external byte string creation logic. This is an alternative
-            method to assignment at container creation.
+            '''returns a copy of current field assignments.
+
+            kwargs can be used to insert updated values which will be copied over to new containers of the same type. a
+            good use case for this is to fill out fields that are constants and can be streamlined to simplify
+            external byte string creation logic. This is an alternative method to assignment at container creation.
             '''
 
             new_container = _copy(self)
@@ -327,8 +329,9 @@ def structure(obj_name: str, fields: Union[List, str]) -> Structure:
                 raise AttributeError(f'attribute {key} does not exist in this container.')
 
         def assemble(self) -> bytearray:
-            '''pack attributes into slotted buf with creation order preserved then returns buf reference. alternatively,
-            buf can be accessed directly for quick changes and can be restored by a subsequent call to assemble.
+            '''pack attributes into slotted buf with creation order preserved then returns buf reference.
+
+            alternatively, buf can be accessed directly for quick changes.
             '''
 
             pack_fields(self.buf, 0, *self.values())

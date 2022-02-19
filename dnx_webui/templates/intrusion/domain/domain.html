@@ -118,7 +118,7 @@
                                 <label>
                                     Off
                                     <input type="checkbox" {% if settings['keyword'] %} checked="checked"
-                                        {% endif %} name="keyword" value="{{category}}" onchange="this.form.submit()">
+                                        {% endif %} name="keyword" value="{{category}}" onchange="updateCategory(this)">
                                     <span class="lever"></span>
                                     On
                                 </label>

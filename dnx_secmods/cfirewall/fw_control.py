@@ -57,7 +57,7 @@ class FirewallControl:
     # zone int values are arbitrary / randomly selected on zone creation.
     def _monitor_zones(self, zone_map):
         '''calls to Cython are made from within this method block. the GIL must be manually acquired on the Cython
-        side or the Python interpreter will crash. Monitors the rules zone file for changes and loads updates to
+        side or the Python interpreter will crash. Monitors the firewall zone file for changes and loads updates to
         cfirewall.'''
 
         dnx_zones = load_configuration(zone_map, filepath='dnx_system/iptables')
@@ -77,7 +77,7 @@ class FirewallControl:
     @cfg_read_poller('firewall_active', folder='iptables')
     def _monitor_standard_rules(self, fw_rules):
         '''calls to Cython are made from within this method block. the GIL must be manually acquired on the Cython
-        side or the Python interpreter will crash. Monitors the active rules rules file for changes and loads
+        side or the Python interpreter will crash. Monitors the active firewall rules file for changes and loads
         updates to cfirewall.'''
 
         dnx_fw = load_configuration(fw_rules, filepath='dnx_system/iptables')

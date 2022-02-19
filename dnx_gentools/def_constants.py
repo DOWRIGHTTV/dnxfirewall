@@ -33,11 +33,11 @@ RUN_FOREVER: Iterator = _repeat(1)
 # used by socket sender loops
 ATTEMPTS: tuple[int, int] = (0, 1)
 
-byte_join:  Callable[[list[bytes]], bytes] = b''.join
-str_join:   Callable[[list[str]], str] = ''.join
-dot_join:   Callable[[list[str]], str] = '.'.join
-space_join: Callable[[list[str]], str] = ' '.join
-comma_join: Callable[[list[str]], str] = ', '.join
+byte_join:  Callable[Union[tuple[bytes], list[bytes]], bytes] = b''.join
+str_join:   Callable[Union[tuple[str], list[str]], str] = ''.join
+dot_join:   Callable[Union[tuple[str], list[str]], str] = '.'.join
+space_join: Callable[Union[tuple[str], list[str]], str] = ' '.join
+comma_join: Callable[Union[tuple[str], list[str]], str] = ', '.join
 
 HOME_DIR: str = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-2]))
 

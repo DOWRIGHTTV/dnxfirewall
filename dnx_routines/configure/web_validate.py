@@ -94,11 +94,11 @@ def check_digit(dig: str, /, *, default: Optional[str] = '1') -> str:
 
     return default
 
-def get_check_digit(form: dict, dig: str, /, *, default: Optional[str] = '1') -> str:
+def get_check_digit(form: dict, key: str, /, *, default: Optional[str] = '1') -> str:
 
-    value = form.get(dig, default)
+    value = form.get(key, default)
     if (value.isdigit()):
-        return dig
+        return value
 
     return default
 

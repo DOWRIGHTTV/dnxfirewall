@@ -146,7 +146,7 @@ def update_field(form):
 def validate_reputation(category: config) -> Optional[ValidationError]:
     ip_proxy = load_configuration('ip_proxy')
 
-    valid_categories = ip_proxy['reputation']
+    valid_categories = ip_proxy.get_list('reputation')
 
     if (category.name not in valid_categories):
         return ValidationError(INVALID_FORM)
@@ -159,13 +159,9 @@ def validate_geolocation(category: config, rtype: str = 'country') -> Optional[V
     if (category.direction not in range(4)):
         return ValidationError(INVALID_FORM)
 
-    # NOTE: this is probably worthless
-    if (rtype not in ['country', 'continent']):
-        return ValidationError(INVALID_FORM)
-
     if (rtype == 'country'):
         try:
-            GEO[category.name]
+            GEO[category.name.upper()]
         except:
             return ValidationError(INVALID_FORM)
 

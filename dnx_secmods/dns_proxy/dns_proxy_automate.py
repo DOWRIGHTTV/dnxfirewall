@@ -36,7 +36,7 @@ class Configuration:
         self._initialize = Initialize(Log, name)
 
     @classmethod
-    def proxy_setup(cls, dns_proxy: Type[DNSProxy]):
+    def proxy_setup(cls, dns_proxy: Type[DNSProxy]) -> None:
         '''start threads for tasks required by the DNS proxy. blocking until settings are loaded/initialized.'''
         if (cls._proxy_setup):
             raise RuntimeError('proxy setup should only be called once.')
@@ -45,7 +45,7 @@ class Configuration:
 
         # NOTE: might be temporary, but this needed to be moved outside the standard/bitmap sigs since they are
         # now being handled by an external C extension (cython)
-        cls._keywords = load_keywords(Log=Log)
+        cls._keywords = load_keywords(log=Log)
 
         self = cls(dns_proxy.__name__)
         self.dns_proxy = dns_proxy
@@ -57,9 +57,12 @@ class Configuration:
         self._initialize.wait_for_threads(count=3)
 
     @classmethod
-    def server_setup(cls, dns_server: Type[DNSServer]):
-        '''start threads for tasks required by the DNS server. This will ensure all automated threads
-        get started, including reachability. blocking until settings are loaded/initialized.'''
+    def server_setup(cls, dns_server: Type[DNSServer]) -> None:
+        '''start threads for tasks required by the DNS server.
+
+        This will ensure all automated threads get started, including reachability. blocking until settings are
+        loaded/initialized.'''
+
         if (cls._server_setup):
             raise RuntimeError('server setup should only be called once.')
         cls._server_setup = True
@@ -71,13 +74,13 @@ class Configuration:
         self._initialize.wait_for_threads(count=1)
 
     @cfg_read_poller('dns_proxy')
-    def _get_proxy_settings(self, cfg_file: str):
+    def _get_proxy_settings(self, cfg_file: str) -> None:
         dns_proxy = load_configuration(cfg_file)
 
         signatures = self.dns_proxy.signatures
         # CATEGORY SETTINGS
         enabled_keywords = []
-        for cat, setting in dns_proxy['categories']['default'].items():
+        for cat, setting in dns_proxy.get_items('categories->default'):
             # identifying enabled keyword search categories
             if (setting['keyword']):
                 enabled_keywords.append(DNS_CAT[cat])
@@ -118,7 +121,7 @@ class Configuration:
         self._initialize.done()
 
     @cfg_read_poller('dns_server')
-    def _get_server_settings(self, dns_server: Type[DNSServer], cfg_file: str):
+    def _get_server_settings(self, dns_server: Type[DNSServer], cfg_file: str) -> None:
         dns_settings = load_configuration(cfg_file)
 
         tls_enabled = dns_settings['tls->enabled']
@@ -144,7 +147,7 @@ class Configuration:
 
     @cfg_write_poller
     # handles updating user defined signatures in memory/propagated changes to disk.
-    def _get_list(self, lname: str, cfg_file: str, last_modified_time: int):
+    def _get_list(self, lname: str, cfg_file: str, last_modified_time: int) -> None:
         memory_list = getattr(self.dns_proxy, lname).dns
 
         timeout_detected = self._check_for_timeout(memory_list)
@@ -179,7 +182,7 @@ class Configuration:
         return modified_time
 
     @staticmethod
-    def _modify_memory(memory_list: Dict, loaded_list: ConfigChain, *, action: CFG):
+    def _modify_memory(memory_list: Dict, loaded_list: ConfigChain, *, action: CFG) -> None:
         '''removing/adding signature/rule from memory as needed.'''
         if (action is CFG.ADD):
 
@@ -197,15 +200,14 @@ class Configuration:
             # iterating over rules/signature in memory
             for rule, settings in memory_list.copy().items():
 
-                # TODO: why is this not being used? is this broken or was it not needed and i forget to remove it?
                 bitmap_key = convert_string_to_bitmap(rule, DNS_BIN_OFFSET)
 
                 # if rule is not present in config file it will be removed from memory
                 if (settings['key'] not in loaded_list):
-                    memory_list.pop(rule)
+                    memory_list.pop(bitmap_key, None)
 
     @staticmethod
-    def _modify_ip_whitelist(cfg_file: str, memory_ip_list: Dict):
+    def _modify_ip_whitelist(cfg_file: str, memory_ip_list: Dict) -> None:
         loaded_ip_list = load_configuration(cfg_file)
 
         # iterating over ip rules in memory.
@@ -213,7 +215,7 @@ class Configuration:
 
             # if it is not in the config file it will be removed.
             if (f'{ip}' not in loaded_ip_list):
-                memory_ip_list.pop(ip)
+                memory_ip_list.pop(ip, None)
 
         # iterating over ip rules in configuration file
         for ip, settings in loaded_ip_list.get_items('ip_bypass'):

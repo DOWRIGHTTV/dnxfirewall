@@ -34,8 +34,8 @@ class UDPRelay(ProtoRelay):
             Log.critical(f'[{self._protocol}] No DNS servers available.')
 
     @dnx_queue(Log, name='UDPRelay')
-    def relay(self, client_query: ClientQuery):
-        self._send_query(client_query)
+    def relay(self, send_data: bytearray, request: str):
+        self._send_query(send_data, request)
 
     # receive data from server. if dns response will call parse method else will close the socket.
     def _recv_handler(self):
@@ -104,10 +104,11 @@ class TLSRelay(ProtoRelay):
 
     # iterating over dns server list and calling to create a connection to first available server. this will only happen
     # if a socket connection isn't already established when attempting to send query.
-    def _register_new_socket(self):
+    def _register_new_socket(self) -> Optional[bool]:
         for tls_server in self._dns_server.dns_servers:
 
-            # skipping over known down server. NOTE: using self._protocol is not needed here.
+            # skipping over known down server.
+            # NOTE: using self._protocol is not needed here.
             if (not tls_server[PROTO.DNS_TLS]): continue
 
             # attempting to connect via tls. if successful will return True, otherwise mark server as
@@ -122,14 +123,15 @@ class TLSRelay(ProtoRelay):
             Log.error(f'[{self._protocol}] No DNS servers available.')
 
     @dnx_queue(Log, name='TLSRelay')
-    def relay(self, client_query: ClientQuery):
+    def relay(self, send_data: bytearray, request: str) -> None:
         # if servers are down and a fallback is configured, it will be forwarded to that relay queue, otherwise
         # the request will be silently dropped.
         if (not self.fail_condition):
-            self._send_query(client_query)
+            self._send_query(send_data, request)
 
+        # slicing out length field which is tcp only.
         elif (self._fallback_relay):
-            self._fallback_relay_add(client_query)
+            self._fallback_relay_add(send_data[2:], request)
 
     # receive data from server and call parse method when valid message is recvd, else will close the socket.
     def _recv_handler(self, recv_buf: bytearray = bytearray(2048)):

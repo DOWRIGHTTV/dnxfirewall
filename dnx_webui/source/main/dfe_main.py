@@ -122,7 +122,7 @@ def rules_firewall(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'ajax': True,
-        'tab': validate.get_check_digit(request.form, 'tab'),
+        'tab': validate.get_check_digit(request.args, 'tab'),
         'dnx_network_objects': {},
         'dnx_service_objects': {},
         'selected': 'MAIN',
@@ -133,7 +133,7 @@ def rules_firewall(session_data):
     page_settings.update(session_data)
 
     page_action = firewall_page_logic(
-        dnx_fwall, page_settings, 'firewall_settings', page_name='rules/firewall/firewall'
+        dnx_fwall, page_settings, 'firewall_settings', page_name='rules/firewall/firewall.html'
     )
 
     return page_action
@@ -156,13 +156,10 @@ def rules_firewall_commit(session_data):
 @app.route('/rules/nat', methods=['GET', 'POST'])
 @user_restrict('admin')
 def rules_nat(session_data):
-    tab = request.args.get('tab', '1')
-    menu_option = request.args.get('menu', '1')
-
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_check_digit(request.form, 'tab'),
-        'menu': validate.get_check_digit(request.form, 'menu'),
+        'tab': validate.get_check_digit(request.args, 'tab'),
+        'menu': validate.get_check_digit(request.args, 'menu'),
         'selected': 'WAN_ZONE',
         'zones': ['WAN', 'DMZ', 'LAN'],
         'uri_path': ['rules', 'nat']
@@ -171,7 +168,7 @@ def rules_nat(session_data):
     page_settings.update(session_data)
 
     page_action = firewall_page_logic(
-        dnx_nat, page_settings, 'nat_settings', page_name='rules/nat'
+        dnx_nat, page_settings, 'nat_settings', page_name='rules/nat.html'
     )
 
     return page_action
@@ -181,14 +178,14 @@ def rules_nat(session_data):
 def rules_overrides_whitelist(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_check_digit(request.form, 'tab'),
+        'tab': validate.get_check_digit(request.args, 'tab'),
         'uri_path': ['rules', 'overrides', 'whitelist']
     }
 
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        xlist, page_settings, 'whitelist_settings', page_name='rules/overrides/whitelist'
+        xlist, page_settings, 'whitelist_settings', page_name='rules/overrides/whitelist.html'
     )
 
     return page_action
@@ -198,14 +195,14 @@ def rules_overrides_whitelist(session_data):
 def rules_overrides_blacklist(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_check_digit(request.form, 'tab'),
+        'tab': validate.get_check_digit(request.args, 'tab'),
         'uri_path': ['rules', 'overrides', 'blacklist']
     }
 
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        xlist, page_settings, 'blacklist_settings', page_name='rules/overrides/blacklist'
+        xlist, page_settings, 'blacklist_settings', page_name='rules/overrides/blacklist.html'
     )
 
     return page_action
@@ -219,14 +216,14 @@ def intrusion_ip(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'ajax': True,
-        'tab': validate.get_check_digit(request.form, 'tab'),
+        'tab': validate.get_check_digit(request.args, 'tab'),
         'uri_path': ['intrusion', 'ip']
     }
 
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        ip_proxy, page_settings, 'ip_settings', page_name='intrusion/ip'
+        ip_proxy, page_settings, 'ip_settings', page_name='intrusion/ip.html'
     )
 
     return page_action
@@ -251,14 +248,14 @@ def intrusion_domain(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'ajax': True,
-        'tab': validate.get_check_digit(request.form, 'tab'),
+        'tab': validate.get_check_digit(request.args, 'tab'),
         'uri_path': ['intrusion', 'domain']
     }
 
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        dns_proxy, page_settings, 'domain_settings', page_name='intrusion/domain/domain'
+        dns_proxy, page_settings, 'domain_settings', page_name='intrusion/domain/domain.html'
     )
 
     return page_action
@@ -283,8 +280,8 @@ def intrusion_domain_post(session_data):
 def intrusion_domain_categories(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_check_digit(request.form, 'tab'),
-        'menu': validate.get_check_digit(request.form, 'menu'),
+        'tab': validate.get_check_digit(request.args, 'tab'),
+        'menu': validate.get_check_digit(request.args, 'menu'),
         'cat_settings': True,
         'uri_path': ['intrusion', 'domain', 'categories']
     }
@@ -302,7 +299,7 @@ def intrusion_domain_categories(session_data):
 def intrusion_ips(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_check_digit(request.form, 'tab'),
+        'tab': validate.get_check_digit(request.args, 'tab'),
         'uri_path': ['intrusion', 'ips']
     }
 
@@ -324,7 +321,7 @@ def intrusion_ips(session_data):
 def system_settings_dns(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_check_digit(request.form, 'tab'),
+        'tab': validate.get_check_digit(request.args, 'tab'),
         'uri_path': ['system', 'settings', 'dns']
     }
 
@@ -341,7 +338,7 @@ def system_settings_dns(session_data):
 def system_settings_dhcp(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_check_digit(request.form, 'tab'),
+        'tab': validate.get_check_digit(request.args, 'tab'),
         'uri_path': ['system', 'settings', 'dhcp']
     }
 
@@ -358,7 +355,7 @@ def system_settings_dhcp(session_data):
 def system_settings_interface(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_check_digit(request.form, 'tab'),
+        'tab': validate.get_check_digit(request.args, 'tab'),
         'uri_path': ['system', 'settings', 'interface']
     }
 
@@ -376,7 +373,7 @@ def system_settings_logging(session_data):
     tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_check_digit(request.form, 'tab'),
+        'tab': validate.get_check_digit(request.args, 'tab'),
         'uri_path': ['system', 'settings', 'logging']
     }
 
@@ -393,7 +390,7 @@ def system_settings_logging(session_data):
 def system_settings_syslog(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_check_digit(request.form, 'tab'),
+        'tab': validate.get_check_digit(request.args, 'tab'),
         'uri_path': ['system', 'settings', 'syslog']
     }
 
@@ -613,6 +610,7 @@ def dnx_login():
 
 @app.post('/refresh/session')
 @user_restrict('user', 'admin')
+@user_restrict('user', 'admin')
 def refresh_session(dnx_session):
 
     return ajax_response(status=True, data={'error': 0, 'message': None})
@@ -652,7 +650,7 @@ def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
             return render_template(application_error_page, application_error=ose, **page_settings)
 
         page_settings.update({
-            'tab': validate.get_check_digit(request.form, 'tab'),
+            'tab': validate.get_check_digit(request.args, 'tab'),
             'standard_error': error
         })
 
@@ -660,6 +658,8 @@ def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
         page_settings[data_key] = dnx_page.load_page(request.form)
     except OSError as ose:
         return render_template(application_error_page, application_error=ose, **page_settings)
+
+    print(request.args, page_settings)
 
     return render_template(page_name, **page_settings)
 
@@ -672,7 +672,7 @@ def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name):
             return render_template(application_error_page, application_error=ose, **page_settings)
 
         page_settings.update({
-            'tab': validate.get_check_digit(request.form, 'tab'),
+            'tab': validate.get_check_digit(request.args, 'tab'),
             'selected': selected,
             'standard_error': error
         })
@@ -717,8 +717,8 @@ def categories_page_logic(dnx_page, page_settings):
             return render_template(application_error_page, application_error=ose, **page_settings)
 
         page_settings.update({
-            'tab': validate.get_check_digit(request.form, 'tab'),
-            'menu': validate.get_check_digit(request.form, 'menu'),
+            'tab': validate.get_check_digit(request.args, 'tab'),
+            'menu': validate.get_check_digit(request.args, 'menu'),
             'standard_error': error
         })
 

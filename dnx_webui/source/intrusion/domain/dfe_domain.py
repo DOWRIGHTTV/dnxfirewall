@@ -27,24 +27,22 @@ def load_page(form):
 def update_page(form: dict) -> tuple[bool, dict]:
 
     ruleset = form.get('type', DATA.MISSING)
+    if (ruleset is DATA.MISSING):
+        return False, {'error': 1, 'message': INVALID_FORM}
 
-    if (ruleset is not DATA.MISSING):
-        category = config(**{
-            'name': form.get('category', DATA.MISSING),
-            'enabled': get_convert_bint(form, 'enabled')
-        })
-        print(category)
-        if ([x for x in category.values() if x in [DATA.MISSING, DATA.INVALID]]):
-            return False, {'error': 1, 'message': INVALID_FORM}
+    category = config(**{
+        'name': form.get('category', DATA.MISSING),
+        'enabled': get_convert_bint(form, 'enabled')
+    })
 
-        error = validate_domain_categories(category, ruleset=ruleset)
-        if (error):
-            return False, {'error': 2, 'message': error.message}
+    if ([x for x in category.values() if x in [DATA.MISSING, DATA.INVALID]]):
+        return False, {'error': 2, 'message': INVALID_FORM}
 
-        configure_domain_categories(category, ruleset=ruleset)
+    error = validate_domain_categories(category, ruleset=ruleset)
+    if (error):
+        return False, {'error': 3, 'message': error.message}
 
-    else:
-        return False, {'error': 3, 'message': INVALID_FORM}
+    configure_domain_categories(category, ruleset=ruleset)
 
     return True, {'error': 0, 'message': None}
 
@@ -81,7 +79,7 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[Va
     else:
         return ValidationError(INVALID_FORM)
 
-    if category.name not in cat_list:
+    if (category.name not in cat_list):
         return ValidationError(INVALID_FORM)
 
 # ==============
@@ -92,27 +90,18 @@ def configure_domain_categories(category: config, *, ruleset):
     with ConfigurationManager('dns_proxy') as dnx:
         dns_proxy = dnx.load_configuration()
 
-        if category.name in ['malicious', 'cryptominer']:
-            return
+        if (ruleset in ['default', 'user_defined']):
+            if category.name in ['malicious', 'cryptominer']:
+                return
 
-        dns_proxy[f'categories->{ruleset}->{category.name}->enabled'] = category.enabled
+            dns_proxy[f'categories->{ruleset}->{category.name}->enabled'] = category.enabled
+
+        elif (ruleset in ['tld']):
+
+            dns_proxy[f'tld->{category.name}'] = category.enabled
+
+        elif (ruleset in ['keyword']):
+
+            dns_proxy[f'categories->default->{category.name}->keyword'] = category.enabled
 
         dnx.write_configuration(dns_proxy.expanded_user_data)
-
-def configure_domain_tlds(tld: config):
-    with ConfigurationManager('dns_proxy') as dnx:
-        proxy_settings = dnx.load_configuration()
-
-        proxy_settings[f'tlds->{tld.name}'] = tld.enabled
-
-        dnx.write_configuration(proxy_settings.expanded_user_data)
-#
-# def set_domain_category_keywords(en_keywords):
-#     with ConfigurationManager('dns_proxy') as dnx:
-#         dns_proxy_categories = dnx.load_configuration()
-#
-#         domain_cats = dns_proxy_categories['categories']['default']
-#         for cat, settings in domain_cats.items():
-#             settings['keyword'] = True if cat in en_keywords else False
-#
-#         dnx.write_configuration(dns_proxy_categories)

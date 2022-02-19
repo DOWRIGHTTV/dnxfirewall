@@ -48,7 +48,7 @@ class FirewallManage:
 
     @classmethod
     def commit(cls, firewall_rules):
-        '''Updates pending configuration file with sent in rules rules data. This is a replace operation on disk and
+        '''Updates pending configuration file with sent in firewall rules data. This is a replace operation on disk and
         thread and process safe.'''
 
         with ConfigurationManager(DEFAULT_VERSION, file_path=USER_PATH) as dnx_fw:
@@ -136,7 +136,7 @@ class FirewallManage:
 
 
 # class FirewallManageLegacy:
-#     '''intermediary between front end and underlying C rules code.
+#     '''intermediary between front end and underlying C firewall code.
 #
 #     Front end <> FirewallManageLegacy <file monitoring> FirewallControl <> CFirewall
 #

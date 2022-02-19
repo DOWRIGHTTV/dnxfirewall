@@ -8,7 +8,6 @@ from dnx_gentools.signature_operations import generate_domain
 
 from dnx_iptools.dnx_trie_search import generate_recursive_binary_search
 from dnx_iptools.packet_classes import NFQueue
-from dnx_iptools.protocol_tools import int_to_ip
 
 from dns_proxy_automate import Configuration
 from dns_proxy_log import Log
@@ -18,6 +17,8 @@ from dns_proxy_server import DNSServer
 LOG_NAME = 'dns_proxy'
 
 LOCAL_RECORD = DNSServer.dns_records.get
+prepare_and_send = ProxyResponse.prepare_and_send
+
 
 class DNSProxy(NFQueue):
     # dns | ip
@@ -27,7 +28,8 @@ class DNSProxy(NFQueue):
     blacklist: ClassVar[NamedTuple[dict]] = DNS_BLACKLIST(
         {}
     )
-    # en_dns | tld | keyword | NOTE: dns signatures are contained within the binary search extension as a closure
+    # en_dns | tld | keyword |
+    # NOTE: dns signatures are contained within the binary search extension as a closure
     signatures: ClassVar[NamedTuple[dict, dict, dict]] = DNS_SIGNATURES(
         {DNS_CAT.doh}, {}, []
     )
@@ -41,34 +43,28 @@ class DNSProxy(NFQueue):
 
     @classmethod
     def _setup(cls):
-        Configuration.proxy_setup(cls)
         cls.set_proxy_callback(func=inspect)
 
+        Configuration.proxy_setup(cls)
         ProxyResponse.setup(Log, cls)
 
         Log.notice(f'{cls.__name__} initialization complete.')
 
-    # pre-check will filter out invalid packets or local dns records (no tld)
+    # pre-check will filter out invalid packets, ipv6 records, and local dns records
     def _pre_inspect(self, packet: DNSPacket) -> bool:
         if (packet.qr != DNS.QUERY):
-            return False
+            packet.nfqueue.drop()
 
-        if (packet.qtype in [DNS.A, DNS.NS] and not LOCAL_RECORD(packet.request)):
+        elif (packet.qtype in [DNS.A, DNS.NS] and not LOCAL_RECORD(packet.request)):
             return True
 
         # refusing ipv6 dns record types as policy
-        if (packet.qtype == DNS.AAAA):
-            packet.generate_proxy_response()
-            send_to_client(packet)
+        elif (packet.qtype == DNS.AAAA):
+            prepare_and_send(packet)
+
+            packet.nfqueue.drop()
 
         return False
-
-# GENERAL PROXY FUNCTIONS
-def send_to_client(packet: DNSPacket):
-    try:
-        packet.sendto(packet.send_data, (int_to_ip(packet.src_ip), 0))
-    except OSError:
-        pass
 
 
 # =================
@@ -93,9 +89,7 @@ def inspect(packet: DNSPacket):
     else:
         packet.nfqueue.drop()
 
-        packet.generate_proxy_response()
-
-        send_to_client(packet)
+        prepare_and_send(packet)
 
     Log.log(packet, request_results)
 
@@ -106,19 +100,18 @@ def _inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
     # are stored in this format and we have since moved away from this format on the back end.
     # TODO: in the near-ish future, consider storing ip whitelists as integers to conform to newer standards.
     whitelisted = _ip_whitelist_get(packet.request_identifier[0], False)
-    enum_categories = []
 
-    requests = packet.requests
+    enum_categories = []
 
     # NOTE: dns whitelist does not override tld blocks at the moment. this is most likely the desired setup
     # TLD (top level domain) block | after first index will pass nested to allow for continue
     if _tld_get(packet.tld):
 
-        return DNS_REQUEST_RESULTS(True, 'tld filter', TLD_CAT[requests[0]])
+        return DNS_REQUEST_RESULTS(True, 'tld filter', TLD_CAT[packet.requests[0]])
 
     # signature/ blacklist check.
     # DNS_REQUEST_RESULTS(redirect, block type, category)
-    for enum_request in requests[1:]:
+    for enum_request in packet.requests[1:]:
 
         # NOTE: allowing malicious category overrides (for false positives)
         if (enum_request in _dns_whitelist):
@@ -141,6 +134,7 @@ def _inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
         enum_categories.append(category)
 
     # Keyword search within domain || block if match
+    # TODO: see if there is a better way to match instead of linear search
     for keyword, category in _dns_keywords:
         if (keyword in packet.request):
 
@@ -187,6 +181,6 @@ if (INIT_MODULE):
         name=LOG_NAME
     )
 
-    # starting server before proxy because proxy will block server will not
+    # starting server before proxy will block.
     DNSServer.run(Log, threaded=False, always_on=True)
     DNSProxy.run(Log, q_num=Queue.DNS_PROXY)

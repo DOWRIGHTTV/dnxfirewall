@@ -16,7 +16,7 @@ from dnx_secmods.ip_proxy.ip_proxy_restrict import LanRestrict
 from dnx_secmods.ip_proxy.ip_proxy_automate import Configuration
 from dnx_secmods.ip_proxy.ip_proxy_log import Log
 
-LOG_NAME = 'ip_proxy'
+LOG_NAME: str = 'ip_proxy'
 
 
 class IPProxy(NFQueue):
@@ -37,12 +37,12 @@ class IPProxy(NFQueue):
     _packet_parser: ProxyParser = IPPPacket.netfilter_recv  # alternate constructor
 
     @classmethod
-    def _setup(cls):
+    def _setup(cls) -> None:
+        cls.set_proxy_callback(func=inspect)
+
         Configuration.setup(cls)
         ProxyResponse.setup(Log, cls)
         LanRestrict.run(cls)
-
-        cls.set_proxy_callback(func=inspect)
 
     def _pre_inspect(self, packet: IPPPacket) -> bool:
         # TODO: this can and should be moved to cfirewall
@@ -77,15 +77,15 @@ class IPProxy(NFQueue):
         return False
 
     @classmethod
-    def forward_packet(cls, packet: IPPPacket, direction: DIR, action: CONN):
+    def forward_packet(cls, packet: IPPPacket, direction: DIR, action: CONN) -> None:
 
         # NOTE: this condition restricts ips inspection to INBOUND only to emulate prior functionality. if ips profile
         # is set on a rule for outbound traffic, it will be ignored.
         # TODO: look into what would be needed to expand ips inspection to lan to wan or lan to lan rules.
         if (direction is DIR.INBOUND and packet.ips_profile):
 
-            # re-mark needed to notify ips to drop the packet, but inspect under specified profile
-            # bitwise and resets first 2 bits (allocated for action) to 0 (CONN.DROP = 0).
+            # mark update needed to notify ips to drop the packet, but inspect under specified profile. bitwise op
+            # resets first 2 bits (allocated for action) to 0 (CONN.DROP = 0).
             if (action is CONN.DROP):
                 packet.nfqueue.update_mark(packet.mark & 65532)
 
@@ -103,7 +103,7 @@ class IPProxy(NFQueue):
 
 
 # GENERAL PROXY FUNCTIONS
-def log_geolocation(packet: IPPPacket):
+def log_geolocation(packet: IPPPacket) -> None:
 
     # country of tracked (external) passed from cfirewall via packet mark
     country = GEO(packet.tracked_geo)
@@ -125,7 +125,7 @@ _geolocation_settings = IPProxy.geolocation_settings
 
 _tor_whitelist = IPProxy.tor_whitelist
 
-def inspect(packet: IPPPacket):
+def inspect(packet: IPPPacket) -> None:
 
     action, category = _inspect(packet)
 

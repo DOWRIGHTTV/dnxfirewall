@@ -12,6 +12,7 @@ from dnx_gentools.def_namedtuples import CACHED_RECORD
 from dnx_iptools.def_structs import *
 from dnx_iptools.protocol_tools import *
 from dnx_iptools.def_structures import *
+from dnx_iptools.interface_ops import load_interfaces
 from dnx_iptools.packet_classes import NFPacket, RawResponse
 
 
@@ -38,16 +39,16 @@ class ClientQuery:
         if (sock_info):
             self.sendto = sock_info.sendto  # 5 object namedtuple
 
-        self.local_domain = False
-        self.top_domain = False if address[0] else True
-        self.keepalive  = False
-        self.fallback   = False
+        self.local_domain: bool = False
+        self.top_domain:   bool = False if address[0] else True
+        self.keepalive: bool = False
+        self.fallback:  bool = False
 
-        self.dns_id    = 1
-        self.request   = None
-        self.send_data = b''
+        self.dns_id:  int = 1
+        self.request: str = ''
 
-        # OPT record defaults # TODO: add better support for this
+        # OPT record defaults #
+        # TODO: add better support for this
         self.additional_records = b''
 
     def __str__(self):
@@ -84,8 +85,9 @@ class ClientQuery:
         self.request_identifier = (*self.address, dns_header[0])  # dns_id
 
     def generate_record_response(self, host_ip: str = None, configured_ttl: int = THIRTY_MIN) -> bytearray:
-        '''builds a dns query response for locally configured records. if host_ip is not passed in, the resource record
-        section of the payload will not be generated.'''
+        '''builds a dns query response for locally configured records.
+
+        if host_ip is not passed in, the resource record section of the payload will not be generated.'''
 
         flags = 32896 | self.rd | self.ad | self.cd | self.rc
 
@@ -110,7 +112,7 @@ class ClientQuery:
 
         return send_data
 
-    def generate_dns_query(self, dns_id: int, protocol: PROTO):
+    def generate_dns_query(self, dns_id: int, protocol: PROTO) -> bytearray:
         # setting additional data flag in dns header if detected
         arc = 1 if self.additional_records else 0
 
@@ -128,7 +130,7 @@ class ClientQuery:
         else:
             send_data = send_data[2:]
 
-        self.send_data = send_data
+        return send_data
 
     @classmethod
     def generate_local_query(cls, request: str, keepalive: bool = False):
@@ -153,10 +155,10 @@ class ClientQuery:
 # ======================================
 # PROXY - FULL INSPECTION, DIRECT SOCKET
 # ======================================
-ip_header_template = PR_IP_HDR(
+_ip_header_template = PR_IP_HDR(
     **{'ver_ihl': 69, 'tos': 0, 'ident': 0, 'flags_fro': 16384, 'ttl': 255, 'protocol': PROTO.UDP}
 )
-udp_header_template = PR_UDP_HDR(**{'checksum': 0})
+_udp_header_template = PR_UDP_HDR(**{'checksum': 0})
 
 std_resource_record_template = DNS_STD_RR(**{'ptr': 49164, 'type': 1, 'class': 1, 'ttl': 300, 'rd_len': 4})
 
@@ -352,6 +354,7 @@ def _parse_record(dns_payload: memoryview, cur_offset: int) -> Tuple[int, _RESOU
 # PROXY RESPONSE
 # ===============
 class ProxyResponse(RawResponse):
+    _intfs = load_interfaces(exclude=['wan'])
 
     def _prepare_packet(self, packet: ProxyPacket, dnx_src_ip: int) -> bytearray:
         # DNS HEADER + PAYLOAD
@@ -365,26 +368,29 @@ class ProxyResponse(RawResponse):
         else:
             resource_record = std_resource_record_template()
 
-            resource_record.rd_data = btoia(self.intf_ip)
+            resource_record.rd_data = btoia(dnx_src_ip)
 
             udp_payload += dns_header_pack(packet.dns_id, 32896 | packet.rd | packet.ad | packet.cd, 1, 0, 0, 0)
             udp_payload += packet.question_record
             udp_payload += resource_record.assemble()
 
         # UDP HEADER
-        udp_header = udp_header_template()
+        udphdr = _udp_header_template()
 
-        udp_header.src_port = self.dst_port
-        udp_header.dst_port = self.src_port
-        udp_header.len = 8 + len(udp_payload)
+        udphdr.src_port = packet.dst_port
+        udphdr.dst_port = packet.src_port
+        udphdr.len = 8 + len(udp_payload)
+
+        udp_header = udphdr.assemble()
 
         # IP HEADER
-        ip_header = ip_header_template()
+        iphdr = _ip_header_template()
 
-        ip_header.tl = 28 + len(udp_payload)
-        ip_header.src_ip = self.dst_ip
-        ip_header.dst_ip = self.src_ip
+        iphdr.tl = 28 + len(udp_payload)
+        iphdr.src_ip = dnx_src_ip
+        iphdr.dst_ip = packet.src_ip
 
-        ip_header.checksum = calc_checksum(ip_header.assemble())
+        ip_header = iphdr.assemble()
+        ip_header[10:12] = calc_checksum(ip_header, pack=True)
 
-        return ip_header.assemble() + udp_header.assemble() + udp_payload
+        return ip_header + udp_header + udp_payload

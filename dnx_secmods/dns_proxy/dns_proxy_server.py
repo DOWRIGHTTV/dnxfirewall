@@ -139,17 +139,18 @@ class DNSServer(Listener):
     def handle_query(cls, client_query: ClientQuery, *, top_domain: bool = False) -> None:
 
         # generating dns query packet data
-        client_query.generate_dns_query(
+        send_data = client_query.generate_dns_query(
             # returns new unique id after storing {id: request info} in request map
             get_unique_id(cls._request_map, (top_domain, client_query)), cls.protocol
         )
 
-        # send query instance to currently enabled protocol/relay for sending to external resolver.
+        # queue send data to currently enabled protocol/relay for sending to external resolver.
+        # request is sent for logging purposes and may be temporary.
         if (cls.protocol is PROTO.UDP):
-            udp_relay_add(client_query)
+            udp_relay_add(send_data, client_query.request)
 
         elif (cls.protocol is PROTO.DNS_TLS):
-            tls_relay_add(client_query)
+            tls_relay_add(send_data, client_query.request)
 
     @staticmethod
     def _cache_available(client_query: ClientQuery) -> bool:

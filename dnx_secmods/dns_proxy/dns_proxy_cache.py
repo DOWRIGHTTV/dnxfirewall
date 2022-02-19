@@ -36,8 +36,8 @@ def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
     def manual_clear(cache: DNSCache, cfg_file: str):
         cache_settings = load_configuration(cfg_file)
 
-        clear_dns_cache   = cache_settings['clear']['standard']
-        clear_top_domains = cache_settings['clear']['top_domains']
+        clear_dns_cache   = cache_settings['clear->standard']
+        clear_top_domains = cache_settings['clear->top_domains']
 
         # when new top domains or standard cache (future) are written to disk, the poller will trigger whether the
         # flags are set or not. this will ensure we only run through the code if needed.
@@ -61,10 +61,10 @@ def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
         with ConfigurationManager('dns_cache') as dnx:
             cache_settings = dnx.load_configuration()
 
-            cache_settings['clear']['standard'] = clear_dns_cache
-            cache_settings['clear']['top_domains'] = clear_top_domains
+            cache_settings['clear->standard'] = clear_dns_cache
+            cache_settings['clear->top_domains'] = clear_top_domains
 
-            dnx.write_configuration(cache_settings)
+            dnx.write_configuration(cache_settings.expanded_user_data)
 
     @looper(THREE_MIN)
     # automated process to flush the cache if expire time has been reached.
