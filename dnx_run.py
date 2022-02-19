@@ -26,9 +26,6 @@ except:
     except:
         args = parser.parse_args(sys.argv[1:2])
 
-if os.getuid():
-    exit('\nDNXFIREWALL run utility must be ran as root.\n')
-
 dnx_run = partial(check_call, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
 
 # =========================
@@ -65,11 +62,17 @@ systemctl_ret_codes: dict[int,str] = {
     4: 'program service status is unknown',
 }
 
+def check_priv(command: str) -> None:
+    if os.getuid():
+        exit(f'\nDNXFIREWALL {command} command requires root.\n')
+
+
 valid_module = MODULE_MAPPING.get(args.module, False)
 if (not valid_module):
     exit('\nUNKNOWN COMMAND -> see --help\n')
 
 if (valid_module == 'modstat'):
+    check_priv('modstat')
 
     svc_len: int = 0
     down_detected: bool = False
@@ -105,6 +108,7 @@ if (valid_module == 'modstat'):
         print(f'\ndowned service detected. check journal for more details.')
 
 elif (args.s):
+    check_priv('service')
     try:
         dnx_run(['systemctl', valid_module, args.s])
     except CalledProcessError:
