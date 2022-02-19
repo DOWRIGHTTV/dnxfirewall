@@ -238,7 +238,7 @@ def _log_handler():
     # ==============================
     # TODO: consider having this offloaded so the security modules don't have to waste cycles on writing to disk.
     #  also, check to see how often they even log, it might not be often after first startup.
-    @dnx_queue(Log, name='LogHandler')
+    @dnx_queue(Handler, name='LogHandler')
     def _write_to_disk(job):
 
         path = f'{_path}/{_system_date(string=True)}-{_name}.log'
