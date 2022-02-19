@@ -57,6 +57,14 @@ MODULE_MAPPING: dict[str, str] = {
     'syscontrol': 'dnx_system.sys_control'
 }
 
+systemctl_ret_codes: dict[int,str] = {
+    0: 'program is running or service is OK',
+    1: 'program dead and /var/run pid file exists',
+    2: 'program dead and /var/lock lock file exists',
+    3: 'program not running',
+    4: 'program service status is unknown',
+}
+
 valid_module = MODULE_MAPPING.get(args.module, False)
 if (not valid_module):
     exit('\nUNKNOWN COMMAND -> see --help\n')
@@ -75,7 +83,7 @@ if (valid_module == 'modstat'):
         try:
             dnx_run(f'sudo systemctl status {service}', shell=True)
         except CalledProcessError as E:
-            status.append([service, f'down (code={E.returncode})'])
+            status.append([service, f'down  code={E.returncode}  msg="{systemctl_ret_codes.get(E.returncode, "")}"'])
 
             down_detected = True
 
@@ -94,7 +102,7 @@ if (valid_module == 'modstat'):
         print(f'{svc.ljust(svc_len)} => {result.rjust(4)}')
 
     if (down_detected):
-        print(f'downed service detected. check journal for more details.')
+        print(f'\ndowned service detected. check journal for more details.')
 
 elif (args.s):
     try:
