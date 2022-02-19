@@ -25,7 +25,7 @@ cdef class HashTrie:
             u_int32_t TRIE_KEY_HASH
             TrieRange *trie_value_ranges
 
-            size_t MAX_KEYS = 2 ** log2(py_trie_len)
+            size_t MAX_KEYS = <size_t>2 ** log2(py_trie_len)
 
         self.INDEX_MASK = MAX_KEYS - 1
 
