@@ -239,7 +239,7 @@ cdef class RangeTrie:
 
             # calling make function for l2 content struct for each entry in current py_l2 container
             for xi in range(L2_SIZE):
-                self.L1_CONTAINER[i][xi] = self._make_l2(py_trie[i][1][xi])[0]
+                self.L1_CONTAINER[i].l2_ptr[xi] = self._make_l2(py_trie[i][1][xi])[0]
 
     # NOTE: this will be called directly from cfirewall until lru_cache is ported with no gil needed
     cdef long _search(self, long container_id, long host_id) nogil:
