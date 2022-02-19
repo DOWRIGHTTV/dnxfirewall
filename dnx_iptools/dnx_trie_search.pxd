@@ -40,7 +40,7 @@ cdef class HashTrie:
 
         size_t INDEX_MASK
 
-    cpdef void generate_structure(self, tuple py_trie)
+    cpdef void generate_structure(self, tuple py_trie, size_t py_trie_len)
     cdef u_int8_t search(self, u_int32_t trie_key, u_int32_t host_id) nogil
     cdef TrieRange* _make_l2(self, u_int32_t trie_key, (u_int32_t, u_int32_t, u_int16_t) l2_entry)
 
