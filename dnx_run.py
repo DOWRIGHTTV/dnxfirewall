@@ -16,7 +16,7 @@ from subprocess import check_call, DEVNULL, CalledProcessError
 
 hardout = os._exit
 
-parser = argparse.ArgumentParser(description='DNXFIREWALL utility to start an included module.')
+parser = argparse.ArgumentParser(description='DNXFIREWALL utility to start an included module.', exit_on_error=False)
 parser.add_argument('module', metavar='mod', type=str)
 parser.add_argument('-s', metavar='service', type=str, choices=['start', 'stop', 'restart'], default='')
 
