@@ -98,8 +98,10 @@ class FirewallControl:
             # updating ruleset to reflect changes
             setattr(self, section, new_section)
 
-            # converting section to list of rules for easier manipulation in C.
+            # converting section to a list of rules for easier manipulation in C.
             ruleset: list = [rule for rule in new_section.values()]
+
+            self.log.notice(f'DNXFIREWALL {section} rule update job starting.')
 
             # NOTE: gil must be held throughout this call
             error = self.cfirewall.update_ruleset(i, ruleset)
@@ -121,6 +123,8 @@ class FirewallControl:
         rulesets: ConfigChain = load_configuration(system_rules, filepath='dnx_system/iptables')
 
         ruleset: list = [rule for rule in rulesets.get_values('BUILTIN')]
+
+        self.log.notice('DNXFIREWALL system rule update job starting.')
 
         # NOTE: gil must be held throughout this call. 0 is index of SYSTEM RULES
         error = self.cfirewall.update_ruleset(0, ruleset)

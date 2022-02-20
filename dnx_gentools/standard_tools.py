@@ -94,7 +94,7 @@ class Initialize:
         self._thread_ready = set()
 
     def wait_for_threads(self, *, count: int, timeout: Optional[int] = None) -> None:
-        '''will block until the checked in thread count has reach the passed in count.'''
+        '''blocks until the checked in threads count has reached the wait for amount.'''
         if (not self._is_initializing or self.has_ran):
             raise RuntimeError('run has already been called for this self.')
 
@@ -104,7 +104,14 @@ class Initialize:
         self._log.notice(f'{self._name} setup waiting for threads: {count}.')
 
         # blocking until all threads check in by individually calling done method
-        while not self._initial_load_complete and not self._timeout_reached:
+        while not self._initial_load_complete:
+
+            if (self._timeout_reached):
+                self._log.error(
+                    f'{self._name} init timed out while waiting for '
+                    f'{self._thread_count-len(self._thread_ready)}/{self._thread_count} threads'
+                )
+
             fast_sleep(1)
 
         self.has_ran = True
