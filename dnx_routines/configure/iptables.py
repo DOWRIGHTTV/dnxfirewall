@@ -3,6 +3,7 @@
 import fcntl
 
 from dnx_gentools.def_constants import *
+from dnx_gentools.def_enums import Queue
 from dnx_gentools.file_operations import load_data
 
 __all__ = (
