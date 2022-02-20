@@ -22,9 +22,8 @@ ConfigurationManager.set_log_reference(Log)
 # ========================================
 # MANAGE - used by webui
 # ========================================
-
 class FirewallManage:
-    '''intermediary between front end and underlying C rules code.
+    '''intermediary between frontend and underlying C rules code.
 
     Front end <> FirewallManage <file monitoring> FirewallControl <> CFirewall
 
@@ -48,8 +47,9 @@ class FirewallManage:
 
     @classmethod
     def commit(cls, firewall_rules):
-        '''Updates pending configuration file with sent in firewall rules data. This is a replace operation on disk and
-        thread and process safe.'''
+        '''Updates pending configuration file with sent in firewall rules data.
+
+        This is a replace operation on disk and thread and process safe.'''
 
         with ConfigurationManager(DEFAULT_VERSION, file_path=USER_PATH) as dnx_fw:
             dnx_fw.write_configuration(firewall_rules)
@@ -70,7 +70,7 @@ class FirewallManage:
             # ==============================
             obj_lookup = cls.object_manager.lookup
 
-            # using standalone functions due to config manager not being compatible with these operations
+            # using standalone functions due to ConfigManager not being compatible with these operations
             fw_rules = load_data('firewall_pending.cfg', filepath='dnx_system/iptables')
 
             for section in cls.sections:
@@ -101,12 +101,9 @@ class FirewallManage:
         pass
 
     def view_ruleset(self, section='MAIN'):
-        '''returns dict of requested "firewall_pending" ruleset in raw form. additional processing is required for webui
-         or cli formats.
+        '''returns dict of requested "firewall_pending" ruleset in raw form.
 
-        args:
-
-        section > will change which ruleset is returned.
+        additional processing is required for webui or cli formats. section arg will change which ruleset is returned.
         '''
 
         try:
@@ -127,13 +124,12 @@ class FirewallManage:
         active = calculate_file_hash('firewall_active.cfg', folder='iptables/usr')
         pending = calculate_file_hash('firewall_pending.cfg', folder='iptables/usr')
 
-        # if user has never modified rules there is not a pending change. active file can be none
+        # if user has never modified rules, there is not a pending change. the active file can be none
         # if pending is present. a commit will write the active file.
         if (pending is None):
             return False
 
         return active != pending
-
 
 # class FirewallManageLegacy:
 #     '''intermediary between front end and underlying C firewall code.
@@ -224,14 +220,14 @@ class FirewallManage:
 #             ruleset = rules[section]
 #
 #             # TODO: make lock re entrant (non exclusive?)
-#             # update rule first using static_pos, then remove from list if it needs to move. cannot call add method from
-#             # here due to file lock being held by this current context (its not re entrant).
+#             # update rule first using static_pos, then remove from list if it needs to move. cannot call add method
+#             from here due to file lock being held by this current context (its not re entrant).
 #             ruleset[static_pos] = rule
 #             if (move):
 #                 rule_to_move = ruleset.pop(static_pos)
 #
-#             # writes even if it needs to move since external func will handle move operation (in the form of insertion).
-#             # dnx_fw.write_configuration(rules)
+#             # writes even if it needs to move since external func will handle move operation (in the form of
+#             insertion). dnx_fw.write_configuration(rules)
 #
 #             # updating instance/ mem-copy of variable for fast access
 #             self._firewall = rules

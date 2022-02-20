@@ -5,6 +5,8 @@ from __future__ import annotations
 import sys
 import argparse
 
+from threading import Thread
+
 from dnx_gentools.def_constants import hardout, INIT_MODULE
 from dnx_gentools.def_enums import Queue
 
@@ -43,10 +45,12 @@ if (INIT_MODULE):
 
     # this is a blocking call but is running in pure C. the GIL is released before running the low level system
     # operations and will never retake the gil.
-    # NOTE: setting bypass will tell the process to invoke rules action (DROP or ACCEPT) directly without
+    # NOTE: setting bypass will tell the process to invoke rule action (DROP or ACCEPT) directly without
     #  forwarding to other modules.
+    dnx: Thread = Thread(target=dnxfirewall.nf_run())
+    dnx.start()
     try:
-        dnxfirewall.nf_run()
+        dnx.join()
     except Exception as E:
         dnxfirewall.nf_break()
         hardout(f'DNXFIREWALL nqueue failure => {E}')
