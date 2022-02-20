@@ -21,13 +21,13 @@ dnx_run = partial(check_call, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
 # =========================
 MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     # HELPERS
-    'all': {'module': None, 'exclude': ['status', 'cli'], 'priv': True},
+    'all': {'module': '', 'exclude': ['status', 'cli'], 'priv': True},
 
     # INFORMATIONAL
-    'modstat': {'module': None, 'exclude': ['start', 'stop', 'restart', 'status', 'cli'], 'priv': True},
+    'modstat': {'module': '', 'exclude': ['start', 'stop', 'restart', 'status', 'cli'], 'priv': True},
 
     # WEBUI
-    'webui': {'module': None, 'exclude': ['cli'], 'priv': False},
+    'webui': {'module': '', 'exclude': ['cli'], 'priv': False},
 
     # SECURITY MODULES
     'cfirewall': {'module': 'dnx_secmods.cfirewall.fw_init', 'exclude': [], 'priv': True},
@@ -80,8 +80,8 @@ def get_index(idx: int, /, *, cname='') -> str:
         exit(f'\nUNKNOWN {cname.upper()} -> see --help\n')
 
 def check_module(mod: str, /) -> dict:
-    valid_module = MODULE_MAPPING.get(mod)
-    if (not valid_module):
+    valid_module = MODULE_MAPPING.get(mod, None)
+    if (valid_module is None):
         exit(f'\nUNKNOWN MODULE -> see --help\n')
 
     return valid_module
@@ -163,7 +163,7 @@ if (__name__ == '__main__'):
         utility_commands(mod_name)
 
     elif mod_cmd in ['', 'cli']:
-        pass
+        run_cli(mod_name, mod_path)
 
     else:
         service_commands(mod_name, mod_cmd)
