@@ -131,20 +131,21 @@ def utility_commands(mod: str, cmd: str = '') -> None:
     elif (mod == 'all'):
         for svc in SERVICE_MODULES:
             try:
-                dnx_run(['systemctl', svc, cmd])
+                dnx_run(f'sudo systemctl status {svc}', shell=True)
             except CalledProcessError:
                 print(f'{svc.ljust(11)} => {"fail".rjust(7)}')
             else:
                 print(f'{svc.ljust(11)} => {"success".rjust(7)}')
 
 def service_commands(mod: str, cmd: str) -> None:
+    svc = f'dnx-{mod.replace("_", "-")}'
     try:
-        dnx_run(['systemctl', mod, cmd])
+        dnx_run(f'sudo systemctl status {svc}', shell=True)
     except CalledProcessError:
-        print(f'{mod} service {cmd} failed. check journal.')
+        print(f'{svc} service {cmd} failed. check journal.')
 
     else:
-        print(f'{mod} service {cmd} successful.')
+        print(f'{svc} service {cmd} successful.')
 
 def run_cli(mod: str, mod_loc: str) -> None:
     os.environ['INIT_MODULE'] = 'YES'

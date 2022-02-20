@@ -543,6 +543,12 @@ cdef class CFirewall:
         BYPASS  = <bint>bypass
         VERBOSE = <bint>verbose
 
+        if (bypass):
+            print('<proxy bypass enable>')
+
+        if (verbose):
+            print('<verbose console logging enabled>')
+
     def nf_run(self):
         '''calls internal C run method to engage nfqueue processes.
 
