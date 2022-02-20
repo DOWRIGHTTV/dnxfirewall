@@ -21,36 +21,37 @@ dnx_run = partial(check_call, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
 # =========================
 MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     # HELPERS
-    'all': {'module': '', 'exclude': ['status', 'cli'], 'priv': True},
+    'all': {'module': '', 'exclude': ['status', 'cli'], 'priv': True, 'service': False},
 
     # INFORMATIONAL
-    'modstat': {'module': '', 'exclude': ['start', 'stop', 'restart', 'status', 'cli'], 'priv': True},
+    'modstat': {'module': '', 'exclude': ['start', 'stop', 'restart', 'status', 'cli'], 'priv': True, 'service': False},
 
     # WEBUI
-    'webui': {'module': '', 'exclude': ['cli'], 'priv': False},
+    'webui': {'module': '', 'exclude': ['cli'], 'priv': False, 'service': True},
 
     # SECURITY MODULES
-    'cfirewall': {'module': 'dnx_secmods.cfirewall.fw_init', 'exclude': [], 'priv': True},
-    'dns_proxy': {'module': 'dnx_secmods.dns_proxy.dns_proxy', 'exclude': [], 'priv': True},
-    'ip_proxy': {'module': 'dnx_secmods.ip_proxy.ip_proxy', 'exclude': [], 'priv': True},
-    'ips_ids': {'module': 'dnx_secmods.ips_ids.ips_ids', 'exclude': [], 'priv': True},
+    'cfirewall': {'module': 'dnx_secmods.cfirewall.fw_init', 'exclude': [], 'priv': True, 'service': True},
+    'dns_proxy': {'module': 'dnx_secmods.dns_proxy.dns_proxy', 'exclude': [], 'priv': True, 'service': True},
+    'ip_proxy': {'module': 'dnx_secmods.ip_proxy.ip_proxy', 'exclude': [], 'priv': True, 'service': True},
+    'ips_ids': {'module': 'dnx_secmods.ips_ids.ips_ids', 'exclude': [], 'priv': True, 'service': True},
 
     # NETWORK MODULES
-    'dhcp_server': {'module': 'dnx_netmods.dhcp_server.dhcp_server', 'exclude': [], 'priv': True},
+    'dhcp_server': {'module': 'dnx_netmods.dhcp_server.dhcp_server', 'exclude': [], 'priv': True, 'service': True},
 
     # ROUTINES
-    'database': {'module': 'dnx_routines.database.ddb_main', 'exclude': [], 'priv': False},
-    'logging': {'module': 'dnx_routines.logging.log_main', 'exclude': [], 'priv': False},
+    'database': {'module': 'dnx_routines.database.ddb_main', 'exclude': [], 'priv': False, 'service': True},
+    'logging': {'module': 'dnx_routines.logging.log_main', 'exclude': [], 'priv': False, 'service': True},
 
-    'iptables': {'module': 'dnx_routines.configure.iptables', 'exclude': [], 'priv': True},
+    'iptables': {'module': 'dnx_routines.configure.iptables', 'exclude': [], 'priv': True, 'service': False},
 
     # SYSTEM
-    'startup': {'module': 'dnx_system.startup_proc', 'exclude': [], 'priv': True},
-    'interface': {'module': 'dnx_system.interface_services', 'exclude': [], 'priv': False},
-    'syscontrol': {'module': 'dnx_system.sys_control', 'exclude': [], 'priv': True}
+    'startup': {'module': 'dnx_system.startup_proc', 'exclude': [], 'priv': True, 'service': True},
+    'interface': {'module': 'dnx_system.interface_services', 'exclude': [], 'priv': False, 'service': True},
+    'syscontrol': {'module': 'dnx_system.sys_control', 'exclude': [], 'priv': True, 'service': True}
 }
+SERVICE_MODULES = [f'dnx-{mod.replace("_", "-")}' for mod, modset in MODULE_MAPPING.items() if modset['service']]
 
-systemctl_ret_codes: dict[int,str] = {
+systemctl_ret_codes: dict[int, str] = {
     0: 'program is running or service is OK',
     1: 'program dead and /var/run pid file exists',
     2: 'program dead and /var/lock lock file exists',
@@ -58,7 +59,7 @@ systemctl_ret_codes: dict[int,str] = {
     4: 'program service status is unknown',
 }
 
-def parse_args():
+def parse_args() -> tuple[str, str, dict]:
     module: str = get_index(1, cname='module')
     command: str = get_index(2, cname='command')
 
@@ -71,7 +72,7 @@ def parse_args():
 
     os.environ['PASSTHROUGH_ARGS'] = ','.join(sys.argv[3:])
 
-    return module, command, mod_settings['module']
+    return module, command, mod_settings
 
 def get_index(idx: int, /, *, cname='') -> str:
     try:
@@ -90,7 +91,7 @@ def check_module(mod: str, /) -> dict:
     return valid_module
 
 def check_priv(mod: str, cmd: str, modset: dict) -> None:
-    if (os.getuid() and modset['priv'] and cmd == 'cli'):
+    if (os.getuid() and modset['priv'] and cmd in ['', 'cli']):
         exit(f'\nDNXFIREWALL {mod.upper()} requires root to run in CLI.\n')
 
 def utility_commands(mod: str, cmd: str = '') -> None:
@@ -100,20 +101,18 @@ def utility_commands(mod: str, cmd: str = '') -> None:
         down_detected: bool = False
 
         status: list[Optional[list[str, str]]] = []
-        for _mod in list(MODULE_MAPPING)[1:]:
-            service = f'dnx-{_mod.replace("_", "-")}'
-
-            svc_len = len(service) if len(service) > svc_len else svc_len
+        for svc in SERVICE_MODULES:
+            svc_len = len(svc) if len(svc) > svc_len else svc_len
 
             try:
-                dnx_run(f'sudo systemctl status {service}', shell=True)
+                dnx_run(f'sudo systemctl status {svc}', shell=True)
             except CalledProcessError as E:
-                status.append([service, f'down  code={E.returncode}  msg="{systemctl_ret_codes.get(E.returncode, "")}"'])
+                status.append([svc, f'down  code={E.returncode}  msg="{systemctl_ret_codes.get(E.returncode, "")}"'])
 
                 down_detected = True
 
             else:
-                status.append([service, 'up'])
+                status.append([svc, 'up'])
 
         # =================================
         # OUTPUT - Justified left<==>right
@@ -129,12 +128,10 @@ def utility_commands(mod: str, cmd: str = '') -> None:
         if (down_detected):
             print(f'\ndowned service detected. check journal for more details.')
 
-    elif mod == 'all':
-        for svc in list(MODULE_MAPPING)[2:]:
-            service = f'dnx-{mod.replace("_", "-")}'
-
+    elif (mod == 'all'):
+        for svc in SERVICE_MODULES:
             try:
-                dnx_run(['systemctl', service, cmd])
+                dnx_run(['systemctl', svc, cmd])
             except CalledProcessError:
                 print(f'{svc.ljust(11)} => {"fail".rjust(7)}')
             else:
@@ -160,13 +157,13 @@ def run_cli(mod: str, mod_loc: str) -> None:
 
 
 if (__name__ == '__main__'):
-    mod_name, mod_cmd, mod_path = parse_args()
+    mod_name, mod_cmd, mod_set = parse_args()
 
-    if (not mod_path):
+    if (not mod_set['module']):
         utility_commands(mod_name, mod_cmd)
 
     elif mod_cmd in ['', 'cli']:
-        run_cli(mod_name, mod_path)
+        run_cli(mod_name, mod_set['module'])
 
     else:
         service_commands(mod_name, mod_cmd)
