@@ -77,11 +77,14 @@ def get_index(idx: int, /, *, cname='') -> str:
     try:
         return sys.argv[idx]
     except IndexError:
+        if (cname == 'command'):
+            return ''
+
         exit(f'\nUNKNOWN {cname.upper()} -> see --help\n')
 
 def check_module(mod: str, /) -> dict:
-    valid_module = MODULE_MAPPING.get(mod, None)
-    if (valid_module is None):
+    valid_module = MODULE_MAPPING.get(mod)
+    if (not valid_module):
         exit(f'\nUNKNOWN MODULE -> see --help\n')
 
     return valid_module
