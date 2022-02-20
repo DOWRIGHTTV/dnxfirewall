@@ -461,10 +461,10 @@ cdef void process_traffic(nfq_handle *h) nogil:
     printf('<ready to process traffic>')
 
     while True:
-        dlen = recv(fd, <void>packet_buf, sizeof_buf, recv_flags)
+        dlen = recv(fd, <void*>packet_buf, sizeof_buf, recv_flags)
 
         if (dlen >= 0):
-            nfq_handle_packet(h, <void>packet_buf, dlen)
+            nfq_handle_packet(h, <void*>packet_buf, dlen)
 
         else:
             # TODO: i believe we can get rid of this and set up a lower level ignore of this. this might require
