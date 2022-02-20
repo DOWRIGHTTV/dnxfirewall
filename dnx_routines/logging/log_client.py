@@ -109,7 +109,7 @@ def _log_handler():
         @classmethod
         def run(cls, *, name: str, console_output: bool = False):
             '''
-            initializes log handler settings and monitors system configs for changes with log/syslog settings.
+            initialize log handler settings and monitor system configs for changes with log/syslog settings.
 
             set console=True to enable Log.console outputs in terminal.
             '''
@@ -128,7 +128,7 @@ def _log_handler():
 
             threading.Thread(target=_write_to_disk).start()
 
-            # connecting here as a deferred action so services loading before log handler will not have issues.
+            # connecting here as a deferred action, so services loading before log handler will not have issues.
             try:
                 _db_client.connect(DATABASE_SOCKET.encode())
             except (FileNotFoundError, ConnectionRefusedError):
@@ -190,17 +190,15 @@ def _log_handler():
 
         @staticmethod
         def console(log_msg: str):
-            '''print message to console. this is for all important console only events.'''
+            '''print a message to console. this is for all important console only events.'''
             if (_console):
                 console_log(f'{log_msg}\n')
 
         @staticmethod
         def event_log(timestamp: int, log: NamedTuple, method: str):
-            '''log security events to database. uses local socket controlled by log service
-            to aggregate messages across all modules.
+            '''log security events to database.
 
-            Do not override.
-
+            uses local socket controlled by log service to aggregate messages across all modules.
             '''
 
             log_data = [db_message(timestamp, log, method)]
@@ -296,7 +294,7 @@ def _log_handler():
 
         _add_logging_methods(Handler)
 
-        # after initial load, this dones nothing
+        # after the initial load, this dones nothing
         _initialized = True
 
     @cfg_read_poller('syslog_client')

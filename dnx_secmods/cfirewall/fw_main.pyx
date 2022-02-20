@@ -594,6 +594,7 @@ cdef class CFirewall:
 
         cdef size_t i
 
+        printf(<char*>'[update/zones] acquiring lock\n')
         pthread_mutex_lock(&FWrulelock)
         printf(<char*>'[update/zones] acquired lock\n')
 
@@ -615,9 +616,10 @@ cdef class CFirewall:
             dict fw_rule
             size_t rule_count = len(rulelist)
 
+        printf(<char*>'[update/ruleset] acquiring lock\n')
         pthread_mutex_lock(&FWrulelock)
-
         printf(<char*>'[update/ruleset] acquired lock\n')
+
         for i in range(rule_count):
             fw_rule = rulelist[i]
 

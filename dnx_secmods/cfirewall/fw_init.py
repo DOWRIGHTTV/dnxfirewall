@@ -10,7 +10,7 @@ from threading import Thread
 from dnx_gentools.def_constants import hardout, INIT_MODULE
 from dnx_gentools.def_enums import Queue
 
-from dnx_routines.logging.log_client import LogHandler as Log
+from dnx_routines.logging.log_client import Log
 
 from dnx_secmods.cfirewall.fw_main import CFirewall
 from dnx_secmods.cfirewall.fw_control import FirewallControl
@@ -23,7 +23,7 @@ if (INIT_MODULE):
 
     args = parser.parse_args(sys.argv[1:])
 
-    Log.run(name='rules')
+    Log.run(name='firewall')
 
     dnxfirewall = CFirewall()
     dnxfirewall.set_options(args.bypass, args.verbose)
