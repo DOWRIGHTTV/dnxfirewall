@@ -547,6 +547,8 @@ cdef class CFirewall:
         release the GIL prior to entering C and never try to reacquire it.'''
 
         # release gil and never look back.
+        print('<releasing GIL>')
+
         with nogil:
             process_traffic(self.h)
 
