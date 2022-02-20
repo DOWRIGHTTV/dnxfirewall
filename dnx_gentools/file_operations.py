@@ -17,14 +17,15 @@ from collections import namedtuple
 from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_enums import DNS_CAT, DATA
-from dnx_routines.configure.web_validate import ValidationError
+
+from dnx_routines.configure.exceptions import ValidationError
 
 FILE_POLL_TIMER = 10
 
 file_exists = os.path.exists
 
 def load_configuration(filename: str, *, filepath: str = 'dnx_system/data', ext_override: str = '') -> ConfigChain:
-    '''load json data from file, convert it to a python dict, then return as object.'''
+    '''load json data from file and convert it to a ConfigChain'''
 
     if (ext_override):
         filename += ext_override
@@ -36,7 +37,7 @@ def load_configuration(filename: str, *, filepath: str = 'dnx_system/data', ext_
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'r') as system_settings_io:
         system_settings: dict = json.load(system_settings_io)
 
-    # I like the path check more than try/except block
+    # I like the path checks more than try/except block
     if not os.path.exists(f'{HOME_DIR}/{filepath}/usr/{filename}'):
         user_settings = {}
 
@@ -56,8 +57,8 @@ def write_configuration(data: dict, filename: str, *, filepath: str = 'dnx_syste
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
         json.dump(data, settings, indent=4)
 
-# will load json data from file, convert it to a python dict, then return as object
 def load_data(filename: str, *, filepath: str = 'dnx_system/data') -> dict:
+    '''loads json data from file and convert it to a python dict'''
 
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'r') as system_settings_io:
         system_settings: dict = json.load(system_settings_io)
@@ -296,9 +297,9 @@ class ConfigChain:
         return list(search_data)
 
     def get_items(self, key: str) -> list[Optional[_item]]:
-        '''return list of namedtuples containing key: value pairs of child keys 1 level lower than passed in key.
+        '''return list of namedtuple containing key: value pairs of child keys 1 level lower than the passed in key.
 
-        returns empty list if not found.
+        returns an empty list if not found.
 
             config.get_items('interfaces->builtins')
         '''
@@ -410,9 +411,10 @@ class ConfigChain:
 
 class ConfigurationManager:
     '''
-    Class to ensure process safe operations on configuration files. This class is written
-    as a context manager and must be used as such. upon calling the context a file lock will
-    be obtained or block until it can acquire the lock and return the class object to the caller.
+    Class to ensure process safe operations on configuration files.
+
+    This class is written as a context manager and must be used as such. upon calling the context, a file lock will be
+    obtained or block until it can acquire the lock and return the class object to the caller.
     '''
 
     log: ClassVar[Optional[LogHandler]] = None
@@ -431,7 +433,7 @@ class ConfigurationManager:
         cls.log = ref
 
     def __init__(self, config_file: str = '', file_path: Optional[str] = None) -> None:
-        '''Config file can be omitted to allow for configuration lock to be used with
+        '''config_file can be omitted to allow for configuration lock to be used with
         external operations.'''
 
         self._config_file = config_file
@@ -475,9 +477,9 @@ class ConfigurationManager:
 
         return self
 
-    # if there is no exception on leaving the context and data was written to the temp file the temporary
-    # file will be renamed over the configuration file sent in by the caller. if an exception is raised
-    # the temporary file will be deleted. The file lock will be released upon exiting
+    # if no exception was raised and data was written, the temporary file will be replaced over the designated
+    # configuration file. if an exception is raised, the temporary file will be deleted. the file lock will be released
+    # upon exiting
     def __exit__(self, exc_type, exc_val, traceback) -> bool:
         # lock only mode
         if (not self._config_file):
@@ -505,7 +507,7 @@ class ConfigurationManager:
 
             raise OSError('Configuration manager was unable to update the requested file.')
 
-    # will load json data from file, convert it to a python dict, then returned as object
+    # will load json data from file, convert it to a ConfigChain
     def load_configuration(self) -> ConfigChain:
         '''returns python dictionary of configuration file contents'''
 
@@ -514,8 +516,7 @@ class ConfigurationManager:
 
         return load_configuration(self._filename, filepath=self._file_path)
 
-    # accepts python dictionary to be serialized to json and written to file opened. will ensure
-    # data gets fully rewritten and if shorter than original the excess gets truncated.
+    # accepts python dictionary for serialization to json. writes data to specified file opened.
     def write_configuration(self, data_to_write: dict):
         '''writes configuration data as json to generated temporary file'''
 

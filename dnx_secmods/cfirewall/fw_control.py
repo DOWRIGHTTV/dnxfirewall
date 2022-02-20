@@ -16,7 +16,6 @@ from dnx_gentools.file_operations import cfg_read_poller, load_configuration
 # ========================================
 # CONTROL - used within cfirewall process
 # ========================================
-
 class FirewallControl:
     __slots__ = (
         'log', 'cfirewall', '_initialize',
