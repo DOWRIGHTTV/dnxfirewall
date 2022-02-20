@@ -93,7 +93,7 @@ def check_priv(mod: str, cmd: str, modset: dict) -> None:
     if (os.getuid() and modset['priv'] and cmd == 'cli'):
         exit(f'\nDNXFIREWALL {mod.upper()} requires root to run in CLI.\n')
 
-def utility_commands(mod: str, cmd: Optional[str] = None) -> None:
+def utility_commands(mod: str, cmd: str = '') -> None:
     if (mod == 'modstat'):
 
         svc_len: int = 0
@@ -163,7 +163,7 @@ if (__name__ == '__main__'):
     mod_name, mod_cmd, mod_path = parse_args()
 
     if (not mod_path):
-        utility_commands(mod_name)
+        utility_commands(mod_name, mod_cmd)
 
     elif mod_cmd in ['', 'cli']:
         run_cli(mod_name, mod_path)
