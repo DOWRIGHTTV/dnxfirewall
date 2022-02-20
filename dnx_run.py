@@ -11,6 +11,7 @@ import argparse
 import importlib
 
 from functools import partial
+from contextlib import suppress
 from subprocess import check_call, DEVNULL, CalledProcessError
 
 hardout = os._exit
@@ -19,20 +20,14 @@ parser = argparse.ArgumentParser(description='DNXFIREWALL utility to start an in
 parser.add_argument('module', metavar='mod', type=str)
 parser.add_argument('-s', metavar='service', type=str, choices=['start', 'stop', 'restart'], default='')
 
+
 # exceptions will handle different ways to call file. args will be sliced just before passthrough args begin.
-try:
-    args = parser.parse_args(sys.argv[1:4])
+for i in range(2, 5)[::-1]:
+    with suppress(Exception):
+        args = parser.parse_args(sys.argv[1:i])
+        sys.argv = [sys.argv[0], *sys.argv[i:]]
 
-    sys.argv = [sys.argv[0], *sys.argv[4:]]
-except:
-    try:
-        args = parser.parse_args(sys.argv[1:3])
-
-        sys.argv = [sys.argv[0], *sys.argv[3:]]
-    except:
-        args = parser.parse_args(sys.argv[1:2])
-
-        sys.argv = [sys.argv[0], *sys.argv[2:]]
+        break
 
 dnx_run = partial(check_call, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
 
@@ -55,6 +50,8 @@ MODULE_MAPPING: dict[str, str] = {
     # ROUTINES
     'database': 'dnx_routines.database.ddb_main',
     'logging': 'dnx_routines.logging.log_main',
+
+    'iptables': 'dnx_routines.configure.iptables',
 
     # SYSTEM
     'startup': 'dnx_system.startup_proc',

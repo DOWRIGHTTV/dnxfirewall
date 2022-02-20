@@ -11,7 +11,7 @@ __all__ = (
 
 
 class _Defaults:
-    '''class containing methods to build default iptable rulesets.'''
+    '''class containing methods to build default IPTable rulesets.'''
 
     def __init__(self, interfaces):
 
@@ -24,34 +24,33 @@ class _Defaults:
     @classmethod
     def load(cls, interfaces):
 
-        # initializing instance of self Class. this is to allow caller to not have to initialize class instance.
+        # self init
         self = cls(interfaces)
         for n, f in cls.__dict__.items():
             if '__' not in n and n != 'load':
                 try:
                     f(self)
                 except Exception as E:
-                    console_log(E)
+                    console_log(f'{E}')
 
     def create_new_chains(self):
         for chain in self.custom_nat_chains:
             shell(f'iptables -t nat -N {chain}')
 
         shell('iptables -N MGMT')
-        shell('iptables -t raw -N IPS') # ddos prevention rule insertion location
+        shell('iptables -t raw -N IPS')  # ddos prevention rule insertion location
 
     def default_actions(self):
-        # these aren't needed anymore since cfirewall has a default action. this makes it easier to configure the file
-        # or when doing dev functions like swapping code or manually editing system configurations.
-        # shell('iptables -P FORWARD DROP')
-        # shell('iptables -P INPUT DROP')
-
-        # default allow just in case it was changed prior.
+        # default allow is explicitly set in case it was set to deny prior
         shell('iptables -P OUTPUT ACCEPT')
 
     def cfirewall_hook(self):
-        # standard conntrack permit. cfirewall will deal with all tcp, udp, and icmp packet as a basic ip/protocol
-        # filter and as a security module inspection pre preprocessor.
+        '''IPTable rules to give cfirewall control of all tcp, udp, and icmp packets.
+
+        cfirewall operates as a basic ip/protocol filter and as a security module inspection pre preprocessor.
+
+        standard conntrack permit/allow control is left to IPTables for now.
+         '''
 
         # FORWARD #
         shell('iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
@@ -66,8 +65,9 @@ class _Defaults:
         # local socket allow
         shell(f'iptables -A INPUT -s 127.0.0.0/24 -d 127.0.0.0/24 -j ACCEPT')
 
-        # user configured services access will be kept as iptables for now. note: the implicit allows like dhcp and dns
-        # will be handled by cfirewall from this point on. mark filter to ensure wan doesn't match as extra precaution.
+        # user configured services access will be kept as iptables for now.
+        # mark filter to ensure wan doesn't match as an extra precaution.
+        # NOTE: the implicit allows like dhcp and dns will be handled by cfirewall from this point on.
         shell(f'iptables -A INPUT -m mark ! --mark {WAN_IN} -j MGMT')
 
         shell(f'iptables -A INPUT -p tcp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
@@ -86,11 +86,11 @@ class _Defaults:
 
         # filtering out broadcast packets to the wan. These can be prevalent if in a double nat scenario and would never
         # be used for anything.
-        shell(f'iptables -I INPUT -i {self._wan_int} -m addrtype --dst-type BROADCAST -j DROP')  # pylint: disable=no-member
+        shell(f'iptables -I INPUT -i {self._wan_int} -m addrtype --dst-type BROADCAST -j DROP')
 
     # TODO: implement commands to check source and dnat changes in nat table. what does this even mean?
     def nat(self):
-        shell('iptables -t raw -A PREROUTING -j IPS')  # action to check custom ips chain
+        shell('iptables -t raw -A PREROUTING -j IPS')  # action to check the custom ips chain
 
         # NOTE: this is being phased out
         # internal zones dns redirect into proxy
@@ -108,7 +108,7 @@ class _Defaults:
         shell(f'iptables -t nat -A POSTROUTING -j SRCNAT')
 
         # implicit masquerade rule for users. lan/dmz > wan
-        shell(f'iptables -t nat -A POSTROUTING -o {self._wan_int} -j MASQUERADE') # pylint: disable=no-member
+        shell(f'iptables -t nat -A POSTROUTING -o {self._wan_int} -j MASQUERADE')
 
 
 class IPTablesManager:
@@ -289,6 +289,7 @@ class IPTablesManager:
     def clear_dns_over_https():
         shell(f'sudo iptables -F DOH')
 
-if (__name__ == '__main__'):
+
+if (INIT_MODULE):
     with IPTablesManager() as iptables:
         iptables.apply_defaults()
