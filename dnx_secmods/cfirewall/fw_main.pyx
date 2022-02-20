@@ -453,16 +453,18 @@ cdef void process_traffic(nfq_handle *h) nogil:
     cdef:
         int fd = nfq_fd(h)
         char packet_buf[4096]
+        size_t sizeof_buf = sizeof(packet_buf)
         int recv_flags = 0
-        size_t dlen
+
+        ssize_t dlen
 
     printf('<ready to process traffic>')
 
     while True:
-        dlen = recv(fd, packet_buf, sizeof(packet_buf), recv_flags)
+        dlen = recv(fd, <void>packet_buf, sizeof_buf, recv_flags)
 
         if (dlen >= 0):
-            nfq_handle_packet(h, packet_buf, dlen)
+            nfq_handle_packet(h, <void>packet_buf, dlen)
 
         else:
             # TODO: i believe we can get rid of this and set up a lower level ignore of this. this might require
@@ -525,11 +527,10 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
 # ============================================
 # C EXTENSION - Python Communication Pipeline
 # ============================================
-
 cdef u_int32_t MAX_COPY_SIZE = 4016 # 4096(buf) - 80
 cdef u_int32_t DEFAULT_MAX_QUEUELEN = 8192
 
-# Socket queue should hold max number of packets of copy size bytes
+# socket queue should hold max number of packets of copy size bytes
 # formula: DEF_MAX_QUEUELEN * (MaxCopySize+SockOverhead) / 2
 cdef u_int32_t SOCK_RCV_SIZE = 1024 * 4796 // 2
 
@@ -543,12 +544,12 @@ cdef class CFirewall:
         VERBOSE = verbose
 
     def nf_run(self):
-        '''calls internal C run method to engage nfqueue processes. this call will run forever, but will
-        release the GIL prior to entering C and never try to reacquire it.'''
+        '''calls internal C run method to engage nfqueue processes.
 
-        # release gil and never look back.
+        this call will run forever, but will release the GIL prior to entering C and never try to reacquire it.'''
+
         print('<releasing GIL>')
-
+        # release gil and never look back.
         with nogil:
             process_traffic(self.h)
 
@@ -561,9 +562,7 @@ cdef class CFirewall:
             return ERR
 
         nfq_set_mode(self.qh, NFQNL_COPY_PACKET, MAX_COPY_SIZE)
-
         nfq_set_queue_maxlen(self.qh, DEFAULT_MAX_QUEUELEN)
-
         nfnl_rcvbufsiz(nfq_nfnlh(self.h), SOCK_RCV_SIZE)
 
     def nf_break(self):
@@ -573,8 +572,10 @@ cdef class CFirewall:
         nfq_close(self.h)
 
     cpdef void prepare_geolocation(self, tuple geolocation_trie, long msb, long lsb) with gil:
-        '''initializes Cython Extension RangeTrie passing in py_trie provided then assigning reference globally to be
-        used by cfirewall inspection. also globally assigns MSB and LSB definitions.'''
+        '''initializes Cython Extension HashTrie for use by CFirewall.
+         
+        py_trie is passed through as data source and reference to function is globally assigned. MSB and LSB definitions 
+        are also globally assigned.'''
 
         global GEOLOCATION, MSB, LSB
 
