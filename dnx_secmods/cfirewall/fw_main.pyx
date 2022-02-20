@@ -456,6 +456,8 @@ cdef void process_traffic(nfq_handle *h) nogil:
         int recv_flags = 0
         size_t dlen
 
+    printf('<ready to process traffic>')
+
     while True:
         dlen = recv(fd, packet_buf, sizeof(packet_buf), recv_flags)
 

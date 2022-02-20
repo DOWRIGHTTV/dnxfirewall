@@ -33,10 +33,11 @@ if (INIT_MODULE):
         Log.error(f'failed to bind to queue {Queue.CFIREWALL}')
         hardout()
 
-    # initializing python processes for detecting configuration changes to zone or rules rule sets and also handles
-    # necessary calls into Cython via cfirewall reference for making the actual config change. these will run in Python
-    # threads and some may call into Cython. These functions should be explicitly identified since they will require the
-    # gil to be acquired on the Cython side or else the Python interpreter will crash.
+    # initializing python processes for detecting configuration changes to zone or firewall rule sets and also handles
+    # necessary calls into Cython via cfirewall reference for making the actual config change.
+    # these will run in Python threads with a potential calling into Cython.
+    # these functions should be explicitly identified since they will require the gil to be acquired on the Cython side
+    # or else the Python interpreter will crash.
     fw_control = FirewallControl(Log, cfirewall=dnxfirewall)
     try:
         fw_control.run()
@@ -47,10 +48,10 @@ if (INIT_MODULE):
     # operations and will never retake the gil.
     # NOTE: setting bypass will tell the process to invoke rule action (DROP or ACCEPT) directly without
     #  forwarding to other modules.
-    dnx: Thread = Thread(target=dnxfirewall.nf_run())
+    dnx: Thread = Thread(target=dnxfirewall.nf_run)
     dnx.start()
     try:
         dnx.join()
     except Exception as E:
         dnxfirewall.nf_break()
-        hardout(f'DNXFIREWALL nqueue failure => {E}')
+        hardout(f'DNXFIREWALL cfirewall/nfqueue failure => {E}')
