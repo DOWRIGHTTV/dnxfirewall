@@ -17,7 +17,7 @@ from collections import namedtuple
 from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_enums import DNS_CAT, DATA
-from dnx_routines.configure.exceptions import ValidationError
+from dnx_routines.configure.web_validate import ValidationError
 
 FILE_POLL_TIMER = 10
 
@@ -297,6 +297,7 @@ class ConfigChain:
 
     def get_items(self, key: str) -> list[Optional[_item]]:
         '''return list of namedtuples containing key: value pairs of child keys 1 level lower than passed in key.
+
         returns empty list if not found.
 
             config.get_items('interfaces->builtins')
@@ -314,7 +315,8 @@ class ConfigChain:
         return [_item(k, v) for k, v in search_data.items()]
 
     def get_values(self, key: str) -> list:
-        '''return list of namedtuples containing key: value pairs of child keys 1 level lower than passed in key.
+        '''return list of values of child keys 1 level lower than passed in key.
+
         returns empty list if not found.
 
             config.get_items('interfaces->builtins')
