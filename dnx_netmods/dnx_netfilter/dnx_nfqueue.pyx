@@ -58,7 +58,7 @@ cdef class CPacket:
         self._hdr = nfq_get_msg_packet_hdr(nfa)
         self._id  = ntohl(self._hdr.packet_id)
 
-        # splitting packet by tcp/ip layers
+        # splitting the packet by tcp/ip layers
         self._parse()
 
         # returning mark for more direct access
@@ -95,7 +95,7 @@ cdef class CPacket:
         '''Call appropriate set_verdict function on packet.'''
 
         if (self._verdict):
-            printf('[C/warning] Multiple verdicts issued to a single packet.')
+            printf('[C/warning] Multiple verdicts issued to the packet.')
 
             return
 
@@ -127,7 +127,10 @@ cdef class CPacket:
             self.verdict(NF_DROP)
 
     cpdef forward(self, u_int16_t queue_num):
-        '''Send instance packet to a different queue.'''
+        '''Send instance packet to a different queue.
+        
+        The GIL is released before applying to packet action.
+        '''
 
         cdef u_int32_t forward_to_queue
 
@@ -137,6 +140,10 @@ cdef class CPacket:
             self.verdict(forward_to_queue)
 
     cpdef repeat(self):
+        '''Send instance packet back to the top of current chain.
+
+        The GIL is released before applying to packet action.
+        '''
 
         with nogil:
             self.verdict(NF_REPEAT)
@@ -279,18 +286,20 @@ cdef class NetfilterQueue:
 
         while True:
             with nogil:
-                data_len = recv(fd, packet_buf, sizeof_buf, 0)
+                data_len = recv(fd, <void*>packet_buf, sizeof_buf, 0)
 
             if (data_len >= 0):
-                nfq_handle_packet(self.h, packet_buf, data_len)
+                nfq_handle_packet(self.h, <char*>packet_buf, data_len)
 
             else:
                 if (errno != ENOBUFS):
                     break
 
     def nf_run(self):
-        ''' calls internal C run method to engage nfqueue processes. this call will run forever, but parsing operations
-        will release the GIL prior to and acquire before returning to user callback.'''
+        ''' calls internal C run method to engage nfqueue processes.
+
+        This call will run forever, but the parsing operations will release the GIL and reacquire before returning to
+        user callback.'''
 
         self._run()
 

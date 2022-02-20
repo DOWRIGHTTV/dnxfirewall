@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import sys
-import argparse
+import os
 
 from threading import Thread
+from dataclasses import dataclass
 
 from dnx_gentools.def_constants import hardout, INIT_MODULE
 from dnx_gentools.def_enums import Queue
@@ -15,18 +15,30 @@ from dnx_routines.logging.log_client import Log
 from dnx_secmods.cfirewall.fw_main import CFirewall
 from dnx_secmods.cfirewall.fw_control import FirewallControl
 
+@dataclass
+class Args:
+    b: int = 0
+    v: int = 0
+    bypass: int = 0
+    verbose: int = 0
+
+    @property
+    def bypass_set(self):
+        return self.b or self.bypass
+
+    @property
+    def verbose_set(self):
+        return self.v or self.verbose
+
+
+args = Args(**{a: 1 for a in os.environ['PASSTHROUGH_ARGS'].split(',')})
+
 if (INIT_MODULE):
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--bypass', action='store_true')
-    parser.add_argument('--verbose', action='store_true')
-
-    args = parser.parse_args(sys.argv[1:])
 
     Log.run(name='firewall')
 
     dnxfirewall = CFirewall()
-    dnxfirewall.set_options(args.bypass, args.verbose)
+    dnxfirewall.set_options(args.bypass_set, args.verbose_set)
 
     error = dnxfirewall.nf_set(Queue.CFIREWALL)
     if (error):

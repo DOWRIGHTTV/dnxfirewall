@@ -537,11 +537,11 @@ cdef u_int32_t SOCK_RCV_SIZE = 1024 * 4796 // 2
 
 cdef class CFirewall:
 
-    def set_options(self, bint bypass, bint verbose):
+    def set_options(self, int bypass, int verbose):
         global BYPASS, VERBOSE
 
-        BYPASS  = bypass
-        VERBOSE = verbose
+        BYPASS  = <bint>bypass
+        VERBOSE = <bint>verbose
 
     def nf_run(self):
         '''calls internal C run method to engage nfqueue processes.
@@ -555,7 +555,6 @@ cdef class CFirewall:
 
     def nf_set(self, u_int16_t queue_num):
         self.h = nfq_open()
-
         self.qh = nfq_create_queue(self.h, queue_num, <nfq_callback*>cfirewall_rcv, <void*>self)
 
         if (self.qh == NULL):
@@ -571,7 +570,7 @@ cdef class CFirewall:
 
         nfq_close(self.h)
 
-    cpdef void prepare_geolocation(self, tuple geolocation_trie, long msb, long lsb) with gil:
+    cpdef int prepare_geolocation(self, tuple geolocation_trie, long msb, long lsb) with gil:
         '''initializes Cython Extension HashTrie for use by CFirewall.
          
         py_trie is passed through as data source and reference to function is globally assigned. MSB and LSB definitions 
@@ -582,11 +581,12 @@ cdef class CFirewall:
         cdef size_t trie_len = len(geolocation_trie)
 
         GEOLOCATION = HashTrie()
-
         GEOLOCATION.generate_structure(geolocation_trie, trie_len)
 
         MSB = msb
         LSB = lsb
+
+        return OK
 
     cpdef int update_zones(self, PyArray zone_map) with gil:
         '''acquires FWrule lock then updates the zone values by interface index. max slots defined by
@@ -595,7 +595,6 @@ cdef class CFirewall:
 
         cdef size_t i
 
-        printf(<char*>'[update/zones] acquiring lock\n')
         pthread_mutex_lock(&FWrulelock)
         printf(<char*>'[update/zones] acquired lock\n')
 
@@ -617,7 +616,6 @@ cdef class CFirewall:
             dict fw_rule
             size_t rule_count = len(rulelist)
 
-        printf(<char*>'[update/ruleset] acquiring lock\n')
         pthread_mutex_lock(&FWrulelock)
         printf(<char*>'[update/ruleset] acquired lock\n')
 
