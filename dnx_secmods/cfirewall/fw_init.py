@@ -38,8 +38,8 @@ if (INIT_MODULE):
     fw_control = FirewallControl(Log, cfirewall=dnxfirewall)
     try:
         fw_control.run()
-    except:
-        hardout()
+    except Exception as E:
+        hardout(f'DNXFIREWALL control run failure => {E}')
 
     # this is a blocking call but is running in pure C. the GIL is released before running the low level system
     # operations and will never retake the gil.
@@ -47,6 +47,6 @@ if (INIT_MODULE):
     #  forwarding to other modules.
     try:
         dnxfirewall.nf_run()
-    except:
+    except Exception as E:
         dnxfirewall.nf_break()
-        hardout()
+        hardout(f'DNXFIREWALL nqueue failure => {E}')

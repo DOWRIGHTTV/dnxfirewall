@@ -24,11 +24,17 @@ INIT_MODULE: bool = bool(_os.environ.get('INIT_MODULE', False))
 fast_time:  Callable[[], float] = _time.time
 fast_sleep: Callable[[float], None] = _time.sleep
 
-hardout: Callable[[], None] = _partial(_os._exit, 1)
 console_log: Callable[[str], None] = _partial(print, flush=True)
 shell: Callable[[str], None] = _partial(_run, shell=True, stdout=_DEVNULL, stderr=_DEVNULL)
 
 RUN_FOREVER: Iterator = _repeat(1)
+
+def hardout(msg: Optional[str] = None) -> None:
+    if (msg):
+        console_log(msg)
+
+    _os._exit(1)
+
 
 # used by socket sender loops
 ATTEMPTS: tuple[int, int] = (0, 1)
