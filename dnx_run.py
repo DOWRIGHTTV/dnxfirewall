@@ -11,7 +11,7 @@ import argparse
 import importlib
 
 from functools import partial
-from subprocess import run, check_call, DEVNULL, CalledProcessError
+from subprocess import check_call, DEVNULL, CalledProcessError
 
 hardout = os._exit
 
@@ -23,16 +23,16 @@ parser.add_argument('-s', metavar='service', type=str, choices=['start', 'stop',
 try:
     args = parser.parse_args(sys.argv[1:4])
 
-    sys.argv = [sys.argv[1], *sys.argv[4:]]
+    sys.argv = sys.argv[4:]
 except:
     try:
         args = parser.parse_args(sys.argv[1:3])
 
-        sys.argv = [sys.argv[1], *sys.argv[3:]]
+        sys.argv = sys.argv[3:]
     except:
         args = parser.parse_args(sys.argv[1:2])
 
-        sys.argv = [sys.argv[1], *sys.argv[2:]]
+        sys.argv = sys.argv[2:]
 
 dnx_run = partial(check_call, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
 
