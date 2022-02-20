@@ -131,7 +131,7 @@ def utility_commands(mod: str, cmd: str = '') -> None:
     elif (mod == 'all'):
         for svc in SERVICE_MODULES:
             try:
-                dnx_run(f'sudo systemctl status {svc}', shell=True)
+                dnx_run(f'sudo systemctl {cmd} {svc}', shell=True)
             except CalledProcessError:
                 print(f'{svc.ljust(11)} => {"fail".rjust(7)}')
             else:
@@ -140,9 +140,9 @@ def utility_commands(mod: str, cmd: str = '') -> None:
 def service_commands(mod: str, cmd: str) -> None:
     svc = f'dnx-{mod.replace("_", "-")}'
     try:
-        dnx_run(f'sudo systemctl status {svc}', shell=True)
-    except CalledProcessError:
-        print(f'{svc} service {cmd} failed. check journal.')
+        dnx_run(f'sudo systemctl {cmd} {svc}', shell=True)
+    except CalledProcessError as cpe:
+        print(f'{svc} service {cmd} failed. check journal. => msg={cpe}')
 
     else:
         print(f'{svc} service {cmd} successful.')
