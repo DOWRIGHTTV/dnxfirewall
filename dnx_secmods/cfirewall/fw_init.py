@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 import argparse
 
-from dnx_gentools.def_constants import hard_out, INIT_MODULE
+from dnx_gentools.def_constants import hardout, INIT_MODULE
 from dnx_gentools.def_enums import Queue
 
 from dnx_routines.logging.log_client import LogHandler as Log

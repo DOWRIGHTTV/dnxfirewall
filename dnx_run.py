@@ -130,5 +130,6 @@ else:
 
     try:
         importlib.import_module(valid_module)
-    except:
+    except Exception as E:
+        print(f'{valid_module} cli run failure. => {E}')
         hardout(0)
