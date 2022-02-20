@@ -9,9 +9,14 @@ __all__ = (
     'IPTablesManager'
 )
 
+# aliases for readability
+FILE_LOCK = fcntl.flock
+EXCLUSIVE_LOCK = fcntl.LOCK_EX
+UNLOCK_LOCK = fcntl.LOCK_UN
+
 
 class _Defaults:
-    '''class containing methods to build default IPTable rulesets.'''
+    '''class containing methods to build default IPTable rule sets.'''
 
     def __init__(self, interfaces):
 
@@ -62,7 +67,8 @@ class _Defaults:
         # INPUT #
         shell(' iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
 
-        # local socket allow
+        # allow local socket communications.
+        # NOTE: this can likely be removed since we are not using AF_UNIX sockets.
         shell(f'iptables -A INPUT -s 127.0.0.0/24 -d 127.0.0.0/24 -j ACCEPT')
 
         # user configured services access will be kept as iptables for now.
@@ -124,7 +130,7 @@ class IPTablesManager:
     )
 
     def __init__(self):
-        interfaces = load_data('system')['interfaces']['builtins']
+        interfaces = load_data('system.cfg')['interfaces']['builtins']
 
         self._intf_to_zone = {
             interfaces[zone]['ident']: zone for zone in ['wan', 'lan', 'dmz']
@@ -138,7 +144,7 @@ class IPTablesManager:
 
     def __enter__(self):
         self._iptables_lock = open(self._iptables_lock_file, 'r+')
-        fcntl.flock(self._iptables_lock, fcntl.LOCK_EX)
+        FILE_LOCK(self._iptables_lock, EXCLUSIVE_LOCK)
 
         return self
 
@@ -146,14 +152,15 @@ class IPTablesManager:
         if (exc_type is None):
             self.commit()
 
-        fcntl.flock(self._iptables_lock, fcntl.LOCK_UN)
+        FILE_LOCK(self._iptables_lock, UNLOCK_LOCK)
         self._iptables_lock.close()
 
         return True
 
     def commit(self):
-        '''explicit, process safe, call to save iptables to back up file. this is not needed if using
-        within a context manager as the commit happens on exit.'''
+        '''explicit, process safe, call to save iptables to back up file.
+
+        this is not needed if using within a context manager as the commit happens on exit.'''
 
         shell(f'sudo iptables-save > {HOME_DIR}/dnx_system/iptables/iptables_backup.cnf', check=True)
 
@@ -164,12 +171,13 @@ class IPTablesManager:
 
     # TODO: think about the duplicate rule check before running this as a safety for creating duplicate rules
     def apply_defaults(self, *, suppress=False):
-        '''convenience function wrapper around the iptable Default class. all iptable default rules will
-        be loaded. if used within the context manager (recommended), the iptables lock will be acquired
-        before continuing (will block until done). iptable commit will be done on exit.
+        '''convenience function wrapper around the iptable Default class.
 
-        NOTE: this method should not be called more than once during system operation or duplicate rules
-        will be inserted into iptables.'''
+        all iptable default rules will be loaded. if used within the context manager (recommended), the iptables lock
+        will be acquired before continuing (will block until done). iptable commit will be done on exit.
+
+        NOTE: this method should not be called more than once during system operation or duplicate rules will be
+        inserted into iptables.'''
 
         _Defaults.load(self._zone_to_intf)
 
