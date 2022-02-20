@@ -10,12 +10,13 @@ from dnx_gentools.file_operations import ConfigurationManager, load_data, write_
 
 from dnx_routines.logging.log_client import LogHandler as Log
 
-DEFAULT_VERSION = 'firewall_pending.cfg'
-DEFAULT_PATH = 'dnx_system/iptables'
-USER_PATH = f'{DEFAULT_PATH}/usr'
-PENDING_RULE_FILE = f'{HOME_DIR}/{DEFAULT_PATH}/usr/firewall_pending.cfg'
-ACTIVE_RULE_FILE  = f'{HOME_DIR}/{DEFAULT_PATH}/usr/firewall_active.cfg'
-COPY_RULE_FILE    = f'{HOME_DIR}/{DEFAULT_PATH}/usr/firewall_copy.cfg'
+DEFAULT_VERSION: str = 'firewall_pending.cfg'
+DEFAULT_PATH: str = 'dnx_system/iptables'
+USER_PATH: str = f'{DEFAULT_PATH}/usr'
+
+PENDING_RULE_FILE: str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/firewall_pending.cfg'
+ACTIVE_RULE_FILE:  str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/firewall_active.cfg'
+COPY_RULE_FILE:    str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/firewall_copy.cfg'
 
 ConfigurationManager.set_log_reference(Log)
 
@@ -36,7 +37,7 @@ class FirewallManage:
 
     __slots__ = ()
 
-    # store main instance reference here, so it can be accessed throughout webui
+    # store the main instance reference here, so it can be accessed throughout webui
     cfirewall = None
     object_manager = None
 

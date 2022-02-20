@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from __future__ import annotations
-
 import threading
 
 from copy import copy
@@ -41,6 +39,7 @@ def looper(sleep_len: int, **kwargs):
 
         # pre-wrap optimization to remove sleep_len condition after every iteration if not set.
         if (not sleep_len):
+            @wraps(loop_function)
             def wrapper(*args):
 
                 # allowing kwargs in decorator setup to be pass into wrapped function. this will allow for local
@@ -51,6 +50,7 @@ def looper(sleep_len: int, **kwargs):
                     loop_function(*args)
 
         else:
+            @wraps(loop_function)
             def wrapper(*args):
 
                 args = (*args, *[v for v in kwargs.values()])
@@ -64,8 +64,11 @@ def looper(sleep_len: int, **kwargs):
     return decorator
 
 def dynamic_looper(loop_function: Callable):
-    '''loop decorator that will sleep for the returned integer amount. functions returning None will
-    not sleep on next iter and returning "break" will cancel the loop.'''
+    '''loop decorator that will sleep for the returned integer amount.
+
+    functions returning None will not sleep on next iter and returning "break" will cancel the loop.'''
+
+    @wraps(loop_function)
     def wrapper(*args):
         for _ in RUN_FOREVER:
             sleep_amount = loop_function(*args)
@@ -180,6 +183,7 @@ def dnx_queue(log: Type[LogHandler], name: str = None) -> Callable:
         job_clear = job_available.clear
         job_set = job_available.set
 
+        @wraps(func)
         def wrapper(*args):
             log.informational(f'{name}/dnx_queue started.')
 
@@ -346,9 +350,10 @@ def structure(obj_name: str, fields: Union[List, str]) -> Structure:
     return _Structure()
 
 def bytecontainer(obj_name: str, field_names: Union[List, str]) -> ByteContainer:
-    '''named tuple like class factory for storing raw byte sections with named fields. calling
-    len on the container will return sum of all bytes stored not amount of fields. slots are
-    being used to speed up attribute access.'''
+    '''named tuple like class factory for storing raw byte sections with named fields.
+
+    calling len on the container will return the sum of all bytes stored, not the number of fields. slots are being used
+    to speed up attribute access.'''
 
     if not isinstance(field_names, list):
         field_names = field_names.split()
@@ -416,6 +421,7 @@ def bytecontainer(obj_name: str, field_names: Union[List, str]) -> ByteContainer
 
 class classproperty:
     '''class used as a decorator to allow class methods to be used as properties.'''
+
     def __init__(self, fget):
         self._fget = fget
 
