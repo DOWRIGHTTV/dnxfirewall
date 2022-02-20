@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-if (__name__ == '__main__'):
-    pass
-
 from socket import inet_aton
 from struct import Struct
 from collections import defaultdict
 
 from dnx_gentools.def_constants import HOME_DIR, MSB, LSB, DNS_BIN_OFFSET, RFC1918
+from dnx_gentools.def_typing import *
 from dnx_gentools.def_enums import GEO, REP, DNS_CAT
 from dnx_gentools.file_operations import load_configuration
 
@@ -17,15 +15,15 @@ __all__ = (
     'generate_domain', 'generate_reputation', 'generate_geolocation',
 )
 
-cidr_to_host_count = {f'{i}': 2**x for i, x in enumerate(reversed(range(31)), 2)}
-ip_unpack = Struct('>L').unpack
+cidr_to_host_count: dict[str, int] = {f'{i}': 2**x for i, x in enumerate(reversed(range(31)), 2)}
+ip_unpack: Callable[bytes, tuple] = Struct('>L').unpack
 
-def _combine_domain(Log):
-    dns_proxy = load_configuration('dns_proxy')
+def _combine_domain(Log: Type[LogHandler]) -> list[str]:
+    dns_proxy: ConfigChain = load_configuration('dns_proxy')
 
-    domain_signatures = []
+    domain_signatures: list = []
 
-    default_cats = dns_proxy['categories']['default']
+    default_cats: list = dns_proxy.get_list('categories->default')
     # iterating over list of categories + DoH to load signature sets.
     for cat in [*default_cats, 'dns-over-https']:
         try:
@@ -36,9 +34,10 @@ def _combine_domain(Log):
             domain_signatures.extend([x.lower() for x in file.read().splitlines() if x and '#' not in x])
             file.close()
 
-    ud_cats = dns_proxy['categories']['user_defined']
+    ud_cats: list = dns_proxy.get_list('categories->user_defined')
     # TODO: user defined categories will break the enum load on proxy / FIX
-    #   looping over all user defined categories. ALSO. i think this will require a proxy restart if sigs change
+    # NOTE: i think this will require a proxy restart if sigs change
+    # looping over all user defined categories.
     for cat, settings in ud_cats:
 
         if (settings['enabled']):
@@ -48,12 +47,12 @@ def _combine_domain(Log):
 
     return domain_signatures
 
-def generate_domain(Log):
+def generate_domain(Log: Type[LogHandler]) -> tuple[tuple[int, tuple[int, int]]]:
     # getting all enabled signatures
-    domain_signatures = _combine_domain(Log)
+    domain_signatures: list = _combine_domain(Log)
 
-    wl_exceptions = load_configuration('whitelist')['pre_proxy']
-    bl_exceptions = load_configuration('blacklist')['pre_proxy']
+    wl_exceptions: list = load_configuration('whitelist').get_list('pre_proxy')
+    bl_exceptions: list = load_configuration('blacklist').get_list('pre_proxy')
 
     dict_nets = defaultdict(list)
 
@@ -62,10 +61,10 @@ def generate_domain(Log):
 
     for signature in domain_signatures:
 
-        sig = signature.strip().split(maxsplit=1)
+        sig: list = signature.strip().split(maxsplit=1)
         try:
-            host_hash = f'{hash(sig[0])}'
-            cat = int(DNS_CAT[sig[1]])
+            host_hash: str = f'{hash(sig[0])}'
+            cat: int = int(DNS_CAT[sig[1]])
         except Exception as E:
             Log.warning(f'bad signature detected | {E} | {sig}')
 
@@ -79,7 +78,9 @@ def generate_domain(Log):
         containers.sort()
 
     # converting to nested tuple and sorting, outermost list converted on return
-    nets = [(bin_id, tuple(containers)) for bin_id, containers in dict_nets.items()]
+    nets: list[tuple[int, tuple[int, int]]] = [
+        (bin_id, tuple(containers)) for bin_id, containers in dict_nets.items()
+    ]
     nets.sort()
 
     # no longer needed so ensuring memory gets freed
@@ -87,11 +88,11 @@ def generate_domain(Log):
 
     return tuple(nets)
 
-def _combine_reputation(Log):
-    ip_proxy = load_configuration('ip_proxy')
+def _combine_reputation(Log: Type[LogHandler]) -> list[str]:
+    ip_proxy: ConfigChain = load_configuration('ip_proxy')
 
-    ip_rep_signatures = []
-    for cat in ip_proxy['reputation']:
+    ip_rep_signatures: list = []
+    for cat in ip_proxy.get_list('reputation'):
         try:
             with open(f'{HOME_DIR}/dnx_system/signatures/ip_lists/{cat}.ips', 'r') as file:
                 ip_rep_signatures.extend([x.lower() for x in file.read().splitlines() if x and '#' not in x])
@@ -100,12 +101,12 @@ def _combine_reputation(Log):
 
     return ip_rep_signatures
 
-def generate_reputation(Log):
+def generate_reputation(Log: Type[LogHandler]) -> tuple[tuple[int, tuple[int, REP]]]:
 
     # getting all enabled signatures
-    ip_rep_signatures = _combine_reputation(Log)
+    ip_rep_signatures: list = _combine_reputation(Log)
 
-    dict_nets = defaultdict(list)
+    dict_nets: defaultdict[int, Union[list[tuple[int, REP]], tuple[tuple[int, REP]]]] = defaultdict(list)
 
     for signature in ip_rep_signatures:
 
@@ -118,8 +119,8 @@ def generate_reputation(Log):
             Log.warning(f'invalid signature: {signature}, {E}')
             continue
 
-        bin_id  = ip_addr & MSB
-        host_id = ip_addr & LSB
+        bin_id:  int = ip_addr & MSB
+        host_id: int = ip_addr & LSB
 
         dict_nets[bin_id].append((host_id, cat))
 
@@ -128,7 +129,7 @@ def generate_reputation(Log):
         containers.sort()
 
     # converting to nested tuple and sorting, outermost list converted on return
-    nets = [
+    nets: list[tuple[int, tuple[int, REP]]] = [
         (bin_id, tuple(containers)) for bin_id, containers in dict_nets.items()
     ]
     nets.sort()
@@ -137,13 +138,13 @@ def generate_reputation(Log):
 
     return tuple(nets)
 
-def _combine_geolocation(Log):
-    geo_settings = load_configuration('ip_proxy')['geolocation']
+def _combine_geolocation(Log: Type[LogHandler]) -> list[str]:
+    geo_settings: list = load_configuration('ip_proxy').get_list('geolocation')
 
     # adding private ip space signatures because they are currently excluded from webui. (by design... for now)
-    geo_settings.update(RFC1918)
+    geo_settings.extend(RFC1918.keys())
 
-    ip_geo_signatures = []
+    ip_geo_signatures: list = []
     # restricting iteration to explicitly defined rules in configuration file instead of assuming all files in signature
     # folder are good to load in.
     for country in geo_settings:
@@ -155,7 +156,7 @@ def _combine_geolocation(Log):
 
     return ip_geo_signatures
 
-def generate_geolocation(Log):
+def generate_geolocation(Log: Type[LogHandler]) -> tuple[tuple[int, tuple[int, int, int]]]:
     '''
     Convert standard signatures into a compressed integer format. This will completely replace file operations function
     since we are no longer generating a combined file and will do the merge and convert in memory before returning
@@ -163,22 +164,22 @@ def generate_geolocation(Log):
     '''
 
     # getting all enabled signatures
-    ip_geo_signatures = _combine_geolocation(Log)
+    ip_geo_signatures: list = _combine_geolocation(Log)
 
-    converted_list = []
+    converted_list: list = []
     cvl_append = converted_list.append
 
     # conversion logic
     for signature in ip_geo_signatures:
 
         try:
-            subnet, country = signature.split()
+            net, country = signature.split()
 
-            subnet = subnet.split('/')
-            net_id = ip_unpack(inet_aton(subnet[0]))[0]
-            host_count = int(cidr_to_host_count[subnet[1]])
+            subnet: list = net.split('/')
+            net_id: int = ip_unpack(inet_aton(subnet[0]))[0]
+            host_count: int = int(cidr_to_host_count[subnet[1]])
 
-            country = GEO[country.upper()]
+            country: GEO = GEO[country.upper()]
         except Exception as E:
             Log.warning(f'invalid signature: {signature}, {E}')
 
@@ -196,14 +197,14 @@ def generate_geolocation(Log):
     del ip_geo_signatures
 
     # compression logic
-    dict_nets = defaultdict(list)
+    dict_nets: defaultdict[int, Union[list, tuple]] = defaultdict(list)
     for signature in converted_list:
 
         net_id, ip_count, country = [int(x) for x in signature.split()]
 
         # assigning vars for bin id, host ranges, and ip count
-        bin_id = net_id & MSB
-        host_id_start = net_id & LSB
+        bin_id: int = net_id & MSB
+        host_id_start: int = net_id & LSB
 
         dict_nets[bin_id].append([host_id_start, host_id_start+ip_count, country])
 
@@ -213,7 +214,7 @@ def generate_geolocation(Log):
 
     # NOTE: reduced list comprehension now that extra compression is re implemented, which converts to
     # tuple once it is completed with host containers, then again on the bin itself.
-    nets = [
+    nets: list[tuple[int, tuple[int, int, int]]] = [
         (bin_id, containers) for bin_id, containers in dict_nets.items()
     ]
     nets.sort()
@@ -222,8 +223,8 @@ def generate_geolocation(Log):
 
     return tuple(nets)
 
-def _merge_geo_ranges(ls):
-    merged_item, merged_containers = [], []
+def _merge_geo_ranges(ls: list, /) -> tuple[tuple]:
+    merged_item, merged_containers, l = [], [], object()
     for l in ls:
 
         cur_net_id, cur_broadcast, cur_country = l

@@ -9,5 +9,6 @@ if (TYPE_CHECKING):
     from def_namedtuples import *
 
     from standard_tools import *
+    from file_operations import *
 
     ByteContainer = bytecontainer('ByteContainer', 'field_a field_b field_n')

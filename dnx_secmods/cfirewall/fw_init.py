@@ -19,7 +19,7 @@ if (INIT_MODULE):
     parser.add_argument('--bypass', action='store_true')
     parser.add_argument('--verbose', action='store_true')
 
-    args = parser.parse_args(sys.argv)
+    args = parser.parse_args(sys.argv[1:])
 
     Log.run(name='rules')
 
