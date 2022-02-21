@@ -170,10 +170,17 @@ def service_commands(mod: str, cmd: str) -> None:
     try:
         dnx_run(f'sudo systemctl {cmd} {svc}', shell=True)
     except CalledProcessError as cpe:
-        sprint(f'{svc} service {cmd} failed. check journal. => msg={cpe}')
+        if (cmd == 'status'):
+            sprint(f'{svc.ljust(12)} => down')
+        else:
+            sprint(f'{svc} service {cmd} failed. check journal. => msg={cpe}')
 
     else:
-        sprint(f'{svc} service {cmd} successful.')
+        if (cmd == 'status'):
+            sprint(f'{svc.ljust(15)} => {"up".rjust(4)}')
+
+        else:
+            sprint(f'{svc} service {cmd} successful.')
 
 def run_cli(mod: str, mod_loc: str) -> None:
     os.environ['INIT_MODULE'] = 'YES'
