@@ -5,12 +5,12 @@ from __future__ import annotations
 import os
 import json
 import time
+import fcntl
 import shutil
 import hashlib
 import subprocess
 
 from copy import copy
-from fcntl import flock, LOCK_EX, LOCK_UN
 from secrets import token_urlsafe
 from collections import namedtuple
 
@@ -24,8 +24,14 @@ FILE_POLL_TIMER = 10
 
 file_exists = os.path.exists
 
+# aliases for readability
+FILE_LOCK = fcntl.flock
+EXCLUSIVE_LOCK = fcntl.LOCK_EX
+UNLOCK_LOCK = fcntl.LOCK_UN
+
+
 def load_configuration(filename: str, *, filepath: str = 'dnx_system/data', ext_override: str = '') -> ConfigChain:
-    '''load json data from file and convert it to a ConfigChain'''
+    '''load json data from a file and convert it to a ConfigChain'''
 
     if (ext_override):
         filename += ext_override
@@ -39,7 +45,7 @@ def load_configuration(filename: str, *, filepath: str = 'dnx_system/data', ext_
 
     # I like the path checks more than try/except block
     if not os.path.exists(f'{HOME_DIR}/{filepath}/usr/{filename}'):
-        user_settings = {}
+        user_settings: dict = {}
 
     else:
         # loading user configurations
@@ -49,7 +55,7 @@ def load_configuration(filename: str, *, filepath: str = 'dnx_system/data', ext_
     return ConfigChain(system_settings, user_settings)
 
 def write_configuration(data: dict, filename: str, *, filepath: str = 'dnx_system/data/usr') -> None:
-    '''write json data object to file.'''
+    '''write a json data object to file.'''
 
     if (not filename.endswith('.cfg')):
         filename += '.cfg'
@@ -58,14 +64,14 @@ def write_configuration(data: dict, filename: str, *, filepath: str = 'dnx_syste
         json.dump(data, settings, indent=4)
 
 def load_data(filename: str, *, filepath: str = 'dnx_system/data') -> dict:
-    '''loads json data from file and convert it to a python dict'''
+    '''loads json data from a file and convert it to a python dict'''
 
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'r') as system_settings_io:
         system_settings: dict = json.load(system_settings_io)
 
     return system_settings
 
-# will load json data from file, convert it to a python dict, then return as object
+# will load json data from file, convert it to a python dict, then return as an object
 def write_data(data: dict, filename: str, *, filepath: str = 'dnx_system/data') -> None:
 
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
@@ -261,9 +267,9 @@ class ConfigChain:
         return ret_val
 
     def get_dict(self, key: Optional[str] = None) -> dict[str, Any]:
-        '''return dict of children 1 level lower than passed in key.
+        '''return dict of children 1 level lower than the passed in key.
 
-         returns empty if not found.
+         returns an empty dict if not found.
 
             config.get_dict('interfaces->builtins')
         '''
@@ -280,7 +286,9 @@ class ConfigChain:
         return search_data
 
     def get_list(self, key: Optional[str] = None) -> list[str]:
-        '''return list of child keys 1 level lower than passed in key. returns empty list if not found.
+        '''return list of child keys 1 level lower than the passed in key.
+
+        returns an empty list if not found.
 
             config.get_list('interfaces->builtins')
         '''
@@ -296,7 +304,7 @@ class ConfigChain:
 
         return list(search_data)
 
-    def get_items(self, key: str) -> list[Optional[_item]]:
+    def get_items(self, key: Optional[str] = None) -> list[Optional[_item]]:
         '''return list of namedtuple containing key: value pairs of child keys 1 level lower than the passed in key.
 
         returns an empty list if not found.
@@ -304,7 +312,7 @@ class ConfigChain:
             config.get_items('interfaces->builtins')
         '''
 
-        keys = key.split(self._sep)
+        keys = [] if key is None else key.split(self._sep)
         search_data = self._merge_expand()
 
         for k in keys:
@@ -315,15 +323,15 @@ class ConfigChain:
 
         return [_item(k, v) for k, v in search_data.items()]
 
-    def get_values(self, key: str) -> list:
-        '''return list of values of child keys 1 level lower than passed in key.
+    def get_values(self, key: Optional[str] = None) -> list:
+        '''return a list of values for the child keys 1 level lower than the passed in key.
 
-        returns empty list if not found.
+        returns an empty list if not found.
 
             config.get_items('interfaces->builtins')
         '''
 
-        keys = key.split(self._sep)
+        keys = [] if key is None else key.split(self._sep)
         search_data = self._merge_expand()
 
         for k in keys:
@@ -418,7 +426,7 @@ class ConfigurationManager:
     '''
 
     log: ClassVar[Optional[LogHandler]] = None
-    config_lock_file: str = f'{HOME_DIR}/dnx_system/config.lock'
+    config_lock_file: ClassVar[str] = f'{HOME_DIR}/dnx_system/config.lock'
 
     __slots__ = (
         '_config_lock', '_filename', '_data_written',
@@ -461,7 +469,7 @@ class ConfigurationManager:
         self._config_lock = open(self.config_lock_file, 'r+')
 
         # acquiring lock on shared lock file
-        flock(self._config_lock, LOCK_EX)
+        FILE_LOCK(self._config_lock, EXCLUSIVE_LOCK)
 
         # setup isn't required if config file is not specified.
         if (self._config_file):
@@ -493,7 +501,7 @@ class ConfigurationManager:
             os.unlink(self._temp_file_path)
 
         # releasing lock for purposes specified in flock(1) man page under -u (unlock)
-        flock(self._config_lock, LOCK_UN)
+        FILE_LOCK(self._config_lock, UNLOCK_LOCK)
 
         # closing file after unlock to allow reference to be cleaned up.
         self._config_lock.close()

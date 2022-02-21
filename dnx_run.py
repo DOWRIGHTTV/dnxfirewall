@@ -60,10 +60,10 @@ systemctl_ret_codes: dict[int, str] = {
 }
 
 def parse_args() -> tuple[str, str, dict]:
-    module: str = get_index(1, cname='module')
-    command: str = get_index(2, cname='command')
+    command: str = get_index(1, cname='command')
+    module: str = get_index(2, cname='module')
 
-    # checking if the specified module exists then checking if subsequent command is valid for the module
+    # checking if the specified module exists, then checking if subsequent command is valid for the module
     mod_settings = check_module(module)
     if (command in mod_settings['exclude']):
         exit(f'\n{command.upper()} not valid for {module.upper()}')
@@ -78,9 +78,6 @@ def get_index(idx: int, /, *, cname='') -> str:
     try:
         return sys.argv[idx]
     except IndexError:
-        if (cname == 'command'):
-            return ''
-
         exit(f'\nUNKNOWN {cname.upper()} -> see --help\n')
 
 def check_module(mod: str, /) -> dict:

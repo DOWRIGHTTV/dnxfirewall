@@ -6,11 +6,12 @@ import os
 import shutil
 
 from dnx_gentools.def_constants import HOME_DIR
-from dnx_gentools.file_operations import ConfigurationManager, load_data, write_configuration, calculate_file_hash
+from dnx_gentools.def_typing import *
+from dnx_gentools.file_operations import ConfigurationManager, load_configuration, write_configuration, calculate_file_hash
 
-from dnx_routines.logging.log_client import LogHandler as Log
+from dnx_routines.logging.log_client import Log
 
-DEFAULT_VERSION: str = 'firewall_pending.cfg'
+DEFAULT_VERSION: str = 'firewall_pending'
 DEFAULT_PATH: str = 'dnx_system/iptables'
 USER_PATH: str = f'{DEFAULT_PATH}/usr'
 
@@ -37,17 +38,17 @@ class FirewallManage:
 
     __slots__ = ()
 
-    # store the main instance reference here, so it can be accessed throughout webui
-    cfirewall = None
-    object_manager = None
+    # store the main instances reference here, so it can be accessed throughout webui
+    cfirewall: ClassVar[Optional[CFirewall]] = None
+    object_manager: ClassVar[Optional[ObjectManager]] = None
 
-    versions = ['pending', 'active']
-    sections = ['BEFORE', 'MAIN', 'AFTER']
+    versions: ClassVar[list] = ['pending', 'active']
+    sections: ClassVar[list] = ['BEFORE', 'MAIN', 'AFTER']
 
-    _firewall = load_data(DEFAULT_VERSION, filepath=USER_PATH)
+    _firewall: ClassVar[dict] = load_configuration(DEFAULT_VERSION, filepath=USER_PATH).get_dict()
 
     @classmethod
-    def commit(cls, firewall_rules):
+    def commit(cls, firewall_rules: dict) -> None:
         '''Updates pending configuration file with sent in firewall rules data.
 
         This is a replace operation on disk and thread and process safe.'''
@@ -59,9 +60,10 @@ class FirewallManage:
         cls._firewall = firewall_rules
 
     @classmethod
-    # TODO: rules need to be converted from object based to true values before replacing active rule file
-    def push(cls):
-        '''Copies pending configuration to active, which is being monitored by Control class to load into cfirewall.'''
+    def push(cls) -> None:
+        '''Copy the pending configuration to the active state.
+
+        file changes are being monitored by Control class to load into cfirewall.'''
 
         with ConfigurationManager():
             shutil.copy(PENDING_RULE_FILE, COPY_RULE_FILE)
@@ -72,18 +74,20 @@ class FirewallManage:
             obj_lookup = cls.object_manager.lookup
 
             # using standalone functions due to ConfigManager not being compatible with these operations
-            fw_rules = load_data('firewall_pending.cfg', filepath='dnx_system/iptables')
+            fw_rules = load_configuration('firewall_pending', filepath='dnx_system/iptables')
+
+            fw_rule_copy = fw_rules.get_dict()
 
             for section in cls.sections:
 
-                for rule in fw_rules[section].values():
+                for rule in fw_rule_copy[section].values():
                     rule['src_network'] = [obj_lookup(x, convert=True) for x in rule['src_network']]
                     rule['src_service'] = [obj_lookup(x, convert=True) for x in rule['src_service']]
 
                     rule['dst_network'] = [obj_lookup(x, convert=True) for x in rule['dst_network']]
                     rule['dst_service'] = [obj_lookup(x, convert=True) for x in rule['dst_service']]
 
-            write_configuration(fw_rules, 'firewall_copy', filepath='dnx_system/iptables')
+            write_configuration(fw_rule_copy, 'firewall_copy', filepath='dnx_system/iptables')
 
             print('FUTURE ACTIVE', fw_rules)
 
@@ -104,7 +108,8 @@ class FirewallManage:
     def view_ruleset(self, section='MAIN'):
         '''returns dict of requested "firewall_pending" ruleset in raw form.
 
-        additional processing is required for webui or cli formats. section arg will change which ruleset is returned.
+        additional processing is required for webui or cli formats.
+        the section arg will change which ruleset is returned.
         '''
 
         try:
@@ -125,8 +130,8 @@ class FirewallManage:
         active = calculate_file_hash('firewall_active.cfg', folder='iptables/usr')
         pending = calculate_file_hash('firewall_pending.cfg', folder='iptables/usr')
 
-        # if user has never modified rules, there is not a pending change. the active file can be none
-        # if pending is present. a commit will write the active file.
+        # if the user has never modified rules, there is not a pending change. the active file can be none if pending is
+        # present. a commit will write the active file.
         if (pending is None):
             return False
 

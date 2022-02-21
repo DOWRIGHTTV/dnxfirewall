@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
-DISABLED = True
+DISABLED = False
 
 from typing import *
 
@@ -23,6 +23,7 @@ if (TYPE_CHECKING and not DISABLED):
     from dnx_routines import *
     from dnx_secmods import *
     from dnx_netmods import *
+    from dnx_webui import *
 
     ProxyCallback = Callable[..., None]
     ProxyPacket = Union[[IPPPacket, IPSPacket, DNSPacket], None]
@@ -31,3 +32,5 @@ if (TYPE_CHECKING and not DISABLED):
     DNSListHandler = Callable[[Any, str, int], int]
 
     Structure = dict[str, int]
+
+    ObjectManager = ob
