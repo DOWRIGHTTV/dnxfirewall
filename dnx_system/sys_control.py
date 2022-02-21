@@ -39,8 +39,9 @@ _control_service_sendmsg = _control_service.sendmsg
 
 class SystemControl:
     '''
-    Provisional control class for executing root level commands on the system. Some functionality, syntax, or format
-    (especially regarding permission management/control) may change over time.
+    Provisional control class for executing root level commands on the system.
+
+    Some functionality, syntax, or format (especially regarding permission management/control) may change over time.
 
         warning: This should not be used to invoke iptables commands at this time.
     '''
@@ -48,7 +49,7 @@ class SystemControl:
     _control_sock = socket()
 
     @classmethod
-    # normally I wouldn't do this as I try to not have needless classes, but this is one case that will definitely be
+    # normally, I wouldn't do this as I try to not have needless classes, but this is one case that will definitely be
     # expanded on to ensure it is a secure implementation and doesn't allow for any funny business.
     def run(cls):
         cls()
@@ -58,7 +59,7 @@ class SystemControl:
         try:
             data, *_ = _control_service_recv(2048)
         except OSError as ose:
-            console_log(ose) # log this eventually
+            console_log(ose)  # log this eventually
 
         else:
             # data format | module: command: args
@@ -69,14 +70,14 @@ class SystemControl:
             try:
                 control_ref = MODULE_PERMISSIONS[data['module']][data['command']]
             except KeyError as ke:
-                console_log(ke) # log eventually
+                console_log(ke)  # log eventually
 
             else:
                 # this allows args to not be specified in kwargs by caller if not needed.
                 cmd_args = data.get('args', '')
 
                 # calling returned reference based on string sent by module. ensuring args are specified here
-                # as a safety. this could still have issues if the args are not a list and would iter over the string.
+                # as safety. this could still have issues if the args are not a list and would iter over the string.
                 if (control_ref and cmd_args):
                     control_ref(*cmd_args)
 
@@ -85,5 +86,5 @@ class SystemControl:
                     shell(f'{data["command"]} {cmd_args}')
 
 
-def RUN_MODULE():
+if (INIT_MODULE):
     SystemControl.run()
