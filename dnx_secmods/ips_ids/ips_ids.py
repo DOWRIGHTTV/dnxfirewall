@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-
 import threading
 
 from copy import copy
 from collections import defaultdict
 
 from dnx_gentools.def_constants import *
+from dnx_gentools.def_enums import *
 from dnx_gentools.def_namedtuples import IPS_SCAN_RESULTS, DDOS_TRACKERS, PSCAN_TRACKERS
 from dnx_routines.configure.iptables import IPTablesManager
 

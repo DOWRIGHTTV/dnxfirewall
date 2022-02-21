@@ -10,6 +10,7 @@ from ipaddress import IPv4Address
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_enums import PROTO, TLD_CAT
 from dnx_gentools.file_operations import *
 from dnx_gentools.standard_tools import looper, Initialize
 
@@ -21,9 +22,9 @@ ConfigurationManager.set_log_reference(Log)
 
 
 class Configuration:
-    _proxy_setup  = False
-    _server_setup = False
-    _keywords = []
+    _proxy_setup:  ClassVar[bool] = False
+    _server_setup: ClassVar[bool] = False
+    _keywords: ClassVar[list] = []
 
     __slots__ = (
         # callbacks
@@ -32,7 +33,7 @@ class Configuration:
         '_initialize',
     )
 
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         self._initialize = Initialize(Log, name)
 
     @classmethod
@@ -96,9 +97,9 @@ class Configuration:
                     signatures.en_dns.remove(dns_cat)
 
         # KEYWORD SETTINGS
-        # copying keyword signature list in memory to a local object. iterating over list. if the current item category
-        # is not an enabled category the signature will get removed and offset will get adjusted to ensure the index
-        # stay correct.
+        # copying the keyword signature list in memory to a local object then iterating over the list. if the current
+        # item category is not an enabled category, the signature will get removed and the offset will get adjusted to
+        # normalize the index.
         mem_keywords, offset = signatures.keyword.copy(), 0
         for i, signature in enumerate(mem_keywords):
 
@@ -147,7 +148,7 @@ class Configuration:
 
     @cfg_write_poller
     # handles updating user defined signatures in memory/propagated changes to disk.
-    def _get_list(self, lname: str, cfg_file: str, last_modified_time: int) -> None:
+    def _get_list(self, lname: str, cfg_file: str, last_modified_time: int) -> float:
         memory_list = getattr(self.dns_proxy, lname).dns
 
         timeout_detected = self._check_for_timeout(memory_list)
@@ -158,13 +159,13 @@ class Configuration:
 
             self._modify_memory(memory_list, loaded_list, action=CFG.DEL)
 
-        # if file has been modified the modified list will be referenced to make in place changes to memory
-        # list, specifically around adding new rules and the new modified time will be returned. if not modified,
+        # if the file has been modified, the list will be referenced to make in place changes to the list in memory,
+        # specifically around adding new rules and the new modified time will be returned. if not modified,
         # the last modified time is returned and not changes are made.
         try:
-            modified_time = os.stat(f'{HOME_DIR}/dnx_system/data/usr/{cfg_file}')
+            modified_time = os.stat(f'{HOME_DIR}/dnx_system/data/usr/{cfg_file}').st_mtime
         except FileNotFoundError:
-            modified_time = os.stat(f'{HOME_DIR}/dnx_system/data/{cfg_file}')
+            modified_time = os.stat(f'{HOME_DIR}/dnx_system/data/{cfg_file}').st_mtime
 
         if (modified_time == last_modified_time):
             return last_modified_time
@@ -182,7 +183,7 @@ class Configuration:
         return modified_time
 
     @staticmethod
-    def _modify_memory(memory_list: Dict, loaded_list: ConfigChain, *, action: CFG) -> None:
+    def _modify_memory(memory_list: dict, loaded_list: ConfigChain, *, action: CFG) -> None:
         '''removing/adding signature/rule from memory as needed.'''
         if (action is CFG.ADD):
 
@@ -202,12 +203,12 @@ class Configuration:
 
                 bitmap_key = convert_string_to_bitmap(rule, DNS_BIN_OFFSET)
 
-                # if rule is not present in config file it will be removed from memory
+                # if the rule is not present in the config file, it will be removed from memory
                 if (settings['key'] not in loaded_list):
                     memory_list.pop(bitmap_key, None)
 
     @staticmethod
-    def _modify_ip_whitelist(cfg_file: str, memory_ip_list: Dict) -> None:
+    def _modify_ip_whitelist(cfg_file: str, memory_ip_list: dict) -> None:
         loaded_ip_list = load_configuration(cfg_file)
 
         # iterating over ip rules in memory.
@@ -219,7 +220,7 @@ class Configuration:
 
         # iterating over ip rules in configuration file
         for ip, settings in loaded_ip_list.get_items('ip_bypass'):
-            # convert to ip address object which is the type stored as key
+            # convert to an ip address object which is the type stored as the key
             ip = IPv4Address(ip)
 
             # if it is not in memory and the rule type is "global" it will be added
@@ -227,7 +228,7 @@ class Configuration:
                 memory_ip_list[ip] = True
 
     @staticmethod
-    # checking corresponding list file for any time based rules timing out. will return True if timeout
+    # checking the corresponding list file for any time based rules timing out. will return True if timeout
     # is detected otherwise return False.
     def _check_for_timeout(lname_dns: Dict) -> bool:
         now = fast_time()

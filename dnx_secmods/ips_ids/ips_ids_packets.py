@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dnx_gentools.def_constants import *
+from dnx_gentools.def_enums import CONN, PROTO
 
 from dnx_iptools.packet_classes import NFPacket, RawResponse
 from dnx_iptools.protocol_tools import int_to_ip

@@ -10,6 +10,7 @@ from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_REUSEADDR
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_enums import PROTO, DNS
 from dnx_gentools.def_namedtuples import DNS_SERVERS
 from dnx_gentools.standard_tools import dnx_queue
 
@@ -22,7 +23,7 @@ from dns_proxy_protocols import UDPRelay, TLSRelay
 from dns_proxy_packets import ClientQuery, ttl_rewrite
 from dns_proxy_log import Log
 
-INVALID_RESPONSE: Tuple[None, None] = (None, None)
+INVALID_RESPONSE: tuple[None, None] = (None, None)
 
 REQ_TRACKER = request_tracker()
 REQ_TRACKER_INSERT = REQ_TRACKER.insert

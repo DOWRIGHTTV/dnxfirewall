@@ -2,7 +2,7 @@
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_enums import Queue, DNS, DNS_CAT
+from dnx_gentools.def_enums import Queue, DNS, DNS_CAT, TLD_CAT
 from dnx_gentools.def_namedtuples import DNS_BLACKLIST, DNS_REQUEST_RESULTS, DNS_SIGNATURES, DNS_WHITELIST
 from dnx_gentools.signature_operations import generate_domain
 

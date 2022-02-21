@@ -1,11 +1,14 @@
 #!usr/bin/env python3
 
+from __future__ import annotations
+
 import threading
 import ssl
 
 from socket import socket, AF_INET, SOCK_DGRAM, SOCK_STREAM
 
 from dnx_gentools.def_constants import *
+from dnx_gentools.def_enums import PROTO
 from dnx_gentools.def_namedtuples import RELAY_CONN
 from dnx_gentools.standard_tools import dnx_queue
 
@@ -78,7 +81,6 @@ class UDPRelay(ProtoRelay):
 # direct reference to alternate constructor
 _keepalive = ClientQuery.generate_local_query
 
-
 class TLSRelay(ProtoRelay):
     _protocol = PROTO.DNS_TLS
 
@@ -144,14 +146,14 @@ class TLSRelay(ProtoRelay):
 
         recv_buffer = memoryview(recv_buf)
 
-        # allocating 4096 bytes of memory as bytearray, then building memory view. access to memory via byte array will
-        # not be needed. 4096 gives space for 8 max length sized udp dns messages (not sure if dot mirrors)
+        # allocating 4096 bytes of memory as bytearray, then building memory view. access to memory via the byte array
+        # will not be needed. 4096 gives space for 8 max length sized udp dns messages (not sure if dot mirrors)
         processing_buffer = memoryview(bytearray(4096))
         b_ct = 0
 
         for _ in RUN_FOREVER:
             try:
-                # recv_into | no need to specify amount to return and mtu covers max len
+                # recv_into | no need to specify the amount to return and mtu covers max len
                 # not inplace adding byte count to protect against cases where a public resolves sends a single
                 # response over multiple packets and connection is closed in between (this is highly unlikely since
                 # most cases it would be via timeout, but I have seen worse.)
@@ -212,7 +214,7 @@ class TLSRelay(ProtoRelay):
                 # elif (b_ct < data_len): break
                 else: break
 
-        # main loop exited, cleaning up socket.
+        # cleanup after the main loop exits
         self._relay_conn.sock.close()
 
     def _tls_connect(self, tls_server: str) -> bool:

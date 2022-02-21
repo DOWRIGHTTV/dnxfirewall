@@ -24,5 +24,4 @@ cdef u_int16_t checksum(void *pkt_data, size_t dlen) nogil:
     return htons(<u_int16_t>~csum)
 
 cdef inline void reject_packet() nogil:
-
-
+    pass

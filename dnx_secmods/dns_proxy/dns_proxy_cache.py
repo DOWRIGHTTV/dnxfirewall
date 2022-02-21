@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from __future__ import annotations
-
 import threading
 
 from collections import Counter, deque, namedtuple
@@ -95,7 +93,7 @@ def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
 
             cache_storage['top_domains'] = top_domains
 
-        write_configuration(cache_storage, 'dns_cache')
+        write_configuration(cache_storage.expanded_user_data, 'dns_cache')
 
         for domain in top_domains:
             request_handler(dns_packet(domain), top_domain=True)

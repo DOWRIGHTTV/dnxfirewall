@@ -11,7 +11,7 @@ StartLimitBurst=3
 User=dnx
 Group=dnx
 WorkingDirectory=/home/dnx/dnxfirewall
-ExecStart=uwsgi --socket dnx_webui/webui.sock --mount /=dnx_webui:app --processes 2 --enable-threads
+ExecStart=uwsgi --socket dnx_webui/webui.sock --mount /=dnx_webui:app --master --processes 2 --enable-threads
 
 Environment=HOME_DIR=/home/dnx/dnxfirewall
 Environment=SYSTEMD_PAGER=

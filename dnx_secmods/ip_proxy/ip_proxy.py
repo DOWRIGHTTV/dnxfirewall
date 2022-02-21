@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_enums import CONN
+from dnx_gentools.def_enums import CONN, PROTO, Queue, DIR, GEO, REP
 from dnx_gentools.def_namedtuples import IPP_INSPECTION_RESULTS
 from dnx_gentools.signature_operations import generate_reputation
 
@@ -183,7 +183,7 @@ def _reputation_action(category: REP, packet: IPPPacket) -> CONN:
     # notify proxy the connection should be blocked. dir enum is Flag with bitwise ops.
     if (packet.direction & block_direction):
         # hardcoded for icmp to drop and tcp/udp to reject. # TODO: consider making this configurable.
-        if (packet.protocol is ICMP):
+        if (packet.protocol is PROTO.ICMP):
             return CONN.DROP
 
         return CONN.REJECT
@@ -197,7 +197,7 @@ def _country_action(category: GEO, packet: IPPPacket) -> CONN:
     # dir enum is _Flag with bitwise ops. this makes comparison much easier.
     if (packet.direction & _geolocation_settings[category]):
         # hardcoded for icmp to drop and tcp/udp to reject. # TODO: consider making this configurable.
-        if (packet.protocol is ICMP):
+        if (packet.protocol is PROTO.ICMP):
             return CONN.DROP
 
         return CONN.REJECT

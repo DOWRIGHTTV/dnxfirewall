@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import *
 
 DISABLED = True
-
-from typing import *
 
 # NOTE: splitting if statements as import organization
 # standard lib imports
@@ -35,5 +33,3 @@ if (TYPE_CHECKING and not DISABLED):
     DNSListHandler = Callable[[Any, str, int], int]
 
     Structure = dict[str, int]
-
-    ObjectManager = ob
