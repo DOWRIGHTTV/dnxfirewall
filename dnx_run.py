@@ -12,8 +12,9 @@ import importlib
 from functools import partial
 from subprocess import check_call, DEVNULL, CalledProcessError
 
-hardout = partial(os._exit, 0)
+HOME_DIR = os.environ.get('HOME_DIR', '/home/dnx/dnxfirewall')
 
+hardout = partial(os._exit, 0)
 dnx_run = partial(check_call, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
 
 # =========================
@@ -147,6 +148,11 @@ def service_commands(mod: str, cmd: str) -> None:
 def run_cli(mod: str, mod_loc: str) -> None:
     os.environ['INIT_MODULE'] = 'YES'
 
+    mod_path = f'{HOME_DIR}/{mod_loc.split(".")[0]}'
+
+    # inserting the module path into the system path so inter-module imports can be done locally
+    sys.path.insert(0, mod_path)
+
     try:
         importlib.import_module(mod_loc)
     except Exception as E:
@@ -160,7 +166,7 @@ if (__name__ == '__main__'):
     if (not mod_set['module']):
         utility_commands(mod_name, mod_cmd)
 
-    elif mod_cmd in ['', 'cli']:
+    elif mod_cmd in ['modstat', 'cli']:
         run_cli(mod_name, mod_set['module'])
 
     else:
