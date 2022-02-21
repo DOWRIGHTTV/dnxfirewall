@@ -134,8 +134,10 @@ def utility_commands(mod: str, cmd: str = '') -> None:
 
             try:
                 dnx_run(f'sudo systemctl status {svc}', shell=True)
-            except CalledProcessError as E:
-                status.append([svc, f'down  code={E.returncode}  msg="{systemctl_ret_codes.get(E.returncode, "")}"'])
+            except CalledProcessError as cpe:
+                status.append(
+                    [svc, f'down  code={cpe.returncode}  msg="{systemctl_ret_codes.get(cpe.returncode, "")}"']
+                )
 
                 down_detected = True
 
@@ -171,7 +173,9 @@ def service_commands(mod: str, cmd: str) -> None:
         dnx_run(f'sudo systemctl {cmd} {svc}', shell=True)
     except CalledProcessError as cpe:
         if (cmd == 'status'):
-            sprint(f'{svc.ljust(12)} => down')
+            sprint(
+                f'{svc.ljust(15)} => down  code={cpe.returncode}  msg="{systemctl_ret_codes.get(cpe.returncode, "")}"'
+            )
         else:
             sprint(f'{svc} service {cmd} failed. check journal. => msg={cpe}')
 

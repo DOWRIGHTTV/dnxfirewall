@@ -9,7 +9,7 @@ Restart=always
 RestartSec=3
 StartLimitBurst=3
 User=dnx
-ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_run.py interface
+ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_run.py cli interface
 Environment=HOME_DIR=/home/dnx/dnxfirewall
 
 [Install]

@@ -9,7 +9,7 @@ Restart=always
 RestartSec=3
 StartLimitBurst=3
 User=root
-ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_run.py dhcp_server
+ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_run.py cli dhcp_server
 Environment=HOME_DIR=/home/dnx/dnxfirewall
 
 [Install]
