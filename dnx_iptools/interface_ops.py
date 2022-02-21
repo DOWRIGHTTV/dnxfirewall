@@ -41,7 +41,7 @@ def get_intf_builtin(zone_name):
 
     return {intf_index: (intf_settings[f'{intf_path}->zone'], intf_settings[f'{intf_path}->ident'])}
 
-def load_interfaces(intf_type: INTF = INTF.BUILTINS, *, exclude: list = []) -> list[Optional[tupleint, int, str]]]:
+def load_interfaces(intf_type: INTF = INTF.BUILTINS, *, exclude: list = []) -> list[Optional[tuple[int, int, str]]]:
     '''
     return list of tuples of specified interface type.
 
