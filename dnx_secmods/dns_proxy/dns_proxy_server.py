@@ -25,7 +25,7 @@ from dns_proxy_log import Log
 
 INVALID_RESPONSE: tuple[None, None] = (None, None)
 
-REQ_TRACKER = request_tracker()
+REQ_TRACKER: RequestTracker = request_tracker()
 REQ_TRACKER_INSERT = REQ_TRACKER.insert
 
 udp_relay_add = UDPRelay.relay.add
@@ -33,23 +33,23 @@ tls_relay_add = TLSRelay.relay.add
 
 
 class DNSServer(Listener):
-    protocol = PROTO.NOT_SET
-    tls_down = True
-    udp_fallback = False
-    keepalive_interval = 8
+    protocol: ClassVar[PROTO] = PROTO.NOT_SET
+    tls_down: ClassVar[bool] = True
+    udp_fallback: ClassVar[bool] = False
+    keepalive_interval: ClassVar[int] = 8
 
     # NOTE: setting values to None to denote initialization has not been completed.
-    dns_records = {}
-    dns_servers = DNS_SERVERS(
+    dns_records: ClassVar[dict[str, str]] = {}
+    dns_servers: ClassVar[DNS_SERVERS] = DNS_SERVERS(
         {'ip': None, PROTO.UDP: None, PROTO.DNS_TLS: None},
         {'ip': None, PROTO.UDP: None, PROTO.DNS_TLS: None}
     )
 
-    _request_map = {}
+    _request_map: ClassVar[dict[int], tuple[bool, ClientQuery]] = {}
     _records_cache = None
-    _id_lock = threading.Lock()
+    _id_lock: ClassVar[Lock] = threading.Lock()
 
-    _packet_parser = ClientQuery
+    _packet_parser: ClassVar[ClientQuery] = ClientQuery
 
     __slots__ = (
         '_request_map_pop', '_dns_records_get'
@@ -105,7 +105,7 @@ class DNSServer(Listener):
 
             return False
 
-        # if domain is local (no tld) and it was not in local records, we can ignore.
+        # if the domain is local (no tld) and it was not in local records, then we can ignore.
         elif (client_query.local_domain):
             return False
 
@@ -136,7 +136,7 @@ class DNSServer(Listener):
                 dns_cache_add(client_query.qname, cache_data)
 
     @classmethod
-    # top_domain will now be set by caller, so we don't have to track that within the query object.
+    # top_domain will now be set by the caller, so we don't have to track that within the query object.
     def handle_query(cls, client_query: ClientQuery, *, top_domain: bool = False) -> None:
 
         # generating dns query packet data
@@ -145,7 +145,7 @@ class DNSServer(Listener):
             get_unique_id(cls._request_map, (top_domain, client_query)), cls.protocol
         )
 
-        # queue send data to currently enabled protocol/relay for sending to external resolver.
+        # queue send_data to currently enabled protocol/relay for sending to external resolver.
         # request is sent for logging purposes and may be temporary.
         if (cls.protocol is PROTO.UDP):
             udp_relay_add(send_data, client_query.request)
@@ -182,7 +182,7 @@ class DNSServer(Listener):
 
 
 # DNS ID generation. this value is guaranteed unique for the life of the request.
-_id_lock = threading.Lock()
+_id_lock: Lock = threading.Lock()
 
 def get_unique_id(request_map: dict, request_info: tuple) -> int:
 

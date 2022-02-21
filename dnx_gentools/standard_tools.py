@@ -212,7 +212,7 @@ def dnx_queue(log: Type[LogHandler], name: str = None) -> Callable:
 
     return decorator
 
-def structure(obj_name: str, fields: Union[List, str]) -> Structure:
+def structure(obj_name: str, fields: Union[list, str]) -> Structure:
     '''named tuple like class factory for storing int values of raw byte sections with named fields.
 
     calling len on the container will return sum of all bytes stored not amount of fields. slots are being used to
@@ -349,7 +349,7 @@ def structure(obj_name: str, fields: Union[List, str]) -> Structure:
 
     return _Structure()
 
-def bytecontainer(obj_name: str, field_names: Union[List, str]) -> ByteContainer:
+def bytecontainer(obj_name: str, field_names: Union[list, str]) -> ByteContainer:
     '''named tuple like class factory for storing raw byte sections with named fields.
 
     calling len on the container will return the sum of all bytes stored, not the number of fields. slots are being used

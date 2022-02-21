@@ -10,7 +10,7 @@ from ipaddress import IPv4Address
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_enums import PROTO, TLD_CAT
+from dnx_gentools.def_enums import PROTO
 from dnx_gentools.file_operations import *
 from dnx_gentools.standard_tools import looper, Initialize
 
@@ -97,9 +97,10 @@ class Configuration:
                     signatures.en_dns.remove(dns_cat)
 
         # KEYWORD SETTINGS
-        # copying the keyword signature list in memory to a local object then iterating over the list. if the current
+        # copying the keyword signature list in memory to a local object, then iterating over the list. if the current
         # item category is not an enabled category, the signature will get removed and the offset will get adjusted to
         # normalize the index.
+        # NOTE: this is not entirely thread safe
         mem_keywords, offset = signatures.keyword.copy(), 0
         for i, signature in enumerate(mem_keywords):
 
@@ -109,7 +110,7 @@ class Configuration:
                 offset += 1
 
         # iterating over keywords from the signature set. if the keyword category is enabled and the current
-        # signature is not already in memory it will be added.
+        # signature is not in memory, it will be added.
         for signature, cat in self._keywords:
 
             if (cat in enabled_keywords and signature not in signatures.keyword):
@@ -230,7 +231,7 @@ class Configuration:
     @staticmethod
     # checking the corresponding list file for any time based rules timing out. will return True if timeout
     # is detected otherwise return False.
-    def _check_for_timeout(lname_dns: Dict) -> bool:
+    def _check_for_timeout(lname_dns: dict) -> bool:
         now = fast_time()
         for info in lname_dns.values():
 

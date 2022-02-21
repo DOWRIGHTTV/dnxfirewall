@@ -224,14 +224,14 @@ class DNSPacket(NFPacket):
         self.request_identifier = (int_to_ip(self.src_ip), self.src_port, self.dns_id)
 
 
-def _enumerate_request(request: str, local_domain: bool, int=int, hash=hash) -> Tuple[List[Tuple[int]], Optional[str]]:
+def _enumerate_request(request: str, local_domain: bool, int=int, hash=hash) -> tuple[list[tuple[int]], Optional[str]]:
     rs = request.split('.')
 
     # tld > fqdn
-    requests: List[str] = [dot_join(rs[i:]) for i in range(-2, -len(rs)-1, -1)]
+    requests: list[str] = [dot_join(rs[i:]) for i in range(-2, -len(rs)-1, -1)]
 
     # adjusting for local record as needed
-    req_ids: list = []
+    req_ids: list[tuple] = []
     tld: Optional[str] = None if local_domain else rs[-1]
 
     # building bin/host id from hash for each enumerated name.
@@ -253,7 +253,7 @@ _RESOURCE_RECORD = bytecontainer('resource_record', 'name qtype qclass ttl data'
 _MINIMUM_TTL = long_pack(MINIMUM_TTL)
 _DEFAULT_TTL = long_pack(DEFAULT_TTL)
 
-def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> Tuple[bytearray, Optional[CACHED_RECORD]]:
+def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[bytearray, Optional[CACHED_RECORD]]:
 
     mem_data = memoryview(data)
     dns_header:  memoryview = mem_data[:12]
@@ -327,7 +327,7 @@ def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> Tuple[by
 
     return send_data, None
 
-def _parse_record(dns_payload: memoryview, cur_offset: int) -> Tuple[int, _RESOURCE_RECORD, int]:
+def _parse_record(dns_payload: memoryview, cur_offset: int) -> tuple[int, _RESOURCE_RECORD, int]:
     new_offset = cur_offset + parse_query_name(dns_payload, cur_offset)
 
     # slicing out current ptr index for faster reference

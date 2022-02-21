@@ -24,9 +24,6 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     # HELPERS
     'all': {'module': '', 'exclude': ['status', 'cli'], 'priv': True, 'service': False},
 
-    # INFORMATIONAL
-    'modstat': {'module': '', 'exclude': ['start', 'stop', 'restart', 'status', 'cli'], 'priv': True, 'service': False},
-
     # WEBUI
     'webui': {'module': '', 'exclude': ['cli'], 'priv': False, 'service': True},
 
@@ -52,6 +49,13 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
 }
 SERVICE_MODULES = [f'dnx-{mod.replace("_", "-")}' for mod, modset in MODULE_MAPPING.items() if modset['service']]
 
+COMMANDS = {
+    'start': {'priv': True},
+    'restart': {'priv': True},
+    'stop': {'priv': True},
+    'modstat': {'priv': True}
+}
+
 systemctl_ret_codes: dict[int, str] = {
     0: 'program is running or service is OK',
     1: 'program dead and /var/run pid file exists',
@@ -69,7 +73,7 @@ def parse_args() -> tuple[str, str, dict]:
     if (command in mod_settings['exclude']):
         exit(f'\n{command.upper()} not valid for {module.upper()}')
 
-    check_priv(module, command, mod_settings)
+    check_command(command, module, mod_settings)
 
     os.environ['PASSTHROUGH_ARGS'] = ','.join(sys.argv[3:])
 
@@ -84,13 +88,20 @@ def get_index(idx: int, /, *, cname='') -> str:
 def check_module(mod: str, /) -> dict:
     valid_module = MODULE_MAPPING.get(mod)
     if (not valid_module):
-        exit(f'\nUNKNOWN MODULE -> see --help\n')
+        exit('\nUNKNOWN MODULE -> see --help\n')
 
     return valid_module
 
-def check_priv(mod: str, cmd: str, modset: dict) -> None:
-    if (os.getuid() and modset['priv'] and cmd in ['', 'cli']):
-        exit(f'\nDNXFIREWALL {mod.upper()} requires root to run in CLI.\n')
+def check_command(cmd: str, mod: str, modset: dict) -> None:
+    if (cmd not in COMMANDS):
+        exit(f'\nUNKNOWN COMMAND ({cmd.upper()}) -> see --help\n')
+
+    if (cmd == 'cli' and not modset['priv']):
+        return
+
+    root = not os.getuid()
+    if (not root and modset['priv']):
+        exit(f'\nDNXFIREWALL command {cmd.upper()} requires root for module {mod.upper()}\n')
 
 def utility_commands(mod: str, cmd: str = '') -> None:
     if (mod == 'modstat'):
@@ -148,9 +159,9 @@ def service_commands(mod: str, cmd: str) -> None:
 def run_cli(mod: str, mod_loc: str) -> None:
     os.environ['INIT_MODULE'] = 'YES'
 
-    mod_path = '/'.join([HOME_DIR, *mod_loc.split('.')[:1]])
+    mod_path = '/'.join([HOME_DIR, *mod_loc.split('.')[:2]])
 
-    # inserting the module path into the system path so inter-module imports can be done locally
+    # inserting the module path into the system path so intra-module imports can be done locally
     sys.path.insert(0, mod_path)
 
     try:
@@ -163,11 +174,11 @@ def run_cli(mod: str, mod_loc: str) -> None:
 if (__name__ == '__main__'):
     mod_name, mod_cmd, mod_set = parse_args()
 
+    if mod_set['service']:
+        service_commands(mod_name, mod_cmd)
+
     if (not mod_set['module']):
         utility_commands(mod_name, mod_cmd)
 
     elif mod_cmd in ['modstat', 'cli']:
         run_cli(mod_name, mod_set['module'])
-
-    else:
-        service_commands(mod_name, mod_cmd)

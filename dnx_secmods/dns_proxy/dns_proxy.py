@@ -22,19 +22,19 @@ prepare_and_send = ProxyResponse.prepare_and_send
 
 class DNSProxy(NFQueue):
     # dns | ip
-    whitelist: ClassVar[NamedTuple[dict, dict]] = DNS_WHITELIST(
+    whitelist: ClassVar[DNS_WHITELIST] = DNS_WHITELIST(
         {}, {}
     )
-    blacklist: ClassVar[NamedTuple[dict]] = DNS_BLACKLIST(
+    blacklist: ClassVar[DNS_BLACKLIST] = DNS_BLACKLIST(
         {}
     )
     # en_dns | tld | keyword |
     # NOTE: dns signatures are contained within the binary search extension as a closure
-    signatures: ClassVar[NamedTuple[dict, dict, dict]] = DNS_SIGNATURES(
+    signatures: ClassVar[DNS_SIGNATURES] = DNS_SIGNATURES(
         {DNS_CAT.doh}, {}, []
     )
 
-    _dns_sig_ref: ClassVar[Optional] = None
+    _dns_sig_ref: ClassVar[Callable[Optional]] = None
     _packet_parser: ClassVar[ProxyParser] = DNSPacket.netfilter_recv  # alternate constructor
 
     __slots__ = (
@@ -94,7 +94,7 @@ def inspect(packet: DNSPacket):
     Log.log(packet, request_results)
 
 # this is where the system decides whether to block dns query/sinkhole or to allow. notification will be done
-# via the request tracker upon returning signature scan result
+# via the request tracker upon returning the signature scan result
 def _inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
     # NOTE: request_ident[0] is a string representation of ip addresses. this is currently needed as the whitelists
     # are stored in this format and we have since moved away from this format on the back end.
@@ -123,22 +123,20 @@ def _inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
 
             return DNS_REQUEST_RESULTS(True, 'blacklist', DNS_CAT.time_based)
 
-        # pulling domain category if signature present. | NOTE: this is now using imported cython function factory
+        # pulling the domain category if a signature match.
         category = DNS_CAT(_recursive_binary_search(enum_request))
         if (category is not DNS_CAT.NONE) and _block_query(category, whitelisted):
 
             return DNS_REQUEST_RESULTS(True, 'category', category)
 
-        # adding returned cat to enum list. this will be used to identify categories
-        # for allowed requests.
+        # adding the returned cat to the enum list. this will be used to identify categories for allowed requests.
         enum_categories.append(category)
 
-    # Keyword search within domain || block if match
-    # TODO: see if there is a better way to match instead of linear search
-    for keyword, category in _dns_keywords:
-        if (keyword in packet.request):
-
-            return DNS_REQUEST_RESULTS(True, 'keyword', category)
+    # Keyword search within query name. will block if match
+    req = packet.request
+    keyword_match = [(kwd, cat) for kwd, cat in _dns_keywords if kwd in req]
+    if (keyword_match):
+        return DNS_REQUEST_RESULTS(True, 'keyword', keyword_match[0][1])
 
     # pulling most specific category that is not none otherwise returned value will be DNS_CAT.NONE.
     for category in enum_categories:
@@ -152,11 +150,11 @@ def _inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
 # grabbing the request category and determining whether the request should be blocked. if so, returns general
 # information for further processing
 def _block_query(category: DNS_CAT, whitelisted: bool) -> bool:
-    # signature match, but blocking disabled for the category | ALLOW
+    # signature match, but blocking is disabled for the category | ALLOW
     if (category not in _enabled_categories):
         return False
 
-    # signature match, not whitelisted, or whitelisted and cat is bad | BLOCK
+    # signature match and not whitelisted or whitelisted and cat is high risk | BLOCK
     if (not whitelisted or category in [DNS_CAT.malicious, DNS_CAT.cryptominer]):
         return True
 

@@ -1,23 +1,25 @@
 #!/usr/bin/env python3
 
 from __future__ import annotations
-from typing import *
+from typing import TYPE_CHECKING, Callable, Generator, Type, NewType, ClassVar, Literal, Union, Optional, Any
 
-DISABLED = True
+_DISABLED = False
 
 # NOTE: splitting if statements as import organization
 # standard lib imports
-if (TYPE_CHECKING and not DISABLED):
+if (TYPE_CHECKING and not _DISABLED):
 
+    from threading import Lock
     from ipaddress import IPv4Address
 
-    Wrapper = Callable([...], None)
+    Wrapper = Callable[[Any], None]
 
-    FileLock = NewType('FileLock', type('LOCK'))
-    WebError = NewType('WebError', dict[str, Union[int, str]])
+    ConfigLock = NewType('ConfigLock', type('FileLock'))
+    IPTableLock = NewType('IPTableLock', type('FileLock'))
+    WebError = dict[str, Union[int, str]]
 
 # dnx class imports for use as Types
-if (TYPE_CHECKING and not DISABLED):
+if (TYPE_CHECKING and not _DISABLED):
 
     # module packs
     from dnx_gentools import *
@@ -27,7 +29,7 @@ if (TYPE_CHECKING and not DISABLED):
     from dnx_webui import *
 
     ProxyCallback = Callable[..., None]
-    ProxyPacket = Union[[IPPPacket, IPSPacket, DNSPacket], None]
+    ProxyPacket = Union[IPPPacket, IPSPacket, DNSPacket, None]
     ProxyParser = Callable[[CPacket, int], ProxyPacket]
 
     DNSListHandler = Callable[[Any, str, int], int]

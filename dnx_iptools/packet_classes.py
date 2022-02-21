@@ -20,7 +20,7 @@ from dnx_iptools.def_structures import *
 from dnx_iptools.protocol_tools import int_to_ip, calc_checksum
 from dnx_iptools.interface_ops import load_interfaces, wait_for_interface, wait_for_ip, get_masquerade_ip
 
-from dnx_netmods.dnx_netfilter.dnx_nfqueue import set_user_callback, NetfilterQueue
+from dnx_netmods.dnx_netfilter.dnx_nfqueue import NetfilterQueue, set_user_callback as set_nfqueue_callback
 
 __all__ = (
     'Listener', 'ProtoRelay', 'NFQueue', 'NFPacket', 'RawPacket', 'RawResponse'
@@ -124,7 +124,7 @@ class Listener:
     @classmethod
     # TODO: what happens if interface comes online, then immediately gets unplugged. the registration would fail
     #  potentially and would no longer be active so it would never happen if the interface was replugged after.
-    def __register(cls, intf: Tuple[int, int, str]):
+    def __register(cls, intf: tuple[int, int, str]):
         '''will register interface with listener. requires subclass property for listener_sock returning valid socket
         object. once registration is complete the thread will exit.'''
 
@@ -359,7 +359,7 @@ class ProtoRelay:
 
 
 class NFQueue:
-    _Log: ClassVar[Optional[Type[LogHandler]]] = None
+    _log: ClassVar[Optional[Type[LogHandler]]] = None
     _packet_parser: ClassVar[ProxyParser] = _NOT_IMPLEMENTED
     _proxy_callback: ClassVar[ProxyCallback] = _NOT_IMPLEMENTED
 
@@ -385,7 +385,7 @@ class NFQueue:
     @classmethod
     def run(cls, Log: Type[LogHandler], *, q_num: int, threaded: bool = True) -> None:
         cls._setup()
-        cls._Log = Log
+        cls._log = Log
 
         self = cls(q_num, threaded)
         self.__queue()
@@ -401,8 +401,9 @@ class NFQueue:
 
     @classmethod
     def set_proxy_callback(cls, *, func: ProxyCallback) -> None:
-        '''Takes a callback function to handle packets after parsing. the reference will be called
-        as part of the packet flow with one argument passed in for "packet".'''
+        '''Takes a callback function to handle packets after parsing.
+
+        the reference will be called as part of the packet flow with one argument passed in for "packet".'''
 
         if (not callable(func)):
             raise TypeError('Proxy callback must be a callable object.')
@@ -410,22 +411,22 @@ class NFQueue:
         cls._proxy_callback = func
 
     def __queue(self) -> None:
-        set_user_callback(self.__handle_packet)
+        set_nfqueue_callback(self.__handle_packet)
 
         for _ in RUN_FOREVER:
             nfqueue = NetfilterQueue()
             nfqueue.nf_set(self.__q_num)
 
-            self._Log.notice('Starting dnx_netfilter queue. Packets will be processed shortly')
+            self._log.notice('Starting dnx_netfilter queue. Packets will be processed shortly')
 
-            # this is a blocking call which interacts with system via callback. while loop is to re-establish the
+            # this is a blocking call that interacts with the system via callback. the while loop is to re-establish the
             # queue handle after an uncaught exception (hopefully maintaining system uptime)
             try:
                 nfqueue.nf_run()
             except:
                 nfqueue.nf_break()
 
-                self._Log.alert('Netfilter binding lost. Attempting to rebind.')
+                self._log.alert('Netfilter binding lost. Attempting to rebind.')
 
             time.sleep(1)
 
@@ -436,7 +437,7 @@ class NFQueue:
             nfqueue.drop()
 
             traceback.print_exc()
-            self._Log.error('failed to parse CPacket. Packet discarded.')
+            self._log.error('failed to parse CPacket. Packet discarded.')
 
         else:
             if self._pre_inspect(packet):
@@ -446,9 +447,10 @@ class NFQueue:
                     self._proxy_callback(packet)
 
     def _pre_inspect(self, packet) -> bool:
-        '''automatically called after parsing. used to determine course of action for packet. nfqueue drop, accept, or
-        repeat can be called within this scope. return will be checked as a boolean where True will continue and
-        False will do nothing.
+        '''a method automatically called after packet parsing.
+
+        used to determine the course of action for a packet. nfqueue drop, accept, or repeat can be called within this
+        scope. return will be checked as a boolean, where True will continue and False will do nothing.
 
         May be overridden.
 
@@ -726,7 +728,7 @@ class RawResponse:
             Thread(target=cls.__register, args=(intf,)).start()
 
     @classmethod
-    def __register(cls, intf: Tuple[int, int, str]):
+    def __register(cls, intf: tuple[int, int, str]):
         '''will register interface with ip and socket. a new socket will be used every time this method is called.'''
         intf_index, zone, _intf = intf
 

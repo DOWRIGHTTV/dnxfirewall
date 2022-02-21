@@ -11,30 +11,31 @@ from dnx_gentools.signature_operations import generate_reputation
 from dnx_iptools.packet_classes import NFQueue
 from dnx_iptools.dnx_trie_search import RecurveTrie
 
-from dnx_secmods.ip_proxy.ip_proxy_packets import IPPPacket, ProxyResponse
-from dnx_secmods.ip_proxy.ip_proxy_restrict import LanRestrict
-from dnx_secmods.ip_proxy.ip_proxy_automate import Configuration
-from dnx_secmods.ip_proxy.ip_proxy_log import Log
+from ip_proxy_packets import IPPPacket, ProxyResponse
+from ip_proxy_restrict import LanRestrict
+from ip_proxy_automate import Configuration
+from ip_proxy_log import Log
 
 LOG_NAME: str = 'ip_proxy'
 
 
 class IPProxy(NFQueue):
-    ids_mode: bool = False
+    ids_mode: ClassVar[bool] = False
 
-    reputation_enabled:   bool = False
-    reputation_settings:  dict = {}
-    geolocation_enabled:  bool = True
-    geolocation_settings: dict = {}
+    reputation_enabled:   ClassVar[bool] = False
+    reputation_settings:  ClassVar[dict] = {}
+    geolocation_enabled:  ClassVar[bool] = True
+    geolocation_settings: ClassVar[dict] = {}
 
-    ip_whitelist:  dict = {}
-    tor_whitelist: dict = {}
+    ip_whitelist:  ClassVar[dict] = {}
+    tor_whitelist: ClassVar[dict] = {}
 
-    open_ports: dict[PROTO, dict] = {
+    open_ports: ClassVar[dict[PROTO, dict]] = {
         PROTO.TCP: {},
         PROTO.UDP: {}
     }
-    _packet_parser: ProxyParser = IPPPacket.netfilter_recv  # alternate constructor
+    # this is providing an alternate constructor
+    _packet_parser: ClassVar[ProxyParser] = IPPPacket.netfilter_recv
 
     @classmethod
     def _setup(cls) -> None:
@@ -53,7 +54,7 @@ class IPProxy(NFQueue):
 
             return False
 
-        # standard ip proxy inspect, further action decided post inspection.
+        # standard ip proxy inspect. further action will be decided after inspection.
         if (packet.action is CONN.ACCEPT and packet.ipp_profile):
             return True
 
@@ -62,7 +63,7 @@ class IPProxy(NFQueue):
         if (packet.direction is DIR.INBOUND and packet.ips_profile):
             packet.nfqueue.forward(Queue.IPS_IDS)
 
-        # if packet is not dropped at this point, neither the ips/ids and ip proxy profiles are set. in this case
+        # if the packet is not dropped at this point, neither the ips/ids nor proxy profiles are set. in this case,
         # the ip proxy will issue the accept verdict.
         elif (packet.action is CONN.ACCEPT and not packet.ipp_profile):
             packet.nfqueue.accept()
@@ -71,7 +72,7 @@ class IPProxy(NFQueue):
         else:
             packet.nfqueue.drop()
 
-        # quick path to log geo data. doing this post action since it's a log only path.
+        # quick path to log geo data. doing this post action, since it's a log-only path.
         log_geolocation(packet)
 
         return False
@@ -84,7 +85,7 @@ class IPProxy(NFQueue):
         # TODO: look into what would be needed to expand ips inspection to lan to wan or lan to lan rules.
         if (direction is DIR.INBOUND and packet.ips_profile):
 
-            # mark update needed to notify ips to drop the packet, but inspect under specified profile. bitwise op
+            # mark update needed to notify ips to drop the packet, but inspect under specified profile. the bitwise op
             # resets first 2 bits (allocated for action) to 0 (CONN.DROP = 0).
             if (action is CONN.DROP):
                 packet.nfqueue.update_mark(packet.mark & 65532)
@@ -138,7 +139,7 @@ def inspect(packet: IPPPacket) -> None:
 
     Log.log(packet, IPP_INSPECTION_RESULTS(category, action))
 
-def _inspect(packet: IPPPacket) -> Tuple[CONN, Tuple[str, str]]:
+def _inspect(packet: IPPPacket) -> tuple[CONN, tuple[str, str]]:
     action = CONN.ACCEPT
     reputation = REP.DNL
 

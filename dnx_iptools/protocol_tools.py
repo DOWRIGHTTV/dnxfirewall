@@ -28,13 +28,13 @@ __all__ = (
     'parse_query_name'
 )
 
-btoia = partial(int.from_bytes, byteorder='big', signed=False)
-itoba = partial(int.to_bytes, byteorder='big', signed=False)
+btoia: Callable[[bytes], int] = partial(int.from_bytes, byteorder='big', signed=False)
+itoba: Callable[[int], bytes] = partial(int.to_bytes, byteorder='big', signed=False)
 
 # will ping specified host. to be used to prevent duplicate ip address handouts.
-def icmp_reachable(host_ip: str) -> Union[Any, bool]:
+def icmp_reachable(host_ip: str) -> bool:
     try:
-        return run(f'ping -c 2 {host_ip}', stdout=DEVNULL, shell=True, check=True)
+        return bool(run(f'ping -c 2 {host_ip}', stdout=DEVNULL, shell=True, check=True))
     except CalledProcessError:
         return False
 
@@ -77,7 +77,7 @@ def mac_stob(mac_address: str) -> bytes:
 
     return binascii.unhexlify(mac_address.replace(':', ''))
 
-def convert_string_to_bitmap(rule: str, offset: int, hash=hash, int=int) -> Tuple[int, int]:
+def convert_string_to_bitmap(rule: str, offset: int) -> tuple[int, int]:
     host_hash = hash(rule)
 
     b_id = int(f'{host_hash}'[:offset])
@@ -85,7 +85,7 @@ def convert_string_to_bitmap(rule: str, offset: int, hash=hash, int=int) -> Tupl
 
     return b_id, h_id
 
-def cidr_to_int(cidr: int, int=int) -> int:
+def cidr_to_int(cidr: int) -> int:
 
     # using hostmask to shift to the start of network bits. int conversion to cover string values.
     hostmask = 32 - int(cidr)
@@ -93,14 +93,14 @@ def cidr_to_int(cidr: int, int=int) -> int:
     return ~((1 << hostmask) - 1) & (2**32 - 1)
 
 def parse_query_name(data: Union[bytes, memoryview], offset: int = 0, *,
-                     qname: bool = False) -> Union[int, Tuple[int, Tuple[str, int]]]:
+                     qname: bool = False) -> Union[int, tuple[int, tuple[str, int]]]:
     '''parse dns name from sent in data. uses overall dns query to follow pointers. will return
     name and offset integer value if qname arg is True otherwise will only return offset.'''
 
-    idx = offset
-    has_ptr = False
-    label_ct = 0
-    query_name = bytearray()
+    idx: int = offset
+    has_ptr: bool = False
+    label_ct: int = 0
+    query_name: bytearray = bytearray()
 
     for _ in RUN_FOREVER:
 
@@ -145,12 +145,13 @@ def domain_stob(domain_name: str) -> bytes:
         byte_pack(len(part)) + part.encode('utf-8') for part in domain_name.split('.')
     ])
 
-    # root query (empty string) gets eval'd to length 0 and doesn't need a term byte. ternary will add term byte, if the
+    # root query (empty string) gets eval'd to length 0 and doesn't need a term byte. ternary will add term byte if the
     # domain name is not a null value.
     return domain_bytes + b'\x00' if domain_name else domain_bytes
 
 # will create dns header specific to response. default resource record count is 1
 def create_dns_response_header(dns_id, record_count=1, *, rd=1, ad=0, cd=0, rc=0):
+
     qr, op, aa, tc, ra, zz = 1, 0, 0, 0, 1, 0
     f = (qr << 15) | (op << 11) | (aa << 10) | (tc << 9) | (rd << 8) | \
         (ra <<  7) | (zz <<  6) | (ad <<  5) | (cd << 4) | (rc << 0)
@@ -159,6 +160,7 @@ def create_dns_response_header(dns_id, record_count=1, *, rd=1, ad=0, cd=0, rc=0
 
 # will create dns header specific to request/query. default resource record count is 1, additional record count optional
 def create_dns_query_header(dns_id, arc=0, *, cd):
+
     qr, op, aa, tc, rd, ra, zz, ad, rc = 0, 0, 0, 0, 1, 0, 0, 0, 0
     f = (qr << 15) | (op << 11) | (aa << 10) | (tc << 9) | (rd << 8) | \
         (ra <<  7) | (zz <<  6) | (ad <<  5) | (cd << 4) | (rc << 0)
@@ -168,7 +170,7 @@ def create_dns_query_header(dns_id, arc=0, *, cd):
 
 _icmp_header_template = PR_ICMP_HDR(**{'type': 8, 'code': 0})
 
-def init_ping(timeout: float = .25) -> Callable:
+def init_ping(timeout: float = .25) -> Callable[[str, int], bool]:
     '''function factory that returns a ping function object optimized for speed. not thread safe within a single ping
      object, but is thread safe between multiple ping objects.'''
 
@@ -178,7 +180,7 @@ def init_ping(timeout: float = .25) -> Callable:
     ping_send = ping_sock.sendto
     ping_recv = ping_sock.recvfrom
 
-    def ping(target: str, *, count: int = 1, OSError=OSError) -> bool:
+    def ping(target: str, *, count: int = 1, ose=OSError) -> bool:
 
         icmp = _icmp_header_template()
         icmp.id = getrandbits(16)
@@ -191,7 +193,7 @@ def init_ping(timeout: float = .25) -> Callable:
 
             try:
                 ping_send(icmp.assemble(), (target, 0))
-            except OSError:
+            except ose:
                 pass
 
             else:
@@ -199,7 +201,7 @@ def init_ping(timeout: float = .25) -> Callable:
                 for _ in RUN_FOREVER:
                     try:
                         echo_reply, addr = ping_recv(2048)
-                    except OSError:
+                    except ose:
                         pass
 
                     else:

@@ -8,11 +8,11 @@ from dnx_gentools.def_constants import RFC1918
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_enums import PROTO, DIR, REP, GEO
 from dnx_gentools.standard_tools import Initialize
-
 from dnx_gentools.file_operations import load_configuration, cfg_read_poller
+
 from dnx_routines.configure.iptables import IPTablesManager
 
-from dnx_secmods.ip_proxy.ip_proxy_log import Log
+from ip_proxy_log import Log
 
 
 class Configuration:

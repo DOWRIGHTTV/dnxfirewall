@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from collections import namedtuple as _namedtuple
+from typing import NamedTuple as _NamedTuple, Union as _Union, Optional as _Optional
+
+from dnx_gentools.def_enums import PROTO
 
 # DHCP SERVER
 DHCP_REQUEST_INFO = _namedtuple(
@@ -15,7 +18,12 @@ DHCP_RECORD = _namedtuple('server_record', 'rtype timestamp mac hostname')
 SYSLOG_SERVERS = _namedtuple('syslog_servers', 'primary secondary')
 
 # DNS PROXY
-DNS_SERVERS = _namedtuple('dns_servers', 'primary secondary')
+class DNS_SERVERS(_NamedTuple):
+    primary: dict[_Union[str, PROTO], _Optional[bool]]
+    secondary: dict[_Union[str, PROTO], _Optional[bool]]
+
+
+# DNS_SERVERS = _namedtuple('dns_servers', 'primary secondary')
 PROXY_DECISION = _namedtuple('proxy_decision', 'name decision')
 RELAY_CONN = _namedtuple('relay_conn', 'remote_ip sock send recv version')
 DNS_CACHE = _namedtuple('dns_cache', 'ttl records')

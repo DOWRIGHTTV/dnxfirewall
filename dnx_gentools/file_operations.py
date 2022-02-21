@@ -111,7 +111,7 @@ def json_to_yaml(data: Union[str, dict], *, is_string: bool = False) -> str:
     # removing empty lines and sliding indent back by 4 spaces
     return '\n'.join([y[4:] for y in data.splitlines() if y.strip()])
 
-def load_tlds() -> Generator[Tuple[str, int]]:
+def load_tlds() -> Generator[tuple[str, int]]:
     dns_proxy = load_configuration('dns_proxy')
 
     for tld, setting in dns_proxy.get_items('tlds'):
@@ -234,7 +234,7 @@ class ConfigChain:
 
         self.__mutable_config = copy(self.__flat_config[0])
 
-    def __getitem__(self, key: str) -> Optional[Union[int, str, list]]:
+    def __getitem__(self, key: str) -> Optional[Union[bool, int, str, list]]:
 
         for cfg in self.__flat_config:
 
@@ -244,7 +244,7 @@ class ConfigChain:
 
         raise KeyError(f'{key} not found in configuration chain.')
 
-    def __setitem__(self, key: str, value: Union[int, str, list, None]):
+    def __setitem__(self, key: str, value: Union[bool, int, str, list, None]):
 
         # print('setting ->', value)
 
@@ -256,7 +256,7 @@ class ConfigChain:
         for k in key_matches:
             del self.__mutable_config[k]
 
-    def get(self, key: str, ret_val: Any = None) -> Union[Optional[Union[int, str, list]], Optional[Any]]:
+    def get(self, key: str, ret_val: Any = None) -> Any:
 
         for cfg in self.__flat_config:
 

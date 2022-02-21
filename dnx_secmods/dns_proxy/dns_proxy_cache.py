@@ -18,10 +18,10 @@ NOT_VALID = -1
 request_info = namedtuple('request_info', 'server proxy')
 
 def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
-    _top_domains = load_configuration('dns_cache')['top_domains']
+    _top_domains = load_data('dns_server.cache')['top_domains']
 
-    domain_counter = Counter({dom: cnt for cnt, dom in enumerate(reversed(_top_domains))})
-    counter_lock = threading.Lock()
+    domain_counter: Counter[str, int] = Counter({dom: cnt for cnt, dom in enumerate(reversed(_top_domains))})
+    counter_lock: Lock = threading.Lock()
 
     top_domain_filter = set(load_top_domains_filter())
 
@@ -30,12 +30,12 @@ def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
 
     dict_get = dict.__getitem__
 
-    @cfg_read_poller('dns_cache')
-    def manual_clear(cache: DNSCache, cfg_file: str):
-        cache_settings = load_configuration(cfg_file)
+    @cfg_read_poller('dns_server.cache')
+    def manual_clear(cache: DNSCache, cfg_file: str) -> None:
+        cache_settings: ConfigChain = load_configuration(cfg_file)
 
-        clear_dns_cache   = cache_settings['clear->standard']
-        clear_top_domains = cache_settings['clear->top_domains']
+        clear_dns_cache:  bool = cache_settings['clear->standard']
+        clear_top_domains: bool = cache_settings['clear->top_domains']
 
         # when new top domains or standard cache (future) are written to disk, the poller will trigger whether the
         # flags are set or not. this will ensure we only run through the code if needed.

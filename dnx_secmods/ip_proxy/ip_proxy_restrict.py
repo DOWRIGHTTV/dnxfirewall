@@ -2,19 +2,20 @@
 
 from __future__ import annotations
 
-# TODO: move this module to cfirewall.
+# TODO: move this module to cfirewall. this should be able to be implemented in the form of quotas.
+#  either have it directly on the rule or use a "rule id" key pair withe quota time as value for rule to check against.
 
 import threading
 
 from datetime import datetime
 
 from dnx_gentools.def_constants import *
+from dnx_gentools.standard_tools import looper, classproperty, Initialize
 from dnx_gentools.file_operations import load_configuration, cfg_read_poller, ConfigurationManager
+
 from dnx_routines.configure.system_info import System
 
-from dnx_secmods.ip_proxy.ip_proxy_log import Log
-
-from dnx_gentools.standard_tools import looper, classproperty, Initialize
+from ip_proxy_log import Log
 
 # required when using ConfigurationManager context manager
 ConfigurationManager.set_log_reference(Log)
@@ -28,8 +29,8 @@ class LanRestrict:
     call run method to start service.
 
     '''
-    _enabled = False
-    _active  = False
+    _enabled: ClassVar[bool] = False
+    _active:  ClassVar[bool] = False
 
     __slots__ = (
         'IPProxy', 'initialize'
@@ -63,7 +64,7 @@ class LanRestrict:
     def _get_settings(self, cfg_file):
         ip_proxy = load_configuration(cfg_file)
 
-        enabled = ip_proxy['time_restriction']['enabled']
+        enabled = ip_proxy['time_restriction->enabled']
         self._change_attribute('_enabled', enabled)
 
         self.initialize.done()
@@ -99,7 +100,7 @@ class LanRestrict:
         restriction_start, restriction_length, offset = self._load_restriction()
 
         now = fast_time() + offset
-        c_d = [int(i) for i in System.date(now)] # current date
+        c_d = [int(i) for i in System.date(now)]  # current date
         r_start = [int(i) for i in restriction_start.split(':')]
 
         restriction_start = datetime(c_d[0], c_d[1], c_d[2], r_start[0], r_start[1]).timestamp()
@@ -121,17 +122,17 @@ class LanRestrict:
 
             time_restriction['end'] = restriction_end
 
-            dnx.write_configuration(time_restriction)
+            dnx.write_configuration(time_restriction.expanded_user_data)
 
     def _load_restriction(self):
         ip_proxy = load_configuration('ip_proxy')
         logging = load_configuration('logging_client')
 
-        restriction_start  = ip_proxy['time_restriction']['start']
-        restriction_length = ip_proxy['time_restriction']['length']
+        restriction_start  = ip_proxy['time_restriction->start']
+        restriction_length = ip_proxy['time_restriction->length']
 
-        os_direction = logging['time_offset']['direction']
-        os_amount    = logging['time_offset']['amount']
+        os_direction = logging['time_offset->direction']
+        os_amount    = logging['time_offset->amount']
 
         offset = int(f'{os_direction}{os_amount}') * ONE_DAY
 
@@ -145,7 +146,7 @@ class LanRestrict:
 
             time_restriction['active'] = active
 
-            dnx.write_configuration(time_restriction)
+            dnx.write_configuration(time_restriction.expanded_user_data)
 
     @classmethod
     def __load_status(cls):
