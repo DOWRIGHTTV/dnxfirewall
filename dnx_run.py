@@ -50,10 +50,12 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
 SERVICE_MODULES = [f'dnx-{mod.replace("_", "-")}' for mod, modset in MODULE_MAPPING.items() if modset['service']]
 
 COMMANDS = {
-    'start': {'priv': True},
-    'restart': {'priv': True},
-    'stop': {'priv': True},
-    'modstat': {'priv': True}
+    'start': {'priv': True, 'module': True},
+    'restart': {'priv': True, 'module': True},
+    'stop': {'priv': True, 'module': True},
+    'status': {'priv': True, 'module': True},
+    'cli': {'priv': True, 'module': True},
+    'modstat': {'priv': True, 'module': False}
 }
 
 systemctl_ret_codes: dict[int, str] = {
@@ -64,44 +66,61 @@ systemctl_ret_codes: dict[int, str] = {
     4: 'program service status is unknown',
 }
 
+def sprint(msg: str, /) -> None:
+    print(f'\n{msg}\n')
+
+# ;)
+def sexit(msg: str, /) -> None:
+    exit(f'\n{msg}\n')
+
 def parse_args() -> tuple[str, str, dict]:
     command: str = get_index(1, cname='command')
     module: str = get_index(2, cname='module')
 
-    # checking if the specified module exists, then checking if subsequent command is valid for the module
     mod_settings = check_module(module)
-    if (command in mod_settings['exclude']):
-        exit(f'\n{command.upper()} not valid for {module.upper()}')
-
     check_command(command, module, mod_settings)
 
     os.environ['PASSTHROUGH_ARGS'] = ','.join(sys.argv[3:])
 
     return module, command, mod_settings
 
-def get_index(idx: int, /, *, cname='') -> str:
+def get_index(idx: int, /, *, cname: str = '') -> str:
     try:
         return sys.argv[idx]
     except IndexError:
-        exit(f'\nUNKNOWN {cname.upper()} -> see --help\n')
+        sexit(f'UNKNOWN {cname.upper()} -> see --help')
 
 def check_module(mod: str, /) -> dict:
-    valid_module = MODULE_MAPPING.get(mod)
-    if (not valid_module):
-        exit('\nUNKNOWN MODULE -> see --help\n')
-
-    return valid_module
+    return MODULE_MAPPING.get(mod, {})
 
 def check_command(cmd: str, mod: str, modset: dict) -> None:
-    if (cmd not in COMMANDS):
-        exit(f'\nUNKNOWN COMMAND ({cmd.upper()}) -> see --help\n')
-
-    if (cmd == 'cli' and not modset['priv']):
-        return
+    cmd_info = COMMANDS.get(cmd, None)
+    if (not cmd_info):
+        sexit(f'UNKNOWN COMMAND ({cmd.upper()}) -> see --help')
 
     root = not os.getuid()
+
+    # command level privilege
+    if (not root and cmd_info['priv']):
+        sexit(f'DNXFIREWALL command {cmd.upper()} requires root')
+
+    # the command does not require a module
+    if (not cmd_info['module']):
+        return
+
+    # ================
+    # MODULE REQUIRED
+    # ================
+    if (not modset):
+        sexit('UNKNOWN MODULE -> see --help')
+
+    # checking if command is valid for the module
+    if (cmd in modset['exclude']):
+        sexit(f'{cmd.upper()} not valid for {mod.upper()}')
+
+    # module level privilege
     if (not root and modset['priv']):
-        exit(f'\nDNXFIREWALL command {cmd.upper()} requires root for module {mod.upper()}\n')
+        sexit(f'DNXFIREWALL command {cmd.upper()} requires root for module {mod.upper()}')
 
 def utility_commands(mod: str, cmd: str = '') -> None:
     if (mod == 'modstat'):
@@ -142,19 +161,19 @@ def utility_commands(mod: str, cmd: str = '') -> None:
             try:
                 dnx_run(f'sudo systemctl {cmd} {svc}', shell=True)
             except CalledProcessError:
-                print(f'{svc.ljust(11)} => {"fail".rjust(7)}')
+                sprint(f'{svc.ljust(11)} => {"fail".rjust(7)}')
             else:
-                print(f'{svc.ljust(11)} => {"success".rjust(7)}')
+                sprint(f'{svc.ljust(11)} => {"success".rjust(7)}')
 
 def service_commands(mod: str, cmd: str) -> None:
     svc = f'dnx-{mod.replace("_", "-")}'
     try:
         dnx_run(f'sudo systemctl {cmd} {svc}', shell=True)
     except CalledProcessError as cpe:
-        print(f'{svc} service {cmd} failed. check journal. => msg={cpe}')
+        sprint(f'{svc} service {cmd} failed. check journal. => msg={cpe}')
 
     else:
-        print(f'{svc} service {cmd} successful.')
+        sprint(f'{svc} service {cmd} successful.')
 
 def run_cli(mod: str, mod_loc: str) -> None:
     os.environ['INIT_MODULE'] = 'YES'
@@ -167,8 +186,7 @@ def run_cli(mod: str, mod_loc: str) -> None:
     try:
         importlib.import_module(mod_loc)
     except Exception as E:
-        print(f'{mod} cli run failure. => {E}')
-        hardout()
+        sexit(f'{mod} cli run failure. => {E}')
 
 
 if (__name__ == '__main__'):
