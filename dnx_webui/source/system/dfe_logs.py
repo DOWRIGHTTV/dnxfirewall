@@ -1,18 +1,22 @@
 #!/usr/bin/python3
 
+from __future__ import annotations
+
+from typing import Optional
+
 import os
 
 from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.file_operations import tail_file
 from dnx_routines.configure.system_info import System
 
-# NOTE: this will likely not be needed anymore with ajax client implemented
-def load_page(uri_query):
+# NOTE: this will likely not be needed anymore with the ajax client implementation
+def load_page(uri_query) -> tuple[list[Optional[str]], str, None]:
     file_path = f'{HOME_DIR}/dnx_system/log/combined'
 
     return get_log_entries(file_path), 'combined', None
 
-def update_page(form):
+def update_page(form: dict) -> tuple[list[Optional[str]], str, None]:
     log_type = form.get('table', 'combined')
 
     # ternary to handle initial page load.
@@ -22,9 +26,10 @@ def update_page(form):
     if (log_type in ['combined', 'dhcp_server', 'dns_proxy', 'ip_proxy', 'ips', 'syslog', 'system', 'web_app', 'logins']):
         file_path = f'{HOME_DIR}/dnx_system/log/{log_type}'
 
-    # returning none to fill table_args var on the calling function to allow reuse with the reports page method
-    # TODO: this should potentially be wrapped in error handling at main. error will raise if table key is in form,
-    #  but type is not in allowed list.
+    else:
+        return [], log_type, None
+
+    # returning none to fill table_args var on the calling function to allow reuse with the report's page method
     return get_log_entries(file_path), log_type, None
 
 # TODO: make front end logging 4 fields. date/time, service, level, entry. this will make the presentation nicer
@@ -32,7 +37,7 @@ def update_page(form):
     # NOTE: it looks like not all long entries, especially debug have the service identified in the log currently.
     # would probably be a good idea to just use the log/service name defined in module so each entry does not need
     # to worry about it.
-def get_log_entries(file_path):
+def get_log_entries(file_path: str) -> list[str]:
     log_files = reversed(sorted(os.listdir(file_path))[:-1])
 
     temp_logs = []

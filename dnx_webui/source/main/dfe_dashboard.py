@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+from __future__ import annotations
+
 from itertools import zip_longest
 
 from dnx_routines.configure.system_info import Interface, System, Services

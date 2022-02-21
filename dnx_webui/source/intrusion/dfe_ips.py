@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from dnx_gentools.def_constants import INVALID_FORM
+from dnx_gentools.def_typing import *
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
-from dnx_routines.configure.web_validate import ValidationError, convert_int, get_convert_int, ip_address, standard
+from dnx_routines.configure.web_validate import ValidationError, convert_int, get_convert_int, get_convert_bint, ip_address, standard
 from dnx_routines.configure.system_info import System
 from dnx_routines.configure.iptables import IPTablesManager
 
-def load_page(form):
+def load_page(form: dict) -> dict:
     ips = load_configuration('ips_ids')
 
     passive_block_ttl = ips['passive_block_ttl']
@@ -36,7 +35,7 @@ def load_page(form):
     ddos_notify = False if ddos['enabled'] or nats_configured else True
     ps_notify   = False if portscan['enabled'] or nats_configured else True
 
-    # converting standard timestamp to front end readable string format
+    # converting standard timestamp to frontend readable string format
     passively_blocked_hosts = []
     pbh = System.ips_passively_blocked()
     for host, timestamp in pbh:
@@ -53,8 +52,7 @@ def load_page(form):
 
     return ips_settings
 
-def update_page(form):
-    # Matching logging update form and sending to configuration method.
+def update_page(form: dict) -> Union[ValidationError, str]:
     if ('dnx_ddos_update' in form):
         action = CFG.ADD if 'ddos' in form else CFG.DEL
 
@@ -81,7 +79,7 @@ def update_page(form):
 
     elif ('dnx_portscan_update' in form):
         enabled_settings = config(**{
-            'enabled': form.getlist('ps_settings', None)
+            'enabled': {k: 1 for k in form.getlist('ps_settings', [])}
         })
 
         error = validate_portscan_settings(enabled_settings)
@@ -166,7 +164,6 @@ def update_page(form):
 # ==============
 # VALIDATION
 # ==============
-
 def validate_portscan_settings(settings: config, /) -> Optional[ValidationError]:
     ips = load_configuration('ips')
 
@@ -185,7 +182,6 @@ def validate_passive_block_length(settings: config, /) -> Optional[ValidationErr
 # ==============
 # CONFIGURATION
 # ==============
-
 def configure_ddos(action: CFG):
     with ConfigurationManager('ips') as dnx:
         ips_settings = dnx.load_configuration()
@@ -203,13 +199,12 @@ def configure_ddos_limits(ddos_limits: config):
 
         dnx.write_configuration(ips_settings.expanded_user_data)
 
-# TODO: this could be converted to using bint convert
 def configure_portscan(portscan: config):
     with ConfigurationManager('ips') as dnx:
         ips_settings = dnx.load_configuration()
 
-        ips_settings['port_scan->enabled'] = True if 'enabled' in portscan.enabled else False
-        ips_settings['port_scan->reject']  = True if 'reject' in portscan.enabled else False
+        ips_settings['port_scan->enabled'] = get_convert_bint(portscan.enabled, 'enabled')
+        ips_settings['port_scan->reject']  = get_convert_bint(portscan.enabled, 'reject')
 
         dnx.write_configuration(ips_settings.expanded_user_data)
 

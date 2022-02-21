@@ -24,7 +24,6 @@ def load_page(form):
 
     return backups_info
 
-## Called when front end post, parsing web forms, calling backup methods ##
 def update_page(form):
 
     if (_BACKUP_DISABLED):

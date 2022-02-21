@@ -1,10 +1,9 @@
 #!/usr/bin/python3
 
-from typing import Optional
+from __future__ import annotations
 
-import dnx_routines.configure.configure as configure
-
-from dnx_gentools.def_constants import INVALID_FORM
+from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import INVALID_FORM, space_join
 from dnx_gentools.def_enums import CFG
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
@@ -16,18 +15,18 @@ from dnx_system.sys_action import system_action
 
 DISABLED_MANAGEMENT_SERVICES = ['cli']
 
-def load_page(form):
+def load_page(form: dict) -> dict[str, Union[list, dict[dict[str, int]]]]:
     dnx_settings = load_configuration('system')
 
     all_services = []
     for service, desc in dnx_settings.get_items('services'):
-        service = ' '.join((service.split('-')[1:]))
+        service = space_join((service.split('-')[1:]))
 
         all_services.append((service, desc, Services.status(service)))
 
-    return {'all_services': all_services, 'mgmt_access': dnx_settings['mgmt_access']}
+    return {'all_services': all_services, 'mgmt_access': dnx_settings.get_dict('mgmt_access')}
 
-def update_page(form):
+def update_page(form: dict) -> Optional[str]:
 
     # checking if button keys are present in form is easy first line validation to ensure valid form fields
     if ('update_mgmt_access' in form):
@@ -51,53 +50,41 @@ def update_page(form):
 
             configure_management_access(fields)
 
-        return
+        # blocking below code
+        return None
 
     # start/stop/restart services parsing.
-
-    valid_services = load_configuration('system')['services']
+    valid_services: list = load_configuration('system').get_list('services')
 
     if ('restart_svc' in form):
-        service = form.get('restart_svc')
-
-        service = 'dnx-' + service.replace(' ', '-')
-        if (service not in valid_services):
-            return INVALID_FORM
-
-        system_action(module='webui', command='systemctl restart', args=service)
-
-        Services.restart(service)
+        service = 'dnx-' + form.get('restart_svc', '').replace(' ', '-')
+        action = 'restart'
 
     elif ('start_svc' in form):
-        service = form.get('start_svc')
-
-        service = 'dnx-' + service.replace(' ', '-')
-        if (service not in valid_services):
-            return INVALID_FORM
-
-        system_action(module='webui', command='systemctl start', args=service)
+        service = 'dnx-' + form.get('start_svc', '').replace(' ', '-')
+        action = 'start'
 
     elif ('stop_svc' in form):
-        service = form.get('stop_svc')
-
-        service = 'dnx-' + service.replace(' ', '-')
-        if (service not in valid_services):
-            return INVALID_FORM
-
-        system_action(module='webui', command='systemctl stop', args=service)
+        service = 'dnx-' + form.get('stop_svc', '').replace(' ', '-')
+        action = 'stop'
 
     else:
         return INVALID_FORM
+
+    if (service not in valid_services):
+        return INVALID_FORM
+
+    system_action(module='webui', command=f'systemctl {action}', args=service)
 
 
 # ==============
 # VALIDATION
 # ==============
-SERVICE_TO_PORT = {'webui': (80, 443), 'cli': (0,), 'ssh': (22,), 'ping': 1}
+SERVICE_TO_PORT: dict = {'webui': (80, 443), 'cli': (0,), 'ssh': (22,), 'ping': 1}
 
 def validate_management_access(fields: config) -> Optional[ValidationError]:
 
-    if (fields.zone not in ['lan', 'dmz'] or fields.service not in ['webui', 'cli', 'ssh', 'ping']):
+    if (fields.zone not in ['lan', 'dmz'] or fields.service not in SERVICE_TO_PORT):
         raise ValidationError(INVALID_FORM)
 
     # convert_int will return -1  if issues with form data and ValueError will cover

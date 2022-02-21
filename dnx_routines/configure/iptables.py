@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+from __future__ import annotations
+
 import fcntl
 
 from dnx_gentools.def_constants import *
@@ -19,16 +21,16 @@ UNLOCK_LOCK = fcntl.LOCK_UN
 class _Defaults:
     '''class containing methods to build default IPTable rule sets.'''
 
-    def __init__(self, interfaces):
+    def __init__(self, interfaces: dict):
 
         for zone, intf in interfaces.items():
             setattr(self, f'_{zone}_int', intf)
 
-        self.custom_nat_chains = ['DSTNAT', 'SRCNAT', 'REDIRECT_OVERRIDE']
+        self.custom_nat_chains: list[str] = ['DSTNAT', 'SRCNAT', 'REDIRECT_OVERRIDE']
 
     # calling all methods in the class dict.
     @classmethod
-    def load(cls, interfaces):
+    def load(cls, interfaces: dict) -> None:
 
         # self init
         self = cls(interfaces)
@@ -39,18 +41,18 @@ class _Defaults:
                 except Exception as E:
                     console_log(f'{E}')
 
-    def create_new_chains(self):
+    def create_new_chains(self) -> None:
         for chain in self.custom_nat_chains:
             shell(f'iptables -t nat -N {chain}')
 
         shell('iptables -N MGMT')
         shell('iptables -t raw -N IPS')  # ddos prevention rule insertion location
 
-    def default_actions(self):
+    def default_actions(self) -> None:
         # default allow is explicitly set in case it was set to deny prior
         shell('iptables -P OUTPUT ACCEPT')
 
-    def cfirewall_hook(self):
+    def cfirewall_hook(self) -> None:
         '''IPTable rules to give cfirewall control of all tcp, udp, and icmp packets.
 
         cfirewall operates as a basic ip/protocol filter and as a security module inspection pre preprocessor.
@@ -81,7 +83,7 @@ class _Defaults:
         shell(f'iptables -A INPUT -p udp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
         shell(f'iptables -A INPUT -p icmp -j NFQUEUE --queue-num {Queue.CFIREWALL}')
 
-    def prefilter_set(self):
+    def prefilter_set(self) -> None:
         # marking traffic entering wan interface. this is currently used for directionality comparisons and to restrict
         # system access.
         shell(f'iptables -t mangle -A INPUT -i {self._wan_int} -j MARK --set-mark {WAN_IN}')
@@ -96,7 +98,7 @@ class _Defaults:
         shell(f'iptables -I INPUT -i {self._wan_int} -m addrtype --dst-type BROADCAST -j DROP')
 
     # TODO: implement commands to check source and dnat changes in nat table. what does this even mean?
-    def nat(self):
+    def nat(self) -> None:
         shell('iptables -t raw -A PREROUTING -j IPS')  # action to check the custom ips chain
 
         # NOTE: this is being phased out
@@ -130,14 +132,14 @@ class IPTablesManager:
         '_iptables_lock_file', '_iptables_lock'
     )
 
-    def __init__(self):
+    def __init__(self) -> None:
         interfaces = load_data('system.cfg')['interfaces']['builtins']
 
-        self._intf_to_zone = {
+        self._intf_to_zone: dict[str, int] = {
             interfaces[zone]['ident']: zone for zone in ['wan', 'lan', 'dmz']
         }
 
-        self._zone_to_intf = {
+        self._zone_to_intf: dict[str, int] = {
             zone: interfaces[zone]['ident'] for zone in ['wan', 'lan', 'dmz']
         }
 

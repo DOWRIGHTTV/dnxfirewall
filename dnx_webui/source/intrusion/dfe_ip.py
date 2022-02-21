@@ -1,17 +1,17 @@
 #!/usr/bin/python3
 
-from typing import Optional
+from __future__ import annotations
 
 from dnx_gentools.def_constants import INVALID_FORM
+from dnx_gentools.def_typing import *
 from dnx_gentools.def_enums import DATA, GEO
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
 from dnx_routines.configure.web_validate import ValidationError, convert_int, get_convert_int, convert_bint
 
-def load_page(form):
-    ip_proxy = load_configuration('ip_proxy')
-
-    country_map = load_configuration('geolocation', filepath='dnx_webui/data')
+def load_page(form: dict) -> dict:
+    ip_proxy: ConfigChain = load_configuration('ip_proxy')
+    country_map: ConfigChain = load_configuration('geolocation', filepath='dnx_webui/data')
 
     # controlling whether to load defaults or user selected view. These are validated by the update function, so it is
     # safe to assume types.
@@ -21,8 +21,8 @@ def load_page(form):
     selected_region = set(country_map[f'{geo_region}->countries'])
 
     geolocation = [
-        (country, dire) for country, dire in ip_proxy.get_items('geolocation')
-        if country in selected_region and (dire == geo_direction or geo_direction == 4)
+        (country, dir) for country, dir in ip_proxy.get_items('geolocation')
+        if country in selected_region and (dir == geo_direction or geo_direction == 4)
     ]
 
     tr_settings = ip_proxy['time_restriction->start'].split(':')
@@ -63,9 +63,9 @@ def load_page(form):
 
     return ipp_settings
 
-def update_page(form):
+def update_page(form: dict) -> tuple[bool, WebError]:
 
-    # no action needed for this at this time. in the future validations may be required, but the load page has been
+    # no action needed for this at this time. in the future, validations may be required, but the load page has been
     # expanded to generate the user select data.
     if ('change_geo_view' in form):
         geo_direction = convert_int(form.get('menu_dir', DATA.MISSING))
@@ -99,7 +99,7 @@ def update_page(form):
         configure_time_restriction(tr_settings)
 
     elif ('continent' in form):
-        return 'Bulk actions are still in development.'
+        return False, {'error': 69, 'message': 'Bulk actions are still in development.'}
 
     else:
         return False, {'error': 5, 'message': INVALID_FORM}
@@ -107,7 +107,7 @@ def update_page(form):
 # ----------------
 # AJAX PROCESSING
 # ----------------
-def update_field(form):
+def update_field(form: dict) -> tuple[bool, WebError]:
 
     category = config(**{
         'type': form.get('type', DATA.MISSING),
@@ -137,7 +137,7 @@ def update_field(form):
     else:
         return False, {'error': 69, 'message': 'unknown action'}
 
-    return True, {'error': 0, 'message': None}
+    return True, {'error': 0, 'message': ''}
 
 # ==============
 # VALIDATION
@@ -201,7 +201,7 @@ def configure_geolocation(category: config, *, rtype: str = 'country') -> None:
     with ConfigurationManager('ip_proxy') as dnx:
         ip_proxy_settings = dnx.load_configuration()
 
-        # setting individual country to user set value
+        # setting the individual country to user set value
         if (rtype == 'country'):
             ip_proxy_settings[f'geolocation->{category.name.lower()}'] = category.direction
 
@@ -212,7 +212,7 @@ def configure_geolocation(category: config, *, rtype: str = 'country') -> None:
 
         dnx.write_configuration(ip_proxy_settings.expanded_user_data)
 
-def configure_time_restriction(tr: config, /):
+def configure_time_restriction(tr: config, /) -> None:
     with ConfigurationManager('ip_proxy') as dnx:
         ip_proxy_settings = dnx.load_configuration()
 
@@ -225,7 +225,7 @@ def configure_time_restriction(tr: config, /):
 
         res_length = int(float(res_length) * 3600)
 
-        ip_proxy_settings['time_restriction->start']  = start_time
+        ip_proxy_settings['time_restriction->start'] = start_time
         ip_proxy_settings['time_restriction->length'] = res_length
         ip_proxy_settings['time_restriction->enabled'] = tr.enabled
 

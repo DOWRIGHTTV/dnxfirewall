@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
-DISABLED = False
+DISABLED = True
 
 from typing import *
 
@@ -14,6 +14,9 @@ if (TYPE_CHECKING and not DISABLED):
     from ipaddress import IPv4Address
 
     Wrapper = Callable([...], None)
+
+    FileLock = NewType('FileLock', type('LOCK'))
+    WebError = NewType('WebError', dict[str, Union[int, str]])
 
 # dnx class imports for use as Types
 if (TYPE_CHECKING and not DISABLED):

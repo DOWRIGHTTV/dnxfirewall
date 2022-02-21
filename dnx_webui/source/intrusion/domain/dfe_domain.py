@@ -44,7 +44,7 @@ def update_page(form: dict) -> tuple[bool, dict]:
 
     configure_domain_categories(category, ruleset=ruleset)
 
-    return True, {'error': 0, 'message': None}
+    return True, {'error': 0, 'message': ''}
 
 # ==============
 # VALIDATION

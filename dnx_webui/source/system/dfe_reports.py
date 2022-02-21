@@ -1,5 +1,8 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
+from __future__ import annotations
+
+from dnx_gentools.def_typing import *
 from dnx_gentools.def_enums import DATA
 from dnx_gentools.file_operations import load_data, config
 
@@ -7,14 +10,14 @@ from dnx_routines.configure.system_info import System
 from dnx_routines.configure.web_validate import INVALID_FORM
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 
-def load_page(uri_query=None):
-    # if sent from dashboard link, infected-clients table will open directly.
+def load_page(uri_query: Optional[dict] = None) -> tuple[list, str, str]:
+    # if sent from the dashboard link, infected-clients table will open directly.
     if uri_query is not None and uri_query.get('view_clients', None):
         return load_infected_clients(), 'all', 'infected_clients'
 
     return get_table_data(action='all', table='dnsproxy', routine='last'), 'dns_proxy', 'all'
 
-def update_page(form):
+def update_page(form: dict) -> tuple[list, str, str]:
 
     # TODO: bring validation up to speed (ensure host is valid mac format). make database raise validation error
     #  when removing a client that isn't present in the db. this means some tomfoolery happened and we should return
@@ -70,9 +73,10 @@ def get_table_data(*, action, table, routine, users=None):
 
     return [format_row(row, users) for row in table_data]
 
-def format_row(row, users):
-    '''formats database data to be better displayed and managed by front end. will replace
-    all '_' with ' '. If user is passed in, it will be appended before last_seen.'''
+def format_row(row: list, users: dict) -> list[str]:
+    '''format database data to be better displayed and managed by frontend.
+
+    will replace all '_' with spaces and append a username if available'''
 
     *entries, last_seen = row
 
@@ -84,8 +88,8 @@ def format_row(row, users):
     entries.append(last_seen)
     return [str(x).lower().replace('_', ' ') for x in entries]
 
-def load_infected_clients():
-    dhcp_server = load_data('dhcp_server.cfg')
+def load_infected_clients() -> list:
+    dhcp_server: dict = load_data('dhcp_server.cfg')
     users = dhcp_server['reservations']
 
     return get_table_data(action='all', table='infectedclients', routine='last', users=users)
