@@ -155,15 +155,18 @@ def calculate_file_hash(file_to_hash: str, *, path: str = 'dnx_system', folder: 
 
     return file_hash
 
-def cfg_read_poller(watch_file: str, ext: str = '.cfg', *, folder: str = 'data', class_method: bool = False):
-    '''Automate Class configuration file poll decorator. apply this decorator to all functions
-    that will update configurations loaded in memory from json files. config file must be sent
-    in via decorator argument. set class_method argument to true if being used with a class method.'''
+def cfg_read_poller(watch_file: str, ext: bool = True, *, folder: str = 'data', class_method: bool = False):
+    '''Automate Class configuration file poll decorator.
+
+    apply this decorator to all functions that will update configurations loaded in memory from json files.
+    config file must be sent in via decorator argument. set class_method argument to true if being used with a
+    class method.'''
 
     if not isinstance(watch_file, str):
         raise TypeError('watch file must be a string.')
 
-    watch_file += ext
+    if (not ext):
+        watch_file += '.cfg'
 
     def decorator(function_to_wrap):
         if (not class_method):
@@ -471,7 +474,7 @@ class ConfigurationManager:
             self._temp_file_path = f'{HOME_DIR}/{self._file_path}/usr/TEMP_{token_urlsafe(10)}'
             self._temp_file = open(self._temp_file_path, 'w+')
 
-            # changing file permissions and settings owner to dnx:dnx to not cause permissions issues after copy.
+            # changing file permissions and settings owner to dnx:dnx to not cause permission issues after copy.
             os.chmod(self._temp_file_path, 0o660)
             shutil.chown(self._temp_file_path, user=USER, group=GROUP)
 

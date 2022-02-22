@@ -29,9 +29,9 @@ def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
 
     dict_get = dict.__getitem__
 
-    @cfg_read_poller('dns_server', ext='.cache')
+    @cfg_read_poller('dns_server.cache', ext=True)
     def manual_clear(cache: DNSCache, cfg_file: str) -> None:
-        cache_settings: ConfigChain = load_configuration(cfg_file)
+        cache_settings: ConfigChain = load_configuration(cfg_file, ext='')
 
         clear_dns_cache:  bool = cache_settings['clear->standard']
         clear_top_domains: bool = cache_settings['clear->top_domains']
