@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, Callable, Generator, Type, NewType, ClassVar, Literal, Union, Optional, Any
+from typing import TYPE_CHECKING, Callable, Generator, Iterator, Type, NewType, ClassVar, Literal, Union, Optional, Any
 
 _DISABLED = False
 
@@ -28,7 +28,7 @@ if (TYPE_CHECKING and not _DISABLED):
     from dnx_netmods import *
     from dnx_webui import *
 
-    ProxyCallback = Callable[..., None]
+    ProxyCallback = Callable[[...], None]
     ProxyPacket = Union[IPPPacket, IPSPacket, DNSPacket, None]
     ProxyParser = Callable[[CPacket, int], ProxyPacket]
 

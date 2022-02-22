@@ -16,7 +16,7 @@ __all__ = (
 )
 
 cidr_to_host_count: dict[str, int] = {f'{i}': 2**x for i, x in enumerate(reversed(range(31)), 2)}
-ip_unpack: Callable[bytes, tuple] = Struct('>L').unpack
+ip_unpack: Callable[[bytes], tuple] = Struct('>L').unpack
 
 def _combine_domain(Log: Type[LogHandler]) -> list[str]:
     dns_proxy: ConfigChain = load_configuration('dns_proxy')

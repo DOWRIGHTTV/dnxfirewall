@@ -34,7 +34,7 @@ class DNSProxy(NFQueue):
         {DNS_CAT.doh}, {}, []
     )
 
-    _dns_sig_ref: ClassVar[Callable[Optional]] = None
+    _dns_sig_ref: ClassVar[Optional[Callable]] = None
     _packet_parser: ClassVar[ProxyParser] = DNSPacket.netfilter_recv  # alternate constructor
 
     __slots__ = (

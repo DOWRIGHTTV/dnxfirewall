@@ -9,7 +9,11 @@ if (TYPE_CHECKING):
     from cfirewall.fw_main import CFirewall
 
     from dns_proxy.dns_proxy import DNSProxy, DNSServer
-    from dns_proxy.dns_proxy_packets import ClientQuery, DNSPacket
+    from dns_proxy.dns_proxy_cache import request_tracker, dns_cache
+    from dns_proxy.dns_proxy_packets import ClientQuery, DNSPacket, ProxyPacket
+
+    DNSCache = dns_cache(dns_packet=DNSPacket, request_handler=ProxyPacket)
+    RequestTracker = request_tracker()
 
     from ip_proxy.ip_proxy import IPProxy
     from ip_proxy.ip_proxy_packets import IPPPacket

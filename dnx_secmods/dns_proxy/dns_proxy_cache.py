@@ -15,7 +15,6 @@ from dnx_gentools.standard_tools import looper
 from dns_proxy_log import Log
 
 NOT_VALID = -1
-request_info = namedtuple('request_info', 'server proxy')
 
 def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
     _top_domains = load_data('dns_server.cache')['top_domains']
@@ -23,14 +22,14 @@ def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
     domain_counter: Counter[str, int] = Counter({dom: cnt for cnt, dom in enumerate(reversed(_top_domains))})
     counter_lock: Lock = threading.Lock()
 
-    top_domain_filter = set(load_top_domains_filter())
+    top_domain_filter = tuple(load_top_domains_filter())
 
     # not needed once loaded into Counter
     del _top_domains
 
     dict_get = dict.__getitem__
 
-    @cfg_read_poller('dns_server.cache')
+    @cfg_read_poller('dns_server', ext='.cache')
     def manual_clear(cache: DNSCache, cfg_file: str) -> None:
         cache_settings: ConfigChain = load_configuration(cfg_file)
 
@@ -56,7 +55,7 @@ def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
 
             Log.notice('top domains cache has been cleared.')
 
-        with ConfigurationManager('dns_cache') as dnx:
+        with ConfigurationManager('dns_server', ext='.cache') as dnx:
             cache_settings = dnx.load_configuration()
 
             cache_settings['clear->standard'] = clear_dns_cache
@@ -88,7 +87,7 @@ def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
         ]
 
         # updating persistent file first then sending requests
-        with ConfigurationManager('dns_cache') as dnx:
+        with ConfigurationManager('dns_server', ext='.cache') as dnx:
             cache_storage = dnx.load_configuration()
 
             cache_storage['top_domains'] = top_domains
@@ -107,7 +106,7 @@ def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
         containers handled by class:
             general dict - standard cache storage
             private dict - top domains cache storage
-            private Counter - tracking number of times domains are queried
+            private Counter - tracking number of times a domain is queried
 
         initialization is the same as a dict, with the addition of two required arguments for callback references
         to the dns server.
@@ -115,7 +114,7 @@ def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
             packet (*reference to packet class*)
             request_handler (*reference to dns server request handler function*)
 
-        if the above callbacks are not set the top domains caching system will NOT actively update records, though the
+        if the above callbacks are not set, the top domain's caching system will NOT actively update records, but the
         counts will still be accurate/usable.
         '''
 
@@ -151,13 +150,13 @@ def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
             Log.debug(f'[{request}:{data_to_cache.ttl}] Added to standard cache. ')
 
         def search(self, query_name: str) -> DNS_CACHE:
-            '''if client requested domain is present in cache, will return namedtuple of time left on ttl
-            and the dns records, otherwise will return None. top domain count will get automatically
-            incremented if it passes filter.'''
+            '''return namedtuple of time left on ttl and the dns record if the client requested domain is cached.
+
+            returns None if not found. top domain count will be incremented automatically if it passes filter.'''
 
             if (query_name):
                 # list comp to built in any test for match. match will not increment top domain counter.
-                if not any([fltr in query_name for fltr in top_domain_filter]):
+                if (not [fltr for fltr in top_domain_filter if fltr in query_name]):
 
                     with counter_lock:
                         domain_counter[query_name] += 1
@@ -196,7 +195,7 @@ def request_tracker() -> RequestTracker:
         # both values present. (client_query class instance object and decision)
         def return_ready() -> ClientQuery:
 
-            # blocking until an at least one request has been received
+            # blocking until at least one request has been received
             wait_for_request()
 
             # immediately clearing event, so we don't have to worry about it after loop. this prevents having to deal
@@ -211,7 +210,7 @@ def request_tracker() -> RequestTracker:
 
             request_tracker_append(client_query)
 
-            # notifying return_ready there is a query ready to forward
+            # notifying return_ready that there is a query ready to forward
             notify_ready()
 
     return RequestTracker()

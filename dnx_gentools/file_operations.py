@@ -30,14 +30,10 @@ EXCLUSIVE_LOCK = fcntl.LOCK_EX
 UNLOCK_LOCK = fcntl.LOCK_UN
 
 
-def load_configuration(filename: str, *, filepath: str = 'dnx_system/data', ext_override: str = '') -> ConfigChain:
+def load_configuration(filename: str, ext: str = '.cfg', *, filepath: str = 'dnx_system/data') -> ConfigChain:
     '''load json data from a file and convert it to a ConfigChain'''
 
-    if (ext_override):
-        filename += ext_override
-
-    elif (not filename.endswith('.cfg')):
-        filename += '.cfg'
+    filename += ext
 
     # loading system default configs
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'r') as system_settings_io:
@@ -54,11 +50,10 @@ def load_configuration(filename: str, *, filepath: str = 'dnx_system/data', ext_
 
     return ConfigChain(system_settings, user_settings)
 
-def write_configuration(data: dict, filename: str, *, filepath: str = 'dnx_system/data/usr') -> None:
+def write_configuration(data: dict, filename: str, ext: str = '.cfg', *, filepath: str = 'dnx_system/data/usr') -> None:
     '''write a json data object to file.'''
 
-    if (not filename.endswith('.cfg')):
-        filename += '.cfg'
+    filename += ext
 
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
         json.dump(data, settings, indent=4)
@@ -160,7 +155,7 @@ def calculate_file_hash(file_to_hash: str, *, path: str = 'dnx_system', folder: 
 
     return file_hash
 
-def cfg_read_poller(watch_file: str, folder: str = 'data', class_method: bool = False):
+def cfg_read_poller(watch_file: str, ext: str = '.cfg', *, folder: str = 'data', class_method: bool = False):
     '''Automate Class configuration file poll decorator. apply this decorator to all functions
     that will update configurations loaded in memory from json files. config file must be sent
     in via decorator argument. set class_method argument to true if being used with a class method.'''
@@ -168,8 +163,7 @@ def cfg_read_poller(watch_file: str, folder: str = 'data', class_method: bool = 
     if not isinstance(watch_file, str):
         raise TypeError('watch file must be a string.')
 
-    if (not watch_file.endswith('.cfg')):
-        watch_file += '.cfg'
+    watch_file += ext
 
     def decorator(function_to_wrap):
         if (not class_method):
@@ -426,7 +420,7 @@ class ConfigurationManager:
     '''
 
     log: ClassVar[Optional[LogHandler]] = None
-    config_lock_file: ClassVar[str] = f'{HOME_DIR}/dnx_system/config.lock'
+    config_lock_file: ClassVar[ConfigLock] = f'{HOME_DIR}/dnx_system/config.lock'
 
     __slots__ = (
         '_config_lock', '_filename', '_data_written',
@@ -440,28 +434,28 @@ class ConfigurationManager:
 
         cls.log = ref
 
-    def __init__(self, config_file: str = '', file_path: Optional[str] = None) -> None:
+    def __init__(self, config_file: str = '', ext: str = '.cfg', file_path: Optional[str] = None) -> None:
         '''config_file can be omitted to allow for configuration lock to be used with
         external operations.'''
 
         self._config_file = config_file
 
         # initialization isn't required if config file is not specified.
-        if (config_file):
+        if (not config_file):
+            # make debug log complete if in lock only mode
+            self._filename = 'ConfigurationManager'
+
+        else:
             self._data_written = False
 
             if (not file_path):
                 file_path = 'dnx_system/data'
 
             self._file_path = file_path
-            self._filename = f'{config_file}.cfg'
+            self._filename = config_file + ext
 
             self._system_path_file = f'{HOME_DIR}/{file_path}/{self._filename}'
             self._usr_path_file = f'{HOME_DIR}/{file_path}/usr/{self._filename}'
-
-        else:
-            # make debug log complete if in lock only mode
-            self._filename = 'ConfigurationManager'
 
     # attempts to acquire lock on system config lock (blocks until acquired), then opens a temporary
     # file which the new configuration will be written to, and finally returns the class object.
@@ -474,7 +468,7 @@ class ConfigurationManager:
         # setup isn't required if config file is not specified.
         if (self._config_file):
             # TEMP prefix is to wildcard match any orphaned files for deletion
-            self._temp_file_path = f'{HOME_DIR}/{self._file_path}/usr/TEMP_{token_urlsafe(10)}.cfg'
+            self._temp_file_path = f'{HOME_DIR}/{self._file_path}/usr/TEMP_{token_urlsafe(10)}'
             self._temp_file = open(self._temp_file_path, 'w+')
 
             # changing file permissions and settings owner to dnx:dnx to not cause permissions issues after copy.
