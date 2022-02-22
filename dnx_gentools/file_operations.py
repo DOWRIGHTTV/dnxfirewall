@@ -519,7 +519,7 @@ class ConfigurationManager:
         if (not self._config_file):
             raise RuntimeError('Configuration Manager methods are disabled in lock only mode.')
 
-        return load_configuration(self._filename, filepath=self._file_path)
+        return load_configuration(self._filename, ext='', filepath=self._file_path)
 
     # accepts python dictionary for serialization to json. writes data to specified file opened.
     def write_configuration(self, data_to_write: dict):
