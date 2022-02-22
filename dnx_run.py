@@ -122,8 +122,8 @@ def check_command(cmd: str, mod: str, modset: dict) -> None:
     if (not root and modset['priv']):
         sexit(f'DNXFIREWALL command {cmd.upper()} requires root for module {mod.upper()}')
 
-def utility_commands(mod: str, cmd: str = '') -> None:
-    if (mod == 'modstat'):
+def modstat_command() -> None:
+    if (cmd == 'modstat'):
 
         svc_len: int = 0
         down_detected: bool = False
@@ -158,7 +158,8 @@ def utility_commands(mod: str, cmd: str = '') -> None:
         if (down_detected):
             print(f'\ndowned service detected. check journal for more details.')
 
-    elif (mod == 'all'):
+def service_command(mod: str, cmd: str) -> None:
+    if (mod == 'all'):
         for svc in SERVICE_MODULES:
             try:
                 dnx_run(f'sudo systemctl {cmd} {svc}', shell=True)
@@ -167,7 +168,8 @@ def utility_commands(mod: str, cmd: str = '') -> None:
             else:
                 sprint(f'{svc.ljust(11)} => {"success".rjust(7)}')
 
-def service_commands(mod: str, cmd: str) -> None:
+        return
+
     svc = f'dnx-{mod.replace("_", "-")}'
     try:
         dnx_run(f'sudo systemctl {cmd} {svc}', shell=True)
@@ -186,6 +188,9 @@ def service_commands(mod: str, cmd: str) -> None:
         else:
             sprint(f'{svc} service {cmd} successful.')
 
+# using environ var to notify imported module to initialize and run. this was done because a normal function was causing
+# issues with the linter thinking a ton of stuff was not defined. this could probably be done better.
+# TODO: see if can be done better
 def run_cli(mod: str, mod_loc: str) -> None:
     os.environ['INIT_MODULE'] = 'YES'
 
@@ -196,18 +201,27 @@ def run_cli(mod: str, mod_loc: str) -> None:
 
     try:
         importlib.import_module(mod_loc)
+    except KeyboardInterrupt:
+        sprint(f'{mod} (cli) interrupted')
+
     except Exception as E:
-        sexit(f'{mod} cli run failure. => {E}')
+        sprint(f'{mod} (cli) run failure. => {E}')
+
+    # this will make sure there are no dangling processes or threads on exit.
+    hardout()
 
 
 if (__name__ == '__main__'):
-    mod_name, mod_cmd, mod_set = parse_args()
+    mod_name, command, mod_set = parse_args()
 
-    if mod_set['service']:
-        service_commands(mod_name, mod_cmd)
-
-    if (not mod_set['module']):
-        utility_commands(mod_name, mod_cmd)
-
-    elif mod_cmd in ['modstat', 'cli']:
+    if (command == 'cli'):
         run_cli(mod_name, mod_set['module'])
+
+    elif (command == 'modstat'):
+        modstat_command()
+
+    elif mod_set['service']:
+        service_command(mod_name, command)
+
+    else:
+        print(f'<dnx> missing command logic for => mod={mod_name} command={command}')

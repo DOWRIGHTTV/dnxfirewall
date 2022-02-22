@@ -567,11 +567,11 @@ class Watcher:
                 time.sleep(FILE_POLL_TIMER)
 
     @property
-    # if watch file has been modified will update modified time and return True, else return False
+    # if watch file has been modified, update the modified time and return True, else return False
     def is_modified(self) -> bool:
         if not os.path.isfile(self._full_path):
 
-            # condition to allow initial load to happen without the usr file being present.
+            # condition to allow the initial load to happen without the usr file being present.
             # NOTE: the load configuration function loads system defaults prior to user settings
             # so there will be no issue marking a non-existent file as modified.
             if (not self._last_modified_time):
@@ -584,7 +584,7 @@ class Watcher:
         modified_time = os.stat(self._full_path).st_mtime
         if (modified_time != self._last_modified_time):
 
-            # updating shared modified time to reflect recent changes and return True notifying system of
+            # updating shared modified time to reflect recent changes and return True notifying the system of
             # a file change event
             self._last_modified_time = modified_time
 
