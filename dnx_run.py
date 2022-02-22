@@ -84,11 +84,11 @@ def parse_args() -> tuple[str, str, dict]:
 
     return module, command, mod_settings
 
-def get_index(idx: int, /, *, cname: str = '') -> str:
+def get_index(idx: int, /, *, cname: str = '') -> Union[str, object]:
     try:
         return sys.argv[idx]
     except IndexError:
-        sexit(f'UNKNOWN {cname.upper()} -> see --help')
+        return object()  # sentinel
 
 def check_module(mod: str, /) -> dict:
     return MODULE_MAPPING.get(mod, {})
