@@ -10,12 +10,12 @@ import time
 import importlib
 
 from functools import partial
-from subprocess import check_call, DEVNULL, CalledProcessError
+from subprocess import run, DEVNULL, CalledProcessError
 
 HOME_DIR = os.environ.get('HOME_DIR', '/home/dnx/dnxfirewall')
 
 hardout = partial(os._exit, 0)
-dnx_run = partial(check_call, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
+dnx_run = partial(run, check=True, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
 
 # =========================
 # MOD NAME -> MOD LOCATION
@@ -123,40 +123,39 @@ def check_command(cmd: str, mod: str, modset: dict) -> None:
         sexit(f'DNXFIREWALL command {cmd.upper()} requires root for module {mod.upper()}')
 
 def modstat_command() -> None:
-    if (cmd == 'modstat'):
 
-        svc_len: int = 0
-        down_detected: bool = False
+    svc_len: int = 0
+    down_detected: bool = False
 
-        status: list[Optional[list[str, str]]] = []
-        for svc in SERVICE_MODULES:
-            svc_len = len(svc) if len(svc) > svc_len else svc_len
+    status: list[Optional[list[str, str]]] = []
+    for svc in SERVICE_MODULES:
+        svc_len = len(svc) if len(svc) > svc_len else svc_len
 
-            try:
-                dnx_run(f'sudo systemctl status {svc}', shell=True)
-            except CalledProcessError as cpe:
-                status.append(
-                    [svc, f'down  code={cpe.returncode}  msg="{systemctl_ret_codes.get(cpe.returncode, "")}"']
-                )
+        try:
+            dnx_run(f'sudo systemctl status {svc}', shell=True)
+        except CalledProcessError as cpe:
+            status.append(
+                [svc, f'down  code={cpe.returncode}  msg="{systemctl_ret_codes.get(cpe.returncode, "")}"']
+            )
 
-                down_detected = True
+            down_detected = True
 
-            else:
-                status.append([svc, 'up'])
+        else:
+            status.append([svc, 'up'])
 
-        # =================================
-        # OUTPUT - Justified left<==>right
-        # =================================
-        # dnx-cfirewall   => down (code=4)
-        print('# =====================')
-        print('# DNXFIREWALL SERVICES')
-        print('# =====================')
-        for svc, result in status:
-            time.sleep(0.05)
-            print(f'{svc.ljust(svc_len)} => {result.rjust(4)}')
+    # =================================
+    # OUTPUT - Justified left<==>right
+    # =================================
+    # dnx-cfirewall   => down (code=4)
+    print('# =====================')
+    print('# DNXFIREWALL SERVICES')
+    print('# =====================')
+    for svc, result in status:
+        time.sleep(0.05)
+        print(f'{svc.ljust(svc_len)} => {result.rjust(4)}')
 
-        if (down_detected):
-            print(f'\ndowned service detected. check journal for more details.')
+    if (down_detected):
+        print(f'\ndowned service detected. check journal for more details.')
 
 def service_command(mod: str, cmd: str) -> None:
     if (mod == 'all'):
@@ -164,9 +163,9 @@ def service_command(mod: str, cmd: str) -> None:
             try:
                 dnx_run(f'sudo systemctl {cmd} {svc}', shell=True)
             except CalledProcessError:
-                sprint(f'{svc.ljust(11)} => {"fail".rjust(7)}')
+                sprint(f'{svc.ljust(15)} => {"fail".rjust(7)}')
             else:
-                sprint(f'{svc.ljust(11)} => {"success".rjust(7)}')
+                sprint(f'{svc.ljust(15)} => {"success".rjust(7)}')
 
         return
 
@@ -176,7 +175,7 @@ def service_command(mod: str, cmd: str) -> None:
     except CalledProcessError as cpe:
         if (cmd == 'status'):
             sprint(
-                f'{svc.ljust(15)} => down  code={cpe.returncode}  msg="{systemctl_ret_codes.get(cpe.returncode, "")}"'
+                f'{svc.ljust(15)} => down  code={cpe.returncode} msg="{systemctl_ret_codes.get(cpe.returncode, "")}"'
             )
         else:
             sprint(f'{svc} service {cmd} failed. check journal. => msg={cpe}')
