@@ -7,24 +7,28 @@ import threading
 from socket import SOL_SOCKET, SO_BROADCAST, SO_BINDTODEVICE, SO_REUSEADDR
 
 from dnx_gentools.def_constants import *
+from dnx_gentools.def_typing import *
+from dnx_gentools.def_enums import DHCP, PROTO
 from dnx_gentools.def_namedtuples import DHCP_RECORD
 
 from dnx_iptools.packet_classes import Listener
 from dnx_routines.logging.log_client import LogHandler as Log
 
-from dnx_netmods.dhcp_server.dhcp_server_requests import ServerResponse, ClientRequest
-from dnx_netmods.dhcp_server.dhcp_server_automate import Configuration, Leases
+from dhcp_server_requests import ServerResponse, ClientRequest
+from dhcp_server_automate import Configuration, Leases, DHCP_Lease
 
 LOG_NAME = 'dhcp_server'
 
+RequestID = tuple[str, int]
+
 
 class DHCPServer(Listener):
-    intf_settings = {}
-    options = {}
-    leases  = {}
-    reservations = {}
-    options_lock = threading.Lock()
-    handout_lock = threading.Lock()
+    intf_settings: ClassVar[dict] = {}
+    options: ClassVar[dict] = {}
+    leases:  ClassVar[dict] = {}
+    reservations: ClassVar[dict] = {}
+    options_lock: Lock = threading.Lock()
+    handout_lock: Lock = threading.Lock()
 
     _valid_mtypes = [DHCP.DISCOVER, DHCP.REQUEST, DHCP.RELEASE]
     _valid_idents = []
@@ -51,7 +55,7 @@ class DHCPServer(Listener):
         cls.set_proxy_callback(func=cls.handle_dhcp)
 
         # only local server ips or no server ip specified are valid. this is to filter responses to other servers
-        # within broadcast domain.
+        # within the broadcast domain.
         cls._valid_idents = [*[intf['ip'].ip for intf in cls.intf_settings.values()], None]
 
     def _pre_inspect(self, packet):
@@ -62,15 +66,20 @@ class DHCPServer(Listener):
         return False
 
     @classmethod
-    def handle_dhcp(cls, packet):
-        '''pseudo alternate constructor acting as a callback for the Parent/Listener class, but will not return
-        the created instance. instead, it will internally manage the instance and ensure the request gets handled.'''
+    def handle_dhcp(cls, packet: ClientRequest):
+        '''pseudo alternate constructor acting as a callback for the Parent/Listener class.
+
+        the call will not return the created instance, instead, it will internally manage the instance and ensure the
+        request gets handled.'''
 
         self = cls()
         self._handle_request(packet)
 
-    def _handle_request(self, client_request):
-        request_id, server_mtype, record = (client_request.mac, client_request.xID), DHCP.NOT_SET, None
+    def _handle_request(self, client_request: ClientRequest):
+        request_id: RequestID = (client_request.mac, client_request.xID)
+        server_mtype: DHCP = DHCP.NOT_SET
+        record: Optional = None
+
         Log.debug(f'[request] type={client_request.mtype}, id={request_id}')
 
         if (client_request.mtype == DHCP.RELEASE):
@@ -90,7 +99,7 @@ class DHCPServer(Listener):
         # this is filtering out response types like dhcp nak | modifying lease before
         # sending to ensure a power failure will have persistent record data.
         if (server_mtype not in [DHCP.NOT_SET, DHCP.DROP, DHCP.NAK]):
-            self.leases.modify( # pylint: disable=no-member
+            self.leases.modify(
                 client_request.handout_ip, record
             )
 
@@ -100,49 +109,45 @@ class DHCPServer(Listener):
 
             self.send_to_client(client_request, server_mtype)
 
-    def _release(self, ip_address, mac_address):
-        dhcp = ServerResponse(server=self)
+    def _release(self, ip_address, mac_address: str) -> None:
+        dhcp: ServerResponse = ServerResponse(server=self)
 
         # if mac/ lease mac match, the lease will be removed from the table
         if dhcp.release(ip_address, mac_address):
-            self.leases.modify(ip_address) # pylint: disable=no-member
+            self.leases.modify(ip_address)
 
         else:
             Log.informational(f'[release][{mac_address}] Client attempted invalid release.')
 
-    def _discover(self, request_id, client_request):
-        dhcp = ServerResponse(client_request.sock.name, server=self)
+    def _discover(self, request_id: RequestID, client_request: ClientRequest):
+        dhcp: ServerResponse = ServerResponse(client_request.sock.name, server=self)
         self._ongoing[request_id] = dhcp
 
         client_request.handout_ip = dhcp.offer(client_request)
 
-        # NOTE: the final record's hostname will be used so don't need it here
+        # NOTE: the final record hostname will be used, so don't need it here
         return DHCP.OFFER, DHCP_RECORD(DHCP.OFFERED, fast_time(), client_request.mac, '')
 
-    def _request(self, request_id, client_request):
+    def _request(self, request_id: RequestID, client_request) -> tuple[DHCP, Optional[DHCP_Lease]]:
+        record: Optional[DHCP_Lease] = None
+        request_mtype: DHCP
 
-        dhcp = self._ongoing.get(request_id, None)
+        dhcp: ServerResponse = self._ongoing.get(request_id, None)
         if (not dhcp):
             dhcp = ServerResponse(client_request.sock.name, server=self)
 
         request_mtype, handout_ip = dhcp.ack(client_request)
-        # not responding per rfc 2131
-        if (request_mtype is DHCP.DROP):
-            record = None
+        # responding with ACK
+        if (request_mtype in [DHCP.ACK, DHCP.RENEWING, DHCP.REBINDING]):
+            client_request.handout_ip = handout_ip
+            record = (DHCP.LEASED, fast_time(), client_request.mac, client_request.hostname)
 
         # sending NAK per rfc 2131
         elif (request_mtype is DHCP.NAK):
             client_request.handout_ip = INADDR_ANY
-            record = None
 
-        # responding with ACK
-        elif (request_mtype in [DHCP.ACK, DHCP.RENEWING, DHCP.REBINDING]):
-            client_request.handout_ip = handout_ip
-            record = (DHCP.LEASED, fast_time(), client_request.mac, client_request.hostname)
-
-        # protecting return on invalid dhcp types | TODO: validate if this even does anything. :)
-        else:
-            record, request_mtype = None, DHCP.DROP
+        # not responding per rfc 2131.
+        # else:
 
         # removing the request from ongoing since we are sending the final message and do
         # not need any objects from the request instance anymore.
@@ -152,7 +157,7 @@ class DHCPServer(Listener):
 
     @staticmethod
     # will send response to client over socket depending on host details it will decide unicast or broadcast
-    def send_to_client(client_request, server_mtype):
+    def send_to_client(client_request: ClientRequest, server_mtype: DHCP) -> None:
         if (server_mtype is DHCP.RENEWING):
             client_request.sock.sendto(client_request.send_data, (f'{client_request.ciaddr}', 68))
 
@@ -172,8 +177,8 @@ class DHCPServer(Listener):
         # messages to 0xffffffff.
 
     @classmethod
-    def listener_sock(cls, intf, _):
-        l_sock = cls.intf_settings[intf].get('l_sock')
+    def listener_sock(cls, intf, _) -> Socket:
+        l_sock: Socket = cls.intf_settings[intf].get('l_sock')
 
         l_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR,1)
         l_sock.setsockopt(SOL_SOCKET, SO_BROADCAST,1)
@@ -185,7 +190,7 @@ class DHCPServer(Listener):
         return l_sock
 
 
-def RUN_MODULE():
+if (INIT_MODULE):
     Log.run(
         name=LOG_NAME
     )

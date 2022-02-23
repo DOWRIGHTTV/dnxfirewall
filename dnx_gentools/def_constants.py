@@ -12,7 +12,9 @@ from subprocess import run as _run, DEVNULL as _DEVNULL
 from ipaddress import IPv4Address as _IPv4Address
 from pprint import PrettyPrinter as _PrettyPrinter
 
-from dnx_gentools.def_typing import *
+# from dnx_gentools.def_typing import *
+from typing import Callable as _Callable, Iterator as _Iterator, Union as _Union
+from typing import Optional as _Optional
 
 from dnx_iptools.def_structs import scm_creds_pack as _scm_creds_pack
 
@@ -21,15 +23,15 @@ ppt = _PrettyPrinter(sort_dicts=False).pprint
 # if set, module code dependencies will run. values are stored as strings
 INIT_MODULE: bool = bool(_os.environ.get('INIT_MODULE', False))
 
-fast_time:  Callable[[], float] = _time.time
-fast_sleep: Callable[[float], None] = _time.sleep
+fast_time:  _Callable[[], float] = _time.time
+fast_sleep: _Callable[[float], None] = _time.sleep
 
-console_log: Callable[[str], None] = _partial(print, flush=True)
-shell: Callable[[str], None] = _partial(_run, shell=True, stdout=_DEVNULL, stderr=_DEVNULL)
+console_log: _Callable[[str], None] = _partial(print, flush=True)
+shell: _Callable[[str], None] = _partial(_run, shell=True, stdout=_DEVNULL, stderr=_DEVNULL)
 
-RUN_FOREVER: Iterator = _repeat(1)
+RUN_FOREVER: _Iterator = _repeat(1)
 
-def hardout(msg: Optional[str] = None) -> None:
+def hardout(msg: _Optional[str] = None) -> None:
     if (msg):
         console_log(msg)
 
@@ -39,11 +41,11 @@ def hardout(msg: Optional[str] = None) -> None:
 # used by socket sender loops
 ATTEMPTS: tuple[int, int] = (0, 1)
 
-byte_join:  Callable[Union[tuple[bytes], list[bytes]], bytes] = b''.join
-str_join:   Callable[Union[tuple[str], list[str]], str] = ''.join
-dot_join:   Callable[Union[tuple[str], list[str]], str] = '.'.join
-space_join: Callable[Union[tuple[str], list[str]], str] = ' '.join
-comma_join: Callable[Union[tuple[str], list[str]], str] = ', '.join
+byte_join:  _Callable[_Union[tuple[bytes], list[bytes]], bytes] = b''.join
+str_join:   _Callable[_Union[tuple[str], list[str]], str] = ''.join
+dot_join:   _Callable[_Union[tuple[str], list[str]], str] = '.'.join
+space_join: _Callable[_Union[tuple[str], list[str]], str] = ' '.join
+comma_join: _Callable[_Union[tuple[str], list[str]], str] = ', '.join
 
 HOME_DIR: str = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-2]))
 
@@ -81,9 +83,9 @@ NO_DELAY:   int = 0
 
 # ip addresses
 NULL_ADDR: tuple[None, None] = (None, None)
-INADDR_ANY: IPv4Address = _IPv4Address('0.0.0.0')
-LOCALHOST:  IPv4Address = _IPv4Address('127.0.0.1')
-BROADCAST:  IPv4Address = _IPv4Address('255.255.255.255')
+INADDR_ANY: _IPv4Address = _IPv4Address('0.0.0.0')
+LOCALHOST:  _IPv4Address = _IPv4Address('127.0.0.1')
+BROADCAST:  _IPv4Address = _IPv4Address('255.255.255.255')
 # definitions for ip proxy data structures. most/least significant bit
 MSB: int = 0b11111111111110000000000000000000
 LSB: int = 0b00000000000001111111111111111111

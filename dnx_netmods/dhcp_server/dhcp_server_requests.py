@@ -7,12 +7,15 @@ import random
 from ipaddress import IPv4Address
 
 from dnx_gentools.def_constants import *
+from dnx_gentools.def_typing import *
+from dnx_gentools.def_enums import DHCP
+
 from dnx_iptools.def_structs import *
-from dnx_iptools.protocol_tools import icmp_reachable, btoia
+from dnx_iptools.protocol_tools import icmp_reachable, itoba
 
 from dnx_routines.logging.log_client import LogHandler as Log
 
-_NULL_OPT = (0,'')
+_NULL_OPT = (0, '')
 _fast_choice = random.choice
 
 __all__ = (
@@ -28,7 +31,7 @@ class ServerResponse:
         '_handout_range', '_net_hosts'
     )
 
-    def __init__(self, intf=None, *, server):
+    def __init__(self, intf=None, *, server: DHCPServer):
         self._svr = server
 
         # if interface ident is sent in we will assign config values. offer/ ack require these
@@ -43,10 +46,10 @@ class ServerResponse:
             self._net_hosts = set(intf_net.hosts())
             self._handout_range = list(intf_net)[range_start:range_end]
 
-    # if client sends a dhcp release, will ensure client info matches current lease then remove
-    # lease from table
-    def release(self, ip_address, mac_address):
+    # if the client sends a dhcp release, will ensure client info matches current lease then remove lease from table
+    def release(self, ip_address, mac_address: str) -> bool:
         '''release ip address lease stored in server. listener/server instance required.'''
+
         _, lease_time, lease_mac, _ = self._svr.leases[ip_address]
         if (lease_time != DHCP.RESERVATION and lease_mac == mac_address):
             return True
@@ -133,7 +136,7 @@ class ServerResponse:
         return DHCP.DROP, None
 
     @property
-    def selecting(self):
+    def selecting(self) -> bool:
         request = self._request
         if (request.ciaddr == INADDR_ANY
                 and request.server_ident and request.req_ip):
@@ -142,7 +145,7 @@ class ServerResponse:
         return False
 
     @property
-    def init_reboot(self):
+    def init_reboot(self) -> bool:
         request = self._request
         if (not request.server_ident and request.req_ip):
             return True
@@ -150,7 +153,7 @@ class ServerResponse:
         return False
 
     @property
-    def lease_active(self):
+    def lease_active(self) -> bool:
         request = self._request
         if (request.ciaddr != INADDR_ANY
                 and not request.server_ident and not request.req_ip):
@@ -159,14 +162,14 @@ class ServerResponse:
         return False
 
     @property
-    def rebinding(self):
+    def rebinding(self) -> bool:
         if (fast_time() - self._lease_time >= 74025):
             return True
 
         return False
 
     @property
-    def renewing(self):
+    def renewing(self) -> bool:
         if (43200 <= fast_time() - self._lease_time < 74025):
             return True
 
@@ -209,8 +212,8 @@ class ServerResponse:
 
 class ClientRequest:
 
-    _Server = None
-    _pack = {
+    _server: ClassVar[Optional[Type[DHCPServer]]] = None
+    _pack: ClassVar[dict[int, list[int, Callable]]] = {
         -1: [4, dhcp_ip_pack],
         1: [1, dhcp_byte_pack],
         2: [2, dhcp_short_pack],
@@ -218,15 +221,13 @@ class ClientRequest:
     }
 
     __slots__ = (
-        '_data', '_address', '_name',
         'init_time', 'server_ident', 'mtype', 'req_ip',
-        'handout_ip', 'hostname', 'requested_options', 'response_header',
-        'response_options', 'bcast', 'xID', 'ciaddr', 'chaddr', 'mac',
-        '_response_mtype', 'send_data', 'sock', 'intf',
+        'handout_ip', 'hostname', 'requested_options',
+        'bcast', 'xID', 'ciaddr', 'chaddr', 'mac',
+        'sock',
 
         # local references to callbacks
-        '_server_options_get', '_server_reservations',
-        '_server_int_ip'
+        '_server_options'
     )
 
     @classmethod
@@ -234,12 +235,11 @@ class ClientRequest:
         '''setting the class object alias "_Server" as the passed in reference object. this is required as all
         methods in this class rely on the alias reference.'''
 
-        cls._Server = server_reference
+        cls._server = server_reference
 
-    def __init__(self, data, address, sock_info):
+    def __init__(self, address, sock_info):
         # NOTE: sock_info (namedtuple): name ip socket send sendto recvfrom
 
-        self._data = data
         self.sock = sock_info
 
         self.init_time    = fast_time()
@@ -249,99 +249,106 @@ class ClientRequest:
         self.handout_ip   = None
         self.hostname     = ''
 
-        self.requested_options = [54,51,58,59]
-        self.response_header   = []
-        self.response_options  = []
+        self.requested_options: list[int] = [54, 51, 58, 59]
 
         # assigning local reference to server callbacks through class alias object
-        self._server_options_get  = self._Server.options[sock_info.name].get
-        self._server_reservations = self._Server.reservations
+        self._server_options = self._server.options[sock_info.name]
 
-    # TODO: look at other parent classes, but consider sending data in directly as arg instead of in constructor
-    def parse(self):
-        data = self._data
+    # TODO: convert IPAddress to using the raw int.
+    def parse(self, data: bytearray) -> None:
 
-        self.xID    = data[4:8]
-        self.bcast  = btoia(data[10:12]) >> 15
-        self.ciaddr = IPv4Address(data[12:16]) # ciaddr
-        self.chaddr = data[28:44]
-        self.mac    = data[28:34].hex()
+        dhcp_header = dhcp_header_unpack(data)
 
-        data, option_length = data[240:], 0
+        self.xID:   int = dhcp_header[4]
+        self.bcast: int = dhcp_header[6] & DHCP_MASK.BCAST
+
+        self.ciaddr: IPv4Address = IPv4Address(dhcp_header[7])
+        self.chaddr: bytes = data[28:44]
+        self.mac: str = dhcp_header[11:17].hex()
+
+        data = data[240:]
         for _ in range(61):
-            data = data[option_length:]
-            if (data[0] == DHCP.END): break
 
-            option_info, data = data[:2], data[2:]
-            option_type, option_length = dhcp_opt_unpack(option_info)
+            if (data[0] == DHCP.END):
+                break
 
-            if (option_type == 12):
-                self.hostname = data[:option_length].decode(errors='replace')
+            opt_val, opt_len, data = data[0], data[1], data[2:]
+            # opt_attrs = {12: 'hostname', 50: 'req_ip', 53: 'mtype', 54: 'server_ident'}
 
-            elif (option_type == 50):
-                self.req_ip = IPv4Address(data[:4]) # constant so hardcoded
+            if (opt_val == 12):
+                self.hostname = data[:opt_len].decode(errors='replace')
 
-            elif (option_type == 53):
+            elif (opt_val == 50):
+                self.req_ip = IPv4Address(data[:4])  # constant so hardcoded
+
+            elif (opt_val == 53):
                 self.mtype = data[0]
 
-            elif (option_type == 54):
-                self.server_ident = IPv4Address(data[:4]) # constant so hardcoded
+            elif (opt_val == 54):
+                self.server_ident = IPv4Address(data[:4])  # constant so hardcoded
 
-            elif (option_type == 55):
-                for option in data[:option_length]:
-                    # required options are preloaded into list. this will prevent duplicates.
-                    if (option in self.requested_options): continue
+            elif (opt_val == 55):
+                for option in data[:opt_len]:
+                    # required options are preloaded into the list to prevent duplicates.
+                    if (option not in self.requested_options):
+                        self.requested_options.append(option)
 
-                    self.requested_options.append(option)
+            data = data[opt_len:]
 
     # calling internal methods for header and options/payload, then combining byte strings as send data.
     # server options are locked to ensure the config loader thread does not mutate while this is iterating.
-    def generate_server_response(self, response_mtype):
+    def generate_server_response(self, response_mtype: DHCP) -> bytearray:
+
         # override the contained record types with DHCP ACK since they are for server use and not to be sent
         if (response_mtype in [DHCP.RENEWING, DHCP.REBINDING]):
             response_mtype = DHCP.ACK
 
-        send_data = [self._generate_dhcp_header()]
-        with self._Server.options_lock:
-            send_data.append(self._generate_server_options(response_mtype))
+        # =====================
+        # DHCP RESPONSE HEADER
+        # =====================
+        dhcp_header = bytearray(44)
 
-        self.send_data = byte_join(send_data)
+        dhcp_header[:4] = qb_pack(2, 1, 6, 0)
+        dhcp_header[4:8] = long_pack(self.xID)
+        dhcp_header[8:10] = int(fast_time() - self.init_time)
+        dhcp_header[10:12] = 0
+        dhcp_header[12:16] = self.ciaddr.packed
+        dhcp_header[16:20] = self.handout_ip.packed
+        dhcp_header[20:24] = self.sock.ip.packed
+        dhcp_header[24:28] = INADDR_ANY.packed
+        dhcp_header[28:44] = self.chaddr
 
-    def _generate_dhcp_header(self):
-        p_time = int(fast_time() - self.init_time)
+        dhcp_header += b'dnxfirewall\x00'
+        dhcp_header += b'\x00'*180
+        dhcp_header += qb_pack(99, 130, 83, 99)
 
-        return dhcp_header_pack(
-            2, 1, 6, 0, self.xID, p_time, 0, self.ciaddr.packed,
-            self.handout_ip.packed, self.sock.ip.packed,
-            INADDR_ANY.packed, self.chaddr, b'dnxfirewall\x00',
-            b'\x00'*180, 99, 130, 83, 99
-        )
-
-    def _generate_server_options(self, response_mtype):
+        # =====================
+        # DHCP RESPONSE OPTS
+        # =====================
         # local reference for load fast in tight loop
-        requested_options = self.requested_options
-        server_option_get = self._server_options_get
-        pack_methods = self._pack
+        server_option_get = self._server_options.get
+        pack_opt = self._pack
 
-        response_options = [dhcp_byte_pack(53, 1, response_mtype)]
-        for opt_num in requested_options:
-            opt, opt_val = server_option_get(opt_num, _NULL_OPT)
-            if (not opt): continue
+        response_options = bytearray([53, 1, response_mtype])
 
-            opt_len, opt_pack = pack_methods[opt]
-            response_options.append(opt_pack(opt_num, opt_len, opt_val))
+        with self._server.options_lock:
+            for opt_num in self.requested_options:
 
-        response_options.append(double_byte_pack(255, 0))
+                opt, opt_val = server_option_get(opt_num, _NULL_OPT)
+                if (opt):
+                    opt_len, opt_pack = pack_opt[opt]
+                    response_options += opt_pack(opt_num, opt_len, opt_val)
 
-        return byte_join(response_options)
+            response_options += double_byte_pack(255, 0)
+
+        return dhcp_header + response_options
 
     # NOTE: recently changed this to ensure reservations aren't used if they are for a network
     # different that what the request came in on.
-    def reservation(self, network_hosts):
+    def reservation(self, network_hosts: IPv4Network) -> Optional[IPv4Address]:
         try:
-            reserved_ip = self._server_reservations[self.mac]['ip_address']
+            reserved_ip: IPv4Address = self._server.reservations[self.mac]['ip_address']
         except KeyError:
             return None
 
-        else:
-            return reserved_ip if reserved_ip in network_hosts else None
+        return reserved_ip if reserved_ip in network_hosts else None

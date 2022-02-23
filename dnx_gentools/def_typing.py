@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, Callable, Generator, Iterator, Type, NewType, ClassVar, Literal, Union, Optional, Any
+from typing import TYPE_CHECKING, Callable, Generator, Iterator, Type, NewType, ClassVar, Literal, Union, Optional
+from typing import NamedTuple, Any
 
 _DISABLED = False
 
@@ -10,7 +11,8 @@ _DISABLED = False
 if (TYPE_CHECKING and not _DISABLED):
 
     from threading import Lock
-    from ipaddress import IPv4Address
+    from ipaddress import IPv4Address, IPv4Network
+    from socket import socket as Socket
 
     Wrapper = Callable[[Any], None]
 

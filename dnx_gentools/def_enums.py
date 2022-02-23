@@ -95,6 +95,9 @@ class DNS_MASK(_IntFlag):
     CD = 0b0000000000010000
     RC = 0b0000000000001111
 
+class DHCP_MASK(_IntFlag):
+    BCAST = 0b1000000000000000
+
 class ICMP(_IntEnum):
     ECHO = 8
 

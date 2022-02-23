@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from __future__ import annotations
-
 import threading
 
 from json import dumps
@@ -28,7 +26,6 @@ _format_time = System.format_time
 # =============================================
 # GENERIC LIGHTWEIGHT FUNCTIONS
 # =============================================
-
 def direct_log(m_name: str, level_name: str, msg: str):
     '''alternate system log method. this can be used to override global module log name if needed and does not
     require LogHandler initialization.'''
@@ -61,7 +58,7 @@ def db_message(timestamp: int, log_msg: NamedTuple, method: str) -> bytes:
 
     return dumps(log_data).encode('utf-8')
 
-def convert_level(level: LOG = None) -> Union[dict, str]:
+def convert_level(level: LOG = None) -> Union[dict[int, list[str, str]], str]:
     '''converts log level as integer to string. valid input: 0-7. if level is None the entire
     dict will be returned.'''
 
@@ -83,7 +80,7 @@ def convert_level(level: LOG = None) -> Union[dict, str]:
 # =================================
 # process wide "instance" of LogHandler class, which can be used directly or subclassed.
 
-def _log_handler():
+def _log_handler() -> Type[LogHandler]:
 
     _LEVEL = 0
     _name = None
@@ -104,7 +101,7 @@ def _log_handler():
     _db_sendmsg = _db_client.sendmsg
 
     # TODO: create function to write logs for system errors that happen prior to log handler being initialized.
-    class Handler:
+    class _LogHandler:
 
         @classmethod
         def run(cls, *, name: str, console_output: bool = False):
@@ -236,7 +233,7 @@ def _log_handler():
     # ==============================
     # TODO: consider having this offloaded so the security modules don't have to waste cycles on writing to disk.
     #  also, check to see how often they even log, it might not be often after first startup.
-    @dnx_queue(Handler, name='LogHandler')
+    @dnx_queue(_LogHandler, name='LogHandler')
     def _write_to_disk(job):
 
         path = f'{_path}/{_system_date(string=True)}-{_name}.log'
@@ -292,7 +289,7 @@ def _log_handler():
 
         _LEVEL = logging['logging->level']
 
-        _add_logging_methods(Handler)
+        _add_logging_methods(_LogHandler)
 
         # after the initial load, this dones nothing
         _initialized = True
@@ -305,7 +302,7 @@ def _log_handler():
 
         _syslog = syslog['enabled']
 
-    return Handler
+    return _LogHandler
 
 
 LogHandler = _log_handler()
@@ -315,12 +312,14 @@ Log = LogHandler  # alias
 # DIRECT ACCESS FUNCTIONS
 # ===========================
 # TODO: test direct access functions after a log level is changed and methods are reset.
-emergency = LogHandler.emergency
-alert = LogHandler.alert
-critical = LogHandler.critical
-error = LogHandler.error
-warning = LogHandler.warning
-notice = LogHandler.notice
-informational = LogHandler.informational
-debug = LogHandler.debug
-console = LogHandler.console
+LogLevel = Callable[[str], None]
+
+emergency: LogLevel = LogHandler.emergency
+alert: LogLevel = LogHandler.alert
+critical: LogLevel = LogHandler.critical
+error: LogLevel = LogHandler.error
+warning: LogLevel = LogHandler.warning
+notice: LogLevel = LogHandler.notice
+informational: LogLevel = LogHandler.informational
+debug: LogLevel = LogHandler.debug
+console: LogLevel = LogHandler.console

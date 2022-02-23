@@ -29,7 +29,7 @@ __all__ = (
 )
 
 btoia: Callable[[bytes], int] = partial(int.from_bytes, byteorder='big', signed=False)
-itoba: Callable[[int], bytes] = partial(int.to_bytes, byteorder='big', signed=False)
+itoba: Callable[[int, int], bytes] = partial(int.to_bytes, byteorder='big', signed=False)
 
 # will ping specified host. to be used to prevent duplicate ip address handouts.
 def icmp_reachable(host_ip: str) -> bool:
