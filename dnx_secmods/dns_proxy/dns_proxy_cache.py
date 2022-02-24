@@ -188,7 +188,7 @@ def request_tracker() -> RequestTracker:
     request_tracker_append = req_tracker.append
     request_tracker_get = req_tracker.popleft
 
-    class RequestTracker:
+    class _RequestTracker:
 
         @staticmethod
         # blocks until the request ready flag has been set, then iterates over dict and appends any client address with
@@ -213,4 +213,4 @@ def request_tracker() -> RequestTracker:
             # notifying return_ready that there is a query ready to forward
             notify_ready()
 
-    return RequestTracker()
+    return _RequestTracker()

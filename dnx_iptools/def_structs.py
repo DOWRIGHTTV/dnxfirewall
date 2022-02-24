@@ -50,7 +50,7 @@ dhcp_header_pack = _Struct('!4B4s2H4s4s4s4s16s12s180s4B').pack
 dhcp_byte_pack   = _Struct('!3B').pack
 dhcp_short_pack  = _Struct('!2BH').pack
 dhcp_long_pack   = _Struct('!2BL').pack
-dhcp_ip_pack     = _Struct('!2B4s').pack
+# dhcp_ip_pack     = _Struct('!2B4s').pack
 
 dns_header_unpack = _Struct('!6H').unpack
 dns_header_pack   = _Struct('!6H').pack

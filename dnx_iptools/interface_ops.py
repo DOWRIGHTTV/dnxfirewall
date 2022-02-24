@@ -20,7 +20,7 @@ __all__ = (
     'get_intf_builtin', 'load_interfaces',
     'set_wan_interface', 'set_wan_mac', 'set_wan_ip',
     'wait_for_interface', 'wait_for_ip',
-    'get_mac', 'get_netmask', 'get_ip_address', 'get_masquerade_ip',
+    'get_mac', 'get_netmask', 'get_ipaddress', 'get_masquerade_ip',
     'get_arp_table'
 )
 
@@ -211,7 +211,7 @@ def wait_for_ip(interface: str) -> Optional[IPv4Address]:
     '''waits for interface ip address configuration then return ip address object for corresponding ip.'''
 
     while True:
-        ipa = get_ip_address(interface=interface)
+        ipa = get_ipaddress(interface=interface)
         if (ipa):
             return ipa
 
@@ -244,7 +244,7 @@ def get_mac(*, interface: str) -> Optional[bytes]:
     except OSError:
         return None
 
-def get_ip_address(*, interface: str) -> Optional[IPv4Address]:
+def get_ipaddress(*, interface: str) -> Optional[IPv4Address]:
     '''return ip address object for current ip address for sent in interface. return None on OSError.'''
     try:
         return IPv4Address(ioctl(DESCRIPTOR, 0x8915, fcntl_pack(bytes(interface, 'utf-8')))[20:24])

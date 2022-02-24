@@ -6,8 +6,7 @@ import time
 import traceback
 import socket
 import select
-
-from threading import Thread
+import threading
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_typing import *
@@ -43,27 +42,13 @@ class Listener:
     # stored as file descriptors to minimize lookups in listener queue.
     enabled_intfs = set()
 
-    __slots__ = (
-        '_intf', '_intf_ip',
-        '_threaded', '_always_on',
-
-        '__epoll_poll', '__registered_socks_get'
-    )
+    __slots__ = ()
 
     def __new__(cls, *args, **kwargs):
         if (cls is Listener):
             raise TypeError('Listener can only be used via inheritance.')
 
         return object.__new__(cls)
-
-    def __init__(self, threaded: bool, always_on: bool):
-        '''general constructor. can only be reached through subclass.
-
-        May be expanded.
-
-        '''
-        self._threaded = threaded
-        self._always_on = always_on
 
     @classmethod
     def run(cls, Log: Type[LogHandler], *, threaded: bool = True, always_on: bool = False):
@@ -78,22 +63,19 @@ class Listener:
         # child class hook to initialize higher level systems. NOTE: must stay after initial intf registration
         cls._setup()
 
-        # starting a registration thread for all available interfaces
-        # upon registration the threads will exit
+        # starting a registration thread for all available interfaces and exit when complete
         for intf in cls._intfs:
-            Thread(target=cls.__register, args=(intf,)).start()
+            threading.Thread(target=cls.__register, args=(intf,)).start()
 
-        # running main epoll/ socket loop. threaded so proxy and server can run side by side
-        # TODO: should be able to convert this into a class object like RawPacket. just need to
-        #  make sure name mangling takes care of the reference issues if 2 classes inherit from
-        #  this class within the same process..
-        self = cls(threaded, always_on)
-        Thread(target=self.__listener).start()
+        # running main epoll/ socket loop.
+        self = cls()
+        self.__listener(always_on, threaded)
 
     @classmethod
     def enable(cls, sock_fd: int, intf: str):
-        '''adds a file descriptor id to the disabled interface set. this effectively re-enables the server for the
-        zone of the specified socket.'''
+        '''adds a file descriptor id to the disabled interface set.
+
+        this effectively re-enables the server for the zone of the specified socket.'''
 
         cls.enabled_intfs.add(sock_fd)
 
@@ -101,8 +83,9 @@ class Listener:
 
     @classmethod
     def disable(cls, sock_fd: int, intf: str):
-        '''removes a file descriptor id to the disabled interface set. this effectively disables the server for the
-        zone of the specified socket.'''
+        '''removes a file descriptor id to the disabled interface set.
+
+        this effectively disables the server for the zone of the specified socket.'''
 
         # try block is to prevent key errors on initialization. after that, key errors should not be happening.
         try:
@@ -114,9 +97,9 @@ class Listener:
 
     @classmethod
     def _setup(cls):
-        '''called prior to creating listener interface instances. module wide code can be run here.
+        '''called prior to creating listener interface instances.
 
-        May be overridden.
+        module wide code can be run here. May be overridden.
 
         '''
         pass
@@ -125,8 +108,10 @@ class Listener:
     # TODO: what happens if interface comes online, then immediately gets unplugged. the registration would fail
     #  potentially and would no longer be active so it would never happen if the interface was replugged after.
     def __register(cls, intf: tuple[int, int, str]):
-        '''will register interface with listener. requires subclass property for listener_sock returning valid socket
-        object. once registration is complete the thread will exit.'''
+        '''will register interface with the listener.
+
+        requires subclass property for listener_sock returning a valid socket object. once registration is complete the
+        thread will exit.'''
 
         # this is being defined here so the listener will be able to correlate socket back to interface and send in.
         # NOTE: we can probably _ the first 2 vars, but they may actually come in handy for something so check to see
@@ -157,9 +142,9 @@ class Listener:
 
         cls._proxy_callback = func
 
-    def __listener(self, recv_buf: bytearray = bytearray(2048)):
+    def __listener(self, always_on: bool, threaded: bool):
 
-        # assigning all instance attrs as a local var for perf
+        # assigning all attrs as a local var for perf
         epoll_poll = self.__epoll.poll
         registered_socks_get = self.__registered_socks.get
 
@@ -169,13 +154,13 @@ class Listener:
         pre_inspect = self._pre_inspect
 
         # flags
-        always_on = self._always_on
         enabled_intfs = self.enabled_intfs
-        threaded = self._threaded
 
+        # data buffer
+        recv_buf: bytearray = bytearray(2048)
         recv_buffer = memoryview(recv_buf)
 
-        # custom generator
+        # custom iterator
         for _ in RUN_FOREVER:
             l_socks = epoll_poll()
             for fd, _ in l_socks:
@@ -201,7 +186,7 @@ class Listener:
                         return
 
                     if (threaded):
-                        Thread(target=proxy_callback, args=(packet,)).start()
+                        threading.Thread(target=proxy_callback, args=(packet,)).start()
                     else:
                         proxy_callback(packet)
 
@@ -209,7 +194,7 @@ class Listener:
                     self._Log.debug(f'recv on fd: {fd} | enabled ints: {self.enabled_intfs}')
 
     def _pre_inspect(self, packet):
-        '''handle the request after packet is parsed and confirmed protocol match.
+        '''handle the request after the packet is parsed and confirmed a protocol match.
 
         Must be overridden.
 
@@ -276,7 +261,7 @@ class ProtoRelay:
         specific processing then query handler will run indefinitely.'''
         self = cls(dns_server, fallback_relay)
 
-        Thread(target=self._fail_detection).start()
+        threading.Thread(target=self._fail_detection).start()
         Thread(target=self.relay).start()
 
     def relay(self):
@@ -292,7 +277,7 @@ class ProtoRelay:
 
                 if not self._register_new_socket(): break
 
-                Thread(target=self._recv_handler).start()
+                threading.Thread(target=self._recv_handler).start()
 
             else:
                 self._increment_fail_detection()
@@ -373,21 +358,23 @@ class NFQueue:
 
         return object.__new__(cls)
 
-    def __init__(self, q_num: int, threaded: bool):
+    def __init__(self):
         '''Constructor. can only be reached if called through subclass.
 
         May be extended.
 
         '''
-        self.__q_num = q_num
-        self.__threaded = threaded
+        self.__q_num = None
+        self.__threaded = None
 
     @classmethod
     def run(cls, Log: Type[LogHandler], *, q_num: int, threaded: bool = True) -> None:
         cls._setup()
         cls._log = Log
 
-        self = cls(q_num, threaded)
+        self = cls()
+        self.__q_num = q_num
+        self.__threaded = threaded
         self.__queue()
 
     @classmethod
@@ -442,7 +429,7 @@ class NFQueue:
         else:
             if self._pre_inspect(packet):
                 if (self.__threaded):
-                    Thread(target=self._proxy_callback, args=(packet,)).start()
+                    threading.Thread(target=self._proxy_callback, args=(packet,)).start()
                 else:
                     self._proxy_callback(packet)
 
@@ -725,7 +712,7 @@ class RawResponse:
         cls._registered_socks_get = cls._registered_socks.get
 
         for intf in cls._intfs:
-            Thread(target=cls.__register, args=(intf,)).start()
+            threading.Thread(target=cls.__register, args=(intf,)).start()
 
     @classmethod
     def __register(cls, intf: tuple[int, int, str]):

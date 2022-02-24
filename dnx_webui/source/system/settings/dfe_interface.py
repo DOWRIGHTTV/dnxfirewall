@@ -26,7 +26,7 @@ def load_page(form):
         },
         'ip': {
             'state': wan_state,
-            'ip_address': f'{interface.get_ip_address(interface=wan_ident)}',
+            'ip_address': f'{interface.get_ipaddress(interface=wan_ident)}',
             'netmask': f'{interface.get_netmask(interface=wan_ident)}',
             'default_gateway': Interface.default_gateway(wan_ident)
         }

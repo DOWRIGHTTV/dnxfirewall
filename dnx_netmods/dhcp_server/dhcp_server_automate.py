@@ -14,7 +14,7 @@ from dnx_gentools.def_enums import DHCP
 from dnx_gentools.file_operations import load_configuration, cfg_read_poller, ConfigurationManager
 from dnx_gentools.standard_tools import looper, dnx_queue, Initialize
 
-from dnx_iptools.interface_ops import get_netmask
+from dnx_iptools.interface_ops import get_netmask, get_ipaddress
 
 from dnx_routines.logging.log_client import LogHandler as Log
 
@@ -58,12 +58,11 @@ class Configuration:
         dhcp_settings: ConfigChain = load_configuration(cfg_file)
 
         # updating user configuration items per interface in memory.
-        for settings in dhcp_settings['interfaces'].values():
+        for settings in dhcp_settings.get_values('interfaces'):
 
             # NOTE ex. ident: eth0, lo, enp0s3
             intf_identity = settings['ident']
-
-            enabled  = True if settings['enabled'] else False
+            enabled = settings['enabled']
 
             # TODO: compare interface status in memory with what is loaded in. if it is different then the setting was
             #  just changed and needs to be acted on. implement register/unregister methods available to external
@@ -86,8 +85,8 @@ class Configuration:
     @cfg_read_poller('dhcp_server')
     def _get_server_options(self, cfg_file: str) -> None:
         dhcp_settings: ConfigChain = load_configuration(cfg_file)
-        server_options = dhcp_settings['options']
-        interfaces = dhcp_settings['interfaces']
+        server_options = dhcp_settings.get_items('options')
+        # interfaces = dhcp_settings['interfaces']
 
         # if server options have not changed, the function can return
         if (server_options == self.dhcp_server.options): return
@@ -98,35 +97,26 @@ class Configuration:
 
         with self.dhcp_server.options_lock:
 
-            # iterating over server interfaces and populated server option data sets NOTE: consider merging server
-            # options with the interface settings since they are technically bound.
+            # iterating over server interfaces and populating server option data sets
             for intf, settings in self.dhcp_server.intf_settings.items():
 
-                for _intf in interfaces.values():
+                # converting keys to integers (json keys are string only), then packing any
+                # option value that is in ip address form to raw bytes.
+                for o_id, values in server_options:
 
-                    # ensuring the interfaces match since we cannot guarantee order
-                    if (intf != _intf['ident']): continue
+                    # standard fields
+                    if (o_id in ['26', '28', '51', '58', '59']):
+                        self.dhcp_server.options[intf][int(o_id)] = values
 
-                    # converting keys to integers (json keys are string only), then packing any
-                    # option value that is in ip address form to raw bytes.
-                    for o_id, values in server_options.items():
+                    elif (o_id == '1'):
+                        ip_value = get_netmask(interface=intf)
 
-                        opt_len, opt_val = values
-                        if (not isinstance(opt_val, str)):
-                            self.dhcp_server.options[intf][int(o_id)] = (opt_len, opt_val)
+                    elif (o_id in ['3', '6', '54']):
+                        ip_value = get_ipaddress(interface=intf)
 
-                        else:
-                            # NOTE: this is temporary to allow interface netmask to be populated correctly while
-                            # migrating to new system backend functions.
-                            if (o_id == '1'):
-                                ip_value = get_netmask(interface=intf)
-                            else:
-                                ip_value = list(settings['ip'].network)[int(opt_val)]
-
-                            # using digit as ipv4 network object index to grab the correct ip object, then pack.
-                            self.dhcp_server.options[intf][int(o_id)] = (
-                                opt_len, ip_value.packed
-                            )
+                    self.dhcp_server.options[intf][int(o_id)] = (
+                        values[0], ip_value.packed
+                    )
 
         self.initialize.done()
 
@@ -141,16 +131,13 @@ class Configuration:
                 'ip_address': IPv4Address(info['ip_address']),
                 'description': info['description']
             }
-            for mac, info in dhcp_settings['reservations'].items()
+            for mac, info in dhcp_settings.get_items('reservations')
         }
 
-        # creating local reference for iteration performance
-        reservations = self.dhcp_server.reservations
+        # loading all reserved ip addresses into a set to be referenced below
+        reserved_ips = set([IPv4Address(info['ip_address']) for info in self.dhcp_server.reservations.values()])
 
-        # loaded all reserved ip addressing into a set to be referenced below
-        reserved_ips = set([IPv4Address(info['ip_address']) for info in reservations.values()])
-
-        # sets reserved ip addresses lease records to available is there are no longer configured
+        # sets reserved ip address lease records to available if they are no longer configured
         dhcp_leases = self.dhcp_server.leases
         for ip, record in dhcp_leases.items():
 
@@ -161,7 +148,7 @@ class Configuration:
 
         # adding dhcp reservations to lease table to prevent them from being selected during an offer
         self.dhcp_server.leases.update({
-            IPv4Address(info['ip_address']): (DHCP.RESERVATION, 0, mac) for mac, info in reservations.items()
+            IPv4Address(info['ip_address']): (DHCP.RESERVATION, 0, mac) for mac, info in self.dhcp_server.reservations.items()
         })
 
         self.initialize.done()

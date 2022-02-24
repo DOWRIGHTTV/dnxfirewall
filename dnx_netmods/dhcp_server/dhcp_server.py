@@ -38,11 +38,6 @@ class DHCPServer(Listener):
 
     __slots__ = ()
 
-    # ensuring compatibility between all instance types of dhcp server class
-    def __init__(self, *args, **kwargs):
-        if (args or kwargs):
-            super().__init__(*args, **kwargs)
-
     @classmethod
     def _setup(cls):
         Configuration.setup(cls)
@@ -54,11 +49,12 @@ class DHCPServer(Listener):
         ClientRequest.set_server_reference(cls)
         cls.set_proxy_callback(func=cls.handle_dhcp)
 
-        # only local server ips or no server ip specified are valid. this is to filter responses to other servers
+        # only local server ips or no server ip specified are valid to filter responses to other servers
         # within the broadcast domain.
+        # FIXME: ip > int
         cls._valid_idents = [*[intf['ip'].ip for intf in cls.intf_settings.values()], None]
 
-    def _pre_inspect(self, packet):
+    def _pre_inspect(self, packet) -> bool:
         if (packet.mtype in self._valid_mtypes
                 and packet.server_ident in self._valid_idents):
             return True
@@ -66,16 +62,12 @@ class DHCPServer(Listener):
         return False
 
     @classmethod
-    def handle_dhcp(cls, packet: ClientRequest):
+    def handle_dhcp(cls, client_request: ClientRequest):
         '''pseudo alternate constructor acting as a callback for the Parent/Listener class.
 
         the call will not return the created instance, instead, it will internally manage the instance and ensure the
         request gets handled.'''
 
-        self = cls()
-        self._handle_request(packet)
-
-    def _handle_request(self, client_request: ClientRequest):
         request_id: RequestID = (client_request.mac, client_request.xID)
         server_mtype: DHCP = DHCP.NOT_SET
         record: Optional = None
@@ -109,7 +101,8 @@ class DHCPServer(Listener):
 
             self.send_to_client(client_request, server_mtype)
 
-    def _release(self, ip_address, mac_address: str) -> None:
+    @classmethod
+    def _release(cls, ip_address, mac_address: str) -> None:
         dhcp: ServerResponse = ServerResponse(server=self)
 
         # if mac/ lease mac match, the lease will be removed from the table

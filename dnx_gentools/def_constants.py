@@ -12,9 +12,8 @@ from subprocess import run as _run, DEVNULL as _DEVNULL
 from ipaddress import IPv4Address as _IPv4Address
 from pprint import PrettyPrinter as _PrettyPrinter
 
-# from dnx_gentools.def_typing import *
-from typing import Callable as _Callable, Iterator as _Iterator, Union as _Union
-from typing import Optional as _Optional
+from typing import Callable as _Callable, Iterator as _Iterator, Iterable as _Iterable
+from typing import Optional as _Optional, Union as _Union
 
 from dnx_iptools.def_structs import scm_creds_pack as _scm_creds_pack
 
@@ -23,14 +22,13 @@ ppt = _PrettyPrinter(sort_dicts=False).pprint
 # if set, module code dependencies will run. values are stored as strings
 INIT_MODULE: bool = bool(_os.environ.get('INIT_MODULE', False))
 
-fast_time:  _Callable[[], float] = _time.time
-fast_sleep: _Callable[[float], None] = _time.sleep
-
 console_log: _Callable[[str], None] = _partial(print, flush=True)
 shell: _Callable[[str], None] = _partial(_run, shell=True, stdout=_DEVNULL, stderr=_DEVNULL)
 
 RUN_FOREVER: _Iterator = _repeat(1)
+fast_sleep: _Callable[[_Union[int, float]], None] = _time.sleep
 
+def fast_time(_int=int, _time=_time.time) -> int: return _int(_time())
 def hardout(msg: _Optional[str] = None) -> None:
     if (msg):
         console_log(msg)
@@ -41,11 +39,11 @@ def hardout(msg: _Optional[str] = None) -> None:
 # used by socket sender loops
 ATTEMPTS: tuple[int, int] = (0, 1)
 
-byte_join:  _Callable[_Union[tuple[bytes], list[bytes]], bytes] = b''.join
-str_join:   _Callable[_Union[tuple[str], list[str]], str] = ''.join
-dot_join:   _Callable[_Union[tuple[str], list[str]], str] = '.'.join
-space_join: _Callable[_Union[tuple[str], list[str]], str] = ' '.join
-comma_join: _Callable[_Union[tuple[str], list[str]], str] = ', '.join
+byte_join:  _Callable[[_Iterable[bytes]], bytes] = b''.join
+str_join:   _Callable[[_Iterable[str]], str] = ''.join
+dot_join:   _Callable[[_Iterable[str]], str] = '.'.join
+space_join: _Callable[[_Iterable[str]], str] = ' '.join
+comma_join: _Callable[[_Iterable[str]], str] = ', '.join
 
 HOME_DIR: str = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-2]))
 
