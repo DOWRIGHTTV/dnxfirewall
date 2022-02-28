@@ -84,7 +84,7 @@ class Initialize:
     '''class used to handle system module thread synchronization on process startup. this will ensure all
     threads have completed one loop before returning control to the caller. will block until condition is met.'''
 
-    def __init__(self, log: Type[LogHandler], name: str):
+    def __init__(self, log: LogHandler_T, name: str):
         self._log  = log
         self._name = name
 
@@ -162,7 +162,7 @@ class Initialize:
 
         return False
 
-def dnx_queue(log: Type[LogHandler], name: str = None) -> Callable:
+def dnx_queue(log: LogHandler_T, name: str = None) -> Callable:
     '''decorator to add custom queue mechanism for any queue handling functions. This is a direct replacement of
     dynamic_looper for queues.
 

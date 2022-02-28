@@ -26,7 +26,7 @@ class FirewallControl:
         'BEFORE', 'MAIN', 'AFTER'
     )
 
-    def __init__(self, Log: Type[LogHandler], /, *, cfirewall: CFirewall):
+    def __init__(self, Log: LogHandler_T, /, *, cfirewall: CFirewall):
         self.log = Log
 
         self._initialize = Initialize(Log, 'FirewallControl')

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import sqlite3
+import importlib
 
 from dnx_gentools.def_constants import *
+from dnx_gentools.def_typing import *
 
 __all__ = ('DBConnector',)
 
@@ -60,7 +62,7 @@ class _DBConnector:
 
     # NOTE: if Log is not sent in, calling any method configured to log will error out, but likely not cause
     # significant impact as it is covered by the context.
-    def __init__(self, log: Type[LogHandler] = None, *, table: str = None, readonly: bool = False, connect: bool = False):
+    def __init__(self, log: LogHandler_T = None, *, table: str = None, readonly: bool = False, connect: bool = False):
 
         # used to notify a calling process whether a failure occurred within the context.
         # this does not distinguish if multiple calls/returns are done.
@@ -165,7 +167,7 @@ class _DBConnector:
         )
 
         # ip proxy - geolocation
-        #( 01,2021 | CHINA | 10 | 1)
+        # (01,2021 | CHINA | 10 | 1)
         self._cur.execute(
             'create table if not exists geolocation '
             '(month not null, country not null, '
@@ -189,19 +191,16 @@ class _DBConnector:
             'value not null, description text not null)'
         )
 
-# NOTE: psql connector is too out of spec, so it will be disabled until a later time.
-#if (SQL_VERSION == 0):
-DBConnector = _DBConnector
 
-#else:
+# NOTE: psql connector is too out of spec, so it will be disabled until a later time.
+# if (SQL_VERSION == 0):
+DBConnector = _DBConnector
+# else:
 #    from dnx_routines.database.ddb_connector_psql import DBConnector
 
-import dnx_routines.database.ddb_routines # routines will be set within DBConnector class
+importlib.import_module('dnx_routines.database.ddb_routines')  # routines will registered with DBConnector class
 
-# print(DBConnector.__dict__)
-
-if __name__ == '__main__':
-    # NOTE: CREATE THE TABLES
-    #   only used on self deployments where system is running already and the tables need to be created
+if (__name__ == '__main__'):
+    # NOTE: CREATE TABLES -> only used on self deployments with active running system and the tables need to be created
     with DBConnector() as FirewallDB:
         FirewallDB.create_db_tables()

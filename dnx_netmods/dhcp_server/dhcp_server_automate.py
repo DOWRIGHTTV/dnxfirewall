@@ -10,19 +10,19 @@ from ipaddress import IPv4Address, IPv4Interface
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_namedtuples import RECORD_CONTAINER, Item
 from dnx_gentools.def_enums import DHCP
 from dnx_gentools.file_operations import load_configuration, cfg_read_poller, ConfigurationManager
 from dnx_gentools.standard_tools import looper, dnx_queue, Initialize
 
-from dnx_iptools.interface_ops import get_netmask, get_ipaddress
+from dnx_iptools.cprotocol_tools import iptoi
 
 from dnx_routines.logging.log_client import LogHandler as Log
 
 # required when using configuration manager.
 ConfigurationManager.set_log_reference(Log)
 
-DHCP_Lease = tuple[DHCP, Union[int, float], str, str]
-_NULL_LEASE: DHCP_Lease = (DHCP.AVAILABLE, 0, '', '')
+_NULL_LEASE: DHCP_RECORD = DHCP_RECORD(DHCP.AVAILABLE, 0, '', '')
 
 
 class Configuration:
@@ -32,19 +32,18 @@ class Configuration:
         'initialize', 'dhcp_server',
     )
 
-    def __init__(self, name: str, DHCPServer: Type[DHCPServer]):
+    def __init__(self, name: str):
         self.initialize = Initialize(Log, name)
 
-        self.dhcp_server = DHCPServer
-
     @classmethod
-    def setup(cls, DHCPServer: Type[DHCPServer]) -> None:
+    def setup(cls, server: Type[DHCPServer]) -> None:
         if (cls._setup):
             raise RuntimeError('configuration setup should only be called once.')
 
         cls._setup = True
 
-        self = cls(DHCPServer.__name__, DHCPServer)
+        self = cls(server.__name__)
+        self.dhcp_server = server
 
         self._load_interfaces()
 
@@ -84,39 +83,24 @@ class Configuration:
 
     @cfg_read_poller('dhcp_server')
     def _get_server_options(self, cfg_file: str) -> None:
-        dhcp_settings: ConfigChain = load_configuration(cfg_file)
-        server_options = dhcp_settings.get_items('options')
-        # interfaces = dhcp_settings['interfaces']
-
-        # if server options have not changed, the function can return
-        if (server_options == self.dhcp_server.options): return
+        dhcp_settings: list[Item] = load_configuration(cfg_file).get_items('interfaces->builtins')
 
         # will wait for 2 threads to check in before running code. this will allow the necessary settings
         # to be initialized on startup before this thread continues.
         self.initialize.wait_in_line(wait_for=2)
 
-        with self.dhcp_server.options_lock:
+        for intf, settings in dhcp_settings:
 
-            # iterating over server interfaces and populating server option data sets
-            for intf, settings in self.dhcp_server.intf_settings.items():
+            # converting json keys to python ints
+            configured_options = {int(k): v for k, v in settings['options']}
 
-                # converting keys to integers (json keys are string only), then packing any
-                # option value that is in ip address form to raw bytes.
-                for o_id, values in server_options:
+            active_interface = self.dhcp_server.intf_settings[settings['ident']]
 
-                    # standard fields
-                    if (o_id in ['26', '28', '51', '58', '59']):
-                        self.dhcp_server.options[intf][int(o_id)] = values
+            # if active interface options have not changed we can pass
+            if (configured_options == active_interface['options']):
+                continue
 
-                    elif (o_id == '1'):
-                        ip_value = get_netmask(interface=intf)
-
-                    elif (o_id in ['3', '6', '54']):
-                        ip_value = get_ipaddress(interface=intf)
-
-                    self.dhcp_server.options[intf][int(o_id)] = (
-                        values[0], ip_value.packed
-                    )
+            active_interface['options'] = configured_options
 
         self.initialize.done()
 
@@ -126,61 +110,57 @@ class Configuration:
         dhcp_settings: ConfigChain = load_configuration(cfg_file)
 
         # dict comp that retains all infos of stored json data, but converts ip address into objects
-        self.dhcp_server.reservations = {
-            mac: {
-                'ip_address': IPv4Address(info['ip_address']),
-                'description': info['description']
-            }
-            for mac, info in dhcp_settings.get_items('reservations')
+        self.dhcp_server.leases.reservations = {
+            mac: info['ip_address'] for mac, info in dhcp_settings.get_items('reservations')
         }
 
         # loading all reserved ip addresses into a set to be referenced below
-        reserved_ips = set([IPv4Address(info['ip_address']) for info in self.dhcp_server.reservations.values()])
+        reserved_ips: set = self.dhcp_server.leases.get_reserved_ips()
 
-        # sets reserved ip address lease records to available if they are no longer configured
+        # sets reserved ip address lease records to available if they are no longer configured. not worried about thread
+        # safety here since we are only removing explicitly configured reservations and pop() method.
         dhcp_leases = self.dhcp_server.leases
         for ip, record in dhcp_leases.items():
 
-            # record[0] is record type. cross-referencing ip reservation list with current lease table
-            # to reset any leased record placeholders for the reserved ip.
-            if (record[0] is DHCP.RESERVATION and IPv4Address(ip) not in reserved_ips):
-                dhcp_leases[ip] = _NULL_LEASE
+            # cross-referencing ip reservation list with current lease table to reset any leased record placeholders
+            # for the reserved ip.
+            if (record.rtype is DHCP.RESERVATION and ip not in reserved_ips):
+                dhcp_leases.pop(ip, None)
 
+        # FIXME: make lease table automatically check if ip is reserved since it now controls the reserved data set
         # adding dhcp reservations to lease table to prevent them from being selected during an offer
-        self.dhcp_server.leases.update({
-            IPv4Address(info['ip_address']): (DHCP.RESERVATION, 0, mac) for mac, info in self.dhcp_server.reservations.items()
-        })
+        # self.dhcp_server.leases.update({
+        #     info['ip_address']: DHCP_RECORD(DHCP.RESERVATION, 0, mac, '')
+        #     for mac, info in self.dhcp_server.reservations.items()
+        # })
 
         self.initialize.done()
 
-    # accessing class object via local instance to change overall DHCP server enabled ints tuple
     def _load_interfaces(self) -> None:
-        fw_intf: ConfigChain = load_configuration('system')['interfaces']['builtins']
-        dhcp_intfs: ConfigChain = load_configuration('dhcp_server')['interfaces']
+        fw_intf: dict = load_configuration('system').get_dict('interfaces->builtins')
 
-        # interface ident eg. eth0
-        for *_, intf in self.dhcp_server._intfs:
+        dhcp_intfs: list[Item] = load_configuration('dhcp_server').get_items('interfaces->builtins')
 
-            # interface friendly name e.g. wan
-            for _intf, settings in dhcp_intfs.items():
+        # interface friendly name e.g. wan
+        for intf_name, settings in dhcp_intfs:
 
-                # ensuring the interfaces match since we cannot guarantee order
-                if (intf != settings['ident']): continue
+            intf_ident = settings['ident']
 
-                # creating ipv4 interface object which will be associated with the ident in the config.
-                # this can then be used by the server to identify itself as well as generate its effective
-                # subnet based on netmask for ip handouts or membership tests.
-                intf_ip = IPv4Interface(str(fw_intf[_intf]['ip']) + '/' + str(fw_intf[_intf]['netmask']))
+            # creating ipv4 interface object which will be associated with the ident in the config.
+            # this can then be used by the server to identify itself as well as generate its effective
+            # subnet based on netmask for ip handouts or membership tests.
+            intf_ip = iptoi(fw_intf[intf_name]['ip'])
+            intf_netmask = iptoi(fw_intf[intf_name]['netmask'])
 
-                # initializing server options so the autoloader doesn't have to worry about it.
-                self.dhcp_server.options[intf] = {}
+            # updating general network information for interfaces on server class object. these will never change
+            # while the server is running. for interfaces changes, the server must be restarted.
+            # initializing fileno key in the intf dict to make assignments easier in later calls.
+            self.dhcp_server.intf_settings[intf_ident] = {
+                'ip': intf_ip,
+                'netmask': intf_netmask
+            }
 
-                # updating general network information for interfaces on server class object. these will never change
-                # while the server is running. for interfaces changes, the server must be restarted.
-                # initializing fileno key in the intf dict to make assignments easier in later calls.
-                self.dhcp_server.intf_settings[intf] = {'ip': intf_ip}
-
-                self._create_socket(intf)
+            self._create_socket(intf_ident)
 
         Log.debug(f'loaded interfaces from file: {self.dhcp_server.intf_settings}')
 
@@ -198,81 +178,71 @@ class Configuration:
         Log.debug(f'[{l_sock.fileno()}][{intf}] socket created')
 
 
-# short-lived container for queue/writing dhcp record to disk
-class _RECORD_CONTAINER(NamedTuple):
-    ip: str
-    record: DHCP_Lease
-
-
 class Leases(dict):
-    _setup = False
+    _setup: ClassVar[bool] = False
 
     __slots__ = (
-        '_ip_reservations', '_lease_table_lock'
+        'reservations',
     )
 
-    def __init__(self, ip_reservations: dict[str, Any]):
-        self._ip_reservations = ip_reservations
+    def __init__(self):
+        super().__init__()
 
-        self._lease_table_lock: Lock = threading.Lock()
+        self.reservations: dict[str, int] = {}
 
         self._load_leases()
-        threading.Thread(target=self._lease_table_cleanup).start()
-        threading.Thread(target=self._storage).start()
 
-    # if missing will return an expired result
-    def __missing__(self, key: Any) -> DHCP_Lease:
+        threading.Thread(target=self._storage_queue).start()
+        threading.Thread(target=self._lease_table_cleanup).start()
+
+    # if missing will return an available record
+    def __missing__(self, key: Any) -> DHCP_RECORD:
         return _NULL_LEASE
 
-    def modify(self, ip: IPv4Address, record: DHCP_Lease = _NULL_LEASE, clean_up: bool = False) -> None:
-        '''modifies a record in the lease table. this will automatically ensure changes get written to disk. if no record
-        is provided, a dhcp release is assumed.
+    def modify(self, ip: int, record: DHCP_RECORD = _NULL_LEASE, clean_up: bool = False) -> None:
+        '''modifies a record in the lease table.
 
-        clean_up=True should only be used by callers in an automated system that handle mutating the lease dict themselves.
+        this will automatically ensure changes get written to disk. if no record is provided, a dhcp release is assumed.
+
+        clean_up=True should only be used by an automated system that handles mutating the lease dict themselves.
         '''
 
         # added change to storage queue for lease persistence across device/process shutdowns.
         # will only store active leases. offers will be treated as volatile and not persist restarts
-        if (record[0] is not DHCP.OFFERED):
-            self._storage.add(_RECORD_CONTAINER(f'{ip}', record))
+        if (record.rtype is not DHCP.OFFERED):
+            self._storage_queue.add(RECORD_CONTAINER(ip, record))
 
         if (not clean_up):
             self[ip] = record
 
+    def get_reserved_ips(self) -> set:
+        '''return copy of reservered ip addresses as a set.'''
+
+        return set(self.reservations.values())
+
     @dnx_queue(Log, name='Leases')
     # store lease table changes to disk. if record is not present, it indicates the record needs to be removed.
-    def _storage(self, dhcp_lease):
+    def _storage_queue(self, dhcp_lease: RECORD_CONTAINER):
         with ConfigurationManager('dhcp_server') as dnx:
             dhcp_settings = dnx.load_configuration()
-            leases = dhcp_settings['leases']
 
+            dhcp_usr_settings = dhcp_settings.expanded_user_data
             if (dhcp_lease.record is _NULL_LEASE):
-                leases.pop(dhcp_lease.ip, None)
+                dhcp_usr_settings['leases'].pop(dhcp_lease.ip, None)
 
             else:
-                leases[dhcp_lease.ip] = dhcp_lease.record
+                dhcp_usr_settings['leases'][dhcp_lease.ip] = dhcp_lease.record
 
-            dnx.write_configuration(dhcp_settings)
-
-    # loading dhcp leases from json file. will be called on startup only for lease persistence.
-    def _load_leases(self) -> None:
-
-        dhcp_settings = load_configuration('dhcp_server')
-
-        stored_leases = dhcp_settings['leases']
-        self.update({
-            IPv4Address(ip): lease_info for ip, lease_info in stored_leases.items()
-        })
+            dnx.write_configuration(dhcp_usr_settings)
 
     @looper(ONE_MIN)
     # TODO: TEST RESERVATIONS GET CLEANED UP
-    def _lease_table_cleanup(self) -> NoReturn:
+    def _lease_table_cleanup(self) -> None:
 
-        # filtering list down to only active leases. list comp is more efficient and this also removes the need
-        # to check if lease is active in business logic.
-        active_leases = [
-            (ip_addr, lease) for ip_addr, lease in self.items() if lease[0] != DHCP.AVAILABLE
-        ]
+        lease: DHCP_RECORD
+
+        # filtering list down to only active leases.
+        active_leases = list(self.items())
 
         for ip_address, lease in active_leases:
 
@@ -282,16 +252,16 @@ class Leases(dict):
             time_elapsed = fast_time() - lease_time
 
             # ip reservation has been removed from the system
-            if (lease_type == DHCP.RESERVATION and lease_mac not in self._ip_reservations):
-                self[ip_address] = (DHCP.AVAILABLE, 0, 0, 0)
+            if (lease_type == DHCP.RESERVATION and lease_mac not in self.reservations):
+                self.pop(ip_address)
 
             # the client did not accept our ip offer
             elif (lease_type == DHCP.OFFERED and time_elapsed > ONE_MIN):
-                self[ip_address] = (DHCP.AVAILABLE, 0, 0, 0)
+                self.pop(ip_address)
 
             # ip lease expired normally # NOTE: consider moving this value to a global constant/ make configurable
             elif (time_elapsed >= 86800):
-                self[ip_address] = (DHCP.AVAILABLE, 0, 0, 0)
+                self.pop(ip_address)
 
             # unknown condition? maybe log?
             else: continue
@@ -299,3 +269,11 @@ class Leases(dict):
             # adding to queue for removal from stored leases on disk. no record notifies job handler to remove vs add.
             # this is only needed to adjust the disk since the iterator handles mutating the lease dict in memory.
             self.modify(ip_address, clean_up=True)
+
+    # loading dhcp leases from json file. only called on startup
+    def _load_leases(self) -> None:
+
+        dhcp_settings = load_configuration('dhcp_server')
+
+        stored_leases = dhcp_settings.get_items('leases')
+        self.update({ip: lease_info for ip, lease_info in stored_leases})

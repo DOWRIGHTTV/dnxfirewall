@@ -12,8 +12,8 @@ from dnx_gentools.def_enums import Queue
 
 from dnx_routines.logging.log_client import Log
 
-from dnx_secmods.cfirewall.fw_main import CFirewall
-from dnx_secmods.cfirewall.fw_control import FirewallControl
+from fw_main import CFirewall
+from fw_control import FirewallControl
 
 @dataclass
 class Args:
@@ -37,7 +37,7 @@ if (INIT_MODULE):
 
     Log.run(name='firewall')
 
-    dnxfirewall = CFirewall()
+    dnxfirewall: CFirewall = CFirewall()
     dnxfirewall.set_options(args.bypass_set, args.verbose_set)
 
     error = dnxfirewall.nf_set(Queue.CFIREWALL)
@@ -50,16 +50,16 @@ if (INIT_MODULE):
     # these will run in Python threads with a potential calling into Cython.
     # these functions should be explicitly identified since they will require the gil to be acquired on the Cython side
     # or else the Python interpreter will crash.
-    fw_control = FirewallControl(Log, cfirewall=dnxfirewall)
+    fw_control: FirewallControl = FirewallControl(Log, cfirewall=dnxfirewall)
     try:
         fw_control.run()
     except Exception as E:
         hardout(f'DNXFIREWALL control run failure => {E}')
 
-    # this is a blocking call but is running in pure C. the GIL is released before running the low level system
-    # operations and will never retake the gil.
-    # NOTE: setting bypass will tell the process to invoke rule action (DROP or ACCEPT) directly without
-    #  forwarding to other modules.
+    # this is running in pure C. the GIL is released before running the low level system operations and will never
+    # retake the gil.
+    # NOTE: setting bypass will tell the process to invoke rule action (DROP or ACCEPT) directly without forwarding to
+    #  other modules.
     dnx: Thread = Thread(target=dnxfirewall.nf_run)
     dnx.start()
     try:

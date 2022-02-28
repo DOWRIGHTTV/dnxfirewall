@@ -12,7 +12,7 @@ from dnx_gentools.def_enums import INTF
 from dnx_gentools.file_operations import load_configuration, ConfigurationManager, json_to_yaml
 
 from dnx_iptools.def_structs import fcntl_pack, long_unpack
-from dnx_iptools.protocol_tools import int_to_ip
+from dnx_iptools.protocol_tools import itoip
 
 from dnx_system.sys_action import system_action
 
@@ -224,7 +224,7 @@ def get_masquerade_ip(*, dst_ip: int, packed: bool = False) -> Union[bytes, int]
 
     # TODO: see if we can reuse DESCRIPTOR socket
     s = socket(AF_INET, SOCK_DGRAM)
-    s.connect((int_to_ip(dst_ip), 0))
+    s.connect((itoip(dst_ip), 0))
 
     try:
         ip_addr = inet_aton(s.getsockname()[0])

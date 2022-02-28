@@ -16,7 +16,7 @@ from dnx_gentools.def_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK
 
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import *
-from dnx_iptools.protocol_tools import int_to_ip, calc_checksum
+from dnx_iptools.protocol_tools import itoip, calc_checksum
 from dnx_iptools.interface_ops import load_interfaces, wait_for_interface, wait_for_ip, get_masquerade_ip
 
 from dnx_netmods.dnx_netfilter.dnx_nfqueue import NetfilterQueue, set_user_callback as set_nfqueue_callback
@@ -33,14 +33,14 @@ class Listener:
     __registered_socks: ClassVar[dict] = {}
     __epoll = select.epoll()
 
-    _Log: ClassVar[Optional[Type[LogHandler]]] = None
+    _Log: ClassVar[LogHandler_T] = None
     _packet_parser: ClassVar[ProxyParser] = _NOT_IMPLEMENTED
     _proxy_callback: ClassVar[ProxyCallback] = _NOT_IMPLEMENTED
 
-    _intfs = load_interfaces(exclude=['wan'])
+    _intfs: ClassVar[list[tuple[int, int, str]]] = load_interfaces(exclude=['wan'])
 
     # stored as file descriptors to minimize lookups in listener queue.
-    enabled_intfs = set()
+    enabled_intfs: ClassVar[set] = set()
 
     __slots__ = ()
 
@@ -51,7 +51,7 @@ class Listener:
         return object.__new__(cls)
 
     @classmethod
-    def run(cls, Log: Type[LogHandler], *, threaded: bool = True, always_on: bool = False):
+    def run(cls, Log: LogHandler_T, *, threaded: bool = True, always_on: bool = False):
         '''associating subclass Log reference with Listener class. registering all interfaces in _intfs and starting
         service listener loop. calling class method setup before to provide subclass specific code to run at class level
         before continuing.'''
@@ -67,6 +67,9 @@ class Listener:
         for intf in cls._intfs:
             threading.Thread(target=cls.__register, args=(intf,)).start()
 
+        # ======================
+        # INITIALIZING LISTENER
+        # ======================
         # running main epoll/ socket loop.
         self = cls()
         self.__listener(always_on, threaded)
@@ -344,7 +347,7 @@ class ProtoRelay:
 
 
 class NFQueue:
-    _log: ClassVar[Optional[Type[LogHandler]]] = None
+    _log: ClassVar[LogHandler_T] = None
     _packet_parser: ClassVar[ProxyParser] = _NOT_IMPLEMENTED
     _proxy_callback: ClassVar[ProxyCallback] = _NOT_IMPLEMENTED
 
@@ -368,7 +371,7 @@ class NFQueue:
         self.__threaded = None
 
     @classmethod
-    def run(cls, Log: Type[LogHandler], *, q_num: int, threaded: bool = True) -> None:
+    def run(cls, Log: LogHandler_T, *, q_num: int, threaded: bool = True) -> None:
         cls._setup()
         cls._log = Log
 
@@ -673,7 +676,7 @@ class RawResponse:
     on startup to associate interface, zone, mac, ip, and active socket.'''
 
     __setup: ClassVar[bool] = False
-    _log: ClassVar[Optional[Type[LogHandler]]] = None
+    _log: ClassVar[LogHandler_T] = None
     _Module = None
 
     _registered_socks: ClassVar[dict] = {}
@@ -695,7 +698,7 @@ class RawResponse:
         self._packet = packet
 
     @classmethod
-    def setup(cls, log: Type[LogHandler], Module) -> None:
+    def setup(cls, log: LogHandler_T, Module) -> None:
         '''register all available interfaces in a separate thread for each. registration will wait for the interface to
         become available before finalizing.'''
 
@@ -749,7 +752,7 @@ class RawResponse:
         # calling hook for packet generation. this can be overloaded by subclass.
         send_data = self._prepare_packet(packet, dnx_src_ip)
         try:
-            intf.sock_sendto(send_data, (int_to_ip(packet.src_ip), 0))
+            intf.sock_sendto(send_data, (itoip(packet.src_ip), 0))
         except OSError:
             pass
 

@@ -6,7 +6,7 @@ from dnx_gentools.def_constants import MSB, LSB
 from dnx_gentools.def_enums import CONN, DIR
 
 from dnx_iptools.packet_classes import NFPacket, RawResponse
-from dnx_iptools.protocol_tools import int_to_ip
+from dnx_iptools.protocol_tools import itoip
 
 
 class IPPPacket(NFPacket):
@@ -33,13 +33,13 @@ class IPPPacket(NFPacket):
         if (self.direction == DIR.INBOUND):
             tracked_ip = self.src_ip
 
-            self.local_ip = int_to_ip(self.dst_ip)
+            self.local_ip = itoip(self.dst_ip)
 
         # elif self.direction = DIR.OUTBOUND:
         else:
             tracked_ip = self.dst_ip
 
-            self.local_ip = int_to_ip(self.src_ip)
+            self.local_ip = itoip(self.src_ip)
 
         self.bin_data = (tracked_ip & MSB, tracked_ip & LSB)
 

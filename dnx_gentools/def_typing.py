@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
 from __future__ import annotations
+
 from typing import TYPE_CHECKING, Callable, Generator, Iterator, Type, NewType, ClassVar, Literal, Union, Optional
-from typing import NamedTuple, Any
+from typing import Any, NoReturn
 
 _DISABLED = False
 
@@ -25,6 +26,7 @@ if (TYPE_CHECKING and not _DISABLED):
 
     # module packs
     from dnx_gentools import *
+    from dnx_iptools import *
     from dnx_routines import *
     from dnx_secmods import *
     from dnx_netmods import *
@@ -35,5 +37,7 @@ if (TYPE_CHECKING and not _DISABLED):
     ProxyParser = Callable[[CPacket, int], ProxyPacket]
 
     DNSListHandler = Callable[[Any, str, int], int]
+    DNSCache = dns_cache(dns_packet=DNSPacket, request_handler=ProxyPacket)
+    RequestTracker = request_tracker()
 
     Structure = dict[str, int]

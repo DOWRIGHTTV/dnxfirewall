@@ -3,24 +3,40 @@
 from __future__ import annotations
 
 from collections import namedtuple as _namedtuple
-from typing import NamedTuple as _NamedTuple, Union as _Union, Optional as _Optional
+from typing import NamedTuple as _NamedTuple, Union as _Union, Optional as _Optional, Any as _Any
 
-from dnx_gentools.def_enums import PROTO
+from dnx_gentools.def_enums import PROTO as _PROTO, DHCP as _DHCP, DNS_CAT as _DNS_CAT
+
+class Item(_NamedTuple):
+    key: _Any
+    value: _Any
+
 
 # DHCP SERVER
 DHCP_REQUEST_INFO = _namedtuple(
     'dhcp_request_info', 'message_type, xID, server_identifier, mac_address, client_address, requested_ip'
 )
 DHCP_RESPONSE_INFO = _namedtuple('dhcp_response_info', 'xID mac_address ciaddr handout_ip options')
-DHCP_RECORD = _namedtuple('server_record', 'rtype timestamp mac hostname')
+
+class DHCP_RECORD(_NamedTuple):
+    rtype: _DHCP
+    timestamp: int
+    mac: str
+    hostname: str
+
+# short-lived container for queue/writing dhcp record to disk
+class RECORD_CONTAINER(_NamedTuple):
+    ip: int
+    record: DHCP_RECORD
+
 
 # SYSLOG CLIENT
 SYSLOG_SERVERS = _namedtuple('syslog_servers', 'primary secondary')
 
 # DNS PROXY
 class DNS_SERVERS(_NamedTuple):
-    primary: dict[_Union[str, PROTO], _Optional[bool]]
-    secondary: dict[_Union[str, PROTO], _Optional[bool]]
+    primary: dict[_Union[str, _PROTO], _Optional[bool]]
+    secondary: dict[_Union[str, _PROTO], _Optional[bool]]
 
 
 # DNS_SERVERS = _namedtuple('dns_servers', 'primary secondary')
@@ -29,7 +45,12 @@ RELAY_CONN = _namedtuple('relay_conn', 'remote_ip sock send recv version')
 DNS_CACHE = _namedtuple('dns_cache', 'ttl records')
 CACHED_RECORD = _namedtuple('cached_record', 'expire ttl records')
 DNS_REQUEST_INFO = _namedtuple('request_info', 'client_address request, request2')
-DNS_REQUEST_RESULTS = _namedtuple('request_results', 'redirect, reason, category')
+class DNS_REQUEST_RESULTS(_NamedTuple):
+    redirect: bool
+    reason: _Optional[str]
+    category: _Optional[_DNS_CAT]
+
+
 DNS_LOG = _namedtuple('dns_log', 'src_ip request category reason action')
 BLOCKED_LOG = _namedtuple('blocked_log', 'src_ip request category reason action')
 

@@ -10,7 +10,7 @@ from collections import namedtuple
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_enums import GEO, DATA
-from dnx_iptools.protocol_tools import cidr_to_int, ip_to_int
+from dnx_iptools.protocol_tools import cidr_to_int, iptoi
 
 debug = pprint.PrettyPrinter(indent=4).pprint
 
@@ -39,7 +39,7 @@ def _object_manager(object_list: list[_FW_OBJECT]) -> ObjectManager:
         if (obj.type == 'address'):
             ip, netmask = obj.value.split('/')
 
-            return [ip_to_int(ip), cidr_to_int(netmask)]
+            return [iptoi(ip), cidr_to_int(netmask)]
 
         elif (obj.type == 'country'):
             return [-1, GEO[obj.value.upper()].value]

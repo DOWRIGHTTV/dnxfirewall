@@ -1,6 +1,6 @@
 #!/usr/bin/env Cython
 
-from fw_main cimport *
+from dnx_secmods.cfirewall.fw_main.fw_main cimport *
 
 # calculates and returns calculated standard tcp/ip checksum
 cdef u_int16_t checksum(void *pkt_data, size_t dlen) nogil:

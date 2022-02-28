@@ -18,7 +18,7 @@ __all__ = (
 cidr_to_host_count: dict[str, int] = {f'{i}': 2**x for i, x in enumerate(reversed(range(31)), 2)}
 ip_unpack: Callable[[bytes], tuple] = Struct('>L').unpack
 
-def _combine_domain(Log: Type[LogHandler]) -> list[str]:
+def _combine_domain(Log: LogHandler_T) -> list[str]:
     dns_proxy: ConfigChain = load_configuration('dns_proxy')
 
     domain_signatures: list = []
@@ -47,7 +47,7 @@ def _combine_domain(Log: Type[LogHandler]) -> list[str]:
 
     return domain_signatures
 
-def generate_domain(Log: Type[LogHandler]) -> tuple[tuple[int, tuple[int, int]]]:
+def generate_domain(Log: LogHandler_T) -> tuple[tuple[int, tuple[int, int]]]:
     # getting all enabled signatures
     domain_signatures: list = _combine_domain(Log)
 
@@ -88,7 +88,7 @@ def generate_domain(Log: Type[LogHandler]) -> tuple[tuple[int, tuple[int, int]]]
 
     return tuple(nets)
 
-def _combine_reputation(Log: Type[LogHandler]) -> list[str]:
+def _combine_reputation(Log: LogHandler_T) -> list[str]:
     ip_proxy: ConfigChain = load_configuration('ip_proxy')
 
     ip_rep_signatures: list = []
@@ -101,7 +101,7 @@ def _combine_reputation(Log: Type[LogHandler]) -> list[str]:
 
     return ip_rep_signatures
 
-def generate_reputation(Log: Type[LogHandler]) -> tuple[tuple[int, tuple[int, REP]]]:
+def generate_reputation(Log: LogHandler_T) -> tuple[tuple[int, tuple[int, REP]]]:
 
     # getting all enabled signatures
     ip_rep_signatures: list = _combine_reputation(Log)
@@ -138,7 +138,7 @@ def generate_reputation(Log: Type[LogHandler]) -> tuple[tuple[int, tuple[int, RE
 
     return tuple(nets)
 
-def _combine_geolocation(Log: Type[LogHandler]) -> list[str]:
+def _combine_geolocation(Log: LogHandler_T) -> list[str]:
     geo_settings: list = load_configuration('ip_proxy').get_list('geolocation')
 
     # adding private ip space signatures because they are currently excluded from webui. (by design... for now)
@@ -156,7 +156,7 @@ def _combine_geolocation(Log: Type[LogHandler]) -> list[str]:
 
     return ip_geo_signatures
 
-def generate_geolocation(Log: Type[LogHandler]) -> tuple[tuple[int, tuple[int, int, int]]]:
+def generate_geolocation(Log: LogHandler_T) -> tuple[tuple[int, tuple[int, int, int]]]:
     '''
     Convert standard signatures into a compressed integer format. This will completely replace file operations function
     since we are no longer generating a combined file and will do the merge and convert in memory before returning

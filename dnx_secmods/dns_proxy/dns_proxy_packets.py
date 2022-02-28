@@ -221,7 +221,7 @@ class DNSPacket(NFPacket):
         # hashing queried name enumerating any subdomains (signature matching)
         # defining unique tuple for informing dns server of inspection results
         self.requests, self.tld = _enumerate_request(*query_info)
-        self.request_identifier = (int_to_ip(self.src_ip), self.src_port, self.dns_id)
+        self.request_identifier = (itoip(self.src_ip), self.src_port, self.dns_id)
 
 
 def _enumerate_request(request: str, local_domain: bool, int=int, hash=hash) -> tuple[list[tuple[int]], Optional[str]]:

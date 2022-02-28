@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
-import os
-import sys
+from __future__ import annotations
 
-sys.path.insert(1, os.path.dirname(__file__))
+from dnx_routines.logging.log_main import *
+from dnx_routines.logging.log_client import *
 
-from log_main import *
-from log_client import *
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from log_client import *
+    from log_main import *

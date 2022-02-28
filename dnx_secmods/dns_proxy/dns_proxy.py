@@ -6,7 +6,7 @@ from dnx_gentools.def_enums import Queue, DNS, DNS_CAT, TLD_CAT
 from dnx_gentools.def_namedtuples import DNS_BLACKLIST, DNS_REQUEST_RESULTS, DNS_SIGNATURES, DNS_WHITELIST
 from dnx_gentools.signature_operations import generate_domain
 
-from dnx_iptools.dnx_trie_search import generate_recursive_binary_search
+from dnx_iptools.dnx_trie_search import RecurveTrie
 from dnx_iptools.packet_classes import NFQueue
 
 from dns_proxy_automate import Configuration
@@ -34,7 +34,7 @@ class DNSProxy(NFQueue):
         {DNS_CAT.doh}, {}, []
     )
 
-    _dns_sig_ref: ClassVar[Optional[Callable]] = None
+    _dns_sig_ref: ClassVar[Callable] = None
     _packet_parser: ClassVar[ProxyParser] = DNSPacket.netfilter_recv  # alternate constructor
 
     __slots__ = (
@@ -109,8 +109,8 @@ def _inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
 
         return DNS_REQUEST_RESULTS(True, 'tld filter', TLD_CAT[packet.requests[0]])
 
+    category: DNS_CAT
     # signature/ blacklist check.
-    # DNS_REQUEST_RESULTS(redirect, block type, category)
     for enum_request in packet.requests[1:]:
 
         # NOTE: allowing malicious category overrides (for false positives)
@@ -123,8 +123,8 @@ def _inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
 
             return DNS_REQUEST_RESULTS(True, 'blacklist', DNS_CAT.time_based)
 
-        # pulling the domain category if a signature match.
-        category = DNS_CAT(_recursive_binary_search(enum_request))
+        # determining the domain category
+        category = DNS_CAT(_category_search(enum_request))
         if (category is not DNS_CAT.NONE) and _block_query(category, whitelisted):
 
             return DNS_REQUEST_RESULTS(True, 'category', category)
@@ -132,7 +132,7 @@ def _inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
         # adding the returned cat to the enum list. this will be used to identify categories for allowed requests.
         enum_categories.append(category)
 
-    # Keyword search within query name. will block if match
+    # Keyword search within query name will block if match
     req = packet.request
     keyword_match = [(kwd, cat) for kwd, cat in _dns_keywords if kwd in req]
     if (keyword_match):
@@ -165,15 +165,15 @@ def _block_query(category: DNS_CAT, whitelisted: bool) -> bool:
 if (INIT_MODULE):
     dns_cat_signatures = generate_domain(Log)
 
-    # using cython function factory to create binary search function with module specific signatures
-    signature_bounds = (0, len(dns_cat_signatures)-1)
-
     # TODO: collisions were found in the geolocation filtering data structure. this has been fixed for geolocation and
     #  standard ip category filtering, but has not been investigated for dns signatures. due to the way the signatures
     #  are compressed, it is much less likely to happen to dns signatures. (main issue were values in multiples of 10
     #  because of the multiple 0s contained).
     #  to be safe, run through the signatures, generate bin and host id, then check for host id collisions within a bin.
-    _recursive_binary_search = generate_recursive_binary_search(dns_cat_signatures, signature_bounds)
+    _category_trie = RecurveTrie()
+    _category_trie.generate_structure(dns_cat_signatures)
+
+    _category_search = _category_trie.search
 
     Log.run(
         name=LOG_NAME

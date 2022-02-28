@@ -2,8 +2,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Type
 
 if (TYPE_CHECKING):
-    from database.ddb_connector_sqlite import *
-    from logging.log_client import LogHandler
+    from logging import *
+
+    from database import *
+
+    # this is being a pain in the ass
+    from logging.log_client import _log_handler
+
+    _LogHandler = _log_handler()
+    LogHandler_T = Type[_LogHandler]

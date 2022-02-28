@@ -171,8 +171,9 @@ def create_dns_query_header(dns_id, arc=0, *, cd):
 _icmp_header_template = PR_ICMP_HDR(**{'type': 8, 'code': 0})
 
 def init_ping(timeout: float = .25) -> Callable[[str, int], bool]:
-    '''function factory that returns a ping function object optimized for speed. not thread safe within a single ping
-     object, but is thread safe between multiple ping objects.'''
+    '''function factory that returns a ping function object optimized for speed.
+
+    not thread safe within a single ping object, but is thread safe between multiple ping objects.'''
 
     ping_sock = socket(AF_INET, SOCK_RAW, PROTO.ICMP)
     ping_sock.settimeout(timeout)

@@ -16,6 +16,7 @@ from collections import namedtuple
 
 from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_namedtuples import Item
 from dnx_gentools.def_enums import DNS_CAT, DATA
 
 from dnx_routines.configure.exceptions import ValidationError
@@ -115,7 +116,7 @@ def load_tlds() -> Generator[tuple[str, int]]:
 # function to load in all keywords corresponding to enabled domain categories. the try/except
 # is used to ensure bad keywords do not prevent the proxy from starting, though the bad keyword
 # will be omitted from the proxy.
-def load_keywords(log: Type[LogHandler]) -> tuple:
+def load_keywords(log: LogHandler_T) -> tuple:
     '''returns keyword set for enabled domain categories'''
 
     keywords = []
@@ -212,8 +213,6 @@ class config(dict):
         self[key] = value
 
 
-_item = namedtuple('item', 'key value')
-
 class ConfigChain:
 
     _sep: ClassVar[str] = '->'
@@ -301,7 +300,7 @@ class ConfigChain:
 
         return list(search_data)
 
-    def get_items(self, key: Optional[str] = None) -> list[Optional[_item]]:
+    def get_items(self, key: Optional[str] = None) -> list[Optional[Item]]:
         '''return list of namedtuple containing key: value pairs of child keys 1 level lower than the passed in key.
 
         returns an empty list if not found.
@@ -318,7 +317,7 @@ class ConfigChain:
             except KeyError:
                 return []
 
-        return [_item(k, v) for k, v in search_data.items()]
+        return [Item(k, v) for k, v in search_data.items()]
 
     def get_values(self, key: Optional[str] = None) -> list:
         '''return a list of values for the child keys 1 level lower than the passed in key.
@@ -359,8 +358,9 @@ class ConfigChain:
 
     @property
     def expanded_user_data(self) -> dict:
-        '''returns snapshot of expanded user config dictionary. additional calls are required to reflect changes to user
-         data'''
+        '''returns snapshot of expanded user config dictionary.
+
+        additional calls are required to reflect changes to user data outside of the returned object'''
 
         return self._expand(self.__mutable_config)
 
@@ -422,7 +422,7 @@ class ConfigurationManager:
     obtained or block until it can acquire the lock and return the class object to the caller.
     '''
 
-    log: ClassVar[Optional[LogHandler]] = None
+    log: ClassVar[LogHandler_T] = None
     config_lock_file: ClassVar[ConfigLock] = f'{HOME_DIR}/dnx_system/config.lock'
 
     __slots__ = (
@@ -432,7 +432,7 @@ class ConfigurationManager:
     )
 
     @classmethod
-    def set_log_reference(cls, ref: Type[LogHandler]) -> None:
+    def set_log_reference(cls, ref: LogHandler_T) -> None:
         '''sets logging class reference for configuration manager specific errors.'''
 
         cls.log = ref

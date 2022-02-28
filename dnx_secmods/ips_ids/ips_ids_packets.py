@@ -6,7 +6,7 @@ from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import CONN, PROTO
 
 from dnx_iptools.packet_classes import NFPacket, RawResponse
-from dnx_iptools.protocol_tools import int_to_ip
+from dnx_iptools.protocol_tools import itoip
 from dnx_iptools.interface_ops import load_interfaces
 
 
@@ -55,7 +55,7 @@ class IPSPacket(NFPacket):
         self.ips_profile = mark >> 20 & 15
 
         # NOTE: subject to change. this assumes ip restricted to inbound traffic only.
-        self.tracked_ip = int_to_ip(self.src_ip)
+        self.tracked_ip = itoip(self.src_ip)
         if (self.protocol is not PROTO.ICMP):
             self.target_port = self.dst_port
 

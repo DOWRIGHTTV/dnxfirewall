@@ -16,8 +16,11 @@ from dnx_gentools.file_operations import change_file_owner, load_configuration, 
 from dnx_routines.configure.system_info import System
 
 __all__ = (
-    'LogHandler', 'Log', 'direct_log',
-    'message', 'db_message', 'convert_level'
+    'LogHandler', 'Log',
+
+    'direct_log', 'message', 'db_message', 'convert_level',
+
+    'emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'informational', 'debug', 'console',
 )
 
 _system_date = System.date
@@ -49,7 +52,7 @@ def message(mod_name: str, mtype: LOG, level: LOG, log_msg: str) -> bytes:
     # 20140624|19:08:15|EVENT|DNSProxy:Informational|192.168.83.1|*MESSAGE*
     return f'{date}|{timestamp}|{mtype.name}|{mod_name}:{level}|{system_ip}|{log_msg}'.encode('utf-8')
 
-def db_message(timestamp: int, log_msg: NamedTuple, method: str) -> bytes:
+def db_message(timestamp: int, log_msg: tuple, method: str) -> bytes:
     log_data = {
         'method': method,
         'timestamp': timestamp,
@@ -80,7 +83,7 @@ def convert_level(level: LOG = None) -> Union[dict[int, list[str, str]], str]:
 # =================================
 # process wide "instance" of LogHandler class, which can be used directly or subclassed.
 
-def _log_handler() -> Type[LogHandler]:
+def _log_handler() -> LogHandler_T:
 
     _LEVEL = 0
     _name = None
@@ -192,7 +195,7 @@ def _log_handler() -> Type[LogHandler]:
                 console_log(f'{log_msg}\n')
 
         @staticmethod
-        def event_log(timestamp: int, log: NamedTuple, method: str):
+        def event_log(timestamp: int, log: tuple, method: str):
             '''log security events to database.
 
             uses local socket controlled by log service to aggregate messages across all modules.
@@ -305,8 +308,8 @@ def _log_handler() -> Type[LogHandler]:
     return _LogHandler
 
 
-LogHandler = _log_handler()
-Log = LogHandler  # alias
+LogHandler: LogHandler_T = _log_handler()
+Log: LogHandler_T = LogHandler  # alias
 
 # ===========================
 # DIRECT ACCESS FUNCTIONS

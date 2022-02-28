@@ -39,8 +39,8 @@ class FirewallManage:
     __slots__ = ()
 
     # store the main instances reference here, so it can be accessed throughout webui
-    cfirewall: ClassVar[Optional[CFirewall]] = None
-    object_manager: ClassVar[Optional[ObjectManager]] = None
+    cfirewall: ClassVar[CFirewall] = None
+    object_manager: ClassVar[ObjectManager] = None
 
     versions: ClassVar[list] = ['pending', 'active']
     sections: ClassVar[list] = ['BEFORE', 'MAIN', 'AFTER']
