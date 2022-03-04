@@ -206,13 +206,20 @@ def run_cli(mod: str, mod_loc: str) -> None:
     sys.path.insert(0, mod_path)
 
     try:
-        importlib.import_module(mod_loc)
-    except KeyboardInterrupt:
-        sprint(f'{mod} (cli) interrupted')
-
+        dnx_mod = importlib.import_module(mod_loc)
     except Exception as E:
-        sprint(f'{mod} (cli) run failure. => {E}')
+        sprint(f'{mod} (cli) import failure. => {E}')
         traceback.print_exc()
+
+    else:
+        try:
+            dnx_mod.run()
+        except Exception as E:
+            sprint(f'{mod} (cli) run failure. => {E}')
+            traceback.print_exc()
+
+        except KeyboardInterrupt:
+            sprint(f'{mod} (cli) interrupted')
 
     # this will make sure there are no dangling processes or threads on exit.
     hardout()
