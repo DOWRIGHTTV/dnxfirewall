@@ -5,8 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Type, NewType, Literal, Protocol, Callable, Generator, Iterator, ClassVar, Union
 from typing import Optional, Any, NoReturn
 
-from dnx_secmods.dns_proxy import DNSPacket
-
 _DISABLED = False
 
 # NOTE: splitting if statements as import organization
