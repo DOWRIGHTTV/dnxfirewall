@@ -8,9 +8,10 @@ from secrets import token_urlsafe
 
 import dnx_iptools.interface_ops as interface
 
+from dnx_gentools.def_constants import INIT_MODULE
 from dnx_gentools.file_operations import ConfigurationManager
 
-from dnx_routines.logging.log_client import LogHandler as Log
+from dnx_routines.logging.log_client import Log
 from dnx_routines.configure.iptables import IPTablesManager as IPTables
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 
@@ -20,12 +21,12 @@ LOG_NAME = 'system'
 ConfigurationManager.set_log_reference(Log)
 
 def run():
-    # ensuring system allows forwarding. NOTE: probably not required for hardware unit as this is enabled by default.
+    # ensuring the system allows forwarding. probably not required for hardware unit as this is enabled by default.
     IPTables.network_forwarding()
 
     Log.notice('[startup] network forwarding set.')
 
-    # changing default action for IPv6 to block everything on all chains in main table
+    # changing default action for IPv6 to block everything on all chains in the main table
     IPTables.block_ipv6()
 
     Log.notice('[startup] IPv6 disabled.')
@@ -82,9 +83,8 @@ def create_database_tables():
         # only standard db writes auto commit
         database.commit_entries()
 
-def RUN_MODULE():
+
+if (INIT_MODULE == LOG_NAME):
     Log.run(
         name=LOG_NAME
     )
-
-    run()

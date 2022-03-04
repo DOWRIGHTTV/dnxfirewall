@@ -163,8 +163,17 @@ def _block_query(category: DNS_CAT, whitelisted: bool) -> bool:
     # default action | ALLOW
     return False
 
+def run():
+    Log.run(
+        name=LOG_NAME
+    )
 
-if (INIT_MODULE):
+    # starting server before proxy will block.
+    DNSServer.run(Log, threaded=False, always_on=True)
+    DNSProxy.run(Log, q_num=Queue.DNS_PROXY)
+
+
+if (INIT_MODULE == LOG_NAME):
     dns_cat_signatures = generate_domain(Log)
 
     # TODO: collisions were found in the geolocation filtering data structure. this has been fixed for geolocation and
@@ -176,11 +185,3 @@ if (INIT_MODULE):
     _category_trie.generate_structure(dns_cat_signatures)
 
     _category_search = _category_trie.search
-
-    Log.run(
-        name=LOG_NAME
-    )
-
-    # starting server before proxy will block.
-    DNSServer.run(Log, threaded=False, always_on=True)
-    DNSProxy.run(Log, q_num=Queue.DNS_PROXY)

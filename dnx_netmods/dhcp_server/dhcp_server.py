@@ -175,9 +175,11 @@ def send_to_client(send_data: bytearray, client_request: ClientRequest, server_m
     # all cases, when 'giaddr' is zero, the server broadcasts any DHCPNAK
     # messages to 0xffffffff.
 
+def run():
+    DHCPServer.run(Log, threaded=False)
 
-if (INIT_MODULE):
+
+if (INIT_MODULE == LOG_NAME):
     Log.run(
         name=LOG_NAME
     )
-    DHCPServer.run(Log, threaded=False)

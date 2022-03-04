@@ -345,9 +345,11 @@ class Inspect:
 
         return IPS.BLOCKED
 
+def run():
+    IPS_IDS.run(Log, q_num=Queue.IPS_IDS)
 
-def RUN_MODULE():
+
+if (INIT_MODULE == LOG_NAME):
     Log.run(
         name=LOG_NAME
     )
-    IPS_IDS.run(Log, q_num=Queue.IPS_IDS)

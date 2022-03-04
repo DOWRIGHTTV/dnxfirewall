@@ -125,11 +125,12 @@ def _receive_requests(queue_for_db):
 
         queue_for_db((name, data['timestamp'], log_entry))
 
-
-if (INIT_MODULE):
-    Log.run(name=LOG_NAME)
-
+def run():
     try:
         init()
     finally:
         os.remove(DATABASE_SOCKET)
+
+
+if (INIT_MODULE == LOG_NAME):
+    Log.run(name=LOG_NAME)

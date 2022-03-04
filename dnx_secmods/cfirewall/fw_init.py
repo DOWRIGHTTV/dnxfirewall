@@ -15,6 +15,8 @@ from dnx_routines.logging.log_client import Log
 from fw_main import CFirewall
 from fw_control import FirewallControl
 
+LOG_NAME = 'cfirewall'
+
 @dataclass
 class Args:
     b: int = 0
@@ -30,12 +32,7 @@ class Args:
     def verbose_set(self):
         return self.v or self.verbose
 
-
-args = Args(**{a: 1 for a in os.environ['PASSTHROUGH_ARGS'].split(',')})
-
-if (INIT_MODULE):
-
-    Log.run(name='firewall')
+def run():
 
     dnxfirewall: CFirewall = CFirewall()
     dnxfirewall.set_options(args.bypass_set, args.verbose_set)
@@ -67,3 +64,9 @@ if (INIT_MODULE):
     except Exception as E:
         dnxfirewall.nf_break()
         hardout(f'DNXFIREWALL cfirewall/nfqueue failure => {E}')
+
+
+if (INIT_MODULE == LOG_NAME):
+    args = Args(**{a: 1 for a in os.environ['PASSTHROUGH_ARGS'].split(',')})
+
+    Log.run(name=LOG_NAME)

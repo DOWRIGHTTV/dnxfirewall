@@ -192,7 +192,7 @@ def service_command(mod: str, cmd: str) -> None:
 # issues with the linter thinking a ton of stuff was not defined. this could probably be done better.
 # TODO: see if can be done better
 def run_cli(mod: str, mod_loc: str) -> None:
-    os.environ['INIT_MODULE'] = 'YES'
+    os.environ['INIT_MODULE'] = mod
     os.environ['HOME_DIR'] = HOME_DIR
 
     env = MODULE_MAPPING[mod].get('environ')

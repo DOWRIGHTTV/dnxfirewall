@@ -205,12 +205,7 @@ def _country_action(category: GEO, packet: IPPPacket) -> CONN:
 
     return CONN.ACCEPT
 
-
-if (INIT_MODULE):
-    Log.run(
-        name=LOG_NAME
-    )
-
+def run():
     reputation_signatures = generate_reputation(Log)
 
     # initializing C/Cython extension, converting python structures to native C array/struct,
@@ -225,3 +220,9 @@ if (INIT_MODULE):
     del reputation_signatures
 
     IPProxy.run(Log, q_num=Queue.IP_PROXY)
+
+
+if (INIT_MODULE == LOG_NAME):
+    Log.run(
+        name=LOG_NAME
+    )

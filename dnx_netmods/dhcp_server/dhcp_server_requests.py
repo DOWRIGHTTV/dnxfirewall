@@ -9,7 +9,7 @@ from dnx_gentools.def_enums import DHCP
 from dnx_iptools.def_structs import *
 from dnx_iptools.protocol_tools import icmp_reachable, btoia
 
-from dnx_routines.logging.log_client import LogHandler as Log
+from dnx_routines.logging.log_client import Log
 
 NULL_OPT: DHCP_OPTION = DHCP_OPTION(0, 0, 0)
 

@@ -90,21 +90,21 @@ def convert_level(level: Optional[LOG] = None) -> Union[dict[int, list[str, str]
 # process wide "instance" of LogHandler class, which can be used directly or subclassed.
 def _log_handler() -> LogHandler_T:
 
-    logging_level = 0
-    handler_name = None
-    cli_output = False
+    logging_level: int = 0
+    handler_name: str = ''
+    cli_output: bool = False
 
-    log_path = f'{HOME_DIR}/dnx_system/log/'
+    log_path: str = f'{HOME_DIR}/dnx_system/log/'
 
-    is_initialized = False
-    syslog = False
+    is_initialized: bool = False
+    syslog: bool = False
 
     # _syslog_sock = socket()
 
     # ==============================
     # DB SERVICE SOCKET
     # ==============================
-    db_client = socket(AF_UNIX, SOCK_DGRAM)
+    db_client: Socket = socket(AF_UNIX, SOCK_DGRAM)
 
     db_sendmsg = db_client.sendmsg
 
@@ -118,7 +118,6 @@ def _log_handler() -> LogHandler_T:
 
             set console_output=True to enable Log.cli outputs in terminal.
             '''
-
             nonlocal handler_name, cli_output, log_path, db_client
 
             if (is_initialized):
@@ -199,7 +198,8 @@ def _log_handler() -> LogHandler_T:
 
         @staticmethod
         def cli(log_msg: str):
-            '''print a message to console. this is for all important console only events.'''
+            '''print a message to console. this is for all important console only events.
+            '''
             if (cli_output):
                 console_log(f'{log_msg}\n')
 
@@ -207,16 +207,15 @@ def _log_handler() -> LogHandler_T:
         def event_log(timestamp: int, log: tuple, method: str):
             '''log security events to database.
 
-            uses local socket controlled by log service to aggregate messages across all modules.
+            sends over local socket controlled by log service to aggregate messages across all modules.
             '''
-
             log_data = [db_message(timestamp, log, method)]
 
             try:
                 db_sendmsg(log_data, [(SOL_SOCKET, SCM_CREDENTIALS, DNX_AUTHENTICATION)])
 
             # deferred connect for processes
-            # FIXME: are we missing the first log doing this? i thought i resolved that, but this doesnt look like it.
+            # NOTE: the event will be lost if this is invoked, but this is a backup for startup races.
             except ConnectionRefusedError:
                 db_client.connect(DATABASE_SOCKET.encode())
 

@@ -108,8 +108,9 @@ class LogService:
 
         self._initialize.done()
 
-
-if (INIT_MODULE):
-    Log.run(name=LOG_NAME)
-
+def run():
     LogService.run()
+
+
+if (INIT_MODULE == LOG_NAME):
+    Log.run(name=LOG_NAME)

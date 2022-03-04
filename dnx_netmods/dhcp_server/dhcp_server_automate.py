@@ -15,7 +15,7 @@ from dnx_gentools.standard_tools import looper, dnx_queue, Initialize
 
 from dnx_iptools.cprotocol_tools import iptoi
 
-from dnx_routines.logging.log_client import LogHandler as Log
+from dnx_routines.logging.log_client import Log
 
 __all__ = (
     'Configuration', 'Leases'

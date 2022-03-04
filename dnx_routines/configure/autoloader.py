@@ -9,12 +9,12 @@ import socket
 import argparse
 
 from sys import argv
-from subprocess import run, DEVNULL, CalledProcessError
+from subprocess import run as srun, DEVNULL, CalledProcessError
 
-from dnx_gentools.def_constants import HOME_DIR, hard_out, str_join
+from dnx_gentools.def_constants import HOME_DIR, INIT_MODULE, hardout, str_join
 from dnx_gentools.file_operations import ConfigurationManager, load_data, write_configuration, json_to_yaml
 from dnx_routines.configure.iptables import IPTablesManager
-from dnx_routines.logging.log_client import LogHandler as Log
+from dnx_routines.logging.log_client import Log
 
 LOG_NAME = 'system'
 PROGRESS_TOTAL_COUNT = 15
@@ -49,10 +49,10 @@ def dnx_run(string):
     '''convenience function, subprocess run wrapper adding additional args.'''
     try:
         if (VERBOSE):
-            run(string, shell=True, check=True)
+            srun(string, shell=True, check=True)
 
         else:
-            run(string, shell=True, stdout=DEVNULL, stderr=DEVNULL, check=True)
+            srun(string, shell=True, stdout=DEVNULL, stderr=DEVNULL, check=True)
 
     except CalledProcessError as cpe:
         eprint(cpe)
@@ -365,13 +365,7 @@ def mark_completion_flag():
 def store_default_mac():
     pass
 
-
-if (__name__ == '__main__'):
-    parser = argparse.ArgumentParser(description='automated deployment utility for DNXFIREWALL')
-    parser.add_argument('-v', '--verbose', help='prints output to screen', action='store_true')
-
-    args = parser.parse_args(argv[1:])
-    VERBOSE = args.verbose
+def run():
 
     # pre-checks to make sure application can run properly
     check_run_as_root()
@@ -405,3 +399,11 @@ if (__name__ == '__main__'):
     sprint('use the webui to configure a static ip or enable ssh access if needed.')
 
     hardout()
+
+
+if (INIT_MODULE == LOG_NAME):
+    parser = argparse.ArgumentParser(description='automated deployment utility for DNXFIREWALL')
+    parser.add_argument('-v', '--verbose', help='prints output to screen', action='store_true')
+
+    args = parser.parse_args(argv[1:])
+    VERBOSE = args.verbose
