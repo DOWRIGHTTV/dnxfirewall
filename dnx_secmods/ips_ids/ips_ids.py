@@ -7,6 +7,8 @@ import threading
 from copy import copy
 from collections import defaultdict
 
+from dnx_gentools.def_runtime import *
+from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import *
 from dnx_gentools.def_namedtuples import IPS_SCAN_RESULTS, DDOS_TRACKERS, PSCAN_TRACKERS

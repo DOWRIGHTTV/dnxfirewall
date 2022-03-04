@@ -6,8 +6,9 @@ import threading
 
 from array import array
 
-from dnx_gentools.def_constants import MSB, LSB
+from dnx_gentools.def_runtime import *
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import MSB, LSB
 
 from dnx_gentools.standard_tools import Initialize
 from dnx_gentools.signature_operations import generate_geolocation

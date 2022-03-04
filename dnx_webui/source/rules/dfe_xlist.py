@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_constants import INVALID_FORM, fast_time
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import INVALID_FORM, fast_time
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import ConfigurationManager, config, load_configuration
 

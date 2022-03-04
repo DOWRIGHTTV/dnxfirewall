@@ -5,8 +5,8 @@ from __future__ import annotations
 import os
 import shutil
 
-from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, write_configuration, calculate_file_hash
 
 from dnx_routines.logging.log_client import Log

@@ -7,8 +7,8 @@ import threading
 from json import dumps
 from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SCM_CREDENTIALS
 
-from dnx_gentools.def_constants import *
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import LOG
 from dnx_gentools.standard_tools import classproperty, dnx_queue
 from dnx_gentools.file_operations import change_file_owner, load_configuration, cfg_read_poller

@@ -9,8 +9,8 @@ from random import getrandbits
 from socket import socket, htons, inet_aton, AF_INET, SOCK_RAW
 from subprocess import run, CalledProcessError, DEVNULL
 
-from dnx_gentools.def_constants import RUN_FOREVER, byte_join, dot_join, fast_time
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import RUN_FOREVER, byte_join, dot_join, fast_time
 from dnx_gentools.def_enums import PROTO
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import PR_ICMP_HDR

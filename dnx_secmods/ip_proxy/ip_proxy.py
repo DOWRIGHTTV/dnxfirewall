@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_constants import *
+from dnx_gentools.def_runtime import *
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import CONN, PROTO, Queue, DIR, GEO, REP
 from dnx_gentools.def_namedtuples import IPP_INSPECTION_RESULTS
 from dnx_gentools.signature_operations import generate_reputation

@@ -6,8 +6,8 @@ import threading
 
 from ipaddress import IPv4Address
 
-from dnx_gentools.def_constants import *
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import PROTO
 from dnx_routines.configure.system_info import System
 from dnx_gentools.standard_tools import looper, Initialize

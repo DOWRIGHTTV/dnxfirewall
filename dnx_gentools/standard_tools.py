@@ -9,8 +9,8 @@ from collections import deque
 from struct import Struct
 from functools import wraps
 
-from dnx_gentools.def_constants import RUN_FOREVER, MSEC, fast_time, fast_sleep, str_join, space_join, comma_join
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import RUN_FOREVER, MSEC, fast_time, fast_sleep, str_join, space_join, comma_join
 
 __all__ = (
     'looper', 'dynamic_looper',

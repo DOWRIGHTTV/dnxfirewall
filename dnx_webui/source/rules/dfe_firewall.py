@@ -7,8 +7,8 @@ import json
 from collections import defaultdict, namedtuple
 from flask import Flask
 
-from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.file_operations import load_configuration
 from dnx_routines.configure.web_validate import ValidationError, convert_int
 

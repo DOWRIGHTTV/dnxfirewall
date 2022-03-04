@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlite3
 import importlib
 
+from dnx_gentools.def_runtime import *
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 

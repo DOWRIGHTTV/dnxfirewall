@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from socket import SOL_SOCKET, SO_BROADCAST, SO_BINDTODEVICE, SO_REUSEADDR
 
+from dnx_gentools.def_runtime import *
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import DHCP, PROTO
