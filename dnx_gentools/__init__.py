@@ -5,9 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if (TYPE_CHECKING):
-    from def_enums import *
-    from def_namedtuples import *
-
     from standard_tools import *
     from file_operations import *
 

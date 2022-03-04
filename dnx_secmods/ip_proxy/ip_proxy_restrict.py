@@ -9,6 +9,7 @@ import threading
 
 from datetime import datetime
 
+from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.standard_tools import looper, classproperty, Initialize
 from dnx_gentools.file_operations import load_configuration, cfg_read_poller, ConfigurationManager

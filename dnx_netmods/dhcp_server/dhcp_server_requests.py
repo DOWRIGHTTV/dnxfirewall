@@ -4,14 +4,15 @@ from __future__ import annotations
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
-from dnx_gentools.def_enums import DHCP
+from dnx_gentools.def_enums import DHCP, DHCP_MASK
+from dnx_gentools.def_namedtuples import L_SOCK, DHCP_OPTION, DHCP_RECORD
 
 from dnx_iptools.def_structs import *
 from dnx_iptools.protocol_tools import icmp_reachable, btoia
 
 from dnx_routines.logging.log_client import Log
 
-NULL_OPT: DHCP_OPTION = DHCP_OPTION(0, 0, 0)
+NULL_OPT = DHCP_OPTION(0, 0, 0)
 
 __all__ = (
     'ClientRequest', 'ServerResponse'

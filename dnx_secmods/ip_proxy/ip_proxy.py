@@ -206,6 +206,14 @@ def _country_action(category: GEO, packet: IPPPacket) -> CONN:
     return CONN.ACCEPT
 
 def run():
+    IPProxy.run(Log, q_num=Queue.IP_PROXY)
+
+
+if (INIT_MODULE == LOG_NAME):
+    Log.run(
+        name=LOG_NAME
+    )
+
     reputation_signatures = generate_reputation(Log)
 
     # initializing C/Cython extension, converting python structures to native C array/struct,
@@ -218,11 +226,3 @@ def run():
     # memory allocation was done manually within C extension for its structures. python structures
     # are no longer needed at this point so freeing memory.
     del reputation_signatures
-
-    IPProxy.run(Log, q_num=Queue.IP_PROXY)
-
-
-if (INIT_MODULE == LOG_NAME):
-    Log.run(
-        name=LOG_NAME
-    )

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_constants import *
+# from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import LOG, IPS
 from dnx_gentools.def_namedtuples import IPS_LOG
 from dnx_routines.logging.log_client import LogHandler

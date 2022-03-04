@@ -8,7 +8,7 @@ from socket import socket,  AF_INET, SOCK_DGRAM
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
-from dnx_gentools.def_namedtuples import RECORD_CONTAINER, Item
+from dnx_gentools.def_namedtuples import RECORD_CONTAINER, DHCP_RECORD, Item
 from dnx_gentools.def_enums import DHCP
 from dnx_gentools.file_operations import load_configuration, cfg_read_poller, ConfigurationManager
 from dnx_gentools.standard_tools import looper, dnx_queue, Initialize
@@ -24,8 +24,8 @@ __all__ = (
 # required when using configuration manager.
 ConfigurationManager.set_log_reference(Log)
 
-NULL_LEASE: DHCP_RECORD = DHCP_RECORD(DHCP.AVAILABLE, 0, '', '')
-RESERVED_LEASE: DHCP_RECORD = DHCP_RECORD(DHCP.RESERVATION, -1, '', '')
+NULL_LEASE = DHCP_RECORD(DHCP.AVAILABLE, 0, '', '')
+RESERVED_LEASE = DHCP_RECORD(DHCP.RESERVATION, -1, '', '')
 
 
 class Configuration:

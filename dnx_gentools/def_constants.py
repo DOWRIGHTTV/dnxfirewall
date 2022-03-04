@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import time as _time
 import os as _os
-import sys as _sys
 import pwd as _pwd
 
 from functools import partial as _partial

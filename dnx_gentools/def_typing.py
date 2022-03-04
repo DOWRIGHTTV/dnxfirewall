@@ -12,7 +12,7 @@ _DISABLED = False
 if (TYPE_CHECKING and not _DISABLED):
 
     from threading import Lock, Event
-    from ipaddress import IPv4Address, IPv4Network
+    from ipaddress import IPv4Address as _IPv4Address, IPv4Network as _IPv4Network
     from socket import socket as Socket
     from select import epoll as Epoll
 
