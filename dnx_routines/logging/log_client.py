@@ -128,7 +128,7 @@ def _log_handler() -> LogHandler_T:
             cli_output = console_output
             log_path += name
 
-            direct_log(handler_name, LOG.NOTICE.name, 'LogHandler started initialization.', cli=True)
+            direct_log(handler_name, LOG.NOTICE.name, 'LogHandler initialization started.', cli=True)
 
             threading.Thread(target=log_settings).start()
             threading.Thread(target=slog_settings).start()

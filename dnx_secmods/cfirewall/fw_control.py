@@ -6,7 +6,6 @@ import threading
 
 from array import array
 
-from dnx_gentools.def_runtime import *
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import MSB, LSB
 

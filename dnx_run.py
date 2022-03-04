@@ -193,9 +193,11 @@ def service_command(mod: str, cmd: str) -> None:
 # TODO: see if can be done better
 def run_cli(mod: str, mod_loc: str) -> None:
     os.environ['INIT_MODULE'] = 'YES'
+    os.environ['HOME_DIR'] = HOME_DIR
 
     mod_path = '/'.join([HOME_DIR, *mod_loc.split('.')[:2]])
 
+    sys.path.insert(0, HOME_DIR)
     # inserting the module path into the system path so intra-module imports can be done locally
     sys.path.insert(0, mod_path)
 

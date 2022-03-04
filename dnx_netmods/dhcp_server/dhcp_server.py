@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from socket import SOL_SOCKET, SO_BROADCAST, SO_BINDTODEVICE, SO_REUSEADDR
 
-from dnx_gentools.def_runtime import *
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import DHCP, PROTO
@@ -45,11 +44,15 @@ class DHCPServer(Listener):
 
     @classmethod
     def _setup(cls):
+        Log.notice('DHCPServer initialization started.')
+
         Configuration.setup(cls)
 
         # so we don't need to import/ hardcore the server class reference.
         ClientRequest.set_server_references(cls.intf_settings)
         cls.set_proxy_callback(func=cls.handle_dhcp)
+
+    Log.notice('DHCPServer initialization complete.')
 
     def _pre_inspect(self, packet) -> bool:
         if (packet.mtype in VALID_MTYPES and packet.server_ident in self.valid_idents):

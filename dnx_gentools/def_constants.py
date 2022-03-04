@@ -52,7 +52,6 @@ space_join: _Callable[[_Iterable[str]], str] = ' '.join
 comma_join: _Callable[[_Iterable[str]], str] = ', '.join
 
 HOME_DIR: str = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-2]))
-_sys.path.insert(0, HOME_DIR)
 
 # dnx user/group + dev helper to when switching between appliance and dev box
 __usr: str = _run('whoami', shell=True, text=True, capture_output=True).stdout.strip()

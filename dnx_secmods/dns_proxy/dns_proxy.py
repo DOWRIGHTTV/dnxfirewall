@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_runtime import *
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import Queue, DNS, DNS_CAT, TLD_CAT
