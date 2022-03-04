@@ -22,7 +22,7 @@ from_hex = bytes.fromhex
 
 class ClientRequest:
 
-    interface_settings: dict = None
+    interface_settings: ClassVar[dict] = None
 
     _default_options: ClassVar[tuple[int]] = (54, 51, 58, 59)
 

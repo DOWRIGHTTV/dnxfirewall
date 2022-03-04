@@ -8,6 +8,7 @@ import os
 import sys
 import time
 import importlib
+import traceback
 
 from functools import partial
 from subprocess import run, DEVNULL, CalledProcessError
@@ -205,6 +206,7 @@ def run_cli(mod: str, mod_loc: str) -> None:
 
     except Exception as E:
         sprint(f'{mod} (cli) run failure. => {E}')
+        traceback.print_exc()
 
     # this will make sure there are no dangling processes or threads on exit.
     hardout()
