@@ -20,7 +20,7 @@ __all__ = (
 
     'direct_log', 'message', 'db_message', 'convert_level',
 
-    'emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'informational', 'debug', 'console',
+    'emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'informational', 'debug', 'cli',
 )
 
 _system_date = System.date
@@ -29,16 +29,21 @@ _format_time = System.format_time
 # =============================================
 # GENERIC LIGHTWEIGHT FUNCTIONS
 # =============================================
-def direct_log(m_name: str, level_name: str, msg: str):
-    '''alternate system log method. this can be used to override global module log name if needed and does not
-    require LogHandler initialization.'''
+def direct_log(m_name: str, level_name: str, msg: str, *, cli: bool = False) -> None:
+    '''alternate system log method.
 
-    path = f'{HOME_DIR}/dnx_system/log/{m_name}/{_system_date(string=True)}-{m_name}.log'
-    with open(path, 'a+') as log:
-        log.write(f'{int(fast_time())}|{m_name}|{level_name}|{msg}\n')
+    used to override global module log name if needed.
+    does not require LogHandler initialization.
+    '''
+    log_path = f'{HOME_DIR}/dnx_system/log/{m_name}/{_system_date(string=True)}-{m_name}.log'
+    with open(log_path, 'a+') as log_file:
+        log_file.write(f'{fast_time()}|{m_name}|{level_name}|{msg}\n')
+
+    if (cli):
+        console_log(msg)
 
     if (ROOT):
-        change_file_owner(path)
+        change_file_owner(log_path)
 
 # system time/UTC will be used.
 def message(mod_name: str, mtype: LOG, level: LOG, log_msg: str) -> bytes:
@@ -61,10 +66,11 @@ def db_message(timestamp: int, log_msg: tuple, method: str) -> bytes:
 
     return dumps(log_data).encode('utf-8')
 
-def convert_level(level: LOG = None) -> Union[dict[int, list[str, str]], str]:
-    '''converts log level as integer to string. valid input: 0-7. if level is None the entire
-    dict will be returned.'''
+def convert_level(level: Optional[LOG] = None) -> Union[dict[int, list[str, str]], str]:
+    '''converts log level as integer to string. valid input: 0-7.
 
+    if level is None the entire dict will be returned.
+    '''
     levels = {
         0: ['emergency', 'system is unusable'],
         1: ['alert', 'action must be taken immediately'],
@@ -82,26 +88,25 @@ def convert_level(level: LOG = None) -> Union[dict[int, list[str, str]], str]:
 # LOG HANDLING CLASS FACTORY
 # =================================
 # process wide "instance" of LogHandler class, which can be used directly or subclassed.
-
 def _log_handler() -> LogHandler_T:
 
-    _LEVEL = 0
-    _name = None
-    _console = False
+    logging_level = 0
+    handler_name = None
+    cli_output = False
 
-    _path = f'{HOME_DIR}/dnx_system/log/'
+    log_path = f'{HOME_DIR}/dnx_system/log/'
 
-    _initialized = False
-    _syslog = False
+    is_initialized = False
+    syslog = False
 
     # _syslog_sock = socket()
 
     # ==============================
     # DB SERVICE SOCKET
     # ==============================
-    _db_client = socket(AF_UNIX, SOCK_DGRAM)
+    db_client = socket(AF_UNIX, SOCK_DGRAM)
 
-    _db_sendmsg = _db_client.sendmsg
+    db_sendmsg = db_client.sendmsg
 
     # TODO: create function to write logs for system errors that happen prior to log handler being initialized.
     class _LogHandler:
@@ -111,42 +116,46 @@ def _log_handler() -> LogHandler_T:
             '''
             initialize log handler settings and monitor system configs for changes with log/syslog settings.
 
-            set console=True to enable Log.console outputs in terminal.
+            set console_output=True to enable Log.cli outputs in terminal.
             '''
 
-            nonlocal _name, _console, _path, _db_client
+            nonlocal handler_name, cli_output, log_path, db_client
 
-            if (_initialized):
+            if (is_initialized):
                 raise RuntimeError('the log handler has already been started.')
 
-            _name = name
-            _console = console_output
-            _path += name
+            handler_name = name
+            cli_output = console_output
+            log_path += name
 
-            threading.Thread(target=_log_settings).start()
-            threading.Thread(target=_slog_settings).start()
+            direct_log(handler_name, LOG.NOTICE.name, 'LogHandler started initialization.', cli=True)
 
-            threading.Thread(target=_write_to_disk).start()
+            threading.Thread(target=log_settings).start()
+            threading.Thread(target=slog_settings).start()
+
+            threading.Thread(target=write_to_disk).start()
 
             # connecting here as a deferred action, so services loading before log handler will not have issues.
             try:
-                _db_client.connect(DATABASE_SOCKET.encode())
+                db_client.connect(DATABASE_SOCKET.encode())
             except (FileNotFoundError, ConnectionRefusedError):
                 critical('failed to connect to database. event logs will be lost.')
 
             # waiting for log settings and methods to initialize before returning to caller
-            while not _initialized:
+            while not is_initialized:
                 fast_sleep(ONE_SEC)
+
+            direct_log(handler_name, LOG.NOTICE.name, 'LogHandler initialization complete.', cli=True)
 
         @classproperty
         def current_lvl(_) -> int:
             '''returns current system log settings level.'''
-            return _LEVEL
+            return logging_level
 
         @classproperty
         def syslog_enabled(_) -> bool:
             '''returns True if syslog is configured in the system else False.'''
-            return _syslog
+            return syslog
 
         @staticmethod
         def emergency(log_msg: str):
@@ -189,9 +198,9 @@ def _log_handler() -> LogHandler_T:
             return
 
         @staticmethod
-        def console(log_msg: str):
+        def cli(log_msg: str):
             '''print a message to console. this is for all important console only events.'''
-            if (_console):
+            if (cli_output):
                 console_log(f'{log_msg}\n')
 
         @staticmethod
@@ -204,11 +213,12 @@ def _log_handler() -> LogHandler_T:
             log_data = [db_message(timestamp, log, method)]
 
             try:
-                _db_sendmsg(log_data, [(SOL_SOCKET, SCM_CREDENTIALS, DNX_AUTHENTICATION)])
+                db_sendmsg(log_data, [(SOL_SOCKET, SCM_CREDENTIALS, DNX_AUTHENTICATION)])
 
             # deferred connect for processes
+            # FIXME: are we missing the first log doing this? i thought i resolved that, but this doesnt look like it.
             except ConnectionRefusedError:
-                _db_client.connect(DATABASE_SOCKET.encode())
+                db_client.connect(DATABASE_SOCKET.encode())
 
         @staticmethod
         def slog_log(mtype, level, log_msg):
@@ -237,44 +247,43 @@ def _log_handler() -> LogHandler_T:
     # TODO: consider having this offloaded so the security modules don't have to waste cycles on writing to disk.
     #  also, check to see how often they even log, it might not be often after first startup.
     @dnx_queue(_LogHandler, name='LogHandler')
-    def _write_to_disk(job):
+    def write_to_disk(job):
 
-        path = f'{_path}/{_system_date(string=True)}-{_name}.log'
+        path = f'{log_path}/{_system_date(string=True)}-{handler_name}.log'
 
-        with open(_path, 'a+') as log:
+        with open(log_path, 'a+') as log:
             log.write(job)
 
         if (ROOT):
             change_file_owner(path)
 
-    def _add_logging_methods(cls) -> None:
-        '''dynamically overrides default log level methods depending on current log settings.'''
-
-        _round = round
-        _queue_write = _write_to_disk.add
+    def add_logging_methods(cls) -> None:
+        '''dynamically overrides default log level methods depending on current log settings.
+        '''
+        queue_write = write_to_disk.add
 
         for level_number, level_info in convert_level().items():
 
             level_name, _ = level_info
 
-            # all entries will be logged and printed to terminal
-            if (_LEVEL is LOG.DEBUG):
+            # all entries will be logged and printed to the terminal
+            if (logging_level is LOG.DEBUG):
 
                 @staticmethod
                 def log_method(log_msg):
-                    log_msg = f'{_round(fast_time())}|{_name}|{level_name}|{log_msg}\n'
+                    log_msg = f'{fast_time()}|{handler_name}|{level_name}|{log_msg}\n'
 
                     console_log(log_msg)
 
-                    _queue_write(log_msg)
+                    queue_write(log_msg)
 
             # entry will be logged to file
-            elif (level_number <= _LEVEL):
+            elif (level_number <= logging_level):
 
                 @staticmethod
                 def log_method(log_msg):
 
-                    _queue_write(f'{_round(fast_time())}|{_name}|{level_name}|{log_msg}\n')
+                    queue_write(f'{fast_time()}|{handler_name}|{level_name}|{log_msg}\n')
 
             # log level is disabled
             else:
@@ -285,25 +294,21 @@ def _log_handler() -> LogHandler_T:
             setattr(cls, level_name, log_method)
 
     @cfg_read_poller('logging_client')
-    def _log_settings(cfg_file: str) -> None:
-        nonlocal _LEVEL, _initialized
+    def log_settings(cfg_file: str) -> None:
+        nonlocal logging_level, is_initialized
 
-        logging = load_configuration(cfg_file)
+        logging_level: int = load_configuration(cfg_file)['logging->level']
 
-        _LEVEL = logging['logging->level']
+        add_logging_methods(_LogHandler)
 
-        _add_logging_methods(_LogHandler)
-
-        # after the initial load, this dones nothing
-        _initialized = True
+        # after the initial load, this does nothing
+        is_initialized = True
 
     @cfg_read_poller('syslog_client')
-    def _slog_settings(cfg_file: str) -> None:
-        nonlocal _syslog
+    def slog_settings(cfg_file: str) -> None:
+        nonlocal syslog
 
-        syslog = load_configuration(cfg_file)
-
-        _syslog = syslog['enabled']
+        syslog: int = load_configuration(cfg_file)['enabled']
 
     return _LogHandler
 
@@ -325,4 +330,4 @@ warning: LogLevel = LogHandler.warning
 notice: LogLevel = LogHandler.notice
 informational: LogLevel = LogHandler.informational
 debug: LogLevel = LogHandler.debug
-console: LogLevel = LogHandler.console
+cli: LogLevel = LogHandler.cli

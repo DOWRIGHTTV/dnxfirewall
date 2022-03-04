@@ -10,7 +10,6 @@ import pwd as _pwd
 from functools import partial as _partial
 from itertools import repeat as _repeat
 from subprocess import run as _run, DEVNULL as _DEVNULL
-from ipaddress import IPv4Address as _IPv4Address
 from pprint import PrettyPrinter as _PrettyPrinter
 
 from typing import Callable as _Callable, Iterator as _Iterator, Iterable as _Iterable
