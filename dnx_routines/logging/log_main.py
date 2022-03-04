@@ -13,7 +13,7 @@ from dnx_gentools.file_operations import load_configuration, cfg_read_poller
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 from dnx_routines.configure.system_info import System
 
-from log_client import Log
+from dnx_routines.logging.log_client import Log
 
 __all__ = (
     'LogService',
