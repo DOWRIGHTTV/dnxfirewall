@@ -297,7 +297,7 @@ def _log_handler() -> LogHandler_T:
     def log_settings(cfg_file: str) -> None:
         nonlocal logging_level, is_initialized
 
-        logging_level: int = load_configuration(cfg_file)['logging->level']
+        logging_level = load_configuration(cfg_file)['logging->level']
 
         add_logging_methods(_LogHandler)
 
@@ -308,7 +308,7 @@ def _log_handler() -> LogHandler_T:
     def slog_settings(cfg_file: str) -> None:
         nonlocal syslog
 
-        syslog: int = load_configuration(cfg_file)['enabled']
+        syslog = load_configuration(cfg_file)['enabled']
 
     return _LogHandler
 
