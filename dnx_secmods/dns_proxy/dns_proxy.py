@@ -1,7 +1,9 @@
 #!/usr/bin/python3
 
-from dnx_gentools.def_constants import *
+from __future__ import annotations
+
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import Queue, DNS, DNS_CAT, TLD_CAT
 from dnx_gentools.def_namedtuples import DNS_BLACKLIST, DNS_REQUEST_RESULTS, DNS_SIGNATURES, DNS_WHITELIST
 from dnx_gentools.signature_operations import generate_domain
@@ -55,7 +57,7 @@ class DNSProxy(NFQueue):
         if (packet.qr != DNS.QUERY):
             packet.nfqueue.drop()
 
-        elif (packet.qtype in [DNS.A, DNS.NS] and not LOCAL_RECORD(packet.request)):
+        elif (packet.qtype in [DNS.A, DNS.NS] and not LOCAL_RECORD(packet.qname)):
             return True
 
         # refusing ipv6 dns record types as policy
@@ -133,7 +135,7 @@ def _inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
         enum_categories.append(category)
 
     # Keyword search within query name will block if match
-    req = packet.request
+    req = packet.qname
     keyword_match = [(kwd, cat) for kwd, cat in _dns_keywords if kwd in req]
     if (keyword_match):
         return DNS_REQUEST_RESULTS(True, 'keyword', keyword_match[0][1])

@@ -2,6 +2,16 @@
 
 from libc.stdio cimport printf, snprintf
 
+
+cpdef long ipaddress(int ipa):
+    '''clamps integer to unsigned 32 bits and returns -1 on overflow.
+    '''
+    # -1 is safe in python, but will never fall within a valid ip range, so win-win
+    if (ipa < 0 or ipa > 4294967295):
+        return -1
+
+    return ipa
+
 cpdef long iptoi(str ipa):
 
     cdef in_addr_t ip_int = inet_addr(<bytes>ipa)

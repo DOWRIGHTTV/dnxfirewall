@@ -66,8 +66,8 @@ def looper(sleep_len: int, **kwargs):
 def dynamic_looper(loop_function: Callable):
     '''loop decorator that will sleep for the returned integer amount.
 
-    functions returning None will not sleep on next iter and returning "break" will cancel the loop.'''
-
+    functions returning None will not sleep on next iter and returning "break" will cancel the loop.
+    '''
     @wraps(loop_function)
     def wrapper(*args):
         for _ in RUN_FOREVER:
@@ -81,22 +81,25 @@ def dynamic_looper(loop_function: Callable):
 
 
 class Initialize:
-    '''class used to handle system module thread synchronization on process startup. this will ensure all
-    threads have completed one loop before returning control to the caller. will block until condition is met.'''
+    '''class used to handle system module thread synchronization on process startup.
+
+    ensures all threads have completed one loop before returning control to the caller.
+    will block until the condition is met.
+    '''
 
     def __init__(self, log: LogHandler_T, name: str):
-        self._log  = log
-        self._name = name
+        self._log: LogHandler_T = log
+        self._name: str = name
 
-        self._initial_time = fast_time()
+        self._initial_time: int = fast_time()
 
-        self.has_ran: bool = False
-        self._timeout: Optional[int] = None
         self._is_initializing: bool = True
+        self.has_ran: bool = False
+        self._timeout: int = 0
         self._thread_count: int = 0
-        self._thread_ready = set()
+        self._thread_ready: set = set()
 
-    def wait_for_threads(self, *, count: int, timeout: Optional[int] = None) -> None:
+    def wait_for_threads(self, *, count: int, timeout: int = 0) -> None:
         '''blocks until the checked in threads count has reached the wait for amount.'''
         if (not self._is_initializing or self.has_ran):
             raise RuntimeError('run has already been called for this self.')
@@ -162,7 +165,7 @@ class Initialize:
 
         return False
 
-def dnx_queue(log: LogHandler_T, name: str = None) -> Callable:
+def dnx_queue(log: LogHandler_T, name: str = None) -> Callable[[...], Any]:
     '''decorator to add custom queue mechanism for any queue handling functions. This is a direct replacement of
     dynamic_looper for queues.
 
@@ -172,19 +175,19 @@ def dnx_queue(log: LogHandler_T, name: str = None) -> Callable:
             process(job)
     '''
 
-    def decorator(func):
+    def decorator(func: Callable[[Any, ...], Any]):
 
-        queue = deque()
-        queue_add = queue.append
-        queue_get = queue.popleft
+        queue: deque = deque()
+        queue_add: Callable[[Any], None] = queue.append
+        queue_get: Callable[[], Any] = queue.popleft
 
-        job_available = threading.Event()
-        job_wait = job_available.wait
-        job_clear = job_available.clear
-        job_set = job_available.set
+        job_available: Event = threading.Event()
+        job_wait: Callable[[Optional[float]], bool] = job_available.wait
+        job_clear: Callable[[], None] = job_available.clear
+        job_set: Callable[[], None] = job_available.set
 
         @wraps(func)
-        def wrapper(*args):
+        def queue_handler(*args) -> NoReturn:
             log.informational(f'{name}/dnx_queue started.')
 
             for _ in RUN_FOREVER:
@@ -201,14 +204,14 @@ def dnx_queue(log: LogHandler_T, name: str = None) -> Callable:
 
                         fast_sleep(MSEC)
 
-        def add(job):
-            '''adds job to work queue, then marks event indicating a job is available.'''
+        def add(job: Any) -> None:
+            '''adds a job to work queue, then flags event indicating a job is available.'''
 
             queue_add(job)
             job_set()
 
-        wrapper.add = add
-        return wrapper
+        queue_handler.__dict__['add'] = add
+        return queue_handler
 
     return decorator
 
@@ -322,7 +325,7 @@ def structure(obj_name: str, fields: Union[list, str]) -> Structure:
         def __setattr__(self, key: str, value: int) -> None:
 
             if (key == 'buf'):
-                super().__setattr__('buf', _bytearray(size_of))
+                super().__setattr__('buf', value)
 
             elif (key not in self):
                 raise AttributeError(f'attribute {key} does not exist in this container.')

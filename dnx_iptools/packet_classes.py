@@ -2,27 +2,27 @@
 
 from __future__ import annotations
 
-import time
 import traceback
 import socket
 import select
 import threading
 
-from dnx_gentools.def_constants import *
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import PROTO
 from dnx_gentools.standard_tools import looper
 from dnx_gentools.def_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK
 
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import *
-from dnx_iptools.protocol_tools import itoip, calc_checksum
+from dnx_iptools.cprotocol_tools import itoip
+from dnx_iptools.protocol_tools import calc_checksum
 from dnx_iptools.interface_ops import load_interfaces, wait_for_interface, wait_for_ip, get_masquerade_ip
 
 from dnx_netmods.dnx_netfilter.dnx_nfqueue import NetfilterQueue, set_user_callback as set_nfqueue_callback
 
 __all__ = (
-    'Listener', 'ProtoRelay', 'NFQueue', 'NFPacket', 'RawPacket', 'RawResponse'
+    'Listener', 'ProtoRelay', 'NFQueue', 'NFPacket', 'RawResponse'
 )
 
 def _NOT_IMPLEMENTED(*args, **kwargs):
@@ -30,10 +30,10 @@ def _NOT_IMPLEMENTED(*args, **kwargs):
 
 
 class Listener:
-    __registered_socks: ClassVar[dict] = {}
-    __epoll = select.epoll()
+    __registered_socks: ClassVar[dict[int, L_SOCK]] = {}
+    __epoll: ClassVar[Epoll] = select.epoll()
 
-    _Log: ClassVar[LogHandler_T] = None
+    _log: ClassVar[LogHandler_T] = None
     _packet_parser: ClassVar[ProxyParser] = _NOT_IMPLEMENTED
     _proxy_callback: ClassVar[ProxyCallback] = _NOT_IMPLEMENTED
 
@@ -51,14 +51,15 @@ class Listener:
         return object.__new__(cls)
 
     @classmethod
-    def run(cls, Log: LogHandler_T, *, threaded: bool = True, always_on: bool = False):
-        '''associating subclass Log reference with Listener class. registering all interfaces in _intfs and starting
-        service listener loop. calling class method setup before to provide subclass specific code to run at class level
-        before continuing.'''
+    def run(cls, log: LogHandler_T, *, threaded: bool = True, always_on: bool = False):
+        '''associating subclass Log reference with Listener class.
 
-        Log.informational(f'{cls.__name__} initialization started.')
+        registering all interfaces in _intfs and starting service listener loop.
+        calling class method setup before to provide subclass specific code to run at class level before continuing.
+        '''
+        log.informational(f'{cls.__name__} initialization started.')
 
-        cls._Log = Log
+        cls._log: LogHandler_T = log
 
         # child class hook to initialize higher level systems. NOTE: must stay after initial intf registration
         cls._setup()
@@ -82,7 +83,7 @@ class Listener:
 
         cls.enabled_intfs.add(sock_fd)
 
-        cls._Log.notice(f'[{sock_fd}][{intf}] {cls.__name__} listener enabled.')
+        cls._log.notice(f'[{sock_fd}][{intf}] {cls.__name__} listener enabled.')
 
     @classmethod
     def disable(cls, sock_fd: int, intf: str):
@@ -96,14 +97,14 @@ class Listener:
         except KeyError:
             pass
 
-        cls._Log.notice(f'[{sock_fd}][{intf}] {cls.__name__} listener disabled.')
+        cls._log.notice(f'[{sock_fd}][{intf}] {cls.__name__} listener disabled.')
 
     @classmethod
     def _setup(cls):
         '''called prior to creating listener interface instances.
 
-        module wide code can be run here. May be overridden.
-
+        module wide code can be run here.
+        May be overridden.
         '''
         pass
 
@@ -113,37 +114,36 @@ class Listener:
     def __register(cls, intf: tuple[int, int, str]):
         '''will register interface with the listener.
 
-        requires subclass property for listener_sock returning a valid socket object. once registration is complete the
-        thread will exit.'''
+        once registration is complete the thread will exit.'''
 
         # this is being defined here so the listener will be able to correlate socket back to interface and send in.
         # NOTE: we can probably _ the first 2 vars, but they may actually come in handy for something so check to see
         # if they can be used to simplify the file descriptor tracking we had to implement awhile back.
         intf_index, zone, _intf = intf
 
-        cls._Log.debug(f'[{_intf}] {cls.__name__} started interface registration.')
+        cls._log.debug(f'[{_intf}] {cls.__name__} started interface registration.')
 
         wait_for_interface(interface=_intf)
-        intf_ip = wait_for_ip(interface=_intf)
+        intf_ip: int = wait_for_ip(interface=_intf)
 
-        l_sock = cls.listener_sock(_intf, intf_ip)
-        cls.__registered_socks[l_sock.fileno()] = L_SOCK(
+        l_sock: Socket = cls.listener_sock(_intf, intf_ip)
+        cls.__registered_socks[l_sock.fileno()]: dict[int, L_SOCK] = L_SOCK(
             _intf, intf_ip, l_sock, l_sock.send, l_sock.sendto, l_sock.recvfrom_into
         )
 
         cls.__epoll.register(l_sock.fileno(), select.EPOLLIN)
 
-        cls._Log.informational(f'[{l_sock.fileno()}][{intf}] {cls.__name__} interface registered.')
+        cls._log.informational(f'[{l_sock.fileno()}][{intf}] {cls.__name__} interface registered.')
 
     @classmethod
-    def set_proxy_callback(cls, *, func: ProxyCallback):
+    def set_proxy_callback(cls, *, func: ProxyCallback) -> None:
         '''takes a callback function to handle packets after parsing. the reference will be called
         as part of the packet flow with one argument passed in for "packet".'''
 
         if (not callable(func)):
             raise TypeError('proxy callback must be a callable object.')
 
-        cls._proxy_callback = func
+        cls._proxy_callback: ProxyCallback = func
 
     def __listener(self, always_on: bool, threaded: bool):
 
@@ -152,7 +152,7 @@ class Listener:
         registered_socks_get = self.__registered_socks.get
 
         # methods
-        packet_parser  = self._packet_parser
+        packet_parser = self._packet_parser
         proxy_callback = self._proxy_callback
         pre_inspect = self._pre_inspect
 
@@ -194,7 +194,7 @@ class Listener:
                         proxy_callback(packet)
 
                 else:
-                    self._Log.debug(f'recv on fd: {fd} | enabled ints: {self.enabled_intfs}')
+                    self._log.debug(f'recv on fd: {fd} | enabled ints: {self.enabled_intfs}')
 
     def _pre_inspect(self, packet):
         '''handle the request after the packet is parsed and confirmed a protocol match.
@@ -205,7 +205,7 @@ class Listener:
         raise NotImplementedError('the _pre_inspect method must be overridden in subclass.')
 
     @staticmethod
-    def listener_sock(intf: str, intf_ip: IPv4Address):
+    def listener_sock(intf: str, intf_ip: int):
         '''returns instance level listener socket.
 
         Must be overridden.
@@ -235,11 +235,10 @@ class ProtoRelay:
 
         return object.__new__(cls)
 
-    def __init__(self, dns_server: Type[DNSServer], fallback_relay: Optional[Callable]):
-        '''general constructor. can only be reached through subclass.
+    def __init__(self, dns_server: DNSServer_T, fallback_relay: Optional[Callable]):
+        '''general constructor that can only be reached through subclass.
 
         May be expanded.
-
         '''
         self._dns_server = dns_server
         self._fallback_relay = fallback_relay
@@ -256,7 +255,7 @@ class ProtoRelay:
             self._fallback_relay_add = fallback_relay.add
 
     @classmethod
-    def run(cls, dns_server: Type[DNSServer], *, fallback_relay: Optional[Callable] = None):
+    def run(cls, dns_server: DNSServer_T, *, fallback_relay: Optional[Callable] = None):
         '''starts the protocol relay.
 
         DNSServer object is the class handling client side requests which we can call back to and fallback is a
@@ -265,10 +264,10 @@ class ProtoRelay:
         self = cls(dns_server, fallback_relay)
 
         threading.Thread(target=self._fail_detection).start()
-        Thread(target=self.relay).start()
+        threading.Thread(target=self.relay).start()
 
     def relay(self):
-        '''main relay process for handling the relay queue. will block and run forever.'''
+        '''the main relay process for handling the relay queue. will block and run forever.'''
 
         raise NotImplementedError('relay must be implemented in the subclass.')
 
@@ -294,12 +293,12 @@ class ProtoRelay:
                 break
 
     def _recv_handler(self):
-        '''called in a thread after creating new socket to handle all responses from remote server.'''
+        '''called in a thread after creating a new socket to handle all responses from remote server.'''
 
         raise NotImplementedError('_recv_handler method must be overridden in subclass.')
 
     def _register_new_socket(self):
-        '''logic to create socket object used for external dns queries.'''
+        '''logic to create a socket object used for external dns queries.'''
 
         raise NotImplementedError('_register_new_socket method must be overridden in subclass.')
 
@@ -309,16 +308,16 @@ class ProtoRelay:
             self.mark_server_down()
 
     # processes that were unable to connect/ create a socket will send in the remote server ip that was attempted.
-    # if a remote server isn't specified the active relay socket connection's remote ip will be used.
+    # if a remote server isn't specified, the active relay socket connection's remote ip will be used.
     def mark_server_down(self, *, remote_server: str = None):
         if (not remote_server):
             remote_server = self._relay_conn.remote_ip
 
-        # more likely case is primary server going down so will use as baseline condition
+        # the more likely case is primary server going down, so will use as baseline condition
         primary = self._dns_server.dns_servers.primary
 
         # if servers could change during runtime, this has a slight race condition potential, but it shouldn't matter
-        # because when changing a server it would be initially set to down (essentially a no-op)
+        # because, when changing a server, it would be initially set to down (essentially a no-op)
         server = primary if primary['ip'] == remote_server else self._dns_server.dns_servers.secondary
         server[PROTO.DNS_TLS] = True
 
@@ -332,16 +331,15 @@ class ProtoRelay:
 
     @property
     def is_enabled(self) -> bool:
-        '''set as true if the running classes protocol matches the currently configured protocol.'''
+        '''set as true if the running class protocol matches the currently configured protocol.'''
 
         return self._dns_server.protocol is self._protocol
 
     @property
     def fail_condition(self) -> bool:
-        '''property to streamline fallback action if condition is met. returns False by default.
+        '''property to streamline fallback action if condition is met.
 
-        May be overridden.
-
+        May be overridden and will always return False if not.
         '''
         return False
 
@@ -362,18 +360,15 @@ class NFQueue:
         return object.__new__(cls)
 
     def __init__(self):
-        '''Constructor. can only be reached if called through subclass.
-
-        May be extended.
-
+        '''General constructor that can only be reached if called through subclass.
         '''
         self.__q_num = None
         self.__threaded = None
 
     @classmethod
-    def run(cls, Log: LogHandler_T, *, q_num: int, threaded: bool = True) -> None:
+    def run(cls, log: LogHandler_T, *, q_num: int, threaded: bool = True) -> None:
         cls._setup()
-        cls._log = Log
+        cls._log: LogHandler_T = log
 
         self = cls()
         self.__q_num = q_num
@@ -382,10 +377,9 @@ class NFQueue:
 
     @classmethod
     def _setup(cls):
-        '''called prior to creating listener interface instances. module wide code can be run here.
+        '''called prior to creating listener interface instances.
 
-        May be overridden.
-
+        can be overridden to run to define class level objects.
         '''
         pass
 
@@ -418,7 +412,7 @@ class NFQueue:
 
                 self._log.alert('Netfilter binding lost. Attempting to rebind.')
 
-            time.sleep(1)
+            fast_sleep(1)
 
     def __handle_packet(self, nfqueue: CPacket, mark: int):
         try:
@@ -437,7 +431,7 @@ class NFQueue:
                     self._proxy_callback(packet)
 
     def _pre_inspect(self, packet) -> bool:
-        '''a method automatically called after packet parsing.
+        '''automatically called after packet parsing.
 
         used to determine the course of action for a packet. nfqueue drop, accept, or repeat can be called within this
         scope. return will be checked as a boolean, where True will continue and False will do nothing.
@@ -511,7 +505,7 @@ class NFPacket:
             self.src_port = proto_header[0]
             self.dst_port = proto_header[1]
 
-            # ip/udp header are only needed for icmp response payloads [at this time]
+            # ip/udp headers are only needed for icmp response payloads [at this time]
             # packing into bytes to make icmp response generation more streamlined if needed
             self.ip_header = bytearray(20)
             self.udp_header = bytearray(8)
@@ -536,130 +530,127 @@ class NFPacket:
         '''executes before returning from parse call.
 
         May be overridden.
-
         '''
         pass
 
 
-class RawPacket:
-    '''NOTICE: this class has been significantly reduced in use. [no current modules subclassing]
-
-    parent class designed to index/parse full tcp/ip packets (including ethernet). alternate
-    constructors are supplied to support different listener types e.g. raw sockets.
-
-    raw socket:
-        packet = RawPacket.interface(data, address, socket)
-
-    the before_exit method can be overridden to extend the parsing functionality, for example to group
-    objects in namedtuples or to index application data.
-
-    '''
-
-    __slots__ = (
-        '_addr', 'protocol',
-
-        # init vars
-        'data', 'timestamp',
-        'sendto', 'intf_ip',
-
-        # ip
-        'ip_header', 'src_ip', 'dst_ip',
-        'src_port', 'dst_port',
-
-        # tcp
-        'seq_number', 'ack_number',
-
-        # udp
-        'udp_chk', 'udp_len',
-        'udp_header', 'udp_payload',
-
-        # icmp
-        'icmp_type'
-    )
-
-    def __new__(cls, *args, **kwargs):
-        if (cls is RawPacket):
-            raise TypeError('RawPacket can only be used via inheritance.')
-
-        return object.__new__(cls)
-
-    def __init__(self):
-        '''general default var assignments. not intended to be called directly.
-
-        May be expanded.
-
-        '''
-        self.timestamp = fast_time()
-
-        # NOTE: recently moved these here. they are defined in the parents slots, so it makes sense. I think these were
-        # in the child (ips) because the ip proxy does not need these initialized.
-        self.icmp_type = None
-        self.udp_payload = b''
-
-    @classmethod
-    def interface(cls, address, sock_info):
-        '''alternate constructor. used to start listener/proxy instances bound to physical interfaces(active socket).'''
-
-        self = cls()
-        self._addr = address  # TODO: see if this can be removed
-
-        # intf_ip used to fill sinkhole query response with rules interface ip (of intf received on)
-        self.intf_ip = sock_info[1].packed
-        self.sendto  = sock_info[4]
-
-        return self
-
-    def parse(self, data):
-        '''index tcp/ip packet layers 3 & 4 for use as instance objects.
-
-        the before_exit method will be called before returning. this can be used to create
-        subclass specific objects like namedtuples or application layer data.'''
-
-        self.protocol = PROTO(data[9])
-        self.src_ip, self.dst_ip = ip_addrs_unpack(data[12:20])
-
-        # calculating iphdr len then slicing out
-        data = data[(data[0] & 15) * 4:]
-
-        if (self.protocol is PROTO.ICMP):
-            self.icmp_type = data[0]
-
-        else:
-
-            self.src_port, self.dst_port = double_short_unpack(data[:4])
-
-            # tcp header max len 32 bytes
-            if (self.protocol is PROTO.TCP):
-
-                self.seq_number, self.ack_number = double_long_unpack(data[4:8])
-
-            # udp header 8 bytes
-            elif (self.protocol is PROTO.UDP):
-
-                self.udp_len, self.udp_chk = double_short_unpack(data[4:8])
-
-                self.udp_header  = data[:8]
-                self.udp_payload = data[8:]
-
-        if (self.continue_condition):
-            self._before_exit()
-
-    def _before_exit(self):
-        '''executes before returning from parse call.
-
-        May be overridden.
-
-        '''
-        pass
-
-    @property
-    def continue_condition(self) -> bool:
-        '''controls whether the _before_exit method gets called.
-
-        May be overridden.
-
-        '''
-        return True
+# class RawPacket:
+#     '''NOTICE: this class has been significantly reduced in use. [no current modules subclassing]
+#
+#     parent class designed to index/parse full tcp/ip packets (including ethernet). alternate
+#     constructors are supplied to support different listener types e.g. raw sockets.
+#
+#     raw socket:
+#         packet = RawPacket.interface(data, address, socket)
+#
+#     the before_exit method can be overridden to extend the parsing functionality, for example to group
+#     objects in namedtuples or to index application data.
+#
+#     '''
+#
+#     __slots__ = (
+#         '_addr', 'protocol',
+#
+#         # init vars
+#         'data', 'timestamp',
+#         'sendto', 'intf_ip',
+#
+#         # ip
+#         'ip_header', 'src_ip', 'dst_ip',
+#         'src_port', 'dst_port',
+#
+#         # tcp
+#         'seq_number', 'ack_number',
+#
+#         # udp
+#         'udp_chk', 'udp_len',
+#         'udp_header', 'udp_payload',
+#
+#         # icmp
+#         'icmp_type'
+#     )
+#
+#     def __new__(cls, *args, **kwargs):
+#         if (cls is RawPacket):
+#             raise TypeError('RawPacket can only be used via inheritance.')
+#
+#         return object.__new__(cls)
+#
+#     def __init__(self):
+#         '''general default var assignments. not intended to be called directly.
+#
+#         May be expanded.
+#
+#         '''
+#         self.timestamp = fast_time()
+#
+#         # NOTE: recently moved these here. they are defined in the parents slots, so it makes sense. I think these
+#         were in the child (ips) because the ip proxy does not need these initialized.
+#         self.icmp_type = None
+#         self.udp_payload = b''
+#
+#     @classmethod
+#     def interface(cls, address, sock_info):
+#         '''alternate constructor. used to start listener/proxy instances bound to physical interfaces(active socket).
+#         '''
+#         self = cls()
+#         self._addr = address  # TODO: see if this can be removed
+#
+#         # intf_ip used to fill sinkhole query response with rules interface ip (of intf received on)
+#         self.intf_ip = sock_info[1].packed
+#         self.sendto  = sock_info[4]
+#
+#         return self
+#
+#     def parse(self, data):
+#         '''index tcp/ip packet layers 3 & 4 for use as instance objects.
+#
+#         the before_exit method will be called before returning. this can be used to create
+#         subclass specific objects like namedtuples or application layer data.
+#         '''
+#         self.protocol = PROTO(data[9])
+#         self.src_ip, self.dst_ip = ip_addrs_unpack(data[12:20])
+#
+#         # calculating iphdr len then slicing out
+#         data = data[(data[0] & 15) * 4:]
+#
+#         if (self.protocol is PROTO.ICMP):
+#             self.icmp_type = data[0]
+#
+#         else:
+#
+#             self.src_port, self.dst_port = double_short_unpack(data[:4])
+#
+#             # tcp header max len 32 bytes
+#             if (self.protocol is PROTO.TCP):
+#
+#                 self.seq_number, self.ack_number = double_long_unpack(data[4:8])
+#
+#             # udp header 8 bytes
+#             elif (self.protocol is PROTO.UDP):
+#
+#                 self.udp_len, self.udp_chk = double_short_unpack(data[4:8])
+#
+#                 self.udp_header  = data[:8]
+#                 self.udp_payload = data[8:]
+#
+#         if (self.continue_condition):
+#             self._before_exit()
+#
+#     def _before_exit(self):
+#         '''executes before returning from parse call.
+#
+#         May be overridden.
+#         '''
+#         pass
+#
+#     @property
+#     def continue_condition(self) -> bool:
+#         '''controls whether the _before_exit method gets called.
+#
+#         May be overridden.
+#         '''
+#         return True
 
 
 # ==========================
@@ -677,7 +668,7 @@ class RawResponse:
 
     __setup: ClassVar[bool] = False
     _log: ClassVar[LogHandler_T] = None
-    _Module = None
+    _module = None
 
     _registered_socks: ClassVar[dict] = {}
 
@@ -698,20 +689,21 @@ class RawResponse:
         self._packet = packet
 
     @classmethod
-    def setup(cls, log: LogHandler_T, Module) -> None:
-        '''register all available interfaces in a separate thread for each. registration will wait for the interface to
-        become available before finalizing.'''
+    def setup(cls, log: LogHandler_T, module) -> None:
+        '''register all available interfaces in a separate thread for each.
 
+        registration will wait for the interface to become available before finalizing.
+        '''
         if (cls.__setup):
             raise RuntimeError('response handler setup can only be called once per process.')
 
-        cls.__setup = True
+        cls.__setup: bool = True
 
-        cls._log = log
-        cls._Module = Module
+        cls._log: LogHandler_T = log
+        cls._module = module
 
         # direct assignment for perf
-        cls._open_ports = Module.open_ports
+        cls._open_ports: dict[PROTO, dict[int, int]] = module.open_ports
         cls._registered_socks_get = cls._registered_socks.get
 
         for intf in cls._intfs:
@@ -726,20 +718,18 @@ class RawResponse:
         ip = wait_for_ip(interface=_intf)
 
         # sock sender is the direct reference to the socket send/to method, adding zone into value for easier
-        # reference in prepare and send method.
+        # reference in prepare_and_send method.
         cls._registered_socks[intf_index] = NFQ_SEND_SOCK(zone, ip, cls.sock_sender())
 
         cls._log.informational(f'{cls.__name__}: {_intf} registered.')
 
     @classmethod
     def prepare_and_send(cls, packet: ProxyPacket):
-        '''obtains socket object based on interface/zone received then prepares a raw packet (all layers).
-        internal _send method will be called once finished.
+        '''obtain a socket object based on the interface/zone received then prepares a raw packet (all layers).
+        the internal _send method will be called once finished.
 
         Do not override.
-
         '''
-
         self = cls(packet)
 
         # in_zone is actually interface index, but zones are linked through this identifier
@@ -843,10 +833,9 @@ class RawResponse:
 
     @staticmethod
     def sock_sender():
-        '''returns new socket object to be used with interface registration.
+        '''return a new socket object to be used with interface registration.
 
         May be overridden.
-
         '''
         sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
 

@@ -45,12 +45,11 @@ udp_header_unpack = _Struct('!4H').unpack_from
 icmp_header_unpack = _Struct('!2B3H').unpack_from
 
 dhcp_opt_unpack  = _Struct('!2B').unpack
-dhcp_header_unpack = _Struct('!4BL2H4L206s').unpack_from
-dhcp_header_pack = _Struct('!4B4s2H4s4s4s4s16s12s180s4B').pack
-dhcp_byte_pack   = _Struct('!3B').pack
-dhcp_short_pack  = _Struct('!2BH').pack
-dhcp_long_pack   = _Struct('!2BL').pack
-# dhcp_ip_pack     = _Struct('!2B4s').pack
+dhcp_header_unpack = _Struct('!4BL2H4L6s10s192s').unpack_from
+# dhcp_header_pack = _Struct('!4B4s2H4s4s4s4s16s12s180s4B').pack
+dhcp_byte_pack  = _Struct('!3B').pack
+dhcp_short_pack = _Struct('!2BH').pack
+dhcp_long_pack  = _Struct('!2BL').pack
 
 dns_header_unpack = _Struct('!6H').unpack
 dns_header_pack   = _Struct('!6H').pack

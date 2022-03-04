@@ -12,7 +12,8 @@ from dnx_gentools.def_enums import INTF
 from dnx_gentools.file_operations import load_configuration, ConfigurationManager, json_to_yaml
 
 from dnx_iptools.def_structs import fcntl_pack, long_unpack
-from dnx_iptools.protocol_tools import itoip
+from dnx_iptools.protocol_tools import btoia
+from dnx_iptools.cprotocol_tools import itoip
 
 from dnx_system.sys_action import system_action
 
@@ -23,6 +24,8 @@ __all__ = (
     'get_mac', 'get_netmask', 'get_ipaddress', 'get_masquerade_ip',
     'get_arp_table'
 )
+
+NO_ADDRESS = -1
 
 _s = socket(AF_INET, SOCK_DGRAM)
 DESCRIPTOR = _s.fileno()
@@ -42,8 +45,7 @@ def get_intf_builtin(zone_name):
     return {intf_index: (intf_settings[f'{intf_path}->zone'], intf_settings[f'{intf_path}->ident'])}
 
 def load_interfaces(intf_type: INTF = INTF.BUILTINS, *, exclude: list = []) -> list[Optional[tuple[int, int, str]]]:
-    '''
-    return list of tuples of specified interface type.
+    '''return a list of tuples for the specified interface type.
 
         [(intf_index, zone, ident)]
     '''
@@ -75,8 +77,7 @@ def load_interfaces(intf_type: INTF = INTF.BUILTINS, *, exclude: list = []) -> l
 
 # TODO: fix this later
 def set_wan_interface(intf_type: INTF = INTF.DHCP):
-    '''
-    Change wan interface state between static or dhcp.
+    '''Change wan interface state between static or dhcp.
 
     1. Configure interface type
     2. Create netplan config from template
@@ -84,7 +85,6 @@ def set_wan_interface(intf_type: INTF = INTF.DHCP):
 
     This does not configure an ip address of the interface when setting to static. see: set_wan_ip()
     '''
-
     # changing dhcp status of wan interface in config file.
     with ConfigurationManager('system') as dnx:
         interface_settings = dnx.load_configuration()
@@ -195,10 +195,12 @@ def _is_ready(interface: str) -> int:
     with open(f'/sys/class/net/{interface}/carrier', 'r') as carrier:
         return int(carrier.read().strip())
 
-# once interface is powered on from cable being plugged in and a remote device on the other end, the loop will break
-def wait_for_interface(interface:str , delay: int = ONE_SEC):
-    '''waits for interface to show powered on and waiting for network. will sleep for delay length after each check.'''
+def wait_for_interface(interface: str, delay: int = ONE_SEC) -> None:
+    '''wait for the specified interface to show power with waiting for network state.
 
+    blocks until interface is up.
+    sleeps for delay length after each check.
+    '''
     while True:
         if _is_ready(interface):
             break
@@ -207,21 +209,24 @@ def wait_for_interface(interface:str , delay: int = ONE_SEC):
 
 # once the lan interface ip address is configured after interface is brought online, the loop will break. this will
 # allow the server to continue the startup process.
-def wait_for_ip(interface: str) -> Optional[IPv4Address]:
-    '''waits for interface ip address configuration then return ip address object for corresponding ip.'''
+def wait_for_ip(interface: str) -> int:
+    '''wait for the ip address configuration of the specified interface.
 
+     return will be the integer value of the corresponding ip.
+    '''
     while True:
         ipa = get_ipaddress(interface=interface)
-        if (ipa):
+        if (ipa != NO_ADDRESS):
             return ipa
 
         fast_sleep(ONE_SEC)
 
 def get_masquerade_ip(*, dst_ip: int, packed: bool = False) -> Union[bytes, int]:
-    '''return correct source ip address for a particular destination ip address based on routing table.
+    '''return correct source ip address for a destination ip address based on the routing table.
 
-    return will be bytes if packed is True or an integer otherwise. a zeroed ip will be returned if error.'''
-
+    return will be bytes if packed is True or an integer otherwise.
+    a zeroed ip will be returned if error.
+    '''
     # TODO: see if we can reuse DESCRIPTOR socket
     s = socket(AF_INET, SOCK_DGRAM)
     s.connect((itoip(dst_ip), 0))
@@ -244,22 +249,28 @@ def get_mac(*, interface: str) -> Optional[bytes]:
     except OSError:
         return None
 
-def get_ipaddress(*, interface: str) -> Optional[IPv4Address]:
-    '''return ip address object for current ip address for sent in interface. return None on OSError.'''
-    try:
-        return IPv4Address(ioctl(DESCRIPTOR, 0x8915, fcntl_pack(bytes(interface, 'utf-8')))[20:24])
-    except OSError:
-        return None
+def get_ipaddress(*, interface: str) -> int:
+    '''return integer value for the passed in interfaces current ip address.
 
-def get_netmask(*, interface: str) -> Optional[IPv4Address]:
+    returns -1 on error.
+    '''
     try:
-        return IPv4Address(ioctl(DESCRIPTOR, 0x891b, fcntl_pack(bytes(interface, 'utf-8')))[20:24])
+        return btoia(ioctl(DESCRIPTOR, 0x8915, fcntl_pack(bytes(interface, 'utf-8')))[20:24])
     except OSError:
-        return None
+        return -1
+
+def get_netmask(*, interface: str) -> int:
+    '''return integer value for the passed in interfaces current netmask.
+
+    returns -1 on error.
+    '''
+    try:
+        return btoia(ioctl(DESCRIPTOR, 0x891b, fcntl_pack(bytes(interface, 'utf-8')))[20:24])
+    except OSError:
+        return -1
 
 def get_arp_table(*, modify: bool = False, host: Optional[str] = None) -> Union[dict, str]:
-    '''
-    return arp table as dictionary
+    '''return arp table as dictionary
 
         {ip_addr: mac} = get_arp_table(modify=True)
 
@@ -267,7 +278,6 @@ def get_arp_table(*, modify: bool = False, host: Optional[str] = None) -> Union[
 
     if host is specified, return just the mac address of the host passed in, returning "unknown" if host is not present.
     '''
-
     with open('/proc/net/arp') as arp_table:
         # 'IP address', 'HW type', 'Flags', 'HW address', 'Mask', 'Device'
         arp_table = [

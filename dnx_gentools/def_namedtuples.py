@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from collections import namedtuple as _namedtuple
-from typing import NamedTuple as _NamedTuple, Union as _Union, Optional as _Optional, Any as _Any
+from functools import cached_property as _cached_property
+from typing import NamedTuple as _NamedTuple, Union as _Union, Optional as _Optional, Any as _Any, Callable as _Callable
 
 from dnx_gentools.def_enums import PROTO as _PROTO, DHCP as _DHCP, DNS_CAT as _DNS_CAT
+from dnx_iptools.def_structs import dhcp_byte_pack as _dhcp_bp, dhcp_short_pack as _dhcp_sp, dhcp_long_pack as _dhcp_lp
 
 class Item(_NamedTuple):
     key: _Any
@@ -17,6 +19,17 @@ DHCP_REQUEST_INFO = _namedtuple(
     'dhcp_request_info', 'message_type, xID, server_identifier, mac_address, client_address, requested_ip'
 )
 DHCP_RESPONSE_INFO = _namedtuple('dhcp_response_info', 'xID mac_address ciaddr handout_ip options')
+
+_pack_map: dict[int, _Callable[[int, int, int], bytes]] = {1: _dhcp_bp, 2: _dhcp_sp, 4: _dhcp_lp}
+class DHCP_OPTION(_NamedTuple):
+    code: int
+    size: int
+    value: int
+
+    @_cached_property
+    def packed(self) -> bytes:
+        return _pack_map[self.size](self.code, self.size, self.value)
+
 
 class DHCP_RECORD(_NamedTuple):
     rtype: _DHCP

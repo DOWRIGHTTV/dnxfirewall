@@ -7,6 +7,7 @@ import ssl
 
 from socket import socket, AF_INET, SOCK_DGRAM, SOCK_STREAM
 
+from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import PROTO
 from dnx_gentools.def_namedtuples import RELAY_CONN
@@ -20,11 +21,11 @@ from dns_proxy_log import Log
 
 
 class UDPRelay(ProtoRelay):
-    _protocol = PROTO.UDP
+    _protocol: ClassVar[PROTO] = PROTO.UDP
 
     __slots__ = ()
 
-    def _register_new_socket(self):
+    def _register_new_socket(self) -> bool:
         for dns_server in self._dns_server.dns_servers:
 
             # if server is down we will skip over it
@@ -36,12 +37,14 @@ class UDPRelay(ProtoRelay):
         else:
             Log.critical(f'[{self._protocol}] No DNS servers available.')
 
+            return False
+
     @dnx_queue(Log, name='UDPRelay')
     def relay(self, send_data: bytearray, request: str):
         self._send_query(send_data, request)
 
     # receive data from server. if dns response will call parse method else will close the socket.
-    def _recv_handler(self):
+    def _recv_handler(self) -> None:
         conn_recv = self._relay_conn.recv
         responder_add = self._dns_server.responder.add
 
@@ -82,7 +85,7 @@ class UDPRelay(ProtoRelay):
 _keepalive = ClientQuery.generate_local_query
 
 class TLSRelay(ProtoRelay):
-    _protocol = PROTO.DNS_TLS
+    _protocol: ClassVar[PROTO] = PROTO.DNS_TLS
 
     __slots__ = (
         '_tls_context', '_keepalive_status'
@@ -97,7 +100,7 @@ class TLSRelay(ProtoRelay):
         self._tls_context.load_verify_locations(CERTIFICATE_STORE)
 
         # tls connection keepalive. hard set to 8 seconds, but can be enabled/disabled
-        self._keepalive_status = threading.Event()
+        self._keepalive_status: Event = threading.Event()
         threading.Thread(target=self._keepalive_run).start()
 
     @property
@@ -106,16 +109,17 @@ class TLSRelay(ProtoRelay):
 
     # iterating over dns server list and calling to create a connection to first available server. this will only happen
     # if a socket connection isn't already established when attempting to send query.
-    def _register_new_socket(self) -> Optional[bool]:
+    def _register_new_socket(self) -> bool:
         for tls_server in self._dns_server.dns_servers:
 
             # skipping over known down server.
-            # NOTE: using self._protocol is not needed here.
-            if (not tls_server[PROTO.DNS_TLS]): continue
+            if (not tls_server[PROTO.DNS_TLS]):
+                continue
 
-            # attempting to connect via tls. if successful will return True, otherwise mark server as
-            # down and try next server.
-            if self._tls_connect(tls_server['ip']): return True
+            # attempting to connect via tls.
+            # if successful will return True, otherwise mark server as down and try next server.
+            if self._tls_connect(tls_server['ip']):
+                return True
 
             self.mark_server_down(remote_server=tls_server['ip'])
 
@@ -123,6 +127,8 @@ class TLSRelay(ProtoRelay):
             self._dns_server.tls_down = True
 
             Log.error(f'[{self._protocol}] No DNS servers available.')
+
+            return False
 
     @dnx_queue(Log, name='TLSRelay')
     def relay(self, send_data: bytearray, request: str) -> None:
@@ -136,7 +142,7 @@ class TLSRelay(ProtoRelay):
             self._fallback_relay_add(send_data[2:], request)
 
     # receive data from server and call parse method when valid message is recvd, else will close the socket.
-    def _recv_handler(self, recv_buf: bytearray = bytearray(2048)):
+    def _recv_handler(self) -> None:
         Log.debug(f'[{self._relay_conn.remote_ip}/{self._protocol.name}] Response handler opened.')
 
         conn_recv = self._relay_conn.recv
@@ -144,6 +150,7 @@ class TLSRelay(ProtoRelay):
 
         responder_add = self._dns_server.responder.add
 
+        recv_buf: bytearray = bytearray(2048)
         recv_buffer = memoryview(recv_buf)
 
         # allocating 4096 bytes of memory as bytearray, then building memory view. access to memory via the byte array

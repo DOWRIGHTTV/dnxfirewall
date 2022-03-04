@@ -2,43 +2,43 @@
 
 from __future__ import annotations
 
-import threading
-
 from socket import SOL_SOCKET, SO_BROADCAST, SO_BINDTODEVICE, SO_REUSEADDR
 
-from dnx_gentools.def_constants import *
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import DHCP, PROTO
 from dnx_gentools.def_namedtuples import DHCP_RECORD
 
 from dnx_iptools.packet_classes import Listener
-from dnx_routines.logging.log_client import LogHandler as Log
+from dnx_iptools.cprotocol_tools import itoip
+
+from dnx_routines.logging.log_client import Log
 
 from dhcp_server_requests import ServerResponse, ClientRequest
 from dhcp_server_automate import Configuration, Leases
 
+__all__ = (
+    'DHCPServer',
+)
+
 LOG_NAME = 'dhcp_server'
 
 RequestID = tuple[str, int]
+VALID_MTYPES: list[DHCP] = [DHCP.DISCOVER, DHCP.REQUEST, DHCP.RELEASE]
+RESPONSE_REQUIRED: list[DHCP] = [DHCP.OFFER, DHCP.ACK, DHCP.NAK]
+RECORD_NOT_NEEDED: list[DHCP] = [DHCP.NOT_SET, DHCP.DROP, DHCP.NAK]
 
 
 class DHCPServer(Listener):
     intf_settings: ClassVar[dict] = {}
-    # options: ClassVar[dict] = {}
-
-    # reservations: ClassVar[dict] = {}
+    valid_idents:  ClassVar[set[int]] = {0}
 
     # initializing the lease table dictionary and providing a reference to the reservations dict
     leases: ClassVar[Leases] = Leases()
 
-    # options_lock: ClassVar[Lock] = threading.Lock()
-    # handout_lock: ClassVar[Lock] = threading.Lock()
-
-    _valid_mtypes: ClassVar[list[DHCP]] = [DHCP.DISCOVER, DHCP.REQUEST, DHCP.RELEASE]
-    _valid_idents: ClassVar[list[Optional[int]]] = []
     _ongoing: ClassVar[dict] = {}
 
-    _packet_parser = ClientRequest
+    _packet_parser: ClassVar[ClientRequest_T] = ClientRequest
 
     __slots__ = ()
 
@@ -47,16 +47,11 @@ class DHCPServer(Listener):
         Configuration.setup(cls)
 
         # so we don't need to import/ hardcore the server class reference.
-        ClientRequest.set_server_references(cls.intf_settings, cls.leases)
+        ClientRequest.set_server_references(cls.intf_settings)
         cls.set_proxy_callback(func=cls.handle_dhcp)
 
-        # only local server ips or no server ip specified are valid to filter responses to other servers
-        # within the broadcast domain.
-        # FIXME: ip > int
-        cls._valid_idents = [*[intf['ip'].ip for intf in cls.intf_settings.values()], None]
-
     def _pre_inspect(self, packet) -> bool:
-        if (packet.mtype in self._valid_mtypes and packet.server_ident in self._valid_idents):
+        if (packet.mtype in VALID_MTYPES and packet.server_ident in self.valid_idents):
             return True
 
         return False
@@ -65,11 +60,11 @@ class DHCPServer(Listener):
         '''pseudo alternate constructor acting as a callback for the Parent/Listener class.
 
         the call will not return the created instance, instead, it will internally manage the instance and ensure the
-        request gets handled.'''
-
+        request gets handled.
+        '''
         request_id: RequestID = (client_request.mac, client_request.xID)
         server_mtype: DHCP = DHCP.NOT_SET
-        record: Optional = None
+        record: Optional[DHCP_RECORD] = None
 
         Log.debug(f'[request] type={client_request.mtype}, id={request_id}')
 
@@ -89,7 +84,7 @@ class DHCPServer(Listener):
         # DISCOVER
         # ==============
         elif (client_request.mtype == DHCP.DISCOVER):
-            dhcp: ServerResponse = ServerResponse(client_request.sock.name)
+            dhcp: ServerResponse = ServerResponse(client_request.recvd_intf)
 
             self.__class__._ongoing[request_id] = dhcp
             client_request.handout_ip = dhcp.check_offer(client_request)
@@ -103,17 +98,17 @@ class DHCPServer(Listener):
         # ==============
         elif (client_request.mtype == DHCP.REQUEST):
             server_mtype: DHCP
-            record: Optional[DHCP_Lease] = None
+            record: Optional[DHCP_RECORD] = None
 
             dhcp: ServerResponse = self._ongoing.get(request_id, None)
             if (not dhcp):
-                dhcp = ServerResponse(client_request.sock.name)
+                dhcp = ServerResponse(client_request.recvd_intf)
 
             server_mtype, handout_ip = dhcp.check_ack(client_request)
             # responding with ACK
             if (server_mtype in [DHCP.ACK, DHCP.RENEWING, DHCP.REBINDING]):
                 client_request.handout_ip = handout_ip
-                record = (DHCP.LEASED, fast_time(), client_request.mac, client_request.hostname)
+                record = DHCP_RECORD(DHCP.LEASED, fast_time(), client_request.mac, client_request.hostname)
 
             # sending NAK per rfc 2131
             elif (server_mtype is DHCP.NAK):
@@ -134,13 +129,11 @@ class DHCPServer(Listener):
 
         # this is filtering out response types like dhcp nak | modifying lease before
         # sending to ensure a power failure will have persistent record data.
-        if (server_mtype not in [DHCP.NOT_SET, DHCP.DROP, DHCP.NAK]):
-            self.leases.modify(
-                client_request.handout_ip, record
-            )
+        if (server_mtype not in RECORD_NOT_NEEDED):
+            self.leases.modify(client_request.handout_ip, record)
 
-        # only types specified in list require a response.
-        if (server_mtype in [DHCP.OFFER, DHCP.ACK, DHCP.NAK]):
+        # only types specified in the list require a response.
+        if (server_mtype in RESPONSE_REQUIRED):
             send_data = client_request.generate_server_response(server_mtype)
 
             send_to_client(send_data, client_request, server_mtype)
@@ -152,7 +145,7 @@ class DHCPServer(Listener):
         l_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         l_sock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
         l_sock.setsockopt(SOL_SOCKET, SO_BINDTODEVICE, f'{intf}\0'.encode('utf-8'))
-        l_sock.bind((str(INADDR_ANY), PROTO.DHCP_SVR))
+        l_sock.bind((itoip(INADDR_ANY), PROTO.DHCP_SVR))
 
         Log.debug(f'[{l_sock.fileno()}][{intf}] {cls.__name__} interface bound: {cls.intf_settings}')
 

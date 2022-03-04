@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Generator, Iterator, Type, NewType, ClassVar, Literal, Union, Optional
-from typing import Any, NoReturn
+from typing import TYPE_CHECKING, Type, NewType, Literal, Protocol, Callable, Generator, Iterator, ClassVar, Union
+from typing import Optional, Any, NoReturn
+
+from dnx_secmods.dns_proxy import DNSPacket
 
 _DISABLED = False
 
@@ -11,11 +13,13 @@ _DISABLED = False
 # standard lib imports
 if (TYPE_CHECKING and not _DISABLED):
 
-    from threading import Lock
+    from threading import Lock, Event
     from ipaddress import IPv4Address, IPv4Network
     from socket import socket as Socket
+    from select import epoll as Epoll
 
     Wrapper = Callable[[Any], None]
+    Callable_T = Callable[[Any, ...], Any]
 
     ConfigLock = NewType('ConfigLock', type('FileLock'))
     IPTableLock = NewType('IPTableLock', type('FileLock'))

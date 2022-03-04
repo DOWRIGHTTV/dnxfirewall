@@ -30,7 +30,7 @@ class IPProxy(NFQueue):
     ip_whitelist:  ClassVar[dict] = {}
     tor_whitelist: ClassVar[dict] = {}
 
-    open_ports: ClassVar[dict[PROTO, dict]] = {
+    open_ports: ClassVar[dict[PROTO, dict[int, int]]] = {
         PROTO.TCP: {},
         PROTO.UDP: {}
     }

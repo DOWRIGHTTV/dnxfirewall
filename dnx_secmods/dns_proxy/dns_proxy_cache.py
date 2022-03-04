@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import threading
 
-from collections import Counter, deque, namedtuple
+from collections import Counter, deque
 
-from dnx_gentools.def_constants import *
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import DNS_CACHE
 from dnx_gentools.file_operations import *
 from dnx_gentools.standard_tools import looper
@@ -17,12 +17,12 @@ from dns_proxy_log import Log
 NOT_VALID = -1
 
 def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
-    _top_domains = load_data('dns_server.cache')['top_domains']
+    _top_domains: dict = load_data('dns_server.cache')['top_domains']
 
     domain_counter: Counter[str, int] = Counter({dom: cnt for cnt, dom in enumerate(reversed(_top_domains))})
     counter_lock: Lock = threading.Lock()
 
-    top_domain_filter = tuple(load_top_domains_filter())
+    top_domain_filter: tuple = tuple(load_top_domains_filter())
 
     # not needed once loaded into Counter
     del _top_domains
@@ -33,7 +33,7 @@ def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
     def manual_clear(cache: DNSCache, cfg_file: str) -> None:
         cache_settings: ConfigChain = load_configuration(cfg_file, ext='')
 
-        clear_dns_cache:  bool = cache_settings['clear->standard']
+        clear_dns_cache:   bool = cache_settings['clear->standard']
         clear_top_domains: bool = cache_settings['clear->top_domains']
 
         # when new top domains or standard cache (future) are written to disk, the poller will trigger whether the
@@ -71,8 +71,8 @@ def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
         # STANDARD
         # =============
         # locking in starting time since per loop accuracy is not necessary
-        now = fast_time()
-        expired = [dom for dom, record in list(cache.items()) if now > record.expire]
+        now: int = fast_time()
+        expired: list[str] = [dom for dom, record in list(cache.items()) if now > record.expire]
 
         for domain in expired:
             del cache[domain]
@@ -82,13 +82,13 @@ def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
         # =============
         # keep top XX queried domains permanently in cache. uses current cached packet to generate a new request and
         # forward to handler. response will be identified by "None" as client address in session tracker.
-        top_domains = [
+        top_domains: list[str] = [
             dom[0] for dom in domain_counter.most_common(TOP_DOMAIN_COUNT)
         ]
 
         # updating persistent file first then sending requests
         with ConfigurationManager('dns_server', ext='.cache') as dnx:
-            cache_storage = dnx.load_configuration()
+            cache_storage: ConfigChain = dnx.load_configuration()
 
             cache_storage['top_domains'] = top_domains
 
@@ -100,7 +100,7 @@ def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
 
         Log.debug('top domains refreshed')
 
-    class DNSCache(dict):
+    class _DNSCache(dict):
         '''subclass of dict to provide a custom data structure for dealing with the local caching of dns records.
 
         containers handled by class:
@@ -163,7 +163,7 @@ def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
 
             return self[query_name]
 
-    _cache = DNSCache()
+    _cache = _DNSCache()
 
     threading.Thread(target=auto_clear, args=(_cache,)).start()
     threading.Thread(target=manual_clear, args=(_cache,)).start()
@@ -206,6 +206,7 @@ def request_tracker() -> RequestTracker:
             while request_tracker:
                 yield request_tracker_get()
 
+        # TODO: why cant this be a static method again? some weird arg problem.
         def insert(self, client_query: ClientQuery):
 
             request_tracker_append(client_query)

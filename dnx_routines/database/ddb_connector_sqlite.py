@@ -5,16 +5,18 @@ from __future__ import annotations
 import sqlite3
 import importlib
 
-from dnx_gentools.def_constants import *
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import *
 
-__all__ = ('DBConnector',)
+__all__ = (
+    'DBConnector',
+)
 
-NO_ROUTINE = [None, None]
+NO_ROUTINE: tuple[None, None] = (None, None)
 
 
 class _DBConnector:
-    DB_PATH = f'{HOME_DIR}/dnx_system/data/dnxfirewall.sqlite3'
+    DB_PATH: ClassVar[str] = f'{HOME_DIR}/dnx_system/data/dnxfirewall.sqlite3'
 
     __slots__ = (
         '_log', '_table', '_data_written',
@@ -23,17 +25,17 @@ class _DBConnector:
     )
 
     # format: {'func name': [routine_type('write/query/clear'), ref(function pointer)]}
-    _routines = {}
+    _routines: ClassVar[dict[str, list[str, Callable_T]]] = {}
 
     @classmethod
-    def register(cls, routine_name: str, *, routine_type: str):
+    def register(cls, routine_name: str, *, routine_type: str) -> Callable_T:
         '''register routine with database connector that can be called initiated with the "execute" method.'''
 
-        name_in_use = cls._routines.get(routine_name)
+        name_in_use: Optional[list] = cls._routines.get(routine_name, None)
         if (name_in_use):
             raise FileExistsError(f'routine with name {routine_name} already exists')
 
-        def registration(func_ref: Callable):
+        def registration(func_ref: Callable_T):
 
             # print(f'FUNC_REF {func_ref}')
             # converting routine function to static method
@@ -66,15 +68,15 @@ class _DBConnector:
 
         # used to notify a calling process whether a failure occurred within the context.
         # this does not distinguish if multiple calls/returns are done.
-        self.failed = False
+        self.failed: bool = False
 
-        self._log = log
-        self._table = table
-        self._readonly = readonly
+        self._log: LogHandler_T = log
+        self._table: str = table
+        self._readonly: bool = readonly
 
-        self._data_written = False
+        self._data_written: bool = False
 
-        self._routines_get = self._routines.get
+        self._routines_get: Callable_T = self._routines.get
 
         if (connect):
             self._conn = sqlite3.connect(self.DB_PATH)
@@ -194,11 +196,11 @@ class _DBConnector:
 
 # NOTE: psql connector is too out of spec, so it will be disabled until a later time.
 # if (SQL_VERSION == 0):
-DBConnector = _DBConnector
+DBConnector: DBConnector_T = _DBConnector
 # else:
 #    from dnx_routines.database.ddb_connector_psql import DBConnector
 
-importlib.import_module('dnx_routines.database.ddb_routines')  # routines will registered with DBConnector class
+importlib.import_module('dnx_routines.database.ddb_routines')  # routines will be registered with DBConnector class
 
 if (__name__ == '__main__'):
     # NOTE: CREATE TABLES -> only used on self deployments with active running system and the tables need to be created

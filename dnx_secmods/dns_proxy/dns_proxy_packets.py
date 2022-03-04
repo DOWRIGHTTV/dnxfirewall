@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from socket import inet_aton
 
-from dnx_gentools.def_constants import *
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import PROTO, DNS, DNS_MASK
 from dnx_gentools.standard_tools import bytecontainer
 from dnx_gentools.def_namedtuples import CACHED_RECORD
@@ -24,7 +24,7 @@ class ClientQuery:
         # init
         'address', 'sendto', 'top_domain',
         'keepalive', 'local_domain', 'fallback',
-        'dns_id', 'request', 'send_data',
+        'dns_id', 'qname', 'send_data',
         'additional_records',
 
         # dns
@@ -41,19 +41,19 @@ class ClientQuery:
             self.sendto = sock_info.sendto  # 5 object namedtuple
 
         self.local_domain: bool = False
-        self.top_domain:   bool = False if address[0] else True
+        self.top_domain:   bool = address is NULL_ADDR
         self.keepalive: bool = False
         self.fallback:  bool = False
 
         self.dns_id:  int = 1
-        self.request: str = ''
+        self.qname: str = ''
 
         # OPT record defaults #
         # TODO: add better support for this
         self.additional_records = b''
 
     def __str__(self):
-        return f'dns_query(host={self.address[0]}, port={self.address[1]}, request={self.request})'
+        return f'dns_query(host={self.address[0]}, port={self.address[1]}, domain={self.qname})'
 
     # TODO: see if we should validate whether there is an indicated question record before continuing
     # TODO: implement DNS label/name validity checks and drop packet if fail. do same on response
@@ -61,7 +61,7 @@ class ClientQuery:
 
         _dns_header, dns_query = data[:12], data[12:]
 
-        dns_header = dns_header_unpack(_dns_header)
+        dns_header: tuple = dns_header_unpack(_dns_header)
         self.dns_id: int = dns_header[0]
 
         self.qr: int = dns_header[1] & DNS_MASK.QR
@@ -77,7 +77,7 @@ class ClientQuery:
 
         # www.micro.com or micro.com || sd.micro.com
         offset, query_info = parse_query_name(dns_query, qname=True)
-        self.request, self.local_domain = query_info
+        self.qname, self.local_domain = query_info
 
         self.qtype, self.qclass = double_short_unpack(dns_query[offset:])
         self.question_record    = dns_query[:offset + 4]
@@ -121,7 +121,7 @@ class ClientQuery:
         send_data = bytearray(2)
 
         send_data += dns_header_pack(dns_id, self.rd | self.ad | self.cd, 1, 0, 0, arc)
-        send_data += domain_stob(self.request)
+        send_data += domain_stob(self.qname)
         send_data += double_short_pack(self.qtype, 1)
         send_data += self.additional_records
 
@@ -134,12 +134,12 @@ class ClientQuery:
         return send_data
 
     @classmethod
-    def generate_local_query(cls, request: str, keepalive: bool = False):
+    def generate_local_query(cls, qname: str, keepalive: bool = False) -> ClientQuery:
         '''alternate constructor for creating locally generated queries (top domain or keepalive requests).'''
 
         self = cls(NULL_ADDR, None)
         # hardcoded qtype can change if needed.
-        self.request = request
+        self.qname = qname
         self.qtype   = 1
 
         self.rd = DNS_MASK.RD
@@ -156,12 +156,11 @@ class ClientQuery:
 # ======================================
 # PROXY - FULL INSPECTION, DIRECT SOCKET
 # ======================================
-_ip_header_template = PR_IP_HDR(
+_ip_header_template: PR_IP_HDR = PR_IP_HDR(
     **{'ver_ihl': 69, 'tos': 0, 'ident': 0, 'flags_fro': 16384, 'ttl': 255, 'protocol': PROTO.UDP}
 )
-_udp_header_template = PR_UDP_HDR(**{'checksum': 0})
-
-std_resource_record_template = DNS_STD_RR(**{'ptr': 49164, 'type': 1, 'class': 1, 'ttl': 300, 'rd_len': 4})
+_udp_header_template: PR_UDP_HDR = PR_UDP_HDR(**{'checksum': 0})
+std_resource_record_template: DNS_STD_RR = DNS_STD_RR(**{'ptr': 49164, 'type': 1, 'class': 1, 'ttl': 300, 'rd_len': 4})
 
 
 class DNSPacket(NFPacket):
@@ -169,7 +168,7 @@ class DNSPacket(NFPacket):
     __slots__ = (
         '_dns_header', '_dns_query',
 
-        'request', 'requests', 'tld', 'request_identifier',
+        'qname', 'requests', 'tld', 'request_identifier',
         'local_domain', 'qtype', 'qclass', 'dns_id', 'question_record',
 
         'qr', 'rd', 'ad', 'cd',
@@ -189,7 +188,7 @@ class DNSPacket(NFPacket):
         # ===========================
         # DNS HEADER (12 bytes)
         # ===========================
-        dns_header = dns_header_unpack(self.udp_payload[:12])
+        dns_header: tuple = dns_header_unpack(self.udp_payload[:12])
 
         # filtering out non query flags. this would also imply malformed payload.
         # TODO: make this int flags enum
@@ -206,7 +205,7 @@ class DNSPacket(NFPacket):
         # ===========================
         # QUESTION RECORD (index 12+)
         # ===========================
-        dns_query = self.udp_payload[12:]  # 13+ is query data
+        dns_query: bytearray = self.udp_payload[12:]  # 13+ is query data
 
         # parsing dns name queried and byte offset due to variable length | ex www.micro.com or micro.com
         offset, query_info = parse_query_name(dns_query, qname=True)
@@ -215,7 +214,7 @@ class DNSPacket(NFPacket):
         self.question_record = dns_query[:offset + 4]
 
         # defining questions record fields
-        self.request, self.local_domain = query_info
+        self.qname, self.local_domain = query_info
         self.qtype, self.qclass = double_short_unpack(dns_query[offset:])
 
         # hashing queried name enumerating any subdomains (signature matching)
@@ -369,7 +368,7 @@ class ProxyResponse(RawResponse):
         else:
             resource_record = std_resource_record_template()
 
-            resource_record.rd_data = btoia(dnx_src_ip)
+            resource_record.rd_data = dnx_src_ip
 
             udp_payload += dns_header_pack(packet.dns_id, 32896 | packet.rd | packet.ad | packet.cd, 1, 0, 0, 0)
             udp_payload += packet.question_record

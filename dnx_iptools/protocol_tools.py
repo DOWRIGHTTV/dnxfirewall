@@ -9,7 +9,7 @@ from random import getrandbits
 from socket import socket, htons, inet_aton, AF_INET, SOCK_RAW
 from subprocess import run, CalledProcessError, DEVNULL
 
-from dnx_gentools.def_constants import RUN_FOREVER, byte_join, dot_join
+from dnx_gentools.def_constants import RUN_FOREVER, byte_join, dot_join, fast_time
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_enums import PROTO
 from dnx_iptools.def_structs import *
@@ -28,7 +28,7 @@ __all__ = (
     'parse_query_name'
 )
 
-btoia: Callable[[bytes], int] = partial(int.from_bytes, byteorder='big', signed=False)
+btoia: Callable[[Union[bytes, bytearray, memoryview]], int] = partial(int.from_bytes, byteorder='big', signed=False)
 itoba: Callable[[int, int], bytes] = partial(int.to_bytes, byteorder='big', signed=False)
 
 # will ping specified host. to be used to prevent duplicate ip address handouts.
@@ -44,9 +44,9 @@ def calc_checksum(data: Union[bytes, bytearray], pack: bool = False) -> Union[in
         data += b'\x00'
 
     # unpacking in chunks of H(short)/ 16 bit/ 2 byte increments in < order
-    chunks = checksum_iunpack(data)
+    chunks: Iterator[tuple[int]] = checksum_iunpack(data)
 
-    csum = 0
+    csum: int = 0
     # loop taking 2 characters at a time
     for chunk in chunks:
         csum += chunk[0]
@@ -55,7 +55,7 @@ def calc_checksum(data: Union[bytes, bytearray], pack: bool = False) -> Union[in
     csum = (csum >> 16) + (csum & 65535)
     csum += (csum >> 16)
 
-    return checksum_pack if pack else htons(~csum)
+    return checksum_pack(~csum) if pack else htons(~csum)
 
 def int_to_ip(ip: int, /) -> str:
 
@@ -78,17 +78,17 @@ def mac_stob(mac_address: str) -> bytes:
     return binascii.unhexlify(mac_address.replace(':', ''))
 
 def convert_string_to_bitmap(rule: str, offset: int) -> tuple[int, int]:
-    host_hash = hash(rule)
+    host_hash: hash = hash(rule)
 
-    b_id = int(f'{host_hash}'[:offset])
-    h_id = int(f'{host_hash}'[offset:])
+    b_id: int = int(f'{host_hash}'[:offset])
+    h_id: int = int(f'{host_hash}'[offset:])
 
     return b_id, h_id
 
 def cidr_to_int(cidr: int) -> int:
 
     # using hostmask to shift to the start of network bits. int conversion to cover string values.
-    hostmask = 32 - int(cidr)
+    hostmask: int = 32 - int(cidr)
 
     return ~((1 << hostmask) - 1) & (2**32 - 1)
 
@@ -192,27 +192,30 @@ def init_ping(timeout: float = .25) -> Callable[[str, int], bool]:
             icmp.sequence = i
             icmp.checksum = calc_checksum(icmp.assemble())
 
-            try:
-                ping_send(icmp.assemble(), (target, 0))
-            except ose:
-                pass
+            ping_send(icmp.assemble(), (target, 0))
 
-            else:
-                # TODO: this might need a mechanism to break if we don't receive a matching response after X reads.
-                for _ in RUN_FOREVER:
-                    try:
-                        echo_reply, addr = ping_recv(2048)
-                    except ose:
-                        pass
+            recv_start = fast_time()
 
-                    else:
-                        iphdr_len = (echo_reply[0] & 15) * 4
+            for _ in RUN_FOREVER:
+                try:
+                    echo_reply, addr = ping_recv(2048)
+                except ose:
+                    break
 
-                        type, code, checksum, id, seq = icmp_header_unpack(echo_reply[iphdr_len:])
-                        if (type == 0 and id == icmp.id and i == seq):
-                            replies_rcvd += 1
+                else:
 
-                            break
+                    # checking overall recv time passed for each ping send. this covers cases where unrelated ping
+                    # responses are received that
+                    if (fast_time() - recv_start > timeout):
+                        break
+
+                    iphdr_len = (echo_reply[0] & 15) * 4
+
+                    type, code, checksum, id, seq = icmp_header_unpack(echo_reply[iphdr_len:])
+                    if (type == 0 and id == icmp.id and i == seq):
+                        replies_rcvd += 1
+
+                        break
 
             # need to reset if doing more than 1 echo request. figure out a way to skip if only doing 1.
             icmp.checksum = 0

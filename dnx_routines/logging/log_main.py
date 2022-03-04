@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import threading
 
+from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.standard_tools import looper, Initialize
 from dnx_gentools.file_operations import load_configuration, cfg_read_poller
@@ -13,6 +14,10 @@ from dnx_routines.database.ddb_connector_sqlite import DBConnector
 from dnx_routines.configure.system_info import System
 
 from log_client import Log
+
+__all__ = (
+    'LogService',
+)
 
 LOG_NAME = 'system'
 
@@ -23,7 +28,7 @@ _format_time = System.format_time
 
 
 class LogService:
-    _log_modules = [
+    _log_modules: ClassVar[list[str]] = [
             x for x in os.listdir(f'{HOME_DIR}/dnx_system/log') if x not in EXCLUDED_MODULES
         ]
 
@@ -37,8 +42,11 @@ class LogService:
 
         self.organize()
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._initialize = Initialize(Log, 'LogService')
+
+        self.log_length: int = 999
+        self.log_level:  int = -1
 
         threading.Thread(target=self.get_settings).start()
 
@@ -48,7 +56,7 @@ class LogService:
         threading.Thread(target=self.clean_blocked_table).start()
 
     @looper(THREE_MIN)
-    def organize(self):
+    def organize(self) -> None:
         log_entries = []
 
         date = str_join(_system_date())
@@ -56,7 +64,8 @@ class LogService:
 
             log_entries.extend(self._pull_recent_logs(module, date))
 
-        if (not log_entries): return
+        if (not log_entries):
+            return
 
         with open(f'{HOME_DIR}/dnx_system/log/combined/{date}-combined.log', 'w+') as system_log:
             system_log.write('\n'.join(sorted(log_entries)))
@@ -64,7 +73,7 @@ class LogService:
         del log_entries  # to reclaim system memory
 
     @staticmethod
-    def _pull_recent_logs(module, date):
+    def _pull_recent_logs(module: str, date: str) -> list[str]:
         log_path = f'{HOME_DIR}/dnx_system/log/{module}/{date}-{module}.log'
 
         if not os.path.isfile(log_path):
@@ -74,7 +83,7 @@ class LogService:
             return [x.strip() for x in log_file.readlines(2048)[:20]]
 
     @looper(ONE_DAY)
-    def clean_db_tables(self):
+    def clean_db_tables(self) -> None:
         with DBConnector(Log) as FirewallDB:
             for table in ['dnsproxy', 'ipproxy', 'ips', 'infectedclients']:
                 FirewallDB.table_cleaner(self.log_length, table=table)
@@ -83,7 +92,7 @@ class LogService:
         Log.notice('completed daily database cleaning')
 
     @looper(THREE_MIN)
-    def clean_blocked_table(self):
+    def clean_blocked_table(self) -> None:
         with DBConnector(Log) as FirewallDB:
             FirewallDB.blocked_cleaner(table='blocked')
 
@@ -91,7 +100,7 @@ class LogService:
         Log.debug('completed blocked database cleaning')
 
     @cfg_read_poller('logging_client')
-    def get_settings(self, cfg_file):
+    def get_settings(self, cfg_file: str) -> None:
         log_settings = load_configuration(cfg_file)
 
         self.log_length = log_settings['logging->length']
@@ -100,9 +109,7 @@ class LogService:
         self._initialize.done()
 
 
-def RUN_MODULE():
-    # overwriting alias above to keep conventions consistent
-    log = Log()
-    log.run(name=LOG_NAME)
+if (INIT_MODULE):
+    Log.run(name=LOG_NAME)
 
     LogService.run()

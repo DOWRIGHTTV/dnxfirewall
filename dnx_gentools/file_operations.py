@@ -32,8 +32,8 @@ UNLOCK_LOCK = fcntl.LOCK_UN
 
 
 def load_configuration(filename: str, ext: str = '.cfg', *, filepath: str = 'dnx_system/data') -> ConfigChain:
-    '''load json data from a file and convert it to a ConfigChain'''
-
+    '''load json data from a file and convert it to a ConfigChain.
+    '''
     filename += ext
 
     # loading system default configs
@@ -52,16 +52,16 @@ def load_configuration(filename: str, ext: str = '.cfg', *, filepath: str = 'dnx
     return ConfigChain(system_settings, user_settings)
 
 def write_configuration(data: dict, filename: str, ext: str = '.cfg', *, filepath: str = 'dnx_system/data/usr') -> None:
-    '''write a json data object to file.'''
-
+    '''write a json data object to file.
+    '''
     filename += ext
 
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
         json.dump(data, settings, indent=4)
 
 def load_data(filename: str, *, filepath: str = 'dnx_system/data') -> dict:
-    '''loads json data from a file and convert it to a python dict'''
-
+    '''loads json data from a file and convert it to a python dict.
+    '''
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'r') as system_settings_io:
         system_settings: dict = json.load(system_settings_io)
 
@@ -74,12 +74,12 @@ def write_data(data: dict, filename: str, *, filepath: str = 'dnx_system/data') 
         json.dump(data, settings, indent=4)
 
 def append_to_file(data: str, filename: str, *, filepath: str = 'dnx_system/data/usr') -> None:
-    '''append data to filepath..'''
-
+    '''append data to filepath.
+    '''
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'a') as settings:
         settings.write(data)
 
-def tail_file(file: str, *, line_count: int) -> list:
+def tail_file(file: str, *, line_count: int) -> list[str]:
     f = subprocess.run(['tail', '-n', f'{line_count}', file], capture_output=True, text=True)
 
     return list(reversed(f.stdout.splitlines()))
@@ -93,10 +93,10 @@ def change_file_owner(file_path: str) -> None:
 
 def json_to_yaml(data: Union[str, dict], *, is_string: bool = False) -> str:
     '''
-    converts a json string or dictionary into yaml syntax and returns as string. set "is_string" to True
-    to skip over object serialization.
-    '''
+    converts a json string or dictionary into yaml syntax and returns as string.
 
+    set "is_string" to True to skip over object serialization.
+    '''
     if (not is_string):
         data = json.dumps(data, indent=4)
 
@@ -108,7 +108,7 @@ def json_to_yaml(data: Union[str, dict], *, is_string: bool = False) -> str:
     return '\n'.join([y[4:] for y in data.splitlines() if y.strip()])
 
 def load_tlds() -> Generator[tuple[str, int]]:
-    dns_proxy = load_configuration('dns_proxy')
+    dns_proxy: ConfigChain = load_configuration('dns_proxy')
 
     for tld, setting in dns_proxy.get_items('tlds'):
         yield (tld.strip('.'), setting)
@@ -116,10 +116,10 @@ def load_tlds() -> Generator[tuple[str, int]]:
 # function to load in all keywords corresponding to enabled domain categories. the try/except
 # is used to ensure bad keywords do not prevent the proxy from starting, though the bad keyword
 # will be omitted from the proxy.
-def load_keywords(log: LogHandler_T) -> tuple:
-    '''returns keyword set for enabled domain categories'''
-
-    keywords = []
+def load_keywords(log: LogHandler_T) -> tuple[tuple[str, DNS_CAT]]:
+    '''returns keyword set for enabled domain categories.
+    '''
+    keywords: list[tuple[str, DNS_CAT]] = []
     try:
         with open(f'{HOME_DIR}/dnx_system/signatures/domain_lists/domain.keywords', 'r') as blocked_keywords:
             all_keywords = [
@@ -140,7 +140,7 @@ def load_keywords(log: LogHandler_T) -> tuple:
 
     return tuple(keywords)
 
-def load_top_domains_filter() -> list:
+def load_top_domains_filter() -> list[str]:
     with open(f'{HOME_DIR}/dnx_system/signatures/domain_lists/valid_top.domains', 'r') as tdf:
         return [s.strip() for s in tdf.readlines() if s.strip() and '#' not in s]
 
@@ -269,7 +269,6 @@ class ConfigChain:
 
             config.get_dict('interfaces->builtins')
         '''
-
         keys = [] if key is None else key.split(self._sep)
         search_data = self._merge_expand()
 
@@ -288,7 +287,6 @@ class ConfigChain:
 
             config.get_list('interfaces->builtins')
         '''
-
         keys = [] if key is None else key.split(self._sep)
         search_data = self._merge_expand()
 
@@ -307,7 +305,6 @@ class ConfigChain:
 
             config.get_items('interfaces->builtins')
         '''
-
         keys = [] if key is None else key.split(self._sep)
         search_data = self._merge_expand()
 
@@ -326,7 +323,6 @@ class ConfigChain:
 
             config.get_items('interfaces->builtins')
         '''
-
         keys = [] if key is None else key.split(self._sep)
         search_data = self._merge_expand()
 
@@ -340,33 +336,33 @@ class ConfigChain:
 
     @property
     def searchable_system_data(self) -> dict:
-        '''returns copy of original pre-flattened system config dictionary.'''
-
+        '''returns copy of original pre-flattened system config dictionary.
+        '''
         return copy(self.__config[1])
 
     @property
     def searchable_user_data(self) -> dict:
-        '''returns copy of original pre-flattened user config dictionary.'''
-
+        '''returns copy of original pre-flattened user config dictionary.
+        '''
         return copy(self.__config[0])
 
     @property
     def user_data(self) -> dict:
-        '''returns mutable flattened user config dictionary.'''
-
+        '''returns mutable flattened user config dictionary.
+        '''
         return self.__mutable_config
 
     @property
     def expanded_user_data(self) -> dict:
         '''returns snapshot of expanded user config dictionary.
 
-        additional calls are required to reflect changes to user data outside of the returned object'''
-
+        additional calls are required to reflect changes to user data outside the returned object.
+        '''
         return self._expand(self.__mutable_config)
 
     def _merge_expand(self) -> dict:
-        '''overloads system config with user data then expands and returns dictionary.'''
-
+        '''overloads system config with user data then expands and returns dictionary.
+        '''
         combined_config = copy(self.__flat_config[1])
 
         combined_config.update(self.__flat_config[0])
@@ -393,15 +389,10 @@ class ConfigChain:
     def _expand(self, cfg: dict, /) -> dict:
         expand_d = {}
 
-        # print(cfg)
         for key, value in cfg.items():
-
-            # print(key, value)
 
             key_path = key.split(self._sep)
             nested = expand_d
-
-            # print(key_path)
 
             for nkey in key_path[:-1]:
                 try:
@@ -421,7 +412,6 @@ class ConfigurationManager:
     This class is written as a context manager and must be used as such. upon calling the context, a file lock will be
     obtained or block until it can acquire the lock and return the class object to the caller.
     '''
-
     log: ClassVar[LogHandler_T] = None
     config_lock_file: ClassVar[ConfigLock] = f'{HOME_DIR}/dnx_system/config.lock'
 
@@ -433,14 +423,14 @@ class ConfigurationManager:
 
     @classmethod
     def set_log_reference(cls, ref: LogHandler_T) -> None:
-        '''sets logging class reference for configuration manager specific errors.'''
-
+        '''sets logging class reference for configuration manager specific errors.
+        '''
         cls.log = ref
 
     def __init__(self, config_file: str = '', ext: str = '.cfg', file_path: Optional[str] = None) -> None:
         '''config_file can be omitted to allow for configuration lock to be used with
-        external operations.'''
-
+        external operations.
+        '''
         self._config_file = config_file
 
         # initialization isn't required if config file is not specified.
@@ -514,8 +504,8 @@ class ConfigurationManager:
 
     # will load json data from file, convert it to a ConfigChain
     def load_configuration(self) -> ConfigChain:
-        '''returns python dictionary of configuration file contents'''
-
+        '''returns python dictionary of configuration file contents.
+        '''
         if (not self._config_file):
             raise RuntimeError('Configuration Manager methods are disabled in lock only mode.')
 
@@ -523,8 +513,8 @@ class ConfigurationManager:
 
     # accepts python dictionary for serialization to json. writes data to specified file opened.
     def write_configuration(self, data_to_write: dict):
-        '''writes configuration data as json to generated temporary file'''
-
+        '''writes configuration data as json to generated temporary file.
+        '''
         if (not self._config_file):
             raise RuntimeError('Configuration Manager methods are disabled in lock only mode.')
 
@@ -539,8 +529,10 @@ class ConfigurationManager:
 
 
 class Watcher:
-    '''this class is used to detect file changes, primarily configuration files.'''
+    '''Class for detecting file changes within the dnxfirewall filesystem.
 
+     primary use is to detect when a configuration file has been changed by an administrator.
+     '''
     __slots__ = (
         '_watch_file', '_callback', '_full_path',
         '_last_modified_time'

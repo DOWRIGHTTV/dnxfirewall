@@ -15,6 +15,7 @@ from pprint import PrettyPrinter as _PrettyPrinter
 from typing import Callable as _Callable, Iterator as _Iterator, Iterable as _Iterable
 from typing import Optional as _Optional, Union as _Union
 
+from dnx_iptools.cprotocol_tools import iptoi as _iptoi
 from dnx_iptools.def_structs import scm_creds_pack as _scm_creds_pack
 
 ppt = _PrettyPrinter(sort_dicts=False).pprint
@@ -25,11 +26,16 @@ INIT_MODULE: bool = bool(_os.environ.get('INIT_MODULE', False))
 console_log: _Callable[[str], None] = _partial(print, flush=True)
 shell: _Callable[[str], None] = _partial(_run, shell=True, stdout=_DEVNULL, stderr=_DEVNULL)
 
-RUN_FOREVER: _Iterator = _repeat(1)
+RUN_FOREVER: _Iterator[int] = _repeat(1)
 fast_sleep: _Callable[[_Union[int, float]], None] = _time.sleep
+ftime = _time.time
 
 def fast_time(_int=int, _time=_time.time) -> int: return _int(_time())
 def hardout(msg: _Optional[str] = None) -> None:
+    '''exit the application.
+
+    guarantees all threads and processes are not left dangling.
+    '''
     if (msg):
         console_log(msg)
 
@@ -80,10 +86,10 @@ MSEC:     float = .001   # one millisecond
 NO_DELAY:   int = 0
 
 # ip addresses
-NULL_ADDR: tuple[None, None] = (None, None)
-INADDR_ANY: _IPv4Address = _IPv4Address('0.0.0.0')
-LOCALHOST:  _IPv4Address = _IPv4Address('127.0.0.1')
-BROADCAST:  _IPv4Address = _IPv4Address('255.255.255.255')
+NULL_ADDR: tuple[int, int] = (-1, -1)
+INADDR_ANY: int = _iptoi('0.0.0.0')
+LOCALHOST:  int = _iptoi('127.0.0.1')
+BROADCAST:  int = _iptoi('255.255.255.255')
 # definitions for ip proxy data structures. most/least significant bit
 MSB: int = 0b11111111111110000000000000000000
 LSB: int = 0b00000000000001111111111111111111

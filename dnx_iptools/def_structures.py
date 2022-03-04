@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from dnx_gentools.standard_tools import structure as _structure
 
+# MAC ADDRESS
+MAC_ADDRESS = _structure('mac_address')
+
 # IP
 PR_IP_HDR = _structure(
     'ip_header', 'B,ver_ihl B,tos H,tl H,ident H,flags_fro B,ttl B,protocol H,checksum L,src_ip L,dst_ip'
