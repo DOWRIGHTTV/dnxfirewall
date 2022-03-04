@@ -26,7 +26,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     'all': {'module': '', 'exclude': ['status', 'cli'], 'priv': True, 'service': False},
 
     # WEBUI
-    'webui': {'module': '', 'exclude': ['cli'], 'priv': False, 'service': True},
+    'webui': {'module': '', 'exclude': ['cli'], 'priv': False, 'service': True, 'environ': ['webui', '1']},
 
     # SECURITY MODULES
     'cfirewall': {'module': 'dnx_secmods.cfirewall.fw_init', 'exclude': [], 'priv': True, 'service': True},
@@ -194,6 +194,10 @@ def service_command(mod: str, cmd: str) -> None:
 def run_cli(mod: str, mod_loc: str) -> None:
     os.environ['INIT_MODULE'] = 'YES'
     os.environ['HOME_DIR'] = HOME_DIR
+
+    env = MODULE_MAPPING[mod].get('environ')
+    if (env):
+        os.environ[env[0]] = env[1]
 
     mod_path = '/'.join([HOME_DIR, *mod_loc.split('.')[:2]])
 

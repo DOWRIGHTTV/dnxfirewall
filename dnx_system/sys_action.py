@@ -30,7 +30,7 @@ def _system_action(data_to_send, delay):
     try:
         data_to_send = dumps(data_to_send).encode('utf-8')
     except Exception as e:
-        console_log(e)
+        console_log(f'{e}')
 
     else:
         _control_client_sendmsg(data_to_send, DNX_AUTHENTICATION)
@@ -47,7 +47,6 @@ def system_action(*, delay=NO_DELAY, **kwargs):
     if command is a control reference to Python function, the "args" kwarg value must be a list of arguments
     that can be passed to the python function.
     '''
-
     if (not isinstance(delay, int)):
         return
 

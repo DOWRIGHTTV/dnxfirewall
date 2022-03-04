@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 from csv import reader as csv_reader
 from fcntl import ioctl
 from socket import socket, inet_aton, if_nameindex, AF_INET, SOCK_DGRAM
@@ -15,7 +17,8 @@ from dnx_iptools.def_structs import fcntl_pack, long_unpack
 from dnx_iptools.protocol_tools import btoia
 from dnx_iptools.cprotocol_tools import itoip
 
-from dnx_system.sys_action import system_action
+if os.environ.get('webui'):
+    from dnx_system.sys_action import system_action
 
 __all__ = (
     'get_intf_builtin', 'load_interfaces',
