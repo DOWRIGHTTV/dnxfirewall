@@ -23,7 +23,8 @@ __all__ = (
 
 LOG_NAME = 'dhcp_server'
 
-RequestID = tuple[str, int]
+# NOTE: this type of type hint confuses me
+RequestID: tuple[str, int]
 VALID_MTYPES: list[DHCP] = [DHCP.DISCOVER, DHCP.REQUEST, DHCP.RELEASE]
 RESPONSE_REQUIRED: list[DHCP] = [DHCP.OFFER, DHCP.ACK, DHCP.NAK]
 RECORD_NOT_NEEDED: list[DHCP] = [DHCP.NOT_SET, DHCP.DROP, DHCP.NAK]
