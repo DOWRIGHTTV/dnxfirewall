@@ -248,13 +248,13 @@ def _log_handler() -> LogHandler_T:
     @dnx_queue(_LogHandler, name='LogHandler')
     def write_to_disk(job):
 
-        path = f'{log_path}/{_system_date(string=True)}-{handler_name}.log'
+        file_path = f'{log_path}/{_system_date(string=True)}-{handler_name}.log'
 
-        with open(log_path, 'a+') as log:
+        with open(file_path, 'a+') as log:
             log.write(job)
 
         if (ROOT):
-            change_file_owner(path)
+            change_file_owner(file_path)
 
     def add_logging_methods(cls) -> None:
         '''dynamically overrides default log level methods depending on current log settings.
