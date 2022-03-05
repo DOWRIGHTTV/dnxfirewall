@@ -303,7 +303,7 @@ def _log_handler() -> LogHandler_T:
     def log_settings(cfg_file: str) -> None:
         nonlocal logging_level, is_initialized
 
-        logging_level = load_configuration(cfg_file)['logging->level']
+        logging_level = LOG(load_configuration(cfg_file)['logging->level'])
 
         add_logging_methods(_LogHandler)
 
