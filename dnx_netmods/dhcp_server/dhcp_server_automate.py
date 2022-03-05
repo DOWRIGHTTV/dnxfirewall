@@ -95,7 +95,7 @@ class Configuration:
         for intf, settings in dhcp_settings:
 
             # converting json keys to python ints
-            configured_options = {int(o.key): o.value for o in settings['options']}
+            configured_options = {int(k): v for k, v in settings['options'].items()}
 
             active_interface = self.dhcp_server.intf_settings[settings['ident']]
 
