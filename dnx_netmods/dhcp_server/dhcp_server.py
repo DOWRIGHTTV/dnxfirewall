@@ -39,7 +39,7 @@ class DHCPServer(Listener):
 
     _ongoing: ClassVar[dict] = {}
 
-    _packet_parser: ClassVar[ClientRequest_T] = ClientRequest
+    _listener_parser: ClassVar[ClientRequest_T] = ClientRequest
 
     __slots__ = ()
 
