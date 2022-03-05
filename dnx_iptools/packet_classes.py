@@ -143,7 +143,7 @@ class Listener:
         if (not callable(func)):
             raise TypeError('proxy callback must be a callable object.')
 
-        cls._proxy_callback: ProxyCallback = func
+        cls._listener_callback: ProxyCallback = func
 
     def __listener(self, always_on: bool, threaded: bool):
 
