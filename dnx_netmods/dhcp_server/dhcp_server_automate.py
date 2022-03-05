@@ -60,7 +60,7 @@ class Configuration:
         dhcp_settings: ConfigChain = load_configuration(cfg_file)
 
         # updating user configuration items per interface in memory.
-        for settings in dhcp_settings.get_values('interfaces'):
+        for settings in dhcp_settings.get_values('interfaces->builtins'):
 
             # NOTE ex. ident: eth0, lo, enp0s3
             intf_identity = settings['ident']
@@ -95,7 +95,7 @@ class Configuration:
         for intf, settings in dhcp_settings:
 
             # converting json keys to python ints
-            configured_options = {int(k): v for k, v in settings['options']}
+            configured_options = {int(o.key): o.value for o in settings['options']}
 
             active_interface = self.dhcp_server.intf_settings[settings['ident']]
 
