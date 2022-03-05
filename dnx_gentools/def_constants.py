@@ -12,15 +12,15 @@ from subprocess import run as _run, DEVNULL as _DEVNULL
 from pprint import PrettyPrinter as _PrettyPrinter
 
 from typing import Callable as _Callable, Iterator as _Iterator, Iterable as _Iterable
-from typing import Optional as _Optional, Union as _Union
+from typing import Optional as _Optional, Union as _Union, Any as _Any
 
 from dnx_iptools.cprotocol_tools import iptoi as _iptoi
 from dnx_iptools.def_structs import scm_creds_pack as _scm_creds_pack
 
-ppt = _PrettyPrinter(sort_dicts=False).pprint
+ppt: _Callable[[_Any], None] = _PrettyPrinter(sort_dicts=False).pprint
 
 # if set, module code dependencies will run. values are stored as strings
-INIT_MODULE: bool = bool(_os.environ.get('INIT_MODULE', False))
+INIT_MODULE: str = _os.environ.get('INIT_MODULE', '')
 
 console_log: _Callable[[str], None] = _partial(print, flush=True)
 shell: _Callable[[str], None] = _partial(_run, shell=True, stdout=_DEVNULL, stderr=_DEVNULL)
