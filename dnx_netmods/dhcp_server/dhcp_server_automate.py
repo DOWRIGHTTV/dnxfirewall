@@ -229,7 +229,7 @@ class Leases(dict):
     @dnx_queue(Log, name='Leases')
     # store lease table changes to disk. if the record is not present, it indicates the record needs to be removed.
     def _storage_queue(self, dhcp_lease: RECORD_CONTAINER):
-        with ConfigurationManager('dhcp_server') as dnx:
+        with ConfigurationManager('dhcp_server', ext='.lease') as dnx:
             dhcp_settings = dnx.load_configuration()
 
             dhcp_usr_settings = dhcp_settings.expanded_user_data
@@ -280,6 +280,6 @@ class Leases(dict):
     # loading dhcp leases from json file. only called on startup
     def _load_leases(self) -> None:
 
-        stored_leases = load_configuration('dhcp_server').get_items('leases')
+        stored_leases = load_configuration('dhcp_server', ext='.lease').get_items('leases')
 
         self.update({ip: DHCP_RECORD(*lease_info) for ip, lease_info in stored_leases})
