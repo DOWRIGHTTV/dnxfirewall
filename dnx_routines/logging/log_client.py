@@ -201,7 +201,7 @@ def _log_handler() -> LogHandler_T:
             '''print a message to console. this is for all important console only events.
             '''
             if (cli_output):
-                console_log(f'{log_msg}\n')
+                console_log(log_msg)
 
         @staticmethod
         def event_log(timestamp: int, log: tuple, method: str):
@@ -268,6 +268,8 @@ def _log_handler() -> LogHandler_T:
             # all entries will be logged and printed to the terminal
             if (logging_level is LOG.DEBUG):
 
+                direct_log(handler_name, LOG.NOTICE.name, f'{level_name} => enabled (debug)', cli=True)
+
                 @staticmethod
                 def log_method(log_msg):
                     log_msg = f'{fast_time()}|{handler_name}|{level_name}|{log_msg}\n'
@@ -279,6 +281,8 @@ def _log_handler() -> LogHandler_T:
             # entry will be logged to file
             elif (level_number <= logging_level):
 
+                direct_log(handler_name, LOG.NOTICE.name, f'{level_name} => enabled', cli=True)
+
                 @staticmethod
                 def log_method(log_msg):
 
@@ -286,6 +290,9 @@ def _log_handler() -> LogHandler_T:
 
             # log level is disabled
             else:
+
+                direct_log(handler_name, LOG.NOTICE.name, f'{level_name} => disabled', cli=True)
+
                 @staticmethod
                 def log_method(*_):
                     pass
