@@ -34,12 +34,18 @@ if (TYPE_CHECKING and not _DISABLED):
     from dnx_netmods import *
     from dnx_webui import *
 
+    Address = tuple[str, int]
+
+    ListenerCallback = Callable[[...], None]
+    ListenerPackets = Union[ClientRequest]
+    ListenerParser = Callable[[Address, LI_SOCK], ListenerPackets]
+
     ProxyCallback = Callable[[...], None]
-    ProxyPacket = Union[IPPPacket, IPSPacket, DNSPacket, None]
-    ProxyParser = Callable[[CPacket, int], ProxyPacket]
+    ProxyPackets = Union[IPPPacket, IPSPacket, DNSPacket]
+    ProxyParser = Callable[[CPacket, int], ProxyPackets]
 
     DNSListHandler = Callable[[Any, str, int], int]
-    DNSCache = dns_cache(dns_packet=DNSPacket, request_handler=ProxyPacket)
+    DNSCache = dns_cache(dns_packet=DNSPacket, request_handler=ProxyPackets)
     RequestTracker = request_tracker()
 
     Structure = dict[str, int]

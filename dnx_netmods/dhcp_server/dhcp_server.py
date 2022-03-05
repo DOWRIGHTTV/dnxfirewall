@@ -53,7 +53,7 @@ class DHCPServer(Listener):
         ClientRequest.set_server_references(cls.intf_settings)
         cls.set_proxy_callback(func=cls.handle_dhcp)
 
-    Log.notice('DHCPServer initialization complete.')
+        Log.notice('DHCPServer initialization complete.')
 
     def _pre_inspect(self, packet) -> bool:
         if (packet.mtype in VALID_MTYPES and packet.server_ident in self.valid_idents):
@@ -152,7 +152,7 @@ class DHCPServer(Listener):
         l_sock.setsockopt(SOL_SOCKET, SO_BINDTODEVICE, f'{intf}\0'.encode('utf-8'))
         l_sock.bind((itoip(INADDR_ANY), PROTO.DHCP_SVR))
 
-        Log.debug(f'[{l_sock.fileno()}][{intf}] {cls.__name__} interface bound: {cls.intf_settings}')
+        Log.debug(f'[{l_sock.fileno()}][{intf}] {cls.__name__} interface bound: {cls.intf_settings[intf]}')
 
         return l_sock
 

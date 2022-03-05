@@ -202,6 +202,7 @@ def cfg_write_poller(list_function: DNSListHandler) -> Wrapper:
 class config(dict):
 
     def __init__(self, **kwargs: dict[str, Union[str, int, bool]]):
+        super().__init__()
 
         for k, v in kwargs.items():
             self[k] = v

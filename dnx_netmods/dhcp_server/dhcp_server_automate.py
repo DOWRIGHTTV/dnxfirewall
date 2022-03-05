@@ -150,7 +150,8 @@ class Configuration:
             # server is running. (the server must be restarted for interface ipaddress changes)
             self.dhcp_server.intf_settings[intf_ident] = {
                 'ip': intf_ip,
-                'netmask': intf_netmask
+                'netmask': intf_netmask,
+                'options': {}
             }
 
             # local server ips added to filter responses to other servers within the broadcast domain.

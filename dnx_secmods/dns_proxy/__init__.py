@@ -10,7 +10,7 @@ __all__ = (
     'request_tracker', 'dns_cache',
 
     # TYPES
-    'DNSServer_T'
+    'DNSServer_T', 'DNSPacket_T'
 )
 
 if (TYPE_CHECKING):
@@ -25,3 +25,4 @@ if (TYPE_CHECKING):
     # TYPES
     # ======
     DNSServer_T = Type[DNSServer]
+    DNSPacket_T = Type[DNSPacket]

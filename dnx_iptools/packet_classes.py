@@ -9,7 +9,7 @@ import threading
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
-from dnx_gentools.def_enums import PROTO
+from dnx_gentools.def_enums import PROTO, ICMP
 from dnx_gentools.standard_tools import looper
 from dnx_gentools.def_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK
 
@@ -25,8 +25,8 @@ __all__ = (
     'Listener', 'ProtoRelay', 'NFQueue', 'NFPacket', 'RawResponse'
 )
 
-def _NOT_IMPLEMENTED(*args, **kwargs):
-    raise NotImplementedError('subclass must reference a data handling function.')
+# def _NOT_IMPLEMENTED(*args, **kwargs):
+#     raise NotImplementedError('subclass must reference a data handling function.')
 
 
 class Listener:
@@ -34,10 +34,10 @@ class Listener:
     __epoll: ClassVar[Epoll] = select.epoll()
 
     _log: ClassVar[LogHandler_T] = None
-    _packet_parser: ClassVar[ProxyParser] = _NOT_IMPLEMENTED
-    _proxy_callback: ClassVar[ProxyCallback] = _NOT_IMPLEMENTED
-
     _intfs: ClassVar[list[tuple[int, int, str]]] = load_interfaces(exclude=['wan'])
+
+    _listener_parser: ClassVar[ListenerParser]
+    _listener_callback: ClassVar[ListenerCallback]
 
     # stored as file descriptors to minimize lookups in listener queue.
     enabled_intfs: ClassVar[set] = set()
@@ -59,7 +59,7 @@ class Listener:
         '''
         log.informational(f'{cls.__name__} initialization started.')
 
-        cls._log: LogHandler_T = log
+        cls._log = log
 
         # child class hook to initialize higher level systems. NOTE: must stay after initial intf registration
         cls._setup()
@@ -152,8 +152,8 @@ class Listener:
         registered_socks_get = self.__registered_socks.get
 
         # methods
-        packet_parser = self._packet_parser
-        proxy_callback = self._proxy_callback
+        listener_parser: ListenerParser = self._listener_parser
+        listener_callback: ListenerCallback = self._listener_callback
         pre_inspect = self._pre_inspect
 
         # flags
@@ -163,21 +163,25 @@ class Listener:
         recv_buf: bytearray = bytearray(2048)
         recv_buffer = memoryview(recv_buf)
 
+        nbytes: int
+        address: tuple[str, int]
+
         # custom iterator
         for _ in RUN_FOREVER:
             l_socks = epoll_poll()
             for fd, _ in l_socks:
 
-                sock_info = registered_socks_get(fd)
+                sock_info: L_SOCK = registered_socks_get(fd)
                 try:
                     nbytes, address = sock_info.recvfrom(recv_buffer)
                 except OSError:
+                    self._log.debug(f'recv error on socket: {sock_info}')
                     continue
 
                 # this is being used as a mechanism to disable/enable interface listeners
                 # NOTE: since this portion is sequential, we can utilize memory view throughout the initial parse
                 if (always_on or fd in enabled_intfs):
-                    packet = packet_parser(address, sock_info)
+                    packet: ListenerPackets = listener_parser(address, sock_info)
                     try:
                         packet.parse(recv_buffer[:nbytes])
                     except:
@@ -189,9 +193,9 @@ class Listener:
                         return
 
                     if (threaded):
-                        threading.Thread(target=proxy_callback, args=(packet,)).start()
+                        threading.Thread(target=listener_callback, args=(packet,)).start()
                     else:
-                        proxy_callback(packet)
+                        listener_callback(packet)
 
                 else:
                     self._log.debug(f'recv on fd: {fd} | enabled ints: {self.enabled_intfs}')
@@ -346,8 +350,9 @@ class ProtoRelay:
 
 class NFQueue:
     _log: ClassVar[LogHandler_T] = None
-    _packet_parser: ClassVar[ProxyParser] = _NOT_IMPLEMENTED
-    _proxy_callback: ClassVar[ProxyCallback] = _NOT_IMPLEMENTED
+
+    _packet_parser: ClassVar[ProxyParser]
+    _proxy_callback: ClassVar[ProxyCallback]
 
     __slots__ = (
         '__q_num', '__threaded'
@@ -362,8 +367,8 @@ class NFQueue:
     def __init__(self):
         '''General constructor that can only be reached if called through subclass.
         '''
-        self.__q_num = None
-        self.__threaded = None
+        self.__q_num: int = 0
+        self.__threaded: bool = False
 
     @classmethod
     def run(cls, log: LogHandler_T, *, q_num: int, threaded: bool = True) -> None:
@@ -416,7 +421,7 @@ class NFQueue:
 
     def __handle_packet(self, nfqueue: CPacket, mark: int):
         try:
-            packet = self._packet_parser(nfqueue, mark)
+            packet: ProxyPackets = self._packet_parser(nfqueue, mark)
         except:
             nfqueue.drop()
 
@@ -663,11 +668,14 @@ _pseudo_header_template = PR_TCP_PSEUDO_HDR(**{'reserved': 0, 'protocol': 6, 'tc
 _icmp_header_template = PR_ICMP_HDR(**{'type': 3, 'code': 3, 'unused': 0})
 
 class RawResponse:
-    '''base class for managing raw socket operations for sending data only. interfaces will be registered
-    on startup to associate interface, zone, mac, ip, and active socket.'''
+    '''base class for managing raw socket operations for sending data only.
+
+    interfaces will be registered on startup to associate interface, zone, mac, ip, and active socket.'''
 
     __setup: ClassVar[bool] = False
     _log: ClassVar[LogHandler_T] = None
+
+    # FIXME: consider making this just a reference to the open ports since that is all its used for
     _module = None
 
     _registered_socks: ClassVar[dict] = {}
@@ -685,7 +693,7 @@ class RawResponse:
 
         return object.__new__(cls)
 
-    def __init__(self, packet: ProxyPacket):
+    def __init__(self, packet: ProxyPackets):
         self._packet = packet
 
     @classmethod
@@ -724,7 +732,7 @@ class RawResponse:
         cls._log.informational(f'{cls.__name__}: {_intf} registered.')
 
     @classmethod
-    def prepare_and_send(cls, packet: ProxyPacket):
+    def prepare_and_send(cls, packet: ProxyPackets):
         '''obtain a socket object based on the interface/zone received then prepares a raw packet (all layers).
         the internal _send method will be called once finished.
 
@@ -746,7 +754,7 @@ class RawResponse:
         except OSError:
             pass
 
-    def _prepare_packet(self, packet: ProxyPacket, dnx_src_ip: int) -> bytearray:
+    def _prepare_packet(self, packet: ProxyPackets, dnx_src_ip: int) -> bytearray:
         # checking if dst port is associated with a nat. if so, will override necessary fields based on protocol
         # and re-assign in the packet object
         # NOTE: can we please optimize this. PLEASE!
@@ -812,7 +820,7 @@ class RawResponse:
         return send_data
 
     @staticmethod
-    def _packet_override(packet: ProxyPacket, dnx_src_ip: int, port_override: int):
+    def _packet_override(packet: ProxyPackets, dnx_src_ip: int, port_override: int):
         if (packet.protocol is PROTO.TCP):
             packet.dst_port = port_override
 
