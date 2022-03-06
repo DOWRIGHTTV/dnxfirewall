@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from dnx_gentools.file_operations import ConfigurationManager
 
+__all__ = (
+    'set_dns_servers'
+)
 
 # TODO: this needs to be redone.
 def set_dns_servers(dns_server_info):

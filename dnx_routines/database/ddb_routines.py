@@ -21,13 +21,13 @@ from __future__ import annotations
 #   it will be passed through connector without
 #   accessing the data.
 
-import dnx_routines.database.ddb_connector_sqlite as db_conn
+import dnx_routines.database.ddb_connector_sqlite as _db_conn
 
-from dnx_gentools.def_constants import fast_sleep
-from dnx_gentools.def_namedtuples import BLOCKED_DOM
-from dnx_routines.configure.system_info import System
+from dnx_gentools.def_constants import fast_sleep as _fsleep
+from dnx_gentools.def_namedtuples import BLOCKED_DOM as _BLOCKED_DOM
+from dnx_routines.configure.system_info import System as _System
 
-db = db_conn.DBConnector
+db = _db_conn.DBConnector
 
 # ========================================
 # INSERT ROUTINES
@@ -118,7 +118,7 @@ def infected_event(cur, timestamp, log):
 @db.register('geo_record', routine_type='write')
 # first arg is timestamp. this can likely go away with new DB API.
 def geo_record(cur, _, log):
-    month = ','.join(System.date()[:2])
+    month = ','.join(_System.date()[:2])
 
     # TODO: can this be switched to if not exists?
     cur.execute(f'select * from geolocation where month=? and country=?', (month, log.country))
@@ -155,9 +155,9 @@ def blocked_domain(cur, *, domain, src_ip):
     for _ in range(6):
         cur.execute(f'select * from blocked where domain=? and src_ip=?', (domain, src_ip))
         try:
-            return BLOCKED_DOM(*cur.fetchone()[1:4])
+            return _BLOCKED_DOM(*cur.fetchone()[1:4])
         except TypeError:
-            fast_sleep(.25)
+            _fsleep(.25)
 
 @db.register('last', routine_type='query')
 # most recent X matching rows
@@ -203,7 +203,7 @@ def top_dashboard(cur, count, *, action):
 
 @db.register('top_geolocation', routine_type='query')
 def top_geolocation(cur, count, *, action, direction):
-    month = ','.join(System.date()[:2])
+    month = ','.join(_System.date()[:2])
 
     # table has a separate column for allowed and blocked. this is why we select and sort on the action directly.
     cur.execute(

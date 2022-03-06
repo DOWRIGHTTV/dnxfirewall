@@ -13,5 +13,4 @@ class DNXError(Exception):
         return self.args[0]
 
 class ValidationError(DNXError):
-    '''Error raised when front end validations fail to notify the user/front end there
-    was a problem and provide a message of what happened. '''
+    '''Raised on webui processing failures.'''

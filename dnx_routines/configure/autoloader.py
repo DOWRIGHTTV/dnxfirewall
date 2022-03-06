@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-import os, sys
+import os
+import sys
 import time
 import json
 import socket
