@@ -428,19 +428,17 @@ cdef inline void rule_print(FWrule *rule) nogil:
 
     cdef:
         size_t i
-        ZoneArray *s_zones = rule.s_zones.objects
-        ZoneArray *d_zones = rule.d_zones.objects
         ServiceObj *src_services = rule.s_services.objects
         ServiceObj *dst_services = rule.d_services.objects
 
     printf(<char*>'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv-RULE-vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n')
     printf(<char*>'src_zones=(')
     for i in range(rule.s_zones.len):
-        printf('%u ', s_zones[i])
+        printf('%u ', rule.s_zones.objects[i])
     printf(<char*>')\n')
 
     for i in range(rule.d_zones.len):
-        printf('%u ', d_zones[i])
+        printf('%u ', rule.s_zones.objects[i])
     printf(<char*>')\n')
 
     printf(<char*> 'src_zones=(')
