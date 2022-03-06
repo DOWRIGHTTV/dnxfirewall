@@ -140,7 +140,7 @@ def _inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
     if (keyword_match):
         return DNS_REQUEST_RESULTS(True, 'keyword', keyword_match[0][1])
 
-    # pulling most specific category that is not none otherwise returned value will be DNS_CAT.NONE.
+    # pulling the most specific category that is not none otherwise returned value will be DNS_CAT.NONE.
     for category in enum_categories:
         if category is not DNS_CAT.NONE: break
 

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from socket import inet_aton
-
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import PROTO, DNS, DNS_MASK

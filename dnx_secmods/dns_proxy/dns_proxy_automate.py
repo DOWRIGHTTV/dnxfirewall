@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import threading
 import socket
 import ssl
@@ -10,8 +11,8 @@ from ipaddress import IPv4Address
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
-from dnx_gentools.def_namedtuples import DNS_SIGNATURES
-from dnx_gentools.def_enums import PROTO, CFG
+from dnx_gentools.def_namedtuples import DNS_SIGNATURES, Item
+from dnx_gentools.def_enums import PROTO, CFG, DNS_CAT
 from dnx_gentools.file_operations import *
 from dnx_gentools.standard_tools import looper, Initialize
 

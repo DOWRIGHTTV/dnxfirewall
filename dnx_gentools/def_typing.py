@@ -16,6 +16,9 @@ if (TYPE_CHECKING and not _DISABLED):
     from socket import socket as Socket
     from select import epoll as Epoll
 
+    Address = tuple[str, int]
+    Structure = dict[str, int]
+
     Wrapper = Callable[[Any], None]
     Callable_T = Callable[[Any, ...], Any]
 
@@ -23,8 +26,7 @@ if (TYPE_CHECKING and not _DISABLED):
     IPTableLock = NewType('IPTableLock', type('FileLock'))
     WebError = dict[str, Union[int, str]]
 
-# dnx class imports for use as Types
-if (TYPE_CHECKING and not _DISABLED):
+    # dnx class imports for use as Types
 
     # module packs
     from dnx_gentools import *
@@ -33,8 +35,6 @@ if (TYPE_CHECKING and not _DISABLED):
     from dnx_secmods import *
     from dnx_netmods import *
     from dnx_webui import *
-
-    Address = tuple[str, int]
 
     ListenerCallback = Callable[[...], None]
     ListenerPackets = Union[ClientRequest]
@@ -47,5 +47,3 @@ if (TYPE_CHECKING and not _DISABLED):
     DNSListHandler = Callable[[Any, str, int], int]
     DNSCache = dns_cache(dns_packet=DNSPacket, request_handler=ProxyPackets)
     RequestTracker = request_tracker()
-
-    Structure = dict[str, int]

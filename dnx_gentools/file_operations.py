@@ -12,7 +12,6 @@ import subprocess
 
 from copy import copy
 from secrets import token_urlsafe
-from collections import namedtuple
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER
