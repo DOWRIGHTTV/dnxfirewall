@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import namedtuple as _namedtuple
-from functools import cached_property as _cached_property
+from functools import cache as _cache
 from typing import NamedTuple as _NamedTuple, Union as _Union, Optional as _Optional, Any as _Any, Callable as _Callable
 
 from dnx_gentools.def_enums import PROTO as _PROTO, DHCP as _DHCP, DNS_CAT as _DNS_CAT
@@ -26,10 +26,13 @@ class DHCP_OPTION(_NamedTuple):
     size: int
     value: int
 
-    def _packed(self) -> bytes:
-        return _pack_map[self.size](self.code, self.size, self.value)
+    @_cache
+    def packed(self) -> bytes:
+        '''pack dhcp option into byte string.
 
-    packed = _cached_property(_packed)
+        @cache decorator guarantees the lookup and calculation will only be done on the first call to this function
+        '''
+        return _pack_map[self.size](self.code, self.size, self.value)
 
 class DHCP_RECORD(_NamedTuple):
     rtype: _DHCP
