@@ -49,7 +49,7 @@ class DNSServer(Listener):
     _request_map: ClassVar[dict[int], tuple[bool, ClientQuery]] = {}
     _id_lock: ClassVar[Lock] = threading.Lock()
 
-    _packet_parser: ClassVar[ClientQuery] = ClientQuery
+    _listener_parser: ClassVar[ClientQuery] = ClientQuery
 
     __slots__ = (
         '_request_map_pop', '_dns_records_get'
