@@ -137,14 +137,14 @@ class ClientRequest:
         # =====================
         # local reference for load fast in tight loop
         server_option_get: Callable[[int, ...], DHCP_OPTION] = self._intf_settings['options'].get
-        response_options: bytearray = bytearray([53, 1, response_mtype])
+        response_options = bytearray([53, 1, response_mtype])
 
         for opt_num in self.request_options:
 
             # only options the server has configured will be included in the request options list.
             option: DHCP_OPTION = server_option_get(opt_num, NULL_OPT)
             if (option is not NULL_OPT):
-                response_options += option.packed
+                response_options += option.packed()
 
         response_options += double_byte_pack(255, 0)
 
