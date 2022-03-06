@@ -67,6 +67,8 @@ def run():
 
 
 if (INIT_MODULE == LOG_NAME):
+    print(os.environ['PASSTHROUGH_ARGS'])
+
     args = Args(**{a: 1 for a in os.environ['PASSTHROUGH_ARGS'].split(',')})
 
     Log.run(name=LOG_NAME)
