@@ -31,6 +31,7 @@ class FirewallControl:
 
         self._initialize = Initialize(Log, 'FirewallControl')
 
+        self.SYSTEM: dict = {}
         self.BEFORE: dict = {}
         self.MAIN:   dict = {}
         self.AFTER:  dict = {}
@@ -132,7 +133,7 @@ class FirewallControl:
         system_set: list = [rule for rule in loaded_rules.get_values('BUILTIN')]
 
         # updating ruleset to reflect changes
-        setattr(self, 'SYSTEM', loaded_rules)
+        self.SYSTEM = loaded_rules
 
         self.log.notice('DNXFIREWALL system rule update job starting.')
 
