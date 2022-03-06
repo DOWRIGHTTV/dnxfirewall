@@ -230,6 +230,9 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
         # security profile loop
         size_t i, idx
 
+    if (VERBOSE):
+        pkt_print(hw, ip_header, proto_header)
+
     for section_num in range(FW_SECTION_COUNT):
 
         current_rule_count = CUR_RULE_COUNTS[section_num]
@@ -365,8 +368,8 @@ cdef inline bint network_match(NetworkArray rule_defs, u_int32_t iph_ip, u_int16
 
         net_defs = rule_defs.objects[i]
 
-        if (VERBOSE):
-            obj_print(NETWORK, &net_defs)
+        # if (VERBOSE):
+        #     obj_print(NETWORK, &net_defs)
 
         # geolocation objects use address object fields. we know it's a geo object when netid is -1
         if (net_defs.netid == GEO_MARKER):
@@ -393,8 +396,8 @@ cdef inline bint service_match(ServiceArray rule_defs, u_int16_t pkt_protocol, u
 
         svc_defs = rule_defs.objects[i]
 
-        if (VERBOSE):
-            obj_print(SERVICE, &svc_defs)
+        # if (VERBOSE):
+        #     obj_print(SERVICE, &svc_defs)
 
         # PROTOCOL
         if (pkt_protocol != svc_defs.protocol and svc_defs.protocol != ANY_PROTOCOL):
@@ -420,13 +423,36 @@ cdef inline void pkt_print(HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header)
     # printf('src-geo=%u, dst-geo=%u\n', src_country, dst_country)
     printf(<char*>'^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n')
 
-# TODO: make this able to print new rule structure
+# TODO: add network object support to print
 cdef inline void rule_print(FWrule *rule) nogil:
+
+    cdef:
+        size_t i
+        ServiceObj src_services = rule.s_services.objects
+        ServiceObj dst_services = rule.d_services.objects
+
     printf(<char*>'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv-RULE-vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n')
-    # printf('in-zone=%u, out-zone=%u', rule.s_zones, rule.d_zones)
+    printf(<char*>'src_zones=(')
+    for i in range(rule.s_zones.len):
+        printf('%u ', rule.s_zones[i])
+    printf(<char*>')\n')
+
+    for i in range(rule.d_zones.len):
+        printf('%u ', rule.d_zones[i])
+    printf(<char*>')\n')
+
+    printf(<char*> 'src_zones=(')
+    for i in range(rule.s_services.len):
+        printf('proto=%u, ports=(%u, %u) ', src_services[i].protocol, src_services[i].start_port, src_services[i].end_port)
+    printf(<char*> ')\n')
+
+    printf(<char*> 'dst_zones=(')
+    for i in range(rule.s_services.len):
+        printf('proto=%u, ports=(%u, %u) ', dst_services[i].protocol, dst_services[i].start_port, dst_services[i].end_port)
+    printf(<char*> ')\n')
+
     # printf('rule-s netid=%lu\n', rule.s_net_id)
     # printf('rule-d netid=%lu\n', rule.d_net_id)
-    # printf('rule-s proto=%u, rule-d proto=%u\n', rule_src_protocol, rule_dst_protocol)
     printf(<char*>'^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n')
 
 cdef inline void obj_print(int name, void *object) nogil:
