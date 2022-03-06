@@ -79,6 +79,9 @@ class Configuration:
             elif (not enabled and self.dhcp_server.intf_settings[intf_identity].get('enabled', 1)):
                 self.dhcp_server.disable(sock_fd, intf_identity)
 
+            # this prevents options being overridden which are being processed in another thread
+            settings.pop('options')
+
             # identity will be kept in settings just in case, though they key is the identity also.
             self.dhcp_server.intf_settings[intf_identity].update(settings)
 
