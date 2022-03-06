@@ -358,54 +358,66 @@ cdef inline bint zone_match(ZoneArray rule_defs, u_int8_t pkt_zone) nogil:
     return NO_MATCH
 
 # generic function for source OR destination network obj matching
-cdef inline bint network_match(NetworkArray rule_defs, u_int32_t iph_ip, u_int16_t country) nogil:
+cdef inline bint network_match(NetworkArray net_defs, u_int32_t iph_ip, u_int16_t country) nogil:
 
     cdef:
         size_t i
-        NetworkObj net_defs
+        NetworkObj net
 
-    for i in range(rule_defs.len):
+    if (VERBOSE):
+        printf(<char*>'checking ip %u: %u\n', iph_ip, country)
 
-        net_defs = rule_defs.objects[i]
+    for i in range(net_defs.len):
 
-        # if (VERBOSE):
-        #     obj_print(NETWORK, &net_defs)
+        net = net_defs.objects[i]
+
+        if (VERBOSE):
+            obj_print(NETWORK, net)
 
         # geolocation objects use address object fields. we know it's a geo object when netid is -1
-        if (net_defs.netid == GEO_MARKER):
+        if (net.netid == GEO_MARKER):
 
             # country code/id comparison
-            if (country == net_defs.netmask):
+            if (country == net.netmask):
                 return MATCH
 
-        # using rules mask to floor source ip in header and checking against FWrule network id
-        elif (iph_ip & net_defs.netmask == net_defs.netid):
+        # using rules mask to floor ip in header and checking against FWrule network id
+        elif (iph_ip & net.netmask == net.netid):
             return MATCH
+
+    if (VERBOSE):
+        printf(<char *> 'no ip match %u: %u\n', iph_ip, country)
 
     # default action
     return NO_MATCH
 
 # generic function that can handle source OR destination proto/port matching
-cdef inline bint service_match(ServiceArray rule_defs, u_int16_t pkt_protocol, u_int16_t pkt_port) nogil:
+cdef inline bint service_match(ServiceArray svc_defs, u_int16_t pkt_protocol, u_int16_t pkt_port) nogil:
 
     cdef:
         size_t i
-        ServiceObj svc_defs
+        ServiceObj svc
 
-    for i in range(rule_defs.len):
+    if (VERBOSE):
+        printf(<char*>'checking service %u: %u\n', pkt_protocol, pkt_port)
 
-        svc_defs = rule_defs.objects[i]
+    for i in range(svc_defs.len):
 
-        # if (VERBOSE):
-        #     obj_print(SERVICE, &svc_defs)
+        svc = svc_defs.objects[i]
+
+        if (VERBOSE):
+            obj_print(SERVICE, svc)
 
         # PROTOCOL
-        if (pkt_protocol != svc_defs.protocol and svc_defs.protocol != ANY_PROTOCOL):
+        if (pkt_protocol != svc.protocol and svc.protocol != ANY_PROTOCOL):
             continue
 
         # PORTS, ICMP will match on the first port start value (looking for 0)
-        if (svc_defs.start_port <= pkt_port <= svc_defs.end_port):
+        if (svc.start_port <= pkt_port <= svc.end_port):
             return MATCH
+
+    if (VERBOSE):
+        printf(<char *> 'no service match %u: %u\n', pkt_protocol, pkt_port)
 
     # default action
     return NO_MATCH
@@ -464,12 +476,13 @@ cdef inline void obj_print(int name, void *object) nogil:
     if (name == NETWORK):
         net_obj = <NetworkObj*>object
 
-        printf('network_obj, netid=%lu netmask=%u\n', net_obj.netid, net_obj.netmask)
+        printf('net_obj, id=%lu mask=%u\n', net_obj.netid, net_obj.netmask)
 
     elif (name == SERVICE):
         svc_obj = <ServiceObj*>object
 
-        printf('service_obj, protocol=%u start_port=%u end_port=%u\n', svc_obj.protocol, svc_obj.start_port, svc_obj.end_port)
+        printf('svc_obj, proto=%u start_port=%u end_port=%u\n', svc_obj.protocol, svc_obj.start_port, svc_obj.end_port)
+
 
 # ============================================
 # C CONVERSION / INIT FUNCTIONS
