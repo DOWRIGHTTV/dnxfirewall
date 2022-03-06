@@ -154,7 +154,7 @@ class ClientRequest:
 
 class ServerResponse:
 
-    _listener_intfs: dict = None
+    listener_intfs: dict = None
     _svr_leases: Leases = None
 
     __slots__ = (
@@ -169,29 +169,31 @@ class ServerResponse:
     def __init__(self, intf: str):
 
         # offer/ ack require these values, but release does not.
-        intf_settings: dict = self._listener_intfs[intf]
+        intf_settings: dict = self.listener_intfs[intf]
 
         self.netid: int = intf_settings['netid']
         self.netmask: int = intf_settings['netmask']
 
-        self._handout_range = intf_settings['lease_range']
+        range_bounds = intf_settings['lease_range']
+        self._handout_range = range(range_bounds[0], range_bounds[1])
+
         self._check_icmp_reach = intf_settings['icmp_check']
 
         self.has_discover: bool = False
         self._request: Optional[ClientRequest] = None
 
     @classmethod
-    def set_server_references(cls, intf_settings, leases) -> None:
+    def set_server_references(cls, intf_settings: dict, leases: Leases) -> None:
 
         cls.listener_intfs = intf_settings
         cls._svr_leases = leases
 
     @classmethod
-    def release(cls, ip_address, mac_address: str) -> bool:
+    def release(cls, ip_address: int, mac_address: str) -> bool:
         '''validates host ip address and mac address with lease table and returns a boolean representing whether it is
         safe to remove.'''
 
-        lease = cls._svr_leases[ip_address]
+        lease: DHCP_RECORD = cls._svr_leases[ip_address]
         if (lease.rtype is not DHCP.RESERVATION and lease.mac == mac_address):
             return True
 
@@ -232,10 +234,6 @@ class ServerResponse:
         # outcome 4 in rfc 2131
         return self.next_available_ip
 
-    # FIXME: this is problematic because it doesnt actually look at reservation again.
-    #  this wouldnt necessarily be needed if we are working from a discover, but a direct request would bypass this and
-    #  make handing out an ip ignore leases and only look at the requested ip (which would generally be the initially
-    #  handed out ip that happens to be the reservation.)
     def check_ack(self, request: ClientRequest) -> tuple[DHCP, Optional[int]]:
 
         # if the request skipped discover due to rebind/renew, then we need to check for a reservation before proceeding
@@ -313,7 +311,7 @@ class ServerResponse:
         if the icmp reachability check is enabled, and the ip is reachable, the process will continue until a valid ip
         is selected or loop is exhausted.
         '''
-        for ip_address in range(self._handout_range):
+        for ip_address in self._handout_range:
 
             if self._is_available(ip_address):
 
