@@ -372,7 +372,7 @@ cdef inline bint network_match(NetworkArray net_defs, u_int32_t iph_ip, u_int16_
         net = net_defs.objects[i]
 
         if (VERBOSE):
-            obj_print(NETWORK, net)
+            obj_print(NETWORK, &net)
 
         # geolocation objects use address object fields. we know it's a geo object when netid is -1
         if (net.netid == GEO_MARKER):
@@ -406,7 +406,7 @@ cdef inline bint service_match(ServiceArray svc_defs, u_int16_t pkt_protocol, u_
         svc = svc_defs.objects[i]
 
         if (VERBOSE):
-            obj_print(SERVICE, svc)
+            obj_print(SERVICE, &svc)
 
         # PROTOCOL
         if (pkt_protocol != svc.protocol and svc.protocol != ANY_PROTOCOL):
