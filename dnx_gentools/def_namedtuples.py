@@ -66,6 +66,10 @@ class DNS_REQUEST_RESULTS(_NamedTuple):
     reason: _Optional[str]
     category: _Optional[_DNS_CAT]
 
+class DNS_SEND(_NamedTuple):
+    qname: str
+    data: bytearray
+
 
 DNS_LOG = _namedtuple('dns_log', 'src_ip request category reason action')
 BLOCKED_LOG = _namedtuple('blocked_log', 'src_ip request category reason action')

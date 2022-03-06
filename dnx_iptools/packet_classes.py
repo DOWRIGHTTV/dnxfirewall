@@ -11,7 +11,7 @@ from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import PROTO, ICMP
 from dnx_gentools.standard_tools import looper
-from dnx_gentools.def_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK
+from dnx_gentools.def_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK, DNS_SEND
 
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import *
@@ -248,7 +248,7 @@ class ProtoRelay:
         self._fallback_relay = fallback_relay
 
         # dummy sock setup
-        sock = socket.socket()
+        sock: Socket = socket.socket()
         self._relay_conn = RELAY_CONN(None, sock, sock.send, sock.recv, None)
 
         self._send_cnt  = 0
@@ -275,10 +275,10 @@ class ProtoRelay:
 
         raise NotImplementedError('relay must be implemented in the subclass.')
 
-    def _send_query(self, send_data: bytearray, request: str) -> None:
+    def _send_query(self, request: DNS_SEND) -> None:
         for attempt in ATTEMPTS:
             try:
-                self._relay_conn.send(send_data)
+                self._relay_conn.send(request.data)
             except OSError:
 
                 if not self._register_new_socket(): break
@@ -291,7 +291,7 @@ class ProtoRelay:
                 # NOTE: temp | identifying connection version to terminal. when removing consider having the relay
                 # protocol show in the webui > system reports.
                 console_log(
-                    f'[{self._relay_conn.remote_ip}/{self._relay_conn.version}][{attempt}] Sent {request}'
+                    f'[{self._relay_conn.remote_ip}/{self._relay_conn.version}][{attempt}] Sent {request.qname}'
                 )
 
                 break

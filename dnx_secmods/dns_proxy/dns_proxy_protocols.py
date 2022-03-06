@@ -10,7 +10,7 @@ from socket import socket, AF_INET, SOCK_DGRAM, SOCK_STREAM
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import PROTO
-from dnx_gentools.def_namedtuples import RELAY_CONN
+from dnx_gentools.def_namedtuples import RELAY_CONN, DNS_SEND
 from dnx_gentools.standard_tools import dnx_queue
 
 from dnx_iptools.protocol_tools import btoia
@@ -40,8 +40,8 @@ class UDPRelay(ProtoRelay):
             return False
 
     @dnx_queue(Log, name='UDPRelay')
-    def relay(self, send_data: bytearray, request: str):
-        self._send_query(send_data, request)
+    def relay(self, request: DNS_SEND):
+        self._send_query(request)
 
     # receive data from server. if dns response will call parse method else will close the socket.
     def _recv_handler(self) -> None:
@@ -131,15 +131,15 @@ class TLSRelay(ProtoRelay):
             return False
 
     @dnx_queue(Log, name='TLSRelay')
-    def relay(self, send_data: bytearray, request: str) -> None:
+    def relay(self, request: DNS_SEND) -> None:
         # if servers are down and a fallback is configured, it will be forwarded to that relay queue, otherwise
         # the request will be silently dropped.
         if (not self.fail_condition):
-            self._send_query(send_data, request)
+            self._send_query(request)
 
         # slicing out length field which is tcp only.
         elif (self._fallback_relay):
-            self._fallback_relay_add(send_data[2:], request)
+            self._fallback_relay_add(DNS_SEND(request.qname[2:], request.data))
 
     # receive data from server and call parse method when valid message is recvd, else will close the socket.
     def _recv_handler(self) -> None:
