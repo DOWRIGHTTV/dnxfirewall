@@ -29,7 +29,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     'webui': {'module': '', 'exclude': ['cli'], 'priv': False, 'service': True, 'environ': ['webui', '1']},
 
     # SECURITY MODULES
-    'cfirewall': {'module': 'dnx_secmods.cfirewall.fw_init', 'exclude': [], 'priv': True, 'service': True},
+    'cfirewall': {'module': 'dnx_secmods.cfirewall', 'exclude': [], 'priv': True, 'service': True},
     'dns_proxy': {'module': 'dnx_secmods.dns_proxy.dns_proxy', 'exclude': [], 'priv': True, 'service': True},
     'ip_proxy': {'module': 'dnx_secmods.ip_proxy.ip_proxy', 'exclude': [], 'priv': True, 'service': True},
     'ips_ids': {'module': 'dnx_secmods.ips_ids.ips_ids', 'exclude': [], 'priv': True, 'service': True},
