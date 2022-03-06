@@ -33,9 +33,6 @@ class Args:
         return self.v or self.verbose
 
 def run():
-    print(os.environ['PASSTHROUGH_ARGS'])
-
-    args = Args(**{a: 1 for a in os.environ['PASSTHROUGH_ARGS'].split(',')})
 
     dnxfirewall: CFirewall = CFirewall()
     dnxfirewall.set_options(args.bypass_set, args.verbose_set)
@@ -69,4 +66,9 @@ def run():
         hardout(f'DNXFIREWALL cfirewall/nfqueue failure => {E}')
 
 if (INIT_MODULE == LOG_NAME):
+    try:
+        args = Args(**{a: 1 for a in os.environ['PASSTHROUGH_ARGS'].split(',') if a})
+    except Exception as E:
+        hardout(f'DNXFIREWALL arg parse failure => {E}')
+
     Log.run(name=LOG_NAME)
