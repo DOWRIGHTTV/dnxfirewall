@@ -26,10 +26,10 @@ class DHCP_OPTION(_NamedTuple):
     size: int
     value: int
 
-    @_cached_property
-    def packed(self) -> bytes:
+    def _packed(self) -> bytes:
         return _pack_map[self.size](self.code, self.size, self.value)
 
+    packed = _cached_property(_packed)
 
 class DHCP_RECORD(_NamedTuple):
     rtype: _DHCP
