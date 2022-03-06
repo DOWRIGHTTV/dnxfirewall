@@ -50,7 +50,9 @@ class DHCPServer(Listener):
         Configuration.setup(cls)
 
         # so we don't need to import/ hardcore the server class reference.
-        ClientRequest.set_server_references(cls.intf_settings)
+        ClientRequest.set_server_reference(cls)
+        ServerResponse.set_server_reference(cls)
+
         cls.set_proxy_callback(func=cls.handle_dhcp)
 
         Log.notice('DHCPServer initialization complete.')

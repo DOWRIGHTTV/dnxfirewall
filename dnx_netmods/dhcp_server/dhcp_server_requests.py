@@ -23,8 +23,7 @@ from_hex = bytes.fromhex
 
 class ClientRequest:
 
-    interface_settings: ClassVar[dict] = None
-
+    _server: DHCPServer_T = None
     _default_options: ClassVar[tuple[int]] = (54, 51, 58, 59)
 
     __slots__ = (
@@ -39,9 +38,9 @@ class ClientRequest:
     )
 
     @classmethod
-    def set_server_references(cls, interface_settings):
+    def set_server_reference(cls, server: DHCPServer_T):
 
-        cls.interface_settings = interface_settings
+        cls._server = server
 
     def __init__(self, _, sock_info: L_SOCK) -> None:
 
@@ -60,7 +59,7 @@ class ClientRequest:
         self.request_options: list[int] =  [*self._default_options]
 
         # making a copy of the interface specific options, so we don't have to worry about a lock when referencing them.
-        self._intf_settings: dict = self.interface_settings[sock_info.name].copy()
+        self._intf_settings: dict = self._server.intf_settings[sock_info.name].copy()
 
     def parse(self, data: memoryview) -> None:
 
@@ -154,8 +153,7 @@ class ClientRequest:
 
 class ServerResponse:
 
-    listener_intfs: dict = None
-    _svr_leases: Leases = None
+    _server: DHCPServer_T = None
 
     __slots__ = (
         '_request', 'netid', 'netmask',
@@ -169,7 +167,7 @@ class ServerResponse:
     def __init__(self, intf: str):
 
         # offer/ ack require these values, but release does not.
-        intf_settings: dict = self.listener_intfs[intf]
+        intf_settings: dict = self._server.intf_settings[intf]
 
         self.netid: int = intf_settings['netid']
         self.netmask: int = intf_settings['netmask']
@@ -183,17 +181,16 @@ class ServerResponse:
         self._request: Optional[ClientRequest] = None
 
     @classmethod
-    def set_server_references(cls, intf_settings: dict, leases: Leases) -> None:
+    def set_server_reference(cls, server: DHCPServer_T) -> None:
 
-        cls.listener_intfs = intf_settings
-        cls._svr_leases = leases
+        cls._server = server
 
     @classmethod
     def release(cls, ip_address: int, mac_address: str) -> bool:
         '''validates host ip address and mac address with lease table and returns a boolean representing whether it is
         safe to remove.'''
 
-        lease: DHCP_RECORD = cls._svr_leases[ip_address]
+        lease: DHCP_RECORD = cls._server.leases[ip_address]
         if (lease.rtype is not DHCP.RESERVATION and lease.mac == mac_address):
             return True
 
@@ -209,13 +206,13 @@ class ServerResponse:
     def check_offer(self, discover: ClientRequest) -> int:
         self.has_discover = True
 
-        reserved_ip: int = self._svr_leases.reservations.get(discover.mac, 0)
+        reserved_ip: int = self._server.leases.reservations.get(discover.mac, 0)
 
         # validity check also covers no reservation case.
         if self.valid_address(reserved_ip):
             return reserved_ip
 
-        lease: DHCP_RECORD = self._svr_leases[discover.req_ip]
+        lease: DHCP_RECORD = self._server.leases[discover.req_ip]
 
         # outcome 1/2 in rfc 2131
         if (discover.ciaddr != INADDR_ANY) and (lease.mac == discover.mac or lease.rtype is DHCP.AVAILABLE):
@@ -239,13 +236,13 @@ class ServerResponse:
         # if the request skipped discover due to rebind/renew, then we need to check for a reservation before proceeding
         # because one could have been configured since the last handout
         if (not self.has_discover):
-            reserved_ip: int = self._svr_leases.reservations.get(request.mac, 0)
+            reserved_ip: int = self._server.leases.reservations.get(request.mac, 0)
 
             # validity check also covers no reservation case.
             if self.valid_address(reserved_ip):
                 return DHCP.ACK, reserved_ip
 
-        lease: DHCP_RECORD = self._svr_leases[request.req_ip]
+        lease: DHCP_RECORD = self._server.leases[request.req_ip]
 
         # DHCP.SELECTING
         if self.selecting(request):
@@ -328,9 +325,9 @@ class ServerResponse:
         if mac is set to True a tuple of status and associated mac, if any, will be returned.
         '''
         try:
-            dhcp_record: DHCP_RECORD = self._svr_leases[ip_address]
+            dhcp_record: DHCP_RECORD = self._server.leases[ip_address]
         except ValueError:
-            Log.error(f'[dhcp/requests] lease lookup error. returned={self._svr_leases[ip_address]}')
+            Log.error(f'[dhcp/requests] lease lookup error. returned={self._server.leases[ip_address]}')
 
         else:
             status = dhcp_record.rtype is DHCP.AVAILABLE
