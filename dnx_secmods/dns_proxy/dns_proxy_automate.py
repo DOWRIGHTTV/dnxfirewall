@@ -142,7 +142,7 @@ class Configuration:
                     PROTO.UDP: False, PROTO.DNS_TLS: False
                 })
 
-        dns_server.dns_records = dns_settings['records']
+        dns_server.dns_records = dns_settings.get_dict('records')
 
         self._initialize.done()
 
