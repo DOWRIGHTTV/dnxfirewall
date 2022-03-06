@@ -56,7 +56,7 @@ class ClientRequest:
         self.req_ip:     int = 0
         self.handout_ip: int = 0
 
-        self.request_options: list[int] =  [*self._default_options]
+        self.request_options: list[int] = [*self._default_options]
 
         # making a copy of the interface specific options, so we don't have to worry about a lock when referencing them.
         self._intf_settings: dict = self._server.intf_settings[sock_info.name].copy()
@@ -95,13 +95,11 @@ class ClientRequest:
                 # not converting to a set because initialization likely takes as long as saving searching would provide
                 # local reference for load fast in tight loops
                 request_options = self.request_options
-                server_options  = self._intf_settings['options']
 
                 for option in data[:opt_len]:
 
-                    # required options are preloaded into the list to prevent duplicates.
-                    # only including options that the server has configured.
-                    if (option not in request_options and option in server_options):
+                    # required options are preloaded into the list to prevent because garbage linux clients.
+                    if (option not in request_options):
                         request_options.append(option)
 
             data = data[opt_len:]
