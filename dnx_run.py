@@ -243,7 +243,7 @@ if (__name__ == '__main__'):
     elif(command == 'compile'):
         file_path = f'{HOME_DIR}/dnx_system/utils/compile_{mod_name.replace("-", "_")}.py'
         try:
-            dnx_run(f'sudo python3 {file_path} build_ext --inplace')
+            dnx_run(f'sudo python3 {file_path} build_ext --inplace', shell=True)
         except CalledProcessError as cpe:
             sprint(f'{mod_name} (compile) run failure. => {cpe}')
 
