@@ -55,8 +55,8 @@ class DHCPServer(Listener):
 
         Log.notice('DHCPServer initialization complete.')
 
-    def _pre_inspect(self, packet) -> bool:
-        if (packet.mtype in VALID_MTYPES and packet.server_ident in self.valid_idents):
+    def _pre_inspect(self, packet: ClientRequest) -> bool:
+        if (packet.mtype in VALID_MTYPES and packet.svr_ident in self.valid_idents):
             return True
 
         return False
