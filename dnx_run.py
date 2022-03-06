@@ -18,6 +18,16 @@ HOME_DIR = os.environ.get('HOME_DIR', '/home/dnx/dnxfirewall')
 hardout = partial(os._exit, 0)
 dnx_run = partial(run, check=True, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
 
+COMMANDS = {
+    'start': {'priv': True, 'module': True},
+    'restart': {'priv': True, 'module': True},
+    'stop': {'priv': True, 'module': True},
+    'status': {'priv': True, 'module': True},
+    'cli': {'priv': True, 'module': True},
+    'modstat': {'priv': True, 'module': False},
+    'compile': {'priv': True, 'module': False}
+}
+
 # =========================
 # MOD NAME -> MOD LOCATION
 # =========================
@@ -30,34 +40,30 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
 
     # SECURITY MODULES
     'cfirewall': {'module': 'dnx_secmods.cfirewall', 'exclude': [], 'priv': True, 'service': True},
-    'dns_proxy': {'module': 'dnx_secmods.dns_proxy.dns_proxy', 'exclude': [], 'priv': True, 'service': True},
-    'ip_proxy': {'module': 'dnx_secmods.ip_proxy.ip_proxy', 'exclude': [], 'priv': True, 'service': True},
-    'ips_ids': {'module': 'dnx_secmods.ips_ids.ips_ids', 'exclude': [], 'priv': True, 'service': True},
+    'dns-proxy': {'module': 'dnx_secmods.dns_proxy.dns_proxy', 'exclude': ['compile'], 'priv': True, 'service': True},
+    'ip-proxy': {'module': 'dnx_secmods.ip_proxy.ip_proxy', 'exclude': ['compile'], 'priv': True, 'service': True},
+    'ips-ids': {'module': 'dnx_secmods.ips_ids.ips_ids', 'exclude': ['compile'], 'priv': True, 'service': True},
 
     # NETWORK MODULES
-    'dhcp_server': {'module': 'dnx_netmods.dhcp_server.dhcp_server', 'exclude': [], 'priv': True, 'service': True},
+    'dhcp-server': {'module': 'dnx_netmods.dhcp_server.dhcp_server', 'exclude': ['compile'], 'priv': True, 'service': True},
 
     # ROUTINES
-    'database': {'module': 'dnx_routines.database.ddb_main', 'exclude': [], 'priv': False, 'service': True},
-    'logging': {'module': 'dnx_routines.logging.log_main', 'exclude': [], 'priv': False, 'service': True},
+    'database': {'module': 'dnx_routines.database.ddb_main', 'exclude': ['compile'], 'priv': False, 'service': True},
+    'logging': {'module': 'dnx_routines.logging.log_main', 'exclude': ['compile'], 'priv': False, 'service': True},
 
-    'iptables': {'module': 'dnx_routines.configure.iptables', 'exclude': [], 'priv': True, 'service': False},
+    'iptables': {'module': 'dnx_routines.configure.iptables', 'exclude': ['compile'], 'priv': True, 'service': False},
 
     # SYSTEM
-    'startup': {'module': 'dnx_system.startup_proc', 'exclude': [], 'priv': True, 'service': True},
-    'interface': {'module': 'dnx_system.interface_services', 'exclude': [], 'priv': False, 'service': True},
-    'syscontrol': {'module': 'dnx_system.sys_control', 'exclude': [], 'priv': True, 'service': True}
+    'startup': {'module': 'dnx_system.startup_proc', 'exclude': ['compile'], 'priv': True, 'service': True},
+    'interface': {'module': 'dnx_system.interface_services', 'exclude': ['compile'], 'priv': False, 'service': True},
+    'syscontrol': {'module': 'dnx_system.sys_control', 'exclude': ['compile'], 'priv': True, 'service': True},
+
+    # COMPILE ONLY
+    'dnx-nfqueue': {'module': '', 'exclude': [x for x in COMMANDS if x != 'compile'], 'priv': True, 'service': False},
+    'cprotocol-tools': {'module': '', 'exclude': [x for x in COMMANDS if x != 'compile'], 'priv': True, 'service': False},
+    'trie-search': {'module': '', 'exclude': [x for x in COMMANDS if x != 'compile'], 'priv': True, 'service': False}
 }
 SERVICE_MODULES = [f'dnx-{mod.replace("_", "-")}' for mod, modset in MODULE_MAPPING.items() if modset['service']]
-
-COMMANDS = {
-    'start': {'priv': True, 'module': True},
-    'restart': {'priv': True, 'module': True},
-    'stop': {'priv': True, 'module': True},
-    'status': {'priv': True, 'module': True},
-    'cli': {'priv': True, 'module': True},
-    'modstat': {'priv': True, 'module': False}
-}
 
 systemctl_ret_codes: dict[int, str] = {
     0: 'program is running or service is OK',
@@ -233,6 +239,16 @@ if (__name__ == '__main__'):
 
     elif (command == 'modstat'):
         modstat_command()
+
+    elif(command == 'compile'):
+        file_path = f'{HOME_DIR}/dnx_system/utils/compile_{mod_name.replace("-", "_")}.py'
+        try:
+            dnx_run(f'sudo python3 {file_path} build_ext --inplace')
+        except CalledProcessError as cpe:
+            sprint(f'{mod_name} (compile) run failure. => {cpe}')
+
+        else:
+            sprint(f'{mod_name} (compile) run sucess.')
 
     elif mod_set['service']:
         service_command(mod_name, command)
