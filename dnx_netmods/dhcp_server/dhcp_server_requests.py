@@ -134,7 +134,7 @@ class ClientRequest:
         # DHCP RESPONSE OPTS
         # =====================
         # local reference for load fast in tight loop
-        server_option_get: Callable[[int, ...], DHCP_OPTION] = self._intf_settings['options'].get
+        server_option_get = self._intf_settings['options'].get
         response_options = bytearray([53, 1, response_mtype])
 
         for opt_num in self.request_options:

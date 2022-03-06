@@ -63,8 +63,8 @@ class Configuration:
         for settings in dhcp_settings.get_values('interfaces->builtins'):
 
             # NOTE ex. ident: eth0, lo, enp0s3
-            intf_identity = settings['ident']
-            enabled = settings['enabled']
+            intf_identity: str = settings['ident']
+            enabled: int = settings['enabled']
 
             # TODO: compare interface status in memory with what is loaded in. if it is different then the setting was
             #  just changed and needs to be acted on. implement register/unregister methods available to external
@@ -73,10 +73,10 @@ class Configuration:
             #  file changes.
             # NOTE: .get is to cover server startup. do not change. test functionality.
             sock_fd = self.dhcp_server.intf_settings[intf_identity]['fileno']
-            if (enabled and not self.dhcp_server.intf_settings[intf_identity].get('enabled', False)):
+            if (enabled and not self.dhcp_server.intf_settings[intf_identity].get('enabled', 0)):
                 self.dhcp_server.enable(sock_fd, intf_identity)
 
-            elif (not enabled and self.dhcp_server.intf_settings[intf_identity].get('enabled', True)):
+            elif (not enabled and self.dhcp_server.intf_settings[intf_identity].get('enabled', 1)):
                 self.dhcp_server.disable(sock_fd, intf_identity)
 
             # identity will be kept in settings just in case, though they key is the identity also.
@@ -97,13 +97,21 @@ class Configuration:
             # converting json keys to python ints
             configured_options = {int(k): DHCP_OPTION(int(k), *v) for k, v in settings['options'].items()}
 
-            active_interface = self.dhcp_server.intf_settings[settings['ident']]
+            active_options = self.dhcp_server.intf_settings[settings['ident']]['options']
 
             # if the active interface options have not changed, we can pass
-            if (configured_options == active_interface['options']):
+            if (configured_options == active_options):
                 continue
 
-            active_interface['options'] = configured_options
+            # inplace swap of options and only acting on a single key at a time to mitigate issues with shared state
+            # over multiple threads
+            options_to_remove: list[int] = [opt for opt in active_options if opt not in configured_options]
+            for option in options_to_remove:
+
+                active_options.pop(option)
+
+            for option, value in configured_options.items():
+                active_options[option] = value
 
         self.initialize.done()
 
