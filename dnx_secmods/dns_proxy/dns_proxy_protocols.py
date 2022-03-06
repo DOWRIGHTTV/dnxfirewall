@@ -28,10 +28,10 @@ class UDPRelay(ProtoRelay):
     def _register_new_socket(self) -> bool:
         for dns_server in self._dns_server.dns_servers:
 
-            # if server is down we will skip over it
+            # skip downed servers
             if (not dns_server[PROTO.UDP]): continue
 
-            # never fail so will always return True
+            # never fails, so will always return True
             return self._create_socket(dns_server['ip'])
 
         else:
@@ -50,7 +50,7 @@ class UDPRelay(ProtoRelay):
 
         for _ in RUN_FOREVER:
             try:
-                data_from_server = conn_recv(1024)
+                data_from_server = conn_recv(2048)
             except OSError:
                 break
 
@@ -150,13 +150,13 @@ class TLSRelay(ProtoRelay):
 
         responder_add = self._dns_server.responder.add
 
-        recv_buf: bytearray = bytearray(2048)
+        recv_buf = bytearray(2048)
         recv_buffer = memoryview(recv_buf)
 
         # allocating 4096 bytes of memory as bytearray, then building memory view. access to memory via the byte array
         # will not be needed. 4096 gives space for 8 max length sized udp dns messages (not sure if dot mirrors)
         processing_buffer = memoryview(bytearray(4096))
-        b_ct = 0
+        b_ct: int = 0
 
         for _ in RUN_FOREVER:
             try:
@@ -164,7 +164,7 @@ class TLSRelay(ProtoRelay):
                 # not inplace adding byte count to protect against cases where a public resolves sends a single
                 # response over multiple packets and connection is closed in between (this is highly unlikely since
                 # most cases it would be via timeout, but I have seen worse.)
-                nbytes = conn_recv(recv_buffer)
+                nbytes: int = conn_recv(recv_buffer)
             except OSError:
                 break
 
@@ -228,7 +228,7 @@ class TLSRelay(ProtoRelay):
 
         Log.informational(f'[{tls_server}/{self._protocol.name}] Opening secure socket.')
 
-        sock = socket(AF_INET, SOCK_STREAM)
+        sock: Socket = socket(AF_INET, SOCK_STREAM)
         sock.settimeout(CONNECT_TIMEOUT)
 
         dot_sock = self._tls_context.wrap_socket(sock, server_hostname=tls_server)

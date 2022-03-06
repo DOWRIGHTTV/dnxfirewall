@@ -10,7 +10,8 @@ from ipaddress import IPv4Address
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
-from dnx_gentools.def_enums import PROTO
+from dnx_gentools.def_namedtuples import DNS_SIGNATURES
+from dnx_gentools.def_enums import PROTO, CFG
 from dnx_gentools.file_operations import *
 from dnx_gentools.standard_tools import looper, Initialize
 
@@ -37,7 +38,7 @@ class Configuration:
         self._initialize = Initialize(Log, name)
 
     @classmethod
-    def proxy_setup(cls, dns_proxy: Type[DNSProxy]) -> None:
+    def proxy_setup(cls, dns_proxy: DNSProxy_T) -> None:
         '''start threads for tasks required by the DNS proxy. blocking until settings are loaded/initialized.'''
         if (cls._proxy_setup):
             raise RuntimeError('proxy setup should only be called once.')
@@ -76,11 +77,11 @@ class Configuration:
 
     @cfg_read_poller('dns_proxy')
     def _get_proxy_settings(self, cfg_file: str) -> None:
-        dns_proxy = load_configuration(cfg_file)
+        dns_proxy: ConfigChain = load_configuration(cfg_file)
 
-        signatures = self.dns_proxy.signatures
+        signatures: DNS_SIGNATURES = self.dns_proxy.signatures
         # CATEGORY SETTINGS
-        enabled_keywords = []
+        enabled_keywords: list[DNS_CAT] = []
         for cat, setting in dns_proxy.get_items('categories->default'):
             # identifying enabled keyword search categories
             if (setting['keyword']):
@@ -97,8 +98,8 @@ class Configuration:
                     signatures.en_dns.remove(dns_cat)
 
         # KEYWORD SETTINGS
-        # copying the keyword signature list in memory to a local object, then iterating over the list. if the current
-        # item category is not an enabled category, the signature will get removed and the offset will get adjusted to
+        # copying the keyword signature list in memory to a local object, then iterating over the list.
+        # if the current category is not enabled, the signature will get removed and the offset will get adjusted to
         # normalize the index.
         # NOTE: this is not entirely thread safe
         mem_keywords, offset = signatures.keyword.copy(), 0
@@ -123,13 +124,11 @@ class Configuration:
         self._initialize.done()
 
     @cfg_read_poller('dns_server')
-    def _get_server_settings(self, dns_server: Type[DNSServer], cfg_file: str) -> None:
-        dns_settings = load_configuration(cfg_file)
+    def _get_server_settings(self, dns_server: DNSServer_T, cfg_file: str) -> None:
+        dns_settings: ConfigChain = load_configuration(cfg_file)
 
-        tls_enabled = dns_settings['tls->enabled']
         dns_server.udp_fallback = dns_settings['tls->fallback']
-
-        dns_server.protocol = PROTO.DNS_TLS if tls_enabled else PROTO.UDP
+        dns_server.protocol = PROTO.DNS_TLS if dns_settings['tls->enabled'] else PROTO.UDP
 
         names = ['primary', 'secondary']
         for name, cfg_server, mem_server in zip(names, dns_settings.get_values('resolvers'), dns_server.dns_servers):
@@ -150,9 +149,9 @@ class Configuration:
     @cfg_write_poller
     # handles updating user defined signatures in memory/propagated changes to disk.
     def _get_list(self, lname: str, cfg_file: str, last_modified_time: int) -> float:
-        memory_list = getattr(self.dns_proxy, lname).dns
+        memory_list: dict = getattr(self.dns_proxy, lname).dns
 
-        timeout_detected = self._check_for_timeout(memory_list)
+        timeout_detected: bool = self._check_for_timeout(memory_list)
         # if a rule timeout is detected for an entry in memory. we will update the config file
         # to align with active rules, then we will remove the rules from memory.
         if (timeout_detected):
@@ -210,7 +209,7 @@ class Configuration:
 
     @staticmethod
     def _modify_ip_whitelist(cfg_file: str, memory_ip_list: dict) -> None:
-        loaded_ip_list = load_configuration(cfg_file)
+        loaded_ip_list: ConfigChain = load_configuration(cfg_file)
 
         # iterating over ip rules in memory.
         for ip in memory_ip_list.copy():
@@ -243,11 +242,11 @@ class Configuration:
     @staticmethod
     # updating the file with necessary changes.
     def _update_list_file(cfg_file: str) -> ConfigChain:
-        now = fast_time()
+        now: int = fast_time()
         with ConfigurationManager(cfg_file) as dnx:
             lists = dnx.load_configuration()
 
-            loaded_list = lists.get_items('time_based')
+            loaded_list: list[Item] = lists.get_items('time_based')
             for domain, info in loaded_list:
 
                 if (now >= info['expire']):

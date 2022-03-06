@@ -96,11 +96,11 @@ class DNSServer(Listener):
         if (client_query.qr != DNS.QUERY or client_query.qtype not in [DNS.A, DNS.NS]):
             return False
 
-        local_record = self._dns_records_get(client_query.qname)
+        record_ip: int = self._dns_records_get(client_query.qname)
 
         # generating server response and sending to client.
-        if (local_record):
-            query_response = client_query.generate_record_response(local_record)
+        if (record_ip):
+            query_response = client_query.generate_record_response(record_ip)
             send_to_client(client_query, query_response)
 
             return False

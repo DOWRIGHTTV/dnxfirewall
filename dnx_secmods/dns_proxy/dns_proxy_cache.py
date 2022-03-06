@@ -8,7 +8,7 @@ from collections import Counter, deque
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
-from dnx_gentools.def_namedtuples import DNS_CACHE
+from dnx_gentools.def_namedtuples import DNS_CACHE, CACHED_RECORD
 from dnx_gentools.file_operations import *
 from dnx_gentools.standard_tools import looper
 
@@ -22,7 +22,7 @@ def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
     domain_counter: Counter[str, int] = Counter({dom: cnt for cnt, dom in enumerate(reversed(_top_domains))})
     counter_lock: Lock = threading.Lock()
 
-    top_domain_filter: tuple = tuple(load_top_domains_filter())
+    top_domain_filter = tuple(load_top_domains_filter())
 
     # not needed once loaded into Counter
     del _top_domains
@@ -95,7 +95,7 @@ def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
         write_configuration(cache_storage.expanded_user_data, 'dns_cache')
 
         for domain in top_domains:
-            request_handler(dns_packet(domain), top_domain=True)
+            request_handler(dns_packet(domain))
             fast_sleep(.1)
 
         Log.debug('top domains refreshed')

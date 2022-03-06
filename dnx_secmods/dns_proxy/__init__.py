@@ -10,7 +10,7 @@ __all__ = (
     'request_tracker', 'dns_cache',
 
     # TYPES
-    'DNSServer_T', 'DNSPacket_T'
+    'DNSProxy_T', 'DNSServer_T', 'DNSPacket_T'
 )
 
 if (TYPE_CHECKING):
@@ -24,5 +24,6 @@ if (TYPE_CHECKING):
     # ======
     # TYPES
     # ======
+    DNSProxy_T = Type[DNSProxy]
     DNSServer_T = Type[DNSServer]
     DNSPacket_T = Type[DNSPacket]

@@ -53,7 +53,7 @@ dhcp_long_pack  = _Struct('!2BL').pack
 
 dns_header_unpack = _Struct('!6H').unpack
 dns_header_pack   = _Struct('!6H').pack
-resource_record_pack = _Struct('!3HLH4s').pack
+resource_record_pack = _Struct('!3HLHL').pack
 
 tls_unpack = _Struct('!B2HB').unpack_from
 handshake_unpack = _Struct('!2B2H').unpack_from

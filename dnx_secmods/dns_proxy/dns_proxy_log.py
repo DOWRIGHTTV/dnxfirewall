@@ -5,7 +5,7 @@ from __future__ import annotations
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import str_join
 from dnx_gentools.def_enums import LOG, DNS_CAT
-from dnx_gentools.def_namedtuples import DNS_LOG, INFECTED_LOG
+from dnx_gentools.def_namedtuples import DNS_REQUEST_RESULTS, DNS_LOG, INFECTED_LOG
 
 from dnx_iptools.interface_ops import get_arp_table
 
@@ -13,7 +13,7 @@ from dnx_routines.logging.log_client import LogHandler
 
 # DIRECT ACCESS FUNCTIONS
 from dnx_routines.logging.log_client import (
-    emergency, alert, critical, error, warning, notice, informational, debug, console
+    emergency, alert, critical, error, warning, notice, informational, debug, cli
 )
 
 class Log(LogHandler):

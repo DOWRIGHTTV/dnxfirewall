@@ -85,7 +85,7 @@ class ClientQuery:
 
         self.request_identifier = (*self.address, dns_header[0])  # dns_id
 
-    def generate_record_response(self, host_ip: str = None, configured_ttl: int = THIRTY_MIN) -> bytearray:
+    def generate_record_response(self, record_ip: int = 0, configured_ttl: int = THIRTY_MIN) -> bytearray:
         '''builds a dns query response for locally configured records.
 
         if host_ip is not passed in, the resource record section of the payload will not be generated.'''
@@ -95,8 +95,8 @@ class ClientQuery:
         send_data = bytearray(dns_header_pack(self.dns_id, flags, 1, 1, 0, 0))
         send_data += self.question_record
 
-        if (host_ip):
-            send_data += resource_record_pack(49164, 1, 1, configured_ttl, 4, inet_aton(host_ip))
+        if (record_ip):
+            send_data += resource_record_pack(49164, 1, 1, configured_ttl, 4, record_ip)
 
         return send_data
 
@@ -356,7 +356,7 @@ def _parse_record(dns_payload: memoryview, cur_offset: int) -> tuple[int, _RESOU
 class ProxyResponse(RawResponse):
     _intfs = load_interfaces(exclude=['wan'])
 
-    def _prepare_packet(self, packet: ProxyPacket, dnx_src_ip: int) -> bytearray:
+    def _prepare_packet(self, packet: ProxyPackets, dnx_src_ip: int) -> bytearray:
         # DNS HEADER + PAYLOAD
         # AAAA record set r code to "domain name does not exist" without record response ac=0, rc=3
         udp_payload = bytearray()
