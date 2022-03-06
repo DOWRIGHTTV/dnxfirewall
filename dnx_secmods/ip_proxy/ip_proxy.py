@@ -209,7 +209,7 @@ def run():
     IPProxy.run(Log, q_num=Queue.IP_PROXY)
 
 
-if (INIT_MODULE == LOG_NAME):
+if (INIT_MODULE == LOG_NAME.replace('-', '_')):
     Log.run(
         name=LOG_NAME
     )

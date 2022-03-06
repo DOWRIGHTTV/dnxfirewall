@@ -272,11 +272,11 @@ def _log_handler() -> LogHandler_T:
 
                 @staticmethod
                 def log_method(log_msg):
-                    log_msg = f'{fast_time()}|{handler_name}|{level_name}|{log_msg}\n'
+                    log_msg = f'{fast_time()}|{handler_name}|{level_name}|{log_msg}'
 
                     console_log(log_msg)
 
-                    queue_write(log_msg)
+                    queue_write(f'{log_msg}\n')
 
             # entry will be logged to file
             elif (level_number <= logging_level):

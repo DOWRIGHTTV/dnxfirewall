@@ -180,7 +180,7 @@ def run():
     DHCPServer.run(Log, threaded=False)
 
 
-if (INIT_MODULE == LOG_NAME):
+if (INIT_MODULE == LOG_NAME.replace('-', '_')):
     Log.run(
         name=LOG_NAME
     )
