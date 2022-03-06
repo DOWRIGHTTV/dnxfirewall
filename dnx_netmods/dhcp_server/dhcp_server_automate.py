@@ -8,7 +8,7 @@ from socket import socket,  AF_INET, SOCK_DGRAM
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
-from dnx_gentools.def_namedtuples import RECORD_CONTAINER, DHCP_RECORD, Item
+from dnx_gentools.def_namedtuples import RECORD_CONTAINER, DHCP_RECORD, DHCP_OPTION, Item
 from dnx_gentools.def_enums import DHCP
 from dnx_gentools.file_operations import load_configuration, cfg_read_poller, ConfigurationManager
 from dnx_gentools.standard_tools import looper, dnx_queue, Initialize
@@ -95,7 +95,7 @@ class Configuration:
         for intf, settings in dhcp_settings:
 
             # converting json keys to python ints
-            configured_options = {int(k): v for k, v in settings['options'].items()}
+            configured_options = {int(k): DHCP_OPTION(int(k), *v) for k, v in settings['options'].items()}
 
             active_interface = self.dhcp_server.intf_settings[settings['ident']]
 
