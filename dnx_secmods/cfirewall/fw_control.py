@@ -11,7 +11,7 @@ from dnx_gentools.def_constants import MSB, LSB, ppt
 
 from dnx_gentools.standard_tools import Initialize
 from dnx_gentools.signature_operations import generate_geolocation
-from dnx_gentools.file_operations import cfg_read_poller, load_configuration
+from dnx_gentools.file_operations import cfg_read_poller, load_configuration, load_data
 
 # ========================================
 # CONTROL - used within cfirewall process
@@ -128,9 +128,9 @@ class FirewallControl:
         #       to be reset. this is ok for now since we only support builtin zones that can't change.
         # 2000+: system control (proxy bypass prevention)
 
-        loaded_rules: ConfigChain = load_configuration(system_rules, filepath='dnx_system/iptables')
+        loaded_rules: dict = load_data(f'{system_rules}.cfg', filepath='dnx_system/iptables')
 
-        system_set: list = [rule for rule in loaded_rules.get_values('BUILTIN')]
+        system_set: list = list(loaded_rules['BUILTIN'].values())
 
         # updating ruleset to reflect changes
         self.SYSTEM = loaded_rules
