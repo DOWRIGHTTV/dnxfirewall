@@ -20,10 +20,10 @@ class FirewallControl:
     __slots__ = (
         'log', 'cfirewall', '_initialize',
 
-        # rules sections (hierarchy)
+        # rule sections (hierarchy)
         # NOTE: these are used primarily to detect config changes to prevent the amount of work/ data conversions that
         #  need to be done to load the settings into C data structures.
-        'BEFORE', 'MAIN', 'AFTER'
+        'SYSTEM', 'BEFORE', 'MAIN', 'AFTER'
     )
 
     def __init__(self, Log: LogHandler_T, /, *, cfirewall: CFirewall):
@@ -41,6 +41,7 @@ class FirewallControl:
 
     def print_active_rules(self):
 
+        ppt(self.SYSTEM)
         ppt(self.BEFORE)
         ppt(self.MAIN)
         ppt(self.AFTER)
@@ -89,14 +90,14 @@ class FirewallControl:
         calls to Cython are made from within this method block. the GIL must be manually acquired on the Cython
         side or the Python interpreter will crash. '''
 
-        dnx_fw: ConfigChain = load_configuration(fw_rules, filepath='dnx_system/iptables')
+        loaded_rules: ConfigChain = load_configuration(fw_rules, filepath='dnx_system/iptables')
 
         # splitting out sections then determine which one has changed. this is to reduce amount of work done on the C
         # side. not for performance, but more for ease of programming.
         # NOTE: index 1 start is needed because SYSTEM rules are held at index 0.
         for i, section in enumerate(['BEFORE', 'MAIN', 'AFTER'], 1):
             current_section: dict = getattr(self, section)
-            new_section: dict = dnx_fw.get_dict(section)
+            new_section: dict = loaded_rules.get_dict(section)
 
             # unchanged ruleset
             if (current_section == new_section): continue
@@ -126,14 +127,17 @@ class FirewallControl:
         #       to be reset. this is ok for now since we only support builtin zones that can't change.
         # 2000+: system control (proxy bypass prevention)
 
-        rulesets: ConfigChain = load_configuration(system_rules, filepath='dnx_system/iptables')
+        loaded_rules: ConfigChain = load_configuration(system_rules, filepath='dnx_system/iptables')
 
-        ruleset: list = [rule for rule in rulesets.get_values('BUILTIN')]
+        system_set: list = [rule for rule in loaded_rules.get_values('BUILTIN')]
+
+        # updating ruleset to reflect changes
+        setattr(self, 'SYSTEM', loaded_rules)
 
         self.log.notice('DNXFIREWALL system rule update job starting.')
 
         # NOTE: gil must be held throughout this call. 0 is index of SYSTEM RULES
-        error = self.cfirewall.update_ruleset(0, ruleset)
+        error = self.cfirewall.update_ruleset(0, system_set)
         if (error):
             pass  # TODO: do something here
 
