@@ -281,7 +281,7 @@ class ConfigChain:
 
         return search_data
 
-    def get_list(self, key: Optional[str] = None) -> list[str]:
+    def get_list(self, key: Optional[str] = None) -> list[Union[str | int]]:
         '''return list of child keys 1 level lower than the passed in key.
 
         returns an empty list if not found.

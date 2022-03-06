@@ -7,7 +7,7 @@ import threading
 from array import array
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import MSB, LSB
+from dnx_gentools.def_constants import MSB, LSB, ppt
 
 from dnx_gentools.standard_tools import Initialize
 from dnx_gentools.signature_operations import generate_geolocation
@@ -38,6 +38,12 @@ class FirewallControl:
         # reference to extension CFirewall, which handles nfqueue and initial packet rcv. # we will use this
         # reference to modify rules objects which will be internally accessed by the inspection function callbacks
         self.cfirewall = cfirewall
+
+    def print_active_rules(self):
+
+        ppt(self.BEFORE)
+        ppt(self.MAIN)
+        ppt(self.AFTER)
 
     # threads will be started and other basic setup functions will be done before releasing control back to the
     # inspection context.

@@ -53,6 +53,9 @@ def run():
     except Exception as E:
         hardout(f'DNXFIREWALL control run failure => {E}')
 
+    if (args.verbose_set):
+        fw_control.print_active_rules()
+
     # this is running in pure C. the GIL is released before running the low level system operations and will never
     # retake the gil.
     # NOTE: setting bypass will tell the process to invoke rule action (DROP or ACCEPT) directly without forwarding to
