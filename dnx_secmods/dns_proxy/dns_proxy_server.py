@@ -50,26 +50,36 @@ class DNSServer(ServerConfiguration, Listener):
         '_request_map_pop', '_dns_records_get'
     )
 
+    def __init__(self):
+
+        super().__init__()
+
+        # assigning object methods to prevent lookup
+        self._request_map_pop: Callable[[int, ...], ClientQuery] = self._request_map.pop
+        self._dns_records_get: Callable[[str], int] = self.dns_records.get
+
     def _setup(self) -> None:
         # setting parent class callback to allow custom actions on subclasses
         self.__class__.set_proxy_callback(func=REQ_TRACKER_INSERT)
 
         self.configure()
 
-        Reachability.run(self.__class__)
-        TLSRelay.run(self.__class__, fallback_relay=UDPRelay.relay)
-        UDPRelay.run(self.__class__)
-
-    def __init__(self):
-
-        super().__init__()
-
+        # =========================
+        # SENDER / RECEIVER QUEUES
+        # =========================
         threading.Thread(target=self.responder).start()
         threading.Thread(target=self._request_queue).start()
 
-        # assigning object methods to prevent lookup
-        self._request_map_pop: Callable[[int, ...], ClientQuery] = self._request_map.pop
-        self._dns_records_get: Callable[[str], int] = self.dns_records.get
+        # =========================
+        # SDN REACHABILITY
+        # =========================
+        Reachability.run(self.__class__)
+
+        # =========================
+        # PROTOCOL RELAY QUEUES
+        # =========================
+        UDPRelay.run(self.__class__)
+        TLSRelay.run(self.__class__, fallback_relay=UDPRelay.relay)
 
     # thread to handle all received requests from the listener.
     def _request_queue(self) -> NoReturn:

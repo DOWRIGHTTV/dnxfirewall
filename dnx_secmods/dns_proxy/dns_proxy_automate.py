@@ -16,6 +16,7 @@ from dnx_gentools.def_enums import PROTO, CFG, DNS_CAT
 from dnx_gentools.file_operations import *
 from dnx_gentools.standard_tools import looper, ConfigurationMixinBase, Initialize
 
+from dnx_iptools.cprotocol_tools import iptoi
 from dnx_iptools.protocol_tools import create_dns_query_header, convert_string_to_bitmap
 
 from dns_proxy_log import Log
@@ -239,7 +240,7 @@ class ServerConfiguration(ConfigurationMixinBase):
         {'ip_address': None, PROTO.UDP: None, PROTO.DNS_TLS: None}
     )
 
-    dns_records: ClassVar[dict[str, str]] = {}
+    dns_records: ClassVar[dict[str, int]] = {}
 
     def _configure(self) -> tuple:
         '''return thread information to be run.
@@ -270,7 +271,18 @@ class ServerConfiguration(ConfigurationMixinBase):
                     PROTO.UDP: False, PROTO.DNS_TLS: False
                 })
 
-        self.__class__.dns_records = server_config.get_dict('records')
+        # inplace swap of dns servers from configuration to memory
+        # copy allows for mutating the dict as we iterate
+        for name, ip_addr in self.__class__.dns_records.copy():
+
+            # removing if record was removed in webui
+            if name not in server_config.get_dict('records'):
+                self.__class__.dns_records.pop(name)
+
+        # a direct update is fine after we have cleared the removed records
+        self.__class__.dns_records.update({
+            name: iptoi(ip_addr) for name, ip_addr in server_config.get_dict('records').items()
+        })
 
         self._initialize.done()
 

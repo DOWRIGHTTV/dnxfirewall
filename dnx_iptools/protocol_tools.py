@@ -93,10 +93,10 @@ def cidr_to_int(cidr: int) -> int:
     return ~((1 << hostmask) - 1) & (2**32 - 1)
 
 def parse_query_name(data: Union[bytes, memoryview], offset: int = 0, *,
-                     qname: bool = False) -> Union[int, tuple[int, tuple[str, bool]]]:
+                     check_local: bool = False) -> Union[tuple[int, str], tuple[int, str, bool]]:
     '''parse dns name from sent in data. uses overall dns query to follow pointers. will return
-    name and offset integer value if qname arg is True otherwise will only return offset.'''
-
+    name and offset integer value if qname arg is True otherwise will only return offset.
+    '''
     idx: int = offset
     has_ptr: bool = False
     label_ct: int = 0
@@ -135,10 +135,10 @@ def parse_query_name(data: Union[bytes, memoryview], offset: int = 0, *,
     # offset +2 for ptr or +1 for root
     offset += 2 if has_ptr else 1
 
-    if (qname):
-        return offset, (query_name[:-1].decode(), label_ct == 1)
+    if (check_local):
+        return offset, query_name[:-1].decode(), label_ct == 1
 
-    return offset
+    return offset, query_name[:-1].decode()
 
 def domain_stob(domain_name: str) -> bytes:
     domain_bytes = byte_join([

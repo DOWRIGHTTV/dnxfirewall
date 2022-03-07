@@ -75,8 +75,7 @@ class ClientQuery:
         self.rc: int = dns_header[1] & DNS_MASK.RC
 
         # www.micro.com or micro.com || sd.micro.com
-        offset, query_info = parse_query_name(dns_query, qname=True)
-        self.qname, self.local_domain = query_info
+        offset, self.qname, self.local_domain = parse_query_name(dns_query, check_local=True)
 
         self.qtype, self.qclass = double_short_unpack(dns_query[offset:])
         self.question_record    = dns_query[:offset + 4]
@@ -213,18 +212,17 @@ class DNSPacket(NFPacket):
         # parsing dns name queried and byte offset due to variable length | ex www.micro.com or micro.com
         offset: int
         query_info: tuple[str, bool]
-        offset, query_info = parse_query_name(dns_query, qname=True)
+        offset, self.qname, self.local_domain = parse_query_name(dns_query, check_local=True)
 
         # defining question record
         self.question_record: bytearray = dns_query[:offset + 4]
 
         # defining questions record fields
-        self.qname, self.local_domain = query_info
         self.qtype, self.qclass = double_short_unpack(dns_query[offset:])
 
         # hashing queried name enumerating any subdomains (signature matching)
         # defining unique tuple for informing dns server of inspection results
-        self.requests, self.tld = _enumerate_request(*query_info)
+        self.requests, self.tld = _enumerate_request(self.qname, self.local_domain)
         self.request_identifier = (itoip(self.src_ip), self.src_port, self.dns_id)
 
 
@@ -281,7 +279,8 @@ def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[by
     # QUESTION RECORD
     # ================
     # www.micro.com or micro.com || sd.micro.com
-    offset: int = parse_query_name(dns_payload) + 4
+    offset, _ = parse_query_name(dns_payload)
+    offset: int = offset + 4
 
     send_data += dns_payload[:offset]
 
@@ -332,25 +331,22 @@ def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[by
     return send_data, None
 
 def _parse_record(dns_payload: memoryview, cur_offset: int) -> tuple[int, _RESOURCE_RECORD, int]:
-    new_offset: int = cur_offset + parse_query_name(dns_payload, cur_offset)
+    new_offset, qname = parse_query_name(dns_payload, cur_offset)
 
-    # slicing out current ptr index for faster reference
-    record_name = dns_payload[cur_offset: new_offset]
     record_values = dns_payload[new_offset:]
-
     # resource record data len, usually 4 for ip address, but can vary.
     # calculating first, so we can single shot creation of the byte container.
     dt_len = btoia(record_values[8:10])
 
     resource_record = _RESOURCE_RECORD(
-        record_name,
+        qname,
         record_values[:2],
         record_values[2:4],
         record_values[4:8],
         record_values[8:10 + dt_len]
     )
 
-    # name len + 2 bytes(length field) + 8 bytes(type, class, ttl) + data len
+    # name len + 8 bytes(type, class, ttl) + 2 bytes(length field) + data len
     new_offset += 10 + dt_len
 
     return btoia(resource_record.qtype), resource_record, new_offset

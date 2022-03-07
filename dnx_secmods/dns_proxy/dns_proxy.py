@@ -17,7 +17,7 @@ from dns_proxy_packets import DNSPacket, ProxyResponse
 from dns_proxy_server import DNSServer
 
 __all__ = (
-    'run',
+    'run', 'DNSProxy'
 )
 
 LOG_NAME = 'dns_proxy'

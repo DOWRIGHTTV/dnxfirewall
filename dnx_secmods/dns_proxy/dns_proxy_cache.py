@@ -67,6 +67,8 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
     # automated process to flush the cache if expire time has been reached.
     def auto_clear(cache: DNSCache):
 
+        Log.debug('record cache clear or renew started.')
+
         # =============
         # STANDARD
         # =============
@@ -80,11 +82,9 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
         # =============
         # TOP 20
         # =============
-        # keep top XX queried domains permanently in the cache using the current cached packet to generate a new request
-        # and forward to handler.
-        # response will be identified by "None" as client address in session tracker.
+        # keep the top XX queried domains permanently in cache.
         top_domains: list[str] = [
-            dom[0] for dom in domain_counter.most_common(TOP_DOMAIN_COUNT)
+            domain[0] for domain in domain_counter.most_common(TOP_DOMAIN_COUNT)
         ]
 
         # updating persistent file first then sending requests
@@ -95,11 +95,12 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
 
         write_configuration(cache_storage.expanded_user_data, 'dns_cache')
 
+        # response will be identified by "None" for client address
         for domain in top_domains:
             request_handler(dns_packet(domain))
             fast_sleep(.1)
 
-        Log.debug('top domains refreshed')
+        Log.debug('expired records cleared from cache and top domains refreshed')
 
     class _DNSCache(dict):
         '''subclass of dict to provide a custom data structure for dealing with the local caching of dns records.

@@ -226,7 +226,6 @@ def dnx_queue(log: LogHandler_T, name: str = None) -> Callable[[...], Any]:
         def some_func(job):
             process(job)
     '''
-
     def decorator(func: Callable[[Any, ...], Any]):
 
         queue: deque = deque()
@@ -275,7 +274,6 @@ def structure(obj_name: str, fields: Union[list, str]) -> Structure:
 
     note: currently < 1 byte attributes are not supported. some form of eval partial will likely be implemented.
     '''
-
     if not isinstance(fields, list):
         fields = fields.split()
 
@@ -318,6 +316,7 @@ def structure(obj_name: str, fields: Union[list, str]) -> Structure:
         __slots__ = ('buf',)
 
         def __init__(self):
+            super().__init__()
 
             self.buf: bytearray = _bytearray(size_of)
 
