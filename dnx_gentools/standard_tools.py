@@ -96,7 +96,8 @@ class ConfigurationMixinBase:
         self._initialize = Initialize()
 
     def configure(self) -> None:
-        '''blocking until settings are loaded/initialized.'''
+        '''blocking until settings are loaded/initialized.
+        '''
         if (self._config_setup):
             raise RuntimeError('configuration setup should only be called once.')
 
@@ -108,13 +109,13 @@ class ConfigurationMixinBase:
         # ===============
         # INITIALIZATION
         # ===============
-        initialize = Initialize(log, self.__class__.__name__)
+        self._initialize.set_logging(log, self.__class__.__name__)
 
         for target, args in thread_info:
             threading.Thread(target=target, args=args).start()
 
         # the length of returned tuple reflects the number of threads we need to wait on before returning.
-        initialize.wait_for_threads(count=len(thread_info))
+        self._initialize.wait_for_threads(count=len(thread_info))
 
     def _configure(self) -> tuple[LogHandler_T, tuple]:
         '''module specific configuration initialization.'''
@@ -127,7 +128,7 @@ class Initialize:
     will block until the condition is met.
     '''
 
-    def __init__(self, log: LogHandler_T, name: str):
+    def __init__(self, log: Optional[LogHandler_T] = None, name: str = '') -> None:
         self._log: LogHandler_T = log
         self._name: str = name
 
@@ -139,8 +140,15 @@ class Initialize:
         self._thread_count: int = 0
         self._thread_ready: set = set()
 
+    def set_logging(self, log: LogHandler_T, name: str) -> None:
+        '''alternate method to set logging references.
+        '''
+        self._log: LogHandler_T = log
+        self._name: str = name
+
     def wait_for_threads(self, *, count: int, timeout: int = 0) -> None:
-        '''blocks until the checked in threads count has reached the wait for amount.'''
+        '''blocks until the checked in threads count has reached the wait for amount.
+        '''
         if (not self._is_initializing or self.has_ran):
             raise RuntimeError('run has already been called for this self.')
 
@@ -166,8 +174,12 @@ class Initialize:
         self._log.notice(f'{self._name} setup complete.')
 
     def done(self) -> None:
-        '''inform the handler a thread has been initialized. using default thread name as dict key.'''
-        if (not self._is_initializing): return
+        '''inform the handler a thread has been initialized.
+
+        using default thread name as dict key.
+        '''
+        if (not self._is_initializing):
+            return
 
         self._thread_ready.add(threading.get_ident())
 
@@ -181,9 +193,9 @@ class Initialize:
 
         this call has the potential to deadlock. positions must be sequential work as intended, but are not
         required to be called in order.
-
         '''
-        if (not self._is_initializing): return
+        if (not self._is_initializing):
+            return
 
         while wait_for < len(self._thread_ready):
             fast_sleep(1)
