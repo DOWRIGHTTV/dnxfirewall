@@ -8,14 +8,13 @@ from collections import Counter, deque
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
-from dnx_gentools.def_enums import PROTO
-from dnx_gentools.def_namedtuples import DNS_CACHE, CACHED_RECORD, DNS_SEND
+from dnx_gentools.def_namedtuples import DNS_CACHE, CACHED_RECORD
 from dnx_gentools.file_operations import *
 from dnx_gentools.standard_tools import looper
 
 from dns_proxy_log import Log
 
-NOT_VALID = -1
+NOT_FOUND = CACHED_RECORD(-1, -1, None)
 
 def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Callable[[ClientQuery], None]) -> DNSCache:
     _top_domains: dict = load_data('dns_server.cache')['top_domains']
@@ -81,8 +80,9 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
         # =============
         # TOP 20
         # =============
-        # keep top XX queried domains permanently in cache. uses current cached packet to generate a new request and
-        # forward to handler. response will be identified by "None" as client address in session tracker.
+        # keep top XX queried domains permanently in the cache using the current cached packet to generate a new request
+        # and forward to handler.
+        # response will be identified by "None" as client address in session tracker.
         top_domains: list[str] = [
             dom[0] for dom in domain_counter.most_common(TOP_DOMAIN_COUNT)
         ]
@@ -118,15 +118,14 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
         if the above callbacks are not set, the top domain's caching system will NOT actively update records, but the
         counts will still be accurate/usable.
         '''
-
         __slots__ = ()
 
         # searching key directly will return calculated ttl and associated records
         def __getitem__(self, key: str) -> DNS_CACHE:
-            record = dict_get(self, key)
+            record: CACHED_RECORD = dict_get(self, key)
             # not present or root lookup
-            if (record == NOT_VALID):
-                return DNS_CACHE(NOT_VALID, None)
+            if (record == NOT_FOUND):
+                return DNS_CACHE(NOT_FOUND, None)
 
             calcd_ttl = record.expire - int(fast_time())
             if (calcd_ttl > DEFAULT_TTL):
@@ -137,15 +136,15 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
 
             # expired
             else:
-                return DNS_CACHE(NOT_VALID, None)
+                return DNS_CACHE(NOT_FOUND, None)
 
         # if missing will return an expired result
-        def __missing__(self, key: str) -> int:
-            return NOT_VALID
+        def __missing__(self, key: str) -> CACHED_RECORD:
+            return NOT_FOUND
 
         def add(self, request: str, data_to_cache: CACHED_RECORD):
-            '''add query to cache after calculating expiration time.'''
-
+            '''add query to cache after calculating expiration time.
+            '''
             self[request] = data_to_cache
 
             Log.debug(f'[{request}:{data_to_cache.ttl}] Added to standard cache. ')
@@ -153,8 +152,9 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
         def search(self, query_name: str) -> DNS_CACHE:
             '''return namedtuple of time left on ttl and the dns record if the client requested domain is cached.
 
-            returns None if not found. top domain count will be incremented automatically if it passes filter.'''
-
+            returns None if not found.
+            the top domain count will be incremented automatically if it passes the filter.
+            '''
             if (query_name):
                 # list comp to built in any test for match. match will not increment top domain counter.
                 if (not [fltr for fltr in top_domain_filter if fltr in query_name]):
@@ -177,7 +177,6 @@ def request_tracker() -> RequestTracker:
     efficient thread blocking via Thread Events over a busy loop. This is a very lightweight version of the standard lib
     Queue and uses a deque as its primary data structure.
     '''
-
     request_ready = threading.Event()
     wait_for_request = request_ready.wait
     notify_ready = request_ready.set
