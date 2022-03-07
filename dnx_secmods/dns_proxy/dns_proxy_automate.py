@@ -330,14 +330,16 @@ class Reachability:
                 if (secure_server[self._protocol]):
                     continue
 
-                Log.debug(f'[{secure_server["ip"]}/{self._protocol.name}] Checking reachability of remote DNS server.')
+                Log.debug(
+                    f'[{secure_server["ip_address"]}/{self._protocol.name}] Checking reachability of remote DNS server.'
+                )
 
                 # if the server responds to a connection attempt, it will be marked as available
-                if self._tls_reachable(secure_server['ip']):
+                if self._tls_reachable(secure_server['ip_address']):
                     secure_server[PROTO.DNS_TLS] = True
                     self._dns_server.tls_down = False
 
-                    Log.notice(f'[{secure_server["ip"]}/{self._protocol.name}] DNS server is reachable.')
+                    Log.notice(f'[{secure_server["ip_address"]}/{self._protocol.name}] DNS server is reachable.')
 
                     # will write server status change individually as its unlikely both will be down at same time
                     write_configuration(self._dns_server.public_resolvers._asdict(), 'dns_server_status')
@@ -345,7 +347,7 @@ class Reachability:
         self._initialize.done()
 
     def _tls_reachable(self, secure_server: str) -> bool:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock: Socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(CONNECT_TIMEOUT)
 
         secure_socket = self._tls_context.wrap_socket(sock, server_hostname=secure_server)
@@ -370,13 +372,13 @@ class Reachability:
                 if (server[self._protocol]):
                     continue
 
-                Log.debug(f'[{server["ip"]}/{self._protocol.name}] Checking reachability of remote DNS server.')
+                Log.debug(f'[{server["ip_address"]}/{self._protocol.name}] Checking reachability of remote DNS server.')
 
                 # if the server responds to a connection attempt, it will be marked as available
-                if self._udp_reachable(server['ip']):
+                if self._udp_reachable(server['ip_address']):
                     server[PROTO.UDP] = True
 
-                    Log.notice(f'[{server["ip"]}/{self._protocol.name}] DNS server is reachable.')
+                    Log.notice(f'[{server["ip_address"]}/{self._protocol.name}] DNS server is reachable.')
 
                     write_configuration(self._dns_server.public_resolvers._asdict(), 'dns_server_status')
 
