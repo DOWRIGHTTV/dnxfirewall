@@ -184,9 +184,9 @@ def request_tracker() -> RequestTracker:
 
     _list = list
 
-    req_tracker = deque()
-    request_tracker_append = req_tracker.append
-    request_tracker_get = req_tracker.popleft
+    request_queue = deque()
+    request_queue_append = request_queue.append
+    request_queue_get = request_queue.popleft
 
     class _RequestTracker:
 
@@ -203,13 +203,13 @@ def request_tracker() -> RequestTracker:
             # the request would be stuck until another was received.
             clear_ready()
 
-            while request_tracker:
-                yield request_tracker_get()
+            while request_queue:
+                yield request_queue_get()
 
         # TODO: why cant this be a static method again? some weird arg problem.
         def insert(self, client_query: ClientQuery):
 
-            request_tracker_append(client_query)
+            request_queue_append(client_query)
 
             # notifying return_ready that there is a query ready to forward
             notify_ready()
