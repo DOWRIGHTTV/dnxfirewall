@@ -87,8 +87,8 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
         # KEYWORD SETTINGS
         # copying the keyword signature list in memory to a local object, then iterating over the list.
-        # if the current category is not enabled, the signature will get removed and the offset will get adjusted to
-        # normalize the index.
+        # if the current category is not enabled, the signature will get removed and the offset will get normalized to
+        # the index.
         # NOTE: this is not entirely thread safe
         mem_keywords, offset = signatures.keyword.copy(), 0
         for i, signature in enumerate(mem_keywords):
@@ -275,6 +275,7 @@ class ServerConfiguration(ConfigurationMixinBase):
         self._initialize.done()
 
 
+# TODO: not sure if i like how this class is a class. it just makes me feel weird.
 class Reachability:
     '''this class is used to determine whether a remote dns server has recovered from an outage or
     slow response times.
@@ -288,9 +289,11 @@ class Reachability:
     )
 
     def __init__(self, protocol: PROTO):
-        self._protocol = protocol
+        self._protocol: PROTO = protocol
 
         self._initialize = Initialize(Log, self._dns_server.__name__)
+
+        self._tls_context: SSLContext
 
     @classmethod
     def run(cls, dns_server: DNSServer_T):
@@ -321,7 +324,7 @@ class Reachability:
     def tls(self):
         if (self.is_enabled):
 
-            for secure_server in self._dns_server.dns_servers:
+            for secure_server in self._dns_server.public_resolvers:
 
                 # no check needed if server/proto is known up
                 if (secure_server[self._protocol]):
@@ -337,7 +340,7 @@ class Reachability:
                     Log.notice(f'[{secure_server["ip"]}/{self._protocol.name}] DNS server is reachable.')
 
                     # will write server status change individually as its unlikely both will be down at same time
-                    write_configuration(self._dns_server.dns_servers._asdict(), 'dns_server_status')
+                    write_configuration(self._dns_server.public_resolvers._asdict(), 'dns_server_status')
 
         self._initialize.done()
 
@@ -361,7 +364,7 @@ class Reachability:
     def udp(self):
         if (self.is_enabled or self._dns_server.udp_fallback):
 
-            for server in self._dns_server.dns_servers:
+            for server in self._dns_server.public_resolvers:
 
                 # no check needed if server/proto is known up
                 if (server[self._protocol]):
@@ -375,12 +378,13 @@ class Reachability:
 
                     Log.notice(f'[{server["ip"]}/{self._protocol.name}] DNS server is reachable.')
 
-                    write_configuration(self._dns_server.dns_servers._asdict(), 'dns_server_status')
+                    write_configuration(self._dns_server.public_resolvers._asdict(), 'dns_server_status')
 
         self._initialize.done()
 
+    # NOTE: UDP can reuse its socket. consider slimming this down to just a send/recv and no socket close.
     def _udp_reachable(self, server_ip: str) -> bool:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock: Socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.settimeout(2)
         try:
             sock.sendto(self._udp_query, (server_ip, PROTO.DNS))
