@@ -5,16 +5,20 @@ from __future__ import annotations
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import Queue, DNS, DNS_CAT, TLD_CAT
-from dnx_gentools.def_namedtuples import DNS_BLACKLIST, DNS_REQUEST_RESULTS, DNS_SIGNATURES, DNS_WHITELIST
+from dnx_gentools.def_namedtuples import DNS_REQUEST_RESULTS
 from dnx_gentools.signature_operations import generate_domain
 
 from dnx_iptools.dnx_trie_search import RecurveTrie
 from dnx_iptools.packet_classes import NFQueue
 
-from dns_proxy_automate import Configuration
+from dns_proxy_automate import ProxyConfiguration
 from dns_proxy_log import Log
 from dns_proxy_packets import DNSPacket, ProxyResponse
 from dns_proxy_server import DNSServer
+
+__all__ = (
+    'run',
+)
 
 LOG_NAME = 'dns_proxy'
 
@@ -22,35 +26,22 @@ LOCAL_RECORD = DNSServer.dns_records.get
 prepare_and_send = ProxyResponse.prepare_and_send
 
 
-class DNSProxy(NFQueue):
-    # dns | ip
-    whitelist: ClassVar[DNS_WHITELIST] = DNS_WHITELIST(
-        {}, {}
-    )
-    blacklist: ClassVar[DNS_BLACKLIST] = DNS_BLACKLIST(
-        {}
-    )
-    # en_dns | tld | keyword |
-    # NOTE: dns signatures are contained within the binary search extension as a closure
-    signatures: ClassVar[DNS_SIGNATURES] = DNS_SIGNATURES(
-        {DNS_CAT.doh}, {}, []
-    )
+class DNSProxy(ProxyConfiguration, NFQueue):
 
-    _dns_sig_ref: ClassVar[Callable] = None
-    _packet_parser: ClassVar[ProxyParser] = DNSPacket.netfilter_recv  # alternate constructor
+    _packet_parser: ClassVar[ProxyParser] = DNSPacket.netfilter_recv
 
     __slots__ = (
         '_dns_record_get',
     )
 
-    @classmethod
-    def _setup(cls):
-        cls.set_proxy_callback(func=inspect)
+    def _setup(self):
+        self.__class__.set_proxy_callback(func=inspect)
 
-        Configuration.proxy_setup(cls)
-        ProxyResponse.setup(Log, cls)
+        self.configure()
 
-        Log.notice(f'{cls.__name__} initialization complete.')
+        ProxyResponse.setup(Log, self.__class__)
+
+        Log.notice(f'{self.__class__.__name__} initialization complete.')
 
     # pre-check will filter out invalid packets, ipv6 records, and local dns records
     def _pre_inspect(self, packet: DNSPacket) -> bool:
@@ -168,7 +159,7 @@ def run():
         name=LOG_NAME
     )
 
-    # starting server before proxy will block.
+    # starting server before proxy since it will block.
     DNSServer.run(Log, threaded=False, always_on=True)
     DNSProxy.run(Log, q_num=Queue.DNS_PROXY)
 

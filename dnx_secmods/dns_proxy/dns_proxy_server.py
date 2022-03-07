@@ -11,18 +11,21 @@ from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_REUSEADDR
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import PROTO, DNS
-from dnx_gentools.def_namedtuples import DNS_SERVERS
 from dnx_gentools.standard_tools import dnx_queue
 
 from dnx_iptools.cprotocol_tools import itoip
 from dnx_iptools.protocol_tools import btoia
 from dnx_iptools.packet_classes import Listener
 
-from dns_proxy_automate import Configuration, Reachability
+from dns_proxy_automate import ServerConfiguration, Reachability
 from dns_proxy_cache import dns_cache, request_tracker
 from dns_proxy_protocols import UDPRelay, TLSRelay
 from dns_proxy_packets import ClientQuery, ttl_rewrite
 from dns_proxy_log import Log
+
+__all__ = (
+    'DNSServer',
+)
 
 INVALID_RESPONSE: tuple[None, None] = (None, None)
 
@@ -33,18 +36,7 @@ udp_relay_add = UDPRelay.relay.add
 tls_relay_add = TLSRelay.relay.add
 
 
-class DNSServer(Listener):
-    protocol: ClassVar[PROTO] = PROTO.NOT_SET
-    tls_down: ClassVar[bool] = True
-    udp_fallback: ClassVar[bool] = False
-    keepalive_interval: ClassVar[int] = 8
-
-    # NOTE: setting values to None to denote initialization has not been completed.
-    dns_records: ClassVar[dict[str, str]] = {}
-    dns_servers: ClassVar[DNS_SERVERS] = DNS_SERVERS(
-        {'ip': None, PROTO.UDP: None, PROTO.DNS_TLS: None},
-        {'ip': None, PROTO.UDP: None, PROTO.DNS_TLS: None}
-    )
+class DNSServer(ServerConfiguration, Listener):
 
     _request_map: ClassVar[dict[int], tuple[bool, ClientQuery]] = {}
     _id_lock: ClassVar[Lock] = threading.Lock()
@@ -55,20 +47,19 @@ class DNSServer(Listener):
         '_request_map_pop', '_dns_records_get'
     )
 
-    @classmethod
-    def _setup(cls) -> None:
-        Configuration.server_setup(cls)
-
+    def _setup(self) -> None:
         # setting parent class callback to allow custom actions on subclasses
-        cls.set_proxy_callback(func=REQ_TRACKER_INSERT)
+        self.__class__.set_proxy_callback(func=REQ_TRACKER_INSERT)
 
-        Reachability.run(cls)
-        TLSRelay.run(cls, fallback_relay=UDPRelay.relay)
-        UDPRelay.run(cls)
+        self.configure()
 
-    # extending parent method because we need to passthrough threaded and always on attrs.
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        Reachability.run(self.__class__)
+        TLSRelay.run(self.__class__, fallback_relay=UDPRelay.relay)
+        UDPRelay.run(self.__class__)
+
+    def __init__(self):
+
+        super().__init__()
 
         threading.Thread(target=self.responder).start()
         threading.Thread(target=self._request_queue).start()
@@ -135,10 +126,6 @@ class DNSServer(Listener):
             if (cache_data):
                 dns_cache_add(client_query.qname, cache_data)
 
-    # FIXME: this was a classmethod, but i changed it thinking it didnt need to be. after looking, the cache dict
-    # calls this method directly through class so this would need to be a classmethod or we need to provide the instance
-    # to the cache dict for it to use.
-    # top_domain will now be set by the caller, so we don't have to track that within the query object.
     def handle_query(self, client_query: ClientQuery) -> None:
 
         # generating dns query packet data

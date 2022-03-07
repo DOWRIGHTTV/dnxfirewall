@@ -61,9 +61,6 @@ class Listener:
 
         cls._log = log
 
-        # child class hook to initialize higher level systems. NOTE: must stay after initial intf registration
-        cls._setup()
-
         # starting a registration thread for all available interfaces and exit when complete
         for intf in cls._intfs:
             threading.Thread(target=cls.__register, args=(intf,)).start()
@@ -73,6 +70,7 @@ class Listener:
         # ======================
         # running main epoll/ socket loop.
         self = cls()
+        self._setup()
         self.__listener(always_on, threaded)
 
     @classmethod
@@ -372,19 +370,18 @@ class NFQueue:
 
     @classmethod
     def run(cls, log: LogHandler_T, *, q_num: int, threaded: bool = True) -> None:
-        cls._setup()
         cls._log: LogHandler_T = log
 
         self = cls()
+        self._setup()
         self.__q_num = q_num
         self.__threaded = threaded
         self.__queue()
 
-    @classmethod
-    def _setup(cls):
+    def _setup(self):
         '''called prior to creating listener interface instances.
 
-        can be overridden to run to define class level objects.
+        May be overridden.
         '''
         pass
 

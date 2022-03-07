@@ -14,7 +14,8 @@ from dnx_gentools.def_constants import RUN_FOREVER, MSEC, fast_time, fast_sleep,
 
 __all__ = (
     'looper', 'dynamic_looper',
-    'Initialize', 'dnx_queue',
+    'ConfigurationMixinBase', 'Initialize',
+    'dnx_queue',
     'bytecontainer', 'structure',
     'classproperty'
 )
@@ -79,6 +80,39 @@ def dynamic_looper(loop_function: Callable):
 
     return wrapper
 
+
+class ConfigurationMixinBase:
+    '''Base class for security module configuration Mixins.
+    '''
+    _config_setup:  ClassVar[bool] = False
+
+    __slots__ = (
+        '_initialize',
+    )
+
+    def __init__(self):
+        # calling the module's epoll handler __init__ method
+        super().__init__()
+
+        self._initialize = Initialize(Log, self.__class__.__name__)
+
+    def configure(self) -> None:
+        '''blocking until settings are loaded/initialized.'''
+        if (self._config_setup):
+            raise RuntimeError('configuration setup should only be called once.')
+
+        self.__class__._config_setup = True
+
+        thread_info: tuple[tuple[Callable, tuple]] = self._configure()
+        for target, args in thread_info:
+            threading.Thread(target=target, args=args).start()
+
+        # the length of returned tuple reflects the number of threads we need to wait on before returning.
+        self._initialize.wait_for_threads(count=len(thread_info))
+
+    def _configure(self):
+        '''module specific configuration initialization.'''
+        raise NotImplementedError('module configuration method is not defined.')
 
 class Initialize:
     '''class used to handle system module thread synchronization on process startup.

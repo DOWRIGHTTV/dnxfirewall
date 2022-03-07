@@ -16,6 +16,10 @@ from ip_proxy_restrict import LanRestrict
 from ip_proxy_automate import Configuration
 from ip_proxy_log import Log
 
+__all__ = (
+    'run', 'IPProxy'
+)
+
 LOG_NAME: str = 'ip_proxy'
 
 
@@ -34,16 +38,15 @@ class IPProxy(NFQueue):
         PROTO.TCP: {},
         PROTO.UDP: {}
     }
-    # this is providing an alternate constructor
+
     _packet_parser: ClassVar[ProxyParser] = IPPPacket.netfilter_recv
 
-    @classmethod
-    def _setup(cls) -> None:
-        cls.set_proxy_callback(func=inspect)
+    def _setup(self) -> None:
+        self.__class__.set_proxy_callback(func=inspect)
 
-        Configuration.setup(cls)
-        ProxyResponse.setup(Log, cls)
-        LanRestrict.run(cls)
+        Configuration.setup(self.__class__)
+        ProxyResponse.setup(Log, self.__class__)
+        LanRestrict.run(self.__class__)
 
     def _pre_inspect(self, packet: IPPPacket) -> bool:
         # TODO: this can and should be moved to cfirewall
@@ -77,8 +80,8 @@ class IPProxy(NFQueue):
 
         return False
 
-    @classmethod
-    def forward_packet(cls, packet: IPPPacket, direction: DIR, action: CONN) -> None:
+    @staticmethod
+    def forward_packet(packet: IPPPacket, direction: DIR, action: CONN) -> None:
 
         # NOTE: this condition restricts ips inspection to INBOUND only to emulate prior functionality. if ips profile
         # is set on a rule for outbound traffic, it will be ignored.
@@ -143,7 +146,7 @@ def _inspect(packet: IPPPacket) -> tuple[CONN, tuple[str, str]]:
     action = CONN.ACCEPT
     reputation = REP.DNL
 
-    # NOTE: geo search is now done by cfirewall. based on direction it will pass on country of tracked_ip
+    # NOTE: geo search is now done by cfirewall. based on the direction, it will pass on country of tracked_ip
     country = GEO(packet.tracked_geo)
 
     # if category match and country is configured to block in direction of conn/packet

@@ -6,7 +6,7 @@ from dnx_gentools.def_constants import MSB, LSB
 from dnx_gentools.def_enums import CONN, DIR
 
 from dnx_iptools.packet_classes import NFPacket, RawResponse
-from dnx_iptools.protocol_tools import itoip
+from dnx_iptools.cprotocol_tools import itoip
 
 
 class IPPPacket(NFPacket):

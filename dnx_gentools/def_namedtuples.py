@@ -61,6 +61,11 @@ RELAY_CONN = _namedtuple('relay_conn', 'remote_ip sock send recv version')
 DNS_CACHE = _namedtuple('dns_cache', 'ttl records')
 CACHED_RECORD = _namedtuple('cached_record', 'expire ttl records')
 DNS_REQUEST_INFO = _namedtuple('request_info', 'client_address request, request2')
+class DNS_SIGNATURES(_NamedTuple):
+    en_dns: set[_DNS_CAT]
+    tld: dict[str, int]
+    keyword: list[tuple[str, _DNS_CAT]]
+
 class DNS_REQUEST_RESULTS(_NamedTuple):
     redirect: bool
     reason: _Optional[str]

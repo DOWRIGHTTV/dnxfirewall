@@ -19,6 +19,10 @@ from dnx_secmods.ips_ids.ips_ids_packets import IPSPacket, IPSResponse
 
 from dnx_secmods.ips_ids.ips_ids_log import Log
 
+__all__ = (
+    'run', 'IPS_IDS'
+)
+
 LOG_NAME = 'ips'
 
 # global to adjust the unique local port count per host before triggering
@@ -43,16 +47,15 @@ class IPS_IDS(NFQueue):
     ps_engine_enabled   = False
     all_engines_enabled = False
 
-    _packet_parser = IPSPacket.netfilter_recv # alternate constructor, but does not return self
+    _packet_parser = IPSPacket.netfilter_recv
 
-    @classmethod
-    def _setup(cls):
-        Configuration.setup(cls)
-        IPSResponse.setup(Log, cls)
+    def _setup(self):
+        self.__class__.set_proxy_callback(func=Inspect.portscan)
 
-        cls.set_proxy_callback(func=Inspect.portscan)
+        Configuration.setup(self.__class__)
+        IPSResponse.setup(Log, self.__class__)
 
-        Log.notice(f'{cls.__name__} initialization complete.')
+        Log.notice(f'{self.__class__.__name__} initialization complete.')
 
     def _pre_inspect(self, packet):
         # permit configured whitelisted hosts (source ip check only)
