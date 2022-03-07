@@ -46,9 +46,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
     _keywords: ClassVar[list[tuple[str, DNS_CAT]]] = []
 
-    __slots__ = ()
-
-    def _configure(self) -> tuple:
+    def _configure(self) -> tuple[LogHandler_T, tuple]:
         '''return thread information to be run.
 
          tasks required by the DNS proxy.
@@ -63,7 +61,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
             (self._get_list, ('blacklist',))
         )
 
-        return threads
+        return Log, threads
 
     @cfg_read_poller('dns_proxy')
     def _get_proxy_settings(self, cfg_file: str) -> None:

@@ -83,17 +83,15 @@ def dynamic_looper(loop_function: Callable):
 
 class ConfigurationMixinBase:
     '''Base class for security module configuration Mixins.
+
+    NOT defining slots to allow for primary parents to provide use/provide them.
     '''
-    __slots__ = (
-        '_config_setup', '_initialize',
-    )
 
     def __init__(self):
         # calling the module's epoll handler __init__ method
         super().__init__()
 
         self._config_setup: bool = False
-        self._initialize = Initialize(Log, self.__class__.__name__)
 
     def configure(self) -> None:
         '''blocking until settings are loaded/initialized.'''
@@ -102,14 +100,21 @@ class ConfigurationMixinBase:
 
         self._config_setup = True
 
-        thread_info: tuple[tuple[Callable, tuple]] = self._configure()
+        # subclass hooke will provide log handler reference and threads to start
+        log, thread_info = self._configure()
+
+        # ===============
+        # INITIALIZATION
+        # ===============
+        initialize = Initialize(log, self.__class__.__name__)
+
         for target, args in thread_info:
             threading.Thread(target=target, args=args).start()
 
         # the length of returned tuple reflects the number of threads we need to wait on before returning.
-        self._initialize.wait_for_threads(count=len(thread_info))
+        initialize.wait_for_threads(count=len(thread_info))
 
-    def _configure(self):
+    def _configure(self) -> tuple[LogHandler_T, tuple]:
         '''module specific configuration initialization.'''
         raise NotImplementedError('module configuration method is not defined.')
 

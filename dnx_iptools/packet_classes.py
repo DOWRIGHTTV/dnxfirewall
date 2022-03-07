@@ -44,12 +44,6 @@ class Listener:
 
     __slots__ = ()
 
-    def __new__(cls, *args, **kwargs):
-        if (cls is Listener):
-            raise TypeError('Listener can only be used via inheritance.')
-
-        return object.__new__(cls)
-
     @classmethod
     def run(cls, log: LogHandler_T, *, threaded: bool = True, always_on: bool = False):
         '''associating subclass Log reference with Listener class.
@@ -231,12 +225,6 @@ class ProtoRelay:
         '_responder_add', '_fallback_relay_add'
     )
 
-    def __new__(cls, *args, **kwargs):
-        if (cls is ProtoRelay):
-            raise TypeError('ProtoRelay can only be used via inheritance.')
-
-        return object.__new__(cls)
-
     def __init__(self, dns_server: DNSServer_T, fallback_relay: Optional[Callable]):
         '''general constructor that can only be reached through subclass.
 
@@ -353,19 +341,12 @@ class NFQueue:
     _proxy_callback: ClassVar[ProxyCallback]
 
     __slots__ = (
-        '__q_num', '__threaded'
+        '__threaded'
     )
-
-    def __new__(cls, *args, **kwargs):
-        if (cls is NFQueue):
-            raise TypeError('NFQueue can only be used via inheritance.')
-
-        return object.__new__(cls)
 
     def __init__(self):
         '''General constructor that can only be reached if called through subclass.
         '''
-        self.__q_num: int = 0
         self.__threaded: bool = False
 
     @classmethod
@@ -374,9 +355,10 @@ class NFQueue:
 
         self = cls()
         self._setup()
-        self.__q_num = q_num
+
         self.__threaded = threaded
-        self.__queue()
+
+        self.__queue(q_num)
 
     def _setup(self):
         '''called prior to creating listener interface instances.
@@ -396,17 +378,16 @@ class NFQueue:
 
         cls._proxy_callback = func
 
-    def __queue(self) -> None:
+    def __queue(self, q: int, /) -> NoReturn:
         set_nfqueue_callback(self.__handle_packet)
 
         for _ in RUN_FOREVER:
             nfqueue = NetfilterQueue()
-            nfqueue.nf_set(self.__q_num)
+            nfqueue.nf_set(q)
 
             self._log.notice('Starting dnx_netfilter queue. Packets will be processed shortly')
 
-            # this is a blocking call that interacts with the system via callback. the while loop is to re-establish the
-            # queue handle after an uncaught exception (hopefully maintaining system uptime)
+            # this is a blocking call that interacts with the system via callback.
             try:
                 nfqueue.nf_run()
             except:
@@ -416,7 +397,7 @@ class NFQueue:
 
             fast_sleep(1)
 
-    def __handle_packet(self, nfqueue: CPacket, mark: int):
+    def __handle_packet(self, nfqueue: CPacket, mark: int) -> None:
         try:
             packet: ProxyPackets = self._packet_parser(nfqueue, mark)
         except:
@@ -433,10 +414,11 @@ class NFQueue:
                     self._proxy_callback(packet)
 
     def _pre_inspect(self, packet) -> bool:
-        '''automatically called after packet parsing.
+        '''called after packet parsing.
 
-        used to determine the course of action for a packet. nfqueue drop, accept, or repeat can be called within this
-        scope. return will be checked as a boolean, where True will continue and False will do nothing.
+        used to determine the course of action for a packet.
+        nfqueue drop, accept, or repeat can be called within this scope.
+        return will be evaluated to determine whether to continue and or do nothing/ drop the packet.
 
         May be overridden.
 
@@ -683,12 +665,6 @@ class RawResponse:
     __slots__ = (
         '_packet',
     )
-
-    def __new__(cls, *args, **kwargs):
-        if (cls is RawResponse):
-            raise TypeError('RawResponse can only be used via inheritance.')
-
-        return object.__new__(cls)
 
     def __init__(self, packet: ProxyPackets):
         self._packet = packet
