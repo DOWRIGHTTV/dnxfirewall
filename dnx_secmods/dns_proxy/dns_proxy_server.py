@@ -10,6 +10,7 @@ from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_REUSEADDR
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
+from dnx_gentools.def_namedtuples import DNS_SEND
 from dnx_gentools.def_enums import PROTO, DNS
 from dnx_gentools.standard_tools import dnx_queue
 
@@ -32,8 +33,10 @@ INVALID_RESPONSE: tuple[None, None] = (None, None)
 REQ_TRACKER: RequestTracker = request_tracker()
 REQ_TRACKER_INSERT = REQ_TRACKER.insert
 
-udp_relay_add = UDPRelay.relay.add
-tls_relay_add = TLSRelay.relay.add
+relay_map: dict[PROTO, Callable[[DNS_SEND], None]] = {
+    PROTO.UDP: UDPRelay.relay.add,
+    PROTO.DNS_TLS: TLSRelay.relay.add
+}
 
 
 class DNSServer(ServerConfiguration, Listener):
@@ -65,8 +68,8 @@ class DNSServer(ServerConfiguration, Listener):
         threading.Thread(target=self._request_queue).start()
 
         # assigning object methods to prevent lookup
-        self._request_map_pop: Callable[[], ClientQuery] = self._request_map.pop
-        self._dns_records_get: Callable[[str], str] = self.dns_records.get
+        self._request_map_pop: Callable[[int, ...], ClientQuery] = self._request_map.pop
+        self._dns_records_get: Callable[[str], int] = self.dns_records.get
 
     # thread to handle all received requests from the listener.
     def _request_queue(self) -> NoReturn:
@@ -105,7 +108,7 @@ class DNSServer(ServerConfiguration, Listener):
     @dnx_queue(Log, name='DNSServer')
     def responder(self, received_data: bytes) -> None:
         # dns id is the first 2 bytes in the dns header
-        dns_id = btoia(received_data[:2])
+        dns_id: int = btoia(received_data[:2])
 
         # recently moved here for clarity. silently drops keepalive responses since they are not needed.
         if (dns_id == DNS.KEEPALIVE):
@@ -136,11 +139,9 @@ class DNSServer(ServerConfiguration, Listener):
 
         # queue send_data to currently enabled protocol/relay for sending to external resolver.
         # request is sent for logging purposes and may be temporary.
-        if (self.protocol is PROTO.UDP):
-            udp_relay_add(send_data, client_query.qname)
-
-        elif (self.protocol is PROTO.DNS_TLS):
-            tls_relay_add(send_data, client_query.qname)
+        relay_map[self.protocol](
+            DNS_SEND(client_query.qname, send_data)
+        )
 
     @staticmethod
     def _cache_available(client_query: ClientQuery) -> bool:
@@ -156,14 +157,15 @@ class DNSServer(ServerConfiguration, Listener):
         if (not cached_dom.records):
             return False
 
-        query_response = client_query.generate_cached_response(cached_dom)
-        send_to_client(client_query, query_response)
+        send_to_client(
+            client_query, client_query.generate_cached_response(cached_dom)
+        )
 
         return True
 
     @staticmethod
     def listener_sock(intf: str, intf_ip: int) -> Socket:
-        l_sock = socket(AF_INET, SOCK_DGRAM)
+        l_sock: Socket = socket(AF_INET, SOCK_DGRAM)
 
         l_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         l_sock.setblocking(False)
