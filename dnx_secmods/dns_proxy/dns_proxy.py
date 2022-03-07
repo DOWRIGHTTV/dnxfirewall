@@ -30,9 +30,7 @@ class DNSProxy(ProxyConfiguration, NFQueue):
 
     _packet_parser: ClassVar[ProxyParser] = DNSPacket.netfilter_recv
 
-    __slots__ = (
-        '_dns_record_get',
-    )
+    __slots__ = ()
 
     def _setup(self):
         self.__class__.set_proxy_callback(func=inspect)

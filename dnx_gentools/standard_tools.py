@@ -84,16 +84,15 @@ def dynamic_looper(loop_function: Callable):
 class ConfigurationMixinBase:
     '''Base class for security module configuration Mixins.
     '''
-    _config_setup:  ClassVar[bool] = False
-
     __slots__ = (
-        '_initialize',
+        '_config_setup', '_initialize',
     )
 
     def __init__(self):
         # calling the module's epoll handler __init__ method
         super().__init__()
 
+        self._config_setup: bool = False
         self._initialize = Initialize(Log, self.__class__.__name__)
 
     def configure(self) -> None:
@@ -101,7 +100,7 @@ class ConfigurationMixinBase:
         if (self._config_setup):
             raise RuntimeError('configuration setup should only be called once.')
 
-        self.__class__._config_setup = True
+        self._config_setup = True
 
         thread_info: tuple[tuple[Callable, tuple]] = self._configure()
         for target, args in thread_info:
