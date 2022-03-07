@@ -29,10 +29,11 @@ class UDPRelay(ProtoRelay):
         for dns_server in self._dns_server.public_resolvers:
 
             # skip downed servers
-            if (not dns_server[PROTO.UDP]): continue
+            if (not dns_server[PROTO.UDP]):
+                continue
 
             # never fails, so will always return True
-            return self._create_socket(dns_server['ip'])
+            return self._create_socket(dns_server['ip_address'])
 
         else:
             Log.critical(f'[{self._protocol}] No DNS servers available.')
@@ -115,10 +116,10 @@ class TLSRelay(ProtoRelay):
 
             # attempting to connect via tls.
             # if successful will return True, otherwise mark server as down and try next server.
-            if self._tls_connect(tls_server['ip']):
+            if self._tls_connect(tls_server['ip_address']):
                 return True
 
-            self.mark_server_down(remote_server=tls_server['ip'])
+            self.mark_server_down(remote_server=tls_server['ip_address'])
 
         else:
             self._dns_server.tls_down = True
