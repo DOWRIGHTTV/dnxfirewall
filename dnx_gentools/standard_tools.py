@@ -93,6 +93,8 @@ class ConfigurationMixinBase:
 
         self._config_setup: bool = False
 
+        self._initialize = Initialize()
+
     def configure(self) -> None:
         '''blocking until settings are loaded/initialized.'''
         if (self._config_setup):

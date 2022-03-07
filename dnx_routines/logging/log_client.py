@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+import typing
 
 from json import dumps
 from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SCM_CREDENTIALS
