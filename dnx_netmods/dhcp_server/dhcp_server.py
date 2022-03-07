@@ -43,17 +43,16 @@ class DHCPServer(Listener):
 
     __slots__ = ()
 
-    @classmethod
-    def _setup(cls):
+    def _setup(self):
         Log.notice('DHCPServer initialization started.')
 
-        Configuration.setup(cls)
+        Configuration.setup(self.__class__)
 
         # so we don't need to import/ hardcore the server class reference.
-        ClientRequest.set_server_reference(cls)
-        ServerResponse.set_server_reference(cls)
+        ClientRequest.set_server_reference(self.__class__)
+        ServerResponse.set_server_reference(self.__class__)
 
-        cls.set_proxy_callback(func=cls.handle_dhcp)
+        self.__class__.set_proxy_callback(func=self.__class__.handle_dhcp)
 
         Log.notice('DHCPServer initialization complete.')
 
