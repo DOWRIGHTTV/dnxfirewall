@@ -4,17 +4,17 @@ from __future__ import annotations
 
 import os
 import json
-import time
 import fcntl
 import shutil
 import hashlib
 import subprocess
 
 from copy import copy
+from functools import wraps
 from secrets import token_urlsafe
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER
+from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER, fast_sleep
 from dnx_gentools.def_namedtuples import Item
 from dnx_gentools.def_enums import DNS_CAT, DATA
 
@@ -53,7 +53,7 @@ def load_configuration(filename: str, ext: str = '.cfg', *, filepath: str = 'dnx
         system_settings: dict = json.load(system_settings_io)
 
     # I like the path checks more than try/except block
-    if not os.path.exists(f'{HOME_DIR}/{filepath}/usr/{filename}'):
+    if not file_exists(f'{HOME_DIR}/{filepath}/usr/{filename}'):
         user_settings: dict = {}
 
     else:
@@ -120,9 +120,9 @@ def json_to_yaml(data: Union[str, dict], *, is_string: bool = False) -> str:
     return '\n'.join([y[4:] for y in data.splitlines() if y.strip()])
 
 def load_tlds() -> Generator[tuple[str, int]]:
-    dns_proxy: ConfigChain = load_configuration('dns_proxy')
+    proxy_config: ConfigChain = load_configuration('dns_proxy')
 
-    for tld, setting in dns_proxy.get_items('tlds'):
+    for tld, setting in proxy_config.get_items('tlds'):
         yield (tld.strip('.'), setting)
 
 # function to load in all keywords corresponding to enabled domain categories. the try/except
@@ -160,7 +160,7 @@ def calculate_file_hash(file_to_hash: str, *, path: str = 'dnx_system', folder: 
     '''returns the sha256 secure hash of passed in file.'''
 
     filepath = f'{HOME_DIR}/{path}/{folder}/{file_to_hash}'
-    if not os.path.exists(filepath):
+    if not file_exists(filepath):
         return None
 
     with open(filepath, 'rb') as f2h:
@@ -183,12 +183,14 @@ def cfg_read_poller(watch_file: str, ext: bool = True, *, folder: str = 'data', 
 
     def decorator(function_to_wrap):
         if (not class_method):
+            @wraps(function_to_wrap)
             def wrapper(*args):
                 watcher = Watcher(watch_file, folder, callback=function_to_wrap)
                 watcher.watch(*args)
 
         else:
             @classmethod
+            @wraps(function_to_wrap)
             def wrapper(*args):
                 watcher = Watcher(watch_file, folder, callback=function_to_wrap)
                 watcher.watch(*args)
@@ -197,9 +199,11 @@ def cfg_read_poller(watch_file: str, ext: bool = True, *, folder: str = 'data', 
     return decorator
 
 def cfg_write_poller(list_function: DNSListHandler) -> Wrapper:
-    '''Automate class configuration file poll decorator. this decorator is only compatible with
-    the dns proxy module whitelist/blacklist read/write operations'''
+    '''Automate module configuration class file polling for read and writes.
 
+    only compatible with the dns proxy module whitelist/blacklist read/write operations.
+    '''
+    @wraps(list_function)
     def wrapper(*args):
         # print(f'[+] Starting user defined {args[1]} timer')
         last_modified_time, new_args = 0, (*args, f'{args[1]}.cfg')
@@ -208,7 +212,7 @@ def cfg_write_poller(list_function: DNSListHandler) -> Wrapper:
         for _ in RUN_FOREVER:
             last_modified_time = list_function(*new_args, last_modified_time)
 
-            time.sleep(FILE_POLL_TIMER)
+            fast_sleep(FILE_POLL_TIMER)
     return wrapper
 
 class config(dict):
@@ -569,12 +573,12 @@ class Watcher:
                 self._callback(*args)
 
             else:
-                time.sleep(FILE_POLL_TIMER)
+                fast_sleep(FILE_POLL_TIMER)
 
     @property
     # if watch file has been modified, update the modified time and return True, else return False
     def is_modified(self) -> bool:
-        if not os.path.isfile(self._full_path):
+        if not file_exists(self._full_path):
 
             # condition to allow the initial load to happen without the usr file being present.
             # NOTE: the load configuration function loads system defaults prior to user settings

@@ -246,7 +246,7 @@ class ServerConfiguration(ConfigurationMixinBase):
 
          tasks required by the DNS server.
          '''
-        return Log, ((self._get_server_settings, ()))
+        return Log, ((self._get_server_settings, ()),)
 
     @cfg_read_poller('dns_server')
     def _get_server_settings(self, cfg_file: str) -> None:

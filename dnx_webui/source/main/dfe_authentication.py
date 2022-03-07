@@ -4,14 +4,16 @@ from __future__ import annotations
 
 from typing import Optional
 
-import time
 import hashlib
 import threading
 
 from functools import wraps
 from flask import redirect, render_template, request, session, url_for
 
+from dnx_gentools.def_typing import Event
+from dnx_gentools.def_constants import fast_sleep
 from dnx_gentools.file_operations import load_configuration
+
 from dnx_routines.logging import direct_log
 
 LOG_NAME = 'logins'
@@ -19,31 +21,28 @@ LOG_NAME = 'logins'
 
 class Authentication:
     def __init__(self):
-        self._time_expired = threading.Event()
+        self._time_expired: Event = threading.Event()
 
     @classmethod
     def user_login(cls, form: dict, login_ip: str) -> tuple:
-        '''function to authenticate a user to the dnx web frontend.
+        '''authenticate a user to the dnx web frontend.
 
-        pass in the flask form and source ip. return will be a boolean representing whether the user is authenticated and
-        authorized.'''
+        pass in the flask form and source ip. return will be a boolean representing whether the user is authenticated
+        and authorized.
+        '''
         self = cls()
 
-        threading.Thread(target=self._login_timer).start()
+        threading.Timer(.6, self._time_expired.set).start()
 
         authorized, username, user_role = self._user_login(form)
         if (authorized):
-            direct_log(
-                LOG_NAME, 'notice', f'User {username} successfully logged in from {login_ip}.'
-            )
+            direct_log(LOG_NAME, 'notice', f'User {username} successfully logged in from {login_ip}.')
 
         else:
-            direct_log(
-                LOG_NAME, 'warning', f'Failed login attempt for user {username} from {login_ip}.'
-            )
+            direct_log(LOG_NAME, 'warning', f'Failed login attempt for user {username} from {login_ip}.')
 
         while not self._time_expired:
-            time.sleep(.202)
+            fast_sleep(.202)
 
         return authorized, username, user_role
 
@@ -58,30 +57,31 @@ class Authentication:
 
     @staticmethod
     def hash_password(username: str, password: str) -> str:
-        salt_one = len(username)
-        salt_two = len(password)
+        salt_one: int = len(username)
+        salt_two: int = len(password)
 
-        # salt value will be placed at the calculated index in username
+        # the salt value will be placed at the calculated index in username
+        fsalt: float
         if (salt_two > salt_one):
-            salt = salt_two/salt_one
+            fsalt = salt_two/salt_one
         else:
-            salt = salt_one/salt_two
+            fsalt = salt_one/salt_two
 
         # floor division to index ~midway point of username
-        index = salt_one//2
-        part_one = username[:index]
-        part_two = username[index:]
+        index: float = salt_one//2
+        part_one: str = username[:index]
+        part_two: str = username[index:]
 
         # salt is compounded from username and initial salt value then appended to password
-        salt = f'{part_one}{salt}{part_two}'
-        password = f'{password}{salt}'.encode('utf-8')
+        salt: str = f'{part_one}{fsalt}{part_two}'
+        password: bytes = f'{password}{salt}'.encode('utf-8')
 
         # calculate the hash, then use a part of the hash as salt for the final hashed value
-        hash_object = hashlib.sha256(password).hexdigest()
-        hash_part = f'{hash_object}'[:salt_one*2]
+        hash_object: str = hashlib.sha256(password).hexdigest()
+        hash_part: str = f'{hash_object}'[:salt_one*2]
 
-        hash_total = f'{hash_part}{hash_object}'.encode('utf-8')
-        hash_total = hashlib.sha256(hash_total)
+        hash_bytes: bytes = f'{hash_part}{hash_object}'.encode('utf-8')
+        hash_total = hashlib.sha256(hash_bytes)
 
         return hash_total.hexdigest()
 
@@ -113,10 +113,6 @@ class Authentication:
         else:
             # returning True on password match else False
             return password == hexpass
-
-    def _login_timer(self):
-        time.sleep(.6)
-        self._time_expired.set()
 
 # web ui page authorization handler
 def user_restrict(*authorized_roles):

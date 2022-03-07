@@ -36,11 +36,11 @@ if (TYPE_CHECKING and not _DISABLED):
     from dnx_netmods import *
     from dnx_webui import *
 
-    ListenerCallback = Callable[[...], None]
+    ListenerCallback = Callable[..., None]
     ListenerPackets = Union[ClientRequest]
     ListenerParser = Callable[[Address, LI_SOCK], ListenerPackets]
 
-    ProxyCallback = Callable[[...], None]
+    ProxyCallback = Callable[..., None]
     ProxyPackets = Union[IPPPacket, IPSPacket, DNSPacket]
     ProxyParser = Callable[[CPacket, int], ProxyPackets]
 
