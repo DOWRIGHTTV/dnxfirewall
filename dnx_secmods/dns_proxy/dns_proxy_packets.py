@@ -9,8 +9,9 @@ from dnx_gentools.standard_tools import bytecontainer
 from dnx_gentools.def_namedtuples import CACHED_RECORD
 
 from dnx_iptools.def_structs import *
-from dnx_iptools.protocol_tools import *
 from dnx_iptools.def_structures import *
+from dnx_iptools.protocol_tools import *
+from dnx_iptools.cprotocol_tools import itoip
 from dnx_iptools.interface_ops import load_interfaces
 from dnx_iptools.packet_classes import NFPacket, RawResponse
 
@@ -34,7 +35,7 @@ class ClientQuery:
     )
 
     def __init__(self, address, sock_info):
-        self.address = address
+        self.address: Address = address
         if (sock_info):
             self.sendto = sock_info.sendto  # 5 object namedtuple
 
@@ -132,21 +133,25 @@ class ClientQuery:
         return send_data
 
     @classmethod
-    def generate_local_query(cls, qname: str, keepalive: bool = False) -> ClientQuery:
-        '''alternate constructor for creating locally generated queries (top domain or keepalive requests).'''
+    def init_local_query(cls, qname: str, keepalive: bool = False) -> Union[bytearray, ClientQuery]:
+        '''alternate constructor for creating locally generated queries (top domain or keepalive requests).
 
+        if keepalive is set, a bytearray of send data is returned.
+        If not keepalive, an instance of ClientQuery will be returned, which requires subsequent call to a send_data
+        generation method.
+        '''
         self = cls(NULL_ADDR, None)
         # hardcoded qtype can change if needed.
         self.qname = qname
-        self.qtype   = 1
+        self.qtype = 1
 
         self.rd = DNS_MASK.RD
         self.ad = DNS_MASK.AD
         self.cd = DNS_MASK.CD
 
-        # keepalive are TLS only so we can hardcode the proto
+        # keepalive are TLS only so we can hardcode the protocol.
         if (keepalive):
-            self.generate_dns_query(DNS.KEEPALIVE, PROTO.DNS_TLS)
+            return self.generate_dns_query(DNS.KEEPALIVE, PROTO.DNS_TLS)
 
         return self
 
@@ -173,10 +178,10 @@ class DNSPacket(NFPacket):
     )
 
     def __init__(self):
-        self.qr     = None
-        self.qtype  = None
-        self.qclass = None
-        self.request_identifier = None
+        self.qr: int = -1
+        self.qtype: int = -1
+        self.qclass: int = -1
+        self.request_identifier: tuple[str, int, int] = ('0', -1, -1)
 
     def _before_exit(self, mark: int):
         # filtering down to dns protocol
@@ -206,10 +211,12 @@ class DNSPacket(NFPacket):
         dns_query: bytearray = self.udp_payload[12:]  # 13+ is query data
 
         # parsing dns name queried and byte offset due to variable length | ex www.micro.com or micro.com
+        offset: int
+        query_info: tuple[str, bool]
         offset, query_info = parse_query_name(dns_query, qname=True)
 
         # defining question record
-        self.question_record = dns_query[:offset + 4]
+        self.question_record: bytearray = dns_query[:offset + 4]
 
         # defining questions record fields
         self.qname, self.local_domain = query_info
@@ -222,7 +229,7 @@ class DNSPacket(NFPacket):
 
 
 def _enumerate_request(request: str, local_domain: bool, int=int, hash=hash) -> tuple[list[tuple[int]], Optional[str]]:
-    rs = request.split('.')
+    rs: list[str] = request.split('.')
 
     # tld > fqdn
     requests: list[str] = [dot_join(rs[i:]) for i in range(-2, -len(rs)-1, -1)]
@@ -247,8 +254,8 @@ def _enumerate_request(request: str, local_domain: bool, int=int, hash=hash) -> 
 # ================
 _RESOURCE_RECORD = bytecontainer('resource_record', 'name qtype qclass ttl data')
 
-_MINIMUM_TTL = long_pack(MINIMUM_TTL)
-_DEFAULT_TTL = long_pack(DEFAULT_TTL)
+_MINIMUM_TTL: bytes = long_pack(MINIMUM_TTL)
+_DEFAULT_TTL: bytes = long_pack(DEFAULT_TTL)
 
 def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[bytearray, Optional[CACHED_RECORD]]:
 
@@ -256,7 +263,7 @@ def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[by
     dns_header:  memoryview = mem_data[:12]
     dns_payload: memoryview = mem_data[12:]
 
-    # converting external/unique dns id back to original dns id of client
+    # converting external/unique dns id back to the original dns id of the client
     send_data: bytearray = bytearray(short_pack(dns_id))
 
     # ================
@@ -325,14 +332,14 @@ def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[by
     return send_data, None
 
 def _parse_record(dns_payload: memoryview, cur_offset: int) -> tuple[int, _RESOURCE_RECORD, int]:
-    new_offset = cur_offset + parse_query_name(dns_payload, cur_offset)
+    new_offset: int = cur_offset + parse_query_name(dns_payload, cur_offset)
 
     # slicing out current ptr index for faster reference
     record_name = dns_payload[cur_offset: new_offset]
     record_values = dns_payload[new_offset:]
 
-    # resource record data len. generally 4 for ip address, but can vary. calculating first, so we can single shot
-    # create byte container below.
+    # resource record data len, usually 4 for ip address, but can vary.
+    # calculating first, so we can single shot creation of the byte container.
     dt_len = btoia(record_values[8:10])
 
     resource_record = _RESOURCE_RECORD(
@@ -379,7 +386,7 @@ class ProxyResponse(RawResponse):
         udphdr.dst_port = packet.src_port
         udphdr.len = 8 + len(udp_payload)
 
-        udp_header = udphdr.assemble()
+        udp_header: bytearray = udphdr.assemble()
 
         # IP HEADER
         iphdr = _ip_header_template()
@@ -388,7 +395,7 @@ class ProxyResponse(RawResponse):
         iphdr.src_ip = dnx_src_ip
         iphdr.dst_ip = packet.src_ip
 
-        ip_header = iphdr.assemble()
+        ip_header: bytearray = iphdr.assemble()
         ip_header[10:12] = calc_checksum(ip_header, pack=True)
 
         return ip_header + udp_header + udp_payload

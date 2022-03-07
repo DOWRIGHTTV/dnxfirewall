@@ -8,7 +8,8 @@ from collections import Counter, deque
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
-from dnx_gentools.def_namedtuples import DNS_CACHE, CACHED_RECORD
+from dnx_gentools.def_enums import PROTO
+from dnx_gentools.def_namedtuples import DNS_CACHE, CACHED_RECORD, DNS_SEND
 from dnx_gentools.file_operations import *
 from dnx_gentools.standard_tools import looper
 
@@ -16,7 +17,7 @@ from dns_proxy_log import Log
 
 NOT_VALID = -1
 
-def dns_cache(*, dns_packet: Callable, request_handler: Callable) -> DNSCache:
+def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Callable[[ClientQuery], None]) -> DNSCache:
     _top_domains: dict = load_data('dns_server.cache')['top_domains']
 
     domain_counter: Counter[str, int] = Counter({dom: cnt for cnt, dom in enumerate(reversed(_top_domains))})

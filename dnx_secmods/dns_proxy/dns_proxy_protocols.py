@@ -26,7 +26,7 @@ class UDPRelay(ProtoRelay):
     __slots__ = ()
 
     def _register_new_socket(self) -> bool:
-        for dns_server in self._dns_server.dns_servers:
+        for dns_server in self._dns_server.public_resolvers:
 
             # skip downed servers
             if (not dns_server[PROTO.UDP]): continue
@@ -67,7 +67,7 @@ class UDPRelay(ProtoRelay):
         self._relay_conn.sock.close()
 
     def _create_socket(self, server_ip: str) -> bool:
-        dns_sock = socket(AF_INET, SOCK_DGRAM)
+        dns_sock: Socket = socket(AF_INET, SOCK_DGRAM)
 
         # udp connect allows 'send' method to be used, but does not actually have an underlying connection
         dns_sock.connect((server_ip, PROTO.DNS))
@@ -81,9 +81,6 @@ class UDPRelay(ProtoRelay):
 # ============================
 # TLS sender/receiver
 # ============================
-# direct reference to alternate constructor
-_keepalive = ClientQuery.generate_local_query
-
 class TLSRelay(ProtoRelay):
     _protocol: ClassVar[PROTO] = PROTO.DNS_TLS
 
@@ -110,7 +107,7 @@ class TLSRelay(ProtoRelay):
     # iterating over dns server list and calling to create a connection to first available server. this will only happen
     # if a socket connection isn't already established when attempting to send query.
     def _register_new_socket(self) -> bool:
-        for tls_server in self._dns_server.dns_servers:
+        for tls_server in self._dns_server.public_resolvers:
 
             # skipping over known down server.
             if (not tls_server[PROTO.DNS_TLS]):
@@ -260,6 +257,9 @@ class TLSRelay(ProtoRelay):
 
         relay_add = self.relay.add
 
+        # keepalive data only needs to be created once since it never changes.
+        keepalive_data: bytearray = ClientQuery.init_local_query(KEEP_ALIVE_DOMAIN, keepalive=True)
+
         for _ in RUN_FOREVER:
 
             # if tls_relay OR keepalive is disabled
@@ -274,6 +274,8 @@ class TLSRelay(ProtoRelay):
                 keepalive_continue()
 
             else:
-                relay_add(_keepalive(KEEP_ALIVE_DOMAIN, keepalive=True))
+                relay_add(
+                    DNS_SEND(KEEP_ALIVE_DOMAIN, keepalive_data)
+                )
 
                 Log.debug(f'[keepalive][{keepalive_interval}] Added to relay queue and cleared')

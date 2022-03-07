@@ -93,7 +93,7 @@ def cidr_to_int(cidr: int) -> int:
     return ~((1 << hostmask) - 1) & (2**32 - 1)
 
 def parse_query_name(data: Union[bytes, memoryview], offset: int = 0, *,
-                     qname: bool = False) -> Union[int, tuple[int, tuple[str, int]]]:
+                     qname: bool = False) -> Union[int, tuple[int, tuple[str, bool]]]:
     '''parse dns name from sent in data. uses overall dns query to follow pointers. will return
     name and offset integer value if qname arg is True otherwise will only return offset.'''
 

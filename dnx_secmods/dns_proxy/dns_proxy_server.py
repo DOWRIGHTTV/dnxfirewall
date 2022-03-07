@@ -202,7 +202,7 @@ def send_to_client(client_query: ClientQuery, query_response: bytearray) -> None
 # ======================
 # initializing dns cache/ sending in reference to needed methods for top domains
 DNS_CACHE = dns_cache(
-    dns_packet=ClientQuery.generate_local_query,
+    dns_packet=ClientQuery.init_local_query,
     request_handler=REQ_TRACKER_INSERT
 )
 
