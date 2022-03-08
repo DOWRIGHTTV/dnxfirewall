@@ -65,7 +65,7 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
 
     @looper(THREE_MIN)
     # automated process to flush the cache if expire time has been reached.
-    def auto_clear(cache: DNSCache):
+    def auto_clear(cache: DNSCache) -> None:
 
         Log.debug('record cache clear or renew started.')
 
@@ -93,7 +93,7 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
 
             cache_storage['top_domains'] = top_domains
 
-        write_configuration(cache_storage.expanded_user_data, 'dns_cache')
+            dnx.write_configuration(cache_storage.expanded_user_data)
 
         # response will be identified by "None" for client address
         for domain in top_domains:
@@ -102,7 +102,7 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
 
         Log.debug('expired records cleared from cache and top domains refreshed')
 
-    class _DNSCache(dict):
+    class DNSCache(dict):
         '''subclass of dict to provide a custom data structure for dealing with the local caching of dns records.
 
         containers handled by class:
@@ -165,7 +165,7 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
 
             return self[query_name]
 
-    _cache = _DNSCache()
+    _cache = DNSCache()
 
     threading.Thread(target=auto_clear, args=(_cache,)).start()
     threading.Thread(target=manual_clear, args=(_cache,)).start()
