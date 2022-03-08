@@ -1,15 +1,20 @@
 #!/usr/bin/env Cython
 
+# ===============
+# PYTHON IMPORTS
+# ===============
+import threading as _threading
+
+from functools import lru_cache as _lru_cache
+
+# ===============
+# C IMPORTS
+# ===============
 from libc.stdlib cimport malloc, calloc
 from libc.math cimport log2
-# from libc.stdio cimport printf
-
-import threading as _threading
-from functools import lru_cache as _lru_cache
 
 DEF EMPTY_CONTAINER = 0
 DEF NO_MATCH = 0
-
 
 # ================================================ #
 # C STRUCTURES - converted from python tuples
@@ -21,8 +26,8 @@ cdef class HashTrie:
         cdef:
             size_t value_len
 
-            u_int32_t TRIE_KEY
-            u_int32_t TRIE_KEY_HASH
+            size_t TRIE_KEY
+            size_t TRIE_KEY_HASH
             TrieRange *trie_value_ranges
 
             size_t MAX_KEYS = <size_t>2 ** log2(py_trie_len)
@@ -37,7 +42,7 @@ cdef class HashTrie:
             value_len = len(py_trie[i][1])
 
             # assigning l2 container reference to calculated hash index
-            TRIE_KEY = <long>py_trie[i][0]
+            TRIE_KEY = <size_t>py_trie[i][0]
             TRIE_KEY_HASH = TRIE_KEY % self.INDEX_MASK
 
             # allocating memory for trie_ranges
@@ -62,8 +67,8 @@ cdef class HashTrie:
 
         for i in range(trie_value.len):
 
-            # this is needed because collisions are possible by design so matching the unhashed key will guarantee the
-            # correct range is being evaluated.
+            # this is needed because collisions are possible by design.
+            # matching the original key will guarantee the correct range is being evaluated.
             if (trie_value.ranges[i].key != trie_key):
                 continue
 
@@ -74,8 +79,8 @@ cdef class HashTrie:
         return NO_MATCH
 
     cdef TrieRange* _make_l2(self, u_int32_t trie_key, (u_int32_t, u_int32_t, u_int16_t) l2_entry):
-        '''allocates memory for a single L2 content struct, assigns members from l2_entry, then returns pointer.'''
-
+        '''allocates memory for a single L2 content struct, assigns members from l2_entry, then returns pointer.
+        '''
         cdef TrieRange *l2_content = <TrieRange*>malloc(sizeof(TrieRange))
 
         l2_content.key     = trie_key
@@ -90,7 +95,6 @@ cdef class RecurveTrie:
     L1 CONTAINER = [<CONTAINER_ID, L2_CONTAINER_SIZE, L2_CONTAINER_PTR>]
     L2 CONTAINER = [<CONTAINER_ID, HOST_CATEGORY>]
     '''
-
     @_lru_cache(maxsize=4096)
     def search(self, (long, long) host):
 
@@ -107,9 +111,7 @@ cdef class RecurveTrie:
             size_t L2_SIZE
             L2Recurve *L2_CONTAINER
 
-        # allocating memory for L1 container. this will be accessed from l1_search method.
-        # L1 container will be iterated over, being checked for id match. if a match is found
-        # the reference stored at that index will be used to check for l2 container id match.
+        # allocating memory for L1 container
         self.L1_SIZE = len(py_trie)
         self.L1_CONTAINER = <L1Recurve*>malloc(sizeof(L1Recurve) * self.L1_SIZE)
 
@@ -121,11 +123,11 @@ cdef class RecurveTrie:
             # allocating memory for individual L2 containers
             L2_CONTAINER = <L2Recurve*>malloc(sizeof(L2Recurve) * L2_SIZE)
 
-            # calling make function for l2 content struct for each entry in current py_l2 container
+            # calling make function for l2 content struct for each entry in the current py_l2 container
             for xi in range(L2_SIZE):
                 L2_CONTAINER[xi] = self._make_l2(py_trie[i][1][xi])[0]
 
-            # assigning struct members to current index of L1 container.
+            # assigning struct members to the current index of L1 container.
             self.L1_CONTAINER[i].id = <u_int32_t>py_trie[i][0]
             self.L1_CONTAINER[i].l2_size = L2_SIZE
             self.L1_CONTAINER[i].l2_ptr  = L2_CONTAINER
@@ -133,9 +135,9 @@ cdef class RecurveTrie:
     cdef long _l1_search(self, long container_id, long host_id) nogil:
 
         cdef:
-            long left = 0
-            long mid
-            long right = self.L1_SIZE
+            size_t left = 0
+            size_t mid
+            size_t right = self.L1_SIZE
 
             L1Recurve l1_container
 
@@ -151,7 +153,6 @@ cdef class RecurveTrie:
             elif (l1_container.id > container_id):
                 right = mid - 1
 
-            # TODO: why are we sending in a ptr to the ptr? should be able to pass first.
             # l1.id match. calling l2_search with ptr to l2_containers looking for l2.id match
             else:
                 return self._l2_search(host_id, l1_container.l2_size, l1_container.l2_ptr)
@@ -162,9 +163,9 @@ cdef class RecurveTrie:
     cdef long _l2_search(self, long container_id, short l2_size, L2Recurve *L2_CONTAINER) nogil:
 
         cdef:
-            short left = 0
-            short mid
-            short right = l2_size
+            size_t left = 0
+            size_t mid
+            size_t right = <size_t>l2_size
 
             L2Recurve l2_container
 
@@ -189,8 +190,8 @@ cdef class RecurveTrie:
 
     cdef L2Recurve* _make_l2(self, (long, long) l2_entry):
         '''allocates memory for a single L2 content struct, assigns members from l2_entry, then
-        returns pointer.'''
-
+        returns pointer.
+        '''
         cdef L2Recurve *l2_content = <L2Recurve*>malloc(sizeof(L2Recurve))
 
         l2_content.id = l2_entry[0]
@@ -204,7 +205,6 @@ cdef class RangeTrie:
     L1 CONTAINER = [<CONTAINER_ID, L2_CONTAINER_SIZE, L2_CONTAINER_PTR>]
     L2 CONTAINER = [<NETWORK_ID, BROADCAST_ID, HOST_COUNTRY>]
     '''
-
     @_lru_cache(maxsize=4096)
     def search(self, (long, long) host):
 
@@ -220,9 +220,7 @@ cdef class RangeTrie:
         cdef:
             size_t L2_SIZE
 
-        # allocating memory for L1 container. this will be accessed from l1_search method.
-        # L1 container will be iterated over, being checked for id match. if a match is found
-        # the reference stored at that index will be used to check for l2 container id match.
+        # allocating memory for L1 container which is accessed by the l1_search method.
         self.L1_SIZE = len(py_trie)
         self.L1_CONTAINER = <L1Range*>malloc(sizeof(L1Range) * self.L1_SIZE)
 
@@ -245,9 +243,9 @@ cdef class RangeTrie:
     cdef long _search(self, long container_id, long host_id) nogil:
 
         cdef:
-            long left = 0
-            long mid
-            long right = self.L1_SIZE
+            size_t left = 0
+            size_t mid
+            size_t right = self.L1_SIZE
 
             L1Range l1_container
             L2Range l2_container

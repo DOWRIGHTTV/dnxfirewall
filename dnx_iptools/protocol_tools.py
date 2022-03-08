@@ -93,9 +93,10 @@ def cidr_to_int(cidr: int) -> int:
     return ~((1 << hostmask) - 1) & (2**32 - 1)
 
 def parse_query_name(data: Union[bytes, memoryview], offset: int = 0, *,
-                     check_local: bool = False) -> Union[tuple[int, str], tuple[int, str, bool]]:
-    '''parse dns name from sent in data. uses overall dns query to follow pointers. will return
-    name and offset integer value if qname arg is True otherwise will only return offset.
+                     quick: bool = False) -> Union[int, tuple[int, str, bool]]:
+    '''parse dns name from sent in data.
+
+    if quick is set, returns offset only, otherwise offset, qname decoded, and whether its local domain.
     '''
     idx: int = offset
     has_ptr: bool = False
@@ -135,10 +136,10 @@ def parse_query_name(data: Union[bytes, memoryview], offset: int = 0, *,
     # offset +2 for ptr or +1 for root
     offset += 2 if has_ptr else 1
 
-    if (check_local):
-        return offset, query_name[:-1].decode(), label_ct == 1
+    if (quick):
+        return offset
 
-    return offset, query_name[:-1].decode()
+    return offset, query_name[:-1].decode(), label_ct == 1
 
 def domain_stob(domain_name: str) -> bytes:
     domain_bytes = byte_join([
@@ -203,9 +204,8 @@ def init_ping(timeout: float = .25) -> Callable[[str, int], bool]:
                     break
 
                 else:
-
-                    # checking overall recv time passed for each ping send. this covers cases where unrelated ping
-                    # responses are received that
+                    # checking overall recv time passed for each ping send.
+                    # this covers cases where unrelated ping responses are received that
                     if (fast_time() - recv_start > timeout):
                         break
 

@@ -75,7 +75,7 @@ class ClientQuery:
         self.rc: int = dns_header[1] & DNS_MASK.RC
 
         # www.micro.com or micro.com || sd.micro.com
-        offset, self.qname, self.local_domain = parse_query_name(dns_query, check_local=True)
+        offset, self.qname, self.local_domain = parse_query_name(dns_query)
 
         self.qtype, self.qclass = double_short_unpack(dns_query[offset:])
         self.question_record    = dns_query[:offset + 4]
@@ -192,9 +192,9 @@ class DNSPacket(NFPacket):
         # ===========================
         dns_header: tuple = dns_header_unpack(self.udp_payload[:12])
 
-        # filtering out non query flags. this would also imply malformed payload.
+        # filtering out non query flags (malformed payload)
         # TODO: make this int flags enum
-        self.qr = dns_header[1] >> 15 & 1
+        self.qr = dns_header[1] & DNS_MASK.QR
         if (self.qr != DNS.QUERY):
             return
 
@@ -212,7 +212,7 @@ class DNSPacket(NFPacket):
         # parsing dns name queried and byte offset due to variable length | ex www.micro.com or micro.com
         offset: int
         query_info: tuple[str, bool]
-        offset, self.qname, self.local_domain = parse_query_name(dns_query, check_local=True)
+        offset, self.qname, self.local_domain = parse_query_name(dns_query)
 
         # defining question record
         self.question_record: bytearray = dns_query[:offset + 4]
@@ -262,7 +262,7 @@ def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[by
     dns_payload: memoryview = mem_data[12:]
 
     # converting external/unique dns id back to the original dns id of the client
-    send_data: bytearray = bytearray(short_pack(dns_id))
+    send_data = bytearray(short_pack(dns_id))
 
     # ================
     # HEADER
@@ -279,8 +279,7 @@ def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[by
     # QUESTION RECORD
     # ================
     # www.micro.com or micro.com || sd.micro.com
-    offset, _ = parse_query_name(dns_payload)
-    offset: int = offset + 4
+    offset: int = parse_query_name(dns_payload)
 
     send_data += dns_payload[:offset]
 
@@ -300,11 +299,9 @@ def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[by
         for _ in range(record_count):
             record_type, record, offset = _parse_record(dns_payload, offset)
 
-            # TTL rewrite done on A records which functionally clamps TTLs between a min and max value. CNAME is listed
-            # first, followed by A records so the original_ttl var will be whatever the last A record ttl parsed is.
-            # generally all A records have the same ttl. CNAME ttl can differ, but will get clamped with A so will
-            # likely end up the same as A records.
-            # NOTE: only caching A and CNAME records
+            # TTL rewrite done on A/CNAME records which functionally clamp TTLs between a min and max value.
+            # CNAME ttl can differ, but will get clamped with A so wil; likely end up the same as A records.
+            # NOTE: only caching A/CNAME records
             if (record_type in [DNS.A, DNS.CNAME]):
                 original_ttl = long_unpack(record.ttl)[0]
                 record.ttl = long_pack(
@@ -317,7 +314,7 @@ def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[by
                 if (len(record_cache) < MAX_A_RECORD_COUNT or record_type != DNS.A):
                     record_cache.append(record)
 
-            # dns system level, ns, mail, and txt records don't need to be clamped and will be relayed to client as is
+            # dns system level, ns, mx, and txt records don't need to be clamped and will be relayed as is
             else:
                 send_data += record
 
@@ -326,20 +323,21 @@ def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[by
     send_data += dns_payload[offset:]
 
     if (record_cache):
-        return send_data, CACHED_RECORD(int(fast_time()) + original_ttl, original_ttl, record_cache)
+        return send_data, CACHED_RECORD(fast_time() + original_ttl, original_ttl, record_cache)
 
     return send_data, None
 
 def _parse_record(dns_payload: memoryview, cur_offset: int) -> tuple[int, _RESOURCE_RECORD, int]:
-    new_offset, qname = parse_query_name(dns_payload, cur_offset)
+    new_offset: int = parse_query_name(dns_payload, cur_offset)
 
-    record_values = dns_payload[new_offset:]
+    record_name: memoryview = dns_payload[cur_offset:new_offset]
+    record_values: memoryview = dns_payload[new_offset:]
     # resource record data len, usually 4 for ip address, but can vary.
     # calculating first, so we can single shot creation of the byte container.
-    dt_len = btoia(record_values[8:10])
+    dt_len: int = btoia(record_values[8:10])
 
     resource_record = _RESOURCE_RECORD(
-        qname,
+        record_name,
         record_values[:2],
         record_values[2:4],
         record_values[4:8],
