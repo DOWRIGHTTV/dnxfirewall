@@ -56,7 +56,7 @@ cdef class RecurveTrie:
         L1Recurve *L1_CONTAINER
 
     cpdef void generate_structure(self, tuple py_trie)
-    cdef u_int16_t _l1_search(self, long container_id, long host_id) nogil
+    cdef u_int16_t _l1_search(self, int32_t container_id, long host_id) nogil
     cdef u_int16_t _l2_search(self, long container_id, size_t l2_size, L2Recurve *L2_CONTAINER) nogil
     cdef L2Recurve* _make_l2(self, (long, long) l2_entry)
 
