@@ -30,7 +30,7 @@ cdef class HashTrie:
 
             TrieRange *trie_value_ranges
 
-            size_t MAX_KEYS = 2 ** log2(py_trie_len)
+            size_t MAX_KEYS = <size_t>2 ** log2(py_trie_len)
 
         self.INDEX_MASK = MAX_KEYS - 1
 
@@ -98,7 +98,7 @@ cdef class RecurveTrie:
     @_lru_cache(maxsize=4096)
     def search(self, (long, long) host):
 
-        cdef long search_result
+        cdef u_int32_t search_result
 
         with nogil:
             search_result = self._l1_search(host[0], host[1])
@@ -132,7 +132,7 @@ cdef class RecurveTrie:
             for xi in range(l2_size):
                 l2_container[xi] = self._make_l2(py_trie[i][1][xi])[0]
 
-    cdef long _l1_search(self, long container_id, long host_id) nogil:
+    cdef u_int32_t _l1_search(self, long container_id, long host_id) nogil:
 
         cdef:
             size_t left = 0
@@ -160,7 +160,7 @@ cdef class RecurveTrie:
         # L1 default
         return NO_MATCH
 
-    cdef u_int16_t _l2_search(self, long container_id, size_t l2_size, L2Recurve *L2_CONTAINER) nogil:
+    cdef u_int32_t _l2_search(self, long container_id, size_t l2_size, L2Recurve *L2_CONTAINER) nogil:
 
         cdef:
             size_t left = 0
