@@ -56,8 +56,8 @@ cdef class RecurveTrie:
         L1Recurve *L1_CONTAINER
 
     cpdef void generate_structure(self, tuple py_trie)
-    cdef u_int16_t _l1_search(self, int32_t container_id, long host_id) nogil
-    cdef u_int16_t _l2_search(self, long container_id, size_t l2_size, L2Recurve *L2_CONTAINER) nogil
+    cdef u_int16_t _l1_search(self, int32_t container_id, u_int32_t host_id) nogil
+    cdef u_int16_t _l2_search(self, u_int32_t container_id, size_t l2_size, L2Recurve *L2_CONTAINER) nogil
     cdef L2Recurve* _make_l2(self, (long, long) l2_entry)
 
 cdef class RangeTrie:
@@ -66,5 +66,5 @@ cdef class RangeTrie:
         L1Range *L1_CONTAINER
 
     cpdef void generate_structure(self, tuple py_trie)
-    cdef long _search(self, long container_id, long host_id) nogil
+    cdef long _search(self, int32_t container_id, u_int32_t host_id) nogil
     cdef L2Range* _make_l2(self, (long, long, short) l2_entry)
