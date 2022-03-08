@@ -25,12 +25,12 @@ cdef class HashTrie:
 
         cdef:
             size_t value_len
+            size_t trie_key
+            size_t trie_key_hash
 
-            size_t TRIE_KEY
-            size_t TRIE_KEY_HASH
             TrieRange *trie_value_ranges
 
-            size_t MAX_KEYS = <size_t>2 ** log2(py_trie_len)
+            size_t MAX_KEYS = 2 ** log2(py_trie_len)
 
         self.INDEX_MASK = MAX_KEYS - 1
 
@@ -38,22 +38,22 @@ cdef class HashTrie:
 
         for i in range(py_trie_len):
 
+            trie_key = py_trie[i][0]
+            trie_key_hash = trie_key % self.INDEX_MASK
+
             # accessed via pointer stored in L1 container
             value_len = len(py_trie[i][1])
-
-            # assigning l2 container reference to calculated hash index
-            TRIE_KEY = <size_t>py_trie[i][0]
-            TRIE_KEY_HASH = TRIE_KEY % self.INDEX_MASK
 
             # allocating memory for trie_ranges
             trie_value_ranges = <TrieRange*>malloc(sizeof(TrieRange) * value_len)
 
             # make function for trie_range struct for each range in py_l2
             for xi in range(value_len):
-                trie_value_ranges[xi] = self._make_l2(TRIE_KEY, py_trie[i][1][xi])[0]
+                trie_value_ranges[xi] = self._make_l2(trie_key, py_trie[i][1][xi])[0]
 
-            self.TRIE_MAP[TRIE_KEY_HASH].len = value_len
-            self.TRIE_MAP[TRIE_KEY_HASH].ranges = trie_value_ranges
+            # assigning struct members
+            self.TRIE_MAP[trie_key_hash].len = value_len
+            self.TRIE_MAP[trie_key_hash].ranges = trie_value_ranges
 
     cdef u_int8_t search(self, u_int32_t trie_key, u_int32_t host_id) nogil:
 
@@ -108,8 +108,8 @@ cdef class RecurveTrie:
     cpdef void generate_structure(self, tuple py_trie):
 
         cdef:
-            size_t L2_SIZE
-            L2Recurve *L2_CONTAINER
+            size_t l2_size
+            L2Recurve *l2_container
 
         # allocating memory for L1 container
         self.L1_SIZE = len(py_trie)
@@ -118,19 +118,19 @@ cdef class RecurveTrie:
         for i in range(self.L1_SIZE):
 
             # accessed via pointer stored in L1 container
-            L2_SIZE = len(py_trie[i][1])
+            l2_size = len(py_trie[i][1])
 
-            # allocating memory for individual L2 containers
-            L2_CONTAINER = <L2Recurve*>malloc(sizeof(L2Recurve) * L2_SIZE)
-
-            # calling make function for l2 content struct for each entry in the current py_l2 container
-            for xi in range(L2_SIZE):
-                L2_CONTAINER[xi] = self._make_l2(py_trie[i][1][xi])[0]
+            # allocating memory for an array of l2 container pointers
+            l2_container = <L2Recurve*>malloc(sizeof(L2Recurve) * l2_size)
 
             # assigning struct members to the current index of L1 container.
-            self.L1_CONTAINER[i].id = <u_int32_t>py_trie[i][0]
-            self.L1_CONTAINER[i].l2_size = L2_SIZE
-            self.L1_CONTAINER[i].l2_ptr  = L2_CONTAINER
+            self.L1_CONTAINER[i].id = <int32_t>py_trie[i][0]
+            self.L1_CONTAINER[i].l2_size = l2_size
+            self.L1_CONTAINER[i].l2_ptr  = l2_container
+
+            # calling make function for l2 content struct for each entry in the current py_l2 container
+            for xi in range(l2_size):
+                l2_container[xi] = self._make_l2(py_trie[i][1][xi])[0]
 
     cdef long _l1_search(self, long container_id, long host_id) nogil:
 
@@ -160,12 +160,12 @@ cdef class RecurveTrie:
         # L1 default
         return NO_MATCH
 
-    cdef long _l2_search(self, long container_id, short l2_size, L2Recurve *L2_CONTAINER) nogil:
+    cdef u_int16_t _l2_search(self, long container_id, size_t l2_size, L2Recurve *L2_CONTAINER) nogil:
 
         cdef:
             size_t left = 0
             size_t mid
-            size_t right = <size_t>l2_size
+            size_t right = l2_size
 
             L2Recurve l2_container
 
@@ -228,8 +228,8 @@ cdef class RangeTrie:
 
             L2_SIZE = len(py_trie[i][1])
 
-            # assigning struct members to current index of L1 container
-            self.L1_CONTAINER[i].id = <u_int32_t>py_trie[i][0]
+            # assigning struct members to the current index of L1 container
+            self.L1_CONTAINER[i].id = py_trie[i][0]
             self.L1_CONTAINER[i].l2_size = L2_SIZE
 
             # allocating memory for individual L2 containers
