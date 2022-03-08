@@ -56,15 +56,16 @@ class Listener:
 
         cls._log = log
 
-        # starting a registration thread for all available interfaces and exit when complete
-        for intf in cls._intfs:
-            threading.Thread(target=cls.__register, args=(intf,)).start()
-
         # ======================
         # INITIALIZING LISTENER
         # ======================
         # running main epoll/ socket loop.
         self = cls()
+
+        # starting a registration thread for all available interfaces and exit when complete
+        for intf in cls._intfs:
+            threading.Thread(target=self.__register, args=(intf,)).start()
+
         self._setup()
         self.__listener(always_on, threaded)
 
