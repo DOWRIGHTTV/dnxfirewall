@@ -279,7 +279,7 @@ def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[by
     # QUESTION RECORD
     # ================
     # www.micro.com or micro.com || sd.micro.com
-    offset: int = parse_query_name(dns_payload, quick=True)
+    offset: int = parse_query_name(dns_payload, quick=True) + 4
 
     send_data += dns_payload[:offset]
 
@@ -330,8 +330,8 @@ def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[by
 def _parse_record(dns_payload: memoryview, cur_offset: int) -> tuple[int, _RESOURCE_RECORD, int]:
     new_offset: int = parse_query_name(dns_payload, cur_offset, quick=True)
 
-    record_name: memoryview = dns_payload[cur_offset:new_offset]
-    record_values: memoryview = dns_payload[new_offset:]
+    record_name = bytes(dns_payload[cur_offset:new_offset])
+    record_values = bytes(dns_payload[new_offset:])
     # resource record data len, usually 4 for ip address, but can vary.
     # calculating first, so we can single shot creation of the byte container.
     dt_len: int = btoia(record_values[8:10])

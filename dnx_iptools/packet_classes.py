@@ -25,9 +25,6 @@ __all__ = (
     'Listener', 'ProtoRelay', 'NFQueue', 'NFPacket', 'RawResponse'
 )
 
-# def _NOT_IMPLEMENTED(*args, **kwargs):
-#     raise NotImplementedError('subclass must reference a data handling function.')
-
 
 class Listener:
     __registered_socks: ClassVar[dict[int, L_SOCK]] = {}
@@ -348,6 +345,7 @@ class NFQueue:
 
     @classmethod
     def run(cls, log: LogHandler_T, *, q_num: int, threaded: bool = True) -> None:
+
         cls._log: LogHandler_T = log
 
         self = cls()

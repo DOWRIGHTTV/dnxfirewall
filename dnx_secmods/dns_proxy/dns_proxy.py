@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import threading
+
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import Queue, DNS, DNS_CAT, TLD_CAT
@@ -42,15 +44,16 @@ if INITIALIZE_MODULE('dns_proxy'):
     from dns_proxy_automate import ProxyConfiguration
     from dns_proxy_packets import DNSPacket, ProxyResponse
 
-    # ================
+    # =================
     # DEFERRED DEFS
-    # ================
+    # =================
     LOCAL_RECORD = DNSServer.dns_records.get
     prepare_and_send = ProxyResponse.prepare_and_send
 
 def run():
-    # starting server before proxy since it will block.
-    DNSServer.run(Log, threaded=False, always_on=True)
+    # server running in thread because run method is a blocking call
+    threading.Thread(target=DNSServer.run, args=(Log,), kwargs={'threaded': False, 'always_on': True}).start()
+
     DNSProxy.run(Log, q_num=Queue.DNS_PROXY)
 
 
