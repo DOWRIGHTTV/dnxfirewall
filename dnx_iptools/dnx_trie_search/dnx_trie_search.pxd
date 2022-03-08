@@ -1,12 +1,18 @@
 #!/usr/bin/env Cython
 
-cdef extern from "sys/types.h":
-    ctypedef unsigned char      u_int8_t
-    ctypedef unsigned short int u_int16_t
-    ctypedef unsigned int       u_int32_t
+from libc.stdint cimport int_fast8_t, int_fast16_t, int_fast32_t, uint_fast8_t, uint_fast16_t, uint_fast32_t
 
+# making generic u/int types aliasing u/int fast
+ctypedef int_fast8_t    int8_t
+ctypedef int_fast16_t   int16_t
+ctypedef int_fast32_t   int32_t
+ctypedef uint_fast8_t   u_int8_t
+ctypedef uint_fast16_t  u_int16_t
+ctypedef uint_fast32_t  u_int32_t
+
+# need signed int because id can be negative with some methods of keying containers
 cdef struct L1Recurve:
-    u_int32_t   id
+    int32_t     id
     size_t      l2_size
     L2Recurve  *l2_ptr
 
