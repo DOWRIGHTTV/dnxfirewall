@@ -665,7 +665,7 @@ class RawResponse:
         self._packet = packet
 
     @classmethod
-    def setup(cls, log: LogHandler_T, module) -> None:
+    def setup(cls, log: LogHandler_T, module, protocol_ports: bool = True) -> None:
         '''register all available interfaces in a separate thread for each.
 
         registration will wait for the interface to become available before finalizing.
@@ -676,10 +676,12 @@ class RawResponse:
         cls.__setup: bool = True
 
         cls._log: LogHandler_T = log
-        cls._module = module
+        cls._module = module  # NOTE: is this still needed?
 
         # direct assignment for perf
-        cls._open_ports: dict[PROTO, dict[int, int]] = module.open_ports
+        if (protocol_ports):
+            cls._open_ports: dict[PROTO, dict[int, int]] = module.open_ports
+
         cls._registered_socks_get = cls._registered_socks.get
 
         for intf in cls._intfs:

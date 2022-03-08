@@ -77,7 +77,7 @@ class DNSProxy(ProxyConfiguration, NFQueue):
 
         self.configure()
 
-        ProxyResponse.setup(Log, self.__class__)
+        ProxyResponse.setup(Log, self.__class__, protocol_ports=False)
 
         Log.notice(f'{self.__class__.__name__} initialization complete.')
 
