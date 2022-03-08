@@ -28,17 +28,42 @@ __all__ = (
     'DNSServer',
 )
 
-INVALID_RESPONSE: tuple[None, None] = (None, None)
-
+# =======================
+# RCVD REQUEST PROCESSOR
+# =======================
 REQ_TRACKER: RequestTracker = request_tracker()
 REQ_TRACKER_INSERT = REQ_TRACKER.insert
 
-relay_map: dict[PROTO, Callable[[DNS_SEND], None]] = {
+# ======================
+# DNS RECORD CACHE DICT
+# ======================
+# initializing dns cache/ sending in reference to needed methods for top domains
+# Initialize class will block (synchronization) until manager threads complete one cycle
+DNS_CACHE = dns_cache(
+    dns_packet=ClientQuery.init_local_query,
+    request_handler=REQ_TRACKER_INSERT
+)
+
+dns_cache_add = DNS_CACHE.add
+dns_cache_search = DNS_CACHE.search
+
+# GENERAL DEFINITIONS
+INVALID_RESPONSE: tuple[None, None] = (None, None)
+
+RELAY_MAP: dict[PROTO, Callable[[DNS_SEND], None]] = {
     PROTO.UDP: UDPRelay.relay.add,
     PROTO.DNS_TLS: TLSRelay.relay.add
 }
 
+# acquired prior to randomly selected dns id
+_id_lock: Lock = threading.Lock()
 
+# ======================
+# MAIN DNS SERVER CLASS
+# ======================
+#   ServerConfiguration - provides config management between memory and filesystem
+#   Listener - provides packet data Linux interface socket
+# ======================
 class DNSServer(ServerConfiguration, Listener):
 
     _request_map: ClassVar[dict[int], tuple[bool, ClientQuery]] = {}
@@ -68,7 +93,7 @@ class DNSServer(ServerConfiguration, Listener):
 
         # queue send_data to currently enabled protocol/relay for sending to external resolver.
         # request is sent for logging purposes and may be temporary.
-        relay_map[self.protocol](
+        RELAY_MAP[self.protocol](
             DNS_SEND(client_query.qname, send_data)
         )
 
@@ -130,15 +155,15 @@ class DNSServer(ServerConfiguration, Listener):
 
         for _ in RUN_FOREVER:
 
-            # generator that blocks until at least 1 request is in the queue. if multiple requests are present, they
-            # will be yielded back until the queue is empty.
+            # generator that blocks until at least 1 request is in the queue.
+            # if multiple requests are present, they will be yielded back until the queue is empty.
             for client_query in return_ready():
 
                 # search cache before sending to relay.
                 if not self._cache_available(client_query):
                     self.handle_query(client_query)
 
-    # NOTE: A, NS records are supported only. consider expanding
+    # NOTE: A/NS records are supported only. consider expanding
     def _pre_inspect(self, client_query: ClientQuery) -> bool:
         if (client_query.qr != DNS.QUERY or client_query.qtype not in [DNS.A, DNS.NS]):
             return False
@@ -190,11 +215,11 @@ class DNSServer(ServerConfiguration, Listener):
         return l_sock
 
 
-# DNS ID generation. this value is guaranteed unique for the life of the request.
-_id_lock: Lock = threading.Lock()
-
 def get_unique_id(request_map: dict, client_query: ClientQuery) -> int:
+    '''DNS ID generation.
 
+    this value is guaranteed unique for the life of the request.
+    '''
     with _id_lock:
         for _ in RUN_FOREVER:
 
@@ -210,17 +235,3 @@ def send_to_client(client_query: ClientQuery, query_response: bytearray) -> None
         client_query.sendto(query_response, client_query.address)
     except OSError:
         pass
-
-
-# ======================
-# DNS RECORD CACHE DICT
-# ======================
-# initializing dns cache/ sending in reference to needed methods for top domains
-# Initialize class will block (synchronization) until manager threads complete one cycle
-DNS_CACHE = dns_cache(
-    dns_packet=ClientQuery.init_local_query,
-    request_handler=REQ_TRACKER_INSERT
-)
-
-dns_cache_add = DNS_CACHE.add
-dns_cache_search = DNS_CACHE.search

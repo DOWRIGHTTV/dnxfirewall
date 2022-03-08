@@ -17,10 +17,18 @@ from typing import Optional as _Optional, Union as _Union, Any as _Any
 from dnx_iptools.cprotocol_tools import iptoi as _iptoi
 from dnx_iptools.def_structs import scm_creds_pack as _scm_creds_pack
 
-ppt: _Callable[[_Any], None] = _PrettyPrinter(sort_dicts=False).pprint
-
-# if set, module code dependencies will run. values are stored as strings
+# =====================================================
+# MODULE INITIALIZATION CONTROL - set by shell command
+# =====================================================
+# module startup code will run if. values are stored as strings
 INIT_MODULE: str = _os.environ.get('INIT_MODULE', '')
+def INITIALIZE_MODULE(log_name: str):
+    '''returns True if the calling module functions should start.
+    '''
+    return True if INIT_MODULE == log_name.replace('_', '-') else False
+# =====================================================
+
+ppt: _Callable[[_Any], None] = _PrettyPrinter(sort_dicts=False).pprint
 
 console_log: _Callable[[str], None] = _partial(print, flush=True)
 shell: _Callable[[str], None] = _partial(_run, shell=True, stdout=_DEVNULL, stderr=_DEVNULL)

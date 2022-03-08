@@ -11,21 +11,54 @@ from dnx_gentools.signature_operations import generate_domain
 from dnx_iptools.dnx_trie_search import RecurveTrie
 from dnx_iptools.packet_classes import NFQueue
 
-from dns_proxy_automate import ProxyConfiguration
-from dns_proxy_log import Log
-from dns_proxy_packets import DNSPacket, ProxyResponse
-from dns_proxy_server import DNSServer
-
 __all__ = (
     'run', 'DNSProxy'
 )
 
-LOG_NAME = 'dns_proxy'
 
-LOCAL_RECORD = DNSServer.dns_records.get
-prepare_and_send = ProxyResponse.prepare_and_send
+# LOG_NAME = 'dns_proxy'
+if INITIALIZE_MODULE('dns_proxy'):
+
+    Log.run(name='dns_proxy')
+
+    dns_cat_signatures = generate_domain(Log)
+
+    # TODO: collisions were found in the geolocation filtering data structure. this has been fixed for geolocation and
+    #  standard ip category filtering, but has not been investigated for dns signatures. due to the way the signatures
+    #  are compressed, it is much less likely to happen to dns signatures. (main issue were values in multiples of 10
+    #  because of the multiple 0s contained).
+    #  to be safe, run through the signatures, generate bin and host id, then check for host id collisions within a bin.
+    _category_trie = RecurveTrie()
+    _category_trie.generate_structure(dns_cat_signatures)
+
+    _category_search = _category_trie.search
+
+    # =================
+    # DEFERRED IMPORTS
+    # =================
+    from dns_proxy_automate import ProxyConfiguration
+    from dns_proxy_log import Log
+    from dns_proxy_packets import DNSPacket, ProxyResponse
+    from dns_proxy_server import DNSServer
+
+    # ================
+    # DEFERRED DEFS
+    # ================
+    LOCAL_RECORD = DNSServer.dns_records.get
+    prepare_and_send = ProxyResponse.prepare_and_send
+
+def run():
+    # starting server before proxy since it will block.
+    DNSServer.run(Log, threaded=False, always_on=True)
+    DNSProxy.run(Log, q_num=Queue.DNS_PROXY)
 
 
+# =====================
+# MAIN DNS PROXY CLASS
+# =====================
+#   ProxyConfiguration - provides config management between memory and filesystem
+#   NFQueue - provides packet data from Linux Netfilter NFQUEUE sub-system
+# =====================
 class DNSProxy(ProxyConfiguration, NFQueue):
 
     _packet_parser: ClassVar[ProxyParser] = DNSPacket.netfilter_recv
@@ -154,26 +187,3 @@ def _block_query(category: DNS_CAT, whitelisted: bool) -> bool:
 
     # default action | ALLOW
     return False
-
-def run():
-    # starting server before proxy since it will block.
-    DNSServer.run(Log, threaded=False, always_on=True)
-    DNSProxy.run(Log, q_num=Queue.DNS_PROXY)
-
-
-if (INIT_MODULE == LOG_NAME.replace('_', '-')):
-    Log.run(
-        name=LOG_NAME
-    )
-
-    dns_cat_signatures = generate_domain(Log)
-
-    # TODO: collisions were found in the geolocation filtering data structure. this has been fixed for geolocation and
-    #  standard ip category filtering, but has not been investigated for dns signatures. due to the way the signatures
-    #  are compressed, it is much less likely to happen to dns signatures. (main issue were values in multiples of 10
-    #  because of the multiple 0s contained).
-    #  to be safe, run through the signatures, generate bin and host id, then check for host id collisions within a bin.
-    _category_trie = RecurveTrie()
-    _category_trie.generate_structure(dns_cat_signatures)
-
-    _category_search = _category_trie.search

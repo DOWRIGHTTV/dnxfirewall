@@ -157,8 +157,8 @@ def load_top_domains_filter() -> list[str]:
         return [s.strip() for s in tdf.readlines() if s.strip() and '#' not in s]
 
 def calculate_file_hash(file_to_hash: str, *, path: str = 'dnx_system', folder: str = 'data') -> Optional[str]:
-    '''returns the sha256 secure hash of passed in file.'''
-
+    '''returns the sha256 secure hash of passed in file.
+    '''
     filepath = f'{HOME_DIR}/{path}/{folder}/{file_to_hash}'
     if not file_exists(filepath):
         return None
@@ -172,9 +172,9 @@ def cfg_read_poller(watch_file: str, ext: bool = True, *, folder: str = 'data', 
     '''Automate Class configuration file poll decorator.
 
     apply this decorator to all functions that will update configurations loaded in memory from json files.
-    config file must be sent in via decorator argument. set class_method argument to true if being used with a
-    class method.'''
-
+    config file must be sent in via decorator argument.
+    set class_method argument to true if being used with a class method.
+    '''
     if not isinstance(watch_file, str):
         raise TypeError('watch file must be a string.')
 
