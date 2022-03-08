@@ -11,6 +11,8 @@ from dnx_gentools.signature_operations import generate_domain
 from dnx_iptools.dnx_trie_search import RecurveTrie
 from dnx_iptools.packet_classes import NFQueue
 
+from dns_proxy_log import Log
+
 __all__ = (
     'run', 'DNSProxy'
 )
@@ -21,13 +23,13 @@ if INITIALIZE_MODULE('dns_proxy'):
 
     Log.run(name='dns_proxy')
 
-    dns_cat_signatures = generate_domain(Log)
-
     # TODO: collisions were found in the geolocation filtering data structure. this has been fixed for geolocation and
     #  standard ip category filtering, but has not been investigated for dns signatures. due to the way the signatures
     #  are compressed, it is much less likely to happen to dns signatures. (main issue were values in multiples of 10
     #  because of the multiple 0s contained).
     #  to be safe, run through the signatures, generate bin and host id, then check for host id collisions within a bin.
+    dns_cat_signatures = generate_domain(Log)
+
     _category_trie = RecurveTrie()
     _category_trie.generate_structure(dns_cat_signatures)
 
@@ -36,10 +38,9 @@ if INITIALIZE_MODULE('dns_proxy'):
     # =================
     # DEFERRED IMPORTS
     # =================
-    from dns_proxy_automate import ProxyConfiguration
-    from dns_proxy_log import Log
-    from dns_proxy_packets import DNSPacket, ProxyResponse
     from dns_proxy_server import DNSServer
+    from dns_proxy_automate import ProxyConfiguration
+    from dns_proxy_packets import DNSPacket, ProxyResponse
 
     # ================
     # DEFERRED DEFS
