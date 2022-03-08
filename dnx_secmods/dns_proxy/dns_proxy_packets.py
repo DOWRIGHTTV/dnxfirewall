@@ -279,7 +279,7 @@ def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[by
     # QUESTION RECORD
     # ================
     # www.micro.com or micro.com || sd.micro.com
-    offset: int = parse_query_name(dns_payload)
+    offset: int = parse_query_name(dns_payload, quick=True)
 
     send_data += dns_payload[:offset]
 
