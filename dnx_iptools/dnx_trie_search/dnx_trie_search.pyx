@@ -240,7 +240,7 @@ cdef class RangeTrie:
                 self.L1_CONTAINER[i].l2_ptr[xi] = self._make_l2(py_trie[i][1][xi])[0]
 
     # NOTE: this will be called directly from cfirewall until lru_cache is ported with no gil needed
-    cdef long _search(self, int32_t container_id, u_int32_t host_id) nogil:
+    cdef long _search(self, u_int32_t container_id, u_int32_t host_id) nogil:
 
         cdef:
             size_t left = 0
