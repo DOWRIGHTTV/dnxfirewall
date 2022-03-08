@@ -328,7 +328,7 @@ def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[by
     return send_data, None
 
 def _parse_record(dns_payload: memoryview, cur_offset: int) -> tuple[int, _RESOURCE_RECORD, int]:
-    new_offset: int = parse_query_name(dns_payload, cur_offset)
+    new_offset: int = parse_query_name(dns_payload, cur_offset, quick=True)
 
     record_name: memoryview = dns_payload[cur_offset:new_offset]
     record_values: memoryview = dns_payload[new_offset:]
