@@ -303,7 +303,7 @@ class Reachability:
     def __init__(self, protocol: PROTO):
         self._protocol: PROTO = protocol
 
-        self._initialize = Initialize(Log, self._dns_server.__name__)
+        self._initialize = Initialize(Log, self.__class__.__name__)
 
         self._tls_context: SSLContext
 
