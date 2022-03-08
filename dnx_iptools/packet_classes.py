@@ -33,7 +33,6 @@ class Listener:
     __registered_socks: ClassVar[dict[int, L_SOCK]] = {}
     __epoll: ClassVar[Epoll] = select.epoll()
 
-    _log: ClassVar[LogHandler_T] = None
     _intfs: ClassVar[list[tuple[int, int, str]]] = load_interfaces(exclude=['wan'])
 
     _listener_parser: ClassVar[ListenerParser]
@@ -42,10 +41,12 @@ class Listener:
     # stored as file descriptors to minimize lookups in listener queue.
     enabled_intfs: ClassVar[set] = set()
 
+    _log: ClassVar[LogHandler_T] = None
+
     __slots__ = ()
 
     @classmethod
-    def run(cls, log: LogHandler_T, *, threaded: bool = True, always_on: bool = False):
+    def run(cls, log: LogHandler_T, *, threaded: bool = True, always_on: bool = False) -> None:
         '''associating subclass Log reference with Listener class.
 
         registering all interfaces in _intfs and starting service listener loop.
@@ -68,7 +69,7 @@ class Listener:
         self.__listener(always_on, threaded)
 
     @classmethod
-    def enable(cls, sock_fd: int, intf: str):
+    def enable(cls, sock_fd: int, intf: str) -> None:
         '''adds a file descriptor id to the disabled interface set.
 
         this effectively re-enables the server for the zone of the specified socket.'''
@@ -78,7 +79,7 @@ class Listener:
         cls._log.notice(f'[{sock_fd}][{intf}] {cls.__name__} listener enabled.')
 
     @classmethod
-    def disable(cls, sock_fd: int, intf: str):
+    def disable(cls, sock_fd: int, intf: str) -> None:
         '''removes a file descriptor id to the disabled interface set.
 
         this effectively disables the server for the zone of the specified socket.'''
@@ -91,41 +92,31 @@ class Listener:
 
         cls._log.notice(f'[{sock_fd}][{intf}] {cls.__name__} listener disabled.')
 
-    @classmethod
-    def _setup(cls):
-        '''called prior to creating listener interface instances.
-
-        module wide code can be run here.
-        May be overridden.
-        '''
-        pass
-
-    @classmethod
     # TODO: what happens if interface comes online, then immediately gets unplugged. the registration would fail
     #  potentially and would no longer be active so it would never happen if the interface was replugged after.
-    def __register(cls, intf: tuple[int, int, str]):
+    def __register(self, intf: tuple[int, int, str]) -> None:
         '''will register interface with the listener.
 
-        once registration is complete the thread will exit.'''
-
+        once registration is complete the thread will exit.
+        '''
         # this is being defined here so the listener will be able to correlate socket back to interface and send in.
         # NOTE: we can probably _ the first 2 vars, but they may actually come in handy for something so check to see
         # if they can be used to simplify the file descriptor tracking we had to implement awhile back.
         intf_index, zone, _intf = intf
 
-        cls._log.debug(f'[{_intf}] {cls.__name__} started interface registration.')
+        self._log.debug(f'[{_intf}] {self.__class__.__name__} started interface registration.')
 
         wait_for_interface(interface=_intf)
         intf_ip: int = wait_for_ip(interface=_intf)
 
-        l_sock: Socket = cls.listener_sock(_intf, intf_ip)
-        cls.__registered_socks[l_sock.fileno()]: dict[int, L_SOCK] = L_SOCK(
+        l_sock: Socket = self._listener_sock(_intf, intf_ip)
+        self.__class__.__registered_socks[l_sock.fileno()]: dict[int, L_SOCK] = L_SOCK(
             _intf, intf_ip, l_sock, l_sock.send, l_sock.sendto, l_sock.recvfrom_into
         )
 
-        cls.__epoll.register(l_sock.fileno(), select.EPOLLIN)
+        self.__class__.__epoll.register(l_sock.fileno(), select.EPOLLIN)
 
-        cls._log.informational(f'[{l_sock.fileno()}][{intf}] {cls.__name__} interface registered.')
+        self._log.informational(f'[{l_sock.fileno()}][{intf}] {self.__class__.__name__} interface registered.')
 
     @classmethod
     def set_proxy_callback(cls, *, func: ProxyCallback) -> None:
@@ -137,7 +128,14 @@ class Listener:
 
         cls._listener_callback: ProxyCallback = func
 
-    def __listener(self, always_on: bool, threaded: bool):
+    def _setup(self):
+        '''called prior to creating listener interface instances.
+
+        May be overridden.
+        '''
+        pass
+
+    def __listener(self, always_on: bool, threaded: bool) -> NoReturn:
 
         # assigning all attrs as a local var for perf
         epoll_poll = self.__epoll.poll
@@ -192,20 +190,18 @@ class Listener:
                 else:
                     self._log.debug(f'recv on fd: {fd} | enabled ints: {self.enabled_intfs}')
 
-    def _pre_inspect(self, packet):
+    def _pre_inspect(self, packet: ListenerPackets) -> bool:
         '''handle the request after the packet is parsed and confirmed a protocol match.
 
         Must be overridden.
-
         '''
         raise NotImplementedError('the _pre_inspect method must be overridden in subclass.')
 
     @staticmethod
-    def listener_sock(intf: str, intf_ip: int):
+    def _listener_sock(intf: str, intf_ip: int) -> Socket:
         '''returns instance level listener socket.
 
         Must be overridden.
-
         '''
         raise NotImplementedError('the listener_sock method must be overridden in subclass.')
 

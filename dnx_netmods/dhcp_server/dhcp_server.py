@@ -145,7 +145,7 @@ class DHCPServer(Listener):
             send_to_client(send_data, client_request, server_mtype)
 
     @classmethod
-    def listener_sock(cls, intf, _) -> Socket:
+    def _listener_sock(cls, intf, _) -> Socket:
         l_sock: Socket = cls.intf_settings[intf].get('l_sock')
 
         l_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)

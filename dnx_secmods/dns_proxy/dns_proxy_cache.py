@@ -10,7 +10,7 @@ from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import DNS_CACHE, CACHED_RECORD
 from dnx_gentools.file_operations import *
-from dnx_gentools.standard_tools import looper
+from dnx_gentools.standard_tools import looper, Initialize
 
 from dns_proxy_log import Log
 
@@ -28,6 +28,9 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
     del _top_domains
 
     dict_get = dict.__getitem__
+
+    # thread synchronization to wait for the first iteration of threads to complete
+    initialize = Initialize(Log, 'DNSCache')
 
     @cfg_read_poller('dns_server.cache', ext=True)
     def manual_clear(cache: DNSCache, cfg_file: str) -> None:
@@ -62,6 +65,8 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
             cache_settings['clear->top_domains'] = clear_top_domains
 
             dnx.write_configuration(cache_settings.expanded_user_data)
+
+        initialize.done()
 
     @looper(THREE_MIN)
     # automated process to flush the cache if expire time has been reached.
@@ -101,6 +106,8 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
             fast_sleep(.1)
 
         Log.debug('expired records cleared from cache and top domains refreshed')
+
+        initialize.done()
 
     class DNSCache(dict):
         '''subclass of dict to provide a custom data structure for dealing with the local caching of dns records.
@@ -169,6 +176,8 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
 
     threading.Thread(target=auto_clear, args=(_cache,)).start()
     threading.Thread(target=manual_clear, args=(_cache,)).start()
+
+    initialize.wait_for_threads(count=2)
 
     return _cache
 

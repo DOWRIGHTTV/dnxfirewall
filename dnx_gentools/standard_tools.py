@@ -43,8 +43,8 @@ def looper(sleep_len: int, **kwargs):
             @wraps(loop_function)
             def wrapper(*args):
 
-                # allowing kwargs in decorator setup to be pass into wrapped function. this will allow for local
-                # assignments of variables to tighten the loop a bit.
+                # allowing kwargs in decorator setup to be passed into wrapped function allowing for local assignments
+                # of variables to tighten the loop a bit.
                 args = (*args, *[v for v in kwargs.values()])
 
                 for _ in RUN_FOREVER:
@@ -73,8 +73,11 @@ def dynamic_looper(loop_function: Callable):
     def wrapper(*args):
         for _ in RUN_FOREVER:
             sleep_amount = loop_function(*args)
-            if (sleep_amount == 'break'): break
-            elif (not sleep_amount): continue
+            if (sleep_amount == 'break'):
+                break
+
+            elif (not sleep_amount):
+                continue
 
             fast_sleep(sleep_amount)
 
@@ -86,7 +89,6 @@ class ConfigurationMixinBase:
 
     NOT defining slots to allow for primary parents to provide use/provide them.
     '''
-
     def __init__(self):
         # calling the module's epoll handler __init__ method
         super().__init__()

@@ -38,7 +38,7 @@ if (TYPE_CHECKING and not _DISABLED):
     from dnx_webui import *
 
     ListenerCallback = Callable[..., None]
-    ListenerPackets = Union[ClientRequest]
+    ListenerPackets = Union[ClientRequest, ClientQuery]
     ListenerParser = Callable[[Address, LI_SOCK], ListenerPackets]
 
     ProxyCallback = Callable[..., None]
@@ -46,5 +46,5 @@ if (TYPE_CHECKING and not _DISABLED):
     ProxyParser = Callable[[CPacket, int], ProxyPackets]
 
     DNSListHandler = Callable[[Any, str, int], int]
-    DNSCache = dns_cache(dns_packet=DNSPacket, request_handler=ProxyPackets)
+    DNSCache = dns_cache(dns_packet=DNSPacket, request_handler=Callable[[ClientQuery], None])
     RequestTracker = request_tracker()
