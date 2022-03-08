@@ -206,9 +206,9 @@ def cfg_write_poller(list_function: DNSListHandler) -> Wrapper:
     @wraps(list_function)
     def wrapper(*args):
         # print(f'[+] Starting user defined {args[1]} timer')
-        last_modified_time, new_args = 0, (*args, f'{args[1]}.cfg')
+        last_modified_time, new_args = 0, (*args, args[1])
         # main loop calling the primary function for read/write change detection/polling
-        # the recycle the saved hash file which is returned regardless of if it was changed or not
+        # the recycle the saved hash file which is returned regardless of whether it was changed or not
         for _ in RUN_FOREVER:
             last_modified_time = list_function(*new_args, last_modified_time)
 
