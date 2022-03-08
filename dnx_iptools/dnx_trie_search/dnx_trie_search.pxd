@@ -66,5 +66,5 @@ cdef class RangeTrie:
         L1Range *L1_CONTAINER
 
     cpdef void generate_structure(self, tuple py_trie)
-    cdef long _search(self, int32_t container_id, u_int32_t host_id) nogil
+    cdef u_int32_t _search(self, u_int32_t container_id, u_int32_t host_id) nogil
     cdef L2Range* _make_l2(self, (long, long, short) l2_entry)
