@@ -10,7 +10,7 @@ from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import DNS_CACHE, CACHED_RECORD
 from dnx_gentools.file_operations import *
-from dnx_gentools.standard_tools import looper, Initialize
+from dnx_gentools.standard_tools import looper
 
 from dns_proxy_log import Log
 
@@ -28,9 +28,6 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
     del _top_domains
 
     dict_get = dict.__getitem__
-
-    # thread synchronization to wait for the first iteration of threads to complete
-    initialize = Initialize(Log, 'DNSCache')
 
     @cfg_read_poller('dns_server.cache', ext=True)
     def manual_clear(cache: DNSCache, cfg_file: str) -> None:
@@ -172,14 +169,12 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
 
             return self[query_name]
 
-    _cache = DNSCache()
+        def start_pollers(self):
 
-    threading.Thread(target=auto_clear, args=(_cache,)).start()
-    threading.Thread(target=manual_clear, args=(_cache,)).start()
+            threading.Thread(target=auto_clear, args=(self,)).start()
+            threading.Thread(target=manual_clear, args=(self,)).start()
 
-    initialize.wait_for_threads(count=2)
-
-    return _cache
+    return DNSCache()
 
 
 def request_tracker() -> RequestTracker:

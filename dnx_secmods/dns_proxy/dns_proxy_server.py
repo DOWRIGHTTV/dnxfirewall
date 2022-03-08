@@ -19,9 +19,9 @@ from dnx_iptools.protocol_tools import btoia
 from dnx_iptools.packet_classes import Listener
 
 from dns_proxy_automate import ServerConfiguration, Reachability
-from dns_proxy_cache import dns_cache, request_tracker
 from dns_proxy_protocols import UDPRelay, TLSRelay
 from dns_proxy_packets import ClientQuery, ttl_rewrite
+from dns_proxy_cache import dns_cache, request_tracker
 from dns_proxy_log import Log
 
 __all__ = (
@@ -38,7 +38,7 @@ REQ_TRACKER_INSERT = REQ_TRACKER.insert
 # DNS RECORD CACHE DICT
 # ======================
 # initializing dns cache/ sending in reference to needed methods for top domains
-# Initialize class will block (synchronization) until manager threads complete one cycle
+# .start_pollers() call is required for top domains and cache clearing functionality
 DNS_CACHE = dns_cache(
     dns_packet=ClientQuery.init_local_query,
     request_handler=REQ_TRACKER_INSERT
@@ -56,7 +56,7 @@ RELAY_MAP: dict[PROTO, Callable[[DNS_SEND], None]] = {
 }
 
 # acquired prior to randomly selected dns id
-_id_lock: Lock = threading.Lock()
+dns_id_lock: Lock = threading.Lock()
 
 # ======================
 # MAIN DNS SERVER CLASS
@@ -130,20 +130,25 @@ class DNSServer(ServerConfiguration, Listener):
 
         self.configure()
 
-        # =========================
+        # ==========================
         # SENDER / RECEIVER QUEUES
-        # =========================
+        # ==========================
         threading.Thread(target=self.responder).start()
         threading.Thread(target=self._request_queue).start()
 
-        # =========================
+        # ==========================
         # SDN REACHABILITY
-        # =========================
+        # ==========================
         Reachability.run(self.__class__)
 
-        # =========================
+        # ==========================
+        # TOP DOMAINS / CACHE CLEAR
+        # ==========================
+        DNS_CACHE.start_pollers()
+
+        # ==========================
         # PROTOCOL RELAY QUEUES
-        # =========================
+        # ==========================
         UDPRelay.run(self.__class__)
         TLSRelay.run(self.__class__, fallback_relay=UDPRelay.relay)
 
@@ -220,7 +225,7 @@ def get_unique_id(request_map: dict, client_query: ClientQuery) -> int:
 
     this value is guaranteed unique for the life of the request.
     '''
-    with _id_lock:
+    with dns_id_lock:
         for _ in RUN_FOREVER:
 
             dns_id = randint(70, 32000)
