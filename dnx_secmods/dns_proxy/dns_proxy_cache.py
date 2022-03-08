@@ -63,8 +63,6 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
 
             dnx.write_configuration(cache_settings.expanded_user_data)
 
-        initialize.done()
-
     @looper(THREE_MIN)
     # automated process to flush the cache if expire time has been reached.
     def auto_clear(cache: DNSCache) -> None:
@@ -103,8 +101,6 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
             fast_sleep(.1)
 
         Log.debug('expired records cleared from cache and top domains refreshed')
-
-        initialize.done()
 
     class DNSCache(dict):
         '''subclass of dict to provide a custom data structure for dealing with the local caching of dns records.
