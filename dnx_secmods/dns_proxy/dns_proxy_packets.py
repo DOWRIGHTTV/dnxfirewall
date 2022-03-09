@@ -15,6 +15,8 @@ from dnx_iptools.cprotocol_tools import itoip
 from dnx_iptools.interface_ops import load_interfaces
 from dnx_iptools.packet_classes import NFPacket, RawResponse
 
+from dnx_gentools.def_exceptions import ProtocolError
+
 
 class ClientQuery:
     __slots__ = (
@@ -168,10 +170,14 @@ std_resource_record_template: DNS_STD_RR = DNS_STD_RR(**{'ptr': 49164, 'type': 1
 class DNSPacket(NFPacket):
 
     __slots__ = (
+        'action',
+
         '_dns_header', '_dns_query',
 
+        'dns_id', 'local_domain',
+
         'qname', 'requests', 'tld', 'request_identifier',
-        'local_domain', 'qtype', 'qclass', 'dns_id', 'question_record',
+        'qtype', 'qclass', 'question_record',
 
         'qr', 'rd', 'ad', 'cd',
     )
@@ -183,20 +189,16 @@ class DNSPacket(NFPacket):
         self.request_identifier: tuple[str, int, int] = ('0', -1, -1)
 
     def _before_exit(self, mark: int):
-        # filtering down to dns protocol
-        if (self.dst_port != PROTO.DNS):
-            return
 
-        # ===========================
+        # ============================
         # DNS HEADER (12 bytes)
-        # ===========================
+        # ============================
         dns_header: tuple = dns_header_unpack(self.udp_payload[:12])
 
         # filtering out non query flags (malformed payload)
-        # TODO: make this int flags enum
         self.qr = dns_header[1] & DNS_MASK.QR
         if (self.qr != DNS.QUERY):
-            return
+            raise ProtocolError
 
         # finishing parse of dns header post filter
         self.dns_id = dns_header[0]
@@ -204,9 +206,9 @@ class DNSPacket(NFPacket):
         self.ad = dns_header[1] & DNS_MASK.AD
         self.cd = dns_header[1] & DNS_MASK.CD
 
-        # ===========================
+        # ============================
         # QUESTION RECORD (index 12+)
-        # ===========================
+        # ============================
         dns_query: bytearray = self.udp_payload[12:]  # 13+ is query data
 
         # parsing dns name queried and byte offset due to variable length | ex www.micro.com or micro.com
@@ -224,7 +226,6 @@ class DNSPacket(NFPacket):
         # defining unique tuple for informing dns server of inspection results
         self.requests, self.tld = _enumerate_request(self.qname, self.local_domain)
         self.request_identifier = (itoip(self.src_ip), self.src_port, self.dns_id)
-
 
 def _enumerate_request(request: str, local_domain: bool, int=int, hash=hash) -> tuple[list[tuple[int]], Optional[str]]:
     rs: list[str] = request.split('.')

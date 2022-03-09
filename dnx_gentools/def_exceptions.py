@@ -13,4 +13,7 @@ class DNXError(Exception):
         return self.args[0]
 
 class ValidationError(DNXError):
-    '''Raised on webui processing failures.'''
+    '''Webui processing failure or invalid user input.'''
+
+class ProtocolError(DNXError):
+    '''Malformed network protocol.'''

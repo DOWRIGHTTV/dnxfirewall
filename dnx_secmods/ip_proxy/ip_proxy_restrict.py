@@ -3,7 +3,15 @@
 from __future__ import annotations
 
 # TODO: move this module to cfirewall. this should be able to be implemented in the form of quotas.
-#  either have it directly on the rule or use a "rule id" key pair withe quota time as value for rule to check against.
+#  either have it directly on the rule or use a "rule id" key pair with a quota time as value for rule to check against.
+
+# TODO: this can and should be moved to cfirewall
+# if local ip is not in the ip whitelist, the packet will be dropped while time restriction is active.
+# if (LanRestrict.is_active and packet.in_zone == LAN_IN
+#         and packet.src_ip not in self.ip_whitelist):
+#     packet.nfqueue.drop()
+#
+#     return False
 
 import threading
 
@@ -34,27 +42,28 @@ class LanRestrict:
     _active:  ClassVar[bool] = False
 
     __slots__ = (
-        'IPProxy', 'initialize'
+        'initialize', 'ip_proxy'
     )
 
     def __init__(self, name):
         self.initialize = Initialize(Log, name)
 
     @classproperty
-    def is_enabled(cls):
+    def is_enabled(cls) -> bool:
         return cls._enabled
 
     @classproperty
-    def is_active(cls):
+    def is_active(cls) -> bool:
         return cls._active
 
     @classmethod
-    def run(cls, IPProxy):
-        '''initializes settings and attributes then runs timer service in a new thread before returning.'''
-        self = cls(IPProxy.__name__)
-        self.IPProxy = IPProxy
+    def run(cls, ip_proxy: IPProxy) -> None:
+        '''initializes settings and attributes then runs timer service in a new thread before returning.
+        '''
+        self = cls(ip_proxy.__name__)
+        self.ip_proxy = ip_proxy
 
-        cls.__load_status()
+        cls._active = load_data('ip_proxy.timer')['active']
 
         threading.Thread(target=self._get_settings).start()
         threading.Thread(target=self._tracker).start()
@@ -63,10 +72,9 @@ class LanRestrict:
 
     @cfg_read_poller('ip_proxy')
     def _get_settings(self, cfg_file):
-        ip_proxy = load_configuration(cfg_file)
+        proxy_settings = load_configuration(cfg_file)
 
-        enabled = ip_proxy['time_restriction->enabled']
-        self._change_attribute('_enabled', enabled)
+        self.__class__._enabled = proxy_settings['time_restriction->enabled']
 
         self.initialize.done()
 
@@ -104,7 +112,7 @@ class LanRestrict:
         c_d = [int(i) for i in System.date(now)]  # current date
         r_start = [int(i) for i in restriction_start.split(':')]
 
-        restriction_start = datetime(c_d[0], c_d[1], c_d[2], r_start[0], r_start[1]).timestamp()
+        restriction_start = datetime(*c_d[:2], *r_start[:1]).timestamp()
         restriction_end = restriction_start + restriction_length
 
         if (self.is_active):
@@ -140,7 +148,7 @@ class LanRestrict:
         return restriction_start, restriction_length, offset
 
     def _set_restriction_status(self, active):
-        self._change_attribute('_active', active)
+        self.__class__._active = active
 
         with ConfigurationManager('ip_proxy_timer') as dnx:
             time_restriction = dnx.load_configuration()
@@ -148,13 +156,3 @@ class LanRestrict:
             time_restriction['active'] = active
 
             dnx.write_configuration(time_restriction.expanded_user_data)
-
-    @classmethod
-    def __load_status(cls):
-        time_restriction = load_configuration('ip_proxy_timer')
-
-        cls._active = time_restriction['active']
-
-    @classmethod
-    def _change_attribute(cls, name, status):
-        setattr(cls, name, status)

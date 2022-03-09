@@ -4,9 +4,9 @@ from typing import Optional
 
 from dnx_gentools.def_constants import fast_time, INVALID_FORM, LOG_LEVELS
 from dnx_gentools.def_enums import DATA, LOG
+from dnx_gentools.def_exceptions import ValidationError
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
-from dnx_routines.configure.exceptions import ValidationError
 from dnx_routines.configure.system_info import System
 from dnx_routines.configure.web_validate import get_convert_int
 

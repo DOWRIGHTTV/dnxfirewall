@@ -6,7 +6,7 @@ import threading
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
-from dnx_gentools.def_enums import Queue, DNS, DNS_CAT, TLD_CAT
+from dnx_gentools.def_enums import Queue, DNS, DNS_CAT, TLD_CAT, CONN
 from dnx_gentools.def_namedtuples import DNS_REQUEST_RESULTS
 from dnx_gentools.signature_operations import generate_domain
 
@@ -83,10 +83,15 @@ class DNSProxy(ProxyConfiguration, NFQueue):
 
     # pre-check will filter out invalid packets, ipv6 records, and local dns records
     def _pre_inspect(self, packet: DNSPacket) -> bool:
-        if (packet.qr != DNS.QUERY):
+
+        # local records will bypass the proxy and allowed to continue to the server
+        if LOCAL_RECORD(packet.qname):
+            packet.nfqueue.accept()
+
+        elif (packet.action is CONN.DROP):
             packet.nfqueue.drop()
 
-        elif (packet.qtype in [DNS.A, DNS.NS] and not LOCAL_RECORD(packet.qname)):
+        elif (packet.qtype in [DNS.A, DNS.NS]):
             return True
 
         # refusing ipv6 dns record types as policy

@@ -43,16 +43,6 @@ class IPSPacket(NFPacket):
 
     # building named tuple with tracked_ip, tracked_port, and local_port variables
     def _before_exit(self, mark):
-        # X | X | ips (4b) | dns (4b) | ipp (4b) | geoloc (8b) | direction (2b) | action (2b)
-        self.mark = mark
-
-        self.action = CONN(mark & 3)
-        # self.direction = DIR(mark >> 2 & 3)
-
-        # self.tracked_geo = mark >> 4 & 255
-        # self.ipp_profile = mark >> 12 & 15
-        # self.dns_profile = mark >> 16 & 15
-        self.ips_profile = mark >> 20 & 15
 
         # NOTE: subject to change. this assumes ip restricted to inbound traffic only.
         self.tracked_ip = itoip(self.src_ip)

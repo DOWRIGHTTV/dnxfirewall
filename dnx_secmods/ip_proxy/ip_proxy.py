@@ -49,29 +49,38 @@ class IPProxy(NFQueue):
         LanRestrict.run(self.__class__)
 
     def _pre_inspect(self, packet: IPPPacket) -> bool:
-        # TODO: this can and should be moved to cfirewall
-        # if local ip is not in the ip whitelist, the packet will be dropped while time restriction is active.
-        if (LanRestrict.is_active and packet.in_zone == LAN_IN
-                and packet.src_ip not in self.ip_whitelist):
-            packet.nfqueue.drop()
 
-            return False
-
-        # standard ip proxy inspect. further action will be decided after inspection.
-        if (packet.action is CONN.ACCEPT and packet.ipp_profile):
+        # --------------------
+        # IP PROXY INSPECT
+        # --------------------
+        if (packet.ipp_profile and packet.action is CONN.ACCEPT):
             return True
 
-        # forwarding packet to ips for portscan/ddos inspection. accept or deny actions are both capable of being
-        # inspected by ips/ids. if ips/ids inspection is needed, the ip proxy will defer verdict and forward.
-        if (packet.direction is DIR.INBOUND and packet.ips_profile):
+        # --------------------
+        # DIRECT TO DNS PROXY
+        # --------------------
+        # this also allows local records to be referenced with no firewall rule
+        elif (packet.dns_profile and packet.direction is DIR.OUTBOUND
+                and packet.protocol is PROTO.UDP and packet.dst_port == PROTO.DNS):
+            packet.nfqueue.forward(Queue.DNS_PROXY)
+
+        # --------------------
+        # DIRECT TO IPS/IDS
+        # --------------------
+        # forwarding packet to ips for portscan/ddos inspection with deferred action verdict
+        # accept or deny actions are both capable of being inspected by ips/ids.
+        if (packet.ips_profile and packet.direction is DIR.INBOUND):
             packet.nfqueue.forward(Queue.IPS_IDS)
 
-        # if the packet is not dropped at this point, neither the ips/ids nor proxy profiles are set. in this case,
-        # the ip proxy will issue the accept verdict.
-        elif (packet.action is CONN.ACCEPT and not packet.ipp_profile):
+        # --------------------
+        # DIRECT TO GEO/ACCEPT
+        # --------------------
+        elif (packet.action is CONN.ACCEPT):
             packet.nfqueue.accept()
 
-        # dropped by cfirewall > inspect geo only
+        # --------------------
+        # DIRECT TO GEO/DROP
+        # --------------------
         else:
             packet.nfqueue.drop()
 
@@ -83,25 +92,37 @@ class IPProxy(NFQueue):
     @staticmethod
     def forward_packet(packet: IPPPacket, direction: DIR, action: CONN) -> None:
 
-        # NOTE: this condition restricts ips inspection to INBOUND only to emulate prior functionality. if ips profile
-        # is set on a rule for outbound traffic, it will be ignored.
-        # TODO: look into what would be needed to expand ips inspection to lan to wan or lan to lan rules.
-        if (direction is DIR.INBOUND and packet.ips_profile):
+        # PACKET MARK UPDATE - needed for forward to ips/ids and dns proxy
+        if (action is CONN.DROP):
+            packet.nfqueue.update_mark(packet.mark & 65532)
 
-            # mark update needed to notify ips to drop the packet, but inspect under specified profile. the bitwise op
-            # resets first 2 bits (allocated for action) to 0 (CONN.DROP = 0).
-            if (action is CONN.DROP):
-                packet.nfqueue.update_mark(packet.mark & 65532)
-
-            packet.nfqueue.forward(Queue.IPS_IDS)
-
-        elif (packet.protocol is PROTO.UDP and packet.dst_port == PROTO.DNS and packet.dns_profile):
+        # --------------------
+        # DNS PROXY FORWARD
+        # --------------------
+        # this needs to be first to give local dns records to be implicitly allowed
+        if (packet.dns_profile and packet.protocol is PROTO.UDP and packet.dst_port == PROTO.DNS):
             packet.nfqueue.forward(Queue.DNS_PROXY)
 
+        # --------------------
+        # IPS/IDS FORWARD
+        # --------------------
+        # ips filter for only INBOUND traffic inspection.
+        # if ips profile is set on a rule for outbound traffic, it will be ignored.
+        # TODO: look into what would be needed to expand ips inspection to lan to wan or lan to lan rules.
+        elif (packet.ips_profile and direction is DIR.INBOUND):
+            packet.nfqueue.forward(Queue.IPS_IDS)
+
+        # --------------------
+        # IP PROXY ACCEPT
+        # --------------------
+        # no other security modules configured on rule and passed ip proxy inspection
         elif (action is CONN.ACCEPT):
             packet.nfqueue.accept()
 
-        # explicit condition match for readability
+        # --------------------
+        # IP PROXY DROP
+        # --------------------
+        # no other security modules configured on rule and failed ip proxy inspection
         elif (action is CONN.DROP):
             packet.nfqueue.drop()
 

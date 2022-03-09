@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import json
 import fcntl
 import shutil
@@ -17,8 +16,7 @@ from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER, fast_sleep
 from dnx_gentools.def_namedtuples import Item
 from dnx_gentools.def_enums import DNS_CAT, DATA
-
-from dnx_routines.configure.exceptions import ValidationError
+from dnx_gentools.def_exceptions import ValidationError
 
 __all__ = (
     'load_configuration', 'write_configuration',

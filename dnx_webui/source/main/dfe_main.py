@@ -10,9 +10,9 @@ import dnx_routines.configure.web_validate as validate
 
 from dnx_gentools.def_constants import HOME_DIR, FIVE_SEC, fast_time
 from dnx_gentools.def_enums import CFG, DATA
+from dnx_gentools.def_exceptions import ValidationError
 from dnx_gentools.file_operations import load_configuration, ConfigurationManager
 
-from dnx_routines.configure.exceptions import ValidationError
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 
 from dnx_routines.logging import LogHandler as Log

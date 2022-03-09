@@ -1,26 +1,10 @@
 {
     "BUILTIN": {
         "10": {
-            "name": "lan_dhcp_allow",
+            "name": "inside_dhcp_allow",
             "id": null,
             "enabled": 1,
-            "src_zone": [11],
-            "src_network": [[0, 0]],
-            "src_service": [[17, 68, 68]],
-            "dst_zone": [0],
-            "dst_network": [[0, 0]],
-            "dst_service": [[17, 67, 67]],
-            "action": 1,
-            "log": 0,
-            "ipp_profile": 0,
-            "dns_profile": 0,
-            "ips_profile": 0
-        },
-        "11": {
-            "name": "dmz_dhcp_allow",
-            "id": null,
-            "enabled": 1,
-            "src_zone": [12],
+            "src_zone": [11, 12],
             "src_network": [[0, 0]],
             "src_service": [[17, 68, 68]],
             "dst_zone": [0],
@@ -33,38 +17,6 @@
             "ips_profile": 0
         },
         "20": {
-            "name": "lan_dnsproxy_allow",
-            "id": null,
-            "enabled": 1,
-            "src_zone": [11],
-            "src_network": [[0, 0]],
-            "src_service": [[17, 1025, 65535]],
-            "dst_zone": [0],
-            "dst_network": [[3232256769, 4294967295]],
-            "dst_service": [[17, 53, 53]],
-            "action": 1,
-            "log": 0,
-            "ipp_profile": 0,
-            "dns_profile": 0,
-            "ips_profile": 0
-        },
-        "21": {
-            "name": "dmz_dnsproxy_allow",
-            "id": null,
-            "enabled": 1,
-            "src_zone": [12],
-            "src_network": [[0, 0]],
-            "src_service": [[17, 1025, 65535]],
-            "dst_zone": [0],
-            "dst_network": [[3232257025, 4294967295]],
-            "dst_service": [[17, 53, 53]],
-            "action": 1,
-            "log": 0,
-            "ipp_profile": 0,
-            "dns_profile": 0,
-            "ips_profile": 0
-        },
-        "30": {
             "name": "lan_webui_allow",
             "id": null,
             "enabled": 1,

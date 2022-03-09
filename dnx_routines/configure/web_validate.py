@@ -9,7 +9,7 @@ from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA, PROTO
 from dnx_gentools.file_operations import load_configuration
-from dnx_routines.configure.exceptions import ValidationError
+from dnx_gentools.def_exceptions import ValidationError
 
 MIN_PORT = 1
 MAX_PORT = 65535

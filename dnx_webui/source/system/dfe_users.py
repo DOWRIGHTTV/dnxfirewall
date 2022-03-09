@@ -7,9 +7,8 @@ from flask import session
 
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA
+from dnx_gentools.def_exceptions import ValidationError
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
-
-from dnx_routines.configure.exceptions import ValidationError
 
 from source.main.dfe_authentication import Authentication
 

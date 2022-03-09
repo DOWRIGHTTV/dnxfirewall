@@ -3,12 +3,18 @@
 from cpython cimport array
 import array
 
+from libc.stdint cimport int_fast8_t, int_fast16_t, int_fast32_t, uint_fast8_t, uint_fast16_t, uint_fast32_t
+
+
 ctypedef array.array PyArray
 
-cdef extern from "sys/types.h":
-    ctypedef unsigned char      u_int8_t
-    ctypedef unsigned short int u_int16_t
-    ctypedef unsigned int       u_int32_t
+# making generic u/int types aliasing u/int fast
+ctypedef int_fast8_t    int8_t
+ctypedef int_fast16_t   int16_t
+ctypedef int_fast32_t   int32_t
+ctypedef uint_fast8_t   u_int8_t
+ctypedef uint_fast16_t  u_int16_t
+ctypedef uint_fast32_t  u_int32_t
 
 cdef extern from "<errno.h>":
     int     errno

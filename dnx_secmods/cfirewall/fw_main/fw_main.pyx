@@ -44,7 +44,7 @@ DEF FOUR_BIT_MASK = 15
 DEF NETWORK = 1
 DEF SERVICE = 2
 
-cdef bint BYPASS  = 0
+cdef bint PROXY_BYPASS  = 0
 cdef bint VERBOSE = 0
 
 # ================================== #
@@ -83,8 +83,9 @@ firewall_rules[BEFORE_RULES] = <FWrule*>calloc(FW_BEFORE_MAX_RULE_COUNT, sizeof(
 firewall_rules[MAIN_RULES]   = <FWrule*>calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(FWrule))
 firewall_rules[AFTER_RULES]  = <FWrule*>calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(FWrule))
 
-# index corresponds to index of sections in firewall rules. this will allow us to skip over sections that are
-# empty and know how far to iterate over. tracking this allows ability to not clear pointers of dangling rules
+# the index corresponds to the index of sections in firewall rules.
+# this will allow us to skip over sections that are empty and know how far to iterate over.
+# tracking this allows the ability to not clear pointers of dangling rules
 # since they will be out of bounds of specified iteration.
 cdef u_int32_t CUR_RULE_COUNTS[FW_SECTION_COUNT]
 
@@ -96,7 +97,7 @@ CUR_RULE_COUNTS[AFTER_RULES]  = 0 # AFTER_CUR_RULE_COUNT
 # stores zone(integer value) at index, which corresponds to if_nametoindex() / value returned from get_in/outdev()
 cdef u_int16_t INTF_ZONE_MAP[FW_MAX_ZONE_COUNT]
 
-# stores active attackers set/controlled by IPS/IDS
+# stores the active attackers set/controlled by IPS/IDS
 cdef u_int32_t *ATTACKER_BLOCKLIST = <u_int32_t*>calloc(FW_MAX_ATTACKERS, sizeof(u_int32_t))
 
 cdef u_int32_t BLOCKLIST_CUR_SIZE = 0 # if we decide to track size for appends
@@ -147,61 +148,65 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # passing ptr of uninitialized data ptr to func. L3+ packet data will be assigned via this pointer
     pktdata_len = nfq_get_payload(nfa, &pktdata)
 
+    # --------------------
     # IP HEADER
-    # assigning ip_header to ptr to data[0] (cast to iphdr struct) then calculate ip header len.
+    # --------------------
     ip_header = <IPhdr*>pktdata
     iphdr_len = (ip_header.ver_ihl & FOUR_BIT_MASK) * 4
 
+    # --------------------
     # PROTOCOL HEADER
+    # --------------------
     # tcp/udp will reassign the pointer to their header data
     if (ip_header.protocol != IPPROTO_ICMP):
         proto_header = <Protohdr*>&pktdata[iphdr_len]
 
+    # --------------------
     # DIRECTION SET
-    # uses initial mark of packet to determine the stateful direction of the connection
+    # --------------------
     direction = OUTBOUND if hw.in_zone != WAN_IN else INBOUND
 
-    if (VERBOSE):
-        pkt_print(&hw, ip_header, proto_header)
-
-    # =============================== #
-    # LOCKING ACCESS TO FIREWALL.
-    # ------------------------------- #
-    # prevents the manager thread from updating firewall rules during a packets inspection
+    # ===================================
+    # LOCKING ACCESS TO FIREWALL RULES
+    # prevents the manager thread from updating firewall rules during packet inspection
     pthread_mutex_lock(&FWrulelock)
-
+    # --------------------
+    # FIREWALL RULE CHECK
+    # --------------------
     inspection_results = cfirewall_inspect(&hw, ip_header, proto_header, direction)
 
     pthread_mutex_unlock(&FWrulelock)
-    # =============================== #
+    # UNLOCKING ACCESS TO FIREWALL RULES
+    # ===================================
 
-    # SYSTEM RULES will have cfirewall invoke action directly since this traffic does not need further inspection
+    # --------------------
+    # NFQUEUE VERDICT
+    # --------------------
+    # SYSTEM RULES will have cfirewall invoke action directly
     if (inspection_results.fw_section == SYSTEM_RULES):
 
         nfq_set_verdict(qh, pktid, inspection_results.action, pktdata_len, pktdata)
 
-        system_rule = 1  # only used by verbose logging.
+        system_rule = 1  # used by VERBOSE logging.
 
     else:
-        # verdict is defined here based on BYPASS flag.
-        # if not BYPASS, ip proxy is next in line regardless of action to gather geolocation data
-        # if BYPASS, invoke the rule action without forwarding to another queue. only to be used for testing and
-        #   toggled via an argument to nf_run().
-        verdict = inspection_results.action if BYPASS else IP_PROXY << TWO_BYTES | NF_QUEUE
+        # if PROXY_BYPASS, cfirewall will invoke the rule action without forwarding to another queue.
+        # if not PROXY_BYPASS, forward to ip proxy regardless of action for geolocation log or local DNS record
+        verdict = inspection_results.action if PROXY_BYPASS else IP_PROXY << TWO_BYTES | NF_QUEUE
 
         nfq_set_verdict2(qh, pktid, verdict, inspection_results.mark, pktdata_len, pktdata)
 
-    # verdict is being used to eval whether packet matched a system rule. 0 verdict infers this also, but for ease
-    # of reading, ill have both.
+    # verdict is being used to eval whether the packet matched a system rule.
+    # a 0 verdict infers this also, but for ease of reading, ill use both.
     if (VERBOSE):
+        pkt_print(&hw, ip_header, proto_header)
+
         printf('[C/packet] action=%u, verdict=%u, system_rule=%u\n', inspection_results.action, verdict, system_rule)
 
-    # libnfnetlink.c return >> libnetfiler_queue return >> CFirewall._run.
-    # < 0 vals are errors, but return is being ignored by CFirewall._run. there may be a use for sending messages
-    # back to socket loop, but who knows.
+    # return heirarchy -> libnfnetlink.c >> libnetfiler_queue >> CFirewall._run.
+    # < 0 vals are errors, but return is being ignored by CFirewall._run.
     return OK
 
-# explicit inline declaration needed for compiler to know to inline this function
 cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header, u_int8_t direction) nogil:
 
     cdef:
@@ -214,10 +219,7 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
         u_int32_t iph_src_ip = ntohl(ip_header.saddr)
         u_int32_t iph_dst_ip = ntohl(ip_header.daddr)
 
-        # ip > country code
-        # NOTE: this will be calculated regardless of a rule match so this process can take over geolocation
-        #  processing for all modules. ip proxy will still do the logging and profile blocking it just won't need to
-        #  lookup the country code.
+        # ip address to country code
         u_int16_t src_country = GEOLOCATION.search(iph_src_ip & MSB, iph_src_ip & LSB)
         u_int16_t dst_country = GEOLOCATION.search(iph_dst_ip & MSB, iph_dst_ip & LSB)
 
@@ -229,9 +231,6 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
 
         # security profile loop
         size_t i, idx
-
-    if (VERBOSE):
-        pkt_print(hw, ip_header, proto_header)
 
     for section_num in range(FW_SECTION_COUNT):
 
@@ -260,8 +259,8 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
             # ------------------------------------------------------------------ #
             # GEOLOCATION or IP/NETMASK
             # ------------------------------------------------------------------ #
-            # geolocation matching repurposes network id and netmask fields in the firewall rule. net id of -1 flags
-            # the rule as a geolocation rule with the country code using the netmask field.
+            # geolocation repurposes the network id and netmask fields in the firewall rule.
+            # net id of -1 will identify geolocation objects.
             if not network_match(rule.s_networks, iph_src_ip, src_country):
                 continue
 
@@ -269,7 +268,7 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
                 continue
 
             # ------------------------------------------------------------------ #
-            # PROTOCOL / PORT (now supports objects + object groups)
+            # PROTOCOL / PORT
             # ------------------------------------------------------------------ #
             if not service_match(rule.s_services, ip_header.protocol, ntohs(proto_header.s_port)):
                 continue
@@ -286,8 +285,7 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
             # ------------------------------------------------------------------ #
             # MATCH ACTION | return rule options
             # ------------------------------------------------------------------ #
-            # drop will inherently forward to ip proxy for geo inspection. ip proxy will call drop.
-            # notify caller which section match was in. this will be used to skip inspection for system access rules
+            # drop will inherently forward to the ip proxy for geo inspection and local dns records.
             results.fw_section = section_num
             results.action = rule.action
             results.mark = tracked_geo << FOUR_BITS | direction << TWO_BITS | rule.action
@@ -308,10 +306,9 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
 
     return results
 
-# ================================================================== #
-# Firewall matching functions (inline)
-# ================================================================== #
-
+# ================================== #
+# Firewall Matching Functions
+# ================================== #
 # attacker blocklist membership test
 cdef inline bint in_blocklist(u_int32_t src_host) nogil:
 
@@ -422,9 +419,9 @@ cdef inline bint service_match(ServiceArray svc_defs, u_int16_t pkt_protocol, u_
     # default action
     return NO_MATCH
 
-# ============================================
+# ================================== #
 # PRINT FUNCTIONS
-# ============================================
+# ================================== #
 cdef inline void pkt_print(HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header) nogil:
     printf(<char*>'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv-PACKET-vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n')
     printf('in-zone=%u, out-zone=%u \n', hw.in_zone, hw.out_zone)
@@ -483,10 +480,9 @@ cdef inline void obj_print(int name, void *object) nogil:
 
         printf('svc_obj, proto=%u start_port=%u end_port=%u\n', svc_obj.protocol, svc_obj.start_port, svc_obj.end_port)
 
-
-# ============================================
+# ================================== #
 # C CONVERSION / INIT FUNCTIONS
-# ============================================
+# ================================== #
 cdef void process_traffic(nfq_handle *h) nogil:
 
     cdef:
@@ -563,9 +559,9 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
     fw_rule.sec_profiles[1] = <u_int8_t>rule['dns_profile']
     fw_rule.sec_profiles[2] = <u_int8_t>rule['ips_profile']
 
-# ============================================
-# C EXTENSION - Python Communication Pipeline
-# ============================================
+# ================================== #
+# C EXTENSION - Python Comm Pipeline
+# ================================== #
 cdef u_int32_t MAX_COPY_SIZE = 4016 # 4096(buf) - 80
 cdef u_int32_t DEFAULT_MAX_QUEUELEN = 8192
 
@@ -577,9 +573,9 @@ cdef u_int32_t SOCK_RCV_SIZE = 1024 * 4796 // 2
 cdef class CFirewall:
 
     def set_options(self, int bypass, int verbose):
-        global BYPASS, VERBOSE
+        global PROXY_BYPASS, VERBOSE
 
-        BYPASS  = <bint>bypass
+        PROXY_BYPASS  = <bint>bypass
         VERBOSE = <bint>verbose
 
         if (bypass):
@@ -591,8 +587,8 @@ cdef class CFirewall:
     def nf_run(self):
         '''calls internal C run method to engage nfqueue processes.
 
-        this call will run forever, but will release the GIL prior to entering C and never try to reacquire it.'''
-
+        this call will run forever, but will release the GIL prior to entering C and never try to reacquire it.
+        '''
         print('<releasing GIL>')
         # release gil and never look back.
         with nogil:
@@ -619,8 +615,8 @@ cdef class CFirewall:
         '''initializes Cython Extension HashTrie for use by CFirewall.
          
         py_trie is passed through as data source and reference to function is globally assigned. MSB and LSB definitions 
-        are also globally assigned.'''
-
+        are also globally assigned.
+        '''
         global GEOLOCATION, MSB, LSB
 
         cdef size_t trie_len = len(geolocation_trie)
@@ -634,10 +630,10 @@ cdef class CFirewall:
         return OK
 
     cpdef int update_zones(self, PyArray zone_map) with gil:
-        '''acquires FWrule lock then updates the zone values by interface index. max slots defined by
-        FW_MAX_ZONE_COUNT. the GIL will be acquired before any code execution.
+        '''acquires FWrule lock then updates the zone values by interface index.
+        
+        MAX_SLOTS defined by FW_MAX_ZONE_COUNT. the GIL will be acquired before any code execution.
         '''
-
         cdef size_t i
 
         pthread_mutex_lock(&FWrulelock)
@@ -652,10 +648,11 @@ cdef class CFirewall:
         return OK
 
     cpdef int update_ruleset(self, size_t ruleset, list rulelist) with gil:
-        '''acquires FWrule lock then rewrites the corresponding section ruleset. the current length var
-        will also be update while the lock is held. the GIL will be acquired before any code execution.
+        '''acquires FWrule lock then rewrites the corresponding section ruleset.
+        
+        the current length var will also be update while the lock is held. 
+        the GIL will be acquired before any code execution.
         '''
-
         cdef:
             size_t i
             dict fw_rule

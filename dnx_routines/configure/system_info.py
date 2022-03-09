@@ -11,6 +11,7 @@ from functools import partial
 from datetime import datetime, timedelta
 from subprocess import run, CalledProcessError, DEVNULL
 
+from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR, fast_time, str_join, NO_DELAY, FIVE_SEC, ONE_HOUR
 from dnx_gentools.file_operations import load_configuration, load_data
 
@@ -19,21 +20,11 @@ __all__ = (
 )
 
 util_shell = partial(run, shell=True, capture_output=True, text=True)
-
+Timestamp = Union[int, float]
 
 class Interface:
-    '''This class is being deprecated and being replaced by dnx_interface module in iptools dir.'''
-
-    @staticmethod
-    def ip_address(interface):
-        output = util_shell(f'ifconfig {interface}').stdout.splitlines(8)
-        for line in output:
-            if('inet' in line):
-                line = line.strip().split()
-                ip = line[1]
-#                print(ip)
-                return ip
-
+    '''This class is being deprecated and being replaced by the interface ops module in iptools dir.
+    '''
     @staticmethod
     def mtu(interface):
         output = util_shell(f'ifconfig {interface}').stdout.splitlines(8)
@@ -45,27 +36,6 @@ class Interface:
                 mtu = 1500
 #                print(mtu)
             return mtu
-
-    @staticmethod
-    def netmask(interface):
-        output = util_shell(f'ifconfig {interface}').stdout.splitlines(8)
-        for line in output:
-            if ('netmask' in line):
-                line = line.strip().split()
-                netmask = line[3]
-#                print(netmask)
-                return netmask
-
-    @staticmethod
-    def broadcast_address(interface):
-        '''returns ip address object for the passed in interface networks broadcast address.'''
-        output = util_shell(f'ifconfig {interface}').stdout.splitlines(8)
-        for line in output:
-            if ('broadcast' in line):
-                line = line.strip().split()
-                broadcast = line[5]
-#                print(broadcast)
-                return IPv4Address(broadcast)
 
     @staticmethod
     def bandwidth():
@@ -87,21 +57,11 @@ class Interface:
 
                 return dfg
 
-    @staticmethod
-    def default_gateways_mac_address(default_gateway):
-        output = util_shell('arp -n -e').stdout.splitlines(8)
-        for line in output:
-            line = line.split()
-            if(line[0] == default_gateway):
-                dfg_mac = line[2]
-
-                return dfg_mac
-
 
 class System:
 
     @staticmethod
-    def restart():
+    def restart() -> None:
         sleep(FIVE_SEC)
         run('sudo reboot', shell=True)
 
@@ -109,13 +69,13 @@ class System:
     # ^ same for restart
     # TODO: check if the delay is still needed. it should be done via a delay on the caller side now.
     # TODO: implement disk sync syscall to ensure all data is written to disk prior to shutdown
-    def shutdown():
+    def shutdown() -> None:
         sleep(FIVE_SEC)
         run('sudo shutdown', shell=True)
 
     @staticmethod
     # TODO: this seems completely fucked. ?????? are you high and drunk?
-    def cpu_usage():
+    def cpu_usage() -> str:
         with open('/proc/stat', 'r') as cpu:
             line = cpu.readline().split()
 
@@ -128,7 +88,7 @@ class System:
         return f'{percent}%'
 
     @staticmethod
-    def uptime():
+    def uptime() -> str:
         with open('/proc/uptime', 'r') as uptime:
             uptime = int(float(uptime.readline().split()[0]))
 
@@ -146,7 +106,7 @@ class System:
         return uptime
 
     @staticmethod
-    def ram_usage():
+    def ram_usage() -> str:
         '''returns available ram %. 69.82%'''
         total, available = None, None
         with open('/proc/meminfo', 'r') as memory:
@@ -164,55 +124,61 @@ class System:
         return ram
 
     @staticmethod
-    def offset_and_format(logged_time):
-        '''
-        convenience wrapper around System.calculate_time_offset and System.format_date_time.
+    def offset_and_format(logged_time: Timestamp):
+        '''convenience wrapper around System.calculate_time_offset and System.format_date_time.
 
             System.format_date_time(System.calculate_time_offset(logged_time))
         '''
-
         return System.format_date_time(System.calculate_time_offset(logged_time))
 
     @staticmethod
-    def calculate_time_offset(logged_time):
-        '''returns modified time based on current time offset settings.'''
-        logging = load_configuration('logging_client')
+    def calculate_time_offset(logged_time: Timestamp) -> Timestamp:
+        '''returns modified time based on current time offset settings.
+        '''
+        log_settings = load_configuration('logging_client')
 
-        os_direction = logging['time_offset->direction']
-        os_amount    = logging['time_offset->amount']
-        offset       = int(f'{os_direction}{os_amount}') * ONE_HOUR
+        os_dir = log_settings['time_offset->direction']
+        os_amt = log_settings['time_offset->amount']
+
+        offset = int(f'{os_dir}{os_amt}') * ONE_HOUR
 
         return logged_time + offset
 
     @staticmethod
-    def format_log_time(epoch):
-        '''return date and time in front end log format. 2019 Jun 24 19:08:15'''
+    def format_log_time(epoch: Timestamp) -> str:
+        '''return date and time in the front end log format. 2019 Jun 24 19:08:15
+        '''
         f_time = ctime(epoch).split()
 
         return f'{f_time[4]} {f_time[1]} {f_time[2]} {f_time[3]}'
 
     @staticmethod
-    def format_date_time(epoch):
-        '''return date and time in general format. 19:08:15 Jun 24 2019'''
+    def format_date_time(epoch: Timestamp) -> str:
+        '''return date and time in the general format.
+
+            19:08:15 Jun 24 2019
+        '''
         f_time = ctime(epoch).split()
 
         return f'{f_time[3]} {f_time[1]} {f_time[2]} {f_time[4]}'
 
     @staticmethod
-    def format_time(epoch):
-        '''return time in general 24h format. 19:08:15'''
+    def format_time(epoch: Timestamp) -> str:
+        '''return time in the general 24h format.
 
+            19:08:15
+        '''
         return f'{ctime(epoch).split()[3]}'
 
     @staticmethod
-    def date(timestamp=None, string=False):
-        '''
-        return list of year, month, day of current system time as a list of strings. ['2019', '06', '24']
+    def date(timestamp: Optional[Timestamp] = None, string: bool = False) -> Union[str, list[str, str, str]]:
+        '''return list of year, month, day of current system time as a list of strings.
 
-        use timestamp argument to override current date with date of timestamp.
+            ['2019', '06', '24']
 
-        setting string=True will return joined list.
+        use timestamp argument to override the current date with date of timestamp.
 
+        setting string=True will return a joined list.
         '''
         dt = datetime.now()
         if (timestamp):
@@ -225,18 +191,18 @@ class System:
         return dt_list
 
     @staticmethod
-    def time():
+    def time() -> list[int, int]:
         time = datetime.now()
 
         return [time.hour, time.minute]
 
     @staticmethod
-    def dns_status():
+    def dns_status() -> dict:
         dns_servers_status = load_data('dns_server.stat')
         dns_server = load_configuration('dns_server')
 
         tls_enabled = dns_server['tls->enabled']
-        dns_servers = dict(dns_server.get_items('resolvers'))
+        dns_servers = dns_server.get_dict('resolvers')
 
         for server, server_info in dns_servers.items():
             tls, dns = 'Waiting', 'Waiting'
@@ -255,13 +221,13 @@ class System:
         return dns_servers
 
     @staticmethod
-    def backups():
+    def backups() -> dict[str, float]:
         backups = {}
         backup_dir = f'{HOME_DIR}/dnx_system/config_backups'
         files = os.listdir(backup_dir)
         for file in files:
             name = file.replace('.tar', '')
-            creation_time = os.stat(f'{backup_dir}/{file}').st_ctime # this is not accurate
+            creation_time = os.stat(f'{backup_dir}/{file}').st_ctime  # this is not accurate
 
             backups[name] = creation_time
 
@@ -269,16 +235,16 @@ class System:
         return backups
 
     @staticmethod
-    def ips_passively_blocked(*, table='raw', block_length=NO_DELAY):
-        '''
-        return list of currently blocked hosts in the specific iptables table. default table is 'raw'.
+    def ips_passively_blocked(*, table: str = 'raw', block_length: int = NO_DELAY) -> list[tuple[str, int]]:
+        '''return list of currently blocked hosts in the specific iptables table.
+
+        the default table is 'raw'.
 
         if block_length is defined, only hosts that have reached point of expiration will be returned.
-        block_length should be an integer value of the amount of seconds that represent the time to expire.
+        block_length should be an integer value of the number of seconds that represent the time to expire.
 
             blocked_hosts = System.ips_passivley_blocked(block_length=100)
         '''
-
         current_time = fast_time()
 
         # ACCEPT all -- 8.8.8.8(src) 0.0.0.0/0(dst) /* 123456 */L
@@ -300,7 +266,7 @@ class System:
 
     @staticmethod
     # TODO: this can be refactored to follow dnat/snat format for parsing
-    def firewall_rules(*, chain='GLOBAL_ZONE'):
+    def firewall_rules(*, chain: str = 'GLOBAL_ZONE') -> list[tuple]:
         # getting list of all rules in specified chain
         output = util_shell(f'sudo iptables -nL {chain} --line-number').stdout.splitlines()
 
@@ -331,7 +297,7 @@ class System:
         return firewallrules
 
     @staticmethod
-    def nat_rules(*, nat_type='DSTNAT'):
+    def nat_rules(*, nat_type: str = 'DSTNAT') -> list[tuple[int, dict]]:
         natrules = []
         output = util_shell(f'sudo iptables -t nat --list-rules | grep "A {nat_type}"').stdout.splitlines()
 
@@ -367,20 +333,20 @@ class System:
         return natrules
 
     @staticmethod
-    def ip_whitelist():
+    def ip_whitelist() -> dict[str, str]:
         ip_whitelist = {}
         output = util_shell('sudo iptables -nL IP_WHITELIST --line-number').stdout.splitlines()
         for rule in output:
             rule = rule.split()
             if (not rule[0].isdigit()): continue
 
-            ip_whitelist[rule[0]] = rule[4] # host ip
+            ip_whitelist[rule[0]] = rule[4]  # host ip
 
 #        print(ip_whitelist)
         return ip_whitelist
 
     @staticmethod
-    def standard_to_cidr(netmask):
+    def standard_to_cidr(netmask: str) -> str:
         return {
             '255.255.255.0'  : '24', '255.255.255.128': '25', '255.255.255.192': '26',
             '255.255.255.224': '27', '255.255.255.240': '28', '255.255.255.248': '29',
@@ -402,13 +368,13 @@ class Services:
             return True
 
     @staticmethod
-    def start(service: str):
+    def start(service: str) -> None:
         _svc_shell(f'sudo systemctl start {service}')
 
     @staticmethod
-    def restart(service: str):
+    def restart(service: str) -> None:
         _svc_shell(f'sudo systemctl restart {service}')
 
     @staticmethod
-    def stop(service: str):
+    def stop(service: str) -> None:
         _svc_shell(f'sudo systemctl stop {service}')

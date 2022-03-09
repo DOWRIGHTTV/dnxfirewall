@@ -11,13 +11,13 @@ from dnx_gentools.file_operations import ConfigurationManager, load_configuratio
 
 from dnx_routines.logging.log_client import Log
 
-DEFAULT_VERSION: str = 'firewall_pending'
+DEFAULT_VERSION: str = 'pending'
 DEFAULT_PATH: str = 'dnx_system/iptables'
 USER_PATH: str = f'{DEFAULT_PATH}/usr'
 
-PENDING_RULE_FILE: str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/firewall_pending.cfg'
-ACTIVE_RULE_FILE:  str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/firewall_active.cfg'
-COPY_RULE_FILE:    str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/firewall_copy.cfg'
+PENDING_RULE_FILE: str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/pending.firewall'
+ACTIVE_RULE_FILE:  str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/active.firewall'
+COPY_RULE_FILE:    str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/pending.copy'
 
 ConfigurationManager.set_log_reference(Log)
 
@@ -74,7 +74,7 @@ class FirewallManage:
             obj_lookup = cls.object_manager.lookup
 
             # using standalone functions due to ConfigManager not being compatible with these operations
-            fw_rules = load_configuration('firewall_pending', filepath='dnx_system/iptables')
+            fw_rules = load_configuration('pending', ext='.firewall', filepath='dnx_system/iptables')
 
             fw_rule_copy = fw_rules.get_dict()
 
@@ -87,7 +87,7 @@ class FirewallManage:
                     rule['dst_network'] = [obj_lookup(x, convert=True) for x in rule['dst_network']]
                     rule['dst_service'] = [obj_lookup(x, convert=True) for x in rule['dst_service']]
 
-            write_configuration(fw_rule_copy, 'firewall_copy', filepath='dnx_system/iptables')
+            write_configuration(fw_rule_copy, 'pending', ext='.copy', filepath='dnx_system/iptables')
 
             print('FUTURE ACTIVE', fw_rules)
 
@@ -127,8 +127,8 @@ class FirewallManage:
 
     @staticmethod
     def is_pending_changes():
-        active = calculate_file_hash('firewall_active.cfg', folder='iptables/usr')
-        pending = calculate_file_hash('firewall_pending.cfg', folder='iptables/usr')
+        active = calculate_file_hash('active.firewall', folder='iptables/usr')
+        pending = calculate_file_hash('pending.firewall', folder='iptables/usr')
 
         # if the user has never modified rules, there is not a pending change. the active file can be none if pending is
         # present. a commit will write the active file.
