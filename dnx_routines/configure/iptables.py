@@ -5,7 +5,7 @@ from __future__ import annotations
 import fcntl
 
 from dnx_gentools.def_constants import *
-from dnx_gentools.def_enums import Queue
+from dnx_gentools.def_enums import Queue, CFG
 from dnx_gentools.file_operations import load_data
 
 __all__ = (
@@ -273,17 +273,18 @@ class IPTablesManager:
 
     @staticmethod
     def proxy_add_rule(ip_address, timestamp, *, table, chain):
-        '''inject iptable rule into the specified table and chain. the ip_address argument will be blocked
-        as a source and timestamp will be set as a comment.'''
+        '''inject an iptable rule into the specified table and chain.
 
+        the ip_address argument will be blocked as a source and timestamp will be set as a comment.
+        '''
         comment = f'-m comment --comment {timestamp}'
 
         shell(f'sudo iptables -t {table} -A {chain} -s {ip_address} -j DROP {comment}')
 
     @staticmethod
     def proxy_del_rule(ip_address, timestamp, *, table, chain):
-        '''remove iptable rule from specified table and chain.'''
-
+        '''remove an iptable rule from specified table and chain.
+        '''
         comment = f'-m comment --comment {timestamp}'
 
         shell(f'sudo iptables -t {table} -D {chain} -s {ip_address} -j DROP {comment}')
@@ -301,6 +302,6 @@ class IPTablesManager:
         shell(f'sudo iptables -F DOH')
 
 
-if (INIT_MODULE):
+if (INITIALIZE_MODULE('iptables')):
     with IPTablesManager() as iptables:
         iptables.apply_defaults()

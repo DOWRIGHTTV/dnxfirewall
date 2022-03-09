@@ -31,7 +31,7 @@ def INITIALIZE_MODULE(log_name: str):
 ppt: _Callable[[_Any], None] = _PrettyPrinter(sort_dicts=False).pprint
 
 console_log: _Callable[[str], None] = _partial(print, flush=True)
-shell: _Callable[[str], None] = _partial(_run, shell=True, stdout=_DEVNULL, stderr=_DEVNULL)
+shell: _Callable[..., None] = _partial(_run, shell=True, stdout=_DEVNULL, stderr=_DEVNULL)
 
 RUN_FOREVER: _Iterator[int] = _repeat(1)
 fast_sleep: _Callable[[_Union[int, float]], None] = _time.sleep
