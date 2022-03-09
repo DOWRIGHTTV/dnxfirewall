@@ -87,7 +87,7 @@ firewall_rules[AFTER_RULES]  = <FWrule*>calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(F
 # this will allow us to skip over sections that are empty and know how far to iterate over.
 # tracking this allows the ability to not clear pointers of dangling rules
 # since they will be out of bounds of specified iteration.
-cdef u_int32_t CUR_RULE_COUNTS[FW_SECTION_COUNT]
+cdef uint32_t CUR_RULE_COUNTS[FW_SECTION_COUNT]
 
 CUR_RULE_COUNTS[SYSTEM_RULES] = 0 # SYSTEM_CUR_RULE_COUNT
 CUR_RULE_COUNTS[BEFORE_RULES] = 0 # BEFORE_CUR_RULE_COUNT
@@ -95,12 +95,12 @@ CUR_RULE_COUNTS[MAIN_RULES]   = 0 # MAIN_CUR_RULE_COUNT
 CUR_RULE_COUNTS[AFTER_RULES]  = 0 # AFTER_CUR_RULE_COUNT
 
 # stores zone(integer value) at index, which corresponds to if_nametoindex() / value returned from get_in/outdev()
-cdef u_int16_t INTF_ZONE_MAP[FW_MAX_ZONE_COUNT]
+cdef uint16_t INTF_ZONE_MAP[FW_MAX_ZONE_COUNT]
 
 # stores the active attackers set/controlled by IPS/IDS
-cdef u_int32_t *ATTACKER_BLOCKLIST = <u_int32_t*>calloc(FW_MAX_ATTACKERS, sizeof(u_int32_t))
+cdef uint32_t *ATTACKER_BLOCKLIST = <uint32_t*>calloc(FW_MAX_ATTACKERS, sizeof(uint32_t))
 
-cdef u_int32_t BLOCKLIST_CUR_SIZE = 0 # if we decide to track size for appends
+cdef uint32_t BLOCKLIST_CUR_SIZE = 0 # if we decide to track size for appends
 
 # ================================== #
 # PRIMARY INSPECTION LOGIC
@@ -119,7 +119,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
 
         bint system_rule = 0
 
-        u_int8_t direction
+        uint8_t direction
         size_t pktdata_len, iphdr_len
 
         InspectionResults inspection_results
@@ -128,7 +128,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # definition w/ assignment via function calls
     cdef:
         nfqnl_msg_packet_hdr *hdr = nfq_get_msg_packet_hdr(nfa)
-        u_int32_t pktid = ntohl(hdr.packet_id)
+        uint32_t pktid = ntohl(hdr.packet_id)
 
         # interface index which corresponds to zone map index
         uint8_t in_intf = nfq_get_indev(nfa)
@@ -207,24 +207,24 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # < 0 vals are errors, but return is being ignored by CFirewall._run.
     return OK
 
-cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header, u_int8_t direction) nogil:
+cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header, uint8_t direction) nogil:
 
     cdef:
         FWrule rule
         size_t section_num, rule_num
 
-        u_int32_t rule_src_protocol, rule_dst_protocol # <16 bit proto | 16 bit port>
+        uint32_t rule_src_protocol, rule_dst_protocol # <16 bit proto | 16 bit port>
 
         # normalizing src/dst ip in header to host order
-        u_int32_t iph_src_ip = ntohl(ip_header.saddr)
-        u_int32_t iph_dst_ip = ntohl(ip_header.daddr)
+        uint32_t iph_src_ip = ntohl(ip_header.saddr)
+        uint32_t iph_dst_ip = ntohl(ip_header.daddr)
 
         # ip address to country code
-        u_int16_t src_country = GEOLOCATION.search(iph_src_ip & MSB, iph_src_ip & LSB)
-        u_int16_t dst_country = GEOLOCATION.search(iph_dst_ip & MSB, iph_dst_ip & LSB)
+        uint16_t src_country = GEOLOCATION.search(iph_src_ip & MSB, iph_src_ip & LSB)
+        uint16_t dst_country = GEOLOCATION.search(iph_dst_ip & MSB, iph_dst_ip & LSB)
 
         # value used by ip proxy which is normalized and always represents the external ip address
-        u_int16_t tracked_geo = src_country if direction == INBOUND else dst_country
+        uint16_t tracked_geo = src_country if direction == INBOUND else dst_country
 
         # return struct (section | action | mark)
         InspectionResults results
@@ -310,11 +310,11 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
 # Firewall Matching Functions
 # ================================== #
 # attacker blocklist membership test
-cdef inline bint in_blocklist(u_int32_t src_host) nogil:
+cdef inline bint in_blocklist(uint32_t src_host) nogil:
 
     cdef:
         size_t i
-        u_int32_t blocked_host
+        uint32_t blocked_host
 
     pthread_mutex_lock(&FWblocklistlock)
 
@@ -333,7 +333,7 @@ cdef inline bint in_blocklist(u_int32_t src_host) nogil:
     return NO_MATCH
 
 # generic function for src/dst zone matching
-cdef inline bint zone_match(ZoneArray rule_defs, u_int8_t pkt_zone) nogil:
+cdef inline bint zone_match(ZoneArray rule_defs, uint8_t pkt_zone) nogil:
 
     cdef size_t i
 
@@ -355,7 +355,7 @@ cdef inline bint zone_match(ZoneArray rule_defs, u_int8_t pkt_zone) nogil:
     return NO_MATCH
 
 # generic function for source OR destination network obj matching
-cdef inline bint network_match(NetworkArray net_defs, u_int32_t iph_ip, u_int16_t country) nogil:
+cdef inline bint network_match(NetworkArray net_defs, uint32_t iph_ip, uint16_t country) nogil:
 
     cdef:
         size_t i
@@ -389,7 +389,7 @@ cdef inline bint network_match(NetworkArray net_defs, u_int32_t iph_ip, u_int16_
     return NO_MATCH
 
 # generic function that can handle source OR destination proto/port matching
-cdef inline bint service_match(ServiceArray svc_defs, u_int16_t pkt_protocol, u_int16_t pkt_port) nogil:
+cdef inline bint service_match(ServiceArray svc_defs, uint16_t pkt_protocol, uint16_t pkt_port) nogil:
 
     cdef:
         size_t i
@@ -521,53 +521,53 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
     # ======
     fw_rule.s_zones.len = <size_t>len(rule['src_zone'])
     for i in range(fw_rule.s_zones.len):
-        fw_rule.s_zones.objects[i] = <u_int8_t>rule['src_zone'][i]
+        fw_rule.s_zones.objects[i] = <uint8_t>rule['src_zone'][i]
 
     fw_rule.s_networks.len = <size_t>len(rule['src_network'])
     for i in range(fw_rule.s_networks.len):
         fw_rule.s_networks.objects[i].netid   = <long>rule['src_network'][i][0]
-        fw_rule.s_networks.objects[i].netmask = <u_int32_t>rule['src_network'][i][1]
+        fw_rule.s_networks.objects[i].netmask = <uint32_t>rule['src_network'][i][1]
 
     fw_rule.s_services.len = <size_t>len(rule['src_service'])
     for i in range(fw_rule.s_services.len):
-        fw_rule.s_services.objects[i].protocol   = <u_int16_t>rule['src_service'][i][0]
-        fw_rule.s_services.objects[i].start_port = <u_int16_t>rule['src_service'][i][1]
-        fw_rule.s_services.objects[i].end_port   = <u_int16_t>rule['src_service'][i][2]
+        fw_rule.s_services.objects[i].protocol   = <uint16_t>rule['src_service'][i][0]
+        fw_rule.s_services.objects[i].start_port = <uint16_t>rule['src_service'][i][1]
+        fw_rule.s_services.objects[i].end_port   = <uint16_t>rule['src_service'][i][2]
 
     # ===========
     # DESTINATION
     # ===========
     fw_rule.d_zones.len = <size_t>len(rule['dst_zone'])
     for i in range(fw_rule.d_zones.len):
-        fw_rule.d_zones.objects[i] = <u_int8_t>rule['dst_zone'][i]
+        fw_rule.d_zones.objects[i] = <uint8_t>rule['dst_zone'][i]
 
     fw_rule.d_networks.len = <size_t>len(rule['dst_network'])
     for i in range(fw_rule.d_networks.len):
         fw_rule.d_networks.objects[i].netid   = <long>rule['dst_network'][i][0]
-        fw_rule.d_networks.objects[i].netmask = <u_int32_t>rule['dst_network'][i][1]
+        fw_rule.d_networks.objects[i].netmask = <uint32_t>rule['dst_network'][i][1]
 
     fw_rule.d_services.len = <size_t>len(rule['dst_service'])
     for i in range(fw_rule.d_services.len):
-        fw_rule.d_services.objects[i].protocol   = <u_int16_t>rule['dst_service'][i][0]
-        fw_rule.d_services.objects[i].start_port = <u_int16_t>rule['dst_service'][i][1]
-        fw_rule.d_services.objects[i].end_port   = <u_int16_t>rule['dst_service'][i][2]
+        fw_rule.d_services.objects[i].protocol   = <uint16_t>rule['dst_service'][i][0]
+        fw_rule.d_services.objects[i].start_port = <uint16_t>rule['dst_service'][i][1]
+        fw_rule.d_services.objects[i].end_port   = <uint16_t>rule['dst_service'][i][2]
 
-    fw_rule.action = <u_int8_t>rule['action']
-    fw_rule.log    = <u_int8_t>rule['log']
+    fw_rule.action = <uint8_t>rule['action']
+    fw_rule.log    = <uint8_t>rule['log']
 
-    fw_rule.sec_profiles[0] = <u_int8_t>rule['ipp_profile']
-    fw_rule.sec_profiles[1] = <u_int8_t>rule['dns_profile']
-    fw_rule.sec_profiles[2] = <u_int8_t>rule['ips_profile']
+    fw_rule.sec_profiles[0] = <uint8_t>rule['ipp_profile']
+    fw_rule.sec_profiles[1] = <uint8_t>rule['dns_profile']
+    fw_rule.sec_profiles[2] = <uint8_t>rule['ips_profile']
 
 # ================================== #
 # C EXTENSION - Python Comm Pipeline
 # ================================== #
-cdef u_int32_t MAX_COPY_SIZE = 4016 # 4096(buf) - 80
-cdef u_int32_t DEFAULT_MAX_QUEUELEN = 8192
+cdef uint32_t MAX_COPY_SIZE = 4016 # 4096(buf) - 80
+cdef uint32_t DEFAULT_MAX_QUEUELEN = 8192
 
 # socket queue should hold max number of packets of copy size bytes
 # formula: DEF_MAX_QUEUELEN * (MaxCopySize+SockOverhead) / 2
-cdef u_int32_t SOCK_RCV_SIZE = 1024 * 4796 // 2
+cdef uint32_t SOCK_RCV_SIZE = 1024 * 4796 // 2
 
 
 cdef class CFirewall:
@@ -594,7 +594,7 @@ cdef class CFirewall:
         with nogil:
             process_traffic(self.h)
 
-    def nf_set(self, u_int16_t queue_num):
+    def nf_set(self, uint16_t queue_num):
         self.h = nfq_open()
         self.qh = nfq_create_queue(self.h, queue_num, <nfq_callback*>cfirewall_rcv, <void*>self)
 
@@ -676,11 +676,11 @@ cdef class CFirewall:
         return OK
 
     # TODO: see if this requires the gil
-    cpdef int remove_blockedlist(self, u_int32_t host_ip):
+    cpdef int remove_blockedlist(self, uint32_t host_ip):
 
         cdef: 
             size_t i, idx
-            u_int32_t blocked_ip
+            uint32_t blocked_ip
 
         pthread_mutex_lock(&FWblocklistlock)
 
