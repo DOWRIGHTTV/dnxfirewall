@@ -167,18 +167,17 @@ def calculate_file_hash(file_to_hash: str, *, path: str = 'dnx_system', folder: 
 
     return file_hash
 
-def cfg_read_poller(watch_file: str, ext: bool = True, *, folder: str = 'data', class_method: bool = False):
+def cfg_read_poller(watch_file: str, *, folder: str = 'data', class_method: bool = False):
     '''Automate Class configuration file poll decorator.
 
     apply this decorator to all functions that will update configurations loaded in memory from json files.
     config file must be sent in via decorator argument.
     set class_method argument to true if being used with a class method.
+
+    extension will not be added to watch file automatically.
     '''
     if not isinstance(watch_file, str):
         raise TypeError('watch file must be a string.')
-
-    if (not ext):
-        watch_file += '.cfg'
 
     def decorator(function_to_wrap):
         if (not class_method):
@@ -441,7 +440,7 @@ class ConfigurationManager:
     def set_log_reference(cls, ref: LogHandler_T) -> None:
         '''sets logging class reference for configuration manager specific errors.
         '''
-        cls.log = ref
+        cls.log: LogHandler_T = ref
 
     def __init__(self, config_file: str = '', ext: str = '.cfg', file_path: Optional[str] = None) -> None:
         '''config_file can be omitted to allow for configuration lock to be used with
@@ -554,13 +553,13 @@ class Watcher:
         '_last_modified_time'
     )
 
-    def __init__(self, watch_file, folder, *, callback):
-        self._watch_file = watch_file
-        self._callback   = callback
+    def __init__(self, watch_file: str, folder: str, *, callback: Callable):
+        self._watch_file: str = watch_file
+        self._callback: Callable = callback
 
-        self._full_path = f'{HOME_DIR}/dnx_system/{folder}/usr/{watch_file}'
+        self._full_path: str = f'{HOME_DIR}/dnx_system/{folder}/usr/{watch_file}'
 
-        self._last_modified_time = 0
+        self._last_modified_time: int = 0
 
     # will check file for change in set intervals, currently using global constant for config file polling
     def watch(self, *args) -> None:

@@ -129,9 +129,10 @@ cdef enum:
     NF_MAX_VERDICT = NF_STOP
 
 cdef enum:
-    NONE     = 0
-    IP_PROXY = 1
-    IPS_IDS  = 2
+    NONE      = 0
+    IP_PROXY  = 1
+    DNS_PROXY = 2
+    IPS_IDS   = 3
 
     DROP   = 0
     ACCEPT = 1
@@ -193,8 +194,8 @@ cdef struct FWrule:
     u_int8_t     log
     u_int8_t     sec_profiles[SECURITY_PROFILE_COUNT]
         # ip_proxy - 0 off, > 1 profile number
-        # ips_ids - 0 off, 1 on
         # dns_proxy - 0 off, > 1 profile number
+        # ips_ids - 0 off, 1 on
 
 cdef struct HWinfo:
     u_int8_t    in_zone
