@@ -20,7 +20,7 @@ from datetime import datetime
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.standard_tools import looper, classproperty, Initialize
-from dnx_gentools.file_operations import load_configuration, cfg_read_poller, ConfigurationManager
+from dnx_gentools.file_operations import ConfigurationManager, load_configuration, load_data, cfg_read_poller
 
 from dnx_routines.configure.system_info import System
 
@@ -48,6 +48,8 @@ class LanRestrict:
     def __init__(self, name):
         self.initialize = Initialize(Log, name)
 
+        self.ip_proxy: IPProxy_T
+
     @classproperty
     def is_enabled(cls) -> bool:
         return cls._enabled
@@ -57,7 +59,7 @@ class LanRestrict:
         return cls._active
 
     @classmethod
-    def run(cls, ip_proxy: IPProxy) -> None:
+    def run(cls, ip_proxy: IPProxy_T) -> None:
         '''initializes settings and attributes then runs timer service in a new thread before returning.
         '''
         self = cls(ip_proxy.__name__)
@@ -134,14 +136,14 @@ class LanRestrict:
             dnx.write_configuration(time_restriction.expanded_user_data)
 
     def _load_restriction(self):
-        ip_proxy = load_configuration('ip_proxy')
-        logging = load_configuration('logging_client')
+        proxy_settings = load_configuration('ip_proxy')
+        log_settings = load_configuration('logging_client')
 
-        restriction_start  = ip_proxy['time_restriction->start']
-        restriction_length = ip_proxy['time_restriction->length']
+        restriction_start  = proxy_settings['time_restriction->start']
+        restriction_length = proxy_settings['time_restriction->length']
 
-        os_direction = logging['time_offset->direction']
-        os_amount    = logging['time_offset->amount']
+        os_direction = log_settings['time_offset->direction']
+        os_amount    = log_settings['time_offset->amount']
 
         offset = int(f'{os_direction}{os_amount}') * ONE_DAY
 
