@@ -109,7 +109,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
 
     # definitions or default assignments
     cdef:
-        u_int8_t *pktdata
+        uint8_t *pktdata
         IPhdr *ip_header
 
         # default proto_header values (used by icmp) and replaced with protocol specific values
@@ -123,7 +123,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         size_t pktdata_len, iphdr_len
 
         InspectionResults inspection_results
-        u_int32_t verdict
+        uint32_t verdict
 
     # definition w/ assignment via function calls
     cdef:
@@ -131,8 +131,8 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         u_int32_t pktid = ntohl(hdr.packet_id)
 
         # interface index which corresponds to zone map index
-        u_int8_t in_intf = nfq_get_indev(nfa)
-        u_int8_t out_intf = nfq_get_outdev(nfa)
+        uint8_t in_intf = nfq_get_indev(nfa)
+        uint8_t out_intf = nfq_get_outdev(nfa)
 
         # grabbing source mac address and casting to char array
         nfqnl_msg_packet_hw *_hw = nfq_get_packet_hw(nfa)
@@ -383,7 +383,7 @@ cdef inline bint network_match(NetworkArray net_defs, u_int32_t iph_ip, u_int16_
             return MATCH
 
     if (VERBOSE):
-        printf(<char *> 'no ip match %u: %u\n', iph_ip, country)
+        printf(<char*>'no ip match %u: %u\n', iph_ip, country)
 
     # default action
     return NO_MATCH
