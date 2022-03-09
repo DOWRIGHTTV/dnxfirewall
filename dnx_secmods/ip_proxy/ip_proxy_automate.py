@@ -26,7 +26,7 @@ class Configuration:
         self.initialize = Initialize(Log, name)
 
     @classmethod
-    def setup(cls, ip_proxy: Type[IPProxy]) -> None:
+    def setup(cls, ip_proxy: IPProxy_T) -> None:
         if (cls._setup):
             raise RuntimeError('configuration setup should only be called once.')
 
@@ -87,7 +87,7 @@ class Configuration:
 
         self.initialize.done()
 
-    @cfg_read_poller('ips')
+    @cfg_read_poller('ips_ids')
     def _get_open_ports(self, cfg_file: str) -> None:
         ips = load_configuration(cfg_file)
 

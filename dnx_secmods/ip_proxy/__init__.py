@@ -8,7 +8,7 @@ __all__ = (
     'IPProxy', 'IPPPacket',
 
     # TYPES
-    'IPPPacket_T'
+    'IPProxy_T', 'IPPPacket_T'
 )
 
 if (TYPE_CHECKING):
@@ -19,4 +19,5 @@ if (TYPE_CHECKING):
     # ======
     # TYPES
     # ======
+    IPProxy_T = Type[IPProxy]
     IPPPacket_T = Type[IPPPacket]

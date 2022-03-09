@@ -20,22 +20,24 @@ class Configuration:
     _setup = False
 
     __slots__ = (
-        'initialize', 'IPS', '_cfg_change',
+        'initialize', 'ips_ids', '_cfg_change',
     )
 
     def __init__(self, name):
         self.initialize  = Initialize(Log, name)
         self._cfg_change = threading.Event()
 
+        self.ips_ids: IPS_IDS_T
+
     @classmethod
-    def setup(cls, IPS):
+    def setup(cls, ips_ids: IPS_IDS_T):
         if (cls._setup):
             raise RuntimeError('configuration setup should only be called once.')
 
         cls._setup = True
 
-        self = cls(IPS.__name__)
-        self.IPS = IPS
+        self = cls(ips_ids.__name__)
+        self.ips_ids = ips_ids
 
         self._load_passive_blocking()
         threading.Thread(target=self._get_settings).start()
@@ -46,60 +48,60 @@ class Configuration:
 
         threading.Thread(target=self._clear_ip_tables).start()
 
-    # this resets any passively blocked hosts in the system on startup. persisting this
-    # data through service or system restarts is not really worth the energy.
+    # this resets any passively blocked hosts in the system on startup.
+    # persisting the data through service or system restarts is not really worth the energy.
     def _load_passive_blocking(self):
-        self.IPS.fw_rules = dict(System.ips_passively_blocked())
+        self.ips_ids.fw_rules = dict(System.ips_passively_blocked())
 
-    @cfg_read_poller('ips')
-    def _get_settings(self, cfg_file):
-        ips = load_configuration(cfg_file)
+    @cfg_read_poller('ips_ids')
+    def _get_settings(self, cfg_file: str) -> None:
+        proxy_settings: ConfigChain = load_configuration(cfg_file)
 
-        self.IPS.ids_mode = ips['ids_mode']
+        self.ips_ids.ids_mode = proxy_settings['ids_mode']
 
-        self.IPS.ddos_prevention = ips['ddos->enabled']
+        self.ips_ids.ddos_prevention = proxy_settings['ddos->enabled']
         # ddos CPS configured thresholds
-        self.IPS.connection_limits = {
-            PROTO.ICMP: ips['ddos->limits->source->icmp'],
-            PROTO.TCP:  ips['ddos->limits->source->tcp'],
-            PROTO.UDP:  ips['ddos->limits->source->udp']
+        self.ips_ids.connection_limits = {
+            PROTO.ICMP: proxy_settings['ddos->limits->source->icmp'],
+            PROTO.TCP:  proxy_settings['ddos->limits->source->tcp'],
+            PROTO.UDP:  proxy_settings['ddos->limits->source->udp']
         }
 
-        self.IPS.portscan_prevention = ips['port_scan->enabled']
-        self.IPS.portscan_reject = ips['port_scan->reject']
+        self.ips_ids.portscan_prevention = proxy_settings['port_scan->enabled']
+        self.ips_ids.portscan_reject = proxy_settings['port_scan->reject']
 
-        if (self.IPS.ddos_prevention and not self.IPS.ids_mode):
+        if (self.ips_ids.ddos_prevention and not self.ips_ids.ids_mode):
 
             # checking length(hours) to leave IP table rules in place for hosts part of ddos attacks
-            self.IPS.block_length = ips['passive_block_ttl'] * ONE_HOUR
+            self.ips_ids.block_length = proxy_settings['passive_block_ttl'] * ONE_HOUR
 
             # NOTE: this will provide a simple way to ensure very recently blocked hosts do not get their
             # rule removed if passive blocking is disabled.
-            if (not self.IPS.block_length):
-                self.IPS.block_length = FIVE_MIN
+            if (not self.ips_ids.block_length):
+                self.ips_ids.block_length = FIVE_MIN
 
         # if ddos engine is disabled
         else:
-            self.IPS.block_length = NO_DELAY
+            self.ips_ids.block_length = NO_DELAY
 
-        # src ips that will not trigger ips # TODO: does this even work? we use integer for ip addr now.
-        self.IPS.ip_whitelist = set([IPv4Address(ip) for ip in ips['whitelist->ip_whitelist']])
+        # src ips that will not trigger ips # FIXME: does this even work? we use integer for ip addr now.
+        self.ips_ids.ip_whitelist = set([IPv4Address(ip) for ip in proxy_settings['whitelist->ip_whitelist']])
 
         self._cfg_change.set()
         self.initialize.done()
 
-    # NOTE: determine whether default sleep timer is acceptable for this method. if not, figure out how to override
+    # NOTE: determine whether the default sleep timer is acceptable for this method. if not, figure out how to override
     # the setting set in the decorator or remove the decorator entirely.
-    @cfg_read_poller('ips')
-    def _get_open_ports(self, cfg_file):
-        ips = load_configuration(cfg_file)
+    @cfg_read_poller('ips_ids')
+    def _get_open_ports(self, cfg_file: str) -> None:
+        proxy_settings: ConfigChain = load_configuration(cfg_file)
 
-        self.IPS.open_ports = {
+        self.ips_ids.open_ports = {
             PROTO.TCP: {
-                int(local_port): int(wan_port) for wan_port, local_port in ips.get_items('open_protocols->tcp')
+                int(local_p): int(wan_p) for wan_p, local_p in proxy_settings.get_items('open_protocols->tcp')
             },
             PROTO.UDP: {
-                int(local_port): int(wan_port) for wan_port, local_port in ips.get_items('open_protocols->udp')
+                int(local_p): int(wan_p) for wan_p, local_p in proxy_settings.get_items('open_protocols->udp')
             }
         }
 
@@ -107,21 +109,21 @@ class Configuration:
         self.initialize.done()
 
     @looper(NO_DELAY)
-    def _update_system_vars(self):
+    def _update_system_vars(self) -> None:
         # waiting for any thread to report a change in configuration.
         self._cfg_change.wait()
 
         # resetting the config change event.
         self._cfg_change.clear()
 
-        open_ports = self.IPS.open_ports[PROTO.TCP] or self.IPS.open_ports[PROTO.UDP]
+        open_ports = self.ips_ids.open_ports[PROTO.TCP] or self.ips_ids.open_ports[PROTO.UDP]
 
-        self.IPS.ps_engine_enabled = True if self.IPS.portscan_prevention and open_ports else False
+        self.ips_ids.ps_engine_enabled = True if self.ips_ids.portscan_prevention and open_ports else False
 
-        self.IPS.ddos_engine_enabled = True if self.IPS.ddos_prevention else False
+        self.ips_ids.ddos_engine_enabled = True if self.ips_ids.ddos_prevention else False
 
         # makes some conditions easier when determining what to do with the packet.
-        self.IPS.all_engines_enabled = self.IPS.ps_engine_enabled and self.IPS.ddos_engine_enabled
+        self.ips_ids.all_engines_enabled = self.ips_ids.ps_engine_enabled and self.ips_ids.ddos_engine_enabled
 
         self.initialize.done()
 
@@ -129,8 +131,8 @@ class Configuration:
     # NOTE: refactored function utilizing iptables + timestamp comment to identify rules to be expired.
     # this should inherently make the passive blocking system persist service or system reboots.
     # TODO: consider using the fw_rule dict check before continuing to call System.
-    def _clear_ip_tables(self):
-        expired_hosts = System.ips_passively_blocked(block_length=self.IPS.block_length)
+    def _clear_ip_tables(self) -> None:
+        expired_hosts = System.ips_passively_blocked(block_length=self.ips_ids.block_length)
         if (not expired_hosts):
             return
 
@@ -139,4 +141,4 @@ class Configuration:
                 iptables.proxy_del_rule(host, timestamp, table='raw', chain='IPS')
 
                 # removing host from ips tracker/ suppression dictionary
-                self.IPS.fw_rules.pop(IPv4Address(host), None)  # should never return None
+                self.ips_ids.fw_rules.pop(IPv4Address(host), None)  # should never return None

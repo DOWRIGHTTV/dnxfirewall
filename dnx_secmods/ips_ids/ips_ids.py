@@ -38,14 +38,14 @@ class IPS_IDS(NFQueue):
         PROTO.UDP: {}
     }
 
-    ddos_prevention = False
-    portscan_prevention = False
-    portscan_reject = False
-    ids_mode = False  # TODO: implement this throughout
+    ddos_prevention: ClassVar[int] = 0
+    portscan_prevention: ClassVar[int] = 0
+    portscan_reject: ClassVar[int] = 0
+    ids_mode: ClassVar[int] = 0  # TODO: implement this throughout
 
-    ddos_engine_enabled = False
-    ps_engine_enabled   = False
-    all_engines_enabled = False
+    ddos_engine_enabled: ClassVar[int] = 0
+    ps_engine_enabled: ClassVar[int] = 0
+    all_engines_enabled: ClassVar[int] = 0
 
     _packet_parser = IPSPacket.netfilter_recv
 

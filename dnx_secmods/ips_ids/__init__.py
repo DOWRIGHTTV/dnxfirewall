@@ -8,7 +8,7 @@ __all__ = (
     'IPS_IDS', 'IPSPacket',
 
     # TYPES
-    'IPSPacket_T'
+    'IPS_IDS_T', 'IPSPacket_T'
 )
 
 if (TYPE_CHECKING):
@@ -19,4 +19,5 @@ if (TYPE_CHECKING):
     # ======
     # TYPES
     # ======
+    IPS_IDS_T = Type[IPS_IDS]
     IPSPacket_T = Type[IPSPacket]
