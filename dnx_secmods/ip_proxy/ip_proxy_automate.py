@@ -44,19 +44,20 @@ class Configuration:
 
     @cfg_read_poller('ip_proxy')
     def _get_settings(self, cfg_file: str) -> None:
-        ip_proxy = load_configuration(cfg_file)
+        proxy_settings = load_configuration(cfg_file)
 
-        self.ip_proxy.ids_mode = ip_proxy['ids_mode']
+        self.ip_proxy.ids_mode = proxy_settings['ids_mode']
 
         # converting list[items] > dict
-        rep_settings = dict(ip_proxy.get_items('reputation'))
-        geo_settings = dict(ip_proxy.get_items('geolocation'))
+        rep_settings = dict(proxy_settings.get_items('reputation'))
+        geo_settings = dict(proxy_settings.get_items('geolocation'))
 
         # used for categorizing private ip addresses
         geo_settings.update(RFC1918)
 
         reputation_enabled = []
         for cat, setting in rep_settings.items():
+
             if (setting): reputation_enabled.append(1)
 
             self.ip_proxy.reputation_settings[REP[cat.upper()]] = DIR(setting)
@@ -67,7 +68,7 @@ class Configuration:
             try:
                 self.ip_proxy.geolocation_settings[GEO[country.upper()]] = DIR(direction)
             except KeyError:
-                continue # not all enums/countries are populated
+                continue  # not all enums/countries are populated
 
         self.ip_proxy.reputation_enabled = bool(reputation_enabled)
 
