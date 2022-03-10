@@ -59,7 +59,6 @@ class IPProxy(NFQueue):
         # --------------------
         # DIRECT TO DNS PROXY
         # --------------------
-        # this also allows local records to be referenced with no firewall rule
         elif (packet.dns_profile and packet.direction is DIR.OUTBOUND
                 and packet.protocol is PROTO.UDP and packet.dst_port == PROTO.DNS):
             packet.nfqueue.forward(Queue.DNS_PROXY)

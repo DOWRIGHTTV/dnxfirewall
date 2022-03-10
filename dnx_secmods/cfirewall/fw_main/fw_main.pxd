@@ -2,19 +2,19 @@
 
 from cpython cimport array
 import array
-
+from libc.stdint cimport uint8_t, uint16_t, uint32_t, int32_t
 from libc.stdint cimport int_fast8_t, int_fast16_t, int_fast32_t, uint_fast8_t, uint_fast16_t, uint_fast32_t
 
 
 ctypedef array.array PyArray
 
 # making generic u/int types aliasing u/int fast
-ctypedef int_fast8_t    int8_t
-ctypedef int_fast16_t   int16_t
-ctypedef int_fast32_t   int32_t
-ctypedef uint_fast8_t   u_int8_t
-ctypedef uint_fast16_t  u_int16_t
-ctypedef uint_fast32_t  u_int32_t
+# ctypedef int_fast8_t    int8_t
+# ctypedef int_fast16_t   int16_t
+# ctypedef int_fast32_t   int32_t
+# ctypedef uint_fast8_t   u_int8_t
+# ctypedef uint_fast16_t  u_int16_t
+# ctypedef uint_fast32_t  u_int32_t
 
 cdef extern from "<errno.h>":
     int     errno
@@ -47,10 +47,10 @@ cdef extern from "pthread.h" nogil:
     cdef int pthread_mutex_destroy(pthread_mutex_t *)
 
 cdef extern from "netinet/in.h":
-    u_int32_t ntohl (u_int32_t __netlong) nogil
-    u_int16_t ntohs (u_int16_t __netshort) nogil
-    u_int32_t htonl (u_int32_t __hostlong) nogil
-    u_int16_t htons (u_int16_t __hostshort) nogil
+    uint32_t ntohl (uint32_t __netlong) nogil
+    uint16_t ntohs (uint16_t __netshort) nogil
+    uint32_t htonl (uint32_t __hostlong) nogil
+    uint16_t htons (uint16_t __hostshort) nogil
 
 # from netinet/in.h:
 cdef enum:
@@ -61,9 +61,9 @@ cdef enum:
 
 cdef extern from "libnfnetlink/linux_nfnetlink.h":
     struct nfgenmsg:
-        u_int8_t    nfgen_family
-        u_int8_t    version
-        u_int16_t   res_id
+        uint8_t    nfgen_family
+        uint8_t    version
+        uint16_t   res_id
 
 cdef extern from "libnfnetlink/libnfnetlink.h":
     struct nfnl_handle:
@@ -78,9 +78,9 @@ cdef extern from "libnetfilter_queue/linux_nfnetlink_queue.h":
         NFQNL_COPY_PACKET
 
     struct nfqnl_msg_packet_hdr:
-        u_int32_t   packet_id
-        u_int16_t   hw_protocol
-        u_int8_t    hook
+        uint32_t   packet_id
+        uint16_t   hw_protocol
+        uint8_t    hook
 
 cdef extern from "libnetfilter_queue/libnetfilter_queue.h":
     struct nfq_handle:
@@ -93,29 +93,29 @@ cdef extern from "libnetfilter_queue/libnetfilter_queue.h":
         pass
 
     struct nfqnl_msg_packet_hw:
-        u_int8_t    hw_addr[8]
+        uint8_t    hw_addr[8]
 
     nfq_handle *nfq_open()
     int nfq_close(nfq_handle *h)
     ctypedef int *nfq_callback(nfq_q_handle *gh, nfgenmsg *nfmsg, nfq_data *nfad, void *data)
-    nfq_q_handle *nfq_create_queue(nfq_handle *h, u_int16_t num, nfq_callback *cb, void *data)
+    nfq_q_handle *nfq_create_queue(nfq_handle *h, uint16_t num, nfq_callback *cb, void *data)
     int nfq_destroy_queue(nfq_q_handle *qh)
     int nfq_handle_packet(nfq_handle *h, char *buf, int len) nogil
-    int nfq_set_mode(nfq_q_handle *qh, u_int8_t mode, unsigned int len)
-    q_set_queue_maxlen(nfq_q_handle *qh, u_int32_t queuelen)
-    int nfq_set_verdict(nfq_q_handle *qh, u_int32_t id, u_int32_t verdict, u_int32_t data_len, unsigned char *buf) nogil
-    int nfq_set_verdict2(nfq_q_handle *qh, u_int32_t id, u_int32_t verdict, u_int32_t mark,
-        u_int32_t datalen, unsigned char *buf) nogil
+    int nfq_set_mode(nfq_q_handle *qh, uint8_t mode, unsigned int len)
+    q_set_queue_maxlen(nfq_q_handle *qh, uint32_t queuelen)
+    int nfq_set_verdict(nfq_q_handle *qh, uint32_t id, uint32_t verdict, uint32_t data_len, unsigned char *buf) nogil
+    int nfq_set_verdict2(nfq_q_handle *qh, uint32_t id, uint32_t verdict, uint32_t mark,
+        uint32_t datalen, unsigned char *buf) nogil
 
-    int nfq_set_queue_maxlen(nfq_q_handle *qh, u_int32_t queuelen)
+    int nfq_set_queue_maxlen(nfq_q_handle *qh, uint32_t queuelen)
     int nfq_fd(nfq_handle *h) nogil
     nfqnl_msg_packet_hdr *nfq_get_msg_packet_hdr(nfq_data *nfad) nogil
     int nfq_get_payload(nfq_data *nfad, unsigned char **data) nogil
     int nfq_get_timestamp(nfq_data *nfad, timeval *tv) nogil
     nfqnl_msg_packet_hw *nfq_get_packet_hw(nfq_data *nfad) nogil
     int nfq_get_nfmark (nfq_data *nfad) nogil
-    u_int8_t nfq_get_indev(nfq_data *nfad) nogil
-    u_int8_t nfq_get_outdev(nfq_data *nfad) nogil
+    uint8_t nfq_get_indev(nfq_data *nfad) nogil
+    uint8_t nfq_get_outdev(nfq_data *nfad) nogil
     nfnl_handle *nfq_nfnlh(nfq_handle *h)
 
 # mirrored defines from linux/netfilter.h
@@ -129,9 +129,10 @@ cdef enum:
     NF_MAX_VERDICT = NF_STOP
 
 cdef enum:
-    NONE     = 0
-    IP_PROXY = 1
-    IPS_IDS  = 2
+    NONE      = 0
+    IP_PROXY  = 1
+    DNS_PROXY = 2
+    IPS_IDS   = 3
 
     DROP   = 0
     ACCEPT = 1
@@ -155,74 +156,74 @@ DEF MAX_ZONES = 16
 DEF MAX_OBJECTS = 100
 
 cdef struct ZoneArray:
-    size_t      len
-    u_int8_t    objects[MAX_OBJECTS]
+    size_t        len
+    uint_fast8_t   objects[MAX_OBJECTS]
 
 cdef struct NetworkObj:
-    long        netid # must be signed for geo marker (-1)
-    u_int32_t   netmask
+    int32_t       netid # must be signed for geo marker (-1)
+    uint_fast32_t  netmask
 
 cdef struct NetworkArray:
-    size_t      len
-    NetworkObj  objects[MAX_OBJECTS]
+    size_t        len
+    NetworkObj    objects[MAX_OBJECTS]
 
 cdef struct ServiceObj:
-    u_int16_t   protocol
-    u_int16_t   start_port
-    u_int16_t   end_port
+    uint_fast16_t  protocol
+    uint_fast16_t  start_port
+    uint_fast16_t  end_port
 
 cdef struct ServiceArray:
-    size_t      len
-    ServiceObj objects[MAX_OBJECTS]
+    size_t        len
+    ServiceObj    objects[MAX_OBJECTS]
 
 cdef struct FWrule:
-    bint        enabled
+    bint          enabled
 
     # SOURCE
-    ZoneArray    s_zones
-    NetworkArray s_networks
-    ServiceArray s_services
+    ZoneArray     s_zones
+    NetworkArray  s_networks
+    ServiceArray  s_services
 
     # DESTINATION
-    ZoneArray    d_zones
-    NetworkArray d_networks
-    ServiceArray d_services
+    ZoneArray     d_zones
+    NetworkArray  d_networks
+    ServiceArray  d_services
 
     # PROFILES
-    u_int8_t     action
-    u_int8_t     log
-    u_int8_t     sec_profiles[SECURITY_PROFILE_COUNT]
+    uint_fast8_t   action
+    uint_fast8_t   log
+    uint_fast8_t   sec_profiles[SECURITY_PROFILE_COUNT]
         # ip_proxy - 0 off, > 1 profile number
-        # ips_ids - 0 off, 1 on
         # dns_proxy - 0 off, > 1 profile number
+        # ips_ids - 0 off, 1 on
 
 cdef struct HWinfo:
-    u_int8_t    in_zone
-    u_int8_t    out_zone
+    uint8_t    in_zone
+    uint8_t    out_zone
     char*       mac_addr
     double      timestamp
 
 # cython define
 cdef struct IPhdr:
-    u_int8_t    ver_ihl
-    u_int8_t    tos
-    u_int16_t   tot_len
-    u_int16_t   id
-    u_int16_t   frag_off
-    u_int8_t    ttl
-    u_int8_t    protocol
-    u_int16_t   check
-    u_int32_t   saddr
-    u_int32_t   daddr
+    uint8_t    ver_ihl
+    uint8_t    tos
+    uint16_t   tot_len
+    uint16_t   id
+    uint16_t   frag_off
+    uint8_t    ttl
+    uint8_t    protocol
+    uint16_t   check
+    uint32_t   saddr
+    uint32_t   daddr
 
 cdef struct Protohdr:
-    u_int16_t   s_port
-    u_int16_t   d_port
+    uint16_t   s_port
+    uint16_t   d_port
 
 cdef struct InspectionResults:
-    u_int16_t   fw_section
-    u_int32_t   action
-    u_int32_t   mark
+    uint16_t   fw_section
+    uint32_t   action
+    uint32_t   mark
 
 cdef class CFirewall:
     cdef:
@@ -232,4 +233,4 @@ cdef class CFirewall:
     cpdef int prepare_geolocation(self, tuple geolocation_trie, long msb, long lsb) with gil
     cpdef int update_zones(self, PyArray zone_map) with gil
     cpdef int update_ruleset(self, size_t ruleset, list rulelist) with gil
-    cpdef int remove_blockedlist(self, u_int32_t host_ip)
+    cpdef int remove_blockedlist(self, uint32_t host_ip)

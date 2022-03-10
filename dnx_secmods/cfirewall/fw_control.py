@@ -8,10 +8,9 @@ from array import array
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import MSB, LSB, ppt
-
 from dnx_gentools.standard_tools import Initialize
 from dnx_gentools.signature_operations import generate_geolocation
-from dnx_gentools.file_operations import cfg_read_poller, load_configuration, load_data
+from dnx_gentools.file_operations import cfg_read_poller, load_data
 
 # ========================================
 # CONTROL - used within cfirewall process
@@ -21,15 +20,13 @@ class FirewallControl:
         'log', 'cfirewall', '_initialize',
 
         # rule sections (hierarchy)
-        # NOTE: these are used primarily to detect config changes to prevent the amount of work/ data conversions that
-        #  need to be done to load the settings into C data structures.
         'SYSTEM', 'BEFORE', 'MAIN', 'AFTER'
     )
 
-    def __init__(self, Log: LogHandler_T, /, *, cfirewall: CFirewall):
-        self.log = Log
+    def __init__(self, log: LogHandler_T, /, *, cfirewall: CFirewall):
+        self.log = log
 
-        self._initialize = Initialize(Log, 'FirewallControl')
+        self._initialize = Initialize(log, 'FirewallControl')
 
         self.SYSTEM: dict = {}
         self.BEFORE: dict = {}
@@ -38,7 +35,7 @@ class FirewallControl:
 
         # reference to extension CFirewall, which handles nfqueue and initial packet rcv. # we will use this
         # reference to modify rules objects which will be internally accessed by the inspection function callbacks
-        self.cfirewall = cfirewall
+        self.cfirewall: CFirewall = cfirewall
 
     def print_active_rules(self):
 
@@ -62,20 +59,20 @@ class FirewallControl:
 
         self._initialize.wait_for_threads(count=3)
 
-    @cfg_read_poller('zone_map', folder='iptables')
+    @cfg_read_poller('zone.firewall', folder='iptables')
     # zone int values are arbitrary / randomly selected on zone creation.
     def _monitor_zones(self, zone_map: str) -> None:
         '''Monitors the firewall zone file for changes and loads updates to cfirewall.
 
         calls to Cython are made from within this method block. the GIL must be manually acquired on the Cython side
-        or the Python interpreter will crash.'''
-
-        loaded_zones: ConfigChain = load_configuration(zone_map, filepath='dnx_system/iptables')
+        or the Python interpreter will crash.
+        '''
+        loaded_zones: dict = load_data(zone_map, filepath='dnx_system/iptables')
 
         # converting list to python array, then sending to Cython to modify C array.
         # this format is required due to transitioning between python and C. python arrays are
         # compatible in C via memory views and Cython can handle the initial list.
-        dnx_zones: array[int] = array('i', loaded_zones.get_list('map'))
+        dnx_zones: array[int] = array('i', loaded_zones['map'])
 
         # NOTE: gil must be held on the other side of this call
         error: int = self.cfirewall.update_zones(dnx_zones)
@@ -84,21 +81,21 @@ class FirewallControl:
 
         self._initialize.done()
 
-    @cfg_read_poller('firewall_active', folder='iptables')
+    @cfg_read_poller('active.firewall', folder='iptables')
     def _monitor_standard_rules(self, fw_rules: str):
         '''Monitors the active firewall rules file for changes and loads updates to cfirewall.
 
         calls to Cython are made from within this method block. the GIL must be manually acquired on the Cython
-        side or the Python interpreter will crash. '''
-
-        loaded_rules: ConfigChain = load_configuration(fw_rules, filepath='dnx_system/iptables')
+        side or the Python interpreter will crash.
+        '''
+        loaded_rules: dict = load_data(fw_rules, filepath='dnx_system/iptables')
 
         # splitting out sections then determine which one has changed. this is to reduce amount of work done on the C
         # side. not for performance, but more for ease of programming.
         # NOTE: index 1 start is needed because SYSTEM rules are held at index 0.
         for i, section in enumerate(['BEFORE', 'MAIN', 'AFTER'], 1):
             current_section: dict = getattr(self, section)
-            new_section: dict = loaded_rules.get_dict(section)
+            new_section: dict = loaded_rules[section]
 
             # unchanged ruleset
             if (current_section == new_section): continue
@@ -118,7 +115,7 @@ class FirewallControl:
 
         self._initialize.done()
 
-    @cfg_read_poller('firewall_system', folder='iptables')
+    @cfg_read_poller('system.firewall', folder='iptables')
     def _monitor_system_rules(self, system_rules: str):
         # 0-99: system reserved - 1. loopback 10/11. dhcp, 20/21. dns, 30/31. http, 40/41. https, etc
         #   - loopback will be left in iptables for now
@@ -128,7 +125,7 @@ class FirewallControl:
         #       to be reset. this is ok for now since we only support builtin zones that can't change.
         # 2000+: system control (proxy bypass prevention)
 
-        loaded_rules: dict = load_data(f'{system_rules}.cfg', filepath='dnx_system/iptables')
+        loaded_rules: dict = load_data(system_rules, filepath='dnx_system/iptables')
 
         system_set: list = list(loaded_rules['BUILTIN'].values())
 
