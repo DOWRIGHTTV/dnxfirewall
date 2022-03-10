@@ -84,7 +84,7 @@ class DNSProxy(ProxyConfiguration, NFQueue):
     # pre-check will filter out invalid packets, ipv6 records, and local dns records
     def _pre_inspect(self, packet: DNSPacket) -> bool:
 
-        # local records will bypass the proxy and allowed to continue to the server
+        # local records will continue directly to the dns server
         if LOCAL_RECORD(packet.qname):
             packet.nfqueue.accept()
 

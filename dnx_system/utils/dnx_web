@@ -1,32 +1,39 @@
 server {
-        listen 80;
-        server_name dnx.firewall;
+    listen 80;
+    server_name dnx.firewall;
 
-	if ($host ~ (dnx.firewall|192.168.83.1) ) {
-  return 301 https://dnx.firewall/dashboard;
-}
+#	if ($host ~ (dnx.firewall|192.168.83.1) ) {
+#        return 301 https://dnx.firewall/dashboard;
+#    }
+#    return 301 https://dnx.firewall/blocked?dom=$host;
 
-        return 301 https://dnx.firewall/blocked?dom=$host;
+	if ($host !~ (dnx.firewall|192.168.83.1) ) {
+	    return 301 https://192.168.83.1/blocked?dom=$host;
+    }
+
 }
 
 server {
-        listen 443 ssl;
-        server_name dnx.firewall;
-        ssl_certificate     /home/dnx/dnxfirewall/dnx_system/ssl/dnx-web.crt;
-        ssl_certificate_key /home/dnx/dnxfirewall/dnx_system/ssl/dnx-web.key;
-        ssl_protocols       TLSv1.1 TLSv1.2;
-        ssl_ciphers         HIGH:!aNULL:!MD5;
-        types_hash_max_size 2048;
+    listen 443 ssl;
+    server_name dnx.firewall;
+    ssl_certificate     /home/dnx/dnxfirewall/dnx_system/ssl/dnx-web.crt;
+    ssl_certificate_key /home/dnx/dnxfirewall/dnx_system/ssl/dnx-web.key;
+    ssl_protocols       TLSv1.1 TLSv1.2;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+    types_hash_max_size 2048;
 
-        if ($host !~ (dnx.firewall|192.168.83.1) ) {
-  return 301 https://dnx.firewall/blocked?dom=$host;
-	}
-	if ($host = "192.168.83.1") {
-  return 301 https://dnx.firewall/dashboard;
-	}
+#    if ($host !~ (dnx.firewall|192.168.83.1) ) {
+#        return 301 https://dnx.firewall/blocked?dom=$host;
+#    }
+#    if ($host = "192.168.83.1") {
+#        return 301 https://dnx.firewall/dashboard;
+#    }
 
-        location / {
-                include uwsgi_params;
-                uwsgi_pass unix:/home/dnx/dnxfirewall/dnx_webui/webui.sock;
-	}
+    if ($host !~ (dnx.firewall|192.168.83.1) ) {
+        return 301 https://192.168.83.1/blocked?dom=$host;
+
+    location / {
+        include uwsgi_params;
+        uwsgi_pass unix:/home/dnx/dnxfirewall/dnx_webui/webui.sock;
+    }
 }
