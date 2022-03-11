@@ -7,7 +7,7 @@ import os
 from threading import Thread
 from dataclasses import dataclass
 
-from dnx_gentools.def_constants import hardout, INIT_MODULE
+from dnx_gentools.def_constants import hardout, INITIALIZE_MODULE
 from dnx_gentools.def_enums import Queue
 
 from dnx_routines.logging.log_client import Log
@@ -68,7 +68,8 @@ def run():
         dnxfirewall.nf_break()
         hardout(f'DNXFIREWALL cfirewall/nfqueue failure => {E}')
 
-if (INIT_MODULE == LOG_NAME):
+
+if INITIALIZE_MODULE(LOG_NAME):
     try:
         args = Args(**{a: 1 for a in os.environ['PASSTHROUGH_ARGS'].split(',') if a})
     except Exception as E:

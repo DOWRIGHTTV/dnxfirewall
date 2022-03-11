@@ -7,9 +7,8 @@ import sys
 import time
 import json
 import socket
-import argparse
 
-from sys import argv
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional
 from subprocess import run as srun, DEVNULL, CalledProcessError
 
@@ -24,6 +23,18 @@ from dnx_routines.logging.log_client import Log
 # ===============
 if (TYPE_CHECKING):
     from dnx_gentools.file_operations import ConfigChain
+
+def lprint(sep: str = '-'): print(f'{sep}' * 32)
+
+
+@dataclass
+class Args:
+    v: int = 0
+    verbose: int = 0
+
+    @property
+    def verbose_set(self):
+        return self.v or self.verbose
 
 
 LOG_NAME: str = 'system'
@@ -61,7 +72,7 @@ def dnx_run(s: str, /) -> None:
     '''convenience function, subprocess run wrapper adding additional args.
     '''
     try:
-        if (VERBOSE):
+        if (args.verbose_set):
             srun(s, shell=True, check=True)
 
         else:
@@ -90,7 +101,7 @@ def check_clone_location() -> None:
 
 def check_already_ran() -> None:
     with ConfigurationManager('system') as dnx:
-        dnx_settings = dnx.load_configuration()
+        dnx_settings: ConfigChain = dnx.load_configuration()
 
     if (dnx_settings['auto_loader']):
 
@@ -379,21 +390,10 @@ def store_default_mac():
 
 def run():
 
-    # pre-checks to make sure application can run properly
-    check_run_as_root()
-    check_dnx_user()
-    check_clone_location()
-
-    # initializing log module which is required when using ConfigurationManager
-    Log.run(name=LOG_NAME)
-    ConfigurationManager.set_log_reference(Log)
-
-    check_already_ran()
-
     configure_interfaces()
 
     sprint('starting system deployment...')
-    print(LINEBREAK)
+    lprint()
 
     install_packages()
     compile_extensions()
@@ -404,8 +404,9 @@ def run():
 
     mark_completion_flag()
 
+    lprint('=')
     progress('dnxfirewall deployment complete')
-
+    lprint()
     sprint('control of the WAN interface configuration has been taken by dnxfirewall.')
     sprint('use the webui to configure a static ip or enable ssh access if needed.')
     sprint('\nrestart system then navigate to https://192.168.83.1 from LAN to manage.')
@@ -414,8 +415,17 @@ def run():
 
 
 if INITIALIZE_MODULE(LOG_NAME):
-    parser = argparse.ArgumentParser(description='automated deployment utility for DNXFIREWALL')
-    parser.add_argument('-v', '--verbose', help='prints output to screen', action='store_true')
+    try:
+        args = Args(**{a: 1 for a in os.environ['PASSTHROUGH_ARGS'].split(',') if a})
+    except Exception as E:
+        hardout(f'DNXFIREWALL arg parse failure => {E}')
 
-    args = parser.parse_args(argv[1:])
-    VERBOSE = args.verbose
+    # pre-checks to make sure application can run properly
+    check_run_as_root()
+    check_dnx_user()
+    check_clone_location()
+    check_already_ran()
+
+    # initializing log module which is required when using ConfigurationManager
+    Log.run(name=LOG_NAME)
+    ConfigurationManager.set_log_reference(Log)
