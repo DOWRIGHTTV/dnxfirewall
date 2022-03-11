@@ -125,7 +125,7 @@ def progress(desc: str) -> None:
 
     sys.stdout.write(f'{completed_count}/{PROGRESS_TOTAL_COUNT} |')
     sys.stdout.write(f'| [{bar}] {int(100 * ratio)}% |')
-    sys.stdout.write(f'| {desc}{" "*20}\r')
+    sys.stdout.write(f'| {desc}{" "*12}\r')
     sys.stdout.flush()
 
 # ============================
@@ -321,12 +321,18 @@ def set_permissions() -> None:
     # ensure it won't be overridden by update pulls.
     dnx_run(f'touch {SYSTEM_DIR}/data/dnxfirewall.sqlite3')
 
-    # set owner to dnx user/group
+    # set the dnx filesystem owner to the dnx user/group
     dnx_run(f'chown -R dnx:dnx {HOME_DIR}')
 
     # apply file permissions 750 on folders, 640 on files
     dnx_run(f'chmod -R 750 {HOME_DIR}')
     dnx_run(f'find {HOME_DIR} -type f -print0|xargs -0 chmod 640')
+
+    # setting the dnx command line utility as executable
+    dnx_run(f'chmod 750 {HOME_DIR}/dnx_run.py')
+
+    # creating sim link to allow dnx command from anywhere if logged in as dnx user
+    dnx_run(f'ln -s {HOME_DIR}/dnx_run.py /usr/local/bin/dnx')
 
     # adding www-data user to dnx group
     dnx_run('usermod -aG dnx www-data')
@@ -339,7 +345,7 @@ def set_permissions() -> None:
         'dnx ALL = (root) NOPASSWD: /usr/sbin/iptables-restore',
         'dnx ALL = (root) NOPASSWD: /usr/sbin/iptables-save',
         'dnx ALL = (root) NOPASSWD: /usr/sbin/iptables',
-        'dnx ALL = (root) NOPASSWD: /usr/bin/systemctl status *'
+        # 'dnx ALL = (root) NOPASSWD: /usr/bin/systemctl status *'
     ]
 
     for line in no_pass:
@@ -404,12 +410,10 @@ def run():
 
     mark_completion_flag()
 
-    lprint('=')
     progress('dnxfirewall deployment complete')
-    lprint()
-    sprint('control of the WAN interface configuration has been taken by dnxfirewall.')
+    sprint('\ncontrol of the WAN interface configuration has been taken by dnxfirewall.')
     sprint('use the webui to configure a static ip or enable ssh access if needed.')
-    sprint('\nrestart system then navigate to https://192.168.83.1 from LAN to manage.')
+    sprint('restart system then navigate to https://192.168.83.1 from LAN to manage.')
 
     hardout()
 
