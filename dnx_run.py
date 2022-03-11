@@ -31,7 +31,7 @@ COMMANDS: dict[str, dict[str, bool]] = {
     'restart': {'priv': True, 'module': True},
     'stop': {'priv': True, 'module': True},
     'status': {'priv': True, 'module': True},
-    'cli': {'priv': True, 'module': True},
+    'cli': {'priv': False, 'module': True},
     'modstat': {'priv': True, 'module': False},
     'compile': {'priv': True, 'module': False}
 }
@@ -266,7 +266,7 @@ if (__name__ == '__main__'):
         else:
             sprint(f'{mod_name} (compile) run sucess.')
 
-    elif mod_set['service']:
+    elif (mod_name == 'all' or mod_set['service']):
         service_command(mod_name, command)
 
     else:
