@@ -362,11 +362,10 @@ def set_services() -> None:
     services = os.listdir(f'{UTILITY_DIR}/services')
     for service in services:
 
-        if (service in ignore_list): continue
+        if (service not in ignore_list):
 
-        dnx_run(f'cp {UTILITY_DIR}/services/{service} /etc/systemd/system/')
-
-        dnx_run(f'systemctl enable {service}')
+            dnx_run(f'cp {UTILITY_DIR}/services/{service} /etc/systemd/system/')
+            dnx_run(f'systemctl enable {service}')
 
     dnx_run(f'systemctl enable nginx')
 
