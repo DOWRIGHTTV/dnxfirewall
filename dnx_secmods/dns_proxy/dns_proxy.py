@@ -21,7 +21,7 @@ __all__ = (
 
 
 # LOG_NAME = 'dns_proxy'
-if INITIALIZE_MODULE('dns_proxy'):
+if INITIALIZE_MODULE('dns-proxy'):
 
     Log.run(name='dns_proxy')
 
