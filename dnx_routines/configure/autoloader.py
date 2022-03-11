@@ -414,7 +414,7 @@ def run():
     hardout()
 
 
-if INITIALIZE_MODULE(LOG_NAME):
+if INITIALIZE_MODULE('autoloader'):
     try:
         args = Args(**{a: 1 for a in os.environ['PASSTHROUGH_ARGS'].split(',') if a})
     except Exception as E:
