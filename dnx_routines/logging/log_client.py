@@ -261,14 +261,14 @@ def _log_handler() -> LogHandler_T:
         '''
         queue_write = write_to_disk.add
 
+        direct_log(handler_name, LOG.SYSTEM.name, f'configuring logger => {logging_level}')
+
         for level_number, level_info in convert_level().items():
 
             level_name, _ = level_info
 
             # all entries will be logged and printed to the terminal
             if (logging_level is LOG.DEBUG):
-
-                direct_log(handler_name, LOG.NOTICE.name, f'{level_name} => enabled (debug)', cli=True)
 
                 @staticmethod
                 def log_method(log_msg):
@@ -281,8 +281,6 @@ def _log_handler() -> LogHandler_T:
             # entry will be logged to file
             elif (level_number <= logging_level):
 
-                direct_log(handler_name, LOG.NOTICE.name, f'{level_name} => enabled', cli=True)
-
                 @staticmethod
                 def log_method(log_msg):
 
@@ -291,13 +289,13 @@ def _log_handler() -> LogHandler_T:
             # log level is disabled
             else:
 
-                direct_log(handler_name, LOG.NOTICE.name, f'{level_name} => disabled', cli=True)
-
                 @staticmethod
                 def log_method(*_):
                     pass
 
             setattr(cls, level_name, log_method)
+
+        direct_log(handler_name, LOG.SYSTEM.name, f'logger successfully configured => {logging_level}', cli=True)
 
     @cfg_read_poller('logging_client')
     def log_settings(cfg_file: str) -> None:
