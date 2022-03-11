@@ -29,7 +29,7 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
 
     dict_get = dict.__getitem__
 
-    @cfg_read_poller('dns_server.cache', ext=True)
+    @cfg_read_poller('dns_server.cache')
     def manual_clear(cache: DNSCache, cfg_file: str) -> None:
         cache_settings: ConfigChain = load_configuration(cfg_file, ext='')
 
