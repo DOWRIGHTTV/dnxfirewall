@@ -424,8 +424,10 @@ if INITIALIZE_MODULE('autoloader'):
     check_run_as_root()
     check_dnx_user()
     check_clone_location()
-    check_already_ran()
 
     # initializing log module which is required when using ConfigurationManager
     Log.run(name=LOG_NAME)
     ConfigurationManager.set_log_reference(Log)
+
+    # this uses the config manager, so must be called after log initialization
+    check_already_ran()
