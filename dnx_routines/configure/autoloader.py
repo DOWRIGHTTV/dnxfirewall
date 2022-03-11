@@ -406,9 +406,9 @@ def run():
 
     progress('dnxfirewall deployment complete')
 
-    sprint('\nrestart system then navigate to https://dnx.firewall from LAN manage.')
-    sprint('control of the wan interface configuration has been taken by dnxfirewall.')
+    sprint('control of the WAN interface configuration has been taken by dnxfirewall.')
     sprint('use the webui to configure a static ip or enable ssh access if needed.')
+    sprint('\nrestart system then navigate to https://192.168.83.1 from LAN to manage.')
 
     hardout()
 
