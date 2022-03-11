@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Optional, Union, Iterable
 
 import os
 import sys
@@ -17,8 +17,16 @@ HOME_DIR = os.environ.get('HOME_DIR', '/home/dnx/dnxfirewall')
 
 hardout = partial(os._exit, 0)
 dnx_run = partial(run, check=True, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
+def exclude(s: str, l: Iterable, /) -> list[str]:
+    '''return a new list with specified string removed from the passed in list, set, tuple, dict.
+    '''
+    nl = list(l)
+    nl.remove(s)
 
-COMMANDS = {
+    return nl
+
+
+COMMANDS: dict[str, dict[str, bool]] = {
     'start': {'priv': True, 'module': True},
     'restart': {'priv': True, 'module': True},
     'stop': {'priv': True, 'module': True},
@@ -35,6 +43,11 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     # HELPERS
     'all': {'module': '', 'exclude': ['status', 'cli'], 'priv': True, 'service': False},
 
+    # AUTOLOADER
+    'autoloader': {
+        'module': 'dnx_routines.configure.autoloader', 'exclude': exclude('cli', COMMANDS), 'priv': True, 'service': False
+    },
+
     # WEBUI
     'webui': {'module': '', 'exclude': ['cli'], 'priv': False, 'service': True, 'environ': ['webui', '1']},
 
@@ -45,7 +58,9 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     'ips-ids': {'module': 'dnx_secmods.ips_ids.ips_ids', 'exclude': ['compile'], 'priv': True, 'service': True},
 
     # NETWORK MODULES
-    'dhcp-server': {'module': 'dnx_netmods.dhcp_server.dhcp_server', 'exclude': ['compile'], 'priv': True, 'service': True},
+    'dhcp-server': {
+        'module': 'dnx_netmods.dhcp_server.dhcp_server', 'exclude': ['compile'], 'priv': True, 'service': True
+    },
 
     # ROUTINES
     'database': {'module': 'dnx_routines.database.ddb_main', 'exclude': ['compile'], 'priv': False, 'service': True},
@@ -59,9 +74,9 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     'syscontrol': {'module': 'dnx_system.sys_control', 'exclude': ['compile'], 'priv': True, 'service': True},
 
     # COMPILE ONLY
-    'dnx-nfqueue': {'module': '', 'exclude': [x for x in COMMANDS if x != 'compile'], 'priv': True, 'service': False},
-    'cprotocol-tools': {'module': '', 'exclude': [x for x in COMMANDS if x != 'compile'], 'priv': True, 'service': False},
-    'trie-search': {'module': '', 'exclude': [x for x in COMMANDS if x != 'compile'], 'priv': True, 'service': False}
+    'dnx-nfqueue': {'module': '', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
+    'cprotocol-tools': {'module': '', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
+    'trie-search': {'module': '', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False}
 }
 SERVICE_MODULES = [f'dnx-{mod.replace("_", "-")}' for mod, modset in MODULE_MAPPING.items() if modset['service']]
 
@@ -81,21 +96,21 @@ def sexit(msg: str, /) -> None:
     exit(f'\n{msg}\n')
 
 def parse_args() -> tuple[str, str, dict]:
-    command: str = get_index(1, cname='command')
-    module: str = get_index(2, cname='module')
+    cmd: str = get_index(1)
+    module: str = get_index(2)
 
     mod_settings = check_module(module)
-    check_command(command, module, mod_settings)
+    check_command(cmd, module, mod_settings)
 
     os.environ['PASSTHROUGH_ARGS'] = ','.join(sys.argv[3:])
 
-    return module, command, mod_settings
+    return module, cmd, mod_settings
 
-def get_index(idx: int, /, *, cname: str = '') -> Union[str, object]:
+def get_index(idx: int, /) -> str:
     try:
         return sys.argv[idx]
     except IndexError:
-        return object()  # sentinel
+        return 'X'
 
 def check_module(mod: str, /) -> dict:
     return MODULE_MAPPING.get(mod, {})
@@ -194,8 +209,9 @@ def service_command(mod: str, cmd: str) -> None:
         else:
             sprint(f'{svc} service {cmd} successful.')
 
-# using environ var to notify imported module to initialize and run. this was done because a normal function was causing
-# issues with the linter thinking a ton of stuff was not defined. this could probably be done better.
+# using environ var to notify imported module to initialize and run.
+# this was done because a normal function was causing issues with the linter thinking a ton of stuff was not defined.
+# this could probably be done better.
 # TODO: see if can be done better
 def run_cli(mod: str, mod_loc: str) -> None:
     os.environ['INIT_MODULE'] = mod
@@ -220,12 +236,12 @@ def run_cli(mod: str, mod_loc: str) -> None:
     else:
         try:
             dnx_mod.run()
+        except KeyboardInterrupt:
+            sprint(f'{mod} (cli) interrupted')
+
         except Exception as E:
             sprint(f'{mod} (cli) run failure. => {E}')
             traceback.print_exc()
-
-        except KeyboardInterrupt:
-            sprint(f'{mod} (cli) interrupted')
 
     # this will make sure there are no dangling processes or threads on exit.
     hardout()

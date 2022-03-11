@@ -10,6 +10,7 @@ import socket
 import argparse
 
 from sys import argv
+from typing import TYPE_CHECKING, Optional
 from subprocess import run as srun, DEVNULL, CalledProcessError
 
 from dnx_gentools.def_constants import HOME_DIR, INITIALIZE_MODULE, hardout, str_join
@@ -18,8 +19,11 @@ from dnx_gentools.file_operations import ConfigurationManager, load_data, write_
 from dnx_routines.configure.iptables import IPTablesManager
 from dnx_routines.logging.log_client import Log
 
-# TYPING
-from dnx_gentools.file_operations import ConfigChain
+# ===============
+# TYPING IMPORTS
+# ===============
+if (TYPE_CHECKING):
+    from dnx_gentools.file_operations import ConfigChain
 
 
 LOG_NAME: str = 'system'
@@ -248,10 +252,11 @@ def install_packages() -> None:
 
 def compile_extensions() -> None:
 
-    commands = [
-        (f'sudo python3 {UTILITY_DIR}/compile_trie_search.py build_ext --inplace', 'compiling trie search C extension'),
-        (f'sudo python3 {UTILITY_DIR}/compile_dnx_nfqueue.py build_ext --inplace', 'compiling dnx-nfqueue C extension'),
-        (f'sudo python3 {UTILITY_DIR}/compile_cfirewall.py build_ext --inplace', 'compiling primary rules')
+    commands: list[tuple[str, str]] = [
+        (f'sudo python3 {UTILITY_DIR}/compile_dnx_nfqueue.py build_ext --inplace', 'compiling dnx-nfqueue'),
+        (f'sudo python3 {UTILITY_DIR}/compile_cfirewall.py build_ext --inplace', 'compiling cfirewall'),
+        (f'sudo python3 {UTILITY_DIR}/compile_trie_search.py build_ext --inplace', 'compiling trie search'),
+        (f'sudo python3 {UTILITY_DIR}/compile_cprotocol_tools.py build_ext --inplace', 'compiling cprotocol tools'),
     ]
 
     for command, desc in commands:
@@ -261,7 +266,7 @@ def compile_extensions() -> None:
         dnx_run(command)
 
 def configure_webui() -> None:
-    cert_subject = str_join([
+    cert_subject: str = str_join([
         '/C=US',
         '/ST=Arizona',
         '/L=cyberspace',
@@ -271,15 +276,15 @@ def configure_webui() -> None:
         '/emailAddress=help@dnxfirewall.com'
     ])
 
-    generate_cert_commands = [
+    generate_cert_commands: str = ' '.join([
         f'sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048',
         f'-keyout {SYSTEM_DIR}/ssl/dnx-web.key',
         f'-out {SYSTEM_DIR}/ssl/dnx-web.crt',
         f'-subj {cert_subject}'
-    ]
+    ])
 
-    commands = [
-        (' '.join(generate_cert_commands), 'generating dnx webui ssl certificate'),
+    commands: list[tuple[str, Optional[str]]] = [
+        (generate_cert_commands, 'generating dnx webui ssl certificate'),
         (f'sudo cp {UTILITY_DIR}/dnx_web /etc/nginx/sites-available/', 'configuring management webui'),
         ('ln -s /etc/nginx/sites-available/dnx_web /etc/nginx/sites-enabled/', None),
         ('sudo rm /etc/nginx/sites-enabled/default', None)
@@ -408,7 +413,7 @@ def run():
     hardout()
 
 
-if (INIT_MODULE == LOG_NAME):
+if INITIALIZE_MODULE(LOG_NAME):
     parser = argparse.ArgumentParser(description='automated deployment utility for DNXFIREWALL')
     parser.add_argument('-v', '--verbose', help='prints output to screen', action='store_true')
 
