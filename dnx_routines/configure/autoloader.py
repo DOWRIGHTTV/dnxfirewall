@@ -125,7 +125,7 @@ def configure_interfaces() -> None:
     interfaces_detected: list[str] = check_system_interfaces()
 
     user_intf_config: dict[str, str] = collect_interface_associations(interfaces_detected)
-    public_dns_servers: dict = load_data('dns_server')['resolvers']
+    public_dns_servers: dict = load_data('dns_server.cfg')['resolvers']
 
     set_dnx_interfaces(user_intf_config)
     set_dhcp_interfaces(user_intf_config)
