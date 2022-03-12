@@ -366,7 +366,7 @@ cdef inline bint network_match(NetworkArray net_defs, uint32_t iph_ip, uint16_t 
         NetworkObj net
 
     if (VERBOSE):
-        printf(<char*>'checking ip->%u, country->%u\n', iph_ip, country)
+        printf(<char*>'checking ip->%lu, country->%u\n', iph_ip, <uint8_t>country)
 
     for i in range(net_defs.len):
 
@@ -393,7 +393,7 @@ cdef inline bint network_match(NetworkArray net_defs, uint32_t iph_ip, uint16_t 
                 return MATCH
 
     if (VERBOSE):
-        printf(<char*>'no match ip->%u, country->%u\n', iph_ip, country)
+        printf(<char*>'no match ip->%lu, country->%u\n', iph_ip, <uint8_t>country)
 
     # default action
     return NO_MATCH
@@ -432,6 +432,8 @@ cdef inline bint service_match(ServiceArray svc_defs, uint16_t pkt_protocol, uin
 # ================================== #
 # PRINT FUNCTIONS
 # ================================== #
+# NOTE: <char*> casting is to shut the editor up
+#  the integer casts are to clamp the struct fields to standard because they are implemented as fast_ints
 cdef inline void pkt_print(HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header) nogil:
     printf(<char*>'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv-PACKET-vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n')
     printf('in-zone=%u, out-zone=%u \n', hw.in_zone, hw.out_zone)
@@ -453,21 +455,23 @@ cdef inline void rule_print(FWrule *rule) nogil:
     printf(<char*>'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv-RULE-vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n')
     printf(<char*>'src_zones=(')
     for i in range(rule.s_zones.len):
-        printf('%u ', rule.s_zones.objects[i])
+        printf('%u ', <uint8_t>rule.s_zones.objects[i])
     printf(<char*>')\n')
 
     for i in range(rule.d_zones.len):
-        printf('%u ', rule.s_zones.objects[i])
+        printf('%u ', <uint8_t>rule.s_zones.objects[i])
     printf(<char*>')\n')
 
     printf(<char*>'src_zones=(')
     for i in range(rule.s_services.len):
-        printf('protocol->%u, ports->(%u, %u) ', src_services[i].protocol, src_services[i].start_port, src_services[i].end_port)
+        printf('protocol->%u, ports->(%u, %u) ',
+                <uint8_t>src_services[i].protocol, <uint16_t>src_services[i].start_port, <uint16_t>src_services[i].end_port)
     printf(<char*>')\n')
 
     printf(<char*> 'dst_zones=(')
     for i in range(rule.s_services.len):
-        printf('protocol->%u, ports->(%u, %u) ', dst_services[i].protocol, dst_services[i].start_port, dst_services[i].end_port)
+        printf('protocol->%u, ports->(%u, %u) ',
+               <uint8_t>dst_services[i].protocol, <uint16_t>dst_services[i].start_port, <uint16_t>dst_services[i].end_port)
     printf(<char*>')\n')
 
     # printf('rule-s netid=%lu\n', rule.s_net_id)
@@ -483,12 +487,13 @@ cdef inline void obj_print(int name, void *object) nogil:
     if (name == NETWORK):
         net_obj = <NetworkObj*>object
 
-        printf('net_obj, id->%lu, mask->%u\n', net_obj.netid, net_obj.netmask)
+        printf('net_obj, id->%lu, mask->%lu\n', net_obj.netid, net_obj.netmask)
 
     elif (name == SERVICE):
         svc_obj = <ServiceObj*>object
 
-        printf('svc_obj, protocol->%u, port->(%u, %u)\n', svc_obj.protocol, svc_obj.start_port, svc_obj.end_port)
+        printf('svc_obj, protocol->%u, port->(%u, %u)\n',
+               <uint8_t>svc_obj.protocol, <uint16_t>svc_obj.start_port, <uint16_t>svc_obj.end_port)
 
 # ================================== #
 # C CONVERSION / INIT FUNCTIONS
@@ -531,43 +536,43 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
     # ======
     fw_rule.s_zones.len = <size_t>len(rule['src_zone'])
     for i in range(fw_rule.s_zones.len):
-        fw_rule.s_zones.objects[i] = <uint8_t>rule['src_zone'][i]
+        fw_rule.s_zones.objects[i] = <uint_fast8_t>rule['src_zone'][i]
 
     fw_rule.s_networks.len = <size_t>len(rule['src_network'])
     for i in range(fw_rule.s_networks.len):
-        fw_rule.s_networks.objects[i].netid   = <long>rule['src_network'][i][0]
-        fw_rule.s_networks.objects[i].netmask = <uint32_t>rule['src_network'][i][1]
+        fw_rule.s_networks.objects[i].netid   = <uint_fast32_t>rule['src_network'][i][0]
+        fw_rule.s_networks.objects[i].netmask = <uint_fast32_t>rule['src_network'][i][1]
 
     fw_rule.s_services.len = <size_t>len(rule['src_service'])
     for i in range(fw_rule.s_services.len):
-        fw_rule.s_services.objects[i].protocol   = <uint16_t>rule['src_service'][i][0]
-        fw_rule.s_services.objects[i].start_port = <uint16_t>rule['src_service'][i][1]
-        fw_rule.s_services.objects[i].end_port   = <uint16_t>rule['src_service'][i][2]
+        fw_rule.s_services.objects[i].protocol   = <uint_fast16_t>rule['src_service'][i][0]
+        fw_rule.s_services.objects[i].start_port = <uint_fast16_t>rule['src_service'][i][1]
+        fw_rule.s_services.objects[i].end_port   = <uint_fast16_t>rule['src_service'][i][2]
 
     # ===========
     # DESTINATION
     # ===========
     fw_rule.d_zones.len = <size_t>len(rule['dst_zone'])
     for i in range(fw_rule.d_zones.len):
-        fw_rule.d_zones.objects[i] = <uint8_t>rule['dst_zone'][i]
+        fw_rule.d_zones.objects[i] = <uint_fast8_t>rule['dst_zone'][i]
 
     fw_rule.d_networks.len = <size_t>len(rule['dst_network'])
     for i in range(fw_rule.d_networks.len):
-        fw_rule.d_networks.objects[i].netid   = <long>rule['dst_network'][i][0]
-        fw_rule.d_networks.objects[i].netmask = <uint32_t>rule['dst_network'][i][1]
+        fw_rule.d_networks.objects[i].netid   = <uint_fast32_t>rule['dst_network'][i][0]
+        fw_rule.d_networks.objects[i].netmask = <uint_fast32_t>rule['dst_network'][i][1]
 
     fw_rule.d_services.len = <size_t>len(rule['dst_service'])
     for i in range(fw_rule.d_services.len):
-        fw_rule.d_services.objects[i].protocol   = <uint16_t>rule['dst_service'][i][0]
-        fw_rule.d_services.objects[i].start_port = <uint16_t>rule['dst_service'][i][1]
-        fw_rule.d_services.objects[i].end_port   = <uint16_t>rule['dst_service'][i][2]
+        fw_rule.d_services.objects[i].protocol   = <uint_fast16_t>rule['dst_service'][i][0]
+        fw_rule.d_services.objects[i].start_port = <uint_fast16_t>rule['dst_service'][i][1]
+        fw_rule.d_services.objects[i].end_port   = <uint_fast16_t>rule['dst_service'][i][2]
 
-    fw_rule.action = <uint8_t>rule['action']
-    fw_rule.log    = <uint8_t>rule['log']
+    fw_rule.action = <uint_fast8_t>rule['action']
+    fw_rule.log    = <uint_fast8_t>rule['log']
 
-    fw_rule.sec_profiles[0] = <uint8_t>rule['ipp_profile']
-    fw_rule.sec_profiles[1] = <uint8_t>rule['dns_profile']
-    fw_rule.sec_profiles[2] = <uint8_t>rule['ips_profile']
+    fw_rule.sec_profiles[0] = <uint_fast8_t>rule['ipp_profile']
+    fw_rule.sec_profiles[1] = <uint_fast8_t>rule['dns_profile']
+    fw_rule.sec_profiles[2] = <uint_fast8_t>rule['ips_profile']
 
 # ================================== #
 # C EXTENSION - Python Comm Pipeline

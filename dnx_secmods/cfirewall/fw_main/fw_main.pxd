@@ -156,44 +156,44 @@ DEF MAX_ZONES = 16
 DEF MAX_OBJECTS = 100
 
 cdef struct ZoneArray:
-    size_t        len
-    uint_fast8_t   objects[MAX_OBJECTS]
+    size_t          len
+    uint_fast8_t    objects[MAX_OBJECTS]
 
 cdef struct NetworkObj:
-    uint_fast8_t   type
-    uint_fast32_t  netid
-    uint_fast32_t  netmask
+    uint_fast8_t    type
+    uint_fast32_t   netid
+    uint_fast32_t   netmask
 
 cdef struct NetworkArray:
-    size_t        len
-    NetworkObj    objects[MAX_OBJECTS]
+    size_t          len
+    NetworkObj      objects[MAX_OBJECTS]
 
 cdef struct ServiceObj:
-    uint_fast16_t  protocol
-    uint_fast16_t  start_port
-    uint_fast16_t  end_port
+    uint_fast16_t   protocol
+    uint_fast16_t   start_port
+    uint_fast16_t   end_port
 
 cdef struct ServiceArray:
-    size_t        len
-    ServiceObj    objects[MAX_OBJECTS]
+    size_t          len
+    ServiceObj      objects[MAX_OBJECTS]
 
 cdef struct FWrule:
-    bint          enabled
+    bint            enabled
 
     # SOURCE
-    ZoneArray     s_zones
-    NetworkArray  s_networks
-    ServiceArray  s_services
+    ZoneArray       s_zones
+    NetworkArray    s_networks
+    ServiceArray    s_services
 
     # DESTINATION
-    ZoneArray     d_zones
-    NetworkArray  d_networks
-    ServiceArray  d_services
+    ZoneArray       d_zones
+    NetworkArray    d_networks
+    ServiceArray    d_services
 
     # PROFILES
-    uint_fast8_t   action
-    uint_fast8_t   log
-    uint_fast8_t   sec_profiles[SECURITY_PROFILE_COUNT]
+    uint_fast8_t    action
+    uint_fast8_t    log
+    uint_fast8_t    sec_profiles[SECURITY_PROFILE_COUNT]
         # ip_proxy - 0 off, > 1 profile number
         # dns_proxy - 0 off, > 1 profile number
         # ips_ids - 0 off, 1 on
