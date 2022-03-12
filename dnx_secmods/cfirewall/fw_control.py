@@ -10,7 +10,15 @@ from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import MSB, LSB, ppt
 from dnx_gentools.standard_tools import Initialize
 from dnx_gentools.signature_operations import generate_geolocation
-from dnx_gentools.file_operations import cfg_read_poller, load_data
+from dnx_gentools.file_operations import cfg_read_poller, load_configuration
+
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from dnx_gentools.file_operations import ConfigChain
 
 # ========================================
 # CONTROL - used within cfirewall process
@@ -64,12 +72,12 @@ class FirewallControl:
     def _monitor_zones(self, zone_map: str) -> None:
         '''Monitors the firewall zone file for changes and loads updates to cfirewall.
 
-        calls to Cython are made from within this method block. the GIL must be manually acquired on the Cython side
-        or the Python interpreter will crash.
+        calls to Cython are made from within this method block.
+        the GIL must be manually acquired on the Cython side or the Python interpreter will crash.
         '''
-        loaded_zones: dict = load_data(zone_map, filepath='dnx_system/iptables')
+        loaded_zones: ConfigChain = load_configuration(zone_map, ext='', filepath='dnx_system/iptables')
 
-        # converting list to python array, then sending to Cython to modify C array.
+        # converting the list to a python array, then sending to Cython to update the C array.
         # this format is required due to transitioning between python and C. python arrays are
         # compatible in C via memory views and Cython can handle the initial list.
         dnx_zones: array[int] = array('i', loaded_zones['map'])
@@ -85,17 +93,16 @@ class FirewallControl:
     def _monitor_standard_rules(self, fw_rules: str):
         '''Monitors the active firewall rules file for changes and loads updates to cfirewall.
 
-        calls to Cython are made from within this method block. the GIL must be manually acquired on the Cython
-        side or the Python interpreter will crash.
+        calls to Cython are made from within this method block.
+        the GIL must be manually acquired on the Cython side or the Python interpreter will crash.
         '''
-        loaded_rules: dict = load_data(fw_rules, filepath='dnx_system/iptables')
+        loaded_rules: ConfigChain = load_configuration(fw_rules, ext='', filepath='dnx_system/iptables')
 
-        # splitting out sections then determine which one has changed. this is to reduce amount of work done on the C
-        # side. not for performance, but more for ease of programming.
+        # splitting out sections then determine which one has changed.
         # NOTE: index 1 start is needed because SYSTEM rules are held at index 0.
         for i, section in enumerate(['BEFORE', 'MAIN', 'AFTER'], 1):
             current_section: dict = getattr(self, section)
-            new_section: dict = loaded_rules[section]
+            new_section: dict = loaded_rules.get_dict(section)
 
             # unchanged ruleset
             if (current_section == new_section): continue
@@ -121,16 +128,16 @@ class FirewallControl:
         #   - loopback will be left in iptables for now
         # 100-1059: zone mgmt rules. 100s place designates interface index
         #   - 0/1: webui, 2: cli, 3: ssh, 4: ping
-        #   - NOTE: int index will be used to do zone lookup. if zone changes, these will stop working and would need
+        #   - NOTE: int index will be used to do zone lookup. if zone changes, these will stop working and will need
         #       to be reset. this is ok for now since we only support builtin zones that can't change.
         # 2000+: system control (proxy bypass prevention)
 
-        loaded_rules: dict = load_data(system_rules, filepath='dnx_system/iptables')
+        loaded_rules: ConfigChain = load_configuration(system_rules, ext='', filepath='dnx_system/iptables')
 
-        system_set: list = list(loaded_rules['BUILTIN'].values())
+        system_set: list = loaded_rules.get_values('BUILTIN')
 
         # updating ruleset to reflect changes
-        self.SYSTEM = loaded_rules
+        self.SYSTEM = loaded_rules.get_dict()
 
         self.log.notice('DNXFIREWALL system rule update job starting.')
 

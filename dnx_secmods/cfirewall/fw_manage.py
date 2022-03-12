@@ -63,8 +63,8 @@ class FirewallManage:
     def push(cls) -> None:
         '''Copy the pending configuration to the active state.
 
-        file changes are being monitored by Control class to load into cfirewall.'''
-
+        file changes are being monitored by Control class to load into cfirewall.
+        '''
         with ConfigurationManager():
             shutil.copy(PENDING_RULE_FILE, COPY_RULE_FILE)
 
