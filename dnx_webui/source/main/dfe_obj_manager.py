@@ -10,7 +10,9 @@ from collections import namedtuple
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_enums import GEO, DATA
-from dnx_iptools.protocol_tools import cidr_to_int, iptoi
+
+from dnx_iptools.cprotocol_tools import iptoi
+from dnx_iptools.protocol_tools import cidr_to_int
 
 debug = pprint.PrettyPrinter(indent=4).pprint
 
