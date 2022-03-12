@@ -8,6 +8,7 @@ from dnx_gentools.def_namedtuples import DNS_REQUEST_RESULTS
 
 from dnx_iptools.packet_classes import NFQueue
 
+from dns_proxy_server import DNSServer
 from dns_proxy_automate import ProxyConfiguration
 from dns_proxy_packets import DNSPacket, ProxyResponse
 from dns_proxy_log import Log
