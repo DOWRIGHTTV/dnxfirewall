@@ -540,8 +540,9 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
 
     fw_rule.s_networks.len = <size_t>len(rule['src_network'])
     for i in range(fw_rule.s_networks.len):
-        fw_rule.s_networks.objects[i].netid   = <uint_fast32_t>rule['src_network'][i][0]
-        fw_rule.s_networks.objects[i].netmask = <uint_fast32_t>rule['src_network'][i][1]
+        fw_rule.s_networks.objects[i].type    = <uint_fast8_t> rule['src_network'][i][0]
+        fw_rule.s_networks.objects[i].netid   = <uint_fast32_t>rule['src_network'][i][1]
+        fw_rule.s_networks.objects[i].netmask = <uint_fast32_t>rule['src_network'][i][2]
 
     fw_rule.s_services.len = <size_t>len(rule['src_service'])
     for i in range(fw_rule.s_services.len):
@@ -558,8 +559,9 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
 
     fw_rule.d_networks.len = <size_t>len(rule['dst_network'])
     for i in range(fw_rule.d_networks.len):
-        fw_rule.d_networks.objects[i].netid   = <uint_fast32_t>rule['dst_network'][i][0]
-        fw_rule.d_networks.objects[i].netmask = <uint_fast32_t>rule['dst_network'][i][1]
+        fw_rule.d_networks.objects[i].type    = <uint_fast8_t> rule['dst_network'][i][0]
+        fw_rule.d_networks.objects[i].netid   = <uint_fast32_t>rule['dst_network'][i][1]
+        fw_rule.d_networks.objects[i].netmask = <uint_fast32_t>rule['dst_network'][i][2]
 
     fw_rule.d_services.len = <size_t>len(rule['dst_service'])
     for i in range(fw_rule.d_services.len):
