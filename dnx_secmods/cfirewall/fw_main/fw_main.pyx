@@ -44,6 +44,11 @@ DEF FOUR_BIT_MASK = 15
 DEF NETWORK = 1
 DEF SERVICE = 2
 
+# network object types. not using enums because they need to be hardcoded anyway.
+DEF IP_ADDRESS = 1
+DEF IP_NETWORK = 2
+DEF GEOLOCATION = 3
+
 cdef bint PROXY_BYPASS  = 0
 cdef bint VERBOSE = 0
 
@@ -372,16 +377,22 @@ cdef inline bint network_match(NetworkArray net_defs, uint32_t iph_ip, uint16_t 
         if (VERBOSE):
             obj_print(NETWORK, &net)
 
-        # geolocation objects use address object fields. we know it's a geo object when netid is -1
-        if (net.netid == GEO_MARKER):
+        if (net.type == IP_ADDRESS):
 
-            # country code/id comparison
-            if (country == net.netmask):
+            if (iph_ip == net.netid):
                 return MATCH
 
-        # using rules mask to floor ip in header and checking against FWrule network id
-        elif (iph_ip & net.netmask == net.netid):
-            return MATCH
+        elif (net.type == IP_NETWORK):
+
+        # using the rule object mask to floor the packets ip and checking against FWrule network id
+            if (iph_ip & net.netmask == net.netid):
+                return MATCH
+
+        elif (net.type == GEOLOCATION):
+
+            # country code/id comparison
+            if (country == net.netid):
+                return MATCH
 
     if (VERBOSE):
         printf(<char*>'no match ip->%u, country->%u\n', iph_ip, country)

@@ -76,7 +76,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     # COMPILE ONLY
     'dnx-nfqueue': {'module': '', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
     'cprotocol-tools': {'module': '', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
-    'trie-search': {'module': '', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False}
+    'trie-structs': {'module': '', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False}
 }
 SERVICE_MODULES = [f'dnx-{mod.replace("_", "-")}' for mod, modset in MODULE_MAPPING.items() if modset['service']]
 
@@ -257,7 +257,7 @@ if (__name__ == '__main__'):
         modstat_command()
 
     elif(command == 'compile'):
-        file_path = f'{HOME_DIR}/dnx_system/utils/compile_{mod_name.replace("-", "_")}.py'
+        file_path = f'{HOME_DIR}/dnx_system/utils/compiler/{mod_name.replace("-", "_")}.py'
         try:
             dnx_run(f'sudo python3 {file_path} build_ext --inplace', shell=True)
         except CalledProcessError as cpe:

@@ -19,5 +19,5 @@ ext = Extension(
 )
 
 setup(
-    name='cprotocol_tools', cmdclass=cmd, ext_modules=cythonize(ext, language_level='3')
+    name='cprotocol-tools', cmdclass=cmd, ext_modules=cythonize(ext, language_level='3')
 )

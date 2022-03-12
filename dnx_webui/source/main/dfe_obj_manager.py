@@ -39,10 +39,12 @@ def _object_manager(object_list: list[_FW_OBJECT]) -> ObjectManager:
         if (obj.type == 'address'):
             ip, netmask = obj.value.split('/')
 
-            return [iptoi(ip), cidr_to_int(netmask)]
+            # type, int 32 bit ip, int 32 bit netmask
+            return [1 if netmask == '32' else 2, iptoi(ip), cidr_to_int(netmask)]
 
+        # type, int 32 bit country code, null
         elif (obj.type == 'country'):
-            return [-1, GEO[obj.value.upper()].value]
+            return [3, GEO[obj.value.upper()].value, 0]
 
         elif (obj.type == 'service'):
 

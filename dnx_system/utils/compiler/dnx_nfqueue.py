@@ -8,13 +8,13 @@ from setuptools import setup, Extension
 from Cython.Build import cythonize
 from Cython.Distutils import build_ext
 
-os.chdir('/home/dnx/dnxfirewall/dnx_iptools/dnx_trie_search')
+os.chdir('/home/dnx/dnxfirewall/dnx_netmods/dnx_netfilter')
 
 cmd = {'build_ext': build_ext}
 ext = Extension(
-    'dnx_trie_search', sources=['dnx_trie_search.pyx']
+    'dnx_nfqueue', sources=['dnx_nfqueue.pyx']  # libraries=['netfilter_queue']
 )
 
 setup(
-    name='DNX-TRIESEARCH', cmdclass=cmd, ext_modules=cythonize(ext, language_level='3')
+    name='dnx-nfqueue', cmdclass=cmd, ext_modules=cythonize(ext, language_level='3')
 )

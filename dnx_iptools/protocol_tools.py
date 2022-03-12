@@ -85,7 +85,7 @@ def convert_string_to_bitmap(rule: str, offset: int) -> tuple[int, int]:
 
     return b_id, h_id
 
-def cidr_to_int(cidr: int) -> int:
+def cidr_to_int(cidr: Union[str, int]) -> int:
 
     # using hostmask to shift to the start of network bits. int conversion to cover string values.
     hostmask: int = 32 - int(cidr)

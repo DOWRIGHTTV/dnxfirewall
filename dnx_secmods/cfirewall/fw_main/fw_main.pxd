@@ -149,7 +149,7 @@ cdef enum:
     MAIN_RULES
     AFTER_RULES
 
-# used for dynamic allocation of array containing security profile settings
+# used for dynamic allocation of the array containing security profile settings
 # ip proxy, ips_ids, dns_proxy
 DEF SECURITY_PROFILE_COUNT = 3
 DEF MAX_ZONES = 16
@@ -160,7 +160,8 @@ cdef struct ZoneArray:
     uint_fast8_t   objects[MAX_OBJECTS]
 
 cdef struct NetworkObj:
-    int32_t       netid # must be signed for geo marker (-1)
+    uint_fast8_t   type
+    uint_fast32_t  netid
     uint_fast32_t  netmask
 
 cdef struct NetworkArray:
@@ -200,10 +201,9 @@ cdef struct FWrule:
 cdef struct HWinfo:
     uint8_t    in_zone
     uint8_t    out_zone
-    char*       mac_addr
-    double      timestamp
+    char*      mac_addr
+    double     timestamp
 
-# cython define
 cdef struct IPhdr:
     uint8_t    ver_ihl
     uint8_t    tos
