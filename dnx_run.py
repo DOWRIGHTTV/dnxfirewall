@@ -59,7 +59,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
 
     # NETWORK MODULES
     'dhcp-server': {
-        'module': 'dnx_netmods.dhcp_server.dhcp_server', 'exclude': ['compile'], 'priv': True, 'service': True
+        'module': 'dnx_netmods.dhcp_server', 'exclude': ['compile'], 'priv': True, 'service': True
     },
 
     # ROUTINES
