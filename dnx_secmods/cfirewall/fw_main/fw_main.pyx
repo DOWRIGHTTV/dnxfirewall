@@ -201,7 +201,8 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     if (VERBOSE):
         pkt_print(&hw, ip_header, proto_header)
 
-        printf('[C/packet] action=%u, verdict=%u, system_rule=%u\n', inspection_results.action, verdict, system_rule)
+        printf('[C/packet] action->%u, verdict->%u, system_rule->%u\n', inspection_results.action, verdict, system_rule)
+        printf(<char*>'---------------------------------------------------------------------\n')
 
     # return heirarchy -> libnfnetlink.c >> libnetfiler_queue >> CFirewall._run.
     # < 0 vals are errors, but return is being ignored by CFirewall._run.
@@ -337,11 +338,11 @@ cdef inline bint zone_match(ZoneArray rule_defs, uint8_t pkt_zone) nogil:
 
     cdef size_t i
 
-    # zone set to any is guaranteed match
+    # a zone set to any is a guaranteed match
     if (rule_defs.objects[0] == ANY_ZONE):
         return MATCH
 
-    # iterating over all zones defined in rule
+    # iterating over all zones defined in the rule
     for i in range(rule_defs.len):
 
         # continue on no match, blocking return
@@ -362,7 +363,7 @@ cdef inline bint network_match(NetworkArray net_defs, uint32_t iph_ip, uint16_t 
         NetworkObj net
 
     if (VERBOSE):
-        printf(<char*>'checking ip %u: %u\n', iph_ip, country)
+        printf(<char*>'checking ip->%u, country->%u\n', iph_ip, country)
 
     for i in range(net_defs.len):
 
@@ -383,7 +384,7 @@ cdef inline bint network_match(NetworkArray net_defs, uint32_t iph_ip, uint16_t 
             return MATCH
 
     if (VERBOSE):
-        printf(<char*>'no ip match %u: %u\n', iph_ip, country)
+        printf(<char*>'no match ip->%u, country->%u\n', iph_ip, country)
 
     # default action
     return NO_MATCH
@@ -396,7 +397,7 @@ cdef inline bint service_match(ServiceArray svc_defs, uint16_t pkt_protocol, uin
         ServiceObj svc
 
     if (VERBOSE):
-        printf(<char*>'checking service %u: %u\n', pkt_protocol, pkt_port)
+        printf(<char*>'checking protocol->%u, port->%u\n', pkt_protocol, pkt_port)
 
     for i in range(svc_defs.len):
 
@@ -414,7 +415,7 @@ cdef inline bint service_match(ServiceArray svc_defs, uint16_t pkt_protocol, uin
             return MATCH
 
     if (VERBOSE):
-        printf(<char *> 'no service match %u: %u\n', pkt_protocol, pkt_port)
+        printf(<char*>'no match protocol->%u, port->%u\n', pkt_protocol, pkt_port)
 
     # default action
     return NO_MATCH
@@ -450,15 +451,15 @@ cdef inline void rule_print(FWrule *rule) nogil:
         printf('%u ', rule.s_zones.objects[i])
     printf(<char*>')\n')
 
-    printf(<char*> 'src_zones=(')
+    printf(<char*>'src_zones=(')
     for i in range(rule.s_services.len):
-        printf('proto=%u, ports=(%u, %u) ', src_services[i].protocol, src_services[i].start_port, src_services[i].end_port)
-    printf(<char*> ')\n')
+        printf('protocol->%u, ports->(%u, %u) ', src_services[i].protocol, src_services[i].start_port, src_services[i].end_port)
+    printf(<char*>')\n')
 
     printf(<char*> 'dst_zones=(')
     for i in range(rule.s_services.len):
-        printf('proto=%u, ports=(%u, %u) ', dst_services[i].protocol, dst_services[i].start_port, dst_services[i].end_port)
-    printf(<char*> ')\n')
+        printf('protocol->%u, ports->(%u, %u) ', dst_services[i].protocol, dst_services[i].start_port, dst_services[i].end_port)
+    printf(<char*>')\n')
 
     # printf('rule-s netid=%lu\n', rule.s_net_id)
     # printf('rule-d netid=%lu\n', rule.d_net_id)
@@ -473,12 +474,12 @@ cdef inline void obj_print(int name, void *object) nogil:
     if (name == NETWORK):
         net_obj = <NetworkObj*>object
 
-        printf('net_obj, id=%lu mask=%u\n', net_obj.netid, net_obj.netmask)
+        printf('net_obj, id->%lu, mask->%u\n', net_obj.netid, net_obj.netmask)
 
     elif (name == SERVICE):
         svc_obj = <ServiceObj*>object
 
-        printf('svc_obj, proto=%u start_port=%u end_port=%u\n', svc_obj.protocol, svc_obj.start_port, svc_obj.end_port)
+        printf('svc_obj, protocol->%u, port->(%u, %u)\n', svc_obj.protocol, svc_obj.start_port, svc_obj.end_port)
 
 # ================================== #
 # C CONVERSION / INIT FUNCTIONS
