@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import Queue, CFG
-from dnx_gentools.file_operations import load_data
+from dnx_gentools.file_operations import load_configuration
 
 from dnx_iptools.cprotocol_tools import itoip
 
@@ -16,7 +16,7 @@ from dnx_iptools.cprotocol_tools import itoip
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
-    from dnx_gentools.file_operations import config
+    from dnx_gentools.file_operations import ConfigChain, config
 
 __all__ = (
     'IPTablesManager'
@@ -151,14 +151,16 @@ class IPTablesManager:
     )
 
     def __init__(self) -> None:
-        interfaces = load_data('system.cfg')['interfaces']['builtins']
+        interfaces: ConfigChain = load_configuration('system')
+
+        builtins = interfaces.get_items('interfaces->builtins')
 
         self._intf_to_zone: dict[str, int] = {
-            interfaces[zone]['ident']: zone for zone in ['wan', 'lan', 'dmz']
+            info['ident']: zone for zone, info in builtins
         }
 
         self._zone_to_intf: dict[str, int] = {
-            zone: interfaces[zone]['ident'] for zone in ['wan', 'lan', 'dmz']
+            zone: info['ident'] for zone, info in builtins
         }
 
         self._iptables_lock_file = f'{HOME_DIR}/dnx_system/iptables/iptables.lock'
