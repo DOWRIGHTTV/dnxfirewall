@@ -12,7 +12,7 @@ os.chdir('/home/dnx/dnxfirewall/dnx_netmods/dnx_netfilter')
 
 cmd = {'build_ext': build_ext}
 ext = Extension(
-    'dnx_nfqueue', sources=['dnx_nfqueue.pyx']  # libraries=['netfilter_queue']
+    'dnx_nfqueue', sources=['dnx_nfqueue.pyx'], libraries=['netfilter_queue']
 )
 
 setup(

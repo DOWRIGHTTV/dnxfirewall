@@ -13,7 +13,7 @@ os.chdir(f'{HOME_DIR}/dnx_secmods/cfirewall/fw_main')
 
 cmd = {'build_ext': build_ext}
 ext = Extension(
-    'fw_main', sources=['fw_main.pyx']  # libraries=['netfilter_queue']
+    'fw_main', sources=['fw_main.pyx'], libraries=['netfilter_queue']
 )
 
 cyonize = cythonize(ext, language_level='3', include_path=[os.getcwd(), f'{HOME_DIR}/dnx_iptools'])
