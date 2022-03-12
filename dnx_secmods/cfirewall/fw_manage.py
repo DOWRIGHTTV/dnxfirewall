@@ -45,7 +45,7 @@ class FirewallManage:
     versions: ClassVar[list] = ['pending', 'active']
     sections: ClassVar[list] = ['BEFORE', 'MAIN', 'AFTER']
 
-    _firewall: ClassVar[dict] = load_configuration(DEFAULT_VERSION, filepath=DEFAULT_PATH).get_dict()
+    _firewall: ClassVar[dict] = load_configuration(DEFAULT_VERSION, ext='.firewall', filepath=DEFAULT_PATH).get_dict()
 
     @classmethod
     def commit(cls, firewall_rules: dict) -> None:
