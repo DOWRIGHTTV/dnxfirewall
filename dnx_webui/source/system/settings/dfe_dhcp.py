@@ -155,7 +155,7 @@ def configure_dhcp_settings(dhcp_settings):
         expanded_data = dhcp_server_settings.expanded_user_data
 
         interface = dhcp_settings.pop('interface')
-        expanded_data['interfaces'][interface].update(dhcp_settings)
+        expanded_data['interfaces']['builtins'][interface].update(dhcp_settings)
 
         dnx.write_configuration(expanded_data)
 

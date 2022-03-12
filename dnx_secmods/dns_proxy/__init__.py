@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+# ================
+# RUNTIME IMPORTS
+# ================
 from dnx_gentools.def_constants import INITIALIZE_MODULE
 
 if INITIALIZE_MODULE('dns-proxy'):
@@ -47,12 +50,12 @@ def run():
     dns_proxy.DNSProxy.run(Log, q_num=Queue.DNS_PROXY)
 
 
-# ===============
+# ================
 # TYPING IMPORTS
-# ===============
+# ================
 from typing import TYPE_CHECKING, Type
-if (TYPE_CHECKING):
 
+if (TYPE_CHECKING):
     __all__ = (
         'DNSProxy', 'DNSServer',
         'ClientQuery', 'DNSPacket',

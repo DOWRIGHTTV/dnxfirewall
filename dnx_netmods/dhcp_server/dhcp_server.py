@@ -144,16 +144,17 @@ class DHCPServer(Listener):
 
             send_to_client(send_data, client_request, server_mtype)
 
-    @classmethod
-    def _listener_sock(cls, intf, _) -> Socket:
-        l_sock: Socket = cls.intf_settings[intf].get('l_sock')
+    def _listener_sock(self, intf, _) -> Socket:
+        l_sock: Socket = self.__class__.intf_settings[intf].get('l_sock')
 
         l_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         l_sock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
         l_sock.setsockopt(SOL_SOCKET, SO_BINDTODEVICE, f'{intf}\0'.encode('utf-8'))
         l_sock.bind((itoip(INADDR_ANY), PROTO.DHCP_SVR))
 
-        Log.debug(f'[{l_sock.fileno()}][{intf}] {cls.__name__} interface bound: {cls.intf_settings[intf]}')
+        Log.debug(
+            f'[{l_sock.fileno()}][{intf}] {self.__class__.__name__} interface bound: {self.__class__.intf_settings[intf]}'
+        )
 
         return l_sock
 
@@ -165,23 +166,15 @@ def send_to_client(send_data: bytearray, client_request: ClientRequest, server_m
         Log.debug(f'[response][unicast] {client_request.ciaddr}')
 
     # NOTE: sending broadcast because fuck.
+    #   it seems we cannot support this unless we use raw sockets
+    #
+    #   If the broadcast bit is not set and 'giaddr' is zero and 'ciaddr' is zero, then the server unicasts DHCPOFFER
+    #   and DHCPACK messages to the client's hardware address and 'yiaddr' address.
+    #
+    #   In all cases, when 'giaddr' is zero, the server broadcasts any DHCPNAK messages to 0xffffffff.
     else:
         client_request.sendto(send_data, (f'{BROADCAST}', 68))
 
         Log.debug(f'[response][broadcast] {client_request.handout_ip}')
 
-    # NOTE: it seems we cannot support this unless we use raw sockets or inject a static arp entry through syscall
-    # If the broadcast bit is not set and 'giaddr' is zero and
-    # 'ciaddr' is zero, then the server unicasts DHCPOFFER and DHCPACK
-    # messages to the client's hardware address and 'yiaddr' address.  In
-    # all cases, when 'giaddr' is zero, the server broadcasts any DHCPNAK
-    # messages to 0xffffffff.
-
-def run():
-    DHCPServer.run(Log, threaded=False)
-
-
-if (INIT_MODULE == LOG_NAME.replace('_', '-')):
-    Log.run(
-        name=LOG_NAME
-    )
+    # NOTE:

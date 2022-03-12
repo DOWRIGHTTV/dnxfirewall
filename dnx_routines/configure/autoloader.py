@@ -227,7 +227,7 @@ def set_dhcp_interfaces(user_intf_config: dict[str, str]) -> None:
 
         for zone in ['LAN', 'DMZ']:
 
-            dhcp_settings[f'interfaces->{zone.lower()}->ident'] = user_intf_config[zone]
+            dhcp_settings[f'interfaces->builtins->{zone.lower()}->ident'] = user_intf_config[zone]
 
         dhcp.write_configuration(dhcp_settings.expanded_user_data)
 

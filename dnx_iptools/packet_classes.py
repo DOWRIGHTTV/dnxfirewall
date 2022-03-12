@@ -59,12 +59,12 @@ class Listener:
         # ======================
         # running main epoll/ socket loop.
         self = cls()
+        self._setup()
 
         # starting a registration thread for all available interfaces and exit when complete
         for intf in cls._intfs:
             threading.Thread(target=self.__register, args=(intf,)).start()
 
-        self._setup()
         self.__listener(always_on, threaded)
 
     @classmethod
@@ -196,8 +196,7 @@ class Listener:
         '''
         raise NotImplementedError('the _pre_inspect method must be overridden in subclass.')
 
-    @staticmethod
-    def _listener_sock(intf: str, intf_ip: int) -> Socket:
+    def _listener_sock(self, intf: str, intf_ip: int) -> Socket:
         '''returns instance level listener socket.
 
         Must be overridden.

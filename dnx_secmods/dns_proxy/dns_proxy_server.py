@@ -6,7 +6,6 @@ import socket
 import threading
 
 from random import randint
-from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_REUSEADDR
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
@@ -208,11 +207,10 @@ class DNSServer(ServerConfiguration, Listener):
 
         return True
 
-    @staticmethod
-    def _listener_sock(intf: str, intf_ip: int) -> Socket:
-        l_sock: Socket = socket(AF_INET, SOCK_DGRAM)
+    def _listener_sock(self, intf: str, intf_ip: int) -> Socket:
+        l_sock: Socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-        l_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        l_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         l_sock.setblocking(False)
 
         l_sock.bind((itoip(intf_ip), PROTO.DNS))

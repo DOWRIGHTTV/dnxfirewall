@@ -2,17 +2,37 @@
 
 from __future__ import annotations
 
+# ================
+# RUNTIME IMPORTS
+# ================
+from dnx_gentools.def_constants import INITIALIZE_MODULE
+
+if INITIALIZE_MODULE('dhcp-server'):
+    __all__ = ('run',)
+
+    from dnx_routines.logging import Log
+
+    Log.run(name='dhcp_server')
+
+    from dhcp_server import DHCPServer
+
+def run():
+    DHCPServer.run(Log, threaded=False)
+
+
+# ================
+# TYPING IMPORTS
+# ================
 from typing import TYPE_CHECKING, Type
 
-__all__ = (
-    'DHCPServer', 'Leases',
-    'ClientRequest', 'ServerResponse',
-
-    # TYPES
-    'DHCPServer_T', 'ClientRequest_T'
-)
-
 if (TYPE_CHECKING):
+    __all__ = (
+        'DHCPServer', 'Leases',
+        'ClientRequest', 'ServerResponse',
+
+        # TYPES
+        'DHCPServer_T', 'ClientRequest_T'
+    )
 
     from dhcp_server import DHCPServer
     from dhcp_server_automate import Leases

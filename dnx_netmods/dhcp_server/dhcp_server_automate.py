@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import threading
-
-from socket import socket,  AF_INET, SOCK_DGRAM
+import socket
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
@@ -177,7 +176,7 @@ class Configuration:
     # this is providing the first portion of creating a socket. this will allow the system to create the socket
     # store the file descriptor id, and then bind when ready per normal registration logic.
     def _create_socket(self, intf: str) -> None:
-        l_sock = socket(AF_INET, SOCK_DGRAM)
+        l_sock: Socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         # used for converting interface identity to socket object file descriptor number
         self.dhcp_server.intf_settings[intf].update({
