@@ -104,6 +104,7 @@ class ClientRequest:
 
             data = data[opt_len:]
 
+    # FIXME: it looks like we are still sending no dhcp options sometimes....?
     # calling internal methods for header and options/payload, then combining byte strings as send data.
     # server options are locked to ensure the config loader thread does not mutate while this is iterating.
     def generate_server_response(self, response_mtype: DHCP) -> bytearray:
