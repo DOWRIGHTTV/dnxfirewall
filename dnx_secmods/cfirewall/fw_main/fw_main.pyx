@@ -366,7 +366,7 @@ cdef inline bint network_match(NetworkArray net_defs, uint32_t iph_ip, uint16_t 
         NetworkObj net
 
     if (VERBOSE):
-        printf(<char*>'checking ip->%lu, country->%u\n', iph_ip, <uint8_t>country)
+        printf(<char*>'checking ip->%u, country->%u\n', iph_ip, <uint8_t>country)
 
     for i in range(net_defs.len):
 
@@ -393,7 +393,7 @@ cdef inline bint network_match(NetworkArray net_defs, uint32_t iph_ip, uint16_t 
                 return MATCH
 
     if (VERBOSE):
-        printf(<char*>'no match ip->%lu, country->%u\n', iph_ip, <uint8_t>country)
+        printf(<char*>'no match ip->%u, country->%u\n', iph_ip, <uint8_t>country)
 
     # default action
     return NO_MATCH
