@@ -47,7 +47,7 @@ DEF SERVICE = 2
 # network object types. not using enums because they need to be hardcoded anyway.
 DEF IP_ADDRESS = 1
 DEF IP_NETWORK = 2
-DEF GEOLOCATION = 3
+DEF IP_GEO = 3
 
 cdef bint PROXY_BYPASS  = 0
 cdef bint VERBOSE = 0
@@ -265,8 +265,6 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
             # ------------------------------------------------------------------ #
             # GEOLOCATION or IP/NETMASK
             # ------------------------------------------------------------------ #
-            # geolocation repurposes the network id and netmask fields in the firewall rule.
-            # net id of -1 will identify geolocation objects.
             if not network_match(rule.s_networks, iph_src_ip, src_country):
                 continue
 
@@ -388,7 +386,7 @@ cdef inline bint network_match(NetworkArray net_defs, uint32_t iph_ip, uint16_t 
             if (iph_ip & net.netmask == net.netid):
                 return MATCH
 
-        elif (net.type == GEOLOCATION):
+        elif (net.type == IP_GEO):
 
             # country code/id comparison
             if (country == net.netid):
