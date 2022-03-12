@@ -2,35 +2,45 @@
 
 from __future__ import annotations
 
-import os
-
-from threading import Thread
-from dataclasses import dataclass
-
 from dnx_gentools.def_constants import hardout, INITIALIZE_MODULE
-from dnx_gentools.def_enums import Queue
-
-from dnx_routines.logging.log_client import Log
-
-from fw_main import CFirewall
-from fw_control import FirewallControl
 
 LOG_NAME = 'cfirewall'
 
-@dataclass
-class Args:
-    b: int = 0
-    v: int = 0
-    bypass: int = 0
-    verbose: int = 0
+if INITIALIZE_MODULE(LOG_NAME):
+    import os
 
-    @property
-    def bypass_set(self):
-        return self.b or self.bypass
+    from threading import Thread
+    from dataclasses import dataclass
 
-    @property
-    def verbose_set(self):
-        return self.v or self.verbose
+    from dnx_gentools.def_enums import Queue
+
+    from dnx_routines.logging.log_client import Log
+
+    from fw_main import CFirewall
+    from fw_control import FirewallControl
+
+
+    @dataclass
+    class Args:
+        b: int = 0
+        v: int = 0
+        bypass: int = 0
+        verbose: int = 0
+
+        @property
+        def bypass_set(self):
+            return self.b or self.bypass
+
+        @property
+        def verbose_set(self):
+            return self.v or self.verbose
+
+    try:
+        args = Args(**{a: 1 for a in os.environ['PASSTHROUGH_ARGS'].split(',') if a})
+    except Exception as E:
+        hardout(f'DNXFIREWALL arg parse failure => {E}')
+
+    Log.run(name=LOG_NAME)
 
 def run():
 
@@ -67,12 +77,3 @@ def run():
     except Exception as E:
         dnxfirewall.nf_break()
         hardout(f'DNXFIREWALL cfirewall/nfqueue failure => {E}')
-
-
-if INITIALIZE_MODULE(LOG_NAME):
-    try:
-        args = Args(**{a: 1 for a in os.environ['PASSTHROUGH_ARGS'].split(',') if a})
-    except Exception as E:
-        hardout(f'DNXFIREWALL arg parse failure => {E}')
-
-    Log.run(name=LOG_NAME)

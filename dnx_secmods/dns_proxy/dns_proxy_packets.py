@@ -188,6 +188,12 @@ class DNSPacket(NFPacket):
         self.qclass: int = -1
         self.request_identifier: tuple[str, int, int] = ('0', -1, -1)
 
+        self.dns_id: int
+        self.qname:  str
+        self.qtype:  int
+        self.qclass: int
+        self.local_domain: bool
+
     def _before_exit(self, mark: int):
 
         # ============================

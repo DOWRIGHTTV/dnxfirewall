@@ -2,60 +2,24 @@
 
 from __future__ import annotations
 
-import threading
-
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import *
-from dnx_gentools.def_enums import Queue, DNS, DNS_CAT, TLD_CAT, CONN
+from dnx_gentools.def_enums import DNS, DNS_CAT, TLD_CAT, CONN
 from dnx_gentools.def_namedtuples import DNS_REQUEST_RESULTS
-from dnx_gentools.signature_operations import generate_domain
 
-from dnx_iptools.dnx_trie_search import RecurveTrie
 from dnx_iptools.packet_classes import NFQueue
 
+from dns_proxy_automate import ProxyConfiguration
+from dns_proxy_packets import DNSPacket, ProxyResponse
 from dns_proxy_log import Log
 
 __all__ = (
-    'run', 'DNSProxy'
+    'DNSProxy',
 )
 
 
-# LOG_NAME = 'dns_proxy'
-if INITIALIZE_MODULE('dns-proxy'):
-
-    Log.run(name='dns_proxy')
-
-    # TODO: collisions were found in the geolocation filtering data structure. this has been fixed for geolocation and
-    #  standard ip category filtering, but has not been investigated for dns signatures. due to the way the signatures
-    #  are compressed, it is much less likely to happen to dns signatures. (main issue were values in multiples of 10
-    #  because of the multiple 0s contained).
-    #  to be safe, run through the signatures, generate bin and host id, then check for host id collisions within a bin.
-    dns_cat_signatures = generate_domain(Log)
-
-    _category_trie = RecurveTrie()
-    _category_trie.generate_structure(dns_cat_signatures)
-
-    _category_search = _category_trie.search
-
-    # =================
-    # DEFERRED IMPORTS
-    # =================
-    from dns_proxy_server import DNSServer
-    from dns_proxy_automate import ProxyConfiguration
-    from dns_proxy_packets import DNSPacket, ProxyResponse
-
-    # =================
-    # DEFERRED DEFS
-    # =================
-    LOCAL_RECORD = DNSServer.dns_records.get
-    prepare_and_send = ProxyResponse.prepare_and_send
-
-def run():
-    # server running in thread because run method is a blocking call
-    threading.Thread(target=DNSServer.run, args=(Log,), kwargs={'threaded': False, 'always_on': True}).start()
-
-    DNSProxy.run(Log, q_num=Queue.DNS_PROXY)
-
+CAT_LOOKUP: Callable[[tuple[int]], int] = NotImplemented  # will be assigned by __init__ prior to running
+LOCAL_RECORD: Callable[[str], ...] = DNSServer.dns_records.get
+PREPARE_AND_SEND = ProxyResponse.prepare_and_send
 
 # =====================
 # MAIN DNS PROXY CLASS
@@ -96,7 +60,7 @@ class DNSProxy(ProxyConfiguration, NFQueue):
 
         # refusing ipv6 dns record types as policy
         elif (packet.qtype == DNS.AAAA):
-            prepare_and_send(packet)
+            PREPARE_AND_SEND(packet)
 
             packet.nfqueue.drop()
 
@@ -125,7 +89,7 @@ def inspect(packet: DNSPacket):
     else:
         packet.nfqueue.drop()
 
-        prepare_and_send(packet)
+        PREPARE_AND_SEND(packet)
 
     Log.log(packet, request_results)
 
@@ -160,7 +124,7 @@ def _inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
             return DNS_REQUEST_RESULTS(True, 'blacklist', DNS_CAT.time_based)
 
         # determining the domain category
-        category = DNS_CAT(_category_search(enum_request))
+        category = DNS_CAT(CAT_LOOKUP(enum_request))
         if (category is not DNS_CAT.NONE) and _block_query(category, whitelisted):
 
             return DNS_REQUEST_RESULTS(True, 'category', category)
