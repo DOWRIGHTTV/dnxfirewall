@@ -2,19 +2,24 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import hashlib
 import threading
 
 from functools import wraps
 from flask import redirect, render_template, request, session, url_for
 
-from dnx_gentools.def_typing import Event
 from dnx_gentools.def_constants import fast_sleep
 from dnx_gentools.file_operations import load_configuration
 
 from dnx_routines.logging import direct_log
+
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING, Optional
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Event
+
 
 LOG_NAME = 'logins'
 
