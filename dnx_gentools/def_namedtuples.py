@@ -7,8 +7,17 @@ from functools import lru_cache as _lru_cache
 from typing import NamedTuple as _NamedTuple, Union as _Union, Optional as _Optional, Any as _Any, Callable as _Callable
 
 from dnx_gentools.def_enums import PROTO as _PROTO, DHCP as _DHCP, DNS_CAT as _DNS_CAT
+from dnx_gentools.standard_tools import bytecontainer as _bytecontainer
 from dnx_iptools.def_structs import dhcp_byte_pack as _dhcp_bp, dhcp_short_pack as _dhcp_sp, dhcp_long_pack as _dhcp_lp
 
+# ================
+# BYTE CONTAINERS
+# ================
+RESOURCE_RECORD = _bytecontainer('resource_record', 'name qtype qclass ttl data')
+
+# ================
+# NAMED TUPLES
+# ================
 class Item(_NamedTuple):
     key: _Any
     value: _Any
@@ -28,9 +37,9 @@ class DHCP_OPTION(_NamedTuple):
 
     @_lru_cache(maxsize=None)
     def packed(self) -> bytes:
-        '''pack dhcp option into byte string.
+        '''pack a dhcp option into a byte string.
 
-        @lru_cache decorator guarantees the lookup and calculation will only be done on the first call to this function
+        the @lru_cache decorator guarantees the attribute lookup/ pack call are done once.
         '''
         return _pack_map[self.size](self.code, self.size, self.value)
 
@@ -58,9 +67,17 @@ class DNS_SERVERS(_NamedTuple):
 # DNS_SERVERS = _namedtuple('dns_servers', 'primary secondary')
 PROXY_DECISION = _namedtuple('proxy_decision', 'name decision')
 RELAY_CONN = _namedtuple('relay_conn', 'remote_ip sock send recv version')
-DNS_CACHE = _namedtuple('dns_cache', 'ttl records')
-CACHED_RECORD = _namedtuple('cached_record', 'expire ttl records')
+
 DNS_REQUEST_INFO = _namedtuple('request_info', 'client_address request, request2')
+class QNAME_RECORD(_NamedTuple):
+    expire: int
+    ttl: int
+    records: list[RESOURCE_RECORD]
+
+class QNAME_RECORD_UPDATE(_NamedTuple):
+    ttl: int
+    records: list[RESOURCE_RECORD]
+
 class DNS_SIGNATURES(_NamedTuple):
     en_dns: set[_DNS_CAT]
     tld: dict[str, int]

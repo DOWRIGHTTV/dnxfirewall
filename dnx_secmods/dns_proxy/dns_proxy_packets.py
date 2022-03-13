@@ -5,8 +5,8 @@ from __future__ import annotations
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import PROTO, DNS, DNS_MASK
-from dnx_gentools.standard_tools import bytecontainer
-from dnx_gentools.def_namedtuples import CACHED_RECORD
+from dnx_gentools.def_namedtuples import QNAME_RECORD, QNAME_RECORD_UPDATE, RESOURCE_RECORD
+from dnx_gentools.def_exceptions import ProtocolError
 
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import *
@@ -15,15 +15,14 @@ from dnx_iptools.cprotocol_tools import itoip
 from dnx_iptools.interface_ops import load_interfaces
 from dnx_iptools.packet_classes import NFPacket, RawResponse
 
-from dnx_gentools.def_exceptions import ProtocolError
+from dns_proxy_cache import NO_QNAME_RECORD
+
 
 __all__ = (
     'ClientQuery', 'DNSPacket', 'ProxyResponse',
 
     'ttl_rewrite'
 )
-
-NO_CACHE = CACHED_RECORD(-1, -1, None)
 
 
 class ClientQuery:
@@ -108,7 +107,7 @@ class ClientQuery:
 
         return send_data
 
-    def generate_cached_response(self, cached_dom) -> bytearray:
+    def generate_cached_response(self, cached_dom: QNAME_RECORD_UPDATE) -> bytearray:
 
         send_data = bytearray(
             dns_header_pack(self.dns_id, 32896 | self.rd | self.cd, 1, len(cached_dom.records), 0, 0)
@@ -265,12 +264,10 @@ def _enumerate_request(request: str, local_domain: bool, int=int, hash=hash) -> 
 # ================
 # SERVER RESPONSE
 # ================
-_RESOURCE_RECORD = bytecontainer('resource_record', 'name qtype qclass ttl data')
-
 _MINIMUM_TTL: bytes = long_pack(MINIMUM_TTL)
 _DEFAULT_TTL: bytes = long_pack(DEFAULT_TTL)
 
-def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[bytearray, CACHED_RECORD]:
+def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[bytearray, QNAME_RECORD]:
 
     mem_data = memoryview(data)
     dns_header:  memoryview = mem_data[:12]
@@ -338,11 +335,11 @@ def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[by
     send_data += dns_payload[offset:]
 
     if (record_cache):
-        return send_data, CACHED_RECORD(fast_time() + original_ttl, original_ttl, record_cache)
+        return send_data, QNAME_RECORD(fast_time() + original_ttl, original_ttl, record_cache)
 
-    return send_data, NO_CACHE
+    return send_data, NO_QNAME_RECORD
 
-def _parse_record(dns_payload: memoryview, cur_offset: int) -> tuple[int, _RESOURCE_RECORD, int]:
+def _parse_record(dns_payload: memoryview, cur_offset: int) -> tuple[int, RESOURCE_RECORD, int]:
     new_offset: int = parse_query_name(dns_payload, cur_offset, quick=True)
 
     record_name = bytes(dns_payload[cur_offset:new_offset])
@@ -351,7 +348,7 @@ def _parse_record(dns_payload: memoryview, cur_offset: int) -> tuple[int, _RESOU
     # calculating first, so we can single shot creation of the byte container.
     dt_len: int = btoia(record_values[8:10])
 
-    resource_record = _RESOURCE_RECORD(
+    resource_record = RESOURCE_RECORD(
         record_name,
         record_values[:2],
         record_values[2:4],

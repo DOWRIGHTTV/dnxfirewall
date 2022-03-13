@@ -8,17 +8,20 @@ from collections import Counter, deque
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
-from dnx_gentools.def_namedtuples import DNS_CACHE, CACHED_RECORD
+from dnx_gentools.def_namedtuples import QNAME_RECORD, QNAME_RECORD_UPDATE
 from dnx_gentools.file_operations import *
 from dnx_gentools.standard_tools import looper
 
 from dns_proxy_log import Log
 
 __all__ = (
-    'dns_cache', 'request_tracker'
+    'dns_cache', 'request_tracker',
+    
+    'NO_QNAME_RECORD', 'QNAME_NOT_FOUND'
 )
 
-NOT_FOUND = CACHED_RECORD(-1, -1, None)
+NO_QNAME_RECORD = QNAME_RECORD(-1, -1, [])
+QNAME_NOT_FOUND = QNAME_RECORD_UPDATE(-1, [])
 
 def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Callable[[ClientQuery], None]) -> DNSCache:
     _top_domains: list = load_configuration('dns_server', ext='.cache').get('top_domains')
@@ -126,28 +129,28 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
         __slots__ = ()
 
         # searching key directly will return calculated ttl and associated records
-        def __getitem__(self, key: str) -> DNS_CACHE:
-            record: CACHED_RECORD = dict_get(self, key)
+        def __getitem__(self, key: str) -> QNAME_RECORD_UPDATE:
+            record: QNAME_RECORD = dict_get(self, key)
             # not present or root lookup
-            if (record == NOT_FOUND):
-                return DNS_CACHE(NOT_FOUND, None)
+            if (record is NO_QNAME_RECORD):
+                return QNAME_NOT_FOUND
 
             calcd_ttl = record.expire - int(fast_time())
             if (calcd_ttl > DEFAULT_TTL):
-                return DNS_CACHE(DEFAULT_TTL, record.records)
+                return QNAME_RECORD_UPDATE(DEFAULT_TTL, record.records)
 
             elif (calcd_ttl > 0):
-                return DNS_CACHE(calcd_ttl, record.records)
+                return QNAME_RECORD_UPDATE(calcd_ttl, record.records)
 
             # expired
             else:
-                return DNS_CACHE(NOT_FOUND, None)
+                return QNAME_NOT_FOUND
 
         # if missing will return an expired result
-        def __missing__(self, key: str) -> CACHED_RECORD:
-            return NOT_FOUND
+        def __missing__(self, key: str) -> QNAME_RECORD:
+            return NO_QNAME_RECORD
 
-        def add(self, request: str, data_to_cache: CACHED_RECORD):
+        def add(self, request: str, data_to_cache: QNAME_RECORD):
             '''add query to cache after calculating expiration time.
             '''
             self[request] = data_to_cache

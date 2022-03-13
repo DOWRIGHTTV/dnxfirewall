@@ -20,8 +20,14 @@ from dnx_iptools.packet_classes import Listener
 from dns_proxy_automate import ServerConfiguration, Reachability
 from dns_proxy_protocols import UDPRelay, TLSRelay
 from dns_proxy_packets import ClientQuery, ttl_rewrite
-from dns_proxy_cache import dns_cache, request_tracker
+from dns_proxy_cache import dns_cache, request_tracker, QNAME_NOT_FOUND
 from dns_proxy_log import Log
+
+# ===============
+# TYPING IMPORTS
+# ===============
+from dnx_gentools.def_namedtuples import QNAME_RECORD_UPDATE
+
 
 __all__ = (
     'DNSServer',
@@ -163,8 +169,12 @@ class DNSServer(ServerConfiguration, Listener):
             # if multiple requests are present, they will be yielded back until the queue is empty.
             for client_query in return_ready():
 
-                if (self._cache_available(client_query)):
+                qname_cache = self._cache_available(client_query)
+                if (qname_cache is QNAME_NOT_FOUND):
                     self.handle_query(client_query)
+
+                else:
+                    send_to_client(client_query, client_query.generate_cached_response(qname_cache))
 
     # NOTE: A/NS records are supported only. consider expanding
     def _pre_inspect(self, client_query: ClientQuery) -> bool:
@@ -187,22 +197,16 @@ class DNSServer(ServerConfiguration, Listener):
         return True
 
     @staticmethod
-    def _cache_available(client_query: ClientQuery) -> bool:
+    def _cache_available(client_query: ClientQuery) -> QNAME_RECORD_UPDATE:
         '''searches cache for query name.
 
         if a cached record is found, a response will be generated and sent back to the client.
         '''
         # only A/CNAME records are cached and CNAME records are always attached to an A record query responses.
         if (client_query.qtype != DNS.A or client_query.top_domain):
-            return False
+            return QNAME_NOT_FOUND
 
-        cached_dom = DNS_CACHE_SEARCH(client_query.qname)
-        if (cached_dom.records):
-            return False
-
-        send_to_client(client_query, client_query.generate_cached_response(cached_dom))
-
-        return True
+        return DNS_CACHE_SEARCH(client_query.qname)
 
     def _listener_sock(self, intf: str, intf_ip: int) -> Socket:
         l_sock: Socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

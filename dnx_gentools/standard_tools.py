@@ -409,8 +409,8 @@ def bytecontainer(obj_name: str, field_names: Union[list, str]) -> ByteContainer
     '''named tuple like class factory for storing raw byte sections with named fields.
 
     calling len on the container will return the sum of all bytes stored, not the number of fields. slots are being used
-    to speed up attribute access.'''
-
+    to speed up attribute access.
+    '''
     if not isinstance(field_names, list):
         field_names = field_names.split()
 
@@ -424,7 +424,7 @@ def bytecontainer(obj_name: str, field_names: Union[list, str]) -> ByteContainer
     _getattr = getattr
     _bytearray = bytearray
 
-    class _ByteContainer:
+    class ByteContainer:
 
         __slots__ = (*field_names,)
 
@@ -473,11 +473,11 @@ def bytecontainer(obj_name: str, field_names: Union[list, str]) -> ByteContainer
 
             return other + ba
 
-    return _ByteContainer()
+    return ByteContainer()
 
 class classproperty:
-    '''class used as a decorator to allow class methods to be used as properties.'''
-
+    '''class used as a decorator to allow class methods to be used as properties.
+    '''
     def __init__(self, fget):
         self._fget = fget
 
