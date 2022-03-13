@@ -17,6 +17,14 @@ from dnx_iptools.packet_classes import NFPacket, RawResponse
 
 from dnx_gentools.def_exceptions import ProtocolError
 
+__all__ = (
+    'ClientQuery', 'DNSPacket', 'ProxyResponse',
+
+    'ttl_rewrite'
+)
+
+NO_CACHE = CACHED_RECORD(-1, -1, None)
+
 
 class ClientQuery:
     __slots__ = (
@@ -46,12 +54,12 @@ class ClientQuery:
         self.keepalive: bool = False
         self.fallback:  bool = False
 
-        self.dns_id:  int = 1
-        self.qname: str = ''
+        self.dns_id: int = 1
+        self.qname:  str = ''
 
         # OPT record defaults #
         # TODO: add better support for this
-        self.additional_records = b''
+        self.additional_records: bytes = b''
 
     def __str__(self):
         return f'dns_query(host={self.address[0]}, port={self.address[1]}, domain={self.qname})'
@@ -88,8 +96,8 @@ class ClientQuery:
     def generate_record_response(self, record_ip: int = 0, configured_ttl: int = THIRTY_MIN) -> bytearray:
         '''builds a dns query response for locally configured records.
 
-        if host_ip is not passed in, the resource record section of the payload will not be generated.'''
-
+        if host_ip is not passed in, the resource record section of the payload will not be generated.
+        '''
         flags = 32896 | self.rd | self.ad | self.cd | self.rc
 
         send_data = bytearray(dns_header_pack(self.dns_id, flags, 1, 1, 0, 0))
@@ -160,11 +168,11 @@ class ClientQuery:
 # ======================================
 # PROXY - FULL INSPECTION, DIRECT SOCKET
 # ======================================
-_ip_header_template: PR_IP_HDR = PR_IP_HDR(
+ip_hdr_template: PR_IP_HDR = PR_IP_HDR(
     **{'ver_ihl': 69, 'tos': 0, 'ident': 0, 'flags_fro': 16384, 'ttl': 255, 'protocol': PROTO.UDP}
 )
-_udp_header_template: PR_UDP_HDR = PR_UDP_HDR(**{'checksum': 0})
-std_resource_record_template: DNS_STD_RR = DNS_STD_RR(**{'ptr': 49164, 'type': 1, 'class': 1, 'ttl': 300, 'rd_len': 4})
+udp_hdr_template: PR_UDP_HDR = PR_UDP_HDR(**{'checksum': 0})
+std_rr_template: DNS_STD_RR = DNS_STD_RR(**{'ptr': 49164, 'type': 1, 'class': 1, 'ttl': 300, 'rd_len': 4})
 
 
 class DNSPacket(NFPacket):
@@ -262,7 +270,7 @@ _RESOURCE_RECORD = bytecontainer('resource_record', 'name qtype qclass ttl data'
 _MINIMUM_TTL: bytes = long_pack(MINIMUM_TTL)
 _DEFAULT_TTL: bytes = long_pack(DEFAULT_TTL)
 
-def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[bytearray, Optional[CACHED_RECORD]]:
+def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[bytearray, CACHED_RECORD]:
 
     mem_data = memoryview(data)
     dns_header:  memoryview = mem_data[:12]
@@ -332,7 +340,7 @@ def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[by
     if (record_cache):
         return send_data, CACHED_RECORD(fast_time() + original_ttl, original_ttl, record_cache)
 
-    return send_data, None
+    return send_data, NO_CACHE
 
 def _parse_record(dns_payload: memoryview, cur_offset: int) -> tuple[int, _RESOURCE_RECORD, int]:
     new_offset: int = parse_query_name(dns_payload, cur_offset, quick=True)
@@ -372,7 +380,7 @@ class ProxyResponse(RawResponse):
 
         # standard query response to sinkhole. default answer count and response code
         else:
-            resource_record = std_resource_record_template()
+            resource_record = std_rr_template()
 
             resource_record.rd_data = dnx_src_ip
 
@@ -381,7 +389,7 @@ class ProxyResponse(RawResponse):
             udp_payload += resource_record.assemble()
 
         # UDP HEADER
-        udphdr = _udp_header_template()
+        udphdr = udp_hdr_template()
 
         udphdr.src_port = packet.dst_port
         udphdr.dst_port = packet.src_port
@@ -390,7 +398,7 @@ class ProxyResponse(RawResponse):
         udp_header: bytearray = udphdr.assemble()
 
         # IP HEADER
-        iphdr = _ip_header_template()
+        iphdr = ip_hdr_template()
 
         iphdr.tl = 28 + len(udp_payload)
         iphdr.src_ip = dnx_src_ip

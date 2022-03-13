@@ -406,7 +406,7 @@ cdef inline bint service_match(ServiceArray svc_defs, uint16_t pkt_protocol, uin
         ServiceObj svc
 
     if (VERBOSE):
-        printf(<char*>'checking protocol->%u, port->%u\n', pkt_protocol, pkt_port)
+        printf(<char*>'packet protocol->%u, port->%u\n', pkt_protocol, pkt_port)
 
     for i in range(svc_defs.len):
 
@@ -424,7 +424,7 @@ cdef inline bint service_match(ServiceArray svc_defs, uint16_t pkt_protocol, uin
             return MATCH
 
     if (VERBOSE):
-        printf(<char*>'no match protocol->%u, port->%u\n', pkt_protocol, pkt_port)
+        printf(<char*>'no match for packet protocol->%u, port->%u\n', pkt_protocol, pkt_port)
 
     # default action
     return NO_MATCH

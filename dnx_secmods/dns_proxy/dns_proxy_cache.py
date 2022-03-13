@@ -14,10 +14,14 @@ from dnx_gentools.standard_tools import looper
 
 from dns_proxy_log import Log
 
+__all__ = (
+    'dns_cache', 'request_tracker'
+)
+
 NOT_FOUND = CACHED_RECORD(-1, -1, None)
 
 def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Callable[[ClientQuery], None]) -> DNSCache:
-    _top_domains: dict = load_data('dns_server.cache')['top_domains']
+    _top_domains: list = load_configuration('dns_server', ext='.cache').get('top_domains')
 
     domain_counter: Counter[str, int] = Counter({dom: cnt for cnt, dom in enumerate(reversed(_top_domains))})
     counter_lock: Lock = threading.Lock()

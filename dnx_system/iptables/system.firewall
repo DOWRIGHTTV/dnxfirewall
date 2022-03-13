@@ -47,22 +47,6 @@
             "ipp_profile": 0,
             "dns_profile": 0,
             "ips_profile": 0
-        },
-        "2001": {
-            "name": "any_dns_outbound_deny",
-            "id": null,
-            "enabled": 1,
-            "src_zone": [99],
-            "src_network": [[2, 0, 0]],
-            "src_service": [[17, 1, 65535]],
-            "dst_zone": [10],
-            "dst_network": [[2, 0, 0]],
-            "dst_service": [[17, 53, 53]],
-            "action": 0,
-            "log": 0,
-            "ipp_profile": 0,
-            "dns_profile": 0,
-            "ips_profile": 0
         }
     },
     "USER": {}

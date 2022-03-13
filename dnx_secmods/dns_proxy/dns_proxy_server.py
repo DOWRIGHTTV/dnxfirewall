@@ -43,8 +43,8 @@ DNS_CACHE = dns_cache(
     request_handler=REQ_TRACKER_INSERT
 )
 
-dns_cache_add = DNS_CACHE.add
-dns_cache_search = DNS_CACHE.search
+DNS_CACHE_ADD = DNS_CACHE.add
+DNS_CACHE_SEARCH = DNS_CACHE.search
 
 # GENERAL DEFINITIONS
 INVALID_RESPONSE: tuple[None, None] = (None, None)
@@ -117,8 +117,8 @@ class DNSServer(ServerConfiguration, Listener):
             if (not client_query.top_domain):
                 send_to_client(client_query, query_response)
 
-            if (cache_data):
-                dns_cache_add(client_query.qname, cache_data)
+            if (cache_data.records):
+                DNS_CACHE_ADD(client_query.qname, cache_data)
 
     def _setup(self) -> None:
 
@@ -163,8 +163,7 @@ class DNSServer(ServerConfiguration, Listener):
             # if multiple requests are present, they will be yielded back until the queue is empty.
             for client_query in return_ready():
 
-                # search cache before sending to relay.
-                if not self._cache_available(client_query):
+                if (self._cache_available(client_query)):
                     self.handle_query(client_query)
 
     # NOTE: A/NS records are supported only. consider expanding
@@ -194,16 +193,14 @@ class DNSServer(ServerConfiguration, Listener):
         if a cached record is found, a response will be generated and sent back to the client.
         '''
         # only A/CNAME records are cached and CNAME records are always attached to an A record query responses.
-        if (client_query.qtype != DNS.A):
+        if (client_query.qtype != DNS.A or client_query.top_domain):
             return False
 
-        cached_dom = dns_cache_search(client_query.qname)
-        if (not cached_dom.records):
+        cached_dom = DNS_CACHE_SEARCH(client_query.qname)
+        if (cached_dom.records):
             return False
 
-        send_to_client(
-            client_query, client_query.generate_cached_response(cached_dom)
-        )
+        send_to_client(client_query, client_query.generate_cached_response(cached_dom))
 
         return True
 
