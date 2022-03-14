@@ -374,12 +374,13 @@ class NFQueue:
         for _ in RUN_FOREVER:
             # on failure, we will reinitialize the extension to start fresh
             nfqueue = NetfilterQueue()
-            nfqueue.nf_set(q)
 
             if (threaded):
                 nfqueue.set_proxy_callback(self.__handle_packet_threaded)
             else:
                 nfqueue.set_proxy_callback(self.__handle_packet)
+
+            nfqueue.nf_set(q)
 
             self._log.notice('Starting dnx_netfilter queue. Packets will be processed shortly')
 
