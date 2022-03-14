@@ -189,7 +189,7 @@ cdef class CPacket:
 
 cdef class NetfilterQueue:
     cdef:
-        nfq_handle   *nfq_lib_handle # Handle to NFQueue library
+        nfq_handle   *nfqlib_handle # Handle to NFQueue library
         nfq_q_handle *q_handle # A handle to the queue
 
         object proxy_callback

@@ -7,6 +7,7 @@ from libc.stdio cimport printf
 DEF OK  = 0
 DEF ERR = 1
 
+DEF NFQ_BUF_SIZE = 4096
 DEF MAX_COPY_SIZE = 4016 # 4096(buf) - 80
 DEF DEFAULT_MAX_QUEUELEN = 8192
 
@@ -55,7 +56,7 @@ cdef class CPacket:
 
         cdef:
             size_t iphdr_len
-            size_t protohdr_len
+            size_t protohdr_len = 0
 
         self.ip_header = <IPhdr*>self.pktdata
 
@@ -276,14 +277,15 @@ cdef class NetfilterQueue:
             self._run()
 
     def nf_set(self, uint16_t queue_num):
-        self.nfq_lib_handle = nfq_open()
-        self.q_handle = nfq_create_queue(self.nfq_lib_handle, queue_num, <nfq_callback*>self.nf_callback, <void*>self)
+        self.nfqlib_handle = nfq_open()
+        self.q_handle = nfq_create_queue(self.nfqlib_handle, queue_num, <nfq_callback*>self.nf_callback, <void*>self)
+        
         if (self.q_handle == NULL):
             return ERR
 
         nfq_set_mode(self.q_handle, NFQNL_COPY_PACKET, MAX_COPY_SIZE)
         nfq_set_queue_maxlen(self.q_handle, DEFAULT_MAX_QUEUELEN)
-        nfnl_rcvbufsiz(nfq_nfnlh(self.nfq_lib_handle), SOCK_RCV_SIZE)
+        nfnl_rcvbufsiz(nfq_nfnlh(self.nfqlib_handle), SOCK_RCV_SIZE)
 
     # cdef object user_callback
     def set_proxy_callback(self, func_ref):
@@ -295,21 +297,20 @@ cdef class NetfilterQueue:
         if (self.q_handle != NULL):
             nfq_destroy_queue(self.q_handle)
 
-        nfq_close(self.nfq_lib_handle)
+        nfq_close(self.nfqlib_handle)
 
     cdef void _run(self) nogil:
 
         cdef:
-            char    packet_buf[4096]
-            size_t  sizeof_buf = sizeof(packet_buf)
+            uint8_t packet_buf[NFQ_BUF_SIZE]
             ssize_t data_len
 
-            int fd = nfq_fd(self.nfq_lib_handle)
+            int fd = nfq_fd(self.nfqlib_handle)
 
         while True:
-            data_len = recv(fd, <void*>packet_buf, sizeof_buf, 0)
+            data_len = recv(fd, <void*>packet_buf, NFQ_BUF_SIZE, 0)
 
-            if (data_len >= 0):
+            if (data_len > 0):
 
                 # ===================================
                 # LOCKING ACCESS TO NetfilterQueue
@@ -318,11 +319,14 @@ cdef class NetfilterQueue:
                 # -------------------------
                 # NetfilterQueue Processor
                 # -------------------------
-                nfq_handle_packet(self.nfq_lib_handle, <char*>packet_buf, data_len)
+                nfq_handle_packet(self.nfqlib_handle, <char*>packet_buf, data_len)
 
                 pthread_mutex_unlock(&NFQlock)
                 # UNLOCKING ACCESS TO NetfilterQueue
                 # ===================================
+
+            elif (data_len == 0):
+                printf('NFQ ZERO LENGTH PACKET RECVD')
 
             elif (errno != ENOBUFS):
                 break
