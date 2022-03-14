@@ -14,6 +14,15 @@ DEF DEFAULT_MAX_QUEUELEN = 8192
 # formula: DEF_MAX_QUEUELEN * (MaxCopySize+SockOverhead) / 2
 DEF SOCK_RCV_SIZE = 1024 * 4796 // 2
 
+# ================================== #
+# NetfilterQueue Read/Write lock
+# ================================== #
+# Must be held during
+# ---------------------------------- #
+cdef pthread_mutex_t NFQlock
+
+pthread_mutex_init(&NFQlock, NULL)
+
 
 # pre allocating memory for 8 instance. instances are created and destroyed sequentially so only one instance will be
 # active at a time, but this is to make a point to myself that this module could be multithreading within C one day.
@@ -34,7 +43,7 @@ cdef class CPacket:
         self.nfq_msg_hdr = nfq_get_msg_packet_hdr(nfa)
 
         # filling packet data buffer from netfilter
-        self.data_len = nfq_get_payload(nfa, &self.data)
+        self.data_len = nfq_get_payload(nfa, &self.pktdata)
 
         # splitting the packet by tcp/ip layers
         self._parse()
@@ -48,21 +57,21 @@ cdef class CPacket:
             size_t iphdr_len
             size_t protohdr_len
 
-        self.ip_header = <IPhdr*>self.data
+        self.ip_header = <IPhdr*>self.pktdata
 
         iphdr_len = (self.ip_header.ver_ihl & 15) * 4
         if (self.ip_header.protocol == IPPROTO_TCP):
-            self.tcp_header = <TCPhdr*>&self.data[iphdr_len]
+            self.tcp_header = <TCPhdr*>&self.pktdata[iphdr_len]
 
             protohdr_len = ((self.tcp_header.th_off >> 4) & 15) * 4
 
         elif (self.ip_header.protocol == IPPROTO_UDP):
-            self.udp_header = <UDPhdr*>&self.data[iphdr_len]
+            self.udp_header = <UDPhdr*>&self.pktdata[iphdr_len]
 
             protohdr_len = 8
 
         elif (self.ip_header.protocol == IPPROTO_ICMP):
-            self.icmp_header = <ICMPhdr*>&self.data[iphdr_len]
+            self.icmp_header = <ICMPhdr*>&self.pktdata[iphdr_len]
 
             protohdr_len = 4
 
@@ -76,15 +85,26 @@ cdef class CPacket:
 
             return
 
+        # ===================================
+        # LOCKING ACCESS TO NetfilterQueue
+        # prevents nfq packet handler from processing a packet while setting a verdict of another packet.
+        pthread_mutex_lock(&NFQlock)
+        # -------------------------
+        # NetfilterQueue Processor
+        # -------------------------
         if (self.mark):
             nfq_set_verdict2(
-                self.q_handle, self.nfq_msg_hdr.packet_id, verdict, self.mark, self.data_len, self.data
+                self.q_handle, self.nfq_msg_hdr.packet_id, verdict, self.mark, self.data_len, self.pktdata
             )
 
         else:
             nfq_set_verdict(
-                self.q_handle, self.nfq_msg_hdr.packet_id, verdict, self.data_len, self.data
+                self.q_handle, self.nfq_msg_hdr.packet_id, verdict, self.data_len, self.pktdata
             )
+
+        pthread_mutex_unlock(&NFQlock)
+        # UNLOCKING ACCESS TO NetfilterQueue
+        # ===================================
 
         self.verdict = 1
 
@@ -165,7 +185,7 @@ cdef class CPacket:
     def get_raw_packet(self):
         '''Return layer 3-7 of packet data.
         '''
-        return self.data[:<Py_ssize_t>self.data_len]
+        return self.pktdata[:<Py_ssize_t>self.data_len]
 
     def get_ip_header(self):
         '''Return layer3 of packet data as a tuple converted directly from C struct.
@@ -239,7 +259,7 @@ cdef class CPacket:
         '''
         cdef:
             Py_ssize_t payload_len = self.data_len - self.cmbhdr_len
-            uint8_t *payload = &self.data[self.cmbhdr_len]
+            uint8_t *payload = &self.pktdata[self.cmbhdr_len]
 
         return payload[:payload_len]
 
@@ -290,7 +310,19 @@ cdef class NetfilterQueue:
             data_len = recv(fd, <void*>packet_buf, sizeof_buf, 0)
 
             if (data_len >= 0):
+
+                # ===================================
+                # LOCKING ACCESS TO NetfilterQueue
+                # prevents verdict from being issues while initially processing the recvd packet
+                pthread_mutex_lock(&NFQlock)
+                # -------------------------
+                # NetfilterQueue Processor
+                # -------------------------
                 nfq_handle_packet(self.nfq_lib_handle, <char*>packet_buf, data_len)
+
+                pthread_mutex_unlock(&NFQlock)
+                # UNLOCKING ACCESS TO NetfilterQueue
+                # ===================================
 
             elif (errno != ENOBUFS):
                 break

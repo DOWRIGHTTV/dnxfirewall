@@ -5,6 +5,10 @@ from libc.stdint cimport uint8_t, uint16_t, uint32_t
 cdef extern from "<errno.h>":
     int errno
 
+# dummy defines from asm-generic/errno.h:
+cdef enum:
+    ENOBUFS = 105   # No buffer space available
+
 cdef extern from "sys/socket.h":
     ssize_t recv(int __fd, void *__buf, size_t __n, int __flags) nogil
     int MSG_DONTWAIT
@@ -20,10 +24,15 @@ cdef extern from "time.h" nogil:
     struct timezone:
         pass
 
-# dummy defines from asm-generic/errno.h:
-cdef enum:
-    ENOBUFS = 105   # No buffer space available
+cdef extern from "pthread.h" nogil:
+    ctypedef struct pthread_mutex_t:
+        pass
 
+    cdef int pthread_mutex_init(pthread_mutex_t *, void *)
+    cdef int pthread_mutex_lock(pthread_mutex_t *)
+    cdef int pthread_mutex_trylock(pthread_mutex_t *)
+    cdef int pthread_mutex_unlock(pthread_mutex_t *)
+    cdef int pthread_mutex_destroy(pthread_mutex_t *)
 
 cdef extern from "netinet/in.h":
     uint32_t ntohl (uint32_t __netlong) nogil
@@ -73,7 +82,7 @@ cdef extern from "libnetfilter_queue/libnetfilter_queue.h":
     int nfq_fd(nfq_handle *h) nogil
     int nfq_set_queue_maxlen(nfq_q_handle *qh, uint32_t queuelen)
     int nfq_set_mode(nfq_q_handle *qh, uint8_t mode, unsigned int len)
-    q_set_queue_maxlen(nfq_q_handle *qh, uint32_t queuelen)
+    void q_set_queue_maxlen(nfq_q_handle *qh, uint32_t queuelen)
     nfnl_handle *nfq_nfnlh(nfq_handle *h)
 
     ctypedef int *nfq_callback(nfq_q_handle *gh, nfgenmsg *nfmsg, nfq_data *nfad, void *data)
@@ -165,9 +174,9 @@ cdef class CPacket:
         ICMPhdr *icmp_header
 
         time_t  timestamp
-        size_t  data_len
+        int     data_len
         size_t  cmbhdr_len
-        uint8_t *data
+        uint8_t *pktdata
 
     cdef uint32_t parse(self, nfq_q_handle *qh, nfq_data *nfa) nogil
     cdef void _parse(self) nogil
@@ -181,6 +190,8 @@ cdef class CPacket:
 cdef class NetfilterQueue:
     cdef nfq_handle   *nfq_lib_handle # Handle to NFQueue library
     cdef nfq_q_handle *q_handle # A handle to the queue
+
+    object proxy_callback
 
     cdef void _run(self) nogil
     cdef int nf_callback(self, nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *data) with gil
