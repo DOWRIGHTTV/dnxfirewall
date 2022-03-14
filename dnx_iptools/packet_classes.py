@@ -21,7 +21,7 @@ from dnx_iptools.cprotocol_tools import itoip
 from dnx_iptools.protocol_tools import calc_checksum
 from dnx_iptools.interface_ops import load_interfaces, wait_for_interface, wait_for_ip, get_masquerade_ip
 
-from dnx_netmods.dnx_netfilter.dnx_nfqueue import NetfilterQueue, set_user_callback as set_nfqueue_callback
+from dnx_netmods.dnx_netfilter.dnx_nfqueue import NetfilterQueue
 
 __all__ = (
     'Listener', 'ProtoRelay', 'NFQueue', 'NFPacket', 'RawResponse'
@@ -341,22 +341,15 @@ class NFQueue:
 
     __slots__ = ()
 
-    def __init__(self, threaded):
-        '''General constructor that can only be reached if called through subclass.
-        '''
-        if (threaded):
-            set_nfqueue_callback(self.__handle_packet_threaded)
-        else:
-            set_nfqueue_callback(self.__handle_packet)
-
     @classmethod
     def run(cls, log: LogHandler_T, *, q_num: int, threaded: bool = True) -> None:
 
         cls._log: LogHandler_T = log
 
-        self = cls(threaded)
+        self = cls()
+
         self._setup()
-        self.__queue(q_num)
+        self.__queue(q_num, threaded)
 
     def _setup(self):
         '''called prior to creating listener interface instances.
@@ -376,11 +369,17 @@ class NFQueue:
 
         cls._proxy_callback = func
 
-    def __queue(self, q: int, /) -> NoReturn:
+    def __queue(self, q: int, /, threaded: bool) -> NoReturn:
 
         for _ in RUN_FOREVER:
+            # on failure, we will reinitialize the extension to start fresh
             nfqueue = NetfilterQueue()
             nfqueue.nf_set(q)
+
+            if (threaded):
+                nfqueue.set_proxy_callback(self.__handle_packet_threaded)
+            else:
+                nfqueue.set_proxy_callback(self.__handle_packet)
 
             self._log.notice('Starting dnx_netfilter queue. Packets will be processed shortly')
 

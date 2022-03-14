@@ -1,10 +1,13 @@
-cdef extern from "sys/types.h":
-    ctypedef unsigned char u_int8_t
-    ctypedef unsigned short int u_int16_t
-    ctypedef unsigned int u_int32_t
+#!/usr/bin/env Cython
+
+from libc.stdint cimport uint8_t, uint16_t, uint32_t
 
 cdef extern from "<errno.h>":
     int errno
+
+cdef extern from "sys/socket.h":
+    ssize_t recv(int __fd, void *__buf, size_t __n, int __flags) nogil
+    int MSG_DONTWAIT
 
 cdef extern from "time.h" nogil:
     ctypedef long time_t
@@ -19,66 +22,20 @@ cdef extern from "time.h" nogil:
 
 # dummy defines from asm-generic/errno.h:
 cdef enum:
-    EAGAIN = 11           # Try again
-    EWOULDBLOCK = EAGAIN
-    ENOBUFS = 105         # No buffer space available
+    ENOBUFS = 105   # No buffer space available
 
-# cython define
-cdef struct iphdr:
-    u_int8_t  ver_ihl
-    u_int8_t  tos
-    u_int16_t tot_len
-    u_int16_t id
-    u_int16_t frag_off
-    u_int8_t  ttl
-    u_int8_t  protocol
-    u_int16_t check
-    u_int32_t saddr
-    u_int32_t daddr
-
-# cython define
-cdef struct tcphdr:
-    u_int16_t th_sport
-    u_int16_t th_dport
-    u_int32_t th_seq
-    u_int32_t th_ack
-
-    u_int8_t  th_off
-
-    u_int8_t  th_flags
-    u_int16_t th_win
-    u_int16_t th_sum
-    u_int16_t th_urp
-
-# cython define
-cdef struct udphdr:
-    u_int16_t uh_sport
-    u_int16_t uh_dport
-    u_int16_t uh_ulen
-    u_int16_t uh_sum
-
-cdef struct icmphdr:
-    u_int8_t type
-    u_int8_t code
-
-# from netinet/in.h:
-cdef enum:
-    IPPROTO_IP = 0        # Dummy protocol for TCP.
-    IPPROTO_ICMP = 1      # Internet Control Message Protocol.
-    IPPROTO_TCP = 6       # Transmission Control Protocol.
-    IPPROTO_UDP = 17      # User Datagram Protocol.
 
 cdef extern from "netinet/in.h":
-    u_int32_t ntohl (u_int32_t __netlong) nogil
-    u_int16_t ntohs (u_int16_t __netshort) nogil
-    u_int32_t htonl (u_int32_t __hostlong) nogil
-    u_int16_t htons (u_int16_t __hostshort) nogil
+    uint32_t ntohl (uint32_t __netlong) nogil
+    uint16_t ntohs (uint16_t __netshort) nogil
+    uint32_t htonl (uint32_t __hostlong) nogil
+    uint16_t htons (uint16_t __hostshort) nogil
 
 cdef extern from "libnfnetlink/linux_nfnetlink.h":
     struct nfgenmsg:
-        u_int8_t nfgen_family
-        u_int8_t version
-        u_int16_t res_id
+        uint8_t nfgen_family
+        uint8_t version
+        uint16_t res_id
 
 cdef extern from "libnfnetlink/libnfnetlink.h":
     struct nfnl_handle:
@@ -93,9 +50,9 @@ cdef extern from "libnetfilter_queue/linux_nfnetlink_queue.h":
         NFQNL_COPY_PACKET
 
     struct nfqnl_msg_packet_hdr:
-        u_int32_t packet_id
-        u_int16_t hw_protocol
-        u_int8_t hook
+        uint32_t packet_id
+        uint16_t hw_protocol
+        uint8_t  hook
 
 cdef extern from "libnetfilter_queue/libnetfilter_queue.h":
     struct nfq_handle:
@@ -108,40 +65,32 @@ cdef extern from "libnetfilter_queue/libnetfilter_queue.h":
         pass
 
     struct nfqnl_msg_packet_hw:
-        u_int8_t hw_addr[8]
+        uint8_t hw_addr[8]
 
     nfq_handle *nfq_open()
     int nfq_close(nfq_handle *h)
     int nfq_destroy_queue(nfq_q_handle *qh)
     int nfq_fd(nfq_handle *h) nogil
-    int nfq_set_queue_maxlen(nfq_q_handle *qh, u_int32_t queuelen)
-    int nfq_set_mode(nfq_q_handle *qh, u_int8_t mode, unsigned int len)
-    q_set_queue_maxlen(nfq_q_handle *qh, u_int32_t queuelen)
+    int nfq_set_queue_maxlen(nfq_q_handle *qh, uint32_t queuelen)
+    int nfq_set_mode(nfq_q_handle *qh, uint8_t mode, unsigned int len)
+    q_set_queue_maxlen(nfq_q_handle *qh, uint32_t queuelen)
     nfnl_handle *nfq_nfnlh(nfq_handle *h)
 
     ctypedef int *nfq_callback(nfq_q_handle *gh, nfgenmsg *nfmsg, nfq_data *nfad, void *data)
-    nfq_q_handle *nfq_create_queue(nfq_handle *h, u_int16_t num, nfq_callback *cb, void *data)
+    nfq_q_handle *nfq_create_queue(nfq_handle *h, uint16_t num, nfq_callback *cb, void *data)
 
     int nfq_handle_packet(nfq_handle *h, char *buf, int len) nogil
-    int nfq_set_verdict(nfq_q_handle *qh, u_int32_t id, u_int32_t verdict, u_int32_t data_len, unsigned char *buf) nogil
-    int nfq_set_verdict2(nfq_q_handle *qh, u_int32_t id, u_int32_t verdict, u_int32_t mark,
-        u_int32_t datalen, unsigned char *buf) nogil
+    int nfq_set_verdict(nfq_q_handle *qh, uint32_t id, uint32_t verdict, uint32_t data_len, unsigned char *buf) nogil
+    int nfq_set_verdict2(nfq_q_handle *qh, uint32_t id, uint32_t verdict, uint32_t mark,
+        uint32_t datalen, unsigned char *buf) nogil
 
     nfqnl_msg_packet_hdr *nfq_get_msg_packet_hdr(nfq_data *nfad) nogil
     int nfq_get_payload(nfq_data *nfad, unsigned char **data) nogil
     nfqnl_msg_packet_hw *nfq_get_packet_hw(nfq_data *nfad) nogil
     int nfq_get_nfmark (nfq_data *nfad) nogil
-    u_int8_t nfq_get_indev(nfq_data *nfad) nogil
-    u_int8_t nfq_get_outdev(nfq_data *nfad) nogil
+    uint8_t nfq_get_indev(nfq_data *nfad) nogil
+    uint8_t nfq_get_outdev(nfq_data *nfad) nogil
 
-# Dummy defines from linux/socket.h:
-cdef enum: #  Protocol families, same as address families.
-    PF_INET = 2
-    PF_INET6 = 10
-
-cdef extern from "sys/socket.h":
-    ssize_t recv(int __fd, void *__buf, size_t __n, int __flags) nogil
-    int MSG_DONTWAIT
 
 # Dummy defines from linux/netfilter.h
 cdef enum:
@@ -153,41 +102,85 @@ cdef enum:
     NF_STOP
     NF_MAX_VERDICT = NF_STOP
 
+# cython define
+cdef struct IPhdr:
+    uint8_t  ver_ihl
+    uint8_t  tos
+    uint16_t tot_len
+    uint16_t id
+    uint16_t frag_off
+    uint8_t  ttl
+    uint8_t  protocol
+    uint16_t check
+    uint32_t saddr
+    uint32_t daddr
+
+# cython define
+cdef struct TCPhdr:
+    uint16_t th_sport
+    uint16_t th_dport
+    uint32_t th_seq
+    uint32_t th_ack
+
+    uint8_t  th_off
+
+    uint8_t  th_flags
+    uint16_t th_win
+    uint16_t th_sum
+    uint16_t th_urp
+
+# cython define
+cdef struct UDPhdr:
+    uint16_t uh_sport
+    uint16_t uh_dport
+    uint16_t uh_ulen
+    uint16_t uh_sum
+
+cdef struct ICMPhdr:
+    uint8_t type
+    uint8_t code
+
+# from netinet/in.h:
+cdef enum:
+    IPPROTO_IP = 0        # Dummy protocol for TCP.
+    IPPROTO_ICMP = 1      # Internet Control Message Protocol.
+    IPPROTO_TCP = 6       # Transmission Control Protocol.
+    IPPROTO_UDP = 17      # User Datagram Protocol.
+
 
 cdef class CPacket:
-    cdef nfq_q_handle *_qh
-    cdef nfq_data *_nfa
-    cdef nfqnl_msg_packet_hdr *_hdr
-    cdef nfqnl_msg_packet_hw *_hw
-    cdef u_int32_t _id
+    cdef:
+        nfq_q_handle *q_handle
+        nfq_data *nld_handle
+        nfqnl_msg_packet_hdr *nfq_msg_hdr
 
-    # protocol headers
-    cdef iphdr *ip_header
-    cdef tcphdr *tcp_header
-    cdef udphdr *udp_header
-    cdef icmphdr *icmp_header
+        uint32_t packet_id
+        bint     verdict
+        uint32_t mark
 
-    cdef bint _verdict
-    cdef u_int32_t _mark
+        # protocol headers
+        IPhdr   *ip_header
+        TCPhdr  *tcp_header
+        UDPhdr  *udp_header
+        ICMPhdr *icmp_header
 
-    # Packet details
-    cdef int _data_len
-    cdef u_int8_t _cmbhdr_len
-    cdef readonly unsigned char *data
-    cdef readonly unsigned char *payload
-    cdef time_t _timestamp
+        time_t  timestamp
+        size_t  data_len
+        size_t  cmbhdr_len
+        uint8_t *data
 
-    cdef u_int32_t parse(self, nfq_q_handle *qh, nfq_data *nfa) nogil
+    cdef uint32_t parse(self, nfq_q_handle *qh, nfq_data *nfa) nogil
     cdef void _parse(self) nogil
-    cdef void verdict(self, u_int32_t verdict) nogil
-    cpdef update_mark(self, u_int32_t mark)
-    cpdef accept(self)
-    cpdef drop(self)
-    cpdef forward(self, u_int16_t queue_num)
-    cpdef repeat(self)
+    cdef void _set_verdict(self, uint32_t verdict) nogil
+    cpdef void update_mark(self, uint32_t mark)
+    cpdef void accept(self)
+    cpdef void drop(self)
+    cpdef void forward(self, uint16_t queue_num)
+    cpdef void repeat(self)
 
 cdef class NetfilterQueue:
-    cdef nfq_handle *h # Handle to NFQueue library
-    cdef nfq_q_handle *qh # A handle to the queue
+    cdef nfq_handle   *nfq_lib_handle # Handle to NFQueue library
+    cdef nfq_q_handle *q_handle # A handle to the queue
 
-    cdef void _run(self)
+    cdef void _run(self) nogil
+    cdef int nf_callback(self, nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *data) with gil
