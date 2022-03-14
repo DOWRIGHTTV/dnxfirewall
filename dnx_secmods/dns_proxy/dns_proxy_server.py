@@ -17,7 +17,7 @@ from dnx_iptools.cprotocol_tools import itoip
 from dnx_iptools.protocol_tools import btoia
 from dnx_iptools.packet_classes import Listener
 
-from dns_proxy_automate import ServerConfiguration, Reachability
+from dns_proxy_automate import ServerConfiguration
 from dns_proxy_protocols import UDPRelay, TLSRelay
 from dns_proxy_packets import ClientQuery, ttl_rewrite
 from dns_proxy_cache import dns_cache, request_tracker, QNAME_NOT_FOUND
@@ -140,11 +140,6 @@ class DNSServer(ServerConfiguration, Listener):
         # ==========================
         threading.Thread(target=self.responder).start()
         threading.Thread(target=self._request_queue).start()
-
-        # ==========================
-        # SDN REACHABILITY
-        # ==========================
-        Reachability.run(self.__class__)
 
         # ==========================
         # TOP DOMAINS / CACHE CLEAR

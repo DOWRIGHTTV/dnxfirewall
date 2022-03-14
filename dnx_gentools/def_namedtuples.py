@@ -6,11 +6,17 @@ from collections import namedtuple as _namedtuple
 from functools import lru_cache as _lru_cache
 from typing import NamedTuple as _NamedTuple, Union as _Union, Optional as _Optional, Any as _Any, Callable as _Callable
 
-from dnx_gentools.def_typing import Socket
 from dnx_gentools.def_enums import PROTO as _PROTO, DHCP as _DHCP, DNS_CAT as _DNS_CAT
 from dnx_gentools.standard_tools import bytecontainer as _bytecontainer
 
 from dnx_iptools.def_structs import dhcp_byte_pack as _dhcp_bp, dhcp_short_pack as _dhcp_sp, dhcp_long_pack as _dhcp_lp
+
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Socket
 
 # ================
 # BYTE CONTAINERS
