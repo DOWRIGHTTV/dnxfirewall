@@ -28,6 +28,7 @@ def INITIALIZE_MODULE(log_name: str):
     return True if INIT_MODULE == log_name.replace('_', '-') else False
 # =====================================================
 
+
 ppt: _Callable[[_Any], None] = _PrettyPrinter(sort_dicts=False).pprint
 
 console_log: _Callable[[str], None] = _partial(print, flush=True)
@@ -51,6 +52,7 @@ def hardout(msg: _Optional[str] = None) -> None:
 
 # used by socket sender loops
 ATTEMPTS: tuple[int, int] = (0, 1)
+LAST_ATTEMPT: int = 1
 
 byte_join:  _Callable[[_Iterable[bytes]], bytes] = b''.join
 str_join:   _Callable[[_Iterable[str]], str] = ''.join

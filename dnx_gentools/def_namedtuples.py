@@ -6,8 +6,10 @@ from collections import namedtuple as _namedtuple
 from functools import lru_cache as _lru_cache
 from typing import NamedTuple as _NamedTuple, Union as _Union, Optional as _Optional, Any as _Any, Callable as _Callable
 
+from dnx_gentools.def_typing import Socket
 from dnx_gentools.def_enums import PROTO as _PROTO, DHCP as _DHCP, DNS_CAT as _DNS_CAT
 from dnx_gentools.standard_tools import bytecontainer as _bytecontainer
+
 from dnx_iptools.def_structs import dhcp_byte_pack as _dhcp_bp, dhcp_short_pack as _dhcp_sp, dhcp_long_pack as _dhcp_lp
 
 # ================
@@ -59,16 +61,23 @@ class RECORD_CONTAINER(_NamedTuple):
 SYSLOG_SERVERS = _namedtuple('syslog_servers', 'primary secondary')
 
 # DNS PROXY
+PROXY_DECISION = _namedtuple('proxy_decision', 'name decision')
+DNS_LOG = _namedtuple('dns_log', 'src_ip request category reason action')
+BLOCKED_LOG = _namedtuple('blocked_log', 'src_ip request category reason action')
+
+DNS_WHITELIST = _namedtuple('whitelist', 'dns ip')
+DNS_BLACKLIST = _namedtuple('blacklist', 'dns')
 class DNS_SERVERS(_NamedTuple):
     primary: dict[_Union[str, _PROTO], _Optional[bool]]
     secondary: dict[_Union[str, _PROTO], _Optional[bool]]
 
+class RELAY_CONN(_NamedTuple):
+    remote_ip: str
+    sock: Socket
+    send: _Callable[[_Union[bytes, bytearray]], int]
+    recv: _Union[_Callable[[int], bytes], _Callable[[_Union[bytearray, memoryview]], int]]
+    version: str
 
-# DNS_SERVERS = _namedtuple('dns_servers', 'primary secondary')
-PROXY_DECISION = _namedtuple('proxy_decision', 'name decision')
-RELAY_CONN = _namedtuple('relay_conn', 'remote_ip sock send recv version')
-
-DNS_REQUEST_INFO = _namedtuple('request_info', 'client_address request, request2')
 class QNAME_RECORD(_NamedTuple):
     expire: int
     ttl: int
@@ -92,13 +101,6 @@ class DNS_SEND(_NamedTuple):
     qname: str
     data: bytearray
 
-
-DNS_LOG = _namedtuple('dns_log', 'src_ip request category reason action')
-BLOCKED_LOG = _namedtuple('blocked_log', 'src_ip request category reason action')
-
-DNS_SIGNATURES = _namedtuple('signatures', 'en_dns tld keyword')
-DNS_WHITELIST  = _namedtuple('whitelist', 'dns ip')
-DNS_BLACKLIST  = _namedtuple('blacklist', 'dns')
 
 # IPS/IDS
 IPS_WAN_INFO = _namedtuple('ips_wan_info', 'interface ip mac')

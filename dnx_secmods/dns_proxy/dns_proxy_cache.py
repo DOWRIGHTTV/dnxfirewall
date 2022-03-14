@@ -146,7 +146,6 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
             else:
                 return QNAME_NOT_FOUND
 
-        # if missing will return an expired result
         def __missing__(self, key: str) -> QNAME_RECORD:
             return NO_QNAME_RECORD
 
@@ -157,15 +156,15 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
 
             Log.debug(f'[{request}:{data_to_cache.ttl}] Added to standard cache. ')
 
-        def search(self, query_name: str) -> DNS_CACHE:
+        def search(self, query_name: str) -> QNAME_RECORD_UPDATE:
             '''return namedtuple of time left on ttl and the dns record if the client requested domain is cached.
 
-            returns None if not found.
             the top domain count will be incremented automatically if it passes the filter.
             '''
             if (query_name):
-                # list comp to built in any test for match. match will not increment top domain counter.
-                if (not [fltr for fltr in top_domain_filter if fltr in query_name]):
+
+                filter_matches: list[str] = [fltr for fltr in top_domain_filter if fltr in query_name]
+                if (not filter_matches):
 
                     with counter_lock:
                         domain_counter[query_name] += 1

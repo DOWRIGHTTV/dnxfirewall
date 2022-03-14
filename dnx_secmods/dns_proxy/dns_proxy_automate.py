@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import threading
 import socket
 import ssl
 
@@ -14,7 +13,7 @@ from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import DNS_SERVERS, DNS_SIGNATURES, DNS_WHITELIST, DNS_BLACKLIST, Item
 from dnx_gentools.def_enums import PROTO, CFG, DNS_CAT
 from dnx_gentools.file_operations import *
-from dnx_gentools.standard_tools import looper, ConfigurationMixinBase, Initialize
+from dnx_gentools.standard_tools import looper, ConfigurationMixinBase
 
 from dnx_iptools.cprotocol_tools import iptoi
 from dnx_iptools.protocol_tools import create_dns_query_header, convert_string_to_bitmap
@@ -22,7 +21,7 @@ from dnx_iptools.protocol_tools import create_dns_query_header, convert_string_t
 from dns_proxy_log import Log
 
 __all__ = (
-    'ProxyConfiguration', 'ServerConfiguration', 'Reachability'
+    'ProxyConfiguration', 'ServerConfiguration',
 )
 
 ConfigurationManager.set_log_reference(Log)
@@ -48,10 +47,10 @@ class ProxyConfiguration(ConfigurationMixinBase):
     _keywords: ClassVar[list[tuple[str, DNS_CAT]]] = []
 
     def _configure(self) -> tuple[LogHandler_T, tuple]:
-        '''return thread information to be run.
+        '''tasks required by the DNS proxy.
 
-         tasks required by the DNS proxy.
-         '''
+        return thread information to be run.
+        '''
         # NOTE: might be temporary, but this needed to be moved outside the standard/bitmap sigs since they are
         # now being handled by an external C extension (cython)
         self.__class__._keywords = load_keywords(log=Log)
@@ -244,11 +243,25 @@ class ServerConfiguration(ConfigurationMixinBase):
     dns_records: ClassVar[dict[str, int]] = {}
 
     def _configure(self) -> tuple:
-        '''return thread information to be run.
+        '''tasks required by the DNS server.
 
-         tasks required by the DNS server.
-         '''
-        return Log, ((self._get_server_settings, ()),)
+        return thread information to be run.
+        '''
+        udp_query: bytes = create_dns_query_header(dns_id=69, cd=1) + b'\x0bdnxfirewall\x03com\x00\x00\x01\x00\x01'
+        udp_reach_sock: Socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        udp_reach_sock.settimeout(CONNECT_TIMEOUT)
+
+        tls_context: SSLContext = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        tls_context.verify_mode = ssl.CERT_REQUIRED
+        tls_context.load_verify_locations(CERTIFICATE_STORE)
+
+        threads = (
+            (self._get_server_settings, ()),
+            (self._udp_reachability, (udp_query, udp_reach_sock)),
+            (self._tls_reachability, (tls_context,))
+        )
+
+        return Log, threads
 
     @cfg_read_poller('dns_server')
     def _get_server_settings(self, cfg_file: str) -> None:
@@ -287,142 +300,75 @@ class ServerConfiguration(ConfigurationMixinBase):
 
         self._initialize.done()
 
-
-# TODO: not sure if i like how this class is a class. it just makes me feel weird.
-class Reachability:
-    '''this class is used to determine whether a remote dns server has recovered from an outage or
-    slow response times.
-    '''
-    _dns_server: ClassVar[DNSServer_T] = None
-
-    __slots__ = (
-        '_protocol', '_initialize',
-
-        '_tls_context', '_udp_query',
-    )
-
-    def __init__(self, protocol: PROTO):
-        self._protocol: PROTO = protocol
-
-        self._initialize = Initialize(Log, self.__class__.__name__)
-
-        self._tls_context: SSLContext
-
-    @classmethod
-    def run(cls, dns_server: DNSServer_T):
-        '''starting remote server responsiveness detection as a thread.
-
-        the remote servers will only be checked for connectivity if they are marked as down during the polling interval.
-        both UDP and TLS(TCP) will be started with one call to run.
-        '''
-        cls._dns_server = dns_server
-
-        # initializing udp instance and starting thread
-        reach_udp = cls(PROTO.UDP)
-        reach_udp._set_udp_query()
-
-        threading.Thread(target=reach_udp.udp).start()
-
-        # initializing tls instance and starting thread
-        reach_tls = cls(PROTO.DNS_TLS)
-        reach_tls._create_tls_context()
-
-        threading.Thread(target=reach_tls.tls).start()
-
-        # waiting for each thread to finish initial reachability check before returning
-        reach_udp._initialize.wait_for_threads(count=1)
-        reach_tls._initialize.wait_for_threads(count=1)
-
     @looper(FIVE_SEC)
-    def tls(self):
-        if (self.is_enabled):
+    def _udp_reachability(self, udp_query: bytes, udp_sock: Socket):
+        public_resolvers = self.__class__.public_resolvers
 
-            for secure_server in self._dns_server.public_resolvers:
+        if (self.protocol is not PROTO.UDP and not self.__class__.udp_fallback):
+            return
 
-                # no check needed if server/proto is known up
-                if (secure_server[self._protocol]):
-                    continue
+        downed_servers: list[tuple[int, str]] = [
+            (idx, server['ip_address']) for idx, server in enumerate(public_resolvers) if not server[PROTO.UDP]
+        ]
 
-                Log.debug(
-                    f'[{secure_server["ip_address"]}/{self._protocol.name}] Checking reachability of remote DNS server.'
-                )
+        status_change: bool = False
+        for idx, server in downed_servers:
 
-                # if the server responds to a connection attempt, it will be marked as available
-                if self._tls_reachable(secure_server['ip_address']):
-                    secure_server[PROTO.DNS_TLS] = True
-                    self._dns_server.tls_down = False
+            Log.debug(f'[{server}/UDP] Checking reachability of remote DNS server.')
 
-                    Log.notice(f'[{secure_server["ip_address"]}/{self._protocol.name}] DNS server is reachable.')
+            udp_sock.sendto(udp_query, (server, PROTO.DNS))
+            try:
+                udp_sock.recv(1024)
+            except OSError:
+                continue
 
-                    # will write server status change individually as its unlikely both will be down at same time
-                    write_configuration(self._dns_server.public_resolvers._asdict(), 'dns_server_status')
+            status_change = True
+            public_resolvers[idx][PROTO.UDP] = True
+
+            Log.notice(f'[{server}/UDP] DNS server is reachable.')
+
+        if (status_change):
+            write_configuration(public_resolvers._asdict(), 'dns_server_status')
 
         self._initialize.done()
 
-    def _tls_reachable(self, secure_server: str) -> bool:
-        sock: Socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(CONNECT_TIMEOUT)
-
-        secure_socket = self._tls_context.wrap_socket(sock, server_hostname=secure_server)
-        try:
-            secure_socket.connect((secure_server, PROTO.DNS_TLS))
-        except OSError:
-            return False
-
-        else:
-            return True
-
-        finally:
-            secure_socket.close()
-
     @looper(FIVE_SEC)
-    def udp(self):
-        if (self.is_enabled or self._dns_server.udp_fallback):
+    def _tls_reachability(self, tls_context: SSLContext):
+        public_resolvers = self.__class__.public_resolvers
 
-            for server in self._dns_server.public_resolvers:
+        if (self.protocol is not PROTO.DNS_TLS):
+            return
 
-                # no check needed if server/proto is known up
-                if (server[self._protocol]):
-                    continue
+        downed_servers: list[tuple[int, str]] = [
+            (idx, server['ip_address']) for idx, server in enumerate(public_resolvers) if not server[PROTO.DNS_TLS]
+        ]
 
-                Log.debug(f'[{server["ip_address"]}/{self._protocol.name}] Checking reachability of remote DNS server.')
+        status_change: bool = False
+        for idx, secure_server in downed_servers:
 
-                # if the server responds to a connection attempt, it will be marked as available
-                if self._udp_reachable(server['ip_address']):
-                    server[PROTO.UDP] = True
+            Log.debug(f'[{secure_server}/DNS_TLS] Checking reachability of remote DNS server.')
 
-                    Log.notice(f'[{server["ip_address"]}/{self._protocol.name}] DNS server is reachable.')
+            sock: Socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(CONNECT_TIMEOUT)
 
-                    write_configuration(self._dns_server.public_resolvers._asdict(), 'dns_server_status')
+            secure_socket = tls_context.wrap_socket(sock, server_hostname=secure_server)
+            try:
+                secure_socket.connect((secure_server, PROTO.DNS_TLS))
+            except OSError:
+                return False
+
+            else:
+                status_change = True
+
+                public_resolvers[idx][PROTO.DNS_TLS] = True
+                self.__class__.tls_down = False
+
+                Log.notice(f'[{secure_server}/DNS_TLS] DNS server is reachable.')
+
+            finally:
+                secure_socket.close()
+
+        if (status_change):
+            write_configuration(public_resolvers._asdict(), 'dns_server_status')
 
         self._initialize.done()
-
-    # NOTE: UDP can reuse its socket. consider slimming this down to just a send/recv and no socket close.
-    def _udp_reachable(self, server_ip: str) -> bool:
-        sock: Socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.settimeout(2)
-        try:
-            sock.sendto(self._udp_query, (server_ip, PROTO.DNS))
-            sock.recv(1024)
-        except OSError:
-            return False
-
-        else:
-            return True
-
-        finally:
-            sock.close()
-
-    def _create_tls_context(self):
-        self._tls_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        self._tls_context.verify_mode = ssl.CERT_REQUIRED
-        self._tls_context.load_verify_locations(CERTIFICATE_STORE)
-
-    def _set_udp_query(self):
-        self._udp_query = bytearray(
-            create_dns_query_header(dns_id=69, cd=1)
-        ) + b'\x0bdnxfirewall\x03com\x00\x00\x01\x00\x01'
-
-    @property
-    def is_enabled(self) -> bool:
-        return self._protocol == self._dns_server.protocol

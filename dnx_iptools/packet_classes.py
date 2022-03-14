@@ -5,7 +5,8 @@ from __future__ import annotations
 import traceback
 import socket
 import select
-import threading
+
+from threading import Thread
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
@@ -63,7 +64,7 @@ class Listener:
 
         # starting a registration thread for all available interfaces and exit when complete
         for intf in cls._intfs:
-            threading.Thread(target=self.__register, args=(intf,)).start()
+            Thread(target=self.__register, args=(intf,)).start()
 
         self.__listener(always_on, threaded)
 
@@ -179,10 +180,10 @@ class Listener:
 
                     # referring to child class for whether to continue processing the packet
                     if not pre_inspect(packet):
-                        return
+                        continue
 
                     if (threaded):
-                        threading.Thread(target=listener_callback, args=(packet,)).start()
+                        Thread(target=listener_callback, args=(packet,)).start()
                     else:
                         listener_callback(packet)
 
@@ -207,15 +208,15 @@ class Listener:
 class ProtoRelay:
     '''parent class for udp and tls relays.
 
-    provides standard built in methods to start, check status, or add jobs to the work queue. _dns_queue object must
-    be overwritten by subclasses.
+    provides standard built in methods to start, check status, or add jobs to the work queue.
+    _dns_queue object must be overwritten by subclasses.
     '''
     _protocol: ClassVar[PROTO] = PROTO.NOT_SET
 
     __slots__ = (
         '_dns_server', '_fallback_relay',
 
-        '_relay_conn', '_send_cnt', '_last_rcvd',
+        '_relay_conn', '_send_count', '_last_rcvd',
         '_responder_add', '_fallback_relay_add'
     )
 
@@ -224,15 +225,15 @@ class ProtoRelay:
 
         May be expanded.
         '''
-        self._dns_server = dns_server
-        self._fallback_relay = fallback_relay
+        self._dns_server: DNSServer_T = dns_server
+        self._fallback_relay: Optional[Callable] = fallback_relay
 
         # dummy sock setup
-        sock: Socket = socket.socket()
-        self._relay_conn = RELAY_CONN(None, sock, sock.send, sock.recv, None)
+        sock = socket.socket()
+        self._relay_conn = RELAY_CONN('', sock, sock.send, sock.recv, '')
 
-        self._send_cnt  = 0
-        self._last_rcvd = 0
+        self._send_count:  int = 0
+        self._last_rcvd: int = 0
 
         # direct reference for performance
         if (fallback_relay):
@@ -248,29 +249,35 @@ class ProtoRelay:
         '''
         self = cls(dns_server, fallback_relay)
 
-        threading.Thread(target=self._fail_detection).start()
-        threading.Thread(target=self.relay).start()
+        Thread(target=self._fail_detection).start()
+        Thread(target=self.relay).start()
 
     def relay(self):
         '''the main relay process for handling the relay queue. will block and run forever.
         '''
         raise NotImplementedError('relay must be implemented in the subclass.')
 
-    def _send_query(self, request: DNS_SEND) -> None:
+    def _send_query(self, request: DNS_SEND, nbytes: int = 0) -> None:
         for attempt in ATTEMPTS:
             try:
-                self._relay_conn.send(request.data)
+                nbytes: int = self._relay_conn.send(request.data)
             except OSError:
+                pass
 
-                if not self._register_new_socket(): break
+            # failed to send on first try will trigger a connection reconnect and resend
+            if (not nbytes and attempt != LAST_ATTEMPT):
+                registered: bool = self._register_new_socket()
+                if (registered):
+                    Thread(target=self._recv_handler).start()
 
-                threading.Thread(target=self._recv_handler).start()
+                else:
+                    break
 
-            else:
-                self._increment_fail_detection()
+            # successful send
+            elif (nbytes):
+                self._send_count += 1
 
-                # NOTE: temp | identifying connection version to terminal. when removing consider having the relay
-                # protocol show in the webui > system reports.
+                # FIXME: temp
                 console_log(
                     f'[{self._relay_conn.remote_ip}/{self._relay_conn.version}][{attempt}] Sent {request.qname}'
                 )
@@ -289,7 +296,7 @@ class ProtoRelay:
 
     @looper(FIVE_SEC)
     def _fail_detection(self):
-        if (fast_time() - self._last_rcvd >= FIVE_SEC and self._send_cnt >= HEARTBEAT_FAIL_LIMIT):
+        if (fast_time() - self._last_rcvd >= FIVE_SEC and self._send_count >= HEARTBEAT_FAIL_LIMIT):
             self.mark_server_down()
 
     # processes that were unable to connect/ create a socket will send in the remote server ip that was attempted.
@@ -304,15 +311,12 @@ class ProtoRelay:
         # if servers could change during runtime, this has a slight race condition potential, but it shouldn't matter
         # because, when changing a server, it would be initially set to down (essentially a no-op)
         server = primary if primary['ip'] == remote_server else self._dns_server.public_resolvers.secondary
-        server[PROTO.DNS_TLS] = True
+        server[PROTO.DNS_TLS] = False
 
         try:
             self._relay_conn.sock.close()
         except OSError:
             console_log(f'[{self._relay_conn.remote_ip}] Failed to close socket while marking server down.')
-
-    def _increment_fail_detection(self):
-        self._send_cnt += 1
 
     @property
     def is_enabled(self) -> bool:
@@ -335,25 +339,23 @@ class NFQueue:
     _packet_parser: ClassVar[ProxyParser]
     _proxy_callback: ClassVar[ProxyCallback]
 
-    __slots__ = (
-        '__threaded'
-    )
+    __slots__ = ()
 
-    def __init__(self):
+    def __init__(self, threaded):
         '''General constructor that can only be reached if called through subclass.
         '''
-        self.__threaded: bool = False
+        if (threaded):
+            set_nfqueue_callback(self.__handle_packet_threaded)
+        else:
+            set_nfqueue_callback(self.__handle_packet)
 
     @classmethod
     def run(cls, log: LogHandler_T, *, q_num: int, threaded: bool = True) -> None:
 
         cls._log: LogHandler_T = log
 
-        self = cls()
+        self = cls(threaded)
         self._setup()
-
-        self.__threaded = threaded
-
         self.__queue(q_num)
 
     def _setup(self):
@@ -375,7 +377,6 @@ class NFQueue:
         cls._proxy_callback = func
 
     def __queue(self, q: int, /) -> NoReturn:
-        set_nfqueue_callback(self.__handle_packet)
 
         for _ in RUN_FOREVER:
             nfqueue = NetfilterQueue()
@@ -389,11 +390,13 @@ class NFQueue:
             except:
                 nfqueue.nf_break()
 
-                self._log.alert('Netfilter binding lost. Attempting to rebind.')
+                self._log.alert('Netfilter binding lost.')
 
             fast_sleep(1)
 
-    def __handle_packet(self, nfqueue: CPacket, mark: int) -> None:
+    def __handle_packet_threaded(self, nfqueue: CPacket, mark: int) -> None:
+        '''NFQUEUE callback where each call to the proxy callback is done in a thread.
+        '''
         try:
             packet: ProxyPackets = self._packet_parser(nfqueue, mark)
         except ProtocolError:
@@ -402,15 +405,28 @@ class NFQueue:
         except:
             nfqueue.drop()
 
-            traceback.print_exc()
             self._log.error('failed to parse CPacket. Packet discarded.')
 
         else:
             if self._pre_inspect(packet):
-                if (self.__threaded):
-                    threading.Thread(target=self._proxy_callback, args=(packet,)).start()
-                else:
-                    self._proxy_callback(packet)
+                Thread(target=self._proxy_callback, args=(packet,)).start()
+
+    def __handle_packet(self, nfqueue: CPacket, mark: int) -> None:
+        '''NFQUEUE callback where each call to the proxy callback is done sequentially.
+        '''
+        try:
+            packet: ProxyPackets = self._packet_parser(nfqueue, mark)
+        except ProtocolError:
+            nfqueue.drop()
+
+        except:
+            nfqueue.drop()
+
+            self._log.error('failed to parse CPacket. Packet discarded.')
+
+        else:
+            if self._pre_inspect(packet):
+                self._proxy_callback(packet)
 
     def _pre_inspect(self, packet) -> bool:
         '''called after packet parsing.
@@ -420,7 +436,6 @@ class NFQueue:
         return will be evaluated to determine whether to continue and or do nothing/ drop the packet.
 
         May be overridden.
-
         '''
         return True
 
@@ -698,7 +713,7 @@ class RawResponse:
         cls._registered_socks_get = cls._registered_socks.get
 
         for intf in cls._intfs:
-            threading.Thread(target=cls.__register, args=(intf,)).start()
+            Thread(target=cls.__register, args=(intf,)).start()
 
     @classmethod
     def __register(cls, intf: tuple[int, int, str]):
