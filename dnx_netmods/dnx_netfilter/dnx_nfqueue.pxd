@@ -188,10 +188,11 @@ cdef class CPacket:
     cpdef void repeat(self)
 
 cdef class NetfilterQueue:
-    cdef nfq_handle   *nfq_lib_handle # Handle to NFQueue library
-    cdef nfq_q_handle *q_handle # A handle to the queue
+    cdef:
+        nfq_handle   *nfq_lib_handle # Handle to NFQueue library
+        nfq_q_handle *q_handle # A handle to the queue
 
-    object proxy_callback
+        object proxy_callback
 
     cdef void _run(self) nogil
     cdef int nf_callback(self, nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *data) with gil
