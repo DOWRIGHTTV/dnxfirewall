@@ -25,8 +25,9 @@ cdef pthread_mutex_t NFQlock
 pthread_mutex_init(&NFQlock, NULL)
 
 
-# pre allocating memory for 8 instance. instances are created and destroyed sequentially so only one instance will be
-# active at a time, but this is to make a point to myself that this module could be multithreading within C one day.
+# pre allocating memory for 8 instance.
+# instances are created and destroyed sequentially so only one instance will be active at a time.
+# this is to make a point to myself that this module could be multithreading within C one day.
 @cython.freelist(8)
 cdef class CPacket:
 
@@ -36,22 +37,28 @@ cdef class CPacket:
     cpdef void update_mark(self, uint32_t mark):
         '''Modifies the netfilter mark of the packet.
         '''
-        self.mark = mark
+        self.packet.mark = mark
 
     cpdef void accept(self):
+        '''Allow the packet to continue to the next table.
 
+        The GIL is released before calling into netfilter.
+        '''
         with nogil:
             self._set_verdict(NF_ACCEPT)
 
     cpdef void drop(self):
+        '''Discard the packet.
 
+        The GIL is released before calling into netfilter.
+        '''
         with nogil:
             self._set_verdict(NF_DROP)
 
     cpdef void forward(self, uint16_t queue_num):
-        '''Send instance packet to a different queue.
+        '''Send the packet to a different queue.
 
-        The GIL is released before applying to packet action.
+        The GIL is released before calling into netfilter.
         '''
         cdef uint32_t forward_to_queue
 
@@ -61,9 +68,9 @@ cdef class CPacket:
             self._set_verdict(forward_to_queue)
 
     cpdef void repeat(self):
-        '''Send instance packet back to the top of current chain.
+        '''Send the packet back to the top of the current chain.
 
-        The GIL is released before applying to packet action.
+        The GIL is released before calling into netfilter.
         '''
         with nogil:
             self._set_verdict(NF_REPEAT)
@@ -118,7 +125,7 @@ cdef class CPacket:
         cdef (uint8_t, uint8_t, uint16_t, uint16_t, uint16_t,
                 uint8_t, uint8_t, uint16_t, uint32_t, uint32_t) ip_header
 
-        iphdr = <IPhdr*>self.packet.protohdr
+        cdef IPhdr *iphdr = <IPhdr*>self.packet.protohdr
 
         ip_header = (
             iphdr.ver_ihl,
@@ -138,11 +145,10 @@ cdef class CPacket:
     def get_tcp_header(self):
         '''Return layer4 (TCP) of packet data as a tuple converted directly from C struct.
         '''
-        cdef:
-            (uint16_t, uint16_t, uint32_t, uint32_t,
+        cdef (uint16_t, uint16_t, uint32_t, uint32_t,
                 uint8_t, uint8_t, uint16_t, uint16_t, uint16_t) tcp_header
 
-        tcphdr = <TCPhdr*>self.packet.protohdr
+        cdef TCPhdr *tcphdr = <TCPhdr*>self.packet.protohdr
 
         tcp_header = (
             ntohs(tcphdr.th_sport),
@@ -163,7 +169,7 @@ cdef class CPacket:
         '''
         cdef (uint16_t, uint16_t, uint16_t, uint16_t) udp_header
 
-        udphdr = <UDPhdr*>self.packet.protohdr
+        cdef UDPhdr *udphdr = <UDPhdr*>self.packet.protohdr
 
         udp_header = (
             ntohs(udphdr.uh_sport),
@@ -177,11 +183,9 @@ cdef class CPacket:
     def get_icmp_header(self):
         '''Return layer4 (ICMP) of packet data as a tuple converted directly from C struct.
         '''
-        cdef (uint8_t, uint8_t) icmp_header
+        cdef ICMPhdr *icmphdr = <ICMPhdr*>self.packet.protohdr
 
-        icmphdr = <ICMPhdr*>self.packet.protohdr
-
-        icmp_header = (icmphdr.type, icmphdr.code)
+        cdef (uint8_t, uint8_t) icmp_header = (icmphdr.type, icmphdr.code)
 
         return icmp_header
 
@@ -234,9 +238,7 @@ cdef class CPacket:
 # ============================================
 cdef int32_t nfqueue_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *q_manager) nogil:
 
-    cdef PacketData *raw_packet
-
-    raw_packet = nfqueue_parse(qh, nfa)
+    cdef PacketData *raw_packet = nfqueue_parse(qh, nfa)
 
     return nfqueue_forward(qh, nfmsg, nfa, q_manager, raw_packet)
 
@@ -246,13 +248,12 @@ cdef int32_t nfqueue_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void 
 cdef inline PacketData* nfqueue_parse(nfq_q_handle *qh, nfq_data *nfa) nogil:
 
     cdef:
-        nfqnl_msg_packet_hdr *nfq_msg_hdr
+        nfqnl_msg_packet_hdr *nfq_msg_hdr = nfq_get_msg_packet_hdr(nfa)
+
+        PacketData  packet
 
         upkt_buf   *pktdata
-        PacketData  packet
         IPhdr      *ip_header
-
-    nfq_msg_hdr = nfq_get_msg_packet_hdr(nfa)
 
     packet.q_handle   = qh
     packet.nld_handle = nfa
@@ -262,7 +263,7 @@ cdef inline PacketData* nfqueue_parse(nfq_q_handle *qh, nfq_data *nfa) nogil:
     packet.len        = nfq_get_payload(nfa, &pktdata)
 
     # splitting the packet by tcp/ip layers
-    ip_header = <IPhdr *> pktdata
+    ip_header = <IPhdr*>pktdata
 
     packet.protocol = ip_header.protocol
     packet.protohdr = &pktdata[(ip_header.ver_ihl & 15) * 4]
@@ -290,12 +291,14 @@ cdef int32_t nfqueue_forward(
         nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *q_manager, PacketData *raw_packet) with gil:
 
     # skipping call to __init__
-    cdef CPacket cpacket
+    cdef:
+        NetfilterQueue nfqueue = <NetfilterQueue>q_manager
+        CPacket cpacket
 
     cpacket = CPacket.__new__(CPacket)
     cpacket.packet = raw_packet
 
-    (<NetfilterQueue>q_manager)[0].proxy_callback(cpacket, raw_packet.mark)
+    (<object>nfqueue.proxy_callback)(cpacket, raw_packet.mark)
 
     return OK
 
@@ -358,8 +361,7 @@ cdef class NetfilterQueue:
         nfq_set_queue_maxlen(self.q_handle, DEFAULT_MAX_QUEUELEN)
         nfnl_rcvbufsiz(nfq_nfnlh(self.nfqlib_handle), SOCK_RCV_SIZE)
 
-    # cdef object user_callback
-    def set_proxy_callback(self, func_ref):
+    def set_proxy_callback(self, object func_ref):
         '''Set required reference which will be called after packet data is parsed into C structs.
         '''
         self.proxy_callback = func_ref

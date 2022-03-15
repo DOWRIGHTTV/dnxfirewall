@@ -183,20 +183,15 @@ cdef class CPacket:
 
         PacketData *packet
 
-        IPhdr   *iphdr
-        TCPhdr  *tcphdr
-        UDPhdr  *udphdr
-        ICMPhdr *icmphdr
-
         bint has_verdict
 
-    cdef void set_packet_data(self, PacketData * packet) nogil
-    cdef void _set_verdict(self, uint32_t verdict) nogil
     cpdef void update_mark(self, uint32_t mark)
     cpdef void accept(self)
     cpdef void drop(self)
     cpdef void forward(self, uint16_t queue_num)
     cpdef void repeat(self)
+    cdef void set_packet_data(self, PacketData * packet)
+    cdef void _set_verdict(self, uint32_t verdict) nogil
 
 cdef class NetfilterQueue:
     cdef:
