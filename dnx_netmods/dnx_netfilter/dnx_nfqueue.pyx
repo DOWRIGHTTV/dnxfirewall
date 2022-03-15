@@ -31,83 +31,7 @@ pthread_mutex_init(&NFQlock, NULL)
 cdef class CPacket:
 
     def __cinit__(self):
-        self.timestamp = time(NULL)
-
-        self.verdict = 0
-        self.mark = 0
-
-    cdef uint32_t parse(self, nfq_q_handle *qh, nfq_data *nfa) nogil:
-
-        self.q_handle = qh
-        self.nld_handle = nfa
-
-        self.nfq_msg_hdr = nfq_get_msg_packet_hdr(nfa)
-
-        # filling packet data buffer from netfilter
-        self.data_len = nfq_get_payload(nfa, &self.pktdata)
-
-        # splitting the packet by tcp/ip layers
-        self._parse()
-
-        # returning mark for more direct access
-        return nfq_get_nfmark(nfa)
-
-    cdef inline void _parse(self) nogil:
-
-        cdef:
-            size_t iphdr_len
-            size_t protohdr_len = 0
-
-        self.ip_header = <IPhdr*>self.pktdata
-
-        iphdr_len = (self.ip_header.ver_ihl & 15) * 4
-        if (self.ip_header.protocol == IPPROTO_TCP):
-            self.tcp_header = <TCPhdr*>&self.pktdata[iphdr_len]
-
-            protohdr_len = ((self.tcp_header.th_off >> 4) & 15) * 4
-
-        elif (self.ip_header.protocol == IPPROTO_UDP):
-            self.udp_header = <UDPhdr*>&self.pktdata[iphdr_len]
-
-            protohdr_len = 8
-
-        elif (self.ip_header.protocol == IPPROTO_ICMP):
-            self.icmp_header = <ICMPhdr*>&self.pktdata[iphdr_len]
-
-            protohdr_len = 4
-
-        self.cmbhdr_len = protohdr_len + 20
-
-    cdef void _set_verdict(self, uint32_t verdict) nogil:
-        '''Call appropriate set_verdict function on packet.
-        '''
-        if (self.verdict):
-            printf('[C/warning] Verdict already issued for this packet.')
-
-            return
-
-        # ===================================
-        # LOCKING ACCESS TO NetfilterQueue
-        # prevents nfq packet handler from processing a packet while setting a verdict of another packet.
-        pthread_mutex_lock(&NFQlock)
-        # -------------------------
-        # NetfilterQueue Processor
-        # -------------------------
-        if (self.mark):
-            nfq_set_verdict2(
-                self.q_handle, self.nfq_msg_hdr.packet_id, verdict, self.mark, self.data_len, self.pktdata
-            )
-
-        else:
-            nfq_set_verdict(
-                self.q_handle, self.nfq_msg_hdr.packet_id, verdict, self.data_len, self.pktdata
-            )
-
-        pthread_mutex_unlock(&NFQlock)
-        # UNLOCKING ACCESS TO NetfilterQueue
-        # ===================================
-
-        self.verdict = 1
+        self.has_verdict = 0
 
     cpdef void update_mark(self, uint32_t mark):
         '''Modifies the netfilter mark of the packet.
@@ -186,7 +110,7 @@ cdef class CPacket:
     def get_raw_packet(self):
         '''Return layer 3-7 of packet data.
         '''
-        return self.pktdata[:<Py_ssize_t>self.data_len]
+        return self.packet.data[:<Py_ssize_t>self.packet.len]
 
     def get_ip_header(self):
         '''Return layer3 of packet data as a tuple converted directly from C struct.
@@ -194,17 +118,19 @@ cdef class CPacket:
         cdef (uint8_t, uint8_t, uint16_t, uint16_t, uint16_t,
                 uint8_t, uint8_t, uint16_t, uint32_t, uint32_t) ip_header
 
+        iphdr = <IPhdr*>self.packet.protohdr
+
         ip_header = (
-            self.ip_header.ver_ihl,
-            self.ip_header.tos,
-            ntohs(self.ip_header.tot_len),
-            ntohs(self.ip_header.id),
-            ntohs(self.ip_header.frag_off),
-            self.ip_header.ttl,
-            self.ip_header.protocol,
-            ntohs(self.ip_header.check),
-            ntohl(self.ip_header.saddr),
-            ntohl(self.ip_header.daddr),
+            iphdr.ver_ihl,
+            iphdr.tos,
+            ntohs(iphdr.tot_len),
+            ntohs(iphdr.id),
+            ntohs(iphdr.frag_off),
+            iphdr.ttl,
+            iphdr.protocol,
+            ntohs(iphdr.check),
+            ntohl(iphdr.saddr),
+            ntohl(iphdr.daddr),
         )
 
         return ip_header
@@ -212,19 +138,22 @@ cdef class CPacket:
     def get_tcp_header(self):
         '''Return layer4 (TCP) of packet data as a tuple converted directly from C struct.
         '''
-        cdef (uint16_t, uint16_t, uint32_t, uint32_t,
+        cdef:
+            (uint16_t, uint16_t, uint32_t, uint32_t,
                 uint8_t, uint8_t, uint16_t, uint16_t, uint16_t) tcp_header
 
+        tcphdr = <TCPhdr*>self.packet.protohdr
+
         tcp_header = (
-            ntohs(self.tcp_header.th_sport),
-            ntohs(self.tcp_header.th_dport),
-            ntohl(self.tcp_header.th_seq),
-            ntohl(self.tcp_header.th_ack),
-            self.tcp_header.th_off,
-            self.tcp_header.th_flags,
-            ntohs(self.tcp_header.th_win),
-            ntohs(self.tcp_header.th_sum),
-            ntohs(self.tcp_header.th_urp),
+            ntohs(tcphdr.th_sport),
+            ntohs(tcphdr.th_dport),
+            ntohl(tcphdr.th_seq),
+            ntohl(tcphdr.th_ack),
+            tcphdr.th_off,
+            tcphdr.th_flags,
+            ntohs(tcphdr.th_win),
+            ntohs(tcphdr.th_sum),
+            ntohs(tcphdr.th_urp),
         )
 
         return tcp_header
@@ -234,11 +163,13 @@ cdef class CPacket:
         '''
         cdef (uint16_t, uint16_t, uint16_t, uint16_t) udp_header
 
+        udphdr = <UDPhdr*>self.packet.protohdr
+
         udp_header = (
-            ntohs(self.udp_header.uh_sport),
-            ntohs(self.udp_header.uh_dport),
-            ntohs(self.udp_header.uh_ulen),
-            ntohs(self.udp_header.uh_sum),
+            ntohs(udphdr.uh_sport),
+            ntohs(udphdr.uh_dport),
+            ntohs(udphdr.uh_ulen),
+            ntohs(udphdr.uh_sum),
         )
 
         return udp_header
@@ -248,10 +179,9 @@ cdef class CPacket:
         '''
         cdef (uint8_t, uint8_t) icmp_header
 
-        icmp_header = (
-            self.icmp_header.type,
-            self.icmp_header.code,
-        )
+        icmphdr = <ICMPhdr*>self.packet.protohdr
+
+        icmp_header = (icmphdr.type, icmphdr.code)
 
         return icmp_header
 
@@ -259,10 +189,151 @@ cdef class CPacket:
         '''Return payload (>layer4) as Python bytes.
         '''
         cdef:
-            Py_ssize_t payload_len = self.data_len - self.cmbhdr_len
-            uint8_t *payload = &self.pktdata[self.cmbhdr_len]
+            Py_ssize_t payload_len = self.packet.len - self.packet.ttl_hdr_len
+            upkt_buf *payload = &self.packet.data[self.packet.ttl_hdr_len]
 
         return payload[:payload_len]
+
+    cdef void set_packet_data(self, PacketData *packet):
+
+        self.packet = packet
+
+    cdef void _set_verdict(self, uint32_t verdict) nogil:
+        '''Call appropriate set_verdict function on packet.
+        '''
+        if (self.has_verdict):
+            printf('[C/warning] Verdict already issued for this packet.')
+
+            return
+
+        # ===================================
+        # LOCKING ACCESS TO NetfilterQueue
+        # prevents nfq packet handler from processing a packet while setting a verdict of another packet.
+        pthread_mutex_lock(&NFQlock)
+        # -------------------------
+        # NetfilterQueue Processor
+        # -------------------------
+        if (self.packet.mark):
+            nfq_set_verdict2(
+                self.packet.q_handle, self.packet.id, verdict, self.packet.mark, self.packet.len, self.packet.data
+            )
+
+        else:
+            nfq_set_verdict(
+                self.packet.q_handle, self.packet.id, verdict, self.packet.len, self.packet.data
+            )
+
+        pthread_mutex_unlock(&NFQlock)
+        # UNLOCKING ACCESS TO NetfilterQueue
+        # ===================================
+
+        self.has_verdict = 1
+
+# ============================================
+# NFQUEUE CALLBACK - PARSE > FORWARD - NO GIL
+# ============================================
+cdef int32_t nfqueue_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *q_manager) nogil:
+
+    cdef PacketData *raw_packet
+
+    raw_packet = nfqueue_parse(qh, nfa)
+
+    return nfqueue_forward(qh, nfmsg, nfa, q_manager, raw_packet)
+
+# ============================================
+# TCP/IP HEADER PARSING - NO GIL
+# ============================================
+cdef inline PacketData* nfqueue_parse(nfq_q_handle *qh, nfq_data *nfa) nogil:
+
+    cdef:
+        nfqnl_msg_packet_hdr *nfq_msg_hdr
+
+        upkt_buf   *pktdata
+        PacketData  packet
+        IPhdr      *ip_header
+
+    nfq_msg_hdr = nfq_get_msg_packet_hdr(nfa)
+
+    packet.q_handle   = qh
+    packet.nld_handle = nfa
+    packet.id         = nfq_msg_hdr.packet_id
+    packet.mark       = nfq_get_nfmark(nfa)
+    packet.timestamp  = time(NULL)
+    packet.len        = nfq_get_payload(nfa, &pktdata)
+
+    # splitting the packet by tcp/ip layers
+    ip_header = <IPhdr *> pktdata
+
+    packet.protocol = ip_header.protocol
+    packet.protohdr = &pktdata[(ip_header.ver_ihl & 15) * 4]
+
+    if (ip_header.protocol == IPPROTO_TCP):
+
+        packet.protohdr_len = (((<TCPhdr*>packet.protohdr).th_off >> 4) & 15) * 4
+
+    elif (ip_header.protocol == IPPROTO_UDP):
+
+        packet.protohdr_len = 8
+
+    elif (ip_header.protocol == IPPROTO_ICMP):
+
+        packet.protohdr_len = 4
+
+    packet.ttl_hdr_len = packet.protohdr_len + 20
+
+    return &packet
+
+# ============================================
+# FORWARDING TO PROXY CALLBACK - GIL ACQUIRED
+# ============================================
+cdef int32_t nfqueue_forward(
+        nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *q_manager, PacketData *raw_packet) with gil:
+
+    # skipping call to __init__
+    cdef CPacket cpacket
+
+    cpacket = CPacket.__new__(CPacket)
+    cpacket.packet = raw_packet
+
+    (<NetfilterQueue>q_manager)[0].proxy_callback(cpacket, raw_packet.mark)
+
+    return OK
+
+# ============================================
+# NFQUEUE RECV LOOP - NO GIL
+# ============================================
+# RECV > NFQ_HANDLE > NFQ_CALLBACK > PARSE > PROXY CALLBACK
+cdef void process_traffic(nfq_handle *nfqlib_handle) nogil:
+
+    cdef:
+        pkt_buf pkt_buffer[NFQ_BUF_SIZE]
+        int32_t fd = nfq_fd(nfqlib_handle)
+
+        ssize_t data_len
+
+    while True:
+        data_len = recv(fd, pkt_buffer, NFQ_BUF_SIZE, 0)
+
+        if (data_len > 0):
+            # ===================================
+            # LOCKING ACCESS TO NetfilterQueue
+            # prevents verdict from being issues while initially processing the recvd packet
+            # TODO: determine if this is ACTUALLY needed vs dumb dumbs saying it is. adjust cfirewall as necessary
+            pthread_mutex_lock(&NFQlock)
+            # -------------------------
+            # NetfilterQueue Processor
+            # -------------------------
+            nfq_handle_packet(nfqlib_handle, pkt_buffer, data_len)
+
+            pthread_mutex_unlock(&NFQlock)
+            # UNLOCKING ACCESS TO NetfilterQueue
+            # ===================================
+
+        elif (data_len == 0):
+            printf('NFQ ZERO LENGTH PACKET RECVD')
+
+        elif (errno != ENOBUFS):
+            break
 
 
 cdef class NetfilterQueue:
@@ -274,12 +345,12 @@ cdef class NetfilterQueue:
         user callback.
         '''
         with nogil:
-            self._run()
+            process_traffic(self.nfqlib_handle)
 
     def nf_set(self, uint16_t queue_num):
         self.nfqlib_handle = nfq_open()
-        self.q_handle = nfq_create_queue(self.nfqlib_handle, queue_num, <nfq_callback*>self.nf_callback, <void*>self)
-        
+        self.q_handle = nfq_create_queue(self.nfqlib_handle, queue_num, <nfq_callback*>nfqueue_rcv, <void*>self)
+
         if (self.q_handle == NULL):
             return ERR
 
@@ -298,51 +369,3 @@ cdef class NetfilterQueue:
             nfq_destroy_queue(self.q_handle)
 
         nfq_close(self.nfqlib_handle)
-
-    cdef void _run(self) nogil:
-
-        cdef:
-            uint8_t packet_buf[NFQ_BUF_SIZE]
-            ssize_t data_len
-
-            int fd = nfq_fd(self.nfqlib_handle)
-
-        while True:
-            data_len = recv(fd, <void*>packet_buf, NFQ_BUF_SIZE, 0)
-
-            if (data_len > 0):
-
-                # ===================================
-                # LOCKING ACCESS TO NetfilterQueue
-                # prevents verdict from being issues while initially processing the recvd packet
-                pthread_mutex_lock(&NFQlock)
-                # -------------------------
-                # NetfilterQueue Processor
-                # -------------------------
-                nfq_handle_packet(self.nfqlib_handle, <char*>packet_buf, data_len)
-
-                pthread_mutex_unlock(&NFQlock)
-                # UNLOCKING ACCESS TO NetfilterQueue
-                # ===================================
-
-            elif (data_len == 0):
-                printf('NFQ ZERO LENGTH PACKET RECVD')
-
-            elif (errno != ENOBUFS):
-                break
-
-    cdef int nf_callback(self, nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *data) with gil:
-
-        cdef:
-            CPacket  packet
-            uint32_t mark
-
-        # skipping call to __init__
-        packet = CPacket.__new__(CPacket)
-
-        with nogil:
-            mark = packet.parse(qh, nfa)
-
-        self.proxy_callback(packet, mark)
-
-        return OK

@@ -1,6 +1,6 @@
 #!/usr/bin/env Cython
 
-from libc.stdint cimport uint8_t, uint16_t, uint32_t
+from libc.stdint cimport uint8_t, uint16_t, uint32_t, int32_t
 
 cdef extern from "<errno.h>":
     int errno
@@ -156,30 +156,41 @@ cdef enum:
     IPPROTO_TCP = 6       # Transmission Control Protocol.
     IPPROTO_UDP = 17      # User Datagram Protocol.
 
+ctypedef char pkt_buf
+ctypedef unsigned char upkt_buf
+# ctypedef void *dnx_callback(CPacket, uint32t)
+
+cdef struct PacketData:
+    nfq_q_handle *q_handle
+    nfq_data     *nld_handle
+    uint32_t      id
+    int32_t       mark
+    time_t        timestamp
+    uint32_t     len
+    upkt_buf     *data
+    size_t        ttl_hdr_len
+    size_t        iphdr_len
+    IPhdr        *iphdr
+    uint8_t       protocol
+    size_t        protohdr_len
+    void         *protohdr  # receiving func will need to recast back to protocol header
+
 
 cdef class CPacket:
     cdef:
         nfq_q_handle *q_handle
         nfq_data *nld_handle
-        nfqnl_msg_packet_hdr *nfq_msg_hdr
 
-        uint32_t packet_id
-        bint     verdict
-        uint32_t mark
+        PacketData *packet
 
-        # protocol headers
-        IPhdr   *ip_header
-        TCPhdr  *tcp_header
-        UDPhdr  *udp_header
-        ICMPhdr *icmp_header
+        IPhdr   *iphdr
+        TCPhdr  *tcphdr
+        UDPhdr  *udphdr
+        ICMPhdr *icmphdr
 
-        time_t  timestamp
-        int     data_len
-        size_t  cmbhdr_len
-        uint8_t *pktdata
+        bint has_verdict
 
-    cdef uint32_t parse(self, nfq_q_handle *qh, nfq_data *nfa) nogil
-    cdef void _parse(self) nogil
+    cdef void set_packet_data(self, PacketData * packet) nogil
     cdef void _set_verdict(self, uint32_t verdict) nogil
     cpdef void update_mark(self, uint32_t mark)
     cpdef void accept(self)
@@ -193,6 +204,3 @@ cdef class NetfilterQueue:
         nfq_q_handle *q_handle # A handle to the queue
 
         object proxy_callback
-
-    cdef void _run(self) nogil
-    cdef int nf_callback(self, nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *data) with gil
