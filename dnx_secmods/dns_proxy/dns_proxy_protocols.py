@@ -139,7 +139,7 @@ class TLSRelay(ProtoRelay):
         elif (self._fallback_relay):
             self._fallback_relay_add(DNS_SEND(request.qname[2:], request.data))
 
-    # receive data from server and call parse method when valid message is recvd, else will close the socket.
+    # receive data from server and call parse method when a valid message is recvd, else will close the socket.
     def _recv_handler(self) -> None:
         Log.debug(f'[{self._relay_conn.remote_ip}/{self._protocol.name}] Response handler opened.')
 
@@ -171,8 +171,8 @@ class TLSRelay(ProtoRelay):
                 break
 
             # resetting fail detection
-            self._last_rcvd = fast_time()
-            self._send_cnt = 0
+            self._last_rcvd  = fast_time()
+            self._send_count = 0
 
             # breaking keepalive timer from blocking, which will effectively reset the timer.
             keepalive_reset()

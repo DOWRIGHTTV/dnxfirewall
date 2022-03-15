@@ -310,7 +310,7 @@ class ProtoRelay:
 
         # if servers could change during runtime, this has a slight race condition potential, but it shouldn't matter
         # because, when changing a server, it would be initially set to down (essentially a no-op)
-        server = primary if primary['ip'] == remote_server else self._dns_server.public_resolvers.secondary
+        server = primary if primary['ip_address'] == remote_server else self._dns_server.public_resolvers.secondary
         server[PROTO.DNS_TLS] = False
 
         try:
