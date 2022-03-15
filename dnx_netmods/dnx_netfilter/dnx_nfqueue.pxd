@@ -160,20 +160,21 @@ ctypedef char pkt_buf
 ctypedef unsigned char upkt_buf
 # ctypedef void *dnx_callback(CPacket, uint32t)
 
+cdef union Protohdr:
+    TCPhdr  *tcphdr
+    UDPhdr  *udphdr
+    ICMPhdr *icmphdr
+
 cdef struct PacketData:
     nfq_q_handle *q_handle
     nfq_data     *nld_handle
     uint32_t      id
-    int32_t       mark
+    uint32_t      mark
     time_t        timestamp
-    uint32_t     len
+    uint32_t      len
     upkt_buf     *data
-    size_t        ttl_hdr_len
     size_t        iphdr_len
     IPhdr        *iphdr
-    uint8_t       protocol
-    size_t        protohdr_len
-    void         *protohdr  # receiving func will need to recast back to protocol header
 
 
 cdef class CPacket:
@@ -183,7 +184,8 @@ cdef class CPacket:
 
         PacketData *packet
 
-        bint has_verdict
+        size_t protohdr_len
+        bint   has_verdict
 
     cpdef void update_mark(self, uint32_t mark)
     cpdef void accept(self)

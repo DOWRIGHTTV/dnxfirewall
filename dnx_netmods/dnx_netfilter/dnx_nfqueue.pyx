@@ -99,9 +99,9 @@ cdef class CPacket:
         cdef:
             (uint32_t, uint32_t, char*, uint32_t) hw_info
 
-            uint32_t in_interface   = nfq_get_indev(self.nld_handle)
-            uint32_t out_interface  = nfq_get_outdev(self.nld_handle)
-            nfqnl_msg_packet_hw *hw = nfq_get_packet_hw(self.nld_handle)
+            uint32_t in_interface   = nfq_get_indev(self.packet.nld_handle)
+            uint32_t out_interface  = nfq_get_outdev(self.packet.nld_handle)
+            nfqnl_msg_packet_hw *hw = nfq_get_packet_hw(self.packet.nld_handle)
 
         if (hw == NULL):
             # nfq_get_packet_hw doesn't work on OUTPUT and PREROUTING chains
@@ -109,7 +109,7 @@ cdef class CPacket:
             raise OSError('MAC address not available in OUTPUT and PREROUTING chains')
 
         hw_info = (
-            in_interface, out_interface, <char*>hw.hw_addr, self.timestamp
+            in_interface, out_interface, <char*>hw.hw_addr, self.packet.timestamp
         )
 
         return hw_info
@@ -125,19 +125,17 @@ cdef class CPacket:
         cdef (uint8_t, uint8_t, uint16_t, uint16_t, uint16_t,
                 uint8_t, uint8_t, uint16_t, uint32_t, uint32_t) ip_header
 
-        cdef IPhdr *iphdr = <IPhdr*>self.packet.protohdr
-
         ip_header = (
-            iphdr.ver_ihl,
-            iphdr.tos,
-            ntohs(iphdr.tot_len),
-            ntohs(iphdr.id),
-            ntohs(iphdr.frag_off),
-            iphdr.ttl,
-            iphdr.protocol,
-            ntohs(iphdr.check),
-            ntohl(iphdr.saddr),
-            ntohl(iphdr.daddr),
+            self.packet.iphdr.ver_ihl,
+            self.packet.iphdr.tos,
+            ntohs(self.packet.iphdr.tot_len),
+            ntohs(self.packet.iphdr.id),
+            ntohs(self.packet.iphdr.frag_off),
+            self.packet.iphdr.ttl,
+            self.packet.iphdr.protocol,
+            ntohs(self.packet.iphdr.check),
+            ntohl(self.packet.iphdr.saddr),
+            ntohl(self.packet.iphdr.daddr),
         )
 
         return ip_header
@@ -148,7 +146,9 @@ cdef class CPacket:
         cdef (uint16_t, uint16_t, uint32_t, uint32_t,
                 uint8_t, uint8_t, uint16_t, uint16_t, uint16_t) tcp_header
 
-        cdef TCPhdr *tcphdr = <TCPhdr*>self.packet.protohdr
+        cdef TCPhdr *tcphdr = <TCPhdr*>&self.packet.data[self.packet.iphdr_len]
+
+        self.protohdr_len = ((tcphdr.th_off >> 4) & 15) * 4
 
         tcp_header = (
             ntohs(tcphdr.th_sport),
@@ -169,7 +169,9 @@ cdef class CPacket:
         '''
         cdef (uint16_t, uint16_t, uint16_t, uint16_t) udp_header
 
-        cdef UDPhdr *udphdr = <UDPhdr*>self.packet.protohdr
+        cdef UDPhdr *udphdr = <UDPhdr*>&self.packet.data[self.packet.iphdr_len]
+
+        self.protohdr_len = 8
 
         udp_header = (
             ntohs(udphdr.uh_sport),
@@ -182,19 +184,29 @@ cdef class CPacket:
 
     def get_icmp_header(self):
         '''Return layer4 (ICMP) of packet data as a tuple converted directly from C struct.
-        '''
-        cdef ICMPhdr *icmphdr = <ICMPhdr*>self.packet.protohdr
 
-        cdef (uint8_t, uint8_t) icmp_header = (icmphdr.type, icmphdr.code)
+        Calculates protohdr length and unlocks get_payload().
+        '''
+        cdef (uint8_t, uint8_t) icmp_header
+
+        cdef ICMPhdr *icmphdr = <ICMPhdr*>&self.packet.data[self.packet.iphdr_len]
+
+        self.protohdr_len = 4
+
+        icmp_header = (icmphdr.type, icmphdr.code)
 
         return icmp_header
 
     def get_payload(self):
         '''Return payload (>layer4) as Python bytes.
+
+        A call to get a protohdr is required before calling this method.
         '''
         cdef:
-            Py_ssize_t payload_len = self.packet.len - self.packet.ttl_hdr_len
-            upkt_buf *payload = &self.packet.data[self.packet.ttl_hdr_len]
+            size_t ttl_hdr_len = 20 + self.protohdr_len
+            Py_ssize_t payload_len = self.packet.len - ttl_hdr_len
+
+            upkt_buf *payload = &self.packet.data[ttl_hdr_len]
 
         return payload[:payload_len]
 
@@ -213,7 +225,7 @@ cdef class CPacket:
         # ===================================
         # LOCKING ACCESS TO NetfilterQueue
         # prevents nfq packet handler from processing a packet while setting a verdict of another packet.
-        pthread_mutex_lock(&NFQlock)
+        # pthread_mutex_lock(&NFQlock)
         # -------------------------
         # NetfilterQueue Processor
         # -------------------------
@@ -227,7 +239,7 @@ cdef class CPacket:
                 self.packet.q_handle, self.packet.id, verdict, self.packet.len, self.packet.data
             )
 
-        pthread_mutex_unlock(&NFQlock)
+        # pthread_mutex_unlock(&NFQlock)
         # UNLOCKING ACCESS TO NetfilterQueue
         # ===================================
 
@@ -252,35 +264,15 @@ cdef inline PacketData* nfqueue_parse(nfq_q_handle *qh, nfq_data *nfa) nogil:
 
         PacketData  packet
 
-        upkt_buf   *pktdata
-        IPhdr      *ip_header
-
     packet.q_handle   = qh
     packet.nld_handle = nfa
     packet.id         = nfq_msg_hdr.packet_id
     packet.mark       = nfq_get_nfmark(nfa)
     packet.timestamp  = time(NULL)
-    packet.len        = nfq_get_payload(nfa, &pktdata)
+    packet.len        = nfq_get_payload(nfa, &packet.data)
 
-    # splitting the packet by tcp/ip layers
-    ip_header = <IPhdr*>pktdata
-
-    packet.protocol = ip_header.protocol
-    packet.protohdr = &pktdata[(ip_header.ver_ihl & 15) * 4]
-
-    if (ip_header.protocol == IPPROTO_TCP):
-
-        packet.protohdr_len = (((<TCPhdr*>packet.protohdr).th_off >> 4) & 15) * 4
-
-    elif (ip_header.protocol == IPPROTO_UDP):
-
-        packet.protohdr_len = 8
-
-    elif (ip_header.protocol == IPPROTO_ICMP):
-
-        packet.protohdr_len = 4
-
-    packet.ttl_hdr_len = packet.protohdr_len + 20
+    packet.iphdr      = <IPhdr*>packet.data
+    packet.iphdr_len  = (packet.iphdr.ver_ihl & 15) * 4
 
     return &packet
 
@@ -288,7 +280,7 @@ cdef inline PacketData* nfqueue_parse(nfq_q_handle *qh, nfq_data *nfa) nogil:
 # FORWARDING TO PROXY CALLBACK - GIL ACQUIRED
 # ============================================
 cdef int32_t nfqueue_forward(
-        nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *q_manager, PacketData *raw_packet) with gil:
+        nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *q_manager, PacketData *dnx_nfq_hdr) with gil:
 
     # skipping call to __init__
     cdef:
@@ -296,7 +288,7 @@ cdef int32_t nfqueue_forward(
         CPacket cpacket
 
     cpacket = CPacket.__new__(CPacket)
-    cpacket.packet = raw_packet
+    cpacket.packet = dnx_nfq_hdr
 
     (<object>nfqueue.proxy_callback)(cpacket, raw_packet.mark)
 
@@ -322,13 +314,13 @@ cdef void process_traffic(nfq_handle *nfqlib_handle) nogil:
             # LOCKING ACCESS TO NetfilterQueue
             # prevents verdict from being issues while initially processing the recvd packet
             # TODO: determine if this is ACTUALLY needed vs dumb dumbs saying it is. adjust cfirewall as necessary
-            pthread_mutex_lock(&NFQlock)
+            # pthread_mutex_lock(&NFQlock)
             # -------------------------
             # NetfilterQueue Processor
             # -------------------------
             nfq_handle_packet(nfqlib_handle, pkt_buffer, data_len)
 
-            pthread_mutex_unlock(&NFQlock)
+            # pthread_mutex_unlock(&NFQlock)
             # UNLOCKING ACCESS TO NetfilterQueue
             # ===================================
 
