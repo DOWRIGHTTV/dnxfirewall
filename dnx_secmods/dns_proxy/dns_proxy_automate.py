@@ -46,7 +46,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
     _keywords: ClassVar[list[tuple[str, DNS_CAT]]] = []
 
-    def _configure(self) -> tuple[LogHandler_T, tuple]:
+    def _configure(self) -> tuple[LogHandler_T, tuple, int]:
         '''tasks required by the DNS proxy.
 
         return thread information to be run.
@@ -61,7 +61,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
             (self._get_list, ('blacklist',))
         )
 
-        return Log, threads
+        return Log, threads, 3
 
     @cfg_read_poller('dns_proxy')
     def _get_proxy_settings(self, cfg_file: str) -> None:
@@ -242,7 +242,7 @@ class ServerConfiguration(ConfigurationMixinBase):
 
     dns_records: ClassVar[dict[str, int]] = {}
 
-    def _configure(self) -> tuple:
+    def _configure(self) -> tuple[LogHandler_T, tuple, int]:
         '''tasks required by the DNS server.
 
         return thread information to be run.
@@ -261,7 +261,7 @@ class ServerConfiguration(ConfigurationMixinBase):
             (self._tls_reachability, (tls_context,))
         )
 
-        return Log, threads
+        return Log, threads, 2
 
     @cfg_read_poller('dns_server')
     def _get_server_settings(self, cfg_file: str) -> None:

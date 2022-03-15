@@ -274,7 +274,8 @@ cdef inline PacketData* nfqueue_parse(nfq_q_handle *qh, nfq_data *nfa) nogil:
     packet.timestamp  = time(NULL)
     packet.len        = nfq_get_payload(nfa, &packet.data)
 
-    packet.iphdr_len  = ((<IPhdr*>packet.data).ver_ihl & 15) * 4
+    iphdr = <IPhdr*>packet.data
+    packet.iphdr_len  = (iphdr.ver_ihl & 15) * 4
 
     return &packet
 

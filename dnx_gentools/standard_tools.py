@@ -106,7 +106,7 @@ class ConfigurationMixinBase:
         self._config_setup = True
 
         # subclass hooke will provide log handler reference and threads to start
-        log, thread_info = self._configure()
+        log, thread_info, thread_count = self._configure()
 
         # ===============
         # INITIALIZATION
@@ -117,10 +117,11 @@ class ConfigurationMixinBase:
             threading.Thread(target=target, args=args).start()
 
         # the length of returned tuple reflects the number of threads we need to wait on before returning.
-        self._initialize.wait_for_threads(count=len(thread_info))
+        self._initialize.wait_for_threads(count=thread_count)
 
-    def _configure(self) -> tuple[LogHandler_T, tuple]:
-        '''module specific configuration initialization.'''
+    def _configure(self) -> tuple[LogHandler_T, tuple, int]:
+        '''module specific configuration initialization.
+        '''
         raise NotImplementedError('module configuration method is not defined.')
 
 class Initialize:
@@ -129,7 +130,6 @@ class Initialize:
     ensures all threads have completed one loop before returning control to the caller.
     will block until the condition is met.
     '''
-
     def __init__(self, log: Optional[LogHandler_T] = None, name: str = '') -> None:
         self._log: LogHandler_T = log
         self._name: str = name
@@ -145,8 +145,8 @@ class Initialize:
     def set_logging(self, log: LogHandler_T, name: str) -> None:
         '''alternate method to set logging references.
         '''
-        self._log: LogHandler_T = log
-        self._name: str = name
+        self._log  = log
+        self._name = name
 
     def wait_for_threads(self, *, count: int, timeout: int = 0) -> None:
         '''blocks until the checked in threads count has reached the wait for amount.
