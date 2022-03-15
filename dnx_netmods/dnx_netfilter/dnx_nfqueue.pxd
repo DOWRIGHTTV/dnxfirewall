@@ -1,6 +1,7 @@
 #!/usr/bin/env Cython
 
 from libc.stdint cimport uint8_t, uint16_t, uint32_t, int32_t
+from libc.stdint cimport uint_fast8_t, uint_fast16_t
 
 cdef extern from "<errno.h>":
     int errno
@@ -158,12 +159,6 @@ cdef enum:
 
 ctypedef char pkt_buf
 ctypedef unsigned char upkt_buf
-# ctypedef void *dnx_callback(CPacket, uint32t)
-
-cdef union Protohdr:
-    TCPhdr  *tcphdr
-    UDPhdr  *udphdr
-    ICMPhdr *icmphdr
 
 cdef struct PacketData:
     nfq_q_handle *q_handle
@@ -173,8 +168,7 @@ cdef struct PacketData:
     time_t        timestamp
     uint32_t      len
     upkt_buf     *data
-    size_t        iphdr_len
-    IPhdr        *iphdr
+    uint_fast8_t  iphdr_len
 
 
 cdef class CPacket:
@@ -192,8 +186,8 @@ cdef class CPacket:
     cpdef void drop(self)
     cpdef void forward(self, uint16_t queue_num)
     cpdef void repeat(self)
-    cdef void set_packet_data(self, PacketData * packet)
-    cdef void _set_verdict(self, uint32_t verdict) nogil
+    cdef  void set_packet_data(self, PacketData * packet)
+    cdef  void _set_verdict(self, uint32_t verdict) nogil
 
 cdef class NetfilterQueue:
     cdef:

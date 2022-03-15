@@ -18,7 +18,8 @@ DEF SOCK_RCV_SIZE = 1024 * 4796 // 2
 # ================================== #
 # NetfilterQueue Read/Write lock
 # ================================== #
-# Must be held during
+# TODO: confirm this is needed.
+#  apparently needed when calling nfq_handle_packet and set_verdict (doesnt sound right to me)
 # ---------------------------------- #
 cdef pthread_mutex_t NFQlock
 
@@ -55,7 +56,7 @@ cdef class CPacket:
         with nogil:
             self._set_verdict(NF_DROP)
 
-    cpdef void forward(self, uint16_t queue_num):
+    cpdef void forward(self, uint_fast16_t queue_num):
         '''Send the packet to a different queue.
 
         The GIL is released before calling into netfilter.
@@ -125,17 +126,19 @@ cdef class CPacket:
         cdef (uint8_t, uint8_t, uint16_t, uint16_t, uint16_t,
                 uint8_t, uint8_t, uint16_t, uint32_t, uint32_t) ip_header
 
+        cdef IPhdr *iphdr = <IPhdr*>self.packet.data
+
         ip_header = (
-            self.packet.iphdr.ver_ihl,
-            self.packet.iphdr.tos,
-            ntohs(self.packet.iphdr.tot_len),
-            ntohs(self.packet.iphdr.id),
-            ntohs(self.packet.iphdr.frag_off),
-            self.packet.iphdr.ttl,
-            self.packet.iphdr.protocol,
-            ntohs(self.packet.iphdr.check),
-            ntohl(self.packet.iphdr.saddr),
-            ntohl(self.packet.iphdr.daddr),
+            iphdr.ver_ihl,
+            iphdr.tos,
+            ntohs(iphdr.tot_len),
+            ntohs(iphdr.id),
+            ntohs(iphdr.frag_off),
+            iphdr.ttl,
+            iphdr.protocol,
+            ntohs(iphdr.check),
+            ntohl(iphdr.saddr),
+            ntohl(iphdr.daddr),
         )
 
         return ip_header
@@ -271,8 +274,7 @@ cdef inline PacketData* nfqueue_parse(nfq_q_handle *qh, nfq_data *nfa) nogil:
     packet.timestamp  = time(NULL)
     packet.len        = nfq_get_payload(nfa, &packet.data)
 
-    packet.iphdr      = <IPhdr*>packet.data
-    packet.iphdr_len  = (packet.iphdr.ver_ihl & 15) * 4
+    packet.iphdr_len  = ((<IPhdr*>packet.data).ver_ihl & 15) * 4
 
     return &packet
 
@@ -280,7 +282,7 @@ cdef inline PacketData* nfqueue_parse(nfq_q_handle *qh, nfq_data *nfa) nogil:
 # FORWARDING TO PROXY CALLBACK - GIL ACQUIRED
 # ============================================
 cdef int32_t nfqueue_forward(
-        nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *q_manager, PacketData *dnx_nfq_hdr) with gil:
+        nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *q_manager, PacketData *dnx_nfqhdr) with gil:
 
     # skipping call to __init__
     cdef:
@@ -288,9 +290,10 @@ cdef int32_t nfqueue_forward(
         CPacket cpacket
 
     cpacket = CPacket.__new__(CPacket)
-    cpacket.packet = dnx_nfq_hdr
+    cpacket.packet = dnx_nfqhdr
 
-    (<object>nfqueue.proxy_callback)(cpacket, raw_packet.mark)
+    # (<object>nfqueue.proxy_callback)(cpacket, dnx_nfqhdr.mark)
+    nfqueue.proxy_callback(cpacket, dnx_nfqhdr.mark)
 
     return OK
 
@@ -323,10 +326,6 @@ cdef void process_traffic(nfq_handle *nfqlib_handle) nogil:
             # pthread_mutex_unlock(&NFQlock)
             # UNLOCKING ACCESS TO NetfilterQueue
             # ===================================
-
-        elif (data_len == 0):
-            printf('NFQ ZERO LENGTH PACKET RECVD')
-
         elif (errno != ENOBUFS):
             break
 
@@ -342,7 +341,7 @@ cdef class NetfilterQueue:
         with nogil:
             process_traffic(self.nfqlib_handle)
 
-    def nf_set(self, uint16_t queue_num):
+    def nf_set(self, uint_fast16_t queue_num):
         self.nfqlib_handle = nfq_open()
         self.q_handle = nfq_create_queue(self.nfqlib_handle, queue_num, <nfq_callback*>nfqueue_rcv, <void*>self)
 
