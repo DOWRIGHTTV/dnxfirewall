@@ -253,14 +253,14 @@ cdef class CPacket:
 # ============================================
 cdef int32_t nfqueue_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *q_manager) nogil:
 
-    cdef PacketData *raw_packet = nfqueue_parse(qh, nfa)
+    cdef PacketData dnx_nfqhdr = nfqueue_parse(qh, nfa)
 
-    return nfqueue_forward(qh, nfmsg, nfa, q_manager, raw_packet)
+    return nfqueue_forward(qh, nfmsg, nfa, q_manager, &dnx_nfqhdr)
 
 # ============================================
 # TCP/IP HEADER PARSING - NO GIL
 # ============================================
-cdef inline PacketData* nfqueue_parse(nfq_q_handle *qh, nfq_data *nfa) nogil:
+cdef inline PacketData nfqueue_parse(nfq_q_handle *qh, nfq_data *nfa) nogil:
 
     cdef:
         nfqnl_msg_packet_hdr *nfq_msg_hdr = nfq_get_msg_packet_hdr(nfa)
@@ -277,7 +277,7 @@ cdef inline PacketData* nfqueue_parse(nfq_q_handle *qh, nfq_data *nfa) nogil:
     iphdr = <IPhdr*>packet.data
     packet.iphdr_len  = (iphdr.ver_ihl & 15) * 4
 
-    return &packet
+    return packet
 
 # ============================================
 # FORWARDING TO PROXY CALLBACK - GIL ACQUIRED
