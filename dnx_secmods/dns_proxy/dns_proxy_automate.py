@@ -52,7 +52,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
         return thread information to be run.
         '''
         # NOTE: might be temporary, but this needed to be moved outside the standard/bitmap sigs since they are
-        # now being handled by an external C extension (cython)
+        #  now being handled by an external C extension (cython)
         self.__class__._keywords = load_keywords(log=Log)
 
         threads = (
@@ -87,8 +87,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
         # KEYWORD SETTINGS
         # copying the keyword signature list in memory to a local object, then iterating over the list.
-        # if the current category is not enabled, the signature will get removed and the offset will get normalized to
-        # the index.
+        # if the current category is not enabled, the signature will get removed and the offset normalized to the index.
         # NOTE: this is not entirely thread safe
         mem_keywords, offset = signatures.keyword.copy(), 0
         for i, signature in enumerate(mem_keywords):
@@ -124,9 +123,9 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
             self._modify_memory(memory_list, loaded_list, action=CFG.DEL)
 
-        # if the file has been modified, the list will be referenced to make in place changes to the list in memory,
-        # specifically around adding new rules and the new modified time will be returned. if not modified,
-        # the last modified time is returned and not changes are made.
+        # if the file has been modified, the list will be referenced to make and in place changes the in-memory copy
+        # and the new modified time will be returned.
+        # if not modified, the last modified time is returned and not changes are made.
         # NOTE: files need extensions due to changes to file operations. these functions will be reworked soon anyway.
         try:
             modified_time = os.stat(f'{HOME_DIR}/dnx_system/data/usr/{cfg_file}.cfg').st_mtime
