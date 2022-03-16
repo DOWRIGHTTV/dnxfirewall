@@ -101,7 +101,7 @@ class Listener:
         '''
         # this is being defined here so the listener will be able to correlate socket back to interface and send in.
         # NOTE: we can probably _ the first 2 vars, but they may actually come in handy for something so check to see
-        # if they can be used to simplify the file descriptor tracking we had to implement awhile back.
+        #  if they can be used to simplify the file descriptor tracking we had to implement awhile back.
         intf_index, zone, _intf = intf
 
         self._log.debug(f'[{_intf}] {self.__class__.__name__} started interface registration.')

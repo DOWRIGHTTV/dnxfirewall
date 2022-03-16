@@ -66,7 +66,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     'database': {'module': 'dnx_routines.database.ddb_main', 'exclude': ['compile'], 'priv': False, 'service': True},
     'logging': {'module': 'dnx_routines.logging.log_main', 'exclude': ['compile'], 'priv': False, 'service': True},
 
-    'iptables': {'module': 'dnx_routines.configure.iptables', 'exclude': ['compile'], 'priv': True, 'service': False},
+    'iptables': {'module': 'dnx_routines.configure.iptables', 'exclude': exclude('cli', COMMANDS), 'priv': True, 'service': False},
 
     # SYSTEM
     'startup': {'module': 'dnx_system.startup_proc', 'exclude': ['compile'], 'priv': True, 'service': True},

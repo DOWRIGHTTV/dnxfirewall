@@ -323,6 +323,10 @@ class IPTablesManager:
         shell(f'sudo iptables -F DOH')
 
 
-if (INITIALIZE_MODULE('iptables')):
+def run():
     with IPTablesManager() as iptables:
         iptables.apply_defaults()
+
+# worthless unless we want to implement log handling on direct call.
+if (INITIALIZE_MODULE('iptables')):
+    pass
