@@ -152,10 +152,10 @@ cdef struct ICMPhdr:
 
 # from netinet/in.h:
 cdef enum:
-    IPPROTO_IP = 0        # Dummy protocol for TCP.
-    IPPROTO_ICMP = 1      # Internet Control Message Protocol.
-    IPPROTO_TCP = 6       # Transmission Control Protocol.
-    IPPROTO_UDP = 17      # User Datagram Protocol.
+    IPPROTO_IP   = 0       # Dummy protocol for TCP.
+    IPPROTO_ICMP = 1       # Internet Control Message Protocol.
+    IPPROTO_TCP  = 6       # Transmission Control Protocol.
+    IPPROTO_UDP  = 17      # User Datagram Protocol.
 
 ctypedef char pkt_buf
 ctypedef unsigned char upkt_buf
