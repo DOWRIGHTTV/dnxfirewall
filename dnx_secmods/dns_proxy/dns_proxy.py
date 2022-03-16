@@ -98,7 +98,7 @@ def inspect(packet: DNSPacket):
 # via the request tracker upon returning the signature scan result
 def _inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
     # NOTE: request_ident[0] is a string representation of ip addresses. this is currently needed as the whitelists
-    # are stored in this format and we have since moved away from this format on the back end.
+    #  are stored in this format and we have since moved away from this format on the back end.
     # TODO: in the near-ish future, consider storing ip whitelists as integers to conform to newer standards.
     whitelisted = _ip_whitelist_get(packet.request_identifier[0], False)
 

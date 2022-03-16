@@ -180,7 +180,14 @@ class Initialize:
 
         using default thread name as dict key.
         '''
+        # initialization is complete
         if (not self._is_initializing):
+            return
+
+        # this thread has already checked in.
+        # this is a no op, but generates multiple debug messages, so filtering helps tshoot.
+        thread_ident = threading.get_ident()
+        if (thread_ident in self._thread_ready):
             return
 
         self._thread_ready.add(threading.get_ident())

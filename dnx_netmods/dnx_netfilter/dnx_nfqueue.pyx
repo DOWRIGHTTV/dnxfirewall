@@ -265,7 +265,7 @@ cdef inline PacketData nfqueue_parse(nfq_q_handle *qh, nfq_data *nfa) nogil:
     cdef:
         nfqnl_msg_packet_hdr *nfq_msg_hdr = nfq_get_msg_packet_hdr(nfa)
 
-        PacketData  packet
+        PacketData packet
 
     packet.q_handle   = qh
     packet.nld_handle = nfa

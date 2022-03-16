@@ -470,8 +470,8 @@ class NFPacket:
 
     @classmethod
     def netfilter_recv(cls, cpacket: CPacket, mark: int) -> NFPacket:
-        '''Cython > Python attribute conversion'''
-
+        '''Cython > Python attribute conversion.
+        '''
         self = object.__new__(cls)
 
         # reference to allow higher level modules to call packet actions directly
