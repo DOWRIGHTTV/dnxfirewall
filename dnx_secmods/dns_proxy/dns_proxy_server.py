@@ -128,8 +128,6 @@ class DNSServer(ServerConfiguration, Listener):
 
     def _setup(self) -> None:
 
-        Log.informational(f'{self.__class__.__name__} initialization started.')
-
         # setting parent class callback to allow custom actions on subclasses
         self.__class__.set_proxy_callback(func=REQ_TRACKER_INSERT)
 
@@ -151,8 +149,6 @@ class DNSServer(ServerConfiguration, Listener):
         # ==========================
         UDPRelay.run(self.__class__)
         TLSRelay.run(self.__class__, fallback_relay=UDPRelay.relay)
-
-        Log.notice(f'{self.__class__.__name__} initialization complete.')
 
     # thread to handle all received requests from the listener.
     def _request_queue(self) -> NoReturn:

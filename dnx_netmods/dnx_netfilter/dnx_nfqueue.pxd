@@ -176,7 +176,7 @@ cdef class CPacket:
         nfq_q_handle *q_handle
         nfq_data *nld_handle
 
-        PacketData *packet
+        PacketData packet
 
         size_t protohdr_len
         bint   has_verdict

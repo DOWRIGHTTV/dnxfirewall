@@ -255,7 +255,7 @@ cdef int32_t nfqueue_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void 
 
     cdef PacketData dnx_nfqhdr = nfqueue_parse(qh, nfa)
 
-    return nfqueue_forward(qh, nfmsg, nfa, q_manager, &dnx_nfqhdr)
+    return nfqueue_forward(qh, nfmsg, nfa, q_manager, dnx_nfqhdr)
 
 # ============================================
 # TCP/IP HEADER PARSING - NO GIL
@@ -282,8 +282,8 @@ cdef inline PacketData nfqueue_parse(nfq_q_handle *qh, nfq_data *nfa) nogil:
 # ============================================
 # FORWARDING TO PROXY CALLBACK - GIL ACQUIRED
 # ============================================
-cdef int32_t nfqueue_forward(
-        nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *q_manager, PacketData *dnx_nfqhdr) with gil:
+cdef inline int32_t nfqueue_forward(
+        nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *q_manager, PacketData dnx_nfqhdr) with gil:
 
     # skipping call to __init__
     cdef:

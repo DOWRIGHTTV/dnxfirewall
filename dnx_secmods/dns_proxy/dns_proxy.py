@@ -36,15 +36,11 @@ class DNSProxy(ProxyConfiguration, NFQueue):
 
     def _setup(self):
 
-        Log.informational(f'{self.__class__.__name__} initialization started.')
-
         self.__class__.set_proxy_callback(func=inspect)
 
         self.configure()
 
         ProxyResponse.setup(Log, self.__class__, protocol_ports=False)
-
-        Log.notice(f'{self.__class__.__name__} initialization complete.')
 
     # pre-check will filter out invalid packets, ipv6 records, and local dns records
     def _pre_inspect(self, packet: DNSPacket) -> bool:

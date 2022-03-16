@@ -51,16 +51,17 @@ class Listener:
         registering all interfaces in _intfs and starting service listener loop.
         calling class method setup before to provide subclass specific code to run at class level before continuing.
         '''
-        log.informational(f'{cls.__name__} initialization started.')
-
         cls._log = log
 
+        log.informational(f'{cls.__name__} initialization started.')
         # ======================
         # INITIALIZING LISTENER
         # ======================
         # running main epoll/ socket loop.
         self = cls()
         self._setup()
+
+        Log.notice(f'{cls.__class__.__name__} initialization complete.')
 
         # starting a registration thread for all available interfaces and exit when complete
         for intf in cls._intfs:
@@ -150,7 +151,7 @@ class Listener:
         enabled_intfs = self.enabled_intfs
 
         # data buffer
-        recv_buf: bytearray = bytearray(2048)
+        recv_buf = bytearray(2048)
         recv_buffer = memoryview(recv_buf)
 
         nbytes: int
@@ -346,10 +347,13 @@ class NFQueue:
 
         cls._log: LogHandler_T = log
 
-        self = cls()
+        Log.informational(f'{cls.__class__.__name__} initialization started.')
 
+        self = cls()
         self._setup()
         self.__queue(q_num, threaded)
+
+        Log.notice(f'{cls.__class__.__name__} initialization complete.')
 
     def _setup(self):
         '''called prior to creating listener interface instances.
