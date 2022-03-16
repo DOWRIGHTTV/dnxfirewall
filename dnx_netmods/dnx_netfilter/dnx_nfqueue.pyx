@@ -100,9 +100,9 @@ cdef class CPacket:
         cdef:
             (uint32_t, uint32_t, char*, uint32_t) hw_info
 
-            uint32_t in_interface   = nfq_get_indev(self.packet.nld_handle)
-            uint32_t out_interface  = nfq_get_outdev(self.packet.nld_handle)
-            nfqnl_msg_packet_hw *hw = nfq_get_packet_hw(self.packet.nld_handle)
+            uint32_t in_interface   = nfq_get_indev(self.packet.nfq_d)
+            uint32_t out_interface  = nfq_get_outdev(self.packet.nfq_d)
+            nfqnl_msg_packet_hw *hw = nfq_get_packet_hw(self.packet.nfq_d)
 
         if (hw == NULL):
             # nfq_get_packet_hw doesn't work on OUTPUT and PREROUTING chains
@@ -234,12 +234,12 @@ cdef class CPacket:
         # -------------------------
         if (self.packet.mark):
             nfq_set_verdict2(
-                self.packet.q_handle, self.packet.id, verdict, self.packet.mark, self.packet.len, self.packet.data
+                self.packet.nfq_qh, self.packet.id, verdict, self.packet.mark, self.packet.len, self.packet.data
             )
 
         else:
             nfq_set_verdict(
-                self.packet.q_handle, self.packet.id, verdict, self.packet.len, self.packet.data
+                self.packet.nfq_qh, self.packet.id, verdict, self.packet.len, self.packet.data
             )
 
         # pthread_mutex_unlock(&NFQlock)
@@ -251,28 +251,28 @@ cdef class CPacket:
 # ============================================
 # NFQUEUE CALLBACK - PARSE > FORWARD - NO GIL
 # ============================================
-cdef int32_t nfqueue_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *q_manager) nogil:
+cdef int32_t nfqueue_rcv(nfq_q_handle *nfq_qh, nfgenmsg *nfmsg, nfq_data *nfq_d, void *q_manager) nogil:
 
-    cdef PacketData dnx_nfqhdr = nfqueue_parse(qh, nfa)
+    cdef PacketData dnx_nfqhdr = nfqueue_parse(nfq_qh, nfq_d)
 
-    return nfqueue_forward(qh, nfmsg, nfa, q_manager, dnx_nfqhdr)
+    return nfqueue_forward(dnx_nfqhdr, q_manager)
 
 # ============================================
 # TCP/IP HEADER PARSING - NO GIL
 # ============================================
-cdef inline PacketData nfqueue_parse(nfq_q_handle *qh, nfq_data *nfa) nogil:
+cdef inline PacketData nfqueue_parse(nfq_q_handle *qh, nfq_data *nfq_d) nogil:
 
     cdef:
-        nfqnl_msg_packet_hdr *nfq_msg_hdr = nfq_get_msg_packet_hdr(nfa)
+        nfqnl_msg_packet_hdr *nfq_msg_hdr = nfq_get_msg_packet_hdr(nfq_d)
 
         PacketData packet
 
-    packet.q_handle   = qh
-    packet.nld_handle = nfa
-    packet.id         = nfq_msg_hdr.packet_id
-    packet.mark       = nfq_get_nfmark(nfa)
-    packet.timestamp  = time(NULL)
-    packet.len        = nfq_get_payload(nfa, &packet.data)
+    packet.nfq_qh    = qh
+    packet.nfq_d     = nfq_d
+    packet.id        = ntohl(nfq_msg_hdr.packet_id)
+    packet.mark      = nfq_get_nfmark(nfq_d)
+    packet.timestamp = time(NULL)
+    packet.len       = nfq_get_payload(nfq_d, &packet.data)
 
     iphdr = <IPhdr*>packet.data
     packet.iphdr_len  = (iphdr.ver_ihl & 15) * 4
@@ -282,8 +282,9 @@ cdef inline PacketData nfqueue_parse(nfq_q_handle *qh, nfq_data *nfa) nogil:
 # ============================================
 # FORWARDING TO PROXY CALLBACK - GIL ACQUIRED
 # ============================================
-cdef inline int32_t nfqueue_forward(
-        nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *q_manager, PacketData dnx_nfqhdr) with gil:
+cdef inline int32_t nfqueue_forward(PacketData dnx_nfqhdr, void *q_manager) with gil:
+# cdef inline int32_t nfqueue_forward(
+#         nfq_q_handle *qh, nfgenmsg *nf_msg, nfq_data *nfq_d, void *q_manager, PacketData dnx_nfqhdr) with gil:
 
     # skipping call to __init__
     cdef:
@@ -302,11 +303,11 @@ cdef inline int32_t nfqueue_forward(
 # NFQUEUE RECV LOOP - NO GIL
 # ============================================
 # RECV > NFQ_HANDLE > NFQ_CALLBACK > PARSE > PROXY CALLBACK
-cdef void process_traffic(nfq_handle *nfqlib_handle) nogil:
+cdef void process_traffic(nfq_handle *nfq_h) nogil:
 
     cdef:
         pkt_buf pkt_buffer[NFQ_BUF_SIZE]
-        int32_t fd = nfq_fd(nfqlib_handle)
+        int32_t fd = nfq_fd(nfq_h)
 
         ssize_t data_len
 
@@ -322,7 +323,7 @@ cdef void process_traffic(nfq_handle *nfqlib_handle) nogil:
             # -------------------------
             # NetfilterQueue Processor
             # -------------------------
-            nfq_handle_packet(nfqlib_handle, pkt_buffer, data_len)
+            nfq_handle_packet(nfq_h, pkt_buffer, data_len)
 
             # pthread_mutex_unlock(&NFQlock)
             # UNLOCKING ACCESS TO NetfilterQueue
@@ -340,26 +341,42 @@ cdef class NetfilterQueue:
         user callback.
         '''
         with nogil:
-            process_traffic(self.nfqlib_handle)
+            process_traffic(self.nfq_h)
 
     def nf_set(self, uint_fast16_t queue_num):
-        self.nfqlib_handle = nfq_open()
-        self.q_handle = nfq_create_queue(self.nfqlib_handle, queue_num, <nfq_callback*>nfqueue_rcv, <void*>self)
+        # ======================
+        # CREATE <NFQ_HANDLE>
+        # ----------------------
+        self.nfq_h = nfq_open()
+        # h->nfnlh = nfnlh
+        # h->nfnlssh = nfnl_subsys_open(...)
+        # h->qh_list = ????????????
 
-        if (self.q_handle == NULL):
+        # ======================
+        # CREATE <NFQ_Q_HANDLE>
+        # ----------------------
+        self.nfq_qh = nfq_create_queue(self.nfq_h, queue_num, <nfq_callback *> nfqueue_rcv, <void *> self)
+        # qh->h = h;
+        # qh->id = num;
+        # qh->cb = cb;
+        # qh->data = data;
+        # ======================
+        if (self.nfq_qh == NULL):
             return ERR
 
-        nfq_set_mode(self.q_handle, NFQNL_COPY_PACKET, MAX_COPY_SIZE)
-        nfq_set_queue_maxlen(self.q_handle, DEFAULT_MAX_QUEUELEN)
-        nfnl_rcvbufsiz(nfq_nfnlh(self.nfqlib_handle), SOCK_RCV_SIZE)
+        nfq_set_mode(self.nfq_qh, NFQNL_COPY_PACKET, MAX_COPY_SIZE)
+        nfq_set_queue_maxlen(self.nfq_qh, DEFAULT_MAX_QUEUELEN)
+        nfnl_rcvbufsiz(nfq_nfnlh(self.nfq_h), SOCK_RCV_SIZE)
 
     def set_proxy_callback(self, object func_ref):
         '''Set required reference which will be called after packet data is parsed into C structs.
         '''
+        cdef object proxy_callback
+
         self.proxy_callback = func_ref
 
     def nf_break(self):
-        if (self.q_handle != NULL):
-            nfq_destroy_queue(self.q_handle)
+        if (self.nfq_qh != NULL):
+            nfq_destroy_queue(self.nfq_qh)
 
-        nfq_close(self.nfqlib_handle)
+        nfq_close(self.nfq_h)

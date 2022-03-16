@@ -43,8 +43,8 @@ cdef extern from "netinet/in.h":
 
 cdef extern from "libnfnetlink/linux_nfnetlink.h":
     struct nfgenmsg:
-        uint8_t nfgen_family
-        uint8_t version
+        uint8_t  nfgen_family
+        uint8_t  version
         uint16_t res_id
 
 cdef extern from "libnfnetlink/libnfnetlink.h":
@@ -66,12 +66,22 @@ cdef extern from "libnetfilter_queue/linux_nfnetlink_queue.h":
 
 cdef extern from "libnetfilter_queue/libnetfilter_queue.h":
     struct nfq_handle:
+        # 	struct nfnl_handle *nfnlh;
+        # 	struct nfnl_subsys_handle *nfnlssh;
+        # 	struct nfq_q_handle *qh_list;
         pass
 
     struct nfq_q_handle:
+        # 	struct nfq_q_handle *next;
+        # 	struct nfq_handle *h;
+        uint16_t id;
+        #
+        # 	nfq_callback *cb;
+        # 	void *data;
         pass
 
     struct nfq_data:
+        # struct nfattr **data;
         pass
 
     struct nfqnl_msg_packet_hw:
@@ -161,8 +171,8 @@ ctypedef char pkt_buf
 ctypedef unsigned char upkt_buf
 
 cdef struct PacketData:
-    nfq_q_handle *q_handle
-    nfq_data     *nld_handle
+    nfq_q_handle *nfq_qh
+    # nfq_data     *nld_handle
     uint32_t      id
     uint32_t      mark
     time_t        timestamp
@@ -173,8 +183,8 @@ cdef struct PacketData:
 
 cdef class CPacket:
     cdef:
-        nfq_q_handle *q_handle
-        nfq_data *nld_handle
+        # nfq_data    *nfq_h
+        # nfq_q_handle *nfq_qh
 
         PacketData packet
 
@@ -191,7 +201,5 @@ cdef class CPacket:
 
 cdef class NetfilterQueue:
     cdef:
-        nfq_handle   *nfqlib_handle # Handle to NFQueue library
-        nfq_q_handle *q_handle # A handle to the queue
-
-        object proxy_callback
+        nfq_handle   *nfq_h   # NFQueue library
+        nfq_q_handle *nfq_qh  # Specific processing queue
