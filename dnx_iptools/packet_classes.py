@@ -61,7 +61,7 @@ class Listener:
         self = cls()
         self._setup()
 
-        Log.notice(f'{cls.__class__.__name__} initialization complete.')
+        log.notice(f'{cls.__class__.__name__} initialization complete.')
 
         # starting a registration thread for all available interfaces and exit when complete
         for intf in cls._intfs:
@@ -347,13 +347,13 @@ class NFQueue:
 
         cls._log: LogHandler_T = log
 
-        Log.informational(f'{cls.__class__.__name__} initialization started.')
+        log.informational(f'{cls.__class__.__name__} initialization started.')
 
         self = cls()
         self._setup()
         self.__queue(q_num, threaded)
 
-        Log.notice(f'{cls.__class__.__name__} initialization complete.')
+        log.notice(f'{cls.__class__.__name__} initialization complete.')
 
     def _setup(self):
         '''called prior to creating listener interface instances.
