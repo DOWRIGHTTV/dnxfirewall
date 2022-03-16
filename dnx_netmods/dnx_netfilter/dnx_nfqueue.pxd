@@ -172,7 +172,7 @@ ctypedef unsigned char upkt_buf
 
 cdef struct PacketData:
     nfq_q_handle *nfq_qh
-    # nfq_data     *nld_handle
+    nfq_data     *nfq_d
     uint32_t      id
     uint32_t      mark
     time_t        timestamp
