@@ -213,7 +213,7 @@ cdef class CPacket:
 
         return payload[:payload_len]
 
-    cdef void set_packet_data(self, PacketData *packet):
+    cdef void set_packet_data(self, PacketData packet):
 
         self.packet = packet
 

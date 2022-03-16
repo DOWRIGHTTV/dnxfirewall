@@ -186,7 +186,7 @@ cdef class CPacket:
     cpdef void drop(self)
     cpdef void forward(self, uint16_t queue_num)
     cpdef void repeat(self)
-    cdef  void set_packet_data(self, PacketData * packet)
+    cdef  void set_packet_data(self, PacketData packet)
     cdef  void _set_verdict(self, uint32_t verdict) nogil
 
 cdef class NetfilterQueue:
