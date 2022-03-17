@@ -183,20 +183,17 @@ cdef struct PacketData:
 
 cdef class CPacket:
     cdef:
-        # nfq_data    *nfq_h
-        # nfq_q_handle *nfq_qh
+        PacketData *dnx_nfqhdr
 
-        PacketData packet
-
-        size_t protohdr_len
         bint   has_verdict
+        size_t protohdr_len
 
     cpdef void update_mark(self, uint32_t mark)
     cpdef void accept(self)
     cpdef void drop(self)
     cpdef void forward(self, uint16_t queue_num)
     cpdef void repeat(self)
-    cdef  void set_packet_data(self, PacketData packet)
+    cdef  void set_packet_data(self, PacketData dnx_nfqhdr)
     cdef  void _set_verdict(self, uint32_t verdict) nogil
 
 cdef class NetfilterQueue:

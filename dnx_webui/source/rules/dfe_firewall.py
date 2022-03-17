@@ -14,7 +14,7 @@ from dnx_routines.configure.web_validate import ValidationError, convert_int
 
 from dnx_secmods.cfirewall.fw_manage import FirewallManage
 
-valid_sections = {
+valid_sections: dict[str, str] = {
     'BEFORE': '1',
     'MAIN': '2',
     'AFTER': '3',
@@ -24,11 +24,10 @@ reference_counts = defaultdict(int)
 zone_map = {'builtins': {}, 'extended': {}}
 zone_manager = {'builtins': {}, 'user-defined': {}}
 
-# including 0/any since it is not an actual zone definition
-_zone_map = {99: 'any'}
+ANY_ZONE = 99
 
 def load_page(section: str = 'MAIN') -> dict[str, Any]:
-    global _zone_map
+    lzone_map: dict[int, str] = {ANY_ZONE: 'any'}
 
     dnx_settings = load_configuration('system')
 
@@ -44,7 +43,7 @@ def load_page(section: str = 'MAIN') -> dict[str, Any]:
         for zone_name, (zone_ident, zone_desc) in dnx_settings.get_items(f'zones->{zone_type}'):
 
             # need to make converting zone ident/int to name easier in format function
-            _zone_map[zone_ident] = zone_name
+            lzone_map[zone_ident] = zone_name
 
             zone_manager[zone_type][zone_name] = [reference_counts[zone_ident], zone_desc]
 
@@ -55,7 +54,7 @@ def load_page(section: str = 'MAIN') -> dict[str, Any]:
     network_autofill = {k.name: None for k in firewall_objects if k.type in ['country', 'address']}
     service_autofill = {k.name: None for k in firewall_objects if k.type in ['service']}
 
-    firewall_rules = get_and_format_rules(section)
+    firewall_rules = get_and_format_rules(section, lzone_map)
 
     return {
         'zone_map': zone_map,
@@ -77,13 +76,13 @@ def update_page(form: dict) -> tuple[Optional[str], str]:
 
     return None, section
 
-def get_and_format_rules(section: str) -> list[Optional[list]]:
+def get_and_format_rules(section: str, lzone_map: dict[int, str]) -> list[Optional[list]]:
     firewall_rules = FirewallManage.cfirewall.view_ruleset(section)
 
     converted_rules = []
     converted_rules_append = converted_rules.append
 
-    zone_map_get = _zone_map.get
+    zone_map_get = lzone_map.get
     obj_lookup = Flask.app.dnx_object_manager.lookup
 
     # convert rules into a friendly format
@@ -111,7 +110,7 @@ def get_and_format_rules(section: str) -> list[Optional[list]]:
 
     return converted_rules
 
-def commit_rules(json_data):
+def commit_rules(json_data: dict[str, str]) -> tuple[bool, dict[str, Union[bool, str]]]:
 
     section = json_data.get('section', None)
     if (not section or section not in valid_sections):
@@ -129,10 +128,10 @@ def commit_rules(json_data):
     else:
         FirewallManage.commit(validated_rules)
 
-    # temporary for testing
+    # temporary for testing # FIXME: ??? what??
     FirewallManage.push()
 
-    return True, {'error': False, 'message': None}
+    return True, {'error': False, 'message': ''}
 
 
 # ================
@@ -154,6 +153,13 @@ def validate_firewall_commit(fw_rules, /):
 
     validated_rules = {}
 
+    # TODO: make zone map integrated better
+    dnx_interfaces = load_configuration('system').get_items('interfaces->builtins')
+
+    lzone_map = {zone_name: zone_info['zone'] for zone_name, zone_info in dnx_interfaces}
+    # 99 used to specify wildcard/any zone match
+    lzone_map['any'] = ANY_ZONE
+
     # index/ enumerate is for providing better feedback if issues are detected.
     for i, rule in enumerate(fw_rules.values(), 1):
 
@@ -163,7 +169,7 @@ def validate_firewall_commit(fw_rules, /):
             raise ValidationError(f'Format error found in rule #{i}')
 
         try:
-            validated_rules[i] = validate_firewall_rule(i, rule)
+            validated_rules[i] = validate_firewall_rule(i, rule, lzone_map)
         except ValidationError:
             raise
 
@@ -171,7 +177,7 @@ def validate_firewall_commit(fw_rules, /):
     return validated_rules
 
 # NOTE: log disabled in form and set here as default for the time being.
-def validate_firewall_rule(rule_num, fw_rule, /):
+def validate_firewall_rule(rule_num, fw_rule, lzone_map, /):
 
     # FASTER CHECKS FIRST
     if (fw_rule.action not in ['ACCEPT', 'DROP']):
@@ -205,15 +211,8 @@ def validate_firewall_rule(rule_num, fw_rule, /):
     if (None in dst_service):
         raise ValidationError(f'A destination service object was not found for rule #{rule_num}.')
 
-    # TODO: make zone map integrated better
-    dnx_interfaces = load_configuration('system').get_items('interfaces->builtins')
-    lzone_map = {zone_name: zone_info['zone'] for zone_name, zone_info in dnx_interfaces}
-
-    # 99 used to specify wildcard/any zone match
-    lzone_map['any'] = 99
-
-    s_zone = zone_map.get(fw_rule.src_zone, None)
-    d_zone = zone_map.get(fw_rule.dst_zone, None)
+    s_zone = lzone_map.get(fw_rule.src_zone, None)
+    d_zone = lzone_map.get(fw_rule.dst_zone, None)
     if (s_zone is None or d_zone is None):
         raise ValidationError(f'{INVALID_FORM} [rule #{rule_num}/zone]')
 

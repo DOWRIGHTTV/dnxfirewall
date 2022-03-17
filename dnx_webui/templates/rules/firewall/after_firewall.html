@@ -189,39 +189,41 @@ ruleEditor.addEventListener("click", function(click) {
     editRule.open();
   });
 
+// FIXME: this is not properly resetting the rule name, src/dst zones, and sec profiles
 function fillEditor(ruleEditor, ruleRow) {
 
     const fields = ["name", "log", "enabled", "src_zone", "src_network",
-            "src_service", "dst_zone", "dst_network", "dst_service", "action", "sec1_prof", "sec2_prof"]
+            "src_service", "dst_zone", "dst_network", "dst_service", "action", "sec1_prof", "sec2_prof", "sec3_prof"]
 
-    for (let x in fields) {
-        let i = parseInt(x)
-        let field = fields[i]
+    for (let field of fields) {
         let editor_field = ruleEditor.querySelector(`.e${field}`)
         let rule_field = ruleRow.querySelector(`.r${field}`)
 
 
         try {
-            if ([0,1,9,10,11].includes(i)) {
+            if (["name", "log", "action", "sec1_prof", "sec2_prof", "sec3_prof"].includes(field)) {
                 editor_field.setAttribute("value", rule_field.innerText)
                 editor_field.parentNode.querySelector("label").setAttribute("class", "active")
             }
-            else if (i === 2) {
+            else if (field === "enabled") {
                 const enabled = parseInt(ruleRow.getAttribute("data-enabled"));
                 console.log(enabled)
                 editor_field.checked = !!enabled;
             }
-            else if ([3,6].includes(i)) {
+            else if (["src_zone", "dst_zone"].includes(field)) {
                 editor_field.querySelector("input").value = rule_field.innerHTML.toUpperCase();
-            } else {
+            }
+            else if (["src_network", "src_service", "dst_network", "dst_service"].includes(field)) {
                 let dnxChips = editor_field.parentNode;
                 let chipArray = dnxChips.querySelectorAll(".chip");
 
-                chipArray.forEach((x) => {x.remove()});
+                chipArray.forEach((chip) => {chip.remove()});
                 dnxChips.insertAdjacentHTML("afterbegin", rule_field.innerHTML);
                 
                 chipArray = dnxChips.querySelectorAll(".chip");
-                chipArray.forEach((x) => {x.insertAdjacentHTML("beforeend", '<i class="material-icons close" onclick="cRemove(this)">close</i>')});
+                chipArray.forEach((chip) => {
+                    chip.insertAdjacentHTML("beforeend", '<i class="material-icons close" onclick="cRemove(this)">close</i>')
+                });
             }
         }
         catch (e) {
@@ -234,15 +236,17 @@ function fillEditor(ruleEditor, ruleRow) {
 }
 </script>
 <script>
+    //firewall object implementation (built from materialize chips)
 const fwObjectMap = {{firewall_settings.fw_object_map|tojson}}
 const objFormatMap =  {country: ["red", "language"], address: ["blue lighten-2", "tv"], service: ["orange lighten-2", "track_changes"]}
 const network_autofill = {{firewall_settings.network_autofill|tojson}}
 const service_autofill = {{firewall_settings.service_autofill|tojson}}
 
-function initDNXChips(field_type) {
-    let elem = document.querySelectorAll(`.${field_type}-chips`);
+function initDNXChips(field) {
+    let elem = document.querySelectorAll(`.${field}-chips`);
     let set;
 
+    let field_type = field.split('-')[0]
     if (field_type === "service") {
         set = service_autofill;
     } else {
@@ -261,8 +265,10 @@ function initDNXChips(field_type) {
     })
 }
 
-let networkChips = initDNXChips("network")
-let serviceChips = initDNXChips("service")
+let srcNetworkObjects = initDNXChips("src-network")
+let dstNetworkObjects = initDNXChips("dst-network")
+let srcServiceObjects = initDNXChips("src-service")
+let dstServiceObjects = initDNXChips("dst-service")
 
 function cAddCallback(e, chip) {
 
@@ -283,7 +289,7 @@ function cSelectCallback(e, chip) {
     console.log(`SELECTED ${e} ${chip}`)
 }
 function cRemove(btn) {
-    // using as function to allow for hooks or other functionality to be added if needed.
+    // using as a function to allow for hooks or other functionality to be added if needed.
 
     btn.parentNode.remove()
 }

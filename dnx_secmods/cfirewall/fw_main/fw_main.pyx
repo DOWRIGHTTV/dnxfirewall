@@ -1,6 +1,6 @@
 #!/usr/bin/env Cython
 
-from libc.stdlib cimport  calloc
+from libc.stdlib cimport calloc
 from libc.stdio cimport printf
 
 from dnx_iptools.dnx_trie_search.dnx_trie_search cimport HashTrie
