@@ -199,7 +199,6 @@ function fillEditor(ruleEditor, ruleRow) {
         let editor_field = ruleEditor.querySelector(`.e${field}`)
         let rule_field = ruleRow.querySelector(`.r${field}`)
 
-
         try {
             if (["name", "log", "action", "sec1_prof", "sec2_prof", "sec3_prof"].includes(field)) {
                 editor_field.setAttribute("value", rule_field.innerText)
@@ -246,7 +245,7 @@ function initDNXChips(field) {
     let elem = document.querySelectorAll(`.${field}-chips`);
     let set;
 
-    let field_type = field.split('-')[0]
+    let field_type = field.split('-')[1]
     if (field_type === "service") {
         set = service_autofill;
     } else {

@@ -13,7 +13,6 @@ from dnx_routines.logging.log_client import Log
 
 DEFAULT_VERSION: str = 'pending'
 DEFAULT_PATH: str = 'dnx_system/iptables'
-USER_PATH: str = f'{DEFAULT_PATH}/usr'
 
 PENDING_RULE_FILE: str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/pending.firewall'
 ACTIVE_RULE_FILE:  str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/active.firewall'
@@ -53,7 +52,7 @@ class FirewallManage:
 
         This is a replace operation on disk and thread and process safe.'''
 
-        with ConfigurationManager(DEFAULT_VERSION, file_path=USER_PATH) as dnx_fw:
+        with ConfigurationManager(DEFAULT_VERSION, ext='.firewall', file_path=DEFAULT_PATH) as dnx_fw:
             dnx_fw.write_configuration(firewall_rules)
 
         # updating instance/ mem-copy of variable for fast access
