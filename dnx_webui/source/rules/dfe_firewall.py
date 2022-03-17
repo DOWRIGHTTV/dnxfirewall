@@ -185,9 +185,10 @@ def validate_firewall_rule(rule_num, fw_rule, lzone_map, /):
 
     action = 1 if fw_rule.action == 'ACCEPT' else 0
 
-    ip_proxy_profile = convert_int(fw_rule.sec1_prof)
-    ips_ids_profile  = convert_int(fw_rule.sec2_prof)
-    if not all([x in [0, 1] for x in [ip_proxy_profile, ips_ids_profile]]):
+    ip_proxy_profile  = convert_int(fw_rule.sec1_prof)
+    dns_proxy_profile = convert_int(fw_rule.sec2_prof)
+    ips_ids_profile   = convert_int(fw_rule.sec3_prof)
+    if not all([x in [0, 1] for x in [ip_proxy_profile, dns_proxy_profile, ips_ids_profile]]):
         raise ValidationError(f'Invalid security profile for rule #{rule_num}.')
 
     enabled = convert_int(fw_rule.enabled)
@@ -229,6 +230,7 @@ def validate_firewall_rule(rule_num, fw_rule, lzone_map, /):
         'action': action,                    # 1
         'log': 0,
         'ipp_profile': ip_proxy_profile,
+        'dns_profile': dns_proxy_profile
         'ips_profile': ips_ids_profile
     }
 
