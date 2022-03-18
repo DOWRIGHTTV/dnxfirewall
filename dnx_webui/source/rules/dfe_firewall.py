@@ -24,6 +24,7 @@ reference_counts = defaultdict(int)
 zone_map = {'builtins': {}, 'extended': {}}
 zone_manager = {'builtins': {}, 'user-defined': {}}
 
+INTRA_ZONE = 0
 ANY_ZONE = 99
 
 def load_page(section: str = 'MAIN') -> dict[str, Any]:
@@ -216,6 +217,11 @@ def validate_firewall_rule(rule_num, fw_rule, lzone_map, /):
     d_zone = lzone_map.get(fw_rule.dst_zone, None)
     if (s_zone is None or d_zone is None):
         raise ValidationError(f'{INVALID_FORM} [rule #{rule_num}/zone]')
+
+    # intra zone rules will be set to zone "0", which is direct to firewall traffic.
+    # this would be used for dhcp, dns, web, etc.
+    if (d_zone == s_zone and d_zone != ANY_ZONE):
+        d_zone = INTRA_ZONE
 
     rule = {
         'name': fw_rule.name,
