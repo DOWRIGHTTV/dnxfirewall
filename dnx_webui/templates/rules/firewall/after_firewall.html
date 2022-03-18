@@ -113,7 +113,9 @@ function updateRule() {
     col[3].innerHTML = ruleEditor.querySelector(".esrc_zone").querySelector("input").value.toLowerCase();
     col[6].innerHTML = ruleEditor.querySelector(".edst_zone").querySelector("input").value.toLowerCase();
     col[9].innerHTML = ruleEditor.querySelector(".eaction") === "1" ? "ACCEPT" : "DROP";
-    col[10].innerHTML = ruleEditor.querySelector(".elog").value;
+    console.log("COL 9");
+    {#col[10].innerHTML = ruleEditor.querySelector(".elog").value;#}
+    console.log("COL 10");
     col[11].innerHTML = ruleEditor.querySelector(".esec1_prof").value;
     col[12].innerHTML = ruleEditor.querySelector(".esec2_prof").value;
     col[13].innerHTML = ruleEditor.querySelector(".esec3_prof").value;
@@ -206,12 +208,15 @@ function fillEditor(ruleEditor, ruleRow) {
                 editor_field.remove();
 
                 let input = document.createElement("input");
+                input.id = "ename";
                 input.name = "ename";
                 input.type = "text";
                 input.classList = "ename validate";
-                input.value = rule_field.innerText;
+                input.value = rule_field.innerText
 
-                input_field.appendChild(input)
+                input_field.prepend(input);
+
+                input_field.children[1].classList = "active";
             }
             else if (["sec1_prof", "sec2_prof", "sec3_prof"].includes(field)) {
                 let input_field = editor_field.parentNode;
@@ -219,32 +224,31 @@ function fillEditor(ruleEditor, ruleRow) {
                 editor_field.remove();
 
                 let input = document.createElement("input");
-                input.name = `e${field}`;
+                input.name = field;
                 input.type = "number";
-                input.classList = "ename validate";
-                input.value = rule_field.innerText;
+                input.classList = `e${field} validate`;
                 input.min = "0";
                 input.max = "1";
+                input.value = rule_field.innerText
 
-                input_field.appendChild(input)
-
+                input_field.prepend(input);
             }
 
             else if (["log", "action"].includes(field)) {
                 editor_field.setAttribute("value", rule_field.innerText);
-                editor_field.parentNode.querySelector("label").setAttribute("class", "active");
+                {#editor_field.parentNode.querySelector("label").setAttribute("class", "active");#}
             }
             else if (field === "enabled") {
                 const enabled = parseInt(ruleRow.getAttribute("data-enabled"));
-                console.log(enabled);
+                {#console.log(enabled);#}
                 editor_field.checked = !!enabled;
             }
             else if (["src_zone", "dst_zone"].includes(field)) {
                 let zone_value = rule_field.innerHTML.toUpperCase();
 
                 editor_field.querySelector("input").value = zone_value;
-
-                let options = editor_field.nextElementSibling.children;
+                console.log(editor_field.querySelector("input"))
+                let options = editor_field.getElementsByTagName("li");
                 for (let option of options) {
                     if (option.innerText === zone_value) {
                         option.classList = "selected";
@@ -252,7 +256,6 @@ function fillEditor(ruleEditor, ruleRow) {
                         option.classList = "";
                     }
                 }
-
             }
             else if (["src_network", "src_service", "dst_network", "dst_service"].includes(field)) {
                 let dnxChips = editor_field.parentNode;
