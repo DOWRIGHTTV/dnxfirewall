@@ -99,7 +99,6 @@ function updateRule() {
         row.appendChild(document.createElement("td"));
         row.children[i].setAttribute("class", field);
     }
-    console.log(row)
 
     let col = row.children
     col[0].innerHTML = '<td><label><input type="checkbox" class="filled-in rule-select"><span></span></label></td>'
@@ -112,10 +111,8 @@ function updateRule() {
     col[2].innerHTML = ruleEditor.querySelector(".ename").value;
     col[3].innerHTML = ruleEditor.querySelector(".esrc_zone").querySelector("input").value.toLowerCase();
     col[6].innerHTML = ruleEditor.querySelector(".edst_zone").querySelector("input").value.toLowerCase();
-    col[9].innerHTML = ruleEditor.querySelector(".eaction") === "1" ? "ACCEPT" : "DROP";
-    console.log("COL 9");
-    {#col[10].innerHTML = ruleEditor.querySelector(".elog").value;#}
-    console.log("COL 10");
+    col[9].innerHTML = ruleEditor.querySelector(".eaction").querySelector("input").value.toLowerCase(); // === "1" ? "ACCEPT" : "DROP";
+    col[10].innerHTML = "N"; // ruleEditor.querySelector(".elog").value;
     col[11].innerHTML = ruleEditor.querySelector(".esec1_prof").value;
     col[12].innerHTML = ruleEditor.querySelector(".esec2_prof").value;
     col[13].innerHTML = ruleEditor.querySelector(".esec3_prof").value;
@@ -144,8 +141,6 @@ function newRule() {
 
     let defaultChip = '<div class="chip">none</div>'
 
-    // TODO: add classes for each td
-
     let rule_template = `<tr id="r${ruleCount}" style="opacity: .4;" data-enabled="0">` +
         '<td><label><input type="checkbox" class="filled-in rule-select"><span></span></label></td>' +
         '<td>' +
@@ -165,8 +160,8 @@ function newRule() {
         '<td class="rdst_zone">any</td>' +
         `<td class="rdst_network">${defaultChip}</td>` +
         `<td class="rdst_service">${defaultChip}</td>` +
-        '<td class="raction">0</td>' +
-        '<td class="rlog">0</td>' +
+        '<td class="raction">drop</td>' +
+        '<td class="rlog">N</td>' +
         '<td class="rsec1_prof">0</td>' +
         '<td class="rsec2_prof">0</td>' +
         '<td class="rsec3_prof">0</td>' +
@@ -191,7 +186,6 @@ ruleEditor.addEventListener("click", function(click) {
     editRule.open();
   });
 
-// FIXME: this is not properly resetting the rule name, src/dst zones, and sec profiles
 function fillEditor(ruleEditor, ruleRow) {
 
     const fields = ["name", "log", "enabled", "src_zone", "src_network",
@@ -234,7 +228,7 @@ function fillEditor(ruleEditor, ruleRow) {
                 input_field.prepend(input);
             }
 
-            else if (["log", "action"].includes(field)) {
+            else if (["log"].includes(field)) {
                 editor_field.setAttribute("value", rule_field.innerText);
                 {#editor_field.parentNode.querySelector("label").setAttribute("class", "active");#}
             }
@@ -243,11 +237,11 @@ function fillEditor(ruleEditor, ruleRow) {
                 {#console.log(enabled);#}
                 editor_field.checked = !!enabled;
             }
-            else if (["src_zone", "dst_zone"].includes(field)) {
+            else if (["action", "src_zone", "dst_zone"].includes(field)) {
                 let zone_value = rule_field.innerHTML.toUpperCase();
 
                 editor_field.querySelector("input").value = zone_value;
-                console.log(editor_field.querySelector("input"))
+
                 let options = editor_field.getElementsByTagName("li");
                 for (let option of options) {
                     if (option.innerText === zone_value) {

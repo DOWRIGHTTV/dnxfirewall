@@ -78,7 +78,7 @@
         </div>
         <div class="eaction input-field col s2 offset-s1 {{input_color}}">
             <select name="action">
-                {% for opt in ['accept', 'deny'] %}
+                {% for opt in ['accept', 'drop'] %}
                 <option value="{{opt}}">{{opt.upper()}}</option>
                 {% endfor %}
             </select>

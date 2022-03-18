@@ -1,6 +1,6 @@
-id,name,type,value,description
+id,name,type,type,value,description
 
-# SERVIC
+# SERVICE
 9001,tcp_any,built-in,service,tcp/0,all TCP ports (1-65535)
 9002,udp_any,built-in,service,udp/0,all UDP ports (1-65535)
 9003,icmp,built-in,service,icmp/0,commonly: Ping
@@ -23,15 +23,20 @@ id,name,type,value,description
 9020,tcp_587,built-in,service,tcp/587,commonly: Message Submission for SMTP
 9021,tcp_system_ports,built-in,service,tcp/1-1023,Port range used for internet/system services (privileged)
 9022,tcp_user_ports,built-in,service,tcp/1024-49151,Port range for general use (non privileged)
-9023,tcp_dynamic_ports,built-in,service,tcp/49152-65535,Port range which will never be "assigned by IANA"
+9023,tcp_dynamic_ports,built-in,service,tcp/49152-65535,Port range which will never be assigned by IANA
 9024,udp_system_ports,built-in,service,udp/1-1023,Port range used for internet/system services (privileged)
 9025,udp_user_ports,built-in,service,udp/1024-49151,Port range for general use (non privileged)
-9026,udp_dynamic_ports,built-in,service,udp/49152-65535,Port range which will never be "assigned by IANA"
+9026,udp_dynamic_ports,built-in,service,udp/49152-65535,Port range which will never be assigned by IANA
+
+# NAMED SERVICE | tweak webui to allow this
+9051,web-browsing,built-in,service,tcp/80:tcp/443,Standard ports used for (secure) web browsing
 
 # ADDRESS
 9101,any_network,built-int,address,0.0.0.0/0,
 9102,lan_network,built-in,address,192.168.83.0/24,
-9103,dmz_network,built-in,address,192.168.84.0/24,
+9103,lan_interface,built-in,address,192.168.83.1/32,
+9104,dmz_network,built-in,address,192.168.84.0/24,
+9105,dmz_interface,built-in,address,192.168.84.1/32
 
 # GEOLOCATION
 9200,algeria,built-in,country,algeria,region: africa

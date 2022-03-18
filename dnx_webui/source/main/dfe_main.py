@@ -670,7 +670,7 @@ def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name):
         })
 
     try:
-        page_settings[data_key] = dnx_page.load_page()
+        page_settings[data_key] = dnx_page.load_page(page_settings['selected'])
     except OSError as ose:
         return render_template(application_error_page, application_error=ose, **page_settings)
 
