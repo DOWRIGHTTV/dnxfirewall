@@ -230,7 +230,7 @@ def validate_firewall_rule(rule_num, fw_rule, lzone_map, /):
         'action': action,                    # 1
         'log': 0,
         'ipp_profile': ip_proxy_profile,
-        'dns_profile': dns_proxy_profile
+        'dns_profile': dns_proxy_profile,
         'ips_profile': ips_ids_profile
     }
 

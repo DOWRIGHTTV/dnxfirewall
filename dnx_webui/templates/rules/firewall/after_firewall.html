@@ -196,21 +196,63 @@ function fillEditor(ruleEditor, ruleRow) {
             "src_service", "dst_zone", "dst_network", "dst_service", "action", "sec1_prof", "sec2_prof", "sec3_prof"]
 
     for (let field of fields) {
-        let editor_field = ruleEditor.querySelector(`.e${field}`)
-        let rule_field = ruleRow.querySelector(`.r${field}`)
+        let rule_field = ruleRow.querySelector(`.r${field}`);
+        let editor_field = ruleEditor.querySelector(`.e${field}`);
 
         try {
-            if (["name", "log", "action", "sec1_prof", "sec2_prof", "sec3_prof"].includes(field)) {
-                editor_field.setAttribute("value", rule_field.innerText)
-                editor_field.parentNode.querySelector("label").setAttribute("class", "active")
+            if (["name"].includes(field)) {
+                let input_field = editor_field.parentNode;
+
+                editor_field.remove();
+
+                let input = document.createElement("input");
+                input.name = "ename";
+                input.type = "text";
+                input.classList = "ename validate";
+                input.value = rule_field.innerText;
+
+                input_field.appendChild(input)
+            }
+            else if (["sec1_prof", "sec2_prof", "sec3_prof"].includes(field)) {
+                let input_field = editor_field.parentNode;
+
+                editor_field.remove();
+
+                let input = document.createElement("input");
+                input.name = `e${field}`;
+                input.type = "number";
+                input.classList = "ename validate";
+                input.value = rule_field.innerText;
+                input.min = "0";
+                input.max = "1";
+
+                input_field.appendChild(input)
+
+            }
+
+            else if (["log", "action"].includes(field)) {
+                editor_field.setAttribute("value", rule_field.innerText);
+                editor_field.parentNode.querySelector("label").setAttribute("class", "active");
             }
             else if (field === "enabled") {
                 const enabled = parseInt(ruleRow.getAttribute("data-enabled"));
-                console.log(enabled)
+                console.log(enabled);
                 editor_field.checked = !!enabled;
             }
             else if (["src_zone", "dst_zone"].includes(field)) {
-                editor_field.querySelector("input").value = rule_field.innerHTML.toUpperCase();
+                let zone_value = rule_field.innerHTML.toUpperCase();
+
+                editor_field.querySelector("input").value = zone_value;
+
+                let options = editor_field.nextElementSibling.children;
+                for (let option of options) {
+                    if (option.innerText === zone_value) {
+                        option.classList = "selected";
+                    } else {
+                        option.classList = "";
+                    }
+                }
+
             }
             else if (["src_network", "src_service", "dst_network", "dst_service"].includes(field)) {
                 let dnxChips = editor_field.parentNode;
