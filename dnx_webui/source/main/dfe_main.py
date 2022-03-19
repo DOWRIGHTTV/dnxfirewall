@@ -868,9 +868,9 @@ def format_fw_obj(fw_obj, /):
         'service': ['orange lighten-2', 'track_changes']
     }.get(fw_obj[3], ['', ''])
 
-    return (f'<div class="chip tooltipped {properties[0]}" data-html="true"'
-            f'data-tooltip="<p style=width:160px> {fw_obj[2]}<br>{fw_obj[3]}<br>{fw_obj[4]}<br>{fw_obj[5]}</p>">'
-            f'<i class="material-icons tiny {properties[0]} valign-center">{properties[1]}</i>  {fw_obj[1]}</div>')
+    return (f'<div class="chip tooltipped {properties[0]}" data-html="true" data-tooltip="<p style=width:160px>'
+            f'{fw_obj[2]}<br>{fw_obj[3]}<br>{fw_obj[4]}<br>{fw_obj[5]}</p>">'
+            f'<i class="material-icons tiny {properties[0]} valign-center">{properties[1]}</i> {fw_obj[1]}</div>')
 
 def is_list(li, /):
     return isinstance(li, list)

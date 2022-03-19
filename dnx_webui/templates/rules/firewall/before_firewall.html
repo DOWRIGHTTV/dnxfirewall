@@ -1,28 +1,23 @@
 <script>
 async function commitRules(table_id) {
-        let FWsection = document.getElementById("section").value
-        let FWrules = tableToJson(table_id)
+        let FWsection = document.getElementById("section").value;
+        let FWrules = tableToJson(table_id);
         let response = await ajaxClient.post("/commit", { "section": `${FWsection}`, "rules": `${FWrules}` });
 
-        if (response.error) {
-            let commitError = document.querySelector("#ajax-error-modal");
-            commitError.querySelector("h5").innerText = response.message;
+        let commitResponse = document.querySelector("#ajax-error-modal");
+        commitResponse.querySelector("h5").innerText = response.message;
 
-            let errorModal = M.Modal.init(
-                commitError, {
-                    dismissible: false
-                }
-            );
-            errorModal.open();
+        let errorModal = M.Modal.init(
+            commitResponse, {
+                dismissible: false
+            }
+        );
+        errorModal.open();
 
-            console.log("[server/response]: ", response);
-        } else {
-            console.log("[server/response]: successful commit.")
-        }
+        console.log("[server/response]: ", response);
 }
 function tableToJson(table_id) {
     const table = document.getElementById(`${table_id}`)
-    console.log(table)
     let data = {};
 
     for (let i=0; i<table.rows.length; i++) {
@@ -31,7 +26,18 @@ function tableToJson(table_id) {
         let rowData = [tableRow.attributes["data-enabled"].value];
 
         for (let j=2; j<tableRow.cells.length; j++) {
-            rowData.push((tableRow.cells[j].innerText)); // .replace(" ", ",") replace only does first occurrence
+            let currentCell = tableRow.cells[j]
+
+            if (currentCell.children.length > 0) {
+                let objectStr = ""
+                for (let obj of tableRow.cells[j].children) {
+                    objectStr += `${obj.innerText.replace(" ", "/")},`;
+                }
+                rowData.push((objectStr.slice(0, -1)));
+            } else {
+                rowData.push((currentCell.innerText)); // .replace(" ", ",") replace only does first occurrence
+            }
+            console.log(rowData)
         }
 
         data[i] = rowData;

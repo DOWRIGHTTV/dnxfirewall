@@ -245,7 +245,10 @@ class ConfigChain:
 
         self.__mutable_config = copy(self.__flat_config[0])
 
-    def __getitem__(self, key: str) -> Optional[Union[bool, int, str, list]]:
+    def __str__(self):
+        return json.dumps(self._merge_expand(), indent=2, sort_keys=False)
+
+    def __getitem__(self, key: str) -> Union[bool, int, str, list]:
 
         for cfg in self.__flat_config:
 

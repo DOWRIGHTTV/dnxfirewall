@@ -36,7 +36,7 @@ id,name,type,type,value,description
 9102,lan_network,built-in,address,192.168.83.0/24,
 9103,lan_interface,built-in,address,192.168.83.1/32,
 9104,dmz_network,built-in,address,192.168.84.0/24,
-9105,dmz_interface,built-in,address,192.168.84.1/32
+9105,dmz_interface,built-in,address,192.168.84.1/32,
 
 # GEOLOCATION
 9200,algeria,built-in,country,algeria,region: africa

@@ -17,8 +17,9 @@ from dnx_iptools.protocol_tools import cidr_to_int
 debug = pprint.PrettyPrinter(indent=4).pprint
 
 _FW_OBJECT = namedtuple('fw_object', 'id name origin type value description')
-
 _icon_to_type = {'tv': 'address', 'language': 'country', 'track_changes': 'service'}
+INVALID_OBJECT = -1
+
 
 def _object_manager(object_list: list[_FW_OBJECT]) -> ObjectManager:
 
@@ -37,7 +38,7 @@ def _object_manager(object_list: list[_FW_OBJECT]) -> ObjectManager:
 
     proto_convert: dict[str, int] = {'icmp': 1, 'tcp': 6, 'udp': 17}
 
-    def convert_object(obj: _FW_OBJECT, /, len=len) -> list[int, int, Optional[int]]:
+    def convert_object(obj: _FW_OBJECT, /) -> list[int, int, int]:
         if (obj.type == 'address'):
             ip, netmask = obj.value.split('/')
 
@@ -67,19 +68,19 @@ def _object_manager(object_list: list[_FW_OBJECT]) -> ObjectManager:
 
         return [0, 0]
 
-    class ObjManager:
+    class ObjectManager:
 
         __slots__ = ()
 
         @staticmethod
-        def validate(icon: str, obj_name: str) -> Optional[int]:
-            '''return object id if valid, otherwise returns None'''
-
+        def validate(icon: str, obj_name: str) -> int:
+            '''return object id if valid, otherwise returns None
+            '''
             idx = _name_to_idx_get(obj_name, DATA.MISSING)
             print(f'index found: {idx}')
 
             if (idx is DATA.MISSING):
-                return None
+                return INVALID_OBJECT
 
             input_type = _icon_to_type.get(icon, None)
             fw_obj_type = _object_definitions[idx].type
@@ -89,20 +90,19 @@ def _object_manager(object_list: list[_FW_OBJECT]) -> ObjectManager:
                 return _object_definitions[idx].id
 
             else:
-                return None
+                return INVALID_OBJECT
 
         # None return is in list for compatibility with the normal process
-        def iter_validate(self, fw_objects: str) -> list[Optional[list[Optional[int]]]]:
+        def iter_validate(self, fw_objects: str) -> list[int]:
 
-            fw_objects: list = fw_objects.split()
-            if (not fw_objects):
-                return [None]
+            if (not fw_objects or 'none' in fw_objects):
+                return [INVALID_OBJECT]
 
             # making a list of icon and obj_name pairs from raw string representation of data
             try:
-                fw_objects: list = [fw_objects[i:i + 2] for i in range(0, len(fw_objects), 2)]
-            except Exception:  # TODO: consider making this more specific. probably not though lol.
-                return [None]
+                fw_objects: list[list[str, str]] = [x.split('/') for x in fw_objects.split(',')]
+            except Exception:
+                return [INVALID_OBJECT]
 
             results = []
             for obj in fw_objects:
@@ -115,8 +115,8 @@ def _object_manager(object_list: list[_FW_OBJECT]) -> ObjectManager:
         def lookup(oid: int, convert: bool = False) -> Union[Optional[_FW_OBJECT], list[int, int, [Optional[int]]]]:
             '''return index of the object associated with sent in object id.
 
-            if the id does not exist, None will be returned.'''
-
+            if the id does not exist, None will be returned.
+            '''
             idx = _id_to_idx_get(oid, DATA.MISSING)
             if (idx is DATA.MISSING):
                 return None
@@ -130,11 +130,11 @@ def _object_manager(object_list: list[_FW_OBJECT]) -> ObjectManager:
 
         @staticmethod
         def get_objects() -> tuple[int, list[_FW_OBJECT]]:
-            '''returns the current version and full object list.'''
-
+            '''returns the current version and full object list.
+            '''
             return _object_version, _object_definitions
 
-    return ObjManager()
+    return ObjectManager()
 
 
 def initialize(home_dir: str) -> ObjectManager:

@@ -55,18 +55,15 @@ cdef int32_t nfqueue_rcv(nfq_q_handle *nfq_qh, nfgenmsg *nfmsg, nfq_data *nfq_d,
 # FORWARDING TO PROXY CALLBACK - GIL ACQUIRED
 # ============================================
 cdef inline int32_t nfqueue_forward(PacketData *dnx_nfqhdr, void *q_manager) with gil:
-# cdef inline int32_t nfqueue_forward(
-#         nfq_q_handle *qh, nfgenmsg *nf_msg, nfq_data *nfq_d, void *q_manager, PacketData dnx_nfqhdr) with gil:
 
-    # skipping call to __init__
     cdef:
         NetfilterQueue nfqueue = <NetfilterQueue>q_manager
         CPacket cpacket
 
+    # skipping call to __init__
     cpacket = CPacket.__new__(CPacket)
     cpacket.set_nfqhdr(dnx_nfqhdr)
 
-    # (<object>nfqueue.proxy_callback)(cpacket, dnx_nfqhdr.mark)
     nfqueue.proxy_callback(cpacket, dnx_nfqhdr.mark)
 
     return OK

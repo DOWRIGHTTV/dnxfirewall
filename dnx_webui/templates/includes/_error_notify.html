@@ -4,3 +4,12 @@
     </div>
     <a class="btn-flat modal-close waves-effect waves-green right">OK</a>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    let modal = document.querySelector('.standard-error-modal');
+
+    if (!modal) return;
+
+    M.Modal.init(modal, {dismissible: false}).open();
+})
+</script>

@@ -9,6 +9,7 @@ from collections import defaultdict, namedtuple
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import INVALID_FORM
+from dnx_gentools.def_enums import DATA
 from dnx_gentools.file_operations import load_configuration
 
 from dnx_routines.configure.web_validate import ValidationError, convert_int
@@ -28,6 +29,8 @@ valid_sections: dict[str, str] = {'BEFORE': '1', 'MAIN': '2', 'AFTER': '3'}
 reference_counts = defaultdict(int)
 zone_map: dict[str, dict] = {'builtins': {}, 'extended': {}}
 zone_manager: dict[str, dict] = {'builtins': {}, 'user-defined': {}}
+
+INVALID_OBJECT = -1
 
 INTRA_ZONE = 0
 ANY_ZONE = 99
@@ -103,7 +106,7 @@ def get_and_format_rules(section: str, lzone_map: dict[int, str]) -> list[list]:
         # ternary to properly render intra_zone rule (same src and dst zone, dst zone would be 0)
         dst_zone = zone_map_get(rule['dst_zone'][0], 'ERROR') if rule['dst_zone'][0] else src_zone
 
-        # counting amount of times a zone is seen in a rule. default dict protects new zones ints.
+        # increment every time a zone is used in a rule. default dict protects new zones ints.
         reference_counts[src_zone] += 1
         reference_counts[dst_zone] += 1
 
@@ -143,7 +146,7 @@ def commit_rules(json_data: dict[str, str]) -> tuple[bool, dict[str, Union[bool,
     # temporary for testing # FIXME: ??? what??
     FirewallManage.push()
 
-    return True, {'error': False, 'message': ''}
+    return True, {'error': False, 'message': 'commit successful'}
 
 
 # ================
@@ -157,18 +160,18 @@ rule_structure = namedtuple('rule_structure', [
     'sec1_prof', 'sec2_prof', 'sec3_prof'
 ])
 
-def validate_firewall_commit(fw_rules, /):
+def validate_firewall_commit(fw_rules_json: str, /):
     # ["1", "lan_dhcp_allow", "lan", "tv,lan_network tv,dmz_network", "track_changes,udp_any", "any",
     #  "tv,lan_network tv,dmz_network", "track_changes,udp_67", "ACCEPT", "OFF", "0", "0"]
 
-    fw_rules = json.loads(fw_rules)
+    fw_rules: dict = json.loads(fw_rules_json)
 
-    validated_rules = {}
+    validated_rules: dict = {}
 
     # TODO: make zone map integrated more gooder
     dnx_interfaces = load_configuration('system').get_items('interfaces->builtins')
 
-    lzone_map = {zone_name: zone_info['zone'] for zone_name, zone_info in dnx_interfaces}
+    lzone_map: dict[str, int] = {zone_name: zone_info['zone'] for zone_name, zone_info in dnx_interfaces}
     # 99 used to specify wildcard/any zone match
     lzone_map['any'] = ANY_ZONE
 
@@ -176,7 +179,7 @@ def validate_firewall_commit(fw_rules, /):
     for i, rule in enumerate(fw_rules.values(), 1):
 
         try:
-            rule = rule_structure(*rule)
+            rule: rule_structure = rule_structure(*rule)
         except ValueError:  # i think its a value error
             raise ValidationError(f'Format error found in rule #{i}')
 
@@ -213,24 +216,24 @@ def validate_firewall_rule(rule_num: int, fw_rule: rule_structure, lzone_map: di
     check = Flask.app.dnx_object_manager.iter_validate
 
     src_network = check(fw_rule.src_network)
-    if (None in src_network):
+    if (INVALID_OBJECT in src_network):
         raise ValidationError(f'A source network object was not found for rule #{rule_num}.')
 
     src_service = check(fw_rule.src_service)
-    if (None in src_service):
+    if (INVALID_OBJECT in src_service):
         raise ValidationError(f'A source service object was not found for rule #{rule_num}.')
 
     dst_network = check(fw_rule.dst_network)
-    if (None in dst_network):
+    if (INVALID_OBJECT in dst_network):
         raise ValidationError(f'A destination network object was not found for rule #{rule_num}.')
 
     dst_service = check(fw_rule.src_service)
-    if (None in dst_service):
+    if (INVALID_OBJECT in dst_service):
         raise ValidationError(f'A destination service object was not found for rule #{rule_num}.')
 
-    s_zone = lzone_map.get(fw_rule.src_zone, None)
-    d_zone = lzone_map.get(fw_rule.dst_zone, None)
-    if (s_zone is None or d_zone is None):
+    s_zone = lzone_map.get(fw_rule.src_zone, DATA.MISSING)
+    d_zone = lzone_map.get(fw_rule.dst_zone, DATA.MISSING)
+    if (s_zone is DATA.MISSING or d_zone is DATA.MISSING):
         raise ValidationError(f'{INVALID_FORM} [rule #{rule_num}/zone]')
 
     # intra zone rules will be set to zone "0", which is direct to firewall traffic.

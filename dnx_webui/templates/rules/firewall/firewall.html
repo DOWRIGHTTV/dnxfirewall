@@ -75,7 +75,7 @@
                                 </tr>
                                 <tr>
                                     <th>Select</th>
-                                    <th>Move</th>
+                                    <th style="width:5%">Move</th>
                                     <th>Name</th>
                                     <th>Zones</th>
                                     <th>Networks</th>
@@ -125,8 +125,8 @@
                                             {{format_fw_obj(subfield)|safe}}
                                         {% endfor -%}
                                     </td>
-                                    <td class="raction">{{'ACCEPT' if rule[8] else 'DROP'}}</td>
-                                    <td class="rlog">{{'ON' if rule[9] else 'OFF'}}</td>
+                                    <td class="raction">{{'accept' if rule[8] else 'drop'}}</td>
+                                    <td class="rlog">{{'Y' if rule[9] else 'N'}}</td>
                                     <td class="rsec1_prof">{{rule[10]}}</td>
                                     <td class="rsec2_prof">{{rule[11]}}</td>
                                     <td class="rsec3_prof">{{rule[12]}}</td>

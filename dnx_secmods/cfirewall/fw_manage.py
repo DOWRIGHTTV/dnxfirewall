@@ -11,6 +11,15 @@ from dnx_gentools.file_operations import ConfigurationManager, load_configuratio
 
 from dnx_routines.logging.log_client import Log
 
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from dnx_gentools.file_operations import ConfigChain
+
+
 DEFAULT_VERSION: str = 'pending'
 DEFAULT_PATH: str = 'dnx_system/iptables'
 
@@ -34,7 +43,6 @@ class FirewallManage:
     print(rules.view_ruleset('BEFORE'))
 
     '''
-
     __slots__ = ()
 
     # store the main instances reference here, so it can be accessed throughout webui
@@ -44,7 +52,7 @@ class FirewallManage:
     versions: ClassVar[list] = ['pending', 'active']
     sections: ClassVar[list] = ['BEFORE', 'MAIN', 'AFTER']
 
-    _firewall: ClassVar[dict] = load_configuration(DEFAULT_VERSION, ext='.firewall', filepath=DEFAULT_PATH).get_dict()
+    _firewall: ClassVar[dict[str, Any]] = load_configuration(DEFAULT_VERSION, ext='.firewall', filepath=DEFAULT_PATH).get_dict()
 
     @classmethod
     def commit(cls, firewall_rules: dict) -> None:
@@ -73,9 +81,9 @@ class FirewallManage:
             obj_lookup = cls.object_manager.lookup
 
             # using standalone functions due to ConfigManager not being compatible with these operations
-            fw_rules = load_configuration('pending', ext='.firewall', filepath='dnx_system/iptables')
+            fw_rules: ConfigChain = load_configuration('pending', ext='.firewall', filepath='dnx_system/iptables')
 
-            fw_rule_copy = fw_rules.get_dict()
+            fw_rule_copy: dict[str, Any] = fw_rules.get_dict()
 
             for section in cls.sections:
 
@@ -129,8 +137,9 @@ class FirewallManage:
         active = calculate_file_hash('active.firewall', folder='iptables/usr')
         pending = calculate_file_hash('pending.firewall', folder='iptables/usr')
 
-        # if the user has never modified rules, there is not a pending change. the active file can be none if pending is
-        # present. a commit will write the active file.
+        # if the user has never modified rules, there is not a pending change.
+        # the active file can be none if pending is present.
+        # a commit will write the active file.
         if (pending is None):
             return False
 

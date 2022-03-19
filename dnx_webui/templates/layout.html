@@ -51,15 +51,6 @@
 
     {% if standard_error %}
         {% include 'includes/_error_notify.html' %}
-        <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            let modal = document.querySelector('.standard-error-modal');
-
-            if (!modal) return;
-
-            M.Modal.init(modal, {dismissible: false}).open();
-        })
-        </script>
     {% endif -%}
 
     {# materialize js #}

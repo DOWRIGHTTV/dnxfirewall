@@ -120,10 +120,9 @@ function updateRule() {
     let rData;
     for (let fStr of ["src_network", "src_service", "dst_network", "dst_service"]) {
         field = row.querySelector(`.r${fStr}`);
-        console.log("field", field)
 
         rData = ruleEditor.querySelector(`.e${fStr}`).parentNode.querySelectorAll(".chip");
-        console.log("rData", rData)
+
         rData.forEach((x) => {field.insertAdjacentHTML("beforeend", x.outerHTML)});
     }
 
@@ -206,7 +205,7 @@ function fillEditor(ruleEditor, ruleRow) {
                 input.name = "ename";
                 input.type = "text";
                 input.classList = "ename validate";
-                input.value = rule_field.innerText
+                input.value = rule_field.innerText;
 
                 input_field.prepend(input);
 
