@@ -444,6 +444,8 @@ class NFQueue:
         return True
 
 
+# TODO: see if we can decommission this class to be replaced by CPacket.
+#  this became an option after reworking dnx_nfqueue lib since the parsing and GIL operations are much more refined.
 class NFPacket:
 
     __slots__ = (

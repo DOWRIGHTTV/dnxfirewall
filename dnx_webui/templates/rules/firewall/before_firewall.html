@@ -3,10 +3,10 @@ async function commitRules(table_id) {
     let FWsection = document.getElementById("section").value;
     let FWrules = tableToJson(table_id);
 
-    await post("/commit", {"section": `${FWsection}`, "rules": `${FWrules}`});
+    await post("commit", {"section": `${FWsection}`, "rules": `${FWrules}`});
 }
 async function pushRules() {
-    await post("/push", {});
+    await post("push", {});
 }
 async function post(endpoint, data) {
         let response = await ajaxClient.post(`/${endpoint}`, data);
