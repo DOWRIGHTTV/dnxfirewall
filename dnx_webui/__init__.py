@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
-# ====================
+# ==================
 # DNXFIREWALL WEBUI
-# ====================
-from dnx_gentools.def_constants import INITIALIZE_MODULE
-
-if INITIALIZE_MODULE('webui'):
+# ==================
+if (__name__ == '__main__'):
     __all__ = ('app',)
+
+    import os
+    import sys
+
+    HOME_DIR = os.environ['HOME_DIR']
+    WEB_DIR  = os.environ['WEB_DIR']
+
+    sys.path.insert(0, HOME_DIR)
+    sys.path.insert(0, WEB_DIR)
 
     # app will be called by uwsgi
     from source.main.dfe_main import app
