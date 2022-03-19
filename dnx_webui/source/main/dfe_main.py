@@ -137,11 +137,8 @@ def rules_firewall_commit(session_data):
     # TODO: get user and ip information so we can log the commit (warning?)
 
     json_data = request.get_json(force=True)
-    print(json_data)
 
     status, err_data = dnx_fwall.commit_rules(json_data)
-
-    print(f'[commit/response] status={status}, err_data={err_data}')
 
     return ajax_response(status=status, data=err_data)
 
@@ -151,11 +148,16 @@ def rules_firewall_push(session_data):
     # for when we implement preview option
     # json_data = request.get_json(force=True)
 
-    error = FirewallManage.push()
+    error, pending_changes = FirewallManage.push()
     if (error):
-        return False, {'error': True, 'message': 'push failed'}
+        return ajax_response(status=False, data={'error': 1, 'message': 'push failed'})
 
-    return ajax_response(status=True, data={'error': False, 'message': 'push success'})
+    elif (pending_changes):
+        return ajax_response(status=False, data={
+            'error': 2, 'message': 'pending rules changed while pushing to firewall. refresh page.'
+        })
+
+    return ajax_response(status=True, data={'error': 0, 'message': 'push success'})
 
 @app.route('/rules/nat', methods=['GET', 'POST'])
 @user_restrict('admin')

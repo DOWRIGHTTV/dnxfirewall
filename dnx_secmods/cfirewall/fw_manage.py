@@ -67,7 +67,7 @@ class FirewallManage:
         cls._firewall = firewall_rules
 
     @classmethod
-    def push(cls) -> bool:
+    def push(cls) -> tuple[bool, bool]:
         '''Copy the pending configuration to the active state.
 
         file changes are being monitored by Control class to load into cfirewall.
@@ -101,7 +101,7 @@ class FirewallManage:
 
             push_error = False
 
-        return push_error
+        return push_error, cls.is_pending_changes()
 
     @staticmethod
     def revert():

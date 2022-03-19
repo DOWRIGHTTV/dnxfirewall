@@ -41,9 +41,9 @@
                                 <label for="section">Ruleset</label>
                             </div>
                         </form>
-                        <a class="btn waves-effect waves-light modal-trigger red darken-2" href="#revert-modal"
+                        <a id="revert" class="btn waves-effect waves-light modal-trigger red darken-2" href="#revert-modal"
                            {% if not firewall_settings['pending_changes'] %} disabled {% endif %}>Revert</a>
-                        <a class="btn waves-effect waves-light modal-trigger green darken-2" href="#push-modal"
+                        <a id="push" class="btn waves-effect waves-light modal-trigger green darken-2" href="#push-modal"
                            {% if not firewall_settings['pending_changes'] %} disabled {% endif %}>Push</a>
                         <a class="btn waves-effect waves-light modal-trigger blue-grey" href="#commit-modal">Commit</a>
                         <a class="btn waves-effect waves-light right" onclick="newRule()">Create Rule</a>

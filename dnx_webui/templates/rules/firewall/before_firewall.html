@@ -3,10 +3,18 @@ async function commitRules(table_id) {
     let FWsection = document.getElementById("section").value;
     let FWrules = tableToJson(table_id);
 
-    await post("commit", {"section": `${FWsection}`, "rules": `${FWrules}`});
+    let success = await post("commit", {"section": `${FWsection}`, "rules": `${FWrules}`});
+    if (success) {
+        document.querySelector("#revert").disabled = false;
+        document.querySelector("#push").disabled = false;
+    }
 }
 async function pushRules() {
-    await post("push", {});
+    let success = await post("push", {});
+    if (success) {
+        document.querySelector("#revert").disabled = true;
+        document.querySelector("#push").disabled = true;
+    }
 }
 async function post(endpoint, data) {
         let response = await ajaxClient.post(`/${endpoint}`, data);
@@ -20,6 +28,8 @@ async function post(endpoint, data) {
             }
         );
         errorModal.open();
+
+        return response.status;
 }
 function tableToJson(table_id) {
     const table = document.getElementById(`${table_id}`)
@@ -33,21 +43,20 @@ function tableToJson(table_id) {
         for (let j=2; j<tableRow.cells.length; j++) {
             let currentCell = tableRow.cells[j];
 
+            // converting the fw object list to the proper server format
             if (currentCell.children.length > 0) {
                 let objectStr = ""
                 for (let obj of tableRow.cells[j].children) {
                     objectStr += `${obj.innerText.replace(" ", "/")},`;
                 }
+                // pulling out the trailing comma
                 rowData.push((objectStr.slice(0, -1)));
             } else {
-                rowData.push((currentCell.innerText)); // .replace(" ", ",") replace only does first occurrence
+                rowData.push((currentCell.innerText));
             }
-            console.log(rowData);
         }
-
         data[i] = rowData;
     }
-
     return JSON.stringify(data);
 }
 </script>

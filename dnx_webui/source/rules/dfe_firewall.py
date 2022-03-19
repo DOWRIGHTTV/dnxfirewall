@@ -226,7 +226,7 @@ def validate_firewall_rule(rule_num: int, fw_rule: rule_structure, lzone_map: di
     if (INVALID_OBJECT in dst_network):
         raise ValidationError(f'A destination network object was not found for rule #{rule_num}.')
 
-    dst_service = check(fw_rule.src_service)
+    dst_service = check(fw_rule.dst_service)
     if (INVALID_OBJECT in dst_service):
         raise ValidationError(f'A destination service object was not found for rule #{rule_num}.')
 
