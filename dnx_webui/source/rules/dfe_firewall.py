@@ -35,6 +35,8 @@ INVALID_OBJECT = -1
 INTRA_ZONE = 0
 ANY_ZONE = 99
 
+return_data: tuple[bool, dict[str, Union[bool, str]]]
+
 def load_page(section: str) -> dict[str, Any]:
     lzone_map: dict[int, str] = {ANY_ZONE: 'any'}
 
@@ -125,7 +127,7 @@ def get_and_format_rules(section: str, lzone_map: dict[int, str]) -> list[list]:
 
     return converted_rules
 
-def commit_rules(json_data: dict[str, str]) -> tuple[bool, dict[str, Union[bool, str]]]:
+def commit_rules(json_data: dict[str, str]) -> return_data:
 
     section = json_data.get('section', None)
     if (not section or section not in valid_sections):
@@ -142,9 +144,6 @@ def commit_rules(json_data: dict[str, str]) -> tuple[bool, dict[str, Union[bool,
 
     else:
         FirewallManage.commit(validated_rules)
-
-    # temporary for testing # FIXME: ??? what??
-    FirewallManage.push()
 
     return True, {'error': False, 'message': 'commit successful'}
 

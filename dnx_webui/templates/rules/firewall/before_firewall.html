@@ -1,20 +1,25 @@
 <script>
 async function commitRules(table_id) {
-        let FWsection = document.getElementById("section").value;
-        let FWrules = tableToJson(table_id);
-        let response = await ajaxClient.post("/commit", { "section": `${FWsection}`, "rules": `${FWrules}` });
+    let FWsection = document.getElementById("section").value;
+    let FWrules = tableToJson(table_id);
 
-        let commitResponse = document.querySelector("#ajax-error-modal");
-        commitResponse.querySelector("h5").innerText = response.message;
+    await post("/commit", {"section": `${FWsection}`, "rules": `${FWrules}`});
+}
+async function pushRules() {
+    await post("/push", {});
+}
+async function post(endpoint, data) {
+        let response = await ajaxClient.post(`/${endpoint}`, data);
+
+        let Response = document.querySelector("#ajax-error-modal");
+        Response.querySelector("h5").innerText = response.message;
 
         let errorModal = M.Modal.init(
-            commitResponse, {
+            Response, {
                 dismissible: false
             }
         );
         errorModal.open();
-
-        console.log("[server/response]: ", response);
 }
 function tableToJson(table_id) {
     const table = document.getElementById(`${table_id}`)
@@ -26,7 +31,7 @@ function tableToJson(table_id) {
         let rowData = [tableRow.attributes["data-enabled"].value];
 
         for (let j=2; j<tableRow.cells.length; j++) {
-            let currentCell = tableRow.cells[j]
+            let currentCell = tableRow.cells[j];
 
             if (currentCell.children.length > 0) {
                 let objectStr = ""
@@ -37,7 +42,7 @@ function tableToJson(table_id) {
             } else {
                 rowData.push((currentCell.innerText)); // .replace(" ", ",") replace only does first occurrence
             }
-            console.log(rowData)
+            console.log(rowData);
         }
 
         data[i] = rowData;

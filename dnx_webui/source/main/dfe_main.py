@@ -145,6 +145,18 @@ def rules_firewall_commit(session_data):
 
     return ajax_response(status=status, data=err_data)
 
+@app.route('/rules/firewall/push', methods=['POST'])
+@user_restrict('admin')
+def rules_firewall_push(session_data):
+    # for when we implement preview option
+    # json_data = request.get_json(force=True)
+
+    error = FirewallManage.push()
+    if (error):
+        return False, {'error': True, 'message': 'push failed'}
+
+    return ajax_response(status=True, data={'error': False, 'message': 'push success'})
+
 @app.route('/rules/nat', methods=['GET', 'POST'])
 @user_restrict('admin')
 def rules_nat(session_data):

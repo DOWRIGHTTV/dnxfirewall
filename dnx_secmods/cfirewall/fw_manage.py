@@ -67,11 +67,12 @@ class FirewallManage:
         cls._firewall = firewall_rules
 
     @classmethod
-    def push(cls) -> None:
+    def push(cls) -> bool:
         '''Copy the pending configuration to the active state.
 
         file changes are being monitored by Control class to load into cfirewall.
         '''
+        push_error: bool = True
         with ConfigurationManager():
             shutil.copy(PENDING_RULE_FILE, COPY_RULE_FILE)
 
@@ -96,9 +97,11 @@ class FirewallManage:
 
             write_configuration(fw_rule_copy, 'pending', ext='.copy', filepath='dnx_system/iptables')
 
-            print('FUTURE ACTIVE', fw_rules)
+            os.replace(COPY_RULE_FILE, ACTIVE_RULE_FILE)
 
-#            os.replace(COPY_RULE_FILE, ACTIVE_RULE_FILE)
+            push_error = False
+
+        return push_error
 
     @staticmethod
     def revert():
