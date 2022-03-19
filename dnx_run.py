@@ -183,6 +183,9 @@ def service_command(mod: str, cmd: str) -> None:
     if (mod == 'all'):
         for svc in SERVICE_MODULES:
             try:
+                if (mod == 'webui'):
+                    dnx_run(f'sudo systemctl {cmd} nginx', shell=True)
+
                 dnx_run(f'sudo systemctl {cmd} {svc}', shell=True)
             except CalledProcessError:
                 sprint(f'{svc.ljust(15)} => {"fail".rjust(7)}')
@@ -193,6 +196,9 @@ def service_command(mod: str, cmd: str) -> None:
 
     svc = f'dnx-{mod.replace("_", "-")}'
     try:
+        if (mod == 'webui'):
+            dnx_run(f'sudo systemctl {cmd} nginx', shell=True)
+
         dnx_run(f'sudo systemctl {cmd} {svc}', shell=True)
     except CalledProcessError as cpe:
         if (cmd == 'status'):

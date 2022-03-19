@@ -13,6 +13,7 @@ Group=dnx
 WorkingDirectory=/home/dnx/dnxfirewall
 ExecStart=uwsgi --socket dnx_webui/webui.sock --chmod-socket=660 --mount /=dnx_webui:app --master --processes 2 --enable-threads
 
+Environment=INIT=True
 Environment=HOME_DIR=/home/dnx/dnxfirewall
 Environment=WEB_DIR=/home/dnx/dnxfirewall/dnx_webui
 Environment=SYSTEMD_PAGER=

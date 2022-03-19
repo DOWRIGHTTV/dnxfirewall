@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import os
+import sys
+
 # ==================
 # DNXFIREWALL WEBUI
 # ==================
-if (__name__ == '__main__'):
-    __all__ = ('app',)
+INITIALIZE_MODULE = os.environ.get('INIT', False)
 
-    import os
-    import sys
+if (INITIALIZE_MODULE):
+    __all__ = ('app',)
 
     HOME_DIR = os.environ['HOME_DIR']
     WEB_DIR  = os.environ['WEB_DIR']
