@@ -148,3 +148,7 @@ table.striped > tbody > tr {
 
 .tr-even {
     background-color: rgba(242, 242, 242, 0.5); }
+
+/* materialize override */
+.no-border {
+  border-bottom: 0; }

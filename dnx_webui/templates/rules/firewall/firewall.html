@@ -41,10 +41,11 @@
                                 <label for="section">Ruleset</label>
                             </div>
                         </form>
-                        <a id="revert" class="btn waves-effect waves-light modal-trigger red darken-2" href="#revert-modal"
-                           {% if not firewall_settings['pending_changes'] %} disabled {% endif %}>Revert</a>
-                        <a id="push" class="btn waves-effect waves-light modal-trigger green darken-2" href="#push-modal"
-                           {% if not firewall_settings['pending_changes'] %} disabled {% endif %}>Push</a>
+                        {% set dis = not firewall_settings['pending_changes'] -%}
+                        <a id="revert_rules" class="btn {% if dis %}btn-disabled{% endif %} waves-effect waves-light
+                            modal-trigger red darken-2" href="#revert-modal">Revert</a>
+                        <a id="push_rules" class="btn {% if dis %}btn-disabled{% endif %} waves-effect waves-light
+                            modal-trigger green darken-2" href="#push-modal">Push</a>
                         <a class="btn waves-effect waves-light modal-trigger blue-grey" href="#commit-modal">Commit</a>
                         <a class="btn waves-effect waves-light right" onclick="newRule()">Create Rule</a>
                     </div>
@@ -103,7 +104,11 @@
                                         </div>
                                     </td>
                                     <td class="rname">{{rule[1]}}</td>
-                                    <td class="rsrc_zone">{{rule[2]}}</td>
+                                    <td class="rsrc_zone">
+                                        {%- for subfield in rule[2] -%}
+                                            {{format_fw_obj(subfield)|safe}}
+                                        {% endfor -%}
+                                    </td>
                                     <td class="rsrc_network">
                                         {%- for subfield in rule[3] -%}
                                             {{format_fw_obj(subfield)|safe}}
@@ -114,7 +119,11 @@
                                             {{format_fw_obj(subfield)|safe}}
                                         {% endfor -%}
                                     </td>
-                                    <td class="rdst_zone">{{rule[5]}}</td>
+                                    <td class="rdst_zone">
+                                        {%- for subfield in rule[5] -%}
+                                            {{format_fw_obj(subfield)|safe}}
+                                        {% endfor -%}
+                                    </td>
                                     <td class="rdst_network">
                                         {%- for subfield in rule[6] -%}
                                             {{format_fw_obj(subfield)|safe}}
@@ -220,7 +229,7 @@
                             </tr>
                         </thead>
                         <tbody id="filter-table-body2">
-                            {% for id, name, group, type, value, description in firewall_settings['firewall_objects'] -%}
+                            {% for id, name, group, type, subtype, value, description in firewall_settings['firewall_objects'] -%}
                             <tr name="obj_{{name}}" id="{{id}}" style="height: 25px;">
                             {% if not 'built-in' in type -%}
                                 <td class="fw_obj">X</td>

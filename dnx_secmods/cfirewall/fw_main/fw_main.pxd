@@ -154,29 +154,47 @@ cdef enum:
 DEF SECURITY_PROFILE_COUNT = 3
 DEF MAX_ZONES = 16
 DEF MAX_OBJECTS = 100
+DEF MAX_SVC_OBJ_LIST_MEMBERS = 10
 
+# STANDARD ZONE ARRAY [10, 11]
 cdef struct ZoneArray:
     size_t          len
     uint_fast8_t    objects[MAX_OBJECTS]
 
+# STANDARD NETWORK OBJECT (HOST, NETWORK, RANGE, GEO)
 cdef struct NetworkObj:
     uint_fast8_t    type
     uint_fast32_t   netid
     uint_fast32_t   netmask
 
+# MAIN NETWORK ARRAY
 cdef struct NetworkArray:
     size_t          len
     NetworkObj      objects[MAX_OBJECTS]
 
+# STANDARD SERVICE OBJECT (SOLO or RANGE)
 cdef struct ServiceObj:
     uint_fast16_t   protocol
     uint_fast16_t   start_port
     uint_fast16_t   end_port
 
+# SERVICE OBJECT LIST (tcp/80:tcp/443)
+cdef struct ServiceList:
+    size_t          len
+    ServiceObj      objects[MAX_SVC_OBJ_LIST_MEMBERS]
+
+# UNION OF EACH SERVICE OBJECT TYPE
+cdef union ServiceObj_U:
+    uint_fast8_t    type
+    ServiceObj      object
+    ServiceList     list
+
+# MAIN SERVICE ARRAY
 cdef struct ServiceArray:
     size_t          len
-    ServiceObj      objects[MAX_OBJECTS]
+    ServiceObj_U    objects[MAX_OBJECTS]
 
+# COMPLETE RULE STRUCT - NO POINTERS
 cdef struct FWrule:
     bint            enabled
 

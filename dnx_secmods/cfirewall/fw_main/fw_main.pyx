@@ -47,7 +47,12 @@ DEF SERVICE = 2
 # network object types. not using enums because they need to be hardcoded anyway.
 DEF IP_ADDRESS = 1
 DEF IP_NETWORK = 2
-DEF IP_GEO = 3
+DEF IP_RANGE   = 3
+DEF IP_GEO     = 6
+
+DEF SVC_SOLO  = 1
+DEF SVC_RANGE = 2
+DEF SVC_LIST  = 3
 
 cdef bint PROXY_BYPASS  = 0
 cdef bint VERBOSE = 0
@@ -283,8 +288,8 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
             # ------------------------------------------------------------------ #
             # VERBOSE MATCH OUTPUT | only showing matches due to too much output
             # ------------------------------------------------------------------ #
-            if (VERBOSE):
-                rule_print(&rule)
+            # if (VERBOSE):
+            #     rule_print(&rule)
 
             # ------------------------------------------------------------------ #
             # MATCH ACTION | return rule options
@@ -359,7 +364,7 @@ cdef inline bint zone_match(ZoneArray rule_defs, uint8_t pkt_zone) nogil:
     return NO_MATCH
 
 # generic function for source OR destination network obj matching
-cdef inline bint network_match(NetworkArray net_defs, uint32_t iph_ip, uint16_t country) nogil:
+cdef inline bint network_match(NetworkArray net_array, uint32_t iph_ip, uint16_t country) nogil:
 
     cdef:
         size_t i
@@ -368,24 +373,30 @@ cdef inline bint network_match(NetworkArray net_defs, uint32_t iph_ip, uint16_t 
     if (VERBOSE):
         printf(<char*>'checking ip->%u, country->%u\n', iph_ip, <uint8_t>country)
 
-    for i in range(net_defs.len):
+    for i in range(net_array.len):
 
-        net = net_defs.objects[i]
+        net = net_array.objects[i]
 
-        if (VERBOSE):
-            obj_print(NETWORK, &net)
-
+        # --------------------
+        # TYPE -> HOST (1)
+        # --------------------
         if (net.type == IP_ADDRESS):
 
             if (iph_ip == net.netid):
                 return MATCH
 
+        # --------------------
+        # TYPE -> NETWORK (2)
+        # --------------------
         elif (net.type == IP_NETWORK):
 
         # using the rule object mask to floor the packets ip and checking against FWrule network id
             if (iph_ip & net.netmask == net.netid):
                 return MATCH
 
+        # --------------------
+        # TYPE -> GEO (6)
+        # --------------------
         elif (net.type == IP_GEO):
 
             # country code/id comparison
@@ -399,29 +410,48 @@ cdef inline bint network_match(NetworkArray net_defs, uint32_t iph_ip, uint16_t 
     return NO_MATCH
 
 # generic function that can handle source OR destination proto/port matching
-cdef inline bint service_match(ServiceArray svc_defs, uint16_t pkt_protocol, uint16_t pkt_port) nogil:
+cdef inline bint service_match(ServiceArray svc_array, uint16_t pkt_protocol, uint16_t pkt_port) nogil:
 
     cdef:
         size_t i
-        ServiceObj svc
+        ServiceObj  svc
+        ServiceList svc_list
 
     if (VERBOSE):
         printf(<char*>'packet protocol->%u, port->%u\n', pkt_protocol, pkt_port)
 
-    for i in range(svc_defs.len):
+    for i in range(svc_array.len):
 
-        svc = svc_defs.objects[i]
+        # --------------------
+        # STD SVC INSPECTION
+        # --------------------
+        if (svc_array.objects[i].type != SVC_LIST):
+            svc = svc_array.objects[i].object
 
-        if (VERBOSE):
-            obj_print(SERVICE, &svc)
+            # PROTOCOL
+            if (pkt_protocol != svc.protocol and svc.protocol != ANY_PROTOCOL):
+                continue
 
-        # PROTOCOL
-        if (pkt_protocol != svc.protocol and svc.protocol != ANY_PROTOCOL):
-            continue
+            # PORTS, ICMP will match on the first port start value (looking for 0)
+            if (svc.start_port <= pkt_port <= svc.end_port):
+                return MATCH
 
-        # PORTS, ICMP will match on the first port start value (looking for 0)
-        if (svc.start_port <= pkt_port <= svc.end_port):
-            return MATCH
+        # --------------------
+        # SVC LIST INSPECTION
+        # --------------------
+        else:
+            svc_list = svc_array.objects[i].list
+
+            for i in range(svc_list.len):
+                svc_obj = svc_list.objects[i]
+
+                # PROTOCOL
+                if (pkt_protocol != svc_obj.protocol and svc_obj.protocol != ANY_PROTOCOL):
+                    continue
+
+                # PORTS, ICMP will match on the first port start value (looking for 0)
+                if (svc_obj.start_port <= pkt_port <= svc_obj.end_port):
+                    return MATCH
 
     if (VERBOSE):
         printf(<char*>'no match for packet protocol->%u, port->%u\n', pkt_protocol, pkt_port)
@@ -444,39 +474,39 @@ cdef inline void pkt_print(HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header)
     # printf('src-geo=%u, dst-geo=%u\n', src_country, dst_country)
     printf(<char*>'^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n')
 
-# TODO: add network object support to print
-cdef inline void rule_print(FWrule *rule) nogil:
-
-    cdef:
-        size_t i
-        ServiceObj *src_services = rule.s_services.objects
-        ServiceObj *dst_services = rule.d_services.objects
-
-    printf(<char*>'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv-RULE-vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n')
-    printf(<char*>'src_zones=(')
-    for i in range(rule.s_zones.len):
-        printf('%u ', <uint8_t>rule.s_zones.objects[i])
-    printf(<char*>')\n')
-
-    for i in range(rule.d_zones.len):
-        printf('%u ', <uint8_t>rule.s_zones.objects[i])
-    printf(<char*>')\n')
-
-    printf(<char*>'src_zones=(')
-    for i in range(rule.s_services.len):
-        printf('protocol->%u, ports->(%u, %u) ',
-                <uint8_t>src_services[i].protocol, <uint16_t>src_services[i].start_port, <uint16_t>src_services[i].end_port)
-    printf(<char*>')\n')
-
-    printf(<char*> 'dst_zones=(')
-    for i in range(rule.s_services.len):
-        printf('protocol->%u, ports->(%u, %u) ',
-               <uint8_t>dst_services[i].protocol, <uint16_t>dst_services[i].start_port, <uint16_t>dst_services[i].end_port)
-    printf(<char*>')\n')
-
-    # printf('rule-s netid=%lu\n', rule.s_net_id)
-    # printf('rule-d netid=%lu\n', rule.d_net_id)
-    printf(<char*>'^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n')
+# # TODO: add network object support to print
+# cdef inline void rule_print(FWrule *rule) nogil:
+#
+#     cdef:
+#         size_t i
+#         ServiceObj *src_services = rule.s_services.objects
+#         ServiceObj *dst_services = rule.d_services.objects
+#
+#     printf(<char*>'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv-RULE-vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n')
+#     printf(<char*>'src_zones=(')
+#     for i in range(rule.s_zones.len):
+#         printf('%u ', <uint8_t>rule.s_zones.objects[i])
+#     printf(<char*>')\n')
+#
+#     for i in range(rule.d_zones.len):
+#         printf('%u ', <uint8_t>rule.s_zones.objects[i])
+#     printf(<char*>')\n')
+#
+#     printf(<char*>'src_zones=(')
+#     for i in range(rule.s_services.len):
+#         printf('protocol->%u, ports->(%u, %u) ',
+#             <uint8_t>src_services[i].protocol, <uint16_t>src_services[i].start_port, <uint16_t>src_services[i].end_port)
+#     printf(<char*>')\n')
+#
+#     printf(<char*> 'dst_zones=(')
+#     for i in range(rule.s_services.len):
+#         printf('protocol->%u, ports->(%u, %u) ',
+#             <uint8_t>dst_services[i].protocol, <uint16_t>dst_services[i].start_port, <uint16_t>dst_services[i].end_port)
+#     printf(<char*>')\n')
+#
+#     # printf('rule-s netid=%lu\n', rule.s_net_id)
+#     # printf('rule-d netid=%lu\n', rule.d_net_id)
+#     printf(<char*>'^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n')
 
 cdef inline void obj_print(int name, void *object) nogil:
 
@@ -525,7 +555,10 @@ cdef void process_traffic(nfq_handle *h) nogil:
 cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
 
     cdef:
-        size_t i
+        size_t i, ix, svc_list_len
+
+        ServiceObj  svc_object
+        ServiceList list_object
 
         FWrule *fw_rule = &firewall_rules[ruleset][pos]
 
@@ -544,11 +577,32 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
         fw_rule.s_networks.objects[i].netid   = <uint_fast32_t>rule['src_network'][i][1]
         fw_rule.s_networks.objects[i].netmask = <uint_fast32_t>rule['src_network'][i][2]
 
+    # -----------------------
+    # SOURCE SERVICE OBJECTS
+    # -----------------------
     fw_rule.s_services.len = <size_t>len(rule['src_service'])
     for i in range(fw_rule.s_services.len):
-        fw_rule.s_services.objects[i].protocol   = <uint_fast16_t>rule['src_service'][i][0]
-        fw_rule.s_services.objects[i].start_port = <uint_fast16_t>rule['src_service'][i][1]
-        fw_rule.s_services.objects[i].end_port   = <uint_fast16_t>rule['src_service'][i][2]
+        fw_rule.s_services.objects[i].type = <uint_fast8_t>rule['src_service'][i][0]
+
+        # STANDARD OBJECT ASSIGNMENT
+        if (fw_rule.s_services.objects[i].type != SVC_LIST):
+            svc_object = fw_rule.s_services.objects[i].object
+
+            svc_object.protocol   = <uint_fast16_t>rule['src_service'][i][1]
+            svc_object.start_port = <uint_fast16_t>rule['src_service'][i][2]
+            svc_object.end_port   = <uint_fast16_t>rule['src_service'][i][3]
+
+        # SERVICE LIST ASSIGNMENT
+        else:
+            list_object = fw_rule.s_services.objects[i].list
+
+            list_object.len = <size_t>(len(rule['src_service'][i])-1)
+            for ix in range(list_object.len):
+
+                # 0 START INDEX ON FW RULE SIZE, 1 START INDEX PYTHON DICT SIDE (to first index for size)
+                list_object.objects[ix].protocol   = <uint_fast16_t>rule['src_service'][i+1][ix][0]
+                list_object.objects[ix].start_port = <uint_fast16_t>rule['src_service'][i+1][ix][1]
+                list_object.objects[ix].end_port   = <uint_fast16_t>rule['src_service'][i+1][ix][2]
 
     # ===========
     # DESTINATION
@@ -563,12 +617,36 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
         fw_rule.d_networks.objects[i].netid   = <uint_fast32_t>rule['dst_network'][i][1]
         fw_rule.d_networks.objects[i].netmask = <uint_fast32_t>rule['dst_network'][i][2]
 
+    # -----------------------
+    # SOURCE SERVICE OBJECTS
+    # -----------------------
     fw_rule.d_services.len = <size_t>len(rule['dst_service'])
     for i in range(fw_rule.d_services.len):
-        fw_rule.d_services.objects[i].protocol   = <uint_fast16_t>rule['dst_service'][i][0]
-        fw_rule.d_services.objects[i].start_port = <uint_fast16_t>rule['dst_service'][i][1]
-        fw_rule.d_services.objects[i].end_port   = <uint_fast16_t>rule['dst_service'][i][2]
+        fw_rule.d_services.objects[i].type = <uint_fast8_t>rule['dst_service'][i][0]
 
+        # STANDARD OBJECT ASSIGNMENT
+        if (fw_rule.d_services.objects[i].type != SVC_LIST):
+            svc_object = fw_rule.d_services.objects[i].object
+
+            svc_object.protocol   = <uint_fast16_t>rule['dst_service'][i][1]
+            svc_object.start_port = <uint_fast16_t>rule['dst_service'][i][2]
+            svc_object.end_port   = <uint_fast16_t>rule['dst_service'][i][3]
+
+        # SERVICE LIST ASSIGNMENT
+        else:
+            list_object = fw_rule.d_services.objects[i].list
+
+            list_object.len = <size_t>(len(rule['dst_service'][i])-1)
+            for ix in range(list_object.len):
+
+                # 0 START INDEX ON FW RULE SIZE, 1 START INDEX PYTHON DICT SIDE (to first index for size)
+                list_object.objects[ix].protocol   = <uint_fast16_t>rule['dst_service'][i+1][ix][0]
+                list_object.objects[ix].start_port = <uint_fast16_t>rule['dst_service'][i+1][ix][1]
+                list_object.objects[ix].end_port   = <uint_fast16_t>rule['dst_service'][i+1][ix][2]
+
+    # --------------------------
+    # RULE PROFILES AND ACTIONS
+    # --------------------------
     fw_rule.action = <uint_fast8_t>rule['action']
     fw_rule.log    = <uint_fast8_t>rule['log']
 

@@ -3,36 +3,34 @@ async function commitRules(table_id) {
     let FWsection = document.getElementById("section").value;
     let FWrules = tableToJson(table_id);
 
-    let success = await post("commit", {"section": `${FWsection}`, "rules": `${FWrules}`});
-    if (success) {
-        document.querySelector("#revert").disabled = false;
-        document.querySelector("#push").disabled = false;
+    let error = await post("commit", {"section": `${FWsection}`, "rules": `${FWrules}`});
+    if (!error) {
+        document.getElementById("revert_rules").classList.remove('btn-disabled');
+        document.getElementById("push_rules").classList.remove('btn-disabled');
     }
 }
 async function pushRules() {
-    let success = await post("push", {});
-    if (success) {
-        document.querySelector("#revert").disabled = true;
-        document.querySelector("#push").disabled = true;
+    let error = await post("push", {});
+    if (!error) {
+        document.getElementById("revert_rules").classList.add('btn-disabled');
+        document.getElementById("push_rules").classList.add('btn-disabled');
     }
 }
 async function post(endpoint, data) {
-        let response = await ajaxClient.post(`/${endpoint}`, data);
+        let result = await ajaxClient.post(`/${endpoint}`, data);
 
-        let Response = document.querySelector("#ajax-error-modal");
-        Response.querySelector("h5").innerText = response.message;
+        let message_popup = document.querySelector("#ajax-error-modal");
+        message_popup.querySelector("h5").innerText = result.message;
 
         let errorModal = M.Modal.init(
-            Response, {
-                dismissible: false
-            }
+            message_popup, {dismissible: false}
         );
         errorModal.open();
 
-        return response.status;
+        return result;
 }
 function tableToJson(table_id) {
-    const table = document.getElementById(`${table_id}`)
+    const table = document.getElementById(`${table_id}`);
     let data = {};
 
     for (let i=0; i<table.rows.length; i++) {

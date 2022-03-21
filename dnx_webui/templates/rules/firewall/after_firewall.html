@@ -109,8 +109,6 @@ function updateRule() {
                     '<i class="material-icons red darken-2">arrow_downward</i></a></div>'
 
     col[2].innerHTML = ruleEditor.querySelector(".ename").value;
-    col[3].innerHTML = ruleEditor.querySelector(".esrc_zone").querySelector("input").value.toLowerCase();
-    col[6].innerHTML = ruleEditor.querySelector(".edst_zone").querySelector("input").value.toLowerCase();
     col[9].innerHTML = ruleEditor.querySelector(".eaction").querySelector("input").value.toLowerCase(); // === "1" ? "ACCEPT" : "DROP";
     col[10].innerHTML = "N"; // ruleEditor.querySelector(".elog").value;
     col[11].innerHTML = ruleEditor.querySelector(".esec1_prof").value;
@@ -118,7 +116,7 @@ function updateRule() {
     col[13].innerHTML = ruleEditor.querySelector(".esec3_prof").value;
 
     let rData;
-    for (let fStr of ["src_network", "src_service", "dst_network", "dst_service"]) {
+    for (let fStr of ["src_zone", "src_network", "src_service", "dst_zone", "dst_network", "dst_service"]) {
         field = row.querySelector(`.r${fStr}`);
 
         rData = ruleEditor.querySelector(`.e${fStr}`).parentNode.querySelectorAll(".chip");
@@ -153,10 +151,10 @@ function newRule() {
             '</div>' +
         '</td>' +
         '<td class="rname">new_rule</td>' +
-        '<td class="rsrc_zone">any</td>' +
+        `<td class="rsrc_zone">${defaultChip}</td>` +
         `<td class="rsrc_network">${defaultChip}</td>` +
         `<td class="rsrc_service">${defaultChip}</td>` +
-        '<td class="rdst_zone">any</td>' +
+        `<td class="rdst_zone">${defaultChip}</td>` +
         `<td class="rdst_network">${defaultChip}</td>` +
         `<td class="rdst_service">${defaultChip}</td>` +
         '<td class="raction">drop</td>' +
@@ -233,10 +231,9 @@ function fillEditor(ruleEditor, ruleRow) {
             }
             else if (field === "enabled") {
                 const enabled = parseInt(ruleRow.getAttribute("data-enabled"));
-                {#console.log(enabled);#}
                 editor_field.checked = !!enabled;
             }
-            else if (["action", "src_zone", "dst_zone"].includes(field)) {
+            else if (["action"].includes(field)) {
                 let zone_value = rule_field.innerHTML.toUpperCase();
 
                 editor_field.querySelector("input").value = zone_value;
@@ -250,7 +247,7 @@ function fillEditor(ruleEditor, ruleRow) {
                     }
                 }
             }
-            else if (["src_network", "src_service", "dst_network", "dst_service"].includes(field)) {
+            else if (["src_zone", "src_network", "src_service", "dst_zone", "dst_network", "dst_service"].includes(field)) {
                 let dnxChips = editor_field.parentNode;
                 let chipArray = dnxChips.querySelectorAll(".chip");
 
@@ -268,16 +265,19 @@ function fillEditor(ruleEditor, ruleRow) {
         }
         finally {}
     }
-
     ruleEditor.children[0].id = `e${ruleRow.id}`
 }
 </script>
 <script>
-    //firewall object implementation (built from materialize chips)
-const fwObjectMap = {{firewall_settings.fw_object_map|tojson}}
-const objFormatMap =  {country: ["red", "language"], address: ["blue lighten-2", "tv"], service: ["orange lighten-2", "track_changes"]}
-const network_autofill = {{firewall_settings.network_autofill|tojson}}
-const service_autofill = {{firewall_settings.service_autofill|tojson}}
+//firewall object implementation (built from materialize chips)
+const fwObjectMap = {{firewall_settings.fw_object_map|tojson}};
+const objFormatMap =  {
+    address: ["blue lighten-2", "tv"], country: ["red", "language"],
+    service: ["orange lighten-2", "track_changes"], zone: ["purple lighten-2", "border_inner"]
+};
+const zone_autofill = {{firewall_settings.zone_autofill|tojson}};
+const network_autofill = {{firewall_settings.network_autofill|tojson}};
+const service_autofill = {{firewall_settings.service_autofill|tojson}};
 
 function initDNXChips(field) {
     let elem = document.querySelectorAll(`.${field}-chips`);
@@ -286,6 +286,9 @@ function initDNXChips(field) {
     let field_type = field.split('-')[1]
     if (field_type === "service") {
         set = service_autofill;
+    }
+    else if (field_type === "zone") {
+        set = zone_autofill;
     } else {
         set = network_autofill;
     }
@@ -301,7 +304,8 @@ function initDNXChips(field) {
         }
     })
 }
-
+let srcZoneObjects = initDNXChips("src-zone")
+let dstZoneObjects = initDNXChips("dst-zone")
 let srcNetworkObjects = initDNXChips("src-network")
 let dstNetworkObjects = initDNXChips("dst-network")
 let srcServiceObjects = initDNXChips("src-service")

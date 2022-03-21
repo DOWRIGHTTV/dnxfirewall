@@ -6,7 +6,7 @@ import os
 import shutil
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import HOME_DIR
+from dnx_gentools.def_constants import HOME_DIR, ppt
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, write_configuration, calculate_file_hash
 
 from dnx_routines.logging.log_client import Log
@@ -89,9 +89,11 @@ class FirewallManage:
             for section in cls.sections:
 
                 for rule in fw_rule_copy[section].values():
+                    rule['src_zone'] = [obj_lookup(x, convert=True) for x in rule['src_zone']]
                     rule['src_network'] = [obj_lookup(x, convert=True) for x in rule['src_network']]
                     rule['src_service'] = [obj_lookup(x, convert=True) for x in rule['src_service']]
 
+                    rule['dst_zone'] = [obj_lookup(x, convert=True) for x in rule['dst_zone']]
                     rule['dst_network'] = [obj_lookup(x, convert=True) for x in rule['dst_network']]
                     rule['dst_service'] = [obj_lookup(x, convert=True) for x in rule['dst_service']]
 
@@ -100,6 +102,8 @@ class FirewallManage:
             os.replace(COPY_RULE_FILE, ACTIVE_RULE_FILE)
 
             push_error = False
+
+            ppt(fw_rule_copy)
 
         return push_error, cls.is_pending_changes()
 

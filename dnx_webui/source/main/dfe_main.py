@@ -877,9 +877,10 @@ def merge_items(a1, a2):
     return new_list
 
 def format_fw_obj(fw_obj, /):
+    print(fw_obj)
     properties = {
-        'country': ['red', 'language'], 'address': ['blue lighten-2', 'tv'],
-        'service': ['orange lighten-2', 'track_changes']
+        'address': ['blue lighten-2', 'tv'], 'country': ['red', 'language'],
+        'service': ['orange lighten-2', 'track_changes'], 'zone': ['purple lighten-2', 'border_inner']
     }.get(fw_obj[3], ['', ''])
 
     return (f'<div class="chip tooltipped {properties[0]}" data-html="true" data-tooltip="<p style=width:160px>'

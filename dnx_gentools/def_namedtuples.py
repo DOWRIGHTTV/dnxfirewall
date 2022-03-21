@@ -30,6 +30,15 @@ class Item(_NamedTuple):
     key: _Any
     value: _Any
 
+class FW_OBJECT(_NamedTuple):
+    id: str
+    name: str
+    origin: str
+    type: str
+    subtype: int
+    value: str
+    description: str = ''
+
 
 # DHCP SERVER
 DHCP_REQUEST_INFO = _namedtuple(

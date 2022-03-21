@@ -1,263 +1,270 @@
-id,name,type,type,value,description
+id,name,origin,type,subtype,value,description
 
 # SERVICE
-9001,tcp_any,built-in,service,tcp/0,all TCP ports (1-65535)
-9002,udp_any,built-in,service,udp/0,all UDP ports (1-65535)
-9003,icmp,built-in,service,icmp/0,commonly: Ping
-9004,tcp_22,built-in,service,tcp/22,commonly: Secure Shell (SSH)
-9005,tcp_25,built-in,service,tcp/25,commonly: Simple Mail Transfer Protocol (SMTP)
-9006,udp_53,built-in,service,udp/53,commonly: Domain Name System (DNS)
-9007,udp_67,built-in,service,udp/67,commonly: Dynamic Host Configuration Protocol (DHCP) Server
-9008,udp_68,built-in,service,udp/68,commonly: Dynamic Host Configuration Protocol (DHCP) Client
-9009,tcp_80,built-in,service,tcp/80,commonly: Hypertext Transfer Protocol (HTTP)
-9010,tcp_110,built-in,service,tcp/110,commonly: Post Office Protocol (POP) version 3
-9011,udp_123,built-in,service,udp/123,commonly: Network Time Protocol (NTP)
-9012,tcp_143,built-in,service,tcp/143,commonly: Internet Message Access Protocol (IMAP)
-9013,udp_161,built-in,service,udp/161,commonly: Simple Network Management Protocol (SNMP)
-9014,udp_162,built-in,service,udp/162,commonly: Simple Network Management Protocol Traps (SNMP-Traps)
-9015,udp_389,built-in,service,udp/389,commonly: Connectionless Lightweight Directory Access Protocol (CLDAP)
-9016,tcp_389,built-in,service,tcp/389,commonly: Lightweight Directory Access Protocol (LDAP)
-9017,tcp_443,built-in,service,tcp/443,commonly: Hypertext Transfer Protocol over SSL/TLS (HTTPS)
-9018,tcp_636,built-in,service,tcp/636,commonly: Lightweight Directory Access Protocol over SSL/TLS (LDAPS)
-9019,tcp_993,built-in,service,tcp/993,commonly: Internet Message Access Protocol Secure (IMAPS)
-9020,tcp_587,built-in,service,tcp/587,commonly: Message Submission for SMTP
-9021,tcp_system_ports,built-in,service,tcp/1-1023,Port range used for internet/system services (privileged)
-9022,tcp_user_ports,built-in,service,tcp/1024-49151,Port range for general use (non privileged)
-9023,tcp_dynamic_ports,built-in,service,tcp/49152-65535,Port range which will never be assigned by IANA
-9024,udp_system_ports,built-in,service,udp/1-1023,Port range used for internet/system services (privileged)
-9025,udp_user_ports,built-in,service,udp/1024-49151,Port range for general use (non privileged)
-9026,udp_dynamic_ports,built-in,service,udp/49152-65535,Port range which will never be assigned by IANA
+9001,tcp_any,built-in,service,1,tcp/0,All TCP ports (1-65535)
+9002,udp_any,built-in,service,1,udp/0,All UDP ports (1-65535)
+9003,icmp,built-in,service,1,icmp/0,commonly: Ping
+9004,tcp_22,built-in,service,1,tcp/22,commonly: Secure Shell (SSH)
+9005,tcp_25,built-in,service,1,tcp/25,commonly: Simple Mail Transfer Protocol (SMTP)
+9006,udp_53,built-in,service,1,udp/53,commonly: Domain Name System (DNS)
+9007,udp_67,built-in,service,1,udp/67,commonly: Dynamic Host Configuration Protocol (DHCP) Server
+9008,udp_68,built-in,service,1,udp/68,commonly: Dynamic Host Configuration Protocol (DHCP) Client
+9009,tcp_80,built-in,service,1,tcp/80,commonly: Hypertext Transfer Protocol (HTTP)
+9010,tcp_110,built-in,service,1,tcp/110,commonly: Post Office Protocol (POP) version 3
+9011,udp_123,built-in,service,1,udp/123,commonly: Network Time Protocol (NTP)
+9012,tcp_143,built-in,service,1,tcp/143,commonly: Internet Message Access Protocol (IMAP)
+9013,udp_161,built-in,service,1,udp/161,commonly: Simple Network Management Protocol (SNMP)
+9014,udp_162,built-in,service,1,udp/162,commonly: Simple Network Management Protocol Traps (SNMP-Traps)
+9015,udp_389,built-in,service,1,udp/389,commonly: Connectionless Lightweight Directory Access Protocol (CLDAP)
+9016,tcp_389,built-in,service,1,tcp/389,commonly: Lightweight Directory Access Protocol (LDAP)
+9017,tcp_443,built-in,service,1,tcp/443,commonly: Hypertext Transfer Protocol over SSL/TLS (HTTPS)
+9018,tcp_636,built-in,service,1,tcp/636,commonly: Lightweight Directory Access Protocol over SSL/TLS (LDAPS)
+9019,tcp_993,built-in,service,1,tcp/993,commonly: Internet Message Access Protocol Secure (IMAPS)
+9020,tcp_587,built-in,service,1,tcp/587,commonly: Message Submission for SMTP
+9021,tcp_system_ports,built-in,service,2,tcp/1-1023,Port range used for internet/system services (privileged)
+9022,tcp_user_ports,built-in,service,2,tcp/1024-49151,Port range for general use (non privileged)
+9023,tcp_dynamic_ports,built-in,service,2,tcp/49152-65535,Port range which will never be assigned by IANA
+9024,udp_system_ports,built-in,service,2,udp/1-1023,Port range used for internet/system services (privileged)
+9025,udp_user_ports,built-in,service,2,udp/1024-49151,Port range for general use (non privileged)
+9026,udp_dynamic_ports,built-in,service,2,udp/49152-65535,Port range which will never be assigned by IANA
 
 # NAMED SERVICE | tweak webui to allow this
-9051,web-browsing,built-in,service,tcp/80:tcp/443,Standard ports used for (secure) web browsing
+9050,web-browsing,built-in,service,3,tcp/80:tcp/443,Standard ports used for (secure) web browsing
+
+# ZONES
+9090,any_zone,built-in,zone,1,99,Always matches the zone of the packet
+9091,wan_zone,built-in,zone,2,10,
+9092,lan_zone,built-in,zone,2,11,
+9093,dmz_zone,built-in,zone,2,12,
+9099,sys_zone,built-in,zone,1,0,Zone used for direct system communication (webui; ssh; etc.)
 
 # ADDRESS
-9101,any_network,built-int,address,0.0.0.0/0,
-9102,lan_network,built-in,address,192.168.83.0/24,
-9103,lan_interface,built-in,address,192.168.83.1/32,
-9104,dmz_network,built-in,address,192.168.84.0/24,
-9105,dmz_interface,built-in,address,192.168.84.1/32,
+9100,any_network,built-int,address,2,0.0.0.0/0,
+9101,lan_network,built-in,address,2,192.168.83.0/24,
+9102,lan_interface,built-in,address,1,192.168.83.1/32,
+9103,dmz_network,built-in,address,2,192.168.84.0/24,
+9104,dmz_interface,built-in,address,1,192.168.84.1/32,
 
 # GEOLOCATION
-9200,algeria,built-in,country,algeria,region: africa
-9201,angola,built-in,country,angola,region: africa
-9202,benin,built-in,country,benin,region: africa
-9203,botswana,built-in,country,botswana,region: africa
-9204,burkina_faso,built-in,country,burkina_faso,region: africa
-9205,burundi,built-in,country,burundi,region: africa
-9207,cameroon,built-in,country,cameroon,region: africa
-9208,central_african_republic,built-in,country,central_african_republic,region: africa
-9209,chad,built-in,country,chad,region: africa
-9210,comoros,built-in,country,comoros,region: africa
-9212,djibouti,built-in,country,djibouti,region: africa
-9214,egypt,built-in,country,egypt,region: africa
-9215,equatorial_guinea,built-in,country,equatorial_guinea,region: africa
-9216,eritrea,built-in,country,eritrea,region: africa
-9218,ethiopia,built-in,country,ethiopia,region: africa
-9219,gabon,built-in,country,gabon,region: africa
-9220,gambia,built-in,country,gambia,region: africa
-9221,ghana,built-in,country,ghana,region: africa
-9222,guinea,built-in,country,guinea,region: africa
-9225,kenya,built-in,country,kenya,region: africa
-9226,lesotho,built-in,country,lesotho,region: africa
-9227,liberia,built-in,country,liberia,region: africa
-9228,libya,built-in,country,libya,region: africa
-9229,madagascar,built-in,country,madagascar,region: africa
-9230,malawi,built-in,country,malawi,region: africa
-9231,mali,built-in,country,mali,region: africa
-9232,mauritania,built-in,country,mauritania,region: africa
-9233,mauritius,built-in,country,mauritius,region: africa
-9234,mayotte,built-in,country,mayotte,region: africa
-9235,morocco,built-in,country,morocco,region: africa
-9236,mozambique,built-in,country,mozambique,region: africa
-9237,namibia,built-in,country,namibia,region: africa
-9238,niger,built-in,country,niger,region: africa
-9239,nigeria,built-in,country,nigeria,region: africa
-9240,reunion,built-in,country,reunion,region: africa
-9241,rwanda,built-in,country,rwanda,region: africa
-9242,saint_helena,built-in,country,saint_helena,region: africa
-9244,senegal,built-in,country,senegal,region: africa
-9245,seychelles,built-in,country,seychelles,region: africa
-9246,sierra_leone,built-in,country,sierra_leone,region: africa
-9247,somalia,built-in,country,somalia,region: africa
-9248,south_africa,built-in,country,south_africa,region: africa
-9249,south_sudan,built-in,country,south_sudan,region: africa
-9250,sudan,built-in,country,sudan,region: africa
-9251,tanzania,built-in,country,tanzania,region: africa
-9252,togo,built-in,country,togo,region: africa
-9253,tunisia,built-in,country,tunisia,region: africa
-9254,uganda,built-in,country,uganda,region: africa
-9255,western_sahara,built-in,country,western_sahara,region: africa
-9256,zambia,built-in,country,zambia,region: africa
-9257,zimbabwe,built-in,country,zimbabwe,region: africa
-9300,afghanistan,built-in,country,afghanistan,region: asia
-9301,armenia,built-in,country,armenia,region: asia
-9302,azerbaijan,built-in,country,azerbaijan,region: asia
-9303,bahrain,built-in,country,bahrain,region: asia
-9304,bangladesh,built-in,country,bangladesh,region: asia
-9305,bhutan,built-in,country,bhutan,region: asia
-9306,british_indian_ocean_territory,built-in,country,british_indian_ocean_territory,region: asia
-9308,cambodia,built-in,country,cambodia,region: asia
-9309,china,built-in,country,china,region: asia
-9310,cocos_islands,built-in,country,cocos_islands,region: asia
-9311,georgia,built-in,country,georgia,region: asia
-9312,hong_kong,built-in,country,hong_kong,region: asia
-9313,india,built-in,country,india,region: asia
-9314,indonesia,built-in,country,indonesia,region: asia
-9315,iran,built-in,country,iran,region: asia
-9316,iraq,built-in,country,iraq,region: asia
-9317,israel,built-in,country,israel,region: asia
-9318,japan,built-in,country,japan,region: asia
-9319,jordan,built-in,country,jordan,region: asia
-9320,kazakhstan,built-in,country,kazakhstan,region: asia
-9321,kuwait,built-in,country,kuwait,region: asia
-9322,kyrgyzstan,built-in,country,kyrgyzstan,region: asia
-9323,laos,built-in,country,laos,region: asia
-9324,lebanon,built-in,country,lebanon,region: asia
-9325,macao,built-in,country,macao,region: asia
-9326,malaysia,built-in,country,malaysia,region: asia
-9327,maldives,built-in,country,maldives,region: asia
-9328,mongolia,built-in,country,mongolia,region: asia
-9329,myanmar,built-in,country,myanmar,region: asia
-9330,nepal,built-in,country,nepal,region: asia
-9331,north_korea,built-in,country,north_korea,region: asia
-9332,oman,built-in,country,oman,region: asia
-9333,pakistan,built-in,country,pakistan,region: asia
-9334,palestine,built-in,country,palestine,region: asia
-9335,philippines,built-in,country,philippines,region: asia
-9336,qatar,built-in,country,qatar,region: asia
-9337,saudi_arabia,built-in,country,saudi_arabia,region: asia
-9338,singapore,built-in,country,singapore,region: asia
-9339,south_korea,built-in,country,south_korea,region: asia
-9340,sri_lanka,built-in,country,sri_lanka,region: asia
-9341,syria,built-in,country,syria,region: asia
-9342,taiwan,built-in,country,taiwan,region: asia
-9343,tajikistan,built-in,country,tajikistan,region: asia
-9344,thailand,built-in,country,thailand,region: asia
-9345,turkey,built-in,country,turkey,region: asia
-9346,turkmenistan,built-in,country,turkmenistan,region: asia
-9347,united_arab_emirates,built-in,country,united_arab_emirates,region: asia
-9348,uzbekistan,built-in,country,uzbekistan,region: asia
-9349,vietnam,built-in,country,vietnam,region: asia
-9350,yemen,built-in,country,yemen,region: asia
-9401,albania,built-in,country,albania,region: europe
-9402,andorra,built-in,country,andorra,region: europe
-9403,austria,built-in,country,austria,region: europe
-9404,belarus,built-in,country,belarus,region: europe
-9405,belgium,built-in,country,belgium,region: europe
-9406,bosnia_and_herzegovina,built-in,country,bosnia_and_herzegovina,region: europe
-9407,bulgaria,built-in,country,bulgaria,region: europe
-9408,croatia,built-in,country,croatia,region: europe
-9409,cyprus,built-in,country,cyprus,region: europe
-9411,denmark,built-in,country,denmark,region: europe
-9412,estonia,built-in,country,estonia,region: europe
-9413,faroe_islands,built-in,country,faroe_islands,region: europe
-9414,finland,built-in,country,finland,region: europe
-9415,france,built-in,country,france,region: europe
-9416,germany,built-in,country,germany,region: europe
-9417,gibraltar,built-in,country,gibraltar,region: europe
-9418,greece,built-in,country,greece,region: europe
-9419,guernsey,built-in,country,guernsey,region: europe
-9420,hungary,built-in,country,hungary,region: europe
-9421,iceland,built-in,country,iceland,region: europe
-9422,ireland,built-in,country,ireland,region: europe
-9423,isle_of_man,built-in,country,isle_of_man,region: europe
-9424,italy,built-in,country,italy,region: europe
-9425,jersey,built-in,country,jersey,region: europe
-9427,latvia,built-in,country,latvia,region: europe
-9428,liechtenstein,built-in,country,liechtenstein,region: europe
-9429,lithuania,built-in,country,lithuania,region: europe
-9430,luxembourg,built-in,country,luxembourg,region: europe
-9431,malta,built-in,country,malta,region: europe
-9432,moldova,built-in,country,moldova,region: europe
-9433,montenegro,built-in,country,montenegro,region: europe
-9434,netherlands,built-in,country,netherlands,region: europe
-9436,norway,built-in,country,norway,region: europe
-9437,poland,built-in,country,poland,region: europe
-9438,portugal,built-in,country,portugal,region: europe
-9440,romania,built-in,country,romania,region: europe
-9441,russian_federation,built-in,country,russian_federation,region: europe
-9442,san_marino,built-in,country,san_marino,region: europe
-9443,serbia,built-in,country,serbia,region: europe
-9444,slovakia,built-in,country,slovakia,region: europe
-9445,slovenia,built-in,country,slovenia,region: europe
-9446,spain,built-in,country,spain,region: europe
-9448,sweden,built-in,country,sweden,region: europe
-9449,switzerland,built-in,country,switzerland,region: europe
-9450,ukraine,built-in,country,ukraine,region: europe
-9451,united_kingdom,built-in,country,united_kingdom,region: europe
-9500,bouvet_island,built-in,country,bouvet_island,region: antarctica
-9501,french_southern_territories,built-in,country,french_southern_territories,region: antarctica
-9503,south_georgia_and_the_south_sandwich_islands,built-in,country,south_georgia_and_the_south_sandwich_islands,region: antarctica
-9600,american_samoa,built-in,country,american_samoa,region: oceania
-9601,australia,built-in,country,australia,region: oceania
-9602,christmas_island,built-in,country,christmas_island,region: oceania
-9603,cook_islands,built-in,country,cook_islands,region: oceania
-9606,fiji,built-in,country,fiji,region: oceania
-9607,french_polynesia,built-in,country,french_polynesia,region: oceania
-9608,guam,built-in,country,guam,region: oceania
-9609,kiribati,built-in,country,kiribati,region: oceania
-9610,marshall_islands,built-in,country,marshall_islands,region: oceania
-9611,nauru,built-in,country,nauru,region: oceania
-9612,new_caledonia,built-in,country,new_caledonia,region: oceania
-9613,new_zealand,built-in,country,new_zealand,region: oceania
-9614,niue,built-in,country,niue,region: oceania
-9615,norfolk_island,built-in,country,norfolk_island,region: oceania
-9616,northern_mariana_islands,built-in,country,northern_mariana_islands,region: oceania
-9617,palau,built-in,country,palau,region: oceania
-9618,papua_new_guinea,built-in,country,papua_new_guinea,region: oceania
-9620,samoa,built-in,country,samoa,region: oceania
-9621,solomon_islands,built-in,country,solomon_islands,region: oceania
-9622,tokelau,built-in,country,tokelau,region: oceania
-9623,tonga,built-in,country,tonga,region: oceania
-9624,tuvalu,built-in,country,tuvalu,region: oceania
-9625,us_minor_outlying_islands,built-in,country,us_minor_outlying_islands,region: oceania
-9626,vanuatu,built-in,country,vanuatu,region: oceania
-9700,anguilla,built-in,country,anguilla,region: north_america
-9701,antigua_and_barbuda,built-in,country,antigua_and_barbuda,region: north_america
-9702,aruba,built-in,country,aruba,region: north_america
-9703,bahamas,built-in,country,bahamas,region: north_america
-9704,barbados,built-in,country,barbados,region: north_america
-9705,belize,built-in,country,belize,region: north_america
-9706,bermuda,built-in,country,bermuda,region: north_america
-9707,british_virgin_islands,built-in,country,british_virgin_islands,region: north_america
-9708,canada,built-in,country,canada,region: north_america
-9709,cayman_islands,built-in,country,cayman_islands,region: north_america
-9710,costa_rica,built-in,country,costa_rica,region: north_america
-9711,cuba,built-in,country,cuba,region: north_america
-9713,dominica,built-in,country,dominica,region: north_america
-9714,dominican_republic,built-in,country,dominican_republic,region: north_america
-9715,el_salvador,built-in,country,el_salvador,region: north_america
-9716,greenland,built-in,country,greenland,region: north_america
-9717,grenada,built-in,country,grenada,region: north_america
-9718,guadeloupe,built-in,country,guadeloupe,region: north_america
-9719,guatemala,built-in,country,guatemala,region: north_america
-9720,haiti,built-in,country,haiti,region: north_america
-9721,honduras,built-in,country,honduras,region: north_america
-9722,jamaica,built-in,country,jamaica,region: north_america
-9723,martinique,built-in,country,martinique,region: north_america
-9724,mexico,built-in,country,mexico,region: north_america
-9725,montserrat,built-in,country,montserrat,region: north_america
-9726,nicaragua,built-in,country,nicaragua,region: north_america
-9727,panama,built-in,country,panama,region: north_america
-9728,puerto_rico,built-in,country,puerto_rico,region: north_america
-9730,saint_lucia,built-in,country,saint_lucia,region: north_america
-9731,saint_martin,built-in,country,saint_martin,region: north_america
-9732,saint_pierre_and_miquelon,built-in,country,saint_pierre_and_miquelon,region: north_america
-9735,trinidad_and_tobago,built-in,country,trinidad_and_tobago,region: north_america
-9736,turks_and_caicos_islands,built-in,country,turks_and_caicos_islands,region: north_america
-9737,united_states,built-in,country,united_states,region: north_america
-9800,argentina,built-in,country,argentina,region: south_america
-9801,bolivia,built-in,country,bolivia,region: south_america
-9803,brazil,built-in,country,brazil,region: south_america
-9804,chile,built-in,country,chile,region: south_america
-9805,colombia,built-in,country,colombia,region: south_america
-9806,ecuador,built-in,country,ecuador,region: south_america
-9807,falkland_islands,built-in,country,falkland_islands,region: south_america
-9808,french_guiana,built-in,country,french_guiana,region: south_america
-9809,guyana,built-in,country,guyana,region: south_america
-9810,paraguay,built-in,country,paraguay,region: south_america
-9811,peru,built-in,country,peru,region: south_america
-9812,suriname,built-in,country,suriname,region: south_america
-9813,uruguay,built-in,country,uruguay,region: south_america
-9814,venezuela,built-in,country,venezuela,region: south_america
+9200,algeria,built-in,country,6,algeria,region: africa
+9201,angola,built-in,country,6,angola,region: africa
+9202,benin,built-in,country,6,benin,region: africa
+9203,botswana,built-in,country,6,botswana,region: africa
+9204,burkina_faso,built-in,country,6,burkina_faso,region: africa
+9205,burundi,built-in,country,6,burundi,region: africa
+9207,cameroon,built-in,country,6,cameroon,region: africa
+9208,central_african_republic,built-in,country,6,central_african_republic,region: africa
+9209,chad,built-in,country,6,chad,region: africa
+9210,comoros,built-in,country,6,comoros,region: africa
+9212,djibouti,built-in,country,6,djibouti,region: africa
+9214,egypt,built-in,country,6,egypt,region: africa
+9215,equatorial_guinea,built-in,country,6,equatorial_guinea,region: africa
+9216,eritrea,built-in,country,6,eritrea,region: africa
+9218,ethiopia,built-in,country,6,ethiopia,region: africa
+9219,gabon,built-in,country,6,gabon,region: africa
+9220,gambia,built-in,country,6,gambia,region: africa
+9221,ghana,built-in,country,6,ghana,region: africa
+9222,guinea,built-in,country,6,guinea,region: africa
+9225,kenya,built-in,country,6,kenya,region: africa
+9226,lesotho,built-in,country,6,lesotho,region: africa
+9227,liberia,built-in,country,6,liberia,region: africa
+9228,libya,built-in,country,6,libya,region: africa
+9229,madagascar,built-in,country,6,madagascar,region: africa
+9230,malawi,built-in,country,6,malawi,region: africa
+9231,mali,built-in,country,6,mali,region: africa
+9232,mauritania,built-in,country,6,mauritania,region: africa
+9233,mauritius,built-in,country,6,mauritius,region: africa
+9234,mayotte,built-in,country,6,mayotte,region: africa
+9235,morocco,built-in,country,6,morocco,region: africa
+9236,mozambique,built-in,country,6,mozambique,region: africa
+9237,namibia,built-in,country,6,namibia,region: africa
+9238,niger,built-in,country,6,niger,region: africa
+9239,nigeria,built-in,country,6,nigeria,region: africa
+9240,reunion,built-in,country,6,reunion,region: africa
+9241,rwanda,built-in,country,6,rwanda,region: africa
+9242,saint_helena,built-in,country,6,saint_helena,region: africa
+9244,senegal,built-in,country,6,senegal,region: africa
+9245,seychelles,built-in,country,6,seychelles,region: africa
+9246,sierra_leone,built-in,country,6,sierra_leone,region: africa
+9247,somalia,built-in,country,6,somalia,region: africa
+9248,south_africa,built-in,country,6,south_africa,region: africa
+9249,south_sudan,built-in,country,6,south_sudan,region: africa
+9250,sudan,built-in,country,6,sudan,region: africa
+9251,tanzania,built-in,country,6,tanzania,region: africa
+9252,togo,built-in,country,6,togo,region: africa
+9253,tunisia,built-in,country,6,tunisia,region: africa
+9254,uganda,built-in,country,6,uganda,region: africa
+9255,western_sahara,built-in,country,6,western_sahara,region: africa
+9256,zambia,built-in,country,6,zambia,region: africa
+9257,zimbabwe,built-in,country,6,zimbabwe,region: africa
+9300,afghanistan,built-in,country,6,afghanistan,region: asia
+9301,armenia,built-in,country,6,armenia,region: asia
+9302,azerbaijan,built-in,country,6,azerbaijan,region: asia
+9303,bahrain,built-in,country,6,bahrain,region: asia
+9304,bangladesh,built-in,country,6,bangladesh,region: asia
+9305,bhutan,built-in,country,6,bhutan,region: asia
+9306,british_indian_ocean_territory,built-in,country,6,british_indian_ocean_territory,region: asia
+9308,cambodia,built-in,country,6,cambodia,region: asia
+9309,china,built-in,country,6,china,region: asia
+9310,cocos_islands,built-in,country,6,cocos_islands,region: asia
+9311,georgia,built-in,country,6,georgia,region: asia
+9312,hong_kong,built-in,country,6,hong_kong,region: asia
+9313,india,built-in,country,6,india,region: asia
+9314,indonesia,built-in,country,6,indonesia,region: asia
+9315,iran,built-in,country,6,iran,region: asia
+9316,iraq,built-in,country,6,iraq,region: asia
+9317,israel,built-in,country,6,israel,region: asia
+9318,japan,built-in,country,6,japan,region: asia
+9319,jordan,built-in,country,6,jordan,region: asia
+9320,kazakhstan,built-in,country,6,kazakhstan,region: asia
+9321,kuwait,built-in,country,6,kuwait,region: asia
+9322,kyrgyzstan,built-in,country,6,kyrgyzstan,region: asia
+9323,laos,built-in,country,6,laos,region: asia
+9324,lebanon,built-in,country,6,lebanon,region: asia
+9325,macao,built-in,country,6,macao,region: asia
+9326,malaysia,built-in,country,6,malaysia,region: asia
+9327,maldives,built-in,country,6,maldives,region: asia
+9328,mongolia,built-in,country,6,mongolia,region: asia
+9329,myanmar,built-in,country,6,myanmar,region: asia
+9330,nepal,built-in,country,6,nepal,region: asia
+9331,north_korea,built-in,country,6,north_korea,region: asia
+9332,oman,built-in,country,6,oman,region: asia
+9333,pakistan,built-in,country,6,pakistan,region: asia
+9334,palestine,built-in,country,6,palestine,region: asia
+9335,philippines,built-in,country,6,philippines,region: asia
+9336,qatar,built-in,country,6,qatar,region: asia
+9337,saudi_arabia,built-in,country,6,saudi_arabia,region: asia
+9338,singapore,built-in,country,6,singapore,region: asia
+9339,south_korea,built-in,country,6,south_korea,region: asia
+9340,sri_lanka,built-in,country,6,sri_lanka,region: asia
+9341,syria,built-in,country,6,syria,region: asia
+9342,taiwan,built-in,country,6,taiwan,region: asia
+9343,tajikistan,built-in,country,6,tajikistan,region: asia
+9344,thailand,built-in,country,6,thailand,region: asia
+9345,turkey,built-in,country,6,turkey,region: asia
+9346,turkmenistan,built-in,country,6,turkmenistan,region: asia
+9347,united_arab_emirates,built-in,country,6,united_arab_emirates,region: asia
+9348,uzbekistan,built-in,country,6,uzbekistan,region: asia
+9349,vietnam,built-in,country,6,vietnam,region: asia
+9350,yemen,built-in,country,6,yemen,region: asia
+9401,albania,built-in,country,6,albania,region: europe
+9402,andorra,built-in,country,6,andorra,region: europe
+9403,austria,built-in,country,6,austria,region: europe
+9404,belarus,built-in,country,6,belarus,region: europe
+9405,belgium,built-in,country,6,belgium,region: europe
+9406,bosnia_and_herzegovina,built-in,country,6,bosnia_and_herzegovina,region: europe
+9407,bulgaria,built-in,country,6,bulgaria,region: europe
+9408,croatia,built-in,country,6,croatia,region: europe
+9409,cyprus,built-in,country,6,cyprus,region: europe
+9411,denmark,built-in,country,6,denmark,region: europe
+9412,estonia,built-in,country,6,estonia,region: europe
+9413,faroe_islands,built-in,country,6,faroe_islands,region: europe
+9414,finland,built-in,country,6,finland,region: europe
+9415,france,built-in,country,6,france,region: europe
+9416,germany,built-in,country,6,germany,region: europe
+9417,gibraltar,built-in,country,6,gibraltar,region: europe
+9418,greece,built-in,country,6,greece,region: europe
+9419,guernsey,built-in,country,6,guernsey,region: europe
+9420,hungary,built-in,country,6,hungary,region: europe
+9421,iceland,built-in,country,6,iceland,region: europe
+9422,ireland,built-in,country,6,ireland,region: europe
+9423,isle_of_man,built-in,country,6,isle_of_man,region: europe
+9424,italy,built-in,country,6,italy,region: europe
+9425,jersey,built-in,country,6,jersey,region: europe
+9427,latvia,built-in,country,6,latvia,region: europe
+9428,liechtenstein,built-in,country,6,liechtenstein,region: europe
+9429,lithuania,built-in,country,6,lithuania,region: europe
+9430,luxembourg,built-in,country,6,luxembourg,region: europe
+9431,malta,built-in,country,6,malta,region: europe
+9432,moldova,built-in,country,6,moldova,region: europe
+9433,montenegro,built-in,country,6,montenegro,region: europe
+9434,netherlands,built-in,country,6,netherlands,region: europe
+9436,norway,built-in,country,6,norway,region: europe
+9437,poland,built-in,country,6,poland,region: europe
+9438,portugal,built-in,country,6,portugal,region: europe
+9440,romania,built-in,country,6,romania,region: europe
+9441,russian_federation,built-in,country,6,russian_federation,region: europe
+9442,san_marino,built-in,country,6,san_marino,region: europe
+9443,serbia,built-in,country,6,serbia,region: europe
+9444,slovakia,built-in,country,6,slovakia,region: europe
+9445,slovenia,built-in,country,6,slovenia,region: europe
+9446,spain,built-in,country,6,spain,region: europe
+9448,sweden,built-in,country,6,sweden,region: europe
+9449,switzerland,built-in,country,6,switzerland,region: europe
+9450,ukraine,built-in,country,6,ukraine,region: europe
+9451,united_kingdom,built-in,country,6,united_kingdom,region: europe
+9500,bouvet_island,built-in,country,6,bouvet_island,region: antarctica
+9501,french_southern_territories,built-in,country,6,french_southern_territories,region: antarctica
+9503,south_georgia_and_the_south_sandwich_islands,built-in,country,6,south_georgia_and_the_south_sandwich_islands,region: antarctica
+9600,american_samoa,built-in,country,6,american_samoa,region: oceania
+9601,australia,built-in,country,6,australia,region: oceania
+9602,christmas_island,built-in,country,6,christmas_island,region: oceania
+9603,cook_islands,built-in,country,6,cook_islands,region: oceania
+9606,fiji,built-in,country,6,fiji,region: oceania
+9607,french_polynesia,built-in,country,6,french_polynesia,region: oceania
+9608,guam,built-in,country,6,guam,region: oceania
+9609,kiribati,built-in,country,6,kiribati,region: oceania
+9610,marshall_islands,built-in,country,6,marshall_islands,region: oceania
+9611,nauru,built-in,country,6,nauru,region: oceania
+9612,new_caledonia,built-in,country,6,new_caledonia,region: oceania
+9613,new_zealand,built-in,country,6,new_zealand,region: oceania
+9614,niue,built-in,country,6,niue,region: oceania
+9615,norfolk_island,built-in,country,6,norfolk_island,region: oceania
+9616,northern_mariana_islands,built-in,country,6,northern_mariana_islands,region: oceania
+9617,palau,built-in,country,6,palau,region: oceania
+9618,papua_new_guinea,built-in,country,6,papua_new_guinea,region: oceania
+9620,samoa,built-in,country,6,samoa,region: oceania
+9621,solomon_islands,built-in,country,6,solomon_islands,region: oceania
+9622,tokelau,built-in,country,6,tokelau,region: oceania
+9623,tonga,built-in,country,6,tonga,region: oceania
+9624,tuvalu,built-in,country,6,tuvalu,region: oceania
+9625,us_minor_outlying_islands,built-in,country,6,us_minor_outlying_islands,region: oceania
+9626,vanuatu,built-in,country,6,vanuatu,region: oceania
+9700,anguilla,built-in,country,6,anguilla,region: north_america
+9701,antigua_and_barbuda,built-in,country,6,antigua_and_barbuda,region: north_america
+9702,aruba,built-in,country,6,aruba,region: north_america
+9703,bahamas,built-in,country,6,bahamas,region: north_america
+9704,barbados,built-in,country,6,barbados,region: north_america
+9705,belize,built-in,country,6,belize,region: north_america
+9706,bermuda,built-in,country,6,bermuda,region: north_america
+9707,british_virgin_islands,built-in,country,6,british_virgin_islands,region: north_america
+9708,canada,built-in,country,6,canada,region: north_america
+9709,cayman_islands,built-in,country,6,cayman_islands,region: north_america
+9710,costa_rica,built-in,country,6,costa_rica,region: north_america
+9711,cuba,built-in,country,6,cuba,region: north_america
+9713,dominica,built-in,country,6,dominica,region: north_america
+9714,dominican_republic,built-in,country,6,dominican_republic,region: north_america
+9715,el_salvador,built-in,country,6,el_salvador,region: north_america
+9716,greenland,built-in,country,6,greenland,region: north_america
+9717,grenada,built-in,country,6,grenada,region: north_america
+9718,guadeloupe,built-in,country,6,guadeloupe,region: north_america
+9719,guatemala,built-in,country,6,guatemala,region: north_america
+9720,haiti,built-in,country,6,haiti,region: north_america
+9721,honduras,built-in,country,6,honduras,region: north_america
+9722,jamaica,built-in,country,6,jamaica,region: north_america
+9723,martinique,built-in,country,6,martinique,region: north_america
+9724,mexico,built-in,country,6,mexico,region: north_america
+9725,montserrat,built-in,country,6,montserrat,region: north_america
+9726,nicaragua,built-in,country,6,nicaragua,region: north_america
+9727,panama,built-in,country,6,panama,region: north_america
+9728,puerto_rico,built-in,country,6,puerto_rico,region: north_america
+9730,saint_lucia,built-in,country,6,saint_lucia,region: north_america
+9731,saint_martin,built-in,country,6,saint_martin,region: north_america
+9732,saint_pierre_and_miquelon,built-in,country,6,saint_pierre_and_miquelon,region: north_america
+9735,trinidad_and_tobago,built-in,country,6,trinidad_and_tobago,region: north_america
+9736,turks_and_caicos_islands,built-in,country,6,turks_and_caicos_islands,region: north_america
+9737,united_states,built-in,country,6,united_states,region: north_america
+9800,argentina,built-in,country,6,argentina,region: south_america
+9801,bolivia,built-in,country,6,bolivia,region: south_america
+9803,brazil,built-in,country,6,brazil,region: south_america
+9804,chile,built-in,country,6,chile,region: south_america
+9805,colombia,built-in,country,6,colombia,region: south_america
+9806,ecuador,built-in,country,6,ecuador,region: south_america
+9807,falkland_islands,built-in,country,6,falkland_islands,region: south_america
+9808,french_guiana,built-in,country,6,french_guiana,region: south_america
+9809,guyana,built-in,country,6,guyana,region: south_america
+9810,paraguay,built-in,country,6,paraguay,region: south_america
+9811,peru,built-in,country,6,peru,region: south_america
+9812,suriname,built-in,country,6,suriname,region: south_america
+9813,uruguay,built-in,country,6,uruguay,region: south_america
+9814,venezuela,built-in,country,6,venezuela,region: south_america

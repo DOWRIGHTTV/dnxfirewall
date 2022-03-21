@@ -28,50 +28,61 @@
             </div>
         </div>
         <div>
-            <h4 class="{{title_color}}" style="float: right;">Create Rule</h4>
+            <h4 class="{{title_color}}" style="float: right;">Edit Rule</h4>
         </div>
     </div>
-    {# source network fields #}
     <div class="row">
-        <div>
-            <h6 class="{{title_color}}" style="float: left;">Src:</h6>
-        </div>
-        <div class="esrc_zone input-field col s2 offset-s1 {{input_color}}">
-            <select name="src_zone">
-                {% for zone in merge_items('any', firewall_settings['zone_manager']['builtins'].keys()) -%}
-                <option value="{{zone}}">{{zone.upper()}}</option>
-                {% endfor -%}
-            </select>
-            <label for="src_zone">Zone</label>
-        </div>
-        <div class="src-network-chips col s3 offset-s1">
-            <input class="esrc_network">
-        </div>
-        <div class="src-service-chips col s3 offset-s1">
-            <input class="esrc_service">
-        </div>
+        <table class="centered">
+            <thead>
+                <tr>
+                    <th style="width:20%">Desc</th>
+                    <th style="width:40%">Source</th>
+                    <th style="width:40%">Destination</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="no-border">
+                    <td>ZONE</td>
+                    <td>
+                        <div class="src-zone-chips col s10">
+                            <input class="esrc_zone">
+                        </div>
+                    </td>
+                    <td>
+                        <div class="dst-zone-chips col s10">
+                            <input class="edst_zone">
+                        </div>
+                    </td>
+                </tr>
+                <tr class="no-border">
+                    <td>ADDRESS</td>
+                    <td>
+                        <div class="src-network-chips col s10">
+                            <input class="esrc_network">
+                        </div>
+                    </td>
+                    <td>
+                        <div class="dst-network-chips col s10">
+                            <input class="edst_network">
+                        </div>
+                    </td>
+                </tr>
+                <tr class="no-border">
+                    <td>SERVICE</td>
+                    <td>
+                        <div class="src-service-chips col s10">
+                            <input class="esrc_service">
+                        </div>
+                    </td>
+                    <td>
+                        <div class="dst-service-chips col s10">
+                            <input class="edst_service">
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
     </div>
-    {# destination network fields #}
-    <div class="row">
-        <div>
-            <h6 class="{{title_color}}" style="float: left;">Dst:</h6>
-        </div>
-        <div class="edst_zone input-field col s2 offset-s1 {{input_color}}">
-            <select name="dst_zone">
-                {% for zone in merge_items('any', firewall_settings['zone_manager']['builtins'].keys()) %}
-                <option value="{{zone}}">{{zone.upper()}}</option>
-                {% endfor %}
-            </select>
-            <label for="dst_zone">Zone</label>
-        </div>
-        <div class="dst-network-chips col s3 offset-s1">
-            <input class="edst_network">
-        </div>
-        <div class="dst-service-chips col s3 offset-s1">
-            <input class="edst_service">
-        </div>
-    </div>
-    {# packet decision fields #}
     <div class="row">
         <div>
             <h6 class="{{title_color}}" style="float: left;">Act:</h6>
