@@ -173,7 +173,7 @@ cdef struct NetworkArray:
     NetworkObj      objects[MAX_OBJECTS]
 
 # STANDARD SERVICE OBJECT (SOLO or RANGE)
-cdef struct ServiceObj:
+cdef struct Service:
     uint_fast16_t   protocol
     uint_fast16_t   start_port
     uint_fast16_t   end_port
@@ -181,18 +181,21 @@ cdef struct ServiceObj:
 # SERVICE OBJECT LIST (tcp/80:tcp/443)
 cdef struct ServiceList:
     size_t          len
-    ServiceObj      objects[MAX_SVC_OBJ_LIST_MEMBERS]
+    Service         objects[MAX_SVC_OBJ_LIST_MEMBERS]
 
 # UNION OF EACH SERVICE OBJECT TYPE
-cdef union ServiceObj_U:
-    uint_fast8_t    type
-    ServiceObj      object
+cdef union Service_U:
+    Service         object
     ServiceList     list
+
+cdef struct ServiceObject:
+    uint_fast8_t    type
+    Service_U    service
 
 # MAIN SERVICE ARRAY
 cdef struct ServiceArray:
     size_t          len
-    ServiceObj_U    objects[MAX_OBJECTS]
+    ServiceObject   objects[MAX_OBJECTS]
 
 # COMPLETE RULE STRUCT - NO POINTERS
 cdef struct FWrule:

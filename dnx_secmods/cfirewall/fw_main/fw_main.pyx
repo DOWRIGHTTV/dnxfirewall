@@ -414,21 +414,21 @@ cdef inline bint service_match(ServiceArray svc_array, uint16_t pkt_protocol, ui
 
     cdef:
         size_t i
-        ServiceObj_U svc_union
-        ServiceList  svc_list
-        ServiceObj   svc
+        Service         svc
+        ServiceList     svc_list
+        ServiceObject   svc_object
 
     if (VERBOSE):
         printf(<char*>'packet protocol->%u, port->%u\n', pkt_protocol, pkt_port)
 
     for i in range(svc_array.len):
-        svc_union = svc_array.objects[i]
+        svc_object = svc_array.objects[i]
         # ---------------------
         # SOLO SVC INSPECTION
         # ---------------------
-        if (svc_union.type == SVC_SOLO):
-            svc = svc_union.object
+        if (svc_object.type == SVC_SOLO):
 
+            svc = svc_object.service.object
             if (pkt_protocol == svc.protocol or svc.protocol == ANY_PROTOCOL):
 
                 if (pkt_protocol == svc.start_port):
@@ -437,9 +437,9 @@ cdef inline bint service_match(ServiceArray svc_array, uint16_t pkt_protocol, ui
         # ---------------------
         # SVC RANGE INSPECTION
         # ---------------------
-        elif (svc_union.type == SVC_RANGE):
-            svc = svc_union.object
+        elif (svc_object.type == SVC_RANGE):
 
+            svc = svc_object.service.object
             if (pkt_protocol == svc.protocol or svc.protocol == ANY_PROTOCOL):
 
                 if (svc.start_port <= pkt_port <= svc.end_port):
@@ -449,11 +449,10 @@ cdef inline bint service_match(ServiceArray svc_array, uint16_t pkt_protocol, ui
         # SVC LIST INSPECTION
         # ---------------------
         else:
-            svc_list = svc_union.list
-
+            svc_list = svc_object.service.list
             for i in range(svc_list.len):
-                svc = svc_list.objects[i]
 
+                svc = svc_list.objects[i]
                 if (pkt_protocol == svc.protocol or svc.protocol == ANY_PROTOCOL):
 
                     if (svc.start_port <= pkt_port <= svc.end_port):
@@ -517,8 +516,8 @@ cdef inline void pkt_print(HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header)
 cdef inline void obj_print(int name, void *object) nogil:
 
     cdef:
-        NetworkObj *net_obj
-        ServiceObj *svc_obj
+        NetworkObj    *net_obj
+        Service *svc_obj
 
     if (name == NETWORK):
         net_obj = <NetworkObj*>object
@@ -526,7 +525,7 @@ cdef inline void obj_print(int name, void *object) nogil:
         printf('net_obj, id->%lu, mask->%lu\n', net_obj.netid, net_obj.netmask)
 
     elif (name == SERVICE):
-        svc_obj = <ServiceObj*>object
+        svc_obj = <ServiceObject*>object
 
         printf('svc_obj, protocol->%u, port->(%u, %u)\n',
                <uint8_t>svc_obj.protocol, <uint16_t>svc_obj.start_port, <uint16_t>svc_obj.end_port)
@@ -563,8 +562,9 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
     cdef:
         size_t i, ix, svc_list_len
 
-        ServiceObj  svc_object
-        ServiceList list_object
+        Service         svc
+        ServiceList     svc_list
+        ServiceObject   svc_object
 
         FWrule *fw_rule = &firewall_rules[ruleset][pos]
 
@@ -588,27 +588,29 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
     # -----------------------
     fw_rule.s_services.len = <size_t>len(rule['src_service'])
     for i in range(fw_rule.s_services.len):
-        fw_rule.s_services.objects[i].type = <uint_fast8_t>rule['src_service'][i][0]
+        svc_object = fw_rule.s_services.objects[i]
+
+        svc_object.type = <uint_fast8_t>rule['src_service'][i][0]
 
         # STANDARD OBJECT ASSIGNMENT
-        if (fw_rule.s_services.objects[i].type != SVC_LIST):
-            svc_object = fw_rule.s_services.objects[i].object
+        if (svc_object.type != SVC_LIST):
+            svc = svc_object.service.object
 
-            svc_object.protocol   = <uint_fast16_t>rule['src_service'][i][1]
-            svc_object.start_port = <uint_fast16_t>rule['src_service'][i][2]
-            svc_object.end_port   = <uint_fast16_t>rule['src_service'][i][3]
+            svc.protocol   = <uint_fast16_t>rule['src_service'][i][1]
+            svc.start_port = <uint_fast16_t>rule['src_service'][i][2]
+            svc.end_port   = <uint_fast16_t>rule['src_service'][i][3]
 
         # SERVICE LIST ASSIGNMENT
         else:
-            list_object = fw_rule.s_services.objects[i].list
+            svc_list = svc_object.service.list
 
-            list_object.len = <size_t>(len(rule['src_service'][i])-1)
-            for ix in range(list_object.len):
-
+            svc_list.len = <size_t>(len(rule['src_service'][i]) - 1)
+            for ix in range(svc_list.len):
+                svc = svc_list.objects[ix]
                 # 0 START INDEX ON FW RULE SIZE, 1 START INDEX PYTHON DICT SIDE (to first index for size)
-                list_object.objects[ix].protocol   = <uint_fast16_t>rule['src_service'][i+1][ix][0]
-                list_object.objects[ix].start_port = <uint_fast16_t>rule['src_service'][i+1][ix][1]
-                list_object.objects[ix].end_port   = <uint_fast16_t>rule['src_service'][i+1][ix][2]
+                svc.protocol   = <uint_fast16_t>rule['src_service'][i + 1][ix][0]
+                svc.start_port = <uint_fast16_t>rule['src_service'][i + 1][ix][1]
+                svc.end_port   = <uint_fast16_t>rule['src_service'][i + 1][ix][2]
 
     # ===========
     # DESTINATION
@@ -628,27 +630,29 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
     # -----------------------
     fw_rule.d_services.len = <size_t>len(rule['dst_service'])
     for i in range(fw_rule.d_services.len):
-        fw_rule.d_services.objects[i].type = <uint_fast8_t>rule['dst_service'][i][0]
+        svc_object = fw_rule.d_services.objects[i]
+
+        svc_object.type = <uint_fast8_t>rule['dst_service'][i][0]
 
         # STANDARD OBJECT ASSIGNMENT
-        if (fw_rule.d_services.objects[i].type != SVC_LIST):
-            svc_object = fw_rule.d_services.objects[i].object
+        if (svc_object.type != SVC_LIST):
+            svc = svc_object.service.object
 
-            svc_object.protocol   = <uint_fast16_t>rule['dst_service'][i][1]
-            svc_object.start_port = <uint_fast16_t>rule['dst_service'][i][2]
-            svc_object.end_port   = <uint_fast16_t>rule['dst_service'][i][3]
+            svc.protocol   = <uint_fast16_t>rule['dst_service'][i][1]
+            svc.start_port = <uint_fast16_t>rule['dst_service'][i][2]
+            svc.end_port   = <uint_fast16_t>rule['dst_service'][i][3]
 
         # SERVICE LIST ASSIGNMENT
         else:
-            list_object = fw_rule.d_services.objects[i].list
+            svc_list = svc_object.service.list
 
-            list_object.len = <size_t>(len(rule['dst_service'][i])-1)
-            for ix in range(list_object.len):
-
+            svc_list.len = <size_t>(len(rule['dst_service'][i]) - 1)
+            for ix in range(svc_list.len):
+                svc = svc_list.objects[ix]
                 # 0 START INDEX ON FW RULE SIZE, 1 START INDEX PYTHON DICT SIDE (to first index for size)
-                list_object.objects[ix].protocol   = <uint_fast16_t>rule['dst_service'][i+1][ix][0]
-                list_object.objects[ix].start_port = <uint_fast16_t>rule['dst_service'][i+1][ix][1]
-                list_object.objects[ix].end_port   = <uint_fast16_t>rule['dst_service'][i+1][ix][2]
+                svc.protocol   = <uint_fast16_t>rule['dst_service'][i + 1][ix][0]
+                svc.start_port = <uint_fast16_t>rule['dst_service'][i + 1][ix][1]
+                svc.end_port   = <uint_fast16_t>rule['dst_service'][i + 1][ix][2]
 
     # --------------------------
     # RULE PROFILES AND ACTIONS
