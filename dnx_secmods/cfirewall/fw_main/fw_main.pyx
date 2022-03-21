@@ -414,44 +414,50 @@ cdef inline bint service_match(ServiceArray svc_array, uint16_t pkt_protocol, ui
 
     cdef:
         size_t i
-        ServiceObj  svc
-        ServiceList svc_list
+        ServiceObj_U scv_union
+        ServiceList  svc_list
+        ServiceObj   svc
 
     if (VERBOSE):
         printf(<char*>'packet protocol->%u, port->%u\n', pkt_protocol, pkt_port)
 
     for i in range(svc_array.len):
+        svc_union = svc_array.objects[i]
+        # ---------------------
+        # SOLO SVC INSPECTION
+        # ---------------------
+        if (svc_union.type == SVC_SOLO):
+            svc = scv_union.object
 
-        # --------------------
-        # STD SVC INSPECTION
-        # --------------------
-        if (svc_array.objects[i].type != SVC_LIST):
-            svc = svc_array.objects[i].object
+            if (pkt_protocol == svc.protocol or svc.protocol == ANY_PROTOCOL):
 
-            # PROTOCOL
-            if (pkt_protocol != svc.protocol and svc.protocol != ANY_PROTOCOL):
-                continue
+                if (pkt_protocol == svc.start_port):
+                    return MATCH
 
-            # PORTS, ICMP will match on the first port start value (looking for 0)
-            if (svc.start_port <= pkt_port <= svc.end_port):
-                return MATCH
+        # ---------------------
+        # SVC RANGE INSPECTION
+        # ---------------------
+        elif (svc_union.type == SVC_RANGE):
+            svc = scv_union.object
 
-        # --------------------
+            if (pkt_protocol == svc.protocol or svc.protocol == ANY_PROTOCOL):
+
+                if (svc.start_port <= pkt_port <= svc.end_port):
+                    return MATCH
+
+        # ---------------------
         # SVC LIST INSPECTION
-        # --------------------
+        # ---------------------
         else:
-            svc_list = svc_array.objects[i].list
+            svc_list = svc_union.list
 
             for i in range(svc_list.len):
-                svc_obj = svc_list.objects[i]
+                svc = svc_list.objects[i]
 
-                # PROTOCOL
-                if (pkt_protocol != svc_obj.protocol and svc_obj.protocol != ANY_PROTOCOL):
-                    continue
+                if (pkt_protocol == svc.protocol or svc.protocol == ANY_PROTOCOL):
 
-                # PORTS, ICMP will match on the first port start value (looking for 0)
-                if (svc_obj.start_port <= pkt_port <= svc_obj.end_port):
-                    return MATCH
+                    if (svc.start_port <= pkt_port <= svc.end_port):
+                        return MATCH
 
     if (VERBOSE):
         printf(<char*>'no match for packet protocol->%u, port->%u\n', pkt_protocol, pkt_port)
