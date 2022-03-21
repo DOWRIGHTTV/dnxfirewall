@@ -25,7 +25,12 @@ DEFAULT_PATH: str = 'dnx_system/iptables'
 
 PENDING_RULE_FILE: str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/pending.firewall'
 ACTIVE_RULE_FILE:  str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/active.firewall'
-COPY_RULE_FILE:    str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/pending.copy'
+
+# short lived file that has cfirewall format rules and gets os.replace over active.firewall
+PUSH_RULE_FILE: str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/push.firewall'
+
+# mirror of pending rule file as it was when pushed. used for change detection.
+ACTIVE_COPY_FILE: str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/active_copy.firewall'
 
 ConfigurationManager.set_log_reference(Log)
 
@@ -73,13 +78,13 @@ class FirewallManage:
         file changes are being monitored by Control class to load into cfirewall.
         '''
         push_error: bool = True
-        with ConfigurationManager():
-            shutil.copy(PENDING_RULE_FILE, COPY_RULE_FILE)
 
-            # ==============================
-            # OBJECT ID > VALUE CONVERSIONS
-            # ==============================
-            obj_lookup = cls.object_manager.lookup
+        # ==============================
+        # OBJECT ID > VALUE CONVERSIONS
+        # ==============================
+        obj_lookup = cls.object_manager.lookup
+
+        with ConfigurationManager():
 
             # using standalone functions due to ConfigManager not being compatible with these operations
             fw_rules: ConfigChain = load_configuration('pending', ext='.firewall', filepath='dnx_system/iptables')
@@ -97,24 +102,24 @@ class FirewallManage:
                     rule['dst_network'] = [obj_lookup(x, convert=True) for x in rule['dst_network']]
                     rule['dst_service'] = [obj_lookup(x, convert=True) for x in rule['dst_service']]
 
-            write_configuration(fw_rule_copy, 'pending', ext='.copy', filepath='dnx_system/iptables')
+            write_configuration(fw_rule_copy, 'push', ext='.firewall', filepath='dnx_system/iptables/usr')
 
-            os.replace(COPY_RULE_FILE, ACTIVE_RULE_FILE)
+            os.replace(PUSH_RULE_FILE, ACTIVE_RULE_FILE)
+
+            shutil.copy(PENDING_RULE_FILE, ACTIVE_COPY_FILE)
 
             push_error = False
 
-            ppt(fw_rule_copy)
-
-        return push_error, cls.is_pending_changes()
+        return push_error
 
     @staticmethod
     def revert():
         '''Copies active configuration to pending, which effectively wipes any unpushed changes.'''
 
         with ConfigurationManager():
-            shutil.copy(ACTIVE_RULE_FILE, COPY_RULE_FILE)
+            shutil.copy(ACTIVE_COPY_FILE, PUSH_RULE_FILE)
 
-            os.replace(COPY_RULE_FILE, PENDING_RULE_FILE)
+            os.replace(PUSH_RULE_FILE, PENDING_RULE_FILE)
 
     def convert_ruleset(self):
         pass
@@ -141,12 +146,12 @@ class FirewallManage:
 
     @staticmethod
     def is_pending_changes():
-        active = calculate_file_hash('active.firewall', folder='iptables/usr')
+        active = calculate_file_hash('active_copy.firewall', folder='iptables/usr')
         pending = calculate_file_hash('pending.firewall', folder='iptables/usr')
 
         # if the user has never modified rules, there is not a pending change.
         # the active file can be none if pending is present.
-        # a commit will write the active file.
+        # a push will write the active file.
         if (pending is None):
             return False
 

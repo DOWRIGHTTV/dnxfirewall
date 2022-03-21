@@ -68,7 +68,7 @@ def write_configuration(data: dict, filename: str, ext: str = '.cfg', *, filepat
     filename += ext
 
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
-        json.dump(data, settings, indent=4)
+        json.dump(data, settings, indent=2)
 
 def load_data(filename: str, *, filepath: str = 'dnx_system/data') -> dict:
     '''loads json data from a file and convert it to a python dict.
@@ -82,7 +82,7 @@ def load_data(filename: str, *, filepath: str = 'dnx_system/data') -> dict:
 def write_data(data: dict, filename: str, *, filepath: str = 'dnx_system/data') -> None:
 
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
-        json.dump(data, settings, indent=4)
+        json.dump(data, settings, indent=2)
 
 def append_to_file(data: str, filename: str, *, filepath: str = 'dnx_system/data/usr') -> None:
     '''append data to filepath.
@@ -246,7 +246,7 @@ class ConfigChain:
         self.__mutable_config = copy(self.__flat_config[0])
 
     def __str__(self):
-        return json.dumps(self._merge_expand(), indent=2, sort_keys=False)
+        return json.dumps(self._merge_expand(), indent=2)
 
     def __getitem__(self, key: str) -> Union[bool, int, str, list]:
 
@@ -539,7 +539,7 @@ class ConfigurationManager:
         if (self._data_written):
             raise RuntimeWarning('configuration file has already been written to.')
 
-        json.dump(data_to_write, self._temp_file, indent=4)
+        json.dump(data_to_write, self._temp_file, indent=2)
         self._temp_file.flush()
 
         # this is to inform context to copy temp file to dnx configuration folder
@@ -583,7 +583,7 @@ class Watcher:
 
             # condition to allow the initial load to happen without the usr file being present.
             # NOTE: the load configuration function loads system defaults prior to user settings
-            # so there will be no issue marking a non-existent file as modified.
+            #  so there will be no issue marking a non-existent file as modified.
             if (not self._last_modified_time):
                 self._last_modified_time = 1
 

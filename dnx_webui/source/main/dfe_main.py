@@ -148,14 +148,9 @@ def rules_firewall_push(session_data):
     # for when we implement preview option
     # json_data = request.get_json(force=True)
 
-    error, pending_changes = FirewallManage.push()
+    error = FirewallManage.push()
     if (error):
         return ajax_response(status=False, data={'error': 1, 'message': 'push failed'})
-
-    elif (pending_changes):
-        return ajax_response(status=False, data={
-            'error': 2, 'message': 'pending rules changed while pushing to firewall. refresh page.'
-        })
 
     return ajax_response(status=True, data={'error': 0, 'message': 'push success'})
 
