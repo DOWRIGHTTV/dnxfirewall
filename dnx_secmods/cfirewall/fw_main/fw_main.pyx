@@ -525,7 +525,7 @@ cdef inline void obj_print(int name, void *object) nogil:
         printf('net_obj, id->%lu, mask->%lu\n', net_obj.netid, net_obj.netmask)
 
     elif (name == SERVICE):
-        svc_obj = <ServiceObject*>object
+        svc_obj = <Service*>object
 
         printf('svc_obj, protocol->%u, port->(%u, %u)\n',
                <uint8_t>svc_obj.protocol, <uint16_t>svc_obj.start_port, <uint16_t>svc_obj.end_port)
