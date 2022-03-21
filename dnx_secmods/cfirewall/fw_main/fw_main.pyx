@@ -414,7 +414,7 @@ cdef inline bint service_match(ServiceArray svc_array, uint16_t pkt_protocol, ui
 
     cdef:
         size_t i
-        ServiceObj_U scv_union
+        ServiceObj_U svc_union
         ServiceList  svc_list
         ServiceObj   svc
 
@@ -427,7 +427,7 @@ cdef inline bint service_match(ServiceArray svc_array, uint16_t pkt_protocol, ui
         # SOLO SVC INSPECTION
         # ---------------------
         if (svc_union.type == SVC_SOLO):
-            svc = scv_union.object
+            svc = svc_union.object
 
             if (pkt_protocol == svc.protocol or svc.protocol == ANY_PROTOCOL):
 
@@ -438,7 +438,7 @@ cdef inline bint service_match(ServiceArray svc_array, uint16_t pkt_protocol, ui
         # SVC RANGE INSPECTION
         # ---------------------
         elif (svc_union.type == SVC_RANGE):
-            svc = scv_union.object
+            svc = svc_union.object
 
             if (pkt_protocol == svc.protocol or svc.protocol == ANY_PROTOCOL):
 
