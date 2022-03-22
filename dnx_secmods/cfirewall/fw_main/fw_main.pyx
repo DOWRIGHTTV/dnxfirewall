@@ -271,28 +271,28 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
             # ZONE MATCHING
             # ------------------------------------------------------------------ #
             # currently tied to interface and designated LAN, WAN, DMZ
-            if not zone_match(rule.s_zones, hw.in_zone):
+            if not zone_match(&rule.s_zones, hw.in_zone):
                 continue
 
-            if not zone_match(rule.d_zones, hw.out_zone):
+            if not zone_match(&rule.d_zones, hw.out_zone):
                 continue
 
             # ------------------------------------------------------------------ #
             # GEOLOCATION or IP/NETMASK
             # ------------------------------------------------------------------ #
-            if not network_match(rule.s_networks, iph_src_ip, src_country):
+            if not network_match(&rule.s_networks, iph_src_ip, src_country):
                 continue
 
-            if not network_match(rule.d_networks, iph_dst_ip, dst_country):
+            if not network_match(&rule.d_networks, iph_dst_ip, dst_country):
                 continue
 
             # ------------------------------------------------------------------ #
             # PROTOCOL / PORT
             # ------------------------------------------------------------------ #
-            if not service_match(rule.s_services, ip_header.protocol, ntohs(proto_header.s_port)):
+            if not service_match(&rule.s_services, ip_header.protocol, ntohs(proto_header.s_port)):
                 continue
 
-            if not service_match(rule.d_services, ip_header.protocol, ntohs(proto_header.d_port)):
+            if not service_match(&rule.d_services, ip_header.protocol, ntohs(proto_header.d_port)):
                 continue
 
             # ------------------------------------------------------------------ #
@@ -352,19 +352,19 @@ cdef inline bint in_blocklist(uint32_t src_host) nogil:
     return NO_MATCH
 
 # generic function for src/dst zone matching
-cdef inline bint zone_match(ZoneArray rule_defs, uint8_t pkt_zone) nogil:
+cdef inline bint zone_match(ZoneArray *zone_array, uint8_t pkt_zone) nogil:
 
     cdef size_t i
 
     # a zone set to any is a guaranteed match
-    if (rule_defs.objects[0] == ANY_ZONE):
+    if (zone_array.objects[0] == ANY_ZONE):
         return MATCH
 
     # iterating over all zones defined in the rule
-    for i in range(rule_defs.len):
+    for i in range(zone_array.len):
 
         # continue on no match, blocking return
-        if (pkt_zone != rule_defs.objects[i]):
+        if (pkt_zone != zone_array.objects[i]):
             continue
 
         # zone match
@@ -374,18 +374,18 @@ cdef inline bint zone_match(ZoneArray rule_defs, uint8_t pkt_zone) nogil:
     return NO_MATCH
 
 # generic function for source OR destination network obj matching
-cdef inline bint network_match(NetworkArray net_array, uint32_t iph_ip, uint16_t country) nogil:
+cdef inline bint network_match(NetworkArray *net_array, uint32_t iph_ip, uint16_t country) nogil:
 
     cdef:
         size_t  i
-        Network net
+        Network *net
 
     if (VERBOSE):
         printf(<char*>'checking ip->%u, country->%u\n', iph_ip, <uint8_t>country)
 
     for i in range(net_array.len):
 
-        net = net_array.objects[i]
+        net = &net_array.objects[i]
 
         # --------------------
         # TYPE -> HOST (1)
@@ -420,7 +420,7 @@ cdef inline bint network_match(NetworkArray net_array, uint32_t iph_ip, uint16_t
     return NO_MATCH
 
 # generic function that can handle source OR destination proto/port matching
-cdef inline bint service_match(ServiceArray svc_array, uint16_t pkt_protocol, uint16_t pkt_port) nogil:
+cdef inline bint service_match(ServiceArray *svc_array, uint16_t pkt_protocol, uint16_t pkt_port) nogil:
 
     cdef:
         size_t i
@@ -479,50 +479,23 @@ cdef inline bint service_match(ServiceArray svc_array, uint16_t pkt_protocol, ui
 # ================================== #
 # NOTE: <char*> casting is to shut the editor up
 #  the integer casts are to clamp the struct fields to standard because they are implemented as fast_ints
-cdef inline void pkt_print(HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header) nogil:
-    printf(<char*>'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv-PACKET-vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n')
-    printf('in-zone=%u, out-zone=%u \n', hw.in_zone, hw.out_zone)
-    printf('proto=%u \n', ip_header.protocol)
-    printf('%u:%u > %u:%u \n',
-           ntohl(ip_header.saddr), ntohs(proto_header.s_port), ntohl(ip_header.daddr), ntohs(proto_header.d_port)
-    )
-    # printf('src-geo=%u, dst-geo=%u\n', src_country, dst_country)
-    printf(<char*>'^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n')
+cdef inline void pkt_print(HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header) with gil:
+    '''nested struct print of the passed in references using Python pretty printer.
 
-# # TODO: add network object support to print
-# cdef inline void rule_print(FWrule *rule) nogil:
-#
-#     cdef:
-#         size_t i
-#         ServiceObj *src_services = rule.s_services.objects
-#         ServiceObj *dst_services = rule.d_services.objects
-#
-#     printf(<char*>'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv-RULE-vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n')
-#     printf(<char*>'src_zones=(')
-#     for i in range(rule.s_zones.len):
-#         printf('%u ', <uint8_t>rule.s_zones.objects[i])
-#     printf(<char*>')\n')
-#
-#     for i in range(rule.d_zones.len):
-#         printf('%u ', <uint8_t>rule.s_zones.objects[i])
-#     printf(<char*>')\n')
-#
-#     printf(<char*>'src_zones=(')
-#     for i in range(rule.s_services.len):
-#         printf('protocol->%u, ports->(%u, %u) ',
-#             <uint8_t>src_services[i].protocol, <uint16_t>src_services[i].start_port, <uint16_t>src_services[i].end_port)
-#     printf(<char*>')\n')
-#
-#     printf(<char*> 'dst_zones=(')
-#     for i in range(rule.s_services.len):
-#         printf('protocol->%u, ports->(%u, %u) ',
-#             <uint8_t>dst_services[i].protocol, <uint16_t>dst_services[i].start_port, <uint16_t>dst_services[i].end_port)
-#     printf(<char*>')\n')
-#
-#     # printf('rule-s netid=%lu\n', rule.s_net_id)
-#     # printf('rule-d netid=%lu\n', rule.d_net_id)
-#     printf(<char*>'^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n')
+    the GIL will be acquired before executing the print and released on return.
+    '''
+    ppt(hw[0])
+    ppt(ip_header[0])
+    ppt(proto_header[0])
 
+cdef inline void rule_print(FWrule *rule) with gil:
+    '''nested struct print of the passed in reference using Python pretty printer.
+    
+    the GIL will be acquired before executing the print and released on return.
+    '''
+    ppt(rule[0])
+
+# NOTE: consider making this a union
 cdef inline void obj_print(int name, void *object) nogil:
 
     cdef:
