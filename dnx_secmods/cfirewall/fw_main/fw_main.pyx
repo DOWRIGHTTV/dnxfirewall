@@ -8,6 +8,13 @@ from libc.stdint cimport uint_fast8_t, uint_fast16_t, uint_fast32_t
 
 from dnx_iptools.dnx_trie_search.dnx_trie_search cimport HashTrie
 
+# ===============================
+# VERBOSE T-SHOOT ASSISTANCE
+# ===============================
+from pprint import PrettyPrinter
+ppt = PrettyPrinter(sort_dicts=False, indent=1).pprint
+# ===============================
+
 DEF FW_SECTION_COUNT = 4
 DEF FW_SYSTEM_MAX_RULE_COUNT = 50
 DEF FW_BEFORE_MAX_RULE_COUNT = 100
@@ -417,21 +424,21 @@ cdef inline bint service_match(ServiceArray svc_array, uint16_t pkt_protocol, ui
 
     cdef:
         size_t i
-        Service         svc
-        ServiceList     svc_list
-        ServiceObject   svc_object
+        Service         *svc
+        ServiceList     *svc_list
+        ServiceObject   *svc_object
 
     if (VERBOSE):
         printf(<char*>'packet protocol->%u, port->%u\n', pkt_protocol, pkt_port)
 
     for i in range(svc_array.len):
-        svc_object = svc_array.objects[i]
+        svc_object = &svc_array.objects[i]
         # --------------------
         # TYPE -> SOLO (1)
         # --------------------
         if (svc_object.type == SVC_SOLO):
 
-            svc = svc_object.service.object
+            svc = &svc_object.service.object
             if (pkt_protocol == svc.protocol or svc.protocol == ANY_PROTOCOL):
 
                 if (pkt_port == svc.start_port):
@@ -442,7 +449,7 @@ cdef inline bint service_match(ServiceArray svc_array, uint16_t pkt_protocol, ui
         # --------------------
         elif (svc_object.type == SVC_RANGE):
 
-            svc = svc_object.service.object
+            svc = &svc_object.service.object
             if (pkt_protocol == svc.protocol or svc.protocol == ANY_PROTOCOL):
 
                 if (svc.start_port <= pkt_port <= svc.end_port):
@@ -452,10 +459,10 @@ cdef inline bint service_match(ServiceArray svc_array, uint16_t pkt_protocol, ui
         # TYPE -> LIST (3)
         # --------------------
         else:
-            svc_list = svc_object.service.list
+            svc_list = &svc_object.service.list
             for i in range(svc_list.len):
 
-                svc = svc_list.objects[i]
+                svc = &svc_list.objects[i]
                 if (pkt_protocol == svc.protocol or svc.protocol == ANY_PROTOCOL):
 
                     if (svc.start_port <= pkt_port <= svc.end_port):
@@ -664,6 +671,9 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
     fw_rule.sec_profiles[0] = <uint_fast8_t>rule['ipp_profile']
     fw_rule.sec_profiles[1] = <uint_fast8_t>rule['dns_profile']
     fw_rule.sec_profiles[2] = <uint_fast8_t>rule['ips_profile']
+
+    if (VERBOSE and ruleset >= 1):
+        ppt(fw_rule[0])
 
 # ===================================
 # C EXTENSION - Python Comm Pipeline
