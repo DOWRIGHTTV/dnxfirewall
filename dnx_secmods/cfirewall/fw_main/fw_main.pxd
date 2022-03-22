@@ -152,14 +152,17 @@ cdef enum:
 # used for dynamic allocation of the array containing security profile settings
 # ip proxy, ips_ids, dns_proxy
 DEF SECURITY_PROFILE_COUNT = 3
-DEF MAX_ZONES = 16
-DEF MAX_OBJECTS = 100
-DEF MAX_SVC_OBJ_LIST_MEMBERS = 10
+
+# PER FIELD AND RULE LIMITS
+DEF FIELD_MAX_ZONES = 16
+DEF FIELD_MAX_NETWORKS = 8
+DEF FIELD_MAX_SERVICES = 8
+DEF FIELD_MAX_SVC_LIST_MEMBERS = 8
 
 # STANDARD ZONE ARRAY [10, 11]
 cdef struct ZoneArray:
     size_t          len
-    uint_fast8_t    objects[MAX_OBJECTS]
+    uint_fast8_t    objects[FIELD_MAX_ZONES]
 
 # STANDARD NETWORK OBJECT (HOST, NETWORK, RANGE, GEO)
 cdef struct Network:
@@ -170,7 +173,7 @@ cdef struct Network:
 # MAIN NETWORK ARRAY
 cdef struct NetworkArray:
     size_t          len
-    Network         objects[MAX_OBJECTS]
+    Network         objects[FIELD_MAX_NETWORKS]
 
 # STANDARD SERVICE OBJECT (SOLO or RANGE)
 cdef struct Service:
@@ -181,7 +184,7 @@ cdef struct Service:
 # SERVICE OBJECT LIST (tcp/80:tcp/443)
 cdef struct ServiceList:
     size_t          len
-    Service         objects[MAX_SVC_OBJ_LIST_MEMBERS]
+    Service         objects[FIELD_MAX_SVC_LIST_MEMBERS]
 
 # UNION OF EACH SERVICE OBJECT TYPE
 cdef union Service_U:
@@ -195,7 +198,7 @@ cdef struct ServiceObject:
 # MAIN SERVICE ARRAY
 cdef struct ServiceArray:
     size_t          len
-    ServiceObject   objects[MAX_OBJECTS]
+    ServiceObject   objects[FIELD_MAX_SERVICES]
 
 # COMPLETE RULE STRUCT - NO POINTERS
 cdef struct FWrule:

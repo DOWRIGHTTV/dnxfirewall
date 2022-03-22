@@ -3,6 +3,9 @@
 from libc.stdlib cimport calloc
 from libc.stdio cimport printf
 
+from libc.stdint cimport uint8_t, uint16_t, uint32_t
+from libc.stdint cimport uint_fast8_t, uint_fast16_t, uint_fast32_t
+
 from dnx_iptools.dnx_trie_search.dnx_trie_search cimport HashTrie
 
 DEF FW_SECTION_COUNT = 4
@@ -607,9 +610,9 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
             for ix in range(svc_list.len):
                 svc = &svc_list.objects[ix]
                 # 0 START INDEX ON FW RULE SIZE, 1 START INDEX PYTHON DICT SIDE (to first index for size)
-                svc.protocol   = <uint_fast16_t>rule['src_service'][i + 1][ix][0]
-                svc.start_port = <uint_fast16_t>rule['src_service'][i + 1][ix][1]
-                svc.end_port   = <uint_fast16_t>rule['src_service'][i + 1][ix][2]
+                svc.protocol   = <uint_fast16_t>rule['src_service'][i][ix + 1][0]
+                svc.start_port = <uint_fast16_t>rule['src_service'][i][ix + 1][1]
+                svc.end_port   = <uint_fast16_t>rule['src_service'][i][ix + 1][2]
 
     # ===========
     # DESTINATION
@@ -648,9 +651,9 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
             for ix in range(svc_list.len):
                 svc = &svc_list.objects[ix]
                 # 0 START INDEX ON FW RULE SIZE, 1 START INDEX PYTHON DICT SIDE (to first index for size)
-                svc.protocol   = <uint_fast16_t>rule['dst_service'][i + 1][ix][0]
-                svc.start_port = <uint_fast16_t>rule['dst_service'][i + 1][ix][1]
-                svc.end_port   = <uint_fast16_t>rule['dst_service'][i + 1][ix][2]
+                svc.protocol   = <uint_fast16_t>rule['dst_service'][i][ix + 1][0]
+                svc.start_port = <uint_fast16_t>rule['dst_service'][i][ix + 1][1]
+                svc.end_port   = <uint_fast16_t>rule['dst_service'][i][ix + 1][2]
 
     # --------------------------
     # RULE PROFILES AND ACTIONS
@@ -662,9 +665,9 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
     fw_rule.sec_profiles[1] = <uint_fast8_t>rule['dns_profile']
     fw_rule.sec_profiles[2] = <uint_fast8_t>rule['ips_profile']
 
-# ================================== #
+# ===================================
 # C EXTENSION - Python Comm Pipeline
-# ================================== #
+# ===================================
 cdef uint32_t MAX_COPY_SIZE = 4016 # 4096(buf) - 80
 cdef uint32_t DEFAULT_MAX_QUEUELEN = 8192
 
@@ -699,8 +702,8 @@ cdef class CFirewall:
 
     def nf_set(self, uint16_t queue_num):
         self.h = nfq_open()
-        self.qh = nfq_create_queue(self.h, queue_num, <nfq_callback*>cfirewall_rcv, <void*>self)
 
+        self.qh = nfq_create_queue(self.h, queue_num, <nfq_callback*>cfirewall_rcv, <void*>self)
         if (self.qh == NULL):
             return ERR
 
@@ -804,7 +807,7 @@ cdef class CFirewall:
             if (ATTACKER_BLOCKLIST[i] == END_OF_ARRAY):
                 break
 
-            ATTACKER_BLOCKLIST[i] = ATTACKER_BLOCKLIST[i+1]
+            ATTACKER_BLOCKLIST[i] = ATTACKER_BLOCKLIST[i + 1]
 
         pthread_mutex_unlock(&FWblocklistlock)
 
