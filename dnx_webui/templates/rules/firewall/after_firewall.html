@@ -1,7 +1,4 @@
 <script>
-    colorizeTable(2);
-</script>
-<script>
 function selectedRules() {
     let selected_rules = [];
 
@@ -109,7 +106,8 @@ function updateRule() {
                     '<i class="material-icons red darken-2">arrow_downward</i></a></div>'
 
     col[2].innerHTML = ruleEditor.querySelector(".ename").value;
-    col[9].innerHTML = ruleEditor.querySelector(".eaction").querySelector("input").value.toLowerCase(); // === "1" ? "ACCEPT" : "DROP";
+
+    col[9].innerHTML = ruleEditor.querySelectorAll(".eaction")[0].checked ? "drop" : "accept"
     col[10].innerHTML = "N"; // ruleEditor.querySelector(".elog").value;
     col[11].innerHTML = ruleEditor.querySelector(".esec1_prof").value;
     col[12].innerHTML = ruleEditor.querySelector(".esec2_prof").value;
@@ -225,27 +223,18 @@ function fillEditor(ruleEditor, ruleRow) {
                 input_field.prepend(input);
             }
 
-            else if (["log"].includes(field)) {
+            else if (field === "log") {
                 editor_field.setAttribute("value", rule_field.innerText);
-                {#editor_field.parentNode.querySelector("label").setAttribute("class", "active");#}
             }
             else if (field === "enabled") {
                 const enabled = parseInt(ruleRow.getAttribute("data-enabled"));
                 editor_field.checked = !!enabled;
             }
-            else if (["action"].includes(field)) {
-                let zone_value = rule_field.innerHTML.toUpperCase();
+            else if (field === "action") {
+                const actionMap = {"drop": 0, "accept": 1};
 
-                editor_field.querySelector("input").value = zone_value;
+                document.querySelectorAll(".eaction")[actionMap[rule_field.innerHTML]].checked = true;
 
-                let options = editor_field.getElementsByTagName("li");
-                for (let option of options) {
-                    if (option.innerText === zone_value) {
-                        option.classList = "selected";
-                    } else {
-                        option.classList = "";
-                    }
-                }
             }
             else if (["src_zone", "src_network", "src_service", "dst_zone", "dst_network", "dst_service"].includes(field)) {
                 let dnxChips = editor_field.parentNode;

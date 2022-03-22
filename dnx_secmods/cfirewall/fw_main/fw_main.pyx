@@ -322,7 +322,7 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
 cdef inline bint in_blocklist(uint32_t src_host) nogil:
 
     cdef:
-        size_t i
+        size_t   i
         uint32_t blocked_host
 
     pthread_mutex_lock(&FWblocklistlock)
@@ -367,8 +367,8 @@ cdef inline bint zone_match(ZoneArray rule_defs, uint8_t pkt_zone) nogil:
 cdef inline bint network_match(NetworkArray net_array, uint32_t iph_ip, uint16_t country) nogil:
 
     cdef:
-        size_t i
-        NetworkObj net
+        size_t  i
+        Network net
 
     if (VERBOSE):
         printf(<char*>'checking ip->%u, country->%u\n', iph_ip, <uint8_t>country)
@@ -423,20 +423,20 @@ cdef inline bint service_match(ServiceArray svc_array, uint16_t pkt_protocol, ui
 
     for i in range(svc_array.len):
         svc_object = svc_array.objects[i]
-        # ---------------------
-        # SOLO SVC INSPECTION
-        # ---------------------
+        # --------------------
+        # TYPE -> SOLO (1)
+        # --------------------
         if (svc_object.type == SVC_SOLO):
 
             svc = svc_object.service.object
             if (pkt_protocol == svc.protocol or svc.protocol == ANY_PROTOCOL):
 
-                if (pkt_protocol == svc.start_port):
+                if (pkt_port == svc.start_port):
                     return MATCH
 
-        # ---------------------
-        # SVC RANGE INSPECTION
-        # ---------------------
+        # --------------------
+        # TYPE -> RANGE (2)
+        # --------------------
         elif (svc_object.type == SVC_RANGE):
 
             svc = svc_object.service.object
@@ -445,9 +445,9 @@ cdef inline bint service_match(ServiceArray svc_array, uint16_t pkt_protocol, ui
                 if (svc.start_port <= pkt_port <= svc.end_port):
                     return MATCH
 
-        # ---------------------
-        # SVC LIST INSPECTION
-        # ---------------------
+        # --------------------
+        # TYPE -> LIST (3)
+        # --------------------
         else:
             svc_list = svc_object.service.list
             for i in range(svc_list.len):
@@ -516,11 +516,11 @@ cdef inline void pkt_print(HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header)
 cdef inline void obj_print(int name, void *object) nogil:
 
     cdef:
-        NetworkObj    *net_obj
-        Service *svc_obj
+        Network     *net_obj
+        Service     *svc_obj
 
     if (name == NETWORK):
-        net_obj = <NetworkObj*>object
+        net_obj = <Network*>object
 
         printf('net_obj, id->%lu, mask->%lu\n', net_obj.netid, net_obj.netmask)
 
@@ -562,17 +562,17 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
     cdef:
         size_t i, ix, svc_list_len
 
-        Service         svc
-        ServiceList     svc_list
-        ServiceObject   svc_object
+        Service          *svc
+        ServiceList      *svc_list
+        ServiceObject    *svc_object
 
         FWrule *fw_rule = &firewall_rules[ruleset][pos]
 
     fw_rule.enabled = <bint>rule['enabled']
 
-    # ======
+    # ===========
     # SOURCE
-    # ======
+    # ===========
     fw_rule.s_zones.len = <size_t>len(rule['src_zone'])
     for i in range(fw_rule.s_zones.len):
         fw_rule.s_zones.objects[i] = <uint_fast8_t>rule['src_zone'][i]
@@ -588,25 +588,24 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
     # -----------------------
     fw_rule.s_services.len = <size_t>len(rule['src_service'])
     for i in range(fw_rule.s_services.len):
-        svc_object = fw_rule.s_services.objects[i]
+        svc_object = &fw_rule.s_services.objects[i]
 
         svc_object.type = <uint_fast8_t>rule['src_service'][i][0]
-
-        # STANDARD OBJECT ASSIGNMENT
+        # TYPE 1/2 (SOLO, RANGE) OBJECT ASSIGNMENT
         if (svc_object.type != SVC_LIST):
-            svc = svc_object.service.object
+            svc = &svc_object.service.object
 
             svc.protocol   = <uint_fast16_t>rule['src_service'][i][1]
             svc.start_port = <uint_fast16_t>rule['src_service'][i][2]
             svc.end_port   = <uint_fast16_t>rule['src_service'][i][3]
 
-        # SERVICE LIST ASSIGNMENT
+        # TYPE 3 (LIST) OBJECT ASSIGNMENT
         else:
-            svc_list = svc_object.service.list
+            svc_list = &svc_object.service.list
 
             svc_list.len = <size_t>(len(rule['src_service'][i]) - 1)
             for ix in range(svc_list.len):
-                svc = svc_list.objects[ix]
+                svc = &svc_list.objects[ix]
                 # 0 START INDEX ON FW RULE SIZE, 1 START INDEX PYTHON DICT SIDE (to first index for size)
                 svc.protocol   = <uint_fast16_t>rule['src_service'][i + 1][ix][0]
                 svc.start_port = <uint_fast16_t>rule['src_service'][i + 1][ix][1]
@@ -630,25 +629,24 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
     # -----------------------
     fw_rule.d_services.len = <size_t>len(rule['dst_service'])
     for i in range(fw_rule.d_services.len):
-        svc_object = fw_rule.d_services.objects[i]
+        svc_object = &fw_rule.d_services.objects[i]
 
         svc_object.type = <uint_fast8_t>rule['dst_service'][i][0]
-
-        # STANDARD OBJECT ASSIGNMENT
+        # TYPE 1/2 (SOLO, RANGE) OBJECT ASSIGNMENT
         if (svc_object.type != SVC_LIST):
-            svc = svc_object.service.object
+            svc = &svc_object.service.object
 
             svc.protocol   = <uint_fast16_t>rule['dst_service'][i][1]
             svc.start_port = <uint_fast16_t>rule['dst_service'][i][2]
             svc.end_port   = <uint_fast16_t>rule['dst_service'][i][3]
 
-        # SERVICE LIST ASSIGNMENT
+        # TYPE 3 (LIST) OBJECT ASSIGNMENT
         else:
-            svc_list = svc_object.service.list
+            svc_list = &svc_object.service.list
 
             svc_list.len = <size_t>(len(rule['dst_service'][i]) - 1)
             for ix in range(svc_list.len):
-                svc = svc_list.objects[ix]
+                svc = &svc_list.objects[ix]
                 # 0 START INDEX ON FW RULE SIZE, 1 START INDEX PYTHON DICT SIDE (to first index for size)
                 svc.protocol   = <uint_fast16_t>rule['dst_service'][i + 1][ix][0]
                 svc.start_port = <uint_fast16_t>rule['dst_service'][i + 1][ix][1]

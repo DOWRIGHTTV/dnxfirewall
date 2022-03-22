@@ -162,7 +162,7 @@ cdef struct ZoneArray:
     uint_fast8_t    objects[MAX_OBJECTS]
 
 # STANDARD NETWORK OBJECT (HOST, NETWORK, RANGE, GEO)
-cdef struct NetworkObj:
+cdef struct Network:
     uint_fast8_t    type
     uint_fast32_t   netid
     uint_fast32_t   netmask
@@ -170,7 +170,7 @@ cdef struct NetworkObj:
 # MAIN NETWORK ARRAY
 cdef struct NetworkArray:
     size_t          len
-    NetworkObj      objects[MAX_OBJECTS]
+    Network         objects[MAX_OBJECTS]
 
 # STANDARD SERVICE OBJECT (SOLO or RANGE)
 cdef struct Service:

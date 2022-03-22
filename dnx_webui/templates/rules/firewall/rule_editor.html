@@ -35,9 +35,9 @@
         <table class="centered">
             <thead>
                 <tr>
-                    <th style="width:20%">Desc</th>
-                    <th style="width:40%">Source</th>
-                    <th style="width:40%">Destination</th>
+                    <th style="width:10%">Desc</th>
+                    <th style="width:45%">Source</th>
+                    <th style="width:45%">Destination</th>
                 </tr>
             </thead>
             <tbody>
@@ -84,19 +84,6 @@
         </table>
     </div>
     <div class="row">
-        <div>
-            <h6 class="{{title_color}}" style="float: left;">Act:</h6>
-        </div>
-        <div class="eaction input-field col s2 offset-s1 {{input_color}}">
-            <select name="action">
-                {% for opt in ['accept', 'drop'] %}
-                <option value="{{opt}}">{{opt.upper()}}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col offset-s1">
-            <h6 class="{{title_color}}" style="float: left;">Sec:</h6>
-        </div>
         <div class="input-field col s2 offset-s1 {{input_color}}">
             <input class="esec1_prof validate" type="number" name="sec1_prof" value="0" min="0" max="1">
             <label for="sec1_prof">IPProxy</label>
@@ -108,6 +95,16 @@
         <div class="input-field col s2 {{input_color}}">
             <input class="esec3_prof validate" type="number" name="sec3_prof" value="0" min="0" max="1">
             <label for="sec2_prof">IPS/IDS</label>
+        </div>
+        <div class="col s1 offset-s1">
+            <label>
+                <input class="eaction" name="action" type="radio"/><span>drop</span>
+            </label>
+        </div>
+        <div class="col s1">
+            <label>
+                <input class="eaction" name="action" type="radio"/><span>accept</span>
+            </label>
         </div>
     </div>
     <div class="row">
