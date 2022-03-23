@@ -40,7 +40,7 @@ app.secret_key = app_config['flask->key']
 # DNX API - LOGGING / FIREWALL / CONFIG
 # =========================================
 from dnx_system.sys_action import system_action
-from dnx_secmods.cfirewall.fw_manage import FirewallManage
+from dnx_secmods.cfirewall.fw_control import FirewallControl
 
 import dnx_webui.source.main.dfe_obj_manager as dnx_object_manager
 
@@ -53,13 +53,13 @@ ConfigurationManager.set_log_reference(Log)
 app.dnx_object_manager = dnx_object_manager.initialize(HOME_DIR)
 
 # initialize cfirewall manager, which interfaces with cfirewall control class through a fd.
-cfirewall = FirewallManage()
+cfirewall = FirewallControl()
 
 # setting FirewallManager instance as class var within FirewallManager to access instance through webui
-FirewallManage.cfirewall = cfirewall
+FirewallControl.cfirewall = cfirewall
 
 # setting object manager instance as class var within FirewallManager for direct access
-FirewallManage.object_manager = app.dnx_object_manager
+FirewallControl.object_manager = app.dnx_object_manager
 
 # =========================================
 # WEBUI COMPONENTS
@@ -148,7 +148,7 @@ def rules_firewall_push(session_data):
     # for when we implement preview option
     # json_data = request.get_json(force=True)
 
-    error = FirewallManage.push()
+    error = FirewallControl.push()
     if (error):
         return ajax_response(status=False, data={'error': 1, 'message': 'push failed'})
 

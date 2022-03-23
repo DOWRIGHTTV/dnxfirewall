@@ -591,6 +591,7 @@ class Watcher:
 
             return False
 
+
         modified_time = os.stat(self._full_path).st_mtime
         if (modified_time != self._last_modified_time):
 

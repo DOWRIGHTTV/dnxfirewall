@@ -14,7 +14,7 @@ from dnx_gentools.file_operations import load_configuration
 
 from dnx_routines.configure.web_validate import ValidationError, convert_int
 
-from dnx_secmods.cfirewall.fw_manage import FirewallManage
+from dnx_secmods.cfirewall.fw_control import FirewallControl
 
 # ===============
 # TYPING IMPORTS
@@ -59,7 +59,7 @@ def load_page(section: str) -> dict[str, Any]:
     firewall_rules = get_and_format_rules(section, lzone_map)
 
     # TODO: this is now unoptimized.
-    #  we should track ref counts in in FirewallManage class and inc/dec when rule is deleted or added.
+    #  we should track ref counts in in FirewallControl class and inc/dec when rule is deleted or added.
     calculate_ref_counts(firewall_rules)
 
     # building zone list and reference counts NOTE: builtins only for now
@@ -85,7 +85,7 @@ def load_page(section: str) -> dict[str, Any]:
         'network_autofill': network_autofill,
         'service_autofill': service_autofill,
         'firewall_rules': firewall_rules,
-        'pending_changes': FirewallManage.is_pending_changes()
+        'pending_changes': FirewallControl.is_pending_changes()
     }
 
 def update_page(form: dict) -> tuple[str, str]:
@@ -98,7 +98,7 @@ def update_page(form: dict) -> tuple[str, str]:
     return '', section
 
 def get_and_format_rules(section: str, lzone_map: dict[int, str]) -> list[list]:
-    firewall_rules = FirewallManage.cfirewall.view_ruleset(section)
+    firewall_rules = FirewallControl.cfirewall.view_ruleset(section)
 
     converted_rules: list = []
     converted_rules_append = converted_rules.append
@@ -162,7 +162,7 @@ def commit_rules(json_data: dict[str, str]) -> return_data:
         return False, {'error': 3, 'message': str(ve)}
 
     else:
-        FirewallManage.commit(validated_rules)
+        FirewallControl.commit(validated_rules)
 
     return True, {'error': 0, 'message': 'commit successful'}
 

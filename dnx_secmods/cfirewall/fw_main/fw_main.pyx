@@ -221,8 +221,10 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     if (VERBOSE):
         pkt_print(&hw, ip_header, proto_header)
 
-        printf('[C/packet] action->%u, verdict->%u, system_rule->%u\n', inspection_results.action, verdict, system_rule)
-        printf(<char*>'---------------------------------------------------------------------\n')
+        printf('[C/packet] system->%u, action->%u, ', system_rule, inspection_results.action)
+        printf('ipp->%u, dns->%u, ips->%u\n',
+               inspection_results.mark >> 12 & 15, inspection_results.mark >> 16 & 15, inspection_results.mark >> 20 & 15)
+        printf(<char*>'=====================================================================\n')
 
     # return heirarchy -> libnfnetlink.c >> libnetfiler_queue >> CFirewall._run.
     # < 0 vals are errors, but return is being ignored by CFirewall._run.

@@ -17,7 +17,7 @@ if INITIALIZE_MODULE(LOG_NAME):
     from dnx_routines.logging.log_client import Log
 
     from fw_main import CFirewall
-    from fw_control import FirewallControl
+    from fw_automate import FirewallAutomate
 
 
     @dataclass
@@ -57,14 +57,14 @@ def run():
     # these will run in Python threads with a potential calling into Cython.
     # these functions should be explicitly identified since they will require the gil to be acquired on the Cython side
     # or else the Python interpreter will crash.
-    fw_control: FirewallControl = FirewallControl(Log, cfirewall=dnxfirewall)
+    fw_rule_monitor: FirewallAutomate = FirewallAutomate(Log, cfirewall=dnxfirewall)
     try:
-        fw_control.run()
+        fw_rule_monitor.run()
     except Exception as E:
         hardout(f'DNXFIREWALL control run failure => {E}')
 
     if (args.verbose_set):
-        fw_control.print_active_rules()
+        fw_rule_monitor.print_active_rules()
 
     # this is running in pure C. the GIL is released before running the low level system operations and will never
     # retake the gil.

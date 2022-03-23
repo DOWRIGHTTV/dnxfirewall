@@ -123,7 +123,6 @@ def _inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
 
         # determining the domain category
         category = DNS_CAT(CAT_LOOKUP(enum_request))
-        print(f'DNS REQUEST: request->{enum_request}, lookup->{category}')
         if (category is not DNS_CAT.NONE) and _block_query(category, whitelisted):
 
             return DNS_REQUEST_RESULTS(True, 'category', category)
