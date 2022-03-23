@@ -9,7 +9,7 @@ import traceback
 from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SO_PASSCRED, SCM_CREDENTIALS
 from json import loads
 
-from dnx_gentools.def_namedtuples import IPP_LOG, DNS_LOG, IPS_LOG, GEO_LOG, BLOCKED_LOG, INFECTED_LOG
+from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, DNS_REQUEST_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG, INFECTED_LOG
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.standard_tools import dnx_queue, looper
@@ -19,8 +19,10 @@ from dnx_iptools.def_structs import unpack_scm_creds
 from dnx_routines.logging.log_client import Log
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 
-# NOTE: allowing for dynamic reference to namedtuples
-NT_LOOKUP = {func.__name__: func for func in [IPP_LOG, DNS_LOG, IPS_LOG, GEO_LOG, BLOCKED_LOG, INFECTED_LOG]}.get
+# NOTE: dynamic reference to namedtuples
+NT_LOOKUP = {
+    func.__name__: func for func in [IPP_EVENT_LOG, DNS_REQUEST_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG, INFECTED_LOG]
+}.get
 
 _getuser_info = pwd.getpwuid
 _getuser_groups = os.getgrouplist
@@ -114,6 +116,9 @@ def receive_requests(queue_for_db):
 
         # NOTE: instead of pickle, using json then converting to a py object manually
         log_tuple = NT_LOOKUP(f'{name}_log'.upper())
+
+        print(f'tuple reference retrieved: name->{name}, log_tuple->{log_tuple}')
+
         log_entry = log_tuple(*data['log'])
 
         queue_for_db((name, data['timestamp'], log_entry))

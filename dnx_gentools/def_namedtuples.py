@@ -6,7 +6,7 @@ from collections import namedtuple as _namedtuple
 from functools import lru_cache as _lru_cache
 from typing import NamedTuple as _NamedTuple, Union as _Union, Optional as _Optional, Any as _Any, Callable as _Callable
 
-from dnx_gentools.def_enums import PROTO as _PROTO, DHCP as _DHCP, DNS_CAT as _DNS_CAT
+from dnx_gentools.def_enums import PROTO as _PROTO, DHCP as _DHCP, DNS_CAT as _DNS_CAT, IPS as _IPS
 from dnx_gentools.standard_tools import bytecontainer as _bytecontainer
 
 from dnx_iptools.def_structs import dhcp_byte_pack as _dhcp_bp, dhcp_short_pack as _dhcp_sp, dhcp_long_pack as _dhcp_lp
@@ -77,8 +77,6 @@ SYSLOG_SERVERS = _namedtuple('syslog_servers', 'primary secondary')
 
 # DNS PROXY
 PROXY_DECISION = _namedtuple('proxy_decision', 'name decision')
-DNS_LOG = _namedtuple('dns_log', 'src_ip request category reason action')
-BLOCKED_LOG = _namedtuple('blocked_log', 'src_ip request category reason action')
 
 DNS_WHITELIST = _namedtuple('whitelist', 'dns ip')
 DNS_BLACKLIST = _namedtuple('blacklist', 'dns')
@@ -120,25 +118,59 @@ class DNS_SEND(_NamedTuple):
 # IPS/IDS
 IPS_WAN_INFO = _namedtuple('ips_wan_info', 'interface ip mac')
 IPS_SCAN_RESULTS = _namedtuple('ips_scan_results', 'initial_block scan_detected block_status')
-IPS_LOG = _namedtuple('ips_log', 'ip protocol attack_type action')
 PSCAN_TRACKERS = _namedtuple('portscan', 'lock tracker')
 DDOS_TRACKERS  = _namedtuple('ddos', 'lock tracker')
 
 # IP PROXY
 IPP_INSPECTION_RESULTS = _namedtuple('ipp_inspection_results', 'category action')
-IPP_LOG = _namedtuple('ipp_log', 'local_ip tracked_ip category direction action')
-GEO_LOG = _namedtuple('geo_log', 'country direction action')
 
 IPP_SRC_INFO = _namedtuple('src_info', 'protocol src_ip src_port')
 IPP_DST_INFO = _namedtuple('dst_info', 'protocol dst_ip dst_port')
 
-# INFECTED CLIENTS
-INFECTED_LOG = _namedtuple('infected_log', 'infected_client src_ip detected_host reason')
+# LOG TUPLES
+class IPP_EVENT_LOG(_NamedTuple):
+    local_ip: int
+    tracked_ip: int
+    category: str
+    direction: str
+    action: str
+
+class DNS_REQUEST_LOG(_NamedTuple):
+    src_ip: str
+    request: str
+    category: str
+    reason: str
+    action: str
+
+class IPS_EVENT_LOG(_NamedTuple):
+    attacker: int
+    protocol: str
+    attack_type: str
+    action: str
+
+class GEOLOCATION_LOG(_NamedTuple):
+    country: str
+    direction: str
+    action: str
+
+# class DNS_BLOCKED_LOG(_NamedTuple):
+#     src_ip: int
+#     request: str
+#     category: str
+#     reason: str
+#     action: str
+
+class INFECTED_LOG(_NamedTuple):
+    client_mac: str
+    src_ip: int
+    detected_host: _Union[int, str]
+    reason: str
 
 # DATABASE
 BLOCKED_DOM = _namedtuple('blocked', 'domain category reason')
 
 # SOCKET
 L_SOCK = _namedtuple('listener_socket', 'name ip socket send sendto recvfrom')
+
 # NFQ_SOCK = _namedtuple('socket_info', 'zone name mac ip sock')
 NFQ_SEND_SOCK = _namedtuple('socket_info', 'zone ip sock_sendto')
