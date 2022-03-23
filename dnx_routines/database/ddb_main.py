@@ -4,34 +4,29 @@ from __future__ import annotations
 
 import os
 import pwd
-import threading
 import traceback
 
 from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SO_PASSCRED, SCM_CREDENTIALS
 from json import loads
 
-# importing named tuples, then pulling them from namespace before finishing imports.
-# ===============================================================
-from dnx_gentools.def_namedtuples import *
-
-_NT_LOCAL_REF = {k: v for k, v in globals().items() if k.isupper()}
-_NT_LOOKUP = _NT_LOCAL_REF.get
-# ===============================================================
+from dnx_gentools.def_namedtuples import IPP_LOG, DNS_LOG, IPS_LOG, GEO_LOG, BLOCKED_LOG, INFECTED_LOG
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.standard_tools import dnx_queue, looper
+
 from dnx_iptools.def_structs import unpack_scm_creds
 
-from dnx_routines.logging.log_client import LogHandler as Log
+from dnx_routines.logging.log_client import Log
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 
-LOG_NAME = 'system'
+# NOTE: allowing for dynamic reference to namedtuples
+NT_LOOKUP = {func.__name__: func for func in [IPP_LOG, DNS_LOG, IPS_LOG, GEO_LOG, BLOCKED_LOG, INFECTED_LOG]}.get
 
 _getuser_info = pwd.getpwuid
 _getuser_groups = os.getgrouplist
 
 # ====================================================
-# SERVICE SOCKET - initialization
+# SERVICE SOCKET - Initialization
 # ====================================================
 if os.path.exists(DATABASE_SOCKET):
     os.remove(DATABASE_SOCKET)
@@ -41,12 +36,12 @@ _db_service.setsockopt(SOL_SOCKET, SO_PASSCRED, 1)
 
 _db_service.bind(DATABASE_SOCKET.encode())
 
-# NOTE: direct reference to recvmsg method for perf
+# NOTE: direct reference to the recvmsg method for perf
 _db_service_recvmsg = _db_service.recvmsg
 
-# ----------------------------------------------------
-# SERVICE SOCKET - auth validation
-# ----------------------------------------------------
+# ---------------------------------------
+# SERVICE SOCKET - Auth Validation
+# ---------------------------------------
 def _authenticate_sender(anc_data):
     anc_data = {msg_type: data for _, msg_type, data in anc_data}
 
@@ -61,19 +56,15 @@ def _authenticate_sender(anc_data):
 
     return True
 
-# ====================================================
+# =======================================
 # PRIMARY FUNCTIONS - REDUCED FROM CLASS
-# ====================================================
-def init():
+# =======================================
+# the main service loop to remove the recursive callback of queue handler.
+def run():
+    Log.notice('Database log entry processing queue ready.')
 
-    threading.Thread(target=_receive_requests).start()
-
-    _run()
-
-# main service loop to remove the recursive callback of queue handler.
-def _run():
-    print('[+] Starting database log entry processing queue.')
     fail_count = 0
+    fail_time = fast_time()
     while True:
         # NOTE: this is blocking inside dnx_queue loop decorator on _write_to_database function.
         with DBConnector(Log) as database:
@@ -81,8 +72,11 @@ def _run():
 
         fail_count += 1
         if (not fail_count % 5):
-            # TODO: log this as critical or something
-            pass
+            new_time = fast_time()
+
+            Log.critical(f'Database write failure count reached 5. {new_time-fail_time} seconds since last entry.')
+
+            fail_time = new_time
 
         fast_sleep(ONE_SEC)
 
@@ -96,10 +90,10 @@ def _request_handler(database, job):
     # NOTE: this might be wasteful
     database.commit_entries()
 
-
 @looper(NO_DELAY, queue_for_db=_request_handler.add)
-def _receive_requests(queue_for_db):
-    '''receives databases messages plus ancillary authentication data from dnxfirewall mods.'''
+def receive_requests(queue_for_db):
+    '''receives databases messages plus ancillary authentication data from dnxfirewall mods.
+    '''
     try:
         data, anc_data, *_ = _db_service_recvmsg(2048, 256)
     except OSError:
@@ -112,25 +106,14 @@ def _receive_requests(queue_for_db):
         if (not authorized):
             return
 
-        # not validating input because we do not accept unsolicited communications and enforced by unix socket
-        # authentication. if there is malformed data from other dnx module, then it will be unrecoverable until
-        # a patch can be loaded.
+        # not validating input because we don't accept unsolicited comms, enforced by unix socket authentication.
+        # if there is malformed data from other dnx module, then it will be unrecoverable until a patch can be loaded.
         data = loads(data.decode())
 
         name = data['method']
 
-        # NOTE: instead of pickle, using json then converting to py object manually
-        log_tuple = _NT_LOOKUP(f'{name}_log'.upper())
+        # NOTE: instead of pickle, using json then converting to a py object manually
+        log_tuple = NT_LOOKUP(f'{name}_log'.upper())
         log_entry = log_tuple(*data['log'])
 
         queue_for_db((name, data['timestamp'], log_entry))
-
-def run():
-    try:
-        init()
-    finally:
-        os.remove(DATABASE_SOCKET)
-
-
-if (INIT_MODULE == LOG_NAME):
-    Log.run(name=LOG_NAME)
