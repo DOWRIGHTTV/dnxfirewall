@@ -76,7 +76,8 @@ _dns_whitelist = DNSProxy.whitelist.dns
 _dns_blacklist = DNSProxy.blacklist.dns
 _dns_keywords  = DNSProxy.signatures.keyword
 
-def inspect(packet: DNSPacket):
+# called via an instance, so we need to handle the implicit arg
+def inspect(_, packet: DNSPacket):
 
     request_results = _inspect(packet)
 
@@ -122,6 +123,7 @@ def _inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
 
         # determining the domain category
         category = DNS_CAT(CAT_LOOKUP(enum_request))
+        print(f'DNS REQUEST: request->{enum_request}, lookup->{category}')
         if (category is not DNS_CAT.NONE) and _block_query(category, whitelisted):
 
             return DNS_REQUEST_RESULTS(True, 'category', category)

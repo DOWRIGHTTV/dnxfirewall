@@ -39,7 +39,7 @@ def icmp_reachable(host_ip: str) -> bool:
         return False
 
 def calc_checksum(data: Union[bytes, bytearray], pack: bool = False) -> Union[int, bytes]:
-    # if data length is odd, this will pad it with 1 byte to complete final chunk
+    # if data length is odd, this will pad it with 1 byte to complete the final chunk
     if (len(data) & 1):
         data += b'\x00'
 
