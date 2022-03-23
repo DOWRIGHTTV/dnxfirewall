@@ -41,9 +41,6 @@ if (TYPE_CHECKING):
         'DBConnector_T'
     )
 
-    from typing import TYPE_CHECKING, Type
+    from ddb_connector_sqlite import DBConnector
 
-    if (TYPE_CHECKING):
-        from ddb_connector_sqlite import DBConnector
-
-        DBConnector_T = Type[DBConnector]
+    DBConnector_T = Type[DBConnector]
