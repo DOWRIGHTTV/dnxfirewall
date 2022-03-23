@@ -56,6 +56,22 @@ class IPProxy(NFQueue):
         if (packet.ipp_profile and packet.action is CONN.ACCEPT):
             return True
 
+        # PRE DROP FILTER
+        # --------------------
+        # DIRECT TO IPS/IDS
+        # --------------------
+        # forwarding packet to ips for portscan/ddos inspection with deferred verdict.
+        # accept/ deny actions are both capable of being inspected by ips/ids.
+        if (packet.ips_profile and packet.direction is DIR.INBOUND):
+            packet.nfqueue.forward(Queue.IPS_IDS)
+
+        # ====================
+        # DIRECT TO GEO/DROP
+        # ====================
+        elif packet.action is CONN.DROP:
+            packet.nfqueue.drop()
+
+        # POST DROP FILTER
         # --------------------
         # DIRECT TO DNS PROXY
         # --------------------
@@ -63,25 +79,11 @@ class IPProxy(NFQueue):
                 and packet.protocol is PROTO.UDP and packet.dst_port == PROTO.DNS):
             packet.nfqueue.forward(Queue.DNS_PROXY)
 
-        # --------------------
-        # DIRECT TO IPS/IDS
-        # --------------------
-        # forwarding packet to ips for portscan/ddos inspection with deferred action verdict
-        # accept or deny actions are both capable of being inspected by ips/ids.
-        if (packet.ips_profile and packet.direction is DIR.INBOUND):
-            packet.nfqueue.forward(Queue.IPS_IDS)
-
-        # --------------------
+        # =====================
         # DIRECT TO GEO/ACCEPT
-        # --------------------
+        # =====================
         elif (packet.action is CONN.ACCEPT):
             packet.nfqueue.accept()
-
-        # --------------------
-        # DIRECT TO GEO/DROP
-        # --------------------
-        else:
-            packet.nfqueue.drop()
 
         # quick path to log geo data. doing this post action, since it's a log-only path.
         log_geolocation(packet)
@@ -91,39 +93,40 @@ class IPProxy(NFQueue):
     @staticmethod
     def forward_packet(packet: IPPPacket, direction: DIR, action: CONN) -> None:
 
-        # PACKET MARK UPDATE - needed for forward to ips/ids and dns proxy
-        if (action is CONN.DROP):
-            packet.nfqueue.update_mark(packet.mark & 65532)
-
-        # --------------------
-        # DNS PROXY FORWARD
-        # --------------------
-        # this needs to be first to give local dns records to be implicitly allowed
-        if (packet.dns_profile and packet.protocol is PROTO.UDP and packet.dst_port == PROTO.DNS):
-            packet.nfqueue.forward(Queue.DNS_PROXY)
-
+        # PRE DROP FILTERS
         # --------------------
         # IPS/IDS FORWARD
         # --------------------
         # ips filter for only INBOUND traffic inspection.
+        # it is intended to inspect dropped packets for ddos/portscan profiling
         # if ips profile is set on a rule for outbound traffic, it will be ignored.
         # TODO: look into what would be needed to expand ips inspection to lan to wan or lan to lan rules.
-        elif (packet.ips_profile and direction is DIR.INBOUND):
+        if (packet.ips_profile and direction is DIR.INBOUND):
+            packet.nfqueue.update_mark(packet.mark & 65532)
+
             packet.nfqueue.forward(Queue.IPS_IDS)
 
-        # --------------------
-        # IP PROXY ACCEPT
-        # --------------------
-        # no other security modules configured on rule and passed ip proxy inspection
-        elif (action is CONN.ACCEPT):
-            packet.nfqueue.accept()
-
-        # --------------------
+        # ====================
         # IP PROXY DROP
-        # --------------------
+        # ====================
         # no other security modules configured on rule and failed ip proxy inspection
         elif (action is CONN.DROP):
             packet.nfqueue.drop()
+
+        # POST DROP FILTERS
+        # --------------------
+        # DNS PROXY FORWARD
+        # --------------------
+        elif (packet.dns_profile and packet.protocol is PROTO.UDP and packet.dst_port == PROTO.DNS):
+            packet.nfqueue.forward(Queue.DNS_PROXY)
+
+        # ====================
+        # IP PROXY ACCEPT
+        # ====================
+        # no other security modules configured on rule and passed ip proxy inspection
+        # NOTE: make else?
+        elif (action is CONN.ACCEPT):
+            packet.nfqueue.accept()
 
 
 # GENERAL PROXY FUNCTIONS
@@ -149,7 +152,7 @@ _geolocation_settings = IPProxy.geolocation_settings
 
 _tor_whitelist = IPProxy.tor_whitelist
 
-def inspect(packet: IPPPacket) -> None:
+def inspect(_, packet: IPPPacket) -> None:
 
     action, category = _inspect(packet)
 
