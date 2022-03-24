@@ -237,7 +237,7 @@ def generate_geolocation(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32
 
         # assigning vars for bin id, host ranges, and ip count
         bin_id = net_id & MSB
-        host_id_r1 = c_uint32(net_id & LSB)
+        host_id_r1 = net_id & LSB
         host_id_r2 = c_uint32((net_id & LSB) + ip_count)
         cty = c_uint16(country)
 
@@ -246,6 +246,10 @@ def generate_geolocation(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32
     # merging contiguous ranges if within the same country
     for bin_id, containers in dict_nets.items():
         dict_nets[bin_id] = _merge_geo_ranges(sorted(containers))
+
+        # ctypes dont have comparison operators
+        for container in dict_nets[bin_id]:
+            container[0] = c_uint32(container[0])
 
     # NOTE: reduced list comprehension now that extra compression is re implemented, which converts to
     # tuple once it is completed with host containers, then again on the bin itself.
@@ -284,7 +288,7 @@ def _merge_geo_ranges(ls: list, /) -> list[list]:
             # complexity. after, replace the value of the ongoing merged_item with the current iteration list to
             # continue process.
             else:
-                merged_containers.append(tuple(merged_item))
+                merged_containers.append(merged_item)
 
                 merged_item = l
 
