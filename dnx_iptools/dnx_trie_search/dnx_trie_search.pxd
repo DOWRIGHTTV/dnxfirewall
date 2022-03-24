@@ -38,8 +38,8 @@ cdef class HashTrie:
         size_t INDEX_MASK
 
     cpdef void generate_structure(self, list py_trie, size_t py_trie_len)
-    cdef uint8_t search(self, uint32_t trie_key, uint32_t host_id) nogil
-    cdef TrieRange* make_l2(self, uint32_t trie_key, list l2_entry)
+    cdef uint8_t search(self, size_t trie_key, uint32_t host_id) nogil
+    cdef TrieRange* make_l2(self, size_t trie_key, list l2_entry)
 
 cdef class RecurveTrie:
     cdef:

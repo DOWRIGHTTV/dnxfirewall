@@ -30,8 +30,7 @@ cdef class HashTrie:
         '''
         cdef uint8_t search_result
 
-        with nogil:
-            search_result = self.search(host[0], host[1])
+        search_result = self.search(host[0], host[1])
 
         return search_result
 
@@ -68,7 +67,7 @@ cdef class HashTrie:
             self.TRIE_MAP[trie_key_hash].len    = value_len
             self.TRIE_MAP[trie_key_hash].ranges = trie_values
 
-    cdef uint8_t search(self, uint32_t trie_key, uint32_t host_id) nogil:
+    cdef uint8_t search(self, size_t trie_key, uint32_t host_id) nogil:
 
         cdef:
             TrieMap *trie_value = &self.TRIE_MAP[trie_key % self.INDEX_MASK]
@@ -90,7 +89,7 @@ cdef class HashTrie:
         # iteration completed with no l2 match
         return NO_MATCH
 
-    cdef TrieRange* make_l2(self, uint32_t trie_key, list l2_entry):
+    cdef TrieRange* make_l2(self, size_t trie_key, list l2_entry):
         '''allocates memory for a single L2 content struct, assigns members from l2_entry, then returns pointer.
         '''
         cdef TrieRange *l2_content = <TrieRange*>malloc(sizeof(TrieRange))
