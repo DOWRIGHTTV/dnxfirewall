@@ -123,17 +123,41 @@ if INITIALIZE_MODULE('trie-test'):
 
     @dataclass
     class Args:
+        h:    int = 0
+        help: int = 0
+
         gh: int = 0
         gr: int = 0
         rr: int = 0
         dr: int = 0
+
+        @property
+        def show_help(self):
+            return self.h or self.help
 
     try:
         args = Args(**{a: 1 for a in os.environ['PASSTHROUGH_ARGS'].split(',') if a})
     except Exception as E:
         hardout(f'DNXFIREWALL arg parse failure => {E}')
 
-    import pyximport; pyximport.install()
+    fields = list(Args.__dataclass_fields__)
+    if (Args.show_help):
+        vargs = [
+            ('gh', 'v3 GEO (HASH)'), ('gr', 'v2 GEO (RANGE)'),
+            ('rr', 'v2 REP (RECURVE)'), ('dr', 'v2 DNS (RECURVE)')
+        ]
+
+        print('available args')
+        print('-'*32)
+        for a, desc in vargs:
+            print(f'{a}->{desc}')
+
+        hardout()
+
+    elif not any([getattr(Args, x) for x in fields]):
+        hardout('args required. use help for more info.')
+
+    # import pyximport; pyximport.install()
 
     Log.run(name='_tests')
 
