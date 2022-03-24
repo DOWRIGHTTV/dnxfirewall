@@ -46,16 +46,16 @@ cdef class HashTrie:
 
             size_t max_width = <size_t>2 ** log2(py_trie_len)
 
-        self.INDEX_MASK = max_width - 1
+        self.INDEX_MASK = <size_t>(max_width - 1)
 
         self.TRIE_MAP = <TrieMap*>calloc(max_width, sizeof(TrieMap))
 
         for i in range(py_trie_len):
 
-            trie_key = py_trie[i][0]
+            trie_key = <size_t>py_trie[i][0]
             trie_key_hash = trie_key % self.INDEX_MASK
 
-            value_len = len(py_trie[i][1])
+            value_len = <size_t>len(py_trie[i][1])
 
             # allocating memory for trie_ranges
             trie_values = <TrieRange*>malloc(sizeof(TrieRange) * value_len)
@@ -125,13 +125,13 @@ cdef class RecurveTrie:
             L2Recurve  *l2_container
 
         # allocating memory for L1 container
-        self.L1_SIZE = len(py_trie)
+        self.L1_SIZE = <size_t>len(py_trie)
         self.L1_CONTAINER = <L1Recurve*>malloc(sizeof(L1Recurve) * self.L1_SIZE)
 
         for i in range(self.L1_SIZE):
 
-            l1_id   = py_trie[i][0]
-            l2_size = len(py_trie[i][1])
+            l1_id   = <uint32_t>py_trie[i][0]
+            l2_size = <size_t>len(py_trie[i][1])
 
             # allocating memory for an array of l2 container pointers
             l2_container = <L2Recurve*>malloc(sizeof(L2Recurve) * l2_size)

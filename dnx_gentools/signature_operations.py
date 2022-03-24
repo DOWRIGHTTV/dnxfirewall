@@ -99,17 +99,9 @@ def generate_domain(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32, c_u
     for containers in dict_nets.values():
         containers.sort()
 
-        # ctypes dont have comparison operators
-        for container in containers:
-            container[0] = c_uint32(container[0])
-            container[1] = c_uint32(container[1])
-
     # converting to nested tuple and sorting with the outermost list converted on return
     nets = [[bin_id, containers] for bin_id, containers in dict_nets.items()]
     nets.sort()
-
-    for li in nets:
-        li[0] = c_uint32(li[0])
 
     # no longer needed so ensuring memory gets freed
     del dict_nets
@@ -156,17 +148,10 @@ def generate_reputation(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32,
     for containers in dict_nets.values():
         containers.sort()
 
-        # ctypes dont have comparison operators
-        for container in containers:
-            container[0] = c_uint32(container[0])
-
     # converting to nested tuple and sorting.
     # outermost list converted on return
     nets = [[bin_id, containers] for bin_id, containers in dict_nets.items()]
     nets.sort()
-
-    for li in nets:
-        li[0] = c_uint32(li[0])
 
     del dict_nets, ip_rep_signatures
 
@@ -250,20 +235,10 @@ def generate_geolocation(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32
     for bin_id, containers in dict_nets.items():
         dict_nets[bin_id] = _merge_geo_ranges(sorted(containers))
 
-        # ctypes dont have comparison operators
-        for container in dict_nets[bin_id]:
-            container[0] = c_uint32(container[0])
-            container[1] = c_uint32(container[1])
-            container[2] = c_uint16(container[2])
-
     # NOTE: reduced list comprehension now that extra compression is re implemented, which converts to
     # tuple once it is completed with host containers, then again on the bin itself.
     nets = [[bin_id, containers] for bin_id, containers in dict_nets.items()]
     nets.sort()
-
-    # ctypes do not have comparison operations
-    for li in nets:
-        li[0] = c_uint32(li[0])
 
     del dict_nets
 
@@ -284,14 +259,12 @@ def _merge_geo_ranges(ls: list, /) -> list[list]:
             _, last_broadcast, last_country = merged_item
 
             # the networks are contiguous, so we will merge them and update the temp item.
-            # if the countries are different, well treat the current container as not contiguous
+            # if countries are different, we will treat the current container as not contiguous
             if (cur_net_id == last_broadcast+1 and cur_country == last_country):
                 merged_item[1] = cur_broadcast
 
             # once a discontiguous range or new country is detected, the merged_item will get added to the merged list.
-            # convert host container to a tuple while we have it here now, which should reduce the list comprehension
-            # complexity. after, replace the value of the ongoing merged_item with the current iteration list to
-            # continue process.
+            # swaps the value of the ongoing merged_item with the current iteration list.
             else:
                 merged_containers.append(merged_item)
 
