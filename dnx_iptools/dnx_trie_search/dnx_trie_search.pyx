@@ -90,15 +90,15 @@ cdef class HashTrie:
         # iteration completed with no l2 match
         return NO_MATCH
 
-    cdef TrieRange* make_l2(self, uint32_t trie_key, (uint32_t, uint32_t, uint16_t) l2_entry):
+    cdef TrieRange* make_l2(self, uint32_t trie_key, list l2_entry):
         '''allocates memory for a single L2 content struct, assigns members from l2_entry, then returns pointer.
         '''
         cdef TrieRange *l2_content = <TrieRange*>malloc(sizeof(TrieRange))
 
         l2_content.key     = trie_key
-        l2_content.netid   = l2_entry[0]
-        l2_content.bcast   = l2_entry[1]
-        l2_content.country = l2_entry[2]
+        l2_content.netid   = <uint32_t>l2_entry[0]
+        l2_content.bcast   = <uint32_t>l2_entry[1]
+        l2_content.country = <uint16_t>l2_entry[2]
 
         return l2_content
 
@@ -141,7 +141,7 @@ cdef class RecurveTrie:
                 l2_container[xi] = self.make_l2(py_trie[i][1][xi])[0]
 
             # assigning struct members to the current index of L1 container.
-            self.L1_CONTAINER[i].id = <uint32_t>( & UINT32_MAX)
+            self.L1_CONTAINER[i].id = l1_id
             self.L1_CONTAINER[i].l2_size = l2_size
             self.L1_CONTAINER[i].l2_ptr  = l2_container
 
@@ -204,14 +204,14 @@ cdef class RecurveTrie:
         # L2 default
         return NO_MATCH
 
-    cdef L2Recurve* make_l2(self, (uint32_t, uint16_t) l2_entry):
+    cdef L2Recurve* make_l2(self, list l2_entry):
         '''allocates memory for a single L2 content struct, assigns members from l2_entry, then
         returns pointer.
         '''
         cdef L2Recurve *l2_content = <L2Recurve*>malloc(sizeof(L2Recurve))
 
-        l2_content.id       = l2_entry[0]
-        l2_content.host_cat = l2_entry[1]
+        l2_content.id       = <uint32_t>l2_entry[0]
+        l2_content.host_cat = <uint16_t>l2_entry[1]
 
         return l2_content
 
@@ -244,7 +244,7 @@ cdef class RangeTrie:
 
             l2_size = len(py_trie[i][1])
 
-            # calling make function for l2 content struct for each entry in current py_l2 container
+            # calling make function for l2 content struct for each entry in the current py_l2 container
             for xi in range(l2_size):
                 self.L1_CONTAINER[i].l2_ptr[xi] = self.make_l2(py_trie[i][1][xi])[0]
 
@@ -292,14 +292,14 @@ cdef class RangeTrie:
         # l1 match
         return NO_MATCH
 
-    cdef L2Range* make_l2(self, (uint32_t, uint32_t, uint16_t) l2_entry):
-        '''allocates memory for a single L2 content struct, assigns members from l2_entry, then returns pointer.'''
-
+    cdef L2Range* make_l2(self, list l2_entry):
+        '''allocates memory for a single L2 content struct, assigns members from l2_entry, then returns pointer.
+        '''
         cdef L2Range *l2_content = <L2Range*>malloc(sizeof(L2Range))
 
-        l2_content.netid   = l2_entry[0]
-        l2_content.bcast   = l2_entry[1]
-        l2_content.country = l2_entry[2]
+        l2_content.netid   = <uint32_t>l2_entry[0]
+        l2_content.bcast   = <uint32_t>l2_entry[1]
+        l2_content.country = <uint16_t>l2_entry[2]
 
         return l2_content
 
