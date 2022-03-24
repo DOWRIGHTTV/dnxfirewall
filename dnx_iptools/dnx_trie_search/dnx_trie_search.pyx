@@ -123,7 +123,7 @@ cdef class RecurveTrie:
 
             # calling make function for l2 content struct for each entry in the current py_l2 container
             for xi in range(l2_size):
-                l2_container[xi] = self._make_l2(py_trie[i][1][xi])[0]
+                l2_container[xi] = self.make_l2(py_trie[i][1][xi])[0]
 
             # assigning struct members to the current index of L1 container.
             self.L1_CONTAINER[i].id = <int32_t>py_trie[i][0]
@@ -188,7 +188,7 @@ cdef class RecurveTrie:
         # L2 default
         return NO_MATCH
 
-    cdef L2Recurve* _make_l2(self, (uint32_t, uint16_t) l2_entry):
+    cdef L2Recurve* make_l2(self, (uint32_t, uint16_t) l2_entry):
         '''allocates memory for a single L2 content struct, assigns members from l2_entry, then
         returns pointer.
         '''
