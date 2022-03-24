@@ -120,6 +120,7 @@ def _process_results(results, descriptor):
 
 
 if INITIALIZE_MODULE('trie-test'):
+    args = None
 
     @dataclass
     class Args:
@@ -140,8 +141,7 @@ if INITIALIZE_MODULE('trie-test'):
     except Exception as E:
         hardout(f'DNXFIREWALL arg parse failure => {E}')
 
-    fields = list(Args.__dataclass_fields__)
-    if (Args.show_help):
+    if (args.show_help):
         vargs = [
             ('gh', 'v3 GEO (HASH)'), ('gr', 'v2 GEO (RANGE)'),
             ('rr', 'v2 REP (RECURVE)'), ('dr', 'v2 DNS (RECURVE)')
@@ -154,7 +154,7 @@ if INITIALIZE_MODULE('trie-test'):
 
         hardout()
 
-    elif not any([getattr(Args, x) for x in fields]):
+    elif not any(args.__dict__.values()):
         hardout('args required. use help for more info.')
 
     # import pyximport; pyximport.install()
