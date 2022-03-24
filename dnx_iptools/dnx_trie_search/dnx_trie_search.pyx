@@ -35,7 +35,7 @@ cdef class HashTrie:
 
         return search_result
 
-    cpdef void generate_structure(self, tuple py_trie, size_t py_trie_len):
+    cpdef void generate_structure(self, list py_trie, size_t py_trie_len):
 
         cdef:
             size_t trie_key
@@ -117,7 +117,7 @@ cdef class RecurveTrie:
 
         return search_result
 
-    cpdef void generate_structure(self, tuple py_trie):
+    cpdef void generate_structure(self, list py_trie):
 
         cdef:
             uint32_t    l1_id
@@ -130,7 +130,7 @@ cdef class RecurveTrie:
 
         for i in range(self.L1_SIZE):
 
-            l1_id   = py_trie[i][0] >> 1
+            l1_id   = py_trie[i][0]
             l2_size = len(py_trie[i][1])
 
             # allocating memory for an array of l2 container pointers
@@ -231,7 +231,7 @@ cdef class RangeTrie:
 
         return search_result
 
-    cpdef void generate_structure(self, tuple py_trie):
+    cpdef void generate_structure(self, list py_trie):
 
         cdef:
             size_t l2_size
