@@ -17,6 +17,8 @@ from libc.stdint cimport int8_t, int16_t, int32_t, uint8_t, uint16_t, uint32_t
 DEF EMPTY_CONTAINER = 0
 DEF NO_MATCH = 0
 
+cdef uint32_t UINT32_MAX = 4294967295
+
 # ================================================
 # C STRUCTURES - converted from python tuples
 # ================================================
@@ -137,11 +139,11 @@ cdef class RecurveTrie:
                 l2_container[xi] = self.make_l2(py_trie[i][1][xi])[0]
 
             # assigning struct members to the current index of L1 container.
-            self.L1_CONTAINER[i].id = <int32_t>py_trie[i][0]
+            self.L1_CONTAINER[i].id = <uint32_t>(py_trie[i][0] & UINT32_MAX)
             self.L1_CONTAINER[i].l2_size = l2_size
             self.L1_CONTAINER[i].l2_ptr  = l2_container
 
-    cdef uint16_t l1_search(self, int32_t container_id, uint32_t host_id) nogil:
+    cdef uint16_t l1_search(self, uint32_t container_id, uint32_t host_id) nogil:
 
         cdef:
             size_t left = 0

@@ -2,9 +2,8 @@
 
 from libc.stdint cimport int8_t, int16_t, int32_t, uint8_t, uint16_t, uint32_t
 
-# need signed int because id can be negative with some methods of keying containers
 cdef struct L1Recurve:
-    int32_t     id
+    uint32_t    id
     size_t      l2_size
     L2Recurve  *l2_ptr
 
@@ -48,7 +47,7 @@ cdef class RecurveTrie:
         L1Recurve *L1_CONTAINER
 
     cpdef void generate_structure(self, tuple py_trie)
-    cdef uint16_t l1_search(self, int32_t container_id, uint32_t host_id) nogil
+    cdef uint16_t l1_search(self, uint32_t container_id, uint32_t host_id) nogil
     cdef uint16_t l2_search(self, uint32_t container_id, L1Recurve *l1_container) nogil
     cdef L2Recurve* make_l2(self, (uint32_t, uint16_t) l2_entry)
 
