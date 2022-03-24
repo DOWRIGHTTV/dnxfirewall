@@ -9,6 +9,7 @@ from ipaddress import IPv4Address
 from dnx_gentools.def_constants import INITIALIZE_MODULE, hardout
 from dnx_gentools import signature_operations
 
+from dnx_iptools.protocol_tools import mhash
 from dnx_iptools.dnx_trie_search import HashTrie, RecurveTrie, RangeTrie
 
 from dnx_routines.logging.log_client import LogHandler as Log
@@ -74,7 +75,7 @@ def _test_search2(name, cat, search_func):
 
     for domain in domains_to_test:
 
-        host_hash = hash(domain)
+        host_hash = mhash(domain)
 
         h1 = host_hash[:DNS_BIN_OFFSET]
         h2 = host_hash[DNS_BIN_OFFSET:]

@@ -25,7 +25,7 @@ __all__ = (
     'domain_stob', 'mac_stob',
     'mac_add_sep', 'convert_string_to_bitmap',
     'create_dns_query_header', 'create_dns_response_header',
-    'parse_query_name'
+    'parse_query_name', 'mhash'
 )
 
 btoia: Callable[[Union[bytes, bytearray, memoryview]], int] = partial(int.from_bytes, byteorder='big', signed=False)

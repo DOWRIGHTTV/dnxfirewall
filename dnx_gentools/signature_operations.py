@@ -11,6 +11,8 @@ from dnx_gentools.def_constants import HOME_DIR, MSB, LSB, DNS_BIN_OFFSET, RFC19
 from dnx_gentools.def_enums import GEO, REP, DNS_CAT
 from dnx_gentools.file_operations import load_configuration
 
+from dnx_iptools.protocol_tools import mhash
+
 # ===============
 # TYPING IMPORTS
 # ===============
@@ -71,8 +73,8 @@ def generate_domain(log: LogHandler_T) -> tuple[tuple[int, tuple[int, int]]]:
 
         sig: list = signature.strip().split(maxsplit=1)
         try:
-            host_hash: str = f'{hash(sig[0])}'
-            cat: int = int(DNS_CAT[sig[1]])
+            host_hash: str = f'{mhash(sig[0])}'
+            cat = int(DNS_CAT[sig[1]])
         except Exception as E:
             log.warning(f'bad signature detected | {E} | {sig}')
 

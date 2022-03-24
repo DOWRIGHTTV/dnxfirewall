@@ -240,7 +240,7 @@ class DNSPacket(NFPacket):
         self.requests, self.tld = _enumerate_request(self.qname, self.local_domain)
         self.request_identifier = (itoip(self.src_ip), self.src_port, self.dns_id)
 
-def _enumerate_request(request: str, local_domain: bool, int=int, hash=hash) -> tuple[list[tuple[int]], Optional[str]]:
+def _enumerate_request(request: str, local_domain: bool, int=int, hash=mhash) -> tuple[list[tuple[int]], Optional[str]]:
     rs: list[str] = request.split('.')
 
     # tld > fqdn
@@ -250,7 +250,7 @@ def _enumerate_request(request: str, local_domain: bool, int=int, hash=hash) -> 
     req_ids: list[tuple] = []
     tld: Optional[str] = None if local_domain else rs[-1]
 
-    # building bin/host id from hash for each enumerated name.
+    # building bin/host id from hash (murmurhash 32b) for each enumerated name.
     for r in requests:
         r_hash = hash(r)
         b_id = int(f'{r_hash}'[:4])
