@@ -31,7 +31,6 @@ class PROTO(_IntEnum):
     ICMP    = 1
     TCP     = 6
     UDP     = 17
-    TCP_UDP = 23  # bitwise in cfirewall / ICMP (1) messes a straight bitwise op
 
     # TCP/UDP
     DNS      = 53
@@ -159,10 +158,10 @@ class Queue(_IntEnum):
     CFIREWALL = 69
 
 class DNS_CAT(_IntEnum):
-    doh = -30  # system
-    time_based = -5  # system
-
     NONE = 0
+
+    doh = 900  # system
+    time_based = 990  # system
 
     malicious   = 10
     cryptominer = 11
@@ -181,7 +180,6 @@ class DNS_CAT(_IntEnum):
     purchases   = 140
     remotelogin = 150
     downloads   = 160
-    teentop50   = 1000
 
 class REP(_IntEnum):
     DNL  = -1  # did not look due to being geo filtered
