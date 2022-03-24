@@ -168,19 +168,20 @@ def create_dns_query_header(dns_id, arc=0, *, cd):
 
     return dns_header_pack(dns_id, f, 1, 0, 0, arc)
 
-def mhash(key: str, seed=0x0):
+def mhash(key: str, seed: int = 0x0):
     '''Implements 32bit murmur3 hash.
     '''
-    bkey = bytearray(key)
+    bkey = bytearray(key.encode('utf-8'))
 
     length:  int = len(key)
     nblocks: int = length // 4
 
-    h1 = seed
+    h1: int = seed
 
-    c1 = 0xcc9e2d51
-    c2 = 0x1b873593
+    c1: int = 0xcc9e2d51
+    c2: int = 0x1b873593
 
+    k1: int
     for block_start in range(0, nblocks * 4, 4):
         k1 = (bkey[block_start + 3] << 24 | bkey[block_start + 2] << 16 |
               bkey[block_start + 1] << 8  | bkey[block_start + 0])
@@ -193,24 +194,24 @@ def mhash(key: str, seed=0x0):
         h1 = (h1 << 13 | h1 >> 19) & 0xFFFFFFFF  # inlined ROTL32
         h1 = (h1 * 5 + 0xe6546b64) & 0xFFFFFFFF
 
-    tail_index = nblocks * 4
-    k1 = 0
-    tail_size = length & 3
+    k2: int = 0
+    tail_index: int = nblocks * 4
+    tail_size: int = length & 3
 
     if (tail_size >= 3):
-        k1 ^= bkey[tail_index + 2] << 16
+        k2 ^= bkey[tail_index + 2] << 16
 
     if (tail_size >= 2):
-        k1 ^= bkey[tail_index + 1] << 8
+        k2 ^= bkey[tail_index + 1] << 8
 
     if (tail_size >= 1):
-        k1 ^= bkey[tail_index + 0]
+        k2 ^= bkey[tail_index + 0]
 
     if (tail_size > 0):
-        k1 = (k1 * c1) & 0xFFFFFFFF
-        k1 = (k1 << 15 | k1 >> 17) & 0xFFFFFFFF  # inlined ROTL32
-        k1 = (k1 * c2) & 0xFFFFFFFF
-        h1 ^= k1
+        k2 = (k2 * c1) & 0xFFFFFFFF
+        k2 = (k2 << 15 | k2 >> 17) & 0xFFFFFFFF  # inlined ROTL32
+        k2 = (k2 * c2) & 0xFFFFFFFF
+        h1 ^= k2
 
     # FINAL MIX
     h = h1 ^ length
