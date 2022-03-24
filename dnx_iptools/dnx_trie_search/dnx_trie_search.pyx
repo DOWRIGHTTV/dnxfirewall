@@ -211,7 +211,7 @@ cdef class RangeTrie:
         cdef long search_result
 
         with nogil:
-            search_result = self.search(host[0], host[1])
+            search_result = self.l1_search(host[0], host[1])
 
         return search_result
 
@@ -239,7 +239,7 @@ cdef class RangeTrie:
             # allocating memory for individual L2 containers
             self.L1_CONTAINER[i].l2_ptr = <L2Range*>malloc(sizeof(L2Range) * l2_size)
 
-    cdef uint32_t search(self, uint32_t container_id, uint32_t host_id) nogil:
+    cdef uint32_t l1_search(self, uint32_t container_id, uint32_t host_id) nogil:
 
         cdef:
             size_t mid
