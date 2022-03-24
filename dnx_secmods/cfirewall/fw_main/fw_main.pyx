@@ -243,8 +243,8 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
         uint32_t iph_dst_ip = ntohl(ip_header.daddr)
 
         # ip address to country code
-        uint16_t src_country = GEOLOCATION.search(iph_src_ip & MSB, iph_src_ip & LSB)
-        uint16_t dst_country = GEOLOCATION.search(iph_dst_ip & MSB, iph_dst_ip & LSB)
+        uint8_t src_country = GEOLOCATION.search(iph_src_ip & MSB, iph_src_ip & LSB)
+        uint8_t dst_country = GEOLOCATION.search(iph_dst_ip & MSB, iph_dst_ip & LSB)
 
         # value used by ip proxy which is normalized and always represents the external ip address
         uint16_t tracked_geo = src_country if direction == INBOUND else dst_country
@@ -376,14 +376,14 @@ cdef inline bint zone_match(ZoneArray *zone_array, uint8_t pkt_zone) nogil:
     return NO_MATCH
 
 # generic function for source OR destination network obj matching
-cdef inline bint network_match(NetworkArray *net_array, uint32_t iph_ip, uint16_t country) nogil:
+cdef inline bint network_match(NetworkArray *net_array, uint32_t iph_ip, uint8_t country) nogil:
 
     cdef:
         size_t  i
         Network *net
 
     if (VERBOSE):
-        printf(<char*>'checking ip->%u, country->%u\n', iph_ip, <uint8_t>country)
+        printf(<char*>'checking ip->%u, country->%u\n', iph_ip, country)
 
     for i in range(net_array.len):
 
@@ -416,7 +416,7 @@ cdef inline bint network_match(NetworkArray *net_array, uint32_t iph_ip, uint16_
                 return MATCH
 
     if (VERBOSE):
-        printf(<char*>'no match ip->%u, country->%u\n', iph_ip, <uint8_t>country)
+        printf(<char*>'no match ip->%u, country->%u\n', iph_ip, country)
 
     # default action
     return NO_MATCH
