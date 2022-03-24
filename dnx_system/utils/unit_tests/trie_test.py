@@ -83,7 +83,7 @@ def _test_search2(name, cat, search_func):
         h1 = host_hash[:DNS_BIN_OFFSET]
         h2 = host_hash[DNS_BIN_OFFSET:]
 
-        host = (h1, h2)
+        host = (int(h1), int(h2))
 
         start = f_time()
 
