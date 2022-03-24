@@ -183,16 +183,16 @@ def run():
 
         print(f'{line}\nITERATION {x}\n{line}')
 
-        if (Args.gh):
+        if (args.gh):
             _test_search('v3 GEO (HASH)', 'geo', geo_hash_trie.py_search)
 
-        if (Args.gr):
+        if (args.gr):
             _test_search('v2 GEO (RANGE)', 'geo', geo_range_trie.search)
 
-        if (Args.rr):
+        if (args.rr):
             _test_search('v2 REP (RECURVE)', 'rep', rep_recurve_trie.search)
 
-        if (Args.dr):
+        if (args.dr):
             _test_search2('v2 DNS (RECURVE)', 'dns', dns_recurve_trie.search)
 
     os._exit(1)
