@@ -84,13 +84,16 @@ def generate_domain(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32, c_u
         else:
             # pre proxy override check before adding
             if (sig[0] not in wl_exceptions):
-                bin_id  = int(host_hash[:DNS_BIN_OFFSET])
-                host_id = c_uint32(int(host_hash[DNS_BIN_OFFSET:]))
-
                 try:
-                    dict_nets[bin_id].append([host_id, cat])
+                    bin_id  = int(host_hash[:DNS_BIN_OFFSET])
+                    host_id = c_uint32(int(host_hash[DNS_BIN_OFFSET:]))
                 except Exception as E:
                     log.warning(f'bad signature detected | {E} | {sig}')
+                else:
+                    try:
+                        dict_nets[bin_id].append([host_id, cat])
+                    except Exception as E:
+                        log.warning(f'bad signature detected | {E} | {sig}')
 
     # in place sort of all containers prior to building the structure
     for containers in dict_nets.values():
