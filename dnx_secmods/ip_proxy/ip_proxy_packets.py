@@ -12,7 +12,7 @@ from dnx_iptools.cprotocol_tools import itoip
 class IPPPacket(NFPacket):
 
     __slots__ = (
-        'local_ip', 'bin_data',
+        'local_ip', 'tracked_ip', 'bin_data',
     )
 
     def _before_exit(self, mark):
@@ -28,6 +28,7 @@ class IPPPacket(NFPacket):
 
             self.local_ip = itoip(self.src_ip)
 
+        self.tracked_ip = itoip(tracked_ip)
         self.bin_data = (tracked_ip & MSB, tracked_ip & LSB)
 
 # NOTE: RawResponse can only be subclassed and not used directly.
