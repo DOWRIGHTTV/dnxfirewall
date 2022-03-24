@@ -8,7 +8,6 @@ import argparse
 from ipaddress import IPv4Address
 
 from dnx_gentools import signature_operations
-from dnx_gentools.def_constants import DNS_BIN_OFFSET
 
 from dnx_iptools.dnx_trie_search import HashTrie, RecurveTrie, RangeTrie
 
@@ -20,6 +19,7 @@ f_time = time.perf_counter_ns
 
 MSB = 0b11111111111110000000000000000000
 LSB = 0b00000000000001111111111111111111
+DNS_BIN_OFFSET = 4
 
 _host_list = [
     '14.204.211.122',  # malware

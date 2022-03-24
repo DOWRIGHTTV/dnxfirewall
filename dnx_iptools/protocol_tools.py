@@ -21,7 +21,7 @@ __all__ = (
     'icmp_reachable',
 
     'calc_checksum',
-    'int_to_ip', 'ip_to_int', 'cidr_to_int',
+    'itoip', 'iptoi', 'cidr_to_int',
     'domain_stob', 'mac_stob',
     'mac_add_sep', 'convert_string_to_bitmap',
     'create_dns_query_header', 'create_dns_response_header',
@@ -57,11 +57,11 @@ def calc_checksum(data: Union[bytes, bytearray], pack: bool = False) -> Union[in
 
     return checksum_pack(~csum) if pack else htons(~csum)
 
-def int_to_ip(ip: int, /) -> str:
+def itoip(ip: int, /) -> str:
 
     return dot_join([f'{b}' for b in long_pack(ip)])
 
-def ip_to_int(ip: str, /) -> int:
+def iptoi(ip: str, /) -> int:
 
     return btoia(inet_aton(ip))
 

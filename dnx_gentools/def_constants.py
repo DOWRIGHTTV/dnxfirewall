@@ -14,8 +14,12 @@ from pprint import PrettyPrinter as _PrettyPrinter
 from typing import Callable as _Callable, Iterator as _Iterator, Iterable as _Iterable
 from typing import Optional as _Optional, Union as _Union, Any as _Any
 
-from dnx_iptools.cprotocol_tools import iptoi as _iptoi
 from dnx_iptools.def_structs import scm_creds_pack as _scm_creds_pack
+
+try:
+    from dnx_iptools.cprotocol_tools import iptoi as _iptoi
+except ModuleNotFoundError:
+    from dnx_iptools.protocol_tools import iptoi as _iptoi
 
 # =====================================================
 # MODULE INITIALIZATION CONTROL - set by shell command
