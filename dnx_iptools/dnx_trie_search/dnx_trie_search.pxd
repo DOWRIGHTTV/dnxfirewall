@@ -37,7 +37,7 @@ cdef class HashTrie:
 
         size_t INDEX_MASK
 
-    cpdef void generate_structure(self, tuple py_trie, size_t py_trie_len)
+    cpdef void generate_structure(self, list py_trie, size_t py_trie_len)
     cdef uint8_t search(self, uint32_t trie_key, uint32_t host_id) nogil
     cdef TrieRange* make_l2(self, uint32_t trie_key, (uint32_t, uint32_t, uint16_t) l2_entry)
 
@@ -46,7 +46,7 @@ cdef class RecurveTrie:
         size_t L1_SIZE
         L1Recurve *L1_CONTAINER
 
-    cpdef void generate_structure(self, tuple py_trie)
+    cpdef void generate_structure(self, list py_trie)
     cdef uint16_t l1_search(self, uint32_t container_id, uint32_t host_id) nogil
     cdef uint16_t l2_search(self, uint32_t container_id, L1Recurve *l1_container) nogil
     cdef L2Recurve* make_l2(self, (uint32_t, uint16_t) l2_entry)
@@ -56,6 +56,6 @@ cdef class RangeTrie:
         size_t L1_SIZE
         L1Range *L1_CONTAINER
 
-    cpdef void generate_structure(self, tuple py_trie)
+    cpdef void generate_structure(self, list py_trie)
     cdef uint32_t l1_search(self, uint32_t container_id, uint32_t host_id) nogil
     cdef L2Range* make_l2(self, (uint32_t, uint32_t, uint16_t) l2_entry)
