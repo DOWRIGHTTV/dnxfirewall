@@ -76,7 +76,12 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     # COMPILE ONLY
     'dnx-nfqueue': {'module': '', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
     'cprotocol-tools': {'module': '', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
-    'trie-structs': {'module': '', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False}
+    'trie-search': {'module': '', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
+
+    # TESTS
+    'trie-test': {
+        'module': 'dnx_system.utils.unit_tests.trie_test', 'exclude': exclude('cli', COMMANDS), 'priv': False, 'service': False
+    }
 }
 SERVICE_MODULES = [f'dnx-{mod.replace("_", "-")}' for mod, modset in MODULE_MAPPING.items() if modset['service']]
 

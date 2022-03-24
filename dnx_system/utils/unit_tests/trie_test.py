@@ -1,12 +1,12 @@
 #!usr/bin/env python3
 
 import os
-import sys
 import time
-import argparse
 
+from dataclasses import dataclass
 from ipaddress import IPv4Address
 
+from dnx_gentools.def_constants import INITIALIZE_MODULE, hardout
 from dnx_gentools import signature_operations
 
 from dnx_iptools.dnx_trie_search import HashTrie, RecurveTrie, RangeTrie
@@ -118,20 +118,26 @@ def _process_results(results, descriptor):
     print(f'cached avg: {cached_average} ns, excluded: {cache[-1]}')
 
 
-if (__name__ == '__main__'):
-    parser = argparse.ArgumentParser(description='DNXFIREWALL TRIE unit test utility')
+if INITIALIZE_MODULE('trie-test'):
 
-    parser.add_argument('-rr', help='rep-recurve test', action='store_true')
-    parser.add_argument('-gh', help='geo-hash test', action='store_true')
-    parser.add_argument('-gr', help='geo-recurve test', action='store_true')
-    parser.add_argument('-dr', help='dns-recurve test', action='store_true')
+    @dataclass
+    class Args:
+        gh: int = 0
+        gr: int = 0
+        rr: int = 0
+        dr: int = 0
 
-    args = parser.parse_args(sys.argv[1:])
+    try:
+        args = Args(**{a: 1 for a in os.environ['PASSTHROUGH_ARGS'].split(',') if a})
+    except Exception as E:
+        hardout(f'DNXFIREWALL arg parse failure => {E}')
 
     import pyximport; pyximport.install()
 
     Log.run(name='_test')
 
+
+def run():
     rep_sigs = signature_operations.generate_reputation(Log)
     geo_sigs = signature_operations.generate_geolocation(Log)
     dns_sigs = signature_operations.generate_domain(Log)
@@ -152,16 +158,16 @@ if (__name__ == '__main__'):
 
         print(f'{line}\nITERATION {x}\n{line}')
 
-        if (args.gh):
+        if (Args.gh):
             _test_search('v3 GEO (HASH)', 'geo', geo_hash_trie.py_search)
 
-        if (args.gr):
+        if (Args.gr):
             _test_search('v2 GEO (RANGE)', 'geo', geo_range_trie.search)
 
-        if (args.rr):
+        if (Args.rr):
             _test_search('v2 REP (RECURVE)', 'rep', rep_recurve_trie.search)
 
-        if (args.dr):
+        if (Args.dr):
             _test_search2('v2 DNS (RECURVE)', 'dns', dns_recurve_trie.search)
 
     os._exit(1)

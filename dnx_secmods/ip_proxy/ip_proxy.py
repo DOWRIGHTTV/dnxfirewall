@@ -20,8 +20,6 @@ __all__ = (
     'run', 'IPProxy'
 )
 
-LOG_NAME: str = 'ip_proxy'
-
 
 class IPProxy(NFQueue):
     ids_mode: ClassVar[bool] = False
@@ -231,24 +229,23 @@ def _country_action(category: GEO, packet: IPPPacket) -> CONN:
 
     return CONN.ACCEPT
 
-def run():
-    IPProxy.run(Log, q_num=Queue.IP_PROXY)
 
-
-if (INIT_MODULE == LOG_NAME.replace('_', '-')):
-    Log.run(
-        name=LOG_NAME
-    )
+if INITIALIZE_MODULE('ip-proxy'):
+    Log.run(name='ip_proxy')
 
     reputation_signatures = generate_reputation(Log)
 
-    # initializing C/Cython extension, converting python structures to native C array/struct,
-    # and assigning direct reference to search method [which calls underlying C without GIL]
-    recurve_trie: RecurveTrie = RecurveTrie()
+    # initializing the C/Cython extension, converting python structures to native C array/struct.
+    # assigning direct reference to the search method [which calls underlying C without GIL]
+    recurve_trie = RecurveTrie()
     recurve_trie.generate_structure(reputation_signatures)
 
     _recurve_trie_search = recurve_trie.search
 
-    # memory allocation was done manually within C extension for its structures. python structures
-    # are no longer needed at this point so freeing memory.
+    # memory allocation was done manually within the C extension for its structures.
+    # python structures are no longer needed at this point so freeing memory.
     del reputation_signatures
+
+
+def run():
+    IPProxy.run(Log, q_num=Queue.IP_PROXY)

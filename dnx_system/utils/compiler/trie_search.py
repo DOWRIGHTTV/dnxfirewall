@@ -16,5 +16,5 @@ ext = Extension(
 )
 
 setup(
-    name='dnx-trie-structs', cmdclass=cmd, ext_modules=cythonize(ext, language_level='3')
+    name='dnx-trie-search', cmdclass=cmd, ext_modules=cythonize(ext, language_level='3')
 )

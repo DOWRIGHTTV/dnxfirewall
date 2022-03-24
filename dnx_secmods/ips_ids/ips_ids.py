@@ -23,8 +23,6 @@ __all__ = (
     'run', 'IPS_IDS'
 )
 
-LOG_NAME = 'ips'
-
 # global to adjust the unique local port count per host before triggering
 PORTSCAN_THRESHOLD = 4
 
@@ -352,11 +350,10 @@ class Inspect:
 
         return IPS.BLOCKED
 
+
+if INITIALIZE_MODULE('ips-ids'):
+    Log.run(name='ips')
+
+
 def run():
     IPS_IDS.run(Log, q_num=Queue.IPS_IDS)
-
-
-if (INIT_MODULE == LOG_NAME):
-    Log.run(
-        name=LOG_NAME
-    )
