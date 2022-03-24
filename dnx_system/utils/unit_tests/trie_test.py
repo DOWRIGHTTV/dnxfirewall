@@ -134,7 +134,7 @@ if INITIALIZE_MODULE('trie-test'):
 
     import pyximport; pyximport.install()
 
-    Log.run(name='_test')
+    Log.run(name='_tests')
 
 
 def run():
