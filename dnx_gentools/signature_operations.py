@@ -86,7 +86,7 @@ def generate_domain(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32, c_u
             if (sig[0] not in wl_exceptions):
                 try:
                     bin_id  = int(host_hash[:DNS_BIN_OFFSET])
-                    host_id = c_uint32(int(host_hash[DNS_BIN_OFFSET:]))
+                    host_id = int(host_hash[DNS_BIN_OFFSET:])
                 except Exception as E:
                     log.warning(f'bad signature detected | {E} | {sig}')
                 else:
@@ -102,6 +102,7 @@ def generate_domain(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32, c_u
         # ctypes dont have comparison operators
         for container in containers:
             container[0] = c_uint32(container[0])
+            container[1] = c_uint32(container[1])
 
     # converting to nested tuple and sorting with the outermost list converted on return
     nets = [[bin_id, containers] for bin_id, containers in dict_nets.items()]
