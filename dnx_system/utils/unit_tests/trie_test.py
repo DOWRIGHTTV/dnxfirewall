@@ -163,21 +163,28 @@ if INITIALIZE_MODULE('trie-test'):
 
 
 def run():
-    rep_sigs = signature_operations.generate_reputation(Log)
-    geo_sigs = signature_operations.generate_geolocation(Log)
-    dns_sigs = signature_operations.generate_domain(Log)
 
-    rep_recurve_trie = RecurveTrie()
-    rep_recurve_trie.generate_structure(rep_sigs)
+    if (args.gh or args.gr):
+        geo_sigs = signature_operations.generate_geolocation(Log)
 
-    geo_range_trie = RangeTrie()
-    geo_range_trie.generate_structure(geo_sigs)
+        if (args.gh):
+            geo_hash_trie = HashTrie()
+            geo_hash_trie.generate_structure(geo_sigs, len(geo_sigs))
 
-    geo_hash_trie = HashTrie()
-    geo_hash_trie.generate_structure(geo_sigs, len(geo_sigs))
+        if (args.gr):
+            geo_range_trie = RangeTrie()
+            geo_range_trie.generate_structure(geo_sigs)
 
-    dns_recurve_trie = RecurveTrie()
-    dns_recurve_trie.generate_structure(dns_sigs)
+    if (args.rr):
+        rep_sigs = signature_operations.generate_reputation(Log)
+        rep_recurve_trie = RecurveTrie()
+        rep_recurve_trie.generate_structure(rep_sigs)
+
+    if (args.dr):
+        dns_sigs = signature_operations.generate_domain(Log)
+        dns_recurve_trie = RecurveTrie()
+        dns_recurve_trie.generate_structure(dns_sigs)
+
 
     for x in range(2):
 
