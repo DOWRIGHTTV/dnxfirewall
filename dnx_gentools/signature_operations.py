@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ctypes import c_uint16, c_uint32
 from socket import inet_aton
 from struct import Struct
 from collections import defaultdict
@@ -57,7 +58,7 @@ def _combine_domain(log: LogHandler_T) -> list[str]:
 
     return domain_signatures
 
-def generate_domain(log: LogHandler_T) -> tuple[tuple[int, tuple[int, int]]]:
+def generate_domain(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32, c_uint16]]]:
     # getting all enabled signatures
     domain_signatures: list = _combine_domain(log)
 
@@ -73,7 +74,9 @@ def generate_domain(log: LogHandler_T) -> tuple[tuple[int, tuple[int, int]]]:
 
         sig: list = signature.strip().split(maxsplit=1)
         try:
-            host_hash: str = f'{mhash(sig[0])}'
+            hhash = mhash(sig[0]) >> 1
+            host_hash: str = f'{hhash}'
+
             cat = int(DNS_CAT[sig[1]])
         except Exception as E:
             log.warning(f'bad signature detected | {E} | {sig}')
@@ -81,8 +84,11 @@ def generate_domain(log: LogHandler_T) -> tuple[tuple[int, tuple[int, int]]]:
         else:
             # pre proxy override check before adding
             if (sig[0] not in wl_exceptions):
+                bin_id  = c_uint32(int(host_hash[:DNS_BIN_OFFSET]))
+                host_id = c_uint32(int(host_hash[DNS_BIN_OFFSET:]))
+
                 try:
-                    dict_nets[int(host_hash[:DNS_BIN_OFFSET])].append((int(host_hash[DNS_BIN_OFFSET:]), cat))
+                    dict_nets[bin_id].append([host_id, cat])
                 except Exception as E:
                     log.warning(f'bad signature detected | {E} | {sig}')
 
@@ -91,15 +97,13 @@ def generate_domain(log: LogHandler_T) -> tuple[tuple[int, tuple[int, int]]]:
         containers.sort()
 
     # converting to nested tuple and sorting with the outermost list converted on return
-    nets: list[tuple[int, tuple[int, int]]] = [
-        (bin_id, tuple(containers)) for bin_id, containers in dict_nets.items()
-    ]
+    nets = [[bin_id, containers] for bin_id, containers in dict_nets.items()]
     nets.sort()
 
     # no longer needed so ensuring memory gets freed
     del dict_nets
 
-    return tuple(nets)
+    return nets
 
 def _combine_reputation(log: LogHandler_T) -> list[str]:
     proxy_settings: ConfigChain = load_configuration('ip_proxy')
@@ -114,12 +118,12 @@ def _combine_reputation(log: LogHandler_T) -> list[str]:
 
     return ip_rep_signatures
 
-def generate_reputation(log: LogHandler_T) -> tuple[tuple[int, tuple[int, REP]]]:
+def generate_reputation(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32, c_uint16]]]:
 
     # getting all enabled signatures
     ip_rep_signatures: list = _combine_reputation(log)
 
-    dict_nets: defaultdict[int, Union[list[tuple[int, REP]], tuple[tuple[int, REP]]]] = defaultdict(list)
+    dict_nets = defaultdict(list)
 
     for signature in ip_rep_signatures:
 
@@ -127,29 +131,28 @@ def generate_reputation(log: LogHandler_T) -> tuple[tuple[int, tuple[int, REP]]]
         try:
             ip_addr = ip_unpack(inet_aton(sig[0]))[0]
 
-            cat = REP[sig[1].upper()]
+            cat = int(REP[sig[1].upper()])
         except Exception as E:
             log.warning(f'invalid signature: {signature}, {E}')
             continue
 
-        bin_id:  int = ip_addr & MSB
-        host_id: int = ip_addr & LSB
+        bin_id  = c_uint32(ip_addr & MSB)
+        host_id = c_uint32(ip_addr & LSB)
 
-        dict_nets[bin_id].append((host_id, cat))
+        dict_nets[bin_id].append([host_id, cat])
 
     # in place sort of all containers prior to building the structure
     for containers in dict_nets.values():
         containers.sort()
 
-    # converting to nested tuple and sorting, outermost list converted on return
-    nets: list[tuple[int, tuple[int, REP]]] = [
-        (bin_id, tuple(containers)) for bin_id, containers in dict_nets.items()
-    ]
+    # converting to nested tuple and sorting.
+    # outermost list converted on return
+    nets = [[bin_id, containers] for bin_id, containers in dict_nets.items()]
     nets.sort()
 
     del dict_nets, ip_rep_signatures
 
-    return tuple(nets)
+    return nets
 
 def _combine_geolocation(log: LogHandler_T) -> list[str]:
     geo_settings: list = load_configuration('ip_proxy').get_list('geolocation')
@@ -169,7 +172,7 @@ def _combine_geolocation(log: LogHandler_T) -> list[str]:
 
     return ip_geo_signatures
 
-def generate_geolocation(log: LogHandler_T) -> tuple[tuple[int, tuple[int, int, int]]]:
+def generate_geolocation(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32, c_uint32, c_uint16]]]:
     '''
     Convert standard signatures into a compressed integer format. This will completely replace file operations function
     since we are no longer generating a combined file and will do the merge and convert in memory before returning
@@ -185,40 +188,46 @@ def generate_geolocation(log: LogHandler_T) -> tuple[tuple[int, tuple[int, int, 
     for signature in ip_geo_signatures:
 
         try:
-            net, country = signature.split()
+            net, cat = signature.split()
 
-            subnet: list = net.split('/')
-            net_id: int = ip_unpack(inet_aton(subnet[0]))[0]
-            host_count: int = int(cidr_to_host_count[subnet[1]])
+            snet: list = net.split('/')
+            nid: int = ip_unpack(inet_aton(snet[0]))[0]
+            hcount = int(cidr_to_host_count[snet[1]])
 
-            country: GEO = GEO[country.upper()]
+            cat = int(GEO[cat.upper()])
         except Exception as E:
             log.warning(f'invalid signature: {signature}, {E}')
 
         else:
             # needed to account for MSB/bin_id overflows
-            while host_count > LSB+1:
-                cvl_append(f'{net_id} {LSB} {country}')
+            while hcount > LSB+1:
+                cvl_append(f'{nid} {LSB} {cat}')
 
-                host_count -= (LSB+1)
-                net_id += (LSB+1)
+                hcount -= (LSB+1)
+                nid += (LSB+1)
 
             # NOTE: -1 to step down to bcast value
-            cvl_append(f'{net_id} {host_count-1} {country}')
+            cvl_append(f'{nid} {hcount-1} {cat}')
 
     del ip_geo_signatures
 
     # compression logic
-    dict_nets: defaultdict[int, Union[list, tuple]] = defaultdict(list)
+    dict_nets = defaultdict(list)
     for signature in converted_list:
 
-        net_id, ip_count, country = [int(x) for x in signature.split()]
+        sig = [int(x) for x in signature.split()]
+
+        net_id:   int = sig[0]
+        ip_count: int = sig[1]
+        country:  int = sig[2]
 
         # assigning vars for bin id, host ranges, and ip count
-        bin_id: int = net_id & MSB
-        host_id_start: int = net_id & LSB
+        bin_id = c_uint32(net_id & MSB)
+        host_id_r1 = c_uint32(net_id & LSB)
+        host_id_r2 = c_uint32((net_id & LSB) + ip_count)
+        cty = c_uint16(country)
 
-        dict_nets[bin_id].append([host_id_start, host_id_start+ip_count, country])
+        dict_nets[bin_id].append([host_id_r1, host_id_r2, cty])
 
     # merging contiguous ranges if within the same country
     for bin_id, containers in dict_nets.items():
@@ -226,16 +235,14 @@ def generate_geolocation(log: LogHandler_T) -> tuple[tuple[int, tuple[int, int, 
 
     # NOTE: reduced list comprehension now that extra compression is re implemented, which converts to
     # tuple once it is completed with host containers, then again on the bin itself.
-    nets: list[tuple[int, tuple[int, int, int]]] = [
-        (bin_id, containers) for bin_id, containers in dict_nets.items()
-    ]
+    nets = [[bin_id, containers] for bin_id, containers in dict_nets.items()]
     nets.sort()
 
     del dict_nets
 
-    return tuple(nets)
+    return nets
 
-def _merge_geo_ranges(ls: list, /) -> tuple[tuple]:
+def _merge_geo_ranges(ls: list, /) -> list[list]:
     merged_item, merged_containers, l = [], [], object()
     for l in ls:
 
@@ -258,7 +265,6 @@ def _merge_geo_ranges(ls: list, /) -> tuple[tuple]:
             # convert host container to a tuple while we have it here now, which should reduce the list comprehension
             # complexity. after, replace the value of the ongoing merged_item with the current iteration list to
             # continue process.
-            # NOTE/TODO: this is where we can implement the array, instead of converting after returned.
             else:
                 merged_containers.append(tuple(merged_item))
 
@@ -266,7 +272,7 @@ def _merge_geo_ranges(ls: list, /) -> tuple[tuple]:
 
     # adding odd one out to the merged container
     if (not merged_item or merged_item[-1] != l):
-        merged_containers.append(tuple(merged_item))
+        merged_containers.append(merged_item)
 
     # converting bin to tuple here. this should reduce the list comprehension complexity on return.
-    return tuple(merged_containers)
+    return merged_containers

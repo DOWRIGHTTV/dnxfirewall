@@ -120,6 +120,7 @@ cdef class RecurveTrie:
     cpdef void generate_structure(self, tuple py_trie):
 
         cdef:
+            uint32_t    l1_id
             size_t      l2_size
             L2Recurve  *l2_container
 
@@ -129,6 +130,7 @@ cdef class RecurveTrie:
 
         for i in range(self.L1_SIZE):
 
+            l1_id   = py_trie[i][0] >> 1
             l2_size = len(py_trie[i][1])
 
             # allocating memory for an array of l2 container pointers
@@ -139,60 +141,61 @@ cdef class RecurveTrie:
                 l2_container[xi] = self.make_l2(py_trie[i][1][xi])[0]
 
             # assigning struct members to the current index of L1 container.
-            self.L1_CONTAINER[i].id = <uint32_t>(py_trie[i][0] & UINT32_MAX)
+            self.L1_CONTAINER[i].id = <uint32_t>( & UINT32_MAX)
             self.L1_CONTAINER[i].l2_size = l2_size
             self.L1_CONTAINER[i].l2_ptr  = l2_container
 
-    cdef uint16_t l1_search(self, uint32_t container_id, uint32_t host_id) nogil:
+    cdef uint16_t l1_search(self, uint32_t l1_id, uint32_t l2_id) nogil:
 
         cdef:
-            size_t left = 0
             size_t mid
-            size_t right = self.L1_SIZE
+
+            size_t left_bound = 0
+            size_t right_bound = self.L1_SIZE
 
             L1Recurve *l1_container
 
-        while left <= right:
-            mid = left + (right - left) // 2
+        while left_bound <= right_bound:
+            mid = left_bound + (right_bound - left_bound) // 2
             l1_container = &self.L1_CONTAINER[mid]
 
             # excluding left half
-            if (l1_container.id < container_id):
-                left = mid + 1
+            if (l1_container.id < l1_id):
+                left_bound = mid + 1
 
             # excluding right half
-            elif (l1_container.id > container_id):
-                right = mid - 1
+            elif (l1_container.id > l1_id):
+                right_bound = mid - 1
 
             # l1.id match. calling l2_search with ptr to l2_containers looking for l2.id match
             else:
-                return self.l2_search(host_id, l1_container)
+                return self.l2_search(l2_id, l1_container)
 
         # L1 default
         return NO_MATCH
 
-    cdef uint16_t l2_search(self, uint32_t container_id, L1Recurve *l1_container) nogil:
+    cdef uint16_t l2_search(self, uint32_t l2_id, L1Recurve *l1_container) nogil:
 
         cdef:
             size_t mid
             L2Recurve *l2_container
 
-            size_t left = 0
-            size_t right = l1_container.l2_size
+            size_t left_bound = 0
+            size_t right_bound = l1_container.l2_size
 
             L2Recurve *L2_CONTAINER = l1_container.l2_ptr
 
-        while left <= right:
-            mid = left + (right - left) // 2
+        while left_bound <= right_bound:
+            mid = left_bound + (right_bound - left_bound) // 2
             l2_container = &L2_CONTAINER[mid]
 
             # excluding left half
-            if (l2_container.id < container_id):
-                left = mid + 1
+            if (l2_container.id < l2_id):
+                left_bound = mid + 1
 
             # excluding right half
-            elif (l2_container.id > container_id):
-                right = mid - 1
+            elif (l2_container.id > l2_id):
+                right_bound = mid - 1
 
             # l2.id match. returning struct value
             else:
