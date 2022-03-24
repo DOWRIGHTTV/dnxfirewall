@@ -58,7 +58,7 @@ def _combine_domain(log: LogHandler_T) -> list[str]:
 
     return domain_signatures
 
-def generate_domain(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32, c_uint16]]]:
+def generate_domain(log: LogHandler_T) -> list[list[int, list[int, int]]]:
     # getting all enabled signatures
     domain_signatures: list = _combine_domain(log)
 
@@ -74,7 +74,9 @@ def generate_domain(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32, c_u
 
         sig: list = signature.strip().split(maxsplit=1)
         try:
-            hhash = mhash(sig[0]) >> 1
+            # converting the hash to an unsigned int to normalize for dnx tries
+            hhash: int = c_uint32(mhash(sig[0])).value
+
             host_hash: str = f'{hhash}'
 
             cat = int(DNS_CAT[sig[1]])
@@ -175,7 +177,7 @@ def _combine_geolocation(log: LogHandler_T) -> list[str]:
 
     return ip_geo_signatures
 
-def generate_geolocation(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32, c_uint32, c_uint16]]]:
+def generate_geolocation(log: LogHandler_T) -> list[list[int, list[int, int, int]]]:
     '''
     Convert standard signatures into a compressed integer format. This will completely replace file operations function
     since we are no longer generating a combined file and will do the merge and convert in memory before returning

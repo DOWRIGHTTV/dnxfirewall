@@ -234,26 +234,28 @@ cdef class RangeTrie:
     cpdef void generate_structure(self, list py_trie):
 
         cdef:
-            size_t l2_size
+            uint32_t l1_id
+            size_t   l2_size
 
         # allocating memory for L1 container which is accessed by the l1_search method.
-        self.L1_SIZE = len(py_trie)
+        self.L1_SIZE = <size_t>len(py_trie)
         self.L1_CONTAINER = <L1Range*>malloc(sizeof(L1Range) * self.L1_SIZE)
 
         for i in range(self.L1_SIZE):
 
-            l2_size = len(py_trie[i][1])
+            l1_id   = <uint32_t>py_trie[i][0]
+            l2_size = <size_t>len(py_trie[i][1])
+
+            # allocating memory for individual L2 containers
+            self.L1_CONTAINER[i].l2_ptr = <L2Range*>malloc(sizeof(L2Range) * l2_size)
 
             # calling make function for l2 content struct for each entry in the current py_l2 container
             for xi in range(l2_size):
                 self.L1_CONTAINER[i].l2_ptr[xi] = self.make_l2(py_trie[i][1][xi])[0]
 
             # assigning struct members to the current index of L1 container
-            self.L1_CONTAINER[i].id = py_trie[i][0]
+            self.L1_CONTAINER[i].id = l1_id
             self.L1_CONTAINER[i].l2_size = l2_size
-
-            # allocating memory for individual L2 containers
-            self.L1_CONTAINER[i].l2_ptr = <L2Range*>malloc(sizeof(L2Range) * l2_size)
 
     cdef uint32_t l1_search(self, uint32_t container_id, uint32_t host_id) nogil:
 
