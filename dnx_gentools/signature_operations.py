@@ -11,6 +11,14 @@ from dnx_gentools.def_constants import HOME_DIR, MSB, LSB, DNS_BIN_OFFSET, RFC19
 from dnx_gentools.def_enums import GEO, REP, DNS_CAT
 from dnx_gentools.file_operations import load_configuration
 
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from dnx_gentools.file_operations import ConfigChain
+
 __all__ = (
     'generate_domain', 'generate_reputation', 'generate_geolocation',
 )
@@ -19,12 +27,12 @@ cidr_to_host_count: dict[str, int] = {f'{i}': 2**x for i, x in enumerate(reverse
 ip_unpack: Callable[[bytes], tuple] = Struct('>L').unpack
 
 def _combine_domain(log: LogHandler_T) -> list[str]:
-    dns_proxy: ConfigChain = load_configuration('dns_proxy')
+    proxy_settings: ConfigChain = load_configuration('dns_proxy')
 
     domain_signatures: list = []
 
-    default_cats: list = dns_proxy.get_list('categories->default')
-    # iterating over list of categories + DoH to load signature sets.
+    default_cats: list = proxy_settings.get_list('categories->default')
+    # iterating over the list of categories + DoH to load signature sets.
     for cat in [*default_cats, 'dns-over-https']:
         try:
             file = open(f'{HOME_DIR}/dnx_system/signatures/domain_lists/{cat}.domains')
@@ -34,7 +42,7 @@ def _combine_domain(log: LogHandler_T) -> list[str]:
             domain_signatures.extend([x.lower() for x in file.read().splitlines() if x and '#' not in x])
             file.close()
 
-    ud_cats: list = dns_proxy.get_list('categories->user_defined')
+    ud_cats: list = proxy_settings.get_list('categories->user_defined')
     # TODO: user defined categories will break the enum load on proxy / FIX
     # NOTE: i think this will require a proxy restart if sigs change
     # looping over all user defined categories.
@@ -89,10 +97,10 @@ def generate_domain(log: LogHandler_T) -> tuple[tuple[int, tuple[int, int]]]:
     return tuple(nets)
 
 def _combine_reputation(log: LogHandler_T) -> list[str]:
-    ip_proxy: ConfigChain = load_configuration('ip_proxy')
+    proxy_settings: ConfigChain = load_configuration('ip_proxy')
 
     ip_rep_signatures: list = []
-    for cat in ip_proxy.get_list('reputation'):
+    for cat in proxy_settings.get_list('reputation'):
         try:
             with open(f'{HOME_DIR}/dnx_system/signatures/ip_lists/{cat}.ips', 'r') as file:
                 ip_rep_signatures.extend([x.lower() for x in file.read().splitlines() if x and '#' not in x])

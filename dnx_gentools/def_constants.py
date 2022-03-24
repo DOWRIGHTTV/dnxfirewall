@@ -16,10 +16,6 @@ from typing import Optional as _Optional, Union as _Union, Any as _Any
 
 from dnx_iptools.def_structs import scm_creds_pack as _scm_creds_pack
 
-try:
-    from dnx_iptools.cprotocol_tools import iptoi as _iptoi
-except ModuleNotFoundError:
-    from dnx_iptools.protocol_tools import iptoi as _iptoi
 
 # =====================================================
 # MODULE INITIALIZATION CONTROL - set by shell command
@@ -100,9 +96,9 @@ NO_DELAY:   int = 0
 
 # ip addresses
 NULL_ADDR: tuple[int, int] = (-1, -1)
-INADDR_ANY: int = _iptoi('0.0.0.0')
-LOCALHOST:  int = _iptoi('127.0.0.1')
-BROADCAST:  int = _iptoi('255.255.255.255')
+INADDR_ANY: int = 0
+LOCALHOST:  int = 2130706433
+BROADCAST:  int = 4294967295
 # definitions for ip proxy data structures. most/least significant bit
 MSB: int = 0b11111111111110000000000000000000
 LSB: int = 0b00000000000001111111111111111111

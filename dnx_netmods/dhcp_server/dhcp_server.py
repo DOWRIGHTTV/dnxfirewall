@@ -173,7 +173,7 @@ def send_to_client(send_data: bytearray, client_request: ClientRequest, server_m
     #
     #   In all cases, when 'giaddr' is zero, the server broadcasts any DHCPNAK messages to 0xffffffff.
     else:
-        client_request.sendto(send_data, (f'{BROADCAST}', 68))
+        client_request.sendto(send_data, (itoip(BROADCAST), 68))
 
         Log.debug(f'[response][broadcast] {client_request.handout_ip}')
 
