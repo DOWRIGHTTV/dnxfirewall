@@ -96,6 +96,10 @@ def generate_domain(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32, c_u
     for containers in dict_nets.values():
         containers.sort()
 
+        # ctypes dont have comparison operators
+        for container in containers:
+            container[0] = c_uint32(container[0])
+
     # converting to nested tuple and sorting with the outermost list converted on return
     nets = [[bin_id, containers] for bin_id, containers in dict_nets.items()]
     nets.sort()
@@ -140,13 +144,17 @@ def generate_reputation(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32,
             continue
 
         bin_id  = ip_addr & MSB
-        host_id = c_uint32(ip_addr & LSB)
+        host_id = ip_addr & LSB
 
         dict_nets[bin_id].append([host_id, cat])
 
     # in place sort of all containers prior to building the structure
     for containers in dict_nets.values():
         containers.sort()
+
+        # ctypes dont have comparison operators
+        for container in containers:
+            container[0] = c_uint32(container[0])
 
     # converting to nested tuple and sorting.
     # outermost list converted on return
