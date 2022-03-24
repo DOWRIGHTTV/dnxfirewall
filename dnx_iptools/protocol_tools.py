@@ -168,6 +168,65 @@ def create_dns_query_header(dns_id, arc=0, *, cd):
 
     return dns_header_pack(dns_id, f, 1, 0, 0, arc)
 
+def mhash(key: str, seed=0x0):
+    '''Implements 32bit murmur3 hash.
+    '''
+    bkey = bytearray(key)
+
+    length:  int = len(key)
+    nblocks: int = length // 4
+
+    h1 = seed
+
+    c1 = 0xcc9e2d51
+    c2 = 0x1b873593
+
+    for block_start in range(0, nblocks * 4, 4):
+        k1 = (bkey[block_start + 3] << 24 | bkey[block_start + 2] << 16 |
+              bkey[block_start + 1] << 8  | bkey[block_start + 0])
+
+        k1 = (c1 * k1) & 0xFFFFFFFF
+        k1 = (k1 << 15 | k1 >> 17) & 0xFFFFFFFF  # inlined ROTL32
+        k1 = (c2 * k1) & 0xFFFFFFFF
+
+        h1 ^= k1
+        h1 = (h1 << 13 | h1 >> 19) & 0xFFFFFFFF  # inlined ROTL32
+        h1 = (h1 * 5 + 0xe6546b64) & 0xFFFFFFFF
+
+    tail_index = nblocks * 4
+    k1 = 0
+    tail_size = length & 3
+
+    if (tail_size >= 3):
+        k1 ^= bkey[tail_index + 2] << 16
+
+    if (tail_size >= 2):
+        k1 ^= bkey[tail_index + 1] << 8
+
+    if (tail_size >= 1):
+        k1 ^= bkey[tail_index + 0]
+
+    if (tail_size > 0):
+        k1 = (k1 * c1) & 0xFFFFFFFF
+        k1 = (k1 << 15 | k1 >> 17) & 0xFFFFFFFF  # inlined ROTL32
+        k1 = (k1 * c2) & 0xFFFFFFFF
+        h1 ^= k1
+
+    # FINAL MIX
+    h = h1 ^ length
+    h ^= h >> 16
+    h = (h * 0x85ebca6b) & 0xFFFFFFFF
+    h ^= h >> 13
+    h = (h * 0xc2b2ae35) & 0xFFFFFFFF
+    h ^= h >> 16
+    unsigned_val = h
+
+    if (not unsigned_val & 0x80000000):
+        return unsigned_val
+
+    else:
+        return -((unsigned_val ^ 0xFFFFFFFF) + 1)
+
 
 _icmp_header_template = PR_ICMP_HDR(**{'type': 8, 'code': 0})
 

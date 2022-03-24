@@ -1,7 +1,7 @@
 #!/usr/bin/env Cython
 
 from libc.stdio cimport printf, snprintf
-
+from libc.stdint cimport uint32_t
 
 # cpdef long ip_address(int ipa):
 #     '''clamps integer to unsigned 32 bits and returns -1 on overflow.
