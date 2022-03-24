@@ -3,6 +3,7 @@
 import os
 import time
 
+from ctypes import c_uint32
 from dataclasses import dataclass
 from ipaddress import IPv4Address
 
@@ -75,7 +76,9 @@ def _test_search2(name, cat, search_func):
 
     for domain in domains_to_test:
 
-        host_hash = mhash(domain)
+        hhash = c_uint32(mhash(domain)).value
+
+        host_hash = f'{hhash}'
 
         h1 = host_hash[:DNS_BIN_OFFSET]
         h2 = host_hash[DNS_BIN_OFFSET:]
