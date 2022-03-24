@@ -84,7 +84,7 @@ def generate_domain(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32, c_u
         else:
             # pre proxy override check before adding
             if (sig[0] not in wl_exceptions):
-                bin_id  = c_uint32(int(host_hash[:DNS_BIN_OFFSET]))
+                bin_id  = int(host_hash[:DNS_BIN_OFFSET])
                 host_id = c_uint32(int(host_hash[DNS_BIN_OFFSET:]))
 
                 try:
@@ -97,7 +97,7 @@ def generate_domain(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32, c_u
         containers.sort()
 
     # converting to nested tuple and sorting with the outermost list converted on return
-    nets = [[bin_id, containers] for bin_id, containers in dict_nets.items()]
+    nets = [[c_uint32(bin_id), containers] for bin_id, containers in dict_nets.items()]
     nets.sort()
 
     # no longer needed so ensuring memory gets freed
@@ -136,7 +136,7 @@ def generate_reputation(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32,
             log.warning(f'invalid signature: {signature}, {E}')
             continue
 
-        bin_id  = c_uint32(ip_addr & MSB)
+        bin_id  = ip_addr & MSB
         host_id = c_uint32(ip_addr & LSB)
 
         dict_nets[bin_id].append([host_id, cat])
@@ -147,7 +147,7 @@ def generate_reputation(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32,
 
     # converting to nested tuple and sorting.
     # outermost list converted on return
-    nets = [[bin_id, containers] for bin_id, containers in dict_nets.items()]
+    nets = [[c_uint32(bin_id), containers] for bin_id, containers in dict_nets.items()]
     nets.sort()
 
     del dict_nets, ip_rep_signatures
@@ -222,7 +222,7 @@ def generate_geolocation(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32
         country:  int = sig[2]
 
         # assigning vars for bin id, host ranges, and ip count
-        bin_id = c_uint32(net_id & MSB)
+        bin_id = net_id & MSB
         host_id_r1 = c_uint32(net_id & LSB)
         host_id_r2 = c_uint32((net_id & LSB) + ip_count)
         cty = c_uint16(country)
@@ -235,7 +235,7 @@ def generate_geolocation(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32
 
     # NOTE: reduced list comprehension now that extra compression is re implemented, which converts to
     # tuple once it is completed with host containers, then again on the bin itself.
-    nets = [[bin_id, containers] for bin_id, containers in dict_nets.items()]
+    nets = [[c_uint32(bin_id), containers] for bin_id, containers in dict_nets.items()]
     nets.sort()
 
     del dict_nets
