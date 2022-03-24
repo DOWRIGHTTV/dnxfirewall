@@ -22,6 +22,17 @@ DEF NO_MATCH = 0
 # ================================================
 cdef class HashTrie:
 
+    @_lru_cache(maxsize=4096)
+    def py_search(self, (long, long) host):
+        '''used for testing functions of data structure and searching.
+        '''
+        cdef uint8_t search_result
+
+        with nogil:
+            search_result = self.search(host[0], host[1])
+
+        return search_result
+
     cpdef void generate_structure(self, tuple py_trie, size_t py_trie_len):
 
         cdef:
@@ -107,8 +118,8 @@ cdef class RecurveTrie:
     cpdef void generate_structure(self, tuple py_trie):
 
         cdef:
-            size_t l2_size
-            L2Recurve *l2_container
+            size_t      l2_size
+            L2Recurve  *l2_container
 
         # allocating memory for L1 container
         self.L1_SIZE = len(py_trie)
