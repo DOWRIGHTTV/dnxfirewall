@@ -97,8 +97,11 @@ def generate_domain(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32, c_u
         containers.sort()
 
     # converting to nested tuple and sorting with the outermost list converted on return
-    nets = [[c_uint32(bin_id), containers] for bin_id, containers in dict_nets.items()]
+    nets = [[bin_id, containers] for bin_id, containers in dict_nets.items()]
     nets.sort()
+
+    for li in nets:
+        li[0] = c_uint32(li[0])
 
     # no longer needed so ensuring memory gets freed
     del dict_nets
@@ -147,8 +150,11 @@ def generate_reputation(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32,
 
     # converting to nested tuple and sorting.
     # outermost list converted on return
-    nets = [[c_uint32(bin_id), containers] for bin_id, containers in dict_nets.items()]
+    nets = [[bin_id, containers] for bin_id, containers in dict_nets.items()]
     nets.sort()
+
+    for li in nets:
+        li[0] = c_uint32(li[0])
 
     del dict_nets, ip_rep_signatures
 
@@ -235,8 +241,12 @@ def generate_geolocation(log: LogHandler_T) -> list[list[c_uint32, list[c_uint32
 
     # NOTE: reduced list comprehension now that extra compression is re implemented, which converts to
     # tuple once it is completed with host containers, then again on the bin itself.
-    nets = [[c_uint32(bin_id), containers] for bin_id, containers in dict_nets.items()]
+    nets = [[bin_id, containers] for bin_id, containers in dict_nets.items()]
     nets.sort()
+
+    # ctypes do not have comparison operations
+    for li in nets:
+        li[0] = c_uint32(li[0])
 
     del dict_nets
 
