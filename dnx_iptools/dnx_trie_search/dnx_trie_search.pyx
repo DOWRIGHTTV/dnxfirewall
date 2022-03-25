@@ -37,7 +37,7 @@ cdef class HashTrie:
 
         return search_result
 
-    cdef uint8_t search(self, uint32_t trie_key, uint32_t host_id) nogil:
+    cdef uint8_t search(self, uint32_t trie_key, uint32_t host_id):
 
         cdef:
             TrieMap *trie_value = &self.TRIE_MAP[self.hash_key(trie_key)]
