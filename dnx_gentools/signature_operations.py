@@ -207,7 +207,7 @@ def generate_geolocation(log: LogHandler_T) -> list[list[int, list[int, int, int
             net, cat = signature.split()
 
             subnet: list = net.split('/')
-            net_id:  int = ip_unpack(inet_aton(subnet[0]))[0]
+            net_id:  int = c_uint32(ip_unpack(inet_aton(subnet[0]))[0]).value
             h_count: int = cidr_to_host_count[subnet[1]]
 
             country = int(GEO[cat.upper()])

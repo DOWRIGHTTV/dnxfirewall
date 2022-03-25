@@ -17,9 +17,6 @@ from libc.stdint cimport uint8_t, uint16_t, uint32_t
 DEF EMPTY_CONTAINER = 0
 DEF NO_MATCH = 0
 
-DEF MSB = 0b11111111111110000000000000000000
-DEF LSB = 0b00000000000001111111111111111111
-
 # ================================================
 # C STRUCTURES - converted from python tuples
 # ================================================
@@ -43,7 +40,7 @@ cdef class HashTrie:
     cdef uint8_t search(self, uint32_t trie_key, uint32_t host_id) nogil:
 
         cdef:
-            TrieMap *trie_value = &self.TRIE_MAP[trie_key % self.INDEX_MASK]
+            TrieMap *trie_value = &self.TRIE_MAP[self.hash_key(trie_key)]
 
         # no l1 match
         if (trie_value.len == EMPTY_CONTAINER):
@@ -62,20 +59,23 @@ cdef class HashTrie:
         # iteration completed with no l2 match
         return NO_MATCH
 
+    cdef inline uint32_t hash_key(self, uint32_t trie_key):
+        return trie_key % (self.max_width - 1)
+
     cpdef void generate_structure(self, list py_trie, Py_ssize_t py_trie_len):
 
         cdef:
-            uint32_t trie_key
-            uint32_t trie_key_hash
-            size_t   num_values
+            uint32_t    trie_key
+            uint32_t    trie_key_hash
+            size_t      num_values
 
-            TrieRange *trie_values
+            list        trie_val
+            TrieRange  *trie_values
 
-            uint32_t max_width = <uint32_t>pow(2, log2(py_trie_len))
+            uint32_t index_mask = self.hash_key(trie_key)
 
-        self.INDEX_MASK = max_width - 1
-
-        self.TRIE_MAP = <TrieMap*>calloc(max_width, sizeof(TrieMap))
+        self.max_width = <uint32_t>pow(2, log2(py_trie_len))
+        self.TRIE_MAP  = <TrieMap*>calloc(self.max_width, sizeof(TrieMap))
 
         for i in range(py_trie_len):
 
@@ -89,13 +89,15 @@ cdef class HashTrie:
             for xi in range(num_values):
                 print(py_trie[i][1][xi])
 
+                trie_val = py_trie[i][1][xi]
+
                 trie_values[xi].key     = trie_key
-                trie_values[xi].netid   = <uint32_t>py_trie[i][1][xi][0]
-                trie_values[xi].bcast   = <uint32_t>py_trie[i][1][xi][1]
-                trie_values[xi].country = <uint16_t>py_trie[i][1][xi][2]
+                trie_values[xi].netid   = <uint32_t>trie_val[0]
+                trie_values[xi].bcast   = <uint32_t>trie_val[1]
+                trie_values[xi].country = <uint16_t>trie_val[2]
 
             # assigning struct members
-            trie_key_hash = trie_key % self.INDEX_MASK
+            trie_key_hash = self.hash_key(trie_key)
             self.TRIE_MAP[trie_key_hash].len    = num_values
             self.TRIE_MAP[trie_key_hash].ranges = trie_values
 

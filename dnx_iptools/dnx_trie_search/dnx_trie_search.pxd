@@ -34,8 +34,7 @@ cdef struct TrieRange:
 cdef class HashTrie:
     cdef:
         TrieMap    *TRIE_MAP
-
-        uint32_t    INDEX_MASK
+        uint32_t    max_width
 
     cpdef void generate_structure(self, list py_trie, Py_ssize_t py_trie_len)
     cdef uint8_t search(self, uint32_t trie_key, uint32_t host_id) nogil
