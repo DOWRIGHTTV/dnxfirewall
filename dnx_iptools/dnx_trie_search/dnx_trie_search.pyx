@@ -66,6 +66,7 @@ cdef class HashTrie:
 
         cdef:
             TrieMap    *trie_map_container
+            TrieRange  *trie_multival
 
             uint32_t    trie_key
             uint32_t    trie_key_hash
@@ -86,14 +87,16 @@ cdef class HashTrie:
             for xi in range(num_values):
                 print(py_trie[i][1][xi])
 
-                trie_map_container.ranges[trie_map_container.len+xi].key     = trie_key
-                trie_map_container.ranges[trie_map_container.len+xi].netid   = <uint32_t>py_trie[i][1][xi][0]
-                trie_map_container.ranges[trie_map_container.len+xi].bcast   = <uint32_t>py_trie[i][1][xi][1]
-                trie_map_container.ranges[trie_map_container.len+xi].country = <uint16_t>py_trie[i][1][xi][2]
+                trie_multival = <TrieRange*>malloc(sizeof(TrieRange))
+
+                trie_multival.key     = trie_key
+                trie_multival.netid   = <uint32_t>py_trie[i][1][xi][0]
+                trie_multival.bcast   = <uint32_t>py_trie[i][1][xi][1]
+                trie_multival.country = <uint16_t>py_trie[i][1][xi][2]
+
+                trie_map_container.ranges[trie_map_container.len + xi] = trie_multival
 
             trie_map_container.len += num_values
-
-            # print([x for x in self.TRIE_MAP[trie_key_hash].ranges[:num_values]])
 
 cdef class RecurveTrie:
     '''
