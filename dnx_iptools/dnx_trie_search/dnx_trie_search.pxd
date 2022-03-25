@@ -23,7 +23,7 @@ cdef struct L2Range:
 
 cdef struct TrieMap:
     size_t      len
-    TrieRange  *ranges
+    TrieRange  *ranges[100]
 
 cdef struct TrieRange:
     uint32_t    key

@@ -65,14 +65,11 @@ cdef class HashTrie:
     cpdef void generate_structure(self, list py_trie, Py_ssize_t py_trie_len):
 
         cdef:
+            TrieMap    *trie_map_container
+
             uint32_t    trie_key
             uint32_t    trie_key_hash
             size_t      num_values
-
-            list        trie_val
-            TrieRange  *trie_values
-
-            uint32_t index_mask = self.hash_key(trie_key)
 
         self.max_width = <uint32_t>pow(2, log2(py_trie_len))
         self.TRIE_MAP  = <TrieMap*>calloc(self.max_width, sizeof(TrieMap))
@@ -80,26 +77,21 @@ cdef class HashTrie:
         for i in range(py_trie_len):
 
             trie_key   = <uint32_t>py_trie[i][0]
-            num_values = <size_t>len(py_trie[i][1])
+            num_values = <size_t> len(py_trie[i][1])
 
-            # allocating memory for trie_ranges
-            trie_values = <TrieRange*>malloc(sizeof(TrieRange) * num_values)
+            trie_key_hash = self.hash_key(trie_key)
+            trie_map_container = &self.TRIE_MAP[trie_key_hash]
 
             # define struct members for each range in py_l2
             for xi in range(num_values):
                 print(py_trie[i][1][xi])
 
-                trie_val = py_trie[i][1][xi]
+                trie_map_container.ranges[trie_map_container.len+xi].key     = trie_key
+                trie_map_container.ranges[trie_map_container.len+xi].netid   = <uint32_t>py_trie[i][1][xi][0]
+                trie_map_container.ranges[trie_map_container.len+xi].bcast   = <uint32_t>py_trie[i][1][xi][1]
+                trie_map_container.ranges[trie_map_container.len+xi].country = <uint16_t>py_trie[i][1][xi][2]
 
-                trie_values[xi].key     = trie_key
-                trie_values[xi].netid   = <uint32_t>trie_val[0]
-                trie_values[xi].bcast   = <uint32_t>trie_val[1]
-                trie_values[xi].country = <uint16_t>trie_val[2]
-
-            # assigning struct members
-            trie_key_hash = self.hash_key(trie_key)
-            self.TRIE_MAP[trie_key_hash].len    = num_values
-            self.TRIE_MAP[trie_key_hash].ranges = trie_values
+            trie_map_container.len += num_values
 
             # print([x for x in self.TRIE_MAP[trie_key_hash].ranges[:num_values]])
 
