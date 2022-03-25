@@ -8,7 +8,9 @@ from setuptools import setup, Extension
 from Cython.Build import cythonize
 from Cython.Distutils import build_ext
 
-os.chdir('/home/dnx/dnxfirewall/dnx_netmods/dnx_netfilter')
+HOME_DIR = os.environ.get('HOME_DIR')
+
+os.chdir(f'{HOME_DIR}/dnx_netmods/dnx_netfilter')
 
 cmd = {'build_ext': build_ext}
 ext = Extension(

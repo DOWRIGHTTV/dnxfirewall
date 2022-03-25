@@ -8,7 +8,9 @@ from setuptools import setup, Extension
 from Cython.Build import cythonize
 from Cython.Distutils import build_ext
 
-os.chdir('/home/dnx/dnxfirewall/dnx_iptools/dnx_trie_search')
+HOME_DIR = os.environ.get('HOME_DIR')
+
+os.chdir(f'{HOME_DIR}/dnx_iptools/dnx_trie_search')
 
 cmd = {'build_ext': build_ext}
 ext = Extension(

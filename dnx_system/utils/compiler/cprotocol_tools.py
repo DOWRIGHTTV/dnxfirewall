@@ -8,8 +8,7 @@ from setuptools import setup, Extension
 from Cython.Build import cythonize
 from Cython.Distutils import build_ext
 
-HOME_DIR = '/home/dnx/dnxfirewall'
-# HOME_DIR = '/home/free/Desktop/new_repos/dnxfirewall-cmd'
+HOME_DIR = os.environ.get('HOME_DIR')
 
 os.chdir(f'{HOME_DIR}/dnx_iptools/cprotocol_tools')
 

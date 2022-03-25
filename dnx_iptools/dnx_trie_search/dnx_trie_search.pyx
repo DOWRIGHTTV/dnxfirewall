@@ -11,13 +11,14 @@ from functools import lru_cache as _lru_cache
 # C IMPORTS
 # ===============
 from libc.stdlib cimport malloc, calloc
-from libc.math cimport log2
-from libc.stdint cimport int8_t, int16_t, int32_t, uint8_t, uint16_t, uint32_t
+from libc.math cimport pow, log2
+from libc.stdint cimport uint8_t, uint16_t, uint32_t
 
 DEF EMPTY_CONTAINER = 0
 DEF NO_MATCH = 0
 
-cdef uint32_t UINT32_MAX = 4294967295
+DEF MSB = 0b11111111111110000000000000000000
+DEF LSB = 0b00000000000001111111111111111111
 
 # ================================================
 # C STRUCTURES - converted from python tuples
@@ -25,52 +26,21 @@ cdef uint32_t UINT32_MAX = 4294967295
 cdef class HashTrie:
 
     @_lru_cache(maxsize=4096)
-    def py_search(self, (long, long) host):
+    def py_search(self, tuple host):
         '''used for testing functions of data structure and searching.
         '''
-        cdef uint8_t search_result
+        cdef:
+            uint8_t search_result
 
-        search_result = self.search(host[0], host[1])
+            uint32_t trie_key = <uint32_t>host[0]
+            uint32_t host_id  = <uint32_t>host[1]
+
+        # search_result = self.search(tk, hi)
+        search_result = self.search(trie_key, host_id)
 
         return search_result
 
-    cpdef void generate_structure(self, list py_trie, size_t py_trie_len):
-
-        cdef:
-            size_t trie_key
-            size_t trie_key_hash
-            size_t num_values
-
-            TrieRange *trie_values
-
-            size_t max_width = <size_t>2 ** log2(py_trie_len)
-
-        self.INDEX_MASK = <size_t>(max_width - 1)
-
-        self.TRIE_MAP = <TrieMap*>calloc(max_width, sizeof(TrieMap))
-
-        for i in range(py_trie_len):
-
-            trie_key = <size_t>py_trie[i][0]
-            trie_key_hash = trie_key % self.INDEX_MASK
-
-            num_values = <size_t>len(py_trie[i][1])
-
-            # allocating memory for trie_ranges
-            trie_values = <TrieRange*>malloc(sizeof(TrieRange) * num_values)
-
-            # define struct members for each range in py_l2
-            for xi in range(num_values):
-                trie_values[xi].key     = trie_key
-                trie_values[xi].netid   = <uint32_t>py_trie[i][1][xi][0]
-                trie_values[xi].bcast   = <uint32_t>py_trie[i][1][xi][1]
-                trie_values[xi].country = <uint16_t>py_trie[i][1][xi][2]
-
-            # assigning struct members
-            self.TRIE_MAP[trie_key_hash].len    = num_values
-            self.TRIE_MAP[trie_key_hash].ranges = trie_values
-
-    cdef uint8_t search(self, size_t trie_key, uint32_t host_id) nogil:
+    cdef uint8_t search(self, uint32_t trie_key, uint32_t host_id) nogil:
 
         cdef:
             TrieMap *trie_value = &self.TRIE_MAP[trie_key % self.INDEX_MASK]
@@ -92,56 +62,70 @@ cdef class HashTrie:
         # iteration completed with no l2 match
         return NO_MATCH
 
+    cpdef void generate_structure(self, list py_trie, Py_ssize_t py_trie_len):
+
+        cdef:
+            uint32_t trie_key
+            uint32_t trie_key_hash
+            size_t   num_values
+
+            TrieRange *trie_values
+
+            uint32_t max_width = <uint32_t>pow(2, log2(py_trie_len))
+
+        self.INDEX_MASK = max_width - 1
+
+        self.TRIE_MAP = <TrieMap*>calloc(max_width, sizeof(TrieMap))
+
+        for i in range(py_trie_len):
+
+            trie_key   = <uint32_t>py_trie[i][0]
+            num_values = <size_t>len(py_trie[i][1])
+
+            # allocating memory for trie_ranges
+            trie_values = <TrieRange*>malloc(sizeof(TrieRange) * num_values)
+
+            # define struct members for each range in py_l2
+            for xi in range(num_values):
+                print(py_trie[i][1][xi])
+
+                trie_values[xi].key     = trie_key
+                trie_values[xi].netid   = <uint32_t>py_trie[i][1][xi][0]
+                trie_values[xi].bcast   = <uint32_t>py_trie[i][1][xi][1]
+                trie_values[xi].country = <uint16_t>py_trie[i][1][xi][2]
+
+            # assigning struct members
+            trie_key_hash = trie_key % self.INDEX_MASK
+            self.TRIE_MAP[trie_key_hash].len    = num_values
+            self.TRIE_MAP[trie_key_hash].ranges = trie_values
+
+            # print([x for x in self.TRIE_MAP[trie_key_hash].ranges[:num_values]])
+
 cdef class RecurveTrie:
     '''
     L1 CONTAINER = [<CONTAINER_ID, L2_CONTAINER_SIZE, L2_CONTAINER_PTR>]
     L2 CONTAINER = [<CONTAINER_ID, HOST_CATEGORY>]
     '''
     @_lru_cache(maxsize=4096)
-    def search(self, (long, long) host):
-
-        cdef uint16_t search_result
-
-        with nogil:
-            search_result = self.l1_search(host[0], host[1])
-
-        return search_result
-
-    cpdef void generate_structure(self, list py_trie):
+    def search(self, tuple host):
 
         cdef:
-            uint32_t    l1_id
-            size_t      l2_size
-            L2Recurve  *l2_container
+            uint32_t l1_id = <uint32_t>host[0]
+            uint32_t l2_id = <uint32_t>host[1]
 
-        # allocating memory for L1 container
-        self.L1_SIZE = <size_t>len(py_trie)
-        self.L1_CONTAINER = <L1Recurve*>malloc(sizeof(L1Recurve) * self.L1_SIZE)
+            uint16_t search_result
 
-        for i in range(self.L1_SIZE):
+        with nogil:
+            search_result = self.l1_search(l1_id, l2_id)
 
-            l1_id   = <uint32_t>py_trie[i][0]
-            l2_size = <size_t>len(py_trie[i][1])
-
-            # allocating memory for an array of l2 container pointers
-            l2_container = <L2Recurve*>malloc(sizeof(L2Recurve) * l2_size)
-
-            # calling make function for l2 content struct for each entry in the current py_l2 container
-            for xi in range(l2_size):
-                l2_container[xi].id       = <uint32_t>py_trie[i][1][xi][0]
-                l2_container[xi].host_cat = <uint16_t>py_trie[i][1][xi][1]
-
-            # assigning struct members to the current index of L1 container.
-            self.L1_CONTAINER[i].id      = l1_id
-            self.L1_CONTAINER[i].l2_size = l2_size
-            self.L1_CONTAINER[i].l2_ptr  = l2_container
+        return search_result
 
     cdef uint16_t l1_search(self, uint32_t l1_id, uint32_t l2_id) nogil:
 
         cdef:
             size_t mid
 
-            size_t left_bound = 0
+            size_t left_bound  = 0
             size_t right_bound = self.L1_SIZE
 
             L1Recurve *l1_container
@@ -171,7 +155,7 @@ cdef class RecurveTrie:
             size_t      mid
             L2Recurve  *l2_container
 
-            size_t left_bound = 0
+            size_t left_bound  = 0
             size_t right_bound = l1_container.l2_size
 
             L2Recurve *L2_CONTAINER = l1_container.l2_ptr
@@ -194,6 +178,35 @@ cdef class RecurveTrie:
 
         # L2 default
         return NO_MATCH
+
+    cpdef void generate_structure(self, list py_trie):
+
+        cdef:
+            uint32_t    l1_id
+            size_t      l2_size
+            L2Recurve  *l2_container
+
+        # allocating memory for L1 container
+        self.L1_SIZE = <size_t>len(py_trie)
+        self.L1_CONTAINER = <L1Recurve*>malloc(sizeof(L1Recurve) * self.L1_SIZE)
+
+        for i in range(self.L1_SIZE):
+
+            l1_id   = <uint32_t>py_trie[i][0]
+            l2_size = <size_t>len(py_trie[i][1])
+
+            # allocating memory for an array of l2 container pointers
+            l2_container = <L2Recurve*>malloc(sizeof(L2Recurve) * l2_size)
+
+            # calling make function for l2 content struct for each entry in the current py_l2 container
+            for xi in range(l2_size):
+                l2_container[xi].id       = <uint32_t>py_trie[i][1][xi][0]
+                l2_container[xi].host_cat = <uint16_t>py_trie[i][1][xi][1]
+
+            # assigning struct members to the current index of L1 container.
+            self.L1_CONTAINER[i].id      = l1_id
+            self.L1_CONTAINER[i].l2_size = l2_size
+            self.L1_CONTAINER[i].l2_ptr  = l2_container
 
 
 cdef class RangeTrie:
@@ -252,20 +265,20 @@ cdef class RangeTrie:
             L1Range *l1_container
             L2Range *l2_container
 
-            size_t left = 0
-            size_t right = self.L1_SIZE
+            size_t left_bound  = 0
+            size_t right_bound = self.L1_SIZE
 
-        while left <= right:
-            mid = left + (right - left) // 2
+        while left_bound <= right_bound:
+            mid = left_bound + (right_bound - left_bound) // 2
             l1_container = &self.L1_CONTAINER[mid]
 
             # excluding left half
             if (l1_container.id < container_id):
-                left = mid + 1
+                left_bound = mid + 1
 
             # excluding right half
             elif (l1_container.id > container_id):
-                right = mid - 1
+                right_bound = mid - 1
 
             # l1.id match. iterating over l2_containers looking for l2.id match
             else:

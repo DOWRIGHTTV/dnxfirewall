@@ -13,10 +13,11 @@ import traceback
 from functools import partial
 from subprocess import run, DEVNULL, CalledProcessError
 
-HOME_DIR = os.environ.get('HOME_DIR', '/home/dnx/dnxfirewall')
+# HOME_DIR = os.environ.get('HOME_DIR', '/home/dnx/dnxfirewall')
 
 hardout = partial(os._exit, 0)
 dnx_run = partial(run, check=True, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
+dnx_run_v = partial(run, check=True, stdin=DEVNULL)
 def exclude(s: str, l: Iterable, /) -> list[str]:
     '''return a new list with specified string removed from the passed in list, set, tuple, dict.
     '''
@@ -226,6 +227,9 @@ def service_command(mod: str, cmd: str) -> None:
 # TODO: see if can be done better
 def run_cli(mod: str, mod_loc: str) -> None:
     os.environ['INIT_MODULE'] = mod
+
+    from dnx_gentools.def_constants import HOME_DIR
+
     os.environ['HOME_DIR'] = HOME_DIR
 
     env = MODULE_MAPPING[mod].get('environ')
@@ -268,9 +272,11 @@ if (__name__ == '__main__'):
         modstat_command()
 
     elif(command == 'compile'):
+        from dnx_gentools.def_constants import HOME_DIR
+
         file_path = f'{HOME_DIR}/dnx_system/utils/compiler/{mod_name.replace("-", "_")}.py'
         try:
-            dnx_run(f'sudo python3 {file_path} build_ext --inplace', shell=True)
+            dnx_run_v(f'sudo HOME_DIR={HOME_DIR} python3 {file_path} build_ext --inplace', shell=True)
         except CalledProcessError as cpe:
             sprint(f'{mod_name} (compile) run failure. => {cpe}')
 

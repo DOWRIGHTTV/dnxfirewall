@@ -21,13 +21,14 @@ f_time = time.perf_counter_ns
 
 MSB = 0b11111111111110000000000000000000
 LSB = 0b00000000000001111111111111111111
-DNS_BIN_OFFSET = 4
+DNS_BIN_OFFSET = 6
 
 _host_list = [
     '14.204.211.122',  # malware
     '69.69.69.69',  # not found
     '193.164.216.238',  # compromised host
     '1.1.1.1',  # DoH
+    '8.8.8.8',  # google/ USA
     '104.244.75.143',  # tor entry
     '192.168.69.69',  # rfc1918 (private)
     '34.107.220.220',  # USA

@@ -1,6 +1,6 @@
 #!/usr/bin/env Cython
 
-from libc.stdint cimport int8_t, int16_t, int32_t, uint8_t, uint16_t, uint32_t
+from libc.stdint cimport uint8_t, uint16_t, uint32_t
 
 cdef struct L1Recurve:
     uint32_t    id
@@ -26,24 +26,24 @@ cdef struct TrieMap:
     TrieRange  *ranges
 
 cdef struct TrieRange:
-    size_t      key
+    uint32_t    key
     uint32_t    netid
     uint32_t    bcast
     uint8_t     country
 
 cdef class HashTrie:
     cdef:
-        TrieMap *TRIE_MAP
+        TrieMap    *TRIE_MAP
 
-        size_t INDEX_MASK
+        uint32_t    INDEX_MASK
 
-    cpdef void generate_structure(self, list py_trie, size_t py_trie_len)
-    cdef uint8_t search(self, size_t trie_key, uint32_t host_id) nogil
+    cpdef void generate_structure(self, list py_trie, Py_ssize_t py_trie_len)
+    cdef uint8_t search(self, uint32_t trie_key, uint32_t host_id) nogil
 
 cdef class RecurveTrie:
     cdef:
-        size_t L1_SIZE
-        L1Recurve *L1_CONTAINER
+        size_t      L1_SIZE
+        L1Recurve  *L1_CONTAINER
 
     cpdef void generate_structure(self, list py_trie)
     cdef uint16_t l1_search(self, uint32_t container_id, uint32_t host_id) nogil
@@ -51,8 +51,8 @@ cdef class RecurveTrie:
 
 cdef class RangeTrie:
     cdef:
-        size_t L1_SIZE
-        L1Range *L1_CONTAINER
+        size_t      L1_SIZE
+        L1Range    *L1_CONTAINER
 
     cpdef void generate_structure(self, list py_trie)
     cdef uint16_t l1_search(self, uint32_t container_id, uint32_t host_id) nogil
