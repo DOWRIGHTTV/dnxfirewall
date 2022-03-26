@@ -700,7 +700,7 @@ cdef class CFirewall:
 
         nfq_close(self.h)
 
-    cpdef int prepare_geolocation(self, tuple geolocation_trie, uint32_t msb, uint32_t lsb) with gil:
+    cpdef int prepare_geolocation(self, list geolocation_trie, uint32_t msb, uint32_t lsb) with gil:
         '''initializes Cython Extension HashTrie for use by CFirewall.
          
         py_trie is passed through as data source and reference to function is globally assigned. MSB and LSB definitions 
