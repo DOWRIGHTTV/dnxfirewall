@@ -6,7 +6,7 @@ from libc.stdio cimport printf
 from libc.stdint cimport uint8_t, uint16_t, uint32_t
 from libc.stdint cimport uint_fast8_t, uint_fast16_t, uint_fast32_t
 
-from dnx_iptools.dnx_trie_search.dnx_trie_search cimport HashTrie_Range
+from dnx_iptools.hash_trie.hash_trie cimport HashTrie_Range
 
 # ===============================
 # VERBOSE T-SHOOT ASSISTANCE
