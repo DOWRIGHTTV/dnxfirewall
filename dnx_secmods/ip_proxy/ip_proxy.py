@@ -9,7 +9,7 @@ from dnx_gentools.def_namedtuples import IPP_INSPECTION_RESULTS
 from dnx_gentools.signature_operations import generate_reputation
 
 from dnx_iptools.packet_classes import NFQueue
-from dnx_iptools.dnx_trie_search import RecurveTrie
+from dnx_iptools.hash_trie import HashTrie_Value
 
 from ip_proxy_packets import IPPPacket, ProxyResponse
 from ip_proxy_restrict import LanRestrict
@@ -213,7 +213,7 @@ def _reputation_action(category: REP, packet: IPPPacket) -> CONN:
 
         return CONN.REJECT
 
-    # default action is allow due to category not being enabled
+    # default action is allow
     return CONN.ACCEPT
 
 # TODO: expand for profiles. geolocation_settings[profile][category]
@@ -237,8 +237,8 @@ if INITIALIZE_MODULE('ip-proxy'):
 
     # initializing the C/Cython extension, converting python structures to native C array/struct.
     # assigning direct reference to the search method [which calls underlying C without GIL]
-    recurve_trie = RecurveTrie()
-    recurve_trie.generate_structure(reputation_signatures)
+    recurve_trie = HashTrie_Value()
+    recurve_trie.generate_structure(reputation_signatures, len(reputation_signatures))
 
     _recurve_trie_search = recurve_trie.search
 

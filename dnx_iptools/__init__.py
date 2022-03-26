@@ -6,4 +6,4 @@ from typing import TYPE_CHECKING
 
 if (TYPE_CHECKING):
     from cprotocol_tools import *
-    from dnx_trie_search import *
+    from hash_trie import *

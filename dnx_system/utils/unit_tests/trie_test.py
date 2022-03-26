@@ -3,15 +3,13 @@
 import os
 import time
 
-from ctypes import c_uint32
 from dataclasses import dataclass
 from ipaddress import IPv4Address
 
-from dnx_gentools.def_constants import INITIALIZE_MODULE, hardout
+from dnx_gentools.def_constants import INITIALIZE_MODULE, UINT32_MAX, hardout
 from dnx_gentools import signature_operations
 
-from dnx_iptools.protocol_tools import mhash
-from dnx_iptools.dnx_trie_search import HashTrie_Range, HashTrie_Value, RecurveTrie, RangeTrie
+from dnx_iptools.hash_trie import HashTrie_Range, HashTrie_Value
 
 from dnx_routines.logging.log_client import LogHandler as Log
 
@@ -21,7 +19,6 @@ f_time = time.perf_counter_ns
 
 MSB = 0b11111111111110000000000000000000
 LSB = 0b00000000000001111111111111111111
-DNS_BIN_OFFSET = 6
 
 _host_list = [
     '14.204.211.122',  # malware
@@ -33,20 +30,17 @@ _host_list = [
     '192.168.69.69',  # rfc1918 (private)
     '34.107.220.220',  # USA
 ]
-host_list = [int(IPv4Address(ip)) for ip in _host_list]
+hosts_to_test = [int(IPv4Address(ip)) for ip in _host_list]
 
-domain_list = [
-    'www.google.com',
-    'www.dnxfirewall.com',
-    'www.worldofwarcraft.com',  # video games
-    'www.amd.com',
-    'www.poker.com',  # gambling
-    'www.intel.com',
+_domain_list = [
+    'google.com',
+    'dnxfirewall.com',
+    'worldofwarcraft.com',  # video games
+    'amd.com',
+    'uspoker.com',  # gambling
+    'logmein.com',  # remote login
 ]
-
-# this is to get every ip to be searched twice, which will guarantee LRU cache hits if applicable
-hosts_to_test = [*host_list, *host_list]
-domains_to_test = [*domain_list, *domain_list]
+domains_to_test = [hash(domain) & UINT32_MAX for domain in _domain_list]
 
 def _test_search(name, cat, search_func):
     results = []
@@ -73,54 +67,43 @@ def _test_search(name, cat, search_func):
 
 def _test_search2(name, cat, search_func):
 
+    if (cat == 'rep'):
+        test_list = hosts_to_test
+
+    elif (cat == 'dns'):
+        test_list = domains_to_test
+
     results = []
 
-    for domain in domains_to_test:
-
-        hhash = c_uint32(mhash(domain)).value
-
-        host_hash = f'{hhash}'
-
-        h1 = host_hash[:DNS_BIN_OFFSET]
-        h2 = host_hash[DNS_BIN_OFFSET:]
-
-        host = (int(h1), int(h2))
+    for entry in test_list:
 
         start = f_time()
 
         # =========================
         # FUNCTION BEING TIMED
         # =========================
-        result = search_func(host)
+        result = search_func(entry)
         # =========================
 
         total_time = f_time() - start
 
         results.append(
-            (total_time, f'[{domain}] {cat}={result}', f'BINID->{h1}', f'HOSTID->{h2}')
+            (total_time, f'[{entry}] {cat}->{result}')
         )
 
     _process_results(results, f'{name} TRIE RESULTS')
 
 def _process_results(results, descriptor):
-    no_cache = sorted(results[:len(host_list)])
-    cache = sorted(results[len(host_list):len(hosts_to_test)])
+    normalized_results = sorted(results)[:-1]
 
-    normalize_no_cache = no_cache[:-1]
-    normalize_cache = cache[:-1]
-
-    no_cache_average = sum([x[0] for x in normalize_no_cache])/(len(results)/2)-1
-    cached_average = sum([x[0] for x in normalize_cache])/(len(results)/2)-1
-
-    # print(f'{sum([x[0] for x in normalize_no_cache])}/{(len(results)/2)-1}')
+    average = sum([x[0] for x in normalized_results]) / (len(results) / 2) - 1
 
     print(f'{line}\n{descriptor}\n{line}')
 
     for i, res in enumerate(results):
-        print(hosts_to_test[i], f'> time={res[0]}, {res[1]}')
+        print(f'[{i}] time->{res[0]}, {res[1]}')
 
-    print(f'\nno cache avg: {no_cache_average} ns, excluded: {no_cache[-1]}')
-    print(f'cached avg: {cached_average} ns, excluded: {cache[-1]}')
+    print(f'\nsearch time: avg->{average}ns, excluded->{sorted(results)[-1]}')
 
 
 if INITIALIZE_MODULE('trie-test'):
@@ -132,9 +115,8 @@ if INITIALIZE_MODULE('trie-test'):
         help: int = 0
 
         gh: int = 0
-        gr: int = 0
-        rr: int = 0
-        dr: int = 0
+        rh: int = 0
+        dh: int = 0
 
         @property
         def show_help(self):
@@ -147,8 +129,9 @@ if INITIALIZE_MODULE('trie-test'):
 
     if (args.show_help):
         vargs = [
-            ('gh', 'v3 GEO (HASH)'), ('gr', 'v2 GEO (RANGE)'),
-            ('rr', 'v2 REP (RECURVE)'), ('dr', 'v2 DNS (RECURVE)')
+            ('gh', 'v3 GEO (HASH)'),
+            ('rh', 'v4 REP (HASH)'),
+            ('dh', 'v4 DNS (HASH)')
         ]
 
         print('available args')
@@ -166,21 +149,15 @@ if INITIALIZE_MODULE('trie-test'):
 
 def run():
 
-    if (args.gh or args.gr):
+    if (args.gh):
         geo_sigs = signature_operations.generate_geolocation(Log)
-
-        if (args.gh):
-            geo_hash_trie = HashTrie_Range()
-            geo_hash_trie.generate_structure(geo_sigs, len(geo_sigs))
-
-        if (args.gr):
-            geo_range_trie = RangeTrie()
-            geo_range_trie.generate_structure(geo_sigs)
+        geo_hash_trie = HashTrie_Range()
+        geo_hash_trie.generate_structure(geo_sigs, len(geo_sigs))
 
     if (args.rr):
         rep_sigs = signature_operations.generate_reputation(Log)
-        rep_recurve_trie = RecurveTrie()
-        rep_recurve_trie.generate_structure(rep_sigs)
+        rep_hash_trie = HashTrie_Value()
+        rep_hash_trie.generate_structure(rep_sigs, len(rep_sigs))
 
     if (args.dr):
         dns_sigs = signature_operations.generate_domain(Log)
@@ -194,13 +171,10 @@ def run():
         if (args.gh):
             _test_search('v3 GEO (HASH)', 'geo', geo_hash_trie.py_search)
 
-        if (args.gr):
-            _test_search('v2 GEO (RANGE)', 'geo', geo_range_trie.search)
+        if (args.rh):
+            _test_search2('v4 REP (HASH)', 'rep', rep_hash_trie.py_search)
 
-        if (args.rr):
-            _test_search('v2 REP (RECURVE)', 'rep', rep_recurve_trie.search)
-
-        if (args.dr):
-            _test_search2('v4 DNS (HASH)', 'dns', dns_hash_trie.search)
+        if (args.dh):
+            _test_search2('v4 DNS (HASH)', 'dns', dns_hash_trie.py_search)
 
     os._exit(1)

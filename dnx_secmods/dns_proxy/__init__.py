@@ -15,21 +15,20 @@ if INITIALIZE_MODULE('dns-proxy'):
     from dnx_gentools.def_enums import Queue
     from dnx_gentools.signature_operations import generate_domain
 
-    from dnx_iptools.dnx_trie_search import RecurveTrie
+    from dnx_iptools.hash_trie import HashTrie_Value
 
     from dns_proxy_log import Log
 
     Log.run(name='dns_proxy')
 
-    # TODO: collisions were found in the geolocation filtering data structure. this has been fixed for geolocation and
-    #  standard ip category filtering, but has not been investigated for dns signatures. due to the way the signatures
-    #  are compressed, it is much less likely to happen to dns signatures. (main issue were values in multiples of 10
-    #  because of the multiple 0s contained).
-    #  to be safe, run through the signatures, generate bin and host id, then check for host id collisions within a bin.
     dns_cat_signatures = generate_domain(Log)
 
-    _category_trie = RecurveTrie()
-    _category_trie.generate_structure(dns_cat_signatures)
+    _category_trie = HashTrie_Value()
+    _category_trie.generate_structure(dns_cat_signatures, len(dns_cat_signatures))
+
+    # memory allocation was done manually within the C extension for its structures.
+    # python structures are no longer needed at this point so freeing memory.
+    del dns_cat_signatures
 
     # =================
     # DEFERRED IMPORTS

@@ -8,11 +8,9 @@ from struct import Struct
 from collections import defaultdict
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import HOME_DIR, MSB, LSB, DNS_BIN_OFFSET, RFC1918, ppt
+from dnx_gentools.def_constants import HOME_DIR, MSB, LSB, UINT32_MAX, RFC1918
 from dnx_gentools.def_enums import GEO, REP, DNS_CAT
 from dnx_gentools.file_operations import load_configuration
-
-from dnx_iptools.protocol_tools import mhash
 
 # ===============
 # TYPING IMPORTS
@@ -65,31 +63,17 @@ def generate_domain(log: LogHandler_T) -> list[list[int, int]]:
     wl_exceptions: list = load_configuration('whitelist').get_list('pre_proxy')
     bl_exceptions: list = load_configuration('blacklist').get_list('pre_proxy')
 
-    # dict_nets = defaultdict(list)
-
     # converting blacklist exceptions (pre proxy) to be compatible with dnx signature syntax
     domain_signatures.extend([f'{domain} blacklist' for domain in bl_exceptions])
 
-    # seen_hashes = {}
-    # dup_hashes = []
     doms = []
     doms_append = doms.append
     for signature in domain_signatures:
 
         sig: list = signature.strip().split(maxsplit=1)
         try:
-            # converting the hash to an unsigned int to normalize for dnx tries
+            # converting the hash to an unsigned 32 bit int to normalize for dnx tries
             hhash = hash(sig[0]) & UINT32_MAX
-
-            # host_hash: str = f'{hhash}'
-            #
-            # seen_hash = seen_hashes.get(host_hash)
-            # if not seen_hash:
-            #     seen_hashes[host_hash] = signature
-            #
-            # else:
-            #     dup_hashes.append((f'{host_hash}/{signature}', f'{host_hash}/{seen_hash}'))
-
             cat = int(DNS_CAT[sig[1]])
         except Exception as E:
             log.warning(f'bad signature detected | {E} | {sig}')
@@ -98,29 +82,6 @@ def generate_domain(log: LogHandler_T) -> list[list[int, int]]:
             # pre proxy override check before adding
             if (sig[0] not in wl_exceptions):
                 doms_append([hhash, cat])
-                # try:
-                #     bin_id  = int(host_hash[:DNS_BIN_OFFSET])
-                #     host_id = int(host_hash[DNS_BIN_OFFSET:])
-                # except Exception as E:
-                #     log.warning(f'bad signature detected | {E} | {sig}')
-                # else:
-                #     try:
-                #         dict_nets[bin_id].append([host_id, cat])
-                #     except Exception as E:
-                #         log.warning(f'bad signature detected | {E} | {sig}')
-    # ppt(seen_hashes)
-    # ppt(sorted(dup_hashes))
-
-    # in place sort of all containers prior to building the structure
-    # for containers in dict_nets.values():
-    #     containers.sort()
-
-    # converting to nested tuple and sorting with the outermost list converted on return
-    # nets = [[bin_id, containers] for bin_id, containers in dict_nets.items()]
-    # nets.sort()
-
-    # no longer needed so ensuring memory gets freed
-    # del dict_nets
 
     return doms
 
@@ -137,41 +98,28 @@ def _combine_reputation(log: LogHandler_T) -> list[str]:
 
     return ip_rep_signatures
 
-def generate_reputation(log: LogHandler_T) -> list[list[int, list[int, int]]]:
+def generate_reputation(log: LogHandler_T) -> list[list[int, int]]:
 
     # getting all enabled signatures
     ip_rep_signatures: list = _combine_reputation(log)
 
-    dict_nets = defaultdict(list)
-
+    hosts = []
+    hosts_append = hosts.append
     for signature in ip_rep_signatures:
 
         sig = signature.split()
         try:
             ip_addr = ip_unpack(inet_aton(sig[0]))[0]
-
             cat = int(REP[sig[1].upper()])
         except Exception as E:
             log.warning(f'invalid signature: {signature}, {E}')
-            continue
 
-        bin_id  = ip_addr & MSB
-        host_id = ip_addr & LSB
+        else:
+            hosts_append([ip_addr, cat])
 
-        dict_nets[bin_id].append([host_id, cat])
+    del ip_rep_signatures
 
-    # in place sort of all containers prior to building the structure
-    for containers in dict_nets.values():
-        containers.sort()
-
-    # converting to nested tuple and sorting.
-    # outermost list converted on return
-    nets = [[bin_id, containers] for bin_id, containers in dict_nets.items()]
-    nets.sort()
-
-    del dict_nets, ip_rep_signatures
-
-    return nets
+    return hosts
 
 def _combine_geolocation(log: LogHandler_T) -> list[str]:
     geo_settings: list = load_configuration('ip_proxy').get_list('geolocation')

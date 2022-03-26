@@ -10,13 +10,13 @@ from Cython.Distutils import build_ext
 
 HOME_DIR = os.environ.get('HOME_DIR')
 
-os.chdir(f'{HOME_DIR}/dnx_iptools/dnx_trie_search')
+os.chdir(f'{HOME_DIR}/dnx_iptools/hash_trie')
 
 cmd = {'build_ext': build_ext}
 ext = Extension(
-    'dnx_trie_search', sources=['dnx_trie_search.pyx']
+    'hash_trie', sources=['hash_trie.pyx']
 )
 
 setup(
-    name='dnx-trie-search', cmdclass=cmd, ext_modules=cythonize(ext, language_level='3')
+    name='dnx-hash-trie', cmdclass=cmd, ext_modules=cythonize(ext, language_level='3')
 )

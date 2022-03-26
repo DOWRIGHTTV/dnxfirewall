@@ -789,7 +789,7 @@ class RawResponse:
             proto_payload = b''
 
             # calculating checksum of container
-            proto_header[16:18] = calc_checksum(pseudo_header.buf + proto_header)
+            proto_header[16:18] = calc_checksum(pseudo_header.buf + proto_header, pack=True)
 
         # ICMP HEADER
         # elif (packet.protocol is PROTO.UDP):
