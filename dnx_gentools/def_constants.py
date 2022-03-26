@@ -102,6 +102,7 @@ BROADCAST:  int = 4294967295
 # definitions for ip proxy data structures. most/least significant bit
 MSB: int = 0b11111111111110000000000000000000
 LSB: int = 0b00000000000001111111111111111111
+UINT32_MAX: int = 0b11111111111111111111111111111111
 
 # NFQUEUE packet actions | marking packet, so it can be matched by next rules in order of operations
 WAN_IN: int = 10  # used for limiting certain internal functions from applying to wan > inside traffic

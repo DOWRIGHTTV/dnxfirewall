@@ -11,7 +11,7 @@ from dnx_gentools.def_constants import INITIALIZE_MODULE, hardout
 from dnx_gentools import signature_operations
 
 from dnx_iptools.protocol_tools import mhash
-from dnx_iptools.dnx_trie_search import HashTrie, RecurveTrie, RangeTrie
+from dnx_iptools.dnx_trie_search import HashTrie_Range, HashTrie_Value, RecurveTrie, RangeTrie
 
 from dnx_routines.logging.log_client import LogHandler as Log
 
@@ -161,8 +161,6 @@ if INITIALIZE_MODULE('trie-test'):
     elif not any(args.__dict__.values()):
         hardout('args required. use help for more info.')
 
-    # import pyximport; pyximport.install()
-
     Log.run(name='_tests')
 
 
@@ -172,7 +170,7 @@ def run():
         geo_sigs = signature_operations.generate_geolocation(Log)
 
         if (args.gh):
-            geo_hash_trie = HashTrie()
+            geo_hash_trie = HashTrie_Range()
             geo_hash_trie.generate_structure(geo_sigs, len(geo_sigs))
 
         if (args.gr):
@@ -186,9 +184,8 @@ def run():
 
     if (args.dr):
         dns_sigs = signature_operations.generate_domain(Log)
-        dns_recurve_trie = RecurveTrie()
-        dns_recurve_trie.generate_structure(dns_sigs)
-
+        dns_hash_trie = HashTrie_Value()
+        dns_hash_trie.generate_structure(dns_sigs, len(dns_sigs))
 
     for x in range(2):
 
@@ -204,6 +201,6 @@ def run():
             _test_search('v2 REP (RECURVE)', 'rep', rep_recurve_trie.search)
 
         if (args.dr):
-            _test_search2('v2 DNS (RECURVE)', 'dns', dns_recurve_trie.search)
+            _test_search2('v4 DNS (HASH)', 'dns', dns_hash_trie.search)
 
     os._exit(1)

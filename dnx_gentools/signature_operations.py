@@ -58,35 +58,37 @@ def _combine_domain(log: LogHandler_T) -> list[str]:
 
     return domain_signatures
 
-def generate_domain(log: LogHandler_T) -> list[list[int, list[int, int]]]:
+def generate_domain(log: LogHandler_T) -> list[list[int, int]]:
     # getting all enabled signatures
     domain_signatures: list = _combine_domain(log)
 
     wl_exceptions: list = load_configuration('whitelist').get_list('pre_proxy')
     bl_exceptions: list = load_configuration('blacklist').get_list('pre_proxy')
 
-    dict_nets = defaultdict(list)
+    # dict_nets = defaultdict(list)
 
     # converting blacklist exceptions (pre proxy) to be compatible with dnx signature syntax
     domain_signatures.extend([f'{domain} blacklist' for domain in bl_exceptions])
 
-    seen_hashes = {}
-    dup_hashes = []
+    # seen_hashes = {}
+    # dup_hashes = []
+    doms = []
+    doms_append = doms.append
     for signature in domain_signatures:
 
         sig: list = signature.strip().split(maxsplit=1)
         try:
             # converting the hash to an unsigned int to normalize for dnx tries
-            hhash: int = c_uint32(mhash(sig[0])).value
+            hhash = hash(sig[0]) & UINT32_MAX
 
-            host_hash: str = f'{hhash}'
-
-            seen_hash = seen_hashes.get(host_hash)
-            if not seen_hash:
-                seen_hashes[host_hash] = signature
-
-            else:
-                dup_hashes.append((f'{host_hash}/{signature}', f'{host_hash}/{seen_hash}'))
+            # host_hash: str = f'{hhash}'
+            #
+            # seen_hash = seen_hashes.get(host_hash)
+            # if not seen_hash:
+            #     seen_hashes[host_hash] = signature
+            #
+            # else:
+            #     dup_hashes.append((f'{host_hash}/{signature}', f'{host_hash}/{seen_hash}'))
 
             cat = int(DNS_CAT[sig[1]])
         except Exception as E:
@@ -95,31 +97,32 @@ def generate_domain(log: LogHandler_T) -> list[list[int, list[int, int]]]:
         else:
             # pre proxy override check before adding
             if (sig[0] not in wl_exceptions):
-                try:
-                    bin_id  = int(host_hash[:DNS_BIN_OFFSET])
-                    host_id = int(host_hash[DNS_BIN_OFFSET:])
-                except Exception as E:
-                    log.warning(f'bad signature detected | {E} | {sig}')
-                else:
-                    try:
-                        dict_nets[bin_id].append([host_id, cat])
-                    except Exception as E:
-                        log.warning(f'bad signature detected | {E} | {sig}')
+                doms_append([hhash, cat])
+                # try:
+                #     bin_id  = int(host_hash[:DNS_BIN_OFFSET])
+                #     host_id = int(host_hash[DNS_BIN_OFFSET:])
+                # except Exception as E:
+                #     log.warning(f'bad signature detected | {E} | {sig}')
+                # else:
+                #     try:
+                #         dict_nets[bin_id].append([host_id, cat])
+                #     except Exception as E:
+                #         log.warning(f'bad signature detected | {E} | {sig}')
     # ppt(seen_hashes)
-    ppt(sorted(dup_hashes))
+    # ppt(sorted(dup_hashes))
 
     # in place sort of all containers prior to building the structure
-    for containers in dict_nets.values():
-        containers.sort()
+    # for containers in dict_nets.values():
+    #     containers.sort()
 
     # converting to nested tuple and sorting with the outermost list converted on return
-    nets = [[bin_id, containers] for bin_id, containers in dict_nets.items()]
-    nets.sort()
+    # nets = [[bin_id, containers] for bin_id, containers in dict_nets.items()]
+    # nets.sort()
 
     # no longer needed so ensuring memory gets freed
-    del dict_nets
+    # del dict_nets
 
-    return nets
+    return doms
 
 def _combine_reputation(log: LogHandler_T) -> list[str]:
     proxy_settings: ConfigChain = load_configuration('ip_proxy')
