@@ -240,7 +240,7 @@ if INITIALIZE_MODULE('ip-proxy'):
     recurve_trie = HashTrie_Value()
     recurve_trie.generate_structure(reputation_signatures, len(reputation_signatures))
 
-    _recurve_trie_search = recurve_trie.search
+    _recurve_trie_search = recurve_trie.py_search
 
     # memory allocation was done manually within the C extension for its structures.
     # python structures are no longer needed at this point so freeing memory.

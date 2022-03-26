@@ -38,7 +38,7 @@ if INITIALIZE_MODULE('dns-proxy'):
     import dns_proxy_server
 
     # setting top of file variable for proxy direct access to search method
-    dns_proxy.CAT_LOOKUP = _category_trie.search
+    dns_proxy.CAT_LOOKUP = _category_trie.py_search
 
 def run():
     # server running in thread because run method is a blocking call

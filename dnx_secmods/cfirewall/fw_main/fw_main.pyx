@@ -6,7 +6,7 @@ from libc.stdio cimport printf
 from libc.stdint cimport uint8_t, uint16_t, uint32_t
 from libc.stdint cimport uint_fast8_t, uint_fast16_t, uint_fast32_t
 
-from dnx_iptools.dnx_trie_search.dnx_trie_search cimport HashTrie
+from dnx_iptools.dnx_trie_search.dnx_trie_search cimport HashTrie_Range
 
 # ===============================
 # VERBOSE T-SHOOT ASSISTANCE
@@ -86,10 +86,8 @@ pthread_mutex_init(&FWblocklistlock, NULL)
 # ================================== #
 # Geolocation definitions
 # ================================== #
-DEF GEO_MARKER = -1
-
-cdef long MSB, LSB
-cdef HashTrie GEOLOCATION
+cdef uint32_t MSB, LSB
+cdef HashTrie_Range GEOLOCATION
 
 # ================================== #
 # ARRAY INITIALIZATION
@@ -702,7 +700,7 @@ cdef class CFirewall:
 
         nfq_close(self.h)
 
-    cpdef int prepare_geolocation(self, tuple geolocation_trie, long msb, long lsb) with gil:
+    cpdef int prepare_geolocation(self, tuple geolocation_trie, uint32_t msb, uint32_t lsb) with gil:
         '''initializes Cython Extension HashTrie for use by CFirewall.
          
         py_trie is passed through as data source and reference to function is globally assigned. MSB and LSB definitions 
@@ -712,7 +710,7 @@ cdef class CFirewall:
 
         cdef size_t trie_len = len(geolocation_trie)
 
-        GEOLOCATION = HashTrie()
+        GEOLOCATION = HashTrie_Range()
         GEOLOCATION.generate_structure(geolocation_trie, trie_len)
 
         MSB = msb

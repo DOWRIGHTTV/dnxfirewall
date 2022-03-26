@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from ctypes import c_uint32
 from socket import inet_aton
 from struct import Struct
 from collections import defaultdict
@@ -158,7 +157,7 @@ def generate_geolocation(log: LogHandler_T) -> list[list[int, list[int, int, int
             net, cat = signature.split()
 
             subnet: list = net.split('/')
-            net_id:  int = c_uint32(ip_unpack(inet_aton(subnet[0]))[0]).value
+            net_id:  int = ip_unpack(inet_aton(subnet[0]))[0]
             h_count: int = cidr_to_host_count[subnet[1]]
 
             country = int(GEO[cat.upper()])
@@ -169,18 +168,14 @@ def generate_geolocation(log: LogHandler_T) -> list[list[int, list[int, int, int
             # needed to account for MSB/bin_id overflows
             while h_count > LSB+1:
                 cvl_append(f'{net_id} {LSB} {country}')
-                # print('111111 WHILEEEEE', f'{net_id} {LSB} {country}')
 
                 h_count -= LSB + 1
                 net_id  += LSB + 1
 
             # NOTE: -1 to step down to bcast value
             cvl_append(f'{net_id} {h_count-1} {country}')
-            # print('222222 NOTWHILE', f'{net_id} {h_count-1} {country}')
 
     del ip_geo_signatures
-
-    # print(converted_list)
 
     # compression logic
     dict_nets = defaultdict(list)
@@ -192,9 +187,6 @@ def generate_geolocation(log: LogHandler_T) -> list[list[int, list[int, int, int
         bin_id  = net_id & MSB
         host_id = net_id & LSB
 
-        if (host_id == 0):
-            print('WHY 0???', net_id)
-
         dict_nets[bin_id].append([host_id, host_id + ip_count, country])
 
     # merging contiguous ranges if within the same country
@@ -205,8 +197,6 @@ def generate_geolocation(log: LogHandler_T) -> list[list[int, list[int, int, int
     nets.sort()
 
     del dict_nets
-
-    # ppt(nets)
 
     return nets
 

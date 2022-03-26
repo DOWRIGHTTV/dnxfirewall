@@ -75,9 +75,9 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     'syscontrol': {'module': 'dnx_system.sys_control', 'exclude': ['compile'], 'priv': True, 'service': True},
 
     # COMPILE ONLY
-    'dnx-nfqueue': {'module': '', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
-    'cprotocol-tools': {'module': '', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
-    'hash-trie': {'module': '', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
+    'dnx-nfqueue': {'module': '1', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
+    'cprotocol-tools': {'module': '1', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
+    'hash-trie': {'module': '1', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
 
     # TESTS
     'trie-test': {
