@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Type, NewType, Literal, Protocol, Callable, Generator, Iterator, Iterable, ClassVar,
+from typing import TYPE_CHECKING, Type, NewType, Literal, Protocol, Callable, Generator, Iterator, Iterable, ClassVar
 from typing import Union, Optional, Any, NoReturn
 
 _DISABLED = False

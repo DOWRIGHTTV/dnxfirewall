@@ -2,8 +2,15 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_typing import Structure
 from dnx_gentools.standard_tools import structure as _structure
+
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import Structure
 
 # IP
 PR_IP_HDR: Structure = _structure(
