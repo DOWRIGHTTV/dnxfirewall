@@ -18,7 +18,7 @@ __all__ = (
 )
 
 
-CAT_LOOKUP: Callable[[tuple[int]], int] = NotImplemented  # will be assigned by __init__ prior to running
+CAT_LOOKUP: Callable[[int], int] = NotImplemented  # will be assigned by __init__ prior to running
 LOCAL_RECORD: Callable[[str], ...] = DNSServer.dns_records.get
 PREPARE_AND_SEND = ProxyResponse.prepare_and_send
 

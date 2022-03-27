@@ -3,13 +3,10 @@
 from __future__ import annotations
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import CONN, PROTO, Queue, DIR, GEO, REP
 from dnx_gentools.def_namedtuples import IPP_INSPECTION_RESULTS
-from dnx_gentools.signature_operations import generate_reputation
 
 from dnx_iptools.packet_classes import NFQueue
-from dnx_iptools.hash_trie import HashTrie_Value
 
 from ip_proxy_packets import IPPPacket, ProxyResponse
 from ip_proxy_restrict import LanRestrict
@@ -17,8 +14,11 @@ from ip_proxy_automate import Configuration
 from ip_proxy_log import Log
 
 __all__ = (
-    'run', 'IPProxy'
+    'IPProxy',
 )
+
+REP_LOOKUP: Callable[[int], int] = NotImplemented  # will be assigned by __init__ prior to running
+PREPARE_AND_SEND = ProxyResponse.prepare_and_send
 
 
 class IPProxy(NFQueue):
@@ -122,7 +122,6 @@ class IPProxy(NFQueue):
         # IP PROXY ACCEPT
         # ====================
         # no other security modules configured on rule and passed ip proxy inspection
-        # NOTE: make else?
         elif (action is CONN.ACCEPT):
             packet.nfqueue.accept()
 
@@ -139,8 +138,7 @@ def log_geolocation(packet: IPPPacket) -> None:
 # =================
 # INSPECTION LOGIC
 # =================
-_forward_packet   = IPProxy.forward_packet
-_prepare_and_send = ProxyResponse.prepare_and_send
+FORWARD_PACKET = IPProxy.forward_packet
 
 # direct references to proxy class data structure methods
 _reputation_settings = IPProxy.reputation_settings
@@ -154,12 +152,12 @@ def inspect(_, packet: IPPPacket) -> None:
 
     results = _inspect(packet)
 
-    _forward_packet(packet, packet.direction, results.action)
+    FORWARD_PACKET(packet, packet.direction, results.action)
 
     # RECENTLY MOVED: thought it more fitting here than in the forward method
     # if tcp or udp, we will send a kill conn packet.
     if (results.action is CONN.REJECT):
-        _prepare_and_send(packet)
+        PREPARE_AND_SEND(packet)
 
     Log.log(packet, results)
 
@@ -171,14 +169,13 @@ def _inspect(packet: IPPPacket) -> IPP_INSPECTION_RESULTS:
     country = GEO(packet.tracked_geo)
 
     # if category match and country is configured to block in direction of conn/packet
-    # TODO: consider option to configure default action for unknown countries
     if (country is not GEO.NONE):
         action = _country_action(country, packet)
 
     # no need to check reputation of host if filtered by geolocation
     if (action is CONN.ACCEPT and _reputation_enabled):
 
-        reputation = REP(_recurve_trie_search(packet.bin_data))
+        reputation = REP(REP_LOOKUP(packet.tracked_ip))
 
         # if category match, and category is configured to block in direction of conn/packet
         if (reputation is not REP.NONE):
@@ -228,24 +225,3 @@ def _country_action(category: GEO, packet: IPPPacket) -> CONN:
         return CONN.REJECT
 
     return CONN.ACCEPT
-
-
-if INITIALIZE_MODULE('ip-proxy'):
-    Log.run(name='ip_proxy')
-
-    reputation_signatures = generate_reputation(Log)
-
-    # initializing the C/Cython extension, converting python structures to native C array/struct.
-    # assigning direct reference to the search method [which calls underlying C without GIL]
-    recurve_trie = HashTrie_Value()
-    recurve_trie.generate_structure(reputation_signatures, len(reputation_signatures))
-
-    _recurve_trie_search = recurve_trie.py_search
-
-    # memory allocation was done manually within the C extension for its structures.
-    # python structures are no longer needed at this point so freeing memory.
-    del reputation_signatures
-
-
-def run():
-    IPProxy.run(Log, q_num=Queue.IP_PROXY)

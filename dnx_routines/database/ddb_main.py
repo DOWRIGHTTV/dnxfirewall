@@ -84,10 +84,8 @@ def run():
 
 @dnx_queue(Log, name='Database')
 def _request_handler(database, job):
-    method, timestamp, log_info = job
 
-    # NOTE: this might still have issues if callers were missed
-    database.execute(method, timestamp, log_info)
+    database.execute(*job)
 
     # NOTE: this might be wasteful
     database.commit_entries()

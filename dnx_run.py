@@ -58,7 +58,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     # SECURITY MODULES
     'cfirewall': {'module': 'dnx_secmods.cfirewall', 'exclude': [], 'priv': True, 'service': True},
     'dns-proxy': {'module': 'dnx_secmods.dns_proxy', 'exclude': ['compile'], 'priv': True, 'service': True},
-    'ip-proxy': {'module': 'dnx_secmods.ip_proxy.ip_proxy', 'exclude': ['compile'], 'priv': True, 'service': True},
+    'ip-proxy': {'module': 'dnx_secmods.ip_proxy', 'exclude': ['compile'], 'priv': True, 'service': True},
     'ips-ids': {'module': 'dnx_secmods.ips_ids.ips_ids', 'exclude': ['compile'], 'priv': True, 'service': True},
 
     # NETWORK MODULES
