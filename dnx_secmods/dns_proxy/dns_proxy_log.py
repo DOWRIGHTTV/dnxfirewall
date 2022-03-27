@@ -5,7 +5,7 @@ from __future__ import annotations
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import str_join
 from dnx_gentools.def_enums import LOG, DNS_CAT
-from dnx_gentools.def_namedtuples import DNS_REQUEST_LOG, INFECTED_LOG
+from dnx_gentools.def_namedtuples import DNS_REQUEST_LOG, INF_EVENT_LOG
 
 from dnx_iptools.interface_ops import get_arp_table
 
@@ -47,7 +47,7 @@ class Log(LogHandler):
 
             log = DNS_REQUEST_LOG(client_ip, pkt.qname, req.category.name, req.reason, 'dns_blocked')
 
-            log2 = INFECTED_LOG(get_arp_table(host=client_ip), client_ip, pkt.qname, req.category.name)
+            log2 = INF_EVENT_LOG(get_arp_table(host=client_ip), client_ip, pkt.qname, req.category.name)
 
             return LOG.ALERT, {'dns_request': log, 'dns_blocked': log, 'inf_event': log2}
 

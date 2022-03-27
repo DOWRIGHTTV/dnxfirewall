@@ -187,11 +187,12 @@ def cfg_read_poller(watch_file: str, *, folder: str = 'data', class_method: bool
                 watcher.watch(*args)
 
         else:
-            @classmethod
             @wraps(function_to_wrap)
             def wrapper(*args):
                 watcher = Watcher(watch_file, folder, callback=function_to_wrap)
                 watcher.watch(*args)
+
+            wrapper = classmethod(wrapper)
 
         return wrapper
     return decorator
@@ -590,7 +591,6 @@ class Watcher:
                 return True
 
             return False
-
 
         modified_time = os.stat(self._full_path).st_mtime
         if (modified_time != self._last_modified_time):

@@ -11,7 +11,7 @@ from dnx_gentools.def_exceptions import ProtocolError
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import *
 from dnx_iptools.protocol_tools import *
-from dnx_iptools.cprotocol_tools import itoip
+from dnx_iptools.cprotocol_tools import itoip, calc_checksum
 from dnx_iptools.interface_ops import load_interfaces
 from dnx_iptools.packet_classes import NFPacket, RawResponse
 

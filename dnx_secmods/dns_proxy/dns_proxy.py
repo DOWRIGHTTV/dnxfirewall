@@ -109,7 +109,7 @@ def _inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
 
     category: DNS_CAT
     # signature/ blacklist check.
-    for enum_request in packet.requests[1:]:
+    for enum_request in packet.requests:
 
         # NOTE: allowing malicious category overrides (for false positives)
         if (enum_request in _dns_whitelist):

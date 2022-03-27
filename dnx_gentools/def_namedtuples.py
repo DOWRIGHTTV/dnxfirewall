@@ -154,7 +154,7 @@ class GEOLOCATION_LOG(_NamedTuple):
 
 class INF_EVENT_LOG(_NamedTuple):
     client_mac: str
-    src_ip: int
+    src_ip: str
     detected_host: _Union[int, str]
     reason: str
 

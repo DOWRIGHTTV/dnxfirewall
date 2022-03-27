@@ -20,7 +20,6 @@ __all__ = (
 
     'icmp_reachable',
 
-    'calc_checksum',
     'itoip', 'iptoi', 'cidr_to_int',
     'domain_stob', 'mac_stob',
     'mac_add_sep', 'convert_string_to_bitmap',
@@ -37,25 +36,6 @@ def icmp_reachable(host_ip: str) -> bool:
         return bool(run(f'ping -c 2 {host_ip}', stdout=DEVNULL, shell=True, check=True))
     except CalledProcessError:
         return False
-
-def calc_checksum(data: Union[bytes, bytearray], pack: bool = False) -> Union[int, bytes]:
-    # if data length is odd, this will pad it with 1 byte to complete the final chunk
-    if (len(data) & 1):
-        data += b'\x00'
-
-    # unpacking in chunks of H(short)/ 16 bit/ 2 byte increments in < order
-    chunks: Iterator[tuple[int]] = checksum_iunpack(data)
-
-    csum: int = 0
-    # loop taking 2 characters at a time
-    for chunk in chunks:
-        csum += chunk[0]
-
-    # fold 32-bit sum to 16 bits (x2) then bitwise NOT for inverse
-    csum = (csum >> 16) + (csum & 65535)
-    csum += (csum >> 16)
-
-    return checksum_pack(~csum) if pack else htons(~csum)
 
 def itoip(ip: int, /) -> str:
 

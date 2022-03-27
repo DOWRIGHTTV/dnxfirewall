@@ -1,7 +1,11 @@
 #!/usr/bin/env Cython
 
+# cython: boundscheck=False
+
 from libc.stdio cimport printf, snprintf
 from libc.stdint cimport uint8_t, uint32_t
+
+DEF UINT16_MAX = 65535
 
 cpdef uint32_t iptoi(unicode ipa):
 
@@ -28,3 +32,25 @@ cpdef unicode itoip(uint32_t ip):
     snprintf(ip_addr, sizeof(ip_addr), '%d.%d.%d.%d', octets[0], octets[1], octets[2], octets[3])
 
     return ip_addr.decode('utf-8')
+
+def calc_checksum(const unsigned char[:] data, bint pack=0):
+
+    cdef:
+        size_t      i
+        size_t      dlen = data.shape[0]
+        uint32_t    csum = 0
+
+    for i in range(0, dlen, 2):
+        csum += (data[i] << 8 | data[i + 1])
+
+    # adding trailing byte for odd byte strings
+    if (dlen & 1):
+        csum += <uint8_t>data[dlen]
+
+    csum = (csum >> 16) + (csum & UINT16_MAX)
+    csum = ~(csum + (csum >> 16)) & UINT16_MAX
+
+    if (pack):
+        return csum.to_bytes(length=2, byteorder='big')
+    else:
+        return htons(csum)

@@ -270,7 +270,6 @@ def _log_handler() -> LogHandler_T:
             # all entries will be logged and printed to the terminal
             if (logging_level is LOG.DEBUG):
 
-                @staticmethod
                 def log_method(log_msg):
                     log_msg = f'{fast_time()}|{handler_name}|{level_name}|{log_msg}'
 
@@ -281,7 +280,6 @@ def _log_handler() -> LogHandler_T:
             # entry will be logged to file
             elif (level_number <= logging_level):
 
-                @staticmethod
                 def log_method(log_msg):
 
                     queue_write(f'{fast_time()}|{handler_name}|{level_name}|{log_msg}\n')
@@ -289,9 +287,10 @@ def _log_handler() -> LogHandler_T:
             # log level is disabled
             else:
 
-                @staticmethod
                 def log_method(*_):
                     pass
+
+            log_method = staticmethod(log_method)
 
             setattr(cls, level_name, log_method)
 
