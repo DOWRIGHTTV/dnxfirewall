@@ -152,7 +152,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         uint8_t in_intf = nfq_get_indev(nfa)
         uint8_t out_intf = nfq_get_outdev(nfa)
 
-        # grabbing source mac address and casting to char array
+        # grabbing source mac address and casting to a char array
         nfqnl_msg_packet_hw *_hw = nfq_get_packet_hw(nfa)
         char *m_addr = <char*>_hw.hw_addr
 
@@ -356,7 +356,7 @@ cdef inline bint zone_match(ZoneArray *zone_array, uint8_t pkt_zone) nogil:
 
     cdef size_t i
 
-    # a zone set to any is a guaranteed match
+    # any zone def is a guaranteed match
     if (zone_array.objects[0] == ANY_ZONE):
         return MATCH
 
@@ -400,7 +400,7 @@ cdef inline bint network_match(NetworkArray *net_array, uint32_t iph_ip, uint8_t
         # --------------------
         elif (net.type == IP_NETWORK):
 
-        # using the rule object mask to floor the packets ip and checking against FWrule network id
+            # using the rule defs netmask to floor the packet ip and matching netid
             if (iph_ip & net.netmask == net.netid):
                 return MATCH
 
@@ -409,7 +409,6 @@ cdef inline bint network_match(NetworkArray *net_array, uint32_t iph_ip, uint8_t
         # --------------------
         elif (net.type == IP_GEO):
 
-            # country code/id comparison
             if (country == net.netid):
                 return MATCH
 
@@ -477,8 +476,7 @@ cdef inline bint service_match(ServiceArray *svc_array, uint16_t pkt_protocol, u
 # ================================== #
 # PRINT FUNCTIONS
 # ================================== #
-# NOTE: <char*> casting is to shut the editor up
-#  the integer casts are to clamp the struct fields to standard because they are implemented as fast_ints
+# NOTE: the integer casts are to clamp the struct fields to standard because they are implemented as fast_ints
 cdef inline void pkt_print(HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header) with gil:
     '''nested struct print of the passed in references using Python pretty printer.
 
@@ -505,7 +503,7 @@ cdef inline void obj_print(int name, void *object) nogil:
     if (name == NETWORK):
         net_obj = <Network*>object
 
-        printf('net_obj, id->%lu, mask->%lu\n', net_obj.netid, net_obj.netmask)
+        printf('net_obj, id->%u, mask->%u\n', <uint32_t>net_obj.netid, <uint32_t>net_obj.netmask)
 
     elif (name == SERVICE):
         svc_obj = <Service*>object
@@ -589,7 +587,8 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
             svc_list.len = <size_t>(len(rule['src_service'][i]) - 1)
             for ix in range(svc_list.len):
                 svc = &svc_list.objects[ix]
-                # 0 START INDEX ON FW RULE SIZE, 1 START INDEX PYTHON DICT SIDE (to first index for size)
+                # [0] START INDEX ON FW RULE SIZE
+                # [1] START INDEX PYTHON DICT SIDE (to first index for size)
                 svc.protocol   = <uint_fast16_t>rule['src_service'][i][ix + 1][0]
                 svc.start_port = <uint_fast16_t>rule['src_service'][i][ix + 1][1]
                 svc.end_port   = <uint_fast16_t>rule['src_service'][i][ix + 1][2]
@@ -630,7 +629,8 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
             svc_list.len = <size_t>(len(rule['dst_service'][i]) - 1)
             for ix in range(svc_list.len):
                 svc = &svc_list.objects[ix]
-                # 0 START INDEX ON FW RULE SIZE, 1 START INDEX PYTHON DICT SIDE (to first index for size)
+                # [0] START INDEX ON FW RULE SIZE
+                # [1] START INDEX PYTHON DICT SIDE (to first index for size)
                 svc.protocol   = <uint_fast16_t>rule['dst_service'][i][ix + 1][0]
                 svc.start_port = <uint_fast16_t>rule['dst_service'][i][ix + 1][1]
                 svc.end_port   = <uint_fast16_t>rule['dst_service'][i][ix + 1][2]

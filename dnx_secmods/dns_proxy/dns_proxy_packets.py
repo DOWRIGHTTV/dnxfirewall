@@ -374,7 +374,7 @@ class ProxyResponse(RawResponse):
 
             resource_record.rd_data = dnx_src_ip
 
-            udp_payload += dns_header_pack(packet.dns_id, 32896 | packet.rd | packet.ad | packet.cd, 1, 0, 0, 0)
+            udp_payload += dns_header_pack(packet.dns_id, 32896 | packet.rd | packet.ad | packet.cd, 1, 1, 0, 0)
             udp_payload += packet.question_record
             udp_payload += resource_record.assemble()
 
