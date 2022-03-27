@@ -49,7 +49,7 @@ class Log(LogHandler):
 
             log2 = INFECTED_LOG(get_arp_table(host=client_ip), client_ip, pkt.qname, req.category.name)
 
-            return LOG.ALERT, {'dns_request': log, 'dns_blocked': log, 'infected_event': log2}
+            return LOG.ALERT, {'dns_request': log, 'dns_blocked': log, 'inf_event': log2}
 
         # logs redirected/blocked requests
         elif (req.redirect and cls.current_lvl >= LOG.WARNING):

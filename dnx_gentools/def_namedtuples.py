@@ -6,7 +6,7 @@ from collections import namedtuple as _namedtuple
 from functools import lru_cache as _lru_cache
 from typing import NamedTuple as _NamedTuple, Union as _Union, Optional as _Optional, Any as _Any, Callable as _Callable
 
-from dnx_gentools.def_enums import PROTO as _PROTO, DHCP as _DHCP, DNS_CAT as _DNS_CAT, IPS as _IPS
+from dnx_gentools.def_enums import PROTO as _PROTO, DHCP as _DHCP, DNS_CAT as _DNS_CAT, CONN as _CONN, IPS as _IPS
 from dnx_gentools.standard_tools import bytecontainer as _bytecontainer
 
 from dnx_iptools.def_structs import dhcp_byte_pack as _dhcp_bp, dhcp_short_pack as _dhcp_sp, dhcp_long_pack as _dhcp_lp
@@ -122,16 +122,15 @@ PSCAN_TRACKERS = _namedtuple('portscan', 'lock tracker')
 DDOS_TRACKERS  = _namedtuple('ddos', 'lock tracker')
 
 # IP PROXY
-IPP_INSPECTION_RESULTS = _namedtuple('ipp_inspection_results', 'category action')
-
-IPP_SRC_INFO = _namedtuple('src_info', 'protocol src_ip src_port')
-IPP_DST_INFO = _namedtuple('dst_info', 'protocol dst_ip dst_port')
+class IPP_INSPECTION_RESULTS(_NamedTuple):
+    category: _Union[str, tuple[str, str]]
+    action: _Optional[_CONN]
 
 # LOG TUPLES
 class IPP_EVENT_LOG(_NamedTuple):
     local_ip: int
     tracked_ip: int
-    category: str
+    category: tuple[str, str]
     direction: str
     action: str
 
@@ -153,18 +152,15 @@ class GEOLOCATION_LOG(_NamedTuple):
     direction: str
     action: str
 
-# class DNS_BLOCKED_LOG(_NamedTuple):
-#     src_ip: int
-#     request: str
-#     category: str
-#     reason: str
-#     action: str
-
-class INFECTED_LOG(_NamedTuple):
+class INF_EVENT_LOG(_NamedTuple):
     client_mac: str
     src_ip: int
     detected_host: _Union[int, str]
     reason: str
+
+
+# alias
+DNS_BLOCKED_LOG = DNS_REQUEST_LOG
 
 # DATABASE
 BLOCKED_DOM = _namedtuple('blocked', 'domain category reason')

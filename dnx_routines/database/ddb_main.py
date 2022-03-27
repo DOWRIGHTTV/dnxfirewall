@@ -9,7 +9,7 @@ import traceback
 from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SO_PASSCRED, SCM_CREDENTIALS
 from json import loads
 
-from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, DNS_REQUEST_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG, INFECTED_LOG
+from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, DNS_REQUEST_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG, INF_EVENT_LOG
 
 from dnx_gentools.def_constants import *
 from dnx_gentools.standard_tools import dnx_queue, looper
@@ -21,7 +21,7 @@ from dnx_routines.database.ddb_connector_sqlite import DBConnector
 
 # NOTE: dynamic reference to namedtuples
 NT_LOOKUP = {
-    func.__name__: func for func in [IPP_EVENT_LOG, DNS_REQUEST_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG, INFECTED_LOG]
+    nt.__name__: nt for nt in [IPP_EVENT_LOG, DNS_REQUEST_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG, INF_EVENT_LOG]
 }.get
 
 _getuser_info = pwd.getpwuid

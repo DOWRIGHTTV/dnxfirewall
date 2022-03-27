@@ -133,7 +133,7 @@ def log_geolocation(packet: IPPPacket) -> None:
     # country of tracked (external) passed from cfirewall via packet mark
     country = GEO(packet.tracked_geo)
 
-    Log.log(packet, IPP_INSPECTION_RESULTS(country.name, ''), geo_only=True)
+    Log.log(packet, IPP_INSPECTION_RESULTS(country.name, None), geo_only=True)
 
 
 # =================
@@ -152,18 +152,18 @@ _tor_whitelist = IPProxy.tor_whitelist
 
 def inspect(_, packet: IPPPacket) -> None:
 
-    action, category = _inspect(packet)
+    results = _inspect(packet)
 
-    _forward_packet(packet, packet.direction, action)
+    _forward_packet(packet, packet.direction, results.action)
 
     # RECENTLY MOVED: thought it more fitting here than in the forward method
     # if tcp or udp, we will send a kill conn packet.
-    if (action is CONN.REJECT):
+    if (results.action is CONN.REJECT):
         _prepare_and_send(packet)
 
-    Log.log(packet, IPP_INSPECTION_RESULTS(category, action))
+    Log.log(packet, results)
 
-def _inspect(packet: IPPPacket) -> tuple[CONN, tuple[str, str]]:
+def _inspect(packet: IPPPacket) -> IPP_INSPECTION_RESULTS:
     action = CONN.ACCEPT
     reputation = REP.DNL
 
@@ -184,7 +184,7 @@ def _inspect(packet: IPPPacket) -> tuple[CONN, tuple[str, str]]:
         if (reputation is not REP.NONE):
             action = _reputation_action(reputation, packet)
 
-    return action, (country.name, reputation.name)
+    return IPP_INSPECTION_RESULTS((country.name, reputation.name), action)
 
 # TODO: expand for profiles. reputation_settings[profile][category]
 # category setting lookup. will match packet direction with configured dir for category/category group.

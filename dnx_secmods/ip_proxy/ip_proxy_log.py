@@ -5,7 +5,7 @@ from __future__ import annotations
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import str_join
 from dnx_gentools.def_enums import LOG, DIR, CONN
-from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, GEOLOCATION_LOG, INFECTED_LOG
+from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, GEOLOCATION_LOG, INF_EVENT_LOG
 
 from dnx_routines.logging.log_client import LogHandler
 
@@ -28,18 +28,17 @@ class Log(LogHandler):
 
     @classmethod
     def log(cls, pkt: IPPPacket, inspection: IPP_INSPECTION_RESULTS, *, geo_only: bool = False):
-        # standard logging procedure.
-        if (not geo_only):
+        # inspection will be a tuple containing only geo name (geo_name,)
+        if (geo_only):
+            log = GEOLOCATION_LOG(inspection.category, pkt.direction.name, 'allowed')
 
+            cls.event_log(pkt.timestamp, log, method='geolocation')
+
+        # standard logging procedure.
+        else:
             lvl, logs = cls._generate_log(pkt, inspection)
             for method, log in logs.items():
                 cls.event_log(pkt.timestamp, log, method=method)
-
-        # blocked by cfirewall geo logging. inspection will be a tuple containing only geo name (geo_name,)
-        else:
-            log = GEOLOCATION_LOG(inspection.category[0], pkt.direction.name, 'allowed')
-
-            cls.event_log(pkt.timestamp, log, method='geo')
 
         # if (cls.syslog_enabled and logs):
         #     cls.slog_log(LOG.EVENT, lvl, cls.generate_syslog_message(log))
@@ -59,13 +58,13 @@ class Log(LogHandler):
                     pkt.local_ip, pkt.tracked_ip, inspection.category, pkt.direction.name, 'blocked'
                 )
 
-                log2 = INFECTED_LOG(
+                log2 = INF_EVENT_LOG(
                     get_arp_table(host=pkt.local_ip), pkt.local_ip, pkt.tracked_ip, 'malware'
                 )
 
                 log3 = GEOLOCATION_LOG(inspection.category[0], pkt.direction.name, 'blocked')
 
-                return LOG.ALERT, {'ipp_event': log, 'infected_event': log2, 'geo_record': log3}
+                return LOG.ALERT, {'ipp_event': log, 'inf_event': log2, 'geolocation': log3}
 
             elif (cls.current_lvl >= LOG.WARNING):
                 log = IPP_EVENT_LOG(
@@ -74,7 +73,7 @@ class Log(LogHandler):
 
                 log2 = GEOLOCATION_LOG(inspection.category[0], pkt.direction.name, 'blocked')
 
-                return LOG.WARNING, {'ipp_event': log, 'geo_record': log2}
+                return LOG.WARNING, {'ipp_event': log, 'geolocation': log2}
 
         # informational logging for all accepted connections
         elif (cls.current_lvl >= LOG.INFO):
@@ -82,7 +81,7 @@ class Log(LogHandler):
 
             log2 = GEOLOCATION_LOG(inspection.category[0], pkt.direction.name, 'allowed')
 
-            return LOG.INFO, {'ipp_event': log, 'geo_record': log2}
+            return LOG.INFO, {'ipp_event': log, 'geolocation': log2}
 
         # this contains all that is needed to get the country information input into the database.
-        return LOG.NONE, {'geo_record': GEOLOCATION_LOG(inspection.category[0], pkt.direction.name, 'allowed')}
+        return LOG.NONE, {'geolocation': GEOLOCATION_LOG(inspection.category[0], pkt.direction.name, 'allowed')}
