@@ -16,6 +16,14 @@ from typing import Optional as _Optional, Union as _Union, Any as _Any
 
 from dnx_iptools.def_structs import scm_creds_pack as _scm_creds_pack
 
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from dnx_gentools.def_namedtuples import Item as _Item
+
 
 # =====================================================
 # MODULE INITIALIZATION CONTROL - set by shell command
@@ -134,8 +142,8 @@ TOP_DOMAIN_COUNT: int = 20
 HEARTBEAT_FAIL_LIMIT: int = 3
 KEEP_ALIVE_DOMAIN: str = 'dnxfirewall.com'
 
-# used when loading geolocation settings to implicitly include private ip space as a category
-RFC1918: dict[str, int] = {'rfc1918': 1}
+# used when loading geolocation settings to implicitly include private ip space as a category, but disabled
+RFC1918: _Item = _Item('rfc1918', 0)
 
 # TODO: consider moving to web_validate
 INVALID_FORM: str = 'Invalid form data.'
