@@ -32,7 +32,7 @@ class IPProxy(ProxyConfiguration, NFQueue):
 
         self.configure()
 
-        ProxyResponse.setup(Log, self.__class__)
+        ProxyResponse.setup(Log, self.__class__.open_ports)
         LanRestrict.run(self.__class__)
 
     def _pre_inspect(self, packet: IPPPacket) -> bool:
@@ -154,7 +154,7 @@ def _inspect(packet: IPPPacket) -> IPP_INSPECTION_RESULTS:
     action = CONN.ACCEPT
     reputation = REP.DNL
 
-    # NOTE: geo search is now done by cfirewall. based on the direction, it will pass on country of tracked_ip
+    # geolocation lookup is done by cfirewall so we only need to define enum
     country = GEO(packet.tracked_geo)
 
     # if category match and country is configured to block in direction of conn/packet

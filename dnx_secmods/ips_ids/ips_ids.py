@@ -51,7 +51,7 @@ class IPS_IDS(NFQueue):
         self.__class__.set_proxy_callback(func=Inspect.portscan)
 
         Configuration.setup(self.__class__)
-        IPSResponse.setup(Log, self.__class__)
+        IPSResponse.setup(Log, self.__class__.open_ports)
 
         Log.notice(f'{self.__class__.__name__} initialization complete.')
 

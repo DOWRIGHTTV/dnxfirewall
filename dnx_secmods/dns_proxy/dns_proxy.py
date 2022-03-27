@@ -40,7 +40,7 @@ class DNSProxy(ProxyConfiguration, NFQueue):
 
         self.configure()
 
-        ProxyResponse.setup(Log, self.__class__, protocol_ports=False)
+        ProxyResponse.setup(Log)
 
     # pre-check will filter out invalid packets, ipv6 records, and local dns records
     def _pre_inspect(self, packet: DNSPacket) -> bool:
