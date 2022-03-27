@@ -41,7 +41,7 @@ class _DBConnector:
             # converting routine function to static method
             registered_routine = staticmethod(func_ref)
 
-            print(f'REGISTERED FUNC_REF {registered_routine}')
+            # print(f'REGISTERED FUNC_REF {registered_routine}')
             # define static method as db connector class attribute
             setattr(cls, routine_name, registered_routine)
 
@@ -49,7 +49,7 @@ class _DBConnector:
             # is used to store the staticmethod reference as it's bounded to the class.
             cls._routines[routine_name] = [routine_type, getattr(cls, routine_name)]
 
-            print(f'REGISTERED {routine_name}')
+            # print(f'REGISTERED {routine_name}')
 
             # returning callable to make the decorator happy. the function will be called via reference and not by name.
             def wrapper(*args, **kwargs):
@@ -58,7 +58,7 @@ class _DBConnector:
 
             return wrapper
 
-        print(f'RETURNING REGISTRATION FOR {routine_name}')
+        # print(f'RETURNING REGISTRATION FOR {routine_name}')
 
         return registration
 

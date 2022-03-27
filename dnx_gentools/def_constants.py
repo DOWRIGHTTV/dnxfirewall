@@ -14,15 +14,9 @@ from pprint import PrettyPrinter as _PrettyPrinter
 from typing import Callable as _Callable, Iterator as _Iterator, Iterable as _Iterable
 from typing import Optional as _Optional, Union as _Union, Any as _Any
 
+from dnx_gentools.def_namedtuples import Item as _Item
+
 from dnx_iptools.def_structs import scm_creds_pack as _scm_creds_pack
-
-# ===============
-# TYPING IMPORTS
-# ===============
-from typing import TYPE_CHECKING
-
-if (TYPE_CHECKING):
-    from dnx_gentools.def_namedtuples import Item as _Item
 
 
 # =====================================================
