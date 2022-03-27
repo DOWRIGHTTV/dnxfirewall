@@ -31,7 +31,7 @@ class _DBConnector:
     def register(cls, routine_name: str, *, routine_type: str) -> Callable_T:
         '''register routine with database connector that can be called initiated with the "execute" method.'''
 
-        name_in_use: Optional[list] = cls._routines.get(routine_name, None)
+        name_in_use: list = cls._routines.get(routine_name, None)
         if (name_in_use):
             raise FileExistsError(f'routine with name {routine_name} already exists')
 
@@ -41,7 +41,7 @@ class _DBConnector:
             # converting routine function to static method
             registered_routine = staticmethod(func_ref)
 
-            # print(f'REGISTERED FUNC_REF {registered_routine}')
+            print(f'REGISTERED FUNC_REF {registered_routine}')
             # define static method as db connector class attribute
             setattr(cls, routine_name, registered_routine)
 
@@ -49,7 +49,7 @@ class _DBConnector:
             # is used to store the staticmethod reference as it's bounded to the class.
             cls._routines[routine_name] = [routine_type, getattr(cls, routine_name)]
 
-            # print(f'REGISTERED {routine_name}')
+            print(f'REGISTERED {routine_name}')
 
             # returning callable to make the decorator happy. the function will be called via reference and not by name.
             def wrapper(*args, **kwargs):
@@ -58,12 +58,12 @@ class _DBConnector:
 
             return wrapper
 
-        # print(f'RETURNING REGISTRATION FOR {routine_name}')
+        print(f'RETURNING REGISTRATION FOR {routine_name}')
 
         return registration
 
     # NOTE: if Log is not sent in, calling any method configured to log will error out, but likely not cause
-    # significant impact as it is covered by the context.
+    #  significant impact as it is covered by the context.
     def __init__(self, log: LogHandler_T = None, *, table: str = None, readonly: bool = False, connect: bool = False):
 
         # used to notify a calling process whether a failure occurred within the context.
@@ -103,8 +103,7 @@ class _DBConnector:
 
         return True
 
-    # TODO: see if we can set the Any to a list
-    def execute(self, routine_name: str, *args, **kwargs) -> Optional[Any]:
+    def execute(self, routine_name: str, *args, **kwargs) -> list:
 
         routine_type, routine = self._routines_get(routine_name, NO_ROUTINE)
         if (not routine):
@@ -117,7 +116,7 @@ class _DBConnector:
             return routine(self._cur, *args, **kwargs)
 
         else:
-            ValueError(f'routine type {routine_type} invalid.')
+            raise ValueError(f'routine type {routine_type} invalid.')
 
     def commit_entries(self):
         self._conn.commit()
@@ -200,9 +199,5 @@ DBConnector: DBConnector_T = _DBConnector
 # else:
 #    from dnx_routines.database.ddb_connector_psql import DBConnector
 
-importlib.import_module('dnx_routines.database.ddb_routines')  # routines will be registered with DBConnector class
-
-if (__name__ == '__main__'):
-    # NOTE: CREATE TABLES -> only used on self deployments with active running system and the tables need to be created
-    with DBConnector() as FirewallDB:
-        FirewallDB.create_db_tables()
+# routines will be registered with DBConnector class
+importlib.import_module('dnx_routines.database.ddb_routines')

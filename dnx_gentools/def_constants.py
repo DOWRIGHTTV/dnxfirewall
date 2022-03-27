@@ -109,8 +109,6 @@ WAN_IN: int = 10  # used for limiting certain internal functions from applying t
 LAN_IN: int = 11  # used for management access traffic matching
 DMZ_IN: int = 12  # used for management access traffic matching
 
-DNS_BIN_OFFSET: int = 4  # NOTE: 4 seems to be a good compromise of len(bins) vs len(buckets)
-
 # ============================
 # LOCAL SOCKET DEFINITIONS
 # ============================

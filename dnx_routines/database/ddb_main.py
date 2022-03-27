@@ -87,7 +87,7 @@ def _request_handler(database, job):
     method, timestamp, log_info = job
 
     # NOTE: this might still have issues if callers were missed
-    database.execute(timestamp, log_info, routine=method)
+    database.execute(method, timestamp, log_info)
 
     # NOTE: this might be wasteful
     database.commit_entries()

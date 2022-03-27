@@ -19,14 +19,22 @@ if INITIALIZE_MODULE('database'):
 
     import ddb_main
 
+if INITIALIZE_MODULE('db-tables'):
+    from ddb_connector_sqlite import DBConnector
+
+    with DBConnector() as FirewallDB:
+        FirewallDB.create_db_tables()
+
 def run():
+    # init db tables only
+    if INITIALIZE_MODULE('db-tables'):
+        return
 
     threading.Thread(target=ddb_main.receive_requests).start()
     try:
         ddb_main.run()
     finally:
         os.remove(DATABASE_SOCKET)
-
 
 # ================
 # TYPING IMPORTS

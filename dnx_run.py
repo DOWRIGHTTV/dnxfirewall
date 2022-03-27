@@ -49,6 +49,9 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
         'module': 'dnx_routines.configure.autoloader', 'exclude': exclude('cli', COMMANDS), 'priv': True, 'service': False
     },
 
+    # DB TABLES
+    'db-tables': {'module': 'dnx_routines.database', 'exclude': exclude('cli', COMMANDS), 'priv': False, 'service': True},
+
     # WEBUI
     'webui': {'module': '', 'exclude': ['cli'], 'priv': False, 'service': True, 'environ': ['webui', '1']},
 
