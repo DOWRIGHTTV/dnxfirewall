@@ -10,7 +10,7 @@ from dnx_iptools.packet_classes import NFQueue
 
 from ip_proxy_packets import IPPPacket, ProxyResponse
 from ip_proxy_restrict import LanRestrict
-from ip_proxy_automate import Configuration
+from ip_proxy_automate import ProxyConfiguration
 from ip_proxy_log import Log
 
 __all__ = (
@@ -21,28 +21,17 @@ REP_LOOKUP: Callable[[int], int] = NotImplemented  # will be assigned by __init_
 PREPARE_AND_SEND = ProxyResponse.prepare_and_send
 
 
-class IPProxy(NFQueue):
-    ids_mode: ClassVar[bool] = False
-
-    reputation_enabled:   ClassVar[bool] = False
-    reputation_settings:  ClassVar[dict] = {}
-    geolocation_enabled:  ClassVar[bool] = True
-    geolocation_settings: ClassVar[dict] = {}
-
-    ip_whitelist:  ClassVar[dict] = {}
-    tor_whitelist: ClassVar[dict] = {}
-
-    open_ports: ClassVar[dict[PROTO, dict[int, int]]] = {
-        PROTO.TCP: {},
-        PROTO.UDP: {}
-    }
+class IPProxy(ProxyConfiguration, NFQueue):
 
     _packet_parser: ClassVar[ProxyParser] = IPPPacket.netfilter_recv
+
+    __slots__ = ()
 
     def _setup(self) -> None:
         self.__class__.set_proxy_callback(func=inspect)
 
-        Configuration.setup(self.__class__)
+        self.configure()
+
         ProxyResponse.setup(Log, self.__class__)
         LanRestrict.run(self.__class__)
 

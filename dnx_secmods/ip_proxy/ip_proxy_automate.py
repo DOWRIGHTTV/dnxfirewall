@@ -2,97 +2,108 @@
 
 from __future__ import annotations
 
-import threading
-
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import RFC1918
+from dnx_gentools.def_namedtuples import Item
 from dnx_gentools.def_enums import PROTO, DIR, REP, GEO
-from dnx_gentools.standard_tools import Initialize
+from dnx_gentools.standard_tools import ConfigurationMixinBase
 from dnx_gentools.file_operations import load_configuration, cfg_read_poller
 
 from dnx_routines.configure.iptables import IPTablesManager
 
 from ip_proxy_log import Log
 
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
 
-class Configuration:
-    _setup: bool = False
+if (TYPE_CHECKING):
+    from dnx_gentools.file_operations import ConfigChain
 
-    __slots__ = (
-        'ip_proxy', 'initialize',
-    )
 
-    def __init__(self, name: str):
-        self.initialize = Initialize(Log, name)
+class ProxyConfiguration(ConfigurationMixinBase):
+    ids_mode: ClassVar[bool] = False
 
-    @classmethod
-    def setup(cls, ip_proxy: IPProxy_T) -> None:
-        if (cls._setup):
-            raise RuntimeError('configuration setup should only be called once.')
+    reputation_enabled:   ClassVar[bool] = False
+    reputation_settings:  ClassVar[dict[REP, DIR]] = {}
+    # geolocation_enabled:  ClassVar[bool] = True
+    geolocation_settings: ClassVar[dict[GEO, DIR]] = {}
 
-        cls._setup = True
+    ip_whitelist:  ClassVar[dict] = {}
+    tor_whitelist: ClassVar[dict] = {}
 
-        self: Configuration = cls(ip_proxy.__name__)
-        self.ip_proxy = ip_proxy
+    open_ports: ClassVar[dict[PROTO, dict[int, int]]] = {
+        PROTO.TCP: {},
+        PROTO.UDP: {}
+    }
 
+    def _configure(self) -> tuple[LogHandler_T, tuple, int]:
+        '''tasks required by the DNS proxy.
+
+        return thread information to be run.
+        '''
         self._manage_ip_tables()
-        threading.Thread(target=self._get_settings).start()
-        threading.Thread(target=self._get_ip_whitelist).start()
-        threading.Thread(target=self._get_open_ports).start()
 
-        self.initialize.wait_for_threads(count=3)
+        threads = (
+            (self._get_settings, ()),
+            (self._get_ip_whitelist, ()),
+            (self._get_open_ports, ())
+        )
+
+        return Log, threads, 3
 
     @cfg_read_poller('ip_proxy')
     def _get_settings(self, cfg_file: str) -> None:
-        proxy_settings = load_configuration(cfg_file)
+        proxy_settings: ConfigChain = load_configuration(cfg_file)
 
-        self.ip_proxy.ids_mode = proxy_settings['ids_mode']
+        self.__class__.ids_mode = proxy_settings['ids_mode']
 
         # converting list[items] > dict
-        rep_settings = dict(proxy_settings.get_items('reputation'))
-        geo_settings = dict(proxy_settings.get_items('geolocation'))
+        rep_settings = proxy_settings.get_items('reputation')
+        geo_settings = proxy_settings.get_items('geolocation')
 
         # used for categorizing private ip addresses
-        geo_settings.update(RFC1918)
+        geo_settings.append(Item(**RFC1918))
 
-        reputation_enabled = []
-        for cat, setting in rep_settings.items():
+        reputation_enabled: list[int] = []
+        for cat, setting in rep_settings:
 
             if (setting): reputation_enabled.append(1)
 
-            self.ip_proxy.reputation_settings[REP[cat.upper()]] = DIR(setting)
+            self.__class__.reputation_settings[REP[cat.upper()]] = DIR(setting)
 
-        for country, direction in geo_settings.items():
+        for country, direction in geo_settings:
             
             # using enum for category key and direction value
             try:
-                self.ip_proxy.geolocation_settings[GEO[country.upper()]] = DIR(direction)
+                self.__class__.geolocation_settings[GEO[country.upper()]] = DIR(direction)
             except KeyError:
                 continue  # not all enums/countries are populated
 
-        self.ip_proxy.reputation_enabled = bool(reputation_enabled)
+        self.__class__.reputation_enabled = bool(reputation_enabled)
 
-        self.initialize.done()
+        self._initialize.done()
 
     @cfg_read_poller('whitelist')
     def _get_ip_whitelist(self, cfg_file: str) -> None:
-        whitelist = load_configuration(cfg_file)
+        whitelist: ConfigChain = load_configuration(cfg_file)
 
-        self.ip_proxy.ip_whitelist = {
+        self.__class__.ip_whitelist = {
             ip for ip, wl_info in whitelist.get_items('ip_bypass') if wl_info['type'] == 'ip'
         }
 
-        self.ip_proxy.tor_whitelist = {
+        self.__class__.tor_whitelist = {
             ip for ip, wl_info in whitelist.get_items('ip_bypass') if wl_info['type'] == 'tor'
         }
 
-        self.initialize.done()
+        self._initialize.done()
 
     @cfg_read_poller('ips_ids')
     def _get_open_ports(self, cfg_file: str) -> None:
-        ips = load_configuration(cfg_file)
+        ips: ConfigChain = load_configuration(cfg_file)
 
-        self.ip_proxy.open_ports = {
+        self.__class__.open_ports = {
             PROTO.TCP: {
                 int(local_port): int(wan_port) for wan_port, local_port in ips.get_items('open_protocols->tcp')
             },
@@ -101,7 +112,7 @@ class Configuration:
             }
         }
 
-        self.initialize.done()
+        self._initialize.done()
 
     @staticmethod
     def _manage_ip_tables():

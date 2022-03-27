@@ -16,7 +16,7 @@ from dnx_iptools.def_structs import dhcp_byte_pack as _dhcp_bp, dhcp_short_pack 
 # ===============
 from typing import TYPE_CHECKING
 if (TYPE_CHECKING):
-    from dnx_gentools.def_typing import Socket
+    from dnx_gentools.def_typing import Socket as _Socket, Address as _Address
 
 # ================
 # BYTE CONTAINERS
@@ -86,7 +86,7 @@ class DNS_SERVERS(_NamedTuple):
 
 class RELAY_CONN(_NamedTuple):
     remote_ip: str
-    sock: Socket
+    sock: _Socket
     send: _Callable[[_Union[bytes, bytearray]], int]
     recv: _Union[_Callable[[int], bytes], _Callable[[_Union[bytearray, memoryview]], int]]
     version: str
@@ -169,4 +169,7 @@ BLOCKED_DOM = _namedtuple('blocked', 'domain category reason')
 L_SOCK = _namedtuple('listener_socket', 'name ip socket send sendto recvfrom')
 
 # NFQ_SOCK = _namedtuple('socket_info', 'zone name mac ip sock')
-NFQ_SEND_SOCK = _namedtuple('socket_info', 'zone ip sock_sendto')
+class NFQ_SEND_SOCK(_NamedTuple):
+    in_intf: int
+    ip: int
+    sock_sendto: _Callable[[tuple[_Address, _Union[bytes, bytearray]]], int]

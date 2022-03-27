@@ -16,9 +16,18 @@ from dnx_gentools.file_operations import *
 from dnx_gentools.standard_tools import looper, ConfigurationMixinBase
 
 from dnx_iptools.cprotocol_tools import iptoi
-from dnx_iptools.protocol_tools import create_dns_query_header, convert_string_to_bitmap
+from dnx_iptools.protocol_tools import create_dns_query_header, strtobit
 
 from dns_proxy_log import Log
+
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from dnx_gentools.file_operations import ConfigChain
+
 
 __all__ = (
     'ProxyConfiguration', 'ServerConfiguration',
@@ -39,7 +48,6 @@ class ProxyConfiguration(ConfigurationMixinBase):
     )
 
     # en_dns | tld | keyword |
-    # NOTE: dns signatures are contained within the binary search extension as a closure
     signatures: ClassVar[DNS_SIGNATURES] = DNS_SIGNATURES(
         {DNS_CAT.doh}, {}, []
     )
@@ -51,8 +59,8 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
         return thread information to be run.
         '''
-        # NOTE: might be temporary, but this needed to be moved outside the standard/bitmap sigs since they are
-        #  now being handled by an external C extension (cython)
+        # NOTE: might be temporary.
+        # needed to be moved since other sigs are now being handled by an external C extension via cython
         self.__class__._keywords = load_keywords(log=Log)
 
         threads = (
@@ -113,6 +121,8 @@ class ProxyConfiguration(ConfigurationMixinBase):
     @cfg_write_poller
     # handles updating user defined signatures in memory/propagated changes to disk.
     def _get_list(self, lname: str, cfg_file: str, last_modified_time: int) -> float:
+        loaded_list: ConfigChain
+
         memory_list: dict = getattr(self.__class__, lname).dns
 
         timeout_detected: bool = self._check_for_timeout(memory_list)
@@ -154,23 +164,23 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
             # iterating over rules/signatures pulled from file
             for rule, settings in loaded_list.get_items('time_based'):
-                bitmap_key = convert_string_to_bitmap(rule, DNS_BIN_OFFSET)
+                trie_key = strtobit(rule)
 
                 # adding rule/signature to memory if not present
-                if (bitmap_key not in memory_list):
+                if (trie_key not in memory_list):
                     settings['key'] = rule
-                    memory_list[bitmap_key] = settings
+                    memory_list[trie_key] = settings
 
         if (action is CFG.DEL):
 
             # iterating over rules/signature in memory
             for rule, settings in memory_list.copy().items():
 
-                bitmap_key = convert_string_to_bitmap(rule, DNS_BIN_OFFSET)
+                trie_key = strtobit(rule)
 
                 # if the rule is not present in the config file, it will be removed from memory
                 if (settings['key'] not in loaded_list):
-                    memory_list.pop(bitmap_key, None)
+                    memory_list.pop(trie_key, None)
 
     @staticmethod
     def _modify_ip_whitelist(cfg_file: str, memory_ip_list: dict) -> None:
@@ -212,7 +222,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
     def _update_list_file(cfg_file: str) -> ConfigChain:
         now: int = fast_time()
         with ConfigurationManager(cfg_file) as dnx:
-            lists = dnx.load_configuration()
+            lists: ConfigChain = dnx.load_configuration()
 
             loaded_list: list[Item] = lists.get_items('time_based')
             for domain, info in loaded_list:

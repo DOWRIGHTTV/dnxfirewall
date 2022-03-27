@@ -453,7 +453,7 @@ class NFPacket:
         'action', 'direction', 'tracked_geo',
         'ipp_profile', 'dns_profile', 'ips_profile',
 
-        'in_zone', 'out_zone',
+        'in_intf', 'out_intf',
         'src_mac', 'timestamp',
 
         # ip header
@@ -493,8 +493,8 @@ class NFPacket:
         self.ips_profile = mark >> 20 & 15
 
         hw_info = cpacket.get_hw()
-        self.in_zone   = hw_info[0]
-        self.out_zone  = hw_info[1]
+        self.in_intf   = hw_info[0]
+        self.out_intf  = hw_info[1]
         self.src_mac   = hw_info[2]
         self.timestamp = hw_info[3]
 
@@ -669,10 +669,18 @@ class NFPacket:
 # PROXY RESPONSE BASE CLASS
 # ==========================
 # pre-defined fields which are functionally constants for the purpose of connection resets
-_ip_header_template = PR_IP_HDR(**{'ver_ihl': 69, 'tos': 0, 'ident': 0, 'flags_fro': 16384, 'ttl': 255, 'checksum': 0})
-_tcp_header_template = PR_TCP_HDR(**{'seq_num': 696969, 'offset_control': 20500, 'window': 0, 'urg_ptr': 0})
-_pseudo_header_template = PR_TCP_PSEUDO_HDR(**{'reserved': 0, 'protocol': 6, 'tcp_len': 20})
-_icmp_header_template = PR_ICMP_HDR(**{'type': 3, 'code': 3, 'unused': 0})
+ip_header_template: Structure = PR_IP_HDR(
+    (('ver_ihl', 69), ('tos', 0), ('ident', 0), ('flags_fro', 16384), ('ttl', 255), ('checksum',0))
+)
+tcp_header_template: Structure = PR_TCP_HDR(
+    (('seq_num', 696969), ('offset_control', 20500), ('window', 0), ('urg_ptr', 0))
+)
+pseudo_header_template: Structure = PR_TCP_PSEUDO_HDR(
+    (('reserved', 0), ('protocol', 6), ('tcp_len', 20))
+)
+icmp_header_template: Structure = PR_ICMP_HDR(
+    (('type', 3), ('code', 3), ('unused', 0))
+)
 
 class RawResponse:
     '''base class for managing raw socket operations for sending data only.
@@ -682,23 +690,18 @@ class RawResponse:
     __setup: ClassVar[bool] = False
     _log: ClassVar[LogHandler_T] = None
 
-    # FIXME: consider making this just a reference to the open ports since that is all its used for
-    _module = None
+    _open_ports: ClassVar[dict[PROTO, dict[int, int]]] = {PROTO.TCP: {}, PROTO.UDP: {}}
 
     _registered_socks: ClassVar[dict] = {}
+    _registered_socks_get = _registered_socks.get
 
     # dynamically provide interfaces. default returns builtins.
     _intfs = load_interfaces()
 
-    __slots__ = (
-        '_packet',
-    )
-
-    def __init__(self, packet: ProxyPackets):
-        self._packet = packet
+    __slots__ = ()
 
     @classmethod
-    def setup(cls, log: LogHandler_T, module, protocol_ports: bool = True) -> None:
+    def setup(cls, log: LogHandler_T, open_ports: dict[PROTO, dict[int, int]] = None) -> None:
         '''register all available interfaces in a separate thread for each.
 
         registration will wait for the interface to become available before finalizing.
@@ -706,16 +709,12 @@ class RawResponse:
         if (cls.__setup):
             raise RuntimeError('response handler setup can only be called once per process.')
 
-        cls.__setup: bool = True
-
-        cls._log: LogHandler_T = log
-        cls._module = module  # NOTE: is this still needed?
+        cls.__setup = True
+        cls._log = log
 
         # direct assignment for perf
-        if (protocol_ports):
-            cls._open_ports: dict[PROTO, dict[int, int]] = module.open_ports
-
-        cls._registered_socks_get = cls._registered_socks.get
+        if (open_ports):
+            cls._open_ports = open_ports
 
         for intf in cls._intfs:
             Thread(target=cls.__register, args=(intf,)).start()
@@ -724,14 +723,14 @@ class RawResponse:
     def __register(cls, intf: tuple[int, int, str]):
         '''will register interface with ip and socket. a new socket will be used every time this method is called.
         '''
-        intf_index, zone, _intf = intf
+        intf_index, in_intf, _intf = intf
 
         wait_for_interface(interface=_intf)
         ip = wait_for_ip(interface=_intf)
 
         # sock sender is the direct reference to the socket send/to method, adding zone into value for easier
         # reference in prepare_and_send method.
-        cls._registered_socks[intf_index] = NFQ_SEND_SOCK(zone, ip, cls.sock_sender())
+        cls._registered_socks[intf_index] = NFQ_SEND_SOCK(in_intf, ip, cls.sock_sender())
 
         cls._log.informational(f'{cls.__name__}: {_intf} registered.')
 
@@ -742,29 +741,30 @@ class RawResponse:
 
         Do not override.
         '''
-        self = cls(packet)
+        # in_intf is the interface index
+        intf = cls._registered_socks_get(packet.in_intf)
 
-        # in_zone is actually interface index, but zones are linked through this identifier
-        intf = self._registered_socks_get(packet.in_zone)
-
-        # NOTE: if the wan interface has a static ip address, we can use the ip assigned during registration.
-        # this will need a condition to check, but won't need to masquerade.
+        # TODO: skip masquerade when WAN int is statically assigned
         dnx_src_ip = packet.dst_ip if intf.zone != WAN_IN else get_masquerade_ip(dst_ip=packet.src_ip)
 
+        # checking if dst port is associated with a nat.
+        # if so, will override necessary fields based on protocol and re-assign in the packet object
+        # chained if statement is for the more likely case of open port not being present
+        open_ports = cls._open_ports[packet.protocol]
+        if (open_ports):
+            port_override = open_ports.get(packet.dst_port)
+            if (port_override):
+                cls._packet_override(packet, dnx_src_ip, port_override)
+
         # calling hook for packet generation. this can be overloaded by subclass.
-        send_data = self._prepare_packet(packet, dnx_src_ip)
+        send_data = cls._prepare_packet(packet, dnx_src_ip)
         try:
             intf.sock_sendto(send_data, (itoip(packet.src_ip), 0))
         except OSError:
             pass
 
-    def _prepare_packet(self, packet: ProxyPackets, dnx_src_ip: int) -> bytearray:
-        # checking if dst port is associated with a nat and, if so, will override necessary fields based on protocol
-        # and re-assign in the packet object
-        # NOTE: can we please optimize this... PLEASE!
-        port_override = self._open_ports[packet.protocol].get(packet.dst_port)
-        if (port_override):
-            self._packet_override(packet, dnx_src_ip, port_override)
+    @classmethod
+    def _prepare_packet(cls, packet: ProxyPackets, dnx_src_ip: int) -> bytearray:
 
         # TCP HEADER
         if (packet.protocol is PROTO.TCP):
@@ -772,7 +772,7 @@ class RawResponse:
             proto_len = 20
 
             # new instance of header byte container template
-            protohdr = _tcp_header_template()
+            protohdr = tcp_header_template()
 
             # assigning missing fields
             protohdr.dst_port = packet.dst_port
@@ -782,9 +782,9 @@ class RawResponse:
             proto_header = protohdr.assemble()
 
             # using creation/call to handle field update and buffer assembly
-            pseudo_header = _pseudo_header_template({'src_ip': dnx_src_ip, 'dst_ip': packet.src_ip})
+            pseudo_header = pseudo_header_template((('src_ip', dnx_src_ip), ('dst_ip', packet.src_ip)))
 
-            # defined for consistency
+            # defined for final assembly simplicity
             proto_payload = b''
 
             # calculating checksum of container
@@ -797,16 +797,16 @@ class RawResponse:
             proto_len = 8 + 28
 
             # new instance of header byte container template
-            proto_header = _icmp_header_template()
+            protohdr = icmp_header_template()
+            proto_header = protohdr.assemble()
 
             # per icmp, ip header and first 8 bytes of rcvd payload are included in icmp response payload
             proto_payload = packet.ip_header + packet.udp_header
 
-            # icmp pre-assemble covers this
             proto_header[2:4] = calc_checksum(proto_header + proto_payload, pack=True)
 
         # IP HEADER
-        iphdr = _ip_header_template()
+        iphdr = ip_header_template()
 
         iphdr.tl = 20 + proto_len
         iphdr.protocol = response_protocol

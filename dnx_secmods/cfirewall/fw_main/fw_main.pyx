@@ -149,7 +149,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         uint32_t pktid = ntohl(hdr.packet_id)
 
         # interface index which corresponds to zone map index
-        uint8_t in_intf = nfq_get_indev(nfa)
+        uint8_t in_intf  = nfq_get_indev(nfa)
         uint8_t out_intf = nfq_get_outdev(nfa)
 
         # grabbing source mac address and casting to a char array

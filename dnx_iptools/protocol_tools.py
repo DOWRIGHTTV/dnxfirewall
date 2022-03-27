@@ -6,11 +6,11 @@ import binascii
 
 from functools import partial
 from random import getrandbits
-from socket import socket, htons, inet_aton, AF_INET, SOCK_RAW
+from socket import socket, inet_aton, AF_INET, SOCK_RAW
 from subprocess import run, CalledProcessError, DEVNULL
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import RUN_FOREVER, byte_join, dot_join, fast_time
+from dnx_gentools.def_constants import RUN_FOREVER, byte_join, dot_join, fast_time, UINT32_MAX
 from dnx_gentools.def_enums import PROTO
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import PR_ICMP_HDR
@@ -22,7 +22,7 @@ __all__ = (
 
     'itoip', 'iptoi', 'cidr_to_int',
     'domain_stob', 'mac_stob',
-    'mac_add_sep', 'convert_string_to_bitmap',
+    'mac_add_sep', 'strtobit',
     'create_dns_query_header', 'create_dns_response_header',
     'parse_query_name', 'mhash'
 )
@@ -57,13 +57,10 @@ def mac_stob(mac_address: str) -> bytes:
 
     return binascii.unhexlify(mac_address.replace(':', ''))
 
-def convert_string_to_bitmap(rule: str, offset: int) -> tuple[int, int]:
-    host_hash: hash = hash(rule)
+def strtobit(rule: str) -> int:
+    host_hash = hash(rule) & UINT32_MAX
 
-    b_id: int = int(f'{host_hash}'[:offset])
-    h_id: int = int(f'{host_hash}'[offset:])
-
-    return b_id, h_id
+    return host_hash
 
 def cidr_to_int(cidr: Union[str, int]) -> int:
 
@@ -209,7 +206,7 @@ def mhash(key: str, seed: int = 0x0):
         return -((unsigned_val ^ 0xFFFFFFFF) + 1)
 
 
-_icmp_header_template = PR_ICMP_HDR(**{'type': 8, 'code': 0})
+icmp_header_template: Structure = PR_ICMP_HDR((('type', 8), ('code', 0)))
 
 def init_ping(timeout: float = .25) -> Callable[[str, int], bool]:
     '''function factory that returns a ping function object optimized for speed.
@@ -224,7 +221,7 @@ def init_ping(timeout: float = .25) -> Callable[[str, int], bool]:
 
     def ping(target: str, *, count: int = 1, ose=OSError) -> bool:
 
-        icmp = _icmp_header_template()
+        icmp = icmp_header_template()
         icmp.id = getrandbits(16)
 
         replies_rcvd = 0

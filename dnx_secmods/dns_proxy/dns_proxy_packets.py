@@ -167,11 +167,15 @@ class ClientQuery:
 # ======================================
 # PROXY - FULL INSPECTION, DIRECT SOCKET
 # ======================================
-ip_hdr_template: PR_IP_HDR = PR_IP_HDR(
-    **{'ver_ihl': 69, 'tos': 0, 'ident': 0, 'flags_fro': 16384, 'ttl': 255, 'protocol': PROTO.UDP}
+ip_hdr_template: Structure = PR_IP_HDR(
+    (('ver_ihl', 69), ('tos', 0), ('ident', 0), ('flags_fro', 16384), ('ttl', 255), ('protocol', PROTO.UDP))
 )
-udp_hdr_template: PR_UDP_HDR = PR_UDP_HDR(**{'checksum': 0})
-std_rr_template: DNS_STD_RR = DNS_STD_RR(**{'ptr': 49164, 'type': 1, 'class': 1, 'ttl': 300, 'rd_len': 4})
+udp_hdr_template: Structure = PR_UDP_HDR(
+    (('checksum', 0),)
+)
+std_rr_template: Structure = DNS_STD_RR(
+    (('ptr', 49164), ('type', 1), ('class', 1), ('ttl', 300), ('rd_len', 4))
+)
 
 
 class DNSPacket(NFPacket):

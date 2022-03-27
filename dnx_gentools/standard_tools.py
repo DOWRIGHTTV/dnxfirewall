@@ -341,28 +341,25 @@ def structure(obj_name: str, fields: Union[list, str]) -> Structure:
 
             return f'{obj_name}({comma_join(_fields)})'
 
-        def __call__(self, **kwargs) -> Structure:
+        def __call__(self, updates: tuple[tuple[str, int]] = None) -> Structure:
             '''returns a copy of current field assignments.
 
-            kwargs can be used to insert updated values which will be copied over to new containers of the same type. a
-            good use case for this is to fill out fields that are constants and can be streamlined to simplify
-            external byte string creation logic. This is an alternative method to assignment at container creation.
+            a dictionary can be used to insert updated values to the new container.
+
+            a subsequent assemble call is required to update the buffer if updates are provided on the call.
             '''
 
             new_container = _copy(self)
 
             # set args in new instance if specified. this will overwrite any pre-set attributes. kwargs can be used to
             # pre define values at creation of new container.
-            if (kwargs):
-                for name, value in kwargs.items():
+            if (updates):
+                for name, value in updates:
 
                     if (name not in field_names):
                         raise ValueError(f'attribute {name} does not exist in this container.')
 
                     new_container[name] = value
-
-                # pre packing the buffer with updated field values
-                new_container.assemble()
 
             return new_container
 
@@ -401,7 +398,7 @@ def structure(obj_name: str, fields: Union[list, str]) -> Structure:
                 raise AttributeError(f'attribute {key} does not exist in this container.')
 
         def assemble(self) -> bytearray:
-            '''pack attributes into slotted buf with creation order preserved then returns buf reference.
+            '''return packed attributes into a slotted buffer with creation order preserved.
 
             alternatively, buf can be accessed directly for quick changes.
             '''
