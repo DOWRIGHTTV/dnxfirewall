@@ -124,7 +124,7 @@ def _combine_geolocation(log: LogHandler_T) -> list[str]:
     geo_settings: list = load_configuration('ip_proxy').get_list('geolocation')
 
     # adding private ip space signatures because they are currently excluded from webui. (by design... for now)
-    geo_settings.append(RFC1918.key)
+    geo_settings.append(RFC1918[0])
 
     ip_geo_signatures: list = []
     # restricting iteration to explicitly defined rules in the configuration file instead of assuming all files in the

@@ -64,7 +64,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
         geo_settings = proxy_settings.get_items('geolocation')
 
         # used for categorizing private ip addresses
-        geo_settings.append(RFC1918)
+        geo_settings.append(Item(*RFC1918))
 
         reputation_enabled: list[int] = []
         for cat, setting in rep_settings:
