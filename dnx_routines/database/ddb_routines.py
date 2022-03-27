@@ -103,7 +103,7 @@ def ipp_event(cur, timestamp: int, log: IPP_EVENT_LOG) -> bool:
 
     return True
 
-@db.register('infected_event', routine_type='write')
+@db.register('inf_event', routine_type='write')
 def infected_event(cur, timestamp: int, log: INFECTED_LOG) -> bool:
     cur.execute(f'select * from infectedclients where mac=? and detected_host=?',
         (log.client_mac, log.detected_host)
@@ -123,7 +123,7 @@ def infected_event(cur, timestamp: int, log: INFECTED_LOG) -> bool:
 
     return True
 
-@db.register('geo_record', routine_type='write')
+@db.register('geolocation', routine_type='write')
 # first arg is timestamp. this can likely go away with new DB API.
 def geo_record(cur, _, log: GEOLOCATION_LOG) -> bool:
     month = ','.join(_System.date()[:2])
