@@ -400,6 +400,6 @@ class ProxyResponse(RawResponse):
         iphdr.dst_ip = packet.src_ip
 
         ip_header: bytearray = iphdr.assemble()
-        ip_header[10:12] = calc_checksum(ip_header, pack=True)
+        ip_header[10:12] = calc_checksum(ip_header)
 
         return ip_header + udp_header + udp_payload

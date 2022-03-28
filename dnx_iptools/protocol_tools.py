@@ -227,8 +227,9 @@ def init_ping(timeout: float = .25) -> Callable[[str, int], bool]:
         replies_rcvd = 0
         for i in range(count):
 
+            # NOTE: this is dumb. should only call assemble once.
             icmp.sequence = i
-            icmp.checksum = calc_checksum(icmp.assemble())
+            icmp.checksum = btoia(calc_checksum(icmp.assemble()))
 
             ping_send(icmp.assemble(), (target, 0))
 

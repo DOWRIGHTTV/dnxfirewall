@@ -8,14 +8,14 @@ from dnx_iptools.packet_classes import NFPacket, RawResponse
 
 
 class IPPPacket(NFPacket):
+    tracked_ip: int
+    local_ip: int
 
     __slots__ = (
         'tracked_ip', 'local_ip',
     )
 
     def _before_exit(self, mark: int) -> None:
-        self.tracked_ip: int
-        self.local_ip: int
 
         if (self.direction == DIR.INBOUND):
             self.tracked_ip = self.src_ip

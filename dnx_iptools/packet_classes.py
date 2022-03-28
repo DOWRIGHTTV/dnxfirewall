@@ -476,47 +476,43 @@ class NFPacket:
         'icmp_type'
     )
 
-    def __init__(self):
-        '''used for typing purposes.
+    # C Callbacks
+    nfqueue: CPacket
 
-        instances of this class are created by calling __new__ directly.
-        '''
-        # MARK FIELDs
-        self.mark: int
+    # MARK FIELDs
+    mark: int
 
-        self.action: CONN
-        self.direction: DIR
-        self.tracked_geo: int
-        self.ipp_profile: int
-        self.dns_profile: int
-        self.ips_profile: int
+    action: CONN
+    direction: DIR
+    tracked_geo: int
+    ipp_profile: int
+    dns_profile: int
+    ips_profile: int
 
-        # HW FIELDS
+    # HW FIELDS
+    in_intf: int
+    out_intf: int
+    src_mac: str
+    timestamp: int
 
-        self.in_intf: int
-        self.out_intf: int
-        self.src_mac: str
-        self.timestamp: int
+    # IP FIELDS
+    protocol: PROTO
+    src_ip: int
+    dst_ip: int
+    src_port: int
+    dst_port: int
 
-        # IP FIELDS
+    # TCP FIELDS
+    seq_number: int
+    ack_number: int
 
-        self.protocol: PROTO
-        self.src_ip: int
-        self.dst_ip: int
-        self.src_port: int
-        self.dst_port: int
+    # UDP FIELDS
+    ip_header: bytearray
+    udp_header: bytearray
+    udp_payload: bytes
 
-        # TCP FIELDS
-        self.seq_number: int
-        self.ack_number: int
-
-        # UDP FIELDS
-        self.ip_header: bytearray
-        self.udp_header: bytearray
-        self.udp_payload: bytes
-
-        # ICMP FIELDS
-        self.icmp_type: ICMP
+    # ICMP FIELDS
+    icmp_type: ICMP
 
     @classmethod
     def netfilter_recv(cls, cpacket: CPacket, mark: int) -> NFPacket:
@@ -715,7 +711,7 @@ class RawResponse:
             proto_payload = b''
 
             # calculating checksum of container
-            proto_header[16:18] = calc_checksum(pseudo_header.buf + proto_header, pack=True)
+            proto_header[16:18] = calc_checksum(pseudo_header.buf + proto_header)
 
         # ICMP HEADER
         # elif (packet.protocol is PROTO.UDP):
@@ -730,7 +726,7 @@ class RawResponse:
             # per icmp, ip header and first 8 bytes of rcvd payload are included in icmp response payload
             proto_payload = packet.ip_header + packet.udp_header
 
-            proto_header[2:4] = calc_checksum(proto_header + proto_payload, pack=True)
+            proto_header[2:4] = calc_checksum(proto_header + proto_payload)
 
         # IP HEADER
         iphdr = ip_header_template()
@@ -741,7 +737,7 @@ class RawResponse:
         iphdr.dst_ip = packet.src_ip
 
         ip_header = iphdr.assemble()
-        ip_header[10:12] = calc_checksum(ip_header, pack=True)
+        ip_header[10:12] = calc_checksum(ip_header)
 
         # ASSEMBLY
         return ip_header + proto_header + proto_payload
@@ -764,7 +760,7 @@ class RawResponse:
             ip_header[12:16] = long_pack(packet.src_ip)
             ip_header[16:20] = long_pack(dnx_src_ip)
 
-            ip_header[10:12] = calc_checksum(ip_header, pack=True)
+            ip_header[10:12] = calc_checksum(ip_header)
 
     @staticmethod
     def sock_sender():

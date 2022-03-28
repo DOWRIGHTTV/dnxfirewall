@@ -35,7 +35,7 @@ cpdef unicode itoip(uint32_t ip):
 
     return ip_addr.decode('utf-8')
 
-def calc_checksum(const unsigned char[:] data, bint pack=0):
+cpdef bytes calc_checksum(const unsigned char[:] data):
 
     cdef:
         size_t      i
@@ -52,7 +52,4 @@ def calc_checksum(const unsigned char[:] data, bint pack=0):
     csum = (csum >> 16) + (csum & UINT16_MAX)
     csum = ~(csum + (csum >> 16)) & UINT16_MAX
 
-    if (pack):
-        return csum.to_bytes(length=2, byteorder='big')
-    else:
-        return htons(csum)
+    return csum.to_bytes(length=2, byteorder='big')
