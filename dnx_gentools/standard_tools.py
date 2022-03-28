@@ -348,11 +348,9 @@ def structure(obj_name: str, fields: Union[list, str]) -> Structure:
 
             a subsequent call to assemble is required to update the buffer if updates are provided on the call.
             '''
-
             new_container = _copy(self)
 
-            # set args in new instance if specified. this will overwrite any pre-set attributes. kwargs can be used to
-            # pre define values at creation of new container.
+            # set args in the new instance if specified. this will overwrite any pre-set attributes.
             if (updates):
                 for name, value in updates:
 

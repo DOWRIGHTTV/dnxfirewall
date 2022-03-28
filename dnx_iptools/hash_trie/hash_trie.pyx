@@ -30,7 +30,9 @@ cdef class HashTrie_Range:
     cdef uint8_t search(s, uint32_t trie_key, uint32_t host_id) nogil:
 
         cdef:
-            TrieMap_R *trie_value = &s.TRIE_MAP[s.hash_key(trie_key)]
+            size_t      i
+
+            TrieMap_R  *trie_value = &s.TRIE_MAP[s.hash_key(trie_key)]
 
         # no l1 match
         if (trie_value.len == EMPTY_CONTAINER):
@@ -55,6 +57,8 @@ cdef class HashTrie_Range:
     cpdef void generate_structure(s, list py_trie, Py_ssize_t py_trie_len):
 
         cdef:
+            size_t      i, xi
+
             TrieMap_R  *trie_map_container
             TrieRange  *trie_multival
 
@@ -111,7 +115,9 @@ cdef class HashTrie_Value:
     cdef uint32_t search(s, uint32_t trie_key) nogil:
 
         cdef:
-            TrieMap_V *trie_container = &s.TRIE_MAP[s.hash_key(trie_key)]
+            size_t      i
+
+            TrieMap_V  *trie_container = &s.TRIE_MAP[s.hash_key(trie_key)]
 
         # no l1 match
         if (trie_container.len == EMPTY_CONTAINER):
@@ -134,6 +140,8 @@ cdef class HashTrie_Value:
     cpdef void generate_structure(s, list py_trie, Py_ssize_t py_trie_len):
 
         cdef:
+            size_t      i
+
             TrieMap_V  *trie_map_container
             TrieValue  *trie_multival
 

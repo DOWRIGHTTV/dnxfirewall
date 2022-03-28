@@ -354,7 +354,7 @@ cdef class NetfilterQueue:
         # ======================
         # CREATE <NFQ_Q_HANDLE>
         # ----------------------
-        s.nfq_qh = nfq_create_queue(s.nfq_h, queue_num, <nfq_callback*> nfqueue_rcv, <void*>s)
+        s.nfq_qh = nfq_create_queue(s.nfq_h, queue_num, <nfq_callback*> nfqueue_rcv, <void*> s)
         # qh->h = h;
         # qh->id = num;
         # qh->cb = cb;

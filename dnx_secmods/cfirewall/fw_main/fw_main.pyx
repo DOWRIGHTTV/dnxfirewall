@@ -332,6 +332,7 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
 cdef inline bint in_blocklist(uint32_t src_host) nogil:
 
     cdef:
+        size_t   i
         uint32_t blocked_host
 
     pthread_mutex_lock(&FWblocklistlock)
@@ -353,6 +354,8 @@ cdef inline bint in_blocklist(uint32_t src_host) nogil:
 # generic function for src/dst zone matching
 cdef inline bint zone_match(ZoneArray *zone_array, uint8_t pkt_zone) nogil:
 
+    cdef size_t i
+
     # any zone def is a guaranteed match
     if (zone_array.objects[0] == ANY_ZONE):
         return MATCH
@@ -373,7 +376,9 @@ cdef inline bint zone_match(ZoneArray *zone_array, uint8_t pkt_zone) nogil:
 # generic function for source OR destination network obj matching
 cdef inline bint network_match(NetworkArray *net_array, uint32_t iph_ip, uint8_t country) nogil:
 
-    cdef Network *net
+    cdef:
+        size_t  i
+        Network *net
 
     if (VERBOSE):
         printf(<char*>'checking ip->%u, country->%u\n', iph_ip, country)
@@ -417,6 +422,7 @@ cdef inline bint network_match(NetworkArray *net_array, uint32_t iph_ip, uint8_t
 cdef inline bint service_match(ServiceArray *svc_array, uint16_t pkt_protocol, uint16_t pkt_port) nogil:
 
     cdef:
+        size_t i
         Service         *svc
         ServiceList     *svc_list
         ServiceObject   *svc_object
@@ -453,9 +459,9 @@ cdef inline bint service_match(ServiceArray *svc_array, uint16_t pkt_protocol, u
         # --------------------
         else:
             svc_list = &svc_object.service.list
-            for ix in range(svc_list.len):
+            for i in range(svc_list.len):
 
-                svc = &svc_list.objects[ix]
+                svc = &svc_list.objects[i]
                 if (pkt_protocol == svc.protocol or svc.protocol == ANY_PROTOCOL):
 
                     if (svc.start_port <= pkt_port <= svc.end_port):
@@ -488,19 +494,19 @@ cdef inline void rule_print(FWrule *rule) with gil:
     ppt(rule[0])
 
 # NOTE: consider making this a union
-cdef inline void obj_print(int name, void *object) nogil:
+cdef inline void obj_print(int name, void *obj) nogil:
 
     cdef:
         Network     *net_obj
         Service     *svc_obj
 
     if (name == NETWORK):
-        net_obj = <Network*>object
+        net_obj = <Network*>obj
 
         printf('net_obj, id->%u, mask->%u\n', <uint32_t>net_obj.netid, <uint32_t>net_obj.netmask)
 
     elif (name == SERVICE):
-        svc_obj = <Service*>object
+        svc_obj = <Service*>obj
 
         printf('svc_obj, protocol->%u, port->(%u, %u)\n',
                <uint8_t>svc_obj.protocol, <uint16_t>svc_obj.start_port, <uint16_t>svc_obj.end_port)
@@ -508,31 +514,35 @@ cdef inline void obj_print(int name, void *object) nogil:
 # ================================== #
 # C CONVERSION / INIT FUNCTIONS
 # ================================== #
+DEF NFQ_BUF_SIZE = 2048
+
 cdef void process_traffic(nfq_handle *h) nogil:
 
     cdef:
-        char packet_buf[4096]
-        int fd = nfq_fd(h)
-
         ssize_t dlen
+
+        char packet_buf[NFQ_BUF_SIZE]
+        int fd = nfq_fd(h)
 
     printf(<char*>'<ready to process traffic>\n')
 
     while True:
-        dlen = recv(fd, <void*>packet_buf, sizeof(packet_buf), 0)
+        dlen = recv(fd, <void*>packet_buf, NFQ_BUF_SIZE, 0)
 
         if (dlen >= 0):
             nfq_handle_packet(h, <char*>packet_buf, dlen)
 
         else:
-            # TODO: i believe we can get rid of this and set up a lower level ignore of this. this might require
-            #  the libmnl implementation version though.
+            # TODO: i believe we can get rid of this and set up a lower level ignore of this.
+            #  this might require the libmnl implementation version though.
             if (errno != ENOBUFS):
                 break
 
 cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
 
     cdef:
+        size_t i, ix, svc_list_len
+
         Service          *svc
         ServiceList      *svc_list
         ServiceObject    *svc_object
@@ -713,6 +723,8 @@ cdef class CFirewall:
         
         MAX_SLOTS defined by FW_MAX_ZONE_COUNT. the GIL will be acquired before any code execution.
         '''
+        cdef size_t i
+
         pthread_mutex_lock(&FWrulelock)
         printf(<char*>'[update/zones] acquired lock\n')
 
@@ -731,6 +743,7 @@ cdef class CFirewall:
         the GIL will be acquired before any code execution.
         '''
         cdef:
+            size_t i
             dict fw_rule
             size_t rule_count = len(rulelist)
 
@@ -754,7 +767,9 @@ cdef class CFirewall:
     # TODO: see if this requires the gil
     cpdef int remove_blockedlist(s, uint32_t host_ip):
 
-        cdef uint32_t blocked_ip
+        cdef:
+            size_t i, idx
+            uint32_t blocked_ip
 
         pthread_mutex_lock(&FWblocklistlock)
 

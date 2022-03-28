@@ -5,7 +5,7 @@
 # TODO: make a biptoi for bytestring to integer conversion
 
 from libc.stdio cimport snprintf
-from libc.stdint cimport uint8_t, uint32_t
+from libc.stdint cimport uint8_t, uint32_t, uint_fast16_t
 
 DEF UINT8_MAX  = 255
 DEF UINT16_MAX = 65535
@@ -39,10 +39,12 @@ cpdef unicode itoip(uint32_t ip):
 cpdef bytes calc_checksum(const uint8_t[:] data):
 
     cdef:
-        size_t      dlen = data.shape[0]
-        uint32_t    csum = 0
+        # 16 bit integer is ip packet max
+        uint_fast16_t   i
+        uint8_t         ubytes[2]
 
-        uint8_t     ubytes[2]
+        uint32_t        csum = 0
+        size_t          dlen = data.shape[0]
 
     for i in range(0, dlen, 2):
         csum += (data[i] << 8 | data[i + 1])
