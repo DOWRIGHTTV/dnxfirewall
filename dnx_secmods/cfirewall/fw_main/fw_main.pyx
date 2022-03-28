@@ -332,7 +332,6 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
 cdef inline bint in_blocklist(uint32_t src_host) nogil:
 
     cdef:
-        size_t   i
         uint32_t blocked_host
 
     pthread_mutex_lock(&FWblocklistlock)
@@ -354,8 +353,6 @@ cdef inline bint in_blocklist(uint32_t src_host) nogil:
 # generic function for src/dst zone matching
 cdef inline bint zone_match(ZoneArray *zone_array, uint8_t pkt_zone) nogil:
 
-    cdef size_t i
-
     # any zone def is a guaranteed match
     if (zone_array.objects[0] == ANY_ZONE):
         return MATCH
@@ -376,9 +373,7 @@ cdef inline bint zone_match(ZoneArray *zone_array, uint8_t pkt_zone) nogil:
 # generic function for source OR destination network obj matching
 cdef inline bint network_match(NetworkArray *net_array, uint32_t iph_ip, uint8_t country) nogil:
 
-    cdef:
-        size_t  i
-        Network *net
+    cdef Network *net
 
     if (VERBOSE):
         printf(<char*>'checking ip->%u, country->%u\n', iph_ip, country)
@@ -422,7 +417,6 @@ cdef inline bint network_match(NetworkArray *net_array, uint32_t iph_ip, uint8_t
 cdef inline bint service_match(ServiceArray *svc_array, uint16_t pkt_protocol, uint16_t pkt_port) nogil:
 
     cdef:
-        size_t i
         Service         *svc
         ServiceList     *svc_list
         ServiceObject   *svc_object
@@ -459,9 +453,9 @@ cdef inline bint service_match(ServiceArray *svc_array, uint16_t pkt_protocol, u
         # --------------------
         else:
             svc_list = &svc_object.service.list
-            for i in range(svc_list.len):
+            for ix in range(svc_list.len):
 
-                svc = &svc_list.objects[i]
+                svc = &svc_list.objects[ix]
                 if (pkt_protocol == svc.protocol or svc.protocol == ANY_PROTOCOL):
 
                     if (svc.start_port <= pkt_port <= svc.end_port):
@@ -517,17 +511,15 @@ cdef inline void obj_print(int name, void *object) nogil:
 cdef void process_traffic(nfq_handle *h) nogil:
 
     cdef:
-        int fd = nfq_fd(h)
         char packet_buf[4096]
-        size_t sizeof_buf = sizeof(packet_buf)
-        int recv_flags = 0
+        int fd = nfq_fd(h)
 
         ssize_t dlen
 
     printf(<char*>'<ready to process traffic>\n')
 
     while True:
-        dlen = recv(fd, <void*>packet_buf, sizeof_buf, recv_flags)
+        dlen = recv(fd, <void*>packet_buf, sizeof(packet_buf), 0)
 
         if (dlen >= 0):
             nfq_handle_packet(h, <char*>packet_buf, dlen)
@@ -541,8 +533,6 @@ cdef void process_traffic(nfq_handle *h) nogil:
 cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
 
     cdef:
-        size_t i, ix, svc_list_len
-
         Service          *svc
         ServiceList      *svc_list
         ServiceObject    *svc_object
@@ -661,7 +651,7 @@ cdef uint32_t SOCK_RCV_SIZE = 1024 * 4796 // 2
 
 cdef class CFirewall:
 
-    def set_options(self, int bypass, int verbose):
+    def set_options(s, int bypass, int verbose):
         global PROXY_BYPASS, VERBOSE
 
         PROXY_BYPASS  = <bint>bypass
@@ -673,7 +663,7 @@ cdef class CFirewall:
         if (verbose):
             print('<verbose console logging enabled>')
 
-    def nf_run(self):
+    def nf_run(s):
         '''calls internal C run method to engage nfqueue processes.
 
         this call will run forever, but will release the GIL prior to entering C and never try to reacquire it.
@@ -681,26 +671,26 @@ cdef class CFirewall:
         print('<releasing GIL>')
         # release gil and never look back.
         with nogil:
-            process_traffic(self.h)
+            process_traffic(s.h)
 
-    def nf_set(self, uint16_t queue_num):
-        self.h = nfq_open()
+    def nf_set(s, uint16_t queue_num):
+        s.h = nfq_open()
 
-        self.qh = nfq_create_queue(self.h, queue_num, <nfq_callback*>cfirewall_rcv, <void*>self)
-        if (self.qh == NULL):
+        s.qh = nfq_create_queue(s.h, queue_num, <nfq_callback*>cfirewall_rcv, <void*>s)
+        if (s.qh == NULL):
             return ERR
 
-        nfq_set_mode(self.qh, NFQNL_COPY_PACKET, MAX_COPY_SIZE)
-        nfq_set_queue_maxlen(self.qh, DEFAULT_MAX_QUEUELEN)
-        nfnl_rcvbufsiz(nfq_nfnlh(self.h), SOCK_RCV_SIZE)
+        nfq_set_mode(s.qh, NFQNL_COPY_PACKET, MAX_COPY_SIZE)
+        nfq_set_queue_maxlen(s.qh, DEFAULT_MAX_QUEUELEN)
+        nfnl_rcvbufsiz(nfq_nfnlh(s.h), SOCK_RCV_SIZE)
 
-    def nf_break(self):
-        if (self.qh != NULL):
-            nfq_destroy_queue(self.qh)
+    def nf_break(s):
+        if (s.qh != NULL):
+            nfq_destroy_queue(s.qh)
 
-        nfq_close(self.h)
+        nfq_close(s.h)
 
-    cpdef int prepare_geolocation(self, list geolocation_trie, uint32_t msb, uint32_t lsb) with gil:
+    cpdef int prepare_geolocation(s, list geolocation_trie, uint32_t msb, uint32_t lsb) with gil:
         '''initializes Cython Extension HashTrie for use by CFirewall.
          
         py_trie is passed through as data source and reference to function is globally assigned. MSB and LSB definitions 
@@ -718,13 +708,11 @@ cdef class CFirewall:
 
         return OK
 
-    cpdef int update_zones(self, PyArray zone_map) with gil:
+    cpdef int update_zones(s, PyArray zone_map) with gil:
         '''acquires FWrule lock then updates the zone values by interface index.
         
         MAX_SLOTS defined by FW_MAX_ZONE_COUNT. the GIL will be acquired before any code execution.
         '''
-        cdef size_t i
-
         pthread_mutex_lock(&FWrulelock)
         printf(<char*>'[update/zones] acquired lock\n')
 
@@ -736,14 +724,13 @@ cdef class CFirewall:
 
         return OK
 
-    cpdef int update_ruleset(self, size_t ruleset, list rulelist) with gil:
+    cpdef int update_ruleset(s, size_t ruleset, list rulelist) with gil:
         '''acquires FWrule lock then rewrites the corresponding section ruleset.
         
         the current length var will also be update while the lock is held. 
         the GIL will be acquired before any code execution.
         '''
         cdef:
-            size_t i
             dict fw_rule
             size_t rule_count = len(rulelist)
 
@@ -765,11 +752,9 @@ cdef class CFirewall:
         return OK
 
     # TODO: see if this requires the gil
-    cpdef int remove_blockedlist(self, uint32_t host_ip):
+    cpdef int remove_blockedlist(s, uint32_t host_ip):
 
-        cdef: 
-            size_t i, idx
-            uint32_t blocked_ip
+        cdef uint32_t blocked_ip
 
         pthread_mutex_lock(&FWblocklistlock)
 

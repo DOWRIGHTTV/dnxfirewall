@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Type, NewType, Literal, Protocol, Callable, Generator, Iterator, Iterable, ClassVar
-from typing import Union, Optional, Any, NoReturn
+from typing import Union, Optional, Any, NoReturn, ByteString
 
 _DISABLED = False
 
@@ -18,7 +18,6 @@ if (TYPE_CHECKING and not _DISABLED):
     from ssl import SSLContext
 
     Address = tuple[str, int]
-    Structure = Callable[[Optional[tuple[tuple[str, int], ...]]], 'Structure']
 
     Wrapper = Callable[[Any], None]
     Callable_T = Callable[[Any, ...], Any]

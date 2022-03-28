@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import namedtuple as _namedtuple
 from functools import lru_cache as _lru_cache
 from typing import NamedTuple as _NamedTuple, Union as _Union, Optional as _Optional, Any as _Any, Callable as _Callable
+from typing import ByteString as _ByteString
 
 from dnx_gentools.def_enums import PROTO as _PROTO, DHCP as _DHCP, DNS_CAT as _DNS_CAT, CONN as _CONN, IPS as _IPS
 from dnx_gentools.standard_tools import bytecontainer as _bytecontainer
@@ -15,6 +16,7 @@ from dnx_iptools.def_structs import dhcp_byte_pack as _dhcp_bp, dhcp_short_pack 
 # TYPING IMPORTS
 # ===============
 from typing import TYPE_CHECKING
+
 if (TYPE_CHECKING):
     from dnx_gentools.def_typing import Socket as _Socket, Address as _Address
 
@@ -166,7 +168,13 @@ DNS_BLOCKED_LOG = DNS_REQUEST_LOG
 BLOCKED_DOM = _namedtuple('blocked', 'domain category reason')
 
 # SOCKET
-L_SOCK = _namedtuple('listener_socket', 'name ip socket send sendto recvfrom')
+class L_SOCK(_NamedTuple):
+    name: str
+    ip: int
+    socket: _Socket
+    send: _Callable[[_Union[bytes, bytearray]], int]
+    sendto: _Callable[[_Union[bytes, bytearray], _Address], int]
+    recvfrom: _Callable[[_ByteString], tuple[int, _Address]]
 
 class NFQ_SEND_SOCK(_NamedTuple):
     zone: int

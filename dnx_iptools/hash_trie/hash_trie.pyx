@@ -15,7 +15,7 @@ DEF MAX_WIDTH_MULTIPLIER = 2
 # ================================================
 cdef class HashTrie_Range:
 
-    def py_search(self, tuple host):
+    def py_search(s, tuple host):
         cdef:
             uint8_t search_result
 
@@ -23,14 +23,14 @@ cdef class HashTrie_Range:
             uint32_t host_id  = <uint32_t>host[1]
 
         with nogil:
-            search_result = self.search(trie_key, host_id)
+            search_result = s.search(trie_key, host_id)
 
         return search_result
 
-    cdef uint8_t search(self, uint32_t trie_key, uint32_t host_id) nogil:
+    cdef uint8_t search(s, uint32_t trie_key, uint32_t host_id) nogil:
 
         cdef:
-            TrieMap_R *trie_value = &self.TRIE_MAP[self.hash_key(trie_key)]
+            TrieMap_R *trie_value = &s.TRIE_MAP[s.hash_key(trie_key)]
 
         # no l1 match
         if (trie_value.len == EMPTY_CONTAINER):
@@ -49,10 +49,10 @@ cdef class HashTrie_Range:
         # iteration completed with no l2 match
         return NO_MATCH
 
-    cdef inline uint32_t hash_key(self, uint32_t trie_key) nogil:
-        return trie_key % (self.max_width - 1)
+    cdef inline uint32_t hash_key(s, uint32_t trie_key) nogil:
+        return trie_key % (s.max_width - 1)
 
-    cpdef void generate_structure(self, list py_trie, Py_ssize_t py_trie_len):
+    cpdef void generate_structure(s, list py_trie, Py_ssize_t py_trie_len):
 
         cdef:
             TrieMap_R  *trie_map_container
@@ -64,8 +64,8 @@ cdef class HashTrie_Range:
             size_t      num_values
 
         # TODO: test the multiplier for max_width (current is 2, try 1.3)
-        self.max_width = <uint32_t>py_trie_len * MAX_WIDTH_MULTIPLIER
-        self.TRIE_MAP  = <TrieMap_R*>calloc(self.max_width, sizeof(TrieMap_R))
+        s.max_width = <uint32_t>py_trie_len * MAX_WIDTH_MULTIPLIER
+        s.TRIE_MAP  = <TrieMap_R*>calloc(s.max_width, sizeof(TrieMap_R))
 
         for i in range(py_trie_len):
 
@@ -73,8 +73,8 @@ cdef class HashTrie_Range:
             trie_vals  = py_trie[i][1]
             num_values = <size_t>len(trie_vals)
 
-            trie_key_hash = self.hash_key(trie_key)
-            trie_map_container = &self.TRIE_MAP[trie_key_hash]
+            trie_key_hash = s.hash_key(trie_key)
+            trie_map_container = &s.TRIE_MAP[trie_key_hash]
 
             # first time on index so allocating memory for the number of current multi-vals this iteration
             if (trie_map_container.len == 0):
@@ -99,19 +99,19 @@ cdef class HashTrie_Range:
 
 cdef class HashTrie_Value:
 
-    def py_search(self, uint32_t trie_key):
+    def py_search(s, uint32_t trie_key):
         cdef:
             uint32_t search_result
 
         with nogil:
-            search_result = self.search(trie_key)
+            search_result = s.search(trie_key)
 
         return search_result
 
-    cdef uint32_t search(self, uint32_t trie_key) nogil:
+    cdef uint32_t search(s, uint32_t trie_key) nogil:
 
         cdef:
-            TrieMap_V *trie_container = &self.TRIE_MAP[self.hash_key(trie_key)]
+            TrieMap_V *trie_container = &s.TRIE_MAP[s.hash_key(trie_key)]
 
         # no l1 match
         if (trie_container.len == EMPTY_CONTAINER):
@@ -128,10 +128,10 @@ cdef class HashTrie_Value:
         # iteration completed with no l2 match
         return NO_MATCH
 
-    cdef inline uint32_t hash_key(self, uint32_t trie_key) nogil:
-        return trie_key % (self.max_width - 1)
+    cdef inline uint32_t hash_key(s, uint32_t trie_key) nogil:
+        return trie_key % (s.max_width - 1)
 
-    cpdef void generate_structure(self, list py_trie, Py_ssize_t py_trie_len):
+    cpdef void generate_structure(s, list py_trie, Py_ssize_t py_trie_len):
 
         cdef:
             TrieMap_V  *trie_map_container
@@ -142,16 +142,16 @@ cdef class HashTrie_Value:
             uint32_t    trie_val
 
         # max_width will be ~130% of the size of py_trie
-        self.max_width = <uint32_t>py_trie_len + (py_trie_len // 3)
-        self.TRIE_MAP  = <TrieMap_V*>calloc(self.max_width, sizeof(TrieMap_V))
+        s.max_width = <uint32_t>py_trie_len + (py_trie_len // 3)
+        s.TRIE_MAP  = <TrieMap_V*>calloc(s.max_width, sizeof(TrieMap_V))
 
         for i in range(py_trie_len):
 
             trie_key = <uint32_t>py_trie[i][0]
             trie_val = <uint32_t>py_trie[i][1]
 
-            trie_key_hash = self.hash_key(trie_key)
-            trie_map_container = &self.TRIE_MAP[trie_key_hash]
+            trie_key_hash = s.hash_key(trie_key)
+            trie_map_container = &s.TRIE_MAP[trie_key_hash]
 
             # first time on index so allocating memory for the number of current multi-vals this iteration
             if (trie_map_container.len == 0):

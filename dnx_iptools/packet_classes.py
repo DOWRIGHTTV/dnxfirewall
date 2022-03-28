@@ -26,20 +26,21 @@ __all__ = (
     'Listener', 'ProtoRelay', 'NFQueue', 'NFPacket', 'RawResponse'
 )
 
+IntfList: list[tuple[int, int, str]]
+
 
 class Listener:
     __registered_socks: ClassVar[dict[int, L_SOCK]] = {}
     __epoll: ClassVar[Epoll] = select.epoll()
 
-    _intfs: ClassVar[list[tuple[int, int, str]]] = load_interfaces(exclude=['wan'])
+    _intfs: ClassVar[IntfList] = load_interfaces(exclude=['wan'])
+    _log:   ClassVar[LogHandler_T] = None
 
-    _listener_parser: ClassVar[ListenerParser]
+    _listener_parser:   ClassVar[ListenerParser]
     _listener_callback: ClassVar[ListenerCallback]
 
     # stored as file descriptors to minimize lookups in listener queue.
-    enabled_intfs: ClassVar[set] = set()
-
-    _log: ClassVar[LogHandler_T] = None
+    enabled_intfs: ClassVar[set[int]] = set()
 
     __slots__ = ()
 
@@ -107,10 +108,10 @@ class Listener:
         self._log.debug(f'[{_intf}] {self.__class__.__name__} started interface registration.')
 
         wait_for_interface(interface=_intf)
-        intf_ip: int = wait_for_ip(interface=_intf)
+        intf_ip = wait_for_ip(interface=_intf)
 
-        l_sock: Socket = self._listener_sock(_intf, intf_ip)
-        self.__class__.__registered_socks[l_sock.fileno()]: dict[int, L_SOCK] = L_SOCK(
+        l_sock = self._listener_sock(_intf, intf_ip)
+        self.__class__.__registered_socks[l_sock.fileno()] = L_SOCK(
             _intf, intf_ip, l_sock, l_sock.send, l_sock.sendto, l_sock.recvfrom_into
         )
 
@@ -154,7 +155,7 @@ class Listener:
         recv_buffer = memoryview(recv_buf)
 
         nbytes: int
-        address: tuple[str, int]
+        address: Address
 
         # custom iterator
         for _ in RUN_FOREVER:
@@ -221,7 +222,7 @@ class ProtoRelay:
     )
 
     def __init__(self, dns_server: DNSServer_T, fallback_relay: Optional[Callable]):
-        '''general constructor that can only be reached through subclass.
+        '''general constructor.
 
         May be expanded.
         '''
@@ -232,8 +233,8 @@ class ProtoRelay:
         sock = socket.socket()
         self._relay_conn = RELAY_CONN('', sock, sock.send, sock.recv, '')
 
-        self._send_count:  int = 0
-        self._last_rcvd: int = 0
+        self._send_count: int = 0
+        self._last_rcvd:  int = 0
 
         # direct reference for performance
         if (fallback_relay):
@@ -336,7 +337,7 @@ class ProtoRelay:
 class NFQueue:
     _log: ClassVar[LogHandler_T] = None
 
-    _packet_parser: ClassVar[ProxyParser]
+    _packet_parser:  ClassVar[ProxyParser]
     _proxy_callback: ClassVar[ProxyCallback]
 
     __slots__ = ()
@@ -344,7 +345,7 @@ class NFQueue:
     @classmethod
     def run(cls, log: LogHandler_T, *, q_num: int, threaded: bool = True) -> None:
 
-        cls._log: LogHandler_T = log
+        cls._log = log
 
         log.informational(f'{cls.__class__.__name__} initialization started.')
 
@@ -431,7 +432,7 @@ class NFQueue:
             if self._pre_inspect(packet):
                 self._proxy_callback(packet)
 
-    def _pre_inspect(self, packet) -> bool:
+    def _pre_inspect(self, packet: ProxyPackets) -> bool:
         '''called after packet parsing.
 
         used to determine the course of action for a packet.
@@ -482,23 +483,24 @@ class NFPacket:
     # MARK FIELDs
     mark: int
 
-    action: CONN
+    action:    CONN
     direction: DIR
+
     tracked_geo: int
     ipp_profile: int
     dns_profile: int
     ips_profile: int
 
     # HW FIELDS
-    in_intf: int
-    out_intf: int
-    src_mac: str
+    in_intf:   int
+    out_intf:  int
+    src_mac:   str
     timestamp: int
 
     # IP FIELDS
     protocol: PROTO
-    src_ip: int
-    dst_ip: int
+    src_ip:   int
+    dst_ip:   int
     src_port: int
     dst_port: int
 
@@ -507,8 +509,8 @@ class NFPacket:
     ack_number: int
 
     # UDP FIELDS
-    ip_header: bytearray
-    udp_header: bytearray
+    ip_header:   bytearray
+    udp_header:  bytearray
     udp_payload: bytes
 
     # ICMP FIELDS
@@ -526,7 +528,7 @@ class NFPacket:
         # creating instance attr so it can be modified if needed
         self.mark = mark
         # X | X | ips (4b) | dns (4b) | ipp (4b) | geo loc (8b) | direction (2b) | action (2b)
-        self.action = CONN(mark & 3)
+        self.action    = CONN(mark & 3)
         self.direction = DIR(mark >> 2 & 3)
         self.tracked_geo = mark >>  4 & 255
         self.ipp_profile = mark >> 12 & 15
@@ -560,7 +562,7 @@ class NFPacket:
 
             # ip/udp headers are only needed for icmp response payloads [at this time]
             # packing into bytes to make icmp response generation more streamlined if needed
-            self.ip_header = bytearray(20)
+            self.ip_header  = bytearray(20)
             self.udp_header = bytearray(8)
 
             iphdr_pack_into(self.ip_header, 0, *ip_header)
@@ -610,15 +612,15 @@ class RawResponse:
     interfaces will be registered on startup to associate interface, zone, mac, ip, and active socket.
     '''
     __setup: ClassVar[bool] = False
-    _log: ClassVar[LogHandler_T] = None
-
-    _open_ports: ClassVar[dict[PROTO, dict[int, int]]] = {PROTO.TCP: {}, PROTO.UDP: {}}
-
-    _registered_socks: ClassVar[dict[int, NFQ_SEND_SOCK]] = {}
-    _registered_socks_get: ClassVar[Callable[[int], NFQ_SEND_SOCK]] = _registered_socks.get
 
     # dynamically provide interfaces. default returns builtins.
-    _intfs = load_interfaces()
+    _intfs: ClassVar[IntfList] = load_interfaces()
+
+    _log: ClassVar[LogHandler_T] = None
+    _open_ports: ClassVar[dict[PROTO, dict[int, int]]] = {PROTO.TCP: {}, PROTO.UDP: {}}
+
+    _registered_socks:     ClassVar[dict[int, NFQ_SEND_SOCK]] = {}
+    _registered_socks_get: ClassVar[Callable[[int], NFQ_SEND_SOCK]] = _registered_socks.get
 
     __slots__ = ()
 
@@ -705,7 +707,8 @@ class RawResponse:
             proto_header = protohdr.assemble()
 
             # using creation/call to handle field update and buffer assembly
-            pseudo_header = pseudo_header_template((('src_ip', dnx_src_ip), ('dst_ip', packet.src_ip)))
+            psdohdr = pseudo_header_template((('src_ip', dnx_src_ip), ('dst_ip', packet.src_ip)))
+            pseudo_header = psdohdr.assemble()
 
             # defined for final assembly simplicity
             proto_payload = b''

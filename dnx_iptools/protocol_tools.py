@@ -27,7 +27,7 @@ __all__ = (
     'parse_query_name', 'mhash'
 )
 
-btoia: Callable[[Union[bytes, bytearray, memoryview]], int] = partial(int.from_bytes, byteorder='big', signed=False)
+btoia: Callable[[ByteString], int] = partial(int.from_bytes, byteorder='big', signed=False)
 itoba: Callable[[int, int], bytes] = partial(int.to_bytes, byteorder='big', signed=False)
 
 # will ping specified host. to be used to prevent duplicate ip address handouts.

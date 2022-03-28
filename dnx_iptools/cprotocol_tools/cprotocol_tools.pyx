@@ -39,7 +39,6 @@ cpdef unicode itoip(uint32_t ip):
 cpdef bytes calc_checksum(const uint8_t[:] data):
 
     cdef:
-        size_t      i
         size_t      dlen = data.shape[0]
         uint32_t    csum = 0
 

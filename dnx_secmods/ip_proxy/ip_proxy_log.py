@@ -56,7 +56,7 @@ class Log(LogHandler):
         if (inspection.action is CONN.DROP):
             if (inspection.category in cls._infected_cats and pkt.direction is DIR.OUTBOUND and cls.current_lvl >= LOG.ALERT):
                 tracked_ip: str = itoip(pkt.tracked_ip)
-                local_ip: str   = itoip(pkt.local_ip)
+                local_ip:   str = itoip(pkt.local_ip)
                 log = IPP_EVENT_LOG(
                     local_ip, tracked_ip, inspection.category, pkt.direction.name, 'blocked'
                 )

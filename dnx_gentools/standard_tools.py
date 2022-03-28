@@ -344,9 +344,9 @@ def structure(obj_name: str, fields: Union[list, str]) -> Structure:
         def __call__(self, updates: tuple[tuple[str, int]] = None) -> Structure:
             '''returns a copy of current field assignments.
 
-            a dictionary can be used to insert updated values to the new container.
+            a dictionary can be used to insert updated values into the new container.
 
-            a subsequent assemble call is required to update the buffer if updates are provided on the call.
+            a subsequent call to assemble is required to update the buffer if updates are provided on the call.
             '''
 
             new_container = _copy(self)
@@ -407,13 +407,16 @@ def structure(obj_name: str, fields: Union[list, str]) -> Structure:
 
             return self.buf
 
+    if (TYPE_CHECKING):
+        return _Structure
+
     return _Structure()
 
 def bytecontainer(obj_name: str, field_names: Union[list, str]) -> ByteContainer:
     '''named tuple like class factory for storing raw byte sections with named fields.
 
-    calling len on the container will return the sum of all bytes stored, not the number of fields. slots are being used
-    to speed up attribute access.
+    calling len on the container will return the sum of all bytes stored, not the number of fields.
+    slots are being used to speed up attribute access.
     '''
     if not isinstance(field_names, list):
         field_names = field_names.split()
@@ -428,7 +431,7 @@ def bytecontainer(obj_name: str, field_names: Union[list, str]) -> ByteContainer
     _getattr = getattr
     _bytearray = bytearray
 
-    class ByteContainer:
+    class _ByteContainer:
 
         __slots__ = (*field_names,)
 
@@ -477,7 +480,10 @@ def bytecontainer(obj_name: str, field_names: Union[list, str]) -> ByteContainer
 
             return other + ba
 
-    return ByteContainer()
+    if (TYPE_CHECKING):
+        return _ByteContainer
+
+    return _ByteContainer()
 
 class classproperty:
     '''class used as a decorator to allow class methods to be used as properties.
