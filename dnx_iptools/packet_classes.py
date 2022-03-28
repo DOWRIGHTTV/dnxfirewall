@@ -591,125 +591,6 @@ class NFPacket:
         pass
 
 
-# class RawPacket:
-#     '''NOTICE: this class has been significantly reduced in use. [no current modules subclassing]
-#
-#     parent class designed to index/parse full tcp/ip packets (including ethernet). alternate
-#     constructors are supplied to support different listener types e.g. raw sockets.
-#
-#     raw socket:
-#         packet = RawPacket.interface(data, address, socket)
-#
-#     the before_exit method can be overridden to extend the parsing functionality, for example to group
-#     objects in namedtuples or to index application data.
-#
-#     '''
-#
-#     __slots__ = (
-#         '_addr', 'protocol',
-#
-#         # init vars
-#         'data', 'timestamp',
-#         'sendto', 'intf_ip',
-#
-#         # ip
-#         'ip_header', 'src_ip', 'dst_ip',
-#         'src_port', 'dst_port',
-#
-#         # tcp
-#         'seq_number', 'ack_number',
-#
-#         # udp
-#         'udp_chk', 'udp_len',
-#         'udp_header', 'udp_payload',
-#
-#         # icmp
-#         'icmp_type'
-#     )
-#
-#     def __new__(cls, *args, **kwargs):
-#         if (cls is RawPacket):
-#             raise TypeError('RawPacket can only be used via inheritance.')
-#
-#         return object.__new__(cls)
-#
-#     def __init__(self):
-#         '''general default var assignments. not intended to be called directly.
-#
-#         May be expanded.
-#
-#         '''
-#         self.timestamp = fast_time()
-#
-#         # NOTE: recently moved these here. they are defined in the parents slots, so it makes sense. I think these
-#         were in the child (ips) because the ip proxy does not need these initialized.
-#         self.icmp_type = None
-#         self.udp_payload = b''
-#
-#     @classmethod
-#     def interface(cls, address, sock_info):
-#         '''alternate constructor. used to start listener/proxy instances bound to physical interfaces(active socket).
-#         '''
-#         self = cls()
-#         self._addr = address  # TODO: see if this can be removed
-#
-#         # intf_ip used to fill sinkhole query response with rules interface ip (of intf received on)
-#         self.intf_ip = sock_info[1].packed
-#         self.sendto  = sock_info[4]
-#
-#         return self
-#
-#     def parse(self, data):
-#         '''index tcp/ip packet layers 3 & 4 for use as instance objects.
-#
-#         the before_exit method will be called before returning. this can be used to create
-#         subclass specific objects like namedtuples or application layer data.
-#         '''
-#         self.protocol = PROTO(data[9])
-#         self.src_ip, self.dst_ip = ip_addrs_unpack(data[12:20])
-#
-#         # calculating iphdr len then slicing out
-#         data = data[(data[0] & 15) * 4:]
-#
-#         if (self.protocol is PROTO.ICMP):
-#             self.icmp_type = data[0]
-#
-#         else:
-#
-#             self.src_port, self.dst_port = double_short_unpack(data[:4])
-#
-#             # tcp header max len 32 bytes
-#             if (self.protocol is PROTO.TCP):
-#
-#                 self.seq_number, self.ack_number = double_long_unpack(data[4:8])
-#
-#             # udp header 8 bytes
-#             elif (self.protocol is PROTO.UDP):
-#
-#                 self.udp_len, self.udp_chk = double_short_unpack(data[4:8])
-#
-#                 self.udp_header  = data[:8]
-#                 self.udp_payload = data[8:]
-#
-#         if (self.continue_condition):
-#             self._before_exit()
-#
-#     def _before_exit(self):
-#         '''executes before returning from parse call.
-#
-#         May be overridden.
-#         '''
-#         pass
-#
-#     @property
-#     def continue_condition(self) -> bool:
-#         '''controls whether the _before_exit method gets called.
-#
-#         May be overridden.
-#         '''
-#         return True
-
-
 # ==========================
 # PROXY RESPONSE BASE CLASS
 # ==========================
@@ -737,8 +618,8 @@ class RawResponse:
 
     _open_ports: ClassVar[dict[PROTO, dict[int, int]]] = {PROTO.TCP: {}, PROTO.UDP: {}}
 
-    _registered_socks: ClassVar[dict] = {}
-    _registered_socks_get = _registered_socks.get
+    _registered_socks: ClassVar[dict[int, NFQ_SEND_SOCK]] = {}
+    _registered_socks_get: ClassVar[Callable[[int], NFQ_SEND_SOCK]] = _registered_socks.get
 
     # dynamically provide interfaces. default returns builtins.
     _intfs = load_interfaces()
@@ -768,14 +649,14 @@ class RawResponse:
     def __register(cls, intf: tuple[int, int, str]):
         '''will register interface with ip and socket. a new socket will be used every time this method is called.
         '''
-        intf_index, in_intf, _intf = intf
+        intf_index, zone, _intf = intf
 
         wait_for_interface(interface=_intf)
         ip = wait_for_ip(interface=_intf)
 
         # sock sender is the direct reference to the socket send/to method, adding zone into value for easier
         # reference in prepare_and_send method.
-        cls._registered_socks[intf_index] = NFQ_SEND_SOCK(in_intf, ip, cls.sock_sender())
+        cls._registered_socks[intf_index] = NFQ_SEND_SOCK(zone, ip, cls.sock_sender())
 
         cls._log.informational(f'{cls.__name__}: {_intf} registered.')
 
@@ -787,7 +668,8 @@ class RawResponse:
         Do not override.
         '''
         # in_intf is the interface index
-        intf = cls._registered_socks_get(packet.in_intf)
+        # zone is the zone id, eg 10,11,12
+        intf: NFQ_SEND_SOCK = cls._registered_socks_get(packet.in_intf)
 
         # TODO: skip masquerade when WAN int is statically assigned
         dnx_src_ip = packet.dst_ip if intf.zone != WAN_IN else get_masquerade_ip(dst_ip=packet.src_ip)
@@ -795,14 +677,14 @@ class RawResponse:
         # checking if dst port is associated with a nat.
         # if so, will override necessary fields based on protocol and re-assign in the packet object
         # chained if statement is for the more likely case of open port not being present
-        open_ports = cls._open_ports[packet.protocol]
+        open_ports: dict = cls._open_ports[packet.protocol]
         if (open_ports):
-            port_override = open_ports.get(packet.dst_port)
+            port_override: int = open_ports.get(packet.dst_port)
             if (port_override):
                 cls._packet_override(packet, dnx_src_ip, port_override)
 
         # calling hook for packet generation. this can be overloaded by subclass.
-        send_data = cls._prepare_packet(packet, dnx_src_ip)
+        send_data: bytearray = cls._prepare_packet(packet, dnx_src_ip)
         try:
             intf.sock_sendto(send_data, (itoip(packet.src_ip), 0))
         except OSError:

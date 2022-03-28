@@ -168,8 +168,7 @@ BLOCKED_DOM = _namedtuple('blocked', 'domain category reason')
 # SOCKET
 L_SOCK = _namedtuple('listener_socket', 'name ip socket send sendto recvfrom')
 
-# NFQ_SOCK = _namedtuple('socket_info', 'zone name mac ip sock')
 class NFQ_SEND_SOCK(_NamedTuple):
-    in_intf: int
+    zone: int
     ip: int
-    sock_sendto: _Callable[[tuple[_Address, _Union[bytes, bytearray]]], int]
+    sock_sendto: _Callable[[_Union[bytes, bytearray], _Address], int]

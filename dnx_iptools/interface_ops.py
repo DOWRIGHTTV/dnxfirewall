@@ -20,6 +20,14 @@ from dnx_iptools.cprotocol_tools import itoip
 if os.environ.get('webui'):
     from dnx_system.sys_action import system_action
 
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from dnx_gentools.file_operations import ConfigChain
+
 __all__ = (
     'get_intf_builtin', 'load_interfaces',
     'set_wan_interface', 'set_wan_mac', 'set_wan_ip',
@@ -47,12 +55,12 @@ def get_intf_builtin(zone_name):
 
     return {intf_index: (intf_settings[f'{intf_path}->zone'], intf_settings[f'{intf_path}->ident'])}
 
-def load_interfaces(intf_type: INTF = INTF.BUILTINS, *, exclude: list = []) -> list[Optional[tuple[int, int, str]]]:
+def load_interfaces(intf_type: INTF = INTF.BUILTINS, *, exclude: list = []) -> list[tuple[int, int, str]]:
     '''return a list of tuples for the specified interface type.
 
         [(intf_index, zone, ident)]
     '''
-    intf_settings = load_configuration('system')
+    intf_settings: ConfigChain = load_configuration('system')
 
     dnx_interfaces = intf_settings.get_items(f'interfaces->{intf_type.name.lower()}')
 

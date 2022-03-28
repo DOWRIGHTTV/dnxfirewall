@@ -2,7 +2,9 @@
 
 # cython: boundscheck=False
 
-from libc.stdio cimport printf, snprintf
+# TODO: make a biptoi for bytestring to integer conversion
+
+from libc.stdio cimport snprintf
 from libc.stdint cimport uint8_t, uint32_t
 
 DEF UINT16_MAX = 65535
