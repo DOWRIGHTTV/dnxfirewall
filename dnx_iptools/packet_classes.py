@@ -446,7 +446,10 @@ class NFQueue:
 # TODO: see if we can decommission this class to be replaced by CPacket.
 #  this became an option after reworking dnx_nfqueue lib since the parsing and GIL operations are much more refined.
 class NFPacket:
+    '''base class for security module packet containers.
 
+    instances of this class are created by calling __new__ directly via the alternate constructor "netfilter_recv".
+    '''
     __slots__ = (
         'nfqueue', 'mark',
 
@@ -472,6 +475,48 @@ class NFPacket:
         # icmp
         'icmp_type'
     )
+
+    def __init__(self):
+        '''used for typing purposes.
+
+        instances of this class are created by calling __new__ directly.
+        '''
+        # MARK FIELDs
+        self.mark: int
+
+        self.action: CONN
+        self.direction: DIR
+        self.tracked_geo: int
+        self.ipp_profile: int
+        self.dns_profile: int
+        self.ips_profile: int
+
+        # HW FIELDS
+
+        self.in_intf: int
+        self.out_intf: int
+        self.src_mac: str
+        self.timestamp: int
+
+        # IP FIELDS
+
+        self.protocol: PROTO
+        self.src_ip: int
+        self.dst_ip: int
+        self.src_port: int
+        self.dst_port: int
+
+        # TCP FIELDS
+        self.seq_number: int
+        self.ack_number: int
+
+        # UDP FIELDS
+        self.ip_header: bytearray
+        self.udp_header: bytearray
+        self.udp_payload: bytes
+
+        # ICMP FIELDS
+        self.icmp_type: ICMP
 
     @classmethod
     def netfilter_recv(cls, cpacket: CPacket, mark: int) -> NFPacket:
@@ -763,8 +808,8 @@ class RawResponse:
         except OSError:
             pass
 
-    @classmethod
-    def _prepare_packet(cls, packet: ProxyPackets, dnx_src_ip: int) -> bytearray:
+    @staticmethod
+    def _prepare_packet(packet: ProxyPackets, dnx_src_ip: int) -> bytearray:
 
         # TCP HEADER
         if (packet.protocol is PROTO.TCP):

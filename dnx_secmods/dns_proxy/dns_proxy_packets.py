@@ -364,7 +364,8 @@ def _parse_record(dns_payload: memoryview, cur_offset: int) -> tuple[int, RESOUR
 class ProxyResponse(RawResponse):
     _intfs = load_interfaces(exclude=['wan'])
 
-    def _prepare_packet(self, packet: ProxyPackets, dnx_src_ip: int) -> bytearray:
+    @staticmethod
+    def _prepare_packet(packet: ProxyPackets, dnx_src_ip: int) -> bytearray:
         # DNS HEADER + PAYLOAD
         # AAAA record set r code to "domain name does not exist" without record response ac=0, rc=3
         udp_payload = bytearray()

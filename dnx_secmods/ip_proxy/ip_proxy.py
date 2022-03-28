@@ -89,7 +89,7 @@ class IPProxy(ProxyConfiguration, NFQueue):
         # if ips profile is set on a rule for outbound traffic, it will be ignored.
         # TODO: look into what would be needed to expand ips inspection to lan to wan or lan to lan rules.
         if (packet.ips_profile and direction is DIR.INBOUND):
-            packet.nfqueue.update_mark(packet.mark & 65532)
+            packet.nfqueue.update_mark(packet.mark & UINT16_MAX)
 
             packet.nfqueue.forward(Queue.IPS_IDS)
 

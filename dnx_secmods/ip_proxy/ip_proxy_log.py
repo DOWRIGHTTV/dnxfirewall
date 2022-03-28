@@ -7,9 +7,10 @@ from dnx_gentools.def_constants import str_join
 from dnx_gentools.def_enums import LOG, DIR, CONN
 from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, GEOLOCATION_LOG, INF_EVENT_LOG
 
-from dnx_routines.logging.log_client import LogHandler
-
+from dnx_iptools.cprotocol_tools import itoip
 from dnx_iptools.interface_ops import get_arp_table
+
+from dnx_routines.logging.log_client import LogHandler
 
 # DIRECT ACCESS FUNCTIONS
 from dnx_routines.logging.log_client import (
@@ -54,12 +55,14 @@ class Log(LogHandler):
     def _generate_log(cls, pkt: IPPPacket, inspection: IPP_INSPECTION_RESULTS) -> tuple[LOG, dict]:
         if (inspection.action is CONN.DROP):
             if (inspection.category in cls._infected_cats and pkt.direction is DIR.OUTBOUND and cls.current_lvl >= LOG.ALERT):
+                tracked_ip: str = itoip(pkt.tracked_ip)
+                local_ip: str   = itoip(pkt.local_ip)
                 log = IPP_EVENT_LOG(
-                    pkt.local_ip, pkt.tracked_ip, inspection.category, pkt.direction.name, 'blocked'
+                    local_ip, tracked_ip, inspection.category, pkt.direction.name, 'blocked'
                 )
 
                 log2 = INF_EVENT_LOG(
-                    get_arp_table(host=pkt.local_ip), pkt.local_ip, pkt.tracked_ip, 'malware'
+                    get_arp_table(host=local_ip), local_ip, tracked_ip, 'malware'
                 )
 
                 log3 = GEOLOCATION_LOG(inspection.category[0], pkt.direction.name, 'blocked')
@@ -68,7 +71,7 @@ class Log(LogHandler):
 
             elif (cls.current_lvl >= LOG.WARNING):
                 log = IPP_EVENT_LOG(
-                    pkt.local_ip, pkt.tracked_ip, inspection.category, pkt.direction.name, 'blocked'
+                    itoip(pkt.local_ip), itoip(pkt.tracked_ip), inspection.category, pkt.direction.name, 'blocked'
                 )
 
                 log2 = GEOLOCATION_LOG(inspection.category[0], pkt.direction.name, 'blocked')
@@ -77,7 +80,9 @@ class Log(LogHandler):
 
         # informational logging for all accepted connections
         elif (cls.current_lvl >= LOG.INFO):
-            log = IPP_EVENT_LOG(pkt.local_ip, pkt.tracked_ip, inspection.category, pkt.direction.name, 'allowed')
+            log = IPP_EVENT_LOG(
+                itoip(pkt.local_ip), itoip(pkt.tracked_ip), inspection.category, pkt.direction.name, 'allowed'
+            )
 
             log2 = GEOLOCATION_LOG(inspection.category[0], pkt.direction.name, 'allowed')
 

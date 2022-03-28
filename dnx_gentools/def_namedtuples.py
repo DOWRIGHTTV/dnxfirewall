@@ -128,8 +128,8 @@ class IPP_INSPECTION_RESULTS(_NamedTuple):
 
 # LOG TUPLES
 class IPP_EVENT_LOG(_NamedTuple):
-    local_ip: int
-    tracked_ip: int
+    local_ip: str
+    tracked_ip: str
     category: tuple[str, str]
     direction: str
     action: str

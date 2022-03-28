@@ -25,7 +25,7 @@ if (TYPE_CHECKING):
 class ProxyConfiguration(ConfigurationMixinBase):
     ids_mode: ClassVar[bool] = False
 
-    reputation_enabled:   ClassVar[bool] = False
+    reputation_enabled:   ClassVar[list[int]] = []
     reputation_settings:  ClassVar[dict[REP, DIR]] = {}
     # geolocation_enabled:  ClassVar[bool] = True
     geolocation_settings: ClassVar[dict[GEO, DIR]] = {}
@@ -66,12 +66,13 @@ class ProxyConfiguration(ConfigurationMixinBase):
         # used for categorizing private ip addresses
         geo_settings.append(Item(*RFC1918))
 
-        reputation_enabled: list[int] = []
-        for cat, setting in rep_settings:
+        reputation_enabled: bool = False
+        for reputation, direction in rep_settings:
 
-            if (setting): reputation_enabled.append(1)
+            if (direction):
+                reputation_enabled = True
 
-            self.__class__.reputation_settings[REP[cat.upper()]] = DIR(setting)
+            self.__class__.reputation_settings[REP[reputation.upper()]] = DIR(direction)
 
         for country, direction in geo_settings:
             
@@ -81,7 +82,12 @@ class ProxyConfiguration(ConfigurationMixinBase):
             except KeyError:
                 continue  # not all enums/countries are populated
 
-        self.__class__.reputation_enabled = bool(reputation_enabled)
+        # using a list to maintain initial reference with inplace ops
+        if (reputation_enabled):
+            self.__class__.reputation_enabled.append(1)
+
+        else:
+            self.__class__.reputation_enabled.clear()
 
         self._initialize.done()
 

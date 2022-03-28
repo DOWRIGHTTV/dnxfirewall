@@ -37,12 +37,14 @@ if (TYPE_CHECKING and not _DISABLED):
     from dnx_netmods import *
     from dnx_webui import *
 
+    from dnx_iptools.packet_classes import NFPacket as _NFPacket
+
     ListenerCallback = Callable[..., None]
     ListenerPackets = Union[ClientRequest, ClientQuery]
     ListenerParser = Callable[[Address, LI_SOCK], ListenerPackets]
 
     ProxyCallback = Callable[..., None]
-    ProxyPackets = Union[IPPPacket, IPSPacket, DNSPacket]
+    ProxyPackets = Union[IPPPacket, IPSPacket, DNSPacket, _NFPacket]
     ProxyParser = Callable[[CPacket, int], ProxyPackets]
 
     DNSListHandler = Callable[[Any, str, int], int]
