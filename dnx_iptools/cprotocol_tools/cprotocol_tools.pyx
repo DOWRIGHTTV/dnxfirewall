@@ -7,6 +7,7 @@
 from libc.stdio cimport snprintf
 from libc.stdint cimport uint8_t, uint32_t
 
+DEF UINT8_MAX  = 255
 DEF UINT16_MAX = 65535
 
 cpdef uint32_t iptoi(unicode ipa):
@@ -35,12 +36,14 @@ cpdef unicode itoip(uint32_t ip):
 
     return ip_addr.decode('utf-8')
 
-cpdef bytes calc_checksum(const unsigned char[:] data):
+cpdef bytes calc_checksum(const uint8_t[:] data):
 
     cdef:
         size_t      i
         size_t      dlen = data.shape[0]
         uint32_t    csum = 0
+
+        uint8_t     ubytes[2]
 
     for i in range(0, dlen, 2):
         csum += (data[i] << 8 | data[i + 1])
@@ -52,4 +55,7 @@ cpdef bytes calc_checksum(const unsigned char[:] data):
     csum = (csum >> 16) + (csum & UINT16_MAX)
     csum = ~(csum + (csum >> 16)) & UINT16_MAX
 
-    return csum.to_bytes(length=2, byteorder='big')
+    ubytes[0] = <uint8_t>(csum >> 8)
+    ubytes[1] = csum & UINT8_MAX
+
+    return ubytes
