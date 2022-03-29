@@ -51,10 +51,10 @@ class LanRestrict:
     _active:  ClassVar[bool] = False
 
     initialize: Initialize
-    ip_proxy: IPProxy_T
+    proxy: IPProxy_T
 
     __slots__ = (
-        'initialize', 'ip_proxy'
+        'initialize', 'proxy'
     )
 
     @classproperty
@@ -70,7 +70,7 @@ class LanRestrict:
         '''initializes settings and attributes then runs timer service in a new thread before returning.
         '''
         self = cls.__new__(cls)
-        self.ip_proxy = ip_proxy
+        self.proxy = proxy
         self.initialize = Initialize(Log, proxy.__name__)
 
         cls._active = load_data('ip_proxy.timer')['active']
