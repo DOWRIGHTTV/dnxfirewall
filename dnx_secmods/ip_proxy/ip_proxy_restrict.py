@@ -26,6 +26,15 @@ from dnx_routines.configure.system_info import System
 
 from ip_proxy_log import Log
 
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from dnx_gentools.file_operations import ConfigChain
+
+
 # required when using ConfigurationManager context manager
 ConfigurationManager.set_log_reference(Log)
 
@@ -41,14 +50,12 @@ class LanRestrict:
     _enabled: ClassVar[bool] = False
     _active:  ClassVar[bool] = False
 
+    initialize: Initialize
+    ip_proxy: IPProxy_T
+
     __slots__ = (
         'initialize', 'ip_proxy'
     )
-
-    def __init__(self, name):
-        self.initialize = Initialize(Log, name)
-
-        self.ip_proxy: IPProxy_T
 
     @classproperty
     def is_enabled(cls) -> bool:
@@ -59,11 +66,12 @@ class LanRestrict:
         return cls._active
 
     @classmethod
-    def run(cls, ip_proxy: IPProxy_T) -> None:
+    def run(cls, proxy: IPProxy_T) -> None:
         '''initializes settings and attributes then runs timer service in a new thread before returning.
         '''
-        self = cls(ip_proxy.__name__)
+        self = cls.__new__(cls)
         self.ip_proxy = ip_proxy
+        self.initialize = Initialize(Log, proxy.__name__)
 
         cls._active = load_data('ip_proxy.timer')['active']
 
@@ -73,7 +81,7 @@ class LanRestrict:
         self.initialize.wait_for_threads(count=2)
 
     @cfg_read_poller('ip_proxy')
-    def _get_settings(self, cfg_file):
+    def _get_settings(self, cfg_file: str) -> None:
         proxy_settings = load_configuration(cfg_file)
 
         self.__class__._enabled = proxy_settings['time_restriction->enabled']
@@ -81,13 +89,9 @@ class LanRestrict:
         self.initialize.done()
 
     @looper(ONE_MIN)
-    def _tracker(self):
+    def _tracker(self) -> None:
         restriction_start, restriction_end, now = self._calculate_times()
 
-        # Log.debug(f'ENABLED: {self.is_enabled} | ACTIVE: {self.is_active}')
-        # Log.debug(f'START: {restriction_start}: {datetime.fromtimestamp(restriction_start)}')
-        # Log.debug(f'NOW: {now}: {datetime.fromtimestamp(now)}')
-        # Log.debug(f'END: {restriction_end}: {datetime.fromtimestamp(restriction_end)}')
         if (not self.is_enabled and self.is_active):
             self._set_restriction_status(active=False)
 
@@ -107,18 +111,19 @@ class LanRestrict:
 
     # Calculating what the current date and time is and what the current days start time is in epoch
     # this must be calculated daily as the start time epoch is always changing
-    def _calculate_times(self):
-        restriction_start, restriction_length, offset = self._load_restriction()
+    def _calculate_times(self) -> tuple[float, float, int]:
+        restriction_time, restriction_length, offset = self._load_restriction()
 
-        now = fast_time() + offset
-        c_d = [int(i) for i in System.date(now)]  # current date
-        r_start = [int(i) for i in restriction_start.split(':')]
+        now: int = fast_time() + offset
 
-        restriction_start = datetime(*c_d[:2], *r_start[:1]).timestamp()
-        restriction_end = restriction_start + restriction_length
+        c_d: list[int] = [int(i) for i in System.date(now)]  # current date
+        r_start: list[int] = [int(i) for i in restriction_time.split(':')]
+
+        restriction_start: float = datetime(*c_d[:2], *r_start[:1]).timestamp()
+        restriction_end: float = restriction_start + restriction_length
 
         if (self.is_active):
-            restriction_end = load_data('ip_proxy.timer')['end']
+            restriction_end: float = load_data('ip_proxy.timer')['end']
 
         else:
             self._write_end_time(restriction_end)
@@ -127,23 +132,23 @@ class LanRestrict:
 
     # Calculating the time.time() of when timer should end. calculated by current days start time (time since epoch)
     # and then adding seconds of user configured amount to start time.
-    def _write_end_time(self, restriction_end):
+    def _write_end_time(self, restriction_end: float) -> None:
         with ConfigurationManager('ip_proxy', ext='.timer') as dnx:
-            time_restriction = dnx.load_configuration()
+            time_restriction: ConfigChain = dnx.load_configuration()
 
             time_restriction['end'] = restriction_end
 
             dnx.write_configuration(time_restriction.expanded_user_data)
 
-    def _load_restriction(self):
-        proxy_settings = load_configuration('ip_proxy')
-        log_settings = load_configuration('logging_client')
+    def _load_restriction(self) -> tuple[str, float, int]:
+        proxy_settings: ConfigChain = load_configuration('ip_proxy')
+        log_settings:   ConfigChain = load_configuration('logging_client')
 
-        restriction_start  = proxy_settings['time_restriction->start']
-        restriction_length = proxy_settings['time_restriction->length']
+        restriction_start:  str = proxy_settings['time_restriction->start']
+        restriction_length: float = proxy_settings['time_restriction->length']
 
-        os_direction = log_settings['time_offset->direction']
-        os_amount    = log_settings['time_offset->amount']
+        os_direction: str = log_settings['time_offset->direction']
+        os_amount:    str = log_settings['time_offset->amount']
 
         offset = int(f'{os_direction}{os_amount}') * ONE_DAY
 
@@ -153,7 +158,7 @@ class LanRestrict:
         self.__class__._active = active
 
         with ConfigurationManager('ip_proxy', ext='.timer') as dnx:
-            time_restriction = dnx.load_configuration()
+            time_restriction: ConfigChain = dnx.load_configuration()
 
             time_restriction['active'] = active
 

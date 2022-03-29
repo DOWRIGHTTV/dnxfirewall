@@ -259,7 +259,7 @@ class ConfigChain:
 
         raise KeyError(f'{key} not found in configuration chain.')
 
-    def __setitem__(self, key: str, value: Union[bool, int, str, list, None]):
+    def __setitem__(self, key: str, value: Union[bool, int, float, str, list, None]):
 
         # print('setting ->', value)
 
@@ -281,7 +281,7 @@ class ConfigChain:
 
         return ret_val
 
-    def get_dict(self, key: Optional[str] = None) -> dict[str, Any]:
+    def get_dict(self, key: str = None) -> dict[str, Any]:
         '''return dict of children 1 level lower than the passed in key.
 
          returns an empty dict if not found.
@@ -299,7 +299,7 @@ class ConfigChain:
 
         return search_data
 
-    def get_list(self, key: Optional[str] = None) -> list[Union[str | int]]:
+    def get_list(self, key: str = None) -> list[Union[str, int]]:
         '''return list of child keys 1 level lower than the passed in key.
 
         returns an empty list if not found.
@@ -317,7 +317,7 @@ class ConfigChain:
 
         return list(search_data)
 
-    def get_items(self, key: Optional[str] = None) -> list[Optional[Item]]:
+    def get_items(self, key: str = None) -> list[Optional[Item]]:
         '''return list of namedtuple containing key: value pairs of child keys 1 level lower than the passed in key.
 
         returns an empty list if not found.
@@ -335,7 +335,7 @@ class ConfigChain:
 
         return [Item(k, v) for k, v in search_data.items()]
 
-    def get_values(self, key: Optional[str] = None) -> list:
+    def get_values(self, key: str = None) -> list:
         '''return a list of values for the child keys 1 level lower than the passed in key.
 
         returns an empty list if not found.
@@ -446,7 +446,7 @@ class ConfigurationManager:
         '''
         cls.log: LogHandler_T = ref
 
-    def __init__(self, config_file: str = '', ext: str = '.cfg', file_path: Optional[str] = None) -> None:
+    def __init__(self, config_file: str = '', ext: str = '.cfg', file_path: str = None) -> None:
         '''config_file can be omitted to allow for configuration lock to be used with
         external operations.
         '''
@@ -557,11 +557,11 @@ class Watcher:
         '_last_modified_time'
     )
 
-    def __init__(self, watch_file: str, folder: str, *, callback: Callable):
+    def __init__(self, watch_file: str, folder: str, *, callback: Callable_T):
         self._watch_file: str = watch_file
-        self._callback: Callable = callback
+        self._callback: Callable_T = callback
 
-        self._full_path: str = f'{HOME_DIR}/dnx_system/{folder}/usr/{watch_file}'
+        self._full_path: str = f'{HOME_DIR}/dnx_system/{folder}/usr/{watch_file}.cfg'
 
         self._last_modified_time: int = 0
 
