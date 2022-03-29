@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 
-from flask import Flask
 from collections import defaultdict, namedtuple
 
 from dnx_gentools.def_typing import *
@@ -27,6 +26,7 @@ if (TYPE_CHECKING):
 
 valid_sections: dict[str, str] = {'BEFORE': '1', 'MAIN': '2', 'AFTER': '3'}
 
+fw_object_manager: ObjectManager = FirewallControl.object_manager
 reference_counts = defaultdict(int)
 zone_map: dict[str, dict] = {'builtins': {}, 'extended': {}}
 zone_manager: dict[str, dict] = {'builtins': {}, 'user-defined': {}}
@@ -52,11 +52,13 @@ def load_page(section: str) -> dict[str, Any]:
 
             # need to make converting zone ident/int to name easier in format function
             zone_ident = dnx_settings[f'zones->builtins->{intf_name}'][0]
+
+            # TODO: is lzone_map needed after moving zones to fw objects?
             lzone_map[zone_ident] = intf_name
 
     reference_counts.clear()
-    # NOTE: this needs to be before zone manager building so we can get reference counts
-    firewall_rules = get_and_format_rules(section, lzone_map)
+    # NOTE: this needs to be before the zone manager builds, so we can get reference counts
+    firewall_rules = get_and_format_rules(section)
 
     # TODO: this is now unoptimized.
     #  we should track ref counts in in FirewallControl class and inc/dec when rule is deleted or added.
@@ -68,13 +70,13 @@ def load_page(section: str) -> dict[str, Any]:
 
             zone_manager[zone_type][zone_name] = [reference_counts[zone_name], zone_desc]
 
-    version, firewall_objects = Flask.app.dnx_object_manager.get_objects()
+    version, firewall_objects = fw_object_manager.get_objects()
 
-    fw_object_map = {obj.name: {'type': obj.type, 'id': obj.id} for obj in firewall_objects}
+    fw_object_map: dict[str, dict] = {obj.name: {'type': obj.type, 'id': obj.id} for obj in firewall_objects}
 
-    zone_autofill = {k.name: None for k in firewall_objects if k.type in ['zone']}
-    network_autofill = {k.name: None for k in firewall_objects if k.type in ['country', 'address']}
-    service_autofill = {k.name: None for k in firewall_objects if k.type in ['service']}
+    zone_autofill: dict[str, None] = {k.name: None for k in firewall_objects if k.type in ['zone']}
+    network_autofill: dict[str, None] = {k.name: None for k in firewall_objects if k.type in ['country', 'address']}
+    service_autofill: dict[str, None] = {k.name: None for k in firewall_objects if k.type in ['service']}
 
     return {
         'zone_map': zone_map,
@@ -91,34 +93,27 @@ def load_page(section: str) -> dict[str, Any]:
 def update_page(form: dict) -> tuple[str, str]:
 
     # initial input validation for presence of zone field
-    section = form.get('section', None)
+    section: str = form.get('section', '')
     if (section not in valid_sections or 'change_section' not in form):
         return INVALID_FORM, 'MAIN'
 
     return '', section
 
-def get_and_format_rules(section: str, lzone_map: dict[int, str]) -> list[list]:
+def get_and_format_rules(section: str) -> list[list]:
     firewall_rules = FirewallControl.cfirewall.view_ruleset(section)
 
     converted_rules: list = []
     converted_rules_append = converted_rules.append
 
-    zone_map_get = lzone_map.get
-    obj_lookup = Flask.app.dnx_object_manager.lookup
+    obj_lookup = fw_object_manager.lookup
 
     # convert rules into a friendly format
     for rule in firewall_rules.values():
 
-        # # single zone per rule for now. :(, back end can handle multiple
-        # src_zone = zone_map_get(rule['src_zone'][0], 'ERROR')
-        #
-        # # ternary to properly render intra_zone rule (same src and dst zone, dst zone would be 0)
-        # dst_zone = zone_map_get(rule['dst_zone'][0], 'ERROR') if rule['dst_zone'][0] else src_zone
-
         converted_rules_append([
             rule['enabled'], rule['name'],
 
-            [obj_lookup(x) for x in rule['src_zone'] if x != INVALID_OBJECT],
+            [obj_lookup(x) for x in rule['src_zone']],
             [obj_lookup(x) for x in rule['src_network']],
             [obj_lookup(x) for x in rule['src_service']],
 
@@ -148,7 +143,7 @@ def calculate_ref_counts(firewall_rules: list[list]) -> None:
 
 def commit_rules(json_data: dict[str, str]) -> return_data:
 
-    section = json_data.get('section', None)
+    section: str = json_data.get('section', '')
     if (not section or section not in valid_sections):
         return False, {'error': 1, 'message': 'missing section data'}
 
@@ -189,6 +184,7 @@ def validate_firewall_commit(fw_rules_json: str, /):
     # TODO: make zone map integrated more gooder
     dnx_interfaces = load_configuration('system').get_items('interfaces->builtins')
 
+    # TODO: same as above. not needed?
     lzone_map: dict[str, int] = {zone_name: zone_info['zone'] for zone_name, zone_info in dnx_interfaces}
     # 99 used to specify wildcard/any zone match
     lzone_map['any'] = ANY_ZONE
@@ -202,15 +198,14 @@ def validate_firewall_commit(fw_rules_json: str, /):
             raise ValidationError(f'Format error found in rule #{i}')
 
         try:
-            validated_rules[i] = validate_firewall_rule(i, rule, lzone_map)
+            validated_rules[i] = validate_firewall_rule(i, rule)
         except ValidationError:
             raise
 
-    print(validated_rules)
     return validated_rules
 
 # NOTE: log disabled in form and set here as default for the time being.
-def validate_firewall_rule(rule_num: int, fw_rule: rule_structure, lzone_map: dict[str, int], /) -> dict[str, Any]:
+def validate_firewall_rule(rule_num: int, fw_rule: rule_structure, /) -> dict[str, Any]:
 
     actions: dict[str, int] = {'accept': 1, 'drop': 0}
 
@@ -227,7 +222,7 @@ def validate_firewall_rule(rule_num: int, fw_rule: rule_structure, lzone_map: di
     enabled = convert_int(fw_rule.enabled)
 
     # OBJECT VALIDATIONS
-    check = Flask.app.dnx_object_manager.iter_validate
+    check = fw_object_manager.iter_validate
 
     src_zone = check(fw_rule.src_zone)
     if (INVALID_OBJECT in src_zone):

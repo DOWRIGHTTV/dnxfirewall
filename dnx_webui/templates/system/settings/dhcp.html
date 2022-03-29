@@ -33,7 +33,7 @@
                                     <label>
                                         Off
                                         <input type="checkbox" name="server_enabled"
-                                            {% if dhcp_settings['interfaces'][interface.lower()]['enabled'] %} checked="checked" {% endif %}>
+                                            {% if dhcp_settings['interfaces'][interface]['enabled'] %} checked="checked" {% endif %}>
                                         <span class="lever"></span>
                                         On
                                     </label>
@@ -45,7 +45,7 @@
                                     <label>
                                         Disabled
                                         <input type="checkbox" name="icmp_check"
-                                            {% if dhcp_settings['interfaces'][interface.lower()]['icmp_check'] %} checked="checked" {% endif %}>
+                                            {% if dhcp_settings['interfaces'][interface]['icmp_check'] %} checked="checked" {% endif %}>
                                         <span class="lever"></span>
                                         Enabled
                                     </label>
@@ -54,13 +54,14 @@
                         </div>
                         <div class="row {{input_color}}">
                             <div class="input-field col s6">
-                                <input type="number" name="start" value="{{dhcp_settings['interfaces'][interface]['lease_range']['start']}}"
-                                    class="validate">
+                                <input type="number" name="start" class="validate"
+                                       value="{{dhcp_settings['interfaces'][interface]['lease_range']['start']}}">
                                 <label for="">Start</label>
                             </div>
                             <div class="input-field col s6">
-                                <input type="number" name="end" value="{{dhcp_settings['interfaces'][interface]['lease_range']['end']}}"
-                                    class="validate"><label for="">End</label>
+                                <input type="number" name="end" class="validate"
+                                       value="{{dhcp_settings['interfaces'][interface]['lease_range']['end']}}">
+                                <label for="">End</label>
                             </div>
                         </div>
                         <div class="row">

@@ -367,6 +367,8 @@ cdef class NetfilterQueue:
         nfq_set_queue_maxlen(s.nfq_qh, DEFAULT_MAX_QUEUELEN)
         nfnl_rcvbufsiz(nfq_nfnlh(s.nfq_h), SOCK_RCV_SIZE)
 
+        return OK
+
     def set_proxy_callback(s, object func_ref):
         '''Set required reference which will be called after packet data is parsed into C structs.
         '''

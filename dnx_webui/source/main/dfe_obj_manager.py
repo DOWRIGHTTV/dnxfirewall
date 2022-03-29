@@ -15,6 +15,11 @@ from dnx_gentools.def_namedtuples import FW_OBJECT
 from dnx_iptools.cprotocol_tools import iptoi
 from dnx_iptools.protocol_tools import cidr_to_int
 
+
+__all__ = (
+    'initialize', 'ADDR_OBJ', 'SVC_OBJ', 'INVALID_OBJECT', 'MISSING_RULE'
+)
+
 debug = pprint.PrettyPrinter(indent=4).pprint
 
 _icon_to_type = {'border_inner': 'zone', 'tv': 'address', 'language': 'country', 'track_changes': 'service'}
@@ -33,7 +38,7 @@ class SVC_OBJ(IntEnum):
     LIST = 3
 
 
-def _object_manager(object_list: list[FW_OBJECT]) -> ObjectManager:
+def object_manager(object_list: list[FW_OBJECT]) -> ObjectManager:
 
     _object_version: int = 0
     _object_definitions: list[FW_OBJECT] = copy(object_list)
@@ -97,7 +102,7 @@ def _object_manager(object_list: list[FW_OBJECT]) -> ObjectManager:
 
         return INVALID_OBJECT
 
-    class ObjectManager:
+    class _ObjectManager:
 
         __slots__ = ()
 
@@ -166,7 +171,10 @@ def _object_manager(object_list: list[FW_OBJECT]) -> ObjectManager:
             '''
             return _object_version, _object_definitions
 
-    return ObjectManager()
+    if (TYPE_CHECKING):
+        return _ObjectManager
+
+    return _ObjectManager()
 
 
 def initialize(home_dir: str) -> ObjectManager:
@@ -179,10 +187,10 @@ def initialize(home_dir: str) -> ObjectManager:
     formatted_object_list: list = []
     for obj in object_list:
 
-        # replacing subtype with int to compatibility with cfirewall
+        # replacing subtype with int to line up with cfirewall
         obj[4] = int(obj[4])
 
         formatted_object_list.append(FW_OBJECT(*obj))
 
-    return _object_manager(formatted_object_list)
+    return object_manager(formatted_object_list)
 

@@ -1,34 +1,46 @@
 #!/usr/bin/python3
 
-from typing import Optional
+from __future__ import annotations
+
+from typing import Optional, Any
 from ipaddress import IPv4Network, IPv4Address
 
 from dnx_gentools.def_constants import INVALID_FORM
-from dnx_gentools.def_enums import CFG, DATA
+from dnx_gentools.def_enums import CFG, DATA, DHCP
 from dnx_gentools.file_operations import ConfigurationManager, config, load_configuration, load_data
 
 from dnx_iptools.protocol_tools import mac_add_sep as mac_str
+
 from dnx_routines.configure.web_validate import ValidationError, standard, mac_address, ip_address, get_convert_int, get_convert_bint
 from dnx_routines.configure.system_info import System
 
-def load_page(form):
-    dhcp_server = load_configuration('dhcp_server')
-    dhcp_leases = load_data('dhcp_server.lease')
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from dnx_gentools.file_operations import ConfigChain
+
+
+def load_page(form) -> dict[str, Any]:
+    dhcp_server: ConfigChain = load_configuration('dhcp_server')
+    dhcp_leases: dict = load_data('dhcp_server.lease')
 
     leases = []
     for ip, (status, handout_time, mac, hostname) in dhcp_leases.items():
+
         # ensuring only leased status entries get included
-        if (status != -4): continue
+        if (status == DHCP.LEASED):
+            offset_time = System.calculate_time_offset(handout_time)
+            handout_time = System.format_date_time(offset_time)
 
-        offset_time = System.calculate_time_offset(handout_time)
-        handout_time = System.format_date_time(offset_time)
-
-        leases.append((ip, handout_time, mac_str(mac), hostname))
+            leases.append((ip, handout_time, mac_str(mac), hostname))
 
     leases.sort()
 
     dhcp_settings = {
-        'interfaces': dhcp_server.get_dict('interfaces'),
+        'interfaces': dhcp_server.get_dict('interfaces->builtins'),
         'reservations': [(mac_str(mac), info) for mac, info in dhcp_server.get_items('reservations')],
         'leases': leases
     }
@@ -116,15 +128,14 @@ def update_page(form):
 # ==============
 # VALIDATION
 # ==============
-
 def validate_dhcp_settings(settings: config, /) -> Optional[ValidationError]:
     if (settings.interface not in ['lan', 'dmz']):
         return ValidationError('Invalid interface referenced.')
 
     lease_range = settings.lease_range
 
-    # clamping range into lan/dmz class C's. this will have to change later if more control over interface
-    # configurations is implemented.
+    # clamping the valid range into lan/dmz class C's.
+    # this will have to change later if more control over interface configurations is implemented.
     for field in lease_range.values():
 
         if (field not in range(2, 255)):
@@ -147,7 +158,6 @@ def validate_reservation(res, /) -> Optional[ValidationError]:
 # ==============
 # CONFIGURATION
 # ==============
-
 def configure_dhcp_settings(dhcp_settings):
     with ConfigurationManager('dhcp_server') as dnx:
         dhcp_server_settings = dnx.load_configuration()

@@ -34,7 +34,8 @@ if (TYPE_CHECKING and not _DISABLED):
     from dnx_routines import *
     from dnx_secmods import *
     from dnx_netmods import *
-    from dnx_webui import *
+
+    from dnx_webui.source.main import *
 
     from dnx_iptools.packet_classes import NFPacket as _NFPacket
 

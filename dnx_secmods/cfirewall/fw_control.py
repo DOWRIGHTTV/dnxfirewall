@@ -42,7 +42,7 @@ class FirewallControl:
 
     Front end <> FirewallControl <file monitoring> FirewallControl <> CFirewall
 
-    rules = FirewallManage()
+    rules = FirewallControl()
     print(rules.view_ruleset())
 
     print(rules.view_ruleset('BEFORE'))
@@ -51,8 +51,9 @@ class FirewallControl:
     __slots__ = ()
 
     # store the main instances reference here, so it can be accessed throughout webui
-    cfirewall: ClassVar[CFirewall] = None
-    object_manager: ClassVar[ObjectManager] = None
+    # typing pisses me off sometimes. object_manager def is an attempt to make not show None or Any
+    cfirewall: ClassVar[FirewallControl] = None
+    object_manager: ClassVar[ObjectManager] = ObjectManager
 
     versions: ClassVar[list] = ['pending', 'active']
     sections: ClassVar[list] = ['BEFORE', 'MAIN', 'AFTER']

@@ -44,7 +44,7 @@ cpdef bytes calc_checksum(const uint8_t[:] data):
         uint8_t         ubytes[2]
 
         uint32_t        csum = 0
-        size_t          dlen = data.shape[0]
+        uint_fast16_t   dlen = data.shape[0]
 
     for i in range(0, dlen, 2):
         csum += (data[i] << 8 | data[i + 1])

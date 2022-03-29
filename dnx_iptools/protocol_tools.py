@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-import binascii
-
+from binascii import unhexlify
 from functools import partial
 from random import getrandbits
-from socket import socket, inet_aton, AF_INET, SOCK_RAW
+from socket import socket, AF_INET, SOCK_RAW
 from subprocess import run, CalledProcessError, DEVNULL
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import RUN_FOREVER, byte_join, dot_join, fast_time, UINT32_MAX
+from dnx_gentools.def_constants import RUN_FOREVER, byte_join, fast_time, UINT32_MAX
 from dnx_gentools.def_enums import PROTO
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import PR_ICMP_HDR
@@ -20,11 +19,11 @@ __all__ = (
 
     'icmp_reachable',
 
-    'itoip', 'iptoi', 'cidr_to_int',
+    'cidr_to_int',
     'domain_stob', 'mac_stob',
     'mac_add_sep', 'strtobit',
-    'create_dns_query_header', 'create_dns_response_header',
-    'parse_query_name', 'mhash'
+    'create_dns_query_header',
+    'parse_query_name'
 )
 
 btoia: Callable[[ByteString], int] = partial(int.from_bytes, byteorder='big', signed=False)
@@ -37,13 +36,13 @@ def icmp_reachable(host_ip: str) -> bool:
     except CalledProcessError:
         return False
 
-def itoip(ip: int, /) -> str:
-
-    return dot_join([f'{b}' for b in long_pack(ip)])
-
-def iptoi(ip: str, /) -> int:
-
-    return btoia(inet_aton(ip))
+# def itoip(ip: int, /) -> str:
+#
+#     return dot_join([f'{b}' for b in long_pack(ip)])
+#
+# def iptoi(ip: str, /) -> int:
+#
+#     return btoia(inet_aton(ip))
 
 def mac_add_sep(mac_address: str, sep: str = ':') -> str:
     string_mac = []
@@ -55,12 +54,11 @@ def mac_add_sep(mac_address: str, sep: str = ':') -> str:
 
 def mac_stob(mac_address: str) -> bytes:
 
-    return binascii.unhexlify(mac_address.replace(':', ''))
+    return unhexlify(mac_address.replace(':', ''))
 
 def strtobit(rule: str) -> int:
-    host_hash = hash(rule) & UINT32_MAX
 
-    return host_hash
+    return hash(rule) & UINT32_MAX
 
 def cidr_to_int(cidr: Union[str, int]) -> int:
 
@@ -123,87 +121,16 @@ def domain_stob(domain_name: str) -> bytes:
         byte_pack(len(part)) + part.encode('utf-8') for part in domain_name.split('.')
     ])
 
-    # root query (empty string) gets eval'd to length 0 and doesn't need a term byte. ternary will add term byte if the
-    # domain name is not a null value.
+    # root query (empty string) gets eval'd to length 0 and doesn't need a term byte.
+    # ternary will add term byte if the omain name is not a null value.
     return domain_bytes + b'\x00' if domain_name else domain_bytes
-
-# will create dns header specific to response. default resource record count is 1
-def create_dns_response_header(dns_id, record_count=1, *, rd=1, ad=0, cd=0, rc=0):
-
-    qr, op, aa, tc, ra, zz = 1, 0, 0, 0, 1, 0
-    f = (qr << 15) | (op << 11) | (aa << 10) | (tc << 9) | (rd << 8) | \
-        (ra <<  7) | (zz <<  6) | (ad <<  5) | (cd << 4) | (rc << 0)
-
-    return dns_header_pack(dns_id, f, 1, record_count, 0, 0)
 
 # will create dns header specific to request/query. default resource record count is 1, additional record count optional
 def create_dns_query_header(dns_id, arc=0, *, cd):
 
-    qr, op, aa, tc, rd, ra, zz, ad, rc = 0, 0, 0, 0, 1, 0, 0, 0, 0
-    f = (qr << 15) | (op << 11) | (aa << 10) | (tc << 9) | (rd << 8) | \
-        (ra <<  7) | (zz <<  6) | (ad <<  5) | (cd << 4) | (rc << 0)
+    bit_fields = (1 << 8) | (cd << 4)
 
-    return dns_header_pack(dns_id, f, 1, 0, 0, arc)
-
-def mhash(key: str, seed: int = 0x0):
-    '''Implements 32bit murmur3 hash.
-    '''
-    bkey = bytearray(key.encode('utf-8'))
-
-    length:  int = len(key)
-    nblocks: int = length // 4
-
-    h1: int = seed
-
-    c1: int = 0xcc9e2d51
-    c2: int = 0x1b873593
-
-    k1: int
-    for block_start in range(0, nblocks * 4, 4):
-        k1 = (bkey[block_start + 3] << 24 | bkey[block_start + 2] << 16 |
-              bkey[block_start + 1] << 8  | bkey[block_start + 0])
-
-        k1 = (c1 * k1) & 0xFFFFFFFF
-        k1 = (k1 << 15 | k1 >> 17) & 0xFFFFFFFF  # inlined ROTL32
-        k1 = (c2 * k1) & 0xFFFFFFFF
-
-        h1 ^= k1
-        h1 = (h1 << 13 | h1 >> 19) & 0xFFFFFFFF  # inlined ROTL32
-        h1 = (h1 * 5 + 0xe6546b64) & 0xFFFFFFFF
-
-    k2: int = 0
-    tail_index: int = nblocks * 4
-    tail_size: int = length & 3
-
-    if (tail_size >= 3):
-        k2 ^= bkey[tail_index + 2] << 16
-
-    if (tail_size >= 2):
-        k2 ^= bkey[tail_index + 1] << 8
-
-    if (tail_size >= 1):
-        k2 ^= bkey[tail_index + 0]
-
-    if (tail_size > 0):
-        k2 = (k2 * c1) & 0xFFFFFFFF
-        k2 = (k2 << 15 | k2 >> 17) & 0xFFFFFFFF  # inlined ROTL32
-        k2 = (k2 * c2) & 0xFFFFFFFF
-        h1 ^= k2
-
-    # FINAL MIX
-    h = h1 ^ length
-    h ^= h >> 16
-    h = (h * 0x85ebca6b) & 0xFFFFFFFF
-    h ^= h >> 13
-    h = (h * 0xc2b2ae35) & 0xFFFFFFFF
-    h ^= h >> 16
-    unsigned_val = h
-
-    if (not unsigned_val & 0x80000000):
-        return unsigned_val
-
-    else:
-        return -((unsigned_val ^ 0xFFFFFFFF) + 1)
+    return dns_header_pack(dns_id, bit_fields, 1, 0, 0, arc)
 
 
 icmp_header_template: Structure = PR_ICMP_HDR((('type', 8), ('code', 0)))
