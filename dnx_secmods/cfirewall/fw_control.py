@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 
 if (TYPE_CHECKING):
     from dnx_gentools.file_operations import ConfigChain
+    from dnx_webui import ObjectManager
 
 
 DEFAULT_VERSION: str = 'pending'
