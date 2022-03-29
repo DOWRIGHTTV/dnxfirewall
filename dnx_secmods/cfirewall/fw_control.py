@@ -14,8 +14,7 @@ from dnx_routines.logging.log_client import Log
 # ===============
 # TYPING IMPORTS
 # ===============
-from dnx_webui import ObjectManager
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if (TYPE_CHECKING):
     from dnx_gentools.file_operations import ConfigChain
@@ -51,9 +50,8 @@ class FirewallControl:
     __slots__ = ()
 
     # store the main instances reference here, so it can be accessed throughout webui
-    # typing pisses me off sometimes. object_manager def is an attempt to make not show None or Any
     cfirewall: ClassVar[FirewallControl] = None
-    object_manager: ClassVar[ObjectManager] = ObjectManager
+    object_manager: ClassVar[ObjectManager] = None
 
     versions: ClassVar[list] = ['pending', 'active']
     sections: ClassVar[list] = ['BEFORE', 'MAIN', 'AFTER']
