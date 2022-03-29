@@ -14,11 +14,11 @@ from dnx_routines.logging.log_client import Log
 # ===============
 # TYPING IMPORTS
 # ===============
+from dnx_webui import ObjectManager
 from typing import TYPE_CHECKING
 
 if (TYPE_CHECKING):
     from dnx_gentools.file_operations import ConfigChain
-    from dnx_webui import ObjectManager
 
 
 DEFAULT_VERSION: str = 'pending'
