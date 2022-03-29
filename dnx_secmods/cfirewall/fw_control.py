@@ -6,7 +6,7 @@ import os
 import shutil
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import HOME_DIR, ppt
+from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, write_configuration, calculate_file_hash
 
 from dnx_routines.logging.log_client import Log
@@ -26,7 +26,7 @@ DEFAULT_PATH: str = 'dnx_system/iptables'
 PENDING_RULE_FILE: str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/pending.firewall'
 ACTIVE_RULE_FILE:  str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/active.firewall'
 
-# short lived file that has cfirewall format rules and gets os.replace over active.firewall
+# short-lived file that has cfirewall format rules and gets os.replace over active.firewall
 PUSH_RULE_FILE: str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/push.firewall'
 
 # mirror of pending rule file as it was when pushed. used for change detection.
@@ -46,7 +46,6 @@ class FirewallControl:
     print(rules.view_ruleset())
 
     print(rules.view_ruleset('BEFORE'))
-
     '''
     __slots__ = ()
 
@@ -73,7 +72,7 @@ class FirewallControl:
         cls._firewall = firewall_rules
 
     @classmethod
-    def push(cls) -> tuple[bool, bool]:
+    def push(cls) -> bool:
         '''Copy the pending configuration to the active state.
 
         file changes are being monitored by Control class to load into cfirewall.
@@ -129,7 +128,7 @@ class FirewallControl:
         '''returns dict of requested "firewall_pending" ruleset in raw form.
 
         additional processing is required for webui or cli formats.
-        the section arg will change which ruleset is returned.
+        section arg will change which ruleset is returned.
         '''
 
         try:
