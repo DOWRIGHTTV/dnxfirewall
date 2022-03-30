@@ -62,7 +62,7 @@
                                         href="#wl-modal1-{{loop.index}}"><i class="material-icons">remove</i></a>
                                     <div id="wl-modal1-{{loop.index}}" class="modal">
                                         <div class="modal-content">
-                                            <h5 class="red-text">Are you sure you want to remove the whitelist rule? </h5>
+                                            <h5 class="{{modal_text_style}}">Are you sure you want to remove the whitelist rule? </h5>
                                         </div>
                                         <form action="/rules/overrides/whitelist" method="POST">
                                             <div class="modal-footer">

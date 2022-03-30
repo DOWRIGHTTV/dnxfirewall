@@ -53,7 +53,7 @@
                             <a class="waves-effect waves-light btn modal-trigger col s12" href="#dns-modal2">Update</a>
                             <div id="dns-modal2" class="modal">
                                 <div class="modal-content">
-                                    <h5 class="red-text">Changing DNS servers will restart the WAN interface. Continue?</h5>
+                                    <h5 class="{{modal_text_style}}">Changing DNS servers will restart the WAN interface. Continue?</h5>
                                 </div>
                                 <form action="/settings/dns" method="POST">
                                     <div class="modal-footer">
@@ -154,7 +154,7 @@
                                         href="#dns-modal3-{{loop.index}}"><i class="material-icons">remove</i></a>
                                     <div id="dns-modal3-{{loop.index}}" class="modal">
                                         <div class="modal-content">
-                                            <h5 class="red-text">Are you sure you want to remove the DNS Record?</h5>
+                                            <h5 class="{{modal_text_style}}">Are you sure you want to remove the DNS Record?</h5>
                                         </div>
                                         <form action="/settings/dns" method="POST">
                                             <div class="modal-footer">
@@ -222,7 +222,7 @@
                             </div>
                             <div id="dns-modal4" class="modal">
                                 <div class="modal-content">
-                                    <h5 class="red-text">Initiating DNS cache clear cannot be undone and can take a
+                                    <h5 class="{{modal_text_style}}">Initiating DNS cache clear cannot be undone and can take a
                                         few minutes to process. Are you sure you want to proceed?</h5>
                                 </div>
                                 <div class="modal-footer">

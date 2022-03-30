@@ -75,7 +75,7 @@
                                 <a class="waves-effect waves-light btn modal-trigger col s12" href="#ips-modal1">Update</a>
                                 <div id="ips-modal1" class="modal">
                                     <div class="modal-content">
-                                        <h5 class="red-text">Enabling DDOS Prevention will have a limited effect when
+                                        <h5 class="{{modal_text_style}}">Enabling DDOS Prevention will have a limited effect when
                                             there is no active NATs on WAN interface.</h5>
                                     </div>
                                     <div class="modal-footer">
@@ -178,7 +178,7 @@
                                     <a class="waves-effect waves-light btn modal-trigger col s12" href="#ips-modal2">Update</a>
                                     <div id="ips-modal2" class="modal">
                                         <div class="modal-content">
-                                            <h5 class="red-text">Enabling PortScan Logging/Prevention will have no effect
+                                            <h5 class="{{modal_text_style}}">Enabling PortScan Logging/Prevention will have no effect
                                                 when there is no active NATs on WAN interface.</h5>
                                         </div>
                                         <div class="modal-footer">
@@ -273,7 +273,7 @@
                                         href="#ips-modal3-{{loop.index}}"><i class="material-icons">remove</i></a>
                                     <div id="ips-modal3-{{loop.index}}" class="modal">
                                         <div class="modal-content">
-                                            <h5 class="red-text">Are you sure you want to remove the IPS whitelist rule?</h5>
+                                            <h5 class="{{modal_text_style}}">Are you sure you want to remove the IPS whitelist rule?</h5>
                                         </div>
                                         <form action="/intrusion/ips" method="POST">
                                             <input type="hidden" name="tab" value="2">
@@ -324,7 +324,7 @@
                                         href="#ips-modal4-{{loop.index}}"><i class="material-icons">remove</i></a>
                                     <div id="ips-modal4-{{loop.index}}" class="modal">
                                         <div class="modal-content">
-                                            <h5 class="red-text">Are you sure you want to remove the passively blocked host?</h5>
+                                            <h5 class="{{modal_text_style}}">Are you sure you want to remove the passively blocked host?</h5>
                                         </div>
                                         <form action="/intrusion/ips" method="POST">
                                             <input type="hidden" name="tab" value="3">

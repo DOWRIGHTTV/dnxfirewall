@@ -13,7 +13,7 @@ from dnx_routines.configure.web_validate import ValidationError, ip_address, net
 from dnx_routines.configure.iptables import IPTablesManager
 from dnx_routines.configure.system_info import System
 
-def load_page():
+def load_page(_):
     return {
         'dmz_dnat_rules': System.nat_rules(),
         'local_snat_rules': System.nat_rules(nat_type='SRCNAT')
@@ -21,7 +21,7 @@ def load_page():
 
 def update_page(form):
 
-    # action field is not required for some functions, so will not be hard validated
+    # the action field is not required for some functions, so it will not be hard checked
     action = form.get('action', DATA.MISSING)
 
     nat_type = form.get('nat_type', DATA.MISSING)
@@ -40,12 +40,11 @@ def update_page(form):
         'local_snat_rules': System.nat_rules(nat_type='SRCNAT')
     }
 
-    # print(f'RETURNING: {page_data}')
     return error, None, page_data
 
 # TODO: currently it is possible to put overlapping DNAT rules (same dst port, but different host port).
-#  this isnt normally an issue and could be left to the user, but the last one inserted with be
-#  the local port value, which if the lower rule, will be incorrect for portscan reject packets.
+#  this isnt normally an issue, but the last one inserted will be the local port value in cfg.
+#  if the more recent rule is the lower rule, it will be incorrect for portscan reject packets.
 #  a similar issue will also be for the local ports because they are flipped when loaded into the ips.
     # NOTE: a possible solution would be to store the wan ip/wan port and local ip/ local port in a tuple
     # or a splittable string. this could be the key/vals to the dict making each unique and would allow
@@ -119,7 +118,7 @@ def _snat_rules(action, form):
             return error.message
 
         with IPTablesManager() as iptables:
-           iptables.delete_nat(fields)
+            iptables.delete_nat(fields)
 
     else:
         return INVALID_FORM
@@ -127,7 +126,6 @@ def _snat_rules(action, form):
 # ===========
 # VALIDATION
 # ===========
-
 def validate_dnat_rule(rule, /, action) -> Optional[ValidationError]:
 
     if (action is CFG.ADD):
@@ -169,8 +167,8 @@ def validate_dnat_rule(rule, /, action) -> Optional[ValidationError]:
         except:
             return ValidationError(INVALID_FORM)
 
-        # tcp/udp checked first. if error, will check icmp format. if that doesn't match then
-        # exception is raised.
+        # check tcp/udp first, then icmp if it fails.
+        # if either fail, standard exception raised.
         try:
             open_protocol_settings[f'open_protocols->{rule.protocol}->{rule.port}']
         except:
@@ -191,14 +189,13 @@ def validate_snat_rule(rule, /, action: CFG) -> Optional[ValidationError]:
 # ==============
 # CONFIGURATION
 # ==============
-
 def configure_open_wan_protocol(nat: config, *, action: CFG) -> None:
     with ConfigurationManager('ips') as dnx:
         protocol_settings = dnx.load_configuration()
 
         if (action is CFG.ADD):
 
-            # if dst port is present protocol is tcp/udp
+            # if dst port is specified, protocol is tcp/udp
             if (nat.dst_port):
                 protocol_settings[f'open_protocols->{nat.protocol}->{nat.dst_port}'] = nat.host_port
 

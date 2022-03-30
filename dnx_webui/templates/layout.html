@@ -13,14 +13,15 @@
 </head>
 <body style="background-color:{% if session['dark_mode'] %} #263238 {% else %} #e0e0e0 {% endif %}">
     {% set tab_classes = 'tab col s4 l3 xl2 blue-grey-text lighten-3' -%}
-    {% set tab_text_color = 'blue-grey-text lighten-3' %}
+    {% set tab_text_color = 'blue-grey-text lighten-3' -%}
     {% set icon_tiny = 'height=25px width=25px' -%}
     {% set icon_small = 'height=52px width=52px' -%}
     {% set dash_icon_std = 'height=65px width=65px' -%}
     {% set dash_icon_zoom = 'height=100px width=100px' -%}
 
-    {% set nav_text_color = 'blue-grey-text darken-4' %}
+    {% set nav_text_color = 'blue-grey-text darken-4' -%}
     {% set icon_color = 'blue-grey-text' -%}
+    {% set modal_text_style = 'blue-grey-text center' -%}
 
     {% if session['dark_mode'] -%}
         <!-- dark mode enabled -->

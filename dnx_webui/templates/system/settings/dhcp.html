@@ -33,7 +33,8 @@
                                     <label>
                                         Off
                                         <input type="checkbox" name="server_enabled"
-                                            {% if dhcp_settings['interfaces'][interface]['enabled'] %} checked="checked" {% endif %}>
+                                            {% if dhcp_settings['interfaces']['builtins'][interface]['enabled'] %}
+                                               checked="checked" {% endif %}>
                                         <span class="lever"></span>
                                         On
                                     </label>
@@ -45,7 +46,8 @@
                                     <label>
                                         Disabled
                                         <input type="checkbox" name="icmp_check"
-                                            {% if dhcp_settings['interfaces'][interface]['icmp_check'] %} checked="checked" {% endif %}>
+                                            {% if dhcp_settings['interfaces']['builtins'][interface]['icmp_check'] %}
+                                               checked="checked" {% endif %}>
                                         <span class="lever"></span>
                                         Enabled
                                     </label>
@@ -55,12 +57,12 @@
                         <div class="row {{input_color}}">
                             <div class="input-field col s6">
                                 <input type="number" name="start" class="validate"
-                                       value="{{dhcp_settings['interfaces'][interface]['lease_range']['start']}}">
+                                       value="{{dhcp_settings['interfaces']['builtins'][interface]['lease_range']['start']}}">
                                 <label for="">Start</label>
                             </div>
                             <div class="input-field col s6">
                                 <input type="number" name="end" class="validate"
-                                       value="{{dhcp_settings['interfaces'][interface]['lease_range']['end']}}">
+                                       value="{{dhcp_settings['interfaces'['builtins']][interface]['lease_range']['end']}}">
                                 <label for="">End</label>
                             </div>
                         </div>
@@ -90,7 +92,7 @@
                                     <option value="DMZ">DMZ</option>
                                     <option value="LAN">LAN</option>
                                 </select>
-                                <label for="">Zone</label>
+                                <label for="">Interface</label>
                             </div>
                             <div class="input-field col s4 {{input_color}}">
                                 <input type="text" name="mac_address" class="validate" placeholder="aa:aa:aa:aa:aa:aa" required>
@@ -119,14 +121,15 @@
                     <h4 class="{{title_color}}">DHCP Reservations</h4>
                     <table class="striped centered">
                         <thead>
-                            <th></th>
-                            <th>Zone</th>
-                            <th>Mac Address</th>
-                            <th>IP Address</th>
-                            <th>Description</th>
+                            <tr>
+                                <th></th>
+                                <th>Interface</th>
+                                <th>Mac Address</th>
+                                <th>IP Address</th>
+                                <th>Description</th>
+                            </tr>
                         </thead>
                         <tbody>
-                            {% if dhcp_settings['reservations'] %}
                             {% for mac, info in dhcp_settings['reservations'] %}
                             <tr>
                                 <td>
@@ -134,7 +137,7 @@
                                         href="#dhcp-modal1-{{loop.index}}"><i class="material-icons">remove</i></a>
                                     <div id="dhcp-modal1-{{loop.index}}" class="modal">
                                         <div class="modal-content">
-                                            <h5 class="red-text">Are you sure you want to remove the DHCP reservation?</h5>
+                                            <h5 class="{{modal_text_style}}">Are you sure you want to remove the DHCP reservation?</h5>
                                         </div>
                                         <form action="system/settings/dhcp" method="POST">
                                             <div class="modal-footer">
@@ -151,14 +154,13 @@
                                 <td>{{info['ip_address']}}</td>
                                 <td>{{info['description']}}</td>
                             </tr>
-                            {% endfor %}
                             {% else %}
                             <tr>
                                 {% for i in range(5) %}
                                 <td></td>
                                 {% endfor %}
                             </tr>
-                            {% endif %}
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -190,7 +192,7 @@
                                         href="#dhcp-modal2-{{loop.index}}"><i class="material-icons">remove</i></a>
                                     <div id="dhcp-modal2-{{loop.index}}" class="modal">
                                         <div class="modal-content">
-                                            <h5 class="red-text">Are you sure you want to remove the DHCP lease?</h5>
+                                            <h5 class="{{modal_text_style}}">Are you sure you want to remove the DHCP lease?</h5>
                                         </div>
                                         <form action="system/settings/dhcp" method="POST">
                                             <div class="modal-footer">

@@ -29,15 +29,6 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% if not syslog_settings['syslog_servers'] %}
-                            <tr>
-                                <td></td>
-                                <td>Not Configured</td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                            </tr>
-                            {% else %}
                             {% for server in syslog_settings['syslog_servers'].values() %}
                             <tr>
                                 <td>
@@ -45,7 +36,7 @@
                                         href="#slog-modal1-{{loop.index}}"><i class="material-icons">remove</i></a>
                                     <div id="slog-modal1-{{loop.index}}" class="modal">
                                         <div class="modal-content">
-                                            <h5 class="red-text">Are you sure you want to remove the 'Syslog Server'?
+                                            <h5 class="{{modal_text_style}}">Are you sure you want to remove the 'Syslog Server'?
                                             </h5>
                                         </div>
                                         <form action="/settings/syslog" method="POST">
@@ -61,23 +52,31 @@
                                 <td>{{server['ip_address']}}</td>
                                 <td>
                                     <!-- listing configured port also if fallback enabled -->
-                                    {% if syslog_settings['tls'] == 'Enabled' and syslog_settings['tcp_fallback'] %}
                                     <!-- checking tcp fallback -->
-                                    6514/{{server['port']}}</td>
-                                {% elif syslog_settings['tls'] == 'Enabled' and syslog_settings['udp_fallback'] %}
-                                <!-- checking udp fallback -->
-                                6514/{{server['port']}}</td>
-                                {% elif syslog_settings['tls'] %}
-                                <!--checking if tls is enabled -->
-                                6514</td> <!-- Syslog TLS Port -->
-                                {% elif server['port'] %}
-                                {{server['port']}}</td> <!-- configured solo listed if udp or tcp only enabled -->
-                                {% endif %}
+                                    {% if syslog_settings['tls'] == 'Enabled' and syslog_settings['tcp_fallback'] %}
+                                        6514/{{server['port']}}
+                                    <!-- checking udp fallback -->
+                                    {% elif syslog_settings['tls'] == 'Enabled' and syslog_settings['udp_fallback'] %}
+                                        6514/{{server['port']}}
+                                    <!-- checking if tls is enabled -->
+                                    {% elif syslog_settings['tls'] %}
+                                        6514
+                                    {% elif server['port'] %}
+                                        {{server['port']}}
+                                    {% endif %}
+                                </td>
                                 <td>{{server['reach']}}</td>
                                 <td>{{server['tls']}}</td>
                             </tr>
+                            {% else %}
+                            <tr>
+                                <td></td>
+                                <td>Not Configured</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
                             {% endfor %}
-                            {% endif %}
                         </tbody>
                     </table>
                 </div>
@@ -208,15 +207,15 @@
                             </div>
                         </div>
                         <div class="row">
-                            <div class="input-field col s0 m5 center"></div>
-                            <div class="input-field col s12 m2 center">
+                            <div class="input-field col s12 m2 offset-m5 center">
                                 <a class="waves-effect waves-light btn modal-trigger col s12" href="#slog-modal2-1"><i
                                         class="material-icons"></i>Update</a>
                                 <div id="slog-modal2-1" class="modal">
                                     <div class="modal-content">
-                                        <h5 class="red-text">Changing Syslog protocol settings can take a few minutes to
-                                            take effect. Restarting
-                                            the Syslog client manually will force the settings immediately.</h5>
+                                        <h5 class="{{modal_text_style}}">Changing Syslog protocol settings can take a
+                                            few minutes to take effect. Restarting  the Syslog client manually will
+                                            force the settings immediately.
+                                        </h5>
                                     </div>
                                     <div class="modal-footer">
                                         <button class="btn waves-effect waves-light">Continue</button>

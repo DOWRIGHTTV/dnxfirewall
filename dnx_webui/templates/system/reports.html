@@ -177,7 +177,7 @@
                                     <a class="btn-floating btn-small red waves-effect waves-light modal-trigger" href="#rep-modal1-{{loop.index}}"><i class="material-icons">remove</i></a>
                                     <div id="rep-modal1-{{loop.index}}" class="modal">
                                         <div class="modal-content">
-                                            <h5 class="red-text">Are you sure you want to remove the infected client from the list? Is it now clean?</h5>
+                                            <h5 class="{{modal_text_style}}">Are you sure you want to remove the infected client from the list? Is it now clean?</h5>
                                         </div>
                                         <form action="/system/reports" method="POST">
                                             <input type="hidden" name="menu" value="infected_clients/last">

@@ -1,6 +1,6 @@
 <div id="standard-error-modal" class="modal standard-error-modal">
-    <div class="modal-content center">
-        <h5 class="red-text">{{standard_error}}</h5>
+    <div class="modal-content">
+        <h5 class="{{modal_text_style}}">{{standard_error}}</h5>
     </div>
     <a class="btn-flat modal-close waves-effect waves-green right">OK</a>
 </div>
@@ -8,8 +8,8 @@
 document.addEventListener('DOMContentLoaded', () => {
     let modal = document.querySelector('.standard-error-modal');
 
-    if (!modal) return;
-
-    M.Modal.init(modal, {dismissible: false}).open();
+    if (modal) {
+        M.Modal.init(modal, {dismissible: false}).open();
+    }
 })
 </script>

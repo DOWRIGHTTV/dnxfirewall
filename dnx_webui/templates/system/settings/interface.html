@@ -81,11 +81,13 @@
                                 </div>
                                 <div id="wanint-modal2" class="modal">
                                     <div class="modal-content">
-                                        {% if not interface_settings['ip']['state'] %}
-                                        <h5 class="red-text">Setting WAN interface to DHCP will clear the IP configuration. Continue?</h5>
+                                        <h5 class="{{modal_text_style}}">
+                                        {% if interface_settings['ip']['state'] %}
+                                            Setting WAN interface to static requires manual IP address configuration. Continue?
                                         {% else %}
-                                        <h5 class="red-text">Setting WAN interface to static requires manual IP address configuration. Continue?</h5>
+                                            Setting WAN interface to DHCP will clear the IP configuration. Continue?
                                         {% endif %}
+                                        </h5>
                                     </div>
                                     <div class="modal-footer">
                                         <button class="btn waves-effect waves-light">YES</button>
@@ -119,7 +121,7 @@
                                         class="material-icons"></i>Update</a>
                                 <div id="wanint-modal3" class="modal">
                                     <div class="modal-content">
-                                        <h5 class="red-text">Changing the WAN MAC address will restart the interface. Continue?</h5>
+                                        <h5 class="{{modal_text_style}}">Changing the WAN MAC address will restart the interface. Continue?</h5>
                                     </div>
                                     <div class="modal-footer">
                                         <button class="btn waves-effect waves-light" name="wan_mac_update">YES</button>
@@ -135,7 +137,7 @@
                                     class="material-icons"></i>Revert</a>
                             <div id="wanint-modal4" class="modal">
                                 <div class="modal-content">
-                                    <h5 class="red-text">Reverting the WAN MAC address to default will restart the interface.
+                                    <h5 class="{{modal_text_style}}">Reverting the WAN MAC address to default will restart the interface.
                                         Continue?</h5>
                                 </div>
                                 <div class="modal-footer">
