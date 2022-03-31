@@ -10,6 +10,17 @@ from libc.stdint cimport uint8_t, uint32_t, uint_fast16_t
 DEF UINT8_MAX  = 255
 DEF UINT16_MAX = 65535
 
+cpdef uint32_t btoia(const uint8_t[:] cb):
+
+    cdef:
+        uint32_t i
+        uint32_t num = 0
+
+    for i in range(cb.shape[0]):
+        num += cb[i]
+
+    return num
+
 cpdef uint32_t iptoi(unicode ipa):
 
     bipa = ipa.encode('utf-8')

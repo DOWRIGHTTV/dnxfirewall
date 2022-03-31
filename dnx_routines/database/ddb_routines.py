@@ -33,7 +33,7 @@ from dnx_routines.configure.system_info import System as _System
 # ===============
 if (TYPE_CHECKING):
     from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, DNS_REQUEST_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG
-    from dnx_gentools.def_namedtuples import INFECTED_LOG
+    from dnx_gentools.def_namedtuples import INF_EVENT_LOG
 
 
 db = _db_conn.DBConnector

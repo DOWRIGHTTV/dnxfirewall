@@ -36,10 +36,10 @@ __all__ = (
     'get_arp_table'
 )
 
-NO_ADDRESS = -1
+NO_ADDRESS: int = -1
 
-_s = socket(AF_INET, SOCK_DGRAM)
-DESCRIPTOR = _s.fileno()
+_s: Socket = socket(AF_INET, SOCK_DGRAM)
+DESCRIPTOR: int = _s.fileno()
 
 # NOTE: this may no longer be needed even though it was recently overhauled. the inclusion of the excluded
 # filter in the load_interfaces() function should be able to replace this function. keep for now just in case.

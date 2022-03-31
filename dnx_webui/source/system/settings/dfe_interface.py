@@ -6,18 +6,29 @@ from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA, INTF
 from dnx_gentools.file_operations import load_configuration, config
 
-from dnx_routines.configure.web_validate import ValidationError, convert_int, ip_address, cidr
+from dnx_iptools.cprotocol_tools import itoip
+
+from dnx_routines.configure.web_validate import ValidationError, convert_int, ip_address
 from dnx_routines.configure.system_info import Interface
+
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from dnx_gentools.file_operations import ConfigChain
+
 
 _IP_DISABLED = True
 
-def load_page(form):
-    interface_settings = load_configuration('system')
+def load_page(_):
+    system_settings: ConfigChain = load_configuration('system')
 
-    wan_ident = interface_settings['interfaces->builtins->wan->ident']
-    wan_state = interface_settings['interfaces->builtins->wan->state']
-    default_mac = interface_settings['interfaces->builtins->wan->default_mac']
-    configured_mac = interface_settings['interfaces->builtins->wan->default_mac']
+    wan_ident = system_settings['interfaces->builtins->wan->ident']
+    wan_state = system_settings['interfaces->builtins->wan->state']
+    default_mac = system_settings['interfaces->builtins->wan->default_mac']
+    configured_mac = system_settings['interfaces->builtins->wan->default_mac']
 
     interface_settings = {
         'mac': {
@@ -26,9 +37,9 @@ def load_page(form):
         },
         'ip': {
             'state': wan_state,
-            'ip_address': f'{interface.get_ipaddress(interface=wan_ident)}',
-            'netmask': f'{interface.get_netmask(interface=wan_ident)}',
-            'default_gateway': Interface.default_gateway(wan_ident)
+            'ip_address': itoip(interface.get_ipaddress(interface=wan_ident)),
+            'netmask': itoip(interface.get_netmask(interface=wan_ident)),
+            'default_gateway': itoip(Interface.default_gateway(wan_ident))
         }
     }
 
