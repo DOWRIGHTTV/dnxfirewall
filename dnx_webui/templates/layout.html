@@ -46,14 +46,6 @@
     {# includes #}
     {% include 'includes/_header.html' %}
 
-    {% if navi %}
-        {% include 'includes/_fab.html' %}
-    {% endif -%}
-
-    {% if standard_error %}
-        {% include 'includes/_error_notify.html' %}
-    {% endif -%}
-
     {# materialize js #}
     <script src="{{url_for('static',filename='assets/js/materialize.min.js')}}"></script>
     <script>
@@ -61,31 +53,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             M.AutoInit();
         })
-
-        {# materialize overrides #}
-        document.addEventListener('DOMContentLoaded', () => {
-            let elems = document.querySelectorAll('.dropdown-trigger-hoverable');
-            M.Dropdown.init(elems, {
-                coverTrigger : false,
-                hover: true
-            });
-        })
-        document.addEventListener('DOMContentLoaded', () => {
-            let elems = document.querySelectorAll('.dropdown-trigger');
-            M.Dropdown.init(elems, {
-                coverTrigger : false
-            });
-        })
-        document.addEventListener('DOMContentLoaded', () => {
-            let elems = document.querySelectorAll('.fixed-action-btn');
-            M.FloatingActionButton.init(elems, {
-                // direction: 'left',
-                hoverEnabled: false,
-                closeOnClick: false,
-                constrainWidth: false
-            });
-        })
-
     </script>
     {# dnx custom table with filtering/striping #}
     {% if dnx_table %}
@@ -93,6 +60,7 @@
     {% endif -%}
 
     {# dnx custom ajax client by seeker1437 (WyteChocolate) #}
+    {# NOTE::: shouldnt this be in ajax if statement??? #}
     <script src="{{url_for('static',filename='assets/js/dnx_ajax_client.js')}}"></script>
     {% include 'includes/_ajax_error.html' %}
 
@@ -112,6 +80,7 @@
     <!-- vv AFTER PAGE TEMPLATE vv -->
 
     {%- if navi %}
+        {% include 'includes/_fab.html' %}
         {# custom functions for client side functionality. tied to nav since any page with nav, these will apply #}
         <script>
             function activeTab(n) {
@@ -123,6 +92,10 @@
                 document.getElementById("timeout-menu").innerHTML = "<input type=hidden name=menu value=" + n + ">";
             }
         </script>
+    {% endif -%}
+
+    {% if standard_error %}
+        {% include 'includes/_error_notify.html' %}
     {% endif -%}
 
     {% if idle_timeout %}

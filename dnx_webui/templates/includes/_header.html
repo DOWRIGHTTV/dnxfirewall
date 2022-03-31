@@ -2,8 +2,8 @@
     <nav class="blue-grey">
         <div class="container">
             <div class="nav-wrapper">
-                <a href="dashboard" class="brand-logo valign-center"><img src="/static/assets/images/dnxlogo_v2.png"
-                                                                          height="40px" style="display: block;">
+                <a href="dashboard" class="brand-logo valign-center">
+                    <img src="/static/assets/images/dnxlogo_v2.png" height="40px" style="display: block;">
                 </a>
                 {%- if navi %}
                     <a href="dashboard" data-target="mobile-nav" class="sidenav-trigger show-mobile-menu">
@@ -17,28 +17,28 @@
                                 </a>
                             </li>
                             <li {% if uri_path[0] == 'rules' %} class='active' {% endif %}>
-                                <a class="dropdown-trigger-hoverable no-autoinit" data-target="rules-dropdown">
+                                <a class="dropdown-trigger-hoverable" data-target="rules-dropdown">
                                     <i class="material-icons  left">security</i>
                                     Rules
                                     <i class="material-icons right">arrow_drop_down</i>
                                 </a>
                             </li>
                             <li {% if uri_path[0] == 'intrusion' %} class='active' {% endif %}>
-                                <a class="dropdown-trigger-hoverable no-autoinit" data-target="intrusion-dropdown">
+                                <a class="dropdown-trigger-hoverable" data-target="intrusion-dropdown">
                                     <i class="material-icons green-text lighten-2 left">fingerprint</i>
                                     Intrusion
                                     <i class="material-icons right">arrow_drop_down</i>
                                 </a>
                             </li>
                             <li {% if uri_path[0] == 'system' %} class='active' {% endif %}>
-                                <a class="dropdown-trigger-hoverable no-autoinit" data-target="system-dropdown">
+                                <a class="dropdown-trigger-hoverable" data-target="system-dropdown">
                                     <i class="material-icons grey-text lighten-3 left">computer</i>
                                     System
                                     <i class="material-icons right">arrow_drop_down</i>
                                 </a>
                             </li>
                             <li>
-                                <a class="dropdown-trigger-hoverable no-autoinit" data-target="device-dropdown">
+                                <a class="dropdown-trigger-hoverable" data-target="device-dropdown">
                                     <i class="material-icons green-text accent-3 left">power_settings_new</i>
                                     Device
                                     <i class="material-icons right">arrow_drop_down</i>
@@ -100,8 +100,9 @@
             </a>
         </li>
         <li {% if uri_path[1] == 'overrides' %} class='active' {% endif %}>
-            <a class="dropdown-trigger-hoverable dropdown-trigger-nested no-autoinit expand grey-text" data-target="overrides-dropdown">
-                <i class="material-icons fuck grey-text">donut_small</i>
+            <a class="dropdown-trigger-hoverable dropdown-trigger-nested expand grey-text"
+                data-target="overrides-dropdown">
+                <i class="material-icons grey-text">donut_small</i>
                 Overrides
                 <i class="material-icons grey-text right">chevron_right</i>
             </a>
@@ -128,7 +129,8 @@
             </a>
         </li>
         <li {% if uri_path[1] == 'domain' %} class='active' {% endif %}>
-            <a href="intrusion/domain" class="dropdown-trigger-hoverable dropdown-trigger-nested no-autoinit {{ nav_text_color }}" data-target="domain-dropdown" data-hover="hover">
+            <a href="intrusion/domain" class="dropdown-trigger-hoverable dropdown-trigger-nested
+                {{ nav_text_color }}" data-target="domain-dropdown" data-hover="hover">
                 <i class="material-icons {{ icon_color }} left">dns</i>
                 Domain
                 <i class="material-icons right {{ icon_color }}">chevron_right</i>
@@ -151,10 +153,11 @@
     {# SYSTEM DROPDOWN - TIER 2#}
     <ul id="system-dropdown" class="dropdown-content dropdown-content-trigger">
         <li {% if uri_path[1] == 'settings' %} class='active' {% endif %}>
-            <a class="dropdown-trigger-hoverable dropdown-trigger-nested no-autoinit expand grey-text" data-target="settings-dropdown">
-                <i class="material-icons grey-text accent-2 left">settings</i>
+            <a class="dropdown-trigger-hoverable dropdown-trigger-nested expand black-text"
+                data-target="settings-dropdown">
+                <i class="material-icons black-text accent-2 left">settings</i>
                 Settings
-                <i class="material-icons grey-text right">chevron_right</i>
+                <i class="material-icons black-text right">chevron_right</i>
             </a>
         </li>
         <li {% if uri_path[1] == 'logs' %} class='active' {% endif %}>
@@ -236,28 +239,28 @@
             </a>
         </li>
         <li {% if uri_path[0] == 'intrusion' %} class='active' {% endif %}>
-            <a class="dropdown-trigger-hoverable no-autoinit {{ nav_text_color }}" data-target="sidenav-advanced-dropdown">
+            <a class="dropdown-trigger-hoverable {{ nav_text_color }}" data-target="sidenav-advanced-dropdown">
                 <i class="material-icons red-text lighten-2 left">security</i>
                 Advanced
                 <i class="material-icons right">arrow_drop_down</i>
             </a>
         </li>
         <li {% if uri_path[0] == 'system' %} class='active' {% endif %}>
-            <a class="dropdown-trigger-hoverable no-autoinit {{ nav_text_color }}" data-target="sidenav-system-dropdown">
+            <a class="dropdown-trigger-hoverable {{ nav_text_color }}" data-target="sidenav-system-dropdown">
                 <i class="material-icons left">computer</i>
                 System
                 <i class="material-icons grey-text accent-2 right">arrow_drop_down</i>
             </a>
         </li>
         <li {% if uri_path[0] == 'settings' %} class='active' {% endif %}>
-            <a class="dropdown-trigger-hoverable no-autoinit {{ nav_text_color }}" data-target="sidenav-settings-dropdown">
+            <a class="dropdown-trigger-hoverable {{ nav_text_color }}" data-target="sidenav-settings-dropdown">
                 <i class="material-icons left">settings</i>
                 Settings
                 <i class="material-icons grey-text accent-2 right">arrow_drop_down</i>
             </a>
         </li>
         <li {% if uri_path[0] == 'device' %} class='active' {% endif %}>
-            <a class="dropdown-trigger-hoverable no-autoinit {{ nav_text_color }}" data-target="sidenav-device-dropdown">
+            <a class="dropdown-trigger-hoverable {{ nav_text_color }}" data-target="sidenav-device-dropdown">
                 <i class="material-icons green-text accent-3 left">power_settings_new</i>
                 Device
                 <i class="material-icons right">arrow_drop_down</i>
@@ -392,3 +395,12 @@
     </ul>
 {% endif %}
 {% endif %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        let elems = document.querySelectorAll('.dropdown-trigger-hoverable');
+        M.Dropdown.init(elems, {
+            coverTrigger : false,
+            hover: true
+        });
+    })
+</script>
