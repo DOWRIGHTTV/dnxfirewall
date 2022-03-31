@@ -1,6 +1,6 @@
 <!-- idle timeout notification popup
 1.5 mil: 25 min, 1.8 mil: 30 min -->
-<div id="idle-timeout-modal" class="modal-idle-timeout">
+<div id="idle-timeout-modal" class="modal idle-timeout-modal no-autoinit">
     <div class="modal-content">
         <h5 class="{{modal_text_style}}">Your session is about to expire. Do you need more time?</h5>
     </div>
@@ -21,7 +21,7 @@
     let initialLoad = false
 
     function idleTimeoutWarning() {
-        let timeoutNotify = document.querySelector('.modal-idle-timeout');
+        let timeoutNotify = document.querySelector('.idle-timeout-modal');
         let notifyInstance = M.Modal.init(timeoutNotify);
 
         notifyInstance.open();
@@ -45,10 +45,9 @@
 
         console.log('[server/response]: session renewed successfully.');
 
-        M.Modal.getInstance(document.querySelector('.modal-idle-timeout')).close();
+        M.Modal.getInstance(document.querySelector('.idle-timeout-modal')).close();
     }
-
-     document.addEventListener('DOMContentLoaded', activateTimers);
+    document.addEventListener('DOMContentLoaded', activateTimers);
 
     const refreshSession = new AjaxClient('refresh/session', activateTimers);
 </script>
