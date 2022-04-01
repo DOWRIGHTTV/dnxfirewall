@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from ipaddress import IPv4Network
+from ipaddress import IPv4Network, IPv4Address
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import INVALID_FORM

@@ -36,14 +36,6 @@ def icmp_reachable(host_ip: str) -> bool:
     except CalledProcessError:
         return False
 
-# def itoip(ip: int, /) -> str:
-#
-#     return dot_join([f'{b}' for b in long_pack(ip)])
-#
-# def iptoi(ip: str, /) -> int:
-#
-#     return btoia(inet_aton(ip))
-
 def mac_add_sep(mac_address: str, sep: str = ':') -> str:
     string_mac = []
     string_mac_append = string_mac.append

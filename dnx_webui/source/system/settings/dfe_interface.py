@@ -8,8 +8,7 @@ from dnx_gentools.file_operations import load_configuration, config
 
 from dnx_iptools.cprotocol_tools import itoip
 
-from dnx_routines.configure.web_validate import ValidationError, convert_int, ip_address
-from dnx_routines.configure.system_info import Interface
+from dnx_routines.configure.web_validate import ValidationError, convert_int, ip_address, default_gateway, cidr
 
 # ===============
 # TYPING IMPORTS
@@ -25,10 +24,10 @@ _IP_DISABLED = True
 def load_page(_):
     system_settings: ConfigChain = load_configuration('system')
 
-    wan_ident = system_settings['interfaces->builtins->wan->ident']
-    wan_state = system_settings['interfaces->builtins->wan->state']
-    default_mac = system_settings['interfaces->builtins->wan->default_mac']
-    configured_mac = system_settings['interfaces->builtins->wan->default_mac']
+    wan_ident: str = system_settings['interfaces->builtins->wan->ident']
+    wan_state: int = system_settings['interfaces->builtins->wan->state']
+    default_mac:    str = system_settings['interfaces->builtins->wan->default_mac']
+    configured_mac: str = system_settings['interfaces->builtins->wan->default_mac']
 
     interface_settings = {
         'mac': {
@@ -39,7 +38,7 @@ def load_page(_):
             'state': wan_state,
             'ip_address': itoip(interface.get_ipaddress(interface=wan_ident)),
             'netmask': itoip(interface.get_netmask(interface=wan_ident)),
-            'default_gateway': itoip(Interface.default_gateway(wan_ident))
+            'default_gateway': itoip(interface.default_route())
         }
     }
 
@@ -82,28 +81,29 @@ def update_page(form: dict):
         return 'wan interface configuration currently disabled for system rework.'
 
     elif ('wan_ip_update' in form):
-        wan_ip = form.get('ud_wan_ip', None)
-        cidr = form.get('ud_wan_cidr', None)
-        default_gateway = form.get('ud_wan_dfg', None)
-        # missing forms keys. potential client side manipulation
-        if any(x is None for x in [wan_ip, cidr, default_gateway]):
+        wan_settings = config(**{
+            'ip': form.get('ud_wan_ip', DATA.MISSING),
+            'cidr': form.get('ud_wan_cidr', DATA.MISSING),
+            'dfg': form.get('ud_wan_dfg', DATA.MISSING)
+        })
+
+        if (DATA.MISSING in wan_settings.values()):
             return INVALID_FORM
 
         if ('static_wan' in form):
-            # keys present, but fields left empty. (unable to force client side)
-            if (not wan_ip or not default_gateway):
+            # keys present, but fields left empty (unable to force client side).
+            # catching prior to validation to give a more graceful error response
+            if (not wan_settings.ip or not wan_settings.dfg):
                 return 'All fields are required when setting the wan interface to static.'
 
             try:
-                validate.ip_address(wan_ip)
-                validate.cidr(cidr)
-                validate.default_gateway(default_gateway)
+                ip_address(wan_settings.ip)
+                cidr(wan_settings.cidr)
+                default_gateway(wan_settings.dfg)
             except ValidationError as ve:
                 return ve
+
             else:
-                wan_settings = {
-                    'ip_address': wan_ip, 'cidr': cidr, 'default_gateway': default_gateway
-                }
                 interface.set_wan_interface(wan_settings)
 
         else:
@@ -116,7 +116,7 @@ def update_page(form: dict):
             return INVALID_FORM
 
         try:
-            validate.mac_address(mac_address)
+            mac_address(mac_address)
         except ValidationError as ve:
             return ve
         else:

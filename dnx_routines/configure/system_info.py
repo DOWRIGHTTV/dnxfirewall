@@ -22,6 +22,7 @@ __all__ = (
 util_shell = partial(run, shell=True, capture_output=True, text=True)
 Timestamp = Union[int, float]
 
+
 class Interface:
     '''This class is being deprecated and being replaced by the interface ops module in iptools dir.
     '''
@@ -47,15 +48,6 @@ class Interface:
             intstat[interface] = [rx, tx]
 #        print(intstat)
         return intstat
-
-    @staticmethod
-    def default_gateway(interface):
-        output = util_shell('ip route').stdout.splitlines(8)
-        for line in output:
-            if('default' in line):
-                dfg = line.split()[2]
-
-                return dfg
 
 
 class System:

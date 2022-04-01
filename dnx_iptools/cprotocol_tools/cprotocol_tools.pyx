@@ -71,3 +71,15 @@ cpdef bytes calc_checksum(const uint8_t[:] data):
     ubytes[1] = csum & UINT8_MAX
 
     return ubytes
+
+def default_route():
+    with open('/proc/net/route', 'r') as f:
+        f = f.readlines()[1:]
+        for line in f:
+            l = line.split()
+            if int(l[1], 16) or int(l[7], 16):
+                continue
+
+            return int(l[2], 16)
+
+        return 0
