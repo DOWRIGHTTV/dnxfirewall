@@ -13,40 +13,40 @@
                         <ul class="right remove-big-menu">
                             <li {% if uri_path[0] == 'dashboard' %} class='active' {% endif %}>
                                 <a href="dashboard">
-                                    <i class="material-icons grey-text left">dashboard</i>Dashboard
+                                    <i class="material-icons left grey-text text-lighten-1">dashboard</i>Dashboard
                                 </a>
                             </li>
                             <li {% if uri_path[0] == 'rules' %} class='active' {% endif %}>
                                 <a class="dropdown-trigger-hoverable" data-target="rules-dropdown">
-                                    <i class="material-icons  left">security</i>
+                                    <i class="material-icons left orange-text text-lighten-2">security</i>
                                     Rules
                                     <i class="material-icons right">arrow_drop_down</i>
                                 </a>
                             </li>
                             <li {% if uri_path[0] == 'intrusion' %} class='active' {% endif %}>
                                 <a class="dropdown-trigger-hoverable" data-target="intrusion-dropdown">
-                                    <i class="material-icons green-text lighten-2 left">fingerprint</i>
+                                    <i class="material-icons left brown-text text-lighten-2">fingerprint</i>
                                     Intrusion
                                     <i class="material-icons right">arrow_drop_down</i>
                                 </a>
                             </li>
                             <li {% if uri_path[0] == 'system' %} class='active' {% endif %}>
                                 <a class="dropdown-trigger-hoverable" data-target="system-dropdown">
-                                    <i class="material-icons grey-text lighten-3 left">computer</i>
+                                    <i class="material-icons left grey-text text-lighten-2">computer</i>
                                     System
                                     <i class="material-icons right">arrow_drop_down</i>
                                 </a>
                             </li>
                             <li>
                                 <a class="dropdown-trigger-hoverable" data-target="device-dropdown">
-                                    <i class="material-icons green-text accent-3 left">power_settings_new</i>
+                                    <i class="material-icons left green-text text-lighten-2">power_settings_new</i>
                                     Device
                                     <i class="material-icons right">arrow_drop_down</i>
                                 </a>
                             </li>
                             <li>
                                 <a href="logout">
-                                    <i class="material-icons orange-text lighten-1 left">logout</i>Logout
+                                    <i class="material-icons left red-text text-lighten-2">logout</i>Logout
                                 </a>
                             </li>
                         </ul>
@@ -100,11 +100,11 @@
             </a>
         </li>
         <li {% if uri_path[1] == 'overrides' %} class='active' {% endif %}>
-            <a class="dropdown-trigger-hoverable dropdown-trigger-nested expand grey-text"
+            <a class="dropdown-trigger-hoverable dropdown-trigger-nested expand {{ subnav_text_color }}"
                 data-target="overrides-dropdown">
-                <i class="material-icons grey-text">donut_small</i>
+                <i class="material-icons {{ icon_color }}">donut_small</i>
                 Overrides
-                <i class="material-icons grey-text right">chevron_right</i>
+                <i class="material-icons right {{ subnav_text_color }}">chevron_right</i>
             </a>
         </li>
     </ul>
@@ -131,9 +131,9 @@
         <li {% if uri_path[1] == 'domain' %} class='active' {% endif %}>
             <a href="intrusion/domain" class="dropdown-trigger-hoverable dropdown-trigger-nested
                 {{ nav_text_color }}" data-target="domain-dropdown" data-hover="hover">
-                <i class="material-icons {{ icon_color }} left">dns</i>
+                <i class="material-icons left {{ icon_color }}">dns</i>
                 Domain
-                <i class="material-icons right {{ icon_color }}">chevron_right</i>
+                <i class="material-icons right {{ subnav_text_color }}">chevron_right</i>
             </a>
         </li>
         <li {% if uri_path[1] == 'ips' %} class='active' {% endif %}>
@@ -153,11 +153,11 @@
     {# SYSTEM DROPDOWN - TIER 2#}
     <ul id="system-dropdown" class="dropdown-content dropdown-content-trigger">
         <li {% if uri_path[1] == 'settings' %} class='active' {% endif %}>
-            <a class="dropdown-trigger-hoverable dropdown-trigger-nested expand black-text"
+            <a class="dropdown-trigger-hoverable dropdown-trigger-nested expand {{ subnav_text_color }}"
                 data-target="settings-dropdown">
-                <i class="material-icons black-text accent-2 left">settings</i>
+                <i class="material-icons left {{ icon_color }}">settings</i>
                 Settings
-                <i class="material-icons black-text right">chevron_right</i>
+                <i class="material-icons right {{ subnav_text_color }}">chevron_right</i>
             </a>
         </li>
         <li {% if uri_path[1] == 'logs' %} class='active' {% endif %}>

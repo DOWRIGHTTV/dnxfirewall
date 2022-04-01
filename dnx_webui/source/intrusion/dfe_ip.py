@@ -9,8 +9,17 @@ from dnx_gentools.file_operations import ConfigurationManager, load_configuratio
 
 from dnx_routines.configure.web_validate import ValidationError, convert_int, get_convert_int, convert_bint
 
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from dnx_gentools.file_operations import ConfigChain
+
+
 def load_page(form: dict) -> dict:
-    ip_proxy: ConfigChain = load_configuration('ip_proxy')
+    proxy_settings: ConfigChain = load_configuration('ip_proxy')
     country_map: ConfigChain = load_configuration('geolocation', filepath='dnx_webui/data')
 
     # controlling whether to load defaults or user selected view. These are validated by the update function, so it is
@@ -21,11 +30,11 @@ def load_page(form: dict) -> dict:
     selected_region = set(country_map[f'{geo_region}->countries'])
 
     geolocation = [
-        (country, dir) for country, dir in ip_proxy.get_items('geolocation')
-        if country in selected_region and (dir == geo_direction or geo_direction == 4)
+        (country, direction) for country, direction in proxy_settings.get_items('geolocation')
+        if country in selected_region and (direction == geo_direction or geo_direction == 4)
     ]
 
-    tr_settings = ip_proxy['time_restriction->start'].split(':')
+    tr_settings = proxy_settings['time_restriction->start'].split(':')
 
     hour, minutes = int(tr_settings[0]), int(tr_settings[1])
     suffix = 'AM'
@@ -33,7 +42,7 @@ def load_page(form: dict) -> dict:
         hour -= 12
         suffix = 'PM'
 
-    tr_length = ip_proxy['time_restriction->length']
+    tr_length = proxy_settings['time_restriction->length']
 
     tr_length /= 3600
     tlen_hour = tr_length
@@ -47,11 +56,11 @@ def load_page(form: dict) -> dict:
     tr_settings = {
         'hour': hour, 'minutes': minutes, 'suffix': suffix,
         'length_hour': tlen_hour, 'length_minutes': tlen_minutes,
-        'enabled': ip_proxy['time_restriction->enabled']
+        'enabled': proxy_settings['time_restriction->enabled']
     }
 
     ipp_settings = {
-        'reputation': ip_proxy.get_items('reputation'),
+        'reputation': proxy_settings.get_items('reputation'),
         'tr_settings': tr_settings, 'regions': sorted(country_map.get_list()),
         'image_map': {0: 'allow_up-down.png', 1: 'block_up.png', 2: 'block_down.png', 3: 'block_up-down.png'},
         'geolocation': {
@@ -73,8 +82,7 @@ def update_page(form: dict) -> tuple[bool, WebError]:
         if (geo_direction not in range(5)):
             return False, {'error': 1, 'message': INVALID_FORM}
 
-        valid_regions = load_configuration('geolocation', filepath='dnx_webui/data')
-
+        valid_regions = load_configuration('geolocation', filepath='dnx_webui/data').get_list()
         if (form.get('region') not in valid_regions):
             return False, {'error': 2, 'message': INVALID_FORM}
 

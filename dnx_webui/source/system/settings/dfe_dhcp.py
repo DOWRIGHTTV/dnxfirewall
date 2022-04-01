@@ -23,7 +23,7 @@ if (TYPE_CHECKING):
     from dnx_gentools.file_operations import ConfigChain
 
 
-def load_page(form) -> dict[str, Any]:
+def load_page(_) -> dict[str, Any]:
     dhcp_server: ConfigChain = load_configuration('dhcp_server')
     dhcp_leases: dict = load_data('dhcp_server.lease')
 
