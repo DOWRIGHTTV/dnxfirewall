@@ -41,13 +41,14 @@ class ServerConfiguration(ConfigurationMixinBase):
     valid_idents: set[int] = {0}
 
     # initializing the lease table dictionary and providing a reference to the reservations dict
-    leases: Leases = Leases()
+    leases: Leases
 
     def _configure(self) -> tuple[LogHandler_T, tuple, int]:
         '''tasks required by the DHCP server.
 
         return thread information to be run.
         '''
+        self.__class__.leases = Leases()
         self._load_interfaces()
 
         threads = (
