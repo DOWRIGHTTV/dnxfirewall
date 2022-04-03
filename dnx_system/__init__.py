@@ -7,7 +7,7 @@ from __future__ import annotations
 # ================
 from dnx_gentools.def_constants import INITIALIZE_MODULE
 
-if INITIALIZE_MODULE('dhcp-server'):
+if INITIALIZE_MODULE('syscontrol'):
     __all__ = ('run',)
 
     from dnx_routines.logging import Log
