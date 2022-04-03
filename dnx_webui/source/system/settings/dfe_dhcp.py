@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
 from ipaddress import IPv4Network, IPv4Address
 
 from dnx_gentools.def_constants import INVALID_FORM
@@ -10,6 +9,7 @@ from dnx_gentools.def_enums import CFG, DATA, DHCP
 from dnx_gentools.def_namedtuples import DHCP_RECORD
 from dnx_gentools.file_operations import ConfigurationManager, config, load_configuration, load_data
 
+from dnx_iptools.cprotocol_tools import itoip
 from dnx_iptools.protocol_tools import mac_add_sep as mac_str
 
 from dnx_routines.configure.system_info import System
@@ -33,6 +33,9 @@ def load_page(_: Form) -> dict[str, Any]:
     leases = []
     for ip, _record in dhcp_leases.items():
         record = DHCP_RECORD(*_record)
+
+        # json key is str repr of int.
+        ip = itoip(int(ip))
 
         # ensuring only leased status entries get included
         if (record.rtype == DHCP.LEASED):
