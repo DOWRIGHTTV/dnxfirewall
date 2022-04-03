@@ -154,8 +154,8 @@ class ServerConfiguration(ConfigurationMixinBase):
         for intf_name, settings in dhcp_intfs:
 
             identity: str = settings['ident']
-            enabled:  int = settings['enabled']
-            check_ip: int = settings['icmp_check']
+            # enabled:  int = settings['enabled']
+            # check_ip: int = settings['icmp_check']
             ip_range: list = settings['lease_range']
 
             # converting interface ip address to an integer and associating it with the intf ident in the config.
@@ -171,7 +171,7 @@ class ServerConfiguration(ConfigurationMixinBase):
             # updating the interface information in server class settings object. these will never change while the
             # server is running. (the server must be restarted for interface ipaddress changes)
             self.interfaces[identity] = DHCP_INTERFACE(
-                [enabled, check_ip], intf_ip, intf_ip & intf_netmask, intf_netmask, ip_range, sock_refs, {}
+                [0, 0], intf_ip, intf_ip & intf_netmask, intf_netmask, ip_range, sock_refs, {}
             )
 
             # local server ips added to filter responses to other servers within the broadcast domain.
