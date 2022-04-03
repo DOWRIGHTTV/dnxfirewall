@@ -28,7 +28,7 @@ if (TYPE_CHECKING):
 
 def load_page(_: Form) -> dict[str, Any]:
     dhcp_server: ConfigChain = load_configuration('dhcp_server')
-    dhcp_leases: dict[str, tuple] = load_data('dhcp_server.lease')
+    dhcp_leases: dict[str, tuple] = load_data('dhcp_server.lease', filepath='dnx_system/data/usr/')
 
     leases = []
     for ip, _record in dhcp_leases.items():
