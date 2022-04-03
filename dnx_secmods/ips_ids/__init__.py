@@ -2,6 +2,28 @@
 
 from __future__ import annotations
 
+# ================
+# RUNTIME IMPORTS
+# ================
+from dnx_gentools.def_constants import INITIALIZE_MODULE
+
+if INITIALIZE_MODULE('ips-ids'):
+    __all__ = ('run',)
+
+    from dnx_gentools.def_enums import Queue
+
+    from ips_ids_log import Log
+
+    Log.run(name='ips')
+
+
+def run():
+    IPS_IDS.run(Log, q_num=Queue.IPS_IDS)
+
+
+# ================
+# TYPING IMPORTS
+# ================
 from typing import TYPE_CHECKING, Type
 
 if (TYPE_CHECKING):

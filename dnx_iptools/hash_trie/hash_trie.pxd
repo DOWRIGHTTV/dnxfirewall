@@ -19,7 +19,7 @@ cdef class HashTrie_Range:
 
     cdef uint8_t search(s, uint32_t trie_key, uint32_t host_id) nogil
     cdef inline uint32_t hash_key(s, uint32_t trie_key) nogil
-    cpdef void generate_structure(s, list py_trie, Py_ssize_t py_trie_len)
+    cpdef void generate_structure(s, list py_trie, size_t py_trie_len)
 
 
 cdef struct TrieMap_V:
@@ -35,6 +35,6 @@ cdef class HashTrie_Value:
         TrieMap_V  *TRIE_MAP
         uint32_t    max_width
 
-    cdef uint32_t search(s, uint32_t trie_key) nogil
-    cdef inline uint32_t hash_key(s, uint32_t trie_key) nogil
-    cpdef void generate_structure(s, list py_trie, Py_ssize_t py_trie_len)
+    cdef  uint32_t search(s, uint32_t trie_key) nogil
+    cdef  inline uint32_t hash_key(s, uint32_t trie_key) nogil
+    cpdef void generate_structure(s, list py_trie, size_t py_trie_len)

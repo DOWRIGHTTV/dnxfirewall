@@ -67,7 +67,7 @@ def looper(sleep_len: int, **kwargs):
 def dynamic_looper(loop_function: Callable):
     '''loop decorator that will sleep for the returned integer amount.
 
-    functions returning None will not sleep on next iter and returning "break" will cancel the loop.
+    functions returning None will not sleep on the next iter and returning "break" will cancel the loop.
     '''
     @wraps(loop_function)
     def wrapper(*args):

@@ -159,6 +159,9 @@ class DHCPServer(Listener):
         return l_sock
 
 
+# ==================
+# GENERAL FUNCTIONS
+# ==================
 def send_to_client(send_data: bytearray, client_request: ClientRequest, server_mtype: DHCP) -> None:
     if (server_mtype is DHCP.RENEWING):
         client_request.sendto(send_data, (f'{client_request.ciaddr}', 68))
@@ -176,5 +179,3 @@ def send_to_client(send_data: bytearray, client_request: ClientRequest, server_m
         client_request.sendto(send_data, (itoip(BROADCAST), 68))
 
         Log.debug(f'[response][broadcast] {client_request.handout_ip}')
-
-    # NOTE:

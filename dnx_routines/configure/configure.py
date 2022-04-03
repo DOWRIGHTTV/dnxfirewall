@@ -2,31 +2,7 @@
 
 from __future__ import annotations
 
-from dnx_gentools.file_operations import ConfigurationManager
-
-__all__ = (
-    'set_dns_servers'
-)
-
-# TODO: this needs to be redone.
-def set_dns_servers(dns_server_info):
-    field = {1: 'primary', 2: 'secondary'}
-
-    with ConfigurationManager('dns_server') as dnx:
-        dns_server_settings = dnx.load_configuration()
-
-        public_resolvers = dns_server_settings['resolvers']
-
-        for i, (server_name, ip_address) in enumerate(dns_server_info.items(), 1):
-            if (not server_name or not ip_address):
-                continue
-
-            public_resolvers[field[i]].update({
-                'name': server_name,
-                'ip_address': ip_address
-            })
-
-        dnx.write_configuration(dns_server_settings)
+# from dnx_gentools.file_operations import ConfigurationManager
 
 # def set_syslog_settings(syslog_settings):
 #     with ConfigurationManager('syslog_client') as dnx:

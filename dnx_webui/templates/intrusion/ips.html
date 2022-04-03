@@ -24,7 +24,7 @@
                     <h4 class="{{title_color}}">Denial Of Service</h4>
                     <form action="/intrusion/ips" method="POST">
                         <input type="hidden" name="tab" value="1">
-                        <input type="hidden" name="dnx_ddos_update">
+                        <input type="hidden" name="ddos_limits">
                         <div class="row">
                             <div class="input-field col s12 {{input_color}}">
                                 <p class="range-field">
@@ -58,34 +58,37 @@
                                 </p>
                             </div>
                         </div>
+                        <div class="input-field col s4">
+                            {% if ips_settings['ddos_notify'] %}
+                            <a class="waves-effect waves-light btn modal-trigger col s12" href="#ips-modal1">Update</a>
+                            <div id="ips-modal1" class="modal">
+                                <div class="modal-content">
+                                    <h5 class="{{modal_text_style}}">Enabling DDOS Prevention will have a limited effect when
+                                        there is no active NATs on WAN interface.</h5>
+                                </div>
+                                <div class="modal-footer">
+                                    <button class="btn waves-effect waves-light">Continue</button>
+                                    <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+                                </div>
+                            </div>
+                            {% else %}
+                            <button class="btn waves-effect waves-light col s12">Update</button>
+                            {% endif %}
+                        </div>
+                    </form>
+                    <form action="/intrusion/ips" method="POST">
+                        <input type="hidden" name="ddos">
                         <div class="row">
                             <div class="input-field col s7 center">
                                 <div class="switch">
                                     <label>
                                         Disabled
-                                        <input type="checkbox" {% if ips_settings['ddos']['enabled'] %}
-                                            checked="checked"  {% endif %} name="ddos" onchange="this.form.submit()">
+                                        <input type="checkbox" name="enabled" {% if ips_settings['ddos']['enabled'] %}
+                                            checked="checked" {% endif %} value="1" onchange="this.form.submit()">
                                         <span class="lever"></span>
                                         Enabled
                                     </label>
                                 </div>
-                            </div>
-                            <div class="input-field col s4">
-                                {% if ips_settings['ddos_notify'] %}
-                                <a class="waves-effect waves-light btn modal-trigger col s12" href="#ips-modal1">Update</a>
-                                <div id="ips-modal1" class="modal">
-                                    <div class="modal-content">
-                                        <h5 class="{{modal_text_style}}">Enabling DDOS Prevention will have a limited effect when
-                                            there is no active NATs on WAN interface.</h5>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button class="btn waves-effect waves-light">Continue</button>
-                                        <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                                    </div>
-                                </div>
-                                {% else %}
-                                <button class="btn waves-effect waves-light col s12">Update</button>
-                                {% endif %}
                             </div>
                         </div>
                     </form>

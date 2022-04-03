@@ -268,6 +268,7 @@ class IPTablesManager:
         shell(nat_rule, check=True)
 
     def delete_nat(self, rule: config) -> None:
+        print(rule.nat_type, rule.position)
         shell(f'sudo iptables -t nat -D {rule.nat_type} {rule.position}', check=True)
 
     def remove_passive_block(self, host_ip: str, timestamp: str) -> None:
@@ -303,7 +304,7 @@ class IPTablesManager:
         shell(f'sudo iptables -t {table} -A {chain} -s {itoip(ip_address)} -j DROP {comment}')
 
     @staticmethod
-    def proxy_del_rule(ip_address: int, timestamp: int, *, table: str, chain: str) -> None:
+    def proxy_del_rule(ip_address: str, timestamp: int, *, table: str, chain: str) -> None:
         '''remove an iptable rule from the passed in table and chain.
         '''
         comment = f'-m comment --comment {timestamp}'

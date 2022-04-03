@@ -18,7 +18,7 @@ from dnx_iptools.def_structs import dhcp_byte_pack as _dhcp_bp, dhcp_short_pack 
 from typing import TYPE_CHECKING
 
 if (TYPE_CHECKING):
-    from dnx_gentools.def_typing import Socket as _Socket, Address as _Address
+    from dnx_gentools.def_typing import Socket as _Socket, Address as _Address, Lock as _Lock
 
 # ================
 # BYTE CONTAINERS
@@ -41,12 +41,12 @@ class FW_OBJECT(_NamedTuple):
     value: str
     description: str = ''
 
-
 # DHCP SERVER
-DHCP_REQUEST_INFO = _namedtuple(
-    'dhcp_request_info', 'message_type, xID, server_identifier, mac_address, client_address, requested_ip'
-)
-DHCP_RESPONSE_INFO = _namedtuple('dhcp_response_info', 'xID mac_address ciaddr handout_ip options')
+# DHCP_REQUEST_INFO = _namedtuple(
+#     'dhcp_request_info', 'message_type, xID, server_identifier, mac_address, client_address, requested_ip'
+# )
+# DHCP_RESPONSE_INFO = _namedtuple('dhcp_response_info', 'xID mac_address ciaddr handout_ip options')
+
 
 _pack_map: dict[int, _Callable[[int, int, int], bytes]] = {1: _dhcp_bp, 2: _dhcp_sp, 4: _dhcp_lp}
 class DHCP_OPTION(_NamedTuple):
@@ -78,8 +78,6 @@ class RECORD_CONTAINER(_NamedTuple):
 SYSLOG_SERVERS = _namedtuple('syslog_servers', 'primary secondary')
 
 # DNS PROXY
-PROXY_DECISION = _namedtuple('proxy_decision', 'name decision')
-
 DNS_WHITELIST = _namedtuple('whitelist', 'dns ip')
 DNS_BLACKLIST = _namedtuple('blacklist', 'dns')
 class DNS_SERVERS(_NamedTuple):
@@ -119,9 +117,19 @@ class DNS_SEND(_NamedTuple):
 
 # IPS/IDS
 IPS_WAN_INFO = _namedtuple('ips_wan_info', 'interface ip mac')
-IPS_SCAN_RESULTS = _namedtuple('ips_scan_results', 'initial_block scan_detected block_status')
-PSCAN_TRACKERS = _namedtuple('portscan', 'lock tracker')
-DDOS_TRACKERS  = _namedtuple('ddos', 'lock tracker')
+
+class IPS_SCAN_RESULTS(_NamedTuple):
+    initial_block: bool
+    scan_detected: bool
+    block_status: _IPS
+
+class PSCAN_TRACKERS(_NamedTuple):
+    lock: _Lock
+    tracker: dict[_PROTO, dict]
+
+class DDOS_TRACKERS(_NamedTuple):
+    lock: _Lock
+    tracker: dict[_PROTO, dict]
 
 # IP PROXY
 class IPP_INSPECTION_RESULTS(_NamedTuple):

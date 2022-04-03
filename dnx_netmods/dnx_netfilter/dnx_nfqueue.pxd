@@ -6,9 +6,9 @@ from libc.stdint cimport uint_fast8_t, uint_fast16_t
 cdef extern from "<errno.h>":
     int errno
 
-# dummy defines from asm-generic/errno.h:
-cdef enum:
-    ENOBUFS = 105   # No buffer space available
+    # dummy defines from asm-generic/errno.h:
+    cdef enum:
+        ENOBUFS = 105  # No buffer space available
 
 cdef extern from "sys/socket.h":
     ssize_t recv(int __fd, void *__buf, size_t __n, int __flags) nogil
@@ -29,11 +29,11 @@ cdef extern from "pthread.h" nogil:
     ctypedef struct pthread_mutex_t:
         pass
 
-    cdef int pthread_mutex_init(pthread_mutex_t *, void *)
-    cdef int pthread_mutex_lock(pthread_mutex_t *)
-    cdef int pthread_mutex_trylock(pthread_mutex_t *)
-    cdef int pthread_mutex_unlock(pthread_mutex_t *)
-    cdef int pthread_mutex_destroy(pthread_mutex_t *)
+    cdef int pthread_mutex_init(pthread_mutex_t*, void*)
+    cdef int pthread_mutex_lock(pthread_mutex_t*)
+    cdef int pthread_mutex_trylock(pthread_mutex_t*)
+    cdef int pthread_mutex_unlock(pthread_mutex_t*)
+    cdef int pthread_mutex_destroy(pthread_mutex_t*)
 
 cdef extern from "netinet/in.h":
     uint32_t ntohl (uint32_t __netlong) nogil
@@ -87,29 +87,33 @@ cdef extern from "libnetfilter_queue/libnetfilter_queue.h":
     struct nfqnl_msg_packet_hw:
         uint8_t hw_addr[8]
 
-    nfq_handle *nfq_open()
-    int nfq_close(nfq_handle *h)
-    int nfq_destroy_queue(nfq_q_handle *qh)
-    int nfq_fd(nfq_handle *h) nogil
-    int nfq_set_queue_maxlen(nfq_q_handle *qh, uint32_t queuelen)
-    int nfq_set_mode(nfq_q_handle *qh, uint8_t mode, unsigned int len)
-    void q_set_queue_maxlen(nfq_q_handle *qh, uint32_t queuelen)
-    nfnl_handle *nfq_nfnlh(nfq_handle *h)
-
     ctypedef int *nfq_callback(nfq_q_handle *gh, nfgenmsg *nfmsg, nfq_data *nfad, void *data)
+
+    nfq_handle *nfq_open()
+
+    int nfq_fd(nfq_handle *h)
+    int nfq_close(nfq_handle *h)
+
+    nfnl_handle *nfq_nfnlh(nfq_handle *h)
     nfq_q_handle *nfq_create_queue(nfq_handle *h, uint16_t num, nfq_callback *cb, void *data)
 
+    int nfq_destroy_queue(nfq_q_handle *qh)
+    int nfq_set_mode(nfq_q_handle *qh, uint8_t mode, unsigned int len)
+    int nfq_set_queue_maxlen(nfq_q_handle *qh, uint32_t queuelen)
     int nfq_handle_packet(nfq_handle *h, char *buf, int len) nogil
-    int nfq_set_verdict(nfq_q_handle *qh, uint32_t id, uint32_t verdict, uint32_t data_len, unsigned char *buf) nogil
-    int nfq_set_verdict2(nfq_q_handle *qh, uint32_t id, uint32_t verdict, uint32_t mark,
-        uint32_t datalen, unsigned char *buf) nogil
 
     nfqnl_msg_packet_hdr *nfq_get_msg_packet_hdr(nfq_data *nfad) nogil
-    int nfq_get_payload(nfq_data *nfad, unsigned char **data) nogil
     nfqnl_msg_packet_hw *nfq_get_packet_hw(nfq_data *nfad) nogil
-    int nfq_get_nfmark (nfq_data *nfad) nogil
+
+    int nfq_get_payload(nfq_data *nfad, unsigned char ** data) nogil
+    int nfq_get_timestamp(nfq_data *nfad, timeval *tv) nogil
+    int nfq_get_nfmark(nfq_data *nfad) nogil
     uint8_t nfq_get_indev(nfq_data *nfad) nogil
-    uint8_t nfq_get_outdev(nfq_data *nfad) nogil
+    uint8_t nfq_get_outdev(nfq_data *nfad)
+
+    int nfq_set_verdict(nfq_q_handle *qh, uint32_t id, uint32_t verdict, uint32_t data_len, uint8_t *buf) nogil
+    int nfq_set_verdict2(
+            nfq_q_handle *qh, uint32_t id, uint32_t verdict, uint32_t mark, uint32_t datalen, uint8_t *buf) nogil
 
 
 # Dummy defines from linux/netfilter.h

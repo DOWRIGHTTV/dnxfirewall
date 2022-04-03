@@ -160,7 +160,7 @@ class DNSServer(ServerConfiguration, Listener):
             # if multiple requests are present, they will be yielded back until the queue is empty.
             for client_query in return_ready():
 
-                qname_cache = self._cache_available(client_query)
+                qname_cache = cache_available(client_query)
                 if (qname_cache is QNAME_NOT_FOUND):
                     self.handle_query(client_query)
 
@@ -187,18 +187,6 @@ class DNSServer(ServerConfiguration, Listener):
 
         return True
 
-    @staticmethod
-    def _cache_available(client_query: ClientQuery) -> QNAME_RECORD_UPDATE:
-        '''searches cache for query name.
-
-        if a cached record is found, a response will be generated and sent back to the client.
-        '''
-        # only A/CNAME records are cached and CNAME records are always attached to an A record query responses.
-        if (client_query.qtype != DNS.A or client_query.top_domain):
-            return QNAME_NOT_FOUND
-
-        return DNS_CACHE_SEARCH(client_query.qname)
-
     def _listener_sock(self, intf: str, intf_ip: int) -> Socket:
         l_sock: Socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -210,6 +198,9 @@ class DNSServer(ServerConfiguration, Listener):
         return l_sock
 
 
+# ==================
+# GENERAL FUNCTIONS
+# ==================
 def get_unique_id(request_map: dict, client_query: ClientQuery) -> int:
     '''DNS ID generation.
 
@@ -224,6 +215,17 @@ def get_unique_id(request_map: dict, client_query: ClientQuery) -> int:
                 request_map[dns_id] = client_query
 
                 return dns_id
+
+def cache_available(client_query: ClientQuery) -> QNAME_RECORD_UPDATE:
+    '''searches cache for query name.
+
+    if a cached record is found, a response will be generated and sent back to the client.
+    '''
+    # only A/CNAME records are cached and CNAME records are always attached to an A record query responses.
+    if (client_query.qtype != DNS.A or client_query.top_domain):
+        return QNAME_NOT_FOUND
+
+    return DNS_CACHE_SEARCH(client_query.qname)
 
 def send_to_client(client_query: ClientQuery, query_response: bytearray) -> None:
     try:

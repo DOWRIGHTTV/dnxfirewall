@@ -7,7 +7,7 @@ from dnx_gentools.def_constants import INVALID_FORM, space_join
 from dnx_gentools.def_enums import CFG
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
-from dnx_routines.configure.web_validate import convert_int, ValidationError
+from source.web_validate import convert_int, ValidationError
 from dnx_routines.configure.system_info import Services
 from dnx_routines.configure.iptables import IPTablesManager
 

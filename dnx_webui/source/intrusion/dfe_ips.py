@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
-from dnx_routines.configure.web_validate import ValidationError, convert_int, get_convert_int, get_convert_bint, ip_address, standard
 from dnx_routines.configure.system_info import System
 from dnx_routines.configure.iptables import IPTablesManager
 
-def load_page(form: dict) -> dict:
-    ips = load_configuration('ips_ids')
+from source.web_typing import *
+from source.web_validate import ValidationError, convert_int, get_convert_int, get_convert_bint, ip_address, standard
+
+
+def load_page(_: Form) -> dict:
+    ips: ConfigChain = load_configuration('ips_ids')
 
     passive_block_ttl = ips['passive_block_ttl']
     ids_mode = ips['ids_mode']
@@ -35,13 +37,13 @@ def load_page(form: dict) -> dict:
     ddos_notify = False if ddos['enabled'] or nats_configured else True
     ps_notify   = False if portscan['enabled'] or nats_configured else True
 
-    # converting standard timestamp to frontend readable string format
+    # converting standard timestamp to a frontend readable string format
     passively_blocked_hosts = []
     pbh = System.ips_passively_blocked()
     for host, timestamp in pbh:
         passively_blocked_hosts.append((host, timestamp, System.offset_and_format(timestamp)))
 
-    ips_settings = {
+    return {
         'enabled': ips_enabled, 'length': passive_block_ttl, 'ids_mode': ids_mode,
         'ddos': ddos, 'port_scan': portscan,
         'ddos_notify': ddos_notify, 'ps_notify': ps_notify,
@@ -50,32 +52,31 @@ def load_page(form: dict) -> dict:
         'passively_blocked_hosts': passively_blocked_hosts
     }
 
-    return ips_settings
+def update_page(form: Form) -> str:
+    print(form)
+    if ('ddos_limits' in form):
+        ddos_limits = config(**{
+            'tcp': get_convert_int(form, 'tcp_limit'),
+            'udp': get_convert_int(form, 'udp_limit'),
+            'icmp': get_convert_int(form, 'icmp_limit')
+        })
 
-def update_page(form: dict) -> Union[ValidationError, str]:
-    if ('dnx_ddos_update' in form):
-        action = CFG.ADD if 'ddos' in form else CFG.DEL
+        if (DATA.INVALID in ddos_limits.values()):
+            return INVALID_FORM
 
-        ddos_limits = config()
-        for protocol in ['tcp', 'udp', 'icmp']:
+        if not all([limit in range(5, 100) for limit in ddos_limits.values()]):
+            return f'protocol limits must be in within range 5-100.'
 
-            form_limit = form.get(f'{protocol}_limit', DATA.MISSING)
-            if (form_limit is DATA.MISSING):
-                return INVALID_FORM
+        configure_ddos_limits(ddos_limits)
 
-            limit = convert_int(form_limit)
-            if (limit is DATA.INVALID):
-                return f'{protocol} limit invalid.'
+    elif ('ddos' in form):
+        ddos = config(**{
+            'enabled': get_convert_bint(form, 'enabled')
+        })
+        if (DATA.INVALID in ddos.values()):
+            return INVALID_FORM
 
-            if (not 5 <= limit <= 200):
-                return f'{protocol} limit must be in range 5-200.'
-
-            ddos_limits[protocol] = limit
-
-        configure_ddos(action)
-
-        if (ddos_limits):
-            configure_ddos_limits(ddos_limits)
+        configure_ddos(ddos)
 
     elif ('dnx_portscan_update' in form):
         enabled_settings = config(**{
@@ -116,7 +117,7 @@ def update_page(form: dict) -> Union[ValidationError, str]:
             ip_address(whitelist.ip)
             standard(whitelist.name)
         except ValidationError as ve:
-            return ve
+            return ve.message
         else:
             configure_ip_whitelist(whitelist, action=CFG.ADD)
 
@@ -130,7 +131,7 @@ def update_page(form: dict) -> Union[ValidationError, str]:
         try:
             ip_address(whitelist.ip)
         except ValidationError as ve:
-            return ve
+            return ve.message
         else:
             configure_ip_whitelist(whitelist, action=CFG.DEL)
 
@@ -161,17 +162,19 @@ def update_page(form: dict) -> Union[ValidationError, str]:
     else:
         return INVALID_FORM
 
+    return ''
+
 # ==============
 # VALIDATION
 # ==============
 def validate_portscan_settings(settings: config, /) -> Optional[ValidationError]:
-    ips = load_configuration('ips')
+    ips: ConfigChain = load_configuration('ips_ids')
 
     current_prevention = ips['port_scan->enabled']
-    for item in settings:
-        if (item not in ['enabled', 'reject']):
-            raise ValidationError(INVALID_FORM)
+    if not all([hasattr(settings, x) for x in ['enabled', 'reject']]):
+        raise ValidationError(INVALID_FORM)
 
+    print(settings)
     if ('reject' in settings.enabled and 'drop' not in settings.enabled and not current_prevention):
         return ValidationError('Prevention must be enabled to configure portscan reject.')
 
@@ -182,44 +185,44 @@ def validate_passive_block_length(settings: config, /) -> Optional[ValidationErr
 # ==============
 # CONFIGURATION
 # ==============
-def configure_ddos(action: CFG):
-    with ConfigurationManager('ips') as dnx:
-        ips_settings = dnx.load_configuration()
+def configure_ddos(ddos: CFG) -> None:
+    with ConfigurationManager('ips_ids') as dnx:
+        ips_settings: ConfigChain = dnx.load_configuration()
 
-        ips_settings['ddos->enabled'] = action
+        ips_settings['ddos->enabled'] = ddos.enabled
 
         dnx.write_configuration(ips_settings.expanded_user_data)
 
-def configure_ddos_limits(ddos_limits: config):
-    with ConfigurationManager('ips') as dnx:
-        ips_settings = dnx.load_configuration()
+def configure_ddos_limits(ddos_limits: config) -> None:
+    with ConfigurationManager('ips_ids') as dnx:
+        ips_settings: ConfigChain = dnx.load_configuration()
 
         for protocol, limit in ddos_limits.items():
-            ips_settings[f'ddos->limits->source{protocol}'] = limit
+            ips_settings[f'ddos->limits->source->{protocol}'] = limit
 
         dnx.write_configuration(ips_settings.expanded_user_data)
 
-def configure_portscan(portscan: config):
-    with ConfigurationManager('ips') as dnx:
-        ips_settings = dnx.load_configuration()
+def configure_portscan(portscan: config) -> None:
+    with ConfigurationManager('ips_ids') as dnx:
+        ips_settings: ConfigChain = dnx.load_configuration()
 
         ips_settings['port_scan->enabled'] = get_convert_bint(portscan.enabled, 'enabled')
         ips_settings['port_scan->reject']  = get_convert_bint(portscan.enabled, 'reject')
 
         dnx.write_configuration(ips_settings.expanded_user_data)
 
-def configure_general_settings(settings: config, /):
-    with ConfigurationManager('ips') as dnx:
-        ips_settings = dnx.load_configuration()
+def configure_general_settings(settings: config, /) -> None:
+    with ConfigurationManager('ips_ids') as dnx:
+        ips_settings: ConfigChain = dnx.load_configuration()
 
         ips_settings['passive_block_ttl'] = settings.pb_length
         ips_settings['ids_mode'] = settings.ids_mode
 
         dnx.write_configuration(ips_settings.expanded_user_data)
 
-def configure_ip_whitelist(whitelist: config, *, action: CFG):
-    with ConfigurationManager('ips') as dnx:
-        ips_settings = dnx.load_configuration()
+def configure_ip_whitelist(whitelist: config, *, action: CFG) -> None:
+    with ConfigurationManager('ips_ids') as dnx:
+        ips_settings: ConfigChain = dnx.load_configuration()
 
         if (action is CFG.ADD):
             ips_settings[f'ip_whitelist->{whitelist.ip}'] = whitelist.name
@@ -229,9 +232,9 @@ def configure_ip_whitelist(whitelist: config, *, action: CFG):
 
         dnx.write_configuration(ips_settings.expanded_user_data)
 
-def configure_dns_whitelist(action: CFG):
-    with ConfigurationManager('ips') as dnx:
-        ips_settings = dnx.load_configuration()
+def configure_dns_whitelist(action: CFG) -> None:
+    with ConfigurationManager('ips_ids') as dnx:
+        ips_settings: ConfigChain = dnx.load_configuration()
 
         ips_settings['dns_servers'] = action
 

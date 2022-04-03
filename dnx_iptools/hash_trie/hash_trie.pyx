@@ -54,7 +54,7 @@ cdef class HashTrie_Range:
     cdef inline uint32_t hash_key(s, uint32_t trie_key) nogil:
         return trie_key % (s.max_width - 1)
 
-    cpdef void generate_structure(s, list py_trie, Py_ssize_t py_trie_len):
+    cpdef void generate_structure(s, list py_trie, size_t py_trie_len):
 
         cdef:
             size_t      i, xi
@@ -137,7 +137,7 @@ cdef class HashTrie_Value:
     cdef inline uint32_t hash_key(s, uint32_t trie_key) nogil:
         return trie_key % (s.max_width - 1)
 
-    cpdef void generate_structure(s, list py_trie, Py_ssize_t py_trie_len):
+    cpdef void generate_structure(s, list py_trie, size_t py_trie_len):
 
         cdef:
             size_t      i

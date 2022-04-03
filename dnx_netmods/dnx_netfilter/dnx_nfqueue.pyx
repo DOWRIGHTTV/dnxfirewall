@@ -6,8 +6,8 @@ from libc.stdlib cimport calloc, free
 from libc.stdio cimport printf
 from libc.stdint cimport uint8_t, uint16_t, uint32_t, uint_fast16_t, int32_t
 
-DEF OK  = 0
-DEF ERR = 1
+DEF Py_OK  = 0
+DEF Py_ERR = 1
 
 DEF NFQ_BUF_SIZE = 4096
 DEF MAX_COPY_SIZE = 4016 # 4096(buf) - 80
@@ -67,7 +67,7 @@ cdef inline int32_t nfqueue_forward(PacketData *dnx_nfqhdr, void *q_manager) wit
 
     nfqueue.proxy_callback(cpacket, dnx_nfqhdr.mark)
 
-    return OK
+    return Py_OK
 
 # ============================================
 # NFQUEUE RECV LOOP - NO GIL
@@ -361,13 +361,13 @@ cdef class NetfilterQueue:
         # qh->data = data;
         # ======================
         if (s.nfq_qh == NULL):
-            return ERR
+            return Py_ERR
 
         nfq_set_mode(s.nfq_qh, NFQNL_COPY_PACKET, MAX_COPY_SIZE)
         nfq_set_queue_maxlen(s.nfq_qh, DEFAULT_MAX_QUEUELEN)
         nfnl_rcvbufsiz(nfq_nfnlh(s.nfq_h), SOCK_RCV_SIZE)
 
-        return OK
+        return Py_OK
 
     def set_proxy_callback(s, object func_ref):
         '''Set required reference which will be called after packet data is parsed into C structs.

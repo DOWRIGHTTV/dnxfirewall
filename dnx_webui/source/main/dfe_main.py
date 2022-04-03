@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from datetime import timedelta
 
-import dnx_routines.configure.web_validate as validate
+import source.web_validate as validate
 
 from dnx_gentools.def_constants import HOME_DIR, FIVE_SEC, fast_time
 from dnx_gentools.def_enums import CFG, DATA
@@ -14,7 +12,6 @@ from dnx_gentools.def_exceptions import ValidationError
 from dnx_gentools.file_operations import load_configuration, ConfigurationManager
 
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
-
 from dnx_routines.logging import LogHandler as Log
 
 # ========================================
@@ -83,6 +80,7 @@ import source.system.dfe_services as dnx_services
 
 from source.main.dfe_authentication import Authentication, user_restrict
 
+
 # --------------------------------------------- #
 #  START OF NAVIGATION TABS
 # --------------------------------------------- #
@@ -99,7 +97,6 @@ def dnx_dashboard(session_data):
     }
 
     page_settings.update(session_data)
-    print(page_settings)
 
     return render_template('main/dashboard.html', **page_settings)
 
@@ -233,11 +230,10 @@ def intrusion_ip(session_data):
 def intrusion_ip_post(session_data):
 
     json_data = request.get_json(force=True)
-    print(json_data)
 
     status, err_data = ip_proxy.update_field(json_data)
 
-    print(f'[commit/response] status={status}, err_data={err_data}')
+    # print(f'[commit/response] status={status}, err_data={err_data}')
 
     return ajax_response(status=status, data=err_data)
 
@@ -264,11 +260,10 @@ def intrusion_domain(session_data):
 def intrusion_domain_post(session_data):
 
     json_data = request.get_json(force=True)
-    print(json_data)
 
     status, err_data = dns_proxy.update_page(json_data)
 
-    print(f'[commit/response] status={status}, err_data={err_data}')
+    # print(f'[commit/response] status={status}, err_data={err_data}')
 
     return ajax_response(status=status, data=err_data)
 
@@ -589,7 +584,7 @@ def dnx_login():
     if (session.get('user', None)):
         return redirect(url_for('dnx_dashboard'))
 
-    login_error = None
+    login_error = ''
     if (request.method == 'POST'):
         authenticated, username, user_role = Authentication.user_login(request.form, request.remote_addr)
 
@@ -608,7 +603,6 @@ def dnx_login():
     )
 
 @app.post('/refresh/session')
-@user_restrict('user', 'admin')
 @user_restrict('user', 'admin')
 def refresh_session(dnx_session):
 
@@ -657,8 +651,6 @@ def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
         page_settings[data_key] = dnx_page.load_page(request.form)
     except OSError as ose:
         return render_template(application_error_page, application_error=ose, **page_settings)
-
-    print(request.args, page_settings)
 
     return render_template(page_name, **page_settings)
 
@@ -732,7 +724,7 @@ def categories_page_logic(dnx_page, page_settings):
 def handle_system_action(page_settings):
     action = page_settings['action']
 
-    response = request.form.get(f'system_{action}', None)
+    response = request.form.get(f'system_{action}', '')
     if (response == 'YES'):
         page_settings.pop('control', None)
         page_settings.pop('user_role', None)
@@ -784,7 +776,7 @@ def ajax_response(*, status, data):
     if (not isinstance(status, bool)):
         raise TypeError('Ajax response status must be a boolean.')
 
-    print(jsonify({'success': status, 'result': data}))
+    # print(jsonify({'success': status, 'result': data}))
 
     return jsonify({'success': status, 'result': data})
 
@@ -870,7 +862,7 @@ def merge_items(a1, a2):
     return new_list
 
 def format_fw_obj(fw_obj, /):
-    print(fw_obj)
+
     properties = {
         'address': ['blue lighten-2', 'tv'], 'country': ['red', 'language'],
         'service': ['orange lighten-2', 'track_changes'], 'zone': ['purple lighten-2', 'border_inner']

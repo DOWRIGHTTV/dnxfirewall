@@ -9,38 +9,35 @@ from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
-from dnx_routines.configure.web_validate import ValidationError, ip_address, network_port
 from dnx_routines.configure.iptables import IPTablesManager
 from dnx_routines.configure.system_info import System
 
-def load_page(_):
+from source.web_typing import *
+from source.web_validate import ValidationError, ip_address, network_port, convert_int
+
+
+def load_page(_: Form):
     return {
         'dmz_dnat_rules': System.nat_rules(),
         'local_snat_rules': System.nat_rules(nat_type='SRCNAT')
     }
 
-def update_page(form):
+def update_page(form: Form) -> tuple[str, str]:
 
     # the action field is not required for some functions, so it will not be hard checked
     action = form.get('action', DATA.MISSING)
 
     nat_type = form.get('nat_type', DATA.MISSING)
     if (nat_type == 'DSTNAT'):
-        error = _dnat_rules(action, form)
+        error = _dnat_rules(form, action)
 
     elif (nat_type == 'SRCNAT'):
-        error = _snat_rules(action, form)
+        error = _snat_rules(form, action)
 
     else:
-        return INVALID_FORM, None, None
+        return INVALID_FORM, ''
 
-    # updating page data then returning to include the newly added configuration item.
-    page_data = {
-        'dmz_dnat_rules': System.nat_rules(),
-        'local_snat_rules': System.nat_rules(nat_type='SRCNAT')
-    }
-
-    return error, None, page_data
+    return error, ''
 
 # TODO: currently it is possible to put overlapping DNAT rules (same dst port, but different host port).
 #  this isnt normally an issue, but the last one inserted will be the local port value in cfg.
@@ -50,7 +47,7 @@ def update_page(form):
     # or a splittable string. this could be the key/vals to the dict making each unique and would allow
     # for any combination and still properly identify missed scans while also reliable generating reject
     # packets.
-def _dnat_rules(action, form):
+def _dnat_rules(form: Form, action: str) -> str:
 
     fields = config(**form)
     if (action == 'add'):
@@ -71,7 +68,7 @@ def _dnat_rules(action, form):
                     ip_address(fields.dst_ip)
 
             except ValidationError as ve:
-                return ve
+                return ve.message
 
         with IPTablesManager() as iptables:
             iptables.add_nat(fields)
@@ -79,6 +76,7 @@ def _dnat_rules(action, form):
             configure_open_wan_protocol(fields, action=CFG.ADD)
 
     elif (action == 'remove'):
+        fields.position = convert_int(fields.position)
 
         # NOTE: validation needs to know the zone, so it can ensure the position is valid
         error = validate_dnat_rule(fields, action=CFG.DEL)
@@ -93,7 +91,9 @@ def _dnat_rules(action, form):
     else:
         return INVALID_FORM
 
-def _snat_rules(action, form):
+    return ''
+
+def _snat_rules(form: Form, action: str) -> str:
     # TODO: make this code for snat (currently using dnat code as template)
 
     fields = config(**form)
@@ -106,12 +106,14 @@ def _snat_rules(action, form):
         try:
             ip_address(ip_iter=[fields.orig_src_ip, fields.new_src_ip])
         except ValidationError as ve:
-            return ve
+            return ve.message
 
         with IPTablesManager() as iptables:
             iptables.add_nat(fields)
 
     elif (action == 'remove'):
+        fields.position = convert_int(fields.position)
+
         # NOTE: validation needs to know the zone, so it can ensure the position is valid
         error = validate_snat_rule(fields, action=CFG.DEL)
         if (error):
@@ -123,11 +125,13 @@ def _snat_rules(action, form):
     else:
         return INVALID_FORM
 
+    return ''
+
 # ===========
 # VALIDATION
 # ===========
-def validate_dnat_rule(rule, /, action) -> Optional[ValidationError]:
-
+def validate_dnat_rule(rule: config, /, action: CFG) -> Optional[ValidationError]:
+    print(rule)
     if (action is CFG.ADD):
         # ensuring all necessary fields are present in the namespace before continuing.
         valid_fields = [
@@ -145,7 +149,7 @@ def validate_dnat_rule(rule, /, action) -> Optional[ValidationError]:
 
         if (rule.protocol == 'icmp'):
 
-            open_protocols = load_configuration('ips')
+            open_protocols: ConfigChain = load_configuration('ips_ids')
             if (open_protocols['open_protocols->icmp']):
                 return ValidationError(
                     'Only one ICMP rule can be active at a time. Remove existing rule before adding another.'
@@ -161,12 +165,12 @@ def validate_dnat_rule(rule, /, action) -> Optional[ValidationError]:
             return ValidationError('Selected rule is not valid and cannot be removed.')
 
         # validating fields for removing the associated open protocol/port from the tracker
-        open_protocol_settings = load_configuration('ips')
         try:
             rule.protocol, rule.port = rule.proto_port.split('/')
         except:
             return ValidationError(INVALID_FORM)
 
+        open_protocol_settings: ConfigChain = load_configuration('ips_ids')
         # check tcp/udp first, then icmp if it fails.
         # if either fail, standard exception raised.
         try:
@@ -175,7 +179,7 @@ def validate_dnat_rule(rule, /, action) -> Optional[ValidationError]:
             if (rule.protocol != 'icmp' and rule.port != '0'):
                 return ValidationError(INVALID_FORM)
 
-def validate_snat_rule(rule, /, action: CFG) -> Optional[ValidationError]:
+def validate_snat_rule(rule: config, /, action: CFG) -> Optional[ValidationError]:
 
     if (action is CFG.ADD):
         # ensuring all necessary fields are present in the namespace before continuing.
@@ -190,8 +194,8 @@ def validate_snat_rule(rule, /, action: CFG) -> Optional[ValidationError]:
 # CONFIGURATION
 # ==============
 def configure_open_wan_protocol(nat: config, *, action: CFG) -> None:
-    with ConfigurationManager('ips') as dnx:
-        protocol_settings = dnx.load_configuration()
+    with ConfigurationManager('ips_ids') as dnx:
+        protocol_settings: ConfigChain = dnx.load_configuration()
 
         if (action is CFG.ADD):
 

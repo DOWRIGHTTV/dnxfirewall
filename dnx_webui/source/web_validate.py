@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import re
+
 from ipaddress import IPv4Network, IPv4Address
 
-from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA, PROTO
 from dnx_gentools.file_operations import load_configuration
 from dnx_gentools.def_exceptions import ValidationError
+
+from source.web_typing import *
+
 
 MIN_PORT = 1
 MAX_PORT = 65535
@@ -40,7 +43,7 @@ _proto_map = {'any': 0, 'icmp': 1, 'tcp': 6, 'udp': 17}
 VALID_MAC = re.compile('(?:[0-9a-fA-F]:?){12}')
 VALID_DOMAIN = re.compile('(//|\\s+|^)(\\w\\.|\\w[A-Za-z0-9-]{0,61}\\w\\.){1,3}[A-Za-z]{2,6}')
 
-def get_convert_int(form: dict, key: str) -> Union[int, DATA]:
+def get_convert_int(form: Form, key: str) -> Union[int, DATA]:
     '''gets string value from submitted form then converts into an integer and returns.
 
     If key is not present or string cannot be converted, an IntEnum representing the error will be returned.'''
@@ -51,7 +54,7 @@ def get_convert_int(form: dict, key: str) -> Union[int, DATA]:
     except:
         return DATA.INVALID
 
-def get_convert_bint(form: dict, key: str) -> Union[int, DATA]:
+def get_convert_bint(form: Form, key: str) -> Union[int, DATA]:
     '''gets string value from submitted form and converts into an integer representation of bool.
 
     If the key is not present 0 (False) will be returned.
@@ -94,7 +97,7 @@ def check_digit(dig: str, /, *, default: Optional[str] = '1') -> str:
 
     return default
 
-def get_check_digit(form: dict, key: str, /, *, default: Optional[str] = '1') -> str:
+def get_check_digit(form: Form, key: str, /, *, default: Optional[str] = '1') -> str:
 
     value = form.get(key, default)
     if (value.isdigit()):

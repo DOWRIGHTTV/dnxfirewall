@@ -8,15 +8,8 @@ from dnx_gentools.file_operations import load_configuration, config
 
 from dnx_iptools.cprotocol_tools import itoip
 
-from dnx_routines.configure.web_validate import ValidationError, convert_int, ip_address, default_gateway, cidr
-
-# ===============
-# TYPING IMPORTS
-# ===============
-from typing import TYPE_CHECKING
-
-if (TYPE_CHECKING):
-    from dnx_gentools.file_operations import ConfigChain
+from source.web_typing import *
+from source.web_validate import ValidationError, convert_int, ip_address, default_gateway, cidr
 
 
 _IP_DISABLED = True
@@ -29,7 +22,7 @@ def load_page(_):
     default_mac:    str = system_settings['interfaces->builtins->wan->default_mac']
     configured_mac: str = system_settings['interfaces->builtins->wan->default_mac']
 
-    interface_settings = {
+    return {
         'mac': {
             'default': default_mac,
             'current': configured_mac if configured_mac else default_mac
@@ -41,8 +34,6 @@ def load_page(_):
             'default_gateway': itoip(interface.default_route())
         }
     }
-
-    return interface_settings
 
 def update_page(form: dict):
     if ('update_wan_state' in form):

@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from dnx_gentools.def_constants import INVALID_FORM, ppt
 from dnx_gentools.def_enums import DATA
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
-from dnx_routines.configure.web_validate import ValidationError, get_convert_bint
+from source.web_typing import *
+from source.web_validate import ValidationError, get_convert_bint
+
 
 # TODO: if system category gets disabled that had keyword enabled. it does not disable the keyword search.
-def load_page(form):
-    dns_proxy = load_configuration('dns_proxy')
+def load_page(_: Form):
+    dns_proxy: ConfigChain = load_configuration('dns_proxy')
 
     domain_settings = {
         'default': dns_proxy.get_items('categories->default'),
@@ -20,11 +20,10 @@ def load_page(form):
         'tld': dns_proxy.get_items('tld')
     }
 
-    ppt(domain_settings)
     return domain_settings
 
 # TODO: figure out how to refresh page or update keyword options after domain cat change
-def update_page(form: dict) -> tuple[bool, dict]:
+def update_page(form: Form) -> tuple[bool, dict]:
 
     ruleset = form.get('type', DATA.MISSING)
     if (ruleset is DATA.MISSING):
@@ -49,10 +48,9 @@ def update_page(form: dict) -> tuple[bool, dict]:
 # ==============
 # VALIDATION
 # ==============
-
 def validate_domain_categories(category: config, *, ruleset: str) -> Optional[ValidationError]:
 
-    dns_proxy = load_configuration('dns_proxy')
+    dns_proxy: ConfigChain = load_configuration('dns_proxy')
 
     if (ruleset in ['default', 'user_defined']):
         cat_list = dns_proxy.get_list(f'categories->{ruleset}')
@@ -69,7 +67,7 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[Va
         if (category.name not in domain_cats):
             return ValidationError(INVALID_FORM)
 
-        # ensuring url cat is enabled since it is a pre-req to enable keywords
+        # ensuring the associated url cat is enabled since it is a pre-req to enable keywords
         if (not dns_proxy[f'categories->default->{category.name}->enabled']):
             return ValidationError(INVALID_FORM)
 
@@ -85,10 +83,9 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[Va
 # ==============
 # CONFIGURATION
 # ==============
-
-def configure_domain_categories(category: config, *, ruleset):
+def configure_domain_categories(category: config, *, ruleset: str):
     with ConfigurationManager('dns_proxy') as dnx:
-        dns_proxy = dnx.load_configuration()
+        dns_proxy: ConfigChain = dnx.load_configuration()
 
         if (ruleset in ['default', 'user_defined']):
             if category.name in ['malicious', 'cryptominer']:

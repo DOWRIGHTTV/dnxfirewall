@@ -7,7 +7,7 @@ from dnx_gentools.def_enums import DATA
 from dnx_gentools.file_operations import load_data, config
 
 from dnx_routines.configure.system_info import System
-from dnx_routines.configure.web_validate import INVALID_FORM
+from source.web_validate import INVALID_FORM
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 
 def load_page(uri_query: Optional[dict] = None) -> tuple[list, str, str]:

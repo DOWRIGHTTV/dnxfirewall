@@ -31,7 +31,10 @@ DEF ANY_PROTOCOL = 0
 DEF COUNTRY_NOT_DEFINED = 0
 
 DEF OK  = 0
-DEF ERR = 1
+DEF ERR = -1
+
+DEF Py_OK  = 0
+DEF Py_ERR = 1
 
 DEF NO_MATCH = 0
 DEF MATCH = 1
@@ -120,9 +123,9 @@ cdef uint32_t *ATTACKER_BLOCKLIST = <uint32_t*>calloc(FW_MAX_ATTACKERS, sizeof(u
 
 cdef uint32_t BLOCKLIST_CUR_SIZE = 0 # if we decide to track size for appends
 
-# ================================== #
+# ==================================
 # PRIMARY INSPECTION LOGIC
-# ================================== #
+# ==================================
 cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
 
     # definitions or default assignments
@@ -226,7 +229,7 @@ cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
 
     # return heirarchy -> libnfnetlink.c >> libnetfiler_queue >> CFirewall._run.
     # < 0 vals are errors, but return is being ignored by CFirewall._run.
-    return OK
+    return Py_OK
 
 cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header, uint8_t direction) nogil:
 
@@ -267,9 +270,9 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
             if (not rule.enabled):
                 continue
 
-            # ------------------------------------------------------------------ #
+            # ------------------------------------------------------------------
             # ZONE MATCHING
-            # ------------------------------------------------------------------ #
+            # ------------------------------------------------------------------
             # currently tied to interface and designated LAN, WAN, DMZ
             if not zone_match(&rule.s_zones, hw.in_zone):
                 continue
@@ -277,33 +280,33 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
             if not zone_match(&rule.d_zones, hw.out_zone):
                 continue
 
-            # ------------------------------------------------------------------ #
+            # ------------------------------------------------------------------
             # GEOLOCATION or IP/NETMASK
-            # ------------------------------------------------------------------ #
+            # ------------------------------------------------------------------
             if not network_match(&rule.s_networks, iph_src_ip, src_country):
                 continue
 
             if not network_match(&rule.d_networks, iph_dst_ip, dst_country):
                 continue
 
-            # ------------------------------------------------------------------ #
+            # ------------------------------------------------------------------
             # PROTOCOL / PORT
-            # ------------------------------------------------------------------ #
+            # ------------------------------------------------------------------
             if not service_match(&rule.s_services, ip_header.protocol, ntohs(proto_header.s_port)):
                 continue
 
             if not service_match(&rule.d_services, ip_header.protocol, ntohs(proto_header.d_port)):
                 continue
 
-            # ------------------------------------------------------------------ #
+            # ------------------------------------------------------------------
             # VERBOSE MATCH OUTPUT | only showing matches due to too much output
-            # ------------------------------------------------------------------ #
+            # ------------------------------------------------------------------
             # if (VERBOSE):
             #     rule_print(&rule)
 
-            # ------------------------------------------------------------------ #
+            # ------------------------------------------------------------------
             # MATCH ACTION | return rule options
-            # ------------------------------------------------------------------ #
+            # ------------------------------------------------------------------
             # drop will inherently forward to the ip proxy for geo inspection and local dns records.
             results.fw_section = section_num
             results.action = rule.action
@@ -316,18 +319,18 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
 
             return results
 
-    # ------------------------------------------------------------------ #
+    # ------------------------------------------------------------------
     # DEFAULT ACTION
-    # ------------------------------------------------------------------ #
+    # ------------------------------------------------------------------
     results.fw_section = NO_SECTION
     results.action = DROP
     results.mark = tracked_geo << FOUR_BITS | direction << TWO_BITS | DROP
 
     return results
 
-# ================================== #
+# ==================================
 # Firewall Matching Functions
-# ================================== #
+# ==================================
 # attacker blocklist membership test
 cdef inline bint in_blocklist(uint32_t src_host) nogil:
 
@@ -473,9 +476,9 @@ cdef inline bint service_match(ServiceArray *svc_array, uint16_t pkt_protocol, u
     # default action
     return NO_MATCH
 
-# ================================== #
+# ==================================
 # PRINT FUNCTIONS
-# ================================== #
+# ==================================
 # NOTE: the integer casts are to clamp the struct fields to standard because they are implemented as fast_ints
 cdef inline void pkt_print(HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header) with gil:
     '''nested struct print of the passed in references using Python pretty printer.
@@ -511,18 +514,18 @@ cdef inline void obj_print(int name, void *obj) nogil:
         printf('svc_obj, protocol->%u, port->(%u, %u)\n',
                <uint8_t>svc_obj.protocol, <uint16_t>svc_obj.start_port, <uint16_t>svc_obj.end_port)
 
-# ================================== #
+# ==================================
 # C CONVERSION / INIT FUNCTIONS
-# ================================== #
+# ==================================
 DEF NFQ_BUF_SIZE = 2048
 
 cdef void process_traffic(nfq_handle *h) nogil:
 
     cdef:
-        ssize_t dlen
+        ssize_t  dlen
 
-        char packet_buf[NFQ_BUF_SIZE]
-        int fd = nfq_fd(h)
+        char     packet_buf[NFQ_BUF_SIZE]
+        int      fd = nfq_fd(h)
 
     printf(<char*>'<ready to process traffic>\n')
 
@@ -664,7 +667,7 @@ cdef class CFirewall:
     def set_options(s, int bypass, int verbose):
         global PROXY_BYPASS, VERBOSE
 
-        PROXY_BYPASS  = <bint>bypass
+        PROXY_BYPASS = <bint>bypass
         VERBOSE = <bint>verbose
 
         if (bypass):
@@ -672,6 +675,9 @@ cdef class CFirewall:
 
         if (verbose):
             print('<verbose console logging enabled>')
+
+    def api_run(s):
+        pass
 
     def nf_run(s):
         '''calls internal C run method to engage nfqueue processes.
@@ -688,7 +694,7 @@ cdef class CFirewall:
 
         s.qh = nfq_create_queue(s.h, queue_num, <nfq_callback*>cfirewall_rcv, <void*>s)
         if (s.qh == NULL):
-            return ERR
+            return Py_ERR
 
         nfq_set_mode(s.qh, NFQNL_COPY_PACKET, MAX_COPY_SIZE)
         nfq_set_queue_maxlen(s.qh, DEFAULT_MAX_QUEUELEN)
@@ -716,7 +722,7 @@ cdef class CFirewall:
         MSB = msb
         LSB = lsb
 
-        return OK
+        return Py_OK
 
     cpdef int update_zones(s, PyArray zone_map) with gil:
         '''acquires FWrule lock then updates the zone values by interface index.
@@ -734,7 +740,7 @@ cdef class CFirewall:
         pthread_mutex_unlock(&FWrulelock)
         printf(<char*>'[update/zones] released lock\n')
 
-        return OK
+        return Py_OK
 
     cpdef int update_ruleset(s, size_t ruleset, list rulelist) with gil:
         '''acquires FWrule lock then rewrites the corresponding section ruleset.
@@ -743,9 +749,9 @@ cdef class CFirewall:
         the GIL will be acquired before any code execution.
         '''
         cdef:
-            size_t i
-            dict fw_rule
-            size_t rule_count = len(rulelist)
+            size_t  i
+            dict    fw_rule
+            size_t  rule_count = len(rulelist)
 
         pthread_mutex_lock(&FWrulelock)
         printf(<char*>'[update/ruleset] acquired lock\n')
@@ -762,14 +768,13 @@ cdef class CFirewall:
         pthread_mutex_unlock(&FWrulelock)
         printf(<char*>'[update/ruleset] released lock\n')
 
-        return OK
+        return Py_OK
 
-    # TODO: see if this requires the gil
-    cpdef int remove_blockedlist(s, uint32_t host_ip):
+    cdef int remove_attacker(s, uint32_t host_ip):
 
         cdef:
-            size_t i, idx
-            uint32_t blocked_ip
+            size_t    i, idx
+            uint32_t  blocked_ip
 
         pthread_mutex_lock(&FWblocklistlock)
 
@@ -779,7 +784,7 @@ cdef class CFirewall:
 
             # reached end without host_ip match
             if (blocked_ip == END_OF_ARRAY):
-                return ERR
+                return Py_ERR
 
             # host_ip match, current idx will carry over to shift
             elif (blocked_ip == host_ip):
@@ -794,4 +799,4 @@ cdef class CFirewall:
 
         pthread_mutex_unlock(&FWblocklistlock)
 
-        return OK
+        return Py_OK

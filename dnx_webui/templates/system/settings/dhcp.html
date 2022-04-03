@@ -32,7 +32,8 @@
                                 <div class="switch">
                                     <label>
                                         Off
-                                        <input type="checkbox" name="server_enabled"
+                                        {% set val = "0" if dhcp_settings['interfaces'][interface]['enabled'] else "1" %}
+                                        <input type="checkbox" name="server_enabled" value="{{ val }}"
                                             {% if dhcp_settings['interfaces'][interface]['enabled'] %}
                                                checked="checked" {% endif %}>
                                         <span class="lever"></span>
@@ -45,9 +46,10 @@
                                 <div class="switch">
                                     <label>
                                         Disabled
-                                        <input type="checkbox" name="icmp_check"
+                                        {% set val = "0" if dhcp_settings['interfaces'][interface]['icmp_check'] else "1" %}
+                                        <input type="checkbox" name="icmp_check" value="{{ val }}"
                                             {% if dhcp_settings['interfaces'][interface]['icmp_check'] %}
-                                               checked="checked" {% endif %}>
+                                               checked="checked"{% endif %}>
                                         <span class="lever"></span>
                                         Enabled
                                     </label>

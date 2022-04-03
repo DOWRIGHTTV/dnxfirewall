@@ -11,7 +11,7 @@ from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import DATA
 from dnx_gentools.file_operations import load_configuration
 
-from dnx_routines.configure.web_validate import ValidationError, convert_int
+from source.web_validate import ValidationError, convert_int
 
 from dnx_secmods.cfirewall.fw_control import FirewallControl
 

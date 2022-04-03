@@ -8,7 +8,7 @@ from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import ConfigurationManager, config, load_configuration
 
 from dnx_routines.configure.system_info import System
-from dnx_routines.configure.web_validate import ValidationError, VALID_DOMAIN, get_convert_int, standard, ip_address
+from source.web_validate import ValidationError, VALID_DOMAIN, get_convert_int, standard, ip_address
 
 VALID_RULESETS = ['whitelist', 'blacklist']
 

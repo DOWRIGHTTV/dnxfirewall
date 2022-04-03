@@ -7,7 +7,7 @@ from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import DATA, GEO
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
-from dnx_routines.configure.web_validate import ValidationError, convert_int, get_convert_int, convert_bint
+from source.web_validate import ValidationError, convert_int, get_convert_int, convert_bint
 
 # ===============
 # TYPING IMPORTS

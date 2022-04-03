@@ -1,59 +1,51 @@
 #!/usr/bin/python3
 
-from typing import Optional
+from __future__ import annotations
 
-
-from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import ConfigurationManager, config, load_configuration
 
 from dnx_routines.configure.system_info import System
-from dnx_routines.configure.web_validate import ValidationError, VALID_DOMAIN, get_convert_bint
+
+from source.web_typing import *
+from source.web_validate import ValidationError, VALID_DOMAIN, get_convert_bint, standard, ip_address
 
 
-def load_page(form):
-    dns_server = load_configuration('dns_server')
-    dns_cache  = load_configuration('dns_server', ext_override='.cache')
+def load_page(_: Form) -> dict[str, Any]:
+    server_settings = load_configuration('dns_server')
+    server_cache    = load_configuration('dns_server', ext='.cache')
 
-    dns_settings = {
-        'dns_servers': System.dns_status(), 'dns_records': dns_server.get_items('records'),
-        'tls': dns_server['tls->enabled'], 'udp_fallback': dns_server['tls->fallback'],
-        'top_domains': dns_cache.get_items('top_domains'),
+    return {
+        'dns_servers': System.dns_status(), 'dns_records': server_settings.get_items('records'),
+        'tls': server_settings['tls->enabled'], 'udp_fallback': server_settings['tls->fallback'],
+        'top_domains': server_cache.get_items('top_domains'),
         'cache': {
-            'clear_top_domains': dns_cache['clear->top_domains'],
-            'clear_dns_cache': dns_cache['clear->standard']
+            'clear_top_domains': server_cache['clear->top_domains'],
+            'clear_dns_cache': server_cache['clear->standard']
         }
     }
 
-    return dns_settings
-
-def update_page(form):
+def update_page(form: Form) -> str:
     # TODO: i dont like this. fix this. i did a little, but more can be done
-
+    print(form)
     if ('dns_update' in form):
+
         dns_servers = config(**{
-            form.get('dnsname1', DATA.MISSING): form.get('dnsserver1', DATA.MISSING),
-            form.get('dnsname2', DATA.MISSING): form.get('dnsserver2', DATA.MISSING)
+            'primary': [form.get('dnsname1', DATA.MISSING), form.get('dnsserver1', DATA.MISSING)],
+            'secondary': [form.get('dnsname2', DATA.MISSING), form.get('dnsserver2', DATA.MISSING)]
         })
 
         # explicit identity check on None to prevent from matching empty fields vs missing for keys.
-        if (DATA.MISSING in [*dns_servers.keys(), *dns_servers.values()]):
+        if any([DATA.MISSING in x for x in dns_servers.values()]):
             return INVALID_FORM
 
-        try:
-            dns_server_info = {}
-            for i, (server_name, server_ip) in enumerate(dns_servers.items(), 1):
-                if (server_ip != ''):
-                    validate.standard(server_name)
-                    validate.ip_address(server_ip)
-
-                dns_server_info[form.get(f'dnsname{i}')] = form.get(f'dnsserver{i}')
-        except ValidationError as ve:
-            return ve
+        error = validate_dns_servers(dns_servers)
+        if (error):
+            return error.message
 
         else:
-            set_dns_servers(dns_server_info)
+            set_dns_servers(dns_servers)
 
     elif ('dns_record_update' in form):
         dns_record = config(**{
@@ -65,10 +57,10 @@ def update_page(form):
             return INVALID_FORM
 
         try:
+            ip_address(dns_record.ip)
             validate_dns_record(dns_record.name, action=CFG.ADD)
-            validate.ip_address(dns_record.ip)
         except ValidationError as ve:
-            return ve
+            return ve.message
 
         else:
             update_dns_record(dns_record)
@@ -84,25 +76,33 @@ def update_page(form):
 
         error = validate_dns_record(dns_record.name, action=CFG.DEL)
         if (error):
-            return error
+            return error.message
 
         update_dns_record(dns_record)
 
-    elif ('dns_protocol_update' in form):
-        print(form)
+    elif ('dns_over_tls' in form):
         protocol_settings = config(**{
-            'dns_over_tls': get_convert_bint(form, 'dns_over_tls'),
-            'udp_fallback': get_convert_bint(form, 'udp_fallback')
+            'enabled': get_convert_bint(form, 'enabled')
         })
-        print(protocol_settings)
-        if any([opt in [DATA.MISSING, DATA.INVALID] for opt in protocol_settings.values()]):
+
+        if (protocol_settings.enabled is DATA.INVALID):
             return INVALID_FORM
 
-        error = validate_proto_update(protocol_settings)
-        if (error):
-            return error
+        configure_protocol_options(protocol_settings, field='dot')
 
-        configure_protocol_options(protocol_settings)
+    elif ('udp_fallback' in form):
+        protocol_settings = config(**{
+            'fallback': get_convert_bint(form, 'fallback')
+        })
+        print(protocol_settings)
+        if (protocol_settings.fallback is DATA.INVALID):
+            return INVALID_FORM
+
+        error = validate_fallback_settings(protocol_settings)
+        if (error):
+            return error.message
+
+        configure_protocol_options(protocol_settings, field='fallback')
 
     elif ('dns_cache_clear' in form):
         clear_dns_cache = config(**{
@@ -110,7 +110,7 @@ def update_page(form):
             'dns_cache': get_convert_bint(form, 'dns_cache')
         })
 
-        # only one is required, so will only be invalid if both are missing.
+        # only one is required, so it will only be invalid if both are missing.
         if all([x is DATA.MISSING for x in clear_dns_cache.values()]):
             return INVALID_FORM
 
@@ -122,6 +122,17 @@ def update_page(form):
 # ==============
 # VALIDATION
 # ==============
+def validate_dns_servers(server_info: config) -> Optional[ValidationError]:
+
+    for server in server_info.values():
+        try:
+            standard(server[0])
+            ip_address(server[1])
+        except ValidationError as ve:
+            return ve
+
+    if server_info.primary[1] == server_info.secondary[1]:
+        return ValidationError('Server addresses must be unique.')
 
 def validate_dns_record(query_name: str, *, action: CFG) -> Optional[ValidationError]:
 
@@ -133,28 +144,39 @@ def validate_dns_record(query_name: str, *, action: CFG) -> Optional[ValidationE
     elif (action is CFG.DEL):
         dns_server = load_configuration('dns_server').searchable_user_data
 
-        if (query_name == 'dnx.rules'):
+        if (query_name == 'dnx.firewall'):
             return ValidationError('Cannot remove dnxfirewall dns record.')
 
         if (query_name not in dns_server['records']):
             return ValidationError(INVALID_FORM)
 
-def validate_proto_update(settings: config) -> Optional[ValidationError]:
+def validate_fallback_settings(settings: config) -> Optional[ValidationError]:
+    with ConfigurationManager('dns_server') as dnx:
+        server_settings: ConfigChain = dnx.load_configuration()
 
-    print(settings)
-    if any([x not in (0, 1) for x in settings.values()]):
-        return ValidationError(INVALID_FORM)
+        dot_enabled = server_settings['tls->enabled']
 
-    if (settings.udp_fallback and not settings.dns_over_tls):
+    if (settings.fallback and not dot_enabled):
         return ValidationError('DNS over TLS must be enabled to configure UDP fallback.')
 
 # ==============
 # CONFIGURATION
 # ==============
+def set_dns_servers(server_info: config) -> None:
+    with ConfigurationManager('dns_server') as dnx:
+        server_settings: ConfigChain = dnx.load_configuration()
+
+        server_settings['resolvers->primary->name'] = server_info.primary[0]
+        server_settings['resolvers->primary->ip_address'] = server_info.primary[1]
+
+        server_settings['resolvers->secondary->name'] = server_info.secondary[0]
+        server_settings['resolvers->secondary->ip_address'] = server_info.secondary[1]
+
+        dnx.write_configuration(server_settings.expanded_user_data)
 
 def update_dns_record(dns_record: config):
     with ConfigurationManager('dns_server') as dnx:
-        dns_records = dnx.load_configuration()
+        dns_records: ConfigChain = dnx.load_configuration()
 
         if (dns_record.action is CFG.ADD):
             dns_records[f'dns_server->records->{dns_record.name}'] = dns_record.ip
@@ -164,23 +186,26 @@ def update_dns_record(dns_record: config):
 
         dnx.write_configuration(dns_records.expanded_user_data)
 
-def configure_protocol_options(settings: config) -> None:
+def configure_protocol_options(settings: config, *, field: str) -> None:
     with ConfigurationManager('dns_server') as dnx:
-        dns_server_settings = dnx.load_configuration()
+        dns_server_settings: ConfigChain = dnx.load_configuration()
 
-        if (settings.udp_fallback and not settings.dns_over_tls):
-            settings.udp_fallback = 0
+        if (field == 'dot'):
+            dns_server_settings['tls->enabled'] = settings.enabled
 
-        dns_server_settings['tls->enabled'] = settings.dns_over_tls
-        dns_server_settings['tls->fallback'] = settings.udp_fallback
+            if (not settings.enabled):
+                dns_server_settings['tls->fallback'] = 0
+
+        elif (field == 'fallback'):
+            dns_server_settings['tls->fallback'] = settings.fallback
 
         dnx.write_configuration(dns_server_settings.expanded_user_data)
 
 def set_dns_cache_clear_flag(clear_cache):
-    with ConfigurationManager('dns_server') as dnx:
-        dns_server_settings = dnx.load_configuration()
+    with ConfigurationManager('dns_server', ext='.cache') as dnx:
+        dns_server_settings: ConfigChain = dnx.load_configuration()
 
-        dns_server_settings['dns_server->cache->standard'] = clear_cache.standard
-        dns_server_settings['dns_server->cache->top_domains'] = clear_cache.top_domains
+        dns_server_settings['clear->standard'] = clear_cache.standard
+        dns_server_settings['clear->top_domains'] = clear_cache.top_domains
 
         dnx.write_configuration(dns_server_settings.expanded_user_data)

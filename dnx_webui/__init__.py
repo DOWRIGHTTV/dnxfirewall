@@ -25,9 +25,11 @@ if (INITIALIZE_MODULE):
 # ===============
 # TYPING
 # ===============
-# primarily for type hints, but need it to be valid at runtime for this situation
-from dnx_gentools.def_namedtuples import FW_OBJECT
-from dnx_webui.source.main.dfe_obj_manager import object_manager
+from typing import TYPE_CHECKING
 
-fw_object = FW_OBJECT('id', 'name', 'origin', 'type', 0, 'value', 'description')
-ObjectManager = object_manager([fw_object])
+if (TYPE_CHECKING):
+    from dnx_gentools.def_namedtuples import FW_OBJECT
+    from dnx_webui.source.main.dfe_obj_manager import object_manager
+
+    fw_object = FW_OBJECT('id', 'name', 'origin', 'type', 0, 'value', 'description')
+    ObjectManager = object_manager([fw_object])

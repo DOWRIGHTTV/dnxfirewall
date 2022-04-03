@@ -5,7 +5,9 @@ from __future__ import annotations
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration
-from dnx_routines.configure.web_validate import ValidationError, standard
+
+from source.web_validate import ValidationError, standard, convert_int
+
 
 DISABLED = True
 
@@ -67,30 +69,30 @@ def update_page(form):
         if (not category):
             return INVALID_FORM, 1 # NOTE: get correct value for menu option
 
-        print(f'validating the shit {category}')
         try:
             standard(category)
             # validation errors can be raised here so keeping within try block
-            configure.update_custom_category(category, action=CFG.ADD)
+            configure_category(category, action=CFG.ADD)
         except ValidationError as ve:
-            return ve, 1 # NOTE: get correct value for menu option
+            return ve, 1  # NOTE: get correct value for menu option
 
     elif ('ud_cat_remove' in form):
         category = form.get('ud_cat_remove')
         if (not category):
-            return INVALID_FORM, 1 # NOTE: get correct value for menu option
+            return INVALID_FORM, 1  # NOTE: get correct value for menu option
 
-        configure.update_custom_category(category, action=CFG.DEL)
+        configure_category(category, action=CFG.DEL)
 
     elif ('cat_add_domain' in form):
         category = get_ud_category(menu_option)
         domain = form.get('ud_domain_name', None)
         reason = form.get('ud_domain_reason', None)
         if (not category):
-            return 'a custom category must be created before adding domain rules.', 1 # NOTE: get correct value for menu option
+            return 'a custom category must be created before adding domain rules.', 1  # NOTE: get correct value for
+            # menu option
 
         elif (not domain or not reason):
-            return INVALID_FORM, 1 # NOTE: get correct value for menu option
+            return INVALID_FORM, 1  # NOTE: get correct value for menu option
 
         try:
             standard(category)
@@ -98,7 +100,7 @@ def update_page(form):
             standard(reason)
 
             # validation errors can be raised here so keeping within try block
-            configure.update_custom_category_domain(category, domain, reason, action=CFG.ADD)
+            configure_category_domain(category, domain, reason, action=CFG.ADD)
         except ValidationError as ve:
             return ve, 1 # NOTE: get correct value for menu option
         else:
@@ -108,22 +110,22 @@ def update_page(form):
         category = get_ud_category(menu_option)
         domain = form.get('cat_del_domain', None)
         if (not domain or not category):
-            return INVALID_FORM, 1 # NOTE: get correct value for menu option
+            return INVALID_FORM, 1  # NOTE: get correct value for menu option
 
         try:
-            configure.update_custom_category_domain(category, domain, action=CFG.DEL)
+            configure_category_domain(category, domain, action=CFG.DEL)
         except ValidationError as ve:
-            return ve, 1 # NOTE: get correct value for menu option
+            return ve, 1  # NOTE: get correct value for menu option
 
     # else:
-    #     return INVALID_FORM, 1 # NOTE: get correct value for menu option
+    #     return INVALID_FORM, 1 # NOTE: get correct value for the menu option
 
     return None, menu_option
 
 # returning the category name of the currently selected menu option which is displayed by category name
 # if an exception is raised. will return none, which will tell caller to show invalid form data error.
 def get_ud_category(menu_option):
-    menu_option = validate.convert_int(menu_option)
+    menu_option = convert_int(menu_option)
     if (not menu_option):
         return None
 
@@ -136,15 +138,15 @@ def get_ud_category(menu_option):
     except Exception:
         return None
 
+# TODO: shit is fucked up
 # ==============
 # CONFIGURATION
 # ==============
-
 def configure_category(category, *, action):
     with ConfigurationManager('dns_proxy') as dnx:
         custom_category_lists = dnx.load_configuration()
 
-        ud_cats = custom_category_lists['categories']['user_defined']
+        ud_cats = custom_category_lists.get_list('categories->user_defined')
         if (action is CFG.DEL and category != 'enabled'):
             ud_cats.pop(category, None)
 

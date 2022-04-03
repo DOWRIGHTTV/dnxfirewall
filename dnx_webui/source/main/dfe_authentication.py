@@ -17,6 +17,7 @@ from dnx_routines.logging import direct_log
 # TYPING IMPORTS
 # ===============
 from typing import TYPE_CHECKING, Optional
+
 if (TYPE_CHECKING):
     from dnx_gentools.def_typing import Event
 

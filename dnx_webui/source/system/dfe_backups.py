@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import dnx_routines.configure.web_validate as validate
+import source.web_validate as validate
 
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG
 from dnx_gentools.def_exceptions import ValidationError
 
-from dnx_routines.configure.web_validate import get_convert_int
+from source.web_validate import get_convert_int
 from dnx_routines.configure.system_info import System
 from dnx_routines.backups.bck_backups import BackupHandler
 
