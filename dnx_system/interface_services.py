@@ -6,12 +6,11 @@ from time import sleep
 from json import dump
 from subprocess import check_output
 
-from dnx_gentools.def_constants import NO_DELAY, HOME_DIR
+from dnx_gentools.def_constants import INITIALIZE_MODULE, HOME_DIR, NO_DELAY
 from dnx_routines.logging.log_client import LogHandler as Log
 
 from dnx_gentools.standard_tools import looper
 
-LOG_NAME = 'system'
 
 dt = {}
 INT_BANDWIDTH_TIMER = 5
@@ -26,7 +25,8 @@ def interface_bandwidth(int=int, open=open):
     sleep(INT_BANDWIDTH_TIMER)
     dy = get_current_bytes()
 
-    if (not dx or not dy): return
+    if (not dx or not dy):
+        return
 
     for k in dy:
         intf = k
@@ -51,9 +51,13 @@ def get_current_bytes():
             if 'lo' not in x]
         }
     except Exception as E:
-        Log.simple_write(LOG_NAME, 'error', f'Interface bandwidth module error | {E}')
+        Log.simple_write('system', 'error', f'Interface bandwidth module error | {E}')
         sleep(1)
 
 
-def RUN_MODULE():
+def run():
     interface_bandwidth()
+
+
+if INITIALIZE_MODULE('interface'):
+    pass

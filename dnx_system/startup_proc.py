@@ -8,7 +8,7 @@ from secrets import token_urlsafe
 
 import dnx_iptools.interface_ops as interface
 
-from dnx_gentools.def_constants import INIT_MODULE
+from dnx_gentools.def_constants import INITIALIZE_MODULE
 from dnx_gentools.file_operations import ConfigurationManager
 
 from dnx_routines.logging.log_client import Log
@@ -84,7 +84,7 @@ def create_database_tables():
         database.commit_entries()
 
 
-if (INIT_MODULE == LOG_NAME):
+if INITIALIZE_MODULE('startup'):
     Log.run(
         name=LOG_NAME
     )
