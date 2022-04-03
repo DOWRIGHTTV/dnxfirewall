@@ -7,17 +7,26 @@ import socket
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
-from dnx_gentools.def_namedtuples import RECORD_CONTAINER, DHCP_RECORD, DHCP_OPTION, Item
 from dnx_gentools.def_enums import DHCP
-from dnx_gentools.file_operations import load_configuration, cfg_read_poller, ConfigurationManager
-from dnx_gentools.standard_tools import looper, dnx_queue, Initialize
+from dnx_gentools.def_namedtuples import DHCP_INTERFACE, DHCP_OPTION, RECORD_CONTAINER, DHCP_RECORD, Item
+from dnx_gentools.file_operations import ConfigurationManager, load_configuration, cfg_read_poller
+from dnx_gentools.standard_tools import ConfigurationMixinBase, dnx_queue, looper
 
 from dnx_iptools.cprotocol_tools import iptoi
 
 from dnx_routines.logging.log_client import Log
 
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from dnx_gentools.file_operations import ConfigChain
+
+
 __all__ = (
-    'Configuration', 'Leases'
+    'ServerConfiguration', 'Leases'
 )
 
 # required when using configuration manager.
@@ -27,79 +36,69 @@ NULL_LEASE = DHCP_RECORD(DHCP.AVAILABLE, 0, '', '')
 RESERVED_LEASE = DHCP_RECORD(DHCP.RESERVATION, -1, '', '')
 
 
-class Configuration:
-    _setup: ClassVar[bool] = False
+class ServerConfiguration(ConfigurationMixinBase):
+    interfaces:   dict[str, DHCP_INTERFACE] = {}
+    valid_idents: set[int] = {0}
 
-    __slots__ = (
-        'initialize', 'dhcp_server',
-    )
+    # initializing the lease table dictionary and providing a reference to the reservations dict
+    leases: Leases = Leases()
 
-    def __init__(self, name: str, server: DHCPServer_T):
-        self.initialize = Initialize(Log, name)
+    def _configure(self) -> tuple[LogHandler_T, tuple, int]:
+        '''tasks required by the DHCP server.
 
-        self.dhcp_server: DHCPServer_T = server
-
-    @classmethod
-    def setup(cls, server: DHCPServer_T) -> None:
-        if (cls._setup):
-            raise RuntimeError('configuration setup should only be called once.')
-
-        cls._setup = True
-
-        self = cls(server.__name__, server)
+        return thread information to be run.
+        '''
         self._load_interfaces()
 
-        threading.Thread(target=self._get_settings).start()
-        threading.Thread(target=self._get_server_options).start()
-        threading.Thread(target=self._get_reservations).start()
-        self.initialize.wait_for_threads(count=3)
+        threads = (
+            (self._get_settings, ()),
+            (self._get_server_options, ()),
+            (self._get_reservations, ())
+        )
+
+        return Log, threads, 3
 
     @cfg_read_poller('dhcp_server')
     def _get_settings(self, cfg_file: str) -> None:
         dhcp_settings: ConfigChain = load_configuration(cfg_file)
 
         # updating user configuration items per interface in memory.
-        for settings in dhcp_settings.get_values('interfaces->builtins'):
+        for intf in dhcp_settings.get_values('interfaces->builtins'):
 
             # NOTE ex. ident: eth0, lo, enp0s3
-            intf_identity: str = settings['ident']
-            enabled: int = settings['enabled']
+            identity: str = intf['ident']
+            enabled:  int = intf['enabled']
+            check_ip: int = intf['icmp_check']
 
-            # TODO: compare interface status in memory with what is loaded in. if it is different then the setting was
-            #  just changed and needs to be acted on. implement register/unregister methods available to external
-            #  callers and use them to act on the disable of an interfaces dhcp service. this should also be the most
-            #  efficient in that if all listeners are disabled only the automate class will be actively processing on
-            #  file changes.
-            # NOTE: .get is to cover server startup. do not change. test functionality.
-            sock_fd = self.dhcp_server.intf_settings[intf_identity]['fileno']
-            if (enabled and not self.dhcp_server.intf_settings[intf_identity].get('enabled', 0)):
-                self.dhcp_server.enable(sock_fd, intf_identity)
+            # en_check is both enabled and icmp check
+            sock_fd = self.interfaces[identity].socket[1]
+            if (enabled and not self.interfaces[identity].en_check[0]):
+                self.__class__.enable(sock_fd, identity)
 
-            elif (not enabled and self.dhcp_server.intf_settings[intf_identity].get('enabled', 1)):
-                self.dhcp_server.disable(sock_fd, intf_identity)
-
-            # this prevents options being overridden which are being processed in another thread
-            settings.pop('options')
+            elif (not enabled and self.interfaces[identity].en_check[0]):
+                self.__class__.disable(sock_fd, identity)
 
             # identity will be kept in settings just in case, though they key is the identity also.
-            self.dhcp_server.intf_settings[intf_identity].update(settings)
+            self.interfaces[identity].en_check[:] = [enabled, check_ip]
 
-        self.initialize.done()
+        self._initialize.done()
 
     @cfg_read_poller('dhcp_server')
     def _get_server_options(self, cfg_file: str) -> None:
-        dhcp_settings: list[Item] = load_configuration(cfg_file).get_items('interfaces->builtins')
+        builtin_intfs: list[Item] = load_configuration(cfg_file).get_items('interfaces->builtins')
 
-        # will wait for 2 threads to check in before running code. this will allow the necessary settings
-        # to be initialized on startup before this thread continues.
-        self.initialize.wait_in_line(wait_for=2)
+        # will wait for 2 threads to check in before running code.
+        # allows the necessary settings to be initialized on startup before this thread continues.
+        self._initialize.wait_in_line(wait_for=2)
 
-        for intf, settings in dhcp_settings:
+        for intf, settings in builtin_intfs:
 
             # converting json keys to python ints
-            configured_options = {int(k): DHCP_OPTION(int(k), *v) for k, v in settings['options'].items()}
+            configured_options: dict[int, DHCP_OPTION] = {
+                int(k): DHCP_OPTION(int(k), *v) for k, v in settings['options'].items()
+            }
 
-            active_options = self.dhcp_server.intf_settings[settings['ident']]['options']
+            active_options: dict[int, DHCP_OPTION] = self.interfaces[settings['ident']].options
 
             # if the active interface options have not changed, we can pass
             if (configured_options == active_options):
@@ -115,7 +114,7 @@ class Configuration:
             for option, value in configured_options.items():
                 active_options[option] = value
 
-        self.initialize.done()
+        self._initialize.done()
 
     # loading the user configured dhcp reservations from json config file into memory.
     @cfg_read_poller('dhcp_server')
@@ -123,34 +122,36 @@ class Configuration:
         dhcp_settings: ConfigChain = load_configuration(cfg_file)
 
         # dict comp that retains all infos of stored json data, but converts ip address into objects
-        self.dhcp_server.leases.reservations = {
+        self.leases.reservations = {
             mac: info['ip_address'] for mac, info in dhcp_settings.get_items('reservations')
         }
 
         # loading all reserved ip addresses into a set to be referenced below
-        reserved_ips: set = self.dhcp_server.leases.get_reserved_ips()
+        reserved_ips = self.leases.get_reserved_ips()
 
         # sets reserved ip address lease records to available if they are no longer configured. not worried about thread
         # safety here since we are only removing explicitly configured reservations and pop() method.
-        dhcp_leases = self.dhcp_server.leases
-        for ip, record in dhcp_leases.items():
+        for ip, record in self.leases.items():
 
             # cross-referencing ip reservation list with current lease table to reset any leased record placeholders
             # for the reserved ip.
             if (record.rtype is DHCP.RESERVATION and ip not in reserved_ips):
-                dhcp_leases.pop(ip, None)
+                self.leases.pop(ip, None)
 
-        self.initialize.done()
+        self._initialize.done()
 
     def _load_interfaces(self) -> None:
-        fw_intf: dict = load_configuration('system').get_dict('interfaces->builtins')
+        fw_intf: dict[str, dict] = load_configuration('system').get_dict('interfaces->builtins')
 
         dhcp_intfs: list[Item] = load_configuration('dhcp_server').get_items('interfaces->builtins')
 
         # interface friendly name e.g. wan
         for intf_name, settings in dhcp_intfs:
 
-            intf_ident = settings['ident']
+            identity: str = settings['ident']
+            enabled:  int = settings['enabled']
+            check_ip: int = settings['icmp_check']
+            ip_range: list = settings['lease_range']
 
             # converting interface ip address to an integer and associating it with the intf ident in the config.
             intf_ip = iptoi(fw_intf[intf_name]['ip'])
@@ -158,20 +159,17 @@ class Configuration:
 
             # updating the interface information in server class settings object. these will never change while the
             # server is running. (the server must be restarted for interface ipaddress changes)
-            self.dhcp_server.intf_settings[intf_ident] = {
-                'ip': intf_ip,
-                'netid': intf_ip & intf_netmask,
-                'netmask': intf_netmask,
-                'options': {}
-            }
+            self.interfaces[identity] = DHCP_INTERFACE(
+                [enabled, check_ip], intf_ip, intf_ip & intf_netmask, intf_netmask, ip_range, [], {}
+            )
 
             # local server ips added to filter responses to other servers within the broadcast domain.
-            self.dhcp_server.valid_idents.add(intf_ip)
+            self.valid_idents.add(intf_ip)
 
             # initializing fileno key in the intf dict to make assignments easier in later calls.
-            self._create_socket(intf_ident)
+            self._create_socket(identity)
 
-        Log.debug(f'loaded interfaces from file: {self.dhcp_server.intf_settings}')
+        Log.debug(f'loaded interfaces from file: {self.interfaces}')
 
     # this is providing the first portion of creating a socket. this will allow the system to create the socket
     # store the file descriptor id, and then bind when ready per normal registration logic.
@@ -179,10 +177,7 @@ class Configuration:
         l_sock: Socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         # used for converting interface identity to socket object file descriptor number
-        self.dhcp_server.intf_settings[intf].update({
-            'l_sock': l_sock,
-            'fileno': l_sock.fileno()
-        })
+        self.interfaces[intf].socket[:] = [l_sock, l_sock.fileno()]
 
         Log.debug(f'[{l_sock.fileno()}][{intf}] socket created')
 

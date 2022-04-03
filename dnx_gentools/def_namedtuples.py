@@ -29,48 +29,52 @@ RESOURCE_RECORD = _bytecontainer('resource_record', 'name qtype qclass ttl data'
 # NAMED TUPLES
 # ================
 class Item(_NamedTuple):
-    key: _Any
+    key:   _Any
     value: _Any
 
 class FW_OBJECT(_NamedTuple):
-    id: str
-    name: str
-    origin: str
-    type: str
+    id:      str
+    name:    str
+    origin:  str
+    type:    str
     subtype: int
-    value: str
+    value:   str
     description: str = ''
 
+
 # DHCP SERVER
-# DHCP_REQUEST_INFO = _namedtuple(
-#     'dhcp_request_info', 'message_type, xID, server_identifier, mac_address, client_address, requested_ip'
-# )
-# DHCP_RESPONSE_INFO = _namedtuple('dhcp_response_info', 'xID mac_address ciaddr handout_ip options')
-
-
 _pack_map: dict[int, _Callable[[int, int, int], bytes]] = {1: _dhcp_bp, 2: _dhcp_sp, 4: _dhcp_lp}
 class DHCP_OPTION(_NamedTuple):
-    code: int
-    size: int
+    code:  int
+    size:  int
     value: int
 
     @_lru_cache(maxsize=None)
     def packed(self) -> bytes:
         '''pack a dhcp option into a byte string.
 
-        the @lru_cache decorator guarantees the attribute lookup/ pack call are done once.
+        the @lru_cache decorator guarantees the attribute lookup/ pack call are done only once.
         '''
         return _pack_map[self.size](self.code, self.size, self.value)
 
+class DHCP_INTERFACE(_NamedTuple):
+    en_check: list[int, int]
+    ip:       int
+    netid:    int
+    netmask:  int
+    h_range:  list[int, int]
+    socket:   list[_Socket, int]
+    options:  dict[int, DHCP_OPTION]
+
 class DHCP_RECORD(_NamedTuple):
-    rtype: _DHCP
+    rtype:     _DHCP
     timestamp: int
-    mac: str
-    hostname: str
+    mac:       str
+    hostname:  str
 
 # short-lived container for queue/writing dhcp record to disk
 class RECORD_CONTAINER(_NamedTuple):
-    ip: int
+    ip:     int
     record: DHCP_RECORD
 
 
@@ -81,7 +85,7 @@ SYSLOG_SERVERS = _namedtuple('syslog_servers', 'primary secondary')
 DNS_WHITELIST = _namedtuple('whitelist', 'dns ip')
 DNS_BLACKLIST = _namedtuple('blacklist', 'dns')
 class DNS_SERVERS(_NamedTuple):
-    primary: dict[_Union[str, _PROTO], _Optional[bool]]
+    primary:   dict[_Union[str, _PROTO], _Optional[bool]]
     secondary: dict[_Union[str, _PROTO], _Optional[bool]]
 
 class RELAY_CONN(_NamedTuple):
@@ -92,27 +96,27 @@ class RELAY_CONN(_NamedTuple):
     version: str
 
 class QNAME_RECORD(_NamedTuple):
-    expire: int
-    ttl: int
+    expire:  int
+    ttl:     int
     records: list[RESOURCE_RECORD]
 
 class QNAME_RECORD_UPDATE(_NamedTuple):
-    ttl: int
+    ttl:     int
     records: list[RESOURCE_RECORD]
 
 class DNS_SIGNATURES(_NamedTuple):
-    en_dns: set[_DNS_CAT]
-    tld: dict[str, int]
+    en_dns:  set[_DNS_CAT]
+    tld:     dict[str, int]
     keyword: list[tuple[str, _DNS_CAT]]
 
 class DNS_REQUEST_RESULTS(_NamedTuple):
     redirect: bool
-    reason: _Optional[str]
+    reason:   _Optional[str]
     category: _Optional[_DNS_CAT]
 
 class DNS_SEND(_NamedTuple):
     qname: str
-    data: bytearray
+    data:  bytearray
 
 
 # IPS/IDS
@@ -121,52 +125,52 @@ IPS_WAN_INFO = _namedtuple('ips_wan_info', 'interface ip mac')
 class IPS_SCAN_RESULTS(_NamedTuple):
     initial_block: bool
     scan_detected: bool
-    block_status: _IPS
+    block_status:  _IPS
 
 class PSCAN_TRACKERS(_NamedTuple):
-    lock: _Lock
+    lock:    _Lock
     tracker: dict[_PROTO, dict]
 
 class DDOS_TRACKERS(_NamedTuple):
-    lock: _Lock
+    lock:    _Lock
     tracker: dict[_PROTO, dict]
 
 # IP PROXY
 class IPP_INSPECTION_RESULTS(_NamedTuple):
     category: _Union[str, tuple[str, str]]
-    action: _Optional[_CONN]
+    action:   _Optional[_CONN]
 
 # LOG TUPLES
 class IPP_EVENT_LOG(_NamedTuple):
-    local_ip: str
+    local_ip:   str
     tracked_ip: str
-    category: tuple[str, str]
-    direction: str
-    action: str
+    category:   tuple[str, str]
+    direction:  str
+    action:     str
 
 class DNS_REQUEST_LOG(_NamedTuple):
-    src_ip: str
-    request: str
+    src_ip:   str
+    request:  str
     category: str
-    reason: str
-    action: str
+    reason:   str
+    action:   str
 
 class IPS_EVENT_LOG(_NamedTuple):
-    attacker: int
-    protocol: str
+    attacker:    int
+    protocol:    str
     attack_type: str
-    action: str
+    action:      str
 
 class GEOLOCATION_LOG(_NamedTuple):
-    country: str
+    country:   str
     direction: str
-    action: str
+    action:    str
 
 class INF_EVENT_LOG(_NamedTuple):
     client_mac: str
-    src_ip: str
+    src_ip:     str
     detected_host: _Union[int, str]
-    reason: str
+    reason:     str
 
 
 # alias
@@ -177,14 +181,14 @@ BLOCKED_DOM = _namedtuple('blocked', 'domain category reason')
 
 # SOCKET
 class L_SOCK(_NamedTuple):
-    name: str
-    ip: int
-    socket: _Socket
-    send: _Callable[[_Union[bytes, bytearray]], int]
-    sendto: _Callable[[_Union[bytes, bytearray], _Address], int]
+    name:     str
+    ip:       int
+    socket:   _Socket
+    send:     _Callable[[_Union[bytes, bytearray]], int]
+    sendto:   _Callable[[_Union[bytes, bytearray], _Address], int]
     recvfrom: _Callable[[_ByteString], tuple[int, _Address]]
 
 class NFQ_SEND_SOCK(_NamedTuple):
     zone: int
-    ip: int
+    ip:   int
     sock_sendto: _Callable[[_Union[bytes, bytearray], _Address], int]

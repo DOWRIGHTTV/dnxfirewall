@@ -30,9 +30,11 @@ btoia: Callable[[ByteString], int] = partial(int.from_bytes, byteorder='big', si
 itoba: Callable[[int, int], bytes] = partial(int.to_bytes, byteorder='big', signed=False)
 
 # will ping specified host. to be used to prevent duplicate ip address handouts.
-def icmp_reachable(host_ip: str) -> bool:
+def icmp_reachable(host_ip: int) -> bool:
+
+    ip_addr = itoip(host_ip)
     try:
-        return bool(run(f'ping -c 2 {host_ip}', stdout=DEVNULL, shell=True, check=True))
+        return bool(run(f'ping -c 2 {ip_addr}', stdout=DEVNULL, shell=True, check=True))
     except CalledProcessError:
         return False
 

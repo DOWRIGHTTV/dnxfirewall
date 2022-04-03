@@ -15,13 +15,11 @@ from dnx_iptools.cprotocol_tools import itoip
 from dnx_routines.logging.log_client import Log
 
 from dhcp_server_requests import ServerResponse, ClientRequest
-from dhcp_server_automate import Configuration, Leases
+from dhcp_server_automate import ServerConfiguration
 
 __all__ = (
     'DHCPServer',
 )
-
-LOG_NAME = 'dhcp_server'
 
 # NOTE: this type of type hint confuses me
 RequestID: tuple[str, int]
@@ -30,31 +28,20 @@ RESPONSE_REQUIRED: list[DHCP] = [DHCP.OFFER, DHCP.ACK, DHCP.NAK]
 RECORD_NOT_NEEDED: list[DHCP] = [DHCP.NOT_SET, DHCP.DROP, DHCP.NAK]
 
 
-class DHCPServer(Listener):
-    intf_settings: ClassVar[dict] = {}
-    valid_idents:  ClassVar[set[int]] = {0}
-
-    # initializing the lease table dictionary and providing a reference to the reservations dict
-    leases: ClassVar[Leases] = Leases()
-
+class DHCPServer(ServerConfiguration, Listener):
     _ongoing: ClassVar[dict] = {}
-
     _listener_parser: ClassVar[ClientRequest_T] = ClientRequest
 
     __slots__ = ()
 
     def _setup(self):
-        Log.notice('DHCPServer initialization started.')
+        self.__class__.set_proxy_callback(func=self.__class__.handle_dhcp)
 
-        Configuration.setup(self.__class__)
+        self.configure()
 
         # so we don't need to import/ hardcore the server class reference.
         ClientRequest.set_server_reference(self.__class__)
         ServerResponse.set_server_reference(self.__class__)
-
-        self.__class__.set_proxy_callback(func=self.__class__.handle_dhcp)
-
-        Log.notice('DHCPServer initialization complete.')
 
     def _pre_inspect(self, packet: ClientRequest) -> bool:
         if (packet.mtype in VALID_MTYPES and packet.svr_ident in self.valid_idents):
@@ -81,7 +68,7 @@ class DHCPServer(Listener):
 
             # if mac/ lease mac match, the lease will be removed from the table
             if ServerResponse.release(client_request.ciaddr, client_request.mac):
-                self.__class__.leases.modify(client_request.ciaddr)
+                self.leases.modify(client_request.ciaddr)
 
             else:
                 Log.informational(f'[release][{client_request.mac}] Client attempted invalid release.')
@@ -144,16 +131,18 @@ class DHCPServer(Listener):
 
             send_to_client(send_data, client_request, server_mtype)
 
-    def _listener_sock(self, intf, _) -> Socket:
-        l_sock: Socket = self.__class__.intf_settings[intf].get('l_sock')
+    def _listener_sock(self, intf_ident: str, _) -> Socket:
+        intf_sock = self.interfaces[intf_ident].socket
+
+        l_sock: Socket = intf_sock[0]
 
         l_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         l_sock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
-        l_sock.setsockopt(SOL_SOCKET, SO_BINDTODEVICE, f'{intf}\0'.encode('utf-8'))
+        l_sock.setsockopt(SOL_SOCKET, SO_BINDTODEVICE, f'{intf_ident}\0'.encode('utf-8'))
         l_sock.bind((itoip(INADDR_ANY), PROTO.DHCP_SVR))
 
         Log.debug(
-            f'[{l_sock.fileno()}][{intf}] {self.__class__.__name__} interface bound: {self.__class__.intf_settings[intf]}'
+            f'[{intf_ident}][{intf_sock[1]}] {self.__class__.__name__} interface bound: {self.interfaces[intf_ident]}'
         )
 
         return l_sock
