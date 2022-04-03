@@ -25,14 +25,14 @@ from typing import TYPE_CHECKING, cast
 if (TYPE_CHECKING):
     from typing import TypeAlias
 
+    RequestID: TypeAlias = tuple[str, int]
+
     from dnx_netmods.dhcp_server import ClientRequest_T
 
 __all__ = (
     'DHCPServer',
 )
 
-# NOTE: this type of type hint confuses me
-RequestID: TypeAlias = tuple[str, int]
 VALID_MTYPES: list[DHCP] = [DHCP.DISCOVER, DHCP.REQUEST, DHCP.RELEASE]
 RESPONSE_REQUIRED: list[DHCP] = [DHCP.OFFER, DHCP.ACK, DHCP.NAK]
 RECORD_NOT_NEEDED: list[DHCP] = [DHCP.NOT_SET, DHCP.DROP, DHCP.NAK]
