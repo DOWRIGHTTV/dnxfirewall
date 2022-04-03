@@ -10,6 +10,9 @@ from socket import socket, AF_UNIX, SOCK_DGRAM
 from dnx_gentools.def_constants import *
 from dnx_gentools.standard_tools import looper
 
+from dnx_routines.logging import Log
+
+
 MODULE_PERMISSIONS = {
     'webui': {
         'systemctl start': None,
@@ -59,7 +62,7 @@ class SystemControl:
         try:
             data, *_ = _control_service_recv(2048)
         except OSError as ose:
-            console_log(ose)  # log this eventually
+            Log.error(ose)  # log this eventually
 
         else:
             # data format | module: command: args
@@ -70,7 +73,7 @@ class SystemControl:
             try:
                 control_ref = MODULE_PERMISSIONS[data['module']][data['command']]
             except KeyError as ke:
-                console_log(ke)  # log eventually
+                Log.warning(ke)  # log eventually
 
             else:
                 # this allows args to not be specified in kwargs by caller if not needed.
@@ -84,7 +87,3 @@ class SystemControl:
                 # calling partial of run with shell=True
                 else:
                     shell(f'{data["command"]} {cmd_args}')
-
-
-if (INIT_MODULE):
-    SystemControl.run()

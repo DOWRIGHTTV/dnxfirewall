@@ -15,6 +15,15 @@ from dnx_gentools.file_operations import change_file_owner, load_configuration, 
 
 from dnx_routines.configure.system_info import System
 
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from dnx_routines.logging import LogHandler_T
+
+
 __all__ = (
     'LogHandler', 'Log',
 
@@ -26,9 +35,9 @@ __all__ = (
 _system_date = System.date
 _format_time = System.format_time
 
-# =============================================
+# ==============================
 # GENERIC LIGHTWEIGHT FUNCTIONS
-# =============================================
+# ==============================
 def direct_log(m_name: str, level_name: str, msg: str, *, cli: bool = False) -> None:
     '''alternate system log method.
 
@@ -84,9 +93,9 @@ def convert_level(level: Optional[LOG] = None) -> Union[dict[int, list[str, str]
 
     return levels if level is None else levels[level][0]
 
-# =================================
+# ===========================
 # LOG HANDLING CLASS FACTORY
-# =================================
+# ===========================
 # process wide "instance" of LogHandler class, which can be used directly or subclassed.
 def _log_handler() -> LogHandler_T:
 
@@ -101,9 +110,9 @@ def _log_handler() -> LogHandler_T:
 
     # _syslog_sock = socket()
 
-    # ==============================
+    # ------------------
     # DB SERVICE SOCKET
-    # ==============================
+    # ------------------
     db_client: Socket = socket(AF_UNIX, SOCK_DGRAM)
 
     db_sendmsg = db_client.sendmsg
@@ -148,52 +157,62 @@ def _log_handler() -> LogHandler_T:
 
         @classproperty
         def current_lvl(_) -> int:
-            '''returns current system log settings level.'''
+            '''returns current system log settings level.
+            '''
             return logging_level
 
         @classproperty
         def syslog_enabled(_) -> bool:
-            '''returns True if syslog is configured in the system else False.'''
+            '''returns True if syslog is configured in the system else False.
+            '''
             return syslog
 
         @staticmethod
         def emergency(log_msg: str):
-            '''system is unusable.'''
+            '''L0. system is unusable.
+            '''
             return
 
         @staticmethod
         def alert(log_msg: str):
-            '''action must be taken immediately.'''
+            '''L1. action must be taken immediately.
+            '''
             return
 
         @staticmethod
         def critical(log_msg: str):
-            '''critical conditions.'''
+            '''L2. critical conditions.
+            '''
             return
 
         @staticmethod
         def error(log_msg: str):
-            '''error conditions.'''
+            '''L3. error conditions.
+            '''
             return
 
         @staticmethod
         def warning(log_msg: str):
-            '''warning conditions.'''
+            '''L4. warning conditions.
+            '''
             return
 
         @staticmethod
         def notice(log_msg: str):
-            '''normal but significant condition.'''
+            '''L5. normal but significant condition.
+            '''
             return
 
         @staticmethod
         def informational(log_msg: str):
-            '''informational messages.'''
+            '''L6. informational messages.
+            '''
             return
 
         @staticmethod
         def debug(log_msg: str):
-            '''debug-level messages.'''
+            '''L7. debug-level messages.
+            '''
             return
 
         @staticmethod
@@ -319,10 +338,11 @@ def _log_handler() -> LogHandler_T:
 LogHandler: LogHandler_T = _log_handler()
 Log: LogHandler_T = LogHandler  # alias
 
-# ===========================
+# ========================
 # DIRECT ACCESS FUNCTIONS
-# ===========================
+# ========================
 # TODO: test direct access functions after a log level is changed and methods are reset.
+#  - im pretty sure this reference will change so it will not work unless we setattr on the globals
 LogLevel = Callable[[str], None]
 
 emergency: LogLevel = LogHandler.emergency
