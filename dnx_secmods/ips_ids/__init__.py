@@ -12,6 +12,7 @@ if INITIALIZE_MODULE('ips-ids'):
 
     from dnx_gentools.def_enums import Queue
 
+    from ips_ids import IPS_IDS
     from ips_ids_log import Log
 
     Log.run(name='ips')
