@@ -20,9 +20,11 @@ from dhcp_server_automate import ServerConfiguration
 # ===============
 # TYPING IMPORTS
 # ===============
-from typing import TYPE_CHECKING, TypeAlias, cast
+from typing import TYPE_CHECKING, cast
 
 if (TYPE_CHECKING):
+    from typing import TypeAlias
+
     from dnx_netmods.dhcp_server import ClientRequest_T
 
 __all__ = (

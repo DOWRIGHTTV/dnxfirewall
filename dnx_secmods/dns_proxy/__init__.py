@@ -52,9 +52,11 @@ def run():
 # ================
 # TYPING IMPORTS
 # ================
-from typing import TYPE_CHECKING, Type, TypeAlias, Callable
+from typing import TYPE_CHECKING, Type, Callable
 
 if (TYPE_CHECKING):
+    from typing import TypeAlias
+
     __all__ = (
         'DNSProxy', 'DNSServer',
         'ClientQuery', 'DNSPacket',
