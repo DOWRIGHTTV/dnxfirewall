@@ -63,7 +63,7 @@ class DHCP_INTERFACE(_NamedTuple):
     netid:    int
     netmask:  int
     h_range:  list[int, int]
-    socket:   list[_Socket, int]
+    socket:   tuple[_Socket, int]
     options:  dict[int, DHCP_OPTION]
 
 class DHCP_RECORD(_NamedTuple):
@@ -186,7 +186,7 @@ class L_SOCK(_NamedTuple):
     socket:   _Socket
     send:     _Callable[[_Union[bytes, bytearray]], int]
     sendto:   _Callable[[_Union[bytes, bytearray], _Address], int]
-    recvfrom: _Callable[[_ByteString], tuple[int, _Address]]
+    recvfrom: _Callable[[_Union[_ByteString, memoryview]], tuple[int, _Address]]
 
 class NFQ_SEND_SOCK(_NamedTuple):
     zone: int

@@ -25,7 +25,7 @@ def run():
 # ================
 # TYPING IMPORTS
 # ================
-from typing import TYPE_CHECKING, Type
+from typing import TYPE_CHECKING, Type, TypeAlias
 
 if (TYPE_CHECKING):
     __all__ = (
@@ -41,5 +41,5 @@ if (TYPE_CHECKING):
     # ======
     # TYPES
     # ======
-    IPS_IDS_T = Type[IPS_IDS]
-    IPSPacket_T = Type[IPSPacket]
+    IPS_IDS_T:   TypeAlias = Type[IPS_IDS]
+    IPSPacket_T: TypeAlias = Type[IPSPacket]

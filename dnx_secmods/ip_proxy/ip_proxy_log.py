@@ -22,6 +22,7 @@ from dnx_routines.logging.log_client import (
 # ===============
 if (TYPE_CHECKING):
     from dnx_gentools.def_namedtuples import IPP_INSPECTION_RESULTS
+    from dnx_secmods.ip_proxy import IPPPacket
 
 
 class Log(LogHandler):

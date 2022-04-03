@@ -47,7 +47,7 @@ def run():
 # ================
 # TYPING IMPORTS
 # ================
-from typing import TYPE_CHECKING, Type
+from typing import TYPE_CHECKING, Type, TypeAlias
 
 if (TYPE_CHECKING):
     __all__ = (
@@ -63,5 +63,5 @@ if (TYPE_CHECKING):
     # ======
     # TYPES
     # ======
-    IPProxy_T = Type[IPProxy]
-    IPPPacket_T = Type[IPPPacket]
+    IPProxy_T:   TypeAlias = Type[IPProxy]
+    IPPPacket_T: TypeAlias = Type[IPPPacket]

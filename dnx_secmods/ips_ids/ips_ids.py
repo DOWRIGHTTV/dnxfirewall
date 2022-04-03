@@ -7,7 +7,7 @@ import threading
 from copy import copy
 from collections import defaultdict
 
-from dnx_gentools.def_typing import *
+# from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import *
 from dnx_gentools.def_namedtuples import IPS_SCAN_RESULTS, DDOS_TRACKERS, PSCAN_TRACKERS
@@ -194,12 +194,12 @@ def portscan_reject(pre_detection_logging: dict, packet: IPSPacket, initial_bloc
 
             # some scanners may send to the same port twice
             for src_port, seq_num in conns:
-                PREPARE_AND_SEND(copy(packet).tcp_override(dst_port, src_port, seq_num))
+                PREPARE_AND_SEND(copy(packet).tcp_override(dst_port, seq_num))  # .tcp_override(dst_port, src_port, # seq_num))
 
     elif (packet.protocol is PROTO.UDP):
 
         for ip_header, udp_header in pre_detection_logging.items():
-            PREPARE_AND_SEND(copy(packet).udp_override(ip_header, udp_header))
+            PREPARE_AND_SEND(copy(packet).udp_override(ip_header + udp_header))  # .udp_override(ip_header, udp_header))
 
 # checking intersection between pre detection and open port keys.
 # the missed_port var will contain any port that was scanned before the host was marked as a scanner.

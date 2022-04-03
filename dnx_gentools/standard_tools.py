@@ -12,6 +12,14 @@ from functools import wraps
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import RUN_FOREVER, MSEC, fast_time, fast_sleep, str_join, space_join, comma_join
 
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from dnx_routines.logging import LogHandler_T
+
 __all__ = (
     'looper', 'dynamic_looper',
     'ConfigurationMixinBase', 'Initialize',
@@ -89,6 +97,8 @@ class ConfigurationMixinBase:
 
     NOT defining slots to allow for primary parents to provide use/provide them.
     '''
+    module_class: ModuleClasses
+
     def __init__(self):
         # calling the module's epoll handler __init__ method
         super().__init__()
@@ -97,13 +107,15 @@ class ConfigurationMixinBase:
 
         self._initialize = Initialize()
 
-    def configure(self) -> None:
+    def configure(self, module_class: Optional[ModuleClasses] = None) -> None:
         '''blocking until settings are loaded/initialized.
         '''
         if (self._config_setup):
             raise RuntimeError('configuration setup should only be called once.')
 
         self._config_setup = True
+
+        self.module_class = module_class
 
         # subclass hooke will provide log handler reference and threads to start
         log, thread_info, thread_count = self._configure()

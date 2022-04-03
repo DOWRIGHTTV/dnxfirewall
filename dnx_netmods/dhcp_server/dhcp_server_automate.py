@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING
 
 if (TYPE_CHECKING):
     from dnx_gentools.file_operations import ConfigChain
+    from dnx_routines.logging import LogHandler_T
 
 
 __all__ = (
@@ -48,6 +49,9 @@ class ServerConfiguration(ConfigurationMixinBase):
 
         return thread information to be run.
         '''
+        self.intf_enable  = self.module_class.enable
+        self.intf_disable = self.module_class.disable
+
         self.__class__.leases = Leases()
         self._load_interfaces()
 
@@ -74,10 +78,10 @@ class ServerConfiguration(ConfigurationMixinBase):
             # en_check is both enabled and icmp check
             sock_fd = self.interfaces[identity].socket[1]
             if (enabled and not self.interfaces[identity].en_check[0]):
-                self.__class__.enable(sock_fd, identity)
+                self.intf_enable(sock_fd, identity)
 
             elif (not enabled and self.interfaces[identity].en_check[0]):
-                self.__class__.disable(sock_fd, identity)
+                self.intf_disable(sock_fd, identity)
 
             # identity will be kept in settings just in case, though they key is the identity also.
             self.interfaces[identity].en_check[:] = [enabled, check_ip]
@@ -158,29 +162,22 @@ class ServerConfiguration(ConfigurationMixinBase):
             intf_ip = iptoi(fw_intf[intf_name]['ip'])
             intf_netmask = iptoi(fw_intf[intf_name]['netmask'])
 
+            # this is providing the first portion of creating a socket. this will allow the system to create the socket
+            # store the file descriptor id, and then bind when ready per normal registration logic.
+            l_sock: Socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+            sock_refs = (l_sock, l_sock.fileno())
+
             # updating the interface information in server class settings object. these will never change while the
             # server is running. (the server must be restarted for interface ipaddress changes)
             self.interfaces[identity] = DHCP_INTERFACE(
-                [enabled, check_ip], intf_ip, intf_ip & intf_netmask, intf_netmask, ip_range, [], {}
+                [enabled, check_ip], intf_ip, intf_ip & intf_netmask, intf_netmask, ip_range, sock_refs, {}
             )
 
             # local server ips added to filter responses to other servers within the broadcast domain.
             self.valid_idents.add(intf_ip)
 
-            # initializing fileno key in the intf dict to make assignments easier in later calls.
-            self._create_socket(identity)
-
         Log.debug(f'loaded interfaces from file: {self.interfaces}')
-
-    # this is providing the first portion of creating a socket. this will allow the system to create the socket
-    # store the file descriptor id, and then bind when ready per normal registration logic.
-    def _create_socket(self, intf: str) -> None:
-        l_sock: Socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-        # used for converting interface identity to socket object file descriptor number
-        self.interfaces[intf].socket[:] = [l_sock, l_sock.fileno()]
-
-        Log.debug(f'[{l_sock.fileno()}][{intf}] socket created')
 
 
 class Leases(dict):

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Type
+from typing import TYPE_CHECKING
 
 # ================
 # RUNTIME IMPORTS
@@ -23,10 +23,10 @@ if (not TYPE_CHECKING):
 # TYPING IMPORTS
 # ================
 else:
+    from typing import Type
+
     __all__ = (
-        'LogHandler', 'Log',
-        'direct_log', 'message', 'db_message', 'convert_level',
-        'emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'informational', 'debug', 'cli',
+        'LogHandler',
 
         'LogHandler_T',
 

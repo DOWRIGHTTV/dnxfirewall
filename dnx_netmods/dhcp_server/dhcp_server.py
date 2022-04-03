@@ -17,27 +17,35 @@ from dnx_routines.logging.log_client import Log
 from dhcp_server_requests import ServerResponse, ClientRequest
 from dhcp_server_automate import ServerConfiguration
 
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING, TypeAlias, cast
+
+if (TYPE_CHECKING):
+    from dnx_netmods.dhcp_server import ClientRequest_T
+
 __all__ = (
     'DHCPServer',
 )
 
 # NOTE: this type of type hint confuses me
-RequestID: tuple[str, int]
+RequestID: TypeAlias = tuple[str, int]
 VALID_MTYPES: list[DHCP] = [DHCP.DISCOVER, DHCP.REQUEST, DHCP.RELEASE]
 RESPONSE_REQUIRED: list[DHCP] = [DHCP.OFFER, DHCP.ACK, DHCP.NAK]
 RECORD_NOT_NEEDED: list[DHCP] = [DHCP.NOT_SET, DHCP.DROP, DHCP.NAK]
 
 
 class DHCPServer(ServerConfiguration, Listener):
-    _ongoing: ClassVar[dict] = {}
-    _listener_parser: ClassVar[ClientRequest_T] = ClientRequest
+    _ongoing: dict[RequestID, ServerResponse] = {}
+    _listener_parser: ClientRequest_T = ClientRequest
 
     __slots__ = ()
 
     def _setup(self):
         self.__class__.set_proxy_callback(func=self.__class__.handle_dhcp)
 
-        self.configure()
+        self.configure(self.__class__)
 
         # so we don't need to import/ hardcore the server class reference.
         ClientRequest.set_server_reference(self.__class__)
@@ -56,8 +64,9 @@ class DHCPServer(ServerConfiguration, Listener):
         request gets handled.
         '''
         request_id: RequestID = (client_request.mac, client_request.xID)
-        server_mtype: DHCP = DHCP.NOT_SET
-        record: Optional[DHCP_RECORD] = None
+
+        server_mtype = DHCP.NOT_SET
+        record = cast(DHCP_RECORD, None)
 
         Log.debug(f'[request] type={client_request.mtype}, id={request_id}')
 
@@ -77,7 +86,7 @@ class DHCPServer(ServerConfiguration, Listener):
         # DISCOVER
         # ==============
         elif (client_request.mtype == DHCP.DISCOVER):
-            dhcp: ServerResponse = ServerResponse(client_request.recvd_intf)
+            dhcp = ServerResponse(client_request.recvd_intf)
 
             self.__class__._ongoing[request_id] = dhcp
             client_request.handout_ip = dhcp.check_offer(client_request)
@@ -90,10 +99,9 @@ class DHCPServer(ServerConfiguration, Listener):
         # REQUEST
         # ==============
         elif (client_request.mtype == DHCP.REQUEST):
-            server_mtype: DHCP
-            record: Optional[DHCP_RECORD] = None
+            record = cast(DHCP_RECORD, None)
 
-            dhcp: ServerResponse = self._ongoing.get(request_id, None)
+            dhcp = self._ongoing.get(request_id, None)
             if (not dhcp):
                 dhcp = ServerResponse(client_request.recvd_intf)
 
@@ -132,9 +140,7 @@ class DHCPServer(ServerConfiguration, Listener):
             send_to_client(send_data, client_request, server_mtype)
 
     def _listener_sock(self, intf_ident: str, _) -> Socket:
-        intf_sock = self.interfaces[intf_ident].socket
-
-        l_sock: Socket = intf_sock[0]
+        l_sock, sock_fd = self.interfaces[intf_ident].socket
 
         l_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         l_sock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
@@ -142,7 +148,7 @@ class DHCPServer(ServerConfiguration, Listener):
         l_sock.bind((itoip(INADDR_ANY), PROTO.DHCP_SVR))
 
         Log.debug(
-            f'[{intf_ident}][{intf_sock[1]}] {self.__class__.__name__} interface bound: {self.interfaces[intf_ident]}'
+            f'[{intf_ident}][{sock_fd}] {self.__class__.__name__} interface bound: {self.interfaces[intf_ident]}'
         )
 
         return l_sock

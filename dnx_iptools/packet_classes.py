@@ -30,17 +30,17 @@ IntfList: list[tuple[int, int, str]]
 
 
 class Listener:
-    __registered_socks: ClassVar[dict[int, L_SOCK]] = {}
-    __epoll: ClassVar[Epoll] = select.epoll()
+    __registered_socks: dict[int, L_SOCK] = {}
+    __epoll: Epoll = select.epoll()
 
-    _intfs: ClassVar[IntfList] = load_interfaces(exclude=['wan'])
-    _log:   ClassVar[LogHandler_T] = None
+    _intfs: IntfList = load_interfaces(exclude=['wan'])
+    _log:   LogHandler_T = None
 
-    _listener_parser:   ClassVar[ListenerParser]
-    _listener_callback: ClassVar[ListenerCallback]
+    _listener_parser:   ListenerParser
+    _listener_callback: ListenerCallback
 
     # stored as file descriptors to minimize lookups in listener queue.
-    enabled_intfs: ClassVar[set[int]] = set()
+    enabled_intfs: set[int] = set()
 
     __slots__ = ()
 
@@ -143,8 +143,8 @@ class Listener:
         registered_socks_get = self.__registered_socks.get
 
         # methods
-        listener_parser: ListenerParser = self._listener_parser
-        listener_callback: ListenerCallback = self._listener_callback
+        listener_parser   = self._listener_parser
+        listener_callback = self._listener_callback
         pre_inspect = self._pre_inspect
 
         # flags
@@ -335,10 +335,10 @@ class ProtoRelay:
 
 
 class NFQueue:
-    _log: ClassVar[LogHandler_T] = None
+    _log: LogHandler_T = None
 
-    _packet_parser:  ClassVar[ProxyParser]
-    _proxy_callback: ClassVar[ProxyCallback]
+    _packet_parser:  ProxyParser
+    _proxy_callback: ProxyCallback
 
     __slots__ = ()
 
@@ -451,6 +451,45 @@ class NFPacket:
 
     instances of this class are created by calling __new__ directly via the alternate constructor "netfilter_recv".
     '''
+    # C Callbacks
+    nfqueue: CPacket
+
+    # MARK FIELDs
+    mark: int
+
+    action: CONN
+    direction: DIR
+
+    tracked_geo: int
+    ipp_profile: int
+    dns_profile: int
+    ips_profile: int
+
+    # HW FIELDS
+    in_intf: int
+    out_intf: int
+    src_mac: str
+    timestamp: int
+
+    # IP FIELDS
+    protocol: PROTO
+    src_ip: int
+    dst_ip: int
+    src_port: int
+    dst_port: int
+
+    # TCP FIELDS
+    seq_number: int
+    ack_number: int
+
+    # UDP FIELDS
+    ip_header: bytearray
+    udp_header: bytearray
+    udp_payload: bytes
+
+    # ICMP FIELDS
+    icmp_type: ICMP
+
     __slots__ = (
         'nfqueue', 'mark',
 
@@ -476,45 +515,6 @@ class NFPacket:
         # icmp
         'icmp_type'
     )
-
-    # C Callbacks
-    nfqueue: CPacket
-
-    # MARK FIELDs
-    mark: int
-
-    action:    CONN
-    direction: DIR
-
-    tracked_geo: int
-    ipp_profile: int
-    dns_profile: int
-    ips_profile: int
-
-    # HW FIELDS
-    in_intf:   int
-    out_intf:  int
-    src_mac:   str
-    timestamp: int
-
-    # IP FIELDS
-    protocol: PROTO
-    src_ip:   int
-    dst_ip:   int
-    src_port: int
-    dst_port: int
-
-    # TCP FIELDS
-    seq_number: int
-    ack_number: int
-
-    # UDP FIELDS
-    ip_header:   bytearray
-    udp_header:  bytearray
-    udp_payload: bytes
-
-    # ICMP FIELDS
-    icmp_type: ICMP
 
     @classmethod
     def netfilter_recv(cls, cpacket: CPacket, mark: int) -> NFPacket:
@@ -614,13 +614,13 @@ class RawResponse:
     __setup: ClassVar[bool] = False
 
     # dynamically provide interfaces. default returns builtins.
-    _intfs: ClassVar[IntfList] = load_interfaces()
+    _intfs: IntfList = load_interfaces()
 
-    _log: ClassVar[LogHandler_T] = None
+    _log: LogHandler_T = None
     _open_ports: ClassVar[dict[PROTO, dict[int, int]]] = {PROTO.TCP: {}, PROTO.UDP: {}}
 
-    _registered_socks:     ClassVar[dict[int, NFQ_SEND_SOCK]] = {}
-    _registered_socks_get: ClassVar[Callable[[int], NFQ_SEND_SOCK]] = _registered_socks.get
+    _registered_socks:     dict[int, NFQ_SEND_SOCK] = {}
+    _registered_socks_get: Callable[[int], NFQ_SEND_SOCK] = _registered_socks.get
 
     __slots__ = ()
 

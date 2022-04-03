@@ -14,14 +14,14 @@ from dnx_routines.logging.log_client import Log
 # ===============
 # TYPING IMPORTS
 # ===============
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 if (TYPE_CHECKING):
     from dnx_gentools.file_operations import ConfigChain
 
 
 DEFAULT_VERSION: str = 'pending'
-DEFAULT_PATH: str = 'dnx_system/iptables'
+DEFAULT_PATH:    str = 'dnx_system/iptables'
 
 PENDING_RULE_FILE: str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/pending.firewall'
 ACTIVE_RULE_FILE:  str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/active.firewall'
@@ -50,13 +50,13 @@ class FirewallControl:
     __slots__ = ()
 
     # store the main instances reference here, so it can be accessed throughout webui
-    cfirewall: ClassVar[FirewallControl]
-    object_manager: ClassVar[ObjectManager]
+    cfirewall: FirewallControl
+    object_manager: ObjectManager
 
-    versions: ClassVar[list] = ['pending', 'active']
-    sections: ClassVar[list] = ['BEFORE', 'MAIN', 'AFTER']
+    versions: list[str, str] = ['pending', 'active']
+    sections: list[str, str, str] = ['BEFORE', 'MAIN', 'AFTER']
 
-    _firewall: ClassVar[dict[str, Any]] = load_configuration(DEFAULT_VERSION, ext='.firewall', filepath=DEFAULT_PATH).get_dict()
+    _firewall: dict[str, Any] = load_configuration(DEFAULT_VERSION, ext='.firewall', filepath=DEFAULT_PATH).get_dict()
 
     @classmethod
     def commit(cls, firewall_rules: dict) -> None:

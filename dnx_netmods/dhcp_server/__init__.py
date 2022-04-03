@@ -23,7 +23,7 @@ def run():
 # ================
 # TYPING IMPORTS
 # ================
-from typing import TYPE_CHECKING, Type
+from typing import TYPE_CHECKING, Type, TypeAlias
 
 if (TYPE_CHECKING):
     __all__ = (
@@ -41,5 +41,5 @@ if (TYPE_CHECKING):
     # ======
     # TYPES
     # ======
-    DHCPServer_T = Type[DHCPServer]
-    ClientRequest_T = Type[ClientRequest]
+    DHCPServer_T:    TypeAlias = Type[DHCPServer]
+    ClientRequest_T: TypeAlias = Type[ClientRequest]

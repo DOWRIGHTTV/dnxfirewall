@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 # ================
 # RUNTIME IMPORTS
 # ================
@@ -53,13 +52,14 @@ def run():
 # ================
 # TYPING IMPORTS
 # ================
-from typing import TYPE_CHECKING, Type
+from typing import TYPE_CHECKING, Type, TypeAlias, Callable
 
 if (TYPE_CHECKING):
     __all__ = (
         'DNSProxy', 'DNSServer',
         'ClientQuery', 'DNSPacket',
-        'request_tracker', 'dns_cache',
+
+        'DNSCache', 'RequestTracker',
 
         # TYPES
         'DNSProxy_T', 'DNSServer_T', 'DNSPacket_T'
@@ -69,11 +69,15 @@ if (TYPE_CHECKING):
     from dns_proxy import DNSProxy
     from dns_proxy_server import DNSServer
     from dns_proxy_packets import ClientQuery, DNSPacket
-    from dns_proxy_cache import request_tracker, dns_cache
+
+    from dns_proxy_cache import dns_cache as _dns_cache, request_tracker as _request_tracker
+
+    DNSCache = _dns_cache(dns_packet=Callable[[str], ClientQuery], request_handler=Callable[[ClientQuery], None])
+    RequestTracker = _request_tracker()
 
     # ======
     # TYPES
     # ======
-    DNSProxy_T = Type[DNSProxy]
-    DNSServer_T = Type[DNSServer]
-    DNSPacket_T = Type[DNSPacket]
+    DNSProxy_T:  TypeAlias = Type[DNSProxy]
+    DNSServer_T: TypeAlias = Type[DNSServer]
+    DNSPacket_T: TypeAlias = Type[DNSPacket]

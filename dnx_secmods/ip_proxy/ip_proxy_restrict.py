@@ -116,11 +116,11 @@ class LanRestrict:
 
         now: int = fast_time() + offset
 
-        c_d: list[int] = [int(i) for i in System.date(now)]  # current date
+        c_d:     list[int] = [int(i) for i in System.date(now)]  # current date
         r_start: list[int] = [int(i) for i in restriction_time.split(':')]
 
         restriction_start: float = datetime(*c_d[:2], *r_start[:1]).timestamp()
-        restriction_end: float = restriction_start + restriction_length
+        restriction_end:   float = restriction_start + restriction_length
 
         if (self.is_active):
             restriction_end: float = load_data('ip_proxy.timer')['end']

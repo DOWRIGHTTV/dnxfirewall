@@ -22,18 +22,19 @@ from typing import TYPE_CHECKING
 
 if (TYPE_CHECKING):
     from dnx_gentools.file_operations import ConfigChain
+    from dnx_routines.logging import LogHandler_T
 
 
 class IPSConfiguration(ConfigurationMixinBase):
-    fw_rules: ClassVar[dict] = {}
-    ip_whitelist: ClassVar[dict] = {}
+    fw_rules:     dict = {}
+    ip_whitelist: dict = {}
 
-    open_ports: ClassVar[dict[PROTO, dict]] = {
+    open_ports: dict[PROTO, dict] = {
         PROTO.TCP: {},
         PROTO.UDP: {}
     }
 
-    ddos_limits: ClassVar[dict[PROTO, int]] = {
+    ddos_limits: dict[PROTO, int] = {
         PROTO.TCP: -1,
         PROTO.UDP: -1,
         PROTO.ICMP: -1
@@ -44,6 +45,7 @@ class IPSConfiguration(ConfigurationMixinBase):
     pscan_enabled: ClassVar[int] = 0
     pscan_reject:  ClassVar[int] = 0
     all_enabled:   ClassVar[int] = 0
+    block_length:  ClassVar[int] = 0
 
     def _configure(self) -> tuple[LogHandler_T, tuple, int]:
         '''tasks required by the DNS proxy.

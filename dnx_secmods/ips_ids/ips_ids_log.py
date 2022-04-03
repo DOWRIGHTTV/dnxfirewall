@@ -18,6 +18,7 @@ from dnx_routines.logging.log_client import (
 # ===============
 if (TYPE_CHECKING):
     from dnx_gentools.def_namedtuples import IPS_SCAN_RESULTS
+    from dnx_secmods.ips_ids import IPSPacket
 
 
 class Log(LogHandler):

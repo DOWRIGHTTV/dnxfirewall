@@ -23,7 +23,7 @@ from_hex = bytes.fromhex
 
 class ClientRequest:
 
-    _server: ClassVar[Optional[DHCPServer_T]] = None
+    _server: Optional[DHCPServer_T] = None
     _default_options: ClassVar[tuple[int]] = (54, 51, 58, 59)
 
     xID:    int
@@ -157,7 +157,7 @@ class ClientRequest:
 
 class ServerResponse:
 
-    _server: ClassVar[Optional[DHCPServer_T]] = None
+    _server: Optional[DHCPServer_T] = None
 
     __slots__ = (
         '_request', 'netid', 'netmask',

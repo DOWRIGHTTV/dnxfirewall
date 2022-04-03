@@ -14,6 +14,16 @@ from dnx_gentools.standard_tools import looper
 
 from dns_proxy_log import Log
 
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from dnx_secmods.dns_proxy import DNSCache, RequestTracker
+
+    from dns_proxy_packets import ClientQuery
+
 __all__ = (
     'dns_cache', 'request_tracker',
     
@@ -109,7 +119,7 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
 
         Log.debug('expired records cleared from cache and top domains refreshed')
 
-    class DNSCache(dict):
+    class _DNSCache(dict):
         '''subclass of dict to provide a custom data structure for dealing with the local caching of dns records.
 
         containers handled by class:
@@ -176,7 +186,10 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
             threading.Thread(target=auto_clear, args=(self,)).start()
             threading.Thread(target=manual_clear, args=(self,)).start()
 
-    return DNSCache()
+    if (TYPE_CHECKING):
+        return _DNSCache
+
+    return _DNSCache()
 
 
 def request_tracker() -> RequestTracker:
@@ -213,12 +226,16 @@ def request_tracker() -> RequestTracker:
             while request_queue:
                 yield request_queue_get()
 
-        # TODO: why cant this be a static method again? some weird arg problem.
-        def insert(self, client_query: ClientQuery):
+        @staticmethod
+        # NOTE: first arg is because this gets reference/called via an instance.
+        def insert(_, client_query: ClientQuery) -> None:
 
             request_queue_append(client_query)
 
             # notifying return_ready that there is a query ready to forward
             notify_ready()
+
+    if (TYPE_CHECKING):
+        return _RequestTracker
 
     return _RequestTracker()

@@ -24,7 +24,7 @@ PREPARE_AND_SEND = ProxyResponse.prepare_and_send
 
 class IPProxy(ProxyConfiguration, NFQueue):
 
-    _packet_parser: ClassVar[ProxyParser] = IPPPacket.netfilter_recv
+    _packet_parser: ProxyParser = IPPPacket.netfilter_recv
 
     __slots__ = ()
 
