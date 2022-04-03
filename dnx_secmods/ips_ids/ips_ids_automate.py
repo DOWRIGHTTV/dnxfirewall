@@ -58,7 +58,7 @@ class IPSConfiguration(ConfigurationMixinBase):
             (self._clear_ip_tables, ())
         )
 
-        return Log, threads, 3
+        return Log, threads, 2
 
     @cfg_read_poller('ips_ids')
     def _get_settings(self, cfg_file: str) -> None:
