@@ -55,7 +55,9 @@ class SystemControl:
     # normally, I wouldn't do this as I try to not have needless classes, but this is one case that will definitely be
     # expanded on to ensure it is a secure implementation and doesn't allow for any funny business.
     def run(cls):
-        cls()
+        self = cls()
+
+        self._receive_control_socket()
 
     @looper(NO_DELAY)
     def _receive_control_socket(self):
