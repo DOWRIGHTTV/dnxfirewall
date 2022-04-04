@@ -50,7 +50,8 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     },
 
     # DB TABLES
-    'db-tables': {'module': 'dnx_routines.database', 'exclude': exclude('cli', COMMANDS), 'priv': False, 'service': True},
+    'db-tables': {'module': 'dnx_routines.database', 'exclude': exclude('cli', COMMANDS), 'priv': False, 'service':
+        False},
 
     # WEBUI
     'webui': {'module': '', 'exclude': ['cli'], 'priv': False, 'service': True, 'environ': ['webui', '1']},
@@ -89,7 +90,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
         'module': 'dnx_system.utils.unit_tests.trie_test', 'exclude': exclude('cli', COMMANDS), 'priv': False, 'service': False
     }
 }
-SERVICE_MODULES = [f'dnx-{mod.replace("_", "-")}' for mod, modset in MODULE_MAPPING.items() if modset['service']]
+SERVICE_MODULES = [f'dnx-{mod}' for mod, modset in MODULE_MAPPING.items() if modset['service']]
 
 systemctl_ret_codes: dict[int, str] = {
     0: 'program is running or service is OK',
@@ -160,7 +161,7 @@ def modstat_command() -> None:
     svc_len: int = 0
     down_detected: bool = False
 
-    status: list[Optional[list[str, str]]] = []
+    status: list[list[str, str]] = []
     for svc in SERVICE_MODULES:
         svc_len = len(svc) if len(svc) > svc_len else svc_len
 

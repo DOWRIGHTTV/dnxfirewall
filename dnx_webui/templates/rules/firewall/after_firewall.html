@@ -122,11 +122,13 @@ function updateRule() {
         rData.forEach((x) => {field.insertAdjacentHTML("beforeend", x.outerHTML)});
     }
 
-    let close = row.querySelectorAll(".close")
-    close.forEach((x) => {x.remove()})
+    let close = row.querySelectorAll(".close");
+    close.forEach((x) => {x.remove()});
 
-    let FWrule = document.getElementById(rid)
-    FWrule.outerHTML = row.outerHTML
+    let FWrule = document.getElementById(rid);
+    FWrule.outerHTML = row.outerHTML;
+
+    clearDNXChips();
 
     M.Modal.getInstance(ruleEditor).close();
 }
@@ -234,7 +236,6 @@ function fillEditor(ruleEditor, ruleRow) {
                 const actionMap = {"drop": 0, "accept": 1};
 
                 document.querySelectorAll(".eaction")[actionMap[rule_field.innerHTML]].checked = true;
-
             }
             else if (["src_zone", "src_network", "src_service", "dst_zone", "dst_network", "dst_service"].includes(field)) {
                 let dnxChips = editor_field.parentNode;
@@ -250,11 +251,11 @@ function fillEditor(ruleEditor, ruleRow) {
             }
         }
         catch (e) {
-            console.log(e)
+            console.log(e);
         }
         finally {}
     }
-    ruleEditor.children[0].id = `e${ruleRow.id}`
+    ruleEditor.children[0].id = `e${ruleRow.id}`;
 }
 </script>
 <script>
@@ -293,33 +294,76 @@ function initDNXChips(field) {
         }
     })
 }
-let srcZoneObjects = initDNXChips("src-zone")
-let dstZoneObjects = initDNXChips("dst-zone")
-let srcNetworkObjects = initDNXChips("src-network")
-let dstNetworkObjects = initDNXChips("dst-network")
-let srcServiceObjects = initDNXChips("src-service")
-let dstServiceObjects = initDNXChips("dst-service")
+let chipMAP = {
+    zone: [initDNXChips("s-zone")[0], initDNXChips("d-zone")[0]],
+    network: [initDNXChips("s-network")[0], initDNXChips("d-network")[0]],
+    service: [initDNXChips("s-service")[0], initDNXChips("d-service")[0]]
+}
 
-function cAddCallback(e, chip) {
+function clearDNXChips() {
+    let srcZone = chipMAP["zone"][0]
+    let dstZone = chipMAP["zone"][1]
+
+    let srcNetwork = chipMAP["network"][0]
+    let dstNetwork = chipMAP["network"][1]
+
+    let srcService = chipMAP["service"][0]
+    let dstService = chipMAP["service"][1]
+
+    for (let field of [srcZone, dstZone, srcNetwork, dstNetwork, srcService, dstService]) {
+        field.$chips.splice(0, 99);
+        field.chipsData.splice(0,99);
+    }
+}
+
+function cAddCallback(el, chip) {
+
+    let ftype = chip.parentNode.getAttribute("data-ftype");
+    let findex = chip.parentNode.getAttribute("data-findex");
+
+    let instance = chipMAP[ftype][findex];
+
+    chip.setAttribute("data-id", chip.innerHTML.split("<")[0]);
+    console.log('index of', instance.$chips);
+    console.log('index of', instance.chipsData);
+
+    {#console.log(instance.chipsData.indexOf(chip));#}
 
     // setting up remove function
-    chip.children[0].setAttribute("onclick", "cRemove(this)"); // [0] icon, [1] close
-    console.log(chip.children[0])
+    chip.children[0].setAttribute("onclick", "cRemove(this)");
 
     //adding icon and color to an object
-    let chipDef = fwObjectMap[chip.innerText.split("\n")[0]]
-    let chipFormat = objFormatMap[chipDef.type]
+    let chipDef = fwObjectMap[chip.innerText.split("\n")[0]];
+    let chipFormat = objFormatMap[chipDef.type];
 
-    chip.className += ` ${chipFormat[0]}`
-    chip.innerHTML = `<i class="material-icons tiny">${chipFormat[1]}</i>` + "  " + chip.innerHTML
-    chip.innerHTML += `<input type="hidden" name="${e[0].id}" value="${chipDef.id},${chipDef.type}">`;
+    chip.className += ` ${chipFormat[0]}`;
+    chip.innerHTML = `<i class="material-icons tiny">${chipFormat[1]}</i>` + "  " + chip.innerHTML;
+    chip.innerHTML += `<input type="hidden" name="${el[0].id}" value="${chipDef.id},${chipDef.type}">`;
+
+    {#console.log('added to instance', instance);#}
 }
 function cSelectCallback(e, chip) {
 
     console.log(`SELECTED ${e} ${chip}`)
 }
 function cRemove(btn) {
-    // using as a function to allow for hooks or other functionality to be added if needed.
+
+    let chip = btn.parentNode;
+
+    let ftype = chip.parentNode.getAttribute("data-ftype");
+    let findex = chip.parentNode.getAttribute("data-findex");
+
+    let instance = chipMAP[ftype][findex];
+
+    let i
+    for (i = 0; i < instance.chipsData.length; i++) {
+        let c = instance.chipsData[i];
+        if (c.tag === chip.getAttribute("data-id")) {
+            break
+        }
+    }
+    instance.$chips.splice(i, 1);
+    instance.chipsData.splice(i, 1);
 
     btn.parentNode.remove()
 }

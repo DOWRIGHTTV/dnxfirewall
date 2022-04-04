@@ -44,12 +44,12 @@
                 <tr class="no-border">
                     <td>ZONE</td>
                     <td>
-                        <div class="src-zone-chips col s10">
+                        <div class="s-zone-chips col s10" data-ftype="zone" data-findex="0">
                             <input class="esrc_zone">
                         </div>
                     </td>
                     <td>
-                        <div class="dst-zone-chips col s10">
+                        <div class="d-zone-chips col s10" data-ftype="zone" data-findex="1">
                             <input class="edst_zone">
                         </div>
                     </td>
@@ -57,12 +57,12 @@
                 <tr class="no-border">
                     <td>ADDRESS</td>
                     <td>
-                        <div class="src-network-chips col s10">
+                        <div class="s-network-chips col s10" data-ftype="network" data-findex="0">
                             <input class="esrc_network">
                         </div>
                     </td>
                     <td>
-                        <div class="dst-network-chips col s10">
+                        <div class="d-network-chips col s10" data-ftype="network" data-findex="1">
                             <input class="edst_network">
                         </div>
                     </td>
@@ -70,12 +70,12 @@
                 <tr class="no-border">
                     <td>SERVICE</td>
                     <td>
-                        <div class="src-service-chips col s10">
+                        <div class="s-service-chips col s10" data-ftype="service" data-findex="0">
                             <input class="esrc_service">
                         </div>
                     </td>
                     <td>
-                        <div class="dst-service-chips col s10">
+                        <div class="d-service-chips col s10" data-ftype="service" data-findex="1">
                             <input class="edst_service">
                         </div>
                     </td>
@@ -110,7 +110,7 @@
     <div class="row">
         <div class="modal-footer">
             <a class="btn waves-effect waves-light" onclick="updateRule()">Submit</a>
-            <a class="btn-flat modal-close waves-effect waves-green" >Cancel</a>
+            <a class="btn-flat modal-close waves-effect waves-green" onclick="clearDNXChips()">Cancel</a>
         </div>
     </div>
 </div>
