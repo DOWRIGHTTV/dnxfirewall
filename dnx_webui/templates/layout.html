@@ -75,6 +75,13 @@
         Object.keys(attrs).forEach(key => el.setAttribute(key, attrs[key]));
     }
 
+    function getAttributes(el, attrs) {
+        let values = [];
+        attrs.forEach(attr => values.push(el.getAttribute(attr)));
+
+        return values;
+    }
+
     </script>
     <!-- ^^ BEFORE PAGE TEMPLATE ^^ -->
     {% block body %}{% endblock body -%}

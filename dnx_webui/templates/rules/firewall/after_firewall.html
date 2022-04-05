@@ -23,7 +23,6 @@ function enableRules() {
     for (let rule of checkedRules) {
         setAttributes(rule.closest("tr"), {"data-enabled": "1", "style": "opacity: 1"})
     }
-
     uncheckRules(checkedRules);
 }
 function disableRules() {
@@ -33,7 +32,6 @@ function disableRules() {
     for (let rule of checkedRules) {
         setAttributes(rule.closest("tr"), {"data-enabled": "0", "style": "opacity: .4"})
     }
-
     uncheckRules(checkedRules);
 }
 function removeRules() {
@@ -202,12 +200,12 @@ function fillEditor(ruleEditor, ruleRow) {
                 input.id = "ename";
                 input.name = "ename";
                 input.type = "text";
-                input.classList = "ename validate";
+                input.className = "ename validate";
                 input.value = rule_field.innerText;
 
                 input_field.prepend(input);
 
-                input_field.children[1].classList = "active";
+                input_field.children[1].className = "active";
             }
             else if (["sec1_prof", "sec2_prof", "sec3_prof"].includes(field)) {
                 let input_field = editor_field.parentNode;
@@ -217,7 +215,7 @@ function fillEditor(ruleEditor, ruleRow) {
                 let input = document.createElement("input");
                 input.name = field;
                 input.type = "number";
-                input.classList = `e${field} validate`;
+                input.className = `e${field} validate`;
                 input.min = "0";
                 input.max = "1";
                 input.value = rule_field.innerText
@@ -260,33 +258,29 @@ function fillEditor(ruleEditor, ruleRow) {
 </script>
 <script>
 //firewall object implementation (built from materialize chips)
-const fwObjectMap = {{firewall_settings.fw_object_map|tojson}};
+const fwObjectMap  = {{firewall_settings.fw_object_map|tojson}};
 const objFormatMap =  {
     address: ["blue lighten-2", "tv"], country: ["red", "language"],
     service: ["orange lighten-2", "track_changes"], zone: ["purple lighten-2", "border_inner"]
 };
-const zone_autofill = {{firewall_settings.zone_autofill|tojson}};
+const zone_autofill    = {{firewall_settings.zone_autofill|tojson}};
 const network_autofill = {{firewall_settings.network_autofill|tojson}};
 const service_autofill = {{firewall_settings.service_autofill|tojson}};
 
 function initDNXChips(field) {
     let elem = document.querySelectorAll(`.${field}-chips`);
-    let set;
 
-    let field_type = field.split('-')[1]
-    if (field_type === "service") {
+    let set;
+    if (field === "service") {
         set = service_autofill;
     }
-    else if (field_type === "zone") {
+    else if (field === "zone") {
         set = zone_autofill;
     } else {
         set = network_autofill;
     }
-
     return M.Chips.init(elem, {
         onChipAdd: cAddCallback,
-        onChipSelect: () => console.log("selected"),
-//        onChipDelete: cRemoveCallback,
         limit: 4,
         autocompleteOnly: true,
         autocompleteOptions: {
@@ -295,76 +289,51 @@ function initDNXChips(field) {
     })
 }
 let chipMAP = {
-    zone: [initDNXChips("s-zone")[0], initDNXChips("d-zone")[0]],
-    network: [initDNXChips("s-network")[0], initDNXChips("d-network")[0]],
-    service: [initDNXChips("s-service")[0], initDNXChips("d-service")[0]]
+    zone: initDNXChips("zone"),
+    network: initDNXChips("network"),
+    service: initDNXChips("service")
 }
-
 function clearDNXChips() {
-    let srcZone = chipMAP["zone"][0]
-    let dstZone = chipMAP["zone"][1]
-
-    let srcNetwork = chipMAP["network"][0]
-    let dstNetwork = chipMAP["network"][1]
-
-    let srcService = chipMAP["service"][0]
-    let dstService = chipMAP["service"][1]
-
-    for (let field of [srcZone, dstZone, srcNetwork, dstNetwork, srcService, dstService]) {
-        field.$chips.splice(0, 99);
-        field.chipsData.splice(0,99);
+    for (let fields of [chipMAP["zone"], chipMAP["network"], chipMAP["service"]]) {
+        fields.forEach((field) => {field.$chips.splice(0, 99); field.chipsData.splice(0,99);});
     }
 }
 
 function cAddCallback(el, chip) {
 
-    let ftype = chip.parentNode.getAttribute("data-ftype");
-    let findex = chip.parentNode.getAttribute("data-findex");
+    let objName = chip.innerHTML.split("<")[0];
+    let chipClose = chip.innerHTML.split(objName)[1];
 
-    let instance = chipMAP[ftype][findex];
+    chip.setAttribute("data-id", objName);
 
-    chip.setAttribute("data-id", chip.innerHTML.split("<")[0]);
-    console.log('index of', instance.$chips);
-    console.log('index of', instance.chipsData);
-
-    {#console.log(instance.chipsData.indexOf(chip));#}
-
-    // setting up remove function
-    chip.children[0].setAttribute("onclick", "cRemove(this)");
+    chip.innerHTML = `<span>${objName}</span>${chipClose}`;
+    chip.children[1].setAttribute("onclick", "cRemove(this.parentNode)");
 
     //adding icon and color to an object
     let chipDef = fwObjectMap[chip.innerText.split("\n")[0]];
     let chipFormat = objFormatMap[chipDef.type];
 
     chip.className += ` ${chipFormat[0]}`;
-    chip.innerHTML = `<i class="material-icons tiny">${chipFormat[1]}</i>` + "  " + chip.innerHTML;
+    chip.innerHTML = `<i class="material-icons tiny">${chipFormat[1]}</i>` + chip.innerHTML;
     chip.innerHTML += `<input type="hidden" name="${el[0].id}" value="${chipDef.id},${chipDef.type}">`;
-
-    {#console.log('added to instance', instance);#}
 }
-function cSelectCallback(e, chip) {
+function cRemove(chip) {
+    let fid = chip.getAttribute("data-id");
 
-    console.log(`SELECTED ${e} ${chip}`)
-}
-function cRemove(btn) {
-
-    let chip = btn.parentNode;
-
-    let ftype = chip.parentNode.getAttribute("data-ftype");
-    let findex = chip.parentNode.getAttribute("data-findex");
+    let ftype, findex;
+    [ftype, findex] = getAttributes(chip.parentNode, ["data-ftype", "data-findex"])
 
     let instance = chipMAP[ftype][findex];
 
-    let i
+    let i;
     for (i = 0; i < instance.chipsData.length; i++) {
         let c = instance.chipsData[i];
-        if (c.tag === chip.getAttribute("data-id")) {
+        if (c.tag === fid) {
             break
         }
     }
     instance.$chips.splice(i, 1);
     instance.chipsData.splice(i, 1);
-
-    btn.parentNode.remove()
+    chip.remove();
 }
 </script>
