@@ -305,7 +305,7 @@ function cAddCallback(el, chip) {
 
     chip.setAttribute("data-id", objName);
 
-    chip.innerHTML = `<span>${objName}</span>${chipClose}`;
+    chip.innerHTML = `<span> ${objName}</span>${chipClose}`;
     chip.children[1].setAttribute("onclick", "cRemove(this.parentNode)");
 
     //adding icon and color to an object
