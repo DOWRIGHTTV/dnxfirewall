@@ -244,7 +244,8 @@ function fillEditor(ruleEditor, ruleRow) {
                 
                 chipArray = dnxChips.querySelectorAll(".chip");
                 chipArray.forEach((chip) => {
-                    chip.insertAdjacentHTML("beforeend", '<i class="material-icons close" onclick="cRemove(this)">close</i>')
+                    chip.insertAdjacentHTML("beforeend", '<i class="material-icons close" ' +
+                        'onclick="cRemove(this.parentNode)">close</i>')
                 });
             }
         }
@@ -298,9 +299,7 @@ function clearDNXChips() {
         fields.forEach((field) => {field.$chips.splice(0, 99); field.chipsData.splice(0,99);});
     }
 }
-
 function cAddCallback(el, chip) {
-
     let objName = chip.innerHTML.split("<")[0];
     let chipClose = chip.innerHTML.split(objName)[1];
 
