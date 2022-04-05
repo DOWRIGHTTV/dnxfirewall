@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+import shutil
+
 from binascii import unhexlify
 from functools import partial
 from random import getrandbits
@@ -11,12 +14,23 @@ from subprocess import run, CalledProcessError, DEVNULL
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import RUN_FOREVER, byte_join, fast_time, UINT32_MAX
 from dnx_gentools.def_enums import PROTO
+
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import PR_ICMP_HDR
+from dnx_iptools.cprotocol_tools import itoip
+
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from dnx_gentools import Structure
 
 __all__ = (
     'btoia', 'itoba',
 
+    'change_socket_owner',
     'icmp_reachable',
 
     'cidr_to_int',
@@ -28,6 +42,23 @@ __all__ = (
 
 btoia: Callable[[ByteString], int] = partial(int.from_bytes, byteorder='big', signed=False)
 itoba: Callable[[int, int], bytes] = partial(int.to_bytes, byteorder='big', signed=False)
+
+def change_socket_owner(sock_path: str) -> bool:
+    '''attempts to change the file owner and permissions of the passed in socket to dnx/dnx.
+
+    following the change, the permissions will be set to 660.
+    return True on success, False on failure.
+
+        required: run on unix sockets created by root.
+        optional: run on unix socket created by dnx (would only slightly reduce permissions)
+    '''
+    try:
+        shutil.chown(sock_path, user='dnx', group='dnx')
+        os.chmod(sock_path, 0o660)
+    except PermissionError:
+        return False
+
+    return True
 
 # will ping specified host. to be used to prevent duplicate ip address handouts.
 def icmp_reachable(host_ip: int) -> bool:

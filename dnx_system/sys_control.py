@@ -10,6 +10,8 @@ from socket import socket, AF_UNIX, SOCK_DGRAM
 from dnx_gentools.def_constants import *
 from dnx_gentools.standard_tools import looper
 
+from dnx_iptools.protocol_tools import change_socket_owner
+
 from dnx_routines.logging import Log
 
 
@@ -35,6 +37,8 @@ if os.path.exists(CONTROL_SOCKET):
 
 _control_service = socket(AF_UNIX, SOCK_DGRAM)
 _control_service.bind(CONTROL_SOCKET.encode())
+
+change_socket_owner(CONTROL_SOCKET)
 
 _control_service_recv = _control_service.recvmsg
 _control_service_sendmsg = _control_service.sendmsg
