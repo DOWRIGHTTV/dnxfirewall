@@ -95,7 +95,7 @@ MSEC:     float = .001   # one millisecond
 NO_DELAY:   int = 0
 
 # ip addresses
-NULL_ADDR: tuple[int, int] = (-1, -1)
+NULL_ADDR:  tuple[str, int] = ('', -1)
 INADDR_ANY: int = 0
 LOCALHOST:  int = 2130706433
 BROADCAST:  int = 4294967295

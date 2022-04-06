@@ -24,6 +24,8 @@ if (TYPE_CHECKING):
     from dnx_gentools.file_operations import ConfigChain
     from dnx_gentools.def_namedtuples import FW_OBJECT
 
+    from dnx_webui import ObjectManager
+
 valid_sections: dict[str, str] = {'BEFORE': '1', 'MAIN': '2', 'AFTER': '3'}
 
 fw_object_manager: ObjectManager = FirewallControl.object_manager

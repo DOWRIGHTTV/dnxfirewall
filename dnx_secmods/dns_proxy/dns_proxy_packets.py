@@ -11,7 +11,7 @@ from dnx_gentools.def_exceptions import ProtocolError
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import *
 from dnx_iptools.protocol_tools import *
-from dnx_iptools.cprotocol_tools import itoip, calc_checksum
+from dnx_iptools.cprotocol_tools import itoip, iptoi, calc_checksum
 from dnx_iptools.interface_ops import load_interfaces
 from dnx_iptools.packet_classes import NFPacket, RawResponse
 
@@ -26,25 +26,37 @@ __all__ = (
 
 
 class ClientQuery:
+    qtype:  int
+    qclass: int
+    qname:  str
+
+    request_identifier: tuple[int, int, int]
+
+    question_record: memoryview
+    additional_records: memoryview
+
     __slots__ = (
         '_dns_header', '_dns_query',
 
-        # init
-        'address', 'sendto', 'top_domain',
-        'keepalive', 'local_domain', 'fallback',
-        'dns_id', 'qname', 'send_data',
-        'additional_records',
+        'client_ip', 'client_port',
+        'local_domain', 'top_domain',
+        'keepalive', 'fallback',
+        'send_data', 'sendto',
 
-        # dns
         'qr', 'op', 'aa', 'tc', 'rd',
         'ra', 'zz', 'ad', 'cd', 'rc',
 
-        'request_identifier', 'requests', 'qtype',
-        'qclass', 'question_record'
+        'dns_id',
+        'request_identifier', 'requests',
+        'qtype', 'qclass', 'qname',
+        'question_record', 'additional_records'
     )
 
-    def __init__(self, address, sock_info):
-        self.address: Address = address
+    def __init__(self, address: Address, sock_info):
+
+        self.client_ip:   int = iptoi(address[0])
+        self.client_port: int = address[1]
+
         if (sock_info):
             self.sendto = sock_info.sendto  # 5 object namedtuple
 
@@ -54,22 +66,22 @@ class ClientQuery:
         self.fallback:  bool = False
 
         self.dns_id: int = 1
-        self.qname:  str = ''
+        # self.qname:  str = ''
 
         # OPT record defaults #
         # TODO: add better support for this
         self.additional_records: bytes = b''
 
     def __str__(self):
-        return f'dns_query(host={self.address[0]}, port={self.address[1]}, domain={self.qname})'
+        return f'dns_query(host={self.client_ip}, port={self.client_port}, domain={self.qname})'
 
     # TODO: see if we should validate whether there is an indicated question record before continuing
     # TODO: implement DNS label/name validity checks and drop packet if fail. do same on response
-    def parse(self, data: memoryview):
+    def parse(self, data: memoryview) -> None:
 
         _dns_header, dns_query = data[:12], data[12:]
 
-        dns_header: tuple = dns_header_unpack(_dns_header)
+        dns_header: tuple[int, ...] = dns_header_unpack(_dns_header)
         self.dns_id: int = dns_header[0]
 
         self.qr: int = dns_header[1] & DNS_MASK.QR
@@ -90,7 +102,7 @@ class ClientQuery:
         self.question_record    = dns_query[:offset + 4]
         self.additional_records = dns_query[offset + 4:]
 
-        self.request_identifier = (*self.address, dns_header[0])  # dns_id
+        self.request_identifier = (self.client_ip, self.client_port, dns_header[0])  # dns_id
 
     def generate_record_response(self, record_ip: int = 0, configured_ttl: int = THIRTY_MIN) -> bytearray:
         '''builds a dns query response for locally configured records.
@@ -179,6 +191,9 @@ std_rr_template: Structure = DNS_STD_RR(
 
 
 class DNSPacket(NFPacket):
+    qtype:  int
+    qclass: int
+    qname:  str
 
     __slots__ = (
         'action',
@@ -193,24 +208,12 @@ class DNSPacket(NFPacket):
         'qr', 'rd', 'ad', 'cd',
     )
 
-    def __init__(self):
-        self.qr: int = -1
-        self.qtype: int = -1
-        self.qclass: int = -1
-        self.request_identifier: tuple[str, int, int] = ('0', -1, -1)
-
-        self.dns_id: int
-        self.qname:  str
-        self.qtype:  int
-        self.qclass: int
-        self.local_domain: bool
-
     def _before_exit(self, mark: int):
 
         # ============================
         # DNS HEADER (12 bytes)
         # ============================
-        dns_header: tuple = dns_header_unpack(self.udp_payload[:12])
+        dns_header: StructUnpack = dns_header_unpack(self.udp_payload[:12])
 
         # filtering out non query flags (malformed payload)
         self.qr = dns_header[1] & DNS_MASK.QR
@@ -242,7 +245,7 @@ class DNSPacket(NFPacket):
         # hashing queried name enumerating any subdomains (signature matching)
         # defining unique tuple for informing dns server of inspection results
         self.requests, self.tld = _enumerate_request(self.qname, self.local_domain)
-        self.request_identifier = (itoip(self.src_ip), self.src_port, self.dns_id)
+        self.request_identifier = (self.src_ip, self.src_port, self.dns_id)
 
 def _enumerate_request(request: str, local_domain: bool) -> tuple[list[int], str]:
     rs: list[str] = request.split('.')
@@ -297,8 +300,8 @@ def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[by
     # ================
     # resource_records = dns_payload[offset + 4:]
 
-    original_ttl: int = 0
-    record_cache: list = []
+    original_ttl = 0
+    record_cache = []
 
     # parsing standard and authority records
     for record_count in [resource_count, authority_count]:
@@ -343,9 +346,9 @@ def _parse_record(dns_payload: memoryview, cur_offset: int) -> tuple[int, RESOUR
     record_values = bytes(dns_payload[new_offset:])
     # resource record data len, usually 4 for ip address, but can vary.
     # calculating first, so we can single shot creation of the byte container.
-    dt_len: int = btoia(record_values[8:10])
+    dt_len = btoia(record_values[8:10])
 
-    resource_record = RESOURCE_RECORD(
+    resource_record =  RESOURCE_RECORD(
         record_name,
         record_values[:2],
         record_values[2:4],

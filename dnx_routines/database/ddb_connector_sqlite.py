@@ -8,11 +8,20 @@ import importlib
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 
+if (TYPE_CHECKING):
+    from typing import TypeAlias
+
+    from dnx_routines.logging import LogHandler_T
+    from dnx_routines.database import DBConnector_T
+
+    NO_ROUTINE: tuple[None, None]
+
+
 __all__ = (
     'DBConnector',
 )
 
-NO_ROUTINE: tuple[None, None] = (None, None)
+NO_ROUTINE = (None, None)
 
 
 class _DBConnector:
@@ -137,7 +146,7 @@ class _DBConnector:
         # dns proxy main
         self._cur.execute(
             'create table if not exists dnsproxy '
-            '(src_ip text not null, domain text not null, '
+            '(src_ip int4 not null, domain text not null, '
             'category text not null, reason text not null, '
             'action text not null, count int4 not null, '
             'last_seen int4 not null)'
@@ -146,7 +155,7 @@ class _DBConnector:
         # ip proxy main
         self._cur.execute(
             'create table if not exists ipproxy '
-            '(local_ip text not null, tracked_ip text not null, '
+            '(local_ip int4 not null, tracked_ip int4 not null, '
             'category text not null, direction text not null, '
             'action text not null, last_seen int4 not null)'
         )
@@ -154,15 +163,15 @@ class _DBConnector:
         # ips/ids main
         self._cur.execute(
             'create table if not exists ips '
-            '(src_ip not null, protocol not null, '
-            'attack_type not null, action not null, '
+            '(src_ip int4 not null, protocol text not null, '
+            'attack_type text not null, action text not null, '
             'last_seen int4 not null)'
         )
 
         # infected clients
         self._cur.execute(
             'create table if not exists infectedclients '
-            '(mac text not null, ip_address text not null, '
+            '(mac text not null, ip_address int4 not null, '
             'detected_host text not null, reason text not null, '
             'last_seen int4 not null)'
         )
@@ -171,10 +180,9 @@ class _DBConnector:
         # (01,2021 | CHINA | 10 | 1)
         self._cur.execute(
             'create table if not exists geolocation '
-            '(month not null, country not null, '
-            'direction not null, '
-            'blocked int4 not null, '
-            'allowed int4 not null)'
+            '(month text not null, '
+            'country text not null, direction not null, '
+            'blocked int4 not null, allowed int4 not null)'
         )
 
         # dns proxy - blocked clients (for serving webui block page)
@@ -189,7 +197,7 @@ class _DBConnector:
         self._cur.execute(
             'create table if not exists config_objects '
             '(name text not null, type text not null, '
-            'value not null, description text not null)'
+            'value text not null, description text not null)'
         )
 
 

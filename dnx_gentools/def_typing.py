@@ -10,6 +10,7 @@ _DISABLED = False
 # NOTE: splitting if statements as import organization
 # standard lib imports
 if (TYPE_CHECKING and not _DISABLED):
+    from typing import TypeAlias
 
     from threading import Lock, Event
     from ipaddress import IPv4Address as _IPv4Address, IPv4Network as _IPv4Network
@@ -17,14 +18,15 @@ if (TYPE_CHECKING and not _DISABLED):
     from select import epoll as Epoll
     from ssl import SSLContext
 
-    Address = tuple[str, int]
+    Address:    TypeAlias = tuple[str, int]
+    IntAddress: TypeAlias = tuple[int, int]
 
-    Wrapper = Callable[[Any], None]
-    Callable_T = Callable[[Any, ...], Any]
+    Wrapper: TypeAlias = Callable[[Any], None]
+    Callable_T: TypeAlias = Callable[[Any, ...], Any]
 
     ConfigLock = NewType('ConfigLock', type('FileLock'))
     IPTableLock = NewType('IPTableLock', type('FileLock'))
-    WebError = dict[str, Union[int, str]]
+    WebError: TypeAlias = dict[str, Union[int, str]]
 
     # dnx class imports for use as Types
 
@@ -43,15 +45,16 @@ if (TYPE_CHECKING and not _DISABLED):
 
     from dnx_iptools.packet_classes import NFPacket as _NFPacket
 
-    ModuleClasses = Union[IPProxy_T, IPS_IDS_T, DNSProxy_T, DHCPServer_T]
+    ModuleClasses: TypeAlias = Union[IPProxy_T, IPS_IDS_T, DNSProxy_T, DHCPServer_T]
 
-    ListenerCallback = Callable[..., None]
-    ListenerPackets = Union[_ClientRequest, _ClientQuery]
-    ListenerParser = Callable[[Address, _L_SOCK], ListenerPackets]
+    ListenerCallback: TypeAlias = Callable[..., None]
+    ListenerPackets:  TypeAlias = Union[_ClientRequest, _ClientQuery]
+    ListenerParser:   TypeAlias = Callable[[Address, _L_SOCK], ListenerPackets]
 
-    ProxyCallback = Callable[..., None]
-    ProxyPackets = Union[_IPPPacket, _IPSPacket, _DNSPacket, _NFPacket]
-    ProxyParser = Callable[[_CPacket, int], ProxyPackets]
+    ProxyCallback: TypeAlias = Callable[..., None]
+    ProxyPackets:  TypeAlias = Union[_IPPPacket, _IPSPacket, _DNSPacket, _NFPacket]
+    ProxyParser:   TypeAlias = Callable[[_CPacket, int], ProxyPackets]
 
-    DNSListHandler = Callable[[Any, str, int], int]
+    DNSListHandler: TypeAlias = Callable[[Any, str, int], int]
 
+    StructUnpack: TypeAlias = tuple[int, ...]

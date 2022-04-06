@@ -21,6 +21,7 @@ from dnx_routines.logging.log_client import (
 # ===============
 if (TYPE_CHECKING):
     from dnx_gentools.def_namedtuples import DNS_REQUEST_RESULTS
+    from dnx_secmods.dns_proxy import DNSPacket
 
 
 class Log(LogHandler):

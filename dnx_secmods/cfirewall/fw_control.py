@@ -19,6 +19,8 @@ from typing import TYPE_CHECKING
 if (TYPE_CHECKING):
     from dnx_gentools.file_operations import ConfigChain
 
+    from dnx_webui import ObjectManager
+
 
 DEFAULT_VERSION: str = 'pending'
 DEFAULT_PATH:    str = 'dnx_system/iptables'
@@ -76,7 +78,7 @@ class FirewallControl:
 
         file changes are being monitored by Control class to load into cfirewall.
         '''
-        push_error: bool = True
+        push_error = True
 
         # ==============================
         # OBJECT ID > VALUE CONVERSIONS

@@ -15,10 +15,9 @@ from dnx_gentools.def_constants import RUN_FOREVER, MSEC, fast_time, fast_sleep,
 # ===============
 # TYPING IMPORTS
 # ===============
-from typing import TYPE_CHECKING
-
 if (TYPE_CHECKING):
     from dnx_routines.logging import LogHandler_T
+
 
 __all__ = (
     'looper', 'dynamic_looper',

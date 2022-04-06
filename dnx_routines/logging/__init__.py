@@ -23,7 +23,7 @@ if (not TYPE_CHECKING):
 # TYPING IMPORTS
 # ================
 else:
-    from typing import Type
+    from typing import Type, TypeAlias
 
     __all__ = (
         'LogHandler',
@@ -39,4 +39,4 @@ else:
     # ======
     # TYPES
     # ======
-    LogHandler_T = Type[LogHandler]
+    LogHandler_T: TypeAlias = Type[LogHandler]

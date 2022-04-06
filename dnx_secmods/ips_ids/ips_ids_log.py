@@ -6,6 +6,9 @@ from dnx_gentools.def_typing import *
 # from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import LOG, IPS
 from dnx_gentools.def_namedtuples import IPS_EVENT_LOG
+
+from dnx_iptools.cprotocol_tools import itoip
+
 from dnx_routines.logging.log_client import LogHandler
 
 # DIRECT ACCESS FUNCTIONS
@@ -45,14 +48,14 @@ class Log(LogHandler):
         if (cls.current_lvl >= LOG.ALERT and scan_info is IPS.LOGGED):
             log = IPS_EVENT_LOG(pkt.tracked_ip, pkt.protocol.name, IPS.DDOS.name, 'logged')
 
-            cls.debug(f'[ddos][logged] {pkt.tracked_ip}')
+            cls.debug(f'[ddos][logged] {itoip(pkt.tracked_ip)}')
 
             return LOG.ALERT, log
 
         if (cls.current_lvl >= LOG.CRITICAL and scan_info is IPS.FILTERED):
             log = IPS_EVENT_LOG(pkt.tracked_ip, pkt.protocol.name, IPS.DDOS.name, 'filtered')
 
-            cls.debug(f'[ddos][filtered] {pkt.tracked_ip}')
+            cls.debug(f'[ddos][filtered] {itoip(pkt.tracked_ip)}')
 
             return LOG.CRITICAL, log
 
@@ -70,7 +73,7 @@ class Log(LogHandler):
                 pkt.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, scan_info.block_status.name
             )
 
-            cls.debug(f'[pscan/scan detected][{scan_info.block_status.name}] {pkt.tracked_ip}')
+            cls.debug(f'[pscan/scan detected][{scan_info.block_status.name}] {itoip(pkt.tracked_ip)}')
 
             return LOG.ERROR, log
 
@@ -81,7 +84,7 @@ class Log(LogHandler):
                 pkt.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, 'blocked'
             )
 
-            cls.debug(f'[pscan/scan detected][blocked] {pkt.tracked_ip}')
+            cls.debug(f'[pscan/scan detected][blocked] {itoip(pkt.tracked_ip)}')
 
             return LOG.WARNING, log
 

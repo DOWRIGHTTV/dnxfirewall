@@ -142,8 +142,8 @@ class IPP_INSPECTION_RESULTS(_NamedTuple):
 
 # LOG TUPLES
 class IPP_EVENT_LOG(_NamedTuple):
-    local_ip:   str
-    tracked_ip: str
+    local_ip:   int
+    tracked_ip: int
     category:   tuple[str, str]
     direction:  str
     action:     str
@@ -168,8 +168,8 @@ class GEOLOCATION_LOG(_NamedTuple):
 
 class INF_EVENT_LOG(_NamedTuple):
     client_mac: str
-    src_ip:     str
-    detected_host: _Union[int, str]
+    src_ip:     int
+    detected_host: str
     reason:     str
 
 

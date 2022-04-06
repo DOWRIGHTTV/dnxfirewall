@@ -15,6 +15,13 @@ from dnx_gentools.def_namedtuples import FW_OBJECT
 from dnx_iptools.cprotocol_tools import iptoi
 from dnx_iptools.protocol_tools import cidr_to_int
 
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from dnx_webui import ObjectManager
 
 __all__ = (
     'initialize', 'ADDR_OBJ', 'SVC_OBJ', 'INVALID_OBJECT', 'MISSING_RULE'

@@ -81,7 +81,7 @@ ddos_tracker: dict[PROTO, DDOS_TRACKERS] = {
 # =================
 # PSCAN INSPECTION
 # =================
-def inspect_portscan(_, packet: IPSPacket):
+def inspect_portscan(_, packet: IPSPacket) -> None:
     '''drives the overall logic of the portscan detection engine.
     '''
     pscan = pscan_tracker[packet.protocol]
@@ -217,7 +217,7 @@ def get_block_status(pre_detection_logging: dict, protocol: PROTO) -> IPS:
 # =================
 # DDOS INSPECTION
 # =================
-def inspect_ddos(_, packet: IPSPacket) -> None:
+def inspect_ddos(packet: IPSPacket) -> None:
     '''drives the overall logic of the ddos detection engine.
     '''
     # filter to make only icmp echo requests checked.

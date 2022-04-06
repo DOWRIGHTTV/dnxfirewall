@@ -22,11 +22,16 @@ from dnx_iptools.interface_ops import load_interfaces, wait_for_interface, wait_
 
 from dnx_netmods.dnx_netfilter.dnx_nfqueue import NetfilterQueue
 
+if (TYPE_CHECKING):
+    from dnx_netmods.dnx_netfilter import CPacket
+    from dnx_secmods.dns_proxy import DNSServer_T
+    from dnx_routines.logging import LogHandler_T
+
+    IntfList: TypeAlias = list[tuple[int, int, str]]
+
 __all__ = (
     'Listener', 'ProtoRelay', 'NFQueue', 'NFPacket', 'RawResponse'
 )
-
-IntfList: list[tuple[int, int, str]]
 
 
 class Listener:
@@ -457,7 +462,7 @@ class NFPacket:
     # MARK FIELDs
     mark: int
 
-    action: CONN
+    action:    CONN
     direction: DIR
 
     tracked_geo: int
@@ -466,9 +471,9 @@ class NFPacket:
     ips_profile: int
 
     # HW FIELDS
-    in_intf: int
-    out_intf: int
-    src_mac: str
+    in_intf:   int
+    out_intf:  int
+    src_mac:   str
     timestamp: int
 
     # IP FIELDS
@@ -483,9 +488,9 @@ class NFPacket:
     ack_number: int
 
     # UDP FIELDS
-    ip_header: bytearray
-    udp_header: bytearray
-    udp_payload: bytes
+    ip_header:   ByteString
+    udp_header:  ByteString
+    udp_payload: ByteString
 
     # ICMP FIELDS
     icmp_type: ICMP
