@@ -21,40 +21,40 @@
         <div class="row">
             <div class="col s12">
                 <div class="card-panel hoverable {{card_color}}">
-                <form action="/system/settings/dns" method="POST">
-                    <h4 class="{{title_color}}">DNS Servers</h4>
-                    <table class="striped centered">
-                        <thead>
-                            <tr>
-                                <th style="width:35%">Name</th>
-                                <th style="width:35%">IP Address</th>
-                                <th style="width:15%">Status</th>
-                                <th style="width:15%">TLS</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for server_info in dns_settings['dns_servers'].values() %}
-                            <tr>
-                                <td>
-                                    <input type="text" name="dnsname{{loop.index}}" value="{{server_info['name']}}" class="validate center">
-                                </td>
-                                <td>
-                                    <input type="text" name="dnsserver{{loop.index}}" value="{{server_info['ip_address']}}" class="validate center">
-                                </td>
-                                <td>{{server_info['dns_up']}}</td>
-                                <td>{{server_info['tls_down']}}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                    <div class="row">
-                        <div class="input-field col s12 m2 offset-m5">
-                            <a class="waves-effect waves-light btn modal-trigger col s12" href="#dns-modal2">Update</a>
-                        </div>
-                        <div id="dns-modal2" class="modal">
-                            <div class="modal-content">
-                                <h5 class="{{modal_text_style}}">Changing DNS servers will restart the WAN interface. Continue?</h5>
+                    <form action="/system/settings/dns" method="POST">
+                        <h4 class="{{title_color}}">DNS Servers</h4>
+                        <table class="striped centered">
+                            <thead>
+                                <tr>
+                                    <th style="width:35%">Name</th>
+                                    <th style="width:35%">IP Address</th>
+                                    <th style="width:15%">Status</th>
+                                    <th style="width:15%">TLS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for server_info in dns_settings['dns_servers'].values() %}
+                                <tr>
+                                    <td>
+                                        <input type="text" name="dnsname{{loop.index}}" value="{{server_info['name']}}" class="validate center">
+                                    </td>
+                                    <td>
+                                        <input type="text" name="dnsserver{{loop.index}}" value="{{server_info['ip_address']}}" class="validate center">
+                                    </td>
+                                    <td>{{server_info['dns_up']}}</td>
+                                    <td>{{server_info['tls_down']}}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <div class="row">
+                            <div class="input-field col s12 m2 offset-m5">
+                                <a class="waves-effect waves-light btn modal-trigger col s12" href="#dns-modal2">Update</a>
                             </div>
+                            <div id="dns-modal2" class="modal">
+                                <div class="modal-content">
+                                    <h5 class="{{modal_text_style}}">Changing DNS servers will restart the WAN interface. Continue?</h5>
+                                </div>
                                 <div class="modal-footer">
                                     <button class="btn waves-effect waves-light" name="dns_update">YES</button>
                                     <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
@@ -62,9 +62,7 @@
                                 </div>
                             </div>
                         </div>
-                        </div>
-                    </div>
-                </form>
+                    </form>
                 </div>
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Additional Options</h4>

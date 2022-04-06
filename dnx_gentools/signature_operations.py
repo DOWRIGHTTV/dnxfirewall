@@ -14,10 +14,9 @@ from dnx_gentools.file_operations import load_configuration
 # ===============
 # TYPING IMPORTS
 # ===============
-from typing import TYPE_CHECKING
-
 if (TYPE_CHECKING):
     from dnx_gentools.file_operations import ConfigChain
+    from dnx_routines.logging import LogHandler_T
 
 __all__ = (
     'generate_domain', 'generate_reputation', 'generate_geolocation',

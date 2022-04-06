@@ -107,7 +107,7 @@
                                     <label>
                                         Off
                                         <input type="checkbox" {% if ips_settings['ids_mode'] %}
-                                            checked="checked" {% endif %} name="ids_mode" value="enabled"
+                                            checked="checked" {% endif %} name="ids_mode" value="1"
                                             onchange="this.form.submit()">
                                         <span class="lever"></span>
                                         On
@@ -139,63 +139,43 @@
                 </div>
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Port Scan</h4>
-                    <form action="/intrusion/ips" method="POST">
-                        <input type="hidden" name="tab" value="1">
-                        <input type="hidden" name="dnx_portscan_update">
-                        <div class="row">
+                    <div class="row">
+                        <form action="/intrusion/ips" method="POST">
+                            <input type="hidden" name="tab" value="1">
+                            <input type="hidden" name="ps_enabled">
                             <div class="input-field col s6 center">
                                 Enabled
                                 <div class="switch">
                                     <label>
                                         Off
                                         <input type="checkbox" {% if ips_settings['port_scan']['enabled'] %}
-                                            checked="checked" {% endif %} name="ps_settings" value="enabled"
+                                            checked="checked" {% endif %} name="enabled" value="1"
                                             onchange="this.form.submit()">
                                         <span class="lever"></span>
                                         On
                                     </label>
                                 </div>
                             </div>
+                        </form>
+                        <form action="/intrusion/ips" method="POST">
+                            <input type="hidden" name="tab" value="1">
+                            <input type="hidden" name="ps_reject">
                             <div class="input-field col s6 center">
                                 Reject
                                 <div class="switch">
                                     <label>
                                         Off
+                                        <input type="checkbox" name="reject" value="1" onchange="this.form.submit()"
+                                        {% if ips_settings['port_scan']['reject'] %} checked="checked" {% endif %}
                                         {% if not ips_settings['port_scan']['enabled'] or ips_settings['ids_mode'] %}
-                                        <input disabled type="checkbox">
-                                        {% else %}
-                                        <input type="checkbox" {% if ips_settings['port_scan']['reject'] %}
-                                            checked="checked" {% endif %} name="ps_settings" value="reject"
-                                            onchange="this.form.submit()">
-                                        {% endif %}
+                                            disabled {%- endif %}>
                                         <span class="lever"></span>
                                         On
                                     </label>
                                 </div>
                             </div>
-                        </div>
-                        <noscript>
-                            <div class="row">
-                                <div class="input-field col s12 m4 offset-m4">
-                                    {% if ips_settings['ps_notify'] %}
-                                    <a class="waves-effect waves-light btn modal-trigger col s12" href="#ips-modal2">Update</a>
-                                    <div id="ips-modal2" class="modal">
-                                        <div class="modal-content">
-                                            <h5 class="{{modal_text_style}}">Enabling PortScan Logging/Prevention will have no effect
-                                                when there is no active NATs on WAN interface.</h5>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button class="btn waves-effect waves-light">Continue</button>
-                                            <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                                        </div>
-                                    </div>
-                                    {% else %}
-                                    <button class="btn waves-effect waves-light col s12">Update</button>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </noscript>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

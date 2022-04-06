@@ -53,7 +53,6 @@ def load_page(_: Form) -> dict:
     }
 
 def update_page(form: Form) -> str:
-    print(form)
     if ('ddos_limits' in form):
         ddos_limits = config(**{
             'tcp': get_convert_int(form, 'tcp_limit'),
@@ -78,24 +77,37 @@ def update_page(form: Form) -> str:
 
         configure_ddos(ddos)
 
-    elif ('dnx_portscan_update' in form):
-        enabled_settings = config(**{
-            'enabled': {k: 1 for k in form.getlist('ps_settings', [])}
+    elif ('ps_enabled' in form):
+        settings = config(**{
+            'enabled': get_convert_bint(form, 'enabled')
         })
 
-        error = validate_portscan_settings(enabled_settings)
+        if (DATA.INVALID in settings.values()):
+            return INVALID_FORM
+
+        configure_portscan(settings, field='enabled')
+
+    elif ('ps_reject' in form):
+        settings = config(**{
+            'reject': get_convert_bint(form, 'reject')
+        })
+
+        if (DATA.INVALID in settings.values()):
+            return INVALID_FORM
+
+        error = validate_portscan_reject(settings)
         if (error):
             return error.message
 
-        configure_portscan(enabled_settings)
+        configure_portscan(settings, field='reject')
 
     elif ('general_settings' in form):
         settings = config(**{
-            'ids_mode': True if 'ids_mode' in form else False,
-            'passive_block_length': get_convert_int(form, 'passive_block_length')
+            'ids_mode': get_convert_bint(form, 'ids_mode'),
+            'pb_length': get_convert_int(form, 'passive_block_length')
         })
 
-        if (x in [DATA.MISSING, DATA.INVALID] for x in settings.values()):
+        if any([x in [DATA.MISSING, DATA.INVALID] for x in settings.values()]):
             return INVALID_FORM
 
         error = validate_passive_block_length(settings)
@@ -167,15 +179,11 @@ def update_page(form: Form) -> str:
 # ==============
 # VALIDATION
 # ==============
-def validate_portscan_settings(settings: config, /) -> Optional[ValidationError]:
+def validate_portscan_reject(settings: config, /) -> Optional[ValidationError]:
     ips: ConfigChain = load_configuration('ips_ids')
 
     current_prevention = ips['port_scan->enabled']
-    if not all([hasattr(settings, x) for x in ['enabled', 'reject']]):
-        raise ValidationError(INVALID_FORM)
-
-    print(settings)
-    if ('reject' in settings.enabled and 'drop' not in settings.enabled and not current_prevention):
+    if (settings.reject and not current_prevention):
         return ValidationError('Prevention must be enabled to configure portscan reject.')
 
 def validate_passive_block_length(settings: config, /) -> Optional[ValidationError]:
@@ -202,12 +210,18 @@ def configure_ddos_limits(ddos_limits: config) -> None:
 
         dnx.write_configuration(ips_settings.expanded_user_data)
 
-def configure_portscan(portscan: config) -> None:
+def configure_portscan(portscan: config, *, field: str) -> None:
     with ConfigurationManager('ips_ids') as dnx:
         ips_settings: ConfigChain = dnx.load_configuration()
 
-        ips_settings['port_scan->enabled'] = get_convert_bint(portscan.enabled, 'enabled')
-        ips_settings['port_scan->reject']  = get_convert_bint(portscan.enabled, 'reject')
+        if (field == 'enabled'):
+            ips_settings['port_scan->enabled'] = portscan.enabled
+
+            if (not portscan.enabled):
+                ips_settings['port_scan->reject'] = 0
+
+        elif (field == 'reject'):
+            ips_settings['port_scan->reject'] = portscan.reject
 
         dnx.write_configuration(ips_settings.expanded_user_data)
 

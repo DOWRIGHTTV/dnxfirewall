@@ -19,6 +19,10 @@ from dnx_gentools.def_namedtuples import Item
 from dnx_gentools.def_enums import DNS_CAT, DATA
 from dnx_gentools.def_exceptions import ValidationError
 
+if (TYPE_CHECKING):
+    from dnx_routines.logging import LogHandler_T
+
+
 __all__ = (
     'load_configuration', 'write_configuration',
     'load_data', 'write_data',
@@ -30,7 +34,6 @@ __all__ = (
 
     'config', 'ConfigChain', 'ConfigurationManager'
 )
-
 
 FILE_POLL_TIMER = 10
 
@@ -223,7 +226,14 @@ class config(dict):
             self[k] = v
 
     def __getattr__(self, item: str) -> Any:
-        return self[item]
+        '''calls __getitem__ and returns the returned value.
+
+        raises AttributeError on error.
+        '''
+        try:
+            return self[item]
+        except KeyError:
+            raise AttributeError
 
     def __setattr__(self, key: str, value: Union[str, int, bool]):
         self[key] = value
