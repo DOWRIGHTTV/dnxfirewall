@@ -126,7 +126,7 @@ cdef uint32_t BLOCKLIST_CUR_SIZE = 0 # if we decide to track size for appends
 # ==================================
 # PRIMARY INSPECTION LOGIC
 # ==================================
-cdef int cfirewall_rcv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
+cdef int cfirewall_recv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
 
     # definitions or default assignments
     cdef:
@@ -692,7 +692,7 @@ cdef class CFirewall:
     def nf_set(s, uint16_t queue_num):
         s.h = nfq_open()
 
-        s.qh = nfq_create_queue(s.h, queue_num, <nfq_callback*>cfirewall_rcv, <void*>s)
+        s.qh = nfq_create_queue(s.h, queue_num, <nfq_callback*>cfirewall_recv, <void*>s)
         if (s.qh == NULL):
             return Py_ERR
 

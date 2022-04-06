@@ -55,11 +55,11 @@ class IPS_IDS(IPSConfiguration, NFQueue):
         if (self.pscan_enabled and self.open_ports[packet.protocol]):
             return True
 
-        # no inspection, packet accepted
+        # packet accepted, no inspection
         if (packet.action is CONN.ACCEPT):
             packet.nfqueue.accept()
 
-        # no inspection, packet dropped
+        # packet dropped, no inspection
         else:
             packet.nfqueue.drop()
 

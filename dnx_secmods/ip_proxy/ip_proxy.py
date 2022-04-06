@@ -38,42 +38,59 @@ class IPProxy(ProxyConfiguration, NFQueue):
 
     def _pre_inspect(self, packet: IPPPacket) -> bool:
 
-        # --------------------
-        # IP PROXY INSPECT
-        # --------------------
-        if (packet.ipp_profile and packet.action is CONN.ACCEPT):
-            return True
+        # ====================
+        # CFIREWALL ACCEPT
+        # ====================
+        if (packet.action is CONN.ACCEPT):
 
-        # PRE DROP FILTER
-        # --------------------
-        # DIRECT TO IPS/IDS
-        # --------------------
-        # forwarding packet to ips for portscan/ddos inspection with deferred verdict.
-        # accept/ deny actions are both capable of being inspected by ips/ids.
-        if (packet.ips_profile and packet.direction is DIR.INBOUND):
-            packet.nfqueue.forward(Queue.IPS_IDS)
+            # --------------------
+            # IP PROXY INSPECT
+            # --------------------
+            if (packet.ipp_profile):
+                return True
+
+            # --------------------
+            # DIRECT TO IPS/IDS
+            # --------------------
+            # deferred verdict
+            # forwarding packet to ips for portscan/ddos inspection.
+            if (packet.ips_profile and packet.direction is DIR.INBOUND):
+                packet.nfqueue.forward(Queue.IPS_IDS)
+
+            # --------------------
+            # DIRECT TO DNS PROXY
+            # --------------------
+            # deferred verdict
+            elif (packet.dns_profile and packet.direction is DIR.OUTBOUND
+                    and packet.protocol is PROTO.UDP and packet.dst_port == PROTO.DNS):
+                packet.nfqueue.forward(Queue.DNS_PROXY)
+
+            # --------------------
+            # ACCEPT/ NO PROFILE
+            # --------------------
+            else:
+                packet.nfqueue.accept()
 
         # ====================
-        # DIRECT TO GEO/DROP
+        # CFIREWALL DROP
         # ====================
-        elif packet.action is CONN.DROP:
-            packet.nfqueue.drop()
+        elif (packet.action is CONN.DROP):
 
-        # POST DROP FILTER
-        # --------------------
-        # DIRECT TO DNS PROXY
-        # --------------------
-        elif (packet.dns_profile and packet.direction is DIR.OUTBOUND
-                and packet.protocol is PROTO.UDP and packet.dst_port == PROTO.DNS):
-            packet.nfqueue.forward(Queue.DNS_PROXY)
+            if (packet.direction is DIR.OUTBOUND):
+                packet.nfqueue.drop()
 
-        # =====================
-        # DIRECT TO GEO/ACCEPT
-        # =====================
-        elif (packet.action is CONN.ACCEPT):
-            packet.nfqueue.accept()
+            # --------------------
+            # IPS/IDS PROFILING
+            # --------------------
+            # deferred verdict
+            # forwarding packet to ips for portscan/ddos host profiling
+            else:
+                packet.nfqueue.forward(Queue.IPS_IDS)
 
-        # quick path to log geo data. doing this post action, since it's a log-only path.
+        # FUTURE: REJECT
+        else: pass
+
+        # log-only.
         log_geolocation(packet)
 
         return False
