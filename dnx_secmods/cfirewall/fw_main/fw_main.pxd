@@ -1,14 +1,11 @@
 #!/usr/bin/env Cython
 
-import array
-
-from cython cimport array
+from cpython cimport array
 from libc.stdint cimport uint8_t, uint16_t, uint32_t
 from libc.stdint cimport uint_fast8_t, uint_fast16_t, uint_fast32_t, int_fast8_t, int_fast16_t, int_fast32_t
 
 
 ctypedef array.array PyArray
-
 
 cdef extern from "<errno.h>":
     int     errno
@@ -259,4 +256,4 @@ cdef class CFirewall:
     cpdef int prepare_geolocation(s, list geolocation_trie, uint32_t msb, uint32_t lsb) with gil
     cpdef int update_zones(s, PyArray zone_map) with gil
     cpdef int update_ruleset(s, size_t ruleset, list rulelist) with gil
-    cpdef int remove_blockedlist(s, uint32_t host_ip)
+    cdef  int remove_attacker(s, uint32_t host_ip)
