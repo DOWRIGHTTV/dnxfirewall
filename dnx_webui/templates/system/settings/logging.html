@@ -18,19 +18,19 @@
             <div class="col s12 m6">
                 <div class="card-panel card-panel-eql z-depth-2 hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Logging</h4>
-                    <form action="/settings/logging" method="POST">
+                    <form action="/system/settings/logging" method="POST">
                         <input type="hidden" name="tab" value="1">
                         <input type="hidden" name="logging_update">
                         <div class="row">
                             <div class="input-field col s12 {{input_color}}">
                                 <select name="length" onchange="this.form.submit()">
-                                    <option value="30" {% if logging_settings['logging']['length']==30 %} selected
+                                    <option value="30" {% if logging_settings['logging']['length'] == 30 %} selected
                                         {% endif %}>30</option>
-                                    <option value="45" {% if logging_settings['logging']['length']==45 %} selected
+                                    <option value="45" {% if logging_settings['logging']['length'] == 45 %} selected
                                         {% endif %}>45</option>
-                                    <option value="60" {% if logging_settings['logging']['length']==60 %} selected
+                                    <option value="60" {% if logging_settings['logging']['length'] == 60 %} selected
                                         {% endif %}>60</option>
-                                    <option value="90" {% if logging_settings['logging']['length']==90 %} selected
+                                    <option value="90" {% if logging_settings['logging']['length'] == 90 %} selected
                                         {% endif %}>90</option>
                                 </select>
                                 <label for="length">Length (Days)</label>
@@ -40,8 +40,8 @@
                             <div class="input-field col s12 {{input_color}}">
                                 <select name="level" onchange="this.form.submit()">
                                     {% for level in logging_settings['logging']['log_levels'] %}
-                                    {% set level_num = loop.index - 1 %}
-                                    {% if logging_settings['logging']['level']==level_num %}
+                                    {% set level_num = loop.index0 %}
+                                    {% if logging_settings['logging']['level'] == level_num %}
                                     <option value="{{level_num}}" selected>{{level_num}}: {{level}}</option>
                                     {% else %}
                                     <option value="{{level_num}}">{{level_num}}: {{level}}</option>
@@ -67,7 +67,7 @@
                     <h6>System Time: {{logging_settings['system']}}</h6>
                     <h6>Time Offset: {{logging_settings['local']}}</h6>
                     <br>
-                    <form action="/settings/logging" method="POST">
+                    <form action="/system/settings/logging" method="POST">
                         <input type="hidden" name="tab" value="2">
                         <input type="hidden" name="time_offset_update">
                         <div class="row">
