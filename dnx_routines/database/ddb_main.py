@@ -115,11 +115,12 @@ def receive_requests(queue_for_db):
         # NOTE: instead of pickle, using json then converting to a py object manually
         log_tuple = NT_LOOKUP(f'{name}_log'.upper())
 
-        print(f'tuple reference retrieved: name->{name}, log_tuple->{log_tuple}')
-
-        log_entry = log_tuple(*data['log'])
+        Log.debug(f'tuple reference retrieved: name->{name}, log_tuple->{log_tuple}')
 
         try:
-            queue_for_db((name, data['timestamp'], log_entry))
+            log_entry = log_tuple(*data['log'])
         except:
-            Log.critical(f'routine queueing failure -> ({name})')
+            Log.critical(f'routine lookup failure -> ({name})')
+
+        else:
+            queue_for_db((name, data['timestamp'], log_entry))
