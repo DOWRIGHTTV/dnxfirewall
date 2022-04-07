@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dnx_gentools.def_typing import *
-# from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import LOG, IPS
 from dnx_gentools.def_namedtuples import IPS_EVENT_LOG
 
@@ -27,7 +26,7 @@ if (TYPE_CHECKING):
 class Log(LogHandler):
 
     @classmethod
-    def log(cls, pkt: IPSPacket, scan_info: Union[IPS, IPS_SCAN_RESULTS], *, engine: IPS):
+    def log(cls, pkt: IPSPacket, scan_info: Union[IPS, IPS_SCAN_RESULTS], *, engine: IPS) -> None:
         if (engine is IPS.DDOS):
             lvl, log = cls._generate_ddos_log(pkt, scan_info)
 
@@ -42,8 +41,7 @@ class Log(LogHandler):
                 cls.slog_log(LOG.EVENT, lvl, cls.generate_syslog_message(log))
 
     @classmethod
-    def _generate_ddos_log(
-            cls, pkt: IPSPacket, scan_info: Union[IPS, IPS_SCAN_RESULTS]) -> tuple[LOG, Optional[IPS_EVENT_LOG]]:
+    def _generate_ddos_log(cls, pkt: IPSPacket, scan_info: IPS) -> tuple[LOG, Optional[IPS_EVENT_LOG]]:
 
         if (cls.current_lvl >= LOG.ALERT and scan_info is IPS.LOGGED):
             log = IPS_EVENT_LOG(pkt.tracked_ip, pkt.protocol.name, IPS.DDOS.name, 'logged')
@@ -62,10 +60,9 @@ class Log(LogHandler):
         return LOG.NONE, None
 
     @classmethod
-    def _generate_ps_log(
-            cls, pkt: IPSPacket, scan_info: Union[IPS, IPS_SCAN_RESULTS]) -> tuple[LOG, Optional[IPS_EVENT_LOG]]:
+    def _generate_ps_log(cls, pkt: IPSPacket, scan_info: IPS_SCAN_RESULTS) -> tuple[LOG, Optional[IPS_EVENT_LOG]]:
 
-        # will match if open ports are contained in pre detection logging (port was hit before flagged)
+        # ERROR/3 - MISSED or IDS MODE
         if (scan_info.initial_block and scan_info.block_status in [IPS.LOGGED, IPS.MISSED]
                 and cls.current_lvl >= LOG.ERROR):
 
@@ -77,14 +74,15 @@ class Log(LogHandler):
 
             return LOG.ERROR, log
 
-        # will match if open ports are not contained in pre detection logging (port was hit before flagged)
-        elif (scan_info.initial_block and scan_info.block_status is IPS.BLOCKED and cls.current_lvl >= LOG.WARNING):
+        # WARNING/4 - BLOCKED or REJECTED
+        elif (scan_info.initial_block and scan_info.block_status in [IPS.BLOCKED, IPS.REJECTED]
+              and cls.current_lvl >= LOG.WARNING):
 
             log = IPS_EVENT_LOG(
-                pkt.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, 'blocked'
+                pkt.tracked_ip, pkt.protocol.name, IPS.PORTSCAN.name, scan_info.block_status.name
             )
 
-            cls.debug(f'[pscan/scan detected][blocked] {itoip(pkt.tracked_ip)}')
+            cls.debug(f'[pscan/scan detected][{scan_info.block_status.name}] {itoip(pkt.tracked_ip)}')
 
             return LOG.WARNING, log
 
@@ -92,5 +90,5 @@ class Log(LogHandler):
 
     # for sending a message to the syslog servers
     @staticmethod
-    def generate_syslog_message(log: IPS_EVENT_LOG):
+    def generate_syslog_message(log: IPS_EVENT_LOG) -> str:
         return f'src.ip={log.attacker}; protocol={log.protocol}; attack_type={log.attack_type}; action={log.action}'

@@ -106,10 +106,12 @@ class IPS(_Enum):
     DDOS     = 1
     PORTSCAN = 2
     BOTH     = 3
+
     BLOCKED  = 4
-    FILTERED = 5
-    MISSED   = 6
-    LOGGED   = 7
+    REJECTED = 5
+    FILTERED = 6
+    MISSED   = 7
+    LOGGED   = 8
 
 # traffic direction / type
 class DIR(_Flag):
