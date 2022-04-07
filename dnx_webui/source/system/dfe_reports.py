@@ -28,6 +28,7 @@ def update_page(form: dict) -> tuple[list, str, str]:
             'remote_host': form.get('detected_host', DATA.MISSING)
         })
 
+        # TODO: investigate/fix this...
         if (DATA.MISSING in ic_data.values()):
             return INVALID_FORM
 
@@ -82,6 +83,7 @@ def format_row(row: list, users: dict) -> list[str]:
 
     ls_offset = System.calculate_time_offset(last_seen)
     last_seen = System.format_date_time(ls_offset)
+
     if (users is not None):
         entries.append(users.get(entries[0], {}).get('name', 'n/a'))
 

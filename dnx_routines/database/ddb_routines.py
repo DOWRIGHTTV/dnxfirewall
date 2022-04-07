@@ -104,7 +104,7 @@ def ipp_event(cur, timestamp: int, log: IPP_EVENT_LOG) -> bool:
     return True
 
 @db.register('inf_event', routine_type='write')
-def infected_event(cur, timestamp: int, log: INFECTED_LOG) -> bool:
+def infected_event(cur, timestamp: int, log: INF_EVENT_LOG) -> bool:
     cur.execute(f'select * from infectedclients where mac=? and detected_host=?',
         (log.client_mac, log.detected_host)
     )
@@ -148,7 +148,7 @@ def geo_record(cur, _, log: GEOLOCATION_LOG) -> bool:
 # REMOVE / CLEAR ROUTINES
 # ===============================
 @db.register('clear_infected', routine_type='clear')
-# TODO: see why this want being committed. i feel like that it was an oversight.
+# TODO: see why this wasnt being committed. i feel like it was an oversight.
 # TODO: also type this
 def clear_infected(cur, infected_client, detected_host):
     cur.execute(f'delete from infectedclients where mac=? and detected_host=?', (infected_client, detected_host))
