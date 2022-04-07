@@ -197,10 +197,12 @@ cdef class CPacket:
     cpdef void drop(self)
     cpdef void forward(self, uint16_t queue_num)
     cpdef void repeat(self)
-    cdef void set_nfqhdr(s, PacketData *dnx_nfqhdr)
+    cdef  void set_nfqhdr(s, PacketData *dnx_nfqhdr)
     cdef  void _set_verdict(self, uint32_t verdict) nogil
 
 cdef class NetfilterQueue:
     cdef:
         nfq_handle   *nfq_h   # NFQueue library
         nfq_q_handle *nfq_qh  # Specific processing queue
+
+        object proxy_callback
