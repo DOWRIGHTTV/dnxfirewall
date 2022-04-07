@@ -290,7 +290,7 @@ function initDNXChips(field) {
     })
 }
 let chipMAP = {
-    zone: initDNXChips("zone"),
+    zone:    initDNXChips("zone"),
     network: initDNXChips("network"),
     service: initDNXChips("service")
 }
@@ -300,8 +300,14 @@ function clearDNXChips() {
     }
 }
 function cAddCallback(el, chip) {
+
     let objName = chip.innerHTML.split("<")[0];
     let chipClose = chip.innerHTML.split(objName)[1];
+
+    if (!service_autofill.contains(objName) && !zone_autofill.contains(objName) && !network_autofill.contain(objName)) {
+        console.log(111111)
+        return
+    }
 
     chip.setAttribute("data-id", objName);
 

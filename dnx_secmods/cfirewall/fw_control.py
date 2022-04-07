@@ -58,7 +58,7 @@ class FirewallControl:
     versions: list[str, str] = ['pending', 'active']
     sections: list[str, str, str] = ['BEFORE', 'MAIN', 'AFTER']
 
-    _firewall: dict[str, Any] = load_configuration(DEFAULT_VERSION, ext='.firewall', filepath=DEFAULT_PATH).get_dict()
+    # _firewall: dict[str, Any] = load_configuration(DEFAULT_VERSION, ext='.firewall', filepath=DEFAULT_PATH).get_dict()
 
     @classmethod
     def commit(cls, firewall_rules: dict) -> None:
@@ -70,7 +70,7 @@ class FirewallControl:
             dnx_fw.write_configuration(firewall_rules)
 
         # updating instance/ mem-copy of variable for fast access
-        cls._firewall = firewall_rules
+        # cls._firewall = firewall_rules
 
     @classmethod
     def push(cls) -> bool:
@@ -125,25 +125,32 @@ class FirewallControl:
     def convert_ruleset(self):
         pass
 
-    def view_ruleset(self, section='MAIN'):
+    def view_ruleset(self, section: str = 'MAIN') -> dict:
         '''returns dict of requested "firewall_pending" ruleset in raw form.
 
         additional processing is required for webui or cli formats.
         section arg will change which ruleset is returned.
         '''
+        fw_rules = load_configuration(DEFAULT_VERSION, ext='.firewall', filepath=DEFAULT_PATH).get_dict()
 
-        try:
-            return self._firewall[section]
-        except KeyError:
-            return {}
+        return fw_rules
 
-    def ruleset_len(self, section='MAIN'):
+        # try:
+        #     return self._firewall[section]
+        # except KeyError:
+        #     return {}
+
+    def ruleset_len(self, section: str = 'MAIN') -> int:
         '''returns len of firewall_pending ruleset. defaults to main and returns 0 on error.'''
 
-        try:
-            return len(self._firewall[section])
-        except:
-            return 0
+        fw_rules = load_configuration(DEFAULT_VERSION, ext='.firewall', filepath=DEFAULT_PATH).get_dict()
+
+        return len(fw_rules)
+
+        # try:
+        #     return len(self._firewall[section])
+        # except:
+        #     return 0
 
     @staticmethod
     def is_pending_changes():
