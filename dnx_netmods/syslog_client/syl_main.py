@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-import os, sys
+from __future__ import annotations
+
 import time
 import threading
 import traceback
@@ -9,14 +10,11 @@ from collections import deque
 from socket import socket, AF_INET, SOCK_DGRAM
 from socket import SOL_SOCKET, SO_REUSEADDR
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
 import dnx_iptools.interface_ops as interface
 
-from dnx_gentools.def_constants import * # pylint: disable=unused-wildcard-import
+from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import SYSLOG_SERVERS
-from dnx_sysmods.logging.log_main import LogHandler as Log
+from dnx_routines.logging.log_client import LogHandler as Log
 
 from dnx_netmods.syslog_client.syl_format import SyslogFormat
 from dnx_netmods.syslog_client.syl_protocols import UDPMessage, TCPMessage
@@ -64,7 +62,7 @@ class SyslogService:
         threading.Thread(target=self.process_message_queue).start()
 
     @dnx_queue(Log, name='SyslogClient')
-    # Checking the syslog message queue for entries. if entries it will connection to the configured server over the
+    # Checking the syslog message queue for entries. if entries it will connect to the configured server over the
     # configured protocol/ports, then send the sockets to the protocol classes to actually send the messages
     def process_message_queue(self):
         if (self.syslog_protocol == PROTO.TCP):
@@ -85,7 +83,7 @@ class SyslogService:
                 self.SyslogUDP.send_queue(udp_socket)
 
     @looper(NO_DELAY)
-    # local socket receiving messages to be sent over syslog from all processes firewall wide. once a message is
+    # local socket receiving messages to be sent over syslog from all processes rules wide. once a message is
     # received it will add it to the queue to be handled by a separate method.
     def _main(self):
         try:
@@ -107,7 +105,7 @@ class SyslogService:
 
         self._main()
 
-    # using loopback so shouldnt have problems, but just taking precautions.
+    # using loopback so shouldn't have problems, but just taking precautions.
     def _create_service_socket(self):
         self.service_sock = socket(AF_INET, SOCK_DGRAM)
         self.service_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
@@ -127,7 +125,7 @@ class SyslogHandler:
         self._create_socket()
 
     def start(self):
-        threading.Thread(target=self._get_settings, args=('syslog_client.json',)).start()
+        threading.Thread(target=self._get_settings, args=('syslog_client.cfg',)).start()
 
     def add_to_queue(self, msg_type, msg_level, message):
         message = self.Format.message(self.process.lan_ip, self.module, msg_type, msg_level, message)
@@ -151,6 +149,7 @@ class SyslogHandler:
         self.handler_sock.bind((LOCALHOST, 0))
         self.handler_sock.connect((LOCALHOST, SYSLOG_SOCKET))
 
-if __name__ == '__main__':
+
+def RUN_MODULE():
     Syslog = SyslogService()
     Syslog.start()

@@ -1,5 +1,47 @@
-import os as _os
-import sys as _sys
+#!/usr/bin/env python3
 
-_HOME_DIR = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-3]))
-_sys.path.insert(0, _HOME_DIR)
+from __future__ import annotations
+
+# ================
+# RUNTIME IMPORTS
+# ================
+from dnx_gentools.def_constants import INITIALIZE_MODULE
+
+if INITIALIZE_MODULE('dhcp-server'):
+    __all__ = ('run',)
+
+    from dnx_routines.logging import Log
+
+    Log.run(name='dhcp_server')
+
+    from dhcp_server import DHCPServer
+
+def run():
+    DHCPServer.run(Log, threaded=False)
+
+
+# ================
+# TYPING IMPORTS
+# ================
+from typing import TYPE_CHECKING, Type
+
+if (TYPE_CHECKING):
+    from typing import TypeAlias
+
+    __all__ = (
+        'DHCPServer', 'Leases',
+        'ClientRequest', 'ServerResponse',
+
+        # TYPES
+        'DHCPServer_T', 'ClientRequest_T'
+    )
+
+    from dhcp_server import DHCPServer
+    from dhcp_server_automate import Leases
+    from dhcp_server_requests import ClientRequest, ServerResponse
+
+    # ======
+    # TYPES
+    # ======
+    DHCPServer_T:    TypeAlias = Type[DHCPServer]
+    ClientRequest_T: TypeAlias = Type[ClientRequest]

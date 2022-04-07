@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
 
-import os, sys
+from __future__ import annotations
+
 import threading
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
-
-from dnx_gentools.def_constants import * # pylint: disable=unused-wildcard-import
-from dnx_sysmods.logging.log_main import LogHandler as Log
+from dnx_gentools.def_constants import *
+from dnx_routines.logging.log_client import LogHandler as Log
 from dnx_gentools.standard_tools import Initialize
-from dnx_sysmods.configure.file_operations import cfg_read_poller, load_configuration
+from dnx_gentools.file_operations import cfg_read_poller, load_configuration
 
 
 class Configuration:
@@ -62,7 +59,7 @@ class Configuration:
                 })
 
     def get_interface_settings(self):
-        interface_settings = load_configuration('config.json')
+        interface_settings = load_configuration('system.cfg')
         self.lan_int = interface_settings['settings']['interface']['inside']
 
 class Reachability:
@@ -89,6 +86,6 @@ class Reachability:
     #                 message = (f'Syslog Server {server_ip} reachability status changed to {current_status}.')
     #                 self.SyslogService.Log.add_to_queue(message)
 
-    #         write_configuration(self.SyslogService.syslog_servers, 'syslog_server_status.json')
+    #         write_configuration(self.SyslogService.syslog_servers, 'syslog_server.stat')
 
     #         time.sleep(TEN_SEC)

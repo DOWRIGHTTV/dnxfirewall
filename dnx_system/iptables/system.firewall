@@ -1,0 +1,53 @@
+{
+    "BUILTIN": {
+        "10": {
+            "name": "inside_dhcp_allow",
+            "id": null,
+            "enabled": 1,
+            "src_zone": [11, 12],
+            "src_network": [[2, 0, 0]],
+            "src_service": [[1, 17, 68, 68]],
+            "dst_zone": [0],
+            "dst_network": [[2, 0, 0]],
+            "dst_service": [[1, 17, 67, 67]],
+            "action": 1,
+            "log": 0,
+            "ipp_profile": 0,
+            "dns_profile": 0,
+            "ips_profile": 0
+        },
+        "20": {
+            "name": "lan_webui_allow",
+            "id": null,
+            "enabled": 1,
+            "src_zone": [11],
+            "src_network": [[2, 0, 0]],
+            "src_service": [[2, 6, 1025, 65535]],
+            "dst_zone": [0],
+            "dst_network": [[1, 3232256769, 4294967295]],
+            "dst_service": [[1, 6, 80, 80], [1, 6, 443, 443]],
+            "action": 1,
+            "log": 0,
+            "ipp_profile": 0,
+            "dns_profile": 0,
+            "ips_profile": 0
+        },
+        "2000": {
+            "name": "any_dot_outbound_deny",
+            "id": null,
+            "enabled": 1,
+            "src_zone": [99],
+            "src_network": [[2, 0, 0]],
+            "src_service": [[2, 6, 1, 65535], [2, 17, 1, 65535]],
+            "dst_zone": [10],
+            "dst_network": [[2, 0, 0]],
+            "dst_service": [[1, 6, 853, 853], [1, 17, 853, 853]],
+            "action": 0,
+            "log": 0,
+            "ipp_profile": 0,
+            "dns_profile": 0,
+            "ips_profile": 0
+        }
+    },
+    "USER": {}
+}

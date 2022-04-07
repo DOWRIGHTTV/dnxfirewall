@@ -1,11 +1,7 @@
 #!/user/bin/env python3
 
-import os, sys
 import time
 import json
-
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
 
 from dnx_shell.dnx_shell_standard import Standard
 
@@ -15,10 +11,10 @@ class Blacklist:
         self.Main = Main
         self.conn = Main.conn
 
-        with open(f'{HOME_DIR}/dnx_shell/commands.json', 'r') as commands:
+        with open(f'{HOME_DIR}/dnx_shell/commands.cfg', 'r') as commands:
             valid_commands = json.load(commands)
 
-        with open(f'{HOME_DIR}/dnx_system/data/blacklist.json', 'r') as settings:
+        with open(f'{HOME_DIR}/dnx_system/data/blacklist.cfg', 'r') as settings:
             setting = json.load(settings)
 
         self.valid = valid_commands['main']['configuration']['blacklist']
@@ -108,7 +104,7 @@ class Blacklist:
                     self.AddBlacklist(comm, arg, option, option2)
 
     def ShowStatus(self, arg):
-        with open(f'{HOME_DIR}/dnx_system/data/blacklist.json', 'r') as settings:
+        with open(f'{HOME_DIR}/dnx_system/data/blacklist.cfg', 'r') as settings:
             setting = json.load(settings)
 
         arg2 = arg
@@ -140,7 +136,7 @@ class Blacklist:
             self.conn.send(f'{bl_status}\n'.encode('utf-8'))
 
     def AddBlacklist(self, comm, arg, option, option2):
-        with open(f'{HOME_DIR}/dnx_system/data/blacklist.json', 'r') as settings:
+        with open(f'{HOME_DIR}/dnx_system/data/blacklist.cfg', 'r') as settings:
             setting = json.load(settings)
 
         blacklist = setting['blacklists']
@@ -163,7 +159,7 @@ class Blacklist:
                 blacklist['domains'].update({option: {'time': now, 'rule_length': option2*60, 'expire': expire}})
 
         syntax = self.valid['settings'][arg]['syntax']
-        with open(f'{HOME_DIR}/dnx_system/data/blacklist.json', 'w') as settings:
+        with open(f'{HOME_DIR}/dnx_system/data/blacklist.cfg', 'w') as settings:
             json.dump(setting, settings, indent=4)
 
         self.Standard.SendNotice(f'added {option}. use "show {syntax}" command to check current status.')

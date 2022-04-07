@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 
-import __init__
+from __future__ import annotations
 
 import os
-import json
 
 from secrets import token_urlsafe
 
-import dnx_sysmods.configure.configure as configure
+import dnx_iptools.interface_ops as interface
 
-from dnx_sysmods.logging.log_main import LogHandler as Log
-from dnx_sysmods.configure.file_operations import ConfigurationManager
-from dnx_sysmods.configure.iptables import IPTablesManager as IPTables
-from dnx_sysmods.database.ddb_connector_sqlite import DBConnector
+from dnx_gentools.def_constants import INITIALIZE_MODULE
+from dnx_gentools.file_operations import ConfigurationManager
+
+from dnx_routines.logging.log_client import Log
+from dnx_routines.configure.iptables import IPTablesManager as IPTables
+from dnx_routines.database.ddb_connector_sqlite import DBConnector
 
 LOG_NAME = 'system'
 
@@ -20,12 +21,12 @@ LOG_NAME = 'system'
 ConfigurationManager.set_log_reference(Log)
 
 def run():
-    # ensuring system allows forwarding. NOTE: probably not required for hardware unit as this is enabled by default.
+    # ensuring the system allows forwarding. probably not required for hardware unit as this is enabled by default.
     IPTables.network_forwarding()
 
     Log.notice('[startup] network forwarding set.')
 
-    # changing default action for IPv6 to block everything on all chains in main table
+    # changing default action for IPv6 to block everything on all chains in the main table
     IPTables.block_ipv6()
 
     Log.notice('[startup] IPv6 disabled.')
@@ -39,9 +40,10 @@ def run():
 
     Log.notice('[startup] Webui/Flask key regenerated.')
 
-    # ensuring the default mac address of the wan interface is set. this should only change first time the system initializes
-    # setting the mac from None > interface mac. Once the flag has been set, it will not longer change modify default mac value
-    configure.set_default_mac_flag()
+    # ensuring the default mac address of the wan interface is set. this should only change first time the system
+    # initializes setting the mac from None > interface mac. Once the flag has been set, it will no longer change
+    # modify default mac value
+    set_default_mac_flag()
 
     Log.debug('[startup] default mac flag check.')
 
@@ -53,24 +55,36 @@ def run():
     os._exit(0)
 
 def reset_flask_key():
-    with ConfigurationManager('config') as dnx:
+    with ConfigurationManager('system') as dnx:
         flask_settings = dnx.load_configuration()
 
-        flask_config = flask_settings['flask']
-        flask_config['key'] = token_urlsafe(32)
+        flask_settings['flask->key'] = token_urlsafe(32)
 
-        dnx.write_configuration(flask_settings)
+        dnx.write_configuration(flask_settings.expanded_user_data)
+
+def set_default_mac_flag():
+    with ConfigurationManager('system') as dnx:
+        dnx_settings = dnx.load_configuration()
+
+        if (not dnx_settings['interfaces->builtins->wan->mac_set']):
+
+            wan_intf = dnx_settings['interfaces->builtins->wan->ident']
+
+            dnx_settings['interfaces->builtins->wan->default_mac'] = interface.get_mac(interface=wan_intf)
+            dnx_settings['interfaces->builtins->wan->mac_set'] = True
+
+        dnx.write_configuration(dnx_settings.expanded_user_data)
 
 # creating all DB tables if not already done
 def create_database_tables():
     with DBConnector() as database:
         database.create_db_tables()
 
+        # only standard db writes auto commit
         database.commit_entries()
 
-if __name__ == '__main__':
+
+if INITIALIZE_MODULE('startup'):
     Log.run(
         name=LOG_NAME
     )
-
-    run()

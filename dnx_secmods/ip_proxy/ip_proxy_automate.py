@@ -1,114 +1,127 @@
 #!/usr/bin/env python3
 
-import threading
+from __future__ import annotations
 
-import dnx_sysmods.configure.signature_operations as signature_operations
+from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import RFC1918
+from dnx_gentools.def_namedtuples import Item
+from dnx_gentools.def_enums import PROTO, DIR, REP, GEO
+from dnx_gentools.standard_tools import ConfigurationMixinBase
+from dnx_gentools.file_operations import load_configuration, cfg_read_poller
 
-from dnx_gentools.def_constants import *
-from dnx_gentools.standard_tools import Initialize
+from dnx_routines.configure.iptables import IPTablesManager
 
-from dnx_sysmods.configure.file_operations import load_configuration, cfg_read_poller
-from dnx_sysmods.configure.iptables import IPTablesManager
+from ip_proxy_log import Log
 
-from dnx_secmods.ip_proxy.ip_proxy_log import Log
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from dnx_gentools.file_operations import ConfigChain
+    from dnx_routines.logging import LogHandler_T
 
 
-class Configuration:
-    _setup = False
+class ProxyConfiguration(ConfigurationMixinBase):
+    ids_mode: ClassVar[bool] = False
 
-    __slots__ = (
-        'IPProxy', 'initialize',
-    )
+    reputation_enabled:   ClassVar[list[int]] = []
+    reputation_settings:  ClassVar[dict[REP, DIR]] = {}
+    # geolocation_enabled:  ClassVar[bool] = True
+    geolocation_settings: ClassVar[dict[GEO, DIR]] = {}
 
-    def __init__(self, name):
-        self.initialize = Initialize(Log, name)
+    ip_whitelist:  ClassVar[dict] = {}
+    tor_whitelist: ClassVar[dict] = {}
 
-    @classmethod
-    def setup(cls, IPProxy):
-        if (cls._setup):
-            raise RuntimeError('configuration setup should only be called once.')
+    open_ports: ClassVar[dict[PROTO, dict[int, int]]] = {
+        PROTO.TCP: {},
+        PROTO.UDP: {}
+    }
 
-        cls._setup = True
+    def _configure(self) -> tuple[LogHandler_T, tuple, int]:
+        '''tasks required by the DNS proxy.
 
-        self = cls(IPProxy.__name__)
-        self.IPProxy = IPProxy
-
+        return thread information to be run.
+        '''
         self._manage_ip_tables()
-        threading.Thread(target=self._get_settings).start()
-        threading.Thread(target=self._get_ip_whitelist).start()
-        threading.Thread(target=self._get_open_ports).start()
 
-        self.initialize.wait_for_threads(count=3)
+        threads = (
+            (self._get_settings, ()),
+            (self._get_ip_whitelist, ()),
+            (self._get_open_ports, ())
+        )
+
+        return Log, threads, 3
 
     @cfg_read_poller('ip_proxy')
-    def _get_settings(self, cfg_file):
-        ip_proxy = load_configuration(cfg_file)
+    def _get_settings(self, cfg_file: str) -> None:
+        proxy_settings: ConfigChain = load_configuration(cfg_file)
 
-        self.IPProxy.ids_mode = ip_proxy['ids_mode']
+        self.__class__.ids_mode = proxy_settings['ids_mode']
 
-        rep_settings = ip_proxy['reputation']
-        geo_settings = ip_proxy['geolocation']
+        # converting list[items] > dict
+        rep_settings = proxy_settings.get_items('reputation')
+        geo_settings = proxy_settings.get_items('geolocation')
 
-        reputation_enabled = []
-        for cat, setting in rep_settings.items():
-            if (setting): reputation_enabled.append(1)
+        # used for categorizing private ip addresses
+        geo_settings.append(Item(*RFC1918))
 
-            self.IPProxy.reputation_settings[REP[cat.upper()]] = DIR(setting)
+        reputation_enabled: bool = False
+        for reputation, direction in rep_settings:
 
-        geo_enabled = []
-        for country, setting in geo_settings.items():
-            if (setting): geo_enabled.append(1)
+            if (direction):
+                reputation_enabled = True
 
+            self.__class__.reputation_settings[REP[reputation.upper()]] = DIR(direction)
+
+        for country, direction in geo_settings:
+            
             # using enum for category key and direction value
             try:
-                self.IPProxy.geolocation_settings[GEO[country.upper()]] = DIR(setting)
+                self.__class__.geolocation_settings[GEO[country.upper()]] = DIR(direction)
             except KeyError:
-                continue # not all enums/countries are populated
+                continue  # not all enums/countries are populated
 
-        self.IPProxy.reputation_enabled = bool(reputation_enabled)
+        # using a list to maintain initial reference with inplace ops
+        if (reputation_enabled):
+            self.__class__.reputation_enabled.append(1)
 
-        self.initialize.done()
+        else:
+            self.__class__.reputation_enabled.clear()
+
+        self._initialize.done()
 
     @cfg_read_poller('whitelist')
-    def _get_ip_whitelist(self, cfg_file):
-        whitelist = load_configuration(cfg_file)
+    def _get_ip_whitelist(self, cfg_file: str) -> None:
+        whitelist: ConfigChain = load_configuration(cfg_file)
 
-        whitelist = whitelist['ip_bypass']
-        self.IPProxy.ip_whitelist = {
-            ip for ip, wl_info in whitelist.items() if wl_info['type'] == 'ip'
+        self.__class__.ip_whitelist = {
+            ip for ip, wl_info in whitelist.get_items('ip_bypass') if wl_info['type'] == 'ip'
         }
 
-        self.IPProxy.tor_whitelist = {
-            ip for ip, wl_info in whitelist.items() if wl_info['type'] == 'tor'
+        self.__class__.tor_whitelist = {
+            ip for ip, wl_info in whitelist.get_items('ip_bypass') if wl_info['type'] == 'tor'
         }
 
-        self.initialize.done()
+        self._initialize.done()
 
-    @cfg_read_poller('ips')
-    def _get_open_ports(self, cfg_file):
-        ips = load_configuration(cfg_file)
+    @cfg_read_poller('ips_ids')
+    def _get_open_ports(self, cfg_file: str) -> None:
+        ips: ConfigChain = load_configuration(cfg_file)
 
-        self.IPProxy.open_ports = {
+        self.__class__.open_ports = {
             PROTO.TCP: {
-                int(local_port): int(wan_port) for wan_port, local_port in ips['open_protocols']['tcp'].items()
+                int(local_port): int(wan_port) for wan_port, local_port in ips.get_items('open_protocols->tcp')
             },
             PROTO.UDP: {
-                int(local_port): int(wan_port) for wan_port, local_port in ips['open_protocols']['udp'].items()
+                int(local_port): int(wan_port) for wan_port, local_port in ips.get_items('open_protocols->udp')
             }
         }
 
-        self.initialize.done()
+        self._initialize.done()
 
     @staticmethod
     def _manage_ip_tables():
         IPTablesManager.clear_dns_over_https()
         IPTablesManager.update_dns_over_https()
-
-    @staticmethod
-    # loading lists of interesting traffic into dictionaries and creating ip table rules for dns over https blocking
-    def load_signature_tries():
-
-        ip_reputation_signatures = signature_operations.generate_reputation(Log)
-        geolocation_signatures = signature_operations.generate_geolocation(Log)
-
-        return ip_reputation_signatures, geolocation_signatures

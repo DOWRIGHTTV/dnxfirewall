@@ -1,0 +1,338 @@
+<script>
+function selectedRules() {
+    let selected_rules = [];
+
+    let fw_rules = document.querySelectorAll(".rule-select");
+    for (let rule of fw_rules) {
+
+        if (rule.checked) {
+            selected_rules.push(rule);
+        }
+    }
+    return selected_rules
+}
+function uncheckRules(rules) {
+    for (let rule of rules) {
+        rule.checked = false
+    }
+}
+function enableRules() {
+    let checkedRules = selectedRules();
+
+    console.log("enabling > ", checkedRules);
+    for (let rule of checkedRules) {
+        setAttributes(rule.closest("tr"), {"data-enabled": "1", "style": "opacity: 1"})
+    }
+    uncheckRules(checkedRules);
+}
+function disableRules() {
+    let checkedRules = selectedRules();
+
+    console.log("disabling > ", checkedRules);
+    for (let rule of checkedRules) {
+        setAttributes(rule.closest("tr"), {"data-enabled": "0", "style": "opacity: .4"})
+    }
+    uncheckRules(checkedRules);
+}
+function removeRules() {
+    let checkedRules = selectedRules();
+
+    console.log("removing > ", checkedRules);
+    for (let rule of checkedRules) {
+        rule.closest("tr").remove()
+    }
+
+    uncheckRules(checkedRules);
+}
+function MoveUp(id) {
+    let prev = id.previousElementSibling;
+    if (prev == null) return;
+
+    id.setAttribute("class", "ease-in");
+    prev.parentNode.insertBefore(id,prev);
+}
+function MoveDown(id) {
+    let next = id.nextElementSibling;
+    if (next == null) return;
+
+    id.setAttribute("class", "ease-in");
+
+    let next2 = next.nextElementSibling;
+    if (next2 == null) {
+        id.parentNode.append(id);
+    } else {
+        next2.parentNode.insertBefore(id,next2);
+    }
+}
+function updateRule() {
+
+    const ruleEditor = document.querySelector("#FWrule-editor");
+    const rid = ruleEditor.children[0].id.substring(1);
+
+    let row = document.createElement("tr")
+
+    if (ruleEditor.querySelector(".eenabled").checked) {
+        setAttributes(row, {"data-enabled": "1", "id": rid})
+    } else {
+        row.style.opacity = ".4"
+        setAttributes(row, {"data-enabled": "0", "id": rid})
+    }
+
+    const fields = [
+        "rselect", "rmove", "rname",
+        "rsrc_zone", "rsrc_network", "rsrc_service",
+        "rdst_zone", "rdst_network", "rdst_service",
+        "raction", "rlog",
+        "rsec1_prof", "rsec2_prof", "rsec3_prof"
+    ]
+
+    let i, field;
+    for (let x in fields) {
+        i = parseInt(x);
+        field = fields[i];
+
+        row.appendChild(document.createElement("td"));
+        row.children[i].setAttribute("class", field);
+    }
+
+    let col = row.children
+    col[0].innerHTML = '<td><label><input type="checkbox" class="filled-in rule-select"><span></span></label></td>'
+    col[1].innerHTML = "<div class=row>" +
+                `<a class="btn btn-floating btn-small waves-light" onclick="MoveUp(${rid})">` +
+                    '<i class="material-icons blue-grey">arrow_upward</i></a>' +
+                `<a class="btn btn-floating btn-small waves-light" onclick="MoveDown(${rid})">` +
+                    '<i class="material-icons red darken-2">arrow_downward</i></a></div>'
+
+    col[2].innerHTML = ruleEditor.querySelector(".ename").value;
+
+    col[9].innerHTML = ruleEditor.querySelectorAll(".eaction")[0].checked ? "drop" : "accept"
+    col[10].innerHTML = "N"; // ruleEditor.querySelector(".elog").value;
+    col[11].innerHTML = ruleEditor.querySelector(".esec1_prof").value;
+    col[12].innerHTML = ruleEditor.querySelector(".esec2_prof").value;
+    col[13].innerHTML = ruleEditor.querySelector(".esec3_prof").value;
+
+    let rData;
+    for (let fStr of ["src_zone", "src_network", "src_service", "dst_zone", "dst_network", "dst_service"]) {
+        field = row.querySelector(`.r${fStr}`);
+
+        rData = ruleEditor.querySelector(`.e${fStr}`).parentNode.querySelectorAll(".chip");
+
+        rData.forEach((x) => {field.insertAdjacentHTML("beforeend", x.outerHTML)});
+    }
+
+    let close = row.querySelectorAll(".close");
+    close.forEach((x) => {x.remove()});
+
+    let FWrule = document.getElementById(rid);
+    FWrule.outerHTML = row.outerHTML;
+
+    clearDNXChips();
+
+    M.Modal.getInstance(ruleEditor).close();
+}
+function newRule() {
+    let FWrules = document.getElementById("filter-table-body")
+    let ruleCount = FWrules.children.length+1
+
+    let defaultChip = '<div class="chip">none</div>'
+
+    let rule_template = `<tr id="r${ruleCount}" style="opacity: .4;" data-enabled="0">` +
+        '<td><label><input type="checkbox" class="filled-in rule-select"><span></span></label></td>' +
+        '<td>' +
+            '<div class="row">' +
+                `<a class="btn btn-floating btn-small waves-light" onclick="MoveUp(${ruleCount})">` +
+                    '<i class="material-icons blue-grey">arrow_upward</i>' +
+                '</a>' +
+                `<a class="btn btn-floating btn-small waves-light valign-wrapper" onclick="MoveDown(${ruleCount})">` +
+                    '<i class="material-icons red darken-2">arrow_downward</i>' +
+                '</a>' +
+            '</div>' +
+        '</td>' +
+        '<td class="rname">new_rule</td>' +
+        `<td class="rsrc_zone">${defaultChip}</td>` +
+        `<td class="rsrc_network">${defaultChip}</td>` +
+        `<td class="rsrc_service">${defaultChip}</td>` +
+        `<td class="rdst_zone">${defaultChip}</td>` +
+        `<td class="rdst_network">${defaultChip}</td>` +
+        `<td class="rdst_service">${defaultChip}</td>` +
+        '<td class="raction">drop</td>' +
+        '<td class="rlog">N</td>' +
+        '<td class="rsec1_prof">0</td>' +
+        '<td class="rsec2_prof">0</td>' +
+        '<td class="rsec3_prof">0</td>' +
+    '</tr>'
+
+    FWrules.insertAdjacentHTML("beforeend", rule_template)
+}
+</script>
+<script>
+{# watching for rules rule to be clicked for editing, populates the form, then shows the modal. #}
+let ruleEditor = document.querySelector(".rule-editor");
+ruleEditor.addEventListener("click", function(click) {
+
+    if (click.target.cellIndex == null || click.target.cellIndex < 2) return;
+
+    let ruleRow = click.target.parentNode;
+    let ruleEditor = document.querySelector("#FWrule-editor");
+    let editRule = M.Modal.init(ruleEditor, {});
+
+    fillEditor(ruleEditor, ruleRow);
+
+    editRule.open();
+  });
+
+function fillEditor(ruleEditor, ruleRow) {
+
+    const fields = ["name", "log", "enabled", "src_zone", "src_network",
+            "src_service", "dst_zone", "dst_network", "dst_service", "action", "sec1_prof", "sec2_prof", "sec3_prof"]
+
+    for (let field of fields) {
+        let rule_field = ruleRow.querySelector(`.r${field}`);
+        let editor_field = ruleEditor.querySelector(`.e${field}`);
+
+        try {
+            if (["name"].includes(field)) {
+                let input_field = editor_field.parentNode;
+
+                editor_field.remove();
+
+                let input = document.createElement("input");
+                input.id = "ename";
+                input.name = "ename";
+                input.type = "text";
+                input.className = "ename validate";
+                input.value = rule_field.innerText;
+
+                input_field.prepend(input);
+
+                input_field.children[1].className = "active";
+            }
+            else if (["sec1_prof", "sec2_prof", "sec3_prof"].includes(field)) {
+                let input_field = editor_field.parentNode;
+
+                editor_field.remove();
+
+                let input = document.createElement("input");
+                input.name = field;
+                input.type = "number";
+                input.className = `e${field} validate`;
+                input.min = "0";
+                input.max = "1";
+                input.value = rule_field.innerText
+
+                input_field.prepend(input);
+            }
+
+            else if (field === "log") {
+                editor_field.setAttribute("value", rule_field.innerText);
+            }
+            else if (field === "enabled") {
+                const enabled = parseInt(ruleRow.getAttribute("data-enabled"));
+                editor_field.checked = !!enabled;
+            }
+            else if (field === "action") {
+                const actionMap = {"drop": 0, "accept": 1};
+
+                document.querySelectorAll(".eaction")[actionMap[rule_field.innerHTML]].checked = true;
+            }
+            else if (["src_zone", "src_network", "src_service", "dst_zone", "dst_network", "dst_service"].includes(field)) {
+                let dnxChips = editor_field.parentNode;
+                let chipArray = dnxChips.querySelectorAll(".chip");
+
+                chipArray.forEach((chip) => {chip.remove()});
+                dnxChips.insertAdjacentHTML("afterbegin", rule_field.innerHTML);
+                
+                chipArray = dnxChips.querySelectorAll(".chip");
+                chipArray.forEach((chip) => {
+                    chip.insertAdjacentHTML("beforeend", '<i class="material-icons close" ' +
+                        'onclick="cRemove(this.parentNode)">close</i>')
+                });
+            }
+        }
+        catch (e) {
+            console.log(e);
+        }
+        finally {}
+    }
+    ruleEditor.children[0].id = `e${ruleRow.id}`;
+}
+</script>
+<script>
+//firewall object implementation (built from materialize chips)
+const fwObjectMap  = {{firewall_settings.fw_object_map|tojson}};
+const objFormatMap =  {
+    address: ["blue lighten-2", "tv"], country: ["red", "language"],
+    service: ["orange lighten-2", "track_changes"], zone: ["purple lighten-2", "border_inner"]
+};
+const zone_autofill    = {{firewall_settings.zone_autofill|tojson}};
+const network_autofill = {{firewall_settings.network_autofill|tojson}};
+const service_autofill = {{firewall_settings.service_autofill|tojson}};
+
+function initDNXChips(field) {
+    let elem = document.querySelectorAll(`.${field}-chips`);
+
+    let set;
+    if (field === "service") {
+        set = service_autofill;
+    }
+    else if (field === "zone") {
+        set = zone_autofill;
+    } else {
+        set = network_autofill;
+    }
+    return M.Chips.init(elem, {
+        onChipAdd: cAddCallback,
+        limit: 4,
+        autocompleteOnly: true,
+        autocompleteOptions: {
+            data: set
+        }
+    })
+}
+let chipMAP = {
+    zone: initDNXChips("zone"),
+    network: initDNXChips("network"),
+    service: initDNXChips("service")
+}
+function clearDNXChips() {
+    for (let fields of [chipMAP["zone"], chipMAP["network"], chipMAP["service"]]) {
+        fields.forEach((field) => {field.$chips.splice(0, 99); field.chipsData.splice(0,99);});
+    }
+}
+function cAddCallback(el, chip) {
+    let objName = chip.innerHTML.split("<")[0];
+    let chipClose = chip.innerHTML.split(objName)[1];
+
+    chip.setAttribute("data-id", objName);
+
+    chip.innerHTML = ` <span>${objName}</span>${chipClose}`;
+    chip.children[1].setAttribute("onclick", "cRemove(this.parentNode)");
+
+    //adding icon and color to an object
+    let chipDef = fwObjectMap[chip.innerText.split("\n")[0]];
+    let chipFormat = objFormatMap[chipDef.type];
+
+    chip.className += ` ${chipFormat[0]}`;
+    chip.innerHTML = `<i class="material-icons tiny">${chipFormat[1]}</i>` + chip.innerHTML;
+    chip.innerHTML += `<input type="hidden" name="${el[0].id}" value="${chipDef.id},${chipDef.type}">`;
+}
+function cRemove(chip) {
+    let fid = chip.getAttribute("data-id");
+
+    let ftype, findex;
+    [ftype, findex] = getAttributes(chip.parentNode, ["data-ftype", "data-findex"])
+
+    let instance = chipMAP[ftype][findex];
+
+    let i;
+    for (i = 0; i < instance.chipsData.length; i++) {
+        let c = instance.chipsData[i];
+        if (c.tag === fid) {
+            break
+        }
+    }
+    instance.$chips.splice(i, 1);
+    instance.chipsData.splice(i, 1);
+    chip.remove();
+}
+</script>

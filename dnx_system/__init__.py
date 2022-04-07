@@ -1,5 +1,20 @@
-import os as _os
-import sys as _sys
+#!/usr/bin/env python3
 
-_HOME_DIR = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-3]))
-_sys.path.insert(0, _HOME_DIR)
+from __future__ import annotations
+
+# ================
+# RUNTIME IMPORTS
+# ================
+from dnx_gentools.def_constants import INITIALIZE_MODULE
+
+if INITIALIZE_MODULE('syscontrol'):
+    __all__ = ('run',)
+
+    from dnx_routines.logging import Log
+
+    Log.run(name='system')
+
+    from sys_control import SystemControl
+
+def run():
+    SystemControl.run()

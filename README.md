@@ -1,6 +1,6 @@
 <h5><strong>NOTICE: The license has changed from the CMD version (GPLv3). The 'FULL' version (current branch) is licensed under AGPLv3.</strong></h5>
 
-<h1 align="center">
+<h1>
 	<br>
 	<img src="https://raw.githubusercontent.com/DOWRIGHTTV/dnxfirewall/dnxfirewall/dnx_webui/static/assets/images/dnxlogo_v2.png" alt="dnxfirewall logo">
 	<br>
@@ -9,8 +9,8 @@
 <br>
 <h2>Overview</h2>
 
-  DNX Firewall is an optimized/high performance collection of applications and services to convert a standard linux system
-into a zone based next generation firewall. All software is designed to run in conjunction with eachother, but with a modular 
+  DNXFIREWALL is an optimized/high performance collection of applications and services to convert a standard linux system
+into a zone based next generation firewall. All software is designed to run in conjunction with each other, but with a modular 
 design certain aspects can be completely removed with little effort. The primary security modules have DIRECT/INLINE control 
 over all connections, streams, and messages that goes through the system. That being said, depending on the protocol, offloading
 to lower level control is present to maintain the highest possible throughput with full inspection enabled. custom iptable chains
@@ -24,22 +24,22 @@ A low level "architecture, system design" video will be created at some point to
 
 <strong>NEW: sqlite3 is now the default database in use (to simplify deployments). postgresql is still present on the backend and will be able to be enabled during system deployment in a future release.</strong>
 
-<strong>NEW: Auto deployment utility (auto loader) is now live. This should be used to deploy the system on any compatible distro. See compatible distro list for more details. </strong>
+<strong>NEW: Auto deployment utility (autoloader) is now live. This should be used to deploy the system on any compatible distro. See compatible distro list for more details. </strong>
 
 <strong>NEW: full zone based firewall rules (source and destination) and per rule based security profiles.
 
 - Custom packet handler
    - stateful or stateless packet inspection
-   - complex packet decisions (sends to security modules)
+   - complex packet decisions (defer packet action to security modules)
    - implemented in C
 
-- DNS proxy
+- DNS proxy (LAN/outbound)
    - category based blocking (general, TLD, substring matching)
    - user added whitelist/blacklist or custom general category creation
    - native DNS over TLS conversion with optional UDP fallback
    - local dns server (authoritative via packet manipulation)
    - automatic software failover
-   - 2 level record caching
+   - 2 levels of record caching
 
 - IP proxy (transparent) bi-directional
    - reputation based host filtering (detection implemented in C)
@@ -62,14 +62,15 @@ A low level "architecture, system design" video will be created at some point to
     
 - Additional Features
    - IPv6 disabled
-   - prebuilt iptable rules (all inbound connections to wan DROPPED by default)
-   - DNS over HTTPs restricted (dns bypass prevention)
-   - DNS over TCP restricted (dns bypass prevention)
-   - DNS over TLS restricted (dns bypass prevention)
-   - IPTABLES custom chain for admin hook into packet flow
+   - prebuilt IPTABLE rules for device hardening (all inbound connections to wan DROPPED by default)
+   - DNS proxy bypass prevention
+     - DNS over HTTPs restricted
+     - DNS over TCP restricted
+     - DNS over TLS restricted
+   - IPTABLES custom chain for admin hook into packet flow (reduced impact post cfirewall implementation)
 
 <br>
-<h2>To deploy (using auto loader)</h2>
+<h2>To deploy (using autoloader)</h2>
 
 1. select linux distro on compatible distro list (see below)
 
@@ -92,7 +93,7 @@ A low level "architecture, system design" video will be created at some point to
 7. follow prompts to associate physical interfaces to dnxfirewall zones
 	
 8. once utility is complete, restart system and navigate to https://dnx.firewall from LAN or DMZ interface.
-	
+
 <br>
 <h2>Compatible linux distros with dnxfirewall auto loader </h2>
 	
@@ -111,24 +112,25 @@ A low level "architecture, system design" video will be created at some point to
 </a></p>
 
 <br>
+
+<h4>External Contributors</h4>
+afallenhope - web design, ux, and templating -> https://github.com/afallenhope
+
 <h4>External code sources</h4>
 
 https://www.ip2location.com/free/visitor-blocker | geolocation filtering datasets (ip address assignments by country)
 
 https://gitlab.com/ZeroDot1/CoinBlockerLists | cryptominer host dataset
 
-https://squidblacklist.org | malicious and advertisement host datasets
-
 <bold>psql only:</bold> https://github.com/tlocke/pg8000 | pure python postgresql adapter
 
 <br>
 <h4>Showcase demo</h4>	
-  This video is extremely outdated, but still shows general functionality and some of the high level security implementations. 
-An updated video will be created soon(ish), which will show the newly added modules: syslog client, standard logging, ips/ids, 
-updated dns proxy functionality, updated ip proxy functionality, more.
+  This video is extremely outdated, but still shows general functionality and some high level security implementations. 
+An updated video will be created one day, showing modern improvements and features.
 
-<h3 align="center">
-	<a href="http://www.youtube.com/watch?feature=player_embedded&v=6NvRXlNjpOc" target="_blank">
-		<img src="http://img.youtube.com/vi/6NvRXlNjpOc/0.jpg" alt="DNX Firewall Demo" width="480" height="360" border="10" />
+<h3>
+	<a href="https://www.youtube.com/watch?feature=player_embedded&v=6NvRXlNjpOc" target="_blank">
+		<img src="https://img.youtube.com/vi/6NvRXlNjpOc/0.jpg" alt="DNX Firewall Demo" width="480" height="360"/>
 	</a>
 </h3>

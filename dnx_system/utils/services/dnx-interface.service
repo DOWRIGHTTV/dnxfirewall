@@ -1,14 +1,15 @@
 [Unit]
 Description=DNXFIREWALL Interface Service
 After=dnx-database-sqlite.service
-StartLimitIntervalSec=3
+StartLimitIntervalSec=10
 
 [Service]
 Type=simple
 Restart=always
 RestartSec=3
+StartLimitBurst=3
 User=dnx
-ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_system/interface_services.py
+ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_run.py cli interface
 Environment=HOME_DIR=/home/dnx/dnxfirewall
 
 [Install]

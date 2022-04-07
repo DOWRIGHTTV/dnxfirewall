@@ -1,84 +1,84 @@
 #!/usr/bin/env python3
 
-import threading
+from __future__ import annotations
+
+import os
 import socket
 import ssl
 
 from ipaddress import IPv4Address
 
+from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
-from dnx_sysmods.configure.file_operations import *
-from dnx_sysmods.configure.signature_operations import combine_domains
+from dnx_gentools.def_namedtuples import DNS_SERVERS, DNS_SIGNATURES, DNS_WHITELIST, DNS_BLACKLIST, Item
+from dnx_gentools.def_enums import PROTO, CFG, DNS_CAT
+from dnx_gentools.file_operations import *
+from dnx_gentools.standard_tools import looper, ConfigurationMixinBase
 
-from dnx_secmods.dns_proxy.dns_proxy_log import Log
+from dnx_iptools.cprotocol_tools import iptoi
+from dnx_iptools.protocol_tools import create_dns_query_header, strtobit
 
-from dnx_iptools.protocol_tools import create_dns_query_header, convert_string_to_bitmap
-from dnx_gentools.standard_tools import dynamic_looper, Initialize
+from dns_proxy_log import Log
+
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from dnx_gentools.file_operations import ConfigChain
 
 
-class Configuration:
-    _proxy_setup  = False
-    _server_setup = False
-    _keywords = []
+__all__ = (
+    'ProxyConfiguration', 'ServerConfiguration',
+)
 
-    __slots__ = (
-        # callbacks
-        'DNSProxy', 'DNSServer', 'DNSCache',
+ConfigurationManager.set_log_reference(Log)
 
-        '_initialize',
+
+class ProxyConfiguration(ConfigurationMixinBase):
+    '''DNS proxy configuration Mixin.
+    '''
+    # dns | ip
+    whitelist: ClassVar[DNS_WHITELIST] = DNS_WHITELIST(
+        {}, {}
+    )
+    blacklist: ClassVar[DNS_BLACKLIST] = DNS_BLACKLIST(
+        {}
     )
 
-    def __init__(self, name):
-        self._initialize = Initialize(Log, name)
+    # en_dns | tld | keyword |
+    signatures: ClassVar[DNS_SIGNATURES] = DNS_SIGNATURES(
+        {DNS_CAT.doh}, {}, []
+    )
 
-        # this is setting the reference for the entire process/module since it is stored as a class variable.
-        ConfigurationManager.set_log_reference(Log)
+    _keywords: ClassVar[list[tuple[str, DNS_CAT]]] = []
 
-    @classmethod
-    def proxy_setup(cls, DNSProxy):
-        '''start threads for tasks required by the DNS proxy. blocking until settings are loaded/initialized.'''
-        if (cls._proxy_setup):
-            raise RuntimeError('proxy setup should only be called once.')
+    def _configure(self) -> tuple[LogHandler_T, tuple, int]:
+        '''tasks required by the DNS proxy.
 
-        cls._proxy_setup = True
+        return thread information to be run.
+        '''
+        # NOTE: might be temporary.
+        # needed to be moved since other sigs are now being handled by an external C extension via cython
+        self.__class__._keywords = load_keywords(log=Log)
 
-        # NOTE: might be temporary, but this needed to be moved outside of the standard/bitmap sigs since they are
-        # now being handled by an external C extension (cython)
-        cls._keywords = load_keywords(Log=Log)
+        threads = (
+            (self._get_proxy_settings, ()),
+            (self._get_list, ('whitelist',)),
+            (self._get_list, ('blacklist',))
+        )
 
-        self = cls(DNSProxy.__name__)
-        self.DNSProxy = DNSProxy
-
-        threading.Thread(target=self._get_proxy_settings).start()
-        threading.Thread(target=self._get_list, args=('whitelist',)).start()
-        threading.Thread(target=self._get_list, args=('blacklist',)).start()
-
-        self._initialize.wait_for_threads(count=3)
-
-    @classmethod
-    def server_setup(cls, DNSServer, DNSCache):
-        '''start threads for tasks required by the DNS server. This will ensure all automated threads
-        get started, including reachability. blocking until settings are loaded/initialized.'''
-        if (cls._server_setup):
-            raise RuntimeError('server setup should only be called once.')
-        cls._server_setup = True
-
-        self = cls(DNSServer.__name__)
-        self.DNSServer = DNSServer
-        self.DNSCache  = DNSCache
-
-        threading.Thread(target=self._get_server_settings).start()
-
-        self._initialize.wait_for_threads(count=1)
+        return Log, threads, 3
 
     @cfg_read_poller('dns_proxy')
-    def _get_proxy_settings(self, cfg_file):
-        dns_proxy = load_configuration(cfg_file)
+    def _get_proxy_settings(self, cfg_file: str) -> None:
+        proxy_config: ConfigChain = load_configuration(cfg_file)
 
-        signatures = self.DNSProxy.signatures
+        signatures: DNS_SIGNATURES = self.__class__.signatures
         # CATEGORY SETTINGS
-        enabled_keywords = []
-        for cat, setting in dns_proxy['categories']['default'].items():
+        enabled_keywords: list[DNS_CAT] = []
+        for cat, setting in proxy_config.get_items('categories->default'):
             # identifying enabled keyword search categories
             if (setting['keyword']):
                 enabled_keywords.append(DNS_CAT[cat])
@@ -94,9 +94,9 @@ class Configuration:
                     signatures.en_dns.remove(dns_cat)
 
         # KEYWORD SETTINGS
-        # copying keyword signature list in memory to a local object. iterating over list. if the current item category
-        # is not an enabled category the signature will get removed and offset will get adjusted to ensure the index
-        # stay correct.
+        # copying the keyword signature list in memory to a local object, then iterating over the list.
+        # if the current category is not enabled, the signature will get removed and the offset normalized to the index.
+        # NOTE: this is not entirely thread safe
         mem_keywords, offset = signatures.keyword.copy(), 0
         for i, signature in enumerate(mem_keywords):
 
@@ -106,7 +106,7 @@ class Configuration:
                 offset += 1
 
         # iterating over keywords from the signature set. if the keyword category is enabled and the current
-        # signature is not already in memory it will be added.
+        # signature is not in memory, it will be added.
         for signature, cat in self._keywords:
 
             if (cat in enabled_keywords and signature not in signatures.keyword):
@@ -118,43 +118,14 @@ class Configuration:
 
         self._initialize.done()
 
-    @cfg_read_poller('dns_server')
-    def _get_server_settings(self, cfg_file):
-        DNSServer = self.DNSServer
-
-        dns_settings = load_configuration(cfg_file)
-
-        dns_servers = dns_settings['resolvers']
-        tls_enabled  = dns_settings['tls']['enabled']
-        DNSServer.udp_fallback = dns_settings['tls']['fallback']
-
-        DNSServer.protocol = PROTO.DNS_TLS if tls_enabled else PROTO.UDP
-
-        names = ['primary', 'secondary']
-        for name, cfg_server, mem_server in zip(names, dns_servers.values(), DNSServer.dns_servers):
-
-            if (cfg_server['ip_address'] != mem_server['ip']):
-
-                # setting server status as false on initialization or server change by user.
-                # this will require reachability to succeed before it will be actively used.
-                getattr(DNSServer.dns_servers, name).update({
-                    'ip': dns_servers[name]['ip_address'],
-                    PROTO.UDP: False, PROTO.DNS_TLS: False
-                })
-
-        DNSServer.dns_records = dns_settings['records']
-
-        # CLEAR DNS or TOP Domains cache
-        self.DNSCache.clear_dns_cache   = dns_settings['cache']['standard']
-        self.DNSCache.clear_top_domains = dns_settings['cache']['top_domains']
-
-        self._initialize.done()
-
     @cfg_write_poller
-    # handles updating user defined signatures in memory/propogated changes to disk.
-    def _get_list(self, lname, cfg_file, last_modified_time):
-        timeout_detected = self._check_for_timeout(lname)
-        memory_list = getattr(self.DNSProxy, lname).dns
+    # handles updating user defined signatures in memory/propagated changes to disk.
+    def _get_list(self, lname: str, cfg_file: str, last_modified_time: int) -> float:
+        loaded_list: ConfigChain
+
+        memory_list: dict = getattr(self.__class__, lname).dns
+
+        timeout_detected: bool = self._check_for_timeout(memory_list)
         # if a rule timeout is detected for an entry in memory. we will update the config file
         # to align with active rules, then we will remove the rules from memory.
         if (timeout_detected):
@@ -162,241 +133,251 @@ class Configuration:
 
             self._modify_memory(memory_list, loaded_list, action=CFG.DEL)
 
-        # if file has been modified the modified list will be referenced to make in place changes to memory
-        # list, specifically around adding new rules and the new modified time will be returned. if not modified,
-        # the last modified time is returned and not changes are made.
+        # if the file has been modified, the list will be referenced to make and in place changes the in-memory copy
+        # and the new modified time will be returned.
+        # if not modified, the last modified time is returned and not changes are made.
+        # NOTE: files need extensions due to changes to file operations. these functions will be reworked soon anyway.
         try:
-            modified_time = os.stat(f'{HOME_DIR}/dnx_system/data/usr/{cfg_file}')
+            modified_time = os.stat(f'{HOME_DIR}/dnx_system/data/usr/{cfg_file}.cfg').st_mtime
         except FileNotFoundError:
-            modified_time = os.stat(f'{HOME_DIR}/dnx_system/data/{cfg_file}')
+            modified_time = os.stat(f'{HOME_DIR}/dnx_system/data/{cfg_file}.cfg').st_mtime
 
         if (modified_time == last_modified_time):
             return last_modified_time
 
-        loaded_list = load_configuration(cfg_file)['time_based']
+        loaded_list = load_configuration(cfg_file)
 
         self._modify_memory(memory_list, loaded_list, action=CFG.ADD)
 
-        # ip whitelist specific. will do an inplace swap of all rules needing to be added or removed the memory.
+        # ip whitelist specific. will do an inplace swap of all rules needing to be added or removed in memory.
         if (lname == 'whitelist'):
-            self._modify_ip_whitelist(cfg_file)
+            self._modify_ip_whitelist(cfg_file, self.__class__.whitelist.ip)
 
         self._initialize.done()
 
         return modified_time
 
-    def _modify_memory(self, memory_list, loaded_list, *, action):
+    @staticmethod
+    def _modify_memory(memory_list: dict, loaded_list: ConfigChain, *, action: CFG) -> None:
         '''removing/adding signature/rule from memory as needed.'''
-        if (action in [CFG.ADD, CFG.ADD_DEL]):
+        if (action is CFG.ADD):
 
             # iterating over rules/signatures pulled from file
-            for rule, settings in loaded_list.items():
-                bitmap_key = convert_string_to_bitmap(rule, DNS_BIN_OFFSET)
+            for rule, settings in loaded_list.get_items('time_based'):
+                trie_key = strtobit(rule)
 
                 # adding rule/signature to memory if not present
-                if (bitmap_key not in memory_list):
+                if (trie_key not in memory_list):
                     settings['key'] = rule
-                    memory_list[bitmap_key] = settings
+                    memory_list[trie_key] = settings
 
-        if (action in [CFG.DEL, CFG.ADD_DEL]):
+        if (action is CFG.DEL):
 
             # iterating over rules/signature in memory
             for rule, settings in memory_list.copy().items():
 
-                # TODO: why is this not being used? is this broken or was it not needed and i forget to remove it?
-                bitmap_key = convert_string_to_bitmap(rule, DNS_BIN_OFFSET)
+                trie_key = strtobit(rule)
 
-                # if rule is not present in config file it will be removed from memory
+                # if the rule is not present in the config file, it will be removed from memory
                 if (settings['key'] not in loaded_list):
-                    memory_list.pop(rule)
+                    memory_list.pop(trie_key, None)
 
-    def _modify_ip_whitelist(self, cfg_file):
-        memory_ip_list = self.DNSProxy.whitelist.ip
-        loaded_ip_list = load_configuration(cfg_file)['ip_bypass']
+    @staticmethod
+    def _modify_ip_whitelist(cfg_file: str, memory_ip_list: dict) -> None:
+        loaded_ip_list: ConfigChain = load_configuration(cfg_file)
 
         # iterating over ip rules in memory.
         for ip in memory_ip_list.copy():
 
             # if it is not in the config file it will be removed.
             if (f'{ip}' not in loaded_ip_list):
-                memory_ip_list.pop(ip)
+                memory_ip_list.pop(ip, None)
 
         # iterating over ip rules in configuration file
-        for ip, settings in loaded_ip_list.items():
-            # convert to ip address object which is the type stored as key
+        for ip, settings in loaded_ip_list.get_items('ip_bypass'):
+
+            # FIXME: this needs to be converted to int on the backend
+            # convert to an ip address object which is the type stored as the key
             ip = IPv4Address(ip)
 
             # if it is not in memory and the rule type is "global" it will be added
             if (ip not in memory_ip_list and settings['type'] == 'global'):
                 memory_ip_list[ip] = True
 
-    # checking corresponding list file for any time based rules timing out. will return True if timeout
-    # is detected otherwise return False.
-    def _check_for_timeout(self, lname):
+    @staticmethod
+    # will return True if timeout is detected otherwise return False.
+    def _check_for_timeout(lname_dns: dict) -> bool:
+        '''check the passed in list file by name for any time-based rules that have expired.
+        '''
         now = fast_time()
-        for info in getattr(self.DNSProxy, lname).dns.values():
+        for info in lname_dns.values():
 
             if (now >= info['expire']):
                 return True
 
         return False
 
+    @staticmethod
     # updating the file with necessary changes.
-    def _update_list_file(self, cfg_file):
-        now = fast_time()
+    def _update_list_file(cfg_file: str) -> ConfigChain:
+        now: int = fast_time()
         with ConfigurationManager(cfg_file) as dnx:
-            lists = dnx.load_configuration()
+            lists: ConfigChain = dnx.load_configuration()
 
-            loaded_list = lists['time_based']
-            for domain, info in loaded_list.copy().items():
+            loaded_list: list[Item] = lists.get_items('time_based')
+            for domain, info in loaded_list:
 
                 if (now >= info['expire']):
-                    loaded_list.pop(domain, None)
+                    del lists[f'time_based->{domain}']
 
-            dnx.write_configuration(lists)
+            dnx.write_configuration(lists.expanded_user_data)
 
-            return loaded_list
-
-    @staticmethod
-    def load_dns_signature_bitmap():
-
-        # NOTE: old method of created combined signature file and loaded separately
-        combine_domains(Log)
-
-        wl_exceptions = load_configuration('whitelist')['pre_proxy']
-        bl_exceptions = load_configuration('blacklist')['pre_proxy']
-
-        return load_dns_bitmap(Log, bl_exc=bl_exceptions, wl_exc=wl_exceptions)
+            return lists
 
 
-class Reachability:
-    '''this class is used to determine whether a remote dns server has recovered from an outage or
-    slow response times.'''
+class ServerConfiguration(ConfigurationMixinBase):
+    '''DNS Server configuration Mixin.
+    '''
+    protocol: ClassVar[PROTO] = PROTO.NOT_SET
+    tls_down: ClassVar[bool] = True
+    udp_fallback: ClassVar[bool] = False
+    keepalive_interval: ClassVar[int] = 8
 
-    __slots__ = (
-        '_protocol', 'DNSServer', '_initialize',
-
-        '_tls_context', '_udp_query',
+    # NOTE: setting values to None to denote initialization has not been completed.
+    public_resolvers: ClassVar[DNS_SERVERS] = DNS_SERVERS(
+        {'ip_address': None, PROTO.UDP: None, PROTO.DNS_TLS: None},
+        {'ip_address': None, PROTO.UDP: None, PROTO.DNS_TLS: None}
     )
 
-    def __init__(self, protocol, DNSServer):
-        self._protocol = protocol
-        self.DNSServer = DNSServer
+    dns_records: ClassVar[dict[str, int]] = {}
 
-        self._initialize = Initialize(Log, DNSServer.__name__)
+    def _configure(self) -> tuple[LogHandler_T, tuple, int]:
+        '''tasks required by the DNS server.
 
-    @classmethod
-    def run(cls, DNSServer):
-        '''starting remote server responsiveness detection as a thread. the remote servers will only be checked for
-        connectivity if they are marked as down during the polling interval. both UDP and TLS(TCP) will be started
-        with one call to run.'''
+        return thread information to be run.
+        '''
+        udp_query: bytes = create_dns_query_header(dns_id=69, cd=1) + b'\x0bdnxfirewall\x03com\x00\x00\x01\x00\x01'
+        udp_reach_sock: Socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        udp_reach_sock.settimeout(CONNECT_TIMEOUT)
 
-        # initializing udp instance and starting thread
-        reach_udp = cls(PROTO.UDP, DNSServer)
-        reach_udp._set_udp_query()
+        tls_context: SSLContext = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        tls_context.verify_mode = ssl.CERT_REQUIRED
+        tls_context.load_verify_locations(CERTIFICATE_STORE)
 
-        threading.Thread(target=reach_udp.udp).start()
+        threads = (
+            (self._get_server_settings, ()),
+            (self._udp_reachability, (udp_query, udp_reach_sock)),
+            (self._tls_reachability, (tls_context,))
+        )
 
-        # initializing tls instance and starting thread
-        reach_tls = cls(PROTO.DNS_TLS, DNSServer)
-        reach_tls._create_tls_context()
+        return Log, threads, 2
 
-        threading.Thread(target=reach_tls.tls).start()
+    @cfg_read_poller('dns_server')
+    def _get_server_settings(self, cfg_file: str) -> None:
+        server_config: ConfigChain = load_configuration(cfg_file)
 
-        # waiting for each thread to finish initial reachability check before returning
-        reach_udp._initialize.wait_for_threads(count=1)
-        reach_tls._initialize.wait_for_threads(count=1)
+        self.__class__.protocol = PROTO.DNS_TLS if server_config['tls->enabled'] else PROTO.UDP
+        self.__class__.udp_fallback = server_config['tls->fallback']
 
-    @dynamic_looper
-    def tls(self):
-        if (self.is_enabled):
+        # in place swap of dns servers if they have changed
+        loaded_resolvers = server_config.get_values('resolvers')
+        configured_resolvers = self.__class__.public_resolvers
 
-            for secure_server in self.DNSServer.dns_servers:
+        for i, resolver in enumerate(loaded_resolvers):
 
-                # no check needed if server/proto is known up
-                if (secure_server[self._protocol]): continue
+            # setting server status as false on initialization or server change by user.
+            # this will require reachability to succeed before it will be actively used.
+            if (resolver['ip_address'] != configured_resolvers[i]['ip_address']):
 
-                Log.debug(f'[{secure_server["ip"]}/{self._protocol.name}] Checking reachability of remote DNS server.')
+                configured_resolvers[i].update({
+                    'ip_address': resolver['ip_address'],
+                    PROTO.UDP: False, PROTO.DNS_TLS: False
+                })
 
-                # if server responds to connection attempt, it will be marked as available
-                if self._tls_reachable(secure_server['ip']):
-                    secure_server[PROTO.DNS_TLS] = True
-                    self.DNSServer.tls_up = True
+        # inplace swap of dns servers from configuration to memory
+        # copy allows for mutating the dict as we iterate
+        for name, ip_addr in self.__class__.dns_records.copy():
 
-                    Log.notice(f'[{secure_server["ip"]}/{self._protocol.name}] DNS server is reachable.')
+            # removing if record was removed in webui
+            if name not in server_config.get_dict('records'):
+                self.__class__.dns_records.pop(name)
 
-                    # will write server status change individually as its unlikely both will be down at same time
-                    write_configuration(self.DNSServer.dns_servers._asdict(), 'dns_server_status')
-
-        self._initialize.done()
-
-        return FIVE_SEC
-
-    def _tls_reachable(self, secure_server):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(2)
-
-        secure_socket = self._tls_context.wrap_socket(sock, server_hostname=secure_server)
-        try:
-            secure_socket.connect((secure_server, PROTO.DNS_TLS))
-        except (OSError, socket.timeout):
-            return False
-
-        else:
-            return True
-
-        finally:
-            secure_socket.close()
-
-    @dynamic_looper
-    def udp(self):
-        if (self.is_enabled or self.DNSServer.udp_fallback):
-
-            for server in self.DNSServer.dns_servers:
-
-                # no check needed if server/proto is known up
-                if (server[self._protocol]): continue
-
-                Log.debug(f'[{server["ip"]}/{self._protocol.name}] Checking reachability of remote DNS server.')
-
-                # if server responds to connection attempt, it will be marked as available
-                if self._udp_reachable(server['ip']):
-                    server[PROTO.UDP] = True
-
-                    Log.notice(f'[{server["ip"]}/{self._protocol.name}] DNS server is reachable.')
-
-                    write_configuration(self.DNSServer.dns_servers._asdict(), 'dns_server_status')
+        # a direct update is fine after we have cleared the removed records
+        self.__class__.dns_records.update({
+            name: iptoi(ip_addr) for name, ip_addr in server_config.get_dict('records').items()
+        })
 
         self._initialize.done()
 
-        return FIVE_SEC
+    @looper(FIVE_SEC)
+    def _udp_reachability(self, udp_query: bytes, udp_sock: Socket):
+        public_resolvers = self.__class__.public_resolvers
 
-    def _udp_reachable(self, server_ip):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.settimeout(2)
-        try:
-            sock.sendto(self._udp_query, (server_ip, PROTO.DNS))
-            sock.recv(1024)
-        except socket.timeout:
-            return False
+        if (self.protocol is not PROTO.UDP and not self.__class__.udp_fallback):
+            return
 
-        else:
-            return True
+        downed_servers: list[tuple[int, str]] = [
+            (idx, server['ip_address']) for idx, server in enumerate(public_resolvers) if not server[PROTO.UDP]
+        ]
 
-        finally:
-            sock.close()
+        status_change: bool = False
+        for idx, server in downed_servers:
 
-    def _create_tls_context(self):
-        self._tls_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        self._tls_context.verify_mode = ssl.CERT_REQUIRED
-        self._tls_context.load_verify_locations(CERTIFICATE_STORE)
+            Log.debug(f'[{server}/UDP] Checking reachability of remote DNS server.')
 
-    def _set_udp_query(self):
-        self._udp_query = byte_join([
-            create_dns_query_header(dns_id=69, cd=1),
-            b'\x0bdnxfirewall\x03com\x00\x00\x01\x00\x01'
-        ])
+            udp_sock.sendto(udp_query, (server, PROTO.DNS))
+            try:
+                udp_sock.recv(1024)
+            except OSError:
+                continue
 
-    @property
-    def is_enabled(self):
-        return self._protocol == self.DNSServer.protocol
+            status_change = True
+            public_resolvers[idx][PROTO.UDP] = True
+
+            Log.notice(f'[{server}/UDP] DNS server is reachable.')
+
+        if (status_change):
+            write_configuration(public_resolvers._asdict(), 'dns_server_status')
+
+        self._initialize.done()
+
+    @looper(FIVE_SEC)
+    def _tls_reachability(self, tls_context: SSLContext):
+        public_resolvers = self.__class__.public_resolvers
+
+        if (self.protocol is not PROTO.DNS_TLS):
+            return
+
+        downed_servers: list[tuple[int, str]] = [
+            (idx, server['ip_address']) for idx, server in enumerate(public_resolvers) if not server[PROTO.DNS_TLS]
+        ]
+
+        status_change: bool = False
+        for idx, secure_server in downed_servers:
+
+            Log.debug(f'[{secure_server}/DNS_TLS] Checking reachability of remote DNS server.')
+
+            sock: Socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(CONNECT_TIMEOUT)
+
+            secure_socket = tls_context.wrap_socket(sock, server_hostname=secure_server)
+            try:
+                secure_socket.connect((secure_server, PROTO.DNS_TLS))
+            except OSError:
+                return False
+
+            else:
+                status_change = True
+
+                public_resolvers[idx][PROTO.DNS_TLS] = True
+                self.__class__.tls_down = False
+
+                Log.notice(f'[{secure_server}/DNS_TLS] DNS server is reachable.')
+
+            finally:
+                secure_socket.close()
+
+        if (status_change):
+            write_configuration(public_resolvers._asdict(), 'dns_server_status')
+
+        self._initialize.done()

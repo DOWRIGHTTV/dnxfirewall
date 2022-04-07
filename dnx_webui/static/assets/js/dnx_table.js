@@ -16,13 +16,13 @@ const loadTableData = (items) => {
 
 }
 
-function colorizeTable() {
-    var table = document.getElementById("filter-table");
-    var tr = table.getElementsByTagName("tr");
+function colorizeTable(id='') {
+    const table = document.getElementById(`filter-table${id}`);
+    let tr = table.getElementsByTagName("tr");
 
     for (let i = 0; i < tr.length; i++) {
 
-        if (i % 2 == 0) {
+        if (i % 2 === 0) {
             tr[i].className = "tr-even";
         } else {
             tr[i].className = "tr-odd";
@@ -30,19 +30,19 @@ function colorizeTable() {
     }
 }
 
-function filterTable(n1, n2) {
-    var input = document.getElementById("filter-input");
-    var filter = input.value.toUpperCase();
-    var table = document.getElementById("filter-table");
-    var tr = table.getElementsByTagName("tr");
+function filterTable(n1, n2, id='') {
+    let input = document.getElementById(`filter-input${id}`);
+    let filter = input.value.toUpperCase();
+    let table = document.getElementById(`filter-table${id}`);
+    let tr = table.getElementsByTagName("tr");
 
     let r = 1
     for (let i = 0; i < tr.length; i++) {
         let td = tr[i].getElementsByTagName("td");
 
-        if (td.length == 0) { continue; }
+        if (td.length === 0) { continue; }
 
-        if (r % 2 == 0) {
+        if (r % 2 === 0) {
             tr[i].className = "tr-even";
         } else {
             tr[i].className = "tr-odd";

@@ -1,0 +1,170 @@
+{% extends('layout.html') %}
+{% block body %}
+<section id="tabs-bar" class="tabsbar">
+    <div class="container">
+        <div class="row">
+            <div class="col s12">
+                <ul class="tabs">
+                    <li class="{{tab_classes}}"><a {% if tab=='1' %} class="active" {% endif %}
+                        href="#createcategory" onclick="activeTab(1)">Create Category</a></li>
+                    <li class="{{tab_classes}}"><a {% if tab=='2' %} class="active" {% endif %}
+                        href="#categoryrules" onclick="activeTab(2)">Rule List</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+<section id="createcategory" class="section {{main_section_color}}">
+    <div class="container">
+        <div class="row row-flex">
+            <div class="col s12 m6">
+                <div class="card-panel card-panel-eql hoverable {{card_color}}">
+                    <h4 class="{{title_color}}">Add Rule</h4>
+                    <form action="/intrusion/domain/categories" method="post">
+                        <input type="hidden" name="tab" value="1">
+                        <div class="row {{input_color}}">
+                            <div class="input-field col s12">
+                                <select name="menu" onchange="this.form.submit()">
+                                    <!-- this is not an error, jinja is used to send correct value into javascript function-->
+                                    {% for cat in category_settings['ud_list'] %}
+                                    {% if loop.index == menu %}
+                                    <option value="{{loop.index}}" selected>{{cat}}</option>
+                                    {% else %}
+                                    <option value="{{loop.index}}" onclick="activeMenu({{loop.index}})">{{cat}}</option>
+                                    {% endif %}
+                                    {% endfor %}
+                                </select>
+                                <label for="menu">Categories</label>
+                            </div>
+                        </div>
+                        <div class="row {{input_color}}">
+                            <div class="input-field col s12">
+                                <input type="text" name="ud_domain_name" id="ud_domain_name"
+                                    placeholder="www.badsite.com" required>
+                                <label for="domain">Domain</label>
+                            </div>
+                        </div>
+                        <div class="row {{input_color}}">
+                            <div class="input-field col s12">
+                                <input type="text" name="ud_domain_reason" id="reason" placeholder="malicious" required>
+                                <label for="reason">Reason</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="input-field col s12 m3">
+                                <button type="submit" name="cat_add_domain" id="cat_add_domain"
+                                    class="btn waves-effect waves-light lighten-2 col s9">Add</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="col s12 m6">
+                <div class="card-panel card-panel-eql hoverable {{card_color}}">
+                    <h4 class="{{title_color}}">Active Categories</h4>
+                    <form action="/intrusion/domain/categories" method="POST">
+                        <input type="hidden" name="tab" value="1">
+                        <div class="row {{input_color}}">
+                            <div class="input-field col s12">
+                                <input type="text" name="ud_category" class="validate" placeholder="social media"
+                                    required>
+                                <label for="">Category Name</label>
+                                <button class="btn waves-effect waves-light col s2" name="ud_cat_add">Add</button>
+                            </div>
+                        </div>
+                    </form>
+                    {% for cat_list in category_settings['user_defined'].values() %}
+                    {% for cat in cat_list %}
+                    <form action="/intrusion/domain/categories" method="POST">
+                        <div class="input-field col s4 center">
+                            {{cat}} domains
+                            <div class="row">
+                                <div class="input-field col s12">
+                                    <input type="hidden" name="tab" value="1">
+                                    <button class="btn waves-effect waves-light" name="ud_cat_remove" value="{{cat}}">Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                    {% endfor %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<section id="categoryrules" class="section {{main_section_color}}">
+    <div class="container">
+        <div class="col s12">
+            <div class="card-panel hoverable {{card_color}}">
+                <h4 class="{{title_color}}">Configured Categories</h4>
+                <div class="row">
+                    <form action="/intrusion/domain/categories" method="POST">
+                        <input type="hidden" name="tab" value="2">
+                        <div class="input-field col s10 m4 {{input_color}}">
+                            <select name="menu" onchange="this.form.submit()">
+                                {% for cat in category_settings['ud_list'] %}
+                                {% if loop.index == menu %}
+                                <option value="{{loop.index}}" selected>{{cat}}</option>
+                                {% else %}
+                                <option value="{{loop.index}}">{{cat}}</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                            <label for="menu">Reports</label>
+                        </div>
+                        <noscript>
+                            <div class="input-field col s2">
+                                <button class="btn waves-effect waves-light col s12">
+                                    <i class="material-icons">cached</i>
+                                </button>
+                            </div>
+                        </noscript>
+                    </form>
+                </div>
+                {% if category_settings['ud_list'] %}
+                <div class="row">
+                    <table class="striped centered">
+                        <thead>
+                            <tr>
+                                <th style="width:10%"></th>
+                                <th style="width:45%">Domain</th>
+                                <th style="width:45%">Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <form action="/intrusion/domain/categories" method="POST">
+                                <input type="hidden" name="menu" value="{{menu}}">
+                                <input type="hidden" name="category" value="{{category}}">
+                                <input type="hidden" name="tab" value="2">
+                                {% for category, ruleset in category_settings['user_defined_rules'].items() %}
+                                {% if ruleset %}
+                                {% for rule in ruleset.values() %}
+                                <tr>
+                                    <td>
+                                        <button class="btn-floating btn-small red waves-effect waves-light" name="cat_del_domain" value="{{rule[0]}}">
+                                            <i class="material-icons">remove</i>
+                                        </button>
+                                    </td>
+                                    <td>{{rule[0]}}</td>
+                                    <td>{{rule[1]}}</td>
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </form>
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

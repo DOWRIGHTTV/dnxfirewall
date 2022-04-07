@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 
-import os, sys
+from __future__ import annotations
+
 import time
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
-from dnx_sysmods.configure.system_info import System
+from dnx_routines.configure.system_info import System
 
 
 class SyslogFormat:

@@ -1,5 +1,9 @@
-import os as _os
-import sys as _sys
+#!/usr/bin/env python3
 
-_HOME_DIR = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-3]))
-_sys.path.insert(0, _HOME_DIR)
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    from cprotocol_tools import *
+    from hash_trie import *

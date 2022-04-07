@@ -1,8 +1,30 @@
-# ????
+# WEBUI IMAGE EXTENSIONS
 *.png     linguist-language=Python
+
+# LEGACY CONFIGURATION EXTENSIONS
 *.json    linguist-language=Python
 *.txt     linguist-language=Python
+
+# CONFIGURATION EXTENSIONS
+*.cfg     linguist-language=Python
+*.csv     linguist-language=Python
+
+# SYSTEMD SERVICE FILES
 *.service linguist-language=Python
+
+# SIGNATURE EXTENSIONS
 *.geo     linguist-language=Python
 *.domains linguist-language=Python
 *.ips     linguist-language=Python
+
+# DHCP SERVER
+*.lease   linguist-language=Python
+
+# DNS SERVER
+*.cache   linguist-language=Python
+
+# IP PROXY
+*.timer   linguist-language=Python
+
+# STATUS TRACKING
+*.stat    linguist-language=Python
