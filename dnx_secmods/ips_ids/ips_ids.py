@@ -56,7 +56,7 @@ class IPS_IDS(IPSConfiguration, NFQueue):
             return True
 
         # packet accepted, no inspection
-        if (packet.action is CONN.ACCEPT):
+        elif (packet.action is CONN.ACCEPT):
             packet.nfqueue.accept()
 
         # packet dropped, no inspection
@@ -88,19 +88,17 @@ def inspect_portscan(_, packet: IPSPacket) -> None:
     with pscan.lock:
         initial_block, active_scanner, pre_detection_logging = portscan_detect(pscan.tracker, packet)
 
-    # accepting connections from hosts that don't meet active scanner criteria
+    # invoking forwarded verdict for connections from hosts that don't meet active scanner criteria
     if (not active_scanner):
 
         # CONN.INSPECT was dropped in pre_inspect and only needed to inspect for profiling purposes
-        if (packet.action is not CONN.INSPECT):
+        if (packet.action is CONN.ACCEPT):
             packet.nfqueue.accept()
 
-            Log.debug(f'[pscan/accept] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
+        elif (packet.action is CONN.DROP):
+            packet.nfqueue.drop()
 
-        # for tshoot purposes and will likely leave since this is valuable information for a user if they are
-        # trying to see what is going on with their ips configurations if things are not working as intended.
-        else:
-            Log.debug(f'[pscan/profile] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
+            Log.debug(f'[pscan/accept] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
 
         return
 
@@ -108,27 +106,23 @@ def inspect_portscan(_, packet: IPSPacket) -> None:
     # NOTE: this may be noisy and log multiple times per single scan.
     # TODO: validate.
     elif (IPS_IDS.ids_mode):
-
-        # CONN.INSPECT was dropped in pre_inspect and only needed to inspect for profiling purposes
-        if (packet.action is not CONN.INSPECT):
-            packet.nfqueue.accept()
+        packet.nfqueue.accept()
 
         block_status = IPS.LOGGED
 
     # dropping the packet then checking for further action.
     elif (IPS_IDS.pscan_enabled):
 
-        # CONN.INSPECT was dropped in pre_inspect and only needed to inspect for profiling purposes
-        if (packet.action is not CONN.INSPECT):
-            packet.nfqueue.drop()
+        packet.nfqueue.drop()
 
         # if rejection is enabled on top of prevention, port unreachable packets will be sent back to the scanner.
         if (IPS_IDS.pscan_reject):
             portscan_reject(pre_detection_logging, packet, initial_block)
 
         # if initial_block is not set, then the current host has already been effectively blocked and the engine
-        # does not need to do anything beyond this point.
-        if (not initial_block): return
+        # does not need to log
+        if (not initial_block):
+            return
 
         block_status = get_block_status(pre_detection_logging, packet.protocol)
 
@@ -147,11 +141,11 @@ def portscan_detect(tracker: dict, packet: IPSPacket) -> tuple[bool, bool, dict]
     # pulling host profile details from tracker
     tracked_ip = tracker.get(packet.tracked_ip, None)
 
-    # NOTE: this should also act as an effective timeout mechanism to re allow packets/ connections from a host
+    # first time seeing this flow.
     if (not tracked_ip or fast_time() - tracked_ip['last_seen'] > 15):
         add_to_tracker(tracker, packet, engine=IPS.PORTSCAN)
 
-        return False, False, {}
+        return initial_block, scan_detected, {}
 
     tracked_ip['last_seen'] = packet.timestamp
     if (tracked_ip['active_scanner']):
@@ -237,25 +231,29 @@ def inspect_ddos(packet: IPSPacket) -> None:
         Log.log(packet, IPS.FILTERED, engine=IPS.DDOS)
 
 def ddos_detected(tracker: dict, packet: IPSPacket) -> bool:
+
     tracked_ip = tracker.get(packet.tracked_ip, None)
+
     if (not tracked_ip or fast_time() - tracked_ip['last_seen'] > 15):
         add_to_tracker(tracker, packet, engine=IPS.DDOS)
 
-    else:
-        tracked_ip['count'] += 1
-        tracked_ip['last_seen'] = packet.timestamp
+        return False
 
-        # if the ddos limit is exceeded and the host is not yet marked, return active ddos and add ip to tracker
-        if threshold_exceeded(tracked_ip, packet):
+    tracked_ip['count'] += 1
+    tracked_ip['last_seen'] = packet.timestamp
 
-            # this is to suppress log entries for ddos hosts that are being detected by the engine since there is
-            # a delay between detection and kernel offload or some packets are already in queue
-            if (packet.tracked_ip not in IPS_IDS.fw_rules):
-                IPS_IDS.fw_rules[packet.tracked_ip] = packet.timestamp
+    # if the ddos limit is exceeded and the host is not yet marked, return active ddos and add ip to tracker
+    if threshold_exceeded(tracked_ip, packet):
 
-                return True
+        # this is to suppress log entries for ddos hosts that are being detected by the engine since there is
+        # a delay between detection and kernel offload or some packets are already in queue
+        if (packet.tracked_ip not in IPS_IDS.fw_rules):
+            IPS_IDS.fw_rules[packet.tracked_ip] = packet.timestamp
+
+        return True
 
     return False
+
 
 def threshold_exceeded(tracked_ip, packet):
     elapsed_time = packet.timestamp - tracked_ip['initial']
