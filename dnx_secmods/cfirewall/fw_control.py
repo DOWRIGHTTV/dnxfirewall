@@ -133,24 +133,20 @@ class FirewallControl:
         '''
         fw_rules = load_configuration(DEFAULT_VERSION, ext='.firewall', filepath=DEFAULT_PATH).get_dict()
 
-        return fw_rules
-
-        # try:
-        #     return self._firewall[section]
-        # except KeyError:
-        #     return {}
+        try:
+            return fw_rules[section]
+        except KeyError:
+            return {}
 
     def ruleset_len(self, section: str = 'MAIN') -> int:
         '''returns len of firewall_pending ruleset. defaults to main and returns 0 on error.'''
 
         fw_rules = load_configuration(DEFAULT_VERSION, ext='.firewall', filepath=DEFAULT_PATH).get_dict()
 
-        return len(fw_rules)
-
-        # try:
-        #     return len(self._firewall[section])
-        # except:
-        #     return 0
+        try:
+            return len(fw_rules[section])
+        except:
+            return 0
 
     @staticmethod
     def is_pending_changes():
