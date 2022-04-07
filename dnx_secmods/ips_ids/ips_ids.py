@@ -95,10 +95,12 @@ def inspect_portscan(_, packet: IPSPacket) -> None:
         if (packet.action is CONN.ACCEPT):
             packet.nfqueue.accept()
 
+            Log.debug(f'[pscan/accept] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
+
         elif (packet.action is CONN.DROP):
             packet.nfqueue.drop()
 
-            Log.debug(f'[pscan/accept] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
+            Log.debug(f'[pscan/drop] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
 
         return
 
@@ -109,6 +111,8 @@ def inspect_portscan(_, packet: IPSPacket) -> None:
         packet.nfqueue.accept()
 
         block_status = IPS.LOGGED
+
+        Log.debug(f'[pscan/accept] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
 
     # dropping the packet then checking for further action.
     elif (IPS_IDS.pscan_enabled):
@@ -125,6 +129,8 @@ def inspect_portscan(_, packet: IPSPacket) -> None:
             return
 
         block_status = get_block_status(pre_detection_logging, packet.protocol)
+
+        Log.debug(f'[pscan/drop] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
 
     # making linter happy
     else: block_status = IPS.DISABLED
@@ -179,6 +185,7 @@ def portscan_detect(tracker: dict, packet: IPSPacket) -> tuple[bool, bool, dict]
 def portscan_reject(pre_detection_logging: dict, packet: IPSPacket, initial_block: bool) -> None:
     PREPARE_AND_SEND(packet)
 
+    Log.debug(f'[pscan/reject] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
     if (not initial_block):
         return
 
