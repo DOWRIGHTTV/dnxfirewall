@@ -119,4 +119,7 @@ def receive_requests(queue_for_db):
 
         log_entry = log_tuple(*data['log'])
 
-        queue_for_db((name, data['timestamp'], log_entry))
+        try:
+            queue_for_db((name, data['timestamp'], log_entry))
+        except:
+            Log.critical(f'routine queueing failure -> ({name})')
