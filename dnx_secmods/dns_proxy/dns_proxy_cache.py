@@ -33,7 +33,8 @@ __all__ = (
 NO_QNAME_RECORD = QNAME_RECORD(-1, -1, [])
 QNAME_NOT_FOUND = QNAME_RECORD_UPDATE(-1, [])
 
-def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Callable[[ClientQuery], None]) -> DNSCache:
+def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Callable[[int, ClientQuery],None]) -> DNSCache:
+
     _top_domains: list = load_configuration('dns_server', ext='.cache').get('top_domains')
 
     domain_counter: Counter[str, int] = Counter({dom: cnt for cnt, dom in enumerate(reversed(_top_domains))})
@@ -114,7 +115,7 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
 
         # response will be identified by "None" for client address
         for domain in top_domains:
-            request_handler(dns_packet(domain))
+            request_handler(1, dns_packet(domain))
             fast_sleep(.1)
 
         Log.debug('expired records cleared from cache and top domains refreshed')
@@ -228,7 +229,7 @@ def request_tracker() -> RequestTracker:
 
         @staticmethod
         # NOTE: first arg is because this gets reference/called via an instance.
-        def insert(client_query: ClientQuery) -> None:
+        def insert(_, client_query: ClientQuery) -> None:
 
             request_queue_append(client_query)
 

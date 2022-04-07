@@ -229,6 +229,6 @@ def cache_available(client_query: ClientQuery) -> QNAME_RECORD_UPDATE:
 
 def send_to_client(client_query: ClientQuery, query_response: bytearray) -> None:
     try:
-        client_query.sendto(query_response, client_query.address)
+        client_query.sendto(query_response, (itoip(client_query.client_ip), client_query.client_port))
     except OSError:
         pass
