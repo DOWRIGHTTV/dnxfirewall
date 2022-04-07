@@ -228,7 +228,7 @@ def request_tracker() -> RequestTracker:
 
         @staticmethod
         # NOTE: first arg is because this gets reference/called via an instance.
-        def insert(_, client_query: ClientQuery) -> None:
+        def insert(client_query: ClientQuery) -> None:
 
             request_queue_append(client_query)
 
