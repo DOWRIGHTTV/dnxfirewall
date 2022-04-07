@@ -1,8 +1,6 @@
 id,name,origin,type,subtype,value,description
 
 # SERVICE
-9001,tcp_any,built-in,service,1,tcp/0,All TCP ports (1-65535)
-9002,udp_any,built-in,service,1,udp/0,All UDP ports (1-65535)
 9003,icmp,built-in,service,1,icmp/0,commonly: Ping
 9004,tcp_22,built-in,service,1,tcp/22,commonly: Secure Shell (SSH)
 9005,tcp_25,built-in,service,1,tcp/25,commonly: Simple Mail Transfer Protocol (SMTP)
@@ -21,6 +19,8 @@ id,name,origin,type,subtype,value,description
 9018,tcp_636,built-in,service,1,tcp/636,commonly: Lightweight Directory Access Protocol over SSL/TLS (LDAPS)
 9019,tcp_993,built-in,service,1,tcp/993,commonly: Internet Message Access Protocol Secure (IMAPS)
 9020,tcp_587,built-in,service,1,tcp/587,commonly: Message Submission for SMTP
+9001,tcp_any,built-in,service,2,tcp/1-65535,All TCP ports (1-65535)
+9002,udp_any,built-in,service,2,udp/1-65535,All UDP ports (1-65535)
 9021,tcp_system_ports,built-in,service,2,tcp/1-1023,Port range used for internet/system services (privileged)
 9022,tcp_user_ports,built-in,service,2,tcp/1024-49151,Port range for general use (non privileged)
 9023,tcp_dynamic_ports,built-in,service,2,tcp/49152-65535,Port range which will never be assigned by IANA
