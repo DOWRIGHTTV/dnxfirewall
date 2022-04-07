@@ -14,7 +14,8 @@ from dnx_gentools.def_enums import INTF
 from dnx_gentools.file_operations import load_configuration, ConfigurationManager, json_to_yaml
 
 from dnx_iptools.def_structs import fcntl_pack, long_unpack
-from dnx_iptools.cprotocol_tools import btoia, itoip
+from dnx_iptools.cprotocol_tools import itoip
+from dnx_iptools.protocol_tools import btoia
 
 if os.environ.get('webui'):
     from dnx_system.sys_action import system_action
@@ -22,8 +23,6 @@ if os.environ.get('webui'):
 # ===============
 # TYPING IMPORTS
 # ===============
-from typing import TYPE_CHECKING
-
 if (TYPE_CHECKING):
     from dnx_gentools.file_operations import ConfigChain
 
