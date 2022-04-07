@@ -91,7 +91,7 @@ cdef extern from "libnetfilter_queue/libnetfilter_queue.h":
 
     nfq_handle *nfq_open()
 
-    int nfq_fd(nfq_handle *h)
+    int nfq_fd(nfq_handle *h) nogil
     int nfq_close(nfq_handle *h)
 
     nfnl_handle *nfq_nfnlh(nfq_handle *h)
@@ -109,7 +109,7 @@ cdef extern from "libnetfilter_queue/libnetfilter_queue.h":
     int nfq_get_timestamp(nfq_data *nfad, timeval *tv) nogil
     int nfq_get_nfmark(nfq_data *nfad) nogil
     uint8_t nfq_get_indev(nfq_data *nfad) nogil
-    uint8_t nfq_get_outdev(nfq_data *nfad)
+    uint8_t nfq_get_outdev(nfq_data *nfad) nogil
 
     int nfq_set_verdict(nfq_q_handle *qh, uint32_t id, uint32_t verdict, uint32_t data_len, uint8_t *buf) nogil
     int nfq_set_verdict2(
@@ -197,7 +197,7 @@ cdef class CPacket:
     cpdef void drop(self)
     cpdef void forward(self, uint16_t queue_num)
     cpdef void repeat(self)
-    cdef  void set_packet_data(self, PacketData dnx_nfqhdr)
+    cdef void set_nfqhdr(s, PacketData *dnx_nfqhdr)
     cdef  void _set_verdict(self, uint32_t verdict) nogil
 
 cdef class NetfilterQueue:

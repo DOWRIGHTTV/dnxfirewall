@@ -35,7 +35,7 @@ cdef int32_t nfqueue_rcv(nfq_q_handle *nfq_qh, nfgenmsg *nfmsg, nfq_data *nfq_d,
     cdef:
         nfqnl_msg_packet_hdr *nfq_msg_hdr = nfq_get_msg_packet_hdr(nfq_d)
 
-        PacketData dnx_nfqhdr = calloc(1, sizeof(PacketData))
+        PacketData *dnx_nfqhdr = <PacketData*>calloc(1, sizeof(PacketData))
 
     dnx_nfqhdr.nfq_qh    = nfq_qh
     dnx_nfqhdr.nfq_d     = nfq_d
@@ -50,7 +50,7 @@ cdef int32_t nfqueue_rcv(nfq_q_handle *nfq_qh, nfgenmsg *nfmsg, nfq_data *nfq_d,
     # ----------------------------------
     # GIL ACQUIRED -> FORWARD TO PYTHON
     # ----------------------------------
-    return nfqueue_forward(&dnx_nfqhdr, q_manager)
+    return nfqueue_forward(dnx_nfqhdr, q_manager)
 
 # ============================================
 # FORWARDING TO PROXY CALLBACK - GIL ACQUIRED
