@@ -20,8 +20,6 @@ from dhcp_server_automate import ServerConfiguration
 # ===============
 # TYPING IMPORTS
 # ===============
-from typing import TYPE_CHECKING, cast
-
 if (TYPE_CHECKING):
     from typing import TypeAlias
 

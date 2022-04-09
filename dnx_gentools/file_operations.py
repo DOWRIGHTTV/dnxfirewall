@@ -10,7 +10,7 @@ import hashlib
 import subprocess
 
 from copy import copy
-from functools import wraps
+from functools import wraps, partial
 from secrets import token_urlsafe
 
 from dnx_gentools.def_typing import *
@@ -19,11 +19,15 @@ from dnx_gentools.def_namedtuples import Item
 from dnx_gentools.def_enums import DNS_CAT, DATA
 from dnx_gentools.def_exceptions import ValidationError
 
+# ================
+# TYPING IMPORTS
+# ================
 if (TYPE_CHECKING):
     from dnx_routines.logging import LogHandler_T
 
 
 __all__ = (
+    'acquire_lock', 'release_lock',
     'load_configuration', 'write_configuration',
     'load_data', 'write_data',
     'append_to_file', 'tail_file', 'change_file_owner',
@@ -40,10 +44,20 @@ FILE_POLL_TIMER = 10
 file_exists = os.path.exists
 
 # aliases for readability
-FILE_LOCK = fcntl.flock
-EXCLUSIVE_LOCK = fcntl.LOCK_EX
-UNLOCK_LOCK = fcntl.LOCK_UN
+ACQUIRE_LOCK: Callable[[TextIO], None] = partial(fcntl.flock, fcntl.LOCK_EX)
+RELEASE_LOCK: Callable[[TextIO], None] = partial(fcntl.flock, fcntl.LOCK_UN)
 
+def acquire_lock(file: str) -> TextIO:
+    mutex = open(file)
+
+    ACQUIRE_LOCK(mutex)
+
+    return mutex
+
+def release_lock(mutex: TextIO):
+    RELEASE_LOCK(mutex)
+
+    mutex.close()
 
 def load_configuration(filename: str, ext: str = '.cfg', *, filepath: str = 'dnx_system/data') -> ConfigChain:
     '''load json data from a file and convert it to a ConfigChain.
@@ -170,7 +184,7 @@ def calculate_file_hash(file_to_hash: str, *, path: str = 'dnx_system', folder: 
 
     return file_hash
 
-def cfg_read_poller(watch_file: str, *, folder: str = 'data', class_method: bool = False):
+def cfg_read_poller(watch_file: str, *, ext: str = '.cfg', folder: str = 'data', class_method: bool = False):
     '''Automate Class configuration file poll decorator.
 
     apply this decorator to all functions that will update configurations loaded in memory from json files.
@@ -186,13 +200,13 @@ def cfg_read_poller(watch_file: str, *, folder: str = 'data', class_method: bool
         if (not class_method):
             @wraps(function_to_wrap)
             def wrapper(*args):
-                watcher = Watcher(watch_file, folder, callback=function_to_wrap)
+                watcher = Watcher(watch_file, ext, folder, callback=function_to_wrap)
                 watcher.watch(*args)
 
         else:
             @wraps(function_to_wrap)
             def wrapper(*args):
-                watcher = Watcher(watch_file, folder, callback=function_to_wrap)
+                watcher = Watcher(watch_file, ext, folder, callback=function_to_wrap)
                 watcher.watch(*args)
 
             wrapper = classmethod(wrapper)
@@ -441,8 +455,8 @@ class ConfigurationManager:
     This class is written as a context manager and must be used as such. upon calling the context, a file lock will be
     obtained or block until it can acquire the lock and return the class object to the caller.
     '''
-    log: ClassVar[LogHandler_T] = None
-    config_lock_file: ClassVar[ConfigLock] = f'{HOME_DIR}/dnx_system/config.lock'
+    log: LogHandler_T = None
+    config_lock_file: ConfigLock = f'{HOME_DIR}/dnx_system/config.lock'
 
     __slots__ = (
         '_config_lock', '_filename', '_data_written',
@@ -482,10 +496,7 @@ class ConfigurationManager:
     # attempts to acquire lock on system config lock (blocks until acquired), then opens a temporary
     # file which the new configuration will be written to, and finally returns the class object.
     def __enter__(self) -> ConfigurationManager:
-        self._config_lock = open(self.config_lock_file, 'r+')
-
-        # acquiring lock on shared lock file
-        FILE_LOCK(self._config_lock, EXCLUSIVE_LOCK)
+        self._config_lock = acquire_lock(self.config_lock_file)
 
         # setup isn't required if config file is not specified.
         if (self._config_file):
@@ -517,7 +528,7 @@ class ConfigurationManager:
             os.unlink(self._temp_file_path)
 
         # releasing lock for purposes specified in flock(1) man page under -u (unlock)
-        FILE_LOCK(self._config_lock, UNLOCK_LOCK)
+        RELEASE_LOCK(self._config_lock)
 
         # closing file after unlock to allow reference to be cleaned up.
         self._config_lock.close()
@@ -567,11 +578,11 @@ class Watcher:
         '_last_modified_time'
     )
 
-    def __init__(self, watch_file: str, folder: str, *, callback: Callable_T):
+    def __init__(self, watch_file: str, ext: str, folder: str, *, callback: Callable_T):
         self._watch_file: str = watch_file
         self._callback: Callable_T = callback
 
-        self._full_path: str = f'{HOME_DIR}/dnx_system/{folder}/usr/{watch_file}.cfg'
+        self._full_path: str = f'{HOME_DIR}/dnx_system/{folder}/usr/{watch_file}.{ext}'
 
         self._last_modified_time: int = 0
 

@@ -41,6 +41,10 @@ class FW_OBJECT(_NamedTuple):
     value:   str
     description: str = ''
 
+    @_lru_cache(maxsize=0)
+    def db_format(self) -> list:
+        pass
+
 
 # DHCP SERVER
 _pack_map: dict[int, _Callable[[int, int, int], bytes]] = {1: _dhcp_bp, 2: _dhcp_sp, 4: _dhcp_lp}

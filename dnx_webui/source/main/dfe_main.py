@@ -108,7 +108,7 @@ def dnx_dashboard(session_data):
 def rules_firewall(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'ajax': True,
+        'ajax': True, 'dnx_table': True, 'auto_colorize': True,
         'tab': validate.get_check_digit(request.args, 'tab'),
         'dnx_network_objects': {},
         'dnx_service_objects': {},

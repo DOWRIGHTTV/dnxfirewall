@@ -1,65 +1,64 @@
 
-const loadTableData = (items) => {
+const loadTableData = (rows) => {
     const table = document.getElementById("filter-table-body");
-    items.forEach( item => {
-        let row = table.insertRow();
-        for (let i = 0; i < item.length; i++) {
 
-            let col = row.insertCell(i);
-            col.innerHTML = item[i];
-        }
-    });
+    let colorize = table.classList.contains('colorize');
 
-    // this should be able to be integrated into the load table data, but for now it is done
-    // after the fact.
-    colorizeTable();
+    for (let i = 0; i < rows.length; i++) {
+        let tr = table.insertRow();
+        if (colorize) { colorizeRow(i, tr); }
+        for (let i = 0; i < rows.length; i++) {
 
-}
-
-function colorizeTable(id='') {
-    const table = document.getElementById(`filter-table${id}`);
-    let tr = table.getElementsByTagName("tr");
-
-    for (let i = 0; i < tr.length; i++) {
-
-        if (i % 2 === 0) {
-            tr[i].className = "tr-even";
-        } else {
-            tr[i].className = "tr-odd";
+            tr.insertCell(i).innerHTML = rows[i];
         }
     }
 }
+function colorizeTable() {
+    const tables = document.querySelectorAll(".colorize");
+    for (let table of tables) {
 
+        let tr = table.getElementsByTagName("tr");
+        for (let i = 0; i < tr.length; i++) {
+            colorizeRow(i, tr)
+        }
+    }
+}
 function filterTable(n1, n2, id='') {
     let input = document.getElementById(`filter-input${id}`);
-    let filter = input.value.toUpperCase();
     let table = document.getElementById(`filter-table${id}`);
     let tr = table.getElementsByTagName("tr");
 
-    let r = 1
+    let colorize = table.classList.contains('colorize');
+
+    let r = 0;
     for (let i = 0; i < tr.length; i++) {
         let td = tr[i].getElementsByTagName("td");
 
         if (td.length === 0) { continue; }
 
-        if (r % 2 === 0) {
-            tr[i].className = "tr-even";
-        } else {
-            tr[i].className = "tr-odd";
-        }
-
         for (let e = n1; e < n2; e++) {
 
-            let ele = td[e]
+            let ele = td[e];
             let txtValue = ele.textContent || ele.innerText;
 
-            if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                tr[i].style.display = ""; r++; break;
+            if (txtValue.toUpperCase().indexOf(input.value.toUpperCase()) > -1) {
+                tr[i].style.display = ""; r++;
+
+                if (colorize) { colorizeRow(r, tr); }
+                console.log(r)
+                break;
 
             } else {
                 tr[i].style.display = "none";
             }
-
         }
+
+    }
+}
+function colorizeRow(i, tr) {
+    if (i % 2 === 0) {
+        tr[i].className = "tr-even";
+    } else {
+        tr[i].className = "tr-odd";
     }
 }

@@ -97,20 +97,22 @@ def check_digit(dig: str, /, *, default: Optional[str] = '1') -> str:
 
     return default
 
-def get_check_digit(form: Form, key: str, /, *, default: Optional[str] = '1') -> str:
+def get_check_digit(args: Args, key: str, /, *, default: Optional[str] = '1') -> str:
 
-    value = form.get(key, default)
+    value = args.get(key, default)
     if (value.isdigit()):
         return value
 
     return default
 
-def standard(user_input, *, override=[]):
+def standard(user_input: Any, *, override: Optional[list] = None) -> None:
+    override = [] if override is None else override
+
     for char in user_input:
         if (not char.isalnum() and char not in override):
-            override = ', '.join(override)
-
-            raise ValidationError(f'Standard fields can only contain alpha numeric characters or the following {override}.')
+            raise ValidationError(
+                f'Standard fields can only contain alpha numeric characters or the following {", ".join(override)}.'
+            )
 
 def syslog_dropdown(syslog_time):
     syslog_time = convert_int(syslog_time)
