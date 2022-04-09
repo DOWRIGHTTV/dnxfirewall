@@ -76,7 +76,9 @@ def db_message(timestamp: int, log_msg: tuple, method: str) -> bytes:
     return dumps(log_data).encode('utf-8')
 
 def convert_level(level: Optional[LOG] = None) -> Union[dict[int, list[str, str]], str]:
-    '''converts log level as integer to string. valid input: 0-7.
+    '''converts log level as integer to string.
+
+    valid input: 0-7.
 
     if level is None the entire dict will be returned.
     '''
@@ -97,7 +99,7 @@ def convert_level(level: Optional[LOG] = None) -> Union[dict[int, list[str, str]
 # LOG HANDLING CLASS FACTORY
 # ===========================
 # process wide "instance" of LogHandler class, which can be used directly or subclassed.
-def _log_handler() -> LogHandler_T:
+def _log_handler() -> _LogHandler:
 
     logging_level: int = 0
     handler_name: str = ''
@@ -335,7 +337,7 @@ def _log_handler() -> LogHandler_T:
     return _LogHandler
 
 
-LogHandler: LogHandler_T = _log_handler()
+LogHandler = _log_handler()
 Log: LogHandler_T = LogHandler  # alias
 
 # ========================

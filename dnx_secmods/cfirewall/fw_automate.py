@@ -12,6 +12,8 @@ from dnx_gentools.standard_tools import Initialize
 from dnx_gentools.signature_operations import generate_geolocation
 from dnx_gentools.file_operations import cfg_read_poller, load_configuration
 
+from dnx_routines.logging import Log
+
 # ===============
 # TYPING IMPORTS
 # ===============
@@ -57,7 +59,7 @@ class FirewallAutomate:
     def run(self) -> None:
 
         # generating py_trie for geolocation signatures, cfirewall will initialize the extension natively
-        geo_trie: tuple = generate_geolocation(self.log)
+        geo_trie: list = generate_geolocation(self.log)
 
         self.cfirewall.prepare_geolocation(geo_trie, MSB, LSB)
 
@@ -85,7 +87,9 @@ class FirewallAutomate:
         # NOTE: gil must be held on the other side of this call
         error: int = self.cfirewall.update_zones(dnx_zones)
         if (error):
-            pass  # TODO: do something here
+            Log.error('Zone map update failure in CFirewall')
+        else:
+            Log.notice('Zone map updated successfully')
 
         self._initialize.done()
 
@@ -118,7 +122,9 @@ class FirewallAutomate:
             # NOTE: gil must be held throughout this call
             error = self.cfirewall.update_ruleset(i, ruleset)
             if (error):
-                pass  # TODO: do something here
+                Log.error(f'Rules section "{section}" update failure in CFirewall')
+            else:
+                Log.notice(f'Rule section "{section}" updated successfully')
 
         self._initialize.done()
 
@@ -144,6 +150,8 @@ class FirewallAutomate:
         # NOTE: gil must be held throughout this call. 0 is index of SYSTEM RULES
         error = self.cfirewall.update_ruleset(0, system_set)
         if (error):
-            pass  # TODO: do something here
+            Log.error(f'Rules section "SYSTEM" update failure in CFirewall')
+        else:
+            Log.notice(f'Rule section "SYSTEM" updated successfully')
 
         self._initialize.done()
