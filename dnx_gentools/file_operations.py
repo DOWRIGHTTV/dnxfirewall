@@ -59,10 +59,10 @@ def release_lock(mutex: TextIO):
 
     mutex.close()
 
-def load_configuration(filename: str, ext: str = '.cfg', *, filepath: str = 'dnx_system/data') -> ConfigChain:
+def load_configuration(filename: str, ext: str = 'cfg', *, filepath: str = 'dnx_system/data') -> ConfigChain:
     '''load json data from a file and convert it to a ConfigChain.
     '''
-    filename += ext
+    filename = f'{filename}.{ext}'
 
     # loading system default configs
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'r') as system_settings_io:
@@ -79,10 +79,10 @@ def load_configuration(filename: str, ext: str = '.cfg', *, filepath: str = 'dnx
 
     return ConfigChain(system_settings, user_settings)
 
-def write_configuration(data: dict, filename: str, ext: str = '.cfg', *, filepath: str = 'dnx_system/data/usr') -> None:
+def write_configuration(data: dict, filename: str, ext: str = 'cfg', *, filepath: str = 'dnx_system/data/usr') -> None:
     '''write a json data object to file.
     '''
-    filename += ext
+    filename = f'{filename}.{ext}'
 
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
         json.dump(data, settings, indent=2)
@@ -184,7 +184,7 @@ def calculate_file_hash(file_to_hash: str, *, path: str = 'dnx_system', folder: 
 
     return file_hash
 
-def cfg_read_poller(watch_file: str, *, ext: str = '.cfg', folder: str = 'data', class_method: bool = False):
+def cfg_read_poller(watch_file: str, *, ext: str = 'cfg', folder: str = 'data', class_method: bool = False):
     '''Automate Class configuration file poll decorator.
 
     apply this decorator to all functions that will update configurations loaded in memory from json files.
@@ -470,7 +470,7 @@ class ConfigurationManager:
         '''
         cls.log: LogHandler_T = ref
 
-    def __init__(self, config_file: str = '', ext: str = '.cfg', file_path: str = None) -> None:
+    def __init__(self, config_file: str = '', ext: str = 'cfg', file_path: str = None) -> None:
         '''config_file can be omitted to allow for configuration lock to be used with
         external operations.
         '''
@@ -488,7 +488,7 @@ class ConfigurationManager:
                 file_path = 'dnx_system/data'
 
             self._file_path = file_path
-            self._filename = config_file + ext
+            self._filename = f'{config_file}.{ext}'
 
             self._system_path_file = f'{HOME_DIR}/{file_path}/{self._filename}'
             self._usr_path_file = f'{HOME_DIR}/{file_path}/usr/{self._filename}'

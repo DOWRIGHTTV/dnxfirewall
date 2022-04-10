@@ -14,7 +14,7 @@ from source.web_validate import ValidationError, VALID_DOMAIN, get_convert_bint,
 
 def load_page(_: Form) -> dict[str, Any]:
     server_settings = load_configuration('dns_server')
-    server_cache    = load_configuration('dns_server', ext='.cache')
+    server_cache    = load_configuration('dns_server', ext='cache')
 
     return {
         'dns_servers': System.dns_status(), 'dns_records': server_settings.get_items('records'),
@@ -202,7 +202,7 @@ def configure_protocol_options(settings: config, *, field: str) -> None:
         dnx.write_configuration(dns_server_settings.expanded_user_data)
 
 def set_dns_cache_clear_flag(clear_cache):
-    with ConfigurationManager('dns_server', ext='.cache') as dnx:
+    with ConfigurationManager('dns_server', ext='cache') as dnx:
         dns_server_settings: ConfigChain = dnx.load_configuration()
 
         dns_server_settings['clear->standard'] = clear_cache.standard

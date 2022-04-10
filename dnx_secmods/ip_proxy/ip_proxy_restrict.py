@@ -133,7 +133,7 @@ class LanRestrict:
     # Calculating the time.time() of when timer should end. calculated by current days start time (time since epoch)
     # and then adding seconds of user configured amount to start time.
     def _write_end_time(self, restriction_end: float) -> None:
-        with ConfigurationManager('ip_proxy', ext='.timer') as dnx:
+        with ConfigurationManager('ip_proxy', ext='timer') as dnx:
             time_restriction: ConfigChain = dnx.load_configuration()
 
             time_restriction['end'] = restriction_end
@@ -157,7 +157,7 @@ class LanRestrict:
     def _set_restriction_status(self, active):
         self.__class__._active = active
 
-        with ConfigurationManager('ip_proxy', ext='.timer') as dnx:
+        with ConfigurationManager('ip_proxy', ext='timer') as dnx:
             time_restriction: ConfigChain = dnx.load_configuration()
 
             time_restriction['active'] = active

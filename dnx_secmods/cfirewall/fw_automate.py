@@ -69,7 +69,7 @@ class FirewallAutomate:
 
         self._initialize.wait_for_threads(count=3)
 
-    @cfg_read_poller('zone', ext='.firewall', folder='iptables')
+    @cfg_read_poller('zone', ext='firewall', folder='iptables')
     # zone int values are arbitrary / randomly selected on zone creation.
     def _monitor_zones(self, zone_map: str) -> None:
         '''Monitors the firewall zone file for changes and loads updates to cfirewall.
@@ -77,7 +77,7 @@ class FirewallAutomate:
         calls to Cython are made from within this method block.
         the GIL must be manually acquired on the Cython side or the Python interpreter will crash.
         '''
-        loaded_zones: ConfigChain = load_configuration(zone_map, ext='.firewall', filepath='dnx_system/iptables')
+        loaded_zones: ConfigChain = load_configuration(zone_map, ext='firewall', filepath='dnx_system/iptables')
 
         # converting the list to a python array, then sending to Cython to update the C array.
         # this format is required due to transitioning between python and C. python arrays are
@@ -93,14 +93,14 @@ class FirewallAutomate:
 
         self._initialize.done()
 
-    @cfg_read_poller('active', ext='.firewall', folder='iptables')
+    @cfg_read_poller('active', ext='firewall', folder='iptables')
     def _monitor_standard_rules(self, fw_rules: str):
         '''Monitors the active firewall rules file for changes and loads updates to cfirewall.
 
         calls to Cython are made from within this method block.
         the GIL must be manually acquired on the Cython side or the Python interpreter will crash.
         '''
-        loaded_rules: ConfigChain = load_configuration(fw_rules, ext='.firewall', filepath='dnx_system/iptables')
+        loaded_rules: ConfigChain = load_configuration(fw_rules, ext='firewall', filepath='dnx_system/iptables')
 
         # splitting out sections then determine which one has changed.
         # NOTE: index 1 start is needed because SYSTEM rules are held at index 0.
@@ -128,7 +128,7 @@ class FirewallAutomate:
 
         self._initialize.done()
 
-    @cfg_read_poller('system', ext='.firewall', folder='iptables')
+    @cfg_read_poller('system', ext='firewall', folder='iptables')
     def _monitor_system_rules(self, system_rules: str):
         # 0-99: system reserved - 1. loopback 10/11. dhcp, 20/21. dns, 30/31. http, 40/41. https, etc
         #   - loopback will be left in iptables for now
@@ -138,7 +138,7 @@ class FirewallAutomate:
         #       to be reset. this is ok for now since we only support builtin zones that can't change.
         # 2000+: system control (proxy bypass prevention)
 
-        loaded_rules: ConfigChain = load_configuration(system_rules, ext='.firewall', filepath='dnx_system/iptables')
+        loaded_rules: ConfigChain = load_configuration(system_rules, ext='firewall', filepath='dnx_system/iptables')
 
         system_set: list = loaded_rules.get_values('BUILTIN')
 
