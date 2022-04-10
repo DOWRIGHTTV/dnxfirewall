@@ -218,11 +218,12 @@ class ProtoRelay:
     _dns_queue object must be overwritten by subclasses.
     '''
     _protocol: ClassVar[PROTO] = PROTO.NOT_SET
+    _relay_conn: RELAY_CONN
 
     __slots__ = (
         '_dns_server', '_fallback_relay',
 
-        '_relay_conn', '_send_count', '_last_rcvd',
+        '_send_count', '_last_rcvd',
         '_responder_add', '_fallback_relay_add'
     )
 
@@ -233,10 +234,6 @@ class ProtoRelay:
         '''
         self._dns_server: DNSServer_T = dns_server
         self._fallback_relay: Optional[Callable] = fallback_relay
-
-        # dummy sock setup
-        sock = socket.socket()
-        self._relay_conn = RELAY_CONN('', sock, sock.send, sock.recv, '')
 
         self._send_count: int = 0
         self._last_rcvd:  int = 0
@@ -263,42 +260,37 @@ class ProtoRelay:
         '''
         raise NotImplementedError('relay must be implemented in the subclass.')
 
-    def _send_query(self, request: DNS_SEND, nbytes: int = 0) -> None:
+    def _send_query(self, request: DNS_SEND) -> int:
         for attempt in ATTEMPTS:
             try:
-                nbytes: int = self._relay_conn.send(request.data)
+                nbytes = self._relay_conn.send(request.data)
             except OSError:
-                pass
+                nbytes = 0
 
             # failed to send on first try will trigger a connection reconnect and resend
             if (not nbytes and attempt != LAST_ATTEMPT):
-                registered: bool = self._register_new_socket()
-                if (registered):
-                    Thread(target=self._recv_handler).start()
-
-                else:
+                registered = self._register_new_socket()
+                if (not registered):
                     break
 
-            # successful send
+            # SUCCESSFUL SEND
             elif (nbytes):
                 self._send_count += 1
 
-                # FIXME: temp
-                console_log(
-                    f'[{self._relay_conn.remote_ip}/{self._relay_conn.version}][{attempt}] Sent {request.qname}'
-                )
+                return attempt
 
-                break
+        # COMPLETE SEND FAIL
+        return -1
 
     def _recv_handler(self):
         '''called in a thread after creating a new socket to handle all responses from remote server.
         '''
-        raise NotImplementedError('_recv_handler method must be overridden in subclass.')
+        raise NotImplementedError('_recv_handler must be implemented in the subclass.')
 
     def _register_new_socket(self):
         '''logic to create a socket object used for external dns queries.
         '''
-        raise NotImplementedError('_register_new_socket method must be overridden in subclass.')
+        raise NotImplementedError('_register_new_socket must be implemented in the subclass.')
 
     @looper(FIVE_SEC)
     def _fail_detection(self):
@@ -340,7 +332,7 @@ class ProtoRelay:
 
 
 class NFQueue:
-    _log: LogHandler_T = None
+    _log: LogHandler_T
 
     _packet_parser:  ProxyParser
     _proxy_callback: ProxyCallback
@@ -393,6 +385,9 @@ class NFQueue:
 
             self._log.notice('Starting dnx_netfilter queue. Packets will be processed shortly')
 
+            # ==============
+            # BLOCKING CALL
+            # ==============
             # this is a blocking call that interacts with the system via callback.
             try:
                 nfqueue.nf_run()
@@ -414,7 +409,7 @@ class NFQueue:
         except:
             nfqueue.drop()
 
-            self._log.error('failed to parse CPacket. Packet discarded.')
+            self._log.error('Failed to parse CPacket. Packet discarded.')
 
         else:
             if self._pre_inspect(packet):
@@ -431,7 +426,7 @@ class NFQueue:
         except:
             nfqueue.drop()
 
-            self._log.error('failed to parse CPacket. Packet discarded.')
+            self._log.error('Failed to parse CPacket. Packet discarded.')
 
         else:
             if self._pre_inspect(packet):
@@ -459,7 +454,7 @@ class NFPacket:
     # C Callbacks
     nfqueue: CPacket
 
-    # MARK FIELDs
+    # MARK FIELD's
     mark: int
 
     action:    CONN
@@ -624,8 +619,8 @@ class RawResponse:
     _log: LogHandler_T = None
     _open_ports: ClassVar[dict[PROTO, dict[int, int]]] = {PROTO.TCP: {}, PROTO.UDP: {}}
 
-    _registered_socks:     dict[int, NFQ_SEND_SOCK] = {}
-    _registered_socks_get: Callable[[int], NFQ_SEND_SOCK] = _registered_socks.get
+    _registered_socks: dict[int, NFQ_SEND_SOCK] = {}
+    _registered_socks_get = _registered_socks.get
 
     __slots__ = ()
 
@@ -664,7 +659,7 @@ class RawResponse:
         cls._log.informational(f'{cls.__name__}: {_intf} registered.')
 
     @classmethod
-    def prepare_and_send(cls, packet: ProxyPackets):
+    def prepare_and_send(cls, packet: ProxyPackets) -> None:
         '''obtain a socket object based on the interface/zone received then prepares a raw packet (all layers).
         the internal _send method will be called once finished.
 
@@ -679,7 +674,7 @@ class RawResponse:
 
         # checking if dst port is associated with a nat.
         # if so, will override necessary fields based on protocol and re-assign in the packet object
-        # chained if statement is for the more likely case of open port not being present
+        # chained if the statement is for the more likely case of open port not being present.
         open_ports: dict = cls._open_ports[packet.protocol]
         if (open_ports):
             port_override: int = open_ports.get(packet.dst_port)

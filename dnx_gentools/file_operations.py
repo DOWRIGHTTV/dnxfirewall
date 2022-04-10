@@ -10,7 +10,7 @@ import hashlib
 import subprocess
 
 from copy import copy
-from functools import wraps, partial
+from functools import wraps
 from secrets import token_urlsafe
 
 from dnx_gentools.def_typing import *
@@ -44,8 +44,8 @@ FILE_POLL_TIMER = 10
 file_exists = os.path.exists
 
 # aliases for readability
-ACQUIRE_LOCK: Callable[[TextIO], None] = partial(fcntl.flock, fcntl.LOCK_EX)
-RELEASE_LOCK: Callable[[TextIO], None] = partial(fcntl.flock, fcntl.LOCK_UN)
+ACQUIRE_LOCK: Callable[[TextIO], None] = lambda mutex: fcntl.flock(mutex, fcntl.LOCK_EX)
+RELEASE_LOCK: Callable[[TextIO], None] = lambda mutex: fcntl.flock(mutex, fcntl.LOCK_UN)
 
 def acquire_lock(file: str) -> TextIO:
     mutex = open(file)
@@ -459,9 +459,11 @@ class ConfigurationManager:
     config_lock_file: ConfigLock = f'{HOME_DIR}/dnx_system/config.lock'
 
     __slots__ = (
-        '_config_lock', '_filename', '_data_written',
+        '_name', '_ext', '_filename',
+        
+        '_config_lock', '_data_written',
         '_file_path', '_system_path_file', '_usr_path_file',
-        '_temp_file', '_temp_file_path', '_config_file',
+        '_temp_file', '_temp_file_path',
     )
 
     @classmethod
@@ -470,14 +472,15 @@ class ConfigurationManager:
         '''
         cls.log: LogHandler_T = ref
 
-    def __init__(self, config_file: str = '', ext: str = 'cfg', file_path: str = None) -> None:
+    def __init__(self, name: str = '', ext: str = 'cfg', file_path: str = None) -> None:
         '''config_file can be omitted to allow for configuration lock to be used with
         external operations.
         '''
-        self._config_file = config_file
+        self._name = name
+        self._ext  = ext
 
         # initialization isn't required if config file is not specified.
-        if (not config_file):
+        if (not name):
             # make debug log complete if in lock only mode
             self._filename = 'ConfigurationManager'
 
@@ -488,7 +491,7 @@ class ConfigurationManager:
                 file_path = 'dnx_system/data'
 
             self._file_path = file_path
-            self._filename = f'{config_file}.{ext}'
+            self._filename = f'{name}.{ext}'
 
             self._system_path_file = f'{HOME_DIR}/{file_path}/{self._filename}'
             self._usr_path_file = f'{HOME_DIR}/{file_path}/usr/{self._filename}'
@@ -498,8 +501,8 @@ class ConfigurationManager:
     def __enter__(self) -> ConfigurationManager:
         self._config_lock = acquire_lock(self.config_lock_file)
 
-        # setup isn't required if config file is not specified.
-        if (self._config_file):
+        # setup required only if the config file is specified.
+        if (self._name):
             # TEMP prefix is to wildcard match any orphaned files for deletion
             self._temp_file_path = f'{HOME_DIR}/{self._file_path}/usr/TEMP_{token_urlsafe(10)}'
             self._temp_file = open(self._temp_file_path, 'w+')
@@ -517,7 +520,7 @@ class ConfigurationManager:
     # upon exiting
     def __exit__(self, exc_type, exc_val, traceback) -> bool:
         # lock only mode
-        if (not self._config_file):
+        if (not self._name):
             pass
 
         elif (exc_type is None and self._data_written):
@@ -546,16 +549,16 @@ class ConfigurationManager:
     def load_configuration(self) -> ConfigChain:
         '''returns python dictionary of configuration file contents.
         '''
-        if (not self._config_file):
+        if (not self._name):
             raise RuntimeError('Configuration Manager methods are disabled in lock only mode.')
 
-        return load_configuration(self._filename, ext='', filepath=self._file_path)
+        return load_configuration(self._name, ext=self._ext, filepath=self._file_path)
 
     # accepts python dictionary for serialization to json. writes data to specified file opened.
     def write_configuration(self, data_to_write: dict):
         '''writes configuration data as json to generated temporary file.
         '''
-        if (not self._config_file):
+        if (not self._name):
             raise RuntimeError('Configuration Manager methods are disabled in lock only mode.')
 
         if (self._data_written):
