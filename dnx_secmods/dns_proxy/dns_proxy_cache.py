@@ -17,8 +17,6 @@ from dns_proxy_log import Log
 # ===============
 # TYPING IMPORTS
 # ===============
-from typing import TYPE_CHECKING
-
 if (TYPE_CHECKING):
     from dnx_secmods.dns_proxy import DNSCache, RequestTracker
 
@@ -47,9 +45,9 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
 
     dict_get = dict.__getitem__
 
-    @cfg_read_poller('dns_server.cache')
+    @cfg_read_poller('dns_server', ext='cache')
     def manual_clear(cache: DNSCache, cfg_file: str) -> None:
-        cache_settings: ConfigChain = load_configuration(cfg_file, ext='')
+        cache_settings: ConfigChain = load_configuration(cfg_file, ext='cache')
 
         clear_dns_cache:   bool = cache_settings['clear->standard']
         clear_top_domains: bool = cache_settings['clear->top_domains']
