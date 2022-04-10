@@ -48,6 +48,10 @@ ACQUIRE_LOCK: Callable[[TextIO], None] = lambda mutex: fcntl.flock(mutex, fcntl.
 RELEASE_LOCK: Callable[[TextIO], None] = lambda mutex: fcntl.flock(mutex, fcntl.LOCK_UN)
 
 def acquire_lock(file: str) -> TextIO:
+    '''opens passed in filepath and acquires a file lock.
+
+    the file object is returned.
+    '''
     mutex = open(file)
 
     ACQUIRE_LOCK(mutex)
@@ -55,6 +59,10 @@ def acquire_lock(file: str) -> TextIO:
     return mutex
 
 def release_lock(mutex: TextIO):
+    '''releases file lock on the passed in file object.
+
+    the file object will be closed.
+    '''
     RELEASE_LOCK(mutex)
 
     mutex.close()
