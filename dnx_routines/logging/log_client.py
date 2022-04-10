@@ -291,8 +291,8 @@ def _log_handler() -> _LogHandler:
             # all entries will be logged and printed to the terminal
             if (logging_level is LOG.DEBUG):
 
-                def log_method(log_msg):
-                    log_msg = f'{fast_time()}|{handler_name}|{level_name}|{log_msg}'
+                def log_method(log_msg, info=f'{handler_name}|{level_name}'):
+                    log_msg = f'{fast_time()}|{info}|{log_msg}'
 
                     console_log(log_msg)
 
@@ -301,9 +301,9 @@ def _log_handler() -> _LogHandler:
             # entry will be logged to file
             elif (level_number <= logging_level):
 
-                def log_method(log_msg):
+                def log_method(log_msg, info=f'{handler_name}|{level_name}'):
 
-                    queue_write(f'{fast_time()}|{handler_name}|{level_name}|{log_msg}\n')
+                    queue_write(f'{fast_time()}|{info}|{log_msg}\n')
 
             # log level is disabled
             else:

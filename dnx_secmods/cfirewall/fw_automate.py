@@ -87,9 +87,9 @@ class FirewallAutomate:
         # NOTE: gil must be held on the other side of this call
         error: int = self.cfirewall.update_zones(dnx_zones)
         if (error):
-            Log.error('Zone map update failure in CFirewall')
+            Log.error('Zone map update failure in CFirewall.')
         else:
-            Log.notice('Zone map updated successfully')
+            Log.notice('Zone map updated successfully.')
 
         self._initialize.done()
 
@@ -124,7 +124,7 @@ class FirewallAutomate:
             if (error):
                 Log.error(f'Rules section "{section}" update failure in CFirewall')
             else:
-                Log.notice(f'Rule section "{section}" updated successfully')
+                Log.notice(f'Rule section "{section}" updated successfully.')
 
         self._initialize.done()
 
@@ -150,8 +150,8 @@ class FirewallAutomate:
         # NOTE: gil must be held throughout this call. 0 is index of SYSTEM RULES
         error = self.cfirewall.update_ruleset(0, system_set)
         if (error):
-            Log.error(f'Rules section "SYSTEM" update failure in CFirewall')
+            Log.error(f'Rules section "SYSTEM" update failure in CFirewall.')
         else:
-            Log.notice(f'Rule section "SYSTEM" updated successfully')
+            Log.notice(f'Rule section "SYSTEM" updated successfully.')
 
         self._initialize.done()
