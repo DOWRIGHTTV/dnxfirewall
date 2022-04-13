@@ -10,7 +10,8 @@
                         <div class="input-field col s5 m3 {{input_color}}">
                             <select name="table" onchange="this.form.submit()">
                                 {% for table_type in table_types %}
-                                <option value="{{table_type}}/last" {% if table_type == table %} selected {% endif %}>{{table_type.replace("_", " ").upper()}}</option>
+                                <option value="{{table_type}}/last" {% if table_type == table %} selected {% endif %}
+                                    >{{table_type.replace("_", " ").upper()}}</option>
                                 {% endfor %}
                             </select>
                             <label for="table">Module</label>
@@ -39,7 +40,7 @@
                         <!-- DNS Proxy Table -->
                         {% if table == 'dns_proxy' %}
                         <div class="input-field col s12 m6 l5 xl3 {{input_color}}">
-                            <input type="text" id="filter-input" onkeyup="filterTable(0, 5)" placeholder="Search string">
+                            <input type="text" id="filter-input" onkeyup="filterTable(0, 4)" placeholder="Search string">
                         </div>
                         <thead>
                             <tr>
@@ -86,7 +87,7 @@
                         <!-- IP HOSTS TABLE-->
                         {% elif table == 'ip_proxy' %}
                         <div class="input-field col s5 m3 {{input_color}}">
-                            <input type="text" id="filter-input" onkeyup="filterTable(0, 6)" placeholder="Search string">
+                            <input type="text" id="filter-input" onkeyup="filterTable(0, 5)" placeholder="Search string">
                         </div>
                         <thead>
                             <tr>
@@ -127,7 +128,7 @@
                         <!-- IPS TABLE -->
                         {% elif table == 'intrusion_prevention' %}
                         <div class="input-field col s5 m3 {{input_color}}">
-                            <input type="text" id="filter-input" onkeyup="filterTable(0, 4)" placeholder="Search string">
+                            <input type="text" id="filter-input" onkeyup="filterTable(0, 3)" placeholder="Search string">
                         </div>
                         <thead>
                             <tr>
@@ -157,7 +158,7 @@
                         </tbody>
                         {% elif table == 'infected_clients' %}
                         <div class="input-field col s5 m3 {{input_color}}">
-                            <input type="text" id="filter-input" onkeyup="filterTable(1, 6)" placeholder="Search string">
+                            <input type="text" id="filter-input" onkeyup="filterTable(1, 5)" placeholder="Search string">
                         </div>
                         <thead>
                             <tr>

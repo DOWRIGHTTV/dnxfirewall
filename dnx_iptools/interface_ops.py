@@ -10,7 +10,7 @@ from socket import socket, inet_aton, if_nameindex, AF_INET, SOCK_DGRAM
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR, fast_sleep, ONE_SEC
-from dnx_gentools.def_enums import INTF
+from dnx_gentools.def_enums import INTF, CFG
 from dnx_gentools.file_operations import load_configuration, ConfigurationManager, json_to_yaml
 
 from dnx_iptools.def_structs import fcntl_pack, long_unpack
@@ -19,12 +19,6 @@ from dnx_iptools.protocol_tools import btoia
 
 if os.environ.get('webui'):
     from dnx_system.sys_action import system_action
-
-# ===============
-# TYPING IMPORTS
-# ===============
-if (TYPE_CHECKING):
-    from dnx_gentools.file_operations import ConfigChain
 
 __all__ = (
     'get_intf_builtin', 'load_interfaces',

@@ -6,11 +6,11 @@
         <div class="row">
             <div class="col s12 m12 l12 xl12">
                 <ul class="tabs">
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='1' %} class="active" {% endif %} href="#fwall"
+                    <li class="tab col s3 m3 l4 xl2"><a {% if tab==1 %} class="active" {% endif %} href="#fwall"
                         onclick="activeTab(1)">Rulesets</a></li>
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='2' %} class="active" {% endif %} href="#zones"
+                    <li class="tab col s3 m3 l4 xl2"><a {% if tab==2 %} class="active" {% endif %} href="#zones"
                         onclick="activeTab(2)">Zones</a></li>
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='3' %} class="active" {% endif %} href="#objects"
+                    <li class="tab col s3 m3 l4 xl2"><a {% if tab==3 %} class="active" {% endif %} href="#objects"
                         onclick="activeTab(3)">Objects</a></li>
                 </ul>
             </div>
@@ -54,7 +54,7 @@
                         <a class="btn waves-effect blue-grey" onclick="disableRules()">Disable</a>
                         <a class="btn waves-effect red darken-2" onclick="removeRules()">Remove</a>
                         <div class="col s12 m6 l5 xl3 {{input_color}} right">
-                            <input type="text" id="filter-input" onkeyup="filterTable(1, 4)" placeholder="Filter">
+                            <input type="text" id="filter-input" onkeyup="filterTable(2, 9)" placeholder="Filter">
                         </div>
                     </div>
                     <div class="row">
@@ -106,32 +106,32 @@
                                     <td class="rname">{{rule[1]}}</td>
                                     <td class="rsrc_zone">
                                         {%- for subfield in rule[2] -%}
-                                            {{format_fw_obj(subfield)|safe}}
+                                            {{ firewall_settings.fw_object_map[subfield[1]][0]|safe }}
                                         {% endfor -%}
                                     </td>
                                     <td class="rsrc_network">
                                         {%- for subfield in rule[3] -%}
-                                            {{format_fw_obj(subfield)|safe}}
+                                            {{ firewall_settings.fw_object_map[subfield[1]][0]|safe }}
                                         {% endfor -%}
                                     </td>
                                     <td class="rsrc_service">
                                         {%- for subfield in rule[4] -%}
-                                            {{format_fw_obj(subfield)|safe}}
+                                            {{ firewall_settings.fw_object_map[subfield[1]][0]|safe }}
                                         {% endfor -%}
                                     </td>
                                     <td class="rdst_zone">
                                         {%- for subfield in rule[5] -%}
-                                            {{format_fw_obj(subfield)|safe}}
+                                            {{ firewall_settings.fw_object_map[subfield[1]][0]|safe }}
                                         {% endfor -%}
                                     </td>
                                     <td class="rdst_network">
                                         {%- for subfield in rule[6] -%}
-                                            {{format_fw_obj(subfield)|safe}}
+                                            {{ firewall_settings.fw_object_map[subfield[1]][0]|safe }}
                                         {% endfor -%}
                                     </td>
                                     <td class="rdst_service">
                                         {%- for subfield in rule[7] -%}
-                                            {{format_fw_obj(subfield)|safe}}
+                                            {{ firewall_settings.fw_object_map[subfield[1]][0]|safe }}
                                         {% endfor -%}
                                     </td>
                                     <td class="raction">{{'accept' if rule[8] else 'drop'}}</td>
@@ -155,7 +155,7 @@
             <div class="col s12">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Interface List</h4>
-                    <table class="striped centered">
+                    <table style="cursor:default" class="striped centered">
                         <thead>
                             <tr>
                                 <th>Interface</th>
@@ -206,49 +206,50 @@
     </div>
 </section>
 <section id="objects" class="section {{main_section_color}}">
-    <div class="container">
+    <div class="fw-container">
         <div class="col s12">
             <div class="card-panel hoverable {{card_color}}">
                 <h4 class="{{title_color}}">Object Manager</h4>
                 <div class="row">
                     <div class="input-field col s12 m6 l5 xl3 {{input_color}}">
-                        <input type="text" id="filter-input2" onkeyup="filterTable(2, 5, 2)" placeholder="Filter">
+                        <input type="text" id="filter-input2" onkeyup="filterTable(1, 4, 2)" placeholder="Filter">
                     </div>
-                    <a class="btn waves-effect waves-light modal-trigger right" href="#obj-creator">Create Object</a>
+                    <a class="btn waves-effect waves-light modal-trigger right" href="#FWobject-creator">Create Object</a>
                 </div>
                 <div class="row">
-                    <table class="centered highlight colorize" id="filter-table2">
+                    <table class="highlight centered colorize" id="filter-table2" style="cursor:default;table-layout: fixed;">
                         <thead>
                             <tr>
-                                <th style="width:10%"></th>
-                                <th style="width:15%">Name</th>
+                                <th style="width:5%"></th>
+                                <th style="width:20%">Name</th>
                                 <th style="width:10%">Group</th>
                                 <th style="width:10%">Type</th>
-                                <th style="width:10%">Value</th>
-                                <th style="width:45%">Description</th>
+                                <th style="width:15%">Value</th>
+                                <th style="width:40%">Description</th>
                             </tr>
                         </thead>
-                        <tbody id="filter-table-body2">
-                            {% for id, name, group, type, subtype, value, description in firewall_settings['firewall_objects'] -%}
-                            <tr name="obj_{{name}}" id="{{id}}" style="height: 25px;">
-                            {% if not 'built-in' in type -%}
+                        <tbody id="filter-table-body2" class="object-editor">
+                            {% for id, name, group, type, subtype, value, description
+                                    in firewall_settings.firewall_objects.values() -%}
+                            <tr id="{{ id }}" style="height: 25px;" data-id="{{ id }}">
+                            {% if group == 'built-in' -%}
                                 <td class="fw_obj">X</td>
                             {% else -%}
                                 <td class="fw-obj">
                                     <form action="/rules/firewall" method="POST">
                                         <input type="hidden" name="tab" value="3">
-                                        <input type="hidden" name="obj_id" value="{{id}}">
+                                        <input type="hidden" name="obj_id" value="{{ id }}">
                                         <button class="btn-floating btn-small waves-effect waves-light red" name="remove_obj">
                                             <i class="material-icons">remove</i>
                                         </button>
                                     </form>
                                 </td>
                             {% endif -%}
-                                <td class="fw-obj">{{name}}</td>
-                                <td class="fw-obj">{{group}}</td>
-                                <td class="fw-obj">{{type}}</td>
-                                <td class="fw-obj">{{value}}</td>
-                                <td class="fw-obj grab" style="text-align:left">{{description}}</td>
+                                <td class="fw-obj oname">{{name}}</td>
+                                <td class="fw-obj ogroup">{{group}}</td>
+                                <td class="fw-obj otype">{{type}}</td>
+                                <td class="fw-obj ovalue">{{value}}</td>
+                                <td class="fw-obj odesc" style="text-align:left">{{description}}</td>
                             </tr>
                             {% else -%}
                             <tr>
@@ -267,5 +268,6 @@
 {% include 'rules/firewall/rule_style.html' %}
 {% include 'rules/firewall/btn_modals.html' %}
 {% include 'rules/firewall/rule_editor.html' %}
+{% include 'rules/firewall/object_editor.html' %}
 {% include 'rules/firewall/after_firewall.html' %}
 {% endblock %}

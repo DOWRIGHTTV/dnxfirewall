@@ -5,7 +5,7 @@
         <div class="row">
             <div class="col s12 m12 l12 xl12">
                 <ul class="tabs">
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='1' %} class="active" {% endif %} href="#settings"
+                    <li class="tab col s3 m3 l4 xl2"><a {% if tab==1 %} class="active" {% endif %} href="#settings"
                             onclick="activeTab(1)">Servers</a></li>
                 </ul>
             </div>
@@ -40,10 +40,10 @@
                                             </h5>
                                         </div>
                                         <form action="/settings/syslog" method="POST">
+                                            <input type="hidden" name="tab" value="1">
                                             <div class="modal-footer">
                                                 <button class="btn waves-effect waves-light">YES</button>
                                                 <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                                                <input type="hidden" name="tab" value="1">
                                                 <input type="hidden" name="server_remove" value="{{loop.index}}">
                                             </div>
                                         </form>

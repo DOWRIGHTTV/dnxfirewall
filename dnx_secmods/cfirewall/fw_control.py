@@ -11,15 +11,13 @@ from dnx_gentools.file_operations import ConfigurationManager, load_configuratio
 
 from dnx_routines.logging.log_client import Log
 
+from dnx_webui.source.object_manager import FWObjectManager
+
 # ===============
 # TYPING IMPORTS
 # ===============
-from typing import TYPE_CHECKING
-
 if (TYPE_CHECKING):
     from dnx_gentools.file_operations import ConfigChain
-
-    from dnx_webui import ObjectManager
 
 
 DEFAULT_VERSION: str = 'pending'
@@ -53,7 +51,6 @@ class FirewallControl:
 
     # store the main instances reference here, so it can be accessed throughout webui
     cfirewall: FirewallControl
-    object_manager: ObjectManager
 
     versions: list[str, str] = ['pending', 'active']
     sections: list[str, str, str] = ['BEFORE', 'MAIN', 'AFTER']
@@ -83,8 +80,6 @@ class FirewallControl:
         # ==============================
         # OBJECT ID > VALUE CONVERSIONS
         # ==============================
-        obj_lookup = cls.object_manager.lookup
-
         with ConfigurationManager():
 
             # using standalone functions due to ConfigManager not being compatible with these operations
@@ -92,16 +87,19 @@ class FirewallControl:
 
             fw_rule_copy: dict[str, Any] = fw_rules.get_dict()
 
-            for section in cls.sections:
+            with FWObjectManager(lookup=True) as obj_manager:
 
-                for rule in fw_rule_copy[section].values():
-                    rule['src_zone'] = [obj_lookup(x, convert=True) for x in rule['src_zone']]
-                    rule['src_network'] = [obj_lookup(x, convert=True) for x in rule['src_network']]
-                    rule['src_service'] = [obj_lookup(x, convert=True) for x in rule['src_service']]
+                lookup = obj_manager.lookup
+                for section in cls.sections:
 
-                    rule['dst_zone'] = [obj_lookup(x, convert=True) for x in rule['dst_zone']]
-                    rule['dst_network'] = [obj_lookup(x, convert=True) for x in rule['dst_network']]
-                    rule['dst_service'] = [obj_lookup(x, convert=True) for x in rule['dst_service']]
+                    for rule in fw_rule_copy[section].values():
+                        rule['src_zone'] = [lookup(x, convert=True) for x in rule['src_zone']]
+                        rule['src_network'] = [lookup(x, convert=True) for x in rule['src_network']]
+                        rule['src_service'] = [lookup(x, convert=True) for x in rule['src_service']]
+
+                        rule['dst_zone'] = [lookup(x, convert=True) for x in rule['dst_zone']]
+                        rule['dst_network'] = [lookup(x, convert=True) for x in rule['dst_network']]
+                        rule['dst_service'] = [lookup(x, convert=True) for x in rule['dst_service']]
 
             write_configuration(fw_rule_copy, 'push', ext='firewall', filepath='dnx_system/iptables/usr')
 

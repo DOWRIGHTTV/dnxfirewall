@@ -5,7 +5,7 @@
             <div class="row">
                 <div class="col s12 m12 l12 xl12">
                     <ul class="tabs">
-                        <li class="{{ tab_classes }}"><a {% if tab=='1' %} class="active" {% endif %} href="#wan_int"
+                        <li class="{{ tab_classes }}"><a {% if tab==1 %} class="active" {% endif %} href="#wan_int"
                             onclick="activeTab(1)">WAN Interface</a>
                         </li>
                     </ul>
@@ -23,7 +23,6 @@
                         <h6>Netmask: {{ interface_settings['ip']['netmask'] }}</h6>
                         <h6>Gateway: {{ interface_settings['ip']['default_gateway'] }}</h6>
                         <form action="/settings/interface" method="POST">
-                            <input type="hidden" name="tab" value="1">
                             <div class="row">
                                 <div class="input-field col s9 {{ input_color }}">
                                     <input type="text" name="wan_ip" placeholder="192.168.1.11" {{ ip_addr_validate }}
@@ -111,7 +110,7 @@
                     <br>
                     </p>
                     <form action="/settings/interface" method="POST">
-                        <input type="hidden" name="tab" value="1">
+
                         <div class="row">
                             <div class="input-field col s12 {{ input_color }}">
                                 <input type="text" name="ud_wan_mac" class="validate" placeholder="aa:aa:aa:aa:aa:aa">
@@ -135,7 +134,7 @@
                             </div>
                     </form>
                     <form action="/settings/interface" method="POST">
-                        <input type="hidden" name="tab" value="1">
+
                         <div class="input-field col s5 m4 center">
                             <a class="waves-effect waves-light btn modal-trigger col s12" href="#wanint-modal4"><i
                                     class="material-icons"></i>Revert</a>

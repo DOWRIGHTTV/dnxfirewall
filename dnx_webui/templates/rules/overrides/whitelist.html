@@ -5,11 +5,11 @@
         <div class="row">
             <div class="col s12">
                 <ul class="tabs">
-                    <li class="{{tab_classes}}"><a {% if tab=='1' %} class="active" {% endif %}
+                    <li class="{{tab_classes}}"><a {% if tab==1 %} class="active" {% endif %}
                         href="#whitelists" onclick="activeTab(1)">Time Based</a></li>
-                    <li class="{{tab_classes}}"><a {% if tab=='2' %} class="active" {% endif %}
+                    <li class="{{tab_classes}}"><a {% if tab==2 %} class="active" {% endif %}
                         href="#exceptions" onclick="activeTab(2)">Pre Proxy</a></li>
-                    <li class="{{tab_classes}}"><a {% if tab=='3' %} class="active" {% endif %}
+                    <li class="{{tab_classes}}"><a {% if tab==3 %} class="active" {% endif %}
                         href="#ip-whitelist" onclick="activeTab(3)">IP Based</a></li>
                 </ul>
             </div>
@@ -65,10 +65,10 @@
                                             <h5 class="{{modal_text_style}}">Are you sure you want to remove the whitelist rule? </h5>
                                         </div>
                                         <form action="/rules/overrides/whitelist" method="POST">
+                                            <input type="hidden" name="tab" value="1">
                                             <div class="modal-footer">
                                                 <button class="btn waves-effect waves-light">YES</button>
                                                 <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                                                <input type="hidden" name="tab" value="1">
                                                 <input type="hidden" name="wl_remove" value="{{domain}}">
                                             </div>
                                         </form>
@@ -141,11 +141,11 @@
                                             </h5>
                                         </div>
                                         <form action="/rules/overrides/whitelist" method="POST">
+                                            <input type="hidden" name="tab" value="2">
+                                            <input type="hidden" name="exc_remove" value="{{domain}}">
                                             <div class="modal-footer">
                                                 <button class="btn waves-effect waves-light">YES</button>
                                                 <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                                                <input type="hidden" name="tab" value="2">
-                                                <input type="hidden" name="exc_remove" value="{{domain}}">
                                             </div>
                                         </form>
                                     </div>
@@ -225,13 +225,13 @@
                                             </h5>
                                         </div>
                                         <form action="/rules/overrides/whitelist" method="POST">
+                                            <input type="hidden" name="tab" value="3">
+                                            <input type="hidden" name="ip_wl_type" value="{{info['type']}}">
+                                            <input type="hidden" name="ip_wl_ip" value="{{ip_address}}">
+                                            <input type="hidden" name="ip_wl_remove">
                                             <div class="modal-footer">
                                                 <button class="btn waves-effect waves-light">YES</button>
                                                 <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                                                <input type="hidden" name="tab" value="3">
-                                                <input type="hidden" name="ip_wl_type" value="{{info['type']}}">
-                                                <input type="hidden" name="ip_wl_ip" value="{{ip_address}}">
-                                                <input type="hidden" name="ip_wl_remove">
                                             </div>
                                         </form>
                                     </div>

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
 from subprocess import run
 
 from dnx_gentools.def_constants import INVALID_FORM
@@ -131,7 +130,7 @@ def _snat_rules(form: Form, action: str) -> str:
 # VALIDATION
 # ===========
 def validate_dnat_rule(rule: config, /, action: CFG) -> Optional[ValidationError]:
-    print(rule)
+
     if (action is CFG.ADD):
         # ensuring all necessary fields are present in the namespace before continuing.
         valid_fields = [

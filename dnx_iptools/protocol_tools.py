@@ -17,13 +17,11 @@ from dnx_gentools.def_enums import PROTO
 
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import PR_ICMP_HDR
-from dnx_iptools.cprotocol_tools import itoip
+from dnx_iptools.cprotocol_tools import calc_checksum, itoip
 
 # ===============
 # TYPING IMPORTS
 # ===============
-from typing import TYPE_CHECKING
-
 if (TYPE_CHECKING):
     from dnx_gentools import Structure
 
@@ -33,7 +31,7 @@ __all__ = (
     'change_socket_owner',
     'icmp_reachable',
 
-    'cidr_to_int',
+    'cidrtoi',
     'domain_stob', 'mac_stob',
     'mac_add_sep', 'strtobit',
     'create_dns_query_header',
@@ -60,15 +58,6 @@ def change_socket_owner(sock_path: str) -> bool:
 
     return True
 
-# will ping specified host. to be used to prevent duplicate ip address handouts.
-def icmp_reachable(host_ip: int) -> bool:
-
-    ip_addr = itoip(host_ip)
-    try:
-        return bool(run(f'ping -c 2 {ip_addr}', stdout=DEVNULL, shell=True, check=True))
-    except CalledProcessError:
-        return False
-
 def mac_add_sep(mac_address: str, sep: str = ':') -> str:
     string_mac = []
     string_mac_append = string_mac.append
@@ -85,7 +74,7 @@ def strtobit(rule: str) -> int:
 
     return hash(rule) & UINT32_MAX
 
-def cidr_to_int(cidr: Union[str, int]) -> int:
+def cidrtoi(cidr: Union[str, int]) -> int:
 
     # using hostmask to shift to the start of network bits. int conversion to cover string values.
     hostmask: int = 32 - int(cidr)
@@ -159,6 +148,15 @@ def create_dns_query_header(dns_id, arc=0, *, cd):
 
 
 icmp_header_template: Structure = PR_ICMP_HDR((('type', 8), ('code', 0)))
+
+# will ping specified host. to be used to prevent duplicate ip address handouts.
+def icmp_reachable(host_ip: int) -> bool:
+
+    ip_addr = itoip(host_ip)
+    try:
+        return bool(run(f'ping -c 2 {ip_addr}', stdout=DEVNULL, shell=True, check=True))
+    except CalledProcessError:
+        return False
 
 def init_ping(timeout: float = .25) -> Callable[[str, int], bool]:
     '''function factory that returns a ping function object optimized for speed.

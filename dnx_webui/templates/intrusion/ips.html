@@ -5,11 +5,11 @@
         <div class="row">
             <div class="col s12">
                 <ul class="tabs">
-                    <li class="{{tab_classes}}"><a {% if tab=='1' %} class="active" {% endif %}
+                    <li class="{{tab_classes}}"><a {% if tab==1 %} class="active" {% endif %}
                         href="#ips" onclick="activeTab(1)">IPS/IDS</a></li>
-                    <li class="{{tab_classes}}"><a {% if tab=='2' %} class="active" {% endif %}
+                    <li class="{{tab_classes}}"><a {% if tab==2 %} class="active" {% endif %}
                         href="#ips-whitelist" onclick="activeTab(2)">Whitelist</a></li>
-                    <li class="{{tab_classes}}"><a {% if tab=='3' %} class="active" {% endif %}
+                    <li class="{{tab_classes}}"><a {% if tab==3 %} class="active" {% endif %}
                         href="#ips-pbl" onclick="activeTab(3)">Block List</a></li>
                 </ul>
             </div>
@@ -77,6 +77,7 @@
                         </div>
                     </form>
                     <form action="/intrusion/ips" method="POST">
+                        <input type="hidden" name="tab" value="1">
                         <input type="hidden" name="ddos">
                         <div class="row">
                             <div class="input-field col s7 center">

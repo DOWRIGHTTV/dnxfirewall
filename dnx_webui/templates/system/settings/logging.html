@@ -5,7 +5,7 @@
         <div class="row">
             <div class="col s12 m12 l12 xl12">
                 <ul class="tabs">
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab=='1' %} class="active" {% endif %} href="#logging"
+                    <li class="tab col s3 m3 l4 xl2"><a {% if tab==1 %} class="active" {% endif %} href="#logging"
                             onclick="activeTab(1)">Logging</a></li>
                 </ul>
             </div>
@@ -51,13 +51,6 @@
                                 <label for="log_level">Log Level (Severity)</label>
                             </div>
                         </div>
-                        <noscript>
-                            <div class="row">
-                                <div class="input-field col s12 m4 offset-m4 center">
-                                    <button class="btn waves-effect waves-light col s12">Update</button>
-                                </div>
-                            </div>
-                        </noscript>
                     </form>
                 </div>
             </div>
@@ -68,7 +61,7 @@
                     <h6>Time Offset: {{logging_settings['local']}}</h6>
                     <br>
                     <form action="/system/settings/logging" method="POST">
-                        <input type="hidden" name="tab" value="2">
+                        <input type="hidden" name="tab" value="1">
                         <input type="hidden" name="time_offset_update">
                         <div class="row">
                             <div class="input-field col s6 {{input_color}}">
@@ -80,7 +73,6 @@
                                     {% else %}
                                     <option value="+">+</option>
                                     <option value="-" selected>-</option>
-
                                     {% endif %}
                                 </select>
                                 <label for="dir_offset">Direction</label>

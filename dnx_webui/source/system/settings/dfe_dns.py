@@ -28,7 +28,6 @@ def load_page(_: Form) -> dict[str, Any]:
 
 def update_page(form: Form) -> str:
     # TODO: i dont like this. fix this. i did a little, but more can be done
-    print(form)
     if ('dns_update' in form):
 
         dns_servers = config(**{
@@ -94,7 +93,7 @@ def update_page(form: Form) -> str:
         protocol_settings = config(**{
             'fallback': get_convert_bint(form, 'fallback')
         })
-        print(protocol_settings)
+
         if (protocol_settings.fallback is DATA.INVALID):
             return INVALID_FORM
 

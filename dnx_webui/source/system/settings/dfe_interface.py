@@ -6,7 +6,7 @@ from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA, INTF
 from dnx_gentools.file_operations import load_configuration, config
 
-from dnx_iptools.cprotocol_tools import itoip
+from dnx_iptools.cprotocol_tools import itoip, default_route
 
 from source.web_typing import *
 from source.web_validate import ValidationError, convert_int, ip_address, default_gateway, cidr
@@ -31,7 +31,7 @@ def load_page(_):
             'state': wan_state,
             'ip_address': itoip(interface.get_ipaddress(interface=wan_ident)),
             'netmask': itoip(interface.get_netmask(interface=wan_ident)),
-            'default_gateway': itoip(interface.default_route())
+            'default_gateway': itoip(default_route())
         }
     }
 

@@ -19,14 +19,21 @@ class AjaxClient {
 
     async post(url = '', data = {}) {
 
-        const response =
-            await fetch(this.baseUrl + url, {
-                method : 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            })
+        let response;
+        let fullUrl = this.baseUrl + url
+        let sendData = {
+            method : 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        }
+
+        try {
+            response = await fetch(fullUrl, sendData)
+        } catch (e) {
+            return null
+        }
 
         if (response.ok) {
             let ajaxResponse = await response.json();

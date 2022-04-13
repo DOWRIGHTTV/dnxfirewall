@@ -14,6 +14,8 @@ from dnx_gentools.file_operations import load_configuration, ConfigurationManage
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 from dnx_routines.logging import LogHandler as Log
 
+from dnx_gentools.def_constants import ppt
+
 # ========================================
 # FLASK API - APP INSTANCE INITIALIZATION
 # ========================================
@@ -39,8 +41,6 @@ app.secret_key = app_config['flask->key']
 from dnx_system.sys_action import system_action
 from dnx_secmods.cfirewall.fw_control import FirewallControl
 
-import dnx_webui.source.main.dfe_obj_manager as dnx_object_manager
-
 # setup for system logging
 Log.run(name='web_app')
 
@@ -52,9 +52,6 @@ cfirewall = FirewallControl()
 
 # setting FirewallManager instance as class var within FirewallManager to access instance throughout webui
 FirewallControl.cfirewall = cfirewall
-
-# setting object manager instance as class var within FirewallControl for direct access
-FirewallControl.object_manager = dnx_object_manager.initialize(HOME_DIR)
 
 # =========================================
 # WEBUI COMPONENTS
@@ -79,7 +76,7 @@ import source.system.dfe_backups as dfe_backups
 import source.system.dfe_services as dnx_services
 
 from source.main.dfe_authentication import Authentication, user_restrict
-
+from source.web_typing import Optional
 
 # --------------------------------------------- #
 #  START OF NAVIGATION TABS
@@ -106,10 +103,11 @@ def dnx_dashboard(session_data):
 @app.route('/rules/firewall', methods=['GET', 'POST'])
 @user_restrict('admin')
 def rules_firewall(session_data):
+    print(request.data)
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'ajax': True, 'dnx_table': True, 'auto_colorize': True,
-        'tab': validate.get_check_digit(request.args, 'tab'),
+        'tab': validate.get_convert_int(request.args, 'tab'),
         'dnx_network_objects': {},
         'dnx_service_objects': {},
         'selected': 'MAIN',
@@ -154,8 +152,8 @@ def rules_firewall_push(session_data):
 def rules_nat(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_check_digit(request.args, 'tab'),
-        'menu': validate.get_check_digit(request.args, 'menu'),
+        'tab': validate.get_convert_int(request.args, 'tab'),
+        'menu': validate.get_convert_int(request.args, 'menu'),
         'selected': 'WAN_ZONE',
         'zones': ['WAN', 'DMZ', 'LAN'],
         'uri_path': ['rules', 'nat']
@@ -174,7 +172,7 @@ def rules_nat(session_data):
 def rules_overrides_whitelist(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_check_digit(request.args, 'tab'),
+        'tab': validate.get_convert_int(request.args, 'tab'),
         'uri_path': ['rules', 'overrides', 'whitelist']
     }
 
@@ -191,7 +189,7 @@ def rules_overrides_whitelist(session_data):
 def rules_overrides_blacklist(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_check_digit(request.args, 'tab'),
+        'tab': validate.get_convert_int(request.args, 'tab'),
         'uri_path': ['rules', 'overrides', 'blacklist']
     }
 
@@ -212,7 +210,7 @@ def intrusion_ip(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'ajax': True,
-        'tab': validate.get_check_digit(request.args, 'tab'),
+        'tab': validate.get_convert_int(request.args, 'tab'),
         'uri_path': ['intrusion', 'ip']
     }
 
@@ -243,7 +241,7 @@ def intrusion_domain(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'ajax': True,
-        'tab': validate.get_check_digit(request.args, 'tab'),
+        'tab': validate.get_convert_int(request.args, 'tab'),
         'uri_path': ['intrusion', 'domain']
     }
 
@@ -274,8 +272,8 @@ def intrusion_domain_post(session_data):
 def intrusion_domain_categories(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_check_digit(request.args, 'tab'),
-        'menu': validate.get_check_digit(request.args, 'menu'),
+        'tab': validate.get_convert_int(request.args, 'tab'),
+        'menu': validate.get_convert_int(request.args, 'menu'),
         'cat_settings': True,
         'uri_path': ['intrusion', 'domain', 'categories']
     }
@@ -293,7 +291,7 @@ def intrusion_domain_categories(session_data):
 def intrusion_ips(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_check_digit(request.args, 'tab'),
+        'tab': validate.get_convert_int(request.args, 'tab'),
         'uri_path': ['intrusion', 'ips']
     }
 
@@ -315,7 +313,7 @@ def intrusion_ips(session_data):
 def system_settings_dns(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_check_digit(request.args, 'tab'),
+        'tab': validate.get_convert_int(request.args, 'tab'),
         'uri_path': ['system', 'settings', 'dns']
     }
 
@@ -332,7 +330,7 @@ def system_settings_dns(session_data):
 def system_settings_dhcp(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_check_digit(request.args, 'tab'),
+        'tab': validate.get_convert_int(request.args, 'tab'),
         'uri_path': ['system', 'settings', 'dhcp']
     }
 
@@ -349,7 +347,7 @@ def system_settings_dhcp(session_data):
 def system_settings_interface(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_check_digit(request.args, 'tab'),
+        'tab': validate.get_convert_int(request.args, 'tab'),
         'uri_path': ['system', 'settings', 'interface']
     }
 
@@ -364,10 +362,9 @@ def system_settings_interface(session_data):
 @app.route('/system/settings/logging', methods=['GET', 'POST'])
 @user_restrict('admin')
 def system_settings_logging(session_data):
-    tab = request.args.get('tab', '1')
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_check_digit(request.args, 'tab'),
+        'tab': validate.get_convert_int(request.args, 'tab'),
         'uri_path': ['system', 'settings', 'logging']
     }
 
@@ -384,7 +381,7 @@ def system_settings_logging(session_data):
 def system_settings_syslog(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_check_digit(request.args, 'tab'),
+        'tab': validate.get_convert_int(request.args, 'tab'),
         'uri_path': ['system', 'settings', 'syslog']
     }
 
@@ -400,7 +397,7 @@ def system_settings_syslog(session_data):
     # ----------------------------------------- #
 @app.route('/system/logs', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
-def system_system_logs(session_data):
+def system_logs(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
         'menu': '1', 'dnx_table': True, 'ajax': True, 'auto_colorize': True,
@@ -422,6 +419,8 @@ def system_logs_get(session_data):
     json_data = request.get_json(force=True)
 
     table_data, _, _ = dfe_logs.update_page(json_data)
+
+    ppt(table_data)
 
     return ajax_response(status=True, data=table_data)
 
@@ -643,7 +642,7 @@ def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
             return render_template(application_error_page, application_error=ose, **page_settings)
 
         page_settings.update({
-            'tab': validate.get_check_digit(request.args, 'tab'),
+            'tab': validate.get_convert_int(request.form, 'tab'),
             'standard_error': error
         })
 
@@ -654,7 +653,7 @@ def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
 
     return render_template(page_name, **page_settings)
 
-def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name):
+def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name) -> str:
 
     if (request.method == 'POST'):
         try:
@@ -663,11 +662,11 @@ def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name):
             return render_template(application_error_page, application_error=ose, **page_settings)
 
         page_settings.update({
-            'tab': validate.get_check_digit(request.args, 'tab'),
+            'tab': validate.get_convert_int(request.form, 'tab'),
             'selected': selected,
             'standard_error': error
         })
-
+        print(1111111111, page_settings)
     try:
         page_settings[data_key] = dnx_page.load_page(page_settings['selected'])
     except OSError as ose:
@@ -708,8 +707,8 @@ def categories_page_logic(dnx_page, page_settings):
             return render_template(application_error_page, application_error=ose, **page_settings)
 
         page_settings.update({
-            'tab': validate.get_check_digit(request.args, 'tab'),
-            'menu': validate.get_check_digit(request.args, 'menu'),
+            'tab': validate.get_convert_int(request.args, 'tab'),
+            'menu': validate.get_convert_int(request.args, 'menu'),
             'standard_error': error
         })
 
@@ -861,17 +860,6 @@ def merge_items(a1, a2):
 
     return new_list
 
-def format_fw_obj(fw_obj, /):
-
-    properties = {
-        'address': ['blue lighten-2', 'tv'], 'country': ['red', 'language'],
-        'service': ['orange lighten-2', 'track_changes'], 'zone': ['purple lighten-2', 'border_inner']
-    }.get(fw_obj[3], ['', ''])
-
-    return (f'<div class="chip tooltipped {properties[0]}" data-html="true" data-tooltip="<p style=width:160px>'
-            f'{fw_obj[2]}<br>{fw_obj[3]}<br>{fw_obj[4]}<br>{fw_obj[5]}</p>">'
-            f'<i class="material-icons tiny {properties[0]} valign-center">{properties[1]}</i> {fw_obj[1]}</div>')
-
 def is_list(li, /):
     return isinstance(li, list)
 
@@ -880,6 +868,6 @@ def _debug(obj, /):
 
 
 app.add_template_global(merge_items, name='merge_items')
-app.add_template_global(format_fw_obj, name='format_fw_obj')
+# app.add_template_global(format_fw_obj, name='format_fw_obj')
 app.add_template_global(is_list, name='is_list')
 app.add_template_global(_debug, name='debug')

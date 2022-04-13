@@ -43,6 +43,8 @@ FILE_POLL_TIMER = 10
 
 file_exists = os.path.exists
 
+sha256 = hashlib.sha256
+
 # aliases for readability
 ACQUIRE_LOCK: Callable[[TextIO], None] = lambda mutex: fcntl.flock(mutex, fcntl.LOCK_EX)
 RELEASE_LOCK: Callable[[TextIO], None] = lambda mutex: fcntl.flock(mutex, fcntl.LOCK_UN)
@@ -180,15 +182,15 @@ def load_top_domains_filter() -> list[str]:
     with open(f'{HOME_DIR}/dnx_system/signatures/domain_lists/valid_top.domains', 'r') as tdf:
         return [s.strip() for s in tdf.readlines() if s.strip() and '#' not in s]
 
-def calculate_file_hash(file_to_hash: str, *, path: str = 'dnx_system', folder: str = 'data') -> Optional[str]:
+def calculate_file_hash(file_to_hash: str, *, path: str = 'dnx_system', folder: str = 'data') -> str:
     '''returns the sha256 secure hash of passed in file.
     '''
     filepath = f'{HOME_DIR}/{path}/{folder}/{file_to_hash}'
     if not file_exists(filepath):
-        return None
+        return ''
 
     with open(filepath, 'rb') as f2h:
-        file_hash = hashlib.sha256(f2h.read()).hexdigest()
+        file_hash = sha256(f2h.read()).hexdigest()
 
     return file_hash
 

@@ -2,20 +2,23 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import INVALID_FORM, fast_time
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import ConfigurationManager, config, load_configuration
 
 from dnx_routines.configure.system_info import System
+
+from source.web_typing import *
 from source.web_validate import ValidationError, VALID_DOMAIN, get_convert_int, standard, ip_address
 
+
+DISABLED = True
 VALID_RULESETS = ['whitelist', 'blacklist']
 
-def load_page(form):
-    blacklist = load_configuration('blacklist')
+def load_page(_: Form):
+    blacklist: ConfigChain = load_configuration('blacklist')
 
-    for info in blacklist['time_based'].values():
+    for info in blacklist.get_values('time_based'):
         st_offset = System.calculate_time_offset(info['time'])
 
         info['time'] = System.format_date_time(st_offset)
@@ -27,10 +30,13 @@ def load_page(form):
 
     return blacklist_settings
 
-def update_page(form) -> Union[str, ValidationError]:
+def update_page(form: Form) -> Union[str, ValidationError]:
     page_name = form.get('page_name', DATA.MISSING)
     if (page_name is DATA.MISSING):
         return INVALID_FORM
+
+    if (DISABLED):
+        return 'overrides disabled for rework.'
 
     if ('xl_add' in form):
         xlist_settings = config(**{
@@ -93,15 +99,13 @@ def update_page(form) -> Union[str, ValidationError]:
     # =====================
     # WHITELIST ONLY FORMS
     # =====================
-
     # TODO: this should not restrict ips to only "local_net" now that we have multiple interfaces.
     # we should have the user select which interface it will be active on so we can properly validate the
     # ip address falls within that subnet.
-
     if ('ip_wl_add' in form):
         whitelist_settings = config(**{
-            'ip': form.get('ip_wl_ip', DATA.MISSING),
-            'user':form.get('ip_wl_user', DATA.MISSING),
+            'ip':   form.get('ip_wl_ip', DATA.MISSING),
+            'user': form.get('ip_wl_user', DATA.MISSING),
             'type': form.get('ip_wl_type', DATA.MISSING)
         })
 

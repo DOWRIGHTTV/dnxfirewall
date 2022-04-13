@@ -5,9 +5,9 @@
         <div class="row">
             <div class="col s12">
                 <ul class="tabs">
-                    <li class="{{tab_classes}}"><a {% if tab=='1' %} class="active" {% endif %}
+                    <li class="{{tab_classes}}"><a {% if tab==1 %} class="active" {% endif %}
                         href="#blacklists" onclick="activeTab(1)">Time Based</a></li>
-                    <li class="{{tab_classes}}"><a {% if tab=='2' %} class="active" {% endif %}
+                    <li class="{{tab_classes}}"><a {% if tab==2 %} class="active" {% endif %}
                         href="#exceptions" onclick="activeTab(2)">Pre Proxy</a></li>
                 </ul>
             </div>
@@ -21,7 +21,7 @@
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add Blacklist</h4>
                     <form action="/rules/overrides/blacklist" method="POST">
-                    <input type="hidden" name="tab" value="1">
+                        <input type="hidden" name="tab" value="1">
                         <div class="row">
                             <div class="input-field col s4 l3 {{input_color}}">
                                 <input type="text" name="domain" class="validate" placeholder="malicious.com" required>
@@ -62,10 +62,10 @@
                                         <h5 class="{{modal_text_style}}">Are you sure you want to remove the blacklisted domain early?</h5>
                                         </div>
                                         <form action="/rules/overrides/blacklist" method="POST">
+                                            <input type="hidden" name="tab" value="1">
                                             <div class="modal-footer">
                                                 <button class="btn waves-effect waves-light">YES</button>
                                                 <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                                                <input type="hidden" name="tab" value="1">
                                                 <input type="hidden" name="bl_remove" value="{{domain}}">
                                             </div>
                                         </form>
@@ -138,6 +138,7 @@
                                         <h5 class="red-text center">Are you sure you want to remove the override? Service restart required to take effect.</h5>
                                         </div>
                                         <form action="/rules/overrides/blacklist" method="POST">
+                                            <input type="hidden" name="tab" value="2">
                                             <div class="modal-footer">
                                                 <button class="btn waves-effect waves-light">YES</button>
                                                 <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>

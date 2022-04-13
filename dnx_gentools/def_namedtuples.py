@@ -41,9 +41,13 @@ class FW_OBJECT(_NamedTuple):
     value:   str
     description: str = ''
 
-    @_lru_cache(maxsize=0)
-    def db_format(self) -> list:
-        pass
+    @_lru_cache(maxsize=None)
+    def __str__(self) -> str:
+        '''convert the tuple to a list and return as a string.
+
+        the @lru_cache decorator guarantees attribute indexing is done only once per object.
+        '''
+        return f"['{self[0]}','{self[1]}','{self[2]}','{self[3]}',{self[4]},'{self[5]}','{self[6]}']"
 
 
 # DHCP SERVER

@@ -2,9 +2,10 @@
 async function commitRules(table_id) {
     let FWsection = document.getElementById("section").value;
     let FWrules = tableToJson(table_id);
+    console.log(FWrules)
+    let response = await post("commit", {"section": `${FWsection}`, "rules": `${FWrules}`});
 
-    let error = await post("commit", {"section": `${FWsection}`, "rules": `${FWrules}`});
-    if (!error) {
+    if (!response.error) {
         document.getElementById("revert_rules").classList.remove('btn-disabled');
         document.getElementById("push_rules").classList.remove('btn-disabled');
     }
@@ -38,23 +39,27 @@ function tableToJson(table_id) {
         let tableRow = table.rows[i];
         let rowData = [tableRow.attributes["data-enabled"].value];
 
-        for (let j=2; j<tableRow.cells.length; j++) {
+        //rule name
+        rowData.push(tableRow.cells[2].textContent.replace("[*]", ""));
+
+        for (let j=3; j<tableRow.cells.length; j++) {
             let currentCell = tableRow.cells[j];
 
             // converting the fw object list to the proper server format
             if (currentCell.children.length > 0) {
                 let objectStr = ""
                 for (let obj of tableRow.cells[j].children) {
-                    objectStr += `${obj.innerText.replace(" ", "/")},`;
+                    objectStr += `${obj.textContent.replace(" ", "/")},`;
                 }
                 // pulling out the trailing comma
-                rowData.push((objectStr.slice(0, -1)));
+                rowData.push(objectStr.slice(0, -1));
             } else {
-                rowData.push((currentCell.innerText));
+                rowData.push(currentCell.textContent);
             }
         }
         data[i] = rowData;
     }
+    console.log(data)
     return JSON.stringify(data);
 }
 </script>
