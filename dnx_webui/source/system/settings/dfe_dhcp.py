@@ -17,14 +17,6 @@ from dnx_routines.configure.system_info import System
 from source.web_typing import *
 from source.web_validate import ValidationError, standard, mac_address, ip_address, get_convert_int, get_convert_bint
 
-# ===============
-# TYPING IMPORTS
-# ===============
-from typing import TYPE_CHECKING
-
-if (TYPE_CHECKING):
-    from dnx_gentools.file_operations import ConfigChain
-
 
 def load_page(_: Form) -> dict[str, Any]:
     dhcp_server: ConfigChain = load_configuration('dhcp_server')

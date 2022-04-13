@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_constants import INVALID_FORM, ppt
+from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import DATA
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 

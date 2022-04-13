@@ -103,7 +103,7 @@ function updateRule() {
                 `<a class="btn btn-floating btn-small waves-light" onclick="MoveDown(${rid})">` +
                     '<i class="material-icons red darken-2">arrow_downward</i></a></div>'
 
-    col[2].innerHTML = ruleEditor.querySelector(".ename").value;
+    col[2].innerHTML = `[*]${ruleEditor.querySelector(".ename").value}`;
 
     col[9].innerHTML = ruleEditor.querySelectorAll(".eaction")[0].checked ? "drop" : "accept"
     col[10].innerHTML = "N"; // ruleEditor.querySelector(".elog").value;
@@ -166,7 +166,7 @@ function newRule() {
 }
 </script>
 <script>
-{# watching for rules rule to be clicked for editing, populates the form, then shows the modal. #}
+{# watching for a rule to be clicked for editing, populates the form, then shows the modal. #}
 let ruleEditor = document.querySelector(".rule-editor");
 ruleEditor.addEventListener("click", function(click) {
 
@@ -184,7 +184,8 @@ ruleEditor.addEventListener("click", function(click) {
 function fillEditor(ruleEditor, ruleRow) {
 
     const fields = ["name", "log", "enabled", "src_zone", "src_network",
-            "src_service", "dst_zone", "dst_network", "dst_service", "action", "sec1_prof", "sec2_prof", "sec3_prof"]
+            "src_service", "dst_zone", "dst_network", "dst_service", "action",
+            "sec1_prof", "sec2_prof", "sec3_prof"]
 
     for (let field of fields) {
         let rule_field = ruleRow.querySelector(`.r${field}`);
@@ -201,7 +202,7 @@ function fillEditor(ruleEditor, ruleRow) {
                 input.name = "ename";
                 input.type = "text";
                 input.className = "ename validate";
-                input.value = rule_field.innerText;
+                input.value = rule_field.innerText.replace("[*]", "");
 
                 input_field.prepend(input);
 
@@ -259,11 +260,7 @@ function fillEditor(ruleEditor, ruleRow) {
 </script>
 <script>
 //firewall object implementation (built from materialize chips)
-const fwObjectMap  = {{firewall_settings.fw_object_map|tojson}};
-const objFormatMap =  {
-    address: ["blue lighten-2", "tv"], country: ["red", "language"],
-    service: ["orange lighten-2", "track_changes"], zone: ["purple lighten-2", "border_inner"]
-};
+const fwObjectMap = {{firewall_settings.fw_object_map|tojson}};
 const zone_autofill    = {{firewall_settings.zone_autofill|tojson}};
 const network_autofill = {{firewall_settings.network_autofill|tojson}};
 const service_autofill = {{firewall_settings.service_autofill|tojson}};
@@ -305,17 +302,10 @@ function cAddCallback(el, chip) {
     let chipClose = chip.innerHTML.split(objName)[1];
 
     chip.setAttribute("data-id", objName);
+    chip.className += " " + fwObjectMap[objName][2];
 
-    chip.innerHTML = ` <span>${objName}</span>${chipClose}`;
+    chip.innerHTML = fwObjectMap[objName][1] + " " + objName + chipClose;
     chip.children[1].setAttribute("onclick", "cRemove(this.parentNode)");
-
-    //adding icon and color to an object
-    let chipDef = fwObjectMap[chip.innerText.split("\n")[0]];
-    let chipFormat = objFormatMap[chipDef.type];
-
-    chip.className += ` ${chipFormat[0]}`;
-    chip.innerHTML = `<i class="material-icons tiny">${chipFormat[1]}</i>` + chip.innerHTML;
-    chip.innerHTML += `<input type="hidden" name="${el[0].id}" value="${chipDef.id},${chipDef.type}">`;
 }
 function cRemove(chip) {
     let fid = chip.getAttribute("data-id");
@@ -335,5 +325,74 @@ function cRemove(chip) {
     instance.$chips.splice(i, 1);
     instance.chipsData.splice(i, 1);
     chip.remove();
+}
+</script>
+<script>
+//object manager
+{# watching for a rule to be clicked for editing, populates the form, then shows the modal. #}
+let objectEditor = document.querySelector(".object-editor");
+objectEditor.addEventListener("click", function(click) {
+
+    if (click.target.cellIndex == null || click.target.cellIndex < 2) return;
+
+    let objectRow = click.target.parentNode;
+    console.log(objectRow);
+
+    let group = objectRow.querySelector(".ogroup");
+    console.log(group.innerText);
+    if (group.innerText === "built-in") {return;}
+
+    let objectEditor = document.querySelector("#FWobject-editor");
+    let editRule = M.Modal.init(objectEditor, {});
+
+    fillObjectEditor(objectEditor, objectRow);
+
+    editRule.open();
+});
+function fillObjectEditor(objEditor, objRow) {
+
+    let hidden = document.createElement("input")
+    hidden.type = "hidden";
+    hidden.name = "oeid";
+    hidden.value = objRow.getAttribute("data-id")
+
+    objEditor.children[0].prepend(hidden)
+
+    const fields = ["name", "type", "value", "desc"]
+
+    for (let field of fields) {
+        let obj_field = objRow.querySelector(`.o${field}`);
+        let editor_field = objEditor.querySelector(`.oe${field}`);
+
+        try {
+            if (["name", "value", "desc"].includes(field)) {
+                let input_field = editor_field.parentNode;
+
+                editor_field.remove();
+
+                let input = document.createElement("input");
+                input.id = `oe${field}`;
+                input.name = `oe${field}`;
+                input.type = "text";
+                input.className = `oe${field} validate`;
+                input.value = obj_field.innerText;
+
+                input_field.prepend(input);
+
+                input_field.children[1].className = "active";
+            }
+            else if (["type"].includes(field)) {
+                const actionMap = {"address": 0, "service": 1, "geolocation": 2};
+
+                document.querySelectorAll(".oetype")[actionMap[obj_field.innerHTML]].name = "oetype";
+                document.querySelectorAll(".oetype")[actionMap[obj_field.innerHTML]].checked = true;
+            }
+        }
+        catch (e) {
+            console.log(e);
+        }
+        finally {}
+    }
+    objEditor.children[0].id = `oe${objRow.id}`;
 }
 </script>

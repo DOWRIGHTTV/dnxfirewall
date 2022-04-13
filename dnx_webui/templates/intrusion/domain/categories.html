@@ -5,9 +5,9 @@
         <div class="row">
             <div class="col s12">
                 <ul class="tabs">
-                    <li class="{{tab_classes}}"><a {% if tab=='1' %} class="active" {% endif %}
+                    <li class="{{tab_classes}}"><a {% if tab==1 %} class="active" {% endif %}
                         href="#createcategory" onclick="activeTab(1)">Create Category</a></li>
-                    <li class="{{tab_classes}}"><a {% if tab=='2' %} class="active" {% endif %}
+                    <li class="{{tab_classes}}"><a {% if tab==2 %} class="active" {% endif %}
                         href="#categoryrules" onclick="activeTab(2)">Rule List</a></li>
                 </ul>
             </div>
@@ -21,7 +21,6 @@
                 <div class="card-panel card-panel-eql hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add Rule</h4>
                     <form action="/intrusion/domain/categories" method="post">
-                        <input type="hidden" name="tab" value="1">
                         <div class="row {{input_color}}">
                             <div class="input-field col s12">
                                 <select name="menu" onchange="this.form.submit()">
@@ -63,7 +62,6 @@
                 <div class="card-panel card-panel-eql hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Active Categories</h4>
                     <form action="/intrusion/domain/categories" method="POST">
-                        <input type="hidden" name="tab" value="1">
                         <div class="row {{input_color}}">
                             <div class="input-field col s12">
                                 <input type="text" name="ud_category" class="validate" placeholder="social media"
@@ -80,7 +78,7 @@
                             {{cat}} domains
                             <div class="row">
                                 <div class="input-field col s12">
-                                    <input type="hidden" name="tab" value="1">
+
                                     <button class="btn waves-effect waves-light" name="ud_cat_remove" value="{{cat}}">Remove</button>
                                 </div>
                             </div>

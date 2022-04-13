@@ -2,21 +2,21 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import os
 
 from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.file_operations import tail_file
 from dnx_routines.configure.system_info import System
 
+from source.web_typing import *
+
 # NOTE: this will likely not be needed anymore with the ajax client implementation
-def load_page(uri_query) -> tuple[list[Optional[str]], str, None]:
+def load_page(uri_query: Args) -> tuple[list[Optional[str]], str, None]:
     file_path = f'{HOME_DIR}/dnx_system/log/combined'
 
     return get_log_entries(file_path), 'combined', None
 
-def update_page(form: dict) -> tuple[list[Optional[str]], str, None]:
+def update_page(form: Form) -> tuple[list[Optional[str]], str, None]:
     log_type = form.get('table', 'combined')
 
     # ternary to handle initial page load.

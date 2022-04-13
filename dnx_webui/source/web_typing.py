@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-from typing import Optional, Union, Any
+from __future__ import annotations
+
+from typing import Optional, Union, Any, Callable
 
 from typing import TYPE_CHECKING
 
@@ -11,3 +13,4 @@ if (TYPE_CHECKING):
 
     Form = ImmutableMultiDict[str, str]
     Args = MultiDict[str, str]
+    WebError = dict[str, Union[int, str]]

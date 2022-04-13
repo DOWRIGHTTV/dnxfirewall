@@ -29,6 +29,7 @@
                         </div>
                         <div class="col s3">
                             <form action="/system/backups" method="POST">
+                                <input type="hidden" name="tab" value="1">
                                 <div class="input-field col s12">
                                     <a class="btn modal-trigger waves-effect waves-light" href="#bck-modal1-1">Restore Defaults</a>
                                     <div id="bck-modal1-1" class="modal">
@@ -72,11 +73,12 @@
                                                 <h5 class="red-text center">Are you sure you want to delete the saved configuration?</h5>
                                             </div>
                                             <form action="/system/backups" method="POST">
+                                                <input type="hidden" name="tab" value="1">
+                                                <input type="hidden" name="backup_name" value="{{backup}}">
+                                                <input type="hidden" name="cfg_backup" value="0">
                                                 <div class="modal-footer">
                                                     <button class="btn waves-effect waves-light">YES</button>
                                                         <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                                                    <input type="hidden" name="backup_name" value="{{backup}}">
-                                                    <input type="hidden" name="cfg_backup" value="0">
                                                 </div>
                                             </form>
                                         </div>
@@ -92,11 +94,12 @@
                                             </h5>
                                             </div>
                                             <form action="/system/backups" method="POST">
+                                                <input type="hidden" name="tab" value="1">
+                                                <input type="hidden" name="backup_name" value="{{backup}}">
+                                                <input type="hidden" name="cfg_backup" value="3">
                                                 <div class="modal-footer">
                                                     <button class="btn waves-effect waves-light">YES</button>
                                                     <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                                                    <input type="hidden" name="backup_name" value="{{backup}}">
-                                                    <input type="hidden" name="cfg_backup" value="3">
                                                 </div>
                                             </form>
                                         </div>

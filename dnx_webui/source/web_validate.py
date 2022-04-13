@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import string
 
 from ipaddress import IPv4Network, IPv4Address
 
@@ -20,13 +21,13 @@ MAX_PORT_RANGE = MAX_PORT + 1
 
 __all__ = (
     'INVALID_FORM',
-    'standard',
+    'standard', 'full_field',
     'convert_int', 'get_convert_int',
     'convert_bint', 'get_convert_bint',
 
     'mac_address',
-    'ip_address', 'default_gateway', 'cidr',
-    'network_port',
+    'ip_address', 'default_gateway', 'ip_network', 'cidr',
+    'network_port', 'proto_port',
 
     'VALID_MAC', 'VALID_DOMAIN',
 
@@ -43,7 +44,7 @@ _proto_map = {'any': 0, 'icmp': 1, 'tcp': 6, 'udp': 17}
 VALID_MAC = re.compile('(?:[0-9a-fA-F]:?){12}')
 VALID_DOMAIN = re.compile('(//|\\s+|^)(\\w\\.|\\w[A-Za-z0-9-]{0,61}\\w\\.){1,3}[A-Za-z]{2,6}')
 
-def get_convert_int(form: Form, key: str) -> Union[int, DATA]:
+def get_convert_int(form: Union[Form, Args], key: str) -> Union[int, DATA]:
     '''gets string value from submitted form then converts into an integer and returns.
 
     If key is not present or string cannot be converted, an IntEnum representing the error will be returned.'''
@@ -105,7 +106,7 @@ def get_check_digit(args: Args, key: str, /, *, default: Optional[str] = '1') ->
 
     return default
 
-def standard(user_input: Any, *, override: Optional[list] = None) -> None:
+def standard(user_input: str, *, override: Optional[list] = None) -> None:
     override = [] if override is None else override
 
     for char in user_input:
@@ -113,6 +114,15 @@ def standard(user_input: Any, *, override: Optional[list] = None) -> None:
             raise ValidationError(
                 f'Standard fields can only contain alpha numeric characters or the following {", ".join(override)}.'
             )
+
+def full_field(user_input: str, ftype: str = 'Description') -> None:
+    valid_chars = f' {string.printable.strip(string.whitespace)}'
+
+    for char in user_input:
+        if (char in valid_chars):
+            continue
+
+        raise ValidationError(f'{ftype} fields dont support tabs, returns, or linebreaks.')
 
 def syslog_dropdown(syslog_time):
     syslog_time = convert_int(syslog_time)
@@ -136,24 +146,19 @@ def _ip_address(ip_addr):
         raise ValidationError('127.0.0.0/24 is reserved ip space and cannot be used.')
 
 # this is a convenience wrapper around above function to allow for multiple ips to be checked with one func call.
-def ip_address(ip_addr=None, *, ip_iter=None):
-    ip_iter = [] if not ip_iter else ip_iter
+def ip_address(ip_addr: Optional[str] = None, *, ip_iter: Optional[list['str']] = None) -> None:
+    ip_iter = [ip_addr] if not ip_iter else ip_iter
     if (not isinstance(ip_iter, list)):
-        return ValidationError('Data format must be a list.')
-
-    if (ip_addr):
-        ip_iter.append(ip_addr)
+        raise ValidationError('Data format must be a list.')
 
     for ip in ip_iter:
         _ip_address(ip)
 
-def ip_network(net: str, /) -> tuple[int, int]:
+def ip_network(net: str, /) -> None:
     try:
         ip_netw = IPv4Network(net)
     except:
         raise ValidationError('IP network is not valid.')
-
-    return int(ip_netw.network_address), ip_netw.prefixlen
 
 def default_gateway(ip_addr, /):
     try:
@@ -204,7 +209,7 @@ def proto_port(port_str):
     if (proto_int is None):
         raise ValidationError('Invalid protocol. Use [any, tcp, udp, icmp].')
 
-    # ensuring icmp definitions conform to required format.
+    # ensuring icmp definitions conform to the required format.
     if (proto_int == PROTO.ICMP and convert_int(port) != 0):
         raise ValidationError('ICMP does not support ports. Use icmp/0.')
 
@@ -216,7 +221,7 @@ def proto_port(port_str):
         if (ports[0] > ports[1]):
             raise ValidationError('Invalid port range. The start value must be less than the end. ex. 9001-9002')
 
-        error = f'TCP/UDP port range must be between within range 1-65535 or 0 for any. ex tcp/500-550, udp/0'
+        error = f'TCP/UDP port range must be between within range 1-65535. ex tcp/500-550'
 
     else:
         # this puts single port in range syntax

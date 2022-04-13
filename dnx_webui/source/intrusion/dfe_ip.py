@@ -2,23 +2,15 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import DATA, GEO
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
 from source.web_validate import ValidationError, convert_int, get_convert_int, convert_bint
-
-# ===============
-# TYPING IMPORTS
-# ===============
-from typing import TYPE_CHECKING
-
-if (TYPE_CHECKING):
-    from dnx_gentools.file_operations import ConfigChain
+from source.web_typing import *
 
 
-def load_page(form: dict) -> dict:
+def load_page(form: Form) -> dict:
     proxy_settings: ConfigChain = load_configuration('ip_proxy')
     country_map: ConfigChain = load_configuration('geolocation', filepath='dnx_webui/data')
 
@@ -72,7 +64,7 @@ def load_page(form: dict) -> dict:
 
     return ipp_settings
 
-def update_page(form: dict) -> tuple[bool, WebError]:
+def update_page(form: Form) -> tuple[bool, WebError]:
 
     # no action needed for this at this time. in the future, validations may be required, but the load page has been
     # expanded to generate the user select data.
@@ -115,14 +107,14 @@ def update_page(form: dict) -> tuple[bool, WebError]:
 # ----------------
 # AJAX PROCESSING
 # ----------------
-def update_field(form: dict) -> tuple[bool, WebError]:
+def update_field(form: Form) -> tuple[bool, WebError]:
 
     category = config(**{
         'type': form.get('type', DATA.MISSING),
         'name': form.get('category', DATA.MISSING),
         'direction': get_convert_int(form, 'direction')
     })
-    print(form, category)
+
     if ([x for x in category.values() if x in [DATA.MISSING, DATA.INVALID]]):
         return False, {'error': 1, 'message': INVALID_FORM}
 

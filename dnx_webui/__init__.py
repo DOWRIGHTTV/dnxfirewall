@@ -28,11 +28,4 @@ if (INITIALIZE_MODULE):
 from typing import TYPE_CHECKING
 
 if (TYPE_CHECKING):
-    __all__ = ('ObjectManager',)
-
-    from dnx_gentools.def_namedtuples import FW_OBJECT
-    from dnx_webui.source.main.dfe_obj_manager import object_manager
-
-    fw_object = FW_OBJECT('id', 'name', 'origin', 'type', 0, 'value', 'description')
-
-    ObjectManager = object_manager([fw_object])
+    __all__ = ()
