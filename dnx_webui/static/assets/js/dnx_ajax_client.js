@@ -13,6 +13,10 @@ class AjaxClient {
         return this._onSuccessCallback;
     }
 
+    reloadPage = (query = '') => {
+        window.location = this.baseUrl + query;
+    }
+
     get onErrorCallback() {
         return this._onErrorCallback;
     }
