@@ -10,7 +10,7 @@ from os import replace
 from ast import literal_eval
 from enum import IntEnum
 
-from source.web_typing import Union
+from source.web_typing import TYPE_CHECKING, Union
 from source.web_validate import ValidationError
 
 from dnx_gentools.def_constants import HOME_DIR
