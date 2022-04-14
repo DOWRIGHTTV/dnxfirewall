@@ -10,6 +10,9 @@ from os import replace
 from ast import literal_eval
 from enum import IntEnum
 
+from source.web_typing import Union
+from source.web_validate import ValidationError
+
 from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.def_enums import GEO, DATA
 from dnx_gentools.def_namedtuples import FW_OBJECT
@@ -21,13 +24,13 @@ from dnx_iptools.protocol_tools import cidrtoi
 from dnx_routines.configure.system_info import System
 from dnx_routines.logging import Log
 
-from source.web_typing import Union
-from source.web_validate import ValidationError
-
 
 __all__ = (
     'FWObjectManager', 'USER_RANGE',
 )
+
+if (TYPE_CHECKING):
+    ITER_FW_OBJECTS = list[list[str, str]]
 
 # FUNCTION ALIASES
 FILE_LOCK = fcntl.flock
@@ -56,20 +59,22 @@ DB_END   = '}'
 TABLE_NEXT  = ' },'
 TABLE_END   = ' }'
 
-def db_obj(key: str, obj: Union[int, list]) -> str:
+def db_skey_val(key: str, obj: Union[int, list]) -> str:
     '''
     int  > "999":69
     list > "999":["1","1","1"]
     '''
     return f" '{key}':{obj},"
 
-def table_str(key: str, obj: str) -> str:
-    '''"name":"999"
+def table_key_val(key: str, obj: str) -> str:
     '''
-    return f"  '{key}':{obj},"
+    "name":["1","1","1"]
+    '''
+    return f"  {key}:{obj},"
 
-def table_list(key: str, obj: str) -> str:
-    '''"999":["1","1","1"]
+def table_skey_val(key: str, obj: str) -> str:
+    '''
+    "999":9001
     '''
     return f"  '{key}':{obj},"
 
@@ -84,11 +89,11 @@ def table_start(key: str) -> str:
 # RULE CONVERSION
 # ================
 INVALID_OBJECT = -1
-MISSING_RULE = FW_OBJECT('none', 'none', 'none', 'none', 0, 'none', 'none')
+MISSING_RULE = FW_OBJECT(0, 'none', 'none', 'none', 0, 'none', 'none')
 
 proto_convert: dict[str, int] = {'icmp': 1, 'tcp': 6, 'udp': 17}
 icon_map = {
-    'tv': 'address', 'track_changes': 'address','vpn_lock': 'address',
+    'tv': 'address', 'track_changes': 'address', 'vpn_lock': 'address',
     'dns': 'service', 'border_inner': 'zone'
 }
 
@@ -231,9 +236,9 @@ class FWObjectManager:
         '''
         user_objects = self.user_database['objects']
 
-        obj_id = f'{randint(*USER_RANGE)}'
+        obj_id = randint(*USER_RANGE)
         while obj_id in user_objects:
-            obj_id = f'{randint(*USER_RANGE)}'
+            obj_id = randint(*USER_RANGE)
 
         user_objects[obj_id] = FW_OBJECT(obj_id, *list(obj.values())[1:])
 
@@ -255,23 +260,22 @@ class FWObjectManager:
     def remove(self, obj: config) -> None:
 
         # just checking for existence and to check the "group" field
-        fw_object = self.user_database['objects'].get(obj.id, None)
-        if (not fw_object):
+        fw_object: FW_OBJECT = self.user_database['objects'].get(obj.id, MISSING_RULE)
+        if (fw_object is MISSING_RULE):
             raise ValidationError(f'Firewall object {obj.id} not found.')  # LogHandler or return error
 
         # object group
         if (fw_object[2] != 'extended'):
             raise ValidationError('Only extended firewall objects can be removed.')
 
-        t = self.user_database['ntoid'].pop(fw_object[1], None)
+        self.user_database['ntoid'].pop(fw_object[1], None)
 
-
-        # final removal of object from objects table
+        # final removal of the object from the objects table
         del self.user_database['objects'][fw_object[0]]
 
         self.db_changed = True
 
-    def lookup(self, oid: str, convert: bool = False) -> Union[int, list[int, int, int], FW_OBJECT]:
+    def lookup(self, oid: int, convert: bool = False) -> Union[int, list[int, int, int], FW_OBJECT]:
         '''return index of the object associated with sent in object id.
 
         if the id does not exist, None will be returned.
@@ -279,7 +283,7 @@ class FWObjectManager:
         if (not self.lookup_set):
             raise RuntimeError('The lookup flag must be set when initializing FWObjectManager to unlock this method.')
 
-        fw_object = self.full_db['objects'].get(oid, MISSING_RULE)
+        fw_object: FW_OBJECT = self.full_db['objects'].get(oid, MISSING_RULE)
         if (not convert):
             return fw_object
 
@@ -293,7 +297,7 @@ class FWObjectManager:
         '''return object id if valid, otherwise returns None
         '''
         # basic membership test and getting object reference
-        object_id = self.full_db['ntoid'].get(obj_name, DATA.MISSING)
+        object_id: int = self.full_db['ntoid'].get(obj_name, DATA.MISSING)
         if (object_id is DATA.MISSING):
             return INVALID_OBJECT
 
@@ -305,16 +309,16 @@ class FWObjectManager:
         return object_id
 
     # None return is in list for compatibility with the normal process
-    def iter_validate(self, fw_objects: str) -> list[int]:
+    def iter_validate(self, fw_objs: str) -> list[int]:
         if (not self.lookup_set):
             raise RuntimeError('The lookup flag must be set when initializing FWObjectManager to unlock this method.')
 
-        if (not fw_objects or 'none' in fw_objects):
+        if (not fw_objs or 'none' in fw_objs):
             return [INVALID_OBJECT]
 
         # making a list of icon and obj_name pairs from raw string representation of data
         try:
-            fw_objects: list[list[str, str]] = [x.split('/') for x in fw_objects.split(',')]
+            fw_objects: ITER_FW_OBJECTS = [x.split('/') for x in fw_objs.split(',')]
         except Exception:
             return [INVALID_OBJECT]
 
@@ -328,7 +332,7 @@ class FWObjectManager:
     # DISK IO
     # =================
     def _load(self) -> dict:
-        # user db wont exist until first object is added
+        # user db wont exist until the first object is added
         if not os.path.isfile(USER_DB):
             return {
                 'version': 1,
@@ -360,7 +364,7 @@ class FWObjectManager:
         db_version = self.user_database['version'] + 1
 
         database = [
-            DB_START, db_obj('date', System.date()), db_obj('version', db_version), table_start('objects')
+            DB_START, db_skey_val('date', System.date()), db_skey_val('version', db_version), table_start('objects')
         ]
         db_append = database.append
 
@@ -371,8 +375,8 @@ class FWObjectManager:
         # FORMATTING OBJECTS
         for obj in self.user_database['objects'].values():
 
-            db_append(table_list(obj[0], obj))
-            ntoid_append(table_str(obj[1], obj[0]))
+            db_append(table_key_val(obj[0], obj))
+            ntoid_append(table_skey_val(obj[1], obj[0]))
 
         # hack to strip the trailing comma on the last element in the list.
         database[-1] = database[-1][:-1]

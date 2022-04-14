@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+from source.web_typing import *
+from source.web_validate import ValidationError, convert_int, get_convert_int, convert_bint
+
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import DATA, GEO
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
-
-from source.web_validate import ValidationError, convert_int, get_convert_int, convert_bint
-from source.web_typing import *
 
 
 def load_page(form: Form) -> dict:

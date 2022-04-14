@@ -18,10 +18,7 @@ from dnx_secmods.ips_ids.ips_ids_log import Log
 # ===============
 # TYPING IMPORTS
 # ===============
-from typing import TYPE_CHECKING
-
 if (TYPE_CHECKING):
-    from dnx_gentools.file_operations import ConfigChain
     from dnx_routines.logging import LogHandler_T
 
 

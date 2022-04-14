@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from subprocess import run
 
+from source.web_typing import *
+from source.web_validate import ValidationError, ip_address, network_port, convert_int
+
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
 from dnx_routines.configure.iptables import IPTablesManager
 from dnx_routines.configure.system_info import System
-
-from source.web_typing import *
-from source.web_validate import ValidationError, ip_address, network_port, convert_int
 
 
 def load_page(_: Form):

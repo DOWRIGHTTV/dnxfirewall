@@ -16,7 +16,6 @@ from dnx_iptools.def_structs import dhcp_byte_pack as _dhcp_bp, dhcp_short_pack 
 # TYPING IMPORTS
 # ===============
 from typing import TYPE_CHECKING
-
 if (TYPE_CHECKING):
     from dnx_gentools.def_typing import Socket as _Socket, Address as _Address, Lock as _Lock
 
@@ -33,7 +32,7 @@ class Item(_NamedTuple):
     value: _Any
 
 class FW_OBJECT(_NamedTuple):
-    id:      str
+    id:      int
     name:    str
     origin:  str
     type:    str
@@ -47,7 +46,7 @@ class FW_OBJECT(_NamedTuple):
 
         the @lru_cache decorator guarantees attribute indexing is done only once per object.
         '''
-        return f"['{self[0]}','{self[1]}','{self[2]}','{self[3]}',{self[4]},'{self[5]}','{self[6]}']"
+        return f"[{self[0]},'{self[1]}','{self[2]}','{self[3]}',{self[4]},'{self[5]}','{self[6]}']"
 
 
 # DHCP SERVER

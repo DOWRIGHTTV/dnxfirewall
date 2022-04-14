@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from ipaddress import IPv4Network, IPv4Address
 
+from source.web_typing import *
+from source.web_validate import ValidationError, standard, mac_address, ip_address, get_convert_int, get_convert_bint
+
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA, DHCP
 from dnx_gentools.def_namedtuples import DHCP_RECORD
@@ -13,9 +16,6 @@ from dnx_iptools.cprotocol_tools import itoip
 from dnx_iptools.protocol_tools import mac_add_sep as mac_str
 
 from dnx_routines.configure.system_info import System
-
-from source.web_typing import *
-from source.web_validate import ValidationError, standard, mac_address, ip_address, get_convert_int, get_convert_bint
 
 
 def load_page(_: Form) -> dict[str, Any]:

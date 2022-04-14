@@ -75,8 +75,8 @@ import source.system.dfe_users as dfe_users
 import source.system.dfe_backups as dfe_backups
 import source.system.dfe_services as dnx_services
 
-from source.main.dfe_authentication import Authentication, user_restrict
 from source.web_typing import Optional
+from source.main.dfe_authentication import Authentication, user_restrict
 
 # --------------------------------------------- #
 #  START OF NAVIGATION TABS
@@ -103,7 +103,7 @@ def dnx_dashboard(session_data):
 @app.route('/rules/firewall', methods=['GET', 'POST'])
 @user_restrict('admin')
 def rules_firewall(session_data):
-    print(request.data)
+
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'ajax': True, 'dnx_table': True, 'auto_colorize': True,

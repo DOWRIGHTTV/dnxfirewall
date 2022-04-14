@@ -38,15 +38,18 @@ _format_time = System.format_time
 # ==============================
 # GENERIC LIGHTWEIGHT FUNCTIONS
 # ==============================
-def direct_log(m_name: str, level_name: str, msg: str, *, cli: bool = False) -> None:
+def direct_log(m_name: str, log_level: LOG, msg: str, *, cli: bool = False) -> None:
     '''alternate system log method.
 
     used to override global module log name if needed.
     does not require LogHandler initialization.
     '''
+    if (log_level <= Log.current_lvl):
+        return
+
     log_path = f'{HOME_DIR}/dnx_system/log/{m_name}/{_system_date(string=True)}-{m_name}.log'
     with open(log_path, 'a+') as log_file:
-        log_file.write(f'{fast_time()}|{m_name}|{level_name}|{msg}\n')
+        log_file.write(f'{fast_time()}|{m_name}|{log_level.name.lower()}|{msg}\n')
 
     if (cli):
         console_log(msg)
@@ -99,7 +102,7 @@ def convert_level(level: Optional[LOG] = None) -> Union[dict[int, list[str, str]
 # LOG HANDLING CLASS FACTORY
 # ===========================
 # process wide "instance" of LogHandler class, which can be used directly or subclassed.
-def _log_handler() -> _LogHandler:
+def _log_handler() -> LogHandler:
 
     logging_level: int = 0
     handler_name: str = ''
@@ -138,7 +141,7 @@ def _log_handler() -> _LogHandler:
             cli_output = console_output
             log_path += name
 
-            # direct_log(handler_name, 'notice', 'LogHandler initialization started.', cli=True)
+            direct_log(handler_name, LOG.INFO, 'LogHandler initialization started.', cli=True)
 
             threading.Thread(target=log_settings).start()
             threading.Thread(target=slog_settings).start()
@@ -155,7 +158,7 @@ def _log_handler() -> _LogHandler:
             while not is_initialized:
                 fast_sleep(ONE_SEC)
 
-            # direct_log(handler_name, 'notice', 'LogHandler initialization complete.', cli=True)
+            direct_log(handler_name, LOG.NOTICE, 'LogHandler initialization complete.', cli=True)
 
         @classproperty
         def current_lvl(_) -> int:
@@ -282,7 +285,7 @@ def _log_handler() -> _LogHandler:
         '''
         queue_write = write_to_disk.add
 
-        # direct_log(handler_name, 'debug', f'configuring logger => {logging_level}')
+        direct_log(handler_name, LOG.DEBUG, f'configuring logger => {logging_level}')
 
         for level_number, level_info in convert_level().items():
 
@@ -315,7 +318,7 @@ def _log_handler() -> _LogHandler:
 
             setattr(cls, level_name, log_method)
 
-        # direct_log(handler_name, 'notice', f'logger successfully configured => {logging_level}', cli=True)
+        direct_log(handler_name, LOG.NOTICE, f'logger successfully configured => {logging_level}', cli=True)
 
     @cfg_read_poller('logging_client')
     def log_settings(cfg_file: str) -> None:

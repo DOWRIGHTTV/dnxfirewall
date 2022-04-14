@@ -33,8 +33,12 @@ if (TYPE_CHECKING):
         'ClientRequest', 'ServerResponse',
 
         # TYPES
-        'DHCPServer_T', 'ClientRequest_T'
+        'DHCPServer_T', 'ClientRequest_T',
+
+        'RequestID'
     )
+
+    RequestID: TypeAlias = tuple[str, int]
 
     from dhcp_server import DHCPServer
     from dhcp_server_automate import Leases

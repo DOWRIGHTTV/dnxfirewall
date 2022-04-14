@@ -8,18 +8,13 @@ import threading
 from functools import wraps
 from flask import redirect, render_template, request, session, url_for
 
+from source.web_typing import *
+
 from dnx_gentools.def_constants import fast_sleep
+from dnx_gentools.def_enums import LOG
 from dnx_gentools.file_operations import load_configuration
 
 from dnx_routines.logging import direct_log
-
-# ===============
-# TYPING IMPORTS
-# ===============
-from typing import TYPE_CHECKING, Optional
-
-if (TYPE_CHECKING):
-    from dnx_gentools.def_typing import Event
 
 
 LOG_NAME = 'logins'
@@ -30,7 +25,7 @@ class Authentication:
         self._time_expired: Event = threading.Event()
 
     @classmethod
-    def user_login(cls, form: dict, login_ip: str) -> tuple:
+    def user_login(cls, form: Form, login_ip: str) -> tuple:
         '''authenticate a user to the dnx web frontend.
 
         pass in the flask form and source ip. return will be a boolean representing whether the user is authenticated
@@ -42,10 +37,10 @@ class Authentication:
 
         authorized, username, user_role = self._user_login(form)
         if (authorized):
-            direct_log(LOG_NAME, 'notice', f'User {username} successfully logged in from {login_ip}.')
+            direct_log(LOG_NAME, LOG.NOTICE, f'User {username} successfully logged in from {login_ip}.')
 
         else:
-            direct_log(LOG_NAME, 'warning', f'Failed login attempt for user {username} from {login_ip}.')
+            direct_log(LOG_NAME, LOG.WARNING, f'Failed login attempt for user {username} from {login_ip}.')
 
         while not self._time_expired:
             fast_sleep(.202)
@@ -91,7 +86,7 @@ class Authentication:
 
         return hash_total.hexdigest()
 
-    def _user_login(self, form: dict) -> tuple[bool, Optional[str], Optional[str]]:
+    def _user_login(self, form: Form) -> tuple[bool, Optional[str], Optional[str]]:
         password = form.get('password', None)
         username = form.get('username', '').lower()
         if (not username or not password):

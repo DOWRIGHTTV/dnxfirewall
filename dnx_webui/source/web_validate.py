@@ -7,12 +7,12 @@ import string
 
 from ipaddress import IPv4Network, IPv4Address
 
+from source.web_typing import *
+
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA, PROTO
 from dnx_gentools.file_operations import load_configuration
 from dnx_gentools.def_exceptions import ValidationError
-
-from source.web_typing import *
 
 
 MIN_PORT = 1

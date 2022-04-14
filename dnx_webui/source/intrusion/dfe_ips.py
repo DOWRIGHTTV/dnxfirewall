@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
+from source.web_typing import *
+from source.web_validate import ValidationError, convert_int, get_convert_int, get_convert_bint, ip_address, standard
+
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
 from dnx_routines.configure.system_info import System
 from dnx_routines.configure.iptables import IPTablesManager
-
-from source.web_typing import *
-from source.web_validate import ValidationError, convert_int, get_convert_int, get_convert_bint, ip_address, standard
 
 
 def load_page(_: Form) -> dict:

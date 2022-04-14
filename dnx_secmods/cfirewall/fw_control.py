@@ -13,12 +13,6 @@ from dnx_routines.logging.log_client import Log
 
 from dnx_webui.source.object_manager import FWObjectManager
 
-# ===============
-# TYPING IMPORTS
-# ===============
-if (TYPE_CHECKING):
-    from dnx_gentools.file_operations import ConfigChain
-
 
 DEFAULT_VERSION: str = 'pending'
 DEFAULT_PATH:    str = 'dnx_system/iptables'

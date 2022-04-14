@@ -2,7 +2,7 @@
 async function commitRules(table_id) {
     let FWsection = document.getElementById("section").value;
     let FWrules = tableToJson(table_id);
-    console.log(FWrules)
+
     let response = await post("commit", {"section": `${FWsection}`, "rules": `${FWrules}`});
 
     if (!response.error) {
@@ -59,7 +59,7 @@ function tableToJson(table_id) {
         }
         data[i] = rowData;
     }
-    console.log(data)
+
     return JSON.stringify(data);
 }
 </script>

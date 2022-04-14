@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import os
 
+from source.web_typing import *
+
 from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.file_operations import tail_file
 from dnx_routines.configure.system_info import System
-
-from source.web_typing import *
 
 # NOTE: this will likely not be needed anymore with the ajax client implementation
 def load_page(uri_query: Args) -> tuple[list[Optional[str]], str, None]:

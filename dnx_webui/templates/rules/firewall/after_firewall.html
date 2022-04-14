@@ -336,10 +336,8 @@ objectEditor.addEventListener("click", function(click) {
     if (click.target.cellIndex == null || click.target.cellIndex < 2) return;
 
     let objectRow = click.target.parentNode;
-    console.log(objectRow);
-
     let group = objectRow.querySelector(".ogroup");
-    console.log(group.innerText);
+
     if (group.innerText === "built-in") {return;}
 
     let objectEditor = document.querySelector("#FWobject-editor");

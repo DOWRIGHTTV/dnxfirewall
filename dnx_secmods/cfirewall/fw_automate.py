@@ -18,7 +18,6 @@ from dnx_routines.logging import Log
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
-    from dnx_gentools.file_operations import ConfigChain
     from dnx_routines.logging import LogHandler_T
     from dnx_secmods.cfirewall import CFirewall
 

@@ -26,14 +26,6 @@ from dnx_routines.configure.system_info import System
 
 from ip_proxy_log import Log
 
-# ===============
-# TYPING IMPORTS
-# ===============
-from typing import TYPE_CHECKING
-
-if (TYPE_CHECKING):
-    from dnx_gentools.file_operations import ConfigChain
-
 
 # required when using ConfigurationManager context manager
 ConfigurationManager.set_log_reference(Log)

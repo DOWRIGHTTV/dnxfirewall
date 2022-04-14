@@ -21,11 +21,7 @@ from dhcp_server_automate import ServerConfiguration
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
-    from typing import TypeAlias
-
-    RequestID: TypeAlias = tuple[str, int]
-
-    from dnx_netmods.dhcp_server import ClientRequest_T
+    from dnx_netmods.dhcp_server import ClientRequest_T, RequestID
 
 __all__ = (
     'DHCPServer',

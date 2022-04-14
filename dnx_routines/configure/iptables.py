@@ -4,19 +4,12 @@ from __future__ import annotations
 
 import fcntl
 
+from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import Queue, CFG
 from dnx_gentools.file_operations import load_configuration
 
 from dnx_iptools.cprotocol_tools import itoip
-
-# ===============
-# TYPING IMPORTS
-# ===============
-from typing import TYPE_CHECKING
-
-if (TYPE_CHECKING):
-    from dnx_gentools.file_operations import ConfigChain, config
 
 __all__ = (
     'IPTablesManager'

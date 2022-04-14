@@ -2,14 +2,14 @@
 
 import dnx_iptools.interface_ops as interface
 
+from source.web_typing import *
+from source.web_validate import ValidationError, convert_int, ip_address, default_gateway, cidr
+
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA, INTF
 from dnx_gentools.file_operations import load_configuration, config
 
 from dnx_iptools.cprotocol_tools import itoip, default_route
-
-from source.web_typing import *
-from source.web_validate import ValidationError, convert_int, ip_address, default_gateway, cidr
 
 
 _IP_DISABLED = True

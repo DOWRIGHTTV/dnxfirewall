@@ -8,16 +8,16 @@ import string
 from typing import NamedTuple as _NamedTuple
 from collections import defaultdict
 
+from source.web_typing import *
+from source.web_validate import ValidationError, standard, full_field, proto_port, ip_network, ip_address
+from source.web_validate import get_convert_int, convert_int
+from source.object_manager import FWObjectManager, USER_RANGE
+
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import DATA
 from dnx_gentools.file_operations import load_configuration, config
 
 from dnx_secmods.cfirewall.fw_control import FirewallControl
-
-from source.web_typing import *
-from source.web_validate import ValidationError, standard, full_field, proto_port, ip_network, ip_address
-from source.web_validate import get_convert_int, convert_int
-from source.object_manager import FWObjectManager, USER_RANGE
 
 # ===============
 # TYPING IMPORTS
@@ -44,6 +44,7 @@ _properties = {
     ('zone', 1): ['deep-purple lighten-2', 'border_inner'], ('zone', 2): ['purple lighten-2', 'border_inner']
 }
 def format_fw_obj(fw_obj: list, /) -> list[str, str]:
+    print(fw_obj)
     properties = _properties.get((fw_obj[3], fw_obj[4]), ['', ''])
 
     return [
@@ -90,7 +91,7 @@ def load_page(section: str) -> dict[str, Any]:
     version: int
     firewall_objects: dict[str, list]
     version, firewall_objects = FWObjectManager.get_objects()
-
+    print(firewall_objects)
     # fw_object_map: dict[str, dict] = {obj.name: {'type': obj.type, 'id': obj.id} for obj in firewall_objects}
     fw_object_map = {o[1]: format_fw_obj(o) for o in firewall_objects.values()}
 
@@ -169,7 +170,7 @@ def update_page(form: Form) -> tuple[str, str]:
 
     elif ('remove_obj' in form):
         fw_object = config(**{
-            'id': form.get('obj_id', DATA.MISSING)
+            'id': get_convert_int(form, 'obj_id')
         })
 
         if (DATA.MISSING in fw_object.values()):
@@ -302,7 +303,7 @@ def validate_firewall_commit(fw_rules_json: str, /):
     return validated_rules
 
 # NOTE: log disabled in form and set here as default for the time being.
-def validate_firewall_rule(rule_num: int, fw_rule: rule_structure, /, check: Callable[[...], ...]) -> dict[str, Any]:
+def validate_firewall_rule(rule_num: int, fw_rule: rule_structure, /, check: Callable[[str], list[int]]) -> dict[str, Any]:
 
     actions: dict[str, int] = {'accept': 1, 'drop': 0}
 
@@ -345,7 +346,7 @@ def validate_firewall_rule(rule_num: int, fw_rule: rule_structure, /, check: Cal
 
     rule = {
         'name': fw_rule.name,
-        'id': None,
+        'id': 0,
         'enabled': enabled,
         'src_zone': src_zone,                # [12]
         'src_network': src_network,

@@ -15,7 +15,6 @@ from dnx_gentools.file_operations import load_configuration
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
-    from dnx_gentools.file_operations import ConfigChain
     from dnx_routines.logging import LogHandler_T
 
 __all__ = (

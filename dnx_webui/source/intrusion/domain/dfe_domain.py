@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+from source.web_typing import *
+from source.web_validate import ValidationError, get_convert_bint
+
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import DATA
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
-
-from source.web_typing import *
-from source.web_validate import ValidationError, get_convert_bint
 
 
 # TODO: if system category gets disabled that had keyword enabled. it does not disable the keyword search.

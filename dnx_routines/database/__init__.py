@@ -36,6 +36,7 @@ def run():
     finally:
         os.remove(DATABASE_SOCKET)
 
+
 # ================
 # TYPING IMPORTS
 # ================
