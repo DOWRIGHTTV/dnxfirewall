@@ -11,8 +11,8 @@ async function commitRules(table_id) {
     }
 }
 async function pushRules() {
-    let error = await post("push", {});
-    if (!error) {
+    let response = await post("push", {});
+    if (!response.error) {
         document.getElementById("revert_rules").classList.add('btn-disabled');
         document.getElementById("push_rules").classList.add('btn-disabled');
     }
