@@ -8,6 +8,8 @@ from libc.stdint cimport uint_fast8_t, uint_fast16_t, uint_fast32_t
 
 from dnx_iptools.hash_trie.hash_trie cimport HashTrie_Range
 
+from fw_api.fw_api cimport api_open, process_api
+
 # ===============================
 # VERBOSE T-SHOOT ASSISTANCE
 # ===============================
@@ -162,7 +164,7 @@ cdef int cfirewall_recv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         HWinfo hw = [
             INTF_ZONE_MAP[in_intf],
             INTF_ZONE_MAP[out_intf],
-            m_addr,
+            m_addr[:6],
             time(NULL)
         ]
 
@@ -187,6 +189,8 @@ cdef int cfirewall_recv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # --------------------
     direction = OUTBOUND if hw.in_zone != WAN_IN else INBOUND
 
+    # SETTING RULE TABLES BASED ON HOOK
+    cdef srange fw_sections = [0, 1] if hdr.hook == NF_IP_LOCAL_IN else [1, FW_SECTION_COUNT]
     # ===================================
     # LOCKING ACCESS TO FIREWALL RULES
     # prevents the manager thread from updating firewall rules during packet inspection
@@ -194,7 +198,7 @@ cdef int cfirewall_recv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # --------------------
     # FIREWALL RULE CHECK
     # --------------------
-    inspection_results = cfirewall_inspect(&hw, ip_header, proto_header, direction)
+    inspection_results = cfirewall_inspect(&hw, ip_header, proto_header, direction, fw_sections)
 
     pthread_mutex_unlock(&FWrulelock)
     # UNLOCKING ACCESS TO FIREWALL RULES
@@ -231,7 +235,8 @@ cdef int cfirewall_recv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # < 0 vals are errors, but return is being ignored by CFirewall._run.
     return Py_OK
 
-cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header, uint8_t direction) nogil:
+cdef inline InspectionResults cfirewall_inspect(
+        HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header, uint8_t direction, srange fw_sections) nogil:
 
     cdef:
         FWrule rule
@@ -256,7 +261,7 @@ cdef inline InspectionResults cfirewall_inspect(HWinfo *hw, IPhdr *ip_header, Pr
         # security profile loop
         size_t i, idx
 
-    for section_num in range(FW_SECTION_COUNT):
+    for section_num in range(fw_sections.start, fw_sections.end):
 
         current_rule_count = CUR_RULE_COUNTS[section_num]
         if (current_rule_count < 1): # in case there becomes a purpose for < 0 values
@@ -484,6 +489,7 @@ cdef inline void pkt_print(HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header)
     '''nested struct print of the passed in references using Python pretty printer.
 
     the GIL will be acquired before executing the print and released on return.
+    the byte order will be big endian/ network so the integer outputs will be backwards on Linux.
     '''
     ppt(hw[0])
     ppt(ip_header[0])
@@ -493,6 +499,7 @@ cdef inline void rule_print(FWrule *rule) with gil:
     '''nested struct print of the passed in reference using Python pretty printer.
     
     the GIL will be acquired before executing the print and released on return.
+    the byte order will be big endian/ network so the integer outputs will be backwards on Linux.
     '''
     ppt(rule[0])
 
@@ -676,8 +683,16 @@ cdef class CFirewall:
         if (verbose):
             print('<verbose console logging enabled>')
 
+    def api_set(s, unicode sock_path):
+
+        s.sock_path = sock_path.encode('utf-8')
+        s.api_fd = api_open(s.sock_path)
+
     def api_run(s):
-        pass
+        print('<releasing GIL>')
+        # release gil and never look back.
+        with nogil:
+            process_api(s.h)
 
     def nf_run(s):
         '''calls internal C run method to engage nfqueue processes.
@@ -699,6 +714,8 @@ cdef class CFirewall:
         nfq_set_mode(s.qh, NFQNL_COPY_PACKET, MAX_COPY_SIZE)
         nfq_set_queue_maxlen(s.qh, DEFAULT_MAX_QUEUELEN)
         nfnl_rcvbufsiz(nfq_nfnlh(s.h), SOCK_RCV_SIZE)
+
+        return Py_OK
 
     def nf_break(s):
         if (s.qh != NULL):
@@ -767,36 +784,5 @@ cdef class CFirewall:
 
         pthread_mutex_unlock(&FWrulelock)
         printf(<char*>'[update/ruleset] released lock\n')
-
-        return Py_OK
-
-    cdef int remove_attacker(s, uint32_t host_ip):
-
-        cdef:
-            size_t    i, idx
-            uint32_t  blocked_ip
-
-        pthread_mutex_lock(&FWblocklistlock)
-
-        for idx in range(FW_MAX_ATTACKERS):
-            
-            blocked_ip = ATTACKER_BLOCKLIST[idx]
-
-            # reached end without host_ip match
-            if (blocked_ip == END_OF_ARRAY):
-                return Py_ERR
-
-            # host_ip match, current idx will carry over to shift
-            elif (blocked_ip == host_ip):
-                break
-
-        for i in range(idx, FW_MAX_ATTACKERS):
-
-            if (ATTACKER_BLOCKLIST[i] == END_OF_ARRAY):
-                break
-
-            ATTACKER_BLOCKLIST[i] = ATTACKER_BLOCKLIST[i + 1]
-
-        pthread_mutex_unlock(&FWblocklistlock)
 
         return Py_OK

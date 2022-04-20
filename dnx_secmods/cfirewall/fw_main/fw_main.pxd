@@ -18,7 +18,7 @@ cdef extern from "time.h" nogil:
         time_t  tv_sec
         time_t  tv_usec
 
-cdef extern from "sys/socket.h":
+cdef extern from "<sys/socket.h>":
     ssize_t     recv(int __fd, void *__buf, size_t __n, int __flags) nogil
     int         MSG_DONTWAIT
 
@@ -37,18 +37,48 @@ cdef extern from "pthread.h" nogil:
     int pthread_mutex_unlock(pthread_mutex_t*)
     int pthread_mutex_destroy(pthread_mutex_t*)
 
+cdef extern from "linux/netfilter_ipv4.h":
+    # IP Hooks
+    # After promisc drops, checksum checks.
+    enum: NF_IP_PRE_ROUTING #	0
+    # If the packet is destined for this box.
+    enum: NF_IP_LOCAL_IN #		1
+    # If the packet is destined for another interface.
+    enum: NF_IP_FORWARD #		2
+    # Packets coming from a local process.
+    enum: NF_IP_LOCAL_OUT #		3
+    # Packets about to hit the wire.
+    enum: NF_IP_POST_ROUTING #	4
+    enum: NF_IP_NUMHOOKS #		5
+
+    enum nf_ip_hook_priorities:
+        NF_IP_PRI_FIRST
+        NF_IP_PRI_RAW_BEFORE_DEFRAG = -450
+        NF_IP_PRI_CONNTRACK_DEFRAG = -400
+        NF_IP_PRI_RAW = -300
+        NF_IP_PRI_SELINUX_FIRST = -225
+        NF_IP_PRI_CONNTRACK = -200
+        NF_IP_PRI_MANGLE = -150
+        NF_IP_PRI_NAT_DST = -100
+        NF_IP_PRI_FILTER = 0
+        NF_IP_PRI_SECURITY = 50
+        NF_IP_PRI_NAT_SRC = 100
+        NF_IP_PRI_SELINUX_LAST = 225
+        NF_IP_PRI_CONNTRACK_HELPER = 300
+        NF_IP_PRI_CONNTRACK_CONFIRM
+        NF_IP_PRI_LAST
+
+
 cdef extern from "netinet/in.h":
     uint32_t ntohl (uint32_t __netlong) nogil
     uint16_t ntohs (uint16_t __netshort) nogil
     uint32_t htonl (uint32_t __hostlong) nogil
     uint16_t htons (uint16_t __hostshort) nogil
 
-# from netinet/in.h:
-cdef enum:
-    IPPROTO_IP   = 0
-    IPPROTO_ICMP = 1
-    IPPROTO_TCP  = 6
-    IPPROTO_UDP  = 17
+    enum: IPPROTO_IP
+    enum: IPPROTO_ICMP
+    enum: IPPROTO_TCP
+    enum: IPPROTO_UDP
 
 cdef extern from "libnfnetlink/linux_nfnetlink.h":
     struct nfgenmsg:
@@ -113,6 +143,10 @@ cdef extern from "libnetfilter_queue/libnetfilter_queue.h":
     int nfq_set_verdict(nfq_q_handle *qh, uint32_t id, uint32_t verdict, uint32_t data_len, uint8_t *buf) nogil
     int nfq_set_verdict2(
             nfq_q_handle *qh, uint32_t id, uint32_t verdict, uint32_t mark, uint32_t datalen, uint8_t *buf) nogil
+
+cdef struct srange:
+  uint_fast8_t  start
+  uint_fast8_t  end
 
 # mirrored defines from linux/netfilter.h
 cdef enum:
@@ -252,6 +286,9 @@ cdef class CFirewall:
     cdef:
         nfq_handle   *h
         nfq_q_handle *qh
+
+        char*   sock_path
+        int     api_fd
 
     cpdef int prepare_geolocation(s, list geolocation_trie, uint32_t msb, uint32_t lsb) with gil
     cpdef int update_zones(s, PyArray zone_map) with gil

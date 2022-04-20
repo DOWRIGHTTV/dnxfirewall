@@ -666,7 +666,7 @@ def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name) -> str:
             'selected': selected,
             'standard_error': error
         })
-        print(1111111111, page_settings)
+
     try:
         page_settings[data_key] = dnx_page.load_page(page_settings['selected'])
     except OSError as ose:
@@ -838,6 +838,18 @@ def dark_mode():
 # ====================================
 # FLASK API - JINJA FILTER FUNCTIONS
 # ====================================
+def create_switch(label: str, name: str, *, tab: int = 1, checked: int = 0, enabled: int = 1) -> str:
+    if (not enabled): status = 'disabled'
+    elif (checked): status = 'checked'
+    else: status = ''
+
+    return ''.join([
+        f'<form method="POST"><input type="hidden" name="tab" value="{tab}">',
+        f'<div class="input-field col s6 center">{label}<div class="switch"><label>Off',
+        f'<input type="checkbox" class="iswitch" name="{name}" {status}>',
+        '<span class="lever"></span>On</label></div></div></form>'
+    ])
+
 def merge_items(a1, a2):
     '''accepts 2 arguments of item or list and merges them into one list.
 
@@ -867,7 +879,7 @@ def _debug(obj, /):
     print(obj)
 
 
+app.add_template_global(create_switch, name='create_switch')
 app.add_template_global(merge_items, name='merge_items')
-# app.add_template_global(format_fw_obj, name='format_fw_obj')
 app.add_template_global(is_list, name='is_list')
 app.add_template_global(_debug, name='debug')

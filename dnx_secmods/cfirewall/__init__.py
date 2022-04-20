@@ -43,8 +43,9 @@ if INITIALIZE_MODULE(LOG_NAME):
     Log.run(name=LOG_NAME)
 
 def run():
+    from dnx_gentools.def_constants import HOME_DIR
 
-    dnxfirewall: CFirewall = CFirewall()
+    dnxfirewall = CFirewall()
     dnxfirewall.set_options(args.bypass_set, args.verbose_set)
 
     error = dnxfirewall.nf_set(Queue.CFIREWALL)
@@ -57,7 +58,7 @@ def run():
     # these will run in Python threads with a potential calling into Cython.
     # these functions should be explicitly identified since they will require the gil to be acquired on the Cython side
     # or else the Python interpreter will crash.
-    fw_rule_monitor: FirewallAutomate = FirewallAutomate(Log, cfirewall=dnxfirewall)
+    fw_rule_monitor = FirewallAutomate(Log, cfirewall=dnxfirewall)
     try:
         fw_rule_monitor.run()
     except Exception as E:
@@ -66,11 +67,11 @@ def run():
     if (args.verbose_set):
         fw_rule_monitor.print_active_rules()
 
-    # this is running in pure C. the GIL is released before running the low level system operations and will never
+    # this is running in pure C. the GIL is released before running the low-level system operations and will never
     # retake the gil.
     # NOTE: setting bypass will tell the process to invoke rule action (DROP or ACCEPT) directly without forwarding to
     #  other modules.
-    dnx: Thread = Thread(target=dnxfirewall.nf_run)
+    dnx = Thread(target=dnxfirewall.nf_run)
     dnx.start()
     try:
         dnx.join()

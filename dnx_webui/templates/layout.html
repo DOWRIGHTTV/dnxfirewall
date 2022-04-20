@@ -110,6 +110,17 @@
         {% include 'includes/_idle_timeout.html' %}
     {% endif -%}
 
+    <script>
+        let switches = document.querySelectorAll(".iswitch");
+
+        switches.forEach(s => s.setAttribute("onchange", "iSwitchSet(this)"))
+        function iSwitchSet(iSwitch) {
+            iSwitch.setAttribute('value', !!iSwitch.checked ? 1 : 0);
+            iSwitch.checked = true;
+            iSwitch.form.submit();
+        }
+    </script>
+
     {# handles a single table as quick enable. additional need to be called within individual page template. #}
     {% if auto_colorize %}
         <script>colorizeTable()</script>

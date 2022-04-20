@@ -78,10 +78,19 @@ def update_page(form: Form) -> tuple[bool, WebError]:
         if (form.get('region') not in valid_regions):
             return False, {'error': 2, 'message': INVALID_FORM}
 
-    elif ('time_res_update' in form):
-
+    elif ('restriction_enable' in form):
+        print(form)
         tr_settings = config(**{
-            'enabled': convert_bint('restriction_enable' in form),
+            'enabled': get_convert_int(form, 'restriction_enable')
+        })
+        print(tr_settings)
+        if (DATA.INVALID in tr_settings.values()):
+            return False, {'error': 3, 'message': INVALID_FORM}
+
+        configure_time_restriction(tr_settings, 'enabled')
+
+    elif ('time_res_update' in form):
+        tr_settings = config(**{
             'hour': get_convert_int(form, 'hour'),
             'minutes': get_convert_int(form, 'minutes'),
             'suffix': form.get('time_suffix', DATA.MISSING),
@@ -89,20 +98,20 @@ def update_page(form: Form) -> tuple[bool, WebError]:
             'min_len': get_convert_int(form, 'length_minutes')
         })
 
-        if (x in [DATA.MISSING, DATA.INVALID] for x in tr_settings.values()):
-            return False, {'error': 3, 'message': INVALID_FORM}
+        if any([x in [DATA.MISSING, DATA.INVALID] for x in tr_settings.values()]):
+            return False, {'error': 4, 'message': INVALID_FORM}
 
         error = validate_time_restriction(tr_settings)
         if (error):
-            return False, {'error': 4, 'message': error.message}
+            return False, {'error': 5, 'message': error.message}
 
-        configure_time_restriction(tr_settings)
+        configure_time_restriction(tr_settings, 'all')
 
     elif ('continent' in form):
         return False, {'error': 69, 'message': 'Bulk actions are still in development.'}
 
     else:
-        return False, {'error': 5, 'message': INVALID_FORM}
+        return False, {'error': 6, 'message': INVALID_FORM}
 
 # ----------------
 # AJAX PROCESSING
@@ -191,7 +200,7 @@ def validate_time_restriction(tr: config, /) -> Optional[ValidationError]:
 # ==============
 def configure_reputation(category: config, *, ruleset: str = 'reputation') -> None:
     with ConfigurationManager('ip_proxy') as dnx:
-        ip_proxy_settings = dnx.load_configuration()
+        ip_proxy_settings: ConfigChain = dnx.load_configuration()
 
         ip_proxy_settings[f'{ruleset}->{category.name}'] = category.direction
 
@@ -199,7 +208,7 @@ def configure_reputation(category: config, *, ruleset: str = 'reputation') -> No
 
 def configure_geolocation(category: config, *, rtype: str = 'country') -> None:
     with ConfigurationManager('ip_proxy') as dnx:
-        ip_proxy_settings = dnx.load_configuration()
+        ip_proxy_settings: ConfigChain = dnx.load_configuration()
 
         # setting the individual country to user set value
         if (rtype == 'country'):
@@ -212,21 +221,24 @@ def configure_geolocation(category: config, *, rtype: str = 'country') -> None:
 
         dnx.write_configuration(ip_proxy_settings.expanded_user_data)
 
-def configure_time_restriction(tr: config, /) -> None:
+def configure_time_restriction(tr: config, /, field) -> None:
     with ConfigurationManager('ip_proxy') as dnx:
-        ip_proxy_settings = dnx.load_configuration()
+        ip_proxy_settings: ConfigChain = dnx.load_configuration()
 
-        tr.hour += 12 if tr.suffix == 'PM' else tr.hour
+        if (field == 'enabled'):
+            ip_proxy_settings['time_restriction->enabled'] = tr.enabled
 
-        start_time = f'{tr.hour}:{tr.minutes}'
+        else:
+            tr.hour += 12 if tr.suffix == 'PM' else tr.hour
 
-        min_fraction = str(tr.min_len/60).strip('0.')
-        res_length = f'{tr.hour_len}.{min_fraction}'
+            start_time = f'{tr.hour}:{tr.minutes}'
 
-        res_length = int(float(res_length) * 3600)
+            min_fraction = str(tr.min_len/60).strip('0.')
+            res_length = f'{tr.hour_len}.{min_fraction}'
 
-        ip_proxy_settings['time_restriction->start'] = start_time
-        ip_proxy_settings['time_restriction->length'] = res_length
-        ip_proxy_settings['time_restriction->enabled'] = tr.enabled
+            res_length = int(float(res_length) * 3600)
+
+            ip_proxy_settings['time_restriction->start'] = start_time
+            ip_proxy_settings['time_restriction->length'] = res_length
 
         dnx.write_configuration(ip_proxy_settings.expanded_user_data)

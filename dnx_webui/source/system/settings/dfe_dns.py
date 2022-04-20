@@ -81,20 +81,20 @@ def update_page(form: Form) -> str:
 
     elif ('dns_over_tls' in form):
         protocol_settings = config(**{
-            'enabled': get_convert_bint(form, 'enabled')
+            'enabled': get_convert_bint(form, 'dns_over_tls')
         })
 
-        if (protocol_settings.enabled is DATA.INVALID):
+        if (DATA.INVALID in protocol_settings.values()):
             return INVALID_FORM
 
         configure_protocol_options(protocol_settings, field='dot')
 
     elif ('udp_fallback' in form):
         protocol_settings = config(**{
-            'fallback': get_convert_bint(form, 'fallback')
+            'fallback': get_convert_bint(form, 'udp_fallback')
         })
 
-        if (protocol_settings.fallback is DATA.INVALID):
+        if (DATA.INVALID in protocol_settings.values()):
             return INVALID_FORM
 
         error = validate_fallback_settings(protocol_settings)
@@ -103,6 +103,7 @@ def update_page(form: Form) -> str:
 
         configure_protocol_options(protocol_settings, field='fallback')
 
+    # TODO: make these separate forms
     elif ('dns_cache_clear' in form):
         clear_dns_cache = config(**{
             'top_domains': get_convert_bint(form, 'top_domains'),
@@ -110,7 +111,7 @@ def update_page(form: Form) -> str:
         })
 
         # only one is required, so it will only be invalid if both are missing.
-        if all([x is DATA.MISSING for x in clear_dns_cache.values()]):
+        if (DATA.INVALID in clear_dns_cache.values()):
             return INVALID_FORM
 
         set_dns_cache_clear_flag(clear_dns_cache)

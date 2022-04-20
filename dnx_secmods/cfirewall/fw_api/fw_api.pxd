@@ -15,17 +15,17 @@ cdef extern from "pwd.h":
     uint32_t    uid_t
     uint32_t    gid_t
 
-cdef extern from "sys/uio.h":
+cdef extern from "<sys/uio.h>":
    struct iovec:
        void    *iov_base
        size_t   iov_len
 
-cdef extern from "sys/un.h":
+cdef extern from "<sys/un.h>":
     struct sockaddr_un:
         sa_family_t  sun_family  # Address family
         char         sun_path[]  # Socket pathname
 
-cdef extern from "sys/socket.h":
+cdef extern from "<sys/socket.h>":
     uint32_t    socklen_t
     uint32_t    sa_family_t
 

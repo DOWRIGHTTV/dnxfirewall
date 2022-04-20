@@ -53,7 +53,17 @@ def load_page(_: Form) -> dict:
     }
 
 def update_page(form: Form) -> str:
-    if ('ddos_limits' in form):
+
+    if ('ddos_enabled' in form):
+        ddos = config(**{
+            'enabled': get_convert_bint(form, 'ddos_enabled')
+        })
+        if (DATA.INVALID in ddos.values()):
+            return INVALID_FORM
+
+        configure_ddos(ddos)
+
+    elif ('ddos_limits' in form):
         ddos_limits = config(**{
             'tcp': get_convert_int(form, 'tcp_limit'),
             'udp': get_convert_int(form, 'udp_limit'),
@@ -68,18 +78,9 @@ def update_page(form: Form) -> str:
 
         configure_ddos_limits(ddos_limits)
 
-    elif ('ddos' in form):
-        ddos = config(**{
-            'enabled': get_convert_bint(form, 'enabled')
-        })
-        if (DATA.INVALID in ddos.values()):
-            return INVALID_FORM
-
-        configure_ddos(ddos)
-
     elif ('ps_enabled' in form):
         settings = config(**{
-            'enabled': get_convert_bint(form, 'enabled')
+            'enabled': get_convert_bint(form, 'ps_enabled')
         })
 
         if (DATA.INVALID in settings.values()):
@@ -89,7 +90,7 @@ def update_page(form: Form) -> str:
 
     elif ('ps_reject' in form):
         settings = config(**{
-            'reject': get_convert_bint(form, 'reject')
+            'reject': get_convert_bint(form, 'ps_reject')
         })
 
         if (DATA.INVALID in settings.values()):
@@ -101,9 +102,8 @@ def update_page(form: Form) -> str:
 
         configure_portscan(settings, field='reject')
 
-    elif ('general_settings' in form):
+    elif ('passive_block_length' in form):
         settings = config(**{
-            'ids_mode': get_convert_bint(form, 'ids_mode'),
             'pb_length': get_convert_int(form, 'passive_block_length')
         })
 
@@ -114,7 +114,17 @@ def update_page(form: Form) -> str:
         if (error):
             return error.message
 
-        configure_general_settings(settings)
+        configure_general_settings(settings, 'pb_length')
+
+    elif ('ids_mode' in form):
+        settings = config(**{
+            'ids_mode': get_convert_bint(form, 'ids_mode')
+        })
+
+        if (DATA.INVALID in settings.values()):
+            return INVALID_FORM
+
+        configure_general_settings(settings, 'ids_mode')
 
     elif ('ips_wl_add' in form):
         whitelist = config(**{
@@ -147,10 +157,15 @@ def update_page(form: Form) -> str:
         else:
             configure_ip_whitelist(whitelist, action=CFG.DEL)
 
-    elif ('ips_wl_dns' in form):
-        action = CFG.ADD if 'dns_enabled' in form else CFG.DEL
+    elif ('dns_svr_wl' in form):
+        settings = config(**{
+            'action': get_convert_bint(form, 'dns_svr_wl')
+        })
 
-        configure_dns_whitelist(action)
+        if (DATA.INVALID in settings.values()):
+            return INVALID_FORM
+
+        configure_dns_whitelist(settings)
 
     elif ('ips_pbl_remove' in form):
         host_info = form.get('ips_pbl_remove', DATA.INVALID)
@@ -225,12 +240,15 @@ def configure_portscan(portscan: config, *, field: str) -> None:
 
         dnx.write_configuration(ips_settings.expanded_user_data)
 
-def configure_general_settings(settings: config, /) -> None:
+def configure_general_settings(settings: config, /, field) -> None:
     with ConfigurationManager('ips_ids') as dnx:
         ips_settings: ConfigChain = dnx.load_configuration()
 
-        ips_settings['passive_block_ttl'] = settings.pb_length
-        ips_settings['ids_mode'] = settings.ids_mode
+        if (field == 'pb_length'):
+            ips_settings['passive_block_ttl'] = settings.pb_length
+
+        elif (field == 'ids_mode'):
+            ips_settings['ids_mode'] = settings.ids_mode
 
         dnx.write_configuration(ips_settings.expanded_user_data)
 
@@ -239,17 +257,17 @@ def configure_ip_whitelist(whitelist: config, *, action: CFG) -> None:
         ips_settings: ConfigChain = dnx.load_configuration()
 
         if (action is CFG.ADD):
-            ips_settings[f'ip_whitelist->{whitelist.ip}'] = whitelist.name
+            ips_settings[f'whitelist->ip_whitelist->{whitelist.ip}'] = whitelist.name
 
         elif (action is CFG.DEL):
-            del ips_settings[f'ip_whitelist->{whitelist.ip}']
+            del ips_settings[f'whitelist->ip_whitelist->{whitelist.ip}']
 
         dnx.write_configuration(ips_settings.expanded_user_data)
 
-def configure_dns_whitelist(action: CFG) -> None:
+def configure_dns_whitelist(settings: config, /) -> None:
     with ConfigurationManager('ips_ids') as dnx:
         ips_settings: ConfigChain = dnx.load_configuration()
 
-        ips_settings['dns_servers'] = action
+        ips_settings['whitelist->dns_servers'] = settings.action
 
         dnx.write_configuration(ips_settings.expanded_user_data)
