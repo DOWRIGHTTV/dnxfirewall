@@ -1,43 +1,44 @@
-table ip dnxfirewall_filter {
+table ip dnxfirewall {
 
-        chain dnxfirewall_ingress {
+        chain filter_ingress {
                 type filter hook ingress priority 0; policy accept;
 
                 # identified DDOS attackers will be inserted here until cfirewall api is implemented.
                 # once cfirewall is implemented a queue will be put here instead.
         }
 
-        chain dnxfirewall_preroute {
+        chain nat_preroute {
+                type nat hook prerouting priority -100; policy accept;
+        }
+
+        chain filter_preroute {
                 type filter hook prerouting priority -150; policy drop;
 
                 # until we can get conntrack implemented in cfirewall
                 # once we do, we will need to change priority to be <= -200.
                 ct state related,established counter accept
 
-                tcp queue 69
-                udp queue 69
-                icmp queue 69
+                ip protocol tcp queue num 69
+                ip protocol udp queue num 69
+                ip protocol icmp queue num 69
         }
 
         # does this need to be here for traffic to be accepted to input or will preroute accepts handle it?
-        chain dnxfirewall_input {
-                type filter hook input priority 1; policy accept;
+        chain filter_input {
+                type filter hook input priority 0; policy accept;
         }
 
-        chain dnxfirewall_output {
-                type filter hook output priority 1; policy accept;
-        }
-}
-
-table nat dnxfirewall_nat {
-
-        chain dnxfirewall_preroute {
-                type nat hook prerouting priority -100; policy accept;
+        # does this need to be here for traffic to be accepted to input or will preroute accepts handle it?
+        chain filter_forward {
+                type filter hook forward priority 0; policy accept;
         }
 
-        chain dnxfirewall_postroute {
+        chain nat_postroute {
                 type nat hook postrouting priority 100; policy accept;
 
                 oifname "ens160" counter masquerade
         }
-}
+
+        chain filter_output {
+                type filter hook output priority 0; policy accept;
+        }
