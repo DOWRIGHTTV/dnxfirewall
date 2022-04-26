@@ -1,12 +1,13 @@
 #!/usr/bin/env Cython
 
-from libc.stdlib cimport calloc
+from libc.stdlib cimport calloc, malloc, free
 from libc.stdio cimport printf
 
 from libc.stdint cimport uint8_t, uint16_t, uint32_t
 from libc.stdint cimport uint_fast8_t, uint_fast16_t, uint_fast32_t
 
 from dnx_iptools.hash_trie.hash_trie cimport HashTrie_Range
+from dnx_iptools.cprotocol_tools.cprotocol_tools cimport nullset
 
 from fw_api.fw_api cimport api_open, process_api
 
@@ -26,6 +27,8 @@ DEF FW_AFTER_MAX_RULE_COUNT = 100
 DEF FW_MAX_ATTACKERS = 250
 DEF FW_MAX_ZONE_COUNT = 16
 DEF FW_RULE_SIZE = 15
+
+DEF NFQA_RANGE = NFQA_MAX + 1
 
 DEF ANY_ZONE = 99
 DEF NO_SECTION = 99
@@ -128,10 +131,12 @@ cdef uint32_t BLOCKLIST_CUR_SIZE = 0 # if we decide to track size for appends
 # ==================================
 # PRIMARY INSPECTION LOGIC
 # ==================================
-cdef int cfirewall_recv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
+cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
 
     # definitions or default assignments
     cdef:
+        cfdata *cfd = <cfdata*>data
+
         uint8_t *pktdata
         IPhdr *ip_header
 
@@ -140,37 +145,52 @@ cdef int cfirewall_recv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
         Protohdr proto_def = [0, 0]
         Protohdr *proto_header = &proto_def
 
-        bint system_rule = 0
+        uint8_t     direction
+        uint16_t    pktdata_len
+        size_t      iphdr_len
 
-        uint8_t direction
-        size_t pktdata_len, iphdr_len
+        InspectionResults inspection = [0, NF_ACCEPT, 69]
 
-        InspectionResults inspection_results
-        uint32_t verdict
+        # NEW #
+        nlattr **netlink_attrs = <nlattr**>malloc((NFQA_RANGE) * sizeof(nlattr*))
 
-    # definition w/ assignment via function calls
-    cdef:
-        nfqnl_msg_packet_hdr *hdr = nfq_get_msg_packet_hdr(nfa)
-        uint32_t pktid = ntohl(hdr.packet_id)
+        nfqnl_msg_packet_hdr *nlhdr
 
-        # interface index which corresponds to zone map index
-        uint8_t in_intf  = nfq_get_indev(nfa)
-        uint8_t out_intf = nfq_get_outdev(nfa)
+        uint32_t mark, iif, oif
 
-        # grabbing source mac address and casting to a char array
-        nfqnl_msg_packet_hw *_hw = nfq_get_packet_hw(nfa)
-        char *m_addr = <char*>_hw.hw_addr
+        HWinfo hw
+        char* m_addr[8]
+        ##
 
-        HWinfo hw = [
-            INTF_ZONE_MAP[in_intf],
-            INTF_ZONE_MAP[out_intf],
-            m_addr[:6],
-            time(NULL)
-        ]
+    # NEW #
+    nullset(netlink_attrs, NFQA_RANGE)
 
-    # passing ptr of uninitialized data ptr to func. L3+ packet data will be assigned via this pointer
-    pktdata_len = nfq_get_payload(nfa, &pktdata)
+    nfq_nlmsg_parse(nlh, netlink_attrs)
+    # =============
+    # CONNTRACK
+    # this should be checked as soon as feasibly possible for performance.
+    # this will be used to allow for stateless inspection policies later.
+    ct_info = <uint32_t*>mnl_attr_get_u32(netlink_attrs[NFQA_CT_INFO])
+    if (htonl(ct_info) & IP_CT_RELATED|IP_CT_ESTABLISHED):
+        dnx_send_verdict(cfd.queue, ntohl(nlhdr.packet_id), &inspection)
+    # =============
 
+    nlhdr = <nfqnl_msg_packet_hdr*>mnl_attr_get_payload(netlink_attrs[NFQA_PACKET_HDR])
+    nft_hook = ntohl(nlhdr.hook)
+
+    mark = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_MARK])) if netlink_attrs[NFQA_MARK] else 0
+    iif  = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_INDEV])) if netlink_attrs[NFQA_IFINDEX_INDEV] else 0
+    oif  = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_OUTDEV])) if netlink_attrs[NFQA_IFINDEX_OUTDEV] else 0
+
+    if (netlink_attrs[NFQA_HWADDR]):
+        _hw = <nfqnl_msg_packet_hw*>mnl_attr_get_payload(netlink_attrs[NFQA_HWADDR])
+
+        m_addr = <char*>_hw.hw_addr
+
+    hw = [INTF_ZONE_MAP[iif], INTF_ZONE_MAP[oif], m_addr[:6], time(NULL)]
+
+    pktdata_len = mnl_attr_get_payload_len(netlink_attrs[NFQA_PAYLOAD])
+    pktdata = <uint8_t*>mnl_attr_get_payload(netlink_attrs[NFQA_PAYLOAD])
     # --------------------
     # IP HEADER
     # --------------------
@@ -190,7 +210,7 @@ cdef int cfirewall_recv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     direction = OUTBOUND if hw.in_zone != WAN_IN else INBOUND
 
     # SETTING RULE TABLES BASED ON HOOK
-    cdef srange fw_sections = [0, 1] if hdr.hook == NF_IP_LOCAL_IN else [1, FW_SECTION_COUNT]
+    cdef srange fw_sections = [0, 1] if nft_hook == NF_IP_LOCAL_IN else [1, FW_SECTION_COUNT]
     # ===================================
     # LOCKING ACCESS TO FIREWALL RULES
     # prevents the manager thread from updating firewall rules during packet inspection
@@ -198,7 +218,7 @@ cdef int cfirewall_recv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # --------------------
     # FIREWALL RULE CHECK
     # --------------------
-    inspection_results = cfirewall_inspect(&hw, ip_header, proto_header, direction, fw_sections)
+    inspection = cfirewall_inspect(&hw, ip_header, proto_header, direction, fw_sections)
 
     pthread_mutex_unlock(&FWrulelock)
     # UNLOCKING ACCESS TO FIREWALL RULES
@@ -208,27 +228,23 @@ cdef int cfirewall_recv(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa) nogil:
     # NFQUEUE VERDICT
     # --------------------
     # SYSTEM RULES will have cfirewall invoke action directly
-    if (inspection_results.fw_section == SYSTEM_RULES):
+    if (nft_hook != NF_IP_LOCAL_IN):
 
-        nfq_set_verdict(qh, pktid, inspection_results.action, pktdata_len, pktdata)
-
-        system_rule = 1  # used by VERBOSE logging.
-
-    else:
         # if PROXY_BYPASS, cfirewall will invoke the rule action without forwarding to another queue.
-        # if not PROXY_BYPASS, forward to ip proxy regardless of action for geolocation log or local DNS record
-        verdict = inspection_results.action if PROXY_BYPASS else IP_PROXY << TWO_BYTES | NF_QUEUE
+        # if not PROXY_BYPASS, forward to ip proxy regardless of action for geolocation log or IPS
+        if (not PROXY_BYPASS):
+            inspection.action = IP_PROXY << TWO_BYTES | NF_QUEUE
 
-        nfq_set_verdict2(qh, pktid, verdict, inspection_results.mark, pktdata_len, pktdata)
+    dnx_send_verdict(cfd.queue, ntohl(nlhdr.packet_id), &inspection)
 
     # verdict is being used to eval whether the packet matched a system rule.
     # a 0 verdict infers this also, but for ease of reading, ill use both.
     if (VERBOSE):
         pkt_print(&hw, ip_header, proto_header)
 
-        printf('[C/packet] system->%u, action->%u, ', system_rule, inspection_results.action)
+        printf('[C/packet] system->%u, action->%u, ', nft_hook, inspection.action)
         printf('ipp->%u, dns->%u, ips->%u\n',
-               inspection_results.mark >> 12 & 15, inspection_results.mark >> 16 & 15, inspection_results.mark >> 20 & 15)
+               inspection.mark >> 12 & 15, inspection.mark >> 16 & 15, inspection.mark >> 20 & 15)
         printf(<char*>'=====================================================================\n')
 
     # return heirarchy -> libnfnetlink.c >> libnetfiler_queue >> CFirewall._run.
@@ -332,6 +348,22 @@ cdef inline InspectionResults cfirewall_inspect(
     results.mark = tracked_geo << FOUR_BITS | direction << TWO_BITS | DROP
 
     return results
+
+cdef void dnx_send_verdict(uint32_t queue_num, uint32_t pktid, InspectionResults *inspection):
+
+    cdef:
+        uint8_t buf[MNL_SOCKET_BUFFER_SIZE]
+        nlmsghdr *nlh
+        nlattr *nest
+
+    nlh = nfq_nlmsg_put(buf, NFQNL_MSG_VERDICT, queue_num)
+
+    nfq_nlmsg_verdict_put(nlh, pktid, inspection.action)
+    nfq_nlmsg_verdict_put_mark(nlh, inspection.mark)
+
+    ret = mnl_socket_sendto(nl, nlh, nlh.nlmsg_len)
+
+    return ERR if ret < 0 else OK
 
 # ==================================
 # Firewall Matching Functions
@@ -526,27 +558,24 @@ cdef inline void obj_print(int name, void *obj) nogil:
 # ==================================
 DEF NFQ_BUF_SIZE = 2048
 
-cdef void process_traffic(nfq_handle *h) nogil:
+cdef void process_traffic(cfdata *cfd) nogil:
 
     cdef:
-        ssize_t  dlen
+        char        packet_buf[NFQ_BUF_SIZE]
+        ssize_t     dlen
 
-        char     packet_buf[NFQ_BUF_SIZE]
-        int      fd = nfq_fd(h)
+        uint32_t    portid = mnl_socket_get_portid(nl)
 
     printf(<char*>'<ready to process traffic>\n')
 
     while True:
-        dlen = recv(fd, <void*>packet_buf, NFQ_BUF_SIZE, 0)
+        dlen = mnl_socket_recvfrom(nl, <void*>packet_buf, NFQ_BUF_SIZE)
+        if (dlen == -1):
+            return ERR
 
-        if (dlen >= 0):
-            nfq_handle_packet(h, <char*>packet_buf, dlen)
-
-        else:
-            # TODO: i believe we can get rid of this and set up a lower level ignore of this.
-            #  this might require the libmnl implementation version though.
-            if (errno != ENOBUFS):
-                break
+        ret = mnl_cb_run(<void*>packet_buf, dlen, 0, portid, cfirewall_recv, cfd)
+        if (ret < 0):
+            return ERR
 
 cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
 
@@ -668,6 +697,10 @@ cdef uint32_t DEFAULT_MAX_QUEUELEN = 8192
 # formula: DEF_MAX_QUEUELEN * (MaxCopySize+SockOverhead) / 2
 cdef uint32_t SOCK_RCV_SIZE = 1024 * 4796 // 2
 
+# =====================================
+# NETLINK SOCKET - cfirewall <> kernel
+cdef mnl_socket *nl
+# =====================================
 
 cdef class CFirewall:
 
@@ -702,26 +735,65 @@ cdef class CFirewall:
         print('<releasing GIL>')
         # release gil and never look back.
         with nogil:
-            process_traffic(s.h)
+            process_traffic(&s.cfd)
 
     def nf_set(s, uint16_t queue_num):
-        s.h = nfq_open()
 
-        s.qh = nfq_create_queue(s.h, queue_num, <nfq_callback*>cfirewall_recv, <void*>s)
-        if (s.qh == NULL):
+        global nl
+
+        cdef:
+            char *mnl_buf
+            nlmsghdr *nlh
+
+            int ret = 1
+            # largest possible packet payload, plus netlink data overhead: */
+            size_t sizeof_buf = <size_t>(65535 + (MNL_SOCKET_BUFFER_SIZE / 2))
+
+        s.cfd.queue = queue_num
+
+        mnl_buf = <char*>malloc(sizeof_buf)
+
+        nl = mnl_socket_open(NETLINK_NETFILTER)
+        if (nl == NULL):
             return Py_ERR
 
-        nfq_set_mode(s.qh, NFQNL_COPY_PACKET, MAX_COPY_SIZE)
-        nfq_set_queue_maxlen(s.qh, DEFAULT_MAX_QUEUELEN)
-        nfnl_rcvbufsiz(nfq_nfnlh(s.h), SOCK_RCV_SIZE)
+        if (mnl_socket_bind(nl, 0, MNL_SOCKET_AUTOPID) < 0):
+            return Py_ERR
+
+        # ---------------
+        # BINDING SOCKET
+        nlh = nfq_nlmsg_put(mnl_buf, NFQNL_MSG_CONFIG, queue_num)
+        nfq_nlmsg_cfg_put_cmd(nlh, AF_INET, NFQNL_CFG_CMD_BIND)
+
+        if (mnl_socket_sendto(nl, nlh, nlh.nlmsg_len) < 0):
+            return Py_ERR
+
+        # ---------------
+        # ATTR FLAGS
+        nlh = nfq_nlmsg_put(mnl_buf, NFQNL_MSG_CONFIG, queue_num)
+        nfq_nlmsg_cfg_put_params(nlh, NFQNL_COPY_PACKET, 65535)
+
+        # DISABLE PACKET NORMALIZATION (REASSEMBLE FRAGMENTS)
+        mnl_attr_put_u32(nlh, NFQA_CFG_FLAGS, htonl(NFQA_CFG_F_GSO))
+        mnl_attr_put_u32(nlh, NFQA_CFG_MASK, htonl(NFQA_CFG_F_GSO))
+
+        # CONNECTION STATE (NEW, ESTABLISHED, ETC)
+        mnl_attr_put_u32(nlh, NFQA_CFG_FLAGS, htonl(NFQA_CFG_F_CONNTRACK))
+        mnl_attr_put_u32(nlh, NFQA_CFG_MASK, htonl(NFQA_CFG_F_CONNTRACK))
+
+        if (mnl_socket_sendto(nl, nlh, nlh.nlmsg_len) < 0):
+            return Py_ERR
+
+        # ENOBUFS is signalled to userspace when packets were lost on the kernel side.
+        # We don't care, so we can turn it off.
+        mnl_socket_setsockopt(nl, NETLINK_NO_ENOBUFS, <void*>&ret, sizeof(int))
+
+        free(mnl_buf)
 
         return Py_OK
 
     def nf_break(s):
-        if (s.qh != NULL):
-            nfq_destroy_queue(s.qh)
-
-        nfq_close(s.h)
+        mnl_socket_close(nl)
 
     cpdef int prepare_geolocation(s, list geolocation_trie, uint32_t msb, uint32_t lsb) with gil:
         '''initializes Cython Extension HashTrie for use by CFirewall.

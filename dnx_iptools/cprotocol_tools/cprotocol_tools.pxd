@@ -15,3 +15,5 @@ cdef extern from '<arpa/inet.h>':
         pass
 
     in_addr_t inet_addr(char *cp)
+
+cdef inline void nullset(void *data, size_t dlen) nogil

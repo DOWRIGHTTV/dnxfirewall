@@ -10,6 +10,24 @@ from libc.stdint cimport uint8_t, uint32_t, uint_fast16_t
 DEF UINT8_MAX  = 255
 DEF UINT16_MAX = 65535
 
+# ==============
+# PYTHON ONLY
+# ==============
+def default_route():
+    with open('/proc/net/route', 'r') as f:
+        f = f.readlines()[1:]
+        for line in f:
+            l = line.split()
+            if int(l[1], 16) or int(l[7], 16):
+                continue
+
+            return int(l[2], 16)
+
+        return 0
+
+# ==============
+# PYTHON/CYTHON
+# ==============
 cpdef uint32_t btoia(const uint8_t[:] cb):
 
     cdef:
@@ -67,19 +85,18 @@ cpdef bytes calc_checksum(const uint8_t[:] data):
     csum = (csum >> 16) + (csum & UINT16_MAX)
     csum = ~(csum + (csum >> 16)) & UINT16_MAX
 
+    # couldn't this be ubytes = <uint16_t>csum
     ubytes[0] = <uint8_t>(csum >> 8)
     ubytes[1] = csum & UINT8_MAX
 
     return ubytes
 
-def default_route():
-    with open('/proc/net/route', 'r') as f:
-        f = f.readlines()[1:]
-        for line in f:
-            l = line.split()
-            if int(l[1], 16) or int(l[7], 16):
-                continue
+# ============
+# CYTHON ONLY
+# ============
+cdef inline void nullset(void *data, size_t dlen) nogil:
 
-            return int(l[2], 16)
+    cdef size_t i
 
-        return 0
+    for i in range(dlen):
+        data[i] = NULL

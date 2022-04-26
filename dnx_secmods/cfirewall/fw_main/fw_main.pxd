@@ -1,14 +1,17 @@
 #!/usr/bin/env Cython
 
 from cpython cimport array
-from libc.stdint cimport uint8_t, uint16_t, uint32_t
+from libc.stdint cimport uint8_t, uint16_t, uint32_t, uint64_t
 from libc.stdint cimport uint_fast8_t, uint_fast16_t, uint_fast32_t, int_fast8_t, int_fast16_t, int_fast32_t
+from libc.stdio cimport FILE
+
+from posix.types cimport pid_t
 
 
 ctypedef array.array PyArray
 
 cdef extern from "<errno.h>":
-    int     errno
+    int         errno
 
 cdef extern from "time.h" nogil:
     ctypedef    long time_t
@@ -19,8 +22,11 @@ cdef extern from "time.h" nogil:
         time_t  tv_usec
 
 cdef extern from "<sys/socket.h>":
+    ctypedef    unsigned int socklen_t
     ssize_t     recv(int __fd, void *__buf, size_t __n, int __flags) nogil
     int         MSG_DONTWAIT
+
+    enum: AF_INET
 
 cdef enum:
     EAGAIN = 11           # Try again
@@ -37,7 +43,145 @@ cdef extern from "pthread.h" nogil:
     int pthread_mutex_unlock(pthread_mutex_t*)
     int pthread_mutex_destroy(pthread_mutex_t*)
 
-cdef extern from "linux/netfilter_ipv4.h":
+cdef extern from "netinet/in.h":
+    uint32_t ntohl (uint32_t __netlong) nogil
+    uint16_t ntohs (uint16_t __netshort) nogil
+    uint32_t htonl (uint32_t __hostlong) nogil
+    uint16_t htons (uint16_t __hostshort) nogil
+
+    enum: IPPROTO_IP
+    enum: IPPROTO_ICMP
+    enum: IPPROTO_TCP
+    enum: IPPROTO_UDP
+
+cdef extern from "netinet/tcp.h":
+    struct tcphdr:
+        pass
+
+cdef extern from "netinet/udp.h":
+    struct udphdr:
+        pass
+
+cdef extern from "libnfnetlink/libnfnetlink.h":
+    struct nfnl_handle:
+        pass
+
+    unsigned int nfnl_rcvbufsiz(nfnl_handle *h, unsigned int size)
+
+cdef extern from "linux/netlink.h" nogil:
+    enum:
+        NETLINK_ROUTE                 # Routing/device hook           # Unused number
+        NETLINK_USERSOCK              # Reserved for user mode socket protocols
+        NETLINK_FIREWALL              # Unused number, formerly ip_queue
+        NETLINK_SOCK_DIAG             # socket monitoring
+        NETLINK_NFLOG                 # netfilter/iptables ULOG                 # ipsec
+        NETLINK_SELINUX               # SELinux event notifications
+        NETLINK_CONNECTOR
+        NETLINK_NETFILTER             # netfilter subsystem
+
+    struct nlmsghdr:
+        uint32_t nlmsg_len              # Length of message including header
+        uint16_t nlmsg_type             # Message content
+        uint16_t nlmsg_flags            # Additional flags
+        uint32_t nlmsg_seq              # Sequence number
+        uint32_t nlmsg_pid              # Sending process port ID
+
+    #define NLMSG_ALIGN(len) ( ((len)+NLMSG_ALIGNTO-1) & ~(NLMSG_ALIGNTO-1) )
+    int NLMSG_ALIGN(int len)
+
+    #define NLMSG_LENGTH(len) ((len) + NLMSG_HDRLEN)
+    int NLMSG_LENGTH(int len)
+
+    #define NLMSG_SPACE(len) NLMSG_ALIGN(NLMSG_LENGTH(len))
+    int NLMSG_SPACE(int len)
+
+    #define NLMSG_DATA(nlh)  ((void*)(((char*)nlh) + NLMSG_LENGTH(0)))
+    void *NLMSG_DATA(nlmsghdr *nlh)
+
+    # define NLMSG_NEXT(nlh,len) below as inline cdef
+
+    #define NLMSG_OK(nlh,len) ((len) >= (int)sizeof(struct nlmsghdr) && \
+    #                      (nlh)->nlmsg_len >= sizeof(struct nlmsghdr) && \
+    #                      (nlh)->nlmsg_len <= (len))
+    bint NLMSG_OK(nlmsghdr *nlh, len)
+
+    #define NLMSG_PAYLOAD(nlh,len) ((nlh)->nlmsg_len - NLMSG_SPACE((len)))
+    int NLMSG_PAYLOAD(nlmsghdr *nlh, len)
+
+    struct nlmsgerr:
+        int             error
+        nlmsghdr        msg
+
+    enum: NETLINK_NO_ENOBUFS
+
+    enum:
+        NETLINK_UNCONNECTED
+        NETLINK_CONNECTED
+
+    #  <------- NLA_HDRLEN ------> <-- NLA_ALIGN(payload)-->
+    # +---------------------+- - -+- - - - - - - - - -+- - -+
+    # |        Header       | Pad |     Payload       | Pad |
+    # |   (struct nlattr)   | ing |                   | ing |
+    # +---------------------+- - -+- - - - - - - - - -+- - -+
+    #  <-------------- nlattr->nla_len -------------->
+    struct nlattr:
+        uint16_t nla_len
+        uint16_t nla_type
+
+    # nla_type (16 bits)
+    # +---+---+-------------------------------+
+    # | N | O | Attribute Type                |
+    # +---+---+-------------------------------+
+    # N := Carries nested attributes
+    # O := Payload stored in network byte order
+    #
+    # Note: The N and O flag are mutually exclusive.
+    enum:
+        NLA_F_NESTED
+        NLA_F_NET_BYTEORDER
+        NLA_TYPE_MASK
+        NLA_ALIGNTO
+
+    #define NLA_ALIGN(len)              (((len) + NLA_ALIGNTO - 1) & ~(NLA_ALIGNTO - 1))
+    inline int NLA_ALIGN(int len)
+
+    enum: NLA_HDRLEN
+
+#define NLMSG_NEXT(nlh,len)      ((len) -= NLMSG_ALIGN((nlh)->nlmsg_len), \
+#                                 (struct nlmsghdr*)(((char*)(nlh)) + NLMSG_ALIGN((nlh)->nlmsg_len)))
+cdef inline nlmsghdr *NLMSG_NEXT(nlmsghdr *nlh, int *len) nogil:
+    len[0] -= NLMSG_ALIGN(nlh.nlmsg_len)
+    return <nlmsghdr*>(<char*>nlh + NLMSG_ALIGN(nlh.nlmsg_len))
+cdef extern from "linux/netfilter.h" nogil:
+    # responses from hook functions.
+    enum:
+        NF_DROP
+        NF_ACCEPT
+        NF_STOLEN
+        NF_QUEUE
+        NF_REPEAT
+        NF_STOP
+        NF_MAX_VERDICT
+
+        # we overload the higher bits for encoding auxiliary data such as the queue
+        # number or errno values. Not nice, but better than additional function
+        # arguments.
+        NF_VERDICT_MASK
+
+        # extra verdict flags have mask 0x0000ff00
+        NF_VERDICT_FLAG_QUEUE_BYPASS
+
+        # queue number (NF_QUEUE) or errno (NF_DROP)
+        NF_VERDICT_QMASK
+        NF_VERDICT_QBITS
+
+    #define NF_QUEUE_NR(x) ((((x) << 16) & NF_VERDICT_QMASK) | NF_QUEUE)
+    int NF_QUEUE_NR(int x)
+
+    #define NF_DROP_ERR(x) (((-x) << 16) | NF_DROP)
+    int NF_DROP_ERR(int x)
+
+cdef extern from "linux/netfilter_ipv4.h" nogil:
     # IP Hooks
     # After promisc drops, checksum checks.
     enum: NF_IP_PRE_ROUTING #	0
@@ -68,95 +212,388 @@ cdef extern from "linux/netfilter_ipv4.h":
         NF_IP_PRI_CONNTRACK_CONFIRM
         NF_IP_PRI_LAST
 
+# New API based on libmnl
+cdef extern from "libnetfilter_queue/libnetfilter_queue.h":
+    # CMD HELPERS
+    void nfq_nlmsg_cfg_put_cmd(nlmsghdr *nlh, uint16_t pf, uint8_t cmd)
+    void nfq_nlmsg_cfg_put_params(nlmsghdr *nlh, uint8_t mode, int range)
+    void nfq_nlmsg_cfg_put_qmaxlen(nlmsghdr *nlh, uint32_t qmaxlen)
 
-cdef extern from "netinet/in.h":
-    uint32_t ntohl (uint32_t __netlong) nogil
-    uint16_t ntohs (uint16_t __netshort) nogil
-    uint32_t htonl (uint32_t __hostlong) nogil
-    uint16_t htons (uint16_t __hostshort) nogil
+    # VERDICT HELPERS
+    void nfq_nlmsg_verdict_put(nlmsghdr *nlh, int id, int verdict)
+    void nfq_nlmsg_verdict_put_mark(nlmsghdr *nlh, uint32_t mark)
+    void nfq_nlmsg_verdict_put_pkt(nlmsghdr *nlh, const void *pkt, uint32_t plen)
 
-    enum: IPPROTO_IP
-    enum: IPPROTO_ICMP
-    enum: IPPROTO_TCP
-    enum: IPPROTO_UDP
+    # NETLINK MSG HELPERS
+    int nfq_nlmsg_parse(const nlmsghdr *nlh, nlattr **attr)
+    nlmsghdr *nfq_nlmsg_put(char *buf, int type, uint32_t queue_num)
 
-cdef extern from "libnfnetlink/linux_nfnetlink.h":
-    struct nfgenmsg:
-        uint8_t    nfgen_family
-        uint8_t    version
-        uint16_t   res_id
-
-cdef extern from "libnfnetlink/libnfnetlink.h":
-    struct nfnl_handle:
+cdef extern from "libnetfilter_queue/pktbuff.h":
+    # PRIMARY FUNCTIONS
+    struct pkt_buff:
         pass
 
-    unsigned int nfnl_rcvbufsiz(nfnl_handle *h, unsigned int size)
+    pkt_buff *pktb_alloc(int family, void *data, size_t len, size_t extra)
+    void pktb_free(pkt_buff *pktb)
 
-cdef extern from "libnetfilter_queue/linux_nfnetlink_queue.h":
-    enum nfqnl_config_mode:
+    uint8_t *pktb_data(pkt_buff *pktb)
+    uint32_t pktb_len(pkt_buff *pktb)
+
+    bint pktb_mangled(const pkt_buff *pktb)
+
+    # PTR TO PROTO HEADERS
+    uint8_t *pktb_mac_header(pkt_buff *pktb)
+    uint8_t *pktb_network_header(pkt_buff *pktb)
+    uint8_t *pktb_transport_header(pkt_buff *pktb)
+
+    # LIKELY WONT USE
+    void pktb_push(pkt_buff *pktb, unsigned int len)
+    void pktb_pull(pkt_buff *pktb, unsigned int len)
+    void pktb_put(pkt_buff *pktb, unsigned int len)
+    void pktb_trim(pkt_buff *pktb, unsigned int len)
+    unsigned int pktb_tailroom(pkt_buff *pktb)
+
+    # probably wont be used directly. protocol mangle functions are recommended.
+    int pktb_mangle(pkt_buff *pkt, unsigned int dataoff, unsigned int match_offset, unsigned int match_len, const char *rep_buffer, unsigned int rep_len)
+
+cdef extern from "libnetfilter_queue/libnetfilter_queue_ipv4.h":
+    struct iphdr:
+        pass
+
+    iphdr *nfq_ip_get_hdr(pkt_buff *pktb)
+    int nfq_ip_set_transport_header(pkt_buff *pktb, iphdr *iph)
+
+    # IP/TCP NAT CAN USE THIS
+    int nfq_ip_mangle(pkt_buff *pkt, unsigned int dataoff, unsigned int match_offset, unsigned int match_len, const char *rep_buffer, unsigned int rep_len)
+
+    void nfq_ip_set_checksum(iphdr *iph)
+    int nfq_ip_snprintf(char *buf, size_t size, const iphdr *iph)
+
+cdef extern from "libnetfilter_queue/libnetfilter_queue_tcp.h":
+    tcphdr *nfq_tcp_get_hdr(pkt_buff *pktb)
+    void *nfq_tcp_get_payload(tcphdr *tcph, pkt_buff *pktb)
+    unsigned int nfq_tcp_get_payload_len(tcphdr *tcph, pkt_buff *pktb)
+
+    # likely wont need since mangle function will call this automatically.
+    void nfq_tcp_compute_checksum_ipv4(tcphdr *tcph, iphdr *iph)
+
+    # TCP NAT CAN USE THIS
+    int nfq_tcp_mangle_ipv4(
+        pkt_buff *pkt, unsigned int match_offset, unsigned int match_len, const char *rep_buffer, unsigned int rep_len)
+
+    int nfq_tcp_snprintf(char *buf, size_t size, const tcphdr *tcp)
+
+cdef extern from "libnetfilter_queue/libnetfilter_queue_udp.h":
+    udphdr *nfq_udp_get_hdr(pkt_buff *pktb)
+    void *nfq_udp_get_payload(udphdr *udph, pkt_buff *pktb)
+    unsigned int nfq_udp_get_payload_len(udphdr *udph, pkt_buff *pktb)
+
+    # likely wont need since mangle function will call this automatically.
+    void nfq_udp_compute_checksum_ipv4(udphdr *udph, iphdr *iph)
+
+    # UDP NAT CAN USE THIS
+    int nfq_udp_mangle_ipv4(
+        pkt_buff *pkt, unsigned int match_offset, unsigned int match_len, const char *rep_buffer, unsigned int rep_len)
+
+cdef extern from "linux/netfilter/nf_conntrack_common.h" nogil:
+    # connection state tracking for netfilter. this is separated from, but required by, the
+    # NAT layer. it can also be used by an iptables extension.
+    enum: # ip_conntrack_info:
+        # part of an established connection (either direction).
+        IP_CT_ESTABLISHED
+
+        # like NEW, but related to an existing connection, or ICMP error (in either direction).
+        IP_CT_RELATED
+
+        # started a new connection to track (only IP_CT_DIR_ORIGINAL); may be a retransmission.
+        IP_CT_NEW
+
+        # >= this indicates reply direction
+        IP_CT_IS_REPLY
+
+        IP_CT_ESTABLISHED_REPLY
+        IP_CT_RELATED_REPLY
+        IP_CT_NEW_REPLY
+        # number of distinct IP_CT types (no NEW in reply dirn).
+        IP_CT_NUMBER
+
+cdef extern from "linux/netfilter/nfnetlink.h" nogil:
+    # General form of address family dependent message.
+    struct nfgenmsg:
+        uint8_t    nfgen_family        # AF_xxx
+        uint8_t    version             # nfnetlink version
+        uint16_t   res_id              # resource id
+
+cdef extern from "linux/netfilter/nfnetlink_queue.h" nogil:
+    enum nfqnl_msg_types:
+        NFQNL_MSG_PACKET                # packet from kernel to userspace
+        NFQNL_MSG_VERDICT               # verdict from userspace to kernel
+        NFQNL_MSG_CONFIG                # connect to a particular queue
+
+        NFQNL_MSG_MAX
+
+    struct nfqnl_msg_packet_hdr:
+        uint32_t packet_id
+        uint16_t hw_protocol
+        uint8_t  hook
+
+    struct nfqnl_msg_packet_hw:
+        uint16_t hw_addrlen
+        uint16_t _pad
+        uint8_t  hw_addr[8]
+
+    struct nfqnl_msg_packet_timestamp:
+        double sec                      #__aligned_be64
+        double usec                     #__aligned_be64
+
+    enum nfqnl_vlan_attr:
+        NFQA_VLAN_UNSPEC,
+        NFQA_VLAN_PROTO,                # __be16 skb vlan_proto */
+        NFQA_VLAN_TCI,                  # __be16 skb htons(vlan_tci) */
+        __NFQA_VLAN_MAX,
+
+        NFQA_VLAN_MAX = __NFQA_VLAN_MAX - 1
+
+    # name causes cython compile error due to integer/enum type mismatch
+    enum: # nfqnl_attr_type
+        NFQA_UNSPEC,
+        NFQA_PACKET_HDR,
+        NFQA_VERDICT_HDR,               # nfqnl_msg_verdict_hrd */
+        NFQA_MARK,                      # __u32 nfmark */
+        NFQA_TIMESTAMP,                 # nfqnl_msg_packet_timestamp */
+        NFQA_IFINDEX_INDEV,             # __u32 ifindex */
+        NFQA_IFINDEX_OUTDEV,            # __u32 ifindex */
+        NFQA_IFINDEX_PHYSINDEV,         # __u32 ifindex */
+        NFQA_IFINDEX_PHYSOUTDEV,        # __u32 ifindex */
+        NFQA_HWADDR,                    # nfqnl_msg_packet_hw */
+        NFQA_PAYLOAD,                   # opaque data payload */
+        NFQA_CT,                        # nfnetlink_conntrack.h */
+        NFQA_CT_INFO,                   # enum ip_conntrack_info */
+        NFQA_CAP_LEN,                   # __u32 length of captured packet */
+        NFQA_SKB_INFO,                  # __u32 skb meta information */
+        NFQA_EXP,                       # nfnetlink_conntrack.h */
+        NFQA_UID,                       # __u32 sk uid */
+        NFQA_GID,                       # __u32 sk gid */
+        NFQA_SECCTX,                    # security context string */
+        NFQA_VLAN,                      # nested attribute: packet vlan info */
+        NFQA_L2HDR,                     # full L2 header */
+        NFQA_PRIORITY,                  # skb->priority */
+
+        NFQA_MAX
+
+    struct nfqnl_msg_verdict_hdr:
+        uint32_t    verdict
+        uint32_t    id
+
+    enum NfqnlMsgConfigCmds "nfqnl_msg_config_cmds":
+        NFQNL_CFG_CMD_NONE
+        NFQNL_CFG_CMD_BIND
+        NFQNL_CFG_CMD_UNBIND
+        NFQNL_CFG_CMD_PF_BIND
+        NFQNL_CFG_CMD_PF_UNBIND
+
+    struct NfqnlMsgConfigCmd "nfqnl_msg_config_cmd":
+        uint8_t     command             # nfqnl_msg_config_cmds
+        uint8_t     _pad
+        uint16_t    pf                  # AF_xxx for PF_[UN]BIND
+
+    enum NfqnlConfigMode "nfqnl_config_mode":
         NFQNL_COPY_NONE
         NFQNL_COPY_META
         NFQNL_COPY_PACKET
 
-    struct nfqnl_msg_packet_hdr:
-        uint32_t   packet_id
-        uint16_t   hw_protocol
-        uint8_t    hook
+    struct NfqnlMsgConfigParams "nfqnl_msg_config_params":
+        uint32_t    copy_range
+        uint8_t     copy_mode           # enum nfqnl_config_mode
+    # __attribute__ ((packed));
 
-cdef extern from "libnetfilter_queue/libnetfilter_queue.h":
-    struct nfq_handle:
+    enum NfqnlAttrConfig "nfqnl_attr_config":
+        NFQA_CFG_UNSPEC
+        NFQA_CFG_CMD                    # nfqnl_msg_config_cmd
+        NFQA_CFG_PARAMS                 # nfqnl_msg_config_params
+        NFQA_CFG_QUEUE_MAXLEN           # __u32
+        NFQA_CFG_MASK                   # identify which flags to change
+        NFQA_CFG_FLAGS                  # value of these flags (__u32)
+        NFQA_CFG_MAX
+
+    # Flags for NFQA_CFG_FLAGS
+    enum:
+        NFQA_CFG_F_FAIL_OPEN
+        NFQA_CFG_F_CONNTRACK
+        NFQA_CFG_F_GSO
+        NFQA_CFG_F_UID_GID
+        NFQA_CFG_F_MAX
+
+    # flags for NFQA_SKB_INFO
+    enum:
+        # packet appears to have wrong checksums, but they are ok
+        NFQA_SKB_CSUMNOTREADY
+
+        # packet is GSO (i.e., exceeds device mtu)
+        NFQA_SKB_GSO
+
+        # csum not validated (incoming device doesn't support hw checksum, etc.)
+        NFQA_SKB_CSUM_NOTVERIFIED
+
+cdef extern from "libmnl/libmnl.h":
+    # nlattr mnl_attr_for_each(nlattr attr, nlmsghdr *nlh, int offset)
+    # mnl_attr_for_each_nested(nlattr attr, nest)
+    # mnl_attr_for_each_payload(payload, size_t payload_size)
+
+    #
+    # Netlink socket API
+    #
+    enum:
+        MNL_SOCKET_AUTOPID
+        MNL_SOCKET_BUFFER_SIZE
+
+    struct mnl_socket:
         pass
 
-    struct nfq_q_handle:
-        pass
+    #define MNL_FRAME_PAYLOAD(frame) ((void *)(frame) + NL_MMAP_HDRLEN)
+    # void *MNL_FRAME_PAYLOAD(nl_mmap_hdr *frame)
 
-    struct nfq_data:
-        pass
+    mnl_socket *mnl_socket_open(int type)
+    mnl_socket *mnl_socket_fdopen(int fd)
+    int mnl_socket_bind(mnl_socket *nl, unsigned int groups, pid_t pid)
+    int mnl_socket_close(mnl_socket *nl)
+    int mnl_socket_get_fd(const mnl_socket *nl)
+    unsigned int mnl_socket_get_portid(const mnl_socket *nl)
+    ssize_t mnl_socket_sendto(const mnl_socket *nl, const void *req, size_t siz)
+    ssize_t mnl_socket_recvfrom(const mnl_socket *nl, void *buf, size_t siz)
+    int mnl_socket_setsockopt(const mnl_socket *nl, int type, void *buf, socklen_t len)
+    int mnl_socket_getsockopt(const mnl_socket *nl, int type, void *buf, socklen_t *len)
 
-    struct nfqnl_msg_packet_hw:
-        uint8_t    hw_addr[8]
+    #
+    # Netlink message API
+    #
+        #define MNL_ALIGN(len)              (((len)+MNL_ALIGNTO-1) & ~(MNL_ALIGNTO-1))
+    #define MNL_NLMSG_HDRLEN    MNL_ALIGN(sizeof(struct nlmsghdr))
+    int MNL_ALIGN(int len)
+    unsigned long int MNL_NLMSG_HDRLEN
 
-    ctypedef int *nfq_callback(nfq_q_handle *gh, nfgenmsg *nfmsg, nfq_data *nfad, void *data)
+    size_t mnl_nlmsg_size(size_t len)
+    size_t mnl_nlmsg_get_payload_len(const nlmsghdr *nlh)
 
-    nfq_handle *nfq_open()
+    # Netlink message header builder
+    nlmsghdr *mnl_nlmsg_put_header(void *buf)
+    void *mnl_nlmsg_put_extra_header(nlmsghdr *nlh, size_t size)
 
-    int nfq_fd(nfq_handle *h) nogil
-    int nfq_close(nfq_handle *h)
+    # Netlink message iterators
+    bint mnl_nlmsg_ok(const nlmsghdr *nlh, int len)
+    nlmsghdr *mnl_nlmsg_next(const nlmsghdr *nlh, int *len)
 
-    nfnl_handle *nfq_nfnlh(nfq_handle *h)
-    nfq_q_handle *nfq_create_queue(nfq_handle *h, uint16_t num, nfq_callback *cb, void *data)
+    # Netlink sequence tracking
+    bint mnl_nlmsg_seq_ok(const nlmsghdr *nlh, unsigned int seq)
 
-    int nfq_destroy_queue(nfq_q_handle *qh)
-    int nfq_set_mode(nfq_q_handle *qh, uint8_t mode, unsigned int len)
-    int nfq_set_queue_maxlen(nfq_q_handle *qh, uint32_t queuelen)
-    int nfq_handle_packet(nfq_handle *h, char *buf, int len) nogil
+    # Netlink portID checking
+    bint mnl_nlmsg_portid_ok(const nlmsghdr *nlh, unsigned int portid)
 
-    nfqnl_msg_packet_hdr *nfq_get_msg_packet_hdr(nfq_data *nfad) nogil
-    nfqnl_msg_packet_hw  *nfq_get_packet_hw(nfq_data *nfad) nogil
+    # Netlink message getters
+    void *mnl_nlmsg_get_payload(const nlmsghdr *nlh)
+    void *mnl_nlmsg_get_payload_offset(const nlmsghdr *nlh, size_t offset)
+    void *mnl_nlmsg_get_payload_tail(const nlmsghdr *nlh)
 
-    int nfq_get_payload(nfq_data *nfad, unsigned char **data) nogil
-    int nfq_get_timestamp(nfq_data *nfad, timeval *tv) nogil
-    int nfq_get_nfmark (nfq_data *nfad) nogil
-    uint8_t nfq_get_indev(nfq_data *nfad) nogil
-    uint8_t nfq_get_outdev(nfq_data *nfad) nogil
+    # Netlink message printer
+    void mnl_nlmsg_fprintf(FILE *fd, const void *data, size_t datalen, size_t extra_header_size)
 
-    int nfq_set_verdict(nfq_q_handle *qh, uint32_t id, uint32_t verdict, uint32_t data_len, uint8_t *buf) nogil
-    int nfq_set_verdict2(
-            nfq_q_handle *qh, uint32_t id, uint32_t verdict, uint32_t mark, uint32_t datalen, uint8_t *buf) nogil
+    #
+    # Netlink attributes API
+    #
+    enum:
+        MNL_ATTR_HDRLEN
+
+    # TLV attribute getters */
+    uint16_t mnl_attr_get_type(const nlattr *attr)
+    uint16_t mnl_attr_get_len(const nlattr *attr)
+    uint16_t mnl_attr_get_payload_len(const nlattr *attr)
+    nfqnl_msg_packet_hdr *mnl_attr_get_payload(const nlattr *attr)
+    uint8_t mnl_attr_get_u8(const nlattr *attr)
+    uint16_t mnl_attr_get_u16(const nlattr *attr)
+    uint32_t mnl_attr_get_u32(const nlattr *attr)
+    uint64_t mnl_attr_get_u64(const nlattr *attr)
+    const char *mnl_attr_get_str(const nlattr *attr)
+
+    # TLV attribute putters */
+    void mnl_attr_put(nlmsghdr *nlh, uint16_t type, size_t len, const void *data)
+    void mnl_attr_put_u8(nlmsghdr *nlh, uint16_t type, uint8_t data)
+    void mnl_attr_put_u16(nlmsghdr *nlh, uint16_t type, uint16_t data)
+    void mnl_attr_put_u32(nlmsghdr *nlh, uint16_t type, uint32_t data)
+    void mnl_attr_put_u64(nlmsghdr *nlh, uint16_t type, uint64_t data)
+    void mnl_attr_put_str(nlmsghdr *nlh, uint16_t type, const char *data)
+    void mnl_attr_put_strz(nlmsghdr *nlh, uint16_t type, const char *data)
+
+    # TLV attribute putters with buffer boundary checkings */
+    bint mnl_attr_put_check(nlmsghdr *nlh, size_t buflen, uint16_t type, size_t len, const void *data)
+    bint mnl_attr_put_u8_check(nlmsghdr *nlh, size_t buflen, uint16_t type, uint8_t data)
+    bint mnl_attr_put_u16_check(nlmsghdr *nlh, size_t buflen, uint16_t type, uint16_t data)
+    bint mnl_attr_put_u32_check(nlmsghdr *nlh, size_t buflen, uint16_t type, uint32_t data)
+    bint mnl_attr_put_u64_check(nlmsghdr *nlh, size_t buflen, uint16_t type, uint64_t data)
+    bint mnl_attr_put_str_check(nlmsghdr *nlh, size_t buflen, uint16_t type, const char *data)
+    bint mnl_attr_put_strz_check(nlmsghdr *nlh, size_t buflen, uint16_t type, const char *data)
+
+    # TLV attribute nesting */
+    nlattr *mnl_attr_nest_start(nlmsghdr *nlh, uint16_t type)
+    nlattr *mnl_attr_nest_start_check(nlmsghdr *nlh, size_t buflen, uint16_t type)
+    void mnl_attr_nest_end(nlmsghdr *nlh, nlattr *start)
+    void mnl_attr_nest_cancel(nlmsghdr *nlh, nlattr *start)
+
+    # TLV validation */
+    int mnl_attr_type_valid(const nlattr *attr, uint16_t maxtype)
+
+    enum mnl_attr_data_type:
+        MNL_TYPE_UNSPEC
+        MNL_TYPE_U8
+        MNL_TYPE_U16
+        MNL_TYPE_U32
+        MNL_TYPE_U64
+        MNL_TYPE_STRING
+        MNL_TYPE_FLAG
+        MNL_TYPE_MSECS
+        MNL_TYPE_NESTED
+        MNL_TYPE_NESTED_COMPAT
+        MNL_TYPE_NUL_STRING
+        MNL_TYPE_BINARY
+        MNL_TYPE_MAX
+
+    int mnl_attr_validate(const nlattr *attr, mnl_attr_data_type type)
+    int mnl_attr_validate2(const nlattr *attr, mnl_attr_data_type type, size_t len)
+
+    # TLV iterators
+    bint mnl_attr_ok(const nlattr *attr, int len)
+    nlattr *mnl_attr_next(const nlattr *attr)
+
+    # TLV callback-based attribute parsers
+    ctypedef int (*mnl_attr_cb_t)(const nlattr *attr, void *data)
+    # struct mnl_attr_cb_t:
+    #     pass
+
+    int mnl_attr_parse(const nlmsghdr *nlh, unsigned int offset, mnl_attr_cb_t cb, void *data)
+    int mnl_attr_parse_nested(const nlattr *attr, mnl_attr_cb_t cb, void *data)
+    int mnl_attr_parse_payload(const void *payload, size_t payload_len, mnl_attr_cb_t cb, void *data)
+
+    #
+    # callback API
+    #
+    enum:
+        MNL_CB_ERROR
+        MNL_CB_STOP
+        MNL_CB_OK
+
+    ctypedef int (*mnl_cb_t)(const nlmsghdr *nlh, void *data)
+    # struct mnl_cb_t:
+    #     pass
+
+    int mnl_cb_run(const void *buf, size_t numbytes, unsigned int seq,
+                            unsigned int portid, mnl_cb_t cb_data, void *data)
+
+    int mnl_cb_run2(const void *buf, size_t numbytes, unsigned int seq,
+                            unsigned int portid, mnl_cb_t cb_data, void *data,
+                            const mnl_cb_t *cb_ctl_array, unsigned int cb_ctl_array_len)
 
 cdef struct srange:
   uint_fast8_t  start
   uint_fast8_t  end
-
-# mirrored defines from linux/netfilter.h
-cdef enum:
-    NF_DROP
-    NF_ACCEPT
-    NF_STOLEN
-    NF_QUEUE
-    NF_REPEAT
-    NF_STOP
-    NF_MAX_VERDICT = NF_STOP
 
 cdef enum:
     NONE      = 0
@@ -256,41 +693,45 @@ cdef struct FWrule:
         # ips_ids - 0 off, 1 on
 
 cdef struct HWinfo:
-    uint8_t    in_zone
-    uint8_t    out_zone
-    char*      mac_addr
-    double     timestamp
+    uint8_t     in_zone
+    uint8_t     out_zone
+    char*       mac_addr
+    double      timestamp
 
 cdef struct IPhdr:
-    uint8_t    ver_ihl
-    uint8_t    tos
-    uint16_t   tot_len
-    uint16_t   id
-    uint16_t   frag_off
-    uint8_t    ttl
-    uint8_t    protocol
-    uint16_t   check
-    uint32_t   saddr
-    uint32_t   daddr
+    uint8_t     ver_ihl
+    uint8_t     tos
+    uint16_t    tot_len
+    uint16_t    id
+    uint16_t    frag_off
+    uint8_t     ttl
+    uint8_t     protocol
+    uint16_t    check
+    uint32_t    saddr
+    uint32_t    daddr
 
 cdef struct Protohdr:
-    uint16_t   s_port
-    uint16_t   d_port
+    uint16_t    s_port
+    uint16_t    d_port
 
 cdef struct InspectionResults:
-    uint16_t   fw_section
-    uint32_t   action
-    uint32_t   mark
+    uint16_t    fw_section
+    uint32_t    action
+    uint32_t    mark
+
+cdef struct cfdata:
+    uint32_t queue
+
 
 cdef class CFirewall:
     cdef:
-        nfq_handle   *h
-        nfq_q_handle *qh
-
         char*   sock_path
         int     api_fd
+
+        cfdata  cfd
 
     cpdef int prepare_geolocation(s, list geolocation_trie, uint32_t msb, uint32_t lsb) with gil
     cpdef int update_zones(s, PyArray zone_map) with gil
     cpdef int update_ruleset(s, size_t ruleset, list rulelist) with gil
     cdef  int remove_attacker(s, uint32_t host_ip)
+
