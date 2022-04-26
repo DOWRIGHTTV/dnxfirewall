@@ -46,8 +46,8 @@ cdef extern from "linux/netfilter/nfnetlink_queue.h" nogil:
         uint8_t  hw_addr[8]
 
     struct nfqnl_msg_packet_timestamp:
-        double sec                      #__aligned_be64
-        double usec                     #__aligned_be64
+        uint64_t sec                      #__aligned_be64
+        uint64_t usec                     #__aligned_be64
 
     enum nfqnl_vlan_attr:
         NFQA_VLAN_UNSPEC,

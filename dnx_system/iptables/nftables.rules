@@ -8,12 +8,17 @@ table ip dnxfirewall {
 
         chain nat_preroute {
                 type nat hook prerouting priority -100; policy accept;
+
+                # this will be the second time cfirewall will inspect the packet. we can use the fact a mark exists to
+                # know to run through nat table and mangling. NAT action and default action will always be accept since
+                # this is post firewall inspection. (firewall had to accept to get to this point)
+                ip protocol { tcp, udp, icmp } meta mark set 70 queue num 69
         }
 
         chain filter_preroute {
                 type filter hook prerouting priority -150; policy drop;
 
-                # until we can get conntrack implemented in cfirewall
+                # until we can get conntrack stable in cfirewall
                 # once we do, we will need to change priority to be <= -200.
                 ct state related,established counter accept
 
@@ -34,6 +39,11 @@ table ip dnxfirewall {
 
         chain nat_postroute {
                 type nat hook postrouting priority 100; policy accept;
+
+                # this will be the second time cfirewall will inspect the packet. we can use the fact a mark exists to
+                # know to run through nat table and mangling. NAT action and default action will always be accept since
+                # this is post firewall inspection. (firewall had to accept to get to this point)
+                ip protocol { tcp, udp, icmp } meta mark set 71 queue num 69
 
                 oifname "ens160" counter masquerade
         }

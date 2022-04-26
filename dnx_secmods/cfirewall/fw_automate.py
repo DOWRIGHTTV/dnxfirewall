@@ -21,6 +21,7 @@ if (TYPE_CHECKING):
     from dnx_routines.logging import LogHandler_T
     from dnx_secmods.cfirewall import CFirewall
 
+
 # =========================================
 # AUTOMATE - used within cfirewall process
 # =========================================
@@ -29,7 +30,11 @@ class FirewallAutomate:
         'log', 'cfirewall', '_initialize',
 
         # rule sections (hierarchy)
-        'SYSTEM', 'BEFORE', 'MAIN', 'AFTER'
+        'SYSTEM',
+
+        'BEFORE', 'MAIN', 'AFTER',
+
+        'NAT'
     )
 
     def __init__(self, log: LogHandler_T, /, *, cfirewall: CFirewall):
@@ -41,6 +46,7 @@ class FirewallAutomate:
         self.BEFORE: dict = {}
         self.MAIN:   dict = {}
         self.AFTER:  dict = {}
+        self.NAT:    dict = {}
 
         # reference to extension CFirewall, which handles nfqueue and initial packet rcv. # we will use this
         # reference to modify rules objects which will be internally accessed by the inspection function callbacks
@@ -52,6 +58,7 @@ class FirewallAutomate:
         ppt(self.BEFORE)
         ppt(self.MAIN)
         ppt(self.AFTER)
+        ppt(self.NAT)
 
     # threads will be started and other basic setup functions will be done before releasing control back to the
     # inspection context.
@@ -130,7 +137,7 @@ class FirewallAutomate:
     @cfg_read_poller('system', ext='firewall', folder='iptables')
     def _monitor_system_rules(self, system_rules: str):
         # 0-99: system reserved - 1. loopback 10/11. dhcp, 20/21. dns, 30/31. http, 40/41. https, etc
-        #   - loopback will be left in iptables for now
+        #   - add loopback to system table
         # 100-1059: zone mgmt rules. 100s place designates interface index
         #   - 0/1: webui, 2: cli, 3: ssh, 4: ping
         #   - NOTE: int index will be used to do zone lookup. if zone changes, these will stop working and will need

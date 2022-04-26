@@ -15,20 +15,30 @@ from fw_api.fw_api cimport api_open, process_api
 # VERBOSE T-SHOOT ASSISTANCE
 # ===============================
 from pprint import PrettyPrinter
-ppt = PrettyPrinter(sort_dicts=False, indent=1).pprint
+ppt = PrettyPrinter(sort_dicts=False).pprint
 # ===============================
 
-DEF FW_SECTION_COUNT = 4
+DEF FW_SECTION_COUNT = 6
 DEF FW_SYSTEM_MAX_RULE_COUNT = 50
 DEF FW_BEFORE_MAX_RULE_COUNT = 100
 DEF FW_MAIN_MAX_RULE_COUNT = 1000
 DEF FW_AFTER_MAX_RULE_COUNT = 100
+DEF FW_NAT_PRE_MAX_RULE_COUNT = 250
+DEF FW_NAT_POST_MAX_RULE_COUNT = 100
 
 DEF FW_MAX_ATTACKERS = 250
 DEF FW_MAX_ZONE_COUNT = 16
 DEF FW_RULE_SIZE = 15
 
 DEF NFQA_RANGE = NFQA_MAX + 1
+
+DEF SYSTEM_RANGE_MAX = 1
+DEF RULE_RANGE_MAX = 4
+DEF NAT_PRE_RANGE_MAX = 5
+DEF NAT_POST_RANGE_MAX = 6
+
+DEF NAT_PREROUTE = 70
+DEF NAT_POSTROUTE = 71
 
 DEF ANY_ZONE = 99
 DEF NO_SECTION = 99
@@ -97,9 +107,9 @@ pthread_mutex_init(&FWblocklistlock, NULL)
 cdef uint32_t MSB, LSB
 cdef HashTrie_Range GEOLOCATION
 
-# ================================== #
+# ==================================
 # ARRAY INITIALIZATION
-# ================================== #
+# ==================================
 # contains pointers to arrays of pointers to FWrule
 cdef FWrule *firewall_rules[FW_SECTION_COUNT]
 
@@ -113,15 +123,10 @@ firewall_rules[AFTER_RULES]  = <FWrule*>calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(F
 # this will allow us to skip over sections that are empty and know how far to iterate over.
 # tracking this allows the ability to not clear pointers of dangling rules
 # since they will be out of bounds of specified iteration.
-cdef uint32_t CUR_RULE_COUNTS[FW_SECTION_COUNT]
+cdef uint_fast16_t *CUR_RULE_COUNTS = <uint_fast16_t*>calloc(FW_SECTION_COUNT, sizeof(uint_fast16_t))
 
-CUR_RULE_COUNTS[SYSTEM_RULES] = 0 # SYSTEM_CUR_RULE_COUNT
-CUR_RULE_COUNTS[BEFORE_RULES] = 0 # BEFORE_CUR_RULE_COUNT
-CUR_RULE_COUNTS[MAIN_RULES]   = 0 # MAIN_CUR_RULE_COUNT
-CUR_RULE_COUNTS[AFTER_RULES]  = 0 # AFTER_CUR_RULE_COUNT
-
-# stores zone(integer value) at index, which corresponds to if_nametoindex() / value returned from get_in/outdev()
-cdef uint16_t INTF_ZONE_MAP[FW_MAX_ZONE_COUNT]
+# stores zone(integer value) at index, which is mapped to if_nametoindex() (value returned from get_in/outdev)
+cdef uint_fast16_t *INTF_ZONE_MAP = <uint_fast16_t*>calloc(FW_MAX_ZONE_COUNT, sizeof(uint_fast16_t))
 
 # stores the active attackers set/controlled by IPS/IDS
 cdef uint32_t *ATTACKER_BLOCKLIST = <uint32_t*>calloc(FW_MAX_ATTACKERS, sizeof(uint32_t))
@@ -149,32 +154,34 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
         uint16_t    pktdata_len
         size_t      iphdr_len
 
+        srange fw_sections
         InspectionResults inspection = [0, NF_ACCEPT, 69]
 
-        # NEW #
-        nlattr **netlink_attrs = <nlattr**>malloc((NFQA_RANGE) * sizeof(nlattr*))
+        # NEW
+        nlattr *netlink_attrs[NFQA_RANGE]
+        # nlattr **netlink_attrs = <nlattr**>malloc((NFQA_RANGE) * sizeof(nlattr*))
 
         nfqnl_msg_packet_hdr *nlhdr
 
-        uint32_t mark, iif, oif
+        uint32_t iif, oif, mark, ct_info
 
         HWinfo hw
-        char* m_addr[8]
+        char *m_addr = NULL
         ##
 
     # NEW #
     nullset(netlink_attrs, NFQA_RANGE)
 
     nfq_nlmsg_parse(nlh, netlink_attrs)
-    # =============
+    # ======================
     # CONNTRACK
     # this should be checked as soon as feasibly possible for performance.
     # this will be used to allow for stateless inspection policies later.
     ct_info = <uint32_t*>mnl_attr_get_u32(netlink_attrs[NFQA_CT_INFO])
     if (htonl(ct_info) & IP_CT_RELATED|IP_CT_ESTABLISHED):
         dnx_send_verdict(cfd.queue, ntohl(nlhdr.packet_id), &inspection)
-    # =============
-
+    # ======================
+    # INTERFACE, NL, AND HW
     nlhdr = <nfqnl_msg_packet_hdr*>mnl_attr_get_payload(netlink_attrs[NFQA_PACKET_HDR])
     nft_hook = ntohl(nlhdr.hook)
 
@@ -209,8 +216,16 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
     # --------------------
     direction = OUTBOUND if hw.in_zone != WAN_IN else INBOUND
 
-    # SETTING RULE TABLES BASED ON HOOK
-    cdef srange fw_sections = [0, 1] if nft_hook == NF_IP_LOCAL_IN else [1, FW_SECTION_COUNT]
+    # SETTING RULE TABLES
+    if (not mark):
+        fw_sections = [0, SYSTEM_RANGE_MAX] if not oif else [SYSTEM_RANGE_MAX, RULE_RANGE_MAX]
+
+    elif (nft_hook == NF_IP_PRE_ROUTING):
+        fw_sections = [RULE_RANGE_MAX, NAT_PRE_RANGE_MAX]
+
+    elif (nft_hook == NF_IP_POST_ROUTING):
+        fw_sections = [NAT_PRE_RANGE_MAX, NAT_POST_RANGE_MAX]
+
     # ===================================
     # LOCKING ACCESS TO FIREWALL RULES
     # prevents the manager thread from updating firewall rules during packet inspection
@@ -227,8 +242,8 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
     # --------------------
     # NFQUEUE VERDICT
     # --------------------
-    # SYSTEM RULES will have cfirewall invoke action directly
-    if (nft_hook != NF_IP_LOCAL_IN):
+    # only SYSTEM RULES will have cfirewall invoke action directly
+    if (fw_sections.end != SYSTEM_RANGE_MAX):
 
         # if PROXY_BYPASS, cfirewall will invoke the rule action without forwarding to another queue.
         # if not PROXY_BYPASS, forward to ip proxy regardless of action for geolocation log or IPS
@@ -320,12 +335,6 @@ cdef inline InspectionResults cfirewall_inspect(
                 continue
 
             # ------------------------------------------------------------------
-            # VERBOSE MATCH OUTPUT | only showing matches due to too much output
-            # ------------------------------------------------------------------
-            # if (VERBOSE):
-            #     rule_print(&rule)
-
-            # ------------------------------------------------------------------
             # MATCH ACTION | return rule options
             # ------------------------------------------------------------------
             # drop will inherently forward to the ip proxy for geo inspection and local dns records.
@@ -349,7 +358,7 @@ cdef inline InspectionResults cfirewall_inspect(
 
     return results
 
-cdef void dnx_send_verdict(uint32_t queue_num, uint32_t pktid, InspectionResults *inspection):
+cdef ssize_t dnx_send_verdict(uint32_t queue_num, uint32_t pktid, InspectionResults *inspection) nogil:
 
     cdef:
         uint8_t buf[MNL_SOCKET_BUFFER_SIZE]
@@ -361,9 +370,7 @@ cdef void dnx_send_verdict(uint32_t queue_num, uint32_t pktid, InspectionResults
     nfq_nlmsg_verdict_put(nlh, pktid, inspection.action)
     nfq_nlmsg_verdict_put_mark(nlh, inspection.mark)
 
-    ret = mnl_socket_sendto(nl, nlh, nlh.nlmsg_len)
-
-    return ERR if ret < 0 else OK
+    return mnl_socket_sendto(nl, nlh, nlh.nlmsg_len)
 
 # ==================================
 # Firewall Matching Functions
@@ -687,17 +694,10 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
     if (VERBOSE and ruleset >= 1):
         ppt(fw_rule[0])
 
+
 # ===================================
 # C EXTENSION - Python Comm Pipeline
 # ===================================
-cdef uint32_t MAX_COPY_SIZE = 4016 # 4096(buf) - 80
-cdef uint32_t DEFAULT_MAX_QUEUELEN = 8192
-
-# socket queue should hold max number of packets of copy size bytes
-# formula: DEF_MAX_QUEUELEN * (MaxCopySize+SockOverhead) / 2
-cdef uint32_t SOCK_RCV_SIZE = 1024 * 4796 // 2
-
-# =====================================
 # NETLINK SOCKET - cfirewall <> kernel
 cdef mnl_socket *nl
 # =====================================
@@ -746,7 +746,7 @@ cdef class CFirewall:
             nlmsghdr *nlh
 
             int ret = 1
-            # largest possible packet payload, plus netlink data overhead: */
+            # largest possible packet payload, plus netlink data overhead
             size_t sizeof_buf = <size_t>(65535 + (MNL_SOCKET_BUFFER_SIZE / 2))
 
         s.cfd.queue = queue_num

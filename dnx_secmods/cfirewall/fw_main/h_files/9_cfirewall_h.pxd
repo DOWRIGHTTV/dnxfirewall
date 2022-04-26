@@ -25,6 +25,7 @@ cdef enum:
     BEFORE_RULES
     MAIN_RULES
     AFTER_RULES
+    NAT_RULES
 
 # used for dynamic allocation of the array containing security profile settings
 # ip proxy, ips_ids, dns_proxy
