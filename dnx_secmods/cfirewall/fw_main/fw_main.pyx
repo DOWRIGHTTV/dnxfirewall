@@ -364,6 +364,18 @@ cdef dnx_mangle_pkt(dnx_pktb *pkt):
     # MAKE SURE WE RECALCULATE THE PROPER CHECKSUMS.
     # we can probably use the nfq checksum functions if they are publicly available, otherwise use cprotocol_tools.
 
+    # changing dst ip and/or port pre route
+    if (pkt.action & DNX_DST_NAT):
+        pass
+
+    # changing src ip and/or port post route
+    elif (pkt.action & DNX_SRC_NAT):
+        pass
+
+    # changing dst ip and/or port pre route
+    elif (pkt.action & DNX_FULL_NAT):
+        pass
+
     return
 
 # ==================================

@@ -19,7 +19,8 @@ table ip dnxfirewall {
                 type filter hook prerouting priority -150; policy drop;
 
                 # until we can get conntrack stable in cfirewall
-                # once we do, we will need to change priority to be <= -200.
+                # i think priority can stay at -150. it may even be required. the internal nat system relies on CT to
+                # have been done. this is also probably used to make determination of when to send to nat tables.
                 ct state related,established counter accept
 
                 ip protocol { tcp, udp, icmp } jump ips
