@@ -140,36 +140,22 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
 
     # definitions or default assignments
     cdef:
-        cfdata *cfd = <cfdata*>data
-
-        uint8_t *pktdata
-        IPhdr *ip_header
-
-        # default proto_header values (used by icmp) and replaced with protocol specific values
-        # not using calloc to keep mem allocation handled on stack
-        Protohdr proto_def = [0, 0]
-        Protohdr *proto_header = &proto_def
-
-        uint8_t     direction
-        uint16_t    pktdata_len
-        size_t      iphdr_len
-
-        srange fw_sections
-        InspectionResults inspection = [0, NF_ACCEPT, 69]
-
-        # NEW
-        nlattr *netlink_attrs[NFQA_RANGE]
+        cfdata     *cfd = <cfdata*>data
+        nlattr     *netlink_attrs[NFQA_RANGE]
         # nlattr **netlink_attrs = <nlattr**>malloc((NFQA_RANGE) * sizeof(nlattr*))
 
         nfqnl_msg_packet_hdr *nlhdr
+        nfqnl_msg_packet_hw  *_hw
 
-        uint32_t iif, oif, mark, ct_info
+        uint32_t    iif, oif, mark, ct_info
 
-        HWinfo hw
-        char *m_addr = NULL
-        ##
+        HWinfo      hw
+        char       *m_addr = NULL
 
-    # NEW #
+        dnx_pktb    pkt = [NULL, 0, 0, 0, 0, NF_ACCEPT, 69]
+
+        srange      fw_sections
+
     nullset(netlink_attrs, NFQA_RANGE)
 
     nfq_nlmsg_parse(nlh, netlink_attrs)
@@ -179,7 +165,7 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
     # this will be used to allow for stateless inspection policies later.
     ct_info = <uint32_t*>mnl_attr_get_u32(netlink_attrs[NFQA_CT_INFO])
     if (htonl(ct_info) & IP_CT_RELATED|IP_CT_ESTABLISHED):
-        dnx_send_verdict(cfd.queue, ntohl(nlhdr.packet_id), &inspection)
+        dnx_send_verdict(cfd.queue, ntohl(nlhdr.packet_id), &pkt)
     # ======================
     # INTERFACE, NL, AND HW
     nlhdr = <nfqnl_msg_packet_hdr*>mnl_attr_get_payload(netlink_attrs[NFQA_PACKET_HDR])
@@ -194,27 +180,11 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
 
         m_addr = <char*>_hw.hw_addr
 
+    # NOTE: i bet this is going to break on the m_addr when no mac is available
     hw = [INTF_ZONE_MAP[iif], INTF_ZONE_MAP[oif], m_addr[:6], time(NULL)]
 
-    pktdata_len = mnl_attr_get_payload_len(netlink_attrs[NFQA_PAYLOAD])
-    pktdata = <uint8_t*>mnl_attr_get_payload(netlink_attrs[NFQA_PAYLOAD])
-    # --------------------
-    # IP HEADER
-    # --------------------
-    ip_header = <IPhdr*>pktdata
-    iphdr_len = (ip_header.ver_ihl & FOUR_BIT_MASK) * 4
-
-    # --------------------
-    # PROTOCOL HEADER
-    # --------------------
-    # tcp/udp will reassign the pointer to their header data
-    if (ip_header.protocol != IPPROTO_ICMP):
-        proto_header = <Protohdr*>&pktdata[iphdr_len]
-
-    # --------------------
-    # DIRECTION SET
-    # --------------------
-    direction = OUTBOUND if hw.in_zone != WAN_IN else INBOUND
+    pkt.data = <uint8_t*>mnl_attr_get_payload(netlink_attrs[NFQA_PAYLOAD])
+    pkt.len  = mnl_attr_get_payload_len(netlink_attrs[NFQA_PAYLOAD])
 
     # SETTING RULE TABLES
     if (not mark):
@@ -233,11 +203,22 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
     # --------------------
     # FIREWALL RULE CHECK
     # --------------------
-    inspection = cfirewall_inspect(&hw, ip_header, proto_header, direction, fw_sections)
+    cfirewall_inspect(&hw, pkt.data, &fw_sections, &pkt)
 
     pthread_mutex_unlock(&FWrulelock)
     # UNLOCKING ACCESS TO FIREWALL RULES
     # ===================================
+
+    # --------------------
+    # NAT / MANGLE
+    # --------------------
+    # NOTE: it looks like it will be better if we manually NAT the packet contents.
+    # the alternative is to allocate a pktb and user the proper mangler.
+    # this would auto manage the header checksums, but we would need alloc/free every time we mangle.
+    # i have alot of experience with nat and checksum calculations so its probably easier and more efficient to use
+    # the on stack buffer to mangle. (this is unless we need to retain a copy of the original packet)
+    if (pkt.action & DNX_NAT_FLAGS):
+        dnx_mangle_pkt(&pkt)
 
     # --------------------
     # NFQUEUE VERDICT
@@ -248,49 +229,54 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
         # if PROXY_BYPASS, cfirewall will invoke the rule action without forwarding to another queue.
         # if not PROXY_BYPASS, forward to ip proxy regardless of action for geolocation log or IPS
         if (not PROXY_BYPASS):
-            inspection.action = IP_PROXY << TWO_BYTES | NF_QUEUE
+            pkt.action = IP_PROXY << TWO_BYTES | NF_QUEUE
 
-    dnx_send_verdict(cfd.queue, ntohl(nlhdr.packet_id), &inspection)
+    dnx_send_verdict(cfd.queue, ntohl(nlhdr.packet_id), &pkt)
 
     # verdict is being used to eval whether the packet matched a system rule.
     # a 0 verdict infers this also, but for ease of reading, ill use both.
     if (VERBOSE):
-        pkt_print(&hw, ip_header, proto_header)
+        # pkt_print(&hw, ip_header, proto_header)
 
-        printf('[C/packet] system->%u, action->%u, ', nft_hook, inspection.action)
+        printf('[C/packet] system->%u, action->%u, ', nft_hook, pkt.action)
         printf('ipp->%u, dns->%u, ips->%u\n',
-               inspection.mark >> 12 & 15, inspection.mark >> 16 & 15, inspection.mark >> 20 & 15)
+               pkt.mark >> 12 & 15, pkt.mark >> 16 & 15, pkt.mark >> 20 & 15)
         printf(<char*>'=====================================================================\n')
 
     # return heirarchy -> libnfnetlink.c >> libnetfiler_queue >> CFirewall._run.
     # < 0 vals are errors, but return is being ignored by CFirewall._run.
     return Py_OK
 
-cdef inline InspectionResults cfirewall_inspect(
-        HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header, uint8_t direction, srange fw_sections) nogil:
+cdef inline void cfirewall_inspect(HWinfo *hw, srange *fw_sections, dnx_pktb *pkt) nogil:
 
     cdef:
-        FWrule rule
-        size_t section_num, rule_num
-
-        uint32_t rule_src_protocol, rule_dst_protocol # <16 bit proto | 16 bit port>
+        FWrule      rule
+        size_t      section_num, rule_num
+        # ---------------------
+        # L3 - IP HEADER
+        # ---------------------
+        IPhdr       ip_header = <IPhdr*>pkt.data
+        uint16_t    iphdr_len = (ip_header.ver_ihl & FOUR_BIT_MASK) * 4
+        # ---------------------
+        # L4 - PROTOCOL HEADER
+        # ---------------------
+        # tcp/udp will reassign the pointer to their header data
+        Protohdr    proto_header = <Protohdr>pkt.data[iphdr_len] if ip_header.protocol != IPPROTO_ICMP else [0, 0]
 
         # normalizing src/dst ip in header to host order
-        uint32_t iph_src_ip = ntohl(ip_header.saddr)
-        uint32_t iph_dst_ip = ntohl(ip_header.daddr)
+        uint32_t    iph_src_ip = ntohl(ip_header.saddr)
+        uint32_t    iph_dst_ip = ntohl(ip_header.daddr)
 
         # ip address to country code
-        uint8_t src_country = GEOLOCATION.search(iph_src_ip & MSB, iph_src_ip & LSB)
-        uint8_t dst_country = GEOLOCATION.search(iph_dst_ip & MSB, iph_dst_ip & LSB)
+        uint8_t     src_country = GEOLOCATION.search(iph_src_ip & MSB, iph_src_ip & LSB)
+        uint8_t     dst_country = GEOLOCATION.search(iph_dst_ip & MSB, iph_dst_ip & LSB)
 
-        # value used by ip proxy which is normalized and always represents the external ip address
-        uint16_t tracked_geo = src_country if direction == INBOUND else dst_country
-
-        # return struct (section | action | mark)
-        InspectionResults results
+        # general direction of the packet and ip addr normalized to always be the external host/ip
+        uint8_t     direction = OUTBOUND if hw.in_zone != WAN_IN else INBOUND
+        uint16_t    tracked_geo = src_country if direction == INBOUND else dst_country
 
         # security profile loop
-        size_t i, idx
+        uint_fast8_t i, idx
 
     for section_num in range(fw_sections.start, fw_sections.end):
 
@@ -338,27 +324,24 @@ cdef inline InspectionResults cfirewall_inspect(
             # MATCH ACTION | return rule options
             # ------------------------------------------------------------------
             # drop will inherently forward to the ip proxy for geo inspection and local dns records.
-            results.fw_section = section_num
-            results.action = rule.action
-            results.mark = tracked_geo << FOUR_BITS | direction << TWO_BITS | rule.action
+            pkt.fw_section = section_num
+            pkt.rule = rule_num # if logging, this needs to be +1
+            pkt.action = rule.action
+            pkt.mark = tracked_geo << FOUR_BITS | direction << TWO_BITS | rule.action
 
             idx = 0
             for i in range(PROFILE_START, PROFILE_STOP, PROFILE_SIZE):
-                results.mark |= rule.sec_profiles[idx] << i
+                pkt.mark |= rule.sec_profiles[idx] << i
                 idx += 1
-
-            return results
 
     # ------------------------------------------------------------------
     # DEFAULT ACTION
     # ------------------------------------------------------------------
-    results.fw_section = NO_SECTION
-    results.action = DROP
-    results.mark = tracked_geo << FOUR_BITS | direction << TWO_BITS | DROP
+    pkt.fw_section = NO_SECTION
+    pkt.action = DNX_DROP
+    pkt.mark = tracked_geo << FOUR_BITS | direction << TWO_BITS | DNX_DROP
 
-    return results
-
-cdef ssize_t dnx_send_verdict(uint32_t queue_num, uint32_t pktid, InspectionResults *inspection) nogil:
+cdef int dnx_send_verdict(uint32_t queue_num, uint32_t pktid, dnx_pktb *pkt) nogil:
 
     cdef:
         uint8_t buf[MNL_SOCKET_BUFFER_SIZE]
@@ -367,10 +350,21 @@ cdef ssize_t dnx_send_verdict(uint32_t queue_num, uint32_t pktid, InspectionResu
 
     nlh = nfq_nlmsg_put(buf, NFQNL_MSG_VERDICT, queue_num)
 
-    nfq_nlmsg_verdict_put(nlh, pktid, inspection.action)
-    nfq_nlmsg_verdict_put_mark(nlh, inspection.mark)
+    nfq_nlmsg_verdict_put(nlh, pktid, pkt.action)
+    nfq_nlmsg_verdict_put_mark(nlh, pkt.mark)
+    if (pkt.mangled):
+        nfq_nlmsg_verdict_put_pkt(nlh, pkt.data, pkt.len)
 
-    return mnl_socket_sendto(nl, nlh, nlh.nlmsg_len)
+    ret = mnl_socket_sendto(nl, nlh, nlh.nlmsg_len)
+
+    return ERR if ret < 0 else OK
+
+cdef dnx_mangle_pkt(dnx_pktb *pkt):
+
+    # MAKE SURE WE RECALCULATE THE PROPER CHECKSUMS.
+    # we can probably use the nfq checksum functions if they are publicly available, otherwise use cprotocol_tools.
+
+    return
 
 # ==================================
 # Firewall Matching Functions

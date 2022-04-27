@@ -343,8 +343,8 @@ cdef extern from "linux/netfilter/nfnetlink_queue.h" nogil:
         uint8_t  hw_addr[8]
 
     struct nfqnl_msg_packet_timestamp:
-        double sec                      #__aligned_be64
-        double usec                     #__aligned_be64
+        uint64_t sec                      #__aligned_be64
+        uint64_t usec                     #__aligned_be64
 
     enum nfqnl_vlan_attr:
         NFQA_VLAN_UNSPEC,
@@ -602,9 +602,15 @@ cdef enum:
     IPS_IDS   = 3
 
 cdef enum:
-    DROP   = 0
-    ACCEPT = 1
-    REJECT = 2
+    DNX_DROP   = 0
+    DNX_ACCEPT = 1
+    DNX_REJECT = 2
+
+    DNX_SRC_NAT  = 4
+    DNX_DST_NAT  = 8
+    DNX_FULL_NAT = 16
+
+    DNX_NAT_FLAGS = DNX_SRC_NAT | DNX_DST_NAT | DNX_FULL_NAT
 
 cdef enum:
     OUTBOUND = 1
@@ -618,6 +624,7 @@ cdef enum:
     BEFORE_RULES
     MAIN_RULES
     AFTER_RULES
+    NAT_RULES
 
 # used for dynamic allocation of the array containing security profile settings
 # ip proxy, ips_ids, dns_proxy
@@ -714,13 +721,17 @@ cdef struct Protohdr:
     uint16_t    s_port
     uint16_t    d_port
 
-cdef struct InspectionResults:
+cdef struct cfdata:
+    uint32_t    queue
+
+cdef struct dnx_pktb:
+    uint8_t    *data
+    uint16_t    len
+    uint8_t     mangled
     uint16_t    fw_section
+    uint16_t    rule_num
     uint32_t    action
     uint32_t    mark
-
-cdef struct cfdata:
-    uint32_t queue
 
 
 cdef class CFirewall:

@@ -2,8 +2,8 @@
 
 import os
 
-# HOME_DIR: str = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-HOME_DIR = 'C:/Users/dowright/PycharmProjects/dnxfirewall'
+HOME_DIR: str = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
+#HOME_DIR = 'C:/Users/dowright/PycharmProjects/dnxfirewall'
 CFIREWALL_DIR = f'{HOME_DIR}/dnx_secmods/cfirewall/fw_main'
 
 os.chdir(CFIREWALL_DIR)
