@@ -16,4 +16,4 @@ cdef extern from '<arpa/inet.h>':
 
     in_addr_t inet_addr(char *cp)
 
-cdef inline void nullset(void *data, size_t dlen) nogil
+cdef void nullset(void *data, size_t dlen) nogil

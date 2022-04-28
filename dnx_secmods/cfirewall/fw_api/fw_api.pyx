@@ -12,10 +12,8 @@
 # 2. ATTACKER
 
 from libc.stdlib cimport calloc
-from libc.stdio cimport printf, close
+from libc.stdio cimport printf, fclose
 from libc.string cimport memcpy, memset
-
-from libc.stdint cimport uint8_t, uint32_t
 
 # ======================
 # SOCKET AUTHENTICATION
@@ -35,16 +33,6 @@ DEF Py_OK  = 0
 DEF Py_ERR = 1
 
 DEF FW_MSG_MAX_SIZE = 132
-
-cdef struct fwattacker:
-    uint32_t    host
-    time_t      expire
-
-cdef struct dnxfwmsg:
-    uint8_t     control
-    uint8_t     id
-    uint8_t     len
-    uint8_t    *data[128]
 
 
 cdef void process_api(int fd):
@@ -80,7 +68,7 @@ cdef int api_open(char* sock_path):
 
     ret = bind(sd, &addr, sizeof(sockaddr_un))
     if (ret == ERR):
-        close(sd)
+        fclose(sd)
 
         return ERR
 

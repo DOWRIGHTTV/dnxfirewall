@@ -1,4 +1,4 @@
-cdef extern from "libmnl/libmnl.h":
+cdef extern from "libmnl/libmnl.h" nogil:
     # nlattr mnl_attr_for_each(nlattr attr, nlmsghdr *nlh, int offset)
     # mnl_attr_for_each_nested(nlattr attr, nest)
     # mnl_attr_for_each_payload(payload, size_t payload_size)

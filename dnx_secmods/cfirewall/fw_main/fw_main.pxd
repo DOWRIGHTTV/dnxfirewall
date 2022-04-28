@@ -62,7 +62,7 @@ cdef extern from "netinet/udp.h":
     struct udphdr:
         pass
 
-cdef extern from "libnfnetlink/libnfnetlink.h":
+cdef extern from "libnfnetlink/libnfnetlink.h" nogil:
     struct nfnl_handle:
         pass
 
@@ -213,7 +213,7 @@ cdef extern from "linux/netfilter_ipv4.h" nogil:
         NF_IP_PRI_LAST
 
 # New API based on libmnl
-cdef extern from "libnetfilter_queue/libnetfilter_queue.h":
+cdef extern from "libnetfilter_queue/libnetfilter_queue.h" nogil:
     # CMD HELPERS
     void nfq_nlmsg_cfg_put_cmd(nlmsghdr *nlh, uint16_t pf, uint8_t cmd)
     void nfq_nlmsg_cfg_put_params(nlmsghdr *nlh, uint8_t mode, int range)
@@ -228,7 +228,7 @@ cdef extern from "libnetfilter_queue/libnetfilter_queue.h":
     int nfq_nlmsg_parse(const nlmsghdr *nlh, nlattr **attr)
     nlmsghdr *nfq_nlmsg_put(char *buf, int type, uint32_t queue_num)
 
-cdef extern from "libnetfilter_queue/pktbuff.h":
+cdef extern from "libnetfilter_queue/pktbuff.h" nogil:
     # PRIMARY FUNCTIONS
     struct pkt_buff:
         pass
@@ -256,7 +256,7 @@ cdef extern from "libnetfilter_queue/pktbuff.h":
     # probably wont be used directly. protocol mangle functions are recommended.
     int pktb_mangle(pkt_buff *pkt, unsigned int dataoff, unsigned int match_offset, unsigned int match_len, const char *rep_buffer, unsigned int rep_len)
 
-cdef extern from "libnetfilter_queue/libnetfilter_queue_ipv4.h":
+cdef extern from "libnetfilter_queue/libnetfilter_queue_ipv4.h" nogil:
     struct iphdr:
         pass
 
@@ -269,7 +269,7 @@ cdef extern from "libnetfilter_queue/libnetfilter_queue_ipv4.h":
     void nfq_ip_set_checksum(iphdr *iph)
     int nfq_ip_snprintf(char *buf, size_t size, const iphdr *iph)
 
-cdef extern from "libnetfilter_queue/libnetfilter_queue_tcp.h":
+cdef extern from "libnetfilter_queue/libnetfilter_queue_tcp.h" nogil:
     tcphdr *nfq_tcp_get_hdr(pkt_buff *pktb)
     void *nfq_tcp_get_payload(tcphdr *tcph, pkt_buff *pktb)
     unsigned int nfq_tcp_get_payload_len(tcphdr *tcph, pkt_buff *pktb)
@@ -283,7 +283,7 @@ cdef extern from "libnetfilter_queue/libnetfilter_queue_tcp.h":
 
     int nfq_tcp_snprintf(char *buf, size_t size, const tcphdr *tcp)
 
-cdef extern from "libnetfilter_queue/libnetfilter_queue_udp.h":
+cdef extern from "libnetfilter_queue/libnetfilter_queue_udp.h" nogil:
     udphdr *nfq_udp_get_hdr(pkt_buff *pktb)
     void *nfq_udp_get_payload(udphdr *udph, pkt_buff *pktb)
     unsigned int nfq_udp_get_payload_len(udphdr *udph, pkt_buff *pktb)
@@ -435,7 +435,7 @@ cdef extern from "linux/netfilter/nfnetlink_queue.h" nogil:
         # csum not validated (incoming device doesn't support hw checksum, etc.)
         NFQA_SKB_CSUM_NOTVERIFIED
 
-cdef extern from "libmnl/libmnl.h":
+cdef extern from "libmnl/libmnl.h" nogil:
     # nlattr mnl_attr_for_each(nlattr attr, nlmsghdr *nlh, int offset)
     # mnl_attr_for_each_nested(nlattr attr, nest)
     # mnl_attr_for_each_payload(payload, size_t payload_size)
@@ -717,16 +717,28 @@ cdef struct IPhdr:
     uint32_t    saddr
     uint32_t    daddr
 
-cdef struct Protohdr:
+cdef struct P1: # ICMP
+    uint8_t     type
+    uint8_t     code
+
+cdef struct P2: # TCP/UDP
     uint16_t    s_port
     uint16_t    d_port
+
+cdef union Protohdr:
+    P1         *p1
+    P2         *p2
 
 cdef struct cfdata:
     uint32_t    queue
 
 cdef struct dnx_pktb:
     uint8_t    *data
-    uint16_t    len
+    uint16_t    tlen
+    IPhdr      *iphdr
+    uint16_t    iphdr_len # header only
+    Protohdr   *protohdr
+    uint16_t    protohdr_len # header only
     uint8_t     mangled
     uint16_t    fw_section
     uint16_t    rule_num
@@ -744,5 +756,5 @@ cdef class CFirewall:
     cpdef int prepare_geolocation(s, list geolocation_trie, uint32_t msb, uint32_t lsb) with gil
     cpdef int update_zones(s, PyArray zone_map) with gil
     cpdef int update_ruleset(s, size_t ruleset, list rulelist) with gil
-    cdef  int remove_attacker(s, uint32_t host_ip)
+#    cdef  int remove_attacker(s, uint32_t host_ip)
 

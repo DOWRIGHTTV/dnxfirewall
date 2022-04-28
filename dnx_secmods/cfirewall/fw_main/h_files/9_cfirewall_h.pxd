@@ -124,16 +124,28 @@ cdef struct IPhdr:
     uint32_t    saddr
     uint32_t    daddr
 
-cdef struct Protohdr:
+cdef struct P1: # ICMP
+    uint8_t     type
+    uint8_t     code
+
+cdef struct P2: # TCP/UDP
     uint16_t    s_port
     uint16_t    d_port
+
+cdef union Protohdr:
+    P1         *p1
+    P2         *p2
 
 cdef struct cfdata:
     uint32_t    queue
 
 cdef struct dnx_pktb:
     uint8_t    *data
-    uint16_t    len
+    uint16_t    tlen
+    IPhdr      *iphdr
+    uint16_t    iphdr_len # header only
+    Protohdr   *protohdr
+    uint16_t    protohdr_len # header only
     uint8_t     mangled
     uint16_t    fw_section
     uint16_t    rule_num
@@ -151,4 +163,4 @@ cdef class CFirewall:
     cpdef int prepare_geolocation(s, list geolocation_trie, uint32_t msb, uint32_t lsb) with gil
     cpdef int update_zones(s, PyArray zone_map) with gil
     cpdef int update_ruleset(s, size_t ruleset, list rulelist) with gil
-    cdef  int remove_attacker(s, uint32_t host_ip)
+#    cdef  int remove_attacker(s, uint32_t host_ip)

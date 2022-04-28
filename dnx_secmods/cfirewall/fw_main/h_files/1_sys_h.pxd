@@ -62,7 +62,7 @@ cdef extern from "netinet/udp.h":
     struct udphdr:
         pass
 
-cdef extern from "libnfnetlink/libnfnetlink.h":
+cdef extern from "libnfnetlink/libnfnetlink.h" nogil:
     struct nfnl_handle:
         pass
 

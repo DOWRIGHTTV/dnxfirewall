@@ -1,5 +1,7 @@
 #!/usr/bin/env Cython
 
+#
+
 from libc.stdlib cimport calloc, malloc, free
 from libc.stdio cimport printf
 
@@ -9,7 +11,7 @@ from libc.stdint cimport uint_fast8_t, uint_fast16_t, uint_fast32_t
 from dnx_iptools.hash_trie.hash_trie cimport HashTrie_Range
 from dnx_iptools.cprotocol_tools.cprotocol_tools cimport nullset
 
-from fw_api.fw_api cimport api_open, process_api
+from fw_api cimport api_open, process_api
 
 # ===============================
 # VERBOSE T-SHOOT ASSISTANCE
@@ -30,15 +32,13 @@ DEF FW_MAX_ATTACKERS = 250
 DEF FW_MAX_ZONE_COUNT = 16
 DEF FW_RULE_SIZE = 15
 
-DEF NFQA_RANGE = NFQA_MAX + 1
-
 DEF SYSTEM_RANGE_MAX = 1
 DEF RULE_RANGE_MAX = 4
 DEF NAT_PRE_RANGE_MAX = 5
 DEF NAT_POST_RANGE_MAX = 6
 
-DEF NAT_PREROUTE = 70
-DEF NAT_POSTROUTE = 71
+#DEF NAT_PREROUTE = 70
+#DEF NAT_POSTROUTE = 71
 
 DEF ANY_ZONE = 99
 DEF NO_SECTION = 99
@@ -81,9 +81,13 @@ DEF IP_GEO     = 6
 DEF SVC_SOLO  = 1
 DEF SVC_RANGE = 2
 DEF SVC_LIST  = 3
+DEF SVC_ICMP  = 4
 
-cdef bint PROXY_BYPASS  = 0
+cdef bint PROXY_BYPASS = 0
 cdef bint VERBOSE = 0
+
+cdef enum:
+    NFQA_RANGE = NFQA_MAX + 1
 
 # ================================== #
 # Firewall rules lock
@@ -125,7 +129,7 @@ firewall_rules[AFTER_RULES]  = <FWrule*>calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(F
 # since they will be out of bounds of specified iteration.
 cdef uint_fast16_t *CUR_RULE_COUNTS = <uint_fast16_t*>calloc(FW_SECTION_COUNT, sizeof(uint_fast16_t))
 
-# stores zone(integer value) at index, which is mapped to if_nametoindex() (value returned from get_in/outdev)
+# stores zone(integer value) at index, which is mapped Fto if_nametoindex() (value returned from get_in/outdev)
 cdef uint_fast16_t *INTF_ZONE_MAP = <uint_fast16_t*>calloc(FW_MAX_ZONE_COUNT, sizeof(uint_fast16_t))
 
 # stores the active attackers set/controlled by IPS/IDS
@@ -142,7 +146,6 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
     cdef:
         cfdata     *cfd = <cfdata*>data
         nlattr     *netlink_attrs[NFQA_RANGE]
-        # nlattr **netlink_attrs = <nlattr**>malloc((NFQA_RANGE) * sizeof(nlattr*))
 
         nfqnl_msg_packet_hdr *nlhdr
         nfqnl_msg_packet_hw  *_hw
@@ -152,23 +155,24 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
         HWinfo      hw
         char       *m_addr = NULL
 
-        dnx_pktb    pkt = [NULL, 0, 0, 0, 0, NF_ACCEPT, 69]
+        Protohdr    protohdr
+        dnx_pktb    pkt = [NULL, 0, NULL, 0, &protohdr, 0, 0, 0, 0, NF_ACCEPT, 69]
 
         srange      fw_sections
 
     nullset(netlink_attrs, NFQA_RANGE)
-
     nfq_nlmsg_parse(nlh, netlink_attrs)
+
+    nlhdr = <nfqnl_msg_packet_hdr*>mnl_attr_get_payload(netlink_attrs[NFQA_PACKET_HDR])
     # ======================
     # CONNTRACK
     # this should be checked as soon as feasibly possible for performance.
     # this will be used to allow for stateless inspection policies later.
-    ct_info = <uint32_t*>mnl_attr_get_u32(netlink_attrs[NFQA_CT_INFO])
+    ct_info = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_CT_INFO]))
     if (htonl(ct_info) & IP_CT_RELATED|IP_CT_ESTABLISHED):
         dnx_send_verdict(cfd.queue, ntohl(nlhdr.packet_id), &pkt)
     # ======================
     # INTERFACE, NL, AND HW
-    nlhdr = <nfqnl_msg_packet_hdr*>mnl_attr_get_payload(netlink_attrs[NFQA_PACKET_HDR])
     nft_hook = ntohl(nlhdr.hook)
 
     mark = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_MARK])) if netlink_attrs[NFQA_MARK] else 0
@@ -181,10 +185,10 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
         m_addr = <char*>_hw.hw_addr
 
     # NOTE: i bet this is going to break on the m_addr when no mac is available
-    hw = [INTF_ZONE_MAP[iif], INTF_ZONE_MAP[oif], m_addr[:6], time(NULL)]
+    hw = [INTF_ZONE_MAP[iif], INTF_ZONE_MAP[oif], m_addr, time(NULL)]
 
     pkt.data = <uint8_t*>mnl_attr_get_payload(netlink_attrs[NFQA_PAYLOAD])
-    pkt.len  = mnl_attr_get_payload_len(netlink_attrs[NFQA_PAYLOAD])
+    pkt.tlen  = mnl_attr_get_payload_len(netlink_attrs[NFQA_PAYLOAD])
 
     # SETTING RULE TABLES
     if (not mark):
@@ -203,7 +207,7 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
     # --------------------
     # FIREWALL RULE CHECK
     # --------------------
-    cfirewall_inspect(&hw, pkt.data, &fw_sections, &pkt)
+    cfirewall_inspect(&hw, &fw_sections, &pkt)
 
     pthread_mutex_unlock(&FWrulelock)
     # UNLOCKING ACCESS TO FIREWALL RULES
@@ -249,23 +253,29 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
 
 cdef inline void cfirewall_inspect(HWinfo *hw, srange *fw_sections, dnx_pktb *pkt) nogil:
 
+    # intial header parse and assignment to dnx_pktb struct
+    # ---------------------
+    # L3 - IP HEADER
+    # ---------------------
+    pkt.iphdr     = <IPhdr*>pkt.data
+    pkt.iphdr_len = (pkt.iphdr.ver_ihl & FOUR_BIT_MASK) * 4
+    # ---------------------
+    # L4 - PROTOCOL HEADER
+    # ---------------------
+    # tcp/udp will reassign the pointer to their header data
+    # TODO: see if we can just increment the pointer of iphdr. i feel like if we did += we couldnt cast it to protohdr.
+    if (pkt.iphdr.protocol == IPPROTO_ICMP):
+        pkt.protohdr.p1 = <P1*>pkt.data[pkt.iphdr_len]
+    else:
+        pkt.protohdr.p2 = <P2*>pkt.data[pkt.iphdr_len]
+
     cdef:
         FWrule      rule
         size_t      section_num, rule_num
-        # ---------------------
-        # L3 - IP HEADER
-        # ---------------------
-        IPhdr       ip_header = <IPhdr*>pkt.data
-        uint16_t    iphdr_len = (ip_header.ver_ihl & FOUR_BIT_MASK) * 4
-        # ---------------------
-        # L4 - PROTOCOL HEADER
-        # ---------------------
-        # tcp/udp will reassign the pointer to their header data
-        Protohdr    proto_header = <Protohdr>pkt.data[iphdr_len] if ip_header.protocol != IPPROTO_ICMP else [0, 0]
 
         # normalizing src/dst ip in header to host order
-        uint32_t    iph_src_ip = ntohl(ip_header.saddr)
-        uint32_t    iph_dst_ip = ntohl(ip_header.daddr)
+        uint32_t    iph_src_ip = ntohl(pkt.iphdr.saddr)
+        uint32_t    iph_dst_ip = ntohl(pkt.iphdr.daddr)
 
         # ip address to country code
         uint8_t     src_country = GEOLOCATION.search(iph_src_ip & MSB, iph_src_ip & LSB)
@@ -314,10 +324,10 @@ cdef inline void cfirewall_inspect(HWinfo *hw, srange *fw_sections, dnx_pktb *pk
             # ------------------------------------------------------------------
             # PROTOCOL / PORT
             # ------------------------------------------------------------------
-            if not service_match(&rule.s_services, ip_header.protocol, ntohs(proto_header.s_port)):
+            if not service_match(&rule.s_services, pkt.iphdr.protocol, pkt.protohdr, 0):
                 continue
 
-            if not service_match(&rule.d_services, ip_header.protocol, ntohs(proto_header.d_port)):
+            if not service_match(&rule.d_services, pkt.iphdr.protocol, pkt.protohdr, 1):
                 continue
 
             # ------------------------------------------------------------------
@@ -325,9 +335,9 @@ cdef inline void cfirewall_inspect(HWinfo *hw, srange *fw_sections, dnx_pktb *pk
             # ------------------------------------------------------------------
             # drop will inherently forward to the ip proxy for geo inspection and local dns records.
             pkt.fw_section = section_num
-            pkt.rule = rule_num # if logging, this needs to be +1
-            pkt.action = rule.action
-            pkt.mark = tracked_geo << FOUR_BITS | direction << TWO_BITS | rule.action
+            pkt.rule_num   = rule_num # if logging, this needs to be +1
+            pkt.action     = rule.action
+            pkt.mark       = tracked_geo << FOUR_BITS | direction << TWO_BITS | rule.action
 
             idx = 0
             for i in range(PROFILE_START, PROFILE_STOP, PROFILE_SIZE):
@@ -338,8 +348,8 @@ cdef inline void cfirewall_inspect(HWinfo *hw, srange *fw_sections, dnx_pktb *pk
     # DEFAULT ACTION
     # ------------------------------------------------------------------
     pkt.fw_section = NO_SECTION
-    pkt.action = DNX_DROP
-    pkt.mark = tracked_geo << FOUR_BITS | direction << TWO_BITS | DNX_DROP
+    pkt.action     = DNX_DROP
+    pkt.mark       = tracked_geo << FOUR_BITS | direction << TWO_BITS | DNX_DROP
 
 cdef int dnx_send_verdict(uint32_t queue_num, uint32_t pktid, dnx_pktb *pkt) nogil:
 
@@ -348,18 +358,18 @@ cdef int dnx_send_verdict(uint32_t queue_num, uint32_t pktid, dnx_pktb *pkt) nog
         nlmsghdr *nlh
         nlattr *nest
 
-    nlh = nfq_nlmsg_put(buf, NFQNL_MSG_VERDICT, queue_num)
+    nlh = nfq_nlmsg_put(<char*>buf, NFQNL_MSG_VERDICT, queue_num)
 
     nfq_nlmsg_verdict_put(nlh, pktid, pkt.action)
     nfq_nlmsg_verdict_put_mark(nlh, pkt.mark)
     if (pkt.mangled):
-        nfq_nlmsg_verdict_put_pkt(nlh, pkt.data, pkt.len)
+        nfq_nlmsg_verdict_put_pkt(nlh, pkt.data, pkt.tlen)
 
     ret = mnl_socket_sendto(nl, nlh, nlh.nlmsg_len)
 
     return ERR if ret < 0 else OK
 
-cdef dnx_mangle_pkt(dnx_pktb *pkt):
+cdef int dnx_mangle_pkt(dnx_pktb *pkt) nogil:
 
     # MAKE SURE WE RECALCULATE THE PROPER CHECKSUMS.
     # we can probably use the nfq checksum functions if they are publicly available, otherwise use cprotocol_tools.
@@ -376,7 +386,7 @@ cdef dnx_mangle_pkt(dnx_pktb *pkt):
     elif (pkt.action & DNX_FULL_NAT):
         pass
 
-    return
+    return OK
 
 # ==================================
 # Firewall Matching Functions
@@ -472,16 +482,28 @@ cdef inline bint network_match(NetworkArray *net_array, uint32_t iph_ip, uint8_t
     return NO_MATCH
 
 # generic function that can handle source OR destination proto/port matching
-cdef inline bint service_match(ServiceArray *svc_array, uint16_t pkt_protocol, uint16_t pkt_port) nogil:
+cdef inline bint service_match(ServiceArray *svc_array, uint16_t pkt_protocol, Protohdr *protohdr, int idx) nogil:
 
     cdef:
-        size_t i
-        Service         *svc
-        ServiceList     *svc_list
-        ServiceObject   *svc_object
+        uint_fast16_t   i
+        Service        *svc
+        ServiceList    *svc_list
+        ServiceObject  *svc_object
 
-    if (VERBOSE):
-        printf(<char*>'packet protocol->%u, port->%u\n', pkt_protocol, pkt_port)
+        uint16_t        pkt_port = 0
+
+    # will inspect both icmp fields in dst match.
+    if (pkt_protocol == IPPROTO_ICMP and idx == 0):
+        return MATCH
+
+    elif (pkt_protocol == IPPROTO_ICMP):
+        pass
+
+    else:
+        pkt_port = protohdr.p2.d_port if idx else protohdr.p2.s_port
+
+    # if (VERBOSE):
+    #     printf(<char*>'packet protocol->%u, port->%u\n', pkt_protocol, pkt_port)
 
     for i in range(svc_array.len):
         svc_object = &svc_array.objects[i]
@@ -502,26 +524,42 @@ cdef inline bint service_match(ServiceArray *svc_array, uint16_t pkt_protocol, u
         elif (svc_object.type == SVC_RANGE):
 
             svc = &svc_object.service.object
-            if (pkt_protocol == svc.protocol or svc.protocol == ANY_PROTOCOL):
+            if (pkt_protocol != svc.protocol and svc.protocol != ANY_PROTOCOL):
+                continue
+
+            if (svc.start_port <= pkt_port <= svc.end_port):
+                return MATCH
+
+        # --------------------
+        # TYPE -> LIST (3)
+        # --------------------
+        elif (svc_object.type == SVC_LIST):
+
+            svc_list = &svc_object.service.list
+            for i in range(svc_list.len):
+
+                svc = &svc_list.objects[i]
+                if (svc.protocol != pkt_protocol and svc.protocol != ANY_PROTOCOL):
+                    continue
 
                 if (svc.start_port <= pkt_port <= svc.end_port):
                     return MATCH
 
         # --------------------
-        # TYPE -> LIST (3)
+        # TYPE -> ICMP (4)
         # --------------------
-        else:
-            svc_list = &svc_object.service.list
-            for i in range(svc_list.len):
+        elif (svc_object.type == SVC_ICMP):
 
-                svc = &svc_list.objects[i]
-                if (pkt_protocol == svc.protocol or svc.protocol == ANY_PROTOCOL):
+            svc = &svc_object.service.object
+            if (pkt_protocol != IPPROTO_ICMP and svc.protocol != ANY_PROTOCOL):
+                continue
 
-                    if (svc.start_port <= pkt_port <= svc.end_port):
-                        return MATCH
+            # NOTE: currently recyling tcp/udp service struct. consider changing
+            if (svc.start_port == protohdr.p1.type and svc.end_port == protohdr.p1.code):
+                return MATCH
 
-    if (VERBOSE):
-        printf(<char*>'no match for packet protocol->%u, port->%u\n', pkt_protocol, pkt_port)
+    # if (VERBOSE):
+    #     printf(<char*>'no match for packet protocol->%u, port->%u\n', pkt_protocol, pkt_port)
 
     # default action
     return NO_MATCH
@@ -530,15 +568,15 @@ cdef inline bint service_match(ServiceArray *svc_array, uint16_t pkt_protocol, u
 # PRINT FUNCTIONS
 # ==================================
 # NOTE: the integer casts are to clamp the struct fields to standard because they are implemented as fast_ints
-cdef inline void pkt_print(HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header) with gil:
-    '''nested struct print of the passed in references using Python pretty printer.
-
-    the GIL will be acquired before executing the print and released on return.
-    the byte order will be big endian/ network so the integer outputs will be backwards on Linux.
-    '''
-    ppt(hw[0])
-    ppt(ip_header[0])
-    ppt(proto_header[0])
+# cdef inline void pkt_print(HWinfo *hw, IPhdr *ip_header, Protohdr *proto_header) with gil:
+#     '''nested struct print of the passed in references using Python pretty printer.
+#
+#     the GIL will be acquired before executing the print and released on return.
+#     the byte order will be big endian/ network so the integer outputs will be backwards on Linux.
+#     '''
+#     ppt(hw[0])
+#     ppt(ip_header[0])
+#     ppt(proto_header[0])
 
 cdef inline void rule_print(FWrule *rule) with gil:
     '''nested struct print of the passed in reference using Python pretty printer.
@@ -571,7 +609,7 @@ cdef inline void obj_print(int name, void *obj) nogil:
 # ==================================
 DEF NFQ_BUF_SIZE = 2048
 
-cdef void process_traffic(cfdata *cfd) nogil:
+cdef int process_traffic(cfdata *cfd) nogil:
 
     cdef:
         char        packet_buf[NFQ_BUF_SIZE]
@@ -724,14 +762,17 @@ cdef class CFirewall:
 
     def api_set(s, unicode sock_path):
 
-        s.sock_path = sock_path.encode('utf-8')
+        cdef:
+            bytes   _sock_path = sock_path.encode('utf-8')
+
+        s.sock_path = <char*>_sock_path
         s.api_fd = api_open(s.sock_path)
 
     def api_run(s):
         print('<releasing GIL>')
         # release gil and never look back.
-        with nogil:
-            process_api(s.h)
+        #with nogil:
+        process_api(s.api_fd)
 
     def nf_run(s):
         '''calls internal C run method to engage nfqueue processes.

@@ -8,30 +8,25 @@ cdef extern from "time.h":
 cdef extern from "pwd.h":
     passwd     *getpwnam(const char* name)
 
+    ctypedef uint32_t    uid_t
+    ctypedef uint32_t    gid_t
+
     struct passwd:
         uid_t   pw_uid
         gid_t   pw_gid
-
-    uint32_t    uid_t
-    uint32_t    gid_t
 
 cdef extern from "<sys/uio.h>":
    struct iovec:
        void    *iov_base
        size_t   iov_len
 
-cdef extern from "<sys/un.h>":
-    struct sockaddr_un:
-        sa_family_t  sun_family  # Address family
-        char         sun_path[]  # Socket pathname
-
 cdef extern from "<sys/socket.h>":
-    uint32_t    socklen_t
-    uint32_t    sa_family_t
+    ctypedef uint32_t    socklen_t
+    ctypedef uint32_t    sa_family_t
 
     struct sockaddr:
-        sa_family_t  sa_family       # address family
-        char         sa_data[]       # socket address (variable-length data)
+        sa_family_t   sa_family       # address family
+        char         *sa_data         # socket address (variable-length data)
 
     struct msghdr:
         void        *msg_name        # optional address
@@ -70,3 +65,25 @@ cdef extern from "<sys/socket.h>":
     enum: SOL_SOCKET
     enum: SO_PASSCRED
     enum: SCM_CREDENTIALS
+
+cdef extern from "<sys/un.h>":
+    struct sockaddr_un:
+        sa_family_t   sun_family  # Address family
+        char         *sun_path    # Socket pathname
+
+# ========
+# EXPORTS
+# ========
+cdef struct fwattacker:
+    uint32_t    host
+    time_t      expire
+
+cdef struct dnxfwmsg:
+    uint8_t     control
+    uint8_t     id
+    uint8_t     len
+    uint8_t    *data[128]
+
+cdef void process_api(int fd)
+cdef int api_open(char* sock_path)
+cdef size_t api_recv(int fd, dnxfwmsg *dfm) # process_api wraps this and is recommended to use

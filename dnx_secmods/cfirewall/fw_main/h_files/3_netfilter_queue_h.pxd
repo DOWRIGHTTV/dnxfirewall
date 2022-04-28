@@ -59,7 +59,7 @@ cdef extern from "linux/netfilter_ipv4.h" nogil:
         NF_IP_PRI_LAST
 
 # New API based on libmnl
-cdef extern from "libnetfilter_queue/libnetfilter_queue.h":
+cdef extern from "libnetfilter_queue/libnetfilter_queue.h" nogil:
     # CMD HELPERS
     void nfq_nlmsg_cfg_put_cmd(nlmsghdr *nlh, uint16_t pf, uint8_t cmd)
     void nfq_nlmsg_cfg_put_params(nlmsghdr *nlh, uint8_t mode, int range)
@@ -74,7 +74,7 @@ cdef extern from "libnetfilter_queue/libnetfilter_queue.h":
     int nfq_nlmsg_parse(const nlmsghdr *nlh, nlattr **attr)
     nlmsghdr *nfq_nlmsg_put(char *buf, int type, uint32_t queue_num)
 
-cdef extern from "libnetfilter_queue/pktbuff.h":
+cdef extern from "libnetfilter_queue/pktbuff.h" nogil:
     # PRIMARY FUNCTIONS
     struct pkt_buff:
         pass
@@ -102,7 +102,7 @@ cdef extern from "libnetfilter_queue/pktbuff.h":
     # probably wont be used directly. protocol mangle functions are recommended.
     int pktb_mangle(pkt_buff *pkt, unsigned int dataoff, unsigned int match_offset, unsigned int match_len, const char *rep_buffer, unsigned int rep_len)
 
-cdef extern from "libnetfilter_queue/libnetfilter_queue_ipv4.h":
+cdef extern from "libnetfilter_queue/libnetfilter_queue_ipv4.h" nogil:
     struct iphdr:
         pass
 
@@ -115,7 +115,7 @@ cdef extern from "libnetfilter_queue/libnetfilter_queue_ipv4.h":
     void nfq_ip_set_checksum(iphdr *iph)
     int nfq_ip_snprintf(char *buf, size_t size, const iphdr *iph)
 
-cdef extern from "libnetfilter_queue/libnetfilter_queue_tcp.h":
+cdef extern from "libnetfilter_queue/libnetfilter_queue_tcp.h" nogil:
     tcphdr *nfq_tcp_get_hdr(pkt_buff *pktb)
     void *nfq_tcp_get_payload(tcphdr *tcph, pkt_buff *pktb)
     unsigned int nfq_tcp_get_payload_len(tcphdr *tcph, pkt_buff *pktb)
@@ -129,7 +129,7 @@ cdef extern from "libnetfilter_queue/libnetfilter_queue_tcp.h":
 
     int nfq_tcp_snprintf(char *buf, size_t size, const tcphdr *tcp)
 
-cdef extern from "libnetfilter_queue/libnetfilter_queue_udp.h":
+cdef extern from "libnetfilter_queue/libnetfilter_queue_udp.h" nogil:
     udphdr *nfq_udp_get_hdr(pkt_buff *pktb)
     void *nfq_udp_get_payload(udphdr *udph, pkt_buff *pktb)
     unsigned int nfq_udp_get_payload_len(udphdr *udph, pkt_buff *pktb)
