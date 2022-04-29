@@ -1,7 +1,3 @@
-#!/usr/bin/env Cython
-
-# cython: cdivision=True
-
 from libc.stdlib cimport malloc, calloc, realloc
 from libc.stdint cimport uint8_t, uint16_t, uint32_t
 
@@ -150,7 +146,7 @@ cdef class HashTrie_Value:
             uint32_t    trie_val
 
         # max_width will be ~130% of the size of py_trie
-        s.max_width = <uint32_t>py_trie_len + (py_trie_len // 3)
+        s.max_width = <uint32_t>py_trie_len + (py_trie_len / 3)
         s.TRIE_MAP  = <TrieMap_V*>calloc(s.max_width, sizeof(TrieMap_V))
 
         for i in range(py_trie_len):

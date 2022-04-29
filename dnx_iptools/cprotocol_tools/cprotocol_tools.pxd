@@ -1,5 +1,3 @@
-#!/usr/bin/env Cython
-
 from libc.stdint cimport uint16_t, uint32_t
 
 cdef extern from "netinet/in.h":

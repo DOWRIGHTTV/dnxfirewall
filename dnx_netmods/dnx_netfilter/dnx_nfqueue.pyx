@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 cimport cython
 
 from libc.stdlib cimport calloc, free
@@ -15,7 +13,7 @@ DEF DEFAULT_MAX_QUEUELEN = 8192
 
 # Socket queue should hold max number of packets of copy size bytes
 # formula: DEF_MAX_QUEUELEN * (MaxCopySize+SockOverhead) / 2
-DEF SOCK_RCV_SIZE = 1024 * 4796 // 2
+DEF SOCK_RCV_SIZE = 1024 * 4796 / 2
 
 # ================================== #
 # NetfilterQueue Read/Write lock

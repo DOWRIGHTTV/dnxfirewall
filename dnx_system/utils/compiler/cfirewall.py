@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-from __future__ import annotations
-
 import os
 
 from setuptools import setup, Extension
@@ -21,10 +19,8 @@ DIRECTIVES = {
     'cdivision': True
 }
 
-
 HOME_DIR = os.environ.get('HOME_DIR')
 os.chdir(f'{HOME_DIR}/dnx_secmods/cfirewall/fw_main')
-CWD = os.getcwd()
 
 cmd = {'build_ext': build_ext}
 ext = Extension(
@@ -34,8 +30,9 @@ ext = Extension(
     libraries=['netfilter_queue']
 )
 
-INCLUDE_PATHS = [CWD, f'{HOME_DIR}/dnx_secmods/cfirewall', f'{HOME_DIR}/dnx_iptools']
+INCLUDE_PATHS = [os.getcwd(), f'{HOME_DIR}/dnx_secmods/cfirewall', f'{HOME_DIR}/dnx_iptools']
 
-cyonize = cythonize(ext, language_level='3', include_path=INCLUDE_PATHS, compiler_directives=DIRECTIVES)
-
-setup(name='cfirewall', cmdclass=cmd, ext_modules=cyonize)
+setup(
+    name='cfirewall', cmdclass=cmd,
+    ext_modules=cythonize(ext, language_level='3', include_path=INCLUDE_PATHS, compiler_directives=DIRECTIVES)
+)

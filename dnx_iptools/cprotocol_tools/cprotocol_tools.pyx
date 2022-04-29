@@ -1,14 +1,10 @@
-#!/usr/bin/env Cython
-
-# cython: boundscheck=False
-
-# TODO: make a biptoi for bytestring to integer conversion
-
 from libc.stdio cimport snprintf
 from libc.stdint cimport uint8_t, uint32_t, uint_fast16_t
 
 DEF UINT8_MAX  = 255
 DEF UINT16_MAX = 65535
+
+# TODO: make a biptoi for bytestring to integer conversion
 
 # ==============
 # PYTHON ONLY

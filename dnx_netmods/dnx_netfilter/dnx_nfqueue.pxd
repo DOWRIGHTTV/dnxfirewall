@@ -1,5 +1,3 @@
-#!/usr/bin/env Cython
-
 from libc.stdint cimport uint8_t, uint16_t, uint32_t, int32_t
 from libc.stdint cimport uint_fast8_t, uint_fast16_t
 
