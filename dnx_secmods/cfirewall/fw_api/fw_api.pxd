@@ -82,7 +82,7 @@ cdef struct dnxfwmsg:
     uint8_t     control
     uint8_t     id
     uint8_t     len
-    uint8_t    *data[128]
+    uint8_t    *data
 
 cdef void process_api(int fd)
 cdef int api_open(char* sock_path)

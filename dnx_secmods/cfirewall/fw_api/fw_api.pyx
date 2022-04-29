@@ -11,16 +11,16 @@
 # 1. RULE_UPDATE
 # 2. ATTACKER
 
-from libc.stdlib cimport calloc
-from libc.stdio cimport printf, fclose
+from libc.stdio cimport printf
 from libc.string cimport memcpy, memset
+from posix.unistd cimport close
 
 # ======================
 # SOCKET AUTHENTICATION
 # ======================
-DEF AUTH_UNAME = 'dnx'
+DEF AUTH_UNAME = 'dnx'.encode('utf-8')
 
-cdef passwd user = getpwnam(<char*>AUTH_UNAME)
+cdef passwd *user = getpwnam(<char*>AUTH_UNAME)
 
 UID = user.pw_uid
 GID = user.pw_gid
@@ -41,7 +41,7 @@ cdef void process_api(int fd):
         size_t    dlen
         dnxfwmsg  dmsg
 
-    dlen = api_recv(fd, &dnxfwmsg)
+    dlen = api_recv(fd, &dmsg)
     if (dlen == ERR):
         # dis real bad, but shouldnt happen now because the thread would crash first
         return
@@ -55,10 +55,10 @@ cdef int api_open(char* sock_path):
         int     sd, ret
 
         int     opt_val = 1
-        sockaddr_un *addr = calloc(1, sizeof(sockaddr_un))
+        sockaddr_un addr = [AF_UNIX, sock_path]
 
-    addr.sun_family = AF_UNIX
-    addr.sun_path   = sock_path
+    # addr.sun_family = AF_UNIX
+    # addr.sun_path   = sock_path
 
     sd = socket(AF_UNIX, SOCK_DGRAM, 0)
     if (sd == ERR):
@@ -66,9 +66,9 @@ cdef int api_open(char* sock_path):
 
     setsockopt(sd, SOL_SOCKET, SO_PASSCRED, <void*>&opt_val, sizeof(opt_val))
 
-    ret = bind(sd, &addr, sizeof(sockaddr_un))
+    ret = bind(sd, <sockaddr*>&addr, sizeof(sockaddr_un))
     if (ret == ERR):
-        fclose(sd)
+        close(sd)
 
         return ERR
 
@@ -110,16 +110,16 @@ cdef size_t api_recv(int fd, dnxfwmsg *dfm):
         # ---------------------
         # if the sender is not authorized the creds struct will get wiped and the loop will continue back to recv.
         if (auth.uid != UID):
-            memset(&ucred, 0, sizeof(ucred))
+            memset(&auth, 0, sizeof(ucred))
 
             continue
 
         # ----------------------
         # DEFINE CALLERS STRUCT
         # ----------------------
-        dfm.control = msg.msg_iov.iov_base[0]
-        dfm.id      = msg.msg_iov.iov_base[1]
-        dfm.data    = &msg.msg_iov.iov_base[2]
+        dfm.control = (<uint8_t*>msg.msg_iov.iov_base)[0]
+        dfm.id      = (<uint8_t*>msg.msg_iov.iov_base)[1]
+        dfm.data    = <uint8_t*>(<uint8_t*>msg.msg_iov.iov_base)[2]
 
         return msg.msg_iov.iov_len - 2
 

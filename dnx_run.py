@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union, Iterable
+from typing import Union, Iterable
 
 import os
 import sys

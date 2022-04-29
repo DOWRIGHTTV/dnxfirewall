@@ -11,7 +11,7 @@ from libc.stdint cimport uint_fast8_t, uint_fast16_t, uint_fast32_t
 from dnx_iptools.hash_trie.hash_trie cimport HashTrie_Range
 from dnx_iptools.cprotocol_tools.cprotocol_tools cimport nullset
 
-from fw_api cimport api_open, process_api
+# from fw_api cimport api_open, process_api
 
 # ===============================
 # VERBOSE T-SHOOT ASSISTANCE
@@ -760,19 +760,19 @@ cdef class CFirewall:
         if (verbose):
             print('<verbose console logging enabled>')
 
-    def api_set(s, unicode sock_path):
+    # def api_set(s, unicode sock_path):
+    #
+    #     cdef:
+    #         bytes   _sock_path = sock_path.encode('utf-8')
+    #
+    #     s.sock_path = <char*>_sock_path
+    #     s.api_fd = api_open(s.sock_path)
 
-        cdef:
-            bytes   _sock_path = sock_path.encode('utf-8')
-
-        s.sock_path = <char*>_sock_path
-        s.api_fd = api_open(s.sock_path)
-
-    def api_run(s):
-        print('<releasing GIL>')
-        # release gil and never look back.
-        #with nogil:
-        process_api(s.api_fd)
+    # def api_run(s):
+    #     print('<releasing GIL>')
+    #     # release gil and never look back.
+    #     #with nogil:
+    #     process_api(s.api_fd)
 
     def nf_run(s):
         '''calls internal C run method to engage nfqueue processes.
