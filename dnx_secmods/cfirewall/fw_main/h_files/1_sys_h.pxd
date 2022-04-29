@@ -7,6 +7,10 @@ from libc.stdio cimport FILE
 
 from posix.types cimport pid_t
 
+# LIBMNL && LIBNETFILTER_QUEUE SOURCE FILES
+# https://netfilter.org/projects/libmnl/files/libmnl-1.0.5.tar.bz2
+# https://netfilter.org/projects/libnetfilter_queue/files/libnetfilter_queue-1.0.5.tar.bz2
+
 
 ctypedef array.array PyArray
 
@@ -19,7 +23,7 @@ cdef extern from "<stdbool.h>":
     # ctypedef int true
     # ctypedef int false
 
-cdef extern from "time.h" nogil:
+cdef extern from "<time.h>" nogil:
     ctypedef    long time_t
     time_t      time(time_t*)
 
@@ -68,8 +72,8 @@ cdef extern from "netinet/udp.h":
     struct udphdr:
         pass
 
-cdef extern from "libnfnetlink/libnfnetlink.h" nogil:
-    struct nfnl_handle:
-        pass
-
-    unsigned int nfnl_rcvbufsiz(nfnl_handle *h, unsigned int size)
+# cdef extern from "libnfnetlink/libnfnetlink.h" nogil:
+#     struct nfnl_handle:
+#         pass
+#
+#     unsigned int nfnl_rcvbufsiz(nfnl_handle *h, unsigned int size)

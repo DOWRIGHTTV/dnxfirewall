@@ -73,7 +73,7 @@ cdef extern from "linux/netlink.h" nogil:
         NLA_ALIGNTO
 
     #define NLA_ALIGN(len)              (((len) + NLA_ALIGNTO - 1) & ~(NLA_ALIGNTO - 1))
-    inline int NLA_ALIGN(int len)
+    int NLA_ALIGN(int len)
 
     enum: NLA_HDRLEN
 

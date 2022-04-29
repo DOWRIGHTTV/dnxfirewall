@@ -23,9 +23,9 @@ cdef extern from "linux/netfilter/nf_conntrack_common.h" nogil:
 cdef extern from "linux/netfilter/nfnetlink.h" nogil:
     # General form of address family dependent message.
     struct nfgenmsg:
-        uint8_t    nfgen_family        # AF_xxx
-        uint8_t    version             # nfnetlink version
-        uint16_t   res_id              # resource id
+        uint8_t     nfgen_family        # AF_xxx
+        uint8_t     version             # nfnetlink version
+        uint16_t    res_id              # resource id
 
 cdef extern from "linux/netfilter/nfnetlink_queue.h" nogil:
     enum nfqnl_msg_types:
@@ -36,18 +36,18 @@ cdef extern from "linux/netfilter/nfnetlink_queue.h" nogil:
         NFQNL_MSG_MAX
 
     struct nfqnl_msg_packet_hdr:
-        uint32_t packet_id
-        uint16_t hw_protocol
-        uint8_t  hook
+        uint32_t    packet_id
+        uint16_t    hw_protocol
+        uint8_t     hook
 
     struct nfqnl_msg_packet_hw:
-        uint16_t hw_addrlen
-        uint16_t _pad
-        uint8_t  hw_addr[8]
+        uint16_t    hw_addrlen
+        uint16_t    _pad
+        uint8_t     hw_addr[8]
 
     struct nfqnl_msg_packet_timestamp:
-        uint64_t sec                      #__aligned_be64
-        uint64_t usec                     #__aligned_be64
+        uint64_t    sec                      #__aligned_be64
+        uint64_t    usec                     #__aligned_be64
 
     enum nfqnl_vlan_attr:
         NFQA_VLAN_UNSPEC,

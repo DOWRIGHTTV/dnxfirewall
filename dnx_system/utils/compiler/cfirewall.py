@@ -28,7 +28,10 @@ CWD = os.getcwd()
 
 cmd = {'build_ext': build_ext}
 ext = Extension(
-    'fw_main', sources=['fw_main.pyx'], libraries=['netfilter_queue']
+    'fw_main', sources=['fw_main.pyx'],
+    include_dirs=[f'{HOME_DIR}/libraries'],
+    library_dirs=['usr/local/lib'],
+    libraries=['netfilter_queue']
 )
 
 INCLUDE_PATHS = [CWD, f'{HOME_DIR}/dnx_secmods/cfirewall', f'{HOME_DIR}/dnx_iptools']

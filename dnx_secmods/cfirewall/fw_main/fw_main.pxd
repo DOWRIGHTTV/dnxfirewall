@@ -7,6 +7,10 @@ from libc.stdio cimport FILE
 
 from posix.types cimport pid_t
 
+# LIBMNL && LIBNETFILTER_QUEUE SOURCE FILES
+# https://netfilter.org/projects/libmnl/files/libmnl-1.0.5.tar.bz2
+# https://netfilter.org/projects/libnetfilter_queue/files/libnetfilter_queue-1.0.5.tar.bz2
+
 
 ctypedef array.array PyArray
 
@@ -19,7 +23,7 @@ cdef extern from "<stdbool.h>":
     # ctypedef int true
     # ctypedef int false
 
-cdef extern from "time.h" nogil:
+cdef extern from "<time.h>" nogil:
     ctypedef    long time_t
     time_t      time(time_t*)
 
@@ -68,11 +72,11 @@ cdef extern from "netinet/udp.h":
     struct udphdr:
         pass
 
-cdef extern from "libnfnetlink/libnfnetlink.h" nogil:
-    struct nfnl_handle:
-        pass
-
-    unsigned int nfnl_rcvbufsiz(nfnl_handle *h, unsigned int size)
+# cdef extern from "libnfnetlink/libnfnetlink.h" nogil:
+#     struct nfnl_handle:
+#         pass
+#
+#     unsigned int nfnl_rcvbufsiz(nfnl_handle *h, unsigned int size)
 
 cdef extern from "linux/netlink.h" nogil:
     enum:
@@ -149,7 +153,7 @@ cdef extern from "linux/netlink.h" nogil:
         NLA_ALIGNTO
 
     #define NLA_ALIGN(len)              (((len) + NLA_ALIGNTO - 1) & ~(NLA_ALIGNTO - 1))
-    inline int NLA_ALIGN(int len)
+    int NLA_ALIGN(int len)
 
     enum: NLA_HDRLEN
 
@@ -326,9 +330,9 @@ cdef extern from "linux/netfilter/nf_conntrack_common.h" nogil:
 cdef extern from "linux/netfilter/nfnetlink.h" nogil:
     # General form of address family dependent message.
     struct nfgenmsg:
-        uint8_t    nfgen_family        # AF_xxx
-        uint8_t    version             # nfnetlink version
-        uint16_t   res_id              # resource id
+        uint8_t     nfgen_family        # AF_xxx
+        uint8_t     version             # nfnetlink version
+        uint16_t    res_id              # resource id
 
 cdef extern from "linux/netfilter/nfnetlink_queue.h" nogil:
     enum nfqnl_msg_types:
@@ -339,18 +343,18 @@ cdef extern from "linux/netfilter/nfnetlink_queue.h" nogil:
         NFQNL_MSG_MAX
 
     struct nfqnl_msg_packet_hdr:
-        uint32_t packet_id
-        uint16_t hw_protocol
-        uint8_t  hook
+        uint32_t    packet_id
+        uint16_t    hw_protocol
+        uint8_t     hook
 
     struct nfqnl_msg_packet_hw:
-        uint16_t hw_addrlen
-        uint16_t _pad
-        uint8_t  hw_addr[8]
+        uint16_t    hw_addrlen
+        uint16_t    _pad
+        uint8_t     hw_addr[8]
 
     struct nfqnl_msg_packet_timestamp:
-        uint64_t sec                      #__aligned_be64
-        uint64_t usec                     #__aligned_be64
+        uint64_t    sec                      #__aligned_be64
+        uint64_t    usec                     #__aligned_be64
 
     enum nfqnl_vlan_attr:
         NFQA_VLAN_UNSPEC,
