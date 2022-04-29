@@ -160,7 +160,7 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
 
         srange      fw_sections
 
-    nullset(netlink_attrs, NFQA_RANGE)
+    nullset(<void**>netlink_attrs, NFQA_RANGE)
     nfq_nlmsg_parse(nlh, netlink_attrs)
 
     nlhdr = <nfqnl_msg_packet_hdr*>mnl_attr_get_payload(netlink_attrs[NFQA_PACKET_HDR])

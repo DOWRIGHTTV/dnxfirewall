@@ -90,7 +90,7 @@ cpdef bytes calc_checksum(const uint8_t[:] data):
 # ============
 # CYTHON ONLY
 # ============
-cdef inline void nullset(void *data, size_t dlen) nogil:
+cdef inline void nullset(void **data, size_t dlen) nogil:
 
     cdef size_t i
 
