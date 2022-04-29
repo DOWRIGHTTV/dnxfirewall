@@ -14,10 +14,9 @@ cdef extern from "<errno.h>":
     int         errno
 
 cdef extern from "<stdbool.h>":
-    pass
-    # ctypedef int bool
-    # ctypedef int true
-    # ctypedef int false
+    ctypedef int bool
+    ctypedef int true
+    ctypedef int false
 
 cdef extern from "time.h" nogil:
     ctypedef    long time_t
