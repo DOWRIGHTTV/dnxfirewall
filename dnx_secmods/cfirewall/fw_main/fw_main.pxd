@@ -308,24 +308,28 @@ cdef extern from "libnetfilter_queue/libnetfilter_queue_udp.h" nogil:
 cdef extern from "linux/netfilter/nf_conntrack_common.h" nogil:
     # connection state tracking for netfilter. this is separated from, but required by, the
     # NAT layer. it can also be used by an iptables extension.
-    enum: # ip_conntrack_info:
-        # part of an established connection (either direction).
-        IP_CT_ESTABLISHED
+    enum: # ip_conntrack_info
+        # Part of an established connection (either direction). */
+        IP_CT_ESTABLISHED,
 
-        # like NEW, but related to an existing connection, or ICMP error (in either direction).
-        IP_CT_RELATED
+        # Like NEW, but related to an existing connection, or ICMP error (in either direction).
+        IP_CT_RELATED,
 
-        # started a new connection to track (only IP_CT_DIR_ORIGINAL); may be a retransmission.
-        IP_CT_NEW
+        # Started a new connection to track (only IP_CT_DIR_ORIGINAL); may be a retransmission.
+        IP_CT_NEW,
 
         # >= this indicates reply direction
-        IP_CT_IS_REPLY
+        IP_CT_IS_REPLY,
 
-        IP_CT_ESTABLISHED_REPLY
-        IP_CT_RELATED_REPLY
-        IP_CT_NEW_REPLY
-        # number of distinct IP_CT types (no NEW in reply dirn).
-        IP_CT_NUMBER
+        IP_CT_ESTABLISHED_REPLY, # 3 -> IP_CT_ESTABLISHED + IP_CT_IS_REPLY
+        IP_CT_RELATED_REPLY,     # 4 -> IP_CT_RELATED + IP_CT_IS_REPLY
+        # No NEW in reply direction.
+
+        # Number of distinct IP_CT types.
+        IP_CT_NUMBER,
+
+        # only for userspace compatibility
+        IP_CT_UNTRACKED = 7
 
 cdef extern from "linux/netfilter/nfnetlink.h" nogil:
     # General form of address family dependent message.
