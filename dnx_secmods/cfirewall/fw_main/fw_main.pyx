@@ -40,54 +40,61 @@ DEF NAT_POST_RANGE_MAX = 6
 #DEF NAT_PREROUTE = 70
 #DEF NAT_POSTROUTE = 71
 
+DEF SECURITY_PROFILE_COUNT = 3
+DEF PROFILE_SIZE = 4  # bits
+DEF PROFILE_START = 12
+DEF PROFILE_STOP = (SECURITY_PROFILE_COUNT * 4) + 8 + 1  # +1 for range
+
+# function return values
+DEF OK  = 0
+DEF ERR = -1
+DEF Py_OK  = 0
+DEF Py_ERR = 1
+
+DEF NETWORK = 1
+DEF SERVICE = 2
+
+# compile time def because vals are assigned by the external webui
+# network object types.
+DEF IP_ADDRESS = 1
+DEF IP_NETWORK = 2
+DEF IP_RANGE   = 3
+DEF IP_GEO     = 6
+# service object types.
+DEF SVC_SOLO  = 1
+DEF SVC_RANGE = 2
+DEF SVC_LIST  = 3
+DEF SVC_ICMP  = 4
+# matching options
 DEF ANY_ZONE = 99
 DEF NO_SECTION = 99
 DEF ANY_PROTOCOL = 0
 DEF COUNTRY_NOT_DEFINED = 0
 
-DEF OK  = 0
-DEF ERR = -1
-
-DEF Py_OK  = 0
-DEF Py_ERR = 1
+# identifies which packet field to compare
+DEF SRC_MATCH = 1
+DEF DST_MATCH = 2
 
 DEF NO_MATCH = 0
 DEF MATCH = 1
-DEF END_OF_ARRAY = 0
+DEF END_OF_ARRAY = 0 # to make code more readable
 
+# bit shifting helpers
 DEF TWO_BITS = 2
 DEF FOUR_BITS = 4
 DEF ONE_BYTE = 8
 DEF TWELVE_BITS = 12
 DEF TWO_BYTES = 16
 
-DEF SECURITY_PROFILE_COUNT = 3
-DEF PROFILE_SIZE = 4  # bits
-DEF PROFILE_START = 12
-DEF PROFILE_STOP = (SECURITY_PROFILE_COUNT * 4) + 8 + 1  # +1 for range
-
 DEF TWO_BIT_MASK = 3
 DEF FOUR_BIT_MASK = 15
 
-DEF NETWORK = 1
-DEF SERVICE = 2
+# nfq alias for iteration range
+cdef enum: NFQA_RANGE = NFQA_MAX + 1
 
-# network object types. not using enums because they need to be hardcoded anyway.
-DEF IP_ADDRESS = 1
-DEF IP_NETWORK = 2
-DEF IP_RANGE   = 3
-DEF IP_GEO     = 6
-
-DEF SVC_SOLO  = 1
-DEF SVC_RANGE = 2
-DEF SVC_LIST  = 3
-DEF SVC_ICMP  = 4
-
+# cli args
 cdef bint PROXY_BYPASS = 0
 cdef bint VERBOSE = 0
-
-cdef enum:
-    NFQA_RANGE = NFQA_MAX + 1
 
 # ================================== #
 # Firewall rules lock
@@ -265,9 +272,9 @@ cdef inline void cfirewall_inspect(HWinfo *hw, srange *fw_sections, dnx_pktb *pk
     # tcp/udp will reassign the pointer to their header data
     # TODO: see if we can just increment the pointer of iphdr. i feel like if we did += we couldnt cast it to protohdr.
     if (pkt.iphdr.protocol == IPPROTO_ICMP):
-        pkt.protohdr.p1 = <P1*>pkt.data[pkt.iphdr_len]
+        pkt.protohdr.p1 = <P1*>&pkt.data[pkt.iphdr_len]
     else:
-        pkt.protohdr.p2 = <P2*>pkt.data[pkt.iphdr_len]
+        pkt.protohdr.p2 = <P2*>&pkt.data[pkt.iphdr_len]
 
     cdef:
         FWrule      rule
@@ -324,10 +331,10 @@ cdef inline void cfirewall_inspect(HWinfo *hw, srange *fw_sections, dnx_pktb *pk
             # ------------------------------------------------------------------
             # PROTOCOL / PORT
             # ------------------------------------------------------------------
-            if not service_match(&rule.s_services, pkt.iphdr.protocol, pkt.protohdr, 0):
+            if not service_match(&rule.s_services, pkt.iphdr.protocol, pkt.protohdr, SRC_MATCH):
                 continue
 
-            if not service_match(&rule.d_services, pkt.iphdr.protocol, pkt.protohdr, 1):
+            if not service_match(&rule.d_services, pkt.iphdr.protocol, pkt.protohdr, DST_MATCH):
                 continue
 
             # ------------------------------------------------------------------
@@ -492,15 +499,19 @@ cdef inline bint service_match(ServiceArray *svc_array, uint16_t pkt_protocol, P
 
         uint16_t        pkt_port = 0
 
-    # will inspect both icmp fields in dst match.
-    if (pkt_protocol == IPPROTO_ICMP and idx == 0):
-        return MATCH
 
-    elif (pkt_protocol == IPPROTO_ICMP):
-        pass
+    if (pkt_protocol == IPPROTO_ICMP):
 
-    else:
-        pkt_port = protohdr.p2.d_port if idx else protohdr.p2.s_port
+        # will inspect both icmp fields in src check.
+        # if inspection makes it to dst then src was a match.
+        if (idx == DST_MATCH):
+            return MATCH
+
+    elif (SRC_MATCH):
+        pkt_port = ntohs(protohdr.p2.s_port)
+
+    elif (DST_MATCH):
+        pkt_port = ntohs(protohdr.p2.d_port)
 
     # if (VERBOSE):
     #     printf(<char*>'packet protocol->%u, port->%u\n', pkt_protocol, pkt_port)
