@@ -32,10 +32,11 @@ DEF FW_MAX_ATTACKERS = 250
 DEF FW_MAX_ZONE_COUNT = 16
 DEF FW_RULE_SIZE = 15
 
-DEF SYSTEM_RANGE_MAX = 1
-DEF RULE_RANGE_MAX = 4
-DEF NAT_PRE_RANGE_MAX = 5
-DEF NAT_POST_RANGE_MAX = 6
+DEF SYSTEM_RANGE_START = 0
+DEF RULE_RANGE_START = 1
+DEF RULE_RANGE_END = 4
+DEF NAT_PRE_RANGE_END = 5
+DEF NAT_POST_RANGE_END = 6
 
 #DEF NAT_PREROUTE = 70
 #DEF NAT_POSTROUTE = 71
@@ -176,7 +177,7 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
     # this should be checked as soon as feasibly possible for performance.
     # this will be used to allow for stateless inspection policies later.
     ct_info = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_CT_INFO]))
-    if (htonl(ct_info) & IP_CT_RELATED|IP_CT_ESTABLISHED):
+    if (ct_info != IP_CT_NEW):
         dnx_send_verdict(cfd.queue, ntohl(nlhdr.packet_id), &pkt)
     # ======================
     # INTERFACE, NL, AND HW
@@ -199,13 +200,13 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
 
     # SETTING RULE TABLES
     if (not mark):
-        fw_sections = [0, SYSTEM_RANGE_MAX] if not oif else [SYSTEM_RANGE_MAX, RULE_RANGE_MAX]
+        fw_sections = [SYSTEM_RANGE_START, RULE_RANGE_END] if not oif else [RULE_RANGE_START, RULE_RANGE_END]
 
     elif (nft_hook == NF_IP_PRE_ROUTING):
-        fw_sections = [RULE_RANGE_MAX, NAT_PRE_RANGE_MAX]
+        fw_sections = [RULE_RANGE_END, NAT_PRE_RANGE_END]
 
     elif (nft_hook == NF_IP_POST_ROUTING):
-        fw_sections = [NAT_PRE_RANGE_MAX, NAT_POST_RANGE_MAX]
+        fw_sections = [NAT_PRE_RANGE_END, NAT_POST_RANGE_END]
 
     # ===================================
     # LOCKING ACCESS TO FIREWALL RULES
@@ -235,7 +236,7 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
     # NFQUEUE VERDICT
     # --------------------
     # only SYSTEM RULES will have cfirewall invoke action directly
-    if (fw_sections.end != SYSTEM_RANGE_MAX):
+    if (fw_sections.start != SYSTEM_RANGE_START):
 
         # if PROXY_BYPASS, cfirewall will invoke the rule action without forwarding to another queue.
         # if not PROXY_BYPASS, forward to ip proxy regardless of action for geolocation log or IPS
@@ -252,7 +253,7 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
         printf('[C/packet] system->%u, action->%u, ', nft_hook, pkt.action)
         printf('ipp->%u, dns->%u, ips->%u\n',
                pkt.mark >> 12 & 15, pkt.mark >> 16 & 15, pkt.mark >> 20 & 15)
-        printf(<char*>'=====================================================================\n')
+        printf('=====================================================================\n')
 
     # return heirarchy -> libnfnetlink.c >> libnetfiler_queue >> CFirewall._run.
     # < 0 vals are errors, but return is being ignored by CFirewall._run.
@@ -269,12 +270,10 @@ cdef inline void cfirewall_inspect(HWinfo *hw, srange *fw_sections, dnx_pktb *pk
     # ---------------------
     # L4 - PROTOCOL HEADER
     # ---------------------
-    # tcp/udp will reassign the pointer to their header data
-    # TODO: see if we can just increment the pointer of iphdr. i feel like if we did += we couldnt cast it to protohdr.
     if (pkt.iphdr.protocol == IPPROTO_ICMP):
-        pkt.protohdr.p1 = <P1*>&pkt.data[pkt.iphdr_len]
+        pkt.protohdr.p1 = <P1*>(pkt.iphdr + 1)
     else:
-        pkt.protohdr.p2 = <P2*>&pkt.data[pkt.iphdr_len]
+        pkt.protohdr.p2 = <P2*>(pkt.iphdr + 1)
 
     cdef:
         FWrule      rule
@@ -351,6 +350,8 @@ cdef inline void cfirewall_inspect(HWinfo *hw, srange *fw_sections, dnx_pktb *pk
                 pkt.mark |= rule.sec_profiles[idx] << i
                 idx += 1
 
+            return
+
     # ------------------------------------------------------------------
     # DEFAULT ACTION
     # ------------------------------------------------------------------
@@ -361,11 +362,11 @@ cdef inline void cfirewall_inspect(HWinfo *hw, srange *fw_sections, dnx_pktb *pk
 cdef int dnx_send_verdict(uint32_t queue_num, uint32_t pktid, dnx_pktb *pkt) nogil:
 
     cdef:
-        uint8_t buf[MNL_SOCKET_BUFFER_SIZE]
-        nlmsghdr *nlh
-        nlattr *nest
+        char        buf[MNL_SOCKET_BUFFER_SIZE]
+        nlmsghdr   *nlh
+        nlattr     *nest
 
-    nlh = nfq_nlmsg_put(<char*>buf, NFQNL_MSG_VERDICT, queue_num)
+    nlh = nfq_nlmsg_put(buf, NFQNL_MSG_VERDICT, queue_num)
 
     nfq_nlmsg_verdict_put(nlh, pktid, pkt.action)
     nfq_nlmsg_verdict_put_mark(nlh, pkt.mark)
@@ -451,7 +452,7 @@ cdef inline bint network_match(NetworkArray *net_array, uint32_t iph_ip, uint8_t
         Network *net
 
     if (VERBOSE):
-        printf(<char*>'checking ip->%u, country->%u\n', iph_ip, country)
+        printf('checking ip->%u, country->%u\n', iph_ip, country)
 
     for i in range(net_array.len):
 
@@ -483,7 +484,7 @@ cdef inline bint network_match(NetworkArray *net_array, uint32_t iph_ip, uint8_t
                 return MATCH
 
     if (VERBOSE):
-        printf(<char*>'no match ip->%u, country->%u\n', iph_ip, country)
+        printf('no match ip->%u, country->%u\n', iph_ip, country)
 
     # default action
     return NO_MATCH
@@ -507,10 +508,10 @@ cdef inline bint service_match(ServiceArray *svc_array, uint16_t pkt_protocol, P
         if (idx == DST_MATCH):
             return MATCH
 
-    elif (SRC_MATCH):
+    elif (idx == SRC_MATCH):
         pkt_port = ntohs(protohdr.p2.s_port)
 
-    elif (DST_MATCH):
+    elif (idx == DST_MATCH):
         pkt_port = ntohs(protohdr.p2.d_port)
 
     # if (VERBOSE):
@@ -524,10 +525,11 @@ cdef inline bint service_match(ServiceArray *svc_array, uint16_t pkt_protocol, P
         if (svc_object.type == SVC_SOLO):
 
             svc = &svc_object.service.object
-            if (pkt_protocol == svc.protocol or svc.protocol == ANY_PROTOCOL):
+            if (pkt_protocol != svc.protocol and svc.protocol != ANY_PROTOCOL):
+                continue
 
-                if (pkt_port == svc.start_port):
-                    return MATCH
+            if (pkt_port == svc.start_port):
+                return MATCH
 
         # --------------------
         # TYPE -> RANGE (2)
@@ -618,12 +620,11 @@ cdef inline void obj_print(int name, void *obj) nogil:
 # ==================================
 # C CONVERSION / INIT FUNCTIONS
 # ==================================
-DEF NFQ_BUF_SIZE = 2048
 
 cdef int process_traffic(cfdata *cfd) nogil:
 
     cdef:
-        char        packet_buf[NFQ_BUF_SIZE]
+        char        packet_buf[MNL_BUF_SIZE]
         ssize_t     dlen
 
         uint32_t    portid = mnl_socket_get_portid(nl)
@@ -631,7 +632,7 @@ cdef int process_traffic(cfdata *cfd) nogil:
     printf(<char*>'<ready to process traffic>\n')
 
     while True:
-        dlen = mnl_socket_recvfrom(nl, <void*>packet_buf, NFQ_BUF_SIZE)
+        dlen = mnl_socket_recvfrom(nl, <void*>packet_buf, MNL_BUF_SIZE)
         if (dlen == -1):
             return ERR
 
@@ -757,6 +758,10 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
 cdef mnl_socket *nl
 # =====================================
 
+# MNL_SOCKET_BUFFER_SIZE ~= 8192
+DEF DNX_BUF_SIZE = 2048 # (will only handle packets of standard 1500 MTU)
+DEF MNL_BUF_SIZE = DNX_BUF_SIZE + (8192/2)
+
 cdef class CFirewall:
 
     def set_options(s, int bypass, int verbose):
@@ -798,18 +803,13 @@ cdef class CFirewall:
     def nf_set(s, uint16_t queue_num):
 
         global nl
-
-        cdef:
-            char *mnl_buf
-            nlmsghdr *nlh
-
-            int ret = 1
-            # largest possible packet payload, plus netlink data overhead
-            size_t sizeof_buf = <size_t>(65535 + (MNL_SOCKET_BUFFER_SIZE / 2))
-
         s.cfd.queue = queue_num
 
-        mnl_buf = <char*>malloc(sizeof_buf)
+        cdef:
+            char        mnl_buf[MNL_BUF_SIZE]
+            nlmsghdr   *nlh
+
+            int         ret = 1
 
         nl = mnl_socket_open(NETLINK_NETFILTER)
         if (nl == NULL):
@@ -829,7 +829,7 @@ cdef class CFirewall:
         # ---------------
         # ATTR FLAGS
         nlh = nfq_nlmsg_put(mnl_buf, NFQNL_MSG_CONFIG, queue_num)
-        nfq_nlmsg_cfg_put_params(nlh, NFQNL_COPY_PACKET, 65535)
+        nfq_nlmsg_cfg_put_params(nlh, NFQNL_COPY_PACKET, DNX_BUF_SIZE)
 
         # DISABLE PACKET NORMALIZATION (REASSEMBLE FRAGMENTS)
         mnl_attr_put_u32(nlh, NFQA_CFG_FLAGS, htonl(NFQA_CFG_F_GSO))
@@ -845,8 +845,6 @@ cdef class CFirewall:
         # ENOBUFS is signalled to userspace when packets were lost on the kernel side.
         # We don't care, so we can turn it off.
         mnl_socket_setsockopt(nl, NETLINK_NO_ENOBUFS, <void*>&ret, sizeof(int))
-
-        free(mnl_buf)
 
         return Py_OK
 
