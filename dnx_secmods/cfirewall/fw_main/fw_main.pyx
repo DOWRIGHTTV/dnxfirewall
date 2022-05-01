@@ -20,31 +20,33 @@ from pprint import PrettyPrinter
 ppt = PrettyPrinter(sort_dicts=False).pprint
 # ===============================
 
-DEF FW_SECTION_COUNT = 6
+DEF FW_TABLE_COUNT = 4
 DEF FW_SYSTEM_MAX_RULE_COUNT = 50
 DEF FW_BEFORE_MAX_RULE_COUNT = 100
-DEF FW_MAIN_MAX_RULE_COUNT = 1000
-DEF FW_AFTER_MAX_RULE_COUNT = 100
-DEF FW_NAT_PRE_MAX_RULE_COUNT = 250
-DEF FW_NAT_POST_MAX_RULE_COUNT = 100
+DEF FW_MAIN_MAX_RULE_COUNT   = 1000
+DEF FW_AFTER_MAX_RULE_COUNT  = 100
 
-DEF FW_MAX_ATTACKERS = 250
+DEF FW_MAX_ATTACKERS  = 250
 DEF FW_MAX_ZONE_COUNT = 16
-DEF FW_RULE_SIZE = 15
 
-DEF SYSTEM_RANGE_START = 0
-DEF RULE_RANGE_START = 1
-DEF RULE_RANGE_END = 4
-DEF NAT_PRE_RANGE_END = 5
-DEF NAT_POST_RANGE_END = 6
+DEF FW_SYSTEM_RANGE_START = 0
+DEF FW_RULE_RANGE_START   = 1
+DEF FW_RULE_RANGE_END     = 4
+
+DEF NAT_TABLE_COUNT = 2
+DEF NAT_PRE_MAX_RULE_COUNT  = 250
+DEF NAT_POST_MAX_RULE_COUNT = 100
+
+DEF NAT_PRE_TABLE  = 0
+DEF NAT_POST_TABLE = 1
 
 #DEF NAT_PREROUTE = 70
 #DEF NAT_POSTROUTE = 71
 
 DEF SECURITY_PROFILE_COUNT = 3
-DEF PROFILE_SIZE = 4  # bits
+DEF PROFILE_SIZE  = 4  # bits
 DEF PROFILE_START = 12
-DEF PROFILE_STOP = (SECURITY_PROFILE_COUNT * 4) + 8 + 1  # +1 for range
+DEF PROFILE_STOP  = (SECURITY_PROFILE_COUNT * 4) + 8 + 1  # +1 for range
 
 # function return values
 DEF OK  = 0
@@ -67,8 +69,8 @@ DEF SVC_RANGE = 2
 DEF SVC_LIST  = 3
 DEF SVC_ICMP  = 4
 # matching options
-DEF ANY_ZONE = 99
-DEF NO_SECTION = 99
+DEF ANY_ZONE     = 99
+DEF NO_SECTION   = 99
 DEF ANY_PROTOCOL = 0
 DEF COUNTRY_NOT_DEFINED = 0
 
@@ -81,13 +83,13 @@ DEF MATCH = 1
 DEF END_OF_ARRAY = 0 # to make code more readable
 
 # bit shifting helpers
-DEF TWO_BITS = 2
-DEF FOUR_BITS = 4
-DEF ONE_BYTE = 8
+DEF TWO_BITS    = 2
+DEF FOUR_BITS   = 4
+DEF ONE_BYTE    = 8
 DEF TWELVE_BITS = 12
-DEF TWO_BYTES = 16
+DEF TWO_BYTES   = 16
 
-DEF TWO_BIT_MASK = 3
+DEF TWO_BIT_MASK  = 3
 DEF FOUR_BIT_MASK = 15
 
 # nfq alias for iteration range
@@ -123,19 +125,28 @@ cdef HashTrie_Range GEOLOCATION
 # ARRAY INITIALIZATION
 # ==================================
 # contains pointers to arrays of pointers to FWrule
-cdef FWrule *firewall_rules[FW_SECTION_COUNT]
+cdef FWrule *firewall_rules[FW_TABLE_COUNT]
 
 # arrays of pointers to FWrule
-firewall_rules[SYSTEM_RULES] = <FWrule*>calloc(FW_SYSTEM_MAX_RULE_COUNT, sizeof(FWrule))
-firewall_rules[BEFORE_RULES] = <FWrule*>calloc(FW_BEFORE_MAX_RULE_COUNT, sizeof(FWrule))
-firewall_rules[MAIN_RULES]   = <FWrule*>calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(FWrule))
-firewall_rules[AFTER_RULES]  = <FWrule*>calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(FWrule))
+firewall_rules[FW_SYSTEM_RULES] = <FWrule*>calloc(FW_SYSTEM_MAX_RULE_COUNT, sizeof(FWrule))
+firewall_rules[FW_BEFORE_RULES] = <FWrule*>calloc(FW_BEFORE_MAX_RULE_COUNT, sizeof(FWrule))
+firewall_rules[FW_MAIN_RULES]   = <FWrule*>calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(FWrule))
+firewall_rules[FW_AFTER_RULES]  = <FWrule*>calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(FWrule))
 
 # the index corresponds to the index of sections in firewall rules.
 # this will allow us to skip over sections that are empty and know how far to iterate over.
 # tracking this allows the ability to not clear pointers of dangling rules
 # since they will be out of bounds of specified iteration.
-cdef uint_fast16_t *CUR_RULE_COUNTS = <uint_fast16_t*>calloc(FW_SECTION_COUNT, sizeof(uint_fast16_t))
+cdef uint_fast16_t *FW_CUR_RULE_COUNTS = <uint_fast16_t*>calloc(FW_TABLE_COUNT, sizeof(uint_fast16_t))
+
+# contains pointers to arrays of pointers to NATrule
+cdef NATrule *nat_rules[NAT_TABLE_COUNT]
+
+# arrays of pointers to NATrule
+nat_rules[NAT_PRE_RULES]   = <NATrule*>calloc(NAT_PRE_MAX_RULE_COUNT, sizeof(NATrule))
+nat_rules[NAT_POST_RULES]  = <NATrule*>calloc(NAT_POST_MAX_RULE_COUNT, sizeof(NATrule))
+
+cdef uint_fast16_t *NAT_CUR_RULE_COUNTS = <uint_fast16_t*>calloc(NAT_TABLE_COUNT, sizeof(uint_fast16_t))
 
 # stores zone(integer value) at index, which is mapped Fto if_nametoindex() (value returned from get_in/outdev)
 cdef uint_fast16_t *INTF_ZONE_MAP = <uint_fast16_t*>calloc(FW_MAX_ZONE_COUNT, sizeof(uint_fast16_t))
@@ -146,7 +157,7 @@ cdef uint32_t *ATTACKER_BLOCKLIST = <uint32_t*>calloc(FW_MAX_ATTACKERS, sizeof(u
 cdef uint32_t BLOCKLIST_CUR_SIZE = 0 # if we decide to track size for appends
 
 # ==================================
-# PRIMARY INSPECTION LOGIC
+# PRIMARY FIREWALL LOGIC
 # ==================================
 cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
 
@@ -158,15 +169,15 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
         nfqnl_msg_packet_hdr *nlhdr
         nfqnl_msg_packet_hw  *_hw
 
-        uint32_t    iif, oif, mark, ct_info
+        uint32_t    _iif, _oif, _mark, ct_info
 
         HWinfo      hw
         char       *m_addr = NULL
 
         Protohdr    protohdr
-        dnx_pktb    pkt = [NULL, 0, NULL, 0, &protohdr, 0, 0, 0, 0, NF_ACCEPT, 69]
+        dnx_pktb    pkt
 
-        srange      fw_sections
+        srange      fw_tables
 
     nullset(<void**>netlink_attrs, NFQA_RANGE)
     nfq_nlmsg_parse(nlh, netlink_attrs)
@@ -178,14 +189,14 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
     # this will be used to allow for stateless inspection policies later.
     ct_info = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_CT_INFO]))
     if (ct_info != IP_CT_NEW):
-        dnx_send_verdict(cfd.queue, ntohl(nlhdr.packet_id), &pkt)
+        dnx_send_verdict_fast(cfd.queue, ntohl(nlhdr.packet_id), NF_ACCEPT)
     # ======================
     # INTERFACE, NL, AND HW
     nft_hook = ntohl(nlhdr.hook)
 
-    mark = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_MARK])) if netlink_attrs[NFQA_MARK] else 0
-    iif  = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_INDEV])) if netlink_attrs[NFQA_IFINDEX_INDEV] else 0
-    oif  = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_OUTDEV])) if netlink_attrs[NFQA_IFINDEX_OUTDEV] else 0
+    _mark = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_MARK])) if netlink_attrs[NFQA_MARK] else 0
+    _iif  = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_INDEV])) if netlink_attrs[NFQA_IFINDEX_INDEV] else 0
+    _oif  = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_OUTDEV])) if netlink_attrs[NFQA_IFINDEX_OUTDEV] else 0
 
     if (netlink_attrs[NFQA_HWADDR]):
         _hw = <nfqnl_msg_packet_hw*>mnl_attr_get_payload(netlink_attrs[NFQA_HWADDR])
@@ -193,20 +204,21 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
         m_addr = <char*>_hw.hw_addr
 
     # NOTE: i bet this is going to break on the m_addr when no mac is available
-    hw = [INTF_ZONE_MAP[iif], INTF_ZONE_MAP[oif], m_addr, time(NULL)]
+    hw = [INTF_ZONE_MAP[_iif], INTF_ZONE_MAP[_oif], m_addr, time(NULL)]
 
+    # ======================
+    # PACKET DATA / LEN
     pkt.data = <uint8_t*>mnl_attr_get_payload(netlink_attrs[NFQA_PAYLOAD])
     pkt.tlen  = mnl_attr_get_payload_len(netlink_attrs[NFQA_PAYLOAD])
 
-    # SETTING RULE TABLES
-    if (not mark):
-        fw_sections = [SYSTEM_RANGE_START, RULE_RANGE_END] if not oif else [RULE_RANGE_START, RULE_RANGE_END]
+    # ======================
+    # FW TABLE ASSIGNMENT
+    # ordered by system priority
+    if (nft_hook == NF_IP_FORWARD):
+        fw_tables = [FW_RULE_RANGE_START, FW_RULE_RANGE_END]
 
-    elif (nft_hook == NF_IP_PRE_ROUTING):
-        fw_sections = [RULE_RANGE_END, NAT_PRE_RANGE_END]
-
-    elif (nft_hook == NF_IP_POST_ROUTING):
-        fw_sections = [NAT_PRE_RANGE_END, NAT_POST_RANGE_END]
+    elif (nft_hook == NF_IP_LOCAL_IN):
+        fw_tables = [FW_SYSTEM_RANGE_START, FW_RULE_RANGE_END]
 
     # ===================================
     # LOCKING ACCESS TO FIREWALL RULES
@@ -215,28 +227,17 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
     # --------------------
     # FIREWALL RULE CHECK
     # --------------------
-    cfirewall_inspect(&hw, &fw_sections, &pkt)
+    cfirewall_inspect(&fw_tables, &hw, &pkt)
 
     pthread_mutex_unlock(&FWrulelock)
     # UNLOCKING ACCESS TO FIREWALL RULES
     # ===================================
 
     # --------------------
-    # NAT / MANGLE
-    # --------------------
-    # NOTE: it looks like it will be better if we manually NAT the packet contents.
-    # the alternative is to allocate a pktb and user the proper mangler.
-    # this would auto manage the header checksums, but we would need alloc/free every time we mangle.
-    # i have alot of experience with nat and checksum calculations so its probably easier and more efficient to use
-    # the on stack buffer to mangle. (this is unless we need to retain a copy of the original packet)
-    if (pkt.action & DNX_NAT_FLAGS):
-        dnx_mangle_pkt(&pkt)
-
-    # --------------------
     # NFQUEUE VERDICT
     # --------------------
     # only SYSTEM RULES will have cfirewall invoke action directly
-    if (fw_sections.start != SYSTEM_RANGE_START):
+    if (fw_tables.start != FW_SYSTEM_RANGE_START):
 
         # if PROXY_BYPASS, cfirewall will invoke the rule action without forwarding to another queue.
         # if not PROXY_BYPASS, forward to ip proxy regardless of action for geolocation log or IPS
@@ -250,7 +251,7 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
     if (VERBOSE):
         # pkt_print(&hw, ip_header, proto_header)
 
-        printf('[C/packet] system->%u, action->%u, ', nft_hook, pkt.action)
+        printf('[C/packet] hook->%u, mark->%u, action->%u, ', nft_hook, _mark, pkt.action)
         printf('ipp->%u, dns->%u, ips->%u\n',
                pkt.mark >> 12 & 15, pkt.mark >> 16 & 15, pkt.mark >> 20 & 15)
         printf('=====================================================================\n')
@@ -259,7 +260,7 @@ cdef int cfirewall_recv(const nlmsghdr *nlh, void *data) nogil:
     # < 0 vals are errors, but return is being ignored by CFirewall._run.
     return Py_OK
 
-cdef inline void cfirewall_inspect(HWinfo *hw, srange *fw_sections, dnx_pktb *pkt) nogil:
+cdef inline void cfirewall_inspect(srange *fw_tables, HWinfo *hw, dnx_pktb *pkt) nogil:
 
     # intial header parse and assignment to dnx_pktb struct
     # ---------------------
@@ -276,7 +277,7 @@ cdef inline void cfirewall_inspect(HWinfo *hw, srange *fw_sections, dnx_pktb *pk
         pkt.protohdr.p2 = <P2*>(pkt.iphdr + 1)
 
     cdef:
-        FWrule      rule
+        FWrule     *rule
         size_t      section_num, rule_num
 
         # normalizing src/dst ip in header to host order
@@ -294,15 +295,15 @@ cdef inline void cfirewall_inspect(HWinfo *hw, srange *fw_sections, dnx_pktb *pk
         # security profile loop
         uint_fast8_t i, idx
 
-    for section_num in range(fw_sections.start, fw_sections.end):
+    for section_num in range(fw_tables.start, fw_tables.end):
 
-        current_rule_count = CUR_RULE_COUNTS[section_num]
-        if (current_rule_count < 1): # in case there becomes a purpose for < 0 values
+        current_rule_count = FW_CUR_RULE_COUNTS[section_num]
+        if (not current_rule_count):
             continue
 
         for rule_num in range(current_rule_count):
 
-            rule = firewall_rules[section_num][rule_num]
+            rule = &firewall_rules[section_num][rule_num]
 
             # NOTE: inspection order: src > dst | zone, ip_addr, protocol, port
             if (not rule.enabled):
@@ -359,12 +360,106 @@ cdef inline void cfirewall_inspect(HWinfo *hw, srange *fw_sections, dnx_pktb *pk
     pkt.action     = DNX_DROP
     pkt.mark       = tracked_geo << FOUR_BITS | direction << TWO_BITS | DNX_DROP
 
+# ==================================
+# PRIMARY NAT LOGIC
+# ==================================
+cdef int cnat_recv(const nlmsghdr *nlh, void *data) nogil:
+
+    # definitions or default assignments
+    cdef:
+        cfdata     *cfd = <cfdata*>data
+        nlattr     *netlink_attrs[NFQA_RANGE]
+
+        nfqnl_msg_packet_hdr *nlhdr
+        nfqnl_msg_packet_hw  *_hw
+
+        uint32_t    _iif, _oif, _mark, ct_info
+
+        Protohdr    protohdr
+        dnx_pktb    pkt
+
+        int         table_idx
+
+    nullset(<void**>netlink_attrs, NFQA_RANGE)
+    nfq_nlmsg_parse(nlh, netlink_attrs)
+
+    nlhdr = <nfqnl_msg_packet_hdr*>mnl_attr_get_payload(netlink_attrs[NFQA_PACKET_HDR])
+
+    if (ntohl(nlhdr.hook) == NF_IP_POST_ROUTING):
+        table_idx = NAT_PRE_TABLE
+
+    elif (ntohl(nlhdr.hook) == NF_IP_PRE_ROUTING):
+        table_idx = NAT_POST_TABLE
+
+    # ======================
+    # NO NAT QUICK PATH
+    if (not NAT_CUR_RULE_COUNTS[table_idx]):
+        dnx_send_verdict_fast(cfd.queue, ntohl(nlhdr.packet_id), NF_ACCEPT)
+
+        return OK
+    # ======================
+
+
+    _mark = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_MARK])) if netlink_attrs[NFQA_MARK] else 0
+    _iif  = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_INDEV])) if netlink_attrs[NFQA_IFINDEX_INDEV] else 0
+    _oif  = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_OUTDEV])) if netlink_attrs[NFQA_IFINDEX_OUTDEV] else 0
+
+    if (netlink_attrs[NFQA_HWADDR]):
+        _hw = <nfqnl_msg_packet_hw*>mnl_attr_get_payload(netlink_attrs[NFQA_HWADDR])
+
+        m_addr = <char*>_hw.hw_addr
+
+    # NOTE: i bet this is going to break on the m_addr when no mac is available
+    hw = [INTF_ZONE_MAP[_iif], INTF_ZONE_MAP[_oif]]
+
+    # ======================
+    # PACKET DATA / LEN
+    pkt.data = <uint8_t*>mnl_attr_get_payload(netlink_attrs[NFQA_PAYLOAD])
+    pkt.tlen  = mnl_attr_get_payload_len(netlink_attrs[NFQA_PAYLOAD])
+
+    # ===================================
+    # LOCKING ACCESS TO NAT RULES
+    # prevents the manager thread from updating nat rules during packet inspection
+    pthread_mutex_lock(&FWrulelock)
+    # --------------------
+    # NAT RULE CHECK
+    # --------------------
+    cfirewall_inspect(table_idx, &hw, &pkt)
+
+    pthread_mutex_unlock(&FWrulelock)
+    # UNLOCKING ACCESS TO NAT RULES
+    # ===================================
+
+    # --------------------
+    # NAT / MANGLE
+    # --------------------
+    # NOTE: it looks like it will be better if we manually NAT the packet contents.
+    # the alternative is to allocate a pktb and user the proper mangler.
+    # this would auto manage the header checksums, but we would need alloc/free every time we mangle.
+    # i have alot of experience with nat and checksum calculations so its probably easier and more efficient to use
+    # the on stack buffer to mangle. (this is unless we need to retain a copy of the original packet)
+    if (pkt.action & DNX_NAT_FLAGS):
+        dnx_mangle_pkt(&pkt)
+
+cdef inline void cnat_inspect(int nat_table, HWinfo *hw, dnx_pktb *pkt) nogil:
+    pass
+
+cdef inline void dnx_send_verdict_fast(uint32_t queue_num, uint32_t pktid, int action) nogil:
+    cdef:
+        char        buf[MNL_SOCKET_BUFFER_SIZE]
+        nlmsghdr   *nlh
+
+    nlh = nfq_nlmsg_put(buf, NFQNL_MSG_VERDICT, queue_num)
+    nfq_nlmsg_verdict_put(nlh, pktid, action)
+    mnl_socket_sendto(nl, nlh, nlh.nlmsg_len)
+
 cdef int dnx_send_verdict(uint32_t queue_num, uint32_t pktid, dnx_pktb *pkt) nogil:
 
     cdef:
         char        buf[MNL_SOCKET_BUFFER_SIZE]
         nlmsghdr   *nlh
-        nlattr     *nest
+
+        ssize_t     ret
 
     nlh = nfq_nlmsg_put(buf, NFQNL_MSG_VERDICT, queue_num)
 

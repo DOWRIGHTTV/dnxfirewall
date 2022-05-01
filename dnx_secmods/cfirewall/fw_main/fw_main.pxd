@@ -634,11 +634,12 @@ cdef enum:
     WAN_IN = 10
 
 cdef enum:
-    SYSTEM_RULES
-    BEFORE_RULES
-    MAIN_RULES
-    AFTER_RULES
-    NAT_RULES
+    FW_SYSTEM_RULES
+    FW_BEFORE_RULES
+    FW_MAIN_RULES
+    FW_AFTER_RULES
+    NAT_PRE_RULES
+    NAT_POST_RULES
 
 # used for dynamic allocation of the array containing security profile settings
 # ip proxy, ips_ids, dns_proxy
