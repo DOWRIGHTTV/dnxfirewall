@@ -81,7 +81,6 @@ cpdef bytes calc_checksum(const uint8_t[:] data):
     csum = (csum >> 16) + (csum & UINT16_MAX)
     csum = ~(csum + (csum >> 16)) & UINT16_MAX
 
-    # couldn't this be ubytes = <uint16_t>csum
     ubytes[0] = <uint8_t>(csum >> 8)
     ubytes[1] = csum & UINT8_MAX
 
