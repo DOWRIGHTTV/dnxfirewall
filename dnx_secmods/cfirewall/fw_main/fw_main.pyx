@@ -1,14 +1,12 @@
 #!/usr/bin/env Cython
 
-#
-
 from libc.stdlib cimport calloc, malloc, free
 from libc.stdio cimport printf
 
 from libc.stdint cimport uint8_t, uint16_t, uint32_t
 
 from dnx_iptools.hash_trie.hash_trie cimport HashTrie_Range
-from dnx_iptools.cprotocol_tools.cprotocol_tools cimport nullset
+from dnx_iptools.cprotocol_tools.cprotocol_tools cimport calc_checksum
 
 # from fw_api cimport api_open, process_api
 
@@ -395,8 +393,8 @@ cdef int cnat_recv(const nlmsghdr *nlh, void *data) nogil:
         return OK
     # ======================
     # _mark = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_MARK])) if netlink_attrs[NFQA_MARK] else 0
-    # _iif  = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_INDEV])) if netlink_attrs[NFQA_IFINDEX_INDEV] else 0
-    # _oif  = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_OUTDEV])) if netlink_attrs[NFQA_IFINDEX_OUTDEV] else 0
+    pkt.hw.in_zone  = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_INDEV])) if netlink_attrs[NFQA_IFINDEX_INDEV] else 0
+    pkt.hw.out_zone = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_OUTDEV])) if netlink_attrs[NFQA_IFINDEX_OUTDEV] else 0
 
     # ======================
     # PACKET DATA / LEN
@@ -541,8 +539,13 @@ cdef int dnx_mangle_pkt(dnx_pktb *pkt) nogil:
     # MAKE SURE WE RECALCULATE THE PROPER CHECKSUMS.
     # we can probably use the nfq checksum functions if they are publicly available, otherwise use cprotocol_tools.
 
+    if (pkt.action & DNX_MASQ):
+        pkt.iphdr.saddr = intf_masquerade(pkt.hw.out_zone)
+        pkt.iphdr.check = 0
+        pkt.iphdr.check = calc_checksum(pkt.iphdr)
+
     # changing dst ip and/or port pre route
-    if (pkt.action & DNX_DST_NAT):
+    elif (pkt.action & DNX_DST_NAT):
         pass
 
     # changing src ip and/or port post route

@@ -1,86 +1,3 @@
-#!/usr/bin/env Cython
-
-from cpython cimport array
-from libc.stdint cimport uint8_t, uint16_t, uint32_t, uint64_t
-from libc.stdint cimport uint_fast8_t, uint_fast16_t, uint_fast32_t, int_fast8_t, int_fast16_t, int_fast32_t
-from libc.stdio cimport FILE
-
-from posix.types cimport pid_t
-
-# LIBMNL && LIBNETFILTER_QUEUE SOURCE FILES
-# https://netfilter.org/projects/libmnl/files/libmnl-1.0.5.tar.bz2
-# https://netfilter.org/projects/libnetfilter_queue/files/libnetfilter_queue-1.0.5.tar.bz2
-
-# DNXFIREWALL TYPEDEFS
-ctypedef array.array    PyArray
-ctypedef uint_fast8_t   uintf8_t
-ctypedef uint_fast16_t  uintf16_t
-ctypedef uint_fast32_t  uintf32_t
-
-cdef extern from "<errno.h>":
-    int         errno
-
-cdef extern from "<stdbool.h>":
-    pass
-    # ctypedef int bool
-    # ctypedef int true
-    # ctypedef int false
-
-cdef extern from "<time.h>" nogil:
-    ctypedef long   time_t
-
-    time_t      time(time_t*)
-    struct timeval:
-        time_t  tv_sec
-        time_t  tv_usec
-
-cdef extern from "<sys/socket.h>":
-    ctypedef unsigned int   socklen_t
-
-    ssize_t     recv(int __fd, void *__buf, size_t __n, int __flags) nogil
-    int         MSG_DONTWAIT
-    enum: AF_INET
-
-cdef enum:
-    EAGAIN = 11           # Try again
-    EWOULDBLOCK = EAGAIN
-    ENOBUFS = 105         # No buffer space available
-
-cdef extern from "pthread.h" nogil:
-    ctypedef struct pthread_mutex_t:
-        pass
-
-    int pthread_mutex_init(pthread_mutex_t*, void*)
-    int pthread_mutex_lock(pthread_mutex_t*)
-    int pthread_mutex_trylock(pthread_mutex_t*)
-    int pthread_mutex_unlock(pthread_mutex_t*)
-    int pthread_mutex_destroy(pthread_mutex_t*)
-
-cdef extern from "netinet/in.h" nogil:
-    uint32_t ntohl (uint32_t __netlong)
-    uint16_t ntohs (uint16_t __netshort)
-    uint32_t htonl (uint32_t __hostlong)
-    uint16_t htons (uint16_t __hostshort)
-
-    enum: IPPROTO_IP
-    enum: IPPROTO_ICMP
-    enum: IPPROTO_TCP
-    enum: IPPROTO_UDP
-
-cdef extern from "netinet/tcp.h":
-    struct tcphdr:
-        pass
-
-cdef extern from "netinet/udp.h":
-    struct udphdr:
-        pass
-
-# cdef extern from "libnfnetlink/libnfnetlink.h" nogil:
-#     struct nfnl_handle:
-#         pass
-#
-#     unsigned int nfnl_rcvbufsiz(nfnl_handle *h, unsigned int size)
-
 cdef extern from "linux/netlink.h" nogil:
     enum:
         NETLINK_ROUTE                 # Routing/device hook           # Unused number
@@ -308,154 +225,6 @@ cdef extern from "libnetfilter_queue/libnetfilter_queue_udp.h" nogil:
     int nfq_udp_mangle_ipv4(
         pkt_buff *pkt, unsigned int match_offset, unsigned int match_len, const char *rep_buffer, unsigned int rep_len)
 
-cdef extern from "linux/netfilter/nf_conntrack_common.h" nogil:
-    # connection state tracking for netfilter. this is separated from, but required by, the
-    # NAT layer. it can also be used by an iptables extension.
-    enum: # ip_conntrack_info
-        # Part of an established connection (either direction). */
-        IP_CT_ESTABLISHED,
-
-        # Like NEW, but related to an existing connection, or ICMP error (in either direction).
-        IP_CT_RELATED,
-
-        # Started a new connection to track (only IP_CT_DIR_ORIGINAL); may be a retransmission.
-        IP_CT_NEW,
-
-        # >= this indicates reply direction
-        IP_CT_IS_REPLY,
-
-        IP_CT_ESTABLISHED_REPLY, # 3 -> IP_CT_ESTABLISHED + IP_CT_IS_REPLY
-        IP_CT_RELATED_REPLY,     # 4 -> IP_CT_RELATED + IP_CT_IS_REPLY
-        # No NEW in reply direction.
-
-        # Number of distinct IP_CT types.
-        IP_CT_NUMBER,
-
-        # only for userspace compatibility
-        IP_CT_UNTRACKED = 7
-
-cdef extern from "linux/netfilter/nfnetlink.h" nogil:
-    # General form of address family dependent message.
-    struct nfgenmsg:
-        uint8_t     nfgen_family        # AF_xxx
-        uint8_t     version             # nfnetlink version
-        uint16_t    res_id              # resource id
-
-cdef extern from "linux/netfilter/nfnetlink_queue.h" nogil:
-    enum nfqnl_msg_types:
-        NFQNL_MSG_PACKET                # packet from kernel to userspace
-        NFQNL_MSG_VERDICT               # verdict from userspace to kernel
-        NFQNL_MSG_CONFIG                # connect to a particular queue
-
-        NFQNL_MSG_MAX
-
-    struct nfqnl_msg_packet_hdr:
-        uint32_t    packet_id
-        uint16_t    hw_protocol
-        uint8_t     hook
-
-    struct nfqnl_msg_packet_hw:
-        uint16_t    hw_addrlen
-        uint16_t    _pad
-        uint8_t     hw_addr[8]
-
-    struct nfqnl_msg_packet_timestamp:
-        uint64_t    sec                      #__aligned_be64
-        uint64_t    usec                     #__aligned_be64
-
-    enum nfqnl_vlan_attr:
-        NFQA_VLAN_UNSPEC,
-        NFQA_VLAN_PROTO,                # __be16 skb vlan_proto */
-        NFQA_VLAN_TCI,                  # __be16 skb htons(vlan_tci) */
-        __NFQA_VLAN_MAX,
-
-        NFQA_VLAN_MAX = __NFQA_VLAN_MAX - 1
-
-    # name causes cython compile error due to integer/enum type mismatch
-    enum: # nfqnl_attr_type
-        NFQA_UNSPEC,
-        NFQA_PACKET_HDR,
-        NFQA_VERDICT_HDR,               # nfqnl_msg_verdict_hrd */
-        NFQA_MARK,                      # __u32 nfmark */
-        NFQA_TIMESTAMP,                 # nfqnl_msg_packet_timestamp */
-        NFQA_IFINDEX_INDEV,             # __u32 ifindex */
-        NFQA_IFINDEX_OUTDEV,            # __u32 ifindex */
-        NFQA_IFINDEX_PHYSINDEV,         # __u32 ifindex */
-        NFQA_IFINDEX_PHYSOUTDEV,        # __u32 ifindex */
-        NFQA_HWADDR,                    # nfqnl_msg_packet_hw */
-        NFQA_PAYLOAD,                   # opaque data payload */
-        NFQA_CT,                        # nfnetlink_conntrack.h */
-        NFQA_CT_INFO,                   # enum ip_conntrack_info */
-        NFQA_CAP_LEN,                   # __u32 length of captured packet */
-        NFQA_SKB_INFO,                  # __u32 skb meta information */
-        NFQA_EXP,                       # nfnetlink_conntrack.h */
-        NFQA_UID,                       # __u32 sk uid */
-        NFQA_GID,                       # __u32 sk gid */
-        NFQA_SECCTX,                    # security context string */
-        NFQA_VLAN,                      # nested attribute: packet vlan info */
-        NFQA_L2HDR,                     # full L2 header */
-        NFQA_PRIORITY,                  # skb->priority */
-
-        NFQA_MAX
-
-    struct nfqnl_msg_verdict_hdr:
-        uint32_t    verdict
-        uint32_t    id
-
-    enum NfqnlMsgConfigCmds "nfqnl_msg_config_cmds":
-        NFQNL_CFG_CMD_NONE
-        NFQNL_CFG_CMD_BIND
-        NFQNL_CFG_CMD_UNBIND
-        NFQNL_CFG_CMD_PF_BIND
-        NFQNL_CFG_CMD_PF_UNBIND
-
-    struct NfqnlMsgConfigCmd "nfqnl_msg_config_cmd":
-        uint8_t     command             # nfqnl_msg_config_cmds
-        uint8_t     _pad
-        uint16_t    pf                  # AF_xxx for PF_[UN]BIND
-
-    enum NfqnlConfigMode "nfqnl_config_mode":
-        NFQNL_COPY_NONE
-        NFQNL_COPY_META
-        NFQNL_COPY_PACKET
-
-    struct NfqnlMsgConfigParams "nfqnl_msg_config_params":
-        uint32_t    copy_range
-        uint8_t     copy_mode           # enum nfqnl_config_mode
-    # __attribute__ ((packed));
-
-    enum NfqnlAttrConfig "nfqnl_attr_config":
-        NFQA_CFG_UNSPEC
-        NFQA_CFG_CMD                    # nfqnl_msg_config_cmd
-        NFQA_CFG_PARAMS                 # nfqnl_msg_config_params
-        NFQA_CFG_QUEUE_MAXLEN           # __u32
-        NFQA_CFG_MASK                   # identify which flags to change
-        NFQA_CFG_FLAGS                  # value of these flags (__u32)
-        NFQA_CFG_MAX
-
-    # Flags for NFQA_CFG_FLAGS
-    enum:
-        NFQA_CFG_F_FAIL_OPEN
-        NFQA_CFG_F_CONNTRACK
-        NFQA_CFG_F_GSO
-        NFQA_CFG_F_UID_GID
-        NFQA_CFG_F_MAX
-
-    # flags for NFQA_SKB_INFO
-    enum:
-        # packet appears to have wrong checksums, but they are ok
-        NFQA_SKB_CSUMNOTREADY
-
-        # packet is GSO (i.e., exceeds device mtu)
-        NFQA_SKB_GSO
-
-        # csum not validated (incoming device doesn't support hw checksum, etc.)
-        NFQA_SKB_CSUM_NOTVERIFIED
-
-# DNXFIREWALL TYPEDEFS
-ctypedef nfqnl_msg_packet_hdr   nl_pkt_hdr
-ctypedef nfqnl_msg_packet_hw    nl_pkt_hw
-
 cdef extern from "libmnl/libmnl.h" nogil:
     # nlattr mnl_attr_for_each(nlattr attr, nlmsghdr *nlh, int offset)
     # mnl_attr_for_each_nested(nlattr attr, nest)
@@ -612,9 +381,246 @@ cdef extern from "libmnl/libmnl.h" nogil:
                             unsigned int portid, mnl_cb_t cb_data, void *data,
                             const mnl_cb_t *cb_ctl_array, unsigned int cb_ctl_array_len)
 
+#!/usr/bin/env Cython
+
+from cpython cimport array
+from libc.stdint cimport uint8_t, uint16_t, uint32_t, uint64_t
+from libc.stdint cimport uint_fast8_t, uint_fast16_t, uint_fast32_t, int_fast8_t, int_fast16_t, int_fast32_t
+from libc.stdio cimport FILE
+
+from posix.types cimport pid_t
+
+# LIBMNL && LIBNETFILTER_QUEUE SOURCE FILES
+# https://netfilter.org/projects/libmnl/files/libmnl-1.0.5.tar.bz2
+# https://netfilter.org/projects/libnetfilter_queue/files/libnetfilter_queue-1.0.5.tar.bz2
+
+# DNXFIREWALL TYPEDEFS
+ctypedef array.array    PyArray
+ctypedef uint_fast8_t   uintf8_t
+ctypedef uint_fast16_t  uintf16_t
+ctypedef uint_fast32_t  uintf32_t
+
+cdef extern from "<errno.h>":
+    int         errno
+
+cdef extern from "<stdbool.h>":
+    pass
+    # ctypedef int bool
+    # ctypedef int true
+    # ctypedef int false
+
+cdef extern from "<time.h>" nogil:
+    ctypedef long   time_t
+
+    time_t      time(time_t*)
+    struct timeval:
+        time_t  tv_sec
+        time_t  tv_usec
+
+cdef extern from "<sys/socket.h>":
+    ctypedef unsigned int   socklen_t
+
+    ssize_t     recv(int __fd, void *__buf, size_t __n, int __flags) nogil
+    int         MSG_DONTWAIT
+    enum: AF_INET
+
+cdef enum:
+    EAGAIN = 11           # Try again
+    EWOULDBLOCK = EAGAIN
+    ENOBUFS = 105         # No buffer space available
+
+cdef extern from "pthread.h" nogil:
+    ctypedef struct pthread_mutex_t:
+        pass
+
+    int pthread_mutex_init(pthread_mutex_t*, void*)
+    int pthread_mutex_lock(pthread_mutex_t*)
+    int pthread_mutex_trylock(pthread_mutex_t*)
+    int pthread_mutex_unlock(pthread_mutex_t*)
+    int pthread_mutex_destroy(pthread_mutex_t*)
+
+cdef extern from "netinet/in.h" nogil:
+    uint32_t ntohl (uint32_t __netlong)
+    uint16_t ntohs (uint16_t __netshort)
+    uint32_t htonl (uint32_t __hostlong)
+    uint16_t htons (uint16_t __hostshort)
+
+    enum: IPPROTO_IP
+    enum: IPPROTO_ICMP
+    enum: IPPROTO_TCP
+    enum: IPPROTO_UDP
+
+cdef extern from "netinet/tcp.h":
+    struct tcphdr:
+        pass
+
+cdef extern from "netinet/udp.h":
+    struct udphdr:
+        pass
+
+# cdef extern from "libnfnetlink/libnfnetlink.h" nogil:
+#     struct nfnl_handle:
+#         pass
+#
+#     unsigned int nfnl_rcvbufsiz(nfnl_handle *h, unsigned int size)
+
+cdef extern from "linux/netfilter/nf_conntrack_common.h" nogil:
+    # connection state tracking for netfilter. this is separated from, but required by, the
+    # NAT layer. it can also be used by an iptables extension.
+    enum: # ip_conntrack_info
+        # Part of an established connection (either direction). */
+        IP_CT_ESTABLISHED,
+
+        # Like NEW, but related to an existing connection, or ICMP error (in either direction).
+        IP_CT_RELATED,
+
+        # Started a new connection to track (only IP_CT_DIR_ORIGINAL); may be a retransmission.
+        IP_CT_NEW,
+
+        # >= this indicates reply direction
+        IP_CT_IS_REPLY,
+
+        IP_CT_ESTABLISHED_REPLY, # 3 -> IP_CT_ESTABLISHED + IP_CT_IS_REPLY
+        IP_CT_RELATED_REPLY,     # 4 -> IP_CT_RELATED + IP_CT_IS_REPLY
+        # No NEW in reply direction.
+
+        # Number of distinct IP_CT types.
+        IP_CT_NUMBER,
+
+        # only for userspace compatibility
+        IP_CT_UNTRACKED = 7
+
+cdef extern from "linux/netfilter/nfnetlink.h" nogil:
+    # General form of address family dependent message.
+    struct nfgenmsg:
+        uint8_t     nfgen_family        # AF_xxx
+        uint8_t     version             # nfnetlink version
+        uint16_t    res_id              # resource id
+
+cdef extern from "linux/netfilter/nfnetlink_queue.h" nogil:
+    enum nfqnl_msg_types:
+        NFQNL_MSG_PACKET                # packet from kernel to userspace
+        NFQNL_MSG_VERDICT               # verdict from userspace to kernel
+        NFQNL_MSG_CONFIG                # connect to a particular queue
+
+        NFQNL_MSG_MAX
+
+    struct nfqnl_msg_packet_hdr:
+        uint32_t    packet_id
+        uint16_t    hw_protocol
+        uint8_t     hook
+
+    struct nfqnl_msg_packet_hw:
+        uint16_t    hw_addrlen
+        uint16_t    _pad
+        uint8_t     hw_addr[8]
+
+    struct nfqnl_msg_packet_timestamp:
+        uint64_t    sec                      #__aligned_be64
+        uint64_t    usec                     #__aligned_be64
+
+    enum nfqnl_vlan_attr:
+        NFQA_VLAN_UNSPEC,
+        NFQA_VLAN_PROTO,                # __be16 skb vlan_proto */
+        NFQA_VLAN_TCI,                  # __be16 skb htons(vlan_tci) */
+        __NFQA_VLAN_MAX,
+
+        NFQA_VLAN_MAX = __NFQA_VLAN_MAX - 1
+
+    # name causes cython compile error due to integer/enum type mismatch
+    enum: # nfqnl_attr_type
+        NFQA_UNSPEC,
+        NFQA_PACKET_HDR,
+        NFQA_VERDICT_HDR,               # nfqnl_msg_verdict_hrd */
+        NFQA_MARK,                      # __u32 nfmark */
+        NFQA_TIMESTAMP,                 # nfqnl_msg_packet_timestamp */
+        NFQA_IFINDEX_INDEV,             # __u32 ifindex */
+        NFQA_IFINDEX_OUTDEV,            # __u32 ifindex */
+        NFQA_IFINDEX_PHYSINDEV,         # __u32 ifindex */
+        NFQA_IFINDEX_PHYSOUTDEV,        # __u32 ifindex */
+        NFQA_HWADDR,                    # nfqnl_msg_packet_hw */
+        NFQA_PAYLOAD,                   # opaque data payload */
+        NFQA_CT,                        # nfnetlink_conntrack.h */
+        NFQA_CT_INFO,                   # enum ip_conntrack_info */
+        NFQA_CAP_LEN,                   # __u32 length of captured packet */
+        NFQA_SKB_INFO,                  # __u32 skb meta information */
+        NFQA_EXP,                       # nfnetlink_conntrack.h */
+        NFQA_UID,                       # __u32 sk uid */
+        NFQA_GID,                       # __u32 sk gid */
+        NFQA_SECCTX,                    # security context string */
+        NFQA_VLAN,                      # nested attribute: packet vlan info */
+        NFQA_L2HDR,                     # full L2 header */
+        NFQA_PRIORITY,                  # skb->priority */
+
+        NFQA_MAX
+
+    struct nfqnl_msg_verdict_hdr:
+        uint32_t    verdict
+        uint32_t    id
+
+    enum NfqnlMsgConfigCmds "nfqnl_msg_config_cmds":
+        NFQNL_CFG_CMD_NONE
+        NFQNL_CFG_CMD_BIND
+        NFQNL_CFG_CMD_UNBIND
+        NFQNL_CFG_CMD_PF_BIND
+        NFQNL_CFG_CMD_PF_UNBIND
+
+    struct NfqnlMsgConfigCmd "nfqnl_msg_config_cmd":
+        uint8_t     command             # nfqnl_msg_config_cmds
+        uint8_t     _pad
+        uint16_t    pf                  # AF_xxx for PF_[UN]BIND
+
+    enum NfqnlConfigMode "nfqnl_config_mode":
+        NFQNL_COPY_NONE
+        NFQNL_COPY_META
+        NFQNL_COPY_PACKET
+
+    struct NfqnlMsgConfigParams "nfqnl_msg_config_params":
+        uint32_t    copy_range
+        uint8_t     copy_mode           # enum nfqnl_config_mode
+    # __attribute__ ((packed));
+
+    enum NfqnlAttrConfig "nfqnl_attr_config":
+        NFQA_CFG_UNSPEC
+        NFQA_CFG_CMD                    # nfqnl_msg_config_cmd
+        NFQA_CFG_PARAMS                 # nfqnl_msg_config_params
+        NFQA_CFG_QUEUE_MAXLEN           # __u32
+        NFQA_CFG_MASK                   # identify which flags to change
+        NFQA_CFG_FLAGS                  # value of these flags (__u32)
+        NFQA_CFG_MAX
+
+    # Flags for NFQA_CFG_FLAGS
+    enum:
+        NFQA_CFG_F_FAIL_OPEN
+        NFQA_CFG_F_CONNTRACK
+        NFQA_CFG_F_GSO
+        NFQA_CFG_F_UID_GID
+        NFQA_CFG_F_MAX
+
+    # flags for NFQA_SKB_INFO
+    enum:
+        # packet appears to have wrong checksums, but they are ok
+        NFQA_SKB_CSUMNOTREADY
+
+        # packet is GSO (i.e., exceeds device mtu)
+        NFQA_SKB_GSO
+
+        # csum not validated (incoming device doesn't support hw checksum, etc.)
+        NFQA_SKB_CSUM_NOTVERIFIED
+
+# DNXFIREWALL TYPEDEFS
+ctypedef nfqnl_msg_packet_hdr   nl_pkt_hdr
+ctypedef nfqnl_msg_packet_hw    nl_pkt_hw
+
+cdef extern from "inet_tools.h" nogil:
+    uint32_t intf_masquerade(uint32_t idx)
+
+cdef extern from "std_tools.h" nogil:
+    void nullset(void **data, uintf16_t dlen)
+
 cdef struct srange:
-  uintf8_t      start
-  uintf8_t      end
+  uintf8_t  start
+  uintf8_t  end
 
 cdef enum:
     NONE      = 0
