@@ -141,3 +141,7 @@ cdef extern from "linux/netfilter/nfnetlink_queue.h" nogil:
 
         # csum not validated (incoming device doesn't support hw checksum, etc.)
         NFQA_SKB_CSUM_NOTVERIFIED
+
+# DNXFIREWALL TYPEDEFS
+ctypedef nfqnl_msg_packet_hdr   nl_pkt_hdr
+ctypedef nfqnl_msg_packet_hw    nl_pkt_hw

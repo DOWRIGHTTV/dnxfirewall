@@ -11,8 +11,11 @@ from posix.types cimport pid_t
 # https://netfilter.org/projects/libmnl/files/libmnl-1.0.5.tar.bz2
 # https://netfilter.org/projects/libnetfilter_queue/files/libnetfilter_queue-1.0.5.tar.bz2
 
-
-ctypedef array.array PyArray
+# DNXFIREWALL TYPEDEFS
+ctypedef array.array    PyArray
+ctypedef uint_fast8_t   uintf8_t
+ctypedef uint_fast16_t  uintf16_t
+ctypedef uint_fast32_t  uintf32_t
 
 cdef extern from "<errno.h>":
     int         errno
@@ -24,18 +27,18 @@ cdef extern from "<stdbool.h>":
     # ctypedef int false
 
 cdef extern from "<time.h>" nogil:
-    ctypedef    long time_t
-    time_t      time(time_t*)
+    ctypedef long   time_t
 
+    time_t      time(time_t*)
     struct timeval:
         time_t  tv_sec
         time_t  tv_usec
 
 cdef extern from "<sys/socket.h>":
-    ctypedef    unsigned int socklen_t
+    ctypedef unsigned int   socklen_t
+
     ssize_t     recv(int __fd, void *__buf, size_t __n, int __flags) nogil
     int         MSG_DONTWAIT
-
     enum: AF_INET
 
 cdef enum:
@@ -53,11 +56,11 @@ cdef extern from "pthread.h" nogil:
     int pthread_mutex_unlock(pthread_mutex_t*)
     int pthread_mutex_destroy(pthread_mutex_t*)
 
-cdef extern from "netinet/in.h":
-    uint32_t ntohl (uint32_t __netlong) nogil
-    uint16_t ntohs (uint16_t __netshort) nogil
-    uint32_t htonl (uint32_t __hostlong) nogil
-    uint16_t htons (uint16_t __hostshort) nogil
+cdef extern from "netinet/in.h" nogil:
+    uint32_t ntohl (uint32_t __netlong)
+    uint16_t ntohs (uint16_t __netshort)
+    uint32_t htonl (uint32_t __hostlong)
+    uint16_t htons (uint16_t __hostshort)
 
     enum: IPPROTO_IP
     enum: IPPROTO_ICMP

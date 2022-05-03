@@ -11,8 +11,11 @@ from posix.types cimport pid_t
 # https://netfilter.org/projects/libmnl/files/libmnl-1.0.5.tar.bz2
 # https://netfilter.org/projects/libnetfilter_queue/files/libnetfilter_queue-1.0.5.tar.bz2
 
-
-ctypedef array.array PyArray
+# DNXFIREWALL TYPEDEFS
+ctypedef array.array    PyArray
+ctypedef uint_fast8_t   uintf8_t
+ctypedef uint_fast16_t  uintf16_t
+ctypedef uint_fast32_t  uintf32_t
 
 cdef extern from "<errno.h>":
     int         errno
@@ -24,18 +27,18 @@ cdef extern from "<stdbool.h>":
     # ctypedef int false
 
 cdef extern from "<time.h>" nogil:
-    ctypedef    long time_t
-    time_t      time(time_t*)
+    ctypedef long   time_t
 
+    time_t      time(time_t*)
     struct timeval:
         time_t  tv_sec
         time_t  tv_usec
 
 cdef extern from "<sys/socket.h>":
-    ctypedef    unsigned int socklen_t
+    ctypedef unsigned int   socklen_t
+
     ssize_t     recv(int __fd, void *__buf, size_t __n, int __flags) nogil
     int         MSG_DONTWAIT
-
     enum: AF_INET
 
 cdef enum:
@@ -53,11 +56,11 @@ cdef extern from "pthread.h" nogil:
     int pthread_mutex_unlock(pthread_mutex_t*)
     int pthread_mutex_destroy(pthread_mutex_t*)
 
-cdef extern from "netinet/in.h":
-    uint32_t ntohl (uint32_t __netlong) nogil
-    uint16_t ntohs (uint16_t __netshort) nogil
-    uint32_t htonl (uint32_t __hostlong) nogil
-    uint16_t htons (uint16_t __hostshort) nogil
+cdef extern from "netinet/in.h" nogil:
+    uint32_t ntohl (uint32_t __netlong)
+    uint16_t ntohs (uint16_t __netshort)
+    uint32_t htonl (uint32_t __hostlong)
+    uint16_t htons (uint16_t __hostshort)
 
     enum: IPPROTO_IP
     enum: IPPROTO_ICMP
@@ -449,6 +452,10 @@ cdef extern from "linux/netfilter/nfnetlink_queue.h" nogil:
         # csum not validated (incoming device doesn't support hw checksum, etc.)
         NFQA_SKB_CSUM_NOTVERIFIED
 
+# DNXFIREWALL TYPEDEFS
+ctypedef nfqnl_msg_packet_hdr   nl_pkt_hdr
+ctypedef nfqnl_msg_packet_hw    nl_pkt_hw
+
 cdef extern from "libmnl/libmnl.h" nogil:
     # nlattr mnl_attr_for_each(nlattr attr, nlmsghdr *nlh, int offset)
     # mnl_attr_for_each_nested(nlattr attr, nest)
@@ -606,8 +613,8 @@ cdef extern from "libmnl/libmnl.h" nogil:
                             const mnl_cb_t *cb_ctl_array, unsigned int cb_ctl_array_len)
 
 cdef struct srange:
-  uint_fast8_t  start
-  uint_fast8_t  end
+  uintf8_t      start
+  uintf8_t      end
 
 cdef enum:
     NONE      = 0
@@ -620,9 +627,11 @@ cdef enum:
     DNX_ACCEPT = 1
     DNX_REJECT = 2
 
-    DNX_SRC_NAT  = 4
-    DNX_DST_NAT  = 8
-    DNX_FULL_NAT = 16
+    DNX_NO_NAT   = 4
+    DNX_MASQ     = 8
+    DNX_SRC_NAT  = 16
+    DNX_DST_NAT  = 32
+    DNX_FULL_NAT = 64
 
     DNX_NAT_FLAGS = DNX_SRC_NAT | DNX_DST_NAT | DNX_FULL_NAT
 
@@ -653,72 +662,99 @@ DEF FIELD_MAX_SVC_LIST_MEMBERS = 8
 
 # STANDARD ZONE ARRAY [10, 11]
 cdef struct ZoneArray:
-    size_t          len
-    uint_fast8_t    objects[FIELD_MAX_ZONES]
+    uintf8_t    len
+    uintf8_t    objects[FIELD_MAX_ZONES]
 
 # STANDARD NETWORK OBJECT (HOST, NETWORK, RANGE, GEO)
-cdef struct Network:
-    uint_fast8_t    type
-    uint_fast32_t   netid
-    uint_fast32_t   netmask
+cdef struct NetObject:
+    uintf8_t    type
+    uintf32_t   netid
+    uintf32_t   netmask
 
 # MAIN NETWORK ARRAY
-cdef struct NetworkArray:
-    size_t          len
-    Network         objects[FIELD_MAX_NETWORKS]
+cdef struct NetArray:
+    uintf8_t    len
+    NetObject   objects[FIELD_MAX_NETWORKS]
+
+cdef struct S1: # ICMP
+    uint8_t     type
+    uint8_t     code
 
 # STANDARD SERVICE OBJECT (SOLO or RANGE)
-cdef struct Service:
-    uint_fast16_t   protocol
-    uint_fast16_t   start_port
-    uint_fast16_t   end_port
+cdef struct S2:
+    uintf16_t   protocol
+    uintf16_t   start_port
+    uintf16_t   end_port
 
 # SERVICE OBJECT LIST (tcp/80:tcp/443)
-cdef struct ServiceList:
-    size_t          len
-    Service         objects[FIELD_MAX_SVC_LIST_MEMBERS]
+cdef struct S3:
+    uintf8_t    len
+    Service     services[FIELD_MAX_SVC_LIST_MEMBERS]
 
 # UNION OF EACH SERVICE OBJECT TYPE
-cdef union Service_U:
-    Service         object
-    ServiceList     list
+cdef union Svc_U:
+    S1          s1  # ICMP
+    S2          s2  # SOLO or RANGE
+    S3          s3  # LIST
 
-cdef struct ServiceObject:
-    uint_fast8_t    type
-    Service_U    service
+cdef struct SvcObject:
+    uintf8_t    type
+    Svc_U       service
 
 # MAIN SERVICE ARRAY
-cdef struct ServiceArray:
-    size_t          len
-    ServiceObject   objects[FIELD_MAX_SERVICES]
+cdef struct SvcArray:
+    uintf8_t    len
+    SvcObject   objects[FIELD_MAX_SERVICES]
 
 # COMPLETE RULE STRUCT - NO POINTERS
 cdef struct FWrule:
-    bint            enabled
+    bint        enabled
 
     # SOURCE
-    ZoneArray       s_zones
-    NetworkArray    s_networks
-    ServiceArray    s_services
+    ZoneArray   s_zones
+    NetArray    s_networks
+    SvcArray    s_services
 
     # DESTINATION
-    ZoneArray       d_zones
-    NetworkArray    d_networks
-    ServiceArray    d_services
+    ZoneArray   d_zones
+    NetArray    d_networks
+    SvcArray    d_services
 
     # PROFILES
-    uint_fast8_t    action
-    uint_fast8_t    log
-    uint_fast8_t    sec_profiles[SECURITY_PROFILE_COUNT]
+    uintf8_t    action
+    uintf8_t    log
+    uintf8_t    sec_profiles[SECURITY_PROFILE_COUNT]
         # ip_proxy - 0 off, > 1 profile number
         # dns_proxy - 0 off, > 1 profile number
         # ips_ids - 0 off, 1 on
 
+cdef struct NATrule:
+    bint        enabled
+
+    # SOURCE
+    ZoneArray   s_zones
+    NetArray    s_networks
+    SvcArray    s_services
+
+    # DESTINATION
+    ZoneArray   d_zones
+    NetArray    d_networks
+    SvcArray    d_services
+
+    # PROFILES
+    uintf8_t    action
+    uintf8_t    log
+
+    uint32_t    saddr
+    uint16_t    sport
+    uint32_t    daddr
+    uint16_t    dport
+
 cdef struct HWinfo:
-    uint8_t     in_zone
-    uint8_t     out_zone
-    char*       mac_addr
     double      timestamp
+    uintf8_t    in_zone
+    uintf8_t    out_zone
+    char*       mac_addr
 
 cdef struct IPhdr:
     uint8_t     ver_ihl
@@ -750,13 +786,14 @@ cdef struct cfdata:
 cdef struct dnx_pktb:
     uint8_t    *data
     uint16_t    tlen
+    HWinfo      hw
     IPhdr      *iphdr
     uint16_t    iphdr_len # header only
-    Protohdr   *protohdr
+    Protohdr    protohdr
     uint16_t    protohdr_len # header only
-    uint8_t     mangled
-    uint16_t    fw_section
-    uint16_t    rule_num
+    uintf8_t    mangled
+    uintf16_t   fw_table
+    uintf16_t   rule_num
     uint32_t    action
     uint32_t    mark
 
