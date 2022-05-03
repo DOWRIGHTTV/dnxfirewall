@@ -86,13 +86,3 @@ cpdef bytes calc_checksum(const uint8_t[:] data):
     ubytes[1] = csum & UINT8_MAX
 
     return ubytes
-
-# ============
-# CYTHON ONLY
-# ============
-cdef inline void nullset(void **data, size_t dlen) nogil:
-
-    cdef size_t i
-
-    for i in range(dlen):
-        data[i] = NULL

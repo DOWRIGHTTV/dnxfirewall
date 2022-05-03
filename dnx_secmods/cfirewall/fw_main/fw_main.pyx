@@ -399,7 +399,6 @@ cdef int cnat_recv(const nlmsghdr *nlh, void *data) nogil:
         return OK
     # ======================
 
-
     _mark = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_MARK])) if netlink_attrs[NFQA_MARK] else 0
     _iif  = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_INDEV])) if netlink_attrs[NFQA_IFINDEX_INDEV] else 0
     _oif  = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_OUTDEV])) if netlink_attrs[NFQA_IFINDEX_OUTDEV] else 0

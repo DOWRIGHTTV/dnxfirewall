@@ -1,6 +1,13 @@
+cdef extern from "inet_tools.h" nogil:
+    pass
+
+cdef extern from "std_tools.h" nogil:
+    void nullset(void **data, uintf16_t dlen)
+
+
 cdef struct srange:
-  uint_fast8_t  start
-  uint_fast8_t  end
+  uintf8_t  start
+  uintf8_t  end
 
 cdef enum:
     NONE      = 0
@@ -47,13 +54,13 @@ DEF FIELD_MAX_SVC_LIST_MEMBERS = 8
 # STANDARD ZONE ARRAY [10, 11]
 cdef struct ZoneArray:
     size_t          len
-    uint_fast8_t    objects[FIELD_MAX_ZONES]
+    uintf8_t    objects[FIELD_MAX_ZONES]
 
 # STANDARD NETWORK OBJECT (HOST, NETWORK, RANGE, GEO)
 cdef struct Network:
-    uint_fast8_t    type
-    uint_fast32_t   netid
-    uint_fast32_t   netmask
+    uintf8_t    type
+    uintf32_t   netid
+    uintf32_t   netmask
 
 # MAIN NETWORK ARRAY
 cdef struct NetworkArray:
@@ -62,9 +69,9 @@ cdef struct NetworkArray:
 
 # STANDARD SERVICE OBJECT (SOLO or RANGE)
 cdef struct Service:
-    uint_fast16_t   protocol
-    uint_fast16_t   start_port
-    uint_fast16_t   end_port
+    uintf16_t   protocol
+    uintf16_t   start_port
+    uintf16_t   end_port
 
 # SERVICE OBJECT LIST (tcp/80:tcp/443)
 cdef struct ServiceList:
