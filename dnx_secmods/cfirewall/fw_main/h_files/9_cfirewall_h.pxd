@@ -1,9 +1,8 @@
 cdef extern from "inet_tools.h" nogil:
-    pass
+    uint32_t intf_masquerade (unsigned int idx)
 
 cdef extern from "std_tools.h" nogil:
     void nullset(void **data, uintf16_t dlen)
-
 
 cdef struct srange:
   uintf8_t  start
