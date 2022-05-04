@@ -60,6 +60,11 @@ DEF IP_ADDRESS = 1
 DEF IP_NETWORK = 2
 DEF IP_RANGE   = 3
 DEF IP_GEO     = 6
+DEF INV_IP_ADDRESS = 11
+DEF INV_IP_NETWORK = 12
+DEF INV_IP_RANGE   = 13
+DEF INV_IP_GEO     = 16
+
 # service object types.
 DEF SVC_SOLO  = 1
 DEF SVC_RANGE = 2
@@ -539,10 +544,13 @@ cdef int dnx_mangle_pkt(dnx_pktb *pkt) nogil:
     # MAKE SURE WE RECALCULATE THE PROPER CHECKSUMS.
     # we can probably use the nfq checksum functions if they are publicly available, otherwise use cprotocol_tools.
 
+    # NOTE: ip manip only. we will deal with the port issue later.
     if (pkt.action & DNX_MASQ):
         pkt.iphdr.saddr = intf_masquerade(pkt.hw.out_zone)
         pkt.iphdr.check = 0
         pkt.iphdr.check = calc_checksum(pkt.iphdr)
+
+        pkt.mangled = True
 
     # changing dst ip and/or port pre route
     elif (pkt.action & DNX_DST_NAT):
@@ -660,6 +668,31 @@ cdef inline bint network_match(FWrule *rule, uint32_t iph_ip, uint8_t country, i
         elif (net.type == IP_GEO):
 
             if (net.netid == country):
+                return MATCH
+
+        # -----------------------------
+        # TYPE -> INVERSE HOST (11)
+        # -----------------------------
+        elif (net.type == INV_IP_ADDRESS):
+
+            if (iph_ip != net.netid):
+                return MATCH
+
+        # -----------------------------
+        # TYPE -> INVERSE NETWORK (12)
+        # -----------------------------
+        elif (net.type == INV_IP_NETWORK):
+
+            # using the rule defs netmask to floor the packet ip and matching netid
+            if (iph_ip & net.netmask != net.netid):
+                return MATCH
+
+        # -----------------------------
+        # TYPE -> INVERSE GEO (16)
+        # -----------------------------
+        elif (net.type == IP_GEO):
+
+            if (net.netid != country):
                 return MATCH
 
     if (VERBOSE):
@@ -792,7 +825,7 @@ cdef int process_traffic(cfdata *cfd) nogil:
 
     cdef:
         char        packet_buf[MNL_BUF_SIZE]
-        ssize_t     dlen
+        uintf16_t   dlen
 
         uint32_t    portid = mnl_socket_get_portid(nl)
 
@@ -920,11 +953,34 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
 # ===================================
 # NETLINK SOCKET - cfirewall <> kernel
 cdef mnl_socket *nl
+
+def nl_open():
+    global nl
+
+    nl = mnl_socket_open(NETLINK_NETFILTER)
+    if (nl == NULL):
+        return Py_ERR
+
+    return Py_OK
+
+def nl_bind():
+    if (mnl_socket_bind(nl, 0, MNL_SOCKET_AUTOPID) < 0):
+        return Py_ERR
+
+    return Py_OK
+
+def nl_break():
+    mnl_socket_close(nl)
+
+    return Py_OK
 # =====================================
 
 # MNL_SOCKET_BUFFER_SIZE ~= 8192
 DEF DNX_BUF_SIZE = 2048 # (will only handle packets of standard 1500 MTU)
 DEF MNL_BUF_SIZE = DNX_BUF_SIZE + (8192/2)
+
+DEF QFIREWALL = 0
+DEF QNAT      = 1
 
 cdef class CFirewall:
 
@@ -964,10 +1020,15 @@ cdef class CFirewall:
         with nogil:
             process_traffic(&s.cfd)
 
-    def nf_set(s, uint16_t queue_num):
+    def nf_set(s, uint16_t queue_num, uint8_t queue_cb):
 
-        global nl
         s.cfd.queue = queue_num
+
+        if (queue_cb == QFIREWALL):
+            s.cfd.queue_cb = cfirewall_recv
+
+        elif (queue_cb == QNAT):
+            s.cfd.queue_cb = cnat_recv
 
         cdef:
             char        mnl_buf[MNL_BUF_SIZE]
@@ -975,15 +1036,8 @@ cdef class CFirewall:
 
             int         ret = 1
 
-        nl = mnl_socket_open(NETLINK_NETFILTER)
-        if (nl == NULL):
-            return Py_ERR
-
-        if (mnl_socket_bind(nl, 0, MNL_SOCKET_AUTOPID) < 0):
-            return Py_ERR
-
         # ---------------
-        # BINDING SOCKET
+        # BINDING QUEUE
         nlh = nfq_nlmsg_put(mnl_buf, NFQNL_MSG_CONFIG, queue_num)
         nfq_nlmsg_cfg_put_cmd(nlh, AF_INET, NFQNL_CFG_CMD_BIND)
 
@@ -1012,9 +1066,6 @@ cdef class CFirewall:
 
         return Py_OK
 
-    def nf_break(s):
-        mnl_socket_close(nl)
-
     cpdef int prepare_geolocation(s, list geolocation_trie, uint32_t msb, uint32_t lsb) with gil:
         '''initializes Cython Extension HashTrie for use by CFirewall.
          
@@ -1041,13 +1092,13 @@ cdef class CFirewall:
         '''
         cdef uintf16_t  i
 
-        pthread_mutex_lock(&FWrulelock)
+        pthread_mutex_lock(FWlock_ptr)
         print('[update/zones] acquired lock')
 
         for i in range(FW_MAX_ZONE_COUNT):
             INTF_ZONE_MAP[i] = zone_map[i]
 
-        pthread_mutex_unlock(&FWrulelock)
+        pthread_mutex_unlock(FWlock_ptr)
         print('[update/zones] released lock')
 
         return Py_OK
@@ -1063,7 +1114,7 @@ cdef class CFirewall:
             dict        fw_rule
             size_t      rule_count = len(rulelist)
 
-        pthread_mutex_lock(&FWrulelock)
+        pthread_mutex_lock(FWlock_ptr)
         print('[update/ruleset] acquired lock')
 
         for i in range(rule_count):
@@ -1075,7 +1126,7 @@ cdef class CFirewall:
         # this is important to establish iter bounds during inspection.
         firewall_tables[table_idx] = rule_count
 
-        pthread_mutex_unlock(&FWrulelock)
+        pthread_mutex_unlock(FWlock_ptr)
         print('[update/ruleset] released lock')
 
         return Py_OK

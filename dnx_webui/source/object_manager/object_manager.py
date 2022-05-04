@@ -98,28 +98,33 @@ icon_map = {
 }
 
 class ADDR_OBJ(IntEnum):
-    HOST = 1
+    ADDRESS = 1
     NETWORK = 2
-    RANGE = 3
-    GEO = 6
+    RANGE   = 3
+    GEO     = 6
+    INV_ADDRESS = 11
+    INV_NETWORK = 12
+    INV_RANGE   = 13
+    INV_GEO     = 16
+
 
 class SVC_OBJ(IntEnum):
-    SOLO = 1
+    SOLO  = 1
     RANGE = 2
-    LIST = 3
+    LIST  = 3
 
 # TODO: this should be done one time/ precalculated
 def convert_object(obj: FW_OBJECT, /) -> Union[int, list[int], list[list]]:
     if (obj.type == 'address'):
 
-        if (obj.subtype in [ADDR_OBJ.HOST, ADDR_OBJ.NETWORK]):
+        if (obj.subtype in [ADDR_OBJ.ADDRESS, ADDR_OBJ.NETWORK, ADDR_OBJ.INV_ADDRESS, ADDR_OBJ.INV_NETWORK]):
             ip, netmask = obj.value.split('/')
             # type, int32 ip, int32 netmask
-            return [ADDR_OBJ.HOST if netmask == '32' else ADDR_OBJ.NETWORK, iptoi(ip), cidrtoi(netmask)]
+            return [obj.subtype, iptoi(ip), cidrtoi(netmask)]
 
         # type, int32 country code, null
         elif (obj.subtype == ADDR_OBJ.GEO):
-            return [ADDR_OBJ.GEO, GEO[obj.value.upper()].value, 0]
+            return [obj.subtype, GEO[obj.value.upper()].value, 0]
 
     elif (obj.type == 'service'):
 
@@ -127,17 +132,17 @@ def convert_object(obj: FW_OBJECT, /) -> Union[int, list[int], list[list]]:
         if (obj.subtype == SVC_OBJ.SOLO):
             proto, port = obj.value.split('/')
 
-            return [SVC_OBJ.SOLO, proto_convert[proto], int(port), 0]
+            return [obj.subtype, proto_convert[proto], int(port), 0]
 
         # type, int32 protocol, in32 start port, int32 end port
         elif (obj.subtype == SVC_OBJ.RANGE):
             proto, ports = obj.value.split('/')
 
-            return [SVC_OBJ.RANGE, proto_convert[proto], *[int(p) for p in ports.split('-')]]
+            return [obj.subtype, proto_convert[proto], *[int(p) for p in ports.split('-')]]
 
         # list[ int32 type, list[ int32 protocol, int32 start port, int32 end port ]]
         elif (obj.subtype == SVC_OBJ.LIST):
-            obj_list: list[Union[int, list]] = [SVC_OBJ.LIST]
+            obj_list: list[Union[int, list]] = [obj.subtype]
 
             objs = obj.value.split(':')
             for obj in objs:

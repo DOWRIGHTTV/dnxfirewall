@@ -183,7 +183,7 @@ cdef struct dnx_pktb:
     uint16_t    iphdr_len # header only
     Protohdr    protohdr
     uint16_t    protohdr_len # header only
-    uintf8_t    mangled
+    bint        mangled
     uintf16_t   fw_table
     uintf16_t   rule_num
     uint32_t    action

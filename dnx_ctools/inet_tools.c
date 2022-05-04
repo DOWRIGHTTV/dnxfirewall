@@ -1,11 +1,19 @@
-#include inet_tools.h
+#include <net/if.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <ifaddrs.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
-uint16_t calc_checksum(const uint8_t *data, uint16_t dlen)
+#include "include/inet_tools.h"
+
+uint16_t calc_checksum (const uint8_t *data, uint16_t dlen)
 {
-    uint32_t    csum = 0;
+    uint32_t    i, csum = 0;
 
     for (i = 0; i < dlen; i+=2) {
-        csum += (uint16_t*) (&data[i]);
+        csum += (data[i] << 8 | data[i+1]);
     }
 
     if (dlen & 1) {
@@ -26,7 +34,7 @@ uint32_t intf_masquerade (uint32_t idx)
     char    ifname[IF_NAMESIZE+1];
 
     // need the name to compare with when iterating over interfaces
-    if_indextoname(idx), ifname);
+    if_indextoname(idx, ifname);
 
     getifaddrs (&ifap);
     for (ifa = ifap; ifa; ifa = ifa->ifa_next) {
@@ -40,7 +48,12 @@ uint32_t intf_masquerade (uint32_t idx)
         freeifaddrs(ifap);
         return sa->sin_addr.s_addr;
     }
-
     freeifaddrs(ifap);
+
+    return 0;
+}
+
+int main ()
+{
     return 0;
 }

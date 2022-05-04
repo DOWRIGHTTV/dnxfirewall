@@ -12,11 +12,11 @@ if INITIALIZE_MODULE(LOG_NAME):
     from threading import Thread
     from dataclasses import dataclass
 
-    from dnx_gentools.def_enums import Queue
+    from dnx_gentools.def_enums import Queue, QueueType
 
     from dnx_routines.logging.log_client import Log
 
-    from fw_main import CFirewall
+    from fw_main import CFirewall, nl_open, nl_bind, nl_break
     from fw_automate import FirewallAutomate
 
 
@@ -43,14 +43,34 @@ if INITIALIZE_MODULE(LOG_NAME):
     Log.run(name=LOG_NAME)
 
 def run():
-    from dnx_gentools.def_constants import HOME_DIR
+    # ===============
+    # NETLINK SOCKET
+    # ===============
+    nl_open()
+    nl_bind()
 
+    # ===============
+    # FIREWALL QUEUE
+    # ===============
     dnxfirewall = CFirewall()
+
+    # NOTE: bypass tells the process to invoke rule action (DROP or ACCEPT) without forwarding to security modules.
     dnxfirewall.set_options(args.bypass_set, args.verbose_set)
 
-    error = dnxfirewall.nf_set(Queue.CFIREWALL)
+    error = dnxfirewall.nf_set(Queue.CFIREWALL, QueueType.FIREWALL)
     if (error):
         Log.error(f'failed to bind to queue {Queue.CFIREWALL}')
+        hardout()
+
+    # ===============
+    # FIREWALL QUEUE
+    # ===============
+    dnxnat = CFirewall()
+    dnxnat.set_options(0, args.verbose_set)
+
+    error = dnxfirewall.nf_set(Queue.CNAT, QueueType.NAT)
+    if (error):
+        Log.error(f'failed to bind to queue {Queue.CNAT}')
         hardout()
 
     # initializing python processes for detecting configuration changes to zone or firewall rule sets and also handles
@@ -69,12 +89,16 @@ def run():
 
     # this is running in pure C. the GIL is released before running the low-level system operations and will never
     # retake the gil.
-    # NOTE: setting bypass will tell the process to invoke rule action (DROP or ACCEPT) directly without forwarding to
-    #  other modules.
-    dnx = Thread(target=dnxfirewall.nf_run)
-    dnx.start()
+    dnx_threads = [
+        Thread(target=dnxfirewall.nf_run, args=(QueueType.FIREWALL,)),
+        Thread(target=dnxnat.nf_run, args=(QueueType.FIREWALL,))
+    ]
+    for t in dnx_threads:
+        t.start()
+
     try:
-        dnx.join()
+        for t in dnx_threads:
+            t.join()
     except Exception as E:
-        dnxfirewall.nf_break()
+        nl_break()
         hardout(f'DNXFIREWALL cfirewall/nfqueue failure => {E}')

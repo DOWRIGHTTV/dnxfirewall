@@ -4,6 +4,6 @@
 #include <stdint.h>
 
 
-void nullset(void **data, uint_fast16_t dlen)
+void nullset(void **data, uint_fast16_t dlen);
 
 #endif

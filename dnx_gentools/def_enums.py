@@ -152,12 +152,17 @@ class DHCP(_IntEnum):
     # option type
     END = 255
 
+class QueueType(_IntEnum):
+    FIREWALL = 0
+    NAT      = 1
+
 # QUEUE NUMBERS
 class Queue(_IntEnum):
     IP_PROXY  = 1
     DNS_PROXY = 2
     IPS_IDS   = 3
     CFIREWALL = 69
+    CNAT      = 70
 
 class DNS_CAT(_IntEnum):
     NONE = 0
