@@ -17,9 +17,7 @@ ctypedef uint_fast8_t   uintf8_t
 ctypedef uint_fast16_t  uintf16_t
 ctypedef uint_fast32_t  uintf32_t
 
-cdef extern from "<errno.h>":
-    int         errno
-
+# NOTE: might not need anymore... confirm
 cdef extern from "<stdbool.h>":
     pass
     # ctypedef int bool
@@ -38,42 +36,15 @@ cdef extern from "<sys/socket.h>":
     ctypedef unsigned int   socklen_t
 
     ssize_t     recv(int __fd, void *__buf, size_t __n, int __flags) nogil
-    int         MSG_DONTWAIT
-    enum: AF_INET
 
-cdef enum:
-    EAGAIN = 11           # Try again
-    EWOULDBLOCK = EAGAIN
-    ENOBUFS = 105         # No buffer space available
+    enum: AF_INET
 
 cdef extern from "pthread.h" nogil:
     ctypedef struct pthread_mutex_t:
         pass
 
-    int pthread_mutex_init(pthread_mutex_t*, void*)
     int pthread_mutex_lock(pthread_mutex_t*)
-    int pthread_mutex_trylock(pthread_mutex_t*)
     int pthread_mutex_unlock(pthread_mutex_t*)
-    int pthread_mutex_destroy(pthread_mutex_t*)
-
-cdef extern from "netinet/in.h" nogil:
-    uint32_t ntohl (uint32_t __netlong)
-    uint16_t ntohs (uint16_t __netshort)
-    uint32_t htonl (uint32_t __hostlong)
-    uint16_t htons (uint16_t __hostshort)
-
-    enum: IPPROTO_IP
-    enum: IPPROTO_ICMP
-    enum: IPPROTO_TCP
-    enum: IPPROTO_UDP
-
-cdef extern from "netinet/tcp.h":
-    struct tcphdr:
-        pass
-
-cdef extern from "netinet/udp.h":
-    struct udphdr:
-        pass
 
 # cdef extern from "libnfnetlink/libnfnetlink.h" nogil:
 #     struct nfnl_handle:
