@@ -206,7 +206,7 @@ cdef class CFirewall:
 
         # ENOBUFS is signalled to userspace when packets were lost on the kernel side.
         # We don't care, so we can turn it off.
-        mnl_socket_setsockopt(nl, NETLINK_NO_ENOBUFS, <void *> &ret, sizeof(int))
+        mnl_socket_setsockopt(nl, NETLINK_NO_ENOBUFS, <void*>&ret, sizeof(int))
 
         return Py_OK
 
