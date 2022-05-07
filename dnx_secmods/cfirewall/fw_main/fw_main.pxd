@@ -271,7 +271,8 @@ cdef extern from "cfirewall.h" nogil:
         uint16_t    dport
 
 cdef extern from "firewall.h" nogil:
-    pthread_mutex_t *FWlock_ptr
+    pthread_mutex_t     FWtableslock
+    pthread_mutex_t    *FWlock_ptr
 
     void firewall_init()
     void firewall_lock()
@@ -281,7 +282,8 @@ cdef extern from "firewall.h" nogil:
     int  firewall_recv(const nlmsghdr *nlh, void *data)
 
 cdef extern from "nat.h" nogil:
-    pthread_mutex_t *FWlock_ptr
+    # pthread_mutex_t     NATtableslock
+    pthread_mutex_t    *NATlock_ptr
 
     void nat_init()
     void nat_lock()
