@@ -91,7 +91,7 @@ def run():
     # retake the gil.
     dnx_threads = [
         Thread(target=dnxfirewall.nf_run, args=(QueueType.FIREWALL,)),
-        Thread(target=dnxnat.nf_run, args=(QueueType.FIREWALL,))
+        Thread(target=dnxnat.nf_run, args=(QueueType.NAT,))
     ]
     for t in dnx_threads:
         t.start()

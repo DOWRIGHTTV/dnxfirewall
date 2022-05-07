@@ -27,8 +27,6 @@
 
 void
 firewall_init(void) {
-    pthread_mutex_t    *FWlock_ptr = &FWtableslock;
-
     pthread_mutex_init(FWlock_ptr, NULL);
 
     // arrays of pointers to FWrules

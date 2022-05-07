@@ -26,7 +26,7 @@ enum nat_tables {
 // changes to "*firewall_tables[]"
 // ---------------------------------- #
 extern pthread_mutex_t     NATtableslock;
-extern pthread_mutex_t    *NATlock_ptr;
+extern pthread_mutex_t    *NATlock_ptr = &NATtableslock;
 
 // ==================================
 // NAT TABLES

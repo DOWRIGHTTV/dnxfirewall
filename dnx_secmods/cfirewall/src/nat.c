@@ -13,8 +13,6 @@
 
 void
 nat_init(void) {
-    pthread_mutex_t    *NATlock_ptr = &NATtableslock;
-
     pthread_mutex_init(NATlock_ptr, NULL);
 
     // arrays of pointers to NATrule

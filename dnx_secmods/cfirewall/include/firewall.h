@@ -30,7 +30,7 @@ enum fw_tables {
 // changes to "*firewall_tables[]"
 // ---------------------------------- //
 extern pthread_mutex_t     FWtableslock;
-extern pthread_mutex_t    *FWlock_ptr;
+extern pthread_mutex_t    *FWlock_ptr = &FWtableslock;
 // ==================================
 // FIREWALL TABLES
 // ==================================
