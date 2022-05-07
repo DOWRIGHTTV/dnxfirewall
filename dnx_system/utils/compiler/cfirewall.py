@@ -25,7 +25,7 @@ HOME_DIR = os.environ.get('HOME_DIR')
 os.chdir(f'{HOME_DIR}/dnx_secmods/cfirewall')
 
 SOURCES = [
-    f'{HOME_DIR}/dnx_ctools/inet_tools.c',
+    f'{HOME_DIR}/dnx_ctools/inet_tools.c', 'src/cfirewall.c',
     'src/dnx_nfq.c', 'src/firewall.c', 'src/nat.c', 'src/match.c', 'fw_main/fw_main.pyx'
 ]
 

@@ -25,6 +25,11 @@
 // nfq alias for iteration range
 //cdef enum: NFQA_RANGE = NFQA_MAX + 1
 
+struct FWtable firewall_tables[FW_TABLE_COUNT];
+
+pthread_mutex_t     FWtableslock;
+pthread_mutex_t    *FWlock_ptr;
+
 void
 firewall_init(void) {
     pthread_mutex_t    *FWlock_ptr = &FWtableslock;

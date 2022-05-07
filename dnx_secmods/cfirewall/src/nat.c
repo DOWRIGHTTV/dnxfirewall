@@ -11,6 +11,12 @@
 #define NAT_PRE_TABLE  0
 #define NAT_POST_TABLE 1
 
+
+struct NATtable nat_tables[NAT_TABLE_COUNT];
+
+pthread_mutex_t     NATtableslock;
+pthread_mutex_t    *NATlock_ptr;
+
 void
 nat_init(void) {
     pthread_mutex_t    *NATlock_ptr = &NATtableslock;
