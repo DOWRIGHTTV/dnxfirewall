@@ -12,14 +12,6 @@ from posix.types cimport pid_t
 # DNXFIREWALL TYPEDEFS
 ctypedef array.array    PyArray
 
-cdef extern from "config.h" nogil:
-    ctypedef unsigned char  uintf8_t
-    ctypedef unsigned short uintf16_t
-    ctypedef unsigned int   uintf32_t
-    ctypedef char           intf8_t
-    ctypedef short          intf16_t
-    ctypedef int            intf32_t
-
 cdef extern from "<stdbool.h>" nogil:
     ctypedef int    bool
     ctypedef int    true
@@ -32,6 +24,10 @@ cdef extern from "<time.h>" nogil:
     struct timeval:
         time_t  tv_sec
         time_t  tv_usec
+
+cdef extern from "<sys/types.h>" nogil:
+    ctypedef struct pthread_mutex_t:
+        pass
 
 cdef extern from "<sys/socket.h>" nogil:
     ctypedef unsigned int   socklen_t
@@ -173,6 +169,14 @@ cdef extern from "libnetfilter_queue/libnetfilter_queue.h" nogil:
     nlmsghdr *nfq_nlmsg_put(char *buf, int type, uint32_t queue_num)
 
 
+cdef extern from "config.h" nogil:
+    ctypedef unsigned char  uintf8_t
+    ctypedef unsigned short uintf16_t
+    ctypedef unsigned int   uintf32_t
+    ctypedef char           intf8_t
+    ctypedef short          intf16_t
+    ctypedef int            intf32_t
+
 cdef extern from "rules.h" nogil:
     enum:
         FIELD_MAX_ZONES
@@ -267,6 +271,8 @@ cdef extern from "cfirewall.h" nogil:
         uint16_t    dport
 
 cdef extern from "firewall.h" nogil:
+    pthread_mutex_t *FWlock_ptr
+
     void firewall_init()
     void firewall_lock()
     void firewall_unlock()
@@ -275,6 +281,8 @@ cdef extern from "firewall.h" nogil:
     int  firewall_recv(const nlmsghdr *nlh, void *data)
 
 cdef extern from "nat.h" nogil:
+    pthread_mutex_t *FWlock_ptr
+
     void nat_init()
     void nat_lock()
     void nat_unlock()

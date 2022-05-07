@@ -53,6 +53,8 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
             break;
         case NF_IP_PRE_ROUTING:
             table_idx = NAT_PRE_TABLE;
+            break;
+        default: return ERR;
     }
 
     // ======================

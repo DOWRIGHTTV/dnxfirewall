@@ -48,12 +48,6 @@ extern bool VERBOSE;
 #define TWO_BIT_MASK   3
 #define FOUR_BIT_MASK 15
 
-// function return values
-#define OK   0
-#define ERR -1
-#define Py_OK  0
-#define Py_ERR 1
-
 #define OUTBOUND 1
 #define INBOUND 2
 

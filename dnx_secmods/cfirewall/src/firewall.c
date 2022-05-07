@@ -105,6 +105,8 @@ firewall_recv(const struct nlmsghdr *nlh, void *data)
             break;
         case NF_IP_LOCAL_IN:
             fw_tables.start = FW_SYSTEM_RANGE_START;
+            break;
+        default: return ERR;
     }
     fw_tables.end = FW_RULE_RANGE_END;
     // ===================================

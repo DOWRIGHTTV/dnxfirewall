@@ -28,3 +28,6 @@
 
 # STATUS TRACKING
 *.stat    linguist-language=Python
+
+# CYTHON
+*.pyx     linguist-language=Cython
