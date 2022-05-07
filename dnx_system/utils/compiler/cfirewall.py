@@ -24,15 +24,20 @@ DIRECTIVES = {
 HOME_DIR = os.environ.get('HOME_DIR')
 os.chdir(f'{HOME_DIR}/dnx_secmods/cfirewall')
 
+SOURCES = [
+    f'{HOME_DIR}/dnx_ctools/inet_tools.c',
+    'src/dnx_nfq.c', 'src/firewall.c', 'src/nat.c', 'src/match.c', 'fw_main/fw_main.pyx'
+]
+
 cmd = {'build_ext': build_ext}
 ext = Extension(
-    'fw_main', sources=['fw_main/fw_main.pyx'],
-    include_dirs=[f'{HOME_DIR}/libraries'],
+    'fw_main', sources=SOURCES,
+    include_dirs=[f'{HOME_DIR}/dnx_system/libraries', f'{HOME_DIR}/dnx_ctools/include', 'include'],
     library_dirs=['usr/local/lib'],
     libraries=['netfilter_queue']
 )
 
-INCLUDE_PATHS = [f'{os.getcwd()}/fw_main', f'{HOME_DIR}/dnx_iptools']
+INCLUDE_PATHS = [f'{os.getcwd()}/fw_main']
 
 setup(
     name='cfirewall', cmdclass=cmd,

@@ -128,8 +128,6 @@ cdef extern from "libmnl/libmnl.h" nogil:
 
     # TLV callback-based attribute parsers
     ctypedef int (*mnl_attr_cb_t)(const nlattr *attr, void *data)
-    # struct mnl_attr_cb_t:
-    #     pass
 
     int mnl_attr_parse(const nlmsghdr *nlh, unsigned int offset, mnl_attr_cb_t cb, void *data)
     int mnl_attr_parse_nested(const nlattr *attr, mnl_attr_cb_t cb, void *data)
@@ -144,8 +142,6 @@ cdef extern from "libmnl/libmnl.h" nogil:
         MNL_CB_OK
 
     ctypedef int (*mnl_cb_t)(const nlmsghdr *nlh, void *data)
-    # struct mnl_cb_t:
-    #     pass
 
     int mnl_cb_run(const void *buf, size_t numbytes, unsigned int seq,
                             unsigned int portid, mnl_cb_t cb_data, void *data)

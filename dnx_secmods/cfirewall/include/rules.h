@@ -1,9 +1,14 @@
-# matching options
+#ifndef RULES_H
+#define RULES_H
+
+// matching options
+#define NO_MATCH 0
+#define MATCH    1
+
 #define ANY_ZONE    99
 #define NO_SECTION  99
 #define ANY_PROTOCOL 0
 #define COUNTRY_NOT_DEFINED 0
-
 
 // PER FIELD AND RULE LIMITS
 #define FIELD_MAX_ZONES   16
@@ -11,10 +16,8 @@
 #define FIELD_MAX_SERVICES 8
 #define FIELD_MAX_SVC_LIST_MEMBERS 8
 
-struct table_range {
-  uintf8_t  start;
-  uintf8_t  end;
-};
+#define SECURITY_PROFILE_COUNT 3
+
 
 enum rule_actions {
     DNX_DROP,
@@ -22,13 +25,18 @@ enum rule_actions {
     DNX_REJECT,
 
     DNX_NO_NAT,
-    // > 4 means NAT is set
+    // > 3 means NAT is set
     DNX_MASQ,
     DNX_SRC_NAT,
     DNX_DST_NAT,
-    DNX_FULL_NAT,
+    DNX_FULL_NAT
+};
 
-    DNX_NAT_FLAGS = DNX_SRC_NAT | DNX_DST_NAT | DNX_FULL_NAT
+enum sec_profiles {
+    NONE,
+    IP_PROXY,
+    DNS_PROXY,
+    IPS_IDS
 };
 
 // STANDARD ZONE ARRAY - ex. [10, 11]
@@ -47,7 +55,7 @@ struct NetObject {
 // MAIN NETWORK ARRAY
 struct NetArray {
     uintf8_t    len;
-    NetObject   objects[FIELD_MAX_NETWORKS];
+    struct NetObject   objects[FIELD_MAX_NETWORKS];
 };
 
 // ICMP
@@ -66,22 +74,22 @@ struct S2 {
 // SERVICE OBJECT LIST (tcp/80:tcp/443)
 struct S3 {
     uintf8_t    len;
-    Service     services[FIELD_MAX_SVC_LIST_MEMBERS];
-}
+    struct S2   services[FIELD_MAX_SVC_LIST_MEMBERS];
+};
 
 struct SvcObject {
     uintf8_t    type;
     union {
-        S1  icmp;
-        S2  svc;
-        S3  svc_list;
+        struct S1  icmp;
+        struct S2  svc;
+        struct S3  svc_list;
     };
 };
 
 // MAIN SERVICE ARRAY
 struct SvcArray {
     uintf8_t    len;
-    SvcObject   objects[FIELD_MAX_SERVICES];
+    struct SvcObject   objects[FIELD_MAX_SERVICES];
 };
 
 // COMPLETE RULE STRUCTS - NO POINTERS
@@ -89,14 +97,14 @@ struct FWrule {
     bool        enabled;
 
     // SOURCE
-    ZoneArray   s_zones;
-    NetArray    s_networks;
-    SvcArray    s_services;
+    struct ZoneArray   s_zones;
+    struct NetArray    s_networks;
+    struct SvcArray    s_services;
 
     // DESTINATION
-    ZoneArray   d_zones;
-    NetArray    d_networks;
-    SvcArray    d_services;
+    struct ZoneArray   d_zones;
+    struct NetArray    d_networks;
+    struct SvcArray    d_services;
 
     // PROFILES
     uintf8_t    action;
@@ -108,14 +116,14 @@ struct NATrule {
     bool        enabled;
 
     // SOURCE
-    ZoneArray   s_zones;
-    NetArray    s_networks;
-    SvcArray    s_services;
+    struct ZoneArray   s_zones;
+    struct NetArray    s_networks;
+    struct SvcArray    s_services;
 
     // DESTINATION
-    ZoneArray   d_zones;
-    NetArray    d_networks;
-    SvcArray    d_services;
+    struct ZoneArray   d_zones;
+    struct NetArray    d_networks;
+    struct SvcArray    d_services;
 
     // PROFILES
     uintf8_t    action;
@@ -127,3 +135,5 @@ struct NATrule {
     uint32_t    daddr;
     uint16_t    dport;
 };
+
+#endif

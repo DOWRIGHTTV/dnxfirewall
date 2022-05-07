@@ -52,8 +52,10 @@ uint32_t intf_masquerade (uint32_t idx)
 
     return 0;
 }
-
+// for now in case i need to tshoot
+#ifndef CFIREWALL_H
 int main ()
 {
     return 0;
 }
+#endif

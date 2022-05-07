@@ -1,12 +1,12 @@
 #!/usr/bin/env Cython
 
-from libc.stdlib cimport calloc, malloc, free
+#from libc.stdlib cimport calloc, malloc, free
+from libc.string cimport memset
 from libc.stdio cimport printf
 
 from libc.stdint cimport uint8_t, uint16_t, uint32_t
 
 from dnx_iptools.hash_trie.hash_trie cimport HashTrie_Range
-from dnx_iptools.cprotocol_tools.cprotocol_tools cimport calc_checksum
 
 # from fw_api cimport api_open, process_api
 
@@ -18,7 +18,6 @@ ppt = PrettyPrinter(sort_dicts=False).pprint
 # ===============================
 
 DEF FW_MAX_ATTACKERS  = 250
-DEF FW_MAX_ZONE_COUNT = 16
 
 DEF SECURITY_PROFILE_COUNT = 3
 DEF PROFILE_SIZE  = 4  # bits
@@ -55,35 +54,33 @@ DEF SVC_ICMP  = 4
 # DEF MATCH = 1
 # DEF END_OF_ARRAY = 0 # to make code more readable
 
-# cli args
-cdef bint PROXY_BYPASS = 0
-cdef bint VERBOSE = 0
-
 # Blocked list access lock
 # ----------------------------------
-cdef pthread_mutex_t FWblocklistlock
+# cdef pthread_mutex_t FWblocklistlock
 
-pthread_mutex_init(&FWblocklistlock, NULL)
+# pthread_mutex_init(&FWblocklistlock, NULL)
 
 # ================================== #
 # Geolocation definitions
 # ================================== #
-cdef uint32_t MSB, LSB
 cdef HashTrie_Range GEOLOCATION
 
-# stores zone(integer value) at index, which is mapped Fto if_nametoindex() (value returned from get_in/outdev)
-cdef uintf16_t *INTF_ZONE_MAP = <uintf16_t*>calloc(FW_MAX_ZONE_COUNT, sizeof(uintf16_t))
-
 # stores the active attackers set/controlled by IPS/IDS
-cdef uint32_t *ATTACKER_BLOCKLIST = <uint32_t*>calloc(FW_MAX_ATTACKERS, sizeof(uint32_t))
+# cdef uint32_t *ATTACKER_BLOCKLIST = <uint32_t*>calloc(FW_MAX_ATTACKERS, sizeof(uint32_t))
 
-cdef uint32_t BLOCKLIST_CUR_SIZE = 0 # if we decide to track size for appends
+# cdef uint32_t BLOCKLIST_CUR_SIZE = 0 # if we decide to track size for appends
+
+# MNL_SOCKET_BUFFER_SIZE ~= 8192
+DEF DNX_BUF_SIZE = 2048  # (will only handle packets of standard 1500 MTU)
+DEF MNL_BUF_SIZE = 6144  # DNX_BUF_SIZE + (8192 / 2)
+
+DEF QFIREWALL = 0
+DEF QNAT      = 1
 
 # ===================================
 # C EXTENSION - Python Comm Pipeline
 # ===================================
 # NETLINK SOCKET - cfirewall <> kernel
-cdef mnl_socket *nl
 
 def nl_open():
     global nl
@@ -111,7 +108,7 @@ cdef int process_traffic(cfdata *cfd) nogil:
 
     cdef:
         char        packet_buf[MNL_BUF_SIZE]
-        uintf16_t   dlen
+        intf16_t   dlen
 
         uint32_t    portid = mnl_socket_get_portid(nl)
 
@@ -122,23 +119,16 @@ cdef int process_traffic(cfdata *cfd) nogil:
         if (dlen == -1):
             return ERR
 
-        ret = mnl_cb_run(<void*>packet_buf, dlen, 0, portid, cfirewall_recv, cfd)
+        ret = mnl_cb_run(<void*>packet_buf, dlen, 0, portid, cfd.queue_cb, cfd)
         if (ret < 0):
             return ERR
-
-# MNL_SOCKET_BUFFER_SIZE ~= 8192
-DEF DNX_BUF_SIZE = 2048  # (will only handle packets of standard 1500 MTU)
-DEF MNL_BUF_SIZE = DNX_BUF_SIZE + (8192 / 2)
-
-DEF QFIREWALL = 0
-DEF QNAT      = 1
 
 cdef class CFirewall:
     def set_options(s, int bypass, int verbose):
         global PROXY_BYPASS, VERBOSE
 
-        PROXY_BYPASS = <bint> bypass
-        VERBOSE = <bint> verbose
+        PROXY_BYPASS = <bool>bypass
+        VERBOSE = <bool>verbose
 
         if (bypass):
             print('<proxy bypass enable>')
@@ -175,14 +165,18 @@ cdef class CFirewall:
         s.cfd.queue = queue_num
 
         if (queue_cb == QFIREWALL):
-            s.cfd.queue_cb = cfirewall_recv
+            s.cfd.queue_cb = firewall_recv
+
+            firewall_init()
 
         elif (queue_cb == QNAT):
-            s.cfd.queue_cb = cnat_recv
+            s.cfd.queue_cb = nat_recv
+
+            nat_init()
 
         cdef:
             char        mnl_buf[MNL_BUF_SIZE]
-            nlmsghdr *nlh
+            nlmsghdr   *nlh
 
             int         ret = 1
 
@@ -240,15 +234,17 @@ cdef class CFirewall:
         MAX_SLOTS defined by FW_MAX_ZONE_COUNT.
         the GIL will be explicitly acquired before any code execution to ensure calls from C are safe.
         '''
-        cdef uintf16_t  i
+        cdef intf16_t   idx
 
-        pthread_mutex_lock(FWlock_ptr)
+        firewall_lock()
         print('[update/zones] acquired lock')
 
-        for i in range(FW_MAX_ZONE_COUNT):
-            INTF_ZONE_MAP[i] = zone_map[i]
+        memset(<void*>&INTF_ZONE_MAP, 0, FW_MAX_ZONES*sizeof(uintf32_t))
 
-        pthread_mutex_unlock(FWlock_ptr)
+        for idx in range(FW_MAX_ZONES):
+            INTF_ZONE_MAP[idx] = zone_map[idx]
+
+        firewall_unlock()
         print('[update/zones] released lock')
 
         return Py_OK
@@ -260,35 +256,35 @@ cdef class CFirewall:
         the GIL will be explicitly acquired before any code execution to ensure calls from C are safe.
         '''
         cdef:
-            uintf16_t   i
+            uintf16_t   rule_idx, rule_count = len(rulelist)
             dict        fw_rule
-            size_t      rule_count = len(rulelist)
 
-        pthread_mutex_lock(FWlock_ptr)
+        firewall_lock()
         print('[update/ruleset] acquired lock')
 
-        for i in range(rule_count):
-            fw_rule = rulelist[i]
+        for rule_idx in range(rule_count):
+            fw_rule = rulelist[rule_idx]
 
-            set_FWrule(table_idx, fw_rule, i)
+            set_FWrule(table_idx, rule_idx, fw_rule)
 
         # updating rule count in global tracker.
         # this is important to establish iter bounds during inspection.
-        firewall_tables[table_idx] = rule_count
+        firewall_update_count(table_idx, rule_count)
 
-        pthread_mutex_unlock(FWlock_ptr)
+        firewall_unlock()
         print('[update/ruleset] released lock')
 
         return Py_OK
 
 
-cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
+cdef void set_FWrule(size_t table_idx, size_t rule_idx, dict rule):
 
     cdef:
         uintf8_t        i, ix, svc_list_len
-        SvcObject      *svc_object
+        SvcObject       svc_object
 
-        FWrule         *fw_rule = &firewall_tables[ruleset].rules[pos]
+        FWrule          fw_rule
+        # FWrule         *fw_rule = &firewall_tables[ruleset].rules[pos]
 
     fw_rule.enabled = <bint>rule['enabled']
     # ===========
@@ -309,30 +305,29 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
     # -----------------------
     fw_rule.s_services.len = <uintf8_t>len(rule['src_service'])
     for i in range(fw_rule.s_services.len):
-        svc_object = &fw_rule.s_services.objects[i]
+        # svc_object = &fw_rule.s_services.objects[i]
 
-        svc_object.type = <uintf8_t>rule['src_service'][i][0]
-        svc_object.type = <uintf8_t>rule['src_service'][i][0]
+        fw_rule.s_services.objects[i].type = <uintf8_t>rule['src_service'][i][0]
         # TYPE 4 (ICMP) OBJECT ASSIGNMENT
-        if (svc_object.type == SVC_ICMP):
-            svc_object.service.s1.type = <uintf8_t>rule['src_service'][i][1]
-            svc_object.service.s1.code = <uintf8_t>rule['src_service'][i][2]
+        if (fw_rule.s_services.objects[i].type == SVC_ICMP):
+            fw_rule.s_services.objects[i].icmp.type = <uintf8_t>rule['src_service'][i][1]
+            fw_rule.s_services.objects[i].icmp.code = <uintf8_t>rule['src_service'][i][2]
 
         # TYPE 1/2 (SOLO, RANGE) OBJECT ASSIGNMENT
-        elif (svc_object.type == SVC_SOLO or svc_object.type == SVC_RANGE):
-            svc_object.service.s2.protocol   = <uintf16_t>rule['src_service'][i][1]
-            svc_object.service.s2.start_port = <uintf16_t>rule['src_service'][i][2]
-            svc_object.service.s2.end_port   = <uintf16_t>rule['src_service'][i][3]
+        elif (fw_rule.s_services.objects[i].type == SVC_SOLO or fw_rule.s_services.objects[i].type == SVC_RANGE):
+            fw_rule.s_services.objects[i].svc.protocol   = <uintf16_t>rule['src_service'][i][1]
+            fw_rule.s_services.objects[i].svc.start_port = <uintf16_t>rule['src_service'][i][2]
+            fw_rule.s_services.objects[i].svc.end_port   = <uintf16_t>rule['src_service'][i][3]
 
         # TYPE 3 (LIST) OBJECT ASSIGNMENT
         else:
-            svc_object.service.s3.len = <uintf8_t>(len(rule['src_service'][i]) - 1)
-            for ix in range(svc_object.service.s3.len):
+            fw_rule.s_services.objects[i].svc_list.len = <uintf8_t>(len(rule['src_service'][i]) - 1)
+            for ix in range(fw_rule.s_services.objects[i].svc_list.len):
                 # [0] START INDEX ON FW RULE SIZE
                 # [1] START INDEX PYTHON DICT SIDE (to first index for size)
-                svc_object.service.s3.services[ix].protocol   = <uintf16_t>rule['src_service'][i][ix + 1][0]
-                svc_object.service.s3.services[ix].start_port = <uintf16_t>rule['src_service'][i][ix + 1][1]
-                svc_object.service.s3.services[ix].end_port   = <uintf16_t>rule['src_service'][i][ix + 1][2]
+                fw_rule.s_services.objects[i].svc_list.services[ix].protocol   = <uintf16_t>rule['src_service'][i][ix + 1][0]
+                fw_rule.s_services.objects[i].svc_list.services[ix].start_port = <uintf16_t>rule['src_service'][i][ix + 1][1]
+                fw_rule.s_services.objects[i].svc_list.services[ix].end_port   = <uintf16_t>rule['src_service'][i][ix + 1][2]
 
     # ===========
     # DESTINATION
@@ -352,29 +347,29 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
     # -----------------------
     fw_rule.d_services.len = <uintf8_t>len(rule['dst_service'])
     for i in range(fw_rule.d_services.len):
-        svc_object = &fw_rule.d_services.objects[i]
+        # svc_object = &fw_rule.d_services.objects[i]
 
-        svc_object.type = <uintf8_t>rule['dst_service'][i][0]
+        fw_rule.d_services.objects[i].type = <uintf8_t>rule['dst_service'][i][0]
         # TYPE 4 (ICMP) OBJECT ASSIGNMENT
-        if (svc_object.type == SVC_ICMP):
-            svc_object.service.s1.type = <uintf8_t>rule['dst_service'][i][1]
-            svc_object.service.s1.code = <uintf8_t>rule['dst_service'][i][2]
+        if (fw_rule.d_services.objects[i].type == SVC_ICMP):
+            fw_rule.d_services.objects[i].icmp.type = <uintf8_t>rule['dst_service'][i][1]
+            fw_rule.d_services.objects[i].icmp.code = <uintf8_t>rule['dst_service'][i][2]
 
         # TYPE 1/2 (SOLO, RANGE) OBJECT ASSIGNMENT
-        elif (svc_object.type == SVC_SOLO or svc_object.type == SVC_RANGE):
-            svc_object.service.s2.protocol   = <uintf16_t>rule['dst_service'][i][1]
-            svc_object.service.s2.start_port = <uintf16_t>rule['dst_service'][i][2]
-            svc_object.service.s2.end_port   = <uintf16_t>rule['dst_service'][i][3]
+        elif (fw_rule.d_services.objects[i].type == SVC_SOLO or fw_rule.d_services.objects[i].type == SVC_RANGE):
+            fw_rule.d_services.objects[i].svc.protocol   = <uintf16_t>rule['dst_service'][i][1]
+            fw_rule.d_services.objects[i].svc.start_port = <uintf16_t>rule['dst_service'][i][2]
+            fw_rule.d_services.objects[i].svc.end_port   = <uintf16_t>rule['dst_service'][i][3]
 
         # TYPE 3 (LIST) OBJECT ASSIGNMENT
         else:
-            svc_object.service.s3.len = <uintf8_t>(len(rule['dst_service'][i]) - 1)
-            for ix in range(svc_object.service.s3.len):
+            fw_rule.d_services.objects[i].svc_list.len = <uintf8_t>(len(rule['dst_service'][i]) - 1)
+            for ix in range(fw_rule.d_services.objects[i].svc_list.len):
                 # [0] START INDEX ON FW RULE SIZE
                 # [1] START INDEX PYTHON DICT SIDE (to first index for size)
-                svc_object.service.s3.services[ix].protocol   = <uintf16_t>rule['dst_service'][i][ix + 1][0]
-                svc_object.service.s3.services[ix].start_port = <uintf16_t>rule['dst_service'][i][ix + 1][1]
-                svc_object.service.s3.services[ix].end_port   = <uintf16_t>rule['dst_service'][i][ix + 1][2]
+                fw_rule.d_services.objects[i].svc_list.services[ix].protocol   = <uintf16_t>rule['dst_service'][i][ix + 1][0]
+                fw_rule.d_services.objects[i].svc_list.services[ix].start_port = <uintf16_t>rule['dst_service'][i][ix + 1][1]
+                fw_rule.d_services.objects[i].svc_list.services[ix].end_port   = <uintf16_t>rule['dst_service'][i][ix + 1][2]
 
     # --------------------------
     # RULE PROFILES AND ACTIONS
@@ -386,8 +381,10 @@ cdef void set_FWrule(size_t ruleset, dict rule, size_t pos):
     fw_rule.sec_profiles[1] = <uintf8_t>rule['dns_profile']
     fw_rule.sec_profiles[2] = <uintf8_t>rule['ips_profile']
 
-    if (VERBOSE and ruleset >= 1):
-        ppt(fw_rule[0])
+    if (VERBOSE and table_idx >= 1):
+        ppt(fw_rule)
+
+    firewall_set_rule(table_idx, rule_idx, &fw_rule)
 
 # ==================================
 # PRINT FUNCTIONS
