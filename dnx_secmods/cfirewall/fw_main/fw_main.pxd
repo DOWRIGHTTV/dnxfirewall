@@ -271,7 +271,7 @@ cdef extern from "cfirewall.h" nogil:
         uint16_t    dport
 
 cdef extern from "firewall.h" nogil:
-    pthread_mutex_t     FWtableslock
+    # pthread_mutex_t     FWtableslock
     pthread_mutex_t    *FWlock_ptr
 
     void firewall_init()
