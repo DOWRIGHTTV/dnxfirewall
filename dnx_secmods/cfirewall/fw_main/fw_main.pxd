@@ -298,7 +298,7 @@ cdef class CFirewall:
         char*   sock_path
         int     api_fd
 
-        cfdata  cfd
+        cfdata *cfd
 
     cpdef int update_zones(s, PyArray zone_map) with gil
     cpdef int update_ruleset(s, size_t ruleset, list rulelist) with gil

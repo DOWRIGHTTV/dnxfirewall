@@ -104,10 +104,10 @@ def nl_break():
 # =====================================
 # GEOLOCATION INITIALIZATION
 # =====================================
-def initialize_geolocation(s, list hash_trie, uint32_t msb, uint32_t lsb):
+def initialize_geolocation(list hash_trie, uint32_t msb, uint32_t lsb):
     '''initializes Cython Extension HashTrie for use by CFirewall.
 
-    py_trie is passed through as data source and reference to function is globally assigned.
+    py_trie is passed through as a data source and the reference to the search function is globally assigned.
     MSB and LSB definitions are also globally assigned.
     '''
     global GEOLOCATION, MSB, LSB
@@ -129,7 +129,8 @@ cdef int process_traffic(cfdata *cfd) nogil:
 
     cdef:
         char        packet_buf[MNL_BUF_SIZE]
-        intf16_t   dlen
+        intf16_t    dlen
+        int         ret
 
         uint32_t    portid = mnl_socket_get_portid(nl)
 
@@ -140,10 +141,20 @@ cdef int process_traffic(cfdata *cfd) nogil:
         if (dlen == -1):
             return ERR
 
-        ret = mnl_cb_run(<void*>packet_buf, dlen, 0, portid, cfd.queue_cb, cfd)
+        ret = mnl_cb_run(<void*>packet_buf, dlen, 0, portid, cfd.queue_cb, <void*>cfd)
         if (ret < 0):
             return ERR
 
+
+# ===================================
+# CALLBACK STRUCTURES
+# ===================================
+cdef cfdata firewall_cfd
+cdef cfdata nat_cfd
+
+# ===================================
+# C Extension
+# ===================================
 cdef class CFirewall:
     def set_options(s, int bypass, int verbose):
         global PROXY_BYPASS, VERBOSE
@@ -179,20 +190,25 @@ cdef class CFirewall:
         print('<releasing GIL>')
         # release gil and never look back.
         with nogil:
-            process_traffic(&s.cfd)
+            process_traffic(s.cfd)
 
     def nf_set(s, uint16_t queue_num, uint8_t queue_cb):
 
-        s.cfd.queue = queue_num
-        s.cfd.geo_search = <hash_trie_search_t>GEOLOCATION.search
-
         if (queue_cb == QFIREWALL):
-            s.cfd.queue_cb = firewall_recv
+            firewall_cfd.queue      = queue_num
+            firewall_cfd.queue_cb   = firewall_recv
+            firewall_cfd.geo_search = <hash_trie_search_t> GEOLOCATION.search
+
+            s.cfd = &firewall_cfd
 
             firewall_init()
 
         elif (queue_cb == QNAT):
-            s.cfd.queue_cb = nat_recv
+            nat_cfd.queue      = queue_num
+            nat_cfd.queue_cb   = nat_recv
+            nat_cfd.geo_search = <hash_trie_search_t> GEOLOCATION.search
+
+            s.cfd = &nat_cfd
 
             nat_init()
 
