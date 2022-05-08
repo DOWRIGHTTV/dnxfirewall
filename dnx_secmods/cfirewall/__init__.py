@@ -16,7 +16,7 @@ if INITIALIZE_MODULE(LOG_NAME):
 
     from dnx_routines.logging.log_client import Log
 
-    from fw_main import CFirewall, nl_open, nl_bind, nl_break
+    from fw_main import CFirewall, nl_open, nl_bind, nl_break, initialize_geolocation
     from fw_automate import FirewallAutomate
 
 
@@ -48,6 +48,14 @@ def run():
     # ===============
     nl_open()
     nl_bind()
+
+    # ===============
+    # GEOLOCATION
+    # ===============
+    # generating py_trie for geolocation signatures, cfirewall will initialize the extension natively
+    geo_trie = generate_geolocation(Log)
+
+    initialize_geolocation(geo_trie, MSB, LSB)
 
     # ===============
     # FIREWALL QUEUE
@@ -90,8 +98,8 @@ def run():
     # this is running in pure C. the GIL is released before running the low-level system operations and will never
     # retake the gil.
     dnx_threads = [
-        Thread(target=dnxfirewall.nf_run, args=(QueueType.FIREWALL,)),
-        Thread(target=dnxnat.nf_run, args=(QueueType.NAT,))
+        Thread(target=dnxfirewall.nf_run),
+        Thread(target=dnxnat.nf_run)
     ]
     for t in dnx_threads:
         t.start()

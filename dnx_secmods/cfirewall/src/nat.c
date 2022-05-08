@@ -15,12 +15,10 @@
 struct NATtable nat_tables[NAT_TABLE_COUNT];
 
 pthread_mutex_t     NATtableslock;
-pthread_mutex_t    *NATlock_ptr;
+pthread_mutex_t    *NATlock_ptr = &NATtableslock;
 
 void
 nat_init(void) {
-    pthread_mutex_t    *NATlock_ptr = &NATtableslock;
-
     pthread_mutex_init(NATlock_ptr, NULL);
 
     // arrays of pointers to NATrule

@@ -28,12 +28,10 @@
 struct FWtable firewall_tables[FW_TABLE_COUNT];
 
 pthread_mutex_t     FWtableslock;
-pthread_mutex_t    *FWlock_ptr;
+pthread_mutex_t    *FWlock_ptr = &FWtableslock;
 
 void
 firewall_init(void) {
-    pthread_mutex_t    *FWlock_ptr = &FWtableslock;
-
     pthread_mutex_init(FWlock_ptr, NULL);
 
     // arrays of pointers to FWrules

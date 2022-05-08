@@ -81,7 +81,6 @@ DEF QNAT      = 1
 # C EXTENSION - Python Comm Pipeline
 # ===================================
 # NETLINK SOCKET - cfirewall <> kernel
-
 def nl_open():
     global nl
 
@@ -101,6 +100,28 @@ def nl_break():
     mnl_socket_close(nl)
 
     return Py_OK
+
+# =====================================
+# GEOLOCATION INITIALIZATION
+# =====================================
+def initialize_geolocation(s, list hash_trie, uint32_t msb, uint32_t lsb):
+    '''initializes Cython Extension HashTrie for use by CFirewall.
+
+    py_trie is passed through as data source and reference to function is globally assigned.
+    MSB and LSB definitions are also globally assigned.
+    '''
+    global GEOLOCATION, MSB, LSB
+
+    cdef size_t trie_len = len(hash_trie)
+
+    GEOLOCATION = HashTrie_Range()
+    GEOLOCATION.generate_structure(hash_trie, trie_len)
+
+    MSB = msb
+    LSB = lsb
+
+    return Py_OK
+
 # =====================================
 # MAIN QUEUE LOOP
 # =====================================
@@ -163,6 +184,7 @@ cdef class CFirewall:
     def nf_set(s, uint16_t queue_num, uint8_t queue_cb):
 
         s.cfd.queue = queue_num
+        s.cfd.geo_search = <hash_trie_search_t>GEOLOCATION.search
 
         if (queue_cb == QFIREWALL):
             s.cfd.queue_cb = firewall_recv
@@ -207,24 +229,6 @@ cdef class CFirewall:
         # ENOBUFS is signalled to userspace when packets were lost on the kernel side.
         # We don't care, so we can turn it off.
         mnl_socket_setsockopt(nl, NETLINK_NO_ENOBUFS, <void*>&ret, sizeof(int))
-
-        return Py_OK
-
-    cpdef int prepare_geolocation(s, list geolocation_trie, uint32_t msb, uint32_t lsb) with gil:
-        '''initializes Cython Extension HashTrie for use by CFirewall.
-
-        py_trie is passed through as data source and reference to function is globally assigned.
-        MSB and LSB definitions are also globally assigned.
-        '''
-        global GEOLOCATION, MSB, LSB
-
-        cdef size_t trie_len = len(geolocation_trie)
-
-        GEOLOCATION = HashTrie_Range()
-        GEOLOCATION.generate_structure(geolocation_trie, trie_len)
-
-        MSB = msb
-        LSB = lsb
 
         return Py_OK
 

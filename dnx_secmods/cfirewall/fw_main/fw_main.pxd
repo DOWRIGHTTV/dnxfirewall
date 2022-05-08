@@ -233,12 +233,12 @@ cdef extern from "cfirewall.h" nogil:
     enum: FW_MAX_ZONES # define
     uintf16_t INTF_ZONE_MAP[FW_MAX_ZONES]
 
-    ctypedef uint8_t (*hash_trie_search)(uint32_t msb, uint32_t lsb)
+    ctypedef uint8_t (*hash_trie_search_t)(uint32_t msb, uint32_t lsb)
 
     struct cfdata:
         uint32_t            queue
         mnl_cb_t            queue_cb
-        hash_trie_search    geo_search
+        hash_trie_search_t  geo_search
 
     enum: SECURITY_PROFILE_COUNT # define
 
@@ -300,7 +300,6 @@ cdef class CFirewall:
 
         cfdata  cfd
 
-    cpdef int prepare_geolocation(s, list geolocation_trie, uint32_t msb, uint32_t lsb) with gil
     cpdef int update_zones(s, PyArray zone_map) with gil
     cpdef int update_ruleset(s, size_t ruleset, list rulelist) with gil
 #    cdef  int remove_attacker(s, uint32_t host_ip)

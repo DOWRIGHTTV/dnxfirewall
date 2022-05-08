@@ -7,7 +7,7 @@ import threading
 from array import array
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import MSB, LSB, ppt
+from dnx_gentools.def_constants import ppt
 from dnx_gentools.standard_tools import Initialize
 from dnx_gentools.signature_operations import generate_geolocation
 from dnx_gentools.file_operations import cfg_read_poller, load_configuration
@@ -63,11 +63,6 @@ class FirewallAutomate:
     # threads will be started and other basic setup functions will be done before releasing control back to the
     # inspection context.
     def run(self) -> None:
-
-        # generating py_trie for geolocation signatures, cfirewall will initialize the extension natively
-        geo_trie: list = generate_geolocation(self.log)
-
-        self.cfirewall.prepare_geolocation(geo_trie, MSB, LSB)
 
         threading.Thread(target=self._monitor_system_rules).start()
         threading.Thread(target=self._monitor_zones).start()

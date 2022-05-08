@@ -58,12 +58,12 @@ extern uintf16_t INTF_ZONE_MAP[FW_MAX_ZONES]; // = <uintf16_t*>calloc(FW_MAX_ZON
 typedef struct nfqnl_msg_packet_hdr   nl_pkt_hdr;
 typedef struct nfqnl_msg_packet_hw    nl_pkt_hw;
 
-typedef uint8_t (*hash_trie_search)(uint32_t msb, uint32_t lsb);
+typedef uint8_t (*hash_trie_search_t)(uint32_t msb, uint32_t lsb);
 
 struct cfdata {
     uint32_t            queue;
     mnl_cb_t            queue_cb;
-    hash_trie_search    geo_search;
+    hash_trie_search_t  geo_search;
 };
 
 struct table_range {
