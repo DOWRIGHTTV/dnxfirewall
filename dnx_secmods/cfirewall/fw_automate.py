@@ -9,7 +9,6 @@ from array import array
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import ppt
 from dnx_gentools.standard_tools import Initialize
-from dnx_gentools.signature_operations import generate_geolocation
 from dnx_gentools.file_operations import cfg_read_poller, load_configuration
 
 from dnx_routines.logging import Log

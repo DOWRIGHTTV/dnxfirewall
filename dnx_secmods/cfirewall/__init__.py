@@ -12,7 +12,9 @@ if INITIALIZE_MODULE(LOG_NAME):
     from threading import Thread
     from dataclasses import dataclass
 
+    from dnx_gentools.def_constants import MSB, LSB
     from dnx_gentools.def_enums import Queue, QueueType
+    from dnx_gentools.signature_operations import generate_geolocation
 
     from dnx_routines.logging.log_client import Log
 
