@@ -17,7 +17,7 @@ dnx_parse_pkt_headers(struct dnx_pktb *pkt)
     // L4 - PROTOCOL HEADER
     // ---------------------
     // ICMP type/code will be contained in src port. dst port contain checksum.
-    pkt->protohdr    = (struct Protohdr*) (pkt->iphdr + 1);
+    pkt->protohdr = (struct Protohdr*) (pkt->iphdr + 1);
 
 //    switch (pkt->iphdr->protocol) {
 //        case IPPROTO_ICMP:

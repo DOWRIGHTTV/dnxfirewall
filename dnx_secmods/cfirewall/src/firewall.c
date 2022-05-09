@@ -3,6 +3,8 @@
 #include "cfirewall.h"
 #include "rules.h"
 
+#include <stdio.h>
+
 //#include "linux/netlink.h" //nlmsghdr
 
 #define FW_SYSTEM_MAX_RULE_COUNT  50
@@ -102,7 +104,7 @@ firewall_recv(const struct nlmsghdr *nlh, void *data)
     // ======================
     // FW TABLE ASSIGNMENT
     // ordered by system priority
-    switch (ntohl(nlhdr->hook)) {
+    switch (nlhdr->hook) {
         case NF_IP_FORWARD:
             fw_tables.start = FW_RULE_RANGE_START;
             break;
@@ -260,4 +262,49 @@ firewall_set_rule(uint8_t table_idx, uint16_t rule_idx, struct FWrule *rule)
     firewall_tables[table_idx].rules[rule_idx] = *rule;
 
     return OK;
+}
+
+void
+firewall_rule_print(uint8_t table_idx, uint16_t rule_idx)
+{
+    int     i;
+    FWrule  rule = firewall_tables[table_idx].rules[rule_idx];
+
+    printf("<<FIREWALL RULE [%u][%u]>>\n", table_idx, rule_idx);
+    printf("enabled->%d\n", rule.enabled);
+
+    printf("src_zones->[ ");
+    for (i = 0; i < rule.s_zones.len; i++) {
+        printf("%u ", rule.s_zones[i]);
+    }
+    printf(" ]\n");
+
+    printf("src_networks->[ ");
+    for (i = 0; i < rule.s_zones.len; i++) {
+        printf("(%u, %u, %u) ", rule.s_networks[i].type, rule.s_networks[i].netid, rule.s_networks[i].netmask);
+    }
+    printf(" ]\n");
+
+    // SRC SERVICES
+
+    printf("dst_zones->[ ");
+    for (i = 0; i < rule.d_zones.len; i++) {
+        printf("%u ", rule.d_zones[i]);
+    }
+    printf(" ]\n");
+
+    printf("dst_networks->[ ");
+    for (i = 0; i < rule.d_zones.len; i++) {
+        printf("(%u, %u, %u) ", rule.d_networks[i].type, rule.d_networks[i].netid, rule.d_networks[i].netmask);
+    }
+    printf(" ]\n");
+
+    // DST SERVICES
+
+    printf("action->%u\n", rule.action);
+    printf("log->%u\n", rule.log);
+    printf("ipp->%u, dns->%u, ips->%u\n", rule.sec_profiles[0], rule.sec_profiles[1], rule.sec_profiles[2])
+
+//    SvcArray    s_services
+//    SvcArray    d_services
 }

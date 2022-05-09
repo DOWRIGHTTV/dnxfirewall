@@ -117,6 +117,10 @@ def initialize_geolocation(list hash_trie, uint32_t msb, uint32_t lsb):
     GEOLOCATION = HashTrie_Range()
     GEOLOCATION.generate_structure(hash_trie, trie_len)
 
+    # lazy way to give geo_search reference to inspection handlers.
+    cfds[0].geo_search = <hash_trie_search_t>GEOLOCATION.search
+    cfds[1].geo_search = <hash_trie_search_t>GEOLOCATION.search
+
     MSB = msb
     LSB = lsb
 
@@ -129,8 +133,7 @@ cdef int process_traffic(cfdata *cfd) nogil:
 
     cdef:
         char        packet_buf[MNL_BUF_SIZE]
-        intf16_t    dlen
-        int         ret
+        intf16_t    dlen, ret
 
         uint32_t    portid = mnl_socket_get_portid(nl)
 
@@ -146,11 +149,16 @@ cdef int process_traffic(cfdata *cfd) nogil:
             return ERR
 
 
-# ===================================
-# CALLBACK STRUCTURES
-# ===================================
-cdef cfdata firewall_cfd
-cdef cfdata nat_cfd
+# =====================================
+# CALLBACK STRUCTURES + TABLE INIT
+# =====================================
+cdef cfdata cfds
+
+cfds[0].queue_cb = firewall_recv
+cfds[1].queue_cb = nat_recv
+
+firewall_init()
+nat_init()
 
 # ===================================
 # C Extension
@@ -190,27 +198,12 @@ cdef class CFirewall:
         print('<releasing GIL>')
         # release gil and never look back.
         with nogil:
-            process_traffic(s.cfd)
+            process_traffic(cfds[s.queue_type])
 
-    def nf_set(s, uint16_t queue_num, uint8_t queue_cb):
+    def nf_set(s, uint16_t queue_num, uint8_t queue_type):
 
-        if (queue_cb == QFIREWALL):
-            firewall_cfd.queue      = queue_num
-            firewall_cfd.queue_cb   = firewall_recv
-            firewall_cfd.geo_search = <hash_trie_search_t> GEOLOCATION.search
-
-            s.cfd = &firewall_cfd
-
-            firewall_init()
-
-        elif (queue_cb == QNAT):
-            nat_cfd.queue      = queue_num
-            nat_cfd.queue_cb   = nat_recv
-            nat_cfd.geo_search = <hash_trie_search_t> GEOLOCATION.search
-
-            s.cfd = &nat_cfd
-
-            nat_init()
+        s.queue_type = queue_type
+        cfds[queue_type].queue = queue_num
 
         cdef:
             char        mnl_buf[MNL_BUF_SIZE]

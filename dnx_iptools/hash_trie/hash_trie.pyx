@@ -74,7 +74,7 @@ cdef class HashTrie_Range:
             num_values = <size_t>len(trie_vals)
 
             trie_key_hash = s.hash_key(trie_key)
-            trie_map_container = &s.TRIE_MAP[trie_key_hash]
+            trie_map_container = &s.TRIE_MAP[trie_key_hash] ### FIXME: WTF IS THIS>>>???
 
             # first time on index so allocating memory for the number of current multi-vals this iteration
             if (trie_map_container.len == 0):
@@ -93,7 +93,7 @@ cdef class HashTrie_Range:
                 trie_multival.key     = trie_key
                 trie_multival.netid   = <uint32_t>py_trie[i][1][xi][0]
                 trie_multival.bcast   = <uint32_t>py_trie[i][1][xi][1]
-                trie_multival.country = <uint16_t>py_trie[i][1][xi][2]
+                trie_multival.country = <uint8_t>py_trie[i][1][xi][2]
 
             trie_map_container.len += num_values
 
