@@ -121,8 +121,8 @@ nat_inspect(int table_idx, struct dnx_pktb *pkt, struct cfdata *cfd)
     uint32_t    iph_dst_ip = ntohl(pkt->iphdr->daddr);
 
     // ip address to country code
-    uint8_t     src_country = geolocation->lookup(iph_src_ip & MSB, iph_src_ip & LSB);
-    uint8_t     dst_country = geolocation->lookup(iph_dst_ip & MSB, iph_dst_ip & LSB);
+    uint8_t     src_country = geolocation->lookup(geolocation, iph_src_ip & MSB, iph_src_ip & LSB);
+    uint8_t     dst_country = geolocation->lookup(geolocation, iph_dst_ip & MSB, iph_dst_ip & LSB);
 
     uintf16_t   rule_idx;
 
