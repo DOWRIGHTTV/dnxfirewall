@@ -6,6 +6,7 @@ DEF NO_MATCH = 0
 
 DEF MAX_WIDTH_MULTIPLIER = 2
 
+
 # ================================================
 # C STRUCTURES - converted from python tuples
 # ================================================
@@ -52,6 +53,9 @@ cdef class HashTrie_Range:
 
     cpdef void generate_structure(s, list py_trie, size_t py_trie_len):
 
+        # providing function ptr reference for c calls through instance
+        s.lookup = <htr_search_t>s.search
+
         cdef:
             size_t      i, xi
 
@@ -96,6 +100,7 @@ cdef class HashTrie_Range:
                 trie_multival.country = <uint8_t>py_trie[i][1][xi][2]
 
             trie_map_container.len += num_values
+
 
 cdef class HashTrie_Value:
 

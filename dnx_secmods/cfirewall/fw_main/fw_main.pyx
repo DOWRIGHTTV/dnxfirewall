@@ -118,8 +118,8 @@ def initialize_geolocation(list hash_trie, uint32_t msb, uint32_t lsb):
     GEOLOCATION.generate_structure(hash_trie, trie_len)
 
     # lazy way to give geo_search reference to inspection handlers.
-    cfds[0].geo_search = <hash_trie_search_t>GEOLOCATION.search
-    cfds[1].geo_search = <hash_trie_search_t>GEOLOCATION.search
+    cfds[0].geolocation = <void*>GEOLOCATION
+    cfds[1].geolocation = <void*>GEOLOCATION
 
     MSB = msb
     LSB = lsb
@@ -152,7 +152,7 @@ cdef int process_traffic(cfdata *cfd) nogil:
 # =====================================
 # CALLBACK STRUCTURES + TABLE INIT
 # =====================================
-cdef cfdata cfds
+cdef cfdata cfds[2]
 
 cfds[0].queue_cb = firewall_recv
 cfds[1].queue_cb = nat_recv
@@ -198,7 +198,7 @@ cdef class CFirewall:
         print('<releasing GIL>')
         # release gil and never look back.
         with nogil:
-            process_traffic(cfds[s.queue_type])
+            process_traffic(&cfds[s.queue_type])
 
     def nf_set(s, uint16_t queue_num, uint8_t queue_type):
 

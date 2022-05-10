@@ -3,6 +3,8 @@
 #include "cfirewall.h"
 #include "rules.h"
 
+#include "hash_trie.h"
+
 #include <stdio.h>
 
 //#include "linux/netlink.h" //nlmsghdr
@@ -161,6 +163,8 @@ firewall_inspect(struct table_range *fw_tables, struct dnx_pktb *pkt, struct cfd
     // iphdr and protohdr
     dnx_parse_pkt_headers(pkt);
 
+    struct HashTrie_Range *geolocation = cfd->geolocation;
+
     struct FWrule     *rule;
 //    uintf16_t   table_idx, rule_idx;
 
@@ -169,8 +173,8 @@ firewall_inspect(struct table_range *fw_tables, struct dnx_pktb *pkt, struct cfd
     uint32_t    iph_dst_ip = ntohl(pkt->iphdr->daddr);
 
     // ip address to country code
-    uint8_t     src_country = cfd->geo_search(iph_src_ip & MSB, iph_src_ip & LSB);
-    uint8_t     dst_country = cfd->geo_search(iph_dst_ip & MSB, iph_dst_ip & LSB);
+    uint8_t     src_country = geolocation->lookup(iph_src_ip & MSB, iph_src_ip & LSB);
+    uint8_t     dst_country = geolocation->lookup(iph_dst_ip & MSB, iph_dst_ip & LSB);
 
     // general direction of the packet and ip addr normalized to always be the external host/ip
     uint8_t     direction   = pkt->hw.in_zone != WAN_IN ? OUTBOUND : INBOUND;
@@ -267,44 +271,115 @@ firewall_set_rule(uint8_t table_idx, uint16_t rule_idx, struct FWrule *rule)
 void
 firewall_rule_print(uint8_t table_idx, uint16_t rule_idx)
 {
-    int     i;
-    FWrule  rule = firewall_tables[table_idx].rules[rule_idx];
+    int    i, ix;
+    struct FWrule  rule = firewall_tables[table_idx].rules[rule_idx];
 
     printf("<<FIREWALL RULE [%u][%u]>>\n", table_idx, rule_idx);
     printf("enabled->%d\n", rule.enabled);
 
+    // SRC ZONES
     printf("src_zones->[ ");
     for (i = 0; i < rule.s_zones.len; i++) {
-        printf("%u ", rule.s_zones[i]);
+        printf("%u ", rule.s_zones.objects[i]);
     }
     printf(" ]\n");
 
+    // SRC NETWORKS
     printf("src_networks->[ ");
-    for (i = 0; i < rule.s_zones.len; i++) {
-        printf("(%u, %u, %u) ", rule.s_networks[i].type, rule.s_networks[i].netid, rule.s_networks[i].netmask);
+    for (i = 0; i < rule.s_networks.len; i++) {
+        printf("(%u, %u, %u) ",
+            rule.s_networks.objects[i].type,
+            rule.s_networks.objects[i].netid,
+            rule.s_networks.objects[i].netmask);
     }
     printf(" ]\n");
 
     // SRC SERVICES
+    for (i = 0; i < rule.s_services.len; i++) {
+        printf("src_services->[ ");
+        // TYPE 4 (ICMP) OBJECT ASSIGNMENT
+        if (rule.s_services.objects[i].type == SVC_ICMP) {
+            printf("(1, %u, %u) ",
+                rule.s_services.objects[i].icmp.type,
+                rule.s_services.objects[i].icmp.code);
+        }
+        // TYPE 1/2 (SOLO, RANGE) OBJECT ASSIGNMENT
+        else if (rule.s_services.objects[i].type == SVC_SOLO || rule.s_services.objects[i].type == SVC_RANGE) {
+            printf("(%u, %u, %u) ",
+                rule.s_services.objects[i].svc.protocol,
+                rule.s_services.objects[i].svc.start_port,
+                rule.s_services.objects[i].svc.end_port);
+        }
+        // TYPE 3 (LIST) OBJECT ASSIGNMENT
+        else {
+            printf("< ");
+            for (ix = 0; ix < rule.s_services.objects[i].svc_list.len; ix++) {
+                // [0] START INDEX ON FW RULE SIZE
+                // [1] START INDEX PYTHON DICT SIDE (to first index for size)
+                printf("(%u, %u, %u) ",
+                    rule.s_services.objects[i].svc_list.services[ix].protocol,
+                    rule.s_services.objects[i].svc_list.services[ix].start_port,
+                    rule.s_services.objects[i].svc_list.services[ix].end_port);
+            }
+            printf(">");
+        }
+    }
+    printf("]\n");
 
+    // DST ZONES
     printf("dst_zones->[ ");
     for (i = 0; i < rule.d_zones.len; i++) {
-        printf("%u ", rule.d_zones[i]);
+        printf("%u ", rule.d_zones.objects[i]);
     }
     printf(" ]\n");
 
+    // DST NETWORK
     printf("dst_networks->[ ");
-    for (i = 0; i < rule.d_zones.len; i++) {
-        printf("(%u, %u, %u) ", rule.d_networks[i].type, rule.d_networks[i].netid, rule.d_networks[i].netmask);
+    for (i = 0; i < rule.d_networks.len; i++) {
+        printf("(%u, %u, %u) ",
+            rule.d_networks.objects[i].type,
+            rule.d_networks.objects[i].netid,
+            rule.d_networks.objects[i].netmask);
     }
     printf(" ]\n");
 
     // DST SERVICES
+    for (i = 0; i < rule.s_services.len; i++) {
+        printf("dst_services->[ ");
+        // TYPE 4 (ICMP) OBJECT ASSIGNMENT
+        if (rule.d_services.objects[i].type == SVC_ICMP) {
+            printf("(1, %u, %u) ",
+                rule.d_services.objects[i].icmp.type,
+                rule.d_services.objects[i].icmp.code);
+        }
+        // TYPE 1/2 (SOLO, RANGE) OBJECT ASSIGNMENT
+        else if (rule.d_services.objects[i].type == SVC_SOLO || rule.d_services.objects[i].type == SVC_RANGE) {
+            printf("(%u, %u, %u) ",
+                rule.d_services.objects[i].svc.protocol,
+                rule.d_services.objects[i].svc.start_port,
+                rule.d_services.objects[i].svc.end_port);
+        }
+        // TYPE 3 (LIST) OBJECT ASSIGNMENT
+        else {
+            printf("< ");
+            for (ix = 0; ix < rule.d_services.objects[i].svc_list.len; ix++) {
+                // [0] START INDEX ON FW RULE SIZE
+                // [1] START INDEX PYTHON DICT SIDE (to first index for size)
+                printf("(%u, %u, %u) ",
+                    rule.d_services.objects[i].svc_list.services[ix].protocol,
+                    rule.d_services.objects[i].svc_list.services[ix].start_port,
+                    rule.d_services.objects[i].svc_list.services[ix].end_port);
+            }
+            printf("> ");
+        }
+    }
+    printf("]\n");
 
+    // POLICIES
     printf("action->%u\n", rule.action);
     printf("log->%u\n", rule.log);
-    printf("ipp->%u, dns->%u, ips->%u\n", rule.sec_profiles[0], rule.sec_profiles[1], rule.sec_profiles[2])
-
-//    SvcArray    s_services
-//    SvcArray    d_services
+    printf("ipp->%u, dns->%u, ips->%u\n",
+        rule.sec_profiles[0],
+        rule.sec_profiles[1],
+        rule.sec_profiles[2]);
 }

@@ -1,8 +1,8 @@
 #!/usr/bin/env Cython
 
 from cpython cimport array
-from libc.stdint cimport uint8_t, uint16_t, uint32_t, uint64_t
 
+from libc.stdint cimport uint8_t, uint16_t, uint32_t, uint64_t
 from posix.types cimport pid_t
 
 # LIBMNL && LIBNETFILTER_QUEUE SOURCE FILES
@@ -233,12 +233,10 @@ cdef extern from "cfirewall.h" nogil:
     enum: FW_MAX_ZONES # define
     uintf16_t INTF_ZONE_MAP[FW_MAX_ZONES]
 
-    ctypedef uint8_t (*hash_trie_search_t)(uint32_t msb, uint32_t lsb)
-
     struct cfdata:
-        uint32_t            queue
-        mnl_cb_t            queue_cb
-        hash_trie_search_t  geo_search
+        uint32_t    queue
+        mnl_cb_t    queue_cb
+        void       *geolocation
 
     enum: SECURITY_PROFILE_COUNT # define
 

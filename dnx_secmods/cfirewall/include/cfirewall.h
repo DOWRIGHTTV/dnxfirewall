@@ -18,6 +18,8 @@
 #include "match.h" // zone, network, service matching helpers
 #include "dnx_nfq.h" // packet verdict, mangle, etc.
 
+//#include "hash_trie.h" // for structure / type info
+
 // bit shifting helpers
 #define TWO_BITS     2
 #define FOUR_BITS    4
@@ -34,6 +36,22 @@
 #define WAN_IN 10
 
 #define FW_MAX_ZONES  16
+
+// network object types.
+#define IP_ADDRESS 1
+#define IP_NETWORK 2
+#define IP_RANGE   3
+#define IP_GEO     6
+#define INV_IP_ADDRESS 11
+#define INV_IP_NETWORK 12
+#define INV_IP_RANGE   13
+#define INV_IP_GEO     16
+
+// service object types.
+#define SVC_SOLO  1
+#define SVC_RANGE 2
+#define SVC_LIST  3
+#define SVC_ICMP  4
 
 
 extern struct mnl_socket *nl;
@@ -58,12 +76,12 @@ extern uintf16_t INTF_ZONE_MAP[FW_MAX_ZONES]; // = <uintf16_t*>calloc(FW_MAX_ZON
 typedef struct nfqnl_msg_packet_hdr   nl_pkt_hdr;
 typedef struct nfqnl_msg_packet_hw    nl_pkt_hw;
 
-typedef uint8_t (*hash_trie_search_t)(uint32_t msb, uint32_t lsb);
+//typedef uint8_t (*hash_trie_search_t)(uint32_t msb, uint32_t lsb);
 
 struct cfdata {
-    uint32_t            queue;
-    mnl_cb_t            queue_cb;
-    hash_trie_search_t  geo_search;
+    uint32_t    queue;
+    mnl_cb_t    queue_cb;
+    void       *geolocation;
 };
 
 struct table_range {
@@ -110,18 +128,18 @@ struct Protohdr {
 //};
 
 struct dnx_pktb {
-    uint8_t    *data;
-    uint16_t    tlen;
-    struct HWinfo      hw;
-    struct IPhdr      *iphdr;
-    uint16_t    iphdr_len; // header only
-    struct Protohdr   *protohdr;
-    uint16_t    protohdr_len; // header only
-    bool        mangled;
-    uintf16_t   fw_table;
-    uintf16_t   rule_num;
-    uint32_t    action;
-    uint32_t    mark;
+    uint8_t            *data;
+    uint16_t            tlen;
+    struct HWinfo       hw;
+    struct IPhdr       *iphdr;
+    uint16_t            iphdr_len; // header only
+    struct Protohdr    *protohdr;
+    uint16_t            protohdr_len; // header only
+    bool                mangled;
+    uintf16_t           fw_table;
+    uintf16_t           rule_num;
+    uint32_t            action;
+    uint32_t            mark;
 };
 
 #endif

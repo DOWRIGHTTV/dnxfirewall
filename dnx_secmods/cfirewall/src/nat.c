@@ -3,6 +3,8 @@
 #include "cfirewall.h"
 #include "rules.h"
 
+#include "hash_trie.h"
+
 //#include "linux/netlink.h" //nlmsghdr
 
 #define NAT_PRE_MAX_RULE_COUNT  100
@@ -109,6 +111,8 @@ nat_inspect(int table_idx, struct dnx_pktb *pkt, struct cfdata *cfd)
 {
     dnx_parse_pkt_headers(pkt);
 
+    struct HashTrie_Range *geolocation = cfd->geolocation;
+
 //    NATrule    *nat_table;
     struct NATrule    *rule;
 
@@ -117,8 +121,8 @@ nat_inspect(int table_idx, struct dnx_pktb *pkt, struct cfdata *cfd)
     uint32_t    iph_dst_ip = ntohl(pkt->iphdr->daddr);
 
     // ip address to country code
-    uint8_t     src_country = cfd->geo_search(iph_src_ip & MSB, iph_src_ip & LSB);
-    uint8_t     dst_country = cfd->geo_search(iph_dst_ip & MSB, iph_dst_ip & LSB);
+    uint8_t     src_country = geolocation->lookup(iph_src_ip & MSB, iph_src_ip & LSB);
+    uint8_t     dst_country = geolocation->lookup(iph_dst_ip & MSB, iph_dst_ip & LSB);
 
     uintf16_t   rule_idx;
 
