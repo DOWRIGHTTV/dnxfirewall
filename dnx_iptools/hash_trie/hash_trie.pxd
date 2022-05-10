@@ -10,7 +10,9 @@ cdef public struct TrieRange:
     uint32_t    bcast
     uint8_t     country
 
-ctypedef public uint8_t (*htr_search_t)(uint32_t msb, uint32_t lsb)
+cdef public class HashTrie_Range [object HashTrie_Range, type HashTrie_Range_T]
+
+ctypedef public uint8_t (*htr_search_t)(HashTrie_Range, uint32_t, uint32_t)
 
 cdef public class HashTrie_Range [object HashTrie_Range, type HashTrie_Range_T]:
     cdef:

@@ -173,8 +173,8 @@ firewall_inspect(struct table_range *fw_tables, struct dnx_pktb *pkt, struct cfd
     uint32_t    iph_dst_ip = ntohl(pkt->iphdr->daddr);
 
     // ip address to country code
-    uint8_t     src_country = geolocation->lookup(iph_src_ip & MSB, iph_src_ip & LSB);
-    uint8_t     dst_country = geolocation->lookup(iph_dst_ip & MSB, iph_dst_ip & LSB);
+    uint8_t     src_country = geolocation->lookup(geolocation, iph_src_ip & MSB, iph_src_ip & LSB);
+    uint8_t     dst_country = geolocation->lookup(geolocation, iph_dst_ip & MSB, iph_dst_ip & LSB);
 
     // general direction of the packet and ip addr normalized to always be the external host/ip
     uint8_t     direction   = pkt->hw.in_zone != WAN_IN ? OUTBOUND : INBOUND;
