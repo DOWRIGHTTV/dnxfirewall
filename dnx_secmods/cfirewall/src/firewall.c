@@ -183,6 +183,15 @@ firewall_inspect(struct table_range *fw_tables, struct dnx_pktb *pkt, struct cfd
     // loops
     uintf8_t    idx, table_idx, rule_idx;
 
+    if (VERBOSE) {
+        printf("<< PACKET >>\n");
+        printf("src->%u(%u):%u, dst->%u(%u):%u, direction->%u, tracked->%u\n",
+            iph_src_ip, src_country, ntohs(pkt.protohdr.sport),
+            iph_dst_ip, dst_country, ntohs(pkt.protohdr.dport),
+            direction, tracked_geo
+            );
+    }
+
     // is the end index +1?
     for (table_idx = fw_tables->start; table_idx < fw_tables->end; table_idx++) {
 
@@ -196,6 +205,9 @@ firewall_inspect(struct table_range *fw_tables, struct dnx_pktb *pkt, struct cfd
             // NOTE: inspection order: src > dst | zone, ip_addr, protocol, port
             if (!rule->enabled) { continue; }
 
+            if (VERBOSE) {
+                firewall_rule_print(table_idx, rule_idx);
+            }
             // ------------------------------------------------------------------
             // ZONE MATCHING
             // ------------------------------------------------------------------
@@ -212,11 +224,11 @@ firewall_inspect(struct table_range *fw_tables, struct dnx_pktb *pkt, struct cfd
             // ------------------------------------------------------------------
             // PROTOCOL / PORT
             // ------------------------------------------------------------------
-            if (service_match(&rule->s_services, pkt->iphdr->protocol, pkt->protohdr->sport) != MATCH) { continue; }
+            if (service_match(&rule->s_services, pkt->iphdr->protocol, ntohs(pkt->protohdr->sport) != MATCH) { continue; }
 
             //icmp checked in source only.
             if (pkt->iphdr->protocol != IPPROTO_ICMP) {
-                if (service_match(&rule->d_services, pkt->iphdr->protocol, pkt->protohdr->dport) != MATCH) { continue; }
+                if (service_match(&rule->d_services, pkt->iphdr->protocol, ntohs(pkt->protohdr->dport)) != MATCH) { continue; }
             }
             // ------------------------------------------------------------------
             // MATCH ACTION | return rule options

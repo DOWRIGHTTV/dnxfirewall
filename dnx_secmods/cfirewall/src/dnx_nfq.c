@@ -3,6 +3,7 @@
 #include "dnx_nfq.h"
 #include "cfirewall.h"
 
+#include <stdio.h>
 
 inline void
 dnx_parse_pkt_headers(struct dnx_pktb *pkt)
