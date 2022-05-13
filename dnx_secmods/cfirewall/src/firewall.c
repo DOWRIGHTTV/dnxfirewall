@@ -26,13 +26,19 @@
 #define PROFILE_START 12
 #define PROFILE_STOP  (SECURITY_PROFILE_COUNT * 4) + 8 // + 1  // +1 for range
 
-// nfq alias for iteration range
-//cdef enum: NFQA_RANGE = NFQA_MAX + 1
 
 struct FWtable firewall_tables[FW_TABLE_COUNT];
 
 pthread_mutex_t     FWtableslock;
 pthread_mutex_t    *FWlock_ptr = &FWtableslock;
+
+// Python converted data will be placed here. This will allow the GIL to be released
+// before copying the data into the active rules. This comes at a somewhat substantial
+// hit to memory usage, but it will save alot of programming time by moving the need
+// for the fw socket/api to be implemented to correct the deadlock issue between the
+// Python GIL and the firewall or nat rule locks.
+struct FWtable fw_tables_swap[FW_TABLE_COUNT];
+
 
 void
 firewall_init(void) {
@@ -40,16 +46,31 @@ firewall_init(void) {
 
     // arrays of pointers to FWrules
     firewall_tables[FW_SYSTEM_RULES].len = 0;
-    firewall_tables[FW_SYSTEM_RULES].rules = calloc(FW_SYSTEM_MAX_RULE_COUNT, sizeof(struct FWrule));  // (struct FWrule*)
+    firewall_tables[FW_SYSTEM_RULES].rules = calloc(FW_SYSTEM_MAX_RULE_COUNT, sizeof(struct FWrule));
 
     firewall_tables[FW_BEFORE_RULES].len = 0;
-    firewall_tables[FW_BEFORE_RULES].rules = calloc(FW_BEFORE_MAX_RULE_COUNT, sizeof(struct FWrule)); // (struct FWrule*)
+    firewall_tables[FW_BEFORE_RULES].rules = calloc(FW_BEFORE_MAX_RULE_COUNT, sizeof(struct FWrule));
 
     firewall_tables[FW_MAIN_RULES].len = 0;
-    firewall_tables[FW_MAIN_RULES].rules = calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(struct FWrule)); // (struct FWrule*)
+    firewall_tables[FW_MAIN_RULES].rules = calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(struct FWrule));
 
     firewall_tables[FW_AFTER_RULES].len = 0;
-    firewall_tables[FW_AFTER_RULES].rules = calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(struct FWrule)); // (struct FWrule*)
+    firewall_tables[FW_AFTER_RULES].rules = calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(struct FWrule));
+
+    // SWAP STORAGE
+    fw_tables_swap[FW_SYSTEM_RULES].len = 0;
+    fw_tables_swap[FW_SYSTEM_RULES].rules = calloc(FW_SYSTEM_MAX_RULE_COUNT, sizeof(struct FWrule));
+
+    fw_tables_swap[FW_BEFORE_RULES].len = 0;
+    fw_tables_swap[FW_BEFORE_RULES].rules = calloc(FW_BEFORE_MAX_RULE_COUNT, sizeof(struct FWrule));
+
+    fw_tables_swap[FW_MAIN_RULES].len = 0;
+    fw_tables_swap[FW_MAIN_RULES].rules = calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(struct FWrule));
+
+    firewall_tables[FW_AFTER_RULES].len = 0;
+    firewall_tables[FW_AFTER_RULES].rules = calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(struct FWrule));
+
+
 }
 
 // ==================================
@@ -139,14 +160,9 @@ firewall_recv(const struct nlmsghdr *nlh, void *data)
             pkt.action = IP_PROXY << TWO_BYTES | NF_QUEUE;
         }
     }
-
     dnx_send_verdict(cfd->queue, ntohl(nlhdr->packet_id), &pkt);
 
-    // verdict is being used to eval whether the packet matched a system rule.
-    // a 0 verdict infers this also, but for ease of reading, ill use both.
     if (VERBOSE) {
-        // pkt_print(&hw, ip_header, proto_header)
-
         printf("[C/packet] hook->%u, mark->%u, action->%u, ", ntohl(nlhdr->hook), _mark, pkt.action);
         printf("ipp->%u, dns->%u, ips->%u\n", pkt.mark >> 12 & 15, pkt.mark >> 16 & 15, pkt.mark >> 20 & 15);
         printf("=====================================================================\n");
@@ -166,7 +182,6 @@ firewall_inspect(struct table_range *fw_tables, struct dnx_pktb *pkt, struct cfd
     struct HashTrie_Range *geolocation = cfd->geolocation;
 
     struct FWrule     *rule;
-//    uintf16_t   table_idx, rule_idx;
 
     // normalizing src/dst ip in header to host order
     uint32_t    iph_src_ip = ntohl(pkt->iphdr->saddr);
@@ -206,7 +221,7 @@ firewall_inspect(struct table_range *fw_tables, struct dnx_pktb *pkt, struct cfd
             if (!rule->enabled) { continue; }
 
             if (VERBOSE) {
-                firewall_rule_print(table_idx, rule_idx);
+                firewall_print_rule(table_idx, rule_idx);
             }
             // ------------------------------------------------------------------
             // ZONE MATCHING
@@ -224,11 +239,11 @@ firewall_inspect(struct table_range *fw_tables, struct dnx_pktb *pkt, struct cfd
             // ------------------------------------------------------------------
             // PROTOCOL / PORT
             // ------------------------------------------------------------------
-            if (service_match(&rule->s_services, pkt->iphdr->protocol, ntohs(pkt->protohdr->sport) != MATCH)) { continue; }
+            if (service_match(&rule->s_services, pkt->iphdr->protocol, ntohs(pkt->protohdr->sport)) != MATCH) { continue; }
 
             //icmp checked in source only.
             if (pkt->iphdr->protocol != IPPROTO_ICMP) {
-                if (service_match(&rule->d_services, pkt->iphdr->protocol, ntohs(pkt->protohdr->dport) != MATCH)) { continue; }
+                if (service_match(&rule->d_services, pkt->iphdr->protocol, ntohs(pkt->protohdr->dport)) != MATCH) { continue; }
             }
             // ------------------------------------------------------------------
             // MATCH ACTION | return rule options
@@ -266,22 +281,53 @@ firewall_unlock(void)
     pthread_mutex_unlock(FWlock_ptr);
 }
 
-void
-firewall_update_count(uint8_t table_idx, uint16_t rule_count)
+int
+firewall_stage_count(uintf8_t table_idx, uintf16_t rule_count)
 {
     firewall_tables[table_idx].len = rule_count;
+
+    return OK;
 }
 
 int
-firewall_set_rule(uint8_t table_idx, uint16_t rule_idx, struct FWrule *rule)
+firewall_stage_rule(uintf8_t table_idx, uintf16_t rule_idx, struct FWrule *rule)
 {
     firewall_tables[table_idx].rules[rule_idx] = *rule;
 
     return OK;
 }
 
+int
+firewall_push_rules(uintf8_t table_idx)
+{
+    firewall_lock();
+    // iterating over each rule in FW table
+    for (uintf8_t rule_idx = 0; rule_idx < fw_tables_swap[table_idx].len; rule_idx++) {
+
+        // copy swap structure to active structure. alignment is already set as they are idential structures.
+        firewall_tables[table_idx].rules[rule_idx] = fw_tables_swap[table_idx].rules[rule_idx];
+    }
+    firewall_unlock();
+
+    return OK;
+}
+
+int
+firewall_push_zones(uintf8_t *zone_map)
+{
+    firewall_lock();
+
+    for (intf8_t zone_idx = 0; zone_idx < FW_MAX_ZONES; zone_idx++) {
+        INTF_ZONE_MAP[zone_idx] = zone_map[zone_idx];
+    }
+
+    firewall_unlock();
+
+    return OK;
+}
+
 void
-firewall_rule_print(uint8_t table_idx, uint16_t rule_idx)
+firewall_print_rule(uintf8_t table_idx, uintf16_t rule_idx)
 {
     int    i, ix;
     struct FWrule  rule = firewall_tables[table_idx].rules[rule_idx];
@@ -394,4 +440,10 @@ firewall_rule_print(uint8_t table_idx, uint16_t rule_idx)
         rule.sec_profiles[0],
         rule.sec_profiles[1],
         rule.sec_profiles[2]);
+}
+
+int
+firewall_print_zones(void)
+{
+    return OK;
 }

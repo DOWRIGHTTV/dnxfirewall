@@ -19,16 +19,26 @@ struct NATtable nat_tables[NAT_TABLE_COUNT];
 pthread_mutex_t     NATtableslock;
 pthread_mutex_t    *NATlock_ptr = &NATtableslock;
 
+struct NATtable nat_tables_swap[NAT_TABLE_COUNT];
+
+
 void
 nat_init(void) {
     pthread_mutex_init(NATlock_ptr, NULL);
 
     // arrays of pointers to NATrule
     nat_tables[NAT_PRE_RULES].len = 0;
-    nat_tables[NAT_PRE_RULES].rules = calloc(NAT_PRE_MAX_RULE_COUNT, sizeof(struct NATrule)); // (NATrule*)
+    nat_tables[NAT_PRE_RULES].rules = calloc(NAT_PRE_MAX_RULE_COUNT, sizeof(struct NATrule));
 
     nat_tables[NAT_POST_RULES].len = 0;
-    nat_tables[NAT_POST_RULES].rules = calloc(NAT_POST_MAX_RULE_COUNT, sizeof(struct NATrule)); // (NATrule*)
+    nat_tables[NAT_POST_RULES].rules = calloc(NAT_POST_MAX_RULE_COUNT, sizeof(struct NATrule));
+
+    // SWAP STORAGE
+    nat_tables_swap[NAT_PRE_RULES].len = 0;
+    nat_tables_swap[NAT_PRE_RULES].rules = calloc(NAT_PRE_MAX_RULE_COUNT, sizeof(struct NATrule));
+
+    nat_tables_swap[NAT_POST_RULES].len = 0;
+    nat_tables_swap[NAT_POST_RULES].rules = calloc(NAT_POST_MAX_RULE_COUNT, sizeof(struct NATrule));
 }
 
 // ==================================
@@ -48,12 +58,11 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
 
     struct dnx_pktb    pkt;
 
-//    nullset(<void**>netlink_attrs, NFQA_RANGE);
     nfq_nlmsg_parse(nlh, netlink_attrs);
 
     nlhdr = (nl_pkt_hdr*) mnl_attr_get_payload(netlink_attrs[NFQA_PACKET_HDR]);
 
-    switch(ntohl(nlhdr->hook)) {
+    switch(nlhdr->hook) {
         case NF_IP_POST_ROUTING:
             table_idx = NAT_POST_TABLE;
             break;
@@ -71,14 +80,14 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
         return OK;
     }
     // ======================
-    _iif  = netlink_attrs[NFQA_IFINDEX_INDEV] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_INDEV])) : 0;
-    _oif  = netlink_attrs[NFQA_IFINDEX_OUTDEV] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_OUTDEV])) : 0;
+    _iif = netlink_attrs[NFQA_IFINDEX_INDEV] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_INDEV])) : 0;
+    _oif = netlink_attrs[NFQA_IFINDEX_OUTDEV] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_OUTDEV])) : 0;
 
-    pkt.hw.in_zone   = INTF_ZONE_MAP[_iif];
-    pkt.hw.out_zone  = INTF_ZONE_MAP[_oif];
+    pkt.hw.in_zone  = INTF_ZONE_MAP[_iif];
+    pkt.hw.out_zone = INTF_ZONE_MAP[_oif];
     // ======================
     // PACKET DATA / LEN
-    pkt.data = mnl_attr_get_payload(netlink_attrs[NFQA_PAYLOAD]); // <uint8_t*>
+    pkt.data = mnl_attr_get_payload(netlink_attrs[NFQA_PAYLOAD]);
     pkt.tlen = mnl_attr_get_payload_len(netlink_attrs[NFQA_PAYLOAD]);
     // ===================================
     // LOCKING ACCESS TO NAT RULES
@@ -103,6 +112,12 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
         pkt.mangled = dnx_mangle_pkt(&pkt);
     }
 
+    dnx_send_verdict(cfd->queue, ntohl(nlhdr->packet_id), &pkt);
+
+     if (VERBOSE) {
+        printf("[C/packet] hook->%u, action->%u, ", ntohl(nlhdr->hook), pkt.action);
+     }
+
     return OK;
 }
 
@@ -113,7 +128,6 @@ nat_inspect(int table_idx, struct dnx_pktb *pkt, struct cfdata *cfd)
 
     struct HashTrie_Range *geolocation = cfd->geolocation;
 
-//    NATrule    *nat_table;
     struct NATrule    *rule;
 
     // normalizing src/dst ip in header to host order
@@ -132,6 +146,10 @@ nat_inspect(int table_idx, struct dnx_pktb *pkt, struct cfdata *cfd)
         // NOTE: inspection order: src > dst | zone, ip_addr, protocol, port
         if (!rule->enabled) { continue; }
 
+        if (VERBOSE) {
+            nat_print_rule(table_idx, rule_idx);
+        }
+
         // ------------------------------------------------------------------
         // ZONE MATCHING
         // ------------------------------------------------------------------
@@ -148,9 +166,12 @@ nat_inspect(int table_idx, struct dnx_pktb *pkt, struct cfdata *cfd)
         // ------------------------------------------------------------------
         // PROTOCOL / PORT
         // ------------------------------------------------------------------
-        if (service_match(&rule->s_services, pkt->iphdr->protocol, pkt->protohdr->sport) != MATCH) { continue; }
-        if (service_match(&rule->d_services, pkt->iphdr->protocol, pkt->protohdr->dport) != MATCH) { continue; }
+        if (service_match(&rule->s_services, pkt->iphdr->protocol, ntohs(pkt->protohdr->sport)) != MATCH) { continue; }
 
+        //icmp checked in source only.
+        if (pkt->iphdr->protocol != IPPROTO_ICMP) {
+            if (service_match(&rule->d_services, pkt->iphdr->protocol, ntohs(pkt->protohdr->dport)) != MATCH) { continue; }
+        }
         // ------------------------------------------------------------------
         // MATCH ACTION | rule details
         // ------------------------------------------------------------------
@@ -179,16 +200,147 @@ nat_unlock(void)
     pthread_mutex_unlock(NATlock_ptr);
 }
 
-void
-nat_update_count(uint8_t table_idx, uint16_t rule_count)
+int
+nat_stage_count(uintf8_t table_idx, uintf16_t rule_count)
 {
     nat_tables[table_idx].len = rule_count;
+
+    return OK;
 }
 
 int
-nat_set_rule(uint8_t table_idx, uint16_t rule_idx, struct NATrule *rule)
+nat_stage_rule(uintf8_t table_idx, uintf16_t rule_idx, struct NATrule *rule)
 {
     nat_tables[table_idx].rules[rule_idx] = *rule;
 
     return OK;
+}
+
+int
+nat_push_rules(uintf8_t table_idx)
+{
+    nat_lock();
+    // iterating over each rule in NAT table
+    for (uintf8_t rule_idx = 0; rule_idx < nat_tables_swap[table_idx].len; rule_idx++) {
+
+        // copy swap structure to active structure. alignment is already set as they are idential structures.
+        nat_tables[table_idx].rules[rule_idx] = nat_tables_swap[table_idx].rules[rule_idx];
+    }
+    nat_unlock();
+
+    return OK;
+}
+
+void
+nat_print_rule(uintf8_t table_idx, uintf16_t rule_idx)
+{
+    int    i, ix;
+    struct NATrule  rule = nat_tables[table_idx].rules[rule_idx];
+
+    printf("<<NAT RULE [%u][%u]>>\n", table_idx, rule_idx);
+    printf("enabled->%d\n", rule.enabled);
+
+    // SRC ZONES
+    printf("src_zones->[ ");
+    for (i = 0; i < rule.s_zones.len; i++) {
+        printf("%u ", rule.s_zones.objects[i]);
+    }
+    printf(" ]\n");
+
+    // SRC NETWORKS
+    printf("src_networks->[ ");
+    for (i = 0; i < rule.s_networks.len; i++) {
+        printf("(%u, %u, %u) ",
+            rule.s_networks.objects[i].type,
+            rule.s_networks.objects[i].netid,
+            rule.s_networks.objects[i].netmask);
+    }
+    printf(" ]\n");
+
+    // SRC SERVICES
+    for (i = 0; i < rule.s_services.len; i++) {
+        printf("src_services->[ ");
+        // TYPE 4 (ICMP) OBJECT ASSIGNMENT
+        if (rule.s_services.objects[i].type == SVC_ICMP) {
+            printf("(1, %u, %u) ",
+                rule.s_services.objects[i].icmp.type,
+                rule.s_services.objects[i].icmp.code);
+        }
+        // TYPE 1/2 (SOLO, RANGE) OBJECT ASSIGNMENT
+        else if (rule.s_services.objects[i].type == SVC_SOLO || rule.s_services.objects[i].type == SVC_RANGE) {
+            printf("(%u, %u, %u) ",
+                rule.s_services.objects[i].svc.protocol,
+                rule.s_services.objects[i].svc.start_port,
+                rule.s_services.objects[i].svc.end_port);
+        }
+        // TYPE 3 (LIST) OBJECT ASSIGNMENT
+        else {
+            printf("< ");
+            for (ix = 0; ix < rule.s_services.objects[i].svc_list.len; ix++) {
+                // [0] START INDEX ON FW RULE SIZE
+                // [1] START INDEX PYTHON DICT SIDE (to first index for size)
+                printf("(%u, %u, %u) ",
+                    rule.s_services.objects[i].svc_list.services[ix].protocol,
+                    rule.s_services.objects[i].svc_list.services[ix].start_port,
+                    rule.s_services.objects[i].svc_list.services[ix].end_port);
+            }
+            printf(">");
+        }
+    }
+    printf("]\n");
+
+    // DST ZONES
+    printf("dst_zones->[ ");
+    for (i = 0; i < rule.d_zones.len; i++) {
+        printf("%u ", rule.d_zones.objects[i]);
+    }
+    printf(" ]\n");
+
+    // DST NETWORK
+    printf("dst_networks->[ ");
+    for (i = 0; i < rule.d_networks.len; i++) {
+        printf("(%u, %u, %u) ",
+            rule.d_networks.objects[i].type,
+            rule.d_networks.objects[i].netid,
+            rule.d_networks.objects[i].netmask);
+    }
+    printf(" ]\n");
+
+    // DST SERVICES
+    for (i = 0; i < rule.s_services.len; i++) {
+        printf("dst_services->[ ");
+        // TYPE 4 (ICMP) OBJECT ASSIGNMENT
+        if (rule.d_services.objects[i].type == SVC_ICMP) {
+            printf("(1, %u, %u) ",
+                rule.d_services.objects[i].icmp.type,
+                rule.d_services.objects[i].icmp.code);
+        }
+        // TYPE 1/2 (SOLO, RANGE) OBJECT ASSIGNMENT
+        else if (rule.d_services.objects[i].type == SVC_SOLO || rule.d_services.objects[i].type == SVC_RANGE) {
+            printf("(%u, %u, %u) ",
+                rule.d_services.objects[i].svc.protocol,
+                rule.d_services.objects[i].svc.start_port,
+                rule.d_services.objects[i].svc.end_port);
+        }
+        // TYPE 3 (LIST) OBJECT ASSIGNMENT
+        else {
+            printf("< ");
+            for (ix = 0; ix < rule.d_services.objects[i].svc_list.len; ix++) {
+                // [0] START INDEX ON FW RULE SIZE
+                // [1] START INDEX PYTHON DICT SIDE (to first index for size)
+                printf("(%u, %u, %u) ",
+                    rule.d_services.objects[i].svc_list.services[ix].protocol,
+                    rule.d_services.objects[i].svc_list.services[ix].start_port,
+                    rule.d_services.objects[i].svc_list.services[ix].end_port);
+            }
+            printf("> ");
+        }
+    }
+    printf("]\n");
+
+    // POLICIES
+    printf("action->%u\n", rule.action);
+    printf("log->%u\n", rule.log);
+    printf("src_t->%u:%u\n", rule.saddr, rule.sport);
+    printf("dst_t->%u:%u\n", rule.daddr, rule.dport);
 }

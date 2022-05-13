@@ -34,13 +34,18 @@ extern pthread_mutex_t    *NATlock_ptr;
 // contains pointers to arrays of pointers to NATrule and its length
 extern struct NATtable nat_tables[NAT_TABLE_COUNT];
 
+extern struct NATtable nat_tables_swap[NAT_TABLE_COUNT];
+
 extern void nat_init(void);
-extern void nat_lock(void);
-extern void nat_unlock(void);
-extern void nat_update_count(uint8_t table_idx, uint16_t rule_count);
-extern int  nat_set_rule(uint8_t table_idx, uint16_t rule_idx, struct NATrule *rule);
+extern int  nat_stage_count(uintf8_t table_idx, uintf16_t rule_count);
+extern int  nat_stage_rule(uintf8_t table_idx, uintf16_t rule_idx, struct NATrule *rule);
+extern int  nat_push_rules(uintf8_t table_idx);
 
 int  nat_recv(const struct nlmsghdr *nlh, void *data);
 void nat_inspect(int table_idx, struct dnx_pktb *pkt, struct cfdata *cfd);
+
+void nat_lock(void);
+void nat_unlock(void);
+void nat_print_rule(uintf8_t table_idx, uintf16_t rule_idx);
 
 #endif

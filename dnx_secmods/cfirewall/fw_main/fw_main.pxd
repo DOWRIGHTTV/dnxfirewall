@@ -184,6 +184,8 @@ cdef extern from "rules.h" nogil:
         FIELD_MAX_SERVICES
         FIELD_MAX_SVC_LIST_MEMBERS
 
+    enum: SECURITY_PROFILE_COUNT # define
+
     struct ZoneArray:
         uintf8_t    len
         uintf8_t    objects[FIELD_MAX_ZONES]
@@ -222,24 +224,6 @@ cdef extern from "rules.h" nogil:
         uintf8_t    len;
         SvcObject   objects[FIELD_MAX_SERVICES]
 
-cdef extern from "cfirewall.h" nogil:
-    mnl_socket     *nl
-
-    uint32_t MSB, LSB
-    # cli args
-    bool PROXY_BYPASS
-    bool VERBOSE
-
-    enum: FW_MAX_ZONES # define
-    uintf16_t INTF_ZONE_MAP[FW_MAX_ZONES]
-
-    struct cfdata:
-        uint32_t    queue
-        mnl_cb_t    queue_cb
-        void       *geolocation
-
-    enum: SECURITY_PROFILE_COUNT # define
-
     struct FWrule:
         bint        enabled
         ZoneArray   s_zones
@@ -268,26 +252,40 @@ cdef extern from "cfirewall.h" nogil:
         uint32_t    daddr
         uint16_t    dport
 
-cdef extern from "firewall.h" nogil:
-    # pthread_mutex_t     FWtableslock
-    pthread_mutex_t    *FWlock_ptr
+cdef extern from "cfirewall.h" nogil:
+    mnl_socket     *nl
 
+    uint32_t MSB, LSB
+    # cli args
+    bool PROXY_BYPASS
+    bool VERBOSE
+
+    enum: FW_MAX_ZONES # define
+    uintf16_t INTF_ZONE_MAP[FW_MAX_ZONES]
+    uintf16_t zone_map_swap[FW_MAX_ZONES]
+
+    struct cfdata:
+        uint32_t    queue
+        mnl_cb_t    queue_cb
+        void       *geolocation
+
+cdef extern from "firewall.h" nogil:
     void firewall_init()
-    void firewall_lock()
-    void firewall_unlock()
-    void firewall_update_count(uint8_t table, uint16_t rule_count)
-    int  firewall_set_rule(uint8_t table, uint16_t idx, FWrule *rule)
+    # void firewall_lock()
+    # void firewall_unlock()
+    int  firewall_stage_count(uint8_t table, uint16_t rule_count)
+    int  firewall_stage_rule(uint8_t table, uint16_t idx, FWrule *rule)
+    int  firewall_push_rules(uintf8_t table_idx)
     int  firewall_recv(const nlmsghdr *nlh, void *data)
+    int  firewall_push_zones(uintf8_t *zone_map)
 
 cdef extern from "nat.h" nogil:
-    # pthread_mutex_t     NATtableslock
-    pthread_mutex_t    *NATlock_ptr
-
     void nat_init()
-    void nat_lock()
-    void nat_unlock()
-    void nat_update_count(uint8_t table, uint16_t rule_count)
-    int  nat_set_rule(uint8_t table, uint16_t idx, FWrule *rule)
+    # void nat_lock()
+    # void nat_unlock()
+    int  nat_stage_count(uint8_t table, uint16_t rule_count)
+    int  nat_stage_rule(uint8_t table, uint16_t idx, NATrule *rule)
+    int  nat_push_rules(uintf8_t table_idx)
     int  nat_recv(const nlmsghdr *nlh, void *data)
 
 
@@ -297,7 +295,3 @@ cdef class CFirewall:
         int     api_fd
 
         uint8_t queue_type
-
-    cpdef int update_zones(s, PyArray zone_map) with gil
-    cpdef int update_ruleset(s, size_t ruleset, list rulelist) with gil
-#    cdef  int remove_attacker(s, uint32_t host_ip)

@@ -37,13 +37,20 @@ extern pthread_mutex_t    *FWlock_ptr;
 // contains pointers to arrays of pointers to FWrule and its length
 extern struct FWtable firewall_tables[FW_TABLE_COUNT];
 
+extern struct FWtable fw_tables_swap[FW_TABLE_COUNT];
+
 extern void firewall_init(void);
-extern void firewall_lock(void);
-extern void firewall_unlock(void);
-extern void firewall_update_count(uint8_t table_idx, uint16_t rule_count);
-extern int  firewall_set_rule(uint8_t table_idx, uint16_t rule_idx, struct FWrule *rule);
+extern int  firewall_stage_count(uintf8_t table_idx, uintf16_t rule_count);
+extern int  firewall_stage_rule(uintf8_t table_idx, uintf16_t rule_idx, struct FWrule *rule);
+extern int  firewall_push_rules(uintf8_t table_idx);
+extern int  firewall_push_zones(uintf8_t *zone_map);
 
 int  firewall_recv(const struct nlmsghdr *nlh, void *data);
 void firewall_inspect(struct table_range *fw_tables, struct dnx_pktb *pkt, struct cfdata *cfd);
+
+void firewall_lock(void);
+void firewall_unlock(void);
+void firewall_print_rule(uintf8_t table_idx, uintf16_t rule_idx);
+int  firewall_print_zones(void);
 
 #endif

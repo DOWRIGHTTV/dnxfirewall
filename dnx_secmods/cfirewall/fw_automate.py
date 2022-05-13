@@ -33,7 +33,7 @@ class FirewallAutomate:
 
         'BEFORE', 'MAIN', 'AFTER',
 
-        'NAT'
+        'PRE_ROUTE', 'POST_ROUTE'
     )
 
     def __init__(self, log: LogHandler_T, /, *, cfirewall: CFirewall):
@@ -45,7 +45,10 @@ class FirewallAutomate:
         self.BEFORE: dict = {}
         self.MAIN:   dict = {}
         self.AFTER:  dict = {}
-        self.NAT:    dict = {}
+
+        # nat rule groups
+        self.PRE_ROUTE:  dict = {}
+        self.POST_ROUTE: dict = {}
 
         # reference to extension CFirewall, which handles nfqueue and initial packet rcv. # we will use this
         # reference to modify rules objects which will be internally accessed by the inspection function callbacks
@@ -57,7 +60,10 @@ class FirewallAutomate:
         ppt(self.BEFORE)
         ppt(self.MAIN)
         ppt(self.AFTER)
-        ppt(self.NAT)
+
+        # nat rule groups
+        ppt(self.PRE_ROUTE)
+        ppt(self.POST_ROUTE)
 
     # threads will be started and other basic setup functions will be done before releasing control back to the
     # inspection context.
@@ -82,7 +88,7 @@ class FirewallAutomate:
         # converting the list to a python array, then sending to Cython to update the C array.
         # this format is required due to transitioning between python and C. python arrays are
         # compatible in C via memory views and Cython can handle the initial list.
-        dnx_zones: array[int] = array('i', loaded_zones['map'])
+        dnx_zones: array[int] = array('B', loaded_zones['map'])
 
         # NOTE: gil must be held on the other side of this call
         error: int = self.cfirewall.update_zones(dnx_zones)
@@ -94,7 +100,7 @@ class FirewallAutomate:
         self._initialize.done()
 
     @cfg_read_poller('active', ext='firewall', folder='iptables')
-    def _monitor_standard_rules(self, fw_rules: str):
+    def _monitor_standard_rules(self, fw_rules: str) -> None:
         '''Monitors the active firewall rules file for changes and loads updates to cfirewall.
 
         calls to Cython are made from within this method block.
@@ -102,34 +108,35 @@ class FirewallAutomate:
         '''
         loaded_rules: ConfigChain = load_configuration(fw_rules, ext='firewall', filepath='dnx_system/iptables')
 
-        # splitting out sections then determine which one has changed.
-        # NOTE: index 1 start is needed because SYSTEM rules are held at index 0.
-        for i, section in enumerate(['BEFORE', 'MAIN', 'AFTER'], 1):
-            current_section: dict = getattr(self, section)
-            new_section: dict = loaded_rules.get_dict(section)
+        # checking each group for change to reduce C interaction.
+        for table_idx, rule_group in enumerate(['BEFORE', 'MAIN', 'AFTER'], 1):
+
+            current_section: dict = getattr(self, rule_group)
+            new_section = loaded_rules.get_dict(rule_group)
 
             # unchanged ruleset
             if (current_section == new_section): continue
 
             # updating ruleset to reflect changes
-            setattr(self, section, new_section)
+            setattr(self, rule_group, new_section)
 
             # converting section to a list of rules for easier manipulation in C.
-            ruleset: list = [rule for rule in new_section.values()]
+            ruleset = [rule for rule in new_section.values()]
 
-            self.log.notice(f'DNXFIREWALL {section} rule update job starting.')
+            self.log.notice(f'DNXFIREWALL {rule_group} rule update job starting.')
 
-            # NOTE: gil must be held throughout this call
-            error = self.cfirewall.update_ruleset(i, ruleset)
+            table_type = 0 # temp
+
+            error = self.cfirewall.update_rules(table_type, table_idx, ruleset)
             if (error):
-                Log.error(f'Rules section "{section}" update failure in CFirewall')
+                Log.error(f'FIREWALL rule group ({rule_group}) failed to update')
             else:
-                Log.notice(f'Rule section "{section}" updated successfully.')
+                Log.notice(f'FIREWALL rule group ({rule_group}) updated successfully.')
 
         self._initialize.done()
 
     @cfg_read_poller('system', ext='firewall', folder='iptables')
-    def _monitor_system_rules(self, system_rules: str):
+    def _monitor_system_rules(self, system_rules: str) -> None:
         # 0-99: system reserved - 1. loopback 10/11. dhcp, 20/21. dns, 30/31. http, 40/41. https, etc
         #   - add loopback to system table
         # 100-1059: zone mgmt rules. 100s place designates interface index
@@ -140,18 +147,56 @@ class FirewallAutomate:
 
         loaded_rules: ConfigChain = load_configuration(system_rules, ext='firewall', filepath='dnx_system/iptables')
 
-        system_set: list = loaded_rules.get_values('BUILTIN')
+        system_set = loaded_rules.get_values('BUILTIN')
 
         # updating ruleset to reflect changes
         self.SYSTEM = loaded_rules.get_dict()
 
         self.log.notice('DNXFIREWALL system rule update job starting.')
 
-        # NOTE: gil must be held throughout this call. 0 is index of SYSTEM RULES
-        error = self.cfirewall.update_ruleset(0, system_set)
+        # NOTE: 0 is index of SYSTEM RULES
+        table_type = 0
+
+        error = self.cfirewall.update_rules(table_type, 0, system_set)
         if (error):
             Log.error(f'Rules section "SYSTEM" update failure in CFirewall.')
         else:
             Log.notice(f'Rule section "SYSTEM" updated successfully.')
+
+        self._initialize.done()
+
+    @cfg_read_poller('active', ext='nat', folder='iptables')
+    def _monitor_nat_rules(self, nat_rules: str) -> None:
+        '''Monitors the active firewall rules file for changes and loads updates to cfirewall.
+
+        calls to Cython are made from within this method block.
+        the GIL must be manually acquired on the Cython side or the Python interpreter will crash.
+        '''
+        loaded_rules: ConfigChain = load_configuration(nat_rules, ext='nat', filepath='dnx_system/iptables')
+
+        # checking each group for change to reduce C interaction.
+        for table_idx, rule_group in enumerate(['PRE_ROUTE', 'POST_ROUTE']):
+
+            current_section: dict = getattr(self, rule_group)
+            new_section = loaded_rules.get_dict(rule_group)
+
+            # unchanged ruleset
+            if (current_section == new_section): continue
+
+            # updating ruleset to reflect changes
+            setattr(self, rule_group, new_section)
+
+            # converting section to a list of rules for easier manipulation in C.
+            ruleset = [rule for rule in new_section.values()]
+
+            self.log.notice(f'DNXFIREWALL NAT {rule_group} rule update job starting.')
+
+            # NOTE: gil must be held throughout this call
+            table_type = 1 # temp
+            error = self.cfirewall.update_rules(table_type, table_idx, ruleset)
+            if (error):
+                Log.error(f'NAT rule group ({rule_group}) failed to update')
+            else:
+                Log.notice(f'NAT rule group ({rule_group}) updated successfully.')
 
         self._initialize.done()

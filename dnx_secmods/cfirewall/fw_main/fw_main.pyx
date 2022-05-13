@@ -241,28 +241,34 @@ cdef class CFirewall:
 
         return Py_OK
 
-    cpdef int update_zones(s, PyArray zone_map) with gil:
+    def update_zones(s, PyArray zone_map):
         '''acquires FWrule lock then updates the zone values by interface index.
 
         MAX_SLOTS defined by FW_MAX_ZONE_COUNT.
         the GIL will be explicitly acquired before any code execution to ensure calls from C are safe.
         '''
-        cdef intf16_t   idx
-
-        firewall_lock()
-        print('[update/zones] acquired lock')
-
-        memset(<void*>&INTF_ZONE_MAP, 0, FW_MAX_ZONES*sizeof(uintf32_t))
+        cdef:
+            intf16_t    idx
+            uintf8_t   temp_map[FW_MAX_ZONES]
 
         for idx in range(FW_MAX_ZONES):
-            INTF_ZONE_MAP[idx] = zone_map[idx]
+            temp_map[idx] = zone_map[idx]
 
-        firewall_unlock()
-        print('[update/zones] released lock')
+        firewall_push_zones(temp_map)
 
         return Py_OK
 
-    cpdef int update_ruleset(s, size_t table_idx, list rulelist) with gil:
+    def update_rulesets(s, uintf8_t table_type, uintf8_t table_idx, list rulelist):
+
+        if (table_type == 0):
+            return s._update_firewall_rules(table_idx, rulelist)
+
+        elif (table_type == 1):
+            return s._update_nat_rules(table_idx, rulelist)
+
+        return Py_ERR
+
+    def _update_firewall_rules(s, uintf8_t table_idx, list rulelist):
         '''acquires FWrule lock then rewrites the corresponding section ruleset.
 
         the current length var will also be update while the lock is held. 
@@ -272,9 +278,6 @@ cdef class CFirewall:
             uintf16_t   rule_idx, rule_count = len(rulelist)
             dict        fw_rule
 
-        firewall_lock()
-        print('[update/ruleset] acquired lock')
-
         for rule_idx in range(rule_count):
             fw_rule = rulelist[rule_idx]
 
@@ -282,10 +285,32 @@ cdef class CFirewall:
 
         # updating rule count in global tracker.
         # this is important to establish iter bounds during inspection.
-        firewall_update_count(table_idx, rule_count)
+        firewall_stage_count(table_idx, rule_count)
 
-        firewall_unlock()
-        print('[update/ruleset] released lock')
+        firewall_push_rules(table_idx)
+
+        return Py_OK
+
+    def _update_nat_rules(s, uintf8_t table_idx, list rulelist):
+        '''acquires FWrule lock then rewrites the corresponding section ruleset.
+
+        the current length var will also be update while the lock is held.
+        the GIL will be explicitly acquired before any code execution to ensure calls from C are safe.
+        '''
+        cdef:
+            uintf16_t   rule_idx, rule_count = len(rulelist)
+            dict        nat_rule
+
+        for rule_idx in range(rule_count):
+            nat_rule = rulelist[rule_idx]
+
+            set_NATrule(table_idx, rule_idx, nat_rule)
+
+        # updating rule count in global tracker.
+        # this is important to establish iter bounds during inspection.
+        nat_stage_count(table_idx, rule_count)
+
+        nat_push_rules(table_idx)
 
         return Py_OK
 
@@ -297,7 +322,6 @@ cdef void set_FWrule(size_t table_idx, size_t rule_idx, dict rule):
         SvcObject       svc_object
 
         FWrule          fw_rule
-        # FWrule         *fw_rule = &firewall_tables[ruleset].rules[pos]
 
     fw_rule.enabled = <bint>rule['enabled']
     # ===========
@@ -397,18 +421,116 @@ cdef void set_FWrule(size_t table_idx, size_t rule_idx, dict rule):
     if (VERBOSE and table_idx >= 1):
         ppt(fw_rule)
 
-    firewall_set_rule(table_idx, rule_idx, &fw_rule)
+    firewall_stage_rule(table_idx, rule_idx, &fw_rule)
 
-# ==================================
-# PRINT FUNCTIONS
-# ==================================
-cdef inline void rule_print(FWrule *rule) with gil:
-    '''nested struct print of the passed in reference using Python pretty printer.
+cdef void set_NATrule(size_t table_idx, size_t rule_idx, dict rule):
 
-    the GIL will be acquired before executing the print and released on return.
-    the byte order will be big endian/ network so the integer outputs will be backwards on Linux.
-    '''
-    ppt(rule[0])
+    cdef:
+        uintf8_t        i, ix, svc_list_len
+        SvcObject       svc_object
+
+        NATrule          nat_rule
+
+    nat_rule.enabled = <bint>rule['enabled']
+    # ===========
+    # SOURCE
+    # ===========
+    nat_rule.s_zones.len = <uintf8_t>len(rule['src_zone'])
+    for i in range(nat_rule.s_zones.len):
+        nat_rule.s_zones.objects[i] = <uintf8_t>rule['src_zone'][i]
+
+    nat_rule.s_networks.len = <uintf8_t>len(rule['src_network'])
+    for i in range(nat_rule.s_networks.len):
+        nat_rule.s_networks.objects[i].type    = <uintf8_t> rule['src_network'][i][0]
+        nat_rule.s_networks.objects[i].netid   = <uintf32_t>rule['src_network'][i][1]
+        nat_rule.s_networks.objects[i].netmask = <uintf32_t>rule['src_network'][i][2]
+
+    # -----------------------
+    # SOURCE SERVICE OBJECTS
+    # -----------------------
+    nat_rule.s_services.len = <uintf8_t>len(rule['src_service'])
+    for i in range(nat_rule.s_services.len):
+        # svc_object = &nat_rule.s_services.objects[i]
+
+        nat_rule.s_services.objects[i].type = <uintf8_t>rule['src_service'][i][0]
+        # TYPE 4 (ICMP) OBJECT ASSIGNMENT
+        if (nat_rule.s_services.objects[i].type == SVC_ICMP):
+            nat_rule.s_services.objects[i].icmp.type = <uintf8_t>rule['src_service'][i][1]
+            nat_rule.s_services.objects[i].icmp.code = <uintf8_t>rule['src_service'][i][2]
+
+        # TYPE 1/2 (SOLO, RANGE) OBJECT ASSIGNMENT
+        elif (nat_rule.s_services.objects[i].type == SVC_SOLO or nat_rule.s_services.objects[i].type == SVC_RANGE):
+            nat_rule.s_services.objects[i].svc.protocol   = <uintf16_t>rule['src_service'][i][1]
+            nat_rule.s_services.objects[i].svc.start_port = <uintf16_t>rule['src_service'][i][2]
+            nat_rule.s_services.objects[i].svc.end_port   = <uintf16_t>rule['src_service'][i][3]
+
+        # TYPE 3 (LIST) OBJECT ASSIGNMENT
+        else:
+            nat_rule.s_services.objects[i].svc_list.len = <uintf8_t>(len(rule['src_service'][i]) - 1)
+            for ix in range(nat_rule.s_services.objects[i].svc_list.len):
+                # [0] START INDEX ON FW RULE SIZE
+                # [1] START INDEX PYTHON DICT SIDE (to first index for size)
+                nat_rule.s_services.objects[i].svc_list.services[ix].protocol   = <uintf16_t>rule['src_service'][i][ix + 1][0]
+                nat_rule.s_services.objects[i].svc_list.services[ix].start_port = <uintf16_t>rule['src_service'][i][ix + 1][1]
+                nat_rule.s_services.objects[i].svc_list.services[ix].end_port   = <uintf16_t>rule['src_service'][i][ix + 1][2]
+
+    # ===========
+    # DESTINATION
+    # ===========
+    nat_rule.d_zones.len = <uintf8_t>len(rule['dst_zone'])
+    for i in range(nat_rule.d_zones.len):
+        nat_rule.d_zones.objects[i] = <uintf8_t>rule['dst_zone'][i]
+
+    nat_rule.d_networks.len = <uintf8_t>len(rule['dst_network'])
+    for i in range(nat_rule.d_networks.len):
+        nat_rule.d_networks.objects[i].type    = <uintf8_t> rule['dst_network'][i][0]
+        nat_rule.d_networks.objects[i].netid   = <uintf32_t>rule['dst_network'][i][1]
+        nat_rule.d_networks.objects[i].netmask = <uintf32_t>rule['dst_network'][i][2]
+
+    # -----------------------
+    # DST SERVICE OBJECTS
+    # -----------------------
+    nat_rule.d_services.len = <uintf8_t>len(rule['dst_service'])
+    for i in range(nat_rule.d_services.len):
+        # svc_object = &nat_rule.d_services.objects[i]
+
+        nat_rule.d_services.objects[i].type = <uintf8_t>rule['dst_service'][i][0]
+        # TYPE 4 (ICMP) OBJECT ASSIGNMENT
+        if (nat_rule.d_services.objects[i].type == SVC_ICMP):
+            nat_rule.d_services.objects[i].icmp.type = <uintf8_t>rule['dst_service'][i][1]
+            nat_rule.d_services.objects[i].icmp.code = <uintf8_t>rule['dst_service'][i][2]
+
+        # TYPE 1/2 (SOLO, RANGE) OBJECT ASSIGNMENT
+        elif (nat_rule.d_services.objects[i].type == SVC_SOLO or nat_rule.d_services.objects[i].type == SVC_RANGE):
+            nat_rule.d_services.objects[i].svc.protocol   = <uintf16_t>rule['dst_service'][i][1]
+            nat_rule.d_services.objects[i].svc.start_port = <uintf16_t>rule['dst_service'][i][2]
+            nat_rule.d_services.objects[i].svc.end_port   = <uintf16_t>rule['dst_service'][i][3]
+
+        # TYPE 3 (LIST) OBJECT ASSIGNMENT
+        else:
+            nat_rule.d_services.objects[i].svc_list.len = <uintf8_t>(len(rule['dst_service'][i]) - 1)
+            for ix in range(nat_rule.d_services.objects[i].svc_list.len):
+                # [0] START INDEX ON FW RULE SIZE
+                # [1] START INDEX PYTHON DICT SIDE (to first index for size)
+                nat_rule.d_services.objects[i].svc_list.services[ix].protocol   = <uintf16_t>rule['dst_service'][i][ix + 1][0]
+                nat_rule.d_services.objects[i].svc_list.services[ix].start_port = <uintf16_t>rule['dst_service'][i][ix + 1][1]
+                nat_rule.d_services.objects[i].svc_list.services[ix].end_port   = <uintf16_t>rule['dst_service'][i][ix + 1][2]
+
+    # --------------------------
+    # RULE PROFILES AND ACTIONS
+    # --------------------------
+    nat_rule.action = <uintf8_t>rule['action']
+    nat_rule.log    = <uintf8_t>rule['log']
+
+    nat_rule.saddr = <uintf32_t>rule['saddr']
+    nat_rule.sport = <uintf16_t>rule['sport']
+    nat_rule.daddr = <uintf16_t>rule['daddr']
+    nat_rule.dport = <uintf16_t>rule['dport']
+
+    if (VERBOSE):
+        ppt(nat_rule)
+
+    nat_stage_rule(table_idx, rule_idx, &nat_rule)
 
 # ==================================
 # Firewall Matching Functions
