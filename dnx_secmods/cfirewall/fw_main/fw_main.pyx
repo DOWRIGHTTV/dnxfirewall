@@ -258,7 +258,7 @@ cdef class CFirewall:
 
         return Py_OK
 
-    def update_rulesets(s, uintf8_t table_type, uintf8_t table_idx, list rulelist):
+    def update_rules(s, uintf8_t table_type, uintf8_t table_idx, list rulelist):
 
         if (table_type == 0):
             return s._update_firewall_rules(table_idx, rulelist)
