@@ -185,13 +185,13 @@ cdef class CFirewall:
         '''
         cdef int ret = OK
 
-        print(f'<releasing GIL for Queue[{s.queue_type}]({cfds[s.queue_type].queue})>')
+        print(f'<releasing GIL for Queue[{s.queue_idx}]({cfds[s.queue_idx].queue})>')
         # release gil and never look back.
         with nogil:
-            ret = process_traffic(&cfds[s.queue_type])
+            ret = process_traffic(&cfds[s.queue_idx])
 
         if (ret == ERR):
-            print(f'<! processing error on Queue[{s.queue_type}]({cfds[s.queue_type].queue}) !>')
+            print(f'<! processing error on Queue[{s.queue_idx}]({cfds[s.queue_idx].queue}) !>')
 
     def nf_set(s, uint8_t queue_idx, uint16_t queue_num):
 
