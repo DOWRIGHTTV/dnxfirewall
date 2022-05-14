@@ -111,7 +111,7 @@ cdef int process_traffic(cfdata *cfd) nogil:
         char        packet_buf[MNL_BUF_SIZE]
         intf16_t    dlen, ret
 
-        uint32_t    portid = mnl_socket_get_portid(nl)
+        uint32_t    portid = mnl_socket_get_portid(cfd.nl)
 
     printf("<ready to process traffic for Queue(%u)>\n", cfd.queue)
 

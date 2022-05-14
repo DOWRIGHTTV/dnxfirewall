@@ -82,8 +82,8 @@ struct cfdata {
     uint32_t    queue;
     void       *geolocation;
 
-    mnl_socket *nl;
-    mnl_cb_t    queue_cb;
+    struct mnl_socket  *nl;
+    mnl_cb_t            queue_cb;
 };
 
 struct table_range {
