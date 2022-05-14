@@ -72,9 +72,11 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
         case NF_IP_LOCAL_IN:
         case NF_IP_LOCAL_OUT:
             dnx_send_verdict_fast(cfd->queue, ntohl(nlhdr->packet_id), NF_ACCEPT);
+
+            printf("< [--] NAT HOOK FILTERED (%u) - FAST VERDICT [--] >\n", nlhdr->hook);
             return OK;
         default:
-            printf("< [++] NAT HOOK MISMATCH (%u) [++] >\n", nlhdr->hook);
+            printf("< [--!] NAT HOOK MISMATCH (%u) [!--] >\n", nlhdr->hook);
             return ERR;
     }
 
@@ -82,6 +84,8 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
     // NO NAT QUICK PATH
     if (nat_tables[table_idx].len == 0) {
         dnx_send_verdict_fast(cfd->queue, ntohl(nlhdr->packet_id), NF_ACCEPT);
+
+        printf("< [--] NO NAT - FAST VERDICT [--] >\n");
 
         return OK;
     }

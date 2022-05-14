@@ -168,7 +168,7 @@ cdef class CFirewall:
     # TODO: make this work on a per "module" basis. NAT vs FIREWALL.
     #   also provide a global argument option for these.
     #   FW instance will be responsible for settings these globally for the time being.
-    def set_options(s, int bypass, int verbose, int verbose2, fw, nat):
+    def set_options(s, int bypass, int verbose, int verbose2, int fw, int nat):
         global PROXY_BYPASS, VERBOSE, VERBOSE2, FW_V, NAT_V
 
         PROXY_BYPASS = <bool>bypass
@@ -207,10 +207,15 @@ cdef class CFirewall:
 
         this call will run forever, but will release the GIL prior to entering C and never try to reacquire it.
         '''
-        print('<releasing GIL>')
+        cdef int ret = OK
+
+        print(f'<releasing GIL for Queue[{s.queue_type}]({cfds[s.queue_type].queue})>')
         # release gil and never look back.
         with nogil:
-            process_traffic(&cfds[s.queue_type])
+            ret = process_traffic(&cfds[s.queue_type])
+
+        if (ret == ERR):
+            print(f'<! processing error on Queue[{s.queue_type}]({cfds[s.queue_type].queue}) !>')
 
     def nf_set(s, uint16_t queue_num, uint8_t queue_type):
 

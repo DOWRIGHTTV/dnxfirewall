@@ -118,7 +118,7 @@ def run():
     dnxnat = CFirewall()
     # dnxnat.set_options(0, args.verbose_set, args.verbose2_set)
 
-    error = dnxfirewall.nf_set(Queue.CNAT, QueueType.NAT)
+    error = dnxnat.nf_set(Queue.CNAT, QueueType.NAT)
     if (error):
         Log.error(f'failed to bind to queue {Queue.CNAT}')
         hardout()

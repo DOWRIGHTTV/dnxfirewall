@@ -135,7 +135,9 @@ firewall_recv(const struct nlmsghdr *nlh, void *data)
         case NF_IP_LOCAL_IN:
             fw_tables.start = FW_SYSTEM_RANGE_START;
             break;
-        default: return ERR;
+        default:
+            printf("< [--!] FW HOOK MISMATCH (%u) - EXITING [!--] >\n", nlhdr->hook);
+            return ERR;
     }
     fw_tables.end = FW_RULE_RANGE_END;
     // ===================================
@@ -294,7 +296,7 @@ firewall_stage_count(uintf8_t table_idx, uintf16_t rule_count)
 {
     firewall_tables[table_idx].len = rule_count;
 
-    printf("< [!] FW TABLE (%u) COUNT UPDATED [!] >\n", table_idx);
+    printf("< [!] FW TABLE (%u) COUNT STAGED [!] >\n", table_idx);
 
     return OK;
 }
