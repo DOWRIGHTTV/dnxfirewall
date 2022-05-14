@@ -28,7 +28,7 @@ if INITIALIZE_MODULE(LOG_NAME):
 
     from dnx_routines.logging.log_client import Log
 
-    from fw_main import CFirewall, nl_open, nl_bind, nl_break, initialize_geolocation
+    from fw_main import CFirewall, initialize_geolocation
     from fw_automate import FirewallAutomate
 
 

@@ -15,12 +15,12 @@
 #define Py_ERR 1
 
 // cli args
-extern bool PROXY_BYPASS;
-extern bool VERBOSE;
-extern bool VERBOSE2;
+bool PROXY_BYPASS;
+bool VERBOSE;
+bool VERBOSE2;
 
-extern bool FW_V;
-extern bool NAT_V;
+bool FW_V;
+bool NAT_V;
 
 typedef uint_fast8_t    uintf8_t;
 typedef uint_fast16_t   uintf16_t;
