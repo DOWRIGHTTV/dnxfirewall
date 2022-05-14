@@ -2,14 +2,14 @@
 #define CFIREWALL_H
 
 // netfilter
-#include "linux/netfilter.h"
+#include "linux/netfilter.h" // enum nf_inet_hooks
 #include "linux/netfilter_ipv4.h"
 #include "linux/netfilter/nf_conntrack_common.h" // enum ip_conntrack_info
 #include "linux/netfilter/nfnetlink.h" // struct nfgenmsg
 #include "linux/netfilter/nfnetlink_queue.h" // nfqnl structs and attr enums
-#include "libmnl/libmnl.h"
+#include "libmnl/libmnl.h" // nl attr parsing
 #include "libnetfilter_queue/linux_nfnetlink_queue.h"
-#include "libnetfilter_queue/libnetfilter_queue.h"
+#include "libnetfilter_queue/libnetfilter_queue.h" // nfqueue interface for libmnl
 
 // dxnfirewall
 #include "config.h"
@@ -61,6 +61,7 @@ extern uint32_t MSB, LSB;
 // cli args
 extern bool PROXY_BYPASS;
 extern bool VERBOSE;
+extern bool VERBOSE2;
 
 // stores zone(integer value) at index, which is mapped Fto if_nametoindex() (value returned from get_in/outdev)
 // memset will be performed in Cython prior to changing the values.

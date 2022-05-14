@@ -14,6 +14,10 @@
 #define Py_OK  0
 #define Py_ERR 1
 
+// cli args
+bool PROXY_BYPASS;
+bool VERBOSE;
+bool VERBOSE2;
 
 typedef uint_fast8_t    uintf8_t;
 typedef uint_fast16_t   uintf16_t;

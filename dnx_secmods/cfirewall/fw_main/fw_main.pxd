@@ -177,6 +177,11 @@ cdef extern from "config.h" nogil:
     ctypedef short          intf16_t
     ctypedef int            intf32_t
 
+    # cli args
+    bool PROXY_BYPASS
+    bool VERBOSE
+    bool VERBOSE2
+
 cdef extern from "rules.h" nogil:
     enum:
         FIELD_MAX_ZONES
@@ -256,9 +261,6 @@ cdef extern from "cfirewall.h" nogil:
     mnl_socket     *nl
 
     uint32_t MSB, LSB
-    # cli args
-    bool PROXY_BYPASS
-    bool VERBOSE
 
     enum: FW_MAX_ZONES # define
     uintf16_t INTF_ZONE_MAP[FW_MAX_ZONES]

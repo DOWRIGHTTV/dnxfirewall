@@ -164,17 +164,22 @@ nat_init()
 # C Extension
 # ===================================
 cdef class CFirewall:
-    def set_options(s, int bypass, int verbose):
-        global PROXY_BYPASS, VERBOSE
+    def set_options(s, int bypass, int verbose, int verbose2):
+        global PROXY_BYPASS, VERBOSE, VERBOSE2
 
         PROXY_BYPASS = <bool>bypass
         VERBOSE = <bool>verbose
+        VERBOSE2 = <bool>verbose2
 
         if (bypass):
             print('<proxy bypass enable>')
 
         if (verbose):
             print('<verbose console logging enabled>')
+
+        # keeping this independant from verbose so they are not tethered
+        if (verbose2):
+            print('<verbose2 console logging enabled>')
 
     # def api_set(s, unicode sock_path):
     #

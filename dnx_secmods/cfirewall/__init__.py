@@ -6,6 +6,14 @@ from dnx_gentools.def_constants import hardout, INITIALIZE_MODULE
 
 LOG_NAME = 'cfirewall'
 
+def print_help():
+    print('<[ CFIREWALL ARGUMENT LIST ]>')
+    print('h, help               print argument list to the terminal')
+    print('b, bypass             apply firewall rule action without forwarding to any configured security modules')
+    print('v, verbose            print operational messages to the terminal')
+    print('vv, verbose2          print near excessive amounts of debug messages to the terminal')
+
+
 if INITIALIZE_MODULE(LOG_NAME):
     import os
 
@@ -24,10 +32,19 @@ if INITIALIZE_MODULE(LOG_NAME):
 
     @dataclass
     class Args:
-        b: int = 0
-        v: int = 0
-        bypass: int = 0
-        verbose: int = 0
+        h:  int = 0
+        b:  int = 0
+        v:  int = 0
+        vv: int = 0
+
+        help:     int = 0
+        bypass:   int = 0
+        verbose:  int = 0
+        verbose2: int = 0
+
+        @property
+        def help_set(self):
+            return self.h or self.help
 
         @property
         def bypass_set(self):
@@ -37,10 +54,20 @@ if INITIALIZE_MODULE(LOG_NAME):
         def verbose_set(self):
             return self.v or self.verbose
 
+        @property
+        def verbose2_set(self):
+            return self.vv or self.verbose2
+
     try:
         args = Args(**{a: 1 for a in os.environ['PASSTHROUGH_ARGS'].split(',') if a})
     except Exception as E:
         hardout(f'DNXFIREWALL arg parse failure => {E}')
+
+    else:
+        if (args.help_set):
+            print_help()
+
+            hardout()
 
     Log.run(name=LOG_NAME)
 
@@ -65,7 +92,7 @@ def run():
     dnxfirewall = CFirewall()
 
     # NOTE: bypass tells the process to invoke rule action (DROP or ACCEPT) without forwarding to security modules.
-    dnxfirewall.set_options(args.bypass_set, args.verbose_set)
+    dnxfirewall.set_options(args.bypass_set, args.verbose_set, args.verbose2_set)
 
     error = dnxfirewall.nf_set(Queue.CFIREWALL, QueueType.FIREWALL)
     if (error):

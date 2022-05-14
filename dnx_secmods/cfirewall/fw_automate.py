@@ -69,11 +69,12 @@ class FirewallAutomate:
     # inspection context.
     def run(self) -> None:
 
-        threading.Thread(target=self._monitor_system_rules).start()
         threading.Thread(target=self._monitor_zones).start()
+        threading.Thread(target=self._monitor_system_rules).start()
         threading.Thread(target=self._monitor_standard_rules).start()
+        threading.Thread(target=self._monitor_nat_rules).start()
 
-        self._initialize.wait_for_threads(count=3)
+        self._initialize.wait_for_threads(count=4)
 
     @cfg_read_poller('zone', ext='firewall', folder='iptables')
     # zone int values are arbitrary / randomly selected on zone creation.
@@ -96,6 +97,36 @@ class FirewallAutomate:
             Log.error('Zone map update failure in CFirewall.')
         else:
             Log.notice('Zone map updated successfully.')
+
+        self._initialize.done()
+
+    @cfg_read_poller('system', ext='firewall', folder='iptables')
+    def _monitor_system_rules(self, system_rules: str) -> None:
+        # 0-99: system reserved - 1. loopback 10/11. dhcp, 20/21. dns, 30/31. http, 40/41. https, etc
+        #   - add loopback to system table
+        # 100-1059: zone mgmt rules. 100s place designates interface index
+        #   - 0/1: webui, 2: cli, 3: ssh, 4: ping
+        #   - NOTE: int index will be used to do zone lookup. if zone changes, these will stop working and will need
+        #       to be reset. this is ok for now since we only support builtin zones that can't change.
+        # 2000+: system control (proxy bypass prevention)
+
+        loaded_rules: ConfigChain = load_configuration(system_rules, ext='firewall', filepath='dnx_system/iptables')
+
+        system_set = loaded_rules.get_values('BUILTIN')
+
+        # updating ruleset to reflect changes
+        self.SYSTEM = loaded_rules.get_dict()
+
+        self.log.notice('DNXFIREWALL system rule update job starting.')
+
+        # NOTE: 0 is index of SYSTEM RULES
+        table_type = 0
+
+        error = self.cfirewall.update_rules(table_type, 0, system_set)
+        if (error):
+            Log.error(f'Rules section "SYSTEM" update failure in CFirewall.')
+        else:
+            Log.notice(f'Rule section "SYSTEM" updated successfully.')
 
         self._initialize.done()
 
@@ -132,36 +163,6 @@ class FirewallAutomate:
                 Log.error(f'FIREWALL rule group ({rule_group}) failed to update')
             else:
                 Log.notice(f'FIREWALL rule group ({rule_group}) updated successfully.')
-
-        self._initialize.done()
-
-    @cfg_read_poller('system', ext='firewall', folder='iptables')
-    def _monitor_system_rules(self, system_rules: str) -> None:
-        # 0-99: system reserved - 1. loopback 10/11. dhcp, 20/21. dns, 30/31. http, 40/41. https, etc
-        #   - add loopback to system table
-        # 100-1059: zone mgmt rules. 100s place designates interface index
-        #   - 0/1: webui, 2: cli, 3: ssh, 4: ping
-        #   - NOTE: int index will be used to do zone lookup. if zone changes, these will stop working and will need
-        #       to be reset. this is ok for now since we only support builtin zones that can't change.
-        # 2000+: system control (proxy bypass prevention)
-
-        loaded_rules: ConfigChain = load_configuration(system_rules, ext='firewall', filepath='dnx_system/iptables')
-
-        system_set = loaded_rules.get_values('BUILTIN')
-
-        # updating ruleset to reflect changes
-        self.SYSTEM = loaded_rules.get_dict()
-
-        self.log.notice('DNXFIREWALL system rule update job starting.')
-
-        # NOTE: 0 is index of SYSTEM RULES
-        table_type = 0
-
-        error = self.cfirewall.update_rules(table_type, 0, system_set)
-        if (error):
-            Log.error(f'Rules section "SYSTEM" update failure in CFirewall.')
-        else:
-            Log.notice(f'Rule section "SYSTEM" updated successfully.')
 
         self._initialize.done()
 

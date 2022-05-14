@@ -62,6 +62,8 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
 
     nlhdr = (nl_pkt_hdr*) mnl_attr_get_payload(netlink_attrs[NFQA_PACKET_HDR]);
 
+    printf("< [++] NAT RECV - PARSING [++] >\n");
+
     switch(nlhdr->hook) {
         case NF_IP_POST_ROUTING:
             table_idx = NAT_POST_TABLE;
@@ -69,7 +71,13 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
         case NF_IP_PRE_ROUTING:
             table_idx = NAT_PRE_TABLE;
             break;
-        default: return ERR;
+        case NF_IP_LOCAL_IN:
+        case NF_IP_LOCAL_OUT:
+            dnx_send_verdict_fast(cfd->queue, ntohl(nlhdr->packet_id), NF_ACCEPT);
+            return OK;
+        default:
+            printf("< [++] NAT HOOK MISMATCH (%u) [++] >\n", nlhdr->hook);
+            return ERR;
     }
 
     // ======================
@@ -104,19 +112,22 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
     // NAT / MANGLE
     // --------------------
     // NOTE: it looks like it will be better if we manually NAT the packet contents.
-    // the alternative is to allocate a pktb and user the proper mangler.
+    // the alternative is to allocate a pktb and use the netfilter provided mangler.
     // this would auto manage the header checksums, but we would need alloc/free every time we mangle.
     // i have alot of experience with nat and checksum calculations so its probably easier and more efficient to use
-    // the on stack buffer to mangle. (this is unless we need to retain a copy of the original packet)
+    // the on stack buffer to mangle. (this is unless we need to retain a copy of the original packet -> but then again
+    // we could just memcpy the original and still not use pktb)
     if (pkt.action > DNX_NO_NAT) {
         pkt.mangled = dnx_mangle_pkt(&pkt);
     }
 
     dnx_send_verdict(cfd->queue, ntohl(nlhdr->packet_id), &pkt);
 
-     if (VERBOSE) {
-        printf("[C/packet] hook->%u, action->%u, ", ntohl(nlhdr->hook), pkt.action);
-     }
+    if (VERBOSE) {
+        printf("< [--] NAT VERDICT [--] >\n");
+        printf("packet_id->%u, hook->%u, action->%u, ", ntohl(nlhdr->packet_id), nlhdr->hook, pkt.action);
+        printf("=====================================================================\n");
+    }
 
     return OK;
 }
@@ -140,13 +151,21 @@ nat_inspect(int table_idx, struct dnx_pktb *pkt, struct cfdata *cfd)
 
     uintf16_t   rule_idx;
 
+    if (VERBOSE) {
+        printf("< [**] NAT INSPECTION [**] >\n");
+        printf("src->%u:%u, dst->%u:%u\n",
+            iph_src_ip, ntohs(pkt->protohdr->sport),
+            iph_dst_ip, ntohs(pkt->protohdr->dport)
+            );
+    }
+
     for (rule_idx = 0; rule_idx < nat_tables[table_idx].len; rule_idx++) {
 
         rule = &nat_tables[table_idx].rules[rule_idx];
         // NOTE: inspection order: src > dst | zone, ip_addr, protocol, port
         if (!rule->enabled) { continue; }
 
-        if (VERBOSE) {
+        if (VERBOSE2) {
             nat_print_rule(table_idx, rule_idx);
         }
 

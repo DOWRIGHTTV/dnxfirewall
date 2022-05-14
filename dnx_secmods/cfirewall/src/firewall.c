@@ -99,6 +99,7 @@ firewall_recv(const struct nlmsghdr *nlh, void *data)
     // CONNTRACK
     // this should be checked as soon as feasibly possible for performance.
     // this will be used to allow for stateless inspection policies later.
+    // NTOHL on id is because kernel will apply HTONL on receipt
     ct_info = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_CT_INFO]));
     if (ct_info != IP_CT_NEW) {
         dnx_send_verdict_fast(cfd->queue, ntohl(nlhdr->packet_id), NF_ACCEPT);
@@ -163,8 +164,11 @@ firewall_recv(const struct nlmsghdr *nlh, void *data)
     dnx_send_verdict(cfd->queue, ntohl(nlhdr->packet_id), &pkt);
 
     if (VERBOSE) {
-        printf("[C/packet] hook->%u, mark->%u, action->%u, ", ntohl(nlhdr->hook), _mark, pkt.action);
-        printf("ipp->%u, dns->%u, ips->%u\n", pkt.mark >> 12 & 15, pkt.mark >> 16 & 15, pkt.mark >> 20 & 15);
+        printf("< -- FIREWALL VERDICT -- >\n");
+        printf("packet_id->%u, hook->%u, mark->%u, action->%u, ", ntohl(nlhdr->packet_id), nlhdr->hook, _mark, pkt.action);
+        if (!PROXY_BYPASS) {
+            printf("ipp->%u, dns->%u, ips->%u\n", pkt.mark >> 12 & 15, pkt.mark >> 16 & 15, pkt.mark >> 20 & 15);
+        }
         printf("=====================================================================\n");
     }
 
@@ -199,7 +203,7 @@ firewall_inspect(struct table_range *fw_tables, struct dnx_pktb *pkt, struct cfd
     uintf8_t    idx, table_idx, rule_idx;
 
     if (VERBOSE) {
-        printf("<< PACKET >>\n");
+        printf("< ++ FIREWALL INSPECTION ++ >\n");
         printf("src->%u(%u):%u, dst->%u(%u):%u, direction->%u, tracked->%u\n",
             iph_src_ip, src_country, ntohs(pkt->protohdr->sport),
             iph_dst_ip, dst_country, ntohs(pkt->protohdr->dport),
@@ -220,7 +224,7 @@ firewall_inspect(struct table_range *fw_tables, struct dnx_pktb *pkt, struct cfd
             // NOTE: inspection order: src > dst | zone, ip_addr, protocol, port
             if (!rule->enabled) { continue; }
 
-            if (VERBOSE) {
+            if (VERBOSE2) {
                 firewall_print_rule(table_idx, rule_idx);
             }
             // ------------------------------------------------------------------
