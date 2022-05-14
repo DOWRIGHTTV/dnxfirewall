@@ -241,7 +241,7 @@ cdef class CFirewall:
     def nl_open(s):
 
         cfds[s.queue_idx].nl = mnl_socket_open(NETLINK_NETFILTER)
-        if (nl == NULL):
+        if (cfds[s.queue_idx].nl == NULL):
             return Py_ERR
 
         return Py_OK
