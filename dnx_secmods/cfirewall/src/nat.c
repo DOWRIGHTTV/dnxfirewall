@@ -211,18 +211,24 @@ void
 nat_lock(void)
 {
     pthread_mutex_lock(NATlock_ptr);
+
+    printf("< [!] NAT LOCK ACQUIRED [!] >\n");
 }
 
 void
 nat_unlock(void)
 {
     pthread_mutex_unlock(NATlock_ptr);
+
+    printf("< [!] NAT LOCK RELEASED [!] >\n");
 }
 
 int
 nat_stage_count(uintf8_t table_idx, uintf16_t rule_count)
 {
     nat_tables[table_idx].len = rule_count;
+
+    printf("< [!] NAT TABLE (%u) COUNT UPDATED [!] >\n", table_idx);
 
     return OK;
 }
@@ -246,6 +252,8 @@ nat_push_rules(uintf8_t table_idx)
         nat_tables[table_idx].rules[rule_idx] = nat_tables_swap[table_idx].rules[rule_idx];
     }
     nat_unlock();
+
+    printf("< [!] NAT TABLE (%u) RULES UPDATED [!] >\n", table_idx);
 
     return OK;
 }

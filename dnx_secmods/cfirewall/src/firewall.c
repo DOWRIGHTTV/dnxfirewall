@@ -277,18 +277,24 @@ void
 firewall_lock(void)
 {
     pthread_mutex_lock(FWlock_ptr);
+
+    printf("< [!] FW LOCK ACQUIRED [!] >\n");
 }
 
 void
 firewall_unlock(void)
 {
     pthread_mutex_unlock(FWlock_ptr);
+
+    printf("< [!] FW LOCK RELEASED [!] >\n");
 }
 
 int
 firewall_stage_count(uintf8_t table_idx, uintf16_t rule_count)
 {
     firewall_tables[table_idx].len = rule_count;
+
+    printf("< [!] FW TABLE (%u) COUNT UPDATED [!] >\n", table_idx);
 
     return OK;
 }
@@ -312,6 +318,8 @@ firewall_push_rules(uintf8_t table_idx)
         firewall_tables[table_idx].rules[rule_idx] = fw_tables_swap[table_idx].rules[rule_idx];
     }
     firewall_unlock();
+
+    printf("< [!] FW TABLE (%u) RULES UPDATED [!] >\n", table_idx);
 
     return OK;
 }
