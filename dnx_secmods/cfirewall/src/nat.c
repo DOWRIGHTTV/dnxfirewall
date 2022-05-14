@@ -71,7 +71,7 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
             break;
         case NF_IP_LOCAL_IN:
         case NF_IP_LOCAL_OUT:
-            dnx_send_verdict_fast(cfd->queue, ntohl(nlhdr->packet_id), NF_ACCEPT);
+            dnx_send_verdict_fast(cfd, ntohl(nlhdr->packet_id), NF_ACCEPT);
 
             printf("< [--] NAT HOOK FILTERED (%u) - FAST VERDICT [--] >\n", nlhdr->hook);
             return OK;
@@ -83,7 +83,7 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
     // ======================
     // NO NAT QUICK PATH
     if (nat_tables[table_idx].len == 0) {
-        dnx_send_verdict_fast(cfd->queue, ntohl(nlhdr->packet_id), NF_ACCEPT);
+        dnx_send_verdict_fast(cfd, ntohl(nlhdr->packet_id), NF_ACCEPT);
 
         printf("< [--] NO NAT - FAST VERDICT [--] >\n");
 
@@ -123,7 +123,7 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
         pkt.mangled = dnx_mangle_pkt(&pkt);
     }
 
-    dnx_send_verdict(cfd->queue, ntohl(nlhdr->packet_id), &pkt);
+    dnx_send_verdict(cfd, ntohl(nlhdr->packet_id), &pkt);
 
     if (NAT_V && VERBOSE) {
         printf("< [--] NAT VERDICT [--] >\n");

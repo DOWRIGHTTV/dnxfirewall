@@ -88,8 +88,7 @@ def run():
     # ===============
     # NETLINK SOCKET
     # ===============
-    nl_open()
-    nl_bind()
+
 
     # ===============
     # GEOLOCATION
@@ -104,12 +103,15 @@ def run():
     # ===============
     dnxfirewall = CFirewall()
 
+    dnxfirewall.nl_open()
+    dnxfirewall.nl_bind()
+
     # NOTE: bypass tells the process to invoke rule action (DROP or ACCEPT) without forwarding to security modules.
     dnxfirewall.set_options(args.bypass_set, args.verbose_set, args.verbose2_set, args.fw_set, args.nat_set)
 
-    error = dnxfirewall.nf_set(Queue.CFIREWALL, QueueType.FIREWALL)
+    error = dnxfirewall.nf_set(QueueType.FIREWALL, Queue.CFIREWALL)
     if (error):
-        Log.error(f'failed to bind to queue {Queue.CFIREWALL}')
+        Log.error(f'failed to set nl socket options for queue {Queue.CFIREWALL}')
         hardout()
 
     # ===============
@@ -118,9 +120,12 @@ def run():
     dnxnat = CFirewall()
     # dnxnat.set_options(0, args.verbose_set, args.verbose2_set)
 
-    error = dnxnat.nf_set(Queue.CNAT, QueueType.NAT)
+    dnxnat.nl_open()
+    dnxnat.nl_bind()
+
+    error = dnxnat.nf_set(QueueType.NAT, Queue.CNAT)
     if (error):
-        Log.error(f'failed to bind to queue {Queue.CNAT}')
+        Log.error(f'failed to set nl socket options for queue {Queue.CNAT}')
         hardout()
 
     # initializing python processes for detecting configuration changes to zone or firewall rule sets and also handles
@@ -138,7 +143,7 @@ def run():
         fw_rule_monitor.print_active_rules()
 
     # this is running in pure C. the GIL is released before running the low-level system operations and will never
-    # retake the gil.
+    # reacquire the gil.
     dnx_threads = [
         Thread(target=dnxfirewall.nf_run),
         Thread(target=dnxnat.nf_run)
@@ -150,5 +155,4 @@ def run():
         for t in dnx_threads:
             t.join()
     except Exception as E:
-        nl_break()
         hardout(f'DNXFIREWALL cfirewall/nfqueue failure => {E}')

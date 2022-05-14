@@ -268,8 +268,10 @@ cdef extern from "cfirewall.h" nogil:
 
     struct cfdata:
         uint32_t    queue
-        mnl_cb_t    queue_cb
         void       *geolocation
+
+        mnl_socket *nl
+        mnl_cb_t    queue_cb
 
 cdef extern from "firewall.h" nogil:
     void firewall_init()
@@ -296,4 +298,4 @@ cdef class CFirewall:
         char*   sock_path
         int     api_fd
 
-        uint8_t queue_type
+        uint8_t queue_idx

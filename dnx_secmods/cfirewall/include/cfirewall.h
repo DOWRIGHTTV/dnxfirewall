@@ -53,9 +53,6 @@
 #define SVC_LIST  3
 #define SVC_ICMP  4
 
-
-extern struct mnl_socket *nl;
-
 extern uint32_t MSB, LSB;
 
 // cli args
@@ -83,8 +80,10 @@ typedef struct nfqnl_msg_packet_hw    nl_pkt_hw;
 
 struct cfdata {
     uint32_t    queue;
-    mnl_cb_t    queue_cb;
     void       *geolocation;
+
+    mnl_socket *nl;
+    mnl_cb_t    queue_cb;
 };
 
 struct table_range {

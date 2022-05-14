@@ -30,25 +30,25 @@ dnx_parse_pkt_headers(struct dnx_pktb *pkt)
 }
 
 inline void
-dnx_send_verdict_fast(uint32_t queue_num, uint32_t pktid, int action)
+dnx_send_verdict_fast(struct cfdata *cfd, uint32_t pktid, int action)
 {
-    char        buf[MNL_SOCKET_BUFFER_SIZE];
-    struct nlmsghdr   *nlh;
+    char                buf[MNL_SOCKET_BUFFER_SIZE];
+    struct nlmsghdr    *nlh;
 
-    nlh = nfq_nlmsg_put(buf, NFQNL_MSG_VERDICT, queue_num);
+    nlh = nfq_nlmsg_put(buf, NFQNL_MSG_VERDICT, cfd.queue);
     nfq_nlmsg_verdict_put(nlh, pktid, action);
-    mnl_socket_sendto(nl, nlh, nlh->nlmsg_len);
+    mnl_socket_sendto(cfd.nl, nlh, nlh->nlmsg_len);
 }
 
 int
-dnx_send_verdict(uint32_t queue_num, uint32_t pktid, struct dnx_pktb *pkt)
+dnx_send_verdict(struct cfdata *cfd, uint32_t pktid, struct dnx_pktb *pkt)
 {
-    char        buf[MNL_SOCKET_BUFFER_SIZE];
-    struct nlmsghdr   *nlh;
+    char                buf[MNL_SOCKET_BUFFER_SIZE];
+    struct nlmsghdr    *nlh;
 
     ssize_t     ret;
 
-    nlh = nfq_nlmsg_put(buf, NFQNL_MSG_VERDICT, queue_num);
+    nlh = nfq_nlmsg_put(buf, NFQNL_MSG_VERDICT, cfd.queue);
 
     nfq_nlmsg_verdict_put(nlh, pktid, pkt->action);
     nfq_nlmsg_verdict_put_mark(nlh, pkt->mark);
@@ -56,7 +56,7 @@ dnx_send_verdict(uint32_t queue_num, uint32_t pktid, struct dnx_pktb *pkt)
         nfq_nlmsg_verdict_put_pkt(nlh, pkt->data, pkt->tlen);
     }
 
-    ret = mnl_socket_sendto(nl, nlh, nlh->nlmsg_len);
+    ret = mnl_socket_sendto(cfd.nl, nlh, nlh->nlmsg_len);
 
     return ret < 0 ? ERR : OK;
 }

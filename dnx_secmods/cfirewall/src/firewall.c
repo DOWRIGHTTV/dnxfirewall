@@ -103,7 +103,7 @@ firewall_recv(const struct nlmsghdr *nlh, void *data)
     // NTOHL on id is because kernel will apply HTONL on receipt
     ct_info = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_CT_INFO]));
     if (ct_info != IP_CT_NEW) {
-        dnx_send_verdict_fast(cfd->queue, ntohl(nlhdr->packet_id), NF_ACCEPT);
+        dnx_send_verdict_fast(cfd, ntohl(nlhdr->packet_id), NF_ACCEPT);
 
         return OK;
     }
@@ -164,7 +164,7 @@ firewall_recv(const struct nlmsghdr *nlh, void *data)
             pkt.action = IP_PROXY << TWO_BYTES | NF_QUEUE;
         }
     }
-    dnx_send_verdict(cfd->queue, ntohl(nlhdr->packet_id), &pkt);
+    dnx_send_verdict(cfd, ntohl(nlhdr->packet_id), &pkt);
 
     if (FW_V && VERBOSE) {
         printf("< -- FIREWALL VERDICT -- >\n");

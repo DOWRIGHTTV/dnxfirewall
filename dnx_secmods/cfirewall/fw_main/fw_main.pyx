@@ -77,30 +77,6 @@ DEF MNL_BUF_SIZE = 6144  # DNX_BUF_SIZE + (8192 / 2)
 DEF QFIREWALL = 0
 DEF QNAT      = 1
 
-# ===================================
-# C EXTENSION - Python Comm Pipeline
-# ===================================
-# NETLINK SOCKET - cfirewall <> kernel
-def nl_open():
-    global nl
-
-    nl = mnl_socket_open(NETLINK_NETFILTER)
-    if (nl == NULL):
-        return Py_ERR
-
-    return Py_OK
-
-def nl_bind():
-    if (mnl_socket_bind(nl, 0, MNL_SOCKET_AUTOPID) < 0):
-        return Py_ERR
-
-    return Py_OK
-
-def nl_break():
-    mnl_socket_close(nl)
-
-    return Py_OK
-
 # =====================================
 # GEOLOCATION INITIALIZATION
 # =====================================
@@ -140,7 +116,7 @@ cdef int process_traffic(cfdata *cfd) nogil:
     printf("<ready to process traffic for Queue(%u)>\n", cfd.queue)
 
     while True:
-        dlen = mnl_socket_recvfrom(nl, <void*>packet_buf, MNL_BUF_SIZE)
+        dlen = mnl_socket_recvfrom(cfd.nl, <void*>packet_buf, MNL_BUF_SIZE)
         if (dlen == -1):
             return ERR
 
@@ -154,8 +130,8 @@ cdef int process_traffic(cfdata *cfd) nogil:
 # =====================================
 cdef cfdata cfds[2]
 
-cfds[0].queue_cb = <mnl_cb_t>&firewall_recv
-cfds[1].queue_cb = <mnl_cb_t>&nat_recv
+cfds[0].queue_cb = firewall_recv
+cfds[1].queue_cb = nat_recv
 
 firewall_init()
 nat_init()
@@ -217,10 +193,10 @@ cdef class CFirewall:
         if (ret == ERR):
             print(f'<! processing error on Queue[{s.queue_type}]({cfds[s.queue_type].queue}) !>')
 
-    def nf_set(s, uint16_t queue_num, uint8_t queue_type):
+    def nf_set(s, uint8_t queue_idx, uint16_t queue_num):
 
-        s.queue_type = queue_type
-        cfds[queue_type].queue = queue_num
+        s.queue_idx = queue_idx
+        cfds[queue_idx].queue = queue_num
 
         cdef:
             char        mnl_buf[MNL_BUF_SIZE]
@@ -233,7 +209,7 @@ cdef class CFirewall:
         nlh = nfq_nlmsg_put(mnl_buf, NFQNL_MSG_CONFIG, queue_num)
         nfq_nlmsg_cfg_put_cmd(nlh, AF_INET, NFQNL_CFG_CMD_BIND)
 
-        if (mnl_socket_sendto(nl, nlh, nlh.nlmsg_len) < 0):
+        if (mnl_socket_sendto(cfds[queue_idx].nl, nlh, nlh.nlmsg_len) < 0):
             return Py_ERR
 
         # ---------------
@@ -249,12 +225,35 @@ cdef class CFirewall:
         mnl_attr_put_u32(nlh, NFQA_CFG_FLAGS, htonl(NFQA_CFG_F_CONNTRACK))
         mnl_attr_put_u32(nlh, NFQA_CFG_MASK, htonl(NFQA_CFG_F_CONNTRACK))
 
-        if (mnl_socket_sendto(nl, nlh, nlh.nlmsg_len) < 0):
+        if (mnl_socket_sendto(cfds[queue_idx].nl, nlh, nlh.nlmsg_len) < 0):
             return Py_ERR
 
         # ENOBUFS is signalled to userspace when packets were lost on the kernel side.
         # We don't care, so we can turn it off.
-        mnl_socket_setsockopt(nl, NETLINK_NO_ENOBUFS, <void*>&ret, sizeof(int))
+        mnl_socket_setsockopt(cfds[queue_idx].nl, NETLINK_NO_ENOBUFS, <void*>&ret, sizeof(int))
+
+        return Py_OK
+
+    # ===================================
+    # C EXTENSION - Python Comm Pipeline
+    # ===================================
+    # NETLINK SOCKET - cmod <> kernel
+    def nl_open(s):
+
+        cfds[s.queue_idx].nl = mnl_socket_open(NETLINK_NETFILTER)
+        if (nl == NULL):
+            return Py_ERR
+
+        return Py_OK
+
+    def nl_bind(s):
+        if (mnl_socket_bind(cfds[s.queue_idx].nl, 0, MNL_SOCKET_AUTOPID) < 0):
+            return Py_ERR
+
+        return Py_OK
+
+    def nl_break(s):
+        mnl_socket_close(cfds[s.queue_idx].nl)
 
         return Py_OK
 
@@ -266,12 +265,13 @@ cdef class CFirewall:
         '''
         cdef:
             intf16_t    idx
-            uintf8_t   temp_map[FW_MAX_ZONES]
+            uintf8_t    temp_map[FW_MAX_ZONES]
 
         for idx in range(FW_MAX_ZONES):
             temp_map[idx] = zone_map[idx]
 
-        firewall_push_zones(temp_map)
+        with nogil:
+            firewall_push_zones(temp_map)
 
         return Py_OK
 
