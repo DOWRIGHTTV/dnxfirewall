@@ -164,6 +164,10 @@ nat_init()
 # C Extension
 # ===================================
 cdef class CFirewall:
+
+    # TODO: make this work on a per "module" basis. NAT vs FIREWALL.
+    #   also provide a global argument option for these.
+    #   FW instance will be responsible for settings these globally for the time being.
     def set_options(s, int bypass, int verbose, int verbose2):
         global PROXY_BYPASS, VERBOSE, VERBOSE2
 

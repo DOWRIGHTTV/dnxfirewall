@@ -100,10 +100,10 @@ def run():
         hardout()
 
     # ===============
-    # FIREWALL QUEUE
+    # NAT QUEUE
     # ===============
     dnxnat = CFirewall()
-    dnxnat.set_options(0, args.verbose_set)
+    # dnxnat.set_options(0, args.verbose_set, args.verbose2_set)
 
     error = dnxfirewall.nf_set(Queue.CNAT, QueueType.NAT)
     if (error):
