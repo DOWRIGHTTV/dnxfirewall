@@ -198,6 +198,10 @@ cdef class CFirewall:
         s.queue_idx = queue_idx
         cfds[queue_idx].queue = queue_num
 
+        # initializing nl socket for communication
+        s.nl_open()
+        s.nl_bind()
+
         cdef:
             char        mnl_buf[MNL_BUF_SIZE]
             nlmsghdr   *nlh

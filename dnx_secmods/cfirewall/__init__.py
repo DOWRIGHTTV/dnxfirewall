@@ -86,11 +86,6 @@ if INITIALIZE_MODULE(LOG_NAME):
 
 def run():
     # ===============
-    # NETLINK SOCKET
-    # ===============
-
-
-    # ===============
     # GEOLOCATION
     # ===============
     # generating py_trie for geolocation signatures, cfirewall will initialize the extension natively
@@ -102,9 +97,6 @@ def run():
     # FIREWALL QUEUE
     # ===============
     dnxfirewall = CFirewall()
-
-    dnxfirewall.nl_open()
-    dnxfirewall.nl_bind()
 
     # NOTE: bypass tells the process to invoke rule action (DROP or ACCEPT) without forwarding to security modules.
     dnxfirewall.set_options(args.bypass_set, args.verbose_set, args.verbose2_set, args.fw_set, args.nat_set)
@@ -119,9 +111,6 @@ def run():
     # ===============
     dnxnat = CFirewall()
     # dnxnat.set_options(0, args.verbose_set, args.verbose2_set)
-
-    dnxnat.nl_open()
-    dnxnat.nl_bind()
 
     error = dnxnat.nf_set(QueueType.NAT, Queue.CNAT)
     if (error):
