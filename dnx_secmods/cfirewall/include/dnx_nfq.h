@@ -3,6 +3,7 @@
 
 
 struct dnx_pktb;
+struct cfdata;
 
 void dnx_parse_pkt_headers(struct dnx_pktb *pkt);
 void dnx_send_verdict_fast(struct cfdata *cfd, uint32_t pktid, int action);
