@@ -137,7 +137,7 @@ cdef int process_traffic(cfdata *cfd) nogil:
 
         uint32_t    portid = mnl_socket_get_portid(nl)
 
-    printf(<char*>'<ready to process traffic>\n')
+    printf("<ready to process traffic for Queue(%u)>\n", cfd.queue)
 
     while True:
         dlen = mnl_socket_recvfrom(nl, <void*>packet_buf, MNL_BUF_SIZE)
@@ -154,8 +154,8 @@ cdef int process_traffic(cfdata *cfd) nogil:
 # =====================================
 cdef cfdata cfds[2]
 
-cfds[0].queue_cb = firewall_recv
-cfds[1].queue_cb = nat_recv
+cfds[0].queue_cb = <mnl_cb_t>&firewall_recv
+cfds[1].queue_cb = <mnl_cb_t>&nat_recv
 
 firewall_init()
 nat_init()
@@ -437,7 +437,7 @@ cdef void set_FWrule(size_t table_idx, size_t rule_idx, dict rule):
     fw_rule.sec_profiles[1] = <uintf8_t>rule['dns_profile']
     fw_rule.sec_profiles[2] = <uintf8_t>rule['ips_profile']
 
-    if (VERBOSE and table_idx >= 1):
+    if (VERBOSE2 and table_idx >= 1):
         ppt(fw_rule)
 
     firewall_stage_rule(table_idx, rule_idx, &fw_rule)
@@ -546,7 +546,7 @@ cdef void set_NATrule(size_t table_idx, size_t rule_idx, dict rule):
     nat_rule.daddr = <uintf16_t>rule['daddr']
     nat_rule.dport = <uintf16_t>rule['dport']
 
-    if (VERBOSE):
+    if (VERBOSE2):
         ppt(nat_rule)
 
     nat_stage_rule(table_idx, rule_idx, &nat_rule)

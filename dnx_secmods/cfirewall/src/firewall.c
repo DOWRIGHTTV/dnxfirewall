@@ -91,7 +91,8 @@ firewall_recv(const struct nlmsghdr *nlh, void *data)
 
     struct table_range      fw_tables;
 
-//    nullset(<void**>netlink_attrs, NFQA_RANGE);
+    printf("< [++] FW RECV QUEUE(%u) - PARSING [++] >\n", cfd->queue);
+
     nfq_nlmsg_parse(nlh, netlink_attrs);
 
     nlhdr = (nl_pkt_hdr*) mnl_attr_get_payload(netlink_attrs[NFQA_PACKET_HDR]);

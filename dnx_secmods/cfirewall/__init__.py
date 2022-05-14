@@ -134,7 +134,7 @@ def run():
     except Exception as E:
         hardout(f'DNXFIREWALL control run failure => {E}')
 
-    if (args.verbose_set):
+    if (args.verbose2_set):
         fw_rule_monitor.print_active_rules()
 
     # this is running in pure C. the GIL is released before running the low-level system operations and will never

@@ -60,7 +60,7 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
 
     nlhdr = (nl_pkt_hdr*) mnl_attr_get_payload(netlink_attrs[NFQA_PACKET_HDR]);
 
-    printf("< [++] NAT RECV - PARSING [++] >\n");
+    printf("< [++] NAT RECV QUEUE(%u) - PARSING [++] >\n", cfd->queue);
 
     switch(nlhdr->hook) {
         case NF_IP_POST_ROUTING:
@@ -230,7 +230,7 @@ nat_stage_count(uintf8_t table_idx, uintf16_t rule_count)
 {
     nat_tables[table_idx].len = rule_count;
 
-    printf("< [!] NAT TABLE (%u) COUNT UPDATED [!] >\n", table_idx);
+    printf("< [!] NAT TABLE (%u) COUNT STAGED [!] >\n", table_idx);
 
     return OK;
 }
