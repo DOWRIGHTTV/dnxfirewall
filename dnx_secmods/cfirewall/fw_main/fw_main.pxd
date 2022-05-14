@@ -182,6 +182,9 @@ cdef extern from "config.h" nogil:
     bool VERBOSE
     bool VERBOSE2
 
+    bool FW_V
+    bool NAT_V
+
 cdef extern from "rules.h" nogil:
     enum:
         FIELD_MAX_ZONES
