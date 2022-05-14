@@ -163,13 +163,13 @@ firewall_recv(const struct nlmsghdr *nlh, void *data)
     }
     dnx_send_verdict(cfd->queue, ntohl(nlhdr->packet_id), &pkt);
 
-    if (VERBOSE) {
+    if (FW_V && VERBOSE) {
         printf("< -- FIREWALL VERDICT -- >\n");
-        printf("packet_id->%u, hook->%u, mark->%u, action->%u, ", ntohl(nlhdr->packet_id), nlhdr->hook, _mark, pkt.action);
+        printf("packet_id->%u, hook->%u, mark->%u, action->%u", ntohl(nlhdr->packet_id), nlhdr->hook, _mark, pkt.action);
         if (!PROXY_BYPASS) {
-            printf("ipp->%u, dns->%u, ips->%u\n", pkt.mark >> 12 & 15, pkt.mark >> 16 & 15, pkt.mark >> 20 & 15);
+            printf(", ipp->%u, dns->%u, ips->%u", pkt.mark >> 12 & 15, pkt.mark >> 16 & 15, pkt.mark >> 20 & 15);
         }
-        printf("=====================================================================\n");
+        printf("\n=====================================================================\n");
     }
 
     // return heirarchy -> libnfnetlink.c >> libnetfiler_queue >> process_traffic.
@@ -202,7 +202,7 @@ firewall_inspect(struct table_range *fw_tables, struct dnx_pktb *pkt, struct cfd
     // loops
     uintf8_t    idx, table_idx, rule_idx;
 
-    if (VERBOSE) {
+    if (FW_V && VERBOSE) {
         printf("< ++ FIREWALL INSPECTION ++ >\n");
         printf("src->%u(%u):%u, dst->%u(%u):%u, direction->%u, tracked->%u\n",
             iph_src_ip, src_country, ntohs(pkt->protohdr->sport),
@@ -224,7 +224,7 @@ firewall_inspect(struct table_range *fw_tables, struct dnx_pktb *pkt, struct cfd
             // NOTE: inspection order: src > dst | zone, ip_addr, protocol, port
             if (!rule->enabled) { continue; }
 
-            if (VERBOSE2) {
+            if (FW_V && VERBOSE2) {
                 firewall_print_rule(table_idx, rule_idx);
             }
             // ------------------------------------------------------------------

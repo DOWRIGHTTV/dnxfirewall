@@ -168,12 +168,15 @@ cdef class CFirewall:
     # TODO: make this work on a per "module" basis. NAT vs FIREWALL.
     #   also provide a global argument option for these.
     #   FW instance will be responsible for settings these globally for the time being.
-    def set_options(s, int bypass, int verbose, int verbose2):
-        global PROXY_BYPASS, VERBOSE, VERBOSE2
+    def set_options(s, int bypass, int verbose, int verbose2, fw, nat):
+        global PROXY_BYPASS, VERBOSE, VERBOSE2, FW_V, NAT_V
 
         PROXY_BYPASS = <bool>bypass
         VERBOSE = <bool>verbose
         VERBOSE2 = <bool>verbose2
+
+        FW_V = <bool>fw
+        NAT_V = <bool>nat
 
         if (bypass):
             print('<proxy bypass enable>')
@@ -296,7 +299,8 @@ cdef class CFirewall:
         # this is important to establish iter bounds during inspection.
         firewall_stage_count(table_idx, rule_count)
 
-        firewall_push_rules(table_idx)
+        with nogil:
+            firewall_push_rules(table_idx)
 
         return Py_OK
 
@@ -319,7 +323,8 @@ cdef class CFirewall:
         # this is important to establish iter bounds during inspection.
         nat_stage_count(table_idx, rule_count)
 
-        nat_push_rules(table_idx)
+        with nogil:
+            nat_push_rules(table_idx)
 
         return Py_OK
 

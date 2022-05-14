@@ -19,6 +19,9 @@ bool PROXY_BYPASS;
 bool VERBOSE;
 bool VERBOSE2;
 
+bool FW_V;
+bool NAT_V;
+
 typedef uint_fast8_t    uintf8_t;
 typedef uint_fast16_t   uintf16_t;
 typedef uint_fast32_t   uintf32_t;

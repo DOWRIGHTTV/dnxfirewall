@@ -5,8 +5,6 @@
 
 #include "hash_trie.h"
 
-//#include "linux/netlink.h" //nlmsghdr
-
 #define NAT_PRE_MAX_RULE_COUNT  100
 #define NAT_POST_MAX_RULE_COUNT 100
 
@@ -123,7 +121,7 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
 
     dnx_send_verdict(cfd->queue, ntohl(nlhdr->packet_id), &pkt);
 
-    if (VERBOSE) {
+    if (NAT_V && VERBOSE) {
         printf("< [--] NAT VERDICT [--] >\n");
         printf("packet_id->%u, hook->%u, action->%u, ", ntohl(nlhdr->packet_id), nlhdr->hook, pkt.action);
         printf("=====================================================================\n");
@@ -151,7 +149,7 @@ nat_inspect(int table_idx, struct dnx_pktb *pkt, struct cfdata *cfd)
 
     uintf16_t   rule_idx;
 
-    if (VERBOSE) {
+    if (NAT_V && VERBOSE) {
         printf("< [**] NAT INSPECTION [**] >\n");
         printf("src->%u:%u, dst->%u:%u\n",
             iph_src_ip, ntohs(pkt->protohdr->sport),
@@ -165,7 +163,7 @@ nat_inspect(int table_idx, struct dnx_pktb *pkt, struct cfdata *cfd)
         // NOTE: inspection order: src > dst | zone, ip_addr, protocol, port
         if (!rule->enabled) { continue; }
 
-        if (VERBOSE2) {
+        if (NAT_V && VERBOSE2) {
             nat_print_rule(table_idx, rule_idx);
         }
 

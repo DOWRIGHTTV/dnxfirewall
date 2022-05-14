@@ -12,6 +12,8 @@ def print_help():
     print('b, bypass             apply firewall rule action without forwarding to any configured security modules')
     print('v, verbose            print operational messages to the terminal')
     print('vv, verbose2          print near excessive amounts of debug messages to the terminal')
+    print('fw                    enables fw module specific output to terminal (use with v or vv)')
+    print('nat                   enables nat module specific output to terminal (use with v or vv)')
 
 
 if INITIALIZE_MODULE(LOG_NAME):
@@ -42,6 +44,9 @@ if INITIALIZE_MODULE(LOG_NAME):
         verbose:  int = 0
         verbose2: int = 0
 
+        fw:  int = 0
+        nat: int = 0
+
         @property
         def help_set(self):
             return self.h or self.help
@@ -57,6 +62,14 @@ if INITIALIZE_MODULE(LOG_NAME):
         @property
         def verbose2_set(self):
             return self.vv or self.verbose2
+
+        @property
+        def fw_set(self):
+            return (self.v or self.vv) and self.fw
+
+        @property
+        def nat_set(self):
+            return (self.v or self.vv) and self.nat
 
     try:
         args = Args(**{a: 1 for a in os.environ['PASSTHROUGH_ARGS'].split(',') if a})
@@ -92,7 +105,7 @@ def run():
     dnxfirewall = CFirewall()
 
     # NOTE: bypass tells the process to invoke rule action (DROP or ACCEPT) without forwarding to security modules.
-    dnxfirewall.set_options(args.bypass_set, args.verbose_set, args.verbose2_set)
+    dnxfirewall.set_options(args.bypass_set, args.verbose_set, args.verbose2_set, args.fw_set, args.nat_set)
 
     error = dnxfirewall.nf_set(Queue.CFIREWALL, QueueType.FIREWALL)
     if (error):
