@@ -37,7 +37,7 @@ dnx_send_verdict_fast(struct cfdata *cfd, uint32_t pktid, int action)
 
     nlh = nfq_nlmsg_put(buf, NFQNL_MSG_VERDICT, cfd->queue);
     nfq_nlmsg_verdict_put(nlh, pktid, action);
-    mnl_socket_sendto(cfd->nl, nlh, nlh->nlmsg_len);
+    mnl_socket_sendto(nl[cfd->idx], nlh, nlh->nlmsg_len);
 }
 
 int
@@ -56,7 +56,7 @@ dnx_send_verdict(struct cfdata *cfd, uint32_t pktid, struct dnx_pktb *pkt)
         nfq_nlmsg_verdict_put_pkt(nlh, pkt->data, pkt->tlen);
     }
 
-    ret = mnl_socket_sendto(cfd->nl, nlh, nlh->nlmsg_len);
+    ret = mnl_socket_sendto(nl[cfd->idx], nlh, nlh->nlmsg_len);
 
     return ret < 0 ? ERR : OK;
 }

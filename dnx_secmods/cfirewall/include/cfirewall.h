@@ -82,11 +82,11 @@ typedef struct nfqnl_msg_packet_hw    nl_pkt_hw;
 //typedef uint8_t (*hash_trie_search_t)(uint32_t msb, uint32_t lsb);
 
 struct cfdata {
+    uintf8_t    idx;
     uint32_t    queue;
-    void       *geolocation;
 
-    struct mnl_socket  *nl;
-    mnl_cb_t            queue_cb;
+    void       *geolocation;
+    mnl_cb_t    queue_cb;
 };
 
 struct table_range {

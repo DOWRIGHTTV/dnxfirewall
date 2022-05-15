@@ -273,18 +273,18 @@ cdef extern from "cfirewall.h" nogil:
     uintf16_t zone_map_swap[FW_MAX_ZONES]
 
     struct cfdata:
+        uintf8_t    idx
         uint32_t    queue
-        void       *geolocation
 
-        mnl_socket *nl
+        void       *geolocation
         mnl_cb_t    queue_cb
 
 cdef extern from "firewall.h" nogil:
     void firewall_init()
     # void firewall_lock()
     # void firewall_unlock()
-    int  firewall_stage_count(uint8_t table, uint16_t rule_count)
-    int  firewall_stage_rule(uint8_t table, uint16_t idx, FWrule *rule)
+    int  firewall_stage_count(uintf8_t table, uintf16_t rule_count)
+    int  firewall_stage_rule(uintf8_t table, uintf16_t idx, FWrule *rule)
     int  firewall_push_rules(uintf8_t table_idx)
     int  firewall_recv(const nlmsghdr *nlh, void *data)
     int  firewall_push_zones(uintf8_t *zone_map)
@@ -293,8 +293,8 @@ cdef extern from "nat.h" nogil:
     void nat_init()
     # void nat_lock()
     # void nat_unlock()
-    int  nat_stage_count(uint8_t table, uint16_t rule_count)
-    int  nat_stage_rule(uint8_t table, uint16_t idx, NATrule *rule)
+    int  nat_stage_count(uintf8_t table, uintf16_t rule_count)
+    int  nat_stage_rule(uintf8_t table, uintf16_t idx, NATrule *rule)
     int  nat_push_rules(uintf8_t table_idx)
     int  nat_recv(const nlmsghdr *nlh, void *data)
 

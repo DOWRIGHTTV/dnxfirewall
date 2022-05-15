@@ -136,12 +136,12 @@ cdef int process_traffic(cfdata *cfd) nogil:
         char        packet_buf[MNL_BUF_SIZE]
         intf16_t    dlen, ret
 
-        uint32_t    portid = mnl_socket_get_portid(cfd.nl)
+        uint32_t    portid = mnl_socket_get_portid(nl[cfd.idx])
 
     printf("<ready to process traffic for Queue(%u)(%u)>\n", portid, cfd.queue)
 
     while True:
-        dlen = mnl_socket_recvfrom(cfd.nl, <void*>packet_buf, MNL_BUF_SIZE)
+        dlen = mnl_socket_recvfrom(nl[cfd.idx], <void*>packet_buf, MNL_BUF_SIZE)
         if (dlen == -1):
             return ERR
 
@@ -223,6 +223,7 @@ cdef class CFirewall:
     def nf_set(s, uint8_t queue_idx, uint16_t queue_num):
 
         s.queue_idx = queue_idx
+        cfds[queue_idx].idx = queue_idx
         cfds[queue_idx].queue = queue_num
 
         # initializing nl socket for communication
