@@ -256,7 +256,7 @@ cdef extern from "rules.h" nogil:
         uint16_t    dport
 
 cdef extern from "cfirewall.h" nogil:
-    mnl_socket     *nl
+    mnl_socket     *nl[2]
 
     uint32_t MSB, LSB
 
@@ -297,6 +297,9 @@ cdef extern from "nat.h" nogil:
     int  nat_stage_rule(uint8_t table, uint16_t idx, NATrule *rule)
     int  nat_push_rules(uintf8_t table_idx)
     int  nat_recv(const nlmsghdr *nlh, void *data)
+
+cdef int nl_open(int idx) nogil
+cdef int nl_bind(int idx) nogil
 
 
 cdef class CFirewall:

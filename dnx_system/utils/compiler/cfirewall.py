@@ -10,7 +10,7 @@ from Cython.Distutils import build_ext
 from Cython.Compiler import Options
 
 # COMPILER OPTIONS
-Options.annotate = False # FLIP TRUE FOR HTML VIEWABLE OUTPUT
+Options.annotate = True # FLIP TRUE FOR HTML VIEWABLE OUTPUT
 
 Options.docstrings = False
 Options.emit_code_comments = False

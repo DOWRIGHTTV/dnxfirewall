@@ -77,6 +77,31 @@ DEF MNL_BUF_SIZE = 6144  # DNX_BUF_SIZE + (8192 / 2)
 DEF QFIREWALL = 0
 DEF QNAT      = 1
 
+# ===================================
+# C EXTENSION - Python Comm Pipeline
+# ===================================
+# NETLINK SOCKET - cmod <> kernel
+cdef int nl_open(int idx) nogil:
+    nl[idx] = mnl_socket_open(NETLINK_NETFILTER)
+    if (nl[idx] == NULL):
+        return ERR
+
+    # defining ptr within callback struct so mods can use its designated socket
+    cfds[idx].nl = nl[idx]
+
+    return OK
+
+cdef int nl_bind(int idx) nogil:
+    if (mnl_socket_bind(nl[idx], 0, MNL_SOCKET_AUTOPID) < 0):
+        return ERR
+
+    return OK
+
+def nl_break(int idx):
+    mnl_socket_close(nl[idx])
+
+    return Py_OK
+
 # =====================================
 # GEOLOCATION INITIALIZATION
 # =====================================
@@ -184,14 +209,16 @@ cdef class CFirewall:
         this call will run forever, but will release the GIL prior to entering C and never try to reacquire it.
         '''
         cdef int ret = OK
+        cdef unicode msg
 
         print(f'<releasing GIL for Queue[{s.queue_idx}]({cfds[s.queue_idx].queue})>')
         # release gil and never look back.
         with nogil:
             ret = process_traffic(&cfds[s.queue_idx])
 
+        msg = f'<! processing error on Queue[{s.queue_idx}]({cfds[s.queue_idx].queue}) !>'
         if (ret == ERR):
-            perror(<char*>f'<! processing error on Queue[{s.queue_idx}]({cfds[s.queue_idx].queue}) !>')
+            perror(msg.encode('utf-8'))
 
     def nf_set(s, uint8_t queue_idx, uint16_t queue_num):
 
@@ -199,8 +226,8 @@ cdef class CFirewall:
         cfds[queue_idx].queue = queue_num
 
         # initializing nl socket for communication
-        s.nl_open()
-        s.nl_bind()
+        nl_open(queue_idx)
+        nl_bind(queue_idx)
 
         cdef:
             char        mnl_buf[MNL_BUF_SIZE]
@@ -213,7 +240,7 @@ cdef class CFirewall:
         nlh = nfq_nlmsg_put(mnl_buf, NFQNL_MSG_CONFIG, queue_num)
         nfq_nlmsg_cfg_put_cmd(nlh, AF_INET, NFQNL_CFG_CMD_BIND)
 
-        if (mnl_socket_sendto(cfds[queue_idx].nl, nlh, nlh.nlmsg_len) < 0):
+        if (mnl_socket_sendto(nl[queue_idx], nlh, nlh.nlmsg_len) < 0):
             return Py_ERR
 
         # ---------------
@@ -229,35 +256,12 @@ cdef class CFirewall:
         mnl_attr_put_u32(nlh, NFQA_CFG_FLAGS, htonl(NFQA_CFG_F_CONNTRACK))
         mnl_attr_put_u32(nlh, NFQA_CFG_MASK, htonl(NFQA_CFG_F_CONNTRACK))
 
-        if (mnl_socket_sendto(cfds[queue_idx].nl, nlh, nlh.nlmsg_len) < 0):
+        if (mnl_socket_sendto(nl[queue_idx], nlh, nlh.nlmsg_len) < 0):
             return Py_ERR
 
         # ENOBUFS is signalled to userspace when packets were lost on the kernel side.
         # We don't care, so we can turn it off.
-        mnl_socket_setsockopt(cfds[queue_idx].nl, NETLINK_NO_ENOBUFS, <void*>&ret, sizeof(int))
-
-        return Py_OK
-
-    # ===================================
-    # C EXTENSION - Python Comm Pipeline
-    # ===================================
-    # NETLINK SOCKET - cmod <> kernel
-    def nl_open(s):
-
-        cfds[s.queue_idx].nl = mnl_socket_open(NETLINK_NETFILTER)
-        if (cfds[s.queue_idx].nl == NULL):
-            return Py_ERR
-
-        return Py_OK
-
-    def nl_bind(s):
-        if (mnl_socket_bind(cfds[s.queue_idx].nl, 0, MNL_SOCKET_AUTOPID) < 0):
-            return Py_ERR
-
-        return Py_OK
-
-    def nl_break(s):
-        mnl_socket_close(cfds[s.queue_idx].nl)
+        mnl_socket_setsockopt(nl[queue_idx], NETLINK_NO_ENOBUFS, <void*>&ret, sizeof(int))
 
         return Py_OK
 

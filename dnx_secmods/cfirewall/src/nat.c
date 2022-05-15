@@ -56,11 +56,11 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
 
     struct dnx_pktb    pkt;
 
+    printf("< [++] NAT RECV QUEUE(%u) - PARSING [++] >\n", cfd->queue);
+
     nfq_nlmsg_parse(nlh, netlink_attrs);
 
     nlhdr = (nl_pkt_hdr*) mnl_attr_get_payload(netlink_attrs[NFQA_PACKET_HDR]);
-
-    printf("< [++] NAT RECV QUEUE(%u) - PARSING [++] >\n", cfd->queue);
 
     switch(nlhdr->hook) {
         case NF_IP_POST_ROUTING:

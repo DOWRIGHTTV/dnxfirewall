@@ -63,11 +63,11 @@ extern bool VERBOSE2;
 extern bool FW_V;
 extern bool NAT_V;
 
-// stores zone(integer value) at index, which is mapped Fto if_nametoindex() (value returned from get_in/outdev)
+extern struct mnl_socket *nl[2];
+
+// stores zone(integer value) at index, which is mapped to if_nametoindex() (value returned from get_in/outdev)
 // memset will be performed in Cython prior to changing the values.
 extern uintf16_t INTF_ZONE_MAP[FW_MAX_ZONES];
-
-extern uintf16_t zone_map_swap[FW_MAX_ZONES];
 
 //cdef extern from "inet_tools.h" nogil:
 //    uint32_t intf_masquerade(uint32_t idx)
