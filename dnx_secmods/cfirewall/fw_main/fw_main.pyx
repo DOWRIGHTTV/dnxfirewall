@@ -86,9 +86,6 @@ cdef int nl_open(int idx) nogil:
     if (nl[idx] == NULL):
         return ERR
 
-    # defining ptr within callback struct so mods can use its designated socket
-    cfds[idx].nl = nl[idx]
-
     return OK
 
 cdef int nl_bind(int idx) nogil:
