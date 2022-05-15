@@ -113,7 +113,7 @@ cdef int process_traffic(cfdata *cfd) nogil:
 
         uint32_t    portid = mnl_socket_get_portid(cfd.nl)
 
-    printf("<ready to process traffic for Queue(%u)(%u)>\n", cfd.queue)
+    printf("<ready to process traffic for Queue(%u)(%u)>\n", portid, cfd.queue)
 
     while True:
         dlen = mnl_socket_recvfrom(cfd.nl, <void*>packet_buf, MNL_BUF_SIZE)
