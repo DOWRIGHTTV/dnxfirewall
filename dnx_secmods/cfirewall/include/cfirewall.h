@@ -55,6 +55,14 @@
 
 extern uint32_t MSB, LSB;
 
+// cli args
+extern bool PROXY_BYPASS;
+extern bool VERBOSE;
+extern bool VERBOSE2;
+
+extern bool FW_V;
+extern bool NAT_V;
+
 // stores zone(integer value) at index, which is mapped Fto if_nametoindex() (value returned from get_in/outdev)
 // memset will be performed in Cython prior to changing the values.
 extern uintf16_t INTF_ZONE_MAP[FW_MAX_ZONES];
