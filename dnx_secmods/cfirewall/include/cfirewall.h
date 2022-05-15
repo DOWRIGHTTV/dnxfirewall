@@ -63,7 +63,6 @@ extern bool VERBOSE2;
 extern bool FW_V;
 extern bool NAT_V;
 
-extern struct mnl_socket *wtf_nl;
 extern struct mnl_socket *nl[2];
 
 // stores zone(integer value) at index, which is mapped to if_nametoindex() (value returned from get_in/outdev)

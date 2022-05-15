@@ -81,9 +81,9 @@ DEF QNAT      = 1
 # C EXTENSION - Python Comm Pipeline
 # ===================================
 # NETLINK SOCKET - cmod <> kernel
-cdef int nl_open(mnl_socket *nl_ptr) nogil:
+cdef int nl_open(mnl_socket **nl_ptr) nogil:
 
-    nl_ptr = mnl_socket_open(NETLINK_NETFILTER)
+    nl_ptr[0] = mnl_socket_open(NETLINK_NETFILTER)
     if (nl_ptr == NULL):
         return ERR
 
@@ -95,8 +95,8 @@ cdef int nl_bind(mnl_socket *nl_ptr) nogil:
 
     return OK
 
-def nl_break(mnl_socket *nl_ptr):
-    mnl_socket_close(nl_ptr)
+def nl_break(int idx):
+    mnl_socket_close(nl[idx])
 
     return Py_OK
 
@@ -139,17 +139,13 @@ cdef int process_traffic(cfdata *cfd) nogil:
     printf("<ready to process traffic for Queue(%u)(%u)>\n", portid, cfd.queue)
 
     while True:
-        dlen = mnl_socket_recvfrom(wtf_nl, <void*>packet_buf, MNL_BUF_SIZE)
+        dlen = mnl_socket_recvfrom(nl[cfd.idx], <void*>packet_buf, MNL_BUF_SIZE)
         if (dlen == -1):
             return ERR
 
         ret = mnl_cb_run(<void*>packet_buf, dlen, 0, portid, cfd.queue_cb, <void*>cfd)
         if (ret < 0):
             return ERR
-
-
-nl_open(wtf_nl)
-nl_bind(wtf_nl)
 
 # =====================================
 # CALLBACK STRUCTURES + TABLE INIT
@@ -228,7 +224,7 @@ cdef class CFirewall:
         cfds[queue_idx].queue = queue_num
 
         # initializing nl socket for communication
-        nl_open(nl[queue_idx])
+        nl_open(&nl[queue_idx])
         nl_bind(nl[queue_idx])
 
         cdef:
