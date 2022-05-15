@@ -1,8 +1,8 @@
 #!/usr/bin/env Cython
 
 #from libc.stdlib cimport calloc, malloc, free
-from libc.string cimport memset
-from libc.stdio cimport printf
+# from libc.string cimport memset
+from libc.stdio cimport printf, perror
 
 from libc.stdint cimport uint8_t, uint16_t, uint32_t
 
@@ -191,7 +191,7 @@ cdef class CFirewall:
             ret = process_traffic(&cfds[s.queue_idx])
 
         if (ret == ERR):
-            print(f'<! processing error on Queue[{s.queue_idx}]({cfds[s.queue_idx].queue}) !>')
+            perror(<char*>f'<! processing error on Queue[{s.queue_idx}]({cfds[s.queue_idx].queue}) !>')
 
     def nf_set(s, uint8_t queue_idx, uint16_t queue_num):
 

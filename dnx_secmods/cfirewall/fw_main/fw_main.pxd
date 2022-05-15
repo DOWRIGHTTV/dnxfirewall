@@ -12,6 +12,9 @@ from posix.types cimport pid_t
 # DNXFIREWALL TYPEDEFS
 ctypedef array.array    PyArray
 
+cdef extern from "<errno.h>" nogil:
+    int         errno
+
 cdef extern from "<stdbool.h>" nogil:
     ctypedef int    bool
     ctypedef int    true
