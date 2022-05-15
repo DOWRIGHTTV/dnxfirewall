@@ -81,21 +81,22 @@ DEF QNAT      = 1
 # C EXTENSION - Python Comm Pipeline
 # ===================================
 # NETLINK SOCKET - cmod <> kernel
-cdef int nl_open(int idx) nogil:
-    nl[idx] = mnl_socket_open(NETLINK_NETFILTER)
-    if (nl[idx] == NULL):
+cdef int nl_open(mnl_socket *nl_ptr) nogil:
+
+    nl_ptr = mnl_socket_open(NETLINK_NETFILTER)
+    if (nl_ptr == NULL):
         return ERR
 
     return OK
 
-cdef int nl_bind(int idx) nogil:
-    if (mnl_socket_bind(nl[idx], 0, MNL_SOCKET_AUTOPID) < 0):
+cdef int nl_bind(mnl_socket *nl_ptr) nogil:
+    if (mnl_socket_bind(nl_ptr, 0, MNL_SOCKET_AUTOPID) < 0):
         return ERR
 
     return OK
 
-def nl_break(int idx):
-    mnl_socket_close(nl[idx])
+def nl_break(mnl_socket *nl_ptr):
+    mnl_socket_close(nl_ptr)
 
     return Py_OK
 
@@ -138,7 +139,7 @@ cdef int process_traffic(cfdata *cfd) nogil:
     printf("<ready to process traffic for Queue(%u)(%u)>\n", portid, cfd.queue)
 
     while True:
-        dlen = mnl_socket_recvfrom(nl[cfd.idx], <void*>packet_buf, MNL_BUF_SIZE)
+        dlen = mnl_socket_recvfrom(wtf_nl, <void*>packet_buf, MNL_BUF_SIZE)
         if (dlen == -1):
             return ERR
 
@@ -146,6 +147,9 @@ cdef int process_traffic(cfdata *cfd) nogil:
         if (ret < 0):
             return ERR
 
+
+nl_open(wtf_nl)
+nl_bind(wtf_nl)
 
 # =====================================
 # CALLBACK STRUCTURES + TABLE INIT
@@ -224,8 +228,8 @@ cdef class CFirewall:
         cfds[queue_idx].queue = queue_num
 
         # initializing nl socket for communication
-        nl_open(queue_idx)
-        nl_bind(queue_idx)
+        nl_open(nl[queue_idx])
+        nl_bind(nl[queue_idx])
 
         cdef:
             char        mnl_buf[MNL_BUF_SIZE]

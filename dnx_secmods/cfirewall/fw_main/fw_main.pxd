@@ -256,6 +256,7 @@ cdef extern from "rules.h" nogil:
         uint16_t    dport
 
 cdef extern from "cfirewall.h" nogil:
+    mnl_socket     *wtf_nl
     mnl_socket     *nl[2]
 
     uint32_t MSB, LSB
