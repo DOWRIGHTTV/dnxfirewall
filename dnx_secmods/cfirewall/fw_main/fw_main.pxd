@@ -299,8 +299,8 @@ cdef extern from "nat.h" nogil:
     int  nat_push_rules(uintf8_t table_idx)
     int  nat_recv(const nlmsghdr *nlh, void *data)
 
-cdef int nl_open(int idx) nogil
-cdef int nl_bind(int idx) nogil
+cdef int nl_open(mnl_socket *nl_ptr) nogil
+cdef int nl_bind(mnl_socket *nl_ptr) nogil
 
 
 cdef class CFirewall:
