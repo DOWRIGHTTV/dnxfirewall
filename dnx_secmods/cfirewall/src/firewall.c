@@ -207,9 +207,9 @@ firewall_inspect(struct table_range *fw_tables, struct dnx_pktb *pkt, struct cfd
 
     if (FW_V && VERBOSE) {
         printf("< ++ FIREWALL INSPECTION ++ >\n");
-        printf("src->%u(%u):%u, dst->%u(%u):%u, direction->%u, tracked->%u\n",
-            iph_src_ip, src_country, ntohs(pkt->protohdr->sport),
-            iph_dst_ip, dst_country, ntohs(pkt->protohdr->dport),
+        printf("src->[%u]%u(%u):%u, dst->[%u]%u(%u):%u, direction->%u, tracked->%u\n",
+            pkt->hw.in_zone, iph_src_ip, src_country, ntohs(pkt->protohdr->sport),
+            pkt->hw.out_zone, iph_dst_ip, dst_country, ntohs(pkt->protohdr->dport),
             direction, tracked_geo
             );
     }
@@ -281,7 +281,9 @@ firewall_lock(void)
 {
     pthread_mutex_lock(FWlock_ptr);
 
-    printf("< [!] FW LOCK ACQUIRED [!] >\n");
+    if (FW_V && VERBOSE) {
+        printf("< [!] FW LOCK ACQUIRED [!] >\n");
+    }
 }
 
 void
@@ -289,7 +291,9 @@ firewall_unlock(void)
 {
     pthread_mutex_unlock(FWlock_ptr);
 
-    printf("< [!] FW LOCK RELEASED [!] >\n");
+    if (FW_V && VERBOSE) {
+        printf("< [!] FW LOCK RELEASED [!] >\n");
+    }
 }
 
 int
@@ -297,8 +301,9 @@ firewall_stage_count(uintf8_t table_idx, uintf16_t rule_count)
 {
     firewall_tables[table_idx].len = rule_count;
 
-    printf("< [!] FW TABLE (%u) COUNT STAGED [!] >\n", table_idx);
-
+    if (FW_V && VERBOSE) {
+        printf("< [!] FW TABLE (%u) COUNT STAGED [!] >\n", table_idx);
+    }
     return OK;
 }
 
@@ -322,8 +327,9 @@ firewall_push_rules(uintf8_t table_idx)
     }
     firewall_unlock();
 
-    printf("< [!] FW TABLE (%u) RULES UPDATED [!] >\n", table_idx);
-
+    if (FW_V && VERBOSE) {
+        printf("< [!] FW TABLE (%u) RULES UPDATED [!] >\n", table_idx);
+    }
     return OK;
 }
 

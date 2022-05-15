@@ -127,7 +127,7 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
 
     if (NAT_V && VERBOSE) {
         printf("< [--] NAT VERDICT [--] >\n");
-        printf("packet_id->%u, hook->%u, action->%u, ", ntohl(nlhdr->packet_id), nlhdr->hook, pkt.action);
+        printf("packet_id->%u, hook->%u, action->%u\n", ntohl(nlhdr->packet_id), nlhdr->hook, pkt.action);
         printf("=====================================================================\n");
     }
 
@@ -155,9 +155,9 @@ nat_inspect(int table_idx, struct dnx_pktb *pkt, struct cfdata *cfd)
 
     if (NAT_V && VERBOSE) {
         printf("< [**] NAT INSPECTION [**] >\n");
-        printf("src->%u:%u, dst->%u:%u\n",
-            iph_src_ip, ntohs(pkt->protohdr->sport),
-            iph_dst_ip, ntohs(pkt->protohdr->dport)
+        printf("src->[%u]%u:%u, dst->[%u]%u:%u\n",
+            pkt->hw.in_zone, iph_src_ip, ntohs(pkt->protohdr->sport),
+            pkt->hw.out_zone, iph_dst_ip, ntohs(pkt->protohdr->dport)
             );
     }
 
@@ -222,7 +222,9 @@ nat_unlock(void)
 {
     pthread_mutex_unlock(NATlock_ptr);
 
-    printf("< [!] NAT LOCK RELEASED [!] >\n");
+    if (NAT_V && VERBOSE) {
+        printf("< [!] NAT LOCK RELEASED [!] >\n");
+    }
 }
 
 int
@@ -230,8 +232,9 @@ nat_stage_count(uintf8_t table_idx, uintf16_t rule_count)
 {
     nat_tables[table_idx].len = rule_count;
 
-    printf("< [!] NAT TABLE (%u) COUNT STAGED [!] >\n", table_idx);
-
+    if (NAT_V && VERBOSE) {
+        printf("< [!] NAT TABLE (%u) COUNT STAGED [!] >\n", table_idx);
+    }
     return OK;
 }
 
@@ -255,8 +258,9 @@ nat_push_rules(uintf8_t table_idx)
     }
     nat_unlock();
 
-    printf("< [!] NAT TABLE (%u) RULES UPDATED [!] >\n", table_idx);
-
+    if (NAT_V && VERBOSE) {
+        printf("< [!] NAT TABLE (%u) RULES UPDATED [!] >\n", table_idx);
+    }
     return OK;
 }
 
