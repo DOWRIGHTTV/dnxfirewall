@@ -8,23 +8,29 @@
 
 #include "include/inet_tools.h"
 
+//reference data - csum->b'x81\x02' | 33026
+// b'E\x00\x00(\xd9\x04@\x00@\x06\x83\x08\x97e\x00\x00\xc0\xa8\x05\xb3\x01\xbb\x9fv\x0fvl\xfa\x03e\x86\xcbP\x10\x05\xc0#\x7f\x00\x00'
+// '0x45 0x0 0x0 0x28 0xd9 0x4 0x40 0x0 0x40 0x6 0x83 0x8 0x97 0x65 0x0 0x0 0xc0 0xa8 0x5 0xb3'
+
 uint16_t calc_checksum (const uint8_t *data, uint16_t dlen)
 {
-    uint32_t    i, csum = 0;
+    uint32_t    csum = 0;
 
-    for (i = 0; i < dlen; i+=2) {
+    for (uint16_t i = 0; i < dlen; i+=2) {
         csum += (data[i] << 8 | data[i+1]);
     }
 
+    // handle odd byte out if needed
     if (dlen & 1) {
-        csum += data[dlen];
+        csum += (data[dlen] << 8);
     }
 
-    csum = (csum >> 16) + (csum & UINT16_MAX);
-    csum = ~(csum + (csum >> 16)) & UINT16_MAX;
+    while (csum >> 16) {
+        csum = (csum >> 16) + (csum & UINT16_MAX);
+    }
+    csum ^= UINT16_MAX;
 
-    // do we need to cast this or is it like cython and will implicitly cast?
-    return csum;
+    return htons(csum);
 }
 
 uint32_t intf_masquerade (uint32_t idx)

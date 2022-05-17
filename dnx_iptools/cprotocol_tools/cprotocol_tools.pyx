@@ -1,8 +1,8 @@
 from libc.stdio cimport snprintf
 from libc.stdint cimport uint8_t, uint32_t, uint_fast16_t
 
-DEF UINT8_MAX  = 255
-DEF UINT16_MAX = 65535
+cdef uint8_t  UINT8_MAX  = 0b11111111
+cdef uint16_t UINT16_MAX = 0b1111111111111111
 
 # TODO: make a biptoi for bytestring to integer conversion
 
@@ -73,15 +73,19 @@ cpdef bytes calc_checksum(const uint8_t[:] data):
 
     for i in range(0, dlen, 2):
         csum += (data[i] << 8 | data[i + 1])
+        print(csum)
 
     # adding trailing byte for odd byte strings
     if (dlen & 1):
-        csum += <uint8_t>data[dlen]
+        csum += <uint8_t>(data[dlen] << 8)
 
-    csum = (csum >> 16) + (csum & UINT16_MAX)
-    csum = ~(csum + (csum >> 16)) & UINT16_MAX
+    while csum >> 16:
+        csum = (csum & UINT16_MAX) + (csum >> 16)
 
-    ubytes[0] = <uint8_t>(csum >> 8)
+    csum ^= UINT16_MAX
+
+    #flipping bytes to network order
+    ubytes[0] = (csum >> 8)
     ubytes[1] = csum & UINT8_MAX
 
     return ubytes

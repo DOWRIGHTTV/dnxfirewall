@@ -119,8 +119,14 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
     // i have alot of experience with nat and checksum calculations so its probably easier and more efficient to use
     // the on stack buffer to mangle. (this is unless we need to retain a copy of the original packet -> but then again
     // we could just memcpy the original and still not use pktb)
+
+    // providing out-interface for masquerade. other nat types can ignore it.
     if (pkt.action > DNX_NO_NAT) {
-        pkt.mangled = dnx_mangle_pkt(&pkt);
+        pkt.mangled = dnx_mangle_pkt(&pkt, _oif);
+    }
+    // need to reduce DNX_* to NF_ACCEPT when mangling has been done.
+    if (pkt.action >= DNX_NO_NAT) {
+        pkt.action = DNX_ACCEPT;
     }
 
     dnx_send_verdict(cfd, ntohl(nlhdr->packet_id), &pkt);

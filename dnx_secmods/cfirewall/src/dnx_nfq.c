@@ -62,7 +62,7 @@ dnx_send_verdict(struct cfdata *cfd, uint32_t pktid, struct dnx_pktb *pkt)
 }
 
 bool
-dnx_mangle_pkt(struct dnx_pktb *pkt)
+dnx_mangle_pkt(struct dnx_pktb *pkt, uint32_t oif)
 {
     // MAKE SURE WE RECALCULATE THE PROPER CHECKSUMS.
     // we can probably use the nfq checksum functions if they are publicly available, otherwise use cprotocol_tools.
@@ -70,7 +70,7 @@ dnx_mangle_pkt(struct dnx_pktb *pkt)
     // NOTE: ip manip only. we will deal with the port issue later.
     switch (pkt->action) {
         case DNX_MASQ:
-            pkt->iphdr->saddr = intf_masquerade(pkt->hw.out_zone);
+            pkt->iphdr->saddr = intf_masquerade(oif);
             pkt->iphdr->check = 0;
             pkt->iphdr->check = calc_checksum((const uint8_t*) pkt->iphdr, pkt->iphdr_len);
 
