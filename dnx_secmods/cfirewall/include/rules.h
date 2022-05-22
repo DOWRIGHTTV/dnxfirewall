@@ -112,6 +112,13 @@ struct FWrule {
     uintf8_t    sec_profiles[SECURITY_PROFILE_COUNT];
 };
 
+struct Nat {
+    uint32_t    saddr;
+    uint16_t    sport;
+    uint32_t    daddr;
+    uint16_t    dport;
+};
+
 struct NATrule {
     bool        enabled;
 
@@ -130,10 +137,7 @@ struct NATrule {
     uintf8_t    log;
 
     // TRANSLATION
-    uint32_t    saddr;
-    uint16_t    sport;
-    uint32_t    daddr;
-    uint16_t    dport;
+    struct Nat  nat;
 };
 
 #endif

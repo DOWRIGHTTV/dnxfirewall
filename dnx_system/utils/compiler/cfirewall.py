@@ -10,10 +10,10 @@ from Cython.Distutils import build_ext
 from Cython.Compiler import Options
 
 # COMPILER OPTIONS
-Options.annotate = True # FLIP TRUE FOR HTML VIEWABLE OUTPUT
+Options.annotate = False # FLIP TRUE FOR HTML VIEWABLE OUTPUT
 
 Options.docstrings = False
-Options.emit_code_comments = False
+Options.emit_code_comments = True
 
 # COMPILER DIRECTIVES
 DIRECTIVES = {
@@ -25,8 +25,9 @@ HOME_DIR = os.environ.get('HOME_DIR')
 os.chdir(f'{HOME_DIR}/dnx_secmods/cfirewall')
 
 SOURCES = [
-    f'{HOME_DIR}/dnx_ctools/inet_tools.c', 'src/cfirewall.c',
-    'src/dnx_nfq.c', 'src/firewall.c', 'src/nat.c', 'src/match.c', 'fw_main/fw_main.pyx'
+    f'{HOME_DIR}/dnx_ctools/inet_tools.c', f'{HOME_DIR}/dnx_ctools/std_tools.c',
+    'src/cfirewall.c', 'src/dnx_nfq.c', 'src/conntrack.c', 'src/firewall.c', 'src/nat.c', 'src/match.c',
+    'fw_main/fw_main.pyx'
 ]
 
 cmd = {'build_ext': build_ext}
@@ -37,7 +38,7 @@ ext = Extension(
         f'{HOME_DIR}/dnx_iptools/hash_trie', 'include'
     ],
     library_dirs=['usr/local/lib'],
-    libraries=['netfilter_queue']
+    libraries=['netfilter_queue', 'netfilter_conntrack']
 )
 
 INCLUDE_PATHS = [f'{os.getcwd()}/fw_main']

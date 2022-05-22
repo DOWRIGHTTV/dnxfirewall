@@ -2,6 +2,7 @@
 #include "nat.h"
 #include "cfirewall.h"
 #include "rules.h"
+#include "conntrack.h"
 
 #include "hash_trie.h"
 
@@ -37,11 +38,31 @@ nat_init(void) {
 
     nat_tables_swap[NAT_POST_RULES].len = 0;
     nat_tables_swap[NAT_POST_RULES].rules = calloc(NAT_POST_MAX_RULE_COUNT, sizeof(struct NATrule));
+
+    // conntrack socket
+    ct_nat_init();
+
 }
 
-// ==================================
-// PRIMARY NAT LOGIC
-// ==================================
+/*================================
+  PRIMARY NAT LOGIC
+==================================
+SRC_NAT - this will be done in the post_route hook, but pass through the pre_route hook first.
+because of this we can pass up the in-interface to pull the source zone for nat rule matching logic.
+the interface index will be passed up through the packet mark.
+
+MASQUERADE - follows all SRC_NAT logic, but it will use the ip of the outbound interface as the nat source.
+
+DST_NAT - this will be done in the pre_route hook. since we cannot determine the outbound interface until the
+destination has been changed, we cannot use the zone as for destination matching criteria.
+the corresponding firewall rule needs to use the destination zone for matching criteria since it is post_route.
+
+NOTES: we should try moving the nat logic to mangle/ forward hook. this would give us access to in/out inteface
+for src/dst nat rules, but at the cost of having to manually check state of each packet and accept. the performance
+hit might not be worth it for what our current goals are. also, though we would be able to have an dst zone on src nat,
+the dst zone would need to be set to the zone for the dst pre nat, which would be equally wonky to no zone at all.
+*/
+
 int
 nat_recv(const struct nlmsghdr *nlh, void *data)
 {
@@ -50,9 +71,9 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
 
     nl_pkt_hdr *nlhdr;
 
-    uint32_t    _iif, _oif; // , _mark; (not needed at this time)
+    uint32_t    _iif, _oif;
 
-    int         table_idx;
+    int         cntrl_list;
 
     struct dnx_pktb    pkt;
 
@@ -62,36 +83,33 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
 
     nlhdr = (nl_pkt_hdr*) mnl_attr_get_payload(netlink_attrs[NFQA_PACKET_HDR]);
 
+    // mark used to pass iif from pre_route to post_route.
+    // PRE_ROUTE WILL BE 0, POST_ROUTE WILL BE SET TO INTF INDEX
+    pkt.mark = netlink_attrs[NFQA_MARK] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_MARK])) : 0;
+
+    // iif will be set to packet mark if not available (used in post_route)
+    _iif = netlink_attrs[NFQA_IFINDEX_INDEV] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_INDEV])) : pkt.mark;
+    _oif = netlink_attrs[NFQA_IFINDEX_OUTDEV] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_OUTDEV])) : 0;
+
     switch(nlhdr->hook) {
         case NF_IP_POST_ROUTING:
-            table_idx = NAT_POST_TABLE;
+            cntrl_list = NAT_POST_TABLE;
             break;
         case NF_IP_PRE_ROUTING:
-            table_idx = NAT_PRE_TABLE;
+            cntrl_list = NAT_PRE_TABLE;
             break;
-        case NF_IP_LOCAL_IN:
-        case NF_IP_LOCAL_OUT:
-            dnx_send_verdict_fast(cfd, ntohl(nlhdr->packet_id), NF_ACCEPT);
-
-            printf("< [--] NAT HOOK FILTERED (%u) - FAST VERDICT [--] >\n", nlhdr->hook);
-            return OK;
         default:
-            printf("< [--!] NAT HOOK MISMATCH (%u) [!--] >\n", nlhdr->hook);
             return ERR;
     }
 
     // ======================
-    // NO NAT QUICK PATH
-    if (nat_tables[table_idx].len == 0) {
-        dnx_send_verdict_fast(cfd, ntohl(nlhdr->packet_id), NF_ACCEPT);
-
-        printf("< [--] NO NAT - FAST VERDICT [--] >\n");
+    // NO RULES CONFIGURED QUICK PATH
+    if (nat_tables[cntrl_list].len == 0) {
+        dnx_send_verdict_fast(cfd, ntohl(nlhdr->packet_id), _iif, NF_ACCEPT);
 
         return OK;
     }
     // ======================
-    _iif = netlink_attrs[NFQA_IFINDEX_INDEV] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_INDEV])) : 0;
-    _oif = netlink_attrs[NFQA_IFINDEX_OUTDEV] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_OUTDEV])) : 0;
 
     pkt.hw.in_zone  = INTF_ZONE_MAP[_iif];
     pkt.hw.out_zone = INTF_ZONE_MAP[_oif];
@@ -104,7 +122,7 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
     // prevents the manager thread from updating nat rules during packet inspection
     nat_lock();
     // --------------------
-    nat_inspect(table_idx, &pkt, cfd);
+    nat_inspect(cntrl_list, &pkt, cfd);
     // --------------------
     nat_unlock();
     // UNLOCKING ACCESS TO NAT RULES
@@ -113,18 +131,11 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
     // --------------------
     // NAT / MANGLE
     // --------------------
-    // NOTE: it looks like it will be better if we manually NAT the packet contents.
-    // the alternative is to allocate a pktb and use the netfilter provided mangler.
-    // this would auto manage the header checksums, but we would need alloc/free every time we mangle.
-    // i have alot of experience with nat and checksum calculations so its probably easier and more efficient to use
-    // the on stack buffer to mangle. (this is unless we need to retain a copy of the original packet -> but then again
-    // we could just memcpy the original and still not use pktb)
-
     // providing out-interface for masquerade. other nat types can ignore it.
     if (pkt.action > DNX_NO_NAT) {
         pkt.mangled = dnx_mangle_pkt(&pkt, _oif);
     }
-    // need to reduce DNX_* to NF_ACCEPT when mangling has been done.
+    // need to reduce DNX_* to DNX_ACCEPT on nat rule matches.
     if (pkt.action >= DNX_NO_NAT) {
         pkt.action = DNX_ACCEPT;
     }
@@ -141,13 +152,13 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
 }
 
 inline void
-nat_inspect(int table_idx, struct dnx_pktb *pkt, struct cfdata *cfd)
+nat_inspect(int cntrl_list, struct dnx_pktb *pkt, struct cfdata *cfd)
 {
     dnx_parse_pkt_headers(pkt);
 
-    struct HashTrie_Range *geolocation = cfd->geolocation;
+    struct NATrule  *rule;
 
-    struct NATrule    *rule;
+    struct HashTrie_Range *geolocation = cfd->geolocation;
 
     // normalizing src/dst ip in header to host order
     uint32_t    iph_src_ip = ntohl(pkt->iphdr->saddr);
@@ -167,16 +178,16 @@ nat_inspect(int table_idx, struct dnx_pktb *pkt, struct cfdata *cfd)
             );
     }
 
-    for (rule_idx = 0; rule_idx < nat_tables[table_idx].len; rule_idx++) {
+    for (rule_idx = 0; rule_idx < nat_tables[cntrl_list].len; rule_idx++) {
 
-        rule = &nat_tables[table_idx].rules[rule_idx];
-        // NOTE: inspection order: src > dst | zone, ip_addr, protocol, port
+        rule = &nat_tables[cntrl_list].rules[rule_idx];
         if (!rule->enabled) { continue; }
 
         if (NAT_V && VERBOSE2) {
-            nat_print_rule(table_idx, rule_idx);
+            nat_print_rule(cntrl_list, rule_idx);
         }
 
+        // inspection order: src > dst | zone, ip_addr, protocol, port
         // ------------------------------------------------------------------
         // ZONE MATCHING
         // ------------------------------------------------------------------
@@ -202,17 +213,19 @@ nat_inspect(int table_idx, struct dnx_pktb *pkt, struct cfdata *cfd)
         // ------------------------------------------------------------------
         // MATCH ACTION | rule details
         // ------------------------------------------------------------------
-        pkt->fw_table = table_idx;
-        pkt->rule_num = rule_idx; // if logging, this needs to be +1
-        pkt->action   = rule->action;
+        pkt->rule_clist = cntrl_list;
+        pkt->rule_num   = rule_idx; // if logging, this needs to be +1 to reflect true rule number
+        pkt->action     = rule->action;
+
+        pkt->nat = rule->nat;
 
         return;
     }
     // ------------------------------------------------------------------
     // DEFAULT ACTION
     // ------------------------------------------------------------------
-    pkt->fw_table = NO_SECTION;
-    pkt->action   = DNX_ACCEPT;
+    pkt->rule_clist = NO_SECTION;
+    pkt->action     = DNX_ACCEPT;
 }
 
 void
@@ -234,55 +247,56 @@ nat_unlock(void)
 }
 
 int
-nat_stage_count(uintf8_t table_idx, uintf16_t rule_count)
+nat_stage_count(uintf8_t cntrl_list, uintf16_t rule_count)
 {
-    nat_tables[table_idx].len = rule_count;
+    nat_tables[cntrl_list].len = rule_count;
 
     if (NAT_V && VERBOSE) {
-        printf("< [!] NAT TABLE (%u) COUNT STAGED [!] >\n", table_idx);
+        printf("< [!] NAT TABLE (%u) COUNT STAGED [!] >\n", cntrl_list);
     }
     return OK;
 }
 
 int
-nat_stage_rule(uintf8_t table_idx, uintf16_t rule_idx, struct NATrule *rule)
+nat_stage_rule(uintf8_t cntrl_list, uintf16_t rule_idx, struct NATrule *rule)
 {
-    nat_tables[table_idx].rules[rule_idx] = *rule;
+    nat_tables[cntrl_list].rules[rule_idx] = *rule;
 
     return OK;
 }
 
 int
-nat_push_rules(uintf8_t table_idx)
+nat_push_rules(uintf8_t cntrl_list)
 {
     nat_lock();
     // iterating over each rule in NAT table
-    for (uintf8_t rule_idx = 0; rule_idx < nat_tables_swap[table_idx].len; rule_idx++) {
+    for (uintf16_t rule_idx = 0; rule_idx < nat_tables_swap[cntrl_list].len; rule_idx++) {
 
         // copy swap structure to active structure. alignment is already set as they are idential structures.
-        nat_tables[table_idx].rules[rule_idx] = nat_tables_swap[table_idx].rules[rule_idx];
+        nat_tables[cntrl_list].rules[rule_idx] = nat_tables_swap[cntrl_list].rules[rule_idx];
     }
     nat_unlock();
 
     if (NAT_V && VERBOSE) {
-        printf("< [!] NAT TABLE (%u) RULES UPDATED [!] >\n", table_idx);
+        printf("< [!] NAT TABLE (%u) RULES UPDATED [!] >\n", cntrl_list);
     }
     return OK;
 }
 
+// casting to clamp uintfast to set unsigned ints to shut the warnings up.
 void
-nat_print_rule(uintf8_t table_idx, uintf16_t rule_idx)
+nat_print_rule(uintf8_t cntrl_list, uintf16_t rule_idx)
 {
     int    i, ix;
-    struct NATrule  rule = nat_tables[table_idx].rules[rule_idx];
+    struct NATrule  rule = nat_tables[cntrl_list].rules[rule_idx];
 
-    printf("<<NAT RULE [%u][%u]>>\n", table_idx, rule_idx);
-    printf("enabled->%d\n", rule.enabled);
+    printf("<<NAT RULE [%u][%u]>>\n", (uint8_t) cntrl_list, (uint16_t) rule_idx);
+    printf("enabled->%d\n", (uint8_t) rule.enabled);
 
     // SRC ZONES
     printf("src_zones->[ ");
     for (i = 0; i < rule.s_zones.len; i++) {
-        printf("%u ", rule.s_zones.objects[i]);
+        printf("%u ", (uint8_t) rule.s_zones.objects[i]);
     }
     printf(" ]\n");
 
@@ -290,9 +304,9 @@ nat_print_rule(uintf8_t table_idx, uintf16_t rule_idx)
     printf("src_networks->[ ");
     for (i = 0; i < rule.s_networks.len; i++) {
         printf("(%u, %u, %u) ",
-            rule.s_networks.objects[i].type,
-            rule.s_networks.objects[i].netid,
-            rule.s_networks.objects[i].netmask);
+            (uint8_t) rule.s_networks.objects[i].type,
+            (uint32_t) rule.s_networks.objects[i].netid,
+            (uint32_t) rule.s_networks.objects[i].netmask);
     }
     printf(" ]\n");
 
@@ -302,15 +316,15 @@ nat_print_rule(uintf8_t table_idx, uintf16_t rule_idx)
         // TYPE 4 (ICMP) OBJECT ASSIGNMENT
         if (rule.s_services.objects[i].type == SVC_ICMP) {
             printf("(1, %u, %u) ",
-                rule.s_services.objects[i].icmp.type,
-                rule.s_services.objects[i].icmp.code);
+                (uint8_t) rule.s_services.objects[i].icmp.type,
+                (uint8_t) rule.s_services.objects[i].icmp.code);
         }
         // TYPE 1/2 (SOLO, RANGE) OBJECT ASSIGNMENT
         else if (rule.s_services.objects[i].type == SVC_SOLO || rule.s_services.objects[i].type == SVC_RANGE) {
             printf("(%u, %u, %u) ",
-                rule.s_services.objects[i].svc.protocol,
-                rule.s_services.objects[i].svc.start_port,
-                rule.s_services.objects[i].svc.end_port);
+                (uint16_t) rule.s_services.objects[i].svc.protocol,
+                (uint16_t) rule.s_services.objects[i].svc.start_port,
+                (uint16_t) rule.s_services.objects[i].svc.end_port);
         }
         // TYPE 3 (LIST) OBJECT ASSIGNMENT
         else {
@@ -319,9 +333,9 @@ nat_print_rule(uintf8_t table_idx, uintf16_t rule_idx)
                 // [0] START INDEX ON FW RULE SIZE
                 // [1] START INDEX PYTHON DICT SIDE (to first index for size)
                 printf("(%u, %u, %u) ",
-                    rule.s_services.objects[i].svc_list.services[ix].protocol,
-                    rule.s_services.objects[i].svc_list.services[ix].start_port,
-                    rule.s_services.objects[i].svc_list.services[ix].end_port);
+                    (uint16_t)  rule.s_services.objects[i].svc_list.services[ix].protocol,
+                    (uint16_t)  rule.s_services.objects[i].svc_list.services[ix].start_port,
+                    (uint16_t)  rule.s_services.objects[i].svc_list.services[ix].end_port);
             }
             printf(">");
         }
@@ -331,7 +345,7 @@ nat_print_rule(uintf8_t table_idx, uintf16_t rule_idx)
     // DST ZONES
     printf("dst_zones->[ ");
     for (i = 0; i < rule.d_zones.len; i++) {
-        printf("%u ", rule.d_zones.objects[i]);
+        printf("%u ", (uint8_t) rule.d_zones.objects[i]);
     }
     printf(" ]\n");
 
@@ -339,9 +353,9 @@ nat_print_rule(uintf8_t table_idx, uintf16_t rule_idx)
     printf("dst_networks->[ ");
     for (i = 0; i < rule.d_networks.len; i++) {
         printf("(%u, %u, %u) ",
-            rule.d_networks.objects[i].type,
-            rule.d_networks.objects[i].netid,
-            rule.d_networks.objects[i].netmask);
+            (uint8_t) rule.d_networks.objects[i].type,
+            (uint32_t) rule.d_networks.objects[i].netid,
+            (uint32_t) rule.d_networks.objects[i].netmask);
     }
     printf(" ]\n");
 
@@ -351,15 +365,15 @@ nat_print_rule(uintf8_t table_idx, uintf16_t rule_idx)
         // TYPE 4 (ICMP) OBJECT ASSIGNMENT
         if (rule.d_services.objects[i].type == SVC_ICMP) {
             printf("(1, %u, %u) ",
-                rule.d_services.objects[i].icmp.type,
-                rule.d_services.objects[i].icmp.code);
+                (uint8_t) rule.d_services.objects[i].icmp.type,
+                (uint8_t) rule.d_services.objects[i].icmp.code);
         }
         // TYPE 1/2 (SOLO, RANGE) OBJECT ASSIGNMENT
         else if (rule.d_services.objects[i].type == SVC_SOLO || rule.d_services.objects[i].type == SVC_RANGE) {
             printf("(%u, %u, %u) ",
-                rule.d_services.objects[i].svc.protocol,
-                rule.d_services.objects[i].svc.start_port,
-                rule.d_services.objects[i].svc.end_port);
+                (uint16_t) rule.d_services.objects[i].svc.protocol,
+                (uint16_t) rule.d_services.objects[i].svc.start_port,
+                (uint16_t) rule.d_services.objects[i].svc.end_port);
         }
         // TYPE 3 (LIST) OBJECT ASSIGNMENT
         else {
@@ -368,9 +382,9 @@ nat_print_rule(uintf8_t table_idx, uintf16_t rule_idx)
                 // [0] START INDEX ON FW RULE SIZE
                 // [1] START INDEX PYTHON DICT SIDE (to first index for size)
                 printf("(%u, %u, %u) ",
-                    rule.d_services.objects[i].svc_list.services[ix].protocol,
-                    rule.d_services.objects[i].svc_list.services[ix].start_port,
-                    rule.d_services.objects[i].svc_list.services[ix].end_port);
+                    (uint16_t) rule.d_services.objects[i].svc_list.services[ix].protocol,
+                    (uint16_t) rule.d_services.objects[i].svc_list.services[ix].start_port,
+                    (uint16_t) rule.d_services.objects[i].svc_list.services[ix].end_port);
             }
             printf("> ");
         }
@@ -378,8 +392,8 @@ nat_print_rule(uintf8_t table_idx, uintf16_t rule_idx)
     printf("]\n");
 
     // POLICIES
-    printf("action->%u\n", rule.action);
-    printf("log->%u\n", rule.log);
-    printf("src_t->%u:%u\n", rule.saddr, rule.sport);
-    printf("dst_t->%u:%u\n", rule.daddr, rule.dport);
+    printf("action->%u\n", (uint8_t) rule.action);
+    printf("log->%u\n", (uint8_t) rule.log);
+    printf("src_t->%u:%u\n", (uint32_t) rule.nat.saddr, (uint16_t) rule.nat.sport);
+    printf("dst_t->%u:%u\n", (uint32_t) rule.nat.daddr, (uint16_t) rule.nat.dport);
 }

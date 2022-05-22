@@ -281,17 +281,17 @@ cdef class CFirewall:
 
         return Py_OK
 
-    def update_rules(s, uintf8_t table_type, uintf8_t table_idx, list rulelist):
+    def update_rules(s, uintf8_t cntrl_group, uintf8_t cntrl_list_idx, list rulelist):
 
-        if (table_type == 0):
-            return s._update_firewall_rules(table_idx, rulelist)
+        if (cntrl_group == 0):
+            return s._update_firewall_rules(cntrl_list_idx, rulelist)
 
-        elif (table_type == 1):
-            return s._update_nat_rules(table_idx, rulelist)
+        elif (cntrl_group == 1):
+            return s._update_nat_rules(cntrl_list_idx, rulelist)
 
         return Py_ERR
 
-    def _update_firewall_rules(s, uintf8_t table_idx, list rulelist):
+    def _update_firewall_rules(s, uintf8_t cntrl_list_idx, list rulelist):
         '''acquires FWrule lock then rewrites the corresponding section ruleset.
 
         the current length var will also be update while the lock is held. 
@@ -304,18 +304,18 @@ cdef class CFirewall:
         for rule_idx in range(rule_count):
             fw_rule = rulelist[rule_idx]
 
-            set_FWrule(table_idx, rule_idx, fw_rule)
+            set_FWrule(cntrl_list_idx, rule_idx, fw_rule)
 
         # updating rule count in global tracker.
         # this is important to establish iter bounds during inspection.
-        firewall_stage_count(table_idx, rule_count)
+        firewall_stage_count(cntrl_list_idx, rule_count)
 
         with nogil:
-            firewall_push_rules(table_idx)
+            firewall_push_rules(cntrl_list_idx)
 
         return Py_OK
 
-    def _update_nat_rules(s, uintf8_t table_idx, list rulelist):
+    def _update_nat_rules(s, uintf8_t clist_idx, list rulelist):
         '''acquires FWrule lock then rewrites the corresponding section ruleset.
 
         the current length var will also be update while the lock is held.
@@ -328,19 +328,19 @@ cdef class CFirewall:
         for rule_idx in range(rule_count):
             nat_rule = rulelist[rule_idx]
 
-            set_NATrule(table_idx, rule_idx, nat_rule)
+            set_NATrule(clist_idx, rule_idx, nat_rule)
 
         # updating rule count in global tracker.
         # this is important to establish iter bounds during inspection.
-        nat_stage_count(table_idx, rule_count)
+        nat_stage_count(clist_idx, rule_count)
 
         with nogil:
-            nat_push_rules(table_idx)
+            nat_push_rules(clist_idx)
 
         return Py_OK
 
 
-cdef void set_FWrule(size_t table_idx, size_t rule_idx, dict rule):
+cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
 
     cdef:
         uintf8_t        i, ix, svc_list_len
@@ -443,12 +443,12 @@ cdef void set_FWrule(size_t table_idx, size_t rule_idx, dict rule):
     fw_rule.sec_profiles[1] = <uintf8_t>rule['dns_profile']
     fw_rule.sec_profiles[2] = <uintf8_t>rule['ips_profile']
 
-    if (VERBOSE2 and table_idx >= 1):
+    if (VERBOSE2 and cntrl_list_idx >= 1):
         ppt(fw_rule)
 
-    firewall_stage_rule(table_idx, rule_idx, &fw_rule)
+    firewall_stage_rule(cntrl_list_idx, rule_idx, &fw_rule)
 
-cdef void set_NATrule(size_t table_idx, size_t rule_idx, dict rule):
+cdef void set_NATrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
 
     cdef:
         uintf8_t        i, ix, svc_list_len
@@ -547,15 +547,15 @@ cdef void set_NATrule(size_t table_idx, size_t rule_idx, dict rule):
     nat_rule.action = <uintf8_t>rule['action']
     nat_rule.log    = <uintf8_t>rule['log']
 
-    nat_rule.saddr = <uintf32_t>rule['saddr']
-    nat_rule.sport = <uintf16_t>rule['sport']
-    nat_rule.daddr = <uintf16_t>rule['daddr']
-    nat_rule.dport = <uintf16_t>rule['dport']
+    nat_rule.nat.saddr = <uintf32_t>rule['saddr']
+    nat_rule.nat.sport = <uintf16_t>rule['sport']
+    nat_rule.nat.daddr = <uintf16_t>rule['daddr']
+    nat_rule.nat.dport = <uintf16_t>rule['dport']
 
     if (VERBOSE2):
         ppt(nat_rule)
 
-    nat_stage_rule(table_idx, rule_idx, &nat_rule)
+    nat_stage_rule(cntrl_list_idx, rule_idx, &nat_rule)
 
 # ==================================
 # Firewall Matching Functions

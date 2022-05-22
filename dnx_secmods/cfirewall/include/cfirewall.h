@@ -2,23 +2,23 @@
 #define CFIREWALL_H
 
 // netfilter
-#include "linux/netfilter.h" // enum nf_inet_hooks
-#include "linux/netfilter_ipv4.h"
-#include "linux/netfilter/nf_conntrack_common.h" // enum ip_conntrack_info
-#include "linux/netfilter/nfnetlink.h" // struct nfgenmsg
-#include "linux/netfilter/nfnetlink_queue.h" // nfqnl structs and attr enums
-#include "libmnl/libmnl.h" // nl attr parsing
-#include "libnetfilter_queue/linux_nfnetlink_queue.h"
-#include "libnetfilter_queue/libnetfilter_queue.h" // nfqueue interface for libmnl
+#include <linux/netfilter.h> // enum nf_inet_hooks
+#include <linux/netfilter_ipv4.h> // IP hooks (NF_IP_FORWARD)
+#include <linux/netfilter/nfnetlink.h> // struct nfgenmsg
+#include <linux/netfilter/nfnetlink_queue.h> // nfqnl structs and attr enums (nfqnl_msg_pkt_hw/hdr)
+#include <linux/netfilter/nf_conntrack_common.h> // enum ip_conntrack_info
+#include <libmnl/libmnl.h> // nl attr parsing
+#include <libnetfilter_queue/libnetfilter_queue.h> // nfqueue interface for libmnl
+#include <libnetfilter_conntrack/libnetfilter_conntrack.h> // nfct/ conntrack updates (used by nat mod through dnx_nfq)
 
-// dxnfirewall
+// dnxfirewall
 #include "config.h"
 #include "inet_tools.h"
+#include "std_tools.h"
 #include "rules.h" // firewall and nat rule structs/ defs
 #include "match.h" // zone, network, service matching helpers
 #include "dnx_nfq.h" // packet verdict, mangle, etc.
 
-//#include "hash_trie.h" // for structure / type info
 
 // bit shifting helpers
 #define TWO_BITS     2
@@ -69,12 +69,6 @@ extern struct mnl_socket *nl[2];
 // memset will be performed in Cython prior to changing the values.
 extern uintf16_t INTF_ZONE_MAP[FW_MAX_ZONES];
 
-//cdef extern from "inet_tools.h" nogil:
-//    uint32_t intf_masquerade(uint32_t idx)
-//
-//cdef extern from "std_tools.h" nogil:
-//    void nullset(void **data, uintf16_t dlen)
-
 // dxnfirewall typedef helpers
 typedef struct nfqnl_msg_packet_hdr   nl_pkt_hdr;
 typedef struct nfqnl_msg_packet_hw    nl_pkt_hw;
@@ -89,7 +83,7 @@ struct cfdata {
     mnl_cb_t    queue_cb;
 };
 
-struct table_range {
+struct clist_range {
   uintf8_t  start;
   uintf8_t  end;
 };
@@ -126,12 +120,6 @@ struct Protohdr {
     uint16_t    dport;
 };
 
-// for argument defs
-//union Protohdr {
-//    struct P1  *icmp;
-//    struct P2  *proto;
-//};
-
 struct dnx_pktb {
     uint8_t            *data;
     uint16_t            tlen;
@@ -141,7 +129,8 @@ struct dnx_pktb {
     struct Protohdr    *protohdr;
     uint16_t            protohdr_len; // header only
     bool                mangled;
-    uintf16_t           fw_table;
+    struct Nat          nat; // not used by FW. copied over from nat rule on match
+    uintf16_t           rule_clist; // CONTROL LIST. recent change from fw_table to be module agnostic
     uintf16_t           rule_num;
     uint32_t            action;
     uint32_t            mark;

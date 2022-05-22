@@ -89,7 +89,7 @@ firewall_recv(const struct nlmsghdr *nlh, void *data)
 
     struct dnx_pktb    pkt;
 
-    struct table_range      fw_tables;
+    struct clist_range      fw_clist;
 
     printf("< [++] FW RECV QUEUE(%u) - PARSING [++] >\n", cfd->queue);
 
@@ -103,7 +103,7 @@ firewall_recv(const struct nlmsghdr *nlh, void *data)
     // NTOHL on id is because kernel will apply HTONL on receipt
     ct_info = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_CT_INFO]));
     if (ct_info != IP_CT_NEW) {
-        dnx_send_verdict_fast(cfd, ntohl(nlhdr->packet_id), NF_ACCEPT);
+        dnx_send_verdict_fast(cfd, ntohl(nlhdr->packet_id), 0, NF_ACCEPT);
 
         return OK;
     }
@@ -131,22 +131,22 @@ firewall_recv(const struct nlmsghdr *nlh, void *data)
     // ordered by system priority
     switch (nlhdr->hook) {
         case NF_IP_FORWARD:
-            fw_tables.start = FW_RULE_RANGE_START;
+            fw_clist.start = FW_RULE_RANGE_START;
             break;
         case NF_IP_LOCAL_IN:
-            fw_tables.start = FW_SYSTEM_RANGE_START;
+            fw_clist.start = FW_SYSTEM_RANGE_START;
             break;
         default:
             printf("< [--!] FW HOOK MISMATCH (%u) - EXITING [!--] >\n", nlhdr->hook);
             return ERR;
     }
-    fw_tables.end = FW_RULE_RANGE_END;
+    fw_clist.end = FW_RULE_RANGE_END;
     // ===================================
     // LOCKING ACCESS TO FIREWALL RULES
     // prevents the manager thread from updating firewall rules during packet inspection
     firewall_lock();
     // --------------------
-    firewall_inspect(&fw_tables, &pkt, cfd);
+    firewall_inspect(&fw_clist, &pkt, cfd);
     // --------------------
     firewall_unlock();
     // UNLOCKING ACCESS TO FIREWALL RULES
@@ -156,7 +156,7 @@ firewall_recv(const struct nlmsghdr *nlh, void *data)
     // NFQUEUE VERDICT
     // --------------------
     // only SYSTEM RULES will have cfirewall invoke action directly
-    if (fw_tables.start != FW_SYSTEM_RANGE_START) {
+    if (fw_clist.start != FW_SYSTEM_RANGE_START) {
 
         // if PROXY_BYPASS, cfirewall will invoke the rule action without forwarding to another queue.
         // if not PROXY_BYPASS, forward to ip proxy regardless of action for geolocation log or IPS
@@ -181,7 +181,7 @@ firewall_recv(const struct nlmsghdr *nlh, void *data)
 }
 
 inline void
-firewall_inspect(struct table_range *fw_tables, struct dnx_pktb *pkt, struct cfdata *cfd)
+firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfdata *cfd)
 {
     // iphdr and protohdr
     dnx_parse_pkt_headers(pkt);
@@ -203,7 +203,7 @@ firewall_inspect(struct table_range *fw_tables, struct dnx_pktb *pkt, struct cfd
     uint16_t    tracked_geo = direction == INBOUND ? src_country : dst_country;
 
     // loops
-    uintf8_t    idx, table_idx, rule_idx;
+    uintf8_t    idx, cntrl_list, rule_idx;
 
     if (FW_V && VERBOSE) {
         printf("< ++ FIREWALL INSPECTION ++ >\n");
@@ -214,21 +214,20 @@ firewall_inspect(struct table_range *fw_tables, struct dnx_pktb *pkt, struct cfd
             );
     }
 
-    // is the end index +1?
-    for (table_idx = fw_tables->start; table_idx < fw_tables->end; table_idx++) {
+    for (cntrl_list = fw_clist->start; cntrl_list < fw_clist->end; cntrl_list++) {
 
-        if (firewall_tables[table_idx].len == 0) { continue; }
+        if (firewall_tables[cntrl_list].len == 0) { continue; }
 
         // same as above
-        for (rule_idx = 0; rule_idx < firewall_tables[table_idx].len; rule_idx++) {
+        for (rule_idx = 0; rule_idx < firewall_tables[cntrl_list].len; rule_idx++) {
 
-            rule = &firewall_tables[table_idx].rules[rule_idx];
+            rule = &firewall_tables[cntrl_list].rules[rule_idx];
 
             // NOTE: inspection order: src > dst | zone, ip_addr, protocol, port
             if (!rule->enabled) { continue; }
 
             if (FW_V && VERBOSE2) {
-                firewall_print_rule(table_idx, rule_idx);
+                firewall_print_rule(cntrl_list, rule_idx);
             }
             // ------------------------------------------------------------------
             // ZONE MATCHING
@@ -256,10 +255,10 @@ firewall_inspect(struct table_range *fw_tables, struct dnx_pktb *pkt, struct cfd
             // MATCH ACTION | return rule options
             // ------------------------------------------------------------------
             // drop will inherently forward to the ip proxy for geo inspection and local dns records.
-            pkt->fw_table = table_idx;
-            pkt->rule_num = rule_idx; // if logging, this needs to be +1
-            pkt->action   = rule->action;
-            pkt->mark     = tracked_geo << FOUR_BITS | direction << TWO_BITS | rule->action;
+            pkt->rule_clist = cntrl_list;
+            pkt->rule_num   = rule_idx; // if logging, this needs to be +1
+            pkt->action     = rule->action;
+            pkt->mark       = tracked_geo << FOUR_BITS | direction << TWO_BITS | rule->action;
 
             for (idx = 0; idx < 3; idx++) {
                 pkt->mark |= rule->sec_profiles[idx] << ((idx*4)+12);
@@ -271,7 +270,7 @@ firewall_inspect(struct table_range *fw_tables, struct dnx_pktb *pkt, struct cfd
     // ------------------------------------------------------------------
     // DEFAULT ACTION
     // ------------------------------------------------------------------
-    pkt->fw_table   = NO_SECTION;
+    pkt->rule_clist = NO_SECTION;
     pkt->action     = DNX_DROP;
     pkt->mark       = tracked_geo << FOUR_BITS | direction << TWO_BITS | DNX_DROP;
 }
@@ -297,38 +296,38 @@ firewall_unlock(void)
 }
 
 int
-firewall_stage_count(uintf8_t table_idx, uintf16_t rule_count)
+firewall_stage_count(uintf8_t cntrl_list, uintf16_t rule_count)
 {
-    firewall_tables[table_idx].len = rule_count;
+    firewall_tables[cntrl_list].len = rule_count;
 
     if (FW_V && VERBOSE) {
-        printf("< [!] FW TABLE (%u) COUNT STAGED [!] >\n", table_idx);
+        printf("< [!] FW TABLE (%u) COUNT STAGED [!] >\n", cntrl_list);
     }
     return OK;
 }
 
 int
-firewall_stage_rule(uintf8_t table_idx, uintf16_t rule_idx, struct FWrule *rule)
+firewall_stage_rule(uintf8_t cntrl_list, uintf16_t rule_idx, struct FWrule *rule)
 {
-    firewall_tables[table_idx].rules[rule_idx] = *rule;
+    firewall_tables[cntrl_list].rules[rule_idx] = *rule;
 
     return OK;
 }
 
 int
-firewall_push_rules(uintf8_t table_idx)
+firewall_push_rules(uintf8_t cntrl_list)
 {
     firewall_lock();
     // iterating over each rule in FW table
-    for (uintf8_t rule_idx = 0; rule_idx < fw_tables_swap[table_idx].len; rule_idx++) {
+    for (uintf16_t rule_idx = 0; rule_idx < fw_tables_swap[cntrl_list].len; rule_idx++) {
 
         // copy swap structure to active structure. alignment is already set as they are idential structures.
-        firewall_tables[table_idx].rules[rule_idx] = fw_tables_swap[table_idx].rules[rule_idx];
+        firewall_tables[cntrl_list].rules[rule_idx] = fw_tables_swap[cntrl_list].rules[rule_idx];
     }
     firewall_unlock();
 
     if (FW_V && VERBOSE) {
-        printf("< [!] FW TABLE (%u) RULES UPDATED [!] >\n", table_idx);
+        printf("< [!] FW TABLE (%u) RULES UPDATED [!] >\n", cntrl_list);
     }
     return OK;
 }
@@ -347,19 +346,20 @@ firewall_push_zones(uintf8_t *zone_map)
     return OK;
 }
 
+// casting to clamp uintfast to set unsigned ints to shut the warnings up.
 void
-firewall_print_rule(uintf8_t table_idx, uintf16_t rule_idx)
+firewall_print_rule(uintf8_t ctrl_list, uintf16_t rule_idx)
 {
     int    i, ix;
-    struct FWrule  rule = firewall_tables[table_idx].rules[rule_idx];
+    struct FWrule  rule = firewall_tables[ctrl_list].rules[rule_idx];
 
-    printf("<<FIREWALL RULE [%u][%u]>>\n", table_idx, rule_idx);
-    printf("enabled->%d\n", rule.enabled);
+    printf("<<FIREWALL RULE [%u][%u]>>\n", (uint8_t) ctrl_list, (uint16_t) rule_idx);
+    printf("enabled->%d\n", (uint8_t) rule.enabled);
 
     // SRC ZONES
     printf("src_zones->[ ");
     for (i = 0; i < rule.s_zones.len; i++) {
-        printf("%u ", rule.s_zones.objects[i]);
+        printf("%u ", (uint8_t) rule.s_zones.objects[i]);
     }
     printf(" ]\n");
 
@@ -367,9 +367,9 @@ firewall_print_rule(uintf8_t table_idx, uintf16_t rule_idx)
     printf("src_networks->[ ");
     for (i = 0; i < rule.s_networks.len; i++) {
         printf("(%u, %u, %u) ",
-            rule.s_networks.objects[i].type,
-            rule.s_networks.objects[i].netid,
-            rule.s_networks.objects[i].netmask);
+            (uint8_t) rule.s_networks.objects[i].type,
+            (uint32_t) rule.s_networks.objects[i].netid,
+            (uint32_t) rule.s_networks.objects[i].netmask);
     }
     printf(" ]\n");
 
@@ -379,15 +379,15 @@ firewall_print_rule(uintf8_t table_idx, uintf16_t rule_idx)
         // TYPE 4 (ICMP) OBJECT ASSIGNMENT
         if (rule.s_services.objects[i].type == SVC_ICMP) {
             printf("(1, %u, %u) ",
-                rule.s_services.objects[i].icmp.type,
-                rule.s_services.objects[i].icmp.code);
+                (uint8_t) rule.s_services.objects[i].icmp.type,
+                (uint8_t) rule.s_services.objects[i].icmp.code);
         }
         // TYPE 1/2 (SOLO, RANGE) OBJECT ASSIGNMENT
         else if (rule.s_services.objects[i].type == SVC_SOLO || rule.s_services.objects[i].type == SVC_RANGE) {
             printf("(%u, %u, %u) ",
-                rule.s_services.objects[i].svc.protocol,
-                rule.s_services.objects[i].svc.start_port,
-                rule.s_services.objects[i].svc.end_port);
+                (uint16_t) rule.s_services.objects[i].svc.protocol,
+                (uint16_t) rule.s_services.objects[i].svc.start_port,
+                (uint16_t) rule.s_services.objects[i].svc.end_port);
         }
         // TYPE 3 (LIST) OBJECT ASSIGNMENT
         else {
@@ -396,9 +396,9 @@ firewall_print_rule(uintf8_t table_idx, uintf16_t rule_idx)
                 // [0] START INDEX ON FW RULE SIZE
                 // [1] START INDEX PYTHON DICT SIDE (to first index for size)
                 printf("(%u, %u, %u) ",
-                    rule.s_services.objects[i].svc_list.services[ix].protocol,
-                    rule.s_services.objects[i].svc_list.services[ix].start_port,
-                    rule.s_services.objects[i].svc_list.services[ix].end_port);
+                    (uint16_t) rule.s_services.objects[i].svc_list.services[ix].protocol,
+                    (uint16_t) rule.s_services.objects[i].svc_list.services[ix].start_port,
+                    (uint16_t) rule.s_services.objects[i].svc_list.services[ix].end_port);
             }
             printf(">");
         }
@@ -408,7 +408,7 @@ firewall_print_rule(uintf8_t table_idx, uintf16_t rule_idx)
     // DST ZONES
     printf("dst_zones->[ ");
     for (i = 0; i < rule.d_zones.len; i++) {
-        printf("%u ", rule.d_zones.objects[i]);
+        printf("%u ", (uint8_t) rule.d_zones.objects[i]);
     }
     printf(" ]\n");
 
@@ -416,9 +416,9 @@ firewall_print_rule(uintf8_t table_idx, uintf16_t rule_idx)
     printf("dst_networks->[ ");
     for (i = 0; i < rule.d_networks.len; i++) {
         printf("(%u, %u, %u) ",
-            rule.d_networks.objects[i].type,
-            rule.d_networks.objects[i].netid,
-            rule.d_networks.objects[i].netmask);
+            (uint8_t) rule.d_networks.objects[i].type,
+            (uint32_t) rule.d_networks.objects[i].netid,
+            (uint32_t) rule.d_networks.objects[i].netmask);
     }
     printf(" ]\n");
 
@@ -428,15 +428,15 @@ firewall_print_rule(uintf8_t table_idx, uintf16_t rule_idx)
         // TYPE 4 (ICMP) OBJECT ASSIGNMENT
         if (rule.d_services.objects[i].type == SVC_ICMP) {
             printf("(1, %u, %u) ",
-                rule.d_services.objects[i].icmp.type,
-                rule.d_services.objects[i].icmp.code);
+                (uint8_t) rule.d_services.objects[i].icmp.type,
+                (uint8_t) rule.d_services.objects[i].icmp.code);
         }
         // TYPE 1/2 (SOLO, RANGE) OBJECT ASSIGNMENT
         else if (rule.d_services.objects[i].type == SVC_SOLO || rule.d_services.objects[i].type == SVC_RANGE) {
             printf("(%u, %u, %u) ",
-                rule.d_services.objects[i].svc.protocol,
-                rule.d_services.objects[i].svc.start_port,
-                rule.d_services.objects[i].svc.end_port);
+                (uint16_t) rule.d_services.objects[i].svc.protocol,
+                (uint16_t) rule.d_services.objects[i].svc.start_port,
+                (uint16_t) rule.d_services.objects[i].svc.end_port);
         }
         // TYPE 3 (LIST) OBJECT ASSIGNMENT
         else {
@@ -445,9 +445,9 @@ firewall_print_rule(uintf8_t table_idx, uintf16_t rule_idx)
                 // [0] START INDEX ON FW RULE SIZE
                 // [1] START INDEX PYTHON DICT SIDE (to first index for size)
                 printf("(%u, %u, %u) ",
-                    rule.d_services.objects[i].svc_list.services[ix].protocol,
-                    rule.d_services.objects[i].svc_list.services[ix].start_port,
-                    rule.d_services.objects[i].svc_list.services[ix].end_port);
+                    (uint16_t) rule.d_services.objects[i].svc_list.services[ix].protocol,
+                    (uint16_t) rule.d_services.objects[i].svc_list.services[ix].start_port,
+                    (uint16_t) rule.d_services.objects[i].svc_list.services[ix].end_port);
             }
             printf("> ");
         }
@@ -455,12 +455,12 @@ firewall_print_rule(uintf8_t table_idx, uintf16_t rule_idx)
     printf("]\n");
 
     // POLICIES
-    printf("action->%u\n", rule.action);
-    printf("log->%u\n", rule.log);
+    printf("action->%u\n", (uint8_t) rule.action);
+    printf("log->%u\n", (uint8_t) rule.log);
     printf("ipp->%u, dns->%u, ips->%u\n",
-        rule.sec_profiles[0],
-        rule.sec_profiles[1],
-        rule.sec_profiles[2]);
+        (uint8_t) rule.sec_profiles[0],
+        (uint8_t) rule.sec_profiles[1],
+        (uint8_t) rule.sec_profiles[2]);
 }
 
 int

@@ -239,6 +239,12 @@ cdef extern from "rules.h" nogil:
         uintf8_t    log
         uintf8_t    sec_profiles[SECURITY_PROFILE_COUNT]
 
+    struct Nat:
+        uint32_t    saddr
+        uint16_t    sport
+        uint32_t    daddr
+        uint16_t    dport
+
     struct NATrule:
         bint        enabled
         ZoneArray   s_zones
@@ -250,13 +256,9 @@ cdef extern from "rules.h" nogil:
         uintf8_t    action
         uintf8_t    log
 
-        uint32_t    saddr
-        uint16_t    sport
-        uint32_t    daddr
-        uint16_t    dport
+        Nat         nat
 
 cdef extern from "cfirewall.h" nogil:
-    mnl_socket     *wtf_nl
     mnl_socket     *nl[2]
 
     uint32_t MSB, LSB
