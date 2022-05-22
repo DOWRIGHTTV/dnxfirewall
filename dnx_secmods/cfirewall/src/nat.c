@@ -137,6 +137,7 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
     }
     // need to reduce DNX_* to DNX_ACCEPT on nat rule matches.
     if (pkt.action >= DNX_NO_NAT) {
+        ct_nat_update(&pkt);
         pkt.action = DNX_ACCEPT;
     }
 

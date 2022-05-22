@@ -16,9 +16,9 @@ ct_nat_init(void) {
 }
 
 int
-ct_nat_update(struct dnx_pktb *pkt, struct Nat *nat)
+ct_nat_update(struct dnx_pktb *pkt)
 {
-    int                  ret;
+    int    ret;
     struct nf_conntrack *ct;
 
     // using basic API here to be consistent with "_destroy".
@@ -43,17 +43,17 @@ ct_nat_update(struct dnx_pktb *pkt, struct Nat *nat)
     nfct_setobjopt(ct, NFCT_SOPT_SETUP_REPLY);
 
     // updating any field set within the nat rule
-    if (nat->saddr)
+    if (pkt->nat.saddr)
         nfct_set_attr_u32(ct, ATTR_SNAT_IPV4, pkt->nat.saddr);
 
-    if (nat->daddr)
+    if (pkt->nat.daddr)
         nfct_set_attr_u32(ct, ATTR_DNAT_IPV4, pkt->nat.daddr);
 
     // icmp rules will never have these set so this is safe
-    if (nat->sport)
+    if (pkt->nat.sport)
         nfct_set_attr_u32(ct, ATTR_DNAT_PORT, pkt->nat.sport);
 
-    if (nat->dport)
+    if (pkt->nat.dport)
         nfct_set_attr_u32(ct, ATTR_DNAT_PORT, pkt->nat.dport);
 
     // does not wait for response

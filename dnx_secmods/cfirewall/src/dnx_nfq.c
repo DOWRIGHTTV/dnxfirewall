@@ -2,8 +2,6 @@
 #include "dnx_nfq.h"
 #include "cfirewall.h"
 
-#include "conntrack.h"
-
 #include <stdio.h>
 
 static void mangle_src_addr(struct dnx_pktb *pkt);
