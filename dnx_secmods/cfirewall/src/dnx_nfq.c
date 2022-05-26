@@ -2,13 +2,34 @@
 #include "dnx_nfq.h"
 #include "cfirewall.h"
 
-#include <stdio.h>
-
 static void mangle_src_addr(struct dnx_pktb *pkt);
 static void mangle_src_port(struct dnx_pktb *pkt);
 static void mangle_dst_addr(struct dnx_pktb *pkt);
 static void mangle_dst_port(struct dnx_pktb *pkt);
 
+
+inline void
+dnx_parse_nl_headers(nl_msg_hdr *nlmsgh, nl_pkt_hdr *nl_pkth,  struct nlattr **netlink_attrs, struct dnx_pktb *pkt)
+{
+    nfq_nlmsg_parse(nlmsgh, netlink_attrs);
+
+    // in-int > src_zone | not available in POST ROUTE
+    pkt->hw.iif = netlink_attrs[NFQA_IFINDEX_INDEV] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_INDEV])) : 0;
+    pkt->hw.in_zone  = INTF_ZONE_MAP[pkt->hw.iif];
+
+    // out-int > dst_zone | not available in PRE ROUTE
+    pkt->hw.oif = netlink_attrs[NFQA_IFINDEX_OUTDEV] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_OUTDEV])) : 0;
+    pkt->hw.out_zone = INTF_ZONE_MAP[pkt->hw.oif];
+
+    // standard mark
+    pkt->mark = netlink_attrs[NFQA_MARK] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_MARK])) : 0;
+
+    // PACKET DATA / LEN
+    pkt->data = mnl_attr_get_payload(netlink_attrs[NFQA_PAYLOAD]);
+    pkt->tlen = mnl_attr_get_payload_len(netlink_attrs[NFQA_PAYLOAD]);
+
+    nl_pkth = (nl_pkt_hdr*) mnl_attr_get_payload(netlink_attrs[NFQA_PACKET_HDR]);
+}
 
 // initial header parse and assignment to dnx_pktb struct
 inline void
@@ -78,10 +99,10 @@ is important to not restrict feature growth. This will just need to be understoo
 not be specified under normal conditions, unless there is an explicit reason to do so.
 */
 bool
-dnx_mangle_pkt(struct dnx_pktb *pkt, uint32_t oif)
+dnx_mangle_pkt(struct dnx_pktb *pkt)
 {
     if (pkt->action == DNX_MASQ) {
-        pkt->iphdr->saddr = intf_masquerade(oif);
+        pkt->iphdr->saddr = intf_masquerade(pkt->hw.oif);
     }
     else if (pkt->action == DNX_SRC_NAT || pkt->action == DNX_FULL_NAT) {
         mangle_src_addr(pkt);

@@ -12,36 +12,28 @@
 #define NAT_PRE_TABLE  0
 #define NAT_POST_TABLE 1
 
-
-struct NATtable nat_tables[NAT_TABLE_COUNT];
-
 pthread_mutex_t     NATtableslock;
 pthread_mutex_t    *NATlock_ptr = &NATtableslock;
 
-struct NATtable nat_tables_swap[NAT_TABLE_COUNT];
+struct NATtable nat_tables[NAT_TABLE_COUNT];
 
+/* FIREWALL RULES SWAP STORAGE */
+struct NATtable nat_tables_swap[NAT_TABLE_COUNT];
 
 void
 nat_init(void) {
     pthread_mutex_init(NATlock_ptr, NULL);
 
     // arrays of pointers to NATrule
-    nat_tables[NAT_PRE_RULES].len = 0;
     nat_tables[NAT_PRE_RULES].rules = calloc(NAT_PRE_MAX_RULE_COUNT, sizeof(struct NATrule));
-
-    nat_tables[NAT_POST_RULES].len = 0;
     nat_tables[NAT_POST_RULES].rules = calloc(NAT_POST_MAX_RULE_COUNT, sizeof(struct NATrule));
 
     // SWAP STORAGE
-    nat_tables_swap[NAT_PRE_RULES].len = 0;
     nat_tables_swap[NAT_PRE_RULES].rules = calloc(NAT_PRE_MAX_RULE_COUNT, sizeof(struct NATrule));
-
-    nat_tables_swap[NAT_POST_RULES].len = 0;
     nat_tables_swap[NAT_POST_RULES].rules = calloc(NAT_POST_MAX_RULE_COUNT, sizeof(struct NATrule));
 
     // conntrack socket
     ct_nat_init();
-
 }
 
 /*================================
@@ -62,78 +54,45 @@ for src/dst nat rules, but at the cost of having to manually check state of each
 hit might not be worth it for what our current goals are. also, though we would be able to have an dst zone on src nat,
 the dst zone would need to be set to the zone for the dst pre nat, which would be equally wonky to no zone at all.
 */
-
 int
-nat_recv(const struct nlmsghdr *nlh, void *data)
+nat_recv(nl_msg_hdr *nl_msgh, void *data)
 {
-    struct cfdata     *cfd = (struct cfdata*) data;
-    struct nlattr     *netlink_attrs[NFQA_MAX+1] = {};
+    struct cfdata      *cfd = (struct cfdata*) data;
+    struct nlattr      *netlink_attrs[NFQA_MAX+1] = {};
+    struct dnx_pktb     pkt;
 
-    nl_pkt_hdr *nlhdr;
-
-    uint32_t    _iif, _oif;
-
-    int         cntrl_list;
-
-    struct dnx_pktb    pkt;
+    nl_pkt_hdr         *nl_pkth = NULL;
+    int                 cntrl_list;
 
     printf("< [++] NAT RECV QUEUE(%u) - PARSING [++] >\n", cfd->queue);
+    dnx_parse_nl_headers(nl_msgh, nl_pkth, netlink_attrs, &pkt);
 
-    nfq_nlmsg_parse(nlh, netlink_attrs);
-
-    nlhdr = (nl_pkt_hdr*) mnl_attr_get_payload(netlink_attrs[NFQA_PACKET_HDR]);
-
-    // mark used to pass iif from pre_route to post_route.
-    // PRE_ROUTE WILL BE 0, POST_ROUTE WILL BE SET TO INTF INDEX
-    pkt.mark = netlink_attrs[NFQA_MARK] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_MARK])) : 0;
-
-    // iif will be set to packet mark if not available (used in post_route)
-    _iif = netlink_attrs[NFQA_IFINDEX_INDEV] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_INDEV])) : pkt.mark;
-    _oif = netlink_attrs[NFQA_IFINDEX_OUTDEV] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_OUTDEV])) : 0;
-
-    switch(nlhdr->hook) {
-        case NF_IP_POST_ROUTING:
-            cntrl_list = NAT_POST_TABLE;
-            break;
-        case NF_IP_PRE_ROUTING:
-            cntrl_list = NAT_PRE_TABLE;
-            break;
-        default:
-            return ERR;
+    // made if block to expand logic, but unsure how to handle that for now.
+    if (nl_pkth->hook == NF_IP_PRE_ROUTING) {
+        cntrl_list = NAT_PRE_TABLE;
     }
-
-    // ======================
+    else if (nl_pkth->hook == NF_IP_POST_ROUTING) {
+        cntrl_list = NAT_POST_TABLE;
+    }
     // NO RULES CONFIGURED QUICK PATH
+    // in-intf needs to be put into network order before sending to netfilter.
     if (nat_tables[cntrl_list].len == 0) {
-        dnx_send_verdict_fast(cfd, ntohl(nlhdr->packet_id), _iif, NF_ACCEPT);
+        dnx_send_verdict_fast(cfd, ntohl(nl_pkth->packet_id), 0, NF_ACCEPT);
 
         return OK;
     }
-    // ======================
-
-    pkt.hw.in_zone  = INTF_ZONE_MAP[_iif];
-    pkt.hw.out_zone = INTF_ZONE_MAP[_oif];
-    // ======================
-    // PACKET DATA / LEN
-    pkt.data = mnl_attr_get_payload(netlink_attrs[NFQA_PAYLOAD]);
-    pkt.tlen = mnl_attr_get_payload_len(netlink_attrs[NFQA_PAYLOAD]);
     // ===================================
     // LOCKING ACCESS TO NAT RULES
     // prevents the manager thread from updating nat rules during packet inspection
     nat_lock();
-    // --------------------
     nat_inspect(cntrl_list, &pkt, cfd);
-    // --------------------
     nat_unlock();
     // UNLOCKING ACCESS TO NAT RULES
     // ===================================
 
-    // --------------------
     // NAT / MANGLE
-    // --------------------
-    // providing out-interface for masquerade. other nat types can ignore it.
     if (pkt.action > DNX_NO_NAT) {
-        pkt.mangled = dnx_mangle_pkt(&pkt, _oif);
+        pkt.mangled = dnx_mangle_pkt(&pkt);
     }
     // need to reduce DNX_* to DNX_ACCEPT on nat rule matches.
     if (pkt.action >= DNX_NO_NAT) {
@@ -141,11 +100,11 @@ nat_recv(const struct nlmsghdr *nlh, void *data)
         pkt.action = DNX_ACCEPT;
     }
 
-    dnx_send_verdict(cfd, ntohl(nlhdr->packet_id), &pkt);
+    dnx_send_verdict(cfd, ntohl(nl_pkth->packet_id), &pkt);
 
     if (NAT_V && VERBOSE) {
         printf("< [--] NAT VERDICT [--] >\n");
-        printf("packet_id->%u, hook->%u, action->%u\n", ntohl(nlhdr->packet_id), nlhdr->hook, pkt.action);
+        printf("packet_id->%u, hook->%u, action->%u\n", ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.action);
         printf("=====================================================================\n");
     }
 
@@ -169,8 +128,6 @@ nat_inspect(int cntrl_list, struct dnx_pktb *pkt, struct cfdata *cfd)
     uint8_t     src_country = geolocation->lookup(geolocation, iph_src_ip & MSB, iph_src_ip & LSB);
     uint8_t     dst_country = geolocation->lookup(geolocation, iph_dst_ip & MSB, iph_dst_ip & LSB);
 
-    uintf16_t   rule_idx;
-
     if (NAT_V && VERBOSE) {
         printf("< [**] NAT INSPECTION [**] >\n");
         printf("src->[%u]%u:%u, dst->[%u]%u:%u\n",
@@ -179,7 +136,7 @@ nat_inspect(int cntrl_list, struct dnx_pktb *pkt, struct cfdata *cfd)
             );
     }
 
-    for (rule_idx = 0; rule_idx < nat_tables[cntrl_list].len; rule_idx++) {
+    for (uintf16_t rule_idx = 0; rule_idx < nat_tables[cntrl_list].len; rule_idx++) {
 
         rule = &nat_tables[cntrl_list].rules[rule_idx];
         if (!rule->enabled) { continue; }

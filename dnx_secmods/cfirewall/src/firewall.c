@@ -5,10 +5,6 @@
 
 #include "hash_trie.h"
 
-#include <stdio.h>
-
-//#include "linux/netlink.h" //nlmsghdr
-
 #define FW_SYSTEM_MAX_RULE_COUNT  50
 #define FW_BEFORE_MAX_RULE_COUNT 100
 #define FW_MAIN_MAX_RULE_COUNT   500
@@ -26,154 +22,111 @@
 #define PROFILE_START 12
 #define PROFILE_STOP  (SECURITY_PROFILE_COUNT * 4) + 8 // + 1  // +1 for range
 
-
-struct FWtable firewall_tables[FW_TABLE_COUNT];
-
 pthread_mutex_t     FWtableslock;
 pthread_mutex_t    *FWlock_ptr = &FWtableslock;
 
-// Python converted data will be placed here. This will allow the GIL to be released
-// before copying the data into the active rules. This comes at a somewhat substantial
-// hit to memory usage, but it will save alot of programming time by moving the need
-// for the fw socket/api to be implemented to correct the deadlock issue between the
-// Python GIL and the firewall or nat rule locks.
-struct FWtable fw_tables_swap[FW_TABLE_COUNT];
+struct FWtable firewall_tables[FW_TABLE_COUNT];
 
+/* FIREWALL RULES SWAP STORAGE
+Python converted data will be placed here. This will allow the GIL to be released
+before copying the data into the active rules. This comes at a somewhat substantial
+hit to memory usage, but it will save alot of programming time by moving the need
+for the fw socket/api to be implemented to correct the deadlock issue between the
+Python GIL and the firewall or nat rule locks.
+*/
+struct FWtable fw_tables_swap[FW_TABLE_COUNT];
 
 void
 firewall_init(void) {
     pthread_mutex_init(FWlock_ptr, NULL);
 
     // arrays of pointers to FWrules
-    firewall_tables[FW_SYSTEM_RULES].len = 0;
     firewall_tables[FW_SYSTEM_RULES].rules = calloc(FW_SYSTEM_MAX_RULE_COUNT, sizeof(struct FWrule));
-
-    firewall_tables[FW_BEFORE_RULES].len = 0;
     firewall_tables[FW_BEFORE_RULES].rules = calloc(FW_BEFORE_MAX_RULE_COUNT, sizeof(struct FWrule));
-
-    firewall_tables[FW_MAIN_RULES].len = 0;
-    firewall_tables[FW_MAIN_RULES].rules = calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(struct FWrule));
-
-    firewall_tables[FW_AFTER_RULES].len = 0;
+    firewall_tables[FW_MAIN_RULES].rules   = calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(struct FWrule));
     firewall_tables[FW_AFTER_RULES].rules = calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(struct FWrule));
 
     // SWAP STORAGE
-    fw_tables_swap[FW_SYSTEM_RULES].len = 0;
     fw_tables_swap[FW_SYSTEM_RULES].rules = calloc(FW_SYSTEM_MAX_RULE_COUNT, sizeof(struct FWrule));
-
-    fw_tables_swap[FW_BEFORE_RULES].len = 0;
     fw_tables_swap[FW_BEFORE_RULES].rules = calloc(FW_BEFORE_MAX_RULE_COUNT, sizeof(struct FWrule));
-
-    fw_tables_swap[FW_MAIN_RULES].len = 0;
-    fw_tables_swap[FW_MAIN_RULES].rules = calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(struct FWrule));
-
-    firewall_tables[FW_AFTER_RULES].len = 0;
-    firewall_tables[FW_AFTER_RULES].rules = calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(struct FWrule));
-
-
+    fw_tables_swap[FW_MAIN_RULES].rules   = calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(struct FWrule));
+    fw_tables_swap[FW_AFTER_RULES].rules  = calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(struct FWrule));
 }
 
 // ==================================
 // PRIMARY FIREWALL LOGIC
 // ==================================
 int
-firewall_recv(const struct nlmsghdr *nlh, void *data)
+firewall_recv(nl_msg_hdr *nl_msgh, void *data)
 {
-    struct cfdata     *cfd = (struct cfdata*) data;
-    struct nlattr     *netlink_attrs[NFQA_MAX+1] = {};
+    struct cfdata      *cfd = (struct cfdata*) data;
+    struct nlattr      *netlink_attrs[NFQA_MAX+1] = {};
+    struct dnx_pktb     pkt;
 
-    nl_pkt_hdr *nlhdr;
-    nl_pkt_hw  *_hw;
+    nl_pkt_hdr     *nl_pkth = NULL;
+//    nl_pkt_hw  *_hw;
+    uint32_t        ct_info;
 
-    uint32_t    _iif, _oif, _mark, ct_info;
-
-    struct dnx_pktb    pkt;
-
-    struct clist_range      fw_clist;
+    struct clist_range  fw_clist;
 
     printf("< [++] FW RECV QUEUE(%u) - PARSING [++] >\n", cfd->queue);
-
-    nfq_nlmsg_parse(nlh, netlink_attrs);
-
-    nlhdr = (nl_pkt_hdr*) mnl_attr_get_payload(netlink_attrs[NFQA_PACKET_HDR]);
-    // ======================
-    // CONNTRACK
-    // this should be checked as soon as feasibly possible for performance.
-    // this will be used to allow for stateless inspection policies later.
-    // NTOHL on id is because kernel will apply HTONL on receipt
+    dnx_parse_nl_headers(nl_msgh, nl_pkth, netlink_attrs, &pkt);
+    /*
+    CONNTRACK LOOKUP
+    this should be checked as soon as feasibly possible for performance.
+    this will be used to allow for stateless inspection policies later.
+    NTOHL on id is because kernel will apply HTONL on receipt.
+    */
     ct_info = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_CT_INFO]));
     if (ct_info != IP_CT_NEW) {
-        dnx_send_verdict_fast(cfd, ntohl(nlhdr->packet_id), 0, NF_ACCEPT);
+        dnx_send_verdict_fast(cfd, ntohl(nl_pkth->packet_id), 0, NF_ACCEPT);
 
         return OK;
     }
-    // ======================
-    // INTERFACE, NL, AND HW
-    _mark = netlink_attrs[NFQA_MARK] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_MARK])) : 0;
-    _iif  = netlink_attrs[NFQA_IFINDEX_INDEV] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_INDEV])) : 0;
-    _oif  = netlink_attrs[NFQA_IFINDEX_OUTDEV] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_OUTDEV])) : 0;
-
-    if (netlink_attrs[NFQA_HWADDR]) {
-        _hw = (nl_pkt_hw*) mnl_attr_get_payload(netlink_attrs[NFQA_HWADDR]);
-
-        pkt.hw.mac_addr = (char*) _hw->hw_addr;
-    }
-
-    pkt.hw.timestamp = time(NULL);
-    pkt.hw.in_zone   = INTF_ZONE_MAP[_iif];
-    pkt.hw.out_zone  = INTF_ZONE_MAP[_oif];
-    // ======================
-    // PACKET DATA / LEN
-    pkt.data = mnl_attr_get_payload(netlink_attrs[NFQA_PAYLOAD]); // <uint8_t*>
-    pkt.tlen = mnl_attr_get_payload_len(netlink_attrs[NFQA_PAYLOAD]);
-    // ======================
-    // FW TABLE ASSIGNMENT
-    // ordered by system priority
-    switch (nlhdr->hook) {
-        case NF_IP_FORWARD:
-            fw_clist.start = FW_RULE_RANGE_START;
-            break;
-        case NF_IP_LOCAL_IN:
-            fw_clist.start = FW_SYSTEM_RANGE_START;
-            break;
-        default:
-            printf("< [--!] FW HOOK MISMATCH (%u) - EXITING [!--] >\n", nlhdr->hook);
-            return ERR;
-    }
-    fw_clist.end = FW_RULE_RANGE_END;
-    // ===================================
-    // LOCKING ACCESS TO FIREWALL RULES
-    // prevents the manager thread from updating firewall rules during packet inspection
-    firewall_lock();
-    // --------------------
-    firewall_inspect(&fw_clist, &pkt, cfd);
-    // --------------------
-    firewall_unlock();
-    // UNLOCKING ACCESS TO FIREWALL RULES
-    // ===================================
-
-    // --------------------
-    // NFQUEUE VERDICT
-    // --------------------
-    // only SYSTEM RULES will have cfirewall invoke action directly
-    if (fw_clist.start != FW_SYSTEM_RANGE_START) {
-
-        // if PROXY_BYPASS, cfirewall will invoke the rule action without forwarding to another queue.
-        // if not PROXY_BYPASS, forward to ip proxy regardless of action for geolocation log or IPS
+    /*
+    SYSTEM RULES and PROXY_BYPASS will skip proxies and invoke the rule action directly
+    otherwise will forward to ip proxy regardless of action for geolocation log or IPS
+    */
+    if (nl_pkth->hook == NF_IP_FORWARD) {
+        fw_clist.start = FW_RULE_RANGE_START;
         if (!PROXY_BYPASS) {
             pkt.action = IP_PROXY << TWO_BYTES | NF_QUEUE;
         }
     }
-    dnx_send_verdict(cfd, ntohl(nlhdr->packet_id), &pkt);
+    else if (nl_pkth->hook == NF_IP_FORWARD) {
+        fw_clist.start = FW_SYSTEM_RANGE_START;
+    }
+
+    fw_clist.end = FW_RULE_RANGE_END;
+    // ===================================
+    // FIREWALL RULES LOCK
+    // prevents the manager thread from updating firewall rules during packet inspection
+    // consider locking around each control list since. this would weave control list updates with inspection
+    firewall_lock();
+    firewall_inspect(&fw_clist, &pkt, cfd);
+    firewall_unlock();
+    // UNLOCKING ACCESS TO FIREWALL RULES
+    // ===================================
+
+    // NFQUEUE VERDICT
+    dnx_send_verdict(cfd, ntohl(nl_pkth->packet_id), &pkt);
 
     if (FW_V && VERBOSE) {
         printf("< -- FIREWALL VERDICT -- >\n");
-        printf("packet_id->%u, hook->%u, mark->%u, action->%u", ntohl(nlhdr->packet_id), nlhdr->hook, _mark, pkt.action);
+        printf("packet_id->%u, hook->%u, mark->%u, action->%u", ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.mark, pkt.action);
         if (!PROXY_BYPASS) {
             printf(", ipp->%u, dns->%u, ips->%u", pkt.mark >> 12 & 15, pkt.mark >> 16 & 15, pkt.mark >> 20 & 15);
         }
         printf("\n=====================================================================\n");
     }
+
+    // whenever we implement log functionality for rule hits
+//    if (pkt.log) {
+//        pkt.hw.timestamp = time(NULL);
+//        if (netlink_attrs[NFQA_HWADDR]) {
+//            pkt.hw.mac_addr = ((nl_pkt_hw*) mnl_attr_get_payload(netlink_attrs[NFQA_HWADDR]))->hw_addr;
+//        }
+//    }
 
     // return heirarchy -> libnfnetlink.c >> libnetfiler_queue >> process_traffic.
     // < 0 vals are errors, but return is being ignored by CFirewall._run.
@@ -183,12 +136,11 @@ firewall_recv(const struct nlmsghdr *nlh, void *data)
 inline void
 firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfdata *cfd)
 {
-    // iphdr and protohdr
     dnx_parse_pkt_headers(pkt);
 
-    struct HashTrie_Range *geolocation = cfd->geolocation;
-
     struct FWrule     *rule;
+
+    struct HashTrie_Range *geolocation = cfd->geolocation;
 
     // normalizing src/dst ip in header to host order
     uint32_t    iph_src_ip = ntohl(pkt->iphdr->saddr);
@@ -210,20 +162,17 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
         printf("src->[%u]%u(%u):%u, dst->[%u]%u(%u):%u, direction->%u, tracked->%u\n",
             pkt->hw.in_zone, iph_src_ip, src_country, ntohs(pkt->protohdr->sport),
             pkt->hw.out_zone, iph_dst_ip, dst_country, ntohs(pkt->protohdr->dport),
-            direction, tracked_geo
-            );
+            direction, tracked_geo);
     }
 
     for (cntrl_list = fw_clist->start; cntrl_list < fw_clist->end; cntrl_list++) {
 
         if (firewall_tables[cntrl_list].len == 0) { continue; }
 
-        // same as above
+        // NOTE: inspection order: src > dst | zone, ip_addr, protocol, port
         for (rule_idx = 0; rule_idx < firewall_tables[cntrl_list].len; rule_idx++) {
 
             rule = &firewall_tables[cntrl_list].rules[rule_idx];
-
-            // NOTE: inspection order: src > dst | zone, ip_addr, protocol, port
             if (!rule->enabled) { continue; }
 
             if (FW_V && VERBOSE2) {
@@ -442,8 +391,6 @@ firewall_print_rule(uintf8_t ctrl_list, uintf16_t rule_idx)
         else {
             printf("< ");
             for (ix = 0; ix < rule.d_services.objects[i].svc_list.len; ix++) {
-                // [0] START INDEX ON FW RULE SIZE
-                // [1] START INDEX PYTHON DICT SIDE (to first index for size)
                 printf("(%u, %u, %u) ",
                     (uint16_t) rule.d_services.objects[i].svc_list.services[ix].protocol,
                     (uint16_t) rule.d_services.objects[i].svc_list.services[ix].start_port,

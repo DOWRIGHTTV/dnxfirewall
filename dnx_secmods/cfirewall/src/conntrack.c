@@ -3,8 +3,10 @@
 #include "cfirewall.h"
 #include "rules.h"
 
-static void nat_update_std(struct dnx_pktb *pkt, struct nf_conntrack *ct);
-static void nat_update_icmp(struct dnx_pktb *pkt, struct nf_conntrack *ct);
+static void nat_update_std(struct nf_conntrack *ct, struct dnx_pktb *pkt);
+static void nat_update_icmp(struct nf_conntrack *ct, struct dnx_pktb *pkt);
+
+struct nfct_handle *nfct;
 
 int
 ct_nat_init(void) {
@@ -34,10 +36,10 @@ ct_nat_update(struct dnx_pktb *pkt)
     switch (pkt->iphdr->protocol) {
         case IPPROTO_TCP:
         case IPPROTO_UDP:
-            nat_update_std(pkt, ct);
+            nat_update_std(ct, pkt);
             break;
         case IPPROTO_ICMP:
-            nat_update_icmp(pkt, ct);
+            nat_update_icmp(ct, pkt);
     }
     // flip the original
     nfct_setobjopt(ct, NFCT_SOPT_SETUP_REPLY);
@@ -66,7 +68,7 @@ ct_nat_update(struct dnx_pktb *pkt)
 }
 
 static inline void
-nat_update_std(struct dnx_pktb *pkt, struct nf_conntrack *ct)
+nat_update_std(struct nf_conntrack *ct, struct dnx_pktb *pkt)
 {
     // this is to identify the connection
     nfct_set_attr_u8(ct, ATTR_L4PROTO, pkt->iphdr->protocol);
@@ -75,7 +77,7 @@ nat_update_std(struct dnx_pktb *pkt, struct nf_conntrack *ct)
 }
 
 static inline void
-nat_update_icmp(struct dnx_pktb *pkt, struct nf_conntrack *ct)
+nat_update_icmp(struct nf_conntrack *ct, struct dnx_pktb *pkt)
 {
     nfct_set_attr_u8(ct, ATTR_L4PROTO, IPPROTO_ICMP);
 

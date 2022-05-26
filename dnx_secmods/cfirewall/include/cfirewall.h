@@ -65,13 +65,18 @@ extern bool NAT_V;
 
 extern struct mnl_socket *nl[2];
 
+//extern uint8_t dnx_pkt_id;
+//extern struct dnx_pktb *dnx_pkt_tracker[UINT8_MAX];
+
 // stores zone(integer value) at index, which is mapped to if_nametoindex() (value returned from get_in/outdev)
 // memset will be performed in Cython prior to changing the values.
 extern uintf16_t INTF_ZONE_MAP[FW_MAX_ZONES];
 
 // dxnfirewall typedef helpers
-typedef struct nfqnl_msg_packet_hdr   nl_pkt_hdr;
-typedef struct nfqnl_msg_packet_hw    nl_pkt_hw;
+typedef const struct nlmsghdr     nl_msg_hdr;
+
+typedef struct nfqnl_msg_packet_hdr     nl_pkt_hdr;
+typedef struct nfqnl_msg_packet_hw      nl_pkt_hw;
 
 //typedef uint8_t (*hash_trie_search_t)(uint32_t msb, uint32_t lsb);
 
@@ -90,7 +95,9 @@ struct clist_range {
 
 struct HWinfo {
     double      timestamp;
+    uint8f_t    iif;
     uintf8_t    in_zone;
+    uint8f_t    oif;
     uintf8_t    out_zone;
     char*       mac_addr;
 };
@@ -121,6 +128,7 @@ struct Protohdr {
 };
 
 struct dnx_pktb {
+    uint8_t             confirmed;
     uint8_t            *data;
     uint16_t            tlen;
     struct HWinfo       hw;

@@ -186,6 +186,12 @@ cdef class CFirewall:
         if (verbose2):
             print('<verbose2 console logging enabled>')
 
+        if (fw):
+            print('<fw verbose console logging enabled>')
+
+        if (nat):
+            print('<nat verbose console logging enabled>')
+
     # def api_set(s, unicode sock_path):
     #
     #     cdef:
