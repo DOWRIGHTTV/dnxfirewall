@@ -70,7 +70,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     struct clist_range  fw_clist;
 
     printf("< [++] FW RECV QUEUE(%u) - PARSING [++] >\n", cfd->queue);
-    dnx_parse_nl_headers(nl_msgh, nl_pkth, netlink_attrs, &pkt);
+    dnx_parse_nl_headers(nl_msgh, &nl_pkth, netlink_attrs, &pkt);
     /*
     CONNTRACK LOOKUP
     this should be checked as soon as feasibly possible for performance.

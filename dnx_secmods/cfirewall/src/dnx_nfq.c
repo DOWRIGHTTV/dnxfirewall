@@ -9,7 +9,7 @@ static void mangle_dst_port(struct dnx_pktb *pkt);
 
 
 inline void
-dnx_parse_nl_headers(nl_msg_hdr *nlmsgh, nl_pkt_hdr *nl_pkth,  struct nlattr **netlink_attrs, struct dnx_pktb *pkt)
+dnx_parse_nl_headers(nl_msg_hdr *nlmsgh, nl_pkt_hdr **nl_pkth,  struct nlattr **netlink_attrs, struct dnx_pktb *pkt)
 {
     nfq_nlmsg_parse(nlmsgh, netlink_attrs);
 
@@ -28,7 +28,7 @@ dnx_parse_nl_headers(nl_msg_hdr *nlmsgh, nl_pkt_hdr *nl_pkth,  struct nlattr **n
     pkt->data = mnl_attr_get_payload(netlink_attrs[NFQA_PAYLOAD]);
     pkt->tlen = mnl_attr_get_payload_len(netlink_attrs[NFQA_PAYLOAD]);
 
-    nl_pkth = (nl_pkt_hdr*) mnl_attr_get_payload(netlink_attrs[NFQA_PACKET_HDR]);
+    *nl_pkth = (nl_pkt_hdr*) mnl_attr_get_payload(netlink_attrs[NFQA_PACKET_HDR]);
 }
 
 // initial header parse and assignment to dnx_pktb struct
@@ -101,8 +101,14 @@ not be specified under normal conditions, unless there is an explicit reason to 
 bool
 dnx_mangle_pkt(struct dnx_pktb *pkt)
 {
+    uint8_t     _oif;
+
     if (pkt->action == DNX_MASQ) {
-        pkt->iphdr->saddr = intf_masquerade(pkt->hw.oif);
+        _oif = intf_masquerade(pkt->hw.oif);
+
+        pkt->iphdr->saddr = _oif;
+        // need to set nat struct for masquerade or else conn tuple will not be updated.
+        pkt->nat.saddr = _oif;
     }
     else if (pkt->action == DNX_SRC_NAT || pkt->action == DNX_FULL_NAT) {
         mangle_src_addr(pkt);

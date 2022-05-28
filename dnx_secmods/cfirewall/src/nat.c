@@ -65,7 +65,7 @@ nat_recv(nl_msg_hdr *nl_msgh, void *data)
     int                 cntrl_list;
 
     printf("< [++] NAT RECV QUEUE(%u) - PARSING [++] >\n", cfd->queue);
-    dnx_parse_nl_headers(nl_msgh, nl_pkth, netlink_attrs, &pkt);
+    dnx_parse_nl_headers(nl_msgh, &nl_pkth, netlink_attrs, &pkt);
 
     // made if block to expand logic, but unsure how to handle that for now.
     if (nl_pkth->hook == NF_IP_PRE_ROUTING) {
@@ -92,11 +92,11 @@ nat_recv(nl_msg_hdr *nl_msgh, void *data)
 
     // NAT / MANGLE
     if (pkt.action > DNX_NO_NAT) {
+        ct_nat_update(&pkt);
         pkt.mangled = dnx_mangle_pkt(&pkt);
     }
     // need to reduce DNX_* to DNX_ACCEPT on nat rule matches.
     if (pkt.action >= DNX_NO_NAT) {
-        ct_nat_update(&pkt);
         pkt.action = DNX_ACCEPT;
     }
 
@@ -248,18 +248,18 @@ nat_print_rule(uintf8_t cntrl_list, uintf16_t rule_idx)
     int    i, ix;
     struct NATrule  rule = nat_tables[cntrl_list].rules[rule_idx];
 
-    printf("<<NAT RULE [%u][%u]>>\n", (uint8_t) cntrl_list, (uint16_t) rule_idx);
+    printf("<<---NAT RULE [%u][%u]--->>\n", (uint8_t) cntrl_list, (uint16_t) rule_idx);
     printf("enabled->%d\n", (uint8_t) rule.enabled);
 
     // SRC ZONES
-    printf("src_zones->[ ");
+    printf("src_z - ct->%u, zones->[ ", (uint8_t) rule.s_zones.len);
     for (i = 0; i < rule.s_zones.len; i++) {
         printf("%u ", (uint8_t) rule.s_zones.objects[i]);
     }
     printf(" ]\n");
 
     // SRC NETWORKS
-    printf("src_networks->[ ");
+    printf("src_net - ct->%u, networks->[ ", (uint8_t) rule.s_networks.len);
     for (i = 0; i < rule.s_networks.len; i++) {
         printf("(%u, %u, %u) ",
             (uint8_t) rule.s_networks.objects[i].type,
@@ -269,8 +269,8 @@ nat_print_rule(uintf8_t cntrl_list, uintf16_t rule_idx)
     printf(" ]\n");
 
     // SRC SERVICES
+    printf("src_svc - ct->%u, services->[ ", (uint8_t) rule.s_services.len);
     for (i = 0; i < rule.s_services.len; i++) {
-        printf("src_services->[ ");
         // TYPE 4 (ICMP) OBJECT ASSIGNMENT
         if (rule.s_services.objects[i].type == SVC_ICMP) {
             printf("(1, %u, %u) ",
@@ -301,25 +301,25 @@ nat_print_rule(uintf8_t cntrl_list, uintf16_t rule_idx)
     printf("]\n");
 
     // DST ZONES
-    printf("dst_zones->[ ");
+    printf("dst_z - ct->%u, zones->[ ", (uint8_t) rule.d_zones.len);
     for (i = 0; i < rule.d_zones.len; i++) {
         printf("%u ", (uint8_t) rule.d_zones.objects[i]);
     }
-    printf(" ]\n");
+    printf("]\n");
 
     // DST NETWORK
-    printf("dst_networks->[ ");
+    printf("dst_net - ct->%u, networks->[ ", (uint8_t) rule.d_networks.len);
     for (i = 0; i < rule.d_networks.len; i++) {
         printf("(%u, %u, %u) ",
             (uint8_t) rule.d_networks.objects[i].type,
             (uint32_t) rule.d_networks.objects[i].netid,
             (uint32_t) rule.d_networks.objects[i].netmask);
     }
-    printf(" ]\n");
+    printf("]\n");
 
     // DST SERVICES
-    for (i = 0; i < rule.s_services.len; i++) {
-        printf("dst_services->[ ");
+    printf("dst_svc - ct->%u, services->[ ", (uint8_t) rule.d_services.len);
+    for (i = 0; i < rule.d_services.len; i++) {
         // TYPE 4 (ICMP) OBJECT ASSIGNMENT
         if (rule.d_services.objects[i].type == SVC_ICMP) {
             printf("(1, %u, %u) ",

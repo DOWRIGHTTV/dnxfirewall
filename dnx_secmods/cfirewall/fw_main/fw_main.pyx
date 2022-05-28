@@ -1,7 +1,7 @@
 #!/usr/bin/env Cython
 
 #from libc.stdlib cimport calloc, malloc, free
-# from libc.string cimport memset
+from libc.string cimport memset
 from libc.stdio cimport printf, perror
 
 from libc.stdint cimport uint8_t, uint16_t, uint32_t
@@ -354,6 +354,8 @@ cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
 
         FWrule          fw_rule
 
+    memset(&fw_rule, 0, sizeof(FWrule))
+
     fw_rule.enabled = <bint>rule['enabled']
     # ===========
     # SOURCE
@@ -449,7 +451,7 @@ cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
     fw_rule.sec_profiles[1] = <uintf8_t>rule['dns_profile']
     fw_rule.sec_profiles[2] = <uintf8_t>rule['ips_profile']
 
-    if (VERBOSE2 and cntrl_list_idx >= 1):
+    if (VERBOSE2 and FW_V and cntrl_list_idx >= 1):
         ppt(fw_rule)
 
     firewall_stage_rule(cntrl_list_idx, rule_idx, &fw_rule)
@@ -461,6 +463,8 @@ cdef void set_NATrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
         SvcObject       svc_object
 
         NATrule          nat_rule
+
+    memset(&nat_rule, 0, sizeof(NATrule))
 
     nat_rule.enabled = <bint>rule['enabled']
     # ===========
@@ -558,7 +562,7 @@ cdef void set_NATrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
     nat_rule.nat.daddr = <uintf16_t>rule['daddr']
     nat_rule.nat.dport = <uintf16_t>rule['dport']
 
-    if (VERBOSE2):
+    if (VERBOSE2 and NAT_V):
         ppt(nat_rule)
 
     nat_stage_rule(cntrl_list_idx, rule_idx, &nat_rule)

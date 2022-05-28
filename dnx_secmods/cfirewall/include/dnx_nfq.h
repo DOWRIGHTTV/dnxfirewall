@@ -7,7 +7,7 @@ struct nlattr;
 struct dnx_pktb;
 struct cfdata;
 
-void dnx_parse_nl_headers(nl_msg_hdr *nlmsgh, nl_pkt_hdr *nl_pkth, struct nlattr **netlink_attrs, struct dnx_pktb *pkt);
+void dnx_parse_nl_headers(nl_msg_hdr *nlmsgh, nl_pkt_hdr **nl_pkth, struct nlattr **netlink_attrs, struct dnx_pktb *pkt);
 void dnx_parse_pkt_headers(struct dnx_pktb *pkt);
 void dnx_send_verdict_fast(struct cfdata *cfd, uint32_t pktid, uint32_t mark, int action);
 int  dnx_send_verdict(struct cfdata *cfd, uint32_t pktid, struct dnx_pktb *pkt);
