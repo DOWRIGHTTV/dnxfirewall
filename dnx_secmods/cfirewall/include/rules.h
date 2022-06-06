@@ -113,6 +113,7 @@ struct FWrule {
 };
 
 struct Nat {
+    uint32_t    masq;
     uint32_t    saddr;
     uint16_t    sport;
     uint32_t    daddr;

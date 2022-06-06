@@ -62,9 +62,10 @@ nat_recv(nl_msg_hdr *nl_msgh, void *data)
     struct dnx_pktb     pkt;
 
     nl_pkt_hdr         *nl_pkth = NULL;
-    int                 cntrl_list;
+    int                 cntrl_list = 0;
 
     printf("< [++] NAT RECV QUEUE(%u) - PARSING [++] >\n", cfd->queue);
+//    memset(&pkt, 0, sizeof(struct dnx_pktb));
     dnx_parse_nl_headers(nl_msgh, &nl_pkth, netlink_attrs, &pkt);
 
     // made if block to expand logic, but unsure how to handle that for now.
@@ -91,7 +92,15 @@ nat_recv(nl_msg_hdr *nl_msgh, void *data)
     // ===================================
 
     // NAT / MANGLE
-    if (pkt.action > DNX_NO_NAT) {
+    // MASQUERADE needs to mangle before
+    if (pkt.action == DNX_MASQ) {
+        pkt.mangled = dnx_mangle_pkt(&pkt);
+        ct_nat_update(&pkt);
+
+        // masquerade requires a deferred mangle to not conflict with conntrack tuple
+        pkt.iphdr->saddr = pkt.nat.saddr;
+    }
+    else if (pkt.action > DNX_NO_NAT) {
         ct_nat_update(&pkt);
         pkt.mangled = dnx_mangle_pkt(&pkt);
     }
@@ -104,7 +113,8 @@ nat_recv(nl_msg_hdr *nl_msgh, void *data)
 
     if (NAT_V && VERBOSE) {
         printf("< [--] NAT VERDICT [--] >\n");
-        printf("packet_id->%u, hook->%u, action->%u\n", ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.action);
+        printf("packet_id->%u, hook->%u, rule->%u, action->%u\n",
+            ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.rule_num, pkt.action);
         printf("=====================================================================\n");
     }
 
@@ -183,6 +193,7 @@ nat_inspect(int cntrl_list, struct dnx_pktb *pkt, struct cfdata *cfd)
     // DEFAULT ACTION
     // ------------------------------------------------------------------
     pkt->rule_clist = NO_SECTION;
+    pkt->rule_num   = 0;
     pkt->action     = DNX_ACCEPT;
 }
 

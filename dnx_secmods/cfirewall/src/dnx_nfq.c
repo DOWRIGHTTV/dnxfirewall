@@ -101,14 +101,11 @@ not be specified under normal conditions, unless there is an explicit reason to 
 bool
 dnx_mangle_pkt(struct dnx_pktb *pkt)
 {
-    uint8_t     _oif;
-
     if (pkt->action == DNX_MASQ) {
-        _oif = intf_masquerade(pkt->hw.oif);
-
-        pkt->iphdr->saddr = _oif;
         // need to set nat struct for masquerade or else conn tuple will not be updated.
-        pkt->nat.saddr = _oif;
+        pkt->nat.saddr = intf_masquerade(pkt->hw.oif);
+
+        // defer mangle until after conntrack tuple is changed. caller can use nat.saddr as reference.
     }
     else if (pkt->action == DNX_SRC_NAT || pkt->action == DNX_FULL_NAT) {
         mangle_src_addr(pkt);
