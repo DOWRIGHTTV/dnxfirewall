@@ -1,3 +1,7 @@
+# CYTHON
+*.pyx    linguist-language=Cython
+*.pxd    linguist-language=Cython
+
 # WEBUI IMAGE EXTENSIONS
 *.png     linguist-language=Python
 
