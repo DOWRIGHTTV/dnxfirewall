@@ -11,7 +11,7 @@ RestartSec=3
 User=dnx
 Group=dnx
 WorkingDirectory=/home/dnx/dnxfirewall
-ExecStart=uwsgi --socket dnx_webui/webui.sock --chmod-socket=660 --mount /=dnx_webui:app --master --processes 2 --enable-threads
+ExecStart=uwsgi --socket dnx_webui/webui.sock --chmod-socket=660 --mount /=dnx_webui:app --master --processes 2 --enable-threads --die-on-term --reload-mercy 1 --worker-reload-mercy 1
 
 Environment=INIT=True
 Environment=HOME_DIR=/home/dnx/dnxfirewall
