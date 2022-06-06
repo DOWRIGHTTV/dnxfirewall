@@ -2,7 +2,7 @@
  'date':['2022', '04', '13'],
  'version':2,
  'objects':{
-  9003:[9003,'icmp','extended','service',1,'icmp/0','<commonly> Ping'],
+  9003:[9003,'icmp','built-in','service',1,'icmp/0','<commonly> Ping'],
   9004:[9004,'tcp_22','built-in','service',1,'tcp/22','<commonly> Secure Shell (SSH)'],
   9005:[9005,'tcp_25','built-in','service',1,'tcp/25','<commonly> Simple Mail Transfer Protocol (SMTP)'],
   9006:[9006,'udp_53','built-in','service',1,'udp/53','<commonly> Domain Name System (DNS)'],
