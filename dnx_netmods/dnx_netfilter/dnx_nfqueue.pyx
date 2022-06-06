@@ -2,312 +2,382 @@
 
 cimport cython
 
+from libc.stdlib cimport calloc, free
 from libc.stdio cimport printf
+from libc.stdint cimport uint8_t, uint16_t, uint32_t, uint_fast16_t, int32_t
 
-cdef u_int32_t MAX_COPY_SIZE = 4016 # 4096(buf) - 80
-cdef u_int32_t DEFAULT_MAX_QUEUELEN = 8192
+DEF Py_OK  = 0
+DEF Py_ERR = 1
+
+DEF NFQ_BUF_SIZE = 4096
+DEF MAX_COPY_SIZE = 4016 # 4096(buf) - 80
+DEF DEFAULT_MAX_QUEUELEN = 8192
 
 # Socket queue should hold max number of packets of copy size bytes
 # formula: DEF_MAX_QUEUELEN * (MaxCopySize+SockOverhead) / 2
-cdef u_int32_t SOCK_RCV_SIZE = 1024 * 4796 // 2
+DEF SOCK_RCV_SIZE = 1024 * 4796 // 2
 
-cdef object user_callback
-def set_user_callback(ref):
-    '''Set required reference which will be called after packet data is parsed into C structs.'''
+# ================================== #
+# NetfilterQueue Read/Write lock
+# ================================== #
+# TODO: confirm this is needed.
+#  apparently needed when calling nfq_handle_packet and set_verdict (doesnt sound right to me)
+# ---------------------------------- #
+cdef pthread_mutex_t NFQlock
 
-    global user_callback
+pthread_mutex_init(&NFQlock, NULL)
 
-    user_callback = ref
+# ============================================
+# NFQUEUE CALLBACK - PARSE > FORWARD - NO GIL
+# ============================================
+cdef int32_t nfqueue_rcv(nfq_q_handle *nfq_qh, nfgenmsg *nfmsg, nfq_data *nfq_d, void *q_manager) nogil:
 
-cdef int nf_callback(nfq_q_handle *qh, nfgenmsg *nfmsg, nfq_data *nfa, void *data):
+    cdef:
+        nfqnl_msg_packet_hdr *nfq_msg_hdr = nfq_get_msg_packet_hdr(nfq_d)
 
-    cdef CPacket packet
-    cdef u_int32_t mark
+        PacketData *dnx_nfqhdr = <PacketData*>calloc(1, sizeof(PacketData))
+
+    dnx_nfqhdr.nfq_qh    = nfq_qh
+    dnx_nfqhdr.nfq_d     = nfq_d
+    dnx_nfqhdr.id        = ntohl(nfq_msg_hdr.packet_id)
+    dnx_nfqhdr.mark      = nfq_get_nfmark(nfq_d)
+    dnx_nfqhdr.timestamp = time(NULL)
+    dnx_nfqhdr.len       = nfq_get_payload(nfq_d, &dnx_nfqhdr.data)
+
+    # the first byte contains the version and header length, so we can just cast to char to calculate length
+    dnx_nfqhdr.iphdr_len  = (<uint8_t>dnx_nfqhdr.data[0] & 15) * 4
+
+    # ----------------------------------
+    # GIL ACQUIRED -> FORWARD TO PYTHON
+    # ----------------------------------
+    return nfqueue_forward(dnx_nfqhdr, q_manager)
+
+# ============================================
+# FORWARDING TO PROXY CALLBACK - GIL ACQUIRED
+# ============================================
+cdef inline int32_t nfqueue_forward(PacketData *dnx_nfqhdr, void *q_manager) with gil:
+
+    cdef:
+        NetfilterQueue nfqueue = <NetfilterQueue>q_manager
+        CPacket cpacket
 
     # skipping call to __init__
-    packet = CPacket.__new__(CPacket)
+    cpacket = CPacket.__new__(CPacket)
+    cpacket.set_nfqhdr(dnx_nfqhdr)
 
-    with nogil:
-        mark = packet.parse(qh, nfa)
+    nfqueue.proxy_callback(cpacket, dnx_nfqhdr.mark)
 
-    user_callback(packet, mark)
+    return Py_OK
 
-    return 1
+# ============================================
+# NFQUEUE RECV LOOP - NO GIL
+# ============================================
+# RECV > NFQ_HANDLE > NFQ_CALLBACK > PARSE > PROXY CALLBACK
+cdef void process_traffic(nfq_handle *nfq_h) nogil:
 
+    cdef:
+        pkt_buf pkt_buffer[NFQ_BUF_SIZE]
+        int32_t fd = nfq_fd(nfq_h)
 
-# pre allocating memory for 8 instance. instances are created and destroyed sequentially so only one instance
-# will be active at a time, but this is to make a point to myself that this module could be multi threaded within
-# C one day.
+        ssize_t data_len
+
+    while True:
+        data_len = recv(fd, pkt_buffer, NFQ_BUF_SIZE, 0)
+
+        if (data_len > 0):
+            # ===================================
+            # LOCKING ACCESS TO NetfilterQueue
+            # prevents verdict from being issues while initially processing the recvd packet
+            # TODO: determine if this is ACTUALLY needed vs dumb dumbs saying it is. adjust cfirewall as necessary
+            # pthread_mutex_lock(&NFQlock)
+            # -------------------------
+            # NetfilterQueue Processor
+            # -------------------------
+            nfq_handle_packet(nfq_h, pkt_buffer, data_len)
+
+            # pthread_mutex_unlock(&NFQlock)
+            # UNLOCKING ACCESS TO NetfilterQueue
+            # ===================================
+        elif (errno != ENOBUFS):
+            break
+
+# pre allocating memory for 8 instance.
+# instances are created and destroyed sequentially so only one instance will be active at a time.
+# this is to make a point to myself that this module could be multithreading within C one day.
 @cython.freelist(8)
 cdef class CPacket:
 
-    def __cinit__(self):
-        self._verdict = False
-        self._mark = 0
+    def __cinit__(s):
+        s.has_verdict = 0
 
-    cdef u_int32_t parse(self, nfq_q_handle *qh, nfq_data *nfa) nogil:
+    def __dealloc__(s):
+        free(s.dnx_nfqhdr)
 
-        self._timestamp = time(NULL)
-        self._data_len  = nfq_get_payload(nfa, &self.data)
+    cdef void set_nfqhdr(s, PacketData *dnx_nfqhdr):
 
-        self._qh  = qh
-        self._nfa = nfa
+        s.dnx_nfqhdr = dnx_nfqhdr
 
-        self._hdr = nfq_get_msg_packet_hdr(nfa)
-        self._id  = ntohl(self._hdr.packet_id)
-
-        # splitting packet by tcp/ip layers
-        self._parse()
-
-        # returning mark for more direct access
-        return nfq_get_nfmark(nfa)
-
-    cdef void _parse(self) nogil:
-
-        self.ip_header = <iphdr*>self.data
-
-        cdef u_int8_t iphdr_len
-        cdef u_int8_t protohdr_len = 0
-
-        iphdr_len = (self.ip_header.ver_ihl & 15) * 4
-        if (self.ip_header.protocol == IPPROTO_TCP):
-            self.tcp_header = <tcphdr*>&self.data[iphdr_len]
-
-            protohdr_len = ((self.tcp_header.th_off >> 4) & 15) * 4
-
-        elif (self.ip_header.protocol == IPPROTO_UDP):
-            self.udp_header = <udphdr*>&self.data[iphdr_len]
-
-            protohdr_len = 8
-
-        elif (self.ip_header.protocol == IPPROTO_ICMP):
-            self.icmp_header = <icmphdr*>&self.data[iphdr_len]
-
-            protohdr_len = 4
-
-        self._cmbhdr_len = protohdr_len + 20
-
-        self.payload = &self.data[self._cmbhdr_len]
-
-    cdef void verdict(self, u_int32_t verdict) nogil:
-        '''Call appropriate set_verdict function on packet.'''
-
-        if self._verdict:
-            printf('[C/warning] Multiple verdicts issued to a single packet.')
-
-            return
-
-        if self._mark:
-            nfq_set_verdict2(
-                self._qh, self._id, verdict, self._mark, self._data_len, self.data
-            )
-
-        else:
-            nfq_set_verdict(
-                self._qh, self._id, verdict, self._data_len, self.data
-            )
-
-        self._verdict = True
-
-    cpdef update_mark(self, u_int32_t mark):
-        '''Modifies the running mark of the packet.'''
-
-        self._mark = mark
-
-    cpdef accept(self):
-
-        with nogil:
-            self.verdict(NF_ACCEPT)
-
-    cpdef drop(self):
-
-        with nogil:
-            self.verdict(NF_DROP)
-
-    cpdef forward(self, u_int16_t queue_num):
-        '''Send instance packet to a different queue.'''
-
-        cdef u_int32_t forward_to_queue
-
-        with nogil:
-            forward_to_queue = queue_num << 16 | NF_QUEUE
-
-            self.verdict(forward_to_queue)
-
-    cpdef repeat(self):
-
-        with nogil:
-            self.verdict(NF_REPEAT)
-
-    def get_inint_name(self):
-
-        # cdef object *int_name
-        #
-        # nfq_get_indev_name(self)
-
-        pass
-
-    def get_outint_name(self):
-
-        # cdef object *int_name
-        #
-        # nfq_get_outdev_name(self)
-
-        pass
-
-    def get_hw(self):
+    def get_hw(s):
         '''Return hardware information of the packet.
 
-            hw_info = (
-                in_interface, out_interface, mac_addr, timestamp
-            )
+            hw_info = (in_interface, out_interface, mac_addr, timestamp)
         '''
+        cdef:
+            (uint32_t, uint32_t, char*, uint32_t) hw_info
 
-        cdef (u_int32_t, u_int32_t, char*, u_int32_t) hw_info
+            uint32_t in_interface   = nfq_get_indev(s.dnx_nfqhdr.nfq_d)
+            uint32_t out_interface  = nfq_get_outdev(s.dnx_nfqhdr.nfq_d)
+            nfqnl_msg_packet_hw *hw = nfq_get_packet_hw(s.dnx_nfqhdr.nfq_d)
 
-        cdef u_int32_t in_interface  = nfq_get_indev(self._nfa)
-        cdef u_int32_t out_interface = nfq_get_outdev(self._nfa)
-
-        self._hw = nfq_get_packet_hw(self._nfa)
-        if self._hw == NULL:
+        if (hw == NULL):
             # nfq_get_packet_hw doesn't work on OUTPUT and PREROUTING chains
             # NOTE: forcing error handling will ensure it is dealt with [properly].
             raise OSError('MAC address not available in OUTPUT and PREROUTING chains')
 
-        # casting to bytestring to be compatible with ctuple.
-        cdef char *mac_addr = <char*>self._hw.hw_addr
-
         hw_info = (
-            in_interface,
-            out_interface,
-            mac_addr,
-            self._timestamp,
+            in_interface, out_interface, <char*>hw.hw_addr, s.dnx_nfqhdr.timestamp
         )
 
         return hw_info
 
-    def get_raw_packet(self):
-        '''Return layer 3-7 of packet data.'''
+    def get_raw_packet(s):
+        '''Return layer 3-7 of packet data.
+        '''
+        return s.dnx_nfqhdr.data[:<Py_ssize_t>s.dnx_nfqhdr.len]
 
-        return self.data[:<Py_ssize_t>self._data_len]
+    def get_ip_header(s):
+        '''Return layer3 of packet data as a tuple converted directly from C struct.
+        '''
+        cdef (uint8_t, uint8_t, uint16_t, uint16_t, uint16_t,
+                uint8_t, uint8_t, uint16_t, uint32_t, uint32_t) ip_header
 
-    def get_ip_header(self):
-        '''Return layer3 of packet data as a tuple converted directly from C struct.'''
-
-        cdef (u_int8_t, u_int8_t, u_int16_t, u_int16_t, u_int16_t,
-                u_int8_t, u_int8_t, u_int16_t, u_int32_t, u_int32_t) ip_header
+        cdef IPhdr *iphdr = <IPhdr*>s.dnx_nfqhdr.data
 
         ip_header = (
-            self.ip_header.ver_ihl,
-            self.ip_header.tos,
-            ntohs(self.ip_header.tot_len),
-            ntohs(self.ip_header.id),
-            ntohs(self.ip_header.frag_off),
-            self.ip_header.ttl,
-            self.ip_header.protocol,
-            ntohs(self.ip_header.check),
-            ntohl(self.ip_header.saddr),
-            ntohl(self.ip_header.daddr),
+            iphdr.ver_ihl,
+            iphdr.tos,
+            ntohs(iphdr.tot_len),
+            ntohs(iphdr.id),
+            ntohs(iphdr.frag_off),
+            iphdr.ttl,
+            iphdr.protocol,
+            ntohs(iphdr.check),
+            ntohl(iphdr.saddr),
+            ntohl(iphdr.daddr),
         )
 
         return ip_header
 
-    def get_tcp_header(self):
-        '''Return layer4 (TCP) of packet data as a tuple converted directly from C struct.'''
+    def get_tcp_header(s):
+        '''Return layer4 (TCP) of packet data as a tuple converted directly from C struct.
+        '''
+        cdef (uint16_t, uint16_t, uint32_t, uint32_t,
+                uint8_t, uint8_t, uint16_t, uint16_t, uint16_t) tcp_header
 
-        cdef (u_int16_t, u_int16_t, u_int32_t, u_int32_t,
-                u_int8_t, u_int8_t, u_int16_t, u_int16_t, u_int16_t) tcp_header
+        cdef TCPhdr *tcphdr = <TCPhdr*>&s.dnx_nfqhdr.data[s.dnx_nfqhdr.iphdr_len]
+
+        s.protohdr_len = ((tcphdr.th_off >> 4) & 15) * 4
 
         tcp_header = (
-            ntohs(self.tcp_header.th_sport),
-            ntohs(self.tcp_header.th_dport),
-            ntohl(self.tcp_header.th_seq),
-            ntohl(self.tcp_header.th_ack),
-            self.tcp_header.th_off,
-            self.tcp_header.th_flags,
-            ntohs(self.tcp_header.th_win),
-            ntohs(self.tcp_header.th_sum),
-            ntohs(self.tcp_header.th_urp),
+            ntohs(tcphdr.th_sport),
+            ntohs(tcphdr.th_dport),
+            ntohl(tcphdr.th_seq),
+            ntohl(tcphdr.th_ack),
+            tcphdr.th_off,
+            tcphdr.th_flags,
+            ntohs(tcphdr.th_win),
+            ntohs(tcphdr.th_sum),
+            ntohs(tcphdr.th_urp),
         )
 
         return tcp_header
 
-    def get_udp_header(self):
-        '''Return layer4 (UDP) of packet data as a tuple converted directly from C struct.'''
+    def get_udp_header(s):
+        '''Return layer4 (UDP) of packet data as a tuple converted directly from C struct.
+        '''
+        cdef (uint16_t, uint16_t, uint16_t, uint16_t) udp_header
 
-        cdef (u_int16_t, u_int16_t, u_int16_t, u_int16_t) udp_header
+        cdef UDPhdr *udphdr = <UDPhdr*>&s.dnx_nfqhdr.data[s.dnx_nfqhdr.iphdr_len]
+
+        s.protohdr_len = 8
 
         udp_header = (
-            ntohs(self.udp_header.uh_sport),
-            ntohs(self.udp_header.uh_dport),
-            ntohs(self.udp_header.uh_ulen),
-            ntohs(self.udp_header.uh_sum),
+            ntohs(udphdr.uh_sport),
+            ntohs(udphdr.uh_dport),
+            ntohs(udphdr.uh_ulen),
+            ntohs(udphdr.uh_sum),
         )
 
         return udp_header
 
-    def get_icmp_header(self):
-        '''Return layer4 (ICMP) of packet data as a tuple converted directly from C struct.'''
+    def get_icmp_header(s):
+        '''Return layer4 (ICMP) of packet data as a tuple converted directly from C struct.
 
-        cdef (u_int8_t, u_int8_t) icmp_header
+        Calculates protohdr length and unlocks get_payload().
+        '''
+        cdef (uint8_t, uint8_t) icmp_header
 
-        icmp_header = (
-            self.icmp_header.type,
-            self.icmp_header.code,
-        )
+        cdef ICMPhdr *icmphdr = <ICMPhdr*>&s.dnx_nfqhdr.data[s.dnx_nfqhdr.iphdr_len]
+
+        s.protohdr_len = 4
+
+        icmp_header = (icmphdr.type, icmphdr.code)
 
         return icmp_header
 
-    def get_payload(self):
-        '''Return payload (>layer4) as Python bytes.'''
+    def get_payload(s):
+        '''Return payload (>layer4) as Python bytes.
 
-        cdef Py_ssize_t payload_len = self._data_len - self._cmbhdr_len
+        A call to get a protohdr is required before calling this method.
+        '''
+        cdef:
+            size_t ttl_hdr_len = 20 + s.protohdr_len
+            Py_ssize_t payload_len = s.dnx_nfqhdr.len - ttl_hdr_len
 
-        return self.payload[:payload_len]
+            upkt_buf *payload = &s.dnx_nfqhdr.data[ttl_hdr_len]
+
+        return payload[:payload_len]
+
+    cpdef void update_mark(s, uint32_t mark):
+        '''Modifies the netfilter mark of the packet.
+        '''
+        s.dnx_nfqhdr.mark = mark
+
+    cpdef void accept(s):
+        '''Allow the packet to continue to the next table.
+
+        The GIL is released before calling into netfilter.
+        '''
+        with nogil:
+            s._set_verdict(NF_ACCEPT)
+
+    cpdef void drop(s):
+        '''Discard the packet.
+
+        The GIL is released before calling into netfilter.
+        '''
+        with nogil:
+            s._set_verdict(NF_DROP)
+
+    cpdef void forward(s, uint_fast16_t queue_num):
+        '''Send the packet to a different queue.
+
+        The GIL is released before calling into netfilter.
+        '''
+        cdef uint32_t forward_to_queue
+
+        with nogil:
+            forward_to_queue = queue_num << 16 | NF_QUEUE
+
+            s._set_verdict(forward_to_queue)
+
+    cpdef void repeat(s):
+        '''Send the packet back to the top of the current chain.
+
+        The GIL is released before calling into netfilter.
+        '''
+        with nogil:
+            s._set_verdict(NF_REPEAT)
+
+    def get_inint_name(s):
+
+        # cdef object *int_name
+        #
+        # nfq_get_indev_name(s)
+
+        pass
+
+    def get_outint_name(s):
+
+        # cdef object *int_name
+        #
+        # nfq_get_outdev_name(s)
+
+        pass
+
+    cdef void _set_verdict(s, uint32_t verdict) nogil:
+        '''Call appropriate set_verdict function on packet.
+        '''
+        if (s.has_verdict):
+            printf('[C/warning] Verdict already issued for this packet.')
+
+            return
+
+        # ===================================
+        # LOCKING ACCESS TO NetfilterQueue
+        # prevents nfq packet handler from processing a packet while setting a verdict of another packet.
+        # pthread_mutex_lock(&NFQlock)
+        # -------------------------
+        # NetfilterQueue Processor
+        # -------------------------
+        if (s.dnx_nfqhdr.mark):
+            nfq_set_verdict2(
+                s.dnx_nfqhdr.nfq_qh, s.dnx_nfqhdr.id,
+                verdict, s.dnx_nfqhdr.mark,
+                s.dnx_nfqhdr.len, s.dnx_nfqhdr.data
+            )
+
+        else:
+            nfq_set_verdict(
+                s.dnx_nfqhdr.nfq_qh, s.dnx_nfqhdr.id,
+                verdict,
+                s.dnx_nfqhdr.len, s.dnx_nfqhdr.data
+            )
+
+        # pthread_mutex_unlock(&NFQlock)
+        # UNLOCKING ACCESS TO NetfilterQueue
+        # ===================================
+
+        s.has_verdict = 1
 
 
 cdef class NetfilterQueue:
 
-    cdef void _run(self):
+    def nf_run(s):
+        ''' calls internal C run method to engage nfqueue processes.
 
-        cdef int fd = nfq_fd(self.h)
-        cdef char packet_buf[4096]
-        cdef size_t sizeof_buf = sizeof(packet_buf)
-        cdef int data_len
+        This call will run forever, but the parsing operations will release the GIL and reacquire before returning to
+        user callback.
+        '''
+        with nogil:
+            process_traffic(s.nfq_h)
 
-        while True:
-            with nogil:
-                data_len = recv(fd, packet_buf, sizeof_buf, 0)
+    def nf_set(s, uint_fast16_t queue_num):
+        # ======================
+        # CREATE <NFQ_HANDLE>
+        # ----------------------
+        s.nfq_h = nfq_open()
+        # h->nfnlh = nfnlh
+        # h->nfnlssh = nfnl_subsys_open(...)
+        # h->qh_list = ????????????
 
-            if (data_len >= 0):
-                nfq_handle_packet(self.h, buf, data_len)
+        # ======================
+        # CREATE <NFQ_Q_HANDLE>
+        # ----------------------
+        s.nfq_qh = nfq_create_queue(s.nfq_h, queue_num, <nfq_callback*> nfqueue_rcv, <void*> s)
+        # qh->h = h;
+        # qh->id = num;
+        # qh->cb = cb;
+        # qh->data = data;
+        # ======================
+        if (s.nfq_qh == NULL):
+            return Py_ERR
 
-            else:
-                if errno != ENOBUFS:
-                    break
+        nfq_set_mode(s.nfq_qh, NFQNL_COPY_PACKET, MAX_COPY_SIZE)
+        nfq_set_queue_maxlen(s.nfq_qh, DEFAULT_MAX_QUEUELEN)
+        nfnl_rcvbufsiz(nfq_nfnlh(s.nfq_h), SOCK_RCV_SIZE)
 
-    def nf_run(self):
-        ''' calls internal C run method to engage nfqueue processes. this call will run forever, but parsing operations
-        will release the GIL prior to and acquire before returning to user callback.'''
+        return Py_OK
 
-        self._run()
+    def set_proxy_callback(s, object func_ref):
+        '''Set required reference which will be called after packet data is parsed into C structs.
+        '''
+        cdef object proxy_callback
 
-    def nf_set(self, u_int16_t queue_num):
-        self.h = nfq_open()
+        s.proxy_callback = func_ref
 
-        self.qh = nfq_create_queue(self.h, queue_num, <nfq_callback*>nf_callback, <void*>self)
+    def nf_break(s):
+        if (s.nfq_qh != NULL):
+            nfq_destroy_queue(s.nfq_qh)
 
-        if self.qh == NULL:
-            return 1
-
-        nfq_set_mode(self.qh, NFQNL_COPY_PACKET, MAX_COPY_SIZE)
-
-        nfq_set_queue_maxlen(self.qh, DEFAULT_MAX_QUEUELEN)
-
-        nfnl_rcvbufsiz(nfq_nfnlh(self.h), SOCK_RCV_SIZE)
-
-    def nf_break(self):
-        if self.qh != NULL:
-            nfq_destroy_queue(self.qh)
-
-        nfq_close(self.h)
+        nfq_close(s.nfq_h)

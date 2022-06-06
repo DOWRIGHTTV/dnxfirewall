@@ -1,217 +1,234 @@
 #!/usr/bin/env python3
 
-import __init__
+from __future__ import annotations
 
-from dnx_gentools.def_constants import *
+from dnx_gentools.def_typing import *
+from dnx_gentools.def_constants import UINT16_MAX
+from dnx_gentools.def_enums import CONN, PROTO, Queue, DIR, GEO, REP
 from dnx_gentools.def_namedtuples import IPP_INSPECTION_RESULTS
 
 from dnx_iptools.packet_classes import NFQueue
-from dnx_iptools.dnx_trie_search import RecurveTrie, RangeTrie # pylint: disable=import-error, no-name-in-module
 
-from dnx_secmods.ip_proxy.ip_proxy_packets import IPPPacket, ProxyResponse
-from dnx_secmods.ip_proxy.ip_proxy_restrict import LanRestrict
-from dnx_secmods.ip_proxy.ip_proxy_automate import Configuration
-from dnx_secmods.ip_proxy.ip_proxy_log import Log
+from ip_proxy_packets import IPPPacket, ProxyResponse
+from ip_proxy_restrict import LanRestrict
+from ip_proxy_automate import ProxyConfiguration
+from ip_proxy_log import Log
 
-LOG_NAME = 'ip_proxy'
+__all__ = (
+    'IPProxy',
+)
+
+REP_LOOKUP: Callable[[int], int] = NotImplemented  # will be assigned by __init__ prior to running
+PREPARE_AND_SEND = ProxyResponse.prepare_and_send
 
 
-class IPProxy(NFQueue):
-    ids_mode   = False
+class IPProxy(ProxyConfiguration, NFQueue):
 
-    reputation_enabled   = False
-    reputation_settings  = {}
-    geolocation_enabled  = True
-    geolocation_settings = {}
+    _packet_parser: ProxyParser = IPPPacket.netfilter_recv
 
-    ip_whitelist  = {}
-    tor_whitelist = {}
-    open_ports    = {
-        PROTO.TCP: {},
-        PROTO.UDP: {}
-    }
-    _packet_parser = IPPPacket.netfilter_rcv # alternate constructor
+    __slots__ = ()
 
-    @classmethod
-    def _setup(cls):
-        Configuration.setup(cls)
-        ProxyResponse.setup(Log, cls)
-        LanRestrict.run(cls)
+    def _setup(self) -> None:
+        self.__class__.set_proxy_callback(func=inspect)
 
-        cls.set_proxy_callback(func=Inspect.ip)
+        self.configure()
 
-    def _pre_inspect(self, packet):
-        # TODO: this can and should be moved to cfirewall
-        # if local ip is not in the ip whitelist, the packet will be dropped while time restriction is active.
-        if (LanRestrict.is_active and packet.in_zone == LAN_IN
-                and packet.src_ip not in self.ip_whitelist):
-            packet.nfqueue.drop()
+        ProxyResponse.setup(Log, self.__class__.open_ports)
+        LanRestrict.run(self.__class__)
 
-            return False
+    def _pre_inspect(self, packet: IPPPacket) -> bool:
 
-        # standard ip proxy inspect. further action decided post inspection.
-        if (packet.action is CONN.ACCEPT and packet.ipp_profile):
-            return True
+        # ====================
+        # CFIREWALL ACCEPT
+        # ====================
+        if (packet.action is CONN.ACCEPT):
 
-        # forwarding packet to ips for portscan/ddos inspection. accept or deny actions are both capable of being
-        # inspected by ips/ids. if ips/ids inspection is needed, the ip proxy will defer verdict and forward.
-        if (packet.direction is DIR.INBOUND and packet.ips_profile):
-            packet.nfqueue.forward(Queue.IPS_IDS)
+            # --------------------
+            # IP PROXY INSPECT
+            # --------------------
+            if (packet.ipp_profile):
+                return True
 
-        # if packet is not dropped at this point, neither the ips/ids and ip proxy profiles are set. in this case
-        # the ip proxy will issue the accept verdict.
-        elif (packet.action is CONN.ACCEPT and not packet.ipp_profile):
-            packet.nfqueue.accept()
+            # --------------------
+            # DIRECT TO IPS/IDS
+            # --------------------
+            # deferred verdict
+            # forwarding packet to ips for portscan/ddos inspection.
+            if (packet.ips_profile and packet.direction is DIR.INBOUND):
+                packet.nfqueue.forward(Queue.IPS_IDS)
 
-        # dropped by cfirewall > inspect geo only
-        else:
-            packet.nfqueue.drop()
+            # --------------------
+            # DIRECT TO DNS PROXY
+            # --------------------
+            # deferred verdict
+            elif (packet.dns_profile and packet.direction is DIR.OUTBOUND
+                    and packet.protocol is PROTO.UDP and packet.dst_port == PROTO.DNS):
+                packet.nfqueue.forward(Queue.DNS_PROXY)
 
-        # quick path to log geo data. doing this post action since its a log only path.
-        Inspect.geo_only(packet)
+            # --------------------
+            # ACCEPT/ NO PROFILE
+            # --------------------
+            else:
+                packet.nfqueue.accept()
+
+        # ====================
+        # CFIREWALL DROP
+        # ====================
+        elif (packet.action is CONN.DROP):
+
+            if (packet.direction is DIR.OUTBOUND):
+                packet.nfqueue.drop()
+
+            # --------------------
+            # IPS/IDS PROFILING
+            # --------------------
+            # deferred verdict
+            # forwarding packet to ips for portscan/ddos host profiling
+            else:
+                packet.nfqueue.forward(Queue.IPS_IDS)
+
+        # FUTURE: REJECT
+        else: pass
+
+        # log-only.
+        log_geolocation(packet)
 
         return False
 
-    @classmethod
-    def forward_packet(cls, packet, direction, action):
+    @staticmethod
+    def forward_packet(packet: IPPPacket, direction: DIR, action: CONN) -> None:
 
-        # TODO: update mark seems to be broken causing IPS to fail. IPS is logging profile "10" or bit "1010". this
-        #  may require ntoh
-        if (direction is DIR.INBOUND and packet.ips_profile):
-
-            # re-mark needed to notify ips to drop the packet and do ddos inspection only if enabled.
-            # bitwise op resets first 4 bits (allocated for action) to 0 then set the bits for drop.
-            if (action is CONN.DROP):
-                packet.nfqueue.update_mark(packet.mark & 65520 | CONN.DROP)
+        # PRE DROP FILTERS
+        # --------------------
+        # IPS/IDS FORWARD
+        # --------------------
+        # ips filter for only INBOUND traffic inspection.
+        # it is intended to inspect dropped packets for ddos/portscan profiling
+        # if ips profile is set on a rule for outbound traffic, it will be ignored.
+        # TODO: look into what would be needed to expand ips inspection to lan to wan or lan to lan rules.
+        if (packet.ips_profile and direction is DIR.INBOUND):
+            packet.nfqueue.update_mark(packet.mark & UINT16_MAX)
 
             packet.nfqueue.forward(Queue.IPS_IDS)
 
-        elif (action is CONN.ACCEPT):
-            packet.nfqueue.accept()
-
-        # explicit condition to reduce chance of confusion
+        # ====================
+        # IP PROXY DROP
+        # ====================
+        # no other security modules configured on rule and failed ip proxy inspection
         elif (action is CONN.DROP):
             packet.nfqueue.drop()
 
+        # POST DROP FILTERS
+        # --------------------
+        # DNS PROXY FORWARD
+        # --------------------
+        elif (packet.dns_profile and packet.protocol is PROTO.UDP and packet.dst_port == PROTO.DNS):
+            packet.nfqueue.forward(Queue.DNS_PROXY)
 
-class Inspect:
-    _Proxy = IPProxy
+        # ====================
+        # IP PROXY ACCEPT
+        # ====================
+        # no other security modules configured on rule and passed ip proxy inspection
+        elif (action is CONN.ACCEPT):
+            packet.nfqueue.accept()
 
-    __slots__ = (
-        '_packet',
-    )
 
-    # direct reference to the Proxy forward packet method
-    _forward_packet = _Proxy.forward_packet
+# GENERAL PROXY FUNCTIONS
+def log_geolocation(packet: IPPPacket) -> None:
 
-    # direct reference to the proxy response method
-    _prepare_and_send = ProxyResponse.prepare_and_send
+    # country of tracked (external) passed from cfirewall via packet mark
+    country = GEO(packet.tracked_geo)
 
-    @classmethod
-    def geo_only(cls, packet):
-        country = GEO(_range_trie_search(packet.bin_data))
+    Log.log(packet, IPP_INSPECTION_RESULTS(country.name, None), geo_only=True)
 
-        Log.log(packet, IPP_INSPECTION_RESULTS(country.name, ''), geo_only=True)
 
-    @classmethod
-    def ip(cls, packet):
-        self = cls()
-        action, category = self._ip_inspect(self._Proxy, packet)
+# =================
+# INSPECTION LOGIC
+# =================
+FORWARD_PACKET = IPProxy.forward_packet
 
-        self._Proxy.forward_packet(packet, packet.direction, action)
+# direct references to proxy class data structure methods
+_reputation_settings = IPProxy.reputation_settings
+_reputation_enabled  = IPProxy.reputation_enabled
 
-        # RECENTLY MOVED: thought it more fitting here than in the forward method
-        # if tcp or udp, we will send a kill conn packet.
-        if (action is CONN.REJECT):
-            cls._prepare_and_send(packet)
+_geolocation_settings = IPProxy.geolocation_settings
 
-        Log.log(packet, IPP_INSPECTION_RESULTS(category, action))
+_tor_whitelist = IPProxy.tor_whitelist
 
-    def _ip_inspect(self, Proxy, packet):
-        action = CONN.ACCEPT
-        reputation = REP.DNL
+def inspect(_, packet: IPPPacket) -> None:
 
-        # running through geolocation signatures for a host match. NOTE: not all countries are included in the sig
-        # set at this time. the additional compression algo needs to be re implemented before more countries can
-        # be added due to memory cost.
-        country = GEO(_range_trie_search(packet.bin_data))
+    results = _inspect(packet)
 
-        # if category match and country is configured to block in direction of conn/packet
-        if (country is not GEO.NONE):
-            action = self._country_action(country, packet)
+    FORWARD_PACKET(packet, packet.direction, results.action)
 
-        # no need to check reputation of host if filtered by geolocation
-        if (action is CONN.ACCEPT and Proxy.reputation_enabled):
+    # RECENTLY MOVED: thought it more fitting here than in the forward method
+    # if tcp or udp, we will send a kill conn packet.
+    if (results.action is CONN.REJECT):
+        PREPARE_AND_SEND(packet)
 
-            reputation = REP(_recurve_trie_search(packet.bin_data))
+    Log.log(packet, results)
 
-            # if category match, and category is configured to block in direction of conn/packet
-            if (reputation is not REP.NONE):
-                action = self._reputation_action(reputation, packet)
+def _inspect(packet: IPPPacket) -> IPP_INSPECTION_RESULTS:
+    action = CONN.ACCEPT
+    reputation = REP.DNL
 
-        return action, (country.name, reputation.name)
+    # geolocation lookup is done by cfirewall so we only need to define enum
+    country = GEO(packet.tracked_geo)
 
-    # TODO: expand for profiles. reputation_settings[profile][category]
-    # category setting lookup. will match packet direction with configured dir for category/category group.
-    def _reputation_action(self, category, packet):
-        # flooring cat to its cat group for easier matching of tor nodes
-        rep_group = REP((category // 10) * 10)
-        if (rep_group is REP.TOR):
+    # if category match and country is configured to block in direction of conn/packet
+    if (country is not GEO.NONE):
+        action = _country_action(country, packet)
 
-            # only outbound traffic will match tor whitelist since this override is designed for a user to access
-            # tor and not to open a local machine to tor traffic.
-            # TODO: evaluate if we should have an inbound override, though i dont know who would ever want random
-            # tor users accessing their servers.
-            if (packet.direction is DIR.OUTBOUND and packet.conn.local_ip in self._Proxy.tor_whitelist):
-                return CONN.ACCEPT
+    # no need to check reputation of host if filtered by geolocation
+    if (action is CONN.ACCEPT and _reputation_enabled):
 
-            block_direction = self._Proxy.reputation_settings[category]
+        reputation = REP(REP_LOOKUP(packet.tracked_ip))
 
-        else:
-            block_direction = self._Proxy.reputation_settings[rep_group]
+        # if category match, and category is configured to block in direction of conn/packet
+        if (reputation is not REP.NONE):
+            action = _reputation_action(reputation, packet)
 
-        # notify proxy the connection should be blocked
-        if (block_direction in [packet.direction, DIR.BOTH]):
-            # hardcorded for icmp to drop and tcp/udp to reject. # TODO: consider making this configurable.
-            if (packet.protocol is ICMP):
-                return CONN.DROP
+    return IPP_INSPECTION_RESULTS((country.name, reputation.name), action)
 
-            return CONN.REJECT
+# TODO: expand for profiles. reputation_settings[profile][category]
+# category setting lookup. will match packet direction with configured dir for category/category group.
+def _reputation_action(category: REP, packet: IPPPacket) -> CONN:
+    # flooring cat to its cat group for easier matching of tor nodes
+    rep_group = REP((category // 10) * 10)
+    if (rep_group is REP.TOR):
 
-        # default action is allow due to category not being enabled
-        return CONN.ACCEPT
+        # only outbound traffic will match tor whitelist since this override is designed for a user to access tor
+        # and not to open a local machine to tor traffic.
+        # TODO: evaluate if we should have an inbound override, though i dont know who would ever want random tor
+        #  users accessing their servers.
+        if (packet.direction is DIR.OUTBOUND and packet.local_ip in _tor_whitelist):
+            return CONN.ACCEPT
 
-    # TODO: expand for profiles. geolocation_settings[profile][category]
-    def _country_action(self, category, packet):
-        if (self._Proxy.geolocation_settings[category] in [packet.direction, DIR.BOTH]):
-            # hardcorded for icmp to drop and tcp/udp to reject. # TODO: consider making this configurable.
-            if (packet.protocol is ICMP):
-                return CONN.DROP
+        block_direction = _reputation_settings[category]
 
-            return CONN.REJECT
+    else:
+        block_direction = _reputation_settings[rep_group]
 
-        return CONN.ACCEPT
+    # notify proxy the connection should be blocked. dir enum is Flag with bitwise ops.
+    if (packet.direction & block_direction):
+        # hardcoded for icmp to drop and tcp/udp to reject. # TODO: consider making this configurable.
+        if (packet.protocol is PROTO.ICMP):
+            return CONN.DROP
 
-if __name__ == '__main__':
-    Log.run(
-        name=LOG_NAME
-    )
+        return CONN.REJECT
 
-    reputation_signatures, geolocation_signatures = Configuration.load_signature_tries()
+    # default action is allow
+    return CONN.ACCEPT
 
-    # initializing C/Cython extension, converting python structures to native C array/struct,
-    # and assigning direct reference to search method [which calls underlying C without GIL]
-    recurve_trie = RecurveTrie()
-    recurve_trie.generate_structure(reputation_signatures)
+# TODO: expand for profiles. geolocation_settings[profile][category]
+def _country_action(category: GEO, packet: IPPPacket) -> CONN:
 
-    range_trie = RangeTrie()
-    range_trie.generate_structure(geolocation_signatures)
+    # dir enum is _Flag with bitwise ops. this makes comparison much easier.
+    if (packet.direction & _geolocation_settings[category]):
+        # hardcoded for icmp to drop and tcp/udp to reject. # TODO: consider making this configurable.
+        if (packet.protocol is PROTO.ICMP):
+            return CONN.DROP
 
-    _recurve_trie_search = recurve_trie.search
-    _range_trie_search = range_trie.search
+        return CONN.REJECT
 
-    # memory allocation was done manually within C extension for its structures. python structures
-    # are no longer needed at this point so freeing memory.
-    del reputation_signatures, geolocation_signatures
-
-    IPProxy.run(Log, q_num=1)
+    return CONN.ACCEPT

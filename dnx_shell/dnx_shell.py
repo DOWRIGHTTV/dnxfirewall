@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
-import os, sys
+from __future__ import annotations
+
+import os
 import threading
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
+from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
 
 from dnx_shell.dnx_shell_main import TopLevel
 from dnx_shell.dnx_shell_authentication import Authentication

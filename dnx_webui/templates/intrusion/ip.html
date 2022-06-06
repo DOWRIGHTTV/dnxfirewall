@@ -1,0 +1,206 @@
+{% extends('layout.html') %}
+{% block body %}
+<section id="tabs-bar" class="tabsbar">
+    <div class="container">
+        <div class="row">
+            <div class="col s12 m12">
+                <ul class="tabs">
+                    <li class="{{tab_classes}}"><a class="{% if tab==1 %}active {% endif %}{{tab_text_color}}"
+                        href="#reputation" onclick="activeTab(1)">Reputation</a></li>
+                    <li class="{{tab_classes}}"><a class="{% if tab==2 %}active {% endif %}{{tab_text_color}}"
+                        href="#geolocation" onclick="activeTab(2)">Geolocation</a></li>
+                    <li class="{{tab_classes}}"><a class="{% if tab==3 %}active {% endif %}{{tab_text_color}}"
+                        href="#lan-restrict" onclick="activeTab(3)">Lan Restrict</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+<section id="reputation" class="section {{main_section_color}}">
+    <div class="container">
+        <div class="row">
+            <div class="col s12 m10 offset-m1">
+                <div class="card-panel hoverable {{card_color}}">
+                    <h4 class="{{title_color}}">Reputation</h4>
+                    {% for category, enabled in ip_settings['reputation'] %}
+                    {% if loop.index0 in range(0,10,2) %}<div class="row">{% endif %}
+                        <div class="input-field col s4 offset-s1">
+                            <h6>{{category.title().replace('_', ' ')}}</h6>
+                            <select name="reputation" onchange="updateCategory(this)">
+                                <option value="{{category}}_0" {% if enabled==0 %} selected {% endif %}>OFF</option>
+                                <option value="{{category}}_1" {% if enabled==1 %} selected {% endif %}>OUTBOUND</option>
+                                <option value="{{category}}_2" {% if enabled==2 %} selected {% endif %}>INBOUND</option>
+                                <option value="{{category}}_3" {% if enabled==3 %} selected {% endif %}>BOTH</option>
+                            </select>
+                        </div>
+                    {% if loop.last or loop.index0 in range(1,10,2)  %}</div>{% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<section id="geolocation" class="section {{main_section_color}}">
+    <div class="container">
+        <div class="col s12">
+            <div class="card-panel hoverable {{card_color}}">
+                <h4 class="{{title_color}}">Geolocation</h4>
+                <div class="row">
+                    <form method="POST">
+                        <input type="hidden" name="tab" value="2">
+                        <input type="hidden" name="change_geo_view">
+                        <div class="input-field col s5 m3 offset-m1 {{input_color}}">
+                            <select name="region" onchange="this.form.submit()">
+                                {% for region in ip_settings['regions'] %}
+                                <option value="{{region}}" {% if region == ip_settings['geolocation']['region'] %} selected {% endif %}>{{region.replace('_', ' ').upper()}}</option>
+                                {% endfor %}
+                            </select>
+                            <label for="region">Region</label>
+                        </div>
+                        <div class="input-field col s5 m3 {{input_color}}">
+                            <select name="menu_dir" onchange="this.form.submit()">
+                                {% for dir in ['off', 'outbound', 'inbound', 'both', 'all'] %}
+                                ><option value="{{loop.index0}}" {% if ip_settings['geolocation']['menu_dir'] == loop.index0 %} selected {% endif %}>{{dir.upper()}}</option>
+                                {% endfor %}
+                            </select>
+                            <label for="menu_dir">Direction</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="row">
+                    <table class="striped highlight">
+                        <thead>
+                            <tr>
+                                <th style="width:5%"></th>
+                                <th style="width:20%"></th>
+                                <th style="width:5%"></th>
+                                <th style="width:20%"></th>
+                                <th style="width:5%"></th>
+                                <th style="width:20%"></th>
+                                <th style="width:5%"></th>
+                                <th style="width:20%"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for country, direction in ip_settings['geolocation']['countries'] %}
+                        {% if loop.index0 in range(0,100,4) %}<tr>{% endif %}
+                            <td>
+                                <ul id="dd-{{loop.index}}" class="dropdown-content">
+                                    {% for dir, image in ip_settings['image_map'].items() %}
+                                    {% if dir != direction %}
+                                    <li>
+                                        <a><button name="country" value="{{country}}_{{dir}}" onclick="updateCategory(this)"
+                                            static_value="{{direction}}" style="background-color: Transparent; border: none; cursor:pointer;">
+                                        <img src="/static/assets/images/{{image}}" {{dash_icon_std}}></button></a>
+                                    </li>
+                                    {% endif %}
+                                    {% endfor %}
+                                </ul>
+                                <img class="dropdown-trigger" data-target="dd-{{loop.index}}"  height="100%" width="100%"
+                                    src="/static/assets/images/{{ip_settings['image_map'][direction]}}">
+                            </td>
+                            <td>
+                                <h6>{{country.title().replace('_', ' ')}}</h6>
+                            </td>
+                        {% if loop.last or loop.index0 in range(3,100,4)  %}</tr>{% endif %}
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<section id="lan-restrict" class="section {{main_section_color}}">
+    <div class="container">
+        <div class="row">
+            <div class="col s12 m10 offset-m1">
+                <div class="card-panel hoverable {{card_color}}">
+                    <h4 class="{{title_color}}">LAN Restrict</h4>
+                    <form action="/intrusion/ip" method="post">
+                        <input type="hidden" name="tab" value="3">
+                        <div class="col s12">
+                            <h6>Start Time</h6>
+                            <div class="row">
+                                <div class="input-field col s12 m3 {{input_color}}">
+                                    <input type="number" name="hour" min="0" max="12" value="{{ip_settings['tr_settings']['hour']}}">
+                                    <label for="hour">Hour</label>
+                                </div>
+                                <div class="input-field col s12 m3 {{input_color}}">
+                                    <input type="number" name="minutes" min="0" max="45" step="15" value="{{ip_settings['tr_settings']['minutes']}}">
+                                    <label for="minute">Minute</label>
+                                </div>
+                                <div class="input-field col s12 m2 {{input_color}}">
+                                    <select name="time_suffix" id="">
+                                        <option value="AM" {% if ip_settings['tr_settings']['suffix']=='AM' %} selected
+                                            {% endif %}>AM</option>
+                                        <option value="PM" {% if ip_settings['tr_settings']['suffix']=='PM' %} selected
+                                            {% endif %}>PM</option>
+                                    </select>
+                                    <label for="time_suffix"></label>
+                                </div>
+                            </div>
+                            <h6>Duration</h6>
+                            <div class="row">
+                                <div class="input-field col s12 m3 {{input_color}}">
+                                    <input type="number" name="tlen_hour" min="0" max="11" value="{{ip_settings['tr_settings']['length_hour']}}">
+                                    <label for="tlen_hour">Hours</label>
+                                </div>
+                                <div class="input-field col s12 m3 {{input_color}}">
+                                    <input type="number" name="tlen_minutes" min="0" max="45" step="15" value="{{ip_settings['tr_settings']['length_minutes']}}">
+                                    <label for="tlen_minutes">Minutes</label>
+                                </div>
+                                <div class="input-field col s12 m6 center">
+                                    <br>
+                                    <div class="switch">
+                                        <label>
+                                            Disabled
+                                            <input type="checkbox" {% if ip_settings['tr_settings']['enabled'] %}
+                                                checked="checked"  {% endif %} name="restriction_enable">
+                                            <span class="lever"></span>
+                                            Enabled
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col s12 center">
+                                <button class="btn waves-effect waves-light" name="time_res_update">Update</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<script>
+let imageMap = {'0': 'allow_up-down', '1': 'block_up', '2': 'block_down', '3': 'block_up-down'}
+async function updateCategory(category) {
+
+    const cat_info = category.value.split('_')
+
+    let cat_value;
+    let cat_opt;
+    if (cat_info.length === 3) {
+        cat_value = cat_info[0] + '_' + cat_info[1]
+        cat_opt = cat_info[2]
+    } else {
+        cat_value = cat_info[0]
+        cat_opt = cat_info[1]
+    }
+
+    let response = await ajaxClient.post('/post', {'type': category.name, 'category': cat_value, 'direction': cat_opt});
+
+    let error = ajaxClient.handleResponse(response, category)
+
+    // sets the image accordingly
+    if (!error) {
+        let image = category.closest('td').querySelector('.dropdown-trigger')
+
+        image.setAttribute('src', `/static/assets/images/${imageMap[cat_info[1]]}.png`)
+    }
+}
+</script>
+{% endblock %}

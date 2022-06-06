@@ -1,0 +1,272 @@
+{% extends('layout.html') %}
+{% block body %}
+<section id="tabs-bar" class="tabsbar">
+    <div class="container">
+        <div class="row">
+            <div class="col s12 m12 l12 xl12">
+                <ul class="tabs">
+                    <li class="tab col s3 m3 l4 xl2"><a {% if tab==1 %} class="active" {% endif %} href="#settings"
+                            onclick="activeTab(1)">Servers</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+<section id="settings">
+    <div class="container">
+        <div class="row">
+            <div class="col s12 m8">
+                <div class="card-panel">
+                    <h4 class="red-text">Syslog Servers (Beta)</h4>
+                    <table class="striped">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>IP Address</th>
+                                <th>Port</th>
+                                <th>Status</th>
+                                <th>TLS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for server in syslog_settings['syslog_servers'].values() %}
+                            <tr>
+                                <td>
+                                    <a class="waves-effect waves-light btn modal-trigger"
+                                        href="#slog-modal1-{{loop.index}}"><i class="material-icons">remove</i></a>
+                                    <div id="slog-modal1-{{loop.index}}" class="modal">
+                                        <div class="modal-content">
+                                            <h5 class="{{modal_text_style}}">Are you sure you want to remove the 'Syslog Server'?
+                                            </h5>
+                                        </div>
+                                        <form action="/settings/syslog" method="POST">
+                                            <input type="hidden" name="tab" value="1">
+                                            <div class="modal-footer">
+                                                <button class="btn waves-effect waves-light">YES</button>
+                                                <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+                                                <input type="hidden" name="server_remove" value="{{loop.index}}">
+                                            </div>
+                                        </form>
+                                    </div>
+                                </td>
+                                <td>{{server['ip_address']}}</td>
+                                <td>
+                                    <!-- listing configured port also if fallback enabled -->
+                                    <!-- checking tcp fallback -->
+                                    {% if syslog_settings['tls'] == 'Enabled' and syslog_settings['tcp_fallback'] %}
+                                        6514/{{server['port']}}
+                                    <!-- checking udp fallback -->
+                                    {% elif syslog_settings['tls'] == 'Enabled' and syslog_settings['udp_fallback'] %}
+                                        6514/{{server['port']}}
+                                    <!-- checking if tls is enabled -->
+                                    {% elif syslog_settings['tls'] %}
+                                        6514
+                                    {% elif server['port'] %}
+                                        {{server['port']}}
+                                    {% endif %}
+                                </td>
+                                <td>{{server['reach']}}</td>
+                                <td>{{server['tls']}}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td></td>
+                                <td>Not Configured</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-panel">
+                    <h4 class="red-text light-3">Syslog Settings</h4>
+                    <form action="/settings/syslog" method="POST">
+                        <input type="hidden" name="tab" value="1">
+                        <div class="col s4 m4">
+                            <div class="input-field col s12 center">
+                                Syslog
+                                <div class="switch">
+                                    <label>
+                                        Disabled
+                                        {% if syslog_settings['enabled'] %}
+                                        <input type="checkbox" checked="checked" name="syslog_settings"
+                                            value="syslog_enabled">
+                                        {% else %}
+                                        <input type="checkbox" name="syslog_settings" value="syslog_enabled">
+                                        {% endif %}
+                                        <span class="lever"></span>
+                                        Enabled
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="input-field col s12 center">
+                                Protocol
+                                <div class="switch">
+                                    <label>
+                                        UDP
+                                        {% if syslog_settings['protocol'] == 6 %}
+                                        <input type="checkbox" checked="checked" name="syslog_settings"
+                                            value="syslog_protocol">
+                                        {% else %}
+                                        <input type="checkbox" name="syslog_settings" value="syslog_protocol">
+                                        {% endif %}
+                                        <span class="lever"></span>
+                                        TCP
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="input-field col s12 center">
+                                Encrypted (TLS)
+                                <div class="switch">
+                                    <label>
+                                        Off
+                                        {% if syslog_settings['tls'] %}
+                                        <input type="checkbox" checked="checked" name="syslog_tls" value="enabled">
+                                        {% else %}
+                                        <input type="checkbox" name="syslog_tls" value="enabled">
+                                        {% endif %}
+                                        <span class="lever"></span>
+                                        On
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col s4 m4">
+                            <div class="input-field col s12 center">
+                                Self Signed Cert
+                                <div class="switch">
+                                    <label>
+                                        Off
+                                        {% if syslog_settings['self_signed'] %}
+                                        <input type="checkbox" checked="checked" name="syslog_tls" value="self_signed">
+                                        {% else %}
+                                        <input type="checkbox" name="syslog_tls" value="self_signed">
+                                        {% endif %}
+                                        <span class="lever"></span>
+                                        On
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="input-field col s12 center">
+                                TCP Fallback
+                                <div class="switch">
+                                    <label>
+                                        Off
+                                        {% if syslog_settings['tcp_fallback'] %}
+                                        <input type="checkbox" checked="checked" name="fallback_settings"
+                                            value="tcp_fallback">
+                                        {% else %}
+                                        <input type="checkbox" name="fallback_settings" value="tcp_fallback">
+                                        {% endif %}
+                                        <span class="lever"></span>
+                                        On
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="input-field col s12 center">
+                                UDP Fallback
+                                <div class="switch">
+                                    <label>
+                                        Off
+                                        {% if syslog_settings['udp_fallback'] %}
+                                        <input type="checkbox" checked="checked" name="fallback_settings"
+                                            value="udp_fallback">
+                                        {% else %}
+                                        <input type="checkbox" name="fallback_settings" value="udp_fallback">
+                                        {% endif %}
+                                        <span class="lever"></span>
+                                        On
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col s4 m4">
+                            <div class="input-field col s12 center">
+                                <select name="tls_retry_time" id="">
+                                    <option value="5" {% if syslog_settings['tls_retry']==5 %} selected {% endif %}>5
+                                    </option>
+                                    <option value="10" {% if syslog_settings['tls_retry']==10 %} selected {% endif %}>10
+                                    </option>
+                                    <option value="60" {% if syslog_settings['tls_retry']==60 %} selected {% endif %}>60
+                                    </option>
+                                </select>
+                                <label for="tls_retry_time">TLS Retry Time (Minutes)</label>
+                            </div>
+                            <div class="input-field col s12 center">
+                                <select name="tcp_retry_time" id="">
+                                    <option value="5" {% if syslog_settings['tcp_retry']==5 %} selected {% endif %}>5
+                                    </option>
+                                    <option value="10" {% if syslog_settings['tcp_retry']==10 %} selected {% endif %}>10
+                                    </option>
+                                    <option value="30" {% if syslog_settings['tcp_retry']==30 %} selected {% endif %}>30
+                                    </option>
+                                </select>
+                                <label for="tls_retry_time">TCP Retry Time (Minutes)</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="input-field col s12 m2 offset-m5 center">
+                                <a class="waves-effect waves-light btn modal-trigger col s12" href="#slog-modal2-1"><i
+                                        class="material-icons"></i>Update</a>
+                                <div id="slog-modal2-1" class="modal">
+                                    <div class="modal-content">
+                                        <h5 class="{{modal_text_style}}">Changing Syslog protocol settings can take a
+                                            few minutes to take effect. Restarting  the Syslog client manually will
+                                            force the settings immediately.
+                                        </h5>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button class="btn waves-effect waves-light">Continue</button>
+                                        <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+                                        <input type="hidden" name="settings_update">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="col s12 m4">
+                <div class="card-panel">
+                    <h4 class="red-text light-3">Edit Syslog Servers</h4>
+                    <form action="/settings/syslog" method="POST">
+                        <input type="hidden" name="tab" value="1">
+                        Server 1
+                        <div class="row">
+                            <div class="input-field col s9">
+                                <input type="text" name="syslog_server1" class="validate" placeholder="192.168.10.1">
+                                <label for="">IP Address</label>
+                            </div>
+                            <div class="input-field col s3">
+                                <input type="text" name="syslog_port1" class="validate" placeholder="514">
+                                <label for="">Port</label>
+                            </div>
+                        </div>
+                        Server 2
+                        <div class="row">
+                            <div class="input-field col s9">
+                                <input type="text" name="syslog_server2" class="validate" placeholder="192.168.10.2">
+                                <label for="">IP Address</label>
+                            </div>
+                            <div class="input-field col s3">
+                                <input type="text" name="syslog_port2" class="validate" placeholder="514">
+                                <label for="">Port</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="input-field col s12 m4">
+                                <input type="hidden" name="servers_update">
+                                <button class="btn waves-effect waves-light col s12">
+                                    <i class="material-icons"></i> Update
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

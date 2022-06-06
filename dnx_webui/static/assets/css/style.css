@@ -1,4 +1,46 @@
 @import 'materialize.css';
+/* provides support for nested menus in nav */
+nav ul a {
+    /*font-size: .96rem;*/
+    padding: 0 10px;
+    min-width: 130px;
+}
+nav i.material-icons {
+    font-size: 24px;
+    margin-right: 6px;
+}
+.dropdown-content-trigger {
+    overflow-y: visible;
+}
+.dropdown-content .dropdown-content {
+    left: -94%;
+    top: 36px;
+}
+.dropdown-content {
+    min-width: 130px;
+}
+.dropdown-content li > a {
+    font-weight: bold;
+    padding: 14px 6px;
+}
+.dropdown-content li > a > i {
+    float: left;
+    margin: 0 4px;
+    width: 28px;
+}
+.dropdown-content li > a > i.right {
+    float: right;
+}
+.dropdown-content li > a.expand {
+    font-size: 13px;
+    text-align: center;
+    cursor: default;
+}
+.dropdown-content li > a.expand > i {
+    margin: 0 -4px 0 2px;
+}
+
+/* -- */
 
 nav .brand-logo {
     padding-right: 5px;
@@ -67,7 +109,7 @@ nav .brand-logo {
   font-size: 2.1rem;
   padding: 0; }
 
-/* navigation menu type size and pixel adjusmtnet override */
+/* navigation menu type size and pixel adjustment override */
 @media only screen and (max-width: 1550px) {
     .remove-big-menu {
         display: none !important; } }
@@ -107,7 +149,6 @@ table.striped > tbody > tr {
 .tr-even {
     background-color: rgba(242, 242, 242, 0.5); }
 
-/* popup window */
-div .popout-form {
-    padding: 1em;
-}
+/* materialize override */
+.no-border {
+  border-bottom: 0; }

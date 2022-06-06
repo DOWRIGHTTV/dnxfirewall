@@ -8,7 +8,7 @@ DefaultDependencies=no
 [Service]
 Type=oneshot
 User=root
-ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_system/startup_proc.py
+ExecStart=/usr/bin/python3 /home/dnx/dnxfirewall/dnx_run.py cli startup
 Environment=HOME_DIR=/home/dnx/dnxfirewall
 RemainAfterExit=yes
 

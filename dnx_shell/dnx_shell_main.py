@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 
-import os,sys
-import json
+from __future__ import annotations
 
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
+import json
 
 from dnx_shell.dnx_shell_standard import Standard
 from dnx_shell.dnx_shell_services import Services
@@ -21,7 +19,7 @@ class TopLevel:
     def __init__(self, conn):
         self.conn = conn
 
-        with open(f'{HOME_DIR}/dnx_shell/commands.json', 'r') as commands:
+        with open(f'{HOME_DIR}/dnx_shell/commands.cfg', 'r') as commands:
             valid_commands = json.load(commands)
 
         self.valid = valid_commands['main']
@@ -101,10 +99,10 @@ class TopLevel:
             return comm
 
     def ShowVersion(self):
-        with open(f'{HOME_DIR}/dnx_system/data/license.json', 'r') as configs:
+        with open(f'{HOME_DIR}/dnx_system/data/license.cfg', 'r') as configs:
             system = json.load(configs)
 
-        with open(f'{HOME_DIR}/dnx_system/data/updates.json', 'r') as updates:
+        with open(f'{HOME_DIR}/dnx_system/data/updates.cfg', 'r') as updates:
             update = json.load(updates)
 
         activated = system['license']['activated']

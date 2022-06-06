@@ -1,0 +1,35 @@
+<div id="revert-modal" class="modal">
+    <div class="modal-content">
+    <h5 class="{{modal_text_style}}">Are you sure you want to revert the pending firewall rule changes?
+        This action cannot be undone.</h5>
+    </div>
+    <form action="/rules/firewall" method="POST">
+        <div class="modal-footer">
+            <button class="btn waves-effect waves-light">YES</button>
+            <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+            <input type="hidden" name="tab" value="1">
+            <input type="hidden" name="section" value="{{selected}}">
+            <input type="hidden" name="revert_rules">
+        </div>
+    </form>
+</div>
+<div id="push-modal" class="modal">
+    <div class="modal-content">
+    <h5 class="{{modal_text_style}}">Are you sure you want to push the pending rule changes to the firewall?</h5><br>
+        <h6 class="red-text center">Warning: This action cannot be undone.</h6>
+    </div>
+    <div class="modal-footer">
+        <a class="btn waves-effect waves-light modal-close" onclick="pushRules()">YES</a>
+        <a class="btn-flat modal-close">Cancel</a>
+    </div>
+</div>
+<div id="commit-modal" class="modal">
+    <div class="modal-content">
+    <h5 class="{{modal_text_style}}">Are you sure you want to commit your rule changes?<br>The rules will be pending and
+        awaiting a push to the firewall. The rules can be reverted to current active state while in the pending state.</h5>
+    </div>
+    <div class="modal-footer">
+        <a class="btn waves-effect waves-light modal-close" onclick="commitRules('filter-table-body')">YES</a>
+        <a class="btn-flat modal-close">Cancel</a>
+    </div>
+</div>

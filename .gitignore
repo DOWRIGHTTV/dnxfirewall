@@ -102,3 +102,12 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+#pycharm
+.idea
+
+#dnxfirewall
+usr
+TEMP_*
+*.c
+dnxfirewall.sqlite3

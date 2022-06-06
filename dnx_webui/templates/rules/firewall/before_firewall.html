@@ -1,0 +1,66 @@
+<script>
+async function commitRules(table_id) {
+    let FWsection = document.getElementById("section").value;
+    let FWrules = tableToJson(table_id);
+
+    let response = await post("commit", {"section": `${FWsection}`, "rules": `${FWrules}`});
+
+    if (!response.error) {
+        document.getElementById("revert_rules").classList.remove('btn-disabled');
+        document.getElementById("push_rules").classList.remove('btn-disabled');
+    }
+}
+async function pushRules() {
+    let response = await post("push", {});
+    if (!response.error) {
+        document.getElementById("revert_rules").classList.add('btn-disabled');
+        document.getElementById("push_rules").classList.add('btn-disabled');
+    }
+}
+async function post(endpoint, data) {
+        let result = await ajaxClient.post(`/${endpoint}`, data);
+
+        let message_popup = document.querySelector("#ajax-error-modal");
+        message_popup.querySelector("h5").innerText = result.message;
+
+        let errorModal = M.Modal.init(
+            message_popup, {dismissible: false}
+        );
+        errorModal.open();
+
+        return result;
+}
+function tableToJson(table_id) {
+    const table = document.getElementById(`${table_id}`);
+    let data = {};
+
+    for (let i=0; i<table.rows.length; i++) {
+
+        let tableRow = table.rows[i];
+        let rowData = [tableRow.attributes["data-enabled"].value];
+
+        //rule name
+        rowData.push(tableRow.cells[2].textContent.replace("[*]", ""));
+
+        for (let j=3; j<tableRow.cells.length; j++) {
+            let currentCell = tableRow.cells[j];
+
+            // converting the fw object list to the proper server format
+            if (currentCell.children.length > 0) {
+                let objectStr = ""
+                for (let obj of tableRow.cells[j].children) {
+                    objectStr += `${obj.textContent.replace(" ", "/")},`;
+                }
+                // pulling out the trailing comma
+                rowData.push(objectStr.slice(0, -1));
+            } else {
+                rowData.push(currentCell.textContent);
+            }
+        }
+        data[i] = rowData;
+    }
+
+    return JSON.stringify(data);
+}
+</script>
+

@@ -1,21 +1,17 @@
 #!/usr/bin/env python3
 
-import os, sys
+from __future__ import annotations
+
 import time
 import re
 import ipaddress
-
-HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-3]))
-sys.path.insert(0, HOME_DIR)
-
-from dnx_gentools.def_constants import SHELL_SPACE
 
 
 class Standard:
     def __init__(self, CLI):
         self.CLI = CLI
 
-        self.valid_domain = re.compile('(?P<domain>\w+)*\.(\w+)(\/.*)?')
+        self.valid_domain = re.compile('(?P<domain>\w+)*\.(\w+)(\.*)?')
         self.valid_ip = re.compile('^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$')
         self.valid_mac = re.compile('(?:[0-9a-fA-F]:?){12}')
 
@@ -73,7 +69,7 @@ class Standard:
         else:
             return True
 
-    #fix the damn validation shit when you get back from store you shithead.
+    # fix the damn validation shit when you get back from store you shithead.
     def ValidateIP(self, ip_address):
         if (self.valid_ip.match(ip_address) or ip_address == 'none'):
             return True

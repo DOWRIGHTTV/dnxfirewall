@@ -1,5 +1,31 @@
-import os as _os
-import sys as _sys
+#!/usr/bin/env python3
 
-_HOME_DIR = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-3]))
-_sys.path.insert(0, _HOME_DIR)
+from __future__ import annotations
+
+import os
+import sys
+
+# ==================
+# DNXFIREWALL WEBUI
+# ==================
+INITIALIZE_MODULE = os.environ.get('INIT', False)
+
+if (INITIALIZE_MODULE):
+    __all__ = ('app',)
+
+    HOME_DIR = os.environ['HOME_DIR']
+    WEB_DIR  = os.environ['WEB_DIR']
+
+    sys.path.insert(0, HOME_DIR)
+    sys.path.insert(0, WEB_DIR)
+
+    # app will be called by uwsgi
+    from source.main.dfe_main import app
+
+# ===============
+# TYPING
+# ===============
+from typing import TYPE_CHECKING
+
+if (TYPE_CHECKING):
+    __all__ = ()

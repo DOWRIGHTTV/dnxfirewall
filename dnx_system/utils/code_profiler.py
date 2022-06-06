@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
 
-import os as _os
-import sys as _sys
+from __future__ import annotations
+
 import time as _time
 
 from io import StringIO as _StringIO
 from cProfile import Profile as _Profile
 from pstats import Stats as _Stats, SortKey as _SortKey
 
-HOME_DIR = _os.environ['HOME_DIR']
-_sys.path.insert(0, HOME_DIR)
-
-from dnx_sysmods.configure.file_operations import append_to_file
+from dnx_gentools.file_operations import append_to_file
 
 _fast_time_ns = _time.perf_counter_ns
 _CUMU = _SortKey.CUMULATIVE
@@ -23,7 +20,7 @@ def profiler(*, filename):
             pr = _Profile(_fast_time_ns)
             pr.enable()
 
-            #profiled function
+            # profiled function
             thing_to_be_profiled(*args, **kwargs)
 
             pr.disable()
