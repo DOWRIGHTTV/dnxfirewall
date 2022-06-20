@@ -31,14 +31,21 @@ def lprint(sep: str = '-'): print(f'{sep}' * 32)
 class Args:
     v: int = 0
     verbose: int = 0
+    u: int = 0
+    update: int = 0
+    packages: int = 0
 
     @property
     def verbose_set(self):
         return self.v or self.verbose
 
+    @property
+    def update_set(self):
+        return self.u or self.update
+
 
 LOG_NAME: str = 'system'
-PROGRESS_TOTAL_COUNT: int = 15
+PROGRESS_TOTAL_COUNT: int = 4
 
 LINEBREAK: str = '-' * 32
 
@@ -103,10 +110,12 @@ def check_already_ran() -> None:
     with ConfigurationManager('system') as dnx:
         dnx_settings: ConfigChain = dnx.load_configuration()
 
-    if (dnx_settings['auto_loader']):
+    if (not args.update_set and dnx_settings['auto_loader']):
 
-        eprint('dnxfirewall auto loader has already been completed. exiting...')
+        eprint('dnxfirewall has already been installed. exiting...')
 
+    elif (args.update_set):
+        eprint('dnxfirewall has not been installed. see readme for guidance. exiting...')
 
 # ----------------------------
 # PROGRESS BAR
@@ -125,7 +134,7 @@ def progress(desc: str) -> None:
 
     sys.stdout.write(f'{completed_count}/{PROGRESS_TOTAL_COUNT} |')
     sys.stdout.write(f'| [{bar}] {int(100 * ratio)}% |')
-    sys.stdout.write(f'| {desc}{" "*12}\r')
+    sys.stdout.write(f'| {desc.ljust(36)}\r')
     sys.stdout.flush()
 
 # ============================
@@ -244,7 +253,7 @@ def confirm_interfaces(interface_config: dict[str, str]) -> bool:
 # ============================
 # INSTALL PACKAGES
 # ============================
-def install_packages() -> None:
+def install_packages() -> list:
 
     commands = [
         ('sudo apt install python3-pip -y', 'setting up python3'),
@@ -255,28 +264,20 @@ def install_packages() -> None:
         ('pip3 install Cython', 'installing C extension language (Cython)')
     ]
 
-    for command, desc in commands:
+    return commands
 
-        progress(desc)
-
-        dnx_run(command)
-
-def compile_extensions() -> None:
+def compile_extensions() -> list:
 
     commands: list[tuple[str, str]] = [
-        (f'sudo python3 {UTILITY_DIR}/compile_dnx_nfqueue.py build_ext --inplace', 'compiling dnx-nfqueue'),
-        (f'sudo python3 {UTILITY_DIR}/compile_cfirewall.py build_ext --inplace', 'compiling cfirewall'),
-        (f'sudo python3 {UTILITY_DIR}/compile_trie_search.py build_ext --inplace', 'compiling trie search'),
-        (f'sudo python3 {UTILITY_DIR}/compile_cprotocol_tools.py build_ext --inplace', 'compiling cprotocol tools'),
+        (f'sudo python3 {HOME_DIR}/dnx_run.py compile dnx-nfqueue', 'compiling dnx-nfqueue'),
+        (f'sudo python3 {HOME_DIR}/dnx_run.py compile cfirewall', 'compiling cfirewall'),
+        (f'sudo python3 {HOME_DIR}/dnx_run.py compile hash-trie', 'compiling dnx-hash_trie'),
+        (f'sudo python3 {HOME_DIR}/dnx_run.py compile cprotocol-tools', 'compiling cprotocol tools'),
     ]
 
-    for command, desc in commands:
+    return commands
 
-        progress(desc)
-
-        dnx_run(command)
-
-def configure_webui() -> None:
+def configure_webui() -> list:
     cert_subject: str = str_join([
         '/C=US',
         '/ST=Arizona',
@@ -301,13 +302,7 @@ def configure_webui() -> None:
         ('sudo rm /etc/nginx/sites-enabled/default', None)
     ]
 
-    for command, desc in commands:
-
-        # this allows some commands to ride off of the previous status message and completion %.
-        if (desc):
-            progress(desc)
-
-        dnx_run(command)
+    return commands
 
 # ============================
 # PERMISSION CONFIGURATION
@@ -317,28 +312,34 @@ def set_permissions() -> None:
 
     progress('configuring dnxfirewall permissions')
 
-    # creating database file here, so it can get its permissions modified. This will
-    # ensure it won't be overridden by update pulls.
-    dnx_run(f'touch {SYSTEM_DIR}/data/dnxfirewall.sqlite3')
+    commands: list[str] = [
 
-    # set the dnx filesystem owner to the dnx user/group
-    dnx_run(f'chown -R dnx:dnx {HOME_DIR}')
+        # creating database file here, so it can get its permissions modified.
+        # this will also ensure it won't be overridden by update pulls.
+        f'touch {SYSTEM_DIR}/data/dnxfirewall.sqlite3',
 
-    # apply file permissions 750 on folders, 640 on files
-    dnx_run(f'chmod -R 750 {HOME_DIR}')
-    dnx_run(f'find {HOME_DIR} -type f -print0|xargs -0 chmod 640')
+        # set the dnx filesystem owner to the dnx user/group
+        f'chown -R dnx:dnx {HOME_DIR}',
 
-    # setting the dnx command line utility as executable
-    dnx_run(f'chmod 750 {HOME_DIR}/dnx_run.py')
+        # apply file permissions 750 on folders, 640 on files
+        f'chmod -R 750 {HOME_DIR}',
+        f'find {HOME_DIR} -type f -print0|xargs -0 chmod 640',
 
-    # creating sim link to allow dnx command from anywhere if logged in as dnx user
-    dnx_run(f'ln -s {HOME_DIR}/dnx_run.py /usr/local/bin/dnx')
+        # setting the dnx command line utility as executable
+        f'chmod 750 {HOME_DIR}/dnx_run.py',
 
-    # adding www-data user to dnx group
-    dnx_run('usermod -aG dnx www-data')
+        # creating simlink to allow dnx command from anywhere if logged in as dnx user
+        f'ln -s {HOME_DIR}/dnx_run.py /usr/local/bin/dnx',
 
-    # reverse of above
-    dnx_run('usermod -aG www-data dnx')
+        # adding www-data user to dnx group
+        'usermod -aG dnx www-data',
+
+        # reverse of above
+        'usermod -aG www-data dnx'
+    ]
+
+    for command in commands:
+        dnx_run(command)
 
     # update sudoers to allow dnx user no pass for specific system functions
     no_pass = [
@@ -394,25 +395,49 @@ def store_default_mac():
     pass
 
 def run():
+    global PROGRESS_TOTAL_COUNT
 
-    configure_interfaces()
+    if (not args.update_set):
+        configure_interfaces()
 
-    sprint('starting system deployment...')
+    # will hold all dynamically set commands prior to execution to get an accurate count for progress bar.
+    dynamic_commands: list[tuple[str, Optional[str]]] = []
+
+    if (not args.update_set):
+        dynamic_commands.extend(configure_webui())
+
+    # packages will be installed during initial installation automatically.
+    # if update is set, the default is to not update packages.
+    if (not args.update_set) or (args.update_set and args.packages):
+        dynamic_commands.extend(install_packages())
+
+    dynamic_commands.extend(compile_extensions())
+
+    PROGRESS_TOTAL_COUNT += len([1 for k, v in dynamic_commands if v])
+
+    action = 'update' if args.update_set else 'deployment'
+    sprint(f'starting dnxfirewall {action}...')
     lprint()
 
-    install_packages()
-    compile_extensions()
-    configure_webui()
-    set_services()
+    for command, desc in dynamic_commands:
+
+        if (desc):
+            progress(desc)
+
+        dnx_run(command)
+
+    # iptables and permissions will be done for install and update
     configure_iptables()
     set_permissions()
 
-    mark_completion_flag()
+    if (not args.update_set):
+        set_services()
+        mark_completion_flag()
 
-    progress('dnxfirewall deployment complete')
+    progress('dnxfirewall installation complete')
     sprint('\ncontrol of the WAN interface configuration has been taken by dnxfirewall.')
     sprint('use the webui to configure a static ip or enable ssh access if needed.')
-    sprint('restart system then navigate to https://192.168.83.1 from LAN to manage.')
+    sprint('restart the system then navigate to https://192.168.83.1 from LAN to manage.')
 
     hardout()
 
