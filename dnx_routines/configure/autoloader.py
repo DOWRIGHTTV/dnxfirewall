@@ -253,7 +253,7 @@ def confirm_interfaces(interface_config: dict[str, str]) -> bool:
 # ============================
 # INSTALL PACKAGES
 # ============================
-def install_packages() -> int:
+def install_packages() -> list:
 
     commands = [
         ('sudo apt install python3-pip -y', 'setting up python3'),
@@ -264,15 +264,9 @@ def install_packages() -> int:
         ('pip3 install Cython', 'installing C extension language (Cython)')
     ]
 
-    for command, desc in commands:
+    return commands
 
-        progress(desc)
-
-        dnx_run(command)
-
-    return len([x for x in commands if x is not None])
-
-def compile_extensions() -> int:
+def compile_extensions() -> list:
 
     commands: list[tuple[str, str]] = [
         (f'sudo python3 {UTILITY_DIR}/compile_dnx_nfqueue.py build_ext --inplace', 'compiling dnx-nfqueue'),
@@ -281,15 +275,9 @@ def compile_extensions() -> int:
         (f'sudo python3 {UTILITY_DIR}/compile_cprotocol_tools.py build_ext --inplace', 'compiling cprotocol tools'),
     ]
 
-    for command, desc in commands:
+    return commands
 
-        progress(desc)
-
-        dnx_run(command)
-
-    return len([x for x in commands if x is not None])
-
-def configure_webui() -> int:
+def configure_webui() -> list:
     cert_subject: str = str_join([
         '/C=US',
         '/ST=Arizona',
@@ -314,15 +302,7 @@ def configure_webui() -> int:
         ('sudo rm /etc/nginx/sites-enabled/default', None)
     ]
 
-    for command, desc in commands:
-
-        # this allows some commands to ride off of the previous status message and completion %.
-        if (desc):
-            progress(desc)
-
-        dnx_run(command)
-
-    return len([x for x in commands if x is not None])
+    return commands
 
 # ============================
 # PERMISSION CONFIGURATION
@@ -420,26 +400,38 @@ def run():
     if (not args.update_set):
         configure_interfaces()
 
-    action = 'update' if args.update_set else 'deployment'
-    sprint(f'starting dnxfirewall {action}...')
-    lprint()
+    # will hold all dynamically set commands prior to execution to get an accurate count for progress bar.
+    dynamic_commands: list[tuple[str, Optional[str]]] = []
+
+    if (not args.update_set):
+        dynamic_commands.extend(configure_webui())
 
     # packages will be installed during initial installation automatically.
     # if update is set, the default is to not update packages.
     if (not args.update_set) or (args.update_set and args.packages):
-        PROGRESS_TOTAL_COUNT += install_packages()
+        dynamic_commands.extend(install_packages())
 
-    PROGRESS_TOTAL_COUNT += compile_extensions()
+    dynamic_commands.extend(compile_extensions())
 
-    if (not args.update_set):
-        PROGRESS_TOTAL_COUNT += configure_webui()
-        set_services()
+    PROGRESS_TOTAL_COUNT += len([1 for k, v in dynamic_commands if v])
+
+    action = 'update' if args.update_set else 'deployment'
+    sprint(f'starting dnxfirewall {action}...')
+    lprint()
+
+    for command, desc in dynamic_commands:
+
+        if (desc):
+            progress(desc)
+
+        dnx_run(command)
 
     # iptables and permissions will be done for install and update
     configure_iptables()
     set_permissions()
 
     if (not args.update_set):
+        set_services()
         mark_completion_flag()
 
     progress('dnxfirewall installation complete')
