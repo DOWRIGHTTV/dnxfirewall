@@ -50,8 +50,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     },
 
     # DB TABLES
-    'db-tables': {'module': 'dnx_routines.database', 'exclude': exclude('cli', COMMANDS), 'priv': False, 'service':
-        False},
+    'db-tables': {'module': 'dnx_routines.database', 'exclude': exclude('cli', COMMANDS), 'priv': False, 'service': False},
 
     # WEBUI
     'webui': {'module': '', 'exclude': ['cli'], 'priv': False, 'service': True, 'environ': ['webui', '1']},
