@@ -9,7 +9,10 @@ from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import Queue, CFG
 from dnx_gentools.file_operations import load_configuration
 
-from dnx_iptools.cprotocol_tools import itoip
+try:
+    from dnx_iptools.cprotocol_tools import itoip
+except ImportError:
+    pass
 
 __all__ = (
     'IPTablesManager'
