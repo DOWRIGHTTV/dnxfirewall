@@ -269,10 +269,10 @@ def install_packages() -> list:
 def compile_extensions() -> list:
 
     commands: list[tuple[str, str]] = [
-        (f'sudo python3 {UTILITY_DIR}/compile_dnx_nfqueue.py build_ext --inplace', 'compiling dnx-nfqueue'),
-        (f'sudo python3 {UTILITY_DIR}/compile_cfirewall.py build_ext --inplace', 'compiling cfirewall'),
-        (f'sudo python3 {UTILITY_DIR}/compile_trie_search.py build_ext --inplace', 'compiling trie search'),
-        (f'sudo python3 {UTILITY_DIR}/compile_cprotocol_tools.py build_ext --inplace', 'compiling cprotocol tools'),
+        (f'sudo python3 {HOME_DIR}/dnx_run.py compile dnx-nfqueue', 'compiling dnx-nfqueue'),
+        (f'sudo python3 {HOME_DIR}/dnx_run.py compile cfirewall', 'compiling cfirewall'),
+        (f'sudo python3 {HOME_DIR}/dnx_run.py compile hash-trie', 'compiling dnx-hash_trie'),
+        (f'sudo python3 {HOME_DIR}/dnx_run.py compile cprotocol-tools', 'compiling cprotocol tools'),
     ]
 
     return commands
