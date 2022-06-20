@@ -134,7 +134,7 @@ def progress(desc: str) -> None:
 
     sys.stdout.write(f'{completed_count}/{PROGRESS_TOTAL_COUNT} |')
     sys.stdout.write(f'| [{bar}] {int(100 * ratio)}% |')
-    sys.stdout.write(f'| {desc}{" "*12}\r')
+    sys.stdout.write(f'| {desc.ljust(36)}\r')
     sys.stdout.flush()
 
 # ============================
