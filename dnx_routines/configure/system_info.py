@@ -124,6 +124,8 @@ class System:
         return System.format_date_time(System.calculate_time_offset(logged_time))
 
     @staticmethod
+    # TODO: this is really noisy on disk io. see about doing a basic caching function or allow for optional offset to
+    #  be passed in by named arg.
     def calculate_time_offset(logged_time: Timestamp) -> Timestamp:
         '''returns modified time based on current time offset settings.
         '''

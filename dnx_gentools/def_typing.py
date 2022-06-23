@@ -30,7 +30,7 @@ if (TYPE_CHECKING and not _DISABLED):
     # dnx class imports for use as Types
 
     # module packs
-    from dnx_gentools.file_operations import ConfigChain
+    from dnx_gentools.file_operations import ConfigChain, config
     from dnx_gentools.def_namedtuples import L_SOCK as _L_SOCK
     # from dnx_iptools import *
     # from dnx_routines import *

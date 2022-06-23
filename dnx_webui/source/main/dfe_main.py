@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from datetime import timedelta
 
 import source.web_validate as validate
@@ -15,6 +16,7 @@ from dnx_routines.database.ddb_connector_sqlite import DBConnector
 from dnx_routines.logging import LogHandler as Log
 
 from dnx_gentools.def_constants import ppt
+from dnx_gentools.def_exceptions import ConfigurationError
 
 # ========================================
 # FLASK API - APP INSTANCE INITIALIZATION
@@ -638,8 +640,8 @@ def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
     if (request.method == 'POST'):
         try:
             error = dnx_page.update_page(request.form)
-        except OSError as ose:
-            return render_template(application_error_page, application_error=ose, **page_settings)
+        except ConfigurationError as ce:
+            return render_template(application_error_page, application_error=ce, **page_settings)
 
         page_settings.update({
             'tab': validate.get_convert_int(request.form, 'tab'),
@@ -648,8 +650,8 @@ def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
 
     try:
         page_settings[data_key] = dnx_page.load_page(request.form)
-    except OSError as ose:
-        return render_template(application_error_page, application_error=ose, **page_settings)
+    except ConfigurationError as ce:
+        return render_template(application_error_page, application_error=ce, **page_settings)
 
     return render_template(page_name, **page_settings)
 
@@ -783,6 +785,13 @@ def ajax_response(*, status, data):
 # FLASK API - REQUEST MODS
 # =================================
 @app.before_request
+def print_forms():
+    server_type = os.environ.get('FLASK_ENV')
+    if (server_type == 'development' and request.method == 'POST'):
+        print(f'form data\n{"="*12}')
+        ppt(dict(request.form))
+
+@app.before_request
 def user_timeout():
     session.permanent = True
     app.permanent_session_lifetime = timedelta(minutes=30)
@@ -838,9 +847,37 @@ def dark_mode():
 # ====================================
 # FLASK API - JINJA FILTER FUNCTIONS
 # ====================================
+def create_switch(label: str, name: str, *, tab: int = 1, checked: int = 0, enabled: int = 1) -> str:
+    if (not enabled): status = 'disabled'
+    elif (checked): status = 'checked'
+    else: status = ''
+
+    return ''.join([
+        f'<form method="POST"><input type="hidden" name="tab" value="{tab}">',
+        f'<div class="input-field col s6 center">{label}<div class="switch"><label>Off',
+        f'<input type="checkbox" class="iswitch" name="{name}" {status}>',
+        '<span class="lever"></span>On</label></div></div></form>'
+    ])
+
+
+# tabs html | NOTE: find a better place to put this.
+tab_classes = 'tab col s4 l3 xl2'
+tab_text_color = 'blue-grey-text text-lighten-2'
+def create_tab(active_tab: int, cur_tab: int, href: str) -> str:
+
+    name = href.replace('-', ' ').title()
+
+    tab = f'<li class="{tab_classes}"><a href="#{href}" onclick="activeTab({cur_tab})" class="{tab_text_color}'
+
+    if (cur_tab == active_tab):
+        tab += ' active'
+
+    tab += f'">{name}</a></li>'
+
+    return tab
+
 def merge_items(a1, a2):
     '''accepts 2 arguments of item or list and merges them into one list.
-
         valid combinations. int can be replaced with any singular object.
             (int, list)
             (int, int)
@@ -867,7 +904,8 @@ def _debug(obj, /):
     print(obj)
 
 
+app.add_template_global(create_switch, name='create_switch')
+app.add_template_global(create_tab, name='create_tab')
 app.add_template_global(merge_items, name='merge_items')
-# app.add_template_global(format_fw_obj, name='format_fw_obj')
 app.add_template_global(is_list, name='is_list')
 app.add_template_global(_debug, name='debug')

@@ -1,4 +1,4 @@
-const loadTableData = (rows) => {
+function loadTableData(rows) {
     const table = document.getElementById("filter-table-body");
     let colorize = table.classList.contains('colorize');
 

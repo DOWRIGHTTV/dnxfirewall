@@ -15,5 +15,11 @@ class DNXError(Exception):
 class ValidationError(DNXError):
     '''Webui processing failure or invalid user input.'''
 
+class ConfigurationError(DNXError):
+    '''ConfigurationManager processing failure while in context.'''
+
+class ControlError(DNXError):
+    '''System Action (control) failure. This is reraised and a functional alias to other Exceptions.'''
+
 class ProtocolError(DNXError):
     '''Malformed network protocol.'''

@@ -3,10 +3,16 @@
 from __future__ import annotations
 
 from json import dumps
-from threading import Thread
-from socket import socket, AF_UNIX, SOCK_DGRAM
+from threading import Timer
+from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SCM_CREDENTIALS
+
+from source.web_typing import *
 
 from dnx_gentools.def_constants import *
+from dnx_gentools.def_enums import LOG
+from dnx_gentools.def_exceptions import ControlError
+
+from dnx_routines.logging.log_client import Log, direct_log
 
 # ==================
 # CONTROL SOCKET
@@ -23,19 +29,10 @@ _control_client_sendmsg = _control_client.sendmsg
 # ==================
 # CONTROL UTILITY
 # ===================
-def _system_action(data_to_send, delay):
-    if (delay):
-        fast_sleep(delay)
+def _system_action(data_to_send: ByteString) -> None:
+    _control_client_sendmsg(data_to_send, [(SOL_SOCKET, SCM_CREDENTIALS, DNX_AUTHENTICATION)])
 
-    try:
-        data_to_send = dumps(data_to_send).encode('utf-8')
-    except Exception as e:
-        console_log(f'{e}')
-
-    else:
-        _control_client_sendmsg(data_to_send, DNX_AUTHENTICATION)
-
-def system_action(*, delay=NO_DELAY, **kwargs):
+def system_action(*, delay: int = NO_DELAY, **kwargs) -> None:
     '''
     send requested system control action over local socket to SystemControl class/service.
 
@@ -44,14 +41,26 @@ def system_action(*, delay=NO_DELAY, **kwargs):
 
         expecting: module, command, args as keyword arguments
 
-    if command is a control reference to Python function, the "args" kwarg value must be a list of arguments
-    that can be passed to the python function.
+    if command is a control reference to a Python function, the "args" kwarg value must be a list of arguments that
+    can be passed to the python function.
     '''
-    if (not isinstance(delay, int)):
-        return
+    try:
+        data_to_send = dumps(kwargs).encode('utf-8')
+    except Exception as E:
+        direct_log('system', LOG.ERROR, f'system action failure. command not executed. | {E}')
 
-    if (delay):
-        Thread(target=_system_action, args=(kwargs, delay)).start()
+        raise ControlError(f'system action failure. command not executed. | {E}')
 
-    else:
-        _system_action(kwargs, delay)
+    action = Timer(delay, _system_action, args=(data_to_send,))
+
+    try:
+        action.start()
+
+    # this will catch type or value exceptions primarily and any other unexpected errors.
+    except Exception as E:
+        direct_log('system', LOG.ERROR, f'system action failure. command not executed. | {E}')
+
+        raise ControlError(f'system action failure. command not executed. | {E}')
+
+    if (Log.control_audit):
+        direct_log('system', LOG.ERROR, f'{kwargs["module"]} sent system command {kwargs["command"]}')

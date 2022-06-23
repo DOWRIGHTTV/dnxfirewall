@@ -107,6 +107,7 @@ def _log_handler() -> LogHandler:
     logging_level: int = 0
     handler_name: str = ''
     cli_output: bool = False
+    system_action_audit: bool = False
 
     log_path: str = f'{HOME_DIR}/dnx_system/log/'
 
@@ -165,6 +166,12 @@ def _log_handler() -> LogHandler:
             '''returns current system log settings level.
             '''
             return logging_level
+
+        @classproperty
+        def control_audit(_) -> int:
+            '''returns current state of system action (control) auditing setting.
+            '''
+            return system_action_audit
 
         @classproperty
         def syslog_enabled(_) -> bool:

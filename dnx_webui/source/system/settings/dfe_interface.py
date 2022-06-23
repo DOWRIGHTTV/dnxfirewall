@@ -1,9 +1,11 @@
 #!/usr/bin/python3
 
+from __future__ import annotations
+
 import dnx_iptools.interface_ops as interface
 
 from source.web_typing import *
-from source.web_validate import ValidationError, convert_int, ip_address, default_gateway, cidr
+from source.web_validate import ValidationError, convert_int, mac_address, ip_address, cidr
 
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA, INTF
@@ -14,7 +16,7 @@ from dnx_iptools.cprotocol_tools import itoip, default_route
 
 _IP_DISABLED = True
 
-def load_page(_):
+def load_page(_: Form) -> dict[str, Any]:
     system_settings: ConfigChain = load_configuration('system')
 
     wan_ident: str = system_settings['interfaces->builtins->wan->ident']
@@ -35,9 +37,9 @@ def load_page(_):
         }
     }
 
-def update_page(form: dict):
-    if ('update_wan_state' in form):
-        wan_state = form.get('update_wan_state', DATA.MISSING)
+def update_page(form: Form) -> str:
+    if ('wan_state_update' in form):
+        wan_state = form.get('wan_state_update', DATA.MISSING)
         if (wan_state is DATA.MISSING):
             return INVALID_FORM
 
@@ -49,7 +51,7 @@ def update_page(form: dict):
         else:
             interface.set_wan_interface(wan_state)
 
-    elif ('update_wan_ip' in form):
+    elif ('wan_ip_update' in form):
         wan_ip_settings = config(**{
             'ip': form.get('wan_ip', DATA.MISSING),
             'cidr': form.get('wan_cidr', DATA.MISSING),
@@ -64,52 +66,22 @@ def update_page(form: dict):
             cidr(wan_ip_settings.cidr)
             ip_address(wan_ip_settings.dfg)
         except ValidationError as ve:
-            return ve
+            return ve.message
 
         interface.set_wan_ip(wan_ip_settings)
 
     elif (_IP_DISABLED):
         return 'wan interface configuration currently disabled for system rework.'
 
-    elif ('wan_ip_update' in form):
-        wan_settings = config(**{
-            'ip': form.get('ud_wan_ip', DATA.MISSING),
-            'cidr': form.get('ud_wan_cidr', DATA.MISSING),
-            'dfg': form.get('ud_wan_dfg', DATA.MISSING)
-        })
-
-        if (DATA.MISSING in wan_settings.values()):
-            return INVALID_FORM
-
-        if ('static_wan' in form):
-            # keys present, but fields left empty (unable to force client side).
-            # catching prior to validation to give a more graceful error response
-            if (not wan_settings.ip or not wan_settings.dfg):
-                return 'All fields are required when setting the wan interface to static.'
-
-            try:
-                ip_address(wan_settings.ip)
-                cidr(wan_settings.cidr)
-                default_gateway(wan_settings.dfg)
-            except ValidationError as ve:
-                return ve
-
-            else:
-                interface.set_wan_interface(wan_settings)
-
-        else:
-            # no arg indicates dynamic ip/dhcp assignment
-            interface.set_wan_interface()
-
     elif ('wan_mac_update' in form):
-        mac_address = form.get('ud_wan_mac', None)
-        if (not mac_address):
+        mac_addr = form.get('ud_wan_mac', DATA.MISSING)
+        if (mac_addr is DATA.MISSING):
             return INVALID_FORM
 
         try:
-            mac_address(mac_address)
+            mac_address(mac_addr)
         except ValidationError as ve:
-            return ve
+            return ve.message
         else:
             interface.set_wan_mac(CFG.ADD, mac_address=mac_address)
 

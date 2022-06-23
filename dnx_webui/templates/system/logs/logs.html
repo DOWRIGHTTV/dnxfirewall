@@ -6,7 +6,7 @@
             <div class="card-panel hoverable {{card_color}}">
                 <h4 class="{{title_color}}">System Logs</h4>
                 <div class="row">
-                    <form action="system/logs" method="POST">
+                    <form method="POST">
                         <div class="input-field col s10 m6 l4 {{input_color}}">
                             <select name="table" id="table" onchange="updateData(this.value)">
                                 {% for table_type in log_files %}

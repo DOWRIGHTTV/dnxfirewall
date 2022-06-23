@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union, Any, Callable
+from typing import Optional, Union, Any, Callable, ByteString
 
 from typing import TYPE_CHECKING
 
