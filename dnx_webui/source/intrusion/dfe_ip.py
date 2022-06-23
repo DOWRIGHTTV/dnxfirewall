@@ -142,7 +142,6 @@ def update_field(form: Form) -> tuple[bool, WebError]:
 # ==============
 # VALIDATION
 # ==============
-
 def validate_reputation(category: config) -> Optional[ValidationError]:
     ip_proxy = load_configuration('ip_proxy')
 

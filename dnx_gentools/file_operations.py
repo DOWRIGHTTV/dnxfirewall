@@ -17,7 +17,7 @@ from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER, fast_sleep
 from dnx_gentools.def_namedtuples import Item
 from dnx_gentools.def_enums import DNS_CAT, DATA
-from dnx_gentools.def_exceptions import ValidationError, ConfigurationError
+from dnx_gentools.def_exceptions import ValidationError, ConfigurationError, ControlError
 
 # ================
 # TYPING IMPORTS
@@ -550,10 +550,13 @@ class ConfigurationManager:
         if (exc_type is None):
             return True
 
-        elif (exc_type is not ValidationError):
-            self.log.error(f'configuration manager error: {exc_val}')
+        if (exc_type is ControlError):
+            raise
 
-            raise ConfigurationError('Configuration manager was unable to update the requested file.')
+        elif (exc_type is not ValidationError):
+            self.log.error(f'ConfigurationManager: {exc_val}')
+
+            raise ConfigurationError(f'Configuration manager failed while updating file. error->{exc_val}')
 
     # will load json data from file, convert it to a ConfigChain
     def load_configuration(self) -> ConfigChain:

@@ -660,8 +660,8 @@ def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name) -> str:
     if (request.method == 'POST'):
         try:
             error, selected = dnx_page.update_page(request.form)
-        except OSError as ose:
-            return render_template(application_error_page, application_error=ose, **page_settings)
+        except ConfigurationError as ce:
+            return render_template(application_error_page, application_error=ce, **page_settings)
 
         page_settings.update({
             'tab': validate.get_convert_int(request.form, 'tab'),
@@ -671,8 +671,8 @@ def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name) -> str:
         print(1111111111, page_settings)
     try:
         page_settings[data_key] = dnx_page.load_page(page_settings['selected'])
-    except OSError as ose:
-        return render_template(application_error_page, application_error=ose, **page_settings)
+    except ConfigurationError as ce:
+        return render_template(application_error_page, application_error=ce, **page_settings)
 
     return render_template(page_name, **page_settings)
 
@@ -690,8 +690,8 @@ def log_page_logic(log_page, page_settings, *, page_name):
 
     try:
         table_data, table, menu_option = handler(request_data)
-    except OSError as ose:
-        return render_template(application_error_page, application_error=ose, **page_settings)
+    except ConfigurationError as ce:
+        return render_template(application_error_page, application_error=ce, **page_settings)
 
     page_settings.update({
         'menu': menu_option,
@@ -705,8 +705,8 @@ def categories_page_logic(dnx_page, page_settings):
     if (request.method == 'POST'):
         try:
             error, menu_option = dnx_page.update_page(request.form)
-        except OSError as ose:
-            return render_template(application_error_page, application_error=ose, **page_settings)
+        except ConfigurationError as ce:
+            return render_template(application_error_page, application_error=ce, **page_settings)
 
         page_settings.update({
             'tab': validate.get_convert_int(request.args, 'tab'),
@@ -716,8 +716,8 @@ def categories_page_logic(dnx_page, page_settings):
 
     try:
         page_settings['category_settings'] = dnx_page.load_page(page_settings['menu'])
-    except OSError as ose:
-        return render_template(application_error_page, application_error=ose, **page_settings)
+    except ConfigurationError as ce:
+        return render_template(application_error_page, application_error=ce, **page_settings)
 
     return render_template('intrusion/domain/categories.html', **page_settings)
 
