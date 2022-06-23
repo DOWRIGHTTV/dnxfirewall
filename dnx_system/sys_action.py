@@ -29,8 +29,8 @@ _control_client_sendmsg = _control_client.sendmsg
 # ==================
 # CONTROL UTILITY
 # ===================
-def _system_action(data_to_send: ByteString) -> None:
-    _control_client_sendmsg(data_to_send, [(SOL_SOCKET, SCM_CREDENTIALS, DNX_AUTHENTICATION)])
+def _system_action(control_data: ByteString) -> None:
+    _control_client_sendmsg([control_data], [(SOL_SOCKET, SCM_CREDENTIALS, DNX_AUTHENTICATION)])
 
 def system_action(*, delay: int = NO_DELAY, **kwargs) -> None:
     '''
@@ -45,13 +45,13 @@ def system_action(*, delay: int = NO_DELAY, **kwargs) -> None:
     can be passed to the python function.
     '''
     try:
-        data_to_send = dumps(kwargs).encode('utf-8')
+        control_data = dumps(kwargs).encode('utf-8')
     except Exception as E:
         direct_log('system', LOG.ERROR, f'system action failure. command not executed. | {E}')
 
         raise ControlError(f'system action failure. command not executed. | {E}')
 
-    action = Timer(delay, _system_action, args=(data_to_send,))
+    action = Timer(delay, _system_action, args=(control_data,))
 
     try:
         action.start()

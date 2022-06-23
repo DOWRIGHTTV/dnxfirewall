@@ -243,7 +243,7 @@ def _log_handler() -> LogHandler:
             log_data = [db_message(timestamp, log, method)]
 
             try:
-                db_sendmsg(log_data, [(SOL_SOCKET, SCM_CREDENTIALS, DNX_AUTHENTICATION)])
+                db_sendmsg([log_data], [(SOL_SOCKET, SCM_CREDENTIALS, DNX_AUTHENTICATION)])
 
             # deferred connect for processes
             # NOTE: the event will be lost if this is invoked, but this is a backup for startup races.
