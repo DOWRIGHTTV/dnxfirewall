@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 import os
-import pwd
 import traceback
 
-from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SO_PASSCRED, SCM_CREDENTIALS
+from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SO_PASSCRED
 from json import loads
 
 from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, DNS_REQUEST_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG, INF_EVENT_LOG
 
+from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.standard_tools import dnx_queue, looper
 
-from dnx_iptools.def_structs import unpack_scm_creds
+from dnx_iptools.protocol_tools import authenticate_sender
 
 from dnx_routines.logging.log_client import Log
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
@@ -23,9 +23,6 @@ from dnx_routines.database.ddb_connector_sqlite import DBConnector
 NT_LOOKUP = {
     nt.__name__: nt for nt in [IPP_EVENT_LOG, DNS_REQUEST_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG, INF_EVENT_LOG]
 }.get
-
-_getuser_info = pwd.getpwuid
-_getuser_groups = os.getgrouplist
 
 # ====================================================
 # SERVICE SOCKET - Initialization
@@ -41,28 +38,11 @@ _db_service.bind(DATABASE_SOCKET.encode())
 # NOTE: direct reference to the recvmsg method for perf
 _db_service_recvmsg = _db_service.recvmsg
 
-# ---------------------------------------
-# SERVICE SOCKET - Auth Validation
-# ---------------------------------------
-def _authenticate_sender(anc_data):
-    anc_data = {msg_type: data for _, msg_type, data in anc_data}
-
-    auth_data = anc_data.get(SCM_CREDENTIALS)
-    if (not auth_data):
-        return False
-
-    pid, uid, gid = unpack_scm_creds(auth_data)
-    # USER is a dnxfirewall constant specified in def_constants
-    if (_getuser_info(uid).pw_name != USER):
-        return False
-
-    return True
-
 # =======================================
 # PRIMARY FUNCTIONS - REDUCED FROM CLASS
 # =======================================
 # the main service loop to remove the recursive callback of queue handler.
-def run():
+def run() -> NoReturn:
     Log.notice('Database log entry processing queue ready.')
 
     fail_count = 0
@@ -83,7 +63,7 @@ def run():
         fast_sleep(ONE_SEC)
 
 @dnx_queue(Log, name='Database')
-def _request_handler(database, job):
+def _request_handler(database: DBConnector, job: list) -> None:
 
     database.execute(*job)
 
@@ -91,7 +71,7 @@ def _request_handler(database, job):
     database.commit_entries()
 
 @looper(NO_DELAY, queue_for_db=_request_handler.add)
-def receive_requests(queue_for_db):
+def receive_requests(queue_for_db: Callable[[tuple[str, str, str]], None]) -> None:
     '''receives databases messages plus ancillary authentication data from dnxfirewall mods.
     '''
     try:
@@ -100,7 +80,7 @@ def receive_requests(queue_for_db):
         traceback.print_exc()
 
     else:
-        authorized = _authenticate_sender(anc_data)
+        authorized = authenticate_sender(anc_data)
 
         # dropping message due to failed auth
         if (not authorized):

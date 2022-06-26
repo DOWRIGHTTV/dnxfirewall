@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 import os
+import pwd
 import shutil
 
 from binascii import unhexlify
 from functools import partial
 from random import getrandbits
-from socket import socket, AF_INET, SOCK_RAW
+from socket import socket, AF_INET, SOCK_RAW, SCM_CREDENTIALS
 from subprocess import run, CalledProcessError, DEVNULL
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import RUN_FOREVER, byte_join, fast_time, UINT32_MAX
+from dnx_gentools.def_constants import USER, RUN_FOREVER, byte_join, fast_time, UINT32_MAX
 from dnx_gentools.def_enums import PROTO
 
 from dnx_iptools.def_structs import *
@@ -28,7 +29,7 @@ if (TYPE_CHECKING):
 __all__ = (
     'btoia', 'itoba',
 
-    'change_socket_owner',
+    'change_socket_owner', 'authenticate_sender',
     'icmp_reachable',
 
     'cidrtoi',
@@ -54,6 +55,25 @@ def change_socket_owner(sock_path: str) -> bool:
         shutil.chown(sock_path, user='dnx', group='dnx')
         os.chmod(sock_path, 0o660)
     except PermissionError:
+        return False
+
+    return True
+
+# ---------------------------------------
+# SERVICE SOCKET - Auth Validation
+# ---------------------------------------
+_getuser_info = pwd.getpwuid
+_getuser_groups = os.getgrouplist
+def authenticate_sender(anc_data: Iterable[tuple[int, int, bytes]]) -> bool:
+    anc_data = {msg_type: data for _, msg_type, data in anc_data}
+
+    auth_data = anc_data.get(SCM_CREDENTIALS)
+    if (not auth_data):
+        return False
+
+    pid, uid, gid = scm_creds_unpack(auth_data)
+    # USER is a dnxfirewall constant specified in def_constants
+    if (_getuser_info(uid).pw_name != USER):
         return False
 
     return True

@@ -105,7 +105,7 @@ LSB: int = 0b00000000000001111111111111111111
 UINT16_MAX: int = 0b1111111111111111
 UINT32_MAX: int = 0b11111111111111111111111111111111
 
-# NFQUEUE packet actions | marking packet, so it can be matched by next rules in order of operations
+# NFQUEUE packet actions | marking packet, so it can be matched by following rules in order of operations
 WAN_IN: int = 10  # used for limiting certain internal functions from applying to wan > inside traffic
 LAN_IN: int = 11  # used for management access traffic matching
 DMZ_IN: int = 12  # used for management access traffic matching
@@ -114,12 +114,15 @@ DMZ_IN: int = 12  # used for management access traffic matching
 # LOCAL SOCKET DEFINITIONS
 # ============================
 # process, user, group
+CONTROL_AUTHENTICATION: tuple[int, int, int] = (_os.getpid(), _pwd.getpwnam(USER).pw_uid, _pwd.getpwnam(USER).pw_gid)
 DNX_AUTHENTICATION: bytes = _scm_creds_pack(_os.getpid(), _pwd.getpwnam(USER).pw_uid, _pwd.getpwnam(USER).pw_gid)
 
 # SYSLOG_TLS_PORT = 6514
 # SYSLOG_SOCKET   = 6970
-CONTROL_SOCKET:  str = f'{HOME_DIR}/dnx_system/control_sock'
-DATABASE_SOCKET: str = f'{HOME_DIR}/dnx_routines/database/ddb_sock'
+CONTROL_SOCKET: tuple[str, int] = ('127.0.0.1', 6969)
+# DATABASE_SOCKET: tuple[str, int] = ('127.0.0.1', 6970)
+# CONTROL_SOCKET:  str = f'{HOME_DIR}/dnx_system/control.sock'
+DATABASE_SOCKET: str = f'{HOME_DIR}/dnx_routines/database/ddb.sock'
 
 # ================================
 # DNS PROXY DEFS (CONSIDER MOVING)

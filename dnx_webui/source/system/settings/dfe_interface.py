@@ -26,6 +26,16 @@ def load_page(_: Form) -> dict[str, Any]:
     default_mac:    str = system_settings['interfaces->builtins->wan->default_mac']
     configured_mac: str = system_settings['interfaces->builtins->wan->default_mac']
 
+    try:
+        ip_addr = itoip(interface.get_ipaddress(interface=wan_ident))
+    except OverflowError:
+        ip_addr = 'NOT SET'
+
+    try:
+        netmask = itoip(interface.get_netmask(interface=wan_ident))
+    except OverflowError:
+        netmask = 'NOT SET'
+
     return {
         'mac': {
             'default': default_mac,
@@ -33,8 +43,8 @@ def load_page(_: Form) -> dict[str, Any]:
         },
         'ip': {
             'state': wan_state,
-            'ip_address': itoip(interface.get_ipaddress(interface=wan_ident)),
-            'netmask': itoip(interface.get_netmask(interface=wan_ident)),
+            'ip_address': ip_addr,
+            'netmask': netmask,
             'default_gateway': itoip(default_route())
         }
     }
@@ -126,23 +136,7 @@ def set_wan_interface(intf_type: INTF = INTF.DHCP):
             # initializing static, but not configuring an ip address
             wan_intf['addresses'] = '[]'
 
-        # grabbing configured dns servers
-        dns_server_settings: ConfigChain = load_configuration('dns_server')
-
-        dns1: str = dns_server_settings['resolvers->primary->ip_address']
-        dns2: str = dns_server_settings['resolvers->secondary->ip_address']
-
-        # dns server replacement in template required for static or dhcp
-        converted_config = json_to_yaml(intf_template)
-        converted_config = converted_config.replace('_PRIMARY__SECONDARY_', f'{dns1},{dns2}')
-
-        # writing file into dnx_system folder due to limited permissions by the front end.
-        # netplan and the specific mv args operate under sudo/no-pass to get the config loaded.
-        with open(f'{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', 'w') as dnx_intfs:
-            dnx_intfs.write(converted_config)
-
-        cmd_args = ['{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', '/etc/netplan/01-dnx-interfaces.yaml']
-        system_action(module='webui', command='os.replace', args=cmd_args)
+        _configure_netplan(intf_template)
 
         # TODO: writing state change after file has been replaced because any errors prior to this will prevent
         #  configuration from taking effect.
@@ -186,12 +180,6 @@ def set_wan_ip(wan_settings: config) -> None:
 
     wan_ident: str = dnx_settings['interfaces->builtins->wan->ident']
 
-    # grabbing configured dns servers
-    dns_server_settings: ConfigChain = load_configuration('dns_server')
-
-    dns1: str = dns_server_settings['resolvers->primary->ip_address']
-    dns2: str = dns_server_settings['resolvers->secondary->ip_address']
-
     intf_template: dict = load_data('intf_config_template.cfg', filepath='dnx_system/interfaces')
 
     # removing dhcp4 and dhcp_overrides keys, then adding ip address value
@@ -203,15 +191,29 @@ def set_wan_ip(wan_settings: config) -> None:
     wan_intf['addresses'] = f'[{wan_settings.ip}/{wan_settings.cidr}]'
     wan_intf['gateway4']  = f'{wan_settings.dfg}'
 
-    converted_config = json_to_yaml(intf_template)
+    _configure_netplan(intf_template)
+
+    system_action(module='webui', command='netplan apply')
+
+def _configure_netplan(intf_config: dict) -> None:
+    '''writes modified template to file and moves it to /etc/netplan using os.replace
+
+        note: this does NOT run "netplan apply"
+    '''
+    # grabbing configured dns servers
+    dns_server_settings: ConfigChain = load_configuration('dns_server')
+
+    dns1: str = dns_server_settings['resolvers->primary->ip_address']
+    dns2: str = dns_server_settings['resolvers->secondary->ip_address']
+
+    # creating YAML string and applying loaded server values
+    converted_config = json_to_yaml(intf_config)
     converted_config = converted_config.replace('_PRIMARY__SECONDARY_', f'{dns1},{dns2}')
 
-    # writing file into dnx_system folder due to limited permissions by the front end.
-    # netplan and the specific mv args are configured as sudo/no-pass to get the config to netplan.
-    # this will apply system settings without a restart.
+    # writing YAML to interface folder to be used as swap
     with open(f'{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', 'w') as dnx_intfs:
         dnx_intfs.write(converted_config)
 
+    # sending replace command to system control service
     cmd_args = [f'{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', '/etc/netplan/01-dnx-interfaces.yaml']
     system_action(module='webui', command='os.replace', args=cmd_args)
-    system_action(module='webui', command='netplan apply')

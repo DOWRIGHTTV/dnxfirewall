@@ -5,7 +5,7 @@ from __future__ import annotations
 import threading
 
 from json import dumps
-from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SCM_CREDENTIALS
+from socket import socket, AF_UNIX, AF_INET, SOCK_DGRAM, SOL_SOCKET, SCM_CREDENTIALS
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
@@ -149,12 +149,6 @@ def _log_handler() -> LogHandler:
 
             threading.Thread(target=write_to_disk).start()
 
-            # connecting here as a deferred action, so services loading before log handler will not have issues.
-            try:
-                db_client.connect(DATABASE_SOCKET.encode())
-            except (FileNotFoundError, ConnectionRefusedError):
-                critical('failed to connect to database. event logs will be lost.')
-
             # waiting for log settings and methods to initialize before returning to caller
             while not is_initialized:
                 fast_sleep(ONE_SEC)
@@ -235,20 +229,22 @@ def _log_handler() -> LogHandler:
                 console_log(log_msg)
 
         @staticmethod
+        # TODO: figure out a nice way to alert on excessive amounts of dropped events. maybe store dropped events
+        #  to a backlog file that can be loaded into db when available.
         def event_log(timestamp: int, log: tuple, method: str):
             '''log security events to database.
 
-            sends over local socket controlled by log service to aggregate messages across all modules.
+            sends over local socket controlled by database service to aggregate events from all modules.
+            if the database socket is not available, the log message will be silently dropped.
             '''
-            log_data = [db_message(timestamp, log, method)]
-
             try:
-                db_sendmsg([log_data], [(SOL_SOCKET, SCM_CREDENTIALS, DNX_AUTHENTICATION)])
-
-            # deferred connect for processes
-            # NOTE: the event will be lost if this is invoked, but this is a backup for startup races.
-            except ConnectionRefusedError:
-                db_client.connect(DATABASE_SOCKET.encode())
+                db_sendmsg(
+                    [db_message(timestamp, log, method)],
+                    [(SOL_SOCKET, SCM_CREDENTIALS, DNX_AUTHENTICATION)],
+                    0, DATABASE_SOCKET
+                )
+            except (PermissionError, FileNotFoundError):
+                pass
 
         @staticmethod
         def slog_log(mtype, level, log_msg):
