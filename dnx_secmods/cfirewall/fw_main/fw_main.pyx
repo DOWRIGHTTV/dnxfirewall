@@ -19,11 +19,6 @@ ppt = PrettyPrinter(sort_dicts=False).pprint
 
 DEF FW_MAX_ATTACKERS  = 250
 
-DEF SECURITY_PROFILE_COUNT = 3
-DEF PROFILE_SIZE  = 4  # bits
-DEF PROFILE_START = 12
-DEF PROFILE_STOP  = (SECURITY_PROFILE_COUNT * 4) + 8 + 1  # +1 for range
-
 # function return values
 DEF OK  = 0
 DEF ERR = -1
@@ -32,17 +27,6 @@ DEF Py_ERR = 1
 
 DEF NETWORK = 1
 DEF SERVICE = 2
-
-# compile time def because vals are assigned by the external webui
-# network object types.
-DEF IP_ADDRESS = 1
-DEF IP_NETWORK = 2
-DEF IP_RANGE   = 3
-DEF IP_GEO     = 6
-DEF INV_IP_ADDRESS = 11
-DEF INV_IP_NETWORK = 12
-DEF INV_IP_RANGE   = 13
-DEF INV_IP_GEO     = 16
 
 # service object types.
 DEF SVC_SOLO  = 1

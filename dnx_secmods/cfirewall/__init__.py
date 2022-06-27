@@ -93,6 +93,7 @@ def run():
 
     initialize_geolocation(geo_trie, MSB, LSB)
 
+    dnx_threads = []
     # ===============
     # FIREWALL QUEUE
     # ===============
@@ -106,16 +107,21 @@ def run():
         Log.error(f'failed to set nl socket options for queue {Queue.CFIREWALL}')
         hardout()
 
+    dnx_threads.append(Thread(target=dnxfirewall.nf_run))
+
     # ===============
     # NAT QUEUE
     # ===============
-    dnxnat = CFirewall()
+    # TODO: TSHOOT AND FULLY IMPLEMENT NAT MODULE TO REPLACE IPTABLES
+    # dnxnat = CFirewall()
     # dnxnat.set_options(0, args.verbose_set, args.verbose2_set)
 
-    error = dnxnat.nf_set(QueueType.NAT, Queue.CNAT)
-    if (error):
-        Log.error(f'failed to set nl socket options for queue {Queue.CNAT}')
-        hardout()
+    # error = dnxnat.nf_set(QueueType.NAT, Queue.CNAT)
+    # if (error):
+    #     Log.error(f'failed to set nl socket options for queue {Queue.CNAT}')
+    #     hardout()
+
+    # dnx_threads.append(Thread(target=dnxnat.nf_run))
 
     # initializing python processes for detecting configuration changes to zone or firewall rule sets and also handles
     # necessary calls into Cython via cfirewall reference for making the actual config change.
@@ -133,10 +139,6 @@ def run():
 
     # this is running in pure C. the GIL is released before running the low-level system operations and will never
     # reacquire the gil.
-    dnx_threads = [
-        Thread(target=dnxfirewall.nf_run),
-        Thread(target=dnxnat.nf_run)
-    ]
     for t in dnx_threads:
         t.start()
 

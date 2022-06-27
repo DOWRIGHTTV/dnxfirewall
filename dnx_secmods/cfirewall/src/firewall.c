@@ -69,7 +69,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
 
     struct clist_range  fw_clist;
 
-    printf("< [++] FW RECV QUEUE(%u) - PARSING [++] >\n", cfd->queue);
+//    printf("< [++] FW RECV QUEUE(%u) - PARSING [++] >\n", cfd->queue);
     dnx_parse_nl_headers(nl_msgh, &nl_pkth, netlink_attrs, &pkt);
     /*
     CONNTRACK LOOKUP
@@ -270,7 +270,7 @@ firewall_push_rules(uintf8_t cntrl_list)
     // iterating over each rule in FW table
     for (uintf16_t rule_idx = 0; rule_idx < fw_tables_swap[cntrl_list].len; rule_idx++) {
 
-        // copy swap structure to active structure. alignment is already set as they are idential structures.
+        // copy swap structure to active structure. alignment is already set as they are identical structures.
         firewall_tables[cntrl_list].rules[rule_idx] = fw_tables_swap[cntrl_list].rules[rule_idx];
     }
     firewall_unlock();

@@ -5,14 +5,16 @@
 
 // compile time def because vals are assigned by the external webui
 // network object types.
-#define IP_ADDRESS 1
-#define IP_NETWORK 2
-#define IP_RANGE   3
-#define IP_GEO     6
-#define INV_IP_ADDRESS 11
-#define INV_IP_NETWORK 12
-#define INV_IP_RANGE   13
-#define INV_IP_GEO     16
+#define IP_ADDRESS  1
+#define IP_NETWORK  2
+#define IP_RANGE    3
+#define IP_NET_LIST 4
+#define IP_GEO      6
+#define INV_IP_ADDRESS  11
+#define INV_IP_NETWORK  12
+#define INV_IP_RANGE    13
+#define INV_IP_NET_LIST 14
+#define INV_IP_GEO      16
 
 // service object types.
 #define SVC_SOLO  1
