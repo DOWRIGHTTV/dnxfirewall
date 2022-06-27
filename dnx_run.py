@@ -7,13 +7,19 @@ from typing import Optional, Union, Iterable
 import os
 import sys
 import time
+import json
 import importlib
 import traceback
 
 from functools import partial
 from subprocess import run, DEVNULL, CalledProcessError
 
+from dnx_shell.utils.shell_colors import text, styles
+
 # HOME_DIR = os.environ.get('HOME_DIR', '/home/dnx/dnxfirewall')
+
+# style aliases
+BOLD = styles.bold
 
 hardout = partial(os._exit, 0)
 dnx_run = partial(run, check=True, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
@@ -28,6 +34,7 @@ def exclude(s: str, l: Iterable, /) -> list[str]:
 
 
 COMMANDS: dict[str, dict[str, bool]] = {
+    'help': {'description': 'Displays this menu', 'priv': False, 'module': False},
     'start': {'priv': True, 'module': True},
     'restart': {'priv': True, 'module': True},
     'stop': {'priv': True, 'module': True},
@@ -92,11 +99,11 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
 SERVICE_MODULES = [f'dnx-{mod}' for mod, modset in MODULE_MAPPING.items() if modset['service']]
 
 systemctl_ret_codes: dict[int, str] = {
-    0: 'program is running or service is OK',
-    1: 'program dead and /var/run pid file exists',
-    2: 'program dead and /var/lock lock file exists',
-    3: 'program not running',
-    4: 'program service status is unknown',
+    0: text.lightgrey('program is running or service is ') + text.green('OK'),
+    1: text.lightgrey('program ') + text.orange('dead and /var/run pid file exists'),
+    2: text.lightgrey('program ') + text.orange('dead and /var/lock lock file exists'),
+    3: text.lightgrey('program ') + text.red('not running'),
+    4: text.lightgrey('program service status is ') + text.yellow('UNKNOWN'),
 }
 
 def sprint(msg: str, /) -> None:
@@ -129,13 +136,20 @@ def check_module(mod: str, /) -> dict:
 def check_command(cmd: str, mod: str, modset: dict) -> None:
     cmd_info = COMMANDS.get(cmd, None)
     if (not cmd_info):
-        sexit(f'UNKNOWN COMMAND ({cmd.upper()}) -> see --help')
+        sexit(
+            text.red('Error! ') +
+            text.lightgrey('Unknown Command. ⟶ See help for existing commands')
+        )
 
     root = not os.getuid()
 
     # command level privilege
     if (not root and cmd_info['priv']):
-        sexit(f'DNXFIREWALL command {cmd.upper()} requires root')
+        sexit(
+            text.lightgrey(f'DNXFIREWALL command "{cmd.upper()}" requires ') +
+            text.red('root') +
+            text.lightgrey(' privileges.')
+        )
 
     # the command does not require a module
     if (not cmd_info['module']):
@@ -145,15 +159,53 @@ def check_command(cmd: str, mod: str, modset: dict) -> None:
     # MODULE REQUIRED
     # ================
     if (not modset):
-        sexit('UNKNOWN MODULE -> see --help')
+        sexit(
+            text.red('Error! ') +
+            text.lightgrey('Unknown Module. Module does not exist. ⟶ See help')
+        )
 
     # checking if command is valid for the module
     if (cmd in modset['exclude']):
-        sexit(f'{cmd.upper()} not valid for {mod.upper()}')
+        sexit(
+            text.lightgrey(f' "{cmd.upper()}" ') +
+            text.red(f'not valid') +
+            text.lightgrey(f' for  "{mod.upper()}".')
+        )
 
     # module level privilege
     if (not root and modset['priv']):
-        sexit(f'DNXFIREWALL command {cmd.upper()} requires root for module {mod.upper()}')
+        sexit(
+            text.lightgrey(f'DNXFIREWALL command "{cmd.upper()}" requires ') +
+            text.red('root') +
+            text.lightgrey(' privileges.')
+        )
+
+def help_command() -> None:
+    print(text.blue('----------- ') + text.lightgrey(' | Commands | ') + text.blue('-----------'))
+
+    convert_bool = {True: 'yes', False: 'no'}
+    # iterate over COMMANDS dict and print each to a line, adding : inbetween
+    # I want to replace priv with privilege for readability, will experiment.
+    # TODO: better way to do this?
+    for cmd, opts in COMMANDS.items():
+        description = opts.get('description', '')
+        cmd_opts = {
+            'description': description,
+            'priv_required': convert_bool[opts['priv']],
+            'has_module': convert_bool[opts['module']]
+        }
+        if (not description):
+            cmd_opts.pop('description')
+
+        cmd_opts = json.dumps(cmd_opts)[1:-1].replace('"', '').replace(': ', '->')
+
+        print(text.lightgrey(f'{cmd}:   ') + text.lightgrey(cmd_opts, style=None))
+
+    print()
+    print(text.blue('----------- ') + text.lightgrey(' | Ret Codes | ') + text.blue('-----------'))
+
+    for code, msg in systemctl_ret_codes.items():
+        print(code, msg)
 
 def modstat_command() -> None:
 
@@ -167,28 +219,35 @@ def modstat_command() -> None:
         try:
             dnx_run(f'sudo systemctl status {svc}', shell=True)
         except CalledProcessError as cpe:
-            status.append(
-                [svc, f'down  code={cpe.returncode}  msg="{systemctl_ret_codes.get(cpe.returncode, "")}"']
-            )
+            status.append([svc,
+                text.red('down ') + text.darkgrey('code=') + text.lightgrey(f'{cpe.returncode} ') +
+                text.darkgrey(f'msg="{systemctl_ret_codes.get(cpe.returncode, "")}"')
+            ])
 
             down_detected = True
 
         else:
-            status.append([svc, 'up'])
+            status.append([svc, text.green('up')])
 
     # =================================
     # OUTPUT - Justified left<==>right
     # =================================
     # dnx-cfirewall   => down (code=4)
-    print('# =====================')
-    print('# DNXFIREWALL SERVICES')
-    print('# =====================')
+    print(text.blue('░█▀▄░█▀█░█░█  ░█▀▀░█▀▀░█▀▄░█░█░▀█▀░█▀▀░█▀▀░█▀▀'))
+    print(text.blue('░█░█░█░█░▄▀▄  ░▀▀█░█▀▀░█▀▄░▀▄▀░░█░░█░░░█▀▀░▀▀█'))
+    print(text.blue('░▀▀░░▀░▀░▀░▀  ░▀▀▀░▀▀▀░▀░▀░░▀░░▀▀▀░▀▀▀░▀▀▀░▀▀▀'))
     for svc, result in status:
         time.sleep(0.05)
-        print(f'{svc.ljust(svc_len)} => {result.rjust(4)}')
+        print(text.darkgrey(f'{svc.ljust(svc_len)} ⟶ {result.rjust(4)}'))
 
     if (down_detected):
-        print(f'\ndowned service detected. check journal for more details.')
+        print(
+            text.red(f'\nALERT! ') + text.lightgrey(f'Down service(s) detected! ')
+        )
+        print(text.lightgrey('Check journal for more details.'))
+
+    else:
+        print(text.green(f'\nAll services running!'))
 
 def service_command(mod: str, cmd: str) -> None:
     if (mod == 'all'):
@@ -199,9 +258,9 @@ def service_command(mod: str, cmd: str) -> None:
 
                 dnx_run(f'sudo systemctl {cmd} {svc}', shell=True)
             except CalledProcessError:
-                sprint(f'{svc.ljust(15)} => {"fail".rjust(7)}')
+                sprint(text.red(f'{svc.ljust(15)} ⟶ {"fail".rjust(7)}'))
             else:
-                sprint(f'{svc.ljust(15)} => {"success".rjust(7)}')
+                sprint(text.green(f'{svc.ljust(15)} ⟶ {"success".rjust(7)}'))
 
         return
 
@@ -214,17 +273,20 @@ def service_command(mod: str, cmd: str) -> None:
     except CalledProcessError as cpe:
         if (cmd == 'status'):
             sprint(
-                f'{svc.ljust(15)} => down  code={cpe.returncode} msg="{systemctl_ret_codes.get(cpe.returncode, "")}"'
-            )
+                text.lightgrey(f'{svc.ljust(15)} ⟶ ') + text.red(f'down ') + text.lightgrey(f'code="{cpe.returncode}') +
+                text.lightgrey(f'msg="{systemctl_ret_codes.get(cpe.returncode, "")}"')
+                )
         else:
-            sprint(f'{svc} service {cmd} failed. check journal. => msg={cpe}')
+            sprint(
+                text.lightgrey(f'"{svc}" service "{cmd}"') + text.red(f'failed.') +
+                text.darkgrey(f'Check the journal for more details. ⟶ msg="{cpe}"')
+            )
 
     else:
         if (cmd == 'status'):
-            sprint(f'{svc.ljust(15)} => {"up".rjust(4)}')
-
+            sprint(text.lightgrey(f'{svc.ljust(15)} ⟶ ') + text.green(f'{"up".rjust(4)}'))
         else:
-            sprint(f'{svc} service {cmd} successful.')
+            sprint(text.lightgrey(f'svc ') + text.lightgrey(f'service "{cmd}"') + text.green(' successful.'))
 
 # using environ var to notify imported module to initialize and run.
 # this was done because a normal function was causing issues with the linter thinking a ton of stuff was not defined.
@@ -257,10 +319,9 @@ def run_cli(mod: str, mod_loc: str) -> None:
         try:
             dnx_mod.run()
         except KeyboardInterrupt:
-            sprint(f'{mod} (cli) interrupted')
-
+            sprint(text.lightgrey(f'{mod} ') + text.red('(cli) interrupted!'))
         except Exception as E:
-            sprint(f'{mod} (cli) run failure. => {E}')
+            sprint(text.lightgrey(f'{mod} ') + text.red(f'(cli) run failure. ⟶ {E}'))
             traceback.print_exc()
 
     # this will make sure there are no dangling processes or threads on exit.
@@ -270,7 +331,10 @@ def run_cli(mod: str, mod_loc: str) -> None:
 if (__name__ == '__main__'):
     mod_name, command, mod_set = parse_args()
 
-    if (command == 'cli'):
+    if (command == 'help'):
+        help_command()
+
+    elif (command == 'cli'):
         run_cli(mod_name, mod_set['module'])
 
     elif (command == 'modstat'):
@@ -283,13 +347,13 @@ if (__name__ == '__main__'):
         try:
             dnx_run_v(f'sudo HOME_DIR={HOME_DIR} python3 {file_path} build_ext --inplace', shell=True)
         except CalledProcessError as cpe:
-            sprint(f'{mod_name} (compile) run failure. => {cpe}')
+            sprint(text.lightgrey(f'{mod_name} compile has') + text.red(' failed ') + text.lightgrey(f'⟶ {cpe}!'))
 
         else:
-            sprint(f'{mod_name} (compile) run sucess.')
+            sprint(text.lightgrey(f'{mod_name} compile has') + text.green(' succeeded') + text.lightgrey('!'))
 
     elif (mod_name == 'all' or mod_set['service']):
         service_command(mod_name, command)
 
     else:
-        print(f'<dnx> missing command logic for => mod={mod_name} command={command}')
+        sprint(text.lightgrey(f'<dnx> ') + text.red(f'missing command logic for ⟶ mod={mod_name} command={command}'))

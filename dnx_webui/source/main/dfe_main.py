@@ -668,7 +668,7 @@ def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name) -> str:
             'selected': selected,
             'standard_error': error
         })
-        print(1111111111, page_settings)
+
     try:
         page_settings[data_key] = dnx_page.load_page(page_settings['selected'])
     except ConfigurationError as ce:
