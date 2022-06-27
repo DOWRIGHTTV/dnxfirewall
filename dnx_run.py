@@ -99,11 +99,11 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
 SERVICE_MODULES = [f'dnx-{mod}' for mod, modset in MODULE_MAPPING.items() if modset['service']]
 
 systemctl_ret_codes: dict[int, str] = {
-    0: text.lightgrey('program is running or service is ') + text.green('OK'),
-    1: text.lightgrey('program ') + text.orange('dead and /var/run pid file exists'),
-    2: text.lightgrey('program ') + text.orange('dead and /var/lock lock file exists'),
+    0: text.lightgrey('program ') + text.yellow('is running or service is ', style=None) + text.green('OK'),
+    1: text.lightgrey('program ') + text.yellow('dead and /var/run pid file exists', style=None),
+    2: text.lightgrey('program ') + text.yellow('dead and /var/lock lock file exists', style=None),
     3: text.lightgrey('program ') + text.red('not running'),
-    4: text.lightgrey('program service status is ') + text.yellow('UNKNOWN'),
+    4: text.lightgrey('program ') + text.yellow('service status is ', style=None) + text.darkgrey('UNKNOWN'),
 }
 
 def sprint(msg: str, /) -> None:
@@ -181,31 +181,30 @@ def check_command(cmd: str, mod: str, modset: dict) -> None:
         )
 
 def help_command() -> None:
-    print(text.blue('----------- ') + text.lightgrey(' | Commands | ') + text.blue('-----------'))
+    print('\n', text.blue('----------- ') + text.lightgrey(' | Commands | ') + text.blue('-----------'))
 
-    convert_bool = {True: 'yes', False: 'no'}
+    convert_bool = {True: text.red('yes'), False: text.green('no')}
     # iterate over COMMANDS dict and print each to a line, adding : inbetween
     # I want to replace priv with privilege for readability, will experiment.
     # TODO: better way to do this?
     for cmd, opts in COMMANDS.items():
         description = opts.get('description', '')
         cmd_opts = {
-            'description': description,
+            'description': text.yellow(description, style=None),
             'priv_required': convert_bool[opts['priv']],
             'has_module': convert_bool[opts['module']]
         }
         if (not description):
             cmd_opts.pop('description')
 
-        cmd_opts = json.dumps(cmd_opts)[1:-1].replace('"', '').replace(': ', '->')
+        print(text.lightgrey(f'{cmd}: '))
+        for opt, val in cmd_opts.items():
+            print('    ', f'{opt.ljust(14)}... {val}')
 
-        print(text.lightgrey(f'{cmd}:   ') + text.lightgrey(cmd_opts, style=None))
-
-    print()
-    print(text.blue('----------- ') + text.lightgrey(' | Ret Codes | ') + text.blue('-----------'))
+    print('\n', text.blue('----------- ') + text.lightgrey(' | Ret Codes | ') + text.blue('-----------'))
 
     for code, msg in systemctl_ret_codes.items():
-        print(code, msg)
+        print(text.lightgrey(f'code: {code}'.ljust(10)), msg)
 
 def modstat_command() -> None:
 
