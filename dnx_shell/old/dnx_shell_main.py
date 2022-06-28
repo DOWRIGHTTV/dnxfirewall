@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import json
 
-from dnx_shell.dnx_shell_standard import Standard
-from dnx_shell.dnx_shell_services import Services
-from dnx_shell.dnx_shell_dns import DNS
-from dnx_shell.dnx_shell_whitelist import Whitelist
-from dnx_shell.dnx_shell_blacklist import Blacklist
-from dnx_shell.dnx_shell_domain import Domain
-from dnx_shell.dnx_shell_ip import IP
-from dnx_shell.dnx_shell_interface import Interface
-from dnx_shell.dnx_shell_ips_ids import IPS
+from dnx_shell.old.dnx_shell_standard import Standard
+from dnx_shell.old.dnx_shell_services import Services
+from dnx_shell.old.dnx_shell_dns import DNS
+from dnx_shell.old.dnx_shell_whitelist import Whitelist
+from dnx_shell.old.dnx_shell_blacklist import Blacklist
+from dnx_shell.old.dnx_shell_domain import Domain
+from dnx_shell.old.dnx_shell_ip import IP
+from dnx_shell.old.dnx_shell_interface import Interface
+from dnx_shell.old.dnx_shell_ips_ids import IPS
 
 
 class TopLevel:

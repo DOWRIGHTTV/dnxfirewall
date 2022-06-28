@@ -2,7 +2,7 @@
 
 import json
 
-from dnx_shell.dnx_shell_standard import Standard
+from dnx_shell.old.dnx_shell_standard import Standard
 
 
 class IPS:

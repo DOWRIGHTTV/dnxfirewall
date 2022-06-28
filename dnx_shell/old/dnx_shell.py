@@ -7,8 +7,8 @@ import threading
 
 from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
 
-from dnx_shell.dnx_shell_main import TopLevel
-from dnx_shell.dnx_shell_authentication import Authentication
+from dnx_shell.old.dnx_shell_main import TopLevel
+from dnx_shell.old.dnx_shell_authentication import Authentication
 
 
 class DNXShell:

@@ -1,259 +1,313 @@
 #!/usr/bin/env Cython
 
 from cpython cimport array
-from libc.stdint cimport uint8_t, uint16_t, uint32_t
-from libc.stdint cimport uint_fast8_t, uint_fast16_t, uint_fast32_t, int_fast8_t, int_fast16_t, int_fast32_t
 
+from libc.stdint cimport uint8_t, uint16_t, uint32_t, uint64_t
+from posix.types cimport pid_t
 
-ctypedef array.array PyArray
+# LIBMNL && LIBNETFILTER_QUEUE SOURCE FILES
+# https://netfilter.org/projects/libmnl/files/libmnl-1.0.5.tar.bz2
+# https://netfilter.org/projects/libnetfilter_queue/files/libnetfilter_queue-1.0.5.tar.bz2
 
-cdef extern from "<errno.h>":
-    int     errno
+# DNXFIREWALL TYPEDEFS
+ctypedef array.array    PyArray
 
-cdef extern from "time.h" nogil:
-    ctypedef    long time_t
+cdef extern from "<errno.h>" nogil:
+    int         errno
+
+cdef extern from "<stdbool.h>" nogil:
+    ctypedef int    bool
+    ctypedef int    true
+    ctypedef int    false
+
+cdef extern from "<time.h>" nogil:
+    ctypedef long   time_t
+
     time_t      time(time_t*)
-
     struct timeval:
         time_t  tv_sec
         time_t  tv_usec
 
-cdef extern from "sys/socket.h":
-    ssize_t     recv(int __fd, void *__buf, size_t __n, int __flags) nogil
-    int         MSG_DONTWAIT
-
-cdef enum:
-    EAGAIN = 11           # Try again
-    EWOULDBLOCK = EAGAIN
-    ENOBUFS = 105         # No buffer space available
-
-cdef extern from "pthread.h" nogil:
+cdef extern from "<sys/types.h>" nogil:
     ctypedef struct pthread_mutex_t:
         pass
 
-    int pthread_mutex_init(pthread_mutex_t*, void*)
-    int pthread_mutex_lock(pthread_mutex_t*)
-    int pthread_mutex_trylock(pthread_mutex_t*)
-    int pthread_mutex_unlock(pthread_mutex_t*)
-    int pthread_mutex_destroy(pthread_mutex_t*)
+cdef extern from "<sys/socket.h>" nogil:
+    ctypedef unsigned int   socklen_t
 
-cdef extern from "netinet/in.h":
-    uint32_t ntohl (uint32_t __netlong) nogil
-    uint16_t ntohs (uint16_t __netshort) nogil
-    uint32_t htonl (uint32_t __hostlong) nogil
-    uint16_t htons (uint16_t __hostshort) nogil
+    ssize_t     recv(int __fd, void *__buf, size_t __n, int __flags)
 
-# from netinet/in.h:
-cdef enum:
-    IPPROTO_IP   = 0
-    IPPROTO_ICMP = 1
-    IPPROTO_TCP  = 6
-    IPPROTO_UDP  = 17
+    enum: AF_INET
 
-cdef extern from "libnfnetlink/linux_nfnetlink.h":
-    struct nfgenmsg:
-        uint8_t    nfgen_family
-        uint8_t    version
-        uint16_t   res_id
+cdef extern from "netinet/in.h" nogil:
+    uint32_t ntohl (uint32_t __netlong)
+    uint16_t ntohs (uint16_t __netshort)
+    uint32_t htonl (uint32_t __hostlong)
+    uint16_t htons (uint16_t __hostshort)
 
-cdef extern from "libnfnetlink/libnfnetlink.h":
-    struct nfnl_handle:
-        pass
+cdef extern from "linux/netlink.h" nogil:
+    enum: NETLINK_NETFILTER             # netfilter subsystem
 
-    unsigned int nfnl_rcvbufsiz(nfnl_handle *h, unsigned int size)
+    struct nlmsghdr:
+        uint32_t nlmsg_len              # Length of message including header
 
-cdef extern from "libnetfilter_queue/linux_nfnetlink_queue.h":
+    enum: NETLINK_NO_ENOBUFS
+
+    #  <------- NLA_HDRLEN ------> <-- NLA_ALIGN(payload)-->
+    # +---------------------+- - -+- - - - - - - - - -+- - -+
+    # |        Header       | Pad |     Payload       | Pad |
+    # |   (struct nlattr)   | ing |                   | ing |
+    # +---------------------+- - -+- - - - - - - - - -+- - -+
+    #  <-------------- nlattr->nla_len -------------->
+    struct nlattr:
+        uint16_t nla_len
+        uint16_t nla_type
+
+cdef extern from "libnetfilter_queue/linux_nfnetlink_queue.h" nogil:
+    enum nfqnl_msg_types:
+        NFQNL_MSG_PACKET                # packet from kernel to userspace
+        NFQNL_MSG_VERDICT               # verdict from userspace to kernel
+        NFQNL_MSG_CONFIG                # connect to a particular queue
+
+        NFQNL_MSG_MAX
+
     enum nfqnl_config_mode:
         NFQNL_COPY_NONE
         NFQNL_COPY_META
         NFQNL_COPY_PACKET
 
     struct nfqnl_msg_packet_hdr:
-        uint32_t   packet_id
-        uint16_t   hw_protocol
-        uint8_t    hook
+        uint32_t packet_id
+        uint16_t hw_protocol
+        uint8_t  hook
 
-cdef extern from "libnetfilter_queue/libnetfilter_queue.h":
-    struct nfq_handle:
+    # Flags for NFQA_CFG_FLAGS
+    enum:
+        NFQA_CFG_F_FAIL_OPEN
+        NFQA_CFG_F_CONNTRACK
+        NFQA_CFG_F_GSO
+        NFQA_CFG_F_UID_GID
+        NFQA_CFG_F_MAX
+
+    enum NfqnlAttrConfig "nfqnl_attr_config":
+        NFQA_CFG_UNSPEC
+        NFQA_CFG_CMD                    # nfqnl_msg_config_cmd
+        NFQA_CFG_PARAMS                 # nfqnl_msg_config_params
+        NFQA_CFG_QUEUE_MAXLEN           # __u32
+        NFQA_CFG_MASK                   # identify which flags to change
+        NFQA_CFG_FLAGS                  # value of these flags (__u32)
+        NFQA_CFG_MAX
+
+    enum NfqnlMsgConfigCmds "nfqnl_msg_config_cmds":
+        NFQNL_CFG_CMD_NONE
+        NFQNL_CFG_CMD_BIND
+        NFQNL_CFG_CMD_UNBIND
+        NFQNL_CFG_CMD_PF_BIND
+        NFQNL_CFG_CMD_PF_UNBIND
+
+cdef extern from "libmnl/libmnl.h" nogil:
+    #
+    # Netlink socket API
+    #
+    enum:
+        MNL_SOCKET_AUTOPID
+        MNL_SOCKET_BUFFER_SIZE
+
+    struct mnl_socket:
         pass
 
-    struct nfq_q_handle:
-        pass
+    mnl_socket *mnl_socket_open(int type)
+    mnl_socket *mnl_socket_fdopen(int fd)
+    int mnl_socket_bind(mnl_socket *nl, unsigned int groups, pid_t pid)
+    int mnl_socket_close(mnl_socket *nl)
+    int mnl_socket_get_fd(const mnl_socket *nl)
+    unsigned int mnl_socket_get_portid(const mnl_socket *nl)
+    ssize_t mnl_socket_sendto(const mnl_socket *nl, const void *req, size_t siz)
+    ssize_t mnl_socket_recvfrom(const mnl_socket *nl, void *buf, size_t siz)
+    int mnl_socket_setsockopt(const mnl_socket *nl, int type, void *buf, socklen_t len)
+    int mnl_socket_getsockopt(const mnl_socket *nl, int type, void *buf, socklen_t *len)
 
-    struct nfq_data:
-        pass
+    # TLV attribute getters */
+    uint16_t mnl_attr_get_type(const nlattr *attr)
+    uint16_t mnl_attr_get_len(const nlattr *attr)
+    uint16_t mnl_attr_get_payload_len(const nlattr *attr)
+    nfqnl_msg_packet_hdr *mnl_attr_get_payload(const nlattr *attr)
+    uint8_t mnl_attr_get_u8(const nlattr *attr)
+    uint16_t mnl_attr_get_u16(const nlattr *attr)
+    uint32_t mnl_attr_get_u32(const nlattr *attr)
+    uint64_t mnl_attr_get_u64(const nlattr *attr)
+    const char *mnl_attr_get_str(const nlattr *attr)
 
-    struct nfqnl_msg_packet_hw:
-        uint8_t    hw_addr[8]
+    # TLV attribute putters */
+    void mnl_attr_put(nlmsghdr *nlh, uint16_t type, size_t len, const void *data)
+    void mnl_attr_put_u8(nlmsghdr *nlh, uint16_t type, uint8_t data)
+    void mnl_attr_put_u16(nlmsghdr *nlh, uint16_t type, uint16_t data)
+    void mnl_attr_put_u32(nlmsghdr *nlh, uint16_t type, uint32_t data)
+    void mnl_attr_put_u64(nlmsghdr *nlh, uint16_t type, uint64_t data)
+    void mnl_attr_put_str(nlmsghdr *nlh, uint16_t type, const char *data)
+    void mnl_attr_put_strz(nlmsghdr *nlh, uint16_t type, const char *data)
 
-    ctypedef int *nfq_callback(nfq_q_handle *gh, nfgenmsg *nfmsg, nfq_data *nfad, void *data)
+    # TLV callback-based attribute parsers
+    ctypedef int (*mnl_attr_cb_t)(const nlattr *attr, void *data)
 
-    nfq_handle *nfq_open()
+    ctypedef int (*mnl_cb_t)(const nlmsghdr *nlh, void *data)
 
-    int nfq_fd(nfq_handle *h) nogil
-    int nfq_close(nfq_handle *h)
+    int mnl_cb_run(const void *buf, size_t numbytes, unsigned int seq,
+                    unsigned int portid, mnl_cb_t cb_data, void *data)
 
-    nfnl_handle *nfq_nfnlh(nfq_handle *h)
-    nfq_q_handle *nfq_create_queue(nfq_handle *h, uint16_t num, nfq_callback *cb, void *data)
+# New API based on libmnl
+cdef extern from "libnetfilter_queue/libnetfilter_queue.h" nogil:
+    # CMD HELPERS
+    void nfq_nlmsg_cfg_put_cmd(nlmsghdr *nlh, uint16_t pf, uint8_t cmd)
+    void nfq_nlmsg_cfg_put_params(nlmsghdr *nlh, uint8_t mode, int range)
+    void nfq_nlmsg_cfg_put_qmaxlen(nlmsghdr *nlh, uint32_t qmaxlen)
 
-    int nfq_destroy_queue(nfq_q_handle *qh)
-    int nfq_set_mode(nfq_q_handle *qh, uint8_t mode, unsigned int len)
-    int nfq_set_queue_maxlen(nfq_q_handle *qh, uint32_t queuelen)
-    int nfq_handle_packet(nfq_handle *h, char *buf, int len) nogil
+    # VERDICT HELPERS
+    void nfq_nlmsg_verdict_put(nlmsghdr *nlh, int id, int verdict)
+    void nfq_nlmsg_verdict_put_mark(nlmsghdr *nlh, uint32_t mark)
+    void nfq_nlmsg_verdict_put_pkt(nlmsghdr *nlh, const void *pkt, uint32_t plen)
 
-    nfqnl_msg_packet_hdr *nfq_get_msg_packet_hdr(nfq_data *nfad) nogil
-    nfqnl_msg_packet_hw  *nfq_get_packet_hw(nfq_data *nfad) nogil
+    # NETLINK MSG HELPERS
+    int nfq_nlmsg_parse(const nlmsghdr *nlh, nlattr **attr)
+    nlmsghdr *nfq_nlmsg_put(char *buf, int type, uint32_t queue_num)
 
-    int nfq_get_payload(nfq_data *nfad, unsigned char **data) nogil
-    int nfq_get_timestamp(nfq_data *nfad, timeval *tv) nogil
-    int nfq_get_nfmark (nfq_data *nfad) nogil
-    uint8_t nfq_get_indev(nfq_data *nfad) nogil
-    uint8_t nfq_get_outdev(nfq_data *nfad) nogil
 
-    int nfq_set_verdict(nfq_q_handle *qh, uint32_t id, uint32_t verdict, uint32_t data_len, uint8_t *buf) nogil
-    int nfq_set_verdict2(
-            nfq_q_handle *qh, uint32_t id, uint32_t verdict, uint32_t mark, uint32_t datalen, uint8_t *buf) nogil
+cdef extern from "config.h" nogil:
+    ctypedef unsigned char  uintf8_t
+    ctypedef unsigned short uintf16_t
+    ctypedef unsigned int   uintf32_t
+    ctypedef char           intf8_t
+    ctypedef short          intf16_t
+    ctypedef int            intf32_t
 
-# mirrored defines from linux/netfilter.h
-cdef enum:
-    NF_DROP
-    NF_ACCEPT
-    NF_STOLEN
-    NF_QUEUE
-    NF_REPEAT
-    NF_STOP
-    NF_MAX_VERDICT = NF_STOP
+cdef extern from "rules.h" nogil:
+    enum:
+        FIELD_MAX_ZONES
+        FIELD_MAX_NETWORKS
+        FIELD_MAX_SERVICES
+        FIELD_MAX_SVC_LIST_MEMBERS
 
-cdef enum:
-    NONE      = 0
-    IP_PROXY  = 1
-    DNS_PROXY = 2
-    IPS_IDS   = 3
+    enum: SECURITY_PROFILE_COUNT # define
 
-cdef enum:
-    DROP   = 0
-    ACCEPT = 1
-    REJECT = 2
+    struct ZoneArray:
+        uintf8_t    len
+        uintf8_t    objects[FIELD_MAX_ZONES]
 
-cdef enum:
-    OUTBOUND = 1
-    INBOUND  = 2
+    struct NetObject:
+        uintf8_t    type
+        uintf32_t   netid
+        uintf32_t   netmask
 
-cdef enum:
-    WAN_IN = 10
+    struct NetArray:
+        uintf8_t    len
+        NetObject   objects[FIELD_MAX_NETWORKS]
 
-cdef enum:
-    SYSTEM_RULES
-    BEFORE_RULES
-    MAIN_RULES
-    AFTER_RULES
+    struct S1:
+        uint8_t     type
+        uint8_t     code
 
-# used for dynamic allocation of the array containing security profile settings
-# ip proxy, ips_ids, dns_proxy
-DEF SECURITY_PROFILE_COUNT = 3
+    struct S2:
+        uintf16_t   protocol
+        uintf16_t   start_port
+        uintf16_t   end_port
 
-# PER FIELD AND RULE LIMITS
-DEF FIELD_MAX_ZONES = 16
-DEF FIELD_MAX_NETWORKS = 8
-DEF FIELD_MAX_SERVICES = 8
-DEF FIELD_MAX_SVC_LIST_MEMBERS = 8
+    struct S3:
+        uintf8_t    len
+        S2          services[FIELD_MAX_SVC_LIST_MEMBERS]
 
-# STANDARD ZONE ARRAY [10, 11]
-cdef struct ZoneArray:
-    size_t          len
-    uint_fast8_t    objects[FIELD_MAX_ZONES]
+    struct SvcObject:
+        uintf8_t    type
+        # flattened union
+        S1          icmp
+        S2          svc
+        S3          svc_list
 
-# STANDARD NETWORK OBJECT (HOST, NETWORK, RANGE, GEO)
-cdef struct Network:
-    uint_fast8_t    type
-    uint_fast32_t   netid
-    uint_fast32_t   netmask
+    # MAIN SERVICE ARRAY
+    struct SvcArray:
+        uintf8_t    len;
+        SvcObject   objects[FIELD_MAX_SERVICES]
 
-# MAIN NETWORK ARRAY
-cdef struct NetworkArray:
-    size_t          len
-    Network         objects[FIELD_MAX_NETWORKS]
+    struct FWrule:
+        bint        enabled
+        ZoneArray   s_zones
+        NetArray    s_networks
+        SvcArray    s_services
+        ZoneArray   d_zones
+        NetArray    d_networks
+        SvcArray    d_services
+        uintf8_t    action
+        uintf8_t    log
+        uintf8_t    sec_profiles[SECURITY_PROFILE_COUNT]
 
-# STANDARD SERVICE OBJECT (SOLO or RANGE)
-cdef struct Service:
-    uint_fast16_t   protocol
-    uint_fast16_t   start_port
-    uint_fast16_t   end_port
+    struct Nat:
+        uint32_t    saddr
+        uint16_t    sport
+        uint32_t    daddr
+        uint16_t    dport
 
-# SERVICE OBJECT LIST (tcp/80:tcp/443)
-cdef struct ServiceList:
-    size_t          len
-    Service         objects[FIELD_MAX_SVC_LIST_MEMBERS]
+    struct NATrule:
+        bint        enabled
+        ZoneArray   s_zones
+        NetArray    s_networks
+        SvcArray    s_services
+        ZoneArray   d_zones
+        NetArray    d_networks
+        SvcArray    d_services
+        uintf8_t    action
+        uintf8_t    log
 
-# UNION OF EACH SERVICE OBJECT TYPE
-cdef union Service_U:
-    Service         object
-    ServiceList     list
+        Nat         nat
 
-cdef struct ServiceObject:
-    uint_fast8_t    type
-    Service_U    service
+cdef extern from "cfirewall.h" nogil:
+    mnl_socket     *nl[2]
 
-# MAIN SERVICE ARRAY
-cdef struct ServiceArray:
-    size_t          len
-    ServiceObject   objects[FIELD_MAX_SERVICES]
+    uint32_t MSB, LSB
 
-# COMPLETE RULE STRUCT - NO POINTERS
-cdef struct FWrule:
-    bint            enabled
+    # cli args
+    bool PROXY_BYPASS
+    bool VERBOSE
+    bool VERBOSE2
 
-    # SOURCE
-    ZoneArray       s_zones
-    NetworkArray    s_networks
-    ServiceArray    s_services
+    bool FW_V
+    bool NAT_V
 
-    # DESTINATION
-    ZoneArray       d_zones
-    NetworkArray    d_networks
-    ServiceArray    d_services
+    enum: FW_MAX_ZONES # define
+    uintf16_t INTF_ZONE_MAP[FW_MAX_ZONES]
+    uintf16_t zone_map_swap[FW_MAX_ZONES]
 
-    # PROFILES
-    uint_fast8_t    action
-    uint_fast8_t    log
-    uint_fast8_t    sec_profiles[SECURITY_PROFILE_COUNT]
-        # ip_proxy - 0 off, > 1 profile number
-        # dns_proxy - 0 off, > 1 profile number
-        # ips_ids - 0 off, 1 on
+    struct cfdata:
+        uintf8_t    idx
+        uint32_t    queue
 
-cdef struct HWinfo:
-    uint8_t    in_zone
-    uint8_t    out_zone
-    char*      mac_addr
-    double     timestamp
+        void       *geolocation
+        mnl_cb_t    queue_cb
 
-cdef struct IPhdr:
-    uint8_t    ver_ihl
-    uint8_t    tos
-    uint16_t   tot_len
-    uint16_t   id
-    uint16_t   frag_off
-    uint8_t    ttl
-    uint8_t    protocol
-    uint16_t   check
-    uint32_t   saddr
-    uint32_t   daddr
+cdef extern from "firewall.h" nogil:
+    void firewall_init()
+    # void firewall_lock()
+    # void firewall_unlock()
+    int  firewall_stage_count(uintf8_t table, uintf16_t rule_count)
+    int  firewall_stage_rule(uintf8_t table, uintf16_t idx, FWrule *rule)
+    int  firewall_push_rules(uintf8_t table_idx)
+    int  firewall_recv(const nlmsghdr *nlh, void *data)
+    int  firewall_push_zones(uintf8_t *zone_map)
 
-cdef struct Protohdr:
-    uint16_t   s_port
-    uint16_t   d_port
+cdef extern from "nat.h" nogil:
+    void nat_init()
+    # void nat_lock()
+    # void nat_unlock()
+    int  nat_stage_count(uintf8_t table, uintf16_t rule_count)
+    int  nat_stage_rule(uintf8_t table, uintf16_t idx, NATrule *rule)
+    int  nat_push_rules(uintf8_t table_idx)
+    int  nat_recv(const nlmsghdr *nlh, void *data)
 
-cdef struct InspectionResults:
-    uint16_t   fw_section
-    uint32_t   action
-    uint32_t   mark
+cdef int nl_open(mnl_socket **nl_ptr) nogil
+cdef int nl_bind(mnl_socket *nl_ptr) nogil
+
 
 cdef class CFirewall:
     cdef:
-        nfq_handle   *h
-        nfq_q_handle *qh
+        char*   sock_path
+        int     api_fd
 
-    cpdef int prepare_geolocation(s, list geolocation_trie, uint32_t msb, uint32_t lsb) with gil
-    cpdef int update_zones(s, PyArray zone_map) with gil
-    cpdef int update_ruleset(s, size_t ruleset, list rulelist) with gil
-    cdef  int remove_attacker(s, uint32_t host_ip)
+        uint8_t queue_idx

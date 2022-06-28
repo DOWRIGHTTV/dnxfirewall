@@ -15,6 +15,8 @@ from dnx_gentools.file_operations import load_configuration
 from dnx_gentools.def_exceptions import ValidationError
 
 
+BINT = (0, 1)
+
 MIN_PORT = 1
 MAX_PORT = 65535
 MAX_PORT_RANGE = MAX_PORT + 1
@@ -56,24 +58,25 @@ def get_convert_int(form: Union[Form, Args], key: str) -> Union[int, DATA]:
         return DATA.INVALID
 
 def get_convert_bint(form: Form, key: str) -> Union[int, DATA]:
-    '''gets string value from submitted form and converts into an integer representation of bool.
+    '''convenience wrapper around convert_bint().
 
-    If the key is not present 0 (False) will be returned.
-    If string cannot be converted, error will be returned.'''
+    calls val = form.get(key) and returns the result of convert_bint(val).
+    '''
+    value = form.get(key, None)
 
-    value = form.get(key, DATA.MISSING)
-    try:
-        return 0 if value == DATA.MISSING else int(value) & 1
-    except:
-        return DATA.INVALID
+    return convert_bint(value)
 
 def convert_bint(num: Union[str, bool]) -> Union[int, DATA]:
-    '''converts argument into an integer representation of bool, then returns. DATA.INVALID (-1) will
-    be returned on error.'''
+    '''converts argument into an integer representation of bool.
+
+    DATA.INVALID (-1) will be returned on error.
+    '''
     try:
-        return int(num) & 1
-    except:
+        bint = int(num)
+    except TypeError:
         return DATA.INVALID
+
+    return bint if bint in BINT else DATA.INVALID
 
 def convert_float(num: str) -> Union[float, DATA]:
     '''converts argument into a float, then returns. DATA.INVALID (-1) will be returned on error.'''

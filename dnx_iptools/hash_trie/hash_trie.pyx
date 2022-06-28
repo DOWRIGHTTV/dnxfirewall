@@ -1,7 +1,5 @@
 #!/usr/bin/env Cython
 
-# cython: cdivision=True
-
 from libc.stdlib cimport malloc, calloc, realloc
 from libc.stdint cimport uint8_t, uint16_t, uint32_t
 
@@ -9,6 +7,7 @@ DEF EMPTY_CONTAINER = 0
 DEF NO_MATCH = 0
 
 DEF MAX_WIDTH_MULTIPLIER = 2
+
 
 # ================================================
 # C STRUCTURES - converted from python tuples
@@ -56,6 +55,9 @@ cdef class HashTrie_Range:
 
     cpdef void generate_structure(s, list py_trie, size_t py_trie_len):
 
+        # providing function ptr reference for c calls through instance
+        s.lookup = <htr_search_t>s.search
+
         cdef:
             size_t      i, xi
 
@@ -78,7 +80,7 @@ cdef class HashTrie_Range:
             num_values = <size_t>len(trie_vals)
 
             trie_key_hash = s.hash_key(trie_key)
-            trie_map_container = &s.TRIE_MAP[trie_key_hash]
+            trie_map_container = &s.TRIE_MAP[trie_key_hash] ### FIXME: WTF IS THIS>>>???
 
             # first time on index so allocating memory for the number of current multi-vals this iteration
             if (trie_map_container.len == 0):
@@ -97,9 +99,10 @@ cdef class HashTrie_Range:
                 trie_multival.key     = trie_key
                 trie_multival.netid   = <uint32_t>py_trie[i][1][xi][0]
                 trie_multival.bcast   = <uint32_t>py_trie[i][1][xi][1]
-                trie_multival.country = <uint16_t>py_trie[i][1][xi][2]
+                trie_multival.country =  <uint8_t>py_trie[i][1][xi][2]
 
             trie_map_container.len += num_values
+
 
 cdef class HashTrie_Value:
 
@@ -150,7 +153,7 @@ cdef class HashTrie_Value:
             uint32_t    trie_val
 
         # max_width will be ~130% of the size of py_trie
-        s.max_width = <uint32_t>py_trie_len + (py_trie_len // 3)
+        s.max_width = <uint32_t>py_trie_len + (py_trie_len / 3)
         s.TRIE_MAP  = <TrieMap_V*>calloc(s.max_width, sizeof(TrieMap_V))
 
         for i in range(py_trie_len):

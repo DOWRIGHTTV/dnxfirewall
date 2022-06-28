@@ -1,0 +1,55 @@
+table ip dnxfirewall {
+
+        chain ips {
+
+                # identified DDOS attackers will be inserted here until cfirewall api is implemented.
+                # once cfirewall is implemented we should look to get a queue in inet/netdev ingress
+        }
+
+        chain nat_preroute {
+                type nat hook prerouting priority -100; policy accept;
+
+                # this will be the second time cfirewall will inspect the packet. we can use the fact a mark exists to
+                # know to run through nat table and mangling. NAT action and default action will always be accept since
+                # this is post firewall inspection. (firewall had to accept to get to this point)
+                ip protocol { tcp, udp, icmp } meta mark set 70 queue num 69
+        }
+
+        chain filter_preroute {
+                type filter hook prerouting priority -150; policy drop;
+
+                # until we can get conntrack stable in cfirewall
+                # i think priority can stay at -150. it may even be required. the internal nat system relies on CT to
+                # have been done. this is also probably used to make determination of when to send to nat tables.
+                ct state related,established counter accept
+
+                ip protocol { tcp, udp, icmp } jump ips
+
+                ip protocol { tcp, udp, icmp } queue num 69
+        }
+
+        # does this need to be here for traffic to be accepted to input or will preroute accepts handle it?
+        chain filter_input {
+                type filter hook input priority 0; policy accept;
+        }
+
+        # does this need to be here for traffic to be accepted to input or will preroute accepts handle it?
+        chain filter_forward {
+                type filter hook forward priority 0; policy accept;
+        }
+
+        chain nat_postroute {
+                type nat hook postrouting priority 100; policy accept;
+
+                # this will be the second time cfirewall will inspect the packet. we can use the fact a mark exists to
+                # know to run through nat table and mangling. NAT action and default action will always be accept since
+                # this is post firewall inspection. (firewall had to accept to get to this point)
+                ip protocol { tcp, udp, icmp } meta mark set 71 queue num 69
+
+                oifname "ens160" counter masquerade
+        }
+
+        chain filter_output {
+                type filter hook output priority 0; policy accept;
+        }
+}

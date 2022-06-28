@@ -1,15 +1,31 @@
 #!/usr/bin/env Cython
 
-# cython: boundscheck=False
-
-# TODO: make a biptoi for bytestring to integer conversion
-
 from libc.stdio cimport snprintf
 from libc.stdint cimport uint8_t, uint32_t, uint_fast16_t
 
-DEF UINT8_MAX  = 255
-DEF UINT16_MAX = 65535
+cdef uint8_t  UINT8_MAX  = 0b11111111
+cdef uint16_t UINT16_MAX = 0b1111111111111111
 
+# TODO: make a biptoi for bytestring to integer conversion
+
+# ==============
+# PYTHON ONLY
+# ==============
+def default_route():
+    with open('/proc/net/route', 'r') as f:
+        f = f.readlines()[1:]
+        for line in f:
+            l = line.split()
+            if int(l[1], 16) or int(l[7], 16):
+                continue
+
+            return int(l[2], 16)
+
+        return 0
+
+# ==============
+# PYTHON/CYTHON
+# ==============
 cpdef uint32_t btoia(const uint8_t[:] cb):
 
     cdef:
@@ -62,24 +78,15 @@ cpdef bytes calc_checksum(const uint8_t[:] data):
 
     # adding trailing byte for odd byte strings
     if (dlen & 1):
-        csum += <uint8_t>data[dlen]
+        csum += <uint8_t>(data[dlen] << 8)
 
-    csum = (csum >> 16) + (csum & UINT16_MAX)
-    csum = ~(csum + (csum >> 16)) & UINT16_MAX
+    while csum >> 16:
+        csum = (csum & UINT16_MAX) + (csum >> 16)
 
-    ubytes[0] = <uint8_t>(csum >> 8)
+    csum ^= UINT16_MAX
+
+    #flipping bytes to network order
+    ubytes[0] = (csum >> 8)
     ubytes[1] = csum & UINT8_MAX
 
     return ubytes
-
-def default_route():
-    with open('/proc/net/route', 'r') as f:
-        f = f.readlines()[1:]
-        for line in f:
-            l = line.split()
-            if int(l[1], 16) or int(l[7], 16):
-                continue
-
-            return ntohl(int(l[2], 16))
-
-        return 0

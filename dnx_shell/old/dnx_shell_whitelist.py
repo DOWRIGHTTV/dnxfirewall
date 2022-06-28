@@ -3,10 +3,10 @@
 import time
 import json
 
-from dnx_shell.dnx_shell_standard import Standard
+from dnx_shell.old.dnx_shell_standard import Standard
 
 
-class Blacklist:
+class Whitelist:
     def __init__(self, Main):
         self.Main = Main
         self.conn = Main.conn
@@ -14,13 +14,13 @@ class Blacklist:
         with open(f'{HOME_DIR}/dnx_shell/commands.cfg', 'r') as commands:
             valid_commands = json.load(commands)
 
-        with open(f'{HOME_DIR}/dnx_system/data/blacklist.cfg', 'r') as settings:
+        with open(f'{HOME_DIR}/dnx_system/data/whitelist.cfg', 'r') as settings:
             setting = json.load(settings)
 
-        self.valid = valid_commands['main']['configuration']['blacklist']
-        self.valid_blacklist = setting['blacklists']
+        self.valid = valid_commands['main']['configuration']['whitelist']
+        self.valid_whitelist = setting['whitelists']
 
-        self.mod = 'blacklist'
+        self.mod = 'whitelist'
 
         self.Standard = Standard(self)
 
@@ -49,8 +49,7 @@ class Blacklist:
             return 'EXIT'
 
         elif (comm == 'help'):
-            self.Standard.SendNotice(f'type "commands" to view all available commands.')
-
+            self.Standard.ChangeHelpSetting()
             return
 
         elif (comm == 'commands'):
@@ -78,11 +77,16 @@ class Blacklist:
             self.Standard.SendNotice(f'invalid argument. use "{comm}" command for all available arguments.')
             return
 
-         # commands length 2
+        # commands length 2
         if (arg_count < 2):
             return
 
-         # commands length 3
+        elif (comm == 'show'):
+            self.ShowStatus(arg)
+
+            return
+
+        # commands length 3
         if (arg_count < 3):
             if (status and not option):
                 self.Standard.SendNotice(f'missing option after argument.')
@@ -95,16 +99,17 @@ class Blacklist:
             if (status and not option2):
                 self.Standard.SendNotice(f'missing direction after argument. use "inbound", "outbound", or "both".')
 
-            elif (status):
+                return
+            if (status):
                 if (arg == 'timebased'):
                     status2 = self.Standard.ValidateListTimes(option2)
                 elif (arg == 'exceptions'):
                     status2 = self.Standard.AlphaNum(option2)
                 if (status2):
-                    self.AddBlacklist(comm, arg, option, option2)
+                    self.AddWhitelist(comm, arg, option, option2)
 
     def ShowStatus(self, arg):
-        with open(f'{HOME_DIR}/dnx_system/data/blacklist.cfg', 'r') as settings:
+        with open(f'{HOME_DIR}/dnx_system/data/whitelist.cfg', 'r') as settings:
             setting = json.load(settings)
 
         arg2 = arg
@@ -113,15 +118,18 @@ class Blacklist:
         elif (arg == 'timebased'):
             arg = 'domains'
             self.SendDescription('domain', 'time entered', 'expire time')
+        elif (arg == 'ip'):
+            arg = 'ip_whitelist'
+            self.SendDescription('ip address', 'type', 'user')
 
-        blacklist = setting['blacklists'][arg]
-        if (not blacklist):
+        whitelist = setting['whitelists'][arg]
+        if (not whitelist):
             self.Standard.SendNotice(f'no {arg2} objects configured')
 
             return
 
-        for blacklist, info in blacklist.items():
-            lists = self.Standard.CalculateSpace(blacklist)
+        for whitelist, info in whitelist.items():
+            lists = self.Standard.CalculateSpace(whitelist)
             if (arg == 'exceptions'):
                 info = info['reason']
 
@@ -131,35 +139,39 @@ class Blacklist:
                 info = self.Standard.FormatDateTime(time)
                 info = self.Standard.CalculateSpace(info, space=12, symbol='| ', dashes=False)
                 info += str(self.Standard.FormatDateTime(expire))
+            elif (arg == 'ip_whitelist'):
+                user = info['user']
+                info = info['type']
+                info = self.Standard.CalculateSpace(info, space=10, symbol='| ', dashes=False)
+                info += user
+            wl_status = f'{lists} {info}'
+            self.conn.send(f'{wl_status}\n'.encode('utf-8'))
 
-            bl_status = f'{lists} {info}'
-            self.conn.send(f'{bl_status}\n'.encode('utf-8'))
-
-    def AddBlacklist(self, comm, arg, option, option2):
-        with open(f'{HOME_DIR}/dnx_system/data/blacklist.cfg', 'r') as settings:
+    def AddWhitelist(self, comm, arg, option, option2):
+        with open(f'{HOME_DIR}/dnx_system/data/whitelist.cfg', 'r') as settings:
             setting = json.load(settings)
 
-        blacklist = setting['blacklists']
+        whitelist = setting['whitelists']
         if (arg == 'exception'):
-            if (option in blacklist['exceptions']):
-                self.Standard.SendNotice(f'{option} is already blacklisted.')
+            if (option in whitelist['exceptions']):
+                self.Standard.SendNotice(f'{option} is already whitelisted.')
 
                 return
             else:
-                blacklist['exceptions'].update({option: {'reason': option2}})
+                whitelist['exceptions'].update({option: {'reason': option2}})
 
         elif (option == 'timebased'):
-            if (option in blacklist['domains']):
-                self.Standard.SendNotice(f'{option} is already blacklisted.')
+            if (option in whitelist['domains']):
+                self.Standard.SendNotice(f'{option} is already whitelisted.')
 
                 return
             else:
                 now = time.time()
                 expire = now + (option2*60)
-                blacklist['domains'].update({option: {'time': now, 'rule_length': option2*60, 'expire': expire}})
+                whitelist['domains'].update({option: {'time': now, 'rule_length': option2*60, 'expire': expire}})
 
         syntax = self.valid['settings'][arg]['syntax']
-        with open(f'{HOME_DIR}/dnx_system/data/blacklist.cfg', 'w') as settings:
+        with open(f'{HOME_DIR}/dnx_system/data/whitelist.cfg', 'w') as settings:
             json.dump(setting, settings, indent=4)
 
         self.Standard.SendNotice(f'added {option}. use "show {syntax}" command to check current status.')
@@ -171,11 +183,11 @@ class Blacklist:
 
     def ValidateCategory(self, arg, option):
         syntax = self.valid['settings'][arg]['syntax']
-        valid_blacklist = self.valid_blacklist[syntax]
+        valid_whitelist = self.valid_whitelist[syntax]
         if (arg == 'category'):
-            valid_blacklist = valid_blacklist['default']
+            valid_whitelist = valid_whitelist['default']
 
-        if (option not in valid_blacklist):
+        if (option not in valid_whitelist):
             self.Standard.SendNotice(f'invalid {arg}. use "show {syntax}" to view all available {syntax}.')
         else:
             return True

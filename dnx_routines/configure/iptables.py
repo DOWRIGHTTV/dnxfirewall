@@ -71,17 +71,19 @@ class _Defaults:
         standard conntrack permit/allow control is left to IPTables for now.
         '''
         # FORWARD #
-        shell('iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
+        # NOTE: conntrack is now checked by cfirewall
+        # shell('iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
 
         shell(f'iptables -A FORWARD -p tcp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
         shell(f'iptables -A FORWARD -p udp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
         shell(f'iptables -A FORWARD -p icmp -j NFQUEUE --queue-num {Queue.CFIREWALL}')
 
         # INPUT #
-        shell(' iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
+        # NOTE: conntrack is now checked by cfirewall
+        # shell(' iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
 
         # allow local socket communications.
-        # NOTE: this can likely be removed since we are not using AF_UNIX sockets.
+        # NOTE: control sock is AF_INET, so we need this rule
         shell(f'iptables -A INPUT -s 127.0.0.0/24 -d 127.0.0.0/24 -j ACCEPT')
 
         # user configured services access will be kept as iptables for now.
@@ -110,15 +112,6 @@ class _Defaults:
     # TODO: implement commands to check source and dnat changes in nat table. what does this even mean?
     def nat(self) -> None:
         shell('iptables -t raw -A PREROUTING -j IPS')  # action to check the custom ips chain
-
-        # NOTE: this is being phased out
-        # internal zones dns redirect into proxy
-        # shell('iptables -t nat -A PREROUTING -j REDIRECT_OVERRIDE')
-        # TODO: add config option in dns server settings to define up to 2 internal servers (check for RFC1918) as
-        #  internal recursive resolvers. dns requests to the configured servers will be exempt from this redirect. this
-        #  will allow all internal zones to have access to a centralized local dns server (like windows dns in an active
-        #  directory domain).
-        # shell(f'iptables -t nat -A PREROUTING -m mark ! --mark {WAN_IN} -p udp --dport 53 -j REDIRECT --to-port 53')
 
         # user defined chain for dnat
         shell(f'iptables -t nat -A PREROUTING -j DSTNAT')
@@ -264,7 +257,6 @@ class IPTablesManager:
         shell(nat_rule, check=True)
 
     def delete_nat(self, rule: config) -> None:
-        print(rule.nat_type, rule.position)
         shell(f'sudo iptables -t nat -D {rule.nat_type} {rule.position}', check=True)
 
     def remove_passive_block(self, host_ip: str, timestamp: str) -> None:

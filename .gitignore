@@ -109,5 +109,9 @@ venv.bak/
 #dnxfirewall
 usr
 TEMP_*
-*.c
+cprotocol_tools.c
+hash_trie.c
+fw_main.c
+fw_api.c
+dnx_nfqueue.c
 dnxfirewall.sqlite3

@@ -66,47 +66,11 @@
                 </div>
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Additional Options</h4>
-                        <div class="row">
-                            <form action="/system/settings/dns" method="POST">
-                                <input type="hidden" name="tab" value="1">
-                                <input type="hidden" name="dns_over_tls">
-                                <div class="input-field col s3 offset-s3 center">
-                                    DNS over TLS (Encrypted)
-                                    <div class="switch">
-                                        <label>
-                                            Off
-                                            {% set val = "0" if dns_settings['tls'] else "1" %}
-                                            <input type="checkbox" name="enabled" value="{{val}}" onchange="this.form
-                                            .submit()"
-                                                {% if dns_settings['tls'] %} checked="checked" {% endif %}>
-                                            <span class="lever"></span>
-                                            On
-                                        </label>
-                                    </div>
-                                </div>
-                            </form>
-                            <form action="/system/settings/dns" method="POST">
-                                <input type="hidden" name="tab" value="1">
-                                <input type="hidden" name="udp_fallback">
-                                <div class="input-field col s3 center">
-                                    UDP Fallback (On DoT Failure)
-                                    <div class="switch">
-                                        <label>
-                                            Off
-                                            {% if not dns_settings['tls'] %}
-                                            <input disabled type="checkbox">
-                                            {% else %}
-                                            <input type="checkbox" name="fallback" value="1" onchange="this.form.submit()"
-                                                {% if dns_settings['udp_fallback'] %} checked="checked" {% endif %}>
-                                            {% endif %}
-                                            <span class="lever"></span>
-                                            On
-                                        </label>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    </form>
+                    <div class="row">
+                        {{ create_switch('DNS over TLS', 'dns_over_tls', checked=dns_settings.tls)|safe }}
+                        {{ create_switch('UDP Fallback (On DoT Failure)', 'udp_fallback',
+                            checked=dns_settings.udp_fallback, enabled=dns_settings.tls)|safe }}
+                    </div>
                 </div>
             </div>
         </div>
@@ -201,9 +165,8 @@
                                 TOP DOMAINS
                                 <div class="switch">
                                     <label>
-                                        {% set val = "0" if dns_settings['cache']['clear_top_domains'] else "1" %}
-                                        <input type="checkbox" name="top_domains" value="{{val}}"
-                                        {% if dns_settings['cache']['clear_top_domains'] %} checked="checked" {% endif %}>
+                                        <input type="checkbox" class="iswitch" name="top_domains"
+                                        {% if dns_settings['cache']['clear_top_domains'] %} checked {% endif %}>
                                         <span class="lever"></span>
                                         Clear
                                     </label>
@@ -213,9 +176,8 @@
                                 STANDARD
                                 <div class="switch">
                                     <label>
-                                        {% set val = "0" if dns_settings['cache']['clear_dns_cache'] else "1" %}
-                                        <input type="checkbox" name="dns_cache" value="{{val}}"
-                                        {% if dns_settings['cache']['clear_dns_cache'] %} checked="checked" {% endif %}>
+                                        <input type="checkbox" class="iswitch" name="dns_cache"
+                                        {% if dns_settings['cache']['clear_dns_cache'] %} checked {% endif %}>
                                         <span class="lever"></span>
                                         Clear
                                     </label>

@@ -5,7 +5,7 @@ from __future__ import annotations
 import threading
 
 from json import dumps
-from socket import socket, AF_UNIX, AF_INET, SOCK_DGRAM, SOL_SOCKET, SCM_CREDENTIALS
+from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SCM_CREDENTIALS
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *

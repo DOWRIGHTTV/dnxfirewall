@@ -149,15 +149,8 @@
                                 </div>
                                 <div class="input-field col s12 m6 center">
                                     <br>
-                                    <div class="switch">
-                                        <label>
-                                            Disabled
-                                            <input type="checkbox" {% if ip_settings['tr_settings']['enabled'] %}
-                                                checked="checked"  {% endif %} name="restriction_enable">
-                                            <span class="lever"></span>
-                                            Enabled
-                                        </label>
-                                    </div>
+                                    {{ create_switch('', 'restriction_enable',
+                                        checked=ip_settings.tr_settings.enabled)|safe }}
                                 </div>
                             </div>
                         </div>
