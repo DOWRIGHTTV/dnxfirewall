@@ -114,6 +114,16 @@ def _log_handler() -> LogHandler:
     is_initialized: bool = False
     syslog: bool = False
 
+    # keeping file open for performance.
+    # using explicit buffer flush logic to provide more consistent writes to disk
+    _log_buf: TextIO = cast(TextIO, None)
+    _log_buf_date: str = ''
+    _log_write_ct: int = 0
+
+    # this will get immediately overloaded by user setting
+    # this limit signifies the interval for flushing file buffer
+    line_buf_limit = 5
+
     # _syslog_sock = socket()
 
     # ------------------
@@ -275,13 +285,31 @@ def _log_handler() -> LogHandler:
     @dnx_queue(_LogHandler, name='LogHandler')
     def write_to_disk(job):
 
-        file_path = f'{log_path}/{_system_date(string=True)}-{handler_name}.log'
+        nonlocal _log_buf, _log_buf_date, _log_write_ct
 
-        with open(file_path, 'a+') as log:
-            log.write(job)
+        current_date = _system_date(string=True)
+        # if the dates are different, then the day has changed.
+        # we close the previous days log file, then open a new file with current date.
+        # for processes running as root, we will modify the file's owner to dnx so webui can read them.
+        if (current_date != _log_buf_date):
+            _log_buf.close()
 
-        if (ROOT):
-            change_file_owner(file_path)
+            file_path = f'{log_path}/{current_date}-{handler_name}.log'
+
+            _log_buf = open(file_path, 'a')
+            _log_buf_date = current_date
+
+            if (ROOT):
+                change_file_owner(file_path)
+
+        # WRITING LOG ENTRY TO FILE BUFFER
+        _log_buf.write(job)
+
+        # increments counter then checks currently configured limit. resets counter if limit reached.
+        _log_write_ct += 1
+        if (_log_write_ct == line_buf_limit):
+            _log_buf.flush()
+            _log_write_ct = 0
 
     def add_logging_methods(cls) -> None:
         '''dynamically overrides default log level methods depending on current log settings.
@@ -325,9 +353,10 @@ def _log_handler() -> LogHandler:
 
     @cfg_read_poller('logging_client')
     def log_settings(cfg_file: str) -> None:
-        nonlocal logging_level, is_initialized
+        nonlocal logging_level, line_buf_limit, is_initialized
 
-        logging_level = LOG(load_configuration(cfg_file)['logging->level'])
+        logging_level  = LOG(load_configuration(cfg_file)['logging->level'])
+        line_buf_limit = load_configuration(cfg_file)['logging->line_buffer']
 
         add_logging_methods(_LogHandler)
 

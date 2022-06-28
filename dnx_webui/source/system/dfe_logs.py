@@ -10,9 +10,14 @@ from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.file_operations import tail_file
 from dnx_routines.configure.system_info import System
 
+LOG_DIR = f'{HOME_DIR}/dnx_system/log'
+LOG_FILES = [
+    'combined', 'dhcp_server', 'dns_proxy', 'ip_proxy', 'ips', 'syslog', 'system', 'web_app', 'logins'
+]
+
 # NOTE: this will likely not be needed anymore with the ajax client implementation
 def load_page(uri_query: Args) -> tuple[list[Optional[str]], str, None]:
-    file_path = f'{HOME_DIR}/dnx_system/log/combined'
+    file_path = f'{HOME_DIR}/dnx_system/log'
 
     return get_log_entries(file_path), 'combined', None
 
@@ -23,11 +28,11 @@ def update_page(form: Form) -> tuple[list[Optional[str]], str, None]:
     # TODO: this should be done better, but i am waiting until reports page gets converted to ajax to support both
     log_type = 'combined' if log_type == 'default' else log_type
 
-    if (log_type in ['combined', 'dhcp_server', 'dns_proxy', 'ip_proxy', 'ips', 'syslog', 'system', 'web_app', 'logins']):
-        file_path = f'{HOME_DIR}/dnx_system/log/{log_type}'
-
-    else:
+    if (log_type not in LOG_FILES):
         return [], log_type, None
+
+    # combined log is now a single file that reflects recent aggregated logs at the time of loading
+    file_path = LOG_DIR if log_type == 'combined' else f'{LOG_DIR}/{log_type}'
 
     # returning none to fill table_args var on the calling function to allow reuse with the report's page method
     return get_log_entries(file_path), log_type, None

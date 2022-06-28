@@ -20,6 +20,7 @@ __all__ = (
 )
 
 LOG_NAME = 'system'
+LOG_DIR = f'{HOME_DIR}/dnx_system/log'
 
 EXCLUDED_MODULES = ['combined', 'syslog']
 
@@ -55,7 +56,7 @@ class LogService:
         threading.Thread(target=self.clean_db_tables).start()
         threading.Thread(target=self.clean_blocked_table).start()
 
-    @looper(THREE_MIN)
+    @looper(ONE_MIN)
     def organize(self) -> None:
         log_entries = []
 
@@ -67,14 +68,14 @@ class LogService:
         if (not log_entries):
             return
 
-        with open(f'{HOME_DIR}/dnx_system/log/combined/{date}-combined.log', 'w+') as system_log:
+        with open(f'{LOG_DIR}/combined.log', 'w') as system_log:
             system_log.write('\n'.join(sorted(log_entries)))
 
         del log_entries  # to reclaim system memory
 
     @staticmethod
     def _pull_recent_logs(module: str, date: str) -> list[str]:
-        log_path = f'{HOME_DIR}/dnx_system/log/{module}/{date}-{module}.log'
+        log_path = f'{LOG_DIR}/{module}/{date}-{module}.log'
 
         if not os.path.isfile(log_path):
             return []
