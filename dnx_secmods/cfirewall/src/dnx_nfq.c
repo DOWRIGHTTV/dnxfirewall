@@ -15,7 +15,7 @@ dnx_parse_nl_headers(nl_msg_hdr *nlmsgh, nl_pkt_hdr **nl_pkth,  struct nlattr **
 
     // in-int > src_zone | not available in POST ROUTE
     pkt->hw.iif = netlink_attrs[NFQA_IFINDEX_INDEV] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_INDEV])) : 0;
-    pkt->hw.in_zone  = INTF_ZONE_MAP[pkt->hw.iif];
+    pkt->hw.in_zone = INTF_ZONE_MAP[pkt->hw.iif];
 
     // out-int > dst_zone | not available in PRE ROUTE
     pkt->hw.oif = netlink_attrs[NFQA_IFINDEX_OUTDEV] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_OUTDEV])) : 0;

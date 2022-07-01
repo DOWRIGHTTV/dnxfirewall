@@ -18,6 +18,7 @@
 #include "rules.h" // firewall and nat rule structs/ defs
 #include "match.h" // zone, network, service matching helpers
 #include "dnx_nfq.h" // packet verdict, mangle, etc.
+#include "traffic_log.h"
 
 
 // bit shifting helpers

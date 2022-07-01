@@ -12,7 +12,8 @@
 // b'E\x00\x00(\xd9\x04@\x00@\x06\x83\x08\x97e\x00\x00\xc0\xa8\x05\xb3\x01\xbb\x9fv\x0fvl\xfa\x03e\x86\xcbP\x10\x05\xc0#\x7f\x00\x00'
 // '0x45 0x0 0x0 0x28 0xd9 0x4 0x40 0x0 0x40 0x6 0x83 0x8 0x97 0x65 0x0 0x0 0xc0 0xa8 0x5 0xb3'
 
-uint16_t calc_checksum (const uint8_t *data, uint16_t dlen)
+uint16_t
+calc_checksum (const uint8_t *data, uint16_t dlen)
 {
     uint32_t    csum = 0;
 
@@ -33,7 +34,21 @@ uint16_t calc_checksum (const uint8_t *data, uint16_t dlen)
     return htons(csum);
 }
 
-uint32_t intf_masquerade (uint32_t idx)
+void
+itoip(uint32_t ip_int char* ip_addr)
+{
+    uint8_t octets[4]
+
+    octets[0] = (ip >> 24) & 255
+    octets[1] = (ip >> 16) & 255
+    octets[2] = (ip >> 8) & 255
+    octets[3] = ip & 255
+
+    snprintf(ip_addr, sizeof(ip_addr), '%d.%d.%d.%d', octets[0], octets[1], octets[2], octets[3])
+}
+
+uint32_t
+intf_masquerade (uint32_t idx)
 {
     struct  ifaddrs *ifap, *ifa;
     struct  sockaddr_in *sa;

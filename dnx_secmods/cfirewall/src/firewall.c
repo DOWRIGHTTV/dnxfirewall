@@ -120,8 +120,6 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
         printf("\n=====================================================================\n");
     }
 
-    // whenever we implement log functionality for rule hits
-//    if (pkt.log) {
 //        pkt.hw.timestamp = time(NULL);
 //        if (netlink_attrs[NFQA_HWADDR]) {
 //            pkt.hw.mac_addr = ((nl_pkt_hw*) mnl_attr_get_payload(netlink_attrs[NFQA_HWADDR]))->hw_addr;
@@ -207,13 +205,14 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             pkt->rule_clist = cntrl_list;
             pkt->rule_num   = rule_idx; // if logging, this needs to be +1
             pkt->action     = rule->action;
+            pkt->log        = rule->log;
             pkt->mark       = tracked_geo << FOUR_BITS | direction << TWO_BITS | rule->action;
 
             for (idx = 0; idx < 3; idx++) {
-                pkt->mark |= rule->sec_profiles[idx] << ((idx*4)+12);
+                pkt->mark |= rule->sec_profiles[idx] << ((idx * 4) + 12);
             }
 
-            return;
+            goto logging;
         }
     }
     // ------------------------------------------------------------------
@@ -222,6 +221,15 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
     pkt->rule_clist = NO_SECTION;
     pkt->action     = DNX_DROP;
     pkt->mark       = tracked_geo << FOUR_BITS | direction << TWO_BITS | DNX_DROP;
+
+    logging:
+    if (pkt.log) {
+        // log file rotation logic
+        log_enter();
+        log_write(&pkt, direction, src_country, dst_country)
+        log_exit();
+    }
+
 }
 
 void
