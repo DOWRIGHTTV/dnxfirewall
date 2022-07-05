@@ -7,7 +7,9 @@ struct LogHandle Log;
 void
 log_init()
 {
-    Log.id  = "XXXXXXXX\0";
+    memset(Log.id, "\0", 1);
+
+    Log.buf = fopen("/dev/null");
     Log.cnt = 0;
 }
 
@@ -19,7 +21,7 @@ log_enter()
     // open new file if day has changed. this might be changes to 8 hour blocks or something in the future
     check_current_date(today);
     if (Log.id != today) {
-        log_rotate(rotate);
+        log_rotate(today);
     }
 }
 
@@ -29,14 +31,14 @@ log_write(struct dnx_pktb *pkt, uint8_t direction, uint8_t src_country, uint8_t 
     char saddr[18];
     char daddr[18];
 
-    // converting ip as interger to string eg. 192.168.1.1
-    itoip(pkt->iphdr.saddr, saddr);
-    itoip(pkt->iphdr.daddr, daddr);
+    // converting ip as integer to string eg. 192.168.1.1
+    itoip(pkt->iphdr->saddr, saddr);
+    itoip(pkt->iphdr->daddr, daddr);
 
     fprintf(Log.buf, FW_LOG_FORMAT,
-        pkt->rule_num, pkt->action, direction, pkt->iphdr->protocol,
-        pkt->hw.iif, pkt->hw.in_zone, src_country, saddr, pkt->iphdr.sport,
-        pkt->hw.oif, pkt->hw.out_zone, dst_country, daddr, pkt->iphdr.dport
+        (uint8_t) pkt->rule_num, pkt->action, direction, pkt->iphdr->protocol,
+        pkt->hw.iif, pkt->hw.in_zone, src_country, saddr, ntohs(pkt->protohdr->sport),
+        pkt->hw.oif, pkt->hw.out_zone, dst_country, daddr, ntohs(pkt->protohdr->dport)
     );
 
     Log.cnt++;
@@ -47,7 +49,7 @@ log_exit()
 {
     if (Log.cnt == LOG_BUFFER_LIMIT) {
         fflush(Log.buf);
-        Log.cnt = 0
+        Log.cnt = 0;
     }
 }
 
@@ -55,20 +57,19 @@ int
 // since the date will be checked before every message (for now), we will require it to be passed in here.
 log_rotate(char* current_date)
 {
-    char file_path[64]; // 46 + 12 + 8 + 1
+    char file_path[128]; // 46 + 12 + 8 + 1
 
     // closing current file object
     fclose(Log.buf);
+
     snprintf(file_path, sizeof(file_path), "%s%s%s", TRAFFIC_LOG_DIR, current_date, TRAFFIC_LOG_NAME);
+    memcpy(Log.id, current_date, 8);
 
-    memcpy(Log.active_id, current_date, 8)
-
-    // creating and storing new file object.
-    Log->buf = fopen(file_path, "a");
+    // creating and storing new file object
+    Log.buf = fopen(file_path, "a");
 
     return 0;
 }
-
 
 void
 check_current_date(char* buf)
@@ -77,7 +78,7 @@ check_current_date(char* buf)
     struct tm  *time_info;
 
     epoch = time(NULL);
-    info  = localtime(&epoch);
+    time_info = localtime(&epoch);
 
-    strftime(buf, 9, "%Y%m%d", info);
+    strftime(buf, 9, "%Y%m%d", time_info);
 }

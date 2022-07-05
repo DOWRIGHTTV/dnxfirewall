@@ -114,7 +114,7 @@ def check_already_ran() -> None:
 
         eprint('dnxfirewall has already been installed. exiting...')
 
-    elif (args.update_set):
+    elif (args.update_set and not dnx_settings['auto_loader']):
         eprint('dnxfirewall has not been installed. see readme for guidance. exiting...')
 
 # ----------------------------

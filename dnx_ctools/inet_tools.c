@@ -35,16 +35,18 @@ calc_checksum (const uint8_t *data, uint16_t dlen)
 }
 
 void
-itoip(uint32_t ip_int char* ip_addr)
+itoip(uint32_t ip_int, char* ip_addr)
 {
-    uint8_t octets[4]
+    uint8_t octets[4];
 
-    octets[0] = (ip >> 24) & 255
-    octets[1] = (ip >> 16) & 255
-    octets[2] = (ip >> 8) & 255
-    octets[3] = ip & 255
+    ip_int = ntohl(ip_int);
 
-    snprintf(ip_addr, sizeof(ip_addr), '%d.%d.%d.%d', octets[0], octets[1], octets[2], octets[3])
+    octets[0] = (ip_int >> 24) & 255;
+    octets[1] = (ip_int >> 16) & 255;
+    octets[2] = (ip_int >> 8) & 255;
+    octets[3] = ip_int & 255;
+
+    snprintf(ip_addr, 18, "%u.%u.%u.%u", octets[0], octets[1], octets[2], octets[3]);
 }
 
 uint32_t

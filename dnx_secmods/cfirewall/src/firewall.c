@@ -51,6 +51,8 @@ firewall_init(void) {
     fw_tables_swap[FW_BEFORE_RULES].rules = calloc(FW_BEFORE_MAX_RULE_COUNT, sizeof(struct FWrule));
     fw_tables_swap[FW_MAIN_RULES].rules   = calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(struct FWrule));
     fw_tables_swap[FW_AFTER_RULES].rules  = calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(struct FWrule));
+
+    log_init();
 }
 
 // ==================================
@@ -93,7 +95,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
             pkt.action = IP_PROXY << TWO_BYTES | NF_QUEUE;
         }
     }
-    else if (nl_pkth->hook == NF_IP_FORWARD) {
+    else if (nl_pkth->hook == NF_IP_LOCAL_IN) {
         fw_clist.start = FW_SYSTEM_RANGE_START;
     }
 
@@ -119,12 +121,6 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
         }
         printf("\n=====================================================================\n");
     }
-
-//        pkt.hw.timestamp = time(NULL);
-//        if (netlink_attrs[NFQA_HWADDR]) {
-//            pkt.hw.mac_addr = ((nl_pkt_hw*) mnl_attr_get_payload(netlink_attrs[NFQA_HWADDR]))->hw_addr;
-//        }
-//    }
 
     // return heirarchy -> libnfnetlink.c >> libnetfiler_queue >> process_traffic.
     // < 0 vals are errors, but return is being ignored by CFirewall._run.
@@ -205,7 +201,6 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             pkt->rule_clist = cntrl_list;
             pkt->rule_num   = rule_idx; // if logging, this needs to be +1
             pkt->action     = rule->action;
-            pkt->log        = rule->log;
             pkt->mark       = tracked_geo << FOUR_BITS | direction << TWO_BITS | rule->action;
 
             for (idx = 0; idx < 3; idx++) {
@@ -223,12 +218,18 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
     pkt->mark       = tracked_geo << FOUR_BITS | direction << TWO_BITS | DNX_DROP;
 
     logging:
-    if (pkt.log) {
+    if (rule->log) {
         // log file rotation logic
         log_enter();
-        log_write(&pkt, direction, src_country, dst_country)
+        log_write(pkt, direction, src_country, dst_country);
         log_exit();
     }
+
+//        pkt.hw.timestamp = time(NULL);
+//        if (netlink_attrs[NFQA_HWADDR]) {
+//            pkt.hw.mac_addr = ((nl_pkt_hw*) mnl_attr_get_payload(netlink_attrs[NFQA_HWADDR]))->hw_addr;
+//        }
+//    }
 
 }
 

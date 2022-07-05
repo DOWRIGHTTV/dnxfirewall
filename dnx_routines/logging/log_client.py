@@ -116,7 +116,7 @@ def _log_handler() -> LogHandler:
 
     # keeping file open for performance.
     # using explicit buffer flush logic to provide more consistent writes to disk
-    _log_buf: TextIO = cast(TextIO, None)
+    _log_buf: TextIO = open('/dev/null')
     _log_buf_date: str = ''
     _log_write_ct: int = 0
 

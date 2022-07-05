@@ -1,6 +1,7 @@
 #ifndef DNX_NFQ_H
 #define DNX_NFQ_H
 
+typedef struct nfqnl_msg_packet_timestamp nl_pkt_ts;
 typedef const struct nlmsghdr nl_msg_hdr;
 typedef struct nfqnl_msg_packet_hdr nl_pkt_hdr;
 struct nlattr;

@@ -1,13 +1,13 @@
 #ifndef TRAFFIC_LOG_H
 #define TRAFFIC_LOG_H
 
-#define TRAFFIC_LOG_DIR  "/home/dnx/dnxfirewall/dnx_system/logs/traffic/" // 46
+#define TRAFFIC_LOG_DIR  "/home/dnx/dnxfirewall/dnx_system/log/traffic/" // 46
 #define TRAFFIC_LOG_NAME "-traffic.log" // 12
 // 20220628 // 8
-#define FW_LOG_FORMAT "log_type=\"firewall\" log_component=\"firewall rule\" fw_rule_name=\"%u\" "
-    "action=\"%s\" conn_direction=\"%s\" protocol=\"%u\" " //src_mac="%s" dst_mac="%s"
-    "in_intf=\"%u\" in_intf_name=\"%s\" src_zone=\"%u\" src_country=\"$s\" src_ip=\"%s\" src_port=\"%u\" "
-    "out_intf=\"%u\" out_intf_name=\"%s\" dst_zone=\"%u\" dst_country=\"%s\" dst_ip=\"%s\" dst_port=\"%u\""
+#define FW_LOG_FORMAT "log_type=\"firewall\" log_component=\"firewall rule\" fw_rule_name=\"%u\" "\
+    "action=\"%u\" conn_direction=\"%u\" protocol=\"%u\" "\ //src_mac="%s" dst_mac="%s"
+    "in_intf=\"%u\" src_zone=\"%u\" src_country=\"%u\" src_ip=\"%s\" src_port=\"%u\" "\
+    "out_intf=\"%u\" dst_zone=\"%u\" dst_country=\"%u\" dst_ip=\"%s\" dst_port=\"%u\"\n"
 
 #define LOG_BUFFER_LIMIT 8
 
@@ -16,10 +16,6 @@ struct LogHandle {
     char    id[9]; // date in YYYYMMDD format
     FILE   *buf;
     int     cnt;
-};
-
-struct TrafficLog {
-    void NULL
 };
 
 // ================================== //
