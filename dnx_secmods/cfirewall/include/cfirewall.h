@@ -143,6 +143,7 @@ struct dnx_pktb {
     uintf16_t           rule_num;
     uint32_t            action;
     uint32_t            mark;
+    struct LogHandle   *logger;
 };
 
 #endif

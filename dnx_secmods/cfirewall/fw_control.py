@@ -107,8 +107,8 @@ class FirewallControl:
 
     @staticmethod
     def revert():
-        '''Copies active configuration to pending, which effectively wipes any unpushed changes.'''
-
+        '''Copies active configuration to pending, which effectively wipes any unpushed changes.
+        '''
         with ConfigurationManager():
             shutil.copy(ACTIVE_COPY_FILE, PUSH_RULE_FILE)
 
@@ -131,8 +131,8 @@ class FirewallControl:
             return {}
 
     def ruleset_len(self, section: str = 'MAIN') -> int:
-        '''returns len of firewall_pending ruleset. defaults to main and returns 0 on error.'''
-
+        '''returns len of firewall_pending ruleset. defaults to main and returns 0 on error.
+        '''
         fw_rules = load_configuration(DEFAULT_VERSION, ext='firewall', filepath=DEFAULT_PATH).get_dict()
 
         try:

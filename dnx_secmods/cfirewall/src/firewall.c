@@ -44,7 +44,7 @@ firewall_init(void) {
     firewall_tables[FW_SYSTEM_RULES].rules = calloc(FW_SYSTEM_MAX_RULE_COUNT, sizeof(struct FWrule));
     firewall_tables[FW_BEFORE_RULES].rules = calloc(FW_BEFORE_MAX_RULE_COUNT, sizeof(struct FWrule));
     firewall_tables[FW_MAIN_RULES].rules   = calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(struct FWrule));
-    firewall_tables[FW_AFTER_RULES].rules = calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(struct FWrule));
+    firewall_tables[FW_AFTER_RULES].rules  = calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(struct FWrule));
 
     // SWAP STORAGE
     fw_tables_swap[FW_SYSTEM_RULES].rules = calloc(FW_SYSTEM_MAX_RULE_COUNT, sizeof(struct FWrule));
@@ -52,7 +52,7 @@ firewall_init(void) {
     fw_tables_swap[FW_MAIN_RULES].rules   = calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(struct FWrule));
     fw_tables_swap[FW_AFTER_RULES].rules  = calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(struct FWrule));
 
-    log_init();
+    log_init(&Log[FW_LOG_IDX], "firewall");
 }
 
 // ==================================
@@ -63,13 +63,12 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
 {
     struct cfdata      *cfd = (struct cfdata*) data;
     struct nlattr      *netlink_attrs[NFQA_MAX+1] = {};
-    struct dnx_pktb     pkt;
+    struct dnx_pktb     pkt = {.logger = &Log[FW_LOG_IDX]};
+    struct clist_range  fw_clist;
 
     nl_pkt_hdr     *nl_pkth = NULL;
 //    nl_pkt_hw  *_hw;
     uint32_t        ct_info;
-
-    struct clist_range  fw_clist;
 
 //    printf("< [++] FW RECV QUEUE(%u) - PARSING [++] >\n", cfd->queue);
     dnx_parse_nl_headers(nl_msgh, &nl_pkth, netlink_attrs, &pkt);
@@ -102,8 +101,8 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     fw_clist.end = FW_RULE_RANGE_END;
     // ===================================
     // FIREWALL RULES LOCK
-    // prevents the manager thread from updating firewall rules during packet inspection
-    // consider locking around each control list since. this would weave control list updates with inspection
+    // prevents the manager thread from updating firewall rules during packet inspection.
+    // consider locking around each control list. this would weave control list updates with inspection.
     firewall_lock();
     firewall_inspect(&fw_clist, &pkt, cfd);
     firewall_unlock();
@@ -122,7 +121,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
         printf("\n=====================================================================\n");
     }
 
-    // return heirarchy -> libnfnetlink.c >> libnetfiler_queue >> process_traffic.
+    // return hierarchy -> libnfnetlink.c >> libnetfiler_queue >> process_traffic.
     // < 0 vals are errors, but return is being ignored by CFirewall._run.
     return OK;
 }
@@ -132,9 +131,8 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
 {
     dnx_parse_pkt_headers(pkt);
 
-    struct FWrule     *rule;
-
-    struct HashTrie_Range *geolocation = cfd->geolocation;
+    struct FWrule           *rule;
+    struct HashTrie_Range   *geolocation = cfd->geolocation;
 
     // normalizing src/dst ip in header to host order
     uint32_t    iph_src_ip = ntohl(pkt->iphdr->saddr);
@@ -220,9 +218,9 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
     logging:
     if (rule->log) {
         // log file rotation logic
-        log_enter();
+        log_enter(pkt->logger);
         log_write(pkt, direction, src_country, dst_country);
-        log_exit();
+        log_exit(pkt->logger);
     }
 
 //        pkt.hw.timestamp = time(NULL);
