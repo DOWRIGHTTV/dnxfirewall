@@ -71,8 +71,9 @@ import source.system.settings.dfe_dhcp as dhcp_settings
 import source.system.settings.dfe_interface as interface_settings
 import source.system.settings.dfe_logging as logging_settings
 import source.system.settings.dfe_syslog as syslog_settings
-import system.logs.dfe_system as dfe_logs
-import system.logs.dfe_events as proxy_reports
+import system.logs.dfe_traffic as traffic_logs
+import system.logs.dfe_events as sec_events
+import system.logs.dfe_system as sys_logs
 import source.system.dfe_users as dfe_users
 import source.system.dfe_backups as dfe_backups
 import source.system.dfe_services as dnx_services
@@ -409,7 +410,7 @@ def system_reports(session_data):
 
     page_settings.update(session_data)
 
-    page_action = log_page_logic(proxy_reports, page_settings, page_name='system/logs/traffic/traffic.html')
+    page_action = log_page_logic(traffic_logs, page_settings, page_name='system/logs/traffic/traffic.html')
 
     return page_action
 
@@ -425,7 +426,7 @@ def system_reports(session_data):
 
     page_settings.update(session_data)
 
-    page_action = log_page_logic(proxy_reports, page_settings, page_name='system/logs/events/events.html')
+    page_action = log_page_logic(sec_events, page_settings, page_name='system/logs/events/events.html')
 
     return page_action
 
@@ -443,7 +444,7 @@ def system_logs(session_data):
 
     page_settings.update(session_data)
 
-    page_action = log_page_logic(dfe_logs, page_settings, page_name='system/logs/system/logs.html')
+    page_action = log_page_logic(sys_logs, page_settings, page_name='system/logs/system/logs.html')
 
     return page_action
 
@@ -452,7 +453,7 @@ def system_logs(session_data):
 def system_logs_get(session_data):
     json_data = request.get_json(force=True)
 
-    table_data, _, _ = dfe_logs.update_page(json_data)
+    table_data, _, _ = sys_logs.update_page(json_data)
 
     ppt(table_data)
 
