@@ -71,8 +71,8 @@ import source.system.settings.dfe_dhcp as dhcp_settings
 import source.system.settings.dfe_interface as interface_settings
 import source.system.settings.dfe_logging as logging_settings
 import source.system.settings.dfe_syslog as syslog_settings
-import source.system.dfe_logs as dfe_logs
-import source.system.dfe_reports as proxy_reports
+import system.logs.dfe_system as dfe_logs
+import system.logs.dfe_events as proxy_reports
 import source.system.dfe_users as dfe_users
 import source.system.dfe_backups as dfe_backups
 import source.system.dfe_services as dnx_services
@@ -397,25 +397,57 @@ def system_settings_syslog(session_data):
 
     # END OF SETTINGS SUB MENU
     # ----------------------------------------- #
-@app.route('/system/logs', methods=['GET', 'POST'])
+@app.route('/system/logs/traffic', methods=['GET', 'POST'])
+@user_restrict('user', 'admin')
+def system_reports(session_data):
+    page_settings = {
+        'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
+        'menu': '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
+        'table_types': ['firewall', 'nat'],
+        'uri_path': ['system', 'logs', 'events']
+    }
+
+    page_settings.update(session_data)
+
+    page_action = log_page_logic(proxy_reports, page_settings, page_name='system/logs/traffic/traffic.html')
+
+    return page_action
+
+@app.route('/system/logs/events', methods=['GET', 'POST'])
+@user_restrict('user', 'admin')
+def system_reports(session_data):
+    page_settings = {
+        'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
+        'menu': '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
+        'table_types': ['dns_proxy', 'ip_proxy', 'intrusion_prevention', 'infected_clients'],
+        'uri_path': ['system', 'logs', 'events']
+    }
+
+    page_settings.update(session_data)
+
+    page_action = log_page_logic(proxy_reports, page_settings, page_name='system/logs/events/events.html')
+
+    return page_action
+
+@app.route('/system/logs/system', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
 def system_logs(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
         'menu': '1', 'dnx_table': True, 'ajax': True, 'auto_colorize': True,
         'log_files': [
-            'combined', 'logins', 'web_app', 'system', 'dns_proxy', 'ip_proxy', 'ips', 'dhcp_server', 'syslog'
+            'combined', 'logins', 'web_app', 'system', 'dns_proxy', 'ip_proxy', 'ips', 'dhcp_server',  # 'syslog'
         ],
-        'uri_path': ['system', 'logs']
+        'uri_path': ['system', 'logs', 'system']
     }
 
     page_settings.update(session_data)
 
-    page_action = log_page_logic(dfe_logs, page_settings, page_name='system/logs/logs.html')
+    page_action = log_page_logic(dfe_logs, page_settings, page_name='system/logs/system/logs.html')
 
     return page_action
 
-@app.post('/system/logs/get')
+@app.post('/system/logs/system/get')
 @user_restrict('user', 'admin')
 def system_logs_get(session_data):
     json_data = request.get_json(force=True)
@@ -425,22 +457,6 @@ def system_logs_get(session_data):
     ppt(table_data)
 
     return ajax_response(status=True, data=table_data)
-
-@app.route('/system/reports', methods=['GET', 'POST'])
-@user_restrict('user', 'admin')
-def system_reports(session_data):
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu': '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
-        'table_types': ['dns_proxy', 'ip_proxy', 'intrusion_prevention', 'infected_clients'],
-        'uri_path': ['system', 'reports']
-    }
-
-    page_settings.update(session_data)
-
-    page_action = log_page_logic(proxy_reports, page_settings, page_name='system/reports.html')
-
-    return page_action
 
 @app.route('/system/users', methods=['GET', 'POST'])
 @user_restrict('admin')
@@ -491,31 +507,44 @@ def system_services(session_data):
 # --------------------------------------------- #
 #  START OF DEVICE MENU
 # --------------------------------------------- #
-@app.route('/device/restart', methods=['GET', 'POST'])
+@app.route('/device/<path>', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_restart(session_data):
+def system_restart(session_data, path):
     page_settings = {
         'navi': True, 'idle_timeout': False,
-        'control': True, 'action': 'restart',
-        'uri_path': ['device', 'restart']
+        'control': True, 'action': f'{path}',
+        'uri_path': ['device', f'{path}']
     }
 
     page_settings.update(session_data)
 
     return handle_system_action(page_settings)
 
-@app.route('/device/shutdown', methods=['GET', 'POST'])
-@user_restrict('admin')
-def system_shutdown(session_data):
-    page_settings = {
-        'navi': True, 'idle_timeout': False,
-        'control': True, 'action': 'shutdown',
-        'uri_path': ['device', 'shutdown']
-    }
-
-    page_settings.update(session_data)
-
-    return handle_system_action(page_settings)
+# @app.route('/device/restart', methods=['GET', 'POST'])
+# @user_restrict('admin')
+# def system_restart(session_data):
+#     page_settings = {
+#         'navi': True, 'idle_timeout': False,
+#         'control': True, 'action': 'restart',
+#         'uri_path': ['device', 'restart']
+#     }
+#
+#     page_settings.update(session_data)
+#
+#     return handle_system_action(page_settings)
+#
+# @app.route('/device/shutdown', methods=['GET', 'POST'])
+# @user_restrict('admin')
+# def system_shutdown(session_data):
+#     page_settings = {
+#         'navi': True, 'idle_timeout': False,
+#         'control': True, 'action': 'shutdown',
+#         'uri_path': ['device', 'shutdown']
+#     }
+#
+#     page_settings.update(session_data)
+#
+#     return handle_system_action(page_settings)
 
 # --------------------------------------------- #
 #  START OF LOGOUT MENU
@@ -680,22 +709,14 @@ def log_page_logic(log_page, page_settings, *, page_name):
     # can now accept redirects from other places on the webui to load specific tables directly on load
     # using uri queries
 
-    if (request.method == 'GET'):
-        request_data, handler = request.args, log_page.load_page
-
-    elif (request.method == 'POST'):
-        request_data, handler = request.form, log_page.update_page
-
-    else: return
-
     try:
-        table_data, table, menu_option = handler(request_data)
+        table_data, table, menu_option = log_page.load_page(request.form)
     except ConfigurationError as ce:
         return render_template(application_error_page, application_error=ce, **page_settings)
 
     page_settings.update({
-        'menu': menu_option,
-        'table': table,
+        'table': validate.get_convert_int(request.form, 'table'),
+        'menu': validate.get_convert_int(request.form, 'menu'),
         'table_data': table_data
     })
 
@@ -726,6 +747,10 @@ def handle_system_action(page_settings):
     action = page_settings['action']
 
     response = request.form.get(f'system_{action}', '')
+    if (response is None):
+        error = 'device action invalid.'
+        return render_template(application_error_page, application_error=error, **page_settings)
+
     if (response == 'YES'):
         page_settings.pop('control', None)
         page_settings.pop('user_role', None)

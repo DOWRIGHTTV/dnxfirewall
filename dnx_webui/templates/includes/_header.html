@@ -161,8 +161,11 @@
             </a>
         </li>
         <li {% if uri_path[1] == 'logs' %} class='active' {% endif %}>
-            <a href="system/logs" class="{{ nav_text_color }}">
-                <i class="material-icons {{ icon_color }}">assignment</i>Logs
+            <a class="dropdown-trigger-hoverable dropdown-trigger-nested expand {{ subnav_text_color }}"
+                data-target="logs-dropdown">
+                <i class="material-icons left {{ icon_color }}">settings</i>
+                Logs
+                <i class="material-icons right {{ subnav_text_color }}">chevron_right</i>
             </a>
         </li>
         <li {% if uri_path[1] == 'reports' %} class='active' {% endif %}>
@@ -210,6 +213,24 @@
         </li>
         <!--    <li {% if uri_path[1] == 'syslog' %} class='active' {% endif %}>
             <a href="settings/syslog"><i class="material-icons {!icon_color}}">file_copy</i> Syslog</a></li> -->
+    </ul>
+        {# LOGS DROPDOWN - TIER 3 #}
+    <ul id="logs-dropdown" class="dropdown-content">
+        <li {% if uri_path[2] == 'traffic' %} class='active' {% endif %}>
+            <a href="system/logs/traffic" class="{{ nav_text_color }}">
+                <i class="material-icons {{ icon_color }}">dns</i>Traffic
+            </a>
+        </li>
+        <li {% if uri_path[2] == 'events' %} class='active' {% endif %}>
+            <a href="system/logs/events" class="{{ nav_text_color }}">
+                <i class="material-icons {{ icon_color }}">filter_b_and_w</i>Events
+            </a>
+        </li>
+        <li {% if uri_path[2] == 'system' %} class='active' {% endif %}>
+            <a href="system/logs/system" class="{{ nav_text_color }}">
+                <i class="material-icons {{ icon_color }}">format_italic</i>System
+            </a>
+        </li>
     </ul>
     {# DEVICE DROPDOWN - TIER 2 #}
     <ul id="device-dropdown" class="dropdown-content">
