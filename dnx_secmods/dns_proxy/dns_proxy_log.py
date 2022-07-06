@@ -39,7 +39,7 @@ class Log(LogHandler):
 
     @classmethod
     def _generate_event_log(cls, pkt: DNSPacket, req: DNS_REQUEST_RESULTS) -> tuple[LOG, dict]:
-        # suppressing logs for dns over https. these are blocked in the background and should not notify the user.
+        # suppressing log for dns over https. these are blocked in the background and should not notify the user.
         if (req.category in [DNS_CAT.doh]): pass
 
         # log to infected client db table if matching malicious type categories
@@ -52,7 +52,7 @@ class Log(LogHandler):
 
             return LOG.ALERT, {'dns_request': log, 'dns_blocked': log, 'inf_event': log2}
 
-        # logs redirected/blocked requests
+        # log redirected/blocked requests
         elif (req.redirect and cls.current_lvl >= LOG.WARNING):
             log = DNS_REQUEST_LOG(pkt.request_identifier[0], pkt.qname, req.category.name, req.reason, 'blocked')
 
@@ -67,7 +67,7 @@ class Log(LogHandler):
         return LOG.NONE, {}
 
     @staticmethod
-    # for sending message to the syslog service # TODO: im sure more than just standard logs need to be accepted
+    # for sending message to the syslog service # TODO: im sure more than just standard log need to be accepted
     def generate_syslog_message(log: DNS_REQUEST_LOG) -> str:
         message = [
             f'src.ip={log.src_ip}; request={log.request}; category={log.category}; ',

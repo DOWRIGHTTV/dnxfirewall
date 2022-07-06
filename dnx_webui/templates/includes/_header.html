@@ -160,7 +160,7 @@
                 <i class="material-icons right {{ subnav_text_color }}">chevron_right</i>
             </a>
         </li>
-        <li {% if uri_path[1] == 'logs' %} class='active' {% endif %}>
+        <li {% if uri_path[1] == 'log' %} class='active' {% endif %}>
             <a class="dropdown-trigger-hoverable dropdown-trigger-nested expand {{ subnav_text_color }}"
                 data-target="logs-dropdown">
                 <i class="material-icons left {{ icon_color }}">settings</i>
@@ -368,7 +368,7 @@
         </li>
     </ul>
     <ul id="sidenav-system-dropdown" class="dropdown-content">
-        <li {% if uri_path[1] == 'logs' %} class='active' {% endif %}>
+        <li {% if uri_path[1] == 'log' %} class='active' {% endif %}>
             <a href="system/logs">
                 <i class="material-icons {{ icon_color }}">assignment</i>Logs
             </a>

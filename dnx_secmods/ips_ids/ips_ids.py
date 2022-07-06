@@ -181,7 +181,7 @@ def portscan_detect(tracker: dict, packet: IPSPacket) -> tuple[bool, bool, dict]
     return initial_block, scan_detected, tracked_ip['pre_detect']
 
 # sending packet response.
-# initial blocks will use pre detection logs to generate packets for all previously received packets.
+# initial blocks will use pre detection log to generate packets for all previously received packets.
 def portscan_reject(pre_detection_logging: dict, packet: IPSPacket, initial_block: bool) -> None:
     PREPARE_AND_SEND(packet)
 

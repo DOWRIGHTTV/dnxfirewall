@@ -133,7 +133,7 @@ def _log_handler() -> LogHandler:
 
     db_sendmsg = db_client.sendmsg
 
-    # TODO: create function to write logs for system errors that happen prior to log handler being initialized.
+    # TODO: create function to write log for system errors that happen prior to log handler being initialized.
     class _LogHandler:
 
         @classmethod

@@ -42,7 +42,7 @@ class Log(LogHandler):
             for method, log in logs.items():
                 cls.event_log(pkt.timestamp, log, method=method)
 
-        # if (cls.syslog_enabled and logs):
+        # if (cls.syslog_enabled and log):
         #     cls.slog_log(LOG.EVENT, lvl, cls.generate_syslog_message(log))
 
     @staticmethod

@@ -31,7 +31,7 @@ def update_page(form: Form) -> tuple[list[Optional[str]], str, None]:
     if (log_type not in LOG_FILES):
         return [], log_type, None
 
-    # combined log is now a single file that reflects recent aggregated logs at the time of loading
+    # combined log is now a single file that reflects recent aggregated log at the time of loading
     file_path = LOG_DIR if log_type == 'combined' else f'{LOG_DIR}/{log_type}'
 
     # returning none to fill table_args var on the calling function to allow reuse with the report's page method
