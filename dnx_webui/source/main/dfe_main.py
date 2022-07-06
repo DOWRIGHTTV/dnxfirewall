@@ -71,9 +71,9 @@ import source.system.settings.dfe_dhcp as dhcp_settings
 import source.system.settings.dfe_interface as interface_settings
 import source.system.settings.dfe_logging as logging_settings
 import source.system.settings.dfe_syslog as syslog_settings
-import system.logs.dfe_traffic as traffic_logs
-import system.logs.dfe_events as sec_events
-import system.logs.dfe_system as sys_logs
+import source.system.logs.dfe_traffic as traffic_logs
+import source.system.logs.dfe_events as sec_events
+import source.system.logs.dfe_system as sys_logs
 import source.system.dfe_users as dfe_users
 import source.system.dfe_backups as dfe_backups
 import source.system.dfe_services as dnx_services
