@@ -444,7 +444,7 @@ def system_logs_system(session_data):
 
     page_settings.update(session_data)
 
-    page_action = log_page_logic(sys_logs, page_settings, page_name='system/log/system/log.html')
+    page_action = log_page_logic(sys_logs, page_settings, page_name='system/log/system/system.html')
 
     return page_action
 
