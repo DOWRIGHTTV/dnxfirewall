@@ -400,7 +400,7 @@ def system_settings_syslog(session_data):
     # ----------------------------------------- #
 @app.route('/system/logs/traffic', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
-def system_reports(session_data):
+def system_logs_traffic(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
         'menu': '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
@@ -416,7 +416,7 @@ def system_reports(session_data):
 
 @app.route('/system/logs/events', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
-def system_reports(session_data):
+def system_logs_traffic_events(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
         'menu': '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
@@ -432,7 +432,7 @@ def system_reports(session_data):
 
 @app.route('/system/logs/system', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
-def system_logs(session_data):
+def system_logs_system(session_data):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
         'menu': '1', 'dnx_table': True, 'ajax': True, 'auto_colorize': True,
