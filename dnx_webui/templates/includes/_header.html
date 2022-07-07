@@ -190,7 +190,7 @@
         </li>
     </ul>
     {# SETTINGS DROPDOWN - TIER 3 #}
-    <ul id="settings-dropdown" class="dropdown-content">
+    <ul id="settings-dropdown" class="dropdown-content dropdown-content-nested">
         <li {% if uri_path[1] == 'dns' %} class='active' {% endif %}>
             <a href="system/settings/dns" class="{{ nav_text_color }}">
                 <i class="material-icons {{ icon_color }}">dns</i>DNS
@@ -215,19 +215,19 @@
             <a href="settings/syslog"><i class="material-icons {!icon_color}}">file_copy</i> Syslog</a></li> -->
     </ul>
         {# LOGS DROPDOWN - TIER 3 #}
-    <ul id="logs-dropdown" class="dropdown-content">
+    <ul id="logs-dropdown" class="dropdown-content dropdown-content-nested">
         <li {% if uri_path[2] == 'traffic' %} class='active' {% endif %}>
-            <a href="system/logs/traffic" class="{{ nav_text_color }}">
+            <a href="system/log/traffic" class="{{ nav_text_color }}">
                 <i class="material-icons {{ icon_color }}">dns</i>Traffic
             </a>
         </li>
         <li {% if uri_path[2] == 'events' %} class='active' {% endif %}>
-            <a href="system/logs/events" class="{{ nav_text_color }}">
+            <a href="system/log/events" class="{{ nav_text_color }}">
                 <i class="material-icons {{ icon_color }}">filter_b_and_w</i>Events
             </a>
         </li>
         <li {% if uri_path[2] == 'system' %} class='active' {% endif %}>
-            <a href="system/logs/system" class="{{ nav_text_color }}">
+            <a href="system/log/system" class="{{ nav_text_color }}">
                 <i class="material-icons {{ icon_color }}">format_italic</i>System
             </a>
         </li>

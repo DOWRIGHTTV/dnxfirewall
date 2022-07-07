@@ -398,7 +398,7 @@ def system_settings_syslog(session_data):
 
     # END OF SETTINGS SUB MENU
     # ----------------------------------------- #
-@app.route('/system/logs/traffic', methods=['GET', 'POST'])
+@app.route('/system/log/traffic', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
 def system_logs_traffic(session_data):
     page_settings = {
@@ -414,7 +414,7 @@ def system_logs_traffic(session_data):
 
     return page_action
 
-@app.route('/system/logs/events', methods=['GET', 'POST'])
+@app.route('/system/log/events', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
 def system_logs_traffic_events(session_data):
     page_settings = {
@@ -430,7 +430,7 @@ def system_logs_traffic_events(session_data):
 
     return page_action
 
-@app.route('/system/logs/system', methods=['GET', 'POST'])
+@app.route('/system/log/system', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
 def system_logs_system(session_data):
     page_settings = {
@@ -448,7 +448,7 @@ def system_logs_system(session_data):
 
     return page_action
 
-@app.post('/system/logs/system/get')
+@app.post('/system/log/system/get')
 @user_restrict('user', 'admin')
 def system_logs_get(session_data):
     json_data = request.get_json(force=True)
