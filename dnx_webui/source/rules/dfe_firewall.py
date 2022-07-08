@@ -96,7 +96,7 @@ def load_page(section: str) -> dict[str, Any]:
     fw_object_map = {o[1]: format_fw_obj(o) for o in firewall_objects.values()}
 
     # FIXME: this is redundant, but needed to rendering the firewall object list.
-    #  this should only be used for jinja at least it shouldnt be getting sent to client.
+    #  this should only be used for jinja at least it shouldn't be getting sent to client.
     firewall_objects = {o[1]: o for o in firewall_objects.values()}
 
     zone_autofill: dict[str, None] = {k: None for k, v in firewall_objects.items() if v[3] in ['zone']}
@@ -144,7 +144,7 @@ def update_page(form: Form) -> tuple[str, str]:
         except ValidationError as ve:
             return ve.message, section
 
-    elif('edit_obj' in form):
+    elif ('edit_obj' in form):
         fw_object = config(**{
             'id': get_convert_int(form, 'oeid'),
             'name': form.get('oename', DATA.MISSING),
@@ -305,6 +305,12 @@ def validate_firewall_commit(fw_rules_json: str, /):
 # NOTE: log disabled in form and set here as default for the time being.
 def validate_firewall_rule(rule_num: int, fw_rule: rule_structure, /, check: Callable[[str], list[int]]) -> dict[str, Any]:
 
+    tlog: dict[str, int] = {'on': 1, 'off': 0}
+
+    tlog = tlog.get(fw_rule.log, DATA.INVALID)
+    if (not tlog):
+        raise ValidationError(f'{INVALID_FORM} [rule #{rule_num}/log]')
+
     actions: dict[str, int] = {'accept': 1, 'drop': 0}
 
     action = actions.get(fw_rule.action, DATA.INVALID)
@@ -355,7 +361,7 @@ def validate_firewall_rule(rule_num: int, fw_rule: rule_structure, /, check: Cal
         'dst_network': dst_network,
         'dst_service': dst_service,
         'action': action,                    # 1
-        'log': 0,
+        'log': tlog,
         'ipp_profile': ip_proxy_profile,
         'dns_profile': dns_proxy_profile,
         'ips_profile': ips_ids_profile
