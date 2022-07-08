@@ -163,7 +163,7 @@
         <li {% if uri_path[1] == 'log' %} class='active' {% endif %}>
             <a class="dropdown-trigger-hoverable dropdown-trigger-nested expand {{ subnav_text_color }}"
                 data-target="logs-dropdown">
-                <i class="material-icons left {{ icon_color }}">settings</i>
+                <i class="material-icons left {{ icon_color }}">folder</i>
                 Logs
                 <i class="material-icons right {{ subnav_text_color }}">chevron_right</i>
             </a>
@@ -218,17 +218,17 @@
     <ul id="logs-dropdown" class="dropdown-content dropdown-content-nested">
         <li {% if uri_path[2] == 'traffic' %} class='active' {% endif %}>
             <a href="system/log/traffic" class="{{ nav_text_color }}">
-                <i class="material-icons {{ icon_color }}">dns</i>Traffic
+                <i class="material-icons {{ icon_color }}">merge_type</i>Traffic
             </a>
         </li>
         <li {% if uri_path[2] == 'events' %} class='active' {% endif %}>
             <a href="system/log/events" class="{{ nav_text_color }}">
-                <i class="material-icons {{ icon_color }}">filter_b_and_w</i>Events
+                <i class="material-icons {{ icon_color }}">whatshot</i>Events
             </a>
         </li>
         <li {% if uri_path[2] == 'system' %} class='active' {% endif %}>
             <a href="system/log/system" class="{{ nav_text_color }}">
-                <i class="material-icons {{ icon_color }}">format_italic</i>System
+                <i class="material-icons {{ icon_color }}">chrome_reader_mode</i>System
             </a>
         </li>
     </ul>
