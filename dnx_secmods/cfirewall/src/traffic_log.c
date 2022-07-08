@@ -8,7 +8,7 @@ void
 log_init(struct LogHandle *logger, char *label)
 {
     strcpy(logger->label, label);
-    memset(logger->id, "\0", 1);
+    memset(logger->id, 0, 1);
 
     logger->buf = fopen("/dev/null", "a");
     logger->cnt = 0;
