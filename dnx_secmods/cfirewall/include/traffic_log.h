@@ -3,8 +3,9 @@
 
 #define TRAFFIC_LOG_DIR  "/home/dnx/dnxfirewall/dnx_system/log/traffic/" // 46
 // 20220628 // 8
+//src_mac="%s" dst_mac="%s"
 #define FW_LOG_FORMAT "log_type=\"firewall\" log_component=\"firewall rule\" fw_rule_name=\"%u\" "\
-    "action=\"%u\" conn_direction=\"%u\" protocol=\"%u\" "\ //src_mac="%s" dst_mac="%s"
+    "action=\"%u\" conn_direction=\"%u\" protocol=\"%u\" "\
     "in_intf=\"%u\" src_zone=\"%u\" src_country=\"%u\" src_ip=\"%s\" src_port=\"%u\" "\
     "out_intf=\"%u\" dst_zone=\"%u\" dst_country=\"%u\" dst_ip=\"%s\" dst_port=\"%u\"\n"
 
@@ -32,7 +33,7 @@ extern void log_write_firewall(struct dnx_pktb *pkt, uint8_t direction, uint8_t 
 extern void log_write_nat(struct dnx_pktb *pkt);
 extern void log_exit(struct LogHandle *logger);
 
-int  log_rotate(struct LogHandle *logger, char* current_date)
+int  log_rotate(struct LogHandle *logger, char* current_date);
 void check_current_date(char* buf);
 
 #endif
