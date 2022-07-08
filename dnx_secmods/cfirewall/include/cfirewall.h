@@ -79,6 +79,8 @@ typedef const struct nlmsghdr     nl_msg_hdr;
 typedef struct nfqnl_msg_packet_hdr     nl_pkt_hdr;
 typedef struct nfqnl_msg_packet_hw      nl_pkt_hw;
 
+typedef struct nfqnl_msg_packet_timestamp      nl_pkt_timestamp;
+
 //typedef uint8_t (*hash_trie_search_t)(uint32_t msb, uint32_t lsb);
 
 struct cfdata {
