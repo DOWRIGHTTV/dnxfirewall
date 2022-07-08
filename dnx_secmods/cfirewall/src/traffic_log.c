@@ -10,7 +10,7 @@ log_init(struct LogHandle *logger, char *label)
     strcpy(logger->label, label);
     memset(logger->id, "\0", 1);
 
-    logger->buf = fopen("/dev/null");
+    logger->buf = fopen("/dev/null", "a");
     logger->cnt = 0;
 }
 
@@ -42,7 +42,7 @@ log_write_firewall(struct dnx_pktb *pkt, uint8_t direction, uint8_t src_country,
         pkt->hw.oif, pkt->hw.out_zone, dst_country, daddr, ntohs(pkt->protohdr->dport)
     );
 
-    pkt->logger->.cnt++;
+    pkt->logger->cnt++;
 }
 
 void
