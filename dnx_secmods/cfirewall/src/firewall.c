@@ -219,7 +219,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
     if (rule->log) {
         // log file rotation logic
         log_enter(pkt->logger);
-        log_write(pkt, direction, src_country, dst_country);
+        log_write_firewall(pkt, direction, src_country, dst_country);
         log_exit(pkt->logger);
     }
 
