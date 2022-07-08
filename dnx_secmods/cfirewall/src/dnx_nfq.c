@@ -13,7 +13,7 @@ dnx_parse_nl_headers(nl_msg_hdr *nlmsgh, nl_pkt_hdr **nl_pkth,  struct nlattr **
 {
     nfq_nlmsg_parse(nlmsgh, netlink_attrs);
 
-    pkt->hw.timestamp = (nl_pkt_ts) mnl_attr_get_payload(netlink_attrs[NFQA_TIMESTAMP]);
+    pkt->hw.timestamp = (nl_pkt_ts*) mnl_attr_get_payload(netlink_attrs[NFQA_TIMESTAMP]);
 
     // in-int > src_zone | not available in POST ROUTE
     pkt->hw.iif = netlink_attrs[NFQA_IFINDEX_INDEV] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_IFINDEX_INDEV])) : 0;
