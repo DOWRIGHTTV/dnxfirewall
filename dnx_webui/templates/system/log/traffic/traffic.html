@@ -24,19 +24,19 @@
                     </form>
                 </div>
                 <div class="row">
+                    <div class="input-field col s12 m6 l5 xl3 {{input_color}}">
+                        <input type="text" id="filter-input" onkeyup="filterTable(0, 2)" placeholder="Search string">
+                    </div>
                     <table class="centered highlight" id="filter-table">
-                        <div class="input-field col s12 m6 l5 xl3 {{input_color}}">
-                            <input type="text" id="filter-input" onkeyup="filterTable(0, 2)" placeholder="Search string">
-                        </div>
                         <thead>
                             <tr>
                                 <th style="width:25%">Entry</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="filter-table-body">
                             {% for entry in table_data %}
                             <tr>
-                                <td>{{entry[0]}}</td>
+                                <td>{{entry}}</td>
                             </tr>
                             {% else %}
                             <tr>

@@ -307,14 +307,14 @@ def validate_firewall_rule(rule_num: int, fw_rule: rule_structure, /, check: Cal
 
     tlog: dict[str, int] = {'on': 1, 'off': 0}
 
-    tlog = tlog.get(fw_rule.log, DATA.INVALID)
-    if (not tlog):
+    tlog = tlog.get(fw_rule.log, DATA.MISSING)
+    if (tlog is DATA.MISSING):
         raise ValidationError(f'{INVALID_FORM} [rule #{rule_num}/log]')
 
     actions: dict[str, int] = {'accept': 1, 'drop': 0}
 
-    action = actions.get(fw_rule.action, DATA.INVALID)
-    if (not action):
+    action = actions.get(fw_rule.action, DATA.MISSING)
+    if (action is DATA.MISSING):
         raise ValidationError(f'{INVALID_FORM} [rule #{rule_num}/action]')
 
     ip_proxy_profile  = convert_int(fw_rule.sec1_prof)

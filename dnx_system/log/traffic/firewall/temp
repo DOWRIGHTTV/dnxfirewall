@@ -1,0 +1,4 @@
+# EXAMPLE LOG ENTRY
+# log_type="firewall" log_component="firewall rule" fw_rule_name="1" action="1" conn_direction="1" protocol="17"
+# in_intf="3" src_zone="11" src_country="1" src_ip="192.168.83.69" src_port="39240"
+# out_intf="0" dst_zone="0" dst_country="1" dst_ip="192.168.83.1" dst_port="53"
