@@ -28,15 +28,57 @@
                         <input type="text" id="filter-input" onkeyup="filterTable(0, 2)" placeholder="Search string">
                     </div>
                     <table class="centered highlight" id="filter-table">
+                        <colgroup>
+                            <col span="3" style="background-color:#eceff1">
+                            <col span="3" style="background-color:#90a4ae">
+                            <col span="5" style="background-color:#cfd8dc">
+                            <col span="5" style="background-color:#b0bec5">
+                        </colgroup>
                         <thead>
                             <tr>
-                                <th style="width:25%">Entry</th>
+                                <th colspan="3">ID</th>
+                                <th colspan="3">Packet</th>
+                                <th colspan="5">Source</th>
+                                <th colspan="5">Destination</th>
+                            </tr>
+                            <tr>
+                                <th>type</th>
+                                <th>component</th>
+                                <th>rule</th>
+                                <th>action</th>
+                                <th>direction</th>
+                                <th>protocol</th>
+                                <th>intf</th>
+                                <th>zone</th>
+                                <th>country</th>
+                                <th>ip</th>
+                                <th>port</th>
+                                <th>intf</th>
+                                <th>zone</th>
+                                <th>country</th>
+                                <th>ip</th>
+                                <th>port</th>
                             </tr>
                         </thead>
                         <tbody id="filter-table-body">
                             {% for entry in table_data %}
                             <tr>
-                                <td>{{entry}}</td>
+                                <td>{{entry.type}}</td>
+                                <td>{{entry.component}}</td>
+                                <td>{{entry.rule}}</td>
+                                <td>{{entry.action}}</td>
+                                <td>{{entry.direction}}</td>
+                                <td>{{entry.protocol}}</td>
+                                <td>{{entry.in_intf}}</td>
+                                <td>{{entry.src_zone}}</td>
+                                <td>{{entry.src_country}}</td>
+                                <td>{{entry.src_ip}}</td>
+                                <td>{{entry.src_port}}</td>
+                                <td>{{entry.out_intf}}</td>
+                                <td>{{entry.dst_zone}}</td>
+                                <td>{{entry.dst_country}}</td>
+                                <td>{{entry.dst_ip}}</td>
+                                <td>{{entry.dst_port}}</td>
                             </tr>
                             {% else %}
                             <tr>

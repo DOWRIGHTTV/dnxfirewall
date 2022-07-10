@@ -97,10 +97,12 @@
                                     <td><label><input type="checkbox" class="filled-in rule-select"><span></span></label></td>
                                     <td>
                                         <div class="row">
-                                            <a class="btn btn-floating btn-small waves-light" onclick="MoveUp(r{{loop.index}})"><i
-                                                class="material-icons blue-grey">arrow_upward</i></a>
-                                            <a class="btn btn-floating btn-small waves-light" onclick="MoveDown(r{{loop.index}})"><i
-                                                class="material-icons red darken-2">arrow_downward</i></a>
+                                            <a class="btn btn-floating btn-small waves-light" onclick="MoveUp(r{{loop.index}})">
+                                                <i class="material-icons blue-grey">arrow_upward</i>
+                                            </a>
+                                            <a class="btn btn-floating btn-small waves-light" onclick="MoveDown(r{{loop.index}})">
+                                                <i class="material-icons red darken-2">arrow_downward</i>
+                                            </a>
                                         </div>
                                     </td>
                                     <td class="rname">{{rule[1]}}</td>

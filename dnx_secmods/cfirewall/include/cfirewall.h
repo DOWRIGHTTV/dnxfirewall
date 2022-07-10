@@ -99,9 +99,9 @@ struct clist_range {
 struct HWinfo {
     nl_pkt_ts  *timestamp;
     uint8f_t    iif;
-    uintf8_t    in_zone;
+    ZoneObject  in_zone;
     uint8f_t    oif;
-    uintf8_t    out_zone;
+    ZoneObject  out_zone;
     char*       mac_addr;
 };
 
@@ -143,6 +143,7 @@ struct dnx_pktb {
     struct Nat          nat; // not used by FW. copied over from nat rule on match
     uintf16_t           rule_clist; // CONTROL LIST. recent change from fw_table to be module agnostic
     uintf16_t           rule_num;
+    char
     uint32_t            action;
     uint32_t            mark;
     struct LogHandle   *logger;

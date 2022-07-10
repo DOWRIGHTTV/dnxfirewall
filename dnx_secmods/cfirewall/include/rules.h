@@ -39,24 +39,29 @@ enum sec_profiles {
     IPS_IDS
 };
 
+struct ZoneMap {
+    uintf8_t    id;
+    char        name[17];
+} ZoneMap;
+
 // STANDARD ZONE ARRAY - ex. [10, 11]
 struct ZoneArray {
     uintf8_t    len;
-    uintf8_t    objects[FIELD_MAX_ZONES];
-};
+    ZoneObject  objects[FIELD_MAX_ZONES];
+} ZoneArray;
 
 // STANDARD NETWORK OBJECT (HOST, NETWORK, RANGE, GEO)
 struct NetObject {
     uintf8_t    type;
     uintf32_t   netid;
     uintf32_t   netmask;
-};
+} NetObject;
 
 // MAIN NETWORK ARRAY
 struct NetArray {
     uintf8_t    len;
-    struct NetObject   objects[FIELD_MAX_NETWORKS];
-};
+    NetObject   objects[FIELD_MAX_NETWORKS];
+} NetArray;
 
 // ICMP
 struct S1 {
@@ -84,27 +89,28 @@ struct SvcObject {
         struct S2  svc;
         struct S3  svc_list;
     };
-};
+} SvcObject;
 
 // MAIN SERVICE ARRAY
 struct SvcArray {
     uintf8_t    len;
-    struct SvcObject   objects[FIELD_MAX_SERVICES];
+    SvcObject   objects[FIELD_MAX_SERVICES];
 };
 
 // COMPLETE RULE STRUCTS - NO POINTERS
 struct FWrule {
+    char        name[33]; // 32 character max
     bool        enabled;
 
     // SOURCE
-    struct ZoneArray   s_zones;
-    struct NetArray    s_networks;
-    struct SvcArray    s_services;
+    ZoneArray   s_zones;
+    NetArray    s_networks;
+    SvcArray    s_services;
 
     // DESTINATION
-    struct ZoneArray   d_zones;
-    struct NetArray    d_networks;
-    struct SvcArray    d_services;
+    ZoneArray   d_zones;
+    NetArray    d_networks;
+    SvcArray    d_services;
 
     // PROFILES
     uintf8_t    action;
@@ -124,14 +130,14 @@ struct NATrule {
     bool        enabled;
 
     // SOURCE
-    struct ZoneArray   s_zones;
-    struct NetArray    s_networks;
-    struct SvcArray    s_services;
+    ZoneArray   s_zones;
+    NetArray    s_networks;
+    SvcArray    s_services;
 
     // DESTINATION
-    struct ZoneArray   d_zones;
-    struct NetArray    d_networks;
-    struct SvcArray    d_services;
+    ZoneArray   d_zones;
+    NetArray    d_networks;
+    SvcArray    d_services;
 
     // PROFILES
     uintf8_t    action;

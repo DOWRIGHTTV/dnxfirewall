@@ -37,9 +37,9 @@ log_write_firewall(struct dnx_pktb *pkt, uint8_t direction, uint8_t src_country,
     itoip(pkt->iphdr->daddr, daddr);
 
     fprintf(pkt->logger->buf, FW_LOG_FORMAT,
-        (uint8_t) pkt->rule_num, pkt->action, direction, pkt->iphdr->protocol,
-        pkt->hw.iif, pkt->hw.in_zone, src_country, saddr, ntohs(pkt->protohdr->sport),
-        pkt->hw.oif, pkt->hw.out_zone, dst_country, daddr, ntohs(pkt->protohdr->dport)
+        (uint8_t) pkt->rule_name, pkt->action, direction, pkt->iphdr->protocol,
+        pkt->hw.iif, pkt->hw.in_zone.name, src_country, saddr, ntohs(pkt->protohdr->sport),
+        pkt->hw.oif, pkt->hw.out_zone.name, dst_country, daddr, ntohs(pkt->protohdr->dport)
     );
 
     pkt->logger->cnt++;

@@ -10,7 +10,7 @@ from posix.types cimport pid_t
 # https://netfilter.org/projects/libnetfilter_queue/files/libnetfilter_queue-1.0.5.tar.bz2
 
 # DNXFIREWALL TYPEDEFS
-ctypedef array.array    PyArray
+# ctypedef array.array    PyArray
 
 cdef extern from "<errno.h>" nogil:
     int         errno
@@ -189,6 +189,10 @@ cdef extern from "rules.h" nogil:
 
     enum: SECURITY_PROFILE_COUNT # define
 
+    struct ZoneMap:
+        uintf8_t    id
+        char        name[17]
+
     struct ZoneArray:
         uintf8_t    len
         uintf8_t    objects[FIELD_MAX_ZONES]
@@ -228,6 +232,7 @@ cdef extern from "rules.h" nogil:
         SvcObject   objects[FIELD_MAX_SERVICES]
 
     struct FWrule:
+        char        name[33]
         bint        enabled
         ZoneArray   s_zones
         NetArray    s_networks
@@ -246,6 +251,7 @@ cdef extern from "rules.h" nogil:
         uint16_t    dport
 
     struct NATrule:
+        char        name[33]
         bint        enabled
         ZoneArray   s_zones
         NetArray    s_networks

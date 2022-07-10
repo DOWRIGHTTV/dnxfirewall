@@ -29,15 +29,13 @@
 
 //generic function for src/dst zone matching
 inline int
-zone_match(struct ZoneArray *zone_array, uint8_t pkt_zone)
+zone_match(ZoneArray *zone_array, uint8_t pkt_zone)
 {
-    intf8_t    idx;
-
     // any zone def is a guaranteed match
     if (zone_array->objects[0] == ANY_ZONE) { return MATCH; }
 
     // iterating over all zones defined in the rule
-    for (idx = 0; idx < zone_array->len; idx++) {
+    for (intf8_t idx = 0; idx < zone_array->len; idx++) {
 
         if (pkt_zone != zone_array->objects[idx]) {
             continue;
@@ -49,12 +47,11 @@ zone_match(struct ZoneArray *zone_array, uint8_t pkt_zone)
 
 // generic function for source OR destination network obj matching
 inline int
-network_match(struct NetArray *net_array, uint32_t iph_ip, uint8_t country)
+network_match(NetArray *net_array, uint32_t iph_ip, uint8_t country)
 {
-    intf8_t    idx;
-    struct NetObject   net;
+    NetObject   net;
 
-    for (idx = 0; idx < net_array->len; idx++) {
+    for (intf8_t idx = 0; idx < net_array->len; idx++) {
 
         net = net_array->objects[idx];
         switch (net.type) {
@@ -103,15 +100,13 @@ network_match(struct NetArray *net_array, uint32_t iph_ip, uint8_t country)
 
 // generic function that can handle source OR destination proto/port matching
 inline int
-service_match(struct SvcArray *svc_array, uint8_t pkt_protocol, uint16_t pkt_svc)
+service_match(SvcArray *svc_array, uint8_t pkt_protocol, uint16_t pkt_svc)
 {
-    uintf16_t   idx;
-    struct SvcObject   svc_object;
-    struct S2          svc; // service list iter
-
+    SvcObject   svc_object;
+    struct S2   svc; // service list iter
     uint8_t     pkt_type, pkt_code;
 
-    for (idx = 0; idx < svc_array->len; idx++) {
+    for (uintf16_t idx = 0; idx < svc_array->len; idx++) {
 
         svc_object = svc_array->objects[idx];
         switch (svc_object.type) {
@@ -134,7 +129,7 @@ service_match(struct SvcArray *svc_array, uint8_t pkt_protocol, uint16_t pkt_svc
             // TYPE -> LIST (3)
             // --------------------
             case SVC_LIST:
-                for (idx = 0; idx < svc_object.svc_list.len; idx++) {
+                for (uintf16_t idx = 0; idx < svc_object.svc_list.len; idx++) {
                     svc = svc_object.svc_list.services[idx];
                     if (svc.protocol != pkt_protocol && svc.protocol != ANY_PROTOCOL) { continue; }
                     if (pkt_svc >= svc.start_port && pkt_svc <= svc.end_port) { return MATCH; }

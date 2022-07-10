@@ -174,8 +174,8 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             // ZONE MATCHING
             // ------------------------------------------------------------------
             // currently tied to interface and designated LAN, WAN, DMZ
-            if (zone_match(&rule->s_zones, pkt->hw.in_zone) != MATCH) { continue; }
-            if (zone_match(&rule->d_zones, pkt->hw.out_zone) != MATCH) { continue; }
+            if (zone_match(&rule->s_zones, pkt->hw.in_zone.id) != MATCH) { continue; }
+            if (zone_match(&rule->d_zones, pkt->hw.out_zone.id) != MATCH) { continue; }
 
             // ------------------------------------------------------------------
             // GEOLOCATION or IP/NETMASK
@@ -197,7 +197,8 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             // ------------------------------------------------------------------
             // drop will inherently forward to the ip proxy for geo inspection and local dns records.
             pkt->rule_clist = cntrl_list;
-            pkt->rule_num   = rule_idx; // if logging, this needs to be +1
+            pkt->rule_num   = rule_idx+1; // if logging, this needs to be +1
+            pkt->rule_name  = rule->name;
             pkt->action     = rule->action;
             pkt->mark       = tracked_geo << FOUR_BITS | direction << TWO_BITS | rule->action;
 

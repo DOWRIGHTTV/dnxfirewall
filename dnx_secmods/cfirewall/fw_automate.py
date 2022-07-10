@@ -89,7 +89,7 @@ class FirewallAutomate:
         # converting the list to a python array, then sending to Cython to update the C array.
         # this format is required due to transitioning between python and C. python arrays are
         # compatible in C via memory views and Cython can handle the initial list.
-        dnx_zones: array[int] = array('B', loaded_zones['map'])
+        dnx_zones: list[list[int, str]] = loaded_zones['map']
 
         # NOTE: gil must be held on the other side of this call
         error: int = self.cfirewall.update_zones(dnx_zones)

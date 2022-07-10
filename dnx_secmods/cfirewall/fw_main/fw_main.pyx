@@ -1,7 +1,7 @@
 #!/usr/bin/env Cython
 
 #from libc.stdlib cimport calloc, malloc, free
-from libc.string cimport memset
+from libc.string cimport memset, strncpy
 from libc.stdio cimport printf, perror
 
 from libc.stdint cimport uint8_t, uint16_t, uint32_t
@@ -253,7 +253,7 @@ cdef class CFirewall:
 
         return Py_OK
 
-    def update_zones(s, PyArray zone_map):
+    def update_zones(s, list zone_map):
         '''acquires FWrule lock then updates the zone values by interface index.
 
         MAX_SLOTS defined by FW_MAX_ZONE_COUNT.
@@ -261,10 +261,15 @@ cdef class CFirewall:
         '''
         cdef:
             intf16_t    idx
-            uintf8_t    temp_map[FW_MAX_ZONES]
+            ZoneMap     temp_map[FW_MAX_ZONES]
+            char*       zone_name
+
 
         for idx in range(FW_MAX_ZONES):
-            temp_map[idx] = zone_map[idx]
+            temp_map[idx].id = zone_map[idx][0]
+
+            zone_name = zone_map[idx][1].decode('utf-8')
+            strncpy(temp_map[idx].name[0], zone_name, 16)
 
         with nogil:
             firewall_push_zones(temp_map)
@@ -333,13 +338,15 @@ cdef class CFirewall:
 cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
 
     cdef:
-        uintf8_t        i, ix, svc_list_len
-        SvcObject       svc_object
+        uintf8_t    i, ix, svc_list_len
+        SvcObject   svc_object
 
-        FWrule          fw_rule
+        FWrule      fw_rule
+        char*       rule_name = rule['name'].decode('utf-8')
 
     memset(&fw_rule, 0, sizeof(FWrule))
 
+    strncpy(fw_rule.name[0], rule_name, 32)
     fw_rule.enabled = <bint>rule['enabled']
     # ===========
     # SOURCE
@@ -443,13 +450,15 @@ cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
 cdef void set_NATrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
 
     cdef:
-        uintf8_t        i, ix, svc_list_len
-        SvcObject       svc_object
+        uintf8_t    i, ix, svc_list_len
+        SvcObject   svc_object
 
-        NATrule          nat_rule
+        NATrule     nat_rule
+        char*       rule_name = rule['name'].decode('utf-8')
 
     memset(&nat_rule, 0, sizeof(NATrule))
 
+    strncpy(nat_rule.name[0], rule_name, 32)
     nat_rule.enabled = <bint>rule['enabled']
     # ===========
     # SOURCE
