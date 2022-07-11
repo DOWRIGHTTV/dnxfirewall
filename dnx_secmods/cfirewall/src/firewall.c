@@ -143,7 +143,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
     uint8_t     dst_country = geolocation->lookup(geolocation, iph_dst_ip & MSB, iph_dst_ip & LSB);
 
     // general direction of the packet and ip addr normalized to always be the external host/ip
-    uint8_t     direction   = pkt->hw.in_zone != WAN_IN ? OUTBOUND : INBOUND;
+    uint8_t     direction   = pkt->hw.in_zone.id != WAN_IN ? OUTBOUND : INBOUND;
     uint16_t    tracked_geo = direction == INBOUND ? src_country : dst_country;
 
     // loops
@@ -197,7 +197,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             // ------------------------------------------------------------------
             // drop will inherently forward to the ip proxy for geo inspection and local dns records.
             pkt->rule_clist = cntrl_list;
-            pkt->rule       = rule
+            pkt->rule       = rule;
             pkt->action     = rule->action; // copying to allow for outside control.
             pkt->mark       = tracked_geo << FOUR_BITS | direction << TWO_BITS | rule->action;
 
