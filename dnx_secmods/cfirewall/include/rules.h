@@ -47,7 +47,7 @@ struct ZoneMap {
 // STANDARD ZONE ARRAY - ex. [10, 11]
 struct ZoneArray {
     uintf8_t    len;
-    ZoneObject  objects[FIELD_MAX_ZONES];
+    ZoneMap  objects[FIELD_MAX_ZONES];
 } ZoneArray;
 
 // STANDARD NETWORK OBJECT (HOST, NETWORK, RANGE, GEO)
