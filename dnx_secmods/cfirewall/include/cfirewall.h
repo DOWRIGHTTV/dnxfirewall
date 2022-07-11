@@ -143,7 +143,6 @@ struct dnx_pktb {
     struct Nat          nat; // not used by FW. copied over from nat rule on match
     uintf16_t           rule_clist; // CONTROL LIST. recent change from fw_table to be module agnostic
     uintf16_t           rule_num;
-    char
     uint32_t            action;
     uint32_t            mark;
     struct LogHandle   *logger;
