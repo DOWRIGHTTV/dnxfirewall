@@ -113,8 +113,8 @@ nat_recv(nl_msg_hdr *nl_msgh, void *data)
 
     if (NAT_V && VERBOSE) {
         printf("< [--] NAT VERDICT [--] >\n");
-        printf("packet_id->%u, hook->%u, rule->%u, action->%u\n",
-            ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.rule_num, pkt.action);
+        printf("packet_id->%u, hook->%u, rule->%s, action->%u\n",
+            ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.rule->name, pkt.action);
         printf("=====================================================================\n");
     }
 
@@ -160,8 +160,8 @@ nat_inspect(int cntrl_list, struct dnx_pktb *pkt, struct cfdata *cfd)
         // ZONE MATCHING
         // ------------------------------------------------------------------
         // currently tied to interface and designated LAN, WAN, DMZ
-        if (zone_match(&rule->s_zones, pkt->hw.in_zone) != MATCH) { continue; }
-        if (zone_match(&rule->d_zones, pkt->hw.out_zone) != MATCH) { continue; }
+        if (zone_match(&rule->s_zones, pkt->hw.in_zone.id) != MATCH) { continue; }
+        if (zone_match(&rule->d_zones, pkt->hw.out_zone.id) != MATCH) { continue; }
 
         // ------------------------------------------------------------------
         // GEOLOCATION or IP/NETMASK
@@ -182,7 +182,7 @@ nat_inspect(int cntrl_list, struct dnx_pktb *pkt, struct cfdata *cfd)
         // MATCH ACTION | rule details
         // ------------------------------------------------------------------
         pkt->rule_clist = cntrl_list;
-        pkt->rule_num   = rule_idx; // if logging, this needs to be +1 to reflect true rule number
+        pkt->rule       = rule; // if logging, this needs to be +1 to reflect true rule number
         pkt->action     = rule->action;
 
         pkt->nat = rule->nat;
