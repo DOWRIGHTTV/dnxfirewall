@@ -39,26 +39,26 @@ enum sec_profiles {
     IPS_IDS
 };
 
-struct ZoneMap {
+typedef struct ZoneMap {
     uintf8_t    id;
     char        name[17];
 } ZoneMap;
 
 // STANDARD ZONE ARRAY - ex. [10, 11]
-struct ZoneArray {
+typedef struct ZoneArray {
     uintf8_t    len;
     ZoneMap  objects[FIELD_MAX_ZONES];
 } ZoneArray;
 
 // STANDARD NETWORK OBJECT (HOST, NETWORK, RANGE, GEO)
-struct NetObject {
+typedef struct NetObject {
     uintf8_t    type;
     uintf32_t   netid;
     uintf32_t   netmask;
 } NetObject;
 
 // MAIN NETWORK ARRAY
-struct NetArray {
+typedef struct NetArray {
     uintf8_t    len;
     NetObject   objects[FIELD_MAX_NETWORKS];
 } NetArray;
@@ -82,7 +82,7 @@ struct S3 {
     struct S2   services[FIELD_MAX_SVC_LIST_MEMBERS];
 };
 
-struct SvcObject {
+typedef struct SvcObject {
     uintf8_t    type;
     union {
         struct S1  icmp;
@@ -92,10 +92,10 @@ struct SvcObject {
 } SvcObject;
 
 // MAIN SERVICE ARRAY
-struct SvcArray {
+typedef struct SvcArray {
     uintf8_t    len;
     SvcObject   objects[FIELD_MAX_SERVICES];
-};
+} SvcArray;
 
 // COMPLETE RULE STRUCTS - NO POINTERS
 struct FWrule {
