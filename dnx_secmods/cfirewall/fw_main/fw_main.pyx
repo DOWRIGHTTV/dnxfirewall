@@ -269,7 +269,7 @@ cdef class CFirewall:
             strncpy(temp_map[idx].name, bytes(zone_map[idx][1]), 16)
 
         with nogil:
-            firewall_push_zones()
+            firewall_push_zones(temp_map)
 
         return Py_OK
 
@@ -450,11 +450,10 @@ cdef void set_NATrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
         SvcObject   svc_object
 
         NATrule     nat_rule
-        char*       rule_name = rule['name'].decode('utf-8')
 
     memset(&nat_rule, 0, sizeof(NATrule))
 
-    strncpy(nat_rule.name[0], rule_name, 32)
+    strncpy(nat_rule.name[0], bytes(rule['name']), 32)
     nat_rule.enabled = <bint>rule['enabled']
     # ===========
     # SOURCE
