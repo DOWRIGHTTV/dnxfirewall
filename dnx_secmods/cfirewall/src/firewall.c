@@ -197,9 +197,8 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             // ------------------------------------------------------------------
             // drop will inherently forward to the ip proxy for geo inspection and local dns records.
             pkt->rule_clist = cntrl_list;
-            pkt->rule_num   = rule_idx+1; // if logging, this needs to be +1
-            pkt->rule_name  = rule->name;
-            pkt->action     = rule->action;
+            pkt->rule       = rule
+            pkt->action     = rule->action; // copying to allow for outside control.
             pkt->mark       = tracked_geo << FOUR_BITS | direction << TWO_BITS | rule->action;
 
             for (idx = 0; idx < 3; idx++) {

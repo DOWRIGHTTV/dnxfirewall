@@ -20,7 +20,6 @@
 #include "dnx_nfq.h" // packet verdict, mangle, etc.
 #include "traffic_log.h"
 
-
 // bit shifting helpers
 #define TWO_BITS     2
 #define FOUR_BITS    4
@@ -142,7 +141,7 @@ struct dnx_pktb {
     bool                mangled;
     struct Nat          nat; // not used by FW. copied over from nat rule on match
     uintf16_t           rule_clist; // CONTROL LIST. recent change from fw_table to be module agnostic
-    uintf16_t           rule_num;
+    struct FWrule      *rule
     uint32_t            action;
     uint32_t            mark;
     struct LogHandle   *logger;
