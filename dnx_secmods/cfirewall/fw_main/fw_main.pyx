@@ -262,17 +262,14 @@ cdef class CFirewall:
         cdef:
             intf16_t    idx
             ZoneMap     temp_map[FW_MAX_ZONES]
-            char*       zone_name
-
 
         for idx in range(FW_MAX_ZONES):
             temp_map[idx].id = zone_map[idx][0]
 
-            zone_name = zone_map[idx][1].decode('utf-8')
-            strncpy(temp_map[idx].name[0], zone_name, 16)
+            strncpy(temp_map[idx].name, bytes(zone_map[idx][1]), 16)
 
         with nogil:
-            firewall_push_zones(temp_map)
+            firewall_push_zones()
 
         return Py_OK
 
@@ -342,11 +339,10 @@ cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
         SvcObject   svc_object
 
         FWrule      fw_rule
-        char*       rule_name = rule['name'].decode('utf-8')
 
     memset(&fw_rule, 0, sizeof(FWrule))
 
-    strncpy(fw_rule.name[0], rule_name, 32)
+    strncpy(fw_rule.name, bytes(rule['name']), 32)
     fw_rule.enabled = <bint>rule['enabled']
     # ===========
     # SOURCE

@@ -43,7 +43,7 @@ extern void firewall_init(void);
 extern int  firewall_stage_count(uintf8_t cntrl_list, uintf16_t rule_count);
 extern int  firewall_stage_rule(uintf8_t cntrl_list, uintf16_t rule_idx, struct FWrule *rule);
 extern int  firewall_push_rules(uintf8_t cntrl_list);
-extern int  firewall_push_zones(uintf8_t *zone_map);
+extern int  firewall_push_rule(Zone *zone_map);
 
 int  firewall_recv(const struct nlmsghdr *nlh, void *data);
 void firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfdata *cfd);

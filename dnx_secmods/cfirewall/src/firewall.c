@@ -290,7 +290,7 @@ firewall_push_rules(uintf8_t cntrl_list)
 }
 
 int
-firewall_push_zones(uintf8_t *zone_map)
+firewall_push_zones(ZoneMap *zone_map)
 {
     firewall_lock();
 

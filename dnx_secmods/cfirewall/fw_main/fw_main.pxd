@@ -296,7 +296,7 @@ cdef extern from "firewall.h" nogil:
     int  firewall_stage_rule(uintf8_t table, uintf16_t idx, FWrule *rule)
     int  firewall_push_rules(uintf8_t table_idx)
     int  firewall_recv(const nlmsghdr *nlh, void *data)
-    int  firewall_push_zones(uintf8_t *zone_map)
+    int  firewall_push_zones(ZoneMap *zone_map)
 
 cdef extern from "nat.h" nogil:
     void nat_init()
