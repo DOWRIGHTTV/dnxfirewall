@@ -152,8 +152,8 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
     if (FW_V && VERBOSE) {
         printf("< ++ FIREWALL INSPECTION ++ >\n");
         printf("src->[%u]%u(%u):%u, dst->[%u]%u(%u):%u, direction->%u, tracked->%u\n",
-            pkt->hw.in_zone, iph_src_ip, src_country, ntohs(pkt->protohdr->sport),
-            pkt->hw.out_zone, iph_dst_ip, dst_country, ntohs(pkt->protohdr->dport),
+            pkt->hw.in_zone.id, iph_src_ip, src_country, ntohs(pkt->protohdr->sport),
+            pkt->hw.out_zone.id, iph_dst_ip, dst_country, ntohs(pkt->protohdr->dport),
             direction, tracked_geo);
     }
 

@@ -141,8 +141,8 @@ nat_inspect(int cntrl_list, struct dnx_pktb *pkt, struct cfdata *cfd)
     if (NAT_V && VERBOSE) {
         printf("< [**] NAT INSPECTION [**] >\n");
         printf("src->[%u]%u:%u, dst->[%u]%u:%u\n",
-            pkt->hw.in_zone, iph_src_ip, ntohs(pkt->protohdr->sport),
-            pkt->hw.out_zone, iph_dst_ip, ntohs(pkt->protohdr->dport)
+            pkt->hw.in_zone.id, iph_src_ip, ntohs(pkt->protohdr->sport),
+            pkt->hw.out_zone.id, iph_dst_ip, ntohs(pkt->protohdr->dport)
             );
     }
 
