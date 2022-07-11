@@ -342,7 +342,7 @@ cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
 
     memset(&fw_rule, 0, sizeof(FWrule))
 
-    strncpy(fw_rule.name, bytes(rule['name']), 32)
+    strncpy(<char*>&fw_rule.name, bytes(rule['name']), 32)
     fw_rule.enabled = <bint>rule['enabled']
     # ===========
     # SOURCE
@@ -453,7 +453,7 @@ cdef void set_NATrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
 
     memset(&nat_rule, 0, sizeof(NATrule))
 
-    strncpy(nat_rule.name[0], bytes(rule['name']), 32)
+    strncpy(<char*>&nat_rule.name, bytes(rule['name']), 32)
     nat_rule.enabled = <bint>rule['enabled']
     # ===========
     # SOURCE
