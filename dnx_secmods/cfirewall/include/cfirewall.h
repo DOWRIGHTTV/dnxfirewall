@@ -99,7 +99,7 @@ struct clist_range {
 struct HWinfo {
     nl_pkt_ts  *timestamp;
     uint8f_t    iif;
-    ZoneOMap    in_zone;
+    ZoneMap     in_zone;
     uint8f_t    oif;
     ZoneMap     out_zone;
     char*       mac_addr;
