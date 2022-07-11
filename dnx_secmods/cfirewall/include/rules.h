@@ -47,7 +47,7 @@ typedef struct ZoneMap {
 // STANDARD ZONE ARRAY - ex. [10, 11]
 typedef struct ZoneArray {
     uintf8_t    len;
-    ZoneMap  objects[FIELD_MAX_ZONES];
+    uintf8_t    objects[FIELD_MAX_ZONES];
 } ZoneArray;
 
 // STANDARD NETWORK OBJECT (HOST, NETWORK, RANGE, GEO)
@@ -127,6 +127,7 @@ struct Nat {
 };
 
 struct NATrule {
+    char        name[33]; // 32 character max
     bool        enabled;
 
     // SOURCE
