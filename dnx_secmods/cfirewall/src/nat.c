@@ -113,8 +113,8 @@ nat_recv(nl_msg_hdr *nl_msgh, void *data)
 
     if (NAT_V && VERBOSE) {
         printf("< [--] NAT VERDICT [--] >\n");
-        printf("packet_id->%u, hook->%u, rule->%s, action->%u\n",
-            ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.rule->name, pkt.action);
+        printf("packet_id->%u, hook->%u, action->%u\n",
+            ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.action);
         printf("=====================================================================\n");
     }
 
@@ -193,7 +193,6 @@ nat_inspect(int cntrl_list, struct dnx_pktb *pkt, struct cfdata *cfd)
     // DEFAULT ACTION
     // ------------------------------------------------------------------
     pkt->rule_clist = NO_SECTION;
-    pkt->rule_num   = 0;
     pkt->action     = DNX_ACCEPT;
 }
 
