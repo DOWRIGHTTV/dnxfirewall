@@ -71,7 +71,7 @@ extern struct mnl_socket *nl[2];
 
 // stores zone(integer value) at index, which is mapped to if_nametoindex() (value returned from get_in/outdev)
 // memset will be performed in Cython prior to changing the values.
-extern uintf16_t INTF_ZONE_MAP[FW_MAX_ZONES];
+extern ZoneMap INTF_ZONE_MAP[FW_MAX_ZONES];
 
 // dxnfirewall typedef helpers
 typedef const struct nlmsghdr     nl_msg_hdr;

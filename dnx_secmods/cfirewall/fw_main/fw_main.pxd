@@ -278,8 +278,8 @@ cdef extern from "cfirewall.h" nogil:
     bool NAT_V
 
     enum: FW_MAX_ZONES # define
-    uintf16_t INTF_ZONE_MAP[FW_MAX_ZONES]
-    uintf16_t zone_map_swap[FW_MAX_ZONES]
+    ZoneMap INTF_ZONE_MAP[FW_MAX_ZONES]
+#    ZoneMap zone_map_swap[FW_MAX_ZONES]
 
     struct cfdata:
         uintf8_t    idx
