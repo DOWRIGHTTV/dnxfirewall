@@ -182,7 +182,7 @@ nat_inspect(int cntrl_list, struct dnx_pktb *pkt, struct cfdata *cfd)
         // MATCH ACTION | rule details
         // ------------------------------------------------------------------
         pkt->rule_clist = cntrl_list;
-        pkt->rule       = rule; // if logging, this needs to be +1 to reflect true rule number
+        pkt->nat_rule   = rule; // if logging, this needs to be +1 to reflect true rule number
         pkt->action     = rule->action;
 
         pkt->nat = rule->nat;

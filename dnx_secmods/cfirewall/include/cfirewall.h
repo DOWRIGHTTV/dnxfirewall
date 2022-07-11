@@ -141,7 +141,10 @@ struct dnx_pktb {
     bool                mangled;
     struct Nat          nat; // not used by FW. copied over from nat rule on match
     uintf16_t           rule_clist; // CONTROL LIST. recent change from fw_table to be module agnostic
-    struct FWrule      *rule;
+    union {
+        FWrule      fw_rule;
+        NATrule     nat_rule;
+    };
     uint32_t            action;
     uint32_t            mark;
     struct LogHandle   *logger;
