@@ -262,11 +262,13 @@ cdef class CFirewall:
         cdef:
             intf16_t    idx
             ZoneMap     temp_map[FW_MAX_ZONES]
+            char*       zone_name
 
         for idx in range(FW_MAX_ZONES):
             temp_map[idx].id = zone_map[idx][0]
+            zone_name = zone_map[idx][1].encode('utf-8')
 
-            strncpy(temp_map[idx].name, bytes(zone_map[idx][1]), 16)
+            strncpy(temp_map[idx].name, zone_name, 16)
 
         with nogil:
             firewall_push_zones(temp_map)
@@ -339,10 +341,13 @@ cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
         SvcObject   svc_object
 
         FWrule      fw_rule
+        char*       rule_name
 
     memset(&fw_rule, 0, sizeof(FWrule))
 
-    strncpy(<char*>&fw_rule.name, bytes(rule['name']), 32)
+    rule_name = rule['name'].encode('utf-8')
+    strncpy(<char*>&fw_rule.name, rule_name, 32)
+
     fw_rule.enabled = <bint>rule['enabled']
     # ===========
     # SOURCE
@@ -450,10 +455,13 @@ cdef void set_NATrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
         SvcObject   svc_object
 
         NATrule     nat_rule
+        char*       rule_name
 
     memset(&nat_rule, 0, sizeof(NATrule))
 
-    strncpy(<char*>&nat_rule.name, bytes(rule['name']), 32)
+    rule_name = rule['name'].encode('utf-8')
+    strncpy(<char*>&nat_rule.name, rule_name, 32)
+
     nat_rule.enabled = <bint>rule['enabled']
     # ===========
     # SOURCE
