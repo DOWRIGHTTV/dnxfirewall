@@ -268,7 +268,7 @@ cdef class CFirewall:
             temp_map[idx].id = zone_map[idx][0]
             zone_name = zone_map[idx][1]
 
-            strncpy(temp_map[idx].name, bytes(zone_name), 16)
+            strncpy(temp_map[idx].name, zone_name.encode('utf-8'), 16)
 
         with nogil:
             firewall_push_zones(temp_map)
@@ -345,7 +345,7 @@ cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
 
     memset(&fw_rule, 0, sizeof(FWrule))
 
-    strncpy(<char*>&fw_rule.name, bytes(rule_name), 32)
+    strncpy(<char*>&fw_rule.name, rule_name.encode('utf-8'), 32)
     fw_rule.enabled = <bint>rule['enabled']
     # ===========
     # SOURCE
@@ -457,7 +457,7 @@ cdef void set_NATrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
 
     memset(&nat_rule, 0, sizeof(NATrule))
 
-    strncpy(<char*>&nat_rule.name, bytes(rule_name), 32)
+    strncpy(<char*>&nat_rule.name, rule_name.encode('utf-8'), 32)
     nat_rule.enabled = <bint>rule['enabled']
     # ===========
     # SOURCE
