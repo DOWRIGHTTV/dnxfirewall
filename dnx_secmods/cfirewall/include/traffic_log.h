@@ -4,7 +4,7 @@
 #define TRAFFIC_LOG_DIR  "/home/dnx/dnxfirewall/dnx_system/log/traffic/" // 46
 // 20220628 // 8
 //src_mac="%s" dst_mac="%s"
-#define FW_LOG_FORMAT "timestamp=\"%llu.%llu\" log_type=\"firewall\" log_component=\"rule\" "\
+#define FW_LOG_FORMAT "timestamp=\"%lu.%lu\" log_type=\"firewall\" log_component=\"rule\" "\
     "rule=\"%s\" action=\"%s\" conn_direction=\"%s\" protocol=\"%u\" "\
     "in_intf=\"%u\" src_zone=\"%s\" src_country=\"%u\" src_ip=\"%s\" src_port=\"%u\" "\
     "out_intf=\"%u\" dst_zone=\"%s\" dst_country=\"%u\" dst_ip=\"%s\" dst_port=\"%u\"\n"

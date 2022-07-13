@@ -5,7 +5,7 @@
 struct LogHandle Log[2];
 
 char*   action_map[3] = {"deny", "accept", "reject"};
-char*   dir_map[2]    = {"inbound", "outbound"}
+char*   dir_map[2]    = {"inbound", "outbound"};
 
 void
 log_init(struct LogHandle *logger, char *label)
@@ -22,8 +22,8 @@ void
 log_enter(struct timeval *ts, struct LogHandle *logger)
 {
     // open a new file if the day has changed. this might be changes to 8 hour blocks or something in the future
-    if (ts.tv_sec >= logger->rotate) {
-        log_rotate(logger, today);
+    if (ts->tv_sec >= logger->rotate) {
+        log_rotate(logger, ts);
     }
 }
 
