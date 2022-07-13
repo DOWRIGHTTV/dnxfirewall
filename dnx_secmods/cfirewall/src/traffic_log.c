@@ -63,18 +63,14 @@ log_exit(struct LogHandle *logger)
 }
 
 int
-// since the date will be checked before every message (for now), we will require it to be passed in here.
 log_rotate(struct LogHandle *logger, struct timeval *ts)
 {
     struct tm  *time_info;
     char        file_path[128]; // 46 + label_len + 8 + 1
+    char        today[9];
 
     // closing current file object
     fclose(logger->buf);
-
-    // the label is listed twice because the folder is named after the label and filename also contains the label.
-    snprintf(file_path, sizeof(file_path), "%s/%s/%s-%s.log", TRAFFIC_LOG_DIR, logger->label, current_date, logger->label);
-    memcpy(logger->id, current_date, 8);
 
     // setting time info to midnight of current date
     time_info = localtime(&ts->tv_sec);
@@ -82,12 +78,16 @@ log_rotate(struct LogHandle *logger, struct timeval *ts)
     time_info->tm_min = 0;
     time_info->tm_sec = 0;
 
+    // setting id (date) string to be quickly referenced in log_write function
+    strftime(today, 9, "%Y%m%d", time_info);
+
+    // the label is listed twice because the folder is named after the label and filename also contains the label.
+    snprintf(file_path, sizeof(file_path), "%s/%s/%s-%s.log", TRAFFIC_LOG_DIR, logger->label, today, logger->label);
+    memcpy(logger->id, today, 8);
+
     // setting rotate time to next day at 00:00:01.
     // the extra second is just to make sure it is the next day
     logger->rotate = mktime(&time_info) + 86401;
-
-    // setting id (date) string to be quickly referenced in log_write function
-    strftime(buf, 9, "%Y%m%d", time_info);
 
     // creating and storing new file object
     logger->buf = fopen(file_path, "a");
