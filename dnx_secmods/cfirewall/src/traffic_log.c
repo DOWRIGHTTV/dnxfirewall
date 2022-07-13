@@ -4,40 +4,44 @@
 
 struct LogHandle Log[2];
 
+char*   action_map[3] = {"deny", "accept", "reject"};
+char*   dir_map[2]    = {"inbound", "outbound"}
+
 void
 log_init(struct LogHandle *logger, char *label)
 {
-    strcpy(logger->label, label);
-    memset(logger->id, 0, 1);
+    strcpy(logger->label, label); // eg. firewall, nat
+    memset(logger->id, 0, 1); // eg. 20220704
 
-    logger->buf = fopen("/dev/null", "a");
-    logger->cnt = 0;
+    logger->buf    = fopen("/dev/null", "a");
+    logger->rotate = 0;
+    logger->cnt    = 0;
 }
 
 void
-log_enter(struct LogHandle *logger)
+log_enter(struct timeval *ts, struct LogHandle *logger)
 {
-    char today[9];
-
     // open a new file if the day has changed. this might be changes to 8 hour blocks or something in the future
-    check_current_date(today);
-    if (logger->id != today) {
+    if (ts.tv_sec >= logger->rotate) {
         log_rotate(logger, today);
     }
 }
 
+// consider making the countries a tuple as struct
 void
-log_write_firewall(struct dnx_pktb *pkt, uint8_t direction, uint8_t src_country, uint8_t dst_country)
+log_write_firewall(struct timeval *ts, struct dnx_pktb *pkt, uint8_t direction, uint8_t src_country, uint8_t dst_country)
 {
-    char saddr[18];
-    char daddr[18];
+    char    saddr[18];
+    char    daddr[18];
+    char*   dir;
+    char*   action;
 
     // converting ip as integer to a dot notation string eg. 192.168.1.1
     itoip(pkt->iphdr->saddr, saddr);
     itoip(pkt->iphdr->daddr, daddr);
 
-    fprintf(pkt->logger->buf, FW_LOG_FORMAT,
-        pkt->hw.timestamp->sec, pkt->hw.timestamp->usec, pkt->fw_rule->name, pkt->action, direction, pkt->iphdr->protocol,
+    fprintf(pkt->logger->buf, FW_LOG_FORMAT, ts->tv_sec, ts->tv_usec,
+        pkt->fw_rule->name, action_map[pkt->action], dir_map[direction], pkt->iphdr->protocol,
         pkt->hw.iif, pkt->hw.in_zone.name, src_country, saddr, ntohs(pkt->protohdr->sport),
         pkt->hw.oif, pkt->hw.out_zone.name, dst_country, daddr, ntohs(pkt->protohdr->dport)
     );
@@ -60,9 +64,10 @@ log_exit(struct LogHandle *logger)
 
 int
 // since the date will be checked before every message (for now), we will require it to be passed in here.
-log_rotate(struct LogHandle *logger, char* current_date)
+log_rotate(struct LogHandle *logger, struct timeval ts)
 {
-    char file_path[128]; // 46 + label_len + 8 + 1
+    struct tm  *time_info;
+    char        file_path[128]; // 46 + label_len + 8 + 1
 
     // closing current file object
     fclose(logger->buf);
@@ -71,20 +76,21 @@ log_rotate(struct LogHandle *logger, char* current_date)
     snprintf(file_path, sizeof(file_path), "%s/%s/%s-%s.log", TRAFFIC_LOG_DIR, logger->label, current_date, logger->label);
     memcpy(logger->id, current_date, 8);
 
+    // setting time info to midnight of current date
+    time_info = localtime(&epoch);
+    time_info->tm_hour = 0;
+    time_info->tm_min = 0;
+    time_info->tm_sec = 0;
+
+    // setting rotate time to next day at 00:00:01.
+    // the extra second is just to make sure it is the next day
+    logger->rotate = mktime(&time_info) + 86401;
+
+    // setting id (date) string to be quickly referenced in log_write function
+    strftime(buf, 9, "%Y%m%d", time_info);
+
     // creating and storing new file object
     logger->buf = fopen(file_path, "a");
 
     return 0;
-}
-
-void
-check_current_date(char* buf)
-{
-    time_t      epoch;
-    struct tm  *time_info;
-
-    epoch     = time(NULL);
-    time_info = localtime(&epoch);
-
-    strftime(buf, 9, "%Y%m%d", time_info);
 }

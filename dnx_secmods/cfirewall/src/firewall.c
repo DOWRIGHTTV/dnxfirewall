@@ -131,6 +131,8 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
 {
     dnx_parse_pkt_headers(pkt);
 
+    struct timeval *timestamp;
+
     struct FWrule           *rule;
     struct HashTrie_Range   *geolocation = cfd->geolocation;
 
@@ -217,9 +219,11 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
 
     logging:
     if (rule->log) {
+        timestamp = time(NULL);
+
         // log file rotation logic
-        log_enter(pkt->logger);
-        log_write_firewall(pkt, direction, src_country, dst_country);
+        log_enter(timestamp, pkt->logger);
+        log_write_firewall(timestamp, pkt, direction, src_country, dst_country);
         log_exit(pkt->logger);
     }
 
