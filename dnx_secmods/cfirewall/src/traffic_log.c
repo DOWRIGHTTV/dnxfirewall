@@ -33,8 +33,6 @@ log_write_firewall(struct timeval *ts, struct dnx_pktb *pkt, uint8_t direction, 
 {
     char    saddr[18];
     char    daddr[18];
-    char*   dir;
-    char*   action;
 
     // converting ip as integer to a dot notation string eg. 192.168.1.1
     itoip(pkt->iphdr->saddr, saddr);

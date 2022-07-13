@@ -219,7 +219,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
 
     logging:
     if (rule->log) {
-        timestamp = time(NULL);
+        gettimeofday(timestamp, NULL);
 
         // log file rotation logic
         log_enter(timestamp, pkt->logger);
