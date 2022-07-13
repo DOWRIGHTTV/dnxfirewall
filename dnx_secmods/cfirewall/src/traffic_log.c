@@ -64,7 +64,7 @@ log_exit(struct LogHandle *logger)
 
 int
 // since the date will be checked before every message (for now), we will require it to be passed in here.
-log_rotate(struct LogHandle *logger, struct timeval ts)
+log_rotate(struct LogHandle *logger, struct timeval *ts)
 {
     struct tm  *time_info;
     char        file_path[128]; // 46 + label_len + 8 + 1
@@ -77,7 +77,7 @@ log_rotate(struct LogHandle *logger, struct timeval ts)
     memcpy(logger->id, current_date, 8);
 
     // setting time info to midnight of current date
-    time_info = localtime(&epoch);
+    time_info = localtime(&ts->tv_sec);
     time_info->tm_hour = 0;
     time_info->tm_min = 0;
     time_info->tm_sec = 0;

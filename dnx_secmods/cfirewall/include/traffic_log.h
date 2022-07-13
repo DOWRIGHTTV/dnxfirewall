@@ -34,6 +34,6 @@ extern void log_write_firewall(struct timeval *ts, struct dnx_pktb *pkt, uint8_t
 extern void log_write_nat(struct dnx_pktb *pkt);
 extern void log_exit(struct LogHandle *logger);
 
-int  log_rotate(struct LogHandle *logger, char* current_date);
+int  log_rotate(struct LogHandle *logger, struct timeval *ts);
 
 #endif
