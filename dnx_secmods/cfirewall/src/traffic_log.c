@@ -87,7 +87,7 @@ log_rotate(struct LogHandle *logger, struct timeval *ts)
 
     // setting rotate time to next day at 00:00:01.
     // the extra second is just to make sure it is the next day
-    logger->rotate = mktime(&time_info) + 86401;
+    logger->rotate = mktime(time_info) + 86401;
 
     // creating and storing new file object
     logger->buf = fopen(file_path, "a");
