@@ -63,6 +63,6 @@ def get_log_entries(file_path: str) -> list[FIREWALL_LOG]:
     combined_formatted = []
     combinedf_append = combined_formatted.append
     for entry in combined_raw[:100]:
-        combinedf_append(FIREWALL_LOG(*[sub_entry.replace('"', '').split('=')[1] for sub_entry in entry.split()][1]))
+        combinedf_append(FIREWALL_LOG(*[sub_entry.replace('"', '').split('=')[1] for sub_entry in entry.split()]))
 
     return combined_formatted
