@@ -17,6 +17,7 @@ LOG_FILES = [
 ]
 
 class FIREWALL_LOG(_NamedTuple):
+    timestamp: str
     type: str
     component: str
     rule: str
@@ -33,6 +34,7 @@ class FIREWALL_LOG(_NamedTuple):
     dst_country: str
     dst_ip: str
     dst_port: str
+
 
 def load_page(form: Form) -> tuple[list[FIREWALL_LOG], str, None]:
     log_type: str = form.get('table', 'firewall')

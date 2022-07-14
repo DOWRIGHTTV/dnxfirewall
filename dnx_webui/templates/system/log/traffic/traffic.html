@@ -42,6 +42,7 @@
                                 <th colspan="5">Destination</th>
                             </tr>
                             <tr>
+                                <th>timestamp</th>
                                 <th>type</th>
                                 <th>component</th>
                                 <th>rule</th>
@@ -63,22 +64,23 @@
                         <tbody id="filter-table-body">
                             {% for entry in table_data %}
                             <tr>
-                                <td>{{entry.type}}</td>
-                                <td>{{entry.component}}</td>
-                                <td>{{entry.rule}}</td>
-                                <td>{{entry.action}}</td>
-                                <td>{{entry.direction}}</td>
-                                <td>{{entry.protocol}}</td>
-                                <td>{{entry.in_intf}}</td>
-                                <td>{{entry.src_zone}}</td>
-                                <td>{{entry.src_country}}</td>
-                                <td>{{entry.src_ip}}</td>
-                                <td>{{entry.src_port}}</td>
-                                <td>{{entry.out_intf}}</td>
-                                <td>{{entry.dst_zone}}</td>
-                                <td>{{entry.dst_country}}</td>
-                                <td>{{entry.dst_ip}}</td>
-                                <td>{{entry.dst_port}}</td>
+                                <td>{{ entry.timestamp }}</td>
+                                <td>{{ entry.type }}</td>
+                                <td>{{ entry.component }}</td>
+                                <td>{{ entry.rule }}</td>
+                                <td>{{ entry.action }}</td>
+                                <td>{{ entry.direction }}</td>
+                                <td>{{ entry.protocol }}</td>
+                                <td>{{ entry.in_intf }}</td>
+                                <td>{{ entry.src_zone }}</td>
+                                <td>{{ entry.src_country }}</td>
+                                <td>{{ entry.src_ip }}</td>
+                                <td>{{ entry.src_port }}</td>
+                                <td>{{ entry.out_intf }}</td>
+                                <td>{{ entry.dst_zone }}</td>
+                                <td>{{ entry.dst_country }}</td>
+                                <td>{{ entry.dst_ip }}</td>
+                                <td>{{ entry.dst_port }}</td>
                             </tr>
                             {% else %}
                             <tr>
