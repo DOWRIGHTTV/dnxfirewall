@@ -114,7 +114,6 @@ def dnx_run(s: str, /) -> None:
 
 def check_run_as_root() -> None:
     if (os.getuid()):
-
         eprint(
             text.yellow('dnxfirewall auto loader requires') +
             text.red('root') +
@@ -174,24 +173,24 @@ def progress(desc: str) -> None:
 
     bar: str
     if (ratio < .34):
-        bar = text.red('#' * filled_len)
+        bar = text.red('#' * filled_len, style=None)
 
     elif (ratio < .67):
-        bar = text.yellow('#' * filled_len)
+        bar = text.orange('#' * filled_len, style=None)
 
     else:
-        bar = text.green('#' * filled_len)
+        bar = text.green('#' * filled_len, style=None)
 
     bar += text.lightgrey('=' * (bar_len - filled_len))
 
     sys.stdout.write(
-        text.green(f'{completed_count}') +
+        text.yellow(f'{completed_count}') +
         text.lightgrey(f'/{PROGRESS_TOTAL_COUNT} |')
     )
     sys.stdout.write(
-        text.lightgrey(f'| [') +
+        text.lightgrey(f'| [', style=None) +
         f'{bar}' +
-        text.lightgrey(f'] {int(100 * ratio)}% |')
+        text.lightgrey(f'] {int(100 * ratio)}% |', style=None)
     )
     sys.stdout.write(text.yellow(f'| {desc.ljust(36)}\r'))
     sys.stdout.flush()
@@ -308,7 +307,11 @@ def set_dhcp_interfaces(user_intf_config: dict[str, str]) -> None:
 def confirm_interfaces(interface_config: dict[str, str]) -> bool:
     print(text.orange(' '.join([f'{zone}={intf}' for zone, intf in interface_config.items()])))
     while True:
-        answer: str = input(text.yellow('confirm? [') + text.green('Y') + text.yellow('/n]: '))
+        answer: str = input(
+            text.lightgrey('confirm? [', style=None) +
+            text.lightblue('Y') +
+            text.lightgrey('/n]: ', style=None)
+        )
         if (answer.lower() in ['y', '']):
             return True
 
