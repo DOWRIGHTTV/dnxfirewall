@@ -53,7 +53,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
 
     # AUTOLOADER
     'autoloader': {
-        'module': 'dnx_routines.configure.autoloader', 'exclude': exclude('cli', COMMANDS), 'priv': True, 'service': False
+        'module': 'dnx_control.system.autoloader', 'exclude': exclude('cli', COMMANDS), 'priv': True, 'service': False
     },
 
     # DB TABLES
@@ -78,7 +78,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     'logging': {'module': 'dnx_routines.logging.log_main', 'exclude': ['compile'], 'priv': False, 'service': True},
 
     'iptables': {
-        'module': 'dnx_routines.configure.iptables', 'exclude': exclude('cli', COMMANDS), 'priv': True, 'service': False
+        'module': 'dnx_iptools.iptables', 'exclude': exclude('cli', COMMANDS), 'priv': True, 'service': False
     },
 
     # SYSTEM
