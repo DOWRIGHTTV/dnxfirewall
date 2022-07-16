@@ -307,8 +307,10 @@ def run_cli(mod: str, mod_loc: str) -> None:
 
     try:
         dnx_mod = importlib.import_module(mod_loc)
+    except KeyboardInterrupt:
+        sprint(text.lightgrey(f'{mod} ') + text.red('(cli) interrupted!'))
     except Exception as E:
-        sprint(f'{mod} (cli) import failure. => {E}')
+        sprint(text.lightgrey(f'{mod} ') + text.red(f'(cli) run failure. ⟶ {E}'))
         traceback.print_exc()
 
     else:
