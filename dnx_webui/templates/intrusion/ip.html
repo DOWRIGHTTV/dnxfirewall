@@ -48,23 +48,23 @@
                         <input type="hidden" name="change_geo_view">
                         <div class="input-field col s5 m3 offset-m1 {{input_color}}">
                             <label>
+                                Region
                                 <select name="region" onchange="this.form.submit()">
                                     {% for region in ip_settings['regions'] %}
                                     <option value="{{region}}" {% if region == ip_settings['geolocation']['region'] %} selected {% endif %}>{{region.replace('_', ' ').upper()}}</option>
                                     {% endfor %}
                                 </select>
                             </label>
-                            <label for="region">Region</label>
                         </div>
                         <div class="input-field col s5 m3 {{input_color}}">
                             <label>
+                                Direction
                                 <select name="menu_dir" onchange="this.form.submit()">
                                     {% for dir in ['off', 'outbound', 'inbound', 'both', 'all'] %}
                                     ><option value="{{loop.index0}}" {% if ip_settings['geolocation']['menu_dir'] == loop.index0 %} selected {% endif %}>{{dir.upper()}}</option>
                                     {% endfor %}
                                 </select>
                             </label>
-                            <label for="menu_dir">Direction</label>
                         </div>
                     </form>
                 </div>
@@ -90,9 +90,12 @@
                                     {% for dir, image in ip_settings['image_map'].items() %}
                                     {% if dir != direction %}
                                     <li>
-                                        <a><button name="country" value="{{country}}_{{dir}}" onclick="updateCategory(this)"
-                                            static_value="{{direction}}" style="background-color: Transparent; border: none; cursor:pointer;">
-                                        <img src="/static/assets/images/{{image}}" {{dash_icon_std}}></button></a>
+                                        <a>
+                                            <button name="country" value="{{country}}_{{dir}}" onclick="updateCategory(this)"
+                                                static_value="{{direction}}" style="background-color: Transparent; border: none; cursor:pointer;">
+                                                <img src="/static/assets/images/{{image}}" {{dash_icon_std}}>
+                                            </button>
+                                        </a>
                                     </li>
                                     {% endif %}
                                     {% endfor %}
