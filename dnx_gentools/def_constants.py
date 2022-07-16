@@ -65,7 +65,7 @@ HOME_DIR: str = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__)
 # dnx user/group + dev helper to when switching between appliance and dev box
 __usr: str = _run('whoami', shell=True, text=True, capture_output=True).stdout.strip()
 
-USER, GROUP = ('dnx', 'dnx') if __usr != 'free' else ('free', 'free')
+USER, GROUP = ('dnx', 'dnx') if any(['dnx' == u.pw_name for u in _pwd.getpwall()]) else ('free', 'free')
 ROOT: bool = not _os.getuid()
 
 # globally sets which sql to use | sqlite3 = 0, psql = 1
