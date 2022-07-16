@@ -11,9 +11,10 @@ from source.web_validate import convert_int, ValidationError
 from dnx_gentools.system_info import Services
 from dnx_iptools.iptables import IPTablesManager
 
-from dnx_control import system_action
+from dnx_control.control.ctl_action import system_action
 
 DISABLED_MANAGEMENT_SERVICES = ['cli']
+
 
 def load_page(form: dict) -> dict[str, Union[list, dict[dict[str, int]]]]:
     dnx_settings = load_configuration('system')
