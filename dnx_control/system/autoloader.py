@@ -455,8 +455,9 @@ def run():
 if INITIALIZE_MODULE('autoloader'):
     print(BANNER)
 
+    # stripping "-" will allow standard syntax args to be accepted
     try:
-        args = Args(**{a: 1 for a in os.environ['PASSTHROUGH_ARGS'].split(',') if a})
+        args = Args(**{a.lstrip('-'): 1 for a in os.environ['PASSTHROUGH_ARGS'].split(',') if a})
     except Exception as E:
         hardout(f'DNXFIREWALL arg parse failure => {E}')
 
