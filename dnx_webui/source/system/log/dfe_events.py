@@ -71,7 +71,7 @@ def get_table_data(*, action, table, routine, users=None):
         table_data = firewall_db.execute(routine, 100, table=table, action=action)
 
     if (firewall_db.failed):
-        return ['-', '-', '-', '-', '-', '-', '-']
+        return [['-', '-', '-', '-', '-', '-', '-']]
 
     return [format_row(row, users) for row in table_data]
 
