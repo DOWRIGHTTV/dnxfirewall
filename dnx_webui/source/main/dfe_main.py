@@ -78,7 +78,7 @@ import source.system.dfe_users as dfe_users
 import source.system.dfe_backups as dfe_backups
 import source.system.dfe_services as dnx_services
 
-from source.web_typing import Optional
+from source.web_typing import Optional, ConfigChain
 from source.main.dfe_authentication import Authentication, user_restrict
 
 # --------------------------------------------- #
@@ -521,36 +521,10 @@ def system_restart(session_data, path):
 
     return handle_system_action(page_settings)
 
-# @app.route('/device/restart', methods=['GET', 'POST'])
-# @user_restrict('admin')
-# def system_restart(session_data):
-#     page_settings = {
-#         'navi': True, 'idle_timeout': False,
-#         'control': True, 'action': 'restart',
-#         'uri_path': ['device', 'restart']
-#     }
-#
-#     page_settings.update(session_data)
-#
-#     return handle_system_action(page_settings)
-#
-# @app.route('/device/shutdown', methods=['GET', 'POST'])
-# @user_restrict('admin')
-# def system_shutdown(session_data):
-#     page_settings = {
-#         'navi': True, 'idle_timeout': False,
-#         'control': True, 'action': 'shutdown',
-#         'uri_path': ['device', 'shutdown']
-#     }
-#
-#     page_settings.update(session_data)
-#
-#     return handle_system_action(page_settings)
-
 # --------------------------------------------- #
 #  START OF LOGOUT MENU
 # --------------------------------------------- #
-@app.route('/logout', methods=['GET'])
+@app.get('/logout')
 @user_restrict('user', 'admin')
 # removing user from session dict then removing them from locally stored session tracker to allow for cross session
 # awareness of users/accounts logged in.
@@ -560,6 +534,35 @@ def dnx_logout(session_data):
         update_session_tracker(user['name'], action=CFG.DEL)
 
     return redirect(url_for('dnx_login'))
+
+
+
+@app.route('/login', methods=['GET', 'POST'])
+# TODO: consider dropping flask session outright since it is redundant to dnx session tracker.
+#  make sure its not needed for the auto session timeout first though...
+def dnx_login():
+
+    # user has an active authenticated session, so we can drop them back to the dashboard.
+    if (session.get('user', None)):
+        return redirect(url_for('dnx_dashboard'))
+
+    login_error = ''
+    if (request.method == 'POST'):
+        authenticated, username, user_role = Authentication.user_login(request.form, request.remote_addr)
+
+        if (authenticated):
+            update_session_tracker(username, user_role, request.remote_addr)
+
+            session['user'] = username
+
+            return redirect(url_for('dnx_dashboard'))
+
+        login_error = 'Invalid Credentials. Please try again.'
+
+    return render_template(
+        'main/login.html', navi=False, login_btn=False, idle_timeout=False,
+        standard_error=False, login_error=login_error, uri_path=['login']
+    )
 
 # --------------------------------------------- #
 #  BLOCKED PAGE | dns redirect
@@ -607,31 +610,6 @@ def dnx_blocked():
 
 # --------------------------------------------- #
 # --------------------------------------------- #
-
-@app.route('/login', methods=['GET', 'POST'])
-def dnx_login():
-
-    # user has an active authenticated session, so we can drop them back to the dashboard.
-    if (session.get('user', None)):
-        return redirect(url_for('dnx_dashboard'))
-
-    login_error = ''
-    if (request.method == 'POST'):
-        authenticated, username, user_role = Authentication.user_login(request.form, request.remote_addr)
-
-        if (authenticated):
-            update_session_tracker(username, user_role, request.remote_addr)
-
-            session['user'] = username
-
-            return redirect(url_for('dnx_dashboard'))
-
-        login_error = 'Invalid Credentials. Please try again.'
-
-    return render_template(
-        'main/login.html', navi=False, login_btn=False, idle_timeout=False,
-        standard_error=False, login_error=login_error, uri_path=['login']
-    )
 
 @app.post('/refresh/session')
 @user_restrict('user', 'admin')
@@ -781,7 +759,7 @@ def update_session_tracker(username: str, user_role: Optional[str] = None, remot
         raise ValueError('remote_addr must be specified if action is set to add.')
 
     with ConfigurationManager('session_tracker', file_path='dnx_webui/data') as session_tracker:
-        persistent_tracker = session_tracker.load_configuration()
+        persistent_tracker: ConfigChain = session_tracker.load_configuration()
 
         user_path = f'active_users->{username}'
         if (action is CFG.ADD):

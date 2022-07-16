@@ -115,13 +115,14 @@ class Authentication:
             # returning True on password match else False
             return password == hexpass
 
+
 # web ui page authorization handler
-def user_restrict(*authorized_roles):
+def user_restrict(*authorized_roles: str) -> Callable:
     '''user authorization decorator to limit access according to account roles.
 
-    apply this decorator to any flask function associated with page route with the user rules in decorator argument.'''
-
-    def decorator(function_to_wrap):
+    apply this decorator to any flask function associated with page route with the user rules in decorator argument.
+    '''
+    def decorator(function_to_wrap: Callable):
 
         @wraps(function_to_wrap)
         def wrapper(*_):
@@ -134,7 +135,7 @@ def user_restrict(*authorized_roles):
             # they are essentially copies of each other, but dnx is used to track all active sessions.
             # NOTE: dnx session data limits connections to 1 per user.
             # this may change in the future, but some enterprise systems have similar or multiple tab restrictions.
-            session_tracker = load_configuration('session_tracker', filepath='dnx_webui/data')
+            session_tracker: ConfigChain = load_configuration('session_tracker', filepath='dnx_webui/data')
 
             logged_remote_addr = session_tracker.get(f'active_users->{user}->remote_addr')
             if (logged_remote_addr != request.remote_addr):
@@ -148,8 +149,7 @@ def user_restrict(*authorized_roles):
             if (logged_user_role not in authorized_roles):
                 session.pop('user', None)
 
-                return render_template(
-                    'main/not_authorized.html', navi=True, login_btn=True, idle_timeout=False)
+                return render_template('main/not_authorized.html', navi=True, login_btn=True, idle_timeout=False)
 
             # flask page function
             page_action = function_to_wrap(session_tracker.expanded_user_data['active_users'][user])
