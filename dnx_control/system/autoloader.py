@@ -26,6 +26,16 @@ if (TYPE_CHECKING):
 
 def lprint(sep: str = '-'): print(f'{sep}' * 32)
 
+# ===============
+# BANNER
+# ===============
+BANNER = ('\n').join([
+    ' ____  _   ___  __     _   _   _ _____ ___  _     ___    _    ____  _____ ____',
+    '|  _ \| \ | \ \/ /    / \ | | | |_   _/ _ \| |   / _ \  / \  |  _ \| ____|  _ \ ',
+    '| | | |  \| |\  /    / _ \| | | | | || | | | |  | | | |/ _ \ | | | |  _| | |_) |',
+    '| |_| | |\  |/  \   / ___ \ |_| | | || |_| | |__| |_| / ___ \| |_| | |___|  _ <',
+    '|____/|_| \_/_/\_\ /_/   \_\___/  |_| \___/|_____\___/_/   \_\____/|_____|_| \_\ '
+])
 
 @dataclass
 class Args:
@@ -443,6 +453,8 @@ def run():
 
 
 if INITIALIZE_MODULE('autoloader'):
+    print(BANNER)
+
     try:
         args = Args(**{a: 1 for a in os.environ['PASSTHROUGH_ARGS'].split(',') if a})
     except Exception as E:
