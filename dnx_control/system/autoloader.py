@@ -193,7 +193,11 @@ def progress(desc: str) -> None:
         text.lightgrey(f'] {int(100 * ratio)}% |', style=None)
     )
     sys.stdout.write(text.yellow(f'| {desc.ljust(36)}\r'))
+    if (filled_len == bar_len):
+        sys.stdout.write('\n')
+
     sys.stdout.flush()
+
 
 # ============================
 # INTERFACE CONFIGURATION
