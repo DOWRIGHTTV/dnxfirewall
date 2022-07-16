@@ -82,12 +82,10 @@ def eprint(s: str, /) -> None:
     print(text.lightgrey(f'{time.strftime("%H:%M:%S")}| ' + text.red(f'!!! {s}')))
     while True:
         answer: str = input(
-            text.lightgrey('continue? ') +
-            text.yellow('[', style=None) +
-            text.lightgrey('y/', style=None) +
+            text.yellow('continue? ') +
+            text.yellow('[y/', style=None) +
             text.lightred('N') +
-            text.yellow(']', style=None) +
-            text.lightgrey(': ')
+            text.yellow(']: ', style=None)
         )
         if (answer.lower() == 'y'):
             return
@@ -99,7 +97,7 @@ def eprint(s: str, /) -> None:
             print(
                 text.lightgrey(f'{time.strftime("%H:%M:%S")}| ') +
                 text.red('! ') +
-                text.lightgrey('invalid selection.')
+                text.yellow('invalid selection.')
             )
 
 def dnx_run(s: str, /) -> None:
@@ -119,9 +117,9 @@ def check_run_as_root() -> None:
     if (os.getuid()):
 
         eprint(
-            text.lightgrey('dnxfirewall auto loader requires') +
+            text.yellow('dnxfirewall auto loader requires') +
             text.red('root') +
-            text.lightgrey('permissions. ') +
+            text.yellow('permissions. ') +
             text.yellow('exiting...')
         )
 
@@ -132,19 +130,18 @@ def check_dnx_user() -> None:
     if not any([usr for usr in passwd if usr.split(':', 1)[0] == 'dnx']):
 
         eprint(
-            text.lightgrey('dnx user does ') +
+            text.yellow('dnx user does ') +
             text.red('not ') +
-            text.lightgrey('exist. ') +
-            text.yellow('create user and clone repo into dnx home directory before running.')
+            text.yellow('exist. create user and clone repo into dnx home directory before running.')
         )
 
 def check_clone_location() -> None:
     if (not os.path.isdir(HOME_DIR)):
 
         eprint(
-            text.lightgrey('dnxfirewall filesystem ') +
+            text.yellow('dnxfirewall filesystem ') +
             text.red('must ') +
-            text.lightgrey('be located at /home/dnx.')
+            text.yellow('be located at /home/dnx.')
         )
 
 def check_already_ran() -> None:
@@ -198,10 +195,7 @@ def progress(desc: str) -> None:
         f'{bar}' +
         text.lightgrey(f'] {int(100 * ratio)}% |')
     )
-    sys.stdout.write(
-        text.lightgrey(f'| ') +
-        text.yellow(f'{desc.ljust(36)}\r')
-    )
+    sys.stdout.write(text.yellow(f'| {desc.ljust(36)}\r'))
     sys.stdout.flush()
 
 # ============================
@@ -242,10 +236,9 @@ def check_system_interfaces() -> list[str]:
 
     if (len(interfaces_detected) < 3):
         eprint(
-            text.lightgrey('minimum ') +
+            text.yellow('minimum ') +
             text.red('3 ') +
-            text.lightgrey('interfaces are required to deploy dnxfirewall. ') +
-            text.yellow(f'detected: {len(interfaces_detected)}.')
+            text.yellow(f'interfaces are required to deploy dnxfirewall. detected: {len(interfaces_detected)}.')
         )
 
     return interfaces_detected
@@ -254,7 +247,7 @@ def collect_interface_associations(interfaces_detected: list[str]) -> dict[str, 
     print(text.yellow(f'{LINEBREAK}\navailable interfaces\n{LINEBREAK}'))
 
     for i, interface in enumerate(interfaces_detected, 1):
-        print(text.lightgrey(f'{i}. {interface}'))
+        print(text.yellow(f'{i}. {interface}'))
 
     print(LINEBREAK)
 
@@ -272,7 +265,7 @@ def collect_interface_associations(interfaces_detected: list[str]) -> dict[str, 
             if len(set(interface_config.values())) == 3:
                 break
 
-            eprint(text.lightgrey('interface definitions must be unique.'))
+            eprint(text.yellow('interface definitions must be unique.'))
 
     return interface_config
 
@@ -315,7 +308,7 @@ def set_dhcp_interfaces(user_intf_config: dict[str, str]) -> None:
 def confirm_interfaces(interface_config: dict[str, str]) -> bool:
     print(text.orange(' '.join([f'{zone}={intf}' for zone, intf in interface_config.items()])))
     while True:
-        answer: str = input(text.lightgrey('confirm? [') + text.green('Y') + text.lightgrey('/n]: '))
+        answer: str = input(text.yellow('confirm? [') + text.green('Y') + text.yellow('/n]: '))
         if (answer.lower() in ['y', '']):
             return True
 
