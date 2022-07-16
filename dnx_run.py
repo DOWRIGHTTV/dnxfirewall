@@ -14,7 +14,7 @@ import traceback
 from functools import partial
 from subprocess import run, DEVNULL, CalledProcessError
 
-from dnx_shell.utils.shell_colors import text, styles
+from dnx_cli.utils.shell_colors import text, styles
 
 # HOME_DIR = os.environ.get('HOME_DIR', '/home/dnx/dnxfirewall')
 
