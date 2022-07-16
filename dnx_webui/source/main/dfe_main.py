@@ -40,7 +40,7 @@ app.secret_key = app_config['flask->key']
 # =========================================
 # DNX API - LOGGING / FIREWALL / CONFIG
 # =========================================
-from dnx_control import system_action
+from dnx_control.control.ctl_action import system_action
 from dnx_secmods.cfirewall.fw_control import FirewallControl
 
 # setup for system logging
