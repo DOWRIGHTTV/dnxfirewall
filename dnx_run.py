@@ -7,7 +7,6 @@ from typing import Optional, Union, Iterable
 import os
 import sys
 import time
-import json
 import importlib
 import traceback
 
@@ -15,8 +14,6 @@ from functools import partial
 from subprocess import run, DEVNULL, CalledProcessError
 
 from dnx_cli.utils.shell_colors import text, styles
-
-# HOME_DIR = os.environ.get('HOME_DIR', '/home/dnx/dnxfirewall')
 
 # style aliases
 BOLD = styles.bold

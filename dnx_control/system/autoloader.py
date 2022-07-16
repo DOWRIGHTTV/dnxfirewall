@@ -18,6 +18,8 @@ from dnx_gentools.file_operations import ConfigurationManager, load_data, write_
 from dnx_iptools.iptables import IPTablesManager
 from dnx_routines.logging.log_client import Log
 
+from dnx_cli.utils.shell_colors import text, styles
+
 # ===============
 # TYPING IMPORTS
 # ===============
@@ -67,15 +69,19 @@ UTILITY_DIR: str = f'{HOME_DIR}/dnx_profile/utils'
 # ----------------------------
 def sprint(s: str, /) -> None:
     '''setup print. includes timestamp before arg str.
+
+    the passed in message will be automatically colorized.
     '''
-    print(f'{time.strftime("%H:%M:%S")}| {s}')
+    print(text.lightgrey(f'{time.strftime("%H:%M:%S")}| ') + text.yellow(f'{s}'))
 
 def eprint(s: str, /) -> None:
     '''error print. includes timestamp and alert before arg str.
+
+    the passed in message will not be automatically colorized. this should be handled by the caller.
     '''
-    print(f'{time.strftime("%H:%M:%S")}| !!! {s}')
+    print(text.lightgrey(f'{time.strftime("%H:%M:%S")}| ' + text.red(f'!!! {s}')))
     while True:
-        answer: str = input('continue? [y/N]: ')
+        answer: str = input(text.lightgrey('continue? [y/') + text.green('N]: '))
         if (answer.lower() == 'y'):
             return
 
@@ -83,7 +89,11 @@ def eprint(s: str, /) -> None:
             hardout()
 
         else:
-            print('!invalid selection.')
+            print(
+                text.lightgrey(f'{time.strftime("%H:%M:%S")}| ') +
+                text.red('! ') +
+                text.lightgrey('invalid selection.')
+            )
 
 def dnx_run(s: str, /) -> None:
     '''convenience function, subprocess run wrapper adding additional args.
@@ -101,7 +111,12 @@ def dnx_run(s: str, /) -> None:
 def check_run_as_root() -> None:
     if (os.getuid()):
 
-        eprint('must run dnxfirewall auto loader as root. exiting...')
+        eprint(
+            text.lightgrey('dnxfirewall auto loader requires') +
+            text.red('root') +
+            text.lightgrey('permissions. ') +
+            text.yellow('exiting...')
+        )
 
 def check_dnx_user() -> None:
     with open('/etc/passwd', 'r') as passwd_f:
@@ -109,12 +124,20 @@ def check_dnx_user() -> None:
 
     if not any([usr for usr in passwd if usr.split(':', 1)[0] == 'dnx']):
 
-        eprint('dnx user does not exist. create user and clone repo into dnx home directory before running.')
+        eprint(
+            text.lightgrey('dnx user does ') +
+            text.red('not ') +
+            text.lightgrey('exist. create user and clone repo into dnx home directory before running.')
+        )
 
 def check_clone_location() -> None:
     if (not os.path.isdir(HOME_DIR)):
 
-        eprint('dnxfirewall filesystem must be located at /home/dnx.')
+        eprint(
+            text.lightgrey('dnxfirewall filesystem ') +
+            text.red('must ') +
+            text.lightgrey('be located at /home/dnx.')
+        )
 
 def check_already_ran() -> None:
     with ConfigurationManager('system') as dnx:
@@ -122,10 +145,16 @@ def check_already_ran() -> None:
 
     if (not args.update_set and dnx_settings['auto_loader']):
 
-        eprint('dnxfirewall has already been installed. exiting...')
+        eprint(
+            text.red('dnxfirewall has already been installed. ') +
+            text.yellow('exiting...')
+        )
 
     elif (args.update_set and not dnx_settings['auto_loader']):
-        eprint('dnxfirewall has not been installed. see readme for guidance. exiting...')
+        eprint(
+             text.red('dnxfirewall has not been installed. see readme for guidance. ') +
+             text.yellow('exiting...')
+        )
 
 # ----------------------------
 # PROGRESS BAR
@@ -138,13 +167,33 @@ def progress(desc: str) -> None:
 
     completed_count += 1
     ratio: float = completed_count / PROGRESS_TOTAL_COUNT
-
     filled_len: int = int(bar_len * ratio)
-    bar: str = '#' * filled_len + '=' * (bar_len - filled_len)
 
-    sys.stdout.write(f'{completed_count}/{PROGRESS_TOTAL_COUNT} |')
-    sys.stdout.write(f'| [{bar}] {int(100 * ratio)}% |')
-    sys.stdout.write(f'| {desc.ljust(36)}\r')
+    bar: str
+    if (ratio < .34):
+        bar = text.red('#' * filled_len)
+
+    elif (ratio < .67):
+        bar = text.yellow('#' * filled_len)
+
+    else:
+        bar = text.green('#' * filled_len)
+
+    bar += text.lightgrey('=' * (bar_len - filled_len))
+
+    sys.stdout.write(
+        text.green(f'{completed_count}') +
+        text.lightgrey(f'/{PROGRESS_TOTAL_COUNT} |')
+    )
+    sys.stdout.write(
+        text.lightgrey(f'| [') +
+        f'{bar}' +
+        text.lightgrey(f'] {int(100 * ratio)}% |')
+    )
+    sys.stdout.write(
+        text.lightgrey(f'| ') +
+        text.yellow(f'{desc.ljust(36)}\r')
+    )
     sys.stdout.flush()
 
 # ============================
@@ -184,15 +233,20 @@ def check_system_interfaces() -> list[str]:
     interfaces_detected = [intf[1] for intf in socket.if_nameindex() if 'lo' not in intf[1]]
 
     if (len(interfaces_detected) < 3):
-        eprint(f'at least 3 interfaces are required to deploy dnxfirewall. detected: {len(interfaces_detected)}.')
+        eprint(
+            text.lightgrey('minimum ') +
+            text.red('3 ') +
+            text.lightgrey('interfaces are required to deploy dnxfirewall. ') +
+            text.yellow(f'detected: {len(interfaces_detected)}.')
+        )
 
     return interfaces_detected
 
 def collect_interface_associations(interfaces_detected: list[str]) -> dict[str, str]:
-    print(f'{LINEBREAK}\navailable interfaces\n{LINEBREAK}')
+    print(text.yellow(f'{LINEBREAK}\navailable interfaces\n{LINEBREAK}'))
 
     for i, interface in enumerate(interfaces_detected, 1):
-        print(f'{i}. {interface}')
+        print(text.lightgrey(f'{i}. {interface}'))
 
     print(LINEBREAK)
 
@@ -210,7 +264,7 @@ def collect_interface_associations(interfaces_detected: list[str]) -> dict[str, 
             if len(set(interface_config.values())) == 3:
                 break
 
-            eprint('interface definitions must be unique.')
+            eprint(text.lightgrey('interface definitions must be unique.'))
 
     return interface_config
 
@@ -230,7 +284,7 @@ def write_net_config(interface_configs: str) -> None:
 
 # modifying dnx configuration files with the user specified interface names and their corresponding zones
 def set_dnx_interfaces(user_intf_config: dict[str, str]) -> None:
-    sprint('setting dnx interface configurations...')
+    sprint('configuring dnxfirewall network interfaces...')
 
     with ConfigurationManager('system') as dnx:
         dnx_settings: ConfigChain = dnx.load_configuration()
@@ -251,13 +305,13 @@ def set_dhcp_interfaces(user_intf_config: dict[str, str]) -> None:
         dhcp.write_configuration(dhcp_settings.expanded_user_data)
 
 def confirm_interfaces(interface_config: dict[str, str]) -> bool:
-    print(' '.join([f'{zone}={intf}' for zone, intf in interface_config.items()]))
+    print(text.orange(' '.join([f'{zone}={intf}' for zone, intf in interface_config.items()])))
     while True:
-        answer = input('confirm? [Y/n]: ')
+        answer: str = input(text.lightgrey('confirm? [') + text.green('Y') + text.lightgrey('/n]: '))
         if (answer.lower() in ['y', '']):
             return True
 
-        else:
+        elif (answer.lower() == 'n'):
             return False
 
 # ============================
@@ -453,7 +507,7 @@ def run():
 
 
 if INITIALIZE_MODULE('autoloader'):
-    print(BANNER)
+    print(text.lightblue(BANNER))
 
     # stripping "-" will allow standard syntax args to be accepted
     try:
