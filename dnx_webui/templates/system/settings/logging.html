@@ -12,6 +12,7 @@
                         <div class="row">
                             <div class="input-field col s12 {{input_color}}">
                                 <label>
+                                    Length (Days)
                                     <select name="length" onchange="this.form.submit()">
                                         <option value="30" {% if logging_settings['logging']['length'] == 30 %} selected
                                             {% endif %}>30</option>
@@ -23,12 +24,12 @@
                                             {% endif %}>90</option>
                                     </select>
                                 </label>
-                                <label for="length">Length (Days)</label>
                             </div>
                         </div>
                         <div class="row">
                             <div class="input-field col s12 {{input_color}}">
                                 <label>
+                                    Log Level (Severity)
                                     <select name="level" onchange="this.form.submit()">
                                         {% for level in logging_settings['logging']['log_levels'] %}
                                         {% set level_num = loop.index0 %}
@@ -40,7 +41,6 @@
                                         {% endfor %}
                                     </select>
                                 </label>
-                                <label for="log_level">Log Level (Severity)</label>
                             </div>
                         </div>
                     </form>
@@ -58,6 +58,7 @@
                         <div class="row">
                             <div class="input-field col s6 {{input_color}}">
                                 <label>
+                                    Direction
                                     <select name="dir_offset">
                                         {% if logging_settings['offset']['direction']=='+'
                                             or logging_settings['offset']['amount']==0 %}
@@ -69,7 +70,6 @@
                                         {% endif %}
                                     </select>
                                 </label>
-                                <label for="dir_offset">Direction</label>
                             </div>
                             <div class="input-field col s6 {{input_color}}">
                                 <label>

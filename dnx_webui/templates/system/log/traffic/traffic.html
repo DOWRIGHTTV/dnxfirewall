@@ -9,6 +9,7 @@
                     <form method="POST">
                         <div class="input-field col s5 m3 {{input_color}}">
                             <label>
+                                Module
                                 <select name="table" onchange="this.form.submit()">
                                     {%- for table_type in table_types %}
                                     <option value="{{table_type}}"
@@ -19,7 +20,6 @@
                                     {%- endfor %}
                                 </select>
                             </label>
-                            <label for="table">Module</label>
                         </div>
                         <div class="input-field col s2">
                             <button class="btn waves-effect waves-light col">
