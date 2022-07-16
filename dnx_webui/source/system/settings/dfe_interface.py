@@ -11,7 +11,7 @@ from dnx_gentools.def_constants import HOME_DIR, INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA, INTF
 from dnx_gentools.file_operations import load_data, load_configuration, config, ConfigurationManager, json_to_yaml
 
-from dnx_control import system_action
+from dnx_control.control.ctl_action import system_action
 
 from dnx_iptools.cprotocol_tools import itoip, default_route
 
