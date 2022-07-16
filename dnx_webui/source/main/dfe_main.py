@@ -78,7 +78,13 @@ import source.system.dfe_users as dfe_users
 import source.system.dfe_backups as dfe_backups
 import source.system.dfe_services as dnx_services
 
-from source.web_typing import Optional, ConfigChain
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+if (TYPE_CHECKING):
+    from source.web_typing import Optional, ConfigChain
+
 from source.main.dfe_authentication import Authentication, user_restrict
 
 # --------------------------------------------- #
