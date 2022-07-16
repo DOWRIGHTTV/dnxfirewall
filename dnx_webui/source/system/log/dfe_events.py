@@ -64,8 +64,9 @@ def update_page(form: dict) -> tuple[list, str, str]:
         return load_infected_clients(), 'infected_clients', 'all'
 
 def get_table_data(*, action, table, routine, users=None):
-    '''will query the database by using getattr(FirewallDB, f'{method}') on DB Connector context.
-    this will return a max of 100 entries.'''
+    '''query the database by using getattr(FirewallDB, f'{method}') on DB Connector context.
+    this will return a max of 100 entries.
+    '''
     with DBConnector() as firewall_db:
         table_data = firewall_db.execute(routine, 100, table=table, action=action)
 
@@ -77,8 +78,8 @@ def get_table_data(*, action, table, routine, users=None):
 def format_row(row: list, users: dict) -> list[str]:
     '''format database data to be better displayed and managed by frontend.
 
-    will replace all '_' with spaces and append a username if available'''
-
+    will replace all '_' with spaces and append a username if available
+    '''
     *entries, last_seen = row
 
     ls_offset = System.calculate_time_offset(last_seen)

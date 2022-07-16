@@ -10,8 +10,8 @@
                         <div class="input-field col s5 m3 {{input_color}}">
                             <select name="table" id="table" onchange="this.form.submit()">
                                 {% for table_type in table_types %}
-                                <option value="{{table_type}}/last" {% if table_type == table %} selected {% endif %}
-                                    >{{table_type.replace("_", " ").upper()}}</option>
+                                <option value="{{table_type}}/last" {% if table_type == table %} selected {% endif %}>
+                                    {{- table_type.replace("_", " ").upper() -}}</option>
                                 {% endfor %}
                             </select>
                             <label for="table">Module</label>
@@ -36,7 +36,6 @@
                     </form>
                 </div>
                 <div class="row">
-                    {{ table }}
                     <table class="centered highlight" id="filter-table">
                         <!-- DNS Proxy Table -->
                         {% if table == 'dns_proxy' %}
