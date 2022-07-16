@@ -59,7 +59,7 @@ class Args:
 LOG_NAME: str = 'system'
 PROGRESS_TOTAL_COUNT: int = 4
 
-LINEBREAK: str = '-' * 32
+LINEBREAK: str = text.lightblue('-' * 32)
 
 SYSTEM_DIR:  str = f'{HOME_DIR}/dnx_profile'
 UTILITY_DIR: str = f'{HOME_DIR}/dnx_profile/utils'
@@ -129,7 +129,8 @@ def check_dnx_user() -> None:
     if not any([usr for usr in passwd if usr.split(':', 1)[0] == 'dnx']):
 
         eprint(
-            text.yellow('dnx user does ') +
+            text.green('dnx ') +
+            text.yellow('user does ') +
             text.red('not ') +
             text.yellow('exist. create user and clone repo into dnx home directory before running.')
         )
@@ -150,14 +151,12 @@ def check_already_ran() -> None:
     if (not args.update_set and dnx_settings['auto_loader']):
 
         eprint(
-            text.red('dnxfirewall has already been installed. ') +
-            text.yellow('exiting...')
+            text.red('dnxfirewall has already been installed. exiting...')
         )
 
     elif (args.update_set and not dnx_settings['auto_loader']):
         eprint(
-             text.red('dnxfirewall has not been installed. see readme for guidance. ') +
-             text.yellow('exiting...')
+             text.red('dnxfirewall has not been installed. see readme for guidance. exiting...')
         )
 
 # ----------------------------
@@ -243,7 +242,9 @@ def check_system_interfaces() -> list[str]:
     return interfaces_detected
 
 def collect_interface_associations(interfaces_detected: list[str]) -> dict[str, str]:
-    print(text.yellow(f'{LINEBREAK}\navailable interfaces\n{LINEBREAK}'))
+    print(LINEBREAK)
+    print(text.yellow('available interfaces'))
+    print(LINEBREAK)
 
     for i, interface in enumerate(interfaces_detected, 1):
         print(text.yellow(f'{i}. {interface}'))
