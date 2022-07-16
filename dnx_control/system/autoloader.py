@@ -83,10 +83,10 @@ def eprint(s: str, /) -> None:
     while True:
         answer: str = input(
             text.lightgrey('continue? ') +
-            text.yellow('[') +
-            text.lightgrey('y/') +
-            text.orange('N') +
-            text.yellow(']') +
+            text.yellow('[', style=None) +
+            text.lightgrey('y/', style=None) +
+            text.lightred('N') +
+            text.yellow(']', style=None) +
             text.lightgrey(': ')
         )
         if (answer.lower() == 'y'):
@@ -134,7 +134,8 @@ def check_dnx_user() -> None:
         eprint(
             text.lightgrey('dnx user does ') +
             text.red('not ') +
-            text.yellow('exist. create user and clone repo into dnx home directory before running.')
+            text.lightgrey('exist. ') +
+            text.yellow('create user and clone repo into dnx home directory before running.')
         )
 
 def check_clone_location() -> None:

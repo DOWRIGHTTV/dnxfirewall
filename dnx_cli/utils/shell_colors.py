@@ -78,61 +78,61 @@ class text:
     BACKGROUND = bg.black
 
     @staticmethod
-    def black(t: str, style: Optional[styles] = styles.bold):
+    def black(t: str, style: Optional[_Styles] = styles.bold):
         return f'{text.BACKGROUND}{fg.black}{style if style else ""}{t}{styles.reset}'
 
     @staticmethod
-    def red(t: str, style: Optional[styles] = styles.bold):
+    def red(t: str, style: Optional[_Styles] = styles.bold):
         return f'{text.BACKGROUND}{fg.red}{style if style else ""}{t}{styles.reset}'
 
     @staticmethod
-    def green(t: str, style: Optional[styles] = styles.bold):
+    def green(t: str, style: Optional[_Styles] = styles.bold):
         return f'{text.BACKGROUND}{fg.green}{style if style else ""}{t}{styles.reset}'
 
     @staticmethod
-    def orange(t: str, style: Optional[styles] = styles.bold):
+    def orange(t: str, style: Optional[_Styles] = styles.bold):
         return f'{text.BACKGROUND}{fg.orange}{style if style else ""}{t}{styles.reset}'
 
     @staticmethod
-    def blue(t: str, style: Optional[styles] = styles.bold):
+    def blue(t: str, style: Optional[_Styles] = styles.bold):
         return f'{text.BACKGROUND}{fg.blue}{style if style else ""}{t}{styles.reset}'
 
     @staticmethod
-    def purple(t: str, style: Optional[styles] = styles.bold):
+    def purple(t: str, style: Optional[_Styles] = styles.bold):
         return f'{text.BACKGROUND}{fg.purple}{style if style else ""}{t}{styles.reset}'
 
     @staticmethod
-    def cyan(t: str, style: Optional[styles] = styles.bold):
+    def cyan(t: str, style: Optional[_Styles] = styles.bold):
         return f'{text.BACKGROUND}{fg.cyan}{style if style else ""}{t}{styles.reset}'
 
     @staticmethod
-    def lightgrey(t: str, style: Optional[styles] = styles.bold):
+    def lightgrey(t: str, style: Optional[_Styles] = styles.bold):
         return f'{text.BACKGROUND}{fg.lightgrey}{style if style else ""}{t}{styles.reset}'
 
     @staticmethod
-    def darkgrey(t: str, style: Optional[styles] = styles.bold):
+    def darkgrey(t: str, style: Optional[_Styles] = styles.bold):
         return f'{text.BACKGROUND}{fg.darkgrey}{style if style else ""}{t}{styles.reset}'
 
     @staticmethod
-    def lightred(t: str, style: Optional[styles] = styles.bold):
+    def lightred(t: str, style: Optional[_Styles] = styles.bold):
         return f'{text.BACKGROUND}{fg.lightred}{style if style else ""}{t}{styles.reset}'
 
     @staticmethod
-    def lightgreen(t: str, style: Optional[styles] = styles.bold):
+    def lightgreen(t: str, style: Optional[_Styles] = styles.bold):
         return f'{text.BACKGROUND}{fg.lightgreen}{style if style else ""}{t}{styles.reset}'
 
     @staticmethod
-    def yellow(t: str, style: Optional[styles] = styles.bold):
+    def yellow(t: str, style: Optional[_Styles] = styles.bold):
         return f'{text.BACKGROUND}{fg.yellow}{style if style else ""}{t}{styles.reset}'
 
     @staticmethod
-    def lightblue(t: str, style: Optional[styles] = styles.bold):
+    def lightblue(t: str, style: Optional[_Styles] = styles.bold):
         return f'{text.BACKGROUND}{fg.lightblue}{style if style else ""}{t}{styles.reset}'
 
     @staticmethod
-    def pink(t: str, style: Optional[styles] = styles.bold):
+    def pink(t: str, style: Optional[_Styles] = styles.bold):
         return f'{text.BACKGROUND}{fg.pink}{style if style else ""}{t}{styles.reset}'
 
     @staticmethod
-    def lightcyan(t: str, style: Optional[styles] = styles.bold):
+    def lightcyan(t: str, style: Optional[_Styles] = styles.bold):
         return f'{text.BACKGROUND}{fg.lightcyan}{style if style else ""}{t}{styles.reset}'
