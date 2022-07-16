@@ -11,20 +11,13 @@
                             <label>
                                 Log Files
                                 <select name="table" onchange="updateData(this.value)">
-                                    {% for table_type in log_files %}
+                                    {% for table_type in log_files -%}
                                     <option value="{{table_type}}" {% if table_type==table %} selected {% endif %}
                                         >{{table_type.upper()|replace('_', ' ')}} LOG</option>
-                                    {% endfor %}
+                                    {% endfor -%}
                                 </select>
                             </label>
                         </div>
-                        <noscript>
-                            <div class="input-field col s3 m3">
-                                <button class="btn waves-effect waves-light col s4">
-                                    <i class="material-icons">cached</i>
-                                </button>
-                            </div>
-                        </noscript>
                     </form>
                 </div>
                 <div class="row">
