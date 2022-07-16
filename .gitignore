@@ -103,15 +103,17 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-#pycharm
+# pycharm
 .idea
 
-#dnxfirewall
-usr
+# dnxfirewall
+*.sqlite3
+**/usr/*.*
 TEMP_*
+
+# dnx cython C generation
 cprotocol_tools.c
 hash_trie.c
 fw_main.c
 fw_api.c
 dnx_nfqueue.c
-dnxfirewall.sqlite3
