@@ -82,10 +82,9 @@ def eprint(s: str, /) -> None:
     print(text.lightgrey(f'{time.strftime("%H:%M:%S")}| ' + text.red(f'!!! {s}')))
     while True:
         answer: str = input(
-            text.yellow('continue? ') +
-            text.yellow('[y/', style=None) +
+            text.lightgrey('continue? [y/') +
             text.lightred('N') +
-            text.yellow(']: ', style=None)
+            text.lightgrey(']: ', style=None)
         )
         if (answer.lower() == 'y'):
             return
@@ -120,7 +119,7 @@ def check_run_as_root() -> None:
             text.yellow('dnxfirewall auto loader requires') +
             text.red('root') +
             text.yellow('permissions. ') +
-            text.yellow('exiting...')
+            text.red('exiting...')
         )
 
 def check_dnx_user() -> None:
