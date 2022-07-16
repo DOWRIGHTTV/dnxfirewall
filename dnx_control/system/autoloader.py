@@ -82,8 +82,8 @@ def eprint(s: str, /) -> None:
     print(text.lightgrey(f'{time.strftime("%H:%M:%S")}| ' + text.red(f'!!! {s}')))
     while True:
         answer: str = input(
-            text.lightgrey('continue? [y/') +
-            text.lightred('N') +
+            text.lightgrey('continue? [y/', style=None) +
+            text.lightblue('N') +
             text.lightgrey(']: ', style=None)
         )
         if (answer.lower() == 'y'):
