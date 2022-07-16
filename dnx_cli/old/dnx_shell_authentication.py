@@ -9,7 +9,7 @@ HOME_DIR = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split(
 
 class Authentication:
     def __init__(self):
-        with open(f'{HOME_DIR}/dnx_system/data/logins.cfg', 'r') as logins:
+        with open(f'{HOME_DIR}/dnx_profile/data/logins.cfg', 'r') as logins:
             logins = json.load(logins)
 
         self.local_accounts = logins['users']

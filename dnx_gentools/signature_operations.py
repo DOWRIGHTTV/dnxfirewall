@@ -33,7 +33,7 @@ def _combine_domain(log: LogHandler_T) -> list[str]:
     # iterating over the list of categories + DoH to load signature sets.
     for cat in [*default_cats, 'dns-over-https']:
         try:
-            file = open(f'{HOME_DIR}/dnx_system/signatures/domain_lists/{cat}.domains')
+            file = open(f'{HOME_DIR}/dnx_profile/signatures/domain_lists/{cat}.domains')
         except FileNotFoundError:
             log.alert(f'[missing] signature file: {cat} domains.')
         else:
@@ -88,7 +88,7 @@ def _combine_reputation(log: LogHandler_T) -> list[str]:
     ip_rep_signatures: list = []
     for cat in proxy_settings.get_list('reputation'):
         try:
-            with open(f'{HOME_DIR}/dnx_system/signatures/ip_lists/{cat}.ips', 'r') as file:
+            with open(f'{HOME_DIR}/dnx_profile/signatures/ip_lists/{cat}.ips', 'r') as file:
                 ip_rep_signatures.extend([x.lower() for x in file.read().splitlines() if x and '#' not in x])
         except FileNotFoundError:
             log.alert(f'[reputation] signature file missing: {cat}')
@@ -129,7 +129,7 @@ def _combine_geolocation(log: LogHandler_T) -> list[str]:
     # signature folder are good to load in.
     for country in geo_settings:
         try:
-            with open(f'{HOME_DIR}/dnx_system/signatures/geo_lists/{country}.geo', 'r') as file:
+            with open(f'{HOME_DIR}/dnx_profile/signatures/geo_lists/{country}.geo', 'r') as file:
                 ip_geo_signatures.extend([x for x in file.read().splitlines() if x and '#' not in x])
         except FileNotFoundError:
             log.alert(f'[geolocation] signature file missing: {country}')

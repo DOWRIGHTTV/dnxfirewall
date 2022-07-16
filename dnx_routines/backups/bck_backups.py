@@ -40,8 +40,8 @@ class BackupHandler:
 
     @staticmethod
     def _backup_configuration(name):
-        backup_file_path = f'{HOME_DIR}/dnx_system/config_backups/{name}.tar'
-        usr_cfg_file_path = f'{HOME_DIR}/dnx_system/data/usr'
+        backup_file_path = f'{HOME_DIR}/dnx_profile/config_backups/{name}.tar'
+        usr_cfg_file_path = f'{HOME_DIR}/dnx_profile/data/usr'
 
         # check name in use before making backup/file
         if os.path.isfile(backup_file_path):
@@ -61,7 +61,7 @@ class BackupHandler:
 
         # restoring system default consists of deleting all usr config files
         if (name == 'system_default'):
-            usr_cfg_file_path = f'{HOME_DIR}/dnx_system/data/usr'
+            usr_cfg_file_path = f'{HOME_DIR}/dnx_profile/data/usr'
 
             for file in os.listdir(usr_cfg_file_path):
 
@@ -78,8 +78,8 @@ class BackupHandler:
 
         else: #
             try:
-                with tarfile.open(f'{HOME_DIR}/dnx_system/config_backups/{name}.tar', 'r') as tar:
-                    tar.extractall(path=f'{HOME_DIR}/dnx_system/data/usr/')
+                with tarfile.open(f'{HOME_DIR}/dnx_profile/config_backups/{name}.tar', 'r') as tar:
+                    tar.extractall(path=f'{HOME_DIR}/dnx_profile/data/usr/')
             except:
                 raise ValidationError('Error while loading configuration. has the file been removed?')
 
@@ -88,6 +88,6 @@ class BackupHandler:
     @staticmethod
     def _remove_configuration(name):
         try:
-            os.remove(f'{HOME_DIR}/dnx_system/config_backups/{name}.tar')
+            os.remove(f'{HOME_DIR}/dnx_profile/config_backups/{name}.tar')
         except FileNotFoundError:
             raise ValidationError(f'{name} is not a valid file. reload page to see current backups.')

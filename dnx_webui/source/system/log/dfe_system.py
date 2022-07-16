@@ -10,14 +10,14 @@ from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.file_operations import tail_file
 from dnx_gentools.system_info import System
 
-LOG_DIR = f'{HOME_DIR}/dnx_system/log'
+LOG_DIR = f'{HOME_DIR}/dnx_profile/log'
 LOG_FILES = [
     'combined', 'dhcp_server', 'dns_proxy', 'ip_proxy', 'ips', 'syslog', 'system', 'web_app', 'logins'
 ]
 
 # NOTE: this will likely not be needed anymore with the ajax client implementation
 def load_page(uri_query: Args) -> tuple[list[Optional[str]], str, None]:
-    file_path = f'{HOME_DIR}/dnx_system/log'
+    file_path = f'{HOME_DIR}/dnx_profile/log'
 
     return get_log_entries(file_path), 'combined', None
 

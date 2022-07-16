@@ -211,7 +211,7 @@ class Interface:
 
     def ShowIPAddress(self, initial_load=False):
         Inter = Int()
-        with open(f'{HOME_DIR}/dnx_system/data/config.cfg', 'r') as settings:
+        with open(f'{HOME_DIR}/dnx_profile/data/config.cfg', 'r') as settings:
            setting = json.load(settings)
         interface_settings = setting['settings']['interface']
         default_wan_mac = interface_settings['wan']['default_mac']
@@ -237,7 +237,7 @@ class Interface:
             self.Standard.ShowSend('mode', wan_mode)
 
     def ShowMACAddress(self):
-        with open(f'{HOME_DIR}/dnx_system/data/config.cfg', 'r') as settings:
+        with open(f'{HOME_DIR}/dnx_profile/data/config.cfg', 'r') as settings:
            setting = json.load(settings)
 
         interface_settings = setting['settings']['interface']
@@ -254,7 +254,7 @@ class Interface:
         self.Standard.SendNotice(f'interface mode set to {option}. use "show pending" command to check loaded configuration.')
 
     def ChangeStatus(self, comm, arg, option):
-        with open(f'{HOME_DIR}/dnx_system/data/dns_server.cfg', 'r') as settings:
+        with open(f'{HOME_DIR}/dnx_profile/data/dns_server.cfg', 'r') as settings:
             setting = json.load(settings)
 
         if (comm == 'set' and arg == 'tls-retry'):
@@ -266,7 +266,7 @@ class Interface:
             else:
                 tls.update({'retry': retry_amount})
 
-                with open(f'{HOME_DIR}/dnx_system/data/dns_server.cfg', 'w') as settings:
+                with open(f'{HOME_DIR}/dnx_profile/data/dns_server.cfg', 'w') as settings:
                     json.dump(setting, settings, indent=4)
 
                 self.Standard.SendNotice(f'set {arg} to {option} minutes. use "show tls-retry" command to check current status.')
@@ -289,7 +289,7 @@ class Interface:
         if (old_status == new_status):
             self.Standard.SendNotice(f'{arg} already {comm}d.')
         else:
-            with open(f'{HOME_DIR}/dnx_system/data/dns_server.cfg', 'w') as settings:
+            with open(f'{HOME_DIR}/dnx_profile/data/dns_server.cfg', 'w') as settings:
                 json.dump(setting, settings, indent=4)
 
             self.Standard.SendNotice(f'{comm}d {arg}. use "show {arg2}" command to check current status.')

@@ -130,9 +130,9 @@ class ProxyConfiguration(ConfigurationMixinBase):
         # if not modified, the last modified time is returned and not changes are made.
         # NOTE: files need extensions due to changes to file operations. these functions will be reworked soon anyway.
         try:
-            modified_time = os.stat(f'{HOME_DIR}/dnx_system/data/usr/{cfg_file}.cfg').st_mtime
+            modified_time = os.stat(f'{HOME_DIR}/dnx_profile/data/usr/{cfg_file}.cfg').st_mtime
         except FileNotFoundError:
-            modified_time = os.stat(f'{HOME_DIR}/dnx_system/data/{cfg_file}.cfg').st_mtime
+            modified_time = os.stat(f'{HOME_DIR}/dnx_profile/data/{cfg_file}.cfg').st_mtime
 
         if (modified_time == last_modified_time):
             return last_modified_time

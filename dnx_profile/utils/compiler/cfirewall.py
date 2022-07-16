@@ -34,7 +34,7 @@ cmd = {'build_ext': build_ext}
 ext = Extension(
     'fw_main', sources=SOURCES,
     include_dirs=[
-        f'{HOME_DIR}/dnx_system/libraries', f'{HOME_DIR}/dnx_ctools/include',
+        f'{HOME_DIR}/dnx_profile/libraries', f'{HOME_DIR}/dnx_ctools/include',
         f'{HOME_DIR}/dnx_iptools/hash_trie', 'include'
     ],
     library_dirs=['usr/local/lib'],

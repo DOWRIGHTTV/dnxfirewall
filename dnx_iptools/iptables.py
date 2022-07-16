@@ -151,7 +151,7 @@ class IPTablesManager:
             zone: info['ident'] for zone, info in builtins
         }
 
-        self._iptables_lock_file = f'{HOME_DIR}/dnx_system/iptables/iptables.lock'
+        self._iptables_lock_file = f'{HOME_DIR}/dnx_profile/iptables/iptables.lock'
 
     def __enter__(self) -> IPTablesManager:
         self._iptables_lock = open(self._iptables_lock_file, 'r+')
@@ -173,12 +173,12 @@ class IPTablesManager:
 
         this is not needed if using the context manager as the commit happens on exit.
         '''
-        shell(f'sudo iptables-save > {HOME_DIR}/dnx_system/iptables/iptables_backup.cnf', check=True)
+        shell(f'sudo iptables-save > {HOME_DIR}/dnx_profile/iptables/iptables_backup.cnf', check=True)
 
     def restore(self) -> None:
         '''process safe restore of iptable rules from the system file.
         '''
-        shell(f'sudo iptables-restore < {HOME_DIR}/dnx_system/iptables/iptables_backup.cnf', check=True)
+        shell(f'sudo iptables-restore < {HOME_DIR}/dnx_profile/iptables/iptables_backup.cnf', check=True)
 
     # TODO: think about the duplicate rule check before running this as a safety for creating duplicate rules
     def apply_defaults(self, *, suppress: bool = False) -> None:
@@ -301,7 +301,7 @@ class IPTablesManager:
 
     @staticmethod
     def update_dns_over_https() -> None:
-        with open(f'{HOME_DIR}/dnx_system/signatures/ip_lists/dns-over-https.ips') as ips_to_block:
+        with open(f'{HOME_DIR}/dnx_profile/signatures/ip_lists/dns-over-https.ips') as ips_to_block:
             ips_to_block = [sig.strip().split()[0] for sig in ips_to_block.readlines()]
 
         for ip in ips_to_block:

@@ -11,7 +11,7 @@ from source.web_typing import *
 from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.file_operations import tail_file
 
-LOG_DIR = f'{HOME_DIR}/dnx_system/log/traffic'
+LOG_DIR = f'{HOME_DIR}/dnx_profile/log/traffic'
 LOG_FILES = [
     'firewall', 'nat',
 ]

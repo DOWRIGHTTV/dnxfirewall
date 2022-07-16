@@ -99,10 +99,10 @@ class TopLevel:
             return comm
 
     def ShowVersion(self):
-        with open(f'{HOME_DIR}/dnx_system/data/license.cfg', 'r') as configs:
+        with open(f'{HOME_DIR}/dnx_profile/data/license.cfg', 'r') as configs:
             system = json.load(configs)
 
-        with open(f'{HOME_DIR}/dnx_system/data/updates.cfg', 'r') as updates:
+        with open(f'{HOME_DIR}/dnx_profile/data/updates.cfg', 'r') as updates:
             update = json.load(updates)
 
         activated = system['license']['activated']

@@ -25,7 +25,7 @@ NO_ROUTINE = (None, None)
 
 
 class _DBConnector:
-    DB_PATH: ClassVar[str] = f'{HOME_DIR}/dnx_system/data/dnxfirewall.sqlite3'
+    DB_PATH: ClassVar[str] = f'{HOME_DIR}/dnx_profile/data/dnxfirewall.sqlite3'
 
     __slots__ = (
         '_log', '_table', '_data_written',

@@ -14,7 +14,7 @@ from dnx_gentools.standard_tools import looper
 
 dt = {}
 INT_BANDWIDTH_TIMER = 5
-SAVE_FILE = f'{HOME_DIR}/dnx_system/data/interface_speed.cfg'
+SAVE_FILE = f'{HOME_DIR}/dnx_profile/data/interface_speed.cfg'
 
 @looper(NO_DELAY)
 # TODO: figure out how to revert interface values to zero if they are not detected in the output dict.

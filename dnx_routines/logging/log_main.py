@@ -20,7 +20,7 @@ __all__ = (
 )
 
 LOG_NAME = 'system'
-LOG_DIR = f'{HOME_DIR}/dnx_system/log'
+LOG_DIR = f'{HOME_DIR}/dnx_profile/log'
 
 EXCLUDED_MODULES = ['combined', 'syslog']
 
@@ -30,7 +30,7 @@ _format_time = System.format_time
 
 class LogService:
     _log_modules: ClassVar[list[str]] = [
-            x for x in os.listdir(f'{HOME_DIR}/dnx_system/log') if x not in EXCLUDED_MODULES
+            x for x in os.listdir(f'{HOME_DIR}/dnx_profile/log') if x not in EXCLUDED_MODULES
         ]
 
     __slots__ = (

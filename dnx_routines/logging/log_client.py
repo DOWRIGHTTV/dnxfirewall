@@ -47,7 +47,7 @@ def direct_log(m_name: str, log_level: LOG, msg: str, *, cli: bool = False) -> N
     if (log_level <= Log.current_lvl):
         return
 
-    log_path = f'{HOME_DIR}/dnx_system/log/{m_name}/{_system_date(string=True)}-{m_name}.log'
+    log_path = f'{HOME_DIR}/dnx_profile/log/{m_name}/{_system_date(string=True)}-{m_name}.log'
     with open(log_path, 'a+') as log_file:
         log_file.write(f'{fast_time()}|{m_name}|{log_level.name.lower()}|{msg}\n')
 
@@ -109,7 +109,7 @@ def _log_handler() -> LogHandler:
     cli_output: bool = False
     system_action_audit: bool = False
 
-    log_path: str = f'{HOME_DIR}/dnx_system/log/'
+    log_path: str = f'{HOME_DIR}/dnx_profile/log/'
 
     is_initialized: bool = False
     syslog: bool = False

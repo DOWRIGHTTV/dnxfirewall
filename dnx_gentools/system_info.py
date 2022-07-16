@@ -193,7 +193,7 @@ class System:
     @staticmethod
     def backups() -> dict[str, float]:
         backups = {}
-        backup_dir = f'{HOME_DIR}/dnx_system/config_backups'
+        backup_dir = f'{HOME_DIR}/dnx_profile/config_backups'
         files = os.listdir(backup_dir)
         for file in files:
             name = file.replace('.tar', '')

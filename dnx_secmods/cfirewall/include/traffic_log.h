@@ -1,7 +1,7 @@
 #ifndef TRAFFIC_LOG_H
 #define TRAFFIC_LOG_H
 
-#define TRAFFIC_LOG_DIR  "/home/dnx/dnxfirewall/dnx_system/log/traffic/" // 46
+#define TRAFFIC_LOG_DIR  "/home/dnx/dnxfirewall/dnx_profile/log/traffic/" // 46
 // 20220628 // 8
 //src_mac="%s" dst_mac="%s"
 #define FW_LOG_FORMAT "timestamp=\"%lu.%lu\" log_type=\"firewall\" log_component=\"rule\" "\
