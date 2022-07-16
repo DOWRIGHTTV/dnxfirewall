@@ -8,29 +8,25 @@
                 <div class="row">
                     <form method="POST">
                         <div class="input-field col s5 m3 {{input_color}}">
-                            <label>
-                                Module
-                                <select name="table" onchange="this.form.submit()">
-                                    {% for table_type in table_types %}
-                                    <option value="{{table_type}}/last" {% if table_type == table %} selected {% endif %}
-                                        >{{table_type.replace("_", " ").upper()}}</option>
-                                    {% endfor %}
-                                </select>
-                            </label>
+                            <select name="table" id="table" onchange="this.form.submit()">
+                                {% for table_type in table_types %}
+                                <option value="{{table_type}}/last" {% if table_type == table %} selected {% endif %}
+                                    >{{table_type.replace("_", " ").upper()}}</option>
+                                {% endfor %}
+                            </select>
+                            <label for="table">Module</label>
                         </div>
                         <div class="input-field col s5 m3 offset-m1 {{input_color}}">
-                            <label>
-                                Action
-                                <select name="menu" onchange="this.form.submit()">
-                                    {% if table in ['infected_clients', 'intrusion_prevention'] %}
-                                    <option value="all">ALL</option>
-                                    {% else %}
-                                    {% for action in ['all', 'blocked', 'allowed'] %}
-                                    ><option value="{{action}}" {% if action == menu %} selected {% endif %}>{{action.upper()}}</option>
-                                    {% endfor %}
-                                    {% endif %}
-                                </select>
-                            </label>
+                            <select name="menu" id="menu" onchange="this.form.submit()">
+                                {% if table in ['infected_clients', 'intrusion_prevention'] %}
+                                <option value="all">ALL</option>
+                                {% else %}
+                                {% for action in ['all', 'blocked', 'allowed'] %}
+                                ><option value="{{action}}" {% if action == menu %} selected {% endif %}>{{action.upper()}}</option>
+                                {% endfor %}
+                                {% endif %}
+                            </select>
+                            <label for="menu">Action</label>
                         </div>
                         <div class="input-field col s2">
                             <button class="btn waves-effect waves-light col">
@@ -40,6 +36,7 @@
                     </form>
                 </div>
                 <div class="row">
+                    {{ table }}
                     <table class="centered highlight" id="filter-table">
                         <!-- DNS Proxy Table -->
                         {% if table == 'dns_proxy' %}
