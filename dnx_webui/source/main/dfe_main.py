@@ -537,7 +537,7 @@ def system_restart(session_data, path):
 def dnx_logout(session_data):
     user = session.pop('user', None)
     if (user):
-        update_session_tracker(user['name'], action=CFG.DEL)
+        update_session_tracker(user, action=CFG.DEL)
 
     return redirect(url_for('dnx_login'))
 
