@@ -81,7 +81,7 @@ def eprint(s: str, /) -> None:
     '''
     print(text.lightgrey(f'{time.strftime("%H:%M:%S")}| ' + text.red(f'!!! {s}')))
     while True:
-        answer: str = input(text.lightgrey('continue? [y/') + text.green('N]: '))
+        answer: str = input(text.lightgrey('continue? [y/') + text.green('N') + text.lightgrey(']: '))
         if (answer.lower() == 'y'):
             return
 
@@ -127,7 +127,7 @@ def check_dnx_user() -> None:
         eprint(
             text.lightgrey('dnx user does ') +
             text.red('not ') +
-            text.lightgrey('exist. create user and clone repo into dnx home directory before running.')
+            text.yellow('exist. create user and clone repo into dnx home directory before running.')
         )
 
 def check_clone_location() -> None:
