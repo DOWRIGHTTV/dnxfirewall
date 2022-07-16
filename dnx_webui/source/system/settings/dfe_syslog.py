@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-import dnx_routines.configure.configure as configure
+# import dnx_routines.configure.configure as configure
 import source.web_validate as validate
 
 from dnx_gentools.def_constants import INVALID_FORM
