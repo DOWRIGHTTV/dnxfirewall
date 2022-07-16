@@ -308,18 +308,18 @@ def run_cli(mod: str, mod_loc: str) -> None:
     try:
         dnx_mod = importlib.import_module(mod_loc)
     except KeyboardInterrupt:
-        sprint(text.lightgrey(f'{mod} ') + text.red('(cli) interrupted!'))
+        sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red('interrupted!'))
     except Exception as E:
-        sprint(text.lightgrey(f'{mod} ') + text.red(f'(cli) run failure. ⟶ {E}'))
+        sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red(f'run failure. ⟶ {E}'))
         traceback.print_exc()
 
     else:
         try:
             dnx_mod.run()
         except KeyboardInterrupt:
-            sprint(text.lightgrey(f'{mod} ') + text.red('(cli) interrupted!'))
+            sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red('interrupted!'))
         except Exception as E:
-            sprint(text.lightgrey(f'{mod} ') + text.red(f'(cli) run failure. ⟶ {E}'))
+            sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red(f'run failure. ⟶ {E}'))
             traceback.print_exc()
 
     # this will make sure there are no dangling processes or threads on exit.
