@@ -67,11 +67,11 @@ def get_table_data(*, action, table, routine, users=None):
     '''query the database by using getattr(FirewallDB, f'{method}') on DB Connector context.
     this will return a max of 100 entries.
     '''
-    with DBConnector() as firewall_db:
+    with DBConnector(readonly=True, connect=True) as firewall_db:
         table_data = firewall_db.execute(routine, 100, table=table, action=action)
 
     if (firewall_db.failed):
-        return []
+        return ['-', '-', '-', '-', '-', '-', '-']
 
     return [format_row(row, users) for row in table_data]
 
