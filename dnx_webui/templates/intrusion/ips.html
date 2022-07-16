@@ -5,18 +5,15 @@
         <div class="row">
             <div class="col s12">
                 <ul class="tabs">
-                    <li class="{{tab_classes}}"><a {% if tab==1 %} class="active" {% endif %}
-                        href="#ips" onclick="activeTab(1)">IPS/IDS</a></li>
-                    <li class="{{tab_classes}}"><a {% if tab==2 %} class="active" {% endif %}
-                        href="#ips-whitelist" onclick="activeTab(2)">Whitelist</a></li>
-                    <li class="{{tab_classes}}"><a {% if tab==3 %} class="active" {% endif %}
-                        href="#ips-pbl" onclick="activeTab(3)">Block List</a></li>
+                    {{ create_tab(tab, 1, 'ips-ids')|safe }}
+                    {{ create_tab(tab, 2, 'whitelist')|safe }}
+                    {{ create_tab(tab, 3, 'block-list')|safe }}
                 </ul>
             </div>
         </div>
     </div>
 </section>
-<section id="ips" class="section {{main_section_color}}">
+<section id="ips-ids" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
             <div class="col s12 m6">
@@ -28,9 +25,11 @@
                         <div class="row">
                             <div class="input-field col s12 {{input_color}}">
                                 <p class="range-field">
-                                    <input type="range" name="tcp_limit" min="5" max="100"
-                                        value="{{ips_settings['ddos']['tcp']}}">
-                                    <label for="tcp_limit">TCP Source Limit (conns/sec) | Current:
+                                    <label>
+                                        TCP Source Limit (conns/sec) | Current:
+                                        <input type="range" name="tcp_limit" min="5" max="100"
+                                            value="{{ips_settings['ddos']['tcp']}}">
+                                    </label>
                                         {{ips_settings['ddos']['tcp']}}
                                     </label>
                                 </p>
@@ -39,9 +38,11 @@
                         <div class="row">
                             <div class="input-field col s12 {{input_color}}">
                                 <p class="range-field">
-                                    <input type="range" name="udp_limit" min="5" max="100"
-                                        value="{{ips_settings['ddos']['udp']}}">
-                                    <label for="udp_limit">UDP Source Limit (unique/sec) | Current:
+                                    <label>
+                                        UDP Source Limit (unique/sec) | Current:
+                                        <input type="range" name="udp_limit" min="5" max="100"
+                                            value="{{ips_settings['ddos']['udp']}}">
+                                    </label>
                                         {{ips_settings['ddos']['udp']}}
                                     </label>
                                 </p>
@@ -50,9 +51,11 @@
                         <div class="row">
                             <div class="input-field col s12 {{input_color}}">
                                 <p class="range-field">
-                                    <input type="range" name="icmp_limit" min="5" max="100"
-                                        value="{{ips_settings['ddos']['icmp']}}">
-                                    <label for="icmp_limit">ICMP Source Limit (packets/sec) | Current:
+                                    <label>
+                                        ICMP Source Limit (packets/sec) | Current:
+                                        <input type="range" name="icmp_limit" min="5" max="100"
+                                            value="{{ips_settings['ddos']['icmp']}}">
+                                    </label>
                                         {{ips_settings['ddos']['icmp']}}
                                     </label>
                                 </p>
@@ -73,16 +76,18 @@
                         <form method="POST">
                             <input type="hidden" name="tab" value="1">
                             <div class="input-field col s6 left {{input_color}}">
-                                <select name="passive_block_length" onchange="this.form.submit()">
-                                    <option value="0" {% if ips_settings['length']==0 %} selected {% endif %}
-                                        >disabled</option>
-                                    <option value="24" {% if ips_settings['length']==24 %} selected {% endif %}
-                                        >24 hours</option>
-                                    <option value="48" {% if ips_settings['length']==48 %} selected {% endif %}
-                                        >48 hours</option>
-                                    <option value="72" {% if ips_settings['length']==72 %} selected {% endif %}
-                                        >72 hours</option>
-                                </select>
+                                <label>
+                                    <select name="passive_block_length" onchange="this.form.submit()">
+                                        <option value="0" {% if ips_settings['length']==0 %} selected {% endif %}
+                                            >disabled</option>
+                                        <option value="24" {% if ips_settings['length']==24 %} selected {% endif %}
+                                            >24 hours</option>
+                                        <option value="48" {% if ips_settings['length']==48 %} selected {% endif %}
+                                            >48 hours</option>
+                                        <option value="72" {% if ips_settings['length']==72 %} selected {% endif %}
+                                            >72 hours</option>
+                                    </select>
+                                </label>
                                 <label>Passive Block</label>
                             </div>
                         </form>
@@ -100,7 +105,7 @@
         </div>
     </div>
 </section>
-<section id="ips-whitelist" class="section {{main_section_color}}">
+<section id="whitelist" class="section {{main_section_color}}">
     <div class="container">
         <div class="row row-flex">
             <div class="col s8">
@@ -110,12 +115,16 @@
                         <input type="hidden" name="tab" value="2">
                         <div class="row">
                             <div class="input-field col s4 {{input_color}}">
-                                <input type="text" name="ips_wl_ip" class="validate" placeholder="127.0.0.1" required>
-                                <label for="">IP Address</label>
+                                <label>
+                                    IP Address
+                                    <input type="text" name="ips_wl_ip" class="validate" placeholder="127.0.0.1" required>
+                                </label>
                             </div>
                             <div class="input-field col s4 {{input_color}}">
-                                <input type="text" name="ips_wl_name" class="validate" placeholder=dns required>
-                                <label for="">Name</label>
+                                <label>
+                                    Name
+                                    <input type="text" name="ips_wl_name" class="validate" placeholder=dns required>
+                                </label>
                             </div>
                             <div class="input-field col s4">
                                 <input type="hidden" name="ips_wl_add" value="ips_whitelist">
@@ -180,7 +189,7 @@
         </div>
     </div>
 </section>
-<section id="ips-pbl" class="section {{main_section_color}}">
+<section id="block-list" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
             <div class="col s12">

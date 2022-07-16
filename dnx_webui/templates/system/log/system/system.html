@@ -27,7 +27,10 @@
                 </div>
                 <div class="row">
                     <div class="input-field col s12 m6 l5 xl3 {{input_color}}">
-                        <input type="text" id="filter-input" onkeyup="filterTable(1, 4)" placeholder="Search string">
+                        <label>
+                            Search
+                            <input type="text" id="filter-input" onkeyup="filterTable(1, 4)" placeholder="error">
+                        </label>
                     </div>
                     <table class="centered highlight" id="filter-table">
                         <thead>

@@ -9,12 +9,16 @@
                     <form action="/system/users" method="POST">
                         <div class="row">
                             <div class="input-field col s4 {{input_color}}">
-                                <input type="text" name="user_acct" class="validate" placeholder=admin required>
-                                <label for="">Username</label>
+                                <label>
+                                    Username
+                                    <input type="text" name="user_acct" class="validate" placeholder=admin required>
+                                </label>
                             </div>
                             <div class="input-field col s4 {{input_color}}">
-                                <input type="password" name="user_password" class="validate" placeholder="password" required>
-                                <label for="">Password (minimum 8 chars)</label>
+                                <label>
+                                    Password (minimum 8 chars)
+                                    <input type="password" name="user_password" class="validate" placeholder="password" required>
+                                </label>
                             </div>
                             <div class="input-field col s4 {{input_color}}">
                                 <select name="user_role" id="">

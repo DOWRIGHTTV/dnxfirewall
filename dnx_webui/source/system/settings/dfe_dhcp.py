@@ -15,12 +15,12 @@ from dnx_gentools.file_operations import ConfigurationManager, config, load_conf
 from dnx_iptools.cprotocol_tools import itoip
 from dnx_iptools.protocol_tools import mac_add_sep as mac_str
 
-from dnx_routines.configure.system_info import System
+from dnx_gentools.system_info import System
 
 
 def load_page(_: Form) -> dict[str, Any]:
     dhcp_server: ConfigChain = load_configuration('dhcp_server')
-    dhcp_leases: dict[str, tuple] = load_data('dhcp_server.lease', filepath='dnx_system/data/usr/')
+    dhcp_leases: dict[str, tuple] = load_data('dhcp_server.lease', filepath='dnx_profile/data/usr/')
 
     leases = []
     for ip, _record in dhcp_leases.items():

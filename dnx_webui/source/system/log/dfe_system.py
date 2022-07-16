@@ -8,7 +8,7 @@ from source.web_typing import *
 
 from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.file_operations import tail_file
-from dnx_routines.configure.system_info import System
+from dnx_gentools.system_info import System
 
 LOG_DIR = f'{HOME_DIR}/dnx_system/log'
 LOG_FILES = [

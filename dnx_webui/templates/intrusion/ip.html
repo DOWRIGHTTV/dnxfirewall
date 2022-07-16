@@ -47,19 +47,23 @@
                         <input type="hidden" name="tab" value="2">
                         <input type="hidden" name="change_geo_view">
                         <div class="input-field col s5 m3 offset-m1 {{input_color}}">
-                            <select name="region" onchange="this.form.submit()">
-                                {% for region in ip_settings['regions'] %}
-                                <option value="{{region}}" {% if region == ip_settings['geolocation']['region'] %} selected {% endif %}>{{region.replace('_', ' ').upper()}}</option>
-                                {% endfor %}
-                            </select>
+                            <label>
+                                <select name="region" onchange="this.form.submit()">
+                                    {% for region in ip_settings['regions'] %}
+                                    <option value="{{region}}" {% if region == ip_settings['geolocation']['region'] %} selected {% endif %}>{{region.replace('_', ' ').upper()}}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
                             <label for="region">Region</label>
                         </div>
                         <div class="input-field col s5 m3 {{input_color}}">
-                            <select name="menu_dir" onchange="this.form.submit()">
-                                {% for dir in ['off', 'outbound', 'inbound', 'both', 'all'] %}
-                                ><option value="{{loop.index0}}" {% if ip_settings['geolocation']['menu_dir'] == loop.index0 %} selected {% endif %}>{{dir.upper()}}</option>
-                                {% endfor %}
-                            </select>
+                            <label>
+                                <select name="menu_dir" onchange="this.form.submit()">
+                                    {% for dir in ['off', 'outbound', 'inbound', 'both', 'all'] %}
+                                    ><option value="{{loop.index0}}" {% if ip_settings['geolocation']['menu_dir'] == loop.index0 %} selected {% endif %}>{{dir.upper()}}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
                             <label for="menu_dir">Direction</label>
                         </div>
                     </form>
@@ -120,17 +124,24 @@
                             <h6>Start Time</h6>
                             <div class="row">
                                 <div class="input-field col s12 m3 {{input_color}}">
-                                    <input type="number" name="hour" min="0" max="12" value="{{ip_settings['tr_settings']['hour']}}">
-                                    <label for="hour">Hour</label>
+                                    <label>
+                                        Hour
+                                        <input type="number" name="hour" min="0" max="12" value="{{ip_settings['tr_settings']['hour']}}">
+                                    </label>
                                 </div>
                                 <div class="input-field col s12 m3 {{input_color}}">
-                                    <input type="number" name="minutes" min="0" max="45" step="15" value="{{ip_settings['tr_settings']['minutes']}}">
-                                    <label for="minute">Minute</label>
+                                    <label>
+                                        Minute
+                                        <input type="number" name="minutes" min="0" max="45" step="15" value="{{ip_settings['tr_settings']['minutes']}}">
+                                    </label>
                                 </div>
                                 <div class="input-field col s12 m2 {{input_color}}">
-                                    <select name="time_suffix" id="">
-                                        <option value="AM" {% if ip_settings['tr_settings']['suffix']=='AM' %} selected
-                                            {% endif %}>AM</option>
+                                    <label>
+                                        <select name="time_suffix" id="">
+                                            <option value="AM" {% if ip_settings['tr_settings']['suffix']=='AM' %} selected
+                                                {% endif %}>AM</option>
+                                        </select>
+                                    </label>
                                         <option value="PM" {% if ip_settings['tr_settings']['suffix']=='PM' %} selected
                                             {% endif %}>PM</option>
                                     </select>
@@ -140,12 +151,16 @@
                             <h6>Duration</h6>
                             <div class="row">
                                 <div class="input-field col s12 m3 {{input_color}}">
-                                    <input type="number" name="tlen_hour" min="0" max="11" value="{{ip_settings['tr_settings']['length_hour']}}">
-                                    <label for="tlen_hour">Hours</label>
+                                    <label>
+                                        Hours
+                                        <input type="number" name="tlen_hour" min="0" max="11" value="{{ip_settings['tr_settings']['length_hour']}}">
+                                    </label>
                                 </div>
                                 <div class="input-field col s12 m3 {{input_color}}">
-                                    <input type="number" name="tlen_minutes" min="0" max="45" step="15" value="{{ip_settings['tr_settings']['length_minutes']}}">
-                                    <label for="tlen_minutes">Minutes</label>
+                                    <label>
+                                        Minutes
+                                        <input type="number" name="tlen_minutes" min="0" max="45" step="15" value="{{ip_settings['tr_settings']['length_minutes']}}">
+                                    </label>
                                 </div>
                                 <div class="input-field col s12 m6 center">
                                     <br>

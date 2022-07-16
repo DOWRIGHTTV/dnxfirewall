@@ -1065,7 +1065,7 @@ var Component = function () {
 ; // Required for Meteor package, the use of window prevents export by Meteor
 (function (window) {
   if (window.Package) {
-    M = {};
+    var M = {};
   } else {
     window.M = {};
   }

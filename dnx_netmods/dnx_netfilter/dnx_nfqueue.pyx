@@ -13,7 +13,7 @@ DEF NFQ_BUF_SIZE = 4096
 DEF MAX_COPY_SIZE = 4016 # 4096(buf) - 80
 DEF DEFAULT_MAX_QUEUELEN = 8192
 
-# Socket queue should hold max number of packets of copy size bytes
+# Socket queue should hold the max number of packets of COPY_SIZE.
 # formula: DEF_MAX_QUEUELEN * (MaxCopySize+SockOverhead) / 2
 DEF SOCK_RCV_SIZE = 1024 * 4796 / 2
 

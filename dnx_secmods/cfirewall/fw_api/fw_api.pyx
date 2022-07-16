@@ -123,7 +123,7 @@ cdef size_t api_recv(int fd, dnxfwmsg *dfm):
 
         return msg.msg_iov.iov_len - 2
 
-        # shouldnt need additional headers as long as CREDS are in first header.
+        # shouldn't need additional headers as long as CREDS are in first header.
         # while True:
         #     cmsg = CMSG_NXTHDR(&msgh, cmsg)
         #     if (cmsg == NULL):

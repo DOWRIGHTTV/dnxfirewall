@@ -82,9 +82,9 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     },
 
     # SYSTEM
-    'startup': {'module': 'dnx_system.startup_proc', 'exclude': ['compile'], 'priv': True, 'service': True},
-    'interface': {'module': 'dnx_system.interface_services', 'exclude': ['compile'], 'priv': False, 'service': True},
-    'syscontrol': {'module': 'dnx_system', 'exclude': ['compile'], 'priv': True, 'service': True},
+    'startup': {'module': 'dnx_profile.startup_proc', 'exclude': ['compile'], 'priv': True, 'service': True},
+    'interface': {'module': 'dnx_profile.interface_services', 'exclude': ['compile'], 'priv': False, 'service': True},
+    'syscontrol': {'module': 'dnx_profile', 'exclude': ['compile'], 'priv': True, 'service': True},
 
     # COMPILE ONLY
     'dnx-nfqueue': {'module': '1', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
@@ -93,7 +93,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
 
     # TESTS
     'trie-test': {
-        'module': 'dnx_system.utils.unit_tests.trie_test', 'exclude': exclude('cli', COMMANDS), 'priv': False, 'service': False
+        'module': 'dnx_profile.utils.unit_tests.trie_test', 'exclude': exclude('cli', COMMANDS), 'priv': False, 'service': False
     }
 }
 SERVICE_MODULES = [f'dnx-{mod}' for mod, modset in MODULE_MAPPING.items() if modset['service']]
@@ -342,7 +342,7 @@ if (__name__ == '__main__'):
     elif(command == 'compile'):
         from dnx_gentools.def_constants import HOME_DIR
 
-        file_path = f'{HOME_DIR}/dnx_system/utils/compiler/{mod_name.replace("-", "_")}.py'
+        file_path = f'{HOME_DIR}/dnx_profile/utils/compiler/{mod_name.replace("-", "_")}.py'
         try:
             dnx_run_v(f'sudo HOME_DIR={HOME_DIR} python3 {file_path} build_ext --inplace', shell=True)
         except CalledProcessError as cpe:

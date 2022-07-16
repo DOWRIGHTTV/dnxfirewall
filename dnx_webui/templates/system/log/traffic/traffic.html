@@ -8,15 +8,17 @@
                 <div class="row">
                     <form method="POST">
                         <div class="input-field col s5 m3 {{input_color}}">
-                            <select name="table" onchange="this.form.submit()">
-                                {%- for table_type in table_types %}
-                                <option value="{{table_type}}"
-                                        {%- if table_type == table %} selected {% endif %}
-                                        {%- if table_type.startswith('.') %} disabled {% endif %}>
-                                    {{- table_type.upper() }}
-                                </option>
-                                {%- endfor %}
-                            </select>
+                            <label>
+                                <select name="table" onchange="this.form.submit()">
+                                    {%- for table_type in table_types %}
+                                    <option value="{{table_type}}"
+                                            {%- if table_type == table %} selected {% endif %}
+                                            {%- if table_type.startswith('.') %} disabled {% endif %}>
+                                        {{- table_type.upper() }}
+                                    </option>
+                                    {%- endfor %}
+                                </select>
+                            </label>
                             <label for="table">Module</label>
                         </div>
                         <div class="input-field col s2">
@@ -28,7 +30,10 @@
                 </div>
                 <div class="row">
                     <div class="input-field col s12 m6 l5 xl3 {{input_color}}">
-                        <input type="text" id="filter-input" onkeyup="filterTable(1, 17)" placeholder="Search string">
+                        <label>
+                            Search
+                            <input type="text" id="filter-input" onkeyup="filterTable(1, 17)" placeholder="lan">
+                        </label>
                     </div>
                     <table class="centered highlight" id="filter-table">
                         <colgroup>

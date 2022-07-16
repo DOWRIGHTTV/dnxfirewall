@@ -172,7 +172,7 @@ def _inspect(packet: IPPPacket) -> IPP_INSPECTION_RESULTS:
     action = CONN.ACCEPT
     reputation = REP.DNL
 
-    # geolocation lookup is done by cfirewall so we only need to define enum
+    # geolocation lookup is done by cfirewall, so we only need to define enum
     country = GEO(packet.tracked_geo)
 
     # if category match and country is configured to block in direction of conn/packet

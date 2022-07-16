@@ -40,7 +40,7 @@ app.secret_key = app_config['flask->key']
 # =========================================
 # DNX API - LOGGING / FIREWALL / CONFIG
 # =========================================
-from dnx_system.sys_action import system_action
+from dnx_control import system_action
 from dnx_secmods.cfirewall.fw_control import FirewallControl
 
 # setup for system logging
@@ -571,7 +571,7 @@ def dnx_blocked():
         'uri_path': ['blocked']
     }
 
-    # checking for domain sent by nginx that is being redirected to rules. if domain doesnt exist (user navigated to
+    # checking for domain sent by nginx that is being redirected to rule. if domain doesn't exist (user navigated to
     # this page manually) then a not authorized page will be served. If the domain is not a valid domain (regex) the
     # request will be redirected back to blocked page without a domain.
     # NOTE: this is a crazy bit of code that should be tested much more as it is possible to do a sql injection here

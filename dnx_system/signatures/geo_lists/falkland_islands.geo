@@ -1,9 +1,0 @@
-80.73.208.0/20 falkland_islands
-91.232.129.0/24 falkland_islands
-91.232.198.0/24 falkland_islands
-91.232.208.0/24 falkland_islands
-91.232.235.0/24 falkland_islands
-104.28.12.97/32 falkland_islands
-104.28.12.98/32 falkland_islands
-185.87.144.0/22 falkland_islands
-185.244.12.0/22 falkland_islands

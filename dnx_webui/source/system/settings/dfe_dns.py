@@ -9,7 +9,7 @@ from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import ConfigurationManager, config, load_configuration
 
-from dnx_routines.configure.system_info import System
+from dnx_gentools.system_info import System
 
 
 def load_page(_: Form) -> dict[str, Any]:

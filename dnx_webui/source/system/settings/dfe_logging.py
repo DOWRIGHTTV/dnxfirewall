@@ -7,7 +7,7 @@ from dnx_gentools.def_enums import DATA, LOG
 from dnx_gentools.def_exceptions import ValidationError
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
-from dnx_routines.configure.system_info import System
+from dnx_gentools.system_info import System
 from source.web_validate import get_convert_int
 
 def load_page(form):

@@ -22,7 +22,7 @@ from dnx_gentools.def_constants import *
 from dnx_gentools.standard_tools import looper, classproperty, Initialize
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, load_data, cfg_read_poller
 
-from dnx_routines.configure.system_info import System
+from dnx_gentools.system_info import System
 
 from ip_proxy_log import Log
 

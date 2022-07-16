@@ -21,7 +21,7 @@ from dnx_gentools.file_operations import config, acquire_lock, release_lock
 from dnx_iptools.cprotocol_tools import iptoi
 from dnx_iptools.protocol_tools import cidrtoi
 
-from dnx_routines.configure.system_info import System
+from dnx_gentools.system_info import System
 from dnx_routines.logging import Log
 
 
@@ -337,7 +337,7 @@ class FWObjectManager:
     # DISK IO
     # =================
     def _load(self) -> dict:
-        # user db wont exist until the first object is added
+        # user db won't exist until the first object is added
         if not os.path.isfile(USER_DB):
             return {
                 'version': 1,

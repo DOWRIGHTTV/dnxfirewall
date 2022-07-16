@@ -84,7 +84,7 @@ class FirewallAutomate:
         calls to Cython are made from within this method block.
         the GIL must be manually acquired on the Cython side or the Python interpreter will crash.
         '''
-        loaded_zones: ConfigChain = load_configuration(zone_map, ext='firewall', filepath='dnx_system/iptables')
+        loaded_zones: ConfigChain = load_configuration(zone_map, ext='firewall', filepath='dnx_profile/iptables')
 
         # converting the list to a python array, then sending to Cython to update the C array.
         # this format is required due to transitioning between python and C. python arrays are
@@ -110,7 +110,7 @@ class FirewallAutomate:
         #       to be reset. this is ok for now since we only support builtin zones that can't change.
         # 2000+: system control (proxy bypass prevention)
 
-        loaded_rules: ConfigChain = load_configuration(system_rules, ext='firewall', filepath='dnx_system/iptables')
+        loaded_rules: ConfigChain = load_configuration(system_rules, ext='firewall', filepath='dnx_profile/iptables')
 
         system_set = loaded_rules.get_values('BUILTIN')
 
@@ -137,7 +137,7 @@ class FirewallAutomate:
         calls to Cython are made from within this method block.
         the GIL must be manually acquired on the Cython side or the Python interpreter will crash.
         '''
-        loaded_rules: ConfigChain = load_configuration(fw_rules, ext='firewall', filepath='dnx_system/iptables')
+        loaded_rules: ConfigChain = load_configuration(fw_rules, ext='firewall', filepath='dnx_profile/iptables')
 
         # checking each group for change to reduce C interaction.
         for table_idx, rule_group in enumerate(['BEFORE', 'MAIN', 'AFTER'], 1):
@@ -173,7 +173,7 @@ class FirewallAutomate:
         calls to Cython are made from within this method block.
         the GIL must be manually acquired on the Cython side or the Python interpreter will crash.
         '''
-        loaded_rules: ConfigChain = load_configuration(nat_rules, ext='nat', filepath='dnx_system/iptables')
+        loaded_rules: ConfigChain = load_configuration(nat_rules, ext='nat', filepath='dnx_profile/iptables')
 
         # checking each group for change to reduce C interaction.
         for table_idx, rule_group in enumerate(['PRE_ROUTE', 'POST_ROUTE']):

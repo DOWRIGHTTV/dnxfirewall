@@ -13,7 +13,7 @@ from dnx_gentools.def_enums import LOG
 from dnx_gentools.standard_tools import classproperty, dnx_queue
 from dnx_gentools.file_operations import change_file_owner, load_configuration, cfg_read_poller
 
-from dnx_routines.configure.system_info import System
+from dnx_gentools.system_info import System
 
 # ===============
 # TYPING IMPORTS
@@ -141,7 +141,7 @@ def _log_handler() -> LogHandler:
             '''
             initialize log handler settings and monitor system configs for changes with log/syslog settings.
 
-            set console_output=True to enable Log.cli outputs in terminal.
+            set console_output=True to enable "Log.cli" outputs in terminal.
             '''
             nonlocal handler_name, cli_output, log_path, db_client
 

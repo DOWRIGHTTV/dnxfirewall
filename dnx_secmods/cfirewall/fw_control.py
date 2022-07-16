@@ -15,7 +15,7 @@ from dnx_webui.source.object_manager import FWObjectManager
 
 
 DEFAULT_VERSION: str = 'pending'
-DEFAULT_PATH:    str = 'dnx_system/iptables'
+DEFAULT_PATH:    str = 'dnx_profile/iptables'
 
 PENDING_RULE_FILE: str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/pending.firewall'
 ACTIVE_RULE_FILE:  str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/active.firewall'
@@ -27,6 +27,7 @@ PUSH_RULE_FILE: str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/push.firewall'
 ACTIVE_COPY_FILE: str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/active_copy.firewall'
 
 ConfigurationManager.set_log_reference(Log)
+
 
 # =========================================
 # Control - used by webui
@@ -77,7 +78,7 @@ class FirewallControl:
         with ConfigurationManager():
 
             # using standalone functions due to ConfigManager not being compatible with these operations
-            fw_rules: ConfigChain = load_configuration('pending', ext='firewall', filepath='dnx_system/iptables')
+            fw_rules: ConfigChain = load_configuration('pending', ext='firewall', filepath='dnx_profile/iptables')
 
             fw_rule_copy: dict[str, Any] = fw_rules.get_dict()
 
@@ -95,7 +96,7 @@ class FirewallControl:
                         rule['dst_network'] = [lookup(x, convert=True) for x in rule['dst_network']]
                         rule['dst_service'] = [lookup(x, convert=True) for x in rule['dst_service']]
 
-            write_configuration(fw_rule_copy, 'push', ext='firewall', filepath='dnx_system/iptables/usr')
+            write_configuration(fw_rule_copy, 'push', ext='firewall', filepath='dnx_profile/iptables/usr')
 
             os.replace(PUSH_RULE_FILE, ACTIVE_RULE_FILE)
 
@@ -117,7 +118,8 @@ class FirewallControl:
     def convert_ruleset(self):
         pass
 
-    def view_ruleset(self, section: str = 'MAIN') -> dict:
+    @staticmethod
+    def view_ruleset(section: str = 'MAIN') -> dict:
         '''returns dict of requested "firewall_pending" ruleset in raw form.
 
         additional processing is required for webui or cli formats.
@@ -130,7 +132,8 @@ class FirewallControl:
         except KeyError:
             return {}
 
-    def ruleset_len(self, section: str = 'MAIN') -> int:
+    @staticmethod
+    def ruleset_len(section: str = 'MAIN') -> int:
         '''returns len of firewall_pending ruleset. defaults to main and returns 0 on error.
         '''
         fw_rules = load_configuration(DEFAULT_VERSION, ext='firewall', filepath=DEFAULT_PATH).get_dict()

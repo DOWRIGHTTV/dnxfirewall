@@ -8,10 +8,10 @@ from dnx_gentools.def_enums import CFG
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
 from source.web_validate import convert_int, ValidationError
-from dnx_routines.configure.system_info import Services
-from dnx_routines.configure.iptables import IPTablesManager
+from dnx_gentools.system_info import Services
+from dnx_iptools.iptables import IPTablesManager
 
-from dnx_system.sys_action import system_action
+from dnx_control import system_action
 
 DISABLED_MANAGEMENT_SERVICES = ['cli']
 

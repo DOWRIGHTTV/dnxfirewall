@@ -9,7 +9,7 @@ from dnx_gentools.def_enums import CFG
 from dnx_gentools.def_exceptions import ValidationError
 
 from source.web_validate import get_convert_int
-from dnx_routines.configure.system_info import System
+from dnx_gentools.system_info import System
 from dnx_routines.backups.bck_backups import BackupHandler
 
 _BACKUP_DISABLED = False

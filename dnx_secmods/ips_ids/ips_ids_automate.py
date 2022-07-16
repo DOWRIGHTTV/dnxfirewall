@@ -7,11 +7,11 @@ from ipaddress import IPv4Address
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import PROTO
-from dnx_routines.configure.system_info import System
+from dnx_gentools.system_info import System
 from dnx_gentools.standard_tools import looper, ConfigurationMixinBase
 from dnx_gentools.file_operations import load_configuration, cfg_read_poller
 
-from dnx_routines.configure.iptables import IPTablesManager
+from dnx_iptools.iptables import IPTablesManager
 
 from dnx_secmods.ips_ids.ips_ids_log import Log
 

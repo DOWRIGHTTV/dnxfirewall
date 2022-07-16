@@ -5,18 +5,15 @@
         <div class="row">
             <div class="col s12">
                 <ul class="tabs">
-                    <li class="{{tab_classes}}"><a {% if tab==1 %} class="active" {% endif %} href="#dnsservers"
-                        onclick="activeTab(1)">Servers</a></li>
-                    <li class="{{tab_classes}}"><a {% if tab==2 %} class="active" {% endif %} href="#dnsrecords"
-                        onclick="activeTab(2)">Records</a></li>
-                    <li class="{{tab_classes}}"><a {% if tab==3 %} class="active" {% endif %} href="#dnscache"
-                        onclick="activeTab(3)">Cache</a></li>
+                    {{ create_tab(tab, 1, 'servers')|safe }}
+                    {{ create_tab(tab, 2, 'records')|safe }}
+                    {{ create_tab(tab, 3, 'cache')|safe }}
                 </ul>
             </div>
         </div>
     </div>
 </section>
-<section id="dnsservers">
+<section id="servers">
     <div class="container">
         <div class="row">
             <div class="col s12">
@@ -76,7 +73,7 @@
         </div>
     </div>
 </section>
-<section id="dnsrecords">
+<section id="records">
     <div class="container">
         <div class="row">
             <div class="col s12">
@@ -86,12 +83,16 @@
                         <input type="hidden" name="tab" value="2">
                         <div class="row">
                             <div class="input-field col s4 {{input_color}}">
-                                <input type="text" name="dns_record_name" class="validate" placeholder="homepc.local" required>
-                                <label for="">Domain Name</label>
+                                <label>
+                                    Domain Name
+                                    <input type="text" name="dns_record_name" class="validate" placeholder="homepc.local" required>
+                                </label>
                             </div>
                             <div class="input-field col s4 {{input_color}}">
-                                <input type="text" name="dns_record_ip" {{ip_addr_validate}} placeholder="192.168.83.67" required>
-                                <label for="">IP Address</label>
+                                <label>
+                                    IP Address
+                                    <input type="text" name="dns_record_ip" {{ip_addr_validate}} placeholder="192.168.83.67" required>
+                                </label>
                             </div>
                             <div class="input-field col s2 offset-s1">
                                 <button class="btn waves-effect waves-light col s12" name="dns_record_update">Add</button>
@@ -152,7 +153,7 @@
         </div>
     </div>
 </section>
-<section id="dnscache">
+<section id="cache">
     <div class="container">
         <div class="row">
             <div class="col s12">

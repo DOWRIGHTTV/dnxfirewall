@@ -5,18 +5,15 @@
         <div class="row">
             <div class="col s12 m12 l12 xl12">
                 <ul class="tabs">
-                    <li class="{{tab_classes}}"><a class="{{tab_text_color}}" {% if tab==1 %} class="active" {% endif %} href="#dhcpgen"
-                        onclick="activeTab(1)">General</a></li>
-                    <li class="{{tab_classes}}"><a class="{{tab_text_color}}" {% if tab==2 %} class="active" {% endif %} href="#dhcpres"
-                        onclick="activeTab(2)">Reservations</a></li>
-                    <li class="{{tab_classes}}"><a class="{{tab_text_color}}" {% if tab==3 %} class="active" {% endif %} href="#dhcplease"
-                        onclick="activeTab(3)">Leases</a></li>
+                    {{ create_tab(tab, 1, 'general')|safe }}
+                    {{ create_tab(tab, 2, 'reservations')|safe }}
+                    {{ create_tab(tab, 3, 'leases')|safe }}
                 </ul>
             </div>
         </div>
     </div>
 </section>
-<section id="dhcpgen" class="section {{main_section_color}}">
+<section id="general" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
             {% for interface in ['lan', 'dmz'] %}
@@ -58,14 +55,18 @@
                         </div>
                         <div class="row {{input_color}}">
                             <div class="input-field col s6">
-                                <input type="number" name="start" class="validate"
-                                       value="{{dhcp_settings['interfaces'][interface]['lease_range'][0]}}">
-                                <label for="">Start</label>
+                                <label>
+                                    Start
+                                    <input type="number" name="start" class="validate"
+                                           value="{{dhcp_settings['interfaces'][interface]['lease_range'][0]}}">
+                                </label>
                             </div>
                             <div class="input-field col s6">
-                                <input type="number" name="end" class="validate"
-                                       value="{{dhcp_settings['interfaces'][interface]['lease_range'][1]}}">
-                                <label for="">End</label>
+                                <label>
+                                    End
+                                    <input type="number" name="end" class="validate"
+                                           value="{{dhcp_settings['interfaces'][interface]['lease_range'][1]}}">
+                                </label>
                             </div>
                         </div>
                         <div class="row">
@@ -80,7 +81,7 @@
         </div>
     </div>
 </section>
-<section id="dhcpres" class="section {{main_section_color}}">
+<section id="reservations" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
             <div class="col s12">
@@ -97,18 +98,24 @@
                                 <label for="">Interface</label>
                             </div>
                             <div class="input-field col s4 {{input_color}}">
-                                <input type="text" name="mac_address" class="validate" placeholder="aa:aa:aa:aa:aa:aa" required>
-                                <label for="">Mac Address</label>
+                                <label>
+                                    MAC Address
+                                    <input type="text" name="mac_address" class="validate" placeholder="aa:aa:aa:aa:aa:aa" required>
+                                </label>
                             </div>
                             <div class="input-field col s4 {{input_color}}">
-                                <input type="text" name="ip_address" class="validate" placeholder="192.168.5.14" required>
-                                <label for="">IP Address</label>
+                                <label>
+                                    IP Address
+                                    <input type="text" name="ip_address" class="validate" placeholder="192.168.5.14" required>
+                                </label>
                             </div>
                         </div>
                         <div class="row">
                             <div class="input-field col s4 offset-s1 {{input_color}}">
-                                <input type="text" name="description" class="validate" placeholder="Erika's PC">
-                                <label for="">Description</label>
+                                <label>
+                                    Description
+                                    <input type="text" name="description" class="validate" placeholder="Erika's PC">
+                                </label>
                             </div>
                             <div class="input-field col s2 offset-s2">
                                 <input type="hidden" name="dhcp_res_add">
@@ -170,7 +177,7 @@
         </div>
     </div>
 </section>
-<section id="dhcplease" class="section {{main_section_color}}">
+<section id="leases" class="section {{main_section_color}}">
     <div class="container">
         <div class="col s12">
             <div class="card-panel hoverable {{card_color}}">

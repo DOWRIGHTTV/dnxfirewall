@@ -26,7 +26,7 @@ import dnx_routines.database.ddb_connector_sqlite as _db_conn
 from dnx_gentools.def_typing import TYPE_CHECKING, Optional
 from dnx_gentools.def_constants import fast_sleep as _fsleep
 from dnx_gentools.def_namedtuples import BLOCKED_DOM as _BLOCKED_DOM
-from dnx_routines.configure.system_info import System as _System
+from dnx_gentools.system_info import System as _System
 
 # ===============
 # TYPING IMPORTS

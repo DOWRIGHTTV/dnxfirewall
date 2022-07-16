@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from itertools import zip_longest
 
-from dnx_routines.configure.system_info import Interface, System, Services
+from dnx_gentools.system_info import Interface, System, Services
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 from dnx_routines.logging.log_client import LogHandler as Log
 

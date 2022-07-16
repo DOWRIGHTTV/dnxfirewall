@@ -191,8 +191,8 @@ class ServerResponse:
     @classmethod
     def release(cls, ip_address: int, mac_address: str) -> bool:
         '''validates host ip address and mac address with lease table and returns a boolean representing whether it is
-        safe to remove.'''
-
+        safe to remove.
+        '''
         lease: DHCP_RECORD = cls._server.leases[ip_address]
         if (lease.rtype is not DHCP.RESERVATION and lease.mac == mac_address):
             return True

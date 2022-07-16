@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 
-from dnx_routines.configure.system_info import System
+from dnx_gentools.system_info import System
 
 
 class SyslogFormat:

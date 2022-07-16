@@ -23,25 +23,31 @@
                     <br>
                     <div class="row">
                         <div class="input-field col s9 {{ input_color }}">
-                            <input type="text" name="wan_ip" placeholder="192.168.1.11" {{ ip_addr_validate }}
-                                   form="intf_set" {% if interface_settings['ip']['state'] %} disabled {% endif %}>
-                            <label for="">IP Address</label>
+                            <label>
+                                IP Address
+                                <input type="text" name="wan_ip" placeholder="192.168.1.11" {{ ip_addr_validate }}
+                                       form="intf_set" {% if interface_settings['ip']['state'] %} disabled {% endif %}>
+                            </label>
                         </div>
                         <div class="input-field col s3 {{ input_color }}">
-                            <select name="wan_cidr" form="intf_set"
-                                    {% if interface_settings['ip']['state'] %} disabled {% endif %}>
-                                {% for i in range(24,31) %}
-                                    <option value="{{ i }}">/{{ i }}</option>
-                                {% endfor %}
-                            </select>
+                            <label>
+                                <select name="wan_cidr" form="intf_set"
+                                        {% if interface_settings['ip']['state'] %} disabled {% endif %}>
+                                    {% for i in range(24,31) %}
+                                        <option value="{{ i }}">/{{ i }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
                             <label for="">Netmask</label>
                         </div>
                     </div>
                     <div class="row">
                         <div class="input-field col s12 {{ input_color }}">
-                            <input type="text" name="wan_dfg" placeholder="192.168.1.1" {{ ip_addr_validate }}
-                                     form="intf_set" {% if interface_settings['ip']['state'] %} disabled {% endif %}>
-                            <label for="">Default Gateway</label>
+                            <label>
+                                Default Gateway
+                                <input type="text" name="wan_dfg" placeholder="192.168.1.1" {{ ip_addr_validate }}
+                                         form="intf_set" {% if interface_settings['ip']['state'] %} disabled {% endif %}>
+                            </label>
                         </div>
                     </div>
                     <div class="row">
@@ -105,8 +111,10 @@
                     <br>
                     <div class="row">
                         <div class="input-field col s12 {{ input_color }}">
-                            <input type="text" name="ud_wan_mac" class="validate" placeholder="aa:aa:aa:aa:aa:aa" form="mac_update">
-                            <label for="">MAC Address</label>
+                            <label>
+                                MAC Address
+                                <input type="text" name="ud_wan_mac" class="validate" placeholder="aa:aa:aa:aa:aa:aa" form="mac_update">
+                            </label>
                         </div>
                     </div>
                     <div class="row">

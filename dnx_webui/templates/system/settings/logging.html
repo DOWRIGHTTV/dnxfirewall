@@ -1,18 +1,6 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="tabs-bar" class="tabsbar">
-    <div class="container">
-        <div class="row">
-            <div class="col s12 m12 l12 xl12">
-                <ul class="tabs">
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab==1 %} class="active" {% endif %} href="#logging"
-                            onclick="activeTab(1)">Logging</a></li>
-                </ul>
-            </div>
-        </div>
-    </div>
-</section>
-<section id="logging">
+<section id="logging" class="section {{main_section_color}}">
     <div class="container">
         <div class="row row-flex">
             <div class="col s12 m6">
@@ -23,31 +11,35 @@
                         <input type="hidden" name="logging_update">
                         <div class="row">
                             <div class="input-field col s12 {{input_color}}">
-                                <select name="length" onchange="this.form.submit()">
-                                    <option value="30" {% if logging_settings['logging']['length'] == 30 %} selected
-                                        {% endif %}>30</option>
-                                    <option value="45" {% if logging_settings['logging']['length'] == 45 %} selected
-                                        {% endif %}>45</option>
-                                    <option value="60" {% if logging_settings['logging']['length'] == 60 %} selected
-                                        {% endif %}>60</option>
-                                    <option value="90" {% if logging_settings['logging']['length'] == 90 %} selected
-                                        {% endif %}>90</option>
-                                </select>
+                                <label>
+                                    <select name="length" onchange="this.form.submit()">
+                                        <option value="30" {% if logging_settings['logging']['length'] == 30 %} selected
+                                            {% endif %}>30</option>
+                                        <option value="45" {% if logging_settings['logging']['length'] == 45 %} selected
+                                            {% endif %}>45</option>
+                                        <option value="60" {% if logging_settings['logging']['length'] == 60 %} selected
+                                            {% endif %}>60</option>
+                                        <option value="90" {% if logging_settings['logging']['length'] == 90 %} selected
+                                            {% endif %}>90</option>
+                                    </select>
+                                </label>
                                 <label for="length">Length (Days)</label>
                             </div>
                         </div>
                         <div class="row">
                             <div class="input-field col s12 {{input_color}}">
-                                <select name="level" onchange="this.form.submit()">
-                                    {% for level in logging_settings['logging']['log_levels'] %}
-                                    {% set level_num = loop.index0 %}
-                                    {% if logging_settings['logging']['level'] == level_num %}
-                                    <option value="{{level_num}}" selected>{{level_num}}: {{level}}</option>
-                                    {% else %}
-                                    <option value="{{level_num}}">{{level_num}}: {{level}}</option>
-                                    {% endif %}
-                                    {% endfor %}
-                                </select>
+                                <label>
+                                    <select name="level" onchange="this.form.submit()">
+                                        {% for level in logging_settings['logging']['log_levels'] %}
+                                        {% set level_num = loop.index0 %}
+                                        {% if logging_settings['logging']['level'] == level_num %}
+                                        <option value="{{level_num}}" selected>{{level_num}}: {{level}}</option>
+                                        {% else %}
+                                        <option value="{{level_num}}">{{level_num}}: {{level}}</option>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                </label>
                                 <label for="log_level">Log Level (Severity)</label>
                             </div>
                         </div>
@@ -65,21 +57,25 @@
                         <input type="hidden" name="time_offset_update">
                         <div class="row">
                             <div class="input-field col s6 {{input_color}}">
-                                <select name="dir_offset">
-                                    {% if logging_settings['offset']['direction']=='+'
-                                        or logging_settings['offset']['amount']==0 %}
-                                    <option value="+" selected>+</option>
-                                    <option value="-">-</option>
-                                    {% else %}
-                                    <option value="+">+</option>
-                                    <option value="-" selected>-</option>
-                                    {% endif %}
-                                </select>
+                                <label>
+                                    <select name="dir_offset">
+                                        {% if logging_settings['offset']['direction']=='+'
+                                            or logging_settings['offset']['amount']==0 %}
+                                        <option value="+" selected>+</option>
+                                        <option value="-">-</option>
+                                        {% else %}
+                                        <option value="+">+</option>
+                                        <option value="-" selected>-</option>
+                                        {% endif %}
+                                    </select>
+                                </label>
                                 <label for="dir_offset">Direction</label>
                             </div>
                             <div class="input-field col s6 {{input_color}}">
-                                <input type="number" name="time_offset" min="0" max="14" value="{{logging_settings['offset']['amount']}}">
-                                <label for="time_offset">Time Offset</label>
+                                <label>
+                                    Time Offset
+                                    <input type="number" name="time_offset" min="0" max="14" value="{{logging_settings['offset']['amount']}}">
+                                </label>
                             </div>
                         </div>
                         <div class="row">

@@ -1,9 +1,0 @@
-65.255.48.0/20 turks_and_caicos_islands
-104.28.12.79/32 turks_and_caicos_islands
-104.28.12.80/32 turks_and_caicos_islands
-142.54.204.0/22 turks_and_caicos_islands
-192.203.37.0/24 turks_and_caicos_islands
-199.103.28.0/22 turks_and_caicos_islands
-199.182.192.0/22 turks_and_caicos_islands
-204.13.104.0/22 turks_and_caicos_islands
-204.110.56.0/21 turks_and_caicos_islands

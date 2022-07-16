@@ -1,0 +1,17 @@
+104.28.12.107/32 suriname
+104.28.12.108/32 suriname
+104.28.36.150/31 suriname
+104.28.41.193/32 suriname
+104.28.41.194/32 suriname
+104.28.61.104/31 suriname
+104.28.63.232/31 suriname
+104.28.92.136/31 suriname
+104.28.94.136/31 suriname
+168.121.84.0/22 suriname
+168.195.216.0/22 suriname
+186.179.128.0/17 suriname
+190.98.0.0/17 suriname
+200.1.156.0/22 suriname
+200.1.208.0/21 suriname
+200.2.160.0/19 suriname
+200.7.148.0/22 suriname

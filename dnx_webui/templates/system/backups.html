@@ -10,8 +10,10 @@
                         <form action="/system/backups" method="POST">
                         <input type="hidden" name="active" value="1">
                             <div class="input-field col s6 l4 {{input_color}}">
-                                <input type="text" name="backup_name" class="validate" placeholder="main_config">
-                                <label for="">Name</label>
+                                <label>
+                                    Name
+                                    <input type="text" name="backup_name" class="validate" placeholder="main_config">
+                                </label>
                             </div>
                             <div class="input-field col s3 l2">
                                 <input type="hidden" name="cfg_backup" value="1">

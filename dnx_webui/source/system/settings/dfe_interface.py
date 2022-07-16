@@ -11,7 +11,7 @@ from dnx_gentools.def_constants import HOME_DIR, INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA, INTF
 from dnx_gentools.file_operations import load_data, load_configuration, config, ConfigurationManager, json_to_yaml
 
-from dnx_system.sys_action import system_action
+from dnx_control import system_action
 
 from dnx_iptools.cprotocol_tools import itoip, default_route
 
@@ -123,7 +123,7 @@ def set_wan_interface(intf_type: INTF = INTF.DHCP):
         wan_ident: str = dnx_settings['interfaces->builtins->wan->ident']
 
         # template used to generate yaml file with user configured fields
-        intf_template: dict = load_data('intf_config_template.cfg', filepath='dnx_system/interfaces')
+        intf_template: dict = load_data('intf_config_template.cfg', filepath='dnx_profile/interfaces')
 
         # for static dhcp4 and dhcp_overrides keys are removed and creating an empty list for the addresses.
         # NOTE: the ip configuration will unlock after the switch and can then be updated
@@ -180,7 +180,7 @@ def set_wan_ip(wan_settings: config) -> None:
 
     wan_ident: str = dnx_settings['interfaces->builtins->wan->ident']
 
-    intf_template: dict = load_data('intf_config_template.cfg', filepath='dnx_system/interfaces')
+    intf_template: dict = load_data('intf_config_template.cfg', filepath='dnx_profile/interfaces')
 
     # removing dhcp4 and dhcp_overrides keys, then adding ip address value
     wan_intf: dict = intf_template['network']['ethernets'][wan_ident]
@@ -196,7 +196,7 @@ def set_wan_ip(wan_settings: config) -> None:
     system_action(module='webui', command='netplan apply')
 
 def _configure_netplan(intf_config: dict) -> None:
-    '''writes modified template to file and moves it to /etc/netplan using os.replace
+    '''writes modified template to file and moves it to /etc/netplan using os.replace.
 
         note: this does NOT run "netplan apply"
     '''
@@ -211,9 +211,9 @@ def _configure_netplan(intf_config: dict) -> None:
     converted_config = converted_config.replace('_PRIMARY__SECONDARY_', f'{dns1},{dns2}')
 
     # writing YAML to interface folder to be used as swap
-    with open(f'{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', 'w') as dnx_intfs:
+    with open(f'{HOME_DIR}/dnx_profile/interfaces/01-dnx-interfaces.yaml', 'w') as dnx_intfs:
         dnx_intfs.write(converted_config)
 
     # sending replace command to system control service
-    cmd_args = [f'{HOME_DIR}/dnx_system/interfaces/01-dnx-interfaces.yaml', '/etc/netplan/01-dnx-interfaces.yaml']
+    cmd_args = [f'{HOME_DIR}/dnx_profile/interfaces/01-dnx-interfaces.yaml', '/etc/netplan/01-dnx-interfaces.yaml']
     system_action(module='webui', command='os.replace', args=cmd_args)

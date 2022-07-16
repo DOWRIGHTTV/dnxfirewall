@@ -40,7 +40,7 @@ class UDPRelay(ProtoRelay):
     def relay(self, request: DNS_SEND):
         attempt = self._send_query(request)
 
-        # this will always be the case with UDP since a send call wont fail unless socket is closed
+        # this will always be the case with UDP since a "send" call will never fail unless socket is closed
         if (attempt >= 0):
             Log.informational(
                 f'[{self._relay_conn.remote_ip}/UDP][{attempt}] Sent {request.qname}'
@@ -231,8 +231,8 @@ class TLSRelay(ProtoRelay):
                 # normal case - exactly 1 complete dns response in buffer
                 if (b_ct == request_len):
 
-                    # using memoryview(), so need to copy response data or it will be corrupted by subsequent operations
-                    # which are running concurrent to the receiving processor.
+                    # using memoryview(), so need to copy response data, otherwise it will corrupt the original data
+                    # which is running concurrent to the receiving processor.
                     responder_add(bytes(data[:data_len]))
 
                     b_ct = 0

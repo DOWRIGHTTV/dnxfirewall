@@ -754,7 +754,7 @@ class RawResponse:
         elif (packet.protocol is PROTO.UDP):
             packet.udp_header[2:4] = short_pack(port_override)
 
-            # NOTE: did we skip udp checksum because its not required?? prob should do it to be "legit"... someday
+            # NOTE: did we skip udp checksum because it's not required?? prob should do it to be "legit"... someday
 
             # slicing operations will change the referenced object directly
             ip_header = packet.ip_header

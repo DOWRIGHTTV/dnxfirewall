@@ -69,7 +69,7 @@ def release_lock(mutex: TextIO):
 
     mutex.close()
 
-def load_configuration(filename: str, ext: str = 'cfg', *, filepath: str = 'dnx_system/data') -> ConfigChain:
+def load_configuration(filename: str, ext: str = 'cfg', *, filepath: str = 'dnx_profile/data') -> ConfigChain:
     '''load json data from a file and convert it to a ConfigChain.
     '''
     filename = f'{filename}.{ext}'
@@ -89,7 +89,7 @@ def load_configuration(filename: str, ext: str = 'cfg', *, filepath: str = 'dnx_
 
     return ConfigChain(system_settings, user_settings)
 
-def write_configuration(data: dict, filename: str, ext: str = 'cfg', *, filepath: str = 'dnx_system/data/usr') -> None:
+def write_configuration(data: dict, filename: str, ext: str = 'cfg', *, filepath: str = 'dnx_profile/data/usr') -> None:
     '''write a json data object to file.
     '''
     filename = f'{filename}.{ext}'
@@ -97,7 +97,7 @@ def write_configuration(data: dict, filename: str, ext: str = 'cfg', *, filepath
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
         json.dump(data, settings, indent=2)
 
-def load_data(filename: str, *, filepath: str = 'dnx_system/data') -> dict:
+def load_data(filename: str, *, filepath: str = 'dnx_profile/data') -> dict:
     '''loads json data from a file and convert it to a python dict.
     '''
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'r') as system_settings_io:
@@ -106,12 +106,12 @@ def load_data(filename: str, *, filepath: str = 'dnx_system/data') -> dict:
     return system_settings
 
 # will load json data from file, convert it to a python dict, then return as an object
-def write_data(data: dict, filename: str, *, filepath: str = 'dnx_system/data') -> None:
+def write_data(data: dict, filename: str, *, filepath: str = 'dnx_profile/data') -> None:
 
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
         json.dump(data, settings, indent=2)
 
-def append_to_file(data: str, filename: str, *, filepath: str = 'dnx_system/data/usr') -> None:
+def append_to_file(data: str, filename: str, *, filepath: str = 'dnx_profile/data/usr') -> None:
     '''append data to filepath.
     '''
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'a') as settings:
@@ -159,7 +159,7 @@ def load_keywords(log: LogHandler_T) -> tuple[tuple[str, DNS_CAT]]:
     '''
     keywords: list[tuple[str, DNS_CAT]] = []
     try:
-        with open(f'{HOME_DIR}/dnx_system/signatures/domain_lists/domain.keywords', 'r') as blocked_keywords:
+        with open(f'{HOME_DIR}/dnx_profile/signatures/domain_lists/domain.keywords', 'r') as blocked_keywords:
             all_keywords = [
                 x.strip() for x in blocked_keywords.readlines() if x.strip() and '#' not in x
             ]
@@ -179,10 +179,10 @@ def load_keywords(log: LogHandler_T) -> tuple[tuple[str, DNS_CAT]]:
     return tuple(keywords)
 
 def load_top_domains_filter() -> list[str]:
-    with open(f'{HOME_DIR}/dnx_system/signatures/domain_lists/valid_top.domains', 'r') as tdf:
+    with open(f'{HOME_DIR}/dnx_profile/signatures/domain_lists/valid_top.domains', 'r') as tdf:
         return [s.strip() for s in tdf.readlines() if s.strip() and '#' not in s]
 
-def calculate_file_hash(file_to_hash: str, *, path: str = 'dnx_system', folder: str = 'data') -> str:
+def calculate_file_hash(file_to_hash: str, *, path: str = 'dnx_profile', folder: str = 'data') -> str:
     '''returns the sha256 secure hash of passed in file.
     '''
     filepath = f'{HOME_DIR}/{path}/{folder}/{file_to_hash}'
@@ -466,7 +466,7 @@ class ConfigurationManager:
     obtained or block until it can acquire the lock and return the class object to the caller.
     '''
     log: LogHandler_T = None
-    config_lock_file: ConfigLock = f'{HOME_DIR}/dnx_system/config.lock'
+    config_lock_file: ConfigLock = f'{HOME_DIR}/dnx_profile/config.lock'
 
     __slots__ = (
         '_name', '_ext', '_filename',
@@ -498,7 +498,7 @@ class ConfigurationManager:
             self._data_written = False
 
             if (not file_path):
-                file_path = 'dnx_system/data'
+                file_path = 'dnx_profile/data'
 
             self._file_path = file_path
             self._filename = f'{name}.{ext}'
@@ -598,7 +598,7 @@ class Watcher:
         self._watch_file: str = watch_file
         self._callback: Callable_T = callback
 
-        self._full_path: str = f'{HOME_DIR}/dnx_system/{folder}/usr/{watch_file}.{ext}'
+        self._full_path: str = f'{HOME_DIR}/dnx_profile/{folder}/usr/{watch_file}.{ext}'
 
         self._last_modified_time: int = 0
 

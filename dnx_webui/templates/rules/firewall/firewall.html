@@ -6,18 +6,15 @@
         <div class="row">
             <div class="col s12 m12 l12 xl12">
                 <ul class="tabs">
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab==1 %} class="active" {% endif %} href="#fwall"
-                        onclick="activeTab(1)">Rulesets</a></li>
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab==2 %} class="active" {% endif %} href="#zones"
-                        onclick="activeTab(2)">Zones</a></li>
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab==3 %} class="active" {% endif %} href="#objects"
-                        onclick="activeTab(3)">Objects</a></li>
+                    {{ create_tab(tab, 1, 'rulesets')|safe }}
+                    {{ create_tab(tab, 2, 'zones')|safe }}
+                    {{ create_tab(tab, 3, 'objects')|safe }}
                 </ul>
             </div>
         </div>
     </div>
 </section>
-<section id="fwall" class="section {{main_section_color}}">
+<section id="rulesets" class="section {{main_section_color}}">
     <div class="fw-container">
         <div class="row">
             <div class="col s12">
@@ -54,7 +51,10 @@
                         <a class="btn waves-effect blue-grey" onclick="disableRules()">Disable</a>
                         <a class="btn waves-effect red darken-2" onclick="removeRules()">Remove</a>
                         <div class="col s12 m6 l5 xl3 {{input_color}} right">
-                            <input type="text" id="filter-input" onkeyup="filterTable(2, 9)" placeholder="Filter">
+                            <label>
+                                Filter
+                                <input type="text" id="filter-input" onkeyup="filterTable(2, 9)" placeholder="192.168.">
+                            </label>
                         </div>
                     </div>
                     <div class="row">
