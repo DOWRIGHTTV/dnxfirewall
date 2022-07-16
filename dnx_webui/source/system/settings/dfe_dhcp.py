@@ -20,7 +20,7 @@ from dnx_gentools.system_info import System
 
 def load_page(_: Form) -> dict[str, Any]:
     dhcp_server: ConfigChain = load_configuration('dhcp_server')
-    dhcp_leases: dict[str, tuple] = load_data('dhcp_server.lease', filepath='dnx_profile/data/usr/')
+    dhcp_leases: dict[str, tuple] = load_data('dhcp_server.lease', filepath='dnx_profile/data/usr')
 
     leases = []
     for ip, _record in dhcp_leases.items():
