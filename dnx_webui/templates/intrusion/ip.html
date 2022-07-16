@@ -137,15 +137,11 @@
                                 </div>
                                 <div class="input-field col s12 m2 {{input_color}}">
                                     <label>
-                                        <select name="time_suffix" id="">
-                                            <option value="AM" {% if ip_settings['tr_settings']['suffix']=='AM' %} selected
-                                                {% endif %}>AM</option>
+                                        <select name="time_suffix">
+                                            <option value="AM" {% if ip_settings['tr_settings']['suffix']=='AM' %} selected{% endif %}>AM</option>
+                                            <option value="PM" {% if ip_settings['tr_settings']['suffix']=='PM' %} selected{% endif %}>PM</option>
                                         </select>
                                     </label>
-                                        <option value="PM" {% if ip_settings['tr_settings']['suffix']=='PM' %} selected
-                                            {% endif %}>PM</option>
-                                    </select>
-                                    <label for="time_suffix"></label>
                                 </div>
                             </div>
                             <h6>Duration</h6>
