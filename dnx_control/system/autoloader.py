@@ -205,34 +205,37 @@ def progress(desc: str) -> None:
     global completed_count
 
     completed_count += 1
-    ratio: float = completed_count / PROGRESS_TOTAL_COUNT
+    ratio: float = completed_count / (PROGRESS_TOTAL_COUNT - 1)  # to account for completed count offset
     filled_len: int = int(bar_len * ratio)
 
     bar: str
     if (ratio < .34):
         bar = text.red('#' * filled_len, style=None)
-        completed = text.red(f'{completed_count}', style=None)
+        completed = text.red(f'{int(100 * ratio)}', style=None)
 
     elif (ratio < .67):
         bar = text.orange('#' * filled_len, style=None)
-        completed = text.orange(f'{completed_count}', style=None)
+        completed = text.orange(f'{int(100 * ratio)}', style=None)
 
     else:
         bar = text.green('#' * filled_len, style=None)
-        completed = text.yellow(f'{completed_count}', style=None)
+        completed = text.yellow(f'{int(100 * ratio)}', style=None)
 
-    if (ratio == 1):
-        completed = text.green(f'{completed_count}', style=None)
+    if (ratio >= 1):
+        completed = text.green(f'{int(100 * ratio)}', style=None)
 
     bar += text.lightgrey('=' * (bar_len - filled_len))
 
     sys.stdout.write(
-        completed + text.lightgrey(f'/{PROGRESS_TOTAL_COUNT} |')
+        text.yellow(f'{completed_count}', style=None) +
+        text.lightgrey(f'/{PROGRESS_TOTAL_COUNT} |')
     )
     sys.stdout.write(
         text.lightgrey(f'| [', style=None) +
-        f'{bar}' +
-        text.lightgrey(f'] {int(100 * ratio)}% |', style=None)
+        bar +
+        text.lightgrey(f'] ', style=None) +
+        completed +
+        text.lightgrey('% |', style=None)
     )
     sys.stdout.write(text.yellow(f'| {desc.ljust(48)}\r'))
     if (filled_len == bar_len):
@@ -443,10 +446,10 @@ def configure_webui() -> list:
 
     return commands
 
+
 # ============================
 # PERMISSION CONFIGURATION
 # ============================
-
 def set_permissions() -> None:
 
     progress('configuring dnxfirewall permissions')
@@ -483,6 +486,7 @@ def set_permissions() -> None:
     # configure sudoers.d to allow dnx user "no-pass" for specific system functions
     dnx_run(f'sudo cp -n {HOME_DIR}/dnx_profile/admin/dnx /etc/sudoers.d/')
 
+
 # ============================
 # SERVICE FILE SETUP
 # ============================
@@ -501,6 +505,7 @@ def set_services() -> None:
 
     dnx_run(f'systemctl enable nginx')
 
+
 # ============================
 # INITIAL IPTABLES SETUP
 # ============================
@@ -509,6 +514,7 @@ def configure_iptables() -> None:
 
     with IPTablesManager() as iptables:
         iptables.apply_defaults(suppress=True)
+
 
 # ============================
 # CLEANUP
