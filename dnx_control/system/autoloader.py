@@ -428,7 +428,7 @@ def configure_webui() -> list:
 
     commands: list[tuple[str, Optional[str]]] = [
         (generate_cert_commands, 'generating dnx webui ssl certificate'),
-        (f'sudo cp {UTILITY_DIR}/dnx_web /etc/nginx/sites-available/', 'configuring management webui'),
+        (f'sudo cp -n {UTILITY_DIR}/dnx_web /etc/nginx/sites-available/', 'configuring management webui'),
         ('ln -fs /etc/nginx/sites-available/dnx_web /etc/nginx/sites-enabled/', None),
         ('sudo rm -f /etc/nginx/sites-enabled/default', None)
     ]
