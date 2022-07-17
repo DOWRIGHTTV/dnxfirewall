@@ -93,8 +93,8 @@ def eprint(s: str, /) -> None:
 
     the passed in message will not be automatically colorized. this should be handled by the caller.
     '''
-    sys.stdout.write(text.lightgrey(f'{time.strftime("%H:%M:%S")}| ' + text.red(f'!!! {s} ')))
     while True:
+        sys.stdout.write(text.lightgrey(f'{time.strftime("%H:%M:%S")}| ' + text.red(f'!!! {s} ')))
         answer: str = input(
             text.lightgrey('continue? [y/', style=None) +
             text.lightblue('N') +
