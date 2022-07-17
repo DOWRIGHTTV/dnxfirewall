@@ -105,6 +105,7 @@ def eprint(s: str, /) -> None:
             return
 
         elif (answer.lower() in ['n', '']):
+            sprint(text.red('exiting...'))
             hardout()
 
         else:
@@ -160,12 +161,12 @@ def check_already_ran() -> None:
     if (not args.update_set and dnx_settings['auto_loader']):
 
         eprint(
-            text.red('dnxfirewall has already been installed. exiting...')
+            text.red('dnxfirewall has already been installed.')
         )
 
     elif (args.update_set and not dnx_settings['auto_loader']):
         eprint(
-             text.red('dnxfirewall has not been installed. see readme for guidance. exiting...')
+             text.red('dnxfirewall has not been installed. see readme for guidance.')
         )
 
 def set_branch() -> None:
@@ -201,12 +202,15 @@ def set_branch() -> None:
 # ----------------------------
 # starting at -1 to compensate for the first process
 bar_len: int = 30
-completed_count: int = -1
+completed_count: int = 0
 def progress(desc: str) -> None:
     global completed_count
 
-    completed_count += 1
-    ratio: float = completed_count / (PROGRESS_TOTAL_COUNT - 1)  # to account for completed count offset
+    # allows for rendering bar without moving the completion %.
+    if (desc):
+        completed_count += 1
+
+    ratio: float = completed_count / (PROGRESS_TOTAL_COUNT)
     filled_len: int = int(bar_len * ratio)
 
     bar: str
@@ -563,6 +567,7 @@ def run():
     sprint(f'starting dnxfirewall {action}...')
     lprint()
 
+    progress('')  # this will render 0% bar so we don't need to use offsets.
     for command, desc in dynamic_commands:
 
         if (desc):
@@ -578,8 +583,8 @@ def run():
         set_services()
         mark_completion_flag()
 
-    progress('dnxfirewall installation complete')
-    sprint('\ncontrol of the WAN interface configuration has been taken by dnxfirewall.')
+    progress('dnxfirewall installation complete...')
+    sprint('control of the WAN interface configuration has been taken by dnxfirewall.')
     sprint('use the webui to configure a static ip or enable ssh access if needed.')
     sprint('restart the system then navigate to https://192.168.83.1 from LAN to manage.')
 
