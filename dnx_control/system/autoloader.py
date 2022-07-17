@@ -18,7 +18,7 @@ from dnx_gentools.file_operations import ConfigurationManager, load_data, write_
 from dnx_iptools.iptables import IPTablesManager
 from dnx_routines.logging.log_client import Log
 
-from dnx_cli.utils.shell_colors import text, styles
+from dnx_cli.utils.shell_colors import text
 
 # ===============
 # TYPING IMPORTS
@@ -26,7 +26,10 @@ from dnx_cli.utils.shell_colors import text, styles
 if (TYPE_CHECKING):
     from dnx_gentools.file_operations import ConfigChain
 
-def lprint(sep: str = '-'): print(f'{sep}' * 32)
+
+ERROR_SHOW_TIME = .33
+
+def lprint(sep: str = '-'): print(text.lightblue(f'{sep}' * 32))
 
 # ===============
 # BANNER
@@ -67,6 +70,17 @@ UTILITY_DIR: str = f'{HOME_DIR}/dnx_profile/utils'
 # ----------------------------
 # UTILS
 # ----------------------------
+def flash_input_error(error: str, space_ct: int) -> None:
+    # moves cursor up one space in the terminal
+    sys.stdout.write('\033[1A')
+
+    sys.stdout.write(f'\033[{space_ct}C')
+    sys.stdout.write(text.orange(f'{error}\r', style=None))
+
+    time.sleep(ERROR_SHOW_TIME)
+
+    sys.stdout.write(f'{" " * 80}\r')
+
 def sprint(s: str, /) -> None:
     '''setup print. includes timestamp before arg str.
 
@@ -93,11 +107,7 @@ def eprint(s: str, /) -> None:
             hardout()
 
         else:
-            print(
-                text.lightgrey(f'{time.strftime("%H:%M:%S")}| ') +
-                text.red('! ') +
-                text.yellow('invalid selection.')
-            )
+            flash_input_error('invalid selection', 18) # length of raw text
 
 def dnx_run(s: str, /) -> None:
     '''convenience function, subprocess run wrapper adding additional args.
@@ -157,6 +167,34 @@ def check_already_ran() -> None:
         eprint(
              text.red('dnxfirewall has not been installed. see readme for guidance. exiting...')
         )
+
+def set_branch() -> None:
+    available_branches = ['development', 'stable']
+
+    lprint()
+    print(text.yellow('available branches'))
+    lprint()
+
+    print(text.yellow('1. development'))
+    print(text.yellow('2. stable'))
+
+    lprint()
+
+    question = 'branch selection: '
+    while True:
+        selection: str = input(question)
+        if (selection.isdigit() and int(selection) in (1, 2)):
+            break
+
+        flash_input_error('invalid selection', len(question))
+
+    with ConfigurationManager('system') as dnx:
+        dnx_settings: ConfigChain = dnx.load_configuration()
+
+        dnx_settings['branch'] = available_branches[int(selection)]
+
+        dnx.write_configuration(dnx_settings.expanded_user_data)
+
 
 # ----------------------------
 # PROGRESS BAR
@@ -245,14 +283,14 @@ def check_system_interfaces() -> list[str]:
     return interfaces_detected
 
 def collect_interface_associations(interfaces_detected: list[str]) -> dict[str, str]:
-    print(LINEBREAK)
+    lprint()
     print(text.yellow('available interfaces'))
-    print(LINEBREAK)
+    lprint()
 
     for i, interface in enumerate(interfaces_detected, 1):
         print(text.yellow(f'{i}. {interface}'))
 
-    print(LINEBREAK)
+    lprint()
 
     # build out full json for interface configs as dict
     interface_config: dict[str, str] = {'WAN': '', 'LAN': '', 'DMZ': ''}
@@ -322,9 +360,12 @@ def confirm_interfaces(interface_config: dict[str, str]) -> bool:
         elif (answer.lower() == 'n'):
             return False
 
+
 # ============================
 # INSTALL PACKAGES
 # ============================
+# TODO: check compatibility with debian and ubuntu systems. i remember there being an issue where either libmnl or
+#  libnetfilter-conntrack was not on current build. something like apt having 1.0.4, but 1.0.5 is needed.
 def install_packages() -> list:
 
     commands = [
@@ -334,6 +375,24 @@ def install_packages() -> list:
         ('sudo apt install libnetfilter-queue-dev libnetfilter-conntrack-dev libmnl-dev net-tools -y',
             'installing networking components'),
         ('pip3 install Cython', 'installing C extension language (Cython)')
+    ]
+
+    return commands
+
+# this is a no op if already on configured branch, but we will use it to return branch name also.
+def checkout_configured_branch() -> str:
+    configured_branch: str = load_data('system.cfg')['branch']
+
+    branch_name = 'dnxfirewall-dev' if configured_branch == 'development' else 'dnxfirewall'
+
+    dnx_run(f'git -C {HOME_DIR}/dnxfirewall checkout {branch_name}')
+
+    return branch_name
+
+def update_local_branch(branch) -> list:
+
+    commands: list[tuple[str, str]] = [
+        (f'git -C {HOME_DIR}/dnxfirewall pull origin {branch}', 'downloading updates')
     ]
 
     return commands
@@ -371,7 +430,7 @@ def configure_webui() -> list:
         (generate_cert_commands, 'generating dnx webui ssl certificate'),
         (f'sudo cp {UTILITY_DIR}/dnx_web /etc/nginx/sites-available/', 'configuring management webui'),
         ('ln -s /etc/nginx/sites-available/dnx_web /etc/nginx/sites-enabled/', None),
-        ('sudo rm /etc/nginx/sites-enabled/default', None)
+        ('sudo rm -f /etc/nginx/sites-enabled/default', None)
     ]
 
     return commands
@@ -400,7 +459,7 @@ def set_permissions() -> None:
         # setting the dnx command line utility as executable
         f'chmod 750 {HOME_DIR}/dnx_run.py',
 
-        # creating simlink to allow dnx command from anywhere if logged in as dnx user
+        # creating symlink to allow dnx command from anywhere if logged in as dnx user
         f'ln -s {HOME_DIR}/dnx_run.py /usr/local/bin/dnx',
 
         # adding www-data user to dnx group
@@ -470,10 +529,16 @@ def run():
     global PROGRESS_TOTAL_COUNT
 
     if (not args.update_set):
+        set_branch()
         configure_interfaces()
 
     # will hold all dynamically set commands prior to execution to get an accurate count for progress bar.
     dynamic_commands: list[tuple[str, Optional[str]]] = []
+
+    branch = checkout_configured_branch()
+
+    if (args.update_set):
+        update_local_branch(branch)
 
     if (not args.update_set):
         dynamic_commands.extend(configure_webui())

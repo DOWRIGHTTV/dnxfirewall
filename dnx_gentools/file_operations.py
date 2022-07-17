@@ -99,6 +99,8 @@ def write_configuration(data: dict, filename: str, ext: str = 'cfg', *, filepath
 
 def load_data(filename: str, *, filepath: str = 'dnx_profile/data') -> dict:
     '''loads json data from a file and convert it to a python dict.
+
+    this function does not provide a default file extension.
     '''
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'r') as system_settings_io:
         system_settings: dict = json.load(system_settings_io)
