@@ -93,7 +93,7 @@ def eprint(s: str, /) -> None:
 
     the passed in message will not be automatically colorized. this should be handled by the caller.
     '''
-    print(text.lightgrey(f'{time.strftime("%H:%M:%S")}| ' + text.red(f'!!! {s}')))
+    sys.stdout.write(text.lightgrey(f'{time.strftime("%H:%M:%S")}| ' + text.red(f'!!! {s} ')))
     while True:
         answer: str = input(
             text.lightgrey('continue? [y/', style=None) +
@@ -107,7 +107,7 @@ def eprint(s: str, /) -> None:
             hardout()
 
         else:
-            flash_input_error('invalid selection', 18) # length of raw text
+            flash_input_error('invalid selection', 13 + len(s) + 18)  # length of raw text
 
 def dnx_run(s: str, /) -> None:
     '''convenience function, subprocess run wrapper adding additional args.
@@ -127,8 +127,7 @@ def check_run_as_root() -> None:
         eprint(
             text.yellow('dnxfirewall auto loader requires') +
             text.red('root') +
-            text.yellow('permissions. ') +
-            text.red('exiting...')
+            text.yellow('permissions.')
         )
 
 def check_dnx_user() -> None:
@@ -212,25 +211,30 @@ def progress(desc: str) -> None:
     bar: str
     if (ratio < .34):
         bar = text.red('#' * filled_len, style=None)
+        completed = text.red(f'{completed_count}', style=None)
 
     elif (ratio < .67):
         bar = text.orange('#' * filled_len, style=None)
+        completed = text.orange(f'{completed_count}', style=None)
 
     else:
         bar = text.green('#' * filled_len, style=None)
+        completed = text.yellow(f'{completed_count}', style=None)
+
+    if (ratio == 1):
+        completed = text.green(f'{completed_count}', style=None)
 
     bar += text.lightgrey('=' * (bar_len - filled_len))
 
     sys.stdout.write(
-        text.yellow(f'{completed_count}') +
-        text.lightgrey(f'/{PROGRESS_TOTAL_COUNT} |')
+        completed + text.lightgrey(f'/{PROGRESS_TOTAL_COUNT} |')
     )
     sys.stdout.write(
         text.lightgrey(f'| [', style=None) +
         f'{bar}' +
         text.lightgrey(f'] {int(100 * ratio)}% |', style=None)
     )
-    sys.stdout.write(text.yellow(f'| {desc.ljust(36)}\r'))
+    sys.stdout.write(text.yellow(f'| {desc.ljust(48)}\r'))
     if (filled_len == bar_len):
         sys.stdout.write('\n')
 
@@ -464,7 +468,7 @@ def set_permissions() -> None:
         f'chmod 750 {HOME_DIR}/dnx_run.py',
 
         # creating symlink to allow dnx command from anywhere if logged in as dnx user
-        f'ln -s {HOME_DIR}/dnx_run.py /usr/local/bin/dnx',
+        f'ln -fs {HOME_DIR}/dnx_run.py /usr/local/bin/dnx',
 
         # adding www-data user to dnx group
         'usermod -aG dnx www-data',
