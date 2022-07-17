@@ -476,16 +476,8 @@ def set_permissions() -> None:
     for command in commands:
         dnx_run(command)
 
-    # update sudoers to allow dnx user no pass for specific system functions
-    no_pass = [
-        'dnx ALL = (root) NOPASSWD: /usr/sbin/iptables-restore',
-        'dnx ALL = (root) NOPASSWD: /usr/sbin/iptables-save',
-        'dnx ALL = (root) NOPASSWD: /usr/sbin/iptables',
-        # 'dnx ALL = (root) NOPASSWD: /usr/bin/systemctl status *'
-    ]
-
-    for line in no_pass:
-        dnx_run(f'echo "{line}" | sudo EDITOR="tee -a" visudo')
+    # configure sudoers.d to allow dnx user "no-pass" for specific system functions
+    dnx_run(f'sudo cp -n {HOME_DIR}/dnx_profile/admin/dnx /etc/sudoers.d/')
 
 # ============================
 # SERVICE FILE SETUP
@@ -500,7 +492,7 @@ def set_services() -> None:
 
         if (service not in ignore_list):
 
-            dnx_run(f'cp {UTILITY_DIR}/services/{service} /etc/systemd/system/')
+            dnx_run(f'cp -n {UTILITY_DIR}/services/{service} /etc/systemd/system/')
             dnx_run(f'systemctl enable {service}')
 
     dnx_run(f'systemctl enable nginx')

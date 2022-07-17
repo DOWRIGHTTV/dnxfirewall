@@ -1,0 +1,5 @@
+# THIS FILE WILL BE COPIED TO /etc/sudoers.d
+
+dnx ALL = (root) NOPASSWD: /usr/sbin/iptables-restore
+dnx ALL = (root) NOPASSWD: /usr/sbin/iptables-save
+dnx ALL = (root) NOPASSWD: /usr/sbin/iptables
