@@ -107,7 +107,7 @@ def eprint(s: str, /) -> None:
             hardout()
 
         else:
-            flash_input_error('invalid selection', 13 + len(s) + 18)  # length of raw text
+            flash_input_error('invalid selection', 13 + len(s))  # length of raw text
 
 def dnx_run(s: str, /) -> None:
     '''convenience function, subprocess run wrapper adding additional args.
