@@ -302,6 +302,8 @@ def collect_interface_associations(interfaces_detected: list[str]) -> dict[str, 
                     interface_config[int_name] = interfaces_detected[int(select)-1]
                     break
 
+                flash_input_error('invalid selection', 18)
+
         if confirm_interfaces(interface_config):
             if len(set(interface_config.values())) == 3:
                 break
@@ -359,6 +361,8 @@ def confirm_interfaces(interface_config: dict[str, str]) -> bool:
 
         elif (answer.lower() == 'n'):
             return False
+
+        flash_input_error('invalid selection', 18)
 
 
 # ============================
