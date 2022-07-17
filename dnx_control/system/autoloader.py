@@ -381,11 +381,11 @@ def install_packages() -> list:
 
 # this is a no op if already on configured branch, but we will use it to return branch name also.
 def checkout_configured_branch() -> str:
-    configured_branch: str = load_data('system.cfg')['branch']
+    configured_branch: str = load_data('system.cfg', filepath='dnx_profile/data/usr')['branch']
 
     branch_name = 'dnxfirewall-dev' if configured_branch == 'development' else 'dnxfirewall'
 
-    dnx_run(f'git -C {HOME_DIR}/dnxfirewall checkout {branch_name}')
+    dnx_run(f'git -C {HOME_DIR} checkout {branch_name}')
 
     return branch_name
 
