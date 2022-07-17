@@ -191,7 +191,7 @@ def set_branch() -> None:
     with ConfigurationManager('system') as dnx:
         dnx_settings: ConfigChain = dnx.load_configuration()
 
-        dnx_settings['branch'] = available_branches[int(selection)]
+        dnx_settings['branch'] = available_branches[int(selection) - 1]
 
         dnx.write_configuration(dnx_settings.expanded_user_data)
 
