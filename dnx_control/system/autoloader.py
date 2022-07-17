@@ -7,6 +7,7 @@ import sys
 import time
 import json
 import socket
+import readline
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional
@@ -79,7 +80,7 @@ def flash_input_error(error: str, space_ct: int) -> None:
 
     time.sleep(ERROR_SHOW_TIME)
 
-    sys.stdout.write(f'{" " * 80}\r')
+    sys.stdout.write(f'{" " * os.get_terminal_size().columns}\r')
 
 def sprint(s: str, /) -> None:
     '''setup print. includes timestamp before arg str.
