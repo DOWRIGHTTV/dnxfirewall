@@ -45,7 +45,7 @@ def direct_log(m_name: str, log_level: LOG, msg: str, *, cli: bool = False) -> N
     used to override global module log name if needed.
     does not require LogHandler initialization.
     '''
-    if (log_level <= Log.current_lvl):
+    if (Log.current_lvl <= log_level):
         return
 
     log_path = f'{HOME_DIR}/dnx_profile/log/{m_name}/{_system_date(string=True)}-{m_name}.log'
