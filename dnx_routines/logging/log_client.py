@@ -39,18 +39,18 @@ _format_time = System.format_time
 # ==============================
 # GENERIC LIGHTWEIGHT FUNCTIONS
 # ==============================
-def direct_log(m_name: str, log_level: LOG, msg: str, *, cli: bool = False) -> None:
+def direct_log(m_name: str, message_level: LOG, msg: str, *, cli: bool = False) -> None:
     '''alternate system log method.
 
     used to override global module log name if needed.
     does not require LogHandler initialization.
     '''
-    if (Log.current_lvl <= log_level):
+    if (message_level > Log.current_lvl):
         return
 
     log_path = f'{HOME_DIR}/dnx_profile/log/{m_name}/{_system_date(string=True)}-{m_name}.log'
     with open(log_path, 'a+') as log_file:
-        log_file.write(f'{fast_time()}|{m_name}|{log_level.name.lower()}|{msg}\n')
+        log_file.write(f'{fast_time()}|{m_name}|{message_level.name.lower()}|{msg}\n')
 
     if (cli):
         console_log(msg)
