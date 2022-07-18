@@ -141,6 +141,8 @@ class Initialize:
 
     ensures all threads have completed one loop before returning control to the caller.
     will block until the condition is met.
+
+    note: LogHandler is optional so log messages will be bypassed if a handler is not provided (naturally).
     '''
     __slots__ = (
         '_log', '_name', '_initial_time',
@@ -175,7 +177,8 @@ class Initialize:
         self._thread_count = count
         self._timeout = timeout
 
-        self._log.notice(f'{self._name} setup waiting for threads: {count}.')
+        if (self._log):
+            self._log.notice(f'{self._name} setup waiting for threads: {count}.')
 
         # blocking until all threads check in by individually calling done method
         while not self._initial_load_complete:
@@ -194,7 +197,8 @@ class Initialize:
         # overloading property reference to None to reduce code execution for subsequent thread loops.
         Initialize.done2 = None
 
-        self._log.notice(f'{self._name} setup complete.')
+        if (self._log):
+            self._log.notice(f'{self._name} setup complete.')
 
     def done(self) -> None:
         '''inform the handler a thread has been initialized.
@@ -213,7 +217,8 @@ class Initialize:
 
         self._thread_ready.add(threading.get_ident())
 
-        self._log.debug(f'{self._name} thread checkin.')
+        if (self._log):
+            self._log.debug(f'{self._name} thread checkin.')
 
     @property
     def done2(self) -> bool:
