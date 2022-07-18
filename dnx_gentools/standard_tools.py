@@ -18,7 +18,6 @@ from dnx_gentools.def_constants import RUN_FOREVER, MSEC, fast_time, fast_sleep,
 if (TYPE_CHECKING):
     from dnx_routines.logging import LogHandler_T
 
-
 __all__ = (
     'looper', 'dynamic_looper',
     'ConfigurationMixinBase', 'Initialize',
@@ -26,6 +25,7 @@ __all__ = (
     'bytecontainer', 'structure',
     'classproperty'
 )
+
 
 def looper(sleep_len: int, **kwargs):
     '''
@@ -135,12 +135,19 @@ class ConfigurationMixinBase:
         '''
         raise NotImplementedError('module configuration method is not defined.')
 
+
 class Initialize:
     '''class used to handle system module thread synchronization on process startup.
 
     ensures all threads have completed one loop before returning control to the caller.
     will block until the condition is met.
     '''
+    __slots__ = (
+        '_log', '_name', '_initial_time',
+        '_is_initializing', 'has_ran', '_timeout',
+        '_thread_count', '_thread_ready',
+    )
+
     def __init__(self, log: Optional[LogHandler_T] = None, name: str = '') -> None:
         self._log: LogHandler_T = log
         self._name: str = name
@@ -163,7 +170,7 @@ class Initialize:
         '''blocks until the checked in threads count has reached the wait for amount.
         '''
         if (not self._is_initializing or self.has_ran):
-            raise RuntimeError('run has already been called for this self.')
+            raise RuntimeError('run has already been called for this instance.')
 
         self._thread_count = count
         self._timeout = timeout
@@ -184,6 +191,9 @@ class Initialize:
         self.has_ran = True
         self._is_initializing = False
 
+        # overloading property reference to None to reduce code execution for subsequent thread loops.
+        Initialize.done2 = None
+
         self._log.notice(f'{self._name} setup complete.')
 
     def done(self) -> None:
@@ -196,7 +206,7 @@ class Initialize:
             return
 
         # this thread has already checked in.
-        # this is a no op, but generates multiple debug messages, so filtering helps tshoot.
+        # this is a no op, but generates multiple debug messages, so filtering helps troubleshooting.
         thread_ident = threading.get_ident()
         if (thread_ident in self._thread_ready):
             return
@@ -204,6 +214,20 @@ class Initialize:
         self._thread_ready.add(threading.get_ident())
 
         self._log.debug(f'{self._name} thread checkin.')
+
+    @property
+    def done2(self) -> bool:
+        '''new form of dealing with thread initialization check-in.
+
+        for short term compatibility, this will functionally wrap done(), providing identical functionality.
+
+        because this is in property form, True will always be returned.
+        once initialization is complete, the property reference will be overloaded with "None" to reduce code execution
+        post initialization.
+        '''
+        self.done()
+
+        return True
 
     def wait_in_line(self, *, wait_for: int) -> None:
         '''blocking call to wait for all lower number threads to complete before checking in and returning.

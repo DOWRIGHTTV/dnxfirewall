@@ -30,7 +30,7 @@ if (TYPE_CHECKING):
 
 ERROR_SHOW_TIME = .33
 
-def lprint(sep: str = '-'): print(text.lightblue(f'{sep}' * 32))
+def lprint(sep: str = '-'): print(text.lightblue(f'{sep}' * 80))
 
 # ===============
 # BANNER

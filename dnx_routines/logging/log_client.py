@@ -10,7 +10,7 @@ from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SCM_CREDENTIALS
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import LOG
-from dnx_gentools.standard_tools import classproperty, dnx_queue
+from dnx_gentools.standard_tools import classproperty, dnx_queue, Initialize
 from dnx_gentools.file_operations import change_file_owner, load_configuration, cfg_read_poller
 
 from dnx_gentools.system_info import System
@@ -34,6 +34,7 @@ __all__ = (
 
 _system_date = System.date
 _format_time = System.format_time
+
 
 # ==============================
 # GENERIC LIGHTWEIGHT FUNCTIONS
@@ -111,7 +112,7 @@ def _log_handler() -> LogHandler:
 
     log_path: str = f'{HOME_DIR}/dnx_profile/log/'
 
-    is_initialized: bool = False
+    initializer: list[int] = []
     syslog: bool = False
 
     # keeping file open for performance.
@@ -136,6 +137,8 @@ def _log_handler() -> LogHandler:
     # TODO: create function to write log for system errors that happen prior to log handler being initialized.
     class _LogHandler:
 
+        _init_one: ClassVar[Initialize] = Initialize()
+
         @classmethod
         def run(cls, *, name: str, console_output: bool = False):
             '''
@@ -145,24 +148,21 @@ def _log_handler() -> LogHandler:
             '''
             nonlocal handler_name, cli_output, log_path, db_client
 
-            if (is_initialized):
+            if (initializer is None):
                 raise RuntimeError('the log handler has already been started.')
 
             handler_name = name
             cli_output = console_output
             log_path += name
 
-            direct_log(handler_name, LOG.INFO, 'LogHandler initialization started.', cli=True)
-
+            # need to get log level before initialization direct log or else it will be set to 0
             threading.Thread(target=log_settings).start()
             threading.Thread(target=slog_settings).start()
 
+            cls._init_one.wait_for_threads(count=2)
+
+            direct_log(handler_name, LOG.INFO, 'LogHandler initialization started.', cli=True)
             threading.Thread(target=write_to_disk).start()
-
-            # waiting for log settings and methods to initialize before returning to caller
-            while not is_initialized:
-                fast_sleep(ONE_SEC)
-
             direct_log(handler_name, LOG.NOTICE, 'LogHandler initialization complete.', cli=True)
 
         @classproperty
@@ -353,21 +353,23 @@ def _log_handler() -> LogHandler:
 
     @cfg_read_poller('logging_client')
     def log_settings(cfg_file: str) -> None:
-        nonlocal logging_level, line_buf_limit, is_initialized
+        nonlocal logging_level, line_buf_limit
 
         logging_level  = LOG(load_configuration(cfg_file)['logging->level'])
         line_buf_limit = load_configuration(cfg_file)['logging->line_buffer']
 
         add_logging_methods(_LogHandler)
 
-        # after the initial load, this does nothing
-        is_initialized = True
+        # abusing property to overload reference after the initial load.
+        _LogHandler._init_one.done2
 
     @cfg_read_poller('syslog_client')
     def slog_settings(cfg_file: str) -> None:
         nonlocal syslog
 
         syslog = load_configuration(cfg_file)['enabled']
+
+        _LogHandler._init_one.done2
 
     return _LogHandler
 
