@@ -62,7 +62,7 @@ class Args:
 
 
 LOG_NAME: str = 'system'
-PROGRESS_TOTAL_COUNT: int = 2
+PROGRESS_TOTAL_COUNT: int = 1  # set permissions count added here
 
 LINEBREAK: str = text.lightblue('-' * 32)
 
@@ -536,9 +536,12 @@ def run():
     global PROGRESS_TOTAL_COUNT
 
     if (not args.update_set):
-        PROGRESS_TOTAL_COUNT += 2  # accounts for copying service files and building iptables
+        PROGRESS_TOTAL_COUNT += 1  # copying service files
         set_branch()
         configure_interfaces()
+
+    if (not args.update_set) and (args.update_set and args.iptables):
+        PROGRESS_TOTAL_COUNT += 1  # building iptables
 
     # will hold all dynamically set commands prior to execution to get an accurate count for progress bar.
     dynamic_commands: list[tuple[str, Optional[str]]] = []
