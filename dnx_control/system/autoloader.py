@@ -207,9 +207,12 @@ completed_count: int = 0
 def progress(desc: str) -> None:
     global completed_count
 
+    # calculating bar %
     ratio: float = completed_count / PROGRESS_TOTAL_COUNT
     filled_len: int = int(bar_len * ratio)
 
+    # COLORIZING COMPLETION STATUS BAR
+    # --------------------------------------------------------------------
     bar: str
     if (ratio < .34):
         bar = text.red('#' * filled_len, style=None)
@@ -228,6 +231,9 @@ def progress(desc: str) -> None:
 
     bar += text.lightgrey('=' * (bar_len - filled_len))
 
+    # RENDERING UPDATED TIMESTAMP, BAR, DESCRIPTION
+    # --------------------------------------------------------------------
+    sys.stdout.write(text.lightgrey(f'{time.strftime("%H:%M:%S")}| '))
     sys.stdout.write(
         text.lightgrey(f'| [', style=None) + bar + text.lightgrey(f'] ', style=None) +
         completed + text.lightgrey('% |', style=None)
@@ -239,9 +245,11 @@ def progress(desc: str) -> None:
     if (desc):
         completed_count += 1
 
+    # prevents bar from being overwritten once complete
     if (filled_len == bar_len):
         sys.stdout.write('\n')
 
+    # forces current stdout buffer to be written to terminal
     sys.stdout.flush()
 
 
