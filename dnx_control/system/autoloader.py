@@ -50,6 +50,7 @@ class Args:
     u: int = 0
     update: int = 0
     packages: int = 0
+    iptables: int = 0
 
     @property
     def verbose_set(self):
@@ -61,7 +62,7 @@ class Args:
 
 
 LOG_NAME: str = 'system'
-PROGRESS_TOTAL_COUNT: int = 4
+PROGRESS_TOTAL_COUNT: int = 2
 
 LINEBREAK: str = text.lightblue('-' * 32)
 
@@ -206,17 +207,13 @@ completed_count: int = 0
 def progress(desc: str) -> None:
     global completed_count
 
-    # allows for rendering bar without moving the completion %.
-    if (desc):
-        completed_count += 1
-
-    ratio: float = completed_count / (PROGRESS_TOTAL_COUNT)
+    ratio: float = completed_count / PROGRESS_TOTAL_COUNT
     filled_len: int = int(bar_len * ratio)
 
     bar: str
     if (ratio < .34):
         bar = text.red('#' * filled_len, style=None)
-        completed = text.red(f'{int(100 * ratio)}', style=None)
+        completed = text.red(f'{int(100 * ratio)}'.rjust(2), style=None)
 
     elif (ratio < .67):
         bar = text.orange('#' * filled_len, style=None)
@@ -232,17 +229,16 @@ def progress(desc: str) -> None:
     bar += text.lightgrey('=' * (bar_len - filled_len))
 
     sys.stdout.write(
-        text.yellow(f'{completed_count}', style=None) +
-        text.lightgrey(f'/{PROGRESS_TOTAL_COUNT} |')
-    )
-    sys.stdout.write(
-        text.lightgrey(f'| [', style=None) +
-        bar +
-        text.lightgrey(f'] ', style=None) +
-        completed +
-        text.lightgrey('% |', style=None)
+        text.lightgrey(f'| [', style=None) + bar + text.lightgrey(f'] ', style=None) +
+        completed + text.lightgrey('% |', style=None)
     )
     sys.stdout.write(text.yellow(f'| {desc.ljust(48)}\r'))
+    sys.stdout.write(text.yellow(f'{completed_count}', style=None) + text.lightgrey(f'/{PROGRESS_TOTAL_COUNT} |'))
+
+    # allows for rendering bar without moving the completion %.
+    if (desc):
+        completed_count += 1
+
     if (filled_len == bar_len):
         sys.stdout.write('\n')
 
@@ -540,6 +536,7 @@ def run():
     global PROGRESS_TOTAL_COUNT
 
     if (not args.update_set):
+        PROGRESS_TOTAL_COUNT += 2  # accounts for copying service files and building iptables
         set_branch()
         configure_interfaces()
 
@@ -575,8 +572,9 @@ def run():
 
         dnx_run(command)
 
-    # iptables and permissions will be done for install and update
-    configure_iptables()
+    if (not args.update_set) or (args.update_set and args.iptables):
+        configure_iptables()
+
     set_permissions()
 
     if (not args.update_set):
