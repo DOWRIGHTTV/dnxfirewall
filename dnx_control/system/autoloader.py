@@ -567,7 +567,7 @@ def run():
     sprint(f'starting dnxfirewall {action}...')
     lprint()
 
-    progress('')  # this will render 0% bar so we don't need to use offsets.
+    progress('')  # this will render 0% bar, so we don't need to use offsets.
     for command, desc in dynamic_commands:
 
         if (desc):
@@ -606,7 +606,7 @@ if INITIALIZE_MODULE('autoloader'):
     check_clone_location()
 
     # initializing log module which is required when using ConfigurationManager
-    Log.run(name=LOG_NAME)
+    Log.run(name=LOG_NAME, suppress_output=True)
     ConfigurationManager.set_log_reference(Log)
 
     # this uses the config manager, so must be called after log initialization
