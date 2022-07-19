@@ -309,7 +309,7 @@ def collect_interface_associations(interfaces_detected: list[str]) -> dict[str, 
     while True:
         for int_name in interface_config:
             while True:
-                select = input(f'select {int_name} interface: ')
+                select = input(f'select {text.yellow(int_name)} interface: ')
                 if (select.isdigit() and int(select) in range(1, len(interfaces_detected)+1)):
                     interface_config[int_name] = interfaces_detected[int(select)-1]
                     break
@@ -361,7 +361,7 @@ def set_dhcp_interfaces(user_intf_config: dict[str, str]) -> None:
         dhcp.write_configuration(dhcp_settings.expanded_user_data)
 
 def confirm_interfaces(interface_config: dict[str, str]) -> bool:
-    print(text.orange(' '.join([f'{zone}={intf}' for zone, intf in interface_config.items()])))
+    print(' '.join([f'{zone}={text.yellow(intf)}' for zone, intf in interface_config.items()]))
     while True:
         answer: str = input(
             text.lightgrey('confirm? [', style=None) +

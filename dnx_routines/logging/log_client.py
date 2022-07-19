@@ -52,7 +52,7 @@ def direct_log(m_name: str, message_level: LOG, msg: str, *, cli: bool = False) 
     with open(log_path, 'a+') as log_file:
         log_file.write(f'{fast_time()}|{m_name}|{message_level.name.lower()}|{msg}\n')
 
-    if (cli):
+    if (cli and not Log.supress_output):
         console_log(msg)
 
     if (ROOT):
