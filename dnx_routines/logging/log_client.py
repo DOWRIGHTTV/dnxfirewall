@@ -52,7 +52,7 @@ def direct_log(m_name: str, message_level: LOG, msg: str, *, cli: bool = False) 
     with open(log_path, 'a+') as log_file:
         log_file.write(f'{fast_time()}|{m_name}|{message_level.name.lower()}|{msg}\n')
 
-    if (cli and not Log.supress_output):
+    if (cli and not Log.suppress_output):
         console_log(msg)
 
     if (ROOT):
@@ -138,9 +138,10 @@ def _log_handler() -> LogHandler:
     class _LogHandler:
 
         _init_one: ClassVar[Initialize] = Initialize()
+        suppress_output: ClassVar[bool] = False
 
         @classmethod
-        def run(cls, *, name: str, console_output: bool = False):
+        def run(cls, *, name: str, console_output: bool = False, suppress_output: bool = False):
             '''
             initialize log handler settings and monitor system configs for changes with log/syslog settings.
 
@@ -154,6 +155,8 @@ def _log_handler() -> LogHandler:
             handler_name = name
             cli_output = console_output
             log_path += name
+
+            cls.suppress_output = suppress_output
 
             # need to get log level before initialization direct log or else it will be set to 0
             threading.Thread(target=log_settings).start()
