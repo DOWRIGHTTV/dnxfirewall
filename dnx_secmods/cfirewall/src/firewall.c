@@ -67,7 +67,6 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     struct clist_range  fw_clist;
 
     nl_pkt_hdr     *nl_pkth = NULL;
-//    nl_pkt_hw  *_hw;
     uint32_t        ct_info;
 
 //    printf("< [++] FW RECV QUEUE(%u) - PARSING [++] >\n", cfd->queue);
@@ -75,7 +74,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     /*
     CONNTRACK LOOKUP
     this should be checked as soon as feasibly possible for performance.
-    this will be used to allow for stateless inspection policies later.
+    later, this will be used to allow for stateless inspection policies.
     NTOHL on id is because kernel will apply HTONL on receipt.
     */
     ct_info = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_CT_INFO]));
@@ -112,14 +111,13 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     // NFQUEUE VERDICT
     dnx_send_verdict(cfd, ntohl(nl_pkth->packet_id), &pkt);
 
-    if (FW_V && VERBOSE) {
-        printf("< -- FIREWALL VERDICT -- >\n");
-        printf("packet_id->%u, hook->%u, mark->%u, action->%u", ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.mark, pkt.action);
-        if (!PROXY_BYPASS) {
-            printf(", ipp->%u, dns->%u, ips->%u", pkt.mark >> 12 & 15, pkt.mark >> 16 & 15, pkt.mark >> 20 & 15);
-        }
-        printf("\n=====================================================================\n");
-    }
+    debug_(FW_V & VERBOSE, "< -- FIREWALL VERDICT -- >\npacket_id->%u, hook->%u, mark->%u, action->%u",
+        ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.mark, pkt.action);
+
+    debug_(FW_V & VERBOSE & PROXY_BYPASS, ", ipp->%u, dns->%u, ips->%u",
+        pkt.mark >> 12 & 15, pkt.mark >> 16 & 15, pkt.mark >> 20 & 15);
+
+    debug_(FW_V & VERBOSE, "\n")
 
     // return hierarchy -> libnfnetlink.c >> libnetfiler_queue >> process_traffic.
     // < 0 vals are errors, but return is being ignored by CFirewall._run.
@@ -148,28 +146,24 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
     uint8_t     direction   = pkt->hw.in_zone.id != WAN_IN ? OUTBOUND : INBOUND;
     uint16_t    tracked_geo = direction == INBOUND ? src_country : dst_country;
 
-    // loops
-    uintf8_t    idx, cntrl_list, rule_idx;
+    // local flag to mark
+    uintf8_t    log_packet = 0
 
-    if (FW_V && VERBOSE) {
-        printf("< ++ FIREWALL INSPECTION ++ >\n");
-        printf("src->[%u]%u(%u):%u, dst->[%u]%u(%u):%u, direction->%u, tracked->%u\n",
-            pkt->hw.in_zone.id, iph_src_ip, src_country, ntohs(pkt->protohdr->sport),
-            pkt->hw.out_zone.id, iph_dst_ip, dst_country, ntohs(pkt->protohdr->dport),
-            direction, tracked_geo);
+    debug_(FW_V & VERBOSE, "< ++ FIREWALL INSPECTION ++ >\nsrc->[%u]%u(%u):%u, dst->[%u]%u(%u):%u, direction->%u, tracked->%u\n"
+        pkt->hw.in_zone.id, iph_src_ip, src_country, ntohs(pkt->protohdr->sport),
+        pkt->hw.out_zone.id, iph_dst_ip, dst_country, ntohs(pkt->protohdr->dport),
+        direction, tracked_geo);
     }
 
-    for (cntrl_list = fw_clist->start; cntrl_list < fw_clist->end; cntrl_list++) {
-
-        if (firewall_tables[cntrl_list].len == 0) { continue; }
+    for (uintf8_t cntrl_list = fw_clist->start; cntrl_list < fw_clist->end; cntrl_list++) {
 
         // NOTE: inspection order: src > dst | zone, ip_addr, protocol, port
-        for (rule_idx = 0; rule_idx < firewall_tables[cntrl_list].len; rule_idx++) {
+        for (uintf8_t rule_idx = 0; rule_idx < firewall_tables[cntrl_list].len; rule_idx++) {
 
             rule = &firewall_tables[cntrl_list].rules[rule_idx];
             if (!rule->enabled) { continue; }
 
-            if (FW_V && VERBOSE2) {
+            if (FW_V & VERBOSE2) {
                 firewall_print_rule(cntrl_list, rule_idx);
             }
             // ------------------------------------------------------------------
@@ -201,11 +195,13 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             pkt->rule_clist = cntrl_list;
             pkt->fw_rule    = rule;
             pkt->action     = rule->action; // copying to allow for outside control.
-            pkt->mark       = tracked_geo << FOUR_BITS | direction << TWO_BITS | rule->action;
+            pkt->mark       = (tracked_geo << FOUR_BITS) | (direction << TWO_BITS) | rule->action;
 
-            for (idx = 0; idx < 3; idx++) {
+            for (uintf8_t idx = 0; idx < 3; idx++) {
                 pkt->mark |= rule->sec_profiles[idx] << ((idx * 4) + 12);
             }
+
+            log_packet = rule->log;
 
             goto logging;
         }
@@ -218,7 +214,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
     pkt->mark       = tracked_geo << FOUR_BITS | direction << TWO_BITS | DNX_DROP;
 
     logging:
-    if (rule->log) {
+    if (log_packet) {
         gettimeofday(&timestamp, NULL);
 
         // log file rotation logic
@@ -227,12 +223,9 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
         log_exit(pkt->logger);
     }
 
-//        pkt.hw.timestamp = time(NULL);
-//        if (netlink_attrs[NFQA_HWADDR]) {
-//            pkt.hw.mac_addr = ((nl_pkt_hw*) mnl_attr_get_payload(netlink_attrs[NFQA_HWADDR]))->hw_addr;
-//        }
+//    if (netlink_attrs[NFQA_HWADDR]) {
+//        pkt.hw.mac_addr = ((nl_pkt_hw*) mnl_attr_get_payload(netlink_attrs[NFQA_HWADDR]))->hw_addr;
 //    }
-
 }
 
 void
@@ -240,9 +233,7 @@ firewall_lock(void)
 {
     pthread_mutex_lock(FWlock_ptr);
 
-    if (FW_V && VERBOSE) {
-        printf("< [!] FW LOCK ACQUIRED [!] >\n");
-    }
+    debug_(FW_V & VERBOSE, "< [!] FW LOCK ACQUIRED [!] >\n");
 }
 
 void
@@ -250,26 +241,22 @@ firewall_unlock(void)
 {
     pthread_mutex_unlock(FWlock_ptr);
 
-    if (FW_V && VERBOSE) {
-        printf("< [!] FW LOCK RELEASED [!] >\n");
-    }
+    debug_(FW_V & VERBOSE, "< [!] FW LOCK RELEASED [!] >\n");
 }
 
 int
 firewall_stage_count(uintf8_t cntrl_list, uintf16_t rule_count)
 {
-    firewall_tables[cntrl_list].len = rule_count;
+    fw_tables_swap[cntrl_list].len = rule_count;
 
-    if (FW_V && VERBOSE) {
-        printf("< [!] FW TABLE (%u) COUNT STAGED [!] >\n", cntrl_list);
-    }
+    debug_(FW_V & VERBOSE, "< [!] FW TABLE (%u) COUNT STAGED [!] >\n", cntrl_list);
     return OK;
 }
 
 int
 firewall_stage_rule(uintf8_t cntrl_list, uintf16_t rule_idx, struct FWrule *rule)
 {
-    firewall_tables[cntrl_list].rules[rule_idx] = *rule;
+    fw_tables_swap[cntrl_list].rules[rule_idx] = *rule;
 
     return OK;
 }
@@ -284,11 +271,12 @@ firewall_push_rules(uintf8_t cntrl_list)
         // copy swap structure to active structure. alignment is already set as they are identical structures.
         firewall_tables[cntrl_list].rules[rule_idx] = fw_tables_swap[cntrl_list].rules[rule_idx];
     }
+    firewall_tables[cntrl_list].len = fw_tables_swap[cntrl_list].len;
+
     firewall_unlock();
 
-    if (FW_V && VERBOSE) {
-        printf("< [!] FW TABLE (%u) RULES UPDATED [!] >\n", cntrl_list);
-    }
+    debug_(FW_V & VERBOSE, "< [!] FW TABLE (%u) RULES UPDATED [!] >\n", cntrl_list);
+
     return OK;
 }
 

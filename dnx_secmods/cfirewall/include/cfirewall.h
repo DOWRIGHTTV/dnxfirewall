@@ -12,6 +12,7 @@
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h> // nfct/ conntrack updates (used by nat mod through dnx_nfq)
 
 // dnxfirewall
+#include "debug.h"
 #include "config.h"
 #include "inet_tools.h"
 #include "std_tools.h"
@@ -72,7 +73,7 @@ extern struct mnl_socket *nl[2];
 // memset will be performed in Cython prior to changing the values.
 extern ZoneMap INTF_ZONE_MAP[FW_MAX_ZONES];
 
-// dxnfirewall typedef helpers
+// dnxfirewall typedef helpers
 typedef const struct nlmsghdr     nl_msg_hdr;
 
 typedef struct nfqnl_msg_packet_hdr     nl_pkt_hdr;

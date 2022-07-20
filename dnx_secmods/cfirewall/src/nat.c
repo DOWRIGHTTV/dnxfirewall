@@ -49,7 +49,7 @@ DST_NAT - this will be done in the pre_route hook. since we cannot determine the
 destination has been changed, we cannot use the zone as for destination matching criteria.
 the corresponding firewall rule needs to use the destination zone for matching criteria since it is post_route.
 
-NOTES: we should try moving the nat logic to mangle/ forward hook. this would give us access to in/out inteface
+NOTES: we should try moving the nat logic to mangle/ forward hook. this would give us access to in/out interface
 for src/dst nat rules, but at the cost of having to manually check state of each packet and accept. the performance
 hit might not be worth it for what our current goals are. also, though we would be able to have an dst zone on src nat,
 the dst zone would need to be set to the zone for the dst pre nat, which would be equally wonky to no zone at all.
@@ -111,11 +111,8 @@ nat_recv(nl_msg_hdr *nl_msgh, void *data)
 
     dnx_send_verdict(cfd, ntohl(nl_pkth->packet_id), &pkt);
 
-    if (NAT_V && VERBOSE) {
-        printf("< [--] NAT VERDICT [--] >\n");
-        printf("packet_id->%u, hook->%u, action->%u\n",
-            ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.action);
-        printf("=====================================================================\n");
+    debug_(NAT_V & VERBOSE, "< [--] NAT VERDICT [--] >\npacket_id->%u, hook->%u, action->%u\n,
+        ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.action);
     }
 
     return OK;
@@ -138,12 +135,10 @@ nat_inspect(int cntrl_list, struct dnx_pktb *pkt, struct cfdata *cfd)
     uint8_t     src_country = geolocation->lookup(geolocation, iph_src_ip & MSB, iph_src_ip & LSB);
     uint8_t     dst_country = geolocation->lookup(geolocation, iph_dst_ip & MSB, iph_dst_ip & LSB);
 
-    if (NAT_V && VERBOSE) {
-        printf("< [**] NAT INSPECTION [**] >\n");
-        printf("src->[%u]%u:%u, dst->[%u]%u:%u\n",
-            pkt->hw.in_zone.id, iph_src_ip, ntohs(pkt->protohdr->sport),
-            pkt->hw.out_zone.id, iph_dst_ip, ntohs(pkt->protohdr->dport)
-            );
+    debug_(NAT_V & VERBOSE, "< [**] NAT INSPECTION [**] >\nsrc->[%u]%u:%u, dst->[%u]%u:%u\n",
+        pkt->hw.in_zone.id, iph_src_ip, ntohs(pkt->protohdr->sport),
+        pkt->hw.out_zone.id, iph_dst_ip, ntohs(pkt->protohdr->dport)
+        );
     }
 
     for (uintf16_t rule_idx = 0; rule_idx < nat_tables[cntrl_list].len; rule_idx++) {
@@ -201,7 +196,7 @@ nat_lock(void)
 {
     pthread_mutex_lock(NATlock_ptr);
 
-    printf("< [!] NAT LOCK ACQUIRED [!] >\n");
+    debug_(NAT_V & VERBOSE, "< [!] NAT LOCK ACQUIRED [!] >\n");
 }
 
 void
@@ -209,26 +204,23 @@ nat_unlock(void)
 {
     pthread_mutex_unlock(NATlock_ptr);
 
-    if (NAT_V && VERBOSE) {
-        printf("< [!] NAT LOCK RELEASED [!] >\n");
-    }
+    debug_(NAT_V & VERBOSE, "< [!] NAT LOCK RELEASED [!] >\n");
 }
 
 int
 nat_stage_count(uintf8_t cntrl_list, uintf16_t rule_count)
 {
-    nat_tables[cntrl_list].len = rule_count;
+    nat_tables_swap[cntrl_list].len = rule_count;
 
-    if (NAT_V && VERBOSE) {
-        printf("< [!] NAT TABLE (%u) COUNT STAGED [!] >\n", cntrl_list);
-    }
+    debug_(NAT_V & VERBOSE, "< [!] NAT TABLE (%u) COUNT STAGED [!] >\n", cntrl_list);
+
     return OK;
 }
 
 int
 nat_stage_rule(uintf8_t cntrl_list, uintf16_t rule_idx, struct NATrule *rule)
 {
-    nat_tables[cntrl_list].rules[rule_idx] = *rule;
+    nat_tables_swap[cntrl_list].rules[rule_idx] = *rule;
 
     return OK;
 }
@@ -243,10 +235,11 @@ nat_push_rules(uintf8_t cntrl_list)
         // copy swap structure to active structure. alignment is already set as they are idential structures.
         nat_tables[cntrl_list].rules[rule_idx] = nat_tables_swap[cntrl_list].rules[rule_idx];
     }
+    nat_tables[cntrl_list].len = nat_tables_swap[cntrl_list].len;
+
     nat_unlock();
 
-    if (NAT_V && VERBOSE) {
-        printf("< [!] NAT TABLE (%u) RULES UPDATED [!] >\n", cntrl_list);
+    debug_(NAT_V & VERBOSE, "< [!] NAT TABLE (%u) RULES UPDATED [!] >\n", cntrl_list);
     }
     return OK;
 }
