@@ -11,17 +11,13 @@ extern void debug__(int on, char* fmt, ...);
 void
 debug__(int on, char* fmt, ...)
 {
-    va_list     argptr;
+    va_list     args;
 
     if (on) {
-        va_start(argptr, fmt);
-        fprintf(stderr, fmt, ##__VA_ARGS__);
-
-        va_end(argptr);
-
-
+        va_start(args, fmt);
+        vprintf(stderr, fmt, a);
+        va_end(args);
     }
 }
-
 
 #endif
