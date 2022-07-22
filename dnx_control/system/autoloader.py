@@ -412,7 +412,7 @@ def checkout_configured_branch() -> str:
 def update_local_branch(branch: str) -> list:
 
     commands: list[tuple[str, str]] = [
-        (f'git -C {HOME_DIR}/dnxfirewall pull origin {branch}', 'downloading updates')
+        (f'git -C {HOME_DIR} pull origin {branch}', 'downloading updates')
     ]
 
     return commands
@@ -557,7 +557,7 @@ def run():
     branch = checkout_configured_branch()
 
     if (args.update_set):
-        update_local_branch(branch)
+        dynamic_commands.extend(update_local_branch(branch))
 
     if (not args.update_set):
         dynamic_commands.extend(configure_webui())
