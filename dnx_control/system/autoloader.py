@@ -409,7 +409,7 @@ def checkout_configured_branch() -> str:
 
     return branch_name
 
-def update_local_branch(branch) -> list:
+def update_local_branch(branch: str) -> list:
 
     commands: list[tuple[str, str]] = [
         (f'git -C {HOME_DIR}/dnxfirewall pull origin {branch}', 'downloading updates')
@@ -420,10 +420,10 @@ def update_local_branch(branch) -> list:
 def compile_extensions() -> list:
 
     commands: list[tuple[str, str]] = [
-        (f'sudo python3 {HOME_DIR}/dnx_run.py compile dnx-nfqueue', 'compiling dnx-nfqueue'),
-        (f'sudo python3 {HOME_DIR}/dnx_run.py compile cfirewall', 'compiling cfirewall'),
-        (f'sudo python3 {HOME_DIR}/dnx_run.py compile hash-trie', 'compiling dnx-hash_trie'),
-        (f'sudo python3 {HOME_DIR}/dnx_run.py compile cprotocol-tools', 'compiling cprotocol tools'),
+        (f'sudo python3 {HOME_DIR}/dnx_run.py compile dnx-nfqueue _autoloader_', 'compiling dnx-nfqueue'),
+        (f'sudo python3 {HOME_DIR}/dnx_run.py compile cfirewall _autoloader_', 'compiling cfirewall'),
+        (f'sudo python3 {HOME_DIR}/dnx_run.py compile hash-trie _autoloader_', 'compiling dnx-hash_trie'),
+        (f'sudo python3 {HOME_DIR}/dnx_run.py compile cprotocol-tools _autoloader_', 'compiling cprotocol tools'),
     ]
 
     return commands

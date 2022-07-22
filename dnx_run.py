@@ -15,6 +15,8 @@ from subprocess import run, DEVNULL, CalledProcessError
 
 from dnx_cli.utils.shell_colors import text, styles
 
+_AUTOLOADER = False
+
 # style aliases
 BOLD = styles.bold
 
@@ -111,6 +113,8 @@ def sexit(msg: str, /) -> None:
     exit(f'\n{msg}\n')
 
 def parse_args() -> tuple[str, str, dict]:
+    global _AUTOLOADER
+
     cmd: str = get_index(1)
     module: str = get_index(2)
 
@@ -118,6 +122,9 @@ def parse_args() -> tuple[str, str, dict]:
     check_command(cmd, module, mod_settings)
 
     os.environ['PASSTHROUGH_ARGS'] = ','.join(sys.argv[3:])
+
+    if ('_autoloader_' in os.environ['PASSTHROUGH_ARGS']):
+        _AUTOLOADER = True
 
     return module, cmd, mod_settings
 
@@ -135,7 +142,7 @@ def check_command(cmd: str, mod: str, modset: dict) -> None:
     if (not cmd_info):
         sexit(
             text.red('Error! ') +
-            text.lightgrey('Unknown Command. ⟶ See help for existing commands')
+            text.lightgrey('Unknown Command. -> See help for existing commands')
         )
 
     root = not os.getuid()
@@ -158,7 +165,7 @@ def check_command(cmd: str, mod: str, modset: dict) -> None:
     if (not modset):
         sexit(
             text.red('Error! ') +
-            text.lightgrey('Unknown Module. Module does not exist. ⟶ See help')
+            text.lightgrey('Unknown Module. Module does not exist. -> See help')
         )
 
     # checking if command is valid for the module
@@ -234,7 +241,7 @@ def modstat_command() -> None:
     print(text.blue('░▀▀░░▀░▀░▀░▀  ░▀▀▀░▀▀▀░▀░▀░░▀░░▀▀▀░▀▀▀░▀▀▀░▀▀▀'))
     for svc, result in status:
         time.sleep(0.05)
-        print(text.darkgrey(f'{svc.ljust(svc_len)} ⟶ {result.rjust(4)}'))
+        print(text.darkgrey(f'{svc.ljust(svc_len)} -> {result.rjust(4)}'))
 
     if (down_detected):
         print(
@@ -254,9 +261,9 @@ def service_command(mod: str, cmd: str) -> None:
 
                 dnx_run(f'sudo systemctl {cmd} {svc}', shell=True)
             except CalledProcessError:
-                sprint(text.red(f'{svc.ljust(15)} ⟶ {"fail".rjust(7)}'))
+                sprint(text.red(f'{svc.ljust(15)} -> {"fail".rjust(7)}'))
             else:
-                sprint(text.green(f'{svc.ljust(15)} ⟶ {"success".rjust(7)}'))
+                sprint(text.green(f'{svc.ljust(15)} -> {"success".rjust(7)}'))
 
         return
 
@@ -269,18 +276,18 @@ def service_command(mod: str, cmd: str) -> None:
     except CalledProcessError as cpe:
         if (cmd == 'status'):
             sprint(
-                text.lightgrey(f'{svc.ljust(15)} ⟶ ') + text.red(f'down ') + text.lightgrey(f'code="{cpe.returncode}') +
+                text.lightgrey(f'{svc.ljust(15)} -> ') + text.red(f'down ') + text.lightgrey(f'code="{cpe.returncode}') +
                 text.lightgrey(f'msg="{systemctl_ret_codes.get(cpe.returncode, "")}"')
                 )
         else:
             sprint(
                 text.lightgrey(f'"{svc}" service "{cmd}"') + text.red(f'failed.') +
-                text.darkgrey(f'Check the journal for more details. ⟶ msg="{cpe}"')
+                text.darkgrey(f'Check the journal for more details. -> msg="{cpe}"')
             )
 
     else:
         if (cmd == 'status'):
-            sprint(text.lightgrey(f'{svc.ljust(15)} ⟶ ') + text.green(f'{"up".rjust(4)}'))
+            sprint(text.lightgrey(f'{svc.ljust(15)} -> ') + text.green(f'{"up".rjust(4)}'))
         else:
             sprint(text.lightgrey(f'svc ') + text.lightgrey(f'service "{cmd}"') + text.green(' successful.'))
 
@@ -310,7 +317,7 @@ def run_cli(mod: str, mod_loc: str) -> None:
     except KeyboardInterrupt:
         sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red('interrupted!'))
     except Exception as E:
-        sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red(f'run failure. ⟶ {E}'))
+        sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red(f'run failure. -> {E}'))
         traceback.print_exc()
 
     else:
@@ -319,7 +326,7 @@ def run_cli(mod: str, mod_loc: str) -> None:
         except KeyboardInterrupt:
             sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red('interrupted!'))
         except Exception as E:
-            sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red(f'run failure. ⟶ {E}'))
+            sprint(text.lightgrey(f'{mod} ') + text.yellow('(cli) ') + text.red(f'run failure. -> {E}'))
             traceback.print_exc()
 
     # this will make sure there are no dangling processes or threads on exit.
@@ -345,7 +352,9 @@ if (__name__ == '__main__'):
         try:
             dnx_run_v(f'sudo HOME_DIR={HOME_DIR} python3 {file_path} build_ext --inplace', shell=True)
         except CalledProcessError as cpe:
-            sprint(text.lightgrey(f'{mod_name} compile has') + text.red(' failed ') + text.lightgrey(f'⟶ {cpe}!'))
+            if (_AUTOLOADER): raise
+
+            sprint(text.lightgrey(f'{mod_name} compile has') + text.red(' failed ') + text.lightgrey(f'-> {cpe}!'))
 
         else:
             sprint(text.lightgrey(f'{mod_name} compile has') + text.green(' succeeded') + text.lightgrey('!'))
@@ -354,4 +363,4 @@ if (__name__ == '__main__'):
         service_command(mod_name, command)
 
     else:
-        sprint(text.lightgrey(f'<dnx> ') + text.red(f'missing command logic for ⟶ mod={mod_name} command={command}'))
+        sprint(text.lightgrey(f'<dnx> ') + text.red(f'missing command logic for -> mod={mod_name} command={command}'))

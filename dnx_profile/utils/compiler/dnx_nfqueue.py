@@ -8,6 +8,7 @@ from Cython.Distutils import build_ext
 
 # COMPILER DIRECTIVES
 DIRECTIVES = {
+    'language_level': '3',
     'boundscheck': False,
     'cdivision': True
 }
@@ -25,5 +26,5 @@ ext = Extension(
 
 setup(
     name='dnx-nfqueue', cmdclass=cmd,
-    ext_modules=cythonize(ext, language_level='3', compiler_directives=DIRECTIVES)
+    ext_modules=cythonize(ext, compiler_directives=DIRECTIVES)
 )

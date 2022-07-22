@@ -15,7 +15,7 @@ DEF DEFAULT_MAX_QUEUELEN = 8192
 
 # Socket queue should hold the max number of packets of COPY_SIZE.
 # formula: DEF_MAX_QUEUELEN * (MaxCopySize+SockOverhead) / 2
-DEF SOCK_RCV_SIZE = 1024 * 4796 / 2
+DEF SOCK_RCV_SIZE = 1024 * 4796 // 2
 
 # ================================== #
 # NetfilterQueue Read/Write lock

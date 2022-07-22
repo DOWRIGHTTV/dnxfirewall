@@ -10,13 +10,14 @@ from Cython.Distutils import build_ext
 from Cython.Compiler import Options
 
 # COMPILER OPTIONS
-Options.annotate = False # FLIP TRUE FOR HTML VIEWABLE OUTPUT
+Options.annotate = False  # FLIP TRUE FOR HTML VIEWABLE OUTPUT
 
 Options.docstrings = False
 Options.emit_code_comments = True
 
 # COMPILER DIRECTIVES
 DIRECTIVES = {
+    'language_level': '3',
     'boundscheck': False,
     'cdivision': True
 }
@@ -45,7 +46,7 @@ INCLUDE_PATHS = [f'{os.getcwd()}/fw_main']
 
 setup(
     name='cfirewall', cmdclass=cmd,
-    ext_modules=cythonize(ext, language_level='3', include_path=INCLUDE_PATHS, compiler_directives=DIRECTIVES)
+    ext_modules=cythonize(ext, include_path=INCLUDE_PATHS, compiler_directives=DIRECTIVES)
 )
 
 try:
