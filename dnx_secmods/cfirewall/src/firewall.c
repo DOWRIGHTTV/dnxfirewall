@@ -153,7 +153,6 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
         pkt->hw.in_zone.id, iph_src_ip, src_country, ntohs(pkt->protohdr->sport),
         pkt->hw.out_zone.id, iph_dst_ip, dst_country, ntohs(pkt->protohdr->dport),
         direction, tracked_geo);
-    }
 
     for (uintf8_t cntrl_list = fw_clist->start; cntrl_list < fw_clist->end; cntrl_list++) {
 
