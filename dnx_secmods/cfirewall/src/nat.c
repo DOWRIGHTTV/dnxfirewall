@@ -111,7 +111,7 @@ nat_recv(nl_msg_hdr *nl_msgh, void *data)
 
     dnx_send_verdict(cfd, ntohl(nl_pkth->packet_id), &pkt);
 
-    dprint(NAT_V & VERBOSE, "< [--] NAT VERDICT [--] >\npacket_id->%u, hook->%u, action->%u\n,
+    dprint(NAT_V & VERBOSE, "< [--] NAT VERDICT [--] >\npacket_id->%u, hook->%u, action->%u\n",
         ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.action);
     }
 
