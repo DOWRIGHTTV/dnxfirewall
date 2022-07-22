@@ -117,7 +117,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     debug_(FW_V & VERBOSE & PROXY_BYPASS, ", ipp->%u, dns->%u, ips->%u",
         pkt.mark >> 12 & 15, pkt.mark >> 16 & 15, pkt.mark >> 20 & 15);
 
-    debug_(FW_V & VERBOSE, "\n")
+    debug_(FW_V & VERBOSE, "\n");
 
     // return hierarchy -> libnfnetlink.c >> libnetfiler_queue >> process_traffic.
     // < 0 vals are errors, but return is being ignored by CFirewall._run.
