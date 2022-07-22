@@ -138,7 +138,6 @@ nat_inspect(int cntrl_list, struct dnx_pktb *pkt, struct cfdata *cfd)
         pkt->hw.in_zone.id, iph_src_ip, ntohs(pkt->protohdr->sport),
         pkt->hw.out_zone.id, iph_dst_ip, ntohs(pkt->protohdr->dport)
         );
-    }
 
     for (uintf16_t rule_idx = 0; rule_idx < nat_tables[cntrl_list].len; rule_idx++) {
 
