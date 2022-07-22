@@ -238,7 +238,7 @@ nat_push_rules(uintf8_t cntrl_list)
     nat_unlock();
 
     dprint(NAT_V & VERBOSE, "< [!] NAT TABLE (%u) RULES UPDATED [!] >\n", cntrl_list);
-    }
+
     return OK;
 }
 
