@@ -147,7 +147,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
     uint16_t    tracked_geo = direction == INBOUND ? src_country : dst_country;
 
     // local flag to mark
-    uintf8_t    log_packet = 0
+    uintf8_t    log_packet = 0;
 
     dprint(FW_V & VERBOSE, "< ++ FIREWALL INSPECTION ++ >\nsrc->[%u]%u(%u):%u, dst->[%u]%u(%u):%u, direction->%u, tracked->%u\n"
         pkt->hw.in_zone.id, iph_src_ip, src_country, ntohs(pkt->protohdr->sport),
