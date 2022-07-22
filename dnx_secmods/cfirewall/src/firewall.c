@@ -157,15 +157,16 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
 
     for (uintf8_t cntrl_list = fw_clist->start; cntrl_list < fw_clist->end; cntrl_list++) {
 
-        // NOTE: inspection order: src > dst | zone, ip_addr, protocol, port
         for (uintf8_t rule_idx = 0; rule_idx < firewall_tables[cntrl_list].len; rule_idx++) {
 
             rule = &firewall_tables[cntrl_list].rules[rule_idx];
             if (!rule->enabled) { continue; }
-
+#if DEVELOPMENT
             if (FW_V & VERBOSE2) {
                 firewall_print_rule(cntrl_list, rule_idx);
             }
+#endif
+            // inspection order: src > dst | zone, ip_addr, protocol, port
             // ------------------------------------------------------------------
             // ZONE MATCHING
             // ------------------------------------------------------------------

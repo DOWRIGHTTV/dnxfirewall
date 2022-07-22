@@ -145,11 +145,11 @@ nat_inspect(int cntrl_list, struct dnx_pktb *pkt, struct cfdata *cfd)
 
         rule = &nat_tables[cntrl_list].rules[rule_idx];
         if (!rule->enabled) { continue; }
-
+#if DEVELOPMENT
         if (NAT_V && VERBOSE2) {
             nat_print_rule(cntrl_list, rule_idx);
         }
-
+#endif
         // inspection order: src > dst | zone, ip_addr, protocol, port
         // ------------------------------------------------------------------
         // ZONE MATCHING

@@ -1,6 +1,5 @@
 #!/usr/bin/env Cython
 
-#from libc.stdlib cimport calloc, malloc, free
 from libc.string cimport memset, strncpy
 from libc.stdio cimport printf, perror
 
@@ -33,10 +32,6 @@ DEF SVC_SOLO  = 1
 DEF SVC_RANGE = 2
 DEF SVC_LIST  = 3
 DEF SVC_ICMP  = 4
-
-# DEF NO_MATCH = 0
-# DEF MATCH = 1
-# DEF END_OF_ARRAY = 0 # to make code more readable
 
 # Blocked list access lock
 # ----------------------------------
@@ -166,7 +161,7 @@ cdef class CFirewall:
         if (verbose):
             print('<verbose console logging enabled>')
 
-        # keeping this independant from verbose so they are not tethered
+        # keeping this independent of verbose for flexibility
         if (verbose2):
             print('<verbose2 console logging enabled>')
 
