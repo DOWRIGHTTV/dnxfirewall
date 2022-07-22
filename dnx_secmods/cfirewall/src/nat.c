@@ -113,7 +113,6 @@ nat_recv(nl_msg_hdr *nl_msgh, void *data)
 
     dprint(NAT_V & VERBOSE, "< [--] NAT VERDICT [--] >\npacket_id->%u, hook->%u, action->%u\n",
         ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.action);
-    }
 
     return OK;
 }
