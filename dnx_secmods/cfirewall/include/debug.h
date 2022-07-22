@@ -15,7 +15,7 @@ debug__(int on, char* fmt, ...)
 
     if (on) {
         va_start(args, fmt);
-        vprintf(stderr, fmt, a);
+        vfprintf(stderr, fmt, args);
         va_end(args);
     }
 }
