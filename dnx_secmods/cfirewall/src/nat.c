@@ -111,7 +111,7 @@ nat_recv(nl_msg_hdr *nl_msgh, void *data)
 
     dnx_send_verdict(cfd, ntohl(nl_pkth->packet_id), &pkt);
 
-    debug_(NAT_V & VERBOSE, "< [--] NAT VERDICT [--] >\npacket_id->%u, hook->%u, action->%u\n,
+    dprint(NAT_V & VERBOSE, "< [--] NAT VERDICT [--] >\npacket_id->%u, hook->%u, action->%u\n,
         ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.action);
     }
 
@@ -135,7 +135,7 @@ nat_inspect(int cntrl_list, struct dnx_pktb *pkt, struct cfdata *cfd)
     uint8_t     src_country = geolocation->lookup(geolocation, iph_src_ip & MSB, iph_src_ip & LSB);
     uint8_t     dst_country = geolocation->lookup(geolocation, iph_dst_ip & MSB, iph_dst_ip & LSB);
 
-    debug_(NAT_V & VERBOSE, "< [**] NAT INSPECTION [**] >\nsrc->[%u]%u:%u, dst->[%u]%u:%u\n",
+    dprint(NAT_V & VERBOSE, "< [**] NAT INSPECTION [**] >\nsrc->[%u]%u:%u, dst->[%u]%u:%u\n",
         pkt->hw.in_zone.id, iph_src_ip, ntohs(pkt->protohdr->sport),
         pkt->hw.out_zone.id, iph_dst_ip, ntohs(pkt->protohdr->dport)
         );
@@ -196,7 +196,7 @@ nat_lock(void)
 {
     pthread_mutex_lock(NATlock_ptr);
 
-    debug_(NAT_V & VERBOSE, "< [!] NAT LOCK ACQUIRED [!] >\n");
+    dprint(NAT_V & VERBOSE, "< [!] NAT LOCK ACQUIRED [!] >\n");
 }
 
 void
@@ -204,7 +204,7 @@ nat_unlock(void)
 {
     pthread_mutex_unlock(NATlock_ptr);
 
-    debug_(NAT_V & VERBOSE, "< [!] NAT LOCK RELEASED [!] >\n");
+    dprint(NAT_V & VERBOSE, "< [!] NAT LOCK RELEASED [!] >\n");
 }
 
 int
@@ -212,7 +212,7 @@ nat_stage_count(uintf8_t cntrl_list, uintf16_t rule_count)
 {
     nat_tables_swap[cntrl_list].len = rule_count;
 
-    debug_(NAT_V & VERBOSE, "< [!] NAT TABLE (%u) COUNT STAGED [!] >\n", cntrl_list);
+    dprint(NAT_V & VERBOSE, "< [!] NAT TABLE (%u) COUNT STAGED [!] >\n", cntrl_list);
 
     return OK;
 }
@@ -239,7 +239,7 @@ nat_push_rules(uintf8_t cntrl_list)
 
     nat_unlock();
 
-    debug_(NAT_V & VERBOSE, "< [!] NAT TABLE (%u) RULES UPDATED [!] >\n", cntrl_list);
+    dprint(NAT_V & VERBOSE, "< [!] NAT TABLE (%u) RULES UPDATED [!] >\n", cntrl_list);
     }
     return OK;
 }

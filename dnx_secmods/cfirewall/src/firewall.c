@@ -111,13 +111,13 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     // NFQUEUE VERDICT
     dnx_send_verdict(cfd, ntohl(nl_pkth->packet_id), &pkt);
 
-    debug_(FW_V & VERBOSE, "< -- FIREWALL VERDICT -- >\npacket_id->%u, hook->%u, mark->%u, action->%u",
+    dprint(FW_V & VERBOSE, "< -- FIREWALL VERDICT -- >\npacket_id->%u, hook->%u, mark->%u, action->%u",
         ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.mark, pkt.action);
 
-    debug_(FW_V & VERBOSE & PROXY_BYPASS, ", ipp->%u, dns->%u, ips->%u",
+    dprint(FW_V & VERBOSE & PROXY_BYPASS, ", ipp->%u, dns->%u, ips->%u",
         pkt.mark >> 12 & 15, pkt.mark >> 16 & 15, pkt.mark >> 20 & 15);
 
-    debug_(FW_V & VERBOSE, "\n");
+    dprint(FW_V & VERBOSE, "\n");
 
     // return hierarchy -> libnfnetlink.c >> libnetfiler_queue >> process_traffic.
     // < 0 vals are errors, but return is being ignored by CFirewall._run.
@@ -149,7 +149,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
     // local flag to mark
     uintf8_t    log_packet = 0
 
-    debug_(FW_V & VERBOSE, "< ++ FIREWALL INSPECTION ++ >\nsrc->[%u]%u(%u):%u, dst->[%u]%u(%u):%u, direction->%u, tracked->%u\n"
+    dprint(FW_V & VERBOSE, "< ++ FIREWALL INSPECTION ++ >\nsrc->[%u]%u(%u):%u, dst->[%u]%u(%u):%u, direction->%u, tracked->%u\n"
         pkt->hw.in_zone.id, iph_src_ip, src_country, ntohs(pkt->protohdr->sport),
         pkt->hw.out_zone.id, iph_dst_ip, dst_country, ntohs(pkt->protohdr->dport),
         direction, tracked_geo);
@@ -234,7 +234,7 @@ firewall_lock(void)
 {
     pthread_mutex_lock(FWlock_ptr);
 
-    debug_(FW_V & VERBOSE, "< [!] FW LOCK ACQUIRED [!] >\n");
+    dprint(FW_V & VERBOSE, "< [!] FW LOCK ACQUIRED [!] >\n");
 }
 
 void
@@ -242,7 +242,7 @@ firewall_unlock(void)
 {
     pthread_mutex_unlock(FWlock_ptr);
 
-    debug_(FW_V & VERBOSE, "< [!] FW LOCK RELEASED [!] >\n");
+    dprint(FW_V & VERBOSE, "< [!] FW LOCK RELEASED [!] >\n");
 }
 
 int
@@ -250,7 +250,7 @@ firewall_stage_count(uintf8_t cntrl_list, uintf16_t rule_count)
 {
     fw_tables_swap[cntrl_list].len = rule_count;
 
-    debug_(FW_V & VERBOSE, "< [!] FW TABLE (%u) COUNT STAGED [!] >\n", cntrl_list);
+    dprint(FW_V & VERBOSE, "< [!] FW TABLE (%u) COUNT STAGED [!] >\n", cntrl_list);
     return OK;
 }
 
@@ -276,7 +276,7 @@ firewall_push_rules(uintf8_t cntrl_list)
 
     firewall_unlock();
 
-    debug_(FW_V & VERBOSE, "< [!] FW TABLE (%u) RULES UPDATED [!] >\n", cntrl_list);
+    dprint(FW_V & VERBOSE, "< [!] FW TABLE (%u) RULES UPDATED [!] >\n", cntrl_list);
 
     return OK;
 }
