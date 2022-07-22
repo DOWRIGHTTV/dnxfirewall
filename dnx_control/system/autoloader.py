@@ -412,6 +412,7 @@ def checkout_configured_branch() -> str:
 def update_local_branch(branch: str) -> list:
 
     commands: list[tuple[str, str]] = [
+        (f'git -C {HOME_DIR} stash', None),  # resetting any local changes before pulling
         (f'git -C {HOME_DIR} pull origin {branch}', 'downloading updates')
     ]
 
