@@ -26,7 +26,7 @@ struct LogHandle {
     int     cnt;
 };
 
-struct LogHandle Log[2];
+extern struct LogHandle Log[2];
 
 extern void log_init(struct LogHandle *logger, char *label);
 extern void log_enter(struct timeval *ts, struct LogHandle *logger);

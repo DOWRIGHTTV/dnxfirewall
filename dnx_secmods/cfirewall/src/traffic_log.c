@@ -2,7 +2,7 @@
 #include "cfirewall.h"
 #include "traffic_log.h"
 
-extern struct LogHandle Log[2];
+struct LogHandle Log[2];
 
 char*   action_map[3] = {"deny", "accept", "reject"};
 char*   dir_map[2]    = {"inbound", "outbound"};
