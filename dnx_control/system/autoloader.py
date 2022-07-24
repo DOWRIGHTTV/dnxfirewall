@@ -572,13 +572,13 @@ def run():
     if (args.update_set):
         dynamic_commands.extend(update_local_branch(branch))
 
-    if (not args.update_set):
-        dynamic_commands.extend(configure_webui())
-
     # packages will be installed during initial installation automatically.
     # if update is set, the default is to not update packages.
     if (not args.update_set) or (args.update_set and args.packages):
         dynamic_commands.extend(install_packages())
+
+    if (not args.update_set):
+        dynamic_commands.extend(configure_webui())
 
     dynamic_commands.extend(compile_extensions())
 
