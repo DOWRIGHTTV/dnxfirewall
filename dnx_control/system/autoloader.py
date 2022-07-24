@@ -11,7 +11,8 @@ import readline
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional
-from subprocess import run as srun, DEVNULL, CalledProcessError
+from functools import partial
+from subprocess import run as _run, DEVNULL, CalledProcessError
 
 from dnx_gentools.def_constants import HOME_DIR, INITIALIZE_MODULE, hardout, str_join
 from dnx_gentools.file_operations import ConfigurationManager, load_data, write_configuration, json_to_yaml
@@ -30,6 +31,7 @@ if (TYPE_CHECKING):
 
 ERROR_SHOW_TIME = .33
 
+srun = partial(_run, shell=True, check=True)
 def lprint(sep: str = '-'): print(text.lightblue(f'{sep}' * 80))
 
 # ===============
@@ -96,7 +98,7 @@ def eprint(s: str, /) -> None:
     the passed in message will not be automatically colorized. this should be handled by the caller.
     '''
     while True:
-        sys.stdout.write(text.lightgrey(f'{time.strftime("%H:%M:%S")}| ' + text.red(f'!!! {s} ')))
+        sys.stdout.write(text.lightgrey(f'{time.strftime("%H:%M:%S")}| ') + text.red(f'!!! {s} '))
         answer: str = input(
             text.lightgrey('continue? [y/', style=None) +
             text.lightblue('N') +
@@ -117,10 +119,10 @@ def dnx_run(s: str, /) -> None:
     '''
     try:
         if (args.verbose_set):
-            srun(s, shell=True, check=True)
+            srun(s)
 
         else:
-            srun(s, shell=True, stdout=DEVNULL, stderr=DEVNULL, check=True)
+            srun(s, stdout=DEVNULL, stderr=DEVNULL)
 
     except CalledProcessError as cpe:
         eprint(f'{cpe}')
@@ -492,6 +494,16 @@ def set_permissions() -> None:
 
     for command in commands:
         dnx_run(command)
+
+    # testing sudoer file as a precaution. if this fails, the build itself is bad. this should never happen, but humans
+    # makes mistakes so at least this will not brick the system if root wasn't set with a password.
+    try:
+        srun(f'sudo visudo -cf {HOME_DIR}/dnx_profile/admin/dnx', stderr=DEVNULL, stdout=DEVNULL)
+    except CalledProcessError:
+        hardout(
+            text.lightgrey(f'{time.strftime("%H:%M:%S")}| ') +
+            text.red('!!! sudoer file syntax error. cannot continue. exiting...')
+        )
 
     # configure sudoers.d to allow dnx user "no-pass" for specific system functions
     dnx_run(f'sudo cp -n {HOME_DIR}/dnx_profile/admin/dnx /etc/sudoers.d/')
