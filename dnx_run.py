@@ -82,7 +82,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
 
     # SYSTEM
     'startup': {'module': 'dnx_profile.startup_proc', 'exclude': ['compile'], 'priv': True, 'service': True},
-    'interface': {'module': 'dnx_profile.interface_services', 'exclude': ['compile'], 'priv': False, 'service': True},
+    'interface': {'module': 'dnx_control.system.interface_services', 'exclude': ['compile'], 'priv': False, 'service': True},
     'syscontrol': {'module': 'dnx_control', 'exclude': ['compile'], 'priv': True, 'service': True},
 
     # COMPILE ONLY
