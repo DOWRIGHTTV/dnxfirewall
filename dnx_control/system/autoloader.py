@@ -394,8 +394,7 @@ def install_packages() -> list:
         ('sudo apt install python3-pip -y', 'setting up python3'),
         ('pip3 install flask uwsgi', 'installing python web app framework'),
         ('sudo apt install nginx -y', 'installing web server driver'),
-        ('sudo apt install libnetfilter-queue-dev libnetfilter-conntrack-dev libmnl-dev net-tools -y',
-            'installing networking components'),
+        ('sudo apt install libnetfilter-conntrack-dev net-tools -y', 'installing networking components'),
         ('pip3 install Cython', 'installing C extension language (Cython)')
     ]
 

@@ -7,18 +7,18 @@
 #include <linux/netfilter/nfnetlink.h> // struct nfgenmsg
 #include <linux/netfilter/nfnetlink_queue.h> // nfqnl structs and attr enums (nfqnl_msg_pkt_hw/hdr)
 #include <linux/netfilter/nf_conntrack_common.h> // enum ip_conntrack_info
-#include <libmnl/libmnl.h> // nl attr parsing
-#include <libnetfilter_queue/libnetfilter_queue.h> // nfqueue interface for libmnl
-#include <libnetfilter_conntrack/libnetfilter_conntrack.h> // nfct/ conntrack updates (used by nat mod through dnx_nfq)
+#include <libmnl/include/libmnl.h> // nl attr parsing
+#include <libnetfilter_queue/include/libnetfilter_queue.h> // nfqueue interface for libmnl
+#include <libnetfilter_conntrack/libnetfilter_conntrack.h> // nfct - conntrack updates (used by nat mod through dnx_nfq)
 
 // dnxfirewall
 #include "config.h"
 #include "debug.h"
 #include "inet_tools.h"
 #include "std_tools.h"
-#include "rules.h" // firewall and nat rule structs/ defs
-#include "match.h" // zone, network, service matching helpers
-#include "dnx_nfq.h" // packet verdict, mangle, etc.
+#include "rules.h"      // firewall and nat rule structs/ defs
+#include "match.h"      // zone, network, service matching helpers
+#include "dnx_nfq.h"    // packet verdict, mangle, etc.
 #include "traffic_log.h"
 
 // bit shifting helpers
@@ -136,12 +136,12 @@ struct dnx_pktb {
     uint16_t            tlen;
     struct HWinfo       hw;
     struct IPhdr       *iphdr;
-    uint16_t            iphdr_len; // header only
+    uint16_t            iphdr_len;      // header only
     struct Protohdr    *protohdr;
-    uint16_t            protohdr_len; // header only
+    uint16_t            protohdr_len;   // header only
     bool                mangled;
-    struct Nat          nat; // not used by FW. copied over from nat rule on match
-    uintf16_t           rule_clist; // CONTROL LIST. recent change from fw_table to be module agnostic
+    struct Nat          nat;            // not used by FW. copied over from nat rule on match
+    uintf16_t           rule_clist;     // CONTROL LIST. recent change from fw_table to be module agnostic
     union {
         struct FWrule  *fw_rule;
         struct NATrule *nat_rule;
