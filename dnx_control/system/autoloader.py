@@ -423,10 +423,10 @@ def update_local_branch(branch: str) -> list:
 def compile_extensions() -> list:
 
     commands: list[tuple[str, str]] = [
-        (f'sudo python3 {HOME_DIR}/dnx_run.py compile dnx-nfqueue _autoloader_', 'compiling dnx-nfqueue'),
-        (f'sudo python3 {HOME_DIR}/dnx_run.py compile cfirewall _autoloader_', 'compiling cfirewall'),
-        (f'sudo python3 {HOME_DIR}/dnx_run.py compile hash-trie _autoloader_', 'compiling dnx-hash_trie'),
         (f'sudo python3 {HOME_DIR}/dnx_run.py compile cprotocol-tools _autoloader_', 'compiling cprotocol tools'),
+        (f'sudo python3 {HOME_DIR}/dnx_run.py compile dnx-nfqueue _autoloader_', 'compiling dnx-nfqueue'),
+        (f'sudo python3 {HOME_DIR}/dnx_run.py compile hash-trie _autoloader_', 'compiling dnx-hash_trie'),
+        (f'sudo python3 {HOME_DIR}/dnx_run.py compile cfirewall _autoloader_', 'compiling cfirewall'),
     ]
 
     return commands
