@@ -16,5 +16,6 @@ if INITIALIZE_MODULE('syscontrol'):
 
     from dnx_control.control.ctl_control import SystemControl
 
+
 def run():
     SystemControl.run()
