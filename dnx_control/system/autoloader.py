@@ -386,7 +386,7 @@ def confirm_interfaces(interface_config: dict[str, str]) -> bool:
 # ============================
 # INSTALL PACKAGES
 # ============================
-# TODO: check compatibility with debian and ubuntu systems. i remember there being an issue where either libmnl or
+# _TODO: check compatibility with debian and ubuntu systems. i remember there being an issue where either libmnl or
 #  libnetfilter-conntrack was not on current build. something like apt having 1.0.4, but 1.0.5 is needed.
 def install_packages() -> list:
 
@@ -394,7 +394,17 @@ def install_packages() -> list:
         ('sudo apt install python3-pip -y', 'setting up python3'),
         ('pip3 install flask uwsgi', 'installing python web app framework'),
         ('sudo apt install nginx -y', 'installing web server driver'),
-        ('sudo apt install libnetfilter-conntrack-dev net-tools -y', 'installing networking components'),
+        ('sudo apt install net-tools -y', 'installing networking components'),
+
+        (f'bash {HOME_DIR}/dnx_profile/libraries/libmnl/configure', 'building netfilter mnl (lib)'),
+        (f'make -I {HOME_DIR}/dnx_profile/libraries/libmnl', None),
+        (f'sudo make -I {HOME_DIR}/dnx_profile/libraries/libmnl install', None),
+
+        (f'bash {HOME_DIR}/dnx_profile/libraries/libnetfilter_queue/configure', 'building netfilter queue (lib)'),
+        (f'make -I {HOME_DIR}/dnx_profile/libraries/libnetfilter_queue', None),
+        (f'sudo make -I {HOME_DIR}/dnx_profile/libraries/libnetfilter_queue install', None),
+
+        ('sudo apt install libnetfilter-conntrack-dev', 'building netfilter conntrack (lib)'),
         ('pip3 install Cython', 'installing C extension language (Cython)')
     ]
 
