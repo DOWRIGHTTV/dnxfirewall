@@ -31,7 +31,7 @@ PKG_CHECK_MODULES([LIBMNL], [libmnl >= 1.0.3])
 
 dnl Output the makefiles
 AC_CONFIG_FILES([Makefile src/Makefile
-        libnetfilter_queue.pc doxygen.cfg
+        libnetfilter_queue.pc
 	include/Makefile include/libnetfilter_queue/Makefile
 	include/linux/Makefile include/linux/netfilter/Makefile])
 

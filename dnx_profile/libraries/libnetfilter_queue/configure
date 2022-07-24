@@ -13271,7 +13271,7 @@ $as_echo "yes" >&6; }
 
 fi
 
-ac_config_files="$ac_config_files Makefile src/Makefile libnetfilter_queue.pc doxygen.cfg include/Makefile include/libnetfilter_queue/Makefile doxygen/Makefile include/linux/Makefile include/linux/netfilter/Makefile"
+ac_config_files="$ac_config_files Makefile src/Makefile libnetfilter_queue.pc include/Makefile include/libnetfilter_queue/Makefile include/linux/Makefile include/linux/netfilter/Makefile"
 
 
 
