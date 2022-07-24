@@ -2,8 +2,8 @@ include $(top_srcdir)/Make_global.am
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = src include examples doxygen
-DIST_SUBDIRS = src include examples doxygen
+SUBDIRS = src include
+DIST_SUBDIRS = src include
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libmnl.pc

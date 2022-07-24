@@ -390,8 +390,8 @@ LIBVERSION = 2:0:2
 AM_CPPFLAGS = ${regular_CPPFLAGS} -I${top_srcdir}/include
 AM_CFLAGS = ${regular_CFLAGS} ${GCC_FVISIBILITY_HIDDEN}
 ACLOCAL_AMFLAGS = -I m4
-SUBDIRS = src include examples doxygen
-DIST_SUBDIRS = src include examples doxygen
+SUBDIRS = src include
+DIST_SUBDIRS = src include
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libmnl.pc
 all: config.h

@@ -13271,7 +13271,7 @@ $as_echo "yes" >&6; }
 
 fi
 
-ac_config_files="$ac_config_files Makefile src/Makefile utils/Makefile examples/Makefile libnetfilter_queue.pc doxygen.cfg include/Makefile include/libnetfilter_queue/Makefile doxygen/Makefile include/linux/Makefile include/linux/netfilter/Makefile"
+ac_config_files="$ac_config_files Makefile src/Makefile libnetfilter_queue.pc doxygen.cfg include/Makefile include/libnetfilter_queue/Makefile doxygen/Makefile include/linux/Makefile include/linux/netfilter/Makefile"
 
 
 
@@ -14358,13 +14358,9 @@ do
     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
-    "utils/Makefile") CONFIG_FILES="$CONFIG_FILES utils/Makefile" ;;
-    "examples/Makefile") CONFIG_FILES="$CONFIG_FILES examples/Makefile" ;;
     "libnetfilter_queue.pc") CONFIG_FILES="$CONFIG_FILES libnetfilter_queue.pc" ;;
-    "doxygen.cfg") CONFIG_FILES="$CONFIG_FILES doxygen.cfg" ;;
     "include/Makefile") CONFIG_FILES="$CONFIG_FILES include/Makefile" ;;
     "include/libnetfilter_queue/Makefile") CONFIG_FILES="$CONFIG_FILES include/libnetfilter_queue/Makefile" ;;
-    "doxygen/Makefile") CONFIG_FILES="$CONFIG_FILES doxygen/Makefile" ;;
     "include/linux/Makefile") CONFIG_FILES="$CONFIG_FILES include/linux/Makefile" ;;
     "include/linux/netfilter/Makefile") CONFIG_FILES="$CONFIG_FILES include/linux/netfilter/Makefile" ;;
 

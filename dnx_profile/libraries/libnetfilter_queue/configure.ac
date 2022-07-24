@@ -30,10 +30,9 @@ PKG_CHECK_MODULES([LIBNFNETLINK], [libnfnetlink >= 0.0.41])
 PKG_CHECK_MODULES([LIBMNL], [libmnl >= 1.0.3])
 
 dnl Output the makefiles
-AC_CONFIG_FILES([Makefile src/Makefile utils/Makefile examples/Makefile
+AC_CONFIG_FILES([Makefile src/Makefile
         libnetfilter_queue.pc doxygen.cfg
 	include/Makefile include/libnetfilter_queue/Makefile
-	doxygen/Makefile
 	include/linux/Makefile include/linux/netfilter/Makefile])
 
 AC_ARG_WITH([doxygen], [AS_HELP_STRING([--with-doxygen],
