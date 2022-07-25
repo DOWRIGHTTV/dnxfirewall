@@ -63,7 +63,7 @@ cdef extern from "linux/netlink.h" nogil:
         uint16_t nla_len
         uint16_t nla_type
 
-cdef extern from "libnetfilter_queue/linux_nfnetlink_queue.h" nogil:
+cdef extern from "linux/netfilter/nfnetlink_queue.h" nogil:
     enum nfqnl_msg_types:
         NFQNL_MSG_PACKET                # packet from kernel to userspace
         NFQNL_MSG_VERDICT               # verdict from userspace to kernel

@@ -7,8 +7,8 @@
 #include <linux/netfilter/nfnetlink.h> // struct nfgenmsg
 #include <linux/netfilter/nfnetlink_queue.h> // nfqnl structs and attr enums (nfqnl_msg_pkt_hw/hdr)
 #include <linux/netfilter/nf_conntrack_common.h> // enum ip_conntrack_info
-#include <libmnl/include/libmnl/libmnl.h> // nl attr parsing
-#include <libnetfilter_queue/include/libnetfilter_queue/libnetfilter_queue.h> // nfqueue interface for libmnl
+#include <libmnl/libmnl.h> // nl attr parsing
+#include <libnetfilter_queue/libnetfilter_queue.h> // nfqueue interface for libmnl
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h> // nfct - conntrack updates (used by nat mod through dnx_nfq)
 
 // dnxfirewall
