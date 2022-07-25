@@ -40,7 +40,7 @@ ext = Extension(
         f'{HOME_DIR}/dnx_ctools/include',
         f'{HOME_DIR}/dnx_iptools/hash_trie', 'include'
     ],
-    library_dirs=['usr/local/lib'],
+    library_dirs=['/usr/local/lib'],
     libraries=['netfilter_queue', 'netfilter_conntrack']
 )
 
