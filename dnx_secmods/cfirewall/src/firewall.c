@@ -64,7 +64,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     struct cfdata      *cfd = (struct cfdata*) data;
     struct nlattr      *netlink_attrs[NFQA_MAX+1] = {};
     struct dnx_pktb     pkt = {.logger = &Log[FW_LOG_IDX]};
-    struct clist_range  fw_clist;
+    struct clist_range  fw_clist = {0};
 
     nl_pkt_hdr     *nl_pkth = NULL;
     uint32_t        ct_info;
