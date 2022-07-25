@@ -4,9 +4,9 @@
 #include <stdint.h>
 
 
-typedef uint_fast8_t    uint8f_t;
-typedef uint_fast16_t   uint16f_t;
-typedef uint_fast32_t   uint32f_t;
+typedef uint_fast8_t    uintf8_t;
+typedef uint_fast16_t   uintf16_t;
+typedef uint_fast32_t   uintf32_t;
 
 uint16_t calc_checksum(const uint8_t *data, uint16_t dlen);
 void itoip(uint32_t ip_int, char* ip_addr);
