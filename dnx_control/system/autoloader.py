@@ -68,8 +68,8 @@ PROGRESS_TOTAL_COUNT: int = 1  # set permissions count added here
 
 LINEBREAK: str = text.lightblue('-' * 32)
 
-SYSTEM_DIR:  str = f'{HOME_DIR}/dnx_profile'
-UTILITY_DIR: str = f'{HOME_DIR}/dnx_profile/utils'
+SYSTEM_DIR:  str = 'dnx_profile'
+UTILITY_DIR: str = 'dnx_profile/utils'
 
 # ----------------------------
 # UTILS
@@ -140,7 +140,6 @@ def check_dnx_user() -> None:
         passwd: list[str] = passwd_f.read().splitlines()
 
     if not any([usr for usr in passwd if usr.split(':', 1)[0] == 'dnx']):
-
         eprint(
             text.green('dnx ') +
             text.yellow('user does ') +
@@ -149,8 +148,8 @@ def check_dnx_user() -> None:
         )
 
 def check_clone_location() -> None:
-    if (not os.path.isdir(HOME_DIR)):
 
+    if (not os.path.isdir(HOME_DIR)):
         eprint(
             text.yellow('dnxfirewall filesystem ') +
             text.red('must ') +
@@ -162,7 +161,6 @@ def check_already_ran() -> None:
         dnx_settings: ConfigChain = dnx.load_configuration()
 
     if (not args.update_set and dnx_settings['auto_loader']):
-
         eprint(
             text.red('dnxfirewall has already been installed.')
         )
@@ -276,10 +274,10 @@ def configure_interfaces() -> None:
 
     # storing the modified template containing specified interface names.
     # this will be used to configure wan interface via webui or change system level dns servers.
-    write_configuration(json.loads(intf_configs), '../../dnx_profile/interfaces', filepath='dnx_profile/interfaces')
+    # note: json.loads is needed because the write function expects a python dictionary.
+    write_configuration(json.loads(intf_configs), 'interfaces', filepath=f'{SYSTEM_DIR}/interfaces')
 
-    # setting public dns servers on the interface so the system itself will use the user configured
-    # servers in the web ui.
+    # setting public dns servers on the interface so the system itself will use the user-configured servers.
     dns1: str = public_dns_servers['primary']['ip_address']
     dns2: str = public_dns_servers['secondary']['ip_address']
 
@@ -323,7 +321,7 @@ def collect_interface_associations(interfaces_detected: list[str]) -> dict[str, 
                 flash_input_error('invalid selection', 18)
 
         if confirm_interfaces(interface_config):
-            if len(set(interface_config.values())) == 3:
+            if (len(set(interface_config.values())) == 3):
                 break
 
             eprint(text.yellow('interface definitions must be unique.'))
@@ -384,10 +382,47 @@ def confirm_interfaces(interface_config: dict[str, str]) -> bool:
 
 
 # ============================
-# INSTALL PACKAGES
+# BUILD LIBRARIES
 # ============================
 # _TODO: check compatibility with debian and ubuntu systems. i remember there being an issue where either libmnl or
 #  libnetfilter-conntrack was not on current build. something like apt having 1.0.4, but 1.0.5 is needed.
+def build_libraries() -> None:
+    global PROGRESS_TOTAL_COUNT
+
+    # NOTE: this needs to be updated as libs get added to this function
+    PROGRESS_TOTAL_COUNT += 3
+
+    libraries = [
+        (f'{SYSTEM_DIR}/libraries/libmnl', [
+            (f'bash configure', 'building netfilter mnl (lib)'),
+            (f'make', None),
+            (f'sudo make install', None)
+        ]),
+        (f'{SYSTEM_DIR}/libraries/libnetfilter_queue', [
+            (f'bash configure', 'building netfilter queue (lib)'),
+            (f'make', None),
+            (f'sudo make install', None)
+        ])
+    ]
+
+    for libdir, commands in libraries:
+
+        os.chdir(libdir)
+        for command, desc in commands:
+            if (desc):
+                progress(desc)
+
+            dnx_run(command)
+
+    # libnetfilter_conntrack will be installed via package manager for now.
+    progress('building netfilter conntrack (lib)')
+    dnx_run('sudo apt install libnetfilter-conntrack-dev')
+
+    os.chdir(HOME_DIR)
+
+# ============================
+# INSTALL PACKAGES
+# ============================
 def install_packages() -> list:
 
     commands = [
@@ -396,15 +431,6 @@ def install_packages() -> list:
         ('sudo apt install nginx -y', 'installing web server driver'),
         ('sudo apt install net-tools -y', 'installing networking components'),
 
-        (f'bash {HOME_DIR}/dnx_profile/libraries/libmnl/configure', 'building netfilter mnl (lib)'),
-        (f'make -I {HOME_DIR}/dnx_profile/libraries/libmnl', None),
-        (f'sudo make -I {HOME_DIR}/dnx_profile/libraries/libmnl install', None),
-
-        (f'bash {HOME_DIR}/dnx_profile/libraries/libnetfilter_queue/configure', 'building netfilter queue (lib)'),
-        (f'make -I {HOME_DIR}/dnx_profile/libraries/libnetfilter_queue', None),
-        (f'sudo make -I {HOME_DIR}/dnx_profile/libraries/libnetfilter_queue install', None),
-
-        ('sudo apt install libnetfilter-conntrack-dev', 'building netfilter conntrack (lib)'),
         ('pip3 install Cython', 'installing C extension language (Cython)')
     ]
 
@@ -412,19 +438,19 @@ def install_packages() -> list:
 
 # this is a no op if already on configured branch, but we will use it to return branch name also.
 def checkout_configured_branch() -> str:
-    configured_branch: str = load_data('system.cfg', filepath='dnx_profile/data/usr')['branch']
+    configured_branch: str = load_data('system.cfg', filepath=f'{SYSTEM_DIR}/data/usr')['branch']
 
     branch_name = 'dnxfirewall-dev' if configured_branch == 'development' else 'dnxfirewall'
 
-    dnx_run(f'git -C {HOME_DIR} checkout {branch_name}')
+    dnx_run(f'git checkout {branch_name}')
 
     return branch_name
 
 def update_local_branch(branch: str) -> list:
 
     commands: list[tuple[str, str]] = [
-        (f'git -C {HOME_DIR} stash', None),  # resetting any local changes before pulling
-        (f'git -C {HOME_DIR} pull origin {branch}', 'downloading updates')
+        ('git stash', None),  # resetting any local changes before pulling
+        (f'git pull origin {branch}', 'downloading updates')
     ]
 
     return commands
@@ -432,10 +458,10 @@ def update_local_branch(branch: str) -> list:
 def compile_extensions() -> list:
 
     commands: list[tuple[str, str]] = [
-        (f'sudo python3 {HOME_DIR}/dnx_run.py compile cprotocol-tools _autoloader_', 'compiling cprotocol tools'),
-        (f'sudo python3 {HOME_DIR}/dnx_run.py compile dnx-nfqueue _autoloader_', 'compiling dnx-nfqueue'),
-        (f'sudo python3 {HOME_DIR}/dnx_run.py compile hash-trie _autoloader_', 'compiling dnx-hash_trie'),
-        (f'sudo python3 {HOME_DIR}/dnx_run.py compile cfirewall _autoloader_', 'compiling cfirewall'),
+        ('sudo python3 dnx_run.py compile cprotocol-tools _autoloader_', 'compiling cprotocol tools'),
+        ('sudo python3 dnx_run.py compile dnx-nfqueue _autoloader_', 'compiling dnx-nfqueue'),
+        ('sudo python3 dnx_run.py compile hash-trie _autoloader_', 'compiling dnx-hash_trie'),
+        ('sudo python3 dnx_run.py compile cfirewall _autoloader_', 'compiling cfirewall'),
     ]
 
     return commands
@@ -452,7 +478,7 @@ def configure_webui() -> list:
     ])
 
     generate_cert_commands: str = ' '.join([
-        f'sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048',
+        'sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048',
         f'-keyout {SYSTEM_DIR}/ssl/dnx-web.key',
         f'-out {SYSTEM_DIR}/ssl/dnx-web.crt',
         f'-subj {cert_subject}'
@@ -489,10 +515,10 @@ def set_permissions() -> None:
         f'find {HOME_DIR} -type f -print0|xargs -0 chmod 640',
 
         # setting the dnx command line utility as executable
-        f'chmod 750 {HOME_DIR}/dnx_run.py',
+        f'chmod 750 dnx_run.py',
 
         # creating symlink to allow dnx command from anywhere if logged in as dnx user
-        f'ln -fs {HOME_DIR}/dnx_run.py /usr/local/bin/dnx',
+        f'ln -fs dnx_run.py /usr/local/bin/dnx',
 
         # adding www-data user to dnx group
         'usermod -aG dnx www-data',
@@ -504,10 +530,11 @@ def set_permissions() -> None:
     for command in commands:
         dnx_run(command)
 
-    # testing sudoer file as a precaution. if this fails, the build itself is bad. this should never happen, but humans
-    # makes mistakes so at least this will not brick the system if root wasn't set with a password.
+    # testing sudoer file as a precaution. if this fails, the build itself is bad.
+    # this should never happen, but humans make mistakes, so at least this will not brick the system if root wasn't
+    # set with a password.
     try:
-        srun(f'sudo visudo -cf {HOME_DIR}/dnx_profile/admin/dnx', stderr=DEVNULL, stdout=DEVNULL)
+        srun(f'sudo visudo -cf {SYSTEM_DIR}/admin/dnx', stderr=DEVNULL, stdout=DEVNULL)
     except CalledProcessError:
         hardout(
             text.lightgrey(f'{time.strftime("%H:%M:%S")}| ') +
@@ -515,7 +542,7 @@ def set_permissions() -> None:
         )
 
     # configure sudoers.d to allow dnx user "no-pass" for specific system functions
-    dnx_run(f'sudo cp -n {HOME_DIR}/dnx_profile/admin/dnx /etc/sudoers.d/')
+    dnx_run(f'sudo cp -n {SYSTEM_DIR}/admin/dnx /etc/sudoers.d/')
 
 
 # ============================
@@ -526,12 +553,12 @@ def set_services() -> None:
 
     progress('creating dnxfirewall services')
 
-    services = os.listdir(f'{UTILITY_DIR}/services')
+    services = os.listdir(f'{SYSTEM_DIR}/services')
     for service in services:
 
         if (service not in ignore_list):
 
-            dnx_run(f'cp -n {UTILITY_DIR}/services/{service} /etc/systemd/system/')
+            dnx_run(f'cp -n {SYSTEM_DIR}/services/{service} /etc/systemd/system/')
             dnx_run(f'systemctl enable {service}')
 
     dnx_run(f'systemctl enable nginx')
@@ -565,6 +592,9 @@ def store_default_mac():
 def run():
     global PROGRESS_TOTAL_COUNT
 
+    # will relative paths beyond HOME_DIR
+    os.chdir(HOME_DIR)
+
     if (not args.update_set):
         PROGRESS_TOTAL_COUNT += 1  # copying service files
         set_branch()
@@ -596,6 +626,13 @@ def run():
     action = 'update' if args.update_set else 'deployment'
     sprint(f'starting dnxfirewall {action}...')
     lprint()
+
+    # building netfilter libs from source.
+    # keeping this separate from packages since we cannot guarantee the user distro's versioning meets the minimum
+    # requirements [source is locally contained within dnxfirewall repo].
+    # NOTE: keep this first for now or else the progress bar count won't be properly reflected.
+    if (not args.update_set):
+        build_libraries()
 
     progress('')  # this will render 0% bar, so we don't need to use offsets.
     for command, desc in dynamic_commands:

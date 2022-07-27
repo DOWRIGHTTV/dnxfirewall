@@ -38,10 +38,11 @@ ext = Extension(
         f'{HOME_DIR}/dnx_profile/libraries/libmnl/include',
         f'{HOME_DIR}/dnx_profile/libraries/libnetfilter_queue/include',
         f'{HOME_DIR}/dnx_ctools/include',
-        f'{HOME_DIR}/dnx_iptools/hash_trie', 'include'
+        f'{HOME_DIR}/dnx_iptools/hash_trie',
+        'include'
     ],
     library_dirs=['/usr/local/lib'],
-    libraries=['netfilter_queue', 'netfilter_conntrack']
+    libraries=['mnl', 'netfilter_queue', 'netfilter_conntrack']
 )
 
 INCLUDE_PATHS = [f'{os.getcwd()}/fw_main']
