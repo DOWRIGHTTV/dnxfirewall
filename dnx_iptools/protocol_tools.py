@@ -172,9 +172,8 @@ icmp_header_template: Structure = PR_ICMP_HDR((('type', 8), ('code', 0)))
 # will ping specified host. to be used to prevent duplicate ip address handouts.
 def icmp_reachable(host_ip: int) -> bool:
 
-    ip_addr = itoip(host_ip)
     try:
-        return bool(run(f'ping -c 2 {ip_addr}', stdout=DEVNULL, shell=True, check=True))
+        return bool(run(f'ping -c 2 {itoip(host_ip)}', stdout=DEVNULL, shell=True, check=True))
     except CalledProcessError:
         return False
 
@@ -213,7 +212,6 @@ def init_ping(timeout: float = .25) -> Callable[[str, int], bool]:
 
                 else:
                     # checking overall recv time passed for each ping send.
-                    # this covers cases where unrelated ping responses are received that
                     if (fast_time() - recv_start > timeout):
                         break
 

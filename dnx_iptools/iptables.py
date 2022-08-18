@@ -23,6 +23,13 @@ FILE_LOCK = fcntl.flock
 EXCLUSIVE_LOCK = fcntl.LOCK_EX
 UNLOCK_LOCK = fcntl.LOCK_UN
 
+def ipt_shell(command: str, table: str = 'filter', action: str = '-A') -> None:
+    '''iptables wrapper of the dnx shell function.
+
+    provides rule check functionality prior to applying any configured rule.
+    '''
+    shell(f'iptables -t {table} -C {command} || iptables -t {table} {action} {command}')
+
 
 class _Defaults:
     '''class containing methods to build default IPTable rule sets.
@@ -38,8 +45,8 @@ class _Defaults:
 
         self.custom_nat_chains: list[str] = ['DSTNAT', 'SRCNAT']
 
-    # calling all methods in the class dict.
     @classmethod
+    # calling all methods in the class dict.
     def load(cls, interfaces: dict) -> None:
 
         # self init, dynamically calling each method
@@ -53,10 +60,10 @@ class _Defaults:
 
     def create_new_chains(self) -> None:
         for chain in self.custom_nat_chains:
-            shell(f'iptables -t nat -N {chain}')
+            ipt_shell(f'-N {chain}', table='nat')
 
-        shell('iptables -N MGMT')
-        shell('iptables -t raw -N IPS')  # ddos prevention rule insertion location
+        ipt_shell('-N MGMT')
+        ipt_shell('-N IPS', table='raw')  # ddos prevention rule insertion location
 
     def default_actions(self) -> None:
         '''default allow is explicitly set if they were previously changed from default.
@@ -74,9 +81,9 @@ class _Defaults:
         # NOTE: conntrack is now checked by cfirewall
         # shell('iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
 
-        shell(f'iptables -A FORWARD -p tcp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
-        shell(f'iptables -A FORWARD -p udp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
-        shell(f'iptables -A FORWARD -p icmp -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+        ipt_shell(f'FORWARD -p tcp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+        ipt_shell(f'FORWARD -p udp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+        ipt_shell(f'FORWARD -p icmp -j NFQUEUE --queue-num {Queue.CFIREWALL}')
 
         # INPUT #
         # NOTE: conntrack is now checked by cfirewall
@@ -84,47 +91,47 @@ class _Defaults:
 
         # allow local socket communications.
         # NOTE: control sock is AF_INET, so we need this rule
-        shell(f'iptables -A INPUT -s 127.0.0.0/24 -d 127.0.0.0/24 -j ACCEPT')
+        ipt_shell(f'INPUT -s 127.0.0.0/24 -d 127.0.0.0/24 -j ACCEPT')
 
-        # user configured services access will be kept as iptables for now.
+        # user-configured services access will be kept as iptables for now.
         # mark filter to ensure wan doesn't match as an extra precaution.
         # NOTE: the implicit allows like dhcp and dns will be handled by cfirewall from this point on.
-        shell(f'iptables -A INPUT -m mark ! --mark {WAN_IN} -j MGMT')
+        ipt_shell(f'INPUT -m mark ! --mark {WAN_IN} -j MGMT')
 
-        shell(f'iptables -A INPUT -p tcp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
-        shell(f'iptables -A INPUT -p udp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
-        shell(f'iptables -A INPUT -p icmp -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+        ipt_shell(f'INPUT -p tcp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+        ipt_shell(f'INPUT -p udp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
+        ipt_shell(f'INPUT -p icmp -j NFQUEUE --queue-num {Queue.CFIREWALL}')
 
     def prefilter_set(self) -> None:
         # marking traffic entering wan interface.
         # this is currently used for directionality comparisons and to restrict system access.
-        shell(f'iptables -t mangle -A INPUT -i {self._wan_int} -j MARK --set-mark {WAN_IN}')
+        ipt_shell(f'INPUT -i {self._wan_int} -j MARK --set-mark {WAN_IN}', table='mangle')
 
         # builtin lan and dmz interface/ zones will continue to be marked while iptables has partial control over system
         # service access
-        shell(f'iptables -t mangle -A INPUT -i {self._lan_int} -j MARK --set-mark {LAN_IN}')
-        shell(f'iptables -t mangle -A INPUT -i {self._dmz_int} -j MARK --set-mark {DMZ_IN}')
+        ipt_shell(f'INPUT -i {self._lan_int} -j MARK --set-mark {LAN_IN}', table='mangle')
+        ipt_shell(f'INPUT -i {self._dmz_int} -j MARK --set-mark {DMZ_IN}', table='mangle')
 
         # filtering out broadcast packets to the wan.
         # These can be prevalent if in a double nat scenario and would never be used for anything.
-        shell(f'iptables -I INPUT -i {self._wan_int} -m addrtype --dst-type BROADCAST -j DROP')
+        ipt_shell(f'INPUT -i {self._wan_int} -m addrtype --dst-type BROADCAST -j DROP', action='-I')
 
     # TODO: implement commands to check source and dnat changes in nat table. what does this even mean?
     def nat(self) -> None:
-        shell('iptables -t raw -A PREROUTING -j IPS')  # action to check the custom ips chain
+        ipt_shell('PREROUTING -j IPS', table='raw')  # action to check the custom ips chain
 
         # user defined chain for dnat
-        shell(f'iptables -t nat -A PREROUTING -j DSTNAT')
+        ipt_shell(f'PREROUTING -j DSTNAT', table='nat')
 
         # user defined chain for src nat
-        shell(f'iptables -t nat -A POSTROUTING -j SRCNAT')
+        ipt_shell(f'POSTROUTING -j SRCNAT', table='nat')
 
         # implicit masquerade rule for users. lan/dmz > wan
-        shell(f'iptables -t nat -A POSTROUTING -o {self._wan_int} -j MASQUERADE')
+        ipt_shell(f'POSTROUTING -o {self._wan_int} -j MASQUERADE', table='nat')
 
 
 class IPTablesManager:
-    '''This is the IP Table rule adjustment manager.
+    '''This is the IP Tables rule manager.
 
     if class is called in as a context manager, all method calls must be run in the context where the class instance
     itself is returned as the object.
@@ -135,7 +142,7 @@ class IPTablesManager:
     __slots__ = (
         '_intf_to_zone', '_zone_to_intf',
 
-        '_iptables_lock_file', '_iptables_lock'
+        '_iptables_lock'
     )
 
     def __init__(self) -> None:
@@ -151,10 +158,9 @@ class IPTablesManager:
             zone: info['ident'] for zone, info in builtins
         }
 
-        self._iptables_lock_file = f'{HOME_DIR}/dnx_profile/iptables/iptables.lock'
+        self._iptables_lock = open(f'{HOME_DIR}/dnx_profile/iptables/iptables.lock', 'r+')
 
     def __enter__(self) -> IPTablesManager:
-        self._iptables_lock = open(self._iptables_lock_file, 'r+')
         FILE_LOCK(self._iptables_lock, EXCLUSIVE_LOCK)
 
         return self
@@ -169,24 +175,24 @@ class IPTablesManager:
         return True
 
     def commit(self) -> None:
-        '''explicit, process safe, call to save iptables to back up file.
+        '''explicit, process safe, call to save iptables to back-up file.
 
         this is not needed if using the context manager as the commit happens on exit.
         '''
         shell(f'sudo iptables-save > {HOME_DIR}/dnx_profile/iptables/iptables_backup.cnf', check=True)
 
     def restore(self) -> None:
-        '''process safe restore of iptable rules from the system file.
+        '''process safe restore of iptables rules from the system file.
         '''
         shell(f'sudo iptables-restore < {HOME_DIR}/dnx_profile/iptables/iptables_backup.cnf', check=True)
 
     # TODO: think about the duplicate rule check before running this as a safety for creating duplicate rules
     def apply_defaults(self, *, suppress: bool = False) -> None:
-        '''convenience function wrapper around the iptable Default class.
+        '''convenience function wrapper around the iptables Default class.
 
-        all iptable default rules will be loaded.
+        all iptables default rules will be loaded.
         if used within the context manager (recommended), the iptables lock will be acquired before continuing (will
-        block until done) and an iptable commit will be done on exit.
+        block until done) and an iptables commit will be done on exit.
 
         NOTE: this method should not be called more than once during system operation or duplicate rules will be
         inserted into iptables.
