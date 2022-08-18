@@ -414,11 +414,11 @@ def build_libraries() -> None:
 
             dnx_run(command)
 
+        os.chdir(HOME_DIR)
+
     # libnetfilter_conntrack will be installed via package manager for now.
     progress('building netfilter conntrack (lib)')
     dnx_run('sudo apt install libnetfilter-conntrack-dev')
-
-    os.chdir(HOME_DIR)
 
 # ============================
 # INSTALL PACKAGES

@@ -89,9 +89,8 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     */
     if (nl_pkth->hook == NF_IP_FORWARD) {
         fw_clist.start = FW_RULE_RANGE_START;
-        if (!PROXY_BYPASS) {
-            pkt.action = IP_PROXY << TWO_BYTES | NF_QUEUE;
-        }
+
+        pkt.action = 0 ? PROXY_BYPASS : (IP_PROXY << TWO_BYTES) | NF_QUEUE;
     }
     else if (nl_pkth->hook == NF_IP_LOCAL_IN) {
         fw_clist.start = FW_SYSTEM_RANGE_START;
@@ -195,7 +194,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             pkt->rule_clist = cntrl_list;
             pkt->fw_rule    = rule;
             pkt->action     = rule->action; // copying to allow for outside control.
-            pkt->mark       = (tracked_geo << FOUR_BITS) | (direction << TWO_BITS) | rule->action;
+            pkt->mark      |= (tracked_geo << FOUR_BITS) | (direction << TWO_BITS) | rule->action;
 
             for (uintf8_t idx = 0; idx < 3; idx++) {
                 pkt->mark |= rule->sec_profiles[idx] << ((idx * 4) + 12);
@@ -211,7 +210,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
     // ------------------------------------------------------------------
     pkt->rule_clist = NO_SECTION;
     pkt->action     = DNX_DROP;
-    pkt->mark       = tracked_geo << FOUR_BITS | direction << TWO_BITS | DNX_DROP;
+    pkt->mark       = (tracked_geo << FOUR_BITS) | (direction << TWO_BITS) | DNX_DROP;
 
     logging:
     if (log_packet) {
@@ -250,6 +249,7 @@ firewall_stage_count(uintf8_t cntrl_list, uintf16_t rule_count)
     fw_tables_swap[cntrl_list].len = rule_count;
 
     dprint(FW_V & VERBOSE, "< [!] FW TABLE (%u) COUNT STAGED [!] >\n", cntrl_list);
+
     return OK;
 }
 
