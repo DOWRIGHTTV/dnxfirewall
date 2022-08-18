@@ -234,12 +234,12 @@ def progress(desc: str) -> None:
     # RENDERING UPDATED TIMESTAMP, BAR, DESCRIPTION
     # --------------------------------------------------------------------
     sys.stdout.write(text.lightgrey(f'{time.strftime("%H:%M:%S")}| '))
+    sys.stdout.write(text.yellow(f'{completed_count}', style=None) + text.lightgrey(f'/{PROGRESS_TOTAL_COUNT} |'))
     sys.stdout.write(
         text.lightgrey(f'| [', style=None) + bar + text.lightgrey(f'] ', style=None) +
         completed + text.lightgrey('% |', style=None)
     )
     sys.stdout.write(text.yellow(f'| {desc.ljust(48)}\r'))
-    sys.stdout.write(text.yellow(f'{completed_count}', style=None) + text.lightgrey(f'/{PROGRESS_TOTAL_COUNT} |'))
 
     # allows for rendering bar without moving the completion %.
     if (desc):
@@ -518,7 +518,7 @@ def set_permissions() -> None:
         f'chmod 750 dnx_run.py',
 
         # creating symlink to allow dnx command from anywhere if logged in as dnx user
-        f'ln -fs dnx_run.py /usr/local/bin/dnx',
+        f'ln -fs {HOME_DIR}/dnx_run.py /usr/local/bin/dnx',
 
         # adding www-data user to dnx group
         'usermod -aG dnx www-data',
@@ -553,12 +553,12 @@ def set_services() -> None:
 
     progress('creating dnxfirewall services')
 
-    services = os.listdir(f'{SYSTEM_DIR}/services')
+    services = os.listdir(f'{UTILITY_DIR}/services')
     for service in services:
 
         if (service not in ignore_list):
 
-            dnx_run(f'cp -n {SYSTEM_DIR}/services/{service} /etc/systemd/system/')
+            dnx_run(f'cp -n {UTILITY_DIR}/{service} /etc/systemd/system/')
             dnx_run(f'systemctl enable {service}')
 
     dnx_run(f'systemctl enable nginx')
