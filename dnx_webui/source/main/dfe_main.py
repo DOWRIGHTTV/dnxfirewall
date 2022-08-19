@@ -692,16 +692,16 @@ def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name) -> str:
 
 def log_page_logic(log_page, page_settings, *, page_name):
     # can now accept redirects from other places on the webui to load specific tables directly on load
-    # using uri queries
+    # using uri queries FIXME: this has been temporarily suspended and should be reintroduced.
 
     try:
-        table_data, table, menu_option = log_page.load_page(request.form)
+        table, menu, table_data = log_page.update_page(request.form)
     except ConfigurationError as ce:
         return render_template(application_error_page, application_error=ce, **page_settings)
 
     page_settings.update({
-        'table': validate.get_convert_int(request.form, 'table'),
-        'menu': validate.get_convert_int(request.form, 'menu'),
+        'table': table,
+        'menu': menu,
         'table_data': table_data
     })
 

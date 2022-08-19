@@ -38,8 +38,8 @@ class _DBConnector:
 
     @classmethod
     def register(cls, routine_name: str, *, routine_type: str) -> Callable_T:
-        '''register routine with database connector that can be called initiated with the "execute" method.'''
-
+        '''register routine with database connector that can be called initiated with the "execute" method.
+        '''
         name_in_use: list = cls._routines.get(routine_name, None)
         if (name_in_use):
             raise FileExistsError(f'routine with name {routine_name} already exists')
