@@ -795,13 +795,6 @@ def ajax_response(*, status, data):
 # FLASK API - REQUEST MODS
 # =================================
 @app.before_request
-def print_forms():
-    server_type = os.environ.get('FLASK_ENV')
-    if (server_type == 'development' and request.method == 'POST'):
-        print(f'form data\n{"="*12}')
-        ppt(dict(request.form))
-
-@app.before_request
 def user_timeout():
     session.permanent = True
     app.permanent_session_lifetime = timedelta(minutes=30)
@@ -811,8 +804,7 @@ def user_timeout():
 # the current dark mode setting for the active user and set flask.session['dark_mode] accordingly.
 @app.before_request
 def dark_mode():
-    '''
-    the configured value will be stored as session['dark_mode'] so it can be accessed directly by the
+    '''the configured value will be stored as session['dark_mode'], so it can be accessed directly by the
     Flask template context.
     '''
     # dark mode settings will only apply to logged-in users.
@@ -887,14 +879,14 @@ def create_tab(active_tab: int, cur_tab: int, href: str) -> str:
     return tab
 
 def merge_items(a1, a2):
-    '''accepts 2 arguments of item or list and merges them into one list.
-        valid combinations. int can be replaced with any singular object.
+    '''accepts 2 arguments of item or list and merges them into one list. int can be replaced with any singular object.
+
+        valid combinations.
             (int, list)
             (int, int)
             (list,list)
             (list, int)
     '''
-
     new_list = []
 
     for arg in [a1, a2]:
@@ -919,3 +911,16 @@ app.add_template_global(create_tab, name='create_tab')
 app.add_template_global(merge_items, name='merge_items')
 app.add_template_global(is_list, name='is_list')
 app.add_template_global(_debug, name='debug')
+
+# =================================
+# DEV ONLY
+# =================================
+# function will only be registered if running on dev branch using flask dev server
+server_type = os.environ.get('FLASK_ENV')
+if (server_type == 'development'):
+
+    @app.before_request
+    def print_forms():
+        if (request.method == 'POST'):
+            print(f'form data\n{"=" * 12}')
+            ppt(dict(request.form))
