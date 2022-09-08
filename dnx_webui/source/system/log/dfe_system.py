@@ -16,26 +16,26 @@ LOG_FILES = [
 ]
 
 # NOTE: this will likely not be needed anymore with the ajax client implementation
-def load_page(uri_query: Args) -> tuple[list[Optional[str]], str, None]:
+def load_page(uri_query: Args) -> tuple[str, None, list[str]]:
     file_path = f'{HOME_DIR}/dnx_profile/log'
 
-    return get_log_entries(file_path), 'combined', None
+    return 'combined', None, get_log_entries(file_path)
 
-def update_page(form: Form) -> tuple[list[Optional[str]], str, None]:
-    log_type = form.get('table', 'combined')
+def update_page(form: Form) -> tuple[str, None, list[str]]:
+    log_table = form.get('table', 'combined')
 
     # ternary to handle initial page load.
     # TODO: this should be done better, but i am waiting until reports page gets converted to ajax to support both
-    log_type = 'combined' if log_type == 'default' else log_type
+    log_table = 'combined' if log_table == 'default' else log_table
 
-    if (log_type not in LOG_FILES):
-        return [], log_type, None
+    if (log_table not in LOG_FILES):
+        return log_table, None, []
 
     # combined log is now a single file that reflects recent aggregated log at the time of loading
-    file_path = LOG_DIR if log_type == 'combined' else f'{LOG_DIR}/{log_type}'
+    file_path = LOG_DIR if log_table == 'combined' else f'{LOG_DIR}/{log_table}'
 
     # returning none to fill table_args var on the calling function to allow reuse with the report's page method
-    return get_log_entries(file_path), log_type, None
+    return log_table, None, get_log_entries(file_path)
 
 # TODO: make front end logging 4 fields. date/time, service, level, entry. this will make the presentation nicer
 #  and will still allow for service identification on the combined system log.

@@ -384,8 +384,6 @@ def confirm_interfaces(interface_config: dict[str, str]) -> bool:
 # ============================
 # BUILD LIBRARIES
 # ============================
-# _TODO: check compatibility with debian and ubuntu systems. i remember there being an issue where either libmnl or
-#  libnetfilter-conntrack was not on current build. something like apt having 1.0.4, but 1.0.5 is needed.
 def build_libraries() -> None:
     global PROGRESS_TOTAL_COUNT
 
@@ -426,11 +424,12 @@ def build_libraries() -> None:
 def install_packages() -> list:
 
     commands = [
-        ('sudo apt install python3-pip -y', 'setting up python3'),
-        ('pip3 install flask uwsgi', 'installing python web app framework'),
         ('sudo apt install nginx -y', 'installing web server driver'),
         ('sudo apt install net-tools -y', 'installing networking components'),
+        ('sudo apt install autoconf -y', None),
 
+        ('sudo apt install python3-pip -y', 'setting up python3'),
+        ('pip3 install flask uwsgi', 'installing python web app framework'),
         ('pip3 install Cython', 'installing C extension language (Cython)')
     ]
 
