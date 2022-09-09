@@ -63,13 +63,22 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
 {
     struct cfdata      *cfd = (struct cfdata*) data;
     struct nlattr      *netlink_attrs[NFQA_MAX+1] = {};
-    struct dnx_pktb     pkt = {.logger = &Log[FW_LOG_IDX]};
-    struct clist_range  fw_clist = {0};
 
-    nl_pkt_hdr     *nl_pkth = NULL;
+    // verdict default defers to IP_PROXY for logging geolocation
+    // TODO: see if we can get the geo only log moved to cfirewall to prevent denies from needing to be forwarded
+    struct dnx_pktb     pkt = {
+        .logger  = &Log[FW_LOG_IDX],
+        .verdict = (IP_PROXY << TWO_BYTES) | NF_QUEUE,
+    };
+
+    struct clist_range  fw_clist = {
+        .start = FW_RULE_RANGE_START,
+        .end   = FW_RULE_RANGE_END,
+    };
+
+    nl_pkt_hdr     *nl_pkth = NULL; // TODO: cant this just be {}?
     uint32_t        ct_info;
 
-//    printf("< [++] FW RECV QUEUE(%u) - PARSING [++] >\n", cfd->queue);
     dnx_parse_nl_headers(nl_msgh, &nl_pkth, netlink_attrs, &pkt);
     /*
     CONNTRACK LOOKUP
@@ -87,16 +96,14 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     SYSTEM RULES and PROXY_BYPASS will skip proxies and invoke the rule action directly
     otherwise will forward to ip proxy regardless of action for geolocation log or IPS
     */
-    if (nl_pkth->hook == NF_IP_FORWARD) {
-        fw_clist.start = FW_RULE_RANGE_START;
-
-        pkt.action = 0 ? PROXY_BYPASS : (IP_PROXY << TWO_BYTES) | NF_QUEUE;
-    }
-    else if (nl_pkth->hook == NF_IP_LOCAL_IN) {
+    //if (nl_pkth->hook == NF_IP_FORWARD) {}
+    if (nl_pkth->hook == NF_IP_LOCAL_IN) {
+        pkt.verdict = 0;
         fw_clist.start = FW_SYSTEM_RANGE_START;
     }
-
-    fw_clist.end = FW_RULE_RANGE_END;
+#if DEVELOPMENT
+    if (PROXY_BYPASS) pkt.verdict = 0
+#endif
     // ===================================
     // FIREWALL RULES LOCK
     // prevents the manager thread from updating firewall rules during packet inspection.
@@ -108,12 +115,14 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     // ===================================
 
     // NFQUEUE VERDICT
+    // drops will inherently forward to the ip proxy for geo inspection and local dns records.
     dnx_send_verdict(cfd, ntohl(nl_pkth->packet_id), &pkt);
+    // ===================================
 
     dprint(FW_V & VERBOSE, "< -- FIREWALL VERDICT -- >\npacket_id->%u, hook->%u, mark->%u, action->%u",
-        ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.mark, pkt.action);
+        ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.mark, pkt.verdict);
 
-    dprint(FW_V & VERBOSE & PROXY_BYPASS, ", ipp->%u, dns->%u, ips->%u",
+    dprint(FW_V & VERBOSE, ", ipp->%u, dns->%u, ips->%u",
         pkt.mark >> 12 & 15, pkt.mark >> 16 & 15, pkt.mark >> 20 & 15);
 
     dprint(FW_V & VERBOSE, "\n");
@@ -145,7 +154,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
     uint8_t     direction   = pkt->hw.in_zone.id != WAN_IN ? OUTBOUND : INBOUND;
     uint16_t    tracked_geo = direction == INBOUND ? src_country : dst_country;
 
-    // local flag to mark
+    // local flag to mark for traffic logging
     uintf8_t    log_packet = 0;
 
     dprint(FW_V & VERBOSE, "< ++ FIREWALL INSPECTION ++ >\nsrc->[%u]%u(%u):%u, dst->[%u]%u(%u):%u, direction->%u, tracked->%u\n",
@@ -160,7 +169,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             rule = &firewall_tables[cntrl_list].rules[rule_idx];
             if (!rule->enabled) { continue; }
 #if DEVELOPMENT
-            if (FW_V & VERBOSE2) {
+            if (FW_V & VERBOSE2) { // TODO: find a better/ more useful way to show this info without being too spammy.
                 firewall_print_rule(cntrl_list, rule_idx);
             }
 #endif
@@ -169,7 +178,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             // ZONE MATCHING
             // ------------------------------------------------------------------
             // currently tied to interface and designated LAN, WAN, DMZ
-            if (zone_match(&rule->s_zones, pkt->hw.in_zone.id) != MATCH) { continue; }
+            if (zone_match(&rule->s_zones, pkt->hw.in_zone.id)  != MATCH) { continue; }
             if (zone_match(&rule->d_zones, pkt->hw.out_zone.id) != MATCH) { continue; }
 
             // ------------------------------------------------------------------
@@ -190,11 +199,10 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             // ------------------------------------------------------------------
             // MATCH ACTION | return rule options
             // ------------------------------------------------------------------
-            // drop will inherently forward to the ip proxy for geo inspection and local dns records.
             pkt->rule_clist = cntrl_list;
             pkt->fw_rule    = rule;
-            pkt->action     = rule->action; // copying to allow for outside control.
-            pkt->mark      |= (tracked_geo << FOUR_BITS) | (direction << TWO_BITS) | rule->action;
+            pkt->verdict   |= rule->action;
+            pkt->mark      |= (tracked_geo << FOUR_BITS) | (direction << TWO_BITS) | rule->verdict;
 
             for (uintf8_t idx = 0; idx < 3; idx++) {
                 pkt->mark |= rule->sec_profiles[idx] << ((idx * 4) + 12);
@@ -209,7 +217,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
     // DEFAULT ACTION
     // ------------------------------------------------------------------
     pkt->rule_clist = NO_SECTION;
-    pkt->action     = DNX_DROP;
+    pkt->verdict    = DNX_DROP;
     pkt->mark       = (tracked_geo << FOUR_BITS) | (direction << TWO_BITS) | DNX_DROP;
 
     logging:

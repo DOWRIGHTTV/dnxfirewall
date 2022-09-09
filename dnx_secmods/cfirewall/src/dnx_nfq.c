@@ -54,14 +54,14 @@ does not check for mangling.
 does set non 0 mark values.
 */
 inline void
-dnx_send_verdict_fast(struct cfdata *cfd, uint32_t pktid, uint32_t mark, int action)
+dnx_send_verdict_fast(struct cfdata *cfd, uint32_t pktid, uint32_t mark, int verdict)
 {
     char                buf[MNL_SOCKET_BUFFER_SIZE];
     struct nlmsghdr    *nlh;
 
     nlh = nfq_nlmsg_put(buf, NFQNL_MSG_VERDICT, cfd->queue);
 
-    nfq_nlmsg_verdict_put(nlh, pktid, action);
+    nfq_nlmsg_verdict_put(nlh, pktid, verdict);
     if (mark) {
         nfq_nlmsg_verdict_put_mark(nlh, mark);
     }
@@ -78,7 +78,7 @@ dnx_send_verdict(struct cfdata *cfd, uint32_t pktid, struct dnx_pktb *pkt)
 
     nlh = nfq_nlmsg_put(buf, NFQNL_MSG_VERDICT, cfd->queue);
 
-    nfq_nlmsg_verdict_put(nlh, pktid, pkt->action);
+    nfq_nlmsg_verdict_put(nlh, pktid, pkt->verdict);
     nfq_nlmsg_verdict_put_mark(nlh, pkt->mark);
     if (pkt->mangled) {
         nfq_nlmsg_verdict_put_pkt(nlh, pkt->data, pkt->tlen);
@@ -101,17 +101,17 @@ not be specified under normal conditions, unless there is an explicit reason to 
 bool
 dnx_mangle_pkt(struct dnx_pktb *pkt)
 {
-    if (pkt->action == DNX_MASQ) {
+    if (pkt->verdict == DNX_MASQ) {
         // need to set nat struct for masquerade or else conn tuple will not be updated.
         pkt->nat.saddr = intf_masquerade(pkt->hw.oif);
 
         // defer mangle until after conntrack tuple is changed. caller can use nat.saddr as reference.
     }
-    else if (pkt->action == DNX_SRC_NAT || pkt->action == DNX_FULL_NAT) {
+    else if (pkt->verdict == DNX_SRC_NAT || pkt->verdict == DNX_FULL_NAT) {
         mangle_src_addr(pkt);
         mangle_src_port(pkt);
     }
-    else if (pkt->action == DNX_DST_NAT || pkt->action == DNX_FULL_NAT) {
+    else if (pkt->verdict == DNX_DST_NAT || pkt->verdict == DNX_FULL_NAT) {
         mangle_dst_addr(pkt);
         mangle_dst_port(pkt);
     }
