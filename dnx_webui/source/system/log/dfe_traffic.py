@@ -37,7 +37,7 @@ class FIREWALL_LOG(_NamedTuple):
     dst_port: str
 
 
-def load_page(form: Form) -> tuple[str, None, list[FIREWALL_LOG]]:
+def update_page(form: Form) -> tuple[str, None, list[FIREWALL_LOG]]:
     log_table = form.get('table', 'firewall')
 
     if (log_table not in LOG_FILES):
