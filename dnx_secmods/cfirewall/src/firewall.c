@@ -101,9 +101,11 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
         pkt.verdict = 0;
         fw_clist.start = FW_SYSTEM_RANGE_START;
     }
+
 #if DEVELOPMENT
-    if (PROXY_BYPASS) pkt.verdict = 0
+    if (PROXY_BYPASS) pkt.verdict = 0;
 #endif
+
     // ===================================
     // FIREWALL RULES LOCK
     // prevents the manager thread from updating firewall rules during packet inspection.
@@ -124,6 +126,10 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
 
     dprint(FW_V & VERBOSE, ", ipp->%u, dns->%u, ips->%u",
         pkt.mark >> 12 & 15, pkt.mark >> 16 & 15, pkt.mark >> 20 & 15);
+
+#if DEVELOPMENT
+    if (PROXY_BYPASS) dprint(FW_V & VERBOSE, " PROXY BYPASS ON");
+#endif
 
     dprint(FW_V & VERBOSE, "\n");
 
@@ -168,10 +174,10 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
 
             rule = &firewall_tables[cntrl_list].rules[rule_idx];
             if (!rule->enabled) { continue; }
+
 #if DEVELOPMENT
-            if (FW_V & VERBOSE2) { // TODO: find a better/ more useful way to show this info without being too spammy.
-                firewall_print_rule(cntrl_list, rule_idx);
-            }
+            // TODO: find a better/ more useful way to show this info without being too spammy and uses dprint
+            if (FW_V & VERBOSE2) firewall_print_rule(cntrl_list, rule_idx);
 #endif
             // inspection order: src > dst | zone, ip_addr, protocol, port
             // ------------------------------------------------------------------
