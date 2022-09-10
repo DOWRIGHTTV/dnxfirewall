@@ -1,16 +1,11 @@
 #!/usr/bin/env Cython
 
-from cpython cimport array
-
 from libc.stdint cimport uint8_t, uint16_t, uint32_t, uint64_t
 from posix.types cimport pid_t
 
 # LIBMNL && LIBNETFILTER_QUEUE SOURCE FILES
 # https://netfilter.org/projects/libmnl/files/libmnl-1.0.5.tar.bz2
 # https://netfilter.org/projects/libnetfilter_queue/files/libnetfilter_queue-1.0.5.tar.bz2
-
-# DNXFIREWALL TYPEDEFS
-# ctypedef array.array    PyArray
 
 cdef extern from "<errno.h>" nogil:
     int         errno
@@ -279,7 +274,6 @@ cdef extern from "cfirewall.h" nogil:
 
     enum: FW_MAX_ZONES # define
     ZoneMap INTF_ZONE_MAP[FW_MAX_ZONES]
-#    ZoneMap zone_map_swap[FW_MAX_ZONES]
 
     struct cfdata:
         uintf8_t    idx

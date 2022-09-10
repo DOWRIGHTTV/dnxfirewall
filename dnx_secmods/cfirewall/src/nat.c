@@ -93,26 +93,26 @@ nat_recv(nl_msg_hdr *nl_msgh, void *data)
 
     // NAT / MANGLE
     // MASQUERADE needs to mangle before
-    if (pkt.action == DNX_MASQ) {
+    if (pkt.verdict == DNX_MASQ) {
         pkt.mangled = dnx_mangle_pkt(&pkt);
         ct_nat_update(&pkt);
 
         // masquerade requires a deferred mangle to not conflict with conntrack tuple
         pkt.iphdr->saddr = pkt.nat.saddr;
     }
-    else if (pkt.action > DNX_NO_NAT) {
+    else if (pkt.verdict > DNX_NO_NAT) {
         ct_nat_update(&pkt);
         pkt.mangled = dnx_mangle_pkt(&pkt);
     }
     // need to reduce DNX_* to DNX_ACCEPT on nat rule matches.
-    if (pkt.action >= DNX_NO_NAT) {
-        pkt.action = DNX_ACCEPT;
+    if (pkt.verdict >= DNX_NO_NAT) {
+        pkt.verdict = DNX_ACCEPT;
     }
 
     dnx_send_verdict(cfd, ntohl(nl_pkth->packet_id), &pkt);
 
     dprint(NAT_V & VERBOSE, "< [--] NAT VERDICT [--] >\npacket_id->%u, hook->%u, action->%u\n",
-        ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.action);
+        ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.verdict);
 
     return OK;
 }
@@ -176,7 +176,7 @@ nat_inspect(int cntrl_list, struct dnx_pktb *pkt, struct cfdata *cfd)
         // ------------------------------------------------------------------
         pkt->rule_clist = cntrl_list;
         pkt->nat_rule   = rule; // if logging, this needs to be +1 to reflect true rule number
-        pkt->action     = rule->action;
+        pkt->verdict    = rule->action;
 
         pkt->nat = rule->nat;
 
@@ -186,7 +186,7 @@ nat_inspect(int cntrl_list, struct dnx_pktb *pkt, struct cfdata *cfd)
     // DEFAULT ACTION
     // ------------------------------------------------------------------
     pkt->rule_clist = NO_SECTION;
-    pkt->action     = DNX_ACCEPT;
+    pkt->verdict    = DNX_ACCEPT;
 }
 
 void
