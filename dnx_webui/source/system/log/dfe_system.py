@@ -15,6 +15,9 @@ LOG_FILES = [
     'combined', 'dhcp_server', 'dns_proxy', 'ip_proxy', 'ips', 'syslog', 'system', 'web_app', 'logins'
 ]
 
+# FIXME: system logs are rendering with the file name letters enumerated on separate lines. im tired and jacked up my
+#  eye up dinking around with a wire and cant see shit.
+
 # NOTE: this will likely not be needed anymore with the ajax client implementation
 def load_page(uri_query: Args) -> tuple[str, None, list[str]]:
     file_path = f'{HOME_DIR}/dnx_profile/log'
@@ -37,11 +40,6 @@ def update_page(form: Form) -> tuple[str, None, list[str]]:
     # returning none to fill table_args var on the calling function to allow reuse with the report's page method
     return log_table, None, get_log_entries(file_path)
 
-# TODO: make front end logging 4 fields. date/time, service, level, entry. this will make the presentation nicer
-#  and will still allow for service identification on the combined system log.
-    # NOTE: it looks like not all long entries, especially debug have the service identified in the log currently.
-    # would probably be a good idea to just use the log/service name defined in module so each entry does not need
-    # to worry about it.
 def get_log_entries(file_path: str) -> list[str]:
     log_files = reversed(sorted(os.listdir(file_path))[:-1])
 
