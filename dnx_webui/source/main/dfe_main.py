@@ -459,9 +459,7 @@ def system_logs_system(session_data):
 def system_logs_get(session_data):
     json_data = request.get_json(force=True)
 
-    table_data, _, _ = sys_logs.update_page(json_data)
-
-    ppt(table_data)
+    _, _, table_data = sys_logs.update_page(json_data)
 
     return ajax_response(status=True, data=table_data)
 
