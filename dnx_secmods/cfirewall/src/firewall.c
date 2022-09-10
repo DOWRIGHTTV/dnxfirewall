@@ -76,7 +76,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
         .end   = FW_RULE_RANGE_END,
     };
 
-    nl_pkt_hdr     *nl_pkth = NULL; // TODO: cant this just be {}?
+    nl_pkt_hdr     *nl_pkth = NULL; // TODO: see if we can skip initialization since dnx_nfqueue will set this value
     uint32_t        ct_info;
 
     dnx_parse_nl_headers(nl_msgh, &nl_pkth, netlink_attrs, &pkt);
