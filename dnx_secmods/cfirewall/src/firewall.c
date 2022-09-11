@@ -68,15 +68,8 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
 
     // verdict default defers to IP_PROXY for logging geolocation
     // TODO: see if we can get the geo only log moved to cfirewall to prevent denies from needing to be forwarded
-    struct dnx_pktb     pkt = {
-        .logger  = &Log[FW_LOG_IDX],
-        .verdict = (IP_PROXY << TWO_BYTES) | NF_QUEUE,
-    };
-
-    struct clist_range  fw_clist = {
-        .start = FW_SYSTEM_RANGE_START,
-        .end   = FW_RULE_RANGE_END,
-    };
+    struct dnx_pktb     pkt = {};
+    struct clist_range  fw_clist;
 
     nl_pkt_hdr     *nl_pkth = NULL; // TODO: see if we can skip initialization since dnx_nfqueue will set this value
     uint32_t        ct_info;
@@ -94,9 +87,16 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
 
         return OK;
     }
+    // PASSTHROUGH TRAFFIC
     if (nl_pkth->hook == NF_IP_FORWARD) {
         fw_clist.start = FW_RULE_RANGE_START;
     }
+    // LOCAL SYSTEM TRAFFIC
+    else if (nl_pkth-> == NF_IP_LOCAL_IN) {
+        fw_clist.start = FW_SYSTEM_RANGE_START;
+    }
+
+    fw_clist.end = FW_RULE_RANGE_END;
 
     // ===================================
     // FIREWALL RULES LOCK
@@ -211,6 +211,9 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
                 pkt->mark |= rule->sec_profiles[idx] << ((idx * 4) + 12);
             }
 
+            // 0. SYSTEM RULE -> direct invocation || 1-3. STANDARD RULE -> forward to IP_PROXY
+            pkt->verdict = (ctrl_list == FW_SYSTEM_RANGE_START) ? 0 : (IP_PROXY << TWO_BYTES) | NF_QUEUE;
+
             log_packet = rule->log;
 
             goto logging;
@@ -227,9 +230,9 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
         gettimeofday(&timestamp, NULL);
 
         // log file rotation logic
-        log_enter(&timestamp, pkt->logger);
+        log_enter(&timestamp, &Log[FW_LOG_IDX]);
         log_write_firewall(&timestamp, pkt, direction, src_country, dst_country);
-        log_exit(pkt->logger);
+        log_exit(&Log[FW_LOG_IDX]);
     }
 
 //    if (netlink_attrs[NFQA_HWADDR]) {
