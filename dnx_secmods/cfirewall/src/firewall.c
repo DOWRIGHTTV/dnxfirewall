@@ -113,21 +113,21 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
 #if DEVELOPMENT
     if (PROXY_BYPASS) {
         pkt.verdict = pkt.fw_rule->action; // this tells cfirewall to take control instead of forward to proxy
-        dprint(FW_V & VERBOSE, " PROXY BYPASS ON");
+        dprint(FW_V & VERBOSE, "PROXY BYPASS ON>");
     }
 #endif
 
-    dprint(FW_V & VERBOSE, "<0=FW VERDICT=0>\npkt_id->%u, hook->%u, mark->%u, verdict->%u, ipp->%u, dns->%u, ips->%u",
+    dprint(FW_V & VERBOSE, "pkt_id->%u, hook->%u, mark->%u, verdict->%u, ipp->%u, dns->%u, ips->%u",
         ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.mark, pkt.verdict,
         pkt.mark >> 12 & FOUR_BITS, pkt.mark >> 16 & FOUR_BITS, pkt.mark >> 20 & FOUR_BITS
     );
-
-    dprint(FW_V & VERBOSE, " (VERDICT SENT)\n");
 
     // NFQUEUE VERDICT
     // drops will inherently forward to the ip proxy for geo inspection and local dns records.
     dnx_send_verdict_fast(cfd, ntohl(nl_pkth->packet_id), pkt.mark, pkt.verdict);
     // ===================================
+
+    dprint(FW_V & VERBOSE, " (VERDICT SENT)\n");
 
     // return hierarchy -> libnfnetlink.c >> libnetfiler_queue >> process_traffic.
     // < 0 vals are errors, but return is being ignored by CFirewall._run.
