@@ -140,7 +140,8 @@ def get_mac_string(*, interface: str) -> Optional[str]:
         return None
 
     else:
-        return ':'.join([mac_addr[i:i + 2] for i in range(0, 12, 2)])
+        mac_hex = mac_addr.hex()
+        return ':'.join([mac_hex[i:i + 2] for i in range(0, 12, 2)])
 
 
 def get_ipaddress(*, interface: str) -> int:
