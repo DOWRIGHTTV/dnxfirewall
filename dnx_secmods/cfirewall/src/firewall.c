@@ -107,14 +107,9 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     firewall_unlock();
     // UNLOCKING ACCESS TO FIREWALL RULES
     // ===================================
-    // rules destined for firewall interface dont need proxy inspection so cfirewall will invoke action directly.
-    if (nl_pkth->hook == NF_IP_LOCAL_IN) {
-        pkt.verdict = pkt.mark & PACKET_ACTION_MASK;
-    }
-
 #if DEVELOPMENT
     if (PROXY_BYPASS) {
-        pkt.verdict = pkt.mark & PACKET_ACTION_MASK; // this tells cfirewall to take control instead of forward to proxy
+        pkt.verdict = pkt.fw_rule->action; // this tells cfirewall to take control instead of forward to proxy
         dprint(FW_V & VERBOSE, " PROXY BYPASS ON");
     }
 #endif
@@ -212,7 +207,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             }
 
             // 0. SYSTEM RULE -> direct invocation || 1-3. STANDARD RULE -> forward to IP_PROXY
-            pkt->verdict = (cntrl_list == FW_SYSTEM_RANGE_START) ? 0 : (IP_PROXY << TWO_BYTES) | NF_QUEUE;
+            pkt->verdict = (cntrl_list == FW_SYSTEM_RANGE_START) ? rule->action : (IP_PROXY << TWO_BYTES) | NF_QUEUE;
 
             log_packet = rule->log;
 
@@ -223,6 +218,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
     // DEFAULT ACTION
     // ------------------------------------------------------------------
     pkt->rule_clist = NO_SECTION;
+    pkt->verdict    = (IP_PROXY << TWO_BYTES) | NF_QUEUE
     pkt->mark       = (tracked_geo << FOUR_BITS) | (direction << TWO_BITS) | DNX_DROP;
 
     logging:

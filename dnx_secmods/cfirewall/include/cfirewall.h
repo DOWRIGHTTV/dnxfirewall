@@ -146,8 +146,8 @@ struct dnx_pktb {
         struct FWrule  *fw_rule;
         struct NATrule *nat_rule;
     };
-    uint32_t            verdict;
     uint32_t            mark;
+    uint32_t            verdict;
     struct LogHandle   *logger;
 };
 
