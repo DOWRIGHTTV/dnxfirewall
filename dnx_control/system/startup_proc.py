@@ -70,7 +70,7 @@ def set_default_mac_flag():
 
             wan_intf = dnx_settings['interfaces->builtins->wan->ident']
 
-            dnx_settings['interfaces->builtins->wan->default_mac'] = interface.get_mac(interface=wan_intf)
+            dnx_settings['interfaces->builtins->wan->default_mac'] = interface.get_mac_string(interface=wan_intf)
             dnx_settings['interfaces->builtins->wan->mac_set'] = True
 
         dnx.write_configuration(dnx_settings.expanded_user_data)

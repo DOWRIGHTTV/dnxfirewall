@@ -2,21 +2,23 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import INVALID_FORM, space_join
 from dnx_gentools.def_enums import CFG
-from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
-
-from source.web_validate import convert_int, ValidationError
+from dnx_gentools.file_operations import ConfigurationManager, load_configuration
 from dnx_gentools.system_info import Services
+
 from dnx_iptools.iptables import IPTablesManager
 
 from dnx_control.control.ctl_action import system_action
 
+from source.web_typing import *
+
+from source.web_validate import convert_int, ValidationError
+
 DISABLED_MANAGEMENT_SERVICES = ['cli']
 
 
-def load_page(form: dict) -> dict[str, Union[list, dict[dict[str, int]]]]:
+def load_page(form: Args) -> dict[str, Union[list, dict[dict[str, int]]]]:
     dnx_settings = load_configuration('system')
 
     all_services = []
@@ -27,7 +29,7 @@ def load_page(form: dict) -> dict[str, Union[list, dict[dict[str, int]]]]:
 
     return {'all_services': all_services, 'mgmt_access': dnx_settings.get_dict('mgmt_access')}
 
-def update_page(form: dict) -> Optional[str]:
+def update_page(form: Form) -> Optional[str]:
 
     # checking if button keys are present in form is easy first line validation to ensure valid form fields
     if ('update_mgmt_access' in form):

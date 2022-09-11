@@ -75,25 +75,22 @@
                             <td>
                                 <div class="row">
                                     <div class="input-field col s12 l4">
-                                        <form action="/system/services" method="POST">
-                                            <input type="hidden" name="start_svc" value="{{name}}">
-                                            <button class="btn-floating green btn-large waves-effect waves-light">
+                                        <form method="POST">
+                                            <button name="start_svc" value="{{name}}" class="btn-floating btn-large green waves-effect waves-light">
                                                 <i class="material-icons">play_arrow</i>
                                             </button>
                                         </form>
                                     </div>
                                     <div class="input-field col s12 l4">
-                                        <form action="/system/services" method="POST">
-                                            <input type="hidden" name="restart_svc" value="{{name}}">
-                                            <button class="btn-floating btn-large orange waves-effect waves-light">
+                                        <form method="POST">
+                                            <button name="restart_svc" value="{{name}}" class="btn-floating btn-large orange waves-effect waves-light">
                                                 <i class="material-icons">autorenew</i>
                                             </button>
                                         </form>
                                     </div>
                                     <div class="input-field col s12 l4">
-                                        <form action="/system/services" method="POST">
-                                            <input type="hidden" name="stop_svc" value="{{name}}">
-                                            <button class="btn-floating btn-large red waves-effect waves-light">
+                                        <form method="POST">
+                                            <button name="stop_svc" value="{{name}}" class="btn-floating btn-large red waves-effect waves-light">
                                                 <i class="material-icons">stop</i>
                                             </button>
                                         </form>

@@ -124,11 +124,24 @@ def get_masquerade_ip(*, dst_ip: int, packed: bool = False) -> Union[bytes, int]
         s.close()
 
 def get_mac(*, interface: str) -> Optional[bytes]:
-    '''return raw byte mac address for sent in interface. return None on OSError.'''
+    '''return raw byte mac address for sent in interface. return None on OSError.
+    '''
     try:
         return ioctl(DESCRIPTOR, 0x8927,  fcntl_pack(bytes(interface, 'utf-8')))[18:24]
     except OSError:
         return None
+
+def get_mac_string(*, interface: str) -> Optional[str]:
+    '''return standard string representation of mac address for sent in interface. return None on OSError.
+    '''
+    try:
+        mac_addr = ioctl(DESCRIPTOR, 0x8927,  fcntl_pack(bytes(interface, 'utf-8')))[18:24]
+    except OSError:
+        return None
+
+    else:
+        return ':'.join([mac_addr[i:i + 2] for i in range(0, 12, 2)])
+
 
 def get_ipaddress(*, interface: str) -> int:
     '''return integer value for the passed in interfaces current ip address.

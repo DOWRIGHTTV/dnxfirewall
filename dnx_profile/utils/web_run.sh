@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export HOME_DIR=/home/free/dnxfirewall
+export HOME_DIR=/home/$USER/dnxfirewall
 export WEB_DIR=$HOME_DIR/dnx_webui
 export FLASK_DIR=$HOME_DIR/dnx_webui
 export FLASK_APP=$FLASK_DIR
