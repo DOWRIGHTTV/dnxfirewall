@@ -65,14 +65,11 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
 {
     struct cfdata      *cfd = (struct cfdata*) data;
     struct nlattr      *netlink_attrs[NFQA_MAX+1] = {};
-
-    // verdict default defers to IP_PROXY for logging geolocation
-    // TODO: see if we can get the geo only log moved to cfirewall to prevent denies from needing to be forwarded
     struct dnx_pktb     pkt = {};
-    struct clist_range  fw_clist;
+    nl_pkt_hdr         *nl_pkth = NULL; // TODO: see if we can skip initialization since dnx_nfqueue will set this value
 
-    nl_pkt_hdr     *nl_pkth = NULL; // TODO: see if we can skip initialization since dnx_nfqueue will set this value
-    uint32_t        ct_info;
+    struct clist_range  fw_clist;
+    uint32_t            ct_info;
 
     dnx_parse_nl_headers(nl_msgh, &nl_pkth, netlink_attrs, &pkt);
     /*
@@ -82,7 +79,9 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     NTOHL on id is because kernel will apply HTONL on receipt.
     */
     if (!netlink_attrs[NFQA_CT_INFO]) {
-        dprint(FW_V & VERBOSE, "NO CONNTRACK INFO - RETURNING (orphaning packet)\n");
+        dnx_send_verdict_fast(cfd, ntohl(nl_pkth->packet_id), 0, NF_DROP);
+        dprint(FW_V & VERBOSE, "NO CONNTRACK INFO - PACKET DISCARDED\n");
+
         return OK;
     }
     ct_info = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_CT_INFO]));

@@ -7,16 +7,15 @@ from datetime import timedelta
 
 import source.web_validate as validate
 
-from dnx_gentools.def_constants import HOME_DIR, FIVE_SEC, fast_time
+from dnx_gentools.def_constants import HOME_DIR, FIVE_SEC, fast_time, ppt
 from dnx_gentools.def_enums import CFG, DATA
-from dnx_gentools.def_exceptions import ValidationError
+from dnx_gentools.def_exceptions import ValidationError, ConfigurationError
 from dnx_gentools.file_operations import load_configuration, ConfigurationManager
+
+from dnx_iptools.cprotocol_tools.cprotocol_tools import itoip
 
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 from dnx_routines.logging import LogHandler as Log
-
-from dnx_gentools.def_constants import ppt
-from dnx_gentools.def_exceptions import ConfigurationError
 
 # ========================================
 # FLASK API - APP INSTANCE INITIALIZATION
@@ -845,8 +844,9 @@ def dark_mode():
     session['dark_mode'] = dark_mode_config
 
 # ====================================
-# FLASK API - JINJA FILTER FUNCTIONS
+# FLASK API - TEMPLATE FUNCTIONS
 # ====================================
+@app.template_global()
 def create_switch(label: str, name: str, *, tab: int = 1, checked: int = 0, enabled: int = 1) -> str:
     if (not enabled): status = 'disabled'
     elif (checked): status = 'checked'
@@ -863,6 +863,7 @@ def create_switch(label: str, name: str, *, tab: int = 1, checked: int = 0, enab
 # tabs html | NOTE: find a better place to put this.
 tab_classes = 'tab col s4 l3 xl2'
 tab_text_color = 'blue-grey-text text-lighten-2'
+@app.template_global()
 def create_tab(active_tab: int, cur_tab: int, href: str) -> str:
 
     name = href.replace('-', ' ').title()
@@ -876,6 +877,7 @@ def create_tab(active_tab: int, cur_tab: int, href: str) -> str:
 
     return tab
 
+@app.template_global()
 def merge_items(a1, a2):
     '''accepts 2 arguments of item or list and merges them into one list. int can be replaced with any singular object.
 
@@ -897,18 +899,12 @@ def merge_items(a1, a2):
 
     return new_list
 
+@app.template_global()
 def is_list(li, /):
     return isinstance(li, list)
 
-def _debug(obj, /):
-    print(obj)
 
-
-app.add_template_global(create_switch, name='create_switch')
-app.add_template_global(create_tab, name='create_tab')
-app.add_template_global(merge_items, name='merge_items')
-app.add_template_global(is_list, name='is_list')
-app.add_template_global(_debug, name='debug')
+app.add_template_global(itoip, name='itoip')
 
 # =================================
 # DEV ONLY

@@ -1,5 +1,11 @@
 from typing import ByteString
 
+def default_route() -> int:
+    '''return default route of the system.
+
+    return 0 if a default route is not configured.
+    '''
+    ...
 def btoia(cb: ByteString) -> int:
     '''convert a bytestring with a length of 1-4 to a 32-bit unsigned integer.
 
@@ -23,11 +29,5 @@ def calc_checksum(data: ByteString) -> bytes:
 
     valid lengths are between 1-65535 (max length of a tcp/ip packet).
     return will be a 2-byte length bytestring.
-    '''
-    ...
-def default_route() -> int:
-    '''return default route of the system.
-
-    return 0 if a default route is not configured.
     '''
     ...
