@@ -124,7 +124,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
         pkt.mark >> 12 & FOUR_BITS, pkt.mark >> 16 & FOUR_BITS, pkt.mark >> 20 & FOUR_BITS
     );
 
-    dprint(FW_V & VERBOSE, " (VERDICT SENT)\n")
+    dprint(FW_V & VERBOSE, " (VERDICT SENT)\n");
 
     // NFQUEUE VERDICT
     // drops will inherently forward to the ip proxy for geo inspection and local dns records.
