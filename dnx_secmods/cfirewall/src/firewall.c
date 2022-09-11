@@ -55,6 +55,8 @@ firewall_init(void) {
     fw_tables_swap[FW_AFTER_RULES].rules  = calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(struct FWrule));
 
     log_init(&Log[FW_LOG_IDX], "firewall");
+
+    dprint(FW_V & VERBOSE, "FIREWALL INIT COMPLETE >>>>\n");
 }
 
 // ==================================
