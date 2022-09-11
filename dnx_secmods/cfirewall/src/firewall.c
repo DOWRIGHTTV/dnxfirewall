@@ -81,6 +81,10 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     later, this will be used to allow for stateless inspection policies.
     NTOHL on id is because kernel will apply HTONL on receipt.
     */
+    if (!netlink_attrs[NFQA_CT_INFO]) {
+        dprint(FW_V & VERBOSE, "NO CONNTRACK INFO - RETURNING (orphaning packet)\n");
+        return OK;
+    }
     ct_info = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_CT_INFO]));
     if (ct_info != IP_CT_NEW) {
         dnx_send_verdict_fast(cfd, ntohl(nl_pkth->packet_id), 0, NF_ACCEPT);
