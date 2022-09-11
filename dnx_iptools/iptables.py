@@ -87,7 +87,7 @@ class _Defaults:
 
         # INPUT #
         # NOTE: letting iptables control return traffic for DNX sourced traffic
-        ipt_shell('INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
+        ipt_shell('INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT', action='-I')
 
         # allow local socket communications.
         # NOTE: control sock is AF_INET, so we need this rule
