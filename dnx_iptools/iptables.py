@@ -86,12 +86,12 @@ class _Defaults:
         ipt_shell(f'FORWARD -p icmp -j NFQUEUE --queue-num {Queue.CFIREWALL}')
 
         # INPUT #
-        # NOTE: conntrack is now checked by cfirewall
-        # shell(' iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
+        # NOTE: letting iptables control return traffic for DNX sourced traffic
+        ipt_shell('INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
 
         # allow local socket communications.
         # NOTE: control sock is AF_INET, so we need this rule
-        ipt_shell(f'INPUT -s 127.0.0.0/24 -d 127.0.0.0/24 -j ACCEPT')
+        ipt_shell('INPUT -s 127.0.0.0/24 -d 127.0.0.0/24 -j ACCEPT')
 
         # user-configured services access will be kept as iptables for now.
         # mark filter to ensure wan doesn't match as an extra precaution.
