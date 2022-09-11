@@ -55,8 +55,6 @@ firewall_init(void) {
     fw_tables_swap[FW_AFTER_RULES].rules  = calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(struct FWrule));
 
     log_init(&Log[FW_LOG_IDX], "firewall");
-
-    dprint(FW_V & VERBOSE, "FIREWALL INIT COMPLETE >>>>\n");
 }
 
 // ==================================
@@ -227,10 +225,12 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
     if (log_packet) {
         gettimeofday(&timestamp, NULL);
 
+        pkt->logger = &Log[FW_LOG_IDX]; // log_write function needs to reference through pktb struct
+
         // log file rotation logic
-        log_enter(&timestamp, &Log[FW_LOG_IDX]);
+        log_enter(&timestamp, pkt->logger);
         log_write_firewall(&timestamp, pkt, direction, src_country, dst_country);
-        log_exit(&Log[FW_LOG_IDX]);
+        log_exit(pkt->logger);
     }
 
 //    if (netlink_attrs[NFQA_HWADDR]) {
