@@ -15,12 +15,14 @@
 
 #define FW_SYSTEM_RANGE_START 0
 #define FW_RULE_RANGE_START   1
-#define FW_RULE_RANGE_END     4
+#define FW_RULE_RANGE_END     3 // inclusive
 
 #define SECURITY_PROFILE_COUNT 3
 #define PROFILE_SIZE   4  // bits
 #define PROFILE_START 12
 #define PROFILE_STOP  (SECURITY_PROFILE_COUNT * 4) + 8 // + 1  // +1 for range
+
+#define PACKET_ACTION_MASK 3 // first 2 bits
 
 pthread_mutex_t     FWtableslock;
 pthread_mutex_t    *FWlock_ptr = &FWtableslock;
@@ -72,7 +74,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     };
 
     struct clist_range  fw_clist = {
-        .start = FW_RULE_RANGE_START,
+        .start = FW_SYSTEM_RANGE_START,
         .end   = FW_RULE_RANGE_END,
     };
 
@@ -92,19 +94,9 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
 
         return OK;
     }
-    /*
-    SYSTEM RULES and PROXY_BYPASS will skip proxies and invoke the rule action directly
-    otherwise will forward to ip proxy regardless of action for geolocation log or IPS
-    */
-    //if (nl_pkth->hook == NF_IP_FORWARD) {}
-    if (nl_pkth->hook == NF_IP_LOCAL_IN) {
-        pkt.verdict = 0;
-        fw_clist.start = FW_SYSTEM_RANGE_START;
+    if (nl_pkth->hook == NF_IP_FORWARD) {
+        fw_clist.start = FW_RULE_RANGE_START;
     }
-
-#if DEVELOPMENT
-    if (PROXY_BYPASS) pkt.verdict = 0;
-#endif
 
     // ===================================
     // FIREWALL RULES LOCK
@@ -115,23 +107,29 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     firewall_unlock();
     // UNLOCKING ACCESS TO FIREWALL RULES
     // ===================================
+    // rules destined for firewall interface dont need proxy inspection so cfirewall will invoke action directly.
+    if (nl_pkth->hook == NF_IP_LOCAL_IN) {
+        pkt.verdict = pkt.mark & PACKET_ACTION_MASK;
+    }
+
+#if DEVELOPMENT
+    if (PROXY_BYPASS) {
+        pkt.verdict = pkt.mark & PACKET_ACTION_MASK; // this tells cfirewall to take control instead of forward to proxy
+        dprint(FW_V & VERBOSE, " PROXY BYPASS ON");
+    }
+#endif
+
+    dprint(FW_V & VERBOSE, "<0=FW VERDICT=0>\npkt_id->%u, hook->%u, mark->%u, verdict->%u, ipp->%u, dns->%u, ips->%u"
+        ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.mark, pkt.verdict,
+        pkt.mark >> 12 & FOUR_BITS, pkt.mark >> 16 & FOUR_BITS, pkt.mark >> 20 & FOUR_BITS
+    );
+
+    dprint(FW_V & VERBOSE, " (VERDICT SENT)\n")
 
     // NFQUEUE VERDICT
     // drops will inherently forward to the ip proxy for geo inspection and local dns records.
-    dnx_send_verdict(cfd, ntohl(nl_pkth->packet_id), &pkt);
+    dnx_send_verdict_fast(cfd, ntohl(nl_pkth->packet_id), pkt.mark, pkt.verdict);
     // ===================================
-
-    dprint(FW_V & VERBOSE, "< -- FIREWALL VERDICT -- >\npacket_id->%u, hook->%u, mark->%u, action->%u",
-        ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.mark, pkt.verdict);
-
-    dprint(FW_V & VERBOSE, ", ipp->%u, dns->%u, ips->%u",
-        pkt.mark >> 12 & 15, pkt.mark >> 16 & 15, pkt.mark >> 20 & 15);
-
-#if DEVELOPMENT
-    if (PROXY_BYPASS) dprint(FW_V & VERBOSE, " PROXY BYPASS ON");
-#endif
-
-    dprint(FW_V & VERBOSE, "\n");
 
     // return hierarchy -> libnfnetlink.c >> libnetfiler_queue >> process_traffic.
     // < 0 vals are errors, but return is being ignored by CFirewall._run.
@@ -170,7 +168,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
 
     for (uintf8_t cntrl_list = fw_clist->start; cntrl_list < fw_clist->end; cntrl_list++) {
 
-        for (uintf8_t rule_idx = 0; rule_idx < firewall_tables[cntrl_list].len; rule_idx++) {
+        for (uintf8_t rule_idx = 0; rule_idx =< firewall_tables[cntrl_list].len; rule_idx++) {
 
             rule = &firewall_tables[cntrl_list].rules[rule_idx];
             if (!rule->enabled) { continue; }
@@ -207,7 +205,6 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             // ------------------------------------------------------------------
             pkt->rule_clist = cntrl_list;
             pkt->fw_rule    = rule;
-            pkt->verdict   |= rule->action;
             pkt->mark      |= (tracked_geo << FOUR_BITS) | (direction << TWO_BITS) | rule->action;
 
             for (uintf8_t idx = 0; idx < 3; idx++) {
@@ -223,7 +220,6 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
     // DEFAULT ACTION
     // ------------------------------------------------------------------
     pkt->rule_clist = NO_SECTION;
-    pkt->verdict    = DNX_DROP;
     pkt->mark       = (tracked_geo << FOUR_BITS) | (direction << TWO_BITS) | DNX_DROP;
 
     logging:

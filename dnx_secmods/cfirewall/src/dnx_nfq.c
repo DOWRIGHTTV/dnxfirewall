@@ -49,9 +49,9 @@ dnx_parse_pkt_headers(struct dnx_pktb *pkt)
 }
 
 /* NO NAT fast call.
+sets verdict and mark.
 reduced pointer deference.
-does not check for mangling.
-does set non 0 mark values.
+no mangling.
 */
 inline void
 dnx_send_verdict_fast(struct cfdata *cfd, uint32_t pktid, uint32_t mark, int verdict)
@@ -68,6 +68,11 @@ dnx_send_verdict_fast(struct cfdata *cfd, uint32_t pktid, uint32_t mark, int ver
     mnl_socket_sendto(nl[cfd->idx], nlh, nlh->nlmsg_len);
 }
 
+/* MANGLE call
+sets verdict and mark.
+reduced pointer deference.
+no mangling.
+*/
 int
 dnx_send_verdict(struct cfdata *cfd, uint32_t pktid, struct dnx_pktb *pkt)
 {
