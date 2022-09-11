@@ -119,7 +119,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     }
 #endif
 
-    dprint(FW_V & VERBOSE, "<0=FW VERDICT=0>\npkt_id->%u, hook->%u, mark->%u, verdict->%u, ipp->%u, dns->%u, ips->%u"
+    dprint(FW_V & VERBOSE, "<0=FW VERDICT=0>\npkt_id->%u, hook->%u, mark->%u, verdict->%u, ipp->%u, dns->%u, ips->%u",
         ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.mark, pkt.verdict,
         pkt.mark >> 12 & FOUR_BITS, pkt.mark >> 16 & FOUR_BITS, pkt.mark >> 20 & FOUR_BITS
     );
@@ -168,7 +168,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
 
     for (uintf8_t cntrl_list = fw_clist->start; cntrl_list < fw_clist->end; cntrl_list++) {
 
-        for (uintf8_t rule_idx = 0; rule_idx =< firewall_tables[cntrl_list].len; rule_idx++) {
+        for (uintf8_t rule_idx = 0; rule_idx <= firewall_tables[cntrl_list].len; rule_idx++) {
 
             rule = &firewall_tables[cntrl_list].rules[rule_idx];
             if (!rule->enabled) { continue; }
