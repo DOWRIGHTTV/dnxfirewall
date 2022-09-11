@@ -218,7 +218,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
     // DEFAULT ACTION
     // ------------------------------------------------------------------
     pkt->rule_clist = NO_SECTION;
-    pkt->verdict    = (IP_PROXY << TWO_BYTES) | NF_QUEUE
+    pkt->verdict    = (IP_PROXY << TWO_BYTES) | NF_QUEUE;
     pkt->mark       = (tracked_geo << FOUR_BITS) | (direction << TWO_BITS) | DNX_DROP;
 
     logging:
