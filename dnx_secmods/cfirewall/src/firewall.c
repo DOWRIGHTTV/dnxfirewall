@@ -92,7 +92,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
         fw_clist.start = FW_RULE_RANGE_START;
     }
     // LOCAL SYSTEM TRAFFIC
-    else if (nl_pkth-> == NF_IP_LOCAL_IN) {
+    else if (nl_pkth->hook == NF_IP_LOCAL_IN) {
         fw_clist.start = FW_SYSTEM_RANGE_START;
     }
 
@@ -212,7 +212,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             }
 
             // 0. SYSTEM RULE -> direct invocation || 1-3. STANDARD RULE -> forward to IP_PROXY
-            pkt->verdict = (ctrl_list == FW_SYSTEM_RANGE_START) ? 0 : (IP_PROXY << TWO_BYTES) | NF_QUEUE;
+            pkt->verdict = (cntrl_list == FW_SYSTEM_RANGE_START) ? 0 : (IP_PROXY << TWO_BYTES) | NF_QUEUE;
 
             log_packet = rule->log;
 
