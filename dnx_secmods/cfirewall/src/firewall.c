@@ -200,7 +200,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             // ------------------------------------------------------------------
             pkt->rule_clist = cntrl_list;
             pkt->fw_rule    = rule;
-            pkt->mark      |= (tracked_geo << FOUR_BITS) | (direction << TWO_BITS) | rule->action;
+            pkt->mark       = (tracked_geo << FOUR_BITS) | (direction << TWO_BITS) | rule->action;
 
             for (uintf8_t idx = 0; idx < 3; idx++) {
                 pkt->mark |= rule->sec_profiles[idx] << ((idx * 4) + 12);
