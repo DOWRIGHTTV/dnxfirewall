@@ -214,9 +214,9 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for domain, count in dns_settings['top_domains'] %}
+                            {% for domain in dns_settings['top_domains'] %}
                             <tr>
-                                <td>{{count}}</td>
+                                <td>{{loop.index}}</td>
                                 <td>{{domain}}</td>
                             </tr>
                             {% else %}
