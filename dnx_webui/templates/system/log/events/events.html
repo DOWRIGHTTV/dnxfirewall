@@ -68,7 +68,7 @@
                         <tbody>
                             {% for entry in table_data %}
                             <tr>
-                                <td>{{entry[0]|itoip}}</td>
+                                <td>{{entry[0]|int|itoip}}</td>
                                 <td>{{entry[1]}}</td>
                                 <td>{{entry[2]}}</td>
                                 <td>{{entry[3]}}</td>
@@ -103,8 +103,8 @@
                             {% for entry in table_data %}
                             {% set geo, rep = entry[2].split('/') %}
                             <tr>
-                                <td>{{entry[0]|itoip}}</td>
-                                <td>{{entry[1]|itoip}}</td>
+                                <td>{{entry[0]|int|itoip}}</td>
+                                <td>{{entry[1]|int|itoip}}</td>
                                 <td>{{geo}}</td>
                                 <td>{{rep}}</td>
                                 <td>{{entry[3]}}</td>
@@ -130,7 +130,7 @@
                         <tbody>
                             {% for entry in table_data %}
                             <tr>
-                                <td>{{entry[0]|itoip}}</td>
+                                <td>{{entry[0]|int|itoip}}</td>
                                 <td>{{entry[1]}}</td>
                                 <td>{{entry[2]}}</td>
                                 <td>{{entry[3]}}</td>
@@ -174,7 +174,7 @@
                                     </div>
                                 </td>
                                 <td>{{entry[0]}}</td>
-                                <td>{{entry[1]|itoip}}</td>
+                                <td>{{entry[1]|int|itoip}}</td>
                                 <td>{{entry[2]}}</td>
                                 <td>{{entry[3]}}</td>
                                 <td>{{entry[4]}}</td>
