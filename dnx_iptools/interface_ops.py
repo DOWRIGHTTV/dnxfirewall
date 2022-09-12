@@ -113,12 +113,12 @@ def get_masquerade_ip(*, dst_ip: int, packed: bool = False) -> Union[bytes, int]
     s.connect((itoip(dst_ip), 0))
 
     try:
-        ip_addr = inet_aton(s.getsockname()[0])
+        ip_addr = s.getsockname()[0]
     except:
         return b'\x00'*4 if packed else 0
 
     else:
-        return ip_addr if packed else long_unpack(ip_addr)[0]
+        return inet_aton(ip_addr) if packed else ip_addr
 
     finally:
         s.close()

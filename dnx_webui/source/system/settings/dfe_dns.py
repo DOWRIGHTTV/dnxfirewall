@@ -19,7 +19,7 @@ def load_page(_: Form) -> dict[str, Any]:
     return {
         'dns_servers': System.dns_status(), 'dns_records': server_settings.get_items('records'),
         'tls': server_settings['tls->enabled'], 'udp_fallback': server_settings['tls->fallback'],
-        'top_domains': server_cache.get_items('top_domains'),
+        'top_domains': server_cache.get_list('top_domains'),
         'cache': {
             'clear_top_domains': server_cache['clear->top_domains'],
             'clear_dns_cache': server_cache['clear->standard']

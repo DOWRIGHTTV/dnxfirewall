@@ -5,11 +5,11 @@
                 <a href="dashboard" class="brand-logo valign-center">
                     <img src="/static/assets/images/dnxlogo_v2.png" height="40px" style="display: block;">
                 </a>
-                {%- if navi %}
+                {% if navi %}
                     <a href="dashboard" data-target="mobile-nav" class="sidenav-trigger show-mobile-menu">
                         <i class="material-icons">menu</i>
                     </a>
-                    {%- if role == 'admin' %}
+                    {% if role == 'admin' %}
                         <ul class="right remove-big-menu">
                             <li {% if uri_path[0] == 'dashboard' %} class='active' {% endif %}>
                                 <a href="dashboard">
@@ -50,7 +50,7 @@
                                 </a>
                             </li>
                         </ul>
-                    {%- elif role == 'user' %}
+                    {% elif role == 'user' %}
                         <ul class="right remove-big-menu">
                             <li {% if uri_path[0] == 'dashboard' %} class='active' {% endif %}>
                                 <a href="dashboard">
@@ -72,15 +72,15 @@
                                 </a>
                             </li>
                         </ul>
-                    {% endif -%}
+                    {% endif %}
                 {% elif login_btn %}
                     <a href="login">
                         <i class="material-icons left">send</i>
                         Login
                     </a>
-                {%- else %}
+                {% else %}
                     <i class="material-icons grey-text lighten-1">lock_outline</i>
-                {% endif -%}
+                {% endif %}
             </div>
         </div>
     </nav>

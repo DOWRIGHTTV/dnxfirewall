@@ -22,7 +22,7 @@
                                 <option value="all">ALL</option>
                                 {% else %}
                                 {% for action in ['all', 'blocked', 'allowed'] %}
-                                ><option value="{{action}}" {% if action == menu %} selected {% endif %}>{{action.upper()}}</option>
+                                <option value="{{action}}" {% if action == menu %} selected {% endif %}>{{action.upper()}}</option>
                                 {% endfor %}
                                 {% endif %}
                             </select>
@@ -50,14 +50,14 @@
                                 <th style="width:10%">Reason</th>
                                 <th style="width:10%">Action</th>
                                 <th style="width:10%">
-                                    <form action="/system/reports" method="POST">
+                                    <form method="POST">
                                         <input type="hidden" name="table" value="{{table}}/top">
                                         <button class="btn btn-small waves-effect waves-light" name="menu" value="{{menu}}">
                                             <i class="material-icons tiny">arrow_drop_up</i></button> Ct.
                                     </form>
                                 </th>
                                 <th style="width:15%">
-                                    <form action="/system/reports" method="POST">
+                                    <form method="POST">
                                         <input type="hidden" name="table" value="{{table}}/last">
                                         <button class="btn btn-small waves-effect waves-light" name="menu" value="{{menu}}">
                                             <i class="material-icons tiny">arrow_drop_up</i></button> Last Seen
@@ -68,19 +68,13 @@
                         <tbody>
                             {% for entry in table_data %}
                             <tr>
-                                <td>{{entry[0]}}</td>
+                                <td>{{entry[0]|itoip}}</td>
                                 <td>{{entry[1]}}</td>
                                 <td>{{entry[2]}}</td>
                                 <td>{{entry[3]}}</td>
                                 <td>{{entry[4]}}</td>
                                 <td>{{entry[5]}}</td>
                                 <td>{{entry[6]}}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                {% for i in range(7) %}
-                                <td></td>
-                                {% endfor %}
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -109,19 +103,13 @@
                             {% for entry in table_data %}
                             {% set geo, rep = entry[2].split('/') %}
                             <tr>
-                                <td>{{entry[0]}}</td>
-                                <td>{{entry[1]}}</td>
+                                <td>{{entry[0]|itoip}}</td>
+                                <td>{{entry[1]|itoip}}</td>
                                 <td>{{geo}}</td>
                                 <td>{{rep}}</td>
                                 <td>{{entry[3]}}</td>
                                 <td>{{entry[4]}}</td>
                                 <td>{{entry[5]}}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                {% for i in range(7) %}
-                                <td></td>
-                                {% endfor %}
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -142,17 +130,11 @@
                         <tbody>
                             {% for entry in table_data %}
                             <tr>
-                                <td>{{entry[0]}}</td>
+                                <td>{{entry[0]|itoip}}</td>
                                 <td>{{entry[1]}}</td>
                                 <td>{{entry[2]}}</td>
                                 <td>{{entry[3]}}</td>
                                 <td>{{entry[4]}}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                {% for i in range(5) %}
-                                <td></td>
-                                {% endfor %}
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -192,17 +174,11 @@
                                     </div>
                                 </td>
                                 <td>{{entry[0]}}</td>
-                                <td>{{entry[1]}}</td>
+                                <td>{{entry[1]|itoip}}</td>
                                 <td>{{entry[2]}}</td>
                                 <td>{{entry[3]}}</td>
                                 <td>{{entry[4]}}</td>
                                 <td>{{entry[5]}}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                {% for i in range(7) %}
-                                <td></td>
-                                {% endfor %}
                             </tr>
                             {% endfor %}
                         </tbody>

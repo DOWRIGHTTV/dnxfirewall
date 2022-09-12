@@ -54,7 +54,7 @@
                                 <h6>{{category}}</h6>
                                 <label>
                                     Off
-                                    {% if category in ['malicious', 'cryptominer'] -%}
+                                    {% if category in ['malicious', 'cryptominer'] %}
                                     <input disabled type="checkbox" checked="checked" name="default">
                                     {% else %}
                                     <input type="checkbox" {% if settings['enabled'] %} checked="checked" {% endif %}

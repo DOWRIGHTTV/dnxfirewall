@@ -20,25 +20,25 @@
             <div class="col s12">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Rule List
-                    {% if firewall_settings['pending_changes'] %} (*Changes Pending) {% endif -%}</h4>
+                    {% if firewall_settings['pending_changes'] %} (*Changes Pending) {% endif %}</h4>
                     <div class="row">
                         <form action="rules/firewall" method="POST">
                             <input type="hidden" name="tab" value="1">
                             <input type="hidden" name="change_section">
                             <div class="input-field col s4 m2 {{input_color}}">
                                 <select name="section" id="section" onchange="this.form.submit()">
-                                    {%- for section in sections -%}
-                                        {%- if section == selected %}
+                                    {% for section in sections %}
+                                        {% if section == selected %}
                                         <option value="{{section}}" selected>{{section}}</option>
-                                        {%- else %}
+                                        {% else %}
                                         <option value="{{section}}">{{section}}</option>
-                                        {%- endif %}
-                                    {%- endfor %}
+                                        {% endif %}
+                                    {% endfor %}
                                 </select>
                                 <label for="section">Ruleset</label>
                             </div>
                         </form>
-                        {% set dis = not firewall_settings['pending_changes'] -%}
+                        {% set dis = not firewall_settings['pending_changes'] %}
                         <a id="revert_rules" class="btn {% if dis %}btn-disabled{% endif %} waves-effect waves-light
                             modal-trigger red darken-2" href="#revert-modal">Revert</a>
                         <a id="push_rules" class="btn {% if dis %}btn-disabled{% endif %} waves-effect waves-light
@@ -92,8 +92,8 @@
                                 </tr>
                             </thead>
                             <tbody id="filter-table-body" class="rule-editor">
-                                {%- for rule in firewall_settings['firewall_rules'] -%}
-                                <tr id="r{{loop.index}}" {% if not rule[0] %} style="opacity: .4" {% endif -%} data-enabled="{{rule[0]}}">
+                                {% for rule in firewall_settings['firewall_rules'] %}
+                                <tr id="r{{loop.index}}" {% if not rule[0] %} style="opacity: .4" {% endif %} data-enabled="{{rule[0]}}">
                                     <td><label><input type="checkbox" class="filled-in rule-select"><span></span></label></td>
                                     <td>
                                         <div class="row">
@@ -107,34 +107,34 @@
                                     </td>
                                     <td class="rname">{{rule[1]}}</td>
                                     <td class="rsrc_zone">
-                                        {%- for subfield in rule[2] -%}
+                                        {% for subfield in rule[2] %}
                                             {{ firewall_settings.fw_object_map[subfield[1]][0]|safe }}
-                                        {% endfor -%}
+                                        {% endfor %}
                                     </td>
                                     <td class="rsrc_network">
-                                        {%- for subfield in rule[3] -%}
+                                        {% for subfield in rule[3] %}
                                             {{ firewall_settings.fw_object_map[subfield[1]][0]|safe }}
-                                        {% endfor -%}
+                                        {% endfor %}
                                     </td>
                                     <td class="rsrc_service">
-                                        {%- for subfield in rule[4] -%}
+                                        {% for subfield in rule[4] %}
                                             {{ firewall_settings.fw_object_map[subfield[1]][0]|safe }}
-                                        {% endfor -%}
+                                        {% endfor %}
                                     </td>
                                     <td class="rdst_zone">
-                                        {%- for subfield in rule[5] -%}
+                                        {% for subfield in rule[5] %}
                                             {{ firewall_settings.fw_object_map[subfield[1]][0]|safe }}
-                                        {% endfor -%}
+                                        {% endfor %}
                                     </td>
                                     <td class="rdst_network">
-                                        {%- for subfield in rule[6] -%}
+                                        {% for subfield in rule[6] %}
                                             {{ firewall_settings.fw_object_map[subfield[1]][0]|safe }}
-                                        {% endfor -%}
+                                        {% endfor %}
                                     </td>
                                     <td class="rdst_service">
-                                        {%- for subfield in rule[7] -%}
+                                        {% for subfield in rule[7] %}
                                             {{ firewall_settings.fw_object_map[subfield[1]][0]|safe }}
-                                        {% endfor -%}
+                                        {% endfor %}
                                     </td>
                                     <td class="raction">{{'accept' if rule[8] else 'drop'}}</td>
                                     <td class="rlog">{{'on' if rule[9] else 'off'}}</td>
@@ -142,7 +142,7 @@
                                     <td class="rsec2_prof">{{rule[11]}}</td>
                                     <td class="rsec3_prof">{{rule[12]}}</td>
                                 </tr>
-                                {% endfor -%}
+                                {% endfor %}
                             </tbody>
                         </table>
                     </div>
@@ -232,11 +232,11 @@
                         </thead>
                         <tbody id="filter-table-body2" class="object-editor">
                             {% for id, name, group, type, subtype, value, description
-                                    in firewall_settings.firewall_objects.values() -%}
+                                    in firewall_settings.firewall_objects.values() %}
                             <tr id="{{ id }}" style="height: 25px;" data-id="{{ id }}">
-                            {% if group == 'built-in' -%}
+                            {% if group == 'built-in' %}
                                 <td class="fw_obj">X</td>
-                            {% else -%}
+                            {% else %}
                                 <td class="fw-obj">
                                     <form action="/rules/firewall" method="POST">
                                         <input type="hidden" name="tab" value="3">
@@ -246,20 +246,20 @@
                                         </button>
                                     </form>
                                 </td>
-                            {% endif -%}
+                            {% endif %}
                                 <td class="fw-obj oname">{{name}}</td>
                                 <td class="fw-obj ogroup">{{group}}</td>
                                 <td class="fw-obj otype">{{type}}</td>
                                 <td class="fw-obj ovalue">{{value}}</td>
                                 <td class="fw-obj odesc" style="text-align:left">{{description}}</td>
                             </tr>
-                            {% else -%}
+                            {% else %}
                             <tr>
-                                {% for i in range(5) -%}
+                                {% for i in range(5) %}
                                 <td></td>
-                                {% endfor -%}
+                                {% endfor %}
                             </tr>
-                            {% endfor -%}
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>

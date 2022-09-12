@@ -21,6 +21,7 @@ from dnx_routines.logging import LogHandler as Log
 # FLASK API - APP INSTANCE INITIALIZATION
 # ========================================
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
+from jinja2 import Environment
 
 app = Flask(
     __name__, static_folder=f'{HOME_DIR}/dnx_webui/static', template_folder=f'{HOME_DIR}/dnx_webui/templates'
@@ -35,6 +36,9 @@ application_error_page = 'main/application_error.html'
 # a new key is generated on every system start and stored in system config.
 app_config = load_configuration('system')
 app.secret_key = app_config['flask->key']
+
+# initializing custom jinja2 env needed for custom filters
+app.jinja_env = Environment(trim_blocks=True, lstrip_blocks=True)
 
 # =========================================
 # DNX API - LOGGING / FIREWALL / CONFIG
@@ -904,7 +908,10 @@ def is_list(li, /):
     return isinstance(li, list)
 
 
-app.add_template_global(itoip, name='itoip')
+# ====================================
+# JINJA2 API - CUSTOM TEMPLATES
+# ====================================
+app.jinja_env.filters['itoip'] = itoip
 
 # =================================
 # DEV ONLY
