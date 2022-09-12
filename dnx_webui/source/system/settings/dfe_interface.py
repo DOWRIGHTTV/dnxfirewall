@@ -123,7 +123,7 @@ def set_wan_interface(intf_type: INTF = INTF.DHCP):
         wan_ident: str = dnx_settings['interfaces->builtins->wan->ident']
 
         # template used to generate yaml file with user configured fields
-        intf_template: dict = load_data('intf_config_template.cfg', filepath='dnx_profile/interfaces')
+        intf_template: dict = load_data('interfaces.cfg', filepath='dnx_profile/interfaces')
 
         # for static dhcp4 and dhcp_overrides keys are removed and creating an empty list for the addresses.
         # NOTE: the ip configuration will unlock after the switch and can then be updated
@@ -180,7 +180,7 @@ def set_wan_ip(wan_settings: config) -> None:
 
     wan_ident: str = dnx_settings['interfaces->builtins->wan->ident']
 
-    intf_template: dict = load_data('intf_config_template.cfg', filepath='dnx_profile/interfaces')
+    intf_template: dict = load_data('interfaces.cfg', filepath='dnx_profile/interfaces')
 
     # removing dhcp4 and dhcp_overrides keys, then adding ip address value
     wan_intf: dict = intf_template['network']['ethernets'][wan_ident]
