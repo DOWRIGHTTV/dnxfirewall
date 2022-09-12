@@ -23,28 +23,23 @@
                     <form action="/intrusion/domain/categories" method="post">
                         <div class="row {{input_color}}">
                             <div class="input-field col s12">
-                                <label>
-                                    <select name="menu" onchange="this.form.submit()">
-                                        <!-- this is not an error, jinja is used to send correct value into javascript function-->
-                                        {% for cat in category_settings['ud_list'] %}
-                                        {% if loop.index == menu %}
-                                        <option value="{{loop.index}}" selected>{{cat}}</option>
-                                        {% else %}
-                                        <option value="{{loop.index}}" onclick="activeMenu({{loop.index}})">{{cat}}</option>
-                                        {% endif %}
-                                        {% endfor %}
-                                    </select>
-                                </label>
-                                <label for="menu">Categories</label>
+                                <select name="menu" id="menu1" onchange="this.form.submit()">
+                                    <!-- this is not an error, jinja is used to send correct value into javascript function-->
+                                    {% for cat in category_settings['ud_list'] %}
+                                    {% if loop.index == menu %}
+                                    <option value="{{loop.index}}" selected>{{cat}}</option>
+                                    {% else %}
+                                    <option value="{{loop.index}}" onclick="activeMenu({{loop.index}})">{{cat}}</option>
+                                    {% endif %}
+                                    {% endfor %}
+                                </select>
+                                <label for="menu1">Categories</label>
                             </div>
                         </div>
                         <div class="row {{input_color}}">
                             <div class="input-field col s12">
-                                <label>
-                                    Domain
-                                    <input type="text" name="ud_domain_name" id="ud_domain_name"
-                                           placeholder="www.badsite.com" required>
-                                </label>
+                                <input type="text" name="ud_domain_name" id="ud_domain_name" placeholder="www.badsite.com" required>
+                                <label for="ud_domain_name">Domain</label>
                             </div>
                         </div>
                         <div class="row {{input_color}}">
@@ -106,18 +101,15 @@
                     <form action="/intrusion/domain/categories" method="POST">
                         <input type="hidden" name="tab" value="2">
                         <div class="input-field col s10 m4 {{input_color}}">
-                            <label>
-                                <select name="menu" onchange="this.form.submit()">
-                                    {% for cat in category_settings['ud_list'] %}
-                                    {% if loop.index == menu %}
-                                    <option value="{{loop.index}}" selected>{{cat}}</option>
-                                    {% else %}
-                                    <option value="{{loop.index}}">{{cat}}</option>
-                                    {% endif %}
-                                    {% endfor %}
-                                </select>
-                            </label>
-                            <label for="menu">Reports</label>
+                            <select name="menu" id="menu2" onchange="this.form.submit()">
+                                {% for cat in category_settings['ud_list'] %}
+                                {% if loop.index == menu %}
+                                <option value="{{loop.index}}" selected>{{cat}}</option>
+                                {% else %}
+                                <option value="{{loop.index}}">{{cat}}</option>
+                                {% endif %}
+                                {% endfor %}
+                            <label for="menu2">Reports</label>
                         </div>
                         <noscript>
                             <div class="input-field col s2">
