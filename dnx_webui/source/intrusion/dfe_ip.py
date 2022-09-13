@@ -21,10 +21,26 @@ def load_page(form: Form) -> dict:
 
     selected_region = set(country_map[f'{geo_region}->countries'])
 
-    geolocation = [
-        (country, direction) for country, direction in proxy_settings.get_items('geolocation')
-        if country in selected_region and (direction == geo_direction or geo_direction == 4)
-    ]
+    geolocation = []
+    geolocation_append = geolocation.append
+    for country, direction in proxy_settings.get_items('geolocation'):
+        
+        # region level filter
+        if (country not in selected_region and selected_region != 'all'):
+            continue
+            
+        # state level filters
+        # direct match
+        if (direction == geo_direction):
+            geolocation_append((country, direction))
+
+        # all on match
+        elif (geo_direction == 4 and direction > 1):
+            geolocation_append((country, direction))
+
+        # full list
+        elif (geo_direction == 5):
+            geolocation_append((country, direction))
 
     tr_settings = proxy_settings['time_restriction->start'].split(':')
 

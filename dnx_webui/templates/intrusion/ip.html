@@ -47,24 +47,22 @@
                         <input type="hidden" name="tab" value="2">
                         <input type="hidden" name="change_geo_view">
                         <div class="input-field col s5 m3 offset-m1 {{input_color}}">
-                            <label>
-                                Region
-                                <select name="region" onchange="this.form.submit()">
-                                    {% for region in ip_settings['regions'] %}
-                                    <option value="{{region}}" {% if region == ip_settings['geolocation']['region'] %} selected {% endif %}>{{region.replace('_', ' ').upper()}}</option>
-                                    {% endfor %}
-                                </select>
-                            </label>
+                            <select name="region" onchange="this.form.submit()">
+                                {% for region in ip_settings['regions'] %}
+                                <option value="{{region}}" {% if region == ip_settings['geolocation']['region'] %}
+                                        selected {% endif %}>{{region.replace('_', ' ').upper()}}</option>
+                                {% endfor %}
+                            </select>
+                            <label for="region">Region</label>
                         </div>
                         <div class="input-field col s5 m3 {{input_color}}">
-                            <label>
-                                Direction
-                                <select name="menu_dir" onchange="this.form.submit()">
-                                    {% for dir in ['off', 'outbound', 'inbound', 'both', 'all'] %}
-                                    ><option value="{{loop.index0}}" {% if ip_settings['geolocation']['menu_dir'] == loop.index0 %} selected {% endif %}>{{dir.upper()}}</option>
-                                    {% endfor %}
-                                </select>
-                            </label>
+                            <select name="menu_dir" id="menu_dir" onchange="this.form.submit()">
+                                {% for dir in ['off', 'outbound', 'inbound', 'both', 'all on', 'full'] %}
+                                <option value="{{loop.index0}}" {% if ip_settings['geolocation']['menu_dir'] == loop.index0 %}
+                                        selected {% endif %}>{{dir.upper()}}</option>
+                                {% endfor %}
+                            </select>
+                            <label for="menu_dir">Direction</label>
                         </div>
                     </form>
                 </div>
@@ -121,7 +119,7 @@
             <div class="col s12 m10 offset-m1">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">LAN Restrict</h4>
-                    <form action="/intrusion/ip" method="post">
+                    <form method="post">
                         <input type="hidden" name="tab" value="3">
                         <div class="col s12">
                             <h6>Start Time</h6>
