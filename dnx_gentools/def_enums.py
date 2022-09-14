@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from enum import Enum as _Enum, Flag as _Flag, IntEnum as _IntEnum, IntFlag as _IntFlag
+from enum import Enum as _Enum, IntEnum as _IntEnum, IntFlag as _IntFlag
 
 
 class DATA(_IntEnum):
@@ -114,11 +114,13 @@ class IPS(_Enum):
     LOGGED   = 8
 
 # traffic direction / type
-class DIR(_Flag):
-    DISABLED = 0
+class DIR(_IntFlag):
+    OFF      = 0
     OUTBOUND = 1
     INBOUND  = 2
     BOTH     = 3
+    ON       = 4
+    ALL      = 5
 
 class CONN(_IntEnum):
     # decisions

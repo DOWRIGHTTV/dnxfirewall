@@ -57,7 +57,7 @@
                         </div>
                         <div class="input-field col s5 m3 {{input_color}}">
                             <select name="menu_dir" id="menu_dir" onchange="this.form.submit()">
-                                {% for dir in ['off', 'outbound', 'inbound', 'both', 'all on', 'full'] %}
+                                {% for dir in ['off', 'outbound', 'inbound', 'both', 'on', 'all'] %}
                                 <option value="{{loop.index0}}" {% if ip_settings['geolocation']['menu_dir'] == loop.index0 %}
                                         selected {% endif %}>{{dir.upper()}}</option>
                                 {% endfor %}

@@ -6,7 +6,7 @@ from source.web_typing import *
 from source.web_validate import ValidationError, convert_int, get_convert_int, convert_bint
 
 from dnx_gentools.def_constants import INVALID_FORM
-from dnx_gentools.def_enums import DATA, GEO
+from dnx_gentools.def_enums import DATA, GEO, DIR
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
 
@@ -14,32 +14,32 @@ def load_page(form: Form) -> dict:
     proxy_settings: ConfigChain = load_configuration('ip_proxy')
     country_map: ConfigChain = load_configuration('geolocation', filepath='dnx_webui/data')
 
-    # controlling whether to load defaults or user selected view. These are validated by the update function, so it is
-    # safe to assume types.
+    # controlling whether to load defaults or user selected view.
+    # NOTE: These are validated by the update function, so it is safe to assume types.
     geo_region = form.get('region', 'africa')
-    geo_direction = int(form.get('menu_dir', 4))
+    geo_direction = int(form.get('menu_dir', DIR.OFF))
 
     selected_region = set(country_map[f'{geo_region}->countries'])
 
     geolocation = []
     geolocation_append = geolocation.append
     for country, direction in proxy_settings.get_items('geolocation'):
-        
+
         # region level filter
-        if (country not in selected_region and selected_region != 'all'):
+        if (country not in selected_region):
             continue
-            
+
         # state level filters
         # direct match
         if (direction == geo_direction):
             geolocation_append((country, direction))
 
         # all on match
-        elif (geo_direction == 4 and direction > 1):
+        elif (geo_direction == DIR.ON and direction > DIR.OFF):
             geolocation_append((country, direction))
 
         # full list
-        elif (geo_direction == 5):
+        elif (geo_direction == DIR.ALL):
             geolocation_append((country, direction))
 
     tr_settings = proxy_settings['time_restriction->start'].split(':')
@@ -70,7 +70,10 @@ def load_page(form: Form) -> dict:
     ipp_settings = {
         'reputation': proxy_settings.get_items('reputation'),
         'tr_settings': tr_settings, 'regions': sorted(country_map.get_list()),
-        'image_map': {0: 'allow_up-down.png', 1: 'block_up.png', 2: 'block_down.png', 3: 'block_up-down.png'},
+        'image_map': {
+            DIR.OFF: 'allow_up-down.png', DIR.OUTBOUND: 'block_up.png',
+            DIR.INBOUND: 'block_down.png', DIR.BOTH: 'block_up-down.png'
+        },
         'geolocation': {
             'region': geo_region,
             'menu_dir': geo_direction,
@@ -87,7 +90,7 @@ def update_page(form: Form) -> tuple[bool, WebError]:
     if ('change_geo_view' in form):
         geo_direction = convert_int(form.get('menu_dir', DATA.MISSING))
 
-        if (geo_direction not in range(5)):
+        if (geo_direction not in range(6)):
             return False, {'error': 1, 'message': INVALID_FORM}
 
         valid_regions = load_configuration('geolocation', filepath='dnx_webui/data').get_list()
@@ -95,11 +98,9 @@ def update_page(form: Form) -> tuple[bool, WebError]:
             return False, {'error': 2, 'message': INVALID_FORM}
 
     elif ('restriction_enable' in form):
-        print(form)
         tr_settings = config(**{
             'enabled': get_convert_int(form, 'restriction_enable')
         })
-        print(tr_settings)
         if (DATA.INVALID in tr_settings.values()):
             return False, {'error': 3, 'message': INVALID_FORM}
 
