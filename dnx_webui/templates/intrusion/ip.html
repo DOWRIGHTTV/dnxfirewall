@@ -70,24 +70,26 @@
                     <table class="striped highlight">
                         <thead>
                             <tr>
-                                <th></th>
-                                <th></th>
+                                <th style="width:25%"></th>
+                                <th style="width:25%"></th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
                         {% set cty_options = [(0,'radio_button_unchecked'), (1,'file_download'), (1,'file_upload'), (1,'swap_vert')] %}
                         {% for country, direction in ip_settings['geolocation']['countries'] %}
+                            <tr>
                                 <td>
                                     <h6>{{country.title().replace('_', ' ')}}</h6>
                                 </td>
                                 <td>
-                                    <div class="input-field col s4 offset-s1 multi-switch-container">
+                                    <div class="multi-switch-container">
                                         <ul class="multi-switch">
                                         {% for on, option in cty_options %}
                                             {% set status = "multi-switch-on" if on else "multi-switch-off" %}
-                                            <li class="{{ status }} {% if direction == loop.index0 %} active {% endif %}">
-                                                <button name="country" value="{{ country }},{{ loop.index0 }}"
+                                            {% set active = 1 if direction == loop.index0 else 0 %}
+                                            <li class="{{ status }}{% if active %} active {% endif %}">
+                                                <button {% if active %} class="active-text" {% endif %}
+                                                        name="country" value="{{ country }}/{{ loop.index0 }}"
                                                         onclick="updateCategory(this)">
                                                     <i class="material-icons small">{{ option }}</i>
                                                 </button>
@@ -95,6 +97,7 @@
                                         </ul>
                                     </div>
                                 </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -169,7 +172,7 @@
 <script>
 async function updateCategory(category) {
 
-    const cat_info = category.value.split('_');
+    const cat_info = category.value.split('/');
 
     let cat_value = cat_info[0];
     let cat_opt   = cat_info[1];
