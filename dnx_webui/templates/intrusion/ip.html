@@ -70,42 +70,31 @@
                     <table class="striped highlight">
                         <thead>
                             <tr>
-                                <th style="width:5%"></th>
-                                <th style="width:20%"></th>
-                                <th style="width:5%"></th>
-                                <th style="width:20%"></th>
-                                <th style="width:5%"></th>
-                                <th style="width:20%"></th>
-                                <th style="width:5%"></th>
-                                <th style="width:20%"></th>
+                                <th></th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
+                            <tr>
+                        {% set cty_options = [(0,'radio_button_unchecked'), (1,'file_download'), (1,'file_upload'), (1,'swap_vert')] %}
                         {% for country, direction in ip_settings['geolocation']['countries'] %}
-                        {% if loop.index0 in range(0,100,4) %}<tr>{% endif %}
-                            <td>
-                                <ul id="dd-{{loop.index}}" class="dropdown-content">
-                                    {% for dir, image in ip_settings['image_map'].items() %}
-                                    {% if dir != direction %}
-                                    <li>
-                                        <a>
-                                            <button name="country" value="{{country}}_{{dir}}" onclick="updateCategory(this)"
-                                                static_value="{{direction}}" style="background-color: Transparent; border: none; cursor:pointer;">
-                                                <img src="/static/assets/images/{{image}}" {{dash_icon_std}}>
-                                            </button>
-                                        </a>
-                                    </li>
-                                    {% endif %}
-                                    {% endfor %}
-                                </ul>
-                                <img class="dropdown-trigger" data-target="dd-{{loop.index}}"  height="100%" width="100%"
-                                    src="/static/assets/images/{{ip_settings['image_map'][direction]}}">
-                            </td>
-                            <td>
-                                <h6>{{country.title().replace('_', ' ')}}</h6>
-                            </td>
-                        {% if loop.last or loop.index0 in range(3,100,4)  %}</tr>{% endif %}
-                        {% endfor %}
+                                <td>
+                                    <h6>{{country.title().replace('_', ' ')}}</h6>
+                                </td>
+                                <td>
+                                    <div class="input-field col s4 offset-s1 multi-switch-container">
+                                        <ul class="multi-switch">
+                                        {% for on, option in cty_options %}
+                                            {% set status = "multi-switch-on" if on else "multi-switch-off" %}
+                                            <li class="{{ status }} {% if direction == loop.index0 %} active {% endif %}">
+                                                <button name="country" value="{{ country }},{{ loop.index0 }}"
+                                                        onclick="updateCategory(this)">
+                                                    <i class="material-icons small">{{ option }}</i>
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
                         </tbody>
                     </table>
                 </div>
@@ -178,31 +167,18 @@
     </div>
 </section>
 <script>
-let imageMap = {'0': 'allow_up-down', '1': 'block_up', '2': 'block_down', '3': 'block_up-down'}
 async function updateCategory(category) {
 
-    const cat_info = category.value.split('_')
+    const cat_info = category.value.split('_');
 
-    let cat_value;
-    let cat_opt;
-    if (cat_info.length === 3) {
-        cat_value = cat_info[0] + '_' + cat_info[1]
-        cat_opt = cat_info[2]
-    } else {
-        cat_value = cat_info[0]
-        cat_opt = cat_info[1]
-    }
+    let cat_value = cat_info[0];
+    let cat_opt   = cat_info[1];
 
     let response = await ajaxClient.post('/post', {'type': category.name, 'category': cat_value, 'direction': cat_opt});
 
-    let error = ajaxClient.handleResponse(response, category)
+    let error = ajaxClient.handleResponse(response, category);
 
-    // sets the image accordingly
-    if (!error) {
-        let image = category.closest('td').querySelector('.dropdown-trigger')
-
-        image.setAttribute('src', `/static/assets/images/${imageMap[cat_info[1]]}.png`)
-    }
+    // swap active button here
 }
 </script>
 {% endblock %}

@@ -152,3 +152,84 @@ table.striped > tbody > tr {
 /* materialize override */
 .no-border {
   border-bottom: 0; }
+
+/* custom switches */
+.multi-switch-container {
+  position: absolute;
+  margin: auto;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 195px;
+  height: 50px;
+  border-radius: 30px;
+  background: #444444;
+  box-shadow: inset 0 0 2px 2px rgba(0, 0, 0, 0.5);
+}
+
+.multi-switch {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  list-style: none;
+  width: inherit;
+  height: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.multi-switch > li {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 1px;
+  height: 45px;
+  width: 45px;
+  background: #4d4d4d;
+  border-top: 1px solid #999999;
+  box-shadow: 0 10px 10px 0 rgba(0, 0, 0, 0.5);
+  transition: all .5s;
+}
+
+.multi-switch > li:hover {
+  cursor: pointer;
+}
+
+.multi-switch > li:nth-of-type(1) {
+  border-top-left-radius: 28px;
+  border-bottom-left-radius: 28px;
+}
+
+.multi-switch > li:last-of-type {
+  border-top-right-radius: 28px;
+  border-bottom-right-radius: 28px;
+}
+
+.multi-switch > li > button {
+  all: unset;
+  display: inline-block;
+  color: #C62828;
+  text-decoration: none;
+  transition: all .5s;
+}
+
+.multi-switch > li > .active {
+  background: #444444;
+  border-top: none;
+  border-bottom: 2px solid #5b5b5b;
+  box-shadow: inset 0 0 10px 1px rgba(0, 0, 0, 0.8);
+}
+
+.multi-switch > li > button > .active-text {
+  text-shadow: 0 0 5px rgba(220, 10, 10, 0.5);
+}
+
+.multi-switch > li > button > .active-text .multi-switch-on {
+    color: red;
+}
+
+.multi-switch > li > button > .active-text .multi-switch-off {
+    color: green;
+}
