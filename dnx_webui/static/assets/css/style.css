@@ -206,29 +206,29 @@ table.striped > tbody > tr {
   border-bottom-right-radius: 28px;
 }
 
-.multi-switch > li > button {
-  all: unset;
-  display: inline-block;
-  color: #C62828;
-  text-decoration: none;
-  transition: all .5s;
-}
-
-.multi-switch > li > .active {
+.multi-switch > li.active {
   background: #444444;
   border-top: none;
   border-bottom: 2px solid #5b5b5b;
   box-shadow: inset 0 0 10px 1px rgba(0, 0, 0, 0.8);
 }
 
+.multi-switch > li > button {
+  all: unset;
+  display: inline-block;
+  color: grey;
+  text-decoration: none;
+  transition: all .5s;
+}
+
 .multi-switch > li > button > .active-text {
   text-shadow: 0 0 5px rgba(220, 10, 10, 0.5);
 }
 
-.multi-switch > li > button > .active-text .multi-switch-on {
+.multi-switch > li.multi-switch-on > button.active-text {
     color: red;
 }
 
-.multi-switch > li > button > .active-text .multi-switch-off {
+.multi-switch > li.multi-switch-off > button.active-text {
     color: green;
 }
