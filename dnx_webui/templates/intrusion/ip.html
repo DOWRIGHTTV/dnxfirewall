@@ -13,24 +13,35 @@
         </div>
     </div>
 </section>
+{% set cat_options = [(0,'radio_button_unchecked'), (1,'file_upload'), (1,'file_download'), (1,'swap_vert')] %}
 <section id="reputation" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
             <div class="col s12 m10 offset-m1">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Reputation</h4>
-                    {% for category, enabled in ip_settings['reputation'] %}
-                    {% if loop.index0 in range(0,10,2) %}<div class="row">{% endif %}
-                        <div class="input-field col s4 offset-s1">
-                            <h6>{{category.title().replace('_', ' ')}}</h6>
-                            <select name="reputation" onchange="updateCategory(this)">
-                                <option value="{{category}}/0" {% if enabled==0 %} selected {% endif %}>OFF</option>
-                                <option value="{{category}}/1" {% if enabled==1 %} selected {% endif %}>OUTBOUND</option>
-                                <option value="{{category}}/2" {% if enabled==2 %} selected {% endif %}>INBOUND</option>
-                                <option value="{{category}}/3" {% if enabled==3 %} selected {% endif %}>BOTH</option>
-                            </select>
+                    {% for category, direction in ip_settings['reputation'] %}
+                    {% if not loop.index0 % 2 %}<div class="row">{% endif %}
+                        <div class="col s6">
+                            <div class="col s6">
+                                <p class="multi-switch-label">{{ category.title().replace('_', ' ') }}</p>
+                            </div>
+                            <div class="col s6">
+                                <div class="multi-switch-container">
+                                    <ul class="multi-switch">
+                                    {% for on, option in cat_options %}
+                                        {% set status = "multi-switch-on" if on else "multi-switch-off" %}
+                                        <li class="{{ status }}{% if direction == loop.index0 %} active {% endif %}">
+                                            <button name="reputation" value="{{ category }}/{{ loop.index0 }}" onclick="updateCategory(this)">
+                                                <i class="material-icons small">{{ option }}</i>
+                                            </button>
+                                        </li>
+                                    {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
-                    {% if loop.last or loop.index0 in range(1,10,2)  %}</div>{% endif %}
+                    {% if loop.index0 % 2 or loop.last%}</div>{% endif %}
                     {% endfor %}
                 </div>
             </div>
@@ -66,7 +77,6 @@
                         </div>
                     </form>
                 </div>
-                {% set cty_options = [(0,'radio_button_unchecked'), (1,'file_upload'), (1,'file_download'), (1,'swap_vert')] %}
                 {% for country, direction in ip_settings['geolocation']['countries'] %}
                 {% if not loop.index0 % 2 %}<div class="row">{% endif %}
                     <div class="col s6">
@@ -76,7 +86,7 @@
                         <div class="col s6">
                             <div class="multi-switch-container">
                                 <ul class="multi-switch">
-                                {% for on, option in cty_options %}
+                                {% for on, option in cat_options %}
                                     {% set status = "multi-switch-on" if on else "multi-switch-off" %}
                                     <li class="{{ status }}{% if direction == loop.index0 %} active {% endif %}">
                                         <button name="country" value="{{ country }}/{{ loop.index0 }}" onclick="updateCategory(this)">
