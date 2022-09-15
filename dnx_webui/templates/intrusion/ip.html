@@ -23,10 +23,10 @@
                     {% for category, direction in ip_settings['reputation'] %}
                     {% if not loop.index0 % 2 %}<div class="row">{% endif %}
                         <div class="col s6">
-                            <div class="col s6">
+                            <div class="col s8">
                                 <p class="multi-switch-label">{{ category.title().replace('_', ' ') }}</p>
                             </div>
-                            <div class="col s6">
+                            <div class="col s4">
                                 <div class="multi-switch-container">
                                     <ul class="multi-switch">
                                     {% for on, option in cat_options %}
@@ -80,10 +80,10 @@
                 {% for country, direction in ip_settings['geolocation']['countries'] %}
                 {% if not loop.index0 % 2 %}<div class="row">{% endif %}
                     <div class="col s6">
-                        <div class="col s6">
+                        <div class="col s8">
                             <p class="multi-switch-label">{{ country.title().replace('_', ' ') }}</p>
                         </div>
-                        <div class="col s6">
+                        <div class="col s4">
                             <div class="multi-switch-container">
                                 <ul class="multi-switch">
                                 {% for on, option in cat_options %}

@@ -205,10 +205,14 @@ table.striped > tbody > tr {
   color: green;
   text-shadow: 0 0 15px rgba(10, 220, 10, 0.5); }
 
+.multi-switch > li > button > i {
+  font-size: 30px;
+  margin-top: 6px; }
+
 p.multi-switch-label {
   font-family: SpecialElite, Roboto, sans-serif;
   font-size: 18px;
   font-weight: 700;
-  letter-spacing: 0.5em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   text-shadow: 0 0 15px rgba(0, 100, 200, 0.7); }
