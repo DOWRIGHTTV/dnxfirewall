@@ -20,13 +20,14 @@
             <div class="col s12 m10 offset-m1">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Reputation</h4>
+                    <div class="title-divider"></div>
                     {% for category, direction in ip_settings['reputation'] %}
-                    {% if not loop.index0 % 2 %}<div class="row">{% endif %}
-                        <div class="col s6">
-                            <div class="col s8">
-                                <p class="multi-switch-label">{{ category.title().replace('_', ' ') }}</p>
+                    {% if not loop.index0 % 4 %}<div class="row">{% endif %}
+                        <div class="col s3">
+                            <div class="row row-thin">
+                                <p class="multi-switch-label center">{{ category.title().replace('_', ' ') }}</p>
                             </div>
-                            <div class="col s4">
+                            <div class="row row-thin">
                                 <div class="multi-switch-container">
                                     <ul class="multi-switch">
                                     {% for on, option in cat_options %}
@@ -41,7 +42,7 @@
                                 </div>
                             </div>
                         </div>
-                    {% if loop.index0 % 2 or loop.last%}</div>{% endif %}
+                    {% if loop.index0 % 4 == 3 or loop.last%}</div>{% endif %}
                     {% endfor %}
                 </div>
             </div>
@@ -53,6 +54,7 @@
         <div class="col s12">
             <div class="card-panel hoverable {{card_color}}">
                 <h4 class="{{title_color}}">Geolocation</h4>
+                <div class="title-divider"></div>
                 <div class="row">
                     <form method="POST">
                         <input type="hidden" name="tab" value="2">
@@ -78,12 +80,12 @@
                     </form>
                 </div>
                 {% for country, direction in ip_settings['geolocation']['countries'] %}
-                {% if not loop.index0 % 2 %}<div class="row">{% endif %}
-                    <div class="col s6">
-                        <div class="col s8">
-                            <p class="multi-switch-label">{{ country.title().replace('_', ' ') }}</p>
+                {% if not loop.index0 % 4 %}<div class="row">{% endif %}
+                    <div class="col s3">
+                        <div class="row row-thin">
+                            <p class="multi-switch-label center">{{ country.title().replace('_', ' ') }}</p>
                         </div>
-                        <div class="col s4">
+                        <div class="row row-thin">
                             <div class="multi-switch-container">
                                 <ul class="multi-switch">
                                 {% for on, option in cat_options %}
@@ -98,7 +100,7 @@
                             </div>
                         </div>
                     </div>
-                {% if loop.index0 % 2 or loop.last%}</div>{% endif %}
+                {% if loop.index0 % 4 == 3 or loop.last%}</div><div class="divider"></div>{% endif %}
                 {% endfor %}
             </div>
         </div>

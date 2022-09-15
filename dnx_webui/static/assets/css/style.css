@@ -139,15 +139,26 @@ table.striped > tbody > tr {
 .no-border {
   border-bottom: 0; }
 
+.row-thin {
+    margin: 0; }
+
+.title-divider {
+  height: 2px;
+  overflow: hidden;
+  background-color: #e0e0e0; }
+
 /* custom switches */
 .multi-switch-container {
   margin: auto;
-  float: right;
   width: 195px;
   height: 42px;
   border-radius: 30px;
   background: #444444;
   box-shadow: inset 0 0 2px 2px rgba(0, 0, 0, 0.5); }
+  .multi-switch-container .left {
+      float: left; }
+  .multi-switch-container .right {
+      float: right; }
 
 .multi-switch {
   margin: 0;
