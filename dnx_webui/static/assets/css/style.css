@@ -145,16 +145,16 @@ table.striped > tbody > tr {
 .title-divider {
   height: 2px;
   overflow: hidden;
-  background-color: #e0e0e0; }
+  background-color: #757575; }
 
 /* custom switches */
 .multi-switch-container {
   margin: auto;
   width: 195px;
   height: 42px;
-  border-radius: 30px;
+  border-radius: 10px;
   background: #444444;
-  box-shadow: inset 0 0 2px 2px rgba(0, 0, 0, 0.5); }
+  box-shadow: inset 0 0 2px 2px rgba(0, 0, 0, 0.4); }
   .multi-switch-container .left {
       float: left; }
   .multi-switch-container .right {
@@ -184,12 +184,12 @@ table.striped > tbody > tr {
   transition: all 1s; }
 
 .multi-switch > li:nth-of-type(1) {
-  border-top-left-radius: 28px;
-  border-bottom-left-radius: 28px; }
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px; }
 
 .multi-switch > li:last-of-type {
-  border-top-right-radius: 28px;
-  border-bottom-right-radius: 28px; }
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px; }
 
 .multi-switch > li.active {
   background: #444444;
@@ -226,4 +226,4 @@ p.multi-switch-label {
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  text-shadow: 0 0 15px rgba(0, 100, 200, 0.7); }
+  text-shadow: 0 0 15px rgba(0, 100, 200, 0.3); }
