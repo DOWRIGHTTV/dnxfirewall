@@ -156,10 +156,7 @@ table.striped > tbody > tr {
 /* custom switches */
 .multi-switch-container {
   margin: auto;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  float: right;
   width: 195px;
   height: 50px;
   border-radius: 30px;
