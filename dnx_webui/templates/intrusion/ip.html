@@ -13,6 +13,25 @@
         </div>
     </div>
 </section>
+<section>
+    <div class="col s12">
+        <div class="multi-switch-container sec-profiles">
+            <ul class="pagination multi-switch sec-profiles">
+                <li {% if ip_settings.sec_profile == 1 %}class="disabled"{% endif %}>
+                    <button name="ip_profile" value="<"><i class="material-icons">chevron_left</i></button>
+                </li>
+                {% for profile in range(1,16) %}
+                <li class="multi-switch-on{% if ip_settings.sec_profile == profile %}active{% endif %}">
+                    <button name="ip_profile" value="{{ profile }}">{{ profile }}</button>
+                </li>>
+                {% endfor %}
+                <li {% if ip_settings.sec_profile == 15 %}class="disabled"{% endif %}>
+                    <button name="ip_profile" value=">"><i class="material-icons">chevron_right</i></button>
+                </li>
+            </ul>
+        </div>
+    </div>
+</section>
 {% set cat_options = [(0,'radio_button_unchecked'), (1,'file_upload'), (1,'file_download'), (1,'swap_vert')] %}
 <section id="reputation" class="section {{main_section_color}}">
     <div class="container">

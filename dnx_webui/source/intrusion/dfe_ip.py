@@ -68,6 +68,7 @@ def load_page(form: Form) -> dict:
     }
 
     ipp_settings = {
+        'sec_profile': 1,
         'reputation': proxy_settings.get_items('reputation'),
         'tr_settings': tr_settings, 'regions': sorted(country_map.get_list()),
         'image_map': {
