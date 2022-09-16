@@ -85,7 +85,7 @@ import source.system.dfe_services as dnx_services
 # ===============
 from typing import TYPE_CHECKING
 if (TYPE_CHECKING):
-    from source.web_typing import Optional, ConfigChain
+    from source.web_typing import Optional, Union, ConfigChain
 
 from source.main.dfe_authentication import Authentication, user_restrict
 
@@ -95,7 +95,7 @@ from source.main.dfe_authentication import Authentication, user_restrict
 # TODO: figure out best visually pleasing way to inject current logged in user info on each page.
 @app.route('/dashboard', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
-def dnx_dashboard(session_data):
+def dnx_dashboard(session_data: dict):
     dashboard = dfe_dashboard.load_page()
 
     page_settings = {
@@ -113,7 +113,7 @@ def dnx_dashboard(session_data):
 # --------------------------------------------- #
 @app.route('/rules/firewall', methods=['GET', 'POST'])
 @user_restrict('admin')
-def rules_firewall(session_data):
+def rules_firewall(session_data: dict):
 
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
@@ -136,7 +136,7 @@ def rules_firewall(session_data):
 
 @app.route('/rules/firewall/commit', methods=['POST'])
 @user_restrict('admin')
-def rules_firewall_commit(session_data):
+def rules_firewall_commit(session_data: dict):
 
     # TODO: get user and ip information so we can log the commit (warning?)
 
@@ -148,7 +148,7 @@ def rules_firewall_commit(session_data):
 
 @app.route('/rules/firewall/push', methods=['POST'])
 @user_restrict('admin')
-def rules_firewall_push(session_data):
+def rules_firewall_push(session_data: dict):
     # for when we implement preview option
     # json_data = request.get_json(force=True)
 
@@ -160,7 +160,7 @@ def rules_firewall_push(session_data):
 
 @app.route('/rules/nat', methods=['GET', 'POST'])
 @user_restrict('admin')
-def rules_nat(session_data):
+def rules_nat(session_data: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': validate.get_convert_int(request.args, 'tab'),
@@ -180,7 +180,7 @@ def rules_nat(session_data):
 
 @app.route('/rules/overrides/whitelist', methods=['GET', 'POST'])
 @user_restrict('admin')
-def rules_overrides_whitelist(session_data):
+def rules_overrides_whitelist(session_data: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': validate.get_convert_int(request.args, 'tab'),
@@ -197,7 +197,7 @@ def rules_overrides_whitelist(session_data):
 
 @app.route('/rules/overrides/blacklist', methods=['GET', 'POST'])
 @user_restrict('admin')
-def rules_overrides_blacklist(session_data):
+def rules_overrides_blacklist(session_data: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': validate.get_convert_int(request.args, 'tab'),
@@ -217,7 +217,7 @@ def rules_overrides_blacklist(session_data):
 # --------------------------------------------- #
 @app.route('/intrusion/ip', methods=['GET', 'POST'])
 @user_restrict('admin')
-def intrusion_ip(session_data):
+def intrusion_ip(session_data: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'ajax': True,
@@ -236,7 +236,7 @@ def intrusion_ip(session_data):
 # TODO: work on proper response
 @app.post('/intrusion/ip/post')
 @user_restrict('admin')
-def intrusion_ip_post(session_data):
+def intrusion_ip_post(session_data: dict):
 
     json_data = request.get_json(force=True)
 
@@ -248,7 +248,7 @@ def intrusion_ip_post(session_data):
 
 @app.route('/intrusion/domain', methods=['GET', 'POST'])
 @user_restrict('admin')
-def intrusion_domain(session_data):
+def intrusion_domain(session_data: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'ajax': True,
@@ -266,7 +266,7 @@ def intrusion_domain(session_data):
 
 @app.post('/intrusion/domain/post')
 @user_restrict('admin')
-def intrusion_domain_post(session_data):
+def intrusion_domain_post(session_data: dict):
 
     json_data = request.get_json(force=True)
 
@@ -280,7 +280,7 @@ def intrusion_domain_post(session_data):
     # ----------------------------------------- #
 @app.route('/intrusion/domain/categories', methods=['GET', 'POST'])
 @user_restrict('admin')
-def intrusion_domain_categories(session_data):
+def intrusion_domain_categories(session_data: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': validate.get_convert_int(request.args, 'tab'),
@@ -299,7 +299,7 @@ def intrusion_domain_categories(session_data):
     # ----------------------------------------- #
 @app.route('/intrusion/ips', methods=['GET', 'POST'])
 @user_restrict('admin')
-def intrusion_ips(session_data):
+def intrusion_ips(session_data: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': validate.get_convert_int(request.args, 'tab'),
@@ -321,7 +321,7 @@ def intrusion_ips(session_data):
     # ----------------------------------------- #
 @app.route('/system/settings/dns', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_settings_dns(session_data):
+def system_settings_dns(session_data: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': validate.get_convert_int(request.args, 'tab'),
@@ -338,7 +338,7 @@ def system_settings_dns(session_data):
 
 @app.route('/system/settings/dhcp', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_settings_dhcp(session_data):
+def system_settings_dhcp(session_data: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': validate.get_convert_int(request.args, 'tab'),
@@ -355,7 +355,7 @@ def system_settings_dhcp(session_data):
 
 @app.route('/system/settings/interface', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_settings_interface(session_data):
+def system_settings_interface(session_data: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': validate.get_convert_int(request.args, 'tab'),
@@ -372,7 +372,7 @@ def system_settings_interface(session_data):
 
 @app.route('/system/settings/logging', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_settings_logging(session_data):
+def system_settings_logging(session_data: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': validate.get_convert_int(request.args, 'tab'),
@@ -389,7 +389,7 @@ def system_settings_logging(session_data):
 
 @app.route('/system/settings/syslog', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_settings_syslog(session_data):
+def system_settings_syslog(session_data: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': validate.get_convert_int(request.args, 'tab'),
@@ -408,7 +408,7 @@ def system_settings_syslog(session_data):
     # ----------------------------------------- #
 @app.route('/system/log/traffic', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
-def system_logs_traffic(session_data):
+def system_logs_traffic(session_data: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
         'menu': '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
@@ -424,7 +424,7 @@ def system_logs_traffic(session_data):
 
 @app.route('/system/log/events', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
-def system_logs_traffic_events(session_data):
+def system_logs_traffic_events(session_data: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
         'menu': '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
@@ -440,7 +440,7 @@ def system_logs_traffic_events(session_data):
 
 @app.route('/system/log/system', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
-def system_logs_system(session_data):
+def system_logs_system(session_data: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
         'menu': '1', 'dnx_table': True, 'ajax': True, 'auto_colorize': True,
@@ -467,7 +467,7 @@ def system_logs_get(session_data):
 
 @app.route('/system/users', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_users(session_data):
+def system_users(session_data: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'uri_path': ['system', 'users']
@@ -483,7 +483,7 @@ def system_users(session_data):
 
 @app.route('/system/backups', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_backups(session_data):
+def system_backups(session_data: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'uri_path': ['system', 'backups']
@@ -498,7 +498,7 @@ def system_backups(session_data):
 
 @app.route('/system/services', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_services(session_data):
+def system_services(session_data: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'uri_path': ['system', 'services']
@@ -534,7 +534,7 @@ def system_restart(session_data, path):
 @user_restrict('user', 'admin')
 # removing user from session dict then removing them from locally stored session tracker to allow for cross session
 # awareness of users/accounts logged in.
-def dnx_logout(session_data):
+def dnx_logout(session_data: dict):
     user = session.pop('user', None)
     if (user):
         update_session_tracker(user, action=CFG.DEL)
@@ -542,20 +542,18 @@ def dnx_logout(session_data):
     return redirect(url_for('dnx_login'))
 
 
-
 @app.route('/login', methods=['GET', 'POST'])
 # TODO: consider dropping flask session outright since it is redundant to dnx session tracker.
 #  make sure its not needed for the auto session timeout first though...
 def dnx_login():
-
-    # user has an active authenticated session, so we can drop them back to the dashboard.
+    # the user has an active authenticated session, so we can drop them back to the dashboard.
     if (session.get('user', None)):
         return redirect(url_for('dnx_dashboard'))
 
     login_error = ''
     if (request.method == 'POST'):
-        authenticated, username, user_role = Authentication.user_login(request.form, request.remote_addr)
 
+        authenticated, username, user_role = Authentication.user_login(request.form, request.remote_addr)
         if (authenticated):
             update_session_tracker(username, user_role, request.remote_addr)
 
@@ -574,15 +572,16 @@ def dnx_login():
 #  BLOCKED PAGE | dns redirect
 # --------------------------------------------- #
 @app.route('/blocked')
-def dnx_blocked():
+def dnx_blocked() -> str:
     page_settings = {
         'navi': True, 'login_btn': True, 'idle_timeout': False,
         'uri_path': ['blocked']
     }
 
-    # checking for domain sent by nginx that is being redirected to rule. if domain doesn't exist (user navigated to
-    # this page manually) then a not authorized page will be served. If the domain is not a valid domain (regex) the
-    # request will be redirected back to blocked page without a domain.
+    # checking for domain sent by nginx that is being redirected.
+    # if a domain block event is not associated with the request (user navigated to this page manually) then a not
+    #  authorized page will be served.
+    # If the domain is not valid (regex) then the request will be redirected back to the blocked page without a domain.
     # NOTE: this is a crazy bit of code that should be tested much more as it is possible to do a sql injection here
     #  if the validations below are bypassed.
     blocked_domain = request.args.get('dom', None)
@@ -619,7 +618,7 @@ def dnx_blocked():
 
 @app.post('/refresh/session')
 @user_restrict('user', 'admin')
-def refresh_session(dnx_session):
+def refresh_session(session_data: dict):
 
     return ajax_response(status=True, data={'error': 0, 'message': None})
 
@@ -648,8 +647,8 @@ def default_sub_sub(path_a, path_b, path_c):
 
 # --------------------------------------------- #
 # all standard page loads use this logic to decide the page action/ call the correct
-# lower level functions residing in each page's Class
-def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
+# lower level functions residing in each page's module
+def standard_page_logic(dnx_page, page_settings: dict, data_key: str, *, page_name: str) -> str:
 
     if (request.method == 'POST'):
         try:
@@ -669,7 +668,7 @@ def standard_page_logic(dnx_page, page_settings, data_key, *, page_name):
 
     return render_template(page_name, **page_settings)
 
-def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name) -> str:
+def firewall_page_logic(dnx_page, page_settings: dict, data_key: str, *, page_name: str) -> str:
 
     if (request.method == 'POST'):
         try:
@@ -690,7 +689,7 @@ def firewall_page_logic(dnx_page, page_settings, data_key, *, page_name) -> str:
 
     return render_template(page_name, **page_settings)
 
-def log_page_logic(log_page, page_settings, *, page_name):
+def log_page_logic(log_page, page_settings: dict, *, page_name: str):
     # can now accept redirects from other places on the webui to load specific tables directly on load
     # using uri queries FIXME: this has been temporarily suspended and should be reintroduced.
 
@@ -707,7 +706,7 @@ def log_page_logic(log_page, page_settings, *, page_name):
 
     return render_template(page_name, **page_settings)
 
-def categories_page_logic(dnx_page, page_settings):
+def categories_page_logic(dnx_page, page_settings: dict):
     if (request.method == 'POST'):
         try:
             error, menu_option = dnx_page.update_page(request.form)
@@ -728,13 +727,12 @@ def categories_page_logic(dnx_page, page_settings):
     return render_template('intrusion/domain/categories.html', **page_settings)
 
 # function called by restart/shutdown pages. will ensure the user specified operation gets executed
-def handle_system_action(page_settings):
+def handle_system_action(page_settings: dict):
     action = page_settings['action']
 
     response = request.form.get(f'system_{action}', '')
-    if (response is None):
-        error = 'device action invalid.'
-        return render_template(application_error_page, application_error=error, **page_settings)
+    if (not response):
+        return render_template(application_error_page, application_error='device action invalid.', **page_settings)
 
     if (response == 'YES'):
         page_settings.pop('control', None)
@@ -783,7 +781,7 @@ def update_session_tracker(username: str, user_role: Optional[str] = None, remot
 
         session_tracker.write_configuration(persistent_tracker.expanded_user_data)
 
-def ajax_response(*, status, data):
+def ajax_response(*, status: bool, data: Union[dict, list]):
     if (not isinstance(status, bool)):
         raise TypeError('Ajax response status must be a boolean.')
 
@@ -795,7 +793,7 @@ def ajax_response(*, status, data):
 # FLASK API - REQUEST MODS
 # =================================
 @app.before_request
-def user_timeout():
+def user_timeout() -> None:
     session.permanent = True
     app.permanent_session_lifetime = timedelta(minutes=30)
     session.modified = True
@@ -803,7 +801,7 @@ def user_timeout():
 # checks form data for a color mode change and writes/ configures accordingly. otherwise, will load
 # the current dark mode setting for the active user and set flask.session['dark_mode] accordingly.
 @app.before_request
-def dark_mode():
+def dark_mode() -> None:
     '''the configured value will be stored as session['dark_mode'], so it can be accessed directly by the
     Flask template context.
     '''
@@ -903,7 +901,7 @@ def merge_items(a1, a2):
     return new_list
 
 @app.template_global()
-def is_list(li, /):
+def is_list(li, /) -> bool:
     return isinstance(li, list)
 
 
@@ -920,7 +918,7 @@ server_type = os.environ.get('FLASK_ENV')
 if (server_type == 'development'):
 
     @app.before_request
-    def print_forms():
+    def print_forms() -> None:
         if (request.method == 'POST'):
             print(f'form data\n{"=" * 12}')
             ppt(dict(request.form))

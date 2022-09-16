@@ -15,9 +15,6 @@ LOG_FILES = [
     'combined', 'dhcp_server', 'dns_proxy', 'ip_proxy', 'ips', 'syslog', 'system', 'web_app', 'logins'
 ]
 
-# FIXME: system logs are rendering with the file name letters enumerated on separate lines. im tired and jacked up my
-#  eye up dinking around with a wire and cant see shit.
-
 # NOTE: this will likely not be needed anymore with the ajax client implementation
 def load_page(uri_query: Args) -> tuple[str, None, list[str]]:
     file_path = f'{HOME_DIR}/dnx_profile/log'

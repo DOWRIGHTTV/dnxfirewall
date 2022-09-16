@@ -14,6 +14,9 @@ def load_page(form: Form) -> dict:
     proxy_settings: ConfigChain = load_configuration('ip_proxy')
     country_map: ConfigChain = load_configuration('geolocation', filepath='dnx_webui/data')
 
+    # TODO: get selected security profile setting and render according. lets start with converting current config to
+    #  use "profile 1", with proxy set for profiles. once that is good then we can expand to configure more profiles.
+
     # controlling whether to load defaults or user selected view.
     # NOTE: These are validated by the update function, so it is safe to assume types.
     geo_region = form.get('region', 'africa')
@@ -85,6 +88,10 @@ def load_page(form: Form) -> dict:
     return ipp_settings
 
 def update_page(form: Form) -> tuple[bool, WebError]:
+
+    # prevents errors while in dev mode.
+    if ('security_profile' in form):
+        pass
 
     # no action needed for this at this time. in the future, validations may be required, but the load page has been
     # expanded to generate the user select data.

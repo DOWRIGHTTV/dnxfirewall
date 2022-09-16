@@ -207,6 +207,10 @@ table.striped > tbody > tr {
     border-top: none;
     border-bottom: 1px solid #5b5b5b;
     box-shadow: inset 0 0 10px 1px rgba(0, 0, 0, 0.8); }
+  .multi-switch > li.disabled {
+    cursor: default;
+    pointer-events: none;
+    color: #999; }
   .multi-switch > li.multi-switch-on.active > button {
     color: red;
     text-shadow: 0 0 15px rgba(220, 10, 10, 0.5); }
