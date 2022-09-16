@@ -155,11 +155,11 @@ table.striped > tbody > tr {
   border-radius: 10px;
   background: #444444;
   box-shadow: inset 0 0 2px 2px rgba(0, 0, 0, 0.4); }
-  .multi-switch-container .sec-profiles {
+  .multi-switch-container.sec-profiles {
     width: 650px; }
-  .multi-switch-container .left {
+  .multi-switch-container.left {
     float: left; }
-  .multi-switch-container .right {
+  .multi-switch-container.right {
     float: right; }
 
 .multi-switch {
@@ -213,9 +213,8 @@ table.striped > tbody > tr {
   .multi-switch > li.multi-switch-off.active > button {
     color: green;
     text-shadow: 0 0 15px rgba(10, 220, 10, 0.5); }
-
-.multi-switch .sec-profiles > li {
-  width: 36px; }
+  .multi-switch.sec-profiles > li {
+    width: 36px; }
 
 p.multi-switch-label {
   font-family: SpecialElite, Roboto, sans-serif;
