@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TypeAlias, Optional, Union, Any, Callable, ByteString
-
 from typing import TYPE_CHECKING
 
 if (TYPE_CHECKING):
+    from typing import TypeAlias, Optional, Union, Any, Callable, ByteString
+
     from threading import Lock, Event
 
     from werkzeug.datastructures import ImmutableMultiDict, MultiDict

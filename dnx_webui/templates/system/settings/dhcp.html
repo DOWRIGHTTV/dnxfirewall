@@ -13,14 +13,14 @@
         </div>
     </div>
 </section>
-<section id="general" class="section {{main_section_color}}">
+<section {{ section_bg }} id="general" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
             {% for interface in ['lan', 'dmz'] %}
             <div class="col s6">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">{{interface.upper()}} Interface</h4>
-                    <form action="system/settings/dhcp" method="POST">
+                    <form method="POST">
                         <input type="hidden" name="tab" value="1">
                         <input type="hidden" name="interface" value="{{interface}}">
                         <div class="row">
@@ -81,13 +81,13 @@
         </div>
     </div>
 </section>
-<section id="reservations" class="section {{main_section_color}}">
+<section {{ section_bg }} id="reservations" class="section {{main_section_color}}">
     <div class="container">
         <div class="row">
             <div class="col s12">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Add Reservation</h4>
-                    <form action="system/settings/dhcp" method="POST">
+                    <form method="POST">
                         <input type="hidden" name="tab" value="2">
                         <div class="row">
                             <div class="input-field col s2 offset-s1 {{input_color}}">
@@ -177,7 +177,7 @@
         </div>
     </div>
 </section>
-<section id="leases" class="section {{main_section_color}}">
+<section {{ section_bg }} id="leases" class="section {{main_section_color}}">
     <div class="container">
         <div class="col s12">
             <div class="card-panel hoverable {{card_color}}">

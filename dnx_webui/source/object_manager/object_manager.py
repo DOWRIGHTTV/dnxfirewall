@@ -10,7 +10,6 @@ from os import replace
 from ast import literal_eval
 from enum import IntEnum
 
-from source.web_typing import TYPE_CHECKING, Union
 from source.web_validate import ValidationError
 
 from dnx_gentools.def_constants import HOME_DIR
@@ -29,7 +28,10 @@ __all__ = (
     'FWObjectManager', 'USER_RANGE',
 )
 
+from typing import TYPE_CHECKING
 if (TYPE_CHECKING):
+    from source.web_typing import Union
+
     ITER_FW_OBJECTS = list[list[str, str]]
 
 # FUNCTION ALIASES

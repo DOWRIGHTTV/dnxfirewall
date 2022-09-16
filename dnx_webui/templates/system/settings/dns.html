@@ -13,13 +13,13 @@
         </div>
     </div>
 </section>
-<section id="servers">
+<section {{ section_bg }} id="servers" class="section {{ main_section_color }}">
     <div class="container">
         <div class="row">
             <div class="col s12">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">DNS Servers</h4>
-                    <form action="/system/settings/dns" method="POST">
+                    <form method="POST">
                         <input type="hidden" name="tab" value="1">
                         <table class="striped centered">
                             <thead>
@@ -73,7 +73,7 @@
         </div>
     </div>
 </section>
-<section id="records">
+<section {{ section_bg }} id="records" class="section {{ main_section_color }}">
     <div class="container">
         <div class="row">
             <div class="col s12">
@@ -153,7 +153,7 @@
         </div>
     </div>
 </section>
-<section id="cache">
+<section {{ section_bg }} id="cache" class="section {{ main_section_color }}">
     <div class="container">
         <div class="row">
             <div class="col s12">

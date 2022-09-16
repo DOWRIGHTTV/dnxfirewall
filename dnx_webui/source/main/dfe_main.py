@@ -5,8 +5,6 @@ from __future__ import annotations
 import os
 from datetime import timedelta
 
-import source.web_validate as validate
-
 from dnx_gentools.def_constants import HOME_DIR, FIVE_SEC, fast_time, ppt
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.def_exceptions import ValidationError, ConfigurationError
@@ -16,6 +14,8 @@ from dnx_iptools.cprotocol_tools.cprotocol_tools import itoip
 
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 from dnx_routines.logging import LogHandler as Log
+
+import source.web_validate as validate
 
 # ========================================
 # FLASK API - APP INSTANCE INITIALIZATION
@@ -689,7 +689,7 @@ def firewall_page_logic(dnx_page, page_settings: dict, data_key: str, *, page_na
 
     return render_template(page_name, **page_settings)
 
-def log_page_logic(log_page, page_settings: dict, *, page_name: str):
+def log_page_logic(log_page, page_settings: dict, *, page_name: str) -> str:
     # can now accept redirects from other places on the webui to load specific tables directly on load
     # using uri queries FIXME: this has been temporarily suspended and should be reintroduced.
 
@@ -706,7 +706,7 @@ def log_page_logic(log_page, page_settings: dict, *, page_name: str):
 
     return render_template(page_name, **page_settings)
 
-def categories_page_logic(dnx_page, page_settings: dict):
+def categories_page_logic(dnx_page, page_settings: dict) -> str:
     if (request.method == 'POST'):
         try:
             error, menu_option = dnx_page.update_page(request.form)
@@ -757,7 +757,7 @@ def handle_system_action(page_settings: dict):
     return render_template('main/device.html', **page_settings)
 
 def update_session_tracker(username: str, user_role: Optional[str] = None, remote_addr: Optional[str] = None,
-                           *, action: CFG = CFG.ADD):
+                           *, action: CFG = CFG.ADD) -> None:
 
     if (action is CFG.ADD and not remote_addr):
         raise ValueError('remote_addr must be specified if action is set to add.')

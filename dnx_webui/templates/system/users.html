@@ -1,12 +1,12 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="users">
+<section {{ section_bg }} id="users" class="section {{ main_section_color }}">
     <div class="container">
         <div class="row">
             <div class="col s12">
                 <div class="card-panel hoverable {{card_color}}">
                     <h4 class="{{title_color}}">Create User</h4>
-                    <form action="/system/users" method="POST">
+                    <form method="POST">
                         <div class="row">
                             <div class="input-field col s4 {{input_color}}">
                                 <label>
