@@ -21,7 +21,7 @@
     </div>
 </div>
 {% if confirmed %}
-<section {{ section_bg }} class="section {{main_section_color}}">
+<section {{ section_bg|safe }} class="section {{main_section_color}}">
     <div class="container">
         {% if action == 'restart' %}
         <h4 class="red-text">The system is now restarting. This can take a few minutes.</h4>
