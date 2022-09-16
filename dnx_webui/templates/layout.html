@@ -26,7 +26,7 @@
 
     {% if session['dark_mode'] %}
         <!-- dark mode enabled -->
-        {% set section_bg = 'style=background: url(static/assets/images/dnx-section-dark.png); background-repeat: repeat;' %}
+        {% set section_bg = 'style=background: url(static/assets/images/dnx-section-dark.png); background-repeat: repeat;'|safe %}
         {% set main_section_color = 'blue-grey lighten-2' %}
         {% set off_section_color = 'blue-grey lighten-5' %}
         {% set card_color = 'blue-grey lighten-4' %}
@@ -34,7 +34,7 @@
 
     {% else %}
         <!-- default mode enabled -->
-        {% set section_bg = 'style=background: url(static/assets/images/dnx-section-light.png); background-repeat: repeat;' %}
+        {% set section_bg = 'style=background: url(static/assets/images/dnx-section-light.png); background-repeat: repeat;'|safe %}
         {% set main_section_color = 'grey lighten-2' %}
         {% set off_section_color = 'grey lighten-5' %}
         {% set card_color = 'grey lighten-4' %}
