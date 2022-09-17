@@ -4,19 +4,18 @@
     </a>
     <form>
         <ul>
+        {% if not theme.mode.light %}
             <li>
-                <a>
-                    {% if session['dark_mode'] %}
-                    <button class="btn btn-floating amber darken-2 waves-effect waves-light"
-                        name="theme" value="light"><i class="material-icons">wb_sunny</i>
-                    </button>
-                    {% else %}
-                    <button class="btn btn-floating grey darken-3 waves-effect waves-light"
-                        name="theme" value="dark"><i class="material-icons">brightness_2</i>
-                    </button>
-                    {% endif %}
-                </a>
+                <a><button class="btn btn-floating amber darken-2 waves-effect waves-light" name="theme" value="light">
+                    <i class="material-icons">wb_sunny</i></button></a>
             </li>
+        {% endif %}
+        {% if not theme.mode.dark %}
+            <li>
+                <a><button class="btn btn-floating grey darken-3 waves-effect waves-light" name="theme" value="dark">
+                    <i class="material-icons">brightness_2</i></button></a>
+            </li>
+        {% endif %}
         </ul>
     </form>
 </div>

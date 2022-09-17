@@ -13,28 +13,12 @@
         </div>
     </div>
 </section>
-<section {{ theme.section_bg|safe }} >
-    <div class="col s12">
-        <div class="multi-switch-container sec-profiles">
-            <ul class="pagination multi-switch sec-profiles">
-                <li{% if ip_settings.sec_profile == 1 %} class="disabled"{% endif %}>
-                    <button name="ip_profile" value="<"><i class="material-icons">chevron_left</i></button>
-                </li>
-                {% for profile in range(1,16) %}
-                <li class="multi-switch-on{% if ip_settings.sec_profile == profile %} active{% endif %}">
-                    <button name="ip_profile" value="{{ profile }}">{{ profile }}</button>
-                </li>
-                {% endfor %}
-                <li{% if ip_settings.sec_profile == 15 %} class="disabled"{% endif %}>
-                    <button name="ip_profile" value=">"><i class="material-icons">chevron_right</i></button>
-                </li>
-            </ul>
-        </div>
-    </div>
-</section>
+{# aliasing for now so we can reuse template #}
+{% set page_settings = ip_settings %}
 {% set cat_options = [(0,'radio_button_unchecked'), (1,'file_upload'), (1,'file_download'), (1,'swap_vert')] %}
 <section {{ theme.section_bg|safe }} id="reputation" class="section {{theme.main_section}}">
     <div class="container">
+        {% include 'includes/_sec_profiles.html' %}
         <div class="row">
             <div class="col s12 m10 offset-m1">
                 <div class="card-panel hoverable {{theme.card}}">

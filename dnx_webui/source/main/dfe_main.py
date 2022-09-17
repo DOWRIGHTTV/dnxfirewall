@@ -839,6 +839,7 @@ def load_user_settings() -> None:
 @app.before_request
 def set_theme_values() -> None:
     theme = context_global.theme = {
+        'mode': context_global.settings['theme'],  # // for now until we pass all settings into template context
         'nav_text': 'blue-grey-text text-darken-2',
         'subnav_text_color': 'blue-grey-text text-darken-3',
         'tab_text_color': 'blue-grey-text text-lighten-2',
