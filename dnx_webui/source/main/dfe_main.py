@@ -848,7 +848,7 @@ def set_theme_values() -> None:
 
     if (context_global.settings['theme'] == 'dark'):
         theme.update({
-            'section_bg': 'style=background: url("static/assets/images/dnx_section_dark.png"); background-repeat: repeat;"',
+            'section_bg': 'style=background: url(static/assets/images/dnx_section_dark.png); background-repeat: repeat;"',
             'main_section': 'blue-grey lighten-2',
             'off_section': 'blue-grey lighten-5',
             'card': 'blue-grey lighten-4',
