@@ -20,7 +20,7 @@ import source.web_validate as validate
 # ========================================
 # FLASK API - APP INSTANCE INITIALIZATION
 # ========================================
-from flask import Flask, jsonify, redirect, render_template, request, session, url_for
+from flask import Flask, jsonify, redirect, render_template, request, session, url_for, g as context_global
 
 app = Flask(
     __name__, static_folder=f'{HOME_DIR}/dnx_webui/static', template_folder=f'{HOME_DIR}/dnx_webui/templates'
@@ -789,6 +789,9 @@ def ajax_response(*, status: bool, data: Union[dict, list]):
 
     return jsonify({'success': status, 'result': data})
 
+def authenticated_session() -> bool:
+    return session.get('user', None)
+
 # =================================
 # FLASK API - REQUEST MODS
 # =================================
@@ -798,51 +801,69 @@ def user_timeout() -> None:
     app.permanent_session_lifetime = timedelta(minutes=30)
     session.modified = True
 
-# checks form data for a color mode change and writes/ configures accordingly. otherwise, will load
-# the current dark mode setting for the active user and set flask.session['dark_mode] accordingly.
-@app.before_request
-def dark_mode() -> None:
-    '''the configured value will be stored as session['dark_mode'], so it can be accessed directly by the
-    Flask template context.
-    '''
-    # dark mode settings will only apply to logged-in users.
-    # NOTE: username validations are still required lower down to deal with log in/out transitions.
-    user = session.get('user', None)
-    if (not user):
-        return
 
-    dark_mode_update = request.args.get('dark_mode_update', DATA.MISSING)
-    # this ensures value conforms to the system before configuring
-    if (dark_mode_update is not DATA.MISSING):
-        try:
-            dark_mode_config = CFG(validate.convert_int(dark_mode_update))
-        except:
-            return
+@app.before_request
+def set_user_settings() -> None:
+    if user := authenticated_session() is None: return
+
+    # ------------------
+    # WEBUI THEME
+    # ------------------
+    if new_theme := request.args.get('theme'):
+
+        if new_theme not in ['light', 'dark']: return
 
         with ConfigurationManager('logins', file_path='/dnx_webui/data') as webui:
             webui_settings = webui.load_configuration()
 
-            active_users = webui_settings.get_list('users')
-
             # this check prevents issues with log in/out transitions
-            if (user not in active_users):
-                return
+            if user in webui_settings.get_list('users'):
 
-            webui_settings[f'active_users->{user}->dark_mode'] = dark_mode_config
+                webui_settings[f'users->{user}->settings->theme'] = new_theme
 
-            webui.write_configuration(webui_settings.expanded_user_data)
+                webui.write_configuration(webui_settings.expanded_user_data)
 
-    # standard request for page. did NOT submit dark mode fab.
+@app.before_request
+def load_user_settings() -> None:
+
+    # loading defaults before returning. manually setting since theme is only tracked setting as of now.
+    if user := authenticated_session() is None:
+        context_global['settings'] = {'theme': 'light'}
+
     else:
-        webui_settings = load_configuration('logins', filepath='dnx_webui/data')
+        # 1. theme
+        with ConfigurationManager('logins', file_path='/dnx_webui/data') as webui_configured_users:
+            web_config: ConfigChain = webui_configured_users.load_configuration()
 
-        # TODO: implement .get for ConfigChain dict
-        # this check prevents issues with log in/out transitions
-        dark_mode_config = webui_settings.get(f'users->{user}->dark_mode')
-        if (not dark_mode_config):
-            return
+        context_global['settings'] = web_config.get_dict(f'users->{user}->settings')
 
-    session['dark_mode'] = dark_mode_config
+@app.before_request
+def set_theme_values() -> None:
+    theme = context_global['theme'] = {
+        'nav_text': 'blue-grey-text text-darken-2',
+        'subnav_text_color': 'blue-grey-text text-darken-3',
+        'tab_text_color': 'blue-grey-text text-lighten-2',
+        'icon_color': 'teal-text text-lighten-2',
+        'modal_text_style': 'blue-grey-text center',
+    }
+
+    if (context_global['settings']['theme'] == 'dark'):
+        theme.update({
+            'section_bg': 'style=background: url("static/assets/images/dnx-section-dark.png"); background-repeat: repeat',
+            'main_section': 'blue-grey lighten-2',
+            'off_section': 'blue-grey lighten-5',
+            'card': 'blue-grey lighten-4',
+            'title': 'black-text'
+        })
+
+    elif (context_global['settings']['theme'] == 'light'):
+        theme.update({
+            'section_bg': 'style=background: url("static/assets/images/dnx-section-light.png"); background-repeat: repeat',
+            'main_section': 'grey lighten-2',
+            'off_section': 'grey lighten-5',
+            'card': 'grey lighten-4',
+            'title': 'blue-grey-text text-darken-1'
+        })
 
 # ====================================
 # FLASK API - TEMPLATE FUNCTIONS

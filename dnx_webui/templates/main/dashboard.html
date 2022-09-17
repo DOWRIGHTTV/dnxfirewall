@@ -1,10 +1,10 @@
 {% extends('layout.html') %}
 {% block body %}
-<section {{ section_bg }} class="section scrollspy center {{main_section_color}}">
+<section {{ theme.section_bg }} class="section scrollspy center {{theme.main_section}}">
     <div class="container">
         <div class="row row-flex">
             <div class="col s12 m6">
-                <div class="card-panel card-panel-eql hoverable {{card_color}}">
+                <div class="card-panel card-panel-eql hoverable {{theme.card}}">
                     <a>
                         <img src="/static/dashboard/dash_pi-{{dashboard['dc_graph'][0]}}{{dashboard['dc_graph'][1]}}.png"
                             {{dash_icon_std}}>
@@ -25,7 +25,7 @@
                 </div>
             </div>
             <div class="col s12 m6">
-                <div class="card-panel card-panel-eql hoverable {{card_color}}">
+                <div class="card-panel card-panel-eql hoverable {{theme.card}}">
                     <a>
                         <img src="/static/dashboard/dash_pi-{{dashboard['rc_graph'][0]}}{{dashboard['rc_graph'][1]}}.png"
                             {{dash_icon_std}}>
@@ -46,7 +46,7 @@
                 </div>
             </div>
             <div class="col s12">
-                <div class="card-panel card-panel-eql hoverable {{card_color}}">
+                <div class="card-panel card-panel-eql hoverable {{theme.card}}">
                     <a>
                         <img src="/static/dashboard/dash_search1.png" {{dash_icon_zoom}}>
                     </a>
@@ -88,7 +88,7 @@
                 </div>
             </div>
             <div class="col s12">
-                <div class="card-panel card-panel-eql hoverable {{card_color}}">
+                <div class="card-panel card-panel-eql hoverable {{theme.card}}">
                     <a>
                         <img src="/static/dashboard/dash_globe1.png" {{dash_icon_std}}>
                     </a>
@@ -131,7 +131,7 @@
             </div>
             {% if dashboard['infected_hosts'] %}
             <div class="col s12">
-                <div class="card-panel card-panel-eql hoverable {{card_color}}">
+                <div class="card-panel card-panel-eql hoverable {{theme.card}}">
                     <i class="material-icons large red-text">report_problem</i><br>
                     <h4>Infected Hosts</h4>
                     <div class="row">
@@ -154,11 +154,11 @@
         </div>
     </div>
 </section>
-<section {{ section_bg }} id="statistics" class="{{off_section_color}}">
+<section id="statistics" class="{{theme.off_section}}">
     <div class="container">
         <div class="row">
             <div class="col s12">
-                <h4 class="{{title_color}}">System Information</h4>
+                <h4 class="{{theme.title}}">System Information</h4>
                 <ul class="tabs">
                     <li class="tab col s3 l4 xl2"><a class="active" href="#server-stat">Server Status</a></li>
                     <li class="tab col s3 l4 xl2"><a href="#system-stat">System Stats</a></li>

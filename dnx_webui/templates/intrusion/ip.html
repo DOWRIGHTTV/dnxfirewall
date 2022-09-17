@@ -1,6 +1,6 @@
 {% extends('layout.html') %}
 {% block body %}
-<section {{ section_bg }} id="tabs-bar" class="tabsbar">
+<section id="tabs-bar" class="tabsbar">
     <div class="container">
         <div class="row">
             <div class="col s12 m12">
@@ -13,7 +13,7 @@
         </div>
     </div>
 </section>
-<section {{ section_bg }} >
+<section {{ theme.section_bg }} >
     <div class="col s12">
         <div class="multi-switch-container sec-profiles">
             <ul class="pagination multi-switch sec-profiles">
@@ -33,12 +33,12 @@
     </div>
 </section>
 {% set cat_options = [(0,'radio_button_unchecked'), (1,'file_upload'), (1,'file_download'), (1,'swap_vert')] %}
-<section {{ section_bg }} id="reputation" class="section {{main_section_color}}">
+<section {{ theme.section_bg }} id="reputation" class="section {{theme.main_section}}">
     <div class="container">
         <div class="row">
             <div class="col s12 m10 offset-m1">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">Reputation</h4>
+                <div class="card-panel hoverable {{theme.card}}">
+                    <h4 class="{{theme.title}}">Reputation</h4>
                     <div class="title-divider"></div>
                     {% for category, direction in ip_settings['reputation'] %}
                     {% if not loop.index0 % 4 %}<div class="row">{% endif %}
@@ -68,11 +68,11 @@
         </div>
     </div>
 </section>
-<section {{ section_bg }} id="geolocation" class="section {{main_section_color}}">
+<section {{ theme.section_bg }} id="geolocation" class="section {{theme.main_section}}">
     <div class="container">
         <div class="col s12">
-            <div class="card-panel hoverable {{card_color}}">
-                <h4 class="{{title_color}}">Geolocation</h4>
+            <div class="card-panel hoverable {{theme.card}}">
+                <h4 class="{{theme.title}}">Geolocation</h4>
                 <div class="title-divider"></div>
                 <div class="row">
                     <form method="POST">
@@ -125,12 +125,12 @@
         </div>
     </div>
 </section>
-<section {{ section_bg }} id="lan-restrict" class="section {{main_section_color}}">
+<section {{ theme.section_bg }} id="lan-restrict" class="section {{theme.main_section}}">
     <div class="container">
         <div class="row">
             <div class="col s12 m10 offset-m1">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">LAN Restrict</h4>
+                <div class="card-panel hoverable {{theme.card}}">
+                    <h4 class="{{theme.title}}">LAN Restrict</h4>
                     <form method="post">
                         <input type="hidden" name="tab" value="3">
                         <div class="col s12">

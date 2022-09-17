@@ -1,11 +1,11 @@
 {% extends('layout.html') %}
 {% block body %}
-<section {{ section_bg }} id="logging" class="section {{main_section_color}}">
+<section {{ theme.section_bg }} id="logging" class="section {{theme.main_section}}">
     <div class="container">
         <div class="row row-flex">
             <div class="col s12 m6">
-                <div class="card-panel card-panel-eql z-depth-2 hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">Logging</h4>
+                <div class="card-panel card-panel-eql z-depth-2 hoverable {{theme.card}}">
+                    <h4 class="{{theme.title}}">Logging</h4>
                     <form action="/system/settings/logging" method="POST">
                         <input type="hidden" name="tab" value="1">
                         <input type="hidden" name="logging_update">
@@ -43,8 +43,8 @@
                 </div>
             </div>
             <div class="col s12 m6">
-                <div class="card-panel card-panel-eql z-depth-2 hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">Select Time Offset</h4>
+                <div class="card-panel card-panel-eql z-depth-2 hoverable {{theme.card}}">
+                    <h4 class="{{theme.title}}">Select Time Offset</h4>
                     <h6>System Time: {{logging_settings['system']}}</h6>
                     <h6>Time Offset: {{logging_settings['local']}}</h6>
                     <br>

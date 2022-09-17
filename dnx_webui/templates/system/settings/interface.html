@@ -11,12 +11,12 @@
         </div>
     </div>
 </section>
-<section {{ section_bg }} id="wan-interface" class="section {{ main_section_color }}">
+<section {{ theme.section_bg }} id="wan-interface" class="section {{ theme.main_section }}">
     <div class="container">
         <div class="row row-flex">
             <div class="col s12 l6">
-                <div class="card-panel card-panel-eql hoverable {{ card_color }}">
-                    <h4 class="{{ title_color }}">IP Address</h4>
+                <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">IP Address</h4>
                     <h6>IP:      {{ interface_settings['ip']['ip_address'] }}</h6>
                     <h6>Netmask: {{ interface_settings['ip']['netmask'] }}</h6>
                     <h6>Gateway: {{ interface_settings['ip']['default_gateway'] }}</h6>
@@ -98,8 +98,8 @@
                 </div>
             </div>
             <div class="col s12 l6">
-                <div class="card-panel card-panel-eql hoverable {{ card_color }}">
-                    <h4 class="{{ title_color }}">MAC Address</h4>
+                <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">MAC Address</h4>
                     <h6>Default MAC: {{ interface_settings['mac']['default'] }}</h6>
                     <h6>Current MAC: {{ interface_settings['mac']['current'] }}</h6>
                     <br>
