@@ -828,18 +828,18 @@ def load_user_settings() -> None:
 
     # loading defaults before returning. manually setting since theme is only tracked setting as of now.
     if user := authenticated_session() is None:
-        context_global['settings'] = {'theme': 'light'}
+        context_global.settings = {'theme': 'light'}
 
     else:
         # 1. theme
         with ConfigurationManager('logins', file_path='/dnx_webui/data') as webui_configured_users:
             web_config: ConfigChain = webui_configured_users.load_configuration()
 
-        context_global['settings'] = web_config.get_dict(f'users->{user}->settings')
+        context_global.settings = web_config.get_dict(f'users->{user}->settings')
 
 @app.before_request
 def set_theme_values() -> None:
-    theme = context_global['theme'] = {
+    theme = context_global.theme = {
         'nav_text': 'blue-grey-text text-darken-2',
         'subnav_text_color': 'blue-grey-text text-darken-3',
         'tab_text_color': 'blue-grey-text text-lighten-2',
@@ -847,7 +847,7 @@ def set_theme_values() -> None:
         'modal_text_style': 'blue-grey-text center',
     }
 
-    if (context_global['settings']['theme'] == 'dark'):
+    if (context_global.settings['theme'] == 'dark'):
         theme.update({
             'section_bg': 'style=background: url("static/assets/images/dnx-section-dark.png"); background-repeat: repeat',
             'main_section': 'blue-grey lighten-2',
@@ -856,7 +856,7 @@ def set_theme_values() -> None:
             'title': 'black-text'
         })
 
-    elif (context_global['settings']['theme'] == 'light'):
+    elif (context_global.settings['theme'] == 'light'):
         theme.update({
             'section_bg': 'style=background: url("static/assets/images/dnx-section-light.png"); background-repeat: repeat',
             'main_section': 'grey lighten-2',
