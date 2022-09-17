@@ -106,7 +106,7 @@ def dnx_dashboard(session_data: dict):
 
     page_settings.update(session_data)
 
-    return render_template('main/dashboard.html', **page_settings)
+    return render_template('main/dashboard.html', theme=context_global.theme, **page_settings)
 
 # --------------------------------------------- #
 #  START OF RULES TAB
@@ -588,14 +588,14 @@ def dnx_blocked() -> str:
     if (not blocked_domain):
         session.pop('user', None)
 
-        return render_template('main/not_authorized.html', **page_settings)
+        return render_template('main/not_authorized.html', theme=context_global.theme, **page_settings)
 
     try:
         validate.domain_name(blocked_domain)
     except ValidationError:
         session.pop('user', None)
 
-        return render_template('main/not_authorized.html', **page_settings)
+        return render_template('main/not_authorized.html', theme=context_global.theme, **page_settings)
 
     with DBConnector() as firewall_db:
         domain_info = firewall_db.execute(
@@ -605,13 +605,13 @@ def dnx_blocked() -> str:
     if (not domain_info):
         session.pop('user', None)
 
-        return render_template('main/not_authorized.html', **page_settings)
+        return render_template('main/not_authorized.html', theme=context_global.theme, **page_settings)
 
     page_settings.update({
         'standard_error': False, 'src_ip': request.remote_addr, 'blocked': domain_info
     })
 
-    return render_template('main/blocked.html', **page_settings)
+    return render_template('main/blocked.html', theme=context_global.theme, **page_settings)
 
 # --------------------------------------------- #
 # --------------------------------------------- #
@@ -654,7 +654,7 @@ def standard_page_logic(dnx_page, page_settings: dict, data_key: str, *, page_na
         try:
             error = dnx_page.update_page(request.form)
         except ConfigurationError as ce:
-            return render_template(application_error_page, application_error=ce, **page_settings)
+            return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
 
         page_settings.update({
             'tab': validate.get_convert_int(request.form, 'tab'),
@@ -664,9 +664,9 @@ def standard_page_logic(dnx_page, page_settings: dict, data_key: str, *, page_na
     try:
         page_settings[data_key] = dnx_page.load_page(request.form)
     except ConfigurationError as ce:
-        return render_template(application_error_page, application_error=ce, **page_settings)
+        return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
 
-    return render_template(page_name, **page_settings)
+    return render_template(page_name, theme=context_global.theme, **page_settings)
 
 def firewall_page_logic(dnx_page, page_settings: dict, data_key: str, *, page_name: str) -> str:
 
@@ -674,7 +674,7 @@ def firewall_page_logic(dnx_page, page_settings: dict, data_key: str, *, page_na
         try:
             error, selected = dnx_page.update_page(request.form)
         except ConfigurationError as ce:
-            return render_template(application_error_page, application_error=ce, **page_settings)
+            return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
 
         page_settings.update({
             'tab': validate.get_convert_int(request.form, 'tab'),
@@ -685,9 +685,9 @@ def firewall_page_logic(dnx_page, page_settings: dict, data_key: str, *, page_na
     try:
         page_settings[data_key] = dnx_page.load_page(page_settings['selected'])
     except ConfigurationError as ce:
-        return render_template(application_error_page, application_error=ce, **page_settings)
+        return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
 
-    return render_template(page_name, **page_settings)
+    return render_template(page_name, theme=context_global.theme, **page_settings)
 
 def log_page_logic(log_page, page_settings: dict, *, page_name: str) -> str:
     # can now accept redirects from other places on the webui to load specific tables directly on load
@@ -696,7 +696,7 @@ def log_page_logic(log_page, page_settings: dict, *, page_name: str) -> str:
     try:
         table, menu, table_data = log_page.update_page(request.form)
     except ConfigurationError as ce:
-        return render_template(application_error_page, application_error=ce, **page_settings)
+        return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
 
     page_settings.update({
         'table': table,
@@ -704,14 +704,14 @@ def log_page_logic(log_page, page_settings: dict, *, page_name: str) -> str:
         'table_data': table_data
     })
 
-    return render_template(page_name, **page_settings)
+    return render_template(page_name, theme=context_global.theme, **page_settings)
 
 def categories_page_logic(dnx_page, page_settings: dict) -> str:
     if (request.method == 'POST'):
         try:
             error, menu_option = dnx_page.update_page(request.form)
         except ConfigurationError as ce:
-            return render_template(application_error_page, application_error=ce, **page_settings)
+            return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
 
         page_settings.update({
             'tab': validate.get_convert_int(request.args, 'tab'),
@@ -722,9 +722,9 @@ def categories_page_logic(dnx_page, page_settings: dict) -> str:
     try:
         page_settings['category_settings'] = dnx_page.load_page(page_settings['menu'])
     except ConfigurationError as ce:
-        return render_template(application_error_page, application_error=ce, **page_settings)
+        return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
 
-    return render_template('intrusion/domain/categories.html', **page_settings)
+    return render_template('intrusion/domain/categories.html', theme=context_global.theme, **page_settings)
 
 # function called by restart/shutdown pages. will ensure the user specified operation gets executed
 def handle_system_action(page_settings: dict):
@@ -732,7 +732,7 @@ def handle_system_action(page_settings: dict):
 
     response = request.form.get(f'system_{action}', '')
     if (not response):
-        return render_template(application_error_page, application_error='device action invalid.', **page_settings)
+        return render_template(application_error_page, application_error='device action invalid.', theme=context_global.theme, **page_settings)
 
     if (response == 'YES'):
         page_settings.pop('control', None)
@@ -754,7 +754,7 @@ def handle_system_action(page_settings: dict):
     elif (response == 'NO'):
         return redirect(url_for('dnx_dashboard'))
 
-    return render_template('main/device.html', **page_settings)
+    return render_template('main/device.html', theme=context_global.theme, **page_settings)
 
 def update_session_tracker(username: str, user_role: Optional[str] = None, remote_addr: Optional[str] = None,
                            *, action: CFG = CFG.ADD) -> None:
@@ -789,7 +789,7 @@ def ajax_response(*, status: bool, data: Union[dict, list]):
 
     return jsonify({'success': status, 'result': data})
 
-def authenticated_session() -> bool:
+def authenticated_session() -> Optional[str]:
     return session.get('user', None)
 
 # =================================
@@ -804,7 +804,7 @@ def user_timeout() -> None:
 
 @app.before_request
 def set_user_settings() -> None:
-    if user := authenticated_session() is None: return
+    if not (user := authenticated_session()): return
 
     # ------------------
     # WEBUI THEME
@@ -827,13 +827,12 @@ def set_user_settings() -> None:
 def load_user_settings() -> None:
 
     # loading defaults before returning. manually setting since theme is only tracked setting as of now.
-    if user := authenticated_session() is None:
+    if not (user := authenticated_session()):
         context_global.settings = {'theme': 'light'}
 
     else:
         # 1. theme
-        with ConfigurationManager('logins', file_path='/dnx_webui/data') as webui_configured_users:
-            web_config: ConfigChain = webui_configured_users.load_configuration()
+        web_config: ConfigChain = load_configuration('logins', filepath='/dnx_webui/data')
 
         context_global.settings = web_config.get_dict(f'users->{user}->settings')
 
