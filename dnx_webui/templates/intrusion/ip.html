@@ -16,7 +16,7 @@
 {# aliasing for now so we can reuse template #}
 {% set page_settings = ip_settings %}
 {% set cat_options = [(0,'radio_button_unchecked'), (1,'file_upload'), (1,'file_download'), (1,'swap_vert')] %}
-<section {{ theme.section_bg|safe }} id="reputation" class="section {{theme.main_section}}">
+<section id="reputation" class="section">
     <div class="container">
         {% include 'includes/_sec_profiles.html' %}
         <div class="row">
@@ -52,7 +52,7 @@
         </div>
     </div>
 </section>
-<section {{ theme.section_bg|safe }} id="geolocation" class="section {{theme.main_section}}">
+<section id="geolocation" class="section">
     <div class="container">
         <div class="col s12">
             <div class="card-panel hoverable {{theme.card}}">
@@ -109,7 +109,7 @@
         </div>
     </div>
 </section>
-<section {{ theme.section_bg|safe }} id="lan-restrict" class="section {{theme.main_section}}">
+<section id="lan-restrict" class="section">
     <div class="container">
         <div class="row">
             <div class="col s12 m10 offset-m1">

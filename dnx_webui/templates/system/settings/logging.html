@@ -1,12 +1,12 @@
 {% extends('layout.html') %}
 {% block body %}
-<section {{ theme.section_bg|safe }} id="logging" class="section {{theme.main_section}}">
+<section id="logging" class="section">
     <div class="container">
         <div class="row row-flex">
             <div class="col s12 m6">
                 <div class="card-panel card-panel-eql z-depth-2 hoverable {{theme.card}}">
                     <h4 class="{{theme.title}}">Logging</h4>
-                    <form action="/system/settings/logging" method="POST">
+                    <form method="post">
                         <input type="hidden" name="tab" value="1">
                         <input type="hidden" name="logging_update">
                         <div class="row">

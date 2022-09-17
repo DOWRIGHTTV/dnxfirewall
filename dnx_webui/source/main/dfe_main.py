@@ -849,7 +849,7 @@ def set_theme_values() -> None:
 
     if (context_global.settings['theme'] == 'dark'):
         theme.update({
-            'section_bg': (
+            'background': (
                 'style="background: url(static/assets/images/dnx_bg1_dark.svg); '
                 'background-repeat: repeat; '
                 'background-attachment: fixed;"'
@@ -862,7 +862,7 @@ def set_theme_values() -> None:
 
     elif (context_global.settings['theme'] == 'light'):
         theme.update({
-            'section_bg': (
+            'background': (
                 'style="background: url(static/assets/images/dnx_bg1_light.svg); '
                 'background-repeat: repeat; '
                 'background-attachment: fixed;"'
