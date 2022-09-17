@@ -54,38 +54,43 @@ nav .dropdown-content a {
 .input-field input[type=text]:focus+label,
 .input-field input[type=email]:focus+label,
 .input-field input[type=password]:focus+label {
-    color: #e91e63; }
+  color: #e91e63; }
 
 .input-field input[type=date]:focus,
 .input-field input[type=text]:focus,
 .input-field input[type=email]:focus,
 .input-field input[type=password]:focus {
-    border-bottom: 2px solid #e91e63;
-    box-shadow: none; }
+  border-bottom: 2px solid #e91e63;
+  box-shadow: none; }
 
 .login-page {
-    margin: 0 auto; }
+  margin: 0 auto; }
 
-.login-page form {
-    width:300px; }
+.login-form {
+  width: 450px; }
 
 .col.s12.z-depth-4.card-panel {
-    width:315px;
-    word-break:break-all; }
+  width: 315px;
+  word-break: break-all; }
 
 /* CARD PANEL EQ HEIGHT */
 .row-flex {
-    display: flex;
-    flex-wrap: wrap; }
+  display: flex;
+  flex-wrap: wrap; }
 
 .card-panel-eql {
-    height: calc(100% - 12px); }
+  height: calc(100% - 12px); }
+
+.card-panel {
+  border-radius: 25px;
+  transition: all .25s;
+  box-shadow: 0 16px 24px 2px rgba(0, 0, 0, 0.14), 0 6px 30px 5px rgba(0, 0, 0, 0.12), 0 8px 10px -7px rgba(0, 0, 0, 0.2); }
 
 /* LOGO adjustments override */
 @media only screen and (max-width: 992px) {
-    nav .brand-logo {
-      left: 50%;
-      transform: none; } }
+  nav .brand-logo {
+    left: 50%;
+    transform: none; } }
 
 nav .nav-wrapper {
   display: flex;
@@ -100,38 +105,32 @@ nav .brand-logo {
 
 /* navigation menu type size and pixel adjustment override */
 @media only screen and (max-width: 1550px) {
-    .remove-big-menu {
-        display: none !important; } }
+  .remove-big-menu {
+    display: none !important; } }
 
 @media only screen and (max-width: 1549px) {
-    .show-mobile-menu {
-        display: block !important; } }
+  .show-mobile-menu {
+    display: block !important; } }
 
 /* icon color change */
 i.icon-red {
-    color: red; }
-
+  color: red; }
 i.icon-green {
-    color: green; }
-
+  color: green; }
 i.icon-blue {
-    color: blue; }
+  color: blue; }
 
 /* highlight override */
 table.highlight > tbody > tr:hover {
     background-color: rgba(122, 89, 39, 0.507); }
-
 /* table striping and  - css */
 table.striped > tbody > tr:nth-child(odd) {
     background-color: rgba(11, 47, 47, 0.5); }
-
 table.striped > tbody > tr {
     background-color: rgba(242, 242, 242, 0.5); }
-
 /* table striping - javascript */
 .tr-odd {
     background-color: rgba(11, 47, 47, 0.5); }
-
 .tr-even {
     background-color: rgba(242, 242, 242, 0.5); }
 

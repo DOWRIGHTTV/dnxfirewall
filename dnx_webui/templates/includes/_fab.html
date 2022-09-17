@@ -4,13 +4,14 @@
     </a>
     <form>
         <ul>
-        {% if not theme.mode.light %}
+        {% if theme.mode != 'light' %}
             <li>
                 <a><button class="btn btn-floating amber darken-2 waves-effect waves-light" name="theme" value="light">
                     <i class="material-icons">wb_sunny</i></button></a>
             </li>
         {% endif %}
-        {% if not theme.mode.dark %}
+        {# multi if logic set for medium theme to be added #}
+        {% if theme.mode != 'dark' %}
             <li>
                 <a><button class="btn btn-floating grey darken-3 waves-effect waves-light" name="theme" value="dark">
                     <i class="material-icons">brightness_2</i></button></a>
