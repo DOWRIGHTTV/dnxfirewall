@@ -1,5 +1,7 @@
 {% extends('layout.html') %}
 {% block body %}
+{# aliasing for now so we can reuse template #}
+{% set page_settings = ip_settings %}
 <section id="tabs-bar">
     <div class="container">
         <div class="row">
@@ -14,13 +16,11 @@
             </div>
         </div>
     </div>
+    {% include 'includes/_sec_profiles.html' %}
 </section>
-{# aliasing for now so we can reuse template #}
-{% set page_settings = ip_settings %}
 {% set cat_options = [(0,'radio_button_unchecked'), (1,'file_upload'), (1,'file_download'), (1,'swap_vert')] %}
 <section id="reputation" class="section">
     <div class="container">
-        {% include 'includes/_sec_profiles.html' %}
         <div class="row">
             <div class="col s12 m10 offset-m1">
                 <div class="card-panel hoverable {{theme.card}}">

@@ -1,5 +1,7 @@
 {% extends('layout.html') %}
 {% block body %}
+{# aliasing for now so we can reuse template #}
+{% set page_settings = ip_settings %}
 <section id="tabs-bar">
     <div class="container">
         <div class="row">
@@ -17,6 +19,7 @@
             </div>
         </div>
     </div>
+    {% include 'includes/_sec_profiles.html' %}
 </section>
 <section id="categories" class="section">
     <div class="container">
