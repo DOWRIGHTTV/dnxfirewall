@@ -891,8 +891,8 @@ def create_switch(label: str, name: str, *, tab: int = 1, checked: int = 0, enab
 @app.template_global()
 def create_tab(active_tab: int, cur_tab: int, href: str) -> str:
     tab = (
-        f'<li class="{context_global.theme.tab_classes}">'
-        f'<a href="#{href}" onclick="activeTab({cur_tab})" class="{context_global.theme.tab_text}'
+        f'<li class="{context_global.theme["tab_classes"]}">'
+        f'<a href="#{href}" onclick="activeTab({cur_tab})" class="{context_global.theme["tab_text"]}'
     )
 
     if (cur_tab == active_tab):
@@ -911,7 +911,7 @@ def create_button_with_modal(
     button = (
         f'<a class="{btn_classes}" href="#modal{index}-{num}"><i class="material-icons">{icon}</i></a>'
         f'<div id="modal{index}-{num}" class="modal">'
-          f'<div class="modal-content"><h5 class="{context_global.theme.modal_text}">{message}</h5></div>'
+          f'<div class="modal-content"><h5 class="{context_global.theme["modal_text"]}">{message}</h5></div>'
           f'<form method="POST"><input type="hidden" name="tab" value="{tab}">'
             '<div class="modal-footer">'
               f'<button name="{btn_name}" value="{btn_value}" class="btn waves-effect waves-light">YES</button>'
