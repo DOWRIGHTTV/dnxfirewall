@@ -1,51 +1,65 @@
 @import 'materialize.css';
 /* provides support for nested menus in nav */
+/* LOGO adjustments override */
+/* navigation menu type size and pixel adjustment override */
+@media only screen and (max-width: 1550px) {
+  .remove-big-menu {
+    display: none !important; } }
+@media only screen and (max-width: 1549px) {
+  .show-mobile-menu {
+    display: block !important; } }
+@media only screen and (max-width: 992px) {
+  nav .brand-logo {
+    left: 50%;
+    transform: none; } }
+nav .nav-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; }
+nav .brand-logo {
+  color: #fff;
+  display: inline-block;
+  font-size: 2.1rem;
+  padding: 0; }
+nav .dropdown-content a {
+    color: #e51c23; }
+nav i.material-icons {
+    font-size: 24px;
+    margin-right: 6px; }
 nav ul a {
     /*font-size: .96rem;*/
     padding: 0 10px;
     min-width: 130px; }
 
-nav i.material-icons {
-    font-size: 24px;
-    margin-right: 6px; }
-
 .dropdown-content-trigger {
     overflow-y: visible; }
 
-.dropdown-content .dropdown-content {
+.dropdown-content {
+  min-width: 130px; }
+  .dropdown-content .dropdown-content {
     left: -94%;
     top: 36px; }
-
-.dropdown-content {
-    min-width: 130px; }
-
-.dropdown-content li > a {
+  .dropdown-content li > a {
     font-weight: bold;
     padding: 14px 6px; }
-
-.dropdown-content li > a > i {
-    float: left;
-    margin: 0 4px;
-    width: 28px; }
-
-.dropdown-content li > a > i.right {
-    float: right; }
-
-.dropdown-content li > a.expand {
-    font-size: 13px;
-    text-align: center;
-    cursor: default; }
-
-.dropdown-content li > a.expand > i {
-    margin: 0 -4px 0 2px; }
-
-/* -- */
-nav .brand-logo {
-    padding-right: 5px;
-    padding-left: 5px; }
-
-nav .dropdown-content a {
-    color: #e51c23; }
+    .dropdown-content li > a > i {
+      float: left;
+      margin: 0 4px;
+      width: 28px; }
+    .dropdown-content li > a > i.right {
+      float: right; }
+    .dropdown-content li > a.expand {
+      font-size: 13px;
+      text-align: center;
+      cursor: default; }
+    .dropdown-content li > a.expand > i {
+      margin: 0 -4px 0 2px; }
+.tabs .indicator {
+  background-color: #404b77; }
+.tabs .tab a {
+  color: rgba(238, 110, 115, 0.7); }
+  .tabs .tab a:hover, .tabs .tab a.active {
+    color: #45649f; }
 
 #statistics {
     min-height: 300px; }
@@ -55,20 +69,16 @@ nav .dropdown-content a {
 .input-field input[type=email]:focus+label,
 .input-field input[type=password]:focus+label {
   color: #e91e63; }
-
 .input-field input[type=date]:focus,
 .input-field input[type=text]:focus,
 .input-field input[type=email]:focus,
 .input-field input[type=password]:focus {
   border-bottom: 2px solid #e91e63;
   box-shadow: none; }
-
 .login-page {
   margin: 0 auto; }
-
 .login-form {
   width: 450px; }
-
 .col.s12.z-depth-4.card-panel {
   width: 315px;
   word-break: break-all; }
@@ -77,40 +87,12 @@ nav .dropdown-content a {
 .row-flex {
   display: flex;
   flex-wrap: wrap; }
-
 .card-panel-eql {
   height: calc(100% - 12px); }
-
 .card-panel {
   border-radius: 25px;
   transition: all .25s;
   box-shadow: 0 16px 24px 2px rgba(0, 0, 0, 0.14), 0 6px 30px 5px rgba(0, 0, 0, 0.12), 0 8px 10px -7px rgba(0, 0, 0, 0.2); }
-
-/* LOGO adjustments override */
-@media only screen and (max-width: 992px) {
-  nav .brand-logo {
-    left: 50%;
-    transform: none; } }
-
-nav .nav-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: space-between; }
-
-nav .brand-logo {
-  color: #fff;
-  display: inline-block;
-  font-size: 2.1rem;
-  padding: 0; }
-
-/* navigation menu type size and pixel adjustment override */
-@media only screen and (max-width: 1550px) {
-  .remove-big-menu {
-    display: none !important; } }
-
-@media only screen and (max-width: 1549px) {
-  .show-mobile-menu {
-    display: block !important; } }
 
 /* icon color change */
 i.icon-red {

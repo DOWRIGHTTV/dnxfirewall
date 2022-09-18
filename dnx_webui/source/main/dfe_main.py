@@ -839,10 +839,11 @@ def set_theme_values() -> None:
     theme = context_global.theme = {
         'mode': context_global.settings['theme'],  # // for now until we pass all settings into template context
         'nav_text': 'blue-grey-text text-darken-2',
-        'subnav_text_color': 'blue-grey-text text-darken-3',
-        'tab_text_color': 'blue-grey-text text-lighten-2',
-        'icon_color': 'teal-text text-lighten-2',
-        'modal_text_style': 'blue-grey-text center',
+        'subnav_text': 'blue-grey-text text-darken-3',
+        'tab_text': 'blue-grey-text text-lighten-2',
+        'tab_classes': 'tab col s4 l3 xl2',
+        'icon': 'teal-text text-lighten-2',
+        'modal_text': 'blue-grey-text center',
     }
 
     if (context_global.settings['theme'] == 'dark'):
@@ -887,23 +888,40 @@ def create_switch(label: str, name: str, *, tab: int = 1, checked: int = 0, enab
         '<span class="lever"></span>On</label></div></div></form>'
     ])
 
-
-# tabs html | NOTE: find a better place to put this.
-tab_classes = 'tab col s4 l3 xl2'
-tab_text_color = 'blue-grey-text text-lighten-2'
 @app.template_global()
 def create_tab(active_tab: int, cur_tab: int, href: str) -> str:
-
-    name = href.replace('-', ' ').title()
-
-    tab = f'<li class="{tab_classes}"><a href="#{href}" onclick="activeTab({cur_tab})" class="{tab_text_color}'
+    tab = (
+        f'<li class="{context_global.theme.tab_classes}">'
+        f'<a href="#{href}" onclick="activeTab({cur_tab})" class="{context_global.theme.tab_text}'
+    )
 
     if (cur_tab == active_tab):
         tab += ' active'
 
-    tab += f'">{name}</a></li>'
+    tab += f'">{href.replace("-", " ").title()}</a></li>'
 
     return tab
+
+@app.template_global()
+def create_button_with_modal(
+        classes: str, icon: str, index: int, num: int, tab: int, btn_name: str, btn_value: str, message: str) -> str:
+
+    btn_classes = f'{classes} waves-effect waves-light modal-trigger'
+
+    button = (
+        f'<a class="{btn_classes}" href="#modal{index}-{num}"><i class="material-icons">{icon}</i></a>'
+        f'<div id="modal{index}-{num}" class="modal">'
+          f'<div class="modal-content"><h5 class="{context_global.theme.modal_text}">{message}</h5></div>'
+          f'<form method="POST"><input type="hidden" name="tab" value="{tab}">'
+            '<div class="modal-footer">'
+              f'<button name="{btn_name}" value="{btn_value}" class="btn waves-effect waves-light">YES</button>'
+              '<a class="modal-close waves-effect waves-green btn-flat">Cancel</a>'
+            '</div>'
+          '</form>'
+        '</div>'
+    )
+
+    return button
 
 @app.template_global()
 def merge_items(a1, a2):

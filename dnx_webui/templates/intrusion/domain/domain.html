@@ -1,17 +1,19 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="tabs-bar" class="tabsbar">
+<section id="tabs-bar">
     <div class="container">
         <div class="row">
-            <div class="col s12 m12 l12 xl12">
-                <ul class="tabs">
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab==1 %} class="active" {% endif %} href="#categories"
-                            onclick="activeTab(1)">Categories</a></li>
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab==2 %} class="active" {% endif %} href="#tlds"
-                            onclick="activeTab(2)">TLDs</a></li>
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab==3 %} class="active" {% endif %} href="#keywords"
-                            onclick="activeTab(3)">Keywords</a></li>
-                </ul>
+            <div class="col s8 offset-s2">
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <ul class="tabs tabs-fixed-width">
+                        <li class="tab col s3 m3 l4 xl2"><a {% if tab==1 %} class="active" {% endif %} href="#categories"
+                                onclick="activeTab(1)">Categories</a></li>
+                        <li class="tab col s3 m3 l4 xl2"><a {% if tab==2 %} class="active" {% endif %} href="#tlds"
+                                onclick="activeTab(2)">TLDs</a></li>
+                        <li class="tab col s3 m3 l4 xl2"><a {% if tab==3 %} class="active" {% endif %} href="#keywords"
+                                onclick="activeTab(3)">Keywords</a></li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>

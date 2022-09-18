@@ -87,37 +87,37 @@
 </header>
 {% if navi and role == 'admin' %}
     <!-- full nav dropdown - large screens -->
-    {# FIREWALL DROPDOWN - TIER 2 #}
+    {# RULES DROPDOWN - TIER 2 #}
     <ul id="rules-dropdown" class="dropdown-content dropdown-content-trigger">
         <li {% if uri_path[1] == 'firewall' %} class='active' {% endif %}>
             <a href="rules/firewall" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ icon_color }}">blur_linear</i>Firewall
+                <i class="material-icons {{ theme.icon|safe }}">blur_linear</i>Firewall
             </a>
         </li>
         <li {% if uri_path[1] == 'nat' %} class='active' {% endif %}>
             <a href="rules/nat" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ icon_color }}">call_split</i>NAT
+                <i class="material-icons {{ theme.icon|safe }}">call_split</i>NAT
             </a>
         </li>
         <li {% if uri_path[1] == 'overrides' %} class='active' {% endif %}>
             <a class="dropdown-trigger-hoverable dropdown-trigger-nested expand {{ theme.subnav_text }}"
                 data-target="overrides-dropdown">
-                <i class="material-icons {{ icon_color }}">donut_small</i>
+                <i class="material-icons {{ theme.icon|safe }}">donut_small</i>
                 Overrides
                 <i class="material-icons right {{ theme.subnav_text }}">chevron_right</i>
             </a>
         </li>
     </ul>
     {# OVERRIDES DROPDOWN TIER - 3 #}
-    <ul id="overrides-dropdown" class="dropdown-content">
+    <ul id="overrides-dropdown" class="dropdown-content dropdown-content-nested">
         <li {% if uri_path[3] == 'whitelist' %} class='active' {% endif %}>
             <a href="rules/overrides/whitelist" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ icon_color }}">thumb_up</i>Whitelist
+                <i class="material-icons {{ theme.icon|safe }}">thumb_up</i>Whitelist
             </a>
         </li>
         <li {% if uri_path[3] == 'blacklist' %} class='active' {% endif %}>
             <a href="rules/overrides/blacklist" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ icon_color }}">thumb_down</i>Blacklist
+                <i class="material-icons {{ theme.icon|safe }}">thumb_down</i>Blacklist
             </a>
         </li>
     </ul>
@@ -125,20 +125,20 @@
     <ul id="intrusion-dropdown" class="dropdown-content dropdown-content-trigger">
         <li {% if uri_path[1] == 'ip' %} class='active' {% endif %}>
             <a href="intrusion/ip" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ icon_color }}">public</i>IP
+                <i class="material-icons {{ theme.icon|safe }}">public</i>IP
             </a>
         </li>
         <li {% if uri_path[1] == 'domain' %} class='active' {% endif %}>
             <a href="intrusion/domain" class="dropdown-trigger-hoverable dropdown-trigger-nested
                 {{ theme.nav_text }}" data-target="domain-dropdown" data-hover="hover">
-                <i class="material-icons left {{ icon_color }}">dns</i>
+                <i class="material-icons left {{ theme.icon|safe }}">dns</i>
                 Domain
                 <i class="material-icons right {{ theme.subnav_text }}">chevron_right</i>
             </a>
         </li>
         <li {% if uri_path[1] == 'ips' %} class='active' {% endif %}>
             <a href="/intrusion/ips" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ icon_color }}">report</i>IPS/IDS
+                <i class="material-icons {{ theme.icon|safe }}">report</i>IPS/IDS
             </a>
         </li>
     </ul>
@@ -146,7 +146,7 @@
     <ul id="domain-dropdown" class="dropdown-content dropdown-content-nested">
         <li {% if uri_path[2] == 'categories' %} class='active' {% endif %}>
             <a href="intrusion/domain/categories" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ icon_color }}">library_books</i>Categories
+                <i class="material-icons {{ theme.icon|safe }}">library_books</i>Categories
             </a>
         </li>
     </ul>
@@ -155,7 +155,7 @@
         <li {% if uri_path[1] == 'settings' %} class='active' {% endif %}>
             <a class="dropdown-trigger-hoverable dropdown-trigger-nested expand {{ theme.subnav_text }}"
                 data-target="settings-dropdown">
-                <i class="material-icons left {{ icon_color }}">settings</i>
+                <i class="material-icons left {{ theme.icon|safe }}">settings</i>
                 Settings
                 <i class="material-icons right {{ theme.subnav_text }}">chevron_right</i>
             </a>
@@ -163,24 +163,24 @@
         <li {% if uri_path[1] == 'log' %} class='active' {% endif %}>
             <a class="dropdown-trigger-hoverable dropdown-trigger-nested expand {{ theme.subnav_text }}"
                 data-target="logs-dropdown">
-                <i class="material-icons left {{ icon_color }}">folder</i>
+                <i class="material-icons left {{ theme.icon|safe }}">folder</i>
                 Logs
                 <i class="material-icons right {{ theme.subnav_text }}">chevron_right</i>
             </a>
         </li>
         <li {% if uri_path[1] == 'users' %} class='active' {% endif %}>
             <a href="system/users" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ icon_color }}">group</i>Users
+                <i class="material-icons {{ theme.icon|safe }}">group</i>Users
             </a>
         </li>
         <li {% if uri_path[1] == 'backups' %} class='active' {% endif %}>
             <a href="system/backups" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ icon_color }}">backup</i>Backups
+                <i class="material-icons {{ theme.icon|safe }}">backup</i>Backups
             </a>
         </li>
         <li {% if uri_path[1] == 'services' %} class='active' {% endif %}>
             <a href="system/services" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ icon_color }}">sync</i>Services
+                <i class="material-icons {{ theme.icon|safe }}">sync</i>Services
             </a>
         </li>
     </ul>
@@ -188,22 +188,22 @@
     <ul id="settings-dropdown" class="dropdown-content dropdown-content-nested">
         <li {% if uri_path[1] == 'dns' %} class='active' {% endif %}>
             <a href="system/settings/dns" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ icon_color }}">dns</i>DNS
+                <i class="material-icons {{ theme.icon|safe }}">dns</i>DNS
             </a>
         </li>
         <li {% if uri_path[1] == 'dhcp' %} class='active' {% endif %}>
             <a href="system/settings/dhcp" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ icon_color }}">filter_b_and_w</i>DHCP
+                <i class="material-icons {{ theme.icon|safe }}">filter_b_and_w</i>DHCP
             </a>
         </li>
         <li {% if uri_path[1] == 'interface' %} class='active' {% endif %}>
             <a href="system/settings/interface" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ icon_color }}">format_italic</i>Interface
+                <i class="material-icons {{ theme.icon|safe }}">format_italic</i>Interface
             </a>
         </li>
         <li {% if uri_path[1] == 'logging' %} class='active' {% endif %}>
             <a href="system/settings/logging" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ icon_color }}">description</i>Logging
+                <i class="material-icons {{ theme.icon|safe }}">description</i>Logging
             </a>
         </li>
         <!--    <li {% if uri_path[1] == 'syslog' %} class='active' {% endif %}>
@@ -213,17 +213,17 @@
     <ul id="logs-dropdown" class="dropdown-content dropdown-content-nested">
         <li {% if uri_path[2] == 'traffic' %} class='active' {% endif %}>
             <a href="system/log/traffic" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ icon_color }}">merge_type</i>Traffic
+                <i class="material-icons {{ theme.icon|safe }}">merge_type</i>Traffic
             </a>
         </li>
         <li {% if uri_path[2] == 'events' %} class='active' {% endif %}>
             <a href="system/log/events" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ icon_color }}">whatshot</i>Events
+                <i class="material-icons {{ theme.icon|safe }}">whatshot</i>Events
             </a>
         </li>
         <li {% if uri_path[2] == 'system' %} class='active' {% endif %}>
             <a href="system/log/system" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ icon_color }}">chrome_reader_mode</i>System
+                <i class="material-icons {{ theme.icon|safe }}">chrome_reader_mode</i>System
             </a>
         </li>
     </ul>
@@ -231,12 +231,12 @@
     <ul id="device-dropdown" class="dropdown-content">
         <li {% if uri_path[1] == 'restart' %} class='active' {% endif %}>
             <a href="device/restart" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ icon_color }}">refresh</i>Restart
+                <i class="material-icons {{ theme.icon|safe }}">refresh</i>Restart
             </a>
         </li>
         <li {% if uri_path[1] == 'shutdown' %} class='active' {% endif %}>
             <a href="device/shutdown" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ icon_color }}">power_settings_new</i>Shutdown
+                <i class="material-icons {{ theme.icon|safe }}">power_settings_new</i>Shutdown
             </a>
         </li>
     </ul>
@@ -251,7 +251,7 @@
         </li>
         <li {% if uri_path[0] == 'rules' %} class='active' {% endif %}>
             <a href="firewall" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ icon_color }}">security</i>Firewall
+                <i class="material-icons {{ theme.icon|safe }}">security</i>Firewall
             </a>
         </li>
         <li {% if uri_path[0] == 'intrusion' %} class='active' {% endif %}>
@@ -292,100 +292,100 @@
     <ul id="sidenav-settings-dropdown" class="dropdown-content">
         <li {% if uri_path[1] == 'dns' %} class='active' {% endif %}>
             <a href="settings/dns">
-                <i class="material-icons {{ icon_color }}">dns</i>DNS
+                <i class="material-icons {{ theme.icon|safe }}">dns</i>DNS
             </a>
         </li>
         <li {% if uri_path[1] == 'dhcp' %} class='active' {% endif %}>
             <a href="settings/dhcp">
-                <i class="material-icons {{ icon_color }}">filter_b_and_w</i>DHCP
+                <i class="material-icons {{ theme.icon|safe }}">filter_b_and_w</i>DHCP
             </a>
         </li>
         <li {% if uri_path[1] == 'interface' %} class='active' {% endif %}>
             <a href="settings/interface">
-                <i class="material-icons {{ icon_color }}">format_italic</i>Interface
+                <i class="material-icons {{ theme.icon|safe }}">format_italic</i>Interface
             </a>
         </li>
         <li {% if uri_path[1] == 'logging' %} class='active' {% endif %}>
             <a href="settings/logging">
-                <i class="material-icons {{ icon_color }}">description</i>Logging
+                <i class="material-icons {{ theme.icon|safe }}">description</i>Logging
             </a>
         </li>
         <!--    <li {% if uri_path[1] == 'syslog' %} class='active' {% endif %}>
             <a href="settings/syslog"><i class="material-icons {{icon_color}}">file_copy</i> Syslog</a></li> -->
         <li {% if uri_path[1] == 'categories' %} class='active' {% endif %}>
             <a href="settings/categories">
-                <i class="material-icons {{ icon_color }}">library_books</i>Categories
+                <i class="material-icons {{ theme.icon|safe }}">library_books</i>Categories
             </a>
         </li>
     </ul>
     <ul id="sidenav-device-dropdown" class="dropdown-content">
         <li {% if uri_path[1] == 'restart' %} class='active' {% endif %}>
             <a href="device/restart">
-                <i class="material-icons {{ icon_color }}">refresh</i>Restart
+                <i class="material-icons {{ theme.icon|safe }}">refresh</i>Restart
             </a>
         </li>
         <li {% if uri_path[1] == 'shutdown' %} class='active' {% endif %}>
             <a href="device/shutdown">
-                <i class="material-icons {{ icon_color }}">power_settings_new</i>Shutdown
+                <i class="material-icons {{ theme.icon|safe }}">power_settings_new</i>Shutdown
             </a>
         </li>
     </ul>
     <ul id="sidenav-advanced-dropdown" class="dropdown-content">
         <li {% if uri_path[1] == 'whitelist' %} class='active' {% endif %}>
             <a href="/rules/overrides/whitelist">
-                <i class="material-icons {{ icon_color }}">thumb_up</i>Whitelist
+                <i class="material-icons {{ theme.icon|safe }}">thumb_up</i>Whitelist
             </a>
         </li>
         <li {% if uri_path[1] == 'blacklist' %} class='active' {% endif %}>
             <a href="/rules/overrides/blacklist">
-                <i class="material-icons {{ icon_color }}">thumb_down</i>Blacklist
+                <i class="material-icons {{ theme.icon|safe }}">thumb_down</i>Blacklist
             </a>
         </li>
         <li {% if uri_path[1] == 'rules' %} class='active' {% endif %}>
             <a href="/rules/nat">
-                <i class="material-icons {{ icon_color }}">call_split</i>NAT
+                <i class="material-icons {{ theme.icon|safe }}">call_split</i>NAT
             </a>
         </li>
         <li {% if uri_path[1] == 'domain' %} class='active' {% endif %}>
             <a href="/intrusion/domain">
-                <i class="material-icons {{ icon_color }}">collections_bookmark</i>Domain
+                <i class="material-icons {{ theme.icon|safe }}">collections_bookmark</i>Domain
             </a>
         </li>
         <li {% if uri_path[1] == 'ip' %} class='active' {% endif %}>
             <a href="/intrusion/ip">
-                <i class="material-icons {{ icon_color }}">verified_user</i>IP
+                <i class="material-icons {{ theme.icon|safe }}">verified_user</i>IP
             </a>
         </li>
         <li {% if uri_path[1] == 'ips' %} class='active' {% endif %}>
             <a href="/intrusion/ips">
-                <i class="material-icons {{ icon_color }}">report</i>IPS/IDS
+                <i class="material-icons {{ theme.icon|safe }}">report</i>IPS/IDS
             </a>
         </li>
     </ul>
     <ul id="sidenav-system-dropdown" class="dropdown-content">
         <li {% if uri_path[1] == 'log' %} class='active' {% endif %}>
             <a href="system/logs">
-                <i class="material-icons {{ icon_color }}">assignment</i>Logs
+                <i class="material-icons {{ theme.icon|safe }}">assignment</i>Logs
             </a>
         </li>
         <li {% if uri_path[1] == 'reports' %} class='active' {% endif %}>
             <a href="system/reports">
-                <i class="material-icons {{ icon_color }}">assignment_late</i>Reports
+                <i class="material-icons {{ theme.icon|safe }}">assignment_late</i>Reports
             </a>
         </li>
         <li {% if uri_path[1] == 'users' %} class='active' {% endif %}>
             <a href="system/users">
-                <i class="material-icons {{ icon_color }}">group</i>Users
+                <i class="material-icons {{ theme.icon|safe }}">group</i>Users
             </a>
         </li>
         <li {% if uri_path[1] == 'backups' %} class='active' {% endif %}>
             <a href="system/backups">
-                <i class="material-icons {{ icon_color }}">backup</i>Backups
+                <i class="material-icons {{ theme.icon|safe }}">backup</i>Backups
             </a>
         </li>
         <li {% if uri_path[1] == 'services' %} class='active' {% endif %}>
             <a href="system/services">
-                <i class="material-icons {{ icon_color }}">sync</i>Services
+                <i class="material-icons {{ theme.icon|safe }}">sync</i>Services
             </a>
         </li>
     </ul>
