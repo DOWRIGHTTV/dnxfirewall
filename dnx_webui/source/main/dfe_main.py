@@ -550,7 +550,12 @@ def dnx_login():
     if (session.get('user', None)):
         return redirect(url_for('dnx_dashboard'))
 
-    login_error = ''
+    page_settings = {
+        'navi': False, 'login_btn': False, 'idle_timeout': False,
+        'standard_error': False, 'login_error': '',
+        'uri_path': ['login']
+    }
+
     if (request.method == 'POST'):
 
         authenticated, username, user_role = Authentication.user_login(request.form, request.remote_addr)
@@ -561,12 +566,9 @@ def dnx_login():
 
             return redirect(url_for('dnx_dashboard'))
 
-        login_error = 'Invalid Credentials. Please try again.'
+        page_settings['login_error'] = 'Invalid Credentials. Please try again.'
 
-    return render_template(
-        'main/login.html', navi=False, login_btn=False, idle_timeout=False,
-        standard_error=False, login_error=login_error, uri_path=['login']
-    )
+    return render_template('main/login.html', theme=context_global.theme, **page_settings)
 
 # --------------------------------------------- #
 #  BLOCKED PAGE | dns redirect
@@ -598,18 +600,14 @@ def dnx_blocked() -> str:
         return render_template('main/not_authorized.html', theme=context_global.theme, **page_settings)
 
     with DBConnector() as firewall_db:
-        domain_info = firewall_db.execute(
-            'main/blocked_domain', domain=blocked_domain, src_ip=request.remote_addr
-        )
+        domain_info = firewall_db.execute('main/blocked_domain', domain=blocked_domain, src_ip=request.remote_addr)
 
     if (not domain_info):
         session.pop('user', None)
 
         return render_template('main/not_authorized.html', theme=context_global.theme, **page_settings)
 
-    page_settings.update({
-        'standard_error': False, 'src_ip': request.remote_addr, 'blocked': domain_info
-    })
+    page_settings.update({'standard_error': False, 'src_ip': request.remote_addr, 'blocked': domain_info})
 
     return render_template('main/blocked.html', theme=context_global.theme, **page_settings)
 
