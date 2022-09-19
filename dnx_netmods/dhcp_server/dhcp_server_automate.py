@@ -142,9 +142,9 @@ class ServerConfiguration(ConfigurationMixinBase):
         self._initialize.done()
 
     def _load_interfaces(self) -> None:
-        fw_intf: dict[str, dict] = load_configuration('system').get_dict('interfaces->builtins')
+        fw_intf: dict[str, dict] = load_configuration('system', cfg_type='global').get_dict('interfaces->builtins')
 
-        dhcp_intfs: list[Item] = load_configuration('dhcp_server').get_items('interfaces->builtins')
+        dhcp_intfs: list[Item] = load_configuration('dhcp_server', cfg_type='global').get_items('interfaces->builtins')
 
         # interface friendly name e.g. wan
         for intf_name, settings in dhcp_intfs:
@@ -230,7 +230,7 @@ class Leases(dict):
     @dnx_queue(Log, name='Leases')
     # store lease table changes to disk. if the record is not present, it indicates the record needs to be removed.
     def _storage_queue(self, dhcp_lease: RECORD_CONTAINER):
-        with ConfigurationManager('dhcp_server', ext='lease') as dnx:
+        with ConfigurationManager('dhcp_server', ext='lease', cfg_type='global') as dnx:
             dhcp_settings: ConfigChain = dnx.load_configuration()
 
             # converting ip address ints to strings since they will be json keys

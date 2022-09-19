@@ -19,7 +19,7 @@ DISABLED_MANAGEMENT_SERVICES = ['cli']
 
 
 def load_page(form: Args) -> dict[str, Union[list, dict[dict[str, int]]]]:
-    dnx_settings = load_configuration('system')
+    dnx_settings = load_configuration('system', cfg_type='global')
 
     all_services = []
     for service, desc in dnx_settings.get_items('services'):
@@ -57,7 +57,7 @@ def update_page(form: Form) -> Optional[str]:
         return None
 
     # start/stop/restart services parsing.
-    valid_services: list = load_configuration('system').get_list('services')
+    valid_services: list = load_configuration('system', cfg_type='global').get_list('services')
 
     if ('restart_svc' in form):
         service = 'dnx-' + form.get('restart_svc', '').replace(' ', '-')
@@ -105,7 +105,7 @@ def validate_management_access(fields: config) -> Optional[ValidationError]:
 # ==============
 
 def configure_management_access(fields: config):
-    with ConfigurationManager('system') as dnx:
+    with ConfigurationManager('system', cfg_type='global') as dnx:
         mgmt_settings = dnx.load_configuration()
 
         mgmt_settings[f'mgmt_access->{fields.zone}->{fields.service}'] = fields.action

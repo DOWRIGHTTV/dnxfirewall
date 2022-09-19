@@ -59,7 +59,7 @@ return_data: tuple[bool, dict[str, Union[bool, str]]]
 def load_page(section: str) -> dict[str, Any]:
     lzone_map: dict[int, str] = {ANY_ZONE: 'any'}
 
-    dnx_settings: ConfigChain = load_configuration('system')
+    dnx_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
     # building out interface to zone map NOTE: builtins only for now
     for intf_type in ['builtins', 'extended']:
@@ -278,7 +278,7 @@ def validate_firewall_commit(fw_rules_json: str, /):
     validated_rules: dict = {}
 
     # TODO: make zone map integrated more gooder
-    dnx_interfaces = load_configuration('system').get_items('interfaces->builtins')
+    dnx_interfaces = load_configuration('system', cfg_type='global').get_items('interfaces->builtins')
 
     # TODO: same as above. not needed?
     lzone_map: dict[str, int] = {zone_name: zone_info['zone'] for zone_name, zone_info in dnx_interfaces}
