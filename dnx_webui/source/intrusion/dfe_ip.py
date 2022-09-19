@@ -14,6 +14,8 @@ def load_page(form: Form) -> dict:
     proxy_settings: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/ip')
     country_map: ConfigChain = load_configuration('geolocation', filepath='dnx_webui/data')
 
+    proxy_global: ConfigChain = load_configuration('global', cfg_type='security/ip')
+
     # TODO: get selected security profile setting and render accordingly. lets start with converting current config to
     #  use "profile 1", with proxy set for profiles. once that is good then we can expand to configure more profiles.
 
@@ -45,7 +47,7 @@ def load_page(form: Form) -> dict:
         elif (geo_direction == DIR.ALL):
             geolocation_append((country, direction))
 
-    tr_settings = proxy_settings['time_restriction->start'].split(':')
+    tr_settings = proxy_global['time_restriction->start'].split(':')
 
     hour, minutes = int(tr_settings[0]), int(tr_settings[1])
     suffix = 'AM'
@@ -53,7 +55,7 @@ def load_page(form: Form) -> dict:
         hour -= 12
         suffix = 'PM'
 
-    tr_length = proxy_settings['time_restriction->length']
+    tr_length = proxy_global['time_restriction->length']
 
     tr_length /= 3600
     tlen_hour = tr_length
@@ -67,7 +69,7 @@ def load_page(form: Form) -> dict:
     tr_settings = {
         'hour': hour, 'minutes': minutes, 'suffix': suffix,
         'length_hour': tlen_hour, 'length_minutes': tlen_minutes,
-        'enabled': proxy_settings['time_restriction->enabled']
+        'enabled': proxy_global['time_restriction->enabled']
     }
 
     ipp_settings = {
