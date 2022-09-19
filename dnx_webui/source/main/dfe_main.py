@@ -33,7 +33,7 @@ general_error_page = 'main/general_error.html'
 application_error_page = 'main/application_error.html'
 
 # a new key is generated on every system start and stored in system config.
-app_config = load_configuration('system')
+app_config = load_configuration('system', cfg_type='global')
 app.secret_key = app_config['flask->key']
 
 app.jinja_env.trim_blocks   = True
