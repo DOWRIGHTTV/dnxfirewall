@@ -261,7 +261,7 @@ def configure_interfaces() -> None:
     interfaces_detected: list[str] = check_system_interfaces()
 
     user_intf_config: dict[str, str] = collect_interface_associations(interfaces_detected)
-    public_dns_servers: dict = load_data('dns_server.cfg')['resolvers']
+    public_dns_servers: dict = load_data('dns_server.cfg', cfg_type='system/global')['resolvers']
 
     set_dnx_interfaces(user_intf_config)
     set_dhcp_interfaces(user_intf_config)
@@ -437,7 +437,7 @@ def install_packages() -> list:
 
 # this is a no op if already on configured branch, but we will use it to return branch name also.
 def checkout_configured_branch() -> str:
-    configured_branch: str = load_data('system.cfg', filepath=f'{SYSTEM_DIR}/data/usr')['branch']
+    configured_branch: str = load_data('system.cfg', cfg_type='global', filepath=f'{SYSTEM_DIR}/data/usr')['branch']
 
     branch_name = 'dnxfirewall-dev' if configured_branch == 'development' else 'dnxfirewall'
 

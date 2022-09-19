@@ -65,7 +65,7 @@ class LanRestrict:
         self.proxy = proxy
         self.initialize = Initialize(Log, proxy.__name__)
 
-        cls._active = load_data('ip_proxy.timer')['active']
+        cls._active = load_data('ip_proxy.timer', cfg_type='system/global')['active']
 
         threading.Thread(target=self._get_settings).start()
         threading.Thread(target=self._tracker).start()
@@ -115,7 +115,7 @@ class LanRestrict:
         restriction_end:   float = restriction_start + restriction_length
 
         if (self.is_active):
-            restriction_end: float = load_data('ip_proxy.timer')['end']
+            restriction_end: float = load_data('ip_proxy.timer', cfg_type='system/global')['end']
 
         else:
             self._write_end_time(restriction_end)

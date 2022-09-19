@@ -29,7 +29,7 @@ class Interface:
     @staticmethod
     def bandwidth():
         intstat = {}
-        interface_bandwidth = load_data('interface.stat', cfg_type='global')
+        interface_bandwidth = load_data('interface.stat', cfg_type='system/global')
         for interface, value in interface_bandwidth.items():
             rx = str(round(int(value[0])/1024, 2)) + ' MB/s'
             tx = str(round(int(value[1])/1024, 2)) + ' MB/s'
@@ -168,7 +168,7 @@ class System:
 
     @staticmethod
     def dns_status() -> dict:
-        dns_servers_status: dict = load_data('dns_server.stat', cfg_type='global')
+        dns_servers_status: dict = load_data('dns_server.stat', cfg_type='system/global')
         dns_server: ConfigChain = load_configuration('dns_server', cfg_type='global')
 
         tls_enabled = dns_server['tls->enabled']

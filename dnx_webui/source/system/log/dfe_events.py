@@ -93,7 +93,7 @@ def format_row(row: list, users: dict) -> list[str]:
     return [str(x).lower().replace('_', ' ') for x in entries]
 
 def load_infected_clients() -> list:
-    dhcp_server: dict = load_data('dhcp_server.cfg')
+    dhcp_server: dict = load_data('dhcp_server.cfg', cfg_type='system/global')
     users = dhcp_server['reservations']
 
     return get_table_data(action='all', table='infectedclients', routine='last', users=users)

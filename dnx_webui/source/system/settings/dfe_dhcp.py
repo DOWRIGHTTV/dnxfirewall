@@ -178,11 +178,11 @@ def configure_dhcp_settings(dhcp_settings: config):
         dnx.write_configuration(server_settings.expanded_user_data)
 
 def configure_reservation(dhcp: config, action: CFG) -> None:
-    with ConfigurationManager('dhcp_server') as dnx:
+    with ConfigurationManager('dhcp_server', cfg_type='global') as dnx:
         dhcp_server_settings: ConfigChain = dnx.load_configuration()
 
         if (action is CFG.ADD):
-            dhcp_leases = load_data('dhcp_server.lease')
+            dhcp_leases = load_data('dhcp_server.lease', cfg_type='system/global')
             configured_reservations = dhcp_server_settings.searchable_user_data['reservations']
             reserved_ips = {host['ip_address'] for host in configured_reservations}
 
@@ -208,7 +208,7 @@ def configure_reservation(dhcp: config, action: CFG) -> None:
         dnx.write_configuration(dhcp_server_settings.expanded_user_data)
 
 def remove_dhcp_lease(ip_addr: str) -> None:
-    with ConfigurationManager('dhcp_server') as dnx:
+    with ConfigurationManager('dhcp_server', cfg_type='global') as dnx:
         dhcp_leases: ConfigChain = dnx.load_configuration()
 
         try:
