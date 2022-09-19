@@ -100,12 +100,11 @@ class LogService:
         # NOTE: consider moving this into the DBConnector, so it can report if no exc are raised.
         Log.debug('completed blocked database cleaning')
 
-    @cfg_read_poller('logging_client')
-    def get_settings(self, cfg_file: str) -> None:
-        log_settings = load_configuration(cfg_file)
+    @cfg_read_poller('logging_client', cfg_type='global')
+    def get_settings(self, logger_settings: ConfigChain) -> None:
 
-        self.log_length = log_settings['logging->length']
-        self.log_level = log_settings['logging->level']
+        self.log_length = logger_settings['logging->length']
+        self.log_level = logger_settings['logging->level']
 
         self._initialize.done()
 

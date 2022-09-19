@@ -60,9 +60,8 @@ class ServerConfiguration(ConfigurationMixinBase):
 
         return Log, threads, 3
 
-    @cfg_read_poller('dhcp_server')
-    def _get_settings(self, cfg_file: str) -> None:
-        dhcp_settings: ConfigChain = load_configuration(cfg_file)
+    @cfg_read_poller('dhcp_server', cfg_type='global')
+    def _get_settings(self, dhcp_settings: ConfigChain) -> None:
 
         # updating user configuration items per interface in memory.
         for intf in dhcp_settings.get_values('interfaces->builtins'):
@@ -85,9 +84,10 @@ class ServerConfiguration(ConfigurationMixinBase):
 
         self._initialize.done()
 
-    @cfg_read_poller('dhcp_server')
-    def _get_server_options(self, cfg_file: str) -> None:
-        builtin_intfs: list[Item] = load_configuration(cfg_file).get_items('interfaces->builtins')
+    @cfg_read_poller('dhcp_server', cfg_type='global')
+    def _get_server_options(self, dhcp_settings: ConfigChain) -> None:
+
+        builtin_intfs: list[Item] = dhcp_settings.get_items('interfaces->builtins')
 
         # will wait for 2 threads to check in before running code.
         # allows the necessary settings to be initialized on startup before this thread continues.
@@ -119,9 +119,8 @@ class ServerConfiguration(ConfigurationMixinBase):
         self._initialize.done()
 
     # loading the user configured dhcp reservations from json config file into memory.
-    @cfg_read_poller('dhcp_server')
-    def _get_reservations(self, cfg_file: str) -> None:
-        dhcp_settings: ConfigChain = load_configuration(cfg_file)
+    @cfg_read_poller('dhcp_server', cfg_type='global')
+    def _get_reservations(self, dhcp_settings: ConfigChain) -> None:
 
         # dict comp that retains all infos of stored json data, but converts ip address into objects
         self.leases.reservations = {

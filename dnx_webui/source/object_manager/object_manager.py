@@ -44,10 +44,10 @@ DATA_DIR = f'{HOME_DIR}/dnx_webui/data'
 
 DISK_BUFFER = f'{DATA_DIR}/usr/disk_buffer'
 
-SYSTEM_DB = f'{DATA_DIR}/firewall_objects.db'
+SYSTEM_DB = f'{DATA_DIR}/system/firewall_objects.db'
 USER_DB   = f'{DATA_DIR}/usr/firewall_objects.db'
 
-DB_LOCK = f'{DATA_DIR}/firewall_objects.lock'
+DB_LOCK = f'{DATA_DIR}/system/firewall_objects.lock'
 
 BUILTIN_RANGE = (1, 9999)  # probably not necessary
 USER_RANGE = (10000, 999999)

@@ -12,7 +12,7 @@ from dnx_gentools.file_operations import ConfigurationManager, load_configuratio
 
 # TODO: if system category gets disabled that had keyword enabled. it does not disable the keyword search.
 def load_page(_: Form):
-    dns_proxy: ConfigChain = load_configuration('dns_proxy')
+    dns_proxy: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
 
     domain_settings = {
         'default': dns_proxy.get_items('categories->default'),
@@ -50,13 +50,10 @@ def update_page(form: Form) -> tuple[bool, dict]:
 # ==============
 def validate_domain_categories(category: config, *, ruleset: str) -> Optional[ValidationError]:
 
-    dns_proxy: ConfigChain = load_configuration('dns_proxy')
+    dns_proxy: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
 
     if (ruleset in ['default', 'user_defined']):
         cat_list = dns_proxy.get_list(f'categories->{ruleset}')
-
-        if category.name in ['malicious', 'cryptominer']:
-            return ValidationError('high risk categories cannot be disabled at this time.')
 
     elif (ruleset in ['tld']):
         cat_list = dns_proxy.get_list('tld')
@@ -84,12 +81,10 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[Va
 # CONFIGURATION
 # ==============
 def configure_domain_categories(category: config, *, ruleset: str):
-    with ConfigurationManager('dns_proxy') as dnx:
+    with ConfigurationManager('profiles/profile_1', cfg_type='security/dns') as dnx:
         dns_proxy: ConfigChain = dnx.load_configuration()
 
         if (ruleset in ['default', 'user_defined']):
-            if category.name in ['malicious', 'cryptominer']:
-                return
 
             dns_proxy[f'categories->{ruleset}->{category.name}->enabled'] = category.enabled
 

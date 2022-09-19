@@ -14,7 +14,7 @@ from dnx_iptools.iptables import IPTablesManager
 
 
 def load_page(_: Form) -> dict:
-    ips: ConfigChain = load_configuration('ips_ids')
+    ips: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/ids_ips')
 
     passive_block_ttl = ips['passive_block_ttl']
     ids_mode = ips['ids_mode']
@@ -37,7 +37,7 @@ def load_page(_: Form) -> dict:
     ddos_notify = False if ddos['enabled'] or nats_configured else True
     ps_notify   = False if portscan['enabled'] or nats_configured else True
 
-    # converting standard timestamp to a frontend readable string format
+    # converting standard timestamp to a frontend-readable string format
     passively_blocked_hosts = []
     pbh = System.ips_passively_blocked()
     for host, timestamp in pbh:
@@ -195,7 +195,7 @@ def update_page(form: Form) -> str:
 # VALIDATION
 # ==============
 def validate_portscan_reject(settings: config, /) -> Optional[ValidationError]:
-    ips: ConfigChain = load_configuration('ips_ids')
+    ips: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/ids_ips')
 
     current_prevention = ips['port_scan->enabled']
     if (settings.reject and not current_prevention):
@@ -209,7 +209,7 @@ def validate_passive_block_length(settings: config, /) -> Optional[ValidationErr
 # CONFIGURATION
 # ==============
 def configure_ddos(ddos: CFG) -> None:
-    with ConfigurationManager('ips_ids') as dnx:
+    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
         ips_settings: ConfigChain = dnx.load_configuration()
 
         ips_settings['ddos->enabled'] = ddos.enabled
@@ -217,7 +217,7 @@ def configure_ddos(ddos: CFG) -> None:
         dnx.write_configuration(ips_settings.expanded_user_data)
 
 def configure_ddos_limits(ddos_limits: config) -> None:
-    with ConfigurationManager('ips_ids') as dnx:
+    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
         ips_settings: ConfigChain = dnx.load_configuration()
 
         for protocol, limit in ddos_limits.items():
@@ -226,7 +226,7 @@ def configure_ddos_limits(ddos_limits: config) -> None:
         dnx.write_configuration(ips_settings.expanded_user_data)
 
 def configure_portscan(portscan: config, *, field: str) -> None:
-    with ConfigurationManager('ips_ids') as dnx:
+    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
         ips_settings: ConfigChain = dnx.load_configuration()
 
         if (field == 'enabled'):
@@ -241,7 +241,7 @@ def configure_portscan(portscan: config, *, field: str) -> None:
         dnx.write_configuration(ips_settings.expanded_user_data)
 
 def configure_general_settings(settings: config, /, field) -> None:
-    with ConfigurationManager('ips_ids') as dnx:
+    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
         ips_settings: ConfigChain = dnx.load_configuration()
 
         if (field == 'pb_length'):
@@ -253,7 +253,7 @@ def configure_general_settings(settings: config, /, field) -> None:
         dnx.write_configuration(ips_settings.expanded_user_data)
 
 def configure_ip_whitelist(whitelist: config, *, action: CFG) -> None:
-    with ConfigurationManager('ips_ids') as dnx:
+    with ConfigurationManager('global', cfg_type='security/ids_ips') as dnx:
         ips_settings: ConfigChain = dnx.load_configuration()
 
         if (action is CFG.ADD):
@@ -265,7 +265,7 @@ def configure_ip_whitelist(whitelist: config, *, action: CFG) -> None:
         dnx.write_configuration(ips_settings.expanded_user_data)
 
 def configure_dns_whitelist(settings: config, /) -> None:
-    with ConfigurationManager('ips_ids') as dnx:
+    with ConfigurationManager('global', cfg_type='security/ids_ips') as dnx:
         ips_settings: ConfigChain = dnx.load_configuration()
 
         ips_settings['whitelist->dns_servers'] = settings.action

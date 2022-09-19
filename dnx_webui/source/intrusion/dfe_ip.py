@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from source.web_typing import *
-from source.web_validate import ValidationError, convert_int, get_convert_int, convert_bint
+from source.web_validate import ValidationError, convert_int, get_convert_int
 
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import DATA, GEO, DIR
@@ -11,10 +11,10 @@ from dnx_gentools.file_operations import ConfigurationManager, load_configuratio
 
 
 def load_page(form: Form) -> dict:
-    proxy_settings: ConfigChain = load_configuration('ip_proxy')
+    proxy_settings: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/ip')
     country_map: ConfigChain = load_configuration('geolocation', filepath='dnx_webui/data')
 
-    # TODO: get selected security profile setting and render according. lets start with converting current config to
+    # TODO: get selected security profile setting and render accordingly. lets start with converting current config to
     #  use "profile 1", with proxy set for profiles. once that is good then we can expand to configure more profiles.
 
     # controlling whether to load defaults or user selected view.
@@ -208,6 +208,7 @@ def validate_geolocation(category: config, rtype: str = 'country') -> Optional[V
     else:
         return ValidationError(INVALID_FORM)
 
+# TODO: time restriction should probably be moved out of ip proxy. this will ultimately be merged with quotas.
 def validate_time_restriction(tr: config, /) -> Optional[ValidationError]:
 
     if (tr.hour not in range(1, 13) or tr.min not in [00, 15, 30, 45]):
@@ -223,7 +224,7 @@ def validate_time_restriction(tr: config, /) -> Optional[ValidationError]:
 # CONFIGURATION
 # ==============
 def configure_reputation(category: config, *, ruleset: str = 'reputation') -> None:
-    with ConfigurationManager('ip_proxy') as dnx:
+    with ConfigurationManager('profiles/profile_1', cfg_type='security/ip') as dnx:
         ip_proxy_settings: ConfigChain = dnx.load_configuration()
 
         ip_proxy_settings[f'{ruleset}->{category.name}'] = category.direction
@@ -231,7 +232,7 @@ def configure_reputation(category: config, *, ruleset: str = 'reputation') -> No
         dnx.write_configuration(ip_proxy_settings.expanded_user_data)
 
 def configure_geolocation(category: config, *, rtype: str = 'country') -> None:
-    with ConfigurationManager('ip_proxy') as dnx:
+    with ConfigurationManager('profiles/profile_1', cfg_type='security/ip') as dnx:
         ip_proxy_settings: ConfigChain = dnx.load_configuration()
 
         # setting the individual country to user set value
@@ -246,7 +247,7 @@ def configure_geolocation(category: config, *, rtype: str = 'country') -> None:
         dnx.write_configuration(ip_proxy_settings.expanded_user_data)
 
 def configure_time_restriction(tr: config, /, field) -> None:
-    with ConfigurationManager('ip_proxy') as dnx:
+    with ConfigurationManager('global', cfg_type='security/ip') as dnx:
         ip_proxy_settings: ConfigChain = dnx.load_configuration()
 
         if (field == 'enabled'):

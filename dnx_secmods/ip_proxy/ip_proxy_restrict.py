@@ -72,7 +72,7 @@ class LanRestrict:
 
         self.initialize.wait_for_threads(count=2)
 
-    @cfg_read_poller('ip_proxy')
+    @cfg_read_poller('ip', cfg_type='security/ip')
     def _get_settings(self, cfg_file: str) -> None:
         proxy_settings = load_configuration(cfg_file)
 

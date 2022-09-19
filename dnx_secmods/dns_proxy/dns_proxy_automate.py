@@ -20,6 +20,12 @@ from dnx_iptools.protocol_tools import create_dns_query_header, strtobit
 
 from dns_proxy_log import Log
 
+# ===============
+# TYPING IMPORTS
+# ===============
+if (TYPE_CHECKING):
+    from dnx_routines.logging import LogHandler_T
+
 
 __all__ = (
     'ProxyConfiguration', 'ServerConfiguration',
@@ -57,15 +63,14 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
         threads = (
             (self._get_proxy_settings, ()),
-            (self._get_list, ('whitelist',)),
-            (self._get_list, ('blacklist',))
+            # (self._get_list, ('whitelist',)),
+            # (self._get_list, ('blacklist',))
         )
 
-        return Log, threads, 3
+        return Log, threads, 1
 
-    @cfg_read_poller('dns_proxy')
-    def _get_proxy_settings(self, cfg_file: str) -> None:
-        proxy_config: ConfigChain = load_configuration(cfg_file)
+    @cfg_read_poller('profiles/profile_1', cfg_type='security/dns')
+    def _get_proxy_settings(self, proxy_config: ConfigChain) -> None:
 
         signatures: DNS_SIGNATURES = self.__class__.signatures
         # CATEGORY SETTINGS
@@ -130,9 +135,9 @@ class ProxyConfiguration(ConfigurationMixinBase):
         # if not modified, the last modified time is returned and not changes are made.
         # NOTE: files need extensions due to changes to file operations. these functions will be reworked soon anyway.
         try:
-            modified_time = os.stat(f'{HOME_DIR}/dnx_profile/data/usr/{cfg_file}.cfg').st_mtime
+            modified_time = os.stat(f'{HOME_DIR}/dnx_profile/data/usr/global/{cfg_file}.cfg').st_mtime
         except FileNotFoundError:
-            modified_time = os.stat(f'{HOME_DIR}/dnx_profile/data/{cfg_file}.cfg').st_mtime
+            modified_time = os.stat(f'{HOME_DIR}/dnx_profile/data/system/global/{cfg_file}.cfg').st_mtime
 
         if (modified_time == last_modified_time):
             return last_modified_time
@@ -264,9 +269,8 @@ class ServerConfiguration(ConfigurationMixinBase):
 
         return Log, threads, 2
 
-    @cfg_read_poller('dns_server')
-    def _get_server_settings(self, cfg_file: str) -> None:
-        server_config: ConfigChain = load_configuration(cfg_file)
+    @cfg_read_poller('dns_server', cfg_type='global')
+    def _get_server_settings(self, server_config: ConfigChain) -> None:
 
         self.__class__.protocol = PROTO.DNS_TLS if server_config['tls->enabled'] else PROTO.UDP
         self.__class__.udp_fallback = server_config['tls->fallback']

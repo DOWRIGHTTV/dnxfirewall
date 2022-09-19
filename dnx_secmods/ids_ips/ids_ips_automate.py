@@ -59,9 +59,8 @@ class IPSConfiguration(ConfigurationMixinBase):
 
         return Log, threads, 2
 
-    @cfg_read_poller('ips_ids')
-    def _get_settings(self, cfg_file: str) -> None:
-        proxy_settings: ConfigChain = load_configuration(cfg_file)
+    @cfg_read_poller('profiles/profile_1', cfg_type='security/ids_ips')
+    def _get_settings(self, proxy_settings: ConfigChain) -> None:
 
         self.__class__.ids_mode = proxy_settings['ids_mode']
 
@@ -99,9 +98,8 @@ class IPSConfiguration(ConfigurationMixinBase):
 
     # NOTE: determine whether the default sleep timer is acceptable for this method. if not, figure out how to override
     # the setting set in the decorator or remove the decorator entirely.
-    @cfg_read_poller('ips_ids')
-    def _get_open_ports(self, cfg_file: str) -> None:
-        proxy_settings: ConfigChain = load_configuration(cfg_file)
+    @cfg_read_poller('ids_ips', cfg_type='security/ids_ips')
+    def _get_open_ports(self, proxy_settings: ConfigChain) -> None:
 
         self.__class__.open_ports = {
             PROTO.TCP: {

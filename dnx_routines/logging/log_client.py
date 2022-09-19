@@ -354,12 +354,12 @@ def _log_handler() -> LogHandler:
 
         direct_log(handler_name, LOG.NOTICE, f'logger successfully configured => {logging_level}', cli=True)
 
-    @cfg_read_poller('logging_client')
-    def log_settings(cfg_file: str) -> None:
+    @cfg_read_poller('logging_client', cfg_type='global')
+    def log_settings(logger_settings: ConfigChain) -> None:
         nonlocal logging_level, line_buf_limit
 
-        logging_level  = LOG(load_configuration(cfg_file)['logging->level'])
-        line_buf_limit = load_configuration(cfg_file)['logging->line_buffer']
+        logging_level  = LOG(logger_settings['logging->level'])
+        line_buf_limit = logger_settings['logging->line_buffer']
 
         add_logging_methods(_LogHandler)
 
