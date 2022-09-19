@@ -367,10 +367,10 @@ def _log_handler() -> LogHandler:
         _LogHandler._init_one.done2
 
     @cfg_read_poller('syslog_client', cfg_type='global')
-    def slog_settings(cfg_file: str) -> None:
+    def slog_settings(syslog_settings: ConfigChain) -> None:
         nonlocal syslog
 
-        syslog = load_configuration(cfg_file)['enabled']
+        syslog = syslog_settings['enabled']
 
         _LogHandler._init_one.done2
 

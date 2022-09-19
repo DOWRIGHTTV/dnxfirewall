@@ -177,7 +177,7 @@ def update_field(form: Form) -> tuple[bool, WebError]:
 # VALIDATION
 # ==============
 def validate_reputation(category: config) -> Optional[ValidationError]:
-    ip_proxy = load_configuration('ip_proxy')
+    ip_proxy = load_configuration('profiles/profile_1', cfg_type='security/ip')
 
     valid_categories = ip_proxy.get_list('reputation')
 
