@@ -15,8 +15,8 @@ def load_page(_: Form):
     dns_proxy: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
 
     domain_settings = {
-        'default': dns_proxy.get_items('categories->default'),
-        'user_defined': dns_proxy.get_items('categories->user_defined'),
+        'default': dns_proxy.get_items('categories->built-in'),
+        'user_defined': dns_proxy.get_items('categories->custom'),
         'tld': dns_proxy.get_items('tld')
     }
 
