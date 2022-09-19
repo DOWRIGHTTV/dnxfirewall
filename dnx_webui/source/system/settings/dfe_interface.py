@@ -19,7 +19,7 @@ from dnx_iptools.cprotocol_tools import itoip, default_route
 _IP_DISABLED = True
 
 def load_page(_: Form) -> dict[str, Any]:
-    system_settings: ConfigChain = load_configuration('system')
+    system_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
     wan_ident: str = system_settings['interfaces->builtins->wan->ident']
     wan_state: int = system_settings['interfaces->builtins->wan->state']
@@ -176,7 +176,7 @@ def set_wan_ip(wan_settings: config) -> None:
     3. Create netplan config from template
     4. Move file to /etc/netplan
     '''
-    dnx_settings: ConfigChain = load_configuration('system')
+    dnx_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
     wan_ident: str = dnx_settings['interfaces->builtins->wan->ident']
 
@@ -201,7 +201,7 @@ def _configure_netplan(intf_config: dict) -> None:
         note: this does NOT run "netplan apply"
     '''
     # grabbing configured dns servers
-    dns_server_settings: ConfigChain = load_configuration('dns_server')
+    dns_server_settings: ConfigChain = load_configuration('dns_server', cfg_type='global')
 
     dns1: str = dns_server_settings['resolvers->primary->ip_address']
     dns2: str = dns_server_settings['resolvers->secondary->ip_address']

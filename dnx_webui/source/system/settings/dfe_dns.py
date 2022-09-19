@@ -13,8 +13,8 @@ from dnx_gentools.system_info import System
 
 
 def load_page(_: Form) -> dict[str, Any]:
-    server_settings = load_configuration('dns_server')
-    server_cache    = load_configuration('dns_server', ext='cache')
+    server_settings = load_configuration('dns_server', cfg_type='global')
+    server_cache    = load_configuration('dns_server', ext='cache', cfg_type='global')
 
     return {
         'dns_servers': System.dns_status(), 'dns_records': server_settings.get_items('records'),

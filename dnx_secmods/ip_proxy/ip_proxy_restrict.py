@@ -133,7 +133,7 @@ class LanRestrict:
             dnx.write_configuration(time_restriction.expanded_user_data)
 
     def _load_restriction(self) -> tuple[str, float, int]:
-        proxy_settings: ConfigChain = load_configuration('ip_proxy')
+        proxy_settings: ConfigChain = load_configuration('global', cfg_type='security/ip')
         log_settings:   ConfigChain = load_configuration('logging_client')
 
         restriction_start:  str = proxy_settings['time_restriction->start']

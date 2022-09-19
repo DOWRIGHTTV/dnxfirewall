@@ -11,7 +11,7 @@ from dnx_gentools.system_info import System
 from source.web_validate import get_convert_int
 
 def load_page(form):
-    logging = load_configuration('logging_client')
+    logging = load_configuration('logging_client', cfg_type='global')
 
     # correcting time for configured offset.
     system_time = System.format_date_time(fast_time())

@@ -105,7 +105,7 @@ class System:
     def calculate_time_offset(logged_time: Timestamp) -> Timestamp:
         '''returns modified time based on current time offset settings.
         '''
-        log_settings = load_configuration('logging_client')
+        log_settings = load_configuration('logging_client', cfg_type='global')
 
         os_dir = log_settings['time_offset->direction']
         os_amt = log_settings['time_offset->amount']

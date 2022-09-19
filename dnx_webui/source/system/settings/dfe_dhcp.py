@@ -19,7 +19,7 @@ from dnx_gentools.system_info import System
 
 
 def load_page(_: Form) -> dict[str, Any]:
-    dhcp_server: ConfigChain = load_configuration('dhcp_server')
+    dhcp_server: ConfigChain = load_configuration('dhcp_server', cfg_type='global')
     dhcp_leases: dict[str, tuple] = load_data('dhcp_server.lease', filepath='dnx_profile/data/usr')
 
     leases = []
@@ -150,7 +150,7 @@ def validate_reservation(res, /) -> Optional[ValidationError]:
     mac_address(res.mac)
     standard(res.description, override=[' '])
 
-    dhcp_settings: ConfigChain = load_configuration('system')
+    dhcp_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
     zone_net = IPv4Network(dhcp_settings[f'interfaces->builtins{res.zone.lower()}->subnet'])
     if (IPv4Address(res.ip) not in zone_net.hosts()):

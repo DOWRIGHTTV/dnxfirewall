@@ -283,6 +283,6 @@ class Leases(dict):
     # loading dhcp leases from json file. only called on startup
     def _load_leases(self) -> None:
 
-        stored_leases: dict[str, list] = load_configuration('dhcp_server', ext='lease').get_dict()
+        stored_leases: dict[str, list] = load_configuration('dhcp_server', ext='lease', cfg_type='global').get_dict()
 
         self.update({ip: DHCP_RECORD(*lease_info) for ip, lease_info in stored_leases.items()})
