@@ -14,10 +14,10 @@ from dnx_gentools.def_namedtuples import IPS_SCAN_RESULTS, DDOS_TRACKERS, PSCAN_
 from dnx_iptools.iptables import IPTablesManager
 
 from dnx_iptools.packet_classes import NFQueue
-from dnx_secmods.ips_ids.ips_ids_automate import IPSConfiguration
-from dnx_secmods.ips_ids.ips_ids_packets import IPSPacket, IPSResponse
+from dnx_secmods.ids_ips.ids_ips_automate import IPSConfiguration
+from dnx_secmods.ids_ips.ids_ips_packets import IPSPacket, IPSResponse
 
-from dnx_secmods.ips_ids.ips_ids_log import Log
+from dnx_secmods.ids_ips.ids_ips_log import Log
 
 __all__ = (
     'IPS_IDS',

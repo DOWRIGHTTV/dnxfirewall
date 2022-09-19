@@ -13,7 +13,7 @@ from dnx_gentools.file_operations import load_configuration, cfg_read_poller
 
 from dnx_iptools.iptables import IPTablesManager
 
-from dnx_secmods.ips_ids.ips_ids_log import Log
+from dnx_secmods.ids_ips.ids_ips_log import Log
 
 # ===============
 # TYPING IMPORTS

@@ -12,7 +12,7 @@ from source.web_validate import ValidationError, standard, convert_int
 DISABLED = True
 
 def load_page(menu_option):
-    dns_proxy = load_configuration('dns_proxy')
+    dns_proxy = load_configuration('profiles/profile_1', cfg_type='security/dns')
     userdefined_category = dns_proxy.get_items('categories->user_defined')
 
     ud_cat_lists = {}

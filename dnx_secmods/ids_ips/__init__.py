@@ -12,8 +12,8 @@ if INITIALIZE_MODULE('ips-ids'):
 
     from dnx_gentools.def_enums import Queue
 
-    from ips_ids import IPS_IDS
-    from ips_ids_log import Log
+    from ids_ips import IPS_IDS
+    from ids_ips_log import Log
 
     Log.run(name='ips')
 
@@ -37,8 +37,8 @@ if (TYPE_CHECKING):
         'IPS_IDS_T', 'IPSPacket_T'
     )
 
-    from ips_ids import IPS_IDS
-    from ips_ids_packets import IPSPacket
+    from ids_ips import IPS_IDS
+    from ids_ips_packets import IPSPacket
 
     # ======
     # TYPES

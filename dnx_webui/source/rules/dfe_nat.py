@@ -148,7 +148,7 @@ def validate_dnat_rule(rule: config, /, action: CFG) -> Optional[ValidationError
 
         if (rule.protocol == 'icmp'):
 
-            open_protocols: ConfigChain = load_configuration('ips_ids')
+            open_protocols: ConfigChain = load_configuration('global', cfg_type='security/ids_ips')
             if (open_protocols['open_protocols->icmp']):
                 return ValidationError(
                     'Only one ICMP rule can be active at a time. Remove existing rule before adding another.'
@@ -169,7 +169,7 @@ def validate_dnat_rule(rule: config, /, action: CFG) -> Optional[ValidationError
         except:
             return ValidationError(INVALID_FORM)
 
-        open_protocol_settings: ConfigChain = load_configuration('ips_ids')
+        open_protocol_settings: ConfigChain = load_configuration('global', cfg_type='security/ids_ips')
         # check tcp/udp first, then icmp if it fails.
         # if either fail, standard exception raised.
         try:
@@ -193,7 +193,7 @@ def validate_snat_rule(rule: config, /, action: CFG) -> Optional[ValidationError
 # CONFIGURATION
 # ==============
 def configure_open_wan_protocol(nat: config, *, action: CFG) -> None:
-    with ConfigurationManager('ips_ids') as dnx:
+    with ConfigurationManager('global', cfg_type='security/ids_ips') as dnx:
         protocol_settings: ConfigChain = dnx.load_configuration()
 
         if (action is CFG.ADD):

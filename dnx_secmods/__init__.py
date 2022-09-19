@@ -12,4 +12,4 @@ if (TYPE_CHECKING):
 
     from ip_proxy import *
 
-    from ips_ids import *
+    from ids_ips import *

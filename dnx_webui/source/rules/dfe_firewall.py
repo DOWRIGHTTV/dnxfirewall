@@ -319,8 +319,8 @@ def validate_firewall_rule(rule_num: int, fw_rule: rule_structure, /, check: Cal
 
     ip_proxy_profile  = convert_int(fw_rule.sec1_prof)
     dns_proxy_profile = convert_int(fw_rule.sec2_prof)
-    ips_ids_profile   = convert_int(fw_rule.sec3_prof)
-    if not all([x in [0, 1] for x in [ip_proxy_profile, dns_proxy_profile, ips_ids_profile]]):
+    ids_ips_profile   = convert_int(fw_rule.sec3_prof)
+    if not all([x in [0, 1] for x in [ip_proxy_profile, dns_proxy_profile, ids_ips_profile]]):
         raise ValidationError(f'Invalid security profile for rule #{rule_num}.')
 
     enabled = convert_int(fw_rule.enabled)
@@ -364,7 +364,7 @@ def validate_firewall_rule(rule_num: int, fw_rule: rule_structure, /, check: Cal
         'log': tlog,
         'ipp_profile': ip_proxy_profile,
         'dns_profile': dns_proxy_profile,
-        'ips_profile': ips_ids_profile
+        'ips_profile': ids_ips_profile
     }
 
     return rule
