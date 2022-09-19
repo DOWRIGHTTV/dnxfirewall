@@ -366,7 +366,7 @@ def _log_handler() -> LogHandler:
         # abusing property to overload reference after the initial load.
         _LogHandler._init_one.done2
 
-    @cfg_read_poller('syslog_client')
+    @cfg_read_poller('syslog_client', cfg_type='global')
     def slog_settings(cfg_file: str) -> None:
         nonlocal syslog
 
