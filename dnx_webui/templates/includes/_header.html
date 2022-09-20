@@ -99,14 +99,6 @@
                 <i class="material-icons {{ theme.icon|safe }}">call_split</i>NAT
             </a>
         </li>
-        <li {% if uri_path[1] == 'overrides' %} class='active' {% endif %}>
-            <a class="dropdown-trigger-hoverable dropdown-trigger-nested expand {{ theme.subnav_text }}"
-                data-target="overrides-dropdown">
-                <i class="material-icons {{ theme.icon|safe }}">donut_small</i>
-                Overrides
-                <i class="material-icons right {{ theme.subnav_text }}">chevron_right</i>
-            </a>
-        </li>
     </ul>
     {# INTRUSION DROPDOWN - TIER 2 #}
     <ul id="intrusion-dropdown" class="dropdown-content dropdown-content-trigger">
@@ -132,12 +124,12 @@
     {# DOMAIN DROPDOWN - TIER 3 #}
     <ul id="domain-dropdown" class="dropdown-content dropdown-content-nested">
         <li {% if uri_path[2] == 'whitelist' %} class='active' {% endif %}>
-            <a href="rules/overrides/whitelist" class="{{ theme.nav_text }}">
+            <a href="intrusion/domain/whitelist" class="{{ theme.nav_text }}">
                 <i class="material-icons {{ theme.icon|safe }}">thumb_up</i>Whitelist
             </a>
         </li>
         <li {% if uri_path[2] == 'blacklist' %} class='active' {% endif %}>
-            <a href="rules/overrides/blacklist" class="{{ theme.nav_text }}">
+            <a href="intrusion/domain/blacklist" class="{{ theme.nav_text }}">
                 <i class="material-icons {{ theme.icon|safe }}">thumb_down</i>Blacklist
             </a>
         </li>
