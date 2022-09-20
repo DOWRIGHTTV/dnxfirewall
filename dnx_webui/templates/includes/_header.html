@@ -108,19 +108,6 @@
             </a>
         </li>
     </ul>
-    {# OVERRIDES DROPDOWN TIER - 3 #}
-    <ul id="overrides-dropdown" class="dropdown-content dropdown-content-nested">
-        <li {% if uri_path[3] == 'whitelist' %} class='active' {% endif %}>
-            <a href="rules/overrides/whitelist" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ theme.icon|safe }}">thumb_up</i>Whitelist
-            </a>
-        </li>
-        <li {% if uri_path[3] == 'blacklist' %} class='active' {% endif %}>
-            <a href="rules/overrides/blacklist" class="{{ theme.nav_text }}">
-                <i class="material-icons {{ theme.icon|safe }}">thumb_down</i>Blacklist
-            </a>
-        </li>
-    </ul>
     {# INTRUSION DROPDOWN - TIER 2 #}
     <ul id="intrusion-dropdown" class="dropdown-content dropdown-content-trigger">
         <li {% if uri_path[1] == 'ip' %} class='active' {% endif %}>
@@ -144,6 +131,16 @@
     </ul>
     {# DOMAIN DROPDOWN - TIER 3 #}
     <ul id="domain-dropdown" class="dropdown-content dropdown-content-nested">
+        <li {% if uri_path[2] == 'whitelist' %} class='active' {% endif %}>
+            <a href="rules/overrides/whitelist" class="{{ theme.nav_text }}">
+                <i class="material-icons {{ theme.icon|safe }}">thumb_up</i>Whitelist
+            </a>
+        </li>
+        <li {% if uri_path[2] == 'blacklist' %} class='active' {% endif %}>
+            <a href="rules/overrides/blacklist" class="{{ theme.nav_text }}">
+                <i class="material-icons {{ theme.icon|safe }}">thumb_down</i>Blacklist
+            </a>
+        </li>
         <li {% if uri_path[2] == 'categories' %} class='active' {% endif %}>
             <a href="intrusion/domain/categories" class="{{ theme.nav_text }}">
                 <i class="material-icons {{ theme.icon|safe }}">library_books</i>Categories

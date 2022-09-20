@@ -19,7 +19,7 @@
         <div class="row row-flex">
             <div class="col s12 m6">
                 <div class="card-panel card-panel-eql hoverable {{theme.card}}">
-                    <h4 class="{{theme.title}}">Add Rule</h4>
+                    {{ create_title('add rule')|safe }}
                     <form method="post">
                         <div class="row {{input_color}}">
                             <div class="input-field col s12">
@@ -59,15 +59,12 @@
             </div>
             <div class="col s12 m6">
                 <div class="card-panel card-panel-eql hoverable {{theme.card}}">
-                    <h4 class="{{theme.title}}">Active Categories</h4>
+                    {{ create_title('active_categories')|safe }}
                     <form method="POST">
                         <div class="row {{input_color}}">
                             <div class="input-field col s12">
-                                <label>
-                                    Category Name
-                                    <input type="text" name="ud_category" class="validate" placeholder="social media"
-                                        required>
-                                </label>
+                                <input type="text" name="ud_category" id="ud_cat" class="validate" placeholder="social media" required>
+                                <label for="ud_cat">Category Name</label>
                                 <button class="btn waves-effect waves-light col s2" name="ud_cat_add">Add</button>
                             </div>
                         </div>
@@ -95,7 +92,7 @@
     <div class="container">
         <div class="col s12">
             <div class="card-panel hoverable {{theme.card}}">
-                <h4 class="{{theme.title}}">Configured Categories</h4>
+                {{ create_title('configured categories')|safe }}
                 <div class="row">
                     <form method="POST">
                         <input type="hidden" name="tab" value="2">
@@ -110,13 +107,6 @@
                                 {% endfor %}
                             <label for="menu2">Reports</label>
                         </div>
-                        <noscript>
-                            <div class="input-field col s2">
-                                <button class="btn waves-effect waves-light col s12">
-                                    <i class="material-icons">cached</i>
-                                </button>
-                            </div>
-                        </noscript>
                     </form>
                 </div>
                 {% if category_settings['ud_list'] %}
@@ -135,7 +125,6 @@
                                 <input type="hidden" name="category" value="{{category}}">
                                 <input type="hidden" name="tab" value="2">
                                 {% for category, ruleset in category_settings['user_defined_rules'].items() %}
-                                {% if ruleset %}
                                 {% for rule in ruleset.values() %}
                                 <tr>
                                     <td>
@@ -146,14 +135,13 @@
                                     <td>{{rule[0]}}</td>
                                     <td>{{rule[1]}}</td>
                                 </tr>
-                                {% endfor %}
                                 {% else %}
                                 <tr>
                                     <td></td>
                                     <td></td>
                                     <td></td>
                                 </tr>
-                                {% endif %}
+                                {% endfor %}
                                 {% endfor %}
                             </form>
                         </tbody>

@@ -6,7 +6,7 @@ import os
 from datetime import timedelta
 
 from dnx_gentools.def_constants import HOME_DIR, FIVE_SEC, fast_time, ppt
-from dnx_gentools.def_enums import CFG, DATA
+from dnx_gentools.def_enums import CFG
 from dnx_gentools.def_exceptions import ValidationError, ConfigurationError
 from dnx_gentools.file_operations import load_configuration, ConfigurationManager
 
@@ -63,9 +63,9 @@ FirewallControl.cfirewall = cfirewall
 import source.main.dfe_dashboard as dfe_dashboard
 import source.rules.dfe_firewall as dnx_fwall
 import source.rules.dfe_nat as dnx_nat
-import source.rules.dfe_xlist as xlist
 import source.intrusion.dfe_ip as ip_proxy
 import source.intrusion.domain.dfe_domain as dns_proxy
+import source.intrusion.domain.dfe_xlist as xlist
 import source.intrusion.domain.dfe_categories as category_settings
 import source.intrusion.dfe_ips as dnx_ips
 import source.system.settings.dfe_dns as dns_settings
@@ -178,40 +178,6 @@ def rules_nat(session_data: dict):
 
     return page_action
 
-@app.route('/rules/overrides/whitelist', methods=['GET', 'POST'])
-@user_restrict('admin')
-def rules_overrides_whitelist(session_data: dict):
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_convert_int(request.args, 'tab'),
-        'uri_path': ['rules', 'overrides', 'whitelist']
-    }
-
-    page_settings.update(session_data)
-
-    page_action = standard_page_logic(
-        xlist, page_settings, 'whitelist_settings', page_name='rules/overrides/whitelist.html'
-    )
-
-    return page_action
-
-@app.route('/rules/overrides/blacklist', methods=['GET', 'POST'])
-@user_restrict('admin')
-def rules_overrides_blacklist(session_data: dict):
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_convert_int(request.args, 'tab'),
-        'uri_path': ['rules', 'overrides', 'blacklist']
-    }
-
-    page_settings.update(session_data)
-
-    page_action = standard_page_logic(
-        xlist, page_settings, 'blacklist_settings', page_name='rules/overrides/blacklist.html'
-    )
-
-    return page_action
-
 # --------------------------------------------- #
 #  START OF INTRUSION TAB
 # --------------------------------------------- #
@@ -278,6 +244,40 @@ def intrusion_domain_post(session_data: dict):
 
     #  START OF DOMAIN SUB MENU
     # ----------------------------------------- #
+@app.route('/intrusion/domain/whitelist', methods=['GET', 'POST'])
+@user_restrict('admin')
+def rules_overrides_whitelist(session_data: dict):
+    page_settings = {
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': validate.get_convert_int(request.args, 'tab'),
+        'uri_path': ['intrusion', 'domain', 'whitelist']
+    }
+
+    page_settings.update(session_data)
+
+    page_action = standard_page_logic(
+        xlist, page_settings, 'whitelist_settings', page_name='rules/overrides/whitelist.html'
+    )
+
+    return page_action
+
+@app.route('/intrusion/domain/blacklist', methods=['GET', 'POST'])
+@user_restrict('admin')
+def rules_overrides_blacklist(session_data: dict):
+    page_settings = {
+        'navi': True, 'idle_timeout': True, 'standard_error': None,
+        'tab': validate.get_convert_int(request.args, 'tab'),
+        'uri_path': ['intrusion', 'domain', 'blacklist']
+    }
+
+    page_settings.update(session_data)
+
+    page_action = standard_page_logic(
+        xlist, page_settings, 'blacklist_settings', page_name='rules/overrides/blacklist.html'
+    )
+
+    return page_action
+
 @app.route('/intrusion/domain/categories', methods=['GET', 'POST'])
 @user_restrict('admin')
 def intrusion_domain_categories(session_data: dict):
@@ -875,6 +875,10 @@ def set_theme_values() -> None:
 # ====================================
 # FLASK API - TEMPLATE FUNCTIONS
 # ====================================
+@app.template_global()
+def create_title(title: str) -> str:
+    return f'<div class="row"><h4 class="{context_global.theme["title"]}">{title.title()}</h4></div><div class="divider"></div>'
+
 @app.template_global()
 def create_switch(label: str, name: str, *, tab: int = 1, checked: int = 0, enabled: int = 1) -> str:
     if (not enabled): status = 'disabled'

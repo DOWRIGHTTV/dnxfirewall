@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from source.web_typing import *
-from source.web_validate import ValidationError, VALID_DOMAIN, get_convert_int, standard, ip_address
+from source.web_validate import ValidationError, VALID_DOMAIN, get_convert_int, standard
 
 from dnx_gentools.def_constants import INVALID_FORM, fast_time
 from dnx_gentools.def_enums import CFG, DATA
@@ -96,44 +96,6 @@ def update_page(form: Form) -> Union[str, ValidationError]:
     else:
         return INVALID_FORM
 
-    # =====================
-    # WHITELIST ONLY FORMS
-    # =====================
-    # TODO: this should not restrict ips to only "local_net" now that we have multiple interfaces.
-    # we should have the user select which interface it will be active on so we can properly validate the
-    # ip address falls within that subnet.
-    if ('ip_wl_add' in form):
-        whitelist_settings = config(**{
-            'ip':   form.get('ip_wl_ip', DATA.MISSING),
-            'user': form.get('ip_wl_user', DATA.MISSING),
-            'type': form.get('ip_wl_type', DATA.MISSING)
-        })
-
-        if (DATA.MISSING in whitelist_settings.values()):
-            return INVALID_FORM
-
-        error = validate_ip_whitelist(whitelist_settings)
-        if (error):
-            return error.message
-
-        configure_ip_whitelist(whitelist_settings, action=CFG.ADD)
-
-    elif ('ip_wl_remove' in form):
-        whitelist_ip = form.get('ip_wl_ip', DATA.INVALID)
-
-        if (whitelist_ip is DATA.INVALID):
-            return INVALID_FORM
-
-        try:
-            ip_address(whitelist_ip)
-        except ValidationError as ve:
-            return ve
-
-        configure_ip_whitelist(whitelist_ip, action=CFG.DEL)
-
-    else:
-        return INVALID_FORM
-
 
 # ==============
 # VALIDATION
@@ -158,26 +120,16 @@ def validate_pre_proxy_exc(settings: config) -> Optional[ValidationError]:
     except ValidationError as ve:
         return ve
 
-def validate_ip_whitelist(settings: config) -> Optional[ValidationError]:
-    try:
-        ip_address(settings.ip)
-        standard(settings.user)
-    except ValidationError as ve:
-        return ve
-
-    if (settings.type != 'ip'):
-        return ValidationError(INVALID_FORM)
-
 # ==============
 # CONFIGURATION
 # ==============
 
-# adds a time based rule to whitelist/blacklist
+# adds a time-based rule to whitelist/blacklist
 def configure_proxy_domain(settings: config, *, action: CFG):
-    input_time: int = int(fast_time())
+    input_time = fast_time()
 
     with ConfigurationManager(settings.ruleset) as dnx:
-        domain_list = dnx.load_configuration()
+        domain_list: ConfigChain = dnx.load_configuration()
 
         if (action is CFG.ADD):
 
@@ -192,7 +144,7 @@ def configure_proxy_domain(settings: config, *, action: CFG):
 
 def configure_pre_proxy_exc(exc: config, *, action: CFG):
     with ConfigurationManager(exc.ruleset) as dnx:
-        exceptions_list = dnx.load_configuration()
+        exceptions_list: ConfigChain = dnx.load_configuration()
 
         if (action is CFG.ADD):
 
@@ -203,16 +155,3 @@ def configure_pre_proxy_exc(exc: config, *, action: CFG):
             del exceptions_list[exc.domain]
 
         dnx.write_configuration(exceptions_list.expanded_user_data)
-
-def configure_ip_whitelist(ip_wl: config, /, *, action: CFG):
-    with ConfigurationManager('whitelist') as dnx:
-        whitelist = dnx.load_configuration()
-
-        if (action is CFG.ADD):
-            whitelist[f'ip_bypass->{ip_wl.ip}->user'] = ip_wl.user
-            whitelist[f'ip_bypass->{ip_wl.ip}->type'] = ip_wl.type
-
-        elif (action is CFG.DEL):
-            del whitelist[f'ip_bypass->{ip_wl.ip}']
-
-        dnx.write_configuration(whitelist.expanded_user_data)
