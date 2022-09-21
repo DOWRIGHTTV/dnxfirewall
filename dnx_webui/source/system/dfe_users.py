@@ -15,10 +15,8 @@ from dnx_gentools.file_operations import ConfigurationManager, load_configuratio
 
 from source.main.dfe_authentication import Authentication
 
-def load_page(form: Form) -> dict[tuple[str, str]]:
-    logins = load_configuration('logins', filepath='/dnx_webui/data')
-
-    users = logins.searchable_user_data['users']
+def load_page(form: Form) -> dict[str, tuple[str, str]]:
+    users: dict = load_configuration('logins', filepath='/dnx_webui/data').get_dict('users')
 
     user_list = {}
     for account, info in users.items():
