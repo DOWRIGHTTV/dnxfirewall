@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+from __future__ import annotations
+
 import re
 
 from flask import session
@@ -13,7 +15,7 @@ from dnx_gentools.file_operations import ConfigurationManager, load_configuratio
 
 from source.main.dfe_authentication import Authentication
 
-def load_page(form: Form):
+def load_page(form: Form) -> dict[tuple[str, str]]:
     logins = load_configuration('logins', filepath='/dnx_webui/data')
 
     users = logins.searchable_user_data['users']
