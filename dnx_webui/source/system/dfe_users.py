@@ -69,17 +69,20 @@ def update_page(form: Form) -> Optional[str]:
 # ==============
 # VALIDATION
 # ==============
-
 def validate_account_creation(account: config) -> Optional[ValidationError]:
-    '''Convenience function wrapping username, password, and user_role input validation functions. Username value
-       will be updated to .lower() on successful validation.'''
+    '''Convenience function wrapping username, password, and user_role input validation functions.
 
-    try:
-        username(account.username)
-        password(account.password)
-        user_role(account.role)
-    except ValidationError as ve:
-        return ve
+    Username value will be updated to .lower() on successful validation.
+       '''
+
+    if error := username(account.username):
+        return error
+
+    if error := password(account.password):
+        return error
+
+    if error := user_role(account.role):
+        return error
 
     # setting username to lowercase seems cleaner here
     account.username = account.username.lower()
@@ -90,7 +93,7 @@ def username(user: str, /) -> Optional[ValidationError]:
 
 def password(passwd: str, /) -> Optional[ValidationError]:
     if (len(passwd) < 8):
-        raise ValidationError('Password does not meet length requirement of 8 characters.')
+        return ValidationError('Password does not meet length requirement of 8 characters.')
 
     criteria = (
         re.search(r'\d', passwd), re.search(r'[A-Z]', passwd),  # searching for digits & uppercase
