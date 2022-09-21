@@ -9,24 +9,23 @@
                     <form method="POST">
                         <div class="row">
                             <div class="input-field col s4 {{input_color}}">
-                                <label>
-                                    Username
-                                    <input type="text" name="user_acct" class="validate" placeholder=admin required>
+                                <input type="text" name="user_acct" id="ua" class="validate" placeholder="admin" required>
+                                <label for="ua">Username</label>
+                            </div>
+                            <div class="input-field col s4 {{input_color}}">
+                                <input type="password" name="user_password" id="up" class="validate" placeholder="password" required>
+                                <label for="up">Password [ <span class="black-text tooltipped" data-tooltip="Must be at
+                                    least 8 characters containing (1) uppercase, (1) lowercase, (1) number, and (1)
+                                    special character.">?</span> ]
                                 </label>
                             </div>
                             <div class="input-field col s4 {{input_color}}">
-                                <label>
-                                    Password (minimum 8 chars)
-                                    <input type="password" name="user_password" class="validate" placeholder="password" required>
-                                </label>
-                            </div>
-                            <div class="input-field col s4 {{input_color}}">
-                                <select name="user_role" id="">
+                                <select name="user_role" id="ur">
                                     <option value="admin">admin</option>
                                     <option value="user">user</option>
                                     <option value="cli">cli</option>
                                 </select>
-                                <label for="user_role">Role</label>
+                                <label for="ur">Role</label>
                             </div>
                         </div>
                         <div class="row">
@@ -59,7 +58,7 @@
                                         <div class="{{modal_text_style}}">
                                             <h5 class="red-text center">Are you sure you want to remove this user?</h5>
                                         </div>
-                                        <form action="/system/users" method="POST">
+                                        <form method="POST">
                                             <div class="modal-footer">
                                                 <button class="btn waves-effect waves-light">YES</button>
                                                 <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
