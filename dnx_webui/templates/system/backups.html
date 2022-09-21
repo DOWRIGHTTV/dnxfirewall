@@ -4,8 +4,8 @@
     <div class="container">
         <div class="row">
             <div class="col s12">
-                <div class="card-panel hoverable {{theme.card}}">
-                    <h4 class="{{theme.title}}">Create Backup</h4>
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">Create Backup</h4>
                     <div class="row">
                         <form method="POST">
                         <input type="hidden" name="active" value="1">
@@ -24,10 +24,10 @@
                 </div>
             </div>
             <div class="col s12">
-                <div class="card-panel hoverable {{theme.card}}">
+                <div class="card-panel hoverable {{ theme.card }}">
                     <div class="row">
                         <div class="col s8 l9">
-                            <h4 class="{{theme.title}}">Configuration Backups</h4>
+                            <h4 class="{{ theme.title }}">Configuration Backups</h4>
                         </div>
                         <div class="col s3">
                             <form action="/system/backups" method="POST">

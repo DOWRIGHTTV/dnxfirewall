@@ -877,7 +877,10 @@ def set_theme_values() -> None:
 # ====================================
 @app.template_global()
 def create_title(title: str) -> str:
-    return f'<div class="row"><h4 class="{context_global.theme["title"]}">{title.title()}</h4></div><div class="divider"></div>'
+    return (
+        f'<div class="row"><h4 class="{context_global.theme["title"]}">{title.title()}</h4></div>'
+        f'<div class="title-divider"></div><br>'
+    )
 
 @app.template_global()
 def create_switch(label: str, name: str, *, tab: int = 1, checked: int = 0, enabled: int = 1) -> str:

@@ -20,8 +20,8 @@
     <div class="fw-container">
         <div class="row">
             <div class="col s12">
-                <div class="card-panel hoverable {{theme.card}}">
-                    <h4 class="{{theme.title}}">Rule List
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">Rule List
                     {% if firewall_settings['pending_changes'] %} (*Changes Pending) {% endif %}</h4>
                     <div class="row">
                         <form action="rules/firewall" method="POST">
@@ -157,8 +157,8 @@
     <div class="container">
         <div class="row">
             <div class="col s12">
-                <div class="card-panel hoverable {{theme.card}}">
-                    <h4 class="{{theme.title}}">Interface List</h4>
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">Interface List</h4>
                     <table style="cursor:default" class="striped centered">
                         <thead>
                             <tr>
@@ -180,8 +180,8 @@
                 </div>
             </div>
             <div class="col s12">
-                <div class="card-panel hoverable {{theme.card}}">
-                    <h4 class="{{theme.title}}">Zone Manager</h4>
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">Zone Manager</h4>
                     <table class="striped centered highlight">
                         <thead>
                             <tr>
@@ -212,8 +212,8 @@
 <section id="objects" class="section">
     <div class="fw-container">
         <div class="col s12">
-            <div class="card-panel hoverable {{theme.card}}">
-                <h4 class="{{theme.title}}">Object Manager</h4>
+            <div class="card-panel hoverable {{ theme.card }}">
+                <h4 class="{{ theme.title }}">Object Manager</h4>
                 <div class="row">
                     <div class="input-field col s12 m6 l5 xl3 {{input_color}}">
                         <input type="text" id="filter-input2" onkeyup="filterTable(1, 4, 2)" placeholder="Filter">

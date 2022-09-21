@@ -18,7 +18,7 @@
     <div class="container">
         <div class="row row-flex">
             <div class="col s12 m6">
-                <div class="card-panel card-panel-eql hoverable {{theme.card}}">
+                <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
                     {{ create_title('add rule')|safe }}
                     <form method="post">
                         <div class="row {{input_color}}">
@@ -58,8 +58,8 @@
                 </div>
             </div>
             <div class="col s12 m6">
-                <div class="card-panel card-panel-eql hoverable {{theme.card}}">
-                    {{ create_title('active_categories')|safe }}
+                <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+                    {{ create_title('active categories')|safe }}
                     <form method="POST">
                         <div class="row {{input_color}}">
                             <div class="input-field col s12">
@@ -91,7 +91,7 @@
 <section id="rule-list" class="section">
     <div class="container">
         <div class="col s12">
-            <div class="card-panel hoverable {{theme.card}}">
+            <div class="card-panel hoverable {{ theme.card }}">
                 {{ create_title('configured categories')|safe }}
                 <div class="row">
                     <form method="POST">

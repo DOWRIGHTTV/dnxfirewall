@@ -2,8 +2,9 @@
 
 import re
 
-from typing import Optional
 from flask import session
+
+from source.web_typing import *
 
 from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA
@@ -12,7 +13,7 @@ from dnx_gentools.file_operations import ConfigurationManager, load_configuratio
 
 from source.main.dfe_authentication import Authentication
 
-def load_page(form):
+def load_page(form: Form):
     logins = load_configuration('logins', filepath='/dnx_webui/data')
 
     users = logins.searchable_user_data['users']
@@ -23,7 +24,7 @@ def load_page(form):
 
     return user_list
 
-def update_page(form) -> Optional[str]:
+def update_page(form: Form) -> Optional[str]:
     if ('user_add' in form):
         account_info = config(**{
             'username': form.get('user_acct', DATA.MISSING),
@@ -56,7 +57,7 @@ def update_page(form) -> Optional[str]:
         if (DATA.MISSING in account_info.values()):
             return INVALID_FORM
 
-        if (username == session['user']['name']):
+        if (username == session['user']):
             return 'Cannot delete the account you are currently logged in with.'
 
         else:
@@ -110,7 +111,7 @@ def user_role(role: str, /) -> Optional[ValidationError]:
 def configure_user_account(account: config, action: CFG) -> Optional[ValidationError]:
 
     with ConfigurationManager('logins', file_path='/dnx_webui/data') as dnx:
-        accounts = dnx.load_configuration()
+        accounts: ConfigChain = dnx.load_configuration()
 
         userlist = accounts.searchable_user_data['users']
 
