@@ -113,17 +113,17 @@ def configure_user_account(account: config, action: CFG) -> Optional[ValidationE
     with ConfigurationManager('logins', file_path='/dnx_webui/data') as dnx:
         accounts: ConfigChain = dnx.load_configuration()
 
-        userlist = accounts.searchable_user_data['users']
+        users = accounts.get_list('users')
 
         if (action is CFG.DEL):
             del accounts[f'users->{account.username}']
 
-        elif (action is CFG.ADD and account.username not in userlist):
+        elif (action is CFG.ADD and account.username not in users):
             hexpass = Authentication.hash_password(account.username, account.password)
 
             accounts[f'users->{account.username}->password'] = hexpass
             accounts[f'users->{account.username}->role'] = account.role
-            accounts[f'users->{account.username}->dark_mode'] = 0
+            accounts[f'users->{account.username}->settings->theme'] = 'light'
 
         else:
             return ValidationError('User account already exists.')
