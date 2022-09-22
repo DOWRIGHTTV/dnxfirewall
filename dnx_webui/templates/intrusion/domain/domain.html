@@ -61,7 +61,7 @@
                             <div class="row row-thin">
                                 <div class="multi-switch-container">
                                     <ul class="multi-switch">
-                                        <li class="multi-switch-off{% if settings['enabled'] %} active{% endif %}">
+                                        <li class="multi-switch-off{% if not settings['enabled'] %} active{% endif %}">
                                             <button name="default" value="{{ category }}" onclick="updateCategory(this)">
                                                 <i class="material-icons small">radio_button_unchecked</i>
                                             </button>
