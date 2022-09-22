@@ -931,6 +931,25 @@ def create_button_with_modal(
     return button
 
 @app.template_global()
+def create_decora_switch(name: str, value: str, enabled: int):
+
+    off = ' active' if not enabled else ''
+    on  = ' active' if enabled else ''
+
+    switch = (
+        f'<div class="col s3"><div class="row row-thin"><p class="multi-switch-label center">{value}</p></div>'
+        '<div class="row row-thin"><div class="multi-switch-container decora-switch">'
+        '<ul class="multi-switch">'
+            f'<li class="multi-switch-off{off}"><button name="{name}" value="{value}" onclick="updateCategory(this, 0)">'
+                '<i class="material-icons small">radio_button_unchecked</i></button></li>'
+            f'<li class="multi-switch-on{on}"><button name="{name}" value="{value}" onclick="updateCategory(this, 1)">'
+                '<i class="material-icons small">block</i></button></li>'
+        '</ul></div></div></div>'
+    )
+
+    return switch
+
+@app.template_global()
 def merge_items(a1, a2):
     '''accepts 2 arguments of item or list and merges them into one list. int can be replaced with any singular object.
 

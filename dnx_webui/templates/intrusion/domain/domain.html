@@ -52,54 +52,11 @@
             <div class="col s12 m10 offset-m1">
                 <div class="card-panel hoverable {{ theme.card }}">
                     {{ create_title('system default')|safe }}
-                    {% for category, settings in domain_settings['default'] %}
+                    {% for category, settings in domain_settings['built-in'] %}
                     {% if not loop.index0 % 4 %}<div class="row">{% endif %}
-                        <div class="col s3">
-                            <div class="row row-thin">
-                                <p class="multi-switch-label center">{{ category }}</p>
-                            </div>
-                            <div class="row row-thin">
-                                <div class="multi-switch-container">
-                                    <ul class="multi-switch">
-                                        <li class="multi-switch-off{% if not settings['enabled'] %} active{% endif %}">
-                                            <button name="default" value="{{ category }}" onclick="updateCategory(this)">
-                                                <i class="material-icons small">radio_button_unchecked</i>
-                                            </button>
-                                        </li>
-                                        <li class="multi-switch-on{% if settings['enabled'] %} active{% endif %}">
-                                            <button name="default" value="{{ category }}" onclick="updateCategory(this)">
-                                                <i class="material-icons small">block</i>
-                                            </button>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
+                        {{ create_decora_switch('built-in', category, settings['enabled'])|safe }}
                     {% if loop.index0 % 4 == 3 or loop.last%}</div>{% endif %}
                     {% endfor %}
-                </div>
-                <div class="card-panel hoverable {{ theme.card }}">
-                    {{ create_title('system default')|safe }}
-                    <div class="row">
-                    {% for category, settings in domain_settings['default'] %}
-                        <div class="input-field col s4 m4 center">
-                            <div class="switch">
-                                <h6>{{category}}</h6>
-                                <label>
-                                    Off
-                                    {% if category in ['malicious', 'cryptominer'] %}
-                                    <input disabled type="checkbox" checked="checked" name="default">
-                                    {% else %}
-                                    <input type="checkbox" {% if settings['enabled'] %} checked="checked" {% endif %}
-                                           name="default" value="{{category}}" onchange="updateCategory(this)">
-                                    {% endif %}
-                                    <span class="lever"></span>
-                                    On
-                                </label>
-                            </div>
-                        </div>
-                    {% endfor %}
-                    </div>
                 </div>
             </div>
         </div>
@@ -113,22 +70,9 @@
                 {{ create_title('top level domains')|safe }}
                     <div class="row">
                     {% for tld, status in domain_settings['tld'] %}
-                        <div class="col s3 m3 center">
-                            <div class="row">
-                                <div class="input-field col s12">
-                                    <h6>{{tld}}</h6>
-                                    <div class="switch">
-                                        <label>
-                                            Off
-                                            <input type="checkbox" {% if status %} checked="checked" {% endif %}
-                                                name="tld" value="{{tld}}" onchange="updateCategory(this)">
-                                            <span class="lever"></span>
-                                            On
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    {% if not loop.index0 % 4 %}<div class="row">{% endif %}
+                        {{ create_decora_switch('tld', tld, status)|safe }}
+                    {% if loop.index0 % 4 == 3 or loop.last%}</div>{% endif %}
                     {% endfor %}
                     </div>
                 </div>
@@ -143,21 +87,10 @@
                 <div class="card-panel hoverable {{ theme.card }}">
                     {{ create_title('keyword search')|safe }}
                     <div class="row">
-                    {% for category, settings in domain_settings['default'] %}
-                    {% if settings['enabled'] %}
-                        <div class="input-field col s3 m3 center">
-                            <h6>{{category}}</h6>
-                            <div class="switch">
-                                <label>
-                                    Off
-                                    <input type="checkbox" {% if settings['keyword'] %} checked="checked"
-                                        {% endif %} name="keyword" value="{{category}}" onchange="updateCategory(this)">
-                                    <span class="lever"></span>
-                                    On
-                                </label>
-                            </div>
-                        </div>
-                    {% endif %}
+                    {% for category, settings in domain_settings['built-in'] %}
+                        {% if settings['enabled'] %}
+                        {{ create_decora_switch('keyword', category, settings['enabled'])|safe }}
+                        {% endif %}
                     {% endfor %}
                     </div>
                 </div>
@@ -171,7 +104,14 @@ async function updateCategory(category) {
 
     let response = await ajaxClient.post("/post", {"type": category.name, "category": category.value, "enabled": enabled});
 
-    ajaxClient.handleResponse(response, category)
+    // manually changing the active button instead of using an event listener to prevent a switch on server errors.
+    let error = ajaxClient.handleResponse(response, category);
+    if (!error) {
+        category.parentElement.parentElement.querySelector(".active").classList.remove("active");
+        category.parentElement.classList.add("active");
+    }
+
+    category.preventDefault();
 }
 </script>
 {% endblock %}

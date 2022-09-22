@@ -15,7 +15,7 @@ def load_page(_: Form):
     dns_proxy: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
 
     domain_settings = {
-        'default': dns_proxy.get_items('categories->built-in'),
+        'built-in': dns_proxy.get_items('categories->built-in'),
         'user_defined': dns_proxy.get_items('categories->custom'),
         'tld': dns_proxy.get_items('tld')
     }
@@ -34,11 +34,10 @@ def update_page(form: Form) -> tuple[bool, dict]:
         'enabled': get_convert_bint(form, 'enabled')
     })
 
-    if ([x for x in category.values() if x in [DATA.MISSING, DATA.INVALID]]):
+    if any([x for x in category.values() if x in [DATA.MISSING, DATA.INVALID]]):
         return False, {'error': 2, 'message': INVALID_FORM}
 
-    error = validate_domain_categories(category, ruleset=ruleset)
-    if (error):
+    if error := validate_domain_categories(category, ruleset=ruleset):
         return False, {'error': 3, 'message': error.message}
 
     configure_domain_categories(category, ruleset=ruleset)
@@ -52,7 +51,7 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[Va
 
     dns_proxy: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
 
-    if (ruleset in ['default', 'user_defined']):
+    if (ruleset in ['built-in', 'user_defined']):
         cat_list = dns_proxy.get_list(f'categories->{ruleset}')
 
     elif (ruleset in ['tld']):
