@@ -49,24 +49,12 @@
                             </tr>
                         </thead>
                         <tbody>
+                            {% set message = 'Are you sure you want to remove this user?' %}
                             {% for user, user_info in user_list.items() %}
                             <tr>
                                 <td>
-                                    <a class="btn-floating btn-small waves-effect waves-light red modal-trigger"
-                                        href="#user-modal1-{{loop.index}}"><i class="material-icons">remove</i></a>
-                                    <div id="user-modal1-{{loop.index}}" class="modal">
-                                        <div class="{{modal_text_style}}">
-                                            <h5 class="red-text center">Are you sure you want to remove this user?</h5>
-                                        </div>
-                                        <form method="POST">
-                                            <div class="modal-footer">
-                                                <button class="btn waves-effect waves-light">YES</button>
-                                                <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                                                <input type="hidden" name="user_remove" value="{{user}}">
-                                                <input type="hidden" name="user_role" value="{{user_info[1]}}">
-                                            </div>
-                                        </form>
-                                    </div>
+                                    {{ create_button_with_modal('btn-floating btn-small red', 'remove',
+                                        1, loop.index, 1, 'user_remove', user, message)|safe }}
                                 </td>
                                 <td>{{user}}</td>
                                 <td>{{user_info[1]}}</td>

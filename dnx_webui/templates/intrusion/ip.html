@@ -24,8 +24,7 @@
         <div class="row">
             <div class="col s12 m10 offset-m1">
                 <div class="card-panel hoverable {{ theme.card }}">
-                    <h4 class="{{ theme.title }}">Reputation</h4>
-                    <div class="title-divider"></div>
+                    {{ create_title('reputation')|safe }}
                     {% for category, direction in ip_settings['reputation'] %}
                     {% if not loop.index0 % 4 %}<div class="row">{% endif %}
                         <div class="col s3">
@@ -58,8 +57,7 @@
     <div class="container">
         <div class="col s12">
             <div class="card-panel hoverable {{ theme.card }}">
-                <h4 class="{{ theme.title }}">Geolocation</h4>
-                <div class="title-divider"></div>
+                {{ create_title('geolocation')|safe }}
                 <div class="row">
                     <form method="POST">
                         <input type="hidden" name="tab" value="2">

@@ -52,6 +52,34 @@
             <div class="col s12 m10 offset-m1">
                 <div class="card-panel hoverable {{ theme.card }}">
                     {{ create_title('system default')|safe }}
+                    {% for category, settings in domain_settings['default'] %}
+                    {% if not loop.index0 % 4 %}<div class="row">{% endif %}
+                        <div class="col s3">
+                            <div class="row row-thin">
+                                <p class="multi-switch-label center">{{ category }}</p>
+                            </div>
+                            <div class="row row-thin">
+                                <div class="multi-switch-container">
+                                    <ul class="multi-switch">
+                                        <li class="multi-switch-off{% if settings['enabled'] %} active{% endif %}">
+                                            <button name="default" value="{{ category }}" onclick="updateCategory(this)">
+                                                <i class="material-icons small">radio_button_unchecked</i>
+                                            </button>
+                                        </li>
+                                        <li class="multi-switch-on{% if settings['enabled'] %} active{% endif %}">
+                                            <button name="default" value="{{ category }}" onclick="updateCategory(this)">
+                                                <i class="material-icons small">block</i>
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    {% if loop.index0 % 4 == 3 or loop.last%}</div>{% endif %}
+                    {% endfor %}
+                </div>
+                <div class="card-panel hoverable {{ theme.card }}">
+                    {{ create_title('system default')|safe }}
                     <div class="row">
                     {% for category, settings in domain_settings['default'] %}
                         <div class="input-field col s4 m4 center">
@@ -139,7 +167,7 @@
 </section>
 <script>
 async function updateCategory(category) {
-    const enabled = !!category.checked;
+    const enabled = !!category.active;
 
     let response = await ajaxClient.post("/post", {"type": category.name, "category": category.value, "enabled": enabled});
 
