@@ -30,18 +30,9 @@
                     {{ create_title('user defined')|safe }}
                     <div class="row">
                     {% for category, settings in domain_settings['user_defined'] %}
-                        <div class="input-field col s4 m4 center">
-                            {{category}}
-                            <div class="switch">
-                                <label>
-                                    Off
-                                    <input type="checkbox" {% if settings['enabled'] %} checked="checked" {% endif %}
-                                           name="user_defined" value="{{category}}" onchange="updateCategory(this)">
-                                    <span class="lever"></span>
-                                    On
-                                </label>
-                            </div>
-                        </div>
+                    {% if not loop.index0 % 4 %}<div class="row">{% endif %}
+                        {{ create_decora_switch('user_defined', category, settings['enabled'])|safe }}
+                    {% if loop.index0 % 4 == 3 or loop.last%}</div>{% endif %}
                     {% endfor %}
                     </div>
                 </div>
@@ -89,7 +80,7 @@
                     <div class="row">
                     {% for category, settings in domain_settings['built-in'] %}
                         {% if settings['enabled'] %}
-                        {{ create_decora_switch('keyword', category, settings['enabled'])|safe }}
+                        {{ create_decora_switch('keyword', category, settings['keyword'])|safe }}
                         {% endif %}
                     {% endfor %}
                     </div>
