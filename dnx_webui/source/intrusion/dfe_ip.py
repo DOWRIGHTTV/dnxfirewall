@@ -11,7 +11,7 @@ from dnx_gentools.file_operations import ConfigurationManager, load_configuratio
 
 
 def load_page(form: Form) -> dict:
-    proxy_settings: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/ip')
+    proxy_profile: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/ip')
     country_map: ConfigChain = load_configuration('geolocation', filepath='dnx_webui/data')
 
     proxy_global: ConfigChain = load_configuration('global', cfg_type='security/ip')
@@ -28,7 +28,7 @@ def load_page(form: Form) -> dict:
 
     geolocation = []
     geolocation_append = geolocation.append
-    for country, direction in proxy_settings.get_items('geolocation'):
+    for country, direction in proxy_profile.get_items('geolocation'):
 
         # region level filter
         if (country not in selected_region):
@@ -74,7 +74,9 @@ def load_page(form: Form) -> dict:
 
     ipp_settings = {
         'sec_profile': 1,
-        'reputation': proxy_settings.get_items('reputation'),
+        'profile_name': proxy_profile['name'],
+        'profile_desc': proxy_profile['description'],
+        'reputation': proxy_profile.get_items('reputation'),
         'tr_settings': tr_settings, 'regions': sorted(country_map.get_list()),
         'image_map': {
             DIR.OFF: 'allow_up-down.png', DIR.OUTBOUND: 'block_up.png',

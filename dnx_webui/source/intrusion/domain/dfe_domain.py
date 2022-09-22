@@ -12,12 +12,15 @@ from dnx_gentools.file_operations import ConfigurationManager, load_configuratio
 
 # TODO: if system category gets disabled that had keyword enabled. it does not disable the keyword search.
 def load_page(_: Form):
-    dns_proxy: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
+    proxy_profile: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
 
     domain_settings = {
-        'built-in': dns_proxy.get_items('categories->built-in'),
-        'user_defined': dns_proxy.get_items('categories->custom'),
-        'tld': dns_proxy.get_items('tld')
+        'sec_profile': 1,
+        'profile_name': proxy_profile['name'],
+        'profile_desc': proxy_profile['description'],
+        'built-in': proxy_profile.get_items('categories->built-in'),
+        'user_defined': proxy_profile.get_items('categories->custom'),
+        'tld': proxy_profile.get_items('tld')
     }
 
     return domain_settings

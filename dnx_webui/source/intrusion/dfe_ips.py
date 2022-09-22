@@ -14,25 +14,25 @@ from dnx_iptools.iptables import IPTablesManager
 
 
 def load_page(_: Form) -> dict:
-    ips: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/ids_ips')
+    ips_profile: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/ids_ips')
 
-    passive_block_ttl = ips['passive_block_ttl']
-    ids_mode = ips['ids_mode']
+    passive_block_ttl = ips_profile['passive_block_ttl']
+    ids_mode = ips_profile['ids_mode']
 
     ddos = {
-        'enabled': ips['ddos->enabled'],
-        'tcp': ips['ddos->limits->source->tcp'],
-        'udp': ips['ddos->limits->source->udp'],
-        'icmp': ips['ddos->limits->source->icmp']
+        'enabled': ips_profile['ddos->enabled'],
+        'tcp': ips_profile['ddos->limits->source->tcp'],
+        'udp': ips_profile['ddos->limits->source->udp'],
+        'icmp': ips_profile['ddos->limits->source->icmp']
     }
 
     portscan = {
-        'enabled': ips['port_scan->enabled'],
-        'reject': ips['port_scan->reject']
+        'enabled': ips_profile['port_scan->enabled'],
+        'reject': ips_profile['port_scan->reject']
     }
 
     ips_enabled = ddos['enabled'] or portscan['enabled']
-    nats_configured = ips['open_protocols->tcp'] or ips['open_protocols->udp']
+    nats_configured = ips_profile['open_protocols->tcp'] or ips_profile['open_protocols->udp']
 
     ddos_notify = False if ddos['enabled'] or nats_configured else True
     ps_notify   = False if portscan['enabled'] or nats_configured else True
@@ -44,11 +44,14 @@ def load_page(_: Form) -> dict:
         passively_blocked_hosts.append((host, timestamp, System.offset_and_format(timestamp)))
 
     return {
+        'sec_profile': 1,
+        'profile_name': ips_profile['name'],
+        'profile_desc': ips_profile['description'],
         'enabled': ips_enabled, 'length': passive_block_ttl, 'ids_mode': ids_mode,
         'ddos': ddos, 'port_scan': portscan,
         'ddos_notify': ddos_notify, 'ps_notify': ps_notify,
-        'ip_whitelist': ips['whitelist->ip_whitelist'],
-        'dns_server_whitelist': ips['whitelist->dns_servers'],
+        'ip_whitelist': ips_profile['whitelist->ip_whitelist'],
+        'dns_server_whitelist': ips_profile['whitelist->dns_servers'],
         'passively_blocked_hosts': passively_blocked_hosts
     }
 
