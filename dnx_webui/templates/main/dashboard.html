@@ -137,7 +137,7 @@
                     <div class="row">
                         <ul>
                             {% for value in dashboard['infected_hosts'] %}
-                            <li>{{value[0]}} | {{value[1]}} | {{value[3]}}</span></li>
+                            <li>{{ value[0] }} | {{ value[1] }} | {{ value[3] }}</li>
                             {% endfor %}
                         </ul>
                     </div>
@@ -154,15 +154,15 @@
         </div>
     </div>
 </section>
-<section id="statistics" class="{{theme.off_section}}">
+<section id="statistics" class="{{ theme.off_section }}">
     <div class="container">
         <div class="row">
             <div class="col s12">
                 <h4 class="{{ theme.title }}">System Information</h4>
-                <ul class="tabs">
-                    <li class="tab col s3 l4 xl2"><a class="active" href="#server-stat">Server Status</a></li>
-                    <li class="tab col s3 l4 xl2"><a href="#system-stat">System Stats</a></li>
-                    <li class="tab col s3 l4 xl2"><a href="#interface-stat">Interface Stats</a></li>
+                <ul class="tabs tabs-fixed-width">
+                    <li class="tab col s4 xl2"><a class="active" href="#server-stat">Server Status</a></li>
+                    <li class="tab col s4 xl2"><a href="#system-stat">System Stats</a></li>
+                    <li class="tab col s4 xl2"><a href="#interface-stat">Interface Stats</a></li>
                 </ul>
             </div>
             <div id="server-stat" class="col s12">
