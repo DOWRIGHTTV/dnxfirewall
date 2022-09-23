@@ -51,8 +51,8 @@ def load_page(_: Form) -> dict:
         'enabled': ips_enabled, 'length': passive_block_ttl, 'ids_mode': ids_mode,
         'ddos': ddos, 'port_scan': portscan,
         'ddos_notify': ddos_notify, 'ps_notify': ps_notify,
-        'ip_whitelist': ips_profile['whitelist->ip_whitelist'],
-        'dns_server_whitelist': ips_profile['whitelist->dns_servers'],
+        'ip_whitelist': ips_global['whitelist->ip_whitelist'],
+        'dns_server_whitelist': ips_global['whitelist->dns_servers'],
         'passively_blocked_hosts': passively_blocked_hosts
     }
 
