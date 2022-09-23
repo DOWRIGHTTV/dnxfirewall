@@ -23,15 +23,15 @@ if (TYPE_CHECKING):
 
 
 class IPSConfiguration(ConfigurationMixinBase):
-    fw_rules:     dict = {}
-    ip_whitelist: dict = {}
+    fw_rules:     ClassVar[dict] = {}
+    ip_whitelist: ClassVar[dict] = {}
 
-    open_ports: dict[PROTO, dict] = {
+    open_ports: ClassVar[dict[PROTO, dict]] = {
         PROTO.TCP: {},
         PROTO.UDP: {}
     }
 
-    ddos_limits: dict[PROTO, int] = {
+    ddos_limits: ClassVar[dict[PROTO, int]] = {
         PROTO.TCP: -1,
         PROTO.UDP: -1,
         PROTO.ICMP: -1
@@ -45,7 +45,7 @@ class IPSConfiguration(ConfigurationMixinBase):
     block_length:  ClassVar[int] = 0
 
     def _configure(self) -> tuple[LogHandler_T, tuple, int]:
-        '''tasks required by the DNS proxy.
+        '''tasks required by the IDS/IPS.
 
         return thread information to be run.
         '''
@@ -92,13 +92,13 @@ class IPSConfiguration(ConfigurationMixinBase):
             self.__class__.block_length = NO_DELAY
 
         # src ips that will not trigger ips # FIXME: does this even work? we use integer for ip addr now.
-        self.__class__.ip_whitelist = set([IPv4Address(ip) for ip in proxy_settings['whitelist->ip_whitelist']])
+        self.__class__.ip_whitelist = set([ip for ip in proxy_settings['whitelist->ip_whitelist']])
 
         self._initialize.done()
 
     # NOTE: determine whether the default sleep timer is acceptable for this method. if not, figure out how to override
     # the setting set in the decorator or remove the decorator entirely.
-    @cfg_read_poller('ids_ips', cfg_type='security/ids_ips')
+    @cfg_read_poller('global', cfg_type='security/ids_ips')
     def _get_open_ports(self, proxy_settings: ConfigChain) -> None:
 
         self.__class__.open_ports = {

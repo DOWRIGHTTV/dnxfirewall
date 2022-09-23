@@ -37,7 +37,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
     }
 
     def _configure(self) -> tuple[LogHandler_T, tuple, int]:
-        '''tasks required by the DNS proxy.
+        '''tasks required by the IP proxy.
 
         return thread information to be run.
         '''
@@ -102,7 +102,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
         self._initialize.done()
 
-    @cfg_read_poller('ids_ips', cfg_type='security/ids_ips')
+    @cfg_read_poller('global', cfg_type='security/ids_ips')
     def _get_open_ports(self, ips: ConfigChain) -> None:
 
         self.__class__.open_ports = {

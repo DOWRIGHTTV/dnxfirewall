@@ -15,6 +15,7 @@ from dnx_iptools.iptables import IPTablesManager
 
 def load_page(_: Form) -> dict:
     ips_profile: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/ids_ips')
+    ips_global: ConfigChain = load_configuration('global', cfg_type='security/ids_ips')
 
     passive_block_ttl = ips_profile['passive_block_ttl']
     ids_mode = ips_profile['ids_mode']
@@ -32,7 +33,7 @@ def load_page(_: Form) -> dict:
     }
 
     ips_enabled = ddos['enabled'] or portscan['enabled']
-    nats_configured = ips_profile['open_protocols->tcp'] or ips_profile['open_protocols->udp']
+    nats_configured = ips_global['open_protocols->tcp'] or ips_global['open_protocols->udp']
 
     ddos_notify = False if ddos['enabled'] or nats_configured else True
     ps_notify   = False if portscan['enabled'] or nats_configured else True

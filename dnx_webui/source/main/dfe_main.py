@@ -67,7 +67,7 @@ import source.intrusion.dfe_ip as ip_proxy
 import source.intrusion.domain.dfe_domain as dns_proxy
 import source.intrusion.domain.dfe_xlist as xlist
 import source.intrusion.domain.dfe_categories as category_settings
-import source.intrusion.dfe_ips as dnx_ips
+import source.intrusion.dfe_ids_ips as dnx_ips
 import source.system.settings.dfe_dns as dns_settings
 import source.system.settings.dfe_dhcp as dhcp_settings
 import source.system.settings.dfe_interface as interface_settings
