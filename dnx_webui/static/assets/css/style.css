@@ -99,8 +99,9 @@ nav ul a {
     flex-wrap: wrap; }
   /**/
   .card-panel .card-title {
-    font-family: Orbitron, Roboto, sans-serif; }
-
+    font-family: Orbitron, Roboto, sans-serif;
+    font-weight: bold;
+    letter-spacing: 0.075em; }
 
 /* icon color change */
 i.icon-red {
