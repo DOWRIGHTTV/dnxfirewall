@@ -56,7 +56,9 @@ nav ul a {
       margin: 0 -4px 0 2px; }
 
 .tabs {
-  font-family: Orbitron, Roboto, sans-serif; }
+  font-family: Orbitron, Roboto, sans-serif;
+  font-weight: bold;
+  letter-spacing: 0.075em; }
   .tabs .indicator {
     background-color: #404b77; }
   .tabs .tab a {
@@ -100,7 +102,6 @@ nav ul a {
   /**/
   .card-panel .card-title {
     font-family: Orbitron, Roboto, sans-serif;
-    font-weight: bold;
     letter-spacing: 0.075em; }
 
 /* icon color change */
