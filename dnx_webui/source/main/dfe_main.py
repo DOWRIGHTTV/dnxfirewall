@@ -878,7 +878,7 @@ def set_theme_values() -> None:
 @app.template_global()
 def create_title(title: str) -> str:
     return (
-        f'<div class="row"><h4 class="{context_global.theme["title"]}">{title.title()}</h4></div>'
+        f'<div class="row"><h4 class="{context_global.theme["title"]} card-title">{title.title()}</h4></div>'
         f'<div class="title-divider"></div><br>'
     )
 
