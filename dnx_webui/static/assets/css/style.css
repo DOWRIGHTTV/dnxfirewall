@@ -54,12 +54,15 @@ nav ul a {
       cursor: default; }
     .dropdown-content li > a.expand > i {
       margin: 0 -4px 0 2px; }
-.tabs .indicator {
-  background-color: #404b77; }
-.tabs .tab a {
-  color: rgba(238, 110, 115, 0.7); }
-  .tabs .tab a:hover, .tabs .tab a.active {
-    color: #45649f; }
+
+.tabs {
+  font-family: Orbitron, Roboto, sans-serif; }
+  .tabs .indicator {
+    background-color: #404b77; }
+  .tabs .tab a {
+    color: rgba(238, 110, 115, 0.7); }
+    .tabs .tab a:hover, .tabs .tab a.active {
+      color: #45649f; }
 
 #statistics {
     min-height: 300px; }
@@ -88,14 +91,15 @@ nav ul a {
   border-radius: 25px;
   transition: all .25s;
   box-shadow: 0 16px 24px 2px rgba(0, 0, 0, 0.14), 0 6px 30px 5px rgba(0, 0, 0, 0.12), 0 8px 10px -7px rgba(0, 0, 0, 0.2); }
-  .card-panel.card-title {
-    font-family: Orbitron, Roboto, sans-serif; }
   /* EQUAL HEIGHT */
   .card-panel.card-panel-eql {
     height: calc(100% - 12px); }
   .card-panel.row-flex {
     display: flex;
     flex-wrap: wrap; }
+  /**/
+  .card-panel .card-title {
+    font-family: Orbitron, Roboto, sans-serif; }
 
 
 /* icon color change */
