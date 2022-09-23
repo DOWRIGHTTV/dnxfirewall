@@ -88,18 +88,17 @@ nav ul a {
   width: 315px;
   word-break: break-all; }
 
+.row.row-flex {
+  display: flex;
+  flex-wrap: wrap; }
+
 /* CARD PANELS */
 .card-panel {
   border-radius: 25px;
   transition: all .25s;
   box-shadow: 0 16px 24px 2px rgba(0, 0, 0, 0.14), 0 6px 30px 5px rgba(0, 0, 0, 0.12), 0 8px 10px -7px rgba(0, 0, 0, 0.2); }
-  /* EQUAL HEIGHT */
   .card-panel.card-panel-eql {
     height: calc(100% - 12px); }
-  .card-panel.row-flex {
-    display: flex;
-    flex-wrap: wrap; }
-  /**/
   .card-panel .card-title {
     font-family: Orbitron, Roboto, sans-serif;
     letter-spacing: 0.075em; }
