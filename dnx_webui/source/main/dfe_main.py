@@ -82,7 +82,7 @@ import source.system.dfe_users as dfe_users
 import source.system.dfe_backups as dfe_backups
 import source.system.dfe_services as dnx_services
 
-# dns_settings: StandardWebPage
+dns_settings: StandardWebPage
 
 # ===============
 # TYPING IMPORTS
