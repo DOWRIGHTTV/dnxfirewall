@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from source.web_typing import *
-from source.web_validate import ValidationError, convert_int, get_convert_int, get_convert_bint, ip_address, standard
+from source.web_validate import *
 
-from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
@@ -45,7 +44,7 @@ def load_page(_: Form) -> dict:
         passively_blocked_hosts.append((host, timestamp, System.offset_and_format(timestamp)))
 
     return {
-        'sec_profile': 1,
+        'security_profile': 1,
         'profile_name': ips_profile['name'],
         'profile_desc': ips_profile['description'],
         'enabled': ips_enabled, 'length': passive_block_ttl, 'ids_mode': ids_mode,
@@ -56,14 +55,17 @@ def load_page(_: Form) -> dict:
         'passively_blocked_hosts': passively_blocked_hosts
     }
 
-def update_page(form: Form) -> str:
+def update_page(form: Form) -> tuple[int, str]:
+    # prevents errors while in dev mode.
+    if ('security_profile' in form):
+        return -1, 'temporarily limited to profile 1.'
 
     if ('ddos_enabled' in form):
         ddos = config(**{
             'enabled': get_convert_bint(form, 'ddos_enabled')
         })
         if (DATA.INVALID in ddos.values()):
-            return INVALID_FORM
+            return 1, INVALID_FORM
 
         configure_ddos(ddos)
 
@@ -75,10 +77,10 @@ def update_page(form: Form) -> str:
         })
 
         if (DATA.INVALID in ddos_limits.values()):
-            return INVALID_FORM
+            return 2, INVALID_FORM
 
         if not all([limit in range(5, 100) for limit in ddos_limits.values()]):
-            return f'protocol limits must be in within range 5-100.'
+            return 3, 'protocol limits must be in within range 5-100.'
 
         configure_ddos_limits(ddos_limits)
 
@@ -88,7 +90,7 @@ def update_page(form: Form) -> str:
         })
 
         if (DATA.INVALID in settings.values()):
-            return INVALID_FORM
+            return 4, INVALID_FORM
 
         configure_portscan(settings, field='enabled')
 
@@ -98,11 +100,10 @@ def update_page(form: Form) -> str:
         })
 
         if (DATA.INVALID in settings.values()):
-            return INVALID_FORM
+            return 5, INVALID_FORM
 
-        error = validate_portscan_reject(settings)
-        if (error):
-            return error.message
+        if error := validate_portscan_reject(settings):
+            return 6, error.message
 
         configure_portscan(settings, field='reject')
 
@@ -112,11 +113,10 @@ def update_page(form: Form) -> str:
         })
 
         if any([x in [DATA.MISSING, DATA.INVALID] for x in settings.values()]):
-            return INVALID_FORM
+            return 7, INVALID_FORM
 
-        error = validate_passive_block_length(settings)
-        if (error):
-            return error.message
+        if error := validate_passive_block_length(settings):
+            return 8, error.message
 
         configure_general_settings(settings, 'pb_length')
 
@@ -126,7 +126,7 @@ def update_page(form: Form) -> str:
         })
 
         if (DATA.INVALID in settings.values()):
-            return INVALID_FORM
+            return 9, INVALID_FORM
 
         configure_general_settings(settings, 'ids_mode')
 
@@ -137,13 +137,13 @@ def update_page(form: Form) -> str:
         })
 
         if (DATA.MISSING in whitelist.values()):
-            return INVALID_FORM
+            return 10, INVALID_FORM
 
         try:
             ip_address(whitelist.ip)
             standard(whitelist.name)
         except ValidationError as ve:
-            return ve.message
+            return 11, ve.message
         else:
             configure_ip_whitelist(whitelist, action=CFG.ADD)
 
@@ -152,12 +152,12 @@ def update_page(form: Form) -> str:
             'whitelist_ip': form.get('ips_wl_ip', DATA.MISSING)
         })
         if (DATA.MISSING in whitelist.values()):
-            return INVALID_FORM
+            return 12, INVALID_FORM
 
         try:
             ip_address(whitelist.ip)
         except ValidationError as ve:
-            return ve.message
+            return 13, ve.message
         else:
             configure_ip_whitelist(whitelist, action=CFG.DEL)
 
@@ -167,33 +167,32 @@ def update_page(form: Form) -> str:
         })
 
         if (DATA.INVALID in settings.values()):
-            return INVALID_FORM
+            return 14, INVALID_FORM
 
         configure_dns_whitelist(settings)
 
     elif ('ips_pbl_remove' in form):
         host_info = form.get('ips_pbl_remove', DATA.INVALID)
         if (host_info is DATA.INVALID):
-            return INVALID_FORM
+            return 15, INVALID_FORM
 
         try:
             host_ip, timestamp = host_info.split('/')
 
             ip_address(host_ip)
         except:
-            return INVALID_FORM
+            return 16, INVALID_FORM
 
         if (convert_int(timestamp) is DATA.INVALID):
-            return INVALID_FORM
+            return 17, INVALID_FORM
 
-        else:
-            with IPTablesManager() as iptables:
-                iptables.remove_passive_block(host_ip, timestamp)
+        with IPTablesManager() as iptables:
+            iptables.remove_passive_block(host_ip, timestamp)
 
     else:
-        return INVALID_FORM
+        return 99, INVALID_FORM
 
-    return ''
+    return NO_STANDARD_ERROR
 
 # ==============
 # VALIDATION

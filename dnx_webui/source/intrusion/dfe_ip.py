@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from source.web_typing import *
-from source.web_validate import ValidationError, convert_int, get_convert_int
+from source.web_validate import *
 
-from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import DATA, GEO, DIR
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
@@ -73,7 +72,7 @@ def load_page(form: Form) -> dict:
     }
 
     ipp_settings = {
-        'sec_profile': 1,
+        'security_profile': 1,
         'profile_name': proxy_profile['name'],
         'profile_desc': proxy_profile['description'],
         'reputation': proxy_profile.get_items('reputation'),
@@ -91,30 +90,28 @@ def load_page(form: Form) -> dict:
 
     return ipp_settings
 
-def update_page(form: Form) -> tuple[bool, WebError]:
+def update_page(form: Form) -> tuple[int, str]:
 
     # prevents errors while in dev mode.
     if ('security_profile' in form):
-        pass
+        return -1, 'temporarily limited to profile 1.'
 
-    # no action needed for this at this time. in the future, validations may be required, but the load page has been
-    # expanded to generate the user select data.
     if ('change_geo_view' in form):
         geo_direction = convert_int(form.get('menu_dir', DATA.MISSING))
 
         if (geo_direction not in range(6)):
-            return False, {'error': 1, 'message': INVALID_FORM}
+            return 1, INVALID_FORM
 
         valid_regions = load_configuration('geolocation', filepath='dnx_webui/data').get_list()
         if (form.get('region') not in valid_regions):
-            return False, {'error': 2, 'message': INVALID_FORM}
+            return 2, INVALID_FORM
 
     elif ('restriction_enable' in form):
         tr_settings = config(**{
             'enabled': get_convert_int(form, 'restriction_enable')
         })
         if (DATA.INVALID in tr_settings.values()):
-            return False, {'error': 3, 'message': INVALID_FORM}
+            return 3, INVALID_FORM
 
         configure_time_restriction(tr_settings, 'enabled')
 
@@ -128,19 +125,20 @@ def update_page(form: Form) -> tuple[bool, WebError]:
         })
 
         if any([x in [DATA.MISSING, DATA.INVALID] for x in tr_settings.values()]):
-            return False, {'error': 4, 'message': INVALID_FORM}
+            return 4, INVALID_FORM
 
-        error = validate_time_restriction(tr_settings)
-        if (error):
-            return False, {'error': 5, 'message': error.message}
+        if error := validate_time_restriction(tr_settings):
+            return 5, error.message
 
         configure_time_restriction(tr_settings, 'all')
 
     elif ('continent' in form):
-        return False, {'error': 69, 'message': 'Bulk actions are still in development.'}
+        return 69, 'Bulk actions not available.'
 
     else:
-        return False, {'error': 6, 'message': INVALID_FORM}
+        return 99, INVALID_FORM
+
+    return NO_STANDARD_ERROR
 
 # ----------------
 # AJAX PROCESSING

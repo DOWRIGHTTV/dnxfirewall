@@ -1,18 +1,20 @@
 <div class="col s12">
     <div class="multi-switch-container sec-profiles">
-        <ul class="pagination multi-switch sec-profiles">
-            <li{% if page_settings.sec_profile == 1 %} class="disabled"{% endif %}>
-                <button name="sec_profile" value="<"><i class="material-icons">chevron_left</i></button>
-            </li>
-            {% for profile in range(1,16) %}
-            <li class="multi-switch-on{% if page_settings.sec_profile == profile %} active{% endif %}">
-                <button name="security_profile" value="{{ profile }}">{{ profile }}</button>
-            </li>
-            {% endfor %}
-            <li{% if page_settings.sec_profile == 15 %} class="disabled"{% endif %}>
-                <button name="security_profile" value=">"><i class="material-icons">chevron_right</i></button>
-            </li>
-        </ul>
+        <form method="post">
+            <ul class="pagination multi-switch sec-profiles">
+                <li{% if page_settings.sec_profile == 1 %} class="disabled"{% endif %}>
+                    <button name="security_profile" value="<"><i class="material-icons">chevron_left</i></button>
+                </li>
+                {% for profile in range(1,16) %}
+                <li class="multi-switch-on{% if page_settings.sec_profile == profile %} active{% endif %}">
+                    <button name="security_profile" value="{{ profile }}">{{ profile }}</button>
+                </li>
+                {% endfor %}
+                <li{% if page_settings.sec_profile == 15 %} class="disabled"{% endif %}>
+                    <button name="security_profile" value=">"><i class="material-icons">chevron_right</i></button>
+                </li>
+            </ul>
+        </form>
     </div>
 </div>
 <div class="container">

@@ -5,9 +5,11 @@ from __future__ import annotations
 import os
 from datetime import timedelta
 
+from source.web_typing import *
+
 from dnx_gentools.def_constants import HOME_DIR, FIVE_SEC, fast_time, ppt
 from dnx_gentools.def_enums import CFG
-from dnx_gentools.def_exceptions import ValidationError, ConfigurationError
+from dnx_gentools.def_exceptions import ConfigurationError
 from dnx_gentools.file_operations import load_configuration, ConfigurationManager
 
 from dnx_iptools.cprotocol_tools.cprotocol_tools import itoip
@@ -79,6 +81,8 @@ import source.system.log.dfe_system as sys_logs
 import source.system.dfe_users as dfe_users
 import source.system.dfe_backups as dfe_backups
 import source.system.dfe_services as dnx_services
+
+# dns_settings: StandardWebPage
 
 # ===============
 # TYPING IMPORTS
@@ -212,7 +216,7 @@ def intrusion_ip_post(session_data: dict):
 
     return ajax_response(status=status, data=err_data)
 
-@app.route('/intrusion/domain', methods=['GET', 'POST'])
+@app.get('/intrusion/domain')
 @user_restrict('admin')
 def intrusion_domain(session_data: dict):
     page_settings = {
@@ -594,7 +598,7 @@ def dnx_blocked() -> str:
 
     try:
         validate.domain_name(blocked_domain)
-    except ValidationError:
+    except validate.ValidationError:
         session.pop('user', None)
 
         return render_template('main/not_authorized.html', theme=context_global.theme, **page_settings)
@@ -646,17 +650,17 @@ def default_sub_sub(path_a, path_b, path_c):
 # --------------------------------------------- #
 # all standard page loads use this logic to decide the page action/ call the correct
 # lower level functions residing in each page's module
-def standard_page_logic(dnx_page, page_settings: dict, data_key: str, *, page_name: str) -> str:
+def standard_page_logic(dnx_page: StandardWebPage, page_settings: dict, data_key: str, *, page_name: str) -> str:
 
     if (request.method == 'POST'):
         try:
-            error = dnx_page.update_page(request.form)
+            error, err_msg = dnx_page.update_page(request.form)
         except ConfigurationError as ce:
             return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
 
         page_settings.update({
             'tab': validate.get_convert_int(request.form, 'tab'),
-            'standard_error': error
+            'standard_error': err_msg
         })
 
     try:
@@ -666,7 +670,7 @@ def standard_page_logic(dnx_page, page_settings: dict, data_key: str, *, page_na
 
     return render_template(page_name, theme=context_global.theme, **page_settings)
 
-def firewall_page_logic(dnx_page, page_settings: dict, data_key: str, *, page_name: str) -> str:
+def firewall_page_logic(dnx_page: ModuleType, page_settings: dict, data_key: str, *, page_name: str) -> str:
 
     if (request.method == 'POST'):
         try:
@@ -687,7 +691,7 @@ def firewall_page_logic(dnx_page, page_settings: dict, data_key: str, *, page_na
 
     return render_template(page_name, theme=context_global.theme, **page_settings)
 
-def log_page_logic(log_page, page_settings: dict, *, page_name: str) -> str:
+def log_page_logic(log_page: ModuleType, page_settings: dict, *, page_name: str) -> str:
     # can now accept redirects from other places on the webui to load specific tables directly on load
     # using uri queries FIXME: this has been temporarily suspended and should be reintroduced.
 
@@ -704,7 +708,7 @@ def log_page_logic(log_page, page_settings: dict, *, page_name: str) -> str:
 
     return render_template(page_name, theme=context_global.theme, **page_settings)
 
-def categories_page_logic(dnx_page, page_settings: dict) -> str:
+def categories_page_logic(dnx_page: ModuleType, page_settings: dict) -> str:
     if (request.method == 'POST'):
         try:
             error, menu_option = dnx_page.update_page(request.form)

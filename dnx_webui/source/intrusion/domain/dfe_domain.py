@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from source.web_typing import *
-from source.web_validate import ValidationError, get_convert_bint
+from source.web_validate import *
 
-from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import DATA
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
@@ -15,7 +14,7 @@ def load_page(_: Form):
     proxy_profile: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
 
     domain_settings = {
-        'sec_profile': 1,
+        'security_profile': 1,
         'profile_name': proxy_profile['name'],
         'profile_desc': proxy_profile['description'],
         'built-in': proxy_profile.get_items('categories->built-in'),

@@ -44,7 +44,7 @@ _properties = {
     ('zone', 1): ['deep-purple lighten-2', 'border_inner'], ('zone', 2): ['purple lighten-2', 'border_inner']
 }
 def format_fw_obj(fw_obj: list, /) -> list[str, str]:
-    print(fw_obj)
+
     properties = _properties.get((fw_obj[3], fw_obj[4]), ['', ''])
 
     return [

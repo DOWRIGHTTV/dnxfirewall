@@ -141,8 +141,5 @@ TOP_DOMAIN_COUNT: int = 20
 HEARTBEAT_FAIL_LIMIT: int = 3
 KEEP_ALIVE_DOMAIN: str = 'dnxfirewall.com'
 
-# used when loading geolocation settings to implicitly include private ip space as a category, but disabled
+# used when loading geolocation settings to implicitly include private ip space as a category
 RFC1918: tuple[str, int] = ('rfc1918', 0)
-
-# TODO: consider moving to web_validate
-INVALID_FORM: str = 'Invalid form data.'
