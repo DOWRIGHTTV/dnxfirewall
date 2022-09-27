@@ -18,6 +18,8 @@ if (TYPE_CHECKING):
     Args = MultiDict[str, str]
     WebError = dict[str, Union[int, str]]
 
+    # WTF is this shit.
+
     class StandardWebPage(Protocol):
         def load_page(self, _: Union[Form, Args]) -> dict[str, Any]: ...
         def update_page(self, _: Form) -> tuple[int, str]: ...
