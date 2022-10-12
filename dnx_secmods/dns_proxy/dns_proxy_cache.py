@@ -31,7 +31,7 @@ __all__ = (
 NO_QNAME_RECORD = QNAME_RECORD(-1, -1, [])
 QNAME_NOT_FOUND = QNAME_RECORD_UPDATE(-1, [])
 
-def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Callable[[int, ClientQuery],None]) -> DNSCache:
+def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Callable[[int, ClientQuery], None]) -> DNSCache:
 
     _top_domains: list = load_configuration('dns_server', ext='cache').get('top_domains')
 
@@ -71,7 +71,7 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
             Log.notice('top domains cache has been cleared.')
 
         with ConfigurationManager('dns_server', ext='cache') as dnx:
-            cache_settings = dnx.load_configuration()
+            cache_settings: ConfigChain = dnx.load_configuration()
 
             cache_settings['clear->standard'] = clear_dns_cache
             cache_settings['clear->top_domains'] = clear_top_domains
@@ -89,7 +89,7 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
         # =============
         # locking in starting time since per loop accuracy is not necessary
         now: int = fast_time()
-        expired: list[str] = [dom for dom, record in list(cache.items()) if now > record.expire]
+        expired: list[str] = [domain for domain, record in cache.items() if now > record.expire]
 
         for domain in expired:
             del cache[domain]
@@ -99,7 +99,7 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
         # =============
         # keep the top XX queried domains permanently in cache.
         top_domains: list[str] = [
-            domain[0] for domain in domain_counter.most_common(TOP_DOMAIN_COUNT)
+            domain for domain, ct in domain_counter.most_common(TOP_DOMAIN_COUNT)
         ]
 
         # updating persistent file first then sending requests
@@ -158,7 +158,7 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
             return NO_QNAME_RECORD
 
         def add(self, request: str, data_to_cache: QNAME_RECORD):
-            '''add query to cache after calculating expiration time.
+            '''add the query to cache after calculating expiration time.
             '''
             self[request] = data_to_cache
 
@@ -191,9 +191,10 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
 
 
 def request_tracker() -> RequestTracker:
-    '''Basic queueing mechanism for DNS requests received by the server. The main feature of the queue is to provide
-    efficient thread blocking via Thread Events over a busy loop. This is a very lightweight version of the standard lib
-    Queue and uses a deque as its primary data structure.
+    '''Basic queueing mechanism for DNS requests received by the server.
+
+    The main feature of the queue is to provide efficient thread blocking via Thread Events over a busy loop.
+    This is a very lightweight version of the standard lib Queue and uses a deque as its primary data structure.
     '''
     request_ready = threading.Event()
     wait_for_request = request_ready.wait
@@ -209,10 +210,11 @@ def request_tracker() -> RequestTracker:
     class _RequestTracker:
 
         @staticmethod
-        # blocks until the request ready flag has been set, then iterates over dict and appends any client address with
-        # both values present. (client_query class instance object and decision)
         def return_ready() -> ClientQuery:
+            '''function generator returning requests from queue in FIFO order.
 
+            calls will block if the queue is empty and will never time out.
+            '''
             # blocking until at least one request has been received
             wait_for_request()
 
@@ -225,7 +227,7 @@ def request_tracker() -> RequestTracker:
                 yield request_queue_get()
 
         @staticmethod
-        # NOTE: first arg is because this gets reference/called via an instance.
+        # NOTE: first arg is because this gets referenced/called via an instance.
         def insert(_, client_query: ClientQuery) -> None:
 
             request_queue_append(client_query)

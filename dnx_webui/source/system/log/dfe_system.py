@@ -10,32 +10,42 @@ from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.file_operations import tail_file
 from dnx_gentools.system_info import System
 
+from source.web_interfaces import LogWebPage
+
+__all__ = ('WebPage',)
+
 LOG_DIR = f'{HOME_DIR}/dnx_profile/log'
 LOG_FILES = [
     'combined', 'dhcp_server', 'dns_proxy', 'ip_proxy', 'ips', 'syslog', 'system', 'web_app', 'logins'
 ]
 
-# NOTE: this will likely not be needed anymore with the ajax client implementation
-def load_page(uri_query: Args) -> tuple[str, None, list[str]]:
-    file_path = f'{HOME_DIR}/dnx_profile/log'
+class WebPage(LogWebPage):
+    '''
+    available methods: load, update
+    '''
+    @staticmethod
+    # NOTE: this will likely not be needed anymore with the ajax client implementation
+    def load(_: Args) -> tuple[str, None, list[str]]:
+        file_path = f'{HOME_DIR}/dnx_profile/log'
 
-    return 'combined', None, get_log_entries(file_path)
+        return 'combined', None, get_log_entries(file_path)
 
-def update_page(form: Form) -> tuple[str, None, list[str]]:
-    log_table = form.get('table', 'combined')
+    @staticmethod
+    def handle_ajax(form: Form) -> tuple[str, None, list[str]]:
+        log_table = form.get('table', 'combined')
 
-    # ternary to handle initial page load.
-    # TODO: this should be done better, but i am waiting until reports page gets converted to ajax to support both
-    log_table = 'combined' if log_table == 'default' else log_table
+        # ternary to handle initial page load.
+        # TODO: this should be done better, but i am waiting until reports page gets converted to ajax to support both
+        log_table = 'combined' if log_table == 'default' else log_table
 
-    if (log_table not in LOG_FILES):
-        return log_table, None, []
+        if (log_table not in LOG_FILES):
+            return log_table, None, []
 
-    # combined log is now a single file that reflects recent aggregated log at the time of loading
-    file_path = LOG_DIR if log_table == 'combined' else f'{LOG_DIR}/{log_table}'
+        # combined log is now a single file that reflects recent aggregated log at the time of loading
+        file_path = LOG_DIR if log_table == 'combined' else f'{LOG_DIR}/{log_table}'
 
-    # returning none to fill table_args var on the calling function to allow reuse with the report's page method
-    return log_table, None, get_log_entries(file_path)
+        # returning none to fill table_args var on the calling function to allow reuse with the report's page method
+        return log_table, None, get_log_entries(file_path)
 
 def get_log_entries(file_path: str) -> list[str]:
     log_files = reversed(sorted(os.listdir(file_path))[:-1])

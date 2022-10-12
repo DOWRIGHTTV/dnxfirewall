@@ -1,76 +1,83 @@
 #!/usr/bin/python3
 
-from typing import Optional
+from __future__ import annotations
 
-from dnx_gentools.def_constants import fast_time, INVALID_FORM, LOG_LEVELS
+from source.web_typing import *
+from source.web_validate import *
+
+from dnx_gentools.def_constants import fast_time, LOG_LEVELS
 from dnx_gentools.def_enums import DATA, LOG
-from dnx_gentools.def_exceptions import ValidationError
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
-
 from dnx_gentools.system_info import System
-from source.web_validate import get_convert_int
 
-def load_page(form):
-    logging = load_configuration('logging_client', cfg_type='global')
+from source.web_interfaces import StandardWebPage
 
-    # correcting time for configured offset.
-    system_time = System.format_date_time(fast_time())
-    local_time = System.calculate_time_offset(fast_time())
-    local_time = System.format_date_time(local_time)
+__all__ = ('WebPage',)
 
-    logging_settings = {
-        'system': system_time, 'local': local_time,
-        'offset': {
-            'direction': logging['time_offset->direction'],
-            'amount': logging['time_offset->amount']
-        },
-        'logging': {
-            'log_levels': [level.title() for level in LOG_LEVELS],
-            'level': logging['logging->level'],
-            'length': logging['logging->length']
+class WebPage(StandardWebPage):
+    '''
+    available methods: load, update
+    '''
+    @staticmethod
+    def load(_: Form) -> dict[str, Any]:
+        logging: ConfigChain = load_configuration('logging_client', cfg_type='global')
+
+        # correcting time for configured offset.
+        system_time = System.format_date_time(fast_time())
+        local_time = System.calculate_time_offset(fast_time())
+        local_time = System.format_date_time(local_time)
+
+        logging_settings = {
+            'system': system_time, 'local': local_time,
+            'offset': {
+                'direction': logging['time_offset->direction'],
+                'amount': logging['time_offset->amount']
+            },
+            'logging': {
+                'log_levels': [level.title() for level in LOG_LEVELS],
+                'level': logging['logging->level'],
+                'length': logging['logging->length']
+            }
         }
-    }
 
-    return logging_settings
+        return logging_settings
 
-def update_page(form):
-    # matching logging update form and sending to configuration method.
-    if ('logging_update' in form):
-        log_settings = config(**{
-            'length': get_convert_int(form, 'length'),
-            'level': get_convert_int(form, 'level')
-        })
-        if any([x in [DATA.MISSING, DATA.INVALID] for x in log_settings.values()]):
-            return INVALID_FORM
+    @staticmethod
+    def update(form: Form) -> tuple[int, str]:
+        if ('logging_update' in form):
+            log_settings = config(**{
+                'length': get_convert_int(form, 'length'),
+                'level': get_convert_int(form, 'level')
+            })
+            if any([x in [DATA.MISSING, DATA.INVALID] for x in log_settings.values()]):
+                return 1, INVALID_FORM
 
-        error = validate_log_settings(log_settings)
-        if (error):
-            return error.message
+            if error := validate_log_settings(log_settings):
+                return 2, error.message
 
-        configure_logging(log_settings)
+            configure_logging(log_settings)
 
-    # matching time offset form and sending to configuration method.
-    elif ('time_offset_update' in form):
-        offset_settings = config(**{
-            'direction': form.get('dir_offset', DATA.MISSING),
-            'time': get_convert_int(form, 'time_offset')
-        })
-        if any([x in [DATA.MISSING, DATA.INVALID] for x in offset_settings.values()]):
-            return INVALID_FORM
+        elif ('time_offset_update' in form):
+            offset_settings = config(**{
+                'direction': form.get('dir_offset', DATA.MISSING),
+                'time': get_convert_int(form, 'time_offset')
+            })
+            if any([x in [DATA.MISSING, DATA.INVALID] for x in offset_settings.values()]):
+                return 3, INVALID_FORM
 
-        error = validate_time_offset(offset_settings)
-        if (error):
-            return error.message
+            if error := validate_time_offset(offset_settings):
+                return 4, error.message
 
-        configure_sys_time_offset(offset_settings)
+            configure_sys_time_offset(offset_settings)
 
-    else:
-        return INVALID_FORM
+        else:
+            return 99, INVALID_FORM
+
+        return NO_STANDARD_ERROR
 
 # ==============
 # VALIDATION
 # ==============
-
 def validate_log_settings(settings: config, /) -> Optional[ValidationError]:
     if (settings['length'] not in [30, 45, 60, 90]):
         return ValidationError('Invalid log settings.')
@@ -97,19 +104,18 @@ def validate_time_offset(settings: config, /) -> Optional[ValidationError]:
 # ==============
 # CONFIGURATION
 # ==============
-
-def configure_logging(log: config):
+def configure_logging(log: config) -> None:
     with ConfigurationManager('logging_client') as dnx:
-        log_settings = dnx.load_configuration()
+        log_settings: ConfigChain = dnx.load_configuration()
 
         log_settings['logging->length'] = log.length
         log_settings['logging->level']  = log.level
 
         dnx.write_configuration(log_settings.expanded_user_data)
 
-def configure_sys_time_offset(offset: config):
+def configure_sys_time_offset(offset: config) -> None:
     with ConfigurationManager('logging_client') as dnx:
-        offset_settings = dnx.load_configuration()
+        offset_settings: ConfigChain = dnx.load_configuration()
 
         if (offset.time == 0):
             offset.direction = '+'

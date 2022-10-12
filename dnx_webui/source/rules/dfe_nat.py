@@ -5,38 +5,44 @@ from __future__ import annotations
 from subprocess import run
 
 from source.web_typing import *
-from source.web_validate import ValidationError, ip_address, network_port, convert_int
+from source.web_validate import *
 
-from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
 from dnx_iptools.iptables import IPTablesManager
 from dnx_gentools.system_info import System
 
+from source.web_interfaces import RulesWebPage
 
-def load_page(_: Form):
-    return {
-        'dmz_dnat_rules': System.nat_rules(),
-        'local_snat_rules': System.nat_rules(nat_type='SRCNAT')
-    }
+__all__ = ('WebPage',)
 
-def update_page(form: Form) -> tuple[str, str]:
 
-    # the action field is not required for some functions, so it will not be hard checked
-    action = form.get('action', DATA.MISSING)
+class WebPage(RulesWebPage):
+    @staticmethod
+    def load_page(_: Form) -> dict[str, Any]:
+        return {
+            'dmz_dnat_rules': System.nat_rules(),
+            'local_snat_rules': System.nat_rules(nat_type='SRCNAT')
+        }
 
-    nat_type = form.get('nat_type', DATA.MISSING)
-    if (nat_type == 'DSTNAT'):
-        error = _dnat_rules(form, action)
+    @staticmethod
+    def update_page(form: Form) -> tuple[str, str]:
 
-    elif (nat_type == 'SRCNAT'):
-        error = _snat_rules(form, action)
+        # the action field is not required for some functions, so it will not be hard checked
+        action = form.get('action', DATA.MISSING)
 
-    else:
-        return INVALID_FORM, ''
+        nat_type = form.get('nat_type', DATA.MISSING)
+        if (nat_type == 'DSTNAT'):
+            error = _dnat_rules(form, action)
 
-    return error, ''
+        elif (nat_type == 'SRCNAT'):
+            error = _snat_rules(form, action)
+
+        else:
+            return INVALID_FORM, ''
+
+        return error, ''
 
 # TODO: currently it is possible to put overlapping DNAT rules (same dst port, but different host port).
 #  this isnt normally an issue, but the last one inserted will be the local port value in cfg.
@@ -52,8 +58,7 @@ def _dnat_rules(form: Form, action: str) -> str:
     if (action == 'add'):
         # checking all required fields are present and some other basic rules are followed
         # before validating values of standard fields.
-        error = validate_dnat_rule(fields, action=CFG.ADD)
-        if (error):
+        if error := validate_dnat_rule(fields, action=CFG.ADD):
             return error.message
 
         if (fields.protocol in ['tcp', 'udp']):
@@ -98,8 +103,7 @@ def _snat_rules(form: Form, action: str) -> str:
     fields = config(**form)
     if (action == 'add'):
 
-        error = validate_snat_rule(fields, action=CFG.ADD)
-        if (error):
+        if error := validate_snat_rule(fields, action=CFG.ADD):
             return error.message
 
         try:
@@ -114,8 +118,7 @@ def _snat_rules(form: Form, action: str) -> str:
         fields.position = convert_int(fields.position)
 
         # NOTE: validation needs to know the zone, so it can ensure the position is valid
-        error = validate_snat_rule(fields, action=CFG.DEL)
-        if (error):
+        if error := validate_snat_rule(fields, action=CFG.DEL):
             return error.message
 
         with IPTablesManager() as iptables:

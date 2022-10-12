@@ -8,43 +8,51 @@ from source.web_validate import *
 from dnx_gentools.def_enums import DATA
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
+from source.web_interfaces import StandardWebPage
 
-# TODO: if system category gets disabled that had keyword enabled. it does not disable the keyword search.
-def load_page(_: Form):
-    proxy_profile: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
+__all__ = ('WebPage',)
 
-    domain_settings = {
-        'security_profile': 1,
-        'profile_name': proxy_profile['name'],
-        'profile_desc': proxy_profile['description'],
-        'built-in': proxy_profile.get_items('categories->built-in'),
-        'user_defined': proxy_profile.get_items('categories->custom'),
-        'tld': proxy_profile.get_items('tld')
-    }
+class WebPage(StandardWebPage):
+    '''
+    available methods: load, handle_ajax
+    '''
+    @staticmethod
+    # TODO: if system category gets disabled that had keyword enabled. it does not disable the keyword search.
+    def load(_: Form) -> dict[str, Any]:
+        proxy_profile: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
 
-    return domain_settings
+        domain_settings = {
+            'security_profile': 1,
+            'profile_name': proxy_profile['name'],
+            'profile_desc': proxy_profile['description'],
+            'built-in': proxy_profile.get_items('categories->built-in'),
+            'user_defined': proxy_profile.get_items('categories->custom'),
+            'tld': proxy_profile.get_items('tld')
+        }
 
-# TODO: figure out how to refresh page or update keyword options after domain cat change
-def update_page(form: Form) -> tuple[bool, dict]:
+        return domain_settings
 
-    ruleset = form.get('type', DATA.MISSING)
-    if (ruleset is DATA.MISSING):
-        return False, {'error': 1, 'message': INVALID_FORM}
+    # TODO: figure out how to refresh page or update keyword options after domain cat change
+    def handle_ajax(form: Form) -> tuple[bool, WebError]:
 
-    category = config(**{
-        'name': form.get('category', DATA.MISSING),
-        'enabled': get_convert_bint(form, 'enabled')
-    })
+        ruleset = form.get('type', DATA.MISSING)
+        if (ruleset is DATA.MISSING):
+            return False, {'error': 1, 'message': INVALID_FORM}
 
-    if any([x for x in category.values() if x in [DATA.MISSING, DATA.INVALID]]):
-        return False, {'error': 2, 'message': INVALID_FORM}
+        category = config(**{
+            'name': form.get('category', DATA.MISSING),
+            'enabled': get_convert_bint(form, 'enabled')
+        })
 
-    if error := validate_domain_categories(category, ruleset=ruleset):
-        return False, {'error': 3, 'message': error.message}
+        if any([x for x in category.values() if x in [DATA.MISSING, DATA.INVALID]]):
+            return False, {'error': 2, 'message': INVALID_FORM}
 
-    configure_domain_categories(category, ruleset=ruleset)
+        if error := validate_domain_categories(category, ruleset=ruleset):
+            return False, {'error': 3, 'message': error.message}
 
-    return True, {'error': 0, 'message': ''}
+        configure_domain_categories(category, ruleset=ruleset)
+
+        return True, {'error': 0, 'message': ''}
 
 # ==============
 # VALIDATION

@@ -44,6 +44,7 @@ class ValidationError(DNXError):
 _proto_map = {'any': 0, 'icmp': 1, 'tcp': 6, 'udp': 17}
 
 NO_STANDARD_ERROR: tuple[int, str] = (0, '')
+NO_LOG_ERROR: tuple[str, str, []] = ('', '', [])
 INVALID_FORM: str = 'Invalid form data.'
 
 # TODO: mac regex allows trailing characters. it should hard cut after the exact char length.

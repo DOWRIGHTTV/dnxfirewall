@@ -7,64 +7,69 @@ import re
 from flask import session
 
 from source.web_typing import *
+from source.web_validate import *
 
-from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA
-from dnx_gentools.def_exceptions import ValidationError
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
 from source.main.dfe_authentication import Authentication
+from source.web_interfaces import StandardWebPage
 
-def load_page(form: Form) -> dict[str, tuple[str, str]]:
-    users: dict = load_configuration('logins', filepath='/dnx_webui/data').get_dict('users')
+__all__ = ('WebPage',)
 
-    user_list = {}
-    for account, info in users.items():
-        user_list[account] = ('*****', info['role'])
+class WebPage(StandardWebPage):
+    '''
+    available methods: load, handle_ajax
+    '''
+    @staticmethod
+    def load(form: Form) -> dict[str, Any]:
+        users: dict = load_configuration('logins', filepath='/dnx_webui/data').get_dict('users')
 
-    return user_list
+        user_list = {}
+        for account, info in users.items():
+            user_list[account] = ('*****', info['role'])
 
-def update_page(form: Form) -> Optional[str]:
-    if ('user_add' in form):
-        account_info = config(**{
-            'username': form.get('user_acct', DATA.MISSING),
-            'password': form.get('user_password', DATA.MISSING),
-            'role': form.get('user_role', DATA.MISSING)
-        })
+        return user_list
 
-        if (DATA.MISSING in account_info.values()):
-            return INVALID_FORM
+    @staticmethod
+    def update_page(form: Form) -> Optional[str]:
+        if ('user_add' in form):
+            account_info = config(**{
+                'username': form.get('user_acct', DATA.MISSING),
+                'password': form.get('user_password', DATA.MISSING),
+                'role': form.get('user_role', DATA.MISSING)
+            })
 
-        error = validate_account_creation(account_info)
-        if (error):
-            return error.message
+            if (DATA.MISSING in account_info.values()):
+                return INVALID_FORM
 
-        configure_user_account(account_info, action=CFG.ADD)
+            error = validate_account_creation(account_info)
+            if (error):
+                return error.message
 
-    # TODO: add validation ensuring user being deleted is not actively logged in which is now being tracked
-    # locally by the session tracker. this addition along with current logged in user check can probably
-    # be moved to a validation module function as done in most other form submission handlers.
-    # TODO: should make it so admins can remove active users which would remove from session tracker effectively
-    # killing their active session.
-        # NOTE: maybe have a button to kill sessions of other users of lesser priv, then they could delete. this would
-        # be similar to above, but require an extra/explicit step to remove logged in users of lesser priv.
+            configure_user_account(account_info, action=CFG.ADD)
 
-    elif ('user_remove' in form):
-        account_info = config(**{
-            'username': form.get('user_remove', DATA.MISSING)
-        })
+        # TODO: should make it so admins can remove active users which would remove from session tracker effectively
+        #  killing their active session.
+            # NOTE: maybe have a button to kill sessions of other users of lesser priv so they can delete. this would
+            # be similar to above, but require an extra/explicit step to remove logged in users of lesser priv.
 
-        if (DATA.MISSING in account_info.values()):
-            return INVALID_FORM
+        elif ('user_remove' in form):
+            account_info = config(**{
+                'username': form.get('user_remove', DATA.MISSING)
+            })
 
-        if (username == session['user']):
-            return 'Cannot delete the account you are currently logged in with.'
+            if (DATA.MISSING in account_info.values()):
+                return INVALID_FORM
+
+            if (username == session['user']):
+                return 'Cannot delete the account you are currently logged in with.'
+
+            else:
+                configure_user_account(account_info, action=CFG.DEL)
 
         else:
-            configure_user_account(account_info, action=CFG.DEL)
-
-    else:
-        return INVALID_FORM
+            return INVALID_FORM
 
 # ==============
 # VALIDATION
@@ -110,7 +115,6 @@ def user_role(role: str, /) -> Optional[ValidationError]:
 # ==============
 # CONFIGURATION
 # ==============
-
 def configure_user_account(account: config, action: CFG) -> Optional[ValidationError]:
 
     with ConfigurationManager('logins', file_path='/dnx_webui/data') as dnx:

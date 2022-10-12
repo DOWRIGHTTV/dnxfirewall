@@ -3,104 +3,114 @@
 from __future__ import annotations
 
 from source.web_typing import *
-from source.web_validate import ValidationError, VALID_DOMAIN, get_convert_int, standard
+from source.web_validate import *
 
-from dnx_gentools.def_constants import INVALID_FORM, fast_time
+from dnx_gentools.def_constants import fast_time
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import ConfigurationManager, config, load_configuration
 
 from dnx_gentools.system_info import System
 
+from source.web_interfaces import StandardWebPage
 
+__all__ = ('WebPage',)
+
+# TODO: this needs to be reworked to be handled on a per profile basis.
 DISABLED = True
+
 VALID_RULESETS = ['whitelist', 'blacklist']
 
-def load_page(_: Form):
-    blacklist: ConfigChain = load_configuration('blacklist')
 
-    for info in blacklist.get_values('time_based'):
-        st_offset = System.calculate_time_offset(info['time'])
+class WebPage(StandardWebPage):
+    '''
+    available methods: load, update
+    '''
+    @staticmethod
+    def load(form: Form) -> dict[str, Any]:
+        blacklist: ConfigChain = load_configuration('blacklist')
 
-        info['time'] = System.format_date_time(st_offset)
+        for info in blacklist.get_values('time_based'):
+            st_offset = System.calculate_time_offset(info['time'])
 
-    blacklist_settings = {
-        'time_based': blacklist['time_based'],
-        'pre_proxy': blacklist['pre_proxy']
-    }
+            info['time'] = System.format_date_time(st_offset)
 
-    return blacklist_settings
+        blacklist_settings = {
+            'time_based': blacklist['time_based'],
+            'pre_proxy': blacklist['pre_proxy']
+        }
 
-def update_page(form: Form) -> Union[str, ValidationError]:
-    page_name = form.get('page_name', DATA.MISSING)
-    if (page_name is DATA.MISSING):
-        return INVALID_FORM
+        return blacklist_settings
 
-    if (DISABLED):
-        return 'overrides disabled for rework.'
+    @staticmethod
+    def update(form: Form) -> tuple[int, str]:
+        page_name = form.get('page_name', DATA.MISSING)
+        if (page_name is DATA.MISSING):
+            return 1, INVALID_FORM
 
-    if ('xl_add' in form):
-        xlist_settings = config(**{
-            'domain': form.get('domain', DATA.MISSING),
-            'timer': get_convert_int(form, 'rule_length'),
-            'ruleset': page_name
-        })
+        if (DISABLED):
+            return 98, 'overrides disabled for rework.'
 
-        if any([x in [DATA.MISSING, DATA.INVALID] for x in xlist_settings.values()]):
-            return INVALID_FORM
+        if ('xl_add' in form):
+            xlist_settings = config(**{
+                'domain': form.get('domain', DATA.MISSING),
+                'timer': get_convert_int(form, 'rule_length'),
+                'ruleset': page_name
+            })
 
-        error = validate_time_based(xlist_settings)
-        if (error):
-            return error.message
+            if any([x in [DATA.MISSING, DATA.INVALID] for x in xlist_settings.values()]):
+                return 2, INVALID_FORM
 
-        configure_proxy_domain(xlist_settings, action=CFG.ADD)
+            if error := validate_time_based(xlist_settings):
+                return 3, error.message
 
-    elif ('xl_remove' in form):
-        xlist_settings = config(**{
-            'domain': form.get('bl_remove', DATA.MISSING),
-            'ruleset': page_name
-        })
+            configure_proxy_domain(xlist_settings, action=CFG.ADD)
 
-        if (DATA.MISSING in xlist_settings.values()):
-            return INVALID_FORM
+        elif ('xl_remove' in form):
+            xlist_settings = config(**{
+                'domain': form.get('bl_remove', DATA.MISSING),
+                'ruleset': page_name
+            })
 
-        configure_proxy_domain(xlist_settings, action=CFG.DEL)
+            if (DATA.MISSING in xlist_settings.values()):
+                return 4, INVALID_FORM
 
-    elif ('exc_add' in form):
-        exception_settings = config(**{
-            'domain': form.get('domain', DATA.MISSING),
-            'reason': form.get('reason', DATA.MISSING),
-            'ruleset': page_name
-        })
+            configure_proxy_domain(xlist_settings, action=CFG.DEL)
 
-        if (DATA.MISSING in exception_settings.values()):
-            return INVALID_FORM
+        elif ('exc_add' in form):
+            exception_settings = config(**{
+                'domain': form.get('domain', DATA.MISSING),
+                'reason': form.get('reason', DATA.MISSING),
+                'ruleset': page_name
+            })
 
-        error = validate_pre_proxy_exc(exception_settings)
-        if (error):
-            return error.message
+            if (DATA.MISSING in exception_settings.values()):
+                return 5, INVALID_FORM
 
-        configure_pre_proxy_exc(exception_settings, action=CFG.ADD)
+            if error := validate_pre_proxy_exc(exception_settings):
+                return 6, error.message
 
-    elif ('exc_remove' in form):
-        exception_settings = config(**{
-            'domain': form.get('exc_remove', DATA.MISSING),
-            'ruleset': page_name
-        })
+            configure_pre_proxy_exc(exception_settings, action=CFG.ADD)
 
-        # doing the iter for consistency
-        if (DATA.MISSING in exception_settings.values()):
-            return INVALID_FORM
+        elif ('exc_remove' in form):
+            exception_settings = config(**{
+                'domain': form.get('exc_remove', DATA.MISSING),
+                'ruleset': page_name
+            })
 
-        configure_pre_proxy_exc(exception_settings, action=CFG.DEL)
+            # doing the iter for consistency
+            if (DATA.MISSING in exception_settings.values()):
+                return 7, INVALID_FORM
 
-    else:
-        return INVALID_FORM
+            configure_pre_proxy_exc(exception_settings, action=CFG.DEL)
 
+        else:
+            return 99, INVALID_FORM
+
+        return NO_STANDARD_ERROR
 
 # ==============
 # VALIDATION
 # ==============
-
 def validate_time_based(settings: config) -> Optional[ValidationError]:
     if (settings.ruleset not in VALID_RULESETS):
         return ValidationError(INVALID_FORM)
@@ -123,7 +133,6 @@ def validate_pre_proxy_exc(settings: config) -> Optional[ValidationError]:
 # ==============
 # CONFIGURATION
 # ==============
-
 # adds a time-based rule to whitelist/blacklist
 def configure_proxy_domain(settings: config, *, action: CFG):
     input_time = fast_time()

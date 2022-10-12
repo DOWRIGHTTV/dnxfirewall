@@ -31,11 +31,8 @@ app = Flask(
 # easy access to app instance by outer components
 Flask.app = app
 
-general_error_page = 'main/general_error.html'
-application_error_page = 'main/application_error.html'
-
 # a new key is generated on every system start and stored in system config.
-app_config = load_configuration('system', cfg_type='global')
+app_config: ConfigChain = load_configuration('system', cfg_type='global')
 app.secret_key = app_config['flask->key']
 
 app.jinja_env.trim_blocks   = True
@@ -46,6 +43,9 @@ app.jinja_env.lstrip_blocks = True
 # =========================================
 from dnx_control.control.ctl_action import system_action
 from dnx_secmods.cfirewall.fw_control import FirewallControl
+
+general_error_page = 'main/general_error.html'
+application_error_page = 'main/application_error.html'
 
 # setup for system logging
 Log.run(name='web_app')
@@ -63,26 +63,24 @@ FirewallControl.cfirewall = cfirewall
 # WEBUI COMPONENTS
 # =========================================
 import source.main.dfe_dashboard as dfe_dashboard
-import source.rules.dfe_firewall as dnx_fwall
-import source.rules.dfe_nat as dnx_nat
-import source.intrusion.dfe_ip as ip_proxy
-import source.intrusion.domain.dfe_domain as dns_proxy
-import source.intrusion.domain.dfe_xlist as xlist
-import source.intrusion.domain.dfe_categories as category_settings
-import source.intrusion.dfe_ids_ips as dnx_ips
-import source.system.settings.dfe_dns as dns_settings
-import source.system.settings.dfe_dhcp as dhcp_settings
-import source.system.settings.dfe_interface as interface_settings
-import source.system.settings.dfe_logging as logging_settings
-import source.system.settings.dfe_syslog as syslog_settings
-import source.system.log.dfe_traffic as traffic_logs
-import source.system.log.dfe_events as sec_events
-import source.system.log.dfe_system as sys_logs
-import source.system.dfe_users as dfe_users
-import source.system.dfe_backups as dfe_backups
-import source.system.dfe_services as dnx_services
-
-dns_settings: StandardWebPage
+from source.rules.dfe_firewall import WebPage as dnx_fwall  # non standard -> firewall page logic
+from source.rules.dfe_nat import WebPage as dnx_nat
+from source.intrusion.dfe_ip import WebPage as ip_proxy
+from source.intrusion.domain.dfe_domain import WebPage as dns_proxy
+from source.intrusion.domain.dfe_xlist import WebPage as xlist
+from source.intrusion.domain.dfe_categories import WebPage as category_settings
+from source.intrusion.dfe_ids_ips import WebPage as dnx_ips
+from source.system.settings.dfe_dns import WebPage as dns_settings
+from source.system.settings.dfe_dhcp import WebPage as dhcp_settings
+from source.system.settings.dfe_interface import WebPage as interface_settings
+from source.system.settings.dfe_logging import WebPage as logging_settings
+# import source.system.settings.dfe_syslog as syslog_settings
+from source.system.log.dfe_traffic import WebPage as traffic_logs  # non standard -> log page logic
+from source.system.log.dfe_events import WebPage as sec_events  # non standard -> log page logic
+from source.system.log.dfe_system import WebPage as sys_logs  # non standard -> log page logic
+from source.system.dfe_users import WebPage as dfe_users
+from source.system.dfe_backups import WebPage as dfe_backups
+from source.system.dfe_services import WebPage as dnx_services
 
 # ===============
 # TYPING IMPORTS
@@ -146,7 +144,7 @@ def rules_firewall_commit(session_data: dict):
 
     json_data = request.get_json(force=True)
 
-    status, err_data = dnx_fwall.commit_rules(json_data)
+    status, err_data = dnx_fwall.handle_ajax(json_data)
 
     return ajax_response(status=status, data=err_data)
 
@@ -156,8 +154,7 @@ def rules_firewall_push(session_data: dict):
     # for when we implement preview option
     # json_data = request.get_json(force=True)
 
-    error = FirewallControl.push()
-    if (error):
+    if error := FirewallControl.push():
         return ajax_response(status=False, data={'error': 1, 'message': 'push failed'})
 
     return ajax_response(status=True, data={'error': 0, 'message': 'push success'})
@@ -210,7 +207,7 @@ def intrusion_ip_post(session_data: dict):
 
     json_data = request.get_json(force=True)
 
-    status, err_data = ip_proxy.update_field(json_data)
+    status, err_data = ip_proxy.handle_ajax(json_data)
 
     # print(f'[commit/response] status={status}, err_data={err_data}')
 
@@ -240,7 +237,7 @@ def intrusion_domain_post(session_data: dict):
 
     json_data = request.get_json(force=True)
 
-    status, err_data = dns_proxy.update_page(json_data)
+    status, err_data = dns_proxy.handle_ajax(json_data)
 
     # print(f'[commit/response] status={status}, err_data={err_data}')
 
@@ -391,22 +388,24 @@ def system_settings_logging(session_data: dict):
 
     return page_action
 
-@app.route('/system/settings/syslog', methods=['GET', 'POST'])
-@user_restrict('admin')
-def system_settings_syslog(session_data: dict):
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'tab': validate.get_convert_int(request.args, 'tab'),
-        'uri_path': ['system', 'settings', 'syslog']
-    }
-
-    page_settings.update(session_data)
-
-    page_action = standard_page_logic(
-        syslog_settings, page_settings, 'syslog_settings', page_name='system/settings/syslog.html'
-    )
-
-    return page_action
+# NOTE: syslog module out of spec and needs to be reworked.
+# priority is lower than other implementations.
+# @app.route('/system/settings/syslog', methods=['GET', 'POST'])
+# @user_restrict('admin')
+# def system_settings_syslog(session_data: dict):
+#     page_settings = {
+#         'navi': True, 'idle_timeout': True, 'standard_error': None,
+#         'tab': validate.get_convert_int(request.args, 'tab'),
+#         'uri_path': ['system', 'settings', 'syslog']
+#     }
+#
+#     page_settings.update(session_data)
+#
+#     page_action = standard_page_logic(
+#         syslog_settings, page_settings, 'syslog_settings', page_name='system/settings/syslog.html'
+#     )
+#
+#     return page_action
 
     # END OF SETTINGS SUB MENU
     # ----------------------------------------- #
@@ -465,7 +464,7 @@ def system_logs_system(session_data: dict):
 def system_logs_get(session_data):
     json_data = request.get_json(force=True)
 
-    _, _, table_data = sys_logs.update_page(json_data)
+    _, _, table_data = sys_logs.handle_ajax(json_data)
 
     return ajax_response(status=True, data=table_data)
 
@@ -654,7 +653,7 @@ def standard_page_logic(dnx_page: StandardWebPage, page_settings: dict, data_key
 
     if (request.method == 'POST'):
         try:
-            error, err_msg = dnx_page.update_page(request.form)
+            error, err_msg = dnx_page.update(request.form)
         except ConfigurationError as ce:
             return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
 
@@ -664,17 +663,17 @@ def standard_page_logic(dnx_page: StandardWebPage, page_settings: dict, data_key
         })
 
     try:
-        page_settings[data_key] = dnx_page.load_page(request.form)
+        page_settings[data_key] = dnx_page.load(request.form)
     except ConfigurationError as ce:
         return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
 
     return render_template(page_name, theme=context_global.theme, **page_settings)
 
-def firewall_page_logic(dnx_page: ModuleType, page_settings: dict, data_key: str, *, page_name: str) -> str:
+def firewall_page_logic(dnx_page: RulesWebPage, page_settings: dict, data_key: str, *, page_name: str) -> str:
 
     if (request.method == 'POST'):
         try:
-            error, selected = dnx_page.update_page(request.form)
+            error, selected = dnx_page.update(request.form)
         except ConfigurationError as ce:
             return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
 
@@ -685,18 +684,18 @@ def firewall_page_logic(dnx_page: ModuleType, page_settings: dict, data_key: str
         })
 
     try:
-        page_settings[data_key] = dnx_page.load_page(page_settings['selected'])
+        page_settings[data_key] = dnx_page.load(page_settings['selected'])
     except ConfigurationError as ce:
         return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
 
     return render_template(page_name, theme=context_global.theme, **page_settings)
 
-def log_page_logic(log_page: ModuleType, page_settings: dict, *, page_name: str) -> str:
+def log_page_logic(log_page: LogWebPage, page_settings: dict, *, page_name: str) -> str:
     # can now accept redirects from other places on the webui to load specific tables directly on load
     # using uri queries FIXME: this has been temporarily suspended and should be reintroduced.
 
     try:
-        table, menu, table_data = log_page.update_page(request.form)
+        table, menu, table_data = log_page.update(request.form)
     except ConfigurationError as ce:
         return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
 
@@ -708,7 +707,7 @@ def log_page_logic(log_page: ModuleType, page_settings: dict, *, page_name: str)
 
     return render_template(page_name, theme=context_global.theme, **page_settings)
 
-def categories_page_logic(dnx_page: ModuleType, page_settings: dict) -> str:
+def categories_page_logic(dnx_page, page_settings: dict) -> str:
     if (request.method == 'POST'):
         try:
             error, menu_option = dnx_page.update_page(request.form)
