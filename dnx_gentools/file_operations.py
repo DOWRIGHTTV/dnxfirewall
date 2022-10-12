@@ -14,10 +14,12 @@ from functools import wraps
 from secrets import token_urlsafe
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import HOME_DIR, SYSTEM_DIR, USER_DIR, ROOT, USER, GROUP, RUN_FOREVER, fast_sleep
+from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER, fast_sleep
 from dnx_gentools.def_namedtuples import Item
 from dnx_gentools.def_enums import DNS_CAT, DATA
-from dnx_gentools.def_exceptions import ValidationError, ConfigurationError, ControlError
+from dnx_gentools.def_exceptions import ConfigurationError, ControlError
+
+from dnx_webui.source.web_validate import ValidationError
 
 # ================
 # TYPING IMPORTS
