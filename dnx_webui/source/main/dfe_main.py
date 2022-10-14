@@ -82,14 +82,14 @@ from source.system.dfe_users import WebPage as dfe_users
 from source.system.dfe_backups import WebPage as dfe_backups
 from source.system.dfe_services import WebPage as dnx_services
 
+from source.main.dfe_authentication import Authentication, user_restrict
+
 # ===============
 # TYPING IMPORTS
 # ===============
 from typing import TYPE_CHECKING
 if (TYPE_CHECKING):
     from source.web_typing import Optional, Union, ConfigChain
-
-from source.main.dfe_authentication import Authentication, user_restrict
 
 # --------------------------------------------- #
 #  START OF NAVIGATION TABS

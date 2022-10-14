@@ -20,14 +20,14 @@ __all__ = ('WebPage',)
 
 class WebPage(RulesWebPage):
     @staticmethod
-    def load_page(_: Form) -> dict[str, Any]:
+    def load(_: Form) -> dict[str, Any]:
         return {
             'dmz_dnat_rules': System.nat_rules(),
             'local_snat_rules': System.nat_rules(nat_type='SRCNAT')
         }
 
     @staticmethod
-    def update_page(form: Form) -> tuple[str, str]:
+    def update(form: Form) -> tuple[str, str]:
 
         # the action field is not required for some functions, so it will not be hard checked
         action = form.get('action', DATA.MISSING)
