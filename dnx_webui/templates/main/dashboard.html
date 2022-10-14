@@ -5,52 +5,52 @@
         <div class="row row-flex">
             <div class="col s12 m6">
                 <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
-                    <a>
-                        <img src="/static/dashboard/dash_pi-{{dashboard['dc_graph'][0]}}{{dashboard['dc_graph'][1]}}.png"
-                            {{dash_icon_std}}>
-                    </a>
-                    <h4>Unique Domains</h4>
-                    <div class="col s6">
-                        <ul>
-                            <li><h5>Blocked</h5></li>
-                            <li><h2>{{dashboard['domain_counts'][0]}}</h2></li>
-                        </ul>
+                    {{ create_title('unique domains')|safe }}
+                    <div class="row">
+                        <a><img src="/static/dashboard/dash_pi-{{dashboard['dc_graph'][0]}}{{dashboard['dc_graph'][1]}}.png" {{dash_icon_std}}></a>
                     </div>
-                    <div class="col s6">
-                        <ul>
-                            <li><h5>Allowed</h5></li>
-                            <li><h2>{{dashboard['domain_counts'][1]}}</h2></li>
-                        </ul>
+                    <div class="row">
+                        <div class="col s6">
+                            <ul>
+                                <li><h5>Blocked</h5></li>
+                                <li><h2>{{dashboard['domain_counts'][0]}}</h2></li>
+                            </ul>
+                        </div>
+                        <div class="col s6">
+                            <ul>
+                                <li><h5>Allowed</h5></li>
+                                <li><h2>{{dashboard['domain_counts'][1]}}</h2></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col s12 m6">
                 <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
-                    <a>
-                        <img src="/static/dashboard/dash_pi-{{dashboard['rc_graph'][0]}}{{dashboard['rc_graph'][1]}}.png"
-                            {{dash_icon_std}}>
-                    </a>
-                    <h4>Total Domains</h4>
-                    <div class="col s6">
-                        <ul>
-                            <li><h5>Blocked</h5></li>
-                            <li><h2>{{dashboard['request_counts'][0]}}</h2></li>
-                        </ul>
+                    {{ create_title('total domains')|safe }}
+                    <div class="row">
+                        <a><img src="/static/dashboard/dash_pi-{{dashboard['rc_graph'][0]}}{{dashboard['rc_graph'][1]}}.png" {{dash_icon_std}}></a>
                     </div>
-                    <div class="col s6">
-                        <ul>
-                            <li><h5>Allowed</h5></li>
-                            <li><h2>{{dashboard['request_counts'][1]}}</h2></li>
-                        </ul>
+                    <div class="row">
+                        <div class="col s6">
+                            <ul>
+                                <li><h5>Blocked</h5></li>
+                                <li><h2>{{dashboard['request_counts'][0]}}</h2></li>
+                            </ul>
+                        </div>
+                        <div class="col s6">
+                            <ul>
+                                <li><h5>Allowed</h5></li>
+                                <li><h2>{{dashboard['request_counts'][1]}}</h2></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col s12">
                 <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
-                    <a>
-                        <img src="/static/dashboard/dash_search1.png" {{dash_icon_zoom}}>
-                    </a>
-                    <h4>Most Searched Domains</h4>
+                    <a><img src="/static/dashboard/dash_search1.png" {{dash_icon_zoom}}></a>
+                    <h4 class="card-title">Most Searched Domains</h4>
                     <div class="row">
                         {% for action, data in dashboard['top_domains'] %}
                         <div class="col s6">
@@ -89,10 +89,8 @@
             </div>
             <div class="col s12">
                 <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
-                    <a>
-                        <img src="/static/dashboard/dash_globe1.png" {{dash_icon_std}}>
-                    </a>
-                    <h4>Country Activity</h4>
+                    <a><img src="/static/dashboard/dash_globe1.png" {{dash_icon_std}}></a>
+                    <h4 class="card-title">Country Activity</h4>
                     <div class="row">
                         {% for action, countries in dashboard['top_countries'].items() %}
                         <div class="col s6">
