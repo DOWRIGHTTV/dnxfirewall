@@ -73,19 +73,20 @@ class _Defaults:
     def cfirewall_hook(self) -> None:
         '''IPTable rules to give cfirewall control of all tcp, udp, and icmp packets.
 
-        cfirewall operates as a basic ip/protocol filter and as a security module inspection pre preprocessor.
+        cfirewall operates as a basic ip/protocol filter and as a security module inspection pre-preprocessor.
 
         standard conntrack permit/allow control is left to IPTables for now.
         '''
-        # FORWARD #
-        # NOTE: conntrack is now checked by cfirewall
-        # shell('iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
+        # FORWARD
+        # NOTE: cfirewall must mark connections with connmark to offload the connection to the kernel, otherwise all
+        # packets of the connection must be processed/handled by cfirewall.
+        ipt_shell('iptables -A FORWARD -m connmark --mark 1 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
 
         ipt_shell(f'FORWARD -p tcp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
         ipt_shell(f'FORWARD -p udp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
         ipt_shell(f'FORWARD -p icmp -j NFQUEUE --queue-num {Queue.CFIREWALL}')
 
-        # INPUT #
+        # INPUT
         # NOTE: letting iptables control return traffic for DNX sourced traffic
         ipt_shell('INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT', action='-I')
 

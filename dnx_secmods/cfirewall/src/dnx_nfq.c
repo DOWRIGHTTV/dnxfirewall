@@ -65,13 +65,18 @@ dnx_send_verdict_fast(struct cfdata *cfd, uint32_t pktid, uint32_t mark, int ver
     if (mark) {
         nfq_nlmsg_verdict_put_mark(nlh, mark);
     }
+
+    // connection offloaded to kernel if connmark is set. all connections will be offloaded until stateless actions are
+    // implemented in cfirewall and configurable in the webui.
+    nest = mnl_attr_nest_start(nlh, NFQA_CT);
+    mnl_attr_put_u32(nlh, CTA_MARK, htonl(1));
+    mnl_attr_nest_end(nlh, nest);
+
     mnl_socket_sendto(nl[cfd->idx], nlh, nlh->nlmsg_len);
 }
 
 /* MANGLE call
 sets verdict and mark.
-reduced pointer deference.
-no mangling.
 */
 int
 dnx_send_verdict(struct cfdata *cfd, uint32_t pktid, struct dnx_pktb *pkt)

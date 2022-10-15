@@ -66,7 +66,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     struct cfdata      *cfd = (struct cfdata*) data;
     struct nlattr      *netlink_attrs[NFQA_MAX+1] = {};
     struct dnx_pktb     pkt = {};
-    nl_pkt_hdr         *nl_pkth = NULL; // TODO: see if we can skip initialization since dnx_nfqueue will set this value
+    nl_pkt_hdr         *nl_pkth = NULL;
 
     struct clist_range  fw_clist;
     uint32_t            ct_info;
