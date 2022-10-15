@@ -1,10 +1,10 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="dropdown" class="section {{main_section_color}}">
+<section id="dropdown" class="section">
     <div class="container">
-<div class="col s12">
-            <div class="card-panel hoverable {{card_color}}">
-                <h4 class="{{title_color}}">Management Access</h4>
+        <div class="col s12">
+            <div class="card-panel hoverable {{ theme.card }}">
+                <h4 class="{{ theme.title }}">Management Access</h4>
                 <table class="striped centered">
                     <thead>
                         <tr>
@@ -49,8 +49,8 @@
             </div>
         </div>
         <div class="col s12">
-            <div class="card-panel hoverable {{card_color}}">
-                <h4 class="{{title_color}}">System Services</h4>
+            <div class="card-panel hoverable {{ theme.card }}">
+                <h4 class="{{ theme.title }}">System Services</h4>
                 <table class="striped centered">
                     <thead>
                         <tr>

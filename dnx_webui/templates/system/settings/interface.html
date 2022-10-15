@@ -1,22 +1,24 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="tabs-bar" class="tabsbar">
+<section id="tabs-bar">
     <div class="container">
         <div class="row">
-            <div class="col s12 m12 l12 xl12">
-                <ul class="tabs">
-                    {{ create_tab(tab, 1, 'wan-interface')|safe }}
-                </ul>
+            <div class="col s8 offset-s2">
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <ul class="tabs tabs-fixed-width">
+                        {{ create_tab(tab, 1, 'wan-interface')|safe }}
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
 </section>
-<section id="wan-interface" class="section {{ main_section_color }}">
+<section id="wan-interface" class="section">
     <div class="container">
         <div class="row row-flex">
             <div class="col s12 l6">
-                <div class="card-panel card-panel-eql hoverable {{ card_color }}">
-                    <h4 class="{{ title_color }}">IP Address</h4>
+                <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">IP Address</h4>
                     <h6>IP:      {{ interface_settings['ip']['ip_address'] }}</h6>
                     <h6>Netmask: {{ interface_settings['ip']['netmask'] }}</h6>
                     <h6>Gateway: {{ interface_settings['ip']['default_gateway'] }}</h6>
@@ -98,8 +100,8 @@
                 </div>
             </div>
             <div class="col s12 l6">
-                <div class="card-panel card-panel-eql hoverable {{ card_color }}">
-                    <h4 class="{{ title_color }}">MAC Address</h4>
+                <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">MAC Address</h4>
                     <h6>Default MAC: {{ interface_settings['mac']['default'] }}</h6>
                     <h6>Current MAC: {{ interface_settings['mac']['current'] }}</h6>
                     <br>

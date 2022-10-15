@@ -3,133 +3,151 @@
 from __future__ import annotations
 
 from source.web_typing import *
-from source.web_validate import ValidationError, convert_int, get_convert_int, convert_bint
+from source.web_validate import *
 
-from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import DATA, GEO, DIR
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
+from source.web_interfaces import StandardWebPage
 
-def load_page(form: Form) -> dict:
-    proxy_settings: ConfigChain = load_configuration('ip_proxy')
-    country_map: ConfigChain = load_configuration('geolocation', filepath='dnx_webui/data')
+__all__ = ('WebPage',)
 
-    # controlling whether to load defaults or user selected view.
-    # NOTE: These are validated by the update function, so it is safe to assume types.
-    geo_region = form.get('region', 'africa')
-    geo_direction = int(form.get('menu_dir', DIR.OFF))
+class WebPage(StandardWebPage):
+    '''
+    available methods: load, handle_ajax
+    '''
+    @staticmethod
+    def load(form: Form) -> dict[str, Any]:
+        proxy_profile: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/ip')
+        country_map: ConfigChain = load_configuration('geolocation', filepath='dnx_webui/data')
 
-    selected_region = set(country_map[f'{geo_region}->countries'])
+        proxy_global: ConfigChain = load_configuration('global', cfg_type='security/ip')
 
-    geolocation = []
-    geolocation_append = geolocation.append
-    for country, direction in proxy_settings.get_items('geolocation'):
+        # TODO: get selected security profile setting and render accordingly. start with converting current config to
+        #  use "profile 1", with proxy set for profiles. once that is good then we can expand to more profiles.
 
-        # region level filter
-        if (country not in selected_region):
-            continue
+        # controlling whether to load defaults or user selected view.
+        # NOTE: These are validated by the update function, so it is safe to assume types.
+        geo_region = form.get('region', 'africa')
+        geo_direction = int(form.get('menu_dir', DIR.OFF))
 
-        # state level filters
-        # direct match
-        if (direction == geo_direction):
-            geolocation_append((country, direction))
+        selected_region = set(country_map[f'{geo_region}->countries'])
 
-        # all on match
-        elif (geo_direction == DIR.ON and direction > DIR.OFF):
-            geolocation_append((country, direction))
+        geolocation = []
+        geolocation_append = geolocation.append
+        for country, direction in proxy_profile.get_items('geolocation'):
 
-        # full list
-        elif (geo_direction == DIR.ALL):
-            geolocation_append((country, direction))
+            # region level filter
+            if (country not in selected_region):
+                continue
 
-    tr_settings = proxy_settings['time_restriction->start'].split(':')
+            # state level filters
+            # direct match
+            if (direction == geo_direction):
+                geolocation_append((country, direction))
 
-    hour, minutes = int(tr_settings[0]), int(tr_settings[1])
-    suffix = 'AM'
-    if (hour > 12):
-        hour -= 12
-        suffix = 'PM'
+            # all on match
+            elif (geo_direction == DIR.ON and direction > DIR.OFF):
+                geolocation_append((country, direction))
 
-    tr_length = proxy_settings['time_restriction->length']
+            # full list
+            elif (geo_direction == DIR.ALL):
+                geolocation_append((country, direction))
 
-    tr_length /= 3600
-    tlen_hour = tr_length
-    tlen_minutes = 0
-    if (isinstance(tr_length, float)):
-        tr_length = str(tr_length).split('.')
-        tlen_hour = int(tr_length[0])
-        tlen_minutes = float(f'.{tr_length[1]}')
-        tlen_minutes = int(tlen_minutes * 60)
+        tr_settings = proxy_global['time_restriction->start'].split(':')
 
-    tr_settings = {
-        'hour': hour, 'minutes': minutes, 'suffix': suffix,
-        'length_hour': tlen_hour, 'length_minutes': tlen_minutes,
-        'enabled': proxy_settings['time_restriction->enabled']
-    }
+        hour, minutes = int(tr_settings[0]), int(tr_settings[1])
+        suffix = 'AM'
+        if (hour > 12):
+            hour -= 12
+            suffix = 'PM'
 
-    ipp_settings = {
-        'sec_profile': 1,
-        'reputation': proxy_settings.get_items('reputation'),
-        'tr_settings': tr_settings, 'regions': sorted(country_map.get_list()),
-        'image_map': {
-            DIR.OFF: 'allow_up-down.png', DIR.OUTBOUND: 'block_up.png',
-            DIR.INBOUND: 'block_down.png', DIR.BOTH: 'block_up-down.png'
-        },
-        'geolocation': {
-            'region': geo_region,
-            'menu_dir': geo_direction,
-            'countries': sorted(geolocation)
+        tr_length = proxy_global['time_restriction->length']
+
+        tr_length /= 3600
+        tlen_hour = tr_length
+        tlen_minutes = 0
+        if (isinstance(tr_length, float)):
+            tr_length = str(tr_length).split('.')
+            tlen_hour = int(tr_length[0])
+            tlen_minutes = float(f'.{tr_length[1]}')
+            tlen_minutes = int(tlen_minutes * 60)
+
+        tr_settings = {
+            'hour': hour, 'minutes': minutes, 'suffix': suffix,
+            'length_hour': tlen_hour, 'length_minutes': tlen_minutes,
+            'enabled': proxy_global['time_restriction->enabled']
         }
-    }
 
-    return ipp_settings
+        ipp_settings = {
+            'security_profile': 1,
+            'profile_name': proxy_profile['name'],
+            'profile_desc': proxy_profile['description'],
+            'reputation': proxy_profile.get_items('reputation'),
+            'tr_settings': tr_settings, 'regions': sorted(country_map.get_list()),
+            'image_map': {
+                DIR.OFF: 'allow_up-down.png', DIR.OUTBOUND: 'block_up.png',
+                DIR.INBOUND: 'block_down.png', DIR.BOTH: 'block_up-down.png'
+            },
+            'geolocation': {
+                'region': geo_region,
+                'menu_dir': geo_direction,
+                'countries': sorted(geolocation)
+            }
+        }
 
-def update_page(form: Form) -> tuple[bool, WebError]:
+        return ipp_settings
 
-    # no action needed for this at this time. in the future, validations may be required, but the load page has been
-    # expanded to generate the user select data.
-    if ('change_geo_view' in form):
-        geo_direction = convert_int(form.get('menu_dir', DATA.MISSING))
+    @staticmethod
+    def update(form: Form) -> tuple[int, str]:
 
-        if (geo_direction not in range(6)):
-            return False, {'error': 1, 'message': INVALID_FORM}
+        # prevents errors while in dev mode.
+        if ('security_profile' in form):
+            return -1, 'temporarily limited to profile 1.'
 
-        valid_regions = load_configuration('geolocation', filepath='dnx_webui/data').get_list()
-        if (form.get('region') not in valid_regions):
-            return False, {'error': 2, 'message': INVALID_FORM}
+        if ('change_geo_view' in form):
+            geo_direction = convert_int(form.get('menu_dir', DATA.MISSING))
 
-    elif ('restriction_enable' in form):
-        tr_settings = config(**{
-            'enabled': get_convert_int(form, 'restriction_enable')
-        })
-        if (DATA.INVALID in tr_settings.values()):
-            return False, {'error': 3, 'message': INVALID_FORM}
+            if (geo_direction not in range(6)):
+                return 1, INVALID_FORM
 
-        configure_time_restriction(tr_settings, 'enabled')
+            valid_regions = load_configuration('geolocation', filepath='dnx_webui/data').get_list()
+            if (form.get('region') not in valid_regions):
+                return 2, INVALID_FORM
 
-    elif ('time_res_update' in form):
-        tr_settings = config(**{
-            'hour': get_convert_int(form, 'hour'),
-            'minutes': get_convert_int(form, 'minutes'),
-            'suffix': form.get('time_suffix', DATA.MISSING),
-            'hour_len': get_convert_int(form, 'length_hour'),
-            'min_len': get_convert_int(form, 'length_minutes')
-        })
+        elif ('restriction_enable' in form):
+            tr_settings = config(**{
+                'enabled': get_convert_int(form, 'restriction_enable')
+            })
+            if (DATA.INVALID in tr_settings.values()):
+                return 3, INVALID_FORM
 
-        if any([x in [DATA.MISSING, DATA.INVALID] for x in tr_settings.values()]):
-            return False, {'error': 4, 'message': INVALID_FORM}
+            configure_time_restriction(tr_settings, 'enabled')
 
-        error = validate_time_restriction(tr_settings)
-        if (error):
-            return False, {'error': 5, 'message': error.message}
+        elif ('time_res_update' in form):
+            tr_settings = config(**{
+                'hour': get_convert_int(form, 'hour'),
+                'minutes': get_convert_int(form, 'minutes'),
+                'suffix': form.get('time_suffix', DATA.MISSING),
+                'hour_len': get_convert_int(form, 'length_hour'),
+                'min_len': get_convert_int(form, 'length_minutes')
+            })
 
-        configure_time_restriction(tr_settings, 'all')
+            if any([x in [DATA.MISSING, DATA.INVALID] for x in tr_settings.values()]):
+                return 4, INVALID_FORM
 
-    elif ('continent' in form):
-        return False, {'error': 69, 'message': 'Bulk actions are still in development.'}
+            if error := validate_time_restriction(tr_settings):
+                return 5, error.message
 
-    else:
-        return False, {'error': 6, 'message': INVALID_FORM}
+            configure_time_restriction(tr_settings, 'all')
+
+        elif ('continent' in form):
+            return 69, 'Bulk actions not available.'
+
+        else:
+            return 99, INVALID_FORM
+
+        return NO_STANDARD_ERROR
 
 # ----------------
 # AJAX PROCESSING
@@ -170,7 +188,7 @@ def update_field(form: Form) -> tuple[bool, WebError]:
 # VALIDATION
 # ==============
 def validate_reputation(category: config) -> Optional[ValidationError]:
-    ip_proxy = load_configuration('ip_proxy')
+    ip_proxy = load_configuration('profiles/profile_1', cfg_type='security/ip')
 
     valid_categories = ip_proxy.get_list('reputation')
 
@@ -201,6 +219,7 @@ def validate_geolocation(category: config, rtype: str = 'country') -> Optional[V
     else:
         return ValidationError(INVALID_FORM)
 
+# TODO: time restriction should probably be moved out of ip proxy. this will ultimately be merged with quotas.
 def validate_time_restriction(tr: config, /) -> Optional[ValidationError]:
 
     if (tr.hour not in range(1, 13) or tr.min not in [00, 15, 30, 45]):
@@ -216,7 +235,7 @@ def validate_time_restriction(tr: config, /) -> Optional[ValidationError]:
 # CONFIGURATION
 # ==============
 def configure_reputation(category: config, *, ruleset: str = 'reputation') -> None:
-    with ConfigurationManager('ip_proxy') as dnx:
+    with ConfigurationManager('profiles/profile_1', cfg_type='security/ip') as dnx:
         ip_proxy_settings: ConfigChain = dnx.load_configuration()
 
         ip_proxy_settings[f'{ruleset}->{category.name}'] = category.direction
@@ -224,7 +243,7 @@ def configure_reputation(category: config, *, ruleset: str = 'reputation') -> No
         dnx.write_configuration(ip_proxy_settings.expanded_user_data)
 
 def configure_geolocation(category: config, *, rtype: str = 'country') -> None:
-    with ConfigurationManager('ip_proxy') as dnx:
+    with ConfigurationManager('profiles/profile_1', cfg_type='security/ip') as dnx:
         ip_proxy_settings: ConfigChain = dnx.load_configuration()
 
         # setting the individual country to user set value
@@ -239,7 +258,7 @@ def configure_geolocation(category: config, *, rtype: str = 'country') -> None:
         dnx.write_configuration(ip_proxy_settings.expanded_user_data)
 
 def configure_time_restriction(tr: config, /, field) -> None:
-    with ConfigurationManager('ip_proxy') as dnx:
+    with ConfigurationManager('global', cfg_type='security/ip') as dnx:
         ip_proxy_settings: ConfigChain = dnx.load_configuration()
 
         if (field == 'enabled'):

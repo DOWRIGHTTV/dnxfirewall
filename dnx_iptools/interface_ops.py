@@ -30,7 +30,7 @@ DESCRIPTOR: int = _s.fileno()
 # NOTE: this may no longer be needed even though it was recently overhauled. the inclusion of the excluded
 # filter in the load_interfaces() function should be able to replace this function. keep for now just in case.
 def get_intf_builtin(zone_name):
-    intf_settings = load_configuration('system')
+    intf_settings = load_configuration('system', cfg_type='global')
 
     intf_path = f'interfaces->builtins->{zone_name}'
     system_interfaces = {v: k for k, v in if_nameindex()[1:]}
@@ -46,7 +46,7 @@ def load_interfaces(intf_type: INTF = INTF.BUILTINS, *, exclude: list = []) -> l
 
         [(intf_index, zone, ident)]
     '''
-    intf_settings: ConfigChain = load_configuration('system')
+    intf_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
     dnx_interfaces = intf_settings.get_items(f'interfaces->{intf_type.name.lower()}')
 

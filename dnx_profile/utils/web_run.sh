@@ -9,4 +9,4 @@ export PYTHONPATH=$HOME_DIR:$FLASK_DIR:$PYTHONPATH
 export INIT=1
 export webui=1
 
-flask run --host="$1" --port="$2"
+flask run --host=$(hostname -I) --port=$1

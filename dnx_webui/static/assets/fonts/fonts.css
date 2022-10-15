@@ -17,6 +17,6 @@
 
 /* profile labels */
 @font-face {
-  font-family: 'SpecialElite';
-  src: local('SpecialElite-Regular'), url('/static/assets/fonts/SpecialElite-Regular.ttf');
+  font-family: 'Orbitron';
+  src: local('Orbitron-Variable'), url('/static/assets/fonts/Orbitron-Variable.ttf');
 }

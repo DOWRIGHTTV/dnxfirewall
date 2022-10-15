@@ -146,7 +146,7 @@ class IPTablesManager:
     )
 
     def __init__(self) -> None:
-        interfaces: ConfigChain = load_configuration('system')
+        interfaces: ConfigChain = load_configuration('system', cfg_type='global')
 
         builtins = interfaces.get_items('interfaces->builtins')
 

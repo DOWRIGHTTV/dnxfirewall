@@ -65,14 +65,14 @@ class LanRestrict:
         self.proxy = proxy
         self.initialize = Initialize(Log, proxy.__name__)
 
-        cls._active = load_data('ip_proxy.timer')['active']
+        cls._active = load_data('ip_proxy.timer', cfg_type='system/global')['active']
 
         threading.Thread(target=self._get_settings).start()
         threading.Thread(target=self._tracker).start()
 
         self.initialize.wait_for_threads(count=2)
 
-    @cfg_read_poller('ip_proxy')
+    @cfg_read_poller('ip', cfg_type='security/ip')
     def _get_settings(self, cfg_file: str) -> None:
         proxy_settings = load_configuration(cfg_file)
 
@@ -115,7 +115,7 @@ class LanRestrict:
         restriction_end:   float = restriction_start + restriction_length
 
         if (self.is_active):
-            restriction_end: float = load_data('ip_proxy.timer')['end']
+            restriction_end: float = load_data('ip_proxy.timer', cfg_type='system/global')['end']
 
         else:
             self._write_end_time(restriction_end)
@@ -133,7 +133,7 @@ class LanRestrict:
             dnx.write_configuration(time_restriction.expanded_user_data)
 
     def _load_restriction(self) -> tuple[str, float, int]:
-        proxy_settings: ConfigChain = load_configuration('ip_proxy')
+        proxy_settings: ConfigChain = load_configuration('global', cfg_type='security/ip')
         log_settings:   ConfigChain = load_configuration('logging_client')
 
         restriction_start:  str = proxy_settings['time_restriction->start']

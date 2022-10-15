@@ -1,131 +1,85 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="tabs-bar" class="tabsbar">
-    <div class="container">
-        <div class="row">
-            <div class="col s12 m12 l12 xl12">
-                <ul class="tabs">
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab==1 %} class="active" {% endif %} href="#categories"
-                            onclick="activeTab(1)">Categories</a></li>
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab==2 %} class="active" {% endif %} href="#tlds"
-                            onclick="activeTab(2)">TLDs</a></li>
-                    <li class="tab col s3 m3 l4 xl2"><a {% if tab==3 %} class="active" {% endif %} href="#keywords"
-                            onclick="activeTab(3)">Keywords</a></li>
-                </ul>
-            </div>
-        </div>
-    </div>
-</section>
-<section id="categories" class="section {{main_section_color}}">
-    <div class="container">
-        <div class="row">
-            {% if domain_settings['user_defined'] %}
-            <div class="col s12 m10 offset-m1">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">User Defined</h4>
-                    <div class="row">
-                        {% for category, settings in domain_settings['user_defined'] %}
-                        <div class="input-field col s4 m4 center">
-                            {{category}}
-                            <div class="switch">
-                                <label>
-                                    Off
-                                    <input type="checkbox" {% if settings['enabled'] %} checked="checked" {% endif %}
-                                           name="user_defined" value="{{category}}" onchange="updateCategory(this)">
-                                    <span class="lever"></span>
-                                    On
-                                </label>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        <div class="row">
-            <div class="col s12 m10 offset-m1">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">System Default</h4>
-                    <div class="row">
-                        {% for category, settings in domain_settings['default'] %}
-                        <div class="input-field col s4 m4 center">
-                            <div class="switch">
-                                <h6>{{category}}</h6>
-                                <label>
-                                    Off
-                                    {% if category in ['malicious', 'cryptominer'] %}
-                                    <input disabled type="checkbox" checked="checked" name="default">
-                                    {% else %}
-                                    <input type="checkbox" {% if settings['enabled'] %} checked="checked" {% endif %}
-                                           name="default" value="{{category}}" onchange="updateCategory(this)">
-                                    {% endif %}
-                                    <span class="lever"></span>
-                                    On
-                                </label>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-<section id="tlds" class="section {{main_section_color}}">
+{# aliasing for now so we can reuse template #}
+{% set page_settings = domain_settings %}
+<section id="tabs-bar">
     <div class="container">
         <div class="row">
             <div class="col s8 offset-s2">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">Top Level Domains</h4>
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <ul class="tabs tabs-fixed-width">
+                    {{ create_tab(tab, 1, 'categories')|safe }}
+                    {{ create_tab(tab, 2, 'tlds')|safe }}
+                    {{ create_tab(tab, 3, 'keywords')|safe }}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include 'includes/_sec_profiles.html' %}
+</section>
+<section id="categories" class="section">
+    <div class="container">
+        <div class="row">
+        {% if domain_settings['user_defined'] %}
+            <div class="col s12 m10 offset-m1">
+                <div class="card-panel hoverable {{ theme.card }}">
+                    {{ create_title('user defined')|safe }}
                     <div class="row">
-                        {% for tld, status in domain_settings['tld'] %}
-                        <div class="col s3 m3 center">
-                            <div class="row">
-                                <div class="input-field col s12">
-                                    <h6>{{tld}}</h6>
-                                    <div class="switch">
-                                        <label>
-                                            Off
-                                            <input type="checkbox" {% if status %} checked="checked" {% endif %}
-                                                name="tld" value="{{tld}}" onchange="updateCategory(this)">
-                                            <span class="lever"></span>
-                                            On
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
+                    {% for category, settings in domain_settings['user_defined'] %}
+                    {% if not loop.index0 % 4 %}<div class="row">{% endif %}
+                        {{ create_decora_switch('user_defined', category, settings['enabled'])|safe }}
+                    {% if loop.index0 % 4 == 3 or loop.last%}</div>{% endif %}
+                    {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+        <div class="row">
+            <div class="col s12 m10 offset-m1">
+                <div class="card-panel hoverable {{ theme.card }}">
+                    {{ create_title('system default')|safe }}
+                    {% for category, settings in domain_settings['built-in'] %}
+                    {% if not loop.index0 % 4 %}<div class="row">{% endif %}
+                        {{ create_decora_switch('built-in', category, settings['enabled'])|safe }}
+                    {% if loop.index0 % 4 == 3 or loop.last%}</div>{% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<section id="tlds" class="section">
+    <div class="container">
+        <div class="row">
+            <div class="col s8 offset-s2">
+                <div class="card-panel hoverable {{ theme.card }}">
+                {{ create_title('top level domains')|safe }}
+                    <div class="row">
+                    {% for tld, status in domain_settings['tld'] %}
+                    {% if not loop.index0 % 4 %}<div class="row">{% endif %}
+                        {{ create_decora_switch('tld', tld, status)|safe }}
+                    {% if loop.index0 % 4 == 3 or loop.last%}</div>{% endif %}
+                    {% endfor %}
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
-<section id="keywords" class="section {{main_section_color}}">
+<section id="keywords" class="section">
     <div class="container">
         <div class="row">
             <div class="col s8 offset-s2">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">Keyword Search</h4>
+                <div class="card-panel hoverable {{ theme.card }}">
+                    {{ create_title('keyword search')|safe }}
                     <div class="row">
-                        {% for category, settings in domain_settings['default'] %}
+                    {% for category, settings in domain_settings['built-in'] %}
                         {% if settings['enabled'] %}
-                        <div class="input-field col s3 m3 center">
-                            <h6>{{category}}</h6>
-                            <div class="switch">
-                                <label>
-                                    Off
-                                    <input type="checkbox" {% if settings['keyword'] %} checked="checked"
-                                        {% endif %} name="keyword" value="{{category}}" onchange="updateCategory(this)">
-                                    <span class="lever"></span>
-                                    On
-                                </label>
-                            </div>
-                        </div>
+                        {{ create_decora_switch('keyword', category, settings['keyword'])|safe }}
                         {% endif %}
-                        {% endfor %}
+                    {% endfor %}
                     </div>
                 </div>
             </div>
@@ -134,11 +88,16 @@
 </section>
 <script>
 async function updateCategory(category) {
-    const enabled = !!category.checked;
+    const enabled = !!category.active;
 
     let response = await ajaxClient.post("/post", {"type": category.name, "category": category.value, "enabled": enabled});
 
-    ajaxClient.handleResponse(response, category)
+    // manually changing the active button instead of using an event listener to prevent a switch on server errors.
+    let error = ajaxClient.handleResponse(response, category);
+    if (!error) {
+        category.parentElement.parentElement.querySelector(".active").classList.remove("active");
+        category.parentElement.classList.add("active");
+    }
 }
 </script>
 {% endblock %}

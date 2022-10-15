@@ -1,0 +1,28 @@
+<div class="col s12">
+    <div class="multi-switch-container sec-profiles">
+        <form method="post">
+            <ul class="pagination multi-switch sec-profiles">
+                <li{% if page_settings.security_profile == 1 %} class="disabled"{% endif %}>
+                    <button name="security_profile" value="<"><i class="material-icons">chevron_left</i></button>
+                </li>
+                {% for profile in range(1,16) %}
+                <li class="multi-switch-on{% if page_settings.security_profile == profile %} active{% endif %}">
+                    <button name="security_profile" value="{{ profile }}">{{ profile }}</button>
+                </li>
+                {% endfor %}
+                <li{% if page_settings.security_profile == 15 %} class="disabled"{% endif %}>
+                    <button name="security_profile" value=">"><i class="material-icons">chevron_right</i></button>
+                </li>
+            </ul>
+        </form>
+    </div>
+</div>
+<div class="container">
+    <div class="row row-thin">
+        <div class="col s6 offset-s3">
+            <div class="card-panel hoverable center {{ theme.card }}">
+                <h6>{{ page_settings['profile_name'] }} -- {{ page_settings['profile_desc'] }}</h6>
+            </div>
+        </div>
+    </div>
+</div>

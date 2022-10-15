@@ -11,33 +11,13 @@
     <link href="{{url_for('static', filename='assets/css/icons.css')}}" rel="stylesheet">
     <link rel="shortcut icon" href="{{ url_for('static', filename='assets/images/shield.png') }}">
 </head>
-<body style="background-color:{% if session['dark_mode'] %} #263238 {% else %} #e0e0e0 {% endif %}">
+<!-- Matt Visiwig @ svgbackgrounds.com (license https://creativecommons.org/licenses/by/4.0/legalcode) -->
+<body {{ theme.background|safe }}>
     {% set tab_classes = 'tab col s4 l3 xl2' %}
-    {% set tab_text_color = 'blue-grey-text text-lighten-2' %}
     {% set icon_tiny = 'height=25px width=25px' %}
     {% set icon_small = 'height=52px width=52px' %}
     {% set dash_icon_std = 'height=65px width=65px' %}
     {% set dash_icon_zoom = 'height=100px width=100px' %}
-
-    {% set nav_text_color = 'blue-grey-text text-darken-2' %}
-    {% set subnav_text_color = 'blue-grey-text text-darken-3' %}
-    {% set icon_color = 'teal-text text-lighten-2' %}
-    {% set modal_text_style = 'blue-grey-text center' %}
-
-    {% if session['dark_mode'] %}
-        <!-- dark mode enabled -->
-        {% set main_section_color = 'blue-grey lighten-2' %}
-        {% set off_section_color = 'blue-grey lighten-5' %}
-        {% set card_color = 'blue-grey lighten-4' %}
-        {% set title_color = 'black-text' %}
-
-    {% else %}
-        <!-- default mode enabled -->
-        {% set main_section_color = 'grey lighten-2' %}
-        {% set off_section_color = 'grey lighten-5' %}
-        {% set card_color = 'grey lighten-4' %}
-        {% set title_color = 'blue-grey-text text-darken-1' %}
-    {% endif %}
 
     {% set ip_net_validate = 'class=validate pattern=^([0-9]{1,3}\.){3}[0-9]{1,3}(\/([0-9]|[1-2][0-9]|3[0-2]))?$' %}
     {% set ip_addr_validate = 'class=validate minlength=7 maxlength=15 size=15 pattern=^((\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.){3}(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])$' %}

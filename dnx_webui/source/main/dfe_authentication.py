@@ -143,8 +143,7 @@ def user_restrict(*authorized_roles: str) -> Callable:
 
                 return redirect(url_for('dnx_login'))
 
-            # will redirect to not authorized page if the user role does not match
-            # requirements for the page
+            # will redirect to not authorized page if the user role does not match requirements for the page
             logged_user_role = session_tracker.get(f'active_users->{user}->role')
             if (logged_user_role not in authorized_roles):
                 session.pop('user', None)

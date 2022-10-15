@@ -1,25 +1,30 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="tabs-bar" class="tabsbar">
+{# aliasing for now so we can reuse template #}
+{% set page_settings = ips_settings %}
+<section id="tabs-bar">
     <div class="container">
         <div class="row">
-            <div class="col s12">
-                <ul class="tabs">
-                    {{ create_tab(tab, 1, 'ips-ids')|safe }}
-                    {{ create_tab(tab, 2, 'whitelist')|safe }}
-                    {{ create_tab(tab, 3, 'block-list')|safe }}
-                </ul>
+            <div class="col s8 offset-s2">
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <ul class="tabs tabs-fixed-width">
+                        {{ create_tab(tab, 1, 'ips-ids')|safe }}
+                        {{ create_tab(tab, 2, 'whitelist')|safe }}
+                        {{ create_tab(tab, 3, 'block-list')|safe }}
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
+    {% include 'includes/_sec_profiles.html' %}
 </section>
-<section id="ips-ids" class="section {{main_section_color}}">
+<section id="ips-ids" class="section">
     <div class="container">
         <div class="row">
             <div class="col s12 m6">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">Denial Of Service</h4>
-                    <form action="/intrusion/ips" method="POST">
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">Denial Of Service</h4>
+                    <form method="POST">
                         <input type="hidden" name="tab" value="1">
                         <input type="hidden" name="ddos_limits">
                         <div class="row">
@@ -30,8 +35,7 @@
                                         <input type="range" name="tcp_limit" min="5" max="100"
                                             value="{{ips_settings['ddos']['tcp']}}">
                                     </label>
-                                        {{ips_settings['ddos']['tcp']}}
-                                    </label>
+                                    {{ips_settings['ddos']['tcp']}}
                                 </p>
                             </div>
                         </div>
@@ -43,8 +47,7 @@
                                         <input type="range" name="udp_limit" min="5" max="100"
                                             value="{{ips_settings['ddos']['udp']}}">
                                     </label>
-                                        {{ips_settings['ddos']['udp']}}
-                                    </label>
+                                    {{ips_settings['ddos']['udp']}}
                                 </p>
                             </div>
                         </div>
@@ -56,8 +59,7 @@
                                         <input type="range" name="icmp_limit" min="5" max="100"
                                             value="{{ips_settings['ddos']['icmp']}}">
                                     </label>
-                                        {{ips_settings['ddos']['icmp']}}
-                                    </label>
+                                    {{ips_settings['ddos']['icmp']}}
                                 </p>
                             </div>
                         </div>
@@ -69,32 +71,30 @@
                 </div>
             </div>
             <div class="col s12 m6">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">General Settings</h4>
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">General Settings</h4>
                     <div class="row">
                         {{ create_switch('IDS Mode', 'ids_mode', checked=ips_settings.ids_mode)|safe }}
                         <form method="POST">
                             <input type="hidden" name="tab" value="1">
                             <div class="input-field col s6 left {{input_color}}">
-                                <label>
-                                    <select name="passive_block_length" onchange="this.form.submit()">
-                                        <option value="0" {% if ips_settings['length']==0 %} selected {% endif %}
-                                            >disabled</option>
-                                        <option value="24" {% if ips_settings['length']==24 %} selected {% endif %}
-                                            >24 hours</option>
-                                        <option value="48" {% if ips_settings['length']==48 %} selected {% endif %}
-                                            >48 hours</option>
-                                        <option value="72" {% if ips_settings['length']==72 %} selected {% endif %}
-                                            >72 hours</option>
-                                    </select>
-                                </label>
-                                <label>Passive Block</label>
+                                <select name="passive_block_length" id="pbl" onchange="this.form.submit()">
+                                    <option value="0" {% if ips_settings['length']==0 %} selected {% endif %}
+                                        >disabled</option>
+                                    <option value="24" {% if ips_settings['length']==24 %} selected {% endif %}
+                                        >24 hours</option>
+                                    <option value="48" {% if ips_settings['length']==48 %} selected {% endif %}
+                                        >48 hours</option>
+                                    <option value="72" {% if ips_settings['length']==72 %} selected {% endif %}
+                                        >72 hours</option>
+                                </select>
+                                <label for="pbl">Passive Block</label>
                             </div>
                         </form>
                     </div>
                 </div>
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">Port Scan</h4>
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">Port Scan</h4>
                     <div class="row">
                         {{ create_switch('Enabled', 'ps_enabled', checked=ips_settings.port_scan.enabled)|safe }}
                         {{ create_switch('Reject', 'ps_reject', checked=ips_settings.port_scan.reject,
@@ -105,13 +105,13 @@
         </div>
     </div>
 </section>
-<section id="whitelist" class="section {{main_section_color}}">
+<section id="whitelist" class="section">
     <div class="container">
         <div class="row row-flex">
             <div class="col s8">
-                <div class="card-panel card-panel-eql hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">Add IPS Whitelist</h4>
-                    <form action="/intrusion/ips" method="POST">
+                <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">Add IPS Whitelist</h4>
+                    <form method="POST">
                         <input type="hidden" name="tab" value="2">
                         <div class="row">
                             <div class="input-field col s4 {{input_color}}">
@@ -135,15 +135,15 @@
                 </div>
             </div>
             <div class="col s4">
-                <div class="card-panel card-panel-eql hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">Includes</h4>
+                <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">Includes</h4>
                     {{ create_switch('DNS Servers', 'dns_svr_wl', tab=2,
                         checked=ips_settings.dns_server_whitelist)|safe }}
                 </div>
             </div>
             <div class="col s12">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">Current Whitelist</h4>
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">Current Whitelist</h4>
                     <table class="striped centered">
                         <thead>
                             <tr>
@@ -162,7 +162,7 @@
                                         <div class="modal-content">
                                             <h5 class="{{modal_text_style}}">Are you sure you want to remove the IPS whitelist rule?</h5>
                                         </div>
-                                        <form action="/intrusion/ips" method="POST">
+                                        <form method="POST">
                                             <input type="hidden" name="tab" value="2">
                                             <input type="hidden" name="ips_wl_ip" value="{{ip_address}}">
                                             <div class="modal-footer">
@@ -189,12 +189,12 @@
         </div>
     </div>
 </section>
-<section id="block-list" class="section {{main_section_color}}">
+<section id="block-list" class="section">
     <div class="container">
         <div class="row">
             <div class="col s12">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">Passively Blocked Hosts</h4>
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">Passively Blocked Hosts</h4>
                     <table class="striped centered">
                         <thead>
                             <tr>
@@ -213,7 +213,7 @@
                                         <div class="modal-content">
                                             <h5 class="{{modal_text_style}}">Are you sure you want to remove the passively blocked host?</h5>
                                         </div>
-                                        <form action="/intrusion/ips" method="POST">
+                                        <form method="POST">
                                             <input type="hidden" name="tab" value="3">
                                             <div class="modal-footer">
                                                 <button class="btn waves-effect waves-light" name="ips_pbl_remove" value="{{host}}/{{timestamp}}">YES</button>

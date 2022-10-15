@@ -5,9 +5,9 @@ from __future__ import annotations
 import dnx_iptools.interface_ops as interface
 
 from source.web_typing import *
-from source.web_validate import ValidationError, convert_int, mac_address, ip_address, cidr
+from source.web_validate import *
 
-from dnx_gentools.def_constants import HOME_DIR, INVALID_FORM
+from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.def_enums import CFG, DATA, INTF
 from dnx_gentools.file_operations import load_data, load_configuration, config, ConfigurationManager, json_to_yaml
 
@@ -15,93 +15,106 @@ from dnx_control.control.ctl_action import system_action
 
 from dnx_iptools.cprotocol_tools import itoip, default_route
 
+from source.web_interfaces import StandardWebPage
+
+__all__ = ('WebPage',)
 
 _IP_DISABLED = True
 
-def load_page(_: Form) -> dict[str, Any]:
-    system_settings: ConfigChain = load_configuration('system')
+class WebPage(StandardWebPage):
+    '''
+    available methods: load, update
+    '''
+    @staticmethod
+    def load(_: Form) -> dict[str, Any]:
+        system_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
-    wan_ident: str = system_settings['interfaces->builtins->wan->ident']
-    wan_state: int = system_settings['interfaces->builtins->wan->state']
-    default_mac:    str = system_settings['interfaces->builtins->wan->default_mac']
-    configured_mac: str = system_settings['interfaces->builtins->wan->default_mac']
+        wan_ident: str = system_settings['interfaces->builtins->wan->ident']
+        wan_state: int = system_settings['interfaces->builtins->wan->state']
+        default_mac:    str = system_settings['interfaces->builtins->wan->default_mac']
+        configured_mac: str = system_settings['interfaces->builtins->wan->default_mac']
 
-    try:
-        ip_addr = itoip(interface.get_ipaddress(interface=wan_ident))
-    except OverflowError:
-        ip_addr = 'NOT SET'
+        try:
+            ip_addr = itoip(interface.get_ipaddress(interface=wan_ident))
+        except OverflowError:
+            ip_addr = 'NOT SET'
 
-    try:
-        netmask = itoip(interface.get_netmask(interface=wan_ident))
-    except OverflowError:
-        netmask = 'NOT SET'
+        try:
+            netmask = itoip(interface.get_netmask(interface=wan_ident))
+        except OverflowError:
+            netmask = 'NOT SET'
 
-    return {
-        'mac': {
-            'default': default_mac,
-            'current': configured_mac if configured_mac else default_mac
-        },
-        'ip': {
-            'state': wan_state,
-            'ip_address': ip_addr,
-            'netmask': netmask,
-            'default_gateway': itoip(default_route())
+        return {
+            'mac': {
+                'default': default_mac,
+                'current': configured_mac if configured_mac else default_mac
+            },
+            'ip': {
+                'state': wan_state,
+                'ip_address': ip_addr,
+                'netmask': netmask,
+                'default_gateway': itoip(default_route())
+            }
         }
-    }
 
-def update_page(form: Form) -> str:
-    if ('wan_state_update' in form):
-        wan_state = form.get('wan_state_update', DATA.MISSING)
-        if (wan_state is DATA.MISSING):
-            return INVALID_FORM
+    @staticmethod
+    def update(form: Form) -> tuple[int, str]:
+        if ('wan_state_update' in form):
 
-        try:
-            wan_state = INTF(convert_int(wan_state))
-        except (ValidationError, KeyError):
-            return INVALID_FORM
+            wan_state = form.get('wan_state_update', DATA.MISSING)
+            if (wan_state is DATA.MISSING):
+                return 1, INVALID_FORM
+
+            try:
+                wan_state = INTF(convert_int(wan_state))
+            except (ValidationError, KeyError):
+                return 2, INVALID_FORM
+
+            else:
+                set_wan_interface(wan_state)
+
+        elif ('wan_ip_update' in form):
+            wan_ip_settings = config(**{
+                'ip': form.get('wan_ip', DATA.MISSING),
+                'cidr': form.get('wan_cidr', DATA.MISSING),
+                'dfg': form.get('wan_dfg', DATA.MISSING)
+            })
+
+            if (DATA.MISSING in wan_ip_settings.values()):
+                return 3, INVALID_FORM
+
+            try:
+                ip_address(wan_ip_settings.ip)
+                cidr(wan_ip_settings.cidr)
+                ip_address(wan_ip_settings.dfg)
+            except ValidationError as ve:
+                return 4, ve.message
+
+            set_wan_ip(wan_ip_settings)
+
+        elif (_IP_DISABLED):
+            return 98, 'wan interface configuration currently disabled for system rework.'
+
+        elif ('wan_mac_update' in form):
+
+            mac_addr = form.get('ud_wan_mac', DATA.MISSING)
+            if (mac_addr is DATA.MISSING):
+                return 5, INVALID_FORM
+
+            try:
+                mac_address(mac_addr)
+            except ValidationError as ve:
+                return 6, ve.message
+            else:
+                set_wan_mac(CFG.ADD, mac_address=mac_address)
+
+        elif ('wan_mac_restore' in form):
+            set_wan_mac(CFG.DEL)
 
         else:
-            set_wan_interface(wan_state)
+            return 99, INVALID_FORM
 
-    elif ('wan_ip_update' in form):
-        wan_ip_settings = config(**{
-            'ip': form.get('wan_ip', DATA.MISSING),
-            'cidr': form.get('wan_cidr', DATA.MISSING),
-            'dfg': form.get('wan_dfg', DATA.MISSING)
-        })
-
-        if (DATA.MISSING in wan_ip_settings.values()):
-            return INVALID_FORM
-
-        try:
-            ip_address(wan_ip_settings.ip)
-            cidr(wan_ip_settings.cidr)
-            ip_address(wan_ip_settings.dfg)
-        except ValidationError as ve:
-            return ve.message
-
-        set_wan_ip(wan_ip_settings)
-
-    elif (_IP_DISABLED):
-        return 'wan interface configuration currently disabled for system rework.'
-
-    elif ('wan_mac_update' in form):
-        mac_addr = form.get('ud_wan_mac', DATA.MISSING)
-        if (mac_addr is DATA.MISSING):
-            return INVALID_FORM
-
-        try:
-            mac_address(mac_addr)
-        except ValidationError as ve:
-            return ve.message
-        else:
-            set_wan_mac(CFG.ADD, mac_address=mac_address)
-
-    elif ('wan_mac_restore' in form):
-        set_wan_mac(CFG.DEL)
-
-    else:
-        return INVALID_FORM
+        return NO_STANDARD_ERROR
 
 # ==============
 # CONFIGURATION
@@ -176,7 +189,7 @@ def set_wan_ip(wan_settings: config) -> None:
     3. Create netplan config from template
     4. Move file to /etc/netplan
     '''
-    dnx_settings: ConfigChain = load_configuration('system')
+    dnx_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
     wan_ident: str = dnx_settings['interfaces->builtins->wan->ident']
 
@@ -201,7 +214,7 @@ def _configure_netplan(intf_config: dict) -> None:
         note: this does NOT run "netplan apply"
     '''
     # grabbing configured dns servers
-    dns_server_settings: ConfigChain = load_configuration('dns_server')
+    dns_server_settings: ConfigChain = load_configuration('dns_server', cfg_type='global')
 
     dns1: str = dns_server_settings['resolvers->primary->ip_address']
     dns2: str = dns_server_settings['resolvers->secondary->ip_address']

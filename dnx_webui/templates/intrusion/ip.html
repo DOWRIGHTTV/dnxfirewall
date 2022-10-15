@@ -1,45 +1,30 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="tabs-bar" class="tabsbar">
+{# aliasing for now so we can reuse template #}
+{% set page_settings = ip_settings %}
+<section id="tabs-bar">
     <div class="container">
         <div class="row">
-            <div class="col s12 m12">
-                <ul class="tabs">
-                    {{ create_tab(tab, 1, 'reputation')|safe }}
-                    {{ create_tab(tab, 2, 'geolocation')|safe }}
-                    {{ create_tab(tab, 3, 'lan-restrict')|safe }}
-                </ul>
+            <div class="col s8 offset-s2">
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <ul class="tabs tabs-fixed-width">
+                        {{ create_tab(tab, 1, 'reputation')|safe }}
+                        {{ create_tab(tab, 2, 'geolocation')|safe }}
+                        {{ create_tab(tab, 3, 'lan-restrict')|safe }}
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
-</section>
-<section>
-    <div class="col s12">
-        <div class="multi-switch-container sec-profiles">
-            <ul class="pagination multi-switch sec-profiles">
-                <li {% if ip_settings.sec_profile == 1 %}class="disabled"{% endif %}>
-                    <button name="ip_profile" value="<"><i class="material-icons">chevron_left</i></button>
-                </li>
-                {% for profile in range(1,16) %}
-                <li class="multi-switch-on{% if ip_settings.sec_profile == profile %}active{% endif %}">
-                    <button name="ip_profile" value="{{ profile }}">{{ profile }}</button>
-                </li>>
-                {% endfor %}
-                <li {% if ip_settings.sec_profile == 15 %}class="disabled"{% endif %}>
-                    <button name="ip_profile" value=">"><i class="material-icons">chevron_right</i></button>
-                </li>
-            </ul>
-        </div>
-    </div>
+    {% include 'includes/_sec_profiles.html' %}
 </section>
 {% set cat_options = [(0,'radio_button_unchecked'), (1,'file_upload'), (1,'file_download'), (1,'swap_vert')] %}
-<section id="reputation" class="section {{main_section_color}}">
+<section id="reputation" class="section">
     <div class="container">
         <div class="row">
             <div class="col s12 m10 offset-m1">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">Reputation</h4>
-                    <div class="title-divider"></div>
+                <div class="card-panel hoverable {{ theme.card }}">
+                    {{ create_title('reputation')|safe }}
                     {% for category, direction in ip_settings['reputation'] %}
                     {% if not loop.index0 % 4 %}<div class="row">{% endif %}
                         <div class="col s3">
@@ -68,18 +53,17 @@
         </div>
     </div>
 </section>
-<section id="geolocation" class="section {{main_section_color}}">
+<section id="geolocation" class="section">
     <div class="container">
         <div class="col s12">
-            <div class="card-panel hoverable {{card_color}}">
-                <h4 class="{{title_color}}">Geolocation</h4>
-                <div class="title-divider"></div>
+            <div class="card-panel hoverable {{ theme.card }}">
+                {{ create_title('geolocation')|safe }}
                 <div class="row">
                     <form method="POST">
                         <input type="hidden" name="tab" value="2">
                         <input type="hidden" name="change_geo_view">
                         <div class="input-field col s5 m3 offset-m1 {{input_color}}">
-                            <select name="region" onchange="this.form.submit()">
+                            <select name="region" id="region" onchange="this.form.submit()">
                                 {% for region in ip_settings['regions'] %}
                                 <option value="{{region}}" {% if region == ip_settings['geolocation']['region'] %}
                                         selected {% endif %}>{{region.replace('_', ' ').upper()}}</option>
@@ -125,12 +109,12 @@
         </div>
     </div>
 </section>
-<section id="lan-restrict" class="section {{main_section_color}}">
+<section id="lan-restrict" class="section">
     <div class="container">
         <div class="row">
             <div class="col s12 m10 offset-m1">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">LAN Restrict</h4>
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">LAN Restrict</h4>
                     <form method="post">
                         <input type="hidden" name="tab" value="3">
                         <div class="col s12">
@@ -205,8 +189,6 @@ async function updateCategory(category) {
         category.parentElement.parentElement.querySelector(".active").classList.remove("active");
         category.parentElement.classList.add("active");
     }
-
-    category.preventDefault();
 }
 </script>
 {% endblock %}

@@ -1,56 +1,56 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="why-me" class="section scrollspy center {{main_section_color}}">
+<section class="section scrollspy center">
     <div class="container">
         <div class="row row-flex">
             <div class="col s12 m6">
-                <div class="card-panel card-panel-eql hoverable {{card_color}}">
-                    <a>
-                        <img src="/static/dashboard/dash_pi-{{dashboard['dc_graph'][0]}}{{dashboard['dc_graph'][1]}}.png"
-                            {{dash_icon_std}}>
-                    </a>
-                    <h4>Unique Domains</h4>
-                    <div class="col s6">
-                        <ul>
-                            <li><h5>Blocked</h5></li>
-                            <li><h2>{{dashboard['domain_counts'][0]}}</h2></li>
-                        </ul>
+                <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+                    {{ create_title('unique domains')|safe }}
+                    <div class="row">
+                        <a><img src="/static/dashboard/dash_pi-{{dashboard['dc_graph'][0]}}{{dashboard['dc_graph'][1]}}.png" {{dash_icon_std}}></a>
                     </div>
-                    <div class="col s6">
-                        <ul>
-                            <li><h5>Allowed</h5></li>
-                            <li><h2>{{dashboard['domain_counts'][1]}}</h2></li>
-                        </ul>
+                    <div class="row">
+                        <div class="col s6">
+                            <ul>
+                                <li><h5>Blocked</h5></li>
+                                <li><h2>{{dashboard['domain_counts'][0]}}</h2></li>
+                            </ul>
+                        </div>
+                        <div class="col s6">
+                            <ul>
+                                <li><h5>Allowed</h5></li>
+                                <li><h2>{{dashboard['domain_counts'][1]}}</h2></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col s12 m6">
-                <div class="card-panel card-panel-eql hoverable {{card_color}}">
-                    <a>
-                        <img src="/static/dashboard/dash_pi-{{dashboard['rc_graph'][0]}}{{dashboard['rc_graph'][1]}}.png"
-                            {{dash_icon_std}}>
-                    </a>
-                    <h4>Total Domains</h4>
-                    <div class="col s6">
-                        <ul>
-                            <li><h5>Blocked</h5></li>
-                            <li><h2>{{dashboard['request_counts'][0]}}</h2></li>
-                        </ul>
+                <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+                    {{ create_title('total domains')|safe }}
+                    <div class="row">
+                        <a><img src="/static/dashboard/dash_pi-{{dashboard['rc_graph'][0]}}{{dashboard['rc_graph'][1]}}.png" {{dash_icon_std}}></a>
                     </div>
-                    <div class="col s6">
-                        <ul>
-                            <li><h5>Allowed</h5></li>
-                            <li><h2>{{dashboard['request_counts'][1]}}</h2></li>
-                        </ul>
+                    <div class="row">
+                        <div class="col s6">
+                            <ul>
+                                <li><h5>Blocked</h5></li>
+                                <li><h2>{{dashboard['request_counts'][0]}}</h2></li>
+                            </ul>
+                        </div>
+                        <div class="col s6">
+                            <ul>
+                                <li><h5>Allowed</h5></li>
+                                <li><h2>{{dashboard['request_counts'][1]}}</h2></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col s12">
-                <div class="card-panel card-panel-eql hoverable {{card_color}}">
-                    <a>
-                        <img src="/static/dashboard/dash_search1.png" {{dash_icon_zoom}}>
-                    </a>
-                    <h4>Most Searched Domains</h4>
+                <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+                    <a><img src="/static/dashboard/dash_search1.png" {{dash_icon_zoom}}></a>
+                    <h4 class="card-title">Most Searched Domains</h4>
                     <div class="row">
                         {% for action, data in dashboard['top_domains'] %}
                         <div class="col s6">
@@ -88,11 +88,9 @@
                 </div>
             </div>
             <div class="col s12">
-                <div class="card-panel card-panel-eql hoverable {{card_color}}">
-                    <a>
-                        <img src="/static/dashboard/dash_globe1.png" {{dash_icon_std}}>
-                    </a>
-                    <h4>Country Activity</h4>
+                <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+                    <a><img src="/static/dashboard/dash_globe1.png" {{dash_icon_std}}></a>
+                    <h4 class="card-title">Country Activity</h4>
                     <div class="row">
                         {% for action, countries in dashboard['top_countries'].items() %}
                         <div class="col s6">
@@ -131,13 +129,13 @@
             </div>
             {% if dashboard['infected_hosts'] %}
             <div class="col s12">
-                <div class="card-panel card-panel-eql hoverable {{card_color}}">
+                <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
                     <i class="material-icons large red-text">report_problem</i><br>
                     <h4>Infected Hosts</h4>
                     <div class="row">
                         <ul>
                             {% for value in dashboard['infected_hosts'] %}
-                            <li>{{value[0]}} | {{value[1]}} | {{value[3]}}</span></li>
+                            <li>{{ value[0] }} | {{ value[1] }} | {{ value[3] }}</li>
                             {% endfor %}
                         </ul>
                     </div>
@@ -154,15 +152,15 @@
         </div>
     </div>
 </section>
-<section id="statistics" class="{{off_section_color}}"">
+<section id="statistics" class="{{ theme.off_section }}">
     <div class="container">
         <div class="row">
             <div class="col s12">
-                <h4 class="{{title_color}}">System Information</h4>
-                <ul class="tabs">
-                    <li class="tab col s3 l4 xl2"><a class="active" href="#server-stat">Server Status</a></li>
-                    <li class="tab col s3 l4 xl2"><a href="#system-stat">System Stats</a></li>
-                    <li class="tab col s3 l4 xl2"><a href="#interface-stat">Interface Stats</a></li>
+                <h4 class="{{ theme.title }}">System Information</h4>
+                <ul class="tabs tabs-fixed-width">
+                    <li class="tab col s4 xl2"><a class="active" href="#server-stat">Server Status</a></li>
+                    <li class="tab col s4 xl2"><a href="#system-stat">System Stats</a></li>
+                    <li class="tab col s4 xl2"><a href="#interface-stat">Interface Stats</a></li>
                 </ul>
             </div>
             <div id="server-stat" class="col s12">

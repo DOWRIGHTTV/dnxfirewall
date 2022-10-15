@@ -1,26 +1,28 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="tabs-bar" class="tabsbar">
+<section id="tabs-bar">
     <div class="container">
         <div class="row">
-            <div class="col s12 m12 l12 xl12">
-                <ul class="tabs">
-                    {{ create_tab(tab, 1, 'general')|safe }}
-                    {{ create_tab(tab, 2, 'reservations')|safe }}
-                    {{ create_tab(tab, 3, 'leases')|safe }}
-                </ul>
+            <div class="col s8 offset-s2">
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <ul class="tabs tabs-fixed-width">
+                        {{ create_tab(tab, 1, 'general')|safe }}
+                        {{ create_tab(tab, 2, 'reservations')|safe }}
+                        {{ create_tab(tab, 3, 'leases')|safe }}
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
 </section>
-<section id="general" class="section {{main_section_color}}">
+<section id="general" class="section">
     <div class="container">
         <div class="row">
             {% for interface in ['lan', 'dmz'] %}
             <div class="col s6">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">{{interface.upper()}} Interface</h4>
-                    <form action="system/settings/dhcp" method="POST">
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">{{interface.upper()}} Interface</h4>
+                    <form method="POST">
                         <input type="hidden" name="tab" value="1">
                         <input type="hidden" name="interface" value="{{interface}}">
                         <div class="row">
@@ -81,13 +83,13 @@
         </div>
     </div>
 </section>
-<section id="reservations" class="section {{main_section_color}}">
+<section id="reservations" class="section">
     <div class="container">
         <div class="row">
             <div class="col s12">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">Add Reservation</h4>
-                    <form action="system/settings/dhcp" method="POST">
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">Add Reservation</h4>
+                    <form method="POST">
                         <input type="hidden" name="tab" value="2">
                         <div class="row">
                             <div class="input-field col s2 offset-s1 {{input_color}}">
@@ -126,8 +128,8 @@
                 </div>
             </div>
             <div class="col s12">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">DHCP Reservations</h4>
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">DHCP Reservations</h4>
                     <table class="striped centered">
                         <thead>
                             <tr>
@@ -177,11 +179,11 @@
         </div>
     </div>
 </section>
-<section id="leases" class="section {{main_section_color}}">
+<section id="leases" class="section">
     <div class="container">
         <div class="col s12">
-            <div class="card-panel hoverable {{card_color}}">
-                <h4 class="{{title_color}}">DHCP Leases</h4>
+            <div class="card-panel hoverable {{ theme.card }}">
+                <h4 class="{{ theme.title }}">DHCP Leases</h4>
                 <div class="row">
                     <table class="striped centered">
                         <thead>

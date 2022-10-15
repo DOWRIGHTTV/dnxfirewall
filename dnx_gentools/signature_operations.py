@@ -25,7 +25,7 @@ cidr_to_host_count: dict[str, int] = {f'{i}': 2**x for i, x in enumerate(reverse
 ip_unpack: Callable[[bytes], tuple] = Struct('>L').unpack
 
 def _combine_domain(log: LogHandler_T) -> list[str]:
-    proxy_settings: ConfigChain = load_configuration('dns_proxy')
+    proxy_settings: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
 
     domain_signatures: list = []
 
@@ -83,7 +83,7 @@ def generate_domain(log: LogHandler_T) -> list[list[int, int]]:
     return doms
 
 def _combine_reputation(log: LogHandler_T) -> list[str]:
-    proxy_settings: ConfigChain = load_configuration('ip_proxy')
+    proxy_settings: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/ip')
 
     ip_rep_signatures: list = []
     for cat in proxy_settings.get_list('reputation'):
@@ -119,7 +119,7 @@ def generate_reputation(log: LogHandler_T) -> list[list[int, int]]:
     return hosts
 
 def _combine_geolocation(log: LogHandler_T) -> list[str]:
-    geo_settings: list = load_configuration('ip_proxy').get_list('geolocation')
+    geo_settings: list = load_configuration('profiles/profile_1', cfg_type='security/ip').get_list('geolocation')
 
     # adding private ip space signatures because they are currently excluded from webui. (by design... for now)
     geo_settings.append(RFC1918[0])

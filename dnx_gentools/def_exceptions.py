@@ -12,9 +12,6 @@ class DNXError(Exception):
     def message(self) -> Optional[str]:
         return self.args[0]
 
-class ValidationError(DNXError):
-    '''Webui processing failure or invalid user input.'''
-
 class ConfigurationError(DNXError):
     '''ConfigurationManager processing failure while in context.'''
 

@@ -11,6 +11,8 @@ from source.web_typing import *
 from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.file_operations import tail_file
 
+from source.web_interfaces import LogWebPage
+
 LOG_DIR = f'{HOME_DIR}/dnx_profile/log/traffic'
 LOG_FILES = [
     'firewall', 'nat',
@@ -37,17 +39,22 @@ class FIREWALL_LOG(_NamedTuple):
     dst_port: str
 
 
-def update_page(form: Form) -> tuple[str, None, list[FIREWALL_LOG]]:
-    log_table = form.get('table', 'firewall')
+class WebPage(LogWebPage):
+    '''
+    available methods: update
+    '''
+    @staticmethod
+    def update(form: Form) -> tuple[str, None, list[FIREWALL_LOG]]:
+        log_table = form.get('table', 'firewall')
 
-    if (log_table not in LOG_FILES):
-        return log_table, None, []
+        if (log_table not in LOG_FILES):
+            return log_table, None, []
 
-    # combined log is now a single file that reflects recent aggregated log at the time of loading
-    file_path = f'{LOG_DIR}/{log_table}'
+        # combined log is now a single file that reflects recent aggregated log at the time of loading
+        file_path = f'{LOG_DIR}/{log_table}'
 
-    # returning none to fill table_args var on the calling function to allow reuse with the report's page method
-    return log_table, None, get_log_entries(file_path)
+        # returning none to fill table_args var on the calling function to allow reuse with the report's page method
+        return log_table, None, get_log_entries(file_path)
 
 def get_log_entries(file_path: str) -> list[FIREWALL_LOG]:
     log_files = reversed(sorted(os.listdir(file_path))[:-1])

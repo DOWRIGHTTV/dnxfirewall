@@ -60,9 +60,8 @@ class ServerConfiguration(ConfigurationMixinBase):
 
         return Log, threads, 3
 
-    @cfg_read_poller('dhcp_server')
-    def _get_settings(self, cfg_file: str) -> None:
-        dhcp_settings: ConfigChain = load_configuration(cfg_file)
+    @cfg_read_poller('dhcp_server', cfg_type='global')
+    def _get_settings(self, dhcp_settings: ConfigChain) -> None:
 
         # updating user configuration items per interface in memory.
         for intf in dhcp_settings.get_values('interfaces->builtins'):
@@ -85,9 +84,10 @@ class ServerConfiguration(ConfigurationMixinBase):
 
         self._initialize.done()
 
-    @cfg_read_poller('dhcp_server')
-    def _get_server_options(self, cfg_file: str) -> None:
-        builtin_intfs: list[Item] = load_configuration(cfg_file).get_items('interfaces->builtins')
+    @cfg_read_poller('dhcp_server', cfg_type='global')
+    def _get_server_options(self, dhcp_settings: ConfigChain) -> None:
+
+        builtin_intfs: list[Item] = dhcp_settings.get_items('interfaces->builtins')
 
         # will wait for 2 threads to check in before running code.
         # allows the necessary settings to be initialized on startup before this thread continues.
@@ -119,9 +119,8 @@ class ServerConfiguration(ConfigurationMixinBase):
         self._initialize.done()
 
     # loading the user configured dhcp reservations from json config file into memory.
-    @cfg_read_poller('dhcp_server')
-    def _get_reservations(self, cfg_file: str) -> None:
-        dhcp_settings: ConfigChain = load_configuration(cfg_file)
+    @cfg_read_poller('dhcp_server', cfg_type='global')
+    def _get_reservations(self, dhcp_settings: ConfigChain) -> None:
 
         # dict comp that retains all infos of stored json data, but converts ip address into objects
         self.leases.reservations = {
@@ -143,9 +142,9 @@ class ServerConfiguration(ConfigurationMixinBase):
         self._initialize.done()
 
     def _load_interfaces(self) -> None:
-        fw_intf: dict[str, dict] = load_configuration('system').get_dict('interfaces->builtins')
+        fw_intf: dict[str, dict] = load_configuration('system', cfg_type='global').get_dict('interfaces->builtins')
 
-        dhcp_intfs: list[Item] = load_configuration('dhcp_server').get_items('interfaces->builtins')
+        dhcp_intfs: list[Item] = load_configuration('dhcp_server', cfg_type='global').get_items('interfaces->builtins')
 
         # interface friendly name e.g. wan
         for intf_name, settings in dhcp_intfs:
@@ -231,7 +230,7 @@ class Leases(dict):
     @dnx_queue(Log, name='Leases')
     # store lease table changes to disk. if the record is not present, it indicates the record needs to be removed.
     def _storage_queue(self, dhcp_lease: RECORD_CONTAINER):
-        with ConfigurationManager('dhcp_server', ext='lease') as dnx:
+        with ConfigurationManager('dhcp_server', ext='lease', cfg_type='global') as dnx:
             dhcp_settings: ConfigChain = dnx.load_configuration()
 
             # converting ip address ints to strings since they will be json keys
@@ -284,6 +283,6 @@ class Leases(dict):
     # loading dhcp leases from json file. only called on startup
     def _load_leases(self) -> None:
 
-        stored_leases: dict[str, list] = load_configuration('dhcp_server', ext='lease').get_dict()
+        stored_leases: dict[str, list] = load_configuration('dhcp_server', ext='lease', cfg_type='global').get_dict()
 
         self.update({ip: DHCP_RECORD(*lease_info) for ip, lease_info in stored_leases.items()})

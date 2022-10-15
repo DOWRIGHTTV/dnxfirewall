@@ -3,9 +3,9 @@
 # import dnx_routines.configure.configure as configure
 import source.web_validate as validate
 
-from dnx_gentools.def_constants import INVALID_FORM
+# from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.file_operations import load_configuration
-from dnx_gentools.def_exceptions import ValidationError
+# from dnx_gentools.def_exceptions import ValidationError
 
 _SYSLOG_DISABLED = True
 

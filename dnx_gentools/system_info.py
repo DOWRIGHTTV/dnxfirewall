@@ -29,7 +29,7 @@ class Interface:
     @staticmethod
     def bandwidth():
         intstat = {}
-        interface_bandwidth = load_data('interface.stat')
+        interface_bandwidth = load_data('interface.stat', cfg_type='system/global')
         for interface, value in interface_bandwidth.items():
             rx = str(round(int(value[0])/1024, 2)) + ' MB/s'
             tx = str(round(int(value[1])/1024, 2)) + ' MB/s'
@@ -105,7 +105,7 @@ class System:
     def calculate_time_offset(logged_time: Timestamp) -> Timestamp:
         '''returns modified time based on current time offset settings.
         '''
-        log_settings = load_configuration('logging_client')
+        log_settings = load_configuration('logging_client', cfg_type='global')
 
         os_dir = log_settings['time_offset->direction']
         os_amt = log_settings['time_offset->amount']
@@ -168,8 +168,8 @@ class System:
 
     @staticmethod
     def dns_status() -> dict:
-        dns_servers_status: dict = load_data('dns_server.stat')
-        dns_server: ConfigChain = load_configuration('dns_server')
+        dns_servers_status: dict = load_data('dns_server.stat', cfg_type='system/global')
+        dns_server: ConfigChain = load_configuration('dns_server', cfg_type='global')
 
         tls_enabled = dns_server['tls->enabled']
         dns_servers = dns_server.get_dict('resolvers')
