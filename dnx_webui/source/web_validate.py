@@ -7,7 +7,8 @@ import string
 
 from ipaddress import IPv4Network, IPv4Address
 
-from source.web_typing import *
+# TODO: consider moving this module, web_typing, and web_interfaces to dnx_webui folder instead of source
+from dnx_webui.source.web_typing import *
 
 from dnx_gentools.def_enums import CFG, DATA, PROTO
 from dnx_gentools.def_exceptions import DNXError
