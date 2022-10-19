@@ -21,11 +21,12 @@ from dnx_iptools.def_structs import scm_creds_pack as _scm_creds_pack
 # MODULE INITIALIZATION CONTROL - set by shell command
 # =====================================================
 # module startup code will run if. values are stored as strings
-INIT_MODULE: str = _os.environ.get('INIT_MODULE', '')
 def INITIALIZE_MODULE(log_name: str):
     '''returns True if the calling module functions should start.
     '''
-    return True if INIT_MODULE == log_name.replace('_', '-') else False
+    init_module: str = _os.environ.get('INIT_MODULE', '')
+
+    return True if init_module == log_name.replace('_', '-') else False
 # =====================================================
 
 
