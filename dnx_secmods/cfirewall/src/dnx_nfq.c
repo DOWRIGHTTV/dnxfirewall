@@ -58,6 +58,7 @@ dnx_send_verdict_fast(struct cfdata *cfd, uint32_t pktid, uint32_t mark, int ver
 {
     char                buf[MNL_SOCKET_BUFFER_SIZE];
     struct nlmsghdr    *nlh;
+    struct nlattr      *nest;
 
     nlh = nfq_nlmsg_put(buf, NFQNL_MSG_VERDICT, cfd->queue);
 
