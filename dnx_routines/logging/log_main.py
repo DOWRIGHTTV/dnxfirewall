@@ -19,7 +19,6 @@ __all__ = (
     'LogService',
 )
 
-LOG_NAME = 'system'
 LOG_DIR = f'{HOME_DIR}/dnx_profile/log'
 
 EXCLUDED_MODULES = ['combined', 'syslog']
@@ -107,10 +106,3 @@ class LogService:
         self.log_level = logger_settings['logging->level']
 
         self._initialize.done()
-
-def run():
-    LogService.run()
-
-
-if (INIT_MODULE == LOG_NAME):
-    Log.run(name=LOG_NAME)
