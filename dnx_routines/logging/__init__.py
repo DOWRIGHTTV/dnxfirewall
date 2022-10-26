@@ -9,20 +9,27 @@ from dnx_gentools.def_constants import INITIALIZE_MODULE
 def run():
     LogService.run()
 
-
+# SERVICE MODULE START
 if INITIALIZE_MODULE('logging'):
     __all__ = (
-        'LogHandler', 'Log',
-        'direct_log', 'message', 'db_message', 'convert_level',
-        # 'emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'informational', 'debug', 'cli',
-
         'LogService',
     )
 
     from dnx_routines.logging.log_main import LogService
-    from dnx_routines.logging.log_client import *
+    from dnx_routines.logging.log_client import Log  # log service uses its own client to log entries
 
     Log.run(name='system')
+
+# CLIENT API
+else:
+    __all__ = (
+        'LogHandler', 'Log',
+        'direct_log', 'message', 'db_message', 'convert_level',
+        # 'emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'informational', 'debug', 'cli',S
+    )
+
+    from dnx_routines.logging.log_client import *
+
 
 # ================
 # TYPING IMPORTS
