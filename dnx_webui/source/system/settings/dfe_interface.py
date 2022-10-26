@@ -27,22 +27,22 @@ class WebPage(StandardWebPage):
     '''
     @staticmethod
     def load(_: Form) -> dict[str, Any]:
-        system_settings: ConfigChain = load_configuration('system', cfg_type='global')
-
-        wan_ident: str = system_settings['interfaces->builtins->wan->ident']
-        wan_state: int = system_settings['interfaces->builtins->wan->state']
-        default_mac:    str = system_settings['interfaces->builtins->wan->default_mac']
-        configured_mac: str = system_settings['interfaces->builtins->wan->default_mac']
-
-        try:
-            ip_addr = itoip(interface.get_ipaddress(interface=wan_ident))
-        except OverflowError:
-            ip_addr = 'NOT SET'
-
-        try:
-            netmask = itoip(interface.get_netmask(interface=wan_ident))
-        except OverflowError:
-            netmask = 'NOT SET'
+        # system_settings: ConfigChain = load_configuration('system', cfg_type='global')
+        #
+        # wan_ident: str = system_settings['interfaces->builtins->wan->ident']
+        # wan_state: int = system_settings['interfaces->builtins->wan->state']
+        # default_mac:    str = system_settings['interfaces->builtins->wan->default_mac']
+        # configured_mac: str = system_settings['interfaces->builtins->wan->default_mac']
+        #
+        # try:
+        #     ip_addr = itoip(interface.get_ipaddress(interface=wan_ident))
+        # except OverflowError:
+        #     ip_addr = 'NOT SET'
+        #
+        # try:
+        #     netmask = itoip(interface.get_netmask(interface=wan_ident))
+        # except OverflowError:
+        #     netmask = 'NOT SET'
 
         return {
             'interfaces': get_interfaces()
@@ -168,8 +168,8 @@ def get_interfaces() -> dict:
     '''
     configured_intfs: dict = load_configuration('system', cfg_type='global').get_dict('interfaces')
 
-    builtin_intfs:  list[str] = [intf['ident'] for intf in configured_intfs['built-in']]
-    extended_intfs: list[str] = [intf['ident'] for intf in configured_intfs['extended'] if intf['ident']]
+    builtin_intfs:  list[str] = [intf['ident'] for intf in configured_intfs['builtins'].values()]
+    extended_intfs: list[str] = [intf['ident'] for intf in configured_intfs['extended'].values() if intf['ident']]
 
     # intf values -> [ ["general info"], ["transmit"], ["receive"] ]
     system_interfaces = {'built-in': [], 'extended': [], 'unassociated': []}
@@ -180,18 +180,19 @@ def get_interfaces() -> dict:
     # skipping identifier column names
     for intf in detected_intfs[2:]:
 
-        name, *data = intf.split()
+        data = intf.split()
+        name = data[0][:-1]  # removing the ":"
 
         if name in builtin_intfs:
 
-            system_interfaces['built-in'][name] = [[], [data[1], data[2]], [data[9], data[10]]]
+            system_interfaces['built-in'].append([[name, ':O'], [data[1], data[2]], [data[9], data[10]]])
 
         elif name in extended_intfs:
 
-            system_interfaces['extended'][name] = [[], [data[1], data[2]], [data[9], data[10]]]
+            system_interfaces['extended'].append([[name, ':>'], [data[1], data[2]], [data[9], data[10]]])
 
         else:
-            system_interfaces['unassociated'][name] = [[], [data[1], data[2]], [data[9], data[10]]]
+            system_interfaces['unassociated'].append([[name, 'none'], [data[1], data[2]], [data[9], data[10]]])
 
     return system_interfaces
 

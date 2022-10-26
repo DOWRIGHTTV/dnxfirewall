@@ -50,6 +50,25 @@
                                 <td>{{ intf[2][1] }}</td>
                             </tr>
                             {% endfor %}
+                        </tbody>
+                    </table>
+                    <table class="centered highlight">
+                        <colgroup>
+                            <col span="2" style="background-color:#eceff1">
+                            <col span="2" style="background-color:#90a4ae">
+                            <col span="2" style="background-color:#cfd8dc">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>zone</th>
+                                <th>subnet</th>
+                                <th>bytes</th>
+                                <th>packets</th>
+                                <th>bytes</th>
+                                <th>packets</th>
+                            </tr>
+                        </thead>
+                        <tbody>
                             {% for intf in interface_settings.interfaces.extended %}
                             <tr>
                                 <td>{{ intf[0][0] }}</td>
@@ -60,10 +79,35 @@
                                 <td>{{ intf[2][1] }}</td>
                             </tr>
                             {% endfor %}
+                        </tbody>
+                    </table>
+                    <table class="centered highlight">
+                        <colgroup>
+                            <col span="2" style="background-color:#eceff1">
+                            <col span="2" style="background-color:#90a4ae">
+                            <col span="2" style="background-color:#cfd8dc">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>zone</th>
+                                <th>subnet</th>
+                                <th>bytes</th>
+                                <th>packets</th>
+                                <th>bytes</th>
+                                <th>packets</th>
+                            </tr>
+                        </thead>
+                        <tbody>
                             {% for intf in interface_settings.interfaces.unassociated %}
                             <tr>
-                                <td> {{ intf }}</td>
+                                <td>{{ intf[0][0] }}</td>
+                                <td>{{ intf[0][1] }}</td>
+                                <td>{{ intf[1][0] }}</td>
+                                <td>{{ intf[1][1] }}</td>
+                                <td>{{ intf[2][0] }}</td>
+                                <td>{{ intf[2][1] }}</td>
                             </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
