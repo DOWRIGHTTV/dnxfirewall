@@ -168,8 +168,11 @@ def get_interfaces() -> dict:
     '''
     configured_intfs: dict = load_configuration('system', cfg_type='global').get_dict('interfaces')
 
-    builtin_intfs:  list[str] = [intf['ident'] for intf in configured_intfs['builtins'].values()]
-    extended_intfs: list[str] = [intf['ident'] for intf in configured_intfs['extended'].values() if intf['ident']]
+
+    # this will filter out any interface slot that does not have an associated interface
+    extended_intfs: dict[str, str] = {
+        intf['ident']: name for name, intf in configured_intfs['extended'].items() if intf['ident']
+    }
 
     # intf values -> [ ["general info"], ["transmit"], ["receive"] ]
     system_interfaces = {'builtins': [], 'extended': [], 'unassociated': []}
@@ -183,13 +186,17 @@ def get_interfaces() -> dict:
         data = intf.split()
         name = data[0][:-1]  # removing the ":"
 
-        if name in builtin_intfs:
+        if intf_cfg := configured_intfs['builtins'].get(name, None):
 
-            system_interfaces['builtins'].append([[name, ':O', 'subnet/x'], [data[1], data[2]], [data[9], data[10]]])
+            system_interfaces['builtins'].append([
+                [name, intf_cfg['zone'], intf_cfg['subnet']], [data[1], data[2]], [data[9], data[10]]
+            ])
 
-        elif name in extended_intfs:
+        elif intf_cfg := extended_intfs.get(name, None):
 
-            system_interfaces['extended'].append([[name, ':>', 'subnet/x'], [data[1], data[2]], [data[9], data[10]]])
+            system_interfaces['extended'].append([
+                [name, intf_cfg['zone'], intf_cfg['subnet']], [data[1], data[2]], [data[9], data[10]]
+            ])
 
         else:
             system_interfaces['unassociated'].append([[name, 'none', 'none'], [data[1], data[2]], [data[9], data[10]]])
