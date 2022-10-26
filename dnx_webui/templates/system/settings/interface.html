@@ -16,7 +16,7 @@
 <section id="overview" class="section">
     <div class="container">
         <div class="row">
-            <div class="col s12 l6">
+            <div class="col s12">
                 <div class="card-panel hoverable {{ theme.card }}">
                     <table class="centered highlight">
                         <colgroup>
@@ -49,6 +49,8 @@
                                 <td>{{ intf[2][0] }}</td>
                                 <td>{{ intf[2][1] }}</td>
                             </tr>
+                            {% else %}
+                                <td>none</td>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -78,6 +80,8 @@
                                 <td>{{ intf[2][0] }}</td>
                                 <td>{{ intf[2][1] }}</td>
                             </tr>
+                            {% else %}
+                                <td>none</td>
                             {% endfor %}
                         </tbody>
                     </table>
