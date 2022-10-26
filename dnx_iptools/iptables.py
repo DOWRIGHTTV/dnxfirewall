@@ -149,14 +149,14 @@ class IPTablesManager:
     def __init__(self) -> None:
         interfaces: ConfigChain = load_configuration('system', cfg_type='global')
 
-        builtins = interfaces.get_items('interfaces->builtins')
+        builtin = interfaces.get_items('interfaces->builtin')
 
         self._intf_to_zone: dict[str, int] = {
-            info['ident']: zone for zone, info in builtins
+            info['ident']: zone for zone, info in builtin
         }
 
         self._zone_to_intf: dict[str, int] = {
-            zone: info['ident'] for zone, info in builtins
+            zone: info['ident'] for zone, info in builtin
         }
 
         self._iptables_lock = open(f'{HOME_DIR}/dnx_profile/iptables/iptables.lock', 'r+')

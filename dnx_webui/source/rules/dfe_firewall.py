@@ -30,8 +30,8 @@ __all__ = ('WebPage',)
 valid_sections: dict[str, str] = {'BEFORE': '1', 'MAIN': '2', 'AFTER': '3'}
 
 reference_counts = defaultdict(int)
-zone_map: dict[str, dict] = {'builtins': {}, 'extended': {}}
-zone_manager: dict[str, dict] = {'builtins': {}, 'user-defined': {}}
+zone_map: dict[str, dict] = {'builtin': {}, 'extended': {}}
+zone_manager: dict[str, dict] = {'builtin': {}, 'user-defined': {}}
 
 INVALID_OBJECT = -1
 
@@ -66,14 +66,14 @@ class WebPage(RulesWebPage):
         dnx_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
         # building out interface to zone map NOTE: builtins only for now
-        for intf_type in ['builtins', 'extended']:
+        for intf_type in ['builtin', 'extended']:
             for intf_name, intf_info in dnx_settings.get_items(f'interfaces->{intf_type}'):
                 ident = intf_info['ident']
 
                 zone_map[intf_type][ident] = intf_name
 
                 # need to make converting zone ident/int to name easier in format function
-                zone_ident = dnx_settings[f'zones->builtins->{intf_name}'][0]
+                zone_ident = dnx_settings[f'zones->builtin->{intf_name}'][0]
 
                 # TODO: is lzone_map needed after moving zones to fw objects?
                 lzone_map[zone_ident] = intf_name
@@ -86,8 +86,8 @@ class WebPage(RulesWebPage):
         #  we should track ref counts in in FirewallControl class and inc/dec when rule is deleted or added.
         # calculate_ref_counts(firewall_rules)
 
-        # building zone list and reference counts NOTE: builtins only for now
-        for zone_type in ['builtins', 'user-defined']:
+        # building zone list and reference counts NOTE: builtin only for now
+        for zone_type in ['builtin', 'user-defined']:
             for zone_name, (zone_ident, zone_desc) in dnx_settings.get_items(f'zones->{zone_type}'):
 
                 zone_manager[zone_type][zone_name] = [reference_counts[zone_name], zone_desc]
@@ -282,7 +282,7 @@ def validate_firewall_commit(fw_rules_json: str, /):
     validated_rules: dict = {}
 
     # TODO: make zone map integrated more gooder
-    dnx_interfaces = load_configuration('system', cfg_type='global').get_items('interfaces->builtins')
+    dnx_interfaces = load_configuration('system', cfg_type='global').get_items('interfaces->builtin')
 
     # TODO: same as above. not needed?
     lzone_map: dict[str, int] = {zone_name: zone_info['zone'] for zone_name, zone_info in dnx_interfaces}

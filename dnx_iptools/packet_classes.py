@@ -613,7 +613,7 @@ class RawResponse:
     '''
     __setup: ClassVar[bool] = False
 
-    # dynamically provide interfaces. default returns builtins.
+    # dynamically provide interfaces. default returns builtin.
     _intfs: IntfList = load_interfaces()
 
     _log: LogHandler_T = None

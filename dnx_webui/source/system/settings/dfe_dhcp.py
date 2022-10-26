@@ -46,7 +46,7 @@ class WebPage(StandardWebPage):
         leases.sort()
 
         intf_settings = {}
-        interfaces: dict[str, dict] = dhcp_server.get_dict('interfaces->builtins')
+        interfaces: dict[str, dict] = dhcp_server.get_dict('interfaces->builtin')
         for intf, settings in interfaces.items():
 
             # converting 32-bit int to range delta
@@ -160,7 +160,7 @@ def validate_reservation(res: config, /) -> Optional[ValidationError]:
 
     dhcp_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
-    zone_net = IPv4Network(dhcp_settings[f'interfaces->builtins{res.zone.lower()}->subnet'])
+    zone_net = IPv4Network(dhcp_settings[f'interfaces->builtin{res.zone.lower()}->subnet'])
     if (IPv4Address(res.ip) not in zone_net.hosts()):
         return ValidationError(f'IP Address must fall within {zone_net} range.')
 
@@ -173,12 +173,12 @@ def configure_dhcp_settings(dhcp_settings: config):
 
         interface = dhcp_settings.pop('interface')
         # ...this is excessive
-        ip_delta = server_settings.searchable_system_data['interfaces']['builtins'][interface]['options']['3'][1]
+        ip_delta = server_settings.searchable_system_data['interfaces']['builtin'][interface]['options']['3'][1]
 
         dhcp_settings.lease_range[0] += ip_delta
         dhcp_settings.lease_range[1] += ip_delta
 
-        config_path = f'interfaces->builtins->{interface}'
+        config_path = f'interfaces->builtin->{interface}'
         server_settings[f'{config_path}->enabled'] = dhcp_settings.enabled
         server_settings[f'{config_path}->icmp_check'] = dhcp_settings.icmp_check
         server_settings[f'{config_path}->lease_range'] = dhcp_settings.lease_range

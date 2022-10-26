@@ -32,7 +32,7 @@ DESCRIPTOR: int = _s.fileno()
 def get_intf_builtin(zone_name):
     intf_settings = load_configuration('system', cfg_type='global')
 
-    intf_path = f'interfaces->builtins->{zone_name}'
+    intf_path = f'interfaces->builtin->{zone_name}'
     system_interfaces = {v: k for k, v in if_nameindex()[1:]}
 
     intf_index = system_interfaces.get(intf_settings[f'{intf_path}->ident'], None)

@@ -29,10 +29,10 @@ class WebPage(StandardWebPage):
     def load(_: Form) -> dict[str, Any]:
         # system_settings: ConfigChain = load_configuration('system', cfg_type='global')
         #
-        # wan_ident: str = system_settings['interfaces->builtins->wan->ident']
-        # wan_state: int = system_settings['interfaces->builtins->wan->state']
-        # default_mac:    str = system_settings['interfaces->builtins->wan->default_mac']
-        # configured_mac: str = system_settings['interfaces->builtins->wan->default_mac']
+        # wan_ident: str = system_settings['interfaces->builtin->wan->ident']
+        # wan_state: int = system_settings['interfaces->builtin->wan->state']
+        # default_mac:    str = system_settings['interfaces->builtin->wan->default_mac']
+        # configured_mac: str = system_settings['interfaces->builtin->wan->default_mac']
         #
         # try:
         #     ip_addr = itoip(interface.get_ipaddress(interface=wan_ident))
@@ -137,7 +137,7 @@ def set_wan_interface(intf_type: INTF = INTF.DHCP):
     with ConfigurationManager('system') as dnx:
         dnx_settings: ConfigChain = dnx.load_configuration()
 
-        wan_ident: str = dnx_settings['interfaces->builtins->wan->ident']
+        wan_ident: str = dnx_settings['interfaces->builtin->wan->ident']
 
         # template used to generate yaml file with user configured fields
         intf_template: dict = load_data('interfaces.cfg', filepath='dnx_profile/interfaces')
@@ -158,7 +158,7 @@ def set_wan_interface(intf_type: INTF = INTF.DHCP):
         # TODO: writing state change after file has been replaced because any errors prior to this will prevent
         #  configuration from taking effect.
         #  the trade off is that the process could replace the file, but not set the wan state (configuration mismatch)
-        dnx_settings['interfaces->builtins->wan->state'] = intf_type
+        dnx_settings['interfaces->builtin->wan->state'] = intf_type
         dnx.write_configuration(dnx_settings.expanded_user_data)
 
         system_action(module='webui', command='netplan apply', args='')
@@ -168,14 +168,16 @@ def get_interfaces() -> dict:
     '''
     configured_intfs: dict = load_configuration('system', cfg_type='global').get_dict('interfaces')
 
-
     # this will filter out any interface slot that does not have an associated interface
+    builtin_intfs: dict[str, str] = {
+        intf['ident']: name for name, intf in configured_intfs['builtin'].items() if intf['ident']
+    }
     extended_intfs: dict[str, str] = {
         intf['ident']: name for name, intf in configured_intfs['extended'].items() if intf['ident']
     }
 
     # intf values -> [ ["general info"], ["transmit"], ["receive"] ]
-    system_interfaces = {'builtins': [], 'extended': [], 'unassociated': []}
+    system_interfaces = {'builtin': [], 'extended': [], 'unassociated': []}
 
     with open('/proc/net/dev', 'r') as netdev:
         detected_intfs = netdev.readlines()
@@ -186,9 +188,9 @@ def get_interfaces() -> dict:
         data = intf.split()
         name = data[0][:-1]  # removing the ":"
 
-        if intf_cfg := configured_intfs['builtins'].get(name, None):
+        if intf_cfg := builtin_intfs.get(name, None):
 
-            system_interfaces['builtins'].append([
+            system_interfaces['builtin'].append([
                 [name, intf_cfg['zone'], intf_cfg['subnet']], [data[1], data[2]], [data[9], data[10]]
             ])
 
@@ -208,7 +210,7 @@ def get_interfaces() -> dict:
 #     with ConfigurationManager('system') as dnx:
 #         dnx_settings = dnx.load_configuration()
 #
-#         wan_settings = dnx_settings['interfaces']['builtins']['wan']
+#         wan_settings = dnx_settings['interfaces']['builtin']['wan']
 #
 #         new_mac = mac_address if action is CFG.ADD else wan_settings['default_mac']
 #
@@ -235,7 +237,7 @@ def set_wan_ip(wan_settings: config) -> None:
     '''
     dnx_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
-    wan_ident: str = dnx_settings['interfaces->builtins->wan->ident']
+    wan_ident: str = dnx_settings['interfaces->builtin->wan->ident']
 
     intf_template: dict = load_data('interfaces.cfg', filepath='dnx_profile/interfaces')
 
