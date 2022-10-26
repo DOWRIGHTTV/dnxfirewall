@@ -63,7 +63,6 @@ class Args:
         return self.u or self.update
 
 
-LOG_NAME: str = 'system'
 PROGRESS_TOTAL_COUNT: int = 1  # set permissions count added here
 
 LINEBREAK: str = text.lightblue('-' * 32)
@@ -673,7 +672,7 @@ if INITIALIZE_MODULE('autoloader'):
     check_clone_location()
 
     # initializing log module which is required when using ConfigurationManager
-    Log.run(name=LOG_NAME, suppress_output=True)
+    Log.run(name='system', suppress_output=True)
     ConfigurationManager.set_log_reference(Log)
 
     # this uses the config manager, so must be called after log initialization

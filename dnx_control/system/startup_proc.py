@@ -15,7 +15,12 @@ from dnx_routines.logging.log_client import Log
 from dnx_iptools.iptables import IPTablesManager as IPTables
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 
-LOG_NAME = 'system'
+# ===============
+# TYPING IMPORTS
+# ===============
+from typing import TYPE_CHECKING
+if (TYPE_CHECKING):
+    from dnx_gentools.def_typing import ConfigChain
 
 # required to prevent cyclical import issues
 ConfigurationManager.set_log_reference(Log)
@@ -55,23 +60,22 @@ def run():
     os._exit(0)
 
 def reset_flask_key():
-    with ConfigurationManager('system') as dnx:
-        flask_settings = dnx.load_configuration()
+    with ConfigurationManager('system', cfg_type='global') as dnx:
+        flask_settings: ConfigChain = dnx.load_configuration()
 
         flask_settings['flask->key'] = token_urlsafe(32)
 
         dnx.write_configuration(flask_settings.expanded_user_data)
 
 def set_default_mac_flag():
-    with ConfigurationManager('system') as dnx:
-        dnx_settings = dnx.load_configuration()
+    with ConfigurationManager('system', cfg_type='global') as dnx:
+        dnx_settings: ConfigChain = dnx.load_configuration()
 
-        if (not dnx_settings['interfaces->builtins->wan->mac_set']):
+        if (not dnx_settings['interfaces->builtins->wan->default_mac']):
 
             wan_intf = dnx_settings['interfaces->builtins->wan->ident']
 
             dnx_settings['interfaces->builtins->wan->default_mac'] = interface.get_mac_string(interface=wan_intf)
-            dnx_settings['interfaces->builtins->wan->mac_set'] = True
 
         dnx.write_configuration(dnx_settings.expanded_user_data)
 
@@ -86,5 +90,5 @@ def create_database_tables():
 
 if INITIALIZE_MODULE('startup'):
     Log.run(
-        name=LOG_NAME
+        name='startup'
     )

@@ -45,17 +45,21 @@ class WebPage(StandardWebPage):
             netmask = 'NOT SET'
 
         return {
-            'mac': {
-                'default': default_mac,
-                'current': configured_mac if configured_mac else default_mac
-            },
-            'ip': {
-                'state': wan_state,
-                'ip_address': ip_addr,
-                'netmask': netmask,
-                'default_gateway': itoip(default_route())
-            }
+            'interfaces': get_interfaces()
         }
+
+        # return {
+        #     'mac': {
+        #         'default': default_mac,
+        #         'current': configured_mac if configured_mac else default_mac
+        #     },
+        #     'ip': {
+        #         'state': wan_state,
+        #         'ip_address': ip_addr,
+        #         'netmask': netmask,
+        #         'default_gateway': itoip(default_route())
+        #     }
+        # }
 
     @staticmethod
     def update(form: Form) -> tuple[int, str]:
@@ -158,6 +162,38 @@ def set_wan_interface(intf_type: INTF = INTF.DHCP):
         dnx.write_configuration(dnx_settings.expanded_user_data)
 
         system_action(module='webui', command='netplan apply', args='')
+
+def get_interfaces() -> dict:
+    '''loading installed system interfaces, then returning dict with "built-in" and "extended" separated.
+    '''
+    configured_intfs: dict = load_configuration('system', cfg_type='global').get_dict('interfaces')
+
+    builtin_intfs:  list[str] = [intf['ident'] for intf in configured_intfs['built-in']]
+    extended_intfs: list[str] = [intf['ident'] for intf in configured_intfs['extended'] if intf['ident']]
+
+    # intf values -> [ ["general info"], ["transmit"], ["receive"] ]
+    system_interfaces = {'built-in': [], 'extended': [], 'unassociated': []}
+
+    with open('/proc/net/dev', 'r') as netdev:
+        detected_intfs = netdev.readlines()
+
+    # skipping identifier column names
+    for intf in detected_intfs[2:]:
+
+        name, *data = intf.split()
+
+        if name in builtin_intfs:
+
+            system_interfaces['built-in'][name] = [[], [data[1], data[2]], [data[9], data[10]]]
+
+        elif name in extended_intfs:
+
+            system_interfaces['extended'][name] = [[], [data[1], data[2]], [data[9], data[10]]]
+
+        else:
+            system_interfaces['unassociated'][name] = [[], [data[1], data[2]], [data[9], data[10]]]
+
+    return system_interfaces
 
 # TODO: fix this later
 # def set_wan_mac(action: CFG, mac_address: Optional[str] = None):
