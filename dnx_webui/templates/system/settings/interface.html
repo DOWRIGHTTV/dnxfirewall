@@ -22,6 +22,7 @@
             <div class="col s12">
                 <div class="card-panel hoverable {{ theme.card }}">
                     <table class="centered highlight">
+                        {{ create_title('builtin')|safe }}
                         <colgroup>
                             <col span="3" style="background-color:#eceff1">
                             <col span="2" style="background-color:#90a4ae">
@@ -44,7 +45,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for intf in interface_settings.interfaces.builtin %}
+                        {% for intf in interface_settings.interfaces.builtin %}
                             <tr>
                                 <td>{{ intf[0][0] }}</td>
                                 <td>{{ intf[0][1] }}</td>
@@ -54,13 +55,12 @@
                                 <td>{{ intf[2][0] }}</td>
                                 <td>{{ intf[2][1] }}</td>
                             </tr>
-                            {% else %}
-                                <td>none</td>
-                            {% endfor %}
+                        {% endfor %}
                         </tbody>
                     </table>
                     <br>
                     <table class="centered highlight">
+                        {{ create_title('extended')|safe }}
                         <colgroup>
                             <col span="3" style="background-color:#eceff1">
                             <col span="2" style="background-color:#90a4ae">
@@ -78,7 +78,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for intf in interface_settings.interfaces.extended %}
+                        {% for intf in interface_settings.interfaces.extended %}
                             <tr>
                                 <td>{{ intf[0][0] }}</td>
                                 <td>{{ intf[0][1] }}</td>
@@ -88,13 +88,23 @@
                                 <td>{{ intf[2][0] }}</td>
                                 <td>{{ intf[2][1] }}</td>
                             </tr>
-                            {% else %}
+                        {% else %}
+                            <tr>
                                 <td>none</td>
-                            {% endfor %}
+                                <td>none</td>
+                                <td>none</td>
+                                <td>0</td>
+                                <td>0</td>
+                                <td>0</td>
+                                <td>0</td>
+                            </tr>
+                        {% endfor %}
                         </tbody>
                     </table>
+                {% if interface_settings.interfaces.unassociated %}
                     <br>
                     <table class="centered highlight">
+                        {{ create_title('unassociated')|safe }}
                         <colgroup>
                             <col span="3" style="background-color:#eceff1">
                             <col span="2" style="background-color:#90a4ae">
@@ -112,7 +122,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for intf in interface_settings.interfaces.unassociated %}
+                        {% for intf in interface_settings.interfaces.unassociated %}
                             <tr>
                                 <td>{{ intf[0][0] }}</td>
                                 <td>{{ intf[0][1] }}</td>
@@ -122,9 +132,10 @@
                                 <td>{{ intf[2][0] }}</td>
                                 <td>{{ intf[2][1] }}</td>
                             </tr>
-                            {% endfor %}
+                        {% endfor %}
                         </tbody>
                     </table>
+                {% endif %}
                 </div>
             </div>
         </div>
