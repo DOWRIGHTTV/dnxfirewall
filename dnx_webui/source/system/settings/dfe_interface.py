@@ -170,10 +170,10 @@ def get_interfaces() -> dict:
 
     # this will filter out any interface slot that does not have an associated interface
     builtin_intfs: dict[str, str] = {
-        intf['ident']: name for name, intf in configured_intfs['builtin'].items() if intf['ident']
+        name: intf for name, intf in configured_intfs['builtin'].items() if intf['ident']
     }
     extended_intfs: dict[str, str] = {
-        intf['ident']: name for name, intf in configured_intfs['extended'].items() if intf['ident']
+        intf['ident']: intf for intf in configured_intfs['extended'].values() if intf['ident']
     }
 
     # intf values -> [ ["general info"], ["transmit"], ["receive"] ]
