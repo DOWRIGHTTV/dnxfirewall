@@ -172,7 +172,7 @@ def get_interfaces() -> dict:
     extended_intfs: list[str] = [intf['ident'] for intf in configured_intfs['extended'].values() if intf['ident']]
 
     # intf values -> [ ["general info"], ["transmit"], ["receive"] ]
-    system_interfaces = {'built-in': [], 'extended': [], 'unassociated': []}
+    system_interfaces = {'builtins': [], 'extended': [], 'unassociated': []}
 
     with open('/proc/net/dev', 'r') as netdev:
         detected_intfs = netdev.readlines()
@@ -185,14 +185,14 @@ def get_interfaces() -> dict:
 
         if name in builtin_intfs:
 
-            system_interfaces['built-in'].append([[name, ':O'], [data[1], data[2]], [data[9], data[10]]])
+            system_interfaces['builtins'].append([[name, ':O', 'subnet/x'], [data[1], data[2]], [data[9], data[10]]])
 
         elif name in extended_intfs:
 
-            system_interfaces['extended'].append([[name, ':>'], [data[1], data[2]], [data[9], data[10]]])
+            system_interfaces['extended'].append([[name, ':>', 'subnet/x'], [data[1], data[2]], [data[9], data[10]]])
 
         else:
-            system_interfaces['unassociated'].append([[name, 'none'], [data[1], data[2]], [data[9], data[10]]])
+            system_interfaces['unassociated'].append([[name, 'none', 'none'], [data[1], data[2]], [data[9], data[10]]])
 
     return system_interfaces
 

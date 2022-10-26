@@ -20,7 +20,7 @@
                 <div class="card-panel hoverable {{ theme.card }}">
                     <table class="centered highlight">
                         <colgroup>
-                            <col span="2" style="background-color:#eceff1">
+                            <col span="3" style="background-color:#eceff1">
                             <col span="2" style="background-color:#90a4ae">
                             <col span="2" style="background-color:#cfd8dc">
                         </colgroup>
@@ -31,6 +31,7 @@
                                 <th colspan="2">Receive</th>
                             </tr>
                             <tr>
+                                <th>name</th>
                                 <th>zone</th>
                                 <th>subnet</th>
                                 <th>bytes</th>
@@ -44,6 +45,7 @@
                             <tr>
                                 <td>{{ intf[0][0] }}</td>
                                 <td>{{ intf[0][1] }}</td>
+                                <td>{{ intf[0][2] }}</td>
                                 <td>{{ intf[1][0] }}</td>
                                 <td>{{ intf[1][1] }}</td>
                                 <td>{{ intf[2][0] }}</td>
@@ -54,6 +56,7 @@
                             {% endfor %}
                         </tbody>
                     </table>
+                    <br>
                     <table class="centered highlight">
                         <colgroup>
                             <col span="2" style="background-color:#eceff1">
@@ -62,6 +65,7 @@
                         </colgroup>
                         <thead>
                             <tr>
+                                <th>name</th>
                                 <th>zone</th>
                                 <th>subnet</th>
                                 <th>bytes</th>
@@ -75,6 +79,7 @@
                             <tr>
                                 <td>{{ intf[0][0] }}</td>
                                 <td>{{ intf[0][1] }}</td>
+                                <td>{{ intf[0][2] }}</td>
                                 <td>{{ intf[1][0] }}</td>
                                 <td>{{ intf[1][1] }}</td>
                                 <td>{{ intf[2][0] }}</td>
@@ -85,6 +90,7 @@
                             {% endfor %}
                         </tbody>
                     </table>
+                    <br>
                     <table class="centered highlight">
                         <colgroup>
                             <col span="2" style="background-color:#eceff1">
@@ -93,6 +99,7 @@
                         </colgroup>
                         <thead>
                             <tr>
+                                <th>name</th>
                                 <th>zone</th>
                                 <th>subnet</th>
                                 <th>bytes</th>
@@ -106,6 +113,7 @@
                             <tr>
                                 <td>{{ intf[0][0] }}</td>
                                 <td>{{ intf[0][1] }}</td>
+                                <td>{{ intf[0][2] }}></td>
                                 <td>{{ intf[1][0] }}</td>
                                 <td>{{ intf[1][1] }}</td>
                                 <td>{{ intf[2][0] }}</td>
