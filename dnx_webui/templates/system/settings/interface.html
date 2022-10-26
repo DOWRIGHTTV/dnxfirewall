@@ -7,6 +7,9 @@
                 <div class="card-panel hoverable {{ theme.card }}">
                     <ul class="tabs tabs-fixed-width">
                         {{ create_tab(tab, 1, 'overview')|safe }}
+                        {{ create_tab(tab, 2, 'configure')|safe }}
+                        {{ create_tab(tab, 3, 'associate')|safe }}
+
                     </ul>
                 </div>
             </div>
@@ -26,7 +29,7 @@
                         </colgroup>
                         <thead>
                             <tr>
-                                <th colspan="2">General</th>
+                                <th colspan="3">General</th>
                                 <th colspan="2">Transmit</th>
                                 <th colspan="2">Receive</th>
                             </tr>
@@ -59,7 +62,7 @@
                     <br>
                     <table class="centered highlight">
                         <colgroup>
-                            <col span="2" style="background-color:#eceff1">
+                            <col span="3" style="background-color:#eceff1">
                             <col span="2" style="background-color:#90a4ae">
                             <col span="2" style="background-color:#cfd8dc">
                         </colgroup>
@@ -93,7 +96,7 @@
                     <br>
                     <table class="centered highlight">
                         <colgroup>
-                            <col span="2" style="background-color:#eceff1">
+                            <col span="3" style="background-color:#eceff1">
                             <col span="2" style="background-color:#90a4ae">
                             <col span="2" style="background-color:#cfd8dc">
                         </colgroup>
