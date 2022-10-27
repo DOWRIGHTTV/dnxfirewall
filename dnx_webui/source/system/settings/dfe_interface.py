@@ -188,6 +188,8 @@ def get_interfaces() -> dict:
         data = intf.split()
         name = data[0][:-1]  # removing the ":"
 
+        intf_cfg: Optional[dict[str, str]]
+
         if intf_cfg := builtin_intfs.get(name, None):
 
             system_interfaces['builtin'].append([

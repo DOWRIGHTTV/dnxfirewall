@@ -101,7 +101,9 @@ nav ul a {
     height: calc(100% - 12px); }
   .card-panel .card-title {
     font-family: Orbitron, Roboto, sans-serif;
-    letter-spacing: 0.075em; }
+    letter-spacing: 0.075em;
+    margin-left: 12px; }
+
 
 /* icon color change */
 i.icon-red {
@@ -111,6 +113,10 @@ i.icon-green {
 i.icon-blue {
   color: blue; }
 
+/* tables */
+table.table-title {
+  font-size: 1.5rem;
+  text-align: center; }
 /* highlight override */
 table.highlight > tbody > tr:hover {
     background-color: rgba(122, 89, 39, 0.507); }
@@ -120,10 +126,10 @@ table.striped > tbody > tr:nth-child(odd) {
 table.striped > tbody > tr {
     background-color: rgba(242, 242, 242, 0.5); }
 /* table striping - javascript */
-.tr-odd {
-    background-color: rgba(11, 47, 47, 0.5); }
-.tr-even {
+table > tr.tr-even {
     background-color: rgba(242, 242, 242, 0.5); }
+table > tr.tr-odd {
+    background-color: rgba(11, 47, 47, 0.5); }
 
 /* materialize override */
 .no-border {
