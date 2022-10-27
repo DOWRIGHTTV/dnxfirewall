@@ -879,9 +879,12 @@ def set_theme_values() -> None:
 # FLASK API - TEMPLATE FUNCTIONS
 # ====================================
 @app.template_global()
-def create_title(title: str) -> str:
+def create_title(title: str, classes: str = '') -> str:
+
+    classes = 'card-title ' + classes
+
     return (
-        f'<div class="row"><h4 class="{context_global.theme["title"]} card-title">{title.title()}</h4></div>'
+        f'<div class="row"><h4 class="{context_global.theme["title"]} {classes}">{title.title()}</h4></div>'
         f'<div class="title-divider"></div><br>'
     )
 
@@ -954,7 +957,9 @@ def create_decora_switch(name: str, value: str, enabled: int):
 
 @app.template_global()
 def merge_items(a1, a2):
-    '''accepts 2 arguments of item or list and merges them into one list. int can be replaced with any singular object.
+    '''accepts 2 arguments of item or list and merges them into one list.
+
+    int can be replaced with any singular object.
 
         valid combinations.
             (int, list)
