@@ -851,28 +851,25 @@ def set_theme_values() -> None:
         'modal_text': 'blue-grey-text center',
     }
 
+    # string helpers
+    bg_setting = ' background-repeat: repeat; background-attachment: fixed;'
+
     if (context_global.settings['theme'] == 'dark'):
         theme.update({
-            'background': (
-                'style="background: url(static/assets/images/dnx_bg1_dark.svg); '
-                'background-repeat: repeat; '
-                'background-attachment: fixed;"'
-            ),
             'main_section': 'blue-grey lighten-2',
+            'main_bg': 'background: url(static/assets/images/dnx_bg1_dark.svg);' + bg_setting,
             'off_section': 'blue-grey lighten-5',
+            'off_bg': 'background: url(static/assets/images/dnx_bg1_light.svg);' + bg_setting,
             'card': 'blue-grey lighten-4',
             'title': 'black-text'
         })
 
     elif (context_global.settings['theme'] == 'light'):
         theme.update({
-            'background': (
-                'style="background: url(static/assets/images/dnx_bg1_light.svg); '
-                'background-repeat: repeat; '
-                'background-attachment: fixed;"'
-            ),
             'main_section': 'grey lighten-2',
+            'main_bg': 'background: url(static/assets/images/dnx_bg1_light.svg);' + bg_setting,
             'off_section': 'grey lighten-5',
+            'off_bg': 'background: url(static/assets/images/dnx_bg1_dark.svg);' + bg_setting,
             'card': 'grey lighten-4',
             'title': 'blue-grey-text text-darken-1'
         })
