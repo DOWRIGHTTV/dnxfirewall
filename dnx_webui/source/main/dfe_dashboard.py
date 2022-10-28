@@ -4,30 +4,43 @@ from __future__ import annotations
 
 from itertools import zip_longest
 
-from dnx_gentools.system_info import Interface, System, Services
+from source.web_typing import *
+
+from dnx_gentools.system_info import System, Services
+
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 from dnx_routines.logging.log_client import LogHandler as Log
 
-def load_page():
-    domain_counts, request_counts, top_domains, top_countries, inf_hosts = query_database()
+from source.web_interfaces import StandardWebPage
+from source.system.settings.dfe_interface import get_interfaces
 
-    mod_status = {}
-    for svc in ['dns-proxy', 'ip-proxy', 'ips', 'dhcp-server']:
-        status = Services.status(f'dnx-{svc}')
+__all__ = ('WebPage', 'get_interfaces')
 
-        mod_status[svc.replace('-', '_')] = status
 
-    dashboard = {
-        'domain_counts': domain_counts, 'dc_graph': _calculate_graphic(domain_counts),
-        'request_counts': request_counts, 'rc_graph': _calculate_graphic(request_counts),
-        'top_domains': top_domains, 'top_countries': top_countries,
-        'infected_hosts': inf_hosts,
+class WebPage(StandardWebPage):
+    '''
+    available methods: load, update
+    '''
+    @staticmethod
+    def load(_: Form) -> dict[str, Any]:
+        domain_counts, request_counts, top_domains, top_countries, inf_hosts = query_database()
 
-        'interfaces': Interface.bandwidth(), 'uptime': System.uptime(), 'cpu': System.cpu_usage(),
-        'ram': System.ram_usage(), 'dns_servers': System.dns_status(), 'module_status': mod_status
-    }
+        mod_status = {}
+        for svc in ['dns-proxy', 'ip-proxy', 'ips', 'dhcp-server']:
+            status = Services.status(f'dnx-{svc}')
 
-    return dashboard
+            mod_status[svc.replace('-', '_')] = status
+
+        return {
+            'domain_counts': domain_counts, 'dc_graph': _calculate_graphic(domain_counts),
+            'request_counts': request_counts, 'rc_graph': _calculate_graphic(request_counts),
+            'top_domains': top_domains, 'top_countries': top_countries,
+            'infected_hosts': inf_hosts,
+
+            'uptime': System.uptime(), 'cpu': System.cpu_usage(), 'ram': System.ram_usage(),
+
+            'interfaces': get_interfaces,
+        }
 
 def query_database():
     domain_counts = (0, 0)

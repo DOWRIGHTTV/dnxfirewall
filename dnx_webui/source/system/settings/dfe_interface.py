@@ -17,7 +17,7 @@ from dnx_iptools.cprotocol_tools import itoip, default_route
 
 from source.web_interfaces import StandardWebPage
 
-__all__ = ('WebPage',)
+__all__ = ('WebPage', 'get_interfaces')
 
 _IP_DISABLED = True
 
