@@ -62,7 +62,7 @@ FirewallControl.cfirewall = cfirewall
 # =========================================
 # WEBUI COMPONENTS
 # =========================================
-from source.main.dfe_dashboard import WebPage as dnx_dashboard
+from source.main.dfe_dashboard import WebPage as webui_dashboard
 from source.rules.dfe_firewall import WebPage as dnx_fwall  # non standard -> firewall page logic
 from source.rules.dfe_nat import WebPage as dnx_nat
 from source.intrusion.dfe_ip import WebPage as ip_proxy
@@ -107,7 +107,7 @@ def dnx_dashboard(session_data: dict):
     page_settings.update(session_data)
 
     page_action = standard_page_logic(
-        dnx_dashboard, page_settings, 'dashboard', page_name='main/dashboard.html'
+        webui_dashboard, page_settings, 'dashboard', page_name='main/dashboard.html'
     )
 
     return page_action
