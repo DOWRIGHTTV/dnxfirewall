@@ -114,9 +114,6 @@ i.icon-blue {
   color: blue; }
 
 /* tables */
-table.table-title {
-  font-size: 1.5rem;
-  text-align: center; }
 /* highlight override */
 table.highlight > tbody > tr:hover {
     background-color: rgba(122, 89, 39, 0.507); }

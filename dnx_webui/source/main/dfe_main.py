@@ -884,7 +884,7 @@ def create_title(title: str, classes: str = '') -> str:
     classes = 'card-title ' + classes
 
     return (
-        f'<div class="row"><h6 class="{context_global.theme["title"]} {classes}">{title.title()}</h6></div>'
+        f'<div class="row"><h5 class="{context_global.theme["title"]} {classes}">{title.title()}</h5></div>'
         f'<div class="title-divider"></div><br>'
     )
 
