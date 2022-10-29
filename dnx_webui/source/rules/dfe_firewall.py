@@ -69,11 +69,12 @@ class WebPage(RulesWebPage):
         for intf_type in ['builtin', 'extended']:
             for intf_name, intf_info in dnx_settings.get_items(f'interfaces->{intf_type}'):
                 ident = intf_info['ident']
+                zone = intf_info["zone"]
 
                 zone_map[intf_type][ident] = intf_name
 
                 # need to make converting zone ident/int to name easier in format function
-                zone_ident = dnx_settings[f'zones->builtin->{intf_name}'][0]
+                zone_ident = dnx_settings[f'zones->builtin->{zone}'][0]
 
                 # TODO: is lzone_map needed after moving zones to fw objects?
                 lzone_map[zone_ident] = intf_name

@@ -6,7 +6,7 @@ from itertools import zip_longest
 
 from source.web_typing import *
 
-from dnx_gentools.system_info import System, Services
+from dnx_gentools.system_info import System
 
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 from dnx_routines.logging.log_client import LogHandler as Log
@@ -14,7 +14,7 @@ from dnx_routines.logging.log_client import LogHandler as Log
 from source.web_interfaces import StandardWebPage
 from source.system.settings.dfe_interface import get_interfaces
 
-__all__ = ('WebPage', 'get_interfaces')
+__all__ = ('WebPage')
 
 
 class WebPage(StandardWebPage):
@@ -24,12 +24,6 @@ class WebPage(StandardWebPage):
     @staticmethod
     def load(_: Form) -> dict[str, Any]:
         domain_counts, request_counts, top_domains, top_countries, inf_hosts = query_database()
-
-        mod_status = {}
-        for svc in ['dns-proxy', 'ip-proxy', 'ips', 'dhcp-server']:
-            status = Services.status(f'dnx-{svc}')
-
-            mod_status[svc.replace('-', '_')] = status
 
         return {
             'domain_counts': domain_counts, 'dc_graph': _calculate_graphic(domain_counts),
