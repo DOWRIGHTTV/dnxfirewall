@@ -27,39 +27,36 @@ class WebPage(StandardWebPage):
     '''
     @staticmethod
     def load(_: Form) -> dict[str, Any]:
-        # system_settings: ConfigChain = load_configuration('system', cfg_type='global')
-        #
-        # wan_ident: str = system_settings['interfaces->builtin->wan->ident']
-        # wan_state: int = system_settings['interfaces->builtin->wan->state']
-        # default_mac:    str = system_settings['interfaces->builtin->wan->default_mac']
-        # configured_mac: str = system_settings['interfaces->builtin->wan->default_mac']
-        #
-        # try:
-        #     ip_addr = itoip(interface.get_ipaddress(interface=wan_ident))
-        # except OverflowError:
-        #     ip_addr = 'NOT SET'
-        #
-        # try:
-        #     netmask = itoip(interface.get_netmask(interface=wan_ident))
-        # except OverflowError:
-        #     netmask = 'NOT SET'
+        system_settings: ConfigChain = load_configuration('system', cfg_type='global')
+
+        wan_ident: str = system_settings['interfaces->builtin->wan->ident']
+        wan_state: int = system_settings['interfaces->builtin->wan->state']
+        default_mac:    str = system_settings['interfaces->builtin->wan->default_mac']
+        configured_mac: str = system_settings['interfaces->builtin->wan->default_mac']
+
+        try:
+            ip_addr = itoip(interface.get_ipaddress(interface=wan_ident))
+        except OverflowError:
+            ip_addr = 'NOT SET'
+
+        try:
+            netmask = itoip(interface.get_netmask(interface=wan_ident))
+        except OverflowError:
+            netmask = 'NOT SET'
 
         return {
+            'mac': {
+                'default': default_mac,
+                'current': configured_mac if configured_mac else default_mac
+            },
+            'ip': {
+                'state': wan_state,
+                'ip_address': ip_addr,
+                'netmask': netmask,
+                'default_gateway': itoip(default_route())
+            },
             'interfaces': get_interfaces()
         }
-
-        # return {
-        #     'mac': {
-        #         'default': default_mac,
-        #         'current': configured_mac if configured_mac else default_mac
-        #     },
-        #     'ip': {
-        #         'state': wan_state,
-        #         'ip_address': ip_addr,
-        #         'netmask': netmask,
-        #         'default_gateway': itoip(default_route())
-        #     }
-        # }
 
     @staticmethod
     def update(form: Form) -> tuple[int, str]:
