@@ -33,7 +33,7 @@ class WebPage(StandardWebPage):
 
             'uptime': System.uptime(), 'cpu': System.cpu_usage(), 'ram': System.ram_usage(),
 
-            'interfaces': get_interfaces,
+            'interfaces': get_interfaces(),
         }
 
 def query_database():
