@@ -987,7 +987,7 @@ app.jinja_env.filters['itoip'] = itoip
 # =================================
 # DEV ONLY
 # =================================
-# function will only be registered if running on dev branch using flask dev server
+# will only be registered if running on dev branch using flask dev server
 server_type = os.environ.get('FLASK_ENV')
 if (server_type == 'development'):
 
@@ -996,3 +996,11 @@ if (server_type == 'development'):
         if (request.method == 'POST'):
             print(f'form data\n{"=" * 12}')
             ppt(dict(request.form))
+
+    @app.after_request
+    def no_store_http_header(response):
+        # matches primary html files only
+        if ('.' not in request.path):
+            response.headers.add('Cache-Control', 'no-store')
+
+        return response
