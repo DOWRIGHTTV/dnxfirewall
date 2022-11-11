@@ -21,7 +21,8 @@ from dnx_iptools.cprotocol_tools import iptoi
 from dnx_iptools.protocol_tools import cidrtoi
 
 from dnx_gentools.system_info import System
-from dnx_routines.logging import Log
+
+from dnx_routines.logging.log_client import Log
 
 
 __all__ = (

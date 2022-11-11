@@ -14,7 +14,7 @@ from dnx_gentools.def_constants import fast_sleep
 from dnx_gentools.def_enums import LOG
 from dnx_gentools.file_operations import load_configuration
 
-from dnx_routines.logging import direct_log
+from dnx_routines.logging.log_client import direct_log
 
 
 LOG_NAME = 'logins'

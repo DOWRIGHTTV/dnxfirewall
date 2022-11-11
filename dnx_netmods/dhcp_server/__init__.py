@@ -10,7 +10,7 @@ from dnx_gentools.def_constants import INITIALIZE_MODULE
 if INITIALIZE_MODULE('dhcp-server'):
     __all__ = ('run',)
 
-    from dnx_routines.logging import Log
+    from dnx_routines.logging.log_client import Log
 
     Log.run(name='dhcp_server')
 
