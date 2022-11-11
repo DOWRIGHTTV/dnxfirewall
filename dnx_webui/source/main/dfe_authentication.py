@@ -25,23 +25,26 @@ class Authentication:
         self._time_expired: Event = threading.Event()
 
     @classmethod
-    def user_login(cls, form: Form, login_ip: str) -> tuple:
+    def user_login(cls, form: Form, login_ip: str, *, specify_role: Optional[str] = None) -> tuple:
         '''authenticate a user to the dnx web frontend.
 
         pass in the flask form and source ip. return will be a boolean representing whether the user is authenticated
         and authorized.
+
+        login success/fail will take same amount of time to return to reduce timing based attack vulnerabilities.
         '''
         self = cls()
 
         threading.Timer(.6, self._time_expired.set).start()
 
-        authorized, username, user_role = self._user_login(form)
+        authorized, username, user_role = self._user_login(form, specify_role)
         if (authorized):
             direct_log(LOG_NAME, LOG.NOTICE, f'User {username} successfully logged in from {login_ip}.')
 
         else:
             direct_log(LOG_NAME, LOG.WARNING, f'Failed login attempt for user {username} from {login_ip}.')
 
+        # blocks until expiration flag is set
         while not self._time_expired:
             fast_sleep(.202)
 
@@ -50,7 +53,7 @@ class Authentication:
     @staticmethod
     # see if this is safe. if this returns something outside of dictionary, error will occur.
     def get_user_role(username: str) -> Optional[str]:
-        local_accounts = load_configuration('logins', filepath='dnx_webui/data')
+        local_accounts: ConfigChain = load_configuration('logins', filepath='dnx_webui/data')
         try:
             return local_accounts[f'users->{username}->role']
         except KeyError:
@@ -86,9 +89,9 @@ class Authentication:
 
         return hash_total.hexdigest()
 
-    def _user_login(self, form: Form) -> tuple[bool, Optional[str], Optional[str]]:
-        password = form.get('password', None)
-        username = form.get('username', '').lower()
+    def _user_login(self, form: Form, specify_role: Optional[str]) -> tuple[bool, Optional[str], Optional[str]]:
+        password: str = form.get('password', '')
+        username: str = form.get('username', '').lower()
         if (not username or not password):
             return False, None, None
 
@@ -97,16 +100,22 @@ class Authentication:
         if not self._user_authorized(username, hexpass):
             return False, username, None
 
-        # checking for web ui authorization (admins/users only. cli accounts will fail.)
         user_role = self.get_user_role(username)
-        if user_role not in ['admin', 'user']:
-            return False, username, None
 
-        return True, username, user_role
+        # checking for explicit role match if specified.
+        if (specify_role is not None and user_role == specify_role):
+            return True, username, user_role
+
+        # default role matches
+        if (user_role in ['admin', 'user']):
+            return True, username, user_role
+
+        # no role match, no authorization
+        return False, username, None
 
     @staticmethod
     def _user_authorized(username: str, hexpass: str) -> bool:
-        local_accounts = load_configuration('logins', filepath='dnx_webui/data')
+        local_accounts: ConfigChain = load_configuration('logins', filepath='dnx_webui/data')
         try:
             password = local_accounts[f'users->{username}->password']
         except KeyError:
@@ -127,8 +136,7 @@ def user_restrict(*authorized_roles: str) -> Callable:
         @wraps(function_to_wrap)
         def wrapper(*_):
             # will redirect to login page if user is not logged in
-            user = session.get('user', None)
-            if (not user):
+            if not (user := session.get('user', None)):
                 return redirect(url_for('dnx_login'))
 
             # NOTE: this is dnx local tracking of sessions, not to be confused with flask session tracking.

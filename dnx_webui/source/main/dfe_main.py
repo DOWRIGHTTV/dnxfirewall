@@ -947,6 +947,8 @@ if (server_type == 'development'):
 # =================================
 # SECURE MESSENGER - TEMPORARY LOCATION
 # =================================
+# messenger will act like a single page application in that the uri will always be /messenger and chat will show if the
+# user has been authenticated, otherwise a login screen will be displayed.
 @app.route('/messenger', methods=['GET', 'POST'])
 def messenger():
     page_settings = {
@@ -957,9 +959,11 @@ def messenger():
 
         if (request.method == 'POST'):
 
-            authenticated, username, user_role = Authentication.user_login(request.form, request.remote_addr)
+            authenticated, username, user_role = Authentication.user_login(request.form, request.remote_addr, specify_role='messenger')
             if (authenticated):
                 update_session_tracker(username, user_role, request.remote_addr)
+
+                session['user'] = user
 
                 return redirect(url_for('messenger'))
 
@@ -967,5 +971,25 @@ def messenger():
 
         return render_template('messenger/login.html', theme=context_global.theme, **page_settings)
 
+    # AUTHENTICATED USERS
+    messenger_chat()
 
     ## CALL MESSENGER ENTRYPOINT, PASS IN USER INFO TO LOAD MESSAGES, AND RENDER TEMPLATE.
+
+
+@user_restrict('messenger', 'admin')  # NOTE: admin is for testing purposes only
+def messenger_chat(session_data: dict):
+
+    # loading user chats, then rendering template.
+    if (request.method == 'GET'):
+
+        # TODO: load_user_chats()
+
+        return render_template('messenger/chat.html', theme=context_global.theme)
+
+    elif (request.method == 'POST'):
+
+        # TODO: send_user_chats()
+        # TODO: load_user_chats()
+
+        return render_template('messenger/chat.html', theme=context_global.theme)
