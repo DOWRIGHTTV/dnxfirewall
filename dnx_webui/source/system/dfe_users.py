@@ -17,6 +17,9 @@ from source.web_interfaces import StandardWebPage
 
 __all__ = ('WebPage',)
 
+_VALID_ACCT_ROLES = ['admin', 'user', 'messenger', 'cli']
+
+
 class WebPage(StandardWebPage):
     '''
     available methods: load, handle_ajax
@@ -109,7 +112,7 @@ def password(passwd: str, /) -> Optional[ValidationError]:
         return ValidationError('Password does not meet complexity requirements.')
 
 def user_role(role: str, /) -> Optional[ValidationError]:
-    if (role not in ['admin', 'user', 'cli']):
+    if (role not in _VALID_ACCT_ROLES):
         return ValidationError('Invalid user role.')
 
 # ==============
