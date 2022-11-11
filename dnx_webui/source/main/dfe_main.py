@@ -15,7 +15,7 @@ from dnx_gentools.file_operations import load_configuration, ConfigurationManage
 from dnx_iptools.cprotocol_tools.cprotocol_tools import itoip
 
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
-from dnx_routines.logging import LogHandler as Log
+from dnx_routines.logging.log_client import LogHandler as Log
 
 import source.web_validate as validate
 
