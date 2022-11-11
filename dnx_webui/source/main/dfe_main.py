@@ -959,7 +959,7 @@ def messenger():
 
         if (request.method == 'POST'):
 
-            authenticated, username, user_role = Authentication.user_login(request.form, request.remote_addr, specify_role='messenger')
+            authenticated, username, user_role = Authentication.user_login(request.form, request.remote_addr)  #, specify_role='messenger') NOTE: testing with admin role for now
             if (authenticated):
                 update_session_tracker(username, user_role, request.remote_addr)
 
@@ -972,7 +972,7 @@ def messenger():
         return render_template('messenger/login.html', theme=context_global.theme, **page_settings)
 
     # AUTHENTICATED USERS
-    messenger_chat()
+    return messenger_chat()
 
     ## CALL MESSENGER ENTRYPOINT, PASS IN USER INFO TO LOAD MESSAGES, AND RENDER TEMPLATE.
 
