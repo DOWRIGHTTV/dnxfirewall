@@ -963,7 +963,7 @@ def messenger():
             if (authenticated):
                 update_session_tracker(username, user_role, request.remote_addr)
 
-                session['user'] = user
+                session['user'] = username
 
                 return redirect(url_for('messenger'))
 
