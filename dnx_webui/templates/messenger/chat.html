@@ -5,9 +5,163 @@
         <div class="row">
             <div class="col s12">
                 <div class="card-panel hoverable {{ theme.card }}">
+                    <div class="row">
+                        <div class="col s2">
+                            {{ create_title('contacts')|safe }}
+                            <div class="row">
+                                <div class="people-list" id="people-list">
+                                    <!-- <div class="search">
+                                        <input type="text" placeholder="search" />
+                                        <i class="fa fa-search"></i>
+                                    </div> -->
+                                    <ul class="list">
+                                        <li class="clearfix">
+                                            <img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/195612/chat_avatar_01.jpg" alt="avatar" />
+                                            <div class="about">
+                                                <div class="name">Vincent Porter</div>
+                                                <div class="status">
+                                                    <i class="fa fa-circle online"></i> online
+                                                </div>
+                                            </div>
+                                        </li>
+                                        <li class="clearfix">
+                                            <img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/195612/chat_avatar_02.jpg" alt="avatar" />
+                                            <div class="about">
+                                                <div class="name">Aiden Chavez</div>
+                                                <div class="status">
+                                                    <i class="fa fa-circle offline"></i> left 7 mins ago
+                                                </div>
+                                            </div>
+                                        </li>
+                                        <li class="clearfix">
+                                            <img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/195612/chat_avatar_03.jpg" alt="avatar" />
+                                            <div class="about">
+                                                <div class="name">Mike Thomas</div>
+                                                <div class="status">
+                                                    <i class="fa fa-circle online"></i> online
+                                                </div>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col s10">
+                            {{ create_title('chat')|safe }}
+                            <div class="row">
+                                <div class="chat">
+                                    <div class="chat-header clearfix">
+                                        <div class="chat-about">
+                                            <div class="chat-with">Chat with Vincent Porter</div>
+                                            <div class="chat-num-messages">already 1 902 messages</div>
+                                        </div>
+                                        <i class="fa fa-star"></i>
+                                    </div> <!-- end chat-header -->
+                                    <div class="chat-history">
+                                        <ul>
+                                            <li class="col s8 offset-s4">
+                                                <div class="message-data">
+                                                    <span class="message-data-time" >10:10 AM, Today</span>
+                                                    <span class="message-data-name" >DOW</span>
+                                                </div>
+                                                <div class="message my-message">
+                                                    Ay, what are you doing?
+                                                </div>
+                                            </li>
+                                            <li class="col s8">
+                                                <div class="message-data">
+                                                    <span class="message-data-time" >10:10 AM, Today</span>
+                                                    <span class="message-data-name" >Broke</span>
+                                                </div>
+                                                <div class="message my-message">
+                                                    Racing. Also, my shit is broken. fix it.
+                                                </div>
+                                            </li>
+                                            <li class="col s8 offset-s4">
+                                                <div class="message-data">
+                                                    <span class="message-data-time" >10:14 AM, Today</span>
+                                                    <span class="message-data-name" >Olia</span>
+                                                </div>
+                                                <div class="message other-message float-right">
+                                                    Ok, well give me some pcaps.
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </div> <!-- end chat-history -->
+                                    <div class="input-field col s12">
+                                        <textarea id="chat-text" class="materialize-textarea" data-length="120"></textarea>
+                                        <label for="chat-text">Message</label>
+                                    </div>
+                                    <div class="input-field col s4 offset-s4">
+                                        <button type="submit" name="submit" id="submit" class="btn waves-effect waves-light col s12">Send</button>
+                                    </div> <!-- end chat-message -->
+                                </div> <!-- end chat -->
+                            </div> <!-- end container -->
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
+<style>
+.chat {
+  background: #F2F5F8;
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
+
+  color: #434651; }
+
+.chat-history {
+    padding: 30px 30px 20px;
+    border-bottom: 2px solid white;
+    overflow-y: scroll;
+    height: 575px; }
+
+    .message-data {
+      margin-bottom: 15px; }
+
+    .message-data-time {
+      color: lightslategrey;
+      padding-left: 6px; }
+
+    .message {
+      color: white;
+      padding: 18px 20px;
+      line-height: 26px;
+      font-size: 16px;
+      border-radius: 7px;
+      margin-bottom: 30px;
+      width: 90%;
+      position: relative; }
+
+    .my-message {
+      background: green; }
+
+    .other-message {
+      background: blue; }
+</style>
+<script id="message-template" type="text/x-handlebars-template">
+    <li class="clearfix">
+        <div class="message-data align-right">
+            <span class="message-data-time" >{{time}}, Today</span>
+            <span class="message-data-name" >Olia</span> <i class="fa fa-circle me"></i>
+        </div>
+        <div class="message other-message float-right">
+            {{messageOutput}}
+        </div>
+    </li>
+</script>
+
+<script id="message-response-template" type="text/x-handlebars-template">
+    <li>
+        <div class="message-data">
+            <span class="message-data-name"><i class="fa fa-circle online"></i> Vincent</span>
+            <span class="message-data-time">{{time}}, Today</span>
+        </div>
+        <div class="message my-message">
+            {{response}}
+        </div>
+    </li>
+</script>
 {% endblock %}
