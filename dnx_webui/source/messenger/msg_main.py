@@ -9,7 +9,7 @@ from source.web_typing import *
 from dnx_gentools.file_operations import load_configuration
 
 
-def get_msg_users() -> dict[str, list[int]]:
+def get_msg_users(current_user: str) -> dict[str, list[int]]:
     web_users: ConfigChain = load_configuration('logins', filepath='/dnx_webui/data')
     active_users: ConfigChain = load_configuration('session_tracker', filepath='/dnx_webui/data')
 
@@ -18,6 +18,8 @@ def get_msg_users() -> dict[str, list[int]]:
         usr: [0, 0] for usr, settings in web_users.get_dict('users').items() if settings['role'] in ['admin', 'messenger']
 
     }
+    # removes self from contact list
+    msg_users.pop(current_user)
 
     for user in msg_users:
 

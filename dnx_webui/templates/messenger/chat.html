@@ -6,7 +6,7 @@
             <div class="col s12">
                 <div class="card-panel hoverable {{ theme.card }}">
                     <div class="row">
-                        <div class="col s2">
+                        <div class="col s3">
                             {{ create_title('users')|safe }}
                             <div class="row">
                                 <form method="post">
@@ -38,14 +38,14 @@
                                 <!--</div>-->
                             </div>
                         </div>
-                        <div class="col s10">
+                        <div class="col s9">
                             {{ create_title('chat')|safe }}
                             <div class="row">
                                 <div class="chat">
                                     <div class="chat-header clearfix">
                                         <div class="chat-about">
-                                            <div class="chat-with">Chat with Vincent Porter</div>
-                                            <div class="chat-num-messages">already 1 902 messages</div>
+                                            <div class="chat-with">Chatting with {{ to_user }}</div>
+                                            <div class="chat-num-messages">{{ len(messages) }} messages</div>
                                         </div>
                                         <i class="fa fa-star"></i>
                                     </div> <!-- end chat-header -->
@@ -67,7 +67,7 @@
                                             <li class="col s8">
                                                 <div class="message-data">
                                                     <span class="message-data-time">{{ message[3] }}</span>
-                                                    <span class="message-data-name">{{ message[1] }}</span>
+                                                    <span class="message-data-name">{{ message[0] }}</span>
                                                 </div>
                                                 <div class="message other-message">
                                                     {{ message[4] }}

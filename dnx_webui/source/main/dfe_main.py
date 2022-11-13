@@ -996,7 +996,8 @@ def messenger_chat(session_info: dict):
 
         page_settings = {
             'session_info': session_info,
-            'contacts': get_msg_users(),
+            'contacts': get_msg_users(session_info['user']),
+            'to_user': 'broke',
             'messages': load_user_chats()
         }
 
