@@ -124,14 +124,14 @@ class Authentication:
             # returning True on password match else False
             return password == hexpass
 
-
+# TODO: make messanger redirection go to correct login page
 # web ui page authorization handler
 def user_restrict(*authorized_roles: str) -> Callable:
     '''user authorization decorator to limit access according to account roles.
 
     apply this decorator to any flask function associated with page route with the user rules in decorator argument.
     '''
-    def decorator(function_to_wrap: Callable):
+    def decorator(function_to_wrap: Callable[[dict], str]):
 
         @wraps(function_to_wrap)
         def wrapper(*_):

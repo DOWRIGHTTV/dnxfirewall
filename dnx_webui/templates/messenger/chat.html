@@ -7,43 +7,35 @@
                 <div class="card-panel hoverable {{ theme.card }}">
                     <div class="row">
                         <div class="col s2">
-                            {{ create_title('contacts')|safe }}
+                            {{ create_title('users')|safe }}
                             <div class="row">
-                                <div class="people-list" id="people-list">
-                                    <!-- <div class="search">
+                                <form method="post">
+                                <!-- <div class="people-list" id="people-list">
+                                    <div class="search">
                                         <input type="text" placeholder="search" />
                                         <i class="fa fa-search"></i>
                                     </div> -->
-                                    <ul class="list">
-                                        <li class="clearfix">
-                                            <img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/195612/chat_avatar_01.jpg" alt="avatar" />
-                                            <div class="about">
-                                                <div class="name">Vincent Porter</div>
-                                                <div class="status">
-                                                    <i class="fa fa-circle online"></i> online
+                                    <ul>
+                                    {% for user, status in contacts.items() %}
+                                        <li>
+                                            <div class="">
+                                                <div class="">user</div>
+                                                {% if status[0] %}
+                                                <div class="">
+                                                    <i class="material-icon">online</i>
                                                 </div>
+                                                {% else %}
+                                                <div class="">
+                                                    <i class="material-icon">offline</i>
+                                                    <span>seen: {{ status[1] }}</span>
+                                                </div>
+                                                {% endif %}
                                             </div>
                                         </li>
-                                        <li class="clearfix">
-                                            <img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/195612/chat_avatar_02.jpg" alt="avatar" />
-                                            <div class="about">
-                                                <div class="name">Aiden Chavez</div>
-                                                <div class="status">
-                                                    <i class="fa fa-circle offline"></i> left 7 mins ago
-                                                </div>
-                                            </div>
-                                        </li>
-                                        <li class="clearfix">
-                                            <img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/195612/chat_avatar_03.jpg" alt="avatar" />
-                                            <div class="about">
-                                                <div class="name">Mike Thomas</div>
-                                                <div class="status">
-                                                    <i class="fa fa-circle online"></i> online
-                                                </div>
-                                            </div>
-                                        </li>
+                                    {% endfor %}
                                     </ul>
-                                </div>
+                                </form>
+                                <!--</div>-->
                             </div>
                         </div>
                         <div class="col s10">
@@ -58,17 +50,20 @@
                                         <i class="fa fa-star"></i>
                                     </div> <!-- end chat-header -->
                                     <div class="chat-history">
+                                        {{ session_info }}
                                         <ul>
+                                            {% for message in messages %}
                                             <li class="col s8 offset-s4">
                                                 <div class="message-data">
-                                                    <span class="message-data-time" >10:10 AM, Today</span>
-                                                    <span class="message-data-name" >DOW</span>
+                                                    <span class="message-data-time">{{ message[3] }}</span>
+                                                    <span class="message-data-name">{{ message[0] }}</span>
                                                 </div>
                                                 <div class="message my-message">
-                                                    Ay, what are you doing?
+                                                    {{ message }}
                                                 </div>
                                             </li>
-                                            <li class="col s8">
+                                            {% endfor %}
+                                            <!--<li class="col s8">
                                                 <div class="message-data">
                                                     <span class="message-data-time" >10:10 AM, Today</span>
                                                     <span class="message-data-name" >Broke</span>
@@ -85,14 +80,14 @@
                                                 <div class="message other-message float-right">
                                                     Ok, well give me some pcaps.
                                                 </div>
-                                            </li>
+                                            </li>-->
                                         </ul>
                                     </div> <!-- end chat-history -->
                                     <div class="input-field col s12">
                                         <textarea id="chat-text" class="materialize-textarea" data-length="120"></textarea>
                                         <label for="chat-text">Message</label>
                                     </div>
-                                    <div class="input-field col s4 offset-s4">
+                                    <div class="input-field col s4">
                                         <button type="submit" name="submit" id="submit" class="btn waves-effect waves-light col s12">Send</button>
                                     </div> <!-- end chat-message -->
                                 </div> <!-- end chat -->

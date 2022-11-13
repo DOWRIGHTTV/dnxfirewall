@@ -84,6 +84,8 @@ from source.system.dfe_services import WebPage as dnx_services
 
 from source.main.dfe_authentication import Authentication, user_restrict
 
+from source.messenger.msg_main import *
+
 # ===============
 # TYPING IMPORTS
 # ===============
@@ -986,16 +988,19 @@ def messenger():
 
     ## CALL MESSENGER ENTRYPOINT, PASS IN USER INFO TO LOAD MESSAGES, AND RENDER TEMPLATE.
 
-
 @user_restrict('messenger', 'admin')  # NOTE: admin is for testing purposes only
 def messenger_chat(session_data: dict):
 
     # loading user chats, then rendering template.
     if (request.method == 'GET'):
 
-        # TODO: load_user_chats()
+        page_settings = {
+            'session_info': session_data,
+            'contacts': get_msg_users(),
+            'messages': load_user_chats()
+        }
 
-        return render_template('messenger/chat.html', theme=context_global.theme)
+        return render_template('messenger/chat.html', theme=context_global.theme, **page_settings)
 
     elif (request.method == 'POST'):
 

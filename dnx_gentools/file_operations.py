@@ -363,7 +363,7 @@ class ConfigChain:
 
         return list(search_data)
 
-    def get_items(self, key: str = None) -> list[Optional[Item]]:
+    def get_items(self, key: str = None) -> list[Item]:
         '''return list of namedtuple containing key: value pairs of child keys 1 level lower than the passed in key.
 
         returns an empty list if not found.
