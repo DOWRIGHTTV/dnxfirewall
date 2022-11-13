@@ -19,7 +19,7 @@
                                     {% for user, status in contacts.items() %}
                                         <li>
                                             <div class="">
-                                                <div class="">user</div>
+                                                <div class="">{{ user }}</div>
                                                 {% if status[0] %}
                                                 <div class="">
                                                     <i class="material-icon">online</i>
@@ -52,35 +52,29 @@
                                     <div class="chat-history">
                                         {{ session_info }}
                                         <ul>
-                                            {% for message in messages %}
+                                        {% for message in messages %}
+                                            {% if session_info['user'] == message[0] %}
                                             <li class="col s8 offset-s4">
                                                 <div class="message-data">
                                                     <span class="message-data-time">{{ message[3] }}</span>
                                                     <span class="message-data-name">{{ message[0] }}</span>
                                                 </div>
                                                 <div class="message my-message">
-                                                    {{ message }}
+                                                    {{ message[4] }}
                                                 </div>
                                             </li>
-                                            {% endfor %}
-                                            <!--<li class="col s8">
+                                            {% else %}
+                                            <li class="col s8">
                                                 <div class="message-data">
-                                                    <span class="message-data-time" >10:10 AM, Today</span>
-                                                    <span class="message-data-name" >Broke</span>
+                                                    <span class="message-data-time">{{ message[3] }}</span>
+                                                    <span class="message-data-name">{{ message[1] }}</span>
                                                 </div>
-                                                <div class="message my-message">
-                                                    Racing. Also, my shit is broken. fix it.
+                                                <div class="message other-message">
+                                                    {{ message[4] }}
                                                 </div>
                                             </li>
-                                            <li class="col s8 offset-s4">
-                                                <div class="message-data">
-                                                    <span class="message-data-time" >10:14 AM, Today</span>
-                                                    <span class="message-data-name" >Olia</span>
-                                                </div>
-                                                <div class="message other-message float-right">
-                                                    Ok, well give me some pcaps.
-                                                </div>
-                                            </li>-->
+                                            {% endif %}
+                                        {% endfor %}
                                         </ul>
                                     </div> <!-- end chat-history -->
                                     <div class="input-field col s12">

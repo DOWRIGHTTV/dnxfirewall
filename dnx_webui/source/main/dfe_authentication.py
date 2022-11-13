@@ -158,8 +158,10 @@ def user_restrict(*authorized_roles: str) -> Callable:
 
                 return render_template('main/not_authorized.html', navi=True, login_btn=True, idle_timeout=False)
 
+            session_info = {'user': user, **session_tracker.expanded_user_data['active_users'][user]}
+
             # flask page function
-            page_action = function_to_wrap(session_tracker.expanded_user_data['active_users'][user])
+            page_action = function_to_wrap(session_info)
 
             return page_action
 

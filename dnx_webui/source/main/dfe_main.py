@@ -99,8 +99,8 @@ if (TYPE_CHECKING):
 # TODO: figure out best visually pleasing way to inject current logged in user info on each page.
 @app.route('/dashboard', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
-def dnx_dashboard(session_data: dict):
-    page_settings = get_default_page_settings(session_data, uri_path=['dashboard'])
+def dnx_dashboard(session_info: dict):
+    page_settings = get_default_page_settings(session_info, uri_path=['dashboard'])
 
     page_settings['dashboard'] = dfe_dashboard.load_page()
     page_settings['footer'] = True
@@ -112,7 +112,7 @@ def dnx_dashboard(session_data: dict):
 # --------------------------------------------- #
 @app.route('/rules/firewall', methods=['GET', 'POST'])
 @user_restrict('admin')
-def rules_firewall(session_data: dict):
+def rules_firewall(session_info: dict):
 
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
@@ -125,7 +125,7 @@ def rules_firewall(session_data: dict):
         'uri_path': ['rules', 'firewall']
     }
 
-    page_settings.update(session_data)
+    page_settings.update(session_info)
 
     page_action = firewall_page_logic(
         dnx_fwall, page_settings, 'firewall_settings', page_name='rules/firewall/firewall.html'
@@ -135,7 +135,7 @@ def rules_firewall(session_data: dict):
 
 @app.route('/rules/firewall/commit', methods=['POST'])
 @user_restrict('admin')
-def rules_firewall_commit(session_data: dict):
+def rules_firewall_commit(session_info: dict):
 
     # TODO: get user and ip information so we can log the commit (warning?)
 
@@ -147,7 +147,7 @@ def rules_firewall_commit(session_data: dict):
 
 @app.route('/rules/firewall/push', methods=['POST'])
 @user_restrict('admin')
-def rules_firewall_push(session_data: dict):
+def rules_firewall_push(session_info: dict):
     # for when we implement preview option
     # json_data = request.get_json(force=True)
 
@@ -158,7 +158,7 @@ def rules_firewall_push(session_data: dict):
 
 @app.route('/rules/nat', methods=['GET', 'POST'])
 @user_restrict('admin')
-def rules_nat(session_data: dict):
+def rules_nat(session_info: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': validate.get_convert_int(request.args, 'tab'),
@@ -168,7 +168,7 @@ def rules_nat(session_data: dict):
         'uri_path': ['rules', 'nat']
     }
 
-    page_settings.update(session_data)
+    page_settings.update(session_info)
 
     page_action = firewall_page_logic(
         dnx_nat, page_settings, 'nat_settings', page_name='rules/nat.html'
@@ -181,8 +181,8 @@ def rules_nat(session_data: dict):
 # --------------------------------------------- #
 @app.route('/intrusion/ip', methods=['GET', 'POST'])
 @user_restrict('admin')
-def intrusion_ip(session_data: dict):
-    page_settings = get_default_page_settings(session_data, uri_path=['intrusion', 'ip'])
+def intrusion_ip(session_info: dict):
+    page_settings = get_default_page_settings(session_info, uri_path=['intrusion', 'ip'])
 
     page_settings['ajax'] = True
 
@@ -195,7 +195,7 @@ def intrusion_ip(session_data: dict):
 # TODO: work on proper response
 @app.post('/intrusion/ip/post')
 @user_restrict('admin')
-def intrusion_ip_post(session_data: dict):
+def intrusion_ip_post(session_info: dict):
 
     json_data = request.get_json(force=True)
 
@@ -207,8 +207,8 @@ def intrusion_ip_post(session_data: dict):
 
 @app.get('/intrusion/domain')
 @user_restrict('admin')
-def intrusion_domain(session_data: dict):
-    page_settings = get_default_page_settings(session_data, uri_path=['intrusion', 'domain'])
+def intrusion_domain(session_info: dict):
+    page_settings = get_default_page_settings(session_info, uri_path=['intrusion', 'domain'])
 
     page_settings['ajax'] = True
 
@@ -220,7 +220,7 @@ def intrusion_domain(session_data: dict):
 
 @app.post('/intrusion/domain/post')
 @user_restrict('admin')
-def intrusion_domain_post(session_data: dict):
+def intrusion_domain_post(session_info: dict):
 
     json_data = request.get_json(force=True)
 
@@ -234,8 +234,8 @@ def intrusion_domain_post(session_data: dict):
     # ----------------------------------------- #
 @app.route('/intrusion/domain/whitelist', methods=['GET', 'POST'])
 @user_restrict('admin')
-def rules_overrides_whitelist(session_data: dict):
-    page_settings = get_default_page_settings(session_data, uri_path=['intrusion', 'domain', 'whitelist'])
+def rules_overrides_whitelist(session_info: dict):
+    page_settings = get_default_page_settings(session_info, uri_path=['intrusion', 'domain', 'whitelist'])
 
     page_action = standard_page_logic(
         xlist, page_settings, 'whitelist_settings', page_name='rules/overrides/whitelist.html'
@@ -245,8 +245,8 @@ def rules_overrides_whitelist(session_data: dict):
 
 @app.route('/intrusion/domain/blacklist', methods=['GET', 'POST'])
 @user_restrict('admin')
-def rules_overrides_blacklist(session_data: dict):
-    page_settings = get_default_page_settings(session_data, uri_path=['intrusion', 'domain', 'blacklist'])
+def rules_overrides_blacklist(session_info: dict):
+    page_settings = get_default_page_settings(session_info, uri_path=['intrusion', 'domain', 'blacklist'])
 
     page_action = standard_page_logic(
         xlist, page_settings, 'blacklist_settings', page_name='rules/overrides/blacklist.html'
@@ -256,7 +256,7 @@ def rules_overrides_blacklist(session_data: dict):
 
 @app.route('/intrusion/domain/categories', methods=['GET', 'POST'])
 @user_restrict('admin')
-def intrusion_domain_categories(session_data: dict):
+def intrusion_domain_categories(session_info: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': validate.get_convert_int(request.args, 'tab'),
@@ -265,7 +265,7 @@ def intrusion_domain_categories(session_data: dict):
         'uri_path': ['intrusion', 'domain', 'categories']
     }
 
-    page_settings.update(session_data)
+    page_settings.update(session_info)
 
     page_action = categories_page_logic(category_settings, page_settings)
 
@@ -275,8 +275,8 @@ def intrusion_domain_categories(session_data: dict):
     # ----------------------------------------- #
 @app.route('/intrusion/ips', methods=['GET', 'POST'])
 @user_restrict('admin')
-def intrusion_ips(session_data: dict):
-    page_settings = get_default_page_settings(session_data, uri_path=['intrusion', 'ips'])
+def intrusion_ips(session_info: dict):
+    page_settings = get_default_page_settings(session_info, uri_path=['intrusion', 'ips'])
 
     page_action = standard_page_logic(
         dnx_ips, page_settings, 'ips_settings', page_name='intrusion/ips.html'
@@ -291,8 +291,8 @@ def intrusion_ips(session_data: dict):
     # ----------------------------------------- #
 @app.route('/system/settings/dns', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_settings_dns(session_data: dict):
-    page_settings = get_default_page_settings(session_data, uri_path=['system', 'settings', 'dns'])
+def system_settings_dns(session_info: dict):
+    page_settings = get_default_page_settings(session_info, uri_path=['system', 'settings', 'dns'])
 
     page_action = standard_page_logic(
         dns_settings, page_settings, 'dns_settings', page_name='system/settings/dns.html'
@@ -302,8 +302,8 @@ def system_settings_dns(session_data: dict):
 
 @app.route('/system/settings/dhcp', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_settings_dhcp(session_data: dict):
-    page_settings = get_default_page_settings(session_data, uri_path=['system', 'settings', 'dhcp'])
+def system_settings_dhcp(session_info: dict):
+    page_settings = get_default_page_settings(session_info, uri_path=['system', 'settings', 'dhcp'])
 
     page_action = standard_page_logic(
         dhcp_settings, page_settings, 'dhcp_settings', page_name='system/settings/dhcp.html'
@@ -313,8 +313,8 @@ def system_settings_dhcp(session_data: dict):
 
 @app.route('/system/settings/interface', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_settings_interface(session_data: dict):
-    page_settings = get_default_page_settings(session_data, uri_path=['system', 'settings', 'interface'])
+def system_settings_interface(session_info: dict):
+    page_settings = get_default_page_settings(session_info, uri_path=['system', 'settings', 'interface'])
 
     page_action = standard_page_logic(
         interface_settings, page_settings, 'interface_settings', page_name='system/settings/interface.html'
@@ -324,8 +324,8 @@ def system_settings_interface(session_data: dict):
 
 @app.route('/system/settings/logging', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_settings_logging(session_data: dict):
-    page_settings = get_default_page_settings(session_data, uri_path=['system', 'settings', 'logging'])
+def system_settings_logging(session_info: dict):
+    page_settings = get_default_page_settings(session_info, uri_path=['system', 'settings', 'logging'])
 
     page_action = standard_page_logic(
         logging_settings, page_settings, 'logging_settings', page_name='system/settings/logging.html'
@@ -337,14 +337,14 @@ def system_settings_logging(session_data: dict):
 # priority is lower than other implementations.
 # @app.route('/system/settings/syslog', methods=['GET', 'POST'])
 # @user_restrict('admin')
-# def system_settings_syslog(session_data: dict):
+# def system_settings_syslog(session_info: dict):
 #     page_settings = {
 #         'navi': True, 'idle_timeout': True, 'standard_error': None,
 #         'tab': validate.get_convert_int(request.args, 'tab'),
 #         'uri_path': ['system', 'settings', 'syslog']
 #     }
 #
-#     page_settings.update(session_data)
+#     page_settings.update(session_info)
 #
 #     page_action = standard_page_logic(
 #         syslog_settings, page_settings, 'syslog_settings', page_name='system/settings/syslog.html'
@@ -356,7 +356,7 @@ def system_settings_logging(session_data: dict):
     # ----------------------------------------- #
 @app.route('/system/log/traffic', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
-def system_logs_traffic(session_data: dict):
+def system_logs_traffic(session_info: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
         'menu': '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
@@ -364,7 +364,7 @@ def system_logs_traffic(session_data: dict):
         'uri_path': ['system', 'log', 'traffic']
     }
 
-    page_settings.update(session_data)
+    page_settings.update(session_info)
 
     page_action = log_page_logic(traffic_logs, page_settings, page_name='system/log/traffic/traffic.html')
 
@@ -372,7 +372,7 @@ def system_logs_traffic(session_data: dict):
 
 @app.route('/system/log/events', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
-def system_logs_traffic_events(session_data: dict):
+def system_logs_traffic_events(session_info: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
         'menu': '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
@@ -380,7 +380,7 @@ def system_logs_traffic_events(session_data: dict):
         'uri_path': ['system', 'log', 'events']
     }
 
-    page_settings.update(session_data)
+    page_settings.update(session_info)
 
     page_action = log_page_logic(sec_events, page_settings, page_name='system/log/events/events.html')
 
@@ -388,7 +388,7 @@ def system_logs_traffic_events(session_data: dict):
 
 @app.route('/system/log/system', methods=['GET', 'POST'])
 @user_restrict('user', 'admin')
-def system_logs_system(session_data: dict):
+def system_logs_system(session_info: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
         'menu': '1', 'dnx_table': True, 'ajax': True, 'auto_colorize': True,
@@ -398,7 +398,7 @@ def system_logs_system(session_data: dict):
         'uri_path': ['system', 'log', 'system']
     }
 
-    page_settings.update(session_data)
+    page_settings.update(session_info)
 
     page_action = log_page_logic(sys_logs, page_settings, page_name='system/log/system/system.html')
 
@@ -406,7 +406,7 @@ def system_logs_system(session_data: dict):
 
 @app.post('/system/log/system/get')
 @user_restrict('user', 'admin')
-def system_logs_get(session_data):
+def system_logs_get(session_info):
     json_data = request.get_json(force=True)
 
     _, _, table_data = sys_logs.handle_ajax(json_data)
@@ -415,8 +415,8 @@ def system_logs_get(session_data):
 
 @app.route('/system/users', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_users(session_data: dict):
-    page_settings = get_default_page_settings(session_data, uri_path=['system', 'users'])
+def system_users(session_info: dict):
+    page_settings = get_default_page_settings(session_info, uri_path=['system', 'users'])
 
     page_action = standard_page_logic(
         dfe_users, page_settings, 'user_list', page_name='system/users.html'
@@ -426,8 +426,8 @@ def system_users(session_data: dict):
 
 @app.route('/system/backups', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_backups(session_data: dict):
-    page_settings = get_default_page_settings(session_data, uri_path=['system', 'backups'])
+def system_backups(session_info: dict):
+    page_settings = get_default_page_settings(session_info, uri_path=['system', 'backups'])
 
     page_action = standard_page_logic(
         dfe_backups, page_settings, 'current_backups', page_name='system/backups.html')
@@ -436,8 +436,8 @@ def system_backups(session_data: dict):
 
 @app.route('/system/services', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_services(session_data: dict):
-    page_settings = get_default_page_settings(session_data, uri_path=['system', 'services'])
+def system_services(session_info: dict):
+    page_settings = get_default_page_settings(session_info, uri_path=['system', 'services'])
 
     page_action = standard_page_logic(
         dnx_services, page_settings, 'service_info', page_name='system/services.html')
@@ -449,11 +449,11 @@ def system_services(session_data: dict):
 # --------------------------------------------- #
 @app.route('/device/<path>', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_restart(session_data: dict, path: str):
+def system_restart(session_info: dict, path: str):
     if (path not in ['shutdown', 'restart']):
         return render_template(general_error_page, general_error=f'device/{path} not found.')
 
-    page_settings = get_default_page_settings(session_data, uri_path=['device', path])
+    page_settings = get_default_page_settings(session_info, uri_path=['device', path])
 
     page_settings['idle_timeout'] = False
     page_settings['control'] = True
@@ -468,7 +468,7 @@ def system_restart(session_data: dict, path: str):
 @user_restrict('user', 'admin')
 # removing user from session dict then removing them from locally stored session tracker to allow for cross session
 # awareness of users/accounts logged in.
-def dnx_logout(session_data: dict):
+def dnx_logout(session_info: dict):
     if user := session.pop('user', None):
         update_session_tracker(user, action=CFG.DEL)
 
@@ -549,7 +549,7 @@ def dnx_blocked() -> str:
 
 @app.post('/refresh/session')
 @user_restrict('user', 'admin')
-def refresh_session(session_data: dict):
+def refresh_session(session_info: dict):
 
     return ajax_response(status=True, data={'error': 0, 'message': None})
 
@@ -688,7 +688,7 @@ def handle_system_action(page_settings: dict):
     return render_template('main/device.html', theme=context_global.theme, **page_settings)
 
 # HELPERS
-def get_default_page_settings(session_data, *, uri_path: list[str]) -> dict:
+def get_default_page_settings(session_info, *, uri_path: list[str]) -> dict:
     '''sets the following values:
 
         - navi->True
@@ -704,7 +704,7 @@ def get_default_page_settings(session_data, *, uri_path: list[str]) -> dict:
         'uri_path': uri_path
     }
 
-    page_settings.update(session_data)
+    page_settings.update(session_info)
 
     return page_settings
 
@@ -989,13 +989,13 @@ def messenger():
     ## CALL MESSENGER ENTRYPOINT, PASS IN USER INFO TO LOAD MESSAGES, AND RENDER TEMPLATE.
 
 @user_restrict('messenger', 'admin')  # NOTE: admin is for testing purposes only
-def messenger_chat(session_data: dict):
+def messenger_chat(session_info: dict):
 
     # loading user chats, then rendering template.
     if (request.method == 'GET'):
 
         page_settings = {
-            'session_info': session_data,
+            'session_info': session_info,
             'contacts': get_msg_users(),
             'messages': load_user_chats()
         }
