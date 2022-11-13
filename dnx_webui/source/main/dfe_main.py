@@ -447,14 +447,15 @@ def system_services(session_data: dict):
 # --------------------------------------------- #
 @app.route('/device/<path>', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_restart(session_data, path):
-    page_settings = {
-        'navi': True, 'idle_timeout': False,
-        'control': True, 'action': f'{path}',
-        'uri_path': ['device', f'{path}']
-    }
+def system_restart(session_data: dict, path: str):
+    if (path not in ['shutdown', 'restart']):
+        return render_template(general_error_page, general_error=f'device/{path} not found.')
 
-    page_settings.update(session_data)
+    page_settings = get_default_page_settings(session_data, uri_path=['device', path])
+
+    page_settings['idle_timeout'] = False
+    page_settings['control'] = True
+    page_settings['action'] = path
 
     return handle_system_action(page_settings)
 
@@ -686,6 +687,15 @@ def handle_system_action(page_settings: dict):
 
 # HELPERS
 def get_default_page_settings(session_data, *, uri_path: list[str]) -> dict:
+    '''sets the following values:
+
+        - navi->True
+        - idle_timeout->True
+        - standard_error->None
+        - tab from request args "?tab".
+
+    page_settings will be updated with passed in session data.
+    '''
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
         'tab': validate.get_convert_int(request.args, 'tab'),
