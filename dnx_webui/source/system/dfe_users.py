@@ -35,7 +35,7 @@ class WebPage(StandardWebPage):
         return user_list
 
     @staticmethod
-    def update_page(form: Form) -> Optional[str]:
+    def update(form: Form) -> Optional[str]:
         if ('user_add' in form):
             account_info = config(**{
                 'username': form.get('user_acct', DATA.MISSING),
@@ -46,8 +46,7 @@ class WebPage(StandardWebPage):
             if (DATA.MISSING in account_info.values()):
                 return INVALID_FORM
 
-            error = validate_account_creation(account_info)
-            if (error):
+            if error := validate_account_creation(account_info):
                 return error.message
 
             configure_user_account(account_info, action=CFG.ADD)
