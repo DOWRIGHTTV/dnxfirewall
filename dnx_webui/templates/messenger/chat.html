@@ -17,7 +17,8 @@
                                     </div> -->
                                     <ul>
                                     {% for user, status in contacts.items() %}
-                                        <li>
+                                        <li onclick="this.form.submit()" style="cursor: pointer">
+                                            <input type="hidden" name="selected_user" value="{{ user }}">
                                             <div class="">
                                                 <div class="">{{ user }}</div>
                                                 {% if status[0] %}
@@ -48,7 +49,7 @@
                                             <div class="chat-num-messages">{{ messages|length }} messages</div>
                                         </div>
                                         <i class="fa fa-star"></i>
-                                    </div> <!-- end chat-header -->
+                                    </div>
                                     <div class="chat-history">
                                         {{ session_info }}
                                         <ul>
@@ -76,16 +77,16 @@
                                             {% endif %}
                                         {% endfor %}
                                         </ul>
-                                    </div> <!-- end chat-history -->
+                                    </div>
                                     <div class="input-field col s12">
                                         <textarea id="chat-text" class="materialize-textarea" data-length="120"></textarea>
                                         <label for="chat-text">Message</label>
                                     </div>
                                     <div class="input-field col s4">
                                         <button type="submit" name="submit" id="submit" class="btn waves-effect waves-light col s12">Send</button>
-                                    </div> <!-- end chat-message -->
-                                </div> <!-- end chat -->
-                            </div> <!-- end container -->
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
