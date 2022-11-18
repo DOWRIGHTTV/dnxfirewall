@@ -971,7 +971,7 @@ def messenger():
 
         if (request.method == 'POST'):
 
-            authenticated, username, user_role = Authentication.user_login(request.form, request.remote_addr)  #, specify_role='messenger') NOTE: testing with admin role for now
+            authenticated, username, user_role = Authentication.user_login(request.form, request.remote_addr, specify_role='messenger')
             if (authenticated):
                 update_session_tracker(username, user_role, request.remote_addr)
 
