@@ -84,7 +84,7 @@ from source.system.dfe_services import WebPage as dnx_services
 
 from source.main.dfe_authentication import Authentication, user_restrict
 
-from source.messenger.msg_main import *
+import source.messenger.msg_main as messenger
 
 # ===============
 # TYPING IMPORTS
@@ -989,23 +989,23 @@ def messenger():
     ## CALL MESSENGER ENTRYPOINT, PASS IN USER INFO TO LOAD MESSAGES, AND RENDER TEMPLATE.
 
 @user_restrict('messenger', 'admin')  # NOTE: admin is for testing purposes only
-def messenger_chat(session_info: dict):
+def messenger_chat(session_info: dict) -> str:
 
-    # loading user chats, then rendering template.
-    if (request.method == 'GET'):
+    if not (recipient := request.form.get('recipient', '')):
+        return 'fuck'
 
-        page_settings = {
-            'session_info': session_info,
-            'contacts': get_msg_users(session_info['user']),
-            'to_user': 'broke',
-            'messages': load_user_chats()
-        }
+    # post will apply to sending messages only
+    if (request.method == 'POST'):
 
-        return render_template('messenger/chat.html', theme=context_global.theme, **page_settings)
-
-    elif (request.method == 'POST'):
-
-        # TODO: send_user_chats()
+        messenger.send_message()
         # TODO: load_user_chats()
 
-        return render_template('messenger/chat.html', theme=context_global.theme)
+    # loading user chats, then rendering template.
+    page_settings = {
+        'session_info': session_info,
+        'contacts': messenger.get_user_list(session_info['user']),
+        'to_user': 'broke',
+        'messages': messenger.get_messages()
+    }
+
+    return render_template('messenger/chat.html', theme=context_global.theme, **page_settings)
