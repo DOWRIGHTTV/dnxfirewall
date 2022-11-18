@@ -113,7 +113,7 @@ class _DBConnector:
 
         return True
 
-    def execute(self, routine_name: str, *args, **kwargs) -> list:
+    def execute(self, routine_name: str, *args, **kwargs):
 
         routine_type, routine = self._routines_get(routine_name, NO_ROUTINE)
         if (not routine):

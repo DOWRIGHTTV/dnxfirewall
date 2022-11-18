@@ -6,6 +6,8 @@ from time import time as _time  # temp
 
 from source.web_typing import *
 
+from dnx_gentools.def_constants import fast_time
+from dnx_gentools.def_namedtuples import SECURE_MESSAGE
 from dnx_gentools.file_operations import load_configuration
 
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
@@ -33,9 +35,14 @@ def get_user_list(current_user: str) -> dict[str, list[int]]:
     return msg_users
 
 # from, to, group, sent, message, expire  -> group is for future. probably wont have group for a bit.
-def get_messages(sender: str, recipient: str) -> list:
+def get_messages(sender: str, form: Form) -> tuple[str, list]:
+    recipients = form.get('recipients', None)
+    # basic input validation for now
+    if (not recipients):
+        return '', []
+
     with DBConnector() as firewall_db:
-        messages = firewall_db.execute('get_message', sender=sender, recipient=recipient)
+        messages = firewall_db.execute('get_message', sender=sender, recipients=recipients)
 
     # messages = [
     #     ['dow', 'broke', False, int(_time()) - 100, 'Ay, what are you doing?', -1],
@@ -43,11 +50,25 @@ def get_messages(sender: str, recipient: str) -> list:
     #     ['dow', 'broke', False, int(_time()) - 10, 'Ok, well give me some pcaps.', -1]
     # ]
 
-    return messages
+    return recipients, messages
 
-def send_message() -> bool:
+def send_message(sender: str, form: Form) -> bool:
+
+    recipients = form.get('recipients', None)
+    message = form.get('message', None)
+
+    # basic input validation for now
+    if (not recipients or not message):
+        return False
+
+    multi = 0
+    sent_at = fast_time()
+    expiration = -1
+
+    secure_message = SECURE_MESSAGE(sender, recipients, multi, sent_at, message, expiration)
+
     with DBConnector() as firewall_db:
-        status = firewall_db.execute('get_message', sender=sender, recipient=recipient)
+        status = firewall_db.execute('send_message', message=secure_message)
 
     return status
 

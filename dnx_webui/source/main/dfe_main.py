@@ -991,21 +991,22 @@ def messenger():
 @user_restrict('messenger', 'admin')  # NOTE: admin is for testing purposes only
 def messenger_chat(session_info: dict) -> str:
 
-    if not (recipient := request.form.get('recipient', '')):
-        return 'fuck'
+    active_user = session_info['user']
 
     # post will apply to sending messages only
     if (request.method == 'POST'):
 
-        messenger.send_message()
-        # TODO: load_user_chats()
+        if not messenger.send_message(active_user, request.form):
+            return 'fuck'
+
+    recipient, messages = messenger.get_messages(active_user, request.form)
 
     # loading user chats, then rendering template.
     page_settings = {
         'session_info': session_info,
-        'contacts': messenger.get_user_list(session_info['user']),
-        'to_user': 'broke',
-        'messages': messenger.get_messages()
+        'contacts': messenger.get_user_list(active_user),
+        'to_user': recipient,
+        'messages': messages
     }
 
     return render_template('messenger/chat.html', theme=context_global.theme, **page_settings)

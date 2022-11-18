@@ -9,7 +9,7 @@
                         <div class="col s3">
                             {{ create_title('users')|safe }}
                             <div class="row">
-                                <form method="post">
+                                <form method="get">
                                 <!-- <div class="people-list" id="people-list">
                                     <div class="search">
                                         <input type="text" placeholder="search" />
@@ -18,7 +18,7 @@
                                     <ul>
                                     {% for user, status in contacts.items() %}
                                         <li onclick="this.form.submit()" style="cursor: pointer">
-                                            <input type="hidden" name="selected_user" value="{{ user }}">
+                                            <input type="hidden" name="recipients" value="{{ user }}">
                                             <div class="">
                                                 <div class="">{{ user }}</div>
                                                 {% if status[0] %}
@@ -78,13 +78,15 @@
                                         {% endfor %}
                                         </ul>
                                     </div>
-                                    <div class="input-field col s12">
-                                        <textarea id="chat-text" class="materialize-textarea" data-length="120"></textarea>
-                                        <label for="chat-text">Message</label>
-                                    </div>
-                                    <div class="input-field col s4">
-                                        <button type="submit" name="submit" id="submit" class="btn waves-effect waves-light col s12">Send</button>
-                                    </div>
+                                    <form method="post">
+                                        <div class="input-field col s12">
+                                            <textarea id="message-text" class="materialize-textarea" data-length="120"></textarea>
+                                            <label for="message-text">Message</label>
+                                        </div>
+                                        <div class="input-field col s4">
+                                            <button type="submit" name="submit" id="submit" class="btn waves-effect waves-light col s12">Send</button>
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
                         </div>
