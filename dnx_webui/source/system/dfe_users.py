@@ -35,7 +35,7 @@ class WebPage(StandardWebPage):
         return user_list
 
     @staticmethod
-    def update(form: Form) -> Optional[str]:
+    def update(form: Form) -> tuple[int, str]:
         if ('user_add' in form):
             account_info = config(**{
                 'username': form.get('user_acct', DATA.MISSING),
@@ -44,10 +44,10 @@ class WebPage(StandardWebPage):
             })
 
             if (DATA.MISSING in account_info.values()):
-                return INVALID_FORM
+                return 1, INVALID_FORM
 
             if error := validate_account_creation(account_info):
-                return error.message
+                return 2, error.message
 
             configure_user_account(account_info, action=CFG.ADD)
 
@@ -62,16 +62,18 @@ class WebPage(StandardWebPage):
             })
 
             if (DATA.MISSING in account_info.values()):
-                return INVALID_FORM
+                return 3, INVALID_FORM
 
             if (username == session['user']):
-                return 'Cannot delete the account you are currently logged in with.'
+                return 4, 'Cannot delete the account you are currently logged in with.'
 
             else:
                 configure_user_account(account_info, action=CFG.DEL)
 
         else:
-            return INVALID_FORM
+            return 99, INVALID_FORM
+
+        return NO_STANDARD_ERROR
 
 # ==============
 # VALIDATION
