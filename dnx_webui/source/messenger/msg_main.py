@@ -8,8 +8,9 @@ from source.web_typing import *
 
 from dnx_gentools.file_operations import load_configuration
 
+from dnx_routines.database.ddb_connector_sqlite import DBConnector
 
-def get_msg_users(current_user: str) -> dict[str, list[int]]:
+def get_user_list(current_user: str) -> dict[str, list[int]]:
     web_users: ConfigChain = load_configuration('logins', filepath='/dnx_webui/data')
     active_users: ConfigChain = load_configuration('session_tracker', filepath='/dnx_webui/data')
 
@@ -18,7 +19,7 @@ def get_msg_users(current_user: str) -> dict[str, list[int]]:
         usr: [0, 0] for usr, settings in web_users.get_dict('users').items() if settings['role'] in ['admin', 'messenger']
 
     }
-    # removes self from contact list
+    # removes self from the contact list
     msg_users.pop(current_user)
 
     for user in msg_users:
@@ -32,17 +33,23 @@ def get_msg_users(current_user: str) -> dict[str, list[int]]:
     return msg_users
 
 # from, to, group, sent, message, expire  -> group is for future. probably wont have group for a bit.
-def load_user_chats():
-    messages = [
-        ['dow', 'broke', False, int(_time()) - 100, 'Ay, what are you doing?', -1],
-        ['broke', 'dow', False, int(_time()) - 50, 'Racing. Also, my shit is broken. fix it.', -1],
-        ['dow', 'broke', False, int(_time()) - 10, 'Ok, well give me some pcaps.', -1]
-    ]
+def get_messages(sender: str, recipient: str) -> list:
+    with DBConnector() as firewall_db:
+        messages = firewall_db.execute('get_message', sender=sender, recipient=recipient)
+
+    # messages = [
+    #     ['dow', 'broke', False, int(_time()) - 100, 'Ay, what are you doing?', -1],
+    #     ['broke', 'dow', False, int(_time()) - 50, 'Racing. Also, my shit is broken. fix it.', -1],
+    #     ['dow', 'broke', False, int(_time()) - 10, 'Ok, well give me some pcaps.', -1]
+    # ]
 
     return messages
 
-def send_user_chats():
-    pass
+def send_message() -> bool:
+    with DBConnector() as firewall_db:
+        status = firewall_db.execute('get_message', sender=sender, recipient=recipient)
+
+    return status
 
 def clear_user_chats():
     pass

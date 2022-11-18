@@ -199,3 +199,11 @@ class NFQ_SEND_SOCK(_NamedTuple):
     zone: int
     ip:   int
     sock_sendto: _Callable[[_Union[bytes, bytearray], _Address], int]
+
+class SECURE_MESSAGE(_NamedTuple):
+    sender: str
+    recipients: str
+    multi: int  # 0/1
+    sent_at: int
+    message: str
+    expiration: int

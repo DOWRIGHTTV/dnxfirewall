@@ -33,7 +33,7 @@ from dnx_gentools.system_info import System as _System
 # ===============
 if (TYPE_CHECKING):
     from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, DNS_REQUEST_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG
-    from dnx_gentools.def_namedtuples import INF_EVENT_LOG
+    from dnx_gentools.def_namedtuples import INF_EVENT_LOG, SECURE_MESSAGE
 
     from sqlite3 import Cursor
 
@@ -151,6 +151,13 @@ def geo_record(cur: Cursor, _, log: GEOLOCATION_LOG) -> bool:
         f'update geolocation set {log.action}={log.action}+1 where month=? and country=? and direction=?',
         (month, log.country, log.direction)
     )
+
+    return True
+
+@db.register('send_message', routine_type='write')
+# first arg is timestamp. this can likely go away with new DB API.
+def send_message(cur: Cursor, _, message: SECURE_MESSAGE) -> bool:
+    cur.execute('insert into messenger values (?, ?, ?, ?, ?, ?)', message)
 
     return True
 
@@ -277,3 +284,11 @@ def malware_count(cur: Cursor, *, table: str) -> int:
         count += res[0]
 
     return count
+
+@db.register('get_messages', routine_type='query')
+def get_messages(cur: Cursor, *, sender: str, recipients: str) -> list:
+    cur.execute(
+        'select * from messenger where sender=? and recipients=? order by sent_at', (sender, recipients)
+    )
+
+    return cur.fetchall()
