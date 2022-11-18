@@ -962,7 +962,7 @@ if (server_type == 'development'):
 # messenger will act like a single page application in that the uri will always be /messenger and chat will show if the
 # user has been authenticated, otherwise a login screen will be displayed.
 @app.route('/messenger', methods=['GET', 'POST'])
-def messenger():
+def messenger_login():
     page_settings = {
         'navi': False, 'login_btn': False, 'idle_timeout': False, 'login_error': ''
     }
