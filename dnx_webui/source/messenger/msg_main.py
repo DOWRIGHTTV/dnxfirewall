@@ -42,7 +42,10 @@ def get_messages(sender: str, form: Form) -> tuple[str, list]:
         return '', []
 
     with DBConnector() as firewall_db:
-        messages = firewall_db.execute('get_message', sender=sender, recipients=recipients)
+        messages = firewall_db.execute('get_messages', sender=sender, recipients=recipients)
+
+    if (firewall_db.failed):
+        messages = []
 
     # messages = [
     #     ['dow', 'broke', False, int(_time()) - 100, 'Ay, what are you doing?', -1],

@@ -15,14 +15,14 @@
                     <form method="post" id="recipient_form">
                       <input type="hidden" name="recipients" value="{{ user }}">
                       <div class="col s4">
-                        <button type="submit" name="change_recipients" value="1"><i class="material-icons medium">donut_small</i></button>
+                        <button type="submit" name="change_recipients" value="1"><i class="material-icons small">donut_small</i></button>
                       </div>
                       <div class="col s8">
                         <div class="">{{ user }}</div>
                       {% if status[0] %}
-                        <i class="material-icons tiny">online</i>
+                        <i class="material-icons tiny">cloud_queue</i>
                       {% else %}
-                          <i class="material-icons tiny">offline</i>
+                          <i class="material-icons tiny">cloud_off</i>
                           <span>seen: {{ status[1] }}</span>
                       {% endif %}
                       </div>
@@ -71,14 +71,13 @@
                       {% endfor %}
                     </ul>
                   </div>
-                  <form method="post">
-                    <input type="hidden" name="recipients" value="{{ to_user }}">
+                  <form method="post" {% if not to_user %}disabled{% endif %}>
                     <div class="input-field col s12">
                       <textarea name="message" id="msg-text" class="materialize-textarea" data-length="120"></textarea>
                       <label for="msg-text">Message</label>
                     </div>
                     <div class="input-field col s4">
-                      <button type="submit" name="submit" class="btn waves-effect waves-light col s12">Send</button>
+                      <button type="submit" name="recipients" value="{{ to_user }}" class="btn waves-effect waves-light col s12">Send</button>
                     </div>
                   </form>
                 </div>
