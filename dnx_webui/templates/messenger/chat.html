@@ -10,10 +10,11 @@
               {{ create_title('users')|safe }}
               <div class="row">
                 <form method="post" id="recipient_form">
+                <input type="hidden" name="change_recipients">
                   <ul>
                   {% for user, status in contacts.items() %}
                     <li onclick="document.getElementById('recipient_form').submit()" style="cursor: pointer">
-                      <input type="hidden" name="change_recipients" value="{{ user }}">
+                      <input type="hidden" name="recipients" value="{{ user }}">
                       <div class="">
                         <i class="medium material-icons">donut_small</i>
                         <div class="">{{ user }}</div>

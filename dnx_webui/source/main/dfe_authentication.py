@@ -6,7 +6,7 @@ import hashlib
 import threading
 
 from functools import wraps
-from flask import redirect, render_template, request, session, url_for
+from flask import redirect, render_template, request, session, url_for, g as context_global
 
 from source.web_typing import *
 
@@ -154,9 +154,9 @@ def user_restrict(*authorized_roles: str) -> Callable:
             # will redirect to not authorized page if the user role does not match requirements for the page
             logged_user_role = session_tracker.get(f'active_users->{user}->role')
             if (logged_user_role not in authorized_roles):
-                session.pop('user', None)
-
-                return render_template('main/not_authorized.html', navi=True, login_btn=True, idle_timeout=False)
+                return render_template(
+                    'main/not_authorized.html', theme=context_global.theme, navi=True, login_btn=True, idle_timeout=False
+                )
 
             session_info = {'user': user, **session_tracker.expanded_user_data['active_users'][user]}
 
