@@ -5,83 +5,81 @@
     <div class="row">
       <div class="col s12">
         <div class="card-panel hoverable {{ theme.card }}">
+          {{ create_title('users')|safe }}
           <div class="row">
-            <div class="col s3">
-              {{ create_title('users')|safe }}
-              <div class="row">
+            <ul>
+            {% for user, status in contacts.items() %}
+              <li>
+                <form method="post" id="recipient_form">
+                  <input type="hidden" name="recipients" value="{{ user }}">
+                  <div class="col s3">
+                    <button type="submit" name="change_recipients" value="1"><i class="material-icons small">donut_small</i></button>
+                  </div>
+                  <div class="col s8">
+                    <div class="">{{ user }}</div>
+                  {% if status[0] %}
+                    <i class="material-icons tiny right">cloud_queue</i>
+                  {% else %}
+                      <i class="material-icons tiny right">cloud_off</i>
+                      <span>seen: {{ status[1] }}</span>
+                  {% endif %}
+                  </div>
+                </form>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="col s9">
+        <div class="card-panel hoverable {{ theme.card }}">
+          {{ create_title('chat')|safe }}
+          <div class="row">
+            <div class="chat">
+              <div class="">
+                <div class="">
+                  <div class="">Chatting with {{ to_user }}</div>
+                  <div class="">{{ messages|length }} messages</div>
+                </div>
+                <i class="material-icons small">grade</i>
+              </div>
+              <div class="chat-history">
+                {{ session_info }}
                 <ul>
-                {% for user, status in contacts.items() %}
-                  <li>
-                    <form method="post" id="recipient_form">
-                      <input type="hidden" name="recipients" value="{{ user }}">
-                      <div class="col s4">
-                        <button type="submit" name="change_recipients" value="1"><i class="material-icons small">donut_small</i></button>
-                      </div>
-                      <div class="col s8">
-                        <div class="">{{ user }}</div>
-                      {% if status[0] %}
-                        <i class="material-icons tiny">cloud_queue</i>
-                      {% else %}
-                          <i class="material-icons tiny">cloud_off</i>
-                          <span>seen: {{ status[1] }}</span>
-                      {% endif %}
-                      </div>
-                    </form>
-                  </li>
+                  {% for message in messages %}
+                    {% if session_info['user'] == message[0] %}
+                      <li class="col s8 offset-s4">
+                        <div class="message-data">
+                          <span class="message-data-time">{{ message[3] }}</span>
+                          <span class="message-data-name">{{ message[0] }}</span>
+                        </div>
+                        <div class="message my-message">
+                          {{ message[4] }}
+                        </div>
+                      </li>
+                    {% else %}
+                      <li class="col s8">
+                        <div class="message-data">
+                          <span class="message-data-time">{{ message[3] }}</span>
+                          <span class="message-data-name">{{ message[0] }}</span>
+                        </div>
+                        <div class="message other-message">
+                          {{ message[4] }}
+                        </div>
+                      </li>
+                    {% endif %}
                   {% endfor %}
                 </ul>
               </div>
-            </div>
-            <div class="col s9">
-              {{ create_title('chat')|safe }}
-              <div class="row">
-                <div class="chat">
-                  <div class="">
-                    <div class="">
-                      <div class="">Chatting with {{ to_user }}</div>
-                      <div class="">{{ messages|length }} messages</div>
-                    </div>
-                    <i class="material-icons small">grade</i>
-                  </div>
-                  <div class="chat-history">
-                    {{ session_info }}
-                    <ul>
-                      {% for message in messages %}
-                        {% if session_info['user'] == message[0] %}
-                          <li class="col s8 offset-s4">
-                            <div class="message-data">
-                              <span class="message-data-time">{{ message[3] }}</span>
-                              <span class="message-data-name">{{ message[0] }}</span>
-                            </div>
-                            <div class="message my-message">
-                              {{ message[4] }}
-                            </div>
-                          </li>
-                        {% else %}
-                          <li class="col s8">
-                            <div class="message-data">
-                              <span class="message-data-time">{{ message[3] }}</span>
-                              <span class="message-data-name">{{ message[0] }}</span>
-                            </div>
-                            <div class="message other-message">
-                              {{ message[4] }}
-                            </div>
-                          </li>
-                        {% endif %}
-                      {% endfor %}
-                    </ul>
-                  </div>
-                  <form method="post" {% if not to_user %}disabled{% endif %}>
-                    <div class="input-field col s12">
-                      <textarea name="message" id="msg-text" class="materialize-textarea" data-length="120"></textarea>
-                      <label for="msg-text">Message</label>
-                    </div>
-                    <div class="input-field col s4">
-                      <button type="submit" name="recipients" value="{{ to_user }}" class="btn waves-effect waves-light col s12">Send</button>
-                    </div>
-                  </form>
+              <form method="post">
+                <div class="input-field col s12">
+                  <textarea name="message" id="msg-text" class="materialize-textarea" data-length="120"></textarea>
+                  <label for="msg-text">Message</label>
                 </div>
-              </div>
+                <div class="input-field col s4">
+                  <button type="submit" name="recipients" value="{{ to_user }}" class="btn waves-effect waves-light col s12">Send</button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
