@@ -1,108 +1,109 @@
 {% extends('layout.html')%}
 {% block body %}
 <section class="section">
-    <div class="container">
-        <div class="row">
-            <div class="col s12">
-                <div class="card-panel hoverable {{ theme.card }}">
-                    <div class="row">
-                        <div class="col s3">
-                            {{ create_title('users')|safe }}
-                            <div class="row">
-                                <form method="get">
-                                <!-- <div class="people-list" id="people-list">
-                                    <div class="search">
-                                        <input type="text" placeholder="search" />
-                                        <i class="fa fa-search"></i>
-                                    </div> -->
-                                    <ul>
-                                    {% for user, status in contacts.items() %}
-                                        <li onclick="this.form.submit()" style="cursor: pointer">
-                                            <input type="hidden" name="recipients" value="{{ user }}">
-                                            <div class="">
-                                                <div class="">{{ user }}</div>
-                                                {% if status[0] %}
-                                                <div class="">
-                                                    <i class="material-icon">online</i>
-                                                </div>
-                                                {% else %}
-                                                <div class="">
-                                                    <i class="material-icon">offline</i>
-                                                    <span>seen: {{ status[1] }}</span>
-                                                </div>
-                                                {% endif %}
-                                            </div>
-                                        </li>
-                                    {% endfor %}
-                                    </ul>
-                                </form>
-                                <!--</div>-->
-                            </div>
-                        </div>
-                        <div class="col s9">
-                            {{ create_title('chat')|safe }}
-                            <div class="row">
-                                <div class="chat">
-                                    <div class="chat-header clearfix">
-                                        <div class="chat-about">
-                                            <div class="chat-with">Chatting with {{ to_user }}</div>
-                                            <div class="chat-num-messages">{{ messages|length }} messages</div>
-                                        </div>
-                                        <i class="fa fa-star"></i>
-                                    </div>
-                                    <div class="chat-history">
-                                        {{ session_info }}
-                                        <ul>
-                                        {% for message in messages %}
-                                            {% if session_info['user'] == message[0] %}
-                                            <li class="col s8 offset-s4">
-                                                <div class="message-data">
-                                                    <span class="message-data-time">{{ message[3] }}</span>
-                                                    <span class="message-data-name">{{ message[0] }}</span>
-                                                </div>
-                                                <div class="message my-message">
-                                                    {{ message[4] }}
-                                                </div>
-                                            </li>
-                                            {% else %}
-                                            <li class="col s8">
-                                                <div class="message-data">
-                                                    <span class="message-data-time">{{ message[3] }}</span>
-                                                    <span class="message-data-name">{{ message[0] }}</span>
-                                                </div>
-                                                <div class="message other-message">
-                                                    {{ message[4] }}
-                                                </div>
-                                            </li>
-                                            {% endif %}
-                                        {% endfor %}
-                                        </ul>
-                                    </div>
-                                    <form method="post">
-                                        <div class="input-field col s12">
-                                            <textarea id="message-text" class="materialize-textarea" data-length="120"></textarea>
-                                            <label for="message-text">Message</label>
-                                        </div>
-                                        <div class="input-field col s4">
-                                            <button type="submit" name="submit" id="submit" class="btn waves-effect waves-light col s12">Send</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+  <div class="container">
+    <div class="row">
+      <div class="col s12">
+        <div class="card-panel hoverable {{ theme.card }}">
+          <div class="row">
+            <div class="col s3">
+              {{ create_title('users')|safe }}
+              <div class="row">
+                <form method="post">
+                  <!-- <div class="people-list" id="people-list">
+                      <div class="search">
+                          <input type="text" placeholder="search" />
+                          <i class="fa fa-search"></i>
+                      </div> -->
+                  <ul>
+                  {% for user, status in contacts.items() %}
+                    <li onclick="this.form.submit()" style="cursor: pointer">
+                      <input type="hidden" name="recipients" value="{{ user }}">
+                      <div class="">
+                        <div class="">{{ user }}</div>
+                        {% if status[0] %}
+                          <div class="">
+                            <i class="material-icon">online</i>
+                          </div>
+                        {% else %}
+                          <div class="">
+                            <i class="material-icon">offline</i>
+                            <span>seen: {{ status[1] }}</span>
+                          </div>
+                        {% endif %}
+                      </div>
+                    </li>
+                  {% endfor %}
+                  </ul>
+                </form>
+                <!--</div>-->
+              </div>
             </div>
+            <div class="col s9">
+              {{ create_title('chat')|safe }}
+              <div class="row">
+                <div class="chat">
+                  <div class="">
+                    <div class="">
+                      <div class="">Chatting with {{ to_user }}</div>
+                      <div class="">{{ messages|length }} messages</div>
+                    </div>
+                    <i class="fa fa-star"></i>
+                  </div>
+                  <div class="chat-history">
+                    {{ session_info }}
+                    <ul>
+                      {% for message in messages %}
+                        {% if session_info['user'] == message[0] %}
+                          <li class="col s8 offset-s4">
+                            <div class="message-data">
+                              <span class="message-data-time">{{ message[3] }}</span>
+                              <span class="message-data-name">{{ message[0] }}</span>
+                            </div>
+                            <div class="message my-message">
+                              {{ message[4] }}
+                            </div>
+                          </li>
+                        {% else %}
+                          <li class="col s8">
+                            <div class="message-data">
+                              <span class="message-data-time">{{ message[3] }}</span>
+                              <span class="message-data-name">{{ message[0] }}</span>
+                            </div>
+                            <div class="message other-message">
+                              {{ message[4] }}
+                            </div>
+                          </li>
+                        {% endif %}
+                      {% endfor %}
+                    </ul>
+                  </div>
+                  <form method="post">
+                    <input type="hidden" name="recipients" value="{{ to_user }}">
+                    <div class="input-field col s12">
+                      <textarea name="message" id="msg-text" class="materialize-textarea" data-length="120"></textarea>
+                      <label for="msg-text">Message</label>
+                    </div>
+                    <div class="input-field col s4">
+                      <button type="submit" name="submit" class="btn waves-effect waves-light col s12">Send</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
     </div>
+  </div>
 </section>
 <style>
 .chat {
-  background: #F2F5F8;
-  border-top-right-radius: 5px;
-  border-bottom-right-radius: 5px;
+    background: #F2F5F8;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
 
-  color: #434651; }
+    color: #434651; }
 
 .chat-history {
     padding: 30px 30px 20px;
@@ -110,50 +111,27 @@
     overflow-y: scroll;
     height: 575px; }
 
-    .message-data {
-      margin-bottom: 15px; }
+.message-data {
+    margin-bottom: 15px; }
 
-    .message-data-time {
-      color: lightslategrey;
-      padding-left: 6px; }
+.message-data-time {
+    color: lightslategrey;
+    padding-left: 6px; }
 
-    .message {
-      color: white;
-      padding: 18px 20px;
-      line-height: 26px;
-      font-size: 16px;
-      border-radius: 7px;
-      margin-bottom: 30px;
-      width: 90%;
-      position: relative; }
+.message {
+    color: white;
+    padding: 18px 20px;
+    line-height: 26px;
+    font-size: 16px;
+    border-radius: 7px;
+    margin-bottom: 30px;
+    width: 90%;
+    position: relative; }
 
-    .my-message {
-      background: green; }
+.my-message {
+    background: green; }
 
-    .other-message {
-      background: blue; }
+.other-message {
+    background: blue; }
 </style>
-<script id="message-template" type="text/x-handlebars-template">
-    <li class="clearfix">
-        <div class="message-data align-right">
-            <span class="message-data-time" >{{time}}, Today</span>
-            <span class="message-data-name" >Olia</span> <i class="fa fa-circle me"></i>
-        </div>
-        <div class="message other-message float-right">
-            {{messageOutput}}
-        </div>
-    </li>
-</script>
-
-<script id="message-response-template" type="text/x-handlebars-template">
-    <li>
-        <div class="message-data">
-            <span class="message-data-name"><i class="fa fa-circle online"></i> Vincent</span>
-            <span class="message-data-time">{{time}}, Today</span>
-        </div>
-        <div class="message my-message">
-            {{response}}
-        </div>
-    </li>
-</script>
 {% endblock %}
