@@ -977,7 +977,7 @@ def messenger_login():
 
                 session['user'] = username
 
-                return redirect(url_for('messenger'))
+                return redirect(url_for('messenger_login'))
 
             page_settings['login_error'] = 'Invalid Credentials. Please try again.'
 
