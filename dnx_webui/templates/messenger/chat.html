@@ -9,31 +9,27 @@
             <div class="col s3">
               {{ create_title('users')|safe }}
               <div class="row">
-                <form method="post" id="recipient_form">
-                <input type="hidden" name="change_recipients">
-                  <ul>
-                  {% for user, status in contacts.items() %}
-                    <li onclick="document.getElementById('recipient_form').submit()" style="cursor: pointer">
+                <ul>
+                {% for user, status in contacts.items() %}
+                  <li>
+                    <form method="post" id="recipient_form">
                       <input type="hidden" name="recipients" value="{{ user }}">
-                      <div class="">
-                        <i class="medium material-icons">donut_small</i>
+                      <div class="col s4">
+                        <button type="submit" name="change_recipients" value="1"><i class="material-icons medium">donut_small</i></button>
+                      </div>
+                      <div class="col s8">
                         <div class="">{{ user }}</div>
                       {% if status[0] %}
-                        <div class="">
-                          <i class="material-icon">online</i>
-                        </div>
+                        <i class="material-icons tiny">online</i>
                       {% else %}
-                        <div class="">
-                          <i class="material-icon">offline</i>
+                          <i class="material-icons tiny">offline</i>
                           <span>seen: {{ status[1] }}</span>
-                        </div>
                       {% endif %}
                       </div>
-                    </li>
+                    </form>
+                  </li>
                   {% endfor %}
-                  </ul>
-                </form>
-                <!--</div>-->
+                </ul>
               </div>
             </div>
             <div class="col s9">
@@ -45,7 +41,7 @@
                       <div class="">Chatting with {{ to_user }}</div>
                       <div class="">{{ messages|length }} messages</div>
                     </div>
-                    <i class="fa fa-star"></i>
+                    <i class="material-icons small">grade</i>
                   </div>
                   <div class="chat-history">
                     {{ session_info }}
