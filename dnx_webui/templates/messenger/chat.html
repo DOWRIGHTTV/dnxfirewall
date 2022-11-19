@@ -2,9 +2,9 @@
 {% block body %}
 <section class="section">
   <div class="container">
-    <div class="row">
-      <div class="col s12">
-        <div class="card-panel hoverable {{ theme.card }}">
+    <div class="row row-flex">
+      <div class="col s3">
+        <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
           {{ create_title('users')|safe }}
           <div class="row">
             <ul>
@@ -13,14 +13,14 @@
                 <form method="post" id="recipient_form">
                   <input type="hidden" name="recipients" value="{{ user }}">
                   <div class="col s3">
-                    <button type="submit" name="change_recipients" value="1"><i class="material-icons small">donut_small</i></button>
+                    <button type="submit" name="change_recipients" value="1" class="no-border"><i class="material-icons small">donut_small</i></button>
                   </div>
                   <div class="col s8">
                     <div class="">{{ user }}</div>
                   {% if status[0] %}
-                    <i class="material-icons tiny right">cloud_queue</i>
+                    <i class="material-icons small right">cloud_queue</i>
                   {% else %}
-                      <i class="material-icons tiny right">cloud_off</i>
+                      <i class="material-icons small right">cloud_off</i>
                       <span>seen: {{ status[1] }}</span>
                   {% endif %}
                   </div>
@@ -32,7 +32,7 @@
         </div>
       </div>
       <div class="col s9">
-        <div class="card-panel hoverable {{ theme.card }}">
+        <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
           {{ create_title('chat')|safe }}
           <div class="row">
             <div class="chat">
