@@ -995,7 +995,7 @@ def messenger_chat(session_info: dict) -> str:
 
     if (request.method == 'POST'):
 
-        if ('change_recipient' not in request.form):
+        if ('change_recipients' not in request.form):
 
             if not messenger.send_message(active_user, request.form):
                 return 'fuck'
