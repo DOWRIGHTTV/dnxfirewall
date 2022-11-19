@@ -12,17 +12,17 @@
               <li>
                 <form method="post" id="recipient_form">
                   <input type="hidden" name="recipients" value="{{ user }}">
-                  <div class="col s3">
+                  <div class="col s2">
                     <button type="submit" name="change_recipients" value="1" class="btn btn-floating blue-grey waves-light">
                       <i class="material-icons small">donut_small</i>
                     </button>
                   </div>
-                  <div class="col s8">
-                    <div class="col s8">
-                    <div class="row">{{ user }}</div>
-                      {% if not status[0] %}<div class="row">seen: {{ status[1] }}</div>{% endif %}
+                  <div class="col s10">
+                    <div class="col s9">
+                      <div>{{ user }}</div>
+                      {% if not status[0] %}<div>seen: {{ status[1] }}</div>{% endif %}
                     </div>
-                    <div class="col s4">
+                    <div class="col s3">
                     {% if status[0] %}
                       <i class="material-icons small">cloud_queue</i>
                     {% else %}
@@ -37,14 +37,14 @@
           </div>
         </div>
       </div>
-      <div class="col s9">
+      <div class="col s8">
         <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
           {{ create_title('chat')|safe }}
           <div class="row">
             <div class="chat">
               <div class="">
-                <div class="row">Chatting with {{ to_user }}</div>
-                <div class="row">{{ messages|length }} messages</div>
+                <div>Chatting with {{ to_user }}</div>
+                <div>{{ messages|length }} messages</div>
               </div>
               <div class="chat-history">
                 <ul>
