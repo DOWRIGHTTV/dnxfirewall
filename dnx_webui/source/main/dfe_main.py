@@ -993,11 +993,12 @@ def messenger_chat(session_info: dict) -> str:
 
     active_user = session_info['user']
 
-    # post will apply to sending messages only
     if (request.method == 'POST'):
 
-        if not messenger.send_message(active_user, request.form):
-            return 'fuck'
+        if ('change_recipient' not in request.form):
+
+            if not messenger.send_message(active_user, request.form):
+                return 'fuck'
 
     recipient, messages = messenger.get_messages(active_user, request.form)
 

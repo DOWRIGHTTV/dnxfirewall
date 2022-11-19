@@ -9,28 +9,24 @@
             <div class="col s3">
               {{ create_title('users')|safe }}
               <div class="row">
-                <form method="post">
-                  <!-- <div class="people-list" id="people-list">
-                      <div class="search">
-                          <input type="text" placeholder="search" />
-                          <i class="fa fa-search"></i>
-                      </div> -->
+                <form method="post" id="recipient_form">
                   <ul>
                   {% for user, status in contacts.items() %}
-                    <li onclick="this.form.submit()" style="cursor: pointer">
-                      <input type="hidden" name="recipients" value="{{ user }}">
+                    <li onclick="document.getElementById('recipient_form').submit()" style="cursor: pointer">
+                      <input type="hidden" name="change_recipients" value="{{ user }}">
                       <div class="">
+                        <i class="medium material-icons">donut_small</i>
                         <div class="">{{ user }}</div>
-                        {% if status[0] %}
-                          <div class="">
-                            <i class="material-icon">online</i>
-                          </div>
-                        {% else %}
-                          <div class="">
-                            <i class="material-icon">offline</i>
-                            <span>seen: {{ status[1] }}</span>
-                          </div>
-                        {% endif %}
+                      {% if status[0] %}
+                        <div class="">
+                          <i class="material-icon">online</i>
+                        </div>
+                      {% else %}
+                        <div class="">
+                          <i class="material-icon">offline</i>
+                          <span>seen: {{ status[1] }}</span>
+                        </div>
+                      {% endif %}
                       </div>
                     </li>
                   {% endfor %}
