@@ -564,17 +564,17 @@ def main():
 @app.route('/<path>', methods=['GET', 'POST'])
 def default(path):
 
-    return render_template(general_error_page, general_error=f'{path} not found.')
+    return render_template(general_error_page, theme=context_global.theme, general_error=f'{path} not found.')
 
 @app.route('/<path_a>/<path_b>', methods=['GET', 'POST'])
 def default_sub(path_a, path_b):
 
-    return render_template(general_error_page, general_error=f'{path_a}/{path_b} not found.')
+    return render_template(general_error_page, theme=context_global.theme, general_error=f'{path_a}/{path_b} not found.')
 
 @app.route('/<path_a>/<path_b>/<path_c>', methods=['GET', 'POST'])
 def default_sub_sub(path_a, path_b, path_c):
 
-    return render_template(general_error_page, general_error=f'{path_a}/{path_b}/{path_c} not found.')
+    return render_template(general_error_page, theme=context_global.theme, general_error=f'{path_a}/{path_b}/{path_c} not found.')
 
 # --------------------------------------------- #
 # all standard page loads use this logic to decide the page action/ call the correct
@@ -787,43 +787,55 @@ def load_user_settings() -> None:
 
         context_global.settings = web_config.get_dict(f'users->{user}->settings')
 
+
+# ================
+# THEMES
+# ================
+theme_common = {
+    'mode': '',
+    'nav_text': 'blue-grey-text text-darken-2',
+    'subnav_text': 'blue-grey-text text-darken-3',
+    'tab_text': 'blue-grey-text text-lighten-2',
+    'tab_classes': 'tab col s4 l3 xl2',
+    'icon': 'teal-text text-lighten-2',
+    'modal_text': 'blue-grey-text center',
+}
+
+theme_dark = {
+    'background': (
+        'style="background: url(static/assets/images/dnx_bg1_dark.svg); '
+        'background-repeat: repeat; '
+        'background-attachment: fixed;"'
+    ),
+    'main_section': 'blue-grey lighten-2',
+    'off_section': 'blue-grey lighten-5',
+    'card': 'blue-grey lighten-4',
+    'title': 'black-text'
+}
+
+theme_light = {
+    'background': (
+        'style="background: url(static/assets/images/dnx_bg1_light.svg); '
+        'background-repeat: repeat; '
+        'background-attachment: fixed;"'
+    ),
+    'main_section': 'grey lighten-2',
+    'off_section': 'grey lighten-5',
+    'card': 'grey lighten-4',
+    'title': 'blue-grey-text text-darken-1'
+}
 @app.before_request
 def set_theme_values() -> None:
-    theme = context_global.theme = {
-        'mode': context_global.settings['theme'],  # // for now until we pass all settings into template context
-        'nav_text': 'blue-grey-text text-darken-2',
-        'subnav_text': 'blue-grey-text text-darken-3',
-        'tab_text': 'blue-grey-text text-lighten-2',
-        'tab_classes': 'tab col s4 l3 xl2',
-        'icon': 'teal-text text-lighten-2',
-        'modal_text': 'blue-grey-text center',
-    }
+    style = context_global.settings['theme']
 
-    if (context_global.settings['theme'] == 'dark'):
-        theme.update({
-            'background': (
-                'style="background: url(static/assets/images/dnx_bg1_dark.svg); '
-                'background-repeat: repeat; '
-                'background-attachment: fixed;"'
-            ),
-            'main_section': 'blue-grey lighten-2',
-            'off_section': 'blue-grey lighten-5',
-            'card': 'blue-grey lighten-4',
-            'title': 'black-text'
-        })
+    context_global.theme = {'mode': style}
+    context_global.theme.update(theme_common)
 
-    elif (context_global.settings['theme'] == 'light'):
-        theme.update({
-            'background': (
-                'style="background: url(static/assets/images/dnx_bg1_light.svg); '
-                'background-repeat: repeat; '
-                'background-attachment: fixed;"'
-            ),
-            'main_section': 'grey lighten-2',
-            'off_section': 'grey lighten-5',
-            'card': 'grey lighten-4',
-            'title': 'blue-grey-text text-darken-1'
-        })
+    if (style == 'dark'):
+        context_global.theme.update(theme_dark)
+
+    elif (style == 'light'):
+        context_global.theme.update(theme_light)
 
 # ====================================
 # FLASK API - TEMPLATE FUNCTIONS
