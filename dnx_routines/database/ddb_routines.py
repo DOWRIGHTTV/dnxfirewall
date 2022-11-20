@@ -141,7 +141,7 @@ def geo_record(cur: Cursor, _, log: GEOLOCATION_LOG) -> bool:
     cur.execute(f'select * from geolocation where month=? and country=?', (month, log.country))
 
     existing_record = cur.fetchone()
-    # if first time the country has been seen in the current month, it will be initialized with zeroes
+    # if it's the first time a country has been seen in the current month, it will be initialized with zeroes
     if (not existing_record):
         cur.execute(f'insert into geolocation values (?, ?, ?, ?, ?)', (month, log.country, log.direction, 0, 0))
 
@@ -155,7 +155,6 @@ def geo_record(cur: Cursor, _, log: GEOLOCATION_LOG) -> bool:
     return True
 
 @db.register('send_message', routine_type='write')
-# first arg is timestamp. this can likely go away with new DB API.
 def send_message(cur: Cursor, _, message: SECURE_MESSAGE) -> bool:
     cur.execute('insert into messenger values (?, ?, ?, ?, ?, ?)', message)
 

@@ -75,14 +75,11 @@ class _DBConnector:
     #  significant impact as it is covered by the context.
     def __init__(self, log: LogHandler_T = None, *, table: str = None, readonly: bool = False, connect: bool = True):
 
-        # used to notify a calling process whether a failure occurred within the context.
-        # this does not distinguish if multiple calls/returns are done.
-        self.failed: bool = False
-
         self._log: LogHandler_T = log
         self._table: str = table
-        self._readonly: bool = readonly
-        self._connect: bool = connect
+
+        self._readonly = readonly
+        self._connect = connect
 
         self._conn = None
         self._cur  = None
@@ -90,6 +87,10 @@ class _DBConnector:
         self._data_written: bool = False
 
         self._routines_get: Callable_T = self._routines.get
+
+        # used to notify a calling process whether a failure occurred within the context.
+        # this does not distinguish if multiple calls/returns are done.
+        self.failed: bool = False
 
     def __enter__(self) -> DBConnector:
         if (self._connect):
