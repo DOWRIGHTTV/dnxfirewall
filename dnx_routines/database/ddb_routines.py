@@ -155,7 +155,7 @@ def geo_record(cur: Cursor, _, log: GEOLOCATION_LOG) -> bool:
     return True
 
 @db.register('send_message', routine_type='write')
-def send_message(cur: Cursor, _, message: SECURE_MESSAGE) -> bool:
+def send_message(cur: Cursor, message: SECURE_MESSAGE) -> bool:
     cur.execute('insert into messenger values (?, ?, ?, ?, ?, ?)', message)
 
     return True
