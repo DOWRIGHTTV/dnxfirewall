@@ -71,9 +71,9 @@ def send_message(sender: str, form: Form) -> bool:
     secure_message = SECURE_MESSAGE(sender, recipients, multi, sent_at, message, expiration)
 
     with DBConnector() as firewall_db:
-        status = firewall_db.execute('send_message', message=secure_message)
+        firewall_db.execute('send_message', message=secure_message)
 
-    return status
+    return not firewall_db.failed
 
 def clear_user_chats():
     pass
