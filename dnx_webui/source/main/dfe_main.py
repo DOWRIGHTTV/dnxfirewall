@@ -988,7 +988,7 @@ def messenger_login():
 
     ## CALL MESSENGER ENTRYPOINT, PASS IN USER INFO TO LOAD MESSAGES, AND RENDER TEMPLATE.
 
-@user_restrict('messenger', 'admin')  # NOTE: admin is for testing purposes only
+@user_restrict('messenger', 'admin', login_page='messenger')  # NOTE: admin is for testing purposes only
 def messenger_chat(session_info: dict) -> str:
 
     active_user = session_info['user']

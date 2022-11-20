@@ -126,7 +126,7 @@ class Authentication:
 
 # TODO: make messanger redirection go to correct login page
 # web ui page authorization handler
-def user_restrict(*authorized_roles: str) -> Callable:
+def user_restrict(*authorized_roles: str, login_page: str = 'dnx_login') -> Callable:
     '''user authorization decorator to limit access according to account roles.
 
     apply this decorator to any flask function associated with page route with the user rules in decorator argument.
@@ -137,7 +137,7 @@ def user_restrict(*authorized_roles: str) -> Callable:
         def wrapper(*_):
             # will redirect to login page if user is not logged in
             if not (user := session.get('user', None)):
-                return redirect(url_for('dnx_login'))
+                return redirect(url_for(login_page))
 
             # NOTE: this is dnx local tracking of sessions, not to be confused with flask session tracking.
             # they are essentially copies of each other, but dnx is used to track all active sessions.
@@ -149,7 +149,7 @@ def user_restrict(*authorized_roles: str) -> Callable:
             if (logged_remote_addr != request.remote_addr):
                 session.pop('user', None)
 
-                return redirect(url_for('dnx_login'))
+                return redirect(url_for(login_page))
 
             # will redirect to not authorized page if the user role does not match requirements for the page
             logged_user_role = session_tracker.get(f'active_users->{user}->role')
