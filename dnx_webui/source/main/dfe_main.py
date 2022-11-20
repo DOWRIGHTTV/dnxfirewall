@@ -509,7 +509,7 @@ def dnx_login():
 @app.route('/blocked')
 def dnx_blocked() -> str:
     page_settings = {
-        'navi': True, 'login_btn': True, 'idle_timeout': False,
+        'navi': False, 'login_btn': True, 'idle_timeout': False,
         'uri_path': ['blocked']
     }
 
@@ -533,14 +533,18 @@ def dnx_blocked() -> str:
         return render_template('main/not_authorized.html', theme=context_global.theme, **page_settings)
 
     with DBConnector() as firewall_db:
-        domain_info = firewall_db.execute('main/blocked_domain', domain=blocked_domain, src_ip=request.remote_addr)
+        domain_info = firewall_db.execute('blocked_domain', domain=blocked_domain, src_ip=request.remote_addr)
 
     if (not domain_info):
         session.pop('user', None)
 
         return render_template('main/not_authorized.html', theme=context_global.theme, **page_settings)
 
-    page_settings.update({'standard_error': False, 'src_ip': request.remote_addr, 'blocked': domain_info})
+    page_settings.update({
+        'navi': True,
+        'standard_error': False,
+        'src_ip': request.remote_addr,
+        'blocked': domain_info})
 
     return render_template('main/blocked.html', theme=context_global.theme, **page_settings)
 

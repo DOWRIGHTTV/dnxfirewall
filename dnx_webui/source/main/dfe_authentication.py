@@ -154,6 +154,13 @@ def user_restrict(*authorized_roles: str, login_page: str = 'dnx_login') -> Call
             # will redirect to not authorized page if the user role does not match requirements for the page
             logged_user_role = session_tracker.get(f'active_users->{user}->role')
             if (logged_user_role not in authorized_roles):
+
+                # this prevents issues when going from the messenger to the admin panel
+                if (logged_user_role == 'messenger'):
+                    session.pop('user', None)
+
+                    return redirect(url_for(login_page))
+
                 return render_template(
                     'main/not_authorized.html', theme=context_global.theme, navi=True, login_btn=True, idle_timeout=False
                 )
