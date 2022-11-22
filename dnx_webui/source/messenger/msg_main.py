@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from time import time as _time  # temp
-
 from source.web_typing import *
 
 from dnx_gentools.def_constants import fast_time
 from dnx_gentools.def_namedtuples import SECURE_MESSAGE
 from dnx_gentools.file_operations import load_configuration
+from dnx_gentools.system_info import System
 
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 
@@ -30,7 +29,7 @@ def get_user_list(current_user: str) -> dict[str, list[int]]:
             msg_users[user][0] = 1
 
         else:
-            msg_users[user][1] = int(_time())
+            msg_users[user][1] = System.format_log_time(fast_time())
 
     return msg_users
 
@@ -46,12 +45,6 @@ def get_messages(sender: str, form: Form) -> tuple[str, list]:
 
     if (firewall_db.failed):
         messages = []
-
-    # messages = [
-    #     ['dow', 'broke', False, int(_time()) - 100, 'Ay, what are you doing?', -1],
-    #     ['broke', 'dow', False, int(_time()) - 50, 'Racing. Also, my shit is broken. fix it.', -1],
-    #     ['dow', 'broke', False, int(_time()) - 10, 'Ok, well give me some pcaps.', -1]
-    # ]
 
     return recipients, messages
 
@@ -75,5 +68,8 @@ def send_message(sender: str, form: Form) -> bool:
 
     return not firewall_db.failed
 
-def clear_user_chats():
+def delete_message():
+    pass
+
+def purge_messages():
     pass

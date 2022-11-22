@@ -7,7 +7,7 @@ from datetime import timedelta
 
 from source.web_typing import *
 
-from dnx_gentools.def_constants import HOME_DIR, FIVE_SEC, fast_time, ppt
+from dnx_gentools.def_constants import HOME_DIR, FIVE_SEC, ppt
 from dnx_gentools.def_enums import CFG
 from dnx_gentools.def_exceptions import ConfigurationError
 from dnx_gentools.file_operations import load_configuration, ConfigurationManager
@@ -82,7 +82,7 @@ from source.system.dfe_users import WebPage as dfe_users
 from source.system.dfe_backups import WebPage as dfe_backups
 from source.system.dfe_services import WebPage as dnx_services
 
-from source.main.dfe_authentication import Authentication, user_restrict
+from source.main.dfe_authentication import Authentication, user_restrict, update_session_tracker, authenticated_session
 
 import source.messenger.msg_main as messenger
 
@@ -406,7 +406,7 @@ def system_logs_system(session_info: dict):
 
 @app.post('/system/log/system/get')
 @user_restrict('user', 'admin')
-def system_logs_get(session_info):
+def system_logs_get(session_info: dict):
     json_data = request.get_json(force=True)
 
     _, _, table_data = sys_logs.handle_ajax(json_data)
@@ -491,12 +491,8 @@ def dnx_login():
 
     if (request.method == 'POST'):
 
-        authenticated, username, user_role = Authentication.user_login(request.form, request.remote_addr)
+        authenticated, username, user_role = Authentication.user_login()
         if (authenticated):
-            update_session_tracker(username, user_role, request.remote_addr)
-
-            session['user'] = username
-
             return redirect(url_for('dnx_dashboard'))
 
         page_settings['login_error'] = 'Invalid Credentials. Please try again.'
@@ -565,20 +561,10 @@ def main():
 
 # TODO: make this use a new non application error page because explanation doesnt make sense. also transfer session
 #  of logged in users.
-@app.route('/<path>', methods=['GET', 'POST'])
-def default(path):
+@app.errorhandler(404)
+def page_not_found(error):
 
-    return render_template(general_error_page, theme=context_global.theme, general_error=f'{path} not found.')
-
-@app.route('/<path_a>/<path_b>', methods=['GET', 'POST'])
-def default_sub(path_a, path_b):
-
-    return render_template(general_error_page, theme=context_global.theme, general_error=f'{path_a}/{path_b} not found.')
-
-@app.route('/<path_a>/<path_b>/<path_c>', methods=['GET', 'POST'])
-def default_sub_sub(path_a, path_b, path_c):
-
-    return render_template(general_error_page, theme=context_global.theme, general_error=f'{path_a}/{path_b}/{path_c} not found.')
+    return render_template(general_error_page, theme=context_global.theme, general_error='page not found.')
 
 # --------------------------------------------- #
 # all standard page loads use this logic to decide the page action/ call the correct
@@ -712,30 +698,6 @@ def get_default_page_settings(session_info, *, uri_path: list[str]) -> dict:
 
     return page_settings
 
-def update_session_tracker(name: str, role: Optional[str] = None, remote_addr: Optional[str] = None, *, action: CFG = CFG.ADD) -> None:
-
-    if (action is CFG.ADD and not remote_addr):
-        raise ValueError('remote_addr must be specified if action is set to add.')
-
-    with ConfigurationManager('session_tracker', file_path='dnx_webui/data') as session_tracker:
-        persistent_tracker: ConfigChain = session_tracker.load_configuration()
-
-        user_path = f'active_users->{name}'
-        if (action is CFG.ADD):
-
-            persistent_tracker[f'{user_path}->role'] = role
-            persistent_tracker[f'{user_path}->remote_addr'] = remote_addr
-            persistent_tracker[f'{user_path}->logged_in'] = fast_time()  # NOTE: make human-readable?
-            persistent_tracker[f'{user_path}->last_seen'] = None
-
-        elif (action is CFG.DEL):
-            try:
-                del persistent_tracker[f'active_users->{name}']
-            except KeyError:
-                pass
-
-        session_tracker.write_configuration(persistent_tracker.expanded_user_data)
-
 def ajax_response(*, status: bool, data: Union[dict, list]):
     if (not isinstance(status, bool)):
         raise TypeError('Ajax response status must be a boolean.')
@@ -743,9 +705,6 @@ def ajax_response(*, status: bool, data: Union[dict, list]):
     # print(jsonify({'success': status, 'result': data}))
 
     return jsonify({'success': status, 'result': data})
-
-def authenticated_session() -> Optional[str]:
-    return session.get('user', None)
 
 # =================================
 # FLASK API - REQUEST MODS
@@ -756,9 +715,8 @@ def user_timeout() -> None:
     app.permanent_session_lifetime = timedelta(minutes=30)
     session.modified = True
 
-
 @app.before_request
-def set_user_settings() -> None:
+def set_user_settings(user: str) -> None:
     if not (user := authenticated_session()): return
 
     # ------------------
@@ -779,7 +737,7 @@ def set_user_settings() -> None:
                 webui.write_configuration(webui_settings.expanded_user_data)
 
 @app.before_request
-def load_user_settings() -> None:
+def load_user_settings(user: str) -> None:
 
     # loading defaults before returning. manually setting since theme is only tracked setting as of now.
     if not (user := authenticated_session()):
@@ -790,6 +748,7 @@ def load_user_settings() -> None:
         web_config: ConfigChain = load_configuration('logins', filepath='/dnx_webui/data')
 
         context_global.settings = web_config.get_dict(f'users->{user}->settings')
+
 
 
 # ================
@@ -987,12 +946,8 @@ def messenger_login():
 
         if (request.method == 'POST'):
 
-            authenticated, username, user_role = Authentication.user_login(request.form, request.remote_addr, specify_role='messenger')
+            authenticated, username, user_role = Authentication.user_login(specify_role='messenger')
             if (authenticated):
-                update_session_tracker(username, user_role, request.remote_addr)
-
-                session['user'] = username
-
                 return redirect(url_for('messenger_login'))
 
             page_settings['login_error'] = 'Invalid Credentials. Please try again.'

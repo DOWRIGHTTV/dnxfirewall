@@ -246,7 +246,7 @@ class System:
                 data, rule = rule[:2], rule[2:]
 
                 arg, value = data
-                # filtering out unneccesary args
+                # filtering out unnecessary args
                 if arg in ['-m', '-j']: continue
 
                 if (nat_type == 'SRCNAT'):

@@ -10,43 +10,48 @@ from flask import redirect, render_template, request, session, url_for, g as con
 
 from source.web_typing import *
 
-from dnx_gentools.def_constants import fast_sleep
-from dnx_gentools.def_enums import LOG
-from dnx_gentools.file_operations import load_configuration
+from dnx_gentools.def_constants import fast_time, fast_sleep
+from dnx_gentools.def_enums import LOG, CFG
+from dnx_gentools.file_operations import load_configuration, ConfigurationManager
 
 from dnx_routines.logging.log_client import direct_log
 
 
 LOG_NAME = 'logins'
 
-
 class Authentication:
+    '''Auth extension for WebUI.
+
+    this class will access the Flask "request" and "session" data structures directly.
+    '''
     def __init__(self):
         self._time_expired: Event = threading.Event()
 
     @classmethod
-    def user_login(cls, form: Form, login_ip: str, *, specify_role: Optional[str] = None) -> tuple:
+    def user_login(cls, *, specify_role: Optional[str] = None) -> tuple:
         '''authenticate a user to the dnx web frontend.
 
-        pass in the flask form and source ip. return will be a boolean representing whether the user is authenticated
-        and authorized.
+        return will be a boolean representing whether the user is authenticated and authorized.
 
-        login success/fail will take same amount of time to return to reduce timing based attack vulnerabilities.
+        login success/fail will take the same amount of time to return to reduce timing based attack vulnerabilities.
         '''
         self = cls()
 
         threading.Timer(.6, self._time_expired.set).start()
 
-        authorized, username, user_role = self._user_login(form, specify_role)
+        authorized, username, user_role = self._user_login(specify_role)
         if (authorized):
-            direct_log(LOG_NAME, LOG.NOTICE, f'User {username} successfully logged in from {login_ip}.')
+            direct_log(LOG_NAME, LOG.NOTICE, f'User {username} successfully logged in from {request.remote_addr}.')
 
         else:
-            direct_log(LOG_NAME, LOG.WARNING, f'Failed login attempt for user {username} from {login_ip}.')
+            direct_log(LOG_NAME, LOG.WARNING, f'Failed login attempt for user {username} from {request.remote_addr}.')
 
         # blocks until expiration flag is set
         while not self._time_expired:
             fast_sleep(.202)
+
+        if (authorized):
+            update_session_tracker(username, user_role, request.remote_addr)
 
         return authorized, username, user_role
 
@@ -89,9 +94,9 @@ class Authentication:
 
         return hash_total.hexdigest()
 
-    def _user_login(self, form: Form, specify_role: Optional[str]) -> tuple[bool, Optional[str], Optional[str]]:
-        password: str = form.get('password', '')
-        username: str = form.get('username', '').lower()
+    def _user_login(self, specify_role: Optional[str]) -> tuple[bool, Optional[str], Optional[str]]:
+        password: str = request.form.get('password', '')
+        username: str = request.form.get('username', '').lower()
         if (not username or not password):
             return False, None, None
 
@@ -124,9 +129,57 @@ class Authentication:
             # returning True on password match else False
             return password == hexpass
 
-# TODO: make messanger redirection go to correct login page
+def update_session_tracker(name: str, role: Optional[str] = None, remote_addr: Optional[str] = None, *, action: CFG = CFG.ADD) -> None:
+
+    if (action is CFG.ADD and not remote_addr):
+        raise ValueError('remote_addr must be specified if action is set to add.')
+
+    with ConfigurationManager('session_tracker', file_path='dnx_webui/data') as session_tracker:
+        persistent_tracker: ConfigChain = session_tracker.load_configuration()
+
+        user_path = f'active_users->{name}'
+        if (action is CFG.ADD):
+
+            persistent_tracker[f'{user_path}->role'] = role
+            persistent_tracker[f'{user_path}->remote_addr'] = remote_addr
+            persistent_tracker[f'{user_path}->logged_in'] = fast_time()
+            persistent_tracker[f'{user_path}->last_seen'] = fast_time()
+
+            # adding user to flask session data structure
+            session['user'] = name
+
+        # NOTE: user must be removed from Flask session separately
+        elif (action is CFG.DEL):
+            try:
+                del persistent_tracker[f'active_users->{name}']
+            except KeyError:
+                pass
+
+        session_tracker.write_configuration(persistent_tracker.expanded_user_data)
+
+
+def authenticated_session() -> Optional[str]:
+    return session.get('user', None)
+
+def send_to_login_page():
+    '''determines correct login page, then returns a Response object redirect accordingly.
+    '''
+    login_page = 'messenger' if request.path == '/messenger' else 'dnx_login'
+
+    return redirect(url_for(login_page))
+
+def end_session_send_to_login_page(login_page: str = 'dnx_login'):
+    '''1. remove user from Flask session data structure.
+    2. determines correct login page, then returns a Response object redirect accordingly.
+    '''
+    login_page = 'messenger' if request.path == '/messenger' else 'dnx_login'
+
+    session.pop('user', None)
+
+    return redirect(url_for(login_page))
+
 # web ui page authorization handler
-def user_restrict(*authorized_roles: str, login_page: str = 'dnx_login') -> Callable:
+def user_restrict(*authorized_roles: str) -> Callable:
     '''user authorization decorator to limit access according to account roles.
 
     apply this decorator to any flask function associated with page route with the user rules in decorator argument.
@@ -136,8 +189,8 @@ def user_restrict(*authorized_roles: str, login_page: str = 'dnx_login') -> Call
         @wraps(function_to_wrap)
         def wrapper(*_):
             # will redirect to login page if user is not logged in
-            if not (user := session.get('user', None)):
-                return redirect(url_for(login_page))
+            if not (user := authenticated_session()):
+                return send_to_login_page()
 
             # NOTE: this is dnx local tracking of sessions, not to be confused with flask session tracking.
             # they are essentially copies of each other, but dnx is used to track all active sessions.
@@ -147,9 +200,7 @@ def user_restrict(*authorized_roles: str, login_page: str = 'dnx_login') -> Call
 
             logged_remote_addr = session_tracker.get(f'active_users->{user}->remote_addr')
             if (logged_remote_addr != request.remote_addr):
-                session.pop('user', None)
-
-                return redirect(url_for(login_page))
+                return end_session_send_to_login_page()
 
             # will redirect to not authorized page if the user role does not match requirements for the page
             logged_user_role = session_tracker.get(f'active_users->{user}->role')
@@ -157,9 +208,7 @@ def user_restrict(*authorized_roles: str, login_page: str = 'dnx_login') -> Call
 
                 # this prevents issues when going from the messenger to the admin panel
                 if (logged_user_role == 'messenger'):
-                    session.pop('user', None)
-
-                    return redirect(url_for(login_page))
+                    return end_session_send_to_login_page()
 
                 return render_template(
                     'main/not_authorized.html', theme=context_global.theme, navi=True, login_btn=True, idle_timeout=False
