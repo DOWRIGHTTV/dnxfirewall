@@ -115,8 +115,20 @@ class System:
         return logged_time + offset
 
     @staticmethod
+    def format_msg_time(epoch: Timestamp) -> str:
+        '''return date and time in the messenger format.
+
+        Jun 24 19:08:15
+        '''
+        f_time = ctime(epoch).split()
+
+        return f'{f_time[1]} {f_time[2]} {f_time[3]}'
+
+    @staticmethod
     def format_log_time(epoch: Timestamp) -> str:
-        '''return date and time in the front end log format. 2019 Jun 24 19:08:15
+        '''return date and time in the front end log format.
+
+        2019 Jun 24 19:08:15
         '''
         f_time = ctime(epoch).split()
 
@@ -126,7 +138,7 @@ class System:
     def format_date_time(epoch: Timestamp) -> str:
         '''return date and time in the general format.
 
-            19:08:15 Jun 24 2019
+        19:08:15 Jun 24 2019
         '''
         f_time = ctime(epoch).split()
 
@@ -136,7 +148,7 @@ class System:
     def format_time(epoch: Timestamp) -> str:
         '''return time in the general 24h format.
 
-            19:08:15
+        19:08:15
         '''
         return f'{ctime(epoch).split()[3]}'
 

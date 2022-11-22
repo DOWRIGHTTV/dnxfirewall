@@ -29,10 +29,11 @@ def get_user_list(current_user: str) -> dict[str, list[int]]:
             msg_users[user][0] = 1
 
         else:
-            msg_users[user][1] = System.format_log_time(fast_time())
+            msg_users[user][1] = System.format_msg_time(fast_time())
 
     return msg_users
 
+# TODO: figure out how time will be formatted. namedtuple method?
 # from, to, group, sent, message, expire  -> group is for future. probably wont have group for a bit.
 def get_messages(sender: str, form: Form) -> tuple[str, list]:
     recipients = form.get('recipients', None)
