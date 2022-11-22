@@ -82,7 +82,7 @@ from source.system.dfe_users import WebPage as dfe_users
 from source.system.dfe_backups import WebPage as dfe_backups
 from source.system.dfe_services import WebPage as dnx_services
 
-from source.main.dfe_authentication import Authentication, user_restrict, update_session_tracker, authenticated_session
+from source.main.dfe_authentication import *
 
 # ===============
 # TYPING IMPORTS
@@ -555,7 +555,7 @@ def refresh_session(session_info: dict):
 # --------------------------------------------- #
 @app.get('/')
 def main():
-    return redirect(url_for('dnx_login'))
+    return send_to_login_page()
 
 # TODO: make this use a new non application error page because explanation doesnt make sense. also transfer session
 #  of logged in users.

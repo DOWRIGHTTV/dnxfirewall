@@ -12,7 +12,7 @@ class WebPage:
 
     @staticmethod
     def update(form: Form) -> tuple[int, str]:
-        raise NotImplementedError('update page static not defined.')
+        raise NotImplementedError('update page not defined.')
 
     @staticmethod
     def handle_ajax(json_data: dict) -> tuple[bool, WebError]:
