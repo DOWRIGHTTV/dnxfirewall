@@ -217,7 +217,7 @@ def authenticated_session() -> Optional[str]:
 def send_to_login_page():
     '''determines correct login page, then returns a Response object redirect accordingly.
     '''
-    login_page = 'messenger' if request.path == '/messenger' else 'dnx_login'
+    login_page = 'messenger_login' if request.path == '/messenger' else 'dnx_login'
 
     return redirect(url_for(login_page))
 
@@ -225,7 +225,7 @@ def end_session_send_to_login_page(login_page: str = 'dnx_login'):
     '''1. remove user from Flask session data structure.
     2. determines correct login page, then returns a Response object redirect accordingly.
     '''
-    login_page = 'messenger' if request.path == '/messenger' else 'dnx_login'
+    login_page = 'messenger_login' if request.path == '/messenger' else 'dnx_login'
 
     session.pop('user', None)
 
