@@ -17,6 +17,13 @@ from dnx_gentools.file_operations import load_configuration, ConfigurationManage
 from dnx_routines.logging.log_client import direct_log
 
 
+__all__ = (
+    'Authentication', 'user_restrict',
+
+    'update_session_tracker', 'authenticated_session',
+    'send_to_login_page', 'end_session_send_to_login_page',
+)
+
 LOG_NAME = 'logins'
 
 class Authentication:
@@ -129,6 +136,52 @@ class Authentication:
             # returning True on password match else False
             return password == hexpass
 
+# web ui page authorization handler
+def user_restrict(*authorized_roles: str) -> Callable:
+    '''user authorization decorator to limit access according to account roles.
+
+    apply this decorator to any flask function associated with page route with the user rules in decorator argument.
+    '''
+    def decorator(function_to_wrap: Callable[[dict], str]):
+
+        @wraps(function_to_wrap)
+        def wrapper(*_):
+            # will redirect to login page if user is not logged in
+            if not (user := authenticated_session()):
+                return send_to_login_page()
+
+            # NOTE: this is dnx local tracking of sessions, not to be confused with flask session tracking.
+            # they are essentially copies of each other, but dnx is used to track all active sessions.
+            # NOTE: dnx session data limits connections to 1 per user.
+            # this may change in the future, but some enterprise systems have similar or multiple tab restrictions.
+            session_tracker: ConfigChain = load_configuration('session_tracker', filepath='dnx_webui/data')
+
+            logged_remote_addr = session_tracker.get(f'active_users->{user}->remote_addr')
+            if (logged_remote_addr != request.remote_addr):
+                return end_session_send_to_login_page()
+
+            # will redirect to not authorized page if the user role does not match requirements for the page
+            logged_user_role = session_tracker.get(f'active_users->{user}->role')
+            if (logged_user_role not in authorized_roles):
+
+                # this prevents issues when going from the messenger to the admin panel
+                if (logged_user_role == 'messenger'):
+                    return end_session_send_to_login_page()
+
+                return render_template(
+                    'main/not_authorized.html', theme=context_global.theme, navi=True, login_btn=True, idle_timeout=False
+                )
+
+            session_info = {'user': user, **session_tracker.expanded_user_data['active_users'][user]}
+
+            # flask page function
+            page_action = function_to_wrap(session_info)
+
+            return page_action
+
+        return wrapper
+    return decorator
+
 def update_session_tracker(name: str, role: Optional[str] = None, remote_addr: Optional[str] = None, *, action: CFG = CFG.ADD) -> None:
 
     if (action is CFG.ADD and not remote_addr):
@@ -177,49 +230,3 @@ def end_session_send_to_login_page(login_page: str = 'dnx_login'):
     session.pop('user', None)
 
     return redirect(url_for(login_page))
-
-# web ui page authorization handler
-def user_restrict(*authorized_roles: str) -> Callable:
-    '''user authorization decorator to limit access according to account roles.
-
-    apply this decorator to any flask function associated with page route with the user rules in decorator argument.
-    '''
-    def decorator(function_to_wrap: Callable[[dict], str]):
-
-        @wraps(function_to_wrap)
-        def wrapper(*_):
-            # will redirect to login page if user is not logged in
-            if not (user := authenticated_session()):
-                return send_to_login_page()
-
-            # NOTE: this is dnx local tracking of sessions, not to be confused with flask session tracking.
-            # they are essentially copies of each other, but dnx is used to track all active sessions.
-            # NOTE: dnx session data limits connections to 1 per user.
-            # this may change in the future, but some enterprise systems have similar or multiple tab restrictions.
-            session_tracker: ConfigChain = load_configuration('session_tracker', filepath='dnx_webui/data')
-
-            logged_remote_addr = session_tracker.get(f'active_users->{user}->remote_addr')
-            if (logged_remote_addr != request.remote_addr):
-                return end_session_send_to_login_page()
-
-            # will redirect to not authorized page if the user role does not match requirements for the page
-            logged_user_role = session_tracker.get(f'active_users->{user}->role')
-            if (logged_user_role not in authorized_roles):
-
-                # this prevents issues when going from the messenger to the admin panel
-                if (logged_user_role == 'messenger'):
-                    return end_session_send_to_login_page()
-
-                return render_template(
-                    'main/not_authorized.html', theme=context_global.theme, navi=True, login_btn=True, idle_timeout=False
-                )
-
-            session_info = {'user': user, **session_tracker.expanded_user_data['active_users'][user]}
-
-            # flask page function
-            page_action = function_to_wrap(session_info)
-
-            return page_action
-
-        return wrapper
-    return decorator

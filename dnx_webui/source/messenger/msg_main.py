@@ -1,75 +1,59 @@
 #!/usr/bin/env python3
 
-from __future__ import annotations
+from flask import Flask, render_template, request, g as context_global
 
-from source.web_typing import *
+from source.main.dfe_authentication import *
 
-from dnx_gentools.def_constants import fast_time
-from dnx_gentools.def_namedtuples import SECURE_MESSAGE
-from dnx_gentools.file_operations import load_configuration
-from dnx_gentools.system_info import System
+app = Flask.app
 
-from dnx_routines.database.ddb_connector_sqlite import DBConnector
+# =================================
+# SECURE MESSENGER
+# =================================
+import source.messenger.msg_control as messenger
 
-def get_user_list(current_user: str) -> dict[str, list[int]]:
-    web_users: ConfigChain = load_configuration('logins', filepath='/dnx_webui/data')
-    active_users: ConfigChain = load_configuration('session_tracker', filepath='/dnx_webui/data')
-
-    # [online, last seen] -> if online, last seen will be 0
-    msg_users = {
-        usr: [0, 0] for usr, settings in web_users.get_dict('users').items() if settings['role'] in ['admin', 'messenger']
-
+# messenger will act like a single page application in that the uri will always be /messenger and chat will show if the
+# user has been authenticated, otherwise a login screen will be displayed.
+@app.route('/messenger', methods=['GET', 'POST'])
+def messenger_login():
+    page_settings = {
+        'navi': False, 'login_btn': False, 'idle_timeout': False, 'login_error': ''
     }
-    # removes self from the contact list
-    msg_users.pop(current_user)
 
-    for user in msg_users:
+    if not (user := authenticated_session()):
 
-        if user in active_users.get_list('active_users'):
-            msg_users[user][0] = 1
+        if (request.method == 'POST'):
 
-        else:
-            msg_users[user][1] = System.format_log_time(fast_time())
+            authenticated, username, user_role = Authentication.user_login(specify_role='messenger')
+            if (authenticated):
+                return send_to_login_page()
 
-    return msg_users
+            page_settings['login_error'] = 'Invalid Credentials. Please try again.'
 
-# from, to, group, sent, message, expire  -> group is for future. probably wont have group for a bit.
-def get_messages(sender: str, form: Form) -> tuple[str, list]:
-    recipients = form.get('recipients', None)
-    # basic input validation for now
-    if (not recipients):
-        return '', []
+        return render_template('messenger/login.html', theme=context_global.theme, **page_settings)
 
-    with DBConnector() as firewall_db:
-        messages = firewall_db.execute('get_messages', sender=sender, recipients=recipients)
+    # AUTHENTICATED USERS
+    return messenger_chat()
 
-    if (firewall_db.failed):
-        messages = []
+@user_restrict('messenger', 'admin')  # NOTE: admin is for testing purposes only
+def messenger_chat(session_info: dict) -> str:
 
-    return recipients, messages
+    active_user = session_info['user']
 
-def send_message(sender: str, form: Form) -> bool:
+    if (request.method == 'POST'):
 
-    recipients = form.get('recipients', None)
-    message = form.get('message', None)
+        if ('change_recipients' not in request.form):
 
-    # basic input validation for now
-    if (not recipients or not message):
-        return False
+            if not messenger.send_message(active_user, request.form):
+                return 'fuck'
 
-    multi = 0
-    sent_at = fast_time()
-    expiration = -1
+    recipient, messages = messenger.get_messages(active_user, request.form)
 
-    secure_message = SECURE_MESSAGE(sender, recipients, multi, sent_at, message, expiration)
+    # loading user chats, then rendering template.
+    page_settings = {
+        'session_info': session_info,
+        'contacts': messenger.get_user_list(active_user),
+        'to_user': recipient,
+        'messages': messages
+    }
 
-    with DBConnector() as firewall_db:
-        firewall_db.execute('send_message', message=secure_message)
-
-    return not firewall_db.failed
-
-def delete_message():
-    pass
-
-def purge_messages():
-    pass
+    return render_template('messenger/chat.html', theme=context_global.theme, **page_settings)
