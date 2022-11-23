@@ -25,7 +25,7 @@ import dnx_routines.database.ddb_connector_sqlite as _db_conn
 
 from dnx_gentools.def_typing import TYPE_CHECKING, Optional
 from dnx_gentools.def_constants import fast_sleep as _fsleep
-from dnx_gentools.def_namedtuples import BLOCKED_DOM as _BLOCKED_DOM, SECURE_MESSAGE as _SECURE_MESSAGE
+from dnx_gentools.def_namedtuples import BLOCKED_DOM as _BLOCKED_DOM
 from dnx_gentools.system_info import System as _System
 
 # ===============
@@ -33,7 +33,7 @@ from dnx_gentools.system_info import System as _System
 # ===============
 if (TYPE_CHECKING):
     from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, DNS_REQUEST_LOG, IPS_EVENT_LOG, GEOLOCATION_LOG
-    from dnx_gentools.def_namedtuples import INF_EVENT_LOG, SECURE_MESSAGE
+    from dnx_gentools.def_namedtuples import INF_EVENT_LOG
 
     from sqlite3 import Cursor
 
@@ -151,8 +151,8 @@ def geo_record(cur: Cursor, _, log: GEOLOCATION_LOG) -> bool:
     return True
 
 @db.register('send_message', routine_type='write')
-def send_message(cur: Cursor, message: SECURE_MESSAGE) -> bool:
-    cur.execute('insert into messenger values (?, ?, ?, ?, ?, ?, ?)', (message.msg_id, *message))
+def send_message(cur: Cursor, *, msg_id: str, message) -> bool:
+    cur.execute('insert into messenger values (?, ?, ?, ?, ?, ?, ?)', (msg_id, *message))
 
     return True
 
@@ -281,10 +281,10 @@ def malware_count(cur: Cursor, *, table: str) -> int:
     return count
 
 @db.register('get_messages', routine_type='query')
-def get_messages(cur: Cursor, *, sender: str, recipients: str) -> list[_SECURE_MESSAGE]:
+def get_messages(cur: Cursor, *, sender: str, recipients: str) -> list:
     cur.execute(
         'select * from messenger where sender=? and recipients=? order by sent_at', (sender, recipients)
     )
 
-    # converting db rows to associated named tuple
-    return [_SECURE_MESSAGE(*row[1:]) for row in cur.fetchall()]
+    return cur.fetchall()
+

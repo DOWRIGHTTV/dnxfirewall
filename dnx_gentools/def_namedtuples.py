@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-from hashlib import sha256 as _sha256
-
 from collections import namedtuple as _namedtuple
-from functools import lru_cache as _lru_cache, cached_property as _cached_property
+from functools import lru_cache as _lru_cache
 from typing import NamedTuple as _NamedTuple, Union as _Union, Optional as _Optional, Any as _Any, Callable as _Callable
 from typing import ByteString as _ByteString
 
 from dnx_gentools.def_enums import PROTO as _PROTO, DHCP as _DHCP, DNS_CAT as _DNS_CAT, CONN as _CONN, IPS as _IPS
 from dnx_gentools.standard_tools import bytecontainer as _bytecontainer
-from dnx_gentools.system_info import System as _System
 
 from dnx_iptools.def_structs import dhcp_byte_pack as _dhcp_bp, dhcp_short_pack as _dhcp_sp, dhcp_long_pack as _dhcp_lp
 
@@ -202,25 +199,3 @@ class NFQ_SEND_SOCK(_NamedTuple):
     zone: int
     ip:   int
     sock_sendto: _Callable[[_Union[bytes, bytearray], _Address], int]
-
-
-_format_msg_time = _System.format_msg_time
-class SECURE_MESSAGE(_NamedTuple):
-    sender: str
-    recipients: str
-    multi: int  # 0/1
-    sent_at: int
-    message: str
-    expiration: int
-
-    @_cached_property
-    def to_string(self) -> str:
-        return f'({self.sender},{self.recipients},{self.multi},{self.sent_at},{self.message},{self.expiration})'
-
-    @_cached_property
-    def msg_id(self) -> str:
-        return _sha256(self.to_string).hexdigest()
-
-    @_cached_property
-    def msg_time(self) -> str:
-        return _format_msg_time(self.sent_at)

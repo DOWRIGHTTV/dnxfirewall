@@ -2,14 +2,38 @@
 
 from __future__ import annotations
 
+from functools import cached_property
+from typing import NamedTuple
+from hashlib import sha256
+
 from source.web_typing import *
 
 from dnx_gentools.def_constants import fast_time
-from dnx_gentools.def_namedtuples import SECURE_MESSAGE
 from dnx_gentools.file_operations import load_configuration
 from dnx_gentools.system_info import System
 
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
+
+_format_msg_time = System.format_msg_time
+class SECURE_MESSAGE(NamedTuple):
+    sender: str
+    recipients: str
+    multi: int  # 0/1
+    sent_at: int
+    message: str
+    expiration: int
+
+    @cached_property
+    def to_string(self) -> str:
+        return f'({self.sender},{self.recipients},{self.multi},{self.sent_at},{self.message},{self.expiration})'
+
+    @cached_property
+    def msg_id(self) -> str:
+        return sha256(self.to_string).hexdigest()
+
+    @cached_property
+    def msg_time(self) -> str:
+        return _format_msg_time(self.sent_at)
 
 def get_user_list(current_user: str) -> dict[str, list[int]]:
     web_users: ConfigChain = load_configuration('logins', filepath='/dnx_webui/data')
@@ -35,7 +59,7 @@ def get_user_list(current_user: str) -> dict[str, list[int]]:
 
 # TODO: figure out how time will be formatted. namedtuple method?
 # from, to, group, sent, message, expire  -> group is for future. probably wont have group for a bit.
-def get_messages(sender: str, form: Form) -> tuple[str, list]:
+def get_messages(sender: str, form: Form) -> tuple[str, list[SECURE_MESSAGE]]:
     recipients = form.get('recipients', None)
     # basic input validation for now
     if (not recipients):
@@ -44,8 +68,7 @@ def get_messages(sender: str, form: Form) -> tuple[str, list]:
     with DBConnector() as firewall_db:
         messages = firewall_db.execute('get_messages', sender=sender, recipients=recipients)
 
-    if (firewall_db.failed):
-        messages = []
+    messages = [SECURE_MESSAGE(*row[1:]) for row in messages]
 
     return recipients, messages
 
@@ -65,7 +88,7 @@ def send_message(sender: str, form: Form) -> bool:
     secure_message = SECURE_MESSAGE(sender, recipients, multi, sent_at, message, expiration)
 
     with DBConnector() as firewall_db:
-        firewall_db.execute('send_message', message=secure_message)
+        firewall_db.execute('send_message', msg_id=secure_message.msg_id, message=secure_message)
 
     return not firewall_db.failed
 

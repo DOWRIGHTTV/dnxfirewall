@@ -5,14 +5,13 @@ from __future__ import annotations
 import os
 import datetime
 
-from time import ctime, sleep
-from ipaddress import IPv4Address
+from time import ctime
 from functools import partial
 from datetime import datetime, timedelta
 from subprocess import run, CalledProcessError, DEVNULL
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import HOME_DIR, fast_time, str_join, NO_DELAY, FIVE_SEC, ONE_HOUR
+from dnx_gentools.def_constants import HOME_DIR, fast_time, str_join, NO_DELAY, ONE_HOUR
 from dnx_gentools.file_operations import load_configuration, load_data
 
 __all__ = (
