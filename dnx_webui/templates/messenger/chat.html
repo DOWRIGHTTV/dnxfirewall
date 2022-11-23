@@ -53,7 +53,7 @@
                     {% set msg_type = 'my-message' if session_info['user'] == message.sender else 'other-message' %}
                       <li class="{{ msg_class }}">
                         <div class="message-data">
-                          <span class="message-data-time">{{ message.msg_time }}</span>
+                          <span class="message-data-time">{{ message.msg_time() }}</span>
                           <span class="message-data-name">{{ message.sender }}</span>
                         </div>
                         <div class="message {{ msg_type }}">

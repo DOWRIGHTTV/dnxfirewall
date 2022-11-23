@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from functools import cached_property
+from functools import cache
 from typing import NamedTuple
 from hashlib import sha256
 
@@ -23,15 +23,15 @@ class SECURE_MESSAGE(NamedTuple):
     message: str
     expiration: int
 
-    @cached_property
+    @cache
     def to_string(self) -> str:
         return f'({self.sender},{self.recipients},{self.multi},{self.sent_at},{self.message},{self.expiration})'
 
-    @cached_property
+    @cache
     def msg_id(self) -> str:
-        return sha256(self.to_string).hexdigest()
+        return sha256(self.to_string()).hexdigest()
 
-    @cached_property
+    @cache
     def msg_time(self) -> str:
         return _format_msg_time(self.sent_at)
 
@@ -88,7 +88,7 @@ def send_message(sender: str, form: Form) -> bool:
     secure_message = SECURE_MESSAGE(sender, recipients, multi, sent_at, message, expiration)
 
     with DBConnector() as firewall_db:
-        firewall_db.execute('send_message', msg_id=secure_message.msg_id, message=secure_message)
+        firewall_db.execute('send_message', msg_id=secure_message.msg_id(), message=secure_message)
 
     return not firewall_db.failed
 
