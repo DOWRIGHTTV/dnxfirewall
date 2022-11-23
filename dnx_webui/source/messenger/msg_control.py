@@ -24,12 +24,10 @@ class SECURE_MESSAGE(NamedTuple):
     expiration: int
 
     @lru_cache
-    def to_string(self) -> str:
-        return f'({self.sender},{self.recipients},{self.multi},{self.sent_at},{self.message},{self.expiration})'
-
-    @lru_cache
     def msg_id(self) -> str:
-        return sha256(self.to_string()).hexdigest()
+        id_string = f'({self.sender}, {self.recipients}, {self.multi}, {self.sent_at}, {self.message}, {self.expiration})'
+
+        return sha256(bytes(id_string, 'utf-8')).hexdigest()
 
     def msg_time(self) -> str:
         return _format_msg_time(self.sent_at)
