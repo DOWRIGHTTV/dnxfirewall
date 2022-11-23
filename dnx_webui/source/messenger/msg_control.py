@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from functools import cache
+from functools import lru_cache
 from typing import NamedTuple
 from hashlib import sha256
 
@@ -23,15 +23,14 @@ class SECURE_MESSAGE(NamedTuple):
     message: str
     expiration: int
 
-    @cache
+    @lru_cache
     def to_string(self) -> str:
         return f'({self.sender},{self.recipients},{self.multi},{self.sent_at},{self.message},{self.expiration})'
 
-    @cache
+    @lru_cache
     def msg_id(self) -> str:
         return sha256(self.to_string()).hexdigest()
 
-    @cache
     def msg_time(self) -> str:
         return _format_msg_time(self.sent_at)
 
