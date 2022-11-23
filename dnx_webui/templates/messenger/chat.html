@@ -49,27 +49,17 @@
               <div class="chat-history">
                 <ul>
                   {% for message in messages %}
-                    {% if session_info['user'] == message[0] %}
-                      <li class="col s8 offset-s4">
+                    {% set msg_class = 'col s8 offset-s4' if session_info['user'] == message.sender else 'col s8' %}
+                    {% set msg_type = 'my-message' if session_info['user'] == message.sender else 'other-message' %}
+                      <li class="{{ msg_class }}">
                         <div class="message-data">
-                          <span class="message-data-time">{{ message[3] }}</span>
-                          <span class="message-data-name">{{ message[0] }}</span>
+                          <span class="message-data-time">{{ message.msg_time }}</span>
+                          <span class="message-data-name">{{ message.sender }}</span>
                         </div>
-                        <div class="message my-message">
-                          {{ message[4] }}
+                        <div class="message {{ msg_type }}">
+                          {{ message.message }}
                         </div>
                       </li>
-                    {% else %}
-                      <li class="col s8">
-                        <div class="message-data">
-                          <span class="message-data-time">{{ message[3] }}</span>
-                          <span class="message-data-name">{{ message[0] }}</span>
-                        </div>
-                        <div class="message other-message">
-                          {{ message[4] }}
-                        </div>
-                      </li>
-                    {% endif %}
                   {% endfor %}
                 </ul>
               </div>

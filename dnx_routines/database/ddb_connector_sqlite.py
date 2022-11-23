@@ -211,8 +211,9 @@ class _DBConnector:
         self._cur.execute(
             """
             create table if not exists messenger 
-            (sender text not null, recipients text not null, multi int4 not null, 
-            sent_at int4 not null, message text not null, expiration int4 not null)
+            (msg_id text not null, sender text not null, recipients text not null, 
+            multi int4 not null, sent_at int4 not null, message text not null, 
+            expiration int4 not null)
             """
         )
 
