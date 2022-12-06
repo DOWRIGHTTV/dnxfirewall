@@ -55,7 +55,7 @@ def run():
     os._exit(0)
 
 def reset_flask_key():
-    with ConfigurationManager('system') as dnx:
+    with ConfigurationManager('system', cfg_type='global') as dnx:
         flask_settings = dnx.load_configuration()
 
         flask_settings['flask->key'] = token_urlsafe(32)
@@ -63,7 +63,7 @@ def reset_flask_key():
         dnx.write_configuration(flask_settings.expanded_user_data)
 
 def set_default_mac_flag():
-    with ConfigurationManager('system') as dnx:
+    with ConfigurationManager('system', cfg_type='global') as dnx:
         dnx_settings = dnx.load_configuration()
 
         if (not dnx_settings['interfaces->builtins->wan->mac_set']):

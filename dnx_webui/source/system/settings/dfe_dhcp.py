@@ -168,7 +168,7 @@ def validate_reservation(res: config, /) -> Optional[ValidationError]:
 # CONFIGURATION
 # ==============
 def configure_dhcp_settings(dhcp_settings: config):
-    with ConfigurationManager('dhcp_server') as dnx:
+    with ConfigurationManager('dhcp_server', cfg_type='global') as dnx:
         server_settings: ConfigChain = dnx.load_configuration()
 
         interface = dhcp_settings.pop('interface')

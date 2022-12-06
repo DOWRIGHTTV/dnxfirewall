@@ -33,7 +33,7 @@ QNAME_NOT_FOUND = QNAME_RECORD_UPDATE(-1, [])
 
 def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Callable[[int, ClientQuery], None]) -> DNSCache:
 
-    _top_domains: list = load_configuration('dns_server', ext='cache').get('top_domains')
+    _top_domains: list = load_configuration('dns_server', ext='cache', cfg_type='global').get('top_domains')
 
     domain_counter: Counter[str, int] = Counter({dom: cnt for cnt, dom in enumerate(reversed(_top_domains))})
     counter_lock: Lock = threading.Lock()
@@ -70,7 +70,7 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
 
             Log.notice('top domains cache has been cleared.')
 
-        with ConfigurationManager('dns_server', ext='cache') as dnx:
+        with ConfigurationManager('dns_server', ext='cache', cfg_type='global') as dnx:
             cache_settings: ConfigChain = dnx.load_configuration()
 
             cache_settings['clear->standard'] = clear_dns_cache
