@@ -228,7 +228,7 @@ def cfg_read_poller(
         else:
             @wraps(function_to_wrap)
             def wrapper(*args):
-                watcher = Watcher(watch_file, ext, folder, callback=function_to_wrap)
+                watcher = Watcher(watch_file, ext, cfg_type, folder, callback=function_to_wrap)
                 watcher.watch(*args)
 
             wrapper = classmethod(wrapper)
@@ -603,17 +603,20 @@ class Watcher:
      primary use is to detect when an administrator has changed a configuration file.
      '''
     __slots__ = (
-        '_watch_file', '_cfg_type', '_callback', '_full_path',
+        '_watch_file', '_ext', '_cfg_type', 'file_path', '_callback', '_full_path',
         '_last_modified_time'
     )
 
-    def __init__(self, watch_file: str, ext: str, cfg_type: str, folder: str, *, callback: Callable_T):
+    def __init__(self, watch_file: str, ext: str, cfg_type: str, file_path: str, *, callback: Callable_T):
         self._watch_file = watch_file
-        self._cfg_type   = cfg_type
+
+        self._ext       = ext
+        self._cfg_type  = cfg_type
+        self._file_path = file_path
 
         self._callback = callback
 
-        self._full_path: str = f'{HOME_DIR}/dnx_profile/{folder}/usr/{self._watch_file}.{ext}'
+        self._full_path: str = f'{HOME_DIR}/dnx_profile/{file_path}/usr/{watch_file}.{ext}'
 
         self._last_modified_time: int = 0
 
@@ -627,7 +630,7 @@ class Watcher:
         for _ in RUN_FOREVER:
 
             if (self.is_modified):
-                args = [*args, load_configuration(self._watch_file, cfg_type=self._cfg_type)]
+                args = [*args, load_configuration(self._watch_file, ext=self._ext, cfg_type=self._cfg_type, filepath=self._file_path)]
 
                 self._callback(*args)
 
