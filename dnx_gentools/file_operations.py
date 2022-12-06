@@ -206,7 +206,7 @@ def calculate_file_hash(file_to_hash: str, *, path: str = 'dnx_profile', folder:
     return file_hash
 
 def cfg_read_poller(
-        watch_file: str, *, ext: str = 'cfg', cfg_type: str = '', folder: str = 'data', class_method: bool = False):
+        watch_file: str, *, ext: str = 'cfg', cfg_type: str = '', filepath: str = 'dnx_profile/data', class_method: bool = False):
     '''Automate Class configuration file poll decorator.
 
     apply this decorator to all functions that will update configurations loaded in memory from json files.
@@ -222,13 +222,13 @@ def cfg_read_poller(
         if (not class_method):
             @wraps(function_to_wrap)
             def wrapper(*args):
-                watcher = Watcher(watch_file, ext, cfg_type, folder, callback=function_to_wrap)
+                watcher = Watcher(watch_file, ext, cfg_type, filepath, callback=function_to_wrap)
                 watcher.watch(*args)
 
         else:
             @wraps(function_to_wrap)
             def wrapper(*args):
-                watcher = Watcher(watch_file, ext, cfg_type, folder, callback=function_to_wrap)
+                watcher = Watcher(watch_file, ext, cfg_type, filepath, callback=function_to_wrap)
                 watcher.watch(*args)
 
             wrapper = classmethod(wrapper)
@@ -603,20 +603,20 @@ class Watcher:
      primary use is to detect when an administrator has changed a configuration file.
      '''
     __slots__ = (
-        '_watch_file', '_ext', '_cfg_type', '_file_path', '_callback', '_full_path',
+        '_watch_file', '_ext', '_cfg_type', '_filepath', '_callback', '_full_path',
         '_last_modified_time'
     )
 
-    def __init__(self, watch_file: str, ext: str, cfg_type: str, file_path: str, *, callback: Callable_T):
+    def __init__(self, watch_file: str, ext: str, cfg_type: str, filepath: str, *, callback: Callable_T):
         self._watch_file = watch_file
 
         self._ext       = ext
         self._cfg_type  = cfg_type
-        self._file_path = file_path
+        self._filepath = filepath
 
         self._callback = callback
 
-        self._full_path: str = f'{HOME_DIR}/dnx_profile/{file_path}/usr/{watch_file}.{ext}'
+        self._full_path: str = f'{HOME_DIR}/{filepath}/usr/{watch_file}.{ext}'
 
         self._last_modified_time: int = 0
 

@@ -76,7 +76,7 @@ class FirewallAutomate:
 
         self._initialize.wait_for_threads(count=4)
 
-    @cfg_read_poller('zone', ext='firewall', folder='iptables')
+    @cfg_read_poller('zone', ext='firewall', filepath='dnx_profile/iptables')
     # zone int values are arbitrary / randomly selected on zone creation.
     def _monitor_zones(self, zone_map: str) -> None:
         '''Monitors the firewall zone file for changes and loads updates to cfirewall.
@@ -100,7 +100,7 @@ class FirewallAutomate:
 
         self._initialize.done()
 
-    @cfg_read_poller('system', ext='firewall', folder='iptables')
+    @cfg_read_poller('system', ext='firewall', filepath='dnx_profile/iptables')
     def _monitor_system_rules(self, system_rules: str) -> None:
         # 0-99: system reserved - 1. loopback 10/11. dhcp, 20/21. dns, 30/31. http, 40/41. https, etc
         #   - add loopback to system table
@@ -130,7 +130,7 @@ class FirewallAutomate:
 
         self._initialize.done()
 
-    @cfg_read_poller('active', ext='firewall', folder='iptables')
+    @cfg_read_poller('active', ext='firewall', filepath='dnx_profile/iptables')
     def _monitor_standard_rules(self, fw_rules: str) -> None:
         '''Monitors the active firewall rules file for changes and loads updates to cfirewall.
 
@@ -166,7 +166,7 @@ class FirewallAutomate:
 
         self._initialize.done()
 
-    @cfg_read_poller('active', ext='nat', folder='iptables')
+    @cfg_read_poller('active', ext='nat', filepath='dnx_profile/iptables')
     def _monitor_nat_rules(self, nat_rules: str) -> None:
         '''Monitors the active firewall rules file for changes and loads updates to cfirewall.
 
