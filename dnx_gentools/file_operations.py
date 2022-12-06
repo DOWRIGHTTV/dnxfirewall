@@ -630,7 +630,7 @@ class Watcher:
         for _ in RUN_FOREVER:
 
             if (self.is_modified):
-                args = [*args, load_configuration(self._watch_file, ext=self._ext, cfg_type=self._cfg_type, filepath=self._file_path)]
+                args = [*args, load_configuration(self._watch_file, ext=self._ext, cfg_type=self._cfg_type, filepath=self._filepath)]
 
                 self._callback(*args)
 
