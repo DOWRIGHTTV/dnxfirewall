@@ -603,7 +603,7 @@ class Watcher:
      primary use is to detect when an administrator has changed a configuration file.
      '''
     __slots__ = (
-        '_watch_file', '_ext', '_cfg_type', 'file_path', '_callback', '_full_path',
+        '_watch_file', '_ext', '_cfg_type', '_file_path', '_callback', '_full_path',
         '_last_modified_time'
     )
 
