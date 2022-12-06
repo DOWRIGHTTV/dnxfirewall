@@ -57,8 +57,8 @@ def generate_domain(log: LogHandler_T) -> list[list[int, int]]:
     # getting all enabled signatures
     domain_signatures: list = _combine_domain(log)
 
-    wl_exceptions: list = load_configuration('whitelist').get_list('pre_proxy')
-    bl_exceptions: list = load_configuration('blacklist').get_list('pre_proxy')
+    wl_exceptions: list = load_configuration('whitelist', cfg_type='global').get_list('pre_proxy')
+    bl_exceptions: list = load_configuration('blacklist', cfg_type='global').get_list('pre_proxy')
 
     # converting blacklist exceptions (pre proxy) to be compatible with dnx signature syntax
     domain_signatures.extend([f'{domain} blacklist' for domain in bl_exceptions])

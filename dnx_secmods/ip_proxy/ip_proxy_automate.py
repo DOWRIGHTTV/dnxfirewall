@@ -88,7 +88,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
         self._initialize.done()
 
-    @cfg_read_poller('whitelist')
+    @cfg_read_poller('whitelist', cfg_type='global')
     def _get_ip_whitelist(self, cfg_file: str) -> None:
         whitelist: ConfigChain = load_configuration(cfg_file)
 
