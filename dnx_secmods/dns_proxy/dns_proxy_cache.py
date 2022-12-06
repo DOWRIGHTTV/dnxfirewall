@@ -103,7 +103,7 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
         ]
 
         # updating persistent file first then sending requests
-        with ConfigurationManager('dns_server', ext='cache') as dnx:
+        with ConfigurationManager('dns_server', ext='cache', cfg_type='global') as dnx:
             cache_storage: ConfigChain = dnx.load_configuration()
 
             cache_storage['top_domains'] = top_domains

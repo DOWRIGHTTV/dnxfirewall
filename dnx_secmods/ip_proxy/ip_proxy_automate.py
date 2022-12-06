@@ -89,8 +89,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
         self._initialize.done()
 
     @cfg_read_poller('whitelist', cfg_type='global')
-    def _get_ip_whitelist(self, cfg_file: str) -> None:
-        whitelist: ConfigChain = load_configuration(cfg_file)
+    def _get_ip_whitelist(self, whitelist: ConfigChain) -> None:
 
         self.__class__.ip_whitelist = {
             ip for ip, wl_info in whitelist.get_items('ip_bypass') if wl_info['type'] == 'ip'
