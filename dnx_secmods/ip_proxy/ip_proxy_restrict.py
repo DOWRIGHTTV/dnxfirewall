@@ -65,7 +65,7 @@ class LanRestrict:
         self.proxy = proxy
         self.initialize = Initialize(Log, proxy.__name__)
 
-        cls._active = load_data('ip_proxy.timer', cfg_type='system/global')['active']
+        cls._active = load_data('ip_proxy.timer', cfg_type='security/ip')['active']
 
         threading.Thread(target=self._get_settings).start()
         threading.Thread(target=self._tracker).start()
@@ -73,8 +73,7 @@ class LanRestrict:
         self.initialize.wait_for_threads(count=2)
 
     @cfg_read_poller('ip', cfg_type='security/ip')
-    def _get_settings(self, cfg_file: str) -> None:
-        proxy_settings = load_configuration(cfg_file)
+    def _get_settings(self, proxy_settings: ConfigChain) -> None:
 
         self.__class__._enabled = proxy_settings['time_restriction->enabled']
 
