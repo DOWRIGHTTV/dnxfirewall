@@ -38,8 +38,7 @@ def get_user_list(current_user: str) -> dict[str, list[int]]:
 
     # [online, last seen] -> if online, last seen will be 0
     msg_users = {
-        usr: [0, 0] for usr, settings in web_users.get_dict('users').items() if settings['role'] in ['admin', 'messenger']
-
+        usr: [0, 0] for usr, settings in web_users.get_dict('users').items() if settings['role'] == 'messenger'
     }
     # removes self from the contact list
     msg_users.pop(current_user)
@@ -65,6 +64,7 @@ def get_messages(sender: str, form: Form) -> tuple[str, list[SECURE_MESSAGE]]:
     with DBConnector() as firewall_db:
         messages = firewall_db.execute('get_messages', sender=sender, recipients=recipients)
 
+    # converting db rows to namedtuples
     messages = [SECURE_MESSAGE(*row[1:]) for row in messages]
 
     return recipients, messages
