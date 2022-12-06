@@ -33,10 +33,10 @@ class WebPage(StandardWebPage):
         return backups_info
 
     @staticmethod
-    def update_page(form: Form):
+    def update(form: Form) -> tuple[int, str]:
 
         if (_BACKUP_DISABLED):
-            return 'configuration backups are currently disabled for rework.'
+            return -1, 'configuration backups are currently disabled for rework.'
 
         backup_type = get_convert_int(form, 'cfg_backup')
         try:

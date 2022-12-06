@@ -51,7 +51,7 @@ class _DBConnector:
             registered_routine = staticmethod(func_ref)
 
             # print(f'REGISTERED FUNC_REF {registered_routine}')
-            # define static method as db connector class attribute
+            # defines a static method as the db connector class attribute
             setattr(cls, routine_name, registered_routine)
 
             # storing routines in class dictionary to make it easier to associate name, type and function ref. getattr
@@ -75,14 +75,11 @@ class _DBConnector:
     #  significant impact as it is covered by the context.
     def __init__(self, log: LogHandler_T = None, *, table: str = None, readonly: bool = False, connect: bool = True):
 
-        # used to notify a calling process whether a failure occurred within the context.
-        # this does not distinguish if multiple calls/returns are done.
-        self.failed: bool = False
-
         self._log: LogHandler_T = log
         self._table: str = table
-        self._readonly: bool = readonly
-        self._connect: bool = connect
+
+        self._readonly = readonly
+        self._connect = connect
 
         self._conn = None
         self._cur  = None
@@ -90,6 +87,10 @@ class _DBConnector:
         self._data_written: bool = False
 
         self._routines_get: Callable_T = self._routines.get
+
+        # used to notify a calling process whether a failure occurred within the context.
+        # this does not distinguish if multiple calls/returns are done.
+        self.failed: bool = False
 
     def __enter__(self) -> DBConnector:
         if (self._connect):
@@ -113,7 +114,7 @@ class _DBConnector:
 
         return True
 
-    def execute(self, routine_name: str, *args, **kwargs) -> list:
+    def execute(self, routine_name: str, *args, **kwargs):
 
         routine_type, routine = self._routines_get(routine_name, NO_ROUTINE)
         if (not routine):
@@ -146,59 +147,74 @@ class _DBConnector:
     def create_db_tables(self) -> None:
         # dns proxy main
         self._cur.execute(
-            'create table if not exists dnsproxy '
-            '(src_ip int4 not null, domain text not null, '
-            'category text not null, reason text not null, '
-            'action text not null, count int4 not null, '
-            'last_seen int4 not null)'
+            """
+            create table if not exists dnsproxy 
+            (src_ip int4 not null, domain text not null, category text not null, reason text not null, 
+            action text not null, count int4 not null, last_seen int4 not null)
+            """
         )
 
         # ip proxy main
         self._cur.execute(
-            'create table if not exists ipproxy '
-            '(local_ip int4 not null, tracked_ip int4 not null, '
-            'category text not null, direction text not null, '
-            'action text not null, last_seen int4 not null)'
+            """
+            create table if not exists ipproxy 
+            (local_ip int4 not null, tracked_ip int4 not null, category text not null, direction text not null, 
+            action text not null, last_seen int4 not null)
+            """
         )
 
         # ips/ids main
         self._cur.execute(
-            'create table if not exists ips '
-            '(src_ip int4 not null, protocol text not null, '
-            'attack_type text not null, action text not null, '
-            'last_seen int4 not null)'
+            """
+            create table if not exists ips 
+            (src_ip int4 not null, protocol text not null, attack_type text not null, action text not null, 
+            last_seen int4 not null)
+            """
         )
 
         # infected clients
         self._cur.execute(
-            'create table if not exists infectedclients '
-            '(mac text not null, ip_address int4 not null, '
-            'detected_host text not null, reason text not null, '
-            'last_seen int4 not null)'
+            """
+            create table if not exists infectedclients 
+            (mac text not null, ip_address int4 not null, detected_host text not null, reason text not null, 
+            last_seen int4 not null)
+            """
         )
 
         # ip proxy - geolocation
         # (01,2021 | CHINA | 10 | 1)
         self._cur.execute(
-            'create table if not exists geolocation '
-            '(month text not null, '
-            'country text not null, direction not null, '
-            'blocked int4 not null, allowed int4 not null)'
+            """
+            create table if not exists geolocation 
+            (month text not null, country text not null, direction not null, 
+            blocked int4 not null, allowed int4 not null)
+            """
         )
 
         # dns proxy - blocked clients (for serving webui block page)
         self._cur.execute(
-            'create table if not exists blocked '
-            '(src_ip not null, domain not null, '
-            'category not null, reason not null, '
-            'timestamp int4 not null)'
+            """
+            create table if not exists blocked 
+            (src_ip not null, domain not null, category not null, reason not null, timestamp int4 not null)
+            """
         )
 
         # webui objects
         self._cur.execute(
-            'create table if not exists config_objects '
-            '(name text not null, type text not null, '
-            'value text not null, description text not null)'
+            """
+            create table if not exists config_objects 
+            (name text not null, type text not null, value text not null, description text not null)
+            """
+        )
+
+        # messanger
+        self._cur.execute(
+            """
+            create table if not exists messenger 
+            (msg_id text not null, sender text not null, recipients text not null, 
+            multi int4 not null, sent_at int4 not null, message text not null, 
+            expiration int4 not null)
+            """
         )
 
 

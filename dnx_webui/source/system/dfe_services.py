@@ -37,7 +37,7 @@ class WebPage(StandardWebPage):
         return {'all_services': all_services, 'mgmt_access': dnx_settings.get_dict('mgmt_access')}
 
     @staticmethod
-    def update_page(form: Form) -> tuple[int, str]:
+    def update(form: Form) -> tuple[int, str]:
 
         # checking if button keys are present in form is easy first line validation to ensure valid form fields
         if ('update_mgmt_access' in form):

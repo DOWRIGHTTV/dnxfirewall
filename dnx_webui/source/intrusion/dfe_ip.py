@@ -149,40 +149,36 @@ class WebPage(StandardWebPage):
 
         return NO_STANDARD_ERROR
 
-# ----------------
-# AJAX PROCESSING
-# ----------------
-def update_field(form: Form) -> tuple[bool, WebError]:
+    @staticmethod
+    def handle_ajax(json_data: dict) -> tuple[bool, WebError]:
 
-    category = config(**{
-        'type': form.get('type', DATA.MISSING),
-        'name': form.get('category', DATA.MISSING),
-        'direction': get_convert_int(form, 'direction')
-    })
+        category = config(**{
+            'type': json_data.get('type', DATA.MISSING),
+            'name': json_data.get('category', DATA.MISSING),
+            'direction': get_convert_int(json_data, 'direction')
+        })
 
-    if ([x for x in category.values() if x in [DATA.MISSING, DATA.INVALID]]):
-        return False, {'error': 1, 'message': INVALID_FORM}
+        if ([x for x in category.values() if x in [DATA.MISSING, DATA.INVALID]]):
+            return False, {'error': 1, 'message': INVALID_FORM}
 
-    if (category.type == 'reputation'):
+        if (category.type == 'reputation'):
 
-        error = validate_reputation(category)
-        if (error):
-            return False, {'error': 2, 'message': error.message}
+            if error := validate_reputation(category):
+                return False, {'error': 2, 'message': error.message}
 
-        configure_reputation(category)
+            configure_reputation(category)
 
-    elif (category.type == 'country'):
+        elif (category.type == 'country'):
 
-        error = validate_geolocation(category, rtype='country')  # NOTE: to know its country vs continent
-        if (error):
-            return False, {'error': 3, 'message': error.message}
+            if error := validate_geolocation(category, rtype='country'):  # NOTE: to know its country vs continent
+                return False, {'error': 3, 'message': error.message}
 
-        configure_geolocation(category, rtype='country')
+            configure_geolocation(category, rtype='country')
 
-    else:
-        return False, {'error': 69, 'message': 'unknown action'}
+        else:
+            return False, {'error': 69, 'message': 'unknown action'}
 
-    return True, {'error': 0, 'message': ''}
+        return True, {'error': 0, 'message': ''}
 
 # ==============
 # VALIDATION

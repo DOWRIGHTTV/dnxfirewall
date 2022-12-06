@@ -11,7 +11,7 @@ from dnx_gentools.def_constants import ppt
 from dnx_gentools.standard_tools import Initialize
 from dnx_gentools.file_operations import cfg_read_poller, load_configuration
 
-from dnx_routines.logging import Log
+from dnx_routines.logging.log_client import Log
 
 # ===============
 # TYPING IMPORTS

@@ -87,18 +87,14 @@ def ips_event(cur: Cursor, timestamp: int, log: IPS_EVENT_LOG) -> bool:
     existing_record = cur.fetchone()
     if (existing_record):
 
-        t = existing_record[4]
-        if (timestamp - t > 10):
-            cur.execute(
-                f'insert into ips values (?, ?, ?, ?, ?)',
-                (log.attacker, log.protocol, log.attack_type, log.action, timestamp)
-            )
+        # event log suppression. limit one every 10 seconds.
+        if (timestamp - existing_record[4] < 10):
+            return True
 
-    else:
-        cur.execute(
-            f'insert into ips values (?, ?, ?, ?, ?)',
-            (log.attacker, log.protocol, log.attack_type, log.action, timestamp)
-        )
+    cur.execute(
+        f'insert into ips values (?, ?, ?, ?, ?)',
+        (log.attacker, log.protocol, log.attack_type, log.action, timestamp)
+    )
 
     return True
 
@@ -141,7 +137,7 @@ def geo_record(cur: Cursor, _, log: GEOLOCATION_LOG) -> bool:
     cur.execute(f'select * from geolocation where month=? and country=?', (month, log.country))
 
     existing_record = cur.fetchone()
-    # if first time the country has been seen in the current month, it will be initialized with zeroes
+    # if it's the first time a country has been seen in the current month, it will be initialized with zeroes
     if (not existing_record):
         cur.execute(f'insert into geolocation values (?, ?, ?, ?, ?)', (month, log.country, log.direction, 0, 0))
 
@@ -151,6 +147,12 @@ def geo_record(cur: Cursor, _, log: GEOLOCATION_LOG) -> bool:
         f'update geolocation set {log.action}={log.action}+1 where month=? and country=? and direction=?',
         (month, log.country, log.direction)
     )
+
+    return True
+
+@db.register('send_message', routine_type='write')
+def send_message(cur: Cursor, *, msg_id: str, message) -> bool:
+    cur.execute('insert into messenger values (?, ?, ?, ?, ?, ?, ?)', (msg_id, *message))
 
     return True
 
@@ -277,3 +279,12 @@ def malware_count(cur: Cursor, *, table: str) -> int:
         count += res[0]
 
     return count
+
+@db.register('get_messages', routine_type='query')
+def get_messages(cur: Cursor, *, sender: str, recipients: str) -> list:
+    cur.execute(
+        'select * from messenger where sender=? and recipients=? order by sent_at', (sender, recipients)
+    )
+
+    return cur.fetchall()
+

@@ -1,0 +1,119 @@
+{% extends('layout.html')%}
+{% block body %}
+<section class="section">
+  <div class="container">
+    <div class="row row-flex">
+      <div class="col s4">
+        <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+          {{ create_title('users')|safe }}
+          <div class="row">
+            <ul>
+            {% for user, status in contacts.items() %}
+              <li>
+                <form method="post" id="recipient_form">
+                  <input type="hidden" name="recipients" value="{{ user }}">
+                  <div class="col s2">
+                    <button type="submit" name="change_recipients" value="1" class="btn btn-floating blue-grey waves-light">
+                      <i class="material-icons small">donut_small</i>
+                    </button>
+                  </div>
+                  <div class="col s10">
+                    <div class="col s9">
+                      <div>{{ user }}</div>
+                      {% if not status[0] %}<div>seen: {{ status[1] }}</div>{% endif %}
+                    </div>
+                    <div class="col s3">
+                    {% if status[0] %}
+                      <i class="material-icons small">cloud_queue</i>
+                    {% else %}
+                      <i class="material-icons small">cloud_off</i>
+                    </div>
+                  </div>
+                  {% endif %}
+                </form>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="col s8">
+        <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+          {{ create_title('chat')|safe }}
+          <div class="row">
+            <div class="chat">
+              <div class="">
+                <div>Chatting with {{ to_user }}</div>
+                <div>{{ messages|length }} messages</div>
+              </div>
+              <div class="chat-history">
+                <ul>
+                  {% for message in messages %}
+                    {% set msg_class = 'col s8 offset-s4' if session_info['user'] == message.sender else 'col s8' %}
+                    {% set msg_type = 'my-message' if session_info['user'] == message.sender else 'other-message' %}
+                      <li class="{{ msg_class }}">
+                        <div class="message-data">
+                          <span class="message-data-time">{{ message.msg_time() }}</span>
+                          <span class="message-data-name">{{ message.sender }}</span>
+                        </div>
+                        <div class="message {{ msg_type }}">
+                          {{ message.message }}
+                        </div>
+                      </li>
+                  {% endfor %}
+                </ul>
+              </div>
+              <form method="post">
+                <div class="input-field col s12">
+                  <textarea name="message" id="msg-text" class="materialize-textarea" data-length="120"></textarea>
+                  <label for="msg-text">Message</label>
+                </div>
+                <div class="input-field col s4">
+                  <button type="submit" name="recipients" value="{{ to_user }}" class="btn waves-effect waves-light col s12">Send</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<style>
+.chat {
+    background: #F2F5F8;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+
+    color: #434651; }
+
+.chat-history {
+    padding: 30px 30px 20px;
+    border-bottom: 2px solid white;
+    overflow-y: scroll;
+    height: 575px; }
+
+.message-data {
+    margin-bottom: 15px; }
+
+.message-data-time {
+    color: lightslategrey;
+    padding-left: 6px; }
+
+.message {
+    color: white;
+    padding: 18px 20px;
+    line-height: 26px;
+    font-size: 16px;
+    border-radius: 7px;
+    margin-bottom: 30px;
+    width: 90%;
+    position: relative; }
+
+.my-message {
+    background: green; }
+
+.other-message {
+    background: blue; }
+</style>
+{% endblock %}
