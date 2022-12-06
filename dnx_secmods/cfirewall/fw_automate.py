@@ -78,14 +78,12 @@ class FirewallAutomate:
 
     @cfg_read_poller('zone', ext='firewall', filepath='dnx_profile/iptables')
     # zone int values are arbitrary / randomly selected on zone creation.
-    def _monitor_zones(self, zone_map: str) -> None:
+    def _monitor_zones(self, loaded_zones: ConfigChain) -> None:
         '''Monitors the firewall zone file for changes and loads updates to cfirewall.
 
         calls to Cython are made from within this method block.
         the GIL must be manually acquired on the Cython side or the Python interpreter will crash.
         '''
-        loaded_zones: ConfigChain = load_configuration(zone_map, ext='firewall', filepath='dnx_profile/iptables')
-
         # converting the list to a python array, then sending to Cython to update the C array.
         # this format is required due to transitioning between python and C. python arrays are
         # compatible in C via memory views and Cython can handle the initial list.
@@ -101,7 +99,7 @@ class FirewallAutomate:
         self._initialize.done()
 
     @cfg_read_poller('system', ext='firewall', filepath='dnx_profile/iptables')
-    def _monitor_system_rules(self, system_rules: str) -> None:
+    def _monitor_system_rules(self, loaded_rules: ConfigChain) -> None:
         # 0-99: system reserved - 1. loopback 10/11. dhcp, 20/21. dns, 30/31. http, 40/41. https, etc
         #   - add loopback to system table
         # 100-1059: zone mgmt rules. 100s place designates interface index
@@ -109,8 +107,6 @@ class FirewallAutomate:
         #   - NOTE: int index will be used to do zone lookup. if zone changes, these will stop working and will need
         #       to be reset. this is ok for now since we only support builtin zones that can't change.
         # 2000+: system control (proxy bypass prevention)
-
-        loaded_rules: ConfigChain = load_configuration(system_rules, ext='firewall', filepath='dnx_profile/iptables')
 
         system_set = loaded_rules.get_values('BUILTIN')
 
@@ -131,14 +127,12 @@ class FirewallAutomate:
         self._initialize.done()
 
     @cfg_read_poller('active', ext='firewall', filepath='dnx_profile/iptables')
-    def _monitor_standard_rules(self, fw_rules: str) -> None:
+    def _monitor_standard_rules(self, loaded_rules: ConfigChain) -> None:
         '''Monitors the active firewall rules file for changes and loads updates to cfirewall.
 
         calls to Cython are made from within this method block.
         the GIL must be manually acquired on the Cython side or the Python interpreter will crash.
         '''
-        loaded_rules: ConfigChain = load_configuration(fw_rules, ext='firewall', filepath='dnx_profile/iptables')
-
         # checking each group for change to reduce C interaction.
         for table_idx, rule_group in enumerate(['BEFORE', 'MAIN', 'AFTER'], 1):
 
@@ -167,14 +161,12 @@ class FirewallAutomate:
         self._initialize.done()
 
     @cfg_read_poller('active', ext='nat', filepath='dnx_profile/iptables')
-    def _monitor_nat_rules(self, nat_rules: str) -> None:
+    def _monitor_nat_rules(self, loaded_rules: ConfigChain) -> None:
         '''Monitors the active firewall rules file for changes and loads updates to cfirewall.
 
         calls to Cython are made from within this method block.
         the GIL must be manually acquired on the Cython side or the Python interpreter will crash.
         '''
-        loaded_rules: ConfigChain = load_configuration(nat_rules, ext='nat', filepath='dnx_profile/iptables')
-
         # checking each group for change to reduce C interaction.
         for table_idx, rule_group in enumerate(['PRE_ROUTE', 'POST_ROUTE']):
 
@@ -192,8 +184,9 @@ class FirewallAutomate:
 
             self.log.notice(f'DNXFIREWALL NAT {rule_group} rule update job starting.')
 
-            # NOTE: gil must be held throughout this call
             table_type = 1 # temp
+
+            # NOTE: gil must be held throughout this call
             error = self.cfirewall.update_rules(table_type, table_idx, ruleset)
             if (error):
                 Log.error(f'NAT rule group ({rule_group}) failed to update')
