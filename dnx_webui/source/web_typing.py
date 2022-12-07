@@ -25,4 +25,4 @@ if (TYPE_CHECKING):
     LogWebPage: TypeAlias = Type[_LogWebPage]
     RulesWebPage: TypeAlias = Type[_RulesWebPage]
 
-    from dnx_gentools.file_operations import ConfigChain, config
+    from dnx_gentools.file_operations import ConfigChain

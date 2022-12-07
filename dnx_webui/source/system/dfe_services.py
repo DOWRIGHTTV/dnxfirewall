@@ -7,7 +7,7 @@ from source.web_validate import *
 
 from dnx_gentools.def_constants import space_join
 from dnx_gentools.def_enums import CFG
-from dnx_gentools.file_operations import ConfigurationManager, load_configuration
+from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 from dnx_gentools.system_info import Services
 
 from dnx_iptools.iptables import IPTablesManager
@@ -30,9 +30,9 @@ class WebPage(StandardWebPage):
 
         all_services = []
         for service, desc in dnx_settings.get_items('services'):
-            service = space_join((service.split('-')[1:]))
+            service_title = space_join((service.split('-')[1:]))
 
-            all_services.append((service, desc, Services.status(service)))
+            all_services.append((service_title, desc, Services.status(service)))
 
         return {'all_services': all_services, 'mgmt_access': dnx_settings.get_dict('mgmt_access')}
 
