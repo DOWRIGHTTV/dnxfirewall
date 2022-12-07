@@ -27,7 +27,12 @@ class WebPage(StandardWebPage):
     @staticmethod
     def load(_: Form) -> dict[str, Any]:
         dhcp_server: ConfigChain = load_configuration('dhcp_server', cfg_type='global')
-        dhcp_leases: dict[str, tuple] = load_data('dhcp_server.lease', filepath='dnx_profile/data/usr')
+
+        # if dhcp server isn't enabled and/or there was never a lease, the file wont exist.
+        try:
+            dhcp_leases: dict[str, tuple] = load_data('dhcp_server.lease', filepath='dnx_profile/data/usr')
+        except FileNotFoundError:
+            dhcp_leases = {}
 
         leases = []
         for ip, _record in dhcp_leases.items():
