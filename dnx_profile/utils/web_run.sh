@@ -9,4 +9,6 @@ export PYTHONPATH=$HOME_DIR:$FLASK_DIR:$PYTHONPATH
 export INIT=1
 export webui=1
 
-flask run --host=$(hostname -I) --port=$1
+ip_addrs=($(hostname -I | tr " " "\n" | grep -E '192|172'))
+
+flask run --host=${ip_addrs[0]} --port=$1

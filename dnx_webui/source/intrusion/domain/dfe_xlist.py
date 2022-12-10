@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from flask import request
+
 from source.web_typing import *
 from source.web_validate import *
 
@@ -27,25 +29,25 @@ class WebPage(StandardWebPage):
     '''
     @staticmethod
     def load(form: Form) -> dict[str, Any]:
-        blacklist: ConfigChain = load_configuration('blacklist')
+        list_type = request.script_root[1:]
 
-        for info in blacklist.get_values('time_based'):
+        xlist: ConfigChain = load_configuration(list_type, cfg_type='global')
+
+        for info in xlist.get_values('time_based'):
             st_offset = System.calculate_time_offset(info['time'])
 
             info['time'] = System.format_date_time(st_offset)
 
-        blacklist_settings = {
-            'time_based': blacklist['time_based'],
-            'pre_proxy': blacklist['pre_proxy']
+        xlist_settings = {
+            'time_based': xlist['time_based'],
+            'pre_proxy': xlist['pre_proxy']
         }
 
-        return blacklist_settings
+        return xlist_settings
 
     @staticmethod
     def update(form: Form) -> tuple[int, str]:
-        page_name = form.get('page_name', DATA.MISSING)
-        if (page_name is DATA.MISSING):
-            return 1, INVALID_FORM
+        list_type = request.script_root[1:]
 
         if (DISABLED):
             return 98, 'overrides disabled for rework.'
@@ -54,25 +56,25 @@ class WebPage(StandardWebPage):
             xlist_settings = config(**{
                 'domain': form.get('domain', DATA.MISSING),
                 'timer': get_convert_int(form, 'rule_length'),
-                'ruleset': page_name
+                'ruleset': list_type
             })
 
             if any([x in [DATA.MISSING, DATA.INVALID] for x in xlist_settings.values()]):
-                return 2, INVALID_FORM
+                return 1, INVALID_FORM
 
             if error := validate_time_based(xlist_settings):
-                return 3, error.message
+                return 2, error.message
 
             configure_proxy_domain(xlist_settings, action=CFG.ADD)
 
         elif ('xl_remove' in form):
             xlist_settings = config(**{
                 'domain': form.get('bl_remove', DATA.MISSING),
-                'ruleset': page_name
+                'ruleset': list_type
             })
 
             if (DATA.MISSING in xlist_settings.values()):
-                return 4, INVALID_FORM
+                return 3, INVALID_FORM
 
             configure_proxy_domain(xlist_settings, action=CFG.DEL)
 
@@ -80,11 +82,11 @@ class WebPage(StandardWebPage):
             exception_settings = config(**{
                 'domain': form.get('domain', DATA.MISSING),
                 'reason': form.get('reason', DATA.MISSING),
-                'ruleset': page_name
+                'ruleset': list_type
             })
 
             if (DATA.MISSING in exception_settings.values()):
-                return 5, INVALID_FORM
+                return 4, INVALID_FORM
 
             if error := validate_pre_proxy_exc(exception_settings):
                 return 6, error.message
@@ -94,12 +96,12 @@ class WebPage(StandardWebPage):
         elif ('exc_remove' in form):
             exception_settings = config(**{
                 'domain': form.get('exc_remove', DATA.MISSING),
-                'ruleset': page_name
+                'ruleset': list_type
             })
 
             # doing the iter for consistency
             if (DATA.MISSING in exception_settings.values()):
-                return 7, INVALID_FORM
+                return 6, INVALID_FORM
 
             configure_pre_proxy_exc(exception_settings, action=CFG.DEL)
 

@@ -60,15 +60,15 @@ class _Defaults:
 
     def create_new_chains(self) -> None:
         for chain in self.custom_nat_chains:
-            ipt_shell(f'-N {chain}', table='nat')
+            ipt_shell(f'{chain}', table='nat', action='-N')
 
-        ipt_shell('-N MGMT')
-        ipt_shell('-N IPS', table='raw')  # ddos prevention rule insertion location
+        ipt_shell('MGMT', action='-N')
+        ipt_shell('IPS', table='raw', action='-N')  # ddos prevention rule insertion location
 
     def default_actions(self) -> None:
         '''default allow is explicitly set if they were previously changed from default.
         '''
-        shell('iptables -P OUTPUT ACCEPT')
+        shell('OUTPUT ACCEPT', action='-P')
 
     def cfirewall_hook(self) -> None:
         '''IPTable rules to give cfirewall control of all tcp, udp, and icmp packets.
@@ -80,7 +80,7 @@ class _Defaults:
         # FORWARD
         # NOTE: cfirewall must mark connections with connmark to offload the connection to the kernel, otherwise all
         # packets of the connection must be processed/handled by cfirewall.
-        ipt_shell('iptables -A FORWARD -m connmark --mark 1 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
+        ipt_shell('FORWARD -m connmark --mark 1 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT', action='-I')
 
         ipt_shell(f'FORWARD -p tcp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
         ipt_shell(f'FORWARD -p udp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
