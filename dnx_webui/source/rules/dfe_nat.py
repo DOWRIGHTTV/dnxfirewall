@@ -83,8 +83,7 @@ def _dnat_rules(form: Form, action: str) -> str:
         fields.position = convert_int(fields.position)
 
         # NOTE: validation needs to know the zone, so it can ensure the position is valid
-        error = validate_dnat_rule(fields, action=CFG.DEL)
-        if (error):
+        if error := validate_dnat_rule(fields, action=CFG.DEL):
             return error.message
 
         with IPTablesManager() as iptables:
