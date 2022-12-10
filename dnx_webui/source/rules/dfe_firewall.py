@@ -137,16 +137,16 @@ class WebPage(RulesWebPage):
             })
 
             if (DATA.MISSING in fw_object.values()):
-                return INVALID_FORM, section
+                return INVALID_FORM + '. code=1', section
 
             if error := validate_object(fw_object):
-                return error.message, section
+                return error.message + '. code=2', section
 
             try:
                 with FWObjectManager() as obj_manager:
                     obj_manager.add(fw_object)
             except ValidationError as ve:
-                return ve.message, section
+                return ve.message + '. code=3', section
 
         elif ('edit_obj' in form):
             fw_object = config(**{
@@ -160,16 +160,16 @@ class WebPage(RulesWebPage):
             })
 
             if (DATA.MISSING in fw_object.values()):
-                return INVALID_FORM, section
+                return INVALID_FORM + '. code=4', section
 
             if error := validate_object(fw_object):
-                return error.message, section
+                return error.message + '. code=5', section
 
             try:
                 with FWObjectManager() as obj_manager:
                     obj_manager.update(fw_object)
             except ValidationError as ve:
-                return ve.message, section
+                return ve.message + '. code=6', section
 
         elif ('remove_obj' in form):
             fw_object = config(**{
@@ -177,16 +177,16 @@ class WebPage(RulesWebPage):
             })
 
             if (DATA.MISSING in fw_object.values()):
-                return INVALID_FORM, section
+                return INVALID_FORM + '. code=7', section
 
             try:
                 with FWObjectManager() as obj_manager:
                     obj_manager.remove(fw_object)
             except ValidationError as ve:
-                return ve.message, section
+                return ve.message + '. code=8', section
 
         elif (section not in valid_sections or 'change_section' not in form):
-            return INVALID_FORM, 'MAIN'
+            return INVALID_FORM + '. code=9', 'MAIN'
 
         return '', section
 

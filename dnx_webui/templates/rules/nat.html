@@ -20,7 +20,7 @@
         <div class="col s12">
           <div class="card-panel hoverable {{ theme.card }}">
             {{ create_title('add rule')|safe }}
-            <form method="POST">
+            <form method="post">
               <input type="hidden" name="tab" value="1">
               <input type="hidden" name="nat_type" value="DSTNAT">
               <div class="row">
@@ -184,7 +184,7 @@
               {% for i, rule in nat_settings['local_snat_rules'] %}
                 <tr>
                   <td>
-                    <form method="POST">
+                    <form method="post">
                       <input type="hidden" name="tab" value="2">
                       <input type="hidden" name="nat_type" value="SRCNAT">
                       <input type="hidden" name="position" value="{{ i }}">
