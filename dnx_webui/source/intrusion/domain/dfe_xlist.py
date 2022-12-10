@@ -29,7 +29,7 @@ class WebPage(StandardWebPage):
     '''
     @staticmethod
     def load(form: Form) -> dict[str, Any]:
-        list_type: str = request.url_rule[1:]
+        list_type = str(request.url_rule).split('/')[-1]
 
         xlist: ConfigChain = load_configuration(list_type, cfg_type='global')
 
@@ -47,7 +47,7 @@ class WebPage(StandardWebPage):
 
     @staticmethod
     def update(form: Form) -> tuple[int, str]:
-        list_type: str = request.url_rule[1:]
+        list_type = str(request.url_rule).split('/')[-1]
 
         if (DISABLED):
             return 98, 'overrides disabled for rework.'
