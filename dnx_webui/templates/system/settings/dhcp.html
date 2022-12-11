@@ -21,6 +21,7 @@
       {% for interface in ['lan', 'dmz'] %}
         <div class="col s6">
           <div class="card-panel hoverable {{ theme.card }}">
+            {{ create_title(interface.upper() + 'interface')|safe }}
             <h4 class="{{ theme.title }}">{{interface.upper()}} Interface</h4>
             {{ create_switch('Server', interface + '/enabled', checked=dhcp_settings.interfaces[interface].enabled)|safe }}
             {{ create_switch('Ping Verification', interface + '/icmp_check', checked=dhcp_settings.interfaces[interface].icmp_check,
@@ -40,7 +41,7 @@
               </div>
               <div class="row">
                 <div class="col s12 center">
-                  <button class="btn waves-effect waves-light" name="general_settings">Update</button>
+                  <button class="btn waves-effect waves-light" name="general_settings" value="{{ interface }}">Update</button>
                 </div>
               </div>
             </form>
@@ -55,8 +56,8 @@
       <div class="row">
         <div class="col s12">
           <div class="card-panel hoverable {{ theme.card }}">
-            <h4 class="{{ theme.title }}">Add Reservation</h4>
-            <form method="POST">
+            {{ create_title('add reservation')|safe }}
+            <form method="post">
               <input type="hidden" name="tab" value="2">
               <div class="row">
                 <div class="input-field col s2 offset-s1 {{input_color}}">
@@ -90,7 +91,7 @@
         </div>
         <div class="col s12">
           <div class="card-panel hoverable {{ theme.card }}">
-            <h4 class="{{ theme.title }}">DHCP Reservations</h4>
+            {{ create_title('dhcp reservations')|safe }}
             <table class="striped centered">
               <thead>
               <tr>
@@ -144,7 +145,7 @@
     <div class="container">
       <div class="col s12">
         <div class="card-panel hoverable {{ theme.card }}">
-          <h4 class="{{ theme.title }}">DHCP Leases</h4>
+          {{ create_title('dhcp leases')|safe }}
           <div class="row">
             <table class="striped centered">
               <thead>

@@ -132,7 +132,7 @@ class WebPage(StandardWebPage):
 
         if ('general_settings' in form):
             server_settings = config(**{
-                'interface': form.get('interface', DATA.MISSING),
+                'interface': form.get('general_settings', DATA.MISSING),
                 'lease_range': [
                     get_convert_int(form, 'start'),
                     get_convert_int(form, 'end')
