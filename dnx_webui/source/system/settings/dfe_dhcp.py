@@ -79,7 +79,7 @@ class WebPage(StandardWebPage):
 
         # TODO: this will need to be improved when the multiple interfaces functionality is implemented
         if ('lan/enabled' in form):
-            cfg_val = form.get('lan/enabled')
+            cfg_val = get_convert_bint(form, 'lan/enabled')
 
             server_settings = config(**{
                 'interface': 'lan',
@@ -90,7 +90,7 @@ class WebPage(StandardWebPage):
             switch_change = True
 
         elif ('lan/icmp_check' in form):
-            cfg_val = form.get('lan/icmp_check')
+            cfg_val = get_convert_bint(form, 'lan/icmp_check')
 
             server_settings = config(**{
                 'interface': 'lan',
@@ -101,7 +101,7 @@ class WebPage(StandardWebPage):
             switch_change = True
 
         elif ('dmz/enabled' in form):
-            cfg_val = form.get('dmz/enabled')
+            cfg_val = get_convert_bint(form, 'dmz/enabled')
 
             server_settings = config(**{
                 'interface': 'dmz',
@@ -111,8 +111,8 @@ class WebPage(StandardWebPage):
 
             switch_change = True
 
-        elif ('dmz/dmz_check' in form):
-            cfg_val = form.get('dmz/icmp_check')
+        elif ('dmz/icmp_check' in form):
+            cfg_val = get_convert_bint(form, 'dmz/icmp_check')
 
             server_settings = config(**{
                 'interface': 'dmz',
@@ -123,6 +123,9 @@ class WebPage(StandardWebPage):
             switch_change = True
 
         if (switch_change):
+            if any([x in [DATA.MISSING, DATA.INVALID] for x in server_settings.values()]):
+                return 1, INVALID_FORM
+
             configure_dhcp_switches(server_settings)
 
             return NO_STANDARD_ERROR
@@ -137,7 +140,7 @@ class WebPage(StandardWebPage):
             })
 
             if error := validate_dhcp_settings(server_settings):
-                return 1, error.message
+                return 2, error.message
 
             configure_dhcp_settings(server_settings)
 
@@ -150,14 +153,14 @@ class WebPage(StandardWebPage):
             })
 
             if (DATA.MISSING in dhcp_settings.values()):
-                return 2, INVALID_FORM
+                return 3, INVALID_FORM
 
             if error := validate_reservation(dhcp_settings):
-                return 3, error.message
+                return 4, error.message
 
             # returns exception if ip address is already reserved
             if error := configure_reservation(dhcp_settings, CFG.ADD):
-                return 4, error.message
+                return 5, error.message
 
         elif ('dhcp_res_remove' in form):
             dhcp_settings = config(**{
@@ -165,31 +168,31 @@ class WebPage(StandardWebPage):
             })
 
             if (DATA.MISSING in dhcp_settings.values()):
-                return 4, INVALID_FORM
+                return 6, INVALID_FORM
 
             try:
                 mac_address(dhcp_settings.mac_addr)
             except ValidationError as ve:
-                return 5, ve.message
+                return 7, ve.message
 
             configure_reservation(dhcp_settings, CFG.DEL)
 
         elif ('dhcp_lease_remove' in form):
             ip_addr = form.get('dhcp_lease_remove', DATA)
             if (ip_addr is DATA.MISSING):
-                return 6, INVALID_FORM
+                return 8, INVALID_FORM
 
             try:
                 ip_address(ip_addr)
             except ValidationError as ve:
-                return 7, ve.message
+                return 9, ve.message
 
             if error := remove_dhcp_lease(ip_addr):
-                return 8, error.message
+                return 10, error.message
 
 
         else:
-            return 9, INVALID_FORM
+            return 99, INVALID_FORM
 
         return NO_STANDARD_ERROR
 

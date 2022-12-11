@@ -575,9 +575,11 @@ def standard_page_logic(dnx_page: StandardWebPage, page_settings: dict, data_key
         except ConfigurationError as ce:
             return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
 
+        std_error = f'{err_msg} code={error}' if err_msg else ''
+
         page_settings.update({
             'tab': validate.get_convert_int(request.form, 'tab'),
-            'standard_error': err_msg
+            'standard_error': std_error
         })
 
     try:

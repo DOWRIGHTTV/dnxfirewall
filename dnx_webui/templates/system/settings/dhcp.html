@@ -22,9 +22,9 @@
         <div class="col s6">
           <div class="card-panel hoverable {{ theme.card }}">
             <h4 class="{{ theme.title }}">{{interface.upper()}} Interface</h4>
-            {{ create_switch('Server', interface + '/enabled', checked=dhcp_settings.interfaces.interface.enabled)|safe }}
-            {{ create_switch('Ping Verification', interface + '/icmp_check', checked=dhcp_settings.interfaces.interface.enabled,
-                enabled=dhcp_settings.interfaces.interface.enabled)|safe }}
+            {{ create_switch('Server', interface + '/enabled', checked=dhcp_settings.interfaces[interface].enabled)|safe }}
+            {{ create_switch('Ping Verification', interface + '/icmp_check', checked=dhcp_settings.interfaces[interface].icmp_check,
+                enabled=dhcp_settings.interfaces[interface].enabled)|safe }}
             <form method="post">
               <div class="row {{input_color}}">
                 <div class="input-field col s6">
