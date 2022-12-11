@@ -21,7 +21,7 @@ def create_switch(label: str, name: str, *, tab: int = 1, checked: int = 0, enab
     else: status = ''
 
     return ''.join([
-        f'<form method="POST"><input type="hidden" name="tab" value="{tab}">',
+        f'<form method="post"><input type="hidden" name="tab" value="{tab}">',
         f'<div class="input-field col s6 center">{label}<div class="switch"><label>Off',
         f'<input type="checkbox" class="iswitch" name="{name}" {status}>',
         '<span class="lever"></span>On</label></div></div></form>'
@@ -63,7 +63,7 @@ def create_button_with_modal(
     return button
 
 @app.template_global()
-def create_decora_switch(name: str, value: str, enabled: int):
+def create_decora_switch(name: str, value: str, enabled: int, *, onclick: str = 'updateCategory'):
 
     off = ' active' if not enabled else ''
     on  = ' active' if enabled else ''
@@ -72,9 +72,9 @@ def create_decora_switch(name: str, value: str, enabled: int):
         f'<div class="col s3"><div class="row row-thin"><p class="multi-switch-label center">{value}</p></div>'
         '<div class="row row-thin"><div class="multi-switch-container decora-switch">'
         '<ul class="multi-switch">'
-            f'<li class="multi-switch-off{off}"><button name="{name}" value="{value}" onclick="updateCategory(this, 0)">'
+            f'<li class="multi-switch-off{off}"><button name="{name}" value="{value}" onclick="{onclick}(this, 0)">'
                 '<i class="material-icons small">radio_button_unchecked</i></button></li>'
-            f'<li class="multi-switch-on{on}"><button name="{name}" value="{value}" onclick="updateCategory(this, 1)">'
+            f'<li class="multi-switch-on{on}"><button name="{name}" value="{value}" onclick="{onclick}(this, 1)">'
                 '<i class="material-icons small">block</i></button></li>'
         '</ul></div></div></div>'
     )
