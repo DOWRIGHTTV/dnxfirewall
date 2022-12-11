@@ -28,18 +28,14 @@
             <form method="post">
               <div class="row {{input_color}}">
                 <div class="input-field col s6">
-                  <label>
-                    Start
-                    <input type="number" name="start" class="validate"
-                           value="{{dhcp_settings['interfaces'][interface]['lease_range'][0]}}">
-                  </label>
+                  <input type="number" name="start" id="start{{ loop.index }}" class="validate"
+                      value="{{dhcp_settings['interfaces'][interface]['lease_range'][0]}}">
+                  <label for="start{{ loop.index }}">Start</label>
                 </div>
                 <div class="input-field col s6">
-                  <label>
-                    End
-                    <input type="number" name="end" class="validate"
-                           value="{{dhcp_settings['interfaces'][interface]['lease_range'][1]}}">
-                  </label>
+                  <input type="number" name="end" id="end{{ loop.index }}" class="validate"
+                      value="{{dhcp_settings['interfaces'][interface]['lease_range'][1]}}">
+                  <label for="end{{ loop.index }}">End</label>
                 </div>
               </div>
               <div class="row">
@@ -64,31 +60,25 @@
               <input type="hidden" name="tab" value="2">
               <div class="row">
                 <div class="input-field col s2 offset-s1 {{input_color}}">
-                  <select name="zone" id="">
+                  <select name="zone">
                     <option value="DMZ">DMZ</option>
                     <option value="LAN">LAN</option>
                   </select>
-                  <label for="">Interface</label>
+                  <label>Interface</label>
                 </div>
                 <div class="input-field col s4 {{input_color}}">
-                  <label>
-                    MAC Address
-                    <input type="text" name="mac_address" class="validate" placeholder="aa:aa:aa:aa:aa:aa" required>
-                  </label>
+                  <input type="text" name="mac_address" id="mac_address" class="validate" placeholder="aa:aa:aa:aa:aa:aa" required>
+                  <label for="mac_address">MAC Address</label>
                 </div>
                 <div class="input-field col s4 {{input_color}}">
-                  <label>
-                    IP Address
-                    <input type="text" name="ip_address" class="validate" placeholder="192.168.5.14" required>
-                  </label>
+                  <input type="text" name="ip_address" id="ip_address" class="validate" placeholder="192.168.5.14" required>
+                  <label for="ip_address">IP Address</label>
                 </div>
               </div>
               <div class="row">
                 <div class="input-field col s4 offset-s1 {{input_color}}">
-                  <label>
-                    Description
-                    <input type="text" name="description" class="validate" placeholder="Erika's PC">
-                  </label>
+                  <input type="text" name="description" id="description" class="validate" placeholder="Erika's PC">
+                  <label for="description">Description</label>
                 </div>
                 <div class="input-field col s2 offset-s2">
                   <input type="hidden" name="dhcp_res_add">
