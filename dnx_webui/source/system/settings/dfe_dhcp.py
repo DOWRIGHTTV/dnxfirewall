@@ -278,7 +278,7 @@ def configure_reservation(dhcp: config, action: CFG) -> Optional[ValidationError
             dhcp_server_settings[f'{host_path}->description'] = dhcp.description
 
         elif (action is CFG.DEL):
-            del dhcp_server_settings[f'reservations->{dhcp.mac}']
+            del dhcp_server_settings[f'reservations->{dhcp.mac.replace(":", "")}']
 
         dnx.write_configuration(dhcp_server_settings.expanded_user_data)
 
