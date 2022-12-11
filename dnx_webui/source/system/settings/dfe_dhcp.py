@@ -250,8 +250,6 @@ def configure_dhcp_settings(dhcp_settings: config):
         dhcp_settings.lease_range[0] += configured_options['3'][1]  # ip delta
         dhcp_settings.lease_range[1] += configured_options['3'][1]  # ip delta
 
-        server_settings[f'{config_path}->enabled'] = dhcp_settings.enabled
-        server_settings[f'{config_path}->icmp_check'] = dhcp_settings.icmp_check
         server_settings[f'{config_path}->lease_range'] = dhcp_settings.lease_range
 
         dnx.write_configuration(server_settings.expanded_user_data)
