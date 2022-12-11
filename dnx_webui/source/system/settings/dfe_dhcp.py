@@ -219,7 +219,7 @@ def validate_reservation(res: config, /) -> Optional[ValidationError]:
 
     dhcp_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
-    zone_net = IPv4Network(dhcp_settings[f'interfaces->builtins{res.zone.lower()}->subnet'])
+    zone_net = IPv4Network(dhcp_settings[f'interfaces->builtins->{res.zone.lower()}->subnet'])
     if (IPv4Address(res.ip) not in zone_net.hosts()):
         return ValidationError(f'IP Address must fall within {zone_net} range.')
 

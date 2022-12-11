@@ -102,24 +102,12 @@
               </tr>
               </thead>
               <tbody>
+              {% set message = 'Are you sure you want to remove the DHCP reservation?' %}
               {% for mac, info in dhcp_settings['reservations'] %}
                 <tr>
                   <td>
-                    <a class="btn-floating btn-small red waves-effect waves-light modal-trigger"
-                       href="#dhcp-modal1-{{loop.index}}"><i class="material-icons">remove</i></a>
-                    <div id="dhcp-modal1-{{loop.index}}" class="modal">
-                      <div class="modal-content">
-                        <h5 class="{{modal_text_style}}">Are you sure you want to remove the DHCP reservation?</h5>
-                      </div>
-                      <form action="system/settings/dhcp" method="POST">
-                        <input type="hidden" name="tab" value="2">
-                        <input type="hidden" name="dhcp_res_remove" value="{{mac}}">
-                        <div class="modal-footer">
-                          <button class="btn waves-effect waves-light">YES</button>
-                          <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                        </div>
-                      </form>
-                    </div>
+                    {{ create_button_with_modal('btn-floating btn-small red',
+                        'remove', 1, loop.index, 2, 'dhcp_res_remove', mac, message)|safe }}
                   </td>
                   <td>{{info['zone']}}</td>
                   <td>{{mac}}</td>
@@ -157,24 +145,12 @@
               </tr>
               </thead>
               <tbody>
+              {% set message = 'Are you sure you want to remove the DHCP lease?' %}
               {% for ip, handout_time, mac, hostname in dhcp_settings['leases'] %}
                 <tr>
                   <td>
-                    <a class="btn-floating btn-small waves-effect waves-light red modal-trigger"
-                       href="#dhcp-modal2-{{loop.index}}"><i class="material-icons">remove</i></a>
-                    <div id="dhcp-modal2-{{loop.index}}" class="modal">
-                      <div class="modal-content">
-                        <h5 class="{{modal_text_style}}">Are you sure you want to remove the DHCP lease?</h5>
-                      </div>
-                      <form action="system/settings/dhcp" method="POST">
-                        <input type="hidden" name="tab" value="3">
-                        <input type="hidden" name="dhcp_lease_remove" value="{{ip}}">
-                        <div class="modal-footer">
-                          <button class="btn waves-effect waves-light">YES</button>
-                          <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                        </div>
-                      </form>
-                    </div>
+                    {{ create_button_with_modal('btn-floating btn-small red',
+                        'remove', 1, loop.index, 3, 'dhcp_lease_remove', ip, message)|safe }}
                   </td>
                   <td>{{ip}}</td>
                   <td>{{mac}}</td>
