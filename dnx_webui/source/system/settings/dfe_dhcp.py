@@ -171,7 +171,7 @@ class WebPage(StandardWebPage):
                 return 6, INVALID_FORM
 
             try:
-                mac_address(dhcp_settings.mac_addr)
+                mac_address(dhcp_settings.mac)
             except ValidationError as ve:
                 return 7, ve.message
 
