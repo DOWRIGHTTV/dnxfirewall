@@ -144,16 +144,17 @@ def validate_dns_record(query_name: str, *, action: CFG) -> Optional[ValidationE
 
     if (action is CFG.ADD):
 
+        # TODO: make this cleaner -> if not any([VALID_DOMAIN.match(query_name), query_name.isalnum()]:??
         if (not VALID_DOMAIN.match(query_name) and not query_name.isalnum()):
             return ValidationError('Local DNS record is not valid.')
 
     elif (action is CFG.DEL):
-        dns_server = load_configuration('dns_server').searchable_user_data
+        local_dns_records = load_configuration('dns_server', cfg_type='global').get_dict('records')
 
         if (query_name == 'dnx.firewall'):
             return ValidationError('Cannot remove dnxfirewall dns record.')
 
-        if (query_name not in dns_server['records']):
+        if (query_name not in local_dns_records):
             return ValidationError(INVALID_FORM)
 
 def validate_fallback_settings(settings: config) -> Optional[ValidationError]:

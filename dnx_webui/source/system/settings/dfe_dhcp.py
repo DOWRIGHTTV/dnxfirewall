@@ -259,13 +259,13 @@ def configure_reservation(dhcp: config, action: CFG) -> Optional[ValidationError
         dhcp_server_settings: ConfigChain = dnx.load_configuration()
 
         if (action is CFG.ADD):
-            dhcp_leases = load_data('dhcp_server.lease', cfg_type='system/global')
-            configured_reservations = dhcp_server_settings.searchable_user_data['reservations']
-            reserved_ips = {host['ip_address'] for host in configured_reservations}
-
             # preventing reservations being created for ips with an active dhcp lease
+            dhcp_leases = load_data('dhcp_server.lease', cfg_type='system/global')
             if (dhcp.ip in dhcp_leases):
-                return ValidationError(f'There is an active lease with {dhcp.ip}. Clear the lease and try again.')
+                return ValidationError(f'There is an active lease for {dhcp.ip}. Clear the lease and try again.')
+
+            configured_reservations = dhcp_server_settings.get_values('reservations')
+            reserved_ips = {host['ip_address'] for host in configured_reservations}
 
             # ensuring mac address and ip address are unique
             if (dhcp.mac in configured_reservations or dhcp.ip in reserved_ips):
