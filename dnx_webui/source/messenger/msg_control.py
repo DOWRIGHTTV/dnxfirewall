@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# LABEL: CODE_NOT_STABLE
+
 from __future__ import annotations
 
 from functools import lru_cache

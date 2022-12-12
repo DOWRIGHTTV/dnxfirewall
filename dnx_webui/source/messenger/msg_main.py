@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# LABEL: CODE_NOT_STABLE
+
 from flask import Flask, render_template, request, g as context_global
 
 from source.main.dfe_authentication import *

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# LABEL: DEVELOPMENT_ONLY_CODE
+
 from __future__ import annotations
 
 

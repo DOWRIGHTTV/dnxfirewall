@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# LABEL: DEVELOPMENT_ONLY_CODE
+
 export HOME_DIR=/home/$USER/dnxfirewall
 export WEB_DIR=$HOME_DIR/dnx_webui
 export FLASK_DIR=$HOME_DIR/dnx_webui

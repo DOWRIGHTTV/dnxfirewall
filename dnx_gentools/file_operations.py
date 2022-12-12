@@ -386,7 +386,7 @@ class ConfigChain:
 
         returns an empty list if not found.
 
-            config.get_items('interfaces->builtins')
+            config.get_values('interfaces->builtins')
         '''
         keys = [] if key is None else key.split(self._sep)
         search_data = self._merge_expand()

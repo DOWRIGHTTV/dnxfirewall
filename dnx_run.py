@@ -91,6 +91,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     'cprotocol-tools': {'module': '1', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
     'hash-trie': {'module': '1', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
 
+    # LABEL: DEVELOPMENT_ONLY_CODE
     # TESTS
     'trie-test': {
         'module': 'dnx_profile.utils.unit_tests.trie_test', 'exclude': exclude('cli', COMMANDS), 'priv': False, 'service': False

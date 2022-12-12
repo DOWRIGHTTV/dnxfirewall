@@ -761,6 +761,7 @@ import source.main.dfe_template_globals
 # webui themes
 import source.main.dfe_themes
 
+# LABEL: CODE_NOT_STABLE
 # secure messenger extension
 import source.messenger.msg_main
 
@@ -770,7 +771,7 @@ import source.messenger.msg_main
 app.jinja_env.filters['itoip'] = itoip
 
 # =================================
-# DEV ONLY
+# LABEL: DEVELOPMENT_ONLY_CODE
 # =================================
 # will only be registered if running on dev branch using flask dev server
 server_type = os.environ.get('FLASK_ENV')
