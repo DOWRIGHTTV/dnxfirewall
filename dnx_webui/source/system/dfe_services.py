@@ -7,7 +7,7 @@ from source.web_validate import *
 
 from dnx_gentools.def_constants import space_join
 from dnx_gentools.def_enums import CFG
-from dnx_gentools.file_operations import ConfigurationManager, load_configuration
+from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 from dnx_gentools.system_info import Services
 
 from dnx_iptools.iptables import IPTablesManager
