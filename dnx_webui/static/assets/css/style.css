@@ -101,7 +101,8 @@ nav ul a {
     height: calc(100% - 12px); }
   .card-panel .card-title {
     font-family: Orbitron, Roboto, sans-serif;
-    letter-spacing: 0.075em; }
+    letter-spacing: 0.075em;
+    margin-left: 10px; }
 
 /* icon color change */
 i.icon-red {

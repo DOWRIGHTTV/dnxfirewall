@@ -20,6 +20,8 @@ from source.web_interfaces import StandardWebPage
 
 __all__ = ('WebPage',)
 
+VALID_DHCP_INTERFACES = ['lan', 'dmz']
+
 class WebPage(StandardWebPage):
     '''
     available methods: load, update
@@ -72,13 +74,65 @@ class WebPage(StandardWebPage):
     @staticmethod
     def update(form: Form) -> tuple[int, str]:
 
+        server_settings = config()
+        switch_change = False
+
+        # TODO: this will need to be improved when the multiple interfaces functionality is implemented
+        if ('lan/enabled' in form):
+            cfg_val = get_convert_bint(form, 'lan/enabled')
+
+            server_settings = config(**{
+                'interface': 'lan',
+                'cfg_key': 'enabled',
+                'cfg_val': cfg_val
+            })
+
+            switch_change = True
+
+        elif ('lan/icmp_check' in form):
+            cfg_val = get_convert_bint(form, 'lan/icmp_check')
+
+            server_settings = config(**{
+                'interface': 'lan',
+                'cfg_key': 'icmp_check',
+                'cfg_val': cfg_val
+            })
+
+            switch_change = True
+
+        elif ('dmz/enabled' in form):
+            cfg_val = get_convert_bint(form, 'dmz/enabled')
+
+            server_settings = config(**{
+                'interface': 'dmz',
+                'cfg_key': 'enabled',
+                'cfg_val': cfg_val
+            })
+
+            switch_change = True
+
+        elif ('dmz/icmp_check' in form):
+            cfg_val = get_convert_bint(form, 'dmz/icmp_check')
+
+            server_settings = config(**{
+                'interface': 'dmz',
+                'cfg_key': 'icmp_check',
+                'cfg_val': cfg_val
+            })
+
+            switch_change = True
+
+        if (switch_change):
+            if any([x in [DATA.MISSING, DATA.INVALID] for x in server_settings.values()]):
+                return 1, INVALID_FORM
+
+            configure_dhcp_switches(server_settings)
+
+            return NO_STANDARD_ERROR
+
         if ('general_settings' in form):
             server_settings = config(**{
-                'interface': form.get('interface', DATA.MISSING),
-
-                'enabled': get_convert_bint(form, 'server_enabled'),
-                'icmp_check': get_convert_bint(form, 'icmp_check'),
-
+                'interface': form.get('general_settings', DATA.MISSING),
                 'lease_range': [
                     get_convert_int(form, 'start'),
                     get_convert_int(form, 'end')
@@ -86,7 +140,7 @@ class WebPage(StandardWebPage):
             })
 
             if error := validate_dhcp_settings(server_settings):
-                return 1, error.message
+                return 2, error.message
 
             configure_dhcp_settings(server_settings)
 
@@ -99,14 +153,14 @@ class WebPage(StandardWebPage):
             })
 
             if (DATA.MISSING in dhcp_settings.values()):
-                return 2, INVALID_FORM
+                return 3, INVALID_FORM
 
             if error := validate_reservation(dhcp_settings):
-                return 3, error.message
+                return 4, error.message
 
             # returns exception if ip address is already reserved
             if error := configure_reservation(dhcp_settings, CFG.ADD):
-                return 4, error.message
+                return 5, error.message
 
         elif ('dhcp_res_remove' in form):
             dhcp_settings = config(**{
@@ -114,31 +168,31 @@ class WebPage(StandardWebPage):
             })
 
             if (DATA.MISSING in dhcp_settings.values()):
-                return 4, INVALID_FORM
+                return 6, INVALID_FORM
 
             try:
-                mac_address(dhcp_settings.mac_addr)
+                mac_address(dhcp_settings.mac)
             except ValidationError as ve:
-                return 5, ve.message
+                return 7, ve.message
 
             configure_reservation(dhcp_settings, CFG.DEL)
 
         elif ('dhcp_lease_remove' in form):
             ip_addr = form.get('dhcp_lease_remove', DATA)
             if (ip_addr is DATA.MISSING):
-                return 6, INVALID_FORM
+                return 8, INVALID_FORM
 
             try:
                 ip_address(ip_addr)
             except ValidationError as ve:
-                return 7, ve.message
+                return 9, ve.message
 
             if error := remove_dhcp_lease(ip_addr):
-                return 8, error.message
+                return 10, error.message
 
 
         else:
-            return 9, INVALID_FORM
+            return 99, INVALID_FORM
 
         return NO_STANDARD_ERROR
 
@@ -146,7 +200,7 @@ class WebPage(StandardWebPage):
 # VALIDATION
 # ==============
 def validate_dhcp_settings(settings: config, /) -> Optional[ValidationError]:
-    if (settings.interface not in ['lan', 'dmz']):
+    if (settings.interface not in VALID_DHCP_INTERFACES):
         return ValidationError('Invalid interface referenced.')
 
     lrange = settings.lease_range
@@ -165,27 +219,37 @@ def validate_reservation(res: config, /) -> Optional[ValidationError]:
 
     dhcp_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
-    zone_net = IPv4Network(dhcp_settings[f'interfaces->builtins{res.zone.lower()}->subnet'])
+    zone_net = IPv4Network(dhcp_settings[f'interfaces->builtins->{res.zone.lower()}->subnet'])
     if (IPv4Address(res.ip) not in zone_net.hosts()):
         return ValidationError(f'IP Address must fall within {zone_net} range.')
 
 # ==============
 # CONFIGURATION
 # ==============
+def configure_dhcp_switches(dhcp_settings: config):
+    with ConfigurationManager('dhcp_server', cfg_type='global') as dnx:
+        server_settings: ConfigChain = dnx.load_configuration()
+
+        interface = dhcp_settings.pop('interface')
+
+        config_path = f'interfaces->builtins->{interface}'
+
+        server_settings[f'{config_path}->{dhcp_settings.cfg_key}'] = dhcp_settings.cfg_val
+
+        dnx.write_configuration(server_settings.expanded_user_data)
 def configure_dhcp_settings(dhcp_settings: config):
     with ConfigurationManager('dhcp_server', cfg_type='global') as dnx:
         server_settings: ConfigChain = dnx.load_configuration()
 
         interface = dhcp_settings.pop('interface')
-        # ...this is excessive
-        ip_delta = server_settings.searchable_system_data['interfaces']['builtins'][interface]['options']['3'][1]
-
-        dhcp_settings.lease_range[0] += ip_delta
-        dhcp_settings.lease_range[1] += ip_delta
 
         config_path = f'interfaces->builtins->{interface}'
-        server_settings[f'{config_path}->enabled'] = dhcp_settings.enabled
-        server_settings[f'{config_path}->icmp_check'] = dhcp_settings.icmp_check
+        # ...this is excessive
+        configured_options: dict = server_settings.get_dict(f'{config_path}->options')
+
+        dhcp_settings.lease_range[0] += configured_options['3'][1]  # ip delta
+        dhcp_settings.lease_range[1] += configured_options['3'][1]  # ip delta
+
         server_settings[f'{config_path}->lease_range'] = dhcp_settings.lease_range
 
         dnx.write_configuration(server_settings.expanded_user_data)
@@ -195,13 +259,13 @@ def configure_reservation(dhcp: config, action: CFG) -> Optional[ValidationError
         dhcp_server_settings: ConfigChain = dnx.load_configuration()
 
         if (action is CFG.ADD):
-            dhcp_leases = load_data('dhcp_server.lease', cfg_type='system/global')
-            configured_reservations = dhcp_server_settings.searchable_user_data['reservations']
-            reserved_ips = {host['ip_address'] for host in configured_reservations}
-
             # preventing reservations being created for ips with an active dhcp lease
+            dhcp_leases = load_data('dhcp_server.lease', cfg_type='system/global')
             if (dhcp.ip in dhcp_leases):
-                return ValidationError(f'There is an active lease with {dhcp.ip}. Clear the lease and try again.')
+                return ValidationError(f'There is an active lease for {dhcp.ip}. Clear the lease and try again.')
+
+            configured_reservations = dhcp_server_settings.get_values('reservations')
+            reserved_ips = {host['ip_address'] for host in configured_reservations}
 
             # ensuring mac address and ip address are unique
             if (dhcp.mac in configured_reservations or dhcp.ip in reserved_ips):
@@ -214,7 +278,7 @@ def configure_reservation(dhcp: config, action: CFG) -> Optional[ValidationError
             dhcp_server_settings[f'{host_path}->description'] = dhcp.description
 
         elif (action is CFG.DEL):
-            del dhcp_server_settings[f'reservations->{dhcp.mac}']
+            del dhcp_server_settings[f'reservations->{dhcp.mac.replace(":", "")}']
 
         dnx.write_configuration(dhcp_server_settings.expanded_user_data)
 

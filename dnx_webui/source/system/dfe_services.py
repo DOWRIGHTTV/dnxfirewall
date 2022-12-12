@@ -30,9 +30,9 @@ class WebPage(StandardWebPage):
 
         all_services = []
         for service, desc in dnx_settings.get_items('services'):
-            service_title = space_join((service.split('-')[1:]))
+            service_name = space_join((service.split('-')[1:]))
 
-            all_services.append((service_title, desc, Services.status(service)))
+            all_services.append((service_name, desc, Services.status(service)))
 
         return {'all_services': all_services, 'mgmt_access': dnx_settings.get_dict('mgmt_access')}
 

@@ -236,7 +236,7 @@ def rules_overrides_whitelist(session_info: dict):
     page_settings = get_default_page_settings(session_info, uri_path=['intrusion', 'domain', 'whitelist'])
 
     page_action = standard_page_logic(
-        xlist, page_settings, 'whitelist_settings', page_name='rules/overrides/whitelist.html'
+        xlist, page_settings, 'whitelist_settings', page_name='intrusion/domain/whitelist.html'
     )
 
     return page_action
@@ -247,7 +247,7 @@ def rules_overrides_blacklist(session_info: dict):
     page_settings = get_default_page_settings(session_info, uri_path=['intrusion', 'domain', 'blacklist'])
 
     page_action = standard_page_logic(
-        xlist, page_settings, 'blacklist_settings', page_name='rules/overrides/blacklist.html'
+        xlist, page_settings, 'blacklist_settings', page_name='intrusion/domain/blacklist.html'
     )
 
     return page_action
@@ -575,9 +575,11 @@ def standard_page_logic(dnx_page: StandardWebPage, page_settings: dict, data_key
         except ConfigurationError as ce:
             return render_template(application_error_page, application_error=ce, theme=context_global.theme, **page_settings)
 
+        std_error = f'{err_msg} code={error}' if err_msg else ''
+
         page_settings.update({
             'tab': validate.get_convert_int(request.form, 'tab'),
-            'standard_error': err_msg
+            'standard_error': std_error
         })
 
     try:

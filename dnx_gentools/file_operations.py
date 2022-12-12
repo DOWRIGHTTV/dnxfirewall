@@ -399,17 +399,18 @@ class ConfigChain:
 
         return list(search_data.values())
 
-    @property
-    def searchable_system_data(self) -> dict:
-        '''returns copy of original pre-flattened system config dictionary.
-        '''
-        return copy(self.__config[1])
-
-    @property
-    def searchable_user_data(self) -> dict:
-        '''returns copy of original pre-flattened user config dictionary.
-        '''
-        return copy(self.__config[0])
+    # NOTE: get_dict method replaces this functionality and provides more resiliency with user config files
+    # @property
+    # def searchable_system_data(self) -> dict:
+    #     '''returns copy of original pre-flattened system config dictionary.
+    #     '''
+    #     return copy(self.__config[1])
+    #
+    # @property
+    # def searchable_user_data(self) -> dict:
+    #     '''returns copy of original pre-flattened user config dictionary.
+    #     '''
+    #     return copy(self.__config[0])
 
     @property
     def user_data(self) -> dict:
