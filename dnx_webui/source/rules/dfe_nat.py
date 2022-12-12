@@ -40,7 +40,7 @@ class WebPage(RulesWebPage):
             error = _snat_rules(form, action)
 
         else:
-            return INVALID_FORM + '. code=99', ''
+            return INVALID_FORM + ' code=99', ''
 
         return error, ''
 
@@ -59,7 +59,7 @@ def _dnat_rules(form: Form, action: str) -> str:
         # checking all required fields are present and some other basic rules are followed
         # before validating values of standard fields.
         if error := validate_dnat_rule(fields, action=CFG.ADD):
-            return error.message + '. code=1'
+            return error.message + ' code=1'
 
         if (fields.protocol in ['tcp', 'udp']):
             try:
@@ -72,7 +72,7 @@ def _dnat_rules(form: Form, action: str) -> str:
                     ip_address(fields.dst_ip)
 
             except ValidationError as ve:
-                return ve.message + '. code=2'
+                return ve.message + ' code=2'
 
         with IPTablesManager() as iptables:
             iptables.add_nat(fields)
@@ -84,7 +84,7 @@ def _dnat_rules(form: Form, action: str) -> str:
 
         # NOTE: validation needs to know the zone, so it can ensure the position is valid
         if error := validate_dnat_rule(fields, action=CFG.DEL):
-            return error.message + '. code=3'
+            return error.message + ' code=3'
 
         with IPTablesManager() as iptables:
             iptables.delete_nat(fields)
@@ -92,7 +92,7 @@ def _dnat_rules(form: Form, action: str) -> str:
             configure_open_wan_protocol(fields, action=CFG.DEL)
 
     else:
-        return INVALID_FORM + '. code=98'
+        return INVALID_FORM + ' code=98'
 
     return ''
 
@@ -103,12 +103,12 @@ def _snat_rules(form: Form, action: str) -> str:
     if (action == 'add'):
 
         if error := validate_snat_rule(fields, action=CFG.ADD):
-            return error.message + '. code=4'
+            return error.message + ' code=4'
 
         try:
             ip_address(ip_iter=[fields.orig_src_ip, fields.new_src_ip])
         except ValidationError as ve:
-            return ve.message + '. code=5'
+            return ve.message + ' code=5'
 
         with IPTablesManager() as iptables:
             iptables.add_nat(fields)
@@ -118,13 +118,13 @@ def _snat_rules(form: Form, action: str) -> str:
 
         # NOTE: validation needs to know the zone, so it can ensure the position is valid
         if error := validate_snat_rule(fields, action=CFG.DEL):
-            return error.message + '. code=6'
+            return error.message + ' code=6'
 
         with IPTablesManager() as iptables:
             iptables.delete_nat(fields)
 
     else:
-        return INVALID_FORM + '. code=99'
+        return INVALID_FORM + ' code=99'
 
     return ''
 
