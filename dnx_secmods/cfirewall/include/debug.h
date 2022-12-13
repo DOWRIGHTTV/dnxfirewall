@@ -1,6 +1,7 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
+//LABEL: DEVELOPMENT_ONLY_CODE
 #define DEVELOPMENT 1
 
 // trailing underscore to reduce chance of conflicting name defined elsewhere.
