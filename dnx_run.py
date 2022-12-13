@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union, Iterable
+from typing import Union, Iterable
 
 import os
 import sys
@@ -14,6 +14,7 @@ from functools import partial
 from subprocess import run, DEVNULL, CalledProcessError
 
 from dnx_cli.utils.shell_colors import text, styles
+from dnx_gentools.def_constants import HOME_DIR
 
 _AUTOLOADER = False
 
@@ -65,7 +66,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     'cfirewall': {'module': 'dnx_secmods.cfirewall', 'exclude': [], 'priv': True, 'service': True},
     'dns-proxy': {'module': 'dnx_secmods.dns_proxy', 'exclude': ['compile'], 'priv': True, 'service': True},
     'ip-proxy': {'module': 'dnx_secmods.ip_proxy', 'exclude': ['compile'], 'priv': True, 'service': True},
-    'ips-ids': {'module': 'dnx_secmods.ips_ids', 'exclude': ['compile'], 'priv': True, 'service': True},
+    'ips-ids': {'module': 'dnx_secmods.ids_ips', 'exclude': ['compile'], 'priv': True, 'service': True},
 
     # NETWORK MODULES
     'dhcp-server': {
@@ -74,7 +75,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
 
     # ROUTINES
     'database': {'module': 'dnx_routines.database', 'exclude': ['compile'], 'priv': False, 'service': True},
-    'logging': {'module': 'dnx_routines.logging.log_main', 'exclude': ['compile'], 'priv': False, 'service': True},
+    'logging': {'module': 'dnx_routines.logging', 'exclude': ['compile'], 'priv': False, 'service': True},
 
     'iptables': {
         'module': 'dnx_iptools.iptables', 'exclude': exclude('cli', COMMANDS), 'priv': True, 'service': False
@@ -88,12 +89,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     # COMPILE ONLY
     'dnx-nfqueue': {'module': '1', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
     'cprotocol-tools': {'module': '1', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
-    'hash-trie': {'module': '1', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
-
-    # TESTS
-    'trie-test': {
-        'module': 'dnx_profile.utils.unit_tests.trie_test', 'exclude': exclude('cli', COMMANDS), 'priv': False, 'service': False
-    }
+    'hash-trie': {'module': '1', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False}
 }
 SERVICE_MODULES = [f'dnx-{mod}' for mod, modset in MODULE_MAPPING.items() if modset['service']]
 
@@ -188,7 +184,7 @@ def help_command() -> None:
     print('\n', text.blue('----------- ') + text.lightgrey(' | Commands | ') + text.blue('-----------'))
 
     convert_bool = {True: text.red('yes'), False: text.green('no')}
-    # iterate over COMMANDS dict and print each to a line, adding : inbetween
+    # iterate over COMMANDS dict and print each to a line, adding : in between
     # I want to replace priv with privilege for readability, will experiment.
     # TODO: better way to do this?
     for cmd, opts in COMMANDS.items():
@@ -298,8 +294,6 @@ def service_command(mod: str, cmd: str) -> None:
 def run_cli(mod: str, mod_loc: str) -> None:
     os.environ['INIT_MODULE'] = mod
 
-    from dnx_gentools.def_constants import HOME_DIR
-
     os.environ['HOME_DIR'] = HOME_DIR
 
     env = MODULE_MAPPING[mod].get('environ')
@@ -340,14 +334,19 @@ if (__name__ == '__main__'):
         help_command()
 
     elif (command == 'cli'):
-        run_cli(mod_name, mod_set['module'])
+        if (mod_set['module']):
+            run_cli(mod_name, mod_set['module'])
+
+        elif mod_set['bash_cmd']:
+            run(mod_set['bash_cmd'], shell=True)
+
+        else:
+            sexit('module destination not specified.')
 
     elif (command == 'modstat'):
         modstat_command()
 
     elif(command == 'compile'):
-        from dnx_gentools.def_constants import HOME_DIR
-
         file_path = f'{HOME_DIR}/dnx_profile/utils/compiler/{mod_name.replace("-", "_")}.py'
         try:
             dnx_run_v(f'sudo HOME_DIR={HOME_DIR} python3 {file_path} build_ext --inplace', shell=True)

@@ -2,54 +2,61 @@
 
 from __future__ import annotations
 
-import source.web_validate as validate
+from source.web_typing import *
+from source.web_validate import *
 
-from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG
-from dnx_gentools.def_exceptions import ValidationError
 
-from source.web_validate import get_convert_int
 from dnx_gentools.system_info import System
 from dnx_routines.backups.bck_backups import BackupHandler
 
-_BACKUP_DISABLED = False
+from source.web_interfaces import StandardWebPage
 
-def load_page(form):
-    backups_info, current_backups = {}, System.backups()
+__all__ = ('WebPage',)
 
-    for backup, c_time in current_backups.items():
-        c_time = System.calculate_time_offset(c_time)
-        c_time = System.format_date_time(c_time).split(maxsplit=1)
+_BACKUP_DISABLED = True
 
-        backups_info[backup] = (c_time[0], c_time[1])
+class WebPage(StandardWebPage):
+    '''
+    available methods: load, handle_ajax
+    '''
+    @staticmethod
+    def load(form: Form) -> dict[str, Any]:
+        backups_info, current_backups = {}, System.backups()
 
-    return backups_info
+        for backup, c_time in current_backups.items():
+            c_time = System.calculate_time_offset(c_time)
+            c_time = System.format_date_time(c_time).split(maxsplit=1)
 
-def update_page(form):
+            backups_info[backup] = (c_time[0], c_time[1])
 
-    if (_BACKUP_DISABLED):
-        return 'configuration backups are currently disabled.'
+        return backups_info
 
-    backup_type = get_convert_int(form, 'cfg_backup')
-    try:
-        backup_action = CFG(backup_type)
-    except:
-        return INVALID_FORM
+    @staticmethod
+    def update(form: Form) -> tuple[int, str]:
 
-    name = form.get('backup_name', None)
+        if (_BACKUP_DISABLED):
+            return -1, 'configuration backups are currently disabled for rework.'
 
-    # only checking name if creating new backup
-    if (backup_action is CFG.ADD):
-        if (not name):
+        backup_type = get_convert_int(form, 'cfg_backup')
+        try:
+            backup_action = CFG(backup_type)
+        except:
             return INVALID_FORM
 
-        else:
+        name = form.get('backup_name', None)
+
+        # only checking name if creating new backup
+        if (backup_action is CFG.ADD):
+            if (not name):
+                return INVALID_FORM
+
             try:
-                validate.standard(name)
+                standard(name)
             except ValidationError as ve:
                 return ve
 
-    try:
-        BackupHandler.cfg_backup(name, backup_action)
-    except ValidationError as ve:
-        return ve
+        try:
+            BackupHandler.cfg_backup(name, backup_action)
+        except ValidationError as ve:
+            return ve

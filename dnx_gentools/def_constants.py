@@ -21,11 +21,12 @@ from dnx_iptools.def_structs import scm_creds_pack as _scm_creds_pack
 # MODULE INITIALIZATION CONTROL - set by shell command
 # =====================================================
 # module startup code will run if. values are stored as strings
-INIT_MODULE: str = _os.environ.get('INIT_MODULE', '')
 def INITIALIZE_MODULE(log_name: str):
     '''returns True if the calling module functions should start.
     '''
-    return True if INIT_MODULE == log_name.replace('_', '-') else False
+    init_module: str = _os.environ.get('INIT_MODULE', '')
+
+    return True if init_module == log_name.replace('_', '-') else False
 # =====================================================
 
 
@@ -61,6 +62,9 @@ space_join: _Callable[[_Iterable[str]], str] = ' '.join
 comma_join: _Callable[[_Iterable[str]], str] = ', '.join
 
 HOME_DIR: str = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-2]))
+
+SYSTEM_DIR: str = 'dnx_profile/data/system'
+USER_DIR:   str = 'dnx_profile/data/usr'
 
 # dnx user/group + dev helper to when switching between appliance and dev box
 __usr: str = _run('whoami', shell=True, text=True, capture_output=True).stdout.strip()
@@ -138,8 +142,5 @@ TOP_DOMAIN_COUNT: int = 20
 HEARTBEAT_FAIL_LIMIT: int = 3
 KEEP_ALIVE_DOMAIN: str = 'dnxfirewall.com'
 
-# used when loading geolocation settings to implicitly include private ip space as a category, but disabled
+# used when loading geolocation settings to implicitly include private ip space as a category
 RFC1918: tuple[str, int] = ('rfc1918', 0)
-
-# TODO: consider moving to web_validate
-INVALID_FORM: str = 'Invalid form data.'

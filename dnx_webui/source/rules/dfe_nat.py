@@ -5,38 +5,44 @@ from __future__ import annotations
 from subprocess import run
 
 from source.web_typing import *
-from source.web_validate import ValidationError, ip_address, network_port, convert_int
+from source.web_validate import *
 
-from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
 
 from dnx_iptools.iptables import IPTablesManager
 from dnx_gentools.system_info import System
 
+from source.web_interfaces import RulesWebPage
 
-def load_page(_: Form):
-    return {
-        'dmz_dnat_rules': System.nat_rules(),
-        'local_snat_rules': System.nat_rules(nat_type='SRCNAT')
-    }
+__all__ = ('WebPage',)
 
-def update_page(form: Form) -> tuple[str, str]:
 
-    # the action field is not required for some functions, so it will not be hard checked
-    action = form.get('action', DATA.MISSING)
+class WebPage(RulesWebPage):
+    @staticmethod
+    def load(_: Form) -> dict[str, Any]:
+        return {
+            'dmz_dnat_rules': System.nat_rules(),
+            'local_snat_rules': System.nat_rules(nat_type='SRCNAT')
+        }
 
-    nat_type = form.get('nat_type', DATA.MISSING)
-    if (nat_type == 'DSTNAT'):
-        error = _dnat_rules(form, action)
+    @staticmethod
+    def update(form: Form) -> tuple[str, str]:
 
-    elif (nat_type == 'SRCNAT'):
-        error = _snat_rules(form, action)
+        # the action field is not required for some functions, so it will not be hard checked
+        action = form.get('action', DATA.MISSING)
 
-    else:
-        return INVALID_FORM, ''
+        nat_type = form.get('nat_type', DATA.MISSING)
+        if (nat_type == 'DSTNAT'):
+            error = _dnat_rules(form, action)
 
-    return error, ''
+        elif (nat_type == 'SRCNAT'):
+            error = _snat_rules(form, action)
+
+        else:
+            return INVALID_FORM + ' code=99', ''
+
+        return error, ''
 
 # TODO: currently it is possible to put overlapping DNAT rules (same dst port, but different host port).
 #  this isnt normally an issue, but the last one inserted will be the local port value in cfg.
@@ -52,9 +58,8 @@ def _dnat_rules(form: Form, action: str) -> str:
     if (action == 'add'):
         # checking all required fields are present and some other basic rules are followed
         # before validating values of standard fields.
-        error = validate_dnat_rule(fields, action=CFG.ADD)
-        if (error):
-            return error.message
+        if error := validate_dnat_rule(fields, action=CFG.ADD):
+            return error.message + ' code=1'
 
         if (fields.protocol in ['tcp', 'udp']):
             try:
@@ -67,7 +72,7 @@ def _dnat_rules(form: Form, action: str) -> str:
                     ip_address(fields.dst_ip)
 
             except ValidationError as ve:
-                return ve.message
+                return ve.message + ' code=2'
 
         with IPTablesManager() as iptables:
             iptables.add_nat(fields)
@@ -78,9 +83,8 @@ def _dnat_rules(form: Form, action: str) -> str:
         fields.position = convert_int(fields.position)
 
         # NOTE: validation needs to know the zone, so it can ensure the position is valid
-        error = validate_dnat_rule(fields, action=CFG.DEL)
-        if (error):
-            return error.message
+        if error := validate_dnat_rule(fields, action=CFG.DEL):
+            return error.message + ' code=3'
 
         with IPTablesManager() as iptables:
             iptables.delete_nat(fields)
@@ -88,7 +92,7 @@ def _dnat_rules(form: Form, action: str) -> str:
             configure_open_wan_protocol(fields, action=CFG.DEL)
 
     else:
-        return INVALID_FORM
+        return INVALID_FORM + ' code=98'
 
     return ''
 
@@ -98,14 +102,13 @@ def _snat_rules(form: Form, action: str) -> str:
     fields = config(**form)
     if (action == 'add'):
 
-        error = validate_snat_rule(fields, action=CFG.ADD)
-        if (error):
-            return error.message
+        if error := validate_snat_rule(fields, action=CFG.ADD):
+            return error.message + ' code=4'
 
         try:
             ip_address(ip_iter=[fields.orig_src_ip, fields.new_src_ip])
         except ValidationError as ve:
-            return ve.message
+            return ve.message + ' code=5'
 
         with IPTablesManager() as iptables:
             iptables.add_nat(fields)
@@ -114,15 +117,14 @@ def _snat_rules(form: Form, action: str) -> str:
         fields.position = convert_int(fields.position)
 
         # NOTE: validation needs to know the zone, so it can ensure the position is valid
-        error = validate_snat_rule(fields, action=CFG.DEL)
-        if (error):
-            return error.message
+        if error := validate_snat_rule(fields, action=CFG.DEL):
+            return error.message + ' code=6'
 
         with IPTablesManager() as iptables:
             iptables.delete_nat(fields)
 
     else:
-        return INVALID_FORM
+        return INVALID_FORM + ' code=99'
 
     return ''
 
@@ -148,7 +150,7 @@ def validate_dnat_rule(rule: config, /, action: CFG) -> Optional[ValidationError
 
         if (rule.protocol == 'icmp'):
 
-            open_protocols: ConfigChain = load_configuration('ips_ids')
+            open_protocols: ConfigChain = load_configuration('global', cfg_type='security/ids_ips')
             if (open_protocols['open_protocols->icmp']):
                 return ValidationError(
                     'Only one ICMP rule can be active at a time. Remove existing rule before adding another.'
@@ -169,7 +171,7 @@ def validate_dnat_rule(rule: config, /, action: CFG) -> Optional[ValidationError
         except:
             return ValidationError(INVALID_FORM)
 
-        open_protocol_settings: ConfigChain = load_configuration('ips_ids')
+        open_protocol_settings: ConfigChain = load_configuration('global', cfg_type='security/ids_ips')
         # check tcp/udp first, then icmp if it fails.
         # if either fail, standard exception raised.
         try:
@@ -193,7 +195,7 @@ def validate_snat_rule(rule: config, /, action: CFG) -> Optional[ValidationError
 # CONFIGURATION
 # ==============
 def configure_open_wan_protocol(nat: config, *, action: CFG) -> None:
-    with ConfigurationManager('ips_ids') as dnx:
+    with ConfigurationManager('global', cfg_type='security/ids_ips') as dnx:
         protocol_settings: ConfigChain = dnx.load_configuration()
 
         if (action is CFG.ADD):

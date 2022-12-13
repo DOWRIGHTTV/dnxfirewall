@@ -19,7 +19,7 @@ def default_route():
             if int(l[1], 16) or int(l[7], 16):
                 continue
 
-            return int(l[2], 16)
+            return ntohl(int(l[2], 16))
 
         return 0
 

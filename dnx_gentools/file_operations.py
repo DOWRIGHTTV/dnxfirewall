@@ -17,7 +17,9 @@ from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER, fast_sleep
 from dnx_gentools.def_namedtuples import Item
 from dnx_gentools.def_enums import DNS_CAT, DATA
-from dnx_gentools.def_exceptions import ValidationError, ConfigurationError, ControlError
+from dnx_gentools.def_exceptions import ConfigurationError, ControlError
+
+from dnx_webui.source.web_validate import ValidationError
 
 # ================
 # TYPING IMPORTS
@@ -69,13 +71,14 @@ def release_lock(mutex: TextIO):
 
     mutex.close()
 
-def load_configuration(filename: str, ext: str = 'cfg', *, filepath: str = 'dnx_profile/data') -> ConfigChain:
+def load_configuration(
+        filename: str, ext: str = 'cfg', *, cfg_type: str = '', filepath: str = 'dnx_profile/data') -> ConfigChain:
     '''load json data from a file and convert it to a ConfigChain.
     '''
-    filename = f'{filename}.{ext}'
+    filename = f'{cfg_type}/{filename}.{ext}' if cfg_type else f'{filename}.{ext}'
 
     # loading system default configs
-    with open(f'{HOME_DIR}/{filepath}/{filename}', 'r') as system_settings_io:
+    with open(f'{HOME_DIR}/{filepath}/system/{filename}', 'r') as system_settings_io:
         system_settings: dict = json.load(system_settings_io)
 
     # I like the path checks more than try/except block
@@ -89,32 +92,39 @@ def load_configuration(filename: str, ext: str = 'cfg', *, filepath: str = 'dnx_
 
     return ConfigChain(system_settings, user_settings)
 
-def write_configuration(data: dict, filename: str, ext: str = 'cfg', *, filepath: str = 'dnx_profile/data/usr') -> None:
+def write_configuration(
+        data: dict, filename: str, ext: str = 'cfg', *, cfg_type: str = '', filepath: str = 'dnx_profile/data/usr') -> None:
     '''write a json data object to file.
     '''
-    filename = f'{filename}.{ext}'
+    filename = f'{cfg_type}/{filename}.{ext}' if cfg_type else f'{filename}.{ext}'
 
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
         json.dump(data, settings, indent=2)
 
-def load_data(filename: str, *, filepath: str = 'dnx_profile/data') -> dict:
+def load_data(filename: str, *, cfg_type: str = '', filepath: str = 'dnx_profile/data') -> dict:
     '''loads json data from a file and convert it to a python dict.
 
     this function does not provide a default file extension.
     '''
+    filename = f'{cfg_type}/{filename}' if cfg_type else f'{filename}'
+
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'r') as system_settings_io:
         system_settings: dict = json.load(system_settings_io)
 
     return system_settings
 
-# will load json data from file, convert it to a python dict, then return as an object
-def write_data(data: dict, filename: str, *, filepath: str = 'dnx_profile/data') -> None:
+def write_data(data: dict, filename: str, *, cfg_type: str = '', filepath: str = 'dnx_profile/data') -> None:
+    '''write json data to a file from a python dict.
+
+    this function does not provide a default file extension.
+    '''
+    filename = f'{cfg_type}/{filename}' if cfg_type else f'{filename}'
 
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
         json.dump(data, settings, indent=2)
 
 def append_to_file(data: str, filename: str, *, filepath: str = 'dnx_profile/data/usr') -> None:
-    '''append data to filepath.
+    '''append data to filepath. NOTE: needs to be refactored to new folder structure.
     '''
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'a') as settings:
         settings.write(data)
@@ -148,16 +158,15 @@ def json_to_yaml(data: Union[str, dict], *, is_string: bool = False) -> str:
     return '\n'.join([y[4:] for y in data.splitlines() if y.strip()])
 
 def load_tlds() -> Generator[tuple[str, int]]:
-    proxy_config: ConfigChain = load_configuration('dns_proxy')
+    proxy_config: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
 
     for tld, setting in proxy_config.get_items('tlds'):
         yield (tld.strip('.'), setting)
 
-# function to load in all keywords corresponding to enabled domain categories. the try/except
-# is used to ensure bad keywords do not prevent the proxy from starting, though the bad keyword
-# will be omitted from the proxy.
 def load_keywords(log: LogHandler_T) -> tuple[tuple[str, DNS_CAT]]:
     '''returns keyword set for enabled domain categories.
+
+    malformed keywords will be omitted.
     '''
     keywords: list[tuple[str, DNS_CAT]] = []
     try:
@@ -196,7 +205,8 @@ def calculate_file_hash(file_to_hash: str, *, path: str = 'dnx_profile', folder:
 
     return file_hash
 
-def cfg_read_poller(watch_file: str, *, ext: str = 'cfg', folder: str = 'data', class_method: bool = False):
+def cfg_read_poller(
+        watch_file: str, *, ext: str = 'cfg', cfg_type: str = '', filepath: str = 'dnx_profile/data', class_method: bool = False):
     '''Automate Class configuration file poll decorator.
 
     apply this decorator to all functions that will update configurations loaded in memory from json files.
@@ -212,13 +222,13 @@ def cfg_read_poller(watch_file: str, *, ext: str = 'cfg', folder: str = 'data', 
         if (not class_method):
             @wraps(function_to_wrap)
             def wrapper(*args):
-                watcher = Watcher(watch_file, ext, folder, callback=function_to_wrap)
+                watcher = Watcher(watch_file, ext, cfg_type, filepath, callback=function_to_wrap)
                 watcher.watch(*args)
 
         else:
             @wraps(function_to_wrap)
             def wrapper(*args):
-                watcher = Watcher(watch_file, ext, folder, callback=function_to_wrap)
+                watcher = Watcher(watch_file, ext, cfg_type, filepath, callback=function_to_wrap)
                 watcher.watch(*args)
 
             wrapper = classmethod(wrapper)
@@ -353,7 +363,7 @@ class ConfigChain:
 
         return list(search_data)
 
-    def get_items(self, key: str = None) -> list[Optional[Item]]:
+    def get_items(self, key: str = None) -> list[Item]:
         '''return list of namedtuple containing key: value pairs of child keys 1 level lower than the passed in key.
 
         returns an empty list if not found.
@@ -376,7 +386,7 @@ class ConfigChain:
 
         returns an empty list if not found.
 
-            config.get_items('interfaces->builtins')
+            config.get_values('interfaces->builtins')
         '''
         keys = [] if key is None else key.split(self._sep)
         search_data = self._merge_expand()
@@ -389,17 +399,18 @@ class ConfigChain:
 
         return list(search_data.values())
 
-    @property
-    def searchable_system_data(self) -> dict:
-        '''returns copy of original pre-flattened system config dictionary.
-        '''
-        return copy(self.__config[1])
-
-    @property
-    def searchable_user_data(self) -> dict:
-        '''returns copy of original pre-flattened user config dictionary.
-        '''
-        return copy(self.__config[0])
+    # NOTE: get_dict method replaces this functionality and provides more resiliency with user config files
+    # @property
+    # def searchable_system_data(self) -> dict:
+    #     '''returns copy of original pre-flattened system config dictionary.
+    #     '''
+    #     return copy(self.__config[1])
+    #
+    # @property
+    # def searchable_user_data(self) -> dict:
+    #     '''returns copy of original pre-flattened user config dictionary.
+    #     '''
+    #     return copy(self.__config[0])
 
     @property
     def user_data(self) -> dict:
@@ -468,13 +479,13 @@ class ConfigurationManager:
     obtained or block until it can acquire the lock and return the class object to the caller.
     '''
     log: LogHandler_T = None
-    config_lock_file: ConfigLock = f'{HOME_DIR}/dnx_profile/config.lock'
+    config_lock_file: ConfigLock = f'{HOME_DIR}/dnx_profile/data/config.lock'
 
     __slots__ = (
-        '_name', '_ext', '_filename',
+        '_name', '_ext', '_cfg_type', '_filename',
         
         '_config_lock', '_data_written',
-        '_file_path', '_system_path_file', '_usr_path_file',
+        '_file_path', '_usr_path_file',  # '_system_path_file',
         '_temp_file', '_temp_file_path',
     )
 
@@ -484,12 +495,13 @@ class ConfigurationManager:
         '''
         cls.log: LogHandler_T = ref
 
-    def __init__(self, name: str = '', ext: str = 'cfg', file_path: str = None) -> None:
+    def __init__(self, name: str = '', ext: str = 'cfg', cfg_type: str = '', file_path: str = None) -> None:
         '''config_file can be omitted to allow for configuration lock to be used with
         external operations.
         '''
         self._name = name
         self._ext  = ext
+        self._cfg_type = cfg_type
 
         # initialization isn't required if config file is not specified.
         if (not name):
@@ -503,9 +515,9 @@ class ConfigurationManager:
                 file_path = 'dnx_profile/data'
 
             self._file_path = file_path
-            self._filename = f'{name}.{ext}'
+            self._filename = f'{cfg_type}/{name}.{ext}' if cfg_type else f'{name}.{ext}'
 
-            self._system_path_file = f'{HOME_DIR}/{file_path}/{self._filename}'
+            # self._system_path_file = f'{HOME_DIR}/{file_path}/system/{self._filename}'
             self._usr_path_file = f'{HOME_DIR}/{file_path}/usr/{self._filename}'
 
     # attempts to acquire lock on system config lock (blocks until acquired), then opens a temporary
@@ -567,7 +579,7 @@ class ConfigurationManager:
         if (not self._name):
             raise RuntimeError('Configuration Manager methods are disabled in lock only mode.')
 
-        return load_configuration(self._name, ext=self._ext, filepath=self._file_path)
+        return load_configuration(self._name, ext=self._ext, cfg_type=self._cfg_type, filepath=self._file_path)
 
     # accepts python dictionary for serialization to json. writes data to specified file opened.
     def write_configuration(self, data_to_write: dict):
@@ -589,29 +601,39 @@ class ConfigurationManager:
 class Watcher:
     '''Class for detecting file changes within the dnxfirewall filesystem.
 
-     primary use is to detect when a configuration file has been changed by an administrator.
+     primary use is to detect when an administrator has changed a configuration file.
      '''
     __slots__ = (
-        '_watch_file', '_callback', '_full_path',
+        '_watch_file', '_ext', '_cfg_type', '_filepath', '_callback', '_full_path',
         '_last_modified_time'
     )
 
-    def __init__(self, watch_file: str, ext: str, folder: str, *, callback: Callable_T):
-        self._watch_file: str = watch_file
-        self._callback: Callable_T = callback
+    def __init__(self, watch_file: str, ext: str, cfg_type: str, filepath: str, *, callback: Callable_T):
+        self._watch_file = watch_file
 
-        self._full_path: str = f'{HOME_DIR}/dnx_profile/{folder}/usr/{watch_file}.{ext}'
+        self._ext       = ext
+        self._cfg_type  = cfg_type
+        self._filepath = filepath
+
+        self._callback = callback
+
+        self._full_path: str = f'{HOME_DIR}/{filepath}/usr/{watch_file}.{ext}'
 
         self._last_modified_time: int = 0
 
-    # will check file for change in set intervals, currently using global constant for config file polling
     def watch(self, *args) -> None:
-        args = [*args, self._watch_file]
+        '''check configured file for change in set intervals.
+        currently using global constant for config file polling.
 
+        if a change is detected in the polled file, the file will be loaded as a ConfigChain and passed to the set
+        callback function.
+        '''
         for _ in RUN_FOREVER:
 
             if (self.is_modified):
-                self._callback(*args)
+                config_chain = load_configuration(self._watch_file, ext=self._ext, cfg_type=self._cfg_type, filepath=self._filepath)
+
+                self._callback(*args, config_chain)
 
             else:
                 fast_sleep(FILE_POLL_TIMER)

@@ -30,7 +30,7 @@ DESCRIPTOR: int = _s.fileno()
 # NOTE: this may no longer be needed even though it was recently overhauled. the inclusion of the excluded
 # filter in the load_interfaces() function should be able to replace this function. keep for now just in case.
 def get_intf_builtin(zone_name):
-    intf_settings = load_configuration('system')
+    intf_settings = load_configuration('system', cfg_type='global')
 
     intf_path = f'interfaces->builtins->{zone_name}'
     system_interfaces = {v: k for k, v in if_nameindex()[1:]}
@@ -46,7 +46,7 @@ def load_interfaces(intf_type: INTF = INTF.BUILTINS, *, exclude: list = []) -> l
 
         [(intf_index, zone, ident)]
     '''
-    intf_settings: ConfigChain = load_configuration('system')
+    intf_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
     dnx_interfaces = intf_settings.get_items(f'interfaces->{intf_type.name.lower()}')
 
@@ -113,22 +113,36 @@ def get_masquerade_ip(*, dst_ip: int, packed: bool = False) -> Union[bytes, int]
     s.connect((itoip(dst_ip), 0))
 
     try:
-        ip_addr = inet_aton(s.getsockname()[0])
+        ip_addr = s.getsockname()[0]
     except:
         return b'\x00'*4 if packed else 0
 
     else:
-        return ip_addr if packed else long_unpack(ip_addr)[0]
+        return inet_aton(ip_addr) if packed else ip_addr
 
     finally:
         s.close()
 
 def get_mac(*, interface: str) -> Optional[bytes]:
-    '''return raw byte mac address for sent in interface. return None on OSError.'''
+    '''return raw byte mac address for sent in interface. return None on OSError.
+    '''
     try:
         return ioctl(DESCRIPTOR, 0x8927,  fcntl_pack(bytes(interface, 'utf-8')))[18:24]
     except OSError:
         return None
+
+def get_mac_string(*, interface: str) -> Optional[str]:
+    '''return standard string representation of mac address for sent in interface. return None on OSError.
+    '''
+    try:
+        mac_addr = ioctl(DESCRIPTOR, 0x8927,  fcntl_pack(bytes(interface, 'utf-8')))[18:24]
+    except OSError:
+        return None
+
+    else:
+        mac_hex = mac_addr.hex()
+        return ':'.join([mac_hex[i:i + 2] for i in range(0, 12, 2)])
+
 
 def get_ipaddress(*, interface: str) -> int:
     '''return integer value for the passed in interfaces current ip address.

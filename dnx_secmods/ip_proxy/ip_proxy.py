@@ -34,7 +34,7 @@ class IPProxy(ProxyConfiguration, NFQueue):
         self.configure()
 
         ProxyResponse.setup(Log, self.__class__.open_ports)
-        LanRestrict.run(self.__class__)
+        # LanRestrict.run(self.__class__)
 
     def _pre_inspect(self, packet: IPPPacket) -> bool:
 

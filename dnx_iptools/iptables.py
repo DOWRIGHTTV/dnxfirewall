@@ -60,38 +60,39 @@ class _Defaults:
 
     def create_new_chains(self) -> None:
         for chain in self.custom_nat_chains:
-            ipt_shell(f'-N {chain}', table='nat')
+            ipt_shell(f'{chain}', table='nat', action='-N')
 
-        ipt_shell('-N MGMT')
-        ipt_shell('-N IPS', table='raw')  # ddos prevention rule insertion location
+        ipt_shell('MGMT', action='-N')
+        ipt_shell('IPS', table='raw', action='-N')  # ddos prevention rule insertion location
 
     def default_actions(self) -> None:
         '''default allow is explicitly set if they were previously changed from default.
         '''
-        shell('iptables -P OUTPUT ACCEPT')
+        shell('OUTPUT ACCEPT', action='-P')
 
     def cfirewall_hook(self) -> None:
         '''IPTable rules to give cfirewall control of all tcp, udp, and icmp packets.
 
-        cfirewall operates as a basic ip/protocol filter and as a security module inspection pre preprocessor.
+        cfirewall operates as a basic ip/protocol filter and as a security module inspection pre-preprocessor.
 
         standard conntrack permit/allow control is left to IPTables for now.
         '''
-        # FORWARD #
-        # NOTE: conntrack is now checked by cfirewall
-        # shell('iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
+        # FORWARD
+        # NOTE: cfirewall must mark connections with connmark to offload the connection to the kernel, otherwise all
+        # packets of the connection must be processed/handled by cfirewall.
+        ipt_shell('FORWARD -m connmark --mark 1 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT', action='-I')
 
         ipt_shell(f'FORWARD -p tcp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
         ipt_shell(f'FORWARD -p udp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
         ipt_shell(f'FORWARD -p icmp -j NFQUEUE --queue-num {Queue.CFIREWALL}')
 
-        # INPUT #
-        # NOTE: conntrack is now checked by cfirewall
-        # shell(' iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT')
+        # INPUT
+        # NOTE: letting iptables control return traffic for DNX sourced traffic
+        ipt_shell('INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT', action='-I')
 
         # allow local socket communications.
         # NOTE: control sock is AF_INET, so we need this rule
-        ipt_shell(f'INPUT -s 127.0.0.0/24 -d 127.0.0.0/24 -j ACCEPT')
+        ipt_shell('INPUT -s 127.0.0.0/24 -d 127.0.0.0/24 -j ACCEPT')
 
         # user-configured services access will be kept as iptables for now.
         # mark filter to ensure wan doesn't match as an extra precaution.
@@ -146,7 +147,7 @@ class IPTablesManager:
     )
 
     def __init__(self) -> None:
-        interfaces: ConfigChain = load_configuration('system')
+        interfaces: ConfigChain = load_configuration('system', cfg_type='global')
 
         builtins = interfaces.get_items('interfaces->builtins')
 

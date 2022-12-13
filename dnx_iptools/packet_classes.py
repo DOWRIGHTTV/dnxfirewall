@@ -406,10 +406,10 @@ class NFQueue:
         except ProtocolError:
             nfqueue.drop()
 
-        except:
+        except Exception as E:
             nfqueue.drop()
 
-            self._log.error('Failed to parse CPacket. Packet discarded.')
+            self._log.error(f'Failed to parse CPacket. Packet discarded. > {E}')
 
         else:
             if self._pre_inspect(packet):
@@ -423,10 +423,10 @@ class NFQueue:
         except ProtocolError:
             nfqueue.drop()
 
-        except:
+        except Exception as E:
             nfqueue.drop()
 
-            self._log.error('Failed to parse CPacket. Packet discarded.')
+            self._log.error(f'Failed to parse CPacket. Packet discarded. > {E}')
 
         else:
             if self._pre_inspect(packet):

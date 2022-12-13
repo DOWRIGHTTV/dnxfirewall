@@ -157,7 +157,7 @@ def check_clone_location() -> None:
         )
 
 def check_already_ran() -> None:
-    with ConfigurationManager('system') as dnx:
+    with ConfigurationManager('system', cfg_type='global') as dnx:
         dnx_settings: ConfigChain = dnx.load_configuration()
 
     if (not args.update_set and dnx_settings['auto_loader']):
@@ -190,7 +190,7 @@ def set_branch() -> None:
 
         flash_input_error('invalid selection', len(question))
 
-    with ConfigurationManager('system') as dnx:
+    with ConfigurationManager('system', cfg_type='global') as dnx:
         dnx_settings: ConfigChain = dnx.load_configuration()
 
         dnx_settings['branch'] = available_branches[int(selection) - 1]
@@ -261,7 +261,7 @@ def configure_interfaces() -> None:
     interfaces_detected: list[str] = check_system_interfaces()
 
     user_intf_config: dict[str, str] = collect_interface_associations(interfaces_detected)
-    public_dns_servers: dict = load_data('dns_server.cfg')['resolvers']
+    public_dns_servers: dict = load_data('dns_server.cfg', cfg_type='system/global')['resolvers']
 
     set_dnx_interfaces(user_intf_config)
     set_dhcp_interfaces(user_intf_config)
@@ -346,7 +346,7 @@ def write_net_config(interface_configs: str) -> None:
 def set_dnx_interfaces(user_intf_config: dict[str, str]) -> None:
     sprint('configuring dnxfirewall network interfaces...')
 
-    with ConfigurationManager('system') as dnx:
+    with ConfigurationManager('system', cfg_type='global') as dnx:
         dnx_settings: ConfigChain = dnx.load_configuration()
 
         for zone, intf in user_intf_config.items():
@@ -355,7 +355,7 @@ def set_dnx_interfaces(user_intf_config: dict[str, str]) -> None:
         dnx.write_configuration(dnx_settings.expanded_user_data)
 
 def set_dhcp_interfaces(user_intf_config: dict[str, str]) -> None:
-    with ConfigurationManager('dhcp_server') as dhcp:
+    with ConfigurationManager('dhcp_server', cfg_type='global') as dhcp:
         dhcp_settings: ConfigChain = dhcp.load_configuration()
 
         for zone in ['LAN', 'DMZ']:
@@ -437,7 +437,7 @@ def install_packages() -> list:
 
 # this is a no op if already on configured branch, but we will use it to return branch name also.
 def checkout_configured_branch() -> str:
-    configured_branch: str = load_data('system.cfg', filepath=f'{SYSTEM_DIR}/data/usr')['branch']
+    configured_branch: str = load_data('system.cfg', cfg_type='global', filepath=f'{SYSTEM_DIR}/data/usr')['branch']
 
     branch_name = 'dnxfirewall-dev' if configured_branch == 'development' else 'dnxfirewall'
 
@@ -577,7 +577,7 @@ def configure_iptables() -> None:
 # CLEANUP
 # ============================
 def mark_completion_flag() -> None:
-    with ConfigurationManager('system') as dnx:
+    with ConfigurationManager('system', cfg_type='global') as dnx:
         dnx_settings: ConfigChain = dnx.load_configuration()
 
         dnx_settings['auto_loader'] = True

@@ -1,154 +1,223 @@
 @import 'materialize.css';
 /* provides support for nested menus in nav */
-nav ul a {
-    /*font-size: .96rem;*/
-    padding: 0 10px;
-    min-width: 130px;
-}
-nav i.material-icons {
-    font-size: 24px;
-    margin-right: 6px;
-}
-.dropdown-content-trigger {
-    overflow-y: visible;
-}
-.dropdown-content .dropdown-content {
-    left: -94%;
-    top: 36px;
-}
-.dropdown-content {
-    min-width: 130px;
-}
-.dropdown-content li > a {
-    font-weight: bold;
-    padding: 14px 6px;
-}
-.dropdown-content li > a > i {
-    float: left;
-    margin: 0 4px;
-    width: 28px;
-}
-.dropdown-content li > a > i.right {
-    float: right;
-}
-.dropdown-content li > a.expand {
-    font-size: 13px;
-    text-align: center;
-    cursor: default;
-}
-.dropdown-content li > a.expand > i {
-    margin: 0 -4px 0 2px;
-}
-
-/* -- */
-
-nav .brand-logo {
-    padding-right: 5px;
-    padding-left: 5px;
-}
-
-nav .dropdown-content a {
-    color: #e51c23;
-}
-
-#statistics {
-    min-height: 300px;
-}
-
-.input-field input[type=date]:focus+label,
-.input-field input[type=text]:focus+label,
-.input-field input[type=email]:focus+label,
-.input-field input[type=password]:focus+label {
-    color: #e91e63;
-}
-
-.input-field input[type=date]:focus,
-.input-field input[type=text]:focus,
-.input-field input[type=email]:focus,
-.input-field input[type=password]:focus {
-    border-bottom: 2px solid #e91e63;
-    box-shadow: none;
-}
-.login-page {
-    margin: 0 auto;
-}
-
-.login-page form {
-    width:300px;
-}
-
-.col.s12.z-depth-4.card-panel {
-    width:315px;
-    word-break:break-all
-}
-
-/* CARD PANEL EQ HEIGHT */
-.row-flex {
-    display: flex;
-    flex-wrap: wrap;
-  }
-.card-panel-eql {
-    height: calc(100% - 12px);
-  }
-
 /* LOGO adjustments override */
+/* navigation menu type size and pixel adjustment override */
+@media only screen and (max-width: 1550px) {
+  .remove-big-menu {
+    display: none !important; } }
+@media only screen and (max-width: 1549px) {
+  .show-mobile-menu {
+    display: block !important; } }
 @media only screen and (max-width: 992px) {
-    nav .brand-logo {
-      left: 50%;
-      transform: none; }
-    }
-
+  nav .brand-logo {
+    left: 50%;
+    transform: none; } }
 nav .nav-wrapper {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-}
+  justify-content: space-between; }
 nav .brand-logo {
   color: #fff;
   display: inline-block;
   font-size: 2.1rem;
   padding: 0; }
+nav .dropdown-content a {
+    color: #e51c23; }
+nav i.material-icons {
+    font-size: 24px;
+    margin-right: 6px; }
+nav ul a {
+    /*font-size: .96rem;*/
+    padding: 0 10px;
+    min-width: 130px; }
 
-/* navigation menu type size and pixel adjustment override */
-@media only screen and (max-width: 1550px) {
-    .remove-big-menu {
-        display: none !important; } }
+.dropdown-content-trigger {
+    overflow-y: visible; }
 
-@media only screen and (max-width: 1549px) {
-    .show-mobile-menu {
-        display: block !important; } }
+.dropdown-content {
+  min-width: 130px; }
+  .dropdown-content .dropdown-content {
+    left: -94%;
+    top: 36px; }
+  .dropdown-content li > a {
+    font-weight: bold;
+    padding: 14px 6px; }
+    .dropdown-content li > a > i {
+      float: left;
+      margin: 0 4px;
+      width: 28px; }
+    .dropdown-content li > a > i.right {
+      float: right; }
+    .dropdown-content li > a.expand {
+      font-size: 13px;
+      text-align: center;
+      cursor: default; }
+    .dropdown-content li > a.expand > i {
+      margin: 0 -4px 0 2px; }
+
+.tabs {
+  font-family: Orbitron, Roboto, sans-serif;
+  font-weight: bold;
+  letter-spacing: 0.075em; }
+  .tabs .indicator {
+    background-color: #404b77; }
+  .tabs .tab a {
+    color: rgba(238, 110, 115, 0.7); }
+    .tabs .tab a:hover, .tabs .tab a.active {
+      color: #45649f; }
+
+#statistics {
+    min-height: 300px; }
+
+.input-field input[type=date]:focus+label,
+.input-field input[type=text]:focus+label,
+.input-field input[type=email]:focus+label,
+.input-field input[type=password]:focus+label {
+  color: #e91e63; }
+.input-field input[type=date]:focus,
+.input-field input[type=text]:focus,
+.input-field input[type=email]:focus,
+.input-field input[type=password]:focus {
+  border-bottom: 2px solid #e91e63;
+  box-shadow: none; }
+.login-page {
+  margin: 0 auto; }
+.login-form {
+  width: 450px; }
+.col.s12.z-depth-4.card-panel {
+  width: 315px;
+  word-break: break-all; }
+
+.row.row-flex {
+  display: flex;
+  flex-wrap: wrap; }
+
+/* CARD PANELS */
+.card-panel {
+  border-radius: 25px;
+  transition: all .25s;
+  box-shadow: 0 16px 24px 2px rgba(0, 0, 0, 0.14), 0 6px 30px 5px rgba(0, 0, 0, 0.12), 0 8px 10px -7px rgba(0, 0, 0, 0.2); }
+  .card-panel.card-panel-eql {
+    height: calc(100% - 12px); }
+  .card-panel .card-title {
+    font-family: Orbitron, Roboto, sans-serif;
+    letter-spacing: 0.075em;
+    margin-left: 10px; }
 
 /* icon color change */
 i.icon-red {
-    color: red;
-}
-
+  color: red; }
 i.icon-green {
-    color: green;
-}
-
+  color: green; }
 i.icon-blue {
-    color: blue;
-}
+  color: blue; }
 
 /* highlight override */
 table.highlight > tbody > tr:hover {
     background-color: rgba(122, 89, 39, 0.507); }
-
 /* table striping and  - css */
 table.striped > tbody > tr:nth-child(odd) {
     background-color: rgba(11, 47, 47, 0.5); }
-
 table.striped > tbody > tr {
     background-color: rgba(242, 242, 242, 0.5); }
-
 /* table striping - javascript */
 .tr-odd {
     background-color: rgba(11, 47, 47, 0.5); }
-
 .tr-even {
     background-color: rgba(242, 242, 242, 0.5); }
 
 /* materialize override */
 .no-border {
   border-bottom: 0; }
+
+.row-thin {
+    margin: 0; }
+
+.title-divider {
+  height: 2px;
+  overflow: hidden;
+  background-color: #757575; }
+
+/* custom switches */
+/* derivative works of Jove Angelevski @ codepen.io/AlbertFeynman */
+.multi-switch-container {
+  margin: auto;
+  width: 195px;
+  height: 42px;
+  border-radius: 10px;
+  background: #444444;
+  box-shadow: inset 0 0 2px 2px rgba(0, 0, 0, 0.4); }
+  .multi-switch-container.sec-profiles {
+    width: 650px; }
+  .multi-switch-container.decora-switch {
+    width: 100px ; }
+  .multi-switch-container.left {
+    float: left; }
+  .multi-switch-container.right {
+    float: right; }
+
+.multi-switch {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  list-style: none;
+  width: inherit;
+  height: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center; }
+  .multi-switch > li {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 1px;
+    height: 38px;
+    width: 46px;
+    background: #4d4d4d;
+    border-top: 1px solid #999999;
+    box-shadow: 0 10px 10px 0 rgba(0, 0, 0, 0.5);
+    transition: all 1s; }
+    .multi-switch > li > button {
+      all: unset;
+      display: inline-block;
+      color: #bdbdbd;
+      transition: all 1.5s; }
+      .multi-switch > li > button > i {
+        font-size: 30px;
+        margin-top: 6px; }
+    .multi-switch > li > button:hover {
+      color: orange;
+      transition: all 1s; }
+  .multi-switch > li:hover {
+    cursor: pointer; }
+  .multi-switch > li:nth-of-type(1) {
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px; }
+  .multi-switch > li:last-of-type {
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px; }
+  .multi-switch > li.active {
+    background: #444444;
+    border-top: none;
+    border-bottom: 1px solid #5b5b5b;
+    box-shadow: inset 0 0 10px 1px rgba(0, 0, 0, 0.8); }
+  .multi-switch > li.disabled {
+    cursor: default;
+    pointer-events: none;
+    color: #999; }
+  .multi-switch > li.multi-switch-on.active > button {
+    color: red;
+    text-shadow: 0 0 15px rgba(220, 10, 10, 0.5); }
+  .multi-switch > li.multi-switch-off.active > button {
+    color: green;
+    text-shadow: 0 0 15px rgba(10, 220, 10, 0.5); }
+  .multi-switch.sec-profiles > li {
+    width: 36px; }
+
+p.multi-switch-label {
+  font-family: Orbitron, Roboto, sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-shadow: 0 0 15px rgba(0, 100, 200, 0.3); }

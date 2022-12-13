@@ -1,25 +1,23 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="dropdown" class="section {{main_section_color}}">
+<section id="dropdown" class="section">
     <div class="container">
         <div class="col s12">
-            <div class="card-panel hoverable {{card_color}}">
-                <h4 class="{{title_color}}">Traffic Logs</h4>
+            <div class="card-panel hoverable {{ theme.card }}">
+                <h4 class="{{ theme.title }}">Traffic Logs</h4>
                 <div class="row">
                     <form method="POST">
                         <div class="input-field col s5 m3 {{input_color}}">
-                            <label>
-                                Module
-                                <select name="table" onchange="this.form.submit()">
-                                    {%- for table_type in table_types %}
-                                    <option value="{{table_type}}"
-                                            {%- if table_type == table %} selected {% endif %}
-                                            {%- if table_type.startswith('.') %} disabled {% endif %}>
-                                        {{- table_type.upper() }}
-                                    </option>
-                                    {%- endfor %}
-                                </select>
-                            </label>
+                            <select name="table" id="table" onchange="this.form.submit()">
+                                {% for table_type in table_types %}
+                                <option value="{{table_type}}"
+                                        {% if table_type == table %} selected {% endif %}
+                                        {% if table_type.startswith('.') %} disabled {% endif %}>
+                                    {{- table_type.upper() }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <label for="table">Module</label>
                         </div>
                         <div class="input-field col s2">
                             <button class="btn waves-effect waves-light col">
@@ -70,7 +68,7 @@
                             </tr>
                         </thead>
                         <tbody id="filter-table-body">
-                            {%- for entry in table_data %}
+                            {% for entry in table_data %}
                             <tr>
                                 <td>{{ entry.timestamp }}</td>
                                 <td>{{ entry.type }}</td>
@@ -90,13 +88,13 @@
                                 <td>{{ entry.dst_ip }}</td>
                                 <td>{{ entry.dst_port }}</td>
                             </tr>
-                            {%- else %}
+                            {% else %}
                             <tr>
-                                {%- for i in range(1) %}
+                                {% for i in range(1) %}
                                 <td></td>
-                                {%- endfor %}
+                                {% endfor %}
                             </tr>
-                            {%- endfor %}
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>

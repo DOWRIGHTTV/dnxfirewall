@@ -1,18 +1,18 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="slog" class="section {{main_section_color}}">
+<section id="slog" class="section">
     <div class="container">
         <div class="col s12">
-            <div class="card-panel hoverable {{card_color}}">
-                <h4 class="{{title_color}}">System Logs</h4>
+            <div class="card-panel hoverable {{ theme.card }}">
+                <h4 class="{{ theme.title }}">System Logs</h4>
                 <div class="row">
                     <form method="POST">
                         <div class="input-field col s10 m6 l4 {{input_color}}">
                             <select name="table" id="table" onchange="updateData(this.value)">
-                                {% for table_type in log_files -%}
+                                {% for table_type in log_files %}
                                 <option value="{{table_type}}" {% if table_type==table %} selected {% endif %}
                                     >{{table_type.upper()|replace('_', ' ')}} LOG</option>
-                                {% endfor -%}
+                                {% endfor %}
                             </select>
                             <label for="table">Log Files</label>
                         </div>

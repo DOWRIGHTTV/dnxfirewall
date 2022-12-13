@@ -1,53 +1,49 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="tabs-bar" class="tabsbar">
+<section id="tabs-bar">
     <div class="container">
         <div class="row">
-            <div class="col s12 m12 l12 xl12">
-                <ul class="tabs">
-                    {{ create_tab(tab, 1, 'wan-interface')|safe }}
-                </ul>
+            <div class="col s8 offset-s2">
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <ul class="tabs tabs-fixed-width">
+                        {{ create_tab(tab, 1, 'wan-interface')|safe }}
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
 </section>
-<section id="wan-interface" class="section {{ main_section_color }}">
+<section id="wan-interface" class="section">
     <div class="container">
         <div class="row row-flex">
             <div class="col s12 l6">
-                <div class="card-panel card-panel-eql hoverable {{ card_color }}">
-                    <h4 class="{{ title_color }}">IP Address</h4>
+                <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">IP Address</h4>
                     <h6>IP:      {{ interface_settings['ip']['ip_address'] }}</h6>
                     <h6>Netmask: {{ interface_settings['ip']['netmask'] }}</h6>
                     <h6>Gateway: {{ interface_settings['ip']['default_gateway'] }}</h6>
                     <br>
                     <div class="row">
                         <div class="input-field col s9 {{ input_color }}">
-                            <label>
-                                IP Address
-                                <input type="text" name="wan_ip" placeholder="192.168.1.11" {{ ip_addr_validate }}
-                                       form="intf_set" {% if interface_settings['ip']['state'] %} disabled {% endif %}>
-                            </label>
+                            <input type="text" name="wan_ip" id="wan_ip" placeholder="192.168.1.11" {{ ip_addr_validate }}
+                                   form="intf_set" {% if interface_settings['ip']['state'] %} disabled {% endif %}>
+                            <label for="wan_ip">IP Address</label>
                         </div>
                         <div class="input-field col s3 {{ input_color }}">
-                            <label>
-                                <select name="wan_cidr" form="intf_set"
-                                        {% if interface_settings['ip']['state'] %} disabled {% endif %}>
-                                    {% for i in range(24,31) %}
-                                        <option value="{{ i }}">/{{ i }}</option>
-                                    {% endfor %}
-                                </select>
-                            </label>
-                            <label for="">Netmask</label>
+                            <select name="wan_cidr" id="wan_cidr" form="intf_set"
+                                    {% if interface_settings['ip']['state'] %} disabled {% endif %}>
+                                {% for i in range(24,31) %}
+                                    <option value="{{ i }}">/{{ i }}</option>
+                                {% endfor %}
+                            </select>
+                            <label for="wan_cidr">Netmask</label>
                         </div>
                     </div>
                     <div class="row">
                         <div class="input-field col s12 {{ input_color }}">
-                            <label>
-                                Default Gateway
-                                <input type="text" name="wan_dfg" placeholder="192.168.1.1" {{ ip_addr_validate }}
-                                         form="intf_set" {% if interface_settings['ip']['state'] %} disabled {% endif %}>
-                            </label>
+                            <input type="text" name="wan_dfg" id="wan_dfg" placeholder="192.168.1.1" {{ ip_addr_validate }}
+                                   form="intf_set" {% if interface_settings['ip']['state'] %} disabled {% endif %}>
+                            <label for="wan_dfg">Default Gateway</label>
                         </div>
                     </div>
                     <div class="row">
@@ -104,17 +100,16 @@
                 </div>
             </div>
             <div class="col s12 l6">
-                <div class="card-panel card-panel-eql hoverable {{ card_color }}">
-                    <h4 class="{{ title_color }}">MAC Address</h4>
+                <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">MAC Address</h4>
                     <h6>Default MAC: {{ interface_settings['mac']['default'] }}</h6>
                     <h6>Current MAC: {{ interface_settings['mac']['current'] }}</h6>
                     <br>
                     <div class="row">
                         <div class="input-field col s12 {{ input_color }}">
-                            <label>
-                                MAC Address
-                                <input type="text" name="ud_wan_mac" class="validate" placeholder="aa:aa:aa:aa:aa:aa" form="mac_update">
-                            </label>
+                            <input type="text" name="ud_wan_mac" id="ud_wan_mac" class="validate"
+                                   placeholder="aa:aa:aa:aa:aa:aa" form="mac_update">
+                            <label for="ud_wan_mac">MAC Address</label>
                         </div>
                     </div>
                     <div class="row">

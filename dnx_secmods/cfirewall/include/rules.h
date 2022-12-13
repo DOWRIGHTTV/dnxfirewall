@@ -32,6 +32,7 @@ enum rule_actions {
     DNX_FULL_NAT
 };
 
+// module identifiers - linked to netfilter queues
 enum sec_profiles {
     NONE,
     IP_PROXY,

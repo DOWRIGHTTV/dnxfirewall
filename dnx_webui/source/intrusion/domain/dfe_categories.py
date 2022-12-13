@@ -2,17 +2,29 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_constants import INVALID_FORM
+from source.web_typing import *
+from source.web_validate import *
+
 from dnx_gentools.def_enums import CFG
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration
 
-from source.web_validate import ValidationError, standard, convert_int
+
+_DISABLED = True
+
+__all__ = ('WebPage',)
 
 
-DISABLED = True
+class WebPage:
+    @staticmethod
+    def load(form: Form) -> dict[str, Any]:
+        return load_page(1)
 
-def load_page(menu_option):
-    dns_proxy = load_configuration('dns_proxy')
+    @staticmethod
+    def update(form: Form) -> tuple[str, int]:
+        return update_page(form)
+
+def load_page(menu_option: int) -> dict[str, Any]:
+    dns_proxy: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
     userdefined_category = dns_proxy.get_items('categories->user_defined')
 
     ud_cat_lists = {}
@@ -20,7 +32,7 @@ def load_page(menu_option):
     userdefined_categories = []
 
     # TODO: fix this shit. its annoyingly bad right now.
-    if (userdefined_category and not DISABLED):
+    if (userdefined_category and not _DISABLED):
         index = 0
         for i, entry, info in enumerate(userdefined_category):
             if (i % 3 == 0):
@@ -57,9 +69,9 @@ def load_page(menu_option):
 
     return category_settings
 
-def update_page(form):
+def update_page(form: Form) -> tuple[str, int]:
 
-    if (DISABLED):
+    if (_DISABLED):
         return 'user categories disabled for rework', 1
 
     menu_option = form.get('menu', '1')

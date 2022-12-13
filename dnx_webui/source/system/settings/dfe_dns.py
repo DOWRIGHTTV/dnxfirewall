@@ -3,120 +3,127 @@
 from __future__ import annotations
 
 from source.web_typing import *
-from source.web_validate import ValidationError, VALID_DOMAIN, get_convert_bint, standard, ip_address
+from source.web_validate import *
 
-from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import ConfigurationManager, config, load_configuration
 
 from dnx_gentools.system_info import System
 
+from source.web_interfaces import StandardWebPage
 
-def load_page(_: Form) -> dict[str, Any]:
-    server_settings = load_configuration('dns_server')
-    server_cache    = load_configuration('dns_server', ext='cache')
+__all__ = ('WebPage',)
 
-    return {
-        'dns_servers': System.dns_status(), 'dns_records': server_settings.get_items('records'),
-        'tls': server_settings['tls->enabled'], 'udp_fallback': server_settings['tls->fallback'],
-        'top_domains': server_cache.get_items('top_domains'),
-        'cache': {
-            'clear_top_domains': server_cache['clear->top_domains'],
-            'clear_dns_cache': server_cache['clear->standard']
+class WebPage(StandardWebPage):
+    '''
+    available methods: load, update
+    '''
+    @staticmethod
+    def load(_: Form) -> dict[str, Any]:
+        server_settings = load_configuration('dns_server', cfg_type='global')
+        server_cache    = load_configuration('dns_server', ext='cache', cfg_type='global')
+
+        return {
+            'dns_servers': System.dns_status(), 'dns_records': server_settings.get_items('records'),
+            'tls': server_settings['tls->enabled'], 'udp_fallback': server_settings['tls->fallback'],
+            'top_domains': server_cache.get_list('top_domains'),
+            'cache': {
+                'clear_top_domains': server_cache['clear->top_domains'],
+                'clear_dns_cache': server_cache['clear->standard']
+            }
         }
-    }
 
-def update_page(form: Form) -> str:
-    # TODO: i dont like this. fix this. i did a little, but more can be done
-    if ('dns_update' in form):
+    @staticmethod
+    def update(form: Form) -> tuple[int, str]:
+        # TODO: i dont like this. fix this. i did a little, but more can be done
+        if ('dns_update' in form):
 
-        dns_servers = config(**{
-            'primary': [form.get('dnsname1', DATA.MISSING), form.get('dnsserver1', DATA.MISSING)],
-            'secondary': [form.get('dnsname2', DATA.MISSING), form.get('dnsserver2', DATA.MISSING)]
-        })
+            dns_servers = config(**{
+                'primary': [form.get('dnsname1', DATA.MISSING), form.get('dnsserver1', DATA.MISSING)],
+                'secondary': [form.get('dnsname2', DATA.MISSING), form.get('dnsserver2', DATA.MISSING)]
+            })
 
-        # explicit identity check on None to prevent from matching empty fields vs missing for keys.
-        if any([DATA.MISSING in x for x in dns_servers.values()]):
-            return INVALID_FORM
+            # explicit identity check on None to prevent from matching empty fields vs missing for keys.
+            if any([DATA.MISSING in x for x in dns_servers.values()]):
+                return 1, INVALID_FORM
 
-        error = validate_dns_servers(dns_servers)
-        if (error):
-            return error.message
+            if error := validate_dns_servers(dns_servers):
+                return 2, error.message
 
-        else:
-            set_dns_servers(dns_servers)
+            else:
+                set_dns_servers(dns_servers)
 
-    elif ('dns_record_update' in form):
-        dns_record = config(**{
-            'name': form.get('dns_record_name', DATA.MISSING),
-            'ip': form.get('dns_record_ip', DATA.MISSING),
-            'action': CFG.ADD
-        })
-        if (DATA.MISSING in dns_record.values()):
-            return INVALID_FORM
+        elif ('dns_record_update' in form):
+            dns_record = config(**{
+                'name': form.get('dns_record_name', DATA.MISSING),
+                'ip': form.get('dns_record_ip', DATA.MISSING),
+                'action': CFG.ADD
+            })
+            if (DATA.MISSING in dns_record.values()):
+                return 3, INVALID_FORM
 
-        try:
-            ip_address(dns_record.ip)
-            validate_dns_record(dns_record.name, action=CFG.ADD)
-        except ValidationError as ve:
-            return ve.message
+            try:
+                ip_address(dns_record.ip)
+                validate_dns_record(dns_record.name, action=CFG.ADD)
+            except ValidationError as ve:
+                return 4, ve.message
 
-        else:
+            else:
+                update_dns_record(dns_record)
+
+        elif ('dns_record_remove' in form):
+            dns_record = config(**{
+                'name': form.get('dns_record_remove', DATA.MISSING),
+                'action': CFG.DEL
+            })
+
+            if (DATA.MISSING in dns_record.values()):
+                return 5, INVALID_FORM
+
+            if error := validate_dns_record(dns_record.name, action=CFG.DEL):
+                return 6, error.message
+
             update_dns_record(dns_record)
 
-    elif ('dns_record_remove' in form):
-        dns_record = config(**{
-            'name': form.get('dns_record_remove', DATA.MISSING),
-            'action': CFG.DEL
-        })
+        elif ('dns_over_tls' in form):
+            protocol_settings = config(**{
+                'enabled': get_convert_bint(form, 'enabled')
+            })
 
-        if (DATA.MISSING in dns_record.values()):
-            return INVALID_FORM
+            if (protocol_settings.enabled is DATA.INVALID):
+                return 7, INVALID_FORM
 
-        error = validate_dns_record(dns_record.name, action=CFG.DEL)
-        if (error):
-            return error.message
+            configure_protocol_options(protocol_settings, field='dot')
 
-        update_dns_record(dns_record)
+        elif ('udp_fallback' in form):
+            protocol_settings = config(**{
+                'fallback': get_convert_bint(form, 'fallback')
+            })
 
-    elif ('dns_over_tls' in form):
-        protocol_settings = config(**{
-            'enabled': get_convert_bint(form, 'enabled')
-        })
+            if (protocol_settings.fallback is DATA.INVALID):
+                return 8, INVALID_FORM
 
-        if (protocol_settings.enabled is DATA.INVALID):
-            return INVALID_FORM
+            if error := validate_fallback_settings(protocol_settings):
+                return 9, error.message
 
-        configure_protocol_options(protocol_settings, field='dot')
+            configure_protocol_options(protocol_settings, field='fallback')
 
-    elif ('udp_fallback' in form):
-        protocol_settings = config(**{
-            'fallback': get_convert_bint(form, 'fallback')
-        })
+        elif ('dns_cache_clear' in form):
+            clear_dns_cache = config(**{
+                'top_domains': get_convert_bint(form, 'top_domains'),
+                'dns_cache': get_convert_bint(form, 'dns_cache')
+            })
 
-        if (protocol_settings.fallback is DATA.INVALID):
-            return INVALID_FORM
+            # only one is required, so it will only be invalid if both are missing.
+            if all([x is DATA.MISSING for x in clear_dns_cache.values()]):
+                return 10, INVALID_FORM
 
-        error = validate_fallback_settings(protocol_settings)
-        if (error):
-            return error.message
+            set_dns_cache_clear_flag(clear_dns_cache)
 
-        configure_protocol_options(protocol_settings, field='fallback')
+        else:
+            return 99, INVALID_FORM
 
-    elif ('dns_cache_clear' in form):
-        clear_dns_cache = config(**{
-            'top_domains': get_convert_bint(form, 'top_domains'),
-            'dns_cache': get_convert_bint(form, 'dns_cache')
-        })
-
-        # only one is required, so it will only be invalid if both are missing.
-        if all([x is DATA.MISSING for x in clear_dns_cache.values()]):
-            return INVALID_FORM
-
-        set_dns_cache_clear_flag(clear_dns_cache)
-
-    else:
-        return INVALID_FORM
+        return NO_STANDARD_ERROR
 
 # ==============
 # VALIDATION
@@ -137,16 +144,17 @@ def validate_dns_record(query_name: str, *, action: CFG) -> Optional[ValidationE
 
     if (action is CFG.ADD):
 
+        # TODO: make this cleaner -> if not any([VALID_DOMAIN.match(query_name), query_name.isalnum()]:??
         if (not VALID_DOMAIN.match(query_name) and not query_name.isalnum()):
             return ValidationError('Local DNS record is not valid.')
 
     elif (action is CFG.DEL):
-        dns_server = load_configuration('dns_server').searchable_user_data
+        local_dns_records = load_configuration('dns_server', cfg_type='global').get_dict('records')
 
         if (query_name == 'dnx.firewall'):
             return ValidationError('Cannot remove dnxfirewall dns record.')
 
-        if (query_name not in dns_server['records']):
+        if (query_name not in local_dns_records):
             return ValidationError(INVALID_FORM)
 
 def validate_fallback_settings(settings: config) -> Optional[ValidationError]:

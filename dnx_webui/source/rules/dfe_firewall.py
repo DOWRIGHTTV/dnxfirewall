@@ -9,21 +9,23 @@ from typing import NamedTuple as _NamedTuple
 from collections import defaultdict
 
 from source.web_typing import *
-from source.web_validate import ValidationError, standard, full_field, proto_port, ip_network, ip_address
-from source.web_validate import get_convert_int, convert_int
+from source.web_validate import *
 from source.object_manager import FWObjectManager, USER_RANGE
 
-from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import DATA
 from dnx_gentools.file_operations import load_configuration, config
 
 from dnx_secmods.cfirewall.fw_control import FirewallControl
+
+from source.web_interfaces import RulesWebPage
 
 # ===============
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
     from dnx_gentools.def_namedtuples import FW_OBJECT
+
+__all__ = ('WebPage',)
 
 valid_sections: dict[str, str] = {'BEFORE': '1', 'MAIN': '2', 'AFTER': '3'}
 
@@ -44,7 +46,7 @@ _properties = {
     ('zone', 1): ['deep-purple lighten-2', 'border_inner'], ('zone', 2): ['purple lighten-2', 'border_inner']
 }
 def format_fw_obj(fw_obj: list, /) -> list[str, str]:
-    print(fw_obj)
+
     properties = _properties.get((fw_obj[3], fw_obj[4]), ['', ''])
 
     return [
@@ -56,136 +58,158 @@ def format_fw_obj(fw_obj: list, /) -> list[str, str]:
 
 return_data: tuple[bool, dict[str, Union[bool, str]]]
 
-def load_page(section: str) -> dict[str, Any]:
-    lzone_map: dict[int, str] = {ANY_ZONE: 'any'}
+class WebPage(RulesWebPage):
+    @staticmethod
+    def load(section: str) -> dict[str, Any]:
+        lzone_map: dict[int, str] = {ANY_ZONE: 'any'}
 
-    dnx_settings: ConfigChain = load_configuration('system')
+        dnx_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
-    # building out interface to zone map NOTE: builtins only for now
-    for intf_type in ['builtins', 'extended']:
-        for intf_name, intf_info in dnx_settings.get_items(f'interfaces->{intf_type}'):
-            ident = intf_info['ident']
+        # building out interface to zone map NOTE: builtins only for now
+        for intf_type in ['builtins', 'extended']:
+            for intf_name, intf_info in dnx_settings.get_items(f'interfaces->{intf_type}'):
+                ident = intf_info['ident']
 
-            zone_map[intf_type][ident] = intf_name
+                zone_map[intf_type][ident] = intf_name
 
-            # need to make converting zone ident/int to name easier in format function
-            zone_ident = dnx_settings[f'zones->builtins->{intf_name}'][0]
+                # need to make converting zone ident/int to name easier in format function
+                zone_ident = dnx_settings[f'zones->builtins->{intf_name}'][0]
 
-            # TODO: is lzone_map needed after moving zones to fw objects?
-            lzone_map[zone_ident] = intf_name
+                # TODO: is lzone_map needed after moving zones to fw objects?
+                lzone_map[zone_ident] = intf_name
 
-    reference_counts.clear()
-    # NOTE: this needs to be before the zone manager builds, so we can get reference counts
-    firewall_rules = get_and_format_rules(section)
+        reference_counts.clear()
+        # NOTE: this needs to be before the zone manager builds, so we can get reference counts
+        firewall_rules = get_and_format_rules(section)
 
-    # TODO: this is now unoptimized.
-    #  we should track ref counts in in FirewallControl class and inc/dec when rule is deleted or added.
-    # calculate_ref_counts(firewall_rules)
+        # TODO: this is now unoptimized.
+        #  we should track ref counts in in FirewallControl class and inc/dec when rule is deleted or added.
+        # calculate_ref_counts(firewall_rules)
 
-    # building zone list and reference counts NOTE: builtins only for now
-    for zone_type in ['builtins', 'user-defined']:
-        for zone_name, (zone_ident, zone_desc) in dnx_settings.get_items(f'zones->{zone_type}'):
+        # building zone list and reference counts NOTE: builtins only for now
+        for zone_type in ['builtins', 'user-defined']:
+            for zone_name, (zone_ident, zone_desc) in dnx_settings.get_items(f'zones->{zone_type}'):
 
-            zone_manager[zone_type][zone_name] = [reference_counts[zone_name], zone_desc]
+                zone_manager[zone_type][zone_name] = [reference_counts[zone_name], zone_desc]
 
-    version: int
-    firewall_objects: dict[str, list]
-    version, firewall_objects = FWObjectManager.get_objects()
-    print(firewall_objects)
-    # fw_object_map: dict[str, dict] = {obj.name: {'type': obj.type, 'id': obj.id} for obj in firewall_objects}
-    fw_object_map = {o[1]: format_fw_obj(o) for o in firewall_objects.values()}
+        version: int
+        firewall_objects: dict[str, list]
+        version, firewall_objects = FWObjectManager.get_objects()
 
-    # FIXME: this is redundant, but needed to rendering the firewall object list.
-    #  this should only be used for jinja at least it shouldn't be getting sent to client.
-    firewall_objects = {o[1]: o for o in firewall_objects.values()}
+        # fw_object_map: dict[str, dict] = {obj.name: {'type': obj.type, 'id': obj.id} for obj in firewall_objects}
+        fw_object_map = {o[1]: format_fw_obj(o) for o in firewall_objects.values()}
 
-    zone_autofill: dict[str, None] = {k: None for k, v in firewall_objects.items() if v[3] in ['zone']}
-    network_autofill: dict[str, None] = {k: None for k, v in firewall_objects.items() if v[3] in ['address']}
-    service_autofill: dict[str, None] = {k: None for k, v in firewall_objects.items() if v[3] in ['service']}
+        # FIXME: this is redundant, but needed to rendering the firewall object list.
+        #  this should only be used for jinja at least it shouldn't be getting sent to client.
+        firewall_objects = {o[1]: o for o in firewall_objects.values()}
 
-    return {
-        'zone_map': zone_map,
-        'zone_manager': zone_manager,
-        'firewall_objects': firewall_objects,
-        'fw_object_map': fw_object_map,
-        'zone_autofill': zone_autofill,
-        'network_autofill': network_autofill,
-        'service_autofill': service_autofill,
-        'firewall_rules': firewall_rules,
-        'pending_changes': FirewallControl.is_pending_changes()
-    }
+        zone_autofill: dict[str, None] = {k: None for k, v in firewall_objects.items() if v[3] in ['zone']}
+        network_autofill: dict[str, None] = {k: None for k, v in firewall_objects.items() if v[3] in ['address']}
+        service_autofill: dict[str, None] = {k: None for k, v in firewall_objects.items() if v[3] in ['service']}
 
-def update_page(form: Form) -> tuple[str, str]:
+        return {
+            'zone_map': zone_map,
+            'zone_manager': zone_manager,
+            'firewall_objects': firewall_objects,
+            'fw_object_map': fw_object_map,
+            'zone_autofill': zone_autofill,
+            'network_autofill': network_autofill,
+            'service_autofill': service_autofill,
+            'firewall_rules': firewall_rules,
+            'pending_changes': FirewallControl.is_pending_changes()
+        }
 
-    # initial input validation for presence of zone field
-    section: str = form.get('section', 'MAIN')
+    @staticmethod
+    def update(form: Form) -> tuple[str, str]:
 
-    if ('create_obj' in form):
-        fw_object = config(**{
-            'id': 0,
-            'name': form.get('ocname', DATA.MISSING),
-            'group': 'extended',  # hardcoded
-            'type': form.get('octype', DATA.MISSING),
-            'subtype': 0,  # temp value replaced in validation
-            'value': form.get('ocvalue', DATA.MISSING),
-            'desc': form.get('ocdesc', DATA.MISSING)
-        })
+        # initial input validation for presence of zone field
+        section: str = form.get('section', 'MAIN')
 
-        if (DATA.MISSING in fw_object.values()):
-            return INVALID_FORM, section
+        if ('create_obj' in form):
+            fw_object = config(**{
+                'id': 0,
+                'name': form.get('ocname', DATA.MISSING),
+                'group': 'extended',  # hardcoded
+                'type': form.get('octype', DATA.MISSING),
+                'subtype': 0,  # temp value replaced in validation
+                'value': form.get('ocvalue', DATA.MISSING),
+                'desc': form.get('ocdesc', DATA.MISSING)
+            })
 
-        error = validate_object(fw_object)
-        if (error):
-            return error.message, section
+            if (DATA.MISSING in fw_object.values()):
+                return INVALID_FORM + '. code=1', section
 
+            if error := validate_object(fw_object):
+                return error.message + '. code=2', section
+
+            try:
+                with FWObjectManager() as obj_manager:
+                    obj_manager.add(fw_object)
+            except ValidationError as ve:
+                return ve.message + '. code=3', section
+
+        elif ('edit_obj' in form):
+            fw_object = config(**{
+                'id': get_convert_int(form, 'oeid'),
+                'name': form.get('oename', DATA.MISSING),
+                'group': 'extended',  # hardcoded
+                'type': form.get('oetype', DATA.MISSING),
+                'subtype': 0,  # temp value replaced in validation
+                'value': form.get('oevalue', DATA.MISSING),
+                'desc': form.get('oedesc', DATA.MISSING)
+            })
+
+            if (DATA.MISSING in fw_object.values()):
+                return INVALID_FORM + '. code=4', section
+
+            if error := validate_object(fw_object):
+                return error.message + '. code=5', section
+
+            try:
+                with FWObjectManager() as obj_manager:
+                    obj_manager.update(fw_object)
+            except ValidationError as ve:
+                return ve.message + '. code=6', section
+
+        elif ('remove_obj' in form):
+            fw_object = config(**{
+                'id': get_convert_int(form, 'obj_id')
+            })
+
+            if (DATA.MISSING in fw_object.values()):
+                return INVALID_FORM + '. code=7', section
+
+            try:
+                with FWObjectManager() as obj_manager:
+                    obj_manager.remove(fw_object)
+            except ValidationError as ve:
+                return ve.message + '. code=8', section
+
+        elif (section not in valid_sections or 'change_section' not in form):
+            return INVALID_FORM + '. code=9', 'MAIN'
+
+        return '', section
+
+    @staticmethod
+    def handle_ajax(json_data: dict[str, str]) -> return_data:
+
+        section: str = json_data.get('section', '')
+        if (not section or section not in valid_sections):
+            return False, {'error': 1, 'message': 'missing section data'}
+
+        if not json_data.get('rules', None):
+            return False, {'error': 2, 'message': 'missing rule data'}
+
+        # NOTE: all rules must be validated for changes to be applied. validation will raise exception on first error.
         try:
-            with FWObjectManager() as obj_manager:
-                obj_manager.add(fw_object)
+            validated_rules = {section: validate_firewall_commit(json_data['rules'])}
         except ValidationError as ve:
-            return ve.message, section
+            return False, {'error': 3, 'message': str(ve)}
 
-    elif ('edit_obj' in form):
-        fw_object = config(**{
-            'id': get_convert_int(form, 'oeid'),
-            'name': form.get('oename', DATA.MISSING),
-            'group': 'extended',  # hardcoded
-            'type': form.get('oetype', DATA.MISSING),
-            'subtype': 0,  # temp value replaced in validation
-            'value': form.get('oevalue', DATA.MISSING),
-            'desc': form.get('oedesc', DATA.MISSING)
-        })
+        else:
+            FirewallControl.commit(validated_rules)
 
-        if (DATA.MISSING in fw_object.values()):
-            return INVALID_FORM, section
-
-        error = validate_object(fw_object)
-        if (error):
-            return error.message, section
-
-        try:
-            with FWObjectManager() as obj_manager:
-                obj_manager.update(fw_object)
-        except ValidationError as ve:
-            return ve.message, section
-
-    elif ('remove_obj' in form):
-        fw_object = config(**{
-            'id': get_convert_int(form, 'obj_id')
-        })
-
-        if (DATA.MISSING in fw_object.values()):
-            return INVALID_FORM, section
-
-        try:
-            with FWObjectManager() as obj_manager:
-                obj_manager.remove(fw_object)
-        except ValidationError as ve:
-            return ve.message, section
-
-    elif (section not in valid_sections or 'change_section' not in form):
-        return INVALID_FORM, 'MAIN'
-
-    return '', section
+        return True, {'error': 0, 'message': 'commit successful'}
 
 def get_and_format_rules(section: str) -> list[list]:
     firewall_rules = FirewallControl.cfirewall.view_ruleset(section)
@@ -230,26 +254,6 @@ def calculate_ref_counts(firewall_rules: list[list]) -> None:
         for zone in [*src_zones, *dst_zones]:
             reference_counts[zone.name.split('_')[0]] += 1
 
-def commit_rules(json_data: dict[str, str]) -> return_data:
-
-    section: str = json_data.get('section', '')
-    if (not section or section not in valid_sections):
-        return False, {'error': 1, 'message': 'missing section data'}
-
-    if not json_data.get('rules', None):
-        return False, {'error': 2, 'message': 'missing rule data'}
-
-    # NOTE: all rules must be validated for any changes to be applied. validation will raise exception on first error.
-    try:
-        validated_rules = {section: validate_firewall_commit(json_data['rules'])}
-    except ValidationError as ve:
-        return False, {'error': 3, 'message': str(ve)}
-
-    else:
-        FirewallControl.commit(validated_rules)
-
-    return True, {'error': 0, 'message': 'commit successful'}
-
 
 # ================
 # VALIDATION
@@ -278,7 +282,7 @@ def validate_firewall_commit(fw_rules_json: str, /):
     validated_rules: dict = {}
 
     # TODO: make zone map integrated more gooder
-    dnx_interfaces = load_configuration('system').get_items('interfaces->builtins')
+    dnx_interfaces = load_configuration('system', cfg_type='global').get_items('interfaces->builtins')
 
     # TODO: same as above. not needed?
     lzone_map: dict[str, int] = {zone_name: zone_info['zone'] for zone_name, zone_info in dnx_interfaces}
@@ -302,7 +306,6 @@ def validate_firewall_commit(fw_rules_json: str, /):
 
     return validated_rules
 
-# NOTE: log disabled in form and set here as default for the time being.
 def validate_firewall_rule(rule_num: int, fw_rule: rule_structure, /, check: Callable[[str], list[int]]) -> dict[str, Any]:
 
     tlog: dict[str, int] = {'on': 1, 'off': 0}
@@ -319,8 +322,8 @@ def validate_firewall_rule(rule_num: int, fw_rule: rule_structure, /, check: Cal
 
     ip_proxy_profile  = convert_int(fw_rule.sec1_prof)
     dns_proxy_profile = convert_int(fw_rule.sec2_prof)
-    ips_ids_profile   = convert_int(fw_rule.sec3_prof)
-    if not all([x in [0, 1] for x in [ip_proxy_profile, dns_proxy_profile, ips_ids_profile]]):
+    ids_ips_profile   = convert_int(fw_rule.sec3_prof)
+    if not all([x in [0, 1] for x in [ip_proxy_profile, dns_proxy_profile, ids_ips_profile]]):
         raise ValidationError(f'Invalid security profile for rule #{rule_num}.')
 
     enabled = convert_int(fw_rule.enabled)
@@ -364,7 +367,7 @@ def validate_firewall_rule(rule_num: int, fw_rule: rule_structure, /, check: Cal
         'log': tlog,
         'ipp_profile': ip_proxy_profile,
         'dns_profile': dns_proxy_profile,
-        'ips_profile': ips_ids_profile
+        'ips_profile': ids_ips_profile
     }
 
     return rule

@@ -1,235 +1,174 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="tabs-bar" class="tabsbar">
+  <section id="tabs-bar">
     <div class="container">
-        <div class="row">
-            <div class="col s12 m12 l12 xl12">
-                <ul class="tabs">
-                    {{ create_tab(tab, 1, 'general')|safe }}
-                    {{ create_tab(tab, 2, 'reservations')|safe }}
-                    {{ create_tab(tab, 3, 'leases')|safe }}
-                </ul>
-            </div>
+      <div class="row">
+        <div class="col s8 offset-s2">
+          <div class="card-panel hoverable {{ theme.card }}">
+            <ul class="tabs tabs-fixed-width">
+              {{ create_tab(tab, 1, 'general')|safe }}
+              {{ create_tab(tab, 2, 'reservations')|safe }}
+              {{ create_tab(tab, 3, 'leases')|safe }}
+            </ul>
+          </div>
         </div>
+      </div>
     </div>
-</section>
-<section id="general" class="section {{main_section_color}}">
+  </section>
+  <section id="general" class="section">
     <div class="container">
-        <div class="row">
-            {% for interface in ['lan', 'dmz'] %}
-            <div class="col s6">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">{{interface.upper()}} Interface</h4>
-                    <form action="system/settings/dhcp" method="POST">
-                        <input type="hidden" name="tab" value="1">
-                        <input type="hidden" name="interface" value="{{interface}}">
-                        <div class="row">
-                            <div class="input-field col s6 center">
-                                Server
-                                <div class="switch">
-                                    <label>
-                                        Off
-                                        {% set val = "0" if dhcp_settings['interfaces'][interface]['enabled'] else "1" %}
-                                        <input type="checkbox" name="server_enabled" value="{{ val }}"
-                                            {% if dhcp_settings['interfaces'][interface]['enabled'] %}
-                                               checked="checked" {% endif %}>
-                                        <span class="lever"></span>
-                                        On
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="input-field col s6 center">
-                                Ping Verification
-                                <div class="switch">
-                                    <label>
-                                        Disabled
-                                        {% set val = "0" if dhcp_settings['interfaces'][interface]['icmp_check'] else "1" %}
-                                        <input type="checkbox" name="icmp_check" value="{{ val }}"
-                                            {% if dhcp_settings['interfaces'][interface]['icmp_check'] %}
-                                               checked="checked"{% endif %}>
-                                        <span class="lever"></span>
-                                        Enabled
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row {{input_color}}">
-                            <div class="input-field col s6">
-                                <label>
-                                    Start
-                                    <input type="number" name="start" class="validate"
-                                           value="{{dhcp_settings['interfaces'][interface]['lease_range'][0]}}">
-                                </label>
-                            </div>
-                            <div class="input-field col s6">
-                                <label>
-                                    End
-                                    <input type="number" name="end" class="validate"
-                                           value="{{dhcp_settings['interfaces'][interface]['lease_range'][1]}}">
-                                </label>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col s12 center">
-                                <button class="btn waves-effect waves-light" name="general_settings">Update</button>
-                            </div>
-                        </div>
-                    </form>
+      <div class="row">
+      {% for interface in ['lan', 'dmz'] %}
+        <div class="col s6">
+          <div class="card-panel hoverable {{ theme.card }}">
+            {{ create_title(interface.upper() + ' interface')|safe }}
+            {{ create_switch('Server', interface + '/enabled', checked=dhcp_settings.interfaces[interface].enabled)|safe }}
+            {{ create_switch('Ping Verification', interface + '/icmp_check', checked=dhcp_settings.interfaces[interface].icmp_check,
+                enabled=dhcp_settings.interfaces[interface].enabled)|safe }}
+            <form method="post">
+              <div class="row {{input_color}}">
+                <div class="input-field col s6">
+                  <input type="number" name="start" id="start{{ loop.index }}" class="validate"
+                      value="{{dhcp_settings['interfaces'][interface]['lease_range'][0]}}">
+                  <label for="start{{ loop.index }}">Start</label>
                 </div>
-            </div>
-            {% endfor %}
+                <div class="input-field col s6">
+                  <input type="number" name="end" id="end{{ loop.index }}" class="validate"
+                      value="{{dhcp_settings['interfaces'][interface]['lease_range'][1]}}">
+                  <label for="end{{ loop.index }}">End</label>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col s12 center">
+                  <button class="btn waves-effect waves-light" name="general_settings" value="{{ interface }}">Update</button>
+                </div>
+              </div>
+            </form>
+          </div>
         </div>
+      {% endfor %}
+      </div>
     </div>
-</section>
-<section id="reservations" class="section {{main_section_color}}">
+  </section>
+  <section id="reservations" class="section">
     <div class="container">
-        <div class="row">
-            <div class="col s12">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">Add Reservation</h4>
-                    <form action="system/settings/dhcp" method="POST">
-                        <input type="hidden" name="tab" value="2">
-                        <div class="row">
-                            <div class="input-field col s2 offset-s1 {{input_color}}">
-                                <select name="zone" id="">
-                                    <option value="DMZ">DMZ</option>
-                                    <option value="LAN">LAN</option>
-                                </select>
-                                <label for="">Interface</label>
-                            </div>
-                            <div class="input-field col s4 {{input_color}}">
-                                <label>
-                                    MAC Address
-                                    <input type="text" name="mac_address" class="validate" placeholder="aa:aa:aa:aa:aa:aa" required>
-                                </label>
-                            </div>
-                            <div class="input-field col s4 {{input_color}}">
-                                <label>
-                                    IP Address
-                                    <input type="text" name="ip_address" class="validate" placeholder="192.168.5.14" required>
-                                </label>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="input-field col s4 offset-s1 {{input_color}}">
-                                <label>
-                                    Description
-                                    <input type="text" name="description" class="validate" placeholder="Erika's PC">
-                                </label>
-                            </div>
-                            <div class="input-field col s2 offset-s2">
-                                <input type="hidden" name="dhcp_res_add">
-                                <button class="btn waves-effect waves-light col s12">Add</button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            <div class="col s12">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">DHCP Reservations</h4>
-                    <table class="striped centered">
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th>Interface</th>
-                                <th>Mac Address</th>
-                                <th>IP Address</th>
-                                <th>Description</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for mac, info in dhcp_settings['reservations'] %}
-                            <tr>
-                                <td>
-                                    <a class="btn-floating btn-small red waves-effect waves-light modal-trigger"
-                                        href="#dhcp-modal1-{{loop.index}}"><i class="material-icons">remove</i></a>
-                                    <div id="dhcp-modal1-{{loop.index}}" class="modal">
-                                        <div class="modal-content">
-                                            <h5 class="{{modal_text_style}}">Are you sure you want to remove the DHCP reservation?</h5>
-                                        </div>
-                                        <form action="system/settings/dhcp" method="POST">
-                                            <input type="hidden" name="tab" value="2">
-                                            <input type="hidden" name="dhcp_res_remove" value="{{mac}}">
-                                            <div class="modal-footer">
-                                                <button class="btn waves-effect waves-light">YES</button>
-                                                <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </td>
-                                <td>{{info['zone']}}</td>
-                                <td>{{mac}}</td>
-                                <td>{{info['ip_address']}}</td>
-                                <td>{{info['description']}}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                {% for i in range(5) %}
-                                <td></td>
-                                {% endfor %}
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-<section id="leases" class="section {{main_section_color}}">
-    <div class="container">
+      <div class="row">
         <div class="col s12">
-            <div class="card-panel hoverable {{card_color}}">
-                <h4 class="{{title_color}}">DHCP Leases</h4>
-                <div class="row">
-                    <table class="striped centered">
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th>IP Address</th>
-                                <th>Mac Address</th>
-                                <th>Hostname</th>
-                                <th>Time Given</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for ip, handout_time, mac, hostname in dhcp_settings['leases'] %}
-                            <tr>
-                                <td>
-                                    <a class="btn-floating btn-small waves-effect waves-light red modal-trigger"
-                                        href="#dhcp-modal2-{{loop.index}}"><i class="material-icons">remove</i></a>
-                                    <div id="dhcp-modal2-{{loop.index}}" class="modal">
-                                        <div class="modal-content">
-                                            <h5 class="{{modal_text_style}}">Are you sure you want to remove the DHCP lease?</h5>
-                                        </div>
-                                        <form action="system/settings/dhcp" method="POST">
-                                            <input type="hidden" name="tab" value="3">
-                                            <input type="hidden" name="dhcp_lease_remove" value="{{ip}}">
-                                            <div class="modal-footer">
-                                                <button class="btn waves-effect waves-light">YES</button>
-                                                <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </td>
-                                <td>{{ip}}</td>
-                                <td>{{mac}}</td>
-                                <td>{{hostname}}</td>
-                                <td>{{handout_time}}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                {% for i in range(5) %}
-                                <td></td>
-                                {% endfor %}
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+          <div class="card-panel hoverable {{ theme.card }}">
+            {{ create_title('add reservation')|safe }}
+            <form method="post">
+              <input type="hidden" name="tab" value="2">
+              <div class="row">
+                <div class="input-field col s2 offset-s1 {{input_color}}">
+                  <select name="zone">
+                    <option value="DMZ">DMZ</option>
+                    <option value="LAN">LAN</option>
+                  </select>
+                  <label>Interface</label>
                 </div>
-            </div>
+                <div class="input-field col s4 {{input_color}}">
+                  <input type="text" name="mac_address" id="mac_address" class="validate" placeholder="aa:aa:aa:aa:aa:aa" required>
+                  <label for="mac_address">MAC Address</label>
+                </div>
+                <div class="input-field col s4 {{input_color}}">
+                  <input type="text" name="ip_address" id="ip_address" class="validate" placeholder="192.168.5.14" required>
+                  <label for="ip_address">IP Address</label>
+                </div>
+              </div>
+              <div class="row">
+                <div class="input-field col s4 offset-s1 {{input_color}}">
+                  <input type="text" name="description" id="description" class="validate" placeholder="Erika's PC">
+                  <label for="description">Description</label>
+                </div>
+                <div class="input-field col s2 offset-s2">
+                  <input type="hidden" name="dhcp_res_add">
+                  <button class="btn waves-effect waves-light col s12">Add</button>
+                </div>
+              </div>
+            </form>
+          </div>
         </div>
+        <div class="col s12">
+          <div class="card-panel hoverable {{ theme.card }}">
+            {{ create_title('dhcp reservations')|safe }}
+            <table class="striped centered">
+              <thead>
+              <tr>
+                <th></th>
+                <th>Interface</th>
+                <th>Mac Address</th>
+                <th>IP Address</th>
+                <th>Description</th>
+              </tr>
+              </thead>
+              <tbody>
+              {% set message = 'Are you sure you want to remove the DHCP reservation?' %}
+              {% for mac, info in dhcp_settings['reservations'] %}
+                <tr>
+                  <td>
+                    {{ create_button_with_modal('btn-floating btn-small red',
+                        'remove', 1, loop.index, 2, 'dhcp_res_remove', mac, message)|safe }}
+                  </td>
+                  <td>{{info['zone']}}</td>
+                  <td>{{mac}}</td>
+                  <td>{{info['ip_address']}}</td>
+                  <td>{{info['description']}}</td>
+                </tr>
+              {% else %}
+                <tr>
+                  {% for i in range(5) %}
+                    <td></td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
-</section>
+  </section>
+  <section id="leases" class="section">
+    <div class="container">
+      <div class="col s12">
+        <div class="card-panel hoverable {{ theme.card }}">
+          {{ create_title('dhcp leases')|safe }}
+          <div class="row">
+            <table class="striped centered">
+              <thead>
+              <tr>
+                <th></th>
+                <th>IP Address</th>
+                <th>Mac Address</th>
+                <th>Hostname</th>
+                <th>Time Given</th>
+              </tr>
+              </thead>
+              <tbody>
+              {% set message = 'Are you sure you want to remove the DHCP lease?' %}
+              {% for ip, handout_time, mac, hostname in dhcp_settings['leases'] %}
+                <tr>
+                  <td>
+                    {{ create_button_with_modal('btn-floating btn-small red',
+                        'remove', 1, loop.index, 3, 'dhcp_lease_remove', ip, message)|safe }}
+                  </td>
+                  <td>{{ip}}</td>
+                  <td>{{mac}}</td>
+                  <td>{{hostname}}</td>
+                  <td>{{handout_time}}</td>
+                </tr>
+              {% else %}
+                <tr>
+                  {% for i in range(5) %}
+                    <td></td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 {% endblock %}

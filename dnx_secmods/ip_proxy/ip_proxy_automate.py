@@ -37,7 +37,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
     }
 
     def _configure(self) -> tuple[LogHandler_T, tuple, int]:
-        '''tasks required by the DNS proxy.
+        '''tasks required by the IP proxy.
 
         return thread information to be run.
         '''
@@ -51,9 +51,8 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
         return Log, threads, 3
 
-    @cfg_read_poller('ip_proxy')
-    def _get_settings(self, cfg_file: str) -> None:
-        proxy_settings: ConfigChain = load_configuration(cfg_file)
+    @cfg_read_poller('profiles/profile_1', cfg_type='security/ip')
+    def _get_settings(self, proxy_settings: ConfigChain) -> None:
 
         self.__class__.ids_mode = proxy_settings['ids_mode']
 
@@ -89,9 +88,8 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
         self._initialize.done()
 
-    @cfg_read_poller('whitelist')
-    def _get_ip_whitelist(self, cfg_file: str) -> None:
-        whitelist: ConfigChain = load_configuration(cfg_file)
+    @cfg_read_poller('whitelist', cfg_type='global')
+    def _get_ip_whitelist(self, whitelist: ConfigChain) -> None:
 
         self.__class__.ip_whitelist = {
             ip for ip, wl_info in whitelist.get_items('ip_bypass') if wl_info['type'] == 'ip'
@@ -103,9 +101,8 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
         self._initialize.done()
 
-    @cfg_read_poller('ips_ids')
-    def _get_open_ports(self, cfg_file: str) -> None:
-        ips: ConfigChain = load_configuration(cfg_file)
+    @cfg_read_poller('global', cfg_type='security/ids_ips')
+    def _get_open_ports(self, ips: ConfigChain) -> None:
 
         self.__class__.open_ports = {
             PROTO.TCP: {

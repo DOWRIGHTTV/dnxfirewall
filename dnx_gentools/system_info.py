@@ -5,14 +5,13 @@ from __future__ import annotations
 import os
 import datetime
 
-from time import ctime, sleep
-from ipaddress import IPv4Address
+from time import ctime
 from functools import partial
 from datetime import datetime, timedelta
 from subprocess import run, CalledProcessError, DEVNULL
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import HOME_DIR, fast_time, str_join, NO_DELAY, FIVE_SEC, ONE_HOUR
+from dnx_gentools.def_constants import HOME_DIR, fast_time, str_join, NO_DELAY, ONE_HOUR
 from dnx_gentools.file_operations import load_configuration, load_data
 
 __all__ = (
@@ -29,7 +28,7 @@ class Interface:
     @staticmethod
     def bandwidth():
         intstat = {}
-        interface_bandwidth = load_data('interface.stat')
+        interface_bandwidth = load_data('interface.stat', cfg_type='system/global')
         for interface, value in interface_bandwidth.items():
             rx = str(round(int(value[0])/1024, 2)) + ' MB/s'
             tx = str(round(int(value[1])/1024, 2)) + ' MB/s'
@@ -105,7 +104,7 @@ class System:
     def calculate_time_offset(logged_time: Timestamp) -> Timestamp:
         '''returns modified time based on current time offset settings.
         '''
-        log_settings = load_configuration('logging_client')
+        log_settings = load_configuration('logging_client', cfg_type='global')
 
         os_dir = log_settings['time_offset->direction']
         os_amt = log_settings['time_offset->amount']
@@ -115,8 +114,20 @@ class System:
         return logged_time + offset
 
     @staticmethod
+    def format_msg_time(epoch: Timestamp) -> str:
+        '''return date and time in the messenger format.
+
+        Jun 24 19:08:15
+        '''
+        f_time = ctime(epoch).split()
+
+        return f'{f_time[1]} {f_time[2]} {f_time[3]}'
+
+    @staticmethod
     def format_log_time(epoch: Timestamp) -> str:
-        '''return date and time in the front end log format. 2019 Jun 24 19:08:15
+        '''return date and time in the front end log format.
+
+        2019 Jun 24 19:08:15
         '''
         f_time = ctime(epoch).split()
 
@@ -126,7 +137,7 @@ class System:
     def format_date_time(epoch: Timestamp) -> str:
         '''return date and time in the general format.
 
-            19:08:15 Jun 24 2019
+        19:08:15 Jun 24 2019
         '''
         f_time = ctime(epoch).split()
 
@@ -136,7 +147,7 @@ class System:
     def format_time(epoch: Timestamp) -> str:
         '''return time in the general 24h format.
 
-            19:08:15
+        19:08:15
         '''
         return f'{ctime(epoch).split()[3]}'
 
@@ -168,8 +179,8 @@ class System:
 
     @staticmethod
     def dns_status() -> dict:
-        dns_servers_status: dict = load_data('dns_server.stat')
-        dns_server: ConfigChain = load_configuration('dns_server')
+        dns_servers_status: dict = load_data('dns_server.stat', cfg_type='system/global')
+        dns_server: ConfigChain = load_configuration('dns_server', cfg_type='global')
 
         tls_enabled = dns_server['tls->enabled']
         dns_servers = dns_server.get_dict('resolvers')
@@ -246,7 +257,7 @@ class System:
                 data, rule = rule[:2], rule[2:]
 
                 arg, value = data
-                # filtering out unneccesary args
+                # filtering out unnecessary args
                 if arg in ['-m', '-j']: continue
 
                 if (nat_type == 'SRCNAT'):

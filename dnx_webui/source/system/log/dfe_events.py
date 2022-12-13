@@ -2,69 +2,80 @@
 
 from __future__ import annotations
 
+from source.web_typing import *
+from source.web_validate import *
+
 from dnx_gentools.def_enums import DATA
-from dnx_gentools.file_operations import load_data
+from dnx_gentools.file_operations import load_data, config
 from dnx_gentools.system_info import System
 
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 
-from source.web_typing import *
-from source.web_validate import INVALID_FORM
+from source.web_interfaces import LogWebPage
 
-def load_page(uri_query: Optional[dict] = None) -> tuple[str, str, list]:
-    # if sent from the dashboard link, infected-clients table will open directly.
-    if uri_query is not None and uri_query.get('view_clients', None):
-        return 'all', 'infected_clients', load_infected_clients()
+__all__ = ('WebPage',)
 
-    return 'dns_proxy', 'all', get_table_data(action='all', table='dnsproxy', routine='last')
+class WebPage(LogWebPage):
+    '''
+    available methods: load, update
+    '''
+    @staticmethod
+    def load(uri_query: Args) -> tuple[str, str, list]:
 
-def update_page(form: Form) -> tuple[str, str, list]:
+        # if sent from the dashboard link, infected-clients table will open directly.
+        if uri_query is not None and uri_query.get('view_clients', None):
+            return 'all', 'infected_clients', load_infected_clients()
 
-    # TODO: bring validation up to speed (ensure host is valid mac format). make database raise validation error
-    #  when removing a client that isn't present in the db. this means some tomfoolery happened and we should return
-    #  invalid form error.
-    if ('i_client_remove' in form):
-        ic_data = config(**{
-            'client': form.get('infected_client', DATA.MISSING),
-            'remote_host': form.get('detected_host', DATA.MISSING)
-        })
+        return 'dns_proxy', 'all', get_table_data(action='all', table='dnsproxy', routine='last')
 
-        # TODO: investigate/fix this...
-        if (DATA.MISSING in ic_data.values()):
-            return INVALID_FORM
+    @staticmethod
+    def update(form: Form) -> tuple[str, str, list]:
 
-        with DBConnector() as FirewallDB:
-            FirewallDB.execute('clear_infected', ic_data.client, ic_data.remote_host, table='infectedclients')
+        # TODO: bring validation up to speed (ensure host is valid mac format). make database raise validation error
+        #  when removing a client that isn't present in the db. this means some tomfoolery happened and we should return
+        #  invalid form error.
+        if ('i_client_remove' in form):
+            ic_data = config(**{
+                'client': form.get('infected_client', DATA.MISSING),
+                'remote_host': form.get('detected_host', DATA.MISSING)
+            })
 
-    # if form is invalid, will just resend default data for now.
-    try:
-        table_type, sort = form.get('table', DATA.MISSING).split('/')
-    except:
-        return load_page()
+            # TODO: investigate/fix this...
+            if (DATA.MISSING in ic_data.values()):
+                return INVALID_FORM
 
-    if (sort not in ['last', 'top']):
-        return load_page()
+            with DBConnector() as FirewallDB:
+                FirewallDB.execute('clear_infected', ic_data.client, ic_data.remote_host, table='infectedclients')
 
-    menu = form.get('menu', DATA.MISSING)
-    if (menu is DATA.MISSING):
-        return load_page()
+        # if form is invalid, will just resend default data for now.
+        try:
+            table_type, sort = form.get('table', DATA.MISSING).split('/')
+        except:
+            return Webpage.load()
 
-    # domains blocked, viewed, or both
-    if (table_type in ['dns_proxy']):
-        return table_type, menu, get_table_data(action=menu, table='dnsproxy', routine=sort)
+        if (sort not in ['last', 'top']):
+            return WebPage.load()
 
-    elif (table_type in ['ip_proxy']):
-        return table_type, menu, get_table_data(action=menu, table='ipproxy', routine=sort)
+        menu = form.get('menu', DATA.MISSING)
+        if (menu is DATA.MISSING):
+            return Webpage.load()
 
-    elif (table_type in ['intrusion_prevention']):
-        return table_type, menu, get_table_data(action='all', table='ips', routine=sort)
+        # domains blocked, viewed, or both
+        if (table_type in ['dns_proxy']):
+            return table_type, menu, get_table_data(action=menu, table='dnsproxy', routine=sort)
 
-    elif (table_type in ['infected_clients'] or 'i_client_remove' in form):
+        elif (table_type in ['ip_proxy']):
+            return table_type, menu, get_table_data(action=menu, table='ipproxy', routine=sort)
 
-        # created function so load page could reuse code.
-        return 'infected_clients', 'all', load_infected_clients()
+        elif (table_type in ['intrusion_prevention']):
+            return table_type, menu, get_table_data(action='all', table='ips', routine=sort)
 
-def get_table_data(*, action, table, routine, users=None):
+        elif (table_type in ['infected_clients'] or 'i_client_remove' in form):
+
+            # created function so load page could reuse code.
+            return 'infected_clients', 'all', load_infected_clients()
+
+def get_table_data(*, action, table, routine, users=None) -> list[list[str]]:
     '''query the database by using getattr(FirewallDB, f'{method}') on DB Connector context.
     this will return a max of 100 entries.
     '''
@@ -93,7 +104,7 @@ def format_row(row: list, users: dict) -> list[str]:
     return [str(x).lower().replace('_', ' ') for x in entries]
 
 def load_infected_clients() -> list:
-    dhcp_server: dict = load_data('dhcp_server.cfg')
+    dhcp_server: dict = load_data('dhcp_server.cfg', cfg_type='system/global')
     users = dhcp_server['reservations']
 
     return get_table_data(action='all', table='infectedclients', routine='last', users=users)

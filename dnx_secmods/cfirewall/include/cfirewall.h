@@ -32,7 +32,7 @@
 #define FOUR_BIT_MASK 15
 
 #define OUTBOUND 1
-#define INBOUND 2
+#define INBOUND  2
 
 #define WAN_IN 10
 
@@ -146,8 +146,8 @@ struct dnx_pktb {
         struct FWrule  *fw_rule;
         struct NATrule *nat_rule;
     };
-    uint32_t            verdict;
     uint32_t            mark;
+    uint32_t            verdict;
     struct LogHandle   *logger;
 };
 

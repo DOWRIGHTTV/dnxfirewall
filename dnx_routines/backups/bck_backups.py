@@ -7,7 +7,7 @@ import tarfile
 
 from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.def_enums import CFG
-from dnx_gentools.def_exceptions import ValidationError
+# from dnx_gentools.def_exceptions import ValidationError
 
 from dnx_routines.logging.log_client import LogHandler as Log
 

@@ -7,12 +7,11 @@ import string
 
 from ipaddress import IPv4Network, IPv4Address
 
-from source.web_typing import *
+# TODO: consider moving this module, web_typing, and web_interfaces to dnx_webui folder instead of source
+from dnx_webui.source.web_typing import *
 
-from dnx_gentools.def_constants import INVALID_FORM
 from dnx_gentools.def_enums import CFG, DATA, PROTO
-from dnx_gentools.file_operations import load_configuration
-from dnx_gentools.def_exceptions import ValidationError
+from dnx_gentools.def_exceptions import DNXError
 
 
 BINT = (0, 1)
@@ -22,25 +21,32 @@ MAX_PORT = 65535
 MAX_PORT_RANGE = MAX_PORT + 1
 
 __all__ = (
-    'INVALID_FORM',
-    'standard', 'full_field',
+    'ValidationError',
+    
+    'INVALID_FORM', 'NO_STANDARD_ERROR',
+    'VALID_MAC', 'VALID_DOMAIN',
+
     'convert_int', 'get_convert_int',
     'convert_bint', 'get_convert_bint',
+    'standard', 'full_field',
 
     'mac_address',
     'ip_address', 'default_gateway', 'ip_network', 'cidr',
     'network_port', 'proto_port',
 
-    'VALID_MAC', 'VALID_DOMAIN',
-
     'domain_name',
-    'syslog_settings',
-    'syslog_dropdown',
     'add_ip_whitelist',
-    'ValidationError'
 )
 
+class ValidationError(DNXError):
+    '''Webui processing failure or invalid user input.'''
+
+
 _proto_map = {'any': 0, 'icmp': 1, 'tcp': 6, 'udp': 17}
+
+NO_STANDARD_ERROR: tuple[int, str] = (0, '')
+NO_LOG_ERROR: tuple[str, str, []] = ('', '', [])
+INVALID_FORM: str = 'Invalid form data.'
 
 # TODO: mac regex allows trailing characters. it should hard cut after the exact char length.
 VALID_MAC = re.compile('(?:[0-9a-fA-F]:?){12}')
@@ -250,7 +256,7 @@ def proto_port(port_str):
     return proto_int, ports
 
 def syslog_settings(settings, /):
-    syslog = load_configuration('syslog_client')
+    # syslog = load_configuration('syslog_client')
 
     return
     # configured_syslog_servers = syslog['servers']

@@ -1,127 +1,121 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="tabs-bar" class="tabsbar">
+{# aliasing for now so we can reuse template #}
+{% set page_settings = ip_settings %}
+<section id="tabs-bar">
     <div class="container">
         <div class="row">
-            <div class="col s12 m12">
-                <ul class="tabs">
-                    {{ create_tab(tab, 1, 'reputation')|safe }}
-                    {{ create_tab(tab, 2, 'geolocation')|safe }}
-                    {{ create_tab(tab, 3, 'lan-restrict')|safe }}
-                </ul>
+            <div class="col s8 offset-s2">
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <ul class="tabs tabs-fixed-width">
+                        {{ create_tab(tab, 1, 'reputation')|safe }}
+                        {{ create_tab(tab, 2, 'geolocation')|safe }}
+                        {{ create_tab(tab, 3, 'lan-restrict')|safe }}
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
+    {% include 'includes/_sec_profiles.html' %}
 </section>
-<section id="reputation" class="section {{main_section_color}}">
+{% set cat_options = [(0,'radio_button_unchecked'), (1,'file_upload'), (1,'file_download'), (1,'swap_vert')] %}
+<section id="reputation" class="section">
     <div class="container">
         <div class="row">
             <div class="col s12 m10 offset-m1">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">Reputation</h4>
-                    {% for category, enabled in ip_settings['reputation'] %}
-                    {% if loop.index0 in range(0,10,2) %}<div class="row">{% endif %}
-                        <div class="input-field col s4 offset-s1">
-                            <h6>{{category.title().replace('_', ' ')}}</h6>
-                            <select name="reputation" onchange="updateCategory(this)">
-                                <option value="{{category}}_0" {% if enabled==0 %} selected {% endif %}>OFF</option>
-                                <option value="{{category}}_1" {% if enabled==1 %} selected {% endif %}>OUTBOUND</option>
-                                <option value="{{category}}_2" {% if enabled==2 %} selected {% endif %}>INBOUND</option>
-                                <option value="{{category}}_3" {% if enabled==3 %} selected {% endif %}>BOTH</option>
-                            </select>
+                <div class="card-panel hoverable {{ theme.card }}">
+                    {{ create_title('reputation')|safe }}
+                    {% for category, direction in ip_settings['reputation'] %}
+                    {% if not loop.index0 % 4 %}<div class="row">{% endif %}
+                        <div class="col s3">
+                            <div class="row row-thin">
+                                <p class="multi-switch-label center">{{ category.title().replace('_', ' ') }}</p>
+                            </div>
+                            <div class="row row-thin">
+                                <div class="multi-switch-container">
+                                    <ul class="multi-switch">
+                                    {% for on, option in cat_options %}
+                                        {% set status = "multi-switch-on" if on else "multi-switch-off" %}
+                                        <li class="{{ status }}{% if direction == loop.index0 %} active {% endif %}">
+                                            <button name="reputation" value="{{ category }}/{{ loop.index0 }}" onclick="updateCategory(this)">
+                                                <i class="material-icons small">{{ option }}</i>
+                                            </button>
+                                        </li>
+                                    {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
-                    {% if loop.last or loop.index0 in range(1,10,2)  %}</div>{% endif %}
+                    {% if loop.index0 % 4 == 3 or loop.last%}</div>{% endif %}
                     {% endfor %}
                 </div>
             </div>
         </div>
     </div>
 </section>
-<section id="geolocation" class="section {{main_section_color}}">
+<section id="geolocation" class="section">
     <div class="container">
         <div class="col s12">
-            <div class="card-panel hoverable {{card_color}}">
-                <h4 class="{{title_color}}">Geolocation</h4>
+            <div class="card-panel hoverable {{ theme.card }}">
+                {{ create_title('geolocation')|safe }}
                 <div class="row">
                     <form method="POST">
                         <input type="hidden" name="tab" value="2">
                         <input type="hidden" name="change_geo_view">
                         <div class="input-field col s5 m3 offset-m1 {{input_color}}">
-                            <label>
-                                Region
-                                <select name="region" onchange="this.form.submit()">
-                                    {% for region in ip_settings['regions'] %}
-                                    <option value="{{region}}" {% if region == ip_settings['geolocation']['region'] %} selected {% endif %}>{{region.replace('_', ' ').upper()}}</option>
-                                    {% endfor %}
-                                </select>
-                            </label>
+                            <select name="region" id="region" onchange="this.form.submit()">
+                                {% for region in ip_settings['regions'] %}
+                                <option value="{{region}}" {% if region == ip_settings['geolocation']['region'] %}
+                                        selected {% endif %}>{{region.replace('_', ' ').upper()}}</option>
+                                {% endfor %}
+                            </select>
+                            <label for="region">Region</label>
                         </div>
                         <div class="input-field col s5 m3 {{input_color}}">
-                            <label>
-                                Direction
-                                <select name="menu_dir" onchange="this.form.submit()">
-                                    {% for dir in ['off', 'outbound', 'inbound', 'both', 'all'] %}
-                                    ><option value="{{loop.index0}}" {% if ip_settings['geolocation']['menu_dir'] == loop.index0 %} selected {% endif %}>{{dir.upper()}}</option>
-                                    {% endfor %}
-                                </select>
-                            </label>
+                            <select name="menu_dir" id="menu_dir" onchange="this.form.submit()">
+                                {% for dir in ['off', 'outbound', 'inbound', 'both', 'on', 'all'] %}
+                                <option value="{{loop.index0}}" {% if ip_settings['geolocation']['menu_dir'] == loop.index0 %}
+                                        selected {% endif %}>{{dir.upper()}}</option>
+                                {% endfor %}
+                            </select>
+                            <label for="menu_dir">Direction</label>
                         </div>
                     </form>
                 </div>
-                <div class="row">
-                    <table class="striped highlight">
-                        <thead>
-                            <tr>
-                                <th style="width:5%"></th>
-                                <th style="width:20%"></th>
-                                <th style="width:5%"></th>
-                                <th style="width:20%"></th>
-                                <th style="width:5%"></th>
-                                <th style="width:20%"></th>
-                                <th style="width:5%"></th>
-                                <th style="width:20%"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        {% for country, direction in ip_settings['geolocation']['countries'] %}
-                        {% if loop.index0 in range(0,100,4) %}<tr>{% endif %}
-                            <td>
-                                <ul id="dd-{{loop.index}}" class="dropdown-content">
-                                    {% for dir, image in ip_settings['image_map'].items() %}
-                                    {% if dir != direction %}
-                                    <li>
-                                        <a>
-                                            <button name="country" value="{{country}}_{{dir}}" onclick="updateCategory(this)"
-                                                static_value="{{direction}}" style="background-color: Transparent; border: none; cursor:pointer;">
-                                                <img src="/static/assets/images/{{image}}" {{dash_icon_std}}>
-                                            </button>
-                                        </a>
+                {% for country, direction in ip_settings['geolocation']['countries'] %}
+                {% if not loop.index0 % 4 %}<div class="row">{% endif %}
+                    <div class="col s3">
+                        <div class="row row-thin">
+                            <p class="multi-switch-label center">{{ country.title().replace('_', ' ') }}</p>
+                        </div>
+                        <div class="row row-thin">
+                            <div class="multi-switch-container">
+                                <ul class="multi-switch">
+                                {% for on, option in cat_options %}
+                                    {% set status = "multi-switch-on" if on else "multi-switch-off" %}
+                                    <li class="{{ status }}{% if direction == loop.index0 %} active {% endif %}">
+                                        <button name="country" value="{{ country }}/{{ loop.index0 }}" onclick="updateCategory(this)">
+                                            <i class="material-icons small">{{ option }}</i>
+                                        </button>
                                     </li>
-                                    {% endif %}
-                                    {% endfor %}
+                                {% endfor %}
                                 </ul>
-                                <img class="dropdown-trigger" data-target="dd-{{loop.index}}"  height="100%" width="100%"
-                                    src="/static/assets/images/{{ip_settings['image_map'][direction]}}">
-                            </td>
-                            <td>
-                                <h6>{{country.title().replace('_', ' ')}}</h6>
-                            </td>
-                        {% if loop.last or loop.index0 in range(3,100,4)  %}</tr>{% endif %}
-                        {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% if loop.index0 % 4 == 3 or loop.last%}</div><div class="divider"></div>{% endif %}
+                {% endfor %}
             </div>
         </div>
     </div>
 </section>
-<section id="lan-restrict" class="section {{main_section_color}}">
+<section id="lan-restrict" class="section">
     <div class="container">
         <div class="row">
             <div class="col s12 m10 offset-m1">
-                <div class="card-panel hoverable {{card_color}}">
-                    <h4 class="{{title_color}}">LAN Restrict</h4>
-                    <form action="/intrusion/ip" method="post">
+                <div class="card-panel hoverable {{ theme.card }}">
+                    <h4 class="{{ theme.title }}">LAN Restrict</h4>
+                    <form method="post">
                         <input type="hidden" name="tab" value="3">
                         <div class="col s12">
                             <h6>Start Time</h6>
@@ -180,30 +174,20 @@
     </div>
 </section>
 <script>
-let imageMap = {'0': 'allow_up-down', '1': 'block_up', '2': 'block_down', '3': 'block_up-down'}
 async function updateCategory(category) {
 
-    const cat_info = category.value.split('_')
+    const cat_info = category.value.split('/');
 
-    let cat_value;
-    let cat_opt;
-    if (cat_info.length === 3) {
-        cat_value = cat_info[0] + '_' + cat_info[1]
-        cat_opt = cat_info[2]
-    } else {
-        cat_value = cat_info[0]
-        cat_opt = cat_info[1]
-    }
+    let cat_value = cat_info[0];
+    let cat_opt   = cat_info[1];
 
     let response = await ajaxClient.post('/post', {'type': category.name, 'category': cat_value, 'direction': cat_opt});
 
-    let error = ajaxClient.handleResponse(response, category)
-
-    // sets the image accordingly
+    // manually changing the active button instead of using an event listener to prevent a switch on server errors.
+    let error = ajaxClient.handleResponse(response, category);
     if (!error) {
-        let image = category.closest('td').querySelector('.dropdown-trigger')
-
-        image.setAttribute('src', `/static/assets/images/${imageMap[cat_info[1]]}.png`)
+        category.parentElement.parentElement.querySelector(".active").classList.remove("active");
+        category.parentElement.classList.add("active");
     }
 }
 </script>

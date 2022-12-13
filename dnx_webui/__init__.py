@@ -20,12 +20,8 @@ if (INITIALIZE_MODULE):
     sys.path.insert(0, WEB_DIR)
 
     # app will be called by uwsgi
-    from source.main.dfe_main import app
-
-# ===============
-# TYPING
-# ===============
-from typing import TYPE_CHECKING
-
-if (TYPE_CHECKING):
-    __all__ = ()
+    try:
+        from source.main.dfe_main import app
+    except ImportError as ie:
+        print(f'webui import failure. {ie}. exiting...')
+        os._exit(1)
