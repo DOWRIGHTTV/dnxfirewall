@@ -30,8 +30,7 @@
                 <div class="input-field col s4 m2 {{input_color}}">
                   <select name="section" onchange="this.form.submit()">
                     {% for section in sections %}
-                      {% if section == selected %}
-                        <option value="{{ section }}" {% if section == selected %}selected{% endif %}>{{ section }}</option>
+                      <option value="{{ section }}" {% if section == selected %}selected{% endif %}>{{ section }}</option>
                     {% endfor %}
                   </select>
                   <label>Ruleset</label>
