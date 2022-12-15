@@ -334,8 +334,8 @@ class ProtoRelay:
 class NFQueue:
     _log: LogHandler_T
 
-    _packet_parser:  ProxyParser
-    _proxy_callback: ProxyCallback
+    _packet_parser:  ClassVar[ProxyParser]
+    _proxy_callback: ClassVar[ProxyCallback]
 
     __slots__ = ()
 
@@ -670,11 +670,12 @@ class RawResponse:
         intf: NFQ_SEND_SOCK = cls._registered_socks_get(packet.in_intf)
 
         # TODO: skip masquerade when WAN int is statically assigned
+        #   why do we need to masquerade here??? wouldnt the initial dst ip be the current wan interface ip all the same?
         dnx_src_ip = packet.dst_ip if intf.zone != WAN_IN else get_masquerade_ip(dst_ip=packet.src_ip)
 
         # checking if dst port is associated with a nat.
-        # if so, will override necessary fields based on protocol and re-assign in the packet object
-        # chained if the statement is for the more likely case of open port not being present.
+        # if so, will override necessary fields based on protocol and re-assign in the packet object.
+        # the chained if statement is for the more likely case of open port not being present.
         open_ports: dict = cls._open_ports[packet.protocol]
         if (open_ports):
             port_override: int = open_ports.get(packet.dst_port)
@@ -706,7 +707,7 @@ class RawResponse:
 
             proto_header = protohdr.assemble()
 
-            # using creation/call to handle field update and buffer assembly
+            # __call__ for updating fields, then assemble buffer
             psdohdr = pseudo_header_template((('src_ip', dnx_src_ip), ('dst_ip', packet.src_ip)))
             pseudo_header = psdohdr.assemble()
 
