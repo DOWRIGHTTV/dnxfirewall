@@ -145,18 +145,14 @@ cdef class CFirewall:
     # TODO: make this work on a per "module" basis. NAT vs FIREWALL.
     #   also provide a global argument option for these.
     #   FW instance will be responsible for settings these globally for the time being.
-    def set_options(s, int bypass, int verbose, int verbose2, int fw, int nat):
-        global PROXY_BYPASS, VERBOSE, VERBOSE2, FW_V, NAT_V
+    def set_options(s, int verbose, int verbose2, int fw, int nat):
+        global VERBOSE, VERBOSE2, FW_V, NAT_V
 
-        PROXY_BYPASS = <bool>bypass
         VERBOSE = <bool>verbose
         VERBOSE2 = <bool>verbose2
 
         FW_V = <bool>fw
         NAT_V = <bool>nat
-
-        if (bypass):
-            print('<proxy bypass enable>')
 
         if (verbose):
             print('<verbose console logging enabled>')

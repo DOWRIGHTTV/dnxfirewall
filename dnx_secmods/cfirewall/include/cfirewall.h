@@ -1,6 +1,10 @@
 #ifndef CFIREWALL_H
 #define CFIREWALL_H
 
+#include <sys/socket.h>
+#include <uio.h>
+#include <pwd.h>
+
 // netfilter
 #include <linux/netfilter.h> // enum nf_inet_hooks
 #include <linux/netfilter_ipv4.h> // IP hooks (NF_IP_FORWARD)
@@ -57,7 +61,6 @@
 extern uint32_t MSB, LSB;
 
 // cli args
-extern bool PROXY_BYPASS;
 extern bool VERBOSE;
 extern bool VERBOSE2;
 
@@ -146,9 +149,10 @@ struct dnx_pktb {
         struct FWrule  *fw_rule;
         struct NATrule *nat_rule;
     };
-    uint32_t            mark;
-    uint32_t            verdict;
+    uint8_t             log;
     struct LogHandle   *logger;
+    uint32_t            mark;           // X (16b, reserved) | X (4b) | geo loc (8b) | direction (2b) | action (2b)
+    uint16_t            sec_profiles;   // X (4b) | ips (4b) | dns (4b) | ipp (4b) -- will be placed in upper 16b of mark
 };
 
 #endif

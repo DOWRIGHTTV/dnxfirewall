@@ -2,7 +2,9 @@
 #include "cfirewall.h"
 #include "traffic_log.h"
 
-struct LogHandle Log[2];
+int database_service_sock;
+struct sockaddr_un database_service = { AF_UNIX, DATABASE_SERVICE };
+struct ucred database_creds;
 
 char*   action_map[3] = {"deny", "accept", "reject"};
 char*   dir_map[2]    = {"inbound", "outbound"};
@@ -73,8 +75,8 @@ log_rotate(struct LogHandle *logger, struct timeval *ts)
     // setting time info to midnight of current date
     time_info = localtime(&ts->tv_sec);
     time_info->tm_hour = 0;
-    time_info->tm_min = 0;
-    time_info->tm_sec = 0;
+    time_info->tm_min  = 0;
+    time_info->tm_sec  = 0;
 
     // setting id (date) string to be quickly referenced in log_write function
     strftime(today, 9, "%Y%m%d", time_info);
@@ -91,4 +93,94 @@ log_rotate(struct LogHandle *logger, struct timeval *ts)
     logger->buf = fopen(file_path, "a");
 
     return 0;
+}
+
+/* this will be used on cfirewall deny OR if an accept doesnt have an ip proxy profile set
+this will prevent the packet from needing to be redirected to the IPP queue and reprocessed unless the ip proxy
+was configured with an inspection module.
+
+-- i feel like this will drastically improve throughput because deferred action requires a full re parse of the packet
+through netfilter queue, then converted transferred a python object and send through the proxy logger client instance.
+
+NOTE: overriding SCM_CREDENTIALS with the dnxfirewall system user (vs root) for explicit authentication of receiving end
+which also reduces authorization code complexity.
+*/
+void
+log_db_init()
+{
+    struct passwd pwd = getpwnam(DNX_USER);
+       //char   *pw_name;       /* username */
+       //char   *pw_passwd;     /* user password */
+       //uid_t   pw_uid;        /* user ID */
+       //gid_t   pw_gid;        /* group ID */
+       //char   *pw_gecos;      /* user information */
+       //char   *pw_dir;        /* home directory */
+       //char   *pw_shell;      /* shell program */
+
+    database_creds = { getpid(), pwd.pw_uid, pwd.pw_gid };
+
+    database_service_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
+
+    connect(database_service_sock, database_service, sizeof(struct sockaddr_un));
+}
+
+// required data is encoded in the packet mark per dnx standard
+// (country (8b) | (direction (2b) | action (2b)
+void
+log_db_geolocation(uint32_t pkt_mark)
+{
+    /* ===========================================
+    DEFINING LOG MESSAGE DATA
+    =========================================== */
+    char log_data[64]; // 3 spaces for country, 1 for null term
+    struct iovec log_msg = { log_data, sizeof(log_data) };
+
+    snprintf(
+        log_data, DB_LOG_FORMAT,
+        (pkt_mark >> FOUR_BITS) & ONE_BYTE,
+        (pkt_mark >> TWO_BITS) & TWO_BITS,
+        pkt_mark & TWO_BITS
+    );
+
+    /* ===========================================
+    BUILDING SOCKET MESSAGE HEADER
+    includes: packet/log data, ancillary data
+    =========================================== */
+    union {
+        char buf[CMSG_SPACE(sizeof(struct ucred))];
+        struct cmsghdr align;
+    } u;
+
+    struct msghdr db_message = {
+        //void          *msg_name        Optional address.
+        //socklen_t      msg_namelen     Size of address.
+        //struct iovec  *msg_iov         Scatter/gather array.
+        //int            msg_iovlen      Members in msg_iov.
+        //void          *msg_control     Ancillary data; see below.
+        //socklen_t      msg_controllen  Ancillary data buffer len.
+        //int            msg_flags       Flags on received message.
+        .msg_iov = &log_msg,
+        .msg_iovlen = 1,
+        .msg_control = u.buf,
+        .msg_controllen = sizeof(u.buf)
+    }
+
+    /* ===========================================
+    DEFINING CONTROL MESSAGE DATA
+    =========================================== */
+    struct cmsghdr *cmsg = CMSG_FIRSTHDR(&db_message);
+
+    cmsg->cmsg_level = SOL_SOCKET;
+    cmsg->cmsg_type  = SCM_CREDENTIALS
+    cmsg->cmsg_len   = CMSG_LEN(sizeof(struct ucred));
+
+    memcpy(CMSG_DATA(cmsg), &database_creds, sizeof(struct ucred));
+
+    /* ===========================================
+    SEND TO SERVICE SOCKET
+    blindly sending since it is a local socket
+    and we do not expect a confirmation of receipt.
+    =========================================== */
+    sendmsg(database_socket, &db_message, 0);
+
 }

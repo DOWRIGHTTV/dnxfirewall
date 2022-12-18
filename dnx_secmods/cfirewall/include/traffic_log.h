@@ -1,6 +1,11 @@
 #ifndef TRAFFIC_LOG_H
 #define TRAFFIC_LOG_H
 
+#define DNX_USER "dnx"
+
+#define DATABASE_SERVICE "/home/dnx/dnxfirewall/dnx_routines/database/ddb.sock" // 52
+#define DB_LOG_FORMAT "{\"method\": \"geolocation\", \"timestamp\": 0, \"log\": [%u, %u, %u]}\"" // 61
+
 #define TRAFFIC_LOG_DIR  "/home/dnx/dnxfirewall/dnx_profile/log/traffic/" // 46
 // 20220628 // 8
 //src_mac="%s" dst_mac="%s"
@@ -26,7 +31,7 @@ struct LogHandle {
     int     cnt;
 };
 
-extern struct LogHandle Log[2];
+struct LogHandle Log[2];
 
 extern void log_init(struct LogHandle *logger, char *label);
 extern void log_enter(struct timeval *ts, struct LogHandle *logger);
@@ -35,5 +40,8 @@ extern void log_write_nat(struct dnx_pktb *pkt);
 extern void log_exit(struct LogHandle *logger);
 
 int  log_rotate(struct LogHandle *logger, struct timeval *ts);
+
+extern void log_db_init();
+extern void log_db_geolocation(uint32_t pkt_mark);
 
 #endif

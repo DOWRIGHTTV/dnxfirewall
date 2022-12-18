@@ -18,24 +18,34 @@
 #define FW_RULE_RANGE_END     3 // inclusive
 
 #define SECURITY_PROFILE_COUNT 3
-#define PROFILE_SIZE   4  // bits
-#define PROFILE_START 12
-#define PROFILE_STOP  (SECURITY_PROFILE_COUNT * 4) + 8 // + 1  // +1 for range
+#define IP_PROXY_MASK  15
+#define DNS_PROXY_MASK 240
+#define IPS_IDS_MASK   3840
 
 #define PACKET_ACTION_MASK 3 // first 2 bits
+#define PACKET_DIR_MASK    12 // 2nd 2 bits
 
+// ==================================
+// Firewall tables access lock
+// ==================================
+// Must be held to read from or make
+// changes to "*firewall_tables[]"
 pthread_mutex_t     FWtableslock;
 pthread_mutex_t    *FWlock_ptr = &FWtableslock;
 
+// ==================================
+// FIREWALL TABLES
+// ==================================
+// contains pointers to arrays of pointers to FWrule and its length
 struct FWtable firewall_tables[FW_TABLE_COUNT];
 
-/* FIREWALL RULES SWAP STORAGE
-Python converted data will be placed here. This will allow the GIL to be released
-before copying the data into the active rules. This comes at a somewhat substantial
-hit to memory usage, but it will save alot of programming time by moving the need
-for the fw socket/api to be implemented to correct the deadlock issue between the
-Python GIL and the firewall or nat rule locks.
-*/
+// ==================================
+// FIREWALL RULES SWAP STORAGE
+// ==================================
+// Python converted data will be placed here. This will allow the GIL to be released before copying the data into the
+// active rules. This comes at a somewhat substantial hit to memory usage, but it will save alot of programming time by
+// moving the need for the fw socket/api to be implemented to correct the deadlock issue between the Python GIL and the
+// firewall or nat rule locks.
 struct FWtable fw_tables_swap[FW_TABLE_COUNT];
 
 void
@@ -55,6 +65,8 @@ firewall_init(void) {
     fw_tables_swap[FW_AFTER_RULES].rules  = calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(struct FWrule));
 
     log_init(&Log[FW_LOG_IDX], "firewall");
+
+
 }
 
 // ==================================
@@ -71,22 +83,25 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     struct clist_range  fw_clist = {};
     uint32_t            ct_info;
 
+    struct timeval      timestamp; // used only when packet is marked for logging
+
     dnx_parse_nl_headers(nl_msgh, &nl_pkth, netlink_attrs, &pkt);
-    /*
-    CONNTRACK LOOKUP
-    this should be checked as soon as feasibly possible for performance.
-    later, this will be used to allow for stateless inspection policies.
-    NTOHL on id is because kernel will apply HTONL on receipt.
-    */
+
+    // TODO: we need to do more research into this and whether its necessary or just masking a bug
     if (!netlink_attrs[NFQA_CT_INFO]) {
-        dnx_send_verdict_fast(cfd, ntohl(nl_pkth->packet_id), 0, NF_DROP);
+        dnx_send_verdict(cfd, ntohl(nl_pkth->packet_id), NF_DROP);
         dprint(FW_V & VERBOSE, "NO CONNTRACK INFO - PACKET DISCARDED\n");
 
         return OK;
     }
+    /* ===================================
+       CONNTRACK LOOKUP
+    =================================== */
+    // this should be checked as soon as feasibly possible for performance. later, this will be used to allow for
+    // stateless inspection policies. NTOHL on id is because kernel will apply HTONL on receipt.
     ct_info = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_CT_INFO]));
     if (ct_info != IP_CT_NEW) {
-        dnx_send_verdict_fast(cfd, ntohl(nl_pkth->packet_id), 0, NF_ACCEPT);
+        dnx_send_verdict(cfd, ntohl(nl_pkth->packet_id), NF_ACCEPT);
 
         return OK;
     }
@@ -101,33 +116,83 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
 
     fw_clist.end = FW_RULE_RANGE_END;
 
-    // ===================================
-    // FIREWALL RULES LOCK
+    /* ===================================
+       FIREWALL RULES LOCK
+    =================================== */
     // prevents the manager thread from updating firewall rules during packet inspection.
     // consider locking around each control list. this would weave control list updates with inspection.
     firewall_lock();
     firewall_inspect(&fw_clist, &pkt, cfd);
     firewall_unlock();
-    // UNLOCKING ACCESS TO FIREWALL RULES
     // ===================================
-#if DEVELOPMENT
-    if (PROXY_BYPASS) {
-        pkt.verdict = pkt.fw_rule->action; // this tells cfirewall to take control instead of forward to proxy
-        dprint(FW_V & VERBOSE, "PROXY BYPASS ON>");
+
+    /* ===================================
+       NFQUEUE VERDICT LOGIC
+    =================================== */
+    // consider making these encoded in a uint32_t and returned from inspect function (then cast to results tuple struct)
+    uint8_t pkt_action = (pkt.mark & TWO_BITS);
+    uint8_t pkt_dir    = (pkt.mark >> TWO_BITS) & TWO_BITS;
+
+    // SEND TO IP PROXY - criteria: accepted, inbound or outbound
+    if (pkt_action == DNX_ACCEPT // primary match
+            && pkt.sec_profiles & IP_PROXY_MASK ) {
+
+        dnx_send_deferred_verdict(cfd, ntohl(nl_pkth->packet_id),
+            (pkt.sec_profiles << TWO_BYTES) | pkt.mark, (IP_PROXY << TWO_BYTES) | NF_QUEUE);
     }
-#endif
+    // SEND TO IPS/IDS - criteria: accepted or dropped, inbound
+    else if (pkt_dir == INBOUND // primary match
+            && pkt.sec_profiles & IPS_IDS_MASK ) {
 
-    dprint(FW_V & VERBOSE, "pkt_id->%u, hook->%u, mark->%u, verdict->%u, ipp->%u, dns->%u, ips->%u",
-        ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.mark, pkt.verdict,
-        pkt.mark >> 12 & FOUR_BITS, pkt.mark >> 16 & FOUR_BITS, pkt.mark >> 20 & FOUR_BITS
-    );
+        dnx_send_deferred_verdict(cfd, ntohl(nl_pkth->packet_id),
+            (pkt.sec_profiles << TWO_BYTES) | pkt.mark, (IPS_IDS << TWO_BYTES) | NF_QUEUE);
+    }
+    // SEND TO DNS PROXY - criteria: accepted, outbound, udp/53
+    else if (pkt_action == DNX_ACCEPT // primary match
+            && pkt_dir == OUTBOUND
+            && pkt.sec_profiles & DNS_PROXY_MASK
+            && pkt.iphdr->protocol == IPPROTO_UDP
+            && pkt.protohdr->dport == UDPPROTO_DNS ) {
 
-    // NFQUEUE VERDICT
-    // drops will inherently forward to the ip proxy for geo inspection and local dns records.
-    dnx_send_verdict_fast(cfd, ntohl(nl_pkth->packet_id), pkt.mark, pkt.verdict);
-    // ===================================
+        dnx_send_deferred_verdict(cfd, ntohl(nl_pkth->packet_id),
+            (pkt.sec_profiles << TWO_BYTES) | pkt.mark, (DNS_PROXY << TWO_BYTES) | NF_QUEUE);
+    }
+    // default: accept w/o sec policy, system rules, drop action w/o ips
+    else {
+        dnx_send_verdict(cfd, ntohl(nl_pkth->packet_id), pkt_action);
+    }
 
-    dprint(FW_V & VERBOSE, " (VERDICT SENT)\n");
+    /* ===================================
+       GEOLOCATION MONITORING - GENERAL
+    =================================== */
+    // non system traffic only. remote country to or from and packet action
+    if (fw_clist.start != FW_SYSTEM_RANGE_START) {
+        log_db_geolocation(pkt.mark);
+    }
+
+    /* ===================================
+       TRAFFIC LOGGING
+    =================================== */
+    // logs entry for packet on disk
+    // todo: see about running a threaded logger queue so packet processing can continue immediately.
+    //   - this might be more pain than whats its worth since we use stack allocation for pktb struct.
+    if (pkt.fw_rule->log) {
+        gettimeofday(&timestamp, NULL);
+
+        // log_write function needs to reference through pktb struct
+        pkt.logger = &Log[FW_LOG_IDX];
+
+        // log file rotation logic
+        log_enter(&timestamp, pkt.logger);
+        log_write_firewall(&timestamp, pkt, direction, src_country, dst_country);
+        log_exit(pkt.logger);
+    }
+
+//    dprint(FW_V & VERBOSE, "pkt_id->%u, hook->%u, mark->%u, verdict->%u, ipp->%u, dns->%u, ips->%u",
+//        ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.mark, pkt.verdict,
+//        pkt.mark >> 12 & FOUR_BITS, pkt.mark >> 16 & FOUR_BITS, pkt.mark >> 20 & FOUR_BITS
+//    );
+//    dprint(FW_V & VERBOSE, " (VERDICT SENT)\n");
 
     // return hierarchy -> libnfnetlink.c >> libnetfiler_queue >> process_traffic.
     // < 0 vals are errors, but return is being ignored by CFirewall._run.
@@ -138,8 +203,6 @@ inline void
 firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfdata *cfd)
 {
     dnx_parse_pkt_headers(pkt);
-
-    struct timeval timestamp;
 
     struct FWrule           *rule;
     struct HashTrie_Range   *geolocation = cfd->geolocation;
@@ -155,9 +218,6 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
     // general direction of the packet and ip addr normalized to always be the external host/ip
     uint8_t     direction   = pkt->hw.in_zone.id != WAN_IN ? OUTBOUND : INBOUND;
     uint16_t    tracked_geo = direction == INBOUND ? src_country : dst_country;
-
-    // local flag to mark for traffic logging
-    uintf8_t    log_packet = 0;
 
     dprint(FW_V & VERBOSE, "< ++ FIREWALL INSPECTION ++ >\nsrc->[%u]%u(%u):%u, dst->[%u]%u(%u):%u, direction->%u, tracked->%u\n",
         pkt->hw.in_zone.id, iph_src_ip, src_country, ntohs(pkt->protohdr->sport),
@@ -194,7 +254,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             // ------------------------------------------------------------------
             if (service_match(&rule->s_services, pkt->iphdr->protocol, ntohs(pkt->protohdr->sport)) != MATCH) { continue; }
 
-            //icmp checked in source only.
+            // icmp checked in source only.
             if (pkt->iphdr->protocol != IPPROTO_ICMP) {
                 if (service_match(&rule->d_services, pkt->iphdr->protocol, ntohs(pkt->protohdr->dport)) != MATCH) { continue; }
             }
@@ -205,40 +265,18 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             pkt->fw_rule    = rule;
             pkt->mark       = (tracked_geo << FOUR_BITS) | (direction << TWO_BITS) | rule->action;
 
-            for (uintf8_t idx = 0; idx < 3; idx++) {
-                pkt->mark |= rule->sec_profiles[idx] << ((idx * 4) + 12);
+            for (uintf8_t idx = 0; idx < SECURITY_PROFILE_COUNT; idx++) {
+                pkt->sec_profiles |= rule->sec_profiles[idx] << ((idx * 4));
             }
 
-            // 0. SYSTEM RULE -> direct invocation || 1-3. STANDARD RULE -> forward to IP_PROXY
-            pkt->verdict = (cntrl_list == FW_SYSTEM_RANGE_START) ? rule->action : (IP_PROXY << TWO_BYTES) | NF_QUEUE;
-
-            log_packet = rule->log;
-
-            goto logging;
+            return;
         }
     }
     // ------------------------------------------------------------------
     // DEFAULT ACTION
     // ------------------------------------------------------------------
     pkt->rule_clist = NO_SECTION;
-    pkt->verdict    = (IP_PROXY << TWO_BYTES) | NF_QUEUE;
     pkt->mark       = (tracked_geo << FOUR_BITS) | (direction << TWO_BITS) | DNX_DROP;
-
-    logging:
-    if (log_packet) {
-        gettimeofday(&timestamp, NULL);
-
-        pkt->logger = &Log[FW_LOG_IDX]; // log_write function needs to reference through pktb struct
-
-        // log file rotation logic
-        log_enter(&timestamp, pkt->logger);
-        log_write_firewall(&timestamp, pkt, direction, src_country, dst_country);
-        log_exit(pkt->logger);
-    }
-
-//    if (netlink_attrs[NFQA_HWADDR]) {
-//        pkt.hw.mac_addr = ((nl_pkt_hw*) mnl_attr_get_payload(netlink_attrs[NFQA_HWADDR]))->hw_addr;
-//    }
 }
 
 void

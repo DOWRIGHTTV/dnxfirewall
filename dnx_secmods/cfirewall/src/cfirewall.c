@@ -4,7 +4,6 @@
 uint32_t MSB, LSB;
 
 // cli args
-bool PROXY_BYPASS;
 bool VERBOSE;
 bool VERBOSE2;
 

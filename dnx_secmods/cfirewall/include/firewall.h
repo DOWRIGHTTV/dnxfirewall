@@ -30,15 +30,15 @@ enum fw_tables {
 // Must be held to read from or make
 // changes to "*firewall_tables[]"
 // ---------------------------------- //
-extern pthread_mutex_t     FWtableslock;
-extern pthread_mutex_t    *FWlock_ptr;
+//extern pthread_mutex_t     FWtableslock;
+//extern pthread_mutex_t    *FWlock_ptr;
 // ==================================
 // FIREWALL TABLES
 // ==================================
 // contains pointers to arrays of pointers to FWrule and its length
-extern struct FWtable   firewall_tables[FW_TABLE_COUNT];
+//extern struct FWtable   firewall_tables[FW_TABLE_COUNT];
 
-extern struct FWtable   fw_tables_swap[FW_TABLE_COUNT];
+//extern struct FWtable   fw_tables_swap[FW_TABLE_COUNT];
 
 extern void firewall_init(void);
 extern int  firewall_stage_count(uintf8_t cntrl_list, uintf16_t rule_count);

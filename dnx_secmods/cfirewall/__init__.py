@@ -9,7 +9,6 @@ LOG_NAME = 'cfirewall'
 def print_help():
     print('<[ CFIREWALL ARGUMENT LIST ]>')
     print('h, help               print argument list to the terminal')
-    print('b, bypass             apply firewall rule action without forwarding to any configured security modules')
     print('v, verbose            print operational messages to the terminal')
     print('vv, verbose2          print near excessive amounts of debug messages to the terminal')
     print('fw                    enables fw module specific output to terminal (use with v or vv)')
@@ -35,12 +34,10 @@ if INITIALIZE_MODULE(LOG_NAME):
     @dataclass
     class Args:
         h:  int = 0
-        b:  int = 0
         v:  int = 0
         vv: int = 0
 
         help:     int = 0
-        bypass:   int = 0
         verbose:  int = 0
         verbose2: int = 0
 
@@ -50,10 +47,6 @@ if INITIALIZE_MODULE(LOG_NAME):
         @property
         def help_set(self):
             return self.h or self.help
-
-        @property
-        def bypass_set(self):
-            return self.b or self.bypass
 
         @property
         def verbose_set(self):
@@ -100,7 +93,7 @@ def run():
     dnxfirewall = CFirewall()
 
     # NOTE: bypass tells the process to invoke rule action (DROP or ACCEPT) without forwarding to security modules.
-    dnxfirewall.set_options(args.bypass_set, args.verbose_set, args.verbose2_set, args.fw_set, args.nat_set)
+    dnxfirewall.set_options(args.verbose_set, args.verbose2_set, args.fw_set, args.nat_set)
 
     error = dnxfirewall.nf_set(QueueType.FIREWALL, Queue.CFIREWALL)
     if (error):
@@ -146,5 +139,5 @@ def run():
         for t in dnx_threads:
             t.join()
     except Exception as E:
-        dnxfirewall.nf_break()
+        # dnxfirewall.nf_break() TODO: why did we remove the teardown? was it unnecessary?
         hardout(f'DNXFIREWALL cfirewall/nfqueue failure => {E}')

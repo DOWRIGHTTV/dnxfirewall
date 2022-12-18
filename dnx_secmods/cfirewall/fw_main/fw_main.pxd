@@ -265,7 +265,6 @@ cdef extern from "cfirewall.h" nogil:
     uint32_t MSB, LSB
 
     # cli args
-    bool PROXY_BYPASS
     bool VERBOSE
     bool VERBOSE2
 
@@ -284,8 +283,6 @@ cdef extern from "cfirewall.h" nogil:
 
 cdef extern from "firewall.h" nogil:
     void firewall_init()
-    # void firewall_lock()
-    # void firewall_unlock()
     int  firewall_stage_count(uintf8_t table, uintf16_t rule_count)
     int  firewall_stage_rule(uintf8_t table, uintf16_t idx, FWrule *rule)
     int  firewall_push_rules(uintf8_t table_idx)
@@ -294,8 +291,6 @@ cdef extern from "firewall.h" nogil:
 
 cdef extern from "nat.h" nogil:
     void nat_init()
-    # void nat_lock()
-    # void nat_unlock()
     int  nat_stage_count(uintf8_t table, uintf16_t rule_count)
     int  nat_stage_rule(uintf8_t table, uintf16_t idx, NATrule *rule)
     int  nat_push_rules(uintf8_t table_idx)

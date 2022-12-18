@@ -48,13 +48,35 @@ dnx_parse_pkt_headers(struct dnx_pktb *pkt)
     pkt->protohdr = (struct Protohdr*) (pkt->iphdr + 1);
 }
 
-/* NO NAT fast call.
+// DIRECT ACTION (does NOT forward to another nfqueue)
+inline void
+dnx_send_verdict(struct cfdata *cfd, uint32_t pktid, uint32_t verdict)
+{
+    char                buf[MNL_SOCKET_BUFFER_SIZE];
+    struct nlmsghdr    *nlh;
+    struct nlattr      *nest;
+
+    nlh = nfq_nlmsg_put(buf, NFQNL_MSG_VERDICT, cfd->queue);
+
+    nfq_nlmsg_verdict_put(nlh, pktid, verdict);
+
+    // connection offloaded to kernel if connmark is set. all connections will be offloaded until stateless actions are
+    // implemented in cfirewall and configurable in the webui.
+    nest = mnl_attr_nest_start(nlh, NFQA_CT);
+    mnl_attr_put_u32(nlh, CTA_MARK, htonl(1));
+    mnl_attr_nest_end(nlh, nest);
+
+    mnl_socket_sendto(nl[cfd->idx], nlh, nlh->nlmsg_len);
+}
+
+/*
+DEFERRED ACTION (forwarding to another nfqueue)
+NO NAT (mangle) fast call.
 sets verdict and mark.
-reduced pointer deference.
-no mangling.
+reduced pointer dereference.
 */
 inline void
-dnx_send_verdict_fast(struct cfdata *cfd, uint32_t pktid, uint32_t mark, int verdict)
+dnx_send_deferred_verdict(struct cfdata *cfd, uint32_t pktid, uint32_t mark, uint32_t verdict)
 {
     char                buf[MNL_SOCKET_BUFFER_SIZE];
     struct nlmsghdr    *nlh;
@@ -76,11 +98,13 @@ dnx_send_verdict_fast(struct cfdata *cfd, uint32_t pktid, uint32_t mark, int ver
     mnl_socket_sendto(nl[cfd->idx], nlh, nlh->nlmsg_len);
 }
 
-/* MANGLE call
+/*
+DEFERRED ACTION (forwarding to another nfqueue)
+PERFORMS NAT (mangle)
 sets verdict and mark.
 */
 int
-dnx_send_verdict(struct cfdata *cfd, uint32_t pktid, struct dnx_pktb *pkt)
+dnx_send_deferred_verdict_with_mangle(struct cfdata *cfd, uint32_t pktid, struct dnx_pktb *pkt)
 {
     char                buf[MNL_SOCKET_BUFFER_SIZE];
     struct nlmsghdr    *nlh;

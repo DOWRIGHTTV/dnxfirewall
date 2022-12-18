@@ -24,7 +24,7 @@ PREPARE_AND_SEND = ProxyResponse.prepare_and_send
 
 class IPProxy(ProxyConfiguration, NFQueue):
 
-    _packet_parser: ProxyParser = IPPPacket.netfilter_recv
+    _packet_parser: ClassVar[ProxyParser] = IPPPacket.netfilter_recv
 
     __slots__ = ()
 
@@ -36,65 +36,6 @@ class IPProxy(ProxyConfiguration, NFQueue):
         ProxyResponse.setup(Log, self.__class__.open_ports)
         # LanRestrict.run(self.__class__)
 
-    def _pre_inspect(self, packet: IPPPacket) -> bool:
-
-        # ====================
-        # CFIREWALL ACCEPT
-        # ====================
-        if (packet.action is CONN.ACCEPT):
-
-            # --------------------
-            # IP PROXY INSPECT
-            # --------------------
-            if (packet.ipp_profile):
-                return True
-
-            # --------------------
-            # DIRECT TO IPS/IDS
-            # --------------------
-            # deferred verdict
-            # forwarding packet to ips for portscan/ddos inspection.
-            if (packet.ips_profile and packet.direction is DIR.INBOUND):
-                packet.nfqueue.forward(Queue.IPS_IDS)
-
-            # --------------------
-            # DIRECT TO DNS PROXY
-            # --------------------
-            # deferred verdict
-            elif (packet.dns_profile and packet.direction is DIR.OUTBOUND
-                    and packet.protocol is PROTO.UDP and packet.dst_port == PROTO.DNS):
-                packet.nfqueue.forward(Queue.DNS_PROXY)
-
-            # --------------------
-            # ACCEPT/ NO PROFILE
-            # --------------------
-            else:
-                packet.nfqueue.accept()
-
-        # ====================
-        # CFIREWALL DROP
-        # ====================
-        elif (packet.action is CONN.DROP):
-
-            if (packet.direction is DIR.OUTBOUND):
-                packet.nfqueue.drop()
-
-            # --------------------
-            # IPS/IDS PROFILING
-            # --------------------
-            # deferred verdict
-            # forwarding packet to ips for portscan/ddos host profiling
-            else:
-                packet.nfqueue.forward(Queue.IPS_IDS)
-
-        # FUTURE: REJECT
-        else: pass
-
-        # log-only.
-        log_geolocation(packet)
-
-        return False
-
     @staticmethod
     def forward_packet(packet: IPPPacket, direction: DIR, action: CONN) -> None:
 
@@ -103,7 +44,7 @@ class IPProxy(ProxyConfiguration, NFQueue):
         # IPS/IDS FORWARD
         # --------------------
         # ips filter for only INBOUND traffic inspection.
-        # it is intended to inspect dropped packets for ddos/portscan profiling
+        # dropped packets still need to be processed for ddos/portscan profiling
         # if ips profile is set on a rule for outbound traffic, it will be ignored.
         # TODO: look into what would be needed to expand ips inspection to lan to wan or lan to lan rules.
         if (packet.ips_profile and direction is DIR.INBOUND):
