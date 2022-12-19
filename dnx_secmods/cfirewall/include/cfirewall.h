@@ -25,16 +25,6 @@
 #include "dnx_nfq.h"    // packet verdict, mangle, etc.
 #include "traffic_log.h"
 
-// bit shifting helpers
-#define TWO_BITS     2
-#define FOUR_BITS    4
-#define ONE_BYTE     8
-#define TWELVE_BITS 12
-#define TWO_BYTES   16
-
-#define TWO_BIT_MASK   3
-#define FOUR_BIT_MASK 15
-
 #define OUTBOUND 1
 #define INBOUND  2
 
@@ -151,8 +141,16 @@ struct dnx_pktb {
     };
     uint8_t             log;
     struct LogHandle   *logger;
-    uint32_t            mark;           // X (16b, reserved) | X (4b) | geo loc (8b) | direction (2b) | action (2b)
+    struct geolocation  geo;
     uint16_t            sec_profiles;   // X (4b) | ips (4b) | dns (4b) | ipp (4b) -- will be placed in upper 16b of mark
+    uint8_t             action;
+};
+
+struct geolocation {
+    uint8_t     src;
+    uint8_t     dst;
+    uint8_t     direction;
+    uint8_t     remote;
 };
 
 #endif

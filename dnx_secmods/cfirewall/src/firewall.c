@@ -25,6 +25,10 @@
 #define PACKET_ACTION_MASK 3 // first 2 bits
 #define PACKET_DIR_MASK    12 // 2nd 2 bits
 
+#define SEND_TO_IP_PROXY  (IP_PROXY  << TWO_BYTES) | NF_QUEUE)
+#define SEND_TO_IPS_IDS   (IPS_IDS   << TWO_BYTES) | NF_QUEUE)
+#define SEND_TO_DNS_PROXY (DNS_PROXY << TWO_BYTES) | NF_QUEUE)
+
 // ==================================
 // Firewall tables access lock
 // ==================================
@@ -66,7 +70,7 @@ firewall_init(void) {
 
     log_init(&Log[FW_LOG_IDX], "firewall");
 
-
+    log_db_init();
 }
 
 // ==================================
@@ -129,37 +133,36 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     /* ===================================
        NFQUEUE VERDICT LOGIC
     =================================== */
-    // consider making these encoded in a uint32_t and returned from inspect function (then cast to results tuple struct)
-    uint8_t pkt_action = (pkt.mark & TWO_BITS);
-    uint8_t pkt_dir    = (pkt.mark >> TWO_BITS) & TWO_BITS;
+    // PACKET MARK -> X (16b, reserved) | X (4b) | geo loc (8b) | direction (2b) | action (2b)
+    uint16_t pkt_mark = (pkt.geo.remote << FOUR_BITS) | (pkt.geo.dir << TWO_BITS) | pkt.action
 
     // SEND TO IP PROXY - criteria: accepted, inbound or outbound
-    if (pkt_action == DNX_ACCEPT // primary match
+    if (pkt.action == DNX_ACCEPT // primary match
             && pkt.sec_profiles & IP_PROXY_MASK ) {
 
         dnx_send_deferred_verdict(cfd, ntohl(nl_pkth->packet_id),
-            (pkt.sec_profiles << TWO_BYTES) | pkt.mark, (IP_PROXY << TWO_BYTES) | NF_QUEUE);
+            (pkt.sec_profiles << TWO_BYTES) | pkt_mark, SEND_TO_IP_PROXY;
     }
     // SEND TO IPS/IDS - criteria: accepted or dropped, inbound
-    else if (pkt_dir == INBOUND // primary match
+    else if (pkt.geo.dir == INBOUND // primary match
             && pkt.sec_profiles & IPS_IDS_MASK ) {
 
         dnx_send_deferred_verdict(cfd, ntohl(nl_pkth->packet_id),
-            (pkt.sec_profiles << TWO_BYTES) | pkt.mark, (IPS_IDS << TWO_BYTES) | NF_QUEUE);
+            (pkt.sec_profiles << TWO_BYTES) | pkt_mark, SEND_TO_IPS_IDS;
     }
     // SEND TO DNS PROXY - criteria: accepted, outbound, udp/53
-    else if (pkt_action == DNX_ACCEPT // primary match
-            && pkt_dir == OUTBOUND
+    else if (pkt.action == DNX_ACCEPT // primary match
+            && pkt.geo.dir == OUTBOUND
             && pkt.sec_profiles & DNS_PROXY_MASK
             && pkt.iphdr->protocol == IPPROTO_UDP
             && pkt.protohdr->dport == UDPPROTO_DNS ) {
 
         dnx_send_deferred_verdict(cfd, ntohl(nl_pkth->packet_id),
-            (pkt.sec_profiles << TWO_BYTES) | pkt.mark, (DNS_PROXY << TWO_BYTES) | NF_QUEUE);
+            (pkt.sec_profiles << TWO_BYTES) | pkt_mark, SEND_TO_DNS_PROXY;
     }
     // default: accept w/o sec policy, system rules, drop action w/o ips
     else {
-        dnx_send_verdict(cfd, ntohl(nl_pkth->packet_id), pkt_action);
+        dnx_send_verdict(cfd, ntohl(nl_pkth->packet_id), pkt.action);
     }
 
     /* ===================================
@@ -167,7 +170,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     =================================== */
     // non system traffic only. remote country to or from and packet action
     if (fw_clist.start != FW_SYSTEM_RANGE_START) {
-        log_db_geolocation(pkt.mark);
+        log_db_geolocation(&pkt.geo, pkt.action);
     }
 
     /* ===================================
@@ -184,7 +187,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
 
         // log file rotation logic
         log_enter(&timestamp, pkt.logger);
-        log_write_firewall(&timestamp, pkt, direction, src_country, dst_country);
+        log_write_firewall(&timestamp, &pkt);
         log_exit(pkt.logger);
     }
 
@@ -199,7 +202,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     return OK;
 }
 
-inline void
+inline uint32_t
 firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfdata *cfd)
 {
     dnx_parse_pkt_headers(pkt);
@@ -263,7 +266,11 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             // ------------------------------------------------------------------
             pkt->rule_clist = cntrl_list;
             pkt->fw_rule    = rule;
-            pkt->mark       = (tracked_geo << FOUR_BITS) | (direction << TWO_BITS) | rule->action;
+            pkt->action     = rule->action; // required to allow for default action
+            pkt->geo.src    = src_country;
+            pkt->geo.dst    = dst_country;
+            pkt->geo.dir    = direction;
+            pkt->geo.remote = tracked_geo;
 
             for (uintf8_t idx = 0; idx < SECURITY_PROFILE_COUNT; idx++) {
                 pkt->sec_profiles |= rule->sec_profiles[idx] << ((idx * 4));
@@ -276,7 +283,11 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
     // DEFAULT ACTION
     // ------------------------------------------------------------------
     pkt->rule_clist = NO_SECTION;
-    pkt->mark       = (tracked_geo << FOUR_BITS) | (direction << TWO_BITS) | DNX_DROP;
+    pkt->action     = DNX_DROP;
+    pkt->geo.src    = src_country;
+    pkt->geo.dst    = dst_country;
+    pkt->geo.dir    = direction;
+    pkt->geo.remote = tracked_geo;
 }
 
 void

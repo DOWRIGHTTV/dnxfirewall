@@ -31,7 +31,7 @@ log_enter(struct timeval *ts, struct LogHandle *logger)
 
 // consider making the countries a tuple as struct
 void
-log_write_firewall(struct timeval *ts, struct dnx_pktb *pkt, uint8_t direction, uint8_t src_country, uint8_t dst_country)
+log_write_firewall(struct timeval *ts, struct dnx_pktb *pkt, struct geolocation *geo)
 {
     char    saddr[18];
     char    daddr[18];
@@ -41,9 +41,9 @@ log_write_firewall(struct timeval *ts, struct dnx_pktb *pkt, uint8_t direction, 
     itoip(pkt->iphdr->daddr, daddr);
 
     fprintf(pkt->logger->buf, FW_LOG_FORMAT, ts->tv_sec, ts->tv_usec,
-        pkt->fw_rule->name, action_map[pkt->fw_rule->action], dir_map[direction], pkt->iphdr->protocol,
-        pkt->hw.iif, pkt->hw.in_zone.name, src_country, saddr, ntohs(pkt->protohdr->sport),
-        pkt->hw.oif, pkt->hw.out_zone.name, dst_country, daddr, ntohs(pkt->protohdr->dport)
+        pkt->fw_rule->name, action_map[pkt->fw_rule->action], dir_map[geo.dir], pkt->iphdr->protocol,
+        pkt->hw.iif, pkt->hw.in_zone.name, geo.src, saddr, ntohs(pkt->protohdr->sport),
+        pkt->hw.oif, pkt->hw.out_zone.name, geo.dst, daddr, ntohs(pkt->protohdr->dport)
     );
 
     pkt->logger->cnt++;
@@ -127,7 +127,7 @@ log_db_init()
 // required data is encoded in the packet mark per dnx standard
 // (country (8b) | (direction (2b) | action (2b)
 void
-log_db_geolocation(uint32_t pkt_mark)
+log_db_geolocation(struct geolocation *geo)
 {
     /* ===========================================
     DEFINING LOG MESSAGE DATA
@@ -137,9 +137,7 @@ log_db_geolocation(uint32_t pkt_mark)
 
     snprintf(
         log_data, DB_LOG_FORMAT,
-        (pkt_mark >> FOUR_BITS) & ONE_BYTE,
-        (pkt_mark >> TWO_BITS) & TWO_BITS,
-        pkt_mark & TWO_BITS
+        geo->remote, geo->dir, pkt_action
     );
 
     /* ===========================================
@@ -182,5 +180,4 @@ log_db_geolocation(uint32_t pkt_mark)
     and we do not expect a confirmation of receipt.
     =========================================== */
     sendmsg(database_socket, &db_message, 0);
-
 }

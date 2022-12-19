@@ -17,6 +17,17 @@
 #define Py_OK  0
 #define Py_ERR 1
 
+// bitwise helpers
+#define TWO_BITS       2
+#define FOUR_BITS      4
+#define ONE_BYTE       8
+#define TWELVE_BITS   12
+#define TWO_BYTES     16
+#define THREE_BYTES   24
+
+#define TWO_BIT_MASK   3
+#define FOUR_BIT_MASK 15
+
 typedef uint_fast8_t    uintf8_t;
 typedef uint_fast16_t   uintf16_t;
 typedef uint_fast32_t   uintf32_t;

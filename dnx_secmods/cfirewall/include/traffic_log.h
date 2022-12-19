@@ -35,13 +35,13 @@ struct LogHandle Log[2];
 
 extern void log_init(struct LogHandle *logger, char *label);
 extern void log_enter(struct timeval *ts, struct LogHandle *logger);
-extern void log_write_firewall(struct timeval *ts, struct dnx_pktb *pkt, uint8_t direction, uint8_t src_country, uint8_t dst_country);
+extern void log_write_firewall(struct timeval *ts, struct dnx_pktb *pkt, struct geolocation *geo);
 extern void log_write_nat(struct dnx_pktb *pkt);
 extern void log_exit(struct LogHandle *logger);
 
 int  log_rotate(struct LogHandle *logger, struct timeval *ts);
 
 extern void log_db_init();
-extern void log_db_geolocation(uint32_t pkt_mark);
+extern void log_db_geolocation(struct geolocation *geo, uint8_t pkt_action);
 
 #endif
