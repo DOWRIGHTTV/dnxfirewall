@@ -10,9 +10,9 @@ struct cfdata;
 
 void dnx_parse_nl_headers(nl_msg_hdr *nlmsgh, nl_pkt_hdr **nl_pkth, struct nlattr **netlink_attrs, struct dnx_pktb *pkt);
 void dnx_parse_pkt_headers(struct dnx_pktb *pkt);
-void dnx_send_verdict(struct cfdata *cfd, uint32_t pktid, int verdict);
-void dnx_send_deferred_verdict(struct cfdata *cfd, uint32_t pktid, uint32_t mark, int action);
-int  dnx_send_deferred_verdict_with_mangle(struct cfdata *cfd, uint32_t pktid, struct dnx_pktb *pkt);
-bool dnx_mangle_pkt(struct dnx_pktb *pkt);
+void dnx_send_verdict(struct cfdata *cfd, uint32_t pktid, uint32_t verdict);
+void dnx_send_deferred_verdict(struct cfdata *cfd, uint32_t pktid, uint32_t mark, uint32_t verdict);
+//int  dnx_send_deferred_verdict_with_mangle(struct cfdata *cfd, uint32_t pktid, struct dnx_pktb *pkt);
+//bool dnx_mangle_pkt(struct dnx_pktb *pkt);
 
 #endif
