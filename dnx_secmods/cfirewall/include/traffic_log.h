@@ -38,7 +38,7 @@ struct LogHandle Log[2];
 
 extern void log_init(struct LogHandle *logger, char *label);
 extern void log_enter(struct timeval *ts, struct LogHandle *logger);
-extern void log_write_firewall(struct timeval *ts, struct dnx_pktb *pkt, struct geolocation *geo);
+extern void log_write_firewall(struct timeval *ts, struct dnx_pktb *pkt);
 extern void log_write_nat(struct dnx_pktb *pkt);
 extern void log_exit(struct LogHandle *logger);
 

@@ -192,7 +192,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     }
 
     dprint(FW_V & VERBOSE, "pkt_id->%u, hook->%u, action->%u, ipp->%u, dns->%u, ips->%u", ntohl(nl_pkth->packet_id),
-        nl_pkth->hook, pkt_action, pkt.sec_profiles & 4, pkt.sec_profiles >> 4 & 4, pkt.sec_profiles >> 8 & 4);
+        nl_pkth->hook, pkt.action, pkt.sec_profiles & 4, pkt.sec_profiles >> 4 & 4, pkt.sec_profiles >> 8 & 4);
 
     // return hierarchy -> libnfnetlink.c >> libnetfiler_queue >> process_traffic.
     // < 0 vals are errors, but return is being ignored by CFirewall._run.
