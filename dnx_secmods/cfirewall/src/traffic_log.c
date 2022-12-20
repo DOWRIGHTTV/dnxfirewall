@@ -3,7 +3,7 @@
 #include "traffic_log.h"
 
 int database_service_sock;
-struct sockaddr_un database_service = { .sun_family = AF_UNIX, .sun_path = DATABASE_SERVICE };
+struct sockaddr_un database_service;
 struct ucred database_creds;
 
 char*   action_map[3] = {"deny", "accept", "reject"};
@@ -120,6 +120,9 @@ log_db_init()
     database_creds.pid = getpid();
     database_creds.uid = pwd->pw_uid;
     database_creds.gid = pwd->pw_gid;
+
+    database_service.sun_family = AF_UNIX;
+    database_service.sun_path   = DATABASE_SERVICE;
 
     database_service_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
 
