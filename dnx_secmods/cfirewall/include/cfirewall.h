@@ -2,6 +2,7 @@
 #define CFIREWALL_H
 
 #include <sys/socket.h>
+#include <sys/un.h> // sockaddr_un
 #include <sys/uio.h>
 #include <pwd.h>
 
