@@ -41,9 +41,9 @@ log_write_firewall(struct timeval *ts, struct dnx_pktb *pkt)
     itoip(pkt->iphdr->daddr, daddr);
 
     fprintf(pkt->logger->buf, FW_LOG_FORMAT, ts->tv_sec, ts->tv_usec,
-        pkt->fw_rule->name, action_map[pkt->fw_rule->action], dir_map[pkt.geo.dir], pkt->iphdr->protocol,
-        pkt->hw.iif, pkt->hw.in_zone.name, pkt.geo.src, saddr, ntohs(pkt->protohdr->sport),
-        pkt->hw.oif, pkt->hw.out_zone.name, pkt.geo.dst, daddr, ntohs(pkt->protohdr->dport)
+        pkt->fw_rule->name, action_map[pkt->fw_rule->action], dir_map[pkt->geo.dir], pkt->iphdr->protocol,
+        pkt->hw.iif, pkt->hw.in_zone.name, pkt->geo.src, saddr, ntohs(pkt->protohdr->sport),
+        pkt->hw.oif, pkt->hw.out_zone.name, pkt->geo.dst, daddr, ntohs(pkt->protohdr->dport)
     );
 
     pkt->logger->cnt++;
@@ -179,5 +179,5 @@ log_db_geolocation(struct geolocation *geo)
     blindly sending since it is a local socket
     and we do not expect a confirmation of receipt.
     =========================================== */
-    sendmsg(database_socket, &db_message, 0);
+    sendmsg(database_service_sock, &db_message, 0);
 }
