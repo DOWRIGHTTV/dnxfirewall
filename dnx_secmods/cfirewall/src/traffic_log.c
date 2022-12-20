@@ -108,7 +108,7 @@ which also reduces authorization code complexity.
 void
 log_db_init()
 {
-    struct passwd pwd = getpwnam(DNX_USER);
+    struct passwd *pwd = getpwnam(DNX_USER);
        //char   *pw_name;       /* username */
        //char   *pw_passwd;     /* user password */
        //uid_t   pw_uid;        /* user ID */
