@@ -126,7 +126,7 @@ struct Protohdr {
 struct geolocation {
     uint8_t     src;
     uint8_t     dst;
-    uint8_t     direction;
+    uint8_t     dir;
     uint8_t     remote;
 };
 

@@ -202,7 +202,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     return OK;
 }
 
-inline uint32_t
+void
 firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfdata *cfd)
 {
     dnx_parse_pkt_headers(pkt);
