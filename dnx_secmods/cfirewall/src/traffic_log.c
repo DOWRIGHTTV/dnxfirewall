@@ -161,7 +161,7 @@ log_db_geolocation(struct geolocation *geo)
         .msg_iovlen = 1,
         .msg_control = u.buf,
         .msg_controllen = sizeof(u.buf)
-    }
+    };
 
     /* ===========================================
     DEFINING CONTROL MESSAGE DATA
@@ -169,7 +169,7 @@ log_db_geolocation(struct geolocation *geo)
     struct cmsghdr *cmsg = CMSG_FIRSTHDR(&db_message);
 
     cmsg->cmsg_level = SOL_SOCKET;
-    cmsg->cmsg_type  = SCM_CREDENTIALS
+    cmsg->cmsg_type  = SCM_CREDENTIALS;
     cmsg->cmsg_len   = CMSG_LEN(sizeof(struct ucred));
 
     memcpy(CMSG_DATA(cmsg), &database_creds, sizeof(struct ucred));
