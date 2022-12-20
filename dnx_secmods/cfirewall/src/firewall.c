@@ -134,7 +134,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
        NFQUEUE VERDICT LOGIC
     =================================== */
     // PACKET MARK -> X (16b, reserved) | X (4b) | geo loc (8b) | direction (2b) | action (2b)
-    uint16_t pkt_mark = (pkt.geo.remote << FOUR_BITS) | (pkt.geo.dir << TWO_BITS) | pkt.action
+    uint16_t pkt_mark = (pkt.geo.remote << FOUR_BITS) | (pkt.geo.dir << TWO_BITS) | pkt.action;
 
     // SEND TO IP PROXY - criteria: accepted, inbound or outbound
     if (pkt.action == DNX_ACCEPT // primary match
@@ -191,11 +191,8 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
         log_exit(pkt.logger);
     }
 
-//    dprint(FW_V & VERBOSE, "pkt_id->%u, hook->%u, mark->%u, verdict->%u, ipp->%u, dns->%u, ips->%u",
-//        ntohl(nl_pkth->packet_id), nl_pkth->hook, pkt.mark, pkt.verdict,
-//        pkt.mark >> 12 & FOUR_BITS, pkt.mark >> 16 & FOUR_BITS, pkt.mark >> 20 & FOUR_BITS
-//    );
-//    dprint(FW_V & VERBOSE, " (VERDICT SENT)\n");
+    dprint(FW_V & VERBOSE, "pkt_id->%u, hook->%u, action->%u, ipp->%u, dns->%u, ips->%u", ntohl(nl_pkth->packet_id),
+        nl_pkth->hook, pkt_action, pkt.sec_profiles & 4, pkt.sec_profiles >> 4 & 4, pkt.sec_profiles >> 8 & 4);
 
     // return hierarchy -> libnfnetlink.c >> libnetfiler_queue >> process_traffic.
     // < 0 vals are errors, but return is being ignored by CFirewall._run.

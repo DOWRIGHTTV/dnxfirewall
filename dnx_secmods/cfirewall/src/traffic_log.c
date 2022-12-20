@@ -31,7 +31,7 @@ log_enter(struct timeval *ts, struct LogHandle *logger)
 
 // consider making the countries a tuple as struct
 void
-log_write_firewall(struct timeval *ts, struct dnx_pktb *pkt, struct geolocation *geo)
+log_write_firewall(struct timeval *ts, struct dnx_pktb *pkt)
 {
     char    saddr[18];
     char    daddr[18];
@@ -41,9 +41,9 @@ log_write_firewall(struct timeval *ts, struct dnx_pktb *pkt, struct geolocation 
     itoip(pkt->iphdr->daddr, daddr);
 
     fprintf(pkt->logger->buf, FW_LOG_FORMAT, ts->tv_sec, ts->tv_usec,
-        pkt->fw_rule->name, action_map[pkt->fw_rule->action], dir_map[geo.dir], pkt->iphdr->protocol,
-        pkt->hw.iif, pkt->hw.in_zone.name, geo.src, saddr, ntohs(pkt->protohdr->sport),
-        pkt->hw.oif, pkt->hw.out_zone.name, geo.dst, daddr, ntohs(pkt->protohdr->dport)
+        pkt->fw_rule->name, action_map[pkt->fw_rule->action], dir_map[pkt.geo.dir], pkt->iphdr->protocol,
+        pkt->hw.iif, pkt->hw.in_zone.name, pkt.geo.src, saddr, ntohs(pkt->protohdr->sport),
+        pkt->hw.oif, pkt->hw.out_zone.name, pkt.geo.dst, daddr, ntohs(pkt->protohdr->dport)
     );
 
     pkt->logger->cnt++;
