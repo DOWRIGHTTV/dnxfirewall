@@ -4,6 +4,7 @@
 #include <sys/socket.h>
 #include <sys/un.h> // sockaddr_un
 #include <sys/uio.h>
+#include <sys/ucred.h>
 #include <pwd.h>
 
 // netfilter
