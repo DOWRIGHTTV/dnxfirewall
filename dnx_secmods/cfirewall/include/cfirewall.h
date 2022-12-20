@@ -1,12 +1,6 @@
 #ifndef CFIREWALL_H
 #define CFIREWALL_H
 
-#include <sys/socket.h>
-#include <sys/un.h> // sockaddr_un
-#include <sys/uio.h>
-#include <sys/ucred.h>
-#include <pwd.h>
-
 // netfilter
 #include <linux/netfilter.h> // enum nf_inet_hooks
 #include <linux/netfilter_ipv4.h> // IP hooks (NF_IP_FORWARD)

@@ -1,12 +1,20 @@
 #ifndef COMMON_H_
 #define COMMON_H_
 
+// needed for ucred struct
+#define _GNU_SOURCE
+
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+
+#include <sys/socket.h>
+#include <sys/un.h> // sockaddr_un
+#include <sys/uio.h>
+#include <pwd.h>
 
 #include "netinet/in.h"
 #include "pthread.h"
