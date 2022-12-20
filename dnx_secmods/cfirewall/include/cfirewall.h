@@ -123,6 +123,13 @@ struct Protohdr {
     uint16_t    dport;
 };
 
+struct geolocation {
+    uint8_t     src;
+    uint8_t     dst;
+    uint8_t     direction;
+    uint8_t     remote;
+};
+
 struct dnx_pktb {
     uint8_t             confirmed;
     uint8_t            *data;
@@ -144,13 +151,6 @@ struct dnx_pktb {
     struct geolocation  geo;
     uint16_t            sec_profiles;   // X (4b) | ips (4b) | dns (4b) | ipp (4b) -- will be placed in upper 16b of mark
     uint8_t             action;
-};
-
-struct geolocation {
-    uint8_t     src;
-    uint8_t     dst;
-    uint8_t     direction;
-    uint8_t     remote;
 };
 
 #endif
