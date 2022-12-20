@@ -19,6 +19,9 @@
 #define FW_LOG_IDX  0
 #define NAT_LOG_IDX 1
 
+
+struct geolocation *geo;
+
 // ================================== //
 // LOG HANDLE STRUCT
 // ================================== //

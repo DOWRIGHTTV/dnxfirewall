@@ -22,7 +22,7 @@ dnx_parse_nl_headers(nl_msg_hdr *nlmsgh, nl_pkt_hdr **nl_pkth,  struct nlattr **
     pkt->hw.out_zone = INTF_ZONE_MAP[pkt->hw.oif];
 
     // standard mark
-    pkt->mark = netlink_attrs[NFQA_MARK] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_MARK])) : 0;
+    //pkt->mark = netlink_attrs[NFQA_MARK] ? ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_MARK])) : 0;
 
     // PACKET DATA / LEN
     pkt->data = mnl_attr_get_payload(netlink_attrs[NFQA_PAYLOAD]);
