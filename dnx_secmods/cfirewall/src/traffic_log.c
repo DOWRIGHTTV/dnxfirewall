@@ -117,7 +117,9 @@ log_db_init()
        //char   *pw_dir;        /* home directory */
        //char   *pw_shell;      /* shell program */
 
-    database_creds = { getpid(), pwd.pw_uid, pwd.pw_gid };
+    database_creds.pid = getpid();
+    database_creds.uid = pwd->pw_uid;
+    database_creds.gid = pwd->pw_gid;
 
     database_service_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
 
