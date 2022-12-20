@@ -3,6 +3,8 @@
 
 #define FW_TABLE_COUNT 4
 
+// extended protocol definitions
+#define UDPPROTO_DNS 53
 
 struct ZoneMap;
 struct FWrule; // NOTE: this might just need to be included here, but wait until we see if it will be elsewhere.

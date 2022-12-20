@@ -2,7 +2,7 @@
 #define CFIREWALL_H
 
 #include <sys/socket.h>
-#include <uio.h>
+#include <sys/uio.h>
 #include <pwd.h>
 
 // netfilter
