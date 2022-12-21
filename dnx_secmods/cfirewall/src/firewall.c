@@ -261,7 +261,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             // ------------------------------------------------------------------
             // MATCH ACTION | return rule options
             // ------------------------------------------------------------------
-            pkt->rule_clist = cntrl_list;
+            pkt->rule_clist = clist_idx;
             pkt->rule_name  = rule->name;
             pkt->action     = rule->action; // required to allow for default action
             pkt->log        = rule->log;
