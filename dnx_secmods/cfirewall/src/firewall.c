@@ -186,7 +186,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     // logs entry for packet on disk
     // todo: see about running a threaded logger queue so packet processing can continue immediately.
     //   - this might be more pain than whats its worth since we use stack allocation for pktb struct.
-    if (pkt.fw_rule->log) {
+    if (pkt.log) {
         gettimeofday(&timestamp, NULL);
 
         // log_write function needs to reference through pktb struct
@@ -270,18 +270,14 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             // MATCH ACTION | return rule options
             // ------------------------------------------------------------------
             pkt->rule_clist = cntrl_list;
-            pkt->fw_rule    = rule;
+//            pkt->fw_rule    = rule;
             pkt->action     = rule->action; // required to allow for default action
-            pkt->geo.src    = src_country;
-            pkt->geo.dst    = dst_country;
-            pkt->geo.dir    = direction;
-            pkt->geo.remote = tracked_geo;
+            pkt->log        = rule->log
 
             for (uintf8_t idx = 0; idx < SECURITY_PROFILE_COUNT; idx++) {
                 pkt->sec_profiles |= rule->sec_profiles[idx] << ((idx * 4));
             }
-
-            return;
+            goto geolocation;
         }
     }
     // ------------------------------------------------------------------
@@ -289,6 +285,9 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
     // ------------------------------------------------------------------
     pkt->rule_clist = NO_SECTION;
     pkt->action     = DNX_DROP;
+    pkt->log        = 0;
+
+geolocation:
     pkt->geo.src    = src_country;
     pkt->geo.dst    = dst_country;
     pkt->geo.dir    = direction;
