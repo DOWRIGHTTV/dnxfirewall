@@ -333,9 +333,9 @@ firewall_push_rules(uintf8_t cntrl_list)
     }
     firewall_tables[cntrl_list].len = fw_tables_swap[cntrl_list].len;
 
-    firewall_unlock();
-
     dprint(FW_V & VERBOSE, "< [!] FW TABLE (%u) RULES UPDATED [!] >\n", cntrl_list);
+
+    firewall_unlock();
 
     return OK;
 }
