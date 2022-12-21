@@ -176,9 +176,9 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     // non system traffic only. remote country to or from and packet action
     if (fw_clist.start != FW_SYSTEM_RANGE_START) {
         log_db_geolocation(&pkt.geo, pkt.action);
-    }
 
-    dprint(FW_V & VERBOSE, "[geo]");
+        dprint(FW_V & VERBOSE, "[geo]");
+    }
 
     /* ===================================
        TRAFFIC LOGGING

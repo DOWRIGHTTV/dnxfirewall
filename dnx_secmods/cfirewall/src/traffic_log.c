@@ -24,6 +24,7 @@ log_init(struct LogHandle *logger, char *label)
 void
 log_enter(struct timeval *ts, struct LogHandle *logger)
 {
+    dprint(VERBOSE, "<-log enter\n");
     // open a new file if the day has changed. this might be changes to 8 hour blocks or something in the future
     if (ts->tv_sec >= logger->rotate) {
         log_rotate(logger, ts);
@@ -57,6 +58,7 @@ log_write_nat(struct dnx_pktb *pkt) //, uint8_t direction, uint8_t src_country, 
 void
 log_exit(struct LogHandle *logger)
 {
+    dprint(VERBOSE, "log exit-->\n");
     if (logger->cnt == LOG_BUFFER_LIMIT) {
         fflush(logger->buf);
         logger->cnt = 0;
