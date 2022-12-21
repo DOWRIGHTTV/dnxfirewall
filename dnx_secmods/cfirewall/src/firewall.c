@@ -52,6 +52,9 @@ struct FWtable firewall_tables[FW_TABLE_COUNT];
 // firewall or nat rule locks.
 struct FWtable fw_tables_swap[FW_TABLE_COUNT];
 
+// global reference to the firewalls logger struct
+struct LogHandle *FW_LOGGER = &Log[FW_LOG_IDX];
+
 void
 firewall_init(void) {
     pthread_mutex_init(FWlock_ptr, NULL);
@@ -68,7 +71,7 @@ firewall_init(void) {
     fw_tables_swap[FW_MAIN_RULES].rules   = calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(struct FWrule));
     fw_tables_swap[FW_AFTER_RULES].rules  = calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(struct FWrule));
 
-    log_init(&Log[FW_LOG_IDX], "firewall");
+    log_init(FW_LOGGER, "firewall");
 
     log_db_init();
 }
@@ -84,9 +87,6 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     nl_pkt_hdr         *nl_pkth = NULL;
 
     struct dnx_pktb     pkt = {};
-//    uint32_t            ct_info;
-
-    struct timeval      timestamp; // used only when packet is marked for logging
 
     dnx_parse_nl_headers(nl_msgh, &nl_pkth, netlink_attrs, &pkt);
 
@@ -101,6 +101,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     /* ===================================
        CONNTRACK LOOKUP
     =================================== */
+    //uint32_t  ct_info;
     // this should be checked as soon as feasibly possible for performance. later, this will be used to allow for
     // stateless inspection policies. NTOHL on id is because kernel will apply HTONL on receipt.
     //ct_info = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_CT_INFO]));
@@ -122,7 +123,6 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     firewall_lock();
     firewall_inspect(&fw_clist, &pkt, cfd);
     firewall_unlock();
-    // ===================================
 
     dprint(FW_V & VERBOSE, "pkt_id->%u, hook->%u, action->%u, log->%u, ipp->%u, dns->%u, ips->%u ", ntohl(nl_pkth->packet_id),
         nl_pkth->hook, pkt.action, pkt.log, pkt.sec_profiles & 4, pkt.sec_profiles >> 4 & 4, pkt.sec_profiles >> 8 & 4);
@@ -177,21 +177,17 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     /* ===================================
        TRAFFIC LOGGING
     =================================== */
+    struct timeval  timestamp; // used only when packet is marked for logging
     // logs entry for packet on disk
     // todo: see about running a threaded logger queue so packet processing can continue immediately.
     //   - this might be more pain than whats its worth since we use stack allocation for pktb struct.
     if (pkt.log) {
         gettimeofday(&timestamp, NULL);
 
-        // log_write function needs to reference through pktb struct
-        pkt.logger = &Log[FW_LOG_IDX];
-
         // log file rotation logic
-        log_enter(&timestamp, pkt.logger);
-        log_write_firewall(&timestamp, &pkt);
-        log_exit(pkt.logger);
-
-        dprint(FW_V & VERBOSE, "|logged|");
+        log_enter(FW_LOG_HANDLER, &timestamp);
+        log_write_firewall(FW_LOG_HANDLER, &timestamp, &pkt);
+        log_exit(FW_LOG_HANDLER);
     }
 
     dprint(FW_V & VERBOSE, "\n");
@@ -206,6 +202,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
 {
     dnx_parse_pkt_headers(pkt);
 
+    struct FWtable          *control_list;
     struct FWrule           *rule;
     struct HashTrie_Range   *geolocation = cfd->geolocation;
 
@@ -221,22 +218,23 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
     uint8_t     direction   = pkt->hw.in_zone.id != WAN_IN ? OUTBOUND : INBOUND;
     uint16_t    tracked_geo = direction == INBOUND ? src_country : dst_country;
 
-    dprint(FW_V & VERBOSE, "< ++ FIREWALL INSPECTION ++ >\nsrc->[%u]%u(%u):%u, dst->[%u]%u(%u):%u, direction->%u, tracked->%u\n",
+    dprint(FW_V & VERBOSE, "<PACKET> src->[%u]%u(%u):%u, dst->[%u]%u(%u):%u, direction->%u, tracked->%u\n",
         pkt->hw.in_zone.id, iph_src_ip, src_country, ntohs(pkt->protohdr->sport),
         pkt->hw.out_zone.id, iph_dst_ip, dst_country, ntohs(pkt->protohdr->dport),
         direction, tracked_geo);
 
-    for (uintf8_t cntrl_list = fw_clist->start; cntrl_list < fw_clist->end; cntrl_list++) {
+    // iterating over specified control lists
+    for (uintf8_t clist_idx = fw_clist->start; clist_idx < fw_clist->end; clist_idx++) {
 
-        for (uintf8_t rule_idx = 0; rule_idx <= firewall_tables[cntrl_list].len; rule_idx++) {
+        control_list = &firewall_tables[cntrl_list];
 
-            rule = &firewall_tables[cntrl_list].rules[rule_idx];
+        // iterating over each rule in the list
+        for (uintf8_t rule_idx = 0; rule_idx <= control_list.len; rule_idx++) {
+
+            rule = control_list.rules[rule_idx];
+
             if (!rule->enabled) { continue; }
 
-#if DEVELOPMENT
-            // TODO: find a better/ more useful way to show this info without being too spammy and uses dprint
-            if (FW_V & VERBOSE2) firewall_print_rule(cntrl_list, rule_idx);
-#endif
             // inspection order: src > dst | zone, ip_addr, protocol, port
             // ------------------------------------------------------------------
             // ZONE MATCHING
@@ -264,7 +262,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             // MATCH ACTION | return rule options
             // ------------------------------------------------------------------
             pkt->rule_clist = cntrl_list;
-            pkt->fw_rule    = rule;
+            pkt->rule_name  = rule->name;
             pkt->action     = rule->action; // required to allow for default action
             pkt->log        = rule->log;
 

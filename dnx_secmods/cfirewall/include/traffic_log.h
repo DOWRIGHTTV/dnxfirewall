@@ -37,9 +37,9 @@ struct LogHandle {
 struct LogHandle Log[2];
 
 extern void log_init(struct LogHandle *logger, char *label);
-extern void log_enter(struct timeval *ts, struct LogHandle *logger);
-extern void log_write_firewall(struct timeval *ts, struct dnx_pktb *pkt);
-extern void log_write_nat(struct dnx_pktb *pkt);
+extern void log_enter(struct LogHandle *logger, struct timeval *ts);
+extern void log_write_firewall(struct LogHandle *logger, struct timeval *ts, struct dnx_pktb *pkt);
+//extern void log_write_nat(struct LogHandle *logger, struct dnx_pktb *pkt);
 extern void log_exit(struct LogHandle *logger);
 
 int  log_rotate(struct LogHandle *logger, struct timeval *ts);

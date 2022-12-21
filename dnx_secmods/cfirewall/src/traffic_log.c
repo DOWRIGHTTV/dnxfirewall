@@ -22,7 +22,7 @@ log_init(struct LogHandle *logger, char *label)
 }
 
 void
-log_enter(struct timeval *ts, struct LogHandle *logger)
+log_enter(struct LogHandle *logger, struct timeval *ts)
 {
     dprint(VERBOSE, "<-log enter\n");
     // open a new file if the day has changed. this might be changes to 8 hour blocks or something in the future
@@ -33,7 +33,7 @@ log_enter(struct timeval *ts, struct LogHandle *logger)
 
 // consider making the countries a tuple as struct
 void
-log_write_firewall(struct timeval *ts, struct dnx_pktb *pkt)
+log_write_firewall(struct LogHandle *logger, struct timeval *ts, struct dnx_pktb *pkt)
 {
     char    saddr[18];
     char    daddr[18];
@@ -48,12 +48,14 @@ log_write_firewall(struct timeval *ts, struct dnx_pktb *pkt)
         pkt->hw.oif, pkt->hw.out_zone.name, pkt->geo.dst, daddr, ntohs(pkt->protohdr->dport)
     );
 
-    pkt->logger->cnt++;
+    logger->cnt++;
+
+    dprint(FW_V & VERBOSE, "|logged|");
 }
 
-void
-log_write_nat(struct dnx_pktb *pkt) //, uint8_t direction, uint8_t src_country, uint8_t dst_country)
-{};
+//void
+//log_write_nat(struct LogHandle *logger, struct dnx_pktb *pkt) //, uint8_t direction, uint8_t src_country, uint8_t dst_country)
+//{};
 
 void
 log_exit(struct LogHandle *logger)
