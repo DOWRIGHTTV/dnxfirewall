@@ -289,12 +289,12 @@ cdef extern from "firewall.h" nogil:
     int  firewall_recv(const nlmsghdr *nlh, void *data)
     int  firewall_push_zones(ZoneMap *zone_map)
 
-cdef extern from "nat.h" nogil:
-    void nat_init()
-    int  nat_stage_count(uintf8_t table, uintf16_t rule_count)
-    int  nat_stage_rule(uintf8_t table, uintf16_t idx, NATrule *rule)
-    int  nat_push_rules(uintf8_t table_idx)
-    int  nat_recv(const nlmsghdr *nlh, void *data)
+# cdef extern from "nat.h" nogil:
+#     void nat_init()
+#     int  nat_stage_count(uintf8_t table, uintf16_t rule_count)
+#     int  nat_stage_rule(uintf8_t table, uintf16_t idx, NATrule *rule)
+#     int  nat_push_rules(uintf8_t table_idx)
+#     int  nat_recv(const nlmsghdr *nlh, void *data)
 
 cdef int nl_open(mnl_socket **nl_ptr) nogil
 cdef int nl_bind(mnl_socket *nl_ptr) nogil
