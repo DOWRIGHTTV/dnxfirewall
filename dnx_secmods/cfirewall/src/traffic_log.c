@@ -138,7 +138,7 @@ log_db_geolocation(struct geolocation *geo, uint8_t pkt_action)
     /* ===========================================
     DEFINING LOG MESSAGE DATA
     =========================================== */
-    char log_data[64]; // 3 spaces for country, 1 for null term
+    char log_data[96]; // 3 spaces for country, 1 for null term
     struct iovec log_msg = { log_data, sizeof(log_data) };
 
     snprintf(log_data, sizeof(log_data), DB_LOG_FORMAT, geo->remote, geo->dir, pkt_action);
