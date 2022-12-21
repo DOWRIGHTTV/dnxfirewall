@@ -130,6 +130,9 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     firewall_unlock();
     // ===================================
 
+    dprint(FW_V & VERBOSE, "pkt_id->%u, hook->%u, action->%u, ipp->%u, dns->%u, ips->%u ", ntohl(nl_pkth->packet_id),
+        nl_pkth->hook, pkt.action, pkt.sec_profiles & 4, pkt.sec_profiles >> 4 & 4, pkt.sec_profiles >> 8 & 4);
+
     /* ===================================
        NFQUEUE VERDICT LOGIC
     =================================== */
@@ -165,6 +168,8 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
         dnx_send_verdict(cfd, ntohl(nl_pkth->packet_id), pkt.action);
     }
 
+    dprint(FW_V & VERBOSE, "(verdict)");
+
     /* ===================================
        GEOLOCATION MONITORING - GENERAL
     =================================== */
@@ -172,6 +177,8 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     if (fw_clist.start != FW_SYSTEM_RANGE_START) {
         log_db_geolocation(&pkt.geo, pkt.action);
     }
+
+    dprint(FW_V & VERBOSE, "[geo]");
 
     /* ===================================
        TRAFFIC LOGGING
@@ -189,10 +196,11 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
         log_enter(&timestamp, pkt.logger);
         log_write_firewall(&timestamp, &pkt);
         log_exit(pkt.logger);
+
+        dprint(FW_V & VERBOSE, "|logged|");
     }
 
-    dprint(FW_V & VERBOSE, "pkt_id->%u, hook->%u, action->%u, ipp->%u, dns->%u, ips->%u\n", ntohl(nl_pkth->packet_id),
-        nl_pkth->hook, pkt.action, pkt.sec_profiles & 4, pkt.sec_profiles >> 4 & 4, pkt.sec_profiles >> 8 & 4);
+    dprint(FW_V & VERBOSE, "\n");
 
     // return hierarchy -> libnfnetlink.c >> libnetfiler_queue >> process_traffic.
     // < 0 vals are errors, but return is being ignored by CFirewall._run.
