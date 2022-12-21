@@ -135,13 +135,10 @@ struct dnx_pktb {
     uint16_t            iphdr_len;      // header only
     struct Protohdr    *protohdr;
     uint16_t            protohdr_len;   // header only
-    bool                mangled;
     struct Nat          nat;            // not used by FW. copied over from nat rule on match
+    bool                mangled;
     uintf16_t           rule_clist;     // CONTROL LIST. recent change from fw_table to be module agnostic
-    union {
-        struct FWrule  *fw_rule;
-        struct NATrule *nat_rule;
-    };
+    char*               rule_name;
     uint8_t             log;
     struct LogHandle   *logger;
     struct geolocation  geo;

@@ -71,7 +71,7 @@ firewall_init(void) {
     fw_tables_swap[FW_MAIN_RULES].rules   = calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(struct FWrule));
     fw_tables_swap[FW_AFTER_RULES].rules  = calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(struct FWrule));
 
-    log_init(FW_LOGGER, "firewall");
+    log_init(FW_LOG_HANDLE, "firewall");
 
     log_db_init();
 }
@@ -231,7 +231,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
         // iterating over each rule in the list
         for (uintf8_t rule_idx = 0; rule_idx <= control_list->len; rule_idx++) {
 
-            rule = control_list->rules[rule_idx];
+            rule = &control_list->rules[rule_idx];
 
             if (!rule->enabled) { continue; }
 
