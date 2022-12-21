@@ -84,8 +84,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     nl_pkt_hdr         *nl_pkth = NULL;
 
     struct dnx_pktb     pkt = {};
-    struct clist_range  fw_clist = {};
-    uint32_t            ct_info;
+//    uint32_t            ct_info;
 
     struct timeval      timestamp; // used only when packet is marked for logging
 
@@ -98,40 +97,35 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
 
         return OK;
     }
+    // note: this should no longer be needed since we went back to kernel offloading for stateful via connmarks
     /* ===================================
        CONNTRACK LOOKUP
     =================================== */
     // this should be checked as soon as feasibly possible for performance. later, this will be used to allow for
     // stateless inspection policies. NTOHL on id is because kernel will apply HTONL on receipt.
-    ct_info = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_CT_INFO]));
-    if (ct_info != IP_CT_NEW) {
-        dnx_send_verdict(cfd, ntohl(nl_pkth->packet_id), NF_ACCEPT);
+    //ct_info = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_CT_INFO]));
+    //if (ct_info != IP_CT_NEW) {
+    //    dnx_send_verdict(cfd, ntohl(nl_pkth->packet_id), NF_ACCEPT);
 
-        return OK;
-    }
-    // PASSTHROUGH TRAFFIC
-    if (nl_pkth->hook == NF_IP_FORWARD) {
-        fw_clist.start = FW_RULE_RANGE_START;
-    }
-    // LOCAL SYSTEM TRAFFIC
-    else if (nl_pkth->hook == NF_IP_LOCAL_IN) {
-        fw_clist.start = FW_SYSTEM_RANGE_START;
-    }
-
-    fw_clist.end = FW_RULE_RANGE_END;
+    //    return OK;
+    //}
 
     /* ===================================
-       FIREWALL RULES LOCK
+       FIREWALL INSPECTION
     =================================== */
-    // prevents the manager thread from updating firewall rules during packet inspection.
+    struct clist_range  fw_clist = { .end = FW_RULE_RANGE_END };
+    if (nl_pkth->hook == NF_IP_FORWARD)
+        fw_clist.start = FW_RULE_RANGE_START;
+
+    // the lock prevents the manager thread from updating firewall rules during packet inspection.
     // consider locking around each control list. this would weave control list updates with inspection.
     firewall_lock();
     firewall_inspect(&fw_clist, &pkt, cfd);
     firewall_unlock();
     // ===================================
 
-    dprint(FW_V & VERBOSE, "pkt_id->%u, hook->%u, action->%u, ipp->%u, dns->%u, ips->%u ", ntohl(nl_pkth->packet_id),
-        nl_pkth->hook, pkt.action, pkt.sec_profiles & 4, pkt.sec_profiles >> 4 & 4, pkt.sec_profiles >> 8 & 4);
+    dprint(FW_V & VERBOSE, "pkt_id->%u, hook->%u, action->%u, log->%u, ipp->%u, dns->%u, ips->%u ", ntohl(nl_pkth->packet_id),
+        nl_pkth->hook, pkt.action, pkt.log, pkt.sec_profiles & 4, pkt.sec_profiles >> 4 & 4, pkt.sec_profiles >> 8 & 4);
 
     /* ===================================
        NFQUEUE VERDICT LOGIC
