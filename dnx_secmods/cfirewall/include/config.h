@@ -2,7 +2,9 @@
 #define COMMON_H_
 
 // needed for ucred struct
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 
 #include <stdlib.h>
 #include <stdbool.h>

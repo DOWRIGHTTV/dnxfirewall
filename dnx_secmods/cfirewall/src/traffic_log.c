@@ -2,8 +2,9 @@
 #include "cfirewall.h"
 #include "traffic_log.h"
 
+struct sockaddr_un database_service = { .sun_family = AF_UNIX };
+
 int database_service_sock;
-struct sockaddr_un database_service;
 struct ucred database_creds;
 
 char*   action_map[3] = {"deny", "accept", "reject"};
@@ -121,18 +122,18 @@ log_db_init()
     database_creds.uid = pwd->pw_uid;
     database_creds.gid = pwd->pw_gid;
 
-    database_service.sun_family = AF_UNIX;
-    database_service.sun_path   = DATABASE_SERVICE;
+    // copy sock filepath to struct
+    strncpy(database_service.sun_path, DATABASE_SERVICE, sizeof(database_service.sun_path) - 1);
 
     database_service_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
 
-    connect(database_service_sock, database_service, sizeof(struct sockaddr_un));
+    connect(database_service_sock, &database_service, sizeof(struct sockaddr_un));
 }
 
 // required data is encoded in the packet mark per dnx standard
 // (country (8b) | (direction (2b) | action (2b)
 void
-log_db_geolocation(struct geolocation *geo)
+log_db_geolocation(struct geolocation *geo, uint8_t pkt_action)
 {
     /* ===========================================
     DEFINING LOG MESSAGE DATA
@@ -140,10 +141,7 @@ log_db_geolocation(struct geolocation *geo)
     char log_data[64]; // 3 spaces for country, 1 for null term
     struct iovec log_msg = { log_data, sizeof(log_data) };
 
-    snprintf(
-        log_data, DB_LOG_FORMAT,
-        geo->remote, geo->dir, pkt_action
-    );
+    snprintf(log_data, sizeof(log_data), DB_LOG_FORMAT, geo->remote, geo->dir, pkt_action);
 
     /* ===========================================
     BUILDING SOCKET MESSAGE HEADER
