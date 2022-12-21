@@ -177,17 +177,11 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     /* ===================================
        TRAFFIC LOGGING
     =================================== */
-    struct timeval  timestamp; // used only when packet is marked for logging
     // logs entry for packet on disk
     // todo: see about running a threaded logger queue so packet processing can continue immediately.
     //   - this might be more pain than whats its worth since we use stack allocation for pktb struct.
     if (pkt.log) {
-        gettimeofday(&timestamp, NULL);
-
-        // log file rotation logic
-        log_enter(FW_LOG_HANDLER, &timestamp);
-        log_write_firewall(FW_LOG_HANDLER, &timestamp, &pkt);
-        log_exit(FW_LOG_HANDLER);
+        log_write_firewall(FW_LOG_HANDLER, &pkt);
     }
 
     dprint(FW_V & VERBOSE, "\n");

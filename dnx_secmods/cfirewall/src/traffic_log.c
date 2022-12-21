@@ -21,7 +21,7 @@ log_init(struct LogHandle *logger, char *label)
     logger->cnt    = 0;
 }
 
-void
+inline void
 log_enter(struct LogHandle *logger, struct timeval *ts)
 {
     dprint(VERBOSE, "<-log enter\n");
@@ -35,29 +35,36 @@ log_enter(struct LogHandle *logger, struct timeval *ts)
 void
 log_write_firewall(struct LogHandle *logger, struct timeval *ts, struct dnx_pktb *pkt)
 {
+    struct timeval  timestamp;
+
     char    saddr[18];
     char    daddr[18];
+
+    gettimeofday(&timestamp, NULL);
+
+    log_enter(logger, &timestamp);
 
     // converting ip as integer to a dot notation string eg. 192.168.1.1
     itoip(pkt->iphdr->saddr, saddr);
     itoip(pkt->iphdr->daddr, daddr);
 
-    fprintf(pkt->logger->buf, FW_LOG_FORMAT, ts->tv_sec, ts->tv_usec,
+    fprintf(logger->buf, FW_LOG_FORMAT, ts->tv_sec, ts->tv_usec,
         pkt->rule_name, action_map[pkt->action], dir_map[pkt->geo.dir], pkt->iphdr->protocol,
         pkt->hw.iif, pkt->hw.in_zone.name, pkt->geo.src, saddr, ntohs(pkt->protohdr->sport),
         pkt->hw.oif, pkt->hw.out_zone.name, pkt->geo.dst, daddr, ntohs(pkt->protohdr->dport)
     );
-
     logger->cnt++;
 
     dprint(FW_V & VERBOSE, "|logged|");
+
+    log_exit(logger);
 }
 
 //void
 //log_write_nat(struct LogHandle *logger, struct dnx_pktb *pkt) //, uint8_t direction, uint8_t src_country, uint8_t dst_country)
 //{};
 
-void
+inline void
 log_exit(struct LogHandle *logger)
 {
     dprint(VERBOSE, "log exit-->\n");
