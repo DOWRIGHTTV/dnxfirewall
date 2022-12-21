@@ -266,7 +266,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             pkt->rule_clist = cntrl_list;
 //            pkt->fw_rule    = rule;
             pkt->action     = rule->action; // required to allow for default action
-            pkt->log        = rule->log
+            pkt->log        = rule->log;
 
             for (uintf8_t idx = 0; idx < SECURITY_PROFILE_COUNT; idx++) {
                 pkt->sec_profiles |= rule->sec_profiles[idx] << ((idx * 4));
