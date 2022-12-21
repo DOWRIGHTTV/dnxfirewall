@@ -31,9 +31,8 @@ log_enter(struct LogHandle *logger, struct timeval *ts)
     }
 }
 
-// consider making the countries a tuple as struct
 void
-log_write_firewall(struct LogHandle *logger, struct timeval *ts, struct dnx_pktb *pkt)
+log_write_firewall(struct LogHandle *logger, struct dnx_pktb *pkt)
 {
     struct timeval  timestamp;
 
