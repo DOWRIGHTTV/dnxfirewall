@@ -53,7 +53,7 @@ struct FWtable firewall_tables[FW_TABLE_COUNT];
 struct FWtable fw_tables_swap[FW_TABLE_COUNT];
 
 // global reference to the firewalls logger struct
-struct LogHandle *FW_LOGGER = &Log[FW_LOG_IDX];
+struct LogHandle *FW_LOG_HANDLER = &Log[FW_LOG_IDX];
 
 void
 firewall_init(void) {
@@ -229,9 +229,9 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
         control_list = &firewall_tables[cntrl_list];
 
         // iterating over each rule in the list
-        for (uintf8_t rule_idx = 0; rule_idx <= control_list.len; rule_idx++) {
+        for (uintf8_t rule_idx = 0; rule_idx <= control_list->len; rule_idx++) {
 
-            rule = control_list.rules[rule_idx];
+            rule = control_list->rules[rule_idx];
 
             if (!rule->enabled) { continue; }
 
