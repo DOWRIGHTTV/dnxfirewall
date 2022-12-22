@@ -133,7 +133,6 @@ def infected_event(cur: Cursor, timestamp: int, log: INF_EVENT_LOG) -> bool:
 def geo_record(cur: Cursor, _, log: GEOLOCATION_LOG) -> bool:
     month = ','.join(_System.date()[:2])
 
-    # TODO: can this be switched to if not exists?
     cur.execute(f'select * from geolocation where month=? and country=?', (month, log.country))
 
     existing_record = cur.fetchone()
@@ -141,11 +140,10 @@ def geo_record(cur: Cursor, _, log: GEOLOCATION_LOG) -> bool:
     if (not existing_record):
         cur.execute(f'insert into geolocation values (?, ?, ?, ?, ?)', (month, log.country, log.direction, 0, 0))
 
-    # TODO: what does this mean? this needs to be explained better because it looks fucked up.
-    # incremented count of the actions specified in the log.
+    # incremented count of the specific action specified in the log. (eg. blocked, allowed)
     cur.execute(
-        f'update geolocation set {log.action}={log.action}+1 where month=? and country=? and direction=?',
-        (month, log.country, log.direction)
+        f'update geolocation set {log.act_name}={log.act_name}+1 where month=? and country=? and direction=?',
+        (month, log.cty_name, log.dir_name)
     )
 
     return True

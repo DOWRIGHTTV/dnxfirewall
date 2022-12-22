@@ -74,15 +74,6 @@ class IPProxy(ProxyConfiguration, NFQueue):
             packet.nfqueue.accept()
 
 
-# GENERAL PROXY FUNCTIONS
-def log_geolocation(packet: IPPPacket) -> None:
-
-    # country of tracked (external) passed from cfirewall via packet mark
-    country = GEO(packet.tracked_geo)
-
-    Log.log(packet, IPP_INSPECTION_RESULTS(country.name, None), geo_only=True)
-
-
 # =================
 # INSPECTION LOGIC
 # =================

@@ -29,18 +29,10 @@ class Log(LogHandler):
     _infected_cats: ClassVar[list[str]] = ['command/control']
 
     @classmethod
-    def log(cls, pkt: IPPPacket, inspection: IPP_INSPECTION_RESULTS, *, geo_only: bool = False):
-        # inspection will be a tuple containing only geo name (geo_name,)
-        if (geo_only):
-            log = GEOLOCATION_LOG(inspection.category, pkt.direction.name, 'allowed')
-
-            cls.event_log(pkt.timestamp, log, method='geolocation')
-
-        # standard logging procedure.
-        else:
-            lvl, logs = cls._generate_log(pkt, inspection)
-            for method, log in logs.items():
-                cls.event_log(pkt.timestamp, log, method=method)
+    def log(cls, pkt: IPPPacket, inspection: IPP_INSPECTION_RESULTS):
+        lvl, logs = cls._generate_log(pkt, inspection)
+        for method, log in logs.items():
+            cls.event_log(pkt.timestamp, log, method=method)
 
         # if (cls.syslog_enabled and log):
         #     cls.slog_log(LOG.EVENT, lvl, cls.generate_syslog_message(log))
@@ -64,18 +56,14 @@ class Log(LogHandler):
                     get_arp_table(host=itoip(pkt.local_ip)), pkt.local_ip, itoip(pkt.tracked_ip), 'malware'
                 )
 
-                log3 = GEOLOCATION_LOG(inspection.category[0], pkt.direction.name, 'blocked')
-
-                return LOG.ALERT, {'ipp_event': log, 'inf_event': log2, 'geolocation': log3}
+                return LOG.ALERT, {'ipp_event': log, 'inf_event': log2}
 
             elif (cls.current_lvl >= LOG.WARNING):
                 log = IPP_EVENT_LOG(
                     pkt.local_ip, pkt.tracked_ip, inspection.category, pkt.direction.name, 'blocked'
                 )
 
-                log2 = GEOLOCATION_LOG(inspection.category[0], pkt.direction.name, 'blocked')
-
-                return LOG.WARNING, {'ipp_event': log, 'geolocation': log2}
+                return LOG.WARNING, {'ipp_event': log}
 
         # informational logging for all accepted connections
         elif (cls.current_lvl >= LOG.INFO):
@@ -83,9 +71,6 @@ class Log(LogHandler):
                 pkt.local_ip, pkt.tracked_ip, inspection.category, pkt.direction.name, 'allowed'
             )
 
-            log2 = GEOLOCATION_LOG(inspection.category[0], pkt.direction.name, 'allowed')
+            return LOG.INFO, {'ipp_event': log}
 
-            return LOG.INFO, {'ipp_event': log, 'geolocation': log2}
-
-        # this contains all that is needed to get the country information input into the database.
-        return LOG.NONE, {'geolocation': GEOLOCATION_LOG(inspection.category[0], pkt.direction.name, 'allowed')}
+        return LOG.NONE, {}
