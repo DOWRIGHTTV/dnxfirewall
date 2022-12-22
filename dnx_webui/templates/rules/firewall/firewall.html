@@ -38,9 +38,9 @@
               </form>
               {% set dis = not firewall_settings['pending_changes'] %}
               <a id="revert_rules" class="btn{% if dis %} btn-disabled{% endif %} waves-effect waves-light
-                  modal-trigger red darken-2" href="#revert-modal"{% if dis %} disabled{% endif %}>Revert</a>
+                  modal-trigger red darken-2"{% if not dis %} href="#revert-modal"{% endif %}>Revert</a>
               <a id="push_rules" class="btn{% if dis %} btn-disabled{% endif %} waves-effect waves-light
-                  modal-trigger green darken-2" href="#push-modal"{% if dis %} disabled{% endif %}>Push</a>
+                  modal-trigger green darken-2"{% if not dis %} href="#push-modal"{% endif %}>Push</a>
               <a class="btn waves-effect waves-light modal-trigger blue-grey" href="#commit-modal">Commit</a>
               <a class="btn waves-effect waves-light right" onclick="newRule()">Create Rule</a>
             </div>
