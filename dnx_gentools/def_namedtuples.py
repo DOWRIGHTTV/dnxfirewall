@@ -189,7 +189,7 @@ class GEOLOCATION_LOG(_NamedTuple):
 
     @property
     def act_name(self) -> str:
-        return _CONN(self.action).name.lower()
+        return 'allowed' if self.action == 1 else 'blocked'
 
 
 class INF_EVENT_LOG(_NamedTuple):
