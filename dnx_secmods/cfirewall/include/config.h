@@ -46,4 +46,6 @@ typedef int_fast8_t    intf8_t;
 typedef int_fast16_t   intf16_t;
 typedef int_fast32_t   intf32_t;
 
+#define FOR_LOOP(start, end, inc) for (uintf8_t idx = start; idx < end; idx += inc)
+
 #endif

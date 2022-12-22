@@ -97,20 +97,6 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
 
         return OK;
     }
-    // note: this should no longer be needed since we went back to kernel offloading for stateful via connmarks
-    /* ===================================
-       CONNTRACK LOOKUP
-    =================================== */
-    //uint32_t  ct_info;
-    // this should be checked as soon as feasibly possible for performance. later, this will be used to allow for
-    // stateless inspection policies. NTOHL on id is because kernel will apply HTONL on receipt.
-    //ct_info = ntohl(mnl_attr_get_u32(netlink_attrs[NFQA_CT_INFO]));
-    //if (ct_info != IP_CT_NEW) {
-    //    dnx_send_verdict(cfd, ntohl(nl_pkth->packet_id), NF_ACCEPT);
-
-    //    return OK;
-    //}
-
     /* ===================================
        FIREWALL INSPECTION
     =================================== */
@@ -227,30 +213,30 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
 
             rule = &control_list->rules[rule_idx];
 
-            if (!rule->enabled) { continue; }
+            if (!rule->enabled) continue;
 
             // inspection order: src > dst | zone, ip_addr, protocol, port
             // ------------------------------------------------------------------
             // ZONE MATCHING
             // ------------------------------------------------------------------
             // currently tied to interface and designated LAN, WAN, DMZ
-            if (zone_match(&rule->s_zones, pkt->hw.in_zone.id)  != MATCH) { continue; }
-            if (zone_match(&rule->d_zones, pkt->hw.out_zone.id) != MATCH) { continue; }
+            if (zone_match(&rule->s_zones, pkt->hw.in_zone.id)  != MATCH) continue;
+            if (zone_match(&rule->d_zones, pkt->hw.out_zone.id) != MATCH) continue;
 
             // ------------------------------------------------------------------
             // GEOLOCATION or IP/NETMASK
             // ------------------------------------------------------------------
-            if (network_match(&rule->s_networks, iph_src_ip, src_country) != MATCH) { continue; }
-            if (network_match(&rule->d_networks, iph_dst_ip, dst_country) != MATCH) { continue; }
+            if (network_match(&rule->s_networks, iph_src_ip, src_country) != MATCH) continue;
+            if (network_match(&rule->d_networks, iph_dst_ip, dst_country) != MATCH) continue;
 
             // ------------------------------------------------------------------
             // PROTOCOL / PORT
             // ------------------------------------------------------------------
-            if (service_match(&rule->s_services, pkt->iphdr->protocol, ntohs(pkt->protohdr->sport)) != MATCH) { continue; }
+            if (service_match(&rule->s_services, pkt->iphdr->protocol, ntohs(pkt->protohdr->sport)) != MATCH) continue;
 
             // icmp checked in source only.
             if (pkt->iphdr->protocol != IPPROTO_ICMP) {
-                if (service_match(&rule->d_services, pkt->iphdr->protocol, ntohs(pkt->protohdr->dport)) != MATCH) { continue; }
+                if (service_match(&rule->d_services, pkt->iphdr->protocol, ntohs(pkt->protohdr->dport)) != MATCH) continue;
             }
             // ------------------------------------------------------------------
             // MATCH ACTION | return rule options
@@ -260,7 +246,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             pkt->action     = rule->action; // required to allow for default action
             pkt->log        = rule->log;
 
-            for (uintf8_t idx = 0; idx < SECURITY_PROFILE_COUNT; idx++) {
+            FOR_LOOP(0, SECURITY_PROFILE_COUNT, 1) {
                 pkt->sec_profiles |= rule->sec_profiles[idx] << ((idx * 4));
             }
             goto geolocation;

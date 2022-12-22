@@ -66,11 +66,11 @@ log_write_firewall(struct LogHandle *logger, struct dnx_pktb *pkt)
 inline void
 log_exit(struct LogHandle *logger)
 {
-    dprint(VERBOSE, "log exit-->\n");
     if (logger->cnt == LOG_BUFFER_LIMIT) {
         fflush(logger->buf);
         logger->cnt = 0;
     }
+    dprint(VERBOSE, "log exit-->\n");
 }
 
 int
@@ -148,11 +148,12 @@ log_db_geolocation(struct geolocation *geo, uint8_t pkt_action)
     /* ===========================================
     DEFINING LOG MESSAGE DATA
     =========================================== */
-    char log_data[96]; // 3 spaces for country, 1 for null term
-    struct iovec log_msg = { log_data, sizeof(log_data) };
+    char log_data[68];
+    struct iovec log_msg = { .iov_base = log_data };
 
     snprintf(log_data, sizeof(log_data), DB_LOG_FORMAT, geo->remote, geo->dir, pkt_action);
 
+    log_msg.iov_len = strncpy(log_data, sizeof(log_data)); // prevents excess chars from being sent over the wire
     /* ===========================================
     BUILDING SOCKET MESSAGE HEADER
     includes: packet/log data, ancillary data

@@ -4,7 +4,7 @@
 #define DNX_USER "dnx"
 
 #define DATABASE_SERVICE "/home/dnx/dnxfirewall/dnx_routines/database/ddb.sock" // 52
-#define DB_LOG_FORMAT "{\"method\": \"geolocation\", \"timestamp\": 0, \"log\": [%u, %u, %u]}\"" // 61
+#define DB_LOG_FORMAT "{\"method\": \"geolocation\", \"timestamp\": 0, \"log\": [%u, %u, %u]}" // 61
 
 #define TRAFFIC_LOG_DIR  "/home/dnx/dnxfirewall/dnx_profile/log/traffic/" // 46
 // 20220628 // 8
