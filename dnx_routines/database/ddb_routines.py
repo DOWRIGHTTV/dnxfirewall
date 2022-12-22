@@ -133,12 +133,12 @@ def infected_event(cur: Cursor, timestamp: int, log: INF_EVENT_LOG) -> bool:
 def geo_record(cur: Cursor, _, log: GEOLOCATION_LOG) -> bool:
     month = ','.join(_System.date()[:2])
 
-    cur.execute(f'select * from geolocation where month=? and country=?', (month, log.country))
+    cur.execute(f'select * from geolocation where month=? and country=?', (month, log.cty_name))
 
     existing_record = cur.fetchone()
     # if it's the first time a country has been seen in the current month, it will be initialized with zeroes
     if (not existing_record):
-        cur.execute(f'insert into geolocation values (?, ?, ?, ?, ?)', (month, log.country, log.direction, 0, 0))
+        cur.execute(f'insert into geolocation values (?, ?, ?, ?, ?)', (month, log.cty_name, log.dir_name, 0, 0))
 
     # incremented count of the specific action specified in the log. (eg. blocked, allowed)
     cur.execute(

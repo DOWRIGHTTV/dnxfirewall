@@ -181,15 +181,15 @@ class GEOLOCATION_LOG(_NamedTuple):
 
     @property
     def cty_name(self) -> str:
-        return _GEO(self.country).name
+        return _GEO(self.country).name.lower()
 
     @property
     def dir_name(self) -> str:
-        return _DIR(self.direction).name
+        return _DIR(self.direction).name.lower()
 
     @property
     def act_name(self) -> str:
-        return _CONN(self.action).name
+        return _CONN(self.action).name.lower()
 
 
 class INF_EVENT_LOG(_NamedTuple):
