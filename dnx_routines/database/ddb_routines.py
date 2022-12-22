@@ -223,13 +223,13 @@ def top_geolocation(cur: Cursor, count: int, *, action: str, direction: str) -> 
     month = ','.join(_System.date()[:2])
 
     # table has a separate column for allowed and blocked. this is why we select and sort on the action directly.
+    # filtering out entries with no hits in the specified action.
     cur.execute(
         f'select country from geolocation where month=? and direction=? and {action} > 0 '
         f'order by {action} desc limit {count}', (month, direction)
     )
 
-    # filtering out entries with no hits in the specified action.
-    return [x.replace('_', ' ') for x in cur.fetchall()]
+    return [x[0].replace('_', ' ') for x in cur.fetchall()]
 
 @db.register('unique_domain_count', routine_type='query')
 # TODO: see if this should use sum() instead of len() on the results
