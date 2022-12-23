@@ -614,6 +614,8 @@ def log_page_logic(log_page: LogWebPage, page_settings: dict, *, page_name: str)
     # can now accept redirects from other places on the webui to load specific tables directly on load
     # using uri queries FIXME: this has been temporarily suspended and should be reintroduced.
 
+    # TODO: we dont have explicit logic for "GET" and rely on exception handling to load page via GET. fix???
+
     try:
         table, menu, table_data = log_page.update(request.form)
     except ConfigurationError as ce:

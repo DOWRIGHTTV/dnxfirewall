@@ -49,9 +49,6 @@ class DNSProxy(ProxyConfiguration, NFQueue):
         if LOCAL_RECORD(packet.qname):
             packet.nfqueue.accept()
 
-        elif (packet.action is CONN.DROP):
-            packet.nfqueue.drop()
-
         elif (packet.qtype in [DNS.A, DNS.NS]):
             return True
 

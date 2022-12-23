@@ -105,7 +105,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
         fw_clist.start = FW_RULE_RANGE_START;
 
     // the lock prevents the manager thread from updating firewall rules during packet inspection.
-    // consider locking around each control list. this would weave control list updates with inspection.
+    // todo: consider locking around each control list. this would weave control list updates with inspection.
     firewall_lock();
     firewall_inspect(&fw_clist, &pkt, cfd);
     firewall_unlock();
@@ -120,21 +120,21 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     uint16_t pkt_mark = (pkt.geo.remote << FOUR_BITS) | (pkt.geo.dir << TWO_BITS) | pkt.action;
 
     // SEND TO IP PROXY - criteria: accepted, inbound or outbound
-    if (pkt.action == DNX_ACCEPT // primary match
+    if ( pkt.action == DNX_ACCEPT // primary match
             && pkt.sec_profiles & IP_PROXY_MASK ) {
 
         dnx_send_deferred_verdict(cfd, ntohl(nl_pkth->packet_id),
             (pkt.sec_profiles << TWO_BYTES) | pkt_mark, SEND_TO_IP_PROXY;
     }
     // SEND TO IPS/IDS - criteria: accepted or dropped, inbound
-    else if (pkt.geo.dir == INBOUND // primary match
+    else if ( pkt.geo.dir == INBOUND // primary match
             && pkt.sec_profiles & IPS_IDS_MASK ) {
 
         dnx_send_deferred_verdict(cfd, ntohl(nl_pkth->packet_id),
             (pkt.sec_profiles << TWO_BYTES) | pkt_mark, SEND_TO_IPS_IDS;
     }
     // SEND TO DNS PROXY - criteria: accepted, outbound, udp/53
-    else if (pkt.action == DNX_ACCEPT // primary match
+    else if ( pkt.action == DNX_ACCEPT // primary match
             && pkt.geo.dir == OUTBOUND
             && pkt.sec_profiles & DNS_PROXY_MASK
             && pkt.iphdr->protocol == IPPROTO_UDP
@@ -204,12 +204,12 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
         direction, tracked_geo);
 
     // iterating over specified control lists
-    for (uintf8_t clist_idx = fw_clist->start; clist_idx < fw_clist->end; clist_idx++) {
+    FOR_LOOP(fw_clist->start, fw_clist->end, 1, clist_idx) {
 
         control_list = &firewall_tables[clist_idx];
 
         // iterating over each rule in the list
-        for (uintf8_t rule_idx = 0; rule_idx <= control_list->len; rule_idx++) {
+        FOR_LOOP(0, control_list->len, 1, rule_idx) {
 
             rule = &control_list->rules[rule_idx];
 
@@ -246,7 +246,7 @@ firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfda
             pkt->action     = rule->action; // required to allow for default action
             pkt->log        = rule->log;
 
-            FOR_LOOP(0, SECURITY_PROFILE_COUNT, 1) {
+            FOR_LOOP(0, SECURITY_PROFILE_COUNT, 1, idx) {
                 pkt->sec_profiles |= rule->sec_profiles[idx] << ((idx * 4));
             }
             goto geolocation;
@@ -305,8 +305,7 @@ firewall_push_rules(uintf8_t cntrl_list)
 {
     firewall_lock();
     // iterating over each rule in FW table
-    for (uintf16_t rule_idx = 0; rule_idx < fw_tables_swap[cntrl_list].len; rule_idx++) {
-
+    FOR_LOOP(0, fw_tables_swap[cntrl_list].len, 1, rule_idx) {
         // copy swap structure to active structure. alignment is already set as they are identical structures.
         firewall_tables[cntrl_list].rules[rule_idx] = fw_tables_swap[cntrl_list].rules[rule_idx];
     }
@@ -324,7 +323,7 @@ firewall_push_zones(ZoneMap *zone_map)
 {
     firewall_lock();
 
-    for (intf8_t zone_idx = 0; zone_idx < FW_MAX_ZONES; zone_idx++) {
+    FOR_LOOP(0, FW_MAX_ZONES, 1, zone_idx) {
         INTF_ZONE_MAP[zone_idx] = zone_map[zone_idx];
     }
 
@@ -345,14 +344,14 @@ firewall_print_rule(uintf8_t ctrl_list, uintf16_t rule_idx)
 
     // SRC ZONES
     printf("src_zones->[ ");
-    for (i = 0; i < rule.s_zones.len; i++) {
+    FOR_LOOP(0, rule.s_zones.len, 1, i) {
         printf("%u ", (uint8_t) rule.s_zones.objects[i]);
     }
     printf(" ]\n");
 
     // SRC NETWORKS
     printf("src_networks->[ ");
-    for (i = 0; i < rule.s_networks.len; i++) {
+    FOR_LOOP(0, rule.s_networks.len, 1, i) {
         printf("(%u, %u, %u) ",
             (uint8_t) rule.s_networks.objects[i].type,
             (uint32_t) rule.s_networks.objects[i].netid,
@@ -361,7 +360,7 @@ firewall_print_rule(uintf8_t ctrl_list, uintf16_t rule_idx)
     printf(" ]\n");
 
     // SRC SERVICES
-    for (i = 0; i < rule.s_services.len; i++) {
+    FOR_LOOP(0, rule.s_services.len, 1, i) {
         printf("src_services->[ ");
         // TYPE 4 (ICMP) OBJECT ASSIGNMENT
         if (rule.s_services.objects[i].type == SVC_ICMP) {
@@ -379,7 +378,7 @@ firewall_print_rule(uintf8_t ctrl_list, uintf16_t rule_idx)
         // TYPE 3 (LIST) OBJECT ASSIGNMENT
         else {
             printf("< ");
-            for (ix = 0; ix < rule.s_services.objects[i].svc_list.len; ix++) {
+            FOR_LOOP(0, rule.s_services.objects[i].svc_list.len, 1, ix) {
                 // [0] START INDEX ON FW RULE SIZE
                 // [1] START INDEX PYTHON DICT SIDE (to first index for size)
                 printf("(%u, %u, %u) ",
@@ -394,14 +393,14 @@ firewall_print_rule(uintf8_t ctrl_list, uintf16_t rule_idx)
 
     // DST ZONES
     printf("dst_zones->[ ");
-    for (i = 0; i < rule.d_zones.len; i++) {
+    FOR_LOOP(0, rule.d_zones.len, 1, i) {
         printf("%u ", (uint8_t) rule.d_zones.objects[i]);
     }
     printf(" ]\n");
 
     // DST NETWORK
     printf("dst_networks->[ ");
-    for (i = 0; i < rule.d_networks.len; i++) {
+    FOR_LOOP(0, rule.d_networks.len, 1, i) {
         printf("(%u, %u, %u) ",
             (uint8_t) rule.d_networks.objects[i].type,
             (uint32_t) rule.d_networks.objects[i].netid,
@@ -410,7 +409,7 @@ firewall_print_rule(uintf8_t ctrl_list, uintf16_t rule_idx)
     printf(" ]\n");
 
     // DST SERVICES
-    for (i = 0; i < rule.s_services.len; i++) {
+    FOR_LOOP(0, rule.d_services.len, 1, i) {
         printf("dst_services->[ ");
         // TYPE 4 (ICMP) OBJECT ASSIGNMENT
         if (rule.d_services.objects[i].type == SVC_ICMP) {
@@ -428,7 +427,7 @@ firewall_print_rule(uintf8_t ctrl_list, uintf16_t rule_idx)
         // TYPE 3 (LIST) OBJECT ASSIGNMENT
         else {
             printf("< ");
-            for (ix = 0; ix < rule.d_services.objects[i].svc_list.len; ix++) {
+            FOR_LOOP(0, rule.d_services.objects[i].svc_list.len, 1, ix) {
                 printf("(%u, %u, %u) ",
                     (uint16_t) rule.d_services.objects[i].svc_list.services[ix].protocol,
                     (uint16_t) rule.d_services.objects[i].svc_list.services[ix].start_port,

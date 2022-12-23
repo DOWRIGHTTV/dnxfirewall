@@ -20,7 +20,7 @@ class WebPage(LogWebPage):
     available methods: load, update
     '''
     @staticmethod
-    def load(uri_query: Args) -> tuple[str, str, list]:
+    def load(uri_query: Optional[Args]) -> tuple[str, str, list]:
 
         # if sent from the dashboard link, infected-clients table will open directly.
         if uri_query is not None and uri_query.get('view_clients', None):
@@ -51,14 +51,14 @@ class WebPage(LogWebPage):
         try:
             table_type, sort = form.get('table', DATA.MISSING).split('/')
         except:
-            return Webpage.load()
+            return WebPage.load(None)
 
         if (sort not in ['last', 'top']):
-            return WebPage.load()
+            return WebPage.load(None)
 
         menu = form.get('menu', DATA.MISSING)
         if (menu is DATA.MISSING):
-            return Webpage.load()
+            return WebPage.load(None)
 
         # domains blocked, viewed, or both
         if (table_type in ['dns_proxy']):

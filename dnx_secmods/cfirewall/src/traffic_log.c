@@ -157,7 +157,6 @@ log_db_geolocation(struct geolocation *geo, uint8_t pkt_action)
         // returns if unable to reconnect so we dont waste cycles
         if (log_db_connect() == ERR) return;
     }
-
     /* ===========================================
     DEFINING LOG MESSAGE DATA
     =========================================== */
@@ -198,7 +197,6 @@ log_db_geolocation(struct geolocation *geo, uint8_t pkt_action)
     cmsg->cmsg_len   = CMSG_LEN(sizeof(struct ucred));
 
     memcpy(CMSG_DATA(cmsg), &db_service.creds, sizeof(struct ucred));
-
     /* ===========================================
     SEND TO SERVICE SOCKET
     =========================================== */
