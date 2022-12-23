@@ -22,7 +22,7 @@
 #define DNS_PROXY_MASK 240
 #define IPS_IDS_MASK   3840
 
-#define PACKET_ACTION_MASK 3 // first 2 bits
+#define PACKET_ACTION_MASK  3 // first 2 bits
 #define PACKET_DIR_MASK    12 // 2nd 2 bits
 
 #define SEND_TO_IP_PROXY  (IP_PROXY  << TWO_BYTES) | NF_QUEUE)

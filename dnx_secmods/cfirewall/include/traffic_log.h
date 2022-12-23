@@ -36,6 +36,17 @@ struct LogHandle {
 
 struct LogHandle Log[2];
 
+// ================================== //
+// DNX DATABASE SERVICE STRUCT
+// ================================== //
+struct dnx_db_service {
+    struct sockaddr_un  addr;
+    struct ucred        creds;
+
+    int     fd;
+    bool    connected;
+};
+
 extern void log_init(struct LogHandle *logger, char *label);
 extern void log_write_firewall(struct LogHandle *logger, struct dnx_pktb *pkt);
 //extern void log_write_nat(struct LogHandle *logger, struct dnx_pktb *pkt);
@@ -46,6 +57,7 @@ void log_exit(struct LogHandle *logger);
 int  log_rotate(struct LogHandle *logger, struct timeval *ts);
 
 extern void log_db_init();
+extern int  log_db_connect();
 extern void log_db_geolocation(struct geolocation *geo, uint8_t pkt_action);
 
 #endif

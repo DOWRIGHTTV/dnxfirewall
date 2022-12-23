@@ -55,8 +55,8 @@ def query_database():
 
         top_countries = {}
         for action in ['blocked', 'allowed']:
-            outbound = firewall_db.execute('top_geolocation', 5, action=action, direction='OUTBOUND')
-            inbound = firewall_db.execute('top_geolocation', 5, action=action, direction='INBOUND')
+            outbound = firewall_db.execute('top_geolocation', 5, action=action, direction='outbound')
+            inbound = firewall_db.execute('top_geolocation', 5, action=action, direction='inbound')
 
             top_countries[action] = list(zip_longest(outbound, inbound, fillvalue=''))
 

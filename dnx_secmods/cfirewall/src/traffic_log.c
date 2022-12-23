@@ -2,10 +2,7 @@
 #include "cfirewall.h"
 #include "traffic_log.h"
 
-struct sockaddr_un database_service = { .sun_family = AF_UNIX };
-
-int database_service_sock;
-struct ucred database_creds;
+struct dnx_db_service db_service;
 
 char*   action_map[3] = {"deny", "accept", "reject"};
 char*   dir_map[2]    = {"inbound", "outbound"};
@@ -119,6 +116,10 @@ which also reduces authorization code complexity.
 void
 log_db_init()
 {
+    db_service.addr.sun_family = AF_UNIX;
+    // copy sock filepath to struct
+    strncpy(db_service.addr.sun_path, DATABASE_SERVICE, sizeof(db_service.addr.sun_path) - 1);
+
     struct passwd *pwd = getpwnam(DNX_USER);
        //char   *pw_name;       /* username */
        //char   *pw_passwd;     /* user password */
@@ -128,32 +129,43 @@ log_db_init()
        //char   *pw_dir;        /* home directory */
        //char   *pw_shell;      /* shell program */
 
-    database_creds.pid = getpid();
-    database_creds.uid = pwd->pw_uid;
-    database_creds.gid = pwd->pw_gid;
+    db_service.creds.pid = getpid();
+    db_service.creds.uid = pwd->pw_uid;
+    db_service.creds.gid = pwd->pw_gid;
 
-    // copy sock filepath to struct
-    strncpy(database_service.sun_path, DATABASE_SERVICE, sizeof(database_service.sun_path) - 1);
+    db_service.fd = socket(AF_UNIX, SOCK_DGRAM, 0);
 
-    database_service_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
-
-    connect(database_service_sock, &database_service, sizeof(struct sockaddr_un));
+    // dont care about return value. if connect fails it will retried before sending log message.
+    log_db_connect();
 }
 
-// required data is encoded in the packet mark per dnx standard
-// (country (8b) | (direction (2b) | action (2b)
+inline int
+log_db_connect()
+{
+    int ret = connect(db_service.fd, &db_service.addr, sizeof(db_service.addr));
+
+    // updating conn tracker value. this is used to determine if we need to attempt a reconnect.
+    db_service.connected = ret != ERR ? true : false;
+
+    return ret;
+}
+
 void
 log_db_geolocation(struct geolocation *geo, uint8_t pkt_action)
 {
+    if (!db_service.connected) {
+        // returns if unable to reconnect so we dont waste cycles
+        if (log_db_connect() == ERR) return;
+    }
+
     /* ===========================================
     DEFINING LOG MESSAGE DATA
     =========================================== */
     char log_data[68];
-    struct iovec log_msg = { .iov_base = log_data };
+    struct iovec log_msg;
 
-    snprintf(log_data, sizeof(log_data), DB_LOG_FORMAT, geo->remote, geo->dir, pkt_action);
-
-    log_msg.iov_len = strncpy(log_data, sizeof(log_data)); // prevents excess chars from being sent over the wire
+    log_msg.iov_base = log_data;
+    log_msg.iov_len  = snprintf(log_data, sizeof(log_data), DB_LOG_FORMAT, geo->remote, geo->dir, pkt_action);
     /* ===========================================
     BUILDING SOCKET MESSAGE HEADER
     includes: packet/log data, ancillary data
@@ -176,7 +188,6 @@ log_db_geolocation(struct geolocation *geo, uint8_t pkt_action)
         .msg_control = u.buf,
         .msg_controllen = sizeof(u.buf)
     };
-
     /* ===========================================
     DEFINING CONTROL MESSAGE DATA
     =========================================== */
@@ -190,8 +201,7 @@ log_db_geolocation(struct geolocation *geo, uint8_t pkt_action)
 
     /* ===========================================
     SEND TO SERVICE SOCKET
-    blindly sending since it is a local socket
-    and we do not expect a confirmation of receipt.
     =========================================== */
+    // blindly sending since it is a local socket and we do not expect a confirmation of receipt.
     sendmsg(database_service_sock, &db_message, 0);
 }
