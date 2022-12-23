@@ -197,11 +197,11 @@ log_db_geolocation(struct geolocation *geo, uint8_t pkt_action)
     cmsg->cmsg_type  = SCM_CREDENTIALS;
     cmsg->cmsg_len   = CMSG_LEN(sizeof(struct ucred));
 
-    memcpy(CMSG_DATA(cmsg), &database_creds, sizeof(struct ucred));
+    memcpy(CMSG_DATA(cmsg), &db_service.creds, sizeof(struct ucred));
 
     /* ===========================================
     SEND TO SERVICE SOCKET
     =========================================== */
     // blindly sending since it is a local socket and we do not expect a confirmation of receipt.
-    sendmsg(database_service_sock, &db_message, 0);
+    sendmsg(db_service.fd, &db_message, 0);
 }
