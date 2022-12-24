@@ -203,7 +203,7 @@ def intrusion_ip_post(session_info: dict):
 
     return ajax_response(status=status, data=err_data)
 
-@app.get('/intrusion/domain')
+@app.route('/intrusion/domain', methods=['GET', 'POST'])
 @user_restrict('admin')
 def intrusion_domain(session_info: dict):
     page_settings = get_default_page_settings(session_info, uri_path=['intrusion', 'domain'])

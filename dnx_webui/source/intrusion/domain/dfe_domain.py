@@ -14,7 +14,7 @@ __all__ = ('WebPage',)
 
 class WebPage(StandardWebPage):
     '''
-    available methods: load, handle_ajax
+    available methods: load, update, handle_ajax
     '''
     @staticmethod
     # TODO: if system category gets disabled that had keyword enabled. it does not disable the keyword search.
@@ -32,6 +32,16 @@ class WebPage(StandardWebPage):
 
         return domain_settings
 
+    @staticmethod
+    def update(form: Form) -> tuple[int, str]:
+
+        # prevents errors while in dev mode.
+        if ('security_profile' in form):
+            return -1, 'temporarily limited to profile 1.'
+
+        return NO_STANDARD_ERROR
+
+    @staticmethod
     # TODO: figure out how to refresh page or update keyword options after domain cat change
     def handle_ajax(form: Form) -> tuple[bool, WebError]:
 
