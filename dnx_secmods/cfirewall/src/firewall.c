@@ -110,8 +110,8 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     firewall_inspect(&fw_clist, &pkt, cfd);
     firewall_unlock();
 
-    dprint(FW_V & VERBOSE, "pkt_id->%u, hook->%u, action->%u, log->%u, ipp->%u, dns->%u, ips->%u ", ntohl(nl_pkth->packet_id),
-        nl_pkth->hook, pkt.action, pkt.log, pkt.sec_profiles & 4, pkt.sec_profiles >> 4 & 4, pkt.sec_profiles >> 8 & 4);
+    dprint(FW_V & VERBOSE, "action->%u, log->%u, ipp->%u, dns->%u, ips->%u ", pkt.action, pkt.log,
+        pkt.sec_profiles & IP_PROXY_MASK, (pkt.sec_profiles & DNS_PROXY_MASK) >> 4, (pkt.sec_profiles & IPS_IDS_MASK) >> 4);
 
     /* ===================================
        NFQUEUE VERDICT LOGIC
@@ -138,7 +138,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
             && pkt.geo.dir == OUTBOUND
             && pkt.sec_profiles & DNS_PROXY_MASK
             && pkt.iphdr->protocol == IPPROTO_UDP
-            && pkt.protohdr->dport == UDPPROTO_DNS ) {
+            && pkt.protohdr->dport == htons(UDPPROTO_DNS) ) {
 
         dnx_send_deferred_verdict(cfd, ntohl(nl_pkth->packet_id),
             (pkt.sec_profiles << TWO_BYTES) | pkt_mark, SEND_TO_DNS_PROXY;
@@ -336,7 +336,6 @@ firewall_push_zones(ZoneMap *zone_map)
 void
 firewall_print_rule(uintf8_t ctrl_list, uintf16_t rule_idx)
 {
-    int    i, ix;
     struct FWrule  rule = firewall_tables[ctrl_list].rules[rule_idx];
 
     printf("<<FIREWALL RULE [%u][%u]>>\n", (uint8_t) ctrl_list, (uint16_t) rule_idx);

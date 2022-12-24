@@ -105,7 +105,7 @@ def validate_time_offset(settings: config, /) -> Optional[ValidationError]:
 # CONFIGURATION
 # ==============
 def configure_logging(log: config) -> None:
-    with ConfigurationManager('logging_client') as dnx:
+    with ConfigurationManager('logging_client', cfg_type='global') as dnx:
         log_settings: ConfigChain = dnx.load_configuration()
 
         log_settings['logging->length'] = log.length
@@ -114,7 +114,7 @@ def configure_logging(log: config) -> None:
         dnx.write_configuration(log_settings.expanded_user_data)
 
 def configure_sys_time_offset(offset: config) -> None:
-    with ConfigurationManager('logging_client') as dnx:
+    with ConfigurationManager('logging_client', cfg_type='global') as dnx:
         offset_settings: ConfigChain = dnx.load_configuration()
 
         if (offset.time == 0):
