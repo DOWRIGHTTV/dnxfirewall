@@ -265,7 +265,7 @@ def configure_general_settings(settings: config, /, field) -> None:
         dnx.write_configuration(ips_settings.expanded_user_data)
 
 def configure_ip_whitelist(whitelist: config, *, action: CFG) -> None:
-    with ConfigurationManager('profile/profile_1', cfg_type='security/ids_ips') as dnx:
+    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
         ips_settings: ConfigChain = dnx.load_configuration()
 
         if (action is CFG.ADD):
@@ -277,7 +277,7 @@ def configure_ip_whitelist(whitelist: config, *, action: CFG) -> None:
         dnx.write_configuration(ips_settings.expanded_user_data)
 
 def configure_dns_whitelist(settings: config, /) -> None:
-    with ConfigurationManager('profile/profile_1', cfg_type='security/ids_ips') as dnx:
+    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
         ips_settings: ConfigChain = dnx.load_configuration()
 
         ips_settings['whitelist->dns_servers'] = settings.action
