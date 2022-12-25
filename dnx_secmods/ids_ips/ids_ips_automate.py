@@ -9,8 +9,9 @@ from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import PROTO
 from dnx_gentools.system_info import System
 from dnx_gentools.standard_tools import looper, ConfigurationMixinBase
-from dnx_gentools.file_operations import load_configuration, cfg_read_poller
+from dnx_gentools.file_operations import cfg_read_poller
 
+from dnx_iptools.cprotocol_tools import iptoi
 from dnx_iptools.iptables import IPTablesManager
 
 from dnx_secmods.ids_ips.ids_ips_log import Log
@@ -91,8 +92,8 @@ class IPSConfiguration(ConfigurationMixinBase):
         else:
             self.__class__.block_length = NO_DELAY
 
-        # src ips that will not trigger ips # FIXME: does this even work? we use integer for ip addr now.
-        self.__class__.ip_whitelist = set([ip for ip in proxy_settings['whitelist->ip_whitelist']])
+        # src ips that will not trigger ips
+        self.__class__.ip_whitelist = set([iptoi(ip) for ip in proxy_settings['whitelist->ip_whitelist']])
 
         self._initialize.done()
 

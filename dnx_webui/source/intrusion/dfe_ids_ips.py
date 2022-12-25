@@ -58,8 +58,8 @@ class WebPage(StandardWebPage):
             'enabled': ips_enabled, 'length': passive_block_ttl, 'ids_mode': ids_mode,
             'ddos': ddos, 'port_scan': portscan,
             'ddos_notify': ddos_notify, 'ps_notify': ps_notify,
-            'ip_whitelist': ips_global['whitelist->ip_whitelist'],
-            'dns_server_whitelist': ips_global['whitelist->dns_servers'],
+            'ip_whitelist': ips_profile['whitelist->ip_whitelist'],
+            'dns_server_whitelist': ips_profile['whitelist->dns_servers'],
             'passively_blocked_hosts': passively_blocked_hosts
         }
 
@@ -265,7 +265,7 @@ def configure_general_settings(settings: config, /, field) -> None:
         dnx.write_configuration(ips_settings.expanded_user_data)
 
 def configure_ip_whitelist(whitelist: config, *, action: CFG) -> None:
-    with ConfigurationManager('global', cfg_type='security/ids_ips') as dnx:
+    with ConfigurationManager('profile/profile_1', cfg_type='security/ids_ips') as dnx:
         ips_settings: ConfigChain = dnx.load_configuration()
 
         if (action is CFG.ADD):
@@ -277,7 +277,7 @@ def configure_ip_whitelist(whitelist: config, *, action: CFG) -> None:
         dnx.write_configuration(ips_settings.expanded_user_data)
 
 def configure_dns_whitelist(settings: config, /) -> None:
-    with ConfigurationManager('global', cfg_type='security/ids_ips') as dnx:
+    with ConfigurationManager('profile/profile_1', cfg_type='security/ids_ips') as dnx:
         ips_settings: ConfigChain = dnx.load_configuration()
 
         ips_settings['whitelist->dns_servers'] = settings.action
