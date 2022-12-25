@@ -158,7 +158,7 @@ class WebPage(StandardWebPage):
 
         elif ('ips_wl_remove' in form):
             whitelist = config(**{
-                'whitelist_ip': form.get('ips_wl_ip', DATA.MISSING)
+                'ip': form.get('ips_wl_ip', DATA.MISSING)
             })
             if (DATA.MISSING in whitelist.values()):
                 return 12, INVALID_FORM
