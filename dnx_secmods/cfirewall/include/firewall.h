@@ -6,12 +6,12 @@
 // extended protocol definitions
 #define UDPPROTO_DNS 53
 
-struct ZoneMap;
-struct FWrule; // NOTE: this might just need to be included here, but wait until we see if it will be elsewhere.
-struct nlmsghdr;
-struct cfdata;
-struct dnx_pktb;
-struct clist_range;
+//struct ZoneMap;
+//struct FWrule; // NOTE: this might just need to be included here, but wait until we see if it will be elsewhere.
+//struct nlmsghdr;
+//struct cfdata;
+//struct dnx_pktb;
+//struct clist_range;
 
 // contains pointers to arrays of pointers to FWrule
 struct FWtable {

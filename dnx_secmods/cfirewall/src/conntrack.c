@@ -1,7 +1,6 @@
 #include "config.h"
-#include "conntrack.h"
 #include "cfirewall.h"
-#include "rules.h"
+#include "conntrack.h"
 
 struct nfct_handle *nfct;
 

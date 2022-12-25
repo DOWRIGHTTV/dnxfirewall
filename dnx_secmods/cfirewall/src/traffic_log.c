@@ -2,14 +2,17 @@
 #include "cfirewall.h"
 #include "traffic_log.h"
 
+struct LogHandle Log[2];
 struct dnx_db_service db_service;
 
 char*   action_map[3] = {"deny", "accept", "reject"};
 char*   dir_map[2]    = {"inbound", "outbound"};
 
 void
-log_init(struct LogHandle *logger, char *label)
+log_init(int logger_idx, char *label)
 {
+    struct LogHandle *logger = &Log[logger_idx];
+
     strcpy(logger->label, label); // eg. firewall, nat
     memset(logger->id, 0, 1); // eg. 20220704
 
@@ -29,8 +32,10 @@ log_enter(struct LogHandle *logger, struct timeval *ts)
 }
 
 void
-log_write_firewall(struct LogHandle *logger, struct dnx_pktb *pkt)
+log_write_firewall(int logger_idx, struct dnx_pktb *pkt)
 {
+    struct LogHandle *logger = &Log[logger_idx];
+
     struct timeval  timestamp;
 
     char    saddr[18];

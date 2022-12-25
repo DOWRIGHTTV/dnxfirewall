@@ -4,9 +4,9 @@
 typedef struct nfqnl_msg_packet_timestamp nl_pkt_ts;
 typedef const struct nlmsghdr nl_msg_hdr;
 typedef struct nfqnl_msg_packet_hdr nl_pkt_hdr;
-struct nlattr;
-struct dnx_pktb;
-struct cfdata;
+//struct nlattr;
+//struct dnx_pktb;
+//struct cfdata;
 
 void dnx_parse_nl_headers(nl_msg_hdr *nlmsgh, nl_pkt_hdr **nl_pkth, struct nlattr **netlink_attrs, struct dnx_pktb *pkt);
 void dnx_parse_pkt_headers(struct dnx_pktb *pkt);
