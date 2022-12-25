@@ -51,6 +51,9 @@ struct FWtable firewall_tables[FW_TABLE_COUNT];
 // firewall or nat rule locks.
 struct FWtable fw_tables_swap[FW_TABLE_COUNT];
 
+// global reference to the firewalls logger struct
+struct LogHandle *FW_LOG_HANDLER = &Log[FW_LOG_IDX];
+
 void
 firewall_init(void) {
     pthread_mutex_init(FWlock_ptr, NULL);
