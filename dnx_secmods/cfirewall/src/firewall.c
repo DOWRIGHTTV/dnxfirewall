@@ -52,9 +52,6 @@ struct FWtable firewall_tables[FW_TABLE_COUNT];
 // firewall or nat rule locks.
 struct FWtable fw_tables_swap[FW_TABLE_COUNT];
 
-// global reference to the firewalls logger struct
-struct LogHandle *FW_LOG_HANDLER = &Log[FW_LOG_IDX];
-
 void
 firewall_init(void) {
     pthread_mutex_init(FWlock_ptr, NULL);
@@ -71,7 +68,7 @@ firewall_init(void) {
     fw_tables_swap[FW_MAIN_RULES].rules   = calloc(FW_MAIN_MAX_RULE_COUNT, sizeof(struct FWrule));
     fw_tables_swap[FW_AFTER_RULES].rules  = calloc(FW_AFTER_MAX_RULE_COUNT, sizeof(struct FWrule));
 
-    log_init(FW_LOG_HANDLER, "firewall");
+    log_init(FW_LOG_IDX, "firewall");
 
     log_db_init();
 }
@@ -167,7 +164,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     // todo: see about running a threaded logger queue so packet processing can continue immediately.
     //   - this might be more pain than whats its worth since we use stack allocation for pktb struct.
     if (pkt.log) {
-        log_write_firewall(FW_LOG_HANDLER, &pkt);
+        log_write_firewall(FW_LOG_IDX, &pkt);
     }
 
     dprint(FW_V & VERBOSE, "\n");

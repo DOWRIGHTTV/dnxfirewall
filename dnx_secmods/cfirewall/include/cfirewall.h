@@ -140,7 +140,6 @@ struct dnx_pktb {
     uintf16_t           rule_clist;     // CONTROL LIST. recent change from fw_table to be module agnostic
     char*               rule_name;
     uint8_t             log;
-    struct LogHandle   *logger;
     struct geolocation  geo;
     uint16_t            sec_profiles;   // X (4b) | ips (4b) | dns (4b) | ipp (4b) -- will be placed in upper 16b of mark
     uint8_t             action;

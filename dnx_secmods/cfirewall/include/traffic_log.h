@@ -19,9 +19,6 @@
 #define FW_LOG_IDX  0
 #define NAT_LOG_IDX 1
 
-
-struct geolocation *geo;
-
 // ================================== //
 // LOG HANDLE STRUCT
 // ================================== //
@@ -34,8 +31,6 @@ struct LogHandle {
     int     cnt;
 };
 
-struct LogHandle Log[2];
-
 // ================================== //
 // DNX DATABASE SERVICE STRUCT
 // ================================== //
@@ -47,8 +42,8 @@ struct dnx_db_service {
     bool    connected;
 };
 
-extern void log_init(struct LogHandle *logger, char *label);
-extern void log_write_firewall(struct LogHandle *logger, struct dnx_pktb *pkt);
+extern void log_init(int logger_idx, char *label);
+extern void log_write_firewall(int logger_idx, struct dnx_pktb *pkt);
 //extern void log_write_nat(struct LogHandle *logger, struct dnx_pktb *pkt);
 
 void log_enter(struct LogHandle *logger, struct timeval *ts);
