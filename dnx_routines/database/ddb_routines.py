@@ -133,19 +133,17 @@ def infected_event(cur: Cursor, timestamp: int, log: INF_EVENT_LOG) -> bool:
 def geo_record(cur: Cursor, _, log: GEOLOCATION_LOG) -> bool:
     month = ','.join(_System.date()[:2])
 
-    # TODO: can this be switched to if not exists?
-    cur.execute(f'select * from geolocation where month=? and country=?', (month, log.country))
+    cur.execute(f'select * from geolocation where month=? and country=?', (month, log.cty_name))
 
     existing_record = cur.fetchone()
     # if it's the first time a country has been seen in the current month, it will be initialized with zeroes
     if (not existing_record):
-        cur.execute(f'insert into geolocation values (?, ?, ?, ?, ?)', (month, log.country, log.direction, 0, 0))
+        cur.execute(f'insert into geolocation values (?, ?, ?, ?, ?)', (month, log.cty_name, log.dir_name, 0, 0))
 
-    # TODO: what does this mean? this needs to be explained better because it looks fucked up.
-    # incremented count of the actions specified in the log.
+    # incremented count of the specific action specified in the log. (eg. blocked, allowed)
     cur.execute(
-        f'update geolocation set {log.action}={log.action}+1 where month=? and country=? and direction=?',
-        (month, log.country, log.direction)
+        f'update geolocation set {log.act_name}={log.act_name}+1 where month=? and country=? and direction=?',
+        (month, log.cty_name, log.dir_name)
     )
 
     return True
@@ -225,13 +223,13 @@ def top_geolocation(cur: Cursor, count: int, *, action: str, direction: str) -> 
     month = ','.join(_System.date()[:2])
 
     # table has a separate column for allowed and blocked. this is why we select and sort on the action directly.
+    # filtering out entries with no hits in the specified action.
     cur.execute(
         f'select country from geolocation where month=? and direction=? and {action} > 0 '
         f'order by {action} desc limit {count}', (month, direction)
     )
 
-    # filtering out entries with no hits in the specified action.
-    return [x.replace('_', ' ') for x in cur.fetchall()]
+    return [x[0].replace('_', ' ') for x in cur.fetchall()]
 
 @db.register('unique_domain_count', routine_type='query')
 # TODO: see if this should use sum() instead of len() on the results

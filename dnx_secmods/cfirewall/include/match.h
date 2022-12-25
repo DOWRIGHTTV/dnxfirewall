@@ -7,8 +7,8 @@ struct NetArray;
 struct SvcArray;
 struct Protohdr;
 
-int zone_match(struct ZoneArray *zone_array, uint8_t pkt_zone);
-int network_match(struct NetArray *net_array, uint32_t iph_ip, uint8_t country);
-int service_match(struct SvcArray *svc_array, uint8_t pkt_protocol, uint16_t pkt_svc);
+extern int zone_match(struct ZoneArray *zone_array, uint8_t pkt_zone);
+extern int network_match(struct NetArray *net_array, uint32_t iph_ip, uint8_t country);
+extern int service_match(struct SvcArray *svc_array, uint8_t pkt_protocol, uint16_t pkt_svc);
 
 #endif

@@ -87,10 +87,9 @@
     </div>
 </section>
 <script>
-async function updateCategory(category) {
-    const enabled = !!category.active;
+async function updateCategory(category, enabled) {
 
-    let response = await ajaxClient.post("/post", {"type": category.name, "category": category.value, "enabled": enabled});
+    let response = await ajaxClient.post("/post", {"type": category.name, "category": category.value, "enabled": !!enabled});
 
     // manually changing the active button instead of using an event listener to prevent a switch on server errors.
     let error = ajaxClient.handleResponse(response, category);

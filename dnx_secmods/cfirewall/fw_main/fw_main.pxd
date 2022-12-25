@@ -265,7 +265,6 @@ cdef extern from "cfirewall.h" nogil:
     uint32_t MSB, LSB
 
     # cli args
-    bool PROXY_BYPASS
     bool VERBOSE
     bool VERBOSE2
 
@@ -284,22 +283,18 @@ cdef extern from "cfirewall.h" nogil:
 
 cdef extern from "firewall.h" nogil:
     void firewall_init()
-    # void firewall_lock()
-    # void firewall_unlock()
     int  firewall_stage_count(uintf8_t table, uintf16_t rule_count)
     int  firewall_stage_rule(uintf8_t table, uintf16_t idx, FWrule *rule)
     int  firewall_push_rules(uintf8_t table_idx)
     int  firewall_recv(const nlmsghdr *nlh, void *data)
     int  firewall_push_zones(ZoneMap *zone_map)
 
-cdef extern from "nat.h" nogil:
-    void nat_init()
-    # void nat_lock()
-    # void nat_unlock()
-    int  nat_stage_count(uintf8_t table, uintf16_t rule_count)
-    int  nat_stage_rule(uintf8_t table, uintf16_t idx, NATrule *rule)
-    int  nat_push_rules(uintf8_t table_idx)
-    int  nat_recv(const nlmsghdr *nlh, void *data)
+# cdef extern from "nat.h" nogil:
+#     void nat_init()
+#     int  nat_stage_count(uintf8_t table, uintf16_t rule_count)
+#     int  nat_stage_rule(uintf8_t table, uintf16_t idx, NATrule *rule)
+#     int  nat_push_rules(uintf8_t table_idx)
+#     int  nat_recv(const nlmsghdr *nlh, void *data)
 
 cdef int nl_open(mnl_socket **nl_ptr) nogil
 cdef int nl_bind(mnl_socket *nl_ptr) nogil

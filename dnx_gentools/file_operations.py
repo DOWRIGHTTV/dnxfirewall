@@ -160,7 +160,7 @@ def json_to_yaml(data: Union[str, dict], *, is_string: bool = False) -> str:
 def load_tlds() -> Generator[tuple[str, int]]:
     proxy_config: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
 
-    for tld, setting in proxy_config.get_items('tlds'):
+    for tld, setting in proxy_config.get_items('tld'):
         yield (tld.strip('.'), setting)
 
 def load_keywords(log: LogHandler_T) -> tuple[tuple[str, DNS_CAT]]:
@@ -472,8 +472,7 @@ class ConfigChain:
 
 
 class ConfigurationManager:
-    '''
-    Class to ensure process safe operations on configuration files.
+    '''Class to ensure process safe operations on configuration files.
 
     This class is written as a context manager and must be used as such. upon calling the context, a file lock will be
     obtained or block until it can acquire the lock and return the class object to the caller.
@@ -483,7 +482,7 @@ class ConfigurationManager:
 
     __slots__ = (
         '_name', '_ext', '_cfg_type', '_filename',
-        
+
         '_config_lock', '_data_written',
         '_file_path', '_usr_path_file',  # '_system_path_file',
         '_temp_file', '_temp_file_path',

@@ -203,7 +203,7 @@ def intrusion_ip_post(session_info: dict):
 
     return ajax_response(status=status, data=err_data)
 
-@app.get('/intrusion/domain')
+@app.route('/intrusion/domain', methods=['GET', 'POST'])
 @user_restrict('admin')
 def intrusion_domain(session_info: dict):
     page_settings = get_default_page_settings(session_info, uri_path=['intrusion', 'domain'])
@@ -613,6 +613,8 @@ def firewall_page_logic(dnx_page: RulesWebPage, page_settings: dict, data_key: s
 def log_page_logic(log_page: LogWebPage, page_settings: dict, *, page_name: str) -> str:
     # can now accept redirects from other places on the webui to load specific tables directly on load
     # using uri queries FIXME: this has been temporarily suspended and should be reintroduced.
+
+    # TODO: we dont have explicit logic for "GET" and rely on exception handling to load page via GET. fix???
 
     try:
         table, menu, table_data = log_page.update(request.form)

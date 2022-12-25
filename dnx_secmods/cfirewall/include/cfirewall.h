@@ -21,16 +21,6 @@
 #include "dnx_nfq.h"    // packet verdict, mangle, etc.
 #include "traffic_log.h"
 
-// bit shifting helpers
-#define TWO_BITS     2
-#define FOUR_BITS    4
-#define ONE_BYTE     8
-#define TWELVE_BITS 12
-#define TWO_BYTES   16
-
-#define TWO_BIT_MASK   3
-#define FOUR_BIT_MASK 15
-
 #define OUTBOUND 1
 #define INBOUND  2
 
@@ -57,7 +47,6 @@
 extern uint32_t MSB, LSB;
 
 // cli args
-extern bool PROXY_BYPASS;
 extern bool VERBOSE;
 extern bool VERBOSE2;
 
@@ -130,6 +119,13 @@ struct Protohdr {
     uint16_t    dport;
 };
 
+struct geolocation {
+    uint8_t     src;
+    uint8_t     dst;
+    uint8_t     dir;
+    uint8_t     remote;
+};
+
 struct dnx_pktb {
     uint8_t             confirmed;
     uint8_t            *data;
@@ -139,16 +135,15 @@ struct dnx_pktb {
     uint16_t            iphdr_len;      // header only
     struct Protohdr    *protohdr;
     uint16_t            protohdr_len;   // header only
-    bool                mangled;
     struct Nat          nat;            // not used by FW. copied over from nat rule on match
+    bool                mangled;
     uintf16_t           rule_clist;     // CONTROL LIST. recent change from fw_table to be module agnostic
-    union {
-        struct FWrule  *fw_rule;
-        struct NATrule *nat_rule;
-    };
-    uint32_t            mark;
-    uint32_t            verdict;
+    char*               rule_name;
+    uint8_t             log;
     struct LogHandle   *logger;
+    struct geolocation  geo;
+    uint16_t            sec_profiles;   // X (4b) | ips (4b) | dns (4b) | ipp (4b) -- will be placed in upper 16b of mark
+    uint8_t             action;
 };
 
 #endif

@@ -14,7 +14,7 @@ __all__ = ('WebPage',)
 
 class WebPage(StandardWebPage):
     '''
-    available methods: load, handle_ajax
+    available methods: load, update, handle_ajax
     '''
     @staticmethod
     # TODO: if system category gets disabled that had keyword enabled. it does not disable the keyword search.
@@ -32,6 +32,16 @@ class WebPage(StandardWebPage):
 
         return domain_settings
 
+    @staticmethod
+    def update(form: Form) -> tuple[int, str]:
+
+        # prevents errors while in dev mode.
+        if ('security_profile' in form):
+            return -1, 'temporarily limited to profile 1.'
+
+        return NO_STANDARD_ERROR
+
+    @staticmethod
     # TODO: figure out how to refresh page or update keyword options after domain cat change
     def handle_ajax(form: Form) -> tuple[bool, WebError]:
 
@@ -61,20 +71,20 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[Va
 
     dns_proxy: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
 
-    if (ruleset in ['built-in', 'user_defined']):
+    if (ruleset in ['built-in', 'custom']):
         cat_list = dns_proxy.get_list(f'categories->{ruleset}')
 
     elif (ruleset in ['tld']):
         cat_list = dns_proxy.get_list('tld')
 
     elif (ruleset in ['keyword']):
-        domain_cats = dns_proxy.get_list('categories->default')
+        domain_cats = dns_proxy.get_list('categories->built-in')
 
         if (category.name not in domain_cats):
             return ValidationError(INVALID_FORM)
 
         # ensuring the associated url cat is enabled since it is a pre-req to enable keywords
-        if (not dns_proxy[f'categories->default->{category.name}->enabled']):
+        if (not dns_proxy[f'categories->built-in->{category.name}->enabled']):
             return ValidationError(INVALID_FORM)
 
         # skipping over last check which is not valid for keyword validation
@@ -93,7 +103,7 @@ def configure_domain_categories(category: config, *, ruleset: str):
     with ConfigurationManager('profiles/profile_1', cfg_type='security/dns') as dnx:
         dns_proxy: ConfigChain = dnx.load_configuration()
 
-        if (ruleset in ['default', 'user_defined']):
+        if (ruleset in ['built-in', 'user_defined']):
 
             dns_proxy[f'categories->{ruleset}->{category.name}->enabled'] = category.enabled
 
@@ -103,6 +113,6 @@ def configure_domain_categories(category: config, *, ruleset: str):
 
         elif (ruleset in ['keyword']):
 
-            dns_proxy[f'categories->default->{category.name}->keyword'] = category.enabled
+            dns_proxy[f'categories->built-in->{category.name}->keyword'] = category.enabled
 
         dnx.write_configuration(dns_proxy.expanded_user_data)

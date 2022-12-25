@@ -186,7 +186,7 @@ class _DBConnector:
         self._cur.execute(
             """
             create table if not exists geolocation 
-            (month text not null, country text not null, direction not null, 
+            (month text not null, country text not null, direction text not null, 
             blocked int4 not null, allowed int4 not null)
             """
         )

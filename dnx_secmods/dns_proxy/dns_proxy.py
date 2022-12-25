@@ -49,9 +49,6 @@ class DNSProxy(ProxyConfiguration, NFQueue):
         if LOCAL_RECORD(packet.qname):
             packet.nfqueue.accept()
 
-        elif (packet.action is CONN.DROP):
-            packet.nfqueue.drop()
-
         elif (packet.qtype in [DNS.A, DNS.NS]):
             return True
 
@@ -101,11 +98,11 @@ def _inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
 
     enum_categories = []
 
-    # TLD (top level domain) block | after first index will pass nested to allow for continue
+    # TLD (top level domain) block
     # dns whitelist does not override tld blocks at the moment. this is most likely the desired setup
     if _tld_get(packet.tld):
 
-        return DNS_REQUEST_RESULTS(True, 'tld filter', TLD_CAT[packet.requests[0]])
+        return DNS_REQUEST_RESULTS(True, 'tld filter', TLD_CAT[packet.tld])
 
     category: DNS_CAT
     # signature/ blacklist check.

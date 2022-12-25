@@ -527,13 +527,13 @@ class NFPacket:
 
         # creating instance attr so it can be modified if needed
         self.mark = mark
-        # X | X | ips (4b) | dns (4b) | ipp (4b) | geo loc (8b) | direction (2b) | action (2b)
+        # X (4b) | ips (4b) | dns (4b) | ipp (4b) | X (4b) | geo loc (8b) | direction (2b) | action (2b)
         self.action    = CONN(mark & 3)
         self.direction = DIR(mark >> 2 & 3)
         self.tracked_geo = mark >>  4 & 255
-        self.ipp_profile = mark >> 12 & 15
-        self.dns_profile = mark >> 16 & 15
-        self.ips_profile = mark >> 20 & 15
+        self.ipp_profile = mark >> 16 & 15
+        self.dns_profile = mark >> 20 & 15
+        self.ips_profile = mark >> 24 & 15
 
         hw_info = cpacket.get_hw()
         self.in_intf   = hw_info[0]
