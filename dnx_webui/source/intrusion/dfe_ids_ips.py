@@ -70,6 +70,7 @@ class WebPage(StandardWebPage):
             return -1, 'temporarily limited to profile 1.'
 
         if ('ddos_enabled' in form):
+
             ddos = config(**{
                 'enabled': get_convert_bint(form, 'ddos_enabled')
             })
