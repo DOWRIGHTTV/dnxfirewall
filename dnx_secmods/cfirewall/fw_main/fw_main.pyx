@@ -1,4 +1,4 @@
-#!/usr/bin/env Cython
+ #!/usr/bin/env Cython
 
 from libc.string cimport memset, strncpy
 from libc.stdio cimport printf, perror

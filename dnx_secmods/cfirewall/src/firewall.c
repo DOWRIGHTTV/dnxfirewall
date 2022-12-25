@@ -101,7 +101,6 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
         fw_clist.start = FW_RULE_RANGE_START;
 
     // the lock prevents the manager thread from updating firewall rules during packet inspection.
-    // todo: consider locking around each control list. this would weave control list updates with inspection.
     firewall_lock();
     firewall_inspect(&fw_clist, &pkt, cfd);
     firewall_unlock();
@@ -150,6 +149,9 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
        GEOLOCATION MONITORING - GENERAL
     =================================== */
     // non system traffic only. remote country to or from and packet action
+    // todo: this currently filter out drops on wan interface if they do not have an associated nat
+    //  - figure out a filter that would include wan drops
+    //  - this type of logic might work as a fast path for inbound wan interface inspection
     if (fw_clist.start != FW_SYSTEM_RANGE_START) {
         log_db_geolocation(&pkt.geo, pkt.action);
 
@@ -262,7 +264,7 @@ geolocation:
     pkt->geo.remote = tracked_geo;
 }
 
-void
+inline void
 firewall_lock(void)
 {
     pthread_mutex_lock(FWlock_ptr);
@@ -270,7 +272,7 @@ firewall_lock(void)
     dprint(FW_V & VERBOSE, "< [!] FW LOCK ACQUIRED [!] >\n");
 }
 
-void
+inline void
 firewall_unlock(void)
 {
     pthread_mutex_unlock(FWlock_ptr);

@@ -50,8 +50,8 @@ void log_enter(struct LogHandle *logger, struct timeval *ts);
 void log_exit(struct LogHandle *logger);
 int  log_rotate(struct LogHandle *logger, struct timeval *ts);
 
-extern void log_db_init();
-extern int  log_db_connect();
+extern void log_db_init(void);
+extern int  log_db_connect(void);
 extern void log_db_geolocation(struct geolocation *geo, uint8_t pkt_action);
 
 #endif

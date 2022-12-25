@@ -119,7 +119,7 @@ NOTE: overriding SCM_CREDENTIALS with the dnxfirewall system user (vs root) for 
 which also reduces authorization code complexity.
 */
 void
-log_db_init()
+log_db_init(void)
 {
     db_service.addr.sun_family = AF_UNIX;
     // copy sock filepath to struct
@@ -145,7 +145,7 @@ log_db_init()
 }
 
 inline int
-log_db_connect()
+log_db_connect(void)
 {
     int ret = connect(db_service.fd, &db_service.addr, sizeof(db_service.addr));
 
