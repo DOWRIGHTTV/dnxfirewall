@@ -11,11 +11,22 @@
 #include <libnetfilter_queue/libnetfilter_queue.h> // nfqueue interface for libmnl
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h> // nfct - conntrack updates (used by nat mod through dnx_nfq)
 
-// dnxfirewall
+// dnxfirewall setup
 #include "config.h"
 #include "debug.h"
 #include "inet_tools.h"
 #include "std_tools.h"
+
+// forward declarations so extension headers dont need them
+struct cfdata;
+struct clist_range;
+struct HWinfo;
+struct IPhdr;
+struct Protohdr;
+struct geolocation;
+struct dnx_pktb;
+
+// dnxfirewall extensions
 #include "rules.h"      // firewall and nat rule structs/ defs
 #include "match.h"      // zone, network, service matching helpers
 #include "dnx_nfq.h"    // packet verdict, mangle, etc.

@@ -2,10 +2,10 @@
 #define MATCH_H
 
 
-struct ZoneArray;
-struct NetArray;
-struct SvcArray;
-struct Protohdr;
+//struct ZoneArray;
+//struct NetArray;
+//struct SvcArray;
+//struct Protohdr;
 
 extern int zone_match(struct ZoneArray *zone_array, uint8_t pkt_zone);
 extern int network_match(struct NetArray *net_array, uint32_t iph_ip, uint8_t country);

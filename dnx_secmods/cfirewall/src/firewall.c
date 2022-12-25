@@ -1,7 +1,6 @@
 #include "config.h"
-#include "firewall.h"
 #include "cfirewall.h"
-#include "rules.h"
+#include "firewall.h"
 
 #include "hash_trie.h"
 

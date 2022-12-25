@@ -42,6 +42,8 @@ struct dnx_db_service {
     bool    connected;
 };
 
+// todo: why is dnx_pktb not causing an error without a forward declaration???
+
 extern void log_init(int logger_idx, char *label);
 extern void log_write_firewall(int logger_idx, struct dnx_pktb *pkt);
 //extern void log_write_nat(struct LogHandle *logger, struct dnx_pktb *pkt);
@@ -50,6 +52,9 @@ void log_enter(struct LogHandle *logger, struct timeval *ts);
 void log_exit(struct LogHandle *logger);
 
 int  log_rotate(struct LogHandle *logger, struct timeval *ts);
+
+// forward declaration
+struct geolocation;
 
 extern void log_db_init();
 extern int  log_db_connect();
