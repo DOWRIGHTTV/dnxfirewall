@@ -100,7 +100,7 @@ typedef struct SvcArray {
 
 // COMPLETE RULE STRUCTS - NO POINTERS
 struct FWrule {
-    charchar        name[33]; // 32 character max
+    char        name[33]; // 32 character max
     bool        enabled;
 
     // SOURCE
