@@ -24,7 +24,7 @@
         <div class="col s12 m6">
           <div class="card-panel hoverable {{ theme.card }}">
             <h4 class="{{ theme.title }}">Denial Of Service</h4>
-            <form method="POST">
+            <form method="post" id="ddos-limits">
               <input type="hidden" name="tab" value="1">
               <input type="hidden" name="ddos_limits">
               <div class="row">
@@ -56,7 +56,7 @@
               </div>
             </form>
             <div class="row">
-              <button class="btn waves-effect waves-light col s4">Update</button>
+              <button class="btn waves-effect waves-light col s4" form="ddos-limits">Update</button>
               {{ create_switch('Enabled', 'ddos_enabled', checked=ips_settings.enabled)|safe }}
             </div>
           </div>
