@@ -110,6 +110,9 @@ class FirewallAutomate:
 
         system_set = loaded_rules.get_values('BUILTIN')
 
+        # including user configured system rules
+        system_set.append(loaded_rules.get_values('USER'))
+
         # updating ruleset to reflect changes
         self.SYSTEM = loaded_rules.get_dict()
 
