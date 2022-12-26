@@ -166,7 +166,7 @@ class FirewallControl:
             for svc in fields.service_ports:
 
                 idx = str(fields.zone + svc)
-                key = 'HOME' + idx
+                key = 'USER' + idx
 
                 if (fields.action is CFG.DEL):
                     del system_rules[idx]
