@@ -169,7 +169,7 @@ class FirewallControl:
                 key = 'USER' + idx
 
                 if (fields.action is CFG.DEL):
-                    del system_rules[idx]
+                    del system_rules[key]
 
                 else:
                     system_rules[f'{key}->name'] = f'webui_service_{idx}'
