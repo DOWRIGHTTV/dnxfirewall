@@ -204,7 +204,9 @@ class IPTablesManager:
             console_log('dnxfirewall iptable defaults applied.')
 
     def modify_management_access(self, fields: config) -> None:
-        '''set management access as configured in webui. ports must be a list, even if only one port is needed.
+        '''set management access as configured in webui.
+
+        ports must be a list, even if only one port is needed.
         '''
         zone = globals()[f'{fields.zone.upper()}_IN']
         action = '-A' if fields.action is CFG.ADD else '-D'
@@ -266,8 +268,8 @@ class IPTablesManager:
     def delete_nat(self, rule: config) -> None:
         shell(f'sudo iptables -t nat -D {rule.nat_type} {rule.position}', check=True)
 
-    def remove_passive_block(self, host_ip: str, timestamp: str) -> None:
-        shell(f'sudo iptables -t raw -D IPS -s {host_ip} -j DROP -m comment --comment {timestamp}', check=True)
+    def remove_passive_block(self, host: int, timestamp: int) -> None:
+        shell(f'sudo iptables -t raw -D IPS -s {itoip(host)} -j DROP -m comment --comment {timestamp}', check=True)
 
     @staticmethod
     # this allows forwarding through system, required for SNAT/MASQUERADE to work.

@@ -14,6 +14,8 @@ from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR, fast_time, str_join, NO_DELAY, ONE_HOUR
 from dnx_gentools.file_operations import load_configuration, load_data
 
+from dnx_iptools.cprotocol_tools import iptoi
+
 __all__ = (
     'Interface', 'System', 'Services'
 )
@@ -216,7 +218,7 @@ class System:
         return backups
 
     @staticmethod
-    def ips_passively_blocked(*, table: str = 'raw', block_length: int = NO_DELAY) -> list[tuple[str, int]]:
+    def ips_passively_blocked(*, table: str = 'raw', block_length: int = NO_DELAY) -> list[tuple[int, int]]:
         '''return list of currently blocked hosts in the specific iptables table.
 
         the default table is 'raw'.
@@ -234,7 +236,7 @@ class System:
         for line in output[2:]:
             line = line.split()
 
-            blocked_host, timestamp = line[3], int(line[6])
+            blocked_host, timestamp = iptoi(line[3]), int(line[6])
 
             # check whether the host rule has reach point of expiration. if not, loop will continue. for NO_DELAY
             # this condition will eval to False immediately, which marks rule for deletion.

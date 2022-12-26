@@ -9,7 +9,7 @@ from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import PROTO
 from dnx_gentools.system_info import System
 from dnx_gentools.standard_tools import looper, ConfigurationMixinBase
-from dnx_gentools.file_operations import cfg_read_poller
+from dnx_gentools.file_operations import cfg_read_poller, ConfigurationManager
 
 from dnx_iptools.cprotocol_tools import iptoi
 from dnx_iptools.iptables import IPTablesManager
@@ -109,8 +109,21 @@ class IPSConfiguration(ConfigurationMixinBase):
             PROTO.UDP: {
                 int(local_p): int(wan_p) for wan_p, local_p in proxy_settings.get_items('open_protocols->udp')
             },
-            PROTO.ICMP: {}
+            PROTO.ICMP: {}  # todo: what is this here for? is it to prevent issue on packet inspection?
         }
+
+        # NOTE: this is needed to remove from memory who were manually removed by user via webui
+        if hosts_to_remove := proxy_settings.get_items('pbl_remove'):
+            with ConfigurationManager('global', cfg_type='security/ids_ips') as dnx:
+                ips_global_settings: ConfigChain = dnx.load_configuration()
+
+                for host, timestamp in hosts_to_remove:
+
+                    # removing host from ips tracker/ suppression dictionary
+                    if self.__class__.fw_rules.pop(host, None):  # should never return None
+                        del ips_global_settings[f'pbl_remove->{host}']
+
+                dnx.write_configuration(ips_global_settings.expanded_user_data)
 
         self._initialize.done()
 
@@ -125,7 +138,7 @@ class IPSConfiguration(ConfigurationMixinBase):
 
         with IPTablesManager() as iptables:
             for host, timestamp in expired_hosts:
-                iptables.proxy_del_rule(host, timestamp, table='raw', chain='IPS')
+                iptables.remove_passive_block(host, timestamp)
 
                 # removing host from ips tracker/ suppression dictionary
-                self.__class__.fw_rules.pop(IPv4Address(host), None)  # should never return None
+                self.__class__.fw_rules.pop(host, None)  # should never return None
