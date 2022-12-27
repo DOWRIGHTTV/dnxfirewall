@@ -191,8 +191,8 @@ class System:
         for server, info in dns_server_cfg.get_items('resolvers'):
             tls, udp = 'Waiting', 'Waiting'
 
-            active_server = dns_servers_status.get(info[server], None)
-            if (active_server):
+            active_server = dns_servers_status.get(server, None)
+            if (active_server['ip_address'] == info['ip_address']):
                 udp = 'UP' if active_server['17'] else 'Down'
                 tls = 'Up' if active_server['853'] else 'Down'
 
