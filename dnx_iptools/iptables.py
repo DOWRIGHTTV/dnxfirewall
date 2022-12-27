@@ -62,7 +62,6 @@ class _Defaults:
         for chain in self.custom_nat_chains:
             ipt_shell(f'{chain}', table='nat', action='-N')
 
-        ipt_shell('MGMT', action='-N')
         ipt_shell('IPS', table='raw', action='-N')  # ddos prevention rule insertion location
 
     def default_actions(self) -> None:
@@ -94,25 +93,11 @@ class _Defaults:
         # NOTE: control sock is AF_INET, so we need this rule
         ipt_shell('INPUT -s 127.0.0.0/24 -d 127.0.0.0/24 -j ACCEPT')
 
-        # user-configured services access will be kept as iptables for now.
-        # mark filter to ensure wan doesn't match as an extra precaution.
-        # NOTE: the implicit allows like dhcp and dns will be handled by cfirewall from this point on.
-        ipt_shell(f'INPUT -m mark ! --mark {WAN_IN} -j MGMT')
-
         ipt_shell(f'INPUT -p tcp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
         ipt_shell(f'INPUT -p udp  -j NFQUEUE --queue-num {Queue.CFIREWALL}')
         ipt_shell(f'INPUT -p icmp -j NFQUEUE --queue-num {Queue.CFIREWALL}')
 
     def prefilter_set(self) -> None:
-        # marking traffic entering wan interface.
-        # this is currently used for directionality comparisons and to restrict system access.
-        ipt_shell(f'INPUT -i {self._wan_int} -j MARK --set-mark {WAN_IN}', table='mangle')
-
-        # builtin lan and dmz interface/ zones will continue to be marked while iptables has partial control over system
-        # service access
-        ipt_shell(f'INPUT -i {self._lan_int} -j MARK --set-mark {LAN_IN}', table='mangle')
-        ipt_shell(f'INPUT -i {self._dmz_int} -j MARK --set-mark {DMZ_IN}', table='mangle')
-
         # filtering out broadcast packets to the wan.
         # These can be prevalent if in a double nat scenario and would never be used for anything.
         ipt_shell(f'INPUT -i {self._wan_int} -m addrtype --dst-type BROADCAST -j DROP', action='-I')
@@ -202,25 +187,6 @@ class IPTablesManager:
 
         if (not suppress):
             console_log('dnxfirewall iptable defaults applied.')
-
-    def modify_management_access(self, fields: config) -> None:
-        '''set management access as configured in webui.
-
-        ports must be a list, even if only one port is needed.
-        '''
-        zone = globals()[f'{fields.zone.upper()}_IN']
-        action = '-A' if fields.action is CFG.ADD else '-D'
-
-        # icmp/ping rule is one off check.
-        if (fields.service_ports == 1):
-            shell(f'sudo iptables {action} MGMT -m mark --mark {zone} -p icmp --icmp-type 8 -j ACCEPT', check=True)
-
-            return
-
-        # iterate over ports to make it easier to deal with singular or multiple port cases
-        for port in fields.service_ports:
-
-            shell(f'sudo iptables {action} MGMT -m mark --mark {zone} -p tcp --dport {port} -j ACCEPT', check=True)
 
     def add_nat(self, rule: config) -> None:
         src_interface = self._zone_to_intf[f'{rule.src_zone}']
