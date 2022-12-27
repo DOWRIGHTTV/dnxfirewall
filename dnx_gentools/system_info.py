@@ -188,10 +188,10 @@ class System:
         udp_fallback = dns_server_cfg['tls->fallback']
 
         dns_servers = {}
-        for server, server_info in dns_server_cfg.get_items('resolvers'):
+        for server, info in dns_server_cfg.get_items('resolvers'):
             tls, udp = 'Waiting', 'Waiting'
 
-            active_server = dns_servers_status.get(server_info['ip_address'], None)
+            active_server = dns_servers_status.get(info[server]['ip_address'], None)
             if (active_server):
                 udp = 'UP' if active_server['17'] else 'Down'
                 tls = 'Up' if active_server['853'] else 'Down'
@@ -203,7 +203,7 @@ class System:
                 udp = 'Disabled'
 
             dns_servers[server] = {
-                'name': server_info['name'],
+                'name': info[server]['name'],
                 'ip_address': active_server,
                 'udp': udp,
                 'tls': tls
