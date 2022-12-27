@@ -171,7 +171,7 @@ class FirewallControl:
                 if (fields.action is CFG.DEL):
                     del system_rules[key]
 
-                else:
+                elif (fields.action is CFG.ADD):
                     system_rules[f'{key}->name'] = f'webui_service_{idx}'
                     system_rules[f'{key}->id'] = None
                     system_rules[f'{key}->enabled'] = 1
@@ -186,6 +186,9 @@ class FirewallControl:
                     system_rules[f'{key}->ipp_profile'] = 0
                     system_rules[f'{key}->dns_profile'] = 0
                     system_rules[f'{key}->ips_profile'] = 0
+
+                else:
+                    return False
 
             system_rules_file.write_configuration(system_rules.expanded_user_data)
 

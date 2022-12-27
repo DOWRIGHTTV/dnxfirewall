@@ -104,6 +104,10 @@ def validate_management_access(fields: config) -> Optional[ValidationError]:
     except ValueError:
         return ValidationError(INVALID_FORM)
 
+    else:
+        if action not in [CFG.DEL, CFG.ADD]:
+            return ValidationError(INVALID_FORM)
+
     fields.zone = ZONE_TO_INT[fields.name]
     fields.action = action
     fields.service_ports = SERVICE_TO_PORT[fields.service]
