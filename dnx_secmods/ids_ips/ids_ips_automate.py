@@ -116,11 +116,10 @@ class IPSConfiguration(ConfigurationMixinBase):
                 ips_global_settings: ConfigChain = dnx.load_configuration()
 
                 for host, timestamp in hosts_to_remove:
-
                     # removing host from ips tracker/ suppression dictionary
                     # notify list could desync from in memory tracker under service/system shutdown conditions, so we
                     # will remove entry from the notify list regardless.
-                    self.__class__.fw_rules.pop(host, None)
+                    self.__class__.fw_rules.pop(int(host), None)
 
                     del ips_global_settings[f'pbl_remove->{host}']
 
