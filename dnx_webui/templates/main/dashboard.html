@@ -174,9 +174,7 @@
             <tbody>
               <tr>
               {% for server in dashboard['dns_servers'].values() %}
-                <td>{{server['name']}} : {{server['status']}} {% if 'tls' in server %} | TLS:
-                  {{server['tls']}} {% endif %}
-                  ({{server['ip_address']}})</td>
+                <td>{{server['name']}}({{server['ip_address']}}) -> UDP: {{server['udp']}} | TLS: {{server['tls']}}
               {% endfor %}
               {% for mod, status in dashboard['module_status'].items() %}
                 {% if status %}

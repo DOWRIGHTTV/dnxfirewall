@@ -374,6 +374,6 @@ class ServerConfiguration(ConfigurationMixinBase):
                 secure_socket.close()
 
         if (status_change):
-            write_configuration(public_resolvers._asdict(), 'dns_server_status')
+            write_configuration(public_resolvers._asdict(), 'dns_server', ext='stat', cfg_type='global')
 
         self._initialize.done()

@@ -181,25 +181,33 @@ class System:
 
     @staticmethod
     def dns_status() -> dict:
-        dns_servers_status: dict = load_data('dns_server.stat', cfg_type='system/global')
-        dns_server: ConfigChain = load_configuration('dns_server', cfg_type='global')
+        dns_servers_status: dict = load_data('dns_server.stat', cfg_type='usr/global')
+        dns_server_cfg: ConfigChain = load_configuration('dns_server', cfg_type='global')
 
-        tls_enabled = dns_server['tls->enabled']
-        dns_servers = dns_server.get_dict('resolvers')
+        tls_enabled  = dns_server_cfg['tls->enabled']
+        udp_fallback = dns_server_cfg['tls->fallback']
 
-        for server, server_info in dns_servers.items():
-            tls, dns = 'Waiting', 'Waiting'
+        dns_servers = {}
+        for server, server_info in dns_server_cfg.get_items('resolvers'):
+            tls, udp = 'Waiting', 'Waiting'
 
-            active_servers = dns_servers_status.get(server_info['ip_address'], None)
-            if (active_servers):
-                dns = 'UP' if active_servers['dns_up'] else 'Down'
-                tls = 'Down' if active_servers['tls_down'] else 'Up'
+            active_server = dns_servers_status.get(server_info['ip_address'], None)
+            if (active_server):
+                udp = 'UP' if active_server['17'] else 'Down'
+                tls = 'Up' if active_server['853'] else 'Down'
 
             if (not tls_enabled):
                 tls = 'Disabled'
 
-            dns_servers[server]['dns_up'] = dns
-            dns_servers[server]['tls_down'] = tls
+            elif (not udp_fallback):
+                udp = 'Disabled'
+
+            dns_servers[server] = {
+                'name': server_info['name'],
+                'ip_address': active_server,
+                'udp': udp,
+                'tls': tls
+            }
 
         return dns_servers
 
