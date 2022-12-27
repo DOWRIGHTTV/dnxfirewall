@@ -8,9 +8,11 @@ app = Flask.app
 # FLASK API - TEMPLATE FUNCTIONS
 # ====================================
 @app.template_global()
-def create_title(title: str) -> str:
+def create_title(title: str, classes: str = '') -> str:
+    classes = 'card-title ' + classes
+
     return (
-        f'<div class="row"><h4 class="{context_global.theme["title"]} card-title">{title.title()}</h4></div>'
+        f'<div class="row"><h5 class="{context_global.theme["title"]} {classes}">{title.title()}</h5></div>'
         f'<div class="title-divider"></div><br>'
     )
 
