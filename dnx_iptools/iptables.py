@@ -67,7 +67,9 @@ class _Defaults:
     def default_actions(self) -> None:
         '''default allow is explicitly set if they were previously changed from default.
         '''
-        shell('OUTPUT ACCEPT', action='-P')
+        shell('iptables -P INPUT DROP')
+        shell('iptables -P FORWARD DROP')
+        shell('iptables -P OUTPUT ACCEPT')
 
     def cfirewall_hook(self) -> None:
         '''IPTable rules to give cfirewall control of all tcp, udp, and icmp packets.
