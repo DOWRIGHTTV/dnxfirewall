@@ -199,7 +199,8 @@ def get_interfaces() -> dict:
                 [name, intf_cfg['zone'], intf_cfg['subnet']], [data[1], data[2]], [data[9], data[10]]
             ])
 
-        else:
+        # functional else with loopback filter
+        elif (name != 'lo'):
             system_interfaces['unassociated'].append([[name, 'none', 'none'], [data[1], data[2]], [data[9], data[10]]])
 
     return system_interfaces
