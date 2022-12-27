@@ -190,7 +190,7 @@ def get_interfaces() -> dict:
         if intf_cfg := builtin_intfs.get(name, None):
 
             system_interfaces['builtin'].append([
-                [name, intf_cfg['zone'], intf_cfg['subnet']], [data[1], data[2]], [data[9], data[10]]
+                [name, intf_cfg['zone'], intf_cfg.get('subnet', 'n/a')], [data[1], data[2]], [data[9], data[10]]
             ])
 
         elif intf_cfg := extended_intfs.get(name, None):
