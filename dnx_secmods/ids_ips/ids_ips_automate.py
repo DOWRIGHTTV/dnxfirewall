@@ -20,6 +20,9 @@ from dnx_secmods.ids_ips.ids_ips_log import Log
 if (TYPE_CHECKING):
     from dnx_routines.logging import LogHandler_T
 
+# needed for updating pbl early removal notification in cfg
+ConfigurationManager.set_log_reference(Log)
+
 
 class IPSConfiguration(ConfigurationMixinBase):
     fw_rules:     ClassVar[dict] = {}
