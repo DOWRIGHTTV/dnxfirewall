@@ -7,8 +7,9 @@ from source.web_validate import *
 
 from dnx_gentools.def_enums import CFG, DATA
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
-
 from dnx_gentools.system_info import System
+
+from dnx_iptools.cprotocol_tools import iptoi, itoip
 from dnx_iptools.iptables import IPTablesManager
 
 from source.web_interfaces import StandardWebPage
@@ -49,7 +50,7 @@ class WebPage(StandardWebPage):
         passively_blocked_hosts = []
         pbh = System.ips_passively_blocked()
         for host, timestamp in pbh:
-            passively_blocked_hosts.append((host, timestamp, System.offset_and_format(timestamp)))
+            passively_blocked_hosts.append((itoip(host), timestamp, System.offset_and_format(timestamp)))
 
         return {
             'security_profile': 1,
@@ -196,8 +197,7 @@ class WebPage(StandardWebPage):
             if (convert_int(timestamp) is DATA.INVALID):
                 return 17, INVALID_FORM
 
-            with IPTablesManager() as iptables:
-                iptables.remove_passive_block(host_ip, timestamp)
+            pbl_remove_notify(iptoi(host_ip), int(timestamp))
 
         else:
             return 99, INVALID_FORM
@@ -284,3 +284,22 @@ def configure_dns_whitelist(settings: config, /) -> None:
         ips_settings['whitelist->dns_servers'] = settings.action
 
         dnx.write_configuration(ips_settings.expanded_user_data)
+
+# error condition should never be met, but just for initial implementation and piece of mind
+def pbl_remove_notify(host: int, timestamp: int) -> None:
+    error = True
+    with IPTablesManager() as iptables:
+        iptables.remove_passive_block(host, timestamp)
+
+        error = False
+
+    if error: return
+
+    with ConfigurationManager('global', cfg_type='security/ids_ips') as dnx:
+        ips_global_settings: ConfigChain = dnx.load_configuration()
+
+        ips_global_settings[f'pbl_remove->{host}'] = timestamp
+
+        dnx.write_configuration(ips_global_settings.expanded_user_data)
+
+

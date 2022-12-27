@@ -27,10 +27,10 @@
                                             <label>
                                                 Off
                                                 {% if not enabled %}
-                                                <input type="hidden" name="update_mgmt_access" value="{{zone}},{{mgmt_svc}},1">
+                                                <input type="hidden" name="update_mgmt_access" value="{{zone}},{{mgmt_svc}},2">
                                                 <input type="checkbox" onchange="this.form.submit()">
                                                 {% else %}
-                                                <input type="hidden" name="update_mgmt_access" value="{{zone}},{{mgmt_svc}},0">
+                                                <input type="hidden" name="update_mgmt_access" value="{{zone}},{{mgmt_svc}},1">
                                                 <input type="checkbox" onchange="this.form.submit()" checked="checked"
                                                     {% if zone == 'lan' and mgmt_svc == 'webui' %} disabled {% endif %}>
                                                 {% endif %}

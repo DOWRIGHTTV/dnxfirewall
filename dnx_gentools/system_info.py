@@ -14,6 +14,8 @@ from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR, fast_time, str_join, NO_DELAY, ONE_HOUR
 from dnx_gentools.file_operations import load_configuration, load_data
 
+from dnx_iptools.cprotocol_tools import iptoi
+
 __all__ = (
     'Interface', 'System', 'Services'
 )
@@ -179,25 +181,33 @@ class System:
 
     @staticmethod
     def dns_status() -> dict:
-        dns_servers_status: dict = load_data('dns_server.stat', cfg_type='system/global')
-        dns_server: ConfigChain = load_configuration('dns_server', cfg_type='global')
+        dns_servers_status: dict = load_data('dns_server.stat', cfg_type='usr/global')
+        dns_server_cfg: ConfigChain = load_configuration('dns_server', cfg_type='global')
 
-        tls_enabled = dns_server['tls->enabled']
-        dns_servers = dns_server.get_dict('resolvers')
+        tls_enabled  = dns_server_cfg['tls->enabled']
+        udp_fallback = dns_server_cfg['tls->fallback']
 
-        for server, server_info in dns_servers.items():
-            tls, dns = 'Waiting', 'Waiting'
+        dns_servers = {}
+        for server, info in dns_server_cfg.get_items('resolvers'):
+            tls, udp = 'Waiting', 'Waiting'
 
-            active_servers = dns_servers_status.get(server_info['ip_address'], None)
-            if (active_servers):
-                dns = 'UP' if active_servers['dns_up'] else 'Down'
-                tls = 'Down' if active_servers['tls_down'] else 'Up'
+            active_server = dns_servers_status.get(server, None)
+            if (active_server['ip_address'] == info['ip_address']):
+                udp = 'UP' if active_server['17'] else 'Down'
+                tls = 'Up' if active_server['853'] else 'Down'
 
             if (not tls_enabled):
                 tls = 'Disabled'
 
-            dns_servers[server]['dns_up'] = dns
-            dns_servers[server]['tls_down'] = tls
+            elif (not udp_fallback):
+                udp = 'Disabled'
+
+            dns_servers[server] = {
+                'name': info['name'],
+                'ip_address': info['ip_address'],
+                'udp': udp,
+                'tls': tls
+            }
 
         return dns_servers
 
@@ -216,7 +226,7 @@ class System:
         return backups
 
     @staticmethod
-    def ips_passively_blocked(*, table: str = 'raw', block_length: int = NO_DELAY) -> list[tuple[str, int]]:
+    def ips_passively_blocked(*, table: str = 'raw', block_length: int = NO_DELAY) -> list[tuple[int, int]]:
         '''return list of currently blocked hosts in the specific iptables table.
 
         the default table is 'raw'.
@@ -234,7 +244,7 @@ class System:
         for line in output[2:]:
             line = line.split()
 
-            blocked_host, timestamp = line[3], int(line[6])
+            blocked_host, timestamp = iptoi(line[3]), int(line[6])
 
             # check whether the host rule has reach point of expiration. if not, loop will continue. for NO_DELAY
             # this condition will eval to False immediately, which marks rule for deletion.

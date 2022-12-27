@@ -7,6 +7,7 @@ import shutil
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR
+from dnx_gentools.def_enums import CFG
 from dnx_gentools.file_operations import ConfigurationManager, load_configuration, write_configuration, calculate_file_hash
 
 from dnx_routines.logging.log_client import Log
@@ -56,8 +57,8 @@ class FirewallControl:
     def commit(cls, firewall_rules: dict) -> None:
         '''Updates pending configuration file with sent in firewall rules data.
 
-        This is a replace operation on disk and thread and process safe.'''
-
+        This is a replace operation on disk and thread and process safe.
+        '''
         with ConfigurationManager(DEFAULT_VERSION, ext='firewall', file_path=DEFAULT_PATH) as dnx_fw:
             dnx_fw.write_configuration(firewall_rules)
 
@@ -155,3 +156,43 @@ class FirewallControl:
             return False
 
         return active != pending
+
+    @staticmethod
+    def modify_management_access(fields: config) -> bool:
+
+        with ConfigurationManager('system', ext='firewall', file_path='dnx_profile/iptables') as system_rules_file:
+            system_rules = system_rules_file.load_configuration()
+
+            for svc in fields.service_ports:
+
+                idx = str(fields.zone + svc)
+                key = f'USER->{idx}'
+
+                if (fields.action is CFG.DEL):
+                    del system_rules[key]
+
+                elif (fields.action is CFG.ADD):
+                    system_rules[f'{key}->name'] = f'webui_service_{idx}'
+                    system_rules[f'{key}->id'] = None
+                    system_rules[f'{key}->enabled'] = 1
+                    system_rules[f'{key}->src_zone'] = [fields.zone]
+                    system_rules[f'{key}->src_network'] = [[2, 0, 0]]
+                    system_rules[f'{key}->src_service'] = [[2, 6, 1, 65535]]
+                    system_rules[f'{key}->dst_zone'] = [0]
+                    system_rules[f'{key}->dst_network'] = [[2, 0, 0]]
+                    system_rules[f'{key}->dst_service'] = [[1, 6, svc, svc]]
+                    system_rules[f'{key}->action'] = 1
+                    system_rules[f'{key}->log'] = 1
+                    system_rules[f'{key}->ipp_profile'] = 0
+                    system_rules[f'{key}->dns_profile'] = 0
+                    system_rules[f'{key}->ips_profile'] = 0
+
+                else:
+                    return False
+
+            system_rules_file.write_configuration(system_rules.expanded_user_data)
+
+            return True
+
+        # reachable if context exits before finishing (error)
+        return False
