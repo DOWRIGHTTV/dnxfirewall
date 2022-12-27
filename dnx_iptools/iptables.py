@@ -136,7 +136,7 @@ class IPTablesManager:
     def __init__(self) -> None:
         interfaces: ConfigChain = load_configuration('system', cfg_type='global')
 
-        builtins = interfaces.get_items('interfaces->builtins')
+        builtins = interfaces.get_items('interfaces->builtin')
 
         self._intf_to_zone: dict[str, int] = {
             info['ident']: zone for zone, info in builtins

@@ -350,7 +350,7 @@ def set_dnx_interfaces(user_intf_config: dict[str, str]) -> None:
         dnx_settings: ConfigChain = dnx.load_configuration()
 
         for zone, intf in user_intf_config.items():
-            dnx_settings[f'interfaces->builtins->{zone.lower()}->ident'] = intf
+            dnx_settings[f'interfaces->builtin->{zone.lower()}->ident'] = intf
 
         dnx.write_configuration(dnx_settings.expanded_user_data)
 
@@ -360,7 +360,7 @@ def set_dhcp_interfaces(user_intf_config: dict[str, str]) -> None:
 
         for zone in ['LAN', 'DMZ']:
 
-            dhcp_settings[f'interfaces->builtins->{zone.lower()}->ident'] = user_intf_config[zone]
+            dhcp_settings[f'interfaces->builtin->{zone.lower()}->ident'] = user_intf_config[zone]
 
         dhcp.write_configuration(dhcp_settings.expanded_user_data)
 

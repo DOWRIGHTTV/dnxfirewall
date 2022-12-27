@@ -62,7 +62,7 @@ FirewallControl.cfirewall = cfirewall
 # =========================================
 # WEBUI COMPONENTS
 # =========================================
-import source.main.dfe_dashboard as dfe_dashboard
+from source.main.dfe_dashboard import WebPage as webui_dashboard
 from source.rules.dfe_firewall import WebPage as dnx_fwall  # non standard -> firewall page logic
 from source.rules.dfe_nat import WebPage as dnx_nat
 from source.intrusion.dfe_ip import WebPage as ip_proxy
@@ -100,10 +100,13 @@ if (TYPE_CHECKING):
 def dnx_dashboard(session_info: dict):
     page_settings = get_default_page_settings(session_info, uri_path=['dashboard'])
 
-    page_settings['dashboard'] = dfe_dashboard.load_page()
     page_settings['footer'] = True
 
-    return render_template('main/dashboard.html', theme=context_global.theme, **page_settings)
+    page_action = standard_page_logic(
+        webui_dashboard, page_settings, 'dashboard', page_name='main/dashboard.html'
+    )
+
+    return page_action
 
 # --------------------------------------------- #
 #  START OF RULES TAB

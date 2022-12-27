@@ -332,7 +332,7 @@ class ConfigChain:
 
          returns an empty dict if not found.
 
-            config.get_dict('interfaces->builtins')
+            config.get_dict('interfaces->builtin')
         '''
         keys = [] if key is None else key.split(self._sep)
         search_data = self._merge_expand()
@@ -350,7 +350,7 @@ class ConfigChain:
 
         returns an empty list if not found.
 
-            config.get_list('interfaces->builtins')
+            config.get_list('interfaces->builtin')
         '''
         keys = [] if key is None else key.split(self._sep)
         search_data = self._merge_expand()
@@ -368,7 +368,7 @@ class ConfigChain:
 
         returns an empty list if not found.
 
-            config.get_items('interfaces->builtins')
+            config.get_items('interfaces->builtin')
         '''
         keys = [] if key is None else key.split(self._sep)
         search_data = self._merge_expand()
@@ -386,7 +386,7 @@ class ConfigChain:
 
         returns an empty list if not found.
 
-            config.get_values('interfaces->builtins')
+            config.get_values('interfaces->builtin')
         '''
         keys = [] if key is None else key.split(self._sep)
         search_data = self._merge_expand()

@@ -148,82 +148,116 @@
       </div>
     </div>
   </section>
-  <section id="statistics" class="{{ theme.off_section }}">
+  <section id="system-info" class="{{ theme.off_section }}" style="{{ theme.off_bg }}">
     <div class="container">
       <div class="row">
         <div class="col s12">
-          <h4 class="{{ theme.title }}">System Information</h4>
-          <ul class="tabs tabs-fixed-width">
-            <li class="tab col s4 xl2"><a class="active" href="#server-stat">Server Status</a></li>
-            <li class="tab col s4 xl2"><a href="#system-stat">System Stats</a></li>
-            <li class="tab col s4 xl2"><a href="#interface-stat">Interface Stats</a></li>
-          </ul>
-        </div>
-        <div id="server-stat" class="col s12">
-          <table class="striped centered">
-            <thead>
+          <div class="card-panel hoverable {{ theme.card }}">
+            <table class="striped centered">
+              {{ create_title('system information', classes='center')|safe }}
+              <thead>
               <tr>
-                <th>DNS Server1</th>
-                <th>DNS Server2</th>
-                <th>DNS Proxy</th>
-                <th>IP Proxy</th>
-                <th>IPS/IDS</th>
-                <th>DHCP Server</th>
+                <th>Uptime</th>
+                <th>CPU</th>
+                <th>RAM</th>
+                <th>Disk</th>
+
               </tr>
-            </thead>
-            <tbody>
+              </thead>
+              <tbody>
               <tr>
-              {% for server in dashboard['dns_servers'].values() %}
-                <td>{{server['name']}}({{server['ip_address']}}) -> UDP: {{server['udp']}} | TLS: {{server['tls']}}
-              {% endfor %}
-              {% for mod, status in dashboard['module_status'].items() %}
-                {% if status %}
-                  <td>UP</td>
-                {% else %}
-                  <td>Down</td>
-                {% endif %}
-              {% endfor %}
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div id="system-stat" class="col s12">
-          <table class="striped centered">
-            <thead>
-              <tr>
-                <th>CPU Utilization:</th>
-                <th>RAM Utilization:</th>
-                <th>System Uptime:</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
+                <td>{{dashboard['uptime']}}</td>
                 <td>{{dashboard['cpu']}}</td>
                 <td>{{dashboard['ram']}}</td>
-                <td>{{dashboard['uptime']}}</td>
+                <td>add dis ples</td>
               </tr>
-            </tbody>
-          </table>
-        </div>
-        <div id="interface-stat" class="col s12">
-          <table class="striped centered">
-            <thead>
+              </tbody>
+            </table>
+            <br>
+            <table class="centered highlight">
+              {{ create_title('interfaces - builtin', classes='center')|safe }}
+              <colgroup>
+                <col span="3" style="background-color:#eceff1">
+                <col span="2" style="background-color:#90a4ae">
+                <col span="2" style="background-color:#cfd8dc">
+              </colgroup>
+              <thead>
               <tr>
-                <th>Interface</th>
-                <th>Input Rate</th>
-                <th>Output Rate</th>
+                <th colspan="3">General</th>
+                <th colspan="2">Transmit</th>
+                <th colspan="2">Receive</th>
               </tr>
-            </thead>
-            <tbody>
-            {% for interface, speed in dashboard['interfaces'].items() %}
               <tr>
-                <td>{{interface}}</td>
-                <td>{{speed[0]}}</td>
-                <td>{{speed[1]}}</td>
+                <th>name</th>
+                <th>zone</th>
+                <th>subnet</th>
+                <th>bytes</th>
+                <th>packets</th>
+                <th>bytes</th>
+                <th>packets</th>
               </tr>
-            {% endfor %}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+              {% for intf in dashboard.interfaces.builtin %}
+                <tr>
+                  <td>{{ intf[0][0] }}</td>
+                  <td>{{ intf[0][1] }}</td>
+                  <td>{{ intf[0][2] }}</td>
+                  <td>{{ intf[1][0] }}</td>
+                  <td>{{ intf[1][1] }}</td>
+                  <td>{{ intf[2][0] }}</td>
+                  <td>{{ intf[2][1] }}</td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+            <br>
+            {% if dashboard.interfaces.extended %}
+              <table class="centered highlight">
+                {{ create_title('extended', classes='center')|safe }}
+                <colgroup>
+                  <col span="3" style="background-color:#eceff1">
+                  <col span="2" style="background-color:#90a4ae">
+                  <col span="2" style="background-color:#cfd8dc">
+                </colgroup>
+                <thead>
+                <tr>
+                  <th>name</th>
+                  <th>zone</th>
+                  <th>subnet</th>
+                  <th>bytes</th>
+                  <th>packets</th>
+                  <th>bytes</th>
+                  <th>packets</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for intf in dashboard.interfaces.extended %}
+                  <tr>
+                    <td>{{ intf[0][0] }}</td>
+                    <td>{{ intf[0][1] }}</td>
+                    <td>{{ intf[0][2] }}</td>
+                    <td>{{ intf[1][0] }}</td>
+                    <td>{{ intf[1][1] }}</td>
+                    <td>{{ intf[2][0] }}</td>
+                    <td>{{ intf[2][1] }}</td>
+                  </tr>
+                {% else %}
+                  <tr>
+                    <td>none</td>
+                    <td>none</td>
+                    <td>none</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                  </tr>
+                {% endfor %}
+                </tbody>
+              </table>
+              <br>
+            {% endif %}
+          </div>
         </div>
       </div>
     </div>

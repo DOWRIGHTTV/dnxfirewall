@@ -14,7 +14,7 @@ class INTF(_IntEnum):
     STATIC = 0
     DHCP   = 1
 
-    BUILTINS = 69
+    BUILTIN  = 69
     EXTENDED = 70
 
 # enum replacement for socket constants
