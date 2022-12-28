@@ -55,7 +55,9 @@ struct dnx_pktb;
 #define SVC_LIST  3
 #define SVC_ICMP  4
 
+// geolocation vars
 extern uint32_t MSB, LSB;
+extern int HTR_IDX;
 
 // cli args
 extern bool VERBOSE;
@@ -81,8 +83,6 @@ typedef struct nfqnl_msg_packet_hw      nl_pkt_hw;
 
 typedef struct nfqnl_msg_packet_timestamp      nl_pkt_ts;
 
-//typedef uint8_t (*hash_trie_search_t)(uint32_t msb, uint32_t lsb);
-
 struct cfdata {
     uintf8_t    idx;
     uint32_t    queue;
@@ -92,8 +92,8 @@ struct cfdata {
 };
 
 struct clist_range {
-  uintf8_t  start;
-  uintf8_t  end;
+  uintf8_t      start;
+  uintf8_t      end;
 };
 
 struct HWinfo {

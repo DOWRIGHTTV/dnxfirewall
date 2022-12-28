@@ -102,7 +102,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
 
     // the lock prevents the manager thread from updating firewall rules during packet inspection.
     firewall_lock();
-    firewall_inspect(&fw_clist, &pkt, cfd);
+    firewall_inspect(&fw_clist, &pkt);
     firewall_unlock();
 
     dprint(FW_V & VERBOSE, "action->%u, log->%u, ipp->%u, dns->%u, ips->%u ", pkt.action, pkt.log,
@@ -176,21 +176,20 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
 }
 
 void
-firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfdata *cfd)
+firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt)
 {
     dnx_parse_pkt_headers(pkt);
 
     struct FWtable          *control_list;
     struct FWrule           *rule;
-    struct HashTrie_Range   *geolocation = cfd->geolocation;
 
     // normalizing src/dst ip in header to host order
     uint32_t    iph_src_ip = ntohl(pkt->iphdr->saddr);
     uint32_t    iph_dst_ip = ntohl(pkt->iphdr->daddr);
 
     // ip address to country code
-    uint8_t     src_country = geolocation->lookup(geolocation, iph_src_ip & MSB, iph_src_ip & LSB);
-    uint8_t     dst_country = geolocation->lookup(geolocation, iph_dst_ip & MSB, iph_dst_ip & LSB);
+    uint8_t     src_country = htr_search(HTR_IDX, iph_src_ip & MSB, iph_src_ip & LSB);
+    uint8_t     dst_country = htr_search(HTR_IDX, iph_dst_ip & MSB, iph_dst_ip & LSB);
 
     // general direction of the packet and ip addr normalized to always be the external host/ip
     uint8_t     direction   = pkt->hw.in_zone.id != WAN_IN ? OUTBOUND : INBOUND;

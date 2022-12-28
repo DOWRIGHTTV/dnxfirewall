@@ -5,7 +5,7 @@ from libc.stdio cimport printf, perror
 
 from libc.stdint cimport uint8_t, uint16_t, uint32_t
 
-from dnx_iptools.hash_trie.hash_trie cimport HashTrie_Range
+from dnx_iptools.hash_trie.hash_trie cimport htr_generate_structure
 
 # from fw_api cimport api_open, process_api
 
@@ -38,11 +38,6 @@ DEF SVC_ICMP  = 4
 # cdef pthread_mutex_t FWblocklistlock
 
 # pthread_mutex_init(&FWblocklistlock, NULL)
-
-# ================================== #
-# Geolocation definitions
-# ================================== #
-cdef HashTrie_Range GEOLOCATION
 
 # stores the active attackers set/controlled by IPS/IDS
 # cdef uint32_t *ATTACKER_BLOCKLIST = <uint32_t*>calloc(FW_MAX_ATTACKERS, sizeof(uint32_t))
@@ -83,24 +78,20 @@ def nl_break(int idx):
 # GEOLOCATION INITIALIZATION
 # =====================================
 def initialize_geolocation(list hash_trie, uint32_t msb, uint32_t lsb):
-    '''initializes Cython Extension HashTrie for use by CFirewall.
+    '''initializes HashTrie data structure for use by CFirewall.
 
-    py_trie is passed through as a data source and the reference to the search function is globally assigned.
-    MSB and LSB definitions are also globally assigned.
+    py_trie is passed through as a data source.
+    MSB, LSB, and HTR_IDX definitions are globally assigned.
     '''
-    global GEOLOCATION, MSB, LSB
+    global MSB, LSB, HTR_IDX
 
-    cdef size_t trie_len = len(hash_trie)
-
-    GEOLOCATION = HashTrie_Range()
-    GEOLOCATION.generate_structure(hash_trie, trie_len)
-
-    # lazy way to give geo_search reference to inspection handlers.
-    cfds[0].geolocation = <void*>GEOLOCATION
-    cfds[1].geolocation = <void*>GEOLOCATION
+    cdef:
+        size_t trie_len = len(hash_trie)
+        int htr_idx = htr_generate_structure(hash_trie, trie_len)
 
     MSB = msb
     LSB = lsb
+    HTR_IDX = htr_idx
 
     return Py_OK
 

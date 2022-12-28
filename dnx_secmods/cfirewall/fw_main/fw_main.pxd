@@ -260,9 +260,10 @@ cdef extern from "rules.h" nogil:
         Nat         nat
 
 cdef extern from "cfirewall.h" nogil:
-    mnl_socket     *nl[2]
+    mnl_socket *nl[2]
 
-    uint32_t MSB, LSB
+    uint32_t    MSB, LSB
+    int         HTR_IDX
 
     # cli args
     bool VERBOSE
