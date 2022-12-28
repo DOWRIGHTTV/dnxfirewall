@@ -34,7 +34,7 @@ extern int  firewall_stage_rule(uintf8_t cntrl_list, uintf16_t rule_idx, struct 
 extern int  firewall_push_zones(struct ZoneMap *zone_map);
 
 int  firewall_recv(const struct nlmsghdr *nlh, void *data);
-void firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt, struct cfdata *cfd);
+void firewall_inspect(struct clist_range *fw_clist, struct dnx_pktb *pkt);
 
 void firewall_lock(void);
 void firewall_unlock(void);
