@@ -260,25 +260,26 @@ cdef extern from "rules.h" nogil:
         Nat         nat
 
 cdef extern from "cfirewall.h" nogil:
+    enum: FW_MAX_ZONES # define
+
     mnl_socket     *nl[2]
 
-    uint32_t MSB, LSB
+    uint32_t        MSB, LSB
+    int             HTR_IDX
 
     # cli args
-    bool VERBOSE
-    bool VERBOSE2
+    bool            VERBOSE
+    bool            VERBOSE2
 
-    bool FW_V
-    bool NAT_V
+    bool            FW_V
+    bool            NAT_V
 
-    enum: FW_MAX_ZONES # define
-    ZoneMap INTF_ZONE_MAP[FW_MAX_ZONES]
+    ZoneMap         INTF_ZONE_MAP[FW_MAX_ZONES]
 
     struct cfdata:
         uintf8_t    idx
         uint32_t    queue
 
-        void       *geolocation
         mnl_cb_t    queue_cb
 
 cdef extern from "firewall.h" nogil:
@@ -296,6 +297,7 @@ cdef extern from "firewall.h" nogil:
 #     int  nat_push_rules(uintf8_t table_idx)
 #     int  nat_recv(const nlmsghdr *nlh, void *data)
 
+# FW_MAIN DECLARATIONS
 cdef int nl_open(mnl_socket **nl_ptr) nogil
 cdef int nl_bind(mnl_socket *nl_ptr) nogil
 
@@ -306,3 +308,21 @@ cdef class CFirewall:
         int     api_fd
 
         uint8_t queue_idx
+
+# HTR_List > HTR_L1 > HTR_L2
+cdef public struct HTR_L1:
+    size_t      len
+    HTR_L2     *multi_val
+
+cdef public struct HTR_L2:
+    uint32_t    key
+    uint32_t    netid
+    uint32_t    bcast
+    uint8_t     country
+
+cdef public struct HTR_Slot:
+    size_t      len
+    HTR_L1     *keys
+
+# TODO/NOTE: the function cname alias is required due to a Cython bug (fixed in Cython 3.0.0 alpha 12)
+cdef public uint8_t htr_search "htr_search"(int trie_idx, uint32_t trie_key, uint32_t host_id) nogil

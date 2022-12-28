@@ -5,8 +5,6 @@ from libc.stdio cimport printf, perror
 
 from libc.stdint cimport uint8_t, uint16_t, uint32_t
 
-from dnx_iptools.hash_trie.hash_trie cimport HashTrie_Range
-
 # from fw_api cimport api_open, process_api
 
 # ===============================
@@ -39,11 +37,6 @@ DEF SVC_ICMP  = 4
 
 # pthread_mutex_init(&FWblocklistlock, NULL)
 
-# ================================== #
-# Geolocation definitions
-# ================================== #
-cdef HashTrie_Range GEOLOCATION
-
 # stores the active attackers set/controlled by IPS/IDS
 # cdef uint32_t *ATTACKER_BLOCKLIST = <uint32_t*>calloc(FW_MAX_ATTACKERS, sizeof(uint32_t))
 
@@ -57,7 +50,7 @@ DEF QFIREWALL = 0
 DEF QNAT      = 1
 
 # ===================================
-# C EXTENSION - Python Comm Pipeline
+# Netfilter Communication Pipeline
 # ===================================
 # NETLINK SOCKET - cmod <> kernel
 cdef int nl_open(mnl_socket **nl_ptr) nogil:
@@ -76,31 +69,6 @@ cdef int nl_bind(mnl_socket *nl_ptr) nogil:
 
 def nl_break(int idx):
     mnl_socket_close(nl[idx])
-
-    return Py_OK
-
-# =====================================
-# GEOLOCATION INITIALIZATION
-# =====================================
-def initialize_geolocation(list hash_trie, uint32_t msb, uint32_t lsb):
-    '''initializes Cython Extension HashTrie for use by CFirewall.
-
-    py_trie is passed through as a data source and the reference to the search function is globally assigned.
-    MSB and LSB definitions are also globally assigned.
-    '''
-    global GEOLOCATION, MSB, LSB
-
-    cdef size_t trie_len = len(hash_trie)
-
-    GEOLOCATION = HashTrie_Range()
-    GEOLOCATION.generate_structure(hash_trie, trie_len)
-
-    # lazy way to give geo_search reference to inspection handlers.
-    cfds[0].geolocation = <void*>GEOLOCATION
-    cfds[1].geolocation = <void*>GEOLOCATION
-
-    MSB = msb
-    LSB = lsb
 
     return Py_OK
 
@@ -550,28 +518,148 @@ cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
 #
 #     nat_stage_rule(cntrl_list_idx, rule_idx, &nat_rule)
 
-# ==================================
-# Firewall Matching Functions
-# ==================================
-# attacker blocklist membership test
-# cdef inline bint in_blocklist(uint32_t src_host) nogil:
-#
-#     cdef:
-#         size_t   i
-#         uint32_t blocked_host
-#
-#     pthread_mutex_lock(&FWblocklistlock)
-#
-#     for i in range(FW_MAX_ATTACKERS):
-#
-#         blocked_host = ATTACKER_BLOCKLIST[i]
-#
-#         if (blocked_host == END_OF_ARRAY):
-#             break
-#
-#         elif (blocked_host == src_host):
-#             return MATCH
-#
-#     pthread_mutex_unlock(&FWblocklistlock)
-#
-#     return NO_MATCH
+# ===================================
+# HASHING TRIE (Range Type)
+# ===================================
+from libc.stdlib cimport malloc, calloc, realloc
+
+DEF EMPTY_CONTAINER = 0
+DEF NO_MATCH = 0
+# data structure supporting ip to geolocation lookup
+DEF HTR_MAX_WIDTH_MULTIPLIER = 2
+# 4 slots to allow for concurrent use of structures if needed
+DEF HTR_MAX_SLOTS = 4
+
+# GLOBAL CONTAINER FOR HTRs. likely only 1 will ever be needed
+cdef public HTR_Slot HTR_SLOTS[HTR_MAX_SLOTS]
+memset(HTR_SLOTS, 0, sizeof(HTR_Slot) * HTR_MAX_SLOTS)
+
+# -----------------------------------
+# python accessible API
+# -----------------------------------
+def initialize_geolocation(list hash_trie, uint32_t msb, uint32_t lsb):
+    '''initializes HashTrie data structure for use by CFirewall.
+
+    py_trie is passed through as a data source.
+    MSB, LSB, and HTR_IDX definitions are globally assigned.
+    '''
+    global MSB, LSB, HTR_IDX
+
+    cdef:
+        size_t trie_len = len(hash_trie)
+        int htr_idx = htr_generate_structure(hash_trie, trie_len)
+
+    MSB = msb
+    LSB = lsb
+    HTR_IDX = htr_idx
+
+    return Py_OK
+
+cdef int htr_generate_structure(list py_trie, size_t py_trie_len):
+    '''generate hash trie range structure and return container index.
+
+    resulting structure must be access through c function calls and container index.
+
+        note: this function IS NOT thread safe.
+    '''
+    # ====================================
+    # MAP OBJECT ALLOCATION AND PLACEMENT
+    # ====================================
+    cdef:
+        int         trie_idx
+        HTR_Slot   *htr_slot
+
+    # 1. dynamically check next available index
+    for trie_idx in range(HTR_MAX_SLOTS):
+
+        htr_slot = &HTR_SLOTS[trie_idx]
+
+        # 2. allocate memory at current index for TrieMap
+        if (htr_slot.len == 0):
+            # TODO: test the multiplier for max_width (current is 2, try 1.3)
+            htr_slot.len = <size_t> py_trie_len * HTR_MAX_WIDTH_MULTIPLIER
+            htr_slot.keys = <HTR_L1*> calloc(htr_slot.len, sizeof(HTR_L1))
+
+            break
+
+    # reached max container allocation (this should NEVER happen)
+    else: return -1
+
+    # ======================================
+    # RANGE OBJECT ALLOCATION AND PLACEMENT
+    # ======================================
+    cdef:
+        size_t      i, xi
+
+        HTR_L1  *htr_key
+        HTR_L2  *htr_multi_val
+
+        uint32_t    trie_key
+        uint32_t    trie_key_hash
+        list        trie_vals
+        size_t      num_values
+
+    # 3. populate TrieMap structure with TrieRange structs
+    for i in range(py_trie_len):
+
+        trie_key = <uint32_t> py_trie[i][0]
+        trie_key_hash = trie_key % (htr_slot.len - 1)
+
+        trie_vals = py_trie[i][1]
+        num_values = <size_t> len(trie_vals)
+
+        htr_key = &htr_slot.keys[trie_key_hash]
+
+        # first time on index so allocating memory for the number of current multi-vals this iteration
+        if (htr_key.len == 0):
+            htr_key.multi_val = <HTR_L2*> malloc(sizeof(HTR_L2) * num_values)
+
+        # at least 1 multi-val is present, so reallocating memory to include new multi-vals
+        else:
+            htr_key.multi_val = <HTR_L2*> realloc(
+                htr_key.multi_val, sizeof(HTR_L2) * (htr_key.len + num_values)
+            )
+
+        # define struct members for each range in py_l2
+        for xi in range(num_values):
+            htr_l2 = &htr_key.multi_val[htr_key.len + xi]  # skipping to next empty idx
+
+            htr_l2.key = trie_key
+            htr_l2.netid = <uint32_t> py_trie[i][1][xi][0]
+            htr_l2.bcast = <uint32_t> py_trie[i][1][xi][1]
+            htr_l2.country = <uint8_t> py_trie[i][1][xi][2]
+
+        htr_key.len += num_values
+
+    # 4. returning slot the structure was placed in (for subsequent access)
+    return trie_idx
+
+# -----------------------------------
+# C accessible API
+# -----------------------------------
+cdef public uint8_t htr_search(int trie_idx, uint32_t trie_key, uint32_t host_id) nogil:
+
+        cdef :
+            HTR_Slot   *htr_slot = &HTR_SLOTS[trie_idx]
+
+            uint32_t    trie_key_hash = trie_key % (htr_slot.len - 1)
+
+            HTR_L1     *htr_key = &htr_slot.keys[trie_key_hash]
+
+        # no l1 match
+        if (htr_key.len == EMPTY_CONTAINER):
+            return NO_MATCH
+
+        cdef size_t i
+        for i in range(htr_key.len):
+
+            # this is needed because collisions are possible by design.
+            # matching the original key will guarantee the correct range is being evaluated.
+            if (htr_key.multi_val[i].key != trie_key):
+                continue
+
+            if (htr_key.multi_val[i].netid <= host_id <= htr_key.multi_val[i].bcast):
+                return htr_key.multi_val[i].country
+
+        # iteration completed with no l2 match
+        return NO_MATCH

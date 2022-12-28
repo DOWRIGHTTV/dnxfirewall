@@ -1,7 +1,10 @@
 #include "config.h"
 #include "cfirewall.h"
 
+
+// geolocation vars
 uint32_t MSB, LSB;
+int HTR_IDX;
 
 // cli args
 bool VERBOSE;

@@ -1,4 +1,3 @@
-
 class HashTrie_Range:
     def py_search(self, host: tuple[int, int]) -> int:
         '''C function wrapper to search the trie using a calculated hash.
