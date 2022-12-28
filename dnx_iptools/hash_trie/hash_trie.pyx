@@ -15,7 +15,7 @@ DEF HTR_MAX_SLOTS = 4
 
 # this will not be exposed externally.
 cdef HTR_Slot HTR_SLOTS[HTR_MAX_SLOTS]
-memset(HTR_SLOTS, 0, sizeof(HTR_SLOTS) * HTR_MAX_SLOTS)
+memset(HTR_SLOTS, 0, sizeof(HTR_Slot) * HTR_MAX_SLOTS)
 
 # ===================================
 # HASHING TRIE (Range Type)
