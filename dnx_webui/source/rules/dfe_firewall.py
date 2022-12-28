@@ -30,8 +30,8 @@ __all__ = ('WebPage',)
 valid_sections: dict[str, str] = {'BEFORE': '1', 'MAIN': '2', 'AFTER': '3'}
 
 reference_counts = defaultdict(int)
-zone_map: dict[str, dict] = {'builtins': {}, 'extended': {}}
-zone_manager: dict[str, dict] = {'builtins': {}, 'user-defined': {}}
+zone_map: dict[str, dict] = {'builtin': {}, 'extended': {}}
+zone_manager: dict[str, dict] = {'builtin': {}, 'user-defined': {}}
 
 INVALID_OBJECT = -1
 
