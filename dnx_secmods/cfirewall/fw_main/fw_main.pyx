@@ -50,7 +50,7 @@ DEF QFIREWALL = 0
 DEF QNAT      = 1
 
 # ===================================
-# C EXTENSION - Python Comm Pipeline
+# Netfilter Communication Pipeline
 # ===================================
 # NETLINK SOCKET - cmod <> kernel
 cdef int nl_open(mnl_socket **nl_ptr) nogil:
@@ -530,7 +530,7 @@ DEF HTR_MAX_WIDTH_MULTIPLIER = 2
 # 4 slots to allow for concurrent use of structures if needed
 DEF HTR_MAX_SLOTS = 4
 
-# this will not be exposed externally.
+# GLOBAL CONTAINER FOR HTRs. likely only 1 will ever be needed
 cdef public HTR_Slot HTR_SLOTS[HTR_MAX_SLOTS]
 memset(HTR_SLOTS, 0, sizeof(HTR_Slot) * HTR_MAX_SLOTS)
 

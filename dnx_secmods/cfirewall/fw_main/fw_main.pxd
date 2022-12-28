@@ -260,26 +260,26 @@ cdef extern from "rules.h" nogil:
         Nat         nat
 
 cdef extern from "cfirewall.h" nogil:
-    mnl_socket *nl[2]
+    enum: FW_MAX_ZONES # define
 
-    uint32_t    MSB, LSB
-    int         HTR_IDX
+    mnl_socket     *nl[2]
+
+    uint32_t        MSB, LSB
+    int             HTR_IDX
 
     # cli args
-    bool VERBOSE
-    bool VERBOSE2
+    bool            VERBOSE
+    bool            VERBOSE2
 
-    bool FW_V
-    bool NAT_V
+    bool            FW_V
+    bool            NAT_V
 
-    enum: FW_MAX_ZONES # define
-    ZoneMap INTF_ZONE_MAP[FW_MAX_ZONES]
+    ZoneMap         INTF_ZONE_MAP[FW_MAX_ZONES]
 
     struct cfdata:
         uintf8_t    idx
         uint32_t    queue
 
-        void       *geolocation
         mnl_cb_t    queue_cb
 
 cdef extern from "firewall.h" nogil:

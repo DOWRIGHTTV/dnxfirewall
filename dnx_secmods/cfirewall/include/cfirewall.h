@@ -58,14 +58,14 @@ struct dnx_pktb;
 
 // geolocation vars
 extern uint32_t MSB, LSB;
-extern int HTR_IDX;
+extern int      HTR_IDX;
 
 // cli args
-extern bool VERBOSE;
-extern bool VERBOSE2;
+extern bool     VERBOSE;
+extern bool     VERBOSE2;
 
-extern bool FW_V;
-extern bool NAT_V;
+extern bool     FW_V;
+extern bool     NAT_V;
 
 extern struct mnl_socket *nl[2];
 
@@ -88,7 +88,6 @@ struct cfdata {
     uintf8_t    idx;
     uint32_t    queue;
 
-    void       *geolocation;
     mnl_cb_t    queue_cb;
 };
 
