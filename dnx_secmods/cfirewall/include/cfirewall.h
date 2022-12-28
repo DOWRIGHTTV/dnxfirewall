@@ -27,6 +27,7 @@ struct geolocation;
 struct dnx_pktb;
 
 // dnxfirewall extensions
+#include "fw_main.h"    // primary cython file, needed for geolocation lookup
 #include "rules.h"      // firewall and nat rule structs/ defs
 #include "match.h"      // zone, network, service matching helpers
 #include "dnx_nfq.h"    // packet verdict, mangle, etc.
