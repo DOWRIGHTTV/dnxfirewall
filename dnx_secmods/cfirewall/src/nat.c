@@ -4,8 +4,6 @@
 #include "rules.h"
 #include "conntrack.h"
 
-#include "hash_trie.h"
-
 #define NAT_PRE_MAX_RULE_COUNT  100
 #define NAT_POST_MAX_RULE_COUNT 100
 

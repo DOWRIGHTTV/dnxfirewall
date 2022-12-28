@@ -2,8 +2,6 @@
 #include "cfirewall.h"
 #include "firewall.h"
 
-#include "hash_trie.h"
-
 #define FW_SYSTEM_MAX_RULE_COUNT  50
 #define FW_BEFORE_MAX_RULE_COUNT 100
 #define FW_MAIN_MAX_RULE_COUNT   500

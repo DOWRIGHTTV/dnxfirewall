@@ -38,7 +38,7 @@ ext = Extension(
         f'{HOME_DIR}/dnx_profile/libraries/libmnl/include',
         f'{HOME_DIR}/dnx_profile/libraries/libnetfilter_queue/include',
         f'{HOME_DIR}/dnx_ctools/include',
-#        f'{HOME_DIR}/dnx_iptools/hash_trie',
+        f'{os.getcwd()}/fw_main',  # this allows for native C to see Cython header file
         'include'
     ],
     library_dirs=['/usr/local/lib'],

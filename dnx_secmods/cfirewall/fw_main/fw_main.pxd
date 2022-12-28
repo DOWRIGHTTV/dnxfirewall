@@ -310,17 +310,17 @@ cdef class CFirewall:
         uint8_t queue_idx
 
 # HTR_List > HTR_L1 > HTR_L2
-cdef struct HTR_L1:
+cdef public struct HTR_L1:
     size_t      len
     HTR_L2     *multi_val
 
-cdef struct HTR_L2:
+cdef public struct HTR_L2:
     uint32_t    key
     uint32_t    netid
     uint32_t    bcast
     uint8_t     country
 
-cdef struct HTR_Slot:
+cdef public struct HTR_Slot:
     size_t      len
     HTR_L1     *keys
 
