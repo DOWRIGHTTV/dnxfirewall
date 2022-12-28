@@ -28,7 +28,8 @@ cdef struct HTR_Slot:
     size_t      len
     HTR_L1     *keys
 
-cdef public uint8_t htr_search(int trie_idx, uint32_t trie_key, uint32_t host_id) nogil
+# TODO/NOTE: the function cname alias is required due to a Cython bug (fixed in Cython 3.0.0 alpha 12)
+cdef public uint8_t htr_search "htr_search"(int trie_idx, uint32_t trie_key, uint32_t host_id) nogil
 cdef int htr_generate_structure(list py_trie, size_t py_trie_len)
 # cdef public class HashTrie_Range [object HashTrie_Range, type HashTrie_Range_T]
 #
