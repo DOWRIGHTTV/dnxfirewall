@@ -16,7 +16,7 @@ cdef struct TrieRange:
 # HTR_List > HTR_L1 > HTR_L2
 cdef struct HTR_L1:
     size_t      len
-    HTR_L2     *ranges
+    HTR_L2     *multi_val
 
 cdef struct HTR_L2:
     uint32_t    key
@@ -24,9 +24,9 @@ cdef struct HTR_L2:
     uint32_t    bcast
     uint8_t     country
 
-cdef struct HTR_List:
+cdef struct HTR_Slot:
     size_t      len
-    HTR_L1      hash_trie
+    HTR_L1     *keys
 
 cdef public uint8_t htr_search(int trie_idx, uint32_t trie_key, uint32_t host_id) nogil
 cdef int htr_generate_structure(list py_trie, size_t py_trie_len)

@@ -7,15 +7,15 @@ from libc.string cimport memset
 DEF EMPTY_CONTAINER = 0
 DEF NO_MATCH = 0
 
-DEF TRIE_MAX_WIDTH_MULTIPLIER = 2
+DEF HTR_MAX_WIDTH_MULTIPLIER = 2
 
 
 # 4 slots to allow for concurrent use of structures if needed
-DEF MAX_HTR_CONTAINERS = 4
+DEF HTR_MAX_SLOTS = 4
 
 # this will not be exposed externally.
-cdef HTR_List HTR_CONTAINERS[MAX_HTR_CONTAINERS]
-memset(HTR_CONTAINERS, 0, sizeof(HTR_CONTAINERS) * MAX_HTR_CONTAINERS)
+cdef HTR_Slot HTR_SLOTS[HTR_MAX_SLOTS]
+memset(HTR_SLOTS, 0, sizeof(HTR_SLOTS) * HTR_MAX_SLOTS)
 
 # ===================================
 # HASHING TRIE (Range Type)
@@ -36,18 +36,18 @@ cdef int htr_generate_structure(list py_trie, size_t py_trie_len):
     # ====================================
     cdef:
         int         trie_idx
-        HTR_List   *htr_container
+        HTR_Slot   *htr_slot
 
     # 1. dynamically check next available index
-    for trie_idx in range(MAX_HTR_CONTAINERS):
+    for trie_idx in range(HTR_MAX_SLOTS):
 
-        htr_container = &HTR_CONTAINERS[trie_idx]
+        htr_slot = &HTR_SLOTS[trie_idx]
 
         # 2. allocate memory at current index for TrieMap
-        if (htr_container.len == 0):
+        if (htr_slot.len == 0):
             # TODO: test the multiplier for max_width (current is 2, try 1.3)
-            htr_container.len = <size_t> py_trie_len * TRIE_MAX_WIDTH_MULTIPLIER
-            htr_container.hash_trie = <HTR_L1*> calloc(htr_container.len, sizeof(HTR_L1))
+            htr_slot.len = <size_t> py_trie_len * HTR_MAX_WIDTH_MULTIPLIER
+            htr_slot.keys = <HTR_L1*> calloc(htr_slot.len, sizeof(HTR_L1))
 
             break
 
@@ -60,8 +60,8 @@ cdef int htr_generate_structure(list py_trie, size_t py_trie_len):
     cdef:
         size_t      i, xi
 
-        HTR_L1  *htr_l1
-        HTR_L2  *htr_l2
+        HTR_L1  *htr_key
+        HTR_L2  *htr_multi_val
 
         uint32_t    trie_key
         uint32_t    trie_key_hash
@@ -72,33 +72,33 @@ cdef int htr_generate_structure(list py_trie, size_t py_trie_len):
     for i in range(py_trie_len):
 
         trie_key = <uint32_t> py_trie[i][0]
-        trie_key_hash = trie_key % (htr_container.len - 1)
+        trie_key_hash = trie_key % (htr_slot.len - 1)
 
         trie_vals = py_trie[i][1]
         num_values = <size_t> len(trie_vals)
 
-        htr_l1 = &htr_container.hash_trie[trie_key_hash]
+        htr_key = &htr_slot.keys[trie_key_hash]
 
         # first time on index so allocating memory for the number of current multi-vals this iteration
-        if (htr_l1.len == 0):
-            htr_l1.ranges = <HTR_L2*> malloc(sizeof(HTR_L2) * num_values)
+        if (htr_key.len == 0):
+            htr_key.multi_val = <HTR_L2*> malloc(sizeof(HTR_L2) * num_values)
 
         # at least 1 multi-val is present, so reallocating memory to include new multi-vals
         else:
-            htr_l1.ranges = <HTR_L2*> realloc(
-                htr_l1.ranges, sizeof(HTR_L2) * (htr_l1.len + num_values)
+            htr_key.multi_val = <HTR_L2*> realloc(
+                htr_key.multi_val, sizeof(HTR_L2) * (htr_key.len + num_values)
             )
 
         # define struct members for each range in py_l2
         for xi in range(num_values):
-            htr_l2 = &htr_l1.ranges[htr_l1.len + xi]  # skipping to next empty idx
+            htr_l2 = &htr_key.multi_val[htr_key.len + xi]  # skipping to next empty idx
 
             htr_l2.key = trie_key
             htr_l2.netid = <uint32_t> py_trie[i][1][xi][0]
             htr_l2.bcast = <uint32_t> py_trie[i][1][xi][1]
             htr_l2.country = <uint8_t> py_trie[i][1][xi][2]
 
-        htr_l1.len += num_values
+        htr_key.len += num_values
 
     # 4. returning slot the structure was placed in (for subsequent access)
     return trie_idx
@@ -109,26 +109,26 @@ cdef int htr_generate_structure(list py_trie, size_t py_trie_len):
 cdef uint8_t htr_search(int trie_idx, uint32_t trie_key, uint32_t host_id) nogil:
 
         cdef :
-            HTR_List   *htr_container = &HTR_CONTAINERS[trie_idx]
+            HTR_Slot   *htr_slot = &HTR_SLOTS[trie_idx]
 
-            uint32_t    trie_key_hash = trie_key % (htr_container.len - 1)
+            uint32_t    trie_key_hash = trie_key % (htr_slot.len - 1)
 
-            HTR_L1     *range_list = &htr_container.hash_trie[trie_key_hash]
+            HTR_L1     *htr_key = &htr_slot.keys[trie_key_hash]
 
         # no l1 match
-        if (range_list.len == EMPTY_CONTAINER):
+        if (htr_key.len == EMPTY_CONTAINER):
             return NO_MATCH
 
         cdef size_t i
-        for i in range(range_list.len):
+        for i in range(htr_key.len):
 
             # this is needed because collisions are possible by design.
             # matching the original key will guarantee the correct range is being evaluated.
-            if (range_list.ranges[i].key != trie_key):
+            if (htr_key.multi_val[i].key != trie_key):
                 continue
 
-            if (range_list.ranges[i].netid <= host_id <= range_list.ranges[i].bcast):
-                return range_list.ranges[i].country
+            if (htr_key.multi_val[i].netid <= host_id <= htr_key.multi_val[i].bcast):
+                return htr_key.multi_val[i].country
 
         # iteration completed with no l2 match
         return NO_MATCH
@@ -194,7 +194,7 @@ cdef class HashTrie_Range:
             size_t      num_values
 
         # TODO: test the multiplier for max_width (current is 2, try 1.3)
-        s.max_width = <uint32_t>py_trie_len * TRIE_MAX_WIDTH_MULTIPLIER
+        s.max_width = <uint32_t>py_trie_len * HTR_MAX_WIDTH_MULTIPLIER
         s.TRIE_MAP  = <TrieMap_R*>calloc(s.max_width, sizeof(TrieMap_R))
 
         for i in range(py_trie_len):
