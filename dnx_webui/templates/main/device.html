@@ -1,11 +1,8 @@
 {% extends('layout.html') %}
 {% block body %}
-<div id="dev-modal" class="modal modal-pop">
+<div id="device-modal" class="modal modal-pop">
   <div class="modal-content">
-  {% if control %}
-    <script>const error = true;</script>
     <h5 class="{{ modal_text_style }}">Are you sure you want to {{ action }} the system?</h5>
-  {% endif %}
   </div>
   <div class="row right">
     <div class="input-field col s5">
@@ -20,7 +17,17 @@
     </div>
   </div>
 </div>
-{% if confirmed %}
+{% if control %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  let modal = document.querySelector('#device-modal');
+
+  if (modal) {
+      M.Modal.init(modal, {dismissible: false}).open();
+  }
+})
+</script>
+{% elif confirmed %}
 {% set message = 'The system is now restarting. This can take a few minutes.' if action == 'restart'
         else 'The system is being shutdown. Please wait a few minutes before unplugging the device from power.' %}
 <section class="section">
