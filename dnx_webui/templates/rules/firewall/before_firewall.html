@@ -14,7 +14,7 @@ async function commitRules(table_id) {
         let revert_btn = document.getElementById("revert_rules");
 
         revert_btn.classList.remove('btn-disabled');
-        push_btn.href = "#revert-modal";
+        revert_btn.href = "#revert-modal";
     }
 }
 async function pushRules() {
@@ -29,7 +29,7 @@ async function pushRules() {
         let revert_btn = document.getElementById("revert_rules");
 
         revert_btn.classList.add('btn-disabled');
-        push_btn.href = "";
+        revert_btn.href = "";
     }
 }
 async function post(endpoint, data) {
