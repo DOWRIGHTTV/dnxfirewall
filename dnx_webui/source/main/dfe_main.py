@@ -654,31 +654,34 @@ def categories_page_logic(dnx_page, page_settings: dict) -> str:
 
 # function called by restart/shutdown pages. will ensure the user specified operation gets executed
 def handle_system_action(page_settings: dict):
-    action = page_settings['action']
 
-    response = request.form.get(f'system_{action}', '')
-    if (not response):
-        return render_template(application_error_page, application_error='device action invalid.', theme=context_global.theme, **page_settings)
+    if (request.method == 'POST'):
 
-    if (response == 'YES'):
-        page_settings.pop('control', None)
-        page_settings.pop('user_role', None)
-        page_settings.update({
-            'confirmed': True,
-            'login_btn': True
-        })
+        action = page_settings['action']
 
-        Log.warning(f'dnxfirewall {action} initiated.')
+        response = request.form.get(f'system_{action}', '')
+        if (not response):
+            return render_template(application_error_page, application_error='device action invalid.', theme=context_global.theme, **page_settings)
 
-        # I prefer the word restart, so converting to system command here
-        action = 'reboot' if action == 'restart' else f'{action} now'
+        if (response == 'YES'):
+            page_settings.pop('control', None)
+            page_settings.pop('user_role', None)
+            page_settings.update({
+                'confirmed': True,
+                'login_btn': True
+            })
 
-        # TODO: make sure this is authenticated
-        # forwarding request to system control service via local socket for execution
-        system_action(delay=FIVE_SEC, module='webui', command=action)
+            Log.warning(f'dnxfirewall {action} initiated.')
 
-    elif (response == 'NO'):
-        return redirect(url_for('dnx_dashboard'))
+            # I prefer the word restart, so converting to system command here
+            action = 'reboot' if action == 'restart' else f'{action} now'
+
+            # TODO: make sure this is authenticated
+            # forwarding request to system control service via local socket for execution
+            system_action(delay=FIVE_SEC, module='webui', command=action)
+
+        elif (response == 'NO'):
+            return redirect(url_for('dnx_dashboard'))
 
     return render_template('main/device.html', theme=context_global.theme, **page_settings)
 

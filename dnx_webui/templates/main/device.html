@@ -1,34 +1,32 @@
 {% extends('layout.html') %}
 {% block body %}
 <div id="dev-modal" class="modal modal-pop">
-    <div class="modal-content">
-        {% if control %}
-        <script>const error = true;</script>
-        <h5 class="{{modal_text_style}}">Are you sure you want to {{action}} the system?</h5>
-        {% endif %}
+  <div class="modal-content">
+  {% if control %}
+    <script>const error = true;</script>
+    <h5 class="{{ modal_text_style }}">Are you sure you want to {{ action }} the system?</h5>
+  {% endif %}
+  </div>
+  <div class="row right">
+    <div class="input-field col s5">
+      <form method="post">
+        <button class="btn waves-effect waves-light" name="system_{{action}}" value="YES">YES</button>
+      </form>
     </div>
-    <div class="row right">
-        <div class="input-field col s5">
-            <form action="/device/{{action}}" method="POST">
-                <button class="btn waves-effect waves-light" name="system_{{action}}" value="YES">YES</button>
-            </form>
-        </div>
-        <div class="input-field col s5">
-            <form action="/device/{{action}}" method="POST">
-                <button class="btn waves-effect waves-light" name="system_{{action}}" value="NO">NO</button>
-            </form>
-        </div>
+    <div class="input-field col s5">
+      <form method="post">
+        <button class="btn waves-effect waves-light" name="system_{{action}}" value="NO">NO</button>
+      </form>
     </div>
+  </div>
 </div>
 {% if confirmed %}
+{% set message = 'The system is now restarting. This can take a few minutes.' if action == 'restart'
+        else 'The system is being shutdown. Please wait a few minutes before unplugging the device from power.' %}
 <section class="section">
-    <div class="container">
-        {% if action == 'restart' %}
-        <h4 class="red-text">The system is now restarting. This can take a few minutes.</h4>
-        {% elif action == 'shutdown' %}
-        <h4 class="red-text">The system is being shutdown. Please wait a few minutes before unplugging the device from power.</h4>
-        {% endif %}
-    </div>
+  <div class="container">
+    <h4 class="red-text">{{ message }}</h4>
+  </div>
 </section>
 {% endif %}
 {% endblock %}
