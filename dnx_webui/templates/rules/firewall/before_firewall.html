@@ -6,15 +6,30 @@ async function commitRules(table_id) {
     let response = await post("commit", {"section": `${FWsection}`, "rules": `${FWrules}`});
 
     if (!response.error) {
-        document.getElementById("revert_rules").classList.remove('btn-disabled');
-        document.getElementById("push_rules").classList.remove('btn-disabled');
+        let push_btn = document.getElementById("push_rules");
+
+        push_btn.classList.remove('btn-disabled');
+        push_btn.href = "#push-modal";
+
+        let revert_btn = document.getElementById("revert_rules");
+
+        revert_btn.classList.remove('btn-disabled');
+        push_btn.href = "#revert-modal";
     }
 }
 async function pushRules() {
     let response = await post("push", {});
+
     if (!response.error) {
-        document.getElementById("revert_rules").classList.add('btn-disabled');
-        document.getElementById("push_rules").classList.add('btn-disabled');
+        let push_btn = document.getElementById("push_rules");
+
+        push_btn.classList.add('btn-disabled');
+        push_btn.href = "";
+
+        let revert_btn = document.getElementById("revert_rules");
+
+        revert_btn.classList.add('btn-disabled');
+        push_btn.href = "";
     }
 }
 async function post(endpoint, data) {
