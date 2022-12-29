@@ -1,89 +1,75 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="logging" class="section">
+  <section id="logging" class="section">
     <div class="container">
-        <div class="row row-flex">
-            <div class="col s12 m6">
-                <div class="card-panel card-panel-eql z-depth-2 hoverable {{ theme.card }}">
-                    <h4 class="{{ theme.title }}">Logging</h4>
-                    <form method="post">
-                        <input type="hidden" name="tab" value="1">
-                        <input type="hidden" name="logging_update">
-                        <div class="row">
-                            <div class="input-field col s12 {{input_color}}">
-                                <select name="length" id="length" onchange="this.form.submit()">
-                                    <option value="30" {% if logging_settings['logging']['length'] == 30 %} selected
-                                        {% endif %}>30</option>
-                                    <option value="45" {% if logging_settings['logging']['length'] == 45 %} selected
-                                        {% endif %}>45</option>
-                                    <option value="60" {% if logging_settings['logging']['length'] == 60 %} selected
-                                        {% endif %}>60</option>
-                                    <option value="90" {% if logging_settings['logging']['length'] == 90 %} selected
-                                        {% endif %}>90</option>
-                                </select>
-                                <label for="length">Length (Days)</label>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="input-field col s12 {{input_color}}">
-                                    <select name="level" id="level" onchange="this.form.submit()">
-                                        {% for level in logging_settings['logging']['log_levels'] %}
-                                        {% set level_num = loop.index0 %}
-                                        {% if logging_settings['logging']['level'] == level_num %}
-                                        <option value="{{level_num}}" selected>{{level_num}}: {{level}}</option>
-                                        {% else %}
-                                        <option value="{{level_num}}">{{level_num}}: {{level}}</option>
-                                        {% endif %}
-                                        {% endfor %}
-                                    </select>
-                                <label for="level">Log Level (Severity)</label>
-                            </div>
-                        </div>
-                    </form>
+      <div class="row row-flex">
+        <div class="col s12 m6">
+          <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+            {{ create_title('logging')|safe }}
+            <form method="post">
+              <input type="hidden" name="tab" value="1">
+              <input type="hidden" name="logging_update">
+              <div class="row">
+                <div class="input-field col s12 {{input_color}}">
+                  <select name="length" id="length" onchange="this.form.submit()">
+                    <option value="30" {% if logging_settings['logging']['length'] == 30 %} selected{% endif %}>30</option>
+                    <option value="45" {% if logging_settings['logging']['length'] == 45 %} selected{% endif %}>45</option>
+                    <option value="60" {% if logging_settings['logging']['length'] == 60 %} selected{% endif %}>60</option>
+                    <option value="90" {% if logging_settings['logging']['length'] == 90 %} selected{% endif %}>90</option>
+                  </select>
+                  <label for="length">Length (Days)</label>
                 </div>
-            </div>
-            <div class="col s12 m6">
-                <div class="card-panel card-panel-eql z-depth-2 hoverable {{ theme.card }}">
-                    <h4 class="{{ theme.title }}">Select Time Offset</h4>
-                    <h6>System Time: {{logging_settings['system']}}</h6>
-                    <h6>Time Offset: {{logging_settings['local']}}</h6>
-                    <br>
-                    <form action="/system/settings/logging" method="POST">
-                        <input type="hidden" name="tab" value="1">
-                        <input type="hidden" name="time_offset_update">
-                        <div class="row">
-                            <div class="input-field col s6 {{input_color}}">
-                                <label>
-                                    Direction
-                                    <select name="dir_offset">
-                                        {% if logging_settings['offset']['direction']=='+'
-                                            or logging_settings['offset']['amount']==0 %}
-                                        <option value="+" selected>+</option>
-                                        <option value="-">-</option>
-                                        {% else %}
-                                        <option value="+">+</option>
-                                        <option value="-" selected>-</option>
-                                        {% endif %}
-                                    </select>
-                                </label>
-                            </div>
-                            <div class="input-field col s6 {{input_color}}">
-                                <label>
-                                    Time Offset
-                                    <input type="number" name="time_offset" min="0" max="14" value="{{logging_settings['offset']['amount']}}">
-                                </label>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="input-field col s12 m4 offset-m4 center">
-                                <button class="btn waves-effect waves-light col s12">Update</button>
-                            </div>
-                        </div>
-                    </form>
+              </div>
+              <div class="row">
+                <div class="input-field col s12 {{ input_color }}">
+                  <select name="level" id="level" onchange="this.form.submit()">
+                  {% for level in logging_settings['logging']['log_levels'] %}
+                    {% set level_num = loop.index0 %}
+                    <option value="{{ level_num }}" {% if logging_settings.logging.level == level_num %}selected{% endif %}>
+                      {{ level_num }}: {{ level }}
+                    </option>
+                  {% endfor %}
+                  </select>
+                  <label for="level">Log Level (Severity)</label>
                 </div>
-            </div>
-            <div class="col s12 m2"></div>
+              </div>
+            </form>
+          </div>
         </div>
+        <div class="col s12 m6">
+          <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+            {{ create_title('select time offset')|safe }}
+            <h4 class="{{ theme.title }}"></h4>
+            <h6>System Time: {{ logging_settings.system }}</h6>
+            <h6>Time Offset: {{ logging_settings.local }}</h6>
+            <br>
+            <form method="post">
+              <input type="hidden" name="tab" value="1">
+              <input type="hidden" name="time_offset_update">
+              <div class="row">
+                <div class="input-field col s6 {{input_color}}">
+                  <select name="dir_offset" id="dir_offset">
+                    {% set plus = logging_settings.offset.direction == '+' or logging_settings.offset.amount == 0 %}
+                    <option value="+"{% if plus %} selected{% endif %}>+</option>
+                    <option value="-"{% if not plus %} selected{% endif %}>-</option>
+                  </select>
+                  <label for="dir_offset">Direction</label>
+                </div>
+                <div class="input-field col s6 {{input_color}}">
+                  <input type="number" name="time_offset" id="t_off" min="0" max="14" value="{{ logging_settings.offset.amount }}">
+                  <label for="t_off">Time Offset</label>
+                </div>
+              </div>
+              <div class="row">
+                <div class="input-field col s12 m4 offset-m4 center">
+                  <button class="btn waves-effect waves-light col s12">Update</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div class="col s12 m2"></div>
+      </div>
     </div>
-</section>
+  </section>
 {% endblock %}
