@@ -450,7 +450,7 @@ def system_services(session_info: dict):
 # --------------------------------------------- #
 @app.route('/device/<path>', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_restart(session_info: dict, path: str):
+def system_restart(session_info: dict, *, path: str):
     if (path not in ['shutdown', 'restart']):
         return render_template(general_error_page, general_error=f'device/{path} not found.')
 

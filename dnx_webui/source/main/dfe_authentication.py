@@ -145,7 +145,7 @@ def user_restrict(*authorized_roles: str) -> Callable:
     def decorator(function_to_wrap: Callable[[dict, ...], str]):
 
         @wraps(function_to_wrap)
-        def wrapper(*args):
+        def wrapper(**kwargs):
             # will redirect to login page if user is not logged in
             if not (user := authenticated_session()):
                 return send_to_login_page()
@@ -175,7 +175,7 @@ def user_restrict(*authorized_roles: str) -> Callable:
             session_info = {'user': user, **session_tracker.expanded_user_data['active_users'][user]}
 
             # flask page function
-            page_action = function_to_wrap(session_info, *args)
+            page_action = function_to_wrap(session_info, **kwargs)
 
             return page_action
 
