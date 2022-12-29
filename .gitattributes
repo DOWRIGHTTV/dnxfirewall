@@ -1,34 +1,31 @@
-# CYTHON
+# ============
+# VENDOR
+# ============
+# external libs (ex. Netfilter)
+dnx_profile/libraries/** linguist-vendored
+
+# dnxfirewall signature sets (.geo, .ips, domains)
+dnx_profile/signatures/** linguist-vendored
+
+# ============
+# -DETECTABLE
+# ============
+# compiler, utilities, service files, etc
+dnx_profile/utils/** -linguist-detectable
+
+# webui images
+*.png     -linguist-detectable
+
+# ============
+# OVERRIDES
+# ============
+# cython
 *.pyx    linguist-language=Cython
 *.pxd    linguist-language=Cython
 
-# WEBUI IMAGE EXTENSIONS
-*.png     linguist-language=Python
-
-# LEGACY CONFIGURATION EXTENSIONS
-*.json    linguist-language=Python
-*.txt     linguist-language=Python
-
-# CONFIGURATION EXTENSIONS
-*.cfg     linguist-language=Python
-*.csv     linguist-language=Python
-
-# SYSTEMD SERVICE FILES
-*.service linguist-language=Python
-
-# SIGNATURE EXTENSIONS
-*.geo     linguist-language=Python
-*.domains linguist-language=Python
-*.ips     linguist-language=Python
-
-# DHCP SERVER
-*.lease   linguist-language=Python
-
-# DNS SERVER
-*.cache   linguist-language=Python
-
-# IP PROXY
-*.timer   linguist-language=Python
-
-# STATUS TRACKING
-*.stat    linguist-language=Python
+# various configuration persistent tracker files
+*.cfg     linguist-language=JSON
+*.lease   linguist-language=JSON
+*.cache   linguist-language=JSON
+*.timer   linguist-language=JSON
+*.stat    linguist-language=JSON
