@@ -36,13 +36,13 @@
                 {% for server_info in dns_settings['dns_servers'].values() %}
                   <tr>
                     <td>
-                      <input type="text" name="dnsname{{loop.index}}" value="{{server_info['name']}}" class="validate center">
+                      <input type="text" name="dnsname{{ loop.index }}" value="{{ server_info.name }}" class="validate center">
                     </td>
                     <td>
-                      <input type="text" name="dnsserver{{loop.index}}" value="{{server_info['ip_address']}}" class="validate center">
+                      <input type="text" name="dnsserver{{ loop.index }}" value="{{ server_info.ip_address }}" class="validate center">
                     </td>
-                    <td>{{server_info['udp']}}</td>
-                    <td>{{server_info['tls']}}</td>
+                    <td>{{ server_info['udp'] }}</td>
+                    <td>{{ server_info['tls'] }}</td>
                   </tr>
                 {% endfor %}
                 </tbody>
@@ -53,7 +53,7 @@
                 </div>
                 <div id="dns-modal2" class="modal">
                   <div class="modal-content">
-                    <h5 class="{{modal_text_style}}">Changing DNS servers will restart the WAN interface. Continue?</h5>
+                    <h5 class="{{ modal_text_style }}">Changing DNS servers will restart the WAN interface. Continue?</h5>
                   </div>
                   <div class="modal-footer">
                     <button class="btn waves-effect waves-light" name="dns_update">YES</button>
@@ -64,7 +64,7 @@
             </form>
           </div>
           <div class="card-panel hoverable {{ theme.card }}">
-            <h4 class="{{ theme.title }}">Additional Options</h4>
+            {{ create_title('additional options')|safe }}
             <div class="row">
               {{ create_switch('DNS over TLS', 'dns_over_tls', checked=dns_settings.tls)|safe }}
               {{ create_switch('UDP Fallback (On DoT Failure)', 'udp_fallback',
@@ -84,12 +84,12 @@
             <form method="post">
               <input type="hidden" name="tab" value="2">
               <div class="row">
-                <div class="input-field col s4 {{input_color}}">
+                <div class="input-field col s4 {{ input_color }}">
                   <input type="text" name="dns_record_name" id="drn" class="validate" placeholder="homepc.local" required>
                   <label for="drn">Domain Name</label>
                 </div>
-                <div class="input-field col s4 {{input_color}}">
-                  <input type="text" name="dns_record_ip" id="dri" {{ip_addr_validate}} placeholder="192.168.83.67" required>
+                <div class="input-field col s4 {{ input_color }}">
+                  <input type="text" name="dns_record_ip" id="dri" {{ ip_addr_validate }} placeholder="192.168.83.67" required>
                   <label for="dri">IP Address</label>
                 </div>
                 <div class="input-field col s2 offset-s1">
@@ -116,17 +116,17 @@
                   <td>
                     <div class="input-field col s12 m2 offset-m5">
                       <a class="btn-floating btn-small red waves-effect waves-light modal-trigger"
-                          {% if name == 'dnx.firewall' %} disabled {% endif %} href="#dns-modal3-{{loop.index}}">
+                          {% if name == 'dnx.firewall' %} disabled {% endif %} href="#dns-modal3-{{ loop.index }}">
                         <i class="material-icons">remove</i>
                       </a>
                     </div>
-                    <div id="dns-modal3-{{loop.index}}" class="modal">
+                    <div id="dns-modal3-{{ loop.index }}" class="modal">
                       <div class="modal-content">
-                        <h5 class="{{modal_text_style}}">Are you sure you want to remove the DNS Record?</h5>
+                        <h5 class="{{ modal_text_style }}">Are you sure you want to remove the DNS Record?</h5>
                       </div>
-                      <form action="/system/settings/dns" method="POST">
+                      <form method="post">
                         <input type="hidden" name="tab" value="2">
-                        <input type="hidden" name="dns_record_remove" value="{{name}}">
+                        <input type="hidden" name="dns_record_remove" value="{{ name }}">
                         <div class="modal-footer">
                           <button class="btn waves-effect waves-light">YES</button>
                           <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
@@ -134,8 +134,8 @@
                       </form>
                     </div>
                   </td>
-                  <td>{{name}}</td>
-                  <td>{{ip_address}}</td>
+                  <td>{{ name }}</td>
+                  <td>{{ ip_address }}</td>
                 </tr>
               {% else %}
                 <tr>
@@ -187,7 +187,7 @@
                 </div>
                 <div id="dns-modal4" class="modal">
                   <div class="modal-content">
-                    <h5 class="{{modal_text_style}}">Initiating DNS cache clear cannot be undone and can take a
+                    <h5 class="{{ modal_text_style }}">Initiating DNS cache clear cannot be undone and can take a
                       few minutes to process. Are you sure you want to proceed?</h5>
                   </div>
                   <div class="modal-footer">
@@ -214,8 +214,8 @@
               <tbody>
               {% for domain in dns_settings['top_domains'] %}
                 <tr>
-                  <td>{{loop.index}}</td>
-                  <td>{{domain}}</td>
+                  <td>{{ loop.index }}</td>
+                  <td>{{ domain }}</td>
                 </tr>
               {% else %}
                 <tr>

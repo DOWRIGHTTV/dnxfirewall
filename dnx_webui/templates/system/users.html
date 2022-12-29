@@ -51,7 +51,7 @@
               </thead>
               <tbody>
               {% for user, user_info in user_list.items() %}
-                {% set message = 'Are you sure you want to remove user? -> ' + user %}
+                {% set message = 'Are you sure you want to remove user -> ' + user + '?' %}
                 <tr>
                   <td>
                     {{ create_button_with_modal('btn-floating btn-small red', 'remove',
