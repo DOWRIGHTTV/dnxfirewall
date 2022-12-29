@@ -144,7 +144,7 @@
       <div class="row row-flex">
         <div class="col s12 l6">
           <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
-            {{ create_switch('ip address')|safe }}
+            {{ create_title('ip address')|safe }}
             <h6>IP:      {{ interface_settings['ip']['ip_address'] }}</h6>
             <h6>Netmask: {{ interface_settings['ip']['netmask'] }}</h6>
             <h6>Gateway: {{ interface_settings['ip']['default_gateway'] }}</h6>
@@ -226,7 +226,7 @@
         </div>
         <div class="col s12 l6">
           <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
-            {{ create_switch('mac address')|safe }}
+            {{ create_title('mac address')|safe }}
             <h6>Default MAC: {{ interface_settings['mac']['default'] }}</h6>
             <h6>Current MAC: {{ interface_settings['mac']['current'] }}</h6>
             <br>
