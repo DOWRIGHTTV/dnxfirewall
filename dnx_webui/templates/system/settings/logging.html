@@ -25,8 +25,8 @@
                   <select name="level" id="level" onchange="this.form.submit()">
                   {% for level in logging_settings['logging']['log_levels'] %}
                     {% set level_num = loop.index0 %}
-                    <option value="{{ level_num }}" {% if logging_settings.logging.level == level_num %}selected{% endif %}>
-                      {{ level_num }}: {{ level }}
+                    <option value="{{ level_num }}" {% if logging_settings.logging.level == level_num %}selected{% endif %}
+                      >{{ level_num }}: {{ level }}
                     </option>
                   {% endfor %}
                   </select>
