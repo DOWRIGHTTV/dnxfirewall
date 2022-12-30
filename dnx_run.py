@@ -89,18 +89,9 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     # COMPILE ONLY
     'dnx-nfqueue': {'module': '1', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
     'cprotocol-tools': {'module': '1', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
-    'hash-trie': {'module': '1', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
-
-    # LABEL: DEVELOPMENT_ONLY_CODE
-    # TESTS
-    'trie-test': {
-        'module': 'dnx_profile.utils.unit_tests.trie_test', 'exclude': exclude('cli', COMMANDS), 'priv': False, 'service': False
-    },
-    'webui-dev': {
-        'module': None, 'bash_cmd': f'bash {HOME_DIR}/dnx_profile/utils/web_run.sh 5001', 'exclude': exclude('cli', COMMANDS),
-        'priv': False, 'service': False
-    },
+    'hash-trie': {'module': '1', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False}
 }
+
 SERVICE_MODULES = [f'dnx-{mod}' for mod, modset in MODULE_MAPPING.items() if modset['service']]
 
 systemctl_ret_codes: dict[int, str] = {

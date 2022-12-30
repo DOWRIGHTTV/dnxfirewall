@@ -769,32 +769,7 @@ import source.main.dfe_template_globals
 # webui themes
 import source.main.dfe_themes
 
-# LABEL: CODE_NOT_STABLE
-# secure messenger extension
-import source.messenger.msg_main
-
 # =================================
 # JINJA2 API - CUSTOM TEMPLATES
 # =================================
 app.jinja_env.filters['itoip'] = itoip
-
-# =================================
-# LABEL: DEVELOPMENT_ONLY_CODE
-# =================================
-# will only be registered if running on dev branch using flask dev server
-server_type = os.environ.get('FLASK_ENV')
-if (server_type == 'development'):
-
-    @app.before_request
-    def print_forms() -> None:
-        if (request.method == 'POST'):
-            print(f'form data\n{"=" * 12}')
-            ppt(dict(request.form))
-
-    @app.after_request
-    def no_store_http_header(response):
-        # matches primary html files only
-        if ('.' not in request.path):
-            response.headers.add('Cache-Control', 'no-store')
-
-        return response
