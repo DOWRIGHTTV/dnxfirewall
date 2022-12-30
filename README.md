@@ -8,45 +8,68 @@
 
 <br>
 <h2>Overview</h2>
-
+<span>
   DNXFIREWALL is an optimized/high performance collection of applications and services to convert a standard linux system
-into a zone based next generation firewall. All software is designed to run in conjunction with each other, but with a modular 
-design certain aspects can be completely removed with little effort. The primary security modules have DIRECT/INLINE control 
-over all connections, streams, and messages that goes through the system. That being said, depending on the protocol, offloading
-to lower level control is present to maintain the highest possible throughput with full inspection enabled. custom iptable chains
-are used to allow for the administrator to hook into the packet flow without worrying about accidentally overriding dnx security
-modules control.
+  into a zone based next generation firewall. The primary security modules have DIRECT/INLINE control over all connections, streams, 
+  and messages that goes through the system.
 
+<pre>
+                       ------------------------------------------------------
+                       | (outbound)                                         |
+                       |                                                    V
+                       |                                 --------------> [dns proxy (*1)] --------
+                       |                                 | (outbound)                            |
+                       |          (bi-directional)       |                                       V
+TCP/IP stack ----> [cfirewall] -------------------> [ip proxy] ------------------------> ((*packet verdict*)) ----> TCP/IP stack
+                      |  |                               |                                       ^    ^
+                      |  |                               | (inbound)                             |    |
+                      |  |                               --------------> [ids/ips (*2)] ----------    |
+                      |  |                                                  ^                         |
+                      |  | (inbound)                                        |                         |
+                      |  ----------------------------------------------------                         |
+                      |                                                                               |
+                      ---------------------------------------------------------------------------------
+</pre>
+
+- (*1) the dns proxy is specifically designed to inspect dns payload going between internal networks or from the lan to internet.
+
+- (*2) the ids/ips is specifically designed (for now at least) to only inspect traffic from the internet to the lan networks. 
+  - this decision is based on the fact that 99.99% (generalization) of threats in this space will source from the internet.
+
+</span>
 A low level "architecture, system design" video will be created at some point to show how this is possible with pure python.
 
 <br>
 <h2>Included Features</h2>
 
-<strong>NEW: sqlite3 is now the default database in use (to simplify deployments). postgresql is still present on the backend and will be able to be enabled during system deployment in a future release.</strong>
+<strong>NEW: sqlite3 is now the default database in use (to simplify deployments). postgresql is still present on the backend 
+and will be able to be enabled during system deployment in a future release.</strong>
 
-<strong>NEW: Auto deployment utility (autoloader) is now live. This should be used to deploy the system on any compatible distro. See compatible distro list for more details. </strong>
+<strong>NEW: Auto deployment utility (autoloader) is now live. This should be used to deploy the system on any compatible 
+distro. See compatible distro list for more details. </strong>
 
-<strong>NEW: full zone based firewall rules (source and destination) and per rule based security profiles.
+<strong>NEW: full zone based firewall rules (source and destination) and per rule based security profiles.</strong>
 
 - Custom packet handler
-   - stateful or stateless packet inspection
-   - complex packet decisions (defer packet action to security modules)
-   - implemented in C
+  - implemented in C
+  - stateful or stateless packet inspection
+  - complex packet decisions (defer packet action to security modules)
 
-- DNS proxy (LAN/outbound)
+- DNS proxy (outbound or cross lan networks)
    - category based blocking (general, TLD, substring matching)
    - user added whitelist/blacklist or custom general category creation
-   - native DNS over TLS conversion with optional UDP fallback
-   - local dns server (authoritative via packet manipulation)
-   - automatic software failover
-   - 2 levels of record caching
+
+- DNS server (recently detached from dns proxy, but shares process resources)
+  - native DNS over TLS conversion with optional UDP fallback
+  - local dns server (authoritative via packet manipulation)
+  - automatic software failover
+  - 2 levels of record caching
 
 - IP proxy (transparent) bi-directional
    - reputation based host filtering (detection implemented in C)
    - geolocation filter (country blocking, detection implemented in C)
-   - lan restriction (disables internet access to the LAN for all IPs not whitelisted) | Parental Control
 
-- IPS/IDS (WAN/inbound)
+- IPS/IDS (inbound)
    - denial of service detection/prevention
    - portscan detection/prevention
 
@@ -58,16 +81,17 @@ A low level "architecture, system design" video will be created at some point to
 - General Services
    - log handling
    - database management
-   - syslog client (UDP, TCP, TLS) IMPORTANT: currently in a beta/unstable state. this service will not be enabled by default.
+   - syslog client (UDP, TCP, TLS) IMPORTANT: currently unusable state due to many internal breaking api changes. this service will not be enabled by default.
     
 - Additional Features
    - IPv6 disabled
-   - prebuilt IPTABLE rules for device hardening (all inbound connections to wan DROPPED by default)
    - DNS proxy bypass prevention
      - DNS over HTTPs restricted
      - DNS over TCP restricted
      - DNS over TLS restricted
-   - IPTABLES custom chain for admin hook into packet flow (reduced impact post cfirewall implementation)
+   - Modern webui for administration
+   - custom shell utility for system level maintenance
+     - includes built in system (dnxfirewall) updater for 1 click updates
 
 <br>
 <h2>To deploy (using autoloader)</h2>
@@ -78,7 +102,7 @@ A low level "architecture, system design" video will be created at some point to
 	
 	2a. (3) interfaces are required (WAN, LAN, DMZ)
 	
-	2b. create "dnx" user during install or once complete
+	2b. create "dnx" user during os install or once complete
 	
 	2c. install and make python3.8 default (if applicable)
 
@@ -88,28 +112,19 @@ A low level "architecture, system design" video will be created at some point to
 	
 5. clone https://github.com/dowrighttv/dnxfirewall.git to "dnx" user home directory (/home/dnx)
         
-6. log in as "dnx" user run command: sudo python3 dnxfirewall/dnx_configure/dnx_autoloader.py
+6. log in as "dnx" user and run command: sudo python3 dnxfirewall/dnx_run.py cli autoloader
 	
-7. follow prompts to associate physical interfaces to dnxfirewall zones
+7. follow the prompts to associate the physical interfaces with dnxfirewall builtin zones
 	
-8. once utility is complete, restart system and navigate to https://dnx.firewall from LAN or DMZ interface.
+8. once the utility is complete, restart the system and navigate to the specified url
 
 <br>
-<h2>Compatible linux distros with dnxfirewall auto loader </h2>
-	
-  - Ubuntu server 20.04 LTS (stable)
-	
-  - Debian based distros (untested, but likely stable)
-	
-  - Non Debian based distros (not supported)
+<h2>Compatible linux distros with dnxfirewall autoloader</h2>
 
-<br>
-<h2>Additional info</h2>
-
-<h4 align="center">coded and tested live on twitch.tv.</h4>
-<p align="center"><a href="https://www.twitch.tv/dowright" target="_blank">
-	<img src="https://github.com/ProHackTech/DNX-FWALL-CMD/blob/master/Readme_Social/twitch.png" alt="DOWRIGHTTV"/>
-</a></p>
+- Debian based distros
+  - Linux kernel >= 2.6.31
+  - Python 3.8+
+  - netplan	(ubuntu interface/network manager)
 
 <br>
 
@@ -124,13 +139,3 @@ https://gitlab.com/ZeroDot1/CoinBlockerLists | cryptominer host dataset
 
 <bold>psql only:</bold> https://github.com/tlocke/pg8000 | pure python postgresql adapter
 
-<br>
-<h4>Showcase demo</h4>	
-  This video is extremely outdated, but still shows general functionality and some high level security implementations. 
-An updated video will be created one day, showing modern improvements and features.
-
-<h3>
-	<a href="https://www.youtube.com/watch?feature=player_embedded&v=6NvRXlNjpOc" target="_blank">
-		<img src="https://img.youtube.com/vi/6NvRXlNjpOc/0.jpg" alt="DNX Firewall Demo" width="480" height="360"/>
-	</a>
-</h3>
