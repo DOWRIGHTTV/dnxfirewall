@@ -14,7 +14,7 @@ class INTF(_IntEnum):
     STATIC = 0
     DHCP   = 1
 
-    BUILTINS = 69
+    BUILTIN  = 69
     EXTENDED = 70
 
 # enum replacement for socket constants
@@ -213,7 +213,7 @@ _TLD_LIST = [
     'NONE', 'ru', 'cn', 'xxx', 'porn', 'adult', 'ads', 'click', 'download',
     'top', 'loan', 'work', 'men', 'cf', 'gq', 'ml', 'ga'
 ]
-TLD_CAT = _IntEnum('TLS_CAT', _TLD_LIST, start=0)
+TLD_CAT = _IntEnum('TLD_CAT', _TLD_LIST, start=0)
 
 _GEO_LIST = [
     'NONE', 'RFC1918',

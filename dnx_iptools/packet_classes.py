@@ -334,8 +334,8 @@ class ProtoRelay:
 class NFQueue:
     _log: LogHandler_T
 
-    _packet_parser:  ProxyParser
-    _proxy_callback: ProxyCallback
+    _packet_parser:  ClassVar[ProxyParser]
+    _proxy_callback: ClassVar[ProxyCallback]
 
     __slots__ = ()
 
@@ -527,13 +527,13 @@ class NFPacket:
 
         # creating instance attr so it can be modified if needed
         self.mark = mark
-        # X | X | ips (4b) | dns (4b) | ipp (4b) | geo loc (8b) | direction (2b) | action (2b)
+        # X (4b) | ips (4b) | dns (4b) | ipp (4b) | X (4b) | geo loc (8b) | direction (2b) | action (2b)
         self.action    = CONN(mark & 3)
         self.direction = DIR(mark >> 2 & 3)
         self.tracked_geo = mark >>  4 & 255
-        self.ipp_profile = mark >> 12 & 15
-        self.dns_profile = mark >> 16 & 15
-        self.ips_profile = mark >> 20 & 15
+        self.ipp_profile = mark >> 16 & 15
+        self.dns_profile = mark >> 20 & 15
+        self.ips_profile = mark >> 24 & 15
 
         hw_info = cpacket.get_hw()
         self.in_intf   = hw_info[0]
@@ -670,11 +670,12 @@ class RawResponse:
         intf: NFQ_SEND_SOCK = cls._registered_socks_get(packet.in_intf)
 
         # TODO: skip masquerade when WAN int is statically assigned
+        #   why do we need to masquerade here??? wouldnt the initial dst ip be the current wan interface ip all the same?
         dnx_src_ip = packet.dst_ip if intf.zone != WAN_IN else get_masquerade_ip(dst_ip=packet.src_ip)
 
         # checking if dst port is associated with a nat.
-        # if so, will override necessary fields based on protocol and re-assign in the packet object
-        # chained if the statement is for the more likely case of open port not being present.
+        # if so, will override necessary fields based on protocol and re-assign in the packet object.
+        # the chained if statement is for the more likely case of open port not being present.
         open_ports: dict = cls._open_ports[packet.protocol]
         if (open_ports):
             port_override: int = open_ports.get(packet.dst_port)
@@ -706,7 +707,7 @@ class RawResponse:
 
             proto_header = protohdr.assemble()
 
-            # using creation/call to handle field update and buffer assembly
+            # __call__ for updating fields, then assemble buffer
             psdohdr = pseudo_header_template((('src_ip', dnx_src_ip), ('dst_ip', packet.src_ip)))
             pseudo_header = psdohdr.assemble()
 

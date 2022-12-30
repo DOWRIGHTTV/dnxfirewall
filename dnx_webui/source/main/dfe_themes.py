@@ -7,6 +7,9 @@ app = Flask.app
 # ================
 # THEMES
 # ================
+# string helpers
+bg_setting = ' background-repeat: repeat; background-attachment: fixed;'
+
 theme_common = {
     'mode': '',
     'nav_text': 'blue-grey-text text-darken-2',
@@ -18,24 +21,18 @@ theme_common = {
 }
 
 theme_dark = {
-    'background': (
-        'style="background: url(static/assets/images/dnx_bg1_dark.svg); '
-        'background-repeat: repeat; '
-        'background-attachment: fixed;"'
-    ),
+    'main_bg': 'background: url(static/assets/images/dnx_bg1_dark.svg);' + bg_setting,
     'main_section': 'blue-grey lighten-2',
+    'off_bg': 'background: url(static/assets/images/dnx_bg1_light.svg);' + bg_setting,
     'off_section': 'blue-grey lighten-5',
     'card': 'blue-grey lighten-4',
     'title': 'black-text'
 }
 
 theme_light = {
-    'background': (
-        'style="background: url(static/assets/images/dnx_bg1_light.svg); '
-        'background-repeat: repeat; '
-        'background-attachment: fixed;"'
-    ),
+    'main_bg': 'background: url(static/assets/images/dnx_bg1_light.svg);' + bg_setting,
     'main_section': 'grey lighten-2',
+    'off_bg': 'background: url(static/assets/images/dnx_bg1_dark.svg);' + bg_setting,
     'off_section': 'grey lighten-5',
     'card': 'grey lighten-4',
     'title': 'blue-grey-text text-darken-1'

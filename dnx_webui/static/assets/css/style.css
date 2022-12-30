@@ -1,4 +1,23 @@
 @import 'materialize.css';
+
+/* page loading indicator */
+@keyframes page-load {
+    from { background-color: #33ECFF; }
+    to { background-color: #33FF8D; } }
+
+.page-loading::before {
+    content:" ";
+    display:block;
+    position:fixed;
+    z-index:10;
+    height:2px;
+    width:100%;
+    top:0;
+    left:0;
+    background-color:#06D;
+    animation: page-load infinite ease-out 2s;
+    box-shadow:0 2px 2px rgba(0,0,0,.2); }
+
 /* provides support for nested menus in nav */
 /* LOGO adjustments override */
 /* navigation menu type size and pixel adjustment override */

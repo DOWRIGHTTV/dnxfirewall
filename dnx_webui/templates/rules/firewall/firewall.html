@@ -28,7 +28,7 @@
                 <input type="hidden" name="tab" value="1">
                 <input type="hidden" name="change_section">
                 <div class="input-field col s4 m2 {{input_color}}">
-                  <select name="section" onchange="this.form.submit()">
+                  <select name="section" id="section" onchange="this.form.submit()">
                     {% for section in sections %}
                       <option value="{{ section }}" {% if section == selected %}selected{% endif %}>{{ section }}</option>
                     {% endfor %}
@@ -37,10 +37,10 @@
                 </div>
               </form>
               {% set dis = not firewall_settings['pending_changes'] %}
-              <a id="revert_rules" class="btn {% if dis %}btn-disabled{% endif %} waves-effect waves-light
-                  modal-trigger red darken-2" href="#revert-modal">Revert</a>
-              <a id="push_rules" class="btn {% if dis %}btn-disabled{% endif %} waves-effect waves-light
-                  modal-trigger green darken-2" href="#push-modal">Push</a>
+              <a id="revert_rules" class="btn{% if dis %} btn-disabled{% endif %} waves-effect waves-light
+                  modal-trigger red darken-2"{% if not dis %} href="#revert-modal"{% endif %}>Revert</a>
+              <a id="push_rules" class="btn{% if dis %} btn-disabled{% endif %} waves-effect waves-light
+                  modal-trigger green darken-2"{% if not dis %} href="#push-modal"{% endif %}>Push</a>
               <a class="btn waves-effect waves-light modal-trigger blue-grey" href="#commit-modal">Commit</a>
               <a class="btn waves-effect waves-light right" onclick="newRule()">Create Rule</a>
             </div>
@@ -49,7 +49,7 @@
               <a class="btn waves-effect blue-grey" onclick="disableRules()">Disable</a>
               <a class="btn waves-effect red darken-2" onclick="removeRules()">Remove</a>
               <div class="col s12 m6 l5 xl3 {{input_color}} right">
-                <input type="text" id="filter-input" id="filter-input" onkeyup="filterTable(2, 9)" placeholder="192.168.">
+                <input type="text" id="filter-input" onkeyup="filterTable(2, 9)" placeholder="192.168.">
                 <label for="filter-input">Filter</label>
               </div>
             </div>
@@ -162,7 +162,7 @@
               </tr>
               </thead>
               <tbody>
-              {% for intf, zone in firewall_settings['zone_map']['builtins'].items() %}
+              {% for intf, zone in firewall_settings['zone_map']['builtin'].items() %}
                 <tr>
                   <td>{{intf}}</td>
                   <td>{{zone}}</td>
@@ -187,7 +187,7 @@
               </tr>
               </thead>
               <tbody>
-              {% for zone, zone_info in firewall_settings['zone_manager']['builtins'].items() %}
+              {% for zone, zone_info in firewall_settings['zone_manager']['builtin'].items() %}
                 <tr>
                   <td>X</td>
                   <td>{{zone}}</td>

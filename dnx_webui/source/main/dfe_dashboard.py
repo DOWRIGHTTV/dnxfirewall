@@ -4,30 +4,37 @@ from __future__ import annotations
 
 from itertools import zip_longest
 
-from dnx_gentools.system_info import Interface, System, Services
+from source.web_typing import *
+
+from dnx_gentools.system_info import System
+
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
 from dnx_routines.logging.log_client import LogHandler as Log
 
-def load_page():
-    domain_counts, request_counts, top_domains, top_countries, inf_hosts = query_database()
+from source.web_interfaces import StandardWebPage
+from source.system.settings.dfe_interface import get_interfaces
 
-    mod_status = {}
-    for svc in ['dns-proxy', 'ip-proxy', 'ips', 'dhcp-server']:
-        status = Services.status(f'dnx-{svc}')
+__all__ = ('WebPage')
 
-        mod_status[svc.replace('-', '_')] = status
 
-    dashboard = {
-        'domain_counts': domain_counts, 'dc_graph': _calculate_graphic(domain_counts),
-        'request_counts': request_counts, 'rc_graph': _calculate_graphic(request_counts),
-        'top_domains': top_domains, 'top_countries': top_countries,
-        'infected_hosts': inf_hosts,
+class WebPage(StandardWebPage):
+    '''
+    available methods: load, update
+    '''
+    @staticmethod
+    def load(_: Form) -> dict[str, Any]:
+        domain_counts, request_counts, top_domains, top_countries, inf_hosts = query_database()
 
-        'interfaces': Interface.bandwidth(), 'uptime': System.uptime(), 'cpu': System.cpu_usage(),
-        'ram': System.ram_usage(), 'dns_servers': System.dns_status(), 'module_status': mod_status
-    }
+        return {
+            'domain_counts': domain_counts, 'dc_graph': _calculate_graphic(domain_counts),
+            'request_counts': request_counts, 'rc_graph': _calculate_graphic(request_counts),
+            'top_domains': top_domains, 'top_countries': top_countries,
+            'infected_hosts': inf_hosts,
 
-    return dashboard
+            'uptime': System.uptime(), 'cpu': System.cpu_usage(), 'ram': System.ram_usage(),
+
+            'interfaces': get_interfaces(),
+        }
 
 def query_database():
     domain_counts = (0, 0)
@@ -55,8 +62,8 @@ def query_database():
 
         top_countries = {}
         for action in ['blocked', 'allowed']:
-            outbound = firewall_db.execute('top_geolocation', 5, action=action, direction='OUTBOUND')
-            inbound = firewall_db.execute('top_geolocation', 5, action=action, direction='INBOUND')
+            outbound = firewall_db.execute('top_geolocation', 5, action=action, direction='outbound')
+            inbound = firewall_db.execute('top_geolocation', 5, action=action, direction='inbound')
 
             top_countries[action] = list(zip_longest(outbound, inbound, fillvalue=''))
 

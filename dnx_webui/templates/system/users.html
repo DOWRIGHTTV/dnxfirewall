@@ -1,72 +1,72 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="users" class="section">
+  <section id="users" class="section">
     <div class="container">
-        <div class="row">
-            <div class="col s12">
-                <div class="card-panel hoverable {{ theme.card }}">
-                    <h4 class="{{ theme.title }}">Create User</h4>
-                    <form method="POST">
-                        <div class="row">
-                            <div class="input-field col s4 {{input_color}}">
-                                <input type="text" name="user_acct" id="ua" class="validate" placeholder="admin" required>
-                                <label for="ua">Username</label>
-                            </div>
-                            <div class="input-field col s4 {{input_color}}">
-                                <input type="password" name="user_password" id="up" class="validate" placeholder="password" required>
-                                <label for="up">Password [ <span class="black-text tooltipped" data-tooltip="Must be at
+      <div class="row">
+        <div class="col s12">
+          <div class="card-panel hoverable {{ theme.card }}">
+            {{ create_title('add user')|safe }}
+            <form method="post">
+              <div class="row">
+                <div class="input-field col s4 {{input_color}}">
+                  <input type="text" name="user_acct" id="ua" class="validate" placeholder="admin" required>
+                  <label for="ua">Username</label>
+                </div>
+                <div class="input-field col s4 {{input_color}}">
+                  <input type="password" name="user_password" id="up" class="validate" placeholder="password" required>
+                  <label for="up">Password [ <span class="black-text tooltipped" data-tooltip="Must be at
                                     least 8 characters containing (1) uppercase, (1) lowercase, (1) number, and (1)
                                     special character.">?</span> ]
-                                </label>
-                            </div>
-                            <div class="input-field col s4 {{input_color}}">
-                                <select name="user_role" id="ur">
-                                    <option value="admin">admin</option>
-                                    <option value="user">user</option>
-                                    <option value="messenger">messenger</option>
-                                    <option value="cli">cli</option>
-                                </select>
-                                <label for="ur">Role</label>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="input-field col s4 m2 offset-s4 offset-m5">
-                                <button class="btn waves-effect waves-light col s12" name="user_add">Add</button>
-                            </div>
-                        </div>
-                    </form>
+                  </label>
                 </div>
-            </div>
-            <div class="col s12">
-                <div class="card-panel hoverable {{ theme.card }}">
-                    <h4 class="{{ theme.title }}">Configured Users</h4>
-                    <table class="striped centered">
-                        <thead>
-                            <tr>
-                                <th style="width:10%"></th>
-                                <th style="width:35%">User</th>
-                                <th style="width:35%">Role</th>
-                                <th style="width:20%">Password</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% set message = 'Are you sure you want to remove this user?' %}
-                            {% for user, user_info in user_list.items() %}
-                            <tr>
-                                <td>
-                                    {{ create_button_with_modal('btn-floating btn-small red', 'remove',
-                                        1, loop.index, 1, 'user_remove', user, message)|safe }}
-                                </td>
-                                <td>{{user}}</td>
-                                <td>{{user_info[1]}}</td>
-                                <td>{{user_info[0]}}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="input-field col s4 {{input_color}}">
+                  <select name="user_role" id="ur">
+                    <option value="admin">admin</option>
+                    <option value="user">user</option>
+                    <option value="messenger">messenger</option>
+                    <option value="cli">cli</option>
+                  </select>
+                  <label for="ur">Role</label>
                 </div>
-            </div>
+              </div>
+              <div class="row">
+                <div class="input-field col s4 m2 offset-s4 offset-m5">
+                  <button class="btn waves-effect waves-light col s12" name="user_add">Add</button>
+                </div>
+              </div>
+            </form>
+          </div>
         </div>
+        <div class="col s12">
+          <div class="card-panel hoverable {{ theme.card }}">
+            {{ create_title('user list')|safe }}
+            <table class="striped centered">
+              <thead>
+              <tr>
+                <th style="width:10%"></th>
+                <th style="width:35%">User</th>
+                <th style="width:35%">Role</th>
+                <th style="width:20%">Password</th>
+              </tr>
+              </thead>
+              <tbody>
+              {% for user, user_info in user_list.items() %}
+                {% set message = 'Are you sure you want to remove user -> ' + user + '?' %}
+                <tr>
+                  <td>
+                    {{ create_button_with_modal('btn-floating btn-small red', 'remove',
+                                        1, loop.index, 1, 'user_remove', user, message)|safe }}
+                  </td>
+                  <td>{{user}}</td>
+                  <td>{{user_info[1]}}</td>
+                  <td>{{user_info[0]}}</td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
-</section>
+  </section>
 {% endblock %}

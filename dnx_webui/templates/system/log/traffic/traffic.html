@@ -28,22 +28,20 @@
                 </div>
                 <div class="row">
                     <div class="input-field col s12 m6 l5 xl3 {{input_color}}">
-                        <label>
-                            Search
-                            <input type="text" id="filter-input" onkeyup="filterTable(1, 17)" placeholder="lan">
-                        </label>
+                      <input type="text" id="filter-input" onkeyup="filterTable(1, 17)" placeholder="lan">
+                      <label for="filter-input">Search</label>
                     </div>
                     <table class="centered highlight" id="filter-table">
                         <colgroup>
                             <col span="3" style="background-color:#eceff1">
-                            <col span="3" style="background-color:#90a4ae">
+                            <col span="4" style="background-color:#90a4ae">
                             <col span="5" style="background-color:#cfd8dc">
                             <col span="5" style="background-color:#b0bec5">
                         </colgroup>
                         <thead>
                             <tr>
                                 <th colspan="3">ID</th>
-                                <th colspan="3">Packet</th>
+                                <th colspan="4">Packet</th>
                                 <th colspan="5">Source</th>
                                 <th colspan="5">Destination</th>
                             </tr>

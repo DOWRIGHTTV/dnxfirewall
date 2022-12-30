@@ -66,12 +66,12 @@ def set_default_mac_flag():
     with ConfigurationManager('system', cfg_type='global') as dnx:
         dnx_settings = dnx.load_configuration()
 
-        if (not dnx_settings['interfaces->builtins->wan->mac_set']):
+        if (not dnx_settings['interfaces->builtin->wan->mac_set']):
 
-            wan_intf = dnx_settings['interfaces->builtins->wan->ident']
+            wan_intf = dnx_settings['interfaces->builtin->wan->ident']
 
-            dnx_settings['interfaces->builtins->wan->default_mac'] = interface.get_mac_string(interface=wan_intf)
-            dnx_settings['interfaces->builtins->wan->mac_set'] = True
+            dnx_settings['interfaces->builtin->wan->default_mac'] = interface.get_mac_string(interface=wan_intf)
+            dnx_settings['interfaces->builtin->wan->mac_set'] = True
 
         dnx.write_configuration(dnx_settings.expanded_user_data)
 

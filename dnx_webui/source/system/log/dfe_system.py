@@ -25,7 +25,7 @@ class WebPage(LogWebPage):
     '''
     @staticmethod
     # NOTE: this will likely not be needed anymore with the ajax client implementation
-    def load(_: Args) -> tuple[str, None, list[str]]:
+    def load(_: Optional[Args]) -> tuple[str, None, list[str]]:
         file_path = f'{HOME_DIR}/dnx_profile/log'
 
         return 'combined', None, get_log_entries(file_path)
@@ -46,6 +46,12 @@ class WebPage(LogWebPage):
 
         # returning none to fill table_args var on the calling function to allow reuse with the report's page method
         return log_table, None, get_log_entries(file_path)
+
+    @staticmethod
+    # basically worthless, but needed for now because of weird handler logic.
+    def update(form: Form) -> tuple[str, None, list]:
+
+        return WebPage.load(None)
 
 def get_log_entries(file_path: str) -> list[str]:
     log_files = reversed(sorted(os.listdir(file_path))[:-1])

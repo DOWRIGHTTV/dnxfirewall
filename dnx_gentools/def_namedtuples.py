@@ -8,6 +8,7 @@ from typing import NamedTuple as _NamedTuple, Union as _Union, Optional as _Opti
 from typing import ByteString as _ByteString
 
 from dnx_gentools.def_enums import PROTO as _PROTO, DHCP as _DHCP, DNS_CAT as _DNS_CAT, CONN as _CONN, IPS as _IPS
+from dnx_gentools.def_enums import GEO as _GEO, DIR as _DIR
 from dnx_gentools.standard_tools import bytecontainer as _bytecontainer
 
 from dnx_iptools.def_structs import dhcp_byte_pack as _dhcp_bp, dhcp_short_pack as _dhcp_sp, dhcp_long_pack as _dhcp_lp
@@ -60,7 +61,7 @@ class DHCP_OPTION(_NamedTuple):
     def packed(self) -> bytes:
         '''pack a dhcp option into a byte string.
 
-        the @lru_cache decorator guarantees the attribute lookup/ pack call are done only once.
+        the @lru_cache decorator guarantees the attribute lookup/ pack call are done only once per object.
         '''
         return _pack_map[self.size](self.code, self.size, self.value)
 
@@ -169,9 +170,27 @@ class IPS_EVENT_LOG(_NamedTuple):
     action:      str
 
 class GEOLOCATION_LOG(_NamedTuple):
-    country:   str
-    direction: str
-    action:    str
+    '''GENERAL GEOLOCATION LOG TUPLE.
+
+    provides properties to convert integer values to std string form.
+            (cty_name, dir_name, act_name)
+    '''
+    country:   int
+    direction: int
+    action:    int
+
+    @property
+    def cty_name(self) -> str:
+        return _GEO(self.country).name.lower()
+
+    @property
+    def dir_name(self) -> str:
+        return _DIR(self.direction).name.lower()
+
+    @property
+    def act_name(self) -> str:
+        return 'allowed' if self.action == 1 else 'blocked'
+
 
 class INF_EVENT_LOG(_NamedTuple):
     client_mac: str

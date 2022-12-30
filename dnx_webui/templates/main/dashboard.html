@@ -1,237 +1,265 @@
 {% extends('layout.html') %}
 {% block body %}
-<section class="section scrollspy center">
+  <section class="section scrollspy center">
     <div class="container">
-        <div class="row row-flex">
-            <div class="col s12 m6">
-                <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
-                    {{ create_title('unique domains')|safe }}
-                    <div class="row">
-                        <a><img src="/static/dashboard/dash_pi-{{dashboard['dc_graph'][0]}}{{dashboard['dc_graph'][1]}}.png" {{dash_icon_std}}></a>
-                    </div>
-                    <div class="row">
-                        <div class="col s6">
-                            <ul>
-                                <li><h5>Blocked</h5></li>
-                                <li><h2>{{dashboard['domain_counts'][0]}}</h2></li>
-                            </ul>
-                        </div>
-                        <div class="col s6">
-                            <ul>
-                                <li><h5>Allowed</h5></li>
-                                <li><h2>{{dashboard['domain_counts'][1]}}</h2></li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
+      <div class="row row-flex">
+        <div class="col s12 m6">
+          <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+            {{ create_title('unique domains')|safe }}
+            <div class="row">
+              <a><img src="/static/dashboard/dash_pi-{{dashboard['dc_graph'][0]}}{{dashboard['dc_graph'][1]}}.png" {{dash_icon_std}}></a>
             </div>
-            <div class="col s12 m6">
-                <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
-                    {{ create_title('total domains')|safe }}
-                    <div class="row">
-                        <a><img src="/static/dashboard/dash_pi-{{dashboard['rc_graph'][0]}}{{dashboard['rc_graph'][1]}}.png" {{dash_icon_std}}></a>
-                    </div>
-                    <div class="row">
-                        <div class="col s6">
-                            <ul>
-                                <li><h5>Blocked</h5></li>
-                                <li><h2>{{dashboard['request_counts'][0]}}</h2></li>
-                            </ul>
-                        </div>
-                        <div class="col s6">
-                            <ul>
-                                <li><h5>Allowed</h5></li>
-                                <li><h2>{{dashboard['request_counts'][1]}}</h2></li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col s12">
-                <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
-                    <a><img src="/static/dashboard/dash_search1.png" {{dash_icon_zoom}}></a>
-                    <h4 class="card-title">Most Searched Domains</h4>
-                    <div class="row">
-                        {% for action, data in dashboard['top_domains'] %}
-                        <div class="col s6">
-                            <h5>{{action.title()}}</h5>
-                            <div class="divider"></div>
-                            <table class="striped centered">
-                                <thead>
-                                    <tr>
-                                        <th style="width:10%"></th>
-                                        <th style="width:45%">Domain</th>
-                                        <th style="width:45%">Category</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% if not data %}
-                                    <tr>
-                                        <td></td>
-                                        <td>No domains {{action}}</td>
-                                        <td></td>
-                                    </tr>
-                                    {% else %}
-                                    {% for domain, category in data %}
-                                    <tr>
-                                        <td>{{loop.index}}.</td>
-                                        <td>{{domain}}</td>
-                                        <td>{{category}}</td>
-                                    </tr>
-                                    {% endfor %}
-                                    {% endif %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            <div class="col s12">
-                <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
-                    <a><img src="/static/dashboard/dash_globe1.png" {{dash_icon_std}}></a>
-                    <h4 class="card-title">Country Activity</h4>
-                    <div class="row">
-                        {% for action, countries in dashboard['top_countries'].items() %}
-                        <div class="col s6">
-                            <h5>{{action.title()}}</h5>
-                            <div class="divider"></div>
-                            <table class="striped centered">
-                                <thead>
-                                    <tr>
-                                        <th style="width:10%"></th>
-                                        <th style="width:45%">Outbound</th>
-                                        <th style="width:45%">Inbound</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% if not countries %}
-                                    <tr>
-                                        <td></td>
-                                        <td>No known countries {{action}}</td>
-                                        <td></td>
-                                    </tr>
-                                    {% else %}
-                                    {% for c_out, c_in in countries %}
-                                    <tr>
-                                        <td>{{loop.index}}.</td>
-                                        <td>{{c_out}}</td>
-                                        <td>{{c_in}}</td>
-                                    </tr>
-                                    {% endfor %}
-                                    {% endif %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            {% if dashboard['infected_hosts'] %}
-            <div class="col s12">
-                <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
-                    <i class="material-icons large red-text">report_problem</i><br>
-                    <h4>Infected Hosts</h4>
-                    <div class="row">
-                        <ul>
-                            {% for value in dashboard['infected_hosts'] %}
-                            <li>{{ value[0] }} | {{ value[1] }} | {{ value[3] }}</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    <div class="row">
-                        <div class="col s8 m4 offset-s2 offset-m4">
-                            <a href="/system/reports?view_clients=1" target="_blank">
-                                <button class="btn waves-effect waves-light pulse">Open Reports</button>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-</section>
-<section id="statistics" class="{{ theme.off_section }}">
-    <div class="container">
-        <div class="row">
-            <div class="col s12">
-                <h4 class="{{ theme.title }}">System Information</h4>
-                <ul class="tabs tabs-fixed-width">
-                    <li class="tab col s4 xl2"><a class="active" href="#server-stat">Server Status</a></li>
-                    <li class="tab col s4 xl2"><a href="#system-stat">System Stats</a></li>
-                    <li class="tab col s4 xl2"><a href="#interface-stat">Interface Stats</a></li>
+            <div class="row">
+              <div class="col s6">
+                <ul>
+                  <li><h5>Blocked</h5></li>
+                  <li><h2>{{dashboard['domain_counts'][0]}}</h2></li>
                 </ul>
+              </div>
+              <div class="col s6">
+                <ul>
+                  <li><h5>Allowed</h5></li>
+                  <li><h2>{{dashboard['domain_counts'][1]}}</h2></li>
+                </ul>
+              </div>
             </div>
-            <div id="server-stat" class="col s12">
-                <table class="striped centered">
-                    <thead>
-                        <tr>
-                            <th>DNS Server1</th>
-                            <th>DNS Server2</th>
-                            <th>DNS Proxy</th>
-                            <th>IP Proxy</th>
-                            <th>IPS/IDS</th>
-                            <th>DHCP Server</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            {% for server in dashboard['dns_servers'].values() %}
-                            <td>{{server['name']}} : {{server['status']}} {% if 'tls' in server %} | TLS:
-                                {{server['tls']}} {% endif %}
-                                ({{server['ip_address']}})</td>
-                            {% endfor %}
-                            {% for mod, status in dashboard['module_status'].items() %}
-                            {% if status %}
-                            <td>UP</td>
-                            {% else %}
-                            <td>Down</td>
-                            {% endif %}
-                            {% endfor %}
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div id="system-stat" class="col s12">
-                <table class="striped centered">
-                    <thead>
-                        <tr>
-                            <th>CPU Utilization:</th>
-                            <th>RAM Utilization:</th>
-                            <th>System Uptime:</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>{{dashboard['cpu']}}</td>
-                            <td>{{dashboard['ram']}}</td>
-                            <td>{{dashboard['uptime']}}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div id="interface-stat" class="col s12">
-                <table class="striped centered">
-                    <thead>
-                        <tr>
-                            <th>Interface</th>
-                            <th>Input Rate</th>
-                            <th>Output Rate</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for interface, speed in dashboard['interfaces'].items() %}
-                        <tr>
-                            <td>{{interface}}</td>
-                            <td>{{speed[0]}}</td>
-                            <td>{{speed[1]}}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+          </div>
         </div>
+        <div class="col s12 m6">
+          <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+            {{ create_title('total domains')|safe }}
+            <div class="row">
+              <a><img src="/static/dashboard/dash_pi-{{dashboard['rc_graph'][0]}}{{dashboard['rc_graph'][1]}}.png" {{dash_icon_std}}></a>
+            </div>
+            <div class="row">
+              <div class="col s6">
+                <ul>
+                  <li><h5>Blocked</h5></li>
+                  <li><h2>{{dashboard['request_counts'][0]}}</h2></li>
+                </ul>
+              </div>
+              <div class="col s6">
+                <ul>
+                  <li><h5>Allowed</h5></li>
+                  <li><h2>{{dashboard['request_counts'][1]}}</h2></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col s12">
+          <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+            <a><img src="/static/dashboard/dash_search1.png" {{dash_icon_zoom}}></a>
+            <h4 class="card-title">Most Searched Domains</h4>
+            <div class="row">
+            {% for action, data in dashboard['top_domains'] %}
+              <div class="col s6">
+                <h5>{{action.title()}}</h5>
+                <div class="divider"></div>
+                <table class="striped centered">
+                  <thead>
+                    <tr>
+                      <th style="width:10%"></th>
+                      <th style="width:45%">Domain</th>
+                      <th style="width:45%">Category</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                  {% for domain, category in data %}
+                    <tr>
+                      <td>{{loop.index}}.</td>
+                      <td>{{domain}}</td>
+                      <td>{{category}}</td>
+                    </tr>
+                  {% else %}
+                    <tr>
+                      <td></td>
+                      <td>No domains {{action}}</td>
+                      <td></td>
+                    </tr>
+                  {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% endfor %}
+            </div>
+          </div>
+        </div>
+        <div class="col s12">
+          <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+            <a><img src="/static/dashboard/dash_globe1.png" {{dash_icon_std}}></a>
+            <h4 class="card-title">Country Activity</h4>
+            <div class="row">
+            {% for action, countries in dashboard['top_countries'].items() %}
+              <div class="col s6">
+                <h5>{{action.title()}}</h5>
+                <div class="divider"></div>
+                <table class="striped centered">
+                  <thead>
+                    <tr>
+                      <th style="width:10%"></th>
+                      <th style="width:45%">Outbound</th>
+                      <th style="width:45%">Inbound</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                  {% for c_out, c_in in countries %}
+                    <tr>
+                      <td>{{loop.index}}.</td>
+                      <td>{{c_out}}</td>
+                      <td>{{c_in}}</td>
+                    </tr>
+                  {% else %}
+                    <tr>
+                      <td></td>
+                      <td>No known countries {{action}}</td>
+                      <td></td>
+                    </tr>
+                  {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% endfor %}
+            </div>
+          </div>
+        </div>
+      {% if dashboard['infected_hosts'] %}
+        <div class="col s12">
+          <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+            <i class="material-icons large red-text">report_problem</i><br>
+            <h4>Infected Hosts</h4>
+            <div class="row">
+              <ul>
+              {% for value in dashboard['infected_hosts'] %}
+                <li>{{ value[0] }} | {{ value[1] }} | {{ value[3] }}</li>
+              {% endfor %}
+              </ul>
+            </div>
+            <div class="row">
+              <div class="col s8 m4 offset-s2 offset-m4">
+                <a href="/system/reports?view_clients=1" target="_blank">
+                  <button class="btn waves-effect waves-light pulse">Open Reports</button>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+      </div>
     </div>
-</section>
+  </section>
+  <section id="system-info" class="{{ theme.off_section }}" style="{{ theme.off_bg }}">
+    <div class="container">
+      <div class="row">
+        <div class="col s12">
+          <div class="card-panel hoverable {{ theme.card }}">
+            <table class="striped centered">
+              {{ create_title('system information', classes='center')|safe }}
+              <thead>
+              <tr>
+                <th>Uptime</th>
+                <th>CPU</th>
+                <th>RAM</th>
+                <th>Disk</th>
+
+              </tr>
+              </thead>
+              <tbody>
+              <tr>
+                <td>{{dashboard['uptime']}}</td>
+                <td>{{dashboard['cpu']}}</td>
+                <td>{{dashboard['ram']}}</td>
+                <td>add dis ples</td>
+              </tr>
+              </tbody>
+            </table>
+            <br>
+            <table class="centered highlight">
+              {{ create_title('interfaces - builtin', classes='center')|safe }}
+              <colgroup>
+                <col span="3" style="background-color:#eceff1">
+                <col span="2" style="background-color:#90a4ae">
+                <col span="2" style="background-color:#cfd8dc">
+              </colgroup>
+              <thead>
+              <tr>
+                <th colspan="3">General</th>
+                <th colspan="2">Transmit</th>
+                <th colspan="2">Receive</th>
+              </tr>
+              <tr>
+                <th>name</th>
+                <th>zone</th>
+                <th>subnet</th>
+                <th>bytes</th>
+                <th>packets</th>
+                <th>bytes</th>
+                <th>packets</th>
+              </tr>
+              </thead>
+              <tbody>
+              {% for intf in dashboard.interfaces.builtin %}
+                <tr>
+                  <td>{{ intf[0][0] }}</td>
+                  <td>{{ intf[0][1] }}</td>
+                  <td>{{ intf[0][2] }}</td>
+                  <td>{{ intf[1][0] }}</td>
+                  <td>{{ intf[1][1] }}</td>
+                  <td>{{ intf[2][0] }}</td>
+                  <td>{{ intf[2][1] }}</td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+            <br>
+            {% if dashboard.interfaces.extended %}
+              <table class="centered highlight">
+                {{ create_title('extended', classes='center')|safe }}
+                <colgroup>
+                  <col span="3" style="background-color:#eceff1">
+                  <col span="2" style="background-color:#90a4ae">
+                  <col span="2" style="background-color:#cfd8dc">
+                </colgroup>
+                <thead>
+                <tr>
+                  <th>name</th>
+                  <th>zone</th>
+                  <th>subnet</th>
+                  <th>bytes</th>
+                  <th>packets</th>
+                  <th>bytes</th>
+                  <th>packets</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for intf in dashboard.interfaces.extended %}
+                  <tr>
+                    <td>{{ intf[0][0] }}</td>
+                    <td>{{ intf[0][1] }}</td>
+                    <td>{{ intf[0][2] }}</td>
+                    <td>{{ intf[1][0] }}</td>
+                    <td>{{ intf[1][1] }}</td>
+                    <td>{{ intf[2][0] }}</td>
+                    <td>{{ intf[2][1] }}</td>
+                  </tr>
+                {% else %}
+                  <tr>
+                    <td>none</td>
+                    <td>none</td>
+                    <td>none</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                  </tr>
+                {% endfor %}
+                </tbody>
+              </table>
+              <br>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 {% endblock %}

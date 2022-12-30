@@ -32,7 +32,7 @@ DESCRIPTOR: int = _s.fileno()
 def get_intf_builtin(zone_name):
     intf_settings = load_configuration('system', cfg_type='global')
 
-    intf_path = f'interfaces->builtins->{zone_name}'
+    intf_path = f'interfaces->builtin->{zone_name}'
     system_interfaces = {v: k for k, v in if_nameindex()[1:]}
 
     intf_index = system_interfaces.get(intf_settings[f'{intf_path}->ident'], None)
@@ -41,7 +41,7 @@ def get_intf_builtin(zone_name):
 
     return {intf_index: (intf_settings[f'{intf_path}->zone'], intf_settings[f'{intf_path}->ident'])}
 
-def load_interfaces(intf_type: INTF = INTF.BUILTINS, *, exclude: list = []) -> list[tuple[int, int, str]]:
+def load_interfaces(intf_type: INTF = INTF.BUILTIN, *, exclude: list = []) -> list[tuple[int, int, str]]:
     '''return a list of tuples for the specified interface type.
 
         [(intf_index, zone, ident)]
@@ -54,7 +54,7 @@ def load_interfaces(intf_type: INTF = INTF.BUILTINS, *, exclude: list = []) -> l
     system_interfaces: dict = {v: k for k, v in if_nameindex()[1:]}
 
     collected_intfs: list = []
-    if (intf_type is INTF.BUILTINS):
+    if (intf_type is INTF.BUILTIN):
 
         for intf_name, intf_info in dnx_interfaces:
 

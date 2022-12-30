@@ -6,11 +6,10 @@ from libc.stdint cimport uint8_t, uint16_t, uint32_t
 DEF EMPTY_CONTAINER = 0
 DEF NO_MATCH = 0
 
-DEF MAX_WIDTH_MULTIPLIER = 2
-
+DEF HTR_MAX_WIDTH_MULTIPLIER = 2
 
 # ================================================
-# C STRUCTURES - converted from python tuples
+# C EXTENSIONS - converted from python tuples
 # ================================================
 cdef class HashTrie_Range:
 
@@ -56,7 +55,7 @@ cdef class HashTrie_Range:
     cpdef void generate_structure(s, list py_trie, size_t py_trie_len):
 
         # providing function ptr reference for c calls through instance
-        s.lookup = <htr_search_t>s.search
+        # s.lookup = <htr_search_t>s.search
 
         cdef:
             size_t      i, xi
@@ -70,7 +69,7 @@ cdef class HashTrie_Range:
             size_t      num_values
 
         # TODO: test the multiplier for max_width (current is 2, try 1.3)
-        s.max_width = <uint32_t>py_trie_len * MAX_WIDTH_MULTIPLIER
+        s.max_width = <uint32_t>py_trie_len * HTR_MAX_WIDTH_MULTIPLIER
         s.TRIE_MAP  = <TrieMap_R*>calloc(s.max_width, sizeof(TrieMap_R))
 
         for i in range(py_trie_len):

@@ -29,7 +29,7 @@ def _combine_domain(log: LogHandler_T) -> list[str]:
 
     domain_signatures: list = []
 
-    default_cats: list = proxy_settings.get_list('categories->default')
+    default_cats: list = proxy_settings.get_list('categories->built-in')
     # iterating over the list of categories + DoH to load signature sets.
     for cat in [*default_cats, 'dns-over-https']:
         try:
@@ -40,7 +40,7 @@ def _combine_domain(log: LogHandler_T) -> list[str]:
             domain_signatures.extend([x.lower() for x in file.read().splitlines() if x and '#' not in x])
             file.close()
 
-    ud_cats: list = proxy_settings.get_list('categories->user_defined')
+    ud_cats: list = proxy_settings.get_list('categories->custom')
     # TODO: user defined categories will break the enum load on proxy / FIX
     # NOTE: i think this will require a proxy restart if sigs change
     # looping over all user defined categories.

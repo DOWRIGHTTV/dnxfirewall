@@ -1,6 +1,11 @@
 #ifndef TRAFFIC_LOG_H
 #define TRAFFIC_LOG_H
 
+#define DNX_USER "dnx"
+
+#define DATABASE_SERVICE "/home/dnx/dnxfirewall/dnx_routines/database/ddb.sock" // 52
+#define DB_LOG_FORMAT "{\"method\": \"geolocation\", \"timestamp\": 0, \"log\": [%u, %u, %u]}" // 61
+
 #define TRAFFIC_LOG_DIR  "/home/dnx/dnxfirewall/dnx_profile/log/traffic/" // 46
 // 20220628 // 8
 //src_mac="%s" dst_mac="%s"
@@ -26,14 +31,27 @@ struct LogHandle {
     int     cnt;
 };
 
-extern struct LogHandle Log[2];
+// ================================== //
+// DNX DATABASE SERVICE STRUCT
+// ================================== //
+struct dnx_db_service {
+    struct sockaddr_un  addr;
+    struct ucred        creds;
 
-extern void log_init(struct LogHandle *logger, char *label);
-extern void log_enter(struct timeval *ts, struct LogHandle *logger);
-extern void log_write_firewall(struct timeval *ts, struct dnx_pktb *pkt, uint8_t direction, uint8_t src_country, uint8_t dst_country);
-extern void log_write_nat(struct dnx_pktb *pkt);
-extern void log_exit(struct LogHandle *logger);
+    int     fd;
+    bool    connected;
+};
 
+extern void log_init(int logger_idx, char *label);
+extern void log_write_firewall(int logger_idx, struct dnx_pktb *pkt);
+//extern void log_write_nat(struct LogHandle *logger, struct dnx_pktb *pkt);
+
+void log_enter(struct LogHandle *logger, struct timeval *ts);
+void log_exit(struct LogHandle *logger);
 int  log_rotate(struct LogHandle *logger, struct timeval *ts);
+
+extern void log_db_init(void);
+extern int  log_db_connect(void);
+extern void log_db_geolocation(struct geolocation *geo, uint8_t pkt_action);
 
 #endif

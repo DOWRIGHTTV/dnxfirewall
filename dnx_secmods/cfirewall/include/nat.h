@@ -4,10 +4,10 @@
 #define NAT_TABLE_COUNT 2
 
 
-struct NATrule;
-struct nlmsghdr;
-struct cfdata;
-struct dnx_pktb;
+//struct NATrule;
+//struct nlmsghdr;
+//struct cfdata;
+//struct dnx_pktb;
 
 struct NATtable {
     uintf16_t       len;

@@ -62,7 +62,7 @@ FirewallControl.cfirewall = cfirewall
 # =========================================
 # WEBUI COMPONENTS
 # =========================================
-import source.main.dfe_dashboard as dfe_dashboard
+from source.main.dfe_dashboard import WebPage as webui_dashboard
 from source.rules.dfe_firewall import WebPage as dnx_fwall  # non standard -> firewall page logic
 from source.rules.dfe_nat import WebPage as dnx_nat
 from source.intrusion.dfe_ip import WebPage as ip_proxy
@@ -100,10 +100,13 @@ if (TYPE_CHECKING):
 def dnx_dashboard(session_info: dict):
     page_settings = get_default_page_settings(session_info, uri_path=['dashboard'])
 
-    page_settings['dashboard'] = dfe_dashboard.load_page()
     page_settings['footer'] = True
 
-    return render_template('main/dashboard.html', theme=context_global.theme, **page_settings)
+    page_action = standard_page_logic(
+        webui_dashboard, page_settings, 'dashboard', page_name='main/dashboard.html'
+    )
+
+    return page_action
 
 # --------------------------------------------- #
 #  START OF RULES TAB
@@ -203,7 +206,7 @@ def intrusion_ip_post(session_info: dict):
 
     return ajax_response(status=status, data=err_data)
 
-@app.get('/intrusion/domain')
+@app.route('/intrusion/domain', methods=['GET', 'POST'])
 @user_restrict('admin')
 def intrusion_domain(session_info: dict):
     page_settings = get_default_page_settings(session_info, uri_path=['intrusion', 'domain'])
@@ -447,7 +450,7 @@ def system_services(session_info: dict):
 # --------------------------------------------- #
 @app.route('/device/<path>', methods=['GET', 'POST'])
 @user_restrict('admin')
-def system_restart(session_info: dict, path: str):
+def system_restart(session_info: dict, *, path: str):
     if (path not in ['shutdown', 'restart']):
         return render_template(general_error_page, general_error=f'device/{path} not found.')
 
@@ -614,6 +617,8 @@ def log_page_logic(log_page: LogWebPage, page_settings: dict, *, page_name: str)
     # can now accept redirects from other places on the webui to load specific tables directly on load
     # using uri queries FIXME: this has been temporarily suspended and should be reintroduced.
 
+    # TODO: we dont have explicit logic for "GET" and rely on exception handling to load page via GET. fix???
+
     try:
         table, menu, table_data = log_page.update(request.form)
     except ConfigurationError as ce:
@@ -649,31 +654,34 @@ def categories_page_logic(dnx_page, page_settings: dict) -> str:
 
 # function called by restart/shutdown pages. will ensure the user specified operation gets executed
 def handle_system_action(page_settings: dict):
-    action = page_settings['action']
 
-    response = request.form.get(f'system_{action}', '')
-    if (not response):
-        return render_template(application_error_page, application_error='device action invalid.', theme=context_global.theme, **page_settings)
+    if (request.method == 'POST'):
 
-    if (response == 'YES'):
-        page_settings.pop('control', None)
-        page_settings.pop('user_role', None)
-        page_settings.update({
-            'confirmed': True,
-            'login_btn': True
-        })
+        action = page_settings['action']
 
-        Log.warning(f'dnxfirewall {action} initiated.')
+        response = request.form.get(f'system_{action}', '')
+        if (not response):
+            return render_template(application_error_page, application_error='device action invalid.', theme=context_global.theme, **page_settings)
 
-        # I prefer the word restart, so converting to system command here
-        action = 'reboot' if action == 'restart' else f'{action} now'
+        if (response == 'YES'):
+            page_settings.pop('control', None)
+            page_settings.pop('user_role', None)
+            page_settings.update({
+                'confirmed': True,
+                'login_btn': True
+            })
 
-        # TODO: make sure this is authenticated
-        # forwarding request to system control service via local socket for execution
-        system_action(delay=FIVE_SEC, module='webui', command=action)
+            Log.warning(f'dnxfirewall {action} initiated.')
 
-    elif (response == 'NO'):
-        return redirect(url_for('dnx_dashboard'))
+            # I prefer the word restart, so converting to system command here
+            action = 'reboot' if action == 'restart' else f'{action} now'
+
+            # TODO: make sure this is authenticated
+            # forwarding request to system control service via local socket for execution
+            system_action(delay=FIVE_SEC, module='webui', command=action)
+
+        elif (response == 'NO'):
+            return redirect(url_for('dnx_dashboard'))
 
     return render_template('main/device.html', theme=context_global.theme, **page_settings)
 

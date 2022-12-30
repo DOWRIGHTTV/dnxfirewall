@@ -91,6 +91,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     'cprotocol-tools': {'module': '1', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False},
     'hash-trie': {'module': '1', 'exclude': exclude('compile', COMMANDS), 'priv': True, 'service': False}
 }
+
 SERVICE_MODULES = [f'dnx-{mod}' for mod, modset in MODULE_MAPPING.items() if modset['service']]
 
 systemctl_ret_codes: dict[int, str] = {

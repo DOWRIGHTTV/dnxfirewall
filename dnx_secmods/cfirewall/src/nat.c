@@ -4,8 +4,6 @@
 #include "rules.h"
 #include "conntrack.h"
 
-#include "hash_trie.h"
-
 #define NAT_PRE_MAX_RULE_COUNT  100
 #define NAT_POST_MAX_RULE_COUNT 100
 
@@ -167,7 +165,7 @@ nat_inspect(int cntrl_list, struct dnx_pktb *pkt, struct cfdata *cfd)
         // ------------------------------------------------------------------
         if (service_match(&rule->s_services, pkt->iphdr->protocol, ntohs(pkt->protohdr->sport)) != MATCH) { continue; }
 
-        //icmp checked in source only.
+        // icmp checked in source only.
         if (pkt->iphdr->protocol != IPPROTO_ICMP) {
             if (service_match(&rule->d_services, pkt->iphdr->protocol, ntohs(pkt->protohdr->dport)) != MATCH) { continue; }
         }
@@ -176,7 +174,7 @@ nat_inspect(int cntrl_list, struct dnx_pktb *pkt, struct cfdata *cfd)
         // ------------------------------------------------------------------
         pkt->rule_clist = cntrl_list;
         pkt->nat_rule   = rule; // if logging, this needs to be +1 to reflect true rule number
-        pkt->verdict    = rule->action;
+        //pkt->verdict    = rule->action;
 
         pkt->nat = rule->nat;
 
@@ -186,7 +184,7 @@ nat_inspect(int cntrl_list, struct dnx_pktb *pkt, struct cfdata *cfd)
     // DEFAULT ACTION
     // ------------------------------------------------------------------
     pkt->rule_clist = NO_SECTION;
-    pkt->verdict    = DNX_ACCEPT;
+    //pkt->verdict    = DNX_ACCEPT;
 }
 
 void

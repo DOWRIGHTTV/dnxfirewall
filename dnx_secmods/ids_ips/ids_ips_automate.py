@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-from ipaddress import IPv4Address
-
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import PROTO
 from dnx_gentools.system_info import System
 from dnx_gentools.standard_tools import looper, ConfigurationMixinBase
-from dnx_gentools.file_operations import load_configuration, cfg_read_poller
+from dnx_gentools.file_operations import cfg_read_poller, ConfigurationManager
 
+from dnx_iptools.cprotocol_tools import iptoi
 from dnx_iptools.iptables import IPTablesManager
 
 from dnx_secmods.ids_ips.ids_ips_log import Log
@@ -20,6 +19,9 @@ from dnx_secmods.ids_ips.ids_ips_log import Log
 # ===============
 if (TYPE_CHECKING):
     from dnx_routines.logging import LogHandler_T
+
+# needed for updating pbl early removal notification in cfg
+ConfigurationManager.set_log_reference(Log)
 
 
 class IPSConfiguration(ConfigurationMixinBase):
@@ -37,7 +39,7 @@ class IPSConfiguration(ConfigurationMixinBase):
         PROTO.ICMP: -1
     }
 
-    ids_mode: ClassVar[int] = 0  # TODO: implement this throughout
+    ids_mode: ClassVar[int] = 0  # TODO: this should be removed or re implemented as a packet action of LOG/ACCEPT per cat
     ddos_enabled:  ClassVar[int] = 0
     pscan_enabled: ClassVar[int] = 0
     pscan_reject:  ClassVar[int] = 0
@@ -91,13 +93,13 @@ class IPSConfiguration(ConfigurationMixinBase):
         else:
             self.__class__.block_length = NO_DELAY
 
-        # src ips that will not trigger ips # FIXME: does this even work? we use integer for ip addr now.
-        self.__class__.ip_whitelist = set([ip for ip in proxy_settings['whitelist->ip_whitelist']])
+        # src ips that will not trigger ips
+        self.__class__.ip_whitelist = set([iptoi(ip) for ip in proxy_settings['whitelist->ip_whitelist']])
 
         self._initialize.done()
 
-    # NOTE: determine whether the default sleep timer is acceptable for this method. if not, figure out how to override
-    # the setting set in the decorator or remove the decorator entirely.
+    # NOTE: determine whether the default sleep timer is acceptable for this open port updates. if not, figure out how
+    # to override the setting set in the decorator or remove the decorator entirely.
     @cfg_read_poller('global', cfg_type='security/ids_ips')
     def _get_open_ports(self, proxy_settings: ConfigChain) -> None:
 
@@ -108,15 +110,29 @@ class IPSConfiguration(ConfigurationMixinBase):
             PROTO.UDP: {
                 int(local_p): int(wan_p) for wan_p, local_p in proxy_settings.get_items('open_protocols->udp')
             },
-            PROTO.ICMP: {}
+            PROTO.ICMP: {}  # todo: what is this here for? is it to prevent issue on packet inspection?
         }
+
+        # NOTE: this is needed to remove from memory who were manually removed by user via webui
+        if hosts_to_remove := proxy_settings.get_items('pbl_remove'):
+            with ConfigurationManager('global', cfg_type='security/ids_ips') as dnx:
+                ips_global_settings: ConfigChain = dnx.load_configuration()
+
+                for host, timestamp in hosts_to_remove:
+                    # removing host from ips tracker/ suppression dictionary
+                    # notify list could desync from in memory tracker under service/system shutdown conditions, so we
+                    # will remove entry from the notify list regardless.
+                    self.__class__.fw_rules.pop(int(host), None)
+
+                    del ips_global_settings[f'pbl_remove->{host}']
+
+                dnx.write_configuration(ips_global_settings.expanded_user_data)
 
         self._initialize.done()
 
     @looper(FIVE_MIN)
-    # NOTE: refactored function utilizing iptables + timestamp comment to identify rules to be expired.
+    # refactored function utilizing iptables + timestamp comment to identify rules to be expired.
     # this should inherently make the passive blocking system persist service or system reboots.
-    # TODO: consider using the fw_rule dict check before continuing to call System.
     def _clear_ip_tables(self) -> None:
         expired_hosts = System.ips_passively_blocked(block_length=self.__class__.block_length)
         if (not expired_hosts):
@@ -124,7 +140,7 @@ class IPSConfiguration(ConfigurationMixinBase):
 
         with IPTablesManager() as iptables:
             for host, timestamp in expired_hosts:
-                iptables.proxy_del_rule(host, timestamp, table='raw', chain='IPS')
+                iptables.remove_passive_block(host, timestamp)
 
                 # removing host from ips tracker/ suppression dictionary
-                self.__class__.fw_rules.pop(IPv4Address(host), None)  # should never return None
+                self.__class__.fw_rules.pop(host, None)  # should never return None

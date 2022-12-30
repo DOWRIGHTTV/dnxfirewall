@@ -11,25 +11,27 @@
 #include <libnetfilter_queue/libnetfilter_queue.h> // nfqueue interface for libmnl
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h> // nfct - conntrack updates (used by nat mod through dnx_nfq)
 
-// dnxfirewall
+// dnxfirewall setup
 #include "config.h"
 #include "debug.h"
 #include "inet_tools.h"
 #include "std_tools.h"
+
+// forward declarations so extension headers dont need them
+struct cfdata;
+struct clist_range;
+struct HWinfo;
+struct IPhdr;
+struct Protohdr;
+struct geolocation;
+struct dnx_pktb;
+
+// dnxfirewall extensions
+#include "fw_main.h"    // primary cython file, needed for geolocation lookup
 #include "rules.h"      // firewall and nat rule structs/ defs
 #include "match.h"      // zone, network, service matching helpers
 #include "dnx_nfq.h"    // packet verdict, mangle, etc.
 #include "traffic_log.h"
-
-// bit shifting helpers
-#define TWO_BITS     2
-#define FOUR_BITS    4
-#define ONE_BYTE     8
-#define TWELVE_BITS 12
-#define TWO_BYTES   16
-
-#define TWO_BIT_MASK   3
-#define FOUR_BIT_MASK 15
 
 #define OUTBOUND 1
 #define INBOUND  2
@@ -54,15 +56,16 @@
 #define SVC_LIST  3
 #define SVC_ICMP  4
 
+// geolocation vars
 extern uint32_t MSB, LSB;
+extern int      HTR_IDX;
 
 // cli args
-extern bool PROXY_BYPASS;
-extern bool VERBOSE;
-extern bool VERBOSE2;
+extern bool     VERBOSE;
+extern bool     VERBOSE2;
 
-extern bool FW_V;
-extern bool NAT_V;
+extern bool     FW_V;
+extern bool     NAT_V;
 
 extern struct mnl_socket *nl[2];
 
@@ -81,19 +84,16 @@ typedef struct nfqnl_msg_packet_hw      nl_pkt_hw;
 
 typedef struct nfqnl_msg_packet_timestamp      nl_pkt_ts;
 
-//typedef uint8_t (*hash_trie_search_t)(uint32_t msb, uint32_t lsb);
-
 struct cfdata {
     uintf8_t    idx;
     uint32_t    queue;
 
-    void       *geolocation;
     mnl_cb_t    queue_cb;
 };
 
 struct clist_range {
-  uintf8_t  start;
-  uintf8_t  end;
+  uintf8_t      start;
+  uintf8_t      end;
 };
 
 struct HWinfo {
@@ -130,6 +130,13 @@ struct Protohdr {
     uint16_t    dport;
 };
 
+struct geolocation {
+    uint8_t     src;
+    uint8_t     dst;
+    uint8_t     dir;
+    uint8_t     remote;
+};
+
 struct dnx_pktb {
     uint8_t             confirmed;
     uint8_t            *data;
@@ -139,16 +146,14 @@ struct dnx_pktb {
     uint16_t            iphdr_len;      // header only
     struct Protohdr    *protohdr;
     uint16_t            protohdr_len;   // header only
-    bool                mangled;
     struct Nat          nat;            // not used by FW. copied over from nat rule on match
+    bool                mangled;
     uintf16_t           rule_clist;     // CONTROL LIST. recent change from fw_table to be module agnostic
-    union {
-        struct FWrule  *fw_rule;
-        struct NATrule *nat_rule;
-    };
-    uint32_t            mark;
-    uint32_t            verdict;
-    struct LogHandle   *logger;
+    char*               rule_name;
+    uint8_t             log;
+    struct geolocation  geo;
+    uint16_t            sec_profiles;   // X (4b) | ips (4b) | dns (4b) | ipp (4b) -- will be placed in upper 16b of mark
+    uint8_t             action;
 };
 
 #endif
