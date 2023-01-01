@@ -3,8 +3,8 @@
 from libc.stdio cimport snprintf
 from libc.stdint cimport uint8_t, uint32_t, uint_fast16_t
 
-DEF Py_OK  = 0
-DEF Py_ERR = 1
+DEF OK  = 1
+DEF ERR = 0
 
 
 cdef uint8_t  UINT8_MAX  = 0b11111111
@@ -96,10 +96,14 @@ cpdef bytes calc_checksum(const uint8_t[:] data):
     return ubytes
 
 
-def py_ftok(const uint8_t[:] data, int id):
-    cdef key_t ret
+def py_ftok(unicode filepath, int id):
+    fpath = filepath.encode('utf-8')
 
-    ret = ftok(data, id)
+    cdef:
+        key_t   ret
+        char*   path = fpath
+
+    ret = ftok(path, id)
     if (ret == -1):
         return 0
 
@@ -110,8 +114,8 @@ DEF MQ_PERMISSIONS  = 0o600
 DEF MQ_MESSAGE_SIZE = 2048
 
 cdef struct mq_message:
-   int      type
-   char     data[MQ_MESSAGE_SIZE]
+   long int     type
+   uint8_t     *data
 
 cdef class MessageQueue:
 
@@ -124,16 +128,16 @@ cdef class MessageQueue:
     def connect(self, key_t key):
         self.id = msgget(key, MQ_PERMISSIONS)
         if (self.id == -1):
-            return Py_ERR
+            return ERR
 
-        return Py_OK
+        return OK
 
     def create_queue(self, key_t key):
         self.id = msgget(key, MQ_PERMISSIONS | IPC_CREAT)
         if (self.id == -1):
-            return Py_ERR
+            return ERR
 
-        return Py_OK
+        return OK
 
     def send_msg(self, const uint8_t[:] data, int type):
         cdef:
@@ -141,21 +145,24 @@ cdef class MessageQueue:
             mq_message  mq_msg
 
         mq_msg.type = type
-        mq_msg.data = data
+        mq_msg.data = &data[0]
 
         ret = msgsnd(self.id, &mq_msg, data.shape[0], 0)
         if (ret == -1):
-            return Py_ERR
+            return ERR
 
-        return Py_OK
+        return ret
 
     def recv_msg(self):
         cdef:
             int         ret
             mq_message  mq_msg
+            uint8_t     data[MQ_MESSAGE_SIZE]
+
+        mq_msg.data = data
 
         ret = msgrcv(self.id, &mq_msg, MQ_MESSAGE_SIZE, 0, 0)
         if (ret == -1):
-            return Py_ERR
+            return ERR
 
-        return mq_msg.data
+        return data[:ret]
