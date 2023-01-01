@@ -3,6 +3,10 @@
 from libc.stdio cimport snprintf
 from libc.stdint cimport uint8_t, uint32_t, uint_fast16_t
 
+DEF Py_OK  = 0
+DEF Py_ERR = 1
+
+
 cdef uint8_t  UINT8_MAX  = 0b11111111
 cdef uint16_t UINT16_MAX = 0b1111111111111111
 
@@ -90,3 +94,68 @@ cpdef bytes calc_checksum(const uint8_t[:] data):
     ubytes[1] = csum & UINT8_MAX
 
     return ubytes
+
+
+def py_ftok(const uint8_t[:] data, int id):
+    cdef key_t ret
+
+    ret = ftok(data, id)
+    if (ret == -1):
+        return 0
+
+    return ret
+
+#define PERMS 0644
+DEF MQ_PERMISSIONS  = 0o600
+DEF MQ_MESSAGE_SIZE = 2048
+
+cdef struct mq_message:
+   int      type
+   char     data[MQ_MESSAGE_SIZE]
+
+cdef class MessageQueue:
+
+    cdef:
+        int     id
+
+    def __dealloc__(self):
+        msgctl(self.id, IPC_RMID, NULL)
+
+    def connect(self, key_t key):
+        self.id = msgget(key, MQ_PERMISSIONS)
+        if (self.id == -1):
+            return Py_ERR
+
+        return Py_OK
+
+    def create_queue(self, key_t key):
+        self.id = msgget(key, MQ_PERMISSIONS | IPC_CREAT)
+        if (self.id == -1):
+            return Py_ERR
+
+        return Py_OK
+
+    def send_msg(self, const uint8_t[:] data, int type):
+        cdef:
+            int         ret
+            mq_message  mq_msg
+
+        mq_msg.type = type
+        mq_msg.data = data
+
+        ret = msgsnd(self.id, &mq_msg, data.shape[0], 0)
+        if (ret == -1):
+            return Py_ERR
+
+        return Py_OK
+
+    def recv_msg(self):
+        cdef:
+            int         ret
+            mq_message  mq_msg
+
+        ret = msgrcv(self.id, &mq_msg, MQ_MESSAGE_SIZE, 0, 0)
+        if (ret == -1):
+            return Py_ERR
+
+        return mq_msg.data
