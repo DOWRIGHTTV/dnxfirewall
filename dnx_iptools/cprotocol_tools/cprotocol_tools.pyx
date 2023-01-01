@@ -125,15 +125,21 @@ cdef class MessageQueue:
     def __dealloc__(self):
         msgctl(self.id, IPC_RMID, NULL)
 
-    def connect(self, key):
-        self.id = msgget(<key_t>key, MQ_PERMISSIONS)
+    def connect(self, pkey):
+
+        cdef key_t key = <key_t> pkey
+
+        self.id = msgget(key, MQ_PERMISSIONS)
         if (self.id == -1):
             return ERR
 
         return OK
 
-    def create_queue(self, key):
-        self.id = msgget(<key_t>key, MQ_PERMISSIONS | IPC_CREAT)
+    def create_queue(self, pkey):
+
+        cdef key_t key = <key_t> pkey
+
+        self.id = msgget(key, MQ_PERMISSIONS | IPC_CREAT)
         if (self.id == -1):
             return ERR
 
