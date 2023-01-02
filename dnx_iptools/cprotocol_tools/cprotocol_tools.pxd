@@ -16,12 +16,6 @@ cdef extern from '<arpa/inet.h>':
 
     in_addr_t inet_addr(char *cp)
 
-cdef extern from '<sys/msg.h>':
-    int       msgctl(int, int, void*)
-    int       msgget(key_t, int)
-    ssize_t   msgrcv(int, void*, size_t, long int, int)
-    int       msgsnd(int, const void*, size_t, int)
-
 cdef extern from '<sys/ipc.h>':
     enum:
         IPC_CREAT   # Create entry if key does not exist.
@@ -37,3 +31,9 @@ cdef extern from '<sys/ipc.h>':
     ctypedef short int key_t
 
     key_t  ftok(const char*, int)
+
+cdef extern from '<sys/msg.h>':
+    int       msgctl(int a, int b, void* c)
+    int       msgget(key_t a, int b)
+    ssize_t   msgrcv(int a, void* b, size_t c, long int d, int e)
+    int       msgsnd(int a, const void* b, size_t c, int d)

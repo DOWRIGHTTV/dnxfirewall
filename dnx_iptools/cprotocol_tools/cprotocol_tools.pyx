@@ -1,6 +1,9 @@
 #!/usr/bin/env Cython
 
-from libc.stdio cimport snprintf
+from libc.string cimport memset, memcpy
+
+from libc.errno cimport *
+from libc.stdio cimport snprintf, perror, printf
 from libc.stdint cimport uint8_t, uint32_t, uint_fast16_t
 
 DEF OK  = 1
@@ -115,33 +118,45 @@ DEF MQ_MESSAGE_SIZE = 2048
 
 cdef struct mq_message:
    long int     type
-   uint8_t     *data
+   uint8_t      data[MQ_MESSAGE_SIZE]
+
 
 cdef class MessageQueue:
 
     cdef:
         int     id
+        bint    ro  # flag to trigger a free for queue
 
     def __dealloc__(self):
-        msgctl(self.id, IPC_RMID, NULL)
 
-    def connect(self, pkey):
+        # owner of queue will be responsible for freeing resources
+        if (not self.ro):
+            msgctl(self.id, IPC_RMID, NULL)
 
-        cdef key_t key = <key_t> pkey
+#        print(f'deallocated mq with id->{self.id}')
 
-        self.id = msgget(key, MQ_PERMISSIONS)
+    def connect(self, int pkey):
+
+        self.id = msgget(<key_t>pkey, MQ_PERMISSIONS)
         if (self.id == -1):
+            perror("connect error")
             return ERR
+
+        self.ro = True
+
+#        print('connected to mq with id->{self.id}')
 
         return OK
 
-    def create_queue(self, pkey):
+    def create_queue(self, int pkey):
 
-        cdef key_t key = <key_t> pkey
-
-        self.id = msgget(key, MQ_PERMISSIONS | IPC_CREAT)
+        self.id = msgget(<key_t>pkey, MQ_PERMISSIONS | IPC_CREAT)
         if (self.id == -1):
             return ERR
+
+        self.ro = False
+
+#        print(f'created mq with id->{self.id}')
 
         return OK
 
@@ -150,11 +165,16 @@ cdef class MessageQueue:
             int         ret
             mq_message  mq_msg
 
-        mq_msg.type = type
-        mq_msg.data = &data[0]
+            int         dlen = data.shape[0]
 
-        ret = msgsnd(self.id, &mq_msg, data.shape[0], 0)
+#        print(f'sending->{&data[0]}')
+
+        mq_msg.type = type
+        memcpy(mq_msg.data, &data[0], dlen)
+
+        ret = msgsnd(self.id, &mq_msg, dlen, 0)
         if (ret == -1):
+            perror("send error")
             return ERR
 
         return ret
@@ -163,12 +183,12 @@ cdef class MessageQueue:
         cdef:
             int         ret
             mq_message  mq_msg
-            uint8_t     data[MQ_MESSAGE_SIZE]
-
-        mq_msg.data = data
 
         ret = msgrcv(self.id, &mq_msg, MQ_MESSAGE_SIZE, 0, 0)
         if (ret == -1):
+            perror("recv error")
             return ERR
 
-        return data[:ret]
+        print(f'received->{mq_msg.type} || {mq_msg.data[:ret]}')
+
+        return mq_msg.data[:ret]
