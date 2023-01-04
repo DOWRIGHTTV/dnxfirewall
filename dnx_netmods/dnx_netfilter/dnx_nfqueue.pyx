@@ -17,25 +17,14 @@ DEF DEFAULT_MAX_QUEUELEN = 8192
 # formula: DEF_MAX_QUEUELEN * (MaxCopySize+SockOverhead) / 2
 DEF SOCK_RCV_SIZE = 1024 * 4796 // 2
 
-# ================================== #
-# NetfilterQueue Read/Write lock
-# ================================== #
-# TODO: confirm this is needed.
-#  apparently needed when calling nfq_handle_packet and set_verdict (doesnt sound right to me)
-# ---------------------------------- #
-cdef pthread_mutex_t NFQlock
-
-pthread_mutex_init(&NFQlock, NULL)
-
 # ============================================
 # NFQUEUE CALLBACK - PARSE > FORWARD - NO GIL
 # ============================================
 cdef int32_t nfqueue_rcv(nfq_q_handle *nfq_qh, nfgenmsg *nfmsg, nfq_data *nfq_d, void *q_manager) nogil:
 
     cdef:
-        nfqnl_msg_packet_hdr *nfq_msg_hdr = nfq_get_msg_packet_hdr(nfq_d)
-
-        PacketData *dnx_nfqhdr = <PacketData*>calloc(1, sizeof(PacketData))
+        nfqnl_msg_packet_hdr   *nfq_msg_hdr = nfq_get_msg_packet_hdr(nfq_d)
+        PacketData             *dnx_nfqhdr = <PacketData*>calloc(1, sizeof(PacketData))
 
     dnx_nfqhdr.nfq_qh    = nfq_qh
     dnx_nfqhdr.nfq_d     = nfq_d
@@ -58,8 +47,8 @@ cdef int32_t nfqueue_rcv(nfq_q_handle *nfq_qh, nfgenmsg *nfmsg, nfq_data *nfq_d,
 cdef inline int32_t nfqueue_forward(PacketData *dnx_nfqhdr, void *q_manager) with gil:
 
     cdef:
-        NetfilterQueue nfqueue = <NetfilterQueue>q_manager
-        CPacket cpacket
+        NetfilterQueue  nfqueue = <NetfilterQueue>q_manager
+        CPacket         cpacket
 
     # skipping call to __init__
     cpacket = CPacket.__new__(CPacket)
@@ -76,28 +65,20 @@ cdef inline int32_t nfqueue_forward(PacketData *dnx_nfqhdr, void *q_manager) wit
 cdef void process_traffic(nfq_handle *nfq_h) nogil:
 
     cdef:
-        pkt_buf pkt_buffer[NFQ_BUF_SIZE]
-        int32_t fd = nfq_fd(nfq_h)
+        pkt_buf     pkt_buffer[NFQ_BUF_SIZE]
+        int32_t     fd = nfq_fd(nfq_h)
 
-        ssize_t data_len
+        ssize_t     data_len
 
     while True:
         data_len = recv(fd, pkt_buffer, NFQ_BUF_SIZE, 0)
 
         if (data_len > 0):
-            # ===================================
-            # LOCKING ACCESS TO NetfilterQueue
-            # prevents verdict from being issues while initially processing the recvd packet
-            # TODO: determine if this is ACTUALLY needed vs dumb dumbs saying it is. adjust cfirewall as necessary
-            # pthread_mutex_lock(&NFQlock)
             # -------------------------
             # NetfilterQueue Processor
             # -------------------------
             nfq_handle_packet(nfq_h, pkt_buffer, data_len)
 
-            # pthread_mutex_unlock(&NFQlock)
-            # UNLOCKING ACCESS TO NetfilterQueue
-            # ===================================
         elif (errno != ENOBUFS):
             break
 
@@ -303,10 +284,6 @@ cdef class CPacket:
 
             return
 
-        # ===================================
-        # LOCKING ACCESS TO NetfilterQueue
-        # prevents nfq packet handler from processing a packet while setting a verdict of another packet.
-        # pthread_mutex_lock(&NFQlock)
         # -------------------------
         # NetfilterQueue Processor
         # -------------------------
@@ -323,10 +300,6 @@ cdef class CPacket:
                 verdict,
                 s.dnx_nfqhdr.len, s.dnx_nfqhdr.data
             )
-
-        # pthread_mutex_unlock(&NFQlock)
-        # UNLOCKING ACCESS TO NetfilterQueue
-        # ===================================
 
         s.has_verdict = 1
 

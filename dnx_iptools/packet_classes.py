@@ -12,7 +12,7 @@ from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import PROTO, ICMP, CONN, DIR
 from dnx_gentools.def_exceptions import ProtocolError
-from dnx_gentools.standard_tools import looper
+from dnx_gentools.standard_tools import looper, inspection_queue
 from dnx_gentools.def_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK, DNS_SEND
 
 from dnx_iptools.def_structs import *
@@ -26,6 +26,8 @@ if (TYPE_CHECKING):
     from dnx_netmods.dnx_netfilter import CPacket
     from dnx_secmods.dns_proxy import DNSServer_T
     from dnx_routines.logging import LogHandler_T
+
+    from dnx_gentools import Structure_T
 
     IntfList: TypeAlias = list[tuple[int, int, str]]
 
@@ -332,25 +334,32 @@ class ProtoRelay:
 
 
 class NFQueue:
-    _log: LogHandler_T
+    _log: ClassVar[LogHandler_T]
 
     _packet_parser:  ClassVar[ProxyParser]
     _proxy_callback: ClassVar[ProxyCallback]
 
-    __slots__ = ()
+    DEFAULT_THREAD_COUNT = 4
+
+    __slots__ = (
+        'inspection_queue',
+    )
+
+    def __init__(self):
+        self.inspection_queue = inspection_queue()
+
+        self._setup()
 
     @classmethod
-    def run(cls, log: LogHandler_T, *, q_num: int, threaded: bool = True) -> None:
+    def run(cls, log: LogHandler_T, *, q_num: int) -> None:
 
         cls._log = log
 
         log.informational(f'{cls.__class__.__name__} initialization started.')
-
         self = cls()
-        self._setup()
-        self.__queue(q_num, threaded)
-
         log.notice(f'{cls.__class__.__name__} initialization complete.')
+
+        self.__queue(q_num)
 
     def _setup(self):
         '''called prior to creating listener interface instances.
@@ -359,29 +368,25 @@ class NFQueue:
         '''
         pass
 
-    @classmethod
-    def set_proxy_callback(cls, *, func: ProxyCallback) -> None:
-        '''Takes a callback function to handle packets after parsing.
+    # @classmethod
+    # def set_proxy_callback(cls, *, func: ProxyCallback) -> None:
+    #     '''Takes a callback function to handle packets after parsing.
+    #
+    #     the reference will be called as part of the packet flow with one argument passed in for "packet".
+    #     '''
+    #     if (not callable(func)):
+    #         raise TypeError('Proxy callback must be a callable object.')
+    #
+    #     cls._proxy_callback = func
 
-        the reference will be called as part of the packet flow with one argument passed in for "packet".
-        '''
-        if (not callable(func)):
-            raise TypeError('Proxy callback must be a callable object.')
-
-        cls._proxy_callback = func
-
-    def __queue(self, q: int, /, threaded: bool) -> NoReturn:
+    def __queue(self, q: int, /) -> NoReturn:
 
         for _ in RUN_FOREVER:
             # on failure, we will reinitialize the extension to start fresh
             nfqueue = NetfilterQueue()
 
-            if (threaded):
-                nfqueue.set_proxy_callback(self.__handle_packet_threaded)
-            else:
-                nfqueue.set_proxy_callback(self.__handle_packet)
-
             nfqueue.nf_set(q)
+            nfqueue.set_proxy_callback(self.__handle_packet)
 
             self._log.notice('Starting dnx_netfilter queue. Packets will be processed shortly')
 
@@ -398,23 +403,6 @@ class NFQueue:
 
             fast_sleep(1)
 
-    def __handle_packet_threaded(self, nfqueue: CPacket, mark: int) -> None:
-        '''NFQUEUE callback where each call to the proxy callback is done in a thread.
-        '''
-        try:
-            packet: ProxyPackets = self._packet_parser(nfqueue, mark)
-        except ProtocolError:
-            nfqueue.drop()
-
-        except Exception as E:
-            nfqueue.drop()
-
-            self._log.error(f'Failed to parse CPacket. Packet discarded. > {E}')
-
-        else:
-            if self._pre_inspect(packet):
-                Thread(target=self._proxy_callback, args=(packet,)).start()
-
     def __handle_packet(self, nfqueue: CPacket, mark: int) -> None:
         '''NFQUEUE callback where each call to the proxy callback is done sequentially.
         '''
@@ -429,19 +417,7 @@ class NFQueue:
             self._log.error(f'Failed to parse CPacket. Packet discarded. > {E}')
 
         else:
-            if self._pre_inspect(packet):
-                self._proxy_callback(packet)
-
-    def _pre_inspect(self, packet: ProxyPackets) -> bool:
-        '''called after packet parsing.
-
-        used to determine the course of action for a packet.
-        nfqueue drop, accept, or repeat can be called within this scope.
-        return will be evaluated to determine whether to continue and or do nothing/ drop the packet.
-
-        May be overridden.
-        '''
-        return True
+            self.inspection_queue.add(packet)
 
 
 # TODO: see if we can decommission this class to be replaced by CPacket.
@@ -593,16 +569,16 @@ class NFPacket:
 # PROXY RESPONSE BASE CLASS
 # ==========================
 # pre-defined fields which are functionally constants for the purpose of connection resets
-ip_header_template: Structure = PR_IP_HDR(
+ip_header_template: Structure_T = PR_IP_HDR(
     (('ver_ihl', 69), ('tos', 0), ('ident', 0), ('flags_fro', 16384), ('ttl', 255), ('checksum',0))
 )
-tcp_header_template: Structure = PR_TCP_HDR(
+tcp_header_template: Structure_T = PR_TCP_HDR(
     (('seq_num', 696969), ('offset_control', 20500), ('window', 0), ('urg_ptr', 0))
 )
-pseudo_header_template: Structure = PR_TCP_PSEUDO_HDR(
+pseudo_header_template: Structure_T = PR_TCP_PSEUDO_HDR(
     (('reserved', 0), ('protocol', 6), ('tcp_len', 20))
 )
-icmp_header_template: Structure = PR_ICMP_HDR(
+icmp_header_template: Structure_T = PR_ICMP_HDR(
     (('type', 3), ('code', 3), ('unused', 0))
 )
 

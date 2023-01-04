@@ -1,10 +1,9 @@
 #!/usr/bin/env Cython
 
-from libc.string cimport memset, memcpy
-
 from libc.errno cimport *
 from libc.stdio cimport snprintf, perror, printf
 from libc.stdint cimport uint8_t, uint32_t, uint_fast16_t
+from libc.string cimport strncpy  # memset, memcpy
 
 DEF OK  = 1
 DEF ERR = 0
@@ -99,96 +98,93 @@ cpdef bytes calc_checksum(const uint8_t[:] data):
     return ubytes
 
 
-def py_ftok(unicode filepath, int id):
-    fpath = filepath.encode('utf-8')
-
-    cdef:
-        key_t   ret
-        char*   path = fpath
-
-    ret = ftok(path, id)
-    if (ret == -1):
-        return 0
-
-    return ret
-
-#define PERMS 0644
-DEF MQ_PERMISSIONS  = 0o600
-DEF MQ_MESSAGE_SIZE = 2048
-
-cdef struct mq_message:
-   long int     type
-   uint8_t      data[MQ_MESSAGE_SIZE]
-
+# ============================
+# Python Extension Types
+# ============================
+# designed to be used with pure python (no C/Cython compatibility)
+# ----------------------------
+# IPC (POSIX) - MessageQueue
+# ----------------------------
+DEF MQ_PERMISSIONS   = 0o600
+DEF MQ_MESSAGE_SIZE  = 2048
+DEF MQ_MESSAGE_LIMIT = 10  # number of total messages sitting in queue
 
 cdef class MessageQueue:
 
     cdef:
-        int     id
-        bint    ro  # flag to trigger a free for queue
+        bint      ro
+        mqd_t     id
+        int       keylen
+        char      key[32]
+
 
     def __dealloc__(self):
-
-        # owner of queue will be responsible for freeing resources
         if (not self.ro):
-            msgctl(self.id, IPC_RMID, NULL)
+            mq_unlink(self.key)
 
-#        print(f'deallocated mq with id->{self.id}')
+        mq_close(self.id)
 
-    def connect(self, int pkey):
+    def connect(self, unicode pkey):
 
-        self.id = msgget(<key_t>pkey, MQ_PERMISSIONS)
-        if (self.id == -1):
+        self.keylen = len(pkey)
+        bpkey = pkey.encode('utf-8')
+
+        cdef:
+            char*   key = bpkey
+
+        strncpy(self.key, key, self.keylen)
+
+        self.id = mq_open(self.key, O_RDONLY, 0, NULL)
+        if (<int> self.id == -1):
             perror("connect error")
-            return ERR
-
-        self.ro = True
-
-#        print('connected to mq with id->{self.id}')
-
-        return OK
-
-    def create_queue(self, int pkey):
-
-        self.id = msgget(<key_t>pkey, MQ_PERMISSIONS | IPC_CREAT)
-        if (self.id == -1):
             return ERR
 
         self.ro = False
 
-#        print(f'created mq with id->{self.id}')
+        return OK
+
+    def create_queue(self, unicode pkey):
+
+        self.keylen = len(pkey)
+        bpkey = pkey.encode('utf-8')
+
+        cdef:
+            char*   key = bpkey
+            mq_attr attr
+
+        strncpy(self.key, key, self.keylen)
+
+        attr.mq_maxmsg  = MQ_MESSAGE_LIMIT
+        attr.mq_msgsize = MQ_MESSAGE_SIZE
+
+        self.id = mq_open(self.key, O_WRONLY | O_CREAT, MQ_PERMISSIONS, &attr)
+        if (<int> self.id == -1):
+            perror("create_error")
+            return ERR
+
+        self.ro = False
 
         return OK
 
-    def send_msg(self, const uint8_t[:] data, int type):
+    def send_msg(self, const uint8_t[:] data, unsigned int prio):
         cdef:
             int         ret
-            mq_message  mq_msg
 
-            int         dlen = data.shape[0]
-
-#        print(f'sending->{&data[0]}')
-
-        mq_msg.type = type
-        memcpy(mq_msg.data, &data[0], dlen)
-
-        ret = msgsnd(self.id, &mq_msg, dlen, 0)
+        ret = mq_send(self.id, <const char*>&data[0], data.shape[0], prio)
         if (ret == -1):
             perror("send error")
             return ERR
 
         return ret
 
-    def recv_msg(self):
+    def recv_msg(self, unsigned int prio):
         cdef:
             int         ret
-            mq_message  mq_msg
+            char        data[MQ_MESSAGE_SIZE]
 
-        ret = msgrcv(self.id, &mq_msg, MQ_MESSAGE_SIZE, 0, 0)
+        ret = mq_receive(self.id, data, MQ_MESSAGE_SIZE, &prio)
         if (ret == -1):
-            perror("recv error")
+            perror("receive error")
             return ERR
 
-        print(f'received->{mq_msg.type} || {mq_msg.data[:ret]}')
-
-        return mq_msg.data[:ret]
+        return data[:ret]

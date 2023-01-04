@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+from threading import Thread
+
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import UINT16_MAX
+from dnx_gentools.def_constants import UINT16_MAX, RUN_FOREVER
 from dnx_gentools.def_enums import CONN, PROTO, Queue, DIR, GEO, REP
 from dnx_gentools.def_namedtuples import IPP_INSPECTION_RESULTS
 
 from dnx_iptools.packet_classes import NFQueue
 
 from ip_proxy_packets import IPPPacket, ProxyResponse
-from ip_proxy_restrict import LanRestrict
+# from ip_proxy_restrict import LanRestrict
 from ip_proxy_automate import ProxyConfiguration
 from ip_proxy_log import Log
 
@@ -22,63 +24,76 @@ REP_LOOKUP: Callable[[int], int] = NotImplemented  # will be assigned by __init_
 PREPARE_AND_SEND = ProxyResponse.prepare_and_send
 
 
-class IPProxy(ProxyConfiguration, NFQueue):
+class IPProxy(NFQueue, ProxyConfiguration):
 
     _packet_parser: ClassVar[ProxyParser] = IPPPacket.netfilter_recv
 
     __slots__ = ()
 
     def _setup(self) -> None:
-        self.__class__.set_proxy_callback(func=inspect)
-
         self.configure()
 
         ProxyResponse.setup(Log, self.__class__.open_ports)
         # LanRestrict.run(self.__class__)
 
-    @staticmethod
-    def forward_packet(packet: IPPPacket, direction: DIR, action: CONN) -> None:
+        for i in range(self.DEFAULT_THREAD_COUNT):
+            Thread(target=self.inspection_worker).start()
 
-        # PRE DROP FILTERS
-        # --------------------
-        # IPS/IDS FORWARD
-        # --------------------
-        # ips filter for only INBOUND traffic inspection.
-        # dropped packets still need to be processed for ddos/portscan profiling
-        # if ips profile is set on a rule for outbound traffic, it will be ignored.
-        # TODO: look into what would be needed to expand ips inspection to lan to wan or lan to lan rules.
-        if (packet.ips_profile and direction is DIR.INBOUND):
-            packet.nfqueue.update_mark(packet.mark & UINT16_MAX)
+    def inspection_worker(self):
+        for _ in RUN_FOREVER:
+            packet = self.inspection_queue.get()
 
-            packet.nfqueue.forward(Queue.IPS_IDS)
+            results = inspect(packet)
 
-        # ====================
-        # IP PROXY DROP
-        # ====================
-        # no other security modules configured on rule and failed ip proxy inspection
-        elif (action is CONN.DROP):
-            packet.nfqueue.drop()
+            forward_packet(packet, packet.direction, results.action)
 
-        # POST DROP FILTERS
-        # --------------------
-        # DNS PROXY FORWARD
-        # --------------------
-        elif (packet.dns_profile and packet.protocol is PROTO.UDP and packet.dst_port == PROTO.DNS):
-            packet.nfqueue.forward(Queue.DNS_PROXY)
+            if (results.action is CONN.REJECT):
+                PREPARE_AND_SEND(packet)
 
-        # ====================
-        # IP PROXY ACCEPT
-        # ====================
-        # no other security modules configured on rule and passed ip proxy inspection
-        elif (action is CONN.ACCEPT):
-            packet.nfqueue.accept()
+            Log.log(packet, results)
+
+# =================
+# FORWARDING LOGIC
+# =================
+def forward_packet(packet: IPPPacket, direction: DIR, action: CONN) -> None:
+    # PRE DROP FILTERS
+    # --------------------
+    # IPS/IDS FORWARD
+    # --------------------
+    # ips filter for only INBOUND traffic inspection.
+    # dropped packets still need to be processed for ddos/portscan profiling
+    # if ips profile is set on a rule for outbound traffic, it will be ignored.
+    # TODO: look into what would be needed to expand ips inspection to lan to wan or lan to lan rules.
+    if (packet.ips_profile and direction is DIR.INBOUND):
+        packet.nfqueue.update_mark(packet.mark & UINT16_MAX)
+
+        packet.nfqueue.forward(Queue.IPS_IDS)
+
+    # ====================
+    # IP PROXY DROP
+    # ====================
+    # no other security modules configured on rule and failed ip proxy inspection
+    elif (action is CONN.DROP):
+        packet.nfqueue.drop()
+
+    # POST DROP FILTERS
+    # --------------------
+    # DNS PROXY FORWARD
+    # --------------------
+    elif (packet.dns_profile and packet.protocol is PROTO.UDP and packet.dst_port == PROTO.DNS):
+        packet.nfqueue.forward(Queue.DNS_PROXY)
+
+    # ====================
+    # IP PROXY ACCEPT
+    # ====================
+    # no other security modules configured on rule and passed ip proxy inspection
+    elif (action is CONN.ACCEPT):
+        packet.nfqueue.accept()
 
 
 # =================
 # INSPECTION LOGIC
 # =================
-FORWARD_PACKET = IPProxy.forward_packet
-
 # direct references to proxy class data structure methods
 _reputation_settings = IPProxy.reputation_settings
 _reputation_enabled  = IPProxy.reputation_enabled
@@ -87,20 +102,7 @@ _geolocation_settings = IPProxy.geolocation_settings
 
 _tor_whitelist = IPProxy.tor_whitelist
 
-def inspect(_, packet: IPPPacket) -> None:
-
-    results = _inspect(packet)
-
-    FORWARD_PACKET(packet, packet.direction, results.action)
-
-    # RECENTLY MOVED: thought it more fitting here than in the forward method
-    # if tcp or udp, we will send a kill conn packet.
-    if (results.action is CONN.REJECT):
-        PREPARE_AND_SEND(packet)
-
-    Log.log(packet, results)
-
-def _inspect(packet: IPPPacket) -> IPP_INSPECTION_RESULTS:
+def inspect(packet: IPPPacket) -> IPP_INSPECTION_RESULTS:
     action = CONN.ACCEPT
     reputation = REP.DNL
 

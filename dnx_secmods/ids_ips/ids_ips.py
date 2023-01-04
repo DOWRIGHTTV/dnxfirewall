@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import threading
+from threading import Lock, Thread
 
 from copy import copy
 from collections import defaultdict
@@ -11,9 +11,11 @@ from collections import defaultdict
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import *
 from dnx_gentools.def_namedtuples import IPS_SCAN_RESULTS, DDOS_TRACKERS, PSCAN_TRACKERS
-from dnx_iptools.iptables import IPTablesManager
+from dnx_gentools.standard_tools import inspection_queue
 
+from dnx_iptools.iptables import IPTablesManager
 from dnx_iptools.packet_classes import NFQueue
+
 from dnx_secmods.ids_ips.ids_ips_automate import IPSConfiguration
 from dnx_secmods.ids_ips.ids_ips_packets import IPSPacket, IPSResponse
 
@@ -28,18 +30,42 @@ PORTSCAN_THRESHOLD = 4
 PREPARE_AND_SEND = IPSResponse.prepare_and_send
 
 
-class IPS_IDS(IPSConfiguration, NFQueue):
+class IPS_IDS(NFQueue, IPSConfiguration):
 
     _packet_parser = IPSPacket.netfilter_recv
 
     __slots__ = ()
 
-    def _setup(self):
-        self.__class__.set_proxy_callback(func=inspect_portscan)
+    def __init__(self):
+        super().__init__()
 
+        self.ddos_queue = inspection_queue()
+
+    def _setup(self):
         self.configure()
 
         IPSResponse.setup(Log, self.__class__.open_ports)
+
+        for i in range(self.DEFAULT_THREAD_COUNT):
+            Thread(target=self.inspection_worker).start()
+
+        for i in range(self.DEFAULT_THREAD_COUNT):
+            Thread(target=self.ddos_worker).start()
+
+    def inspection_worker(self):
+        for _ in RUN_FOREVER:
+            packet = self.inspection_queue.get()
+
+            if not self._pre_inspect(packet):
+                continue
+
+            inspect_portscan(packet)
+
+    def ddos_worker(self):
+        for _ in RUN_FOREVER:
+            packet = self.ddos_queue.get()
+
+            inspect_ddos(packet)
 
     def _pre_inspect(self, packet: IPSPacket) -> bool:
         # permit configured whitelisted hosts (source ip check only)
@@ -50,7 +76,7 @@ class IPS_IDS(IPSConfiguration, NFQueue):
 
         if (self.ddos_enabled):
             # ddos inspection is independent of pscan and does not invoke action on packets
-            threading.Thread(target=inspect_ddos, args=(packet,)).start()
+            self.ddos_queue.add(packet)
 
         if (self.pscan_enabled and self.open_ports[packet.protocol]):
             return True
@@ -72,16 +98,16 @@ class IPS_IDS(IPSConfiguration, NFQueue):
 # conserves resources by not sending packets that don't need to be checked or logged under normal conditions.
 # TODO: ensure trackers are getting cleaned of timed out records at some set interval.
 pscan_tracker: dict[PROTO, PSCAN_TRACKERS] = {
-    proto: PSCAN_TRACKERS(threading.Lock(), {}) for proto in [PROTO.TCP, PROTO.UDP]
+    proto: PSCAN_TRACKERS(Lock(), {}) for proto in [PROTO.TCP, PROTO.UDP]
 }
 ddos_tracker: dict[PROTO, DDOS_TRACKERS] = {
-    proto: DDOS_TRACKERS(threading.Lock(), {}) for proto in [PROTO.TCP, PROTO.UDP, PROTO.ICMP]
+    proto: DDOS_TRACKERS(Lock(), {}) for proto in [PROTO.TCP, PROTO.UDP, PROTO.ICMP]
 }
 
 # =================
 # PSCAN INSPECTION
 # =================
-def inspect_portscan(_, packet: IPSPacket) -> None:
+def inspect_portscan(packet: IPSPacket) -> None:
     '''drives the overall logic of the portscan detection engine.
     '''
     pscan = pscan_tracker[packet.protocol]

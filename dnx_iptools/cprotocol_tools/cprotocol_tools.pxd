@@ -8,6 +8,15 @@ cdef extern from "netinet/in.h":
     uint32_t htonl (uint32_t __hostlong) nogil
     uint16_t htons (uint16_t __hostshort) nogil
 
+cdef extern from '<fcntl.h>':
+    enum:
+        O_CREAT
+        O_EXCL
+
+        O_RDONLY
+        O_WRONLY
+        O_RDWR
+
 cdef extern from '<arpa/inet.h>':
     ctypedef unsigned long in_addr_t
 
@@ -16,24 +25,19 @@ cdef extern from '<arpa/inet.h>':
 
     in_addr_t inet_addr(char *cp)
 
-cdef extern from '<sys/ipc.h>':
-    enum:
-        IPC_CREAT   # Create entry if key does not exist.
-        IPC_EXCL    # Fail if key exists.
-        IPC_NOWAIT  # Error if request must wait.
+ctypedef int mode_t
 
-        IPC_PRIVATE # Private key.
+cdef extern from '<mqueue.h>':
+    ctypedef void* mqd_t
 
-        IPC_RMID    # Remove identifier.
-        IPC_SET     # Set options.
-        IPC_STAT    # Get options.
+    struct mq_attr:
+        long int mq_flags
+        long int mq_maxmsg
+        long int mq_msgsize
+        long int mq_curmsgs
 
-    ctypedef short int key_t
-
-    key_t  ftok(const char*, int)
-
-cdef extern from '<sys/msg.h>':
-    int       msgctl(int a, int b, void* c)
-    int       msgget(key_t a, int b)
-    ssize_t   msgrcv(int a, void* b, size_t c, long int d, int e)
-    int       msgsnd(int a, const void* b, size_t c, int d)
+    mqd_t   mq_open(const char *name, int oflag, mode_t mode, mq_attr *attr)
+    int     mq_close(mqd_t mqdes)
+    int     mq_send(mqd_t mqdes, const char *msg_ptr, size_t msg_len, unsigned int msg_prio)
+    ssize_t mq_receive(mqd_t mqdes, char *msg_ptr, size_t msg_len, unsigned int *msg_prio)
+    int     mq_unlink(const char *name)
