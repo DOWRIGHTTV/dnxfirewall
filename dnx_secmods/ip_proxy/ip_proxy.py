@@ -37,9 +37,11 @@ class IPProxy(ProxyConfiguration, NFQueue):
         # LanRestrict.run(self.__class__)
 
         for i in range(self.DEFAULT_THREAD_COUNT):
-            Thread(target=self.inspection_worker).start()
+            Thread(target=self.inspection_worker, args=(i,)).start()
 
-    def inspection_worker(self):
+    def inspection_worker(self, i: int) -> NoReturn:
+        Log.informational(f'[proxy/worker][{i}] inspection thread started')
+
         for _ in RUN_FOREVER:
             packet = self.inspection_queue.get()
 

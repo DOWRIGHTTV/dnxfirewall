@@ -7,7 +7,7 @@ from threading import Lock, Thread
 from copy import copy
 from collections import defaultdict
 
-# from dnx_gentools.def_typing import *
+from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import *
 from dnx_gentools.def_namedtuples import IPS_SCAN_RESULTS, DDOS_TRACKERS, PSCAN_TRACKERS
@@ -47,25 +47,10 @@ class IPS_IDS(IPSConfiguration, NFQueue):
         IPSResponse.setup(Log, self.__class__.open_ports)
 
         for i in range(self.DEFAULT_THREAD_COUNT):
-            Thread(target=self.inspection_worker).start()
+            Thread(target=self.inspection_worker, args=(i,)).start()
 
         for i in range(self.DEFAULT_THREAD_COUNT):
-            Thread(target=self.ddos_worker).start()
-
-    def inspection_worker(self):
-        for _ in RUN_FOREVER:
-            packet = self.inspection_queue.get()
-
-            if not self._pre_inspect(packet):
-                continue
-
-            inspect_portscan(packet)
-
-    def ddos_worker(self):
-        for _ in RUN_FOREVER:
-            packet = self.ddos_queue.get()
-
-            inspect_ddos(packet)
+            Thread(target=self.ddos_worker, args=(i,)).start()
 
     def _pre_inspect(self, packet: IPSPacket) -> bool:
         # permit configured whitelisted hosts (source ip check only)
@@ -90,6 +75,24 @@ class IPS_IDS(IPSConfiguration, NFQueue):
             packet.nfqueue.drop()
 
         return False
+
+    def inspection_worker(self, i: int) -> NoReturn:
+        Log.informational(f'[pscan/worker][{i}] inspection thread started')
+
+        for _ in RUN_FOREVER:
+            packet = self.inspection_queue.get()
+
+            if not self._pre_inspect(packet):
+                continue
+
+            inspect_portscan(packet)
+
+    def ddos_worker(self, i: int) -> NoReturn:
+        Log.informational(f'[ddos/worker][{i}] inspection thread started')
+        for _ in RUN_FOREVER:
+            packet = self.ddos_queue.get()
+
+            inspect_ddos(packet)
 
 
 # =================
