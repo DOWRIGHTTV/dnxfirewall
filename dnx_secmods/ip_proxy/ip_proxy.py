@@ -24,7 +24,7 @@ REP_LOOKUP: Callable[[int], int] = NotImplemented  # will be assigned by __init_
 PREPARE_AND_SEND = ProxyResponse.prepare_and_send
 
 
-class IPProxy(NFQueue, ProxyConfiguration):
+class IPProxy(ProxyConfiguration, NFQueue):
 
     _packet_parser: ClassVar[ProxyParser] = IPPPacket.netfilter_recv
 

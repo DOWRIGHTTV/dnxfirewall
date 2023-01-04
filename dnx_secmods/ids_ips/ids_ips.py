@@ -30,7 +30,7 @@ PORTSCAN_THRESHOLD = 4
 PREPARE_AND_SEND = IPSResponse.prepare_and_send
 
 
-class IPS_IDS(NFQueue, IPSConfiguration):
+class IPS_IDS(IPSConfiguration, NFQueue):
 
     _packet_parser = IPSPacket.netfilter_recv
 

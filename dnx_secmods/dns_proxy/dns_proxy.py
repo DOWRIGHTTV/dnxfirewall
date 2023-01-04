@@ -31,7 +31,7 @@ PREPARE_AND_SEND = ProxyResponse.prepare_and_send
 #   ProxyConfiguration - provides config management between memory and filesystem
 #   NFQueue - provides packet data from Linux Netfilter NFQUEUE sub-system
 # =====================
-class DNSProxy(NFQueue, ProxyConfiguration):
+class DNSProxy(ProxyConfiguration, NFQueue):
 
     _packet_parser: ClassVar[ProxyParser] = DNSPacket.netfilter_recv
 
