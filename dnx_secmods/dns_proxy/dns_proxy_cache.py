@@ -50,9 +50,8 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache:
 
         request_queue (*reference to dns server request queue*)
     '''
-    # note: expect "self" as first arg, so we will have to fudge it
-    # see if we can get away with not initializing nonlocal var.
-    request_queue_insert: Callable[[int, ClientQuery], None]  # = None
+    # will be set through class as nonlocal
+    request_queue_insert: Callable[[ClientQuery], None]
 
     _top_domains: list = load_configuration('dns_server', ext='cache', cfg_type='global').get('top_domains')
 
@@ -134,8 +133,7 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache:
         # response will be identified by "None" for client address
         for domain in top_domains:
 
-            # first arg is to fulfill "self" positional arg
-            request_queue_insert(1, dns_packet(domain))
+            request_queue_insert(dns_packet(domain))
             fast_sleep(.1)
 
         Log.debug('expired records cleared from cache and top domains refreshed')

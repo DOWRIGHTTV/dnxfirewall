@@ -332,7 +332,7 @@ def request_queue():
 
     class _RequestQueue:
 
-        def return_ready(self) -> ClientQuery:
+        def return_ready(self) -> ListenerPackets:
             '''function generator returning requests from queue in FIFO order.
 
             calls will block if the queue is empty and will never time out.
@@ -349,7 +349,7 @@ def request_queue():
                 yield request_queue_get()
 
         # NOTE: first arg is because this gets referenced/called via an instance.
-        def insert(self, client_query: ClientQuery) -> None:
+        def insert(self, client_query: ListenerPackets) -> None:
 
             request_queue_append(client_query)
 

@@ -101,8 +101,7 @@ def pre_inspect(packet: DNSPacket) -> bool:
     return DONT_INSPECT_PACKET
 
 
-# this is where the system decides whether to block dns query/sinkhole or to allow. notification will be done
-# via the request tracker upon returning the signature scan result
+# this is where the system decides whether to block dns query/sinkhole or to allow.
 def inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
     # NOTE: request_ident[0] is a string representation of ip addresses. this is currently needed as the whitelists
     #  are stored in this format and we have since moved away from this format on the back end.
@@ -112,7 +111,7 @@ def inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
     enum_categories = []
 
     # TLD (top level domain) block
-    # dns whitelist does not override tld blocks at the moment. this is most likely the desired setup
+    # url whitelist does not override tld blocks at the moment.
     if _tld_get(packet.tld):
 
         return DNS_REQUEST_RESULTS(True, 'tld filter', TLD_CAT[packet.tld])
