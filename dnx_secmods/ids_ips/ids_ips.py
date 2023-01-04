@@ -314,6 +314,8 @@ def threshold_exceeded(tracked_ip, packet):
     return True
 
 def add_to_tracker(tracker, packet, *, engine):
+    Log.debug(f'[{engine}/tracker] host {packet.tracked_ip} added.')
+
     if (engine is IPS.PORTSCAN):
         tracker[packet.tracked_ip] = {
             'last_seen': packet.timestamp, 'active_scanner': False,
