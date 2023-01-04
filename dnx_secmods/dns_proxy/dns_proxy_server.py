@@ -102,9 +102,8 @@ class DNSServer(ServerConfiguration, Listener):
         UDPRelay.run(self.__class__)
         TLSRelay.run(self.__class__, fallback_relay=UDPRelay.relay)
 
-        # NOTE: A/NS records are supported only. consider expanding
-
     def _pre_inspect(self, client_query: ClientQuery) -> bool:
+        # NOTE: A/NS records are supported only. consider expanding
         if (client_query.qr != DNS.QUERY or client_query.qtype not in [DNS.A, DNS.NS]):
             return False
 

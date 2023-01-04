@@ -165,6 +165,7 @@ class ClientQuery:
         self.qname = qname
         self.qtype = 1
 
+        self.qr = 0
         self.rd = DNS_MASK.RD
         self.ad = DNS_MASK.AD
         self.cd = DNS_MASK.CD
