@@ -105,8 +105,9 @@ function updateRule() {
 
     col[2].innerHTML = `[*]${ruleEditor.querySelector(".ename").value}`;
 
-    col[9].innerHTML  = ruleEditor.querySelectorAll(".eaction")[0].checked ? "drop" : "accept"
-    col[10].innerHTML = ruleEditor.querySelectorAll(".elog")[0].checked ? "off" : "on"
+    {# eaction[1] is accept radio btn #}
+    col[9].innerHTML  = ruleEditor.querySelectorAll(".eaction")[1].checked ? "accept" : "drop";
+    col[10].innerHTML = ruleEditor.querySelectorAll(".elog")[0].checked ? "on" : "off";
     col[11].innerHTML = ruleEditor.querySelector(".esec1_prof").value;
     col[12].innerHTML = ruleEditor.querySelector(".esec2_prof").value;
     col[13].innerHTML = ruleEditor.querySelector(".esec3_prof").value;
