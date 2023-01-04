@@ -20,7 +20,6 @@ __all__ = (
     'IPProxy',
 )
 
-REP_LOOKUP: Callable[[int], int] = NotImplemented  # will be assigned by __init__ prior to running
 PREPARE_AND_SEND = ProxyResponse.prepare_and_send
 
 
@@ -42,8 +41,10 @@ class IPProxy(ProxyConfiguration, NFQueue):
     def inspection_worker(self, i: int) -> NoReturn:
         Log.informational(f'[proxy/worker][{i}] inspection thread started')
 
+        inspection_queue_get = self.inspection_queue.get
+
         for _ in RUN_FOREVER:
-            packet = self.inspection_queue.get()
+            packet = inspection_queue_get()
 
             results = inspect(packet)
 
@@ -69,7 +70,7 @@ def forward_packet(packet: IPPPacket, direction: DIR, action: CONN) -> None:
     if (packet.ips_profile and direction is DIR.INBOUND):
         packet.nfqueue.update_mark(packet.mark & UINT16_MAX)
 
-        packet.nfqueue.forward(Queue.IPS_IDS)
+        packet.nfqueue.forward(Queue.IDS_IPS)
 
     # ====================
     # IP PROXY DROP
@@ -96,6 +97,9 @@ def forward_packet(packet: IPPPacket, direction: DIR, action: CONN) -> None:
 # =================
 # INSPECTION LOGIC
 # =================
+# assigned by __init__ prior to running
+REP_LOOKUP: Callable[[int], int] = NotImplemented
+
 # direct references to proxy class data structure methods
 _reputation_settings = IPProxy.reputation_settings
 _reputation_enabled  = IPProxy.reputation_enabled

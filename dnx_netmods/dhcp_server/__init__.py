@@ -23,10 +23,10 @@ def run():
 # ================
 # TYPING IMPORTS
 # ================
-from typing import TYPE_CHECKING, Type
+from typing import TYPE_CHECKING
 
 if (TYPE_CHECKING):
-    from typing import TypeAlias
+    from typing import Type, TypeAlias
 
     __all__ = (
         'DHCPServer', 'Leases',

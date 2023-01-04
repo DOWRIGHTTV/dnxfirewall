@@ -12,14 +12,14 @@ if INITIALIZE_MODULE('ips-ids'):
 
     from dnx_gentools.def_enums import Queue
 
-    from ids_ips import IPS_IDS
+    from ids_ips import IDS_IPS
     from ids_ips_log import Log
 
     Log.run(name='ips')
 
 
 def run():
-    IPS_IDS.run(Log, q_num=Queue.IPS_IDS)
+    IDS_IPS.run(Log, q_num=Queue.IDS_IPS)
 
 
 # ================
@@ -31,17 +31,17 @@ if (TYPE_CHECKING):
     from typing import TypeAlias
 
     __all__ = (
-        'IPS_IDS', 'IPSPacket',
+        'IDS_IPS', 'IPSPacket',
 
         # TYPES
-        'IPS_IDS_T', 'IPSPacket_T'
+        'IDS_IPS_T', 'IPSPacket_T'
     )
 
-    from ids_ips import IPS_IDS
+    from ids_ips import IDS_IPS
     from ids_ips_packets import IPSPacket
 
     # ======
     # TYPES
     # ======
-    IPS_IDS_T:   TypeAlias = Type[IPS_IDS]
+    IDS_IPS_T:   TypeAlias = Type[IDS_IPS]
     IPSPacket_T: TypeAlias = Type[IPSPacket]

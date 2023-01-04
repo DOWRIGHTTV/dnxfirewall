@@ -12,7 +12,7 @@ from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import PROTO, ICMP, CONN, DIR
 from dnx_gentools.def_exceptions import ProtocolError
-from dnx_gentools.standard_tools import looper, inspection_queue
+from dnx_gentools.standard_tools import looper, request_queue, inspection_queue
 from dnx_gentools.def_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK, DNS_SEND
 
 from dnx_iptools.def_structs import *
@@ -37,19 +37,24 @@ __all__ = (
 
 
 class Listener:
-    __registered_socks: dict[int, L_SOCK] = {}
-    __epoll: Epoll = select.epoll()
+    __registered_socks: ClassVar[dict[int, L_SOCK]] = {}
+    __epoll: ClassVar[Epoll] = select.epoll()
 
-    _intfs: IntfList = load_interfaces(exclude=['wan'])
-    _log:   LogHandler_T = None
+    _intfs: ClassVar[IntfList] = load_interfaces(exclude=['wan'])
+    _log:   ClassVar[LogHandler_T] = None
 
-    _listener_parser:   ListenerParser
-    _listener_callback: ListenerCallback
+    _listener_parser:   ClassVar[ListenerParser]
+    _listener_callback: ClassVar[ListenerCallback]
 
     # stored as file descriptors to minimize lookups in listener queue.
     enabled_intfs: set[int] = set()
 
-    __slots__ = ()
+    __slots__ = (
+        'request_queue',
+    )
+
+    def __init__(self):
+        self.request_queue = request_queue()
 
     @classmethod
     def run(cls, log: LogHandler_T, *, threaded: bool = True, always_on: bool = False) -> None:
@@ -64,7 +69,6 @@ class Listener:
         # ======================
         # INITIALIZING LISTENER
         # ======================
-        # running main epoll/ socket loop.
         listener = cls()
         listener._setup()
 
@@ -74,6 +78,7 @@ class Listener:
         for intf in cls._intfs:
             Thread(target=listener.__register, args=(intf,)).start()
 
+        # running main epoll/ socket loop.
         listener.__run_listener(always_on, threaded)
 
     @classmethod
@@ -96,14 +101,14 @@ class Listener:
         try:
             cls.enabled_intfs.remove(sock_fd)
         except KeyError:
-            pass
+            return
 
         cls._log.notice(f'[{sock_fd}][{intf}] {cls.__name__} listener disabled.')
 
     # TODO: what happens if interface comes online, then immediately gets unplugged. the registration would fail
     #  potentially and would no longer be active so it would never happen if the interface was replugged after.
     def __register(self, intf: tuple[int, int, str]) -> None:
-        '''will register interface with the listener.
+        '''registers an interface with the listener.
 
         once registration is complete the thread will exit.
         '''
@@ -126,16 +131,6 @@ class Listener:
 
         self._log.informational(f'[{l_sock.fileno()}][{intf}] {self.__class__.__name__} interface registered.')
 
-    @classmethod
-    def set_proxy_callback(cls, *, func: ProxyCallback) -> None:
-        '''takes a callback function to handle packets after parsing. the reference will be called
-        as part of the packet flow with one argument passed in for "packet".
-        '''
-        if (not callable(func)):
-            raise TypeError('proxy callback must be a callable object.')
-
-        cls._listener_callback: ProxyCallback = func
-
     def _setup(self):
         '''called prior to creating listener interface instances.
 
@@ -148,11 +143,10 @@ class Listener:
         # assigning all attrs as a local var for perf
         epoll_poll = self.__epoll.poll
         registered_socks_get = self.__registered_socks.get
+        request_queue_insert = self.request_queue.insert
 
         # methods
         listener_parser   = self._listener_parser
-        listener_callback = self._listener_callback
-        pre_inspect = self._pre_inspect
 
         # flags
         enabled_intfs = self.enabled_intfs
@@ -186,14 +180,7 @@ class Listener:
                         traceback.print_exc()
                         continue
 
-                    # referring to child class for whether to continue processing the packet
-                    if not pre_inspect(packet):
-                        continue
-
-                    if (threaded):
-                        Thread(target=listener_callback, args=(packet,)).start()
-                    else:
-                        listener_callback(packet)
+                    request_queue_insert(packet)
 
                 else:
                     self._log.debug(f'recv on fd: {fd} | enabled ints: {self.enabled_intfs}')

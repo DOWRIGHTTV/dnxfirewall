@@ -5,8 +5,8 @@ from __future__ import annotations
 from threading import Thread
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import RUN_FOREVER
-from dnx_gentools.def_enums import DNS, DNS_CAT, TLD_CAT, CONN
+from dnx_gentools.def_constants import RUN_FOREVER, INSPECT_PACKET, DONT_INSPECT_PACKET
+from dnx_gentools.def_enums import DNS, DNS_CAT, TLD_CAT
 from dnx_gentools.def_namedtuples import DNS_REQUEST_RESULTS
 
 from dnx_iptools.packet_classes import NFQueue
@@ -20,9 +20,6 @@ __all__ = (
     'DNSProxy',
 )
 
-
-CAT_LOOKUP: Callable[[int], int] = NotImplemented  # will be assigned by __init__ prior to running
-LOCAL_RECORD: Callable[[str], ...] = DNSServer.dns_records.get
 PREPARE_AND_SEND = ProxyResponse.prepare_and_send
 
 # =====================
@@ -48,9 +45,12 @@ class DNSProxy(ProxyConfiguration, NFQueue):
     def inspection_worker(self, i: int) -> NoReturn:
         Log.informational(f'[proxy/worker][{i}] inspection thread started')
 
-        for _ in RUN_FOREVER:
-            packet = self.inspection_queue.get()
+        inspection_queue_get = self.inspection_queue.get
 
+        for _ in RUN_FOREVER:
+            packet = inspection_queue_get()
+
+            # fast path for certain conditions
             if not pre_inspect(packet):
                 continue
 
@@ -70,6 +70,10 @@ class DNSProxy(ProxyConfiguration, NFQueue):
 # =================
 # INSPECTION LOGIC
 # =================
+# will be assigned by __init__ prior to running
+CAT_LOOKUP: Callable[[int], int] = NotImplemented
+LOCAL_RECORD: Callable[[str], ...] = DNSServer.dns_records.get
+
 # direct references to proxy class data structure methods
 _ip_whitelist_get = DNSProxy.whitelist.ip.get
 _tld_get = DNSProxy.signatures.tld.get
@@ -79,7 +83,6 @@ _dns_whitelist = DNSProxy.whitelist.dns
 _dns_blacklist = DNSProxy.blacklist.dns
 _dns_keywords  = DNSProxy.signatures.keyword
 
-
 # pre-check will filter out invalid packets, ipv6 records, and local dns records
 def pre_inspect(packet: DNSPacket) -> bool:
     # local records will continue directly to the dns server
@@ -87,7 +90,7 @@ def pre_inspect(packet: DNSPacket) -> bool:
         packet.nfqueue.accept()
 
     elif (packet.qtype in [DNS.A, DNS.NS]):
-        return True
+        return INSPECT_PACKET
 
     # refusing ipv6 dns record types as policy
     elif (packet.qtype == DNS.AAAA):
@@ -95,7 +98,7 @@ def pre_inspect(packet: DNSPacket) -> bool:
 
         packet.nfqueue.drop()
 
-    return False
+    return DONT_INSPECT_PACKET
 
 
 # this is where the system decides whether to block dns query/sinkhole or to allow. notification will be done

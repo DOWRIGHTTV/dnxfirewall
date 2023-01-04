@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from socket import SOL_SOCKET, SO_BROADCAST, SO_BINDTODEVICE, SO_REUSEADDR
 
 from dnx_gentools.def_typing import *
@@ -33,19 +34,20 @@ RECORD_NOT_NEEDED: list[DHCP] = [DHCP.NOT_SET, DHCP.DROP, DHCP.NAK]
 
 
 class DHCPServer(ServerConfiguration, Listener):
-    _ongoing: dict[RequestID, ServerResponse] = {}
-    _listener_parser: ClientRequest_T = ClientRequest
+    _ongoing: ClassVar[dict[RequestID, ServerResponse]] = {}
+    _listener_parser: ClassVar[ClientRequest_T] = ClientRequest
 
     __slots__ = ()
 
     def _setup(self):
-        self.__class__.set_proxy_callback(func=self.__class__.handle_dhcp)
 
         self.configure(self.__class__)
 
-        # so we don't need to import/ hardcore the server class reference.
+        # so we don't need to import/ hardcode the server class reference.
         ClientRequest.set_server_reference(self.__class__)
         ServerResponse.set_server_reference(self.__class__)
+
+        threading.Thread(target=self.request_handler).start()
 
     def _pre_inspect(self, packet: ClientRequest) -> bool:
         if (packet.mtype in VALID_MTYPES and packet.svr_ident in self.valid_idents):
@@ -53,12 +55,22 @@ class DHCPServer(ServerConfiguration, Listener):
 
         return False
 
-    def handle_dhcp(self, client_request: ClientRequest):
-        '''pseudo alternate constructor acting as a callback for the Parent/Listener class.
+    def request_handler(self) -> NoReturn:
+        return_ready = self.request_queue.return_ready
+        pre_inspection = self._pre_inspect
+        handle_dhcp = self.handle_dhcp
 
-        the call will not return the created instance, instead, it will internally manage the instance and ensure the
-        request gets handled.
-        '''
+        for _ in RUN_FOREVER:
+
+            for client_request in return_ready():
+
+                # fast path for certain conditions
+                if not pre_inspection(client_request):
+                    continue
+
+                handle_dhcp(client_request)
+
+    def handle_dhcp(self, client_request: ClientRequest) -> None:
         request_id: RequestID = (client_request.mac, client_request.xID)
 
         server_mtype = DHCP.NOT_SET

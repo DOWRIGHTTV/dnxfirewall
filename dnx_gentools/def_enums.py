@@ -162,7 +162,7 @@ class QueueType(_IntEnum):
 class Queue(_IntEnum):
     IP_PROXY  = 1
     DNS_PROXY = 2
-    IPS_IDS   = 3
+    IDS_IPS   = 3
     CFIREWALL = 69
     CNAT      = 70
 

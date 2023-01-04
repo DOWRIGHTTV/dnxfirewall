@@ -4,4 +4,4 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 if (TYPE_CHECKING):
-    from dnx_gentools.standard_tools import InspectionQueue_T, Structure_T, ByteContainer_T
+    from dnx_gentools.standard_tools import RequestQueue_T, InspectionQueue_T, Structure_T, ByteContainer_T

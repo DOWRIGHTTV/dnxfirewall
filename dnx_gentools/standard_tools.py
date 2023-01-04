@@ -315,7 +315,61 @@ def dnx_queue(log: LogHandler_T, name: str = None) -> Callable[[...], Any]:
 
     return decorator
 
+def request_queue():
+    '''basic queueing mechanism for DNS requests received by the server.
+
+    alternate [Event based] version to the "InspectionQueue" mechanism used by the security modules.
+    optimized for single thread performance.
+    '''
+    request_queue = deque()
+    request_queue_append = request_queue.append
+    request_queue_get = request_queue.popleft
+
+    request_ready = threading.Event()
+    wait_for_request = request_ready.wait
+    notify_ready = request_ready.set
+    clear_ready = request_ready.clear
+
+    class _RequestQueue:
+
+        def return_ready(self) -> ClientQuery:
+            '''function generator returning requests from queue in FIFO order.
+
+            calls will block if the queue is empty and will never time out.
+            '''
+            # blocking until at least one request has been received
+            wait_for_request()
+
+            # immediately clearing event, so we don't have to worry about it after loop. this prevents having to deal
+            # with scenarios where a request was received in just after while loop, but just before reset. in this case
+            # the request would be stuck until another was received.
+            clear_ready()
+
+            while request_queue:
+                yield request_queue_get()
+
+        # NOTE: first arg is because this gets referenced/called via an instance.
+        def insert(self, client_query: ClientQuery) -> None:
+
+            request_queue_append(client_query)
+
+            # notifying return_ready that there is a query ready to forward
+            notify_ready()
+
+    if (TYPE_CHECKING):
+        return _RequestQueue
+
+    return _RequestQueue()
+
 def inspection_queue():
+    '''thread safe (using semaphores) packet queue to allow for more efficient packet processing by
+    the system modules.
+
+    1 worker can be used for sequential processing of packets
+            - see "RequestQueue" for an alternative to this
+    >1 worker will allow packets to be processed concurrently
+            - performance of threads will depend on ratio of holding gil to not holding gil
+    '''
 
     queue = deque()
     queue_add = queue.append
@@ -326,13 +380,6 @@ def inspection_queue():
     wait_for_job = sem.acquire
 
     class _InspectionQueue:
-        '''thread safe (using semaphores) packet queue to allow for more efficient packet processing by
-        the system modules.
-
-        1 worker can be used for sequential processing of packets
-        >1 worker will allow packets to be processed concurrently
-                - performance of threads will depend on ratio of holding gil to not holding gil
-        '''
 
         def add(self, job: ProxyPackets) -> None:
             '''place packet into inspection queue for processing.
@@ -575,8 +622,9 @@ class classproperty:
 
 # TYPE EXPORTS
 if (TYPE_CHECKING):
+    RequestQueue_T: TypeAlias = request_queue()
     InspectionQueue_T: TypeAlias = inspection_queue()
     Structure_T: TypeAlias       = structure('Structure', '')
     ByteContainer_T: TypeAlias   = bytecontainer('ByteContainer', '')
 
-    __all__.extend(['InspectionQueue_T', 'Structure_T', 'ByteContainer_T'])
+    __all__.extend(['RequestQueue_T', 'InspectionQueue_T', 'Structure_T', 'ByteContainer_T'])
