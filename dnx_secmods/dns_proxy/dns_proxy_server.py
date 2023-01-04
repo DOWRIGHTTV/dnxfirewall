@@ -103,9 +103,13 @@ class DNSServer(ServerConfiguration, Listener):
         TLSRelay.run(self.__class__, fallback_relay=UDPRelay.relay)
 
     def _pre_inspect(self, client_query: ClientQuery) -> bool:
+        # this filter is required with new request queue api
+        if (client_query.top_domain):
+            return INSPECT_PACKET
+
         # NOTE: A/NS records are supported only. consider expanding
         if (client_query.qr != DNS.QUERY or client_query.qtype not in [DNS.A, DNS.NS]):
-            return False
+            return DONT_INSPECT_PACKET
 
         record_ip: int = self._dns_records_get(client_query.qname)
 
@@ -114,13 +118,13 @@ class DNSServer(ServerConfiguration, Listener):
             query_response = client_query.generate_record_response(record_ip)
             send_to_client(client_query, query_response)
 
-            return False
+            return DONT_INSPECT_PACKET
 
         # if the domain is local (no tld) and it was not in local records, then we can ignore.
         elif (client_query.local_domain):
-            return False
+            return DONT_INSPECT_PACKET
 
-        return True
+        return INSPECT_PACKET
 
     def _listener_sock(self, intf: str, intf_ip: int) -> Socket:
         l_sock: Socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -144,7 +148,7 @@ class DNSServer(ServerConfiguration, Listener):
             for client_query in return_ready():
 
                 # fast path for certain conditions
-                if not pre_inspection(client_query):
+                if pre_inspection(client_query) == DONT_INSPECT_PACKET:
                     continue
 
                 qname_cache = cache_available(client_query)

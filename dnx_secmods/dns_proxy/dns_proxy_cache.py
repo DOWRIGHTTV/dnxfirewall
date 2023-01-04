@@ -133,7 +133,6 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache:
         # response will be identified by "None" for client address
         for domain in top_domains:
 
-            # first arg is to fulfill "self" positional arg
             request_queue_insert(dns_packet(domain))
             fast_sleep(.1)
 

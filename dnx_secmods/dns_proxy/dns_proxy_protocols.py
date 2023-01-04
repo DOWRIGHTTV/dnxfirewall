@@ -178,7 +178,7 @@ class TLSRelay(ProtoRelay):
         conn_recv = self._relay_conn.recv
         keepalive_reset = self._keepalive_status.set
 
-        responde_handler_add = self._dns_server.response_handler.add
+        response_handler_add = self._dns_server.response_handler.add
 
         recv_buf = bytearray(2048)
         recv_buffer = memoryview(recv_buf)
@@ -232,7 +232,7 @@ class TLSRelay(ProtoRelay):
 
                     # using memoryview(), so we need to copy the data to bytes first or it will corrupt the original
                     # data which is running concurrent to the receiving processor.
-                    responde_handler_add(bytes(data[:data_len]))
+                    response_handler_add(bytes(data[:data_len]))
 
                     b_ct = 0
 

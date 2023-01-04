@@ -136,7 +136,7 @@ class ClientQuery:
         # setting additional data flag in dns header if detected
         arc = 1 if self.additional_records else 0
 
-        # initializing byte array with (2) bytes. these get overwritten with query len actual after processing
+        # initializing bytearray with (2) bytes. these get overwritten with query len actual after processing
         send_data = bytearray(2)
 
         send_data += dns_header_pack(dns_id, self.rd | self.ad | self.cd, 1, 0, 0, arc)
@@ -165,7 +165,6 @@ class ClientQuery:
         self.qname = qname
         self.qtype = 1
 
-        self.qr = 0
         self.rd = DNS_MASK.RD
         self.ad = DNS_MASK.AD
         self.cd = DNS_MASK.CD
