@@ -65,16 +65,16 @@ class Listener:
         # INITIALIZING LISTENER
         # ======================
         # running main epoll/ socket loop.
-        self = cls()
-        self._setup()
+        listener = cls()
+        listener._setup()
 
         log.notice(f'{cls.__class__.__name__} initialization complete.')
 
         # starting a registration thread for all available interfaces and exit when complete
         for intf in cls._intfs:
-            Thread(target=self.__register, args=(intf,)).start()
+            Thread(target=listener.__register, args=(intf,)).start()
 
-        self.__listener(always_on, threaded)
+        listener.__run_listener(always_on, threaded)
 
     @classmethod
     def enable(cls, sock_fd: int, intf: str) -> None:
@@ -143,7 +143,7 @@ class Listener:
         '''
         pass
 
-    def __listener(self, always_on: bool, threaded: bool) -> NoReturn:
+    def __run_listener(self, always_on: bool, threaded: bool) -> NoReturn:
 
         # assigning all attrs as a local var for perf
         epoll_poll = self.__epoll.poll
@@ -348,18 +348,17 @@ class NFQueue:
     def __init__(self):
         self.inspection_queue = inspection_queue()
 
-        self._setup()
-
     @classmethod
     def run(cls, log: LogHandler_T, *, q_num: int) -> None:
 
         cls._log = log
 
         log.informational(f'{cls.__class__.__name__} initialization started.')
-        self = cls()
+        nfqueue = cls()
+        nfqueue._setup()
         log.notice(f'{cls.__class__.__name__} initialization complete.')
 
-        self.__queue(q_num)
+        nfqueue.__run_queue(q_num)
 
     def _setup(self):
         '''called prior to creating listener interface instances.
@@ -379,7 +378,7 @@ class NFQueue:
     #
     #     cls._proxy_callback = func
 
-    def __queue(self, q: int, /) -> NoReturn:
+    def __run_queue(self, q: int, /) -> NoReturn:
 
         for _ in RUN_FOREVER:
             # on failure, we will reinitialize the extension to start fresh

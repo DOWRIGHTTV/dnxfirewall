@@ -37,9 +37,9 @@ class IPS_IDS(IPSConfiguration, NFQueue):
     __slots__ = ()
 
     def __init__(self):
-        super().__init__()
-
         self.ddos_queue = inspection_queue()
+
+        super().__init__()
 
     def _setup(self):
         self.configure()
