@@ -99,12 +99,12 @@ class ConfigurationMixinBase:
     module_class: ModuleClasses
 
     def __init__(self):
-        # calling the module's epoll handler __init__ method
-        super().__init__()
-
         self._config_setup: bool = False
 
         self._initialize = Initialize()
+
+        # calling the module's epoll handler __init__ method
+        super().__init__()
 
     def configure(self, module_class: Optional[ModuleClasses] = None) -> None:
         '''blocking until settings are loaded/initialized.
