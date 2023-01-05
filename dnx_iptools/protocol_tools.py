@@ -39,7 +39,7 @@ __all__ = (
     'parse_query_name'
 )
 
-btoia: Callable[[ByteString], int] = partial(int.from_bytes, byteorder='big', signed=False)
+btoia: Callable[[ByteString|int], int] = partial(int.from_bytes, byteorder='big', signed=False)
 # itoba: Callable[[int, int], bytes] = partial(int.to_bytes, byteorder='big', signed=False)
 
 def change_socket_owner(sock_path: str) -> bool:

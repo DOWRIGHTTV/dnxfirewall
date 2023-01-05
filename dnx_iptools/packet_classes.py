@@ -12,7 +12,7 @@ from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import PROTO, ICMP, CONN, DIR
 from dnx_gentools.def_exceptions import ProtocolError
-from dnx_gentools.standard_tools import looper, request_queue, inspection_queue
+from dnx_gentools.standard_tools import looper, inspection_queue
 from dnx_gentools.def_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK, DNS_SEND
 
 from dnx_iptools.def_structs import *
@@ -49,16 +49,10 @@ class Listener:
     # stored as file descriptors to minimize lookups in listener queue.
     enabled_intfs: set[int] = set()
 
-    __slots__ = (
-        'request_queue',
-    )
+    __slots__ = ()
 
-    def __init__(self):
-        self.request_queue = request_queue()
-
-        # TODO: what happens if interface comes online, then immediately gets unplugged. the registration would fail
-        #  potentially and would no longer be active so it would never happen if the interface was replugged after.
-
+    # TODO: what happens if interface comes online, then immediately gets unplugged. the registration would fail
+    #  potentially and would no longer be active so it would never happen if the interface was replugged after.
     def __register(self, intf: tuple[int, int, str]) -> None:
         '''registers an interface with the listener.
 

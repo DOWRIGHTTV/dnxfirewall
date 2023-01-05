@@ -316,14 +316,14 @@ def dnx_queue(log: LogHandler_T, name: str = None) -> Callable[[...], Any]:
     return decorator
 
 def request_queue():
-    '''basic queueing mechanism for DNS requests received by the server.
+    '''basic queueing mechanism for requests received by a server.
 
     alternate [Event based] version to the "InspectionQueue" mechanism used by the security modules.
     optimized for single thread performance.
     '''
-    request_queue = deque()
-    request_queue_append = request_queue.append
-    request_queue_get = request_queue.popleft
+    request_q = deque()
+    request_q_append = request_q.append
+    request_q_get = request_q.popleft
 
     request_ready = threading.Event()
     wait_for_request = request_ready.wait
@@ -345,13 +345,13 @@ def request_queue():
             # the request would be stuck until another was received.
             clear_ready()
 
-            while request_queue:
-                yield request_queue_get()
+            while request_q:
+                yield request_q_get()
 
         # NOTE: first arg is because this gets referenced/called via an instance.
         def insert(self, client_query: ListenerPackets) -> None:
 
-            request_queue_append(client_query)
+            request_q_append(client_query)
 
             # notifying return_ready that there is a query ready to forward
             notify_ready()

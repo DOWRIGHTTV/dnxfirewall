@@ -19,7 +19,6 @@ from dns_proxy_log import Log
 # ===============
 if (TYPE_CHECKING):
     from dnx_gentools import RequestQueue_T
-    from dnx_secmods.dns_proxy import DNSCache
 
     from dns_proxy_packets import ClientQuery
 

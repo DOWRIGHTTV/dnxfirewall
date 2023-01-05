@@ -192,13 +192,13 @@ cdef class CPacket:
         bint   has_verdict
         size_t protohdr_len
 
-    cpdef void update_mark(self, uint32_t mark)
-    cpdef void accept(self)
-    cpdef void drop(self)
-    cpdef void forward(self, uint16_t queue_num)
-    cpdef void repeat(self)
+    cpdef void update_mark(s, uint32_t mark)
+    cpdef void accept(s)
+    cpdef void drop(s)
+    cpdef void forward(s, uint16_t queue_num)
+    cpdef void repeat(s)
     cdef  void set_nfqhdr(s, PacketData *dnx_nfqhdr)
-    cdef  void _set_verdict(self, uint32_t verdict) nogil
+    cdef  void _set_verdict(s, uint32_t verdict) nogil
 
 cdef class NetfilterQueue:
     cdef:
