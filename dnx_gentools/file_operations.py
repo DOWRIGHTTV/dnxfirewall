@@ -610,15 +610,15 @@ class Watcher:
     def __init__(self, watch_file: str, ext: str, cfg_type: str, filepath: str, *, callback: Callable_T):
         self._watch_file = watch_file
 
-        self._ext       = ext
-        self._cfg_type  = cfg_type
+        self._ext      = ext
+        self._cfg_type = cfg_type
         self._filepath = filepath
 
         self._callback = callback
 
-        self._full_path: str = f'{HOME_DIR}/{filepath}/usr/{watch_file}.{ext}'
+        self._full_path = f'{HOME_DIR}/{filepath}/usr/{cfg_type}/{watch_file}.{ext}'
 
-        self._last_modified_time: int = 0
+        self._last_modified_time = 0
 
     def watch(self, *args) -> None:
         '''check configured file for change in set intervals.
