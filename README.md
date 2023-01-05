@@ -14,21 +14,21 @@
   and messages that goes through the system.
 
 <pre>
-                       ------------------------------------------------------
-                       | (outbound)                                         |
-                       |                                                    V
-                       |                                 --------------> [dns proxy (*1)] --------
-                       |                                 | (outbound)                            |
-                       |          (bi-directional)       |                                       V
-TCP/IP stack ----> [cfirewall] -------------------> [ip proxy] ------------------------> ((*packet verdict*)) ----> TCP/IP stack
-                      |  |                               |                                       ^    ^
-                      |  |                               | (inbound)                             |    |
-                      |  |                               --------------> [ids/ips (*2)] ----------    |
-                      |  |                                                  ^                         |
-                      |  | (inbound)                                        |                         |
-                      |  ----------------------------------------------------                         |
-                      |                                                                               |
-                      ---------------------------------------------------------------------------------
+                -------------------------------------------------------
+                | (outbound)                                          |
+                |                                                     V
+                |                               --------------> [dns proxy (*1)] --------
+                |                               | (outbound)                            |
+                |      (bi-directional)         |                                       V
+TCP/IP --> [cfirewall] -------------------> [ip proxy] ------------------------> ((*packet verdict*)) --> TCP/IP 
+stack          |  |                             |                                       ^    ^            stack
+               |  |                             | (inbound)                             |    |
+               |  |                             --------------> [ids/ips (*2)] ----------    |
+               |  |                                                   ^                      |
+               |  | (inbound)                                         |                      |
+               |  -----------------------------------------------------                      |
+               |                                                                             |
+               -------------------------------------------------------------------------------
 </pre>
 
 - (*1) the dns proxy is specifically designed to inspect dns payload going between internal networks or from the lan to internet.
@@ -41,14 +41,6 @@ A low level "architecture, system design" video will be created at some point to
 
 <br>
 <h2>Included Features</h2>
-
-<strong>NEW: sqlite3 is now the default database in use (to simplify deployments). postgresql is still present on the backend 
-and will be able to be enabled during system deployment in a future release.</strong>
-
-<strong>NEW: Auto deployment utility (autoloader) is now live. This should be used to deploy the system on any compatible 
-distro. See compatible distro list for more details. </strong>
-
-<strong>NEW: full zone based firewall rules (source and destination) and per rule based security profiles.</strong>
 
 - Custom packet handler
   - implemented in C
