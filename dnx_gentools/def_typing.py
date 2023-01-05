@@ -12,11 +12,15 @@ _DISABLED = False
 if (TYPE_CHECKING and not _DISABLED):
     from typing import TypeAlias
 
-    from threading import Lock, Event
-    from ipaddress import IPv4Address as _IPv4Address, IPv4Network as _IPv4Network
-    from socket import socket as Socket
-    from select import epoll as Epoll
+    from threading import Lock as _Lock, Event as _Event
+    from socket import socket as _socket
+    from select import epoll as _epoll
     from ssl import SSLContext
+
+    Lock_T: TypeAlias = _Lock
+    Event_T: TypeAlias = _Event
+    Socket_T: TypeAlias = _socket
+    Epoll_T: TypeAlias = _epoll
 
     Address:    TypeAlias = tuple[str, int]
     IntAddress: TypeAlias = tuple[int, int]
@@ -35,7 +39,7 @@ if (TYPE_CHECKING and not _DISABLED):
     # from dnx_iptools import *
     # from dnx_routines import *
 
-    from dnx_secmods import IPProxy_T, IPS_IDS_T, DNSProxy_T
+    from dnx_secmods import IPProxy_T, IDS_IPS_T, DNSProxy_T
     from dnx_secmods import ClientQuery as _ClientQuery
     from dnx_secmods import IPPPacket as _IPPPacket, IPSPacket as _IPSPacket
     from dnx_secmods import DNSPacket as _DNSPacket
@@ -45,7 +49,7 @@ if (TYPE_CHECKING and not _DISABLED):
 
     from dnx_iptools.packet_classes import NFPacket as _NFPacket
 
-    ModuleClasses: TypeAlias = Union[IPProxy_T, IPS_IDS_T, DNSProxy_T, DHCPServer_T]
+    ModuleClasses: TypeAlias = Union[IPProxy_T, IDS_IPS_T, DNSProxy_T, DHCPServer_T]
 
     ListenerCallback: TypeAlias = Callable[..., None]
     ListenerPackets:  TypeAlias = Union[_ClientRequest, _ClientQuery]

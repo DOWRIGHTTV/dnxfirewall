@@ -17,13 +17,13 @@
 #define SECURITY_PROFILE_COUNT 3
 #define IP_PROXY_MASK  15
 #define DNS_PROXY_MASK 240
-#define IPS_IDS_MASK   3840
+#define IDS_IPS_MASK   3840
 
 #define PACKET_ACTION_MASK  3 // first 2 bits
 #define PACKET_DIR_MASK    12 // 2nd 2 bits
 
 #define SEND_TO_IP_PROXY  (IP_PROXY  << TWO_BYTES) | NF_QUEUE)
-#define SEND_TO_IPS_IDS   (IPS_IDS   << TWO_BYTES) | NF_QUEUE)
+#define SEND_TO_IDS_IPS   (IDS_IPS   << TWO_BYTES) | NF_QUEUE)
 #define SEND_TO_DNS_PROXY (DNS_PROXY << TWO_BYTES) | NF_QUEUE)
 
 // ==================================
@@ -104,7 +104,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     firewall_unlock();
 
     dprint(FW_V & VERBOSE, "action->%u, log->%u, ipp->%u, dns->%u, ips->%u ", pkt.action, pkt.log,
-        pkt.sec_profiles & IP_PROXY_MASK, (pkt.sec_profiles & DNS_PROXY_MASK) >> 4, (pkt.sec_profiles & IPS_IDS_MASK) >> 4);
+        pkt.sec_profiles & IP_PROXY_MASK, (pkt.sec_profiles & DNS_PROXY_MASK) >> 4, (pkt.sec_profiles & IDS_IPS_MASK) >> 4);
 
     /* ===================================
        NFQUEUE VERDICT LOGIC
@@ -121,10 +121,10 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
     }
     // SEND TO IPS/IDS - criteria: accepted or dropped, inbound
     else if ( pkt.geo.dir == INBOUND // primary match
-            && pkt.sec_profiles & IPS_IDS_MASK ) {
+            && pkt.sec_profiles & IDS_IPS_MASK ) {
 
         dnx_send_deferred_verdict(cfd, ntohl(nl_pkth->packet_id),
-            (pkt.sec_profiles << TWO_BYTES) | pkt_mark, SEND_TO_IPS_IDS;
+            (pkt.sec_profiles << TWO_BYTES) | pkt_mark, SEND_TO_IDS_IPS;
     }
     // SEND TO DNS PROXY - criteria: accepted, outbound, udp/53
     else if ( pkt.action == DNX_ACCEPT // primary match
@@ -147,7 +147,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
        GEOLOCATION MONITORING - GENERAL
     =================================== */
     // non system traffic only. remote country to or from and packet action
-    // todo: this currently filter out drops on wan interface if they do not have an associated nat
+    // todo: this currently filters out drops on wan interface if they do not have an associated nat
     //  - figure out a filter that would include wan drops
     //  - this type of logic might work as a fast path for inbound wan interface inspection
     if (fw_clist.start != FW_SYSTEM_RANGE_START) {

@@ -24,7 +24,7 @@ from dnx_iptools.cprotocol_tools import calc_checksum, itoip
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
-    from dnx_gentools import Structure
+    from dnx_gentools import Structure_T
 
 __all__ = (
     'btoia', 'itoba',
@@ -105,7 +105,7 @@ def parse_query_name(data: Union[bytes, memoryview], offset: int = 0, *,
                      quick: bool = False) -> Union[int, tuple[int, str, bool]]:
     '''parse dns name from sent in data.
 
-    if quick is set, returns offset only, otherwise offset, qname decoded, and whether its local domain.
+    if quick is set, returns offset only, otherwise offset, qname decoded, and whether its local domain is returned.
     '''
     idx: int = offset
     has_ptr: bool = False
@@ -166,9 +166,6 @@ def create_dns_query_header(dns_id, arc=0, *, cd):
 
     return dns_header_pack(dns_id, bit_fields, 1, 0, 0, arc)
 
-
-icmp_header_template: Structure = PR_ICMP_HDR((('type', 8), ('code', 0)))
-
 # will ping specified host. to be used to prevent duplicate ip address handouts.
 def icmp_reachable(host_ip: int) -> bool:
 
@@ -177,11 +174,14 @@ def icmp_reachable(host_ip: int) -> bool:
     except CalledProcessError:
         return False
 
+
+icmp_header_template: Structure_T = PR_ICMP_HDR((('type', 8), ('code', 0)))
+
 def init_ping(timeout: float = .25) -> Callable[[str, int], bool]:
     '''function factory that returns a ping function object optimized for speed.
 
-    not thread safe within a single ping object, but is thread safe between multiple ping objects.'''
-
+    not thread safe within a single ping object, but is thread safe between multiple ping objects.
+    '''
     ping_sock = socket(AF_INET, SOCK_RAW, PROTO.ICMP)
     ping_sock.settimeout(timeout)
 
@@ -196,7 +196,6 @@ def init_ping(timeout: float = .25) -> Callable[[str, int], bool]:
         replies_rcvd = 0
         for i in range(count):
 
-            # NOTE: this is dumb. should only call assemble once.
             icmp.sequence = i
             icmp.checksum = btoia(calc_checksum(icmp.assemble()))
 

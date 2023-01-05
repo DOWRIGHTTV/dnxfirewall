@@ -103,13 +103,18 @@ NULL_ADDR:  tuple[str, int] = ('', -1)
 INADDR_ANY: int = 0
 LOCALHOST:  int = 2130706433
 BROADCAST:  int = 4294967295
+
 # definitions for ip proxy data structures. most/least significant bit
 MSB: int = 0b11111111111110000000000000000000
 LSB: int = 0b00000000000001111111111111111111
 UINT16_MAX: int = 0b1111111111111111
 UINT32_MAX: int = 0b11111111111111111111111111111111
 
-# NFQUEUE packet actions | marking packet, so it can be matched by following rules in order of operations
+OK: bool = True
+ERR: bool = False
+INSPECT_PACKET: bool = True
+DONT_INSPECT_PACKET: bool = False
+
 WAN_IN: int = 10  # used for limiting certain internal functions from applying to wan > inside traffic
 LAN_IN: int = 11  # used for management access traffic matching
 DMZ_IN: int = 12  # used for management access traffic matching

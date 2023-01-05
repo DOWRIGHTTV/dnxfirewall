@@ -16,7 +16,7 @@ from dnx_routines.logging.log_client import Log, direct_log
 # ==================
 # CONTROL SOCKET
 # ===================
-_control_client: Socket = socket(AF_INET, SOCK_DGRAM)
+_control_client: Socket_T = socket(AF_INET, SOCK_DGRAM)
 # connect on udp is for convenience on socket send
 _control_client.connect(CONTROL_SOCKET)
 

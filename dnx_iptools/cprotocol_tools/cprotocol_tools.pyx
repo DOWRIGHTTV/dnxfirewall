@@ -1,7 +1,13 @@
 #!/usr/bin/env Cython
 
-from libc.stdio cimport snprintf
+from libc.errno cimport *
+from libc.stdio cimport snprintf, perror, printf
 from libc.stdint cimport uint8_t, uint32_t, uint_fast16_t
+from libc.string cimport strncpy  # memset, memcpy
+
+DEF OK  = 1
+DEF ERR = 0
+
 
 cdef uint8_t  UINT8_MAX  = 0b11111111
 cdef uint16_t UINT16_MAX = 0b1111111111111111
@@ -90,3 +96,95 @@ cpdef bytes calc_checksum(const uint8_t[:] data):
     ubytes[1] = csum & UINT8_MAX
 
     return ubytes
+
+
+# ============================
+# Python Extension Types
+# ============================
+# designed to be used with pure python (no C/Cython compatibility)
+# ----------------------------
+# IPC (POSIX) - MessageQueue
+# ----------------------------
+DEF MQ_PERMISSIONS   = 0o600
+DEF MQ_MESSAGE_SIZE  = 2048
+DEF MQ_MESSAGE_LIMIT = 10  # number of total messages sitting in queue
+
+cdef class MessageQueue:
+
+    cdef:
+        bint      ro
+        mqd_t     id
+        int       keylen
+        char      key[32]
+
+
+    def __dealloc__(self):
+        if (not self.ro):
+            mq_unlink(self.key)
+
+        mq_close(self.id)
+
+    def connect(self, unicode pkey):
+
+        self.keylen = len(pkey)
+        bpkey = pkey.encode('utf-8')
+
+        cdef:
+            char*   key = bpkey
+
+        strncpy(self.key, key, self.keylen)
+
+        self.id = mq_open(self.key, O_RDONLY, 0, NULL)
+        if (<int> self.id == -1):
+            perror("connect error")
+            return ERR
+
+        self.ro = False
+
+        return OK
+
+    def create_queue(self, unicode pkey):
+
+        self.keylen = len(pkey)
+        bpkey = pkey.encode('utf-8')
+
+        cdef:
+            char*   key = bpkey
+            mq_attr attr
+
+        strncpy(self.key, key, self.keylen)
+
+        attr.mq_maxmsg  = MQ_MESSAGE_LIMIT
+        attr.mq_msgsize = MQ_MESSAGE_SIZE
+
+        self.id = mq_open(self.key, O_WRONLY | O_CREAT, MQ_PERMISSIONS, &attr)
+        if (<int> self.id == -1):
+            perror("create_error")
+            return ERR
+
+        self.ro = False
+
+        return OK
+
+    def send_msg(self, const uint8_t[:] data, unsigned int prio):
+        cdef:
+            int         ret
+
+        ret = mq_send(self.id, <const char*>&data[0], data.shape[0], prio)
+        if (ret == -1):
+            perror("send error")
+            return ERR
+
+        return ret
+
+    def recv_msg(self, unsigned int prio):
+        cdef:
+            int         ret
+            char        data[MQ_MESSAGE_SIZE]
+
+        ret = mq_receive(self.id, data, MQ_MESSAGE_SIZE, &prio)
+        if (ret == -1):
+            perror("receive error")
+            return ERR
+
+        return data[:ret]

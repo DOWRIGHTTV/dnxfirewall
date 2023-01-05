@@ -254,7 +254,7 @@ class ServerConfiguration(ConfigurationMixinBase):
         return thread information to be run.
         '''
         udp_query: bytes = create_dns_query_header(dns_id=69, cd=1) + b'\x0bdnxfirewall\x03com\x00\x00\x01\x00\x01'
-        udp_reach_sock: Socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        udp_reach_sock: Socket_T = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         udp_reach_sock.settimeout(CONNECT_TIMEOUT)
 
         tls_context: SSLContext = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -306,7 +306,7 @@ class ServerConfiguration(ConfigurationMixinBase):
         self._initialize.done()
 
     @looper(FIVE_SEC)
-    def _udp_reachability(self, udp_query: bytes, udp_sock: Socket):
+    def _udp_reachability(self, udp_query: bytes, udp_sock: Socket_T):
         public_resolvers = self.__class__.public_resolvers
 
         if (self.protocol is not PROTO.UDP and not self.__class__.udp_fallback):
@@ -353,7 +353,7 @@ class ServerConfiguration(ConfigurationMixinBase):
 
             Log.debug(f'[{secure_server}/DNS_TLS] Checking reachability of remote DNS server.')
 
-            sock: Socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock: Socket_T = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(CONNECT_TIMEOUT)
 
             secure_socket = tls_context.wrap_socket(sock, server_hostname=secure_server)

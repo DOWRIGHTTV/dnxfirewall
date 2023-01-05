@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from threading import Thread
+
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_enums import DNS, DNS_CAT, TLD_CAT, CONN
+from dnx_gentools.def_constants import RUN_FOREVER, INSPECT_PACKET, DONT_INSPECT_PACKET
+from dnx_gentools.def_enums import DNS, DNS_CAT, TLD_CAT
 from dnx_gentools.def_namedtuples import DNS_REQUEST_RESULTS
 
 from dnx_iptools.packet_classes import NFQueue
@@ -17,9 +20,6 @@ __all__ = (
     'DNSProxy',
 )
 
-
-CAT_LOOKUP: Callable[[int], int] = NotImplemented  # will be assigned by __init__ prior to running
-LOCAL_RECORD: Callable[[str], ...] = DNSServer.dns_records.get
 PREPARE_AND_SEND = ProxyResponse.prepare_and_send
 
 # =====================
@@ -35,35 +35,45 @@ class DNSProxy(ProxyConfiguration, NFQueue):
     __slots__ = ()
 
     def _setup(self):
-
-        self.__class__.set_proxy_callback(func=inspect)
-
         self.configure()
 
         ProxyResponse.setup(Log)
 
-    # pre-check will filter out invalid packets, ipv6 records, and local dns records
-    def _pre_inspect(self, packet: DNSPacket) -> bool:
+        for i in range(self.DEFAULT_THREAD_COUNT):
+            Thread(target=self.inspection_worker, args=(i,)).start()
 
-        # local records will continue directly to the dns server
-        if LOCAL_RECORD(packet.qname):
-            packet.nfqueue.accept()
+    def inspection_worker(self, i: int) -> NoReturn:
+        Log.informational(f'[proxy/worker][{i}] inspection thread started')
 
-        elif (packet.qtype in [DNS.A, DNS.NS]):
-            return True
+        inspection_queue_get = self.inspection_queue.get
 
-        # refusing ipv6 dns record types as policy
-        elif (packet.qtype == DNS.AAAA):
-            PREPARE_AND_SEND(packet)
+        for _ in RUN_FOREVER:
+            packet = inspection_queue_get()
 
-            packet.nfqueue.drop()
+            # fast path for certain conditions
+            if not pre_inspect(packet):
+                continue
 
-        return False
+            request_results = inspect(packet)
+
+            if (not request_results.redirect):
+                packet.nfqueue.accept()
+
+            else:
+                packet.nfqueue.drop()
+
+                PREPARE_AND_SEND(packet)
+
+            Log.log(packet, request_results)
 
 
 # =================
 # INSPECTION LOGIC
 # =================
+# will be assigned by __init__ prior to running
+CAT_LOOKUP: Callable[[int], int] = NotImplemented
+LOCAL_RECORD: Callable[[str], ...] = DNSServer.dns_records.get
+
 # direct references to proxy class data structure methods
 _ip_whitelist_get = DNSProxy.whitelist.ip.get
 _tld_get = DNSProxy.signatures.tld.get
@@ -73,24 +83,26 @@ _dns_whitelist = DNSProxy.whitelist.dns
 _dns_blacklist = DNSProxy.blacklist.dns
 _dns_keywords  = DNSProxy.signatures.keyword
 
-# called via an instance, so we need to handle the implicit arg
-def inspect(_, packet: DNSPacket):
-
-    request_results = _inspect(packet)
-
-    if (not request_results.redirect):
+# pre-check will filter out invalid packets, ipv6 records, and local dns records
+def pre_inspect(packet: DNSPacket) -> bool:
+    # local records will continue directly to the dns server
+    if LOCAL_RECORD(packet.qname):
         packet.nfqueue.accept()
 
-    else:
-        packet.nfqueue.drop()
+    elif (packet.qtype in [DNS.A, DNS.NS]):
+        return INSPECT_PACKET
 
+    # refusing ipv6 dns record types as policy
+    elif (packet.qtype == DNS.AAAA):
         PREPARE_AND_SEND(packet)
 
-    Log.log(packet, request_results)
+        packet.nfqueue.drop()
 
-# this is where the system decides whether to block dns query/sinkhole or to allow. notification will be done
-# via the request tracker upon returning the signature scan result
-def _inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
+    return DONT_INSPECT_PACKET
+
+
+# this is where the system decides whether to block dns query/sinkhole or to allow.
+def inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
     # NOTE: request_ident[0] is a string representation of ip addresses. this is currently needed as the whitelists
     #  are stored in this format and we have since moved away from this format on the back end.
     # TODO: in the near-ish future, consider storing ip whitelists as integers to conform to newer standards.
@@ -99,7 +111,7 @@ def _inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
     enum_categories = []
 
     # TLD (top level domain) block
-    # dns whitelist does not override tld blocks at the moment. this is most likely the desired setup
+    # url whitelist does not override tld blocks at the moment.
     if _tld_get(packet.tld):
 
         return DNS_REQUEST_RESULTS(True, 'tld filter', TLD_CAT[packet.tld])

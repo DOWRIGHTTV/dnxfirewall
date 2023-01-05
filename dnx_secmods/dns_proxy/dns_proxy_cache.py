@@ -18,12 +18,13 @@ from dns_proxy_log import Log
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
-    from dnx_secmods.dns_proxy import DNSCache, RequestTracker
+    from dnx_gentools import RequestQueue_T
+    from dnx_secmods.dns_proxy import DNSCache
 
     from dns_proxy_packets import ClientQuery
 
 __all__ = (
-    'dns_cache', 'request_tracker',
+    'dns_cache',
     
     'NO_QNAME_RECORD', 'QNAME_NOT_FOUND'
 )
@@ -31,12 +32,31 @@ __all__ = (
 NO_QNAME_RECORD = QNAME_RECORD(-1, -1, [])
 QNAME_NOT_FOUND = QNAME_RECORD_UPDATE(-1, [])
 
-def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Callable[[int, ClientQuery], None]) -> DNSCache:
+# TODO: it might be worth making dns_packet callback set via set_* method since we doing for the request_queue already
+def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache:
+    '''factory function providing subclass of dict as custom data structure for dealing with the local caching of dns
+    records and poller operations for refresh and cleanup.
+
+    containers handled by class:
+        general dict - standard cache storage
+        private dict - top domains cache storage
+        private Counter - tracking number of times a domain is queried
+
+    required callbacks via arguments
+
+        packet (*reference to packet class*)
+
+    required callbacks via set_* method
+
+        request_queue (*reference to dns server request queue*)
+    '''
+    # will be set through class as nonlocal
+    request_queue_insert: Callable[[ClientQuery], None]
 
     _top_domains: list = load_configuration('dns_server', ext='cache', cfg_type='global').get('top_domains')
 
     domain_counter: Counter[str, int] = Counter({dom: cnt for cnt, dom in enumerate(reversed(_top_domains))})
-    counter_lock: Lock = threading.Lock()
+    counter_lock: Lock_T = threading.Lock()
 
     top_domain_filter = tuple(load_top_domains_filter())
 
@@ -112,28 +132,13 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
 
         # response will be identified by "None" for client address
         for domain in top_domains:
-            request_handler(1, dns_packet(domain))
+
+            request_queue_insert(dns_packet(domain))
             fast_sleep(.1)
 
         Log.debug('expired records cleared from cache and top domains refreshed')
 
     class _DNSCache(dict):
-        '''subclass of dict to provide a custom data structure for dealing with the local caching of dns records.
-
-        containers handled by class:
-            general dict - standard cache storage
-            private dict - top domains cache storage
-            private Counter - tracking number of times a domain is queried
-
-        initialization is the same as a dict, with the addition of two required arguments for callback references
-        to the dns server.
-
-            packet (*reference to packet class*)
-            request_handler (*reference to dns server request handler function*)
-
-        if the above callbacks are not set, the top domain's caching system will NOT actively update records, but the
-        counts will still be accurate/usable.
-        '''
         __slots__ = ()
 
         # searching key directly will return calculated ttl and associated records
@@ -179,6 +184,11 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
 
             return self[query_name]
 
+        def set_request_queue(self, request_queue: RequestQueue_T) -> None:
+            nonlocal request_queue_insert
+
+            request_queue_insert = request_queue.insert
+
         def start_pollers(self):
 
             threading.Thread(target=auto_clear, args=(self,)).start()
@@ -188,54 +198,3 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery], request_handler: Call
         return _DNSCache
 
     return _DNSCache()
-
-
-def request_tracker() -> RequestTracker:
-    '''Basic queueing mechanism for DNS requests received by the server.
-
-    The main feature of the queue is to provide efficient thread blocking via Thread Events over a busy loop.
-    This is a very lightweight version of the standard lib Queue and uses a deque as its primary data structure.
-    '''
-    request_ready = threading.Event()
-    wait_for_request = request_ready.wait
-    notify_ready = request_ready.set
-    clear_ready = request_ready.clear
-
-    _list = list
-
-    request_queue = deque()
-    request_queue_append = request_queue.append
-    request_queue_get = request_queue.popleft
-
-    class _RequestTracker:
-
-        @staticmethod
-        def return_ready() -> ClientQuery:
-            '''function generator returning requests from queue in FIFO order.
-
-            calls will block if the queue is empty and will never time out.
-            '''
-            # blocking until at least one request has been received
-            wait_for_request()
-
-            # immediately clearing event, so we don't have to worry about it after loop. this prevents having to deal
-            # with scenarios where a request was received in just after while loop, but just before reset. in this case
-            # the request would be stuck until another was received.
-            clear_ready()
-
-            while request_queue:
-                yield request_queue_get()
-
-        @staticmethod
-        # NOTE: first arg is because this gets referenced/called via an instance.
-        def insert(_, client_query: ClientQuery) -> None:
-
-            request_queue_append(client_query)
-
-            # notifying return_ready that there is a query ready to forward
-            notify_ready()
-
-    if (TYPE_CHECKING):
-        return _RequestTracker
-
-    return _RequestTracker()

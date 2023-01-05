@@ -3,10 +3,5 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-
 if (TYPE_CHECKING):
-
-    from standard_tools import structure as _structure, bytecontainer as _bytecontainer
-
-    Structure = _structure('Structure', '')
-    ByteContainer = _bytecontainer('ByteContainer', '')
+    from dnx_gentools.standard_tools import RequestQueue_T, InspectionQueue_T, Structure_T, ByteContainer_T

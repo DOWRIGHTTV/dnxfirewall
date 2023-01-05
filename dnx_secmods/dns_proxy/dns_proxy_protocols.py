@@ -55,16 +55,15 @@ class UDPRelay(ProtoRelay):
 
             self._relay_conn = self._connect_udp(dns_server['ip_address'])
 
-            return True
+            return OK
 
         Log.critical(f'[{self._protocol}] No DNS servers available.')
 
-        return False
+        return ERR
 
-    # receive data from server. if dns response will call parse method else will close the socket.
     def _recv_handler(self) -> None:
         conn_recv = self._relay_conn.recv
-        responder_add = self._dns_server.responder.add
+        response_handler_add = self._dns_server.response_handler.add
 
         for _ in RUN_FOREVER:
             try:
@@ -76,7 +75,7 @@ class UDPRelay(ProtoRelay):
             if (not data_from_server):
                 continue
 
-            responder_add(data_from_server)
+            response_handler_add(data_from_server)
 
             # resetting fail detection
             self._last_rcvd  = fast_time()
@@ -88,7 +87,7 @@ class UDPRelay(ProtoRelay):
 
         Log.informational(f'[{server_ip}/UDP] Opening socket.')
 
-        dns_sock: Socket = socket(AF_INET, SOCK_DGRAM)
+        dns_sock: Socket_T = socket(AF_INET, SOCK_DGRAM)
 
         # udp connect allows 'send' method to be used, but does not actually have an underlying connection
         dns_sock.connect((server_ip, PROTO.DNS))
@@ -120,7 +119,7 @@ class TLSRelay(ProtoRelay):
         self._tls_context.load_verify_locations(CERTIFICATE_STORE)
 
         # tls connection keepalive. hard set to 8 seconds, but can be enabled/disabled
-        self._keepalive_status: Event = threading.Event()
+        self._keepalive_status: Event_T = threading.Event()
         threading.Thread(target=self._keepalive_run).start()
 
     @dnx_queue(Log, name='TLSRelay')
@@ -157,12 +156,12 @@ class TLSRelay(ProtoRelay):
                 continue
 
             # attempting to connect via tls.
-            # if successful will return True, otherwise mark server as down and try the next server.
+            # if successful returns True, otherwise mark server as down and try the next server.
             self._relay_conn = self._connect_tls(tls_server['ip_address'])
             if (self._relay_conn is not NULL_SOCK):
                 threading.Thread(target=self._recv_handler).start()
 
-                return True
+                return OK
 
             self.mark_server_down(remote_server=tls_server['ip_address'])
 
@@ -170,7 +169,7 @@ class TLSRelay(ProtoRelay):
         self._dns_server.tls_down = True
         Log.error(f'[{self._protocol}] No DNS servers available.')
 
-        return False
+        return ERR
 
     # receive data from server and call parse method when a valid message is recvd, else will close the socket.
     def _recv_handler(self) -> None:
@@ -179,7 +178,7 @@ class TLSRelay(ProtoRelay):
         conn_recv = self._relay_conn.recv
         keepalive_reset = self._keepalive_status.set
 
-        responder_add = self._dns_server.responder.add
+        response_handler_add = self._dns_server.response_handler.add
 
         recv_buf = bytearray(2048)
         recv_buffer = memoryview(recv_buf)
@@ -192,10 +191,10 @@ class TLSRelay(ProtoRelay):
 
         for _ in RUN_FOREVER:
             try:
-                # recv_into | no need to specify the amount to return and mtu covers max len.
-                # not inplace adding byte count to protect against cases where a public resolver sends a single
-                # response over multiple packets and connection is closed in between (this is highly unlikely since
-                # most cases it would be via timeout, but I have seen worse).
+                # recv_into | no need to specify the amount to return because mtu covers max len.
+                # keeping nbyte separate to protect against cases where a public resolver sends a single response
+                # over multiple packets and connection is closed in between (highly unlikely since most cases it
+                # would be via timeout, but I have seen worse).
                 nbytes: int = conn_recv(recv_buffer)
             except OSError:
                 break
@@ -214,7 +213,7 @@ class TLSRelay(ProtoRelay):
             # transferring data from single packet buffer to general processing buffer, memoryview()
             processing_buffer[b_ct:b_ct + nbytes] = recv_buffer[:nbytes]
 
-            # incrementing the amount of filled bytes in processing buffer accounting for 2 byte len field
+            # incrementing byte count of processing buffer (accounts for 2 byte len field)
             b_ct += nbytes
 
             # =========================
@@ -231,9 +230,9 @@ class TLSRelay(ProtoRelay):
                 # normal case - exactly 1 complete dns response in buffer
                 if (b_ct == request_len):
 
-                    # using memoryview(), so need to copy response data, otherwise it will corrupt the original data
-                    # which is running concurrent to the receiving processor.
-                    responder_add(bytes(data[:data_len]))
+                    # using memoryview(), so we need to copy the data to bytes first or it will corrupt the original
+                    # data which is running concurrent to the receiving processor.
+                    response_handler_add(bytes(data[:data_len]))
 
                     b_ct = 0
 
@@ -248,8 +247,8 @@ class TLSRelay(ProtoRelay):
 
                     processing_buffer[:b_ct] = extra_bytes
 
-                # more data is needed for a complete response. NOTE: this scenario is kind of dumb
-                # and shouldn't happen unless the server sends length of record and record separately.
+                # more data is needed for a complete response likely because the rmeote server sent the length of the
+                # record and record separately.
                 # elif (b_ct < data_len): break
                 else: break
 
@@ -260,7 +259,7 @@ class TLSRelay(ProtoRelay):
 
         Log.informational(f'[{tls_server}/{self._protocol.name}] Opening secure socket.')
 
-        sock: Socket = socket(AF_INET, SOCK_STREAM)
+        sock: Socket_T = socket(AF_INET, SOCK_STREAM)
         sock.settimeout(CONNECT_TIMEOUT)
 
         dot_sock = self._tls_context.wrap_socket(sock, server_hostname=tls_server)

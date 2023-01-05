@@ -57,7 +57,7 @@
             </form>
             <div class="row">
               <button class="btn waves-effect waves-light col s4" form="ddos-limits">Update</button>
-              {{ create_switch('Enabled', 'ddos_enabled', checked=ips_settings.enabled)|safe }}
+              {{ create_switch('Enabled', 'ddos_enabled', checked=ips_settings.ddos.enabled)|safe }}
             </div>
           </div>
         </div>

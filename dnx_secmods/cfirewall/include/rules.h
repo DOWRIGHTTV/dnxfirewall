@@ -37,7 +37,7 @@ enum sec_profiles {
     NONE,
     IP_PROXY,
     DNS_PROXY,
-    IPS_IDS
+    IDS_IPS
 };
 
 typedef struct ZoneMap {

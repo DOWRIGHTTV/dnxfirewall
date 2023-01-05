@@ -12,7 +12,7 @@ from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import PROTO, ICMP, CONN, DIR
 from dnx_gentools.def_exceptions import ProtocolError
-from dnx_gentools.standard_tools import looper
+from dnx_gentools.standard_tools import looper, request_queue, inspection_queue
 from dnx_gentools.def_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK, DNS_SEND
 
 from dnx_iptools.def_structs import *
@@ -27,6 +27,8 @@ if (TYPE_CHECKING):
     from dnx_secmods.dns_proxy import DNSServer_T
     from dnx_routines.logging import LogHandler_T
 
+    from dnx_gentools import Structure_T
+
     IntfList: TypeAlias = list[tuple[int, int, str]]
 
 __all__ = (
@@ -35,19 +37,24 @@ __all__ = (
 
 
 class Listener:
-    __registered_socks: dict[int, L_SOCK] = {}
-    __epoll: Epoll = select.epoll()
+    __registered_socks: ClassVar[dict[int, L_SOCK]] = {}
+    __epoll: ClassVar[Epoll] = select.epoll()
 
-    _intfs: IntfList = load_interfaces(exclude=['wan'])
-    _log:   LogHandler_T = None
+    _intfs: ClassVar[IntfList] = load_interfaces(exclude=['wan'])
+    _log:   ClassVar[LogHandler_T] = None
 
-    _listener_parser:   ListenerParser
-    _listener_callback: ListenerCallback
+    _listener_parser:   ClassVar[ListenerParser]
+    _listener_callback: ClassVar[ListenerCallback]
 
     # stored as file descriptors to minimize lookups in listener queue.
     enabled_intfs: set[int] = set()
 
-    __slots__ = ()
+    __slots__ = (
+        'request_queue',
+    )
+
+    def __init__(self):
+        self.request_queue = request_queue()
 
     @classmethod
     def run(cls, log: LogHandler_T, *, threaded: bool = True, always_on: bool = False) -> None:
@@ -62,17 +69,17 @@ class Listener:
         # ======================
         # INITIALIZING LISTENER
         # ======================
-        # running main epoll/ socket loop.
-        self = cls()
-        self._setup()
+        listener = cls()
+        listener._setup()
 
         log.notice(f'{cls.__class__.__name__} initialization complete.')
 
         # starting a registration thread for all available interfaces and exit when complete
         for intf in cls._intfs:
-            Thread(target=self.__register, args=(intf,)).start()
+            Thread(target=listener.__register, args=(intf,)).start()
 
-        self.__listener(always_on, threaded)
+        # running main epoll/ socket loop.
+        listener.__run_listener(always_on, threaded)
 
     @classmethod
     def enable(cls, sock_fd: int, intf: str) -> None:
@@ -94,14 +101,14 @@ class Listener:
         try:
             cls.enabled_intfs.remove(sock_fd)
         except KeyError:
-            pass
+            return
 
         cls._log.notice(f'[{sock_fd}][{intf}] {cls.__name__} listener disabled.')
 
     # TODO: what happens if interface comes online, then immediately gets unplugged. the registration would fail
     #  potentially and would no longer be active so it would never happen if the interface was replugged after.
     def __register(self, intf: tuple[int, int, str]) -> None:
-        '''will register interface with the listener.
+        '''registers an interface with the listener.
 
         once registration is complete the thread will exit.
         '''
@@ -124,16 +131,6 @@ class Listener:
 
         self._log.informational(f'[{l_sock.fileno()}][{intf}] {self.__class__.__name__} interface registered.')
 
-    @classmethod
-    def set_proxy_callback(cls, *, func: ProxyCallback) -> None:
-        '''takes a callback function to handle packets after parsing. the reference will be called
-        as part of the packet flow with one argument passed in for "packet".
-        '''
-        if (not callable(func)):
-            raise TypeError('proxy callback must be a callable object.')
-
-        cls._listener_callback: ProxyCallback = func
-
     def _setup(self):
         '''called prior to creating listener interface instances.
 
@@ -141,16 +138,15 @@ class Listener:
         '''
         pass
 
-    def __listener(self, always_on: bool, threaded: bool) -> NoReturn:
+    def __run_listener(self, always_on: bool, threaded: bool) -> NoReturn:
 
         # assigning all attrs as a local var for perf
         epoll_poll = self.__epoll.poll
         registered_socks_get = self.__registered_socks.get
+        request_queue_insert = self.request_queue.insert
 
         # methods
         listener_parser   = self._listener_parser
-        listener_callback = self._listener_callback
-        pre_inspect = self._pre_inspect
 
         # flags
         enabled_intfs = self.enabled_intfs
@@ -184,14 +180,7 @@ class Listener:
                         traceback.print_exc()
                         continue
 
-                    # referring to child class for whether to continue processing the packet
-                    if not pre_inspect(packet):
-                        continue
-
-                    if (threaded):
-                        Thread(target=listener_callback, args=(packet,)).start()
-                    else:
-                        listener_callback(packet)
+                    request_queue_insert(packet)
 
                 else:
                     self._log.debug(f'recv on fd: {fd} | enabled ints: {self.enabled_intfs}')
@@ -332,25 +321,31 @@ class ProtoRelay:
 
 
 class NFQueue:
-    _log: LogHandler_T
+    _log: ClassVar[LogHandler_T]
 
     _packet_parser:  ClassVar[ProxyParser]
     _proxy_callback: ClassVar[ProxyCallback]
 
-    __slots__ = ()
+    DEFAULT_THREAD_COUNT = 4
+
+    __slots__ = (
+        'inspection_queue',
+    )
+
+    def __init__(self):
+        self.inspection_queue = inspection_queue()
 
     @classmethod
-    def run(cls, log: LogHandler_T, *, q_num: int, threaded: bool = True) -> None:
+    def run(cls, log: LogHandler_T, *, q_num: int) -> None:
 
         cls._log = log
 
         log.informational(f'{cls.__class__.__name__} initialization started.')
-
-        self = cls()
-        self._setup()
-        self.__queue(q_num, threaded)
-
+        nfqueue = cls()
+        nfqueue._setup()
         log.notice(f'{cls.__class__.__name__} initialization complete.')
+
+        nfqueue.__run_queue(q_num)
 
     def _setup(self):
         '''called prior to creating listener interface instances.
@@ -359,29 +354,25 @@ class NFQueue:
         '''
         pass
 
-    @classmethod
-    def set_proxy_callback(cls, *, func: ProxyCallback) -> None:
-        '''Takes a callback function to handle packets after parsing.
+    # @classmethod
+    # def set_proxy_callback(cls, *, func: ProxyCallback) -> None:
+    #     '''Takes a callback function to handle packets after parsing.
+    #
+    #     the reference will be called as part of the packet flow with one argument passed in for "packet".
+    #     '''
+    #     if (not callable(func)):
+    #         raise TypeError('Proxy callback must be a callable object.')
+    #
+    #     cls._proxy_callback = func
 
-        the reference will be called as part of the packet flow with one argument passed in for "packet".
-        '''
-        if (not callable(func)):
-            raise TypeError('Proxy callback must be a callable object.')
-
-        cls._proxy_callback = func
-
-    def __queue(self, q: int, /, threaded: bool) -> NoReturn:
+    def __run_queue(self, q: int, /) -> NoReturn:
 
         for _ in RUN_FOREVER:
             # on failure, we will reinitialize the extension to start fresh
             nfqueue = NetfilterQueue()
 
-            if (threaded):
-                nfqueue.set_proxy_callback(self.__handle_packet_threaded)
-            else:
-                nfqueue.set_proxy_callback(self.__handle_packet)
-
             nfqueue.nf_set(q)
+            nfqueue.set_proxy_callback(self.__handle_packet)
 
             self._log.notice('Starting dnx_netfilter queue. Packets will be processed shortly')
 
@@ -398,23 +389,6 @@ class NFQueue:
 
             fast_sleep(1)
 
-    def __handle_packet_threaded(self, nfqueue: CPacket, mark: int) -> None:
-        '''NFQUEUE callback where each call to the proxy callback is done in a thread.
-        '''
-        try:
-            packet: ProxyPackets = self._packet_parser(nfqueue, mark)
-        except ProtocolError:
-            nfqueue.drop()
-
-        except Exception as E:
-            nfqueue.drop()
-
-            self._log.error(f'Failed to parse CPacket. Packet discarded. > {E}')
-
-        else:
-            if self._pre_inspect(packet):
-                Thread(target=self._proxy_callback, args=(packet,)).start()
-
     def __handle_packet(self, nfqueue: CPacket, mark: int) -> None:
         '''NFQUEUE callback where each call to the proxy callback is done sequentially.
         '''
@@ -429,19 +403,7 @@ class NFQueue:
             self._log.error(f'Failed to parse CPacket. Packet discarded. > {E}')
 
         else:
-            if self._pre_inspect(packet):
-                self._proxy_callback(packet)
-
-    def _pre_inspect(self, packet: ProxyPackets) -> bool:
-        '''called after packet parsing.
-
-        used to determine the course of action for a packet.
-        nfqueue drop, accept, or repeat can be called within this scope.
-        return will be evaluated to determine whether to continue and or do nothing/ drop the packet.
-
-        May be overridden.
-        '''
-        return True
+            self.inspection_queue.add(packet)
 
 
 # TODO: see if we can decommission this class to be replaced by CPacket.
@@ -593,16 +555,16 @@ class NFPacket:
 # PROXY RESPONSE BASE CLASS
 # ==========================
 # pre-defined fields which are functionally constants for the purpose of connection resets
-ip_header_template: Structure = PR_IP_HDR(
+ip_header_template: Structure_T = PR_IP_HDR(
     (('ver_ihl', 69), ('tos', 0), ('ident', 0), ('flags_fro', 16384), ('ttl', 255), ('checksum',0))
 )
-tcp_header_template: Structure = PR_TCP_HDR(
+tcp_header_template: Structure_T = PR_TCP_HDR(
     (('seq_num', 696969), ('offset_control', 20500), ('window', 0), ('urg_ptr', 0))
 )
-pseudo_header_template: Structure = PR_TCP_PSEUDO_HDR(
+pseudo_header_template: Structure_T = PR_TCP_PSEUDO_HDR(
     (('reserved', 0), ('protocol', 6), ('tcp_len', 20))
 )
-icmp_header_template: Structure = PR_ICMP_HDR(
+icmp_header_template: Structure_T = PR_ICMP_HDR(
     (('type', 3), ('code', 3), ('unused', 0))
 )
 

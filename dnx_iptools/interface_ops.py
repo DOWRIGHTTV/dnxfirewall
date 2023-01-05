@@ -24,7 +24,7 @@ __all__ = (
 
 NO_ADDRESS: int = -1
 
-_s: Socket = socket(AF_INET, SOCK_DGRAM)
+_s: Socket_T = socket(AF_INET, SOCK_DGRAM)
 DESCRIPTOR: int = _s.fileno()
 
 # NOTE: this may no longer be needed even though it was recently overhauled. the inclusion of the excluded

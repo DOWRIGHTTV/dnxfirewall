@@ -21,9 +21,9 @@ if (TYPE_CHECKING):
 __all__ = (
     'looper', 'dynamic_looper',
     'ConfigurationMixinBase', 'Initialize',
-    'dnx_queue',
+    'dnx_queue', 'inspection_queue',
     'bytecontainer', 'structure',
-    'classproperty'
+    'classproperty',
 )
 
 
@@ -99,12 +99,12 @@ class ConfigurationMixinBase:
     module_class: ModuleClasses
 
     def __init__(self):
-        # calling the module's epoll handler __init__ method
-        super().__init__()
-
         self._config_setup: bool = False
 
         self._initialize = Initialize()
+
+        # calling the module's epoll handler __init__ method
+        super().__init__()
 
     def configure(self, module_class: Optional[ModuleClasses] = None) -> None:
         '''blocking until settings are loaded/initialized.
@@ -281,7 +281,7 @@ def dnx_queue(log: LogHandler_T, name: str = None) -> Callable[[...], Any]:
         queue_add: Callable[[Any], None] = queue.append
         queue_get: Callable[[], Any] = queue.popleft
 
-        job_available: Event = threading.Event()
+        job_available: Event_T = threading.Event()
         job_wait: Callable[[Optional[float]], bool] = job_available.wait
         job_clear: Callable[[], None] = job_available.clear
         job_set: Callable[[], None] = job_available.set
@@ -305,8 +305,8 @@ def dnx_queue(log: LogHandler_T, name: str = None) -> Callable[[...], Any]:
                         fast_sleep(MSEC)
 
         def add(job: Any) -> None:
-            '''adds a job to work queue, then flags event indicating a job is available.'''
-
+            '''adds a job to work queue, then flags event indicating a job is available.
+            '''
             queue_add(job)
             job_set()
 
@@ -315,7 +315,94 @@ def dnx_queue(log: LogHandler_T, name: str = None) -> Callable[[...], Any]:
 
     return decorator
 
-def structure(obj_name: str, fields: Union[list, str]) -> Structure:
+def request_queue():
+    '''basic queueing mechanism for DNS requests received by the server.
+
+    alternate [Event based] version to the "InspectionQueue" mechanism used by the security modules.
+    optimized for single thread performance.
+    '''
+    request_queue = deque()
+    request_queue_append = request_queue.append
+    request_queue_get = request_queue.popleft
+
+    request_ready = threading.Event()
+    wait_for_request = request_ready.wait
+    notify_ready = request_ready.set
+    clear_ready = request_ready.clear
+
+    class _RequestQueue:
+
+        def return_ready(self) -> ListenerPackets:
+            '''function generator returning requests from queue in FIFO order.
+
+            calls will block if the queue is empty and will never time out.
+            '''
+            # blocking until at least one request has been received
+            wait_for_request()
+
+            # immediately clearing event, so we don't have to worry about it after loop. this prevents having to deal
+            # with scenarios where a request was received in just after while loop, but just before reset. in this case
+            # the request would be stuck until another was received.
+            clear_ready()
+
+            while request_queue:
+                yield request_queue_get()
+
+        # NOTE: first arg is because this gets referenced/called via an instance.
+        def insert(self, client_query: ListenerPackets) -> None:
+
+            request_queue_append(client_query)
+
+            # notifying return_ready that there is a query ready to forward
+            notify_ready()
+
+    if (TYPE_CHECKING):
+        return _RequestQueue
+
+    return _RequestQueue()
+
+def inspection_queue():
+    '''thread safe (using semaphores) packet queue to allow for more efficient packet processing by
+    the system modules.
+
+    1 worker can be used for sequential processing of packets
+            - see "RequestQueue" for an alternative to this
+    >1 worker will allow packets to be processed concurrently
+            - performance of threads will depend on ratio of holding gil to not holding gil
+    '''
+
+    queue = deque()
+    queue_add = queue.append
+    queue_get = queue.popleft
+
+    sem = threading.Semaphore(0)
+    notify_add = sem.release
+    wait_for_job = sem.acquire
+
+    class _InspectionQueue:
+
+        def add(self, job: ProxyPackets) -> None:
+            '''place packet into inspection queue for processing.
+            '''
+            queue_add(job)
+            notify_add()
+
+        def get(self) -> ProxyPackets:
+            '''returns packet from inspection queue for processing.
+
+            blocks until a packet is available.
+            '''
+            wait_for_job()
+            job = queue_get()
+
+            return job
+
+    if (TYPE_CHECKING):
+        return _InspectionQueue
+
+    return _InspectionQueue()
+
+def structure(obj_name: str, fields: Union[list, str]):
     '''named tuple like class factory for storing int values of raw byte sections with named fields.
 
     calling len on the container will return sum of all bytes stored not amount of fields. slots are being used to
@@ -381,7 +468,7 @@ def structure(obj_name: str, fields: Union[list, str]) -> Structure:
 
             return f'{obj_name}({comma_join(_fields)})'
 
-        def __call__(self, updates: tuple[tuple[str, int]] = None) -> Structure:
+        def __call__(self, updates: tuple[tuple[str, int]] = None) -> _Structure:
             '''returns a copy of current field assignments.
 
             a dictionary can be used to insert updated values into the new container.
@@ -450,7 +537,7 @@ def structure(obj_name: str, fields: Union[list, str]) -> Structure:
 
     return _Structure()
 
-def bytecontainer(obj_name: str, field_names: Union[list, str]) -> ByteContainer:
+def bytecontainer(obj_name: str, field_names: Union[list, str]):
     '''named tuple like class factory for storing raw byte sections with named fields.
 
     calling len on the container will return the sum of all bytes stored, not the number of fields.
@@ -531,3 +618,13 @@ class classproperty:
 
     def __get__(self, owner_self, owner_class):
         return self._fget(owner_class)
+
+
+# TYPE EXPORTS
+if (TYPE_CHECKING):
+    RequestQueue_T: TypeAlias = request_queue()
+    InspectionQueue_T: TypeAlias = inspection_queue()
+    Structure_T: TypeAlias       = structure('Structure', '')
+    ByteContainer_T: TypeAlias   = bytecontainer('ByteContainer', '')
+
+    __all__.extend(['RequestQueue_T', 'InspectionQueue_T', 'Structure_T', 'ByteContainer_T'])

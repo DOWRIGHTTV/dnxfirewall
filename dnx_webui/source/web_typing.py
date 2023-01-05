@@ -7,7 +7,10 @@ from typing import TYPE_CHECKING
 if (TYPE_CHECKING):
     from typing import TypeAlias, Type, Any, Callable, ByteString, Optional, Union
 
-    from threading import Lock, Event
+    from threading import Lock as _Lock, Event as _Event
+
+    Lock_T: TypeAlias = _Lock
+    Event_T: TypeAlias = _Event
 
     from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 

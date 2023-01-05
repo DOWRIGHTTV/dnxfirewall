@@ -38,7 +38,7 @@ MODULE_PERMISSIONS = {
 #     os.remove(CONTROL_SOCKET)
 #
 # _control_service = socket(AF_UNIX, SOCK_DGRAM)
-_control_sock: Socket = socket(AF_INET, SOCK_DGRAM)
+_control_sock: Socket_T = socket(AF_INET, SOCK_DGRAM)
 # _control_sock.setsockopt(SOL_SOCKET, SO_PASSCRED, 1)
 _control_sock.bind(CONTROL_SOCKET)
 
