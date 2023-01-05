@@ -27,7 +27,7 @@ if (TYPE_CHECKING):
     from dnx_gentools import Structure_T
 
 __all__ = (
-    'btoia', 'itoba',
+    'btoia',  # 'itoba',
 
     'change_socket_owner', 'authenticate_sender',
     'icmp_reachable',
@@ -40,7 +40,7 @@ __all__ = (
 )
 
 btoia: Callable[[ByteString], int] = partial(int.from_bytes, byteorder='big', signed=False)
-itoba: Callable[[int, int], bytes] = partial(int.to_bytes, byteorder='big', signed=False)
+# itoba: Callable[[int, int], bytes] = partial(int.to_bytes, byteorder='big', signed=False)
 
 def change_socket_owner(sock_path: str) -> bool:
     '''attempts to change the file owner and permissions of the passed in socket to dnx/dnx.

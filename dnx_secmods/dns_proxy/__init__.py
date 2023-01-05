@@ -52,16 +52,16 @@ def run():
 # ================
 # TYPING IMPORTS
 # ================
-from typing import TYPE_CHECKING, Type, Callable
+from typing import TYPE_CHECKING
 
 if (TYPE_CHECKING):
-    from typing import TypeAlias
+    from typing import Type, TypeAlias
 
     __all__ = (
         'DNSProxy', 'DNSServer',
         'ClientQuery', 'DNSPacket',
 
-        'DNSCache', 'RequestTracker',
+        'DNSCache_T',
 
         # TYPES
         'DNSProxy_T', 'DNSServer_T', 'DNSPacket_T'
@@ -72,10 +72,7 @@ if (TYPE_CHECKING):
     from dns_proxy_server import DNSServer
     from dns_proxy_packets import ClientQuery, DNSPacket
 
-    from dns_proxy_cache import dns_cache as _dns_cache, request_tracker as _request_tracker
-
-    DNSCache = _dns_cache(dns_packet=Callable[[str], ClientQuery], request_handler=Callable[[ClientQuery], None])
-    RequestTracker = _request_tracker()
+    from dns_proxy_cache import DNSCache_T
 
     # ======
     # TYPES

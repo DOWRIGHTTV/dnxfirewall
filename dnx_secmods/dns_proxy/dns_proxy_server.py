@@ -26,35 +26,40 @@ from dns_proxy_log import Log
 # ===============
 # TYPING IMPORTS
 # ===============
-from dnx_gentools.def_namedtuples import QNAME_RECORD_UPDATE
-
+if (TYPE_CHECKING):
+    from dnx_gentools.def_namedtuples import QNAME_RECORD_UPDATE
 
 __all__ = (
     'DNSServer',
 )
 
 # ======================
+# REQUEST MAP DICT
+# ======================
+REQUEST_MAP: dict[int, ClientQuery] = {}
+REQUEST_MAP_POP = REQUEST_MAP.pop
+
+# acquired prior to randomly selecting dns id
+dns_id_lock: Lock_T = threading.Lock()
+
+# ======================
 # DNS RECORD CACHE DICT
 # ======================
 # initializing dns cache/ sending in reference to needed methods for top domains
 # .start_pollers() call is required for top domains and cache clearing functionality
-DNS_CACHE = dns_cache(
-    dns_packet=ClientQuery.init_local_query
-)
-
+DNS_CACHE: DNSCache_T = dns_cache(dns_packet=ClientQuery.init_local_query)
 DNS_CACHE_ADD = DNS_CACHE.add
 DNS_CACHE_SEARCH = DNS_CACHE.search
 
 # GENERAL DEFINITIONS
+SUPPORTED_RECORD_TYPES = [DNS.A, DNS.NS]
+
 INVALID_RESPONSE: tuple[None, None] = (None, None)
 
 RELAY_MAP: dict[PROTO, Callable[[DNS_SEND], None]] = {
     PROTO.UDP: UDPRelay.relay.add,
     PROTO.DNS_TLS: TLSRelay.relay.add
 }
-
-# acquired prior to randomly selecting dns id
-dns_id_lock: Lock_T = threading.Lock()
 
 # ======================
 # MAIN DNS SERVER CLASS
@@ -64,19 +69,15 @@ dns_id_lock: Lock_T = threading.Lock()
 # ======================
 class DNSServer(ServerConfiguration, Listener):
 
-    _request_map: ClassVar[dict[int], tuple[bool, ClientQuery]] = {}
-    _id_lock: ClassVar[Lock] = threading.Lock()
-
     _listener_parser: ClassVar[ClientQuery] = ClientQuery
 
     __slots__ = (
-        '_request_map_pop', '_dns_records_get'
+        '_dns_records_get',
     )
 
     def __init__(self):
         # assigning object methods to reduce lookups
-        self._request_map_pop: Callable[[int, ...], ClientQuery] = self._request_map.pop
-        self._dns_records_get: Callable[[str], int] = self.dns_records.get
+        self._dns_records_get = self.dns_records.get
 
         super().__init__()
 
@@ -93,7 +94,7 @@ class DNSServer(ServerConfiguration, Listener):
         # ==========================
         # TOP DOMAINS / CACHE CLEAR
         # ==========================
-        DNS_CACHE.set_request_queue(self.request_queue)
+        DNS_CACHE.set_request_queue(self.request_handler)
         DNS_CACHE.start_pollers()
 
         # ==========================
@@ -108,11 +109,10 @@ class DNSServer(ServerConfiguration, Listener):
             return INSPECT_PACKET
 
         # NOTE: A/NS records are supported only. consider expanding
-        if (client_query.qr != DNS.QUERY or client_query.qtype not in [DNS.A, DNS.NS]):
+        if (client_query.qr != DNS.QUERY or client_query.qtype not in SUPPORTED_RECORD_TYPES):
             return DONT_INSPECT_PACKET
 
         record_ip: int = self._dns_records_get(client_query.qname)
-
         # generating server response and sending to client.
         if (record_ip):
             query_response = client_query.generate_record_response(record_ip)
@@ -136,36 +136,27 @@ class DNSServer(ServerConfiguration, Listener):
 
         return l_sock
 
-    # thread to handle all received requests from the listener.
-    def request_handler(self) -> NoReturn:
-        return_ready = self.request_queue.return_ready
-        pre_inspection = self._pre_inspect
+    @dnx_queue(Log, name='DNSServer')
+    def request_handler(self, client_query: ClientQuery) -> None:
+        # fast path for certain conditions
+        if self._pre_inspect(client_query) == DONT_INSPECT_PACKET:
+            return
 
-        for _ in RUN_FOREVER:
+        qname_cache = cache_available(client_query)
+        if (qname_cache is not QNAME_NOT_FOUND):
+            send_to_client(client_query, client_query.generate_cached_response(qname_cache))
 
-            # generator that blocks until at least 1 request is in the queue.
-            # if multiple requests are present, they will be yielded back until the queue is empty.
-            for client_query in return_ready():
+        else:
+            # generating dns query packet data
+            send_data = client_query.generate_dns_query(
+                # returns new unique id after storing {id: request info} in request map
+                get_unique_id(client_query), self.protocol
+            )
 
-                # fast path for certain conditions
-                if pre_inspection(client_query) == DONT_INSPECT_PACKET:
-                    continue
-
-                qname_cache = cache_available(client_query)
-                if (qname_cache is not QNAME_NOT_FOUND):
-                    send_to_client(client_query, client_query.generate_cached_response(qname_cache))
-
-                else:
-                    # generating dns query packet data
-                    send_data = client_query.generate_dns_query(
-                        # returns new unique id after storing {id: request info} in request map
-                        get_unique_id(self._request_map, client_query), self.protocol
-                    )
-
-                    # queue send_data to currently enabled protocol/relay for sending to external resolver
-                    RELAY_MAP[self.protocol](
-                        DNS_SEND(client_query.qname, send_data)
-                    )
+            # queue send_data to currently enabled protocol/relay for sending to external resolver
+            RELAY_MAP[self.protocol](
+                DNS_SEND(client_query.qname, send_data)
+            )
 
     @dnx_queue(Log, name='DNSServer')
     def response_handler(self, received_data: bytes) -> None:
@@ -176,7 +167,7 @@ class DNSServer(ServerConfiguration, Listener):
         if (dns_id == DNS.KEEPALIVE):
             return
 
-        client_query: ClientQuery = self._request_map_pop(dns_id, INVALID_RESPONSE)
+        client_query: ClientQuery = REQUEST_MAP_POP(dns_id, INVALID_RESPONSE)
         if (not client_query):
             return
 
@@ -195,7 +186,7 @@ class DNSServer(ServerConfiguration, Listener):
 # ==================
 # GENERAL FUNCTIONS
 # ==================
-def get_unique_id(request_map: dict, client_query: ClientQuery) -> int:
+def get_unique_id(client_query: ClientQuery) -> int:
     '''DNS ID generation.
 
     this value is guaranteed unique for the life of the request.
@@ -204,9 +195,9 @@ def get_unique_id(request_map: dict, client_query: ClientQuery) -> int:
         for _ in RUN_FOREVER:
 
             dns_id = randint(70, 32000)
-            if (dns_id not in request_map):
+            if (dns_id not in REQUEST_MAP):
 
-                request_map[dns_id] = client_query
+                REQUEST_MAP[dns_id] = client_query
 
                 return dns_id
 

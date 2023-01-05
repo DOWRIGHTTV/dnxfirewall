@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import threading
 
-from collections import Counter, deque
+from collections import Counter
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
@@ -33,7 +33,7 @@ NO_QNAME_RECORD = QNAME_RECORD(-1, -1, [])
 QNAME_NOT_FOUND = QNAME_RECORD_UPDATE(-1, [])
 
 # TODO: it might be worth making dns_packet callback set via set_* method since we doing for the request_queue already
-def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache:
+def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache_T:
     '''factory function providing subclass of dict as custom data structure for dealing with the local caching of dns
     records and poller operations for refresh and cleanup.
 
@@ -198,3 +198,10 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache:
         return _DNSCache
 
     return _DNSCache()
+
+
+# TYPE EXPORTS
+if (TYPE_CHECKING):
+    DNSCache_T: TypeAlias = dns_cache(dns_packet=Callable[[str], ClientQuery])
+
+    __all__.append('DNSCache_T')

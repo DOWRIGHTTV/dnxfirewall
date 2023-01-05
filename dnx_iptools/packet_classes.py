@@ -38,7 +38,7 @@ __all__ = (
 
 class Listener:
     __registered_socks: ClassVar[dict[int, L_SOCK]] = {}
-    __epoll: ClassVar[Epoll] = select.epoll()
+    __epoll: ClassVar[Epoll_T] = select.epoll()
 
     _intfs: ClassVar[IntfList] = load_interfaces(exclude=['wan'])
     _log:   ClassVar[LogHandler_T] = None
@@ -56,57 +56,9 @@ class Listener:
     def __init__(self):
         self.request_queue = request_queue()
 
-    @classmethod
-    def run(cls, log: LogHandler_T, *, threaded: bool = True, always_on: bool = False) -> None:
-        '''associating subclass Log reference with Listener class.
+        # TODO: what happens if interface comes online, then immediately gets unplugged. the registration would fail
+        #  potentially and would no longer be active so it would never happen if the interface was replugged after.
 
-        registering all interfaces in _intfs and starting service listener loop.
-        calling class method setup before to provide subclass specific code to run at class level before continuing.
-        '''
-        cls._log = log
-
-        log.informational(f'{cls.__name__} initialization started.')
-        # ======================
-        # INITIALIZING LISTENER
-        # ======================
-        listener = cls()
-        listener._setup()
-
-        log.notice(f'{cls.__class__.__name__} initialization complete.')
-
-        # starting a registration thread for all available interfaces and exit when complete
-        for intf in cls._intfs:
-            Thread(target=listener.__register, args=(intf,)).start()
-
-        # running main epoll/ socket loop.
-        listener.__run_listener(always_on, threaded)
-
-    @classmethod
-    def enable(cls, sock_fd: int, intf: str) -> None:
-        '''adds a file descriptor id to the disabled interface set.
-
-        this effectively re-enables the server for the zone of the specified socket.
-        '''
-        cls.enabled_intfs.add(sock_fd)
-
-        cls._log.notice(f'[{sock_fd}][{intf}] {cls.__name__} listener enabled.')
-
-    @classmethod
-    def disable(cls, sock_fd: int, intf: str) -> None:
-        '''removes a file descriptor id to the disabled interface set.
-
-        this effectively disables the server for the zone of the specified socket.
-        '''
-        # try block is to prevent key errors on initialization. after that, key errors should not be happening.
-        try:
-            cls.enabled_intfs.remove(sock_fd)
-        except KeyError:
-            return
-
-        cls._log.notice(f'[{sock_fd}][{intf}] {cls.__name__} listener disabled.')
-
-    # TODO: what happens if interface comes online, then immediately gets unplugged. the registration would fail
-    #  potentially and would no longer be active so it would never happen if the interface was replugged after.
     def __register(self, intf: tuple[int, int, str]) -> None:
         '''registers an interface with the listener.
 
@@ -131,22 +83,15 @@ class Listener:
 
         self._log.informational(f'[{l_sock.fileno()}][{intf}] {self.__class__.__name__} interface registered.')
 
-    def _setup(self):
-        '''called prior to creating listener interface instances.
-
-        May be overridden.
-        '''
-        pass
-
-    def __run_listener(self, always_on: bool, threaded: bool) -> NoReturn:
+    def __run_listener(self, always_on: bool) -> NoReturn:
 
         # assigning all attrs as a local var for perf
         epoll_poll = self.__epoll.poll
         registered_socks_get = self.__registered_socks.get
-        request_queue_insert = self.request_queue.insert
+        request_handler_add = self.request_handler.add
 
         # methods
-        listener_parser   = self._listener_parser
+        listener_parser = self._listener_parser
 
         # flags
         enabled_intfs = self.enabled_intfs
@@ -180,24 +125,83 @@ class Listener:
                         traceback.print_exc()
                         continue
 
-                    request_queue_insert(packet)
+                    request_handler_add(packet)
 
                 else:
                     self._log.debug(f'recv on fd: {fd} | enabled ints: {self.enabled_intfs}')
 
-    def _pre_inspect(self, packet: ListenerPackets) -> bool:
-        '''handle the request after the packet is parsed and confirmed a protocol match.
+    def _setup(self):
+        '''called prior to creating listener interface instances.
 
-        Must be overridden.
+        May be overridden.
         '''
-        raise NotImplementedError('the _pre_inspect method must be overridden in subclass.')
+        pass
 
-    def _listener_sock(self, intf: str, intf_ip: int) -> Socket:
+    def _listener_sock(self, intf: str, intf_ip: int) -> Socket_T:
         '''returns instance level listener socket.
 
         Must be overridden.
         '''
         raise NotImplementedError('the listener_sock method must be overridden in subclass.')
+
+    def request_handler(self, request: Any) -> None:
+        '''must be overriden by the subclass and implemented with the dnx_queue decorator.
+
+        example:
+                @dnx_queue(Log, 'ModuleName')
+                def request_handler(self, request: Any) -> None
+                    ...
+        '''
+        raise NotImplementedError('the request_handler method must be overridden in subclass.')
+
+    @classmethod
+    def run(cls, log: LogHandler_T, *, always_on: bool = False) -> None:
+        '''associating subclass Log reference with Listener class.
+
+        registering all interfaces in _intfs and starting service listener loop.
+        calling class method setup before to provide subclass specific code to run at class level before continuing.
+        '''
+        cls._log = log
+
+        log.informational(f'{cls.__name__} initialization started.')
+        # ======================
+        # INITIALIZING LISTENER
+        # ======================
+        listener = cls()
+        listener._setup()
+
+        log.notice(f'{cls.__class__.__name__} initialization complete.')
+
+        # starting a registration thread for all available interfaces and exit when complete
+        for intf in cls._intfs:
+            Thread(target=listener.__register, args=(intf,)).start()
+
+        # running main epoll/ socket loop.
+        listener.__run_listener(always_on)
+
+    @classmethod
+    def enable(cls, sock_fd: int, intf: str) -> None:
+        '''adds a file descriptor id to the disabled interface set.
+
+        this effectively re-enables the server for the zone of the specified socket.
+        '''
+        cls.enabled_intfs.add(sock_fd)
+
+        cls._log.notice(f'[{sock_fd}][{intf}] {cls.__name__} listener enabled.')
+
+    @classmethod
+    def disable(cls, sock_fd: int, intf: str) -> None:
+        '''removes a file descriptor id to the disabled interface set.
+
+        this effectively disables the server for the zone of the specified socket.
+        '''
+        # try block is to prevent key errors on initialization. after that, key errors should not be happening.
+        try:
+            cls.enabled_intfs.remove(sock_fd)
+        except KeyError:
+            return
+
+        cls._log.notice(f'[{sock_fd}][{intf}] {cls.__name__} listener disabled.')
 
 
 class ProtoRelay:
