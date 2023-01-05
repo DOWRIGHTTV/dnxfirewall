@@ -32,7 +32,7 @@ class Authentication:
     this class will access the Flask "request" and "session" data structures directly.
     '''
     def __init__(self):
-        self._time_expired: Event = threading.Event()
+        self._time_expired: Event_T = threading.Event()
 
     @classmethod
     def user_login(cls, *, specify_role: Optional[str] = None) -> tuple:

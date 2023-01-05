@@ -56,7 +56,7 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache:
     _top_domains: list = load_configuration('dns_server', ext='cache', cfg_type='global').get('top_domains')
 
     domain_counter: Counter[str, int] = Counter({dom: cnt for cnt, dom in enumerate(reversed(_top_domains))})
-    counter_lock: Lock = threading.Lock()
+    counter_lock: Lock_T = threading.Lock()
 
     top_domain_filter = tuple(load_top_domains_filter())
 

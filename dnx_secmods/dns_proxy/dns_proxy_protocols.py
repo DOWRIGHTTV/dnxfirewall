@@ -87,7 +87,7 @@ class UDPRelay(ProtoRelay):
 
         Log.informational(f'[{server_ip}/UDP] Opening socket.')
 
-        dns_sock: Socket = socket(AF_INET, SOCK_DGRAM)
+        dns_sock: Socket_T = socket(AF_INET, SOCK_DGRAM)
 
         # udp connect allows 'send' method to be used, but does not actually have an underlying connection
         dns_sock.connect((server_ip, PROTO.DNS))
@@ -119,7 +119,7 @@ class TLSRelay(ProtoRelay):
         self._tls_context.load_verify_locations(CERTIFICATE_STORE)
 
         # tls connection keepalive. hard set to 8 seconds, but can be enabled/disabled
-        self._keepalive_status: Event = threading.Event()
+        self._keepalive_status: Event_T = threading.Event()
         threading.Thread(target=self._keepalive_run).start()
 
     @dnx_queue(Log, name='TLSRelay')
@@ -259,7 +259,7 @@ class TLSRelay(ProtoRelay):
 
         Log.informational(f'[{tls_server}/{self._protocol.name}] Opening secure socket.')
 
-        sock: Socket = socket(AF_INET, SOCK_STREAM)
+        sock: Socket_T = socket(AF_INET, SOCK_STREAM)
         sock.settimeout(CONNECT_TIMEOUT)
 
         dot_sock = self._tls_context.wrap_socket(sock, server_hostname=tls_server)

@@ -130,7 +130,7 @@ def _log_handler() -> LogHandler:
     # ------------------
     # DB SERVICE SOCKET
     # ------------------
-    db_client: Socket = socket(AF_UNIX, SOCK_DGRAM)
+    db_client: Socket_T = socket(AF_UNIX, SOCK_DGRAM)
 
     db_sendmsg = db_client.sendmsg
 

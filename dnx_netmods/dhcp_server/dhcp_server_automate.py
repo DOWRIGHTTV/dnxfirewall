@@ -160,7 +160,7 @@ class ServerConfiguration(ConfigurationMixinBase):
 
             # this is providing the first portion of creating a socket. this will allow the system to create the socket
             # store the file descriptor id, and then bind when ready per normal registration logic.
-            l_sock: Socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            l_sock: Socket_T = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
             sock_refs = (l_sock, l_sock.fileno())
 

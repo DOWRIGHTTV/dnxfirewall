@@ -281,7 +281,7 @@ def dnx_queue(log: LogHandler_T, name: str = None) -> Callable[[...], Any]:
         queue_add: Callable[[Any], None] = queue.append
         queue_get: Callable[[], Any] = queue.popleft
 
-        job_available: Event = threading.Event()
+        job_available: Event_T = threading.Event()
         job_wait: Callable[[Optional[float]], bool] = job_available.wait
         job_clear: Callable[[], None] = job_available.clear
         job_set: Callable[[], None] = job_available.set

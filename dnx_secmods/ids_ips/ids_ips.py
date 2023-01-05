@@ -281,6 +281,9 @@ def ddos_detected(tracker: dict, packet: IPSPacket) -> bool:
     tracked_ip['count'] += 1
     tracked_ip['last_seen'] = packet.timestamp
 
+    # ====================
+    # INSPECTION DECISION
+    # ====================
     # if the ddos limit is exceeded and the host is not yet marked, return active ddos and add ip to tracker
     if threshold_exceeded(tracked_ip, packet):
 
@@ -292,7 +295,6 @@ def ddos_detected(tracker: dict, packet: IPSPacket) -> bool:
         return True
 
     return False
-
 
 def threshold_exceeded(tracked_ip, packet):
     elapsed_time = packet.timestamp - tracked_ip['initial']

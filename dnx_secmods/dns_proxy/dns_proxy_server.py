@@ -54,7 +54,7 @@ RELAY_MAP: dict[PROTO, Callable[[DNS_SEND], None]] = {
 }
 
 # acquired prior to randomly selecting dns id
-dns_id_lock: Lock = threading.Lock()
+dns_id_lock: Lock_T = threading.Lock()
 
 # ======================
 # MAIN DNS SERVER CLASS
@@ -126,8 +126,8 @@ class DNSServer(ServerConfiguration, Listener):
 
         return INSPECT_PACKET
 
-    def _listener_sock(self, intf: str, intf_ip: int) -> Socket:
-        l_sock: Socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    def _listener_sock(self, intf: str, intf_ip: int) -> Socket_T:
+        l_sock: Socket_T = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         l_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         l_sock.setblocking(False)
