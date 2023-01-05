@@ -43,7 +43,7 @@ if INITIALIZE_MODULE('dns-proxy'):
 def run():
     # server running in thread because run method is a blocking call
     threading.Thread(
-        target=dns_proxy_server.DNSServer.run, args=(Log,), kwargs={'threaded': False, 'always_on': True}
+        target=dns_proxy_server.DNSServer.run, args=(Log,), kwargs={'always_on': True}
     ).start()
 
     dns_proxy.DNSProxy.run(Log, q_num=Queue.DNS_PROXY)
