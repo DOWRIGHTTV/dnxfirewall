@@ -25,19 +25,19 @@ cdef extern from '<arpa/inet.h>':
 
     in_addr_t inet_addr(char *cp)
 
-ctypedef int mode_t
-
-cdef extern from '<mqueue.h>':
-    ctypedef void* mqd_t
-
-    struct mq_attr:
-        long int mq_flags
-        long int mq_maxmsg
-        long int mq_msgsize
-        long int mq_curmsgs
-
-    mqd_t   mq_open(const char *name, int oflag, mode_t mode, mq_attr *attr)
-    int     mq_close(mqd_t mqdes)
-    int     mq_send(mqd_t mqdes, const char *msg_ptr, size_t msg_len, unsigned int msg_prio)
-    ssize_t mq_receive(mqd_t mqdes, char *msg_ptr, size_t msg_len, unsigned int *msg_prio)
-    int     mq_unlink(const char *name)
+# ctypedef int mode_t
+#
+# cdef extern from '<mqueue.h>':
+#     ctypedef void* mqd_t
+#
+#     struct mq_attr:
+#         long int mq_flags
+#         long int mq_maxmsg
+#         long int mq_msgsize
+#         long int mq_curmsgs
+#
+#     mqd_t   mq_open(const char *name, int oflag, mode_t mode, mq_attr *attr)
+#     int     mq_close(mqd_t mqdes)
+#     int     mq_send(mqd_t mqdes, const char *msg_ptr, size_t msg_len, unsigned int msg_prio)
+#     ssize_t mq_receive(mqd_t mqdes, char *msg_ptr, size_t msg_len, unsigned int *msg_prio)
+#     int     mq_unlink(const char *name)
