@@ -9,6 +9,7 @@ from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import DHCP, PROTO
 from dnx_gentools.def_namedtuples import DHCP_RECORD
+from dnx_gentools.standard_tools import dnx_queue
 
 from dnx_iptools.packet_classes import Listener
 from dnx_iptools.cprotocol_tools import itoip
@@ -28,13 +29,21 @@ __all__ = (
     'DHCPServer',
 )
 
-VALID_MTYPES: list[DHCP] = [DHCP.DISCOVER, DHCP.REQUEST, DHCP.RELEASE]
-RESPONSE_REQUIRED: list[DHCP] = [DHCP.OFFER, DHCP.ACK, DHCP.NAK]
-RECORD_NOT_NEEDED: list[DHCP] = [DHCP.NOT_SET, DHCP.DROP, DHCP.NAK]
+# ======================
+# ONGOING REQUESTS DICT
+# ======================
+ONGOING_REQUESTS: dict[RequestID, ServerResponse] = {}
+ONGOING_REQUESTS_GET = ONGOING_REQUESTS.get
+ONGOING_REQUESTS_POP = ONGOING_REQUESTS.pop
+
+# GENERAL DEFINITIONS
+VALID_MTYPES = [DHCP.DISCOVER, DHCP.REQUEST, DHCP.RELEASE]
+RESPONSE_REQUIRED = [DHCP.OFFER, DHCP.ACK, DHCP.NAK]
+RECORD_NOT_NEEDED = [DHCP.NOT_SET, DHCP.DROP, DHCP.NAK]
 
 
 class DHCPServer(ServerConfiguration, Listener):
-    _ongoing: ClassVar[dict[RequestID, ServerResponse]] = {}
+
     _listener_parser: ClassVar[ClientRequest_T] = ClientRequest
 
     __slots__ = ()
@@ -55,20 +64,13 @@ class DHCPServer(ServerConfiguration, Listener):
 
         return False
 
-    def request_handler(self) -> NoReturn:
-        return_ready = self.request_queue.return_ready
-        pre_inspection = self._pre_inspect
-        handle_dhcp = self.handle_dhcp
+    @dnx_queue(Log, 'DHCPServer')
+    def request_handler(self, client_request: ClientRequest) -> None:
+        # fast path for certain conditions
+        if not self._pre_inspect(client_request):
+            return
 
-        for _ in RUN_FOREVER:
-
-            for client_request in return_ready():
-
-                # fast path for certain conditions
-                if not pre_inspection(client_request):
-                    continue
-
-                handle_dhcp(client_request)
+        self.handle_dhcp(client_request)
 
     def handle_dhcp(self, client_request: ClientRequest) -> None:
         request_id: RequestID = (client_request.mac, client_request.xID)
@@ -96,7 +98,7 @@ class DHCPServer(ServerConfiguration, Listener):
         elif (client_request.mtype == DHCP.DISCOVER):
             dhcp = ServerResponse(client_request.recvd_intf)
 
-            self.__class__._ongoing[request_id] = dhcp
+            ONGOING_REQUESTS[request_id] = dhcp
             client_request.handout_ip = dhcp.check_offer(client_request)
 
             # NOTE: the final record hostname will be used, so don't need it here
@@ -109,7 +111,7 @@ class DHCPServer(ServerConfiguration, Listener):
         elif (client_request.mtype == DHCP.REQUEST):
             record = cast(DHCP_RECORD, None)
 
-            dhcp = self._ongoing.get(request_id, None)
+            dhcp = ONGOING_REQUESTS_GET(request_id, None)
             if (not dhcp):
                 dhcp = ServerResponse(client_request.recvd_intf)
 
@@ -128,7 +130,7 @@ class DHCPServer(ServerConfiguration, Listener):
 
             # removing the request from ongoing since we are sending the final message and do
             # not need any objects from the request instance anymore.
-            self._ongoing.pop(request_id, None)
+            ONGOING_REQUESTS_POP(request_id, None)
 
         # ==============
         # UNKNOWN/DEBUG
@@ -147,7 +149,7 @@ class DHCPServer(ServerConfiguration, Listener):
 
             send_to_client(send_data, client_request, server_mtype)
 
-    def _listener_sock(self, intf_ident: str, _) -> Socket:
+    def _listener_sock(self, intf_ident: str, _) -> Socket_T:
         l_sock, sock_fd = self.interfaces[intf_ident].socket
 
         l_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)

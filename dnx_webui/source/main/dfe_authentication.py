@@ -221,7 +221,7 @@ def send_to_login_page():
 
     return redirect(url_for(login_page))
 
-def end_session_send_to_login_page(login_page: str = 'dnx_login'):
+def end_session_send_to_login_page():
     '''1. remove user from Flask session data structure.
     2. determines correct login page, then returns a Response object redirect accordingly.
     '''
