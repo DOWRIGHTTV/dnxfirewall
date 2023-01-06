@@ -10,7 +10,7 @@ _DISABLED = False
 # NOTE: splitting if statements as import organization
 # standard lib imports
 if (TYPE_CHECKING and not _DISABLED):
-    from typing import TypeAlias
+    from typing import TypeAlias, cast
 
     from threading import Lock as _Lock, Event as _Event
     from socket import socket as _socket
@@ -39,7 +39,7 @@ if (TYPE_CHECKING and not _DISABLED):
     # from dnx_iptools import *
     # from dnx_routines import *
 
-    from dnx_secmods import IPProxy_T, IDS_IPS_T, DNSProxy_T
+    from dnx_secmods import IPProxy_T, IDS_IPS_T, DNSProxy_T, DNSCache_T
     from dnx_secmods import ClientQuery as _ClientQuery
     from dnx_secmods import IPPPacket as _IPPPacket, IPSPacket as _IPSPacket
     from dnx_secmods import DNSPacket as _DNSPacket

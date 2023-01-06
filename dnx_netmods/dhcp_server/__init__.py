@@ -17,7 +17,7 @@ if INITIALIZE_MODULE('dhcp-server'):
     from dhcp_server import DHCPServer
 
 def run():
-    DHCPServer.run(Log, threaded=False)
+    DHCPServer.run(Log)
 
 
 # ================

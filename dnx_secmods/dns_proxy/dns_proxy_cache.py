@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import threading
 
-from collections import Counter, deque
+from collections import Counter
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
@@ -18,9 +18,6 @@ from dns_proxy_log import Log
 # TYPING IMPORTS
 # ===============
 if (TYPE_CHECKING):
-    from dnx_gentools import RequestQueue_T
-    from dnx_secmods.dns_proxy import DNSCache
-
     from dns_proxy_packets import ClientQuery
 
 __all__ = (
@@ -33,7 +30,7 @@ NO_QNAME_RECORD = QNAME_RECORD(-1, -1, [])
 QNAME_NOT_FOUND = QNAME_RECORD_UPDATE(-1, [])
 
 # TODO: it might be worth making dns_packet callback set via set_* method since we doing for the request_queue already
-def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache:
+def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache_T:
     '''factory function providing subclass of dict as custom data structure for dealing with the local caching of dns
     records and poller operations for refresh and cleanup.
 
@@ -51,7 +48,7 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache:
         request_queue (*reference to dns server request queue*)
     '''
     # will be set through class as nonlocal
-    request_queue_insert: Callable[[ClientQuery], None]
+    request_handler_add: Callable[[ClientQuery], None]
 
     _top_domains: list = load_configuration('dns_server', ext='cache', cfg_type='global').get('top_domains')
 
@@ -66,7 +63,7 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache:
     dict_get = dict.__getitem__
 
     @cfg_read_poller('dns_server', ext='cache', cfg_type='global')
-    def manual_clear(cache: DNSCache, cache_settings: ConfigChain) -> None:
+    def manual_clear(cache: DNSCache_T, cache_settings: ConfigChain) -> None:
 
         clear_dns_cache:   bool = cache_settings['clear->standard']
         clear_top_domains: bool = cache_settings['clear->top_domains']
@@ -100,7 +97,7 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache:
 
     @looper(THREE_MIN)
     # automated process to flush the cache if expire time has been reached.
-    def auto_clear(cache: DNSCache) -> None:
+    def auto_clear(cache: DNSCache_T) -> None:
 
         Log.debug('record cache clear or renew started.')
 
@@ -133,7 +130,7 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache:
         # response will be identified by "None" for client address
         for domain in top_domains:
 
-            request_queue_insert(dns_packet(domain))
+            request_handler_add(dns_packet(domain))
             fast_sleep(.1)
 
         Log.debug('expired records cleared from cache and top domains refreshed')
@@ -184,10 +181,10 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache:
 
             return self[query_name]
 
-        def set_request_queue(self, request_queue: RequestQueue_T) -> None:
-            nonlocal request_queue_insert
+        def set_request_queue(self, request_handler) -> None:
+            nonlocal request_handler_add
 
-            request_queue_insert = request_queue.insert
+            request_handler_add = request_handler.add
 
         def start_pollers(self):
 
@@ -198,3 +195,10 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache:
         return _DNSCache
 
     return _DNSCache()
+
+
+# TYPE EXPORTS
+if (TYPE_CHECKING):
+    DNSCache_T: TypeAlias = dns_cache(dns_packet=Callable[[str], ClientQuery])
+
+    __all__.append('DNSCache_T')
