@@ -95,7 +95,7 @@ def receive_requests(queue_for_db: Callable[[tuple[str, str, str]], None]) -> No
         # NOTE: instead of pickle, using json then converting to a py object manually
         log_tuple = NT_LOOKUP(f'{name}_log'.upper())
 
-        Log.debug(f'tuple reference retrieved: name->{name}, log_tuple->{log_tuple}')
+        # Log.debug(f'tuple reference retrieved: name->{name}, log_tuple->{log_tuple}')
 
         try:
             log_entry = log_tuple(*data['log'])
