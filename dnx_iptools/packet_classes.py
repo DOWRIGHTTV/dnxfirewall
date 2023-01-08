@@ -10,7 +10,7 @@ from threading import Thread
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
-from dnx_gentools.def_enums import PROTO, ICMP, CONN, DIR
+from dnx_gentools.def_enums import PROTO, ICMP, DECISION, DIRECTION
 from dnx_gentools.def_exceptions import ProtocolError
 from dnx_gentools.standard_tools import looper, inspection_queue
 from dnx_gentools.def_namedtuples import RELAY_CONN, NFQ_SEND_SOCK, L_SOCK, DNS_SEND
@@ -417,8 +417,8 @@ class NFPacket:
     # MARK FIELD's
     mark: int
 
-    action:    CONN
-    direction: DIR
+    action:    DECISION
+    direction: DIRECTION
 
     tracked_geo: int
     ipp_profile: int
@@ -488,8 +488,9 @@ class NFPacket:
         # creating instance attr so it can be modified if needed
         self.mark = mark
         # X (4b) | ips (4b) | dns (4b) | ipp (4b) | X (4b) | geo loc (8b) | direction (2b) | action (2b)
-        self.action    = CONN(mark & 3)
-        self.direction = DIR(mark >> 2 & 3)
+        self.action    = DECISION(mark & 3)
+        self.direction = DIRECTION(mark >> 2 & 3)
+
         self.tracked_geo = mark >>  4 & 255
         self.ipp_profile = mark >> 16 & 15
         self.dns_profile = mark >> 20 & 15

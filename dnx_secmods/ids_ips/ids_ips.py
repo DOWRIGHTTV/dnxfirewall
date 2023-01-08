@@ -8,7 +8,8 @@ from copy import copy
 from collections import defaultdict
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_enums import PROTO, CONN, IPS, ICMP
+from dnx_gentools.def_enums import PROTO, IPS, ICMP
+from dnx_gentools.def_enums import DECISION, CONN_REJECT, CONN_INSPECT, CONN_DROP, CONN_ACCEPT
 from dnx_gentools.def_constants import fast_time, RUN_FOREVER, INSPECT_PACKET, DONT_INSPECT_PACKET
 from dnx_gentools.def_namedtuples import IPS_SCAN_RESULTS, DDOS_TRACKERS, PSCAN_TRACKERS
 from dnx_gentools.standard_tools import inspection_queue
@@ -25,6 +26,12 @@ __all__ = (
     'IDS_IPS',
 )
 
+if (TYPE_CHECKING):
+    HOST_TRACKER: TypeAlias = dict[str, Any]
+    PROTO_TRACKER: TypeAlias = dict[int, HOST_TRACKER]
+
+    PRE_DETECTION: TypeAlias = Union[dict[int, list[tuple[int, int]]], dict[int, tuple[int, int]]]
+
 
 class IDS_IPS(IPSConfiguration, NFQueue):
 
@@ -34,12 +41,12 @@ class IDS_IPS(IPSConfiguration, NFQueue):
         'ddos_queue',
     )
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.ddos_queue = inspection_queue()
 
         super().__init__()
 
-    def _setup(self):
+    def _setup(self) -> None:
         self.configure()
 
         IPSResponse.setup(Log, self.__class__.open_ports)
@@ -65,7 +72,7 @@ class IDS_IPS(IPSConfiguration, NFQueue):
             return INSPECT_PACKET
 
         # packet accepted, no inspection
-        elif (packet.action is CONN.ACCEPT):
+        elif (packet.action == CONN_ACCEPT):
             packet.nfqueue.accept()
 
         # packet dropped, no inspection
@@ -81,7 +88,7 @@ class IDS_IPS(IPSConfiguration, NFQueue):
         pre_inspection = self._pre_inspect
 
         for _ in RUN_FOREVER:
-            packet = inspection_queue_get()
+            packet: IPSPacket = inspection_queue_get()
 
             # fast path for certain conditions
             if not pre_inspection(packet):
@@ -95,7 +102,7 @@ class IDS_IPS(IPSConfiguration, NFQueue):
         ddos_queue_get = self.ddos_queue.get
 
         for _ in RUN_FOREVER:
-            packet = ddos_queue_get()
+            packet: IPSPacket = ddos_queue_get()
 
             inspect_ddos(packet)
 
@@ -107,6 +114,7 @@ class IDS_IPS(IPSConfiguration, NFQueue):
 PORTSCAN_THRESHOLD = 4
 
 PREPARE_AND_SEND = IPSResponse.prepare_and_send
+PROXY_ADD_RULE   = IPTablesManager.proxy_add_rule
 
 # conserves resources by not sending packets that don't need to be checked or logged under normal conditions.
 # TODO: ensure trackers are getting cleaned of timed out records at some set interval.
@@ -123,19 +131,19 @@ ddos_tracker: dict[PROTO, DDOS_TRACKERS] = {
 def inspect_portscan(packet: IPSPacket) -> None:
     '''drives the overall logic of the portscan detection engine.
     '''
-    pscan = pscan_tracker[packet.protocol]
-    with pscan.lock:
-        initial_block, active_scanner, pre_detection_logging = portscan_detect(pscan.tracker, packet)
+    pscan_protocol = pscan_tracker[packet.protocol]
+    with pscan_protocol.lock:
+        initial_block, active_scanner, pre_detection_logging = portscan_detect(pscan_protocol.tracker, packet)
 
     # invoking forwarded verdict for connections from hosts that don't meet active scanner criteria
     if (not active_scanner):
 
-        if (packet.action is CONN.ACCEPT):
+        if (packet.action == CONN_ACCEPT):
             packet.nfqueue.accept()
 
             Log.debug(f'[pscan/accept] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
 
-        elif (packet.action is CONN.DROP):
+        elif (packet.action == CONN_DROP):
             packet.nfqueue.drop()
 
             Log.debug(f'[pscan/drop] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
@@ -154,9 +162,16 @@ def inspect_portscan(packet: IPSPacket) -> None:
 
         packet.nfqueue.drop()
 
-        # if rejection is enabled on top of prevention, port unreachable packets will be sent back to the scanner.
+        # if reject is enabled on top of prevention, port unreachable packets will be sent back to the scanner.
         if (IDS_IPS.pscan_reject):
-            portscan_reject(pre_detection_logging, packet, initial_block)
+            PREPARE_AND_SEND(packet)
+
+            Log.debug(f'[pscan/reject] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
+
+            # when host is first flagged as a scanner, we need to reject the packets that were previously allowed
+            # so the remote scanner will see consistent results. this only applies to ports not publicly available.
+            if (initial_block):
+                portscan_retroactive_reject(pre_detection_logging, packet)
 
         block_status = get_block_status(pre_detection_logging, packet.protocol)
 
@@ -172,7 +187,7 @@ def inspect_portscan(packet: IPSPacket) -> None:
 
         Log.log(packet, scan_info, engine=IPS.PORTSCAN)
 
-def portscan_detect(tracker: dict, packet: IPSPacket) -> tuple[bool, bool, dict]:
+def portscan_detect(tracker: PROTO_TRACKER, packet: IPSPacket) -> tuple[bool, bool, dict]:
     '''makes a decision for connections/ packets on whether it matches the profile of a port scanner.
     '''
     initial_block, scan_detected = False, False
@@ -196,8 +211,9 @@ def portscan_detect(tracker: dict, packet: IPSPacket) -> tuple[bool, bool, dict]
         # ====================
         # INSPECTION DECISION
         # ====================
-        # this is the logic to determine whether a host is a scanner or not and for mapping local port to the tcp
-        # sequence number which will be used to retroactively reject scans on ports prior to the host being flagged.
+        # this is the logic to determine whether a host is a scanner and maps the local port to either the tcp sequence
+        # number or ip_header + udp_header depending on the protocol. the map will be used to retroactively reject scans
+        # on ports hit prior to the host being flagged.
         # pre detect data will not be inserted for the packet that sets initial block status since we still have the
         # packet data needed to reject normally.
         if (len(tracked_ip['target']) >= PORTSCAN_THRESHOLD) or (packet.protocol is PROTO.UDP and not packet.udp_payload):
@@ -215,12 +231,7 @@ def portscan_detect(tracker: dict, packet: IPSPacket) -> tuple[bool, bool, dict]
 
 # sending packet response.
 # initial blocks will use pre detection log to generate packets for all previously received packets.
-def portscan_reject(pre_detection_logging: dict, packet: IPSPacket, initial_block: bool) -> None:
-    PREPARE_AND_SEND(packet)
-
-    Log.debug(f'[pscan/reject] {packet.src_ip}:{packet.src_port} > {packet.dst_ip}:{packet.dst_port}.')
-    if (not initial_block):
-        return
+def portscan_retroactive_reject(pre_detection_logging: PRE_DETECTION, packet: IPSPacket) -> None:
 
     if (packet.protocol is PROTO.TCP):
 
@@ -232,7 +243,8 @@ def portscan_reject(pre_detection_logging: dict, packet: IPSPacket, initial_bloc
 
     elif (packet.protocol is PROTO.UDP):
 
-        for ip_header, udp_header in pre_detection_logging.items():
+        # TODO: test this. was .items(), but that looked wrong. pretty sure it should be .values()
+        for ip_header, udp_header in pre_detection_logging.values():
             PREPARE_AND_SEND(copy(packet).udp_override(ip_header + udp_header))
 
 # checking intersection between pre detection and open port keys.
@@ -257,35 +269,35 @@ def inspect_ddos(packet: IPSPacket) -> None:
     # filter out everything but icmp echo requests.
     if (packet.protocol is PROTO.ICMP and packet.icmp_type is not ICMP.ECHO): return
 
-    ddos = ddos_tracker[packet.protocol]
-    with ddos.lock:
-        if not ddos_detected(ddos.tracker, packet): return
+    ddos_protocol = ddos_tracker[packet.protocol]
+    with ddos_protocol.lock:
+        if not ddos_detected(ddos_protocol.tracker, packet): return
 
     if (IDS_IPS.ids_mode):
         Log.log(packet, IPS.LOGGED, engine=IPS.DDOS)
 
     elif (IDS_IPS.ddos_enabled):
-        IPTablesManager.proxy_add_rule(packet.tracked_ip, packet.timestamp, table='raw', chain='IPS')
+        PROXY_ADD_RULE(packet.tracked_ip, packet.timestamp, table='raw', chain='IPS')
 
         Log.log(packet, IPS.FILTERED, engine=IPS.DDOS)
 
-def ddos_detected(tracker: dict, packet: IPSPacket) -> bool:
+def ddos_detected(tracker: PROTO_TRACKER, packet: IPSPacket) -> bool:
 
-    tracked_ip = tracker.get(packet.tracked_ip, None)
+    tracked_host = tracker.get(packet.tracked_ip, None)
 
-    if (not tracked_ip or fast_time() - tracked_ip['last_seen'] > 15):
+    if (not tracked_host or fast_time() - tracked_host['last_seen'] > 15):
         add_to_tracker(tracker, packet, engine=IPS.DDOS)
 
         return False
 
-    tracked_ip['count'] += 1
-    tracked_ip['last_seen'] = packet.timestamp
+    tracked_host['count'] += 1
+    tracked_host['last_seen'] = packet.timestamp
 
     # ====================
     # INSPECTION DECISION
     # ====================
     # if the ddos limit is exceeded and the host is not yet marked, return active ddos and add ip to tracker
-    if threshold_exceeded(tracked_ip, packet):
+    if threshold_exceeded(tracked_host, packet):
 
         # this is to suppress log entries for ddos hosts that are being detected by the engine since there is
         # a delay between detection and kernel offload or some packets are already in queue
@@ -296,26 +308,26 @@ def ddos_detected(tracker: dict, packet: IPSPacket) -> bool:
 
     return False
 
-def threshold_exceeded(tracked_ip, packet):
-    elapsed_time = packet.timestamp - tracked_ip['initial']
+def threshold_exceeded(tracked_host: HOST_TRACKER, packet: IPSPacket) -> bool:
+    elapsed_time = packet.timestamp - tracked_host['initial']
 
     # filter to prevent checks on hosts with connection length less than 2 seconds which would allow for cps/pps
     # calculation from using fractional values which result in multiplication.
     if (elapsed_time < 2):
         return False
 
-    Log.debug(f'[ddos/cps] {tracked_ip["count"]/elapsed_time}')
+    Log.debug(f'[ddos/cps] {tracked_host["count"]/elapsed_time}')
 
     protocol_src_limit = IDS_IPS.ddos_limits[packet.protocol]
-    if (tracked_ip['count']/elapsed_time < protocol_src_limit):
+    if (tracked_host['count']/elapsed_time < protocol_src_limit):
         return False
 
-    Log.informational(f'[ddos/cps] {tracked_ip["count"]/elapsed_time}')
+    Log.informational(f'[ddos/cps] {tracked_host["count"]/elapsed_time}')
 
     # the tracked host is now marked as engaging in an active d/dos attack.
     return True
 
-def add_to_tracker(tracker, packet, *, engine):
+def add_to_tracker(tracker: PROTO_TRACKER, packet: IPSPacket, *, engine: IPS):
     Log.debug(f'[{engine}/tracker] host {packet.tracked_ip} added.')
 
     if (engine is IPS.PORTSCAN):

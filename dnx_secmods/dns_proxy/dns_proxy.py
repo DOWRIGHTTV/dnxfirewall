@@ -48,7 +48,7 @@ class DNSProxy(ProxyConfiguration, NFQueue):
         inspection_queue_get = self.inspection_queue.get
 
         for _ in RUN_FOREVER:
-            packet = inspection_queue_get()
+            packet: DNSPacket = inspection_queue_get()
 
             # fast path for certain conditions
             if not pre_inspect(packet):

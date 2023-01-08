@@ -25,7 +25,7 @@ ConfigurationManager.set_log_reference(Log)
 
 
 class IPSConfiguration(ConfigurationMixinBase):
-    fw_rules:     ClassVar[dict] = {}
+    fw_rules:     ClassVar[dict[int, int]] = {}
     ip_whitelist: ClassVar[dict] = {}
 
     open_ports: ClassVar[dict[PROTO, dict]] = {

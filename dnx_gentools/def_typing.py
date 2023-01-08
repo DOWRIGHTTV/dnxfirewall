@@ -62,3 +62,9 @@ if (TYPE_CHECKING and not _DISABLED):
     DNSListHandler: TypeAlias = Callable[[Any, str, int], int]
 
     StructUnpack: TypeAlias = tuple[int, ...]
+
+    from dnx_gentools.def_namedtuples import INF_EVENT_LOG as _INF_EVENT_LOG
+    from dnx_gentools.def_namedtuples import IPP_EVENT_LOG as _IPP_EVENT_LOG
+    from dnx_gentools.def_namedtuples import IPS_EVENT_LOG as _IPS_EVENT_LOG
+
+    EVENT_LOGS: TypeAlias = Union[_IPP_EVENT_LOG, _IPS_EVENT_LOG, _INF_EVENT_LOG]

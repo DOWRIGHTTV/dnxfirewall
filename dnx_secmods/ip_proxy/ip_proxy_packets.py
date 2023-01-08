@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dnx_gentools.def_enums import DIR
+from dnx_gentools.def_enums import DIR_INBOUND
 
 from dnx_iptools.packet_classes import NFPacket, RawResponse
 
@@ -17,7 +17,7 @@ class IPPPacket(NFPacket):
 
     def _before_exit(self, mark: int) -> None:
 
-        if (self.direction == DIR.INBOUND):
+        if (self.direction == DIR_INBOUND):
             self.tracked_ip = self.src_ip
             self.local_ip = self.dst_ip
 

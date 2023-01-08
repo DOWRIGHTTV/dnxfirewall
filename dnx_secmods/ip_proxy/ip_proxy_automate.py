@@ -5,9 +5,9 @@ from __future__ import annotations
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import RFC1918
 from dnx_gentools.def_namedtuples import Item
-from dnx_gentools.def_enums import PROTO, DIR, REP, GEO
+from dnx_gentools.def_enums import PROTO, DIRECTION, GEOLOCATION, REPUTATION
 from dnx_gentools.standard_tools import ConfigurationMixinBase
-from dnx_gentools.file_operations import load_configuration, cfg_read_poller
+from dnx_gentools.file_operations import cfg_read_poller
 
 from dnx_iptools.iptables import IPTablesManager
 
@@ -23,10 +23,8 @@ if (TYPE_CHECKING):
 class ProxyConfiguration(ConfigurationMixinBase):
     ids_mode: ClassVar[bool] = False
 
-    reputation_enabled:   ClassVar[list[int]] = []
-    reputation_settings:  ClassVar[dict[REP, DIR]] = {}
-    # geolocation_enabled:  ClassVar[bool] = True
-    geolocation_settings: ClassVar[dict[GEO, DIR]] = {}
+    geolocation_settings: ClassVar[dict[GEOLOCATION, DIRECTION]] = {}
+    reputation_settings:  ClassVar[dict[REPUTATION, DIRECTION]] = {}
 
     ip_whitelist:  ClassVar[dict] = {}
     tor_whitelist: ClassVar[dict] = {}
@@ -63,28 +61,17 @@ class ProxyConfiguration(ConfigurationMixinBase):
         # used for categorizing private ip addresses
         geo_settings.append(Item(*RFC1918))
 
-        reputation_enabled: bool = False
         for reputation, direction in rep_settings:
 
-            if (direction):
-                reputation_enabled = True
-
-            self.__class__.reputation_settings[REP[reputation.upper()]] = DIR(direction)
+            self.__class__.reputation_settings[reputation.upper()] = DIRECTION(direction)
 
         for country, direction in geo_settings:
             
             # using enum for category key and direction value
             try:
-                self.__class__.geolocation_settings[GEO[country.upper()]] = DIR(direction)
+                self.__class__.geolocation_settings[country.upper()] = DIRECTION(direction)
             except KeyError:
                 continue  # not all enums/countries are populated
-
-        # using a list to maintain initial reference with inplace ops
-        if (reputation_enabled):
-            self.__class__.reputation_enabled.append(1)
-
-        else:
-            self.__class__.reputation_enabled.clear()
 
         self._initialize.done()
 
