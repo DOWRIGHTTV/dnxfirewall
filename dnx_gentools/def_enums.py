@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from enum import Enum as _Enum, IntEnum as _IntEnum, IntFlag as _IntFlag
+# this needs to be available at runtime. other types can be placed in TYPE_CHECKING conditional.
+from typing import NewType as _NewType
 
-from typing import TYPE_CHECKING
-if (TYPE_CHECKING):
-    from typing import NewType as _NewType
+from enum import Enum as _Enum, IntEnum as _IntEnum, IntFlag as _IntFlag
 
 
 class DATA(_IntEnum):
