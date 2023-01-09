@@ -260,32 +260,20 @@ REP_ID_TO_STRING: dict[int, REPUTATION] = {rep.value: rep.name for rep in REP}
 # ----------------------
 class DNXEnum(int):
 
-    _valid_ints = set()
+    _members: dict[int, str] = {}
 
     def __init__(self, val: int) -> None:
-        self._name = None
-
         # more added safety to ensure only explicitly defined ints are valid to prevent enum overflows
-        if (val not in self._valid_ints):
+        try:
+            self._name = self._members[val]
+        except KeyError:
             raise TypeError(f'[{val}] is not a valid {self.__class__.__name__} member.')
 
         super().__init__()
 
     @property
     def name(self) -> str:
-        # i feel better adding in some basic runtime safety to ensure integrity of logging messages.
-        # this will still be loads faster than IntEnum
-        if (self._name is None):
-            raise RuntimeError(f'Type {self.__class__.__name__}[{self}] name not set.')
-
         return self._name
-
-    def set_name(self, name: str) -> DNXEnum:
-        '''returns self so this can be called directly on initialization.
-
-        This call is required if the name property is needed.
-        '''
-        raise NotImplementedError('set_name method not defined.')
 
 # ----------------------
 # PACKET DECISIONS
@@ -299,18 +287,13 @@ class CONN(_IntEnum):
 
 class DECISION(DNXEnum):
 
-    _valid_ints = {int(x) for x in CONN}
-
-    def set_name(self, name: str) -> DECISION:
-        self._name = name
-
-        return self
+    _members = {x.value: x.name for x in CONN}
 
 
-CONN_REJECT  = DECISION(CONN.REJECT).set_name('REJECT')
-CONN_INSPECT = DECISION(CONN.INSPECT).set_name('INSPECT')
-CONN_DROP    = DECISION(CONN.DROP).set_name('DROP')
-CONN_ACCEPT  = DECISION(CONN.ACCEPT).set_name('ACCEPT')
+CONN_REJECT  = DECISION(CONN.REJECT)
+CONN_INSPECT = DECISION(CONN.INSPECT)
+CONN_DROP    = DECISION(CONN.DROP)
+CONN_ACCEPT  = DECISION(CONN.ACCEPT)
 
 # ----------------------
 # CONN DIRECTIONS
@@ -326,15 +309,10 @@ class DIR(_IntFlag):
 
 class DIRECTION(DNXEnum):
 
-    _valid_ints = {int(x) for x in DIR if x <= DIR.BOTH}
-
-    def set_name(self, name: str) -> DIRECTION:
-        self._name = name
-
-        return self
+    _members = {x.value: x.name for x in DIR if x <= DIR.BOTH}
 
 
-DIR_OFF      = DIRECTION(DIR.OFF).set_name('OFF')
-DIR_OUTBOUND = DIRECTION(DIR.OUTBOUND).set_name('OUTBOUND')
-DIR_INBOUND  = DIRECTION(DIR.INBOUND).set_name('INBOUND')
-DIR_BOTH     = DIRECTION(DIR.BOTH).set_name('BOTH')
+DIR_OFF      = DIRECTION(DIR.OFF)
+DIR_OUTBOUND = DIRECTION(DIR.OUTBOUND)
+DIR_INBOUND  = DIRECTION(DIR.INBOUND)
+DIR_BOTH     = DIRECTION(DIR.BOTH)
