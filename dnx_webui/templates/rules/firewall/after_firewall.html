@@ -175,7 +175,7 @@ ruleEditor.addEventListener("click", function(click) {
 
     let ruleRow = click.target.parentNode;
     let ruleEditor = document.querySelector("#FWrule-editor");
-    let editRule = M.Modal.init(ruleEditor, {});
+    let editRule = M.Modal.init(ruleEditor, {dismissible: false});
 
     fillEditor(ruleEditor, ruleRow);
 
@@ -226,7 +226,7 @@ function fillEditor(ruleEditor, ruleRow) {
             }
 
             else if (field === "log") {
-                editor_field.setAttribute("value", rule_field.innerText);
+                editor_field.checked = rule_field.innerText === 'on';
             }
             else if (field === "enabled") {
                 const enabled = parseInt(ruleRow.getAttribute("data-enabled"));
