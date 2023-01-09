@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-from typing import NewType as _NewType
 from enum import Enum as _Enum, IntEnum as _IntEnum, IntFlag as _IntFlag
+
+from typing import TYPE_CHECKING
+if (TYPE_CHECKING):
+    from typing import NewType as _NewType
 
 
 class DATA(_IntEnum):

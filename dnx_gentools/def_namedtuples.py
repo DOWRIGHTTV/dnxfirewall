@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from collections import namedtuple as _namedtuple
 from functools import lru_cache as _lru_cache
-from typing import NamedTuple as _NamedTuple, Union as _Union, Optional as _Optional, Any as _Any, Callable as _Callable
-from typing import ByteString as _ByteString
 
 from dnx_gentools.def_enums import PROTO as _PROTO, DHCP as _DHCP, DNS_CAT as _DNS_CAT, IPS as _IPS
 from dnx_gentools.def_enums import GEO as _GEO, DIR as _DIR
@@ -19,6 +17,9 @@ from dnx_iptools.def_structs import dhcp_byte_pack as _dhcp_bp, dhcp_short_pack 
 # ===============
 from typing import TYPE_CHECKING
 if (TYPE_CHECKING):
+    from typing import NamedTuple as _NamedTuple, Union as _Union, Optional as _Optional, Any as _Any
+    from typing import Callable as _Callable, ByteString as _ByteString
+
     from dnx_gentools.def_typing import Any as _Any, Socket_T, Lock_T, Address as _Address
 
 # ================
@@ -210,7 +211,7 @@ BLOCKED_DOM = _namedtuple('blocked', 'domain category reason')
 class L_SOCK(_NamedTuple):
     name:     str
     ip:       int
-    socket:   _Socket
+    socket:   Socket_T
     send:     _Callable[[_Union[bytes, bytearray]], int]
     sendto:   _Callable[[_Union[bytes, bytearray], _Address], int]
     recvfrom: _Callable[[_Union[_ByteString, memoryview]], tuple[int, _Address]]

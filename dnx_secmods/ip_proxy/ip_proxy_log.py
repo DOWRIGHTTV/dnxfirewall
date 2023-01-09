@@ -33,7 +33,7 @@ MALWARE_CATEGORIES = ['command/control']
 class Log(LogHandler):
 
     @classmethod
-    def log(cls, pkt: IPPPacket, inspection: IPP_INSPECTION_RESULTS):
+    def log(cls, pkt: IPPPacket, inspection: IPP_INSPECTION_RESULTS) -> None:
 
         for log, lvl, method in _generate_log(pkt, inspection):
             cls.event_log(pkt.timestamp, log, method=method)
