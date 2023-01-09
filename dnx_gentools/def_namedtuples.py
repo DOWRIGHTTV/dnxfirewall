@@ -13,12 +13,15 @@ from dnx_gentools.standard_tools import bytecontainer as _bytecontainer
 from dnx_iptools.def_structs import dhcp_byte_pack as _dhcp_bp, dhcp_short_pack as _dhcp_sp, dhcp_long_pack as _dhcp_lp
 
 # ===============
+# RUNTIME TYPES
+# ===============
+from typing import TYPE_CHECKING, NamedTuple as _NamedTuple
+
+# ===============
 # TYPING IMPORTS
 # ===============
-from typing import TYPE_CHECKING
 if (TYPE_CHECKING):
-    from typing import NamedTuple as _NamedTuple, Union as _Union, Optional as _Optional, Any as _Any
-    from typing import Callable as _Callable, ByteString as _ByteString
+    from typing import Union as _Union, Optional as _Optional, Any as _Any, Callable as _Callable, ByteString as _ByteString
 
     from dnx_gentools.def_typing import Any as _Any, Socket_T, Lock_T, Address as _Address
 
