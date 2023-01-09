@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from enum import Enum as _Enum, IntEnum as _IntEnum, IntFlag as _IntFlag
 
+# ===============
+# RUNTIME TYPES
+# ===============
+from typing import NewType as _NewType
+
 
 class DATA(_IntEnum):
     INVALID = -1
@@ -113,22 +118,6 @@ class IPS(_Enum):
     MISSED   = 7
     LOGGED   = 8
 
-# traffic direction / type
-class DIR(_IntFlag):
-    OFF      = 0
-    OUTBOUND = 1
-    INBOUND  = 2
-    BOTH     = 3
-    ON       = 4
-    ALL      = 5
-
-class CONN(_IntEnum):
-    # decisions
-    REJECT  = -2
-    INSPECT = -1  # drop with full inspection
-    DROP    = 0
-    ACCEPT  = 1
-
 # dhcp server message types
 class DHCP(_IntEnum):
     NOT_SET  = 0
@@ -190,21 +179,6 @@ class DNS_CAT(_IntEnum):
     remotelogin = 150
     downloads   = 160
 
-class REP(_IntEnum):
-    DNL  = -1  # did not look due to being geo filtered
-    NONE = 0
-
-    COMPROMISED      = 10
-    COMPROMISED_HOST = 11
-
-    MALICIOUS       = 20
-    MALICIOUS_HOST  = 21
-    COMMAND_CONTROL = 22
-
-    TOR       = 30
-    TOR_ENTRY = 31
-    TOR_EXIT  = 32
-
 
 # TODO: make this a flag if possible. pretty sure it is.
 CFG = _IntEnum('CFG', ['RESTORE', 'DEL', 'ADD', 'ADD_DEL'], start=0)
@@ -215,6 +189,9 @@ _TLD_LIST = [
 ]
 TLD_CAT = _IntEnum('TLD_CAT', _TLD_LIST, start=0)
 
+# ----------------------
+# GEOLOCATION
+# ----------------------
 _GEO_LIST = [
     'NONE', 'RFC1918',
     'AFGHANISTAN', 'ALBANIA', 'ALGERIA', 'AMERICAN_SAMOA', 'ANDORRA', 'ANGOLA', 'ANGUILLA', 'ANTARCTICA',
@@ -247,3 +224,95 @@ _GEO_LIST = [
     'ZAMBIA', 'ZIMBABWE'
 ]
 GEO = _IntEnum('GEO', _GEO_LIST, start=0)
+GEOLOCATION = _NewType('GEOLOCATION', str)
+GEO_ID_TO_STRING: dict[int, GEOLOCATION] = {i: x for i, x in enumerate(_GEO_LIST)}
+
+# ----------------------
+# REPUTATION
+# ----------------------
+class REP(_IntEnum):
+    DNL  = -1  # did not look due to being geo filtered
+    NONE = 0
+
+    COMPROMISED      = 10
+    COMPROMISED_HOST = 11
+
+    MALICIOUS       = 20
+    MALICIOUS_HOST  = 21
+    COMMAND_CONTROL = 22
+
+    TOR       = 30
+    TOR_ENTRY = 31
+    TOR_EXIT  = 32
+
+
+REPUTATION = _NewType('REPUTATION', str)
+REP_ID_TO_STRING: dict[int, REPUTATION] = {rep.value: rep.name for rep in REP}
+
+
+# ======================
+# CUSTOM ENUM TYPES
+# ======================
+# all custom enums with be synced with an associated stdlib Enum for compatibility
+
+# ----------------------
+# ENUM BASE
+# ----------------------
+class DNXEnum(int):
+
+    _members: dict[int, str] = {}
+
+    def __init__(self, val: int) -> None:
+        # more added safety to ensure only explicitly defined ints are valid to prevent enum overflows
+        try:
+            self._name = self._members[val]
+        except KeyError:
+            raise TypeError(f'[{val}] is not a valid {self.__class__.__name__} member.')
+
+        super().__init__()
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+# ----------------------
+# PACKET DECISIONS
+# ----------------------
+class CONN(_IntEnum):
+    # decisions
+    REJECT  = -2
+    INSPECT = -1  # drop with full inspection
+    DROP    = 0
+    ACCEPT  = 1
+
+class DECISION(DNXEnum):
+
+    _members = {x.value: x.name for x in CONN}
+
+
+CONN_REJECT  = DECISION(CONN.REJECT)
+CONN_INSPECT = DECISION(CONN.INSPECT)
+CONN_DROP    = DECISION(CONN.DROP)
+CONN_ACCEPT  = DECISION(CONN.ACCEPT)
+
+# ----------------------
+# CONN DIRECTIONS
+# ----------------------
+# traffic direction / type
+class DIR(_IntFlag):
+    OFF      = 0
+    OUTBOUND = 1
+    INBOUND  = 2
+    BOTH     = 3
+    ON       = 4
+    ALL      = 5
+
+class DIRECTION(DNXEnum):
+
+    _members = {x.value: x.name for x in DIR if x <= DIR.BOTH}
+
+
+DIR_OFF      = DIRECTION(DIR.OFF)
+DIR_OUTBOUND = DIRECTION(DIR.OUTBOUND)
+DIR_INBOUND  = DIRECTION(DIR.INBOUND)
+DIR_BOTH     = DIRECTION(DIR.BOTH)

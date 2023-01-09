@@ -4,21 +4,26 @@ from __future__ import annotations
 
 from collections import namedtuple as _namedtuple
 from functools import lru_cache as _lru_cache
-from typing import NamedTuple as _NamedTuple, Union as _Union, Optional as _Optional, Any as _Any, Callable as _Callable
-from typing import ByteString as _ByteString
 
-from dnx_gentools.def_enums import PROTO as _PROTO, DHCP as _DHCP, DNS_CAT as _DNS_CAT, CONN as _CONN, IPS as _IPS
+from dnx_gentools.def_enums import PROTO as _PROTO, DHCP as _DHCP, DNS_CAT as _DNS_CAT, IPS as _IPS
 from dnx_gentools.def_enums import GEO as _GEO, DIR as _DIR
+from dnx_gentools.def_enums import DECISION as _DECISION, GEOLOCATION as _GEOLOCATION, REPUTATION as _REPUTATION
 from dnx_gentools.standard_tools import bytecontainer as _bytecontainer
 
 from dnx_iptools.def_structs import dhcp_byte_pack as _dhcp_bp, dhcp_short_pack as _dhcp_sp, dhcp_long_pack as _dhcp_lp
 
 # ===============
+# RUNTIME TYPES
+# ===============
+from typing import TYPE_CHECKING, NamedTuple as _NamedTuple
+
+# ===============
 # TYPING IMPORTS
 # ===============
-from typing import TYPE_CHECKING
 if (TYPE_CHECKING):
-    from dnx_gentools.def_typing import Socket as _Socket, Address as _Address, Lock as _Lock
+    from typing import Union as _Union, Optional as _Optional, Any as _Any, Callable as _Callable, ByteString as _ByteString
+
+    from dnx_gentools.def_typing import Any as _Any, Socket_T, Lock_T, Address as _Address
 
 # ================
 # BYTE CONTAINERS
@@ -71,7 +76,7 @@ class DHCP_INTERFACE(_NamedTuple):
     netid:    int
     netmask:  int
     h_range:  list[int, int]
-    socket:   tuple[_Socket, int]
+    socket:   tuple[Socket_T, int]
     options:  dict[int, DHCP_OPTION]
 
 class DHCP_RECORD(_NamedTuple):
@@ -98,7 +103,7 @@ class DNS_SERVERS(_NamedTuple):
 
 class RELAY_CONN(_NamedTuple):
     remote_ip: str
-    sock: _Socket
+    sock: Socket_T
     send: _Callable[[_Union[bytes, bytearray]], int]
     recv: _Union[_Callable[[int], bytes], _Callable[[_Union[bytearray, memoryview]], int]]
     version: str
@@ -136,23 +141,23 @@ class IPS_SCAN_RESULTS(_NamedTuple):
     block_status:  _IPS
 
 class PSCAN_TRACKERS(_NamedTuple):
-    lock:    _Lock
-    tracker: dict[_PROTO, dict]
+    lock:    Lock_T
+    tracker: dict[int, dict[str, _Any]]
 
 class DDOS_TRACKERS(_NamedTuple):
-    lock:    _Lock
-    tracker: dict[_PROTO, dict]
+    lock:    Lock_T
+    tracker: dict[int, dict[str, _Any]]
 
 # IP PROXY
 class IPP_INSPECTION_RESULTS(_NamedTuple):
-    category: _Union[str, tuple[str, str]]
-    action:   _Optional[_CONN]
+    category: tuple[_GEOLOCATION, _REPUTATION]
+    action:   _DECISION
 
 # LOG TUPLES
 class IPP_EVENT_LOG(_NamedTuple):
     local_ip:   int
     tracked_ip: int
-    category:   tuple[str, str]
+    category:   tuple[_GEOLOCATION, _REPUTATION]
     direction:  str
     action:     str
 
@@ -209,7 +214,7 @@ BLOCKED_DOM = _namedtuple('blocked', 'domain category reason')
 class L_SOCK(_NamedTuple):
     name:     str
     ip:       int
-    socket:   _Socket
+    socket:   Socket_T
     send:     _Callable[[_Union[bytes, bytearray]], int]
     sendto:   _Callable[[_Union[bytes, bytearray], _Address], int]
     recvfrom: _Callable[[_Union[_ByteString, memoryview]], tuple[int, _Address]]

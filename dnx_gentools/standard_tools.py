@@ -452,12 +452,12 @@ def structure(obj_name: str, fields: Union[list, str]):
         __slots__ = ('buf',)
 
         def __init__(self):
-            super().__init__()
-
             self.buf: bytearray = _bytearray(size_of)
 
             for name in field_names:
                 self[name] = 0
+
+            super().__init__()
 
         def __repr__(self) -> str:
             return f'{self.__class__.__name__}({obj_name}, "{space_join(field_names)}")'

@@ -5,6 +5,7 @@ from __future__ import annotations
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import str_join
 from dnx_gentools.def_enums import LOG, DIR, CONN
+from dnx_gentools.def_enums import DECISION, CONN_REJECT, CONN_INSPECT, CONN_DROP, CONN_ACCEPT
 from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, GEOLOCATION_LOG, INF_EVENT_LOG
 
 from dnx_iptools.cprotocol_tools import itoip
@@ -13,9 +14,9 @@ from dnx_iptools.interface_ops import get_arp_table
 from dnx_routines.logging.log_client import LogHandler
 
 # DIRECT ACCESS FUNCTIONS
-from dnx_routines.logging.log_client import (
-    emergency, alert, critical, error, warning, notice, informational, debug, cli
-)
+# from dnx_routines.logging.log_client import (
+#     emergency, alert, critical, error, warning, notice, informational, debug, cli
+# )
 
 # ===============
 # TYPING IMPORTS
@@ -24,14 +25,17 @@ if (TYPE_CHECKING):
     from dnx_gentools.def_namedtuples import IPP_INSPECTION_RESULTS
     from dnx_secmods.ip_proxy import IPPPacket
 
+    LOG_ENTRIES: TypeAlias = list[tuple[EVENT_LOGS, LOG, str]]
+
+
+MALWARE_CATEGORIES = ['command/control']
 
 class Log(LogHandler):
-    _infected_cats: ClassVar[list[str]] = ['command/control']
 
     @classmethod
-    def log(cls, pkt: IPPPacket, inspection: IPP_INSPECTION_RESULTS):
-        lvl, logs = cls._generate_log(pkt, inspection)
-        for method, log in logs.items():
+    def log(cls, pkt: IPPPacket, inspection: IPP_INSPECTION_RESULTS) -> None:
+
+        for log, lvl, method in _generate_log(pkt, inspection):
             cls.event_log(pkt.timestamp, log, method=method)
 
         # if (cls.syslog_enabled and log):
@@ -44,33 +48,41 @@ class Log(LogHandler):
             f'direction={log.direction}; action={log.action}'
         ])
 
-    @classmethod
-    def _generate_log(cls, pkt: IPPPacket, inspection: IPP_INSPECTION_RESULTS) -> tuple[LOG, dict]:
-        if (inspection.action is CONN.DROP):
-            if (inspection.category in cls._infected_cats and pkt.direction is DIR.OUTBOUND and cls.current_lvl >= LOG.ALERT):
-                log = IPP_EVENT_LOG(
-                    pkt.local_ip, pkt.tracked_ip, inspection.category, pkt.direction.name, 'blocked'
-                )
+def _generate_log(pkt: IPPPacket, inspection: IPP_INSPECTION_RESULTS) -> LOG_ENTRIES:
 
-                log2 = INF_EVENT_LOG(
-                    get_arp_table(host=itoip(pkt.local_ip)), pkt.local_ip, itoip(pkt.tracked_ip), 'malware'
-                )
+    log_entries = []
 
-                return LOG.ALERT, {'ipp_event': log, 'inf_event': log2}
+    if (inspection.action in [CONN_REJECT, CONN_DROP]):
 
-            elif (cls.current_lvl >= LOG.WARNING):
-                log = IPP_EVENT_LOG(
-                    pkt.local_ip, pkt.tracked_ip, inspection.category, pkt.direction.name, 'blocked'
-                )
+        if (inspection.category in MALWARE_CATEGORIES and pkt.direction is DIR.OUTBOUND and Log.current_lvl >= LOG.ALERT):
+            log_entries.append((
+                INF_EVENT_LOG(get_arp_table(host=itoip(pkt.local_ip)), pkt.local_ip, itoip(pkt.tracked_ip), 'malware'),
+                LOG.ALERT,
+                'inf_event'
+            ))
 
-                return LOG.WARNING, {'ipp_event': log}
+        if (Log.current_lvl >= LOG.WARNING):
+            log_entries.append((
+                IPP_EVENT_LOG(pkt.local_ip, pkt.tracked_ip, inspection.category, pkt.direction.name, 'blocked'),
+                LOG.WARNING,
+                'ipp_event'
+            ))
+
+    elif (inspection.action is CONN_ACCEPT):
+
+        if (inspection.category in MALWARE_CATEGORIES and pkt.direction is DIR.OUTBOUND and Log.current_lvl >= LOG.EMERGENCY):
+            log_entries.append((
+                INF_EVENT_LOG(get_arp_table(host=itoip(pkt.local_ip)), pkt.local_ip, itoip(pkt.tracked_ip), 'malware'),
+                LOG.EMERGENCY,
+                'inf_event'
+            ))
 
         # informational logging for all accepted connections
-        elif (cls.current_lvl >= LOG.INFO):
-            log = IPP_EVENT_LOG(
-                pkt.local_ip, pkt.tracked_ip, inspection.category, pkt.direction.name, 'allowed'
-            )
+        if (Log.current_lvl >= LOG.INFO):
+            log_entries.append((
+                IPP_EVENT_LOG(pkt.local_ip, pkt.tracked_ip, inspection.category, pkt.direction.name, 'allowed'),
+                LOG.INFO,
+                'ipp_event'
+            ))
 
-            return LOG.INFO, {'ipp_event': log}
-
-        return LOG.NONE, {}
+    return log_entries

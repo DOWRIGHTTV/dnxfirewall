@@ -109,70 +109,70 @@
         </div>
     </div>
 </section>
-<section id="lan-restrict" class="section">
-    <div class="container">
-        <div class="row">
-            <div class="col s12 m10 offset-m1">
-                <div class="card-panel hoverable {{ theme.card }}">
-                    <h4 class="{{ theme.title }}">LAN Restrict</h4>
-                    <form method="post">
-                        <input type="hidden" name="tab" value="3">
-                        <div class="col s12">
-                            <h6>Start Time</h6>
-                            <div class="row">
-                                <div class="input-field col s12 m3 {{input_color}}">
-                                    <label>
-                                        Hour
-                                        <input type="number" name="hour" min="0" max="12" value="{{ip_settings['tr_settings']['hour']}}">
-                                    </label>
-                                </div>
-                                <div class="input-field col s12 m3 {{input_color}}">
-                                    <label>
-                                        Minute
-                                        <input type="number" name="minutes" min="0" max="45" step="15" value="{{ip_settings['tr_settings']['minutes']}}">
-                                    </label>
-                                </div>
-                                <div class="input-field col s12 m2 {{input_color}}">
-                                    <label>
-                                        <select name="time_suffix">
-                                            <option value="AM" {% if ip_settings['tr_settings']['suffix']=='AM' %} selected{% endif %}>AM</option>
-                                            <option value="PM" {% if ip_settings['tr_settings']['suffix']=='PM' %} selected{% endif %}>PM</option>
-                                        </select>
-                                    </label>
-                                </div>
-                            </div>
-                            <h6>Duration</h6>
-                            <div class="row">
-                                <div class="input-field col s12 m3 {{input_color}}">
-                                    <label>
-                                        Hours
-                                        <input type="number" name="tlen_hour" min="0" max="11" value="{{ip_settings['tr_settings']['length_hour']}}">
-                                    </label>
-                                </div>
-                                <div class="input-field col s12 m3 {{input_color}}">
-                                    <label>
-                                        Minutes
-                                        <input type="number" name="tlen_minutes" min="0" max="45" step="15" value="{{ip_settings['tr_settings']['length_minutes']}}">
-                                    </label>
-                                </div>
-                                <div class="input-field col s12 m6 center">
-                                    <br>
-                                    {{ create_switch('', 'restriction_enable',
-                                        checked=ip_settings.tr_settings.enabled)|safe }}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col s12 center">
-                                <button class="btn waves-effect waves-light" name="time_res_update">Update</button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
+{#<section id="lan-restrict" class="section">#}
+{#    <div class="container">#}
+{#        <div class="row">#}
+{#            <div class="col s12 m10 offset-m1">#}
+{#                <div class="card-panel hoverable {{ theme.card }}">#}
+{#                    <h4 class="{{ theme.title }}">LAN Restrict</h4>#}
+{#                    <form method="post">#}
+{#                        <input type="hidden" name="tab" value="3">#}
+{#                        <div class="col s12">#}
+{#                            <h6>Start Time</h6>#}
+{#                            <div class="row">#}
+{#                                <div class="input-field col s12 m3 {{input_color}}">#}
+{#                                    <label>#}
+{#                                        Hour#}
+{#                                        <input type="number" name="hour" min="0" max="12" value="{{ip_settings['tr_settings']['hour']}}">#}
+{#                                    </label>#}
+{#                                </div>#}
+{#                                <div class="input-field col s12 m3 {{input_color}}">#}
+{#                                    <label>#}
+{#                                        Minute#}
+{#                                        <input type="number" name="minutes" min="0" max="45" step="15" value="{{ip_settings['tr_settings']['minutes']}}">#}
+{#                                    </label>#}
+{#                                </div>#}
+{#                                <div class="input-field col s12 m2 {{input_color}}">#}
+{#                                    <label>#}
+{#                                        <select name="time_suffix">#}
+{#                                            <option value="AM" {% if ip_settings['tr_settings']['suffix']=='AM' %} selected{% endif %}>AM</option>#}
+{#                                            <option value="PM" {% if ip_settings['tr_settings']['suffix']=='PM' %} selected{% endif %}>PM</option>#}
+{#                                        </select>#}
+{#                                    </label>#}
+{#                                </div>#}
+{#                            </div>#}
+{#                            <h6>Duration</h6>#}
+{#                            <div class="row">#}
+{#                                <div class="input-field col s12 m3 {{input_color}}">#}
+{#                                    <label>#}
+{#                                        Hours#}
+{#                                        <input type="number" name="tlen_hour" min="0" max="11" value="{{ip_settings['tr_settings']['length_hour']}}">#}
+{#                                    </label>#}
+{#                                </div>#}
+{#                                <div class="input-field col s12 m3 {{input_color}}">#}
+{#                                    <label>#}
+{#                                        Minutes#}
+{#                                        <input type="number" name="tlen_minutes" min="0" max="45" step="15" value="{{ip_settings['tr_settings']['length_minutes']}}">#}
+{#                                    </label>#}
+{#                                </div>#}
+{#                                <div class="input-field col s12 m6 center">#}
+{#                                    <br>#}
+{#                                    {{ create_switch('', 'restriction_enable',#}
+{#                                        checked=ip_settings.tr_settings.enabled)|safe }}#}
+{#                                </div>#}
+{#                            </div>#}
+{#                        </div>#}
+{#                        <div class="row">#}
+{#                            <div class="col s12 center">#}
+{#                                <button class="btn waves-effect waves-light" name="time_res_update">Update</button>#}
+{#                            </div>#}
+{#                        </div>#}
+{#                    </form>#}
+{#                </div>#}
+{#            </div>#}
+{#        </div>#}
+{#    </div>#}
+{#</section>#}
 <script>
 async function updateCategory(category) {
 
