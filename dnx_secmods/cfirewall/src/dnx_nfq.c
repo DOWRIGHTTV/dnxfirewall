@@ -2,6 +2,8 @@
 #include "cfirewall.h"
 #include "dnx_nfq.h"
 
+FILENUM(3);
+
 static void mangle_src_addr(struct dnx_pktb *pkt);
 static void mangle_src_port(struct dnx_pktb *pkt);
 static void mangle_dst_addr(struct dnx_pktb *pkt);

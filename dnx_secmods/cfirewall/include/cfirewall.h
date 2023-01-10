@@ -12,8 +12,8 @@
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h> // nfct - conntrack updates (used by nat mod through dnx_nfq)
 
 // dnxfirewall setup
-#include "config.h"
 #include "debug.h"
+#include "config.h"
 #include "inet_tools.h"
 #include "std_tools.h"
 

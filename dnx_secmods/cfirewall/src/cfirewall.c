@@ -1,6 +1,7 @@
 #include "config.h"
 #include "cfirewall.h"
 
+FILENUM(1);
 
 // geolocation vars
 uint32_t MSB, LSB;

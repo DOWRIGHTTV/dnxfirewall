@@ -2,6 +2,8 @@
 #include "cfirewall.h"
 #include "traffic_log.h"
 
+FILENUM(8);
+
 struct LogHandle Log[2];
 struct dnx_db_service db_service;
 

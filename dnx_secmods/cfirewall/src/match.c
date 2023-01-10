@@ -3,6 +3,8 @@
 #include "cfirewall.h"
 #include "match.h"
 
+FILENUM(5);
+
 // compile time def because vals are assigned by the external webui
 // network object types.
 #define IP_ADDRESS  1
