@@ -76,6 +76,8 @@ extern struct mnl_socket *nl[2];
 // memset will be performed in Cython prior to changing the values.
 extern ZoneMap INTF_ZONE_MAP[FW_MAX_ZONES];
 
+extern void dnxFailed(int level, char* expr, int file, int lineno);
+
 // dnxfirewall typedef helpers
 typedef const struct nlmsghdr     nl_msg_hdr;
 

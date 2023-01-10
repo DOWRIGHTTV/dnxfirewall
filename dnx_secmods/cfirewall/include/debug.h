@@ -25,15 +25,4 @@
 #define assert_d(ignore) ((void)0)
 #endif
 
-void dnxFailed(int level, char* expr, int file, int lineno)
-{
-    if (level >= 1) {
-        fprintf(stderr, "Assertion failure. expr->%s, file->%d, line->%d\n", expr, file, lineno);
-        fflush(stderr); // shouldn't this be line buffered?
-    }
-
-    if (level >= 2) {
-        abort();
-    }
-}
 #endif

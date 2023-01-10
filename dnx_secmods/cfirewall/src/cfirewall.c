@@ -23,3 +23,16 @@ ZoneMap INTF_ZONE_MAP[FW_MAX_ZONES]; // = <uintf16_t*>calloc(FW_MAX_ZONE_COUNT, 
 // the packet id tracks revolving 1-255, which will be used tracked with connmark through nat process
 //uint8_t dnx_pkt_id = 0;
 //struct dnx_pktb dnx_pkt_tracker[UINT8_MAX];
+
+
+void dnxFailed(int level, char* expr, int file, int lineno)
+{
+    if (level >= 1) {
+        fprintf(stderr, "Assertion failure. expr->%s, file->%d, line->%d\n", expr, file, lineno);
+        fflush(stderr); // shouldn't this be line buffered?
+    }
+
+    if (level >= 2) {
+        abort();
+    }
+}
