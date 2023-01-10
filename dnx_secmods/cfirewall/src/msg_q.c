@@ -2,6 +2,8 @@
 #include cfirewall.h
 #include msg_q.h
 
+FILENUM(6);
+
 /*
   Queue indexes
   0 - CFIREWALL

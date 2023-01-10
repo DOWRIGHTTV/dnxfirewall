@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import str_join
-from dnx_gentools.def_enums import LOG, DIR, CONN
+from dnx_gentools.def_enums import LOG
 from dnx_gentools.def_enums import DECISION, CONN_REJECT, CONN_INSPECT, CONN_DROP, CONN_ACCEPT
+from dnx_gentools.def_enums import DIRECTION, DIR_OUTBOUND, DIR_INBOUND
 from dnx_gentools.def_namedtuples import IPP_EVENT_LOG, GEOLOCATION_LOG, INF_EVENT_LOG
 
 from dnx_iptools.cprotocol_tools import itoip
@@ -54,7 +55,7 @@ def _generate_log(pkt: IPPPacket, inspection: IPP_INSPECTION_RESULTS) -> LOG_ENT
 
     if (inspection.action in [CONN_REJECT, CONN_DROP]):
 
-        if (inspection.category in MALWARE_CATEGORIES and pkt.direction is DIR.OUTBOUND and Log.current_lvl >= LOG.ALERT):
+        if (inspection.category in MALWARE_CATEGORIES and pkt.direction == DIR_OUTBOUND and Log.current_lvl >= LOG.ALERT):
             log_entries.append((
                 INF_EVENT_LOG(get_arp_table(host=itoip(pkt.local_ip)), pkt.local_ip, itoip(pkt.tracked_ip), 'malware'),
                 LOG.ALERT,
@@ -70,7 +71,7 @@ def _generate_log(pkt: IPPPacket, inspection: IPP_INSPECTION_RESULTS) -> LOG_ENT
 
     elif (inspection.action is CONN_ACCEPT):
 
-        if (inspection.category in MALWARE_CATEGORIES and pkt.direction is DIR.OUTBOUND and Log.current_lvl >= LOG.EMERGENCY):
+        if (inspection.category in MALWARE_CATEGORIES and pkt.direction == DIR_OUTBOUND and Log.current_lvl >= LOG.EMERGENCY):
             log_entries.append((
                 INF_EVENT_LOG(get_arp_table(host=itoip(pkt.local_ip)), pkt.local_ip, itoip(pkt.tracked_ip), 'malware'),
                 LOG.EMERGENCY,

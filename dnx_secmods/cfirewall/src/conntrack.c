@@ -2,6 +2,8 @@
 #include "cfirewall.h"
 #include "conntrack.h"
 
+FILENUM(2);
+
 struct nfct_handle *nfct;
 
 int

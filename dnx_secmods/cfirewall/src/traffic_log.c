@@ -2,11 +2,13 @@
 #include "cfirewall.h"
 #include "traffic_log.h"
 
+FILENUM(8);
+
 struct LogHandle Log[2];
 struct dnx_db_service db_service;
 
-char*   action_map[3] = {"deny", "accept", "reject"};
-char*   dir_map[2]    = {"inbound", "outbound"};
+char*   action_map[] = { "deny", "accept", "reject" };
+char*   dir_map[]    = { "unknown", "outbound", "inbound" };
 
 void
 log_init(int logger_idx, char *label)
