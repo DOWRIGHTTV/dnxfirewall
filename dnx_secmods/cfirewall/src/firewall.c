@@ -2,7 +2,7 @@
 #include "cfirewall.h"
 #include "firewall.h"
 
-FILENUM(3);
+FILENUM(4);
 
 #define FW_SYSTEM_MAX_RULE_COUNT  50
 #define FW_BEFORE_MAX_RULE_COUNT 100
