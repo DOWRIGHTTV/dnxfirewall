@@ -119,22 +119,31 @@ def generate_reputation(log: LogHandler_T) -> list[list[int, int]]:
     return hosts
 
 def _combine_geolocation(log: LogHandler_T) -> list[str]:
-    geo_settings: list = load_configuration('profiles/profile_1', cfg_type='security/ip').get_list('geolocation')
+    # geo_settings: list = load_configuration('profiles/profile_1', cfg_type='security/ip').get_list('geolocation')
+    #
+    # # adding private ip space signatures because they are currently excluded from webui. (by design... for now)
+    # geo_settings.append(RFC1918[0])
+    #
+    # ip_geo_signatures: list = []
+    # # restricting iteration to explicitly defined rules in the configuration file instead of assuming all files in the
+    # # signature folder are good to load in.
+    # for country in geo_settings:
+    #     try:
+    #         with open(f'{HOME_DIR}/dnx_profile/signatures/geo_lists/{country}.geo', 'r') as file:
+    #             ip_geo_signatures.extend([x for x in file.read().splitlines() if x and '#' not in x])
+    #     except FileNotFoundError:
+    #         log.alert(f'[geolocation] signature file missing: {country}')
+    #
+    # return ip_geo_signatures
 
-    # adding private ip space signatures because they are currently excluded from webui. (by design... for now)
-    geo_settings.append(RFC1918[0])
+    # filtering out ranges with an undefined country
+    try:
+        with open(f'{HOME_DIR}/dnx_profile/signatures/geo_lists/collection.geo', 'r') as collection:
+            return [x for x in collection.read().splitlines() if not x.endswith('-')]
+    except FileNotFoundError:
+        log.alert(f'[geolocation] signature file missing.')
 
-    ip_geo_signatures: list = []
-    # restricting iteration to explicitly defined rules in the configuration file instead of assuming all files in the
-    # signature folder are good to load in.
-    for country in geo_settings:
-        try:
-            with open(f'{HOME_DIR}/dnx_profile/signatures/geo_lists/{country}.geo', 'r') as file:
-                ip_geo_signatures.extend([x for x in file.read().splitlines() if x and '#' not in x])
-        except FileNotFoundError:
-            log.alert(f'[geolocation] signature file missing: {country}')
-
-    return ip_geo_signatures
+        return []
 
 def generate_geolocation(log: LogHandler_T) -> list[list[int, list[int, int, int]]]:
     '''
@@ -145,18 +154,25 @@ def generate_geolocation(log: LogHandler_T) -> list[list[int, list[int, int, int
     # getting all enabled signatures
     ip_geo_signatures: list = _combine_geolocation(log)
 
-    converted_list: list = []
+    converted_list = []
     cvl_append = converted_list.append
 
     # conversion logic
     for signature in ip_geo_signatures:
 
         try:
-            net, cat = signature.split()
+            # net, cat = signature.split()
+            #
+            # subnet: list = net.split('/')
+            # net_id:  int = ip_unpack(inet_aton(subnet[0]))[0]
+            # h_count: int = cidr_to_host_count[subnet[1]]
+            #
+            # country = int(GEO[cat.upper()])
 
-            subnet: list = net.split('/')
-            net_id:  int = ip_unpack(inet_aton(subnet[0]))[0]
-            h_count: int = cidr_to_host_count[subnet[1]]
+            net, ct, cat = signature.split(',')
+
+            net_id = int(net)
+            h_count = int(ct)
 
             country = int(GEO[cat.upper()])
         except Exception as E:
@@ -170,8 +186,10 @@ def generate_geolocation(log: LogHandler_T) -> list[list[int, list[int, int, int
                 h_count -= LSB + 1
                 net_id  += LSB + 1
 
-            # NOTE: -1 to step down to bcast value
-            cvl_append(f'{net_id} {h_count-1} {country}')
+            # NOTE: -1 to step down to bcast value  // not needed with new ip2l format
+            # cvl_append(f'{net_id} {h_count-1} {country}')
+
+            cvl_append(f'{net_id} {h_count} {country}')
 
     del ip_geo_signatures
 
