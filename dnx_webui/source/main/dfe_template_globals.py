@@ -86,8 +86,8 @@ def create_decora_switch(name: str, value: str, checked: int, *, enabled: int = 
     return switch
 
 @app.template_global()
-def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tuple[int, int],
-        *, enabled: int = 1, tethered: bool = False, onclick: str = 'updateCategory'):
+def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tuple[int, int, int],
+        *, enabled: int = 1, onclick: str = 'updateCategory'):
     '''generates and returns HTML containing a title and (2) decora switches.
 
     the second switch will be tethered to the first such that if the first is NOT checked, the second will be marked
@@ -101,8 +101,8 @@ def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tupl
     off_two = ' active' if (not checked[1] or disabled_two) else ''
     on_two  = ' active' if (checked[1] and not disabled_two) else ''
 
-    switch_code_off = 0 if not tethered else 2
-    switch_code_on  = 1 if not tethered else 3
+    switch_code_off = 0 if len(checked) < 3 and not checked[2] else 2
+    switch_code_on  = 1 if len(checked) < 3 and not checked[2] else 3
 
     switch = (
         f'<div class="col s3"><div class="row row-thin"><p class="multi-switch-label center">{value}</p></div>'
@@ -110,9 +110,9 @@ def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tupl
         '<div class="row">'
             f'<div id="{value}-1" class="multi-switch-container decora-switch">'
                 f'<ul class="multi-switch"{disabled}>'
-                    f'<li class="multi-switch-off{off}"><button name="{name[0]}" value="{value}" onclick="{onclick}(this,0,0,{switch_code_off})">'
+                    f'<li class="multi-switch-off{off}"><button name="{name[0]}" value="{value}" onclick="{onclick}(this,0,{switch_code_off})">'
                         '<i class="material-icons small">radio_button_unchecked</i></button></li>'
-                    f'<li class="multi-switch-on{on}"><button name="{name[0]}" value="{value}" onclick="{onclick}(this,0,1,{switch_code_on})">'
+                    f'<li class="multi-switch-on{on}"><button name="{name[0]}" value="{value}" onclick="{onclick}(this,0,{switch_code_on})">'
                         '<i class="material-icons small">block</i></button></li>'
                 '</ul>'
             '</div>'
@@ -121,9 +121,9 @@ def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tupl
         '<div class="row row-thin">'
             f'<div id="{value}-2" class="multi-switch-container decora-switch">'
                 f'<ul class="multi-switch"{disabled_two}>'
-                    f'<li class="multi-switch-off{off_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(this,1,0,{switch_code_off})">'
+                    f'<li class="multi-switch-off{off_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(this,1,{switch_code_off})">'
                         '<i class="material-icons small">radio_button_unchecked</i></button></li>'
-                    f'<li class="multi-switch-on{on_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(this,1,1,{switch_code_on})">'
+                    f'<li class="multi-switch-on{on_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(this,1,{switch_code_on})">'
                         '<i class="material-icons small">block</i></button></li>'
                 '</ul>'
             '</div>'

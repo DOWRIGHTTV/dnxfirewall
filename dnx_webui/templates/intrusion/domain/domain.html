@@ -69,7 +69,7 @@
   </div>
 </section>
 <script>
-async function updateCategory(category, button_idx, li_idx, enabled) {
+async function updateCategory(category, button_idx, enabled) {
 
     let response = await ajaxClient.post("/post", {"type": category.name, "category": category.value, "enabled": enabled});
 

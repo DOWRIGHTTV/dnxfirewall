@@ -789,7 +789,10 @@ if (server_type == 'development'):
     def print_forms() -> None:
         if (request.method == 'POST'):
             print(f'form data\n{"=" * 12}')
-            ppt(dict(request.form))
+            if ajax_data := request.get_json(silent=True):
+                ppt(ajax_data)
+            else:
+                ppt(dict(request.form))
 
     @app.after_request
     def no_store_http_header(response):
