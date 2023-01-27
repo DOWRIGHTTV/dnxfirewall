@@ -139,10 +139,11 @@ def inspect(packet: DNSPacket) -> DNS_REQUEST_RESULTS:
         # adding the returned cat to the enum list. this will be used to identify categories for allowed requests.
         enum_categories.append(category)
 
+    # TODO: expand keyword search to be able to specify locations of sub-string ex. [>start, <end]
+    #  (the endian points towards which side has the remainder of the string.)
     # Keyword search within query name will block if match
     req = packet.qname
-    keyword_match = [(kwd, cat) for kwd, cat in _dns_keywords if kwd in req]
-    if (keyword_match):
+    if (keyword_match := [(kwd, cat) for kwd, cat in _dns_keywords if kwd in req]):
         return DNS_REQUEST_RESULTS(True, 'keyword', keyword_match[0][1])
 
     # pulling the most specific category that is not none otherwise returned value will be DNS_CAT.NONE.

@@ -41,7 +41,8 @@
           {{ create_title('system default')|safe }}
           {% for category, settings in domain_settings['built-in'] %}
             {% if not loop.index0 % 4 %}<div class="row">{% endif %}
-            {{ create_tandem_decora_switch(('built-in', 'keyword'), category, (settings['enabled'], settings['keyword']), tethered=True)|safe }}
+            {{ create_tandem_decora_switch(('built-in', 'keyword'), category,
+                (settings['enabled'], settings['keyword'], settings['tethered']))|safe }}
             {% if loop.index0 % 4 == 3 or loop.last %}</div>{% endif %}
           {% endfor %}
         </div>
@@ -68,16 +69,32 @@
   </div>
 </section>
 <script>
-async function updateCategory(category, enabled) {
+async function updateCategory(category, button_idx, li_idx, enabled) {
 
-  let response = await ajaxClient.post("/post", {"type": category.name, "category": category.value, "enabled": enabled});
+    let response = await ajaxClient.post("/post", {"type": category.name, "category": category.value, "enabled": enabled});
 
-  // manually changing the active button instead of using an event listener to prevent a switch on server errors.
-  let error = ajaxClient.handleResponse(response, category);
-  if (!error) {
-    category.parentElement.parentElement.querySelector(".active").classList.remove("active");
-    category.parentElement.classList.add("active");
-  }
+    // if an error is returned, immediately return. pop-up is handled by the ajax client
+    if (ajaxClient.handleResponse(response, category)) { return; }
+
+    // manually changing the active button instead of using an event listener to prevent a switch on server errors.
+    const buttons = [document.querySelector(category.value + "-1"), document.querySelector(category.value + "-2")];
+
+    let current_button = buttons[button_idx];
+    updateBtn(current_button);
+
+    if ([2, 3].contains(enabled)) {
+        let other_button = buttons[button_idx+1 % 2];
+        updateBtn(other_button);
+      }
+}
+function updateBtn(btn) {
+    btn.querySelectorAll("li").forEach(btn => {
+        if (btn.classList.contains("active")) {
+            btn.classList.remove("active");
+        } else {
+            btn.classList.add("active");
+        }
+    });
 }
 </script>
 {% endblock %}
