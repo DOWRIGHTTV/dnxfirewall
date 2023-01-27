@@ -12,6 +12,10 @@ from source.web_interfaces import StandardWebPage
 
 __all__ = ('WebPage',)
 
+STANDARD_CATEGORY_CODES = (0, 1)
+TETHERED_CATEGORY_CODES = (2, 3)
+VALID_CATEGORY_CODES = (*STANDARD_CATEGORY_CODES, *TETHERED_CATEGORY_CODES)
+
 class WebPage(StandardWebPage):
     '''
     available methods: load, update, handle_ajax
@@ -42,7 +46,6 @@ class WebPage(StandardWebPage):
         return NO_STANDARD_ERROR
 
     @staticmethod
-    # TODO: figure out how to refresh page or update keyword options after domain cat change
     def handle_ajax(form: Form) -> tuple[bool, WebError]:
 
         ruleset = form.get('type', DATA.MISSING)
@@ -51,7 +54,7 @@ class WebPage(StandardWebPage):
 
         category = config(**{
             'name': form.get('category', DATA.MISSING),
-            'enabled': get_convert_bint(form, 'enabled')
+            'enable_code': get_convert_in_range(form, 'enabled')
         })
 
         if any([x for x in category.values() if x in [DATA.MISSING, DATA.INVALID]]):
@@ -71,48 +74,63 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[Va
 
     dns_proxy: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
 
-    if (ruleset in ['built-in', 'custom']):
-        cat_list = dns_proxy.get_list(f'categories->{ruleset}')
+    if (ruleset in ['built-in', 'custom', 'keyword']):
+        # keyword and built-in share categories
+        r_set = 'built-in' if ruleset == 'keyword' else ruleset
+
+        if not (cat := dns_proxy.get_dict(f'categories->{r_set}').get(category.name, None)):
+            return ValidationError(INVALID_FORM)
+
+        if (ruleset == 'keyword'):
+            # ensuring the category is enabled when settings keywords unless they are tethered
+            if not cat['enabled'] and category.enable_code not in TETHERED_CATEGORY_CODES:
+                return ValidationError(INVALID_FORM)
+
+            # ensuring the enable-code is within the valid range(0, 5)
+            elif (cat['enabled'] and category.enable_code not in VALID_CATEGORY_CODES):
+                return ValidationError(INVALID_FORM)
+
+        # ensuring general categories enable-code is valid
+        elif (ruleset == 'built-in' and category.enable_code not in VALID_CATEGORY_CODES):
+            return ValidationError(INVALID_FORM)
+
+        # ensuring custom categories enable-code are within the standard range
+        elif (ruleset == 'custom' and category.enable_code not in STANDARD_CATEGORY_CODES):
+            return ValidationError(INVALID_FORM)
 
     elif (ruleset in ['tld']):
-        cat_list = dns_proxy.get_list('tld')
-
-    elif (ruleset in ['keyword']):
-        domain_cats = dns_proxy.get_list('categories->built-in')
-
-        if (category.name not in domain_cats):
+        # ensuring the tld enable-code is within the standard range
+        if (category.enable_code not in STANDARD_CATEGORY_CODES):
             return ValidationError(INVALID_FORM)
 
-        # ensuring the associated url cat is enabled since it is a pre-req to enable keywords
-        if (not dns_proxy[f'categories->built-in->{category.name}->enabled']):
+        if not dns_proxy.get_dict('tld').get(category.name, None):
             return ValidationError(INVALID_FORM)
-
-        # skipping over last check which is not valid for keyword validation
-        return None
-
-    else:
-        return ValidationError(INVALID_FORM)
-
-    if (category.name not in cat_list):
-        return ValidationError(INVALID_FORM)
 
 # ==============
 # CONFIGURATION
 # ==============
+# im being very explicit on the if statements because i would rather get the logic more right than pretty.
 def configure_domain_categories(category: config, *, ruleset: str):
     with ConfigurationManager('profiles/profile_1', cfg_type='security/dns') as dnx:
         dns_proxy: ConfigChain = dnx.load_configuration()
 
-        if (ruleset in ['built-in', 'user_defined']):
+        # weird naming/ category structures are remnants from older config file formatting.
+        if (ruleset in ['built-in', 'keyword']):
 
-            dns_proxy[f'categories->{ruleset}->{category.name}->enabled'] = category.enabled
+            key = ruleset if ruleset != 'built-in' else 'enabled'
+
+            if (category.enable_code in STANDARD_CATEGORY_CODES):
+                dns_proxy[f'categories->built-in->{category.name}->{key}'] = category.enabled
+
+            # subtracting 2 to normalize tethered code to on/off
+            elif (category.enable_code in TETHERED_CATEGORY_CODES):
+                dns_proxy[f'categories->built-in->{category.name}->enabled'] = category.enable_code - 2
+                dns_proxy[f'categories->built-in->{category.name}->keyword'] = category.enable_code - 2
+
+        if (ruleset == 'custom'):
+            dns_proxy[f'categories->custom->{category.name}->enabled'] = category.enabled
 
         elif (ruleset in ['tld']):
-
             dns_proxy[f'tld->{category.name}'] = category.enabled
-
-        elif (ruleset in ['keyword']):
-
-            dns_proxy[f'categories->built-in->{category.name}->keyword'] = category.enabled
 
         dnx.write_configuration(dns_proxy.expanded_user_data)

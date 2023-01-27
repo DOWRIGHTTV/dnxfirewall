@@ -21,8 +21,15 @@ __all__ = (
     'generate_domain', 'generate_reputation', 'generate_geolocation',
 )
 
-cidr_to_host_count: dict[str, int] = {f'{i}': 2**x for i, x in enumerate(reversed(range(31)), 2)}
+# cidr_to_host_count: dict[str, int] = {f'{i}': 2**x for i, x in enumerate(reversed(range(31)), 2)}
 ip_unpack: Callable[[bytes], tuple] = Struct('>L').unpack
+
+REP_FILES    = ['malicious', 'compromised', 'tor_nodes', 'open_proxy']
+REP_PRIORITY = {
+    'command_control': -1, 'malicious_host': 0, 'compromised_host': 1,
+    'tor_both': 2, 'tor_entry': 3, 'tor_exit': 4, 'open_proxy': 5
+}
+
 
 def _combine_domain(log: LogHandler_T) -> list[str]:
     proxy_settings: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
@@ -31,7 +38,7 @@ def _combine_domain(log: LogHandler_T) -> list[str]:
 
     default_cats: list = proxy_settings.get_list('categories->built-in')
     # iterating over the list of categories + DoH to load signature sets.
-    for cat in [*default_cats, 'dns-over-https']:
+    for cat in [*default_cats, 'dns_https']:
         try:
             file = open(f'{HOME_DIR}/dnx_profile/signatures/domain_lists/{cat}.domains')
         except FileNotFoundError:
@@ -83,10 +90,20 @@ def generate_domain(log: LogHandler_T) -> list[list[int, int]]:
     return doms
 
 def _combine_reputation(log: LogHandler_T) -> list[str]:
-    proxy_settings: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/ip')
+    # proxy_settings: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/ip')
+    #
+    # ip_rep_signatures: list = []
+    # for cat in proxy_settings.get_list('reputation'):
+    #     try:
+    #         with open(f'{HOME_DIR}/dnx_profile/signatures/ip_lists/{cat}.ips', 'r') as file:
+    #             ip_rep_signatures.extend([x.lower() for x in file.read().splitlines() if x and '#' not in x])
+    #     except FileNotFoundError:
+    #         log.alert(f'[reputation] signature file missing: {cat}')
+    #
+    # return ip_rep_signatures
 
-    ip_rep_signatures: list = []
-    for cat in proxy_settings.get_list('reputation'):
+    ip_rep_signatures = []
+    for cat in REP_FILES:
         try:
             with open(f'{HOME_DIR}/dnx_profile/signatures/ip_lists/{cat}.ips', 'r') as file:
                 ip_rep_signatures.extend([x.lower() for x in file.read().splitlines() if x and '#' not in x])
@@ -98,10 +115,29 @@ def _combine_reputation(log: LogHandler_T) -> list[str]:
 def generate_reputation(log: LogHandler_T) -> list[list[int, int]]:
 
     # getting all enabled signatures
+    # ip_rep_signatures: list = _combine_reputation(log)
+    #
+    # hosts = []
+    # hosts_append = hosts.append
+    # for signature in ip_rep_signatures:
+    #
+    #     sig = signature.split()
+    #     try:
+    #         ip_addr = ip_unpack(inet_aton(sig[0]))[0]
+    #         cat = int(REP[sig[1].upper()])
+    #     except Exception as E:
+    #         log.warning(f'invalid signature: {signature}, {E}')
+    #
+    #     else:
+    #         hosts_append([ip_addr, cat])
+    #
+    # del ip_rep_signatures
+    #
+    # return hosts
+
     ip_rep_signatures: list = _combine_reputation(log)
 
-    hosts = []
-    hosts_append = hosts.append
+    hosts_with_dup = defaultdict(list)
     for signature in ip_rep_signatures:
 
         sig = signature.split()
@@ -112,11 +148,17 @@ def generate_reputation(log: LogHandler_T) -> list[list[int, int]]:
             log.warning(f'invalid signature: {signature}, {E}')
 
         else:
-            hosts_append([ip_addr, cat])
+            hosts_with_dup[ip_addr].append((REP_PRIORITY[sig[1]], cat))
 
     del ip_rep_signatures
 
-    return hosts
+    # this routine ensures the highest priority category is used for a host with multiple memberships
+    hosts_final = []
+    for host, cats in hosts_with_dup.items():
+
+        hosts_final.append([host, sorted(cats)[0]])
+
+    return hosts_final
 
 def _combine_geolocation(log: LogHandler_T) -> list[str]:
     # geo_settings: list = load_configuration('profiles/profile_1', cfg_type='security/ip').get_list('geolocation')

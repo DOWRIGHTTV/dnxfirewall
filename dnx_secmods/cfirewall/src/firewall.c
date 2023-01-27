@@ -86,10 +86,10 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
 
     dnx_parse_nl_headers(nl_msgh, &nl_pkth, netlink_attrs, &pkt);
 
-    // TODO: we need to do more research into this and whether its necessary or just masking a bug
+    // this filters out invalid connection states. eg. an ack that was not expected.
+    //   - note: consider offloading this to the kernel
     if (!netlink_attrs[NFQA_CT_INFO]) {
         dnx_send_verdict(cfd, ntohl(nl_pkth->packet_id), NF_DROP);
-        dprint(FW_V & VERBOSE, "NO CONNTRACK INFO - PACKET DISCARDED\n");
 
         return OK;
     }

@@ -28,6 +28,7 @@ __all__ = (
 
     'convert_int', 'get_convert_int',
     'convert_bint', 'get_convert_bint',
+    'get_convert_in_range',
     'standard', 'full_field',
 
     'mac_address',
@@ -72,6 +73,21 @@ def get_convert_bint(form: Form, key: str) -> Union[int, DATA]:
 
     return convert_bint(value)
 
+def get_convert_in_range(form: Form, key: str, bounds: tuple[int, int] = (0, 3)) -> Union[int, DATA]:
+    '''gets value for specified key, converts to an int, then returns if the resulting int is withing specified range.
+
+        note: both ends of the bounds are inclusive.
+    '''
+    value = form.get(key, DATA.MISSING)
+
+    if value is DATA.MISSING:
+        return value
+
+    try:
+        return int(value) if int(value) in range(bounds[0], bounds[1] + 1) else DATA.INVALID
+    except:
+        return DATA.INVALID
+
 def convert_bint(num: Union[str, bool]) -> Union[int, DATA]:
     '''converts argument into an integer representation of bool.
 
@@ -85,7 +101,8 @@ def convert_bint(num: Union[str, bool]) -> Union[int, DATA]:
     return bint if bint in BINT else DATA.INVALID
 
 def convert_float(num: str) -> Union[float, DATA]:
-    '''converts argument into a float, then returns. DATA.INVALID (-1) will be returned on error.'''
+    '''converts argument into a float, then returns. DATA.INVALID (-1) will be returned on error.
+    '''
     try:
         return float(num)
     except:
@@ -94,26 +111,12 @@ def convert_float(num: str) -> Union[float, DATA]:
 def convert_int(num: Union[str, bool]) -> Union[int, DATA]:
     '''converts argument into an integer, then returns.
 
-    if optional default arg is provided, it will be returned on error, otherwise DATA.INVALID (-1) will be returned.'''
+    if optional default arg is provided, it will be returned on error, otherwise DATA.INVALID (-1) will be returned.
+    '''
     try:
         return int(num)
     except:
         return DATA.INVALID
-
-def check_digit(dig: str, /, *, default: Optional[str] = '1') -> str:
-
-    if (dig.isdigit()):
-        return dig
-
-    return default
-
-def get_check_digit(args: Args, key: str, /, *, default: Optional[str] = '1') -> str:
-
-    value = args.get(key, default)
-    if (value.isdigit()):
-        return value
-
-    return default
 
 def standard(user_input: str, *, override: Optional[list] = None) -> None:
     override = [] if override is None else override
@@ -188,8 +191,8 @@ def cidr(cd: str, /) -> None:
 
 # NOTE: split + iter is to support port ranges. limiting split to 1 to prevent 1:2:3 from being marked as valid.
 def network_port(port, port_range=False):
-    '''validates network ports 1-65535 or a range of 1-65535:1-65535'''
-
+    '''validates network ports 1-65535 or a range of 1-65535:1-65535
+    '''
     if (port_range):
         ports = [convert_int(p) for p in port.split(':', 1)]
         additional = ' or a range of 1-65535:1-65535 '

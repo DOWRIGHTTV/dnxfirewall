@@ -65,20 +65,69 @@ def create_button_with_modal(
     return button
 
 @app.template_global()
-def create_decora_switch(name: str, value: str, enabled: int, *, onclick: str = 'updateCategory'):
-
-    off = ' active' if not enabled else ''
-    on  = ' active' if enabled else ''
+def create_decora_switch(name: str, value: str, checked: int, *, enabled: int = 1, onclick: str = 'updateCategory'):
+    '''generates and returns HTML containing a title and a single decora switches.
+    '''
+    disabled = ' disabled' if not enabled else ''
+    off = ' active' if (not checked or disabled) else ''
+    on  = ' active' if (checked and not disabled) else ''
 
     switch = (
         f'<div class="col s3"><div class="row row-thin"><p class="multi-switch-label center">{value}</p></div>'
         '<div class="row row-thin"><div class="multi-switch-container decora-switch">'
-        '<ul class="multi-switch">'
+        f'<ul class="multi-switch"{disabled}>'
             f'<li class="multi-switch-off{off}"><button name="{name}" value="{value}" onclick="{onclick}(this, 0)">'
                 '<i class="material-icons small">radio_button_unchecked</i></button></li>'
             f'<li class="multi-switch-on{on}"><button name="{name}" value="{value}" onclick="{onclick}(this, 1)">'
                 '<i class="material-icons small">block</i></button></li>'
         '</ul></div></div></div>'
+    )
+
+    return switch
+
+@app.template_global()
+def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tuple[int, int],
+        *, enabled: int = 1, tethered: bool = False, onclick: str = 'updateCategory'):
+    '''generates and returns HTML containing a title and (2) decora switches.
+
+    the second switch will be tethered to the first such that if the first is NOT checked, the second will be marked
+    as "disabled" and unable to be submitted.
+    '''
+    disabled = ' disabled' if not enabled else ''
+    off = ' active' if (not checked[0] or disabled) else ''
+    on  = ' active' if (checked[0] and not disabled) else ''
+
+    disabled_two = ' disabled' if not on else ''
+    off_two = ' active' if (not checked[1] or disabled_two) else ''
+    on_two  = ' active' if (checked[1] and not disabled_two) else ''
+
+    switch_code_off = 0 if not tethered else 2
+    switch_code_on  = 1 if not tethered else 3
+
+    switch = (
+        f'<div class="col s3"><div class="row row-thin"><p class="multi-switch-label center">{value}</p></div>'
+        '<h6 class="center">standard</h6>'
+        '<div class="row">'
+            '<div class="multi-switch-container decora-switch">'
+                f'<ul class="multi-switch"{disabled}>'
+                    f'<li class="multi-switch-off{off}"><button name="{name[0]}" value="{value}" onclick="{onclick}(this,{switch_code_off})">'
+                        '<i class="material-icons small">radio_button_unchecked</i></button></li>'
+                    f'<li class="multi-switch-on{on}"><button name="{name[0]}" value="{value}" onclick="{onclick}(this,{switch_code_on})">'
+                        '<i class="material-icons small">block</i></button></li>'
+                '</ul>'
+            '</div>'
+        '</div>'
+        '<h6 class="center">keyword</h6>'
+        '<div class="row row-thin">'
+            '<div class="multi-switch-container decora-switch">'
+                f'<ul class="multi-switch"{disabled_two}>'
+                    f'<li class="multi-switch-off{off_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(this,{switch_code_off})">'
+                        '<i class="material-icons small">radio_button_unchecked</i></button></li>'
+                    f'<li class="multi-switch-on{on_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(this,{switch_code_on})">'
+                        '<i class="material-icons small">block</i></button></li>'
+                '</ul>'
+            '</div>'
+        '</div></div>'
     )
 
     return switch

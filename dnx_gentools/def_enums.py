@@ -252,6 +252,10 @@ class REP(_IntEnum):
     TOR       = 30
     TOR_ENTRY = 31
     TOR_EXIT  = 32
+    TOR_BOTH  = 33
+
+    PROXY = 40
+    OPEN_PROXY = 41
 
 
 REPUTATION = _NewType('REPUTATION', str)

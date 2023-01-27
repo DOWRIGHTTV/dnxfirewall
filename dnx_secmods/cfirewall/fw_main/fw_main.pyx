@@ -14,7 +14,7 @@ from pprint import PrettyPrinter
 ppt = PrettyPrinter(sort_dicts=False).pprint
 # ===============================
 
-DEF FW_MAX_ATTACKERS  = 250
+# DEF FW_MAX_ATTACKERS  = 250
 
 # function return values
 DEF OK  = 0
@@ -22,8 +22,8 @@ DEF ERR = -1
 DEF Py_OK  = 0
 DEF Py_ERR = 1
 
-DEF NETWORK = 1
-DEF SERVICE = 2
+# DEF NETWORK = 1
+# DEF SERVICE = 2
 
 # service object types.
 DEF SVC_SOLO  = 1
@@ -297,7 +297,7 @@ cdef void set_FWrule(size_t cntrl_list_idx, size_t rule_idx, dict rule):
 
     cdef:
         uintf8_t    i, ix, svc_list_len
-        SvcObject   svc_object
+        # SvcObject   svc_object
 
         FWrule      fw_rule
         unicode     rule_name = rule['name']
@@ -558,7 +558,7 @@ def initialize_geolocation(list hash_trie, uint32_t msb, uint32_t lsb):
 cdef int htr_generate_structure(list py_trie, size_t py_trie_len):
     '''generate hash trie range structure and return container index.
 
-    resulting structure must be access through c function calls and container index.
+    resulting structure must be accessed through c function calls with container index as a reference.
 
         note: this function IS NOT thread safe.
     '''
