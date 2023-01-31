@@ -51,19 +51,21 @@ class FirewallControl:
     versions: list[str, str] = ['pending', 'active']
     sections: list[str, str, str] = ['BEFORE', 'MAIN', 'AFTER']
 
-    # _firewall: dict[str, Any] = load_configuration(DEFAULT_VERSION, ext='firewall', filepath=DEFAULT_PATH).get_dict()
-
     @classmethod
-    def commit(cls, firewall_rules: dict) -> None:
-        '''Updates pending configuration file with sent in firewall rules data.
+    def commit(cls, section: str, updated_rules: dict) -> None:
+        '''Updates pending configuration file with sent in firewall rules section data.
 
-        This is a replace operation on disk and thread and process safe.
+        This is a replace operation on disk and thread/process safe.
         '''
         with ConfigurationManager(DEFAULT_VERSION, ext='firewall', file_path=DEFAULT_PATH) as dnx_fw:
-            dnx_fw.write_configuration(firewall_rules)
+            # using standalone functions due to ConfigManager not being compatible with these operations
+            fw_rules: ConfigChain = dnx_fw.load_configuration()
 
-        # updating instance/ mem-copy of variable for fast access
-        # cls._firewall = firewall_rules
+            fw_rules_copy = fw_rules.get_dict()
+
+            fw_rules_copy[section] = updated_rules
+
+            dnx_fw.write_configuration(fw_rules_copy)
 
     @classmethod
     def push(cls) -> bool:
@@ -79,7 +81,8 @@ class FirewallControl:
         with ConfigurationManager():
 
             # using standalone functions due to ConfigManager not being compatible with these operations
-            fw_rules: ConfigChain = load_configuration('pending', ext='firewall', filepath='dnx_profile/iptables')
+            # -> file swapping across multiple files to retain plain and encoding version of the rules
+            fw_rules: ConfigChain = load_configuration('pending', ext='firewall', filepath=DEFAULT_PATH)
 
             fw_rule_copy: dict[str, Any] = fw_rules.get_dict()
 
@@ -97,7 +100,7 @@ class FirewallControl:
                         rule['dst_network'] = [lookup(x, convert=True) for x in rule['dst_network']]
                         rule['dst_service'] = [lookup(x, convert=True) for x in rule['dst_service']]
 
-            write_configuration(fw_rule_copy, 'push', ext='firewall', filepath='dnx_profile/iptables/usr')
+            write_configuration(fw_rule_copy, 'push', ext='firewall', filepath=f'{DEFAULT_PATH}/usr')
 
             os.replace(PUSH_RULE_FILE, ACTIVE_RULE_FILE)
 
@@ -193,6 +196,3 @@ class FirewallControl:
             system_rules_file.write_configuration(system_rules.expanded_user_data)
 
             return True
-
-        # reachable if context exits before finishing (error)
-        return False

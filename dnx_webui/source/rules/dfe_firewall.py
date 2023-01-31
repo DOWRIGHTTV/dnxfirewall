@@ -202,12 +202,12 @@ class WebPage(RulesWebPage):
 
         # NOTE: all rules must be validated for changes to be applied. validation will raise exception on first error.
         try:
-            validated_rules = {section: validate_firewall_commit(json_data['rules'])}
+            validated_rules = validate_firewall_commit(json_data['rules'])
         except ValidationError as ve:
             return False, {'error': 3, 'message': str(ve)}
 
         else:
-            FirewallControl.commit(validated_rules)
+            FirewallControl.commit(section, validated_rules)
 
         return True, {'error': 0, 'message': 'commit successful'}
 
