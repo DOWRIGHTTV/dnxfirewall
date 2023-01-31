@@ -77,23 +77,29 @@ async function updateCategory(category, button_idx, enabled) {
     if (ajaxClient.handleResponse(response, category)) { return; }
 
     // manually changing the active button instead of using an event listener to prevent a switch on server errors.
-    const buttons = [document.querySelector(category.value + "-1"), document.querySelector(category.value + "-2")];
+    const buttons = [document.querySelector("#" + category.value + "-1"), document.querySelector("#" + category.value + "-2")];
 
-    let current_button = buttons[button_idx];
-    updateBtn(current_button);
 
-    if ([2, 3].contains(enabled)) {
-        let other_button = buttons[button_idx+1 % 2];
-        updateBtn(other_button);
-      }
+    let current_btn = buttons[button_idx]
+    let other_btn = buttons[(button_idx+1) % 2];
+
+
+    updateBtn();
+
+    if ([2, 3].includes(enabled)) {
+        updateBtn();
+    }
 }
-function updateBtn(btn) {
-    btn.querySelectorAll("li").forEach(btn => {
-        if (btn.classList.contains("active")) {
-            btn.classList.remove("active");
+function updateBtn(sw) {
+    sw.querySelectorAll("li").forEach(_li => {
+        let _btn = _li.firstChild
+
+        if (_li.classList.contains("active")) {
+            _li.classList.remove("active");
         } else {
-            btn.classList.add("active");
+            _li.classList.add("active");
         }
+        _btn.disabled = false;
     });
 }
 </script>

@@ -22,6 +22,19 @@ __all__ = (
 
 PREPARE_AND_SEND = ProxyResponse.prepare_and_send
 
+# 1 for 1 match, slice must be same size matching string
+# START    ->  ">"
+# END      ->  "<"
+# AT       ->  ":" (i1:i2 slice)
+
+# membership test
+# IN       ->  "?"
+# IN START ->  "]" (:i1 slice)
+# IN END   ->  "[" (-i1: slice)
+
+# domain rewrites
+# no TLD   ->  "@"
+
 # =====================
 # MAIN DNS PROXY CLASS
 # =====================

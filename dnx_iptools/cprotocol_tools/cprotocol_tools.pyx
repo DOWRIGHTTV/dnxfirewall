@@ -2,7 +2,7 @@
 
 from libc.errno cimport *
 from libc.stdio cimport snprintf, perror, printf
-from libc.stdint cimport uint8_t, uint32_t, uint_fast16_t
+from libc.stdint cimport uint8_t,  uint16_t, uint32_t, uint_fast16_t
 from libc.string cimport strncpy  # memset, memcpy
 
 DEF OK  = 1
@@ -95,8 +95,83 @@ cpdef bytes calc_checksum(const uint8_t[:] data):
     ubytes[0] = (csum >> 8)
     ubytes[1] = csum & UINT8_MAX
 
+    # TODO: if we slice[:2], shouldnt it compile to string and size?
     return ubytes
 
+# dont need category, proxy will know which one it each based on filter container passed in
+def check_filters(uint8_t[:] cat_filter, int sig_ct, unicode domain):
+
+    domain_b = domain.encode('utf-8')
+
+    # START    ->  ">"
+    # END      ->  "<"
+    # AT       ->  ":" (i1:i2 slice)
+    # IN       ->  "?"
+    # IN START ->  "]" (:i1 slice)
+    # IN END   ->  "[" (-i1: slice)
+
+    # domain rewrites
+    # no TLD   ->  "@"
+
+    cdef:
+        uint8_t    *search_str = domain_b
+
+        uint8_t     length
+        bytes       match_str
+        uint8_t     rw, op, i1, i2
+
+        char        i, ix
+
+        uint16_t    offset = 0
+        uint8_t     rw_idx = len(domain)
+
+    for i in range(sig_ct):
+
+        length = cat_filter[offset]
+        if (length == 0): # can probably get rid of this with the for loop coverage now
+            return
+
+        match_str = bytes(cat_filter[offset + 1:offset + length + 1])
+
+        rw = cat_filter[offset + length + 1] # rewrite
+        op = cat_filter[offset + length + 2] # operator
+        i1 = cat_filter[offset + length + 3] # primary index   (all slices)
+        i2 = cat_filter[offset + length + 4] # secondary index (middle slices only, as end index)
+
+        # remove TLD
+        if (rw == ord('@')):
+            for ix in range(rw_idx, 0, -1):
+                if search_str[-ix] == ord('.'):
+                    rw_idx -= ix
+
+                    break
+
+#        print(op, match_str[:length], search_str[:length])
+        # at start - ignore rewrite for now since it only modifies the end
+        if (op == ord('>')):
+            if (match_str[:length] == search_str[:length]): return '>', match_str[:length]
+
+        # at end [] - tot
+        elif (op == ord('<')):
+            if (search_str[:rw_idx][-length:] == match_str[:length]): return '<', match_str[:length]
+
+        # in middle - [i1:i2]
+        elif (op == ord(':')):
+            if (search_str[:rw_idx][i1:i2] == match_str[:length]): return ':', match_str[:length]
+
+        # full domain membership
+        elif (op == ord('?')):
+            if (match_str[:length] in search_str[:rw_idx]): return '?', match_str[:length]
+
+        # partial membership, beginning
+        elif (op == ord(']')):
+            if (match_str[:length] in search_str[:rw_idx][:i1]): return ']', match_str[:length]
+
+        # partial membership, end
+        elif (op == ord('[')):
+            if (match_str[:length] in search_str[:rw_idx][i1:]): return '[', match_str[:length]
+
+        offset += (length + 5)
 
 # ============================
 # Python Extension Types
