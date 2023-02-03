@@ -275,6 +275,8 @@ class config(dict):
         self[key] = value
 
 
+# TODO: shouldnt __mutable_config be an alias to __flatten_config[0] (user config) so any changes to the data will be
+#  reflected in the _merge_expand operation and subsequently all the get methods.
 class ConfigChain:
 
     _sep: ClassVar[str] = '->'
@@ -398,19 +400,6 @@ class ConfigChain:
                 return []
 
         return list(search_data.values())
-
-    # NOTE: get_dict method replaces this functionality and provides more resiliency with user config files
-    # @property
-    # def searchable_system_data(self) -> dict:
-    #     '''returns copy of original pre-flattened system config dictionary.
-    #     '''
-    #     return copy(self.__config[1])
-    #
-    # @property
-    # def searchable_user_data(self) -> dict:
-    #     '''returns copy of original pre-flattened user config dictionary.
-    #     '''
-    #     return copy(self.__config[0])
 
     @property
     def user_data(self) -> dict:
