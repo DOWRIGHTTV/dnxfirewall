@@ -32,16 +32,30 @@ async function pushRules() {
         revert_btn.href = "";
     }
 }
-async function post(endpoint, data) {
+async function diffRules() {
+    let result = await post("diff", {}, true);
+
+    let message_popup = document.querySelector("#diff-modal");
+    message_popup.querySelector("h5").innerText = result.message;
+
+    let diffModal = M.Modal.init(
+        message_popup, {dismissible: false}
+    );
+    diffModal.open();
+}
+
+async function post(endpoint, data, defer=false) {
         let result = await ajaxClient.post(`/${endpoint}`, data);
 
-        let message_popup = document.querySelector("#ajax-error-modal");
+        if (defer) { return result;}
+
+        let message_popup = document.querySelector("#ajax-response-modal");
         message_popup.querySelector("h5").innerText = result.message;
 
-        let errorModal = M.Modal.init(
+        let responseModal = M.Modal.init(
             message_popup, {dismissible: false}
         );
-        errorModal.open();
+        responseModal.open();
 
         return result;
 }

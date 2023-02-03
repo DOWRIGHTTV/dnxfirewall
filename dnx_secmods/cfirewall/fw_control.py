@@ -58,7 +58,6 @@ class FirewallControl:
         This is a replace operation on disk and thread/process safe.
         '''
         with ConfigurationManager(DEFAULT_VERSION, ext='firewall', file_path=DEFAULT_PATH) as dnx_fw:
-            # using standalone functions due to ConfigManager not being compatible with these operations
             fw_rules: ConfigChain = dnx_fw.load_configuration()
 
             fw_rules_copy = fw_rules.get_dict()
@@ -118,6 +117,33 @@ class FirewallControl:
             shutil.copy(ACTIVE_COPY_FILE, PUSH_RULE_FILE)
 
             os.replace(PUSH_RULE_FILE, PENDING_RULE_FILE)
+
+    @staticmethod
+    def diff(show_value_diff: bool = True):
+        with ConfigurationManager(DEFAULT_VERSION, ext='firewall', file_path=DEFAULT_PATH) as dnx_fw:
+            pending: ConfigChain = dnx_fw.load_configuration()
+
+            pending_rules = pending.get_dict('MAIN')
+
+            # if active copy is not present, then rules have not been pushed before so all rules will be in diff
+            try:
+                active_rules = load_configuration('active_copy', 'firewall', filepath=f'{DEFAULT_PATH}/usr').get_dict('MAIN')
+            except FileNotFoundError:
+                return pending_rules
+
+        result = {
+            'added': {k: pending_rules[k] for k in set(pending_rules) - set(active_rules)},
+            'removed': {k: active_rules[k] for k in set(active_rules) - set(pending_rules)}
+        }
+
+        if (show_value_diff):
+            common_keys = set(active_rules) & set(pending_rules)
+
+            result['value_diffs'] = {
+                k: (active_rules[k], pending_rules[k]) for k in common_keys if active_rules[k] != pending_rules[k]
+            }
+
+        return result
 
     def convert_ruleset(self):
         pass

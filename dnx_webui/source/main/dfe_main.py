@@ -157,6 +157,16 @@ def rules_firewall_push(session_info: dict):
 
     return ajax_response(status=True, data={'error': 0, 'message': 'push success'})
 
+@app.route('/rules/firewall/diff', methods=['POST'])
+@user_restrict('admin')
+def rules_firewall_push(session_info: dict):
+    # for when we implement preview option
+    # json_data = request.get_json(force=True)
+
+    diff_data = FirewallControl.diff()
+
+    return ajax_response(status=True, data={'error': 0, 'message': diff_data})
+
 @app.route('/rules/nat', methods=['GET', 'POST'])
 @user_restrict('admin')
 def rules_nat(session_info: dict):
