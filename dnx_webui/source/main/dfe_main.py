@@ -159,7 +159,7 @@ def rules_firewall_push(session_info: dict):
 
 @app.route('/rules/firewall/diff', methods=['POST'])
 @user_restrict('admin')
-def rules_firewall_push(session_info: dict):
+def rules_firewall_diff(session_info: dict):
     # for when we implement preview option
     # json_data = request.get_json(force=True)
 
