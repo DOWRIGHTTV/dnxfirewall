@@ -25,6 +25,12 @@ cdef extern from '<arpa/inet.h>':
 
     in_addr_t inet_addr(char *cp)
 
+cdef struct operators:
+    uint8_t    rw
+    uint8_t    op
+    uint8_t    n1
+    uint8_t    n2
+
 # ctypedef int mode_t
 #
 # cdef extern from '<mqueue.h>':
