@@ -292,11 +292,11 @@ class FWObjectManager:
             raise RuntimeError('The lookup flag must be set when initializing FWObjectManager to unlock this method.')
 
         fw_object: FW_OBJECT = self.full_db['objects'].get(oid, MISSING_RULE)
-        if (not convert):
-            return fw_object
-
-        elif (name_only):
+        if (name_only):
             return INVALID_OBJECT if fw_object is MISSING_RULE else fw_object.name
+
+        elif (not convert):
+            return fw_object
 
         return INVALID_OBJECT if fw_object is MISSING_RULE else convert_object(fw_object)
 
