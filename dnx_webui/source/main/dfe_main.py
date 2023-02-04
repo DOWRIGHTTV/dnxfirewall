@@ -53,7 +53,7 @@ Log.run(name='web_app')
 # NOTE: this will allow the config manager to reference the Log class without an import. (cyclical import error)
 ConfigurationManager.set_log_reference(Log)
 
-# initialize cfirewall manager, which interfaces with cfirewall control class through a fd.
+# initialize cfirewall manager - interfaces with cfirewall automate class through a fd.
 cfirewall = FirewallControl()
 
 # setting FirewallManager instance as class var within FirewallManager to access instance throughout webui
@@ -152,7 +152,7 @@ def rules_firewall_push(session_info: dict):
     # for when we implement preview option
     # json_data = request.get_json(force=True)
 
-    if error := FirewallControl.push():
+    if error := cfirewall.push():
         return ajax_response(status=False, data={'error': 1, 'message': 'push failed'})
 
     return ajax_response(status=True, data={'error': 0, 'message': 'push success'})
@@ -163,7 +163,7 @@ def rules_firewall_diff(session_info: dict):
     # for when we implement preview option
     # json_data = request.get_json(force=True)
 
-    diff_data = FirewallControl.diff()
+    diff_data = cfirewall.diff()
 
     return ajax_response(status=True, data={'error': 0, 'message': diff_data})
 

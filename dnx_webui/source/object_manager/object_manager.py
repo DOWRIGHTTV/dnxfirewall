@@ -283,7 +283,7 @@ class FWObjectManager:
 
         self.db_changed = True
 
-    def lookup(self, oid: int, convert: bool = False) -> Union[int, list[int, int, int], FW_OBJECT]:
+    def lookup(self, oid: int, convert: bool = False, name_only: bool = False) -> Union[int, list[int, int, int], FW_OBJECT]:
         '''return index of the object associated with sent in object id.
 
         if the id does not exist, None will be returned.
@@ -294,6 +294,9 @@ class FWObjectManager:
         fw_object: FW_OBJECT = self.full_db['objects'].get(oid, MISSING_RULE)
         if (not convert):
             return fw_object
+
+        elif (name_only):
+            return INVALID_OBJECT if fw_object is MISSING_RULE else fw_object.name
 
         return INVALID_OBJECT if fw_object is MISSING_RULE else convert_object(fw_object)
 

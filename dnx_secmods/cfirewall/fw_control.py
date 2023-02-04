@@ -5,10 +5,13 @@ from __future__ import annotations
 import os
 import shutil
 
+from random import randint
+
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.def_enums import CFG
-from dnx_gentools.file_operations import ConfigurationManager, load_configuration, write_configuration, calculate_file_hash
+from dnx_gentools.file_operations import ConfigurationManager, load_configuration, write_configuration
+from dnx_gentools.file_operations import calculate_file_hash, load_data
 
 from dnx_routines.logging.log_client import Log
 
@@ -51,8 +54,7 @@ class FirewallControl:
     versions: list[str, str] = ['pending', 'active']
     sections: list[str, str, str] = ['BEFORE', 'MAIN', 'AFTER']
 
-    @classmethod
-    def commit(cls, section: str, updated_rules: dict) -> None:
+    def commit(self, section: str, updated_rules: dict) -> None:
         '''Updates pending configuration file with sent in firewall rules section data.
 
         This is a replace operation on disk and thread/process safe.
@@ -62,12 +64,13 @@ class FirewallControl:
 
             fw_rules_copy = fw_rules.get_dict()
 
+            self._generate_ids(fw_rules_copy, section)
+
             fw_rules_copy[section] = updated_rules
 
             dnx_fw.write_configuration(fw_rules_copy)
 
-    @classmethod
-    def push(cls) -> bool:
+    def push(self) -> bool:
         '''Copy the pending configuration to the active state.
 
         file changes are being monitored by Control class to load into cfirewall.
@@ -83,23 +86,11 @@ class FirewallControl:
             # -> file swapping across multiple files to retain plain and encoding version of the rules
             fw_rules: ConfigChain = load_configuration('pending', ext='firewall', filepath=DEFAULT_PATH)
 
-            fw_rule_copy: dict[str, Any] = fw_rules.get_dict()
+            fw_rules_copy: dict[str, Any] = fw_rules.get_dict()
 
-            with FWObjectManager(lookup=True) as obj_manager:
+            self.convert_ruleset(fw_rules_copy)
 
-                lookup = obj_manager.lookup
-                for section in cls.sections:
-
-                    for rule in fw_rule_copy[section].values():
-                        rule['src_zone'] = [lookup(x, convert=True) for x in rule['src_zone']]
-                        rule['src_network'] = [lookup(x, convert=True) for x in rule['src_network']]
-                        rule['src_service'] = [lookup(x, convert=True) for x in rule['src_service']]
-
-                        rule['dst_zone'] = [lookup(x, convert=True) for x in rule['dst_zone']]
-                        rule['dst_network'] = [lookup(x, convert=True) for x in rule['dst_network']]
-                        rule['dst_service'] = [lookup(x, convert=True) for x in rule['dst_service']]
-
-            write_configuration(fw_rule_copy, 'push', ext='firewall', filepath=f'{DEFAULT_PATH}/usr')
+            write_configuration(fw_rules_copy, 'push', ext='firewall', filepath=f'{DEFAULT_PATH}/usr')
 
             os.replace(PUSH_RULE_FILE, ACTIVE_RULE_FILE)
 
@@ -109,8 +100,7 @@ class FirewallControl:
 
         return push_error
 
-    @staticmethod
-    def revert():
+    def revert(self):
         '''Copies active configuration to pending, which effectively wipes any unpushed changes.
         '''
         with ConfigurationManager():
@@ -118,35 +108,73 @@ class FirewallControl:
 
             os.replace(PUSH_RULE_FILE, PENDING_RULE_FILE)
 
-    @staticmethod
-    def diff(show_value_diff: bool = True):
+    def diff(self, show_value_diff: bool = True):
         with ConfigurationManager(DEFAULT_VERSION, ext='firewall', file_path=DEFAULT_PATH) as dnx_fw:
             pending: ConfigChain = dnx_fw.load_configuration()
 
-            pending_rules = pending.get_dict('MAIN')
+            pending_rules = pending.get_dict()
+
+            self.convert_ruleset(pending_rules, name_only=True)
+
+            # temporarily restricting to main set
+            pending_rules = pending_rules['MAIN']
 
             # if active copy is not present, then rules have not been pushed before so all rules will be in diff
             try:
-                active_rules = load_configuration('active_copy', 'firewall', filepath=f'{DEFAULT_PATH}/usr').get_dict('MAIN')
+                active_rules = load_data('active_copy.firewall', filepath=f'{DEFAULT_PATH}/usr')['MAIN']
             except FileNotFoundError:
                 return pending_rules
+
+            self.convert_ruleset(active_rules, name_only=True)
+
+            # temporarily restricting to main set
+            active_rules = active_rules['MAIN']
+
+            # swapping POS and ID. diff based on ID will be much more accurate, detailed, and effective.
+            p_rules, a_rules = {}, {}
+            for pos, rule in pending_rules.items():
+                id = rule['id']
+                rule['id'] = pos
+
+                p_rules[id] = rule
+
+            for pos, rule in active_rules.items():
+                id = rule['id']
+                rule['id'] = pos
+
+                a_rules[id] = rule
 
         result = {
             'added': {k: pending_rules[k] for k in set(pending_rules) - set(active_rules)},
             'removed': {k: active_rules[k] for k in set(active_rules) - set(pending_rules)}
         }
 
-        if (show_value_diff):
-            common_keys = set(active_rules) & set(pending_rules)
+        common_keys = set(active_rules) & set(pending_rules)
 
-            result['value_diffs'] = {
-                k: (active_rules[k], pending_rules[k]) for k in common_keys if active_rules[k] != pending_rules[k]
-            }
+        result['value_diffs'] = {
+            k: (active_rules[k], pending_rules[k]) for k in common_keys if active_rules[k] != pending_rules[k]
+        }
 
         return result
 
-    def convert_ruleset(self):
-        pass
+    def convert_ruleset(self, firewall_rules: dict, *, name_only: bool = False) -> None:
+        '''inplace replacement of firewall objects from id to value.
+        '''
+        kwargs = {'name_only': True} if name_only else {'convert': True}
+
+        with FWObjectManager(lookup=True) as obj_manager:
+
+            lookup = obj_manager.lookup
+            for section in self.sections:
+
+                for rule in firewall_rules[section].values():
+                    rule['src_zone'] = [lookup(x, **kwargs) for x in rule['src_zone']]
+                    rule['src_network'] = [lookup(x, **kwargs) for x in rule['src_network']]
+                    rule['src_service'] = [lookup(x, **kwargs) for x in rule['src_service']]
+
+                    rule['dst_zone'] = [lookup(x, **kwargs) for x in rule['dst_zone']]
+                    rule['dst_network'] = [lookup(x, **kwargs) for x in rule['dst_network']]
+                    rule['dst_service'] = [lookup(x, **kwargs) for x in rule['dst_service']]
 
     @staticmethod
     def view_ruleset(section: str = 'MAIN') -> dict:
@@ -222,3 +250,28 @@ class FirewallControl:
             system_rules_file.write_configuration(system_rules.expanded_user_data)
 
             return True
+
+    @staticmethod
+    def _generate_ids(firewall_rules: dict, section: str):
+
+        ids_in_use = set()
+
+        # first pass gets all currently used ids
+        for section, rules in firewall_rules.items():
+
+            for rule in rules.items():
+
+                if (not rule['id']): continue
+
+                ids_in_use.add(rule['id'])
+
+        # second pass will assign an id to all new rules
+        for rule in firewall_rules[section].values():
+
+            if (rule['id']): continue
+
+            new_id = randint(1000, 9999)
+            while new_id in ids_in_use:
+                new_id = randint(1000, 9999)
+
+            rule['id'] = new_id

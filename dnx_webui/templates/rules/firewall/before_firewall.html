@@ -36,7 +36,7 @@ async function diffRules() {
     let result = await post("diff", {}, true);
 
     let message_popup = document.querySelector("#diff-modal");
-    message_popup.querySelector("h5").innerText = JSON.parse(result.message);
+    message_popup.querySelector("h5").innerText = JSON.stringify(result.message);
 
     let diffModal = M.Modal.init(
         message_popup, {dismissible: false}

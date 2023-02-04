@@ -27,6 +27,8 @@ if (TYPE_CHECKING):
 
 __all__ = ('WebPage',)
 
+cfirewall = FirewallControl.cfirewall
+
 valid_sections: dict[str, str] = {'BEFORE': '1', 'MAIN': '2', 'AFTER': '3'}
 
 reference_counts = defaultdict(int)
@@ -116,7 +118,7 @@ class WebPage(RulesWebPage):
             'network_autofill': network_autofill,
             'service_autofill': service_autofill,
             'firewall_rules': firewall_rules,
-            'pending_changes': FirewallControl.is_pending_changes()
+            'pending_changes': cfirewall.is_pending_changes()
         }
 
     @staticmethod
@@ -207,12 +209,12 @@ class WebPage(RulesWebPage):
             return False, {'error': 3, 'message': str(ve)}
 
         else:
-            FirewallControl.commit(section, validated_rules)
+            cfirewall.commit(section, validated_rules)
 
         return True, {'error': 0, 'message': 'commit successful'}
 
 def get_and_format_rules(section: str) -> list[list]:
-    firewall_rules = FirewallControl.cfirewall.view_ruleset(section)
+    firewall_rules = cfirewall.view_ruleset(section)
 
     converted_rules: list = []
     converted_rules_append = converted_rules.append
