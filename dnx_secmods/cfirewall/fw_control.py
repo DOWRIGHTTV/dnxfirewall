@@ -121,7 +121,7 @@ class FirewallControl:
 
             # if active copy is not present, then rules have not been pushed before so all rules will be in diff
             try:
-                active_rules = load_data('active_copy.firewall', filepath=f'{DEFAULT_PATH}/usr')['MAIN']
+                active_rules = load_data('active_copy.firewall', filepath=f'{DEFAULT_PATH}/usr')
             except FileNotFoundError:
                 return pending_rules
 
