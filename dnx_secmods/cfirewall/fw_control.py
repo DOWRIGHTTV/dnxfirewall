@@ -63,10 +63,9 @@ class FirewallControl:
             fw_rules: ConfigChain = dnx_fw.load_configuration()
 
             fw_rules_copy = fw_rules.get_dict()
+            fw_rules_copy[section] = updated_rules
 
             self._generate_ids(fw_rules_copy, section)
-
-            fw_rules_copy[section] = updated_rules
 
             dnx_fw.write_configuration(fw_rules_copy)
 
@@ -133,26 +132,26 @@ class FirewallControl:
             # swapping POS and ID. diff based on ID will be much more accurate, detailed, and effective.
             p_rules, a_rules = {}, {}
             for pos, rule in pending_rules.items():
-                id = rule['id']
-                rule['id'] = pos
+                id = rule.pop('id')
+                rule['pos'] = pos
 
                 p_rules[id] = rule
 
             for pos, rule in active_rules.items():
-                id = rule['id']
-                rule['id'] = pos
+                id = rule.pop('id')
+                rule['pos'] = pos
 
                 a_rules[id] = rule
 
         result = {
-            'added': {k: pending_rules[k] for k in set(pending_rules) - set(active_rules)},
-            'removed': {k: active_rules[k] for k in set(active_rules) - set(pending_rules)}
+            'added': {k: p_rules[k] for k in set(p_rules) - set(a_rules)},
+            'removed': {k: a_rules[k] for k in set(a_rules) - set(p_rules)}
         }
 
-        common_keys = set(active_rules) & set(pending_rules)
+        common_keys = set(a_rules) & set(p_rules)
 
         result['value_diffs'] = {
-            k: (active_rules[k], pending_rules[k]) for k in common_keys if active_rules[k] != pending_rules[k]
+            k: (a_rules[k], p_rules[k]) for k in common_keys if a_rules[k] != p_rules[k]
         }
 
         return result
@@ -257,9 +256,9 @@ class FirewallControl:
         ids_in_use = set()
 
         # first pass gets all currently used ids
-        for section, rules in firewall_rules.items():
+        for rules in firewall_rules.values():
 
-            for rule in rules.items():
+            for rule in rules.values():
 
                 if (not rule['id']): continue
 

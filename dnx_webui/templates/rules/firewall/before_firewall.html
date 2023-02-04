@@ -66,7 +66,7 @@ function tableToJson(table_id) {
     for (let i=0; i<table.rows.length; i++) {
 
         let tableRow = table.rows[i];
-        let rowData = [tableRow.attributes["data-enabled"].value];
+        let rowData = [tableRow.attributes["data-enabled"].value, tableRow.attributes["data-id"].value];
 
         //rule name
         rowData.push(tableRow.cells[2].textContent.replace("[*]", ""));
@@ -92,4 +92,3 @@ function tableToJson(table_id) {
     return JSON.stringify(data);
 }
 </script>
-
