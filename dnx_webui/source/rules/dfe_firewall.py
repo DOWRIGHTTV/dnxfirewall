@@ -346,13 +346,13 @@ def validate_firewall_rule(rule_num: int, fw_rule: rule_structure, /, check: Cal
     }
 
     # SECURITY PROFILE VALIDATIONS - currently restricted to 0/1
-    if not all([rule[profile] in [0, 1] for profile in ['ipp_profile', 'dns_profile', 'ips_profile']]):
+    if any([rule[profile] not in [0, 1] for profile in ['ipp_profile', 'dns_profile', 'ips_profile']]):
         raise ValidationError(f'Invalid security profile for rule #{rule_num}.')
 
     # OBJECT VALIDATIONS
-    for k, v in rule.items():
-        if (INVALID_OBJECT in v):
-            raise ValidationError(f'A {k.replace("_", " ")} object was not found for rule #{rule_num}.')
+    for obj in ['src_zone', 'src_network', 'src_service', 'dst_zone', 'dst_network', 'dst_service']:
+        if (INVALID_OBJECT in rule[obj]):
+            raise ValidationError(f'A {obj.replace("_", " ")} object was not found for rule #{rule_num}.')
 
     return rule
 
