@@ -189,7 +189,8 @@ function fillEditor(ruleEditor, ruleRow) {
             "src_service", "dst_zone", "dst_network", "dst_service", "action",
             "sec1_prof", "sec2_prof", "sec3_prof"]
 
-    ruleEditor.setAttribute("data-enabled", ruleRow.getAttribute("data-enabled"));
+    ruleEditor.children[0].setAttribute("data-enabled", ruleRow.getAttribute("data-enabled"));
+    ruleEditor.children[0].id = `e${ruleRow.id}`;
 
     for (let field of fields) {
         let rule_field = ruleRow.querySelector(`.r${field}`);
@@ -259,7 +260,6 @@ function fillEditor(ruleEditor, ruleRow) {
         }
         finally {}
     }
-    ruleEditor.children[0].id = `e${ruleRow.id}`;
 }
 </script>
 <script>
