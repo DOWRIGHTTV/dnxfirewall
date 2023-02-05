@@ -107,7 +107,7 @@ class FirewallControl:
 
             os.replace(PUSH_RULE_FILE, PENDING_RULE_FILE)
 
-    def diff(self, show_value_diff: bool = True):
+    def diff(self):
         with ConfigurationManager(DEFAULT_VERSION, ext='firewall', file_path=DEFAULT_PATH) as dnx_fw:
             pending: ConfigChain = dnx_fw.load_configuration()
 
@@ -129,35 +129,52 @@ class FirewallControl:
             # temporarily restricting to main set
             active_rules = active_rules['MAIN']
 
-            # swapping POS and ID. diff based on ID will be much more accurate, detailed, and effective.
+            # swapping POS and ID. diff based on ID will be more accurate, detailed, and effective.
             p_rules, a_rules = {}, {}
             for pos, rule in pending_rules.items():
-                id = rule.pop('id')
+                rid = rule.pop('id')
                 rule['pos'] = pos
 
-                p_rules[id] = rule
+                p_rules[rid] = rule
 
             for pos, rule in active_rules.items():
-                id = rule.pop('id')
+                rid = rule.pop('id')
                 rule['pos'] = pos
 
-                a_rules[id] = rule
+                a_rules[rid] = rule
 
-        change_list = []
+        p_rules_set = set(p_rules)
+        a_rules_set = set(a_rules)
 
+        change_list = {'added': [], 'removed': [], 'modified': []}
 
-        result = {
-            'added': {k: p_rules[k] for k in set(p_rules) - set(a_rules)},
-            'removed': {k: a_rules[k] for k in set(a_rules) - set(p_rules)}
-        }
+        for rule in p_rules_set - a_rules_set:
+            change_list['added'].append(['add', p_rules[rule]['name']])
 
-        common_keys = set(a_rules) & set(p_rules)
+        for rule in a_rules_set - p_rules_set:
+            change_list['removed'].append(['rem', a_rules[rule]['name']])
 
-        result['value_diffs'] = {
-            k: (a_rules[k], p_rules[k]) for k in common_keys if a_rules[k] != p_rules[k]
-        }
+        for rule in a_rules_set & p_rules_set:
 
-        return result
+            a_rule = a_rules[rule]
+            p_rule = p_rules[rule]
+
+            # rule definition has not changed
+            if (a_rule == p_rule): continue
+
+            rule_mods = []
+
+            for (a_k, a_v), (p_k, p_v) in zip(a_rule.items(), p_rule.items()):
+
+                # rule field has not changed
+                if (a_v == p_v): continue
+
+                # code, name, old setting, new setting
+                rule_mods.append(['mod', a_k, a_v, p_v])
+
+            change_list['modified'].append(rule_mods)
+
+        return change_list
 
     def convert_ruleset(self, firewall_rules: dict, *, name_only: bool = False) -> None:
         '''inplace replacement of firewall objects from id to value.
