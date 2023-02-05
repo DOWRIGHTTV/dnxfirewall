@@ -143,6 +143,9 @@ class FirewallControl:
 
                 a_rules[id] = rule
 
+        change_list = []
+
+
         result = {
             'added': {k: p_rules[k] for k in set(p_rules) - set(a_rules)},
             'removed': {k: a_rules[k] for k in set(a_rules) - set(p_rules)}
