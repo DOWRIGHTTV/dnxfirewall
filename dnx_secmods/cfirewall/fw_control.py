@@ -162,7 +162,7 @@ class FirewallControl:
             # rule definition has not changed
             if (a_rule == p_rule): continue
 
-            rule_mods = [rule]
+            rule_mods = [a_rule['name']]
 
             for (a_k, a_v), (p_k, p_v) in zip(a_rule.items(), p_rule.items()):
 
