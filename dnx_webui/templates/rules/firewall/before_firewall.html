@@ -39,7 +39,7 @@ async function diffRules() {
     let message_popup = document.querySelector("#diff-modal");
 
     if (diff_info["added"]) {
-        let added_text = message_popup.querySelector(".diff-add");
+        let added_text = message_popup.querySelector("#diff-add");
 
         added_text.innerText = "";
 
@@ -48,7 +48,7 @@ async function diffRules() {
         }
     }
     if (diff_info["removed"]) {
-        let removed_text = message_popup.querySelector(".diff-rem");
+        let removed_text = message_popup.querySelector("#diff-rem");
 
         removed_text.innerText = "";
 
@@ -57,7 +57,7 @@ async function diffRules() {
         }
     }
     if (diff_info["modified"]) {
-        let modified_text = message_popup.querySelector(".diff-mod");
+        let modified_text = message_popup.querySelector("#diff-mod");
 
         modified_text.innerText = "";
 
