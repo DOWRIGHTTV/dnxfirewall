@@ -44,6 +44,8 @@ app.jinja_env.lstrip_blocks = True
 from dnx_control.control.ctl_action import system_action
 from dnx_secmods.cfirewall.fw_control import FirewallControl
 
+from dnx_secmods.cfirewall import fw_analyze
+
 general_error_page = 'main/general_error.html'
 application_error_page = 'main/application_error.html'
 
@@ -163,7 +165,7 @@ def rules_firewall_diff(session_info: dict):
     # for when we implement preview option
     # json_data = request.get_json(force=True)
 
-    diff_data = cfirewall.diff()
+    diff_data = fw_analyze.diff()
 
     return ajax_response(status=True, data={'error': 0, 'message': diff_data})
 

@@ -33,10 +33,38 @@ async function pushRules() {
     }
 }
 async function diffRules() {
-    let result = await post("diff", {}, true);
+    let result = await ajaxClient.post("/diff", {});
 
+    let diff_info = result.message;
     let message_popup = document.querySelector("#diff-modal");
-    message_popup.querySelector("h5").innerText = JSON.stringify(result.message);
+
+    if (diff_info["added"]) {
+        let added_text = message_popup.querySelector(".diff-add");
+
+        added_text.innerText = "";
+
+        for (let r of diff_info["added"]) {
+            added_text.innerText += JSON.stringify(r) + "<br>";
+        }
+    }
+    if (diff_info["removed"]) {
+        let removed_text = message_popup.querySelector(".diff-rem");
+
+        removed_text.innerText = "";
+
+        for (let r of diff_info["removed"]) {
+            removed_text.innerText += JSON.stringify(r) + "<br>";
+        }
+    }
+    if (diff_info["modified"]) {
+        let modified_text = message_popup.querySelector(".diff-mod");
+
+        modified_text.innerText = "";
+
+        for (let r of diff_info["modified"]) {
+            modified_text.innerText += JSON.stringify(r) + "<br>"
+        }
+    }
 
     let diffModal = M.Modal.init(
         message_popup, {dismissible: false}
@@ -44,10 +72,8 @@ async function diffRules() {
     diffModal.open();
 }
 
-async function post(endpoint, data, defer=false) {
+async function post(endpoint, data) {
         let result = await ajaxClient.post(`/${endpoint}`, data);
-
-        if (defer) { return result;}
 
         let message_popup = document.querySelector("#ajax-response-modal");
         message_popup.querySelector("h5").innerText = result.message;

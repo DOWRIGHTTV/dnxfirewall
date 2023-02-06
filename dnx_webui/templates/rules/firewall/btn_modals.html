@@ -35,8 +35,13 @@
 </div>
 <div id="diff-modal" class="modal">
     <div class="modal-content">
-    <h3 class="{{ modal_text_style }}">pending changes comparing committed and active rules.</h3>
-    <h5 id="diff-content" class="{{ modal_text_style }}"></h5>
+      <h4 class="{{ modal_text_style }}">pending changes comparing committed and active rules.</h4>
+      <h5>Added</h5>
+      <p id="diff-add" class="{{ modal_text_style }}">no rules added.</p>
+      <h5>Removed</h5>
+      <p id="diff-rem" class="{{ modal_text_style }}">no rules removed.</p>
+      <h5>Modified</h5>
+      <p id="diff-mod" class="{{ modal_text_style }}">no rules modified.</p>
     </div>
     <div class="modal-footer">
         <a class="btn-flat modal-close">Ok</a>

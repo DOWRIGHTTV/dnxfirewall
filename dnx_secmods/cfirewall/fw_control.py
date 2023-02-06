@@ -18,6 +18,12 @@ from dnx_routines.logging.log_client import Log
 from dnx_webui.source.object_manager import FWObjectManager
 
 
+__all__ = (
+    'DEFAULT_VERSION', 'DEFAULT_PATH', 'PENDING_RULE_FILE', 'ACTIVE_RULE_FILE', 'PUSH_RULE_FILE', 'ACTIVE_COPY_FILE',
+    'convert_ruleset', 'FirewallControl'
+)
+
+
 DEFAULT_VERSION: str = 'pending'
 DEFAULT_PATH:    str = 'dnx_profile/iptables'
 
@@ -31,6 +37,25 @@ PUSH_RULE_FILE: str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/push.firewall'
 ACTIVE_COPY_FILE: str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/active_copy.firewall'
 
 ConfigurationManager.set_log_reference(Log)
+
+def convert_ruleset(sections: list[str], firewall_rules: dict, *, name_only: bool = False) -> None:
+    '''inplace replacement of firewall objects from id to value.
+    '''
+    kwargs = {'name_only': True} if name_only else {'convert': True}
+
+    with FWObjectManager(lookup=True) as obj_manager:
+
+        lookup = obj_manager.lookup
+        for section in sections:
+
+            for rule in firewall_rules[section].values():
+                rule['src_zone'] = [lookup(x, **kwargs) for x in rule['src_zone']]
+                rule['src_network'] = [lookup(x, **kwargs) for x in rule['src_network']]
+                rule['src_service'] = [lookup(x, **kwargs) for x in rule['src_service']]
+
+                rule['dst_zone'] = [lookup(x, **kwargs) for x in rule['dst_zone']]
+                rule['dst_network'] = [lookup(x, **kwargs) for x in rule['dst_network']]
+                rule['dst_service'] = [lookup(x, **kwargs) for x in rule['dst_service']]
 
 
 # =========================================
@@ -87,7 +112,7 @@ class FirewallControl:
 
             fw_rules_copy: dict[str, Any] = fw_rules.get_dict()
 
-            self.convert_ruleset(fw_rules_copy)
+            convert_ruleset(self.sections, fw_rules_copy)
 
             write_configuration(fw_rules_copy, 'push', ext='firewall', filepath=f'{DEFAULT_PATH}/usr')
 
@@ -106,94 +131,6 @@ class FirewallControl:
             shutil.copy(ACTIVE_COPY_FILE, PUSH_RULE_FILE)
 
             os.replace(PUSH_RULE_FILE, PENDING_RULE_FILE)
-
-    def diff(self):
-        with ConfigurationManager(DEFAULT_VERSION, ext='firewall', file_path=DEFAULT_PATH) as dnx_fw:
-            pending: ConfigChain = dnx_fw.load_configuration()
-
-            pending_rules = pending.get_dict()
-
-            self.convert_ruleset(pending_rules, name_only=True)
-
-            # temporarily restricting to main set
-            pending_rules = pending_rules['MAIN']
-
-            # if active copy is not present, then rules have not been pushed before so all rules will be in diff
-            try:
-                active_rules = load_data('active_copy.firewall', filepath=f'{DEFAULT_PATH}/usr')
-            except FileNotFoundError:
-                return pending_rules
-
-            self.convert_ruleset(active_rules, name_only=True)
-
-            # temporarily restricting to main set
-            active_rules = active_rules['MAIN']
-
-            # swapping POS and ID. diff based on ID will be more accurate, detailed, and effective.
-            p_rules, a_rules = {}, {}
-            for pos, rule in pending_rules.items():
-                rid = rule.pop('id')
-                rule['pos'] = pos
-
-                p_rules[rid] = rule
-
-            for pos, rule in active_rules.items():
-                rid = rule.pop('id')
-                rule['pos'] = pos
-
-                a_rules[rid] = rule
-
-        p_rules_set = set(p_rules)
-        a_rules_set = set(a_rules)
-
-        change_list = {'added': [], 'removed': [], 'modified': []}
-
-        for rule in p_rules_set - a_rules_set:
-            change_list['added'].append(['add', p_rules[rule]['name']])
-
-        for rule in a_rules_set - p_rules_set:
-            change_list['removed'].append(['rem', a_rules[rule]['name']])
-
-        for rule in a_rules_set & p_rules_set:
-
-            a_rule = a_rules[rule]
-            p_rule = p_rules[rule]
-
-            # rule definition has not changed
-            if (a_rule == p_rule): continue
-
-            rule_mods = [a_rule['name']]
-
-            for (a_k, a_v), (p_k, p_v) in zip(a_rule.items(), p_rule.items()):
-
-                # rule field has not changed
-                if (a_v == p_v): continue
-
-                # code, name, old setting, new setting
-                rule_mods.append(['mod', a_k, a_v, p_v])
-
-            change_list['modified'].append(rule_mods)
-
-        return change_list
-
-    def convert_ruleset(self, firewall_rules: dict, *, name_only: bool = False) -> None:
-        '''inplace replacement of firewall objects from id to value.
-        '''
-        kwargs = {'name_only': True} if name_only else {'convert': True}
-
-        with FWObjectManager(lookup=True) as obj_manager:
-
-            lookup = obj_manager.lookup
-            for section in self.sections:
-
-                for rule in firewall_rules[section].values():
-                    rule['src_zone'] = [lookup(x, **kwargs) for x in rule['src_zone']]
-                    rule['src_network'] = [lookup(x, **kwargs) for x in rule['src_network']]
-                    rule['src_service'] = [lookup(x, **kwargs) for x in rule['src_service']]
-
-                    rule['dst_zone'] = [lookup(x, **kwargs) for x in rule['dst_zone']]
-                    rule['dst_network'] = [lookup(x, **kwargs) for x in rule['dst_network']]
-                    rule['dst_service'] = [lookup(x, **kwargs) for x in rule['dst_service']]
 
     @staticmethod
     def view_ruleset(section: str = 'MAIN') -> dict:
