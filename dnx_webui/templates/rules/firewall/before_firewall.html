@@ -39,37 +39,20 @@ async function diffRules() {
     let message_popup = document.querySelector("#diff-modal");
 
     Object.entries(diff_info).forEach(([section, action]) => {
-        if (!Object.keys(action).length) { return; }
+        if (!Object.keys(action).length) return;
 
-        if (action.add.length) {
-            let added_text = message_popup.querySelector("#diff-add");
+        ["add", "rem", "mod"].forEach(code => {
 
-            added_text.innerHTML = "<h6>" + section + "</h6>";
+        if (!action[code].length) return;
 
-            for (let r of action.add) {
-                added_text.innerHTML += "<p>" + JSON.stringify(r) + "</p>";
-            }
+        let change_text = message_popup.querySelector(`#diff-${code}`);
+        change_text.innerHTML = "<h6>" + section + "</h6>";
+
+        for (let r of action[code]) {
+            for (let r2 of r) { change_text.innerHTML += "<p>" + JSON.stringify(r2) + "</p>"; }
         }
-        if (action.rem.length) {
-            let removed_text = message_popup.querySelector("#diff-rem");
-
-            removed_text.innerHTML = "<h6>" + section + "</h6>";
-
-            for (let r of action.rem) {
-                removed_text.innerHTML += "<p>" + JSON.stringify(r) + "</p>";
-            }
-        }
-        if (action.mod.length) {
-            let modified_text = message_popup.querySelector("#diff-mod");
-
-            modified_text.innerHTML = "<h6>" + section + "</h6>";
-
-            for (let r of action.mod) {
-                modified_text.innerHTML += "<p>" + JSON.stringify(r) + "</p>";
-            }
-        }
+        });
     });
-
     let diffModal = M.Modal.init(
         message_popup, {dismissible: false}
     );
