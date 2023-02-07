@@ -50,7 +50,7 @@ async function diffRules() {
 
         for (let r of action[code]) {
             if (["add", "rem"].includes(code)) {
-                change_text.innerHTML += `<p>name[${r.name}] in pos[${r.pos}]</p>`;
+                change_text.innerHTML += `<p>${r[0][1]} in position ${r[13][1]}</p>`;
             } else {
                 for (let r2 of r.slice(1)) {
                     change_text.innerHTML += `<p>${r[0]} changed ${r2[1]} from ${r2[2]} to ${r2[3]}</p>`; }
