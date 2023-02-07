@@ -42,6 +42,7 @@
             <a id="push_rules" class="btn{% if dis %} btn-disabled{% endif %} waves-effect waves-light
                 modal-trigger green darken-2"{% if not dis %} href="#push-modal"{% endif %}>Push</a>
             <a class="btn waves-effect waves-light modal-trigger blue-grey" href="#commit-modal">Commit</a>
+            <a class="btn waves-effect waves-light blue-grey" onclick="diffRules()">Diff</a>
             <a class="btn waves-effect waves-light right" onclick="newRule()">Create Rule</a>
           </div>
           <div class="row">
@@ -89,54 +90,54 @@
               </thead>
               <tbody id="filter-table-body" class="rule-editor">
               {% for rule in firewall_settings['firewall_rules'] %}
-                <tr id="r{{loop.index}}" {% if not rule[0] %} style="opacity: .4" {% endif %} data-enabled="{{rule[0]}}">
+                <tr id="r{{ loop.index }}" {% if not rule[0] %} style="opacity: .4" {% endif %} data-enabled="{{ rule[0] }}" data-id="{{ rule[1] }}">
                   <td><label><input type="checkbox" class="filled-in rule-select"><span></span></label></td>
                   <td>
                     <div class="row">
-                      <a class="btn btn-floating btn-small waves-light" onclick="MoveUp(r{{loop.index}})">
+                      <a class="btn btn-floating btn-small waves-light" onclick="MoveUp(r{{ loop.index }})">
                         <i class="material-icons blue-grey">arrow_upward</i>
                       </a>
-                      <a class="btn btn-floating btn-small waves-light" onclick="MoveDown(r{{loop.index}})">
+                      <a class="btn btn-floating btn-small waves-light" onclick="MoveDown(r{{ loop.index }})">
                         <i class="material-icons red darken-2">arrow_downward</i>
                       </a>
                     </div>
                   </td>
-                  <td class="rname">{{rule[1]}}</td>
+                  <td class="rname">{{ rule[2] }}</td>
                   <td class="rsrc_zone">
-                    {% for subfield in rule[2] %}
-                      {{ firewall_settings.fw_object_map[subfield[1]][0]|safe }}
-                    {% endfor %}
-                  </td>
-                  <td class="rsrc_network">
                     {% for subfield in rule[3] %}
                       {{ firewall_settings.fw_object_map[subfield[1]][0]|safe }}
                     {% endfor %}
                   </td>
-                  <td class="rsrc_service">
+                  <td class="rsrc_network">
                     {% for subfield in rule[4] %}
                       {{ firewall_settings.fw_object_map[subfield[1]][0]|safe }}
                     {% endfor %}
                   </td>
-                  <td class="rdst_zone">
+                  <td class="rsrc_service">
                     {% for subfield in rule[5] %}
                       {{ firewall_settings.fw_object_map[subfield[1]][0]|safe }}
                     {% endfor %}
                   </td>
-                  <td class="rdst_network">
+                  <td class="rdst_zone">
                     {% for subfield in rule[6] %}
                       {{ firewall_settings.fw_object_map[subfield[1]][0]|safe }}
                     {% endfor %}
                   </td>
-                  <td class="rdst_service">
+                  <td class="rdst_network">
                     {% for subfield in rule[7] %}
                       {{ firewall_settings.fw_object_map[subfield[1]][0]|safe }}
                     {% endfor %}
                   </td>
-                  <td class="raction">{{'accept' if rule[8] else 'drop'}}</td>
-                  <td class="rlog">{{'on' if rule[9] else 'off'}}</td>
-                  <td class="rsec1_prof">{{rule[10]}}</td>
-                  <td class="rsec2_prof">{{rule[11]}}</td>
-                  <td class="rsec3_prof">{{rule[12]}}</td>
+                  <td class="rdst_service">
+                    {% for subfield in rule[8] %}
+                      {{ firewall_settings.fw_object_map[subfield[1]][0]|safe }}
+                    {% endfor %}
+                  </td>
+                  <td class="raction">{{'accept' if rule[9] else 'drop'}}</td>
+                  <td class="rlog">{{'on' if rule[10] else 'off'}}</td>
+                  <td class="rsec1_prof">{{rule[11]}}</td>
+                  <td class="rsec2_prof">{{rule[12]}}</td>
+                  <td class="rsec3_prof">{{rule[13]}}</td>
                 </tr>
               {% endfor %}
               </tbody>

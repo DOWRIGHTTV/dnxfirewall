@@ -5,14 +5,23 @@ from __future__ import annotations
 import os
 import shutil
 
+from random import randint
+
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.def_enums import CFG
-from dnx_gentools.file_operations import ConfigurationManager, load_configuration, write_configuration, calculate_file_hash
+from dnx_gentools.file_operations import ConfigurationManager, load_configuration, write_configuration
+from dnx_gentools.file_operations import calculate_file_hash, load_data
 
 from dnx_routines.logging.log_client import Log
 
 from dnx_webui.source.object_manager import FWObjectManager
+
+
+__all__ = (
+    'DEFAULT_VERSION', 'DEFAULT_PATH', 'PENDING_RULE_FILE', 'ACTIVE_RULE_FILE', 'PUSH_RULE_FILE', 'ACTIVE_COPY_FILE',
+    'convert_ruleset', 'FirewallControl'
+)
 
 
 DEFAULT_VERSION: str = 'pending'
@@ -28,6 +37,25 @@ PUSH_RULE_FILE: str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/push.firewall'
 ACTIVE_COPY_FILE: str = f'{HOME_DIR}/{DEFAULT_PATH}/usr/active_copy.firewall'
 
 ConfigurationManager.set_log_reference(Log)
+
+def convert_ruleset(sections: list[str], firewall_rules: dict, *, name_only: bool = False) -> None:
+    '''inplace replacement of firewall objects from id to value.
+    '''
+    kwargs = {'name_only': True} if name_only else {'convert': True}
+
+    with FWObjectManager(lookup=True) as obj_manager:
+
+        lookup = obj_manager.lookup
+        for section in sections:
+
+            for rule in firewall_rules[section].values():
+                rule['src_zone'] = [lookup(x, **kwargs) for x in rule['src_zone']]
+                rule['src_network'] = [lookup(x, **kwargs) for x in rule['src_network']]
+                rule['src_service'] = [lookup(x, **kwargs) for x in rule['src_service']]
+
+                rule['dst_zone'] = [lookup(x, **kwargs) for x in rule['dst_zone']]
+                rule['dst_network'] = [lookup(x, **kwargs) for x in rule['dst_network']]
+                rule['dst_service'] = [lookup(x, **kwargs) for x in rule['dst_service']]
 
 
 # =========================================
@@ -51,24 +79,22 @@ class FirewallControl:
     versions: list[str, str] = ['pending', 'active']
     sections: list[str, str, str] = ['BEFORE', 'MAIN', 'AFTER']
 
-    @classmethod
-    def commit(cls, section: str, updated_rules: dict) -> None:
+    def commit(self, section: str, updated_rules: dict) -> None:
         '''Updates pending configuration file with sent in firewall rules section data.
 
         This is a replace operation on disk and thread/process safe.
         '''
         with ConfigurationManager(DEFAULT_VERSION, ext='firewall', file_path=DEFAULT_PATH) as dnx_fw:
-            # using standalone functions due to ConfigManager not being compatible with these operations
             fw_rules: ConfigChain = dnx_fw.load_configuration()
 
             fw_rules_copy = fw_rules.get_dict()
-
             fw_rules_copy[section] = updated_rules
+
+            self._generate_ids(fw_rules_copy, section)
 
             dnx_fw.write_configuration(fw_rules_copy)
 
-    @classmethod
-    def push(cls) -> bool:
+    def push(self) -> bool:
         '''Copy the pending configuration to the active state.
 
         file changes are being monitored by Control class to load into cfirewall.
@@ -84,23 +110,11 @@ class FirewallControl:
             # -> file swapping across multiple files to retain plain and encoding version of the rules
             fw_rules: ConfigChain = load_configuration('pending', ext='firewall', filepath=DEFAULT_PATH)
 
-            fw_rule_copy: dict[str, Any] = fw_rules.get_dict()
+            fw_rules_copy: dict[str, Any] = fw_rules.get_dict()
 
-            with FWObjectManager(lookup=True) as obj_manager:
+            convert_ruleset(self.sections, fw_rules_copy)
 
-                lookup = obj_manager.lookup
-                for section in cls.sections:
-
-                    for rule in fw_rule_copy[section].values():
-                        rule['src_zone'] = [lookup(x, convert=True) for x in rule['src_zone']]
-                        rule['src_network'] = [lookup(x, convert=True) for x in rule['src_network']]
-                        rule['src_service'] = [lookup(x, convert=True) for x in rule['src_service']]
-
-                        rule['dst_zone'] = [lookup(x, convert=True) for x in rule['dst_zone']]
-                        rule['dst_network'] = [lookup(x, convert=True) for x in rule['dst_network']]
-                        rule['dst_service'] = [lookup(x, convert=True) for x in rule['dst_service']]
-
-            write_configuration(fw_rule_copy, 'push', ext='firewall', filepath=f'{DEFAULT_PATH}/usr')
+            write_configuration(fw_rules_copy, 'push', ext='firewall', filepath=f'{DEFAULT_PATH}/usr')
 
             os.replace(PUSH_RULE_FILE, ACTIVE_RULE_FILE)
 
@@ -110,17 +124,13 @@ class FirewallControl:
 
         return push_error
 
-    @staticmethod
-    def revert():
+    def revert(self):
         '''Copies active configuration to pending, which effectively wipes any unpushed changes.
         '''
         with ConfigurationManager():
             shutil.copy(ACTIVE_COPY_FILE, PUSH_RULE_FILE)
 
             os.replace(PUSH_RULE_FILE, PENDING_RULE_FILE)
-
-    def convert_ruleset(self):
-        pass
 
     @staticmethod
     def view_ruleset(section: str = 'MAIN') -> dict:
@@ -196,3 +206,28 @@ class FirewallControl:
             system_rules_file.write_configuration(system_rules.expanded_user_data)
 
             return True
+
+    @staticmethod
+    def _generate_ids(firewall_rules: dict, section: str):
+
+        ids_in_use = set()
+
+        # first pass gets all currently used ids
+        for rules in firewall_rules.values():
+
+            for rule in rules.values():
+
+                if (not rule['id']): continue
+
+                ids_in_use.add(rule['id'])
+
+        # second pass will assign an id to all new rules
+        for rule in firewall_rules[section].values():
+
+            if (rule['id']): continue
+
+            new_id = randint(1000, 9999)
+            while new_id in ids_in_use:
+                new_id = randint(1000, 9999)
+
+            rule['id'] = new_id

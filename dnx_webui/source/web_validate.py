@@ -115,7 +115,7 @@ def get_check_digit(args: Args, key: str, /, *, default: Optional[str] = '1') ->
 
     return default
 
-def standard(user_input: str, *, override: Optional[list] = None) -> None:
+def standard(user_input: str, *, override: Optional[list] = None) -> str:
     override = [] if override is None else override
 
     for char in user_input:
@@ -123,6 +123,8 @@ def standard(user_input: str, *, override: Optional[list] = None) -> None:
             raise ValidationError(
                 f'Standard fields can only contain alpha numeric characters or the following {", ".join(override)}.'
             )
+
+    return user_input
 
 def full_field(user_input: str, ftype: str = 'Description') -> None:
     valid_chars = f' {string.printable.strip(string.whitespace)}'

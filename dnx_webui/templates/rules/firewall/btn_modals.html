@@ -1,6 +1,6 @@
 <div id="revert-modal" class="modal">
     <div class="modal-content">
-    <h5 class="{{modal_text_style}}">Are you sure you want to revert the pending firewall rule changes?
+    <h5 class="{{ modal_text_style }}">Are you sure you want to revert the pending firewall rule changes?
         This action cannot be undone.</h5>
     </div>
     <form action="/rules/firewall" method="POST">
@@ -15,7 +15,7 @@
 </div>
 <div id="push-modal" class="modal">
     <div class="modal-content">
-    <h5 class="{{modal_text_style}}">Are you sure you want to push the pending rule changes to the firewall?</h5><br>
+    <h5 class="{{ modal_text_style }}">Are you sure you want to push the pending rule changes to the firewall?</h5><br>
         <h6 class="red-text center">Warning: This action cannot be undone.</h6>
     </div>
     <div class="modal-footer">
@@ -25,11 +25,25 @@
 </div>
 <div id="commit-modal" class="modal">
     <div class="modal-content">
-    <h5 class="{{modal_text_style}}">Are you sure you want to commit your rule changes?<br>The rules will be pending and
+    <h5 class="{{ modal_text_style }}">Are you sure you want to commit your rule changes?<br>The rules will be pending and
         awaiting a push to the firewall. The rules can be reverted to current active state while in the pending state.</h5>
     </div>
     <div class="modal-footer">
         <a class="btn waves-effect waves-light modal-close" onclick="commitRules('filter-table-body')">YES</a>
         <a class="btn-flat modal-close">Cancel</a>
+    </div>
+</div>
+<div id="diff-modal" class="modal">
+    <div class="modal-content">
+      <h4 class="{{ modal_text_style }}">PENDING CHANGES</h4>
+      <h5>Added</h5>
+      <p id="diff-add" class="{{ modal_text_style }}">no rules added.</p>
+      <h5>Removed</h5>
+      <p id="diff-rem" class="{{ modal_text_style }}">no rules removed.</p>
+      <h5>Modified</h5>
+      <p id="diff-mod" class="{{ modal_text_style }}">no rules modified.</p>
+    </div>
+    <div class="modal-footer">
+        <a class="btn-flat modal-close">Ok</a>
     </div>
 </div>
