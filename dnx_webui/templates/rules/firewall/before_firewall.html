@@ -38,35 +38,35 @@ async function diffRules() {
     let diff_info = result.message;
     let message_popup = document.querySelector("#diff-modal");
 
-    for (let section of diff_info) {
-        if (section.add.length) {
+    Object.entries(diff_info).forEach(([section, action]) => {
+        if (action.add.length) {
             let added_text = message_popup.querySelector("#diff-add");
 
-            added_text.innerText = "";
+            added_text.innerHTML = "<h6>" + section + "</h6>";
 
-            for (let r of section.add) {
+            for (let r of action.add) {
                 added_text.innerHTML += "<p>" + JSON.stringify(r) + "</p>";
             }
         }
-        if (section.rem.length) {
+        if (action.rem.length) {
             let removed_text = message_popup.querySelector("#diff-rem");
 
-            removed_text.innerText = "";
+            removed_text.innerHTML = "<h6>" + section + "</h6>";
 
-            for (let r of section.rem) {
+            for (let r of action.rem) {
                 removed_text.innerHTML += "<p>" + JSON.stringify(r) + "</p>";
             }
         }
-        if (section.mod) {
+        if (action.mod) {
             let modified_text = message_popup.querySelector("#diff-mod");
 
-            modified_text.innerText = "";
+            modified_text.innerHTML = "<h6>" + section + "</h6>";
 
-            for (let r of section.mod) {
+            for (let r of action.mod) {
                 modified_text.innerHTML += "<p>" + JSON.stringify(r) + "</p>";
             }
         }
-    }
+    });
 
     let diffModal = M.Modal.init(
         message_popup, {dismissible: false}
