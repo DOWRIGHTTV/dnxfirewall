@@ -89,6 +89,6 @@ class FirewallAnalyze:
                     # code, name, old setting, new setting
                     rule_mods.append(['mod', a_k, a_v, p_v])
 
-                change_list['mod'].append(rule_mods)
+                change_list[section]['mod'].append(rule_mods)
 
         return change_list
