@@ -39,6 +39,8 @@ async function diffRules() {
     let message_popup = document.querySelector("#diff-modal");
 
     Object.entries(diff_info).forEach(([section, action]) => {
+        if (!Object.keys(action).length) { return; }
+
         if (action.add.length) {
             let added_text = message_popup.querySelector("#diff-add");
 
@@ -57,7 +59,7 @@ async function diffRules() {
                 removed_text.innerHTML += "<p>" + JSON.stringify(r) + "</p>";
             }
         }
-        if (action.mod) {
+        if (action.mod.length) {
             let modified_text = message_popup.querySelector("#diff-mod");
 
             modified_text.innerHTML = "<h6>" + section + "</h6>";

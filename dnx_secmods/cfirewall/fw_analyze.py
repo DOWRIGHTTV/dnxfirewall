@@ -57,7 +57,10 @@ class FirewallAnalyze:
 
                 self.active_rules = _pos_to_id(active_rules)
 
-        change_list = {'BEFORE': defaultdict(list), 'MAIN': defaultdict(list), 'AFTER': defaultdict(list)}
+        ct = ['add', 'rem', 'mod']
+        change_list = {
+            'BEFORE': {t: [] for t in ct}, 'MAIN': {t: [] for t in ct}, 'AFTER': {t: [] for t in ct}
+        }
 
         for section in FirewallControl.sections:
 
