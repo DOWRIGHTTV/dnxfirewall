@@ -38,31 +38,33 @@ async function diffRules() {
     let diff_info = result.message;
     let message_popup = document.querySelector("#diff-modal");
 
-    if (diff_info.added.length) {
-        let added_text = message_popup.querySelector("#diff-add");
+    for (let section of diff_info) {
+        if (section.add.length) {
+            let added_text = message_popup.querySelector("#diff-add");
 
-        added_text.innerText = "";
+            added_text.innerText = "";
 
-        for (let r of diff_info.added) {
-            added_text.innerHTML += "<p>" + JSON.stringify(r) + "</p>";
+            for (let r of section.add) {
+                added_text.innerHTML += "<p>" + JSON.stringify(r) + "</p>";
+            }
         }
-    }
-    if (diff_info.removed.length) {
-        let removed_text = message_popup.querySelector("#diff-rem");
+        if (section.rem.length) {
+            let removed_text = message_popup.querySelector("#diff-rem");
 
-        removed_text.innerText = "";
+            removed_text.innerText = "";
 
-        for (let r of diff_info.removed) {
-            removed_text.innerHTML += "<p>" + JSON.stringify(r) + "</p>";
+            for (let r of section.rem) {
+                removed_text.innerHTML += "<p>" + JSON.stringify(r) + "</p>";
+            }
         }
-    }
-    if (diff_info.modified) {
-        let modified_text = message_popup.querySelector("#diff-mod");
+        if (section.mod) {
+            let modified_text = message_popup.querySelector("#diff-mod");
 
-        modified_text.innerText = "";
+            modified_text.innerText = "";
 
-        for (let r of diff_info.modified) {
-            modified_text.innerHTML += "<p>" + JSON.stringify(r) + "</p>";
+            for (let r of section.mod) {
+                modified_text.innerHTML += "<p>" + JSON.stringify(r) + "</p>";
+            }
         }
     }
 

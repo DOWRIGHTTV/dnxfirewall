@@ -193,10 +193,13 @@ def load_top_domains_filter() -> list[str]:
     with open(f'{HOME_DIR}/dnx_profile/signatures/domain_lists/valid_top.domains', 'r') as tdf:
         return [s.strip() for s in tdf.readlines() if s.strip() and '#' not in s]
 
-def calculate_file_hash(file_to_hash: str, *, path: str = 'dnx_profile', folder: str = 'data') -> str:
+def calculate_file_hash(
+        file_to_hash: str, *, path: str = 'dnx_profile', folder: str = 'data', full_path: bool = False) -> str:
     '''returns the sha256 secure hash of passed in file.
+
+    if full_path is True then the file_to_hash argument will be used as is.
     '''
-    filepath = f'{HOME_DIR}/{path}/{folder}/{file_to_hash}'
+    filepath = file_to_hash if full_path else f'{HOME_DIR}/{path}/{folder}/{file_to_hash}'
     if not file_exists(filepath):
         return ''
 

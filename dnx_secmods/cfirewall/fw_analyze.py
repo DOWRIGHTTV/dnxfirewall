@@ -1,74 +1,94 @@
 #!/usr/bin/env python3
 
-from dnx_gentools.file_operations import ConfigurationManager, ConfigChain, load_data
+from __future__ import annotations
+
+from collections import defaultdict
+
+from dnx_gentools.file_operations import ConfigurationManager, load_data, calculate_file_hash
 
 from dnx_secmods.cfirewall.fw_control import *
 
-def diff():
-    with ConfigurationManager(DEFAULT_VERSION, ext='firewall', file_path=DEFAULT_PATH) as dnx_fw:
-        pending: ConfigChain = dnx_fw.load_configuration()
 
-        pending_rules = pending.get_dict()
+def _pos_to_id(src_dict: dict) -> dict:
+    converted_dict = {}
 
-        convert_ruleset(FirewallControl.sections, pending_rules, name_only=True)
+    for section in FirewallControl.sections:
 
-        # temporarily restricting to main set
-        pending_rules = pending_rules['MAIN']
+        converted_dict[section] = {}
 
-        # if active copy is not present, then rules have not been pushed before so all rules will be in diff
-        try:
-            active_rules = load_data('active_copy.firewall', filepath=f'{DEFAULT_PATH}/usr')
-        except FileNotFoundError:
-            active_rules = {'BEFORE': {}, 'MAIN': {}, 'AFTER': {}}
-
-        convert_ruleset(FirewallControl.sections, active_rules, name_only=True)
-
-        # temporarily restricting to main set
-        active_rules = active_rules['MAIN']
-
-        # swapping POS and ID. diff based on ID will be more accurate, detailed, and effective.
-        p_rules, a_rules = {}, {}
-        for pos, rule in pending_rules.items():
+        for pos, rule in src_dict[section].items():
             rid = rule.pop('id')
             rule['pos'] = pos
 
-            p_rules[rid] = rule
+            converted_dict[section][rid] = rule
 
-        for pos, rule in active_rules.items():
-            rid = rule.pop('id')
-            rule['pos'] = pos
+    return converted_dict
 
-            a_rules[rid] = rule
+class FirewallAnalyze:
 
-    p_rules_set = set(p_rules)
-    a_rules_set = set(a_rules)
+    cfirewall_analyze: FirewallAnalyze
 
-    change_list = {'added': [], 'removed': [], 'modified': []}
+    def __init__(self):
 
-    for rule in p_rules_set - a_rules_set:
-        change_list['added'].append(['add', p_rules[rule]['name']])
+        self.pending_hash = ''
+        self.pending_rules = {'BEFORE': {}, 'MAIN': {}, 'AFTER': {}}
 
-    for rule in a_rules_set - p_rules_set:
-        change_list['removed'].append(['rem', a_rules[rule]['name']])
+        self.active_hash = ''
+        self.active_rules = {'BEFORE': {}, 'MAIN': {}, 'AFTER': {}}
 
-    for rule in a_rules_set & p_rules_set:
+    def diff(self):
+        with ConfigurationManager(DEFAULT_VERSION, ext='firewall', file_path=DEFAULT_PATH) as dnx_fw:
 
-        a_rule = a_rules[rule]
-        p_rule = p_rules[rule]
+            pending_hash = calculate_file_hash(PENDING_RULE_FILE, full_path=True)
+            if (pending_hash != self.pending_hash):
 
-        # rule definition has not changed
-        if (a_rule == p_rule): continue
+                pending_rules = dnx_fw.load_configuration().get_dict()
 
-        rule_mods = [a_rule['name']]
+                convert_ruleset(FirewallControl.sections, pending_rules, name_only=True)
 
-        for (a_k, a_v), (p_k, p_v) in zip(a_rule.items(), p_rule.items()):
+                self.pending_rules = _pos_to_id(pending_rules)
 
-            # rule field has not changed
-            if (a_v == p_v): continue
+            active_hash = calculate_file_hash(ACTIVE_RULE_FILE, full_path=True)
+            if (active_hash != self.active_hash):
 
-            # code, name, old setting, new setting
-            rule_mods.append(['mod', a_k, a_v, p_v])
+                active_rules = load_data('active_copy.firewall', filepath=f'{DEFAULT_PATH}/usr')
 
-        change_list['modified'].append(rule_mods)
+                convert_ruleset(FirewallControl.sections, active_rules, name_only=True)
 
-    return change_list
+                self.active_rules = _pos_to_id(active_rules)
+
+        change_list = {'BEFORE': defaultdict(list), 'MAIN': defaultdict(list), 'AFTER': defaultdict(list)}
+
+        for section in FirewallControl.sections:
+
+            p_rules_set = set(self.pending_rules[section])
+            a_rules_set = set(self.active_rules[section])
+
+            for rule in p_rules_set - a_rules_set:
+                change_list[section]['add'].append(list(self.pending_rules[section][rule].items()))
+
+            for rule in a_rules_set - p_rules_set:
+                change_list[section]['rem'].append(list(self.active_rules[section][rule].items()))
+
+            for rule in p_rules_set & a_rules_set:
+
+                p_rule = self.pending_rules[section][rule]
+                a_rule = self.active_rules[section][rule]
+
+                # rule definition has not changed
+                if (a_rule == p_rule): continue
+
+                rule_mods = [a_rule['name']]
+
+                for (a_k, a_v), (p_k, p_v) in zip(a_rule.items(), p_rule.items()):
+
+                    # rule field has not changed
+                    if (a_v == p_v): continue
+
+                    # note: currently treating all changes as "modified". will make it more specific later.
+                    # code, name, old setting, new setting
+                    rule_mods.append(['mod', a_k, a_v, p_v])
+
+                change_list['mod'].append(rule_mods)
+
+        return change_list
