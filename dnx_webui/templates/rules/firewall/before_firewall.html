@@ -49,9 +49,13 @@ async function diffRules() {
         change_text.innerHTML = "<h6>" + section + "</h6>";
 
         for (let r of action[code]) {
-            for (let r2 of r) { change_text.innerHTML += "<p>" + JSON.stringify(r2) + "</p>"; }
-        }
-        });
+            if (["add", "rem"].contains(code)) {
+                change_text.innerHTML += `<p>name[${r.name}] in pos[${r.pos}]</p>`;
+            } else {
+                for (let r2 of r.slice(1)) {
+                    change_text.innerHTML += `<p>${r[0]} changed ${r2[1]} from ${r2[2]} to ${r2[3]}</p>`; }
+            }
+        }});
     });
     let diffModal = M.Modal.init(
         message_popup, {dismissible: false}
