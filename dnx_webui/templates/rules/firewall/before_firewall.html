@@ -49,7 +49,7 @@ async function diffRules() {
         change_text.innerHTML = "<h6>" + section + "</h6>";
 
         for (let r of action[code]) {
-            if (["add", "rem"].contains(code)) {
+            if (["add", "rem"].includes(code)) {
                 change_text.innerHTML += `<p>name[${r.name}] in pos[${r.pos}]</p>`;
             } else {
                 for (let r2 of r.slice(1)) {
