@@ -39,7 +39,7 @@
         timeoutID = setTimeout(idleTimeout, 1800000);
 
         {#setTimeout(idleTimeoutWarning, 5000);#}
-        {#setTimeout(idleTimeout, 70000);#}
+        {#timeoutID = setTimeout(idleTimeout, 70000);#}
 
         if (initialLoad) { initialLoad = false; return; }
 
