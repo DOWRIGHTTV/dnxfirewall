@@ -18,7 +18,8 @@
 <input id="timeout-menu" type="hidden" name="menu" value="{{menu}}">
 {% endif %}
 <script>
-    let initialLoad = false
+    let initialLoad = true;
+    let timeoutID = 0;
 
     function idleTimeoutWarning() {
         let timeoutNotify = document.querySelector('.idle-timeout-modal');
@@ -32,16 +33,15 @@
     }
 
     function activateTimers() {
+        if (timeoutID > 0) clearTimeout(timeoutID);
+
         setTimeout(idleTimeoutWarning, 1500000);
-        setTimeout(idleTimeout, 1800000);
+        timeoutID = setTimeout(idleTimeout, 1800000);
 
         {#setTimeout(idleTimeoutWarning, 5000);#}
         {#setTimeout(idleTimeout, 70000);#}
 
-        if (!initialLoad) {
-            initialLoad = true
-            return
-        }
+        if (initialLoad) { initialLoad = false; return; }
 
         console.log('[server/response]: session renewed successfully.');
 
