@@ -106,7 +106,7 @@ def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tupl
 
     switch = (
         f'<div class="col s3"><div class="row row-thin"><p class="multi-switch-label center">{value}</p></div>'
-        '<h6 class="center">standard</h6>'
+        '<h6 class="center">STANDARD</h6>'
         f'<div class="row"><div id="{value}-1" class="multi-switch-container decora-switch">'
         '<ul class="multi-switch">'
             f'<li class="multi-switch-off{off}"><button name="{name[0]}" value="{value}" onclick="{onclick}(this,0,{switch_code_off})"{disabled}>'
@@ -114,7 +114,7 @@ def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tupl
             f'<li class="multi-switch-on{on}"><button name="{name[0]}" value="{value}" onclick="{onclick}(this,0,{switch_code_on})"{disabled}>'
                 '<i class="material-icons small">block</i></button></li>'
         '</ul></div></div>'
-        '<h6 class="center">keyword</h6>'
+        '<h6 class="center">KEYWORD</h6>'
         f'<div class="row row-thin"><div id="{value}-2" class="multi-switch-container decora-switch">'
         '<ul class="multi-switch">'
             f'<li class="multi-switch-off{off_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(this,1,{switch_code_off})"{disabled_two}>'
