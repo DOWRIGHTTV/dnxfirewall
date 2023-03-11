@@ -30,15 +30,11 @@ class WebPage(StandardWebPage):
 
         builtins = proxy_profile.get_items('categories->built-in')
 
-        ordered_cats = defaultdict(list)
-        for cat, info in builtins:
-            ordered_cats[info['label']].append((cat, info))
-
         domain_settings = {
             'security_profile': 1,
             'profile_name': proxy_profile['name'],
             'profile_desc': proxy_profile['description'],
-            'built-in': ordered_cats,
+            'built-in': builtins,
             'user_defined': proxy_profile.get_items('categories->custom'),
             'tld': proxy_profile.get_items('tld')
         }
