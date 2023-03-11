@@ -19,32 +19,32 @@
 </section>
 <section id="categories" class="section">
   <div class="container">
+  {% if domain_settings['user_defined'] %}
     <div class="row">
-    {% if domain_settings['user_defined'] %}
       <div class="col s12 m10 offset-m1">
         <div class="card-panel hoverable {{ theme.card }}">
           {{ create_title('user defined')|safe }}
-          <div class="row">
-            {% for category, settings in domain_settings['user_defined'] %}
-              {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
-              {{ create_decora_switch('user_defined', category, settings['enabled'])|safe }}
-              {% if loop.index % 4 == 0 or loop.last %}</div>{% endif %}
-            {% endfor %}
-          </div>
+          {% for category, settings in domain_settings['user_defined'] %}
+            {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
+            {{ create_decora_switch('user_defined', category, settings['enabled'])|safe }}
+            {% if loop.index % 4 == 0 or loop.last %}</div>{% endif %}
+          {% endfor %}
         </div>
       </div>
-      </div>
-    {% endif %}
+    </div>
+  {% endif %}
     <div class="row">
       <div class="col s12 m10 offset-m1">
         <div class="card-panel hoverable {{ theme.card }}">
-          {{ create_title('system default')|safe }}
-          {% for category, settings in domain_settings['built-in'] %}
-            {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
-            {{ create_tandem_decora_switch(('built-in', 'keyword'), category,
-                (settings['enabled'], settings['keyword'], settings['tethered']))|safe }}
-            {% if loop.index % 4 == 0 or loop.last %}</div>{% endif %}
+        {% for label, categories in domain_settings['built-in'] %}
+          {{ create_title(label)|safe }}
+          {% for category, settings in categories %}
+          {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
+          {{ create_tandem_decora_switch(('built-in', 'keyword'), category,
+              (settings['enabled'], settings['keyword'], settings['tethered']))|safe }}
+          {% if loop.index % 4 == 0 or loop.last %}</div>{% endif %}
           {% endfor %}
+        {% endfor %}
         </div>
       </div>
     </div>
@@ -56,13 +56,11 @@
       <div class="col s8 offset-s2">
         <div class="card-panel hoverable {{ theme.card }}">
           {{ create_title('top level domains')|safe }}
-          <div class="row">
           {% for tld, status in domain_settings['tld'] %}
             {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
             {{ create_decora_switch('tld', tld, status)|safe }}
             {% if loop.index % 4 == 0 or loop.last %}</div>{% endif %}
           {% endfor %}
-          </div>
         </div>
       </div>
     </div>

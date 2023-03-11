@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
+
 from source.web_typing import *
 from source.web_validate import *
 
@@ -26,11 +28,17 @@ class WebPage(StandardWebPage):
     def load(_: Form) -> dict[str, Any]:
         proxy_profile: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
 
+        builtins = proxy_profile.get_items('categories->built-in')
+
+        ordered_cats = defaultdict(list)
+        for cat, info in builtins:
+            ordered_cats[info['label']].append((cat, info))
+
         domain_settings = {
             'security_profile': 1,
             'profile_name': proxy_profile['name'],
             'profile_desc': proxy_profile['description'],
-            'built-in': proxy_profile.get_items('categories->built-in'),
+            'built-in': ordered_cats,
             'user_defined': proxy_profile.get_items('categories->custom'),
             'tld': proxy_profile.get_items('tld')
         }
