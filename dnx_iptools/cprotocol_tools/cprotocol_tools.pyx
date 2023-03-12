@@ -156,7 +156,7 @@ cdef inline int tld_idx(uint8_t *search_str, int slen):
 
     return 0
 
-# dont need category, proxy will know which one it each based on filter container passed in
+# dont need category, proxy will know which one based on filter container passed in
 def check_filters(uint8_t[:] cat_filter, uint32_t sig_ct, const uint8_t[:] domain):
     # domain rewrites / special options
     # no TLD   ->  "@" (decrements right bound by length of ".tld"
