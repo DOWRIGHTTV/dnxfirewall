@@ -34,10 +34,10 @@
     </div>
   {% endif %}
     <div class="row">
-      <div class="col s12 m10 offset-m1">
+      <div class="col s12">
         <div class="card-panel hoverable {{ theme.card }}">
         {% for label, categories in domain_settings['built-in'] %}
-          {{ create_title(label)|safe }}
+          {{ create_title(label.replace('_', ' '))|safe }}
           {% for category, settings in categories.items() %}
           {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
             {{ create_tandem_decora_switch(('built-in', 'keyword'), category,

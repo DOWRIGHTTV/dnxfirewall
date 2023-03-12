@@ -105,7 +105,7 @@ def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tupl
     switch_code_on  = 1 if not checked[2] else 3
 
     switch = (
-        f'<div class="col s3"><div class="row row-thin"><p class="multi-switch-label center">{value}</p></div>'
+        f'<div class="col s3"><div class="row row-thin"><h5 class="multi-switch-label center">{value}</h5></div>'
         '<h6 class="center">STANDARD</h6>'
         f'<div class="row"><div id="{value}-1" class="multi-switch-container decora-switch">'
         '<ul class="multi-switch">'
