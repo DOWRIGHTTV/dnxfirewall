@@ -38,7 +38,7 @@
         <div class="card-panel hoverable {{ theme.card }}">
         {% for label, categories in domain_settings['built-in'] %}
           {{ create_title(label)|safe }}
-          {% for category, settings in categories|dictsort.items() %}
+          {% for category, settings in categories.items() %}
           {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
           {{ create_tandem_decora_switch(('built-in', 'keyword'), category,
               (settings['enabled'], settings['keyword'], settings['tethered']))|safe }}
