@@ -42,8 +42,9 @@
           {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
             {{ create_tandem_decora_switch(('built-in', 'keyword'), category,
                 (settings['enabled'], settings['keyword'], settings['tethered']))|safe }}
-          {% if loop.index % 4 == 0 or loop.last %}<br></div>{% endif %}
+          {% if loop.index % 4 == 0 or loop.last %}</div>{% endif %}
           {% endfor %}
+          <br>
         {% endfor %}
         </div>
       </div>
