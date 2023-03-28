@@ -179,13 +179,13 @@ class ClientQuery:
 # ======================================
 # PROXY - FULL INSPECTION, DIRECT SOCKET
 # ======================================
-ip_hdr_template: Structure = PR_IP_HDR(
+ip_hdr_template: Structure_T = PR_IP_HDR(
     (('ver_ihl', 69), ('tos', 0), ('ident', 0), ('flags_fro', 16384), ('ttl', 255), ('protocol', PROTO.UDP))
 )
-udp_hdr_template: Structure = PR_UDP_HDR(
+udp_hdr_template: Structure_T = PR_UDP_HDR(
     (('checksum', 0),)
 )
-std_rr_template: Structure = DNS_STD_RR(
+std_rr_template: Structure_T = DNS_STD_RR(
     (('ptr', 49164), ('type', 1), ('class', 1), ('ttl', 300), ('rd_len', 4))
 )
 
@@ -264,7 +264,7 @@ def _enumerate_request(request: str, local_domain: bool) -> tuple[list[int], str
 # ================
 # SERVER RESPONSE
 # ================
-_MINIMUM_TTL: bytes = long_pack(MINIMUM_TTL)
+# _MINIMUM_TTL: bytes = long_pack(MINIMUM_TTL)
 _DEFAULT_TTL: bytes = long_pack(DEFAULT_TTL)
 
 def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[bytearray, QNAME_RECORD]:
@@ -311,18 +311,17 @@ def ttl_rewrite(data: bytes, dns_id: int, len=len, min=min, max=max) -> tuple[by
         for _ in range(record_count):
             record_type, record, offset = _parse_record(dns_payload, offset)
 
-            # TTL rewrite done on A/CNAME records which functionally clamp TTLs between a min and max value.
-            # CNAME ttl can differ, but will get clamped with A so wil; likely end up the same as A records.
-            # NOTE: only caching A/CNAME records
+            # TTL rewrite on A/CNAME records. sets the TTL to either DEFAULT_TTL or original, using the lower value.
+            # this is a functional clamp for all TTLs sent to the client to be no more than the DEFAULT_TTL.
+            # CNAME TTL will differ if the A records received had TTL already less than the DEFAULT_TTL.
             if (record_type in [DNS.A, DNS.CNAME]):
                 original_ttl = long_unpack(record.ttl)[0]
-                record.ttl = long_pack(
-                    max(MINIMUM_TTL, min(original_ttl, DEFAULT_TTL))
-                )
+                record.ttl = long_pack(min(original_ttl, DEFAULT_TTL))
 
                 send_data += record
 
-                # limits A record caching, so we aren't caching excessive amount of records with the same qname
+                # caching A and CNAME records ONLY
+                # limits A records cached to configured value (MAX_A_RECORD_COUNT)
                 if (len(record_cache) < MAX_A_RECORD_COUNT or record_type != DNS.A):
                     record_cache.append(record)
 
@@ -348,7 +347,7 @@ def _parse_record(dns_payload: memoryview, cur_offset: int) -> tuple[int, RESOUR
     # calculating first, so we can single shot creation of the byte container.
     dt_len = btoia(record_values[8:10])
 
-    resource_record =  RESOURCE_RECORD(
+    resource_record = RESOURCE_RECORD(
         record_name,
         record_values[:2],
         record_values[2:4],

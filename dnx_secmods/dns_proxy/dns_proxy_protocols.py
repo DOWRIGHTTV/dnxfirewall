@@ -247,7 +247,7 @@ class TLSRelay(ProtoRelay):
 
                     processing_buffer[:b_ct] = extra_bytes
 
-                # more data is needed for a complete response likely because the rmeote server sent the length of the
+                # more data is needed for a complete response likely because the remote server sent the length of the
                 # record and record separately.
                 # elif (b_ct < data_len): break
                 else: break

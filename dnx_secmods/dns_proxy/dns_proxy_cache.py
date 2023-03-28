@@ -146,7 +146,7 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache_T:
                 return QNAME_NOT_FOUND
 
             calcd_ttl = record.expire - int(fast_time())
-            if (calcd_ttl > DEFAULT_TTL):
+            if (calcd_ttl >= DEFAULT_TTL):
                 return QNAME_RECORD_UPDATE(DEFAULT_TTL, record.records)
 
             elif (calcd_ttl > 0):

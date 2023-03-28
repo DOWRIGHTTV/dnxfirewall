@@ -67,6 +67,8 @@ RELAY_MAP: dict[PROTO, Callable[[DNS_SEND], None]] = {
 #   ServerConfiguration - provides config management between memory and filesystem
 #   Listener - provides packet data Linux interface socket
 # ======================
+# todo: move the AAAA (ipv6) record not supported error response to the server and have proxy silenty ignore.
+#   this will ensure AAAA record issues with linux (maybe mac too) will be mitigated without requiring dns proxy.
 class DNSServer(ServerConfiguration, Listener):
 
     _listener_parser: ClassVar[ClientQuery] = ClientQuery
@@ -167,8 +169,8 @@ class DNSServer(ServerConfiguration, Listener):
         if (dns_id == DNS.KEEPALIVE):
             return
 
-        client_query: ClientQuery = REQUEST_MAP_POP(dns_id, INVALID_RESPONSE)
-        if (not client_query):
+        client_query: ClientQuery = REQUEST_MAP_POP(dns_id, None)
+        if (client_query is None):
             return
 
         try:
