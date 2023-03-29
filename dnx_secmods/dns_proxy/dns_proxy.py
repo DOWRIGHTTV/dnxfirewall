@@ -93,10 +93,10 @@ def pre_inspect(packet: DNSPacket) -> bool:
         return INSPECT_PACKET
 
     # refusing ipv6 dns record types as policy
-    elif (packet.qtype == DNS.AAAA):
-        PREPARE_AND_SEND(packet)
-
-        packet.nfqueue.drop()
+    # elif (packet.qtype == DNS.AAAA):
+    #     PREPARE_AND_SEND(packet)
+    #
+    #     packet.nfqueue.drop()
 
     return DONT_INSPECT_PACKET
 

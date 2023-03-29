@@ -67,8 +67,6 @@ RELAY_MAP: dict[PROTO, Callable[[DNS_SEND], None]] = {
 #   ServerConfiguration - provides config management between memory and filesystem
 #   Listener - provides packet data Linux interface socket
 # ======================
-# todo: move the AAAA (ipv6) record not supported error response to the server and have proxy silenty ignore.
-#   this will ensure AAAA record issues with linux (maybe mac too) will be mitigated without requiring dns proxy.
 class DNSServer(ServerConfiguration, Listener):
 
     _listener_parser: ClassVar[ClientQuery] = ClientQuery
@@ -106,16 +104,30 @@ class DNSServer(ServerConfiguration, Listener):
         TLSRelay.run(self.__class__, fallback_relay=UDPRelay.relay)
 
     def _pre_inspect(self, client_query: ClientQuery) -> bool:
+        # ==========================
+        # TOP DOMAINS - FAST PATH
+        # ==========================
         # this filter is required with new request queue api
         if (client_query.top_domain):
             return INSPECT_PACKET
 
-        # NOTE: A/NS records are supported only. consider expanding
-        if (client_query.qr != DNS.QUERY or client_query.qtype not in SUPPORTED_RECORD_TYPES):
+        # ==========================
+        # INVALID/UNSUPPORTED QUERY
+        # ==========================
+        if (client_query.qr != DNS.QUERY):
             return DONT_INSPECT_PACKET
 
+        # NOTE: A/NS records are supported only. consider expanding
+        if (client_query.qtype not in SUPPORTED_RECORD_TYPES):
+            query_response = client_query.generate_unsupported_response()
+            send_to_client(client_query, query_response)
+
+            return DONT_INSPECT_PACKET
+
+        # ==========================
+        # LOCAL RECORD / HOSTNAMES
+        # ==========================
         record_ip: int = self._dns_records_get(client_query.qname)
-        # generating server response and sending to client.
         if (record_ip):
             query_response = client_query.generate_record_response(record_ip)
             send_to_client(client_query, query_response)
@@ -123,7 +135,7 @@ class DNSServer(ServerConfiguration, Listener):
             return DONT_INSPECT_PACKET
 
         # if the domain is local (no tld) and it was not in local records, then we can ignore.
-        elif (client_query.local_domain):
+        if (client_query.local_domain):
             return DONT_INSPECT_PACKET
 
         return INSPECT_PACKET
