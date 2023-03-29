@@ -106,7 +106,7 @@ def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tupl
 
     switch = (
         '<div class="col s3 multi-switch-container">'
-            f'<div class="row row-thin"><span class="multi-switch-label center">{value}</span></div>'
+            f'<div class="row row-thin multi-switch-label"><span class="center">{value}</span></div>'
             '<div class="row">'
                 '<h6 class="center">STANDARD</h6>'
                 f'<div id="{value}-1" class="multi-switch-wrapper decora-switch">'

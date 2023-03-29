@@ -159,7 +159,7 @@ table.striped > tbody > tr {
 
 /* custom switches */
 /* derivative works of Jove Angelevski @ codepen.io/AlbertFeynman */
-.multi-switch.container .multi-switch-label {
+.multi-switch.container div > .multi-switch-label {
   font-family: Orbitron, Roboto, sans-serif;
   font-size: 18px;
   font-weight: 700;
