@@ -37,7 +37,7 @@
       <div class="col s12">
         <div class="card-panel hoverable {{ theme.card }}">
         {% for label, categories in domain_settings['built-in'] %}
-          {{ create_title(label.replace('_', ' '))|safe }}
+          {{ create_title(label)|safe }}
           {% for category, settings in categories.items() %}
           {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
             {{ create_tandem_decora_switch(('built-in', 'keyword'), category,
@@ -54,14 +54,17 @@
 <section id="tlds" class="section">
   <div class="container">
     <div class="row">
-      <div class="col s8 offset-s2">
+      <div class="col s12">
         <div class="card-panel hoverable {{ theme.card }}">
-          {{ create_title('top level domains')|safe }}
-          {% for tld, status in domain_settings['tld'] %}
+        {% for label, categories in domain_settings['tld'] %}
+          {{ create_title(label)|safe }}
+          {% for tld, status in categories.items() %}
             {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
             {{ create_decora_switch('tld', tld, status)|safe }}
-            {% if loop.index % 4 == 0 or loop.last %}</div>{% endif %}
+            {% if loop.index % 4 == 0 or loop.last %}</div>{% if not loop.last %}<div class="divider"></div>{% endif %}{% endif %}
           {% endfor %}
+          <br>
+        {% endfor %}
         </div>
       </div>
     </div>

@@ -73,7 +73,7 @@ def create_decora_switch(name: str, value: str, checked: int, *, enabled: int = 
     on  = ' active' if (checked and not disabled) else ''
 
     switch = (
-        f'<div class="col s3"><div class="row row-thin"><p class="multi-switch-label center">{value}</p></div>'
+        f'<div class="col s3"><div class="row row-thin"><p class="multi-switch-label center">{value.replace("_", " ")}</p></div>'
         '<div class="row row-thin"><div class="multi-switch-wrapper decora-switch">'
         f'<ul class="multi-switch"{disabled}>'
             f'<li class="multi-switch-off{off}"><button name="{name}" value="{value}" onclick="{onclick}(this, 0)">'
@@ -106,7 +106,7 @@ def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tupl
 
     switch = (
         '<div class="col s3 multi-switch-container">'
-            f'<div class="row row-thin"><p class=" multi-switch-label center">{value}</p></div>'
+            f'<div class="row row-thin"><p class=" multi-switch-label center">{value.replace("_", " ")}</p></div>'
             '<div class="row">'
                 '<h6 class="center">STANDARD</h6>'
                 f'<div id="{value}-1" class="multi-switch-wrapper decora-switch">'
