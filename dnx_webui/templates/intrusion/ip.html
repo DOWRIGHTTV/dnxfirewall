@@ -103,7 +103,7 @@
                             </div>
                         </div>
                     </div>
-                {% if loop.index0 % 4 == 3 or loop.last%}</div><div class="divider"></div>{% endif %}
+                {% if loop.index0 % 4 == 3 or loop.last%}</div>{% if not loop.last %}<div class="divider"></div>{% endif %}{% endif %}
                 {% endfor %}
             </div>
         </div>

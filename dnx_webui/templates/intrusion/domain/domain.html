@@ -27,7 +27,7 @@
           {% for category, settings in domain_settings['user_defined'] %}
             {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
             {{ create_decora_switch('user_defined', category, settings['enabled'])|safe }}
-            {% if loop.index % 4 == 0 or loop.last %}</div>{% endif %}
+            {% if loop.index % 4 == 0 or loop.last %}</div>{% if not loop.last %}<div class="divider"></div>{% endif %}{% endif %}
           {% endfor %}
         </div>
       </div>
@@ -42,7 +42,7 @@
           {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
             {{ create_tandem_decora_switch(('built-in', 'keyword'), category,
                 (settings['enabled'], settings['keyword'], settings['tethered']))|safe }}
-          {% if loop.index % 4 == 0 or loop.last %}</div>{% endif %}
+          {% if loop.index % 4 == 0 or loop.last %}</div>{% if not loop.last %}<div class="divider"></div>{% endif %}{% endif %}
           {% endfor %}
           <br>
         {% endfor %}
