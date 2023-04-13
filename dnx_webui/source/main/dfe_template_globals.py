@@ -128,7 +128,7 @@ def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tupl
                 '<h6 class="center">KEYWORD</h6>'
                 f'<div id="{value_name}-2" class="multi-switch-wrapper decora-switch">'
                     '<ul class="multi-switch">'
-                        f'<li class="multi-switch-off{off_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(1,this,1,{th})"{disabled_two}>'
+                        f'<li class="multi-switch-off{off_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(1,this,0,{th})"{disabled_two}>'
                             '<i class="material-icons small">radio_button_unchecked</i></button></li>'
                         f'<li class="multi-switch-on{on_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(1,this,1,{th})"{disabled_two}>'
                             '<i class="material-icons small">block</i></button></li>'
