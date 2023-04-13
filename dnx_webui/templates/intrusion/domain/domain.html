@@ -78,6 +78,7 @@ async function updateCategory(category, button_idx, enabled) {
     // if an error is returned, immediately return. pop-up is handled by the ajax client
     if (ajaxClient.handleResponse(response, category)) { return; }
 
+    // normalizing value for built-in categories since they also have group identifiers
     if (category.value.includes(',')) {
         category.value = category.value.split(',')[1];
     }

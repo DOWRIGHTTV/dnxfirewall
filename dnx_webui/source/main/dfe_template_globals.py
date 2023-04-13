@@ -101,8 +101,8 @@ def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tupl
     off_two = ' active' if (not checked[1] or disabled_two) else ''
     on_two  = ' active' if (checked[1] and not disabled_two) else ''
 
-    switch_code_off = 0 if not checked[2] else 2
-    switch_code_on  = 1 if not checked[2] else 3
+    # switch_code_off = 0 if not checked[2] else 2
+    # switch_code_on  = 1 if not checked[2] else 3
 
     value_name = value.split(',')[1]
 
@@ -113,9 +113,9 @@ def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tupl
                 '<h6 class="center">STANDARD</h6>'
                 f'<div id="{value_name}-1" class="multi-switch-wrapper decora-switch">'
                     '<ul class="multi-switch">'
-                        f'<li class="multi-switch-off{off}"><button name="{name[0]}" value="{value}" onclick="{onclick}(this,0,{switch_code_off})"{disabled}>'
+                        f'<li class="multi-switch-off{off}"><button name="{name[0]}" value="{value}" onclick="{onclick}(this,0,0)"{disabled}>'
                             '<i class="material-icons small">radio_button_unchecked</i></button></li>'
-                        f'<li class="multi-switch-on{on}"><button name="{name[0]}" value="{value}" onclick="{onclick}(this,0,{switch_code_on})"{disabled}>'
+                        f'<li class="multi-switch-on{on}"><button name="{name[0]}" value="{value}" onclick="{onclick}(this,0,1)"{disabled}>'
                             '<i class="material-icons small">block</i></button></li>'
                     '</ul>'
                 '</div>'
@@ -124,9 +124,9 @@ def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tupl
                 '<h6 class="center">KEYWORD</h6>'
                 f'<div id="{value_name}-2" class="multi-switch-wrapper decora-switch">'
                     '<ul class="multi-switch">'
-                        f'<li class="multi-switch-off{off_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(this,1,{switch_code_off})"{disabled_two}>'
+                        f'<li class="multi-switch-off{off_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(this,1,2)"{disabled_two}>'
                             '<i class="material-icons small">radio_button_unchecked</i></button></li>'
-                        f'<li class="multi-switch-on{on_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(this,1,{switch_code_on})"{disabled_two}>'
+                        f'<li class="multi-switch-on{on_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(this,1,3)"{disabled_two}>'
                             '<i class="material-icons small">block</i></button></li>'
                     '</ul>'
                 '</div>'
