@@ -73,7 +73,7 @@ def get_convert_bint(form: Form, key: str) -> Union[int, DATA]:
 
     return convert_bint(value)
 
-def get_convert_in_range(form: Form, key: str, bounds: tuple[int, int] = (0, 3)) -> Union[int, DATA]:
+def get_convert_in_range(form: Form, key: str, bounds: tuple[int, int] = (0, 1)) -> Union[int, DATA]:
     '''gets value for specified key, converts to an int, then returns if the resulting int is withing specified range.
 
         note: both ends of the bounds are inclusive.
