@@ -73,6 +73,8 @@
 <script>
 async function updateCategory(btn_idx, btn, enabled, tethered) {
 
+    console.log(btn.name, btn.value);
+
     let response = await ajaxClient.post('/post', {'type': btn.name, 'category': btn.value, 'enabled': enabled});
 
     // if an error is returned, immediately return. pop-up is handled by the ajax client
