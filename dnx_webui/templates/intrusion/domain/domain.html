@@ -90,6 +90,7 @@ async function updateCategory(category, button_idx, enabled) {
       }
 }
 function updateBtn(btn) {
+    console.log(btn);
     btn.querySelectorAll("li").forEach(btn => {
         if (btn.classList.contains("active")) {
             btn.classList.remove("active");
