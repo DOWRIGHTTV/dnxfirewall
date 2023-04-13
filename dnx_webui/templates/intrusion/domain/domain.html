@@ -94,7 +94,7 @@ async function updateCategory(btn_idx, btn, enabled, tethered) {
     if (btn_idx === 0) {
         updateBtn(btn_standard, enabled);
         // if keyword button is enabled, disable it
-        if (enabled !== 0 || tethered === 1) {
+        if (enabled === 1 || tethered === 1) {
             updateBtn(btn_keyword, enabled);
         }
     // update keyword button
