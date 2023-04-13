@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
+import json
 
 from source.web_typing import *
 from source.web_validate import *
@@ -88,8 +88,9 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[tu
         r_set = 'built-in' if ruleset == 'keyword' else ruleset
 
         # category data should be a string form of a tuple. converting to tuple to validate
+        category_data = json.loads(category.data)
         try:
-            cat_group, cat_name = tuple(category.data)
+            cat_group, cat_name = category_data
         except ValueError:
             return 1, ValidationError(INVALID_FORM)
 
