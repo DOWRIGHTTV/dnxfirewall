@@ -84,25 +84,45 @@ async function updateCategory(category, button_idx, enabled) {
     }
 
     // manually changing the active button instead of using an event listener to prevent a switch on server errors.
-    const buttons = [document.querySelector("#" + category.value + "-1"), document.querySelector("#" + category.value + "-2")];
+    {#const buttons = [document.querySelector("#" + category.value + "-1"), document.querySelector("#" + category.value + "-2")];#}
+    let btn_standard = document.querySelector("#" + category.value + "-1")
+    let btn_keyword = document.querySelector("#" + category.value + "-2")
 
-    let current_button = buttons[button_idx];
-    updateBtn(current_button);
+    updateBtn(btn_standard);
+    updateBtn(btn_keyword);
 
-    if ([2, 3].includes(enabled)) {
-        let other_button = buttons[(button_idx + 1) % 2];
-        updateBtn(other_button);
-      }
+    {#let current_button = ;#}
+    {#updateBtn(buttons[button_idx]);#}
+    {#updateBtn(buttons[(button_idx + 1) % 2]);#}
 }
-function updateBtn(btn) {
+function updateBtn(btn, enabled) {
     console.log(btn);
-    btn.querySelectorAll("li").forEach(btn => {
-        if (btn.classList.contains("active")) {
-            btn.classList.remove("active");
-        } else {
-            btn.classList.add("active");
+    {#btn.querySelectorAll("li").forEach(btn => {#}
+    {#    if (btn.classList.contains("active")) {#}
+    {#        btn.classList.remove("active");#}
+    {#    } else {#}
+    {#        btn.classList.add("active");#}
+    {#    }#}
+    {# });#}
+
+    let btn_array = btn.querySelectorAll("li");
+
+    console.log(btn_array);
+
+    let btn_off_classlist = btn_array[0].classList;
+    let btn_on_classlist = btn_array[1].classList;
+    if ([0,2].includes(enabled)) {
+        if (!btn_off_classlist.contains("active")) {
+            btn_off_classlist.add("active");
         }
-    });
+        btn_on_classlist.remove("active");
+
+    } else {
+        if (!btn_on_classlist.contains("active")) {
+            btn_on_classlist.add("active");
+        }
+        btn_off_classlist.remove("active");
+    }
 }
 </script>
 {% endblock %}
