@@ -86,7 +86,7 @@ def create_decora_switch(name: str, value: str, checked: int, *, enabled: int = 
     return switch
 
 @app.template_global()
-def create_tandem_decora_switch(name: tuple[str, str], value: tuple[str, str], checked: tuple[int, int, int],
+def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tuple[int, int, int],
         *, enabled: int = 1, onclick: str = 'updateCategory'):
     '''generates and returns HTML containing a title and (2) decora switches.
 
@@ -103,6 +103,8 @@ def create_tandem_decora_switch(name: tuple[str, str], value: tuple[str, str], c
 
     switch_code_off = 0 if not checked[2] else 2
     switch_code_on  = 1 if not checked[2] else 3
+
+    value = value.split('/')
 
     switch = (
         '<div class="col s3 multi-switch-container">'
