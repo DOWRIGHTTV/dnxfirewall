@@ -88,6 +88,8 @@ async function updateCategory(btn_idx, btn, enabled, tethered) {
     let btn_standard = document.querySelector('#' + btn.value + '-1')
     let btn_keyword = document.querySelector('#' + btn.value + '-2')
 
+    console.log(btn_idx, btn, enabled, tethered);
+
     // update standard button
     if (btn_idx === '0') {
         updateBtn(btn_standard, enabled);
