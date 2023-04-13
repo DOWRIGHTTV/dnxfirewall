@@ -104,7 +104,7 @@ def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tupl
     switch_code_off = 0 if not checked[2] else 2
     switch_code_on  = 1 if not checked[2] else 3
 
-    value_name = value.split('/')[1]
+    value_name = value.split(',')[1]
 
     switch = (
         '<div class="col s3 multi-switch-container">'
