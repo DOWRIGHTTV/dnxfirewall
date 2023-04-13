@@ -66,7 +66,7 @@ class WebPage(StandardWebPage):
             return False, {'error': 2, 'message': INVALID_FORM}
 
         if error := validate_domain_categories(category, ruleset=ruleset):
-            return False, {'error': 3, 'message': error.message}
+            return False, {'error': 3, 'code': error[0], 'message': error[1].message}
 
         try:
             configure_domain_categories(category, ruleset=ruleset)
@@ -79,7 +79,7 @@ class WebPage(StandardWebPage):
 # VALIDATION
 # ==============
 # it is easier and safer to match on the cases we want to see and error on everything else
-def validate_domain_categories(category: config, *, ruleset: str) -> Optional[ValidationError]:
+def validate_domain_categories(category: config, *, ruleset: str) -> Optional[tuple[int, ValidationError]]:
 
     dns_proxy: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
 
@@ -91,7 +91,7 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[Va
         try:
             cat_group, cat_name = tuple(category.data)
         except ValueError:
-            return ValidationError(INVALID_FORM)
+            return 1, ValidationError(INVALID_FORM)
 
         # reassigning data in config object to tuple for later use
         category.group = cat_group
@@ -99,7 +99,7 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[Va
 
         # general category membership test
         if not (cat := dns_proxy.get_dict(f'categories->{r_set}->{cat_group}').get(cat_name, None)):
-            return ValidationError(INVALID_FORM)
+            return 2, ValidationError(INVALID_FORM)
 
         if (ruleset == 'keyword'):
             # category is enabled and the code is in the valid range
@@ -121,13 +121,13 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[Va
     elif (ruleset in ['tld']):
         # general category membership test
         if not dns_proxy.get_dict('tld').get(category.name, None):
-            return ValidationError(INVALID_FORM)
+            return 3, ValidationError(INVALID_FORM)
 
         # tld enable-code is in the standard range only
         if (category.enable_code in STANDARD_CATEGORY_CODES):
             return
 
-    return ValidationError(INVALID_FORM)
+    return 99, ValidationError(INVALID_FORM)
 
 # ==============
 # CONFIGURATION
