@@ -80,15 +80,16 @@ async function updateCategory(btn_idx, btn, enabled, tethered) {
     // if an error is returned, immediately return. pop-up is handled by the ajax client
     if (ajaxClient.handleResponse(response, btn)) { return; }
 
+    let btn_value = btn.value;
     // normalizing value for built-in categories since they also have group identifiers
     if (btn.value.includes(',')) {
-        btn.value = btn.value.split(',')[1];
+        btn_value = btn.value.split(',')[1];
     }
 
     // manually changing the active button instead of using an event listener to prevent a switch on server errors.
     {#const buttons = [document.querySelector("#" + category.value + "-1"), document.querySelector("#" + category.value + "-2")];#}
-    let btn_standard = document.querySelector('#' + btn.value + '-1')
-    let btn_keyword = document.querySelector('#' + btn.value + '-2')
+    let btn_standard = document.querySelector('#' + btn_value + '-1')
+    let btn_keyword = document.querySelector('#' + btn_value + '-2')
 
     console.log(btn_idx, btn, enabled, tethered);
 
@@ -114,13 +115,6 @@ async function updateCategory(btn_idx, btn, enabled, tethered) {
 }
 function updateBtn(btn, enabled) {
     console.log(btn);
-    {#btn.querySelectorAll("li").forEach(btn => {#}
-    {#    if (btn.classList.contains("active")) {#}
-    {#        btn.classList.remove("active");#}
-    {#    } else {#}
-    {#        btn.classList.add("active");#}
-    {#    }#}
-    {# });#}
 
     let btn_array = btn.querySelectorAll('li');
 
