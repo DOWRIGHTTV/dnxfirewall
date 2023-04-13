@@ -100,7 +100,8 @@ def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tupl
     off = ' active' if (not checked[0] or disabled) else ''
     on  = ' active' if (checked[0] and not disabled) else ''
 
-    disabled_two = ' disabled' if not on else ''
+    # disabled_two = ' disabled' if not on else ''
+    disabled_two = ' disabled' if disabled else ''
     off_two = ' active' if (not checked[1] or disabled_two) else ''
     on_two  = ' active' if (checked[1] and not disabled_two) else ''
 
