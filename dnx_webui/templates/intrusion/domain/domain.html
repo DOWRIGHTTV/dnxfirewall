@@ -78,6 +78,10 @@ async function updateCategory(category, button_idx, enabled) {
     // if an error is returned, immediately return. pop-up is handled by the ajax client
     if (ajaxClient.handleResponse(response, category)) { return; }
 
+    if (category.value.includes(',')) {
+        category.value = category.value.split(',')[1];
+    }
+
     // manually changing the active button instead of using an event listener to prevent a switch on server errors.
     const buttons = [document.querySelector("#" + category.value + "-1"), document.querySelector("#" + category.value + "-2")];
 
