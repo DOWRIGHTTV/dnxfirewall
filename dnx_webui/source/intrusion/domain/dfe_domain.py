@@ -88,9 +88,8 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[tu
         r_set = 'built-in' if ruleset == 'keyword' else ruleset
 
         # category data should be a string form of a tuple. converting to tuple to validate
-        category_data = json.loads(category.data)
         try:
-            cat_group, cat_name = category_data
+            cat_group, cat_name = category.data.split('/')
         except ValueError:
             return 1, ValidationError(INVALID_FORM)
 
