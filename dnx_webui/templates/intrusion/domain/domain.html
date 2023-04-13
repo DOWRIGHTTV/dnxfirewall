@@ -40,7 +40,7 @@
           {{ create_title(label)|safe }}
           {% for category, settings in categories.items() %}
           {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
-            {{ create_tandem_decora_switch(('built-in', 'keyword'), (label, category)|join('/'),
+            {{ create_tandem_decora_switch(('built-in', 'keyword'), (label, category)|join(','),
                 (settings['enabled'], settings['keyword'], settings['tethered']))|safe }}
           {% if loop.index % 4 == 0 or loop.last %}</div>{% if not loop.last %}<div class="divider"></div>{% endif %}{% endif %}
           {% endfor %}

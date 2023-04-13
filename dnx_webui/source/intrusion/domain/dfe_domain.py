@@ -89,7 +89,7 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[tu
 
         # category data should be a string form of a tuple. converting to tuple to validate
         try:
-            cat_group, cat_name = category.data.split('/')
+            cat_group, cat_name = category.data.split(',')
         except ValueError:
             return 1, ValidationError(INVALID_FORM)
 
