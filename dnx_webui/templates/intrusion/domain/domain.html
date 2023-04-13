@@ -73,7 +73,7 @@
 <script>
 async function updateCategory(btn_idx, btn, enabled, tethered) {
 
-    let response = await ajaxClient.post("/post", {"type": btn.name, "category": btn.value, "enabled": enabled});
+    let response = await ajaxClient.post('/post', {'type': btn.name, 'category': btn.value, 'enabled': enabled});
 
     // if an error is returned, immediately return. pop-up is handled by the ajax client
     if (ajaxClient.handleResponse(response, btn)) { return; }
@@ -85,14 +85,14 @@ async function updateCategory(btn_idx, btn, enabled, tethered) {
 
     // manually changing the active button instead of using an event listener to prevent a switch on server errors.
     {#const buttons = [document.querySelector("#" + category.value + "-1"), document.querySelector("#" + category.value + "-2")];#}
-    let btn_standard = document.querySelector("#" + btn.value + "-1")
-    let btn_keyword = document.querySelector("#" + btn.value + "-2")
+    let btn_standard = document.querySelector('#' + btn.value + '-1')
+    let btn_keyword = document.querySelector('#' + btn.value + '-2')
 
     // update standard button
-    if (btn_idx === "0") {
+    if (btn_idx === '0') {
         updateBtn(btn_standard, enabled);
         // if keyword button is enabled, disable it
-        if (!enabled) {
+        if (enabled !== '0' || tethered === '1') {
             updateBtn(btn_keyword, enabled);
         }
     // update keyword button
@@ -118,13 +118,13 @@ function updateBtn(btn, enabled) {
     {#    }#}
     {# });#}
 
-    let btn_array = btn.querySelectorAll("li");
+    let btn_array = btn.querySelectorAll('li');
 
     console.log(btn_array);
 
     let btn_off_classlist = btn_array[0].classList;
     let btn_on_classlist = btn_array[1].classList;
-    if (enabled === "0") {
+    if (enabled === '0') {
         if (!btn_off_classlist.contains("active")) {
             btn_off_classlist.add("active");
         }
