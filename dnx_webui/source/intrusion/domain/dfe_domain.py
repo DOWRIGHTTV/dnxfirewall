@@ -103,7 +103,7 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[tu
 
         if (ruleset == 'keyword' and category.enable_code in VALID_CATEGORY_CODES):
 
-            if (category.enable_code and (not cat['enabled'] or cat['tethered'])):
+            if (cat['tethered'] and (category.enable_code and not cat['enabled'])):
                 return 3, ValidationError('standard must be enabled first for this category to use keyword.')
 
             return
