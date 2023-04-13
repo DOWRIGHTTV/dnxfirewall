@@ -58,7 +58,7 @@ class WebPage(StandardWebPage):
             return False, {'error': 1, 'message': INVALID_FORM}
 
         category = config(**{
-            'name': form.get('category', DATA.MISSING),
+            'data': form.get('category', DATA.MISSING),
             'enable_code': get_convert_in_range(form, 'enabled')
         })
 
@@ -87,8 +87,18 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[Va
         # keyword and built-in share categories
         r_set = 'built-in' if ruleset == 'keyword' else ruleset
 
+        # category data should be a string form of a tuple. converting to tuple to validate
+        try:
+            cat_group, cat_name = tuple(category.data)
+        except ValueError:
+            return ValidationError(INVALID_FORM)
+
+        # reassigning data in config object to tuple for later use
+        category.group = cat_group
+        category.name = cat_name
+
         # general category membership test
-        if not (cat := dns_proxy.get_dict(f'categories->{r_set}').get(category.name, None)):
+        if not (cat := dns_proxy.get_dict(f'categories->{r_set}->{cat_group}').get(cat_name, None)):
             return ValidationError(INVALID_FORM)
 
         if (ruleset == 'keyword'):
@@ -133,17 +143,17 @@ def configure_domain_categories(category: config, *, ruleset: str):
             key = ruleset if ruleset != 'built-in' else 'enabled'
 
             if (category.enable_code in STANDARD_CATEGORY_CODES):
-                dns_proxy[f'categories->built-in->{category.name}->{key}'] = category.enable_code
+                dns_proxy[f'categories->built-in->{category.group}->{category.name}->{key}'] = category.enable_code
 
                 # ensures keyword searching gets disabled if the general category gets disabled
                 # TODO: consider making these independent even unless explicitly tethered
                 if (ruleset in ['built-in'] and category.enable_code == 0):
-                    dns_proxy[f'categories->built-in->{category.name}->keyword'] = category.enable_code
+                    dns_proxy[f'categories->built-in->{category.group}->{category.name}->keyword'] = category.enable_code
 
             # subtracting 2 to normalize tethered code to on/off
             elif (category.enable_code in TETHERED_CATEGORY_CODES):
-                dns_proxy[f'categories->built-in->{category.name}->enabled'] = category.enable_code - 2
-                dns_proxy[f'categories->built-in->{category.name}->keyword'] = category.enable_code - 2
+                dns_proxy[f'categories->built-in->{category.group}->{category.name}->enabled'] = category.enable_code - 2
+                dns_proxy[f'categories->built-in->{category.group}->{category.name}->keyword'] = category.enable_code - 2
 
         if (ruleset == 'custom'):
             dns_proxy[f'categories->custom->{category.name}->enabled'] = category.enable_code
