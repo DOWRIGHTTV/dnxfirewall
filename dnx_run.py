@@ -58,8 +58,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     'all': {'module': '', 'exclude': ['status', 'cli', 'install', 'update'], 'priv': True, 'service': False},
 
     # UPDATES
-    # autoloader mod is the 'system' mod, but keeping for compatibility.
-    'autoloader': {'module': '', 'exclude': exclude(['install', 'update'], COMMANDS), 'priv': True, 'service': False},
+    'system': {'module': '', 'exclude': exclude(['install', 'update'], COMMANDS), 'priv': True, 'service': False},
     'signatures': {'module': '', 'exclude': exclude('update', COMMANDS), 'priv': True, 'service': False},
     # AUTOLOADER
     # 'autoloader': {
@@ -312,8 +311,10 @@ def modstat_command() -> None:
 # this could probably be done better.
 # TODO: see if can be done better
 def run_cli(mod: str, mod_loc: str) -> None:
-    os.environ['INIT_MODULE'] = mod
+    # needed due to previous naming and calling conventions
+    mod_name = 'autoloader' if mod == 'system' else mod
 
+    os.environ['INIT_MODULE'] = mod_name
     os.environ['HOME_DIR'] = HOME_DIR
 
     env = MODULE_MAPPING[mod].get('environ')
@@ -349,7 +350,7 @@ def run_cli(mod: str, mod_loc: str) -> None:
 def install_command() -> None:
     print('installing dnx...')
 
-    run_cli('autoloader', 'dnx_control.system.autoloader')
+    run_cli('system', 'dnx_control.system.autoloader')
 
 def update_command(mod_name: str) -> None:
     # update entire system. this will also update signatures.
@@ -363,7 +364,7 @@ def update_command(mod_name: str) -> None:
 
         print('running autoloader.....')
         print(os.environ)
-        # run_cli('autoloader', 'dnx_control.system.autoloader')
+        # run_cli('system', 'dnx_control.system.autoloader')
 
     # only update signatures, not the entire system, unless remote signatures are not compatible with currently
     # installed system version.
