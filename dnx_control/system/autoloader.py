@@ -450,7 +450,7 @@ def checkout_configured_branch() -> str:
 
     return branch_name
 
-def update_local_branch(branch: str) -> list:
+def update_local_branch(branch: str) -> list[tuple]:
 
     commands: list[tuple[str, str]] = [
         ('git stash', None),  # resetting any local changes before pulling
@@ -459,7 +459,8 @@ def update_local_branch(branch: str) -> list:
 
     return commands
 
-def compile_extensions() -> list:
+def compile_extensions(*, count_only: bool = False) -> Optional[list[tuple]]:
+    global PROGRESS_TOTAL_COUNT
 
     commands: list[tuple[str, str]] = [
         ('sudo python3 dnx_run.py compile cprotocol-tools _autoloader_', 'compiling cprotocol tools'),
@@ -468,9 +469,15 @@ def compile_extensions() -> list:
         ('sudo python3 dnx_run.py compile cfirewall _autoloader_', 'compiling cfirewall'),
     ]
 
+    # incrementing progress total count to ensure progress bar is accurate
+    if (count_only):
+        PROGRESS_TOTAL_COUNT += len(commands)
+
+        return
+
     return commands
 
-def configure_webui() -> list:
+def configure_webui() -> list[tuple]:
     cert_subject: str = str_join([
         '/C=US',
         '/ST=Arizona',
@@ -623,7 +630,7 @@ def run():
     if (not args.update_set):
         dynamic_commands.extend(configure_webui())
 
-    dynamic_commands.extend(compile_extensions())
+    compile_extensions(count_only=True)
 
     PROGRESS_TOTAL_COUNT += len([1 for k, v in dynamic_commands if v])
 
@@ -648,6 +655,14 @@ def run():
     # requirements [source is locally contained within dnxfirewall repo].
     if (not args.update_set):
         build_libraries()
+
+    # this must be done after the netfilter libs are built.
+    for command, desc in compile_extensions():
+
+        if (desc):
+            progress(desc)
+
+        dnx_run(command)
 
     if (not args.update_set) or (args.update_set and args.iptables):
         configure_iptables()
