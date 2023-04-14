@@ -306,6 +306,32 @@ def modstat_command() -> None:
     else:
         print(text.green(f'\nAll services running!'))
 
+# function is for consistency even if it seems unnecessary
+def install_command() -> None:
+    run_cli('system', 'dnx_control.system.autoloader')
+
+def update_command(mod_name: str) -> None:
+    # update entire system. this will also update signatures.
+    # passthrough arguments and defaults:
+    #   v: int = 0
+    #   verbose: int = 0
+    #   packages: int = 0
+    #   iptables: int = 0
+    if (mod_name == 'system'):
+        # setting the env var to notify autoloader to run update process instead of full installation.
+        os.environ['_SYSTEM_UPDATE'] = 'True'
+
+        run_cli('system', 'dnx_control.system.autoloader')
+
+    # only update signatures, not the entire system, unless remote signatures are not compatible with currently
+    # installed system version.
+    elif (mod_name == 'signatures'):
+        print('updating signatures...')
+        os.environ['_SIGNATURE_UPDATE'] = 'True'
+
+        run_cli('system', 'dnx_control.system.autoloader')
+        pass
+
 # using environ var to notify imported module to initialize and run.
 # this was done because a normal function was causing issues with the linter thinking a ton of stuff was not defined.
 # this could probably be done better.
@@ -346,31 +372,6 @@ def run_cli(mod: str, mod_loc: str) -> None:
 
     # this will make sure there are no dangling processes or threads on exit.
     hardout()
-
-def install_command() -> None:
-    print('installing dnx...')
-
-    run_cli('system', 'dnx_control.system.autoloader')
-
-def update_command(mod_name: str) -> None:
-    # update entire system. this will also update signatures.
-    # passthrough arguments and defaults:
-    #   v: int = 0
-    #   verbose: int = 0
-    #   packages: int = 0
-    #   iptables: int = 0
-    if (mod_name == 'system'):
-        os.environ['_SYSTEM_UPDATE'] = 'True'
-
-        print('running autoloader.....')
-        print(os.environ)
-        # run_cli('system', 'dnx_control.system.autoloader')
-
-    # only update signatures, not the entire system, unless remote signatures are not compatible with currently
-    # installed system version.
-    elif (mod_name == 'signatures'):
-        print('updating signatures...')
-        pass
 
 
 if (__name__ == '__main__'):

@@ -541,6 +541,18 @@ def set_permissions() -> None:
     # configure sudoers.d to allow dnx user "no-pass" for specific system functions
     dnx_run(f'sudo cp -n {SYSTEM_DIR}/admin/dnx /etc/sudoers.d/')
 
+def set_signature_permissions() -> None:
+    commands: list[str] = [
+        # set the dnx filesystem owner to the dnx user/group
+        f'chown -R dnx:dnx {HOME_DIR}/dnx_profile/signatures',
+
+        # apply file permissions 750 on folders, 640 on files
+        f'chmod -R 750 {HOME_DIR}/dnx_profile/signatures',
+        f'find {HOME_DIR}/dnx_profile/signatures -type f -print0|xargs -0 chmod 640'
+    ]
+
+    for command in commands:
+        dnx_run(command)
 
 # ============================
 # SERVICE FILE SETUP
@@ -586,18 +598,81 @@ def mark_completion_flag() -> None:
 def store_default_mac():
     pass
 
+def signature_update(system_update: bool = False) -> None:
+    import dnx_control.system.signature_update as signature_update
+
+    TEST_MODE = True
+
+    # system update will ignore the signature version check and force the update.
+    if not signature_update.compare_signature_version() and not system_update and not TEST_MODE:
+        hardout('a system update is required to support the latest signature sets.')
+
+    sprint('downloading remote signature manifest.')
+
+    # downloading manifest of signatures to be downloaded.
+    manifest = signature_update.get_remote_signature_manifest()
+
+    sprint(f'downloading signatures. {len(manifest)} files will be downloaded.')
+
+    # downloading signatures and running checksum validation.
+    if checksum_failure_list := signature_update.download_signature_files(manifest):
+
+        # will try 3 more times to re download the failed files.
+        # if there is a remaining failure, the user will be prompted to try again, load the successes, or exit.
+        for attempt in range(1,4):
+            eprint(f'signature download errors detected. files: {len(checksum_failure_list)} retries: {attempt}/3')
+
+            checksum_failure_list = signature_update.download_signature_files(checksum_failure_list)
+            if (not checksum_failure_list):
+                break
+
+        # will give the user the option to load the signatures that downloaded successfully or exit.
+        else:
+            sprint(f'retry limit reached. {len(checksum_failure_list)} signatures failed to download.')
+            eprint(f'the following signatures failed to download: {[x[0] for x in checksum_failure_list]}')
+
+    if (not checksum_failure_list):
+        sprint('all signatures downloaded successfully. installing signatures.')
+
+    # settings the flag to identify a file move in progress or partial signature update.
+    if signature_update.set_signature_update_flag():
+        eprint('signature update may already be in in progress or a previous update was interrupted.')
+
+        signature_update.set_signature_update_flag(override=True)
+
+    if (not TEST_MODE):
+        signature_update.move_signature_files(manifest, checksum_failure_list)
+
+    sprint('signatures installed. setting permissions.')
+
+    # probably not needed, but doing anyway for consistency.
+    set_signature_permissions()
+
+    signature_update.clear_signature_update_flag()
+
+    sprint('signature update complete.')
+
+    if (not system_update):
+        sprint('restart the security module services for updates to take effect.')
+
 def run():
     global PROGRESS_TOTAL_COUNT
 
     # will relative paths beyond HOME_DIR
     os.chdir(HOME_DIR)
 
-    if (not args._update):
+    # signature updates are handled separately from the rest of the build process unless the system is being updated.
+    if (args._update_signatures):
+        signature_update()
+
+        return
+
+    if (not args._update_system):
         PROGRESS_TOTAL_COUNT += 1  # copying service files
         set_branch()
         configure_interfaces()
 
-    if (not args._update) and (args._update and args.iptables):
+    if (not args._update_system) and (args._update_system and args.iptables):
         PROGRESS_TOTAL_COUNT += 1  # building iptables
 
     # will hold all dynamically set commands prior to execution to get an accurate count for progress bar.
@@ -605,15 +680,15 @@ def run():
 
     branch = checkout_configured_branch()
 
-    if (args._update):
+    if (args._update_system):
         dynamic_commands.extend(update_local_branch(branch))
 
     # packages will be installed during initial installation automatically.
     # if update is set, the default is to not update packages.
-    if (not args._update) or (args._update and args.packages):
+    if (not args._update_system) or (args._update_system and args.packages):
         dynamic_commands.extend(install_packages())
 
-    if (not args._update):
+    if (not args._update_system):
         dynamic_commands.extend(configure_webui())
 
     dynamic_commands.extend(compile_extensions())
@@ -628,7 +703,7 @@ def run():
     # keeping this separate from packages since we cannot guarantee the user distro's versioning meets the minimum
     # requirements [source is locally contained within dnxfirewall repo].
     # NOTE: keep this first for now or else the progress bar count won't be properly reflected.
-    if (not args._update):
+    if (not args._update_system):
         build_libraries()
 
     progress('')  # this will render 0% bar, so we don't need to use offsets.
@@ -639,12 +714,12 @@ def run():
 
         dnx_run(command)
 
-    if (not args._update) or (args._update and args.iptables):
+    if (not args._update_system) or (args._update_system and args.iptables):
         configure_iptables()
 
     set_permissions()
 
-    if (not args._update):
+    if (not args._update_system):
         set_services()
         mark_completion_flag()
 
@@ -665,7 +740,8 @@ if INITIALIZE_MODULE('autoloader'):
     except Exception as E:
         hardout(f'DNXFIREWALL arg parse failure => {E}')
 
-    args._update = 1 if os.environ.get('_SYSTEM_UPDATE') else 0
+    args._update_system = 1 if os.environ.get('_SYSTEM_UPDATE') else 0
+    args._update_signatures = 1 if os.environ.get('_SIGNATURE_UPDATE') else 0
 
     # pre-checks to make sure application can run properly
     check_run_as_root()
