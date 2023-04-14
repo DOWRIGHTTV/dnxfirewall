@@ -387,6 +387,9 @@ def confirm_interfaces(interface_config: dict[str, str]) -> bool:
 def build_libraries() -> None:
     global PROGRESS_TOTAL_COUNT
 
+    # making sure build-essentials is installed
+    dnx_run('sudo apt install build-essential')
+
     # NOTE: this needs to be updated as libs get added to this function
     PROGRESS_TOTAL_COUNT += 3
 
