@@ -601,7 +601,7 @@ def store_default_mac():
 def signature_update(system_update: bool = False) -> None:
     import dnx_control.system.signature_update as signature_update
 
-    TEST_MODE = True
+    TEST_MODE = False
 
     # system update will ignore the signature version check and force the update.
     if not signature_update.compare_signature_version() and not system_update and not TEST_MODE:
