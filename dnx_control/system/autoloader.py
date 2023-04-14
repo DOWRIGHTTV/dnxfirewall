@@ -748,6 +748,10 @@ def run():
         mark_completion_flag()
 
     progress('dnxfirewall installation complete...')
+
+    # signatures will be updated during initial installation or system update automatically.
+    signature_update()
+
     sprint('control of the WAN interface configuration has been taken by dnxfirewall.')
     sprint('use the webui to configure a static ip or enable ssh access if needed.')
     sprint('restart the system then navigate to https://192.168.83.1 from LAN to manage.')
