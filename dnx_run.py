@@ -326,11 +326,9 @@ def update_command(mod_name: str) -> None:
     # only update signatures, not the entire system, unless remote signatures are not compatible with currently
     # installed system version.
     elif (mod_name == 'signatures'):
-        print('updating signatures...')
         os.environ['_SIGNATURE_UPDATE'] = 'True'
 
         run_cli('system', 'dnx_control.system.autoloader')
-        pass
 
 # using environ var to notify imported module to initialize and run.
 # this was done because a normal function was causing issues with the linter thinking a ton of stuff was not defined.
@@ -338,7 +336,7 @@ def update_command(mod_name: str) -> None:
 # TODO: see if can be done better
 def run_cli(mod: str, mod_loc: str) -> None:
     # needed due to previous naming and calling conventions
-    mod_name = 'autoloader' if mod == 'system' else mod
+    mod_name = 'autoloader' if mod in ['system', 'signatures'] else mod
 
     os.environ['INIT_MODULE'] = mod_name
     os.environ['HOME_DIR'] = HOME_DIR
