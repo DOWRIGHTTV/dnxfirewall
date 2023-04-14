@@ -158,12 +158,12 @@ def check_already_ran() -> None:
     with ConfigurationManager('system', cfg_type='global') as dnx:
         dnx_settings: ConfigChain = dnx.load_configuration()
 
-    if (not args.update_set and dnx_settings['auto_loader']):
+    if (not args._update_system and dnx_settings['auto_loader']):
         eprint(
             text.red('dnxfirewall has already been installed.')
         )
 
-    elif (args.update_set and not dnx_settings['auto_loader']):
+    elif (args._update_system and not dnx_settings['auto_loader']):
         eprint(
              text.red('dnxfirewall has not been installed. see readme for guidance.')
         )
