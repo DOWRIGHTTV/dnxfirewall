@@ -569,7 +569,7 @@ def set_services() -> None:
 
         if (service not in ignore_list):
 
-            dnx_run(f'cp -n {UTILITY_DIR}/{service} /etc/systemd/system/')
+            dnx_run(f'cp -n {UTILITY_DIR}/services/{service} /etc/systemd/system/')
             dnx_run(f'systemctl enable {service}')
 
     dnx_run(f'systemctl enable nginx')
