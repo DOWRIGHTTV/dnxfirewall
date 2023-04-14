@@ -601,10 +601,8 @@ def store_default_mac():
 def signature_update(system_update: bool = False) -> None:
     import dnx_control.system.signature_update as signature_update
 
-    TEST_MODE = False
-
     # system update will ignore the signature version check and force the update.
-    if not signature_update.compare_signature_version() and not system_update and not TEST_MODE:
+    if not signature_update.compare_signature_version() and not system_update:
         hardout('a system update is required to support the latest signature sets.')
 
     sprint('downloading remote signature manifest.')
@@ -664,8 +662,7 @@ def signature_update(system_update: bool = False) -> None:
 
         signature_update.set_signature_update_flag(override=True)
 
-    if (not TEST_MODE):
-        signature_update.move_signature_files(manifest, checksum_failure_list)
+    signature_update.move_signature_files(manifest, checksum_failure_list)
 
     sprint('signatures installed. setting permissions.')
 
@@ -750,7 +747,7 @@ def run():
     progress('dnxfirewall installation complete...')
 
     # signatures will be updated during initial installation or system update automatically.
-    signature_update()
+    signature_update(system_update=True)
 
     sprint('control of the WAN interface configuration has been taken by dnxfirewall.')
     sprint('use the webui to configure a static ip or enable ssh access if needed.')
