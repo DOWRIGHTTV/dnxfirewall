@@ -14,7 +14,11 @@ from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR, fast_time, str_join, NO_DELAY, ONE_HOUR
 from dnx_gentools.file_operations import load_configuration, load_data
 
-from dnx_iptools.cprotocol_tools import iptoi
+# prior to system install this will not be available.
+try:
+    from dnx_iptools.cprotocol_tools import iptoi
+except ImportError:
+    pass
 
 __all__ = (
     'Interface', 'System', 'Services'
