@@ -613,14 +613,17 @@ def signature_update(system_update: bool = False) -> None:
     manifest = signature_update.get_remote_signature_manifest()
 
     sprint(f'downloading signatures. {len(manifest)} files will be downloaded.')
+    if (args.verbose_set):
+        for i, f in enumerate(manifest, 1):
+            sprint(f'{i}. {f[0]} - {f[1]}')
 
     # downloading signatures and running checksum validation.
     if checksum_failure_list := signature_update.download_signature_files(manifest):
 
         # will try 3 more times to re download the failed files.
         # if there is a remaining failure, the user will be prompted to try again, load the successes, or exit.
-        for attempt in range(1,4):
-            eprint(f'signature download errors detected. files: {len(checksum_failure_list)} retries: {attempt}/3')
+        for attempt in range(1, 4):
+            eprint(f'signature download errors detected. files: {len(checksum_failure_list)}, retries: {attempt}/3')
 
             checksum_failure_list = signature_update.download_signature_files(checksum_failure_list)
             if (not checksum_failure_list):
