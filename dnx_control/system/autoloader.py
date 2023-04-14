@@ -612,7 +612,7 @@ def signature_update(system_update: bool = False) -> None:
     # downloading manifest of signatures to be downloaded.
     manifest = signature_update.get_remote_signature_manifest()
 
-    sprint(f'downloading signatures. {len(manifest)} files will be downloaded.')
+    sprint(f'done. {len(manifest)} signature files will be downloaded.')
     if (args.verbose_set):
         for i, f in enumerate(manifest, 1):
             sprint(f'{i}. {f[0]} - {f[1]}')
@@ -620,10 +620,10 @@ def signature_update(system_update: bool = False) -> None:
     download_failure_list = []
     checksum_failure_list = []
 
-    for attempt in range(1, 4):
+    for attempt in range(3):
         # retries only need to download the files that are remaining
         # converting to set to remove duplicates
-        if (attempt > 1):
+        if (attempt > 0):
             eprint(f'signature download errors detected. files: {len(checksum_failure_list)}, retries: {attempt}/3')
 
             manifest = list(set(*download_failure_list, *checksum_failure_list))
