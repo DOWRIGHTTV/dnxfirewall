@@ -346,6 +346,8 @@ def run_cli(mod: str, mod_loc: str) -> None:
     hardout()
 
 def install_command() -> None:
+    print('installing dnx...')
+
     run_cli('system', 'dnx_control.system.autoloader')
 
 def update_command(mod_name: str) -> None:
@@ -365,6 +367,7 @@ def update_command(mod_name: str) -> None:
     # only update signatures, not the entire system, unless remote signatures are not compatible with currently
     # installed system version.
     elif (mod_name == 'signatures'):
+        print('updating signatures...')
         pass
 
 

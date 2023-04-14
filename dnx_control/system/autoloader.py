@@ -65,7 +65,7 @@ LINEBREAK: str = text.lightblue('-' * 32)
 SYSTEM_DIR:  str = 'dnx_profile'
 UTILITY_DIR: str = 'dnx_profile/utils'
 
-UPDATE_SET: bool = False
+UPDATE_SET = False
 
 # ----------------------------
 # UTILS
