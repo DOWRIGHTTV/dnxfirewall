@@ -624,9 +624,9 @@ def signature_update(system_update: bool = False) -> None:
         # retries only need to download the files that are remaining
         # converting to set to remove duplicates
         if (attempt > 0):
-            eprint(f'signature download errors detected. files: {len(checksum_failure_list)}, retries: {attempt}/3')
+            eprint(f'({len(checksum_failure_list)}) signature download errors detected. tries: {attempt}/3')
 
-            manifest = list(set(*download_failure_list, *checksum_failure_list))
+            manifest = list({*download_failure_list, *checksum_failure_list})
 
             download_failure_list.clear()
             checksum_failure_list.clear()

@@ -121,33 +121,6 @@ def validate_signature_file(file: str, remote_file_hash: str) -> bool:
 
     return True
 
-def download_signature_files(signature_manifest: list[tuple]) -> list[tuple]:
-
-    failed_files = []
-
-    for file, remote_file_hash in signature_manifest:
-        signatures = ''
-
-        with requests.urlopen(f'{SIGNATURE_URL}/{file}') as remote_signatures_file:
-            signatures = remote_signatures_file.read().decode('utf-8')
-
-        folder, filename = file.split('/')
-        # print('writing file: ', folder + '/temp/' + filename)
-
-        with open(f'dnx_profile/signatures/{folder}/temp/{filename}', 'w') as temp_file:
-            temp_file.write(signatures)
-
-        # if the file hash does not match the remote hash, the file was not downloaded correctly and will be deleted.
-        # files with errors will be added to a list and reported back before the update proceeds.
-
-        local_file_hash = calculate_file_hash(filename, folder=f'signatures/{folder}/temp')
-        if (local_file_hash != remote_file_hash):
-            os.remove(f'dnx_profile/signatures/{folder}/temp/{filename}')
-
-            failed_files.append((file, remote_file_hash))
-
-    return failed_files
-
 def move_signature_files(signature_manifest: list[tuple], failure_list: list[tuple]) -> None:
 
     for file, file_hash in signature_manifest:
