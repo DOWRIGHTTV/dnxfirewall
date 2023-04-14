@@ -49,18 +49,12 @@ BANNER = text.lightblue('\n'.join([
 class Args:
     v: int = 0
     verbose: int = 0
-    u: int = 0
-    update: int = 0
     packages: int = 0
     iptables: int = 0
 
     @property
     def verbose_set(self):
         return self.v or self.verbose
-
-    @property
-    def update_set(self):
-        return self.u or self.update
 
 
 LOG_NAME: str = 'system'
@@ -70,6 +64,8 @@ LINEBREAK: str = text.lightblue('-' * 32)
 
 SYSTEM_DIR:  str = 'dnx_profile'
 UTILITY_DIR: str = 'dnx_profile/utils'
+
+UPDATE_SET: bool = False
 
 # ----------------------------
 # UTILS
@@ -659,6 +655,8 @@ def run():
 
 
 if INITIALIZE_MODULE('autoloader'):
+    global UPDATE_SET
+
     print(BANNER)
 
     # stripping "-" will allow standard syntax args to be accepted
@@ -666,6 +664,8 @@ if INITIALIZE_MODULE('autoloader'):
         args = Args(**{a.lstrip('-'): 1 for a in os.environ['PASSTHROUGH_ARGS'].split(',') if a})
     except Exception as E:
         hardout(f'DNXFIREWALL arg parse failure => {E}')
+
+    UPDATE_SET = bool(os.environ.get('_SYSTEM_UPDATE', False))
 
     # pre-checks to make sure application can run properly
     check_run_as_root()
