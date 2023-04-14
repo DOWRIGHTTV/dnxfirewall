@@ -752,5 +752,6 @@ if INITIALIZE_MODULE('autoloader'):
     Log.run(name=LOG_NAME, suppress_output=True)
     ConfigurationManager.set_log_reference(Log)
 
-    # this uses the config manager, so must be called after log initialization
-    check_already_ran()
+    if (not args._update_signatures):
+        # this uses the config manager, so must be called after log initialization
+        check_already_ran()
