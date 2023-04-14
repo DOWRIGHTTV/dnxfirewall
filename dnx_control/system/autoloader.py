@@ -428,7 +428,7 @@ def install_packages() -> list:
 
     commands = [
         # required system dependencies for building dnxfirewall
-        ('sudo apt install autoconf build-essential -y', 'installing system dependencies'),
+        ('sudo apt install autoconf build-essential libnfnetlink-dev -y', 'installing system dependencies'),
 
         ('sudo apt install nginx -y', 'installing web server driver'),
         ('sudo apt install net-tools -y', 'installing networking components'),
