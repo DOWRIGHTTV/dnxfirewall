@@ -52,6 +52,8 @@ class Args:
     packages: int = 0
     iptables: int = 0
 
+    _update: int = 0
+
     @property
     def verbose_set(self):
         return self.v or self.verbose
@@ -590,12 +592,12 @@ def run():
     # will relative paths beyond HOME_DIR
     os.chdir(HOME_DIR)
 
-    if (not args.update_set):
+    if (not args._update):
         PROGRESS_TOTAL_COUNT += 1  # copying service files
         set_branch()
         configure_interfaces()
 
-    if (not args.update_set) and (args.update_set and args.iptables):
+    if (not args._update) and (args._update and args.iptables):
         PROGRESS_TOTAL_COUNT += 1  # building iptables
 
     # will hold all dynamically set commands prior to execution to get an accurate count for progress bar.
@@ -603,22 +605,22 @@ def run():
 
     branch = checkout_configured_branch()
 
-    if (args.update_set):
+    if (args._update):
         dynamic_commands.extend(update_local_branch(branch))
 
     # packages will be installed during initial installation automatically.
     # if update is set, the default is to not update packages.
-    if (not args.update_set) or (args.update_set and args.packages):
+    if (not args._update) or (args._update and args.packages):
         dynamic_commands.extend(install_packages())
 
-    if (not args.update_set):
+    if (not args._update):
         dynamic_commands.extend(configure_webui())
 
     dynamic_commands.extend(compile_extensions())
 
     PROGRESS_TOTAL_COUNT += len([1 for k, v in dynamic_commands if v])
 
-    action = 'update' if args.update_set else 'deployment'
+    action = 'update' if args._update else 'deployment'
     sprint(f'starting dnxfirewall {action}...')
     lprint()
 
@@ -626,7 +628,7 @@ def run():
     # keeping this separate from packages since we cannot guarantee the user distro's versioning meets the minimum
     # requirements [source is locally contained within dnxfirewall repo].
     # NOTE: keep this first for now or else the progress bar count won't be properly reflected.
-    if (not args.update_set):
+    if (not args._update):
         build_libraries()
 
     progress('')  # this will render 0% bar, so we don't need to use offsets.
@@ -637,12 +639,12 @@ def run():
 
         dnx_run(command)
 
-    if (not args.update_set) or (args.update_set and args.iptables):
+    if (not args._update) or (args._update and args.iptables):
         configure_iptables()
 
     set_permissions()
 
-    if (not args.update_set):
+    if (not args._update):
         set_services()
         mark_completion_flag()
 
@@ -655,8 +657,6 @@ def run():
 
 
 if INITIALIZE_MODULE('autoloader'):
-    global UPDATE_SET
-
     print(BANNER)
 
     # stripping "-" will allow standard syntax args to be accepted
@@ -665,7 +665,7 @@ if INITIALIZE_MODULE('autoloader'):
     except Exception as E:
         hardout(f'DNXFIREWALL arg parse failure => {E}')
 
-    UPDATE_SET = bool(os.environ.get('_SYSTEM_UPDATE', False))
+    args._update = 1 if os.environ.get('_SYSTEM_UPDATE') else 0
 
     # pre-checks to make sure application can run properly
     check_run_as_root()
