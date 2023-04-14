@@ -92,8 +92,11 @@ def get_remote_signature_manifest() -> list[tuple]:
 
 def download_signature_file(file: str) -> bool:
 
+    # removing all comments before storing the signatures in the temp file.
     with requests.urlopen(f'{SIGNATURE_URL}/{file}') as remote_signatures_file:
-        signatures = remote_signatures_file.read().decode('utf-8')
+        signatures = [line for line in remote_signatures_file.read().splitlines() if not line.startswith(b'#')]
+
+        signatures = b'\n'.join(signatures).decode('utf-8')
 
     folder, filename = file.split('/')
     # print('writing file: ', folder + '/temp/' + filename)
