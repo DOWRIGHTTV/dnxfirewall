@@ -58,7 +58,7 @@ MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     'all': {'module': '', 'exclude': ['status', 'cli', 'install', 'update'], 'priv': True, 'service': False},
 
     # UPDATES
-    'system': {'module': '', 'exclude': exclude('update', COMMANDS), 'priv': True, 'service': False},
+    'system': {'module': '', 'exclude': exclude(['install', 'update'], COMMANDS), 'priv': True, 'service': False},
     'signatures': {'module': '', 'exclude': exclude('update', COMMANDS), 'priv': True, 'service': False},
     # AUTOLOADER
     # 'autoloader': {
@@ -346,7 +346,7 @@ def run_cli(mod: str, mod_loc: str) -> None:
     hardout()
 
 def install_command() -> None:
-    run_cli('autoloader', 'dnx_control.system.autoloader')
+    run_cli('system', 'dnx_control.system.autoloader')
 
 def update_command(mod_name: str) -> None:
     # update entire system. this will also update signatures.
