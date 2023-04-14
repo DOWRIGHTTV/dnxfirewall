@@ -617,25 +617,46 @@ def signature_update(system_update: bool = False) -> None:
         for i, f in enumerate(manifest, 1):
             sprint(f'{i}. {f[0]} - {f[1]}')
 
-    # downloading signatures and running checksum validation.
-    if checksum_failure_list := signature_update.download_signature_files(manifest):
+    download_failure_list = []
+    checksum_failure_list = []
 
-        # will try 3 more times to re download the failed files.
-        # if there is a remaining failure, the user will be prompted to try again, load the successes, or exit.
-        for attempt in range(1, 4):
+    for attempt in range(1, 4):
+        # retries only need to download the files that are remaining
+        # converting to set to remove duplicates
+        if (attempt > 1):
             eprint(f'signature download errors detected. files: {len(checksum_failure_list)}, retries: {attempt}/3')
 
-            checksum_failure_list = signature_update.download_signature_files(checksum_failure_list)
-            if (not checksum_failure_list):
-                break
+            manifest = list(set(*download_failure_list, *checksum_failure_list))
 
-        # will give the user the option to load the signatures that downloaded successfully or exit.
-        else:
-            sprint(f'retry limit reached. {len(checksum_failure_list)} signatures failed to download.')
-            eprint(f'the following signatures failed to download: {[x[0] for x in checksum_failure_list]}')
+            download_failure_list.clear()
+            checksum_failure_list.clear()
 
-    if (not checksum_failure_list):
-        sprint('all signatures downloaded successfully. installing signatures.')
+        for file, checksum in manifest:
+
+            # downloading signatures and running checksum validation.
+            if not signature_update.download_signature_file(file):
+                download_failure_list.append((file, checksum))
+
+                if (args.verbose_set):
+                    sprint(f'download failed for {file}')
+
+            else:
+                check_passed = signature_update.validate_signature_file(file, checksum)
+                if (not check_passed):
+                    checksum_failure_list.append((file, checksum))
+
+                    if (args.verbose_set):
+                        sprint(f'checksum failed for {file}')
+
+        if (not download_failure_list and not checksum_failure_list):
+            sprint('all signatures downloaded successfully. installing signatures.')
+            break
+
+    # will give the user the option to load the signatures that downloaded successfully or exit.
+    else:
+        sprint(f'retry limit reached.')
+        sprint(f'{len(download_failure_list)} signatures failed to download.')
+        sprint(f'{len(checksum_failure_list)} signatures failed checksum validation.')
 
     # settings the flag to identify a file move in progress or partial signature update.
     if signature_update.set_signature_update_flag():
