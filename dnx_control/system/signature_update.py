@@ -3,11 +3,8 @@
 from __future__ import annotations
 
 import os
-import sys
-import hashlib
 import urllib.request as requests
 
-from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.file_operations import ConfigurationManager, calculate_file_hash
 
 # update signature files from the github dnxfirewall-signatures repo.
@@ -69,10 +66,10 @@ def compare_signature_version() -> bool:
     remote_version = get_remote_version()
 
     # if the local version file does not exist, the signatures are not compatible and a system update is needed
-    if not os.path.exists(f'{HOME_DIR}/dnx_profile/signatures/COMPATIBLE_VERSION'):
+    if not os.path.exists(f'dnx_profile/signatures/COMPATIBLE_VERSION'):
         return False
 
-    with open(f'{HOME_DIR}/dnx_profile/signatures/COMPATIBLE_VERSION', 'r') as file:
+    with open(f'dnx_profile/signatures/COMPATIBLE_VERSION', 'r') as file:
         local_version = int(file.readlines()[-1])
 
     if (local_version < remote_version):
@@ -106,7 +103,7 @@ def download_signature_files(signature_manifest: list[tuple]) -> list[tuple]:
         folder, filename = file.split('/')
         # print('writing file: ', folder + '/temp/' + filename)
 
-        with open(f'{HOME_DIR}/dnx_profile/signatures/{folder}/temp/{filename}', 'w') as temp_file:
+        with open(f'dnx_profile/signatures/{folder}/temp/{filename}', 'w') as temp_file:
             temp_file.write(signatures)
 
         # if the file hash does not match the remote hash, the file was not downloaded correctly and will be deleted.
@@ -114,7 +111,7 @@ def download_signature_files(signature_manifest: list[tuple]) -> list[tuple]:
 
         local_file_hash = calculate_file_hash(filename, folder=f'signatures/{folder}/temp')
         if (local_file_hash != remote_file_hash):
-            os.remove(f'{HOME_DIR}/dnx_profile/signatures/{folder}/temp/{filename}')
+            os.remove(f'dnx_profile/signatures/{folder}/temp/{filename}')
 
             failed_files.append((file, remote_file_hash))
 
@@ -131,6 +128,6 @@ def move_signature_files(signature_manifest: list[tuple], failure_list: list[tup
         # print(f'moving file {folder}/temp/{filename} -> {folder}/{filename}')
 
         os.rename(
-            f'{HOME_DIR}/dnx_profile/signatures/{folder}/temp/{filename}',
-            f'{HOME_DIR}/dnx_profile/signatures/{folder}/{filename}'
+            f'dnx_profile/signatures/{folder}/temp/{filename}',
+            f'dnx_profile/signatures/{folder}/{filename}'
         )
