@@ -384,14 +384,14 @@ def confirm_interfaces(interface_config: dict[str, str]) -> bool:
 # ============================
 # BUILD LIBRARIES
 # ============================
-def build_libraries() -> None:
+def build_libraries(*, count_only: bool = False) -> None:
     global PROGRESS_TOTAL_COUNT
 
-    # making sure build-essentials is installed
-    dnx_run('sudo apt install build-essential')
-
     # NOTE: this needs to be updated as libs get added to this function
-    PROGRESS_TOTAL_COUNT += 3
+    if (count_only):
+        PROGRESS_TOTAL_COUNT += 3
+
+        return
 
     libraries = [
         (f'{SYSTEM_DIR}/libraries/libmnl', [
@@ -427,9 +427,11 @@ def build_libraries() -> None:
 def install_packages() -> list:
 
     commands = [
+        # required system dependencies for building dnxfirewall
+        ('sudo apt install autoconf build-essential -y', 'installing system dependencies'),
+
         ('sudo apt install nginx -y', 'installing web server driver'),
         ('sudo apt install net-tools -y', 'installing networking components'),
-        ('sudo apt install autoconf -y', None),
 
         ('sudo apt install python3-pip -y', 'setting up python3'),
         ('pip3 install flask uwsgi', 'installing python web app framework'),
@@ -629,12 +631,9 @@ def run():
     sprint(f'starting dnxfirewall {action}...')
     lprint()
 
-    # building netfilter libs from source.
-    # keeping this separate from packages since we cannot guarantee the user distro's versioning meets the minimum
-    # requirements [source is locally contained within dnxfirewall repo].
-    # NOTE: keep this first for now or else the progress bar count won't be properly reflected.
+    # NOTE: ensuring the progress bar count is properly reflected.
     if (not args.update_set):
-        build_libraries()
+        build_libraries(count_only=True)
 
     progress('')  # this will render 0% bar, so we don't need to use offsets.
     for command, desc in dynamic_commands:
@@ -643,6 +642,12 @@ def run():
             progress(desc)
 
         dnx_run(command)
+
+    # building netfilter libs from source.
+    # keeping this separate from packages since we cannot guarantee the user distro's versioning meets the minimum
+    # requirements [source is locally contained within dnxfirewall repo].
+    if (not args.update_set):
+        build_libraries()
 
     if (not args.update_set) or (args.update_set and args.iptables):
         configure_iptables()
