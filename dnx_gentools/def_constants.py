@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time as _time
 import os as _os
+import sys as _sys
 import pwd as _pwd
 
 from functools import partial as _partial
@@ -16,6 +17,16 @@ from typing import Optional as _Optional, Union as _Union, Any as _Any
 
 from dnx_iptools.def_structs import scm_creds_pack as _scm_creds_pack
 
+# =====================================================
+# PYTHON PATH MODIFICATION
+# =====================================================
+# lib dir is not in system path by default for all distros
+#
+# this assumes any module that would need the library files
+# imports this file first for module initializion. if this
+# is not the case, the lib dir will need to be added locally
+# to the module or this file should be imported first.
+_sys.path.append('/usr/local/lib')
 
 # =====================================================
 # MODULE INITIALIZATION CONTROL - set by shell command
