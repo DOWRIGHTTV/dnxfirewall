@@ -73,8 +73,12 @@ def load_interfaces(intf_type: INTF = INTF.BUILTIN, *, exclude: list = []) -> li
     return collected_intfs
 
 def _is_ready(interface: str) -> int:
-    with open(f'/sys/class/net/{interface}/carrier', 'r') as carrier:
-        return int(carrier.read().strip())
+    try:
+        carrier = open(f'/sys/class/net/{interface}/carrier', 'r')
+    except OSError:
+        return 0
+
+    return int(carrier.read().strip())
 
 def wait_for_interface(interface: str, delay: int = ONE_SEC) -> None:
     '''wait for the specified interface to show power with waiting for network state.
