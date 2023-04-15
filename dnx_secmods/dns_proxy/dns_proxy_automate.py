@@ -57,9 +57,9 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
         return thread information to be run.
         '''
-        # NOTE: might be temporary.
+        # TODO: keyword matching is in the process of a rework. they will not be loaded for the time being.
         # needed to be moved since other sigs are now being handled by an external C extension via cython
-        self.__class__._keywords = load_keywords(log=Log)
+        self.__class__._keywords = []  # load_keywords(log=Log)
 
         threads = (
             (self._get_proxy_settings, ()),

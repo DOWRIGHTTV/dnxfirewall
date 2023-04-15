@@ -163,7 +163,8 @@ def load_tlds() -> Generator[tuple[str, int]]:
     for tld, setting in proxy_config.get_items('tld'):
         yield (tld.strip('.'), setting)
 
-def load_keywords(log: LogHandler_T) -> tuple[tuple[str, DNS_CAT]]:
+# TODO: this needs to be reworked to support the new keyword matching system.
+def load_keywords(log: LogHandler_T) -> list[tuple[str, DNS_CAT]]:
     '''returns keyword set for enabled domain categories.
 
     malformed keywords will be omitted.
@@ -187,7 +188,7 @@ def load_keywords(log: LogHandler_T) -> tuple[tuple[str, DNS_CAT]]:
             else:
                 keywords.append((keyword, DNS_CAT[category]))
 
-    return tuple(keywords)
+    return keywords
 
 def load_top_domains_filter() -> list[str]:
     with open(f'{HOME_DIR}/dnx_profile/signatures/domain_lists/valid_top.domains', 'r') as tdf:
