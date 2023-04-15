@@ -183,3 +183,9 @@ def move_signature_files(signature_manifest: list[tuple], failure_list: list[tup
             f'dnx_profile/signatures/{folder}/temp/{filename}',
             f'dnx_profile/signatures/{folder}/{filename}'
         )
+
+    # replacing old compatible version file
+    os.rename('dnx_profile/signatures/COMPATIBLE_VERSION_TEMP', 'dnx_profile/signatures/COMPATIBLE_VERSION')
+
+    # file validation file no longer needed
+    os.remove('dnx_profile/signatures/FILE_VALIDATION_TEMP')

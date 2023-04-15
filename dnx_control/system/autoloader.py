@@ -700,7 +700,7 @@ def signature_update(system_update: bool = False) -> None:
                         sprint(f'checksum failed for {file}')
 
         if (not download_failure_list and not checksum_failure_list):
-            sprint('all signatures downloaded successfully. installing signatures.')
+            sprint('all signatures downloaded successfully. installing...')
             break
 
     # will give the user the option to load the signatures that downloaded successfully or exit.
@@ -724,10 +724,12 @@ def signature_update(system_update: bool = False) -> None:
 
     signature_update.clear_signature_update_flag()
 
-    sprint('signature update complete.')
+    final_msg = 'signature update complete.'
 
     if (not system_update):
-        sprint('restart the security module services for updates to take effect.')
+        final_msg += ' the security modules must be restarted for the changes to take effect.'
+
+    sprint(final_msg)
 
 def run():
     global PROGRESS_TOTAL_COUNT
