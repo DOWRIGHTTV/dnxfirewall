@@ -10,6 +10,9 @@ from enum import Enum as _Enum, IntEnum as _IntEnum, IntFlag as _IntFlag
 from typing import NewType as _NewType
 
 
+# TODO: make this a flag if possible. pretty sure it is.
+CFG = _IntEnum('CFG', ['RESTORE', 'DEL', 'ADD', 'ADD_DEL'], start=0)
+
 class DATA(_IntEnum):
     INVALID = -1
     MISSING = -2
@@ -161,27 +164,36 @@ class DNS_CAT(_IntEnum):
     doh = 900  # system
     time_based = 990  # system
 
-    malicious   = 10
-    cryptominer = 11
-    telemetry   = 20
-    ads = 30
-    vpn = 40
-    mature = 50
-    pornography = 60
-    drugs   = 70
-    weapons = 80
-    socialmedia = 90
-    dyndns = 100
-    p2p    = 110
-    gambling    = 120
-    videogames  = 130
-    purchases   = 140
-    remotelogin = 150
-    downloads   = 160
+    # security, 10-199
+    crypto_miner    = 10
+    dynamic_dns     = 20
+    fraud           = 30
+    malicious       = 40
+    p2p             = 50
+    piracy          = 60
+    ransomware      = 70
+    remote_login    = 80
+    scam            = 90
+    suspicious      = 100
+    vpn             = 110
 
+    # privacy, 210-399
+    advertisement   = 210
+    telemetry       = 220
+    tracker         = 230
 
-# TODO: make this a flag if possible. pretty sure it is.
-CFG = _IntEnum('CFG', ['RESTORE', 'DEL', 'ADD', 'ADD_DEL'], start=0)
+    # content, 410-599
+    download        = 410
+    drug            = 420
+    gambling        = 430
+    mature          = 440
+    pornography     = 450
+    payment         = 460
+    social_media    = 470
+    streaming_video = 480
+    video_game      = 490
+    weaponry        = 500
+
 
 _TLD_LIST = [
     'NONE', 'ru', 'cn', 'xxx', 'porn', 'adult', 'ads', 'click', 'download',
