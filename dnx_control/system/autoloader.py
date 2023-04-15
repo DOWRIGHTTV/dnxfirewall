@@ -624,7 +624,7 @@ def signature_update(system_update: bool = False) -> None:
     rsv_name, rsv_hash = file_validations[0]
     for attempt in range(1, 4):
 
-        error, remote_version = signature_update.get_remote_version()
+        error, remote_version = signature_update.get_remote_version(rsv_name)
         if (not error):
 
             if signature_update.validate_file_download(f'{rsv_name}_TEMP', rsv_hash):
