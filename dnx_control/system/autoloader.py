@@ -67,8 +67,6 @@ LINEBREAK: str = text.lightblue('-' * 32)
 SYSTEM_DIR:  str = 'dnx_profile'
 UTILITY_DIR: str = 'dnx_profile/utils'
 
-UPDATE_SET = False
-
 # ----------------------------
 # UTILS
 # ----------------------------
@@ -382,11 +380,14 @@ def confirm_interfaces(interface_config: dict[str, str]) -> bool:
 # ============================
 # BUILD LIBRARIES
 # ============================
-def build_libraries() -> None:
+def build_libraries(*, count_only: bool = False) -> None:
     global PROGRESS_TOTAL_COUNT
 
     # NOTE: this needs to be updated as libs get added to this function
-    PROGRESS_TOTAL_COUNT += 3
+    if (count_only):
+        PROGRESS_TOTAL_COUNT += 3
+
+        return
 
     libraries = [
         (f'{SYSTEM_DIR}/libraries/libmnl', [
@@ -422,9 +423,11 @@ def build_libraries() -> None:
 def install_packages() -> list:
 
     commands = [
+        # required system dependencies for building dnxfirewall
+        ('sudo apt install autoconf build-essential libnfnetlink-dev -y', 'installing system dependencies'),
+
         ('sudo apt install nginx -y', 'installing web server driver'),
         ('sudo apt install net-tools -y', 'installing networking components'),
-        ('sudo apt install autoconf -y', None),
 
         ('sudo apt install python3-pip -y', 'setting up python3'),
         ('pip3 install flask uwsgi', 'installing python web app framework'),
@@ -443,7 +446,7 @@ def checkout_configured_branch() -> str:
 
     return branch_name
 
-def update_local_branch(branch: str) -> list:
+def update_local_branch(branch: str) -> list[tuple]:
 
     commands: list[tuple[str, str]] = [
         ('git stash', None),  # resetting any local changes before pulling
@@ -452,7 +455,8 @@ def update_local_branch(branch: str) -> list:
 
     return commands
 
-def compile_extensions() -> list:
+def compile_extensions(*, count_only: bool = False) -> Optional[list[tuple]]:
+    global PROGRESS_TOTAL_COUNT
 
     commands: list[tuple[str, str]] = [
         ('sudo python3 dnx_run.py compile cprotocol-tools _autoloader_', 'compiling cprotocol tools'),
@@ -461,9 +465,15 @@ def compile_extensions() -> list:
         ('sudo python3 dnx_run.py compile cfirewall _autoloader_', 'compiling cfirewall'),
     ]
 
+    # incrementing progress total count to ensure progress bar is accurate
+    if (count_only):
+        PROGRESS_TOTAL_COUNT += len(commands)
+
+        return
+
     return commands
 
-def configure_webui() -> list:
+def configure_webui() -> list[tuple]:
     cert_subject: str = str_join([
         '/C=US',
         '/ST=Arizona',
@@ -567,7 +577,7 @@ def set_services() -> None:
 
         if (service not in ignore_list):
 
-            dnx_run(f'cp -n {UTILITY_DIR}/{service} /etc/systemd/system/')
+            dnx_run(f'cp -n {UTILITY_DIR}/services/{service} /etc/systemd/system/')
             dnx_run(f'systemctl enable {service}')
 
     dnx_run(f'systemctl enable nginx')
@@ -767,7 +777,7 @@ def run():
     if (not args._update_system):
         dynamic_commands.extend(configure_webui())
 
-    dynamic_commands.extend(compile_extensions())
+    compile_extensions(count_only=True)
 
     PROGRESS_TOTAL_COUNT += len([1 for k, v in dynamic_commands if v])
 
@@ -775,15 +785,26 @@ def run():
     sprint(f'starting dnxfirewall {action}...')
     lprint()
 
-    # building netfilter libs from source.
-    # keeping this separate from packages since we cannot guarantee the user distro's versioning meets the minimum
-    # requirements [source is locally contained within dnxfirewall repo].
-    # NOTE: keep this first for now or else the progress bar count won't be properly reflected.
+    # NOTE: ensuring the progress bar count is properly reflected.
     if (not args._update_system):
-        build_libraries()
+        build_libraries(count_only=True)
 
     progress('')  # this will render 0% bar, so we don't need to use offsets.
     for command, desc in dynamic_commands:
+
+        if (desc):
+            progress(desc)
+
+        dnx_run(command)
+
+    # building netfilter libs from source.
+    # keeping this separate from packages since we cannot guarantee the user distro's versioning meets the minimum
+    # requirements [source is locally contained within dnxfirewall repo].
+    if (not args._update_system):
+        build_libraries()
+
+    # this must be done after the netfilter libs are built.
+    for command, desc in compile_extensions():
 
         if (desc):
             progress(desc)

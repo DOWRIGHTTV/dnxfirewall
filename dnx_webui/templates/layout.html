@@ -40,11 +40,9 @@
   {% endif %}
 
   {# dnx custom ajax client by seeker1437 (WyteChocolate) #}
-  {# NOTE::: shouldnt this be in ajax if statement??? #}
-  <script src="{{url_for('static',filename='assets/js/dnx_ajax_client.js')}}"></script>
-  {% include 'includes/_ajax_error.html' %}
-
   {% if ajax %}
+    <script src="{{url_for('static',filename='assets/js/dnx_ajax_client.js')}}"></script>
+    {% include 'includes/_ajax_response.html' %}
     <script>const ajaxClient = new AjaxClient(location.pathname);</script>
   {% endif %}
 

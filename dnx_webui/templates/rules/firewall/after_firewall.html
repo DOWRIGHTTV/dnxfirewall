@@ -68,14 +68,15 @@ function updateRule() {
 
     const ruleEditor = document.querySelector("#FWrule-editor");
     const rid = ruleEditor.children[0].id.substring(1);
+    const obj_id = ruleEditor.children[0].getAttribute("data-id");
 
     let row = document.createElement("tr")
 
     if (ruleEditor.querySelector(".eenabled").checked) {
-        setAttributes(row, {"data-enabled": "1", "id": rid})
+        setAttributes(row, {"data-enabled": "1", "data-id": obj_id, "id": rid})
     } else {
         row.style.opacity = ".4"
-        setAttributes(row, {"data-enabled": "0", "id": rid})
+        setAttributes(row, {"data-enabled": "0", "data-id": obj_id, "id": rid})
     }
 
     const fields = [
@@ -137,7 +138,7 @@ function newRule() {
 
     let defaultChip = '<div class="chip">none</div>'
 
-    let rule_template = `<tr id="r${ruleCount}" style="opacity: .4;" data-enabled="0">` +
+    let rule_template = `<tr id="r${ruleCount}" style="opacity: .4;" data-enabled="0" data-id="0">` +
         '<td><label><input type="checkbox" class="filled-in rule-select"><span></span></label></td>' +
         '<td>' +
             '<div class="row">' +
@@ -188,6 +189,9 @@ function fillEditor(ruleEditor, ruleRow) {
             "src_service", "dst_zone", "dst_network", "dst_service", "action",
             "sec1_prof", "sec2_prof", "sec3_prof"]
 
+    ruleEditor.children[0].setAttribute("data-id", ruleRow.getAttribute("data-id"));
+    ruleEditor.children[0].id = `e${ruleRow.id}`;
+
     for (let field of fields) {
         let rule_field = ruleRow.querySelector(`.r${field}`);
         let editor_field = ruleEditor.querySelector(`.e${field}`);
@@ -220,7 +224,7 @@ function fillEditor(ruleEditor, ruleRow) {
                 input.className = `e${field} validate`;
                 input.min = "0";
                 input.max = "1";
-                input.value = rule_field.innerText
+                input.value = rule_field.innerText;
 
                 input_field.prepend(input);
             }
@@ -256,7 +260,6 @@ function fillEditor(ruleEditor, ruleRow) {
         }
         finally {}
     }
-    ruleEditor.children[0].id = `e${ruleRow.id}`;
 }
 </script>
 <script>

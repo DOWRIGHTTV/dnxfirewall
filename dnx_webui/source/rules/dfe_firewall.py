@@ -27,13 +27,19 @@ if (TYPE_CHECKING):
 
 __all__ = ('WebPage',)
 
-valid_sections: dict[str, str] = {'BEFORE': '1', 'MAIN': '2', 'AFTER': '3'}
+cfirewall = FirewallControl.cfirewall
+
+valid_sections = {'BEFORE': '1', 'MAIN': '2', 'AFTER': '3'}
 
 reference_counts = defaultdict(int)
-zone_map: dict[str, dict] = {'builtin': {}, 'extended': {}}
-zone_manager: dict[str, dict] = {'builtin': {}, 'user-defined': {}}
+zone_map = {'builtin': {}, 'extended': {}}
+zone_manager = {'builtin': {}, 'user-defined': {}}
 
 INVALID_OBJECT = -1
+VALID_RULE_IDS = [1000, 10000]
+
+TRAFFIC_LOG  = {'on': 1, 'off': 0}
+RULE_ACTIONS = {'accept': 1, 'drop': 0}
 
 INTRA_ZONE = 0
 ANY_ZONE = 99
@@ -116,7 +122,7 @@ class WebPage(RulesWebPage):
             'network_autofill': network_autofill,
             'service_autofill': service_autofill,
             'firewall_rules': firewall_rules,
-            'pending_changes': FirewallControl.is_pending_changes()
+            'pending_changes': cfirewall.is_pending_changes()
         }
 
     @staticmethod
@@ -202,17 +208,17 @@ class WebPage(RulesWebPage):
 
         # NOTE: all rules must be validated for changes to be applied. validation will raise exception on first error.
         try:
-            validated_rules = {section: validate_firewall_commit(json_data['rules'])}
+            validated_rules = validate_firewall_commit(json_data['rules'])
         except ValidationError as ve:
             return False, {'error': 3, 'message': str(ve)}
 
         else:
-            FirewallControl.commit(validated_rules)
+            cfirewall.commit(section, validated_rules)
 
         return True, {'error': 0, 'message': 'commit successful'}
 
 def get_and_format_rules(section: str) -> list[list]:
-    firewall_rules = FirewallControl.cfirewall.view_ruleset(section)
+    firewall_rules = cfirewall.view_ruleset(section)
 
     converted_rules: list = []
     converted_rules_append = converted_rules.append
@@ -224,7 +230,7 @@ def get_and_format_rules(section: str) -> list[list]:
         for rule in firewall_rules.values():
 
             converted_rules_append([
-                rule['enabled'], rule['name'],
+                rule['enabled'], rule['id'], rule['name'],
 
                 [lookup(x) for x in rule['src_zone']],
                 [lookup(x) for x in rule['src_network']],
@@ -260,6 +266,7 @@ def calculate_ref_counts(firewall_rules: list[list]) -> None:
 # ================
 class rule_structure(_NamedTuple):
     enabled: str
+    id: str
     name: str
     src_zone: str
     src_network: str
@@ -274,7 +281,7 @@ class rule_structure(_NamedTuple):
     sec3_prof: str
 
 def validate_firewall_commit(fw_rules_json: str, /):
-    # ["1", "lan_dhcp_allow", "lan", "tv,lan_network tv,dmz_network", "track_changes,udp_any", "any",
+    # ["1", "6969", "lan_dhcp_allow", "lan", "tv,lan_network tv,dmz_network", "track_changes,udp_any", "any",
     #  "tv,lan_network tv,dmz_network", "track_changes,udp_67", "ACCEPT", "OFF", "0", "0"]
 
     fw_rules: dict = json.loads(fw_rules_json)
@@ -308,67 +315,44 @@ def validate_firewall_commit(fw_rules_json: str, /):
 
 def validate_firewall_rule(rule_num: int, fw_rule: rule_structure, /, check: Callable[[str], list[int]]) -> dict[str, Any]:
 
-    tlog: dict[str, int] = {'on': 1, 'off': 0}
-
-    tlog = tlog.get(fw_rule.log, DATA.MISSING)
-    if (tlog is DATA.MISSING):
+    if ((tlog := TRAFFIC_LOG.get(fw_rule.log, DATA.MISSING)) is DATA.MISSING):
         raise ValidationError(f'{INVALID_FORM} [rule #{rule_num}/log]')
 
-    actions: dict[str, int] = {'accept': 1, 'drop': 0}
-
-    action = actions.get(fw_rule.action, DATA.MISSING)
-    if (action is DATA.MISSING):
+    if ((action := RULE_ACTIONS.get(fw_rule.action, DATA.MISSING)) is DATA.MISSING):
         raise ValidationError(f'{INVALID_FORM} [rule #{rule_num}/action]')
 
-    ip_proxy_profile  = convert_int(fw_rule.sec1_prof)
-    dns_proxy_profile = convert_int(fw_rule.sec2_prof)
-    ids_ips_profile   = convert_int(fw_rule.sec3_prof)
-    if not all([x in [0, 1] for x in [ip_proxy_profile, dns_proxy_profile, ids_ips_profile]]):
-        raise ValidationError(f'Invalid security profile for rule #{rule_num}.')
+    if ((enabled := convert_bint(fw_rule.enabled)) is DATA.INVALID):
+        raise ValidationError(f'Invalid value in "enabled" field for rule #{rule_num}')
 
-    enabled = convert_int(fw_rule.enabled)
-
-    # OBJECT VALIDATIONS
-    src_zone = check(fw_rule.src_zone)
-    if (INVALID_OBJECT in src_zone):
-        raise ValidationError(f'A source zone object was not found for rule #{rule_num}.')
-
-    src_network = check(fw_rule.src_network)
-    if (INVALID_OBJECT in src_network):
-        raise ValidationError(f'A source network object was not found for rule #{rule_num}.')
-
-    src_service = check(fw_rule.src_service)
-    if (INVALID_OBJECT in src_service):
-        raise ValidationError(f'A source service object was not found for rule #{rule_num}.')
-
-    dst_zone = check(fw_rule.dst_zone)
-    if (INVALID_OBJECT in dst_zone):
-        raise ValidationError(f'A destination zone object was not found for rule #{rule_num}.')
-
-    dst_network = check(fw_rule.dst_network)
-    if (INVALID_OBJECT in dst_network):
-        raise ValidationError(f'A destination network object was not found for rule #{rule_num}.')
-
-    dst_service = check(fw_rule.dst_service)
-    if (INVALID_OBJECT in dst_service):
-        raise ValidationError(f'A destination service object was not found for rule #{rule_num}.')
+    r_id = convert_int(fw_rule.id)
+    if (r_id is DATA.INVALID or (r_id != 0 and r_id not in range(*VALID_RULE_IDS))):
+        raise ValidationError(f'Invalid value in "id" field for rule #{rule_num}')
 
     rule = {
-        'name': fw_rule.name,
-        'id': 0,
+        'name': standard(fw_rule.name, override=['_']),
+        'id': r_id,
         'enabled': enabled,
-        'src_zone': src_zone,                # [12]
-        'src_network': src_network,
-        'src_service': src_service,
-        'dst_zone': dst_zone,                # [11]
-        'dst_network': dst_network,
-        'dst_service': dst_service,
+        'src_zone': check(fw_rule.src_zone),                # [12]
+        'src_network': check(fw_rule.src_network),
+        'src_service': check(fw_rule.src_service),
+        'dst_zone': check(fw_rule.dst_zone),                # [11]
+        'dst_network': check(fw_rule.dst_network),
+        'dst_service': check(fw_rule.dst_service),
         'action': action,                    # 1
         'log': tlog,
-        'ipp_profile': ip_proxy_profile,
-        'dns_profile': dns_proxy_profile,
-        'ips_profile': ids_ips_profile
+        'ipp_profile': convert_int(fw_rule.sec1_prof),
+        'dns_profile': convert_int(fw_rule.sec2_prof),
+        'ips_profile': convert_int(fw_rule.sec3_prof)
     }
+
+    # SECURITY PROFILE VALIDATIONS - currently restricted to 0/1
+    if any([rule[profile] not in [0, 1] for profile in ['ipp_profile', 'dns_profile', 'ips_profile']]):
+        raise ValidationError(f'Invalid security profile for rule #{rule_num}.')
+
+    # OBJECT VALIDATIONS
+    for obj in ['src_zone', 'src_network', 'src_service', 'dst_zone', 'dst_network', 'dst_service']:
+        if (INVALID_OBJECT in rule[obj]):
+            raise ValidationError(f'A {obj.replace("_", " ")} object was not found for rule #{rule_num}.')
 
     return rule
 
@@ -420,7 +404,7 @@ def validate_object(obj: config) -> Optional[ValidationError]:
             obj.subtype = 3
             # range nested within the list. we should implement this at some point.
             if ('-' in object_value):
-                return ValidationError('Service ranges are not currently supported in a service list.')
+                return ValidationError('Service ranges are currently not supported in a service list.')
 
             services = object_value.split(':')
             for service in services:
@@ -440,7 +424,7 @@ def validate_object(obj: config) -> Optional[ValidationError]:
 
     # not currently supported
     elif (obj.type == 'geolocation'):
-        return ValidationError('Geolocation lists are current not supported.')
+        return ValidationError('Geolocation lists are currently not supported.')
 
     else:
         return ValidationError(f'Valid object types are {", ".join(valid_types)}')

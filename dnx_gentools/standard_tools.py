@@ -18,13 +18,13 @@ from dnx_gentools.def_constants import RUN_FOREVER, MSEC, fast_time, fast_sleep,
 if (TYPE_CHECKING):
     from dnx_routines.logging import LogHandler_T
 
-__all__ = (
+__all__ = [
     'looper', 'dynamic_looper',
     'ConfigurationMixinBase', 'Initialize',
     'dnx_queue', 'inspection_queue',
     'bytecontainer', 'structure',
     'classproperty',
-)
+]
 
 
 def looper(sleep_len: int, **kwargs):
@@ -537,7 +537,7 @@ def structure(obj_name: str, fields: Union[list, str]):
 
     return _Structure()
 
-def bytecontainer(obj_name: str, field_names: Union[list, str]):
+def bytecontainer(obj_name: str, field_names: Union[list, str]) -> ByteContainer_T:
     '''named tuple like class factory for storing raw byte sections with named fields.
 
     calling len on the container will return the sum of all bytes stored, not the number of fields.
@@ -622,9 +622,9 @@ class classproperty:
 
 # TYPE EXPORTS
 if (TYPE_CHECKING):
-    RequestQueue_T: TypeAlias = request_queue()
-    InspectionQueue_T: TypeAlias = inspection_queue()
-    Structure_T: TypeAlias       = structure('Structure', '')
-    ByteContainer_T: TypeAlias   = bytecontainer('ByteContainer', '')
+    RequestQueue_T = request_queue()
+    InspectionQueue_T = inspection_queue()
+    Structure_T = structure('structure', ' ')
+    ByteContainer_T = bytecontainer('bytecontainer', ' ')
 
     __all__.extend(['RequestQueue_T', 'InspectionQueue_T', 'Structure_T', 'ByteContainer_T'])

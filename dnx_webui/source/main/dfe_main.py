@@ -43,6 +43,7 @@ app.jinja_env.lstrip_blocks = True
 # =========================================
 from dnx_control.control.ctl_action import system_action
 from dnx_secmods.cfirewall.fw_control import FirewallControl
+from dnx_secmods.cfirewall.fw_analyze import FirewallAnalyze
 
 general_error_page = 'main/general_error.html'
 application_error_page = 'main/application_error.html'
@@ -53,11 +54,15 @@ Log.run(name='web_app')
 # NOTE: this will allow the config manager to reference the Log class without an import. (cyclical import error)
 ConfigurationManager.set_log_reference(Log)
 
-# initialize cfirewall manager, which interfaces with cfirewall control class through a fd.
+# initialize cfirewall manager - interfaces with cfirewall automate class through a fd.
 cfirewall = FirewallControl()
 
 # setting FirewallManager instance as class var within FirewallManager to access instance throughout webui
 FirewallControl.cfirewall = cfirewall
+
+cfirewall_analyze = FirewallAnalyze()
+
+FirewallAnalyze.cfirewall_analyze = cfirewall_analyze
 
 # =========================================
 # WEBUI COMPONENTS
@@ -152,10 +157,20 @@ def rules_firewall_push(session_info: dict):
     # for when we implement preview option
     # json_data = request.get_json(force=True)
 
-    if error := FirewallControl.push():
+    if error := cfirewall.push():
         return ajax_response(status=False, data={'error': 1, 'message': 'push failed'})
 
     return ajax_response(status=True, data={'error': 0, 'message': 'push success'})
+
+@app.route('/rules/firewall/diff', methods=['POST'])
+@user_restrict('admin')
+def rules_firewall_diff(session_info: dict):
+    # for when we implement preview option
+    # json_data = request.get_json(force=True)
+
+    diff_data = cfirewall_analyze.diff()
+
+    return ajax_response(status=True, data={'error': 0, 'message': diff_data})
 
 @app.route('/rules/nat', methods=['GET', 'POST'])
 @user_restrict('admin')
