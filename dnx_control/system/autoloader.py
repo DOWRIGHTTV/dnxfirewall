@@ -601,19 +601,72 @@ def store_default_mac():
 def signature_update(system_update: bool = False) -> None:
     import dnx_control.system.signature_update as signature_update
 
+    # ===========================================
+    # INITIAL FILE CHECKSUM INFORMATION DOWNLOAD
+    # ===========================================
+    sprint('downloading initial file integrity information.')
+    file_validations: list[tuple] = []
+    for attempt in range(1, 4):
+        if file_validations := signature_update.get_file_validations():
+            break
+
+        eprint(f'unable to download file validation information. tries: {attempt}/3')
+
+    else:
+        sprint(f'retry limit reached.')
+        hardout('try again later. exiting...')
+
+    # ===========================================
+    # REMOTE SIGNATURE VERSION INFORMATION
+    # ===========================================
+    sprint('downloading remote signature version.')
+    remote_version = 99991231
+    rsv_name, rsv_hash = file_validations[0]
+    for attempt in range(1, 4):
+
+        error, remote_version = signature_update.get_remote_version()
+        if (not error):
+
+            if signature_update.validate_file_download(f'{rsv_name}_TEMP', rsv_hash):
+                break
+
+        eprint(f'unable to validate signature versioning information. tries: {attempt}/3')
+
+    else:
+        sprint(f'retry limit reached. check connection and try again later.')
+        hardout('exiting...')
+
     # system update will ignore the signature version check and force the update.
-    if not signature_update.compare_signature_version() and not system_update:
+    if not signature_update.compare_signature_version(remote_version, system_update=True):
         hardout('a system update is required to support the latest signature sets.')
 
+    # ===========================================
+    # REMOTE SIGNATURE MANIFEST
+    # ===========================================
     sprint('downloading remote signature manifest.')
+    manifest = []
+    rsm_name, rsm_hash = file_validations[1]
+    for attempt in range(1, 4):
 
-    # downloading manifest of signatures to be downloaded.
-    manifest = signature_update.get_remote_signature_manifest()
+        # downloading manifest of signature files to be downloaded.
+        manifest = signature_update.get_remote_signature_manifest(rsm_name)
+        if (manifest):
+
+            if signature_update.validate_file_download(f'{rsm_name}_TEMP', rsm_hash):
+                break
+
+        eprint(f'unable to validate remote signature manifest. tries: {attempt}/3')
+
+    else:
+        sprint(f'retry limit reached. check connection and try again later.')
+        hardout('exiting...')
 
     sprint(f'done. {len(manifest)} signature files will be downloaded.')
-    if (args.verbose_set):
-        for i, f in enumerate(manifest, 1):
-            sprint(f'{i}. {f[0]} - {f[1]}')
+
+    # LIST FILES CONTAINED IN MANIFEST
+    # if (args.verbose_set):
+    #     for i, f in enumerate(manifest, 1):
+    #         sprint(f'{i}. {f[0]} - {f[1]}')
 
     download_failure_list = []
     checksum_failure_list = []
