@@ -111,7 +111,7 @@ def compare_signature_version(remote_version: int, *, system_update: bool = Fals
 def get_file_validations() -> list[tuple]:
     file_validations = []
 
-    with requests.urlopen(f'{SIGNATURE_URL}/FILE_VALIDATIONS') as response:
+    with requests.urlopen(f'{SIGNATURE_URL}/FILE_VALIDATION') as response:
 
         for line in response.readlines():
             line = line.decode('utf-8').strip().split()
