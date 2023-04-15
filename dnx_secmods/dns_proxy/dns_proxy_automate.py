@@ -75,20 +75,22 @@ class ProxyConfiguration(ConfigurationMixinBase):
         signatures: DNS_SIGNATURES = self.__class__.signatures
         # CATEGORY SETTINGS
         enabled_keywords: list[DNS_CAT] = []
-        for cat, setting in proxy_config.get_items('categories->built-in'):
-            # identifying enabled keyword search categories
-            if (setting['keyword']):
-                enabled_keywords.append(DNS_CAT[cat])
+        for label in proxy_config.get_items('categories->built-in'):
 
-            # identifying enabled general categories
-            if (setting['enabled']):
-                signatures.en_dns.add(DNS_CAT[cat])
+            for cat, setting in proxy_config.get_items(f'categories->built-in->{label}'):
+                # identifying enabled keyword search categories
+                if (setting['keyword']):
+                    enabled_keywords.append(DNS_CAT[cat])
 
-            # removing category if present in memory
-            else:
-                dns_cat = DNS_CAT[cat]
-                if (dns_cat in signatures.en_dns):
-                    signatures.en_dns.remove(dns_cat)
+                # identifying enabled general categories
+                if (setting['enabled']):
+                    signatures.en_dns.add(DNS_CAT[cat])
+
+                # removing category if present in memory
+                else:
+                    dns_cat = DNS_CAT[cat]
+                    if (dns_cat in signatures.en_dns):
+                        signatures.en_dns.remove(dns_cat)
 
         # KEYWORD SETTINGS
         # copying the keyword signature list in memory to a local object, then iterating over the list.
