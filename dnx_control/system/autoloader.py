@@ -710,7 +710,7 @@ def signature_update(system_update: bool = False) -> None:
         sprint(f'{len(checksum_failure_list)} signatures failed checksum validation.')
 
     # settings the flag to identify a file move in progress or partial signature update.
-    if signature_update.set_signature_update_flag():
+    if not signature_update.set_signature_update_flag():
         eprint('signature update may already be in in progress or a previous update was interrupted.')
 
         signature_update.set_signature_update_flag(override=True)
