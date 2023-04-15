@@ -49,18 +49,14 @@ BANNER = text.lightblue('\n'.join([
 class Args:
     v: int = 0
     verbose: int = 0
-    u: int = 0
-    update: int = 0
     packages: int = 0
     iptables: int = 0
+
+    _update: int = 0
 
     @property
     def verbose_set(self):
         return self.v or self.verbose
-
-    @property
-    def update_set(self):
-        return self.u or self.update
 
 
 LOG_NAME: str = 'system'
@@ -160,12 +156,12 @@ def check_already_ran() -> None:
     with ConfigurationManager('system', cfg_type='global') as dnx:
         dnx_settings: ConfigChain = dnx.load_configuration()
 
-    if (not args.update_set and dnx_settings['auto_loader']):
+    if (not args._update_system and dnx_settings['auto_loader']):
         eprint(
             text.red('dnxfirewall has already been installed.')
         )
 
-    elif (args.update_set and not dnx_settings['auto_loader']):
+    elif (args._update_system and not dnx_settings['auto_loader']):
         eprint(
              text.red('dnxfirewall has not been installed. see readme for guidance.')
         )
@@ -555,6 +551,18 @@ def set_permissions() -> None:
     # configure sudoers.d to allow dnx user "no-pass" for specific system functions
     dnx_run(f'sudo cp -n {SYSTEM_DIR}/admin/dnx /etc/sudoers.d/')
 
+def set_signature_permissions() -> None:
+    commands: list[str] = [
+        # set the dnx filesystem owner to the dnx user/group
+        f'chown -R dnx:dnx {HOME_DIR}/dnx_profile/signatures',
+
+        # apply file permissions 750 on folders, 640 on files
+        f'chmod -R 750 {HOME_DIR}/dnx_profile/signatures',
+        f'find {HOME_DIR}/dnx_profile/signatures -type f -print0|xargs -0 chmod 640'
+    ]
+
+    for command in commands:
+        dnx_run(command)
 
 # ============================
 # SERVICE FILE SETUP
@@ -600,18 +608,157 @@ def mark_completion_flag() -> None:
 def store_default_mac():
     pass
 
+def signature_update(system_update: bool = False) -> None:
+    import dnx_control.system.signature_update as signature_update
+
+    # ===========================================
+    # INITIAL FILE CHECKSUM INFORMATION DOWNLOAD
+    # ===========================================
+    sprint('downloading initial file integrity information.')
+    file_validations: list[tuple] = []
+    for attempt in range(1, 4):
+        if file_validations := signature_update.get_file_validations():
+            break
+
+        eprint(f'unable to download file validation information. tries: {attempt}/3')
+
+    else:
+        sprint(f'retry limit reached.')
+        hardout('try again later. exiting...')
+
+    # ===========================================
+    # REMOTE SIGNATURE VERSION INFORMATION
+    # ===========================================
+    sprint('downloading remote signature version.')
+    remote_version = 99991231
+    rsv_name, rsv_hash = file_validations[0]
+    for attempt in range(1, 4):
+
+        error, remote_version = signature_update.get_remote_version(rsv_name)
+        if (not error):
+
+            if signature_update.validate_file_download(f'{rsv_name}_TEMP', rsv_hash):
+                break
+
+        eprint(f'unable to validate signature versioning information. tries: {attempt}/3')
+
+    else:
+        sprint(f'retry limit reached. check connection and try again later.')
+        hardout('exiting...')
+
+    # system update will ignore the signature version check and force the update.
+    if not signature_update.compare_signature_version(remote_version, system_update=True):
+        hardout('a system update is required to support the latest signature sets.')
+
+    # ===========================================
+    # REMOTE SIGNATURE MANIFEST
+    # ===========================================
+    sprint('downloading remote signature manifest.')
+    manifest = []
+    rsm_name, rsm_hash = file_validations[1]
+    for attempt in range(1, 4):
+
+        # downloading manifest of signature files to be downloaded.
+        manifest = signature_update.get_remote_signature_manifest(rsm_name)
+        if (manifest):
+
+            if signature_update.validate_file_download(f'{rsm_name}_TEMP', rsm_hash):
+                break
+
+        eprint(f'unable to validate remote signature manifest. tries: {attempt}/3')
+
+    else:
+        sprint(f'retry limit reached. check connection and try again later.')
+        hardout('exiting...')
+
+    sprint(f'done. {len(manifest)} signature files will be downloaded.')
+
+    # LIST FILES CONTAINED IN MANIFEST
+    # if (args.verbose_set):
+    #     for i, f in enumerate(manifest, 1):
+    #         sprint(f'{i}. {f[0]} - {f[1]}')
+
+    download_failure_list = []
+    checksum_failure_list = []
+
+    for attempt in range(3):
+        # retries only need to download the files that are remaining
+        # converting to set to remove duplicates
+        if (attempt > 0):
+            eprint(f'({len(checksum_failure_list)}) signature download errors detected. tries: {attempt}/3')
+
+            manifest = list({*download_failure_list, *checksum_failure_list})
+
+            download_failure_list.clear()
+            checksum_failure_list.clear()
+
+        for file, checksum in manifest:
+
+            # downloading signatures and running checksum validation.
+            if not signature_update.download_signature_file(file):
+                download_failure_list.append((file, checksum))
+
+                if (args.verbose_set):
+                    sprint(f'download failed for {file}')
+
+            else:
+                check_passed = signature_update.validate_signature_file(file, checksum)
+                if (not check_passed):
+                    checksum_failure_list.append((file, checksum))
+
+                    if (args.verbose_set):
+                        sprint(f'checksum failed for {file}')
+
+        if (not download_failure_list and not checksum_failure_list):
+            sprint('all signatures downloaded successfully. installing...')
+            break
+
+    # will give the user the option to load the signatures that downloaded successfully or exit.
+    else:
+        sprint(f'retry limit reached.')
+        sprint(f'{len(download_failure_list)} signatures failed to download.')
+        sprint(f'{len(checksum_failure_list)} signatures failed checksum validation.')
+
+    # settings the flag to identify a file move in progress or partial signature update.
+    if not signature_update.set_signature_update_flag():
+        eprint('signature update may already be in in progress or a previous update was interrupted.')
+
+        signature_update.set_signature_update_flag(override=True)
+
+    signature_update.move_signature_files(manifest, checksum_failure_list)
+
+    sprint('signatures installed. setting permissions.')
+
+    # probably not needed, but doing anyway for consistency.
+    set_signature_permissions()
+
+    signature_update.clear_signature_update_flag()
+
+    final_msg = 'signature update complete.'
+
+    if (not system_update):
+        final_msg += ' the security modules must be restarted for the changes to take effect.'
+
+    sprint(final_msg)
+
 def run():
     global PROGRESS_TOTAL_COUNT
 
     # will relative paths beyond HOME_DIR
     os.chdir(HOME_DIR)
 
-    if (not args.update_set):
+    # signature updates are handled separately from the rest of the build process unless the system is being updated.
+    if (args._update_signatures):
+        signature_update()
+
+        return
+
+    if (not args._update_system):
         PROGRESS_TOTAL_COUNT += 1  # copying service files
         set_branch()
         configure_interfaces()
 
-    if (not args.update_set) and (args.update_set and args.iptables):
+    if (not args._update_system) and (args._update_system and args.iptables):
         PROGRESS_TOTAL_COUNT += 1  # building iptables
 
     # will hold all dynamically set commands prior to execution to get an accurate count for progress bar.
@@ -619,27 +766,27 @@ def run():
 
     branch = checkout_configured_branch()
 
-    if (args.update_set):
+    if (args._update_system):
         dynamic_commands.extend(update_local_branch(branch))
 
     # packages will be installed during initial installation automatically.
     # if update is set, the default is to not update packages.
-    if (not args.update_set) or (args.update_set and args.packages):
+    if (not args._update_system) or (args._update_system and args.packages):
         dynamic_commands.extend(install_packages())
 
-    if (not args.update_set):
+    if (not args._update_system):
         dynamic_commands.extend(configure_webui())
 
     compile_extensions(count_only=True)
 
     PROGRESS_TOTAL_COUNT += len([1 for k, v in dynamic_commands if v])
 
-    action = 'update' if args.update_set else 'deployment'
+    action = 'update' if args._update else 'deployment'
     sprint(f'starting dnxfirewall {action}...')
     lprint()
 
     # NOTE: ensuring the progress bar count is properly reflected.
-    if (not args.update_set):
+    if (not args._update_system):
         build_libraries(count_only=True)
 
     progress('')  # this will render 0% bar, so we don't need to use offsets.
@@ -653,7 +800,7 @@ def run():
     # building netfilter libs from source.
     # keeping this separate from packages since we cannot guarantee the user distro's versioning meets the minimum
     # requirements [source is locally contained within dnxfirewall repo].
-    if (not args.update_set):
+    if (not args._update_system):
         build_libraries()
 
     # this must be done after the netfilter libs are built.
@@ -664,16 +811,20 @@ def run():
 
         dnx_run(command)
 
-    if (not args.update_set) or (args.update_set and args.iptables):
+    if (not args._update_system) or (args._update_system and args.iptables):
         configure_iptables()
 
     set_permissions()
 
-    if (not args.update_set):
+    if (not args._update_system):
         set_services()
         mark_completion_flag()
 
     progress('dnxfirewall installation complete...')
+
+    # signatures will be updated during initial installation or system update automatically.
+    signature_update(system_update=True)
+
     sprint('control of the WAN interface configuration has been taken by dnxfirewall.')
     sprint('use the webui to configure a static ip or enable ssh access if needed.')
     sprint('restart the system then navigate to https://192.168.83.1 from LAN to manage.')
@@ -690,6 +841,9 @@ if INITIALIZE_MODULE('autoloader'):
     except Exception as E:
         hardout(f'DNXFIREWALL arg parse failure => {E}')
 
+    args._update_system = 1 if os.environ.get('_SYSTEM_UPDATE') else 0
+    args._update_signatures = 1 if os.environ.get('_SIGNATURE_UPDATE') else 0
+
     # pre-checks to make sure application can run properly
     check_run_as_root()
     check_dnx_user()
@@ -699,5 +853,6 @@ if INITIALIZE_MODULE('autoloader'):
     Log.run(name=LOG_NAME, suppress_output=True)
     ConfigurationManager.set_log_reference(Log)
 
-    # this uses the config manager, so must be called after log initialization
-    check_already_ran()
+    if (not args._update_signatures):
+        # this uses the config manager, so must be called after log initialization
+        check_already_ran()

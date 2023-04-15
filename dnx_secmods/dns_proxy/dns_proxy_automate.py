@@ -47,7 +47,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
     # en_dns | tld | keyword |
     signatures: ClassVar[DNS_SIGNATURES] = DNS_SIGNATURES(
-        {DNS_CAT.doh}, {}, []
+        {DNS_CAT.dns_https}, {}, []
     )
 
     _keywords: ClassVar[list[tuple[str, DNS_CAT]]] = []
@@ -57,9 +57,9 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
         return thread information to be run.
         '''
-        # NOTE: might be temporary.
+        # TODO: keyword matching is in the process of a rework. they will not be loaded for the time being.
         # needed to be moved since other sigs are now being handled by an external C extension via cython
-        self.__class__._keywords = load_keywords(log=Log)
+        self.__class__._keywords = []  # load_keywords(log=Log)
 
         threads = (
             (self._get_proxy_settings, ()),
@@ -75,20 +75,22 @@ class ProxyConfiguration(ConfigurationMixinBase):
         signatures: DNS_SIGNATURES = self.__class__.signatures
         # CATEGORY SETTINGS
         enabled_keywords: list[DNS_CAT] = []
-        for cat, setting in proxy_config.get_items('categories->built-in'):
-            # identifying enabled keyword search categories
-            if (setting['keyword']):
-                enabled_keywords.append(DNS_CAT[cat])
+        for label in proxy_config.get_items('categories->built-in'):
 
-            # identifying enabled general categories
-            if (setting['enabled']):
-                signatures.en_dns.add(DNS_CAT[cat])
+            for cat, setting in proxy_config.get_items(f'categories->built-in->{label}'):
+                # identifying enabled keyword search categories
+                if (setting['keyword']):
+                    enabled_keywords.append(DNS_CAT[cat])
 
-            # removing category if present in memory
-            else:
-                dns_cat = DNS_CAT[cat]
-                if (dns_cat in signatures.en_dns):
-                    signatures.en_dns.remove(dns_cat)
+                # identifying enabled general categories
+                if (setting['enabled']):
+                    signatures.en_dns.add(DNS_CAT[cat])
+
+                # removing category if present in memory
+                else:
+                    dns_cat = DNS_CAT[cat]
+                    if (dns_cat in signatures.en_dns):
+                        signatures.en_dns.remove(dns_cat)
 
         # KEYWORD SETTINGS
         # copying the keyword signature list in memory to a local object, then iterating over the list.

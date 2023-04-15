@@ -24,11 +24,15 @@ BOLD = styles.bold
 hardout = partial(os._exit, 0)
 dnx_run = partial(run, check=True, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
 dnx_run_v = partial(run, check=True, stdin=DEVNULL)
-def exclude(s: str, l: Iterable, /) -> list[str]:
+def exclude(st: Union[str, list[str]], l: Iterable, /) -> list[str]:
     '''return a new list with specified string removed from the passed in list, set, tuple, dict.
     '''
+    if isinstance(st, str):
+        st = [st]
+
     nl = list(l)
-    nl.remove(s)
+    for s in st:
+        nl.remove(s)
 
     return nl
 
@@ -41,6 +45,8 @@ COMMANDS: dict[str, dict[str, bool]] = {
     'status': {'priv': True, 'module': True},
     'cli': {'priv': False, 'module': True},
     'modstat': {'priv': True, 'module': False},
+    'install': {'priv': True, 'module': False},
+    'update': {'priv': True, 'module': True},
     'compile': {'priv': True, 'module': False}
 }
 
@@ -49,12 +55,15 @@ COMMANDS: dict[str, dict[str, bool]] = {
 # =========================
 MODULE_MAPPING: dict[str, dict[str, Union[str, bool, list]]] = {
     # HELPERS
-    'all': {'module': '', 'exclude': ['status', 'cli'], 'priv': True, 'service': False},
+    'all': {'module': '', 'exclude': ['status', 'cli', 'install', 'update'], 'priv': True, 'service': False},
 
+    # UPDATES
+    'system': {'module': '', 'exclude': exclude(['install', 'update'], COMMANDS), 'priv': True, 'service': False},
+    'signatures': {'module': '', 'exclude': exclude('update', COMMANDS), 'priv': True, 'service': False},
     # AUTOLOADER
-    'autoloader': {
-        'module': 'dnx_control.system.autoloader', 'exclude': exclude('cli', COMMANDS), 'priv': True, 'service': False
-    },
+    # 'autoloader': {
+    #     'module': 'dnx_control.system.autoloader', 'exclude': exclude('cli', COMMANDS), 'priv': True, 'service': False
+    # },
 
     # DB TABLES
     'db-tables': {'module': 'dnx_routines.database', 'exclude': exclude('cli', COMMANDS), 'priv': False, 'service': False},
@@ -132,7 +141,7 @@ def parse_args() -> tuple[str, str, dict]:
     if ('_autoloader_' in os.environ['PASSTHROUGH_ARGS']):
         _AUTOLOADER = True
 
-    return module, cmd, mod_settings
+    return cmd, module, mod_settings
 
 def get_index(idx: int, /) -> str:
     try:
@@ -216,6 +225,45 @@ def help_command() -> None:
     for code, msg in systemctl_ret_codes.items():
         print(text.lightgrey(f'code: {code}'.ljust(10)), msg)
 
+def service_command(mod: str, cmd: str) -> None:
+    if (mod == 'all'):
+        for svc in SERVICE_MODULES:
+            try:
+                if (mod == 'webui'):
+                    dnx_run(f'sudo systemctl {cmd} nginx', shell=True)
+
+                dnx_run(f'sudo systemctl {cmd} {svc}', shell=True)
+            except CalledProcessError:
+                sprint(text.red(f'{svc.ljust(15)} -> {"fail".rjust(7)}'))
+            else:
+                sprint(text.green(f'{svc.ljust(15)} -> {"success".rjust(7)}'))
+
+        return
+
+    svc = f'dnx-{mod.replace("_", "-")}'
+    try:
+        if (mod == 'webui'):
+            dnx_run(f'sudo systemctl {cmd} nginx', shell=True)
+
+        dnx_run(f'sudo systemctl {cmd} {svc}', shell=True)
+    except CalledProcessError as cpe:
+        if (cmd == 'status'):
+            sprint(
+                text.lightgrey(f'{svc.ljust(15)} -> ') + text.red(f'down ') + text.lightgrey(f'code="{cpe.returncode}') +
+                text.lightgrey(f'msg="{systemctl_ret_codes.get(cpe.returncode, "")}"')
+                )
+        else:
+            sprint(
+                text.lightgrey(f'"{svc}" service "{cmd}"') + text.red(f'failed.') +
+                text.darkgrey(f'Check the journal for more details. -> msg="{cpe}"')
+            )
+
+    else:
+        if (cmd == 'status'):
+            sprint(text.lightgrey(f'{svc.ljust(15)} -> ') + text.green(f'{"up".rjust(4)}'))
+        else:
+            sprint(text.lightgrey(f'svc ') + text.lightgrey(f'service "{cmd}"') + text.green(' successful.'))
+
 def modstat_command() -> None:
 
     svc_len: int = 0
@@ -258,52 +306,39 @@ def modstat_command() -> None:
     else:
         print(text.green(f'\nAll services running!'))
 
-def service_command(mod: str, cmd: str) -> None:
-    if (mod == 'all'):
-        for svc in SERVICE_MODULES:
-            try:
-                if (mod == 'webui'):
-                    dnx_run(f'sudo systemctl {cmd} nginx', shell=True)
+# function is for consistency even if it seems unnecessary
+def install_command() -> None:
+    run_cli('system', 'dnx_control.system.autoloader')
 
-                dnx_run(f'sudo systemctl {cmd} {svc}', shell=True)
-            except CalledProcessError:
-                sprint(text.red(f'{svc.ljust(15)} -> {"fail".rjust(7)}'))
-            else:
-                sprint(text.green(f'{svc.ljust(15)} -> {"success".rjust(7)}'))
+def update_command(mod_name: str) -> None:
+    # update entire system. this will also update signatures.
+    # passthrough arguments and defaults:
+    #   v: int = 0
+    #   verbose: int = 0
+    #   packages: int = 0
+    #   iptables: int = 0
+    if (mod_name == 'system'):
+        # setting the env var to notify autoloader to run update process instead of full installation.
+        os.environ['_SYSTEM_UPDATE'] = 'True'
 
-        return
+        run_cli('system', 'dnx_control.system.autoloader')
 
-    svc = f'dnx-{mod.replace("_", "-")}'
-    try:
-        if (mod == 'webui'):
-            dnx_run(f'sudo systemctl {cmd} nginx', shell=True)
+    # only update signatures, not the entire system, unless remote signatures are not compatible with currently
+    # installed system version.
+    elif (mod_name == 'signatures'):
+        os.environ['_SIGNATURE_UPDATE'] = 'True'
 
-        dnx_run(f'sudo systemctl {cmd} {svc}', shell=True)
-    except CalledProcessError as cpe:
-        if (cmd == 'status'):
-            sprint(
-                text.lightgrey(f'{svc.ljust(15)} -> ') + text.red(f'down ') + text.lightgrey(f'code="{cpe.returncode}') +
-                text.lightgrey(f'msg="{systemctl_ret_codes.get(cpe.returncode, "")}"')
-                )
-        else:
-            sprint(
-                text.lightgrey(f'"{svc}" service "{cmd}"') + text.red(f'failed.') +
-                text.darkgrey(f'Check the journal for more details. -> msg="{cpe}"')
-            )
-
-    else:
-        if (cmd == 'status'):
-            sprint(text.lightgrey(f'{svc.ljust(15)} -> ') + text.green(f'{"up".rjust(4)}'))
-        else:
-            sprint(text.lightgrey(f'svc ') + text.lightgrey(f'service "{cmd}"') + text.green(' successful.'))
+        run_cli('system', 'dnx_control.system.autoloader')
 
 # using environ var to notify imported module to initialize and run.
 # this was done because a normal function was causing issues with the linter thinking a ton of stuff was not defined.
 # this could probably be done better.
 # TODO: see if can be done better
 def run_cli(mod: str, mod_loc: str) -> None:
-    os.environ['INIT_MODULE'] = mod
+    # needed due to previous naming and calling conventions
+    mod_name = 'autoloader' if mod in ['system', 'signatures'] else mod
 
+    os.environ['INIT_MODULE'] = mod_name
     os.environ['HOME_DIR'] = HOME_DIR
 
     env = MODULE_MAPPING[mod].get('environ')
@@ -338,10 +373,16 @@ def run_cli(mod: str, mod_loc: str) -> None:
 
 
 if (__name__ == '__main__'):
-    mod_name, command, mod_set = parse_args()
+    command, mod_name, mod_set = parse_args()
 
     if (command == 'help'):
         help_command()
+
+    elif (command == 'install'):
+        install_command()
+
+    elif (command == 'update'):
+        update_command(mod_name)
 
     elif (command == 'cli'):
         if (mod_set['module']):

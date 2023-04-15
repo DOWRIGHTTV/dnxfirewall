@@ -12,9 +12,9 @@ from dnx_iptools.interface_ops import get_arp_table
 from dnx_routines.logging.log_client import LogHandler
 
 # DIRECT ACCESS FUNCTIONS
-from dnx_routines.logging.log_client import (
-    emergency, alert, critical, error, warning, notice, informational, debug, cli
-)
+# from dnx_routines.logging.log_client import (
+#     emergency, alert, critical, error, warning, notice, informational, debug, cli
+# )
 
 # ===============
 # TYPING IMPORTS
@@ -40,10 +40,10 @@ class Log(LogHandler):
     @classmethod
     def _generate_event_log(cls, pkt: DNSPacket, req: DNS_REQUEST_RESULTS) -> tuple[LOG, dict]:
         # suppressing log for dns over https. these are blocked in the background and should not notify the user.
-        if (req.category in [DNS_CAT.doh]): pass
+        if (req.category in [DNS_CAT.dns_https]): pass
 
         # log to infected client db table if matching malicious type categories
-        elif (req.category in [DNS_CAT.malicious, DNS_CAT.cryptominer] and cls.current_lvl >= LOG.ALERT):
+        elif (req.category in [DNS_CAT.malicious, DNS_CAT.crypto_miner] and cls.current_lvl >= LOG.ALERT):
             client_ip = pkt.request_identifier[0]
 
             log = DNS_REQUEST_LOG(client_ip, pkt.qname, req.category.name, req.reason, 'dns_blocked')

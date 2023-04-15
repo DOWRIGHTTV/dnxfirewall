@@ -278,7 +278,7 @@ class IPTablesManager:
 
     @staticmethod
     def update_dns_over_https() -> None:
-        with open(f'{HOME_DIR}/dnx_profile/signatures/ip_lists/dns-over-https.ips') as ips_to_block:
+        with open(f'{HOME_DIR}/dnx_profile/signatures/ip_lists/dns_https.ips') as ips_to_block:
             ips_to_block = [sig.strip().split()[0] for sig in ips_to_block.readlines()]
 
         for ip in ips_to_block:

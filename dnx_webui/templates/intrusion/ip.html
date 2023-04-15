@@ -32,7 +32,7 @@
                                 <p class="multi-switch-label center">{{ category.title().replace('_', ' ') }}</p>
                             </div>
                             <div class="row row-thin">
-                                <div class="multi-switch-container">
+                                <div class="multi-switch-wrapper">
                                     <ul class="multi-switch">
                                     {% for on, option in cat_options %}
                                         {% set status = "multi-switch-on" if on else "multi-switch-off" %}
@@ -89,7 +89,7 @@
                             <p class="multi-switch-label center">{{ country.title().replace('_', ' ') }}</p>
                         </div>
                         <div class="row row-thin">
-                            <div class="multi-switch-container">
+                            <div class="multi-switch-wrapper">
                                 <ul class="multi-switch">
                                 {% for on, option in cat_options %}
                                     {% set status = "multi-switch-on" if on else "multi-switch-off" %}
@@ -103,7 +103,7 @@
                             </div>
                         </div>
                     </div>
-                {% if loop.index0 % 4 == 3 or loop.last%}</div><div class="divider"></div>{% endif %}
+                {% if loop.index0 % 4 == 3 or loop.last%}</div>{% if not loop.last %}<div class="divider"></div>{% endif %}{% endif %}
                 {% endfor %}
             </div>
         </div>

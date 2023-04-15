@@ -65,20 +65,78 @@ def create_button_with_modal(
     return button
 
 @app.template_global()
-def create_decora_switch(name: str, value: str, enabled: int, *, onclick: str = 'updateCategory'):
-
-    off = ' active' if not enabled else ''
-    on  = ' active' if enabled else ''
+def create_decora_switch(name: str, value: str, checked: int, *, enabled: int = 1, onclick: str = 'updateCategory'):
+    '''generates and returns HTML containing a title and a single decora switches.
+    '''
+    disabled = ' disabled' if not enabled else ''
+    off = ' active' if (not checked or disabled) else ''
+    on  = ' active' if (checked and not disabled) else ''
 
     switch = (
-        f'<div class="col s3"><div class="row row-thin"><p class="multi-switch-label center">{value}</p></div>'
-        '<div class="row row-thin"><div class="multi-switch-container decora-switch">'
-        '<ul class="multi-switch">'
+        f'<div class="col s3"><div class="row row-thin"><p class="multi-switch-label center">{value.replace("_", " ")}</p></div>'
+        '<div class="row row-thin"><div class="multi-switch-wrapper decora-switch">'
+        f'<ul class="multi-switch"{disabled}>'
             f'<li class="multi-switch-off{off}"><button name="{name}" value="{value}" onclick="{onclick}(this, 0)">'
                 '<i class="material-icons small">radio_button_unchecked</i></button></li>'
             f'<li class="multi-switch-on{on}"><button name="{name}" value="{value}" onclick="{onclick}(this, 1)">'
                 '<i class="material-icons small">block</i></button></li>'
         '</ul></div></div></div>'
+    )
+
+    return switch
+
+@app.template_global()
+def create_tandem_decora_switch(name: tuple[str, str], value: str, checked: tuple[int, int, int],
+        *, enabled: int = 1, onclick: str = 'updateCategory'):
+    '''generates and returns HTML containing a title and (2) decora switches.
+
+    the second switch will be tethered to the first such that if the first is NOT checked, the second will be marked
+    as "disabled" and unable to be submitted.
+    '''
+
+    # checked = enabled, keyword, tethered
+
+    disabled = ' disabled' if not enabled else ''
+    off = ' active' if (not checked[0] or disabled) else ''
+    on  = ' active' if (checked[0] and not disabled) else ''
+
+    # disabled_two = ' disabled' if not on else ''
+    disabled_two = ' disabled' if disabled else ''
+    off_two = ' active' if (not checked[1] or disabled_two) else ''
+    on_two  = ' active' if (checked[1] and not disabled_two) else ''
+
+    # switch_code_off = 0 if not checked[2] else 2
+    # switch_code_on  = 1 if not checked[2] else 3
+    th = 0 if not checked[2] else 1
+
+    value_name = value.split(',')[1]
+
+    switch = (
+        '<div class="col s3 multi-switch-container">'
+            f'<div class="row row-thin"><p class=" multi-switch-label center">{value_name.replace("_", " ")}</p></div>'
+            '<div class="row">'
+                '<h6 class="center">STANDARD</h6>'
+                f'<div id="{value_name}-1" class="multi-switch-wrapper decora-switch">'
+                    '<ul class="multi-switch">'
+                        f'<li class="multi-switch-off{off}"><button name="{name[0]}" value="{value}" onclick="{onclick}(0,this,0,{th})"{disabled}>'
+                            '<i class="material-icons small">radio_button_unchecked</i></button></li>'
+                        f'<li class="multi-switch-on{on}"><button name="{name[0]}" value="{value}" onclick="{onclick}(0,this,1,{th})"{disabled}>'
+                            '<i class="material-icons small">block</i></button></li>'
+                    '</ul>'
+                '</div>'
+            '</div>'
+            '<div class="row row-thin">'
+                '<h6 class="center">KEYWORD</h6>'
+                f'<div id="{value_name}-2" class="multi-switch-wrapper decora-switch">'
+                    '<ul class="multi-switch">'
+                        f'<li class="multi-switch-off{off_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(1,this,0,{th})"{disabled_two}>'
+                            '<i class="material-icons small">radio_button_unchecked</i></button></li>'
+                        f'<li class="multi-switch-on{on_two}"><button name="{name[1]}" value="{value}" onclick="{onclick}(1,this,1,{th})"{disabled_two}>'
+                            '<i class="material-icons small">block</i></button></li>'
+                    '</ul>'
+                '</div>'
+            '</div>'
+        '</div>'
     )
 
     return switch

@@ -159,20 +159,28 @@ table.striped > tbody > tr {
 
 /* custom switches */
 /* derivative works of Jove Angelevski @ codepen.io/AlbertFeynman */
-.multi-switch-container {
+.multi-switch-label {
+  font-family: Orbitron, Roboto, sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-shadow: 0 0 15px rgba(0, 100, 200, 0.3); }
+
+.multi-switch-wrapper {
   margin: auto;
   width: 195px;
   height: 42px;
   border-radius: 10px;
   background: #444444;
   box-shadow: inset 0 0 2px 2px rgba(0, 0, 0, 0.4); }
-  .multi-switch-container.sec-profiles {
+  .multi-switch-wrapper.sec-profiles {
     width: 650px; }
-  .multi-switch-container.decora-switch {
+  .multi-switch-wrapper.decora-switch {
     width: 100px ; }
-  .multi-switch-container.left {
+  .multi-switch-wrapper.left {
     float: left; }
-  .multi-switch-container.right {
+  .multi-switch-wrapper.right {
     float: right; }
 
 .multi-switch {
@@ -232,11 +240,3 @@ table.striped > tbody > tr {
     text-shadow: 0 0 15px rgba(10, 220, 10, 0.5); }
   .multi-switch.sec-profiles > li {
     width: 36px; }
-
-p.multi-switch-label {
-  font-family: Orbitron, Roboto, sans-serif;
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  text-shadow: 0 0 15px rgba(0, 100, 200, 0.3); }

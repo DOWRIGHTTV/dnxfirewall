@@ -3,99 +3,136 @@
 {# aliasing for now so we can reuse template #}
 {% set page_settings = domain_settings %}
 <section id="tabs-bar">
-    <div class="container">
-        <div class="row">
-            <div class="col s8 offset-s2">
-                <div class="card-panel hoverable {{ theme.card }}">
-                    <ul class="tabs tabs-fixed-width">
-                    {{ create_tab(tab, 1, 'categories')|safe }}
-                    {{ create_tab(tab, 2, 'tlds')|safe }}
-                    {{ create_tab(tab, 3, 'keywords')|safe }}
-                    </ul>
-                </div>
-            </div>
+  <div class="container">
+    <div class="row">
+      <div class="col s8 offset-s2">
+        <div class="card-panel hoverable {{ theme.card }}">
+          <ul class="tabs tabs-fixed-width">
+            {{ create_tab(tab, 1, 'categories')|safe }}
+            {{ create_tab(tab, 2, 'tlds')|safe }}
+          </ul>
         </div>
+      </div>
     </div>
-    {% include 'includes/_sec_profiles.html' %}
+  </div>
+{% include 'includes/_sec_profiles.html' %}
 </section>
 <section id="categories" class="section">
-    <div class="container">
-        <div class="row">
-        {% if domain_settings['user_defined'] %}
-            <div class="col s12 m10 offset-m1">
-                <div class="card-panel hoverable {{ theme.card }}">
-                    {{ create_title('user defined')|safe }}
-                    <div class="row">
-                    {% for category, settings in domain_settings['user_defined'] %}
-                    {% if not loop.index0 % 4 %}<div class="row">{% endif %}
-                        {{ create_decora_switch('user_defined', category, settings['enabled'])|safe }}
-                    {% if loop.index0 % 4 == 3 or loop.last%}</div>{% endif %}
-                    {% endfor %}
-                    </div>
-                </div>
-            </div>
+  <div class="container">
+  {% if domain_settings['user_defined'] %}
+    <div class="row">
+      <div class="col s12 m10 offset-m1">
+        <div class="card-panel hoverable {{ theme.card }}">
+          {{ create_title('user defined')|safe }}
+          {% for category, settings in domain_settings['user_defined'] %}
+            {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
+            {{ create_decora_switch('user_defined', category, settings['enabled'])|safe }}
+            {% if loop.index % 4 == 0 or loop.last %}</div>{% if not loop.last %}<div class="divider"></div>{% endif %}{% endif %}
+          {% endfor %}
         </div>
-    {% endif %}
-        <div class="row">
-            <div class="col s12 m10 offset-m1">
-                <div class="card-panel hoverable {{ theme.card }}">
-                    {{ create_title('system default')|safe }}
-                    {% for category, settings in domain_settings['built-in'] %}
-                    {% if not loop.index0 % 4 %}<div class="row">{% endif %}
-                        {{ create_decora_switch('built-in', category, settings['enabled'])|safe }}
-                    {% if loop.index0 % 4 == 3 or loop.last%}</div>{% endif %}
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
+  {% endif %}
+    <div class="row">
+      <div class="col s12">
+        <div class="card-panel hoverable {{ theme.card }}">
+        {% for label, categories in domain_settings['built-in'] %}
+          {{ create_title(label)|safe }}
+          {% for category, settings in categories.items() %}
+          {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
+            {{ create_tandem_decora_switch(('built-in', 'keyword'), (label, category)|join(','),
+                (settings['enabled'], settings['keyword'], settings['tethered']))|safe }}
+          {% if loop.index % 4 == 0 or loop.last %}</div>{% if not loop.last %}<div class="divider"></div>{% endif %}{% endif %}
+          {% endfor %}
+          <br>
+        {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
 <section id="tlds" class="section">
-    <div class="container">
-        <div class="row">
-            <div class="col s8 offset-s2">
-                <div class="card-panel hoverable {{ theme.card }}">
-                {{ create_title('top level domains')|safe }}
-                    <div class="row">
-                    {% for tld, status in domain_settings['tld'] %}
-                    {% if not loop.index0 % 4 %}<div class="row">{% endif %}
-                        {{ create_decora_switch('tld', tld, status)|safe }}
-                    {% if loop.index0 % 4 == 3 or loop.last%}</div>{% endif %}
-                    {% endfor %}
-                    </div>
-                </div>
-            </div>
+  <div class="container">
+    <div class="row">
+      <div class="col s8 offset-s2">
+        <div class="card-panel hoverable {{ theme.card }}">
+        {% for label, categories in domain_settings['tld'] %}
+          {{ create_title(label)|safe }}
+          {% for tld, status in categories.items() %}
+            {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
+            {{ create_decora_switch('tld', tld, status)|safe }}
+            {% if loop.index % 4 == 0 or loop.last %}</div>{% if not loop.last %}<div class="divider"></div>{% endif %}{% endif %}
+          {% endfor %}
+          <br>
+        {% endfor %}
         </div>
+      </div>
     </div>
-</section>
-<section id="keywords" class="section">
-    <div class="container">
-        <div class="row">
-            <div class="col s8 offset-s2">
-                <div class="card-panel hoverable {{ theme.card }}">
-                    {{ create_title('keyword search')|safe }}
-                    <div class="row">
-                    {% for category, settings in domain_settings['built-in'] %}
-                        {% if settings['enabled'] %}
-                        {{ create_decora_switch('keyword', category, settings['keyword'])|safe }}
-                        {% endif %}
-                    {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+  </div>
 </section>
 <script>
-async function updateCategory(category, enabled) {
+async function updateCategory(btn_idx, btn, enabled, tethered) {
 
-    let response = await ajaxClient.post("/post", {"type": category.name, "category": category.value, "enabled": !!enabled});
+    console.log(btn.name, btn.value);
+
+    let response = await ajaxClient.post('/post', {'type': btn.name, 'category': btn.value, 'enabled': enabled});
+
+    // if an error is returned, immediately return. pop-up is handled by the ajax client
+    if (ajaxClient.handleResponse(response, btn)) { return; }
+
+    let btn_value = btn.value;
+    // normalizing value for built-in categories since they also have group identifiers
+    if (btn.value.includes(',')) {
+        btn_value = btn.value.split(',')[1];
+    }
 
     // manually changing the active button instead of using an event listener to prevent a switch on server errors.
-    let error = ajaxClient.handleResponse(response, category);
-    if (!error) {
-        category.parentElement.parentElement.querySelector(".active").classList.remove("active");
-        category.parentElement.classList.add("active");
+    {#const buttons = [document.querySelector("#" + category.value + "-1"), document.querySelector("#" + category.value + "-2")];#}
+    let btn_standard = document.querySelector('#' + btn_value + '-1')
+    let btn_keyword = document.querySelector('#' + btn_value + '-2')
+
+    console.log(btn_idx, btn, enabled, tethered);
+
+    // update standard button
+    if (btn_idx === 0) {
+        updateBtn(btn_standard, enabled);
+        // changing keyword if tethered or disabling if standard is disabled
+        if (enabled === 0 || tethered === 1) {
+            updateBtn(btn_keyword, enabled);
+        }
+    // update keyword button
+    } else {
+        updateBtn(btn_keyword, enabled);
+        // if the buttons are tethered, update the standard button to same as keyword button
+        if (tethered) {
+            updateBtn(btn_standard, enabled);
+        }
+    }
+
+    {#let current_button = ;#}
+    {#updateBtn(buttons[button_idx]);#}
+    {#updateBtn(buttons[(button_idx + 1) % 2]);#}
+}
+function updateBtn(btn, enabled) {
+    console.log(btn);
+
+    let btn_array = btn.querySelectorAll('li');
+
+    console.log(btn_array);
+
+    let btn_off_classlist = btn_array[0].classList;
+    let btn_on_classlist = btn_array[1].classList;
+    if (enabled === 0) {
+        if (!btn_off_classlist.contains("active")) {
+            btn_off_classlist.add("active");
+        }
+        btn_on_classlist.remove("active");
+
+    } else {
+        if (!btn_on_classlist.contains("active")) {
+            btn_on_classlist.add("active");
+        }
+        btn_off_classlist.remove("active");
     }
 }
 </script>

@@ -2,7 +2,7 @@
 
 from libc.errno cimport *
 from libc.stdio cimport snprintf, perror, printf
-from libc.stdint cimport uint8_t, uint32_t, uint_fast16_t
+from libc.stdint cimport uint8_t, uint16_t, uint32_t, uint_fast16_t
 from libc.string cimport strncpy  # memset, memcpy
 
 DEF OK  = 1
@@ -95,7 +95,133 @@ cpdef bytes calc_checksum(const uint8_t[:] data):
     ubytes[0] = (csum >> 8)
     ubytes[1] = csum & UINT8_MAX
 
+    # TODO: if we slice[:2], shouldnt it compile to string and size?
     return ubytes
+
+cdef int cmp(uint8_t *search_str, uint8_t *match_str, uint32_t mlen, uint32_t offset) nogil:
+    cdef:
+        int     i, midx = mlen - 1
+
+    # OVERFLOW in search string - fast exit path
+    # if (offset < 0): return -1
+    # first char - no match
+    if (match_str[0] != search_str[offset]): return -1
+    # last char - no match
+    if (match_str[midx] != search_str[offset + midx]): return -1
+
+    for i in range(midx):
+
+        if (match_str[i] != search_str[i + offset]):
+            return 0
+
+    return 1
+
+cdef int find(uint8_t *search_str, uint8_t *match_str, uint32_t mlen, uint32_t bounds) nogil:
+
+    cdef:
+        uint32_t    i, ix = 0
+        uint32_t    midx = mlen - 1
+
+        uint32_t    left  = bounds >> 16
+        uint32_t    right = bounds & UINT16_MAX
+        uint32_t    slen  = right - left
+
+    # match str is bigger than search string - fast exit path
+    if (mlen > slen): return 0
+
+    for i in range(slen):
+        # first char - no match
+        if (match_str[0] != search_str[left + i]): continue
+        # OVERFLOW in search string - fast exit path
+        if (i + midx >= slen): return 0
+        # last char - no match
+        if (match_str[midx] != search_str[left + i + midx]): continue
+
+        for ix in range(1, midx):
+
+            if (match_str[midx - ix] != search_str[(i + midx) - ix]):
+                break
+
+        if (ix == midx - 1):
+            return 1
+
+    return 0
+
+cdef inline int tld_idx(uint8_t *search_str, int slen):
+    cdef int ix
+
+    for ix in range(1, slen):
+
+        if search_str[-ix] == ord('.'): return ix
+
+    return 0
+
+# dont need category, proxy will know which one based on filter container passed in
+def check_filters(uint8_t[:] cat_filter, uint32_t sig_ct, const uint8_t[:] domain):
+    # domain rewrites / special options
+    # no TLD   ->  "@" (decrements right bound by length of ".tld"
+    # int scan ->  "i" (sum of chars / number of chars = avg ord value | set threshold in n2??)
+
+    # START    ->  ">"
+    # END      ->  "<"
+    # IN       ->  "?"
+    # IN START ->  "]" (:n1 slice)
+    # IN END   ->  "[" (n1: slice)
+    cdef:
+        uint8_t        *search_str = <uint8_t*> &domain[0]
+        uint32_t        slen = domain.shape[0]
+
+        uint8_t        *match_str
+        operators      *ops
+        uint32_t        i, ix, mlen
+
+        uint32_t        rw_idx = 0
+        uint32_t        offset = 0
+
+    for i in range(sig_ct):
+
+        mlen = cat_filter[offset]
+        match_str = <uint8_t*> &cat_filter[offset + 1]
+
+        ops = <operators*> &cat_filter[offset + mlen + 1]
+        # ==========================
+        # REWRITE / SPECIAL OPTIONS
+        # ==========================
+        # remove TLD
+        if (ops.rw == ord('@')):
+            rw_idx = tld_idx(search_str, slen)
+
+        elif (ops.rw == ord('i')):
+            pass
+
+        # ==========================
+        # SEARCH TYPE OPERATORS
+        # ==========================
+        # rw_idx is used to additionally adjust the index bounds. for example, to skip the TLD in the search
+        # startswith
+        if (ops.op == ord('>')):
+            if cmp(search_str, match_str, mlen, 0): return ord('>')
+
+        # endswith
+        elif (ops.op == ord('<')):
+            # OVERFLOW in search string - fast exit path
+            if ((mlen + rw_idx) > slen): return 0
+
+            if cmp(search_str, match_str, mlen, slen - (mlen + rw_idx)): return ord('<')
+
+        # general membership - find fn will handle its own overflow checks since they won't produce negatives
+        elif (ops.op == ord('?')):
+            if find(search_str, match_str, mlen, slen - rw_idx): return ord('?')
+
+        elif (ops.op == ord(']')):
+            if find(search_str, match_str, mlen, ops.n1): return ord(']')
+
+        elif (ops.op == ord('[')):
+            if find(search_str, match_str, mlen, (ops.n1 << 16 | slen - rw_idx)): return ord('[')
+
+        offset += (mlen + 5)
+
+    return 0
 
 
 # ============================
