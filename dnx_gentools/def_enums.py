@@ -161,7 +161,7 @@ class Queue(_IntEnum):
 class DNS_CAT(_IntEnum):
     NONE = 0
 
-    doh = 900  # system
+    dns_https = 900  # system
     time_based = 990  # system
 
     # security, 10-199

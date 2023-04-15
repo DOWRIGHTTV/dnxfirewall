@@ -176,7 +176,7 @@ def _block_query(category: DNS_CAT, whitelisted: bool) -> bool:
         return False
 
     # signature match and not whitelisted or whitelisted and cat is high risk | BLOCK
-    if (not whitelisted or category in [DNS_CAT.malicious, DNS_CAT.cryptominer]):
+    if (not whitelisted or category in [DNS_CAT.malicious, DNS_CAT.crypto_miner]):
         return True
 
     # default action | ALLOW

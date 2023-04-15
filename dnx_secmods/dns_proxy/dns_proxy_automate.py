@@ -47,7 +47,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
     # en_dns | tld | keyword |
     signatures: ClassVar[DNS_SIGNATURES] = DNS_SIGNATURES(
-        {DNS_CAT.doh}, {}, []
+        {DNS_CAT.dns_https}, {}, []
     )
 
     _keywords: ClassVar[list[tuple[str, DNS_CAT]]] = []
