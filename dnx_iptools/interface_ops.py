@@ -78,6 +78,9 @@ def _is_ready(interface: str) -> int:
     except OSError:
         return 0
 
+    else:
+        carrier.close()
+
     return int(carrier.read().strip())
 
 def wait_for_interface(interface: str, delay: int = ONE_SEC) -> None:
