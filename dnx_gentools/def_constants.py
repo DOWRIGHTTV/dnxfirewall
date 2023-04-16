@@ -83,9 +83,6 @@ __usr: str = _run('whoami', shell=True, text=True, capture_output=True).stdout.s
 USER, GROUP = ('dnx', 'dnx') if any(['dnx' == u.pw_name for u in _pwd.getpwall()]) else ('free', 'free')
 ROOT: bool = not _os.getuid()
 
-# globally sets which sql to use | sqlite3 = 0, psql = 1
-SQL_VERSION: int = 0
-
 # Certificate authority store file
 CERTIFICATE_STORE: str = '/etc/ssl/certs/ca-certificates.crt'
 

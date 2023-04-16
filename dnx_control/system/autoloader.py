@@ -568,7 +568,7 @@ def set_signature_permissions() -> None:
 # SERVICE FILE SETUP
 # ============================
 def set_services() -> None:
-    ignore_list = ['dnx-database-psql.service', 'dnx-syslog.service']
+    ignore_list = ['dnx-syslog.service']
 
     progress('creating dnxfirewall services')
 

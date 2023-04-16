@@ -218,11 +218,7 @@ class _DBConnector:
         )
 
 
-# NOTE: psql connector is too out of spec, so it will be disabled until a later time.
-# if (SQL_VERSION == 0):
 DBConnector: DBConnector_T = _DBConnector
-# else:
-#    from dnx_routines.database.ddb_connector_psql import DBConnector
 
 # routines will be registered with DBConnector class
 importlib.import_module('dnx_routines.database.ddb_routines')

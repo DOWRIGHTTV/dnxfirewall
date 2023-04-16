@@ -14,21 +14,21 @@
   and messages that goes through the system.
 
 <pre>
-                -------------------------------------------------------
-                | (outbound)                                          |
-                |                                                     V
-                |                               --------------> [dns proxy (*1)] --------
-                |                               | (outbound)                            |
-                |      (bi-directional)         |                                       V
-TCP/IP --> [cfirewall] -------------------> [ip proxy] ------------------------> ((*packet verdict*)) --> TCP/IP 
-stack          |  |                             |                                       ^    ^            stack
-               |  |                             | (inbound)                             |    |
-               |  |                             --------------> [ids/ips (*2)] ----------    |
-               |  |                                                   ^                      |
-               |  | (inbound)                                         |                      |
-               |  -----------------------------------------------------                      |
-               |                                                                             |
-               -------------------------------------------------------------------------------
+        ----------------------------------------------------
+        | (outbound)                                       |
+TCP/IP  |                                                  V                      TCP/IP
+stack   |                            --------------> [dns proxy (*1)] --------    stack
+  |     |                            | (outbound)                            |     ^
+  V     |   (bi-directional)         |                                       V     |
+[cfirewall] -------------------> [ip proxy] ----------------------> ((*packet verdict*))
+     |  |                            |                                     ^    ^            
+     |  |                            | (inbound)                           |    |
+     |  |                            --------------> [ids/ips (*2)] --------    |
+     |  |                                                  ^                    |
+     |  | (inbound)                                        |                    |
+     |  ----------------------------------------------------                    |
+     |                                                                          |
+     ----------------------------------------------------------------------------
 </pre>
 
 - (*1) the dns proxy is specifically designed to inspect dns payload going between internal networks or from the lan to internet.
@@ -41,6 +41,9 @@ A low level "architecture, system design" video will be created at some point to
 
 <br>
 <h2>Included Features</h2>
+
+NEW: signature update utility added to system cli. signatures are now detached from primary codebase and can be
+independently updated without running the full system update utility.
 
 - Custom packet handler
   - implemented in C
@@ -92,26 +95,45 @@ A low level "architecture, system design" video will be created at some point to
 
 2. install linux on physical hardware or a VM
 	
-	2a. (3) interfaces are required (WAN, LAN, DMZ)
+	2a. (3) interfaces are required (WAN, LAN, DMZ) (note: work in progress to reduce minimum to 2)
 	
 	2b. create "dnx" user during os install or once complete
 	
-	2c. install and make python3.8 default (if applicable)
+	2c. if not Python version >= 3.8, install Python3.8+ and set to system default 
 
-3. upgrade and update system
+    - note: Python3.10+ provides substantial performance improvements
 
-4. install git
+3. update and upgrade system -> ```sudo apt update && sudo apt upgrade```
+
+4. install git -> ```sudo apt install git```
+
+5. log in as "dnx"
 	
-5. clone https://github.com/dowrighttv/dnxfirewall.git to "dnx" user home directory (/home/dnx)
+    5A. clone repo to home dir -> ```git clone https://github.com/dowrighttv/dnxfirewall.git```
         
-6. log in as "dnx" user and run command: sudo python3 dnxfirewall/dnx_run.py cli autoloader
+    5B. run installer -> ```sudo python3 ~/dnxfirewall/dnx_run.py install```
 	
 7. follow the prompts to associate the physical interfaces with dnxfirewall builtin zones
 	
 8. once the utility is complete, restart the system and navigate to the specified url
 
 <br>
-<h2>Compatible linux distros with dnxfirewall autoloader</h2>
+<h2>To update dnxfirewall software package</h2>
+
+1. run ```sudo dnx update system```
+
+note: the system updater will include signature updates
+
+<br>
+<h2>To update security signatures</h2>
+
+1. run ```sudo dnx update signatures```
+
+note: a system update may be required to update the signatures if an API breaking change has been made. you will be
+notified if a system update is needed.
+
+<br>
+<h2>Compatible linux distros with dnxfirewall autoloader (installer)</h2>
 
 - Debian based distros
   - Linux kernel >= 2.6.31
@@ -128,6 +150,3 @@ afallenhope - web design, ux, and templating -> https://github.com/afallenhope
 https://www.ip2location.com/free/visitor-blocker | geolocation filtering datasets (ip address assignments by country)
 
 https://gitlab.com/ZeroDot1/CoinBlockerLists | cryptominer host dataset
-
-<bold>psql only:</bold> https://github.com/tlocke/pg8000 | pure python postgresql adapter
-
