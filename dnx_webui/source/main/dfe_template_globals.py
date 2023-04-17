@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 from flask import Flask, g as context_global
 
 app = Flask.app
