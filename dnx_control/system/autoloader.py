@@ -236,18 +236,18 @@ def progress(desc: str, *, completed: Optional[int] = None, total: Optional[int]
     bar: str
     if (ratio < .34):
         bar = text.red('#' * filled_len, style=None)
-        completed = text.red(f'{int(100 * ratio)}'.rjust(2), style=None)
+        percentage = text.red(f'{int(100 * ratio)}'.rjust(2), style=None)
 
     elif (ratio < .67):
         bar = text.orange('#' * filled_len, style=None)
-        completed = text.orange(f'{int(100 * ratio)}', style=None)
+        percentage = text.orange(f'{int(100 * ratio)}', style=None)
 
     else:
         bar = text.green('#' * filled_len, style=None)
-        completed = text.yellow(f'{int(100 * ratio)}', style=None)
+        percentage = text.yellow(f'{int(100 * ratio)}', style=None)
 
     if (ratio >= 1):
-        completed = text.green(f'{int(100 * ratio)}', style=None)
+        percentage = text.green(f'{int(100 * ratio)}', style=None)
 
     bar += text.lightgrey('=' * (bar_len - filled_len))
 
@@ -256,10 +256,10 @@ def progress(desc: str, *, completed: Optional[int] = None, total: Optional[int]
     clear_line()
 
     sys.stdout.write(text.lightgrey(f'{time.strftime("%H:%M:%S")}| '))
-    sys.stdout.write(text.yellow(f'{completed}', style=None) + text.lightgrey(f'/{total} |'))
+    sys.stdout.write(text.yellow(f'{completed:02}', style=None) + text.lightgrey(f'/{total} |'))
     sys.stdout.write(
         text.lightgrey(f'| [', style=None) + bar + text.lightgrey(f'] ', style=None) +
-        completed + text.lightgrey('% |', style=None)
+        percentage + text.lightgrey('% |', style=None)
     )
     sys.stdout.write(text.yellow(f'| {desc}\r'))
 
