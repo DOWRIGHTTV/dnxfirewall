@@ -66,7 +66,6 @@ def generate_domain(log: LogHandler_T) -> list[list[int, int]]:
 
         each signature is a key/value pair (as list) -> [hash of the domain, category id]
     '''
-    # getting all enabled signatures
     domain_signatures: list[str] = _combine_domain(log)
 
     # NOTE: currently not available while this system is being reworked for profiles + webui
@@ -167,6 +166,7 @@ def _combine_geolocation(log: LogHandler_T) -> list[str]:
     # return ip_geo_signatures
 
     # filtering out ranges with an undefined country
+    # TODO: make sure rfc1918 is being added to the list
     try:
         with open(f'{HOME_DIR}/dnx_profile/signatures/geo_lists/collection.geo', 'r') as collection:
             return [x for x in collection.read().splitlines() if not x.endswith('-')]
