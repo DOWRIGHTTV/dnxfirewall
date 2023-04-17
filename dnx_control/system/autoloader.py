@@ -723,8 +723,9 @@ def signature_update(system_update: bool = False) -> None:
             checksum_failure_list.clear()
 
         for file, checksum in manifest:
+            filename = file.split('/')[-1]
 
-            progress(f'downloading {file}', completed=success, total=len(manifest))
+            progress(f'downloading {filename}', completed=success, total=len(manifest))
 
             # downloading signatures and running checksum validation.
             if not signature_update.download_signature_file(file):
