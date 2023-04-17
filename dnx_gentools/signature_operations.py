@@ -141,7 +141,8 @@ def generate_reputation(log: LogHandler_T) -> list[list[int, int]]:
     hosts_final = []
     for host, cats in hosts_with_dup.items():
 
-        hosts_final.append([host, sorted(cats)[0]])
+        # sorting to bring the lowest number (highest priority) to the front, then grabbing the cat id from the tuple.
+        hosts_final.append([host, sorted(cats)[0][1]])
 
     return hosts_final
 
