@@ -233,35 +233,38 @@ def progress(desc: str, *, completed: Optional[int] = None, total: Optional[int]
 
     # COLORIZING COMPLETION STATUS BAR
     # --------------------------------------------------------------------
-    bar: str
+    perc = f'{int(100 * ratio)}'.rjust(3)
+    filled = '#' * filled_len
     if (ratio < .34):
-        bar = text.red('#' * filled_len, style=None)
-        percentage = text.red(f'{int(100 * ratio)}'.rjust(2), style=None)
+        progress_fill = text.red(filled, style=None)
+        percentage = text.red(perc, style=None)
 
     elif (ratio < .67):
-        bar = text.orange('#' * filled_len, style=None)
-        percentage = text.orange(f'{int(100 * ratio)}', style=None)
+        progress_fill = text.orange(filled, style=None)
+        percentage = text.orange(perc, style=None)
+
+    elif (ratio < 1):
+        progress_fill = text.green(filled, style=None)
+        percentage = text.yellow(perc, style=None)
 
     else:
-        bar = text.green('#' * filled_len, style=None)
-        percentage = text.yellow(f'{int(100 * ratio)}', style=None)
+        progress_fill = text.green(filled, style=None)
+        percentage = text.green(perc, style=None)
 
-    if (ratio >= 1):
-        percentage = text.green(f'{int(100 * ratio)}', style=None)
-
-    bar += text.lightgrey('=' * (bar_len - filled_len))
+    progress_fill += text.lightgrey('=' * (bar_len - filled_len))
 
     # RENDERING UPDATED TIMESTAMP, BAR, DESCRIPTION
     # --------------------------------------------------------------------
     clear_line()
 
-    sys.stdout.write(text.lightgrey(f'{time.strftime("%H:%M:%S")}| '))
-    sys.stdout.write(text.yellow(f'{completed:02}', style=None) + text.lightgrey(f'/{total} |'))
-    sys.stdout.write(
-        text.lightgrey(f'| [', style=None) + bar + text.lightgrey(f'] ', style=None) +
-        percentage + text.lightgrey('% |', style=None)
-    )
-    sys.stdout.write(text.yellow(f'| {desc}\r'))
+    # 1. timestamp, 2. x/total | 3. | [##########] 4. 100% | 5. | description
+    bar  = text.lightgrey(f'{time.strftime("%H:%M:%S")}| ')
+    bar += text.yellow(f'{completed}'.rjust(2), style=None) + text.lightgrey(f'/{total} |')
+    bar += text.lightgrey(f'| [', style=None) + progress_fill + text.lightgrey(f'] ', style=None)
+    bar += percentage + text.lightgrey('% |', style=None)
+    bar += text.yellow(f'| {desc}\r')
+
+    sys.stdout.write(bar)
 
     # allows for rendering bar without moving the completion %.
     if (primary_progress_bar and desc):
@@ -744,8 +747,7 @@ def signature_update(system_update: bool = False) -> None:
                     #     sprint(f'checksum failed for {file}')
 
         if (not download_failure_list and not checksum_failure_list):
-            progress('done', completed=success, total=len(manifest))
-            sprint('all signatures downloaded successfully. installing...')
+            progress('done. installing...', completed=success, total=len(manifest))
             break
 
     # will give the user the option to load the signatures that downloaded successfully or exit.
