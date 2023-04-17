@@ -100,7 +100,7 @@ def _combine_reputation(log: LogHandler_T) -> tuple[list[str], dict[str, int]]:
     '''returns an aggregated list of all plain text reputation based signatures.
     '''
     proxy_settings: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/ip')
-    reputation_categories = proxy_settings.get_list('reputation')
+    reputation_categories = proxy_settings.get_list('reputation->built-in')
 
     reputation_priority = proxy_settings.get_dict('reputation->priority')
 
@@ -170,7 +170,7 @@ def _combine_geolocation(log: LogHandler_T) -> list[str]:
         with open(f'{HOME_DIR}/dnx_profile/signatures/geo_lists/collection.geo', 'r') as collection:
             return [x for x in collection.read().splitlines() if not x.endswith('-')]
     except FileNotFoundError:
-        log.alert(f'[geolocation] signature file missing.')
+        log.alert('[geolocation] signature file missing.')
 
         return []
 
@@ -195,7 +195,7 @@ def generate_geolocation(log: LogHandler_T) -> list[list[int, list[int, int, int
             network_id = int(sig[0])
             host_count = int(sig[1])
 
-            country = sig[2].upper().replace(' ', '_')
+            country = sig[2].upper()
 
             cat_id = int(GEO[country])
         except Exception as E:
@@ -207,7 +207,7 @@ def generate_geolocation(log: LogHandler_T) -> list[list[int, list[int, int, int
                 cvl_append(f'{network_id} {LSB} {cat_id}')
 
                 host_count -= LSB + 1
-                network_id  += LSB + 1
+                network_id += LSB + 1
 
             # NOTE: -1 to step down to bcast value  // not needed with new ip2l format
             # cvl_append(f'{net_id} {h_count-1} {country}')

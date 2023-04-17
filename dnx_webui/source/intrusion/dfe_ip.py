@@ -83,7 +83,7 @@ class WebPage(StandardWebPage):
             'security_profile': 1,
             'profile_name': proxy_profile['name'],
             'profile_desc': proxy_profile['description'],
-            'reputation': proxy_profile.get_items('reputation'),
+            'reputation': proxy_profile.get_items('reputation->built-in'),
             'tr_settings': tr_settings, 'regions': sorted(country_map.get_list()),
             'image_map': {
                 DIR.OFF: 'allow_up-down.png', DIR.OUTBOUND: 'block_up.png',
@@ -186,7 +186,7 @@ class WebPage(StandardWebPage):
 def validate_reputation(category: config) -> Optional[ValidationError]:
     ip_proxy = load_configuration('profiles/profile_1', cfg_type='security/ip')
 
-    valid_categories = ip_proxy.get_list('reputation')
+    valid_categories = ip_proxy.get_list('reputation->built-in')
 
     if (category.name not in valid_categories):
         return ValidationError(INVALID_FORM)
@@ -230,11 +230,11 @@ def validate_time_restriction(tr: config, /) -> Optional[ValidationError]:
 # ==============
 # CONFIGURATION
 # ==============
-def configure_reputation(category: config, *, ruleset: str = 'reputation') -> None:
+def configure_reputation(category: config) -> None:
     with ConfigurationManager('profiles/profile_1', cfg_type='security/ip') as dnx:
         ip_proxy_settings: ConfigChain = dnx.load_configuration()
 
-        ip_proxy_settings[f'{ruleset}->{category.name}'] = category.direction
+        ip_proxy_settings[f'reputation->built-in->{category.name}'] = category.direction
 
         dnx.write_configuration(ip_proxy_settings.expanded_user_data)
 
