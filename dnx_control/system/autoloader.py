@@ -216,7 +216,9 @@ def progress(desc: str, *, completed: Optional[int] = None, total: Optional[int]
     '''
     global completed_count
 
-    if (completed is None and total is None):
+    primary_progress_bar = completed is None and total is None
+
+    if (primary_progress_bar):
         completed = completed_count
         total = PROGRESS_TOTAL_COUNT
 
@@ -262,7 +264,7 @@ def progress(desc: str, *, completed: Optional[int] = None, total: Optional[int]
     sys.stdout.write(text.yellow(f'| {desc}\r'))
 
     # allows for rendering bar without moving the completion %.
-    if (desc):
+    if (primary_progress_bar and desc):
         completed_count += 1
 
     # prevents bar from being overwritten once complete
