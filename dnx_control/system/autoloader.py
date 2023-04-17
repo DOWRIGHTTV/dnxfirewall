@@ -193,18 +193,40 @@ def set_branch() -> None:
 
         dnx.write_configuration(dnx_settings.expanded_user_data)
 
-
 # ----------------------------
 # PROGRESS BAR
 # ----------------------------
-# starting at -1 to compensate for the first process
+def clear_line() -> None:
+    '''clears the current line in the terminal.
+
+        useful for writes that are not on a new line to prevent previous character overflow.
+    '''
+    sys.stdout.write(' ' * os.get_terminal_size().columns + '\r')
+
+    sys.stdout.flush()
+
+
+# starting at -1 to compensate for the first process. todo: (we arent though....)
 bar_len: int = 30
 completed_count: int = 0
-def progress(desc: str) -> None:
+def progress(desc: str, *, completed: Optional[int] = None, total: Optional[int] = None) -> None:
+    '''prints a progress bar to the terminal.
+
+    if complete and total are not passed in, the global completed_count and PROGRESS_TOTAL_COUNT will be used.
+    '''
     global completed_count
 
+    if (completed is None and total is None):
+        completed = completed_count
+        total = PROGRESS_TOTAL_COUNT
+
+    # this will ensure completed count does not exceed total count when rendering.
+    # this would only happen if I miscalculated the total count somewhere. (happens too often LOL :/)
+    if (completed > total):
+        completed = total
+
     # calculating bar %
-    ratio: float = completed_count / PROGRESS_TOTAL_COUNT
+    ratio: float = completed / total
     filled_len: int = int(bar_len * ratio)
 
     # COLORIZING COMPLETION STATUS BAR
@@ -229,13 +251,15 @@ def progress(desc: str) -> None:
 
     # RENDERING UPDATED TIMESTAMP, BAR, DESCRIPTION
     # --------------------------------------------------------------------
+    clear_line()
+
     sys.stdout.write(text.lightgrey(f'{time.strftime("%H:%M:%S")}| '))
-    sys.stdout.write(text.yellow(f'{completed_count}', style=None) + text.lightgrey(f'/{PROGRESS_TOTAL_COUNT} |'))
+    sys.stdout.write(text.yellow(f'{completed}', style=None) + text.lightgrey(f'/{total} |'))
     sys.stdout.write(
         text.lightgrey(f'| [', style=None) + bar + text.lightgrey(f'] ', style=None) +
         completed + text.lightgrey('% |', style=None)
     )
-    sys.stdout.write(text.yellow(f'| {desc.ljust(48)}\r'))
+    sys.stdout.write(text.yellow(f'| {desc}\r'))
 
     # allows for rendering bar without moving the completion %.
     if (desc):
@@ -611,10 +635,11 @@ def store_default_mac():
 def signature_update(system_update: bool = False) -> None:
     import dnx_control.system.signature_update as signature_update
 
+    sprint('security signature updater initiated.')
     # ===========================================
     # INITIAL FILE CHECKSUM INFORMATION DOWNLOAD
     # ===========================================
-    sprint('downloading initial file integrity information.')
+    sprint('downloading initial file integrity information from remote server.')
     file_validations: list[tuple] = []
     for attempt in range(1, 4):
         if file_validations := signature_update.get_file_validations():
@@ -629,7 +654,7 @@ def signature_update(system_update: bool = False) -> None:
     # ===========================================
     # REMOTE SIGNATURE VERSION INFORMATION
     # ===========================================
-    sprint('downloading remote signature version.')
+    sprint('looking up remote signature version for compatibility.')
     remote_version = 99991231
     rsv_name, rsv_hash = file_validations[0]
     for attempt in range(1, 4):
@@ -682,9 +707,12 @@ def signature_update(system_update: bool = False) -> None:
     checksum_failure_list = []
 
     for attempt in range(3):
+
+        success = 0
         # retries only need to download the files that are remaining
         # converting to set to remove duplicates
         if (attempt > 0):
+            progress('incomplete', completed=success, total=len(manifest))
             eprint(f'({len(checksum_failure_list)}) signature download errors detected. tries: {attempt}/3')
 
             manifest = list({*download_failure_list, *checksum_failure_list})
@@ -694,22 +722,26 @@ def signature_update(system_update: bool = False) -> None:
 
         for file, checksum in manifest:
 
+            progress(f'downloading {file}', completed=success, total=len(manifest))
+
             # downloading signatures and running checksum validation.
             if not signature_update.download_signature_file(file):
                 download_failure_list.append((file, checksum))
-
-                if (args.verbose_set):
-                    sprint(f'download failed for {file}')
+                # if (args.verbose_set):
+                #     sprint(f'download failed for {file}')
 
             else:
                 check_passed = signature_update.validate_signature_file(file, checksum)
                 if (not check_passed):
                     checksum_failure_list.append((file, checksum))
 
-                    if (args.verbose_set):
-                        sprint(f'checksum failed for {file}')
+                else:
+                    success += 1
+                    # if (args.verbose_set):
+                    #     sprint(f'checksum failed for {file}')
 
         if (not download_failure_list and not checksum_failure_list):
+            progress('done', completed=success, total=len(manifest))
             sprint('all signatures downloaded successfully. installing...')
             break
 
