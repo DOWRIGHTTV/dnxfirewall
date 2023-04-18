@@ -720,7 +720,7 @@ def signature_update(system_update: bool = False) -> bool:
         sprint(f'identified {update_msg}. starting download...')
 
     else:
-        sprint('there are no signature updates available. exiting...')
+        sprint('there are no signature updates available.')
 
         signature_update.cleanup_temp_files()
 
