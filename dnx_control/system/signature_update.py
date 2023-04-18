@@ -138,6 +138,30 @@ def get_remote_signature_manifest(manifest_name: str) -> list[tuple]:
 
     return signature_manifest
 
+def check_for_file_changes(manifest_name: str, remote_signature_manifest: list[tuple]) -> tuple[list[tuple], list[tuple]]:
+    '''return list of signature files that have changed or are missing from the local system.
+    '''
+
+    with open(f'dnx_profile/signatures/{manifest_name}', 'r') as file:
+        local_signature_manifest = file.read().splitlines()
+
+    lsm_lookup = {line.split()[0]: line.split()[1] for line in local_signature_manifest}.get
+
+    missing_files: list[tuple] = []
+    changed_files: list[tuple] = []
+    # comparing local and remote signature manifests to determine which files need to be updated.
+    for file, remote_hash in remote_signature_manifest:
+
+        local_hash = lsm_lookup(file, None)
+        if (local_hash is None):
+            missing_files.append((file, remote_hash))
+
+        elif (local_hash != remote_hash):
+
+            changed_files.append((file, remote_hash))
+
+    return missing_files, changed_files
+
 def download_signature_file(file: str) -> bool:
     # removing all comments before storing the signatures in the temp file.
     with requests.urlopen(f'{SIGNATURE_URL}/{file}') as response:

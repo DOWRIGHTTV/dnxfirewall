@@ -32,18 +32,24 @@ if (TYPE_CHECKING):
 ERROR_SHOW_TIME = .33
 
 srun = partial(_run, shell=True, check=True)
-def lprint(sep: str = '-'): print(text.lightblue(f'{sep}' * 80))
+def lprint(sep: str = '-'): print(text.lightblue(f'{sep}' * os.get_terminal_size().columns))
+
 
 # ===============
 # BANNER
 # ===============
 BANNER = text.lightblue('\n'.join([
-    ' ____  _   ___  __     _   _   _ _____ ___  _     ___    _    ____  _____ ____',
-    '|  _ \| \ | \ \/ /    / \ | | | |_   _/ _ \| |   / _ \  / \  |  _ \| ____|  _ \ ',
-    '| | | |  \| |\  /    / _ \| | | | | || | | | |  | | | |/ _ \ | | | |  _| | |_) |',
-    '| |_| | |\  |/  \   / ___ \ |_| | | || |_| | |__| |_| / ___ \| |_| | |___|  _ <',
-    '|____/|_| \_/_/\_\ /_/   \_\___/  |_| \___/|_____\___/_/   \_\____/|_____|_| \_\ '
+    '.__ .  .\  /.___._..__ .___.  ..__..   .   ',
+    '|  \|\ | >< [__  | [__)[__ |  |[__]|   |   ',
+    '|__/| \|/  \|   _|_|  \[___|/\||  ||___|___',
 ]))
+# BANNER = text.lightblue('\n'.join([
+#     ' ____  _   ___  __     _   _   _ _____ ___  _     ___    _    ____  _____ ____',
+#     '|  _ \| \ | \ \/ /    / \ | | | |_   _/ _ \| |   / _ \  / \  |  _ \| ____|  _ \ ',
+#     '| | | |  \| |\  /    / _ \| | | | | || | | | |  | | | |/ _ \ | | | |  _| | |_) |',
+#     '| |_| | |\  |/  \   / ___ \ |_| | | || |_| | |__| |_| / ___ \| |_| | |___|  _ <',
+#     '|____/|_| \_/_/\_\ /_/   \_\___/  |_| \___/|_____\___/_/   \_\____/|_____|_| \_\ '
+# ]))
 
 @dataclass
 class Args:
@@ -52,7 +58,8 @@ class Args:
     packages: int = 0
     iptables: int = 0
 
-    _update: int = 0
+    _update_system: int = 0
+    _update_signatures: int = 0
 
     @property
     def verbose_set(self):
@@ -684,13 +691,13 @@ def signature_update(system_update: bool = False) -> None:
     # REMOTE SIGNATURE MANIFEST
     # ===========================================
     sprint('downloading remote signature manifest.')
-    manifest = []
+    remote_manifest = []
     rsm_name, rsm_hash = file_validations[1]
     for attempt in range(1, 4):
 
         # downloading manifest of signature files to be downloaded.
-        manifest = signature_update.get_remote_signature_manifest(rsm_name)
-        if (manifest):
+        remote_manifest = signature_update.get_remote_signature_manifest(rsm_name)
+        if (remote_manifest):
 
             if signature_update.validate_file_download(f'{rsm_name}_TEMP', rsm_hash):
                 break
@@ -701,13 +708,35 @@ def signature_update(system_update: bool = False) -> None:
         sprint(f'retry limit reached. check connection and try again later.')
         hardout('exiting...')
 
-    sprint(f'done. {len(manifest)} signature files will be downloaded.')
+    # ===========================================
+    # FILTERING UNCHANGED FILES
+    # ===========================================
+    update_msg = []
+    # checking local manifest for files that have not changed and removing them from the list.
+    # separate lists are for better reporting to the user.
+    missing_files, changed_files = signature_update.check_for_file_changes(rsm_name, remote_manifest)
+    if (missing_files):
+        update_msg.append(f'{len(missing_files)} new files')
 
+    if (changed_files):
+        update_msg.append(f'{len(changed_files)} changed files')
+
+    update_msg = ' and '.join(update_msg)
+
+    sprint(f'identified {update_msg}. starting download...')
+
+    manifest = [*missing_files, *changed_files]
     # LIST FILES CONTAINED IN MANIFEST
     # if (args.verbose_set):
     #     for i, f in enumerate(manifest, 1):
     #         sprint(f'{i}. {f[0]} - {f[1]}')
+    if (not manifest):
+        hardout('there are no signature updates available. exiting...')
 
+        return
+    # ===========================================
+    # DOWNLOADING NECESSARY FILES
+    # ===========================================
     download_failure_list = []
     checksum_failure_list = []
 
@@ -778,6 +807,8 @@ def signature_update(system_update: bool = False) -> None:
 
     sprint(final_msg)
 
+    hardout()
+
 def run():
     global PROGRESS_TOTAL_COUNT
 
@@ -818,7 +849,7 @@ def run():
 
     PROGRESS_TOTAL_COUNT += len([1 for k, v in dynamic_commands if v])
 
-    action = 'update' if args._update else 'deployment'
+    action = 'update' if args._update_system else 'deployment'
     sprint(f'starting dnxfirewall {action}...')
     lprint()
 
