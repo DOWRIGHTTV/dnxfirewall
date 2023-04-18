@@ -723,17 +723,20 @@ def signature_update(system_update: bool = False) -> None:
 
     update_msg = ' and '.join(update_msg)
 
-    sprint(f'identified {update_msg}. starting download...')
-
     manifest = [*missing_files, *changed_files]
     # LIST FILES CONTAINED IN MANIFEST
     # if (args.verbose_set):
     #     for i, f in enumerate(manifest, 1):
     #         sprint(f'{i}. {f[0]} - {f[1]}')
-    if (not manifest):
-        hardout('there are no signature updates available. exiting...')
+    if (manifest):
+        sprint(f'identified {update_msg}. starting download...')
+
+    else:
+        sprint('there are no signature updates available. exiting...')
+        hardout()
 
         return
+
     # ===========================================
     # DOWNLOADING NECESSARY FILES
     # ===========================================

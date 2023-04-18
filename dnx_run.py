@@ -290,9 +290,13 @@ def modstat_command() -> None:
     # OUTPUT - Justified left<==>right
     # =================================
     # dnx-cfirewall   => down (code=4)
-    print(text.blue('░█▀▄░█▀█░█░█  ░█▀▀░█▀▀░█▀▄░█░█░▀█▀░█▀▀░█▀▀░█▀▀'))
-    print(text.blue('░█░█░█░█░▄▀▄  ░▀▀█░█▀▀░█▀▄░▀▄▀░░█░░█░░░█▀▀░▀▀█'))
-    print(text.blue('░▀▀░░▀░▀░▀░▀  ░▀▀▀░▀▀▀░▀░▀░░▀░░▀▀▀░▀▀▀░▀▀▀░▀▀▀'))
+    services_banner = text.lightblue('\n'.join([
+        ' __..___.__ .  .._. __ .___ __.',
+        '(__ [__ [__)\  / | /  `[__ (__ ',
+        '.__)[___|  \ \/ _|_\__.[___.__)'
+    ]))
+    print(services_banner)
+
     for svc, result in status:
         time.sleep(0.05)
         print(text.darkgrey(f'{svc.ljust(svc_len)} -> {result.rjust(4)}'))
