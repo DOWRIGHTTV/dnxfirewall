@@ -43,13 +43,6 @@ BANNER = text.lightblue('\n'.join([
     '|  \|\ | >< [__  | [__)[__ |  |[__]|   |   ',
     '|__/| \|/  \|   _|_|  \[___|/\||  ||___|___',
 ]))
-# BANNER = text.lightblue('\n'.join([
-#     ' ____  _   ___  __     _   _   _ _____ ___  _     ___    _    ____  _____ ____',
-#     '|  _ \| \ | \ \/ /    / \ | | | |_   _/ _ \| |   / _ \  / \  |  _ \| ____|  _ \ ',
-#     '| | | |  \| |\  /    / _ \| | | | | || | | | |  | | | |/ _ \ | | | |  _| | |_) |',
-#     '| |_| | |\  |/  \   / ___ \ |_| | | || |_| | |__| |_| / ___ \| |_| | |___|  _ <',
-#     '|____/|_| \_/_/\_\ /_/   \_\___/  |_| \___/|_____\___/_/   \_\____/|_____|_| \_\ '
-# ]))
 
 @dataclass
 class Args:
@@ -709,7 +702,7 @@ def signature_update(system_update: bool = False) -> None:
         hardout('exiting...')
 
     # ===========================================
-    # FILTERING UNCHANGED FILES
+    # FILTERING UNCHANGED FILES - EARLY EXIT
     # ===========================================
     update_msg = []
     # checking local manifest for files that have not changed and removing them from the list.
@@ -723,19 +716,14 @@ def signature_update(system_update: bool = False) -> None:
 
     update_msg = ' and '.join(update_msg)
 
-    manifest = [*missing_files, *changed_files]
-    # LIST FILES CONTAINED IN MANIFEST
-    # if (args.verbose_set):
-    #     for i, f in enumerate(manifest, 1):
-    #         sprint(f'{i}. {f[0]} - {f[1]}')
-    if (manifest):
+    if manifest := [*missing_files, *changed_files]:
         sprint(f'identified {update_msg}. starting download...')
 
     else:
         sprint('there are no signature updates available. exiting...')
-        hardout()
 
-        return
+        signature_update.cleanup_temp_files()
+        hardout()
 
     # ===========================================
     # DOWNLOADING NECESSARY FILES
@@ -788,6 +776,9 @@ def signature_update(system_update: bool = False) -> None:
         sprint(f'{len(download_failure_list)} signatures failed to download.')
         sprint(f'{len(checksum_failure_list)} signatures failed checksum validation.')
 
+    # ===========================================
+    # COPYING DOWNLOADED FILES TO SIGNATURE DIR
+    # ===========================================
     # settings the flag to identify a file move in progress or partial signature update.
     if not signature_update.set_signature_update_flag():
         eprint('signature update may already be in in progress or a previous update was interrupted.')
@@ -806,16 +797,20 @@ def signature_update(system_update: bool = False) -> None:
     final_msg = 'signature update complete.'
 
     if (not system_update):
-        final_msg += ' the security modules must be restarted for the changes to take effect.'
+        final_msg += ' restart security modules to apply the changes.'
 
     sprint(final_msg)
 
     hardout()
 
+# TODO: add a general check for system updates for changes and skip certain steps if possible.
+#  - for example, skip recompiling cython or c modules if they have not changed.
+#    cython does this automatically, but the updater will still run the compile steps and show the progress bar as if
+#    it is doing something.
 def run():
     global PROGRESS_TOTAL_COUNT
 
-    # will relative paths beyond HOME_DIR
+    # to simplify folder/file naming
     os.chdir(HOME_DIR)
 
     # signature updates are handled separately from the rest of the build process unless the system is being updated.
@@ -837,6 +832,7 @@ def run():
 
     branch = checkout_configured_branch()
 
+    # TODO: add a check to see if the branch is up to date and skip to signature update if it is.
     if (args._update_system):
         dynamic_commands.extend(update_local_branch(branch))
 
@@ -891,14 +887,18 @@ def run():
         set_services()
         mark_completion_flag()
 
-    progress('dnxfirewall installation complete...')
+    progress(f'dnxfirewall {action} complete...')
 
     # signatures will be updated during initial installation or system update automatically.
     signature_update(system_update=True)
 
-    sprint('control of the WAN interface configuration has been taken by dnxfirewall.')
-    sprint('use the webui to configure a static ip or enable ssh access if needed.')
-    sprint('restart the system then navigate to https://192.168.83.1 from LAN to manage.')
+    if (not args._update_system):
+        sprint('control of the WAN interface configuration has been taken by dnxfirewall.')
+        sprint('use the webui to configure a static ip or enable ssh access if needed.')
+        sprint('restart the system then navigate to https://192.168.83.1 from LAN to manage.')
+
+    else:
+        sprint('dnxfirewall services restart required. a full system restart is recommended.')
 
     hardout()
 

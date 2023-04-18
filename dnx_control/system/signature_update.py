@@ -211,3 +211,11 @@ def move_signature_files(signature_manifest: list[tuple], failure_list: list[tup
     # replacing old compatible version file and signature file manifest
     os.rename('dnx_profile/signatures/COMPATIBLE_VERSION_TEMP', 'dnx_profile/signatures/COMPATIBLE_VERSION')
     os.rename('dnx_profile/signatures/SIGNATURE_MANIFEST_TEMP', 'dnx_profile/signatures/SIGNATURE_MANIFEST')
+
+def cleanup_temp_files() -> None:
+    try:
+        os.remove('dnx_profile/signatures/COMPATIBLE_VERSION_TEMP')
+        os.remove('dnx_profile/signatures/SIGNATURE_MANIFEST_TEMP')
+    except FileNotFoundError:
+        pass
+
