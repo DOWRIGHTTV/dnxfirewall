@@ -637,7 +637,7 @@ def mark_completion_flag() -> None:
 def store_default_mac():
     pass
 
-def signature_update(system_update: bool = False) -> None:
+def signature_update(system_update: bool = False) -> bool:
     import dnx_control.system.signature_update as signature_update
 
     sprint('security signature updater initiated.')
@@ -723,7 +723,8 @@ def signature_update(system_update: bool = False) -> None:
         sprint('there are no signature updates available. exiting...')
 
         signature_update.cleanup_temp_files()
-        hardout()
+
+        return False
 
     # ===========================================
     # DOWNLOADING NECESSARY FILES
@@ -801,7 +802,7 @@ def signature_update(system_update: bool = False) -> None:
 
     sprint(final_msg)
 
-    hardout()
+    return True
 
 # TODO: add a general check for system updates for changes and skip certain steps if possible.
 #  - for example, skip recompiling cython or c modules if they have not changed.
@@ -890,7 +891,7 @@ def run():
     progress(f'dnxfirewall {action} complete...')
 
     # signatures will be updated during initial installation or system update automatically.
-    signature_update(system_update=True)
+    signatures_updated = signature_update(system_update=True)
 
     if (not args._update_system):
         sprint('control of the WAN interface configuration has been taken by dnxfirewall.')
