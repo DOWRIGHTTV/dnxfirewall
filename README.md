@@ -7,7 +7,7 @@
 <br>
 <h2>Overview</h2>
 <span>
-  DNXFIREWALL is an optimized/high performance collection of applications and services to convert a standard linux system
+  DAD'S NEXT-GEN FIREWALL® is an optimized/high performance collection of applications and services to convert a standard linux system
   into a zone based next generation firewall. The primary security modules have DIRECT/INLINE control over all connections, streams, 
   and messages that goes through the system.
 
