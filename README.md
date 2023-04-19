@@ -1,8 +1,6 @@
-<h5><strong>NOTICE: The license has changed from the CMD version (GPLv3). The 'FULL' version (current branch) is licensed under AGPLv3.</strong></h5>
-
 <h1>
 	<br>
-	<img src="https://raw.githubusercontent.com/DOWRIGHTTV/dnxfirewall/dnxfirewall/dnx_webui/static/assets/images/dads_logo_black.png" alt="dad's next-gen firewall">
+	<img src="https://raw.githubusercontent.com/DOWRIGHTTV/dnxfirewall/dnxfirewall-dev/dnx_webui/static/assets/images/dads_logo_black.png" alt="dad's next-gen firewall">
 	<br>
 </h1>
 
