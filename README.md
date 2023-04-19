@@ -2,7 +2,7 @@
 
 <h1>
 	<br>
-	<img src="https://raw.githubusercontent.com/DOWRIGHTTV/dnxfirewall/dnxfirewall/dnx_webui/static/assets/images/dnxlogo_v2.png" alt="dnxfirewall logo">
+	<img src="https://raw.githubusercontent.com/DOWRIGHTTV/dnxfirewall/dnxfirewall/dnx_webui/static/assets/images/dads_logo_black.png" alt="dad's next-gen firewall">
 	<br>
 </h1>
 
