@@ -1,18 +1,12 @@
-<h5><strong>NOTICE: The license has changed from the CMD version (GPLv3). The 'FULL' version (current branch) is licensed under AGPLv3.</strong></h5>
-
-<h1>
-	<br>
-	<img src="https://raw.githubusercontent.com/DOWRIGHTTV/dnxfirewall/dnxfirewall/dnx_webui/static/assets/images/dnxlogo_v2.png" alt="dnxfirewall logo">
-	<br>
-</h1>
-
-<br>
 <h2>Overview</h2>
-<span>
-  DNXFIREWALL is an optimized/high performance collection of applications and services to convert a standard linux system
-  into a zone based next generation firewall. The primary security modules have DIRECT/INLINE control over all connections, streams, 
-  and messages that goes through the system.
-
+<span style="align: center;">
+    <img src="https://raw.githubusercontent.com/DOWRIGHTTV/dnxfirewall/dnxfirewall-dev/dnx_webui/static/assets/images/dads_logo_black.png" alt="dad's next-gen firewall">
+</span>
+<p>
+DAD'S NEXT-GEN FIREWALL® is an optimized/high performance collection of applications and services to convert a standard 
+linux system into a zone based next generation firewall. The primary security modules have DIRECT/INLINE control over 
+all connections, streams, and messages that goes through the system.
+</p>
 <pre>
         ----------------------------------------------------
         | (outbound)                                       |
@@ -30,18 +24,17 @@ stack   |                            --------------> [dns proxy (*1)] --------  
      |                                                                          |
      ----------------------------------------------------------------------------
 </pre>
+<p>
 
 - (*1) the dns proxy is specifically designed to inspect dns payload going between internal networks or from the lan to internet.
 
 - (*2) the ids/ips is specifically designed (for now at least) to only inspect traffic from the internet to the lan networks. 
   - this decision is based on the fact that 99.99% (generalization) of threats in this space will source from the internet.
-
-</span>
+</p>
 A low level "architecture, system design" video will be created at some point to show how this is possible with pure python.
-
 <br>
 <h2>Included Features</h2>
-
+<p>
 NEW: signature update utility added to system cli. signatures are now detached from primary codebase and can be
 independently updated without running the full system update utility.
 
@@ -87,10 +80,9 @@ independently updated without running the full system update utility.
    - Modern webui for administration
    - custom shell utility for system level maintenance
      - includes built in system (dnxfirewall) updater for 1 click updates
-
-<br>
+</p>
 <h2>To deploy (using autoloader)</h2>
-
+<p>
 1. select linux distro on compatible distro list (see below)
 
 2. install linux on physical hardware or a VM
@@ -117,36 +109,35 @@ independently updated without running the full system update utility.
 	
 8. once the utility is complete, restart the system and navigate to the specified url
 
-<br>
 <h2>To update dnxfirewall software package</h2>
 
 1. run ```sudo dnx update system```
 
 note: the system updater will include signature updates
 
-<br>
 <h2>To update security signatures</h2>
 
 1. run ```sudo dnx update signatures```
 
 note: a system update may be required to update the signatures if an API breaking change has been made. you will be
 notified if a system update is needed.
-
-<br>
+</p>
 <h2>Compatible linux distros with dnxfirewall autoloader (installer)</h2>
-
+<p>
 - Debian based distros
   - Linux kernel >= 2.6.31
   - Python 3.8+
   - netplan	(ubuntu interface/network manager)
-
-<br>
+</p>
 
 <h4>External Contributors</h4>
+<p>
 afallenhope - web design, ux, and templating -> https://github.com/afallenhope
+</p>
 
 <h4>External code sources</h4>
-
-https://www.ip2location.com/free/visitor-blocker | geolocation filtering datasets (ip address assignments by country)
+<p>
+https://www.ip2location.com/free/visitor-blocker | geolocation filtering datasets (ip address to country mapping)
 
 https://gitlab.com/ZeroDot1/CoinBlockerLists | cryptominer host dataset
+</p>
