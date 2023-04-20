@@ -1,28 +1,28 @@
 <h2>Overview</h2>
-<span style="align: center;">
+<div style="text-align: center;">
     <img src="https://raw.githubusercontent.com/DOWRIGHTTV/dnxfirewall/dnxfirewall-dev/dnx_webui/static/assets/images/dads_logo_black.png" alt="dad's next-gen firewall">
-</span>
+</div>
 <p>
 DAD'S NEXT-GEN FIREWALL® is an optimized/high performance collection of applications and services to convert a standard 
 linux system into a zone based next generation firewall. The primary security modules have DIRECT/INLINE control over 
 all connections, streams, and messages that goes through the system.
 </p>
-<pre>
-        ----------------------------------------------------
-        | (outbound)                                       |
-TCP/IP  |                                                  V                      TCP/IP
-stack   |                            --------------> [dns proxy (*1)] --------    stack
-  |     |                            | (outbound)                            |     ^
-  V     |   (bi-directional)         |                                       V     |
-[cfirewall] -------------------> [ip proxy] ----------------------> ((*packet verdict*))
-     |  |                            |                                     ^    ^            
-     |  |                            | (inbound)                           |    |
-     |  |                            --------------> [ids/ips (*2)] --------    |
-     |  |                                                  ^                    |
-     |  | (inbound)                                        |                    |
-     |  ----------------------------------------------------                    |
-     |                                                                          |
-     ----------------------------------------------------------------------------
+<pre style="text-align: center">
+            ---------------------------------------------------                                
+              | (outbound)                                      |                                  
+TCP/IP        |                                                 V                            TCP/IP
+stack        |                            --------------> [dns proxy (*1)] --------         stack
+  |         |                            | (outbound)                            |            ^
+  |         |   (bi-directional)         |                                       V            |
+  --> [cfirewall] ------------------> [ip proxy] ----------------------> ((*packet verdict*))--
+    |  |                            |                                     ^    ^
+    |  |                            | (inbound)                           |    |
+    |  |                            --------------> [ids/ips (*2)] --------    |
+    |  |                                                  ^                    |
+    |  | (inbound)                                        |                    |
+    |  ----------------------------------------------------                    |
+    |                                                                          |
+    ----------------------------------------------------------------------------
 </pre>
 <p>
 

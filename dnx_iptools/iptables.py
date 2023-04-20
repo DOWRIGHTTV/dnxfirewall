@@ -26,7 +26,7 @@ UNLOCK_LOCK = fcntl.LOCK_UN
 def ipt_shell(command: str, table: str = 'filter', action: str = '-A') -> None:
     '''iptables wrapper of the dnx shell function.
 
-    provides rule check functionality prior to applying any configured rule.
+    provides rule check functionality prior to applying any configured rule to prevent duplicate entries.
     '''
     shell(f'iptables -t {table} -C {command} || iptables -t {table} {action} {command}')
 
@@ -76,7 +76,7 @@ class _Defaults:
 
         cfirewall operates as a basic ip/protocol filter and as a security module inspection pre-preprocessor.
 
-        standard conntrack permit/allow control is left to IPTables for now.
+        conntrack management is set to apply on cfirewall mark as a stateful/stateless switch.
         '''
         # FORWARD
         # NOTE: cfirewall must mark connections with connmark to offload the connection to the kernel, otherwise all
@@ -174,7 +174,6 @@ class IPTablesManager:
         '''
         shell(f'sudo iptables-restore < {HOME_DIR}/dnx_profile/iptables/iptables_backup.cnf', check=True)
 
-    # TODO: think about the duplicate rule check before running this as a safety for creating duplicate rules
     def apply_defaults(self, *, suppress: bool = False) -> None:
         '''convenience function wrapper around the iptables Default class.
 
@@ -188,40 +187,37 @@ class IPTablesManager:
         _Defaults.load(self._zone_to_intf)
 
         if (not suppress):
-            console_log('dnxfirewall iptable defaults applied.')
+            console_log('dnxfirewall iptables default applied.')
 
     def add_nat(self, rule: config) -> None:
         src_interface = self._zone_to_intf[f'{rule.src_zone}']
 
-        # implement dnat into iptables
+        # build dnat based on protocol and user configured options.
         if (rule.nat_type == 'DSTNAT'):
+            nat_rule = [f'sudo iptables -t nat -I DSTNAT -i {src_interface}']
 
-            if (rule.protocol == 'icmp'):
-                nat_rule = (
-                    f'sudo iptables -t nat -I DSTNAT -i {src_interface} '
-                    f'-p {rule.protocol} -j DNAT --to-destination {rule.host_ip}'
-                )
+            # destination ip follows interface argument
+            if (rule.dst_ip):
+                nat_rule.append(f'-d {rule.dst_ip} ')
 
-            else:
-                nat_rule = [
-                    f'sudo iptables -t nat -I DSTNAT -i {src_interface} ',
-                    f'-p {rule.protocol} --dport {rule.dst_port} -j DNAT --to-destination {rule.host_ip}'
-                ]
+            nat_rule.append(f'-p {rule.protocol}')
 
-                # inserting destination ip directly following interface argument
-                if (rule.dst_ip):
-                    nat_rule.insert(1, f'-d {rule.dst_ip} ')
+            if (rule.protocol != 'icmp'):
+                nat_rule.append(f'--dport {rule.dst_port}')
 
-                if (rule.dst_port != rule.host_port):
-                    nat_rule.append(f':{rule.host_port}')
+            nat_rule.append(f'-j DNAT --to-destination {rule.host_ip}')
 
-                nat_rule = str_join(nat_rule)
+            if (rule.dst_port not in [0, rule.host_port]):
+                nat_rule.append(f':{rule.host_port}')
+
+            nat_rule = str_join(nat_rule)
 
         elif (rule.nat_type == 'SRCNAT'):
+            dst_interface = self._zone_to_intf['wan']
 
             nat_rule = (
                 'sudo iptables -t nat -I SRCNAT '
-                f'-i {src_interface} -o {self._zone_to_intf["wan"]} '
+                f'-i {src_interface} -o {dst_interface} '
                 f'-s {rule.orig_src_ip}  -j SNAT --to-source {rule.new_src_ip}'
             )
 
