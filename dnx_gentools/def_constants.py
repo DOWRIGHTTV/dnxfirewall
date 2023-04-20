@@ -72,16 +72,17 @@ dot_join:   _Callable[[_Iterable[str]], str] = '.'.join
 space_join: _Callable[[_Iterable[str]], str] = ' '.join
 comma_join: _Callable[[_Iterable[str]], str] = ', '.join
 
-HOME_DIR: str = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-2]))
+# USER, GROUP, HOME_DIR - user set dynamically for development convenience (DNX user used in production deployment)
+__usr = _pwd.getpwuid(_os.getuid())
 
+USER, GROUP = (__usr.pw_name, __usr.pw_name)
+# USER, GROUP = ('dnx', 'dnx') if any(['dnx' == u.pw_name for u in _pwd.getpwall()]) else ('free', 'free')
+ROOT: bool = not __usr.pw_uid
+
+HOME_DIR:   str = f'{__usr.pw_dir}/dnxfirewall'
+# HOME_DIR: str = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-2]))
 SYSTEM_DIR: str = 'dnx_profile/data/system'
 USER_DIR:   str = 'dnx_profile/data/usr'
-
-# dnx user/group + dev helper to when switching between appliance and dev box
-__usr: str = _run('whoami', shell=True, text=True, capture_output=True).stdout.strip()
-
-USER, GROUP = ('dnx', 'dnx') if any(['dnx' == u.pw_name for u in _pwd.getpwall()]) else ('free', 'free')
-ROOT: bool = not _os.getuid()
 
 # Certificate authority store file
 CERTIFICATE_STORE: str = '/etc/ssl/certs/ca-certificates.crt'
