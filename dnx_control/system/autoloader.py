@@ -314,12 +314,15 @@ def configure_interfaces() -> None:
 def check_system_interfaces() -> list[str]:
     interfaces_detected = [intf[1] for intf in socket.if_nameindex() if 'lo' not in intf[1]]
 
-    if (len(interfaces_detected) < 3):
+    if (len(interfaces_detected) < 2):
         eprint(
             text.yellow('minimum ') +
-            text.red('3 ') +
+            text.red('(2) ') +
             text.yellow(f'interfaces are required to deploy dnxfirewall. detected: {len(interfaces_detected)}.')
         )
+
+    elif (len(interfaces_detected) == 2):
+        eprint(text.yellow('(2) interfaces detected. dmz setup will be skipped.'))
 
     return interfaces_detected
 
@@ -334,7 +337,11 @@ def collect_interface_associations(interfaces_detected: list[str]) -> dict[str, 
     lprint()
 
     # build out full json for interface configs as dict
-    interface_config: dict[str, str] = {'WAN': '', 'LAN': '', 'DMZ': ''}
+    interface_config: dict[str, str] = {'WAN': '', 'LAN': ''}
+
+    if (len(interfaces_detected) > 2):
+        interface_config['DMZ'] = ''
+
     while True:
         for int_name in interface_config:
             while True:

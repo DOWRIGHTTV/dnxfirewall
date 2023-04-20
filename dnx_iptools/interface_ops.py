@@ -64,7 +64,9 @@ def load_interfaces(intf_type: INTF = INTF.BUILTIN, *, exclude: list = []) -> li
             if (not intf_index):
                 raise RuntimeError('failed to associate builtin <> system interfaces.')
 
-            if (intf_name not in exclude):
+            # ident will be null if an interface wasn't set up at install time. this will really only apply to DMZ.
+            # future state will allow for interfaces to be registered post install.
+            if (ident and intf_name not in exclude):
                 collected_intfs.append((intf_index, zone, ident))
 
     else:

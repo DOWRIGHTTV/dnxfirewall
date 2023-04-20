@@ -29,10 +29,12 @@ class WebPage(StandardWebPage):
     def load(_: Form) -> dict[str, Any]:
         system_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
-        wan_ident: str = system_settings['interfaces->builtin->wan->ident']
-        wan_state: int = system_settings['interfaces->builtin->wan->state']
-        default_mac:    str = system_settings['interfaces->builtin->wan->default_mac']
-        configured_mac: str = system_settings['interfaces->builtin->wan->default_mac']
+        wan_intf = 'interfaces->builtin->wan'
+
+        wan_ident: str = system_settings[f'{wan_intf}->ident']
+        wan_state: int = system_settings[f'{wan_intf}->state']
+        default_mac:    str = system_settings[f'{wan_intf}->default_mac']
+        configured_mac: str = system_settings[f'{wan_intf}->default_mac']
 
         try:
             ip_addr = itoip(interface.get_ipaddress(interface=wan_ident))
