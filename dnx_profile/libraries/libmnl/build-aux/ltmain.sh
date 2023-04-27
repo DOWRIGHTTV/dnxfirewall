@@ -561,7 +561,7 @@ then
     eval "$1+=\$2"
   }'
 else
-  # ...otherwise fall back to using expr, which is often a shell built-in.
+  # ...otherwise fall back to using expr, which is often a shell builtin.
   func_append ()
   {
     $debug_cmd
