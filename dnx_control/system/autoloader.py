@@ -70,6 +70,35 @@ UTILITY_DIR: str = 'dnx_profile/utils'
 # ----------------------------
 # UTILS
 # ----------------------------
+def prompt_yes_no(s: str, default: str = 'y') -> bool:
+    '''prompts user for yes or no response. returns True for yes and False for no.
+
+    complete message must be passed in as arg, not included [y/N]
+    '''
+    # value check only for fast fail when developing
+    if (default.lower() not in ['y', 'n']):
+        raise ValueError('default must be either "y" or "n"')
+
+    while True:
+        sys.stdout.write(text.lightgrey(f'{time.strftime("%H:%M:%S")}| {s} '))
+
+        if (default.lower() == 'y'):
+            default_answer_text = text.lightgrey('[ ', style=None) + text.lightblue('Y') + text.lightgrey('/n]: ', style=None)
+
+        else:
+            default_answer_text = text.lightgrey('[y/', style=None) + text.lightblue('N') + text.lightgrey(']: ', style=None)
+
+        answer: str = input(default_answer_text)
+
+        if (answer.lower() == 'y') or (default.lower() == 'y' and answer == ''):
+            return True
+
+        elif (answer.lower() == 'n') or (default.lower() == 'n' and answer == ''):
+            return False
+
+        else:
+            flash_input_error('invalid selection', 13 + len(s))  # length of raw text
+
 def flash_input_error(error: str, space_ct: int) -> None:
     # moves cursor up one space in the terminal
     sys.stdout.write('\033[1A')
@@ -283,13 +312,13 @@ def progress(desc: str, *, completed: Optional[int] = None, total: Optional[int]
 # ============================
 # convenience function wrapper for physical interface to dnxfirewall zone association.
 def configure_interfaces() -> None:
-    interfaces_detected: list[str] = check_system_interfaces()
+    interfaces_detected: list[str] = get_system_interfaces()
 
     user_intf_config: dict[str, str] = collect_interface_associations(interfaces_detected)
     public_dns_servers: dict = load_data('dns_server.cfg', cfg_type='system/global')['resolvers']
 
     set_dnx_interfaces(user_intf_config)
-    set_dhcp_interfaces(user_intf_config)
+    set_lan_dhcp(user_intf_config)
 
     with open(f'{SYSTEM_DIR}/interfaces/intf_config_template.cfg', 'r') as intf_configs_f:
         intf_configs: str = intf_configs_f.read()
@@ -311,7 +340,7 @@ def configure_interfaces() -> None:
 
     write_net_config(yaml_output)
 
-def check_system_interfaces() -> list[str]:
+def get_system_interfaces() -> list[str]:
     interfaces_detected = [intf[1] for intf in socket.if_nameindex() if 'lo' not in intf[1]]
 
     if (len(interfaces_detected) < 2):
@@ -320,9 +349,6 @@ def check_system_interfaces() -> list[str]:
             text.red('(2) ') +
             text.yellow(f'interfaces are required to deploy dnxfirewall. detected: {len(interfaces_detected)}.')
         )
-
-    elif (len(interfaces_detected) == 2):
-        eprint(text.yellow('(2) interfaces detected. dmz setup will be skipped.'))
 
     return interfaces_detected
 
@@ -337,28 +363,55 @@ def collect_interface_associations(interfaces_detected: list[str]) -> dict[str, 
     lprint()
 
     # build out full json for interface configs as dict
-    interface_config: dict[str, str] = {'WAN': '', 'LAN': ''}
-
-    if (len(interfaces_detected) > 2):
-        interface_config['DMZ'] = ''
+    interface_config: dict[str, str] = {'std_1': '', 'std_2': ''}
 
     while True:
-        for int_name in interface_config:
+        for intf in interface_config:
+
+            intf_name = 'wan' if intf == 'std_1' else 'lan'
+
             while True:
-                select = input(f'select {text.yellow(int_name)} interface: ')
-                if (select.isdigit() and int(select) in range(1, len(interfaces_detected)+1)):
-                    interface_config[int_name] = interfaces_detected[int(select)-1]
+                select = input(f'select {text.yellow(intf_name)} interface: ')
+                try:
+                    interface_config[intf] = interfaces_detected[int(select) - 1]
+                except:
+                    flash_input_error('invalid selection', 18)
+
+                else:
                     break
 
-                flash_input_error('invalid selection', 18)
+        interfaces_specified = len(set(interface_config.values()))
+        if (interfaces_specified < 2):
+            sprint(text.yellow('interface definitions must be unique.'))
 
-        if confirm_interfaces(interface_config):
-            if (len(set(interface_config.values())) == 3):
-                break
+            continue
 
-            eprint(text.yellow('interface definitions must be unique.'))
+        question_str = ' '.join([f'{z}={text.yellow(intf)}' for z, intf in interface_config.items()]) + ' confirm?'
+        if prompt_yes_no(question_str):
+            break
 
     return interface_config
+
+# modifying dnx configuration files with the user specified interface names and their corresponding zones
+def set_dnx_interfaces(user_intf_config: dict[str, str]) -> None:
+    sprint('configuring dnxfirewall network interfaces...')
+
+    with ConfigurationManager('system', cfg_type='global') as dnx:
+        dnx_settings: ConfigChain = dnx.load_configuration()
+
+        for slot, intf in user_intf_config.items():
+            dnx_settings[f'interfaces->built-in->{slot}->ident'] = intf
+
+        dnx.write_configuration(dnx_settings.expanded_user_data)
+
+# system built-in uses slot std_2 for lan interface
+def set_lan_dhcp(user_intf_config: dict[str, str]) -> None:
+    with ConfigurationManager('dhcp_server', cfg_type='global') as dhcp:
+        dhcp_settings: ConfigChain = dhcp.load_configuration()
+
+        dhcp_settings[f'interfaces->built-in->std_2->ident'] = user_intf_config['std_2']
+
+        dhcp.write_configuration(dhcp_settings.expanded_user_data)
 
 # takes interface config as dict, converts to yaml, then writes to system folder
 def write_net_config(interface_configs: str) -> None:
@@ -373,45 +426,6 @@ def write_net_config(interface_configs: str) -> None:
         os.remove('/etc/netplan/00-installer-config.yaml')
     except:
         pass
-
-# modifying dnx configuration files with the user specified interface names and their corresponding zones
-def set_dnx_interfaces(user_intf_config: dict[str, str]) -> None:
-    sprint('configuring dnxfirewall network interfaces...')
-
-    with ConfigurationManager('system', cfg_type='global') as dnx:
-        dnx_settings: ConfigChain = dnx.load_configuration()
-
-        for zone, intf in user_intf_config.items():
-            dnx_settings[f'interfaces->builtin->{zone.lower()}->ident'] = intf
-
-        dnx.write_configuration(dnx_settings.expanded_user_data)
-
-def set_dhcp_interfaces(user_intf_config: dict[str, str]) -> None:
-    with ConfigurationManager('dhcp_server', cfg_type='global') as dhcp:
-        dhcp_settings: ConfigChain = dhcp.load_configuration()
-
-        for zone in ['LAN', 'DMZ']:
-
-            dhcp_settings[f'interfaces->builtin->{zone.lower()}->ident'] = user_intf_config[zone]
-
-        dhcp.write_configuration(dhcp_settings.expanded_user_data)
-
-def confirm_interfaces(interface_config: dict[str, str]) -> bool:
-    print(' '.join([f'{zone}={text.yellow(intf)}' for zone, intf in interface_config.items()]))
-    while True:
-        answer: str = input(
-            text.lightgrey('confirm? [', style=None) +
-            text.lightblue('Y') +
-            text.lightgrey('/n]: ', style=None)
-        )
-        if (answer.lower() in ['y', '']):
-            return True
-
-        elif (answer.lower() == 'n'):
-            return False
-
-        flash_input_error('invalid selection', 18)
-
 
 # ============================
 # BUILD LIBRARIES
@@ -466,7 +480,7 @@ def install_packages() -> list:
         ('sudo apt install net-tools -y', 'installing networking components'),
 
         ('sudo apt install python3-pip -y', 'setting up python3'),
-        ('pip3 install flask uwsgi', 'installing python web app framework'),
+        ('pip3 install flask uwsgi pyyaml', 'installing python web app framework'),
         ('pip3 install Cython', 'installing C extension language (Cython)')
     ]
 

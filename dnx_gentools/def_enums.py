@@ -11,7 +11,12 @@ from typing import NewType as _NewType
 
 
 # TODO: make this a flag if possible. pretty sure it is.
-CFG = _IntEnum('CFG', ['RESTORE', 'DEL', 'ADD', 'ADD_DEL'], start=0)
+# CFG = _IntEnum('CFG', ['RESTORE', 'DEL', 'ADD', 'ADD_DEL'], start=0)
+class CFG(_IntEnum):
+    RESTORE = 0
+    DEL     = 1
+    ADD     = 2
+    ADD_DEL = 3
 
 class DATA(_IntEnum):
     INVALID = -1

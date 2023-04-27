@@ -163,7 +163,7 @@
             </tr>
             </thead>
             <tbody>
-            {% for intf, zone in firewall_settings['zone_map']['builtin'].items() %}
+            {% for intf, zone in firewall_settings['zone_map']['built-in'].items() %}
               <tr>
                 <td>{{intf}}</td>
                 <td>{{zone}}</td>
@@ -188,7 +188,7 @@
             </tr>
             </thead>
             <tbody>
-            {% for zone, zone_info in firewall_settings['zone_manager']['builtin'].items() %}
+            {% for zone, zone_info in firewall_settings['zone_manager']['built-in'].items() %}
               <tr>
                 <td>X</td>
                 <td>{{zone}}</td>

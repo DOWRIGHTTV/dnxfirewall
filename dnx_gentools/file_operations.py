@@ -148,14 +148,14 @@ def json_to_yaml(data: Union[str, dict], *, is_string: bool = False) -> str:
     set "is_string" to True to skip over object serialization.
     '''
     if (not is_string):
-        data = json.dumps(data, indent=4)
+        data = json.dumps(data, indent=2)
 
     str_replacement = ['{', '}', '"', ',']
     for s in str_replacement:
         data = data.replace(s, '')
 
-    # removing empty lines and sliding indent back by 4 spaces
-    return '\n'.join([y[4:] for y in data.splitlines() if y.strip()])
+    # removing empty lines and sliding indent back by 2 spaces
+    return '\n'.join([y[2:] for y in data.splitlines() if y.strip()])
 
 def load_tlds() -> Generator[tuple[str, int]]:
     proxy_config: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
@@ -338,7 +338,7 @@ class ConfigChain:
 
          returns an empty dict if not found.
 
-            config.get_dict('interfaces->builtin')
+            config.get_dict('interfaces->built-in')
         '''
         keys = [] if key is None else key.split(self._sep)
         search_data = self._merge_expand()
@@ -471,7 +471,7 @@ class ConfigurationManager:
     obtained or block until it can acquire the lock and return the class object to the caller.
     '''
     log: LogHandler_T = None
-    config_lock_file: ConfigLock = f'{HOME_DIR}/dnx_profile/data/config.lock'
+    config_lock_path: ConfigLock = f'{HOME_DIR}/dnx_profile/data/config.lock'
 
     __slots__ = (
         '_name', '_ext', '_cfg_type', '_filename',
@@ -515,7 +515,7 @@ class ConfigurationManager:
     # attempts to acquire lock on system config lock (blocks until acquired), then opens a temporary
     # file which the new configuration will be written to, and finally returns the class object.
     def __enter__(self) -> ConfigurationManager:
-        self._config_lock = acquire_lock(self.config_lock_file)
+        self._config_lock = acquire_lock(self.config_lock_path)
 
         # setup required only if the config file is specified.
         if (self._name):
@@ -546,11 +546,9 @@ class ConfigurationManager:
             self._temp_file.close()
             os.unlink(self._temp_file_path)
 
-        # releasing lock for purposes specified in flock(1) man page under -u (unlock)
-        RELEASE_LOCK(self._config_lock)
+        # releasing lock for purposes specified in flock(1) man page under -u (unlock) + close file.
+        release_lock(self._config_lock)
 
-        # closing file after unlock to allow reference to be cleaned up.
-        self._config_lock.close()
         self.log.debug(f'file lock released for {self._filename}')
 
         if (exc_type is None):

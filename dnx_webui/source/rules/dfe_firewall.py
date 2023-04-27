@@ -32,8 +32,8 @@ cfirewall = FirewallControl.cfirewall
 valid_sections = {'BEFORE': '1', 'MAIN': '2', 'AFTER': '3'}
 
 reference_counts = defaultdict(int)
-zone_map = {'builtin': {}, 'extended': {}}
-zone_manager = {'builtin': {}, 'user-defined': {}}
+zone_map = {'built-in': {}, 'extended': {}}
+zone_manager = {'built-in': {}, 'extended': {}}
 
 INVALID_OBJECT = -1
 VALID_RULE_IDS = [1000, 10000]
@@ -71,15 +71,15 @@ class WebPage(RulesWebPage):
 
         dnx_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
-        # building out interface to zone map NOTE: builtins only for now
-        for intf_type in ['builtin', 'extended']:
+        # building out interface to zone map NOTE: built-ins only for now
+        for intf_type in ['built-in', 'extended']:
             for intf_name, intf_info in dnx_settings.get_items(f'interfaces->{intf_type}'):
                 ident = intf_info['ident']
 
                 zone_map[intf_type][ident] = intf_name
 
                 # need to make converting zone ident/int to name easier in format function
-                zone_ident = dnx_settings[f'zones->builtin->{intf_name}'][0]
+                zone_ident = dnx_settings[f'zones->built-in->{intf_name}'][0]
 
                 # TODO: is lzone_map needed after moving zones to fw objects?
                 lzone_map[zone_ident] = intf_name
@@ -92,8 +92,8 @@ class WebPage(RulesWebPage):
         #  we should track ref counts in in FirewallControl class and inc/dec when rule is deleted or added.
         # calculate_ref_counts(firewall_rules)
 
-        # building zone list and reference counts NOTE: builtins only for now
-        for zone_type in ['builtin', 'user-defined']:
+        # building zone list and reference counts NOTE: built-ins only for now
+        for zone_type in ['built-in', 'extended']:
             for zone_name, (zone_ident, zone_desc) in dnx_settings.get_items(f'zones->{zone_type}'):
 
                 zone_manager[zone_type][zone_name] = [reference_counts[zone_name], zone_desc]

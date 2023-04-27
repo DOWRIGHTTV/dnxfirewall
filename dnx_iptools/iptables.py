@@ -7,7 +7,7 @@ import fcntl
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import Queue, CFG
-from dnx_gentools.file_operations import load_configuration
+from dnx_gentools.file_operations import load_configuration, acquire_lock, release_lock
 
 try:
     from dnx_iptools.cprotocol_tools import itoip
@@ -18,11 +18,6 @@ __all__ = (
     'IPTablesManager'
 )
 
-# aliases for readability
-FILE_LOCK = fcntl.flock
-EXCLUSIVE_LOCK = fcntl.LOCK_EX
-UNLOCK_LOCK = fcntl.LOCK_UN
-
 def ipt_shell(command: str, table: str = 'filter', action: str = '-A') -> None:
     '''iptables wrapper of the dnx shell function.
 
@@ -31,26 +26,22 @@ def ipt_shell(command: str, table: str = 'filter', action: str = '-A') -> None:
     shell(f'iptables -t {table} -C {command} || iptables -t {table} {action} {command}')
 
 
+# TODO: remove need for wan interface settings to be applied as defaults. this will allow for the wan interface
+#   to no be "special" within the system by identity, but could be determined based on a "wan" role.
 class _Defaults:
     '''class containing methods to build default IPTable rule sets.
     '''
-    def __init__(self, interfaces: dict):
+    custom_nat_chains: list[str] = ['DSTNAT', 'SRCNAT']
 
-        self._wan_int: str = ''
-        self._lan_int: str = ''
-        self._dmz_int: str = ''
-
-        for zone, intf in interfaces.items():
-            setattr(self, f'_{zone}_int', intf)
-
-        self.custom_nat_chains: list[str] = ['DSTNAT', 'SRCNAT']
+    def __init__(self, wan_intf: str):
+        self._wan_int = wan_intf
 
     @classmethod
     # calling all methods in the class dict.
-    def load(cls, interfaces: dict) -> None:
+    def load(cls, wan_intf: str) -> None:
 
         # self init, dynamically calling each method
-        self = cls(interfaces)
+        self = cls(wan_intf)
         for n, f in cls.__dict__.items():
             if '__' not in n and n != 'load':
                 try:
@@ -119,16 +110,14 @@ class _Defaults:
 
 
 class IPTablesManager:
-    '''This is the IP Tables rule manager.
+    '''class to manage iptables rules in a thread/process safe manner.
 
-    if class is called in as a context manager, all method calls must be run in the context where the class instance
-    itself is returned as the object.
-
-    Changes as part of a context will be automatically saved upon exit of the context, otherwise they will have to be
-    saved manually.
+    implemented as a context manager.
     '''
+    iptables_lock_path = f'{HOME_DIR}/dnx_profile/iptables/iptables.lock'
+
     __slots__ = (
-        '_intf_to_zone', '_zone_to_intf',
+        '_name_to_intf',
 
         '_iptables_lock'
     )
@@ -136,20 +125,15 @@ class IPTablesManager:
     def __init__(self) -> None:
         interfaces: ConfigChain = load_configuration('system', cfg_type='global')
 
-        builtins = interfaces.get_items('interfaces->builtin')
+        associated_intfs = interfaces.get_items('interfaces->built-in')
+        associated_intfs.extend(interfaces.get_items('interfaces->extended'))
 
-        self._intf_to_zone: dict[str, int] = {
-            info['ident']: zone for zone, info in builtins
+        self._name_to_intf: dict[str, str] = {
+            intf['name']: intf['ident'] for slot, intf in associated_intfs
         }
-
-        self._zone_to_intf: dict[str, int] = {
-            zone: info['ident'] for zone, info in builtins
-        }
-
-        self._iptables_lock = open(f'{HOME_DIR}/dnx_profile/iptables/iptables.lock', 'r+')
 
     def __enter__(self) -> IPTablesManager:
-        FILE_LOCK(self._iptables_lock, EXCLUSIVE_LOCK)
+        self._iptables_lock = acquire_lock(self.iptables_lock_path)
 
         return self
 
@@ -157,8 +141,7 @@ class IPTablesManager:
         if (exc_type is None):
             self.commit()
 
-        FILE_LOCK(self._iptables_lock, UNLOCK_LOCK)
-        self._iptables_lock.close()
+        release_lock(self._iptables_lock)
 
         return True
 
@@ -184,13 +167,13 @@ class IPTablesManager:
         NOTE: this method should not be called more than once during system operation or duplicate rules will be
         inserted into iptables.
         '''
-        _Defaults.load(self._zone_to_intf)
+        _Defaults.load(self._name_to_intf['wan'])
 
         if (not suppress):
             console_log('dnxfirewall iptables default applied.')
 
     def add_nat(self, rule: config) -> None:
-        src_interface = self._zone_to_intf[f'{rule.src_zone}']
+        src_interface = self._name_to_intf[f'{rule.src_zone}']
 
         # build dnat based on protocol and user configured options.
         if (rule.nat_type == 'DSTNAT'):
@@ -213,7 +196,7 @@ class IPTablesManager:
             nat_rule = str_join(nat_rule)
 
         elif (rule.nat_type == 'SRCNAT'):
-            dst_interface = self._zone_to_intf['wan']
+            dst_interface = self._name_to_intf['wan']
 
             nat_rule = (
                 'sudo iptables -t nat -I SRCNAT '

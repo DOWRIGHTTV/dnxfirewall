@@ -29,7 +29,7 @@ if (TYPE_CHECKING):
 
     from dnx_gentools import Structure_T
 
-    IntfList: TypeAlias = list[tuple[int, int, str]]
+    from dnx_iptools.interface_ops import Intf, IntfList
 
 __all__ = (
     'Listener', 'ProtoRelay', 'NFQueue', 'NFPacket', 'RawResponse'
@@ -53,7 +53,7 @@ class Listener:
 
     # TODO: what happens if interface comes online, then immediately gets unplugged. the registration would fail
     #  potentially and would no longer be active so it would never happen if the interface was replugged after.
-    def __register(self, intf: tuple[int, int, str]) -> None:
+    def __register(self, intf: Intf) -> None:
         '''registers an interface with the listener.
 
         once registration is complete the thread will exit.
@@ -61,7 +61,7 @@ class Listener:
         # this is being defined here so the listener will be able to correlate socket back to interface and send in.
         # NOTE: we can probably _ the first 2 vars, but they may actually come in handy for something so check to see
         #  if they can be used to simplify the file descriptor tracking we had to implement awhile back.
-        intf_index, zone, _intf = intf
+        intf_index, _intf, zone = intf
 
         self._log.debug(f'[{_intf}] {self.__class__.__name__} started interface registration.')
 
@@ -574,7 +574,7 @@ class RawResponse:
     '''
     __setup: ClassVar[bool] = False
 
-    # dynamically provide interfaces. default returns builtins.
+    # dynamically provide interfaces. default returns built-ins.
     _intfs: IntfList = load_interfaces()
 
     _log: LogHandler_T = None
@@ -605,10 +605,10 @@ class RawResponse:
             Thread(target=cls.__register, args=(intf,)).start()
 
     @classmethod
-    def __register(cls, intf: tuple[int, int, str]):
+    def __register(cls, intf: Intf):
         '''will register interface with ip and socket. a new socket will be used every time this method is called.
         '''
-        intf_index, zone, _intf = intf
+        intf_index, _intf, zone = intf
 
         wait_for_interface(interface=_intf)
         ip = wait_for_ip(interface=_intf)

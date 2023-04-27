@@ -561,7 +561,7 @@ then
     eval "$1+=\$2"
   }'
 else
-  # ...otherwise fall back to using expr, which is often a shell builtin.
+  # ...otherwise fall back to using expr, which is often a shell built-in.
   func_append ()
   {
     $debug_cmd
@@ -1936,7 +1936,7 @@ then
         && func_split_equals_rhs=
   }'
 else
-  # ...otherwise fall back to using expr, which is often a shell builtin.
+  # ...otherwise fall back to using expr, which is often a shell built-in.
   func_split_equals ()
   {
       $debug_cmd
@@ -1964,7 +1964,7 @@ then
       func_split_short_opt_name=${1%"$func_split_short_opt_arg"}
   }'
 else
-  # ...otherwise fall back to using expr, which is often a shell builtin.
+  # ...otherwise fall back to using expr, which is often a shell built-in.
   func_split_short_opt ()
   {
       $debug_cmd
@@ -2573,7 +2573,7 @@ extracted_serial=0
 exec_cmd=
 
 
-# A function that is used when there is no print builtin or printf.
+# A function that is used when there is no print built-in or printf.
 func_fallback_echo ()
 {
   eval 'cat <<_LTECHO_EOF
