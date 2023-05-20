@@ -171,7 +171,7 @@ def get_interfaces_configuration() -> dict:
     builtin_intfs, extended_intfs = get_configurable_interfaces()
 
     system_interfaces = {'builtin': [], 'extended': []}
-    for slot, intf in builtin_intfs:
+    for slot, intf in builtin_intfs.items():
         mac_addr = get_mac_string(interface=intf['id'])
         ip_addr = get_ipaddress(interface=intf['id'])
         netmask = get_netmask(interface=intf['id'])
@@ -179,7 +179,7 @@ def get_interfaces_configuration() -> dict:
 
         system_interfaces['builtin'].append([slot, intf['id'], mac_addr, intf['name'], intf['dhcp'], ip_addr, netmask, dfg])
 
-    for slot, intf in extended_intfs:
+    for slot, intf in extended_intfs.items():
         mac_addr = get_mac_string(interface=intf['id'])
         ip_addr = get_ipaddress(interface=intf['id'])
         netmask = get_netmask(interface=intf['id'])
