@@ -29,36 +29,36 @@ class WebPage(StandardWebPage):
     '''
     @staticmethod
     def load(_: Form) -> dict[str, Any]:
-        system_settings: ConfigChain = load_configuration('system', cfg_type='global')
-
-        wan_intf = 'interfaces->builtin->std_1'
-
-        wan_id: str = system_settings[f'{wan_intf}->id']
-        wan_state: int = system_settings[f'{wan_intf}->state']
-        default_mac:    str = system_settings[f'{wan_intf}->default_mac']
-        configured_mac: str = system_settings[f'{wan_intf}->default_mac']
-
-        try:
-            ip_addr = itoip(interface.get_ipaddress(interface=wan_id))
-        except OverflowError:
-            ip_addr = 'NOT SET'
-
-        try:
-            netmask = itoip(interface.get_netmask(interface=wan_id))
-        except OverflowError:
-            netmask = 'NOT SET'
+        # system_settings: ConfigChain = load_configuration('system', cfg_type='global')
+        #
+        # wan_intf = 'interfaces->builtin->std_1'
+        #
+        # wan_id: str = system_settings[f'{wan_intf}->id']
+        # wan_state: int = system_settings[f'{wan_intf}->state']
+        # default_mac:    str = system_settings[f'{wan_intf}->default_mac']
+        # configured_mac: str = system_settings[f'{wan_intf}->default_mac']
+        #
+        # try:
+        #     ip_addr = itoip(interface.get_ipaddress(interface=wan_id))
+        # except OverflowError:
+        #     ip_addr = 'NOT SET'
+        #
+        # try:
+        #     netmask = itoip(interface.get_netmask(interface=wan_id))
+        # except OverflowError:
+        #     netmask = 'NOT SET'
 
         return {
-            'mac': {
-                'default': default_mac,
-                'current': configured_mac if configured_mac else default_mac
-            },
-            'ip': {
-                'state': wan_state,
-                'ip_address': ip_addr,
-                'netmask': netmask,
-                'default_gateway': itoip(default_route())
-            },
+            # 'mac': {
+            #     'default': default_mac,
+            #     'current': configured_mac if configured_mac else default_mac
+            # },
+            # 'ip': {
+            #     'state': wan_state,
+            #     'ip_address': ip_addr,
+            #     'netmask': netmask,
+            #     'default_gateway': itoip(default_route())
+            # },
             'overview': get_interfaces_overview(),
             'configuration': get_interfaces_configuration()
         }
