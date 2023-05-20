@@ -175,32 +175,11 @@
                   <tr>
                     <td>{{ intf[1] }}</td>
                     <td>{{ intf[2] }}</td>
-                    <td>
-                      <div class="input-field col s12 center">
-                        <input type="text" name="{{ intf[0] }}/name" value="{{ intf[3] }}">
-                      </div>
-                    </td>
-                    <td>
-                      {% set message = 'warning: changing the dhcp setting will restart the interface and lose any ip address
-                      configuration. proceed?' %}
-                    {{ create_button_with_modal('btn-floating btn-small black',
-                      'compare_arrows', 1, loop.index, 2, 'change_dhcp', intf[0] ~ '/' ~ intf[1], message)|safe }}
-                    </td>
-                    <td>
-                      <div class="input-field col s12 {{ input_color }}">
-                        <input type="text" name="{{ intf[0] }}/name" value="{{ intf[5] }}" {{ ip_addr_validate }}>
-                      </div>
-                    </td>
-                    <td>
-                      <div class="input-field col s12 {{ input_color }}">
-                        <input type="text" name="{{ intf[0] }}/name" value="{{ intf[6] }}" {{ ip_addr_validate }}>
-                      </div>
-                    </td>
-                    <td>
-                      <div class="input-field col s12 {{ input_color }}">
-                        <input type="text" name="{{ intf[0] }}/name" value="{{ intf[7] }}" {{ ip_addr_validate }}>
-                      </div>
-                    </td>
+                    <td>{{ intf[3] }}</td>
+                    <td>{{ intf[4] }}</td>
+                    <td>{{ intf[5] }}</td>
+                    <td>{{ intf[6] }}</td>
+                    <td>{{ intf[7] }}</td>
                   </tr>
                 {% endfor %}
               {% endfor %}

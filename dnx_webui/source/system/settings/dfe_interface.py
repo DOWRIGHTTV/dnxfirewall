@@ -185,8 +185,8 @@ def get_interfaces_configuration() -> dict:
 
     for intf_id, intf in extended_intfs.items():
         mac_addr = get_mac_string(interface=intf['id'])
-        ip_addr = get_ipaddress(interface=intf['id'])
-        netmask = get_netmask(interface=intf['id'])
+        ip_addr = itoip(get_ipaddress(interface=intf['id']))
+        netmask = itoip(get_netmask(interface=intf['id']))
         dfg = itoip(default_route())
 
         dhcp_state = 'on' if intf['dhcp'] else 'off'
