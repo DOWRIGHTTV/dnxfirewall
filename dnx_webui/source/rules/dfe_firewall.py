@@ -67,22 +67,22 @@ return_data: tuple[bool, dict[str, Union[bool, str]]]
 class WebPage(RulesWebPage):
     @staticmethod
     def load(section: str) -> dict[str, Any]:
-        lzone_map: dict[int, str] = {ANY_ZONE: 'any'}
+        # lzone_map: dict[int, str] = {ANY_ZONE: 'any'}
 
         dnx_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
         # building out interface to zone map NOTE: built-ins only for now
-        for intf_type in ['built-in', 'extended']:
-            for intf_name, intf_info in dnx_settings.get_items(f'interfaces->{intf_type}'):
-                ident = intf_info['ident']
-
-                zone_map[intf_type][ident] = intf_name
-
-                # need to make converting zone ident/int to name easier in format function
-                zone_ident = dnx_settings[f'zones->built-in->{intf_name}'][0]
-
-                # TODO: is lzone_map needed after moving zones to fw objects?
-                lzone_map[zone_ident] = intf_name
+        # for intf_type in ['built-in', 'extended']:
+        #     for intf_name, intf_info in dnx_settings.get_items(f'interfaces->{intf_type}'):
+        #         ident = intf_info['id']
+        #
+        #         zone_map[intf_type][ident] = intf_name
+        #
+        #         # need to make converting zone ident/int to name easier in format function
+        #         zone_id = dnx_settings[f'zones->built-in->{intf_name}'][0]
+        #
+        #         # TODO: is lzone_map needed after moving zones to fw objects?
+        #         lzone_map[zone_id] = intf_name
 
         reference_counts.clear()
         # NOTE: this needs to be before the zone manager builds, so we can get reference counts
@@ -94,7 +94,7 @@ class WebPage(RulesWebPage):
 
         # building zone list and reference counts NOTE: built-ins only for now
         for zone_type in ['built-in', 'extended']:
-            for zone_name, (zone_ident, zone_desc) in dnx_settings.get_items(f'zones->{zone_type}'):
+            for zone_id, (zone_name, zone_desc) in dnx_settings.get_items(f'zones->{zone_type}'):
 
                 zone_manager[zone_type][zone_name] = [reference_counts[zone_name], zone_desc]
 
@@ -292,9 +292,9 @@ def validate_firewall_commit(fw_rules_json: str, /):
     dnx_interfaces = load_configuration('system', cfg_type='global').get_items('interfaces->builtin')
 
     # TODO: same as above. not needed?
-    lzone_map: dict[str, int] = {zone_name: zone_info['zone'] for zone_name, zone_info in dnx_interfaces}
+    # lzone_map: dict[str, int] = {zone_name: zone_info['zone'] for zone_name, zone_info in dnx_interfaces}
     # 99 used to specify wildcard/any zone match
-    lzone_map['any'] = ANY_ZONE
+    # lzone_map['any'] = ANY_ZONE
 
     with FWObjectManager(lookup=True) as object_manager:
 

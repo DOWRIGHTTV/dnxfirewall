@@ -14,7 +14,7 @@ if (TYPE_CHECKING):
 
 # IP
 PR_IP_HDR: Structure_T = _structure(
-    'ip_header', 'B,ver_ihl B,tos H,tl H,ident H,flags_fro B,ttl B,protocol H,checksum L,src_ip L,dst_ip'
+    'ip_header', 'B,ver_ihl B,tos H,tl H,id H,flags_fro B,ttl B,protocol H,checksum L,src_ip L,dst_ip'
 )
 
 # TCP

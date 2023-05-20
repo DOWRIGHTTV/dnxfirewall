@@ -30,6 +30,7 @@ if (TYPE_CHECKING):
 
 __all__ = (
     'acquire_lock', 'release_lock',
+    'load_file',
     'load_configuration', 'write_configuration',
     'load_data', 'write_data',
     'append_to_file', 'tail_file', 'change_file_owner',
@@ -70,6 +71,12 @@ def release_lock(mutex: TextIO):
     RELEASE_LOCK(mutex)
 
     mutex.close()
+
+def load_file(filepath: str, *, start=0) -> list[str]:
+    '''load a file and return a list of lines.
+    '''
+    with open(filepath, 'r') as file:
+        return file.readlines()[start:]
 
 def load_configuration(
         filename: str, ext: str = 'cfg', *, cfg_type: str = '', filepath: str = 'dnx_profile/data') -> ConfigChain:

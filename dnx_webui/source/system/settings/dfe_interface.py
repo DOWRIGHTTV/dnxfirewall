@@ -9,10 +9,12 @@ from source.web_validate import *
 
 from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.def_enums import CFG, DATA, INTF
-from dnx_gentools.file_operations import load_data, load_configuration, config, ConfigurationManager, json_to_yaml
+from dnx_gentools.file_operations import config, ConfigurationManager
+from dnx_gentools.file_operations import load_file, load_data, load_configuration, json_to_yaml
 
 from dnx_control.control.ctl_action import system_action
 
+from dnx_iptools.interface_ops import get_configurable_interfaces, get_ip_network, get_mac_string, get_ipaddress, get_netmask, get_de
 from dnx_iptools.cprotocol_tools import itoip, default_route
 
 from source.web_interfaces import StandardWebPage
@@ -31,18 +33,18 @@ class WebPage(StandardWebPage):
 
         wan_intf = 'interfaces->built-in->std_1'
 
-        wan_ident: str = system_settings[f'{wan_intf}->ident']
+        wan_id: str = system_settings[f'{wan_intf}->id']
         wan_state: int = system_settings[f'{wan_intf}->state']
         default_mac:    str = system_settings[f'{wan_intf}->default_mac']
         configured_mac: str = system_settings[f'{wan_intf}->default_mac']
 
         try:
-            ip_addr = itoip(interface.get_ipaddress(interface=wan_ident))
+            ip_addr = itoip(interface.get_ipaddress(interface=wan_id))
         except OverflowError:
             ip_addr = 'NOT SET'
 
         try:
-            netmask = itoip(interface.get_netmask(interface=wan_ident))
+            netmask = itoip(interface.get_netmask(interface=wan_id))
         except OverflowError:
             netmask = 'NOT SET'
 
@@ -57,7 +59,7 @@ class WebPage(StandardWebPage):
                 'netmask': netmask,
                 'default_gateway': itoip(default_route())
             },
-            'interfaces': get_interfaces()
+            'overview': get_interface_overview()
         }
 
     @staticmethod
@@ -136,7 +138,7 @@ def set_wan_interface(intf_type: INTF = INTF.DHCP):
     with ConfigurationManager('system') as dnx:
         dnx_settings: ConfigChain = dnx.load_configuration()
 
-        wan_ident: str = dnx_settings['interfaces->built-in->wan->ident']
+        wan_id: str = dnx_settings['interfaces->built-in->wan->id']
 
         # template used to generate yaml file with user configured fields
         intf_template: dict = load_data('interfaces.cfg', filepath='dnx_profile/interfaces')
@@ -144,7 +146,7 @@ def set_wan_interface(intf_type: INTF = INTF.DHCP):
         # for static dhcp4 and dhcp_overrides keys are removed and creating an empty list for the addresses.
         # NOTE: the ip configuration will unlock after the switch and can then be updated
         if (intf_type is INTF.STATIC):
-            wan_intf: dict = intf_template['network']['ethernets'][wan_ident]
+            wan_intf: dict = intf_template['network']['ethernets'][wan_id]
 
             wan_intf.pop('dhcp4')
             wan_intf.pop('dhcp4-overrides')
@@ -162,43 +164,55 @@ def set_wan_interface(intf_type: INTF = INTF.DHCP):
 
         system_action(module='webui', command='netplan apply', args='')
 
-def get_interfaces() -> dict:
+def get_interface_configuration() -> dict:
     '''loading installed system interfaces, then returning dict with "built-in" and "extended" separated.
     '''
-    configured_intfs: dict = load_configuration('system', cfg_type='global').get_dict('interfaces')
+    builtin_intfs, extended_intfs = get_configurable_interfaces()
 
-    # this will filter out any interface slot that does not have an associated interface
-    builtin_intfs: dict[str, str] = {
-        intf['ident']: intf for intf in configured_intfs['built-in'].values() if intf['ident']
-    }
-    extended_intfs: dict[str, str] = {
-        intf['ident']: intf for intf in configured_intfs['extended'].values() if intf['ident']
-    }
+    system_interfaces = {'built-in': [], 'extended': []}
+    for slot, intf in builtin_intfs:
+        mac_addr = get_mac_string(interface=intf['id'])
+        ip_addr = get_ipaddress(interface=intf['id'])
+        netmask = get_netmask(interface=intf['id'])
+        dfg = itoip(default_route())
+
+        system_interfaces['built-in'].append([slot, intf['id'], mac_addr, intf['name'], intf['dhcp'], ip_addr, netmask, dfg])
+
+
+def get_interface_overview() -> dict:
+
+    builtin_intfs, extended_intfs = get_configurable_interfaces()
+
+    zones: dict = load_configuration('system', cfg_type='global').get_dict('zones')
+    configured_zones = {**zones['built-in'], **zones['extended']}
 
     # intf values -> [ ["general info"], ["transmit"], ["receive"] ]
     system_interfaces = {'built-in': [], 'extended': [], 'unassociated': []}
 
-    with open('/proc/net/dev', 'r') as netdev:
-        detected_intfs = netdev.readlines()
-
     # skipping identifier column names
-    for intf in detected_intfs[2:]:
+    for interface in load_file('/proc/net/dev', start=2):
 
-        data = intf.split()
+        data = interface.split()
         name = data[0][:-1]  # removing the ":"
 
-        intf_cfg: Optional[dict[str, str]]
+        intf: Optional[dict[str, str]]
 
-        if intf_cfg := builtin_intfs.get(name, None):
+        if intf := builtin_intfs.get(name, None):
+
+            zone_name = configured_zones[intf['zone']][0]
+            ip_addr = get_ip_network(interface=intf['id'])
 
             system_interfaces['built-in'].append([
-                [name, intf_cfg['zone'], intf_cfg.get('subnet', 'n/a')], [data[1], data[2]], [data[9], data[10]]
+                [name, zone_name, ip_addr], [data[1], data[2]], [data[9], data[10]]
             ])
 
-        elif intf_cfg := extended_intfs.get(name, None):
+        elif intf := extended_intfs.get(name, None):
+
+            zone_name = configured_zones[intf['zone']][0]
+            ip_addr = get_ip_network(interface=intf['id'])
 
             system_interfaces['extended'].append([
-                [name, intf_cfg['zone'], intf_cfg['subnet']], [data[1], data[2]], [data[9], data[10]]
+                [name, zone_name, ip_addr], [data[1], data[2]], [data[9], data[10]]
             ])
 
         # functional else with loopback filter
@@ -216,7 +230,7 @@ def get_interfaces() -> dict:
 #
 #         new_mac = mac_address if action is CFG.ADD else wan_settings['default_mac']
 #
-#         wan_int = wan_settings['ident']
+#         wan_int = wan_settings['id']
 #         # iterating over the necessary command args, then sending over local socket
 #         # for control service to issue the commands
 #         args = [f'{wan_int} down', f'{wan_int} hw ether {new_mac}', f'{wan_int} up']
@@ -233,18 +247,18 @@ def set_wan_ip(wan_settings: config) -> None:
     Modify configured WAN interface IP address.
 
     1. Loads configured DNS servers
-    2. Loads wan interface identity
+    2. Loads wan interface idity
     3. Create netplan config from template
     4. Move file to /etc/netplan
     '''
     dnx_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
-    wan_ident: str = dnx_settings['interfaces->built-in->wan->ident']
+    wan_id: str = dnx_settings['interfaces->built-in->wan->id']
 
     intf_template: dict = load_data('interfaces.cfg', filepath='dnx_profile/interfaces')
 
     # removing dhcp4 and dhcp_overrides keys, then adding ip address value
-    wan_intf: dict = intf_template['network']['ethernets'][wan_ident]
+    wan_intf: dict = intf_template['network']['ethernets'][wan_id]
 
     wan_intf.pop('dhcp4')
     wan_intf.pop('dhcp4-overrides')

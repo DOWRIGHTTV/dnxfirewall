@@ -129,7 +129,7 @@ class IPTablesManager:
         associated_intfs.extend(interfaces.get_items('interfaces->extended'))
 
         self._name_to_intf: dict[str, str] = {
-            intf['name']: intf['ident'] for slot, intf in associated_intfs
+            intf['name']: intf['id'] for slot, intf in associated_intfs
         }
 
     def __enter__(self) -> IPTablesManager:

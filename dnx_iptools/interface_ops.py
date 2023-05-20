@@ -18,7 +18,7 @@ from dnx_gentools.file_operations import ConfigurationManager, load_configuratio
 
 from dnx_iptools.def_structs import fcntl_pack
 from dnx_iptools.cprotocol_tools import itoip
-from dnx_iptools.protocol_tools import btoia
+from dnx_iptools.protocol_tools import btoia, netmask_to_cidr
 
 # ================
 # TYPING IMPORTS
@@ -30,9 +30,10 @@ if (TYPE_CHECKING):
     IntfList: TypeAlias = list[Intf]
 
 __all__ = (
+    'get_configurable_interfaces',
     'load_interfaces',  # 'get_intf_builtin',
     'wait_for_interface', 'wait_for_ip',
-    'get_mac', 'get_netmask', 'get_ipaddress', 'get_masquerade_ip',
+    'get_mac', 'get_ip_network', 'get_ipaddress', 'get_netmask', 'get_masquerade_ip',
     'get_arp_table'
 )
 
@@ -49,16 +50,27 @@ DESCRIPTOR: int = _s.fileno()
 #     intf_path = f'interfaces->built-in->{zone_name}'
 #     system_interfaces = {v: k for k, v in if_nameindex()[1:]}
 #
-#     intf_index = system_interfaces.get(intf_settings[f'{intf_path}->ident'], None)
+#     intf_index = system_interfaces.get(intf_settings[f'{intf_path}->id'], None)
 #     if (not intf_index):
 #         raise RuntimeError('failed to determine interface from provided built-in zone.')
 #
-#     return {intf_index: (intf_settings[f'{intf_path}->zone'], intf_settings[f'{intf_path}->ident'])}
+#     return {intf_index: (intf_settings[f'{intf_path}->zone'], intf_settings[f'{intf_path}->id'])}
+def get_configurable_interfaces() -> tuple[dict, dict]:
+    '''return a tuple of dictionaries containing the configured associated/configurable interfaces.
+    '''
+    system_intfs: dict = load_configuration('system', cfg_type='global').get_dict('interfaces')
+
+    # filtering out any interface slot that does not have an associated interface
+    extended_intfs: dict[str, str] = {
+        intf_k: intf_v for intf_k, intf_v in system_intfs['extended'].items() if intf_v['id']
+    }
+
+    return system_intfs['built-in'], extended_intfs
 
 def load_interfaces(intf_type: INTF = INTF.BUILTIN, *, exclude: Optional[list] = None) -> IntfList:
     '''return a list of tuples for the specified interface type.
 
-        [(intf_index, zone, ident)]
+        [(intf_index, zone, id)]
 
     the interface index cannot be guaranteed to be the same across system restarts.
     '''
@@ -75,7 +87,7 @@ def load_interfaces(intf_type: INTF = INTF.BUILTIN, *, exclude: Optional[list] =
         for intf, intf_info in dnx_interfaces:
 
             name:  str = intf_info['name']
-            ident: str = intf_info['ident']
+            ident: str = intf_info['id']
             zone:  int = intf_info['zone']
 
             intf_index: int = system_interfaces.get(ident)
@@ -129,15 +141,15 @@ def interface_association(intf: str, action: CFG = CFG.ADD) -> None:
             intf_loc = f'interfaces->extended->{slot}'
 
             # interface identity (eg. ens160) to interface slot
-            if (action is CFG.ADD and interface['ident'] is None):
+            if (action is CFG.ADD and interface['id'] is None):
 
-                intf_settings[f'{intf_loc}->ident'] = intf
+                intf_settings[f'{intf_loc}->id'] = intf
 
                 break
 
             # clearing interface slot for the matching interface identity (eg. ens160)
-            elif (action is CFG.DEL and interface['ident'] == intf):
-                intf_settings[f'{intf_loc}->ident'] = None
+            elif (action is CFG.DEL and interface['id'] == intf):
+                intf_settings[f'{intf_loc}->id'] = None
                 intf_settings[f'{intf_loc}->name'] = None
                 intf_settings[f'{intf_loc}->zone'] = None
 
@@ -173,7 +185,7 @@ def configure_interface_address(intf: config) -> None:
     '''configures the interface with the provided ip address and netmask in netplan via InterfaceManager.
     '''
     with InterfaceManager() as dnx_intf:
-        dnx_intf.add_interface(intf.ident, intf.ip_addr, intf.cidr)
+        dnx_intf.add_interface(intf.id, intf.ip_addr, intf.cidr)
 
 def _is_ready(interface: str) -> int:
     try:
@@ -250,6 +262,21 @@ def get_mac_string(*, interface: str) -> Optional[str]:
         mac_hex = mac_addr.hex()
         return ':'.join([mac_hex[i:i + 2] for i in range(0, 12, 2)])
 
+def get_ip_network(*, interface: str) -> str:
+    '''return ip network for the passed in interface.
+
+    eg. 192.168.83.1/24
+
+    return "not set" on Error.
+    '''
+
+    try:
+        ip_addr = itoip(get_ipaddress(interface=interface))
+        netmask = itoip(get_netmask(interface=interface))
+    except OSError:
+        return 'not set'
+
+    return f'{ip_addr}/{netmask_to_cidr(netmask)}'
 
 def get_ipaddress(*, interface: str) -> int:
     '''return integer value for the passed in interfaces current ip address.
@@ -390,4 +417,3 @@ class InterfaceManager:
         '''
         if self._ext_intf_netplan['network']['ethernets'].pop(intf, None):
             self._data_written = True
-

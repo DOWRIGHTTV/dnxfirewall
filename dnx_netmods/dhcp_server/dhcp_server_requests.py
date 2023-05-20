@@ -35,7 +35,7 @@ class ClientRequest:
         'recvd_intf', 'server_ip', 'sendto',
 
         'init_time', 'mtype', 'hostname',
-        'svr_ident', 'req_ip', 'handout_ip',
+        'svr_id', 'req_ip', 'handout_ip',
 
         'request_options', 'interface',
 
@@ -57,7 +57,7 @@ class ClientRequest:
         self.mtype:     DHCP = DHCP.NOT_SET
         self.hostname:   str = ''
 
-        self.svr_ident:  int = 0
+        self.svr_id:  int = 0
         self.req_ip:     int = 0
         self.handout_ip: int = 0
 

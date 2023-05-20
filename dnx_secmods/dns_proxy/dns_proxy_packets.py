@@ -193,7 +193,7 @@ class ClientQuery:
 # PROXY - FULL INSPECTION, DIRECT SOCKET
 # ======================================
 ip_hdr_template: Structure_T = PR_IP_HDR(
-    (('ver_ihl', 69), ('tos', 0), ('ident', 0), ('flags_fro', 16384), ('ttl', 255), ('protocol', PROTO.UDP))
+    (('ver_ihl', 69), ('tos', 0), ('id', 0), ('flags_fro', 16384), ('ttl', 255), ('protocol', PROTO.UDP))
 )
 udp_hdr_template: Structure_T = PR_UDP_HDR(
     (('checksum', 0),)

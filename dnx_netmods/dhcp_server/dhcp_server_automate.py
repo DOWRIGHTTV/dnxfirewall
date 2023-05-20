@@ -36,7 +36,7 @@ RESERVED_LEASE = DHCP_RECORD(DHCP.RESERVATION, -1, '', '')
 
 class ServerConfiguration(ConfigurationMixinBase):
     interfaces:   dict[str, DHCP_INTERFACE] = {}
-    valid_idents: set[int] = {0}
+    valid_ids: set[int] = {0}
 
     # initializing the lease table dictionary and providing a reference to the reservations dict
     leases: Leases
@@ -66,7 +66,7 @@ class ServerConfiguration(ConfigurationMixinBase):
         # updating user configuration items per interface in memory.
         for intf in dhcp_settings.get_values('interfaces->built-in'):
 
-            # NOTE ex. ident: eth0, lo, enp0s3
+            # NOTE ex. id: eth0, lo, enp0s3
             identity: str = intf['ident']
             enabled:  int = intf['enabled']
             check_ip: int = intf['icmp_check']
