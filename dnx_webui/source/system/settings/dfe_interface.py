@@ -213,7 +213,9 @@ def get_interfaces_overview() -> dict:
 
         if intf := builtin_intfs.get(intf_id, None):
 
-            zone_name = configured_zones[intf['zone']][0]
+            zone_id = str(intf['zone'])  # zone id is natively an integer on the backend. this converts for FE use.
+
+            zone_name = configured_zones[zone_id][0]
             ip_addr = get_ip_network(interface=intf_id)
 
             system_interfaces['builtin'].append([
