@@ -19,7 +19,7 @@ from dnx_iptools.cprotocol_tools import itoip, default_route
 
 from source.web_interfaces import StandardWebPage
 
-__all__ = ('WebPage', 'get_interfaces')
+__all__ = ('WebPage', 'get_interfaces_overview')
 
 _IP_DISABLED = True
 
@@ -59,7 +59,8 @@ class WebPage(StandardWebPage):
                 'netmask': netmask,
                 'default_gateway': itoip(default_route())
             },
-            'overview': get_interface_overview()
+            'overview': get_interfaces_overview(),
+            'configuration': get_interfaces_configuration()
         }
 
     @staticmethod
@@ -164,7 +165,7 @@ def set_wan_interface(intf_type: INTF = INTF.DHCP):
 
         system_action(module='webui', command='netplan apply', args='')
 
-def get_interface_configuration() -> dict:
+def get_interfaces_configuration() -> dict:
     '''loading installed system interfaces, then returning dict with "built-in" and "extended" separated.
     '''
     builtin_intfs, extended_intfs = get_configurable_interfaces()
@@ -178,8 +179,17 @@ def get_interface_configuration() -> dict:
 
         system_interfaces['built-in'].append([slot, intf['id'], mac_addr, intf['name'], intf['dhcp'], ip_addr, netmask, dfg])
 
+    for slot, intf in extended_intfs:
+        mac_addr = get_mac_string(interface=intf['id'])
+        ip_addr = get_ipaddress(interface=intf['id'])
+        netmask = get_netmask(interface=intf['id'])
+        dfg = itoip(default_route())
 
-def get_interface_overview() -> dict:
+        system_interfaces['extended'].append([slot, intf['id'], mac_addr, intf['name'], intf['dhcp'], ip_addr, netmask, dfg])
+
+    return system_interfaces
+
+def get_interfaces_overview() -> dict:
 
     builtin_intfs, extended_intfs = get_configurable_interfaces()
 

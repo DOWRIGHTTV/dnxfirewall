@@ -12,7 +12,7 @@ from dnx_routines.database.ddb_connector_sqlite import DBConnector
 from dnx_routines.logging.log_client import LogHandler as Log
 
 from source.web_interfaces import StandardWebPage
-from source.system.settings.dfe_interface import get_interfaces
+from source.system.settings.dfe_interface import get_interfaces_overview
 
 __all__ = ('WebPage')
 
@@ -33,7 +33,7 @@ class WebPage(StandardWebPage):
 
             'uptime': System.uptime(), 'cpu': System.cpu_usage(), 'ram': System.ram_usage(),
 
-            'interfaces': get_interfaces(),
+            'interfaces': get_interfaces_overview(),
         }
 
 def query_database():
