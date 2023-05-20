@@ -14,7 +14,7 @@ from dnx_gentools.file_operations import load_file, load_data, load_configuratio
 
 from dnx_control.control.ctl_action import system_action
 
-from dnx_iptools.interface_ops import get_configurable_interfaces, get_ip_network, get_mac_string, get_ipaddress, get_netmask, get_de
+from dnx_iptools.interface_ops import get_configurable_interfaces, get_ip_network, get_mac_string, get_ipaddress, get_netmask
 from dnx_iptools.cprotocol_tools import itoip, default_route
 
 from source.web_interfaces import StandardWebPage
