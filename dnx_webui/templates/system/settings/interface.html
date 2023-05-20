@@ -151,13 +151,13 @@
             <table class="centered highlight">
               {{ create_title('interface list')|safe }}
               <colgroup>
-                <col span="3" style="background-color:#eceff1">
-                <col span="5" style="background-color:#90a4ae">
+                <col span="2" style="background-color:#eceff1">
+                <col span="6" style="background-color:#90a4ae">
               </colgroup>
               <thead>
                 <tr>
-                  <th colspan="3">ID</th>
-                  <th colspan="5">Configuration</th>
+                  <th colspan="2">ID</th>
+                  <th colspan="6">Configuration</th>
                 </tr>
                 <tr>
                   <th>id</th>
@@ -176,28 +176,29 @@
                     <td>{{ intf[1] }}</td>
                     <td>{{ intf[2] }}</td>
                     <td>
+                      <div class="input-field col s12 center">
+                        <input type="text" name="{{ intf[0] }}/name" value="{{ intf[3] }}">
+                      </div>
+                    </td>
+                    <td>
+                      {% set message = 'warning: changing the dhcp setting will restart the interface and lose any ip address
+                      configuration. proceed?' %}
+                    {{ create_button_with_modal('btn-floating btn-small black',
+                      'compare_arrows', 1, loop.index, 2, 'change_dhcp', intf[0] ~ '/' ~ intf[1], message)|safe }}
+                    </td>
+                    <td>
                       <div class="input-field col s12 {{ input_color }}">
-                        <input type="text" name="{{ intf[0] }}/name" placeholder="{{ intf[3] }}" {{ ip_addr_validate }}>
+                        <input type="text" name="{{ intf[0] }}/name" value="{{ intf[5] }}" {{ ip_addr_validate }}>
                       </div>
                     </td>
                     <td>
                       <div class="input-field col s12 {{ input_color }}">
-                        <input type="text" name="{{ intf[0] }}/name" placeholder="{{ intf[4] }}" {{ ip_addr_validate }}>
+                        <input type="text" name="{{ intf[0] }}/name" value="{{ intf[6] }}" {{ ip_addr_validate }}>
                       </div>
                     </td>
                     <td>
                       <div class="input-field col s12 {{ input_color }}">
-                        <input type="text" name="{{ intf[0] }}/name" placeholder="{{ intf[5] }}" {{ ip_addr_validate }}>
-                      </div>
-                    </td>
-                    <td>
-                      <div class="input-field col s12 {{ input_color }}">
-                        <input type="text" name="{{ intf[0] }}/name" placeholder="{{ intf[6] }}" {{ ip_addr_validate }}>
-                      </div>
-                    </td>
-                    <td>
-                      <div class="input-field col s12 {{ input_color }}">
-                        <input type="text" name="{{ intf[0] }}/name" placeholder="{{ intf[7] }}" {{ ip_addr_validate }}>
+                        <input type="text" name="{{ intf[0] }}/name" value="{{ intf[7] }}" {{ ip_addr_validate }}>
                       </div>
                     </td>
                   </tr>
