@@ -177,8 +177,10 @@ def get_interfaces_configuration() -> dict:
         netmask = get_netmask(interface=intf_id)
         dfg = itoip(default_route())
 
+        dhcp_state = 'on' if intf['dhcp'] else 'off'
+
         system_interfaces['builtin'].append([
-            INTF.BUILTIN, intf_id, mac_addr, intf['name'], intf['dhcp'], ip_addr, netmask, dfg
+            INTF.BUILTIN, intf_id, mac_addr, intf['name'], dhcp_state, ip_addr, netmask, dfg
         ])
 
     for intf_id, intf in extended_intfs.items():
@@ -187,8 +189,10 @@ def get_interfaces_configuration() -> dict:
         netmask = get_netmask(interface=intf['id'])
         dfg = itoip(default_route())
 
+        dhcp_state = 'on' if intf['dhcp'] else 'off'
+
         system_interfaces['extended'].append([
-            INTF.EXTENDED, intf_id, mac_addr, intf['name'], intf['dhcp'], ip_addr, netmask, dfg
+            INTF.EXTENDED, intf_id, mac_addr, intf['name'], dhcp_state, ip_addr, netmask, dfg
         ])
 
     return system_interfaces
