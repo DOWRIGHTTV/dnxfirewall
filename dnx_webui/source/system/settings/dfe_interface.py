@@ -181,14 +181,14 @@ def get_interfaces_configuration() -> dict:
             INTF.BUILTIN, intf_id, mac_addr, intf['name'], intf['dhcp'], ip_addr, netmask, dfg
         ])
 
-    for slot, intf in extended_intfs.items():
+    for intf_id, intf in extended_intfs.items():
         mac_addr = get_mac_string(interface=intf['id'])
         ip_addr = get_ipaddress(interface=intf['id'])
         netmask = get_netmask(interface=intf['id'])
         dfg = itoip(default_route())
 
         system_interfaces['extended'].append([
-            INTF.EXTENDED, intf['id'], mac_addr, intf['name'], intf['dhcp'], ip_addr, netmask, dfg
+            INTF.EXTENDED, intf_id, mac_addr, intf['name'], intf['dhcp'], ip_addr, netmask, dfg
         ])
 
     return system_interfaces
