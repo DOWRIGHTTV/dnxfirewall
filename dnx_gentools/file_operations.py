@@ -345,7 +345,7 @@ class ConfigChain:
 
          returns an empty dict if not found.
 
-            config.get_dict('interfaces->built-in')
+            config.get_dict('interfaces->builtin')
         '''
         keys = [] if key is None else key.split(self._sep)
         search_data = self._merge_expand()

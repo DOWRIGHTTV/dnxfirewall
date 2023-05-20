@@ -342,7 +342,7 @@ objectEditor.addEventListener("click", function(click) {
     let objectRow = click.target.parentNode;
     let group = objectRow.querySelector(".ogroup");
 
-    if (group.innerText === "built-in") {return;}
+    if (group.innerText === "builtin") {return;}
 
     let objectEditor = document.querySelector("#FWobject-editor");
     let editRule = M.Modal.init(objectEditor, {});

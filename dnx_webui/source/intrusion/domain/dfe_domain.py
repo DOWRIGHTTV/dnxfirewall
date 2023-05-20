@@ -28,13 +28,13 @@ class WebPage(StandardWebPage):
     def load(_: Form) -> dict[str, Any]:
         proxy_profile: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
 
-        builtins = proxy_profile.get_items('categories->built-in')
+        builtins = proxy_profile.get_items('categories->builtin')
 
         domain_settings = {
             'security_profile': 1,
             'profile_name': proxy_profile['name'],
             'profile_desc': proxy_profile['description'],
-            'built-in': builtins,
+            'builtin': builtins,
             'user_defined': proxy_profile.get_items('categories->custom'),
             'tld': proxy_profile.get_items('tld')
         }
@@ -83,9 +83,9 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[tu
 
     dns_proxy: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
 
-    if (ruleset in ['built-in', 'custom', 'keyword']):
-        # keyword and built-in share categories
-        r_set = 'built-in' if ruleset == 'keyword' else ruleset
+    if (ruleset in ['builtin', 'custom', 'keyword']):
+        # keyword and builtin share categories
+        r_set = 'builtin' if ruleset == 'keyword' else ruleset
 
         # category data should be a string form of a tuple. converting to tuple to validate
         try:
@@ -109,7 +109,7 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[tu
             return
 
         # category enable-code is in the valid range
-        elif (ruleset == 'built-in' and category.enable_code in VALID_CATEGORY_CODES):
+        elif (ruleset == 'builtin' and category.enable_code in VALID_CATEGORY_CODES):
             return
 
         # custom category enable-code is in the standard range only
@@ -136,14 +136,14 @@ def configure_domain_categories(category: config, *, ruleset: str):
         dns_proxy: ConfigChain = dnx.load_configuration()
 
         # weird naming/ category structures are remnants from older config file formatting.
-        if (ruleset in ['built-in', 'keyword']):
+        if (ruleset in ['builtin', 'keyword']):
 
-            # converts config key to 'enabled' if the ruleset is built-in
-            key = ruleset if ruleset != 'built-in' else 'enabled'
+            # converts config key to 'enabled' if the ruleset is builtin
+            key = ruleset if ruleset != 'builtin' else 'enabled'
 
-            tethered = dns_proxy[f'categories->built-in->{category.group}->{category.name}->tethered']
+            tethered = dns_proxy[f'categories->builtin->{category.group}->{category.name}->tethered']
 
-            cat_config = f'categories->built-in->{category.group}->{category.name}'
+            cat_config = f'categories->builtin->{category.group}->{category.name}'
 
             # changes standard and keyword to the user specified setting
             if (tethered):
@@ -157,7 +157,7 @@ def configure_domain_categories(category: config, *, ruleset: str):
 
                 # ensures keyword searching gets disabled if the general category gets disabled
                 # TODO: consider making these independent even unless explicitly tethered
-                if (ruleset in ['built-in'] and category.enable_code == 0):
+                if (ruleset in ['builtin'] and category.enable_code == 0):
                     dns_proxy[f'{cat_config}->keyword'] = category.enable_code
 
         if (ruleset == 'custom'):

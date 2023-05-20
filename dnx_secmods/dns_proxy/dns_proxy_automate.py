@@ -75,9 +75,9 @@ class ProxyConfiguration(ConfigurationMixinBase):
         signatures: DNS_SIGNATURES = self.__class__.signatures
         # CATEGORY SETTINGS
         enabled_keywords: list[DNS_CAT] = []
-        for label in proxy_config.get_list('categories->built-in'):
+        for label in proxy_config.get_list('categories->builtin'):
 
-            for cat, setting in proxy_config.get_items(f'categories->built-in->{label}'):
+            for cat, setting in proxy_config.get_items(f'categories->builtin->{label}'):
                 # identifying enabled keyword search categories
                 if (setting['keyword']):
                     enabled_keywords.append(DNS_CAT[cat])

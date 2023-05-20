@@ -163,11 +163,11 @@
             </tr>
             </thead>
             <tbody>
-            {% for intf, zone in firewall_settings['zone_map']['built-in'].items() %}
+            {% for intf, zone in firewall_settings['zone_map']['builtin'].items() %}
               <tr>
                 <td>{{intf}}</td>
                 <td>{{zone}}</td>
-                <td>built-in</td>
+                <td>builtin</td>
               </tr>
             {% endfor %}
             </tbody>
@@ -188,11 +188,11 @@
             </tr>
             </thead>
             <tbody>
-            {% for zone, zone_info in firewall_settings['zone_manager']['built-in'].items() %}
+            {% for zone, zone_info in firewall_settings['zone_manager']['builtin'].items() %}
               <tr>
                 <td>X</td>
                 <td>{{zone}}</td>
-                <td>built-in</td>
+                <td>builtin</td>
                 <td>{{zone_info[0]}}</td>
                 <td>{{zone_info[1]}}</td>
               </tr>
@@ -230,7 +230,7 @@
             <tbody id="filter-table-body2" class="object-editor">
             {% for id, name, group, type, subtype, value, description in firewall_settings.firewall_objects.values() %}
               <tr id="{{ id }}" style="height: 25px;" data-id="{{ id }}">
-              {% if group == 'built-in' %}
+              {% if group == 'builtin' %}
                 <td class="fw_obj">-</td>
               {% else %}
                 <td class="fw-obj">

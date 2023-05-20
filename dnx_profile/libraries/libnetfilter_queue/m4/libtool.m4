@@ -706,7 +706,7 @@ $lt_cl_success || AS_EXIT(1)
 
 # _LT_CONFIG(TAG)
 # ---------------
-# If TAG is the built-in tag, create an initial libtool script with a
+# If TAG is the builtin tag, create an initial libtool script with a
 # default configuration from the untagged config vars.  Otherwise add code
 # to config.status for appending the configuration named by TAG from the
 # matching tagged config vars.
@@ -811,7 +811,7 @@ _LT_EOF
 AC_DEFUN([LT_SUPPORTED_TAG], [])
 
 
-# C support is built-in for now
+# C support is builtin for now
 m4_define([_LT_LANG_C_enabled], [])
 m4_define([_LT_TAGS], [])
 
@@ -1774,7 +1774,7 @@ AC_CACHE_VAL([lt_cv_sys_max_cmd_len], [dnl
         teststring=$teststring$teststring
       done
       SHELL=${SHELL-${CONFIG_SHELL-/bin/sh}}
-      # If test is not a shell built-in, we'll probably end up computing a
+      # If test is not a shell builtin, we'll probably end up computing a
       # maximum length that is only half of the actual maximum length, but
       # we can't tell.
       while { test X`env echo "$teststring$teststring" 2>/dev/null` \

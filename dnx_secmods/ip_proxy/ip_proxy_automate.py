@@ -55,7 +55,7 @@ class ProxyConfiguration(ConfigurationMixinBase):
         self.__class__.ids_mode = proxy_settings['ids_mode']
 
         # converting list[items] > dict
-        rep_settings = proxy_settings.get_items('reputation->built-in')
+        rep_settings = proxy_settings.get_items('reputation->builtin')
         geo_settings = proxy_settings.get_items('geolocation')
 
         # used for categorizing private ip addresses

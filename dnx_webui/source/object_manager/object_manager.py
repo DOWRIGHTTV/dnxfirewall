@@ -240,7 +240,7 @@ class FWObjectManager:
         return builtin_db['version'], builtin_db
 
     def add(self, obj: config, /):
-        '''["9003", "icmp", "built-in", "service", 1, "icmp/0", "<commonly> Ping"]
+        '''["9003", "icmp", "builtin", "service", 1, "icmp/0", "<commonly> Ping"]
         '''
         user_objects = self.user_database['objects']
 

@@ -29,12 +29,12 @@ def _combine_domain(log: LogHandler_T) -> list[str]:
     '''
     proxy_settings: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
 
-    domain_category_labels = proxy_settings.get_list('categories->built-in')
+    domain_category_labels = proxy_settings.get_list('categories->builtin')
 
     domain_categories = ['dns_https']
     for label in domain_category_labels:
 
-        domain_categories.extend(proxy_settings.get_list(f'categories->built-in->{label}'))
+        domain_categories.extend(proxy_settings.get_list(f'categories->builtin->{label}'))
 
     domain_signatures = []
     # iterating over the list of categories + DoH to load signature sets.
@@ -99,7 +99,7 @@ def _combine_reputation(log: LogHandler_T) -> tuple[list[str], dict[str, int]]:
     '''returns an aggregated list of all plain text reputation based signatures.
     '''
     proxy_settings: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/ip')
-    reputation_categories = proxy_settings.get_list('reputation->built-in')
+    reputation_categories = proxy_settings.get_list('reputation->builtin')
 
     reputation_priority = proxy_settings.get_dict('reputation->priority')
 

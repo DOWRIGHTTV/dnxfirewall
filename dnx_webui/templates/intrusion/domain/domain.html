@@ -36,11 +36,11 @@
     <div class="row">
       <div class="col s12">
         <div class="card-panel hoverable {{ theme.card }}">
-        {% for label, categories in domain_settings['built-in'] %}
+        {% for label, categories in domain_settings['builtin'] %}
           {{ create_title(label)|safe }}
           {% for category, settings in categories.items() %}
           {% if loop.index % 4 == 1 %}<div class="row">{% endif %}
-            {{ create_tandem_decora_switch(('built-in', 'keyword'), (label, category)|join(','),
+            {{ create_tandem_decora_switch(('builtin', 'keyword'), (label, category)|join(','),
                 (settings['enabled'], settings['keyword'], settings['tethered']))|safe }}
           {% if loop.index % 4 == 0 or loop.last %}</div>{% if not loop.last %}<div class="divider"></div>{% endif %}{% endif %}
           {% endfor %}
@@ -81,7 +81,7 @@ async function updateCategory(btn_idx, btn, enabled, tethered) {
     if (ajaxClient.handleResponse(response, btn)) { return; }
 
     let btn_value = btn.value;
-    // normalizing value for built-in categories since they also have group identifiers
+    // normalizing value for builtin categories since they also have group identifiers
     if (btn.value.includes(',')) {
         btn_value = btn.value.split(',')[1];
     }

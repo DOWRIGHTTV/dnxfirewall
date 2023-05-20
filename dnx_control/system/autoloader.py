@@ -400,16 +400,16 @@ def set_dnx_interfaces(user_intf_config: dict[str, str]) -> None:
         dnx_settings: ConfigChain = dnx.load_configuration()
 
         for slot, intf in user_intf_config.items():
-            dnx_settings[f'interfaces->built-in->{slot}->ident'] = intf
+            dnx_settings[f'interfaces->builtin->{slot}->ident'] = intf
 
         dnx.write_configuration(dnx_settings.expanded_user_data)
 
-# system built-in uses slot std_2 for lan interface
+# system builtin uses slot std_2 for lan interface
 def set_lan_dhcp(user_intf_config: dict[str, str]) -> None:
     with ConfigurationManager('dhcp_server', cfg_type='global') as dhcp:
         dhcp_settings: ConfigChain = dhcp.load_configuration()
 
-        dhcp_settings[f'interfaces->built-in->std_2->ident'] = user_intf_config['std_2']
+        dhcp_settings[f'interfaces->builtin->std_2->ident'] = user_intf_config['std_2']
 
         dhcp.write_configuration(dhcp_settings.expanded_user_data)
 

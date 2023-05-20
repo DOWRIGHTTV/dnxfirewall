@@ -47,12 +47,12 @@ DESCRIPTOR: int = _s.fileno()
 # def get_intf_builtin(zone_name):
 #     intf_settings = load_configuration('system', cfg_type='global')
 #
-#     intf_path = f'interfaces->built-in->{zone_name}'
+#     intf_path = f'interfaces->builtin->{zone_name}'
 #     system_interfaces = {v: k for k, v in if_nameindex()[1:]}
 #
 #     intf_index = system_interfaces.get(intf_settings[f'{intf_path}->id'], None)
 #     if (not intf_index):
-#         raise RuntimeError('failed to determine interface from provided built-in zone.')
+#         raise RuntimeError('failed to determine interface from provided builtin zone.')
 #
 #     return {intf_index: (intf_settings[f'{intf_path}->zone'], intf_settings[f'{intf_path}->id'])}
 def get_configurable_interfaces() -> tuple[dict, dict]:
@@ -65,7 +65,7 @@ def get_configurable_interfaces() -> tuple[dict, dict]:
         intf_k: intf_v for intf_k, intf_v in system_intfs['extended'].items() if intf_v['id']
     }
 
-    return system_intfs['built-in'], extended_intfs
+    return system_intfs['builtin'], extended_intfs
 
 def load_interfaces(intf_type: INTF = INTF.BUILTIN, *, exclude: Optional[list] = None) -> IntfList:
     '''return a list of tuples for the specified interface type.
@@ -92,13 +92,13 @@ def load_interfaces(intf_type: INTF = INTF.BUILTIN, *, exclude: Optional[list] =
 
             intf_index: int = system_interfaces.get(ident)
             if (not intf_index):
-                raise RuntimeError('failed to associate built-in <> system interfaces.')
+                raise RuntimeError('failed to associate builtin <> system interfaces.')
 
             if (not exclude or name not in exclude):
                 collected_intfs.append((intf_index, ident, zone))
 
     else:
-        raise NotImplementedError('only built-in interfaces are currently supported.')
+        raise NotImplementedError('only builtin interfaces are currently supported.')
 
     return collected_intfs
 

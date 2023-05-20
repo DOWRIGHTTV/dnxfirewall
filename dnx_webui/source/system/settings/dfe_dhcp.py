@@ -53,7 +53,7 @@ class WebPage(StandardWebPage):
         leases.sort()
 
         intf_settings = {}
-        interfaces: dict[str, dict] = dhcp_server.get_dict('interfaces->built-in')
+        interfaces: dict[str, dict] = dhcp_server.get_dict('interfaces->builtin')
         for intf, settings in interfaces.items():
 
             # converting 32-bit int to range delta
@@ -219,7 +219,7 @@ def validate_reservation(res: config, /) -> Optional[ValidationError]:
 
     dhcp_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
-    zone_net = IPv4Network(dhcp_settings[f'interfaces->built-in->{res.zone.lower()}->subnet'])
+    zone_net = IPv4Network(dhcp_settings[f'interfaces->builtin->{res.zone.lower()}->subnet'])
     if (IPv4Address(res.ip) not in zone_net.hosts()):
         return ValidationError(f'IP Address must fall within {zone_net} range.')
 
@@ -232,7 +232,7 @@ def configure_dhcp_switches(dhcp_settings: config):
 
         interface = dhcp_settings.pop('interface')
 
-        config_path = f'interfaces->built-in->{interface}'
+        config_path = f'interfaces->builtin->{interface}'
 
         server_settings[f'{config_path}->{dhcp_settings.cfg_key}'] = dhcp_settings.cfg_val
 
@@ -243,7 +243,7 @@ def configure_dhcp_settings(dhcp_settings: config):
 
         interface = dhcp_settings.pop('interface')
 
-        config_path = f'interfaces->built-in->{interface}'
+        config_path = f'interfaces->builtin->{interface}'
         # ...this is excessive
         configured_options: dict = server_settings.get_dict(f'{config_path}->options')
 

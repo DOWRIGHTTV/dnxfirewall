@@ -64,7 +64,7 @@ class ServerConfiguration(ConfigurationMixinBase):
     def _get_settings(self, dhcp_settings: ConfigChain) -> None:
 
         # updating user configuration items per interface in memory.
-        for intf in dhcp_settings.get_values('interfaces->built-in'):
+        for intf in dhcp_settings.get_values('interfaces->builtin'):
 
             # NOTE ex. id: eth0, lo, enp0s3
             identity: str = intf['ident']
@@ -87,7 +87,7 @@ class ServerConfiguration(ConfigurationMixinBase):
     @cfg_read_poller('dhcp_server', cfg_type='global')
     def _get_server_options(self, dhcp_settings: ConfigChain) -> None:
 
-        builtin_intfs: list[Item] = dhcp_settings.get_items('interfaces->built-in')
+        builtin_intfs: list[Item] = dhcp_settings.get_items('interfaces->builtin')
 
         # will wait for 2 threads to check in before running code.
         # allows the necessary settings to be initialized on startup before this thread continues.
@@ -142,9 +142,9 @@ class ServerConfiguration(ConfigurationMixinBase):
         self._initialize.done()
 
     def _load_interfaces(self) -> None:
-        fw_intf: dict[str, dict] = load_configuration('system', cfg_type='global').get_dict('interfaces->built-in')
+        fw_intf: dict[str, dict] = load_configuration('system', cfg_type='global').get_dict('interfaces->builtin')
 
-        dhcp_intfs: list[Item] = load_configuration('dhcp_server', cfg_type='global').get_items('interfaces->built-in')
+        dhcp_intfs: list[Item] = load_configuration('dhcp_server', cfg_type='global').get_items('interfaces->builtin')
 
         # interface friendly name e.g. wan
         for intf_name, settings in dhcp_intfs:

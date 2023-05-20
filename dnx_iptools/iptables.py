@@ -125,7 +125,7 @@ class IPTablesManager:
     def __init__(self) -> None:
         interfaces: ConfigChain = load_configuration('system', cfg_type='global')
 
-        associated_intfs = interfaces.get_items('interfaces->built-in')
+        associated_intfs = interfaces.get_items('interfaces->builtin')
         associated_intfs.extend(interfaces.get_items('interfaces->extended'))
 
         self._name_to_intf: dict[str, str] = {
