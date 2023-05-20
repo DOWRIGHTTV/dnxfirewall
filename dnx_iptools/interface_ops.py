@@ -60,12 +60,16 @@ def get_configurable_interfaces() -> tuple[dict, dict]:
     '''
     system_intfs: dict = load_configuration('system', cfg_type='global').get_dict('interfaces')
 
-    # filtering out any interface slot that does not have an associated interface
-    extended_intfs: dict[str, str] = {
-        intf_k: intf_v for intf_k, intf_v in system_intfs['extended'].items() if intf_v['id']
+    builtin_intfs: dict[str, str] = {
+        intf_v['id']: intf_v for intf_k, intf_v in system_intfs['builtin'].items()
     }
 
-    return system_intfs['builtin'], extended_intfs
+    # filtering out any interface slot that does not have an associated interface
+    extended_intfs: dict[str, str] = {
+        intf_v['id']: intf_v for intf_k, intf_v in system_intfs['extended'].items() if intf_v['id']
+    }
+
+    return builtin_intfs, extended_intfs
 
 def load_interfaces(intf_type: INTF = INTF.BUILTIN, *, exclude: Optional[list] = None) -> IntfList:
     '''return a list of tuples for the specified interface type.

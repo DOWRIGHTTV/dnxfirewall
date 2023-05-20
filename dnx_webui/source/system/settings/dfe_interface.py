@@ -171,13 +171,15 @@ def get_interfaces_configuration() -> dict:
     builtin_intfs, extended_intfs = get_configurable_interfaces()
 
     system_interfaces = {'builtin': [], 'extended': []}
-    for slot, intf in builtin_intfs.items():
-        mac_addr = get_mac_string(interface=intf['id'])
-        ip_addr = get_ipaddress(interface=intf['id'])
-        netmask = get_netmask(interface=intf['id'])
+    for intf_id, intf in builtin_intfs.items():
+        mac_addr = get_mac_string(interface=intf_id)
+        ip_addr = get_ipaddress(interface=intf_id)
+        netmask = get_netmask(interface=intf_id)
         dfg = itoip(default_route())
 
-        system_interfaces['builtin'].append([slot, intf['id'], mac_addr, intf['name'], intf['dhcp'], ip_addr, netmask, dfg])
+        system_interfaces['builtin'].append([
+            INTF.BUILTIN, intf_id, mac_addr, intf['name'], intf['dhcp'], ip_addr, netmask, dfg
+        ])
 
     for slot, intf in extended_intfs.items():
         mac_addr = get_mac_string(interface=intf['id'])
@@ -185,7 +187,9 @@ def get_interfaces_configuration() -> dict:
         netmask = get_netmask(interface=intf['id'])
         dfg = itoip(default_route())
 
-        system_interfaces['extended'].append([slot, intf['id'], mac_addr, intf['name'], intf['dhcp'], ip_addr, netmask, dfg])
+        system_interfaces['extended'].append([
+            INTF.EXTENDED, intf['id'], mac_addr, intf['name'], intf['dhcp'], ip_addr, netmask, dfg
+        ])
 
     return system_interfaces
 
@@ -203,31 +207,31 @@ def get_interfaces_overview() -> dict:
     for interface in load_file('/proc/net/dev', start=2):
 
         data = interface.split()
-        name = data[0][:-1]  # removing the ":"
+        intf_id = data[0][:-1]  # removing the ":"
 
         intf: Optional[dict[str, str]]
 
-        if intf := builtin_intfs.get(name, None):
+        if intf := builtin_intfs.get(intf_id, None):
 
             zone_name = configured_zones[intf['zone']][0]
-            ip_addr = get_ip_network(interface=intf['id'])
+            ip_addr = get_ip_network(interface=intf_id)
 
             system_interfaces['builtin'].append([
-                [name, zone_name, ip_addr], [data[1], data[2]], [data[9], data[10]]
+                [intf_id, intf['name'], zone_name, ip_addr], [data[1], data[2]], [data[9], data[10]]
             ])
 
-        elif intf := extended_intfs.get(name, None):
+        elif intf := extended_intfs.get(intf_id, None):
 
             zone_name = configured_zones[intf['zone']][0]
-            ip_addr = get_ip_network(interface=intf['id'])
+            ip_addr = get_ip_network(interface=intf_id)
 
             system_interfaces['extended'].append([
-                [name, zone_name, ip_addr], [data[1], data[2]], [data[9], data[10]]
+                [intf_id, intf['name'], zone_name, ip_addr], [data[1], data[2]], [data[9], data[10]]
             ])
 
         # functional else with loopback filter
-        elif (name != 'lo'):
-            system_interfaces['unassociated'].append([[name, 'none', 'none'], [data[1], data[2]], [data[9], data[10]]])
+        elif (intf_id != 'lo'):
+            system_interfaces['unassociated'].append([[intf_id, 'none', 'none', 'none'], [data[1], data[2]], [data[9], data[10]]])
 
     return system_interfaces
 

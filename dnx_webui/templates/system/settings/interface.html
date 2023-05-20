@@ -22,17 +22,18 @@
             <table class="centered highlight">
               {{ create_title('builtin', classes='center')|safe }}
               <colgroup>
-                <col span="3" style="background-color:#eceff1">
+                <col span="4" style="background-color:#eceff1">
                 <col span="2" style="background-color:#90a4ae">
                 <col span="2" style="background-color:#cfd8dc">
               </colgroup>
               <thead>
                 <tr>
-                  <th colspan="3">General</th>
+                  <th colspan="4">General</th>
                   <th colspan="2">Transmit</th>
                   <th colspan="2">Receive</th>
                 </tr>
                 <tr>
+                  <th>id</th>
                   <th>name</th>
                   <th>zone</th>
                   <th>subnet</th>
@@ -48,6 +49,7 @@
                   <td>{{ intf[0][0] }}</td>
                   <td>{{ intf[0][1] }}</td>
                   <td>{{ intf[0][2] }}</td>
+                  <td>{{ intf[0][3] }}</td>
                   <td>{{ intf[1][0] }}</td>
                   <td>{{ intf[1][1] }}</td>
                   <td>{{ intf[2][0] }}</td>
@@ -60,7 +62,7 @@
             <table class="centered highlight">
               {{ create_title('extended', classes='center')|safe }}
               <colgroup>
-                <col span="3" style="background-color:#eceff1">
+                <col span="4" style="background-color:#eceff1">
                 <col span="2" style="background-color:#90a4ae">
                 <col span="2" style="background-color:#cfd8dc">
               </colgroup>
@@ -81,6 +83,7 @@
                   <td>{{ intf[0][0] }}</td>
                   <td>{{ intf[0][1] }}</td>
                   <td>{{ intf[0][2] }}</td>
+                  <td>{{ intf[0][3] }}</td>
                   <td>{{ intf[1][0] }}</td>
                   <td>{{ intf[1][1] }}</td>
                   <td>{{ intf[2][0] }}</td>
@@ -104,7 +107,7 @@
               <table class="centered highlight">
                 {{ create_title('unassociated', classes='center')|safe }}
                 <colgroup>
-                  <col span="3" style="background-color:#eceff1">
+                  <col span="4" style="background-color:#eceff1">
                   <col span="2" style="background-color:#90a4ae">
                   <col span="2" style="background-color:#cfd8dc">
                 </colgroup>
@@ -125,6 +128,7 @@
                     <td>{{ intf[0][0] }}</td>
                     <td>{{ intf[0][1] }}</td>
                     <td>{{ intf[0][2] }}</td>
+                    <td>{{ intf[0][3] }}</td>
                     <td>{{ intf[1][0] }}</td>
                     <td>{{ intf[1][1] }}</td>
                     <td>{{ intf[2][0] }}</td>
