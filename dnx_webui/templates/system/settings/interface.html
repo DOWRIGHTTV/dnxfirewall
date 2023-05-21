@@ -173,13 +173,13 @@
               {% for intf_type in ['builtin', 'extended'] %}
                 {% for intf in interface_settings.configuration[intf_type] %}
                   <tr id="{{ intf_type }}/{{ loop.index }}">
-                    <td id="iid">{{ intf[1] }}</td>
-                    <td id="imac">{{ intf[2] }}</td>
-                    <td id="iname">{{ intf[3] }}</td>
-                    <td id="idhcp">{{ intf[4] }}</td>
-                    <td id="iipa">{{ intf[5] }}</td>
-                    <td id="inetmask">{{ intf[6] }}</td>
-                    <td id="igw">{{ intf[7] }}</td>
+                    <td class="iid">{{ intf[1] }}</td>
+                    <td class="imac">{{ intf[2] }}</td>
+                    <td class="iname">{{ intf[3] }}</td>
+                    <td class="idhcp">{{ intf[4] }}</td>
+                    <td class="iipa">{{ intf[5] }}</td>
+                    <td class="inetmask">{{ intf[6] }}</td>
+                    <td class="igw">{{ intf[7] }}</td>
                   </tr>
                 {% endfor %}
               {% endfor %}
