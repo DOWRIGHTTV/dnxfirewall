@@ -212,7 +212,7 @@
         <div class="switch">
           <label>
             static
-            <input class="edhcp" type="checkbox" checked="checked" name="dhcp_state">
+            <input class="iswitch edhcp" type="checkbox" checked="checked" name="dhcp_state">
             <span class="lever"></span>
             dhcp
           </label>
@@ -286,17 +286,15 @@ function fillEditor(interfaceEditor, interfaceRow) {
         editor_field.checked = intf_field.innerText.toLowerCase() === 'on';
       }
       else {
-        let field_name = `.e${field}`;
-
         let input_field = editor_field.parentNode;
 
         editor_field.remove();
 
         let input = document.createElement('input');
-        input.id = field_name;
-        input.name = field_name;
+        input.id = 'e' + field;
+        input.name = field;
         input.type = 'text';
-        input.className = field_name + 'validate';
+        input.className = 'e' + field + ' validate';
         input.value = intf_field.innerText
 
         input_field.prepend(input);
