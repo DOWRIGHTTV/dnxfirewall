@@ -65,6 +65,8 @@ class WebPage(StandardWebPage):
 
     @staticmethod
     def update(form: Form) -> tuple[int, str]:
+        print(form)
+
         if ('wan_state_update' in form):
 
             wan_state = form.get('wan_state_update', DATA.MISSING)
@@ -180,7 +182,7 @@ def get_interfaces_configuration() -> dict:
         dhcp_state = 'on' if intf['dhcp'] else 'off'
 
         system_interfaces['builtin'].append([
-            INTF.BUILTIN, intf_id, mac_addr, intf['name'], dhcp_state, ip_addr, netmask, dfg
+            INTF.BUILTIN, intf_id, mac_addr, 'untrust', intf['name'], dhcp_state, ip_addr, netmask, dfg
         ])
 
     for intf_id, intf in extended_intfs.items():
@@ -192,7 +194,7 @@ def get_interfaces_configuration() -> dict:
         dhcp_state = 'on' if intf['dhcp'] else 'off'
 
         system_interfaces['extended'].append([
-            INTF.EXTENDED, intf_id, mac_addr, intf['name'], dhcp_state, ip_addr, netmask, dfg
+            INTF.EXTENDED, intf_id, mac_addr, 'zone', intf['name'], dhcp_state, ip_addr, netmask, dfg
         ])
 
     return system_interfaces

@@ -175,11 +175,12 @@
                   <tr id="{{ intf_type }}/{{ loop.index }}">
                     <td class="iid">{{ intf[1] }}</td>
                     <td class="imac">{{ intf[2] }}</td>
-                    <td class="iname">{{ intf[3] }}</td>
-                    <td class="idhcp">{{ intf[4] }}</td>
-                    <td class="iipa">{{ intf[5] }}</td>
-                    <td class="inetmask">{{ intf[6] }}</td>
-                    <td class="igw">{{ intf[7] }}</td>
+                    <td class="izone">{{ intf[3] }}</td>
+                    <td class="iname">{{ intf[4] }}</td>
+                    <td class="idhcp">{{ intf[5] }}</td>
+                    <td class="iipa">{{ intf[6] }}</td>
+                    <td class="inetmask">{{ intf[7] }}</td>
+                    <td class="igw">{{ intf[8] }}</td>
                   </tr>
                 {% endfor %}
               {% endfor %}
@@ -191,7 +192,7 @@
   </div>
 </section>
 <div id="Interface-editor" class="intf-configure-form modal z-depth-5">
-  <form method="post">
+  <form id="intf-editor-form" method="post">
     <input type="hidden" id="intf_id" class="intf_id" name="intf_id">
     <div class="row">
       <div class="col">
@@ -221,32 +222,32 @@
     <div class="row">
       <table class="centered">
         <tbody>
-        <tr class="no-border">
-          <td>
-            <div class="input-field col center {{input_color}}">
-              <input id="eipa" class="eipa validate" type="text" data-length="15">
-              <label for="eipa">IP Address</label>
-            </div>
-          </td>
-          <td>
-            <div class="input-field col center {{input_color}}">
-              <input id="enetmask" class="enetmask validate" type="text" data-length="15">
-              <label for="enetmask">Netmask</label>
-            </div>
-          </td>
-          <td>
-            <div class="input-field col center {{input_color}}">
-              <input id="egw" class="egw validate" type="text" data-length="15">
-              <label for="egw">Gateway</label>
-            </div>
-          </td>
-        </tr>
+          <tr class="no-border">
+            <td>
+              <div class="input-field col center {{input_color}}">
+                <input id="eipa" class="eipa validate" type="text" data-length="15">
+                <label for="eipa">IP Address</label>
+              </div>
+            </td>
+            <td>
+              <div class="input-field col center {{input_color}}">
+                <input id="enetmask" class="enetmask validate" type="text" data-length="15">
+                <label for="enetmask">Netmask</label>
+              </div>
+            </td>
+            <td>
+              <div class="input-field col center {{input_color}}">
+                <input id="egw" class="egw validate" type="text" data-length="15">
+                <label for="egw">Gateway</label>
+              </div>
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
     <div class="row">
       <div class="modal-footer">
-        <a class="btn waves-effect waves-light" onclick="this.form.submit()">Submit</a>
+        <a class="btn waves-effect waves-light" onclick="document.getElementById('intf-editor-form').submit()">Submit</a>
         <a class="btn-flat modal-close waves-effect waves-green">Cancel</a>
       </div>
     </div>
@@ -276,8 +277,6 @@ function fillEditor(interfaceEditor, interfaceRow) {
   for (let field of fields) {
     let intf_field = interfaceRow.querySelector(`.i${field}`);
     let editor_field = interfaceEditor.querySelector(`.e${field}`);
-
-    console.log(intf_field);
 
     try {
       if (field === 'id') {
