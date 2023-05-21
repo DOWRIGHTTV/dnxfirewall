@@ -190,7 +190,7 @@
     </div>
   </div>
 </section>
-<div id="Interface-editor" class="modal z-depth-5">
+<div id="Interface-editor" class="intf-configure-form modal z-depth-5">
   <form method="post">
     <input type="hidden" id="intf_id" class="intf_id" name="intf_id">
     <div class="row">
@@ -314,6 +314,15 @@ function fillEditor(interfaceEditor, interfaceRow) {
   }
 }
 </script>
+<style>
+/* popup window */
+.intf-configure-form {
+    width: 80%;
+    max-height: 80%;
+    overflow: hidden;
+    padding: 2em;
+}
+</style>
 {% endblock %}
 
 
