@@ -191,70 +191,69 @@
   </div>
 </section>
 <div id="Interface-editor" class="modal z-depth-5">
-  <div class="row">
-    <div>
-      <h4 class="{{ theme.title }}" style="float: right;">Edit Interface</h4>
-    </div>
-  </div>
-  <div class="row">
-    <div class="col">
-      <h6 id="eid" class="{{ theme.title }}"></h6>
-    </div>
-    <div class="input-field col s4 m2 center {{input_color}}">
-      <input id="ename" class="ename validate" type="text" data-length="25">
-      <label for="ename">Name</label>
-    </div>
-    {# need to deal with this because input-field class is on div, not input #}
-    <div class="input-field col s3 {{input_color}}">
-      <div class="switch">
-        <label>
-          static
-          <input class="edhcp" type="checkbox" checked="checked" name="dhcp_state">
-          <span class="lever"></span>
-          dhcp
-        </label>
+  <form method="post">
+    <input type="hidden" id="intf_id" class="intf_id" name="intf_id">
+    <div class="row">
+      <div>
+        <h4 class="{{ theme.title }}" style="float: right;">Edit Interface</h4>
       </div>
     </div>
-  </div>
-  <div class="row">
-    <table class="centered">
-      <tbody>
-      <tr class="no-border">
-        <td>
-          <div class="input-field col s4 m2 center {{input_color}}">
-            <input id="eipa" class="eipa validate" type="text" data-length="15">
-            <label for="eipa">IP Address</label>
-          </div>
-        </td>
-      </tr>
-      <tr class="no-border">
-        <td>
-          <div class="input-field col s4 m2 center {{input_color}}">
-            <input id="enetmask" class="enetmask validate" type="text" data-length="15">
-            <label for="enetmask">Netmask</label>
-          </div>
-        </td>
-      </tr>
-      <tr class="no-border">
-        <td>
-          <div class="input-field col s4 m2 center {{input_color}}">
-            <input id="egw" class="egw validate" type="text" data-length="15">
-            <label for="egw">Gateway</label>
-          </div>
-        </td>
-      </tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="row">
-    <div class="modal-footer">
-      <a class="btn waves-effect waves-light" onclick="updateInterface()">Submit</a>
-      <a class="btn-flat modal-close waves-effect waves-green">Cancel</a>
+    <div class="row">
+      <div class="col">
+        <h6 class="eid {{ theme.title }}"></h6>
+      </div>
+      <div class="input-field col s4 m2 center {{input_color}}">
+        <input id="ename" class="ename validate" type="text" data-length="25">
+        <label for="ename">Name</label>
+      </div>
+      {# need to deal with this because input-field class is on div, not input #}
+      <div class="input-field col s3 {{input_color}}">
+        <div class="switch">
+          <label>
+            static
+            <input class="edhcp" type="checkbox" checked="checked" name="dhcp_state">
+            <span class="lever"></span>
+            dhcp
+          </label>
+        </div>
+      </div>
     </div>
-  </div>
+    <div class="row">
+      <table class="centered">
+        <tbody>
+        <tr class="no-border">
+          <td>
+            <div class="input-field col center {{input_color}}">
+              <input id="eipa" class="eipa validate" type="text" data-length="15">
+              <label for="eipa">IP Address</label>
+            </div>
+          </td>
+          <td>
+            <div class="input-field col center {{input_color}}">
+              <input id="enetmask" class="enetmask validate" type="text" data-length="15">
+              <label for="enetmask">Netmask</label>
+            </div>
+          </td>
+          <td>
+            <div class="input-field col center {{input_color}}">
+              <input id="egw" class="egw validate" type="text" data-length="15">
+              <label for="egw">Gateway</label>
+            </div>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="row">
+      <div class="modal-footer">
+        <a class="btn waves-effect waves-light" onclick="this.form.submit()">Submit</a>
+        <a class="btn-flat modal-close waves-effect waves-green">Cancel</a>
+      </div>
+    </div>
+  </form>
 </div>
 <script>
-{# watching for a rule to be clicked for editing, populates the form, then shows the modal. #}
+{# watching for an interface to be clicked for editing, populates the form, then shows the modal. #}
 let interfacesEditor = document.querySelector('.interfaces-editor');
 interfacesEditor.addEventListener('click', function(click) {
 
@@ -272,8 +271,7 @@ interfacesEditor.addEventListener('click', function(click) {
 function fillEditor(interfaceEditor, interfaceRow) {
   const fields = ['id', 'name', 'dhcp', 'ipa', 'netmask', 'gw']
 
-  {#ruleEditor.children[0].setAttribute("data-id", interfaceRow.getAttribute("data-id"));#}
-  {#ruleEditor.children[0].id = `e${interfaceRow.id}`;#}
+  interfaceEditor.querySelector('.intf_id').value = interfaceRow.id;
 
   for (let field of fields) {
     let intf_field = interfaceRow.querySelector(`.i${field}`);
@@ -283,10 +281,10 @@ function fillEditor(interfaceEditor, interfaceRow) {
 
     try {
       if (field === 'id') {
+        editor_field.innerText = intf_field.innerText;
       }
       else if (field === 'dhcp') {
-        const enabled = parseInt('0'); // ruleRow.getAttribute('data-enabled')
-        editor_field.checked = !!enabled;
+        editor_field.checked = intf_field.innerText.toLowerCase() === 'on';
       }
       else {
         let field_name = `.e${field}`;

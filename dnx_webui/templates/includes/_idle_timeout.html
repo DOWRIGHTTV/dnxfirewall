@@ -1,22 +1,5 @@
 <!-- idle timeout notification popup
 1.5 mil: 25 min, 1.8 mil: 30 min -->
-<div id="idle-timeout-modal" class="modal idle-timeout-modal no-autoinit">
-    <div class="modal-content">
-        <h5 class="{{modal_text_style}}">Your session is about to expire. Do you need more time?</h5>
-    </div>
-    <div class="modal-footer">
-        <button class="btn waves-effect waves-light" onclick="refreshSession.post()">YES</button>
-        <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
-    </div>
-</div>
-{% if log_timeout %}
-<input type="hidden" name="table" value="{{table}}">
-{% elif tab %}
-<input id="timeout-tab" type="hidden" name="tab" value="{{tab}}">
-{% endif %}
-{% if menu %}
-<input id="timeout-menu" type="hidden" name="menu" value="{{menu}}">
-{% endif %}
 <script>
     let initialLoad = true;
     let timeoutID = 0;
@@ -51,3 +34,20 @@
 
     const refreshSession = new AjaxClient('refresh/session', activateTimers);
 </script>
+<div id="idle-timeout-modal" class="modal idle-timeout-modal no-autoinit">
+    <div class="modal-content">
+        <h5 class="{{modal_text_style}}">Your session is about to expire. Do you need more time?</h5>
+    </div>
+    <div class="modal-footer">
+        <button class="btn waves-effect waves-light" onclick="refreshSession.post()">YES</button>
+        <a class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+    </div>
+</div>
+{% if log_timeout %}
+<input type="hidden" name="table" value="{{table}}">
+{% elif tab %}
+<input id="timeout-tab" type="hidden" name="tab" value="{{tab}}">
+{% endif %}
+{% if menu %}
+<input id="timeout-menu" type="hidden" name="menu" value="{{menu}}">
+{% endif %}
