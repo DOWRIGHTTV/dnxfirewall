@@ -169,17 +169,17 @@
                   <th>gateway</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody class="interfaces-editor">
               {% for intf_type in ['builtin', 'extended'] %}
                 {% for intf in interface_settings.configuration[intf_type] %}
-                  <tr>
-                    <td>{{ intf[1] }}</td>
-                    <td>{{ intf[2] }}</td>
-                    <td>{{ intf[3] }}</td>
-                    <td>{{ intf[4] }}</td>
-                    <td>{{ intf[5] }}</td>
-                    <td>{{ intf[6] }}</td>
-                    <td>{{ intf[7] }}</td>
+                  <tr id="{{ intf_type }}/{{ loop.index }}">
+                    <td id="iid">{{ intf[1] }}</td>
+                    <td id="imac">{{ intf[2] }}</td>
+                    <td id="iname">{{ intf[3] }}</td>
+                    <td id="idhcp">{{ intf[4] }}</td>
+                    <td id="iipa">{{ intf[5] }}</td>
+                    <td id="inetmask">{{ intf[6] }}</td>
+                    <td id="igw">{{ intf[7] }}</td>
                   </tr>
                 {% endfor %}
               {% endfor %}
@@ -190,6 +190,131 @@
     </div>
   </div>
 </section>
+<div id="Interface-editor" class="modal z-depth-5">
+  <div class="row">
+    <div>
+      <h4 class="{{ theme.title }}" style="float: right;">Edit Interface</h4>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col">
+      <h6 id="eid" class="{{ theme.title }}"></h6>
+    </div>
+    <div class="input-field col s4 m2 center {{input_color}}">
+      <input id="ename" class="ename validate" type="text" data-length="25">
+      <label for="ename">Name</label>
+    </div>
+    {# need to deal with this because input-field class is on div, not input #}
+    <div class="input-field col s3 {{input_color}}">
+      <div class="switch">
+        <label>
+          static
+          <input class="edhcp" type="checkbox" checked="checked" name="dhcp_state">
+          <span class="lever"></span>
+          dhcp
+        </label>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <table class="centered">
+      <tbody>
+      <tr class="no-border">
+        <td>IP ADDRESS</td>
+        <td>
+          <div class="input-field col s4 m2 center {{input_color}}">
+            <input id="eipa" class="eipa validate" type="text" data-length="15">
+            <label for="eipa">IP Address</label>
+          </div>
+        </td>
+      </tr>
+      <tr class="no-border">
+        <td>
+          <div class="input-field col s4 m2 center {{input_color}}">
+            <input id="enetmask" class="enetmask validate" type="text" data-length="15">
+            <label for="enetmask">Netmask</label>
+          </div>
+        </td>
+      </tr>
+      <tr class="no-border">
+        <td>
+          <div class="input-field col s4 m2 center {{input_color}}">
+            <input id="egw" class="egw validate" type="text" data-length="15">
+            <label for="egw">Gateway</label>
+          </div>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="row">
+    <div class="modal-footer">
+      <a class="btn waves-effect waves-light" onclick="updateInterface()">Submit</a>
+      <a class="btn-flat modal-close waves-effect waves-green">Cancel</a>
+    </div>
+  </div>
+</div>
+<script>
+{# watching for a rule to be clicked for editing, populates the form, then shows the modal. #}
+let interfacesEditor = document.querySelector('.interfaces-editor');
+interfacesEditor.addEventListener('click', function(click) {
+
+  if (click.target.cellIndex == null) return;
+
+  let interfaceRow = click.target.parentNode;
+  let interfaceEditor = document.querySelector("#Interface-editor");
+  let editInterface = M.Modal.init(interfaceEditor, {dismissible: false});
+
+  fillEditor(interfaceEditor, interfaceRow);
+
+  editInterface.open();
+});
+
+function fillEditor(interfaceEditor, interfaceRow) {
+  const fields = ['id', 'name', 'dhcp', 'ipa', 'netmask', 'gw']
+
+  {#ruleEditor.children[0].setAttribute("data-id", interfaceRow.getAttribute("data-id"));#}
+  {#ruleEditor.children[0].id = `e${interfaceRow.id}`;#}
+
+  for (let field of fields) {
+    let intf_field = interfaceRow.querySelector(`.i${field}`);
+    let editor_field = interfaceEditor.querySelector(`.e${field}`);
+
+    try {
+      if (field === 'id') {
+      }
+      else if (field === 'dhcp') {
+        const enabled = parseInt('0'); // ruleRow.getAttribute('data-enabled')
+        editor_field.checked = !!enabled;
+      }
+      else {
+        let field_name = `.e${field}`;
+
+        let input_field = editor_field.parentNode;
+
+        editor_field.remove();
+
+        let input = document.createElement('input');
+        input.id = field_name;
+        input.name = field_name;
+        input.type = 'text';
+        input.className = field_name + 'validate';
+        input.value = intf_field.innerText
+
+        input_field.prepend(input);
+
+        input_field.children[1].className = 'active';
+
+        input_field.prepend(input);
+      }
+    }
+    catch (e) {
+      console.log(e);
+    }
+    finally {}
+  }
+}
+</script>
 {% endblock %}
 
 
