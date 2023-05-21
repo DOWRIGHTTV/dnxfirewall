@@ -220,7 +220,6 @@
     <table class="centered">
       <tbody>
       <tr class="no-border">
-        <td>IP ADDRESS</td>
         <td>
           <div class="input-field col s4 m2 center {{input_color}}">
             <input id="eipa" class="eipa validate" type="text" data-length="15">
@@ -279,6 +278,8 @@ function fillEditor(interfaceEditor, interfaceRow) {
   for (let field of fields) {
     let intf_field = interfaceRow.querySelector(`.i${field}`);
     let editor_field = interfaceEditor.querySelector(`.e${field}`);
+
+    console.log(intf_field);
 
     try {
       if (field === 'id') {
