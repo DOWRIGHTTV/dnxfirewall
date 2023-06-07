@@ -116,6 +116,10 @@ class SVC_OBJ(IntEnum):
     RANGE = 2
     LIST  = 3
 
+class ZONE_OBJ(IntEnum):
+    BUILTIN  = 1
+    EXTENDED = 2
+
 # TODO: this should be done one time/ precalculated
 def convert_object(obj: FW_OBJECT, /) -> Union[int, list[int], list[list]]:
     if (obj.type == 'address'):

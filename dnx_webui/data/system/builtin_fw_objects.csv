@@ -33,13 +33,12 @@ id,name,origin,type,subtype,value,description
 
 # ZONES
 9090,any_zone,builtin,zone,1,99,Always matches the zone of the packet
-9091,wan_zone,builtin,zone,2,10,
-9092,lan_zone,builtin,zone,2,11,
-9093,dmz_zone,builtin,zone,2,12,
+9091,untrust_zone,builtin,zone,1,10,Zone for interfaces facing external networks
+9092,trust_zone,builtin,zone,1,11,Zone for interfaces facing internal networks
 9099,sys_zone,builtin,zone,1,0,Zone used for direct system communication (webui; ssh; etc.)
 
 # ADDRESS
-9100,any_network,builtint,address,2,0.0.0.0/0,
+9100,any_network,builtin,address,2,0.0.0.0/0,
 9101,lan_network,builtin,address,2,192.168.83.0/24,
 9102,lan_interface,builtin,address,1,192.168.83.1/32,
 9103,dmz_network,builtin,address,2,192.168.84.0/24,
