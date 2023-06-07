@@ -375,7 +375,7 @@ def system_settings_logging(session_info: dict):
 def system_logs_traffic(session_info: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu': '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
+        'menu': '1', 'table': '1', 'dnx_table': True, 'auto_colorize': True,
         'table_types': ['firewall', '.nat'],
         'uri_path': ['system', 'log', 'traffic']
     }
@@ -391,7 +391,7 @@ def system_logs_traffic(session_info: dict):
 def system_logs_traffic_events(session_info: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu': '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
+        'menu': '1', 'table': '1', 'dnx_table': True, 'auto_colorize': True,
         'table_types': ['dns_proxy', 'ip_proxy', 'intrusion_prevention', 'infected_clients'],
         'uri_path': ['system', 'log', 'events']
     }

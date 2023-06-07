@@ -44,9 +44,9 @@
     <script src="{{url_for('static',filename='assets/js/dnx_table.js')}}"></script>
   {% endif %}
 
-  {# dnx custom ajax client by seeker1437 (WyteChocolate) #}
+  {# dnx custom ajax client by seeker1437 (WyteChocolate) || ajax class will always be available#}
+  <script src="{{url_for('static',filename='assets/js/dnx_ajax_client.js')}}"></script>
   {% if ajax %}
-    <script src="{{url_for('static',filename='assets/js/dnx_ajax_client.js')}}"></script>
     {% include 'includes/_ajax_response.html' %}
     <script>const ajaxClient = new AjaxClient(location.pathname);</script>
   {% endif %}
