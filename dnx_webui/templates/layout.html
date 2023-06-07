@@ -34,6 +34,11 @@
           M.AutoInit();
       })
   </script>
+  {# dnx custom js #}
+
+  {# html form js helpers #}
+  <script src="{{url_for('static',filename='assets/js/dnx_form.js')}}"></script>
+
   {# dnx custom table with filtering/striping #}
   {% if dnx_table %}
     <script src="{{url_for('static',filename='assets/js/dnx_table.js')}}"></script>
