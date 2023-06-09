@@ -217,7 +217,7 @@
         <div class="switch">
           <label>
             static
-            <input class="edhcp" type="checkbox" checked="checked" name="dhcp_state" onclick="toggleFormField(this, ['eipa', 'enetmask', 'egw'])">
+            <input class="edhcp" type="checkbox" checked="checked" name="dhcp_state" onclick="toggleFormField(this.checked, ['eipa', 'enetmask', 'egw'])">
             <span class="lever"></span>
             dhcp
           </label>
@@ -303,7 +303,7 @@ function fillEditor(interfaceEditor, interfaceRow) {
         input.value = intf_field.innerText
 
         if (['ipa', 'netmask', 'gw'].includes(field)) {
-          editor_field.disabled = "true";
+          input.disabled = "true";
         }
 
         input_field.prepend(input);
