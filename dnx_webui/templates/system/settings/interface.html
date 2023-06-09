@@ -302,6 +302,10 @@ function fillEditor(interfaceEditor, interfaceRow) {
         input.className = 'e' + field + ' validate';
         input.value = intf_field.innerText
 
+        if (['ipa', 'netmask', 'gw'].includes(field)) {
+          editor_field.disabled = "true";
+        }
+
         input_field.prepend(input);
 
         input_field.children[1].className = 'active';
