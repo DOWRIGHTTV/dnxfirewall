@@ -277,6 +277,8 @@ interfacesEditor.addEventListener('click', function(click) {
 function fillEditor(interfaceEditor, interfaceRow) {
   const fields = ['id', 'name', 'dhcp', 'ipa', 'netmask', 'gw']
 
+  let disable_inputs = false;
+
   interfaceEditor.querySelector('.intf_id').value = interfaceRow.id;
 
   for (let field of fields) {
@@ -289,6 +291,9 @@ function fillEditor(interfaceEditor, interfaceRow) {
       }
       else if (field === 'dhcp') {
         editor_field.checked = intf_field.innerText.toLowerCase() === 'on';
+        if (editor_field.checked) {
+          disable_inputs = true;
+        }
       }
       else {
         let input_field = editor_field.parentNode;
@@ -302,8 +307,8 @@ function fillEditor(interfaceEditor, interfaceRow) {
         input.className = 'e' + field + ' validate';
         input.value = intf_field.innerText
 
-        if (['ipa', 'netmask', 'gw'].includes(field)) {
-          input.disabled = "true";
+        if (['ipa', 'netmask', 'gw'].includes(field) && disable_inputs) {
+          input.disabled = true;
         }
 
         input_field.prepend(input);
