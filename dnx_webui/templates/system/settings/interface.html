@@ -198,7 +198,7 @@
 <div id="Interface-editor" class="intf-configure-form modal z-depth-5">
   <form id="intf-editor-form" method="post">
     <input type="hidden" name="tab" value="2">
-    <input type="hidden" class="intf_id" name="intf_update">
+    <input type="hidden" class="intf_id" name="intf_update"> {# TODO: why does this have a class?? #}
     <div class="row">
       <div class="col">
         <h6 class="eid {{ theme.title }}"></h6>
@@ -212,7 +212,16 @@
         <input id="ename" class="ename validate" type="text" data-length="25">
         <label for="ename">Name</label>
       </div>
+      <div class="input-field col s6 left {{input_color}}">
+        <select name="zone" id="ezone">
+        {% for z_id, z_name in interface_settings.zone_list %}
+          <option value="{{ z_id }}/{{ z_name }}">{{ z_name }}</option>
+        </select>
+        <label for="ezone">Zone</label>
+      </div>
       {# need to deal with this because input-field class is on div, not input #}
+    </div>
+    <div class="row">
       <div class="input-field col s3 {{input_color}}">
         <div class="switch">
           <label>
@@ -275,7 +284,7 @@ interfacesEditor.addEventListener('click', function(click) {
 });
 
 function fillEditor(interfaceEditor, interfaceRow) {
-  const fields = ['id', 'name', 'dhcp', 'ipa', 'netmask', 'gw']
+  const fields = ['id', 'name', 'zone', 'dhcp', 'ipa', 'netmask', 'gw']
 
   let disable_inputs = false;
 
@@ -288,6 +297,9 @@ function fillEditor(interfaceEditor, interfaceRow) {
     try {
       if (field === 'id') {
         editor_field.innerText = intf_field.innerText;
+      }
+      else if (field === 'zone') {
+          console.log(editor_field);
       }
       else if (field === 'dhcp') {
         editor_field.checked = intf_field.innerText.toLowerCase() === 'on';
