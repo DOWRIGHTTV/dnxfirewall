@@ -208,17 +208,17 @@
       </div>
     </div>
     <div class="row">
-      <div class="input-field col s6 m3 {{input_color}}">
+      <div class="input-field col s12 m4 {{input_color}}">
         <input id="ename" class="ename validate" type="text" data-length="25">
         <label for="ename">Name</label>
       </div>
-      <div id="ezone" class="input-field col s6 m3 {{input_color}}">
-        <select name="zone" id="_zone">
+      <div class="input-field col s12 m4 {{input_color}}">
+        <select name="zone" id="ezone" class="ezone">
         {% for z_id, z_name in interface_settings.zone_list %}
           <option value="{{ z_id }}/{{ z_name }}">{{ z_name }}</option>
         {% endfor %}
         </select>
-        <label for="_zone">Zone</label>
+        <label for="ezone">Zone</label>
       </div>
       {# need to deal with this because input-field class is on div, not input #}
     </div>
