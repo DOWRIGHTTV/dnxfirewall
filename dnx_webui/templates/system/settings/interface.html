@@ -300,7 +300,18 @@ function fillEditor(interfaceEditor, interfaceRow) {
         editor_field.innerText = intf_field.innerText;
       }
       else if (field === 'zone') {
-          console.log(editor_field);
+        console.log(zone_select);
+
+        let zone_array = zone_select.wrapper.children[1].children;
+
+        for (let i = 0; i < zone_array.length; i++) {
+          if (zone_array[i].innerText === intf_field.innerText) {
+              zone_array[i].addClass('selected');
+          }
+          else {
+            zone_array[i].removeClass('selected');
+          }
+        }
       }
       else if (field === 'dhcp') {
         editor_field.checked = intf_field.innerText.toLowerCase() === 'on';
@@ -343,9 +354,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const selectOption = document.querySelector(".ezone");
 
   selectOption.addEventListener("change", function () {
-    const instance = M.FormSelect.getInstance(selectOption);
+    const zone_select = M.FormSelect.getInstance(selectOption);
     {#const selectedValues = instance.getSelectedValues();#}
-    console.log(instance);
   });
 });
 </script>
