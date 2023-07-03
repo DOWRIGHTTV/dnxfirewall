@@ -352,11 +352,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const selects = document.querySelector("select");
   const instances = M.FormSelect.init(selects, {});
   const selectOption = document.querySelector(".ezone");
-
-  selectOption.addEventListener("change", function () {
-    var zone_select = M.FormSelect.getInstance(selectOption);
-    {#const selectedValues = instance.getSelectedValues();#}
-  });
+  const zone_select = M.FormSelect.getInstance(selectOption);
 });
 </script>
 <style>
