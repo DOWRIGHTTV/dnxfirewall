@@ -300,6 +300,9 @@ function fillEditor(interfaceEditor, interfaceRow) {
         editor_field.innerText = intf_field.innerText;
       }
       else if (field === 'zone') {
+        let selectOption = document.querySelector(".ezone");
+        let zone_select = M.FormSelect.getInstance(selectOption);
+
         console.log(zone_select);
 
         let zone_array = zone_select.wrapper.children[1].children;
@@ -351,8 +354,6 @@ function fillEditor(interfaceEditor, interfaceRow) {
 document.addEventListener("DOMContentLoaded", function () {
   const selects = document.querySelector("select");
   const instances = M.FormSelect.init(selects, {});
-  const selectOption = document.querySelector(".ezone");
-  const zone_select = M.FormSelect.getInstance(selectOption);
 });
 </script>
 <style>
