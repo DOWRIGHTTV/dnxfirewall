@@ -354,7 +354,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const selectOption = document.querySelector(".ezone");
 
   selectOption.addEventListener("change", function () {
-    const zone_select = M.FormSelect.getInstance(selectOption);
+    var zone_select = M.FormSelect.getInstance(selectOption);
     {#const selectedValues = instance.getSelectedValues();#}
   });
 });
