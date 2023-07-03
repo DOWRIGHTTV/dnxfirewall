@@ -216,6 +216,7 @@
         <select name="zone" id="ezone">
         {% for z_id, z_name in interface_settings.zone_list %}
           <option value="{{ z_id }}/{{ z_name }}">{{ z_name }}</option>
+        {% endfor %}
         </select>
         <label for="ezone">Zone</label>
       </div>
