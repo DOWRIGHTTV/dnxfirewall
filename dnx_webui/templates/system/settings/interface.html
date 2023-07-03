@@ -213,7 +213,7 @@
         <label for="ename">Name</label>
       </div>
       <div class="input-field col s12 m4 {{input_color}}">
-        <select name="zone" id="ezone" class="ezone">
+        <select name="zone" id="ezone" class="ezone no-autoinit">
         {% for z_id, z_name in interface_settings.zone_list %}
           <option value="{{ z_id }}/{{ z_name }}">{{ z_name }}</option>
         {% endfor %}
@@ -337,6 +337,17 @@ function fillEditor(interfaceEditor, interfaceRow) {
     finally {}
   }
 }
+document.addEventListener("DOMContentLoaded", function () {
+  const selects = document.querySelector("select");
+  const instances = M.FormSelect.init(selects, {});
+  const selectOption = document.querySelector(".ezone");
+
+  selectOption.addEventListener("change", function () {
+    const instance = M.FormSelect.getInstance(selectOption);
+    {#const selectedValues = instance.getSelectedValues();#}
+    console.log(instance);
+  });
+});
 </script>
 <style>
 /* popup window */
