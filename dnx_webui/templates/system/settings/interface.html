@@ -303,9 +303,9 @@ function fillEditor(interfaceEditor, interfaceRow) {
         let selectOption = document.querySelector(".ezone");
         let zone_select = M.FormSelect.getInstance(selectOption);
 
-        console.log(zone_select);
-
         let zone_array = zone_select.wrapper.children[1].children;
+
+        console.log(zone_array);
 
         for (let i = 0; i < zone_array.length; i++) {
           if (zone_array[i].innerText === intf_field.innerText) {
