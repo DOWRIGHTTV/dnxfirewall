@@ -308,6 +308,7 @@ function fillEditor(interfaceEditor, interfaceRow) {
         console.log(zone_array);
 
         for (let i = 0; i < zone_array.length; i++) {
+          console.log(zone_array[i].innerText, intf_field.innerText)
           if (zone_array[i].innerText === intf_field.innerText) {
             zone_array[i].selected = true;
           }
