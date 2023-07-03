@@ -309,10 +309,10 @@ function fillEditor(interfaceEditor, interfaceRow) {
 
         for (let i = 0; i < zone_array.length; i++) {
           if (zone_array[i].innerText === intf_field.innerText) {
-              zone_array[i].addClass('selected');
+              zone_array[i].classList = 'selected';
           }
           else {
-            zone_array[i].removeClass('selected');
+            zone_array[i].classList = '';
           }
         }
       }
