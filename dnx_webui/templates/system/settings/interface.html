@@ -311,9 +311,11 @@ function fillEditor(interfaceEditor, interfaceRow) {
           console.log(zone_array[i].innerText, intf_field.innerText)
           if (zone_array[i].innerText === intf_field.innerText) {
             zone_array[i].selected = true;
+            zone_array[i].classList.add('selected');
           }
           else {
             zone_array[i].selected = false;
+            zone_array[i].classList.remove('selected');
           }
         }
       }
