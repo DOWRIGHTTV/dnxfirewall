@@ -32,7 +32,7 @@ class DNXWebuiTable {
 
     this.full_table_el = document.querySelector(`.${table_class_selector}`);
 
-    this.table_el = this.table_el.getElementsByTagName('tbody')[0];
+    this.table_el = this.full_table_el.getElementsByTagName('tbody')[0];
 
     this.colorize = this.full_table_el.classList.contains('colorize');
     this.filterable = this.full_table_el.classList.contains('filterable');
