@@ -29,37 +29,37 @@
     }
 
     enable_selected_rules() {
-      let checkedRules = this._get_selected_rules();
+      let selected_rules = this._get_selected_rules();
 
-      if (this.debug) { console.log('enabling > ', checkedRules); }
+      if (this.debug) { console.log('enabling > ', selected_rules); }
 
-      for (let rule of checkedRules) {
+      for (let rule of selected_rules) {
         setAttributes(rule.closest('tr'), {'data-enabled': '1', 'style': 'opacity: 1'})
       }
-      this._clear_rule_selection(checkedRules);
+      this._clear_rule_selection(selected_rules);
     }
 
     disable_selected_rules() {
-      let checkedRules = this._get_selected_rules();
+      let selected_rules = this._get_selected_rules();
 
-      if (this.debug) { console.log('disabling > ', checkedRules); }
+      if (this.debug) { console.log('disabling > ', selected_rules); }
 
-      for (let rule of checkedRules) {
+      for (let rule of selected_rules) {
         setAttributes(rule.closest('tr'), {'data-enabled': '0', 'style': 'opacity: .4'})
       }
-      this._clear_rule_selection(checkedRules);
+      this._clear_rule_selection(selected_rules);
     }
 
     remove_selected_rules() {
-      let checkedRules = this._get_selected_rules();
+      let selected_rules = this._get_selected_rules();
 
-      if (this.debug) { console.log('removing > ', checkedRules); }
+      if (this.debug) { console.log('removing > ', selected_rules); }
 
-        for (let rule of checkedRules) {
+        for (let rule of selected_rules) {
           rule.closest('tr').remove()
       }
 
-      this._clear_rule_selection(checkedRules);
+      this._clear_rule_selection(selected_rules);
     }
 
     add_new_rule() {
@@ -290,7 +290,7 @@ class FirewallObjectsTable extends DNXWebuiTableFormModal {
   /////// this is where we initialize the dnx table class ///////
 
   const firewall_rules_table = new FirewallRulesTable('firewall-rules-table');
-  firewall_rules_table.init();
+  firewall_rules_table.init(2, 9);
 
   const firewall_objects_table = new FirewallObjectsTable('firewall-objects-table');
   firewall_objects_table.init(0, 2);

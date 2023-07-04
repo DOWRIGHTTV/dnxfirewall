@@ -18,12 +18,14 @@ class DNXWebuiTable {
   * movable: boolean, whether the table is movable (set by class selector)
   */
 
-  constructor(table_class_selector = 'default-table') {
+  constructor(table_class_selector = 'default-table', cell_start = 0, cell_end = 99) {
 
     /*
     * table_class_selector: class name of the table to be loaded
     * filterable: boolean, whether the table is filterable
-    ** filter_input: the input element of the filter field
+    ** _filter_input: the input element of the filter field
+    ** _filter_cell_start: lower bound for cells to be clickable
+    ** _filter_cell_end: upper bound for cells to be clickable
     * movable: boolean, whether the table is movable
     * colorize: boolean, whether the table is colorized
     */
@@ -38,7 +40,11 @@ class DNXWebuiTable {
     this.filterable = this.full_table_el.classList.contains('filterable');
     this.movable = this.full_table_el.classList.contains('movable');
 
-    this.filter_input = document.getElementById(`${this.table_class_selector}-filter`);
+    if (this.filterable) {
+      this._filter_input = document.getElementById(`${table_class_selector}-filter`)
+      this._filter_cell_start = cell_start;
+      this._filter_cell_end = cell_end;
+    }
   }
 
   init() {
@@ -74,24 +80,24 @@ class DNXWebuiTable {
     }
   }
 
-  filter_table(n1, n2) {
+  filter_table() {
     if (!this.filterable) { console.log('table not filterable'); return; }
 
-    if (this.filter_input.value.length === 1) { return; }
+    if (this._filter_input.value.length === 1) { return; }
 
-    let table_row_array = table.getElementsByTagName('tr');
+    let table_row_array = this.table_el.getElementsByTagName('tr');
 
-    for (let i = 0; i < tr.length; i++) {
+    for (let i = 0; i < table_row_array.length; i++) {
       let td_list = table_row_array[i].getElementsByTagName('td');
 
-      if (td_list.length < n2) {
+      if (td_list.length < this._filter_cell_end) {
         continue;
       }
 
-      for (let f = n1; f <= n2; f++) {
+      for (let f = this._filter_cell_start; f <= this._filter_cell_end; f++) {
         let field = td_list[f].textContent;
 
-        if (field.indexOf(this.filter_input.value) === -1) {
+        if (field.indexOf(this._filter_input.value) === -1) {
           table_row_array[i].style.display = 'none';
         }
         else {
@@ -111,17 +117,12 @@ class DNXWebuiTableFormModal extends DNXWebuiTable {
 //
   initialized = false;
 
-  init(cell_start = 0, cell_end = 99) {
+  init() {
     // initialize the form modal that will show up on row click (uses table class selector as base name)
-    // cell start = lower bound for cells to be clickable
-    // cell end = upper bound for cells to be clickable
 
     super.init();
 
     this.form_el = document.querySelector(`.${this.table_class_selector}-form`);
-    this.cell_start = cell_start;
-    this.cell_end = cell_end;
-
     this.form_el.addEventListener('click', this.click_row_handler.bind(this));
 
     this.initialized = true;

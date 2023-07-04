@@ -43,14 +43,14 @@
                 modal-trigger green darken-2"{% if not dis %} href="#push-modal"{% endif %}>Push</a>
             <a class="btn waves-effect waves-light modal-trigger blue-grey" href="#commit-modal">Commit</a>
             <a class="btn waves-effect waves-light blue-grey" onclick="diffRules()">Diff</a>
-            <a class="btn waves-effect waves-light right" onclick="newRule()">Create Rule</a>
+            <a class="btn waves-effect waves-light right" onclick="firewall_rules_table.add_new_rule()">Create Rule</a>
           </div>
           <div class="row">
             <a class="btn waves-effect green darken-2" onclick="firewall_rules_table.enable_selected_rules()">Enable</a>
             <a class="btn waves-effect blue-grey" onclick="firewall_rules_table.disable_selected_rules()">Disable</a>
             <a class="btn waves-effect red darken-2" onclick="firewall_rules_table.remove_selected_rules()">Remove</a>
             <div class="col s12 m6 l5 xl3 {{input_color}} right">
-              <input id="firewall-rules-table-filter" type="text" onkeyup="firewall_rules_table.filter_table(2, 9)" placeholder="192.168.">
+              <input id="firewall-rules-table-filter" type="text" onkeyup="firewall_rules_table.filter_table()" placeholder="192.168.">
               <label for="firewall-rules-table-filter">Filter</label>
             </div>
           </div>
