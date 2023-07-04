@@ -7,7 +7,7 @@
                 <div class="card-panel hoverable {{ theme.card }}">
                     <h4 class="{{ theme.title }}">Create Backup</h4>
                     <div class="row">
-                        <form method="POST">
+                        <form method="post">
                         <input type="hidden" name="active" value="1">
                             <div class="input-field col s6 l4 {{input_color}}">
                                 <label>
@@ -30,7 +30,7 @@
                             <h4 class="{{ theme.title }}">Configuration Backups</h4>
                         </div>
                         <div class="col s3">
-                            <form action="/system/backups" method="POST">
+                            <form action="/system/backups" method="post">
                                 <input type="hidden" name="tab" value="1">
                                 <div class="input-field col s12">
                                     <a class="btn modal-trigger waves-effect waves-light" href="#bck-modal1-1">Restore Defaults</a>
@@ -74,7 +74,7 @@
                                             <div class="modal-content">
                                                 <h5 class="red-text center">Are you sure you want to delete the saved configuration?</h5>
                                             </div>
-                                            <form action="/system/backups" method="POST">
+                                            <form action="/system/backups" method="post">
                                                 <input type="hidden" name="tab" value="1">
                                                 <input type="hidden" name="backup_name" value="{{backup}}">
                                                 <input type="hidden" name="cfg_backup" value="0">
@@ -95,7 +95,7 @@
                                                 will be lost.
                                             </h5>
                                             </div>
-                                            <form action="/system/backups" method="POST">
+                                            <form action="/system/backups" method="post">
                                                 <input type="hidden" name="tab" value="1">
                                                 <input type="hidden" name="backup_name" value="{{backup}}">
                                                 <input type="hidden" name="cfg_backup" value="3">

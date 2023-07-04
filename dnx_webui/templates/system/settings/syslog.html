@@ -41,7 +41,7 @@
                                             <h5 class="{{modal_text_style}}">Are you sure you want to remove the 'Syslog Server'?
                                             </h5>
                                         </div>
-                                        <form action="/settings/syslog" method="POST">
+                                        <form action="/settings/syslog" method="post">
                                             <input type="hidden" name="tab" value="1">
                                             <div class="modal-footer">
                                                 <button class="btn waves-effect waves-light">YES</button>
@@ -84,7 +84,7 @@
                 </div>
                 <div class="card-panel">
                     <h4 class="red-text light-3">Syslog Settings</h4>
-                    <form action="/settings/syslog" method="POST">
+                    <form action="/settings/syslog" method="post">
                         <input type="hidden" name="tab" value="1">
                         <div class="col s4 m4">
                             <div class="input-field col s12 center">
@@ -233,7 +233,7 @@
             <div class="col s12 m4">
                 <div class="card-panel">
                     <h4 class="red-text light-3">Edit Syslog Servers</h4>
-                    <form action="/settings/syslog" method="POST">
+                    <form action="/settings/syslog" method="post">
                         <input type="hidden" name="tab" value="1">
                         Server 1
                         <div class="row">

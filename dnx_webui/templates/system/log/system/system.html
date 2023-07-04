@@ -6,7 +6,7 @@
             <div class="card-panel hoverable {{ theme.card }}">
                 <h4 class="{{ theme.title }}">System Logs</h4>
                 <div class="row">
-                    <form method="POST">
+                    <form method="post">
                         <div class="input-field col s10 m6 l4 {{input_color}}">
                             <select name="table" id="table" onchange="updateData(this.value)">
                                 {% for table_type in log_files %}

@@ -46,16 +46,16 @@
             <a class="btn waves-effect waves-light right" onclick="newRule()">Create Rule</a>
           </div>
           <div class="row">
-            <a class="btn waves-effect green darken-2" onclick="enableRules()">Enable</a>
-            <a class="btn waves-effect blue-grey" onclick="disableRules()">Disable</a>
-            <a class="btn waves-effect red darken-2" onclick="removeRules()">Remove</a>
+            <a class="btn waves-effect green darken-2" onclick="firewall_rules_table.enable_selected_rules()">Enable</a>
+            <a class="btn waves-effect blue-grey" onclick="firewall_rules_table.disable_selected_rules()">Disable</a>
+            <a class="btn waves-effect red darken-2" onclick="firewall_rules_table.remove_selected_rules()">Remove</a>
             <div class="col s12 m6 l5 xl3 {{input_color}} right">
-              <input type="text" id="filter-input" onkeyup="filterTable(2, 9)" placeholder="192.168.">
-              <label for="filter-input">Filter</label>
+              <input id="firewall-rules-table-filter" type="text" onkeyup="firewall_rules_table.filter_table(2, 9)" placeholder="192.168.">
+              <label for="firewall-rules-table-filter">Filter</label>
             </div>
           </div>
           <div class="row">
-            <table style="cursor:default" class="centered highlight" id="filter-table">
+            <table style="cursor:default" class="firewall-rules-table centered highlight">
               <colgroup>
                 <col span="2" style="background-color:#eceff1">
                 <col span="1" style="background-color:#90a4ae">
@@ -88,16 +88,16 @@
                 <th>IPS</th>
               </tr>
               </thead>
-              <tbody id="filter-table-body" class="rule-editor">
+              <tbody class="firewall-rules-table-body">
               {% for rule in firewall_settings['firewall_rules'] %}
                 <tr id="r{{ loop.index }}" {% if not rule[0] %} style="opacity: .4" {% endif %} data-enabled="{{ rule[0] }}" data-id="{{ rule[1] }}">
-                  <td><label><input type="checkbox" class="filled-in rule-select"><span></span></label></td>
+                  <td><label><input type="checkbox" class="filled-in dnx-table-row-select"><span></span></label></td>
                   <td>
                     <div class="row">
-                      <a class="btn btn-floating btn-small waves-light" onclick="MoveUp(r{{ loop.index }})">
+                      <a class="btn btn-floating btn-small waves-light" onclick="firewall_rules_table.move_up(r{{ loop.index }})">
                         <i class="material-icons blue-grey">arrow_upward</i>
                       </a>
-                      <a class="btn btn-floating btn-small waves-light" onclick="MoveDown(r{{ loop.index }})">
+                      <a class="btn btn-floating btn-small waves-light" onclick="firewall_rules_table.move_down(r{{ loop.index }})">
                         <i class="material-icons red darken-2">arrow_downward</i>
                       </a>
                     </div>

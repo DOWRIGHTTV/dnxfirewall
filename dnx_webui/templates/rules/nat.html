@@ -88,7 +88,7 @@
               {% for i, rule in nat_settings['dmz_dnat_rules'] %}
                 <tr>
                   <td>
-                    <form method="POST">
+                    <form method="post">
                       <input type="hidden" name="tab" value="1">
                       <input type="hidden" name="nat_type" value="DSTNAT">
                       <input type="hidden" name="position" value="{{i}}">
@@ -124,7 +124,7 @@
         <div class="col s12">
           <div class="card-panel hoverable {{ theme.card }}">
             {{ create_title('add rule')|safe }}
-            <form action="/rules/nat" method="POST">
+            <form action="/rules/nat" method="post">
               <input type="hidden" name="tab" value="2">
               <input type="hidden" name="nat_type" value="SRCNAT">
               <div class="row">

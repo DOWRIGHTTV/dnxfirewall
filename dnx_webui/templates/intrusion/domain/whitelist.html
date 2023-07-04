@@ -20,7 +20,7 @@
         <div class="col s12">
           <div class="card-panel hoverable {{ theme.card }}">
             {{ create_title('add whitelist')|safe }}
-            <form method="POST">
+            <form method="post">
               <input type="hidden" name="tab" value="1">
               <div class="row">
                 <div class="input-field col s4 l3 {{input_color}}">
@@ -83,7 +83,7 @@
         <div class="col s12">
           <div class="card-panel hoverable {{ theme.card }}">
             {{ create_title('add override')|safe }}
-            <form method="POST">
+            <form method="post">
               <input type="hidden" name="tab" value="2">
               <div class="row">
                 <div class="input-field col s4 l3 {{input_color}}">
@@ -143,7 +143,7 @@
         <div class="col s12">
           <div class="card-panel hoverable {{ theme.card }}">
             <h4 class="{{ theme.title }}">Add IP Address</h4>
-            <form method="POST">
+            <form method="post">
               <input type="hidden" name="tab" value="3">
               <div class="row">
                 <div class="input-field col s5 offset-s1 l3 {{input_color}}">
@@ -193,7 +193,7 @@
                           <h5 class="red-text center">Are you sure you want to remove the category bypass for this IP?
                           </h5>
                         </div>
-                        <form method="POST">
+                        <form method="post">
                           <input type="hidden" name="tab" value="3">
                           <input type="hidden" name="ip_wl_type" value="{{info['type']}}">
                           <input type="hidden" name="ip_wl_ip" value="{{ip_address}}">

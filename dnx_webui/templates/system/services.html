@@ -22,7 +22,7 @@
                             {% for mgmt_svc, enabled in mgmt_services.items() %}
                             <td>
                                 <div class="input-field col s3 center">
-                                    <form action="/system/services" method="POST">
+                                    <form action="/system/services" method="post">
                                         <div class="switch">
                                             <label>
                                                 Off
@@ -75,21 +75,21 @@
                             <td>
                                 <div class="row">
                                     <div class="input-field col s12 l4">
-                                        <form method="POST">
+                                        <form method="post">
                                             <button name="start_svc" value="{{name}}" class="btn-floating btn-large green waves-effect waves-light">
                                                 <i class="material-icons">play_arrow</i>
                                             </button>
                                         </form>
                                     </div>
                                     <div class="input-field col s12 l4">
-                                        <form method="POST">
+                                        <form method="post">
                                             <button name="restart_svc" value="{{name}}" class="btn-floating btn-large orange waves-effect waves-light">
                                                 <i class="material-icons">autorenew</i>
                                             </button>
                                         </form>
                                     </div>
                                     <div class="input-field col s12 l4">
-                                        <form method="POST">
+                                        <form method="post">
                                             <button name="stop_svc" value="{{name}}" class="btn-floating btn-large red waves-effect waves-light">
                                                 <i class="material-icons">stop</i>
                                             </button>

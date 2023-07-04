@@ -25,7 +25,7 @@ def create_switch(label: str, name: str, *, tab: int = 1, checked: int = 0, enab
     else: status = ''
 
     return ''.join([
-        f'<form method="post"><input type="hidden" name="tab" value="{tab}">',
+        f'<form builtin"post"><input type="hidden" name="tab" value="{tab}">',
         f'<div class="input-field col s6 center">{label}<div class="switch"><label>Off',
         f'<input type="checkbox" class="iswitch" name="{name}" {status}>',
         '<span class="lever"></span>On</label></div></div></form>'
@@ -55,7 +55,7 @@ def create_button_with_modal(
         f'<a class="{btn_classes}" href="#modal{index}-{num}"><i class="material-icons">{icon}</i></a>'
         f'<div id="modal{index}-{num}" class="modal">'
           f'<div class="modal-content"><h5 class="{context_global.theme["modal_text"]}">{message}</h5></div>'
-          f'<form method="POST"><input type="hidden" name="tab" value="{tab}">'
+          f'<form method="post"><input type="hidden" name="tab" value="{tab}">'
             '<div class="modal-footer">'
               f'<button name="{btn_name}" value="{btn_value}" class="btn waves-effect waves-light">YES</button>'
               '<a class="modal-close waves-effect waves-green btn-flat">Cancel</a>'

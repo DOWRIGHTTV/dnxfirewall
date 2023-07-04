@@ -122,7 +122,7 @@ def rules_firewall(session_info: dict):
 
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'ajax': True, 'dnx_table': True, 'auto_colorize': True,
+        'ajax': True, 'dnx_tables': True,
         'tab': validate.get_convert_int(request.args, 'tab'),
         'dnx_network_objects': {},
         'dnx_service_objects': {},
@@ -375,7 +375,7 @@ def system_settings_logging(session_info: dict):
 def system_logs_traffic(session_info: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu': '1', 'table': '1', 'dnx_table': True, 'auto_colorize': True,
+        'menu': '1', 'table': '1', 'dnx_table': True,
         'table_types': ['firewall', '.nat'],
         'uri_path': ['system', 'log', 'traffic']
     }
@@ -391,7 +391,7 @@ def system_logs_traffic(session_info: dict):
 def system_logs_traffic_events(session_info: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu': '1', 'table': '1', 'dnx_table': True, 'auto_colorize': True,
+        'menu': '1', 'table': '1', 'dnx_table': True,
         'table_types': ['dns_proxy', 'ip_proxy', 'intrusion_prevention', 'infected_clients'],
         'uri_path': ['system', 'log', 'events']
     }
@@ -407,7 +407,7 @@ def system_logs_traffic_events(session_info: dict):
 def system_logs_system(session_info: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu': '1', 'dnx_table': True, 'ajax': True, 'auto_colorize': True,
+        'menu': '1', 'dnx_table': True, 'ajax': True,
         'log_files': [
             'combined', 'logins', 'web_app', 'system', 'dns_proxy', 'ip_proxy', 'ips', 'dhcp_server',  # 'syslog'
         ],

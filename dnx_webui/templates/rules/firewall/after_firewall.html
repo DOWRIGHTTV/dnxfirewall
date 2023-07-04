@@ -1,400 +1,378 @@
 <script>
-function selectedRules() {
-    let selected_rules = [];
 
-    let fw_rules = document.querySelectorAll(".rule-select");
-    for (let rule of fw_rules) {
+  class FirewallRulesTable extends DNXWebuiTableFormModal {
+
+    debug = false;
+
+    // i hate how this is in setter format. maybe this should just be passed into constructor, but js is wack.
+    set_debug(debug) {
+      this.debug = debug;
+    }
+
+    _get_selected_rules() {
+      let selected_rules = [];
+
+      let fw_rules = document.querySelectorAll('.dnx-table-row-select');
+      for (let rule of fw_rules) {
 
         if (rule.checked) {
-            selected_rules.push(rule);
+          selected_rules.push(rule);
         }
+      }
+      return selected_rules
     }
-    return selected_rules
-}
-function uncheckRules(rules) {
-    for (let rule of rules) {
+
+    _clear_rule_selection(rules) {
+      for (let rule of rules) {
         rule.checked = false
-    }
-}
-function enableRules() {
-    let checkedRules = selectedRules();
-
-    console.log("enabling > ", checkedRules);
-    for (let rule of checkedRules) {
-        setAttributes(rule.closest("tr"), {"data-enabled": "1", "style": "opacity: 1"})
-    }
-    uncheckRules(checkedRules);
-}
-function disableRules() {
-    let checkedRules = selectedRules();
-
-    console.log("disabling > ", checkedRules);
-    for (let rule of checkedRules) {
-        setAttributes(rule.closest("tr"), {"data-enabled": "0", "style": "opacity: .4"})
-    }
-    uncheckRules(checkedRules);
-}
-function removeRules() {
-    let checkedRules = selectedRules();
-
-    console.log("removing > ", checkedRules);
-    for (let rule of checkedRules) {
-        rule.closest("tr").remove()
+      }
     }
 
-    uncheckRules(checkedRules);
-}
-function MoveUp(id) {
-    let prev = id.previousElementSibling;
-    if (prev == null) return;
+    enable_selected_rules() {
+      let checkedRules = this._get_selected_rules();
 
-    id.setAttribute("class", "ease-in");
-    prev.parentNode.insertBefore(id,prev);
-}
-function MoveDown(id) {
-    let next = id.nextElementSibling;
-    if (next == null) return;
+      if (this.debug) { console.log('enabling > ', checkedRules); }
 
-    id.setAttribute("class", "ease-in");
-
-    let next2 = next.nextElementSibling;
-    if (next2 == null) {
-        id.parentNode.append(id);
-    } else {
-        next2.parentNode.insertBefore(id,next2);
-    }
-}
-function updateRule() {
-
-    const ruleEditor = document.querySelector("#FWrule-editor");
-    const rid = ruleEditor.children[0].id.substring(1);
-    const obj_id = ruleEditor.children[0].getAttribute("data-id");
-
-    let row = document.createElement("tr")
-
-    if (ruleEditor.querySelector(".eenabled").checked) {
-        setAttributes(row, {"data-enabled": "1", "data-id": obj_id, "id": rid})
-    } else {
-        row.style.opacity = ".4"
-        setAttributes(row, {"data-enabled": "0", "data-id": obj_id, "id": rid})
+      for (let rule of checkedRules) {
+        setAttributes(rule.closest('tr'), {'data-enabled': '1', 'style': 'opacity: 1'})
+      }
+      this._clear_rule_selection(checkedRules);
     }
 
-    const fields = [
-        "rselect", "rmove", "rname",
-        "rsrc_zone", "rsrc_network", "rsrc_service",
-        "rdst_zone", "rdst_network", "rdst_service",
-        "raction", "rlog",
-        "rsec1_prof", "rsec2_prof", "rsec3_prof"
-    ]
+    disable_selected_rules() {
+      let checkedRules = this._get_selected_rules();
 
-    let i, field;
-    for (let x in fields) {
-        i = parseInt(x);
-        field = fields[i];
+      if (this.debug) { console.log('disabling > ', checkedRules); }
 
-        row.appendChild(document.createElement("td"));
-        row.children[i].setAttribute("class", field);
+      for (let rule of checkedRules) {
+        setAttributes(rule.closest('tr'), {'data-enabled': '0', 'style': 'opacity: .4'})
+      }
+      this._clear_rule_selection(checkedRules);
     }
 
-    let col = row.children
-    col[0].innerHTML = '<td><label><input type="checkbox" class="filled-in rule-select"><span></span></label></td>'
-    col[1].innerHTML = "<div class=row>" +
-                `<a class="btn btn-floating btn-small waves-light" onclick="MoveUp(${rid})">` +
-                    '<i class="material-icons blue-grey">arrow_upward</i></a>' +
-                `<a class="btn btn-floating btn-small waves-light" onclick="MoveDown(${rid})">` +
-                    '<i class="material-icons red darken-2">arrow_downward</i></a></div>'
+    remove_selected_rules() {
+      let checkedRules = this._get_selected_rules();
 
-    col[2].innerHTML = `[*]${ruleEditor.querySelector(".ename").value}`;
+      if (this.debug) { console.log('removing > ', checkedRules); }
 
-    {# eaction[1] is accept radio btn #}
-    col[9].innerHTML  = ruleEditor.querySelectorAll(".eaction")[1].checked ? "accept" : "drop";
-    col[10].innerHTML = ruleEditor.querySelectorAll(".elog")[0].checked ? "on" : "off";
-    col[11].innerHTML = ruleEditor.querySelector(".esec1_prof").value;
-    col[12].innerHTML = ruleEditor.querySelector(".esec2_prof").value;
-    col[13].innerHTML = ruleEditor.querySelector(".esec3_prof").value;
+        for (let rule of checkedRules) {
+          rule.closest('tr').remove()
+      }
 
-    let rData;
-    for (let fStr of ["src_zone", "src_network", "src_service", "dst_zone", "dst_network", "dst_service"]) {
-        field = row.querySelector(`.r${fStr}`);
-
-        rData = ruleEditor.querySelector(`.e${fStr}`).parentNode.querySelectorAll(".chip");
-
-        rData.forEach((x) => {field.insertAdjacentHTML("beforeend", x.outerHTML)});
+      this._clear_rule_selection(checkedRules);
     }
 
-    let close = row.querySelectorAll(".close");
-    close.forEach((x) => {x.remove()});
+    add_new_rule() {
+      let rule_position = this.table_el.children.length + 1
+      let default_chip = '<div class="chip">none</div>'
 
-    let FWrule = document.getElementById(rid);
-    FWrule.outerHTML = row.outerHTML;
-
-    clearDNXChips();
-
-    M.Modal.getInstance(ruleEditor).close();
-}
-function newRule() {
-    let FWrules = document.getElementById("filter-table-body")
-    let ruleCount = FWrules.children.length+1
-
-    let defaultChip = '<div class="chip">none</div>'
-
-    let rule_template = `<tr id="r${ruleCount}" style="opacity: .4;" data-enabled="0" data-id="0">` +
-        '<td><label><input type="checkbox" class="filled-in rule-select"><span></span></label></td>' +
+      let rule_template = `<tr id="r${rule_position}" style="opacity: .4;" data-enabled="0" data-id="0">` +
+        '<td><label><input type="checkbox" class="filled-in dnx-table-row-select"><span></span></label></td>' +
         '<td>' +
-            '<div class="row">' +
-                `<a class="btn btn-floating btn-small waves-light" onclick="MoveUp(${ruleCount})">` +
-                    '<i class="material-icons blue-grey">arrow_upward</i>' +
-                '</a>' +
-                `<a class="btn btn-floating btn-small waves-light valign-wrapper" onclick="MoveDown(${ruleCount})">` +
-                    '<i class="material-icons red darken-2">arrow_downward</i>' +
-                '</a>' +
-            '</div>' +
+        '<div class="row">' +
+        `<a class="btn btn-floating btn-small waves-light" onclick="firewall_rules_table.move_up(${rule_position})">` +
+        '<i class="material-icons blue-grey">arrow_upward</i>' +
+        '</a>' +
+        `<a class="btn btn-floating btn-small waves-light valign-wrapper" onclick="firewall_rules_table.move_down(${rule_position})">` +
+        '<i class="material-icons red darken-2">arrow_downward</i>' +
+        '</a>' +
+        '</div>' +
         '</td>' +
         '<td class="rname">new_rule</td>' +
-        `<td class="rsrc_zone">${defaultChip}</td>` +
-        `<td class="rsrc_network">${defaultChip}</td>` +
-        `<td class="rsrc_service">${defaultChip}</td>` +
-        `<td class="rdst_zone">${defaultChip}</td>` +
-        `<td class="rdst_network">${defaultChip}</td>` +
-        `<td class="rdst_service">${defaultChip}</td>` +
+        `<td class="rsrc_zone">${default_chip}</td>` +
+        `<td class="rsrc_network">${default_chip}</td>` +
+        `<td class="rsrc_service">${default_chip}</td>` +
+        `<td class="rdst_zone">${default_chip}</td>` +
+        `<td class="rdst_network">${default_chip}</td>` +
+        `<td class="rdst_service">${default_chip}</td>` +
         '<td class="raction">drop</td>' +
         '<td class="rlog">N</td>' +
         '<td class="rsec1_prof">0</td>' +
         '<td class="rsec2_prof">0</td>' +
         '<td class="rsec3_prof">0</td>' +
-    '</tr>'
+        '</tr>'
 
-    FWrules.insertAdjacentHTML("beforeend", rule_template)
-}
+      this.table_el.insertAdjacentHTML('beforeend', rule_template)
+    }
+
+    _update_form_from_row(selected_table_row) {
+
+      const fields = ['name', 'log', 'enabled', 'src_zone', 'src_network',
+        'src_service', 'dst_zone', 'dst_network', 'dst_service', 'action',
+        'sec1_prof', 'sec2_prof', 'sec3_prof']
+
+      this.form_el.children[0].setAttribute('data-id', selected_table_row.getAttribute('data-id'));
+      this.form_el.children[0].id = `e${selected_table_row.id}`;
+
+      for (let field of fields) {
+        let table_row_field = selected_table_row.querySelector(`.r${field}`);
+        let table_form_field = this.form_el.querySelector(`.e${field}`);
+
+        if (['name'].includes(field)) {
+          let input_field = table_form_field.parentNode;
+
+          table_form_field.remove();
+
+          let input = document.createElement('input');
+          input.id = 'ename';
+          input.name = 'ename';
+          input.type = 'text';
+          input.className = 'ename validate';
+          input.value = table_row_field.innerText.replace('[*]', '');
+
+          input_field.prepend(input);
+
+          input_field.children[1].className = 'active';
+        }
+        else if (['sec1_prof', 'sec2_prof', 'sec3_prof'].includes(field)) {
+          let input_field = table_form_field.parentNode;
+
+          table_form_field.remove();
+
+          let input = document.createElement('input');
+          input.name = field;
+          input.type = 'number';
+          input.className = `e${field} validate`;
+          input.min = '0';
+          input.max = '1';
+          input.value = table_row_field.innerText;
+
+          input_field.prepend(input);
+        }
+
+        else if (field === 'log') {
+          table_form_field.checked = table_row_field.innerText === 'on';
+        }
+        else if (field === 'enabled') {
+          const enabled = parseInt(table_row_field.getAttribute('data-enabled'));
+          table_form_field.checked = !!enabled;
+        }
+        else if (field === 'action') {
+          const actionMap = {'drop': 0, 'accept': 1};
+
+          document.querySelectorAll('.eaction')[actionMap[table_row_field.innerHTML]].checked = true;
+        }
+        else if (['src_zone', 'src_network', 'src_service', 'dst_zone', 'dst_network', 'dst_service'].includes(field)) {
+          let dnxChips = table_form_field.parentNode;
+          let chipArray = dnxChips.querySelectorAll('.chip');
+
+          chipArray.forEach((chip) => {
+            chip.remove()
+          });
+          dnxChips.insertAdjacentHTML('afterbegin', table_row_field.innerHTML);
+
+          chipArray = dnxChips.querySelectorAll('.chip');
+          chipArray.forEach((chip) => {
+            chip.insertAdjacentHTML('beforeend', '<i class="material-icons close" ' +
+              'onclick="cRemove(this.parentNode)">close</i>')
+          });
+        }
+      }
+    }
+
+    _update_row_from_form() {
+
+      const row_id = this.form_el.children[0].id.substring(1);
+      const obj_id = this.form_el.children[0].getAttribute('data-id');
+
+      let row = document.createElement('tr')
+
+      if (this.form_el.querySelector('.eenabled').checked) {
+        setAttributes(row, {'data-enabled': '1', 'data-id': obj_id, 'id': row_id})
+      }
+      else {
+        row.style.opacity = '.4'
+        setAttributes(row, {'data-enabled': '0', 'data-id': obj_id, 'id': row_id})
+      }
+
+      const fields = [
+        'rselect', 'rmove', 'rname',
+        'rsrc_zone', 'rsrc_network', 'rsrc_service',
+        'rdst_zone', 'rdst_network', 'rdst_service',
+        'raction', 'rlog',
+        'rsec1_prof', 'rsec2_prof', 'rsec3_prof'
+      ]
+
+      for (let i = 0; i < fields.length; i++) {
+        let rule_field = fields[i];
+
+        row.appendChild(document.createElement('td'));
+        row.children[i].setAttribute('class', rule_field);
+      }
+
+      let col = row.children
+      col[0].innerHTML = '<td><label><input type="checkbox" class="filled-in dnx-table-row-select"><span></span></label></td>'
+      col[1].innerHTML = '<div class=row>' +
+        `<a class="btn btn-floating btn-small waves-light" onclick="firewall_rules_table.move_up(${row_id})">` +
+        '<i class="material-icons blue-grey">arrow_upward</i></a>' +
+        `<a class="btn btn-floating btn-small waves-light" onclick="firewall_rules_table.move_down(${row_id})">` +
+        '<i class="material-icons red darken-2">arrow_downward</i></a></div>'
+
+      col[2].innerHTML = `[*]${this.form_el.querySelector('.ename').value}`;
+
+      {# eaction[1] is accept radio btn #}
+      col[9].innerHTML  = this.form_el.querySelectorAll('.eaction')[1].checked ? 'accept' : 'drop';
+      col[10].innerHTML = this.form_el.querySelectorAll('.elog')[0].checked ? 'on' : 'off';
+      col[11].innerHTML = this.form_el.querySelector('.esec1_prof').value;
+      col[12].innerHTML = this.form_el.querySelector('.esec2_prof').value;
+      col[13].innerHTML = this.form_el.querySelector('.esec3_prof').value;
+
+      let row_field, form_field_objects;
+      for (let fStr of ['src_zone', 'src_network', 'src_service', 'dst_zone', 'dst_network', 'dst_service']) {
+        row_field = row.querySelector(`.r${fStr}`);
+
+        form_field_objects = this.form_el.querySelector(`.e${fStr}`).parentNode.querySelectorAll('.chip');
+
+        form_field_objects.forEach((x) => {
+          row_field.insertAdjacentHTML('beforeend', x.outerHTML)
+        });
+      }
+
+      let close = row.querySelectorAll('.close');
+      close.forEach((x) => {
+        x.remove()
+      });
+
+      this.table_el.getElementById(row_id).outerHTML = row.outerHTML;
+
+      clearDNXChips();
+
+      M.Modal.getInstance(this.form_el).close();
+    }
+  }
 </script>
 <script>
-{# watching for a rule to be clicked for editing, populates the form, then shows the modal. #}
-let ruleEditor = document.querySelector(".rule-editor");
-ruleEditor.addEventListener("click", function(click) {
+class FirewallObjectsTable extends DNXWebuiTableFormModal {
 
-    if (click.target.cellIndex == null || click.target.cellIndex < 2) return;
+  _update_form_from_row(objEditor, objRow) {
 
-    let ruleRow = click.target.parentNode;
-    let ruleEditor = document.querySelector("#FWrule-editor");
-    let editRule = M.Modal.init(ruleEditor, {dismissible: false});
+    let hidden = document.createElement('input')
+    hidden.type = 'hidden';
+    hidden.name = 'oeid';
+    hidden.value = objRow.getAttribute('data-id')
 
-    fillEditor(ruleEditor, ruleRow);
+    objEditor.children[0].prepend(hidden)
 
-    editRule.open();
-  });
-
-function fillEditor(ruleEditor, ruleRow) {
-
-    const fields = ["name", "log", "enabled", "src_zone", "src_network",
-            "src_service", "dst_zone", "dst_network", "dst_service", "action",
-            "sec1_prof", "sec2_prof", "sec3_prof"]
-
-    ruleEditor.children[0].setAttribute("data-id", ruleRow.getAttribute("data-id"));
-    ruleEditor.children[0].id = `e${ruleRow.id}`;
+    const fields = ['name', 'type', 'value', 'desc']
 
     for (let field of fields) {
-        let rule_field = ruleRow.querySelector(`.r${field}`);
-        let editor_field = ruleEditor.querySelector(`.e${field}`);
+      let obj_field = objRow.querySelector(`.o${field}`);
+      let editor_field = objEditor.querySelector(`.oe${field}`);
 
-        try {
-            if (["name"].includes(field)) {
-                let input_field = editor_field.parentNode;
+      if (['name', 'value', 'desc'].includes(field)) {
+        let input_field = editor_field.parentNode;
 
-                editor_field.remove();
+        editor_field.remove();
 
-                let input = document.createElement("input");
-                input.id = "ename";
-                input.name = "ename";
-                input.type = "text";
-                input.className = "ename validate";
-                input.value = rule_field.innerText.replace("[*]", "");
+        let input = document.createElement('input');
+        input.id = `oe${field}`;
+        input.name = `oe${field}`;
+        input.type = 'text';
+        input.className = `oe${field} validate`;
+        input.value = obj_field.innerText;
 
-                input_field.prepend(input);
+        input_field.prepend(input);
 
-                input_field.children[1].className = "active";
-            }
-            else if (["sec1_prof", "sec2_prof", "sec3_prof"].includes(field)) {
-                let input_field = editor_field.parentNode;
+        input_field.children[1].className = 'active';
+      }
+      else if (['type'].includes(field)) {
+        const actionMap = {'address': 0, 'service': 1, 'geolocation': 2};
 
-                editor_field.remove();
-
-                let input = document.createElement("input");
-                input.name = field;
-                input.type = "number";
-                input.className = `e${field} validate`;
-                input.min = "0";
-                input.max = "1";
-                input.value = rule_field.innerText;
-
-                input_field.prepend(input);
-            }
-
-            else if (field === "log") {
-                editor_field.checked = rule_field.innerText === 'on';
-            }
-            else if (field === "enabled") {
-                const enabled = parseInt(ruleRow.getAttribute("data-enabled"));
-                editor_field.checked = !!enabled;
-            }
-            else if (field === "action") {
-                const actionMap = {"drop": 0, "accept": 1};
-
-                document.querySelectorAll(".eaction")[actionMap[rule_field.innerHTML]].checked = true;
-            }
-            else if (["src_zone", "src_network", "src_service", "dst_zone", "dst_network", "dst_service"].includes(field)) {
-                let dnxChips = editor_field.parentNode;
-                let chipArray = dnxChips.querySelectorAll(".chip");
-
-                chipArray.forEach((chip) => {chip.remove()});
-                dnxChips.insertAdjacentHTML("afterbegin", rule_field.innerHTML);
-                
-                chipArray = dnxChips.querySelectorAll(".chip");
-                chipArray.forEach((chip) => {
-                    chip.insertAdjacentHTML("beforeend", '<i class="material-icons close" ' +
-                        'onclick="cRemove(this.parentNode)">close</i>')
-                });
-            }
-        }
-        catch (e) {
-            console.log(e);
-        }
-        finally {}
+        document.querySelectorAll('.oetype')[actionMap[obj_field.innerHTML]].name = 'oetype';
+        document.querySelectorAll('.oetype')[actionMap[obj_field.innerHTML]].checked = true;
+      }
     }
+    objEditor.children[0].id = `oe${objRow.id}`;
+  }
 }
 </script>
 <script>
-//firewall object implementation (built from materialize chips)
-const fwObjectMap = {{firewall_settings.fw_object_map|tojson}};
-const zone_autofill    = {{firewall_settings.zone_autofill|tojson}};
-const network_autofill = {{firewall_settings.network_autofill|tojson}};
-const service_autofill = {{firewall_settings.service_autofill|tojson}};
+  /////// this is where we initialize the dnx table class ///////
 
-function initDNXChips(field) {
+  const firewall_rules_table = new FirewallRulesTable('firewall-rules-table');
+  firewall_rules_table.init();
+
+  const firewall_objects_table = new FirewallObjectsTable('firewall-objects-table');
+  firewall_objects_table.init(0, 2);
+  /////////
+</script>
+<script>
+  //firewall object implementation (built from materialize chips)
+  const fwObjectMap = {{firewall_settings.fw_object_map|tojson}};
+  const zone_autofill = {{firewall_settings.zone_autofill|tojson}};
+  const network_autofill = {{firewall_settings.network_autofill|tojson}};
+  const service_autofill = {{firewall_settings.service_autofill|tojson}};
+
+  function initDNXChips(field) {
     let elem = document.querySelectorAll(`.${field}-chips`);
 
     let set;
-    if (field === "service") {
-        set = service_autofill;
+    if (field === 'service') {
+      set = service_autofill;
     }
-    else if (field === "zone") {
-        set = zone_autofill;
-    } else {
-        set = network_autofill;
+    else if (field === 'zone') {
+      set = zone_autofill;
+    }
+    else {
+      set = network_autofill;
     }
     return M.Chips.init(elem, {
-        onChipAdd: cAddCallback,
-        limit: 4,
-        autocompleteOnly: true,
-        autocompleteOptions: {
-            data: set
-        }
+      onChipAdd: cAddCallback,
+      limit: 4,
+      autocompleteOnly: true,
+      autocompleteOptions: {
+        data: set
+      }
     })
-}
-let chipMAP = {
-    zone:    initDNXChips("zone"),
-    network: initDNXChips("network"),
-    service: initDNXChips("service")
-}
-function clearDNXChips() {
-    for (let fields of [chipMAP["zone"], chipMAP["network"], chipMAP["service"]]) {
-        fields.forEach((field) => {field.$chips.splice(0, 99); field.chipsData.splice(0,99);});
-    }
-}
-function cAddCallback(el, chip) {
+  }
 
-    let objName = chip.innerHTML.split("<")[0];
+  let chipMAP = {
+    zone: initDNXChips('zone'),
+    network: initDNXChips('network'),
+    service: initDNXChips('service')
+  }
+
+  function clearDNXChips() {
+    for (let fields of [chipMAP['zone'], chipMAP['network'], chipMAP['service']]) {
+      fields.forEach((field) => {
+        field.$chips.splice(0, 99);
+        field.chipsData.splice(0, 99);
+      });
+    }
+  }
+
+  function cAddCallback(el, chip) {
+
+    let objName = chip.innerHTML.split('<')[0];
     let chipClose = chip.innerHTML.split(objName)[1];
 
-    chip.setAttribute("data-id", objName);
-    chip.className += " " + fwObjectMap[objName][2];
+    chip.setAttribute('data-id', objName);
+    chip.className += ' ' + fwObjectMap[objName][2];
 
-    chip.innerHTML = fwObjectMap[objName][1] + " " + objName + chipClose;
-    chip.children[1].setAttribute("onclick", "cRemove(this.parentNode)");
-}
-function cRemove(chip) {
-    let fid = chip.getAttribute("data-id");
+    chip.innerHTML = fwObjectMap[objName][1] + ' ' + objName + chipClose;
+    chip.children[1].setAttribute('onclick', 'cRemove(this.parentNode)');
+  }
+
+  function cRemove(chip) {
+    let fid = chip.getAttribute('data-id');
 
     let ftype, findex;
-    [ftype, findex] = getAttributes(chip.parentNode, ["data-ftype", "data-findex"])
+    [ftype, findex] = getAttributes(chip.parentNode, ['data-ftype', 'data-findex'])
 
     let instance = chipMAP[ftype][findex];
 
     let i;
     for (i = 0; i < instance.chipsData.length; i++) {
-        let c = instance.chipsData[i];
-        if (c.tag === fid) {
-            break
-        }
+      let c = instance.chipsData[i];
+      if (c.tag === fid) {
+        break
+      }
     }
     instance.$chips.splice(i, 1);
     instance.chipsData.splice(i, 1);
     chip.remove();
-}
+  }
 </script>
 <script>
-//object manager
-{# watching for a rule to be clicked for editing, populates the form, then shows the modal. #}
-let objectEditor = document.querySelector(".object-editor");
-objectEditor.addEventListener("click", function(click) {
-
-    if (click.target.cellIndex == null || click.target.cellIndex < 2) return;
-
-    let objectRow = click.target.parentNode;
-    let group = objectRow.querySelector(".ogroup");
-
-    if (group.innerText === "builtin") {return;}
-
-    let objectEditor = document.querySelector("#FWobject-editor");
-    let editRule = M.Modal.init(objectEditor, {});
-
-    fillObjectEditor(objectEditor, objectRow);
-
-    editRule.open();
-});
-function fillObjectEditor(objEditor, objRow) {
-
-    let hidden = document.createElement("input")
-    hidden.type = "hidden";
-    hidden.name = "oeid";
-    hidden.value = objRow.getAttribute("data-id")
-
-    objEditor.children[0].prepend(hidden)
-
-    const fields = ["name", "type", "value", "desc"]
-
-    for (let field of fields) {
-        let obj_field = objRow.querySelector(`.o${field}`);
-        let editor_field = objEditor.querySelector(`.oe${field}`);
-
-        try {
-            if (["name", "value", "desc"].includes(field)) {
-                let input_field = editor_field.parentNode;
-
-                editor_field.remove();
-
-                let input = document.createElement("input");
-                input.id = `oe${field}`;
-                input.name = `oe${field}`;
-                input.type = "text";
-                input.className = `oe${field} validate`;
-                input.value = obj_field.innerText;
-
-                input_field.prepend(input);
-
-                input_field.children[1].className = "active";
-            }
-            else if (["type"].includes(field)) {
-                const actionMap = {"address": 0, "service": 1, "geolocation": 2};
-
-                document.querySelectorAll(".oetype")[actionMap[obj_field.innerHTML]].name = "oetype";
-                document.querySelectorAll(".oetype")[actionMap[obj_field.innerHTML]].checked = true;
-            }
-        }
-        catch (e) {
-            console.log(e);
-        }
-        finally {}
-    }
-    objEditor.children[0].id = `oe${objRow.id}`;
-}
+  //object manager
 </script>

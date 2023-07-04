@@ -104,43 +104,43 @@
               {% endfor %}
               </tbody>
             </table>
-            {% if interface_settings.overview.unassociated %}
-              <br>
-              <table class="centered highlight">
-                {{ create_title('unassociated', classes='center')|safe }}
-                <colgroup>
-                  <col span="4" style="background-color:#eceff1">
-                  <col span="2" style="background-color:#90a4ae">
-                  <col span="2" style="background-color:#cfd8dc">
-                </colgroup>
-                <thead>
+          {% if interface_settings.overview.unassociated %}
+            <br>
+            <table class="centered highlight">
+              {{ create_title('unassociated', classes='center')|safe }}
+              <colgroup>
+                <col span="4" style="background-color:#eceff1">
+                <col span="2" style="background-color:#90a4ae">
+                <col span="2" style="background-color:#cfd8dc">
+              </colgroup>
+              <thead>
+              <tr>
+                <th>id</th>
+                <th>name</th>
+                <th>zone</th>
+                <th>subnet</th>
+                <th>bytes</th>
+                <th>packets</th>
+                <th>bytes</th>
+                <th>packets</th>
+              </tr>
+              </thead>
+              <tbody>
+              {% for intf in interface_settings.overview.unassociated %}
                 <tr>
-                  <th>id</th>
-                  <th>name</th>
-                  <th>zone</th>
-                  <th>subnet</th>
-                  <th>bytes</th>
-                  <th>packets</th>
-                  <th>bytes</th>
-                  <th>packets</th>
+                  <td>{{ intf[0][0] }}</td>
+                  <td>{{ intf[0][1] }}</td>
+                  <td>{{ intf[0][2] }}</td>
+                  <td>{{ intf[0][3] }}</td>
+                  <td>{{ intf[1][0] }}</td>
+                  <td>{{ intf[1][1] }}</td>
+                  <td>{{ intf[2][0] }}</td>
+                  <td>{{ intf[2][1] }}</td>
                 </tr>
-                </thead>
-                <tbody>
-                {% for intf in interface_settings.overview.unassociated %}
-                  <tr>
-                    <td>{{ intf[0][0] }}</td>
-                    <td>{{ intf[0][1] }}</td>
-                    <td>{{ intf[0][2] }}</td>
-                    <td>{{ intf[0][3] }}</td>
-                    <td>{{ intf[1][0] }}</td>
-                    <td>{{ intf[1][1] }}</td>
-                    <td>{{ intf[2][0] }}</td>
-                    <td>{{ intf[2][1] }}</td>
-                  </tr>
-                {% endfor %}
-                </tbody>
-              </table>
-            {% endif %}
+              {% endfor %}
+              </tbody>
+            </table>
+          {% endif %}
           </div>
         </div>
       </div>
@@ -198,7 +198,7 @@
 <div id="Interface-editor" class="intf-configure-form modal z-depth-5">
   <form id="intf-editor-form" method="post">
     <input type="hidden" name="tab" value="2">
-    <input type="hidden" class="intf_id" name="intf_update"> {# TODO: why does this have a class?? #}
+    <input type="hidden" name="intf_update"> {# TODO: why does this have a class?? #}
     <div class="row">
       <div class="col">
         <h6 class="eid {{ theme.title }}"></h6>
@@ -310,11 +310,11 @@ function fillEditor(interfaceEditor, interfaceRow) {
         for (let i = 0; i < zone_array.length; i++) {
           console.log(zone_array[i].innerText, intf_field.innerText)
           if (zone_array[i].innerText === intf_field.innerText) {
-            zone_array[i].selected = true;
+            {#zone_array[i].selected = true;#}
             zone_array[i].classList.add('selected');
           }
           else {
-            zone_array[i].selected = false;
+            {#zone_array[i].selected = false;#}
             zone_array[i].classList.remove('selected');
           }
         }

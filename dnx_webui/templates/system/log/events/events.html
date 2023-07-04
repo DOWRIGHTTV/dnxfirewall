@@ -6,7 +6,7 @@
             <div class="card-panel hoverable {{ theme.card }}">
                 <h4 class="{{ theme.title }}">Detection Logs</h4>
                 <div class="row">
-                    <form method="POST">
+                    <form method="post">
                         <div class="input-field col s5 m3 {{input_color}}">
                             <select name="table" id="table" onchange="this.form.submit()">
                                 {% for table_type in table_types %}
@@ -50,14 +50,14 @@
                                 <th style="width:10%">Reason</th>
                                 <th style="width:10%">Action</th>
                                 <th style="width:10%">
-                                    <form method="POST">
+                                    <form method="post">
                                         <input type="hidden" name="table" value="{{table}}/top">
                                         <button class="btn btn-small waves-effect waves-light" name="menu" value="{{menu}}">
                                             <i class="material-icons tiny">arrow_drop_up</i></button> Ct.
                                     </form>
                                 </th>
                                 <th style="width:15%">
-                                    <form method="POST">
+                                    <form method="post">
                                         <input type="hidden" name="table" value="{{table}}/last">
                                         <button class="btn btn-small waves-effect waves-light" name="menu" value="{{menu}}">
                                             <i class="material-icons tiny">arrow_drop_up</i></button> Last Seen
@@ -92,7 +92,7 @@
                                 <th style="width:12%">Direction</th>
                                 <th style="width:12%">Action</th>
                                 <th style="width:20%">
-                                    <form method="POST">
+                                    <form method="post">
                                         <input type="hidden" name="table" value="{{table}}/last">
                                         <button class="btn btn-small waves-effect waves-light" name="menu" value="{{menu}}">
                                             <i class="material-icons tiny">arrow_drop_up</i></button> Timestamp
@@ -162,7 +162,7 @@
                                         <div class="modal-content">
                                             <h5 class="{{modal_text_style}}">Are you sure you want to remove the infected client from the list? Is it now clean?</h5>
                                         </div>
-                                        <form method="POST">
+                                        <form method="post">
                                             <input type="hidden" name="menu" value="infected_clients/last">
                                             <div class="modal-footer">
                                                 <button class="btn waves-effect waves-light" name="i_client_remove">YES</button>

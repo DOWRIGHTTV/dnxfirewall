@@ -60,7 +60,7 @@
             <div class="col s12 m6">
                 <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
                     {{ create_title('active categories')|safe }}
-                    <form method="POST">
+                    <form method="post">
                         <div class="row {{input_color}}">
                             <div class="input-field col s12">
                                 <input type="text" name="ud_category" id="ud_cat" class="validate" placeholder="social media" required>
@@ -71,7 +71,7 @@
                     </form>
                     {% for cat_list in category_settings['user_defined'].values() %}
                     {% for cat in cat_list %}
-                    <form method="POST">
+                    <form method="post">
                         <div class="input-field col s4 center">
                             {{cat}} domains
                             <div class="row">
@@ -94,7 +94,7 @@
             <div class="card-panel hoverable {{ theme.card }}">
                 {{ create_title('configured categories')|safe }}
                 <div class="row">
-                    <form method="POST">
+                    <form method="post">
                         <input type="hidden" name="tab" value="2">
                         <div class="input-field col s10 m4 {{input_color}}">
                             <select name="menu" id="menu2" onchange="this.form.submit()">
@@ -120,7 +120,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <form method="POST">
+                            <form method="post">
                                 <input type="hidden" name="menu" value="{{menu}}">
                                 <input type="hidden" name="category" value="{{category}}">
                                 <input type="hidden" name="tab" value="2">

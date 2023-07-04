@@ -66,7 +66,7 @@
             <h4 class="{{ theme.title }}">General Settings</h4>
             <div class="row">
               {{ create_switch('IDS Mode', 'ids_mode', checked=ips_settings.ids_mode)|safe }}
-              <form method="POST">
+              <form method="post">
                 <input type="hidden" name="tab" value="1">
                 <div class="input-field col s6 left {{input_color}}">
                   <select name="passive_block_length" id="pbl" onchange="this.form.submit()">
@@ -102,7 +102,7 @@
         <div class="col s8">
           <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
             <h4 class="{{ theme.title }}">Add IPS Whitelist</h4>
-            <form method="POST">
+            <form method="post">
               <input type="hidden" name="tab" value="2">
               <div class="row">
                 <div class="input-field col s4 {{input_color}}">
@@ -153,7 +153,7 @@
                       <div class="modal-content">
                         <h5 class="{{modal_text_style}}">Are you sure you want to remove the IPS whitelist rule?</h5>
                       </div>
-                      <form method="POST">
+                      <form method="post">
                         <input type="hidden" name="tab" value="2">
                         <input type="hidden" name="ips_wl_ip" value="{{ip_address}}">
                         <div class="modal-footer">
@@ -204,7 +204,7 @@
                       <div class="modal-content">
                         <h5 class="{{modal_text_style}}">Are you sure you want to remove the passively blocked host?</h5>
                       </div>
-                      <form method="POST">
+                      <form method="post">
                         <input type="hidden" name="tab" value="3">
                         <div class="modal-footer">
                           <button class="btn waves-effect waves-light" name="ips_pbl_remove" value="{{host}}/{{timestamp}}">YES</button>
