@@ -103,6 +103,7 @@
 
         if (['name'].includes(field)) {
           table_form_field.value = table_row_field.innerText.replace('[*]', '');
+          table_form_field.nextSibling.className = 'active';
         }
         else if (['sec1_prof', 'sec2_prof', 'sec3_prof'].includes(field)) {
           table_form_field.value = table_row_field.innerText;
