@@ -169,14 +169,25 @@ class DNXWebuiTableFormModal extends DNXWebuiTable {
     this._click_col_start = click_col_start;
     this._click_col_end = click_col_end;
 
-    this.table_el.addEventListener('click', this.click_row_handler.bind(this));
+    this.table_el.addEventListener('click', this._click_row_handler.bind(this));
 
     this.form_el = document.querySelector(`.${this.table_class_selector}-form`);
+    this.form_el.querySelector(`.${this.table_class_selector}-form-submit`).addEventListener('click', this._click_form_submit_handler.bind(this))
 
     this.form_initialized = true;
   }
 
-  click_row_handler(click) {
+  register_buttons(btn_selector_array) {
+    // set onclick listener for buttons that are outside the table itself, but interact with the table in some way.
+
+    for (let btn_selector of btn_selector_array) {
+      let btn = document.querySelector(`.${this.table_class_selector}-btn-${btn_selector}`)
+
+      btn.addEventListener('click', this._click_button_handler.bind(this, btn_selector));
+    }
+  }
+
+  _click_row_handler(click) {
 
     if (this.debug) { console.log('clicked cell index: ', click.target.cellIndex); }
 
@@ -201,7 +212,7 @@ class DNXWebuiTableFormModal extends DNXWebuiTable {
     form_modal.open();
   }
 
-  click_form_submit_handler() {
+  _click_form_submit_handler() {
     try {
       this._update_row_from_form();
     }
@@ -217,5 +228,9 @@ class DNXWebuiTableFormModal extends DNXWebuiTable {
 
   _update_row_from_form() {
     console.log('_update_row_from_form() not defined in child class');
+  }
+
+  _click_button_handler(btn_selector) {
+    console.log('_click_button_handler() not defined in child class');
   }
 }

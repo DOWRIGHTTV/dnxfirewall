@@ -1,62 +1,11 @@
 <div class="firewall-objects-table-form modal z-depth-5">
   <form method="post">
     <input type="hidden" name="tab" value="3">
-    <input type="hidden" name="create_obj">
+    <input type="hidden" class="oeform">
+    <input type="hidden" class="oeid" name="oeid">
     <div class="row">
       <div>
-        <h4 class="{{ theme.title }}" style="float: right;">Create Object</h4>
-      </div>
-    </div>
-    <div class="row">
-      <div class="input-field col s3 center {{input_color}}">
-        <input id="ocname" name="ocname"  class="ocname validate" type="text" data-length="25" required/>
-        <label for="ocname">Name</label>
-      </div>
-      <div class="input-field col s3 center {{input_color}}">
-        <input id="ocvalue" name="ocvalue"  class="ocvalue validate" type="text" required/>
-        <label for="ocvalue">Value</label>
-      </div>
-    </div>
-    <div class="row">
-      <div class="input-field col s6 center {{input_color}}">
-        <input id="ocdesc" name="ocdesc"  class="ocdesc validate" type="text" data-length="60" required/>
-        <label for="ocdesc">Description</label>
-      </div>
-      <label for="types">Type</label>
-      <div id="types">
-        <div class="col s2">
-          <label>
-            <input class="octype" name="octype" type="radio" value="address" required/><span>ADDRESS</span>
-          </label>
-        </div>
-        <div class="col s2">
-          <label>
-             <input class="octype" name="octype" type="radio" value="service"/><span>SERVICE</span>
-          </label>
-        </div>
-        <div class="col s2">
-          <label>
-            <input class="octype" name="octype" type="radio" value="geolocation"
-                disabled/><span>GEOLOCATION</span>
-          </label>
-        </div>
-      </div>
-    </div>
-    <div class="row">
-      <div class="modal-footer">
-        <button class="btn waves-effect waves-light">Submit</button>
-        <a class="btn-flat modal-close waves-effect waves-green">Cancel</a>
-      </div>
-    </div>
-</form>
-</div>
-<div id="FWobject-editor" class="fwrule-form modal z-depth-5">
-  <form method="post">
-    <input type="hidden" name="tab" value="3">
-    <input type="hidden" name="edit_obj">
-    <div class="row">
-      <div>
-        <h4 class="{{ theme.title }}" style="float: right;">Edit Object</h4>
+        <h4 class="oetitle {{ theme.title }}" style="float: right;"></h4>
       </div>
     </div>
     <div class="row">
@@ -95,7 +44,7 @@
     </div>
     <div class="row">
       <div class="modal-footer">
-        <button class="btn waves-effect waves-light">Submit</button>
+        <a class="firewall-objects-table-form-submit btn waves-effect waves-light">Submit</a>
         <a class="btn-flat modal-close waves-effect waves-green">Cancel</a>
       </div>
     </div>

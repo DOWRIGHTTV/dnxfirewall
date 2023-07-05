@@ -102,35 +102,39 @@
         let table_form_field = this.form_el.querySelector(`.e${field}`);
 
         if (['name'].includes(field)) {
-          let input_field = table_form_field.parentNode;
+          table_form_field.value = table_row_field.innerText.replace('[*]', '');
 
-          table_form_field.remove();
+          {#let input_field = table_form_field.parentNode;#}
 
-          let input = document.createElement('input');
-          input.id = 'ename';
-          input.name = 'ename';
-          input.type = 'text';
-          input.className = 'ename validate';
-          input.value = table_row_field.innerText.replace('[*]', '');
+          {#table_form_field.remove();#}
 
-          input_field.prepend(input);
+          {#let input = document.createElement('input');#}
+          {#input.id = 'ename';#}
+          {#input.name = 'ename';#}
+          {#input.type = 'text';#}
+          {#input.className = 'ename validate';#}
+          {#input.value = table_row_field.innerText.replace('[*]', '');#}
 
-          input_field.children[1].className = 'active';
+          {#input_field.prepend(input);#}
+
+          {#input_field.children[1].className = 'active';#}
         }
         else if (['sec1_prof', 'sec2_prof', 'sec3_prof'].includes(field)) {
-          let input_field = table_form_field.parentNode;
+          table_form_field.value = table_row_field.innerText;
 
-          table_form_field.remove();
+          {#let input_field = table_form_field.parentNode;#}
 
-          let input = document.createElement('input');
-          input.name = field;
-          input.type = 'number';
-          input.className = `e${field} validate`;
-          input.min = '0';
-          input.max = '1';
-          input.value = table_row_field.innerText;
+          {#table_form_field.remove();#}
 
-          input_field.prepend(input);
+          {#let input = document.createElement('input');#}
+          {#input.name = field;#}
+          {#input.type = 'number';#}
+          {#input.className = `e${field} validate`;#}
+          {#input.min = '0';#}
+          {#input.max = '1';#}
+          {#input.value = table_row_field.innerText;#}
+
+          {#input_field.prepend(input);#}
         }
 
         else if (field === 'log') {
@@ -239,43 +243,58 @@ class FirewallObjectsTable extends DNXWebuiTableFormModal {
 
   _update_form_from_row(selected_table_row) {
 
-    let hidden = document.createElement('input')
-    hidden.type = 'hidden';
-    hidden.name = 'oeid';
-    hidden.value = selected_table_row.getAttribute('data-id')
+    // form type identifiers
+    this.form_el.querySelector('.oeform').name = 'edit_obj';
+    this.form_el.querySelector('.oeid').value = selected_table_row.getAttribute('data-id');
+    this.form_el.querySelector('.oetitle').innerText = 'Edit Object';
 
-    this.form_el.children[0].prepend(hidden)
-
-    const fields = ['name', 'type', 'value', 'desc']
+    const fields = ['name', 'type', 'value', 'desc'];
 
     for (let field of fields) {
-      let obj_field = selected_table_row.querySelector(`.o${field}`);
-      let editor_field = this.form_el.querySelector(`.oe${field}`);
+      let table_row_field = selected_table_row.querySelector(`.o${field}`);
+      let table_form_field = this.form_el.querySelector(`.oe${field}`);
 
       if (['name', 'value', 'desc'].includes(field)) {
-        let input_field = editor_field.parentNode;
-
-        editor_field.remove();
-
-        let input = document.createElement('input');
-        input.id = `oe${field}`;
-        input.name = `oe${field}`;
-        input.type = 'text';
-        input.className = `oe${field} validate`;
-        input.value = obj_field.innerText;
-
-        input_field.prepend(input);
-
-        input_field.children[1].className = 'active';
+        table_form_field.value = table_row_field.innerText;
       }
       else if (['type'].includes(field)) {
         const actionMap = {'address': 0, 'service': 1, 'geolocation': 2};
 
-        document.querySelectorAll('.oetype')[actionMap[obj_field.innerHTML]].name = 'oetype';
-        document.querySelectorAll('.oetype')[actionMap[obj_field.innerHTML]].checked = true;
+        document.querySelectorAll('.oetype')[actionMap[table_row_field.innerHTML]].checked = true;
       }
     }
-    this.form_el.children[0].id = `oe${selected_table_row.id}`;
+    this.form_el.children[0].id = `oe${selected_table_row.id}`; // TODO: this is probably wrong
+  }
+
+  _click_button_handler(btn_selector) {
+    if (btn_selector === 'create') {
+      this._update_form_from_new();
+    }
+    else { console.log(`button event ${btn_selector} not associated with action.`)
+    }
+  }
+
+  _update_form_from_new() {
+    this.form_el.querySelector('.oeform').name = 'create_obj';
+    this.form_el.querySelector('.oeid').value = -1;
+    this.form_el.querySelector('.oetitle').innerText = 'Create Object';
+
+    const fields = ['name', 'type', 'value', 'desc'];
+
+    for (let field of fields) {
+      let table_form_field = this.form_el.querySelector(`.oe${field}`);
+
+      if (['name', 'value', 'desc'].includes(field)) {
+        table_form_field.value = '';
+      }
+      else if (['type'].includes(field)) {
+        let radio_btn = document.querySelectorAll('.oetype');
+
+        for (let btn of radio_btn) {
+          btn.checked = false;
+        }
+      }
+    }
   }
 }
 </script>
@@ -284,11 +303,12 @@ class FirewallObjectsTable extends DNXWebuiTableFormModal {
 
   const firewall_rules_table = new FirewallRulesTable('firewall-rules-table', debug=true);
   firewall_rules_table.initialize_filter(filter_min_length=2, filter_col_start=2, filter_col_end=9);
-  firewall_rules_table.initialize_form(click_col_start=2)
+  firewall_rules_table.initialize_form(click_col_start=2);
 
   const firewall_objects_table = new FirewallObjectsTable('firewall-objects-table', debug=true);
   firewall_objects_table.initialize_filter(filter_min_length=2, filter_col_start=1, filter_col_end=4);
-  firewall_objects_table.initialize_form(click_col_start=1)
+  firewall_objects_table.initialize_form(click_col_start=1);
+  firewall_objects_table.register_buttons(['create']);
   /////////
 </script>
 <script>
