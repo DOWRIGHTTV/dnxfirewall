@@ -34,6 +34,9 @@ class DNXWebuiTable {
 
     // auto generated attributes
     this.full_table_el = document.querySelector(`.${table_class_selector}`);
+
+    if (debug) { console.log(this.full_table_el); }
+
     this.table_el = this.full_table_el.getElementsByTagName('tbody')[0];
 
     this.filterable = this.full_table_el.classList.contains('filterable');
@@ -120,6 +123,34 @@ class DNXWebuiTable {
       this.colorize_table();
     }
   }
+  move_up(id) {
+    // basic protection, but shouldn't be hit TODO: figure out how the id string makes this work???
+    if (!this.movable) { return; }
+
+    let prev = id.previousElementSibling;
+    if (prev == null) { return; }
+
+    id.setAttribute('class', 'ease-in');
+    prev.parentNode.insertBefore(id, prev);
+  }
+
+  move_down(id) {
+    // basic protection, but shouldn't be hit TODO: figure out how the id string makes this work???
+    if (!this.movable) { return; }
+
+    let next = id.nextElementSibling;
+    if (next == null) { return; }
+
+    id.setAttribute('class', 'ease-in');
+
+    let next2 = next.nextElementSibling;
+    if (next2 == null) {
+      id.parentNode.append(id);
+    }
+    else {
+      next2.parentNode.insertBefore(id, next2);
+    }
+  }
 }
 
 class DNXWebuiTableFormModal extends DNXWebuiTable {
@@ -140,34 +171,6 @@ class DNXWebuiTableFormModal extends DNXWebuiTable {
     this.form_initialized = true;
   }
 
-  move_up(id) {
-    // basic protection, but shouldn't be hit TODO: figure out how the id string makes this work???
-    if (!this.movable) return;
-
-    let prev = id.previousElementSibling;
-    if (prev == null) return;
-
-    id.setAttribute('class', 'ease-in');
-    prev.parentNode.insertBefore(id, prev);
-  }
-
-  move_down(id) {
-    // basic protection, but shouldn't be hit TODO: figure out how the id string makes this work???
-    if (!this.movable) return;
-
-    let next = id.nextElementSibling;
-    if (next == null) return;
-
-    id.setAttribute('class', 'ease-in');
-
-    let next2 = next.nextElementSibling;
-    if (next2 == null) {
-      id.parentNode.append(id);
-    }
-    else {
-      next2.parentNode.insertBefore(id, next2);
-    }
-  }
   click_row_handler(click) {
     if (click.target.cellIndex == null) return;
     if (click.target.cellIndex < this._click_col_start || click.target.cellIndex > this._click_col_end) return;
