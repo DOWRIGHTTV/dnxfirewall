@@ -137,7 +137,7 @@
           table_form_field.checked = table_row_field.innerText === 'on';
         }
         else if (field === 'enabled') {
-          const enabled = parseInt(table_row_field.getAttribute('data-enabled'));
+          const enabled = parseInt(selected_table_row.getAttribute('data-enabled'));
           table_form_field.checked = !!enabled;
         }
         else if (field === 'action') {
