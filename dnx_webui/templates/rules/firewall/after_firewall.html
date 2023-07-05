@@ -226,7 +226,7 @@
         x.remove()
       });
 
-      this.table_el.getElementById(row_id).outerHTML = row.outerHTML;
+      this.table_el.querySelector(`#${row_id}`).outerHTML = row.outerHTML;
 
       clearDNXChips();
 
