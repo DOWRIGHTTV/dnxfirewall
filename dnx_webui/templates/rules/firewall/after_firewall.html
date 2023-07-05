@@ -237,14 +237,14 @@
 <script>
 class FirewallObjectsTable extends DNXWebuiTableFormModal {
 
-  _update_form_from_row(objEditor, objRow) {
+  _update_form_from_row(selected_table_row) {
 
     let hidden = document.createElement('input')
     hidden.type = 'hidden';
     hidden.name = 'oeid';
-    hidden.value = objRow.getAttribute('data-id')
+    hidden.value = selected_table_row.getAttribute('data-id')
 
-    objEditor.children[0].prepend(hidden)
+    this.form_el.children[0].prepend(hidden)
 
     const fields = ['name', 'type', 'value', 'desc']
 
@@ -275,12 +275,12 @@ class FirewallObjectsTable extends DNXWebuiTableFormModal {
         document.querySelectorAll('.oetype')[actionMap[obj_field.innerHTML]].checked = true;
       }
     }
-    objEditor.children[0].id = `oe${objRow.id}`;
+    this.form_el.children[0].id = `oe${objRow.id}`;
   }
 }
 </script>
 <script>
-  /////// this is where we initialize the dnx table class ///////
+  /////// this is where we initialize the dnx tables class ///////
 
   const firewall_rules_table = new FirewallRulesTable('firewall-rules-table', debug=true);
   firewall_rules_table.initialize_filter(filter_min_length=2, filter_col_start=2, filter_col_end=9);
@@ -292,7 +292,7 @@ class FirewallObjectsTable extends DNXWebuiTableFormModal {
   /////////
 </script>
 <script>
-  //firewall object implementation (built from materialize chips)
+  //firewall object implementation (built from materialize chips) TODO: convert to class and/or integrate with firewall table class
   const fwObjectMap = {{firewall_settings.fw_object_map|tojson}};
   const zone_autofill = {{firewall_settings.zone_autofill|tojson}};
   const network_autofill = {{firewall_settings.network_autofill|tojson}};
