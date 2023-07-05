@@ -103,38 +103,9 @@
 
         if (['name'].includes(field)) {
           table_form_field.value = table_row_field.innerText.replace('[*]', '');
-
-          {#let input_field = table_form_field.parentNode;#}
-
-          {#table_form_field.remove();#}
-
-          {#let input = document.createElement('input');#}
-          {#input.id = 'ename';#}
-          {#input.name = 'ename';#}
-          {#input.type = 'text';#}
-          {#input.className = 'ename validate';#}
-          {#input.value = table_row_field.innerText.replace('[*]', '');#}
-
-          {#input_field.prepend(input);#}
-
-          {#input_field.children[1].className = 'active';#}
         }
         else if (['sec1_prof', 'sec2_prof', 'sec3_prof'].includes(field)) {
           table_form_field.value = table_row_field.innerText;
-
-          {#let input_field = table_form_field.parentNode;#}
-
-          {#table_form_field.remove();#}
-
-          {#let input = document.createElement('input');#}
-          {#input.name = field;#}
-          {#input.type = 'number';#}
-          {#input.className = `e${field} validate`;#}
-          {#input.min = '0';#}
-          {#input.max = '1';#}
-          {#input.value = table_row_field.innerText;#}
-
-          {#input_field.prepend(input);#}
         }
 
         else if (field === 'log') {
