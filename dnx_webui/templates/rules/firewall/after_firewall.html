@@ -249,8 +249,8 @@ class FirewallObjectsTable extends DNXWebuiTableFormModal {
     const fields = ['name', 'type', 'value', 'desc']
 
     for (let field of fields) {
-      let obj_field = objRow.querySelector(`.o${field}`);
-      let editor_field = objEditor.querySelector(`.oe${field}`);
+      let obj_field = selected_table_row.querySelector(`.o${field}`);
+      let editor_field = this.form_el.querySelector(`.oe${field}`);
 
       if (['name', 'value', 'desc'].includes(field)) {
         let input_field = editor_field.parentNode;
@@ -275,7 +275,7 @@ class FirewallObjectsTable extends DNXWebuiTableFormModal {
         document.querySelectorAll('.oetype')[actionMap[obj_field.innerHTML]].checked = true;
       }
     }
-    this.form_el.children[0].id = `oe${objRow.id}`;
+    this.form_el.children[0].id = `oe${selected_table_row.id}`;
   }
 }
 </script>
