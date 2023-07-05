@@ -37,7 +37,7 @@ class DNXWebuiTable {
 
     if (debug) { console.log(this.full_table_el); }
 
-    this.table_el = this.full_table_el.getElementsByTagName('tbody')[0];
+    this.table_el = this.full_table_el.querySelector(`.${table_class_selector}-body`);
 
     this.filterable = this.full_table_el.classList.contains('filterable');
     this.movable = this.full_table_el.classList.contains('movable');
@@ -172,10 +172,15 @@ class DNXWebuiTableFormModal extends DNXWebuiTable {
   }
 
   click_row_handler(click) {
+
+    if (this.debug) { console.log('clicked cell index: ', click.target.cellIndex); }
+
     if (click.target.cellIndex == null) return;
     if (click.target.cellIndex < this._click_col_start || click.target.cellIndex > this._click_col_end) return;
 
     let selected_table_row = click.target.parentNode;
+
+    if (this.debug) { console.log('clicked row: ', selected_table_row); }
 
     let form_modal = M.Modal.init(this.form_el, {dismissible: false});
 
