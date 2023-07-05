@@ -94,7 +94,12 @@ class DNXWebuiTable {
   filter_table() {
     if (!this.filterable) { console.log('table not filterable'); return; }
 
-    if (this._filter_input.value.length < this._filter_min_length) { return; }
+    if (this._filter_input.value.length < this._filter_min_length) {
+      if (this.debug) {
+        console.log(`filter input length (${this._filter_input.value.length}) is less than set minimum (${this._filter_min_length})`)
+      }
+      return;
+    }
 
     let table_row_array = this.table_el.getElementsByTagName('tr');
 
@@ -160,13 +165,13 @@ class DNXWebuiTableFormModal extends DNXWebuiTable {
   initialize_form(click_col_start = 0, click_col_end = 99) {
     // initialize the form modal that will show up on row click (uses table class selector as base name)
 
+    // TODO: add code to change pointer for the specified columns
     this._click_col_start = click_col_start;
     this._click_col_end = click_col_end;
 
-    // TODO: add code to change pointer for the specifid columns
+    this.table_el.addEventListener('click', this.click_row_handler.bind(this));
 
     this.form_el = document.querySelector(`.${this.table_class_selector}-form`);
-    this.form_el.addEventListener('click', this.click_row_handler.bind(this));
 
     this.form_initialized = true;
   }
