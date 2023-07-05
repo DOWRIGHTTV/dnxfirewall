@@ -2,13 +2,6 @@
 
   class FirewallRulesTable extends DNXWebuiTableFormModal {
 
-    debug = false;
-
-    // i hate how this is in setter format. maybe this should just be passed into constructor, but js is wack.
-    set_debug(debug) {
-      this.debug = debug;
-    }
-
     _get_selected_rules() {
       let selected_rules = [];
 
@@ -289,11 +282,13 @@ class FirewallObjectsTable extends DNXWebuiTableFormModal {
 <script>
   /////// this is where we initialize the dnx table class ///////
 
-  const firewall_rules_table = new FirewallRulesTable('firewall-rules-table');
-  firewall_rules_table.init(2, 9);
+  const firewall_rules_table = new FirewallRulesTable('firewall-rules-table', debug=true);
+  firewall_rules_table.initialize_filter(filter_min_length=2, filter_col_start=2, filter_col_end=9);
+  firewall_rules_table.initialize_form(click_col_start=2)
 
-  const firewall_objects_table = new FirewallObjectsTable('firewall-objects-table');
-  firewall_objects_table.init(0, 2);
+  const firewall_objects_table = new FirewallObjectsTable('firewall-objects-table', debug=true);
+  firewall_objects_table.initialize_filter(filter_min_length=2, filter_col_start=1, filter_col_end=4);
+  firewall_objects_table.initialize_form(click_col_start=1)
   /////////
 </script>
 <script>

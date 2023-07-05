@@ -18,38 +18,46 @@ class DNXWebuiTable {
   * movable: boolean, whether the table is movable (set by class selector)
   */
 
-  constructor(table_class_selector = 'default-table', cell_start = 0, cell_end = 99) {
+  constructor(table_class_selector = 'default-table', debug = false) {
 
     /*
     * table_class_selector: class name of the table to be loaded
+    * debug: shows verbose console output
     * filterable: boolean, whether the table is filterable
-    ** _filter_input: the input element of the filter field
-    ** _filter_cell_start: lower bound for cells to be clickable
-    ** _filter_cell_end: upper bound for cells to be clickable
     * movable: boolean, whether the table is movable
     * colorize: boolean, whether the table is colorized
     */
 
+    // args
     this.table_class_selector = table_class_selector;
+    this.debug = debug;
 
+    // auto generated attributes
     this.full_table_el = document.querySelector(`.${table_class_selector}`);
-
     this.table_el = this.full_table_el.getElementsByTagName('tbody')[0];
 
-    this.colorize = this.full_table_el.classList.contains('colorize');
     this.filterable = this.full_table_el.classList.contains('filterable');
     this.movable = this.full_table_el.classList.contains('movable');
 
-    if (this.filterable) {
-      this._filter_input = document.getElementById(`${table_class_selector}-filter`)
-      this._filter_cell_start = cell_start;
-      this._filter_cell_end = cell_end;
+    // handling colorization in constructor i guess
+    this.colorize = this.full_table_el.classList.contains('colorize');
+    if (this.colorize) {
+      this.colorize_table();
     }
   }
 
-  init() {
-    if (this.colorize) {
-      this.colorize_table();
+  initialize_filter(filter_min_length = 0, filter_col_start = 0, filter_col_end = 99) {
+    /*
+    ** _filter_input: the input element of the filter field
+    ** _filter_min_length: minimum length of the filter string
+    ** _filter_col_start: lower bound for cells to be clickable
+    ** _filter_col_end: upper bound for cells to be clickable
+    */
+    if (this.filterable) {
+      this._filter_input = document.getElementById(`${this.table_class_selector}-filter`)
+      this._filter_min_length = filter_min_length;
+      this._filter_col_start = filter_col_start;
+      this._filter_col_end = filter_col_end;
     }
   }
 
@@ -83,18 +91,19 @@ class DNXWebuiTable {
   filter_table() {
     if (!this.filterable) { console.log('table not filterable'); return; }
 
-    if (this._filter_input.value.length === 1) { return; }
+    if (this._filter_input.value.length < this._filter_min_length) { return; }
 
     let table_row_array = this.table_el.getElementsByTagName('tr');
 
     for (let i = 0; i < table_row_array.length; i++) {
       let td_list = table_row_array[i].getElementsByTagName('td');
 
-      if (td_list.length < this._filter_cell_end) {
+      // do not run filter if there are less than 4 rows. note: this can be changed later to be dynamic or user set
+      if (td_list.length <= 3) {
         continue;
       }
 
-      for (let f = this._filter_cell_start; f <= this._filter_cell_end; f++) {
+      for (let f = this._filter_col_start; f <= this._filter_col_end; f++) {
         let field = td_list[f].textContent;
 
         if (field.indexOf(this._filter_input.value) === -1) {
@@ -115,17 +124,20 @@ class DNXWebuiTable {
 
 class DNXWebuiTableFormModal extends DNXWebuiTable {
 //
-  initialized = false;
+  form_initialized = false;
 
-  init() {
+  initialize_form(click_col_start = 0, click_col_end = 99) {
     // initialize the form modal that will show up on row click (uses table class selector as base name)
 
-    super.init();
+    this._click_col_start = click_col_start;
+    this._click_col_end = click_col_end;
+
+    // TODO: add code to change pointer for the specifid columns
 
     this.form_el = document.querySelector(`.${this.table_class_selector}-form`);
     this.form_el.addEventListener('click', this.click_row_handler.bind(this));
 
-    this.initialized = true;
+    this.form_initialized = true;
   }
 
   move_up(id) {
@@ -156,16 +168,14 @@ class DNXWebuiTableFormModal extends DNXWebuiTable {
       next2.parentNode.insertBefore(id, next2);
     }
   }
-
   click_row_handler(click) {
     if (click.target.cellIndex == null) return;
-    if (click.target.cellIndex < this.cell_start || click.target.cellIndex > this.cell_end) return;
+    if (click.target.cellIndex < this._click_col_start || click.target.cellIndex > this._click_col_end) return;
 
     let selected_table_row = click.target.parentNode;
 
-    let form_modal = M.Modal.init(this.form_editor, {dismissible: false});
+    let form_modal = M.Modal.init(this.form_el, {dismissible: false});
 
-    // note: this method needs to be redefined in the child class since each table will have different forms
     try {
       this._update_form_from_row(selected_table_row);
     }
@@ -189,10 +199,10 @@ class DNXWebuiTableFormModal extends DNXWebuiTable {
   }
 
   _update_form_from_row(selected_table_row) {
-    console.log('fill_form() not defined in child class');
+    console.log('_update_form_from_row() not defined in child class');
   }
 
   _update_row_from_form() {
-    console.log('update_row_from_form() not defined in child class');
+    console.log('_update_row_from_form() not defined in child class');
   }
 }
