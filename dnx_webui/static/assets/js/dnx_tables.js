@@ -198,8 +198,6 @@ class DNXWebuiTableFormModal extends DNXWebuiTable {
 
     if (this.debug) { console.log('clicked row: ', selected_table_row); }
 
-    let form_modal = M.Modal.init(this.form_el, {dismissible: false});
-
     try {
       this._update_form_from_row(selected_table_row);
     }
@@ -209,7 +207,7 @@ class DNXWebuiTableFormModal extends DNXWebuiTable {
     }
     finally {}
 
-    form_modal.open();
+    M.Modal.init(this.form_el, {dismissible: false}).open();
   }
 
   _click_form_submit_handler() {
