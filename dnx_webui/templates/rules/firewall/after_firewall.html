@@ -228,6 +228,7 @@ class FirewallObjectsTable extends DNXWebuiTableFormModal {
 
       if (['name', 'value', 'desc'].includes(field)) {
         table_form_field.value = table_row_field.innerText;
+        table_form_field.nextSibling.className = 'active';
       }
       else if (['type'].includes(field)) {
         const actionMap = {'address': 0, 'service': 1, 'geolocation': 2};
