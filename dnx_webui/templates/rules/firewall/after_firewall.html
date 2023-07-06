@@ -228,6 +228,9 @@ class FirewallObjectsTable extends DNXWebuiTableFormModal {
 
       if (['name', 'value', 'desc'].includes(field)) {
         table_form_field.value = table_row_field.innerText;
+
+        console.log(111111111111111111111111111, table_form_field.nextSibling);
+
         table_form_field.nextSibling.className = 'active';
       }
       else if (['type'].includes(field)) {
