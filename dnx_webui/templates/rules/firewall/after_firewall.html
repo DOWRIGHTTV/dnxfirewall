@@ -103,7 +103,7 @@
 
         if (['name'].includes(field)) {
           table_form_field.value = table_row_field.innerText.replace('[*]', '');
-          table_form_field.nextSibling.className = 'active';
+          table_form_field.nextElementSibling.className = 'active';
         }
         else if (['sec1_prof', 'sec2_prof', 'sec3_prof'].includes(field)) {
           table_form_field.value = table_row_field.innerText;
@@ -228,11 +228,7 @@ class FirewallObjectsTable extends DNXWebuiTableFormModal {
 
       if (['name', 'value', 'desc'].includes(field)) {
         table_form_field.value = table_row_field.innerText;
-
-        console.log(111111111111111111111111111, table_form_field.nextSibling);
-        console.log(222222222222222222222222222, table_form_field.parentNode.children[1]);
-
-        table_form_field.nextSibling.className = 'active';
+        table_form_field.nextElementSibling.className = 'active';
       }
       else if (['type'].includes(field)) {
         const actionMap = {'address': 0, 'service': 1, 'geolocation': 2};
