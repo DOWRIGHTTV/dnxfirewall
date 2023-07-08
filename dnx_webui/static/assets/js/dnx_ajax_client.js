@@ -1,15 +1,23 @@
 class AjaxClient {
-  constructor(baseUri, onSuccessCallback = null, onErrorCallback = null, debug = false) {
-    this._baseUrl = baseUri;
+  constructor(base_uri, onSuccessCallback = null, onErrorCallback = null, debug = false) {
+    this.base_url = base_uri;
     this.onSuccessCallback = onSuccessCallback;
     this.onErrorCallback = onErrorCallback;
 
     this.debug = debug;
+
+    if (debug) {
+      console.log(
+        `ajax client initialized -> 
+        base_url: ${this.base_url}, 
+        onSuccessCallback: ${this.onSuccessCallback}, 
+        onErrorCallback: ${this.onErrorCallback}`);
+    }
   }
 
-  get baseUrl() {
-    return this._baseUrl;
-  }
+  //get baseUrl() {
+  //  return this._baseUrl;
+  //}
 
   //get onSuccessCallback() {
   //  return this._onSuccessCallback;
@@ -22,7 +30,7 @@ class AjaxClient {
   async post(endpoint= '', data= {}, alternate_handler = null) {
 
     let response;
-    let fullUrl = this.baseUrl + `/${endpoint}`;
+    let fullUrl = this.base_url + `/${endpoint}`;
     let sendData = {
       method: 'POST',
       headers: {
