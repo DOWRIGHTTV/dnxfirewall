@@ -45,7 +45,7 @@
 <script src="{{ url_for('static',filename='assets/js/dnx_ajax_client.js') }}"></script>
 {% if ajax %}
   {% include 'includes/_ajax_response.html' %}
-  <script>const ajaxClient = new AjaxClient(location.pathname);</script>
+  <script>const ajaxClient = new AjaxClient(location.pathname, debug=true);</script>
 {% endif %}
 
 {# general functions -#}
