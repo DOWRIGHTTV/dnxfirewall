@@ -1,8 +1,8 @@
 class AjaxClient {
   constructor(baseUri, onSuccessCallback = null, onErrorCallback = null, debug = false) {
     this._baseUrl = baseUri;
-    this._onSuccessCallback = onSuccessCallback;
-    this._onErrorCallback = onErrorCallback;
+    this.onSuccessCallback = onSuccessCallback;
+    this.onErrorCallback = onErrorCallback;
 
     this.debug = debug;
   }
@@ -11,13 +11,13 @@ class AjaxClient {
     return this._baseUrl;
   }
 
-  get onSuccessCallback() {
-    return this._onSuccessCallback;
-  }
-
-  get onErrorCallback() {
-    return this._onErrorCallback;
-  }
+  //get onSuccessCallback() {
+  //  return this._onSuccessCallback;
+  //}
+  //
+  //get onErrorCallback() {
+  //  return this._onErrorCallback;
+  //}
 
   async post(endpoint= '', data= {}, alternate_handler = null) {
 
