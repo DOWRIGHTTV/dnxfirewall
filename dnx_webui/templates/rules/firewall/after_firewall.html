@@ -377,96 +377,92 @@ class FirewallObjectsTable extends DNXWebuiTableFormModal {
 }
 </script>
 <script>
-  /////// this is where we initialize the dnx tables class ///////
+/////// this is where we initialize the dnx tables class ///////
+const firewall_rules_table = new FirewallRulesTable('firewall-rules-table', debug=true);
+firewall_rules_table.initialize_filter(filter_min_length=2, filter_col_start=2, filter_col_end=9);
+firewall_rules_table.initialize_form(click_col_start=2);
+firewall_rules_table.register_buttons(['commit', 'push', 'diff']);
 
-  const firewall_rules_table = new FirewallRulesTable('firewall-rules-table', debug=true);
-  firewall_rules_table.initialize_filter(filter_min_length=2, filter_col_start=2, filter_col_end=9);
-  firewall_rules_table.initialize_form(click_col_start=2);
-  firewall_rules_table.register_buttons(['commit', 'push', 'diff']);
-
-  const firewall_objects_table = new FirewallObjectsTable('firewall-objects-table', debug=true);
-  firewall_objects_table.initialize_filter(filter_min_length=2, filter_col_start=1, filter_col_end=4);
-  firewall_objects_table.initialize_form(click_col_start=1);
-  firewall_objects_table.register_buttons(['create']);
-  /////////
+const firewall_objects_table = new FirewallObjectsTable('firewall-objects-table', debug=true);
+firewall_objects_table.initialize_filter(filter_min_length=2, filter_col_start=1, filter_col_end=4);
+firewall_objects_table.initialize_form(click_col_start=1);
+firewall_objects_table.register_buttons(['create']);
+/////////
 </script>
 <script>
-  //firewall object implementation (built from materialize chips) TODO: convert to class and/or integrate with firewall table class
-  const fwObjectMap = {{firewall_settings.fw_object_map|tojson}};
-  const zone_autofill = {{firewall_settings.zone_autofill|tojson}};
-  const network_autofill = {{firewall_settings.network_autofill|tojson}};
-  const service_autofill = {{firewall_settings.service_autofill|tojson}};
+//firewall object implementation (built from materialize chips) TODO: convert to class and/or integrate with firewall table class
+const fwObjectMap = {{firewall_settings.fw_object_map|tojson}};
+const zone_autofill = {{firewall_settings.zone_autofill|tojson}};
+const network_autofill = {{firewall_settings.network_autofill|tojson}};
+const service_autofill = {{firewall_settings.service_autofill|tojson}};
 
-  function initDNXChips(field) {
-    let elem = document.querySelectorAll(`.${field}-chips`);
+function initDNXChips(field) {
+  let elem = document.querySelectorAll(`.${field}-chips`);
 
-    let set;
-    if (field === 'service') {
-      set = service_autofill;
-    }
-    else if (field === 'zone') {
-      set = zone_autofill;
-    }
-    else {
-      set = network_autofill;
-    }
-    return M.Chips.init(elem, {
-      onChipAdd: cAddCallback,
-      limit: 4,
-      autocompleteOnly: true,
-      autocompleteOptions: {
-        data: set
-      }
-    })
+  let set;
+  if (field === 'service') {
+    set = service_autofill;
   }
-
-  let chipMAP = {
-    zone: initDNXChips('zone'),
-    network: initDNXChips('network'),
-    service: initDNXChips('service')
+  else if (field === 'zone') {
+    set = zone_autofill;
   }
+  else {
+    set = network_autofill;
+  }
+  return M.Chips.init(elem, {
+    onChipAdd: cAddCallback,
+    limit: 4,
+    autocompleteOnly: true,
+    autocompleteOptions: {
+      data: set
+    }
+  })
+}
 
-  function clearDNXChips() {
-    for (let fields of [chipMAP['zone'], chipMAP['network'], chipMAP['service']]) {
-      fields.forEach((field) => {
-        field.$chips.splice(0, 99);
-        field.chipsData.splice(0, 99);
-      });
+let chipMAP = {
+  zone: initDNXChips('zone'),
+  network: initDNXChips('network'),
+  service: initDNXChips('service')
+}
+
+function clearDNXChips() {
+  for (let fields of [chipMAP['zone'], chipMAP['network'], chipMAP['service']]) {
+    fields.forEach((field) => {
+      field.$chips.splice(0, 99);
+      field.chipsData.splice(0, 99);
+    });
+  }
+}
+
+function cAddCallback(el, chip) {
+
+  let objName = chip.innerHTML.split('<')[0];
+  let chipClose = chip.innerHTML.split(objName)[1];
+
+  chip.setAttribute('data-id', objName);
+  chip.className += ' ' + fwObjectMap[objName][2];
+
+  chip.innerHTML = fwObjectMap[objName][1] + ' ' + objName + chipClose;
+  chip.children[1].setAttribute('onclick', 'cRemove(this.parentNode)');
+}
+
+function cRemove(chip) {
+  let fid = chip.getAttribute('data-id');
+
+  let ftype, findex;
+  [ftype, findex] = getAttributes(chip.parentNode, ['data-ftype', 'data-findex'])
+
+  let instance = chipMAP[ftype][findex];
+
+  let i;
+  for (i = 0; i < instance.chipsData.length; i++) {
+    let c = instance.chipsData[i];
+    if (c.tag === fid) {
+      break
     }
   }
-
-  function cAddCallback(el, chip) {
-
-    let objName = chip.innerHTML.split('<')[0];
-    let chipClose = chip.innerHTML.split(objName)[1];
-
-    chip.setAttribute('data-id', objName);
-    chip.className += ' ' + fwObjectMap[objName][2];
-
-    chip.innerHTML = fwObjectMap[objName][1] + ' ' + objName + chipClose;
-    chip.children[1].setAttribute('onclick', 'cRemove(this.parentNode)');
-  }
-
-  function cRemove(chip) {
-    let fid = chip.getAttribute('data-id');
-
-    let ftype, findex;
-    [ftype, findex] = getAttributes(chip.parentNode, ['data-ftype', 'data-findex'])
-
-    let instance = chipMAP[ftype][findex];
-
-    let i;
-    for (i = 0; i < instance.chipsData.length; i++) {
-      let c = instance.chipsData[i];
-      if (c.tag === fid) {
-        break
-      }
-    }
-    instance.$chips.splice(i, 1);
-    instance.chipsData.splice(i, 1);
-    chip.remove();
-  }
-</script>
-<script>
-  //object manager
+  instance.$chips.splice(i, 1);
+  instance.chipsData.splice(i, 1);
+  chip.remove();
+}
 </script>
