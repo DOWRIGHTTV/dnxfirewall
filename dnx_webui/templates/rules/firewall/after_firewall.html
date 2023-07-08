@@ -282,7 +282,7 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     M.Modal.init(message_popup, {dismissible: false}).open();
   }
 
-  _table_to_json(table_id) {
+  _table_to_json() {
     let data = {};
 
     for (let i = 0; i < this.table_el.rows.length; i++) {
