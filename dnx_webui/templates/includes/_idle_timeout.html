@@ -5,7 +5,7 @@ let initialLoad = true;
 let timeoutID = 0;
 
 function idleTimeoutWarning() {
-  M.Modal.init(document.querySelector('.idle-timeout-modal')).open();
+  M.Modal.init(document.querySelector('.idle-timeout-modal'), {dismissible: false}).open();
 }
 
 function idleTimeout() {
