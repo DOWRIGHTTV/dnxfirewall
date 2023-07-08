@@ -54,14 +54,14 @@ class AjaxClient {
       }
 
       if (this.onSuccessCallback) {
-        this.onSuccessCallback.call(ajaxResponse);
+        this.onSuccessCallback.call(ajaxResponse.result);
       }
       else if (alternate_handler) {
-        alternate_handler.call(ajaxResponse);
+        alternate_handler.call(ajaxResponse.result);
       }
       else {
         let message_popup = document.querySelector('#ajax-response-modal');
-        message_popup.querySelector('h5').innerText = response.message;
+        message_popup.querySelector('h5').innerText = response.result.message;
 
         M.Modal.init(message_popup, {dismissible: false}).open();
 
