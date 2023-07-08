@@ -378,7 +378,7 @@ class FirewallObjectsTable extends DNXWebuiTableFormModal {
 </script>
 <script>
 /////// this is where we initialize the dnx tables class ///////
-const ajaxClient = new AjaxClient(location.pathname, debug=true);
+const ajaxClient = new AjaxClient(location.pathname, _, _, debug=true);
 
 const firewall_rules_table = new FirewallRulesTable('firewall-rules-table', debug=true);
 firewall_rules_table.initialize_filter(filter_min_length=2, filter_col_start=2, filter_col_end=9);
