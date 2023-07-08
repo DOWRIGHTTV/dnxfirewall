@@ -1,214 +1,319 @@
 <script>
+class FirewallRulesTable extends DNXWebuiTableFormModal {
 
-  class FirewallRulesTable extends DNXWebuiTableFormModal {
+  _get_selected_rules() {
+    let selected_rules = [];
 
-    _get_selected_rules() {
-      let selected_rules = [];
+    let fw_rules = document.querySelectorAll('.dnx-table-row-select');
+    for (let rule of fw_rules) {
 
-      let fw_rules = document.querySelectorAll('.dnx-table-row-select');
-      for (let rule of fw_rules) {
-
-        if (rule.checked) {
-          selected_rules.push(rule);
-        }
-      }
-      return selected_rules
-    }
-
-    _clear_rule_selection(rules) {
-      for (let rule of rules) {
-        rule.checked = false
+      if (rule.checked) {
+        selected_rules.push(rule);
       }
     }
+    return selected_rules
+  }
 
-    enable_selected_rules() {
-      let selected_rules = this._get_selected_rules();
-
-      if (this.debug) { console.log('enabling > ', selected_rules); }
-
-      for (let rule of selected_rules) {
-        setAttributes(rule.closest('tr'), {'data-enabled': '1', 'style': 'opacity: 1'})
-      }
-      this._clear_rule_selection(selected_rules);
-    }
-
-    disable_selected_rules() {
-      let selected_rules = this._get_selected_rules();
-
-      if (this.debug) { console.log('disabling > ', selected_rules); }
-
-      for (let rule of selected_rules) {
-        setAttributes(rule.closest('tr'), {'data-enabled': '0', 'style': 'opacity: .4'})
-      }
-      this._clear_rule_selection(selected_rules);
-    }
-
-    remove_selected_rules() {
-      let selected_rules = this._get_selected_rules();
-
-      if (this.debug) { console.log('removing > ', selected_rules); }
-
-        for (let rule of selected_rules) {
-          rule.closest('tr').remove()
-      }
-
-      this._clear_rule_selection(selected_rules);
-    }
-
-    add_new_rule() {
-      let rule_position = this.table_el.children.length + 1
-      let default_chip = '<div class="chip">none</div>'
-
-      let rule_template = `<tr id="r${rule_position}" style="opacity: .4;" data-enabled="0" data-id="0">` +
-        '<td><label><input type="checkbox" class="filled-in dnx-table-row-select"><span></span></label></td>' +
-        '<td>' +
-        '<div class="row">' +
-        `<a class="btn btn-floating btn-small waves-light" onclick="firewall_rules_table.move_up(${rule_position})">` +
-        '<i class="material-icons blue-grey">arrow_upward</i>' +
-        '</a>' +
-        `<a class="btn btn-floating btn-small waves-light valign-wrapper" onclick="firewall_rules_table.move_down(${rule_position})">` +
-        '<i class="material-icons red darken-2">arrow_downward</i>' +
-        '</a>' +
-        '</div>' +
-        '</td>' +
-        '<td class="rname">new_rule</td>' +
-        `<td class="rsrc_zone">${default_chip}</td>` +
-        `<td class="rsrc_network">${default_chip}</td>` +
-        `<td class="rsrc_service">${default_chip}</td>` +
-        `<td class="rdst_zone">${default_chip}</td>` +
-        `<td class="rdst_network">${default_chip}</td>` +
-        `<td class="rdst_service">${default_chip}</td>` +
-        '<td class="raction">drop</td>' +
-        '<td class="rlog">N</td>' +
-        '<td class="rsec1_prof">0</td>' +
-        '<td class="rsec2_prof">0</td>' +
-        '<td class="rsec3_prof">0</td>' +
-        '</tr>'
-
-      this.table_el.insertAdjacentHTML('beforeend', rule_template)
-    }
-
-    _update_form_from_row(selected_table_row) {
-
-      const fields = ['name', 'log', 'enabled', 'src_zone', 'src_network',
-        'src_service', 'dst_zone', 'dst_network', 'dst_service', 'action',
-        'sec1_prof', 'sec2_prof', 'sec3_prof']
-
-      this.form_el.children[0].setAttribute('data-id', selected_table_row.getAttribute('data-id'));
-      this.form_el.children[0].id = `e${selected_table_row.id}`;
-
-      for (let field of fields) {
-        let table_row_field = selected_table_row.querySelector(`.r${field}`);
-        let table_form_field = this.form_el.querySelector(`.e${field}`);
-
-        if (['name'].includes(field)) {
-          table_form_field.value = table_row_field.innerText.replace('[*]', '');
-          table_form_field.nextElementSibling.className = 'active';
-        }
-        else if (['sec1_prof', 'sec2_prof', 'sec3_prof'].includes(field)) {
-          table_form_field.value = table_row_field.innerText;
-        }
-
-        else if (field === 'log') {
-          table_form_field.checked = table_row_field.innerText === 'on';
-        }
-        else if (field === 'enabled') {
-          const enabled = parseInt(selected_table_row.getAttribute('data-enabled'));
-          table_form_field.checked = !!enabled;
-        }
-        else if (field === 'action') {
-          const actionMap = {'drop': 0, 'accept': 1};
-
-          document.querySelectorAll('.eaction')[actionMap[table_row_field.innerHTML]].checked = true;
-        }
-        else if (['src_zone', 'src_network', 'src_service', 'dst_zone', 'dst_network', 'dst_service'].includes(field)) {
-          let dnxChips = table_form_field.parentNode;
-          let chipArray = dnxChips.querySelectorAll('.chip');
-
-          chipArray.forEach((chip) => {
-            chip.remove()
-          });
-          dnxChips.insertAdjacentHTML('afterbegin', table_row_field.innerHTML);
-
-          chipArray = dnxChips.querySelectorAll('.chip');
-          chipArray.forEach((chip) => {
-            chip.insertAdjacentHTML('beforeend', '<i class="material-icons close" ' +
-              'onclick="cRemove(this.parentNode)">close</i>')
-          });
-        }
-      }
-    }
-
-    _update_row_from_form() {
-
-      const row_id = this.form_el.children[0].id.substring(1);
-      const obj_id = this.form_el.children[0].getAttribute('data-id');
-
-      let row = document.createElement('tr')
-
-      if (this.form_el.querySelector('.eenabled').checked) {
-        setAttributes(row, {'data-enabled': '1', 'data-id': obj_id, 'id': row_id})
-      }
-      else {
-        row.style.opacity = '.4'
-        setAttributes(row, {'data-enabled': '0', 'data-id': obj_id, 'id': row_id})
-      }
-
-      const fields = [
-        'rselect', 'rmove', 'rname',
-        'rsrc_zone', 'rsrc_network', 'rsrc_service',
-        'rdst_zone', 'rdst_network', 'rdst_service',
-        'raction', 'rlog',
-        'rsec1_prof', 'rsec2_prof', 'rsec3_prof'
-      ]
-
-      for (let i = 0; i < fields.length; i++) {
-        let rule_field = fields[i];
-
-        row.appendChild(document.createElement('td'));
-        row.children[i].setAttribute('class', rule_field);
-      }
-
-      let col = row.children
-      col[0].innerHTML = '<td><label><input type="checkbox" class="filled-in dnx-table-row-select"><span></span></label></td>'
-      col[1].innerHTML = '<div class=row>' +
-        `<a class="btn btn-floating btn-small waves-light" onclick="firewall_rules_table.move_up(${row_id})">` +
-        '<i class="material-icons blue-grey">arrow_upward</i></a>' +
-        `<a class="btn btn-floating btn-small waves-light" onclick="firewall_rules_table.move_down(${row_id})">` +
-        '<i class="material-icons red darken-2">arrow_downward</i></a></div>'
-
-      col[2].innerHTML = `[*]${this.form_el.querySelector('.ename').value}`;
-
-      {# eaction[1] is accept radio btn #}
-      col[9].innerHTML  = this.form_el.querySelectorAll('.eaction')[1].checked ? 'accept' : 'drop';
-      col[10].innerHTML = this.form_el.querySelectorAll('.elog')[0].checked ? 'on' : 'off';
-      col[11].innerHTML = this.form_el.querySelector('.esec1_prof').value;
-      col[12].innerHTML = this.form_el.querySelector('.esec2_prof').value;
-      col[13].innerHTML = this.form_el.querySelector('.esec3_prof').value;
-
-      let row_field, form_field_objects;
-      for (let fStr of ['src_zone', 'src_network', 'src_service', 'dst_zone', 'dst_network', 'dst_service']) {
-        row_field = row.querySelector(`.r${fStr}`);
-
-        form_field_objects = this.form_el.querySelector(`.e${fStr}`).parentNode.querySelectorAll('.chip');
-
-        form_field_objects.forEach((x) => {
-          row_field.insertAdjacentHTML('beforeend', x.outerHTML)
-        });
-      }
-
-      let close = row.querySelectorAll('.close');
-      close.forEach((x) => {
-        x.remove()
-      });
-
-      this.table_el.querySelector(`#${row_id}`).outerHTML = row.outerHTML;
-
-      clearDNXChips();
-
-      M.Modal.getInstance(this.form_el, {dismissible: false}).close();
+  _clear_rule_selection(rules) {
+    for (let rule of rules) {
+      rule.checked = false
     }
   }
+
+  enable_selected_rules() {
+    let selected_rules = this._get_selected_rules();
+
+    if (this.debug) { console.log('enabling > ', selected_rules); }
+
+    for (let rule of selected_rules) {
+      setAttributes(rule.closest('tr'), {'data-enabled': '1', 'style': 'opacity: 1'})
+    }
+    this._clear_rule_selection(selected_rules);
+  }
+
+  disable_selected_rules() {
+    let selected_rules = this._get_selected_rules();
+
+    if (this.debug) { console.log('disabling > ', selected_rules); }
+
+    for (let rule of selected_rules) {
+      setAttributes(rule.closest('tr'), {'data-enabled': '0', 'style': 'opacity: .4'})
+    }
+    this._clear_rule_selection(selected_rules);
+  }
+
+  remove_selected_rules() {
+    let selected_rules = this._get_selected_rules();
+
+    if (this.debug) { console.log('removing > ', selected_rules); }
+
+      for (let rule of selected_rules) {
+        rule.closest('tr').remove()
+    }
+
+    this._clear_rule_selection(selected_rules);
+  }
+
+  add_new_rule() {
+    let rule_position = this.table_el.children.length + 1
+    let default_chip = '<div class="chip">none</div>'
+
+    let rule_template = `<tr id="r${rule_position}" style="opacity: .4;" data-enabled="0" data-id="0">` +
+      '<td><label><input type="checkbox" class="filled-in dnx-table-row-select"><span></span></label></td>' +
+      '<td>' +
+      '<div class="row">' +
+      `<a class="btn btn-floating btn-small waves-light" onclick="firewall_rules_table.move_up(${rule_position})">` +
+      '<i class="material-icons blue-grey">arrow_upward</i>' +
+      '</a>' +
+      `<a class="btn btn-floating btn-small waves-light valign-wrapper" onclick="firewall_rules_table.move_down(${rule_position})">` +
+      '<i class="material-icons red darken-2">arrow_downward</i>' +
+      '</a>' +
+      '</div>' +
+      '</td>' +
+      '<td class="rname">new_rule</td>' +
+      `<td class="rsrc_zone">${default_chip}</td>` +
+      `<td class="rsrc_network">${default_chip}</td>` +
+      `<td class="rsrc_service">${default_chip}</td>` +
+      `<td class="rdst_zone">${default_chip}</td>` +
+      `<td class="rdst_network">${default_chip}</td>` +
+      `<td class="rdst_service">${default_chip}</td>` +
+      '<td class="raction">drop</td>' +
+      '<td class="rlog">N</td>' +
+      '<td class="rsec1_prof">0</td>' +
+      '<td class="rsec2_prof">0</td>' +
+      '<td class="rsec3_prof">0</td>' +
+      '</tr>'
+
+    this.table_el.insertAdjacentHTML('beforeend', rule_template)
+  }
+
+  _update_form_from_row(selected_table_row) {
+    const fields = ['name', 'log', 'enabled', 'src_zone', 'src_network',
+      'src_service', 'dst_zone', 'dst_network', 'dst_service', 'action',
+      'sec1_prof', 'sec2_prof', 'sec3_prof']
+
+    this.form_el.children[0].setAttribute('data-id', selected_table_row.getAttribute('data-id'));
+    this.form_el.children[0].id = `e${selected_table_row.id}`;
+
+    for (let field of fields) {
+      let table_row_field = selected_table_row.querySelector(`.r${field}`);
+      let table_form_field = this.form_el.querySelector(`.e${field}`);
+
+      if (['name'].includes(field)) {
+        table_form_field.value = table_row_field.innerText.replace('[*]', '');
+        table_form_field.nextElementSibling.className = 'active';
+      }
+      else if (['sec1_prof', 'sec2_prof', 'sec3_prof'].includes(field)) {
+        table_form_field.value = table_row_field.innerText;
+      }
+
+      else if (field === 'log') {
+        table_form_field.checked = table_row_field.innerText === 'on';
+      }
+      else if (field === 'enabled') {
+        const enabled = parseInt(selected_table_row.getAttribute('data-enabled'));
+        table_form_field.checked = !!enabled;
+      }
+      else if (field === 'action') {
+        const actionMap = {'drop': 0, 'accept': 1};
+
+        document.querySelectorAll('.eaction')[actionMap[table_row_field.innerHTML]].checked = true;
+      }
+      else if (['src_zone', 'src_network', 'src_service', 'dst_zone', 'dst_network', 'dst_service'].includes(field)) {
+        let dnxChips = table_form_field.parentNode;
+        let chipArray = dnxChips.querySelectorAll('.chip');
+
+        chipArray.forEach((chip) => {
+          chip.remove()
+        });
+        dnxChips.insertAdjacentHTML('afterbegin', table_row_field.innerHTML);
+
+        chipArray = dnxChips.querySelectorAll('.chip');
+        chipArray.forEach((chip) => {
+          chip.insertAdjacentHTML('beforeend', '<i class="material-icons close" ' +
+            'onclick="cRemove(this.parentNode)">close</i>')
+        });
+      }
+    }
+  }
+
+  _update_row_from_form() {
+    const row_id = this.form_el.children[0].id.substring(1);
+    const obj_id = this.form_el.children[0].getAttribute('data-id');
+
+    let row = document.createElement('tr')
+
+    if (this.form_el.querySelector('.eenabled').checked) {
+      setAttributes(row, {'data-enabled': '1', 'data-id': obj_id, 'id': row_id})
+    }
+    else {
+      row.style.opacity = '.4'
+      setAttributes(row, {'data-enabled': '0', 'data-id': obj_id, 'id': row_id})
+    }
+
+    const fields = [
+      'rselect', 'rmove', 'rname',
+      'rsrc_zone', 'rsrc_network', 'rsrc_service',
+      'rdst_zone', 'rdst_network', 'rdst_service',
+      'raction', 'rlog',
+      'rsec1_prof', 'rsec2_prof', 'rsec3_prof'
+    ]
+
+    for (let i = 0; i < fields.length; i++) {
+      let rule_field = fields[i];
+
+      row.appendChild(document.createElement('td'));
+      row.children[i].setAttribute('class', rule_field);
+    }
+
+    let col = row.children
+    col[0].innerHTML = '<td><label><input type="checkbox" class="filled-in dnx-table-row-select"><span></span></label></td>'
+    col[1].innerHTML = '<div class=row>' +
+      `<a class="btn btn-floating btn-small waves-light" onclick="firewall_rules_table.move_up(${row_id})">` +
+      '<i class="material-icons blue-grey">arrow_upward</i></a>' +
+      `<a class="btn btn-floating btn-small waves-light" onclick="firewall_rules_table.move_down(${row_id})">` +
+      '<i class="material-icons red darken-2">arrow_downward</i></a></div>'
+
+    col[2].innerHTML = `[*]${this.form_el.querySelector('.ename').value}`;
+
+    {# eaction[1] is accept radio btn #}
+    col[9].innerHTML  = this.form_el.querySelectorAll('.eaction')[1].checked ? 'accept' : 'drop';
+    col[10].innerHTML = this.form_el.querySelectorAll('.elog')[0].checked ? 'on' : 'off';
+    col[11].innerHTML = this.form_el.querySelector('.esec1_prof').value;
+    col[12].innerHTML = this.form_el.querySelector('.esec2_prof').value;
+    col[13].innerHTML = this.form_el.querySelector('.esec3_prof').value;
+
+    let row_field, form_field_objects;
+    for (let fStr of ['src_zone', 'src_network', 'src_service', 'dst_zone', 'dst_network', 'dst_service']) {
+      row_field = row.querySelector(`.r${fStr}`);
+
+      form_field_objects = this.form_el.querySelector(`.e${fStr}`).parentNode.querySelectorAll('.chip');
+
+      form_field_objects.forEach((x) => {
+        row_field.insertAdjacentHTML('beforeend', x.outerHTML)
+      });
+    }
+
+    let close = row.querySelectorAll('.close');
+    close.forEach((x) => {
+      x.remove()
+    });
+
+    this.table_el.querySelector(`#${row_id}`).outerHTML = row.outerHTML;
+
+    clearDNXChips();
+
+    M.Modal.getInstance(this.form_el, {dismissible: false}).close();
+  }
+
+  _click_button_handler(btn_selector) {
+    if (btn_selector === 'commit') {
+      this._commit_rules();
+    }
+    else if (btn_selector === 'push') {
+      this._push_rules();
+    }
+    else if (btn_selector === 'diff') {
+      this._diff_rules();
+    }
+  }
+
+  async _commit_rules() {
+    let success = await ajaxClient.post('commit',
+      {'section': document.getElementById('clist_select').value, 'rules': this._table_to_json()}
+    );
+
+    if (success) {
+      let push_btn = document.querySelector(this.table_class_selector + '-btn-commit');
+
+      push_btn.classList.remove('btn-disabled');
+      push_btn.href = '#push-modal';
+
+      let revert_btn = document.getElementById('revert_rules');
+
+      revert_btn.classList.remove('btn-disabled');
+      revert_btn.href = '#revert-modal';
+    }
+  }
+
+  async _push_rules() {
+    let success = await ajaxClient.post('push');
+
+    if (success) {
+      let push_btn = document.querySelector(this.table_class_selector + '-btn-push');
+
+      push_btn.classList.add('btn-disabled');
+      push_btn.href = '';
+
+      let revert_btn = document.getElementById('revert_rules');
+
+      revert_btn.classList.add('btn-disabled');
+      revert_btn.href = '';
+    }
+  }
+  async _diff_rules() {
+    await ajaxClient.post('diff', {}, this._diff_rules_handler);
+  }
+
+  async _diff_rules_handler(response) {
+    let diff_info = response.message;
+    let message_popup = document.querySelector('#diff-modal');
+
+    Object.entries(diff_info).forEach(([section, action]) => {
+      if (!Object.keys(action).length) return;
+
+      ['add', 'rem', 'mod'].forEach(code => {
+
+      if (!action[code].length) return;
+
+      let change_text = message_popup.querySelector(`#diff-${code}`);
+      change_text.innerHTML = '<h6>' + section + '</h6>';
+
+      for (let r of action[code]) {
+        if (['add', 'rem'].includes(code)) {
+          change_text.innerHTML += `<p>${r[0][1]} in position ${r[13][1]}</p>`;
+        }
+        else {
+          for (let r2 of r.slice(1)) {
+            change_text.innerHTML += `<p>${r[0]} changed ${r2[1]} from ${r2[2]} to ${r2[3]}</p>`; }
+        }
+      }});
+    });
+    M.Modal.init(message_popup, {dismissible: false}).open();
+  }
+
+  _table_to_json(table_id) {
+    let data = {};
+
+    for (let i = 0; i < this.table_el.rows.length; i++) {
+
+        let table_row = this.table_el.rows[i];
+        let row_data = [table_row.attributes['data-enabled'].value, table_row.attributes['data-id'].value];
+
+        //rule name
+        row_data.push(table_row.cells[2].textContent.replace('[*]', ''));
+
+        for (let j = 3; j < table_row.cells.length; j++) {
+            let currentCell = table_row.cells[j];
+
+            // converting the fw object list to the proper server format
+            if (currentCell.children.length > 0) {
+                let objectStr = ''
+                for (let obj of table_row.cells[j].children) {
+                    objectStr += obj.textContent.replace(' ', '/') + ',';
+                }
+                // pulling out the trailing comma
+                row_data.push(objectStr.slice(0, -1));
+            } else {
+                row_data.push(currentCell.textContent);
+            }
+        }
+        data[i] = row_data;
+    }
+
+    return JSON.stringify(data);
+}
+}
 </script>
 <script>
 class FirewallObjectsTable extends DNXWebuiTableFormModal {
@@ -221,6 +326,7 @@ class FirewallObjectsTable extends DNXWebuiTableFormModal {
     this.form_el.querySelector('.oetitle').innerText = 'Edit Object';
 
     const fields = ['name', 'type', 'value', 'desc'];
+    const actionMap = {'address': 0, 'service': 1, 'geolocation': 2};
 
     for (let field of fields) {
       let table_row_field = selected_table_row.querySelector(`.o${field}`);
@@ -231,8 +337,6 @@ class FirewallObjectsTable extends DNXWebuiTableFormModal {
         table_form_field.nextElementSibling.className = 'active';
       }
       else if (['type'].includes(field)) {
-        const actionMap = {'address': 0, 'service': 1, 'geolocation': 2};
-
         document.querySelectorAll('.oetype')[actionMap[table_row_field.innerHTML]].checked = true;
       }
     }
@@ -243,8 +347,7 @@ class FirewallObjectsTable extends DNXWebuiTableFormModal {
     if (btn_selector === 'create') {
       this._update_form_from_new();
     }
-    else { console.log(`button event ${btn_selector} not associated with action.`)
-    }
+    else { console.log(`button event ${btn_selector} not associated with action.`); }
   }
 
   _update_form_from_new() {
@@ -279,6 +382,7 @@ class FirewallObjectsTable extends DNXWebuiTableFormModal {
   const firewall_rules_table = new FirewallRulesTable('firewall-rules-table', debug=true);
   firewall_rules_table.initialize_filter(filter_min_length=2, filter_col_start=2, filter_col_end=9);
   firewall_rules_table.initialize_form(click_col_start=2);
+  firewall_rules_table.register_buttons(['commit', 'push', 'diff']);
 
   const firewall_objects_table = new FirewallObjectsTable('firewall-objects-table', debug=true);
   firewall_objects_table.initialize_filter(filter_min_length=2, filter_col_start=1, filter_col_end=4);

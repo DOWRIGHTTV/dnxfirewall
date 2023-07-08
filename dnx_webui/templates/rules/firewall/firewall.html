@@ -28,7 +28,7 @@
               <input type="hidden" name="tab" value="1">
               <input type="hidden" name="change_section">
               <div class="input-field col s4 m2 {{input_color}}">
-                <select name="section" id="section" onchange="this.form.submit()">
+                <select id="clist_select" name="clist_select" onchange="this.form.submit()">
                   {% for section in sections %}
                     <option value="{{ section }}" {% if section == selected %}selected{% endif %}>{{ section }}</option>
                   {% endfor %}
@@ -42,7 +42,7 @@
             <a id="push_rules" class="btn{% if dis %} btn-disabled{% endif %} waves-effect waves-light
                 modal-trigger green darken-2"{% if not dis %} href="#push-modal"{% endif %}>Push</a>
             <a class="btn waves-effect waves-light modal-trigger blue-grey" href="#commit-modal">Commit</a>
-            <a class="btn waves-effect waves-light blue-grey" onclick="diffRules()">Diff</a>
+            <a class="firewall-rules-table-btn-diff btn waves-effect waves-light blue-grey">Diff</a>
             <a class="btn waves-effect waves-light right" onclick="firewall_rules_table.add_new_rule()">Create Rule</a>
           </div>
           <div class="row">

@@ -1,70 +1,75 @@
 class AjaxClient {
-    constructor(baseUri, onSuccessCallback = null, onErrorCallback = null) {
-        this._baseUrl = baseUri;
-        this._onSuccessCallback = onSuccessCallback;
-        this._onErrorCallback = onErrorCallback;
+  constructor(baseUri, onSuccessCallback = null, onErrorCallback = null, debug = false) {
+    this._baseUrl = baseUri;
+    this._onSuccessCallback = onSuccessCallback;
+    this._onErrorCallback = onErrorCallback;
+
+    this.debug = debug;
+  }
+
+  get baseUrl() {
+    return this._baseUrl;
+  }
+
+  get onSuccessCallback() {
+    return this._onSuccessCallback;
+  }
+
+  get onErrorCallback() {
+    return this._onErrorCallback;
+  }
+
+  async post(endpoint= '', data= {}, alternate_handler = null) {
+
+    let response;
+    let fullUrl = this.baseUrl + `/${endpoint}`;
+    let sendData = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
     }
 
-    get baseUrl() {
-        return this._baseUrl;
+    try {
+      response = await fetch(fullUrl, sendData)
+    }
+    catch (e) {
+      return null
     }
 
-    get onSuccessCallback() {
-        return this._onSuccessCallback;
-    }
+    if (response.ok) {
+      let ajaxResponse = await response.json();
 
-    get onErrorCallback() {
-        return this._onErrorCallback;
-    }
+      if (this.onSuccessCallback) {
+        this.onSuccessCallback.call(ajaxResponse);
+      }
+      else if (alternate_handler) {
+        alternate_handler.call(ajaxResponse);
+      }
+      else {
+        let message_popup = document.querySelector('#ajax-response-modal');
+        message_popup.querySelector('h5').innerText = response.message;
 
-    async post(url = '', data = {}) {
+        M.Modal.init(message_popup, {dismissible: false}).open();
 
-        let response;
-        let fullUrl = this.baseUrl + url
-        let sendData = {
-            method : 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
+        if (this.debug) {
+          console.log('[server/response]: successful update.');
         }
+      }
 
-        try {
-            response = await fetch(fullUrl, sendData)
-        } catch (e) {
-            return null
-        }
+      return true;
 
-        if (response.ok) {
-            let ajaxResponse = await response.json();
-
-            if (this.onSuccessCallback) {
-                this.onSuccessCallback.call(ajaxResponse);
-            }
-
-            return ajaxResponse.result;
-        }
     }
+    else {
+      let commitError = document.querySelector('#ajax-error-modal');
+      commitError.querySelector('h5').innerText = response.message;
 
-   handleResponse(response, field = null) {
-       if (response.error) {
-           let commitError = document.querySelector('#ajax-error-modal');
-           commitError.querySelector('h5').innerText = response.message;
+      M.Modal.init(commitError, { dismissible: false }).open();
 
-           let errorModal = M.Modal.init(
-               commitError, {
-                   dismissible: false
-               }
-           );
-           errorModal.open();
+      console.log('[server/response]: ', response);
 
-           console.log('[server/response]: ', response);
-
-           // notifying of error so field can be reset
-           return true;
-
-       } else {
-           console.log('[server/response]: successful update.');
-       }
-   }
+      return false;
+    }
+  }
 }
