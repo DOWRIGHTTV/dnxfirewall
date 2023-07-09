@@ -1,31 +1,16 @@
 class AjaxClient {
-  constructor(base_uri, onSuccessCallback = null, onErrorCallback = null, debug = false) {
+  constructor(base_uri, debug = false) {
     this.base_url = base_uri;
-    this.onSuccessCallback = onSuccessCallback;
-    this.onErrorCallback = onErrorCallback;
 
     this.debug = debug;
 
     if (debug) {
-      console.log(
-        `ajax client initialized -> 
+      console.log(`ajax client initialized -> 
         base_url: ${this.base_url}, 
-        onSuccessCallback: ${this.onSuccessCallback}, 
-        onErrorCallback: ${this.onErrorCallback}`);
+        debug: ${this.debug}`
+      );
     }
   }
-
-  //get baseUrl() {
-  //  return this._baseUrl;
-  //}
-
-  //get onSuccessCallback() {
-  //  return this._onSuccessCallback;
-  //}
-  //
-  //get onErrorCallback() {
-  //  return this._onErrorCallback;
-  //}
 
   async post(endpoint= '', data= {}, alternate_handler = null) {
 
@@ -59,13 +44,8 @@ class AjaxClient {
 
     let response_data = response_as_json.result;
 
-    if (this.debug) { console.log(`[server/response]: ${JSON.stringify(response_as_json.result)}`); }
-
     if (!response_data.error) {
-      if (this.onSuccessCallback) {
-        this.onSuccessCallback.call(this, response_data);
-      }
-      else if (alternate_handler) {
+      if (alternate_handler) {
         alternate_handler.call(this, response_data);
       }
       else {
