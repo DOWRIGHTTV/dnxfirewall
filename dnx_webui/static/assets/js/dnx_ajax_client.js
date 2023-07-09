@@ -46,22 +46,31 @@ class AjaxClient {
       return null
     }
 
-    if (response.ok) {
-      let ajaxResponse = await response.json();
+    // TODO: handle server related errors via a modal here.
+    if (!response.ok) { return; }
 
-      if (this.debug) {
-        console.log(`[server/response]: ${ajaxResponse}`,);
-      }
+    // note: currently all responses will be marked successful, even if the application identified an error.
+    // the error code, if any, will be available in the response data.
+    if (!response.success) { return; }
 
+    let ajaxResponse = await response.json();
+
+    if (this.debug) {
+      console.log(`[server/response]: ${ajaxResponse}`,);
+    }
+
+    let response_data = ajaxResponse.result;
+
+    if (!response_data.error) {
       if (this.onSuccessCallback) {
-        this.onSuccessCallback.call(ajaxResponse.result);
+        this.onSuccessCallback.call(response_data);
       }
       else if (alternate_handler) {
-        alternate_handler.call(ajaxResponse.result);
+        alternate_handler.call(response_data);
       }
       else {
         let message_popup = document.querySelector('#ajax-response-modal');
-        message_popup.querySelector('h5').innerText = response.result.message;
+        message_popup.querySelector('h5').innerText = response_data.message;
 
         M.Modal.init(message_popup, {dismissible: false}).open();
 
@@ -75,7 +84,7 @@ class AjaxClient {
     }
     else {
       let commitError = document.querySelector('#ajax-error-modal');
-      commitError.querySelector('h5').innerText = response.result.message;
+      commitError.querySelector('h5').innerText = response_data.message;
 
       M.Modal.init(commitError, { dismissible: false }).open();
 
