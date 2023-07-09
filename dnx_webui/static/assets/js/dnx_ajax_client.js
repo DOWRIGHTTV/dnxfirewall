@@ -51,7 +51,7 @@ class AjaxClient {
 
     let response_as_json = await response.json();
 
-    if (this.debug) { console.log(`[server/response]: ${response_as_json}`); }
+    if (this.debug) { console.log(`[server/response]: ${JSON.stringify(response_as_json)}`); }
 
     // note: currently all responses will be marked successful, even if the application identified an error.
     // the error code, if any, will be available in the response data.
