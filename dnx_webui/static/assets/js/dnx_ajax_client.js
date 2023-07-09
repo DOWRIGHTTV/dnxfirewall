@@ -63,10 +63,10 @@ class AjaxClient {
 
     if (!response_data.error) {
       if (this.onSuccessCallback) {
-        this.onSuccessCallback.call(response_data);
+        this.onSuccessCallback.call(this, response_data);
       }
       else if (alternate_handler) {
-        alternate_handler.call(response_data);
+        alternate_handler.call(this, response_data);
       }
       else {
         let message_popup = document.querySelector('#ajax-response-modal');
