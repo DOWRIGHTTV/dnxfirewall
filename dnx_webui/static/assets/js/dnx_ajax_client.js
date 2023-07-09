@@ -40,7 +40,7 @@ class AjaxClient {
     }
 
     try {
-      response = await fetch(full_url, send_data)
+      response = await fetch(full_url, send_data);
     }
     catch (e) {
       return null
@@ -49,15 +49,15 @@ class AjaxClient {
     // TODO: handle server related errors via a modal here.
     if (!response.ok) { return; }
 
-    if (this.debug) { console.log(`[server/response]: ${response}`); }
+    let response_as_json = await response.json();
+
+    if (this.debug) { console.log(`[server/response]: ${response_as_json}`); }
 
     // note: currently all responses will be marked successful, even if the application identified an error.
     // the error code, if any, will be available in the response data.
     if (!response.success) { return; }
 
-    let ajaxResponse = await response.json();
-
-    let response_data = ajaxResponse.result;
+    let response_data = response_as_json.result;
 
     if (!response_data.error) {
       if (this.onSuccessCallback) {
