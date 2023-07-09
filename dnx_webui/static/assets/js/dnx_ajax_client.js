@@ -1,14 +1,17 @@
 class AjaxClient {
-  constructor(base_uri, debug = false) {
+  constructor(base_uri, onSuccessCallback, onErrorCallback, debug = false) {
     this.base_url = base_uri;
+    this.onSuccessCallback = onSuccessCallback;
+    this.onErrorCallback = onErrorCallback;
 
     this.debug = debug;
 
     if (debug) {
-      console.log(`ajax client initialized -> 
+      console.log(
+        `ajax client initialized -> 
         base_url: ${this.base_url}, 
-        debug: ${this.debug}`
-      );
+        onSuccessCallback: ${this.onSuccessCallback}, 
+        onErrorCallback: ${this.onErrorCallback}`);
     }
   }
 
@@ -45,7 +48,10 @@ class AjaxClient {
     let response_data = response_as_json.result;
 
     if (!response_data.error) {
-      if (alternate_handler) {
+      if (this.onSuccessCallback) {
+        this.onSuccessCallback.call(this, response_data);
+      }
+      else if (alternate_handler) {
         alternate_handler.call(this, response_data);
       }
       else {
