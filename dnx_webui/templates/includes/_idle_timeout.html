@@ -31,10 +31,10 @@ function activateTimers() {
 
 document.addEventListener('DOMContentLoaded', activateTimers);
 
-const refreshSession = new AjaxClient('refresh/session', activateTimers);
+const refreshSession = new AjaxClient('refresh/session', activateTimers, null);
 
 </script>
-<div id="idle-timeout-modal" class="modal idle-timeout-modal no-autoinit">
+<div id="idle-timeout-modal" class="idle-timeout-modal modal no-autoinit">
   <div class="modal-content">
     <h5 class="{{ modal_text_style }}">Your session is about to expire. Do you need more time?</h5>
   </div>

@@ -5,6 +5,9 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
 
   pending_changes = {{ initial_pending_changes }};
 
+  _commit_form_el = null;
+  _push_form_el = null;
+
   _get_selected_rules() {
     let selected_rules = [];
 
@@ -212,11 +215,25 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
 
   _click_button_handler(btn_selector) {
     if (btn_selector === 'commit') {
-      M.Modal.getInstance(`.${document.querySelector(this.table_class_selector + '-btn-commit-form')}`).open();
+      if (!this._commit_form_el) {
+        this._commit_form_el = document.querySelector(this.table_class_selector + '-btn-commit-form');
+
+        M.Modal.init(this._commit_form_el, {dismissible: false});
+      }
+
+      M.Modal.getInstance(this._commit_form_el).open();
     }
+
     else if (btn_selector === 'push') {
-      M.Modal.getInstance(`.${document.querySelector(this.table_class_selector + '-btn-push-form')}`).open();
+      if (!this._push_form_el) {
+        this._push_form_el = document.querySelector(this.table_class_selector + '-btn-push-form');
+
+        M.Modal.init(this._push_form_el, {dismissible: false});
+      }
+
+      M.Modal.getInstance(this._push_form_el).open();
     }
+
     else if (btn_selector === 'diff') {
       this._diff_rules();
     }
