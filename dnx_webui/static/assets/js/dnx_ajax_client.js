@@ -30,8 +30,8 @@ class AjaxClient {
   async post(endpoint= '', data= {}, alternate_handler = null) {
 
     let response;
-    let fullUrl = this.base_url + `/${endpoint}`;
-    let sendData = {
+    let full_url = this.base_url + `/${endpoint}`;
+    let send_data = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -40,14 +40,14 @@ class AjaxClient {
     }
 
     try {
-      response = await fetch(fullUrl, sendData)
+      response = await fetch(full_url, send_data)
     }
     catch (e) {
       return null
     }
 
     if (response.ok) {
-      let ajaxResponse = JSON.parse(await response.json());
+      let ajaxResponse = await response.json();
 
       if (this.debug) {
         console.log('[server/response]: ', ajaxResponse);
