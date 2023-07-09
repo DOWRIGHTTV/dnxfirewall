@@ -59,6 +59,8 @@ class AjaxClient {
 
     let response_data = response_as_json.result;
 
+    if (this.debug) { console.log(`[server/response]: ${response_as_json.result}`); }
+
     if (!response_data.error) {
       if (this.onSuccessCallback) {
         this.onSuccessCallback.call(response_data);
