@@ -47,7 +47,7 @@ class AjaxClient {
     }
 
     if (response.ok) {
-      let ajaxResponse = await response.json();
+      let ajaxResponse = JSON.parse(await response.json());
 
       if (this.debug) {
         console.log('[server/response]: ', ajaxResponse);
