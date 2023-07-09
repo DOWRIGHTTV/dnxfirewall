@@ -55,7 +55,7 @@ class AjaxClient {
 
     // note: currently all responses will be marked successful, even if the application identified an error.
     // the error code, if any, will be available in the response data.
-    if (!response.success) { return; }
+    if (!response_as_json.success) { return; }
 
     let response_data = response_as_json.result;
 
