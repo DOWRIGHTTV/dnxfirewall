@@ -49,7 +49,7 @@ class AjaxClient {
     // TODO: handle server related errors via a modal here.
     if (!response.ok) { return; }
 
-    if (this.debug) { console.log(`[server/response]: ${ajaxResponse}`,); }
+    if (this.debug) { console.log(`[server/response]: ${response}`); }
 
     // note: currently all responses will be marked successful, even if the application identified an error.
     // the error code, if any, will be available in the response data.
