@@ -75,7 +75,7 @@ class AjaxClient {
     }
     else {
       let commitError = document.querySelector('#ajax-error-modal');
-      commitError.querySelector('h5').innerText = response.message;
+      commitError.querySelector('h5').innerText = response.result.message;
 
       M.Modal.init(commitError, { dismissible: false }).open();
 
