@@ -1,4 +1,4 @@
-<div id="revert-modal" class="modal">
+<div class="firewall-rules-table-btn-revert-form modal">
   <div class="modal-content">
     <h5 class="{{ modal_text_style }}">Are you sure you want to revert the pending firewall rule changes?
       This action cannot be undone.</h5>
@@ -13,28 +13,28 @@
     </div>
   </form>
 </div>
-<div id="push-modal" class="modal no-autoinit">
+<div class="firewall-rules-table-btn-push-form modal">
   <div class="modal-content">
     <h5 class="{{ modal_text_style }}">Are you sure you want to push the pending rule changes to the firewall?</h5><br>
     <h6 class="red-text center">Warning: This action cannot be undone.</h6>
   </div>
   <div class="modal-footer">
-    <a class="firewall-rules-table-btn-push btn waves-effect waves-light modal-close">YES</a>
+    <a class="firewall-rules-table-btn-push-submit btn waves-effect waves-light modal-close" onclick="firewall_rules_table.push_rules()">YES</a>
     <a class="btn-flat modal-close">Cancel</a>
   </div>
 </div>
-<div id="commit-modal" class="modal no-autoinit">
+<div class="firewall-rules-table-btn-commit-form modal">
   <div class="modal-content">
     <h5 class="{{ modal_text_style }}">Are you sure you want to commit your rule changes?<br>The rules will be pending
       and awaiting a push to the firewall. The rules can be reverted to current active state while in the pending state.
     </h5>
   </div>
   <div class="modal-footer">
-    <a class="firewall-rules-table-btn-commit btn waves-effect waves-light modal-close">YES</a>
+    <a class="firewall-rules-table-btn-commit-submit btn waves-effect waves-light modal-close" onclick="firewall_rules_table.commit_rules()">YES</a>
     <a class="btn-flat modal-close">Cancel</a>
   </div>
 </div>
-<div id="diff-modal" class="modal no-autoinit">
+<div class="firewall-rules-table-btn-diff-form modal">
   <div class="modal-content">
     <h4 class="{{ modal_text_style }}">PENDING CHANGES</h4>
     <h5>Added</h5>

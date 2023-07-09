@@ -1,5 +1,7 @@
 {% extends('layout.html') %}
 {% block body %}
+{% include 'rules/firewall/rule_style.html' %}
+{% include 'rules/firewall/btn_modals.html' %}
 <section id="tabs-bar">
   <div class="container">
     <div class="row">
@@ -35,12 +37,12 @@
                 <label>Ruleset</label>
               </div>
             </form>
-            {% set dis = not firewall_settings['pending_changes'] %}
-            <a id="revert_rules" class="btn{% if dis %} btn-disabled{% endif %} waves-effect waves-light
-                modal-trigger red darken-2"{% if not dis %} href="#revert-modal"{% endif %}>Revert</a>
-            <a id="push_rules" class="btn{% if dis %} btn-disabled{% endif %} waves-effect waves-light
-                modal-trigger green darken-2"{% if not dis %} href="#push-modal"{% endif %}>Push</a>
-            <a class="btn waves-effect waves-light modal-trigger blue-grey" href="#commit-modal">Commit</a>
+            {% set dis = not firewall_settings['pending_changes'] %} {# currently redundant until i can clean up better #}
+            <a class="firewall-rules-table-btn-revert btn{% if dis %} btn-disabled{% endif %} waves-effect waves-light
+                modal-trigger red darken-2">Revert</a>
+            <a class="firewall-rules-table-btn-push btn{% if dis %} btn-disabled{% endif %} waves-effect waves-light
+                modal-trigger green darken-2">Push</a>
+            <a class="firewall-rules-table-btn-commit btn waves-effect waves-light modal-trigger blue-grey">Commit</a>
             <a class="firewall-rules-table-btn-diff btn waves-effect waves-light blue-grey">Diff</a>
             <a class="btn waves-effect waves-light right" onclick="firewall_rules_table.add_new_rule()">Create Rule</a>
           </div>
@@ -261,8 +263,6 @@
     </div>
   </div>
 </section>
-{% include 'rules/firewall/rule_style.html' %}
-{% include 'rules/firewall/btn_modals.html' %}
 {% include 'rules/firewall/rule_editor.html' %}
 {% include 'rules/firewall/object_editor.html' %}
 {% include 'rules/firewall/after_firewall.html' %}

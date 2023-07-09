@@ -1,5 +1,9 @@
 <script>
+{% set initial_pending_changes = 1 if firewall_settings['pending_changes'] else 0 %}
+
 class FirewallRulesTable extends DNXWebuiTableFormModal {
+
+  pending_changes = {{ initial_pending_changes }};
 
   _get_selected_rules() {
     let selected_rules = [];
@@ -208,17 +212,19 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
 
   _click_button_handler(btn_selector) {
     if (btn_selector === 'commit') {
-      this._commit_rules();
+      M.Modal.getInstance(document.querySelector(this.table_class_selector + '-btn-commit-form')).open();
     }
     else if (btn_selector === 'push') {
-      this._push_rules();
+      M.Modal.getInstance(document.querySelector(this.table_class_selector + '-btn-push-form')).open();
     }
     else if (btn_selector === 'diff') {
       this._diff_rules();
     }
   }
 
-  async _commit_rules() {
+  async commit_rules() {
+    {#this.commit_rules_close();#}
+
     let success = await ajaxClient.post('commit',
       {'section': document.getElementById('clist_select').value, 'rules': this._table_to_json()}
     );
@@ -235,8 +241,13 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
       revert_btn.href = '#revert-modal';
     }
   }
+  commit_rules_close() {
+    M.Modal.getInstance(document.querySelector(this.table_class_selector + '-btn-commit-form'), {dismissible: false}).close();
+  }
 
-  async _push_rules() {
+  async push_rules() {
+    {#this.push_rules_close();#}
+
     let success = await ajaxClient.post('push');
 
     if (success) {
@@ -251,6 +262,12 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
       revert_btn.href = '';
     }
   }
+
+  push_rules_close() {
+    let push_form = document.querySelector(this.table_class_selector + '-btn-push-form');
+    M.Modal.getInstance(push_form, {dismissible: false}).close();
+  }
+
   async _diff_rules() {
     await ajaxClient.post('diff', {}, this._diff_rules_handler);
   }
@@ -382,7 +399,7 @@ class FirewallObjectsTable extends DNXWebuiTableFormModal {
 /////// this is where we initialize the dnx tables class ///////
 const ajaxClient = new AjaxClient(location.pathname, _, _, debug=true);
 
-const firewall_rules_table = new FirewallRulesTable('firewall-rules-table', debug=true);
+const firewall_rules_table = new FirewallRulesTable('firewall-rules-table', {% firewall_settings['pending_changes'] %}, debug=true);
 firewall_rules_table.initialize_filter(filter_min_length=2, filter_col_start=2, filter_col_end=9);
 firewall_rules_table.initialize_form(click_col_start=2);
 firewall_rules_table.register_buttons(['commit', 'push', 'diff']);
