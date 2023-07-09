@@ -216,7 +216,7 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
   _click_button_handler(btn_selector) {
     if (btn_selector === 'commit') {
       if (!this._commit_form_el) {
-        this._commit_form_el = document.querySelector(this.table_class_selector + '-btn-commit-form');
+        this._commit_form_el = document.querySelector(`.${this.table_class_selector}-btn-commit-form`);
 
         M.Modal.init(this._commit_form_el, {dismissible: false});
       }
@@ -226,7 +226,7 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
 
     else if (btn_selector === 'push') {
       if (!this._push_form_el) {
-        this._push_form_el = document.querySelector(this.table_class_selector + '-btn-push-form');
+        this._push_form_el = document.querySelector(`.${this.table_class_selector}-btn-push-form`);
 
         M.Modal.init(this._push_form_el, {dismissible: false});
       }
