@@ -321,7 +321,7 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
   }
 
   async _diff_rules(message) {
-    if (this.debug) console.log(result);
+    if (this.debug) console.log(message);
 
     Object.entries(message).forEach(([section, action]) => {
       if (!Object.keys(action).length) return;
