@@ -58,10 +58,10 @@ class AjaxClient {
 
     if (!response_data.error) {
       if (this.onSuccessCallback) {
-        this.onSuccessCallback.call(this, response_data);
+        this.onSuccessCallback.call(this, response_data.message);
       }
       else if (alternate_handler) {
-        alternate_handler.call(this, response_data);
+        alternate_handler.call(this, response_data.message);
       }
       else {
         if (this.debug) { console.log('[server/response][success]: server successfully processed the request.'); }
