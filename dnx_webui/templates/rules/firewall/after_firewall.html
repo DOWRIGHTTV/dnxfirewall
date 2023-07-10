@@ -298,6 +298,8 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     if (success) {
       this.pending_changes = 1;
 
+      this.update_title('Rule List -> Changes Pending - See [ DIFF ]');
+
       this.clear_modified_rule_markers(); // clears all rules
       this.disable_button(this._commit_btn_el);
 
