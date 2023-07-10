@@ -235,10 +235,10 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
 
   // consider making this async so we can call awaits directly from here
   _click_button_handler(btn_selector) {
-    if (btn_selector === 'commit' && !this._commit_form_el.classList.contains('btn-disabled')) {
+    if (btn_selector === 'commit' && !this._commit_btn_el.classList.contains('btn-disabled')) {
       M.Modal.getInstance(this._commit_form_el).open();
     }
-    else if (btn_selector === 'push' && !this._commit_form_el.classList.contains('btn-disabled')) {
+    else if (btn_selector === 'push' && !this._commit_btn_el.classList.contains('btn-disabled')) {
       M.Modal.getInstance(this._push_form_el).open();
     }
     else if (btn_selector === 'diff') {
