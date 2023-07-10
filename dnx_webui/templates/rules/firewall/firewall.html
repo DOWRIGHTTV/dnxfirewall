@@ -1,7 +1,6 @@
 {% extends('layout.html') %}
 {% block body %}
 {% include 'rules/firewall/rule_style.html' %}
-{% include 'rules/firewall/btn_modals.html' %}
 <section id="tabs-bar">
   <div class="container">
     <div class="row">
@@ -265,5 +264,6 @@
 </section>
 {% include 'rules/firewall/rule_editor.html' %}
 {% include 'rules/firewall/object_editor.html' %}
+{% include 'rules/firewall/btn_modals.html' %}
 {% include 'rules/firewall/after_firewall.html' %}
 {% endblock %}
