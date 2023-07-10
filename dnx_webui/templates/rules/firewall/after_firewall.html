@@ -225,6 +225,7 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
 
   }
 
+  // consider making this async so we can call awaits directly from here
   _click_button_handler(btn_selector) {
     if (btn_selector === 'commit') {
       M.Modal.getInstance(this._commit_form_el).open();
@@ -233,12 +234,11 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
       M.Modal.getInstance(this._push_form_el).open();
     }
     else if (btn_selector === 'diff') {
-      this._diff_rules();
+      this._diff_rules(); // async wrapper, see above.
     }
   }
 
   async commit_rules() {
-    {#this.commit_rules_close();#}
 
     let success = await ajaxClient.post('commit',
       {'section': document.getElementById('clist_select').value, 'rules': this._table_to_json()}
@@ -256,12 +256,8 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
       revert_btn.href = '#revert-modal';
     }
   }
-  commit_rules_close() {
-    M.Modal.getInstance(document.querySelector(this.table_class_selector + '-btn-commit-form')).close();
-  }
 
   async push_rules() {
-    {#this.push_rules_close();#}
 
     let success = await ajaxClient.post('push');
 
@@ -278,11 +274,6 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     }
   }
 
-  push_rules_close() {
-    let push_form = document.querySelector();
-    M.Modal.getInstance(push_form).close();
-  }
-
   async _diff_rules() {
     await ajaxClient.post('diff', {}, this._diff_rules_handler.bind(this));
   }
@@ -293,22 +284,23 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     Object.entries(result.message).forEach(([section, action]) => {
       if (!Object.keys(action).length) return;
 
-      ['add', 'rem', 'mod'].forEach(code => {
+      for (let code of ['add', 'rem', 'mod']) {
 
-      if (!action[code].length) return;
+        if (!action[code].length) return;
 
-      let change_text = this._diff_form_el.querySelector(`#diff-${code}`);
-      change_text.innerHTML = '<h6>' + section + '</h6>';
+        let change_text = this._diff_form_el.querySelector(`#diff-${code}`);
+        change_text.innerHTML = '<h6>' + section + '</h6>';
 
-      for (let r of action[code]) {
-        if (['add', 'rem'].includes(code)) {
-          change_text.innerHTML += `<p>${r[0][1]} in position ${r[13][1]}</p>`;
+        for (let r of action[code]) {
+          if (['add', 'rem'].includes(code)) {
+            change_text.innerHTML += `<p>${r[0][1]} in position ${r[13][1]}</p>`;
+          }
+          else {
+            for (let r2 of r.slice(1)) {
+              change_text.innerHTML += `<p>${r[0]} changed ${r2[1]} from ${r2[2]} to ${r2[3]}</p>`; }
+          }
         }
-        else {
-          for (let r2 of r.slice(1)) {
-            change_text.innerHTML += `<p>${r[0]} changed ${r2[1]} from ${r2[2]} to ${r2[3]}</p>`; }
-        }
-      }});
+      }
     });
 
     M.Modal.getInstance(this._diff_form_el).open();
