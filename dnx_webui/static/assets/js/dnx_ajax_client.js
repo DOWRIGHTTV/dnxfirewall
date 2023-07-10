@@ -6,6 +6,10 @@ class AjaxClient {
 
     this.debug = debug;
 
+    // setting response modal element attribute and initializing the modal
+    this._response_modal_el = document.querySelector('#ajax-response-modal');
+    M.Modal.init(this._response_modal_el, {dismissible: false}).open();
+
     if (debug) {
       console.log(
         `ajax client initialized -> 
@@ -15,7 +19,7 @@ class AjaxClient {
     }
   }
 
-  async post(endpoint= '', data= {}, alternate_handler = null) {
+  async post(endpoint = '', data = {}, alternate_handler = null) {
 
     let response;
     let full_url = this.base_url + `/${endpoint}`;
@@ -35,15 +39,21 @@ class AjaxClient {
     }
 
     // TODO: handle server related errors via a modal here.
-    if (!response.ok) { return; }
+    if (!response.ok) {
+      return;
+    }
 
     let response_as_json = await response.json();
 
-    if (this.debug) { console.log(`[server/response]: ${JSON.stringify(response_as_json)}`); }
+    if (this.debug) {
+      console.log(`[server/response]: ${JSON.stringify(response_as_json)}`);
+    }
 
     // note: currently all responses will be marked successful, even if the application identified an error.
     // the error code, if any, will be available in the response data.
-    if (!response_as_json.success) { return; }
+    if (!response_as_json.success) {
+      return;
+    }
 
     let response_data = response_as_json.result;
 
@@ -55,28 +65,26 @@ class AjaxClient {
         alternate_handler.call(this, response_data);
       }
       else {
-        let message_popup = document.querySelector('#ajax-response-modal');
-        message_popup.querySelector('h5').innerText = response_data.message;
+        if (this.debug) { console.log('[server/response][success]: server successfully processed the request.'); }
 
-        M.Modal.init(message_popup, {dismissible: false}).open();
-
-        if (this.debug) {
-          console.log('[server/response]: successful update.');
-        }
+        this._show_response_modal(response_data.message);
       }
 
       return true;
 
     }
     else {
-      let commitError = document.querySelector('#ajax-error-modal');
-      commitError.querySelector('h5').innerText = response_data.message;
+      if (this.debug) { console.log('[server/response][error]: ', response_data.message); }
 
-      M.Modal.init(commitError, { dismissible: false }).open();
-
-      console.log('[server/response]: ', response);
+      this._show_response_modal(response_data.message);
 
       return false;
     }
+  }
+
+  _show_response_modal(message) {
+    this._response_modal_el.querySelector('h5').innerText = message;
+
+    M.Modal.getInstance(this._response_modal_el).open();
   }
 }
