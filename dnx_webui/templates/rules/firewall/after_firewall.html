@@ -282,7 +282,7 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     if (btn_selector === 'commit' && !this._commit_btn_el.classList.contains('btn-disabled')) {
       M.Modal.getInstance(this._commit_form_el).open();
     }
-    else if (btn_selector === 'push' && !this._commit_btn_el.classList.contains('btn-disabled')) {
+    else if (btn_selector === 'push' && !this._push_btn_el.classList.contains('btn-disabled')) {
       M.Modal.getInstance(this._push_form_el).open();
     }
     else if (btn_selector === 'diff') {
@@ -320,6 +320,7 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     }
   }
 
+  // TODO: this is not properly updating the innerHTML of the diff modal
   async _diff_rules(message) {
     if (this.debug) console.log(message);
 
