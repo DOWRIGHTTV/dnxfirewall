@@ -285,7 +285,7 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     else if (btn_selector === 'push' && !this._push_btn_el.classList.contains('btn-disabled')) {
       M.Modal.getInstance(this._push_form_el).open();
     }
-    else if (btn_selector === 'diff') {
+    else if (btn_selector === 'diff' && !this._diff_btn_el.classList.contains('btn-disabled')) {
       await ajaxClient.post('diff', {}, this.diff_rules);
     }
   }
@@ -315,6 +315,7 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
 
       this.disable_button(this._push_btn_el);
       this.disable_button(this._revert_btn_el);
+      this.disable_button(this._diff_btn_el);
 
       this.update_title('Rule List');
     }
