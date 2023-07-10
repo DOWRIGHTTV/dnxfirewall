@@ -293,7 +293,7 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     if (this.debug) console.log(result);
 
     let diff_info = result.message;
-    let message_popup = document.querySelector('#diff-modal');
+    let message_popup = document.querySelector(`.${this.table_class_selector}-btn-diff-form`);
 
     Object.entries(diff_info).forEach(([section, action]) => {
       if (!Object.keys(action).length) return;
