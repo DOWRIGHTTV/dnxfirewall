@@ -5,8 +5,8 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
 
   pending_changes = {{ initial_pending_changes }};
 
-  _commit_form_el = null;
-  _push_form_el = null;
+  {#_commit_form_el = null;#}
+  {#_push_form_el = null;#}
 
   _get_selected_rules() {
     let selected_rules = [];
@@ -214,11 +214,19 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
   }
 
   _register_buttons_hook() {
+    this._commit_btn_el = document.querySelector(`.${this.table_class_selector}-btn-commit`);
     this._commit_form_el = document.querySelector(`.${this.table_class_selector}-btn-commit-form`);
     M.Modal.init(this._commit_form_el, {dismissible: false});
 
+    this._commit_btn_el.addClass('btn-disabled')
+
+    this._push_btn_el = document.querySelector(`.${this.table_class_selector}-btn-push`);
     this._push_form_el = document.querySelector(`.${this.table_class_selector}-btn-push-form`);
     M.Modal.init(this._push_form_el, {dismissible: false});
+
+    if (!this.pending_changes) {
+      this._push_btn_el.addClass('btn-disabled')
+    }
 
     this._diff_form_el = document.querySelector(`.${this.table_class_selector}-btn-diff-form`);
     M.Modal.init(this._diff_form_el, {dismissible: false});
@@ -227,10 +235,10 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
 
   // consider making this async so we can call awaits directly from here
   _click_button_handler(btn_selector) {
-    if (btn_selector === 'commit') {
+    if (btn_selector === 'commit' && !this._commit_form_el.classList.contains('btn-disabled')) {
       M.Modal.getInstance(this._commit_form_el).open();
     }
-    else if (btn_selector === 'push') {
+    else if (btn_selector === 'push' && !this._commit_form_el.classList.contains('btn-disabled')) {
       M.Modal.getInstance(this._push_form_el).open();
     }
     else if (btn_selector === 'diff') {
@@ -245,15 +253,8 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     );
 
     if (success) {
-      let push_btn = document.querySelector(this.table_class_selector + '-btn-commit');
-
-      push_btn.classList.remove('btn-disabled');
-      push_btn.href = '#push-modal';
-
-      let revert_btn = document.getElementById('revert_rules');
-
-      revert_btn.classList.remove('btn-disabled');
-      revert_btn.href = '#revert-modal';
+      this.toggle_button(this._commit_btn_el);
+      this.toggle_button(this._push_btn_el);
     }
   }
 
@@ -262,15 +263,8 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     let success = await ajaxClient.post('push');
 
     if (success) {
-      let push_btn = document.querySelector(this.table_class_selector + '-btn-push');
-
-      push_btn.classList.add('btn-disabled');
-      push_btn.href = '';
-
-      let revert_btn = document.getElementById('revert_rules');
-
-      revert_btn.classList.add('btn-disabled');
-      revert_btn.href = '';
+      this.toggle_button(this._push_btn_el);
+      {#this.toggle_button(this._revert_btn_el);#}
     }
   }
 
