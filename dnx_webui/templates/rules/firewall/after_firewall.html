@@ -56,7 +56,7 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     }
     this._clear_rule_selection(selected_rules);
 
-    this.toggle_button(this._commit_btn_el);
+    this.enable_button(this._commit_btn_el);
   }
 
   disable_selected_rules() {
@@ -69,7 +69,7 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     }
     this._clear_rule_selection(selected_rules);
 
-    this.toggle_button(this._commit_btn_el);
+    this.enable_button(this._commit_btn_el);
   }
 
   remove_selected_rules() {
@@ -83,7 +83,7 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
 
     this._clear_rule_selection(selected_rules);
 
-    this.toggle_button(this._commit_btn_el);
+    this.enable_button(this._commit_btn_el);
   }
 
   add_new_rule() {
@@ -235,7 +235,7 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
 
     clearDNXChips();
 
-    this.toggle_button(this._commit_btn_el);
+    this.enable_button(this._commit_btn_el);
 
     M.Modal.getInstance(this.form_el).close();
   }
@@ -291,11 +291,13 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     );
 
     if (success) {
-      this.clear_modified_rule_markers(); // clears all rules
+      this.pending_changes = 1;
 
-      this.toggle_button(this._revert_btn_el);
-      this.toggle_button(this._push_btn_el);
-      this.toggle_button(this._commit_btn_el);
+      this.clear_modified_rule_markers(); // clears all rules
+      this.disable_button(this._commit_btn_el);
+
+      this.enable_button(this._revert_btn_el);
+      this.enable_button(this._push_btn_el);
     }
   }
 
@@ -303,8 +305,10 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     let success = await ajaxClient.post('push');
 
     if (success) {
-      this.toggle_button(this._push_btn_el);
-      this.toggle_button(this._revert_btn_el);
+      this.pending_changes = 0;
+
+      this.disable_button(this._push_btn_el);
+      this.disable_button(this._revert_btn_el);
 
       this.update_title('Rule List');
     }

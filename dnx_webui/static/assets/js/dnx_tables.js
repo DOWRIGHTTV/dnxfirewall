@@ -193,12 +193,13 @@ class DNXWebuiTableFormModal extends DNXWebuiTable {
     this._register_buttons_hook();
   }
 
-  toggle_button(btn_el) {
-// toggle the button's disabled attribute
+  enable_button(btn_el) {
     if (btn_el.classList.contains('btn-disabled')) {
       btn_el.classList.remove('btn-disabled');
     }
-    else {
+  }
+  disable_button(btn_el) {
+    if (!btn_el.classList.contains('btn-disabled')) {
       btn_el.classList.add('btn-disabled');
     }
   }
