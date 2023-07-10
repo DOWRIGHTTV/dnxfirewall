@@ -79,7 +79,7 @@ class DNXWebuiTable {
   }
 
   update_title(title_str) {
-    this.full_table_el.querySelector(`.${this.table_class_selector}-title`).innerHTML = title_str;
+    document.querySelector(`.${this.table_class_selector}-title`).innerHTML = title_str;
   }
 
   colorize_table() {
