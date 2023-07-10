@@ -13,7 +13,7 @@
     </div>
   </form>
 </div>
-<div class="firewall-rules-table-btn-push-form modal">
+<div id="btn-push-form" class="firewall-rules-table-btn-push-form modal no-autoinit">
   <div class="modal-content">
     <h5 class="{{ modal_text_style }}">Are you sure you want to push the pending rule changes to the firewall?</h5><br>
     <h6 class="red-text center">Warning: This action cannot be undone.</h6>
@@ -23,7 +23,7 @@
     <a class="btn-flat modal-close">Cancel</a>
   </div>
 </div>
-<div class="firewall-rules-table-btn-commit-form modal">
+<div id="btn-commit-form" class="firewall-rules-table-btn-commit-form modal no-autoinit">
   <div class="modal-content">
     <h5 class="{{ modal_text_style }}">Are you sure you want to commit your rule changes?<br>The rules will be pending
       and awaiting a push to the firewall. The rules can be reverted to current active state while in the pending state.

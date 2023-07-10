@@ -29,7 +29,7 @@ class DNXWebuiTable {
     */
 
     // args
-    this.table_class_selector = table_class_selector;
+    this.table_class_selector = '.' + table_class_selector;
     this.debug = debug;
 
     // auto generated attributes
