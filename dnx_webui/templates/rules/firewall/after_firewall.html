@@ -210,24 +210,37 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
 
     clearDNXChips();
 
+    this.toggle_button(this._commit_btn_el);
+
     M.Modal.getInstance(this.form_el).close();
   }
 
   _register_buttons_hook() {
-    this._commit_btn_el = document.querySelector(`.${this.table_class_selector}-btn-commit`);
-    this._commit_form_el = document.querySelector(`.${this.table_class_selector}-btn-commit-form`);
+    //revert (this button submits form directly without ajax)
+    this._revert_btn_el = document.querySelector(`.${this.table_class_selector}-btn-revert`);
+    this._revert_form_el = document.querySelector(`.${this.table_class_selector}-btn-revert-form`);
     M.Modal.init(this._commit_form_el, {dismissible: false});
 
-    this._commit_btn_el.classList.add('btn-disabled')
-
+    //push
     this._push_btn_el = document.querySelector(`.${this.table_class_selector}-btn-push`);
     this._push_form_el = document.querySelector(`.${this.table_class_selector}-btn-push-form`);
     M.Modal.init(this._push_form_el, {dismissible: false});
 
     if (!this.pending_changes) {
-      this._push_btn_el.classList.add('btn-disabled')
+      this._push_btn_el.classList.add('btn-disabled');
+    }
+    else {
+      this.update_title('rule list ([*] changes pending - see diff)');
     }
 
+    //commit
+    this._commit_btn_el = document.querySelector(`.${this.table_class_selector}-btn-commit`);
+    this._commit_form_el = document.querySelector(`.${this.table_class_selector}-btn-commit-form`);
+    M.Modal.init(this._commit_form_el, {dismissible: false});
+
+    this._commit_btn_el.classList.add('btn-disabled');
+
+    //diff
     this._diff_form_el = document.querySelector(`.${this.table_class_selector}-btn-diff-form`);
     M.Modal.init(this._diff_form_el, {dismissible: false});
 
@@ -253,8 +266,9 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     );
 
     if (success) {
-      this.toggle_button(this._commit_btn_el);
+      this.toggle_button(this._revert_btn_el);
       this.toggle_button(this._push_btn_el);
+      this.toggle_button(this._commit_btn_el);
     }
   }
 
@@ -264,7 +278,9 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
 
     if (success) {
       this.toggle_button(this._push_btn_el);
-      {#this.toggle_button(this._revert_btn_el);#}
+      this.toggle_button(this._revert_btn_el);
+
+      this.update_title('rule list');
     }
   }
 
@@ -401,7 +417,7 @@ const ajaxClient = new AjaxClient(location.pathname, _, _, debug=true);
 const firewall_rules_table = new FirewallRulesTable('firewall-rules-table', debug=true);
 firewall_rules_table.initialize_filter(filter_min_length=2, filter_col_start=2, filter_col_end=9);
 firewall_rules_table.initialize_form(click_col_start=2);
-firewall_rules_table.register_buttons(['commit', 'push', 'diff']);
+firewall_rules_table.register_buttons(['revert', 'push', 'commit', 'diff']);
 
 const firewall_objects_table = new FirewallObjectsTable('firewall-objects-table', debug=true);
 firewall_objects_table.initialize_filter(filter_min_length=2, filter_col_start=1, filter_col_end=4);

@@ -78,6 +78,10 @@ class DNXWebuiTable {
     }
   }
 
+  update_title(title_str) {
+    this.full_table_el.querySelector(`.${this.table_class_selector}-title`).innerHTML = title_str;
+  }
+
   colorize_table() {
     let table_row_array = this.table_el.getElementsByTagName('tr');
 

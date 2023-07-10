@@ -21,8 +21,7 @@
     <div class="row">
       <div class="col s12">
         <div class="card-panel hoverable {{ theme.card }}">
-          {% set title_string = 'rule list (*changes pending)' if firewall_settings['pending_changes'] else 'rule list' %}
-          {{ create_title(title_string)|safe }}
+          {{ create_title('rule list', 'firewall-rules-table-title')|safe }}
           <div class="row">
             <form method="post">
               <input type="hidden" name="tab" value="1">
