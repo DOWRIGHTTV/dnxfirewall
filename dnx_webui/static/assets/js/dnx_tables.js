@@ -205,9 +205,10 @@ class DNXWebuiTableFormModal extends DNXWebuiTable {
 
   _click_row_handler(click) {
 
+    if (click.target.cellIndex == null) return;
+
     if (this.debug) { console.log('clicked cell index: ', click.target.cellIndex); }
 
-    if (click.target.cellIndex == null) return;
     if (click.target.cellIndex < this._click_col_start || click.target.cellIndex > this._click_col_end) return;
 
     let selected_table_row = click.target.parentNode;

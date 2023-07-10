@@ -23,7 +23,7 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
 
   _clear_rule_selection(selected_rules) {
     for (let rule_el of selected_rules) {
-      rule_el.children[0].checked = false
+      rule_el.querySelector('.dnx-table-row-select').checked = false
     }
   }
 
