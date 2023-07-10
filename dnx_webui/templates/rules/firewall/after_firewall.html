@@ -226,10 +226,9 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     if (btn_selector === 'commit') {
       M.Modal.getInstance(this._commit_form_el).open();
     }
-
     else if (btn_selector === 'push') {
       M.Modal.getInstance(this._push_form_el).open();
-
+    }
     else if (btn_selector === 'diff') {
       this._diff_rules();
     }
