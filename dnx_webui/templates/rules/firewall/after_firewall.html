@@ -28,8 +28,8 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
   }
 
   add_modified_rule_marker(rule_el) {
-    if (!rule_el[2].innerHTML.includes('[*]')) {
-      rule_el[2].innerHTML = '[*]' + rule_el.children[2].innerHTML;
+    if (!rule_el.children[2].innerHTML.includes('[*]')) {
+      rule_el.children[2].innerHTML = '[*]' + rule_el.children[2].innerHTML;
     }
   }
 
