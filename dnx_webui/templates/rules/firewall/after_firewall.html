@@ -286,7 +286,7 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
   }
 
   async _diff_rules() {
-    await ajaxClient.post('diff', {}, this._diff_rules_handler);
+    await ajaxClient.post('diff', {}, this._diff_rules_handler.bind(this));
   }
 
   _diff_rules_handler(result) {
