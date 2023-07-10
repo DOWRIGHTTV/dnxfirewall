@@ -12,10 +12,10 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     let selected_rules = [];
 
     let fw_rules = document.querySelectorAll('.dnx-table-row-select');
-    for (let rule of fw_rules) {
+    for (let rule_select of fw_rules) {
 
-      if (rule.checked) {
-        selected_rules.push(rule);
+      if (rule_select.checked) {
+        selected_rules.push(rule_select.closest('tr'));
       }
     }
     return selected_rules
@@ -27,13 +27,32 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     }
   }
 
+  add_modified_rule_marker(rule_el) {
+    if (!rule_el[2].innerHTML.includes('[*]')) {
+      rule_el[2].innerHTML = '[*]' + rule_el.children[2].innerHTML;
+    }
+  }
+
+  clear_modified_rule_markers() {
+    let firewall_rules_array = this.table_el.querySelectorAll('tr');
+
+    for (let firewall_rule of firewall_rules_array) {
+      // name field
+      if (firewall_rule.children[2].innerHTML.includes('[*]')) {
+        firewall_rule.children[2].innerHTML = firewall_rule.children[2].innerHTML.replace('[*]', '');
+      }
+    }
+  }
+
   enable_selected_rules() {
     let selected_rules = this._get_selected_rules();
 
     if (this.debug) { console.log('enabling > ', selected_rules); }
 
-    for (let rule of selected_rules) {
-      setAttributes(rule.closest('tr'), {'data-enabled': '1', 'style': 'opacity: 1'})
+    for (let rule_el of selected_rules) {
+      setAttributes(rule_el, {'data-enabled': '1', 'style': 'opacity: 1'})
+
+      this.add_modified_rule_marker(rule_el);
     }
     this._clear_rule_selection(selected_rules);
 
@@ -45,8 +64,8 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
 
     if (this.debug) { console.log('disabling > ', selected_rules); }
 
-    for (let rule of selected_rules) {
-      setAttributes(rule.closest('tr'), {'data-enabled': '0', 'style': 'opacity: .4'})
+    for (let rule_el of selected_rules) {
+      setAttributes(rule_el, {'data-enabled': '0', 'style': 'opacity: .4'})
     }
     this._clear_rule_selection(selected_rules);
 
@@ -58,9 +77,8 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
 
     if (this.debug) { console.log('removing > ', selected_rules); }
 
-      for (let rule of selected_rules) {
-        setAttributes(rule.closest('tr'), {'data-enabled': '-1', 'style': 'opacity: .4; background: red'})
-        {#rule.closest('tr').remove()#}
+      for (let rule_el of selected_rules) {
+        setAttributes(rule_el, {'data-enabled': '-1', 'style': 'opacity: .4; background: red'})
     }
 
     this._clear_rule_selection(selected_rules);
@@ -273,6 +291,8 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     );
 
     if (success) {
+      this.clear_modified_rule_markers(); // clears all rules
+
       this.toggle_button(this._revert_btn_el);
       this.toggle_button(this._push_btn_el);
       this.toggle_button(this._commit_btn_el);
