@@ -8,7 +8,7 @@ class AjaxClient {
 
     // setting response modal element attribute and initializing the modal
     this._response_modal_el = document.querySelector('#ajax-response-modal');
-    M.Modal.init(this._response_modal_el, {dismissible: false}).open();
+    M.Modal.init(this._response_modal_el, {dismissible: false});
 
     if (debug) {
       console.log(
