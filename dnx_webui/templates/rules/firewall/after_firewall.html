@@ -210,19 +210,18 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
 
     clearDNXChips();
 
-    M.Modal.getInstance(this.form_el, {dismissible: false}).close();
+    M.Modal.getInstance(this.form_el).close();
   }
 
   _register_buttons_hook() {
     this._commit_form_el = document.querySelector(`.${this.table_class_selector}-btn-commit-form`);
     M.Modal.init(this._commit_form_el, {dismissible: false});
 
-    {#this._btn_commit_form_selector = '.' + this.table_class_selector + '-btn-commit-form'#}
-
     this._push_form_el = document.querySelector(`.${this.table_class_selector}-btn-push-form`);
     M.Modal.init(this._push_form_el, {dismissible: false});
 
-    {#this._btn_push_form_selector = '.' + this.table_class_selector + '-btn-commit-form'#}
+    this._diff_form_el = document.querySelector(`.${this.table_class_selector}-btn-diff-form`);
+    M.Modal.init(this._diff_form_el, {dismissible: false});
 
   }
 
@@ -258,7 +257,7 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     }
   }
   commit_rules_close() {
-    M.Modal.getInstance(document.querySelector(this.table_class_selector + '-btn-commit-form'), {dismissible: false}).close();
+    M.Modal.getInstance(document.querySelector(this.table_class_selector + '-btn-commit-form')).close();
   }
 
   async push_rules() {
@@ -281,7 +280,7 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
 
   push_rules_close() {
     let push_form = document.querySelector();
-    M.Modal.getInstance(push_form, {dismissible: false}).close();
+    M.Modal.getInstance(push_form).close();
   }
 
   async _diff_rules() {
@@ -291,17 +290,14 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
   _diff_rules_handler(result) {
     if (this.debug) console.log(result);
 
-    let diff_info = result.message;
-    let message_popup = document.querySelector(`.${this.table_class_selector}-btn-diff-form`);
-
-    Object.entries(diff_info).forEach(([section, action]) => {
+    Object.entries(result.message).forEach(([section, action]) => {
       if (!Object.keys(action).length) return;
 
       ['add', 'rem', 'mod'].forEach(code => {
 
       if (!action[code].length) return;
 
-      let change_text = message_popup.querySelector(`#diff-${code}`);
+      let change_text = this._diff_form_el.querySelector(`#diff-${code}`);
       change_text.innerHTML = '<h6>' + section + '</h6>';
 
       for (let r of action[code]) {
@@ -314,7 +310,8 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
         }
       }});
     });
-    M.Modal.init(message_popup, {dismissible: false}).open();
+
+    M.Modal.getInstance(this._diff_form_el).open();
   }
 
   _table_to_json() {
