@@ -36,6 +36,8 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
       setAttributes(rule.closest('tr'), {'data-enabled': '1', 'style': 'opacity: 1'})
     }
     this._clear_rule_selection(selected_rules);
+
+    this.toggle_button(this._commit_btn_el);
   }
 
   disable_selected_rules() {
@@ -47,6 +49,8 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
       setAttributes(rule.closest('tr'), {'data-enabled': '0', 'style': 'opacity: .4'})
     }
     this._clear_rule_selection(selected_rules);
+
+    this.toggle_button(this._commit_btn_el);
   }
 
   remove_selected_rules() {
@@ -55,10 +59,13 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     if (this.debug) { console.log('removing > ', selected_rules); }
 
       for (let rule of selected_rules) {
-        rule.closest('tr').remove()
+        setAttributes(rule.closest('tr'), {'data-enabled': '-1', 'style': 'opacity: .4; background: red'})
+        {#rule.closest('tr').remove()#}
     }
 
     this._clear_rule_selection(selected_rules);
+
+    this.toggle_button(this._commit_btn_el);
   }
 
   add_new_rule() {
@@ -231,7 +238,7 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
       this._push_btn_el.classList.add('btn-disabled');
     }
     else {
-      this.update_title('Rule List ([*]Changes Pending - See [DIFF])');
+      this.update_title('Rule List -> Changes Pending - See [ DIFF ]');
     }
 
     //commit
@@ -316,28 +323,32 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
 
     for (let i = 0; i < this.table_el.rows.length; i++) {
 
-        let table_row = this.table_el.rows[i];
-        let row_data = [table_row.attributes['data-enabled'].value, table_row.attributes['data-id'].value];
+      let table_row = this.table_el.rows[i];
 
-        //rule name
-        row_data.push(table_row.cells[2].textContent.replace('[*]', ''));
+      // skip rules marked for deletion
+      if (table_row.attributes['data-id'].value === '-1') { continue; }
 
-        for (let j = 3; j < table_row.cells.length; j++) {
-            let currentCell = table_row.cells[j];
+      let row_data = [table_row.attributes['data-enabled'].value, table_row.attributes['data-id'].value];
 
-            // converting the fw object list to the proper server format
-            if (currentCell.children.length > 0) {
-                let objectStr = ''
-                for (let obj of table_row.cells[j].children) {
-                    objectStr += obj.textContent.replace(' ', '/') + ',';
-                }
-                // pulling out the trailing comma
-                row_data.push(objectStr.slice(0, -1));
-            } else {
-                row_data.push(currentCell.textContent);
-            }
+      //rule name
+      row_data.push(table_row.cells[2].textContent.replace('[*]', ''));
+
+      for (let j = 3; j < table_row.cells.length; j++) {
+        let currentCell = table_row.cells[j];
+
+        // converting the fw object list to the proper server format
+        if (currentCell.children.length > 0) {
+          let objectStr = ''
+          for (let obj of table_row.cells[j].children) {
+              objectStr += obj.textContent.replace(' ', '/') + ',';
+          }
+          // pulling out the trailing comma
+          row_data.push(objectStr.slice(0, -1));
+        } else {
+          row_data.push(currentCell.textContent);
         }
-        data[i] = row_data;
+      }
+      data[i] = row_data;
     }
 
     return JSON.stringify(data);
