@@ -222,6 +222,7 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     M.Modal.init(this._commit_form_el, {dismissible: false});
 
     //push
+    this.push_rules = this._push_rules.bind(this)
     this._push_btn_el = document.querySelector(`.${this.table_class_selector}-btn-push`);
     this._push_form_el = document.querySelector(`.${this.table_class_selector}-btn-push-form`);
     M.Modal.init(this._push_form_el, {dismissible: false});
@@ -230,10 +231,11 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
       this._push_btn_el.classList.add('btn-disabled');
     }
     else {
-      this.update_title('rule list ([*] changes pending - see diff)');
+      this.update_title('Rule List ([*]Changes Pending - See [DIFF])');
     }
 
     //commit
+    this.commit_rules = this._commit_rules.bind(this)
     this._commit_btn_el = document.querySelector(`.${this.table_class_selector}-btn-commit`);
     this._commit_form_el = document.querySelector(`.${this.table_class_selector}-btn-commit-form`);
     M.Modal.init(this._commit_form_el, {dismissible: false});
@@ -241,13 +243,12 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     this._commit_btn_el.classList.add('btn-disabled');
 
     //diff
+    this.diff_rules = this._diff_rules.bind(this)
     this._diff_form_el = document.querySelector(`.${this.table_class_selector}-btn-diff-form`);
     M.Modal.init(this._diff_form_el, {dismissible: false});
-
   }
 
-  // consider making this async so we can call awaits directly from here
-  _click_button_handler(btn_selector) {
+  async _click_button_handler(btn_selector) {
     if (btn_selector === 'commit' && !this._commit_btn_el.classList.contains('btn-disabled')) {
       M.Modal.getInstance(this._commit_form_el).open();
     }
@@ -255,12 +256,11 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
       M.Modal.getInstance(this._push_form_el).open();
     }
     else if (btn_selector === 'diff') {
-      this._diff_rules(); // async wrapper, see above.
+      await ajaxClient.post('diff', {}, this.diff_rules);
     }
   }
 
-  async commit_rules() {
-
+  async _commit_rules() {
     let success = await ajaxClient.post('commit',
       {'section': document.getElementById('clist_select').value, 'rules': this._table_to_json()}
     );
@@ -272,23 +272,18 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     }
   }
 
-  async push_rules() {
-
+  async _push_rules() {
     let success = await ajaxClient.post('push');
 
     if (success) {
       this.toggle_button(this._push_btn_el);
       this.toggle_button(this._revert_btn_el);
 
-      this.update_title('rule list');
+      this.update_title('Rule List');
     }
   }
 
-  async _diff_rules() {
-    await ajaxClient.post('diff', {}, this._diff_rules_handler.bind(this));
-  }
-
-  _diff_rules_handler(result) {
+  async _diff_rules(result) {
     if (this.debug) console.log(result);
 
     Object.entries(result.message).forEach(([section, action]) => {

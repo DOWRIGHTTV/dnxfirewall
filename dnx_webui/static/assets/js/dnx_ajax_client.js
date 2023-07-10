@@ -7,8 +7,7 @@ class AjaxClient {
     this.debug = debug;
 
     // setting response modal element attribute and initializing the modal
-    this._response_modal_el = document.querySelector('#ajax-response-modal');
-    M.Modal.init(this._response_modal_el, {dismissible: false});
+    this._initialize_response_modal();
 
     if (debug) {
       console.log(
@@ -82,9 +81,13 @@ class AjaxClient {
     }
   }
 
+  _initialize_response_modal() {
+    this._response_modal_el = document.querySelector('#ajax-response-modal');
+    M.Modal.init(this._response_modal_el, {dismissible: false});
+  }
+
   _show_response_modal(message) {
     this._response_modal_el.querySelector('h5').innerText = message;
-
     M.Modal.getInstance(this._response_modal_el).open();
   }
 }
