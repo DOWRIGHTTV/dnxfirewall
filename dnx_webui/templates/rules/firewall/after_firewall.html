@@ -218,14 +218,14 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     this._commit_form_el = document.querySelector(`.${this.table_class_selector}-btn-commit-form`);
     M.Modal.init(this._commit_form_el, {dismissible: false});
 
-    this._commit_btn_el.addClass('btn-disabled')
+    this._commit_btn_el.classList.add('btn-disabled')
 
     this._push_btn_el = document.querySelector(`.${this.table_class_selector}-btn-push`);
     this._push_form_el = document.querySelector(`.${this.table_class_selector}-btn-push-form`);
     M.Modal.init(this._push_form_el, {dismissible: false});
 
     if (!this.pending_changes) {
-      this._push_btn_el.addClass('btn-disabled')
+      this._push_btn_el.classList.add('btn-disabled')
     }
 
     this._diff_form_el = document.querySelector(`.${this.table_class_selector}-btn-diff-form`);
