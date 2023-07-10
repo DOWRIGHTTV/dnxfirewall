@@ -21,9 +21,9 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     return selected_rules
   }
 
-  _clear_rule_selection(rules) {
-    for (let rule of rules) {
-      rule.checked = false
+  _clear_rule_selection(selected_rules) {
+    for (let rule_el of selected_rules) {
+      rule_el.children[0].checked = false
     }
   }
 
