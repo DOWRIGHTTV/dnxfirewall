@@ -185,6 +185,8 @@ class DNXWebuiTableFormModal extends DNXWebuiTable {
 
       btn.addEventListener('click', this._click_button_handler.bind(this, btn_selector));
     }
+
+    this._register_buttons_hook();
   }
 
   _click_row_handler(click) {
@@ -231,4 +233,7 @@ class DNXWebuiTableFormModal extends DNXWebuiTable {
   _click_button_handler(btn_selector) {
     console.log('_click_button_handler() not defined in child class');
   }
+
+  // hook for child class to use for additional button registration setup if needed
+  _register_buttons_hook() {}
 }
