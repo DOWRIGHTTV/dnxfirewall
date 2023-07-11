@@ -188,6 +188,8 @@ class DNXWebuiTableFormModal extends DNXWebuiTable {
       let btn = document.querySelector(`.${this.table_class_selector}-btn-${btn_selector}`)
 
       btn.addEventListener('click', this._click_button_handler.bind(this, btn_selector));
+
+      if (this.debug) { console.log(`${this.table_class_selector} button registered: ${btn_selector}`); }
     }
 
     this._register_buttons_hook();

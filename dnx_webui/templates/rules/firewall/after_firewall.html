@@ -279,11 +279,14 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
   }
 
   async _click_button_handler(btn_selector) {
-    if (btn_selector === 'commit' && !this._commit_btn_el.classList.contains('btn-disabled')) {
-      M.Modal.getInstance(this._commit_form_el).open();
+    if (btn_selector === 'revert' && !this._revert_btn_el.classList.contains('btn-disabled')) {
+      M.Modal.getInstance(this._revert_form_el).open();
     }
     else if (btn_selector === 'push' && !this._push_btn_el.classList.contains('btn-disabled')) {
       M.Modal.getInstance(this._push_form_el).open();
+    }
+    else if (btn_selector === 'commit' && !this._commit_btn_el.classList.contains('btn-disabled')) {
+      M.Modal.getInstance(this._commit_form_el).open();
     }
     else if (btn_selector === 'diff' && !this._diff_btn_el.classList.contains('btn-disabled')) {
       await ajaxClient.post('diff', {}, this.diff_rules);
