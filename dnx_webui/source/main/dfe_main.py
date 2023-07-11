@@ -431,8 +431,7 @@ def system_logs_get(session_info: dict):
         response_data = {'error': 1, 'message': 'No log entries for this module.'}
 
     else:
-        response_data = {'error': 0, 'data': table_data}
-
+        response_data = {'error': 0, 'message': table_data}
 
     # add identifier in data to tell client logic whether to clear or append the table data.
     # this will probably just be set by client, then relayed back for easier handling.
