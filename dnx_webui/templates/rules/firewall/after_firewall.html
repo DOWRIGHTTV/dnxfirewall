@@ -244,7 +244,7 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
     //revert (this button submits form directly without ajax)
     this._revert_btn_el = document.querySelector(`.${this.table_class_selector}-btn-revert`);
     this._revert_form_el = document.querySelector(`.${this.table_class_selector}-btn-revert-form`);
-    M.Modal.init(this._commit_form_el, {dismissible: false});
+    M.Modal.init(this._revert_form_el, {dismissible: false});
 
     //push
     this.push_rules = this._push_rules.bind(this)
