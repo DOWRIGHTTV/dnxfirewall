@@ -64,12 +64,28 @@ class DNXWebuiTable {
     }
   }
 
-  update_table_data(rows) {
-    for (let i = 0; i < rows.length; i++) {
+  async update_table_data(data = {'table': 'default'}) {
+    await ajaxClient.post('/get', data, this._update_table_data.bind(this));
+  }
+
+  _update_table_data(response_data) {
+    // this needs to be worked on to differentiate whether a page update or a new table load.
+    // if a new table, the table body should be reset, data retained and (notify of no data? grey out data btn?)
+    if (response_data.length === 0) {
+      console.log('No data!')
+      return;
+    }
+
+    // temp conditional for resetting table data if a new table is requested. otherwise, data will get appended.
+    if (1) {
+      this.table_el.innerHTML = '';
+    }
+
+    for (let i = 0; i < response_data.length; i++) {
       let tr = this.table_el.insertRow();
 
-      for (let ix = 0; ix < rows[i].length; ix++) {
-        tr.insertCell(ix).innerHTML = rows[i][ix];
+      for (let ix = 0; ix < response_data[i].length; ix++) {
+        tr.insertCell(ix).innerHTML = response_data[i][ix];
       }
     }
     // recolorize after every table update

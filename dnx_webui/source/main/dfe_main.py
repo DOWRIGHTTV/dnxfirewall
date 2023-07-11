@@ -122,7 +122,7 @@ def rules_firewall(session_info: dict):
 
     page_settings = {
         'navi': True, 'idle_timeout': True, 'standard_error': None,
-        'ajax': True, 'dnx_tables': True,
+        'init_ajax_client': True, 'dnx_tables': True,
         'tab': validate.get_convert_int(request.args, 'tab'),
         'dnx_network_objects': {},
         'dnx_service_objects': {},
@@ -200,7 +200,7 @@ def rules_nat(session_info: dict):
 def intrusion_ip(session_info: dict):
     page_settings = get_default_page_settings(session_info, uri_path=['intrusion', 'ip'])
 
-    page_settings['ajax'] = True
+    page_settings['init_ajax_client'] = True
 
     page_action = standard_page_logic(
         ip_proxy, page_settings, 'ip_settings', page_name='intrusion/ip.html'
@@ -226,7 +226,7 @@ def intrusion_ip_post(session_info: dict):
 def intrusion_domain(session_info: dict):
     page_settings = get_default_page_settings(session_info, uri_path=['intrusion', 'domain'])
 
-    page_settings['ajax'] = True
+    page_settings['init_ajax_client'] = True
 
     page_action = standard_page_logic(
         dns_proxy, page_settings, 'domain_settings', page_name='intrusion/domain/domain.html'
@@ -375,7 +375,7 @@ def system_settings_logging(session_info: dict):
 def system_logs_traffic(session_info: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu': '1', 'table': '1', 'dnx_table': True,
+        'menu': '1', 'table': '1', 'dnx_tables': True,
         'table_types': ['firewall', '.nat'],
         'uri_path': ['system', 'log', 'traffic']
     }
@@ -391,7 +391,7 @@ def system_logs_traffic(session_info: dict):
 def system_logs_traffic_events(session_info: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu': '1', 'table': '1', 'dnx_table': True,
+        'menu': '1', 'table': '1', 'dnx_tables': True,
         'table_types': ['dns_proxy', 'ip_proxy', 'intrusion_prevention', 'infected_clients'],
         'uri_path': ['system', 'log', 'events']
     }
@@ -407,7 +407,7 @@ def system_logs_traffic_events(session_info: dict):
 def system_logs_system(session_info: dict):
     page_settings = {
         'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu': '1', 'dnx_table': True, 'ajax': True,
+        'menu': '1', 'init_ajax_client': True, 'dnx_tables': True,
         'log_files': [
             'combined', 'logins', 'web_app', 'system', 'dns_proxy', 'ip_proxy', 'ips', 'dhcp_server',  # 'syslog'
         ],

@@ -56,5 +56,9 @@
         </div>
     </div>
 </section>
-{% include 'system/log/system/after_system.html' %}
+<script>
+const traffic_logs_table = new DNXWebuiTable('system-log-table', debug=true);
+traffic_logs_table.initialize_filter(filter_min_length=2);
+traffic_logs_table.update_table_data();
+</script>
 {% endblock %}
