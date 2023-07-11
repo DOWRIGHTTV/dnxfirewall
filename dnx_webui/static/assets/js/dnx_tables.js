@@ -116,23 +116,25 @@ class DNXWebuiTable {
     }
 
     let table_row_array = this.table_el.getElementsByTagName('tr');
+    // do not run filter if there are less than 4 rows. note: this can be changed later to be dynamic or user set
+    if (table_row_array.length <= 3) {
+      return;
+    }
 
-    for (let i = 0; i < table_row_array.length; i++) {
-      let td_list = table_row_array[i].getElementsByTagName('td');
+    for (let table_idx = 0; table_idx < table_row_array.length; table_idx++) {
+      let td_list = table_row_array[table_idx].getElementsByTagName('td');
 
-      // do not run filter if there are less than 4 rows. note: this can be changed later to be dynamic or user set
-      if (td_list.length <= 3) {
-        continue;
-      }
+      for (let row_idx = this._filter_col_start; row_idx <= this._filter_col_end; row_idx++) {
+        // limit iteration to end of row because the set end index may be greater than the number of columns
+        if (row_idx === td_list.length) { break; }
 
-      for (let f = this._filter_col_start; f <= this._filter_col_end; f++) {
-        let field = td_list[f].textContent;
+        let field = td_list[row_idx].textContent;
 
         if (field.indexOf(this._filter_input.value) === -1) {
-          table_row_array[i].style.display = 'none';
+          table_row_array[table_idx].style.display = 'none';
         }
         else {
-          table_row_array[i].style.display = '';
+          table_row_array[table_idx].style.display = '';
           break;
         }
       }
