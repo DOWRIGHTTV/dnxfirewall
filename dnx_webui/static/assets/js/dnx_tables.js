@@ -70,8 +70,6 @@ class DNXWebuiTable {
 
   // todo: this needs to be worked on to differentiate whether a page update or a new table load.
   _update_table_data(response_data, clear_table=true) {
-    if (debug) { console.log(response_data); }
-
     // temp conditional for resetting table data if a new table is requested. otherwise, data will get appended.
     if (clear_table) {
       this.table_el.innerHTML = '';
