@@ -427,9 +427,16 @@ def system_logs_get(session_info: dict):
 
     _, _, table_data = sys_logs.handle_ajax(json_data)
 
+    if (not len(table_data)):
+        response_data = {'error': 1, 'message': 'No log entries for this module.'}
+
+    else:
+        response_data = {'error': 0, 'data': table_data}
+
+
     # add identifier in data to tell client logic whether to clear or append the table data.
     # this will probably just be set by client, then relayed back for easier handling.
-    return ajax_response(status=True, data={'message': table_data})
+    return ajax_response(status=True, data=response_data)
 
 @app.route('/system/users', methods=['GET', 'POST'])
 @user_restrict('admin')
