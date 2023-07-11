@@ -8,7 +8,7 @@
                 <div class="row">
                     <form method="post">
                         <div class="input-field col s10 m6 l4 {{input_color}}">
-                            <select name="table" id="table" onchange="updateData(this.value)">
+                            <select name="table" id="table" onchange="system_logs_table.update_table_data({'table': this.value})">
                                 {% for table_type in log_files %}
                                 <option value="{{table_type}}" {% if table_type==table %} selected {% endif %}
                                     >{{table_type.upper()|replace('_', ' ')}} LOG</option>
@@ -20,12 +20,11 @@
                 </div>
                 <div class="row">
                     <div class="input-field col s12 m6 l5 xl3 {{input_color}}">
-                        <input type="text" id="filter-input" onkeyup="filterTable(1, 4)" placeholder="error">
-                        <label for="filter-input">Search</label>
+                        <input type="text" id="system-logs-table-filter" onkeyup="system_logs_table.filter_table()" placeholder="Filter">
                     </div>
                 </div>
                 <div class="row">
-                    <table class="centered highlight" id="filter-table">
+                    <table class="system-logs-table centered highlight">
                         <thead>
                             <tr>
                                 <th style="width:15%">Date/Time</th>
@@ -34,7 +33,7 @@
                                 <th style="width:65%">Log Entry</th>
                             </tr>
                         </thead>
-                        <tbody id="filter-table-body">
+                        <tbody class="system-logs-table-body">
                             {% for date_time, service, log_level, log_entry in table_data %}
                             <tr>
                                 <td>{{date_time}}</td>
@@ -57,8 +56,8 @@
     </div>
 </section>
 <script>
-const traffic_logs_table = new DNXWebuiTable('system-log-table', debug=true);
-traffic_logs_table.initialize_filter(filter_min_length=2);
-traffic_logs_table.update_table_data();
+const system_logs_table = new DNXWebuiTable('system-logs-table', debug=true);
+system_logs_table.initialize_filter(filter_min_length=2);
+system_logs_table.update_table_data();
 </script>
 {% endblock %}

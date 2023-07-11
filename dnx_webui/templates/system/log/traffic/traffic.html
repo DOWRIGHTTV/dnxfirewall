@@ -28,10 +28,9 @@
                 </div>
                 <div class="row">
                     <div class="input-field col s12 m6 l5 xl3 {{input_color}}">
-                      <input type="text" id="filter-input" onkeyup="traffic_logs_table.filter_table()" placeholder="lan">
-                      <label for="filter-input">Search</label>
+                      <input type="text" id="traffic-logs-table-filter" onkeyup="traffic_logs_table.filter_table()" placeholder="Filter">
                     </div>
-                    <table class="traffic-log-table centered highlight">
+                    <table class="traffic-logs-table centered highlight">
                         <colgroup>
                             <col span="3" style="background-color:#eceff1">
                             <col span="4" style="background-color:#90a4ae">
@@ -65,7 +64,7 @@
                                 <th>port</th>
                             </tr>
                         </thead>
-                        <tbody class="traffic-log-table-body">
+                        <tbody class="traffic-logs-table-body">
                             {% for entry in table_data %}
                             <tr>
                                 <td>{{ entry.timestamp }}</td>
