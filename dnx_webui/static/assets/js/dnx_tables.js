@@ -69,6 +69,8 @@ class DNXWebuiTable {
   }
 
   _update_table_data(response_data) {
+    if (debug) { console.log(response_data); }
+
     // this needs to be worked on to differentiate whether a page update or a new table load.
     // if a new table, the table body should be reset, data retained and (notify of no data? grey out data btn?)
     if (response_data.length === 0) {
