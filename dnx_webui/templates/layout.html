@@ -35,23 +35,6 @@
   })
 </script>
 {# dnx custom js #}
-
-{# dnx custom table with filtering/striping #}
-{% if dnx_tables %}
-  <script src="{{ url_for('static',filename='assets/js/dnx_tables.js') }}"></script>
-{% endif %}
-
-{# dnx custom ajax client by seeker1437 (WyteChocolate) || ajax class will always be available #}
-<script src="{{ url_for('static',filename='assets/js/dnx_ajax_client.js') }}"></script>
-{% include 'includes/_ajax_response.html' %}
-
-{# initializes default ajax client automatically specified in page settings #}
-{% if init_ajax_client %}
-  <script>const ajaxClient = new AjaxClient(location.pathname, _, _, debug=true);</script>
-{% endif %}
-
-{# dnx custom js #}
-
 {# general functions -#}
 <script>
   let _ = undefined;
@@ -72,6 +55,21 @@
   }, false);
 
 </script>
+
+{# dnx custom table with filtering/striping #}
+{% if dnx_tables %}
+  <script src="{{ url_for('static',filename='assets/js/dnx_tables.js') }}"></script>
+{% endif %}
+
+{# dnx custom ajax client by seeker1437 (WyteChocolate) || ajax class will always be available #}
+<script src="{{ url_for('static',filename='assets/js/dnx_ajax_client.js') }}"></script>
+{% include 'includes/_ajax_response.html' %}
+
+{# initializes default ajax client automatically specified in page settings #}
+{% if init_ajax_client %}
+  <script>const ajaxClient = new AjaxClient(location.pathname, _, _, debug=true);</script>
+{% endif %}
+
 <!-- ^^ BEFORE PAGE TEMPLATE ^^ -->
 {% block body %}{% endblock body %}
 <!-- vv AFTER PAGE TEMPLATE vv -->
