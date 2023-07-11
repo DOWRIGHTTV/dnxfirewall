@@ -332,6 +332,8 @@ class FirewallRulesTable extends DNXWebuiTableFormModal {
 
       for (let code of ['add', 'rem', 'mod']) {
 
+        if (this.debug) { console.log(`diff(${code}):`, action[code]); }
+
         if (!action[code].length) return;
 
         let change_text = this._diff_form_el.querySelector(`#diff-${code}`);
