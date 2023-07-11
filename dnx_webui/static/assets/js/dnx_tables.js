@@ -95,13 +95,18 @@ class DNXWebuiTable {
   colorize_table() {
     let table_row_array = this.table_el.getElementsByTagName('tr');
 
-    for (let i = 0; i < table_row_array.length; i++) {
+    for (let i = 0; i < table_row_array.length;) {
+      if (table_row_array[i].style.display === 'none') { continue; }
+
       if (i % 2 === 0) {
         table_row_array[i].className = 'tr-even';
       }
       else {
         table_row_array[i].className = 'tr-odd';
       }
+
+      // increment only if row is not hidden
+      i++;
     }
   }
 
