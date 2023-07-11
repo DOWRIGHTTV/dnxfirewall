@@ -131,7 +131,10 @@ class WebPage(RulesWebPage):
         # initial input validation for presence of zone field
         section: str = form.get('section', 'MAIN')
 
-        if ('create_obj' in form):
+        if ('revert_rules' in form):
+            cfirewall.revert()
+
+        elif ('create_obj' in form):
             fw_object = config(**{
                 'id': 0,
                 'name': form.get('ocname', DATA.MISSING),
