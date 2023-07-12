@@ -151,7 +151,7 @@
       <div class="row">
         <div class="col s12">
           <div class="card-panel hoverable {{ theme.card }}">
-            <table class="centered highlight">
+            <table class="interfaces-cfg-table centered highlight">
               {{ create_title('interface list')|safe }}
               <colgroup>
                 <col span="2" style="background-color:#eceff1">
@@ -173,20 +173,20 @@
                   <th>gateway</th>
                 </tr>
               </thead>
-              <tbody class="interfaces-editor">
+              <tbody class="interfaces-cfg-table-body">
               {% for intf_type in ['builtin', 'extended'] %}
-                {% for intf in interface_settings.configuration[intf_type] %}
-                  <tr id="{{ intf_type }}/{{ loop.index }}">
-                    <td class="iid">{{ intf[1] }}</td>
-                    <td class="imac">{{ intf[2] }}</td>
-                    <td class="izone">{{ intf[3] }}</td>
-                    <td class="iname">{{ intf[4] }}</td>
-                    <td class="idhcp">{{ intf[5] }}</td>
-                    <td class="iipa">{{ intf[6] }}</td>
-                    <td class="inetmask">{{ intf[7] }}</td>
-                    <td class="igw">{{ intf[8] }}</td>
-                  </tr>
-                {% endfor %}
+              {% for intf in interface_settings.configuration[intf_type] %}
+                <tr id="{{ intf_type }}/{{ loop.index }}">
+                  <td class="iid">{{ intf[1] }}</td>
+                  <td class="imac">{{ intf[2] }}</td>
+                  <td class="izone">{{ intf[3] }}</td>
+                  <td class="iname">{{ intf[4] }}</td>
+                  <td class="idhcp">{{ intf[5] }}</td>
+                  <td class="iipa">{{ intf[6] }}</td>
+                  <td class="inetmask">{{ intf[7] }}</td>
+                  <td class="igw">{{ intf[8] }}</td>
+                </tr>
+              {% endfor %}
               {% endfor %}
               </tbody>
             </table>
@@ -195,10 +195,10 @@
     </div>
   </div>
 </section>
-<div id="Interface-editor" class="intf-configure-form modal z-depth-5">
-  <form id="intf-editor-form" method="post">
+<div class="interfaces-cfg-table-form modal z-depth-5">
+  <form method="post">
     <input type="hidden" name="tab" value="2">
-    <input type="hidden" name="intf_update"> {# TODO: why does this have a class?? #}
+    <input type="hidden" name="intf_update">
     <div class="row">
       <div class="col">
         <h6 class="eid {{ theme.title }}"></h6>
@@ -262,80 +262,66 @@
     </div>
     <div class="row">
       <div class="modal-footer">
-        <a class="btn waves-effect waves-light" onclick="document.getElementById('intf-editor-form').submit()">Submit</a>
+        <a class="btn waves-effect waves-light" onclick="this.form.submit()">Submit</a>
         <a class="btn-flat modal-close waves-effect waves-green">Cancel</a>
       </div>
     </div>
   </form>
 </div>
 <script>
-{# watching for an interface to be clicked for editing, populates the form, then shows the modal. #}
-let interfacesEditor = document.querySelector('.interfaces-editor');
-interfacesEditor.addEventListener('click', function(click) {
+class InterfacesCFGTable extends DNXWebuiTableFormModal {
 
-  if (click.target.cellIndex == null) return;
+  _update_form_from_row(selected_table_row) {
+    const fields = ['id', 'name', 'zone', 'dhcp', 'ipa', 'netmask', 'gw']
 
-  let interfaceRow = click.target.parentNode;
-  let interfaceEditor = document.querySelector("#Interface-editor");
-  let editInterface = M.Modal.init(interfaceEditor, {dismissible: false});
+    let disable_inputs = false;
 
-  fillEditor(interfaceEditor, interfaceRow);
+    this.form_el.querySelector('.intf_id').value = selected_table_row.id;
 
-  editInterface.open();
-});
+    for (let field of fields) {
+      let table_row_field = selected_table_row.querySelector(`.i${field}`);
+      let table_form_field = this.form_el.querySelector(`.e${field}`);
 
-function fillEditor(interfaceEditor, interfaceRow) {
-  const fields = ['id', 'name', 'zone', 'dhcp', 'ipa', 'netmask', 'gw']
-
-  let disable_inputs = false;
-
-  interfaceEditor.querySelector('.intf_id').value = interfaceRow.id;
-
-  for (let field of fields) {
-    let intf_field = interfaceRow.querySelector(`.i${field}`);
-    let editor_field = interfaceEditor.querySelector(`.e${field}`);
-
-    try {
       if (field === 'id') {
-        editor_field.innerText = intf_field.innerText;
+        table_form_field.innerText = table_row_field.innerText;
       }
       else if (field === 'zone') {
-        let selectOption = document.querySelector(".ezone");
+        let selectOption = document.querySelector('.ezone');
         let zone_select = M.FormSelect.getInstance(selectOption);
 
         let zone_array = zone_select.wrapper.children[1].children;
 
         console.log(zone_array);
 
-        for (let i = 0; i < zone_array.length; i++) {
-          console.log(zone_array[i].innerText, intf_field.innerText)
-          if (zone_array[i].innerText === intf_field.innerText) {
+        for (let zone_idx = 0; zone_idx < zone_array.length; zone_idx++) {
+          console.log(zone_array[zone_idx].innerText, table_form_field.innerText)
+          if (zone_array[zone_idx].innerText === table_form_field.innerText) {
             {#zone_array[i].selected = true;#}
-            zone_array[i].classList.add('selected');
+            zone_array[zone_idx].classList.add('selected');
           }
           else {
             {#zone_array[i].selected = false;#}
-            zone_array[i].classList.remove('selected');
+            zone_array[zone_idx].classList.remove('selected');
           }
         }
       }
       else if (field === 'dhcp') {
-        editor_field.checked = intf_field.innerText.toLowerCase() === 'on';
-        if (editor_field.checked) {
+        table_form_field.checked = table_row_field.innerText.toLowerCase() === 'on';
+        if (table_form_field.checked) {
           disable_inputs = true;
         }
       }
       else {
-        let input_field = editor_field.parentNode;
+        let input_field = table_form_field.parentNode;
 
-        editor_field.remove();
+        table_form_field.remove();
 
         let input = document.createElement('input');
         input.id = 'e' + field;
         input.name = field;
         input.type = 'text';
         input.className = 'e' + field + ' validate';
-        input.value = intf_field.innerText
+        input.value = table_row_field.innerText
 
         if (['ipa', 'netmask', 'gw'].includes(field) && disable_inputs) {
           input.disabled = true;
@@ -348,16 +334,12 @@ function fillEditor(interfaceEditor, interfaceRow) {
         input_field.prepend(input);
       }
     }
-    catch (e) {
-      console.log(e);
-    }
-    finally {}
   }
 }
-document.addEventListener("DOMContentLoaded", function () {
-  const selects = document.querySelector("select");
-  const instances = M.FormSelect.init(selects, {});
-});
+</script>
+<script>
+const interfaces_cfg_table = new InterfacesCFGTable('interfaces-cfg-table', debug=true);
+interfaces_cfg_table.initialize_form();
 </script>
 <style>
 /* popup window */
