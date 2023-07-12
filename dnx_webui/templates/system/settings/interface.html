@@ -299,14 +299,14 @@ class InterfacesCFGTable extends DNXWebuiTableFormModal {
         }
 
         for (let zone_idx = 0; zone_idx < zone_array.length; zone_idx++) {
-          console.log(zone_array[zone_idx].innerText, table_form_field.innerText)
-          if (zone_array[zone_idx].innerText === table_form_field.innerText) {
+          console.log(zone_array[zone_idx].innerText, table_row_field.innerText)
+          if (zone_array[zone_idx].innerText === table_row_field.innerText) {
             {#zone_array[i].selected = true;#}
             zone_array[zone_idx].classList.add('selected');
             zone_select.input.value = table_form_field.innerText;
 
             if (this.debug) {
-              console.log('zone set: ', table_form_field.innerText);
+              console.log('zone set: ', table_row_field.innerText);
             }
 
           }
