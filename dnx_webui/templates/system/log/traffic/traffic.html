@@ -1,106 +1,106 @@
 {% extends('layout.html') %}
 {% block body %}
 <section id="dropdown" class="section">
-    <div class="container">
-        <div class="col s12">
-            <div class="card-panel hoverable {{ theme.card }}">
-                <h4 class="{{ theme.title }}">Traffic Logs</h4>
-                <div class="row">
-                    <form method="post">
-                        <div class="input-field col s5 m3 {{input_color}}">
-                            <select name="table" id="table" onchange="this.form.submit()">
-                                {% for table_type in table_types %}
-                                <option value="{{table_type}}"
-                                        {% if table_type == table %} selected {% endif %}
-                                        {% if table_type.startswith('.') %} disabled {% endif %}>
-                                    {{- table_type.upper() }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                            <label for="table">Module</label>
-                        </div>
-                        <div class="input-field col s2">
-                            <button class="btn waves-effect waves-light col">
-                                <i class="material-icons">refresh</i>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-                <div class="row">
-                    <div class="input-field col s12 m6 l5 xl3 {{input_color}}">
-                      <input type="text" id="traffic-logs-table-filter" onkeyup="traffic_logs_table.filter_table()" placeholder="Filter">
-                    </div>
-                    <table class="traffic-logs-table centered highlight">
-                        <colgroup>
-                            <col span="3" style="background-color:#eceff1">
-                            <col span="4" style="background-color:#90a4ae">
-                            <col span="5" style="background-color:#cfd8dc">
-                            <col span="5" style="background-color:#b0bec5">
-                        </colgroup>
-                        <thead>
-                            <tr>
-                                <th colspan="3">ID</th>
-                                <th colspan="4">Packet</th>
-                                <th colspan="5">Source</th>
-                                <th colspan="5">Destination</th>
-                            </tr>
-                            <tr>
-                                <th>timestamp</th>
-                                <th>type</th>
-                                <th>component</th>
-                                <th>rule</th>
-                                <th>action</th>
-                                <th>direction</th>
-                                <th>protocol</th>
-                                <th>intf</th>
-                                <th>zone</th>
-                                <th>country</th>
-                                <th>ip</th>
-                                <th>port</th>
-                                <th>intf</th>
-                                <th>zone</th>
-                                <th>country</th>
-                                <th>ip</th>
-                                <th>port</th>
-                            </tr>
-                        </thead>
-                        <tbody class="traffic-logs-table-body">
-                            {% for entry in table_data %}
-                            <tr>
-                                <td>{{ entry.timestamp }}</td>
-                                <td>{{ entry.type }}</td>
-                                <td>{{ entry.component }}</td>
-                                <td>{{ entry.rule }}</td>
-                                <td>{{ entry.action }}</td>
-                                <td>{{ entry.direction }}</td>
-                                <td>{{ entry.protocol }}</td>
-                                <td>{{ entry.in_intf }}</td>
-                                <td>{{ entry.src_zone }}</td>
-                                <td>{{ entry.src_country }}</td>
-                                <td>{{ entry.src_ip }}</td>
-                                <td>{{ entry.src_port }}</td>
-                                <td>{{ entry.out_intf }}</td>
-                                <td>{{ entry.dst_zone }}</td>
-                                <td>{{ entry.dst_country }}</td>
-                                <td>{{ entry.dst_ip }}</td>
-                                <td>{{ entry.dst_port }}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                {% for i in range(1) %}
-                                <td></td>
-                                {% endfor %}
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+  <div class="container">
+    <div class="col s12">
+      <div class="card-panel hoverable {{ theme.card }}">
+        <h4 class="{{ theme.title }}">Traffic Logs</h4>
+        <div class="row">
+          <form method="post">
+            <div class="input-field col s5 m3 {{ input_color }}">
+              <select name="table" id="table" onchange="this.form.submit()">
+              {% for table_type in table_types %}
+                <option value="{{ table_type }}"
+                    {% if table_type == table %} selected {% endif %}
+                    {% if table_type.startswith('.') %} disabled {% endif %}>
+                  {{- table_type.upper() }}
+                </option>
+              {% endfor %}
+              </select>
+              <label for="table">Module</label>
             </div>
+            <div class="input-field col s2">
+              <button class="btn waves-effect waves-light col">
+                <i class="material-icons">refresh</i>
+              </button>
+            </div>
+          </form>
         </div>
+        <div class="row">
+          <div class="input-field col s12 m6 l5 xl3 {{ input_color }}">
+            <input type="text" id="traffic-logs-table-filter" onkeyup="traffic_logs_table.filter_table()" placeholder="Filter">
+          </div>
+          <table class="traffic-logs-table centered highlight">
+            <colgroup>
+              <col span="3" style="background-color:#eceff1">
+              <col span="4" style="background-color:#90a4ae">
+              <col span="5" style="background-color:#cfd8dc">
+              <col span="5" style="background-color:#b0bec5">
+            </colgroup>
+            <thead>
+              <tr>
+                <th colspan="3">ID</th>
+                <th colspan="4">Packet</th>
+                <th colspan="5">Source</th>
+                <th colspan="5">Destination</th>
+              </tr>
+              <tr>
+                <th>timestamp</th>
+                <th>type</th>
+                <th>component</th>
+                <th>rule</th>
+                <th>action</th>
+                <th>direction</th>
+                <th>protocol</th>
+                <th>intf</th>
+                <th>zone</th>
+                <th>country</th>
+                <th>ip</th>
+                <th>port</th>
+                <th>intf</th>
+                <th>zone</th>
+                <th>country</th>
+                <th>ip</th>
+                <th>port</th>
+              </tr>
+            </thead>
+            <tbody class="traffic-logs-table-body">
+            {% for entry in table_data %}
+              <tr>
+                <td>{{ entry.timestamp }}</td>
+                <td>{{ entry.type }}</td>
+                <td>{{ entry.component }}</td>
+                <td>{{ entry.rule }}</td>
+                <td>{{ entry.action }}</td>
+                <td>{{ entry.direction }}</td>
+                <td>{{ entry.protocol }}</td>
+                <td>{{ entry.in_intf }}</td>
+                <td>{{ entry.src_zone }}</td>
+                <td>{{ entry.src_country }}</td>
+                <td>{{ entry.src_ip }}</td>
+                <td>{{ entry.src_port }}</td>
+                <td>{{ entry.out_intf }}</td>
+                <td>{{ entry.dst_zone }}</td>
+                <td>{{ entry.dst_country }}</td>
+                <td>{{ entry.dst_ip }}</td>
+                <td>{{ entry.dst_port }}</td>
+              </tr>
+            {% else %}
+              <tr>
+              {% for i in range(17) %}
+                <td></td>
+              {% endfor %}
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
+  </div>
 </section>
 <script>
-const traffic_logs_table = new DNXWebuiTable('traffic-log-table', debug=true);
-traffic_logs_table.initialize_filter(filter_min_length=2);
+const traffic_logs_table = new DNXWebuiTable('traffic-log-table', debug = true);
+traffic_logs_table.initialize_filter(filter_min_length = 2);
 </script>
 {% endblock %}

@@ -1,63 +1,64 @@
 {% extends('layout.html') %}
 {% block body %}
 <section id="slog" class="section">
-    <div class="container">
-        <div class="col s12">
-            <div class="card-panel hoverable {{ theme.card }}">
-                <h4 class="{{ theme.title }}">System Logs</h4>
-                <div class="row">
-                    <form method="post">
-                        <div class="input-field col s10 m6 l4 {{input_color}}">
-                            <select name="table" id="table" onchange="system_logs_table.update_table_data({'table': this.value})">
-                                {% for table_type in log_files %}
-                                <option value="{{table_type}}" {% if table_type==table %} selected {% endif %}
-                                    >{{table_type.upper()|replace('_', ' ')}} LOG</option>
-                                {% endfor %}
-                            </select>
-                            <label for="table">Log Files</label>
-                        </div>
-                    </form>
-                </div>
-                <div class="row">
-                    <div class="input-field col s12 m6 l5 xl3 {{input_color}}">
-                        <input type="text" id="system-logs-table-filter" onkeyup="system_logs_table.filter_table()" placeholder="Filter">
-                    </div>
-                </div>
-                <div class="row">
-                    <table class="system-logs-table filterable colorize centered highlight">
-                        <thead>
-                            <tr>
-                                <th style="width:15%">Date/Time</th>
-                                <th style="width:10%">Service</th>
-                                <th style="width:10%">Level</th>
-                                <th style="width:65%">Log Entry</th>
-                            </tr>
-                        </thead>
-                        <tbody class="system-logs-table-body">
-                            {% for date_time, service, log_level, log_entry in table_data %}
-                            <tr>
-                                <td>{{date_time}}</td>
-                                <td>{{service}}</td>
-                                <td>{{log_level}}</td>
-                                <td>{{log_entry}}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                {% for i in range(4) %}
-                                <td></td>
-                                {% endfor %}
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+  <div class="container">
+    <div class="col s12">
+      <div class="card-panel hoverable {{ theme.card }}">
+        <h4 class="{{ theme.title }}">System Logs</h4>
+        <div class="row">
+          <form method="post">
+            <div class="input-field col s10 m6 l4 {{ input_color }}">
+              <select name="table" id="table" onchange="system_logs_table.update_table_data({'table': this.value})">
+              {% for table_type in log_files %}
+                <option value="{{ table_type }}" {% if table_type==table %} selected {% endif %}>
+                  {{ table_type.upper()|replace('_', ' ') }} LOG
+                </option>
+              {% endfor %}
+              </select>
+              <label for="table">Log Files</label>
             </div>
+          </form>
         </div>
+        <div class="row">
+          <div class="input-field col s12 m6 l5 xl3 {{ input_color }}">
+            <input type="text" id="system-logs-table-filter" onkeyup="system_logs_table.filter_table()" placeholder="Filter">
+          </div>
+        </div>
+        <div class="row">
+          <table class="system-logs-table filterable colorize centered highlight">
+            <thead>
+              <tr>
+                <th style="width:15%">Date/Time</th>
+                <th style="width:10%">Service</th>
+                <th style="width:10%">Level</th>
+                <th style="width:65%">Log Entry</th>
+              </tr>
+            </thead>
+            <tbody class="system-logs-table-body">
+            {% for date_time, service, log_level, log_entry in table_data %}
+              <tr>
+                <td>{{ date_time }}</td>
+                <td>{{ service }}</td>
+                <td>{{ log_level }}</td>
+                <td>{{ log_entry }}</td>
+              </tr>
+            {% else %}
+              <tr>
+              {% for i in range(4) %}
+                <td></td>
+              {% endfor %}
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
+  </div>
 </section>
 <script>
-const system_logs_table = new DNXWebuiTable('system-logs-table', debug=true);
-system_logs_table.initialize_filter(filter_min_length=2);
+const system_logs_table = new DNXWebuiTable('system-logs-table', debug = true);
+system_logs_table.initialize_filter(filter_min_length = 2);
 system_logs_table.update_table_data();
 </script>
 {% endblock %}

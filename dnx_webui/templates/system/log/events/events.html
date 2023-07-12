@@ -42,7 +42,7 @@
         </div>
         <div class="row">
           <table class="event-logs-table filterable colorize centered highlight">
-          <!-- DNS Proxy Table -->
+          {# !-- DNS Proxy Table -- #}
           {% if table == 'dns_proxy' %}
             <thead>
               <tr>
@@ -82,7 +82,7 @@
               </tr>
             {% endfor %}
             </tbody>
-              <!-- IP HOSTS TABLE-->
+          {# !-- IP HOSTS TABLE--> #}
           {% elif table == 'ip_proxy' %}
             <thead>
               <tr>
@@ -115,7 +115,7 @@
               </tr>
             {% endfor %}
             </tbody>
-            <!-- IPS TABLE -->
+          {# -- IPS TABLE -- #}
           {% elif table == 'intrusion_prevention' %}
             <thead>
               <tr>
@@ -154,7 +154,8 @@
               <tr>
                 <td>
                   <a class="btn-floating btn-small red waves-effect waves-light modal-trigger"
-                     href="#rep-modal1-{{ loop.index }}"><i class="material-icons">remove</i></a>
+                     href="#rep-modal1-{{ loop.index }}"><i class="material-icons">remove</i>
+                  </a>
                   <div id="rep-modal1-{{ loop.index }}" class="modal">
                     <div class="modal-content">
                       <h5 class="{{ modal_text_style }}">Are you sure you want to remove the infected client from
