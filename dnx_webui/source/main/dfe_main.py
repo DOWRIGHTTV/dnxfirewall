@@ -332,6 +332,8 @@ def system_settings_dhcp(session_info: dict):
 def system_settings_interface(session_info: dict):
     page_settings = get_default_page_settings(session_info, uri_path=['system', 'settings', 'interface'])
 
+    page_settings['dnx_tables'] = True
+
     page_action = standard_page_logic(
         interface_settings, page_settings, 'interface_settings', page_name='system/settings/interface.html'
     )
