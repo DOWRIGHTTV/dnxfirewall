@@ -286,12 +286,17 @@ class InterfacesCFGTable extends DNXWebuiTableFormModal {
         table_form_field.innerText = table_row_field.innerText;
       }
       else if (field === 'zone') {
-        let selectOption = document.querySelector('.ezone');
-        let zone_select = M.FormSelect.getInstance(selectOption);
+        let zone_select = M.FormSelect.getInstance(this.form_el.querySelector('.ezone'));
+
+        if (this.debug) {
+          console.log('zone select: ', zone_select);
+        }
 
         let zone_array = zone_select.wrapper.children[1].children;
 
-        console.log(zone_array);
+        if (this.debug) {
+          console.log('zone array: ', zone_array);
+        }
 
         for (let zone_idx = 0; zone_idx < zone_array.length; zone_idx++) {
           console.log(zone_array[zone_idx].innerText, table_form_field.innerText)
