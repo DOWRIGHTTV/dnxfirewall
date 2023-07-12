@@ -276,7 +276,7 @@ class InterfacesCFGTable extends DNXWebuiTableFormModal {
 
     let disable_inputs = false;
 
-    this.form_el.querySelector('.intf_id').value = selected_table_row.id;
+    this.form_el.querySelector('.eid').value = selected_table_row.id;
 
     for (let field of fields) {
       let table_row_field = selected_table_row.querySelector(`.i${field}`);
