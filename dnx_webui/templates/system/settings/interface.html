@@ -303,7 +303,7 @@ class InterfacesCFGTable extends DNXWebuiTableFormModal {
           if (zone_array[zone_idx].innerText === table_row_field.innerText) {
             {#zone_array[i].selected = true;#}
             zone_array[zone_idx].classList.add('selected');
-            {#zone_select.input.value = table_row_field.innerText;#}
+            zone_select.input.value = table_row_field.innerText;
 
             if (this.debug) {
               console.log('zone set: ', table_row_field.innerText);
