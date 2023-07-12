@@ -213,7 +213,7 @@
         <label for="ename">Name</label>
       </div>
       <div class="input-field col s12 m4 {{input_color}}">
-        <select name="zone" id="ezone" class="ezone no-autoinit">
+        <select name="zone" id="ezone" class="ezone">
         {% for z_id, z_name in interface_settings.zone_list %}
           <option value="{{ z_id }}/{{ z_name }}">{{ z_name }}</option>
         {% endfor %}
