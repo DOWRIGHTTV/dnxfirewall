@@ -350,6 +350,9 @@ class InterfacesCFGTable extends DNXWebuiTableFormModal {
   }
   // form is being submitted to server directly
   _update_row_from_form() {
+    if (this.debug) {
+      console.log('interface form el: ', this.form_el);
+    }
     this.form_el.submit();
   }
 }
