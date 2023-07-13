@@ -42,62 +42,7 @@ class WebPage(StandardWebPage):
 
     @staticmethod
     def update(form: Form) -> tuple[int, str]:
-        print(form)
 
-        if ('wan_state_update' in form):
-
-            wan_state = form.get('wan_state_update', DATA.MISSING)
-            if (wan_state is DATA.MISSING):
-                return 1, INVALID_FORM
-
-            try:
-                wan_state = INTF(convert_int(wan_state))
-            except (ValidationError, KeyError):
-                return 2, INVALID_FORM
-
-            else:
-                set_wan_interface(wan_state)
-
-        elif ('wan_ip_update' in form):
-            wan_ip_settings = config(**{
-                'ip': form.get('wan_ip', DATA.MISSING),
-                'cidr': form.get('wan_cidr', DATA.MISSING),
-                'dfg': form.get('wan_dfg', DATA.MISSING)
-            })
-
-            if (DATA.MISSING in wan_ip_settings.values()):
-                return 3, INVALID_FORM
-
-            try:
-                ip_address(wan_ip_settings.ip)
-                cidr(wan_ip_settings.cidr)
-                ip_address(wan_ip_settings.dfg)
-            except ValidationError as ve:
-                return 4, ve.message
-
-            set_wan_ip(wan_ip_settings)
-
-        elif (_IP_DISABLED):
-            return 98, 'wan interface configuration currently disabled for system rework.'
-
-        elif ('wan_mac_update' in form):
-
-            mac_addr = form.get('ud_wan_mac', DATA.MISSING)
-            if (mac_addr is DATA.MISSING):
-                return 5, INVALID_FORM
-
-            try:
-                mac_address(mac_addr)
-            except ValidationError as ve:
-                return 6, ve.message
-            else:
-                set_wan_mac(CFG.ADD, mac_address=mac_address)
-
-        elif ('wan_mac_restore' in form):
-            set_wan_mac(CFG.DEL)
-
-        else:
-            return 99, INVALID_FORM
 
         return NO_STANDARD_ERROR
 

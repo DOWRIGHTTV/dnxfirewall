@@ -402,15 +402,19 @@ class InterfaceManager:
         if (exc_type is None):
             return True
 
-    def add_interface(self, intf: str, ip: str, cidr: str) -> None:
-        '''adds interface to extended network configuration file (netplan).
+    def set_interface(self, intf: str, ip: str, cidr: str, gw: Optional[str] = None) -> None:
+        '''sets specified interface configuration options in the extended network configuration file (netplan).
 
-        add operation can also be used to update an existing interfaces.
+        If the interface does not exist, it will be created. If the interface already exists, it will be overwritten
+        with the new configuration options.
         '''
         self._ext_intf_netplan['network']['ethernets'][intf] = {
             'optional': 'yes',
             'addresses': [f'{ip}/{cidr}']
         }
+
+        if (gw):
+            self._ext_intf_netplan['network']['ethernets'][intf]['gateway4'] = gw
 
         self._data_written = True
 
