@@ -231,34 +231,24 @@ def validate_time_restriction(tr: config, /) -> Optional[ValidationError]:
 # CONFIGURATION
 # ==============
 def configure_reputation(category: config) -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ip') as dnx:
-        ip_proxy_settings: ConfigChain = dnx.load_configuration()
-
-        ip_proxy_settings[f'reputation->builtin->{category.name}'] = category.direction
-
-        dnx.write_configuration(ip_proxy_settings.expanded_user_data)
+    with ConfigurationManager('profiles/profile_1', cfg_type='security/ip') as ip_proxy:
+        ip_proxy.config_data[f'reputation->builtin->{category.name}'] = category.direction
 
 def configure_geolocation(category: config, *, rtype: str = 'country') -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ip') as dnx:
-        ip_proxy_settings: ConfigChain = dnx.load_configuration()
-
+    with ConfigurationManager('profiles/profile_1', cfg_type='security/ip') as ip_proxy:
         # setting the individual country to user set value
         if (rtype == 'country'):
-            ip_proxy_settings[f'geolocation->{category.name.lower()}'] = category.direction
+            ip_proxy.config_data[f'geolocation->{category.name.lower()}'] = category.direction
 
         # iterating over all countries within specified continent and setting their
         # direction as the user set value # TODO: implement this
         elif (rtype == 'continent'):
             pass
 
-        dnx.write_configuration(ip_proxy_settings.expanded_user_data)
-
 def configure_time_restriction(tr: config, /, field) -> None:
-    with ConfigurationManager('global', cfg_type='security/ip') as dnx:
-        ip_proxy_settings: ConfigChain = dnx.load_configuration()
-
+    with ConfigurationManager('global', cfg_type='security/ip') as ip_proxy:
         if (field == 'enabled'):
-            ip_proxy_settings['time_restriction->enabled'] = tr.enabled
+            ip_proxy.config_data['time_restriction->enabled'] = tr.enabled
 
         else:
             tr.hour += 12 if tr.suffix == 'PM' else tr.hour
@@ -270,7 +260,5 @@ def configure_time_restriction(tr: config, /, field) -> None:
 
             res_length = int(float(res_length) * 3600)
 
-            ip_proxy_settings['time_restriction->start'] = start_time
-            ip_proxy_settings['time_restriction->length'] = res_length
-
-        dnx.write_configuration(ip_proxy_settings.expanded_user_data)
+            ip_proxy.config_data['time_restriction->start'] = start_time
+            ip_proxy.config_data['time_restriction->length'] = res_length

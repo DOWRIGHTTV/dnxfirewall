@@ -121,22 +121,19 @@ def user_role(role: str, /) -> Optional[ValidationError]:
 # ==============
 def configure_user_account(account: config, action: CFG) -> Optional[ValidationError]:
 
-    with ConfigurationManager('logins', file_path='/dnx_webui/data') as dnx:
-        accounts: ConfigChain = dnx.load_configuration()
+    with ConfigurationManager('logins', file_path='/dnx_webui/data') as dnx_users:
 
-        users = accounts.get_list('users')
+        users = dnx_users.config_data.get_list('users')
 
         if (action is CFG.DEL):
-            del accounts[f'users->{account.username}']
+            del dnx_users.config_data[f'users->{account.username}']
 
         elif (action is CFG.ADD and account.username not in users):
             hexpass = Authentication.hash_password(account.username, account.password)
 
-            accounts[f'users->{account.username}->password'] = hexpass
-            accounts[f'users->{account.username}->role'] = account.role
-            accounts[f'users->{account.username}->settings->theme'] = 'light'
+            dnx_users.config_data[f'users->{account.username}->password'] = hexpass
+            dnx_users.config_data[f'users->{account.username}->role'] = account.role
+            dnx_users.config_data[f'users->{account.username}->settings->theme'] = 'light'
 
         else:
             return ValidationError('User account already exists.')
-
-        dnx.write_configuration(accounts.expanded_user_data)

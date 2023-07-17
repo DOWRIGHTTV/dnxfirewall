@@ -87,13 +87,9 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache_T:
 
             Log.notice('top domains cache has been cleared.')
 
-        with ConfigurationManager('dns_server', ext='cache', cfg_type='global') as dnx:
-            cache_settings: ConfigChain = dnx.load_configuration()
-
-            cache_settings['clear->standard'] = clear_dns_cache
-            cache_settings['clear->top_domains'] = clear_top_domains
-
-            dnx.write_configuration(cache_settings.expanded_user_data)
+        with ConfigurationManager('dns_server', ext='cache', cfg_type='global') as dns:
+            dns.config_data['clear->standard'] = clear_dns_cache
+            dns.config_data['clear->top_domains'] = clear_top_domains
 
     @looper(THREE_MIN)
     # automated process to flush the cache if expire time has been reached.
@@ -120,12 +116,8 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache_T:
         ]
 
         # updating persistent file first then sending requests
-        with ConfigurationManager('dns_server', ext='cache', cfg_type='global') as dnx:
-            cache_storage: ConfigChain = dnx.load_configuration()
-
-            cache_storage['top_domains'] = top_domains
-
-            dnx.write_configuration(cache_storage.expanded_user_data)
+        with ConfigurationManager('dns_server', ext='cache', cfg_type='global') as dns:
+            dns.config_data['top_domains'] = top_domains
 
         # response will be identified by "None" for client address
         for domain in top_domains:
@@ -195,6 +187,12 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache_T:
         return _DNSCache
 
     return _DNSCache()
+
+
+# basic helpers
+def load_top_domains_filter() -> list[str]:
+    with open(f'{SIGNATURES_DIR}/domain_lists/valid_top.domains', 'r') as tdf:
+        return [s.strip() for s in tdf.readlines() if s.strip() and '#' not in s]
 
 
 # TYPE EXPORTS

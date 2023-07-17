@@ -227,68 +227,53 @@ def validate_reservation(res: config, /) -> Optional[ValidationError]:
 # CONFIGURATION
 # ==============
 def configure_dhcp_switches(dhcp_settings: config):
-    with ConfigurationManager('dhcp_server', cfg_type='global') as dnx:
-        server_settings: ConfigChain = dnx.load_configuration()
-
+    with ConfigurationManager('dhcp_server', cfg_type='global') as dhcp:
         interface = dhcp_settings.pop('interface')
 
         config_path = f'interfaces->builtin->{interface}'
 
-        server_settings[f'{config_path}->{dhcp_settings.cfg_key}'] = dhcp_settings.cfg_val
+        dhcp.config_data[f'{config_path}->{dhcp_settings.cfg_key}'] = dhcp_settings.cfg_val
 
-        dnx.write_configuration(server_settings.expanded_user_data)
 def configure_dhcp_settings(dhcp_settings: config):
-    with ConfigurationManager('dhcp_server', cfg_type='global') as dnx:
-        server_settings: ConfigChain = dnx.load_configuration()
-
+    with ConfigurationManager('dhcp_server', cfg_type='global') as dhcp:
         interface = dhcp_settings.pop('interface')
 
         config_path = f'interfaces->builtin->{interface}'
         # ...this is excessive
-        configured_options: dict = server_settings.get_dict(f'{config_path}->options')
+        configured_options: dict = dhcp.config_data.get_dict(f'{config_path}->options')
 
         dhcp_settings.lease_range[0] += configured_options['3'][1]  # ip delta
         dhcp_settings.lease_range[1] += configured_options['3'][1]  # ip delta
 
-        server_settings[f'{config_path}->lease_range'] = dhcp_settings.lease_range
+        dhcp.config_data[f'{config_path}->lease_range'] = dhcp_settings.lease_range
 
-        dnx.write_configuration(server_settings.expanded_user_data)
-
-def configure_reservation(dhcp: config, action: CFG) -> Optional[ValidationError]:
-    with ConfigurationManager('dhcp_server', cfg_type='global') as dnx:
-        dhcp_server_settings: ConfigChain = dnx.load_configuration()
-
+def configure_reservation(dhcp_settings: config, action: CFG) -> Optional[ValidationError]:
+    with ConfigurationManager('dhcp_server', cfg_type='global') as dhcp:
         if (action is CFG.ADD):
             # preventing reservations being created for ips with an active dhcp lease
             dhcp_leases = load_data('dhcp_server.lease', cfg_type='system/global')
-            if (dhcp.ip in dhcp_leases):
-                return ValidationError(f'There is an active lease for {dhcp.ip}. Clear the lease and try again.')
+            if (dhcp_settings.ip in dhcp_leases):
+                return ValidationError(f'There is an active lease for {dhcp_settings.ip}. Clear the lease and try again.')
 
-            configured_reservations = dhcp_server_settings.get_values('reservations')
+            configured_reservations = dhcp.config_data.get_values('reservations')
             reserved_ips = {host['ip_address'] for host in configured_reservations}
 
             # ensuring mac address and ip address are unique
-            if (dhcp.mac in configured_reservations or dhcp.ip in reserved_ips):
-                return ValidationError(f'{dhcp.ip} is already reserved.')
+            if (dhcp_settings.mac in configured_reservations or dhcp_settings.ip in reserved_ips):
+                return ValidationError(f'{dhcp_settings.ip} is already reserved.')
 
-            host_path = f'reservations->{dhcp.mac.replace(":", "")}'
+            host_path = f'reservations->{dhcp_settings.mac.replace(":", "")}'
 
-            dhcp_server_settings[f'{host_path}->zone'] = dhcp.zone
-            dhcp_server_settings[f'{host_path}->ip_address'] = dhcp.ip
-            dhcp_server_settings[f'{host_path}->description'] = dhcp.description
+            dhcp.config_data[f'{host_path}->zone'] = dhcp_settings.zone
+            dhcp.config_data[f'{host_path}->ip_address'] = dhcp_settings.ip
+            dhcp.config_data[f'{host_path}->description'] = dhcp_settings.description
 
         elif (action is CFG.DEL):
-            del dhcp_server_settings[f'reservations->{dhcp.mac.replace(":", "")}']
-
-        dnx.write_configuration(dhcp_server_settings.expanded_user_data)
+            del dhcp.config_data[f'reservations->{dhcp_settings.mac.replace(":", "")}']
 
 def remove_dhcp_lease(ip_addr: str) -> Optional[ValidationError]:
-    with ConfigurationManager('dhcp_server', cfg_type='global') as dnx:
-        dhcp_leases: ConfigChain = dnx.load_configuration()
-
+    with ConfigurationManager('dhcp_server', cfg_type='global') as dhcp:
         try:
-            del dhcp_leases[f'leases->{ip_addr}']
+            del dhcp.config_data[f'leases->{ip_addr}']
         except KeyError:
             return ValidationError(INVALID_FORM)
-
-        dnx.write_configuration(dhcp_leases.expanded_user_data)

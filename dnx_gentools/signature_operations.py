@@ -7,7 +7,7 @@ from struct import Struct
 from collections import defaultdict
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import HOME_DIR, MSB, LSB, UINT32_MAX, RFC1918
+from dnx_gentools.def_constants import SIGNATURES_DIR, MSB, LSB, UINT32_MAX, RFC1918
 from dnx_gentools.def_enums import GEO, REP, DNS_CAT
 from dnx_gentools.file_operations import load_configuration
 
@@ -19,6 +19,7 @@ if (TYPE_CHECKING):
 
 __all__ = (
     'generate_domain', 'generate_reputation', 'generate_geolocation',
+    'load_keywords', 'load_tlds',
 )
 
 # cidr_to_host_count: dict[str, int] = {f'{i}': 2**x for i, x in enumerate(reversed(range(31)), 2)}
@@ -40,7 +41,7 @@ def _combine_domain(log: LogHandler_T) -> list[str]:
     # iterating over the list of categories + DoH to load signature sets.
     for category in domain_categories:
         try:
-            file = open(f'{HOME_DIR}/dnx_profile/signatures/domain_lists/{category}.domains')
+            file = open(f'{SIGNATURES_DIR}/domain_lists/{category}.domains')
         except FileNotFoundError:
             log.alert(f'[missing] signature file: {category} domains.')
         else:
@@ -106,7 +107,7 @@ def _combine_reputation(log: LogHandler_T) -> tuple[list[str], dict[str, int]]:
     ip_rep_signatures = []
     for category in reputation_categories:
         try:
-            with open(f'{HOME_DIR}/dnx_profile/signatures/ip_lists/{category}.ips', 'r') as file:
+            with open(f'{SIGNATURES_DIR}/ip_lists/{category}.ips', 'r') as file:
                 ip_rep_signatures.extend([x.lower() for x in file.read().splitlines() if x and '#' not in x])
         except FileNotFoundError:
             log.alert(f'[reputation] signature file missing: {category}')
@@ -158,7 +159,7 @@ def _combine_geolocation(log: LogHandler_T) -> list[str]:
     # # signature folder are good to load in.
     # for country in geo_settings:
     #     try:
-    #         with open(f'{HOME_DIR}/dnx_profile/signatures/geo_lists/{country}.geo', 'r') as file:
+    #         with open(f'{SIGNATURES_DIR}/geo_lists/{country}.geo', 'r') as file:
     #             ip_geo_signatures.extend([x for x in file.read().splitlines() if x and '#' not in x])
     #     except FileNotFoundError:
     #         log.alert(f'[geolocation] signature file missing: {country}')
@@ -168,7 +169,7 @@ def _combine_geolocation(log: LogHandler_T) -> list[str]:
     # filtering out ranges with an undefined country
     # TODO: make sure rfc1918 is being added to the list
     try:
-        with open(f'{HOME_DIR}/dnx_profile/signatures/geo_lists/collection.geo', 'r') as collection:
+        with open(f'{SIGNATURES_DIR}/geo_lists/collection.geo', 'r') as collection:
             return [x for x in collection.read().splitlines() if not x.endswith('-')]
     except FileNotFoundError:
         log.alert('[geolocation] signature file missing.')
@@ -274,3 +275,36 @@ def _merge_geo_ranges(ls: list, /) -> list[list]:
         merged_containers.append(merged_item)
 
     return merged_containers
+
+def load_tlds() -> Generator[tuple[str, int]]:
+    proxy_config: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
+
+    for tld, setting in proxy_config.get_items('tld'):
+        yield (tld.strip('.'), setting)
+
+# TODO: this needs to be reworked to support the new keyword matching system.
+def load_keywords(log: LogHandler_T) -> list[tuple[str, DNS_CAT]]:
+    '''returns keyword set for enabled domain categories.
+
+    malformed keywords will be omitted.
+    '''
+    keywords: list[tuple[str, DNS_CAT]] = []
+    try:
+        with open(f'{SIGNATURES_DIR}/domain_lists/domain.keywords', 'r') as blocked_keywords:
+            all_keywords = [
+                x.strip() for x in blocked_keywords.readlines() if x.strip() and '#' not in x
+            ]
+    except FileNotFoundError:
+        log.critical('domain keywords file not found.')
+
+    else:
+        for keyword_info in all_keywords:
+            try:
+                keyword, category = keyword_info.split(maxsplit=1)
+            except:
+                continue
+
+            else:
+                keywords.append((keyword, DNS_CAT[category]))
+
+    return keywords

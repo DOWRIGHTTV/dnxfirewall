@@ -169,50 +169,35 @@ def validate_fallback_settings(settings: config) -> Optional[ValidationError]:
 # ==============
 # CONFIGURATION
 # ==============
+# TODO: ConfigurationManager kwargs seems wrong on these.
 def set_dns_servers(server_info: config) -> None:
-    with ConfigurationManager('dns_server') as dnx:
-        server_settings: ConfigChain = dnx.load_configuration()
+    with ConfigurationManager('dns_server') as dns:
+        dns.config_data['resolvers->primary->name'] = server_info.primary[0]
+        dns.config_data['resolvers->primary->ip_address'] = server_info.primary[1]
 
-        server_settings['resolvers->primary->name'] = server_info.primary[0]
-        server_settings['resolvers->primary->ip_address'] = server_info.primary[1]
-
-        server_settings['resolvers->secondary->name'] = server_info.secondary[0]
-        server_settings['resolvers->secondary->ip_address'] = server_info.secondary[1]
-
-        dnx.write_configuration(server_settings.expanded_user_data)
+        dns.config_data['resolvers->secondary->name'] = server_info.secondary[0]
+        dns.config_data['resolvers->secondary->ip_address'] = server_info.secondary[1]
 
 def update_dns_record(dns_record: config):
-    with ConfigurationManager('dns_server') as dnx:
-        dns_records: ConfigChain = dnx.load_configuration()
-
+    with ConfigurationManager('dns_server') as dns:
         if (dns_record.action is CFG.ADD):
-            dns_records[f'dns_server->records->{dns_record.name}'] = dns_record.ip
+            dns.config_data[f'dns_server->records->{dns_record.name}'] = dns_record.ip
 
         elif (dns_record.action is CFG.DEL):
-            del dns_records[f'dns_server->records->{dns_record.name}']
-
-        dnx.write_configuration(dns_records.expanded_user_data)
+            del dns.config_data[f'dns_server->records->{dns_record.name}']
 
 def configure_protocol_options(settings: config, *, field: str) -> None:
-    with ConfigurationManager('dns_server') as dnx:
-        dns_server_settings: ConfigChain = dnx.load_configuration()
-
+    with ConfigurationManager('dns_server') as dns:
         if (field == 'dot'):
-            dns_server_settings['tls->enabled'] = settings.enabled
+            dns.config_data['tls->enabled'] = settings.enabled
 
             if (not settings.enabled):
-                dns_server_settings['tls->fallback'] = 0
+                dns.config_data['tls->fallback'] = 0
 
         elif (field == 'fallback'):
-            dns_server_settings['tls->fallback'] = settings.fallback
-
-        dnx.write_configuration(dns_server_settings.expanded_user_data)
+            dns.config_data['tls->fallback'] = settings.fallback
 
 def set_dns_cache_clear_flag(clear_cache):
-    with ConfigurationManager('dns_server', ext='cache') as dnx:
-        dns_server_settings: ConfigChain = dnx.load_configuration()
-
-        dns_server_settings['clear->standard'] = clear_cache.standard
-        dns_server_settings['clear->top_domains'] = clear_cache.top_domains
-
-        dnx.write_configuration(dns_server_settings.expanded_user_data)
+    with ConfigurationManager('dns_server', ext='cache') as dns:
+        dns.config_data['clear->standard'] = clear_cache.standard
+        dns.config_data['clear->top_domains'] = clear_cache.top_domains

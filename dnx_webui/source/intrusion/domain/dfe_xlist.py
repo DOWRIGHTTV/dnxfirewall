@@ -139,19 +139,15 @@ def validate_pre_proxy_exc(settings: config) -> Optional[ValidationError]:
 def configure_proxy_domain(settings: config, *, action: CFG):
     input_time = fast_time()
 
-    with ConfigurationManager(settings.ruleset) as dnx:
-        domain_list: ConfigChain = dnx.load_configuration()
-
+    with ConfigurationManager(settings.ruleset) as dns_proxy:
         if (action is CFG.ADD):
 
-            domain_list[f'time_based->{settings.domain}->time'] = input_time
-            domain_list[f'time_based->{settings.domain}->rule_length'] = settings.timer
-            domain_list[f'time_based->{settings.domain}->expire'] = input_time + settings.timer * 60
+            dns_proxy.config_data[f'time_based->{settings.domain}->time'] = input_time
+            dns_proxy.config_data[f'time_based->{settings.domain}->rule_length'] = settings.timer
+            dns_proxy.config_data[f'time_based->{settings.domain}->expire'] = input_time + settings.timer * 60
 
         elif (action is CFG.DEL):
-            del domain_list[f'time_based->{settings.domain}']
-
-        dnx.write_configuration(domain_list.expanded_user_data)
+            del dns_proxy.config_data[f'time_based->{settings.domain}']
 
 def configure_pre_proxy_exc(exc: config, *, action: CFG):
     with ConfigurationManager(exc.ruleset) as dnx:

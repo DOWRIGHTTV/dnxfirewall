@@ -13,6 +13,7 @@ from dnx_gentools.def_constants import *
 from dnx_gentools.def_namedtuples import DNS_SERVERS, DNS_SIGNATURES, DNS_WHITELIST, DNS_BLACKLIST, Item
 from dnx_gentools.def_enums import PROTO, CFG, DNS_CAT
 from dnx_gentools.file_operations import *
+from dnx_gentools.signature_operations import load_tlds, load_keywords
 from dnx_gentools.standard_tools import looper, ConfigurationMixinBase
 
 from dnx_iptools.cprotocol_tools import iptoi
@@ -117,121 +118,125 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
         self._initialize.done()
 
-    @cfg_write_poller
-    # handles updating user defined signatures in memory/propagated changes to disk.
-    def _get_list(self, lname: str, cfg_file: str, last_modified_time: int) -> float:
-        loaded_list: ConfigChain
-
-        memory_list: dict = getattr(self.__class__, lname).dns
-
-        timeout_detected: bool = self._check_for_timeout(memory_list)
-        # if a rule timeout is detected for an entry in memory. we will update the config file
-        # to align with active rules, then we will remove the rules from memory.
-        if (timeout_detected):
-            loaded_list = self._update_list_file(cfg_file)
-
-            self._modify_memory(memory_list, loaded_list, action=CFG.DEL)
-
-        # if the file has been modified, the list will be referenced to make and in place changes the in-memory copy
-        # and the new modified time will be returned.
-        # if not modified, the last modified time is returned and not changes are made.
-        # NOTE: files need extensions due to changes to file operations. these functions will be reworked soon anyway.
-        try:
-            modified_time = os.stat(f'{HOME_DIR}/dnx_profile/data/usr/global/{cfg_file}.cfg').st_mtime
-        except FileNotFoundError:
-            modified_time = os.stat(f'{HOME_DIR}/dnx_profile/data/system/global/{cfg_file}.cfg').st_mtime
-
-        if (modified_time == last_modified_time):
-            return last_modified_time
-
-        loaded_list = load_configuration(cfg_file)
-
-        self._modify_memory(memory_list, loaded_list, action=CFG.ADD)
-
-        # ip whitelist specific. will do an inplace swap of all rules needing to be added or removed in memory.
-        if (lname == 'whitelist'):
-            self._modify_ip_whitelist(cfg_file, self.__class__.whitelist.ip)
-
-        self._initialize.done()
-
-        return modified_time
-
-    @staticmethod
-    def _modify_memory(memory_list: dict, loaded_list: ConfigChain, *, action: CFG) -> None:
-        '''removing/adding signature/rule from memory as needed.'''
-        if (action is CFG.ADD):
-
-            # iterating over rules/signatures pulled from file
-            for rule, settings in loaded_list.get_items('time_based'):
-                trie_key = strtobit(rule)
-
-                # adding rule/signature to memory if not present
-                if (trie_key not in memory_list):
-                    settings['key'] = rule
-                    memory_list[trie_key] = settings
-
-        if (action is CFG.DEL):
-
-            # iterating over rules/signature in memory
-            for rule, settings in memory_list.copy().items():
-
-                trie_key = strtobit(rule)
-
-                # if the rule is not present in the config file, it will be removed from memory
-                if (settings['key'] not in loaded_list):
-                    memory_list.pop(trie_key, None)
-
-    @staticmethod
-    def _modify_ip_whitelist(cfg_file: str, memory_ip_list: dict) -> None:
-        loaded_ip_list: ConfigChain = load_configuration(cfg_file)
-
-        # iterating over ip rules in memory.
-        for ip in memory_ip_list.copy():
-
-            # if it is not in the config file it will be removed.
-            if (f'{ip}' not in loaded_ip_list):
-                memory_ip_list.pop(ip, None)
-
-        # iterating over ip rules in configuration file
-        for ip, settings in loaded_ip_list.get_items('ip_bypass'):
-
-            # FIXME: this needs to be converted to int on the backend
-            # convert to an ip address object which is the type stored as the key
-            ip = IPv4Address(ip)
-
-            # if it is not in memory and the rule type is "global" it will be added
-            if (ip not in memory_ip_list and settings['type'] == 'global'):
-                memory_ip_list[ip] = True
-
-    @staticmethod
-    # will return True if timeout is detected otherwise return False.
-    def _check_for_timeout(lname_dns: dict) -> bool:
-        '''check the passed in list file by name for any time-based rules that have expired.
-        '''
-        now = fast_time()
-        for info in lname_dns.values():
-
-            if (now >= info['expire']):
-                return True
-
-        return False
-
-    @staticmethod
-    # updating the file with necessary changes.
-    def _update_list_file(cfg_file: str) -> ConfigChain:
-        now: int = fast_time()
-        with ConfigurationManager(cfg_file) as dnx:
-            lists: ConfigChain = dnx.load_configuration()
-
-            loaded_list: list[Item] = lists.get_items('time_based')
-            for domain, info in loaded_list:
-
-                if (now >= info['expire']):
-                    del lists[f'time_based->{domain}']
-
-            dnx.write_configuration(lists.expanded_user_data)
-
-            return lists
+    # NOTE
+    # TODO: list file poller can be a queue that gets notified by the proxy inspection if it sees a rule that is timed
+    #   out for given profile. this will allow for a simpler (lazy) way for the proxy to update the list files and can
+    #   keep the user remove/add as a separate function that only requires the "cfg_read_poller" decorator.
+    # @cfg_write_poller
+    # # handles updating user defined signatures in memory/propagated changes to disk.
+    # def _get_list(self, lname: str, cfg_file: str, last_modified_time: int) -> float:
+    #     loaded_list: ConfigChain
+    #
+    #     memory_list: dict = getattr(self.__class__, lname).dns
+    #
+    #     timeout_detected: bool = self._check_for_timeout(memory_list)
+    #     # if a rule timeout is detected for an entry in memory. we will update the config file
+    #     # to align with active rules, then we will remove the rules from memory.
+    #     if (timeout_detected):
+    #         loaded_list = self._update_list_file(cfg_file)
+    #
+    #         self._modify_memory(memory_list, loaded_list, action=CFG.DEL)
+    #
+    #     # if the file has been modified, the list will be referenced to make and in place changes the in-memory copy
+    #     # and the new modified time will be returned.
+    #     # if not modified, the last modified time is returned and not changes are made.
+    #     # NOTE: files need extensions due to changes to file operations. these functions will be reworked soon anyway.
+    #     try:
+    #         modified_time = os.stat(f'{HOME_DIR}/dnx_profile/data/usr/global/{cfg_file}.cfg').st_mtime
+    #     except FileNotFoundError:
+    #         modified_time = os.stat(f'{HOME_DIR}/dnx_profile/data/system/global/{cfg_file}.cfg').st_mtime
+    #
+    #     if (modified_time == last_modified_time):
+    #         return last_modified_time
+    #
+    #     loaded_list = load_configuration(cfg_file)
+    #
+    #     self._modify_memory(memory_list, loaded_list, action=CFG.ADD)
+    #
+    #     # ip whitelist specific. will do an inplace swap of all rules needing to be added or removed in memory.
+    #     if (lname == 'whitelist'):
+    #         self._modify_ip_whitelist(cfg_file, self.__class__.whitelist.ip)
+    #
+    #     self._initialize.done()
+    #
+    #     return modified_time
+    #
+    # @staticmethod
+    # def _modify_memory(memory_list: dict, loaded_list: ConfigChain, *, action: CFG) -> None:
+    #     '''removing/adding signature/rule from memory as needed.'''
+    #     if (action is CFG.ADD):
+    #
+    #         # iterating over rules/signatures pulled from file
+    #         for rule, settings in loaded_list.get_items('time_based'):
+    #             trie_key = strtobit(rule)
+    #
+    #             # adding rule/signature to memory if not present
+    #             if (trie_key not in memory_list):
+    #                 settings['key'] = rule
+    #                 memory_list[trie_key] = settings
+    #
+    #     if (action is CFG.DEL):
+    #
+    #         # iterating over rules/signature in memory
+    #         for rule, settings in memory_list.copy().items():
+    #
+    #             trie_key = strtobit(rule)
+    #
+    #             # if the rule is not present in the config file, it will be removed from memory
+    #             if (settings['key'] not in loaded_list):
+    #                 memory_list.pop(trie_key, None)
+    #
+    # @staticmethod
+    # def _modify_ip_whitelist(cfg_file: str, memory_ip_list: dict) -> None:
+    #     loaded_ip_list: ConfigChain = load_configuration(cfg_file)
+    #
+    #     # iterating over ip rules in memory.
+    #     for ip in memory_ip_list.copy():
+    #
+    #         # if it is not in the config file it will be removed.
+    #         if (f'{ip}' not in loaded_ip_list):
+    #             memory_ip_list.pop(ip, None)
+    #
+    #     # iterating over ip rules in configuration file
+    #     for ip, settings in loaded_ip_list.get_items('ip_bypass'):
+    #
+    #         # FIXME: this needs to be converted to int on the backend
+    #         # convert to an ip address object which is the type stored as the key
+    #         ip = IPv4Address(ip)
+    #
+    #         # if it is not in memory and the rule type is "global" it will be added
+    #         if (ip not in memory_ip_list and settings['type'] == 'global'):
+    #             memory_ip_list[ip] = True
+    #
+    # @staticmethod
+    # # will return True if timeout is detected otherwise return False.
+    # def _check_for_timeout(lname_dns: dict) -> bool:
+    #     '''check the passed in list file by name for any time-based rules that have expired.
+    #     '''
+    #     now = fast_time()
+    #     for info in lname_dns.values():
+    #
+    #         if (now >= info['expire']):
+    #             return True
+    #
+    #     return False
+    #
+    # @staticmethod
+    # # updating the file with necessary changes.
+    # def _update_list_file(cfg_file: str) -> ConfigChain:
+    #     now: int = fast_time()
+    #     with ConfigurationManager(cfg_file) as dnx:
+    #         lists: ConfigChain = dnx.load_configuration()
+    #
+    #         loaded_list: list[Item] = lists.get_items('time_based')
+    #         for domain, info in loaded_list:
+    #
+    #             if (now >= info['expire']):
+    #                 del lists[f'time_based->{domain}']
+    #
+    #         dnx.write_configuration(lists.expanded_user_data)
+    #
+    #         return lists
 
 
 class ServerConfiguration(ConfigurationMixinBase):

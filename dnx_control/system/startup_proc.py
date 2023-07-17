@@ -56,24 +56,16 @@ def run():
 
 def reset_flask_key():
     with ConfigurationManager('system', cfg_type='global') as dnx:
-        flask_settings = dnx.load_configuration()
-
-        flask_settings['flask->key'] = token_urlsafe(32)
-
-        dnx.write_configuration(flask_settings.expanded_user_data)
+        dnx.config_data['flask->key'] = token_urlsafe(32)
 
 def set_default_mac_flag():
     with ConfigurationManager('system', cfg_type='global') as dnx:
-        dnx_settings = dnx.load_configuration()
+        if (not dnx.config_data['interfaces->builtin->wan->mac_set']):
 
-        if (not dnx_settings['interfaces->builtin->wan->mac_set']):
+            wan_intf = dnx.config_data['interfaces->builtin->wan->id']
 
-            wan_intf = dnx_settings['interfaces->builtin->wan->id']
-
-            dnx_settings['interfaces->builtin->wan->default_mac'] = interface.get_mac_string(interface=wan_intf)
-            dnx_settings['interfaces->builtin->wan->mac_set'] = True
-
-        dnx.write_configuration(dnx_settings.expanded_user_data)
+            dnx.config_data['interfaces->builtin->wan->default_mac'] = interface.get_mac_string(interface=wan_intf)
+            dnx.config_data['interfaces->builtin->wan->mac_set'] = True
 
 # creating all DB tables if not already done
 def create_database_tables():

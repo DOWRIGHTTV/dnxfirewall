@@ -50,44 +50,41 @@ class WebPage(StandardWebPage):
 # CONFIGURATION
 # ==============
 # TODO: TEST THIS
-def set_wan_interface(intf_type: INTF = INTF.DHCP):
-    '''Change wan interface state between static or dhcp.
-
-    1. Configure interface type
-    2. Create netplan config from template
-    3. Move file to /etc/netplan
-
-    This does not configure an ip address of the interface when setting to static. see: set_wan_ip()
-    '''
-    # changing dhcp status of wan interface in config file.
-    with ConfigurationManager('system') as dnx:
-        dnx_settings: ConfigChain = dnx.load_configuration()
-
-        wan_id: str = dnx_settings['interfaces->builtin->wan->id']
-
-        # template used to generate yaml file with user configured fields
-        intf_template: dict = load_data('interfaces.cfg', filepath='dnx_profile/interfaces')
-
-        # for static dhcp4 and dhcp_overrides keys are removed and creating an empty list for the addresses.
-        # NOTE: the ip configuration will unlock after the switch and can then be updated
-        if (intf_type is INTF.STATIC):
-            wan_intf: dict = intf_template['network']['ethernets'][wan_id]
-
-            wan_intf.pop('dhcp4')
-            wan_intf.pop('dhcp4-overrides')
-
-            # initializing static, but not configuring an ip address
-            wan_intf['addresses'] = '[]'
-
-        _configure_netplan(intf_template)
-
-        # TODO: writing state change after file has been replaced because any errors prior to this will prevent
-        #  configuration from taking effect.
-        #  the trade off is that the process could replace the file, but not set the wan state (configuration mismatch)
-        dnx_settings['interfaces->builtin->wan->state'] = intf_type
-        dnx.write_configuration(dnx_settings.expanded_user_data)
-
-        system_action(module='webui', command='netplan apply', args='')
+# def set_wan_interface(intf_type: INTF = INTF.DHCP):
+#     '''Change wan interface state between static or dhcp.
+#
+#     1. Configure interface type
+#     2. Create netplan config from template
+#     3. Move file to /etc/netplan
+#
+#     This does not configure an ip address of the interface when setting to static. see: set_wan_ip()
+#     '''
+#     # changing dhcp status of wan interface in config file.
+#     with ConfigurationManager('system') as dnx:
+#         wan_id: str = dnx.config_data['interfaces->builtin->wan->id']
+#
+#         # template used to generate yaml file with user configured fields
+#         intf_template: dict = load_data('interfaces.cfg', filepath='dnx_profile/interfaces')
+#
+#         # for static dhcp4 and dhcp_overrides keys are removed and creating an empty list for the addresses.
+#         # NOTE: the ip configuration will unlock after the switch and can then be updated
+#         if (intf_type is INTF.STATIC):
+#             wan_intf: dict = intf_template['network']['ethernets'][wan_id]
+#
+#             wan_intf.pop('dhcp4')
+#             wan_intf.pop('dhcp4-overrides')
+#
+#             # initializing static, but not configuring an ip address
+#             wan_intf['addresses'] = '[]'
+#
+#         _configure_netplan(intf_template)
+#
+#         # TODO: writing state change after file has been replaced because any errors prior to this will prevent
+#         #  configuration from taking effect.
+#         #  the trade off is that the process could replace the file, but not set the wan state (configuration mismatch)
+#         dnx.config_data['interfaces->builtin->wan->state'] = intf_type
+#
+#         system_action(module='webui', command='netplan apply', args='')
 
 def get_interfaces_configuration() -> dict:
     '''loading installed system interfaces, then returning dict with "builtin" and "extended" separated.

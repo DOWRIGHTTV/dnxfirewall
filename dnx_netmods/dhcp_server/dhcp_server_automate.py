@@ -228,21 +228,17 @@ class Leases(dict):
         return set(self.reservations.values())
 
     @dnx_queue(Log, name='Leases')
+    # TODO: fix this to work with updated config manager
     # store lease table changes to disk. if the record is not present, it indicates the record needs to be removed.
     def _storage_queue(self, dhcp_lease: RECORD_CONTAINER):
-        with ConfigurationManager('dhcp_server', ext='lease', cfg_type='global') as dnx:
-            dhcp_settings: ConfigChain = dnx.load_configuration()
-
+        with ConfigurationManager('dhcp_server', ext='lease', cfg_type='global') as dhcp:
             # converting ip address ints to strings since they will be json keys
 
-            dhcp_usr_settings = dhcp_settings.expanded_user_data
             if (dhcp_lease.record is NULL_LEASE):
-                dhcp_usr_settings.pop(f'{dhcp_lease.ip}', None)
+                dhcp.config_data.pop(f'{dhcp_lease.ip}', None)
 
             else:
-                dhcp_usr_settings[f'{dhcp_lease.ip}'] = dhcp_lease.record
-
-            dnx.write_configuration(dhcp_usr_settings)
+                dhcp.config_data[f'{dhcp_lease.ip}'] = dhcp_lease.record
 
     @looper(ONE_MIN)
     # TODO: TEST RESERVATIONS GET CLEANED UP

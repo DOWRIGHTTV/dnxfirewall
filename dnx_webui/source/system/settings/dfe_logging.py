@@ -105,22 +105,14 @@ def validate_time_offset(settings: config, /) -> Optional[ValidationError]:
 # CONFIGURATION
 # ==============
 def configure_logging(log: config) -> None:
-    with ConfigurationManager('logging_client', cfg_type='global') as dnx:
-        log_settings: ConfigChain = dnx.load_configuration()
-
-        log_settings['logging->length'] = log.length
-        log_settings['logging->level']  = log.level
-
-        dnx.write_configuration(log_settings.expanded_user_data)
+    with ConfigurationManager('logging_client', cfg_type='global') as logger:
+        logger.config_data['logging->length'] = log.length
+        logger.config_data['logging->level']  = log.level
 
 def configure_sys_time_offset(offset: config) -> None:
-    with ConfigurationManager('logging_client', cfg_type='global') as dnx:
-        offset_settings: ConfigChain = dnx.load_configuration()
-
+    with ConfigurationManager('logging_client', cfg_type='global') as logger:
         if (offset.time == 0):
             offset.direction = '+'
 
-        offset_settings['time_offset->direction'] = offset.direction
-        offset_settings['time_offset->amount'] = offset.time
-
-        dnx.write_configuration(offset_settings.expanded_user_data)
+        logger.config_data['time_offset->direction'] = offset.direction
+        logger.config_data['time_offset->amount'] = offset.time

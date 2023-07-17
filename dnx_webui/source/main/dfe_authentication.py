@@ -188,15 +188,13 @@ def update_session_tracker(name: str, role: Optional[str] = None, remote_addr: O
         raise ValueError('remote_addr must be specified if action is set to add.')
 
     with ConfigurationManager('session_tracker', file_path='dnx_webui/data') as session_tracker:
-        persistent_tracker: ConfigChain = session_tracker.load_configuration()
-
         user_path = f'active_users->{name}'
         if (action is CFG.ADD):
 
-            persistent_tracker[f'{user_path}->role'] = role
-            persistent_tracker[f'{user_path}->remote_addr'] = remote_addr
-            persistent_tracker[f'{user_path}->logged_in'] = fast_time()
-            persistent_tracker[f'{user_path}->last_seen'] = fast_time()
+            session_tracker.config_data[f'{user_path}->role'] = role
+            session_tracker.config_data[f'{user_path}->remote_addr'] = remote_addr
+            session_tracker.config_data[f'{user_path}->logged_in'] = fast_time()
+            session_tracker.config_data[f'{user_path}->last_seen'] = fast_time()
 
             # adding user to flask session data structure
             session['user'] = name
@@ -204,11 +202,9 @@ def update_session_tracker(name: str, role: Optional[str] = None, remote_addr: O
         # NOTE: user must be removed from Flask session separately
         elif (action is CFG.DEL):
             try:
-                del persistent_tracker[f'active_users->{name}']
+                del session_tracker.config_data[f'active_users->{name}']
             except KeyError:
                 pass
-
-        session_tracker.write_configuration(persistent_tracker.expanded_user_data)
 
 
 def authenticated_session() -> Optional[str]:

@@ -79,8 +79,12 @@ USER, GROUP = (__usr.pw_name, __usr.pw_name)
 # USER, GROUP = ('dnx', 'dnx') if any(['dnx' == u.pw_name for u in _pwd.getpwall()]) else ('free', 'free')
 ROOT: bool = not __usr.pw_uid
 
+# full paths
 HOME_DIR:   str = f'{__usr.pw_dir}/dnxfirewall'
 # HOME_DIR: str = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-2]))
+SIGNATURES_DIR: str = f'{HOME_DIR}/dnx_profile/data/signatures'
+
+# relative paths
 SYSTEM_DIR: str = 'dnx_profile/data/system'
 USER_DIR:   str = 'dnx_profile/data/usr'
 

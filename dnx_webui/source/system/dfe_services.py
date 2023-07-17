@@ -117,8 +117,4 @@ def validate_management_access(fields: config) -> Optional[ValidationError]:
 # ==============
 def configure_management_access(fields: config):
     with ConfigurationManager('system', cfg_type='global') as dnx:
-        mgmt_settings = dnx.load_configuration()
-
-        mgmt_settings[f'mgmt_access->{fields.name}->{fields.service}'] = fields.action - 1 # enum offset
-
-        dnx.write_configuration(mgmt_settings.expanded_user_data)
+        dnx.config_data[f'mgmt_access->{fields.name}->{fields.service}'] = fields.action - 1  # enum offset

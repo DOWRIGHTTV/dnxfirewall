@@ -195,25 +195,21 @@ def validate_snat_rule(rule: config, /, action: CFG) -> Optional[ValidationError
 # CONFIGURATION
 # ==============
 def configure_open_wan_protocol(nat: config, *, action: CFG) -> None:
-    with ConfigurationManager('global', cfg_type='security/ids_ips') as dnx:
-        protocol_settings: ConfigChain = dnx.load_configuration()
-
+    with ConfigurationManager('global', cfg_type='security/ids_ips') as ids_ips:
         if (action is CFG.ADD):
 
             # if dst port is specified, protocol is tcp/udp
             if (nat.dst_port):
-                protocol_settings[f'open_protocols->{nat.protocol}->{nat.dst_port}'] = nat.host_port
+                ids_ips.config_data[f'open_protocols->{nat.protocol}->{nat.dst_port}'] = nat.host_port
 
             # will only match icmp, which is configured as a boolean value
             else:
-                protocol_settings[f'open_protocols->{nat.protocol}'] = True
+                ids_ips.config_data[f'open_protocols->{nat.protocol}'] = True
 
         elif (action is CFG.DEL):
 
             if (nat.protocol == 'icmp'):
-                protocol_settings['open_protocols->icmp'] = False
+                ids_ips.config_data['open_protocols->icmp'] = False
 
             else:
-                del protocol_settings[f'open_protocols->{nat.protocol}->{nat.port}']
-
-        dnx.write_configuration(protocol_settings.expanded_user_data)
+                del ids_ips.config_data[f'open_protocols->{nat.protocol}->{nat.port}']

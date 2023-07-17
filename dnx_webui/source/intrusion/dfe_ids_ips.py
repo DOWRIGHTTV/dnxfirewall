@@ -221,69 +221,45 @@ def validate_passive_block_length(settings: config, /) -> Optional[ValidationErr
 # ==============
 # CONFIGURATION
 # ==============
-def configure_ddos(ddos: CFG) -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
-        ips_settings: ConfigChain = dnx.load_configuration()
-
-        ips_settings['ddos->enabled'] = ddos.enabled
-
-        dnx.write_configuration(ips_settings.expanded_user_data)
+def configure_ddos(ddos: config) -> None:
+    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as ids_ips:
+        ids_ips.config_data['ddos->enabled'] = ddos.enabled
 
 def configure_ddos_limits(ddos_limits: config) -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
-        ips_settings: ConfigChain = dnx.load_configuration()
-
+    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as ids_ips:
         for protocol, limit in ddos_limits.items():
-            ips_settings[f'ddos->limits->source->{protocol}'] = limit
-
-        dnx.write_configuration(ips_settings.expanded_user_data)
+            ids_ips.config_data[f'ddos->limits->source->{protocol}'] = limit
 
 def configure_portscan(portscan: config, *, field: str) -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
-        ips_settings: ConfigChain = dnx.load_configuration()
-
+    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as ids_ips:
         if (field == 'enabled'):
-            ips_settings['port_scan->enabled'] = portscan.enabled
+            ids_ips.config_data['port_scan->enabled'] = portscan.enabled
 
             if (not portscan.enabled):
-                ips_settings['port_scan->reject'] = 0
+                ids_ips.config_data['port_scan->reject'] = 0
 
         elif (field == 'reject'):
-            ips_settings['port_scan->reject'] = portscan.reject
-
-        dnx.write_configuration(ips_settings.expanded_user_data)
+            ids_ips.config_data['port_scan->reject'] = portscan.reject
 
 def configure_general_settings(settings: config, /, field) -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
-        ips_settings: ConfigChain = dnx.load_configuration()
-
+    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as ids_ips:
         if (field == 'pb_length'):
-            ips_settings['passive_block_ttl'] = settings.pb_length
+            ids_ips.config_data['passive_block_ttl'] = settings.pb_length
 
         elif (field == 'ids_mode'):
-            ips_settings['ids_mode'] = settings.ids_mode
-
-        dnx.write_configuration(ips_settings.expanded_user_data)
+            ids_ips.config_data['ids_mode'] = settings.ids_mode
 
 def configure_ip_whitelist(whitelist: config, *, action: CFG) -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
-        ips_settings: ConfigChain = dnx.load_configuration()
-
+    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as ids_ips:
         if (action is CFG.ADD):
-            ips_settings[f'whitelist->ip_whitelist->{whitelist.ip}'] = whitelist.name
+            ids_ips.config_data[f'whitelist->ip_whitelist->{whitelist.ip}'] = whitelist.name
 
         elif (action is CFG.DEL):
-            del ips_settings[f'whitelist->ip_whitelist->{whitelist.ip}']
-
-        dnx.write_configuration(ips_settings.expanded_user_data)
+            del ids_ips.config_data[f'whitelist->ip_whitelist->{whitelist.ip}']
 
 def configure_dns_whitelist(settings: config, /) -> None:
-    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
-        ips_settings: ConfigChain = dnx.load_configuration()
-
-        ips_settings['whitelist->dns_servers'] = settings.action
-
-        dnx.write_configuration(ips_settings.expanded_user_data)
+    with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as ids_ips:
+        ids_ips.config_data['whitelist->dns_servers'] = settings.action
 
 # error condition should never be met, but just for initial implementation and piece of mind
 def pbl_remove_notify(host: int, timestamp: int) -> None:
@@ -295,11 +271,7 @@ def pbl_remove_notify(host: int, timestamp: int) -> None:
 
     if error: return
 
-    with ConfigurationManager('global', cfg_type='security/ids_ips') as dnx:
-        ips_global_settings: ConfigChain = dnx.load_configuration()
-
-        ips_global_settings[f'pbl_remove->{host}'] = timestamp
-
-        dnx.write_configuration(ips_global_settings.expanded_user_data)
+    with ConfigurationManager('global', cfg_type='security/ids_ips') as ids_ips:
+        ids_ips.config_data[f'pbl_remove->{host}'] = timestamp
 
 

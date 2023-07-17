@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import shutil
-import yaml
 
 from secrets import token_urlsafe
 from csv import reader as csv_reader
@@ -14,8 +13,8 @@ from socket import socket, inet_aton, if_nameindex, AF_INET, SOCK_DGRAM
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR, USER, GROUP, fast_sleep, ONE_SEC
 from dnx_gentools.def_enums import INTF, CFG
-from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config, acquire_lock, release_lock
-
+from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
+from dnx_gentools.file_operations import json_to_yaml, yaml_to_json
 from dnx_iptools.def_structs import fcntl_pack
 from dnx_iptools.cprotocol_tools import itoip
 from dnx_iptools.protocol_tools import btoia, netmask_to_cidr
@@ -136,9 +135,8 @@ def interface_association(intf: str, action: CFG = CFG.ADD) -> None:
         pass
 
     with ConfigurationManager('system', cfg_type='global') as dnx:
-        intf_settings = dnx.load_configuration()
 
-        extended_interfaces = intf_settings.get_items('interfaces->extended')
+        extended_interfaces = dnx.config_data.get_items('interfaces->extended')
 
         for slot, interface in extended_interfaces:
 
@@ -147,19 +145,17 @@ def interface_association(intf: str, action: CFG = CFG.ADD) -> None:
             # interface identity (eg. ens160) to interface slot
             if (action is CFG.ADD and interface['id'] is None):
 
-                intf_settings[f'{intf_loc}->id'] = intf
+                dnx.config_data[f'{intf_loc}->id'] = intf
 
                 break
 
             # clearing interface slot for the matching interface identity (eg. ens160)
             elif (action is CFG.DEL and interface['id'] == intf):
-                intf_settings[f'{intf_loc}->id'] = None
-                intf_settings[f'{intf_loc}->name'] = None
-                intf_settings[f'{intf_loc}->zone'] = None
+                dnx.config_data[f'{intf_loc}->id'] = None
+                dnx.config_data[f'{intf_loc}->name'] = None
+                dnx.config_data[f'{intf_loc}->zone'] = None
 
                 break
-
-        dnx.write_configuration(intf_settings.expanded_user_data)
 
 # NOTE: this will only configure the interface as a system entry and does not account for dhcp due to a file lock
 # / file sync issue. i would not be able to guarantee that the dhcp server config would be written to disk before
@@ -176,14 +172,10 @@ def configure_interface_labels(intf: config) -> None:
     '''configures the interface with the provided name and zone in system config via ConfigurationManager.
     '''
     with ConfigurationManager('system', cfg_type='global') as dnx:
-        intf_settings = dnx.load_configuration()
-
         intf_loc = f'interfaces->extended->{intf.slot}'
 
-        intf_settings[f'{intf_loc}->name'] = intf.name
-        intf_settings[f'{intf_loc}->zone'] = intf.zone
-
-        dnx.write_configuration(intf_settings.expanded_user_data)
+        dnx.config_data[f'{intf_loc}->name'] = intf.name
+        dnx.config_data[f'{intf_loc}->zone'] = intf.zone
 
 def configure_interface_address(intf: config) -> None:
     '''configures the interface with the provided ip address and netmask in netplan via InterfaceManager.
@@ -330,77 +322,55 @@ def get_arp_table(*, modify: bool = False, host: Optional[str] = None) -> Union[
         return arp_table
 
 
-class InterfaceManager:
-    '''Class to ensure process safe operations on configuration files.
+NETPLAN_PATH = '/etc/netplan'
 
-    This class is written as a context manager and must be used as such. upon calling the context, a file lock will be
-    obtained or block until it can acquire the lock and return the class object to the caller.
+class InterfaceManager(ConfigurationManager):
+    '''Class to ensure process safe operations on configuration files. Subclass of ConfigurationManager.
+
+    As a subclass of ConfigurationManager, this class will share its configuration lock.
     '''
-    log: LogHandler_T = None
-    interface_lock_file: ConfigLock = f'{HOME_DIR}/dnx_profile/data/interfaces/interfaces.lock'
 
-    dnx_extended_path: str = '/etc/netplan/02-dnx-interface-extended.yaml'
+    _intf_builtin:  ClassVar[str] = '01-dnx-interfaces.yaml'
+    _intf_extended: ClassVar[str] = '02-dnx-interfaces-extended.yaml'
 
-    cfg_path: str = f'{HOME_DIR}/dnx_profile/data/interfaces'
+    _intf_cfg_path: str
+    _intf_cfg_netplan: dict
+    _intf_data_written: bool
 
     __slots__ = (
-        '_interface_lock', '_data_written',
-        '_temp_file', '_temp_file_path',
-
-        '_ext_intf_netplan'
+        '_intf_cfg_path', '_intf_cfg_netplan', '_intf_data_written'
     )
 
-    @classmethod
-    def set_log_reference(cls, ref: LogHandler_T) -> None:
-        '''sets logging class reference for configuration manager specific errors.
-        '''
-        cls.log: LogHandler_T = ref
+    def __init__(self, *args, intf_type, **kwargs) -> None:
+        self._intf_data_written = False
 
-    def __init__(self) -> None:
-        self._data_written = False
+        if (intf_type is INTF.BUILTIN):
+            self._intf_cfg_path = f'{NETPLAN_PATH}/{self._intf_builtin}'
 
-    # attempts to acquire lock on system config lock (blocks until acquired), then opens a temporary
-    # file which the new configuration will be written to, and finally returns the class object.
-    def __enter__(self) -> InterfaceManager:
-        self._interface_lock = acquire_lock(self.interface_lock_file)
+        elif (intf_type is INTF.EXTENDED):
+            self._intf_cfg_path = f'{NETPLAN_PATH}/{self._intf_extended}'
 
-        # TEMP prefix is to wildcard match any orphaned files for deletion
-        self._temp_file_path = f'{self.cfg_path}/TEMP_{token_urlsafe(10)}'
-        self._temp_file = open(self._temp_file_path, 'w+')
+        # intf_cfg_path: str = f'{HOME_DIR}/dnx_profile/data/interfaces'
 
-        # changing file permissions and settings owner to dnx:dnx to not cause permission issues after copy.
-        os.chmod(self._temp_file_path, 0o660)
-        shutil.chown(self._temp_file_path, user=USER, group=GROUP)
+        super().__init__(*args, **kwargs)
 
-        self.log.debug('Network interface configuration lock acquired.')
+    def __enter__(self):
 
-        with open('/etc/netplan/02-dnx-interface-extended.yaml') as f:
-            self._ext_intf_netplan: dict = yaml.load(f.read(), Loader=yaml.Loader)
+        super().__enter__()
+
+        self._intf_cfg_netplan = yaml_to_json(f'{self._intf_cfg_path}', to_dict=True)
 
         return self
 
-    # if no exception was raised and data was written, the netplan extended intf file will be replaced by the temp file.
-    # if an exception is raised, the temporary file will be deleted. the file lock will be released upon exiting.
-    def __exit__(self, exc_type, exc_val, traceback) -> bool:
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if (exc_type is None and self._intf_data_written):
+            intf_temp_file_path = f'{HOME_DIR}/dnx_profile/interfaces/TEMP_{token_urlsafe(10)}'
 
-        if (self._data_written):
-            yaml.dump(self._ext_intf_netplan, stream=self._temp_file, Dumper=yaml.Dumper)
+            json_to_yaml(intf_temp_file_path, self._intf_cfg_netplan, from_dict=True)
 
-            self._temp_file.close()
+            os.replace(intf_temp_file_path, self._intf_cfg_path)
 
-            if (exc_type is None):
-                os.replace(self._temp_file_path, self.dnx_extended_path)
-
-            else:
-                os.unlink(self._temp_file_path)
-
-        # releasing lock for purposes specified in flock(1) man page under -u (unlock) + close file.
-        release_lock(self._interface_lock)
-
-        self.log.debug('Network interface configuration lock released.')
-
-        if (exc_type is None):
-            return True
+        super().__exit__(exc_type, exc_val, exc_tb)
 
     def set_interface(self, intf: str, ip: str, cidr: str, gw: Optional[str] = None) -> None:
         '''sets specified interface configuration options in the extended network configuration file (netplan).
@@ -416,7 +386,7 @@ class InterfaceManager:
         if (gw):
             self._ext_intf_netplan['network']['ethernets'][intf]['gateway4'] = gw
 
-        self._data_written = True
+        self._intf_data_written = True
 
     def remove_interface(self, intf: str) -> None:
         '''remove interface from extended network configuration file (netplan).
@@ -424,4 +394,4 @@ class InterfaceManager:
         attempting to remove a non-existent interface will result in a no op.
         '''
         if self._ext_intf_netplan['network']['ethernets'].pop(intf, None):
-            self._data_written = True
+            self._intf_data_written = True

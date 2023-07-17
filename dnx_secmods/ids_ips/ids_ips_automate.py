@@ -113,10 +113,9 @@ class IPSConfiguration(ConfigurationMixinBase):
             PROTO.ICMP: {}  # todo: what is this here for? is it to prevent issue on packet inspection?
         }
 
-        # NOTE: this is needed to remove from memory who were manually removed by user via webui
+        # NOTE: this is needed to remove from memory entries manually removed by user via webui
         if hosts_to_remove := proxy_settings.get_items('pbl_remove'):
-            with ConfigurationManager('global', cfg_type='security/ids_ips') as dnx:
-                ips_global_settings: ConfigChain = dnx.load_configuration()
+            with ConfigurationManager('global', cfg_type='security/ids_ips') as ids_ips:
 
                 for host, timestamp in hosts_to_remove:
                     # removing host from ips tracker/ suppression dictionary
@@ -124,9 +123,7 @@ class IPSConfiguration(ConfigurationMixinBase):
                     # will remove entry from the notify list regardless.
                     self.__class__.fw_rules.pop(int(host), None)
 
-                    del ips_global_settings[f'pbl_remove->{host}']
-
-                dnx.write_configuration(ips_global_settings.expanded_user_data)
+                    del ids_ips.config_data[f'pbl_remove->{host}']
 
         self._initialize.done()
 

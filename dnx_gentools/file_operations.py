@@ -13,6 +13,8 @@ from copy import copy
 from functools import wraps
 from secrets import token_urlsafe
 
+import yaml
+
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER, fast_sleep
 from dnx_gentools.def_namedtuples import Item
@@ -34,8 +36,6 @@ __all__ = (
     'load_configuration', 'write_configuration',
     'load_data', 'write_data',
     'append_to_file', 'tail_file', 'change_file_owner',
-    'json_to_yaml',
-    'load_tlds', 'load_keywords', 'load_top_domains_filter',
     'calculate_file_hash',
     'cfg_read_poller', 'cfg_write_poller', 'Watcher',
 
@@ -130,6 +130,22 @@ def write_data(data: dict, filename: str, *, cfg_type: str = '', filepath: str =
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
         json.dump(data, settings, indent=2)
 
+def read_file(file_path: str) -> str:
+    '''read a file and return the contents as a string.
+
+    a convenience wrapper for the built-in with open('r') function context.
+    '''
+    with open(file_path, 'r') as f:
+        return f.read()
+
+def write_file(file_path: str, data: str) -> int:
+    '''write data to a file.
+
+    a convenience wrapper for the built-in with open('w') function context.
+    '''
+    with open(file_path, 'w') as f:
+        return f.write(data)
+
 def append_to_file(data: str, filename: str, *, filepath: str = 'dnx_profile/data/usr') -> None:
     '''append data to filepath. NOTE: needs to be refactored to new folder structure.
     '''
@@ -147,59 +163,6 @@ def change_file_owner(file_path: str) -> None:
 
     shutil.chown(file_path, user=USER, group=GROUP)
     os.chmod(file_path, 0o660)
-
-def json_to_yaml(data: Union[str, dict], *, is_string: bool = False) -> str:
-    '''
-    converts a json string or dictionary into yaml syntax and returns as string.
-
-    set "is_string" to True to skip over object serialization.
-    '''
-    if (not is_string):
-        data = json.dumps(data, indent=2)
-
-    str_replacement = ['{', '}', '"', ',']
-    for s in str_replacement:
-        data = data.replace(s, '')
-
-    # removing empty lines and sliding indent back by 2 spaces
-    return '\n'.join([y[2:] for y in data.splitlines() if y.strip()])
-
-def load_tlds() -> Generator[tuple[str, int]]:
-    proxy_config: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
-
-    for tld, setting in proxy_config.get_items('tld'):
-        yield (tld.strip('.'), setting)
-
-# TODO: this needs to be reworked to support the new keyword matching system.
-def load_keywords(log: LogHandler_T) -> list[tuple[str, DNS_CAT]]:
-    '''returns keyword set for enabled domain categories.
-
-    malformed keywords will be omitted.
-    '''
-    keywords: list[tuple[str, DNS_CAT]] = []
-    try:
-        with open(f'{HOME_DIR}/dnx_profile/signatures/domain_lists/domain.keywords', 'r') as blocked_keywords:
-            all_keywords = [
-                x.strip() for x in blocked_keywords.readlines() if x.strip() and '#' not in x
-            ]
-    except FileNotFoundError:
-        log.critical('domain keywords file not found.')
-
-    else:
-        for keyword_info in all_keywords:
-            try:
-                keyword, category = keyword_info.split(maxsplit=1)
-            except:
-                continue
-
-            else:
-                keywords.append((keyword, DNS_CAT[category]))
-
-    return keywords
-
-def load_top_domains_filter() -> list[str]:
-    with open(f'{HOME_DIR}/dnx_profile/signatures/domain_lists/valid_top.domains', 'r') as tdf:
-        return [s.strip() for s in tdf.readlines() if s.strip() and '#' not in s]
 
 def calculate_file_hash(
         file_to_hash: str, *, path: str = 'dnx_profile', folder: str = 'data', full_path: bool = False) -> str:
@@ -481,9 +444,11 @@ class ConfigurationManager:
     config_lock_path: ConfigLock = f'{HOME_DIR}/dnx_profile/data/config.lock'
 
     __slots__ = (
+        'config_data', 'config_changed',
+
         '_name', '_ext', '_cfg_type', '_filename',
 
-        '_config_lock', '_data_written',
+        '_config_lock',
         '_file_path', '_usr_path_file',  # '_system_path_file',
         '_temp_file', '_temp_file_path',
     )
@@ -506,9 +471,10 @@ class ConfigurationManager:
         if (not name):
             # make debug log complete if in lock only mode
             self._filename = 'ConfigurationManager'
+            self.config_data: Optional[ConfigChain] = None
 
         else:
-            self._data_written = False
+            self.config_changed = False
 
             if (not file_path):
                 file_path = 'dnx_profile/data'
@@ -526,13 +492,7 @@ class ConfigurationManager:
 
         # setup required only if the config file is specified.
         if (self._name):
-            # TEMP prefix is to wildcard match any orphaned files for deletion
-            self._temp_file_path = f'{HOME_DIR}/{self._file_path}/usr/TEMP_{token_urlsafe(10)}'
-            self._temp_file = open(self._temp_file_path, 'w+')
-
-            # changing file permissions and settings owner to dnx:dnx to not cause permission issues after copy.
-            os.chmod(self._temp_file_path, 0o660)
-            shutil.chown(self._temp_file_path, user=USER, group=GROUP)
+            self.config_data = load_configuration(self._name, ext=self._ext, cfg_type=self._cfg_type, filepath=self._file_path)
 
         self.log.debug(f'Config file lock acquired for {self._filename}.')
 
@@ -546,12 +506,17 @@ class ConfigurationManager:
         if (not self._name):
             pass
 
-        elif (exc_type is None and self._data_written):
-            os.replace(self._temp_file_path, self._usr_path_file)
+        elif (exc_type is None and self.config_changed):
+            # TEMP prefix is to wildcard match any orphaned files for deletion
+            temp_file_path = f'{HOME_DIR}/{self._file_path}/usr/TEMP_{token_urlsafe(10)}'
 
-        else:
-            self._temp_file.close()
-            os.unlink(self._temp_file_path)
+            if write_file(temp_file_path, json.dumps(self.config_data.expanded_user_data, indent=2)):
+
+                # changing file permissions and settings owner to dnx:dnx to not cause permission issues after copy.
+                os.chmod(self._temp_file_path, 0o660)
+                shutil.chown(self._temp_file_path, user=USER, group=GROUP)
+
+                os.replace(self._temp_file_path, self._usr_path_file)
 
         # releasing lock for purposes specified in flock(1) man page under -u (unlock) + close file.
         release_lock(self._config_lock)
@@ -567,32 +532,7 @@ class ConfigurationManager:
         elif (exc_type is not ValidationError):
             self.log.error(f'ConfigurationManager: {exc_val}')
 
-            raise ConfigurationError(f'Configuration manager failed while updating file. error->{exc_val}')
-
-    # will load json data from file, convert it to a ConfigChain
-    def load_configuration(self) -> ConfigChain:
-        '''returns python dictionary of configuration file contents.
-        '''
-        if (not self._name):
-            raise RuntimeError('Configuration Manager methods are disabled in lock only mode.')
-
-        return load_configuration(self._name, ext=self._ext, cfg_type=self._cfg_type, filepath=self._file_path)
-
-    # accepts python dictionary for serialization to json. writes data to specified file opened.
-    def write_configuration(self, data_to_write: dict):
-        '''writes configuration data as json to generated temporary file.
-        '''
-        if (not self._name):
-            raise RuntimeError('Configuration Manager methods are disabled in lock only mode.')
-
-        if (self._data_written):
-            raise RuntimeWarning('configuration file has already been written to.')
-
-        json.dump(data_to_write, self._temp_file, indent=2)
-        self._temp_file.flush()
-
-        # this is to inform context to copy temp file to dnx configuration folder
-        self._data_written = True
+            raise ConfigurationError(f'ConfigurationManager failed while updating file. error->{exc_val}')
 
 
 class Watcher:
@@ -660,3 +600,95 @@ class Watcher:
             return True
 
         return False
+
+# ====================================== #
+# CONFIGURATION CONVERSION FUNCTIONS
+# ====================================== #
+def _converter_build_list(l_str: str) -> str:
+
+    l = l_str.strip('[]()').split(',')
+
+    list_str = '['
+    for i, item in enumerate(l, 1):
+        item = item.strip()
+
+        if (not item.isdigit()):
+            item = f'"{item}"'
+        else:
+            item = f'{item}'
+
+        if (i != len(l)):
+            item += ', '
+
+        list_str += item
+
+    list_str += ']'
+
+    return list_str
+
+def yaml_to_json(file_path: str, to_dict: bool = False) -> Union[str, dict]:
+    '''opens a yaml file and converts contents to a json string.
+
+    set to_dict to True to convert str to a python dict before returning.
+
+    note: optimized for the common case of reading yaml config from disk.
+    '''
+    s = read_file(file_path)
+
+    output_str = '{'
+    prev_indent_level = 0
+    for line in s.splitlines():
+        if (not line):
+            continue
+
+        cur_indent_level = line.count('  ')
+
+        key, value = line.strip().split(':')
+
+        # type check and formatting
+        value = value.strip()
+        if value.startswith('[') or value.startswith('('):
+            value = _converter_build_list(value)
+
+        elif (value and not value.isdigit()):
+            value = f'"{value}"'
+
+        if (cur_indent_level == prev_indent_level and cur_indent_level):
+            output_str += ', '
+
+        elif (cur_indent_level < prev_indent_level):
+            output_str += '}, '
+
+        # start of new dict
+        if (not value):
+            output_str += f'"{key}"' + ': {'
+        # continuation of dict
+        else:
+            output_str += f'"{key}":{value}'
+
+        prev_indent_level = cur_indent_level
+
+    for _ in range(prev_indent_level):
+        output_str += '}'
+
+    output_str += '}'
+
+    return output_str if not to_dict else json.loads(output_str)
+
+def json_to_yaml(file_path: str, data: Union[str, dict], *, from_dict: bool = False) -> int:
+    '''converts a json string into yaml format.
+
+    set "from_dict" to True to if data is a dictionary.
+
+    note: optimized for the common case of writing yaml config to disk.
+    '''
+    if (from_dict):
+        data = json.dumps(data, indent=2)
+
+    str_replacement = ['{', '}', '"', ',']
+    for s in str_replacement:
+        data = data.replace(s, '')
+
+    # removing empty lines and sliding indent back by 2 spaces
+    return write_file(file_path, '\n'.join([y[2:] for y in data.splitlines() if y.strip()]))
+

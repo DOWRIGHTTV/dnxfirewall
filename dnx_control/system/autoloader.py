@@ -216,11 +216,7 @@ def set_branch() -> None:
         flash_input_error('invalid selection', len(question))
 
     with ConfigurationManager('system', cfg_type='global') as dnx:
-        dnx_settings: ConfigChain = dnx.load_configuration()
-
-        dnx_settings['branch'] = available_branches[int(selection) - 1]
-
-        dnx.write_configuration(dnx_settings.expanded_user_data)
+        dnx.config_data['branch'] = available_branches[int(selection) - 1]
 
 # ----------------------------
 # PROGRESS BAR
@@ -397,21 +393,13 @@ def set_dnx_interfaces(user_intf_config: dict[str, str]) -> None:
     sprint('configuring dnxfirewall network interfaces...')
 
     with ConfigurationManager('system', cfg_type='global') as dnx:
-        dnx_settings: ConfigChain = dnx.load_configuration()
-
         for slot, intf in user_intf_config.items():
-            dnx_settings[f'interfaces->builtin->{slot}->ident'] = intf
-
-        dnx.write_configuration(dnx_settings.expanded_user_data)
+            dnx.config_data[f'interfaces->builtin->{slot}->ident'] = intf
 
 # system builtin uses slot std_2 for lan interface
 def set_lan_dhcp(user_intf_config: dict[str, str]) -> None:
     with ConfigurationManager('dhcp_server', cfg_type='global') as dhcp:
-        dhcp_settings: ConfigChain = dhcp.load_configuration()
-
-        dhcp_settings[f'interfaces->builtin->std_2->ident'] = user_intf_config['std_2']
-
-        dhcp.write_configuration(dhcp_settings.expanded_user_data)
+        dhcp.config_data[f'interfaces->builtin->std_2->ident'] = user_intf_config['std_2']
 
 # takes interface config as dict, converts to yaml, then writes to system folder
 def write_net_config(interface_configs: str) -> None:
@@ -648,11 +636,7 @@ def configure_iptables() -> None:
 # ============================
 def mark_completion_flag() -> None:
     with ConfigurationManager('system', cfg_type='global') as dnx:
-        dnx_settings: ConfigChain = dnx.load_configuration()
-
-        dnx_settings['auto_loader'] = True
-
-        dnx.write_configuration(dnx_settings.expanded_user_data)
+        dnx.config_data['auto_loader'] = True
 
 # TODO: add code to pull mac from wan interface and set it in the config file stored in the usr dir.
 def store_default_mac():

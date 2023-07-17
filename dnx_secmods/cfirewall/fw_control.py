@@ -79,6 +79,7 @@ class FirewallControl:
     versions: list[str, str] = ['pending', 'active']
     sections: list[str, str, str] = ['BEFORE', 'MAIN', 'AFTER']
 
+    # TODO: fix this for update config manager
     def commit(self, section: str, updated_rules: dict) -> None:
         '''Updates pending configuration file with sent in firewall rules section data.
 
@@ -173,37 +174,33 @@ class FirewallControl:
     @staticmethod
     def modify_management_access(fields: config) -> bool:
 
-        with ConfigurationManager('system', ext='firewall', file_path='dnx_profile/iptables') as system_rules_file:
-            system_rules = system_rules_file.load_configuration()
-
+        with ConfigurationManager('system', ext='firewall', file_path='dnx_profile/iptables') as sys_rules:
             for svc in fields.service_ports:
 
                 idx = str(fields.zone + svc)
                 key = f'USER->{idx}'
 
                 if (fields.action is CFG.DEL):
-                    del system_rules[key]
+                    del sys_rules.config_data[key]
 
                 elif (fields.action is CFG.ADD):
-                    system_rules[f'{key}->name'] = f'webui_service_{idx}'
-                    system_rules[f'{key}->id'] = None
-                    system_rules[f'{key}->enabled'] = 1
-                    system_rules[f'{key}->src_zone'] = [fields.zone]
-                    system_rules[f'{key}->src_network'] = [[2, 0, 0]]
-                    system_rules[f'{key}->src_service'] = [[2, 6, 1, 65535]]
-                    system_rules[f'{key}->dst_zone'] = [0]
-                    system_rules[f'{key}->dst_network'] = [[2, 0, 0]]
-                    system_rules[f'{key}->dst_service'] = [[1, 6, svc, svc]]
-                    system_rules[f'{key}->action'] = 1
-                    system_rules[f'{key}->log'] = 1
-                    system_rules[f'{key}->ipp_profile'] = 0
-                    system_rules[f'{key}->dns_profile'] = 0
-                    system_rules[f'{key}->ips_profile'] = 0
+                    sys_rules.config_data[f'{key}->name'] = f'webui_service_{idx}'
+                    sys_rules.config_data[f'{key}->id'] = None
+                    sys_rules.config_data[f'{key}->enabled'] = 1
+                    sys_rules.config_data[f'{key}->src_zone'] = [fields.zone]
+                    sys_rules.config_data[f'{key}->src_network'] = [[2, 0, 0]]
+                    sys_rules.config_data[f'{key}->src_service'] = [[2, 6, 1, 65535]]
+                    sys_rules.config_data[f'{key}->dst_zone'] = [0]
+                    sys_rules.config_data[f'{key}->dst_network'] = [[2, 0, 0]]
+                    sys_rules.config_data[f'{key}->dst_service'] = [[1, 6, svc, svc]]
+                    sys_rules.config_data[f'{key}->action'] = 1
+                    sys_rules.config_data[f'{key}->log'] = 1
+                    sys_rules.config_data[f'{key}->ipp_profile'] = 0
+                    sys_rules.config_data[f'{key}->dns_profile'] = 0
+                    sys_rules.config_data[f'{key}->ips_profile'] = 0
 
                 else:
                     return False
-
-            system_rules_file.write_configuration(system_rules.expanded_user_data)
 
             return True
 

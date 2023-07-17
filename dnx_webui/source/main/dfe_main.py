@@ -762,14 +762,10 @@ def set_user_settings() -> None:
         if new_theme not in ['light', 'dark']: return
 
         with ConfigurationManager('logins', file_path='/dnx_webui/data') as webui:
-            webui_settings: ConfigChain = webui.load_configuration()
-
             # this check prevents issues with log in/out transitions
-            if user in webui_settings.get_list('users'):
+            if user in webui.config_data.get_list('users'):
 
-                webui_settings[f'users->{user}->settings->theme'] = new_theme
-
-                webui.write_configuration(webui_settings.expanded_user_data)
+                webui.config_data[f'users->{user}->settings->theme'] = new_theme
 
 @app.before_request
 def load_user_settings() -> None:

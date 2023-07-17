@@ -40,25 +40,17 @@ def format_downloaded_data(data: bytes) -> str:
 
 # set/clear will be used to identify a system failure during a signature update.
 def set_signature_update_flag(*, override: bool = False) -> bool:
-    with ConfigurationManager('system', cfg_type='global') as dnx_settings:
-        config = dnx_settings.load_configuration()
-
-        if config['signature_update'] and not override:
+    with ConfigurationManager('system', cfg_type='global') as dnx:
+        if dnx.config_data['signature_update'] and not override:
             return False
 
-        config['signature_update'] = 1
-
-        dnx_settings.write_configuration(config.expanded_user_data)
+        dnx.config_data['signature_update'] = 1
 
     return True
 
 def clear_signature_update_flag() -> None:
-    with ConfigurationManager('system', cfg_type='global') as dnx_settings:
-        config = dnx_settings.load_configuration()
-
-        config['signature_update'] = 0
-
-        dnx_settings.write_configuration(config.expanded_user_data)
+    with ConfigurationManager('system', cfg_type='global') as dnx:
+        dnx.config_data['signature_update'] = 0
 
 def get_remote_version(filename: str) -> tuple[bool, int]:
     # downloading remote version file and removing all comments
