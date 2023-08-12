@@ -75,8 +75,8 @@ comma_join: _Callable[[_Iterable[str]], str] = ', '.join
 # USER, GROUP, HOME_DIR - user set dynamically for development convenience (DNX user used in production deployment)
 __usr = _pwd.getpwuid(_os.getuid())
 
-USER, GROUP = (__usr.pw_name, __usr.pw_name)
-# USER, GROUP = ('dnx', 'dnx') if any(['dnx' == u.pw_name for u in _pwd.getpwall()]) else ('free', 'free')
+# USER, GROUP = (__usr.pw_name, __usr.pw_name)
+USER, GROUP = ('dnx', 'dnx') if any(['dnx' == u.pw_name for u in _pwd.getpwall()]) else ('free', 'free')
 ROOT: bool = not __usr.pw_uid
 
 # full paths
