@@ -13,8 +13,6 @@ from copy import copy
 from functools import wraps
 from secrets import token_urlsafe
 
-import yaml
-
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER, fast_sleep
 from dnx_gentools.def_namedtuples import Item

@@ -338,7 +338,7 @@ class DIR(_IntFlag):
 
 class DIRECTION(DNXEnum):
 
-    _members = {x.value: x.name for x in DIR if x <= DIR.BOTH}
+    _members = {x.value: x.name for x in DIR if int(x) <= DIR.BOTH}
 
 
 DIR_OFF      = DIRECTION(DIR.OFF)
