@@ -142,10 +142,14 @@ def check_for_file_changes(manifest_name: str, remote_signature_manifest: list[t
     '''return list of signature files that have changed or are missing from the local system.
     '''
 
-    with open(f'dnx_profile/signatures/{manifest_name}', 'r') as file:
-        local_signature_manifest = file.read().splitlines()
-
-    lsm_lookup = {line.split()[0]: line.split()[1] for line in local_signature_manifest}.get
+    # if file doesnt exist, but we made it to this point, then it is safe to proceed with updating all signature sets.
+    try:
+        with open(f'dnx_profile/signatures/{manifest_name}', 'r') as file:
+            local_signature_manifest = file.read().splitlines()
+    except FileNotFoundError:
+        lsm_lookup = {}.get
+    else:
+        lsm_lookup = {line.split()[0]: line.split()[1] for line in local_signature_manifest}.get
 
     missing_files: list[tuple] = []
     changed_files: list[tuple] = []
