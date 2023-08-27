@@ -75,12 +75,12 @@ comma_join: _Callable[[_Iterable[str]], str] = ', '.join
 # USER, GROUP, HOME_DIR - user set dynamically for development convenience (DNX user used in production deployment)
 __usr = _pwd.getpwuid(_os.getuid())
 
-USER, GROUP = (__usr.pw_name, __usr.pw_name)
-# USER, GROUP = ('dnx', 'dnx') if any(['dnx' == u.pw_name for u in _pwd.getpwall()]) else ('free', 'free')
+# USER, GROUP = (__usr.pw_name, __usr.pw_name)
+USER, GROUP = ('dnx', 'dnx') if any(['dnx' == u.pw_name for u in _pwd.getpwall()]) else ('free', 'free')
 ROOT: bool = not __usr.pw_uid
 
-HOME_DIR:   str = f'{__usr.pw_dir}/dnxfirewall'
-# HOME_DIR: str = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-2]))
+# HOME_DIR:   str = f'{__usr.pw_dir}/dnxfirewall'
+HOME_DIR: str = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-2]))
 SYSTEM_DIR: str = 'dnx_profile/data/system'
 USER_DIR:   str = 'dnx_profile/data/usr'
 
