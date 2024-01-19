@@ -3,9 +3,14 @@
     <img src="https://raw.githubusercontent.com/DOWRIGHTTV/dnxfirewall/dnxfirewall-dev/dnx_webui/static/assets/images/dads_logo_black.png" alt="dad's next-gen firewall">
 </span>
 <p>
-DAD'S NEXT-GEN FIREWALL® is an optimized/high performance collection of applications and services to convert a standard 
+DNXFIREWALL™ is an optimized/high performance collection of applications and services to convert a standard 
 linux system into a zone based next generation firewall. The primary security modules have DIRECT/INLINE control over 
 all connections, streams, and messages that goes through the system.
+
+DAD'S NEXT-GEN FIREWALL™ provides a simplified interface for home and small business configuration and maintenanance and includes unique modules fitting for this use case (listed below).
+  - DNXMESSANGER™ is a secure, locally hosted messaging service for private/encrypted communication between members of a household or small business.
+
+note: The codebases are currently unified to make back end development/tuning application easier.
 </p>
 <pre>
         ----------------------------------------------------
