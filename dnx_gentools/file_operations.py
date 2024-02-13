@@ -75,19 +75,23 @@ def load_configuration(
         filename: str, ext: str = 'cfg', *, cfg_type: str = '', filepath: str = 'dnx_profile/data') -> ConfigChain:
     '''load json data from a file and convert it to a ConfigChain.
     '''
-    filename = f'{cfg_type}/{filename}.{ext}' if cfg_type else f'{filename}.{ext}'
+    user_filename = f'{cfg_type}/{filename}.{ext}' if cfg_type else f'{filename}.{ext}'
+
+    # note: quick parse for detecting if the configuration file is a profile, then set the system default accordingly.
+    # a profile will always have a cfg_type (i think) so dont need the logic for it not being present.
+    system_filename = f'{cfg_type}/profiles/profile_0.cfg' if filename.split('/')[0] == 'profiles' else user_filename
 
     # loading system default configs
-    with open(f'{HOME_DIR}/{filepath}/system/{filename}', 'r') as system_settings_io:
+    with open(f'{HOME_DIR}/{filepath}/system/{system_filename}', 'r') as system_settings_io:
         system_settings: dict = json.load(system_settings_io)
 
     # I like the path checks more than try/except block
-    if not file_exists(f'{HOME_DIR}/{filepath}/usr/{filename}'):
+    if not file_exists(f'{HOME_DIR}/{filepath}/usr/{user_filename}'):
         user_settings: dict = {}
 
     else:
         # loading user configurations
-        with open(f'{HOME_DIR}/{filepath}/usr/{filename}', 'r') as user_settings_io:
+        with open(f'{HOME_DIR}/{filepath}/usr/{user_filename}', 'r') as user_settings_io:
             user_settings: dict = json.load(user_settings_io)
 
     return ConfigChain(system_settings, user_settings)
@@ -223,18 +227,12 @@ def cfg_read_poller(
         raise TypeError('watch file must be a string.')
 
     def decorator(function_to_wrap):
-        if (not class_method):
-            @wraps(function_to_wrap)
-            def wrapper(*args):
-                watcher = Watcher(watch_file, ext, cfg_type, filepath, callback=function_to_wrap)
-                watcher.watch(*args)
+        @wraps(function_to_wrap)
+        def wrapper(*args):
+            watcher = Watcher(watch_file, ext, cfg_type, filepath, callback=function_to_wrap)
+            watcher.watch(*args)
 
-        else:
-            @wraps(function_to_wrap)
-            def wrapper(*args):
-                watcher = Watcher(watch_file, ext, cfg_type, filepath, callback=function_to_wrap)
-                watcher.watch(*args)
-
+        if (class_method):
             wrapper = classmethod(wrapper)
 
         return wrapper
@@ -291,10 +289,11 @@ class ConfigChain:
 
     def __init__(self, system: dict, user: dict):
 
+        system_flat = self._flatten(system)
+        user_flat = {k: v for k, v in self._flatten(user).items() if k in system_flat}
+
         self.__config = (user, system)
-        self.__flat_config = (
-            self._flatten(user), self._flatten(system)
-        )
+        self.__flat_config = (user_flat, system_flat)
 
         self.__mutable_config = copy(self.__flat_config[0])
 
@@ -614,7 +613,7 @@ class Watcher:
         self._last_modified_time = 0
 
     def watch(self, *args) -> None:
-        '''check configured file for change in set intervals.
+        '''check the configuration file for changes in set intervals.
         currently using global constant for config file polling.
 
         if a change is detected in the polled file, the file will be loaded as a ConfigChain and passed to the set

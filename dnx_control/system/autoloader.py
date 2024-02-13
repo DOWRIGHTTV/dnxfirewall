@@ -10,11 +10,12 @@ import socket
 import readline
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional
 from functools import partial
 from subprocess import run as _run, DEVNULL, CalledProcessError
 
+from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR, INITIALIZE_MODULE, hardout, str_join
+from dnx_gentools.def_namedtuples import SigFile
 from dnx_gentools.file_operations import ConfigurationManager, load_data, write_configuration, json_to_yaml
 
 from dnx_iptools.iptables import IPTablesManager
@@ -27,7 +28,6 @@ from dnx_cli.utils.shell_colors import text
 # ===============
 if (TYPE_CHECKING):
     from dnx_gentools.file_operations import ConfigChain
-
 
 ERROR_SHOW_TIME = .33
 
@@ -638,7 +638,7 @@ def store_default_mac():
     pass
 
 def signature_update(system_update: bool = False) -> bool:
-    import dnx_control.system.signature_update as signature_update
+    import dnx_control.system.signature_update as signature_updater
 
     sprint('security signature updater initiated.')
     # ===========================================
@@ -647,7 +647,7 @@ def signature_update(system_update: bool = False) -> bool:
     sprint('downloading initial file integrity information from remote server.')
     file_validations: list[tuple] = []
     for attempt in range(1, 4):
-        if file_validations := signature_update.get_file_validations():
+        if file_validations := signature_updater.get_file_validations():
             break
 
         eprint(f'unable to download file validation information. tries: {attempt}/3')
@@ -664,10 +664,10 @@ def signature_update(system_update: bool = False) -> bool:
     rsv_name, rsv_hash = file_validations[0]
     for attempt in range(1, 4):
 
-        error, remote_version = signature_update.get_remote_version(rsv_name)
+        error, remote_version = signature_updater.get_remote_version(rsv_name)
         if (not error):
 
-            if signature_update.validate_file_download(f'{rsv_name}_TEMP', rsv_hash):
+            if signature_updater.validate_file_download(f'{rsv_name}_TEMP', rsv_hash):
                 break
 
         eprint(f'unable to validate signature versioning information. tries: {attempt}/3')
@@ -677,22 +677,22 @@ def signature_update(system_update: bool = False) -> bool:
         hardout('exiting...')
 
     # system update will ignore the signature version check and force the update.
-    if not signature_update.compare_signature_version(remote_version, system_update=True):
+    if not signature_updater.compare_signature_version(remote_version, system_update=True):
         hardout('a system update is required to support the latest signature sets.')
 
     # ===========================================
     # REMOTE SIGNATURE MANIFEST
     # ===========================================
     sprint('downloading remote signature manifest.')
-    remote_manifest = []
+    remote_manifest: SIGNATURE_MANIFEST = []
     rsm_name, rsm_hash = file_validations[1]
     for attempt in range(1, 4):
 
         # downloading manifest of signature files to be downloaded.
-        remote_manifest = signature_update.get_remote_signature_manifest(rsm_name)
+        remote_manifest = signature_updater.get_remote_signature_manifest(rsm_name)
         if (remote_manifest):
 
-            if signature_update.validate_file_download(f'{rsm_name}_TEMP', rsm_hash):
+            if signature_updater.validate_file_download(f'{rsm_name}_TEMP', rsm_hash):
                 break
 
         eprint(f'unable to validate remote signature manifest. tries: {attempt}/3')
@@ -707,7 +707,7 @@ def signature_update(system_update: bool = False) -> bool:
     update_msg = []
     # checking local manifest for files that have not changed and removing them from the list.
     # separate lists are for better reporting to the user.
-    missing_files, changed_files = signature_update.check_for_file_changes(rsm_name, remote_manifest)
+    missing_files, changed_files = signature_updater.check_for_file_changes(rsm_name, remote_manifest)
     if (missing_files):
         update_msg.append(f'{len(missing_files)} new files')
 
@@ -716,21 +716,25 @@ def signature_update(system_update: bool = False) -> bool:
 
     update_msg = ' and '.join(update_msg)
 
-    if manifest := [*missing_files, *changed_files]:
+    download_targets: SIGNATURE_MANIFEST = [*missing_files, *changed_files]
+    if (download_targets):
         sprint(f'identified {update_msg}. starting download...')
 
     else:
         sprint('there are no signature updates available.')
 
-        signature_update.cleanup_temp_files()
+        signature_updater.cleanup_temp_files()
 
         return False
 
     # ===========================================
     # DOWNLOADING NECESSARY FILES
     # ===========================================
-    download_failure_list = []
-    checksum_failure_list = []
+    # TODO: make update in progress check happen before the download starts also to prevent temp files being overwritten
+    #   in a partial state when another update process is trying to move them.
+    #   - give option to continue or exit since it could be from a previous update that was interrupted.
+    download_failure_list: SIGNATURE_MANIFEST = []
+    checksum_failure_list: SIGNATURE_MANIFEST = []
 
     for attempt in range(3):
 
@@ -738,29 +742,29 @@ def signature_update(system_update: bool = False) -> bool:
         # retries only need to download the files that are remaining
         # converting to set to remove duplicates
         if (attempt > 0):
-            progress('incomplete', completed=success, total=len(manifest))
+            progress('incomplete', completed=success, total=len(download_targets))
             eprint(f'({len(checksum_failure_list)}) signature download errors detected. tries: {attempt}/3')
 
-            manifest = list({*download_failure_list, *checksum_failure_list})
+            # dedup with set then converting back to a list
+            download_targets = list({*download_failure_list, *checksum_failure_list})
 
+            # clearing trackers for the next attempt if needed.
             download_failure_list.clear()
             checksum_failure_list.clear()
 
-        for file, checksum in manifest:
-            filename = file.split('/')[-1]
-
-            progress(f'downloading {filename}', completed=success, total=len(manifest))
+        for target in download_targets:
+            progress(f'downloading {target.name}', completed=success, total=len(download_targets))
 
             # downloading signatures and running checksum validation.
-            if not signature_update.download_signature_file(file):
-                download_failure_list.append((file, checksum))
+            if not signature_updater.download_signature_file(target):
+                download_failure_list.append(target)
                 # if (args.verbose_set):
                 #     sprint(f'download failed for {file}')
 
             else:
-                check_passed = signature_update.validate_signature_file(file, checksum)
+                check_passed = signature_updater.validate_signature_file(target)
                 if (not check_passed):
-                    checksum_failure_list.append((file, checksum))
+                    checksum_failure_list.append(target)
 
                 else:
                     success += 1
@@ -768,10 +772,12 @@ def signature_update(system_update: bool = False) -> bool:
                     #     sprint(f'checksum failed for {file}')
 
         if (not download_failure_list and not checksum_failure_list):
-            progress('done. installing...', completed=success, total=len(manifest))
+            progress('done. installing...', completed=success, total=len(download_targets))
             break
 
     # will give the user the option to load the signatures that downloaded successfully or exit.
+    # TODO: i do not see where the option is actually given for this. it looks like it will just continue on its own.
+    #   either current me is dumb or past me was dumb. i'm not sure which.
     else:
         sprint(f'retry limit reached.')
         sprint(f'{len(download_failure_list)} signatures failed to download.')
@@ -781,19 +787,19 @@ def signature_update(system_update: bool = False) -> bool:
     # COPYING DOWNLOADED FILES TO SIGNATURE DIR
     # ===========================================
     # settings the flag to identify a file move in progress or partial signature update.
-    if not signature_update.set_signature_update_flag():
+    if not signature_updater.set_signature_update_flag():
         eprint('signature update may already be in in progress or a previous update was interrupted.')
 
-        signature_update.set_signature_update_flag(override=True)
+        signature_updater.set_signature_update_flag(override=True)
 
-    signature_update.move_signature_files(manifest, checksum_failure_list)
+    signature_updater.move_signature_files(download_targets, checksum_failure_list)
 
     sprint('signatures installed. setting permissions.')
 
     # probably not needed, but doing anyway for consistency.
     set_signature_permissions()
 
-    signature_update.clear_signature_update_flag()
+    signature_updater.clear_signature_update_flag()
 
     final_msg = 'signature update complete.'
 

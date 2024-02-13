@@ -25,7 +25,7 @@ __all__ = (
 ip_unpack: Callable[[bytes], tuple] = Struct('>L').unpack
 
 def _combine_domain(log: LogHandler_T) -> list[str]:
-    '''returns an aggregated list of all plain text domain based signatures.
+    '''returns an aggregated list of all plain-text domain-based signatures.
     '''
     proxy_settings: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
 
@@ -62,7 +62,7 @@ def _combine_domain(log: LogHandler_T) -> list[str]:
     return domain_signatures
 
 def generate_domain(log: LogHandler_T) -> list[list[int, int]]:
-    '''returns a list containing the aggregated domain based signatures.
+    '''returns a list containing the aggregated domain-based signatures.
 
         each signature is a key/value pair (as list) -> [hash of the domain, category id]
     '''
@@ -114,7 +114,7 @@ def _combine_reputation(log: LogHandler_T) -> tuple[list[str], dict[str, int]]:
     return ip_rep_signatures, reputation_priority
 
 def generate_reputation(log: LogHandler_T) -> list[list[int, int]]:
-    '''returns a list containing the aggregated reputation based signatures.
+    '''returns a list containing the aggregated reputation-based signatures.
 
     each signature is a key/value pair -> {ip_addr (as int): (rep priority, category id)}
     '''
@@ -146,7 +146,7 @@ def generate_reputation(log: LogHandler_T) -> list[list[int, int]]:
     return hosts_final
 
 def _combine_geolocation(log: LogHandler_T) -> list[str]:
-    '''returns an aggregated list of all plain text geolocation based signatures.
+    '''returns an aggregated list of all plain text geolocation-based signatures.
     '''
     # geo_settings: list = load_configuration('profiles/profile_1', cfg_type='security/ip').get_list('geolocation')
     #
@@ -166,7 +166,7 @@ def _combine_geolocation(log: LogHandler_T) -> list[str]:
     # return ip_geo_signatures
 
     # filtering out ranges with an undefined country
-    # TODO: make sure rfc1918 is being added to the list
+    # note: RFC1918 is included by the signature updater repo
     try:
         with open(f'{HOME_DIR}/dnx_profile/signatures/geo_lists/collection.geo', 'r') as collection:
             return [x for x in collection.read().splitlines() if not x.endswith('-')]

@@ -25,6 +25,12 @@ if (TYPE_CHECKING):
 
     from dnx_gentools.def_typing import Any as _Any, Socket_T, Lock_T, Address as _Address
 
+class SigFile(_NamedTuple):
+    ftype: str
+    folder: str
+    name: str
+    checksum: str
+
 # ================
 # BYTE CONTAINERS
 # ================
