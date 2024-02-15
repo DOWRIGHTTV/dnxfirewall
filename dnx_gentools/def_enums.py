@@ -214,7 +214,7 @@ TLD_CAT = _IntEnum('TLD_CAT', _TLD_LIST, start=0)
 _HOME_DIR: str = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-2]))
 _SIG_DIR: str = f'{_HOME_DIR}/dnx_profile/signatures'
 
-with open(f'{_SIG_DIR}/geo_lists/geolocation.cfg', 'r') as geo_cfg:
+with open(f'{_SIG_DIR}/configuration/geolocation.cfg', 'r') as geo_cfg:
     _GEO_LIST = _json.load(geo_cfg)['enum_list']
 
 GEO = _IntEnum('GEO', _GEO_LIST, start=0)
