@@ -128,10 +128,12 @@ def get_remote_signature_manifest(manifest_name: str) -> SIGNATURE_MANIFEST:
         signature_manifest_data = format_downloaded_data(response.read())
 
         for file_data in signature_manifest_data.splitlines():
-            folder, file_name = file_data[1].split('/')
+
+            file_data = file_data.split()
+            folder, file_name = file_data[0].split('/')
 
             signature_manifest.append(
-                SigFile(file_data[0], folder, file_name, file_data[2])
+                SigFile('signature', folder, file_name, file_data[1])
             )
 
     # writing the version to temp file
@@ -222,6 +224,9 @@ def create_sigfile(file_data: str) -> SigFile:
 
     return SigFile(file_data[0], folder, file_name, file_data[2])
 
+# TODO: this isnt really needed anymore (at the moment) because of the addition of a configuration folder within the
+#  signature folder. this can stay for now because it might still be useful in the future. ftype will be hard set to
+#  signature for now.
 def get_file_path(file_info: SigFile) -> str:
     '''return the system folder path and filename for the specified file type.
     '''
