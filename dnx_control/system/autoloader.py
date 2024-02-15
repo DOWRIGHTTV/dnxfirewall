@@ -409,6 +409,8 @@ def confirm_interfaces(interface_config: dict[str, str]) -> bool:
 # ============================
 # BUILD LIBRARIES
 # ============================
+# TODO: make sure the lib dir for libraries is in $PATH, if not add it.
+#   - alternatively can create a sim link in cfirewall then include that dir in the cython compile script.
 def build_libraries(*, count_only: bool = False) -> None:
     global PROGRESS_TOTAL_COUNT
 

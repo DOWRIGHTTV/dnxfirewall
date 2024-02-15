@@ -74,6 +74,8 @@ def get_remote_version(filename: str) -> tuple[bool, int]:
             # default version if the remote version cannot be determined. set to the highest calendar year/month/day
             return (True, 99991231)
 
+    # todo: it would probably be a good idea to be an error log here because it would be the context failed
+
     # writing version to temp file
     with open(f'dnx_profile/signatures/{filename}_TEMP', 'w') as file:
         file.write(remote_version_data)
@@ -92,19 +94,11 @@ def validate_file_download(filename: str, remote_file_hash: str) -> bool:
 
     return True
 
+# todo: now that we include a local version of the COMPATIBLE_VERSION file, we should be able to remove the system
+#  update bypass flag because during the update, the version will be updated and the check vs remote will pass.
+#    - this should also ensure that if the signature repo is updated before the system repo, the system updater will
+#      not be able to pull the new signatures until the system repo is updated and updater is ran again.
 def compare_signature_version(remote_version: int, *, system_update: bool = False) -> bool:
-    # if the local version file does not exist, the signatures are not compatible and a system update is needed
-    if not os.path.exists(f'dnx_profile/signatures/COMPATIBLE_VERSION'):
-
-        # todo: removing this bypass because there could be a sync issue between signature and dnxfirewall repos.
-        #  only applies to old version and would have to wait until the system repo update is applied.
-
-        # system update will override compatibility check and allow the signatures to be updated.
-        # if (system_update):
-        #     return True
-
-        return False
-
     with open(f'dnx_profile/signatures/COMPATIBLE_VERSION', 'r') as file:
         local_version = int(file.read().strip())
 
