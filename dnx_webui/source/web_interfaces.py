@@ -22,7 +22,7 @@ class WebPage:
 class StandardWebPage(WebPage):
     '''base class to be used with all standard web page module classes.
 
-    its primary purpose to is to provide better static typing and error reporting/ handling.
+    its primary purpose is to provide better static typing and error reporting/ handling.
     '''
     pass
 
@@ -30,7 +30,7 @@ class StandardWebPage(WebPage):
 class LogWebPage(WebPage):
     '''base class to be used with all log type web page module classes.
 
-    its primary purpose to is to provide better static typing and error reporting/ handling.
+    its primary purpose is to provide better static typing and error reporting/ handling.
     '''
     @staticmethod
     def update(form: Form) -> tuple[str, Optional[str], list]:
@@ -40,7 +40,7 @@ class LogWebPage(WebPage):
 class RulesWebPage(WebPage):
     '''base class to be used with all rules web page module classes.
 
-    its primary purpose to is to provide better static typing and error reporting/ handling.
+    its primary purpose is to provide better static typing and error reporting/ handling.
     '''
     @staticmethod
     def load(section: str) -> dict[str, Any]:

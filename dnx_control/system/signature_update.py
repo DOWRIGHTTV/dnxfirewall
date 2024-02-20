@@ -153,7 +153,7 @@ def check_for_file_changes(manifest_name: str, remote_signature_manifest: SIGNAT
     except FileNotFoundError:
         lsm_lookup = {}.get
     else:
-        lsm_lookup = {line.split()[1]: line.split()[2] for line in local_signature_manifest}.get
+        lsm_lookup = {line.split()[0]: line.split()[1] for line in local_signature_manifest}.get
 
     missing_files: SIGNATURE_MANIFEST = []
     changed_files: SIGNATURE_MANIFEST = []

@@ -6,7 +6,7 @@ from source.web_typing import *
 from source.web_validate import *
 
 from dnx_gentools.def_enums import DATA, GEO, DIR
-from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
+from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config, load_data
 
 from source.web_interfaces import StandardWebPage
 
@@ -14,14 +14,14 @@ __all__ = ('WebPage',)
 
 class WebPage(StandardWebPage):
     '''
-    available methods: load, handle_ajax
+    available methods: load, update, handle_ajax
     '''
     @staticmethod
     def load(form: Form) -> dict[str, Any]:
         proxy_profile: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/ip')
-        country_map: ConfigChain = load_configuration('geolocation', filepath='dnx_webui/data')
-
         proxy_global: ConfigChain = load_configuration('global', cfg_type='security/ip')
+
+        # country_map: ConfigChain = load_configuration('geolocation', filepath='dnx_webui/data')
 
         # TODO: get selected security profile setting and render accordingly. start with converting current config to
         #  use "profile 1", with proxy set for profiles. once that is good then we can expand to more profiles.
@@ -31,15 +31,15 @@ class WebPage(StandardWebPage):
         geo_region = form.get('region', 'africa')
         geo_direction = int(form.get('menu_dir', DIR.OFF))
 
-        selected_region = set(country_map[f'{geo_region}->countries'])
+        # selected_region = set(country_map[f'{geo_region}->countries'])
 
         geolocation = []
         geolocation_append = geolocation.append
-        for country, direction in proxy_profile.get_items('geolocation'):
+        for country, direction in proxy_profile.get_items(f'geolocation->{geo_region}->countries'):
 
             # region level filter
-            if (country not in selected_region):
-                continue
+            # if (country not in selected_region):
+            #     continue
 
             # state level filters
             # direct match
@@ -84,7 +84,7 @@ class WebPage(StandardWebPage):
             'profile_name': proxy_profile['name'],
             'profile_desc': proxy_profile['description'],
             'reputation': proxy_profile.get_items('reputation->built-in'),
-            'tr_settings': tr_settings, 'regions': sorted(country_map.get_list()),
+            'tr_settings': tr_settings, 'regions': proxy_profile.get_list('geolocation'),  # sorted(country_map.get_list()),
             'image_map': {
                 DIR.OFF: 'allow_up-down.png', DIR.OUTBOUND: 'block_up.png',
                 DIR.INBOUND: 'block_down.png', DIR.BOTH: 'block_up-down.png'
