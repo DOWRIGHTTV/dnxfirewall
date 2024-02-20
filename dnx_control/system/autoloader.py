@@ -16,7 +16,8 @@ from subprocess import run as _run, DEVNULL, CalledProcessError
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR, INITIALIZE_MODULE, hardout, str_join
 from dnx_gentools.def_namedtuples import SigFile
-from dnx_gentools.file_operations import ConfigurationManager, load_data, write_configuration, json_to_yaml
+from dnx_gentools.file_operations import ConfigurationManager, write_configuration, json_to_yaml
+from dnx_gentools.file_operations import load_data, write_data,  change_file_owner
 
 from dnx_iptools.iptables import IPTablesManager
 from dnx_routines.logging.log_client import Log
@@ -496,7 +497,7 @@ def compile_extensions(*, count_only: bool = False) -> Optional[list[tuple]]:
         ('sudo python3 dnx_run.py compile cfirewall _autoloader_', 'compiling cfirewall'),
     ]
 
-    # incrementing progress total count to ensure progress bar is accurate
+    # incrementing progress total count to ensure the progress bar is accurate
     if (count_only):
         PROGRESS_TOTAL_COUNT += len(commands)
 
@@ -747,7 +748,7 @@ def signature_update(system_update: bool = False) -> bool:
             progress('incomplete', completed=success, total=len(download_targets))
             eprint(f'({len(checksum_failure_list)}) signature download errors detected. tries: {attempt}/3')
 
-            # dedup with set then converting back to a list
+            # dedup with a set then converting back to a list
             download_targets = list({*download_failure_list, *checksum_failure_list})
 
             # clearing trackers for the next attempt if needed.
@@ -801,6 +802,24 @@ def signature_update(system_update: bool = False) -> bool:
     # probably not needed, but doing anyway for consistency.
     set_signature_permissions()
 
+    # ===========================================
+    # UPDATE LOCAL CONFIGURATION FILES
+    # ===========================================
+    # setting geolocation data in ip proxy/profile_0 to the newly downloaded set.
+    # todo: make this check for a file change before updating the config file so we dont needlessly touch config files.
+    geolocation_cfg = load_data('geolocation.cfg', filepath='dnx_profile/signatures/configuration')
+    ipp_default_profile = load_data('profile_0.cfg', cfg_type='system/security/ip')
+
+    ipp_default_profile['geolocation'] = geolocation_cfg['geolocation']
+
+    # writing to temp file, changing the owner and permissions, the renaming over the original file.
+    write_data(ipp_default_profile, 'profile_0.temp', cfg_type='system/security/ip')
+    change_file_owner('dnx_profile/data/system/security/ip/profile_0.temp')
+    os.rename('dnx_profile/data/system/security/ip/profile_0.temp', 'dnx_profile/data/system/security/ip/profile_0.cfg')
+
+    # ===========================================
+    # CLEANUP
+    # ===========================================
     signature_updater.clear_signature_update_flag()
 
     final_msg = 'signature update complete.'

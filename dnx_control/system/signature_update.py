@@ -193,9 +193,9 @@ def validate_signature_file(file_info: SigFile) -> bool:
 
     system_path = get_file_path(file_info)
 
-    local_file_hash = calculate_file_hash(file_info.name, folder=system_path)
+    local_file_hash = calculate_file_hash(file_info.name, folder=f'{system_path}/temp')
     if (local_file_hash != file_info.checksum):
-        os.remove(f'dnx_profile/{file_info.folder}/temp/{file_info.name}')
+        os.remove(f'dnx_profile/{system_path}/temp/{file_info.name}')
 
         return False
 
@@ -204,14 +204,14 @@ def validate_signature_file(file_info: SigFile) -> bool:
 def move_signature_files(signature_manifest: SIGNATURE_MANIFEST, failure_list: SIGNATURE_MANIFEST) -> None:
 
     for file_info in signature_manifest:
-        folder, filename = get_file_path(file_info)
+        system_path = get_file_path(file_info)
 
         if file_info in failure_list:
             continue
 
         os.rename(
-            f'dnx_profile/{folder}/temp/{filename}',
-            f'dnx_profile/{folder}/{filename}'
+            f'dnx_profile/{system_path}/temp/{file_info.name}',
+            f'dnx_profile/{system_path}/{file_info.name}'
         )
 
     # replacing old compatible version file and signature file manifest
