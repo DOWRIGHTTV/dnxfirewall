@@ -72,8 +72,12 @@ def release_lock(mutex: TextIO):
     mutex.close()
 
 def load_configuration(
-        filename: str, ext: str = 'cfg', *, cfg_type: str = '', filepath: str = 'dnx_profile/data') -> ConfigChain:
+        filename: str, ext: str = 'cfg', *,
+        cfg_type: str = '', filepath: str = 'dnx_profile/data', strict: bool = True) -> ConfigChain:
     '''load json data from a file and convert it to a ConfigChain.
+
+        strict mode will conform usr config to system config.
+        non-conforming keys will be removed from the ConfigChain.
     '''
     user_filename = f'{cfg_type}/{filename}.{ext}' if cfg_type else f'{filename}.{ext}'
 
@@ -94,7 +98,7 @@ def load_configuration(
         with open(f'{HOME_DIR}/{filepath}/usr/{user_filename}', 'r') as user_settings_io:
             user_settings: dict = json.load(user_settings_io)
 
-    return ConfigChain(system_settings, user_settings)
+    return ConfigChain(system_settings, user_settings, strict)
 
 def write_configuration(
         data: dict, filename: str, ext: str = 'cfg', *, cfg_type: str = '', filepath: str = 'dnx_profile/data/usr') -> None:
@@ -108,7 +112,8 @@ def write_configuration(
 def load_data(filename: str, *, cfg_type: str = '', filepath: str = 'dnx_profile/data') -> dict:
     '''loads json data from a file and convert it to a python dict.
 
-    this function does not provide a default file extension.
+    - does not provide a default file extension.
+    - does not check if the file exists before attempting to open it.
     '''
     filename = f'{cfg_type}/{filename}' if cfg_type else f'{filename}'
 
@@ -287,10 +292,10 @@ class ConfigChain:
         '__config', '__flat_config', '__mutable_config'
     )
 
-    def __init__(self, system: dict, user: dict):
+    def __init__(self, system: dict, user: dict, strict: bool):
 
         system_flat = self._flatten(system)
-        user_flat = {k: v for k, v in self._flatten(user).items() if k in system_flat}
+        user_flat = {k: v for k, v in self._flatten(user).items() if k in system_flat} if strict else self._flatten(user)
 
         self.__config = (user, system)
         self.__flat_config = (user_flat, system_flat)
@@ -548,7 +553,7 @@ class ConfigurationManager:
         # releasing lock for purposes specified in flock(1) man page under -u (unlock)
         RELEASE_LOCK(self._config_lock)
 
-        # closing file after unlock to allow reference to be cleaned up.
+        # closing the file after unlocking to allow reference to be cleaned up.
         self._config_lock.close()
         self.log.debug(f'file lock released for {self._filename}')
 
@@ -564,13 +569,14 @@ class ConfigurationManager:
             raise ConfigurationError(f'Configuration manager failed while updating file. error->{exc_val}')
 
     # will load json data from file, convert it to a ConfigChain
-    def load_configuration(self) -> ConfigChain:
+    def load_configuration(self, *, strict: bool = True) -> ConfigChain:
         '''returns python dictionary of configuration file contents.
         '''
         if (not self._name):
             raise RuntimeError('Configuration Manager methods are disabled in lock only mode.')
 
-        return load_configuration(self._name, ext=self._ext, cfg_type=self._cfg_type, filepath=self._file_path)
+        return load_configuration(
+            self._name, self._ext, cfg_type=self._cfg_type, filepath=self._file_path, strict=strict)
 
     # accepts python dictionary for serialization to json. writes data to specified file opened.
     def write_configuration(self, data_to_write: dict):
@@ -622,7 +628,8 @@ class Watcher:
         for _ in RUN_FOREVER:
 
             if (self.is_modified):
-                config_chain = load_configuration(self._watch_file, ext=self._ext, cfg_type=self._cfg_type, filepath=self._filepath)
+                config_chain = load_configuration(
+                    self._watch_file, self._ext, cfg_type=self._cfg_type, filepath=self._filepath)
 
                 self._callback(*args, config_chain)
 

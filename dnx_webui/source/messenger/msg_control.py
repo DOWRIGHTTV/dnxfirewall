@@ -36,7 +36,7 @@ class SECURE_MESSAGE(NamedTuple):
 
 def get_user_list(current_user: str) -> dict[str, list[int]]:
     web_users: ConfigChain = load_configuration('logins', filepath='/dnx_webui/data')
-    active_users: ConfigChain = load_configuration('session_tracker', filepath='/dnx_webui/data')
+    active_users: ConfigChain = load_configuration('session_tracker', filepath='/dnx_webui/data', strict=False)
 
     # [online, last seen] -> if online, last seen will be 0
     msg_users = {

@@ -12,7 +12,7 @@ from source.web_typing import *
 
 from dnx_gentools.def_constants import fast_time, fast_sleep
 from dnx_gentools.def_enums import LOG, CFG
-from dnx_gentools.file_operations import load_configuration, ConfigurationManager
+from dnx_gentools.file_operations import ConfigurationManager, load_configuration, load_data
 
 from dnx_routines.logging.log_client import direct_log
 
@@ -53,7 +53,7 @@ class Authentication:
         else:
             direct_log(LOG_NAME, LOG.WARNING, f'Failed login attempt for user {username} from {request.remote_addr}.')
 
-        # blocks until expiration flag is set
+        # blocks until the expiration flag is set
         while not self._time_expired:
             fast_sleep(.202)
 
@@ -63,7 +63,7 @@ class Authentication:
         return authorized, username, user_role
 
     @staticmethod
-    # see if this is safe. if this returns something outside of dictionary, error will occur.
+    # see if this is safe. if this returns something outside the dictionary, an error will occur.
     def get_user_role(username: str) -> Optional[str]:
         local_accounts: ConfigChain = load_configuration('logins', filepath='dnx_webui/data')
         try:
@@ -152,9 +152,11 @@ def user_restrict(*authorized_roles: str) -> Callable:
 
             # NOTE: this is dnx local tracking of sessions, not to be confused with flask session tracking.
             # they are essentially copies of each other, but dnx is used to track all active sessions.
+            # loaded directly from usr directory and does not fall back to system default. aka will crash if not found.
+
             # NOTE: dnx session data limits connections to 1 per user.
             # this may change in the future, but some enterprise systems have similar or multiple tab restrictions.
-            session_tracker: ConfigChain = load_configuration('session_tracker', filepath='dnx_webui/data')
+            session_tracker: ConfigChain = load_configuration('session_tracker', filepath='dnx_webui/data', strict=False)
 
             logged_remote_addr = session_tracker.get(f'active_users->{user}->remote_addr')
             if (logged_remote_addr != request.remote_addr):
@@ -182,13 +184,14 @@ def user_restrict(*authorized_roles: str) -> Callable:
         return wrapper
     return decorator
 
-def update_session_tracker(name: str, role: Optional[str] = None, remote_addr: Optional[str] = None, *, action: CFG = CFG.ADD) -> None:
+def update_session_tracker(
+        name: str, role: Optional[str] = None, remote_addr: Optional[str] = None, *, action: CFG = CFG.ADD) -> None:
 
     if (action is CFG.ADD and not remote_addr):
         raise ValueError('remote_addr must be specified if action is set to add.')
 
     with ConfigurationManager('session_tracker', file_path='dnx_webui/data') as session_tracker:
-        persistent_tracker: ConfigChain = session_tracker.load_configuration()
+        persistent_tracker: ConfigChain = session_tracker.load_configuration(strict=False)
 
         user_path = f'active_users->{name}'
         if (action is CFG.ADD):
@@ -215,7 +218,7 @@ def authenticated_session() -> Optional[str]:
     return session.get('user', None)
 
 def send_to_login_page():
-    '''determines correct login page, then returns a Response object redirect accordingly.
+    '''determines the correct login page, then returns a Response object redirect accordingly.
     '''
     login_page = 'messenger_login' if request.path == '/messenger' else 'dnx_login'
 
@@ -223,10 +226,10 @@ def send_to_login_page():
 
 def end_session_send_to_login_page():
     '''1. remove user from Flask session data structure.
-    2. determines correct login page, then returns a Response object redirect accordingly.
+    2. determines the correct login page, then returns a Response object redirect accordingly.
     '''
-    login_page = 'messenger_login' if request.path == '/messenger' else 'dnx_login'
-
     session.pop('user', None)
+
+    login_page = 'messenger_login' if request.path == '/messenger' else 'dnx_login'
 
     return redirect(url_for(login_page))
