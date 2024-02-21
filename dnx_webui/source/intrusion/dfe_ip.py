@@ -155,6 +155,7 @@ class WebPage(StandardWebPage):
         category = config(**{
             'type': json_data.get('type', DATA.MISSING),
             'name': json_data.get('category', DATA.MISSING),
+            'region': json_data.get('region', DATA.MISSING),
             'direction': get_convert_int(json_data, 'direction')
         })
 
@@ -244,7 +245,7 @@ def configure_geolocation(category: config, *, rtype: str = 'country') -> None:
 
         # setting the individual country to user set value
         if (rtype == 'country'):
-            ip_proxy_settings[f'geolocation->{category.name.lower()}'] = category.direction
+            ip_proxy_settings[f'geolocation->{category.region}->{category.name}'] = category.direction
 
         # iterating over all countries within specified continent and setting their
         # direction as the user set value # TODO: implement this

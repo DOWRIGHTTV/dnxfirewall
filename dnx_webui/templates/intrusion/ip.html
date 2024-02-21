@@ -62,20 +62,20 @@
                     <form method="POST">
                         <input type="hidden" name="tab" value="2">
                         <input type="hidden" name="change_geo_view">
-                        <div class="input-field col s5 m3 offset-m1 {{input_color}}">
+                        <div class="input-field col s5 m3 offset-m1 {{ input_color }}">
                             <select name="region" id="region" onchange="this.form.submit()">
                                 {% for region in ip_settings['regions'] %}
-                                <option value="{{region}}" {% if region == ip_settings['geolocation']['region'] %}
-                                        selected {% endif %}>{{region.replace('_', ' ').upper()}}</option>
+                                <option value="{{ region }}" {% if region == ip_settings['geolocation']['region'] %}
+                                        selected {% endif %}>{{ region.replace('_', ' ').upper() }}</option>
                                 {% endfor %}
                             </select>
                             <label for="region">Region</label>
                         </div>
-                        <div class="input-field col s5 m3 {{input_color}}">
+                        <div class="input-field col s5 m3 {{ input_color }}">
                             <select name="menu_dir" id="menu_dir" onchange="this.form.submit()">
                                 {% for dir in ['off', 'outbound', 'inbound', 'both', 'on', 'all'] %}
-                                <option value="{{loop.index0}}" {% if ip_settings['geolocation']['menu_dir'] == loop.index0 %}
-                                        selected {% endif %}>{{dir.upper()}}</option>
+                                <option value="{{ loop.index0 }}" {% if ip_settings['geolocation']['menu_dir'] == loop.index0 %}
+                                        selected {% endif %}>{{ dir.upper() }}</option>
                                 {% endfor %}
                             </select>
                             <label for="menu_dir">Direction</label>
@@ -177,11 +177,15 @@
 async function updateCategory(category) {
 
     const cat_info = category.value.split('/');
+    const region = '{{ ip_settings['geolocation']['region'] }}';
 
     let cat_value = cat_info[0];
     let cat_opt   = cat_info[1];
 
-    let response = await ajaxClient.post('/post', {'type': category.name, 'category': cat_value, 'direction': cat_opt});
+    // region is not needed for reputation and will be ignored on server side input validation.
+    let response = await ajaxClient.post('/post', {
+      'type': category.name, 'category': cat_value, 'direction': cat_opt, 'region': region
+    });
 
     // manually changing the active button instead of using an event listener to prevent a switch on server errors.
     let error = ajaxClient.handleResponse(response, category);
