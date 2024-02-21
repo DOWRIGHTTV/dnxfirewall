@@ -808,7 +808,7 @@ def signature_update(system_update: bool = False) -> bool:
     # setting geolocation data in ip proxy/profile_0 to the newly downloaded set.
     # todo: make this check for a file change before updating the config file so we dont needlessly touch config files.
     geolocation_cfg = load_data('geolocation.cfg', filepath='dnx_profile/signatures/configuration')
-    ipp_default_profile = load_data('profile_0.cfg', cfg_type='system/security/ip')
+    ipp_default_profile = load_data('profiles/profile_0.cfg', cfg_type='system/security/ip')
 
     ipp_default_profile['geolocation'] = geolocation_cfg['geolocation']
 
