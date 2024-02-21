@@ -813,9 +813,13 @@ def signature_update(system_update: bool = False) -> bool:
     ipp_default_profile['geolocation'] = geolocation_cfg['geolocation']
 
     # writing to temp file, changing the owner and permissions, the renaming over the original file.
-    write_data(ipp_default_profile, 'profile_0.temp', cfg_type='system/security/ip')
-    change_file_owner('dnx_profile/data/system/security/ip/profile_0.temp')
-    os.rename('dnx_profile/data/system/security/ip/profile_0.temp', 'dnx_profile/data/system/security/ip/profile_0.cfg')
+    write_data(ipp_default_profile, 'profile_0.temp', cfg_type='system/security/ip/profiles')
+
+    geo_cfg_path_temp = 'dnx_profile/data/system/security/ip/profiles/profile_0.temp'
+    geo_cfg_path = 'dnx_profile/data/system/security/ip/profiles/profile_0.cfg'
+
+    change_file_owner(geo_cfg_path_temp)
+    os.rename(geo_cfg_path_temp, geo_cfg_path)
 
     # ===========================================
     # CLEANUP
