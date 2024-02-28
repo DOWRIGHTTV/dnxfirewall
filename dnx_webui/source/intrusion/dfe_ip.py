@@ -92,7 +92,7 @@ class WebPage(StandardWebPage):
             'geolocation': {
                 'region': geo_region,
                 'menu_dir': geo_direction,
-                'countries': sorted(geolocation)
+                'countries': geolocation
             }
         }
 
@@ -245,7 +245,7 @@ def configure_geolocation(category: config, *, rtype: str = 'country') -> None:
 
         # setting the individual country to user set value
         if (rtype == 'country'):
-            ip_proxy_settings[f'geolocation->{category.region}->{category.name}'] = category.direction
+            ip_proxy_settings[f'geolocation->{category.region}->countries->{category.name}'] = category.direction
 
         # iterating over all countries within specified continent and setting their
         # direction as the user set value # TODO: implement this

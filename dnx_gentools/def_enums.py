@@ -219,7 +219,7 @@ with open(f'{_SIG_DIR}/configuration/geolocation.cfg', 'r') as geo_cfg:
 
 GEO = _IntEnum('GEO', _GEO_LIST, start=0)
 GEOLOCATION = _NewType('GEOLOCATION', str)
-GEO_ID_TO_STRING: dict[int, GEOLOCATION] = {i: x for i, x in enumerate(_GEO_LIST)}
+GEO_ID_TO_STRING: dict[int, GEOLOCATION] = {i: GEOLOCATION(x) for i, x in enumerate(_GEO_LIST)}
 
 # ----------------------
 # REPUTATION
@@ -245,7 +245,7 @@ class REP(_IntEnum):
 
 
 REPUTATION = _NewType('REPUTATION', str)
-REP_ID_TO_STRING: dict[int, REPUTATION] = {rep.value: rep.name for rep in REP}
+REP_ID_TO_STRING: dict[int, REPUTATION] = {rep.value: REPUTATION(rep.name) for rep in REP}
 
 
 # ======================

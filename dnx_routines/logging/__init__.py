@@ -30,7 +30,7 @@ if INITIALIZE_MODULE('logging'):
 from typing import TYPE_CHECKING
 
 if (TYPE_CHECKING):
-    from typing import Type, TypeAlias
+    # from typing import Type, TypeAlias
 
     __all__ = (
         'LogHandler', 'LogHandler_T', 'LogService',
@@ -42,4 +42,4 @@ if (TYPE_CHECKING):
     # ======
     # TYPES
     # ======
-    LogHandler_T: TypeAlias = Type[LogHandler]
+    # LogHandler_T: TypeAlias = Type[_LogHandlerBase]

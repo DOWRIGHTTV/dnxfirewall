@@ -69,7 +69,7 @@ def _generate_log(pkt: IPPPacket, inspection: IPP_INSPECTION_RESULTS) -> LOG_ENT
                 'ipp_event'
             ))
 
-    elif (inspection.action is CONN_ACCEPT):
+    elif (inspection.action == CONN_ACCEPT):
 
         if (inspection.category in MALWARE_CATEGORIES and pkt.direction == DIR_OUTBOUND and Log.current_lvl >= LOG.EMERGENCY):
             log_entries.append((

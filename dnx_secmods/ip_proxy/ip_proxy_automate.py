@@ -5,7 +5,7 @@ from __future__ import annotations
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import RFC1918
 from dnx_gentools.def_namedtuples import Item
-from dnx_gentools.def_enums import PROTO, DIRECTION, GEOLOCATION, REPUTATION
+from dnx_gentools.def_enums import PROTO, DIRECTION, GEO, GEOLOCATION, REP, REPUTATION
 from dnx_gentools.standard_tools import ConfigurationMixinBase
 from dnx_gentools.file_operations import cfg_read_poller
 
@@ -54,24 +54,38 @@ class ProxyConfiguration(ConfigurationMixinBase):
 
         self.__class__.ids_mode = proxy_settings['ids_mode']
 
-        # converting list[items] > dict
+        # REPUTATION SETTINGS
         rep_settings = proxy_settings.get_items('reputation->built-in')
-        geo_settings = proxy_settings.get_items('geolocation')
-
-        # used for categorizing private ip addresses
-        geo_settings.append(Item(*RFC1918))
 
         for reputation, direction in rep_settings:
 
-            self.__class__.reputation_settings[reputation.upper()] = DIRECTION(direction)
+            reputation_name = reputation.upper()
+
+            # membership test to detect potential critical errors in signature handling
+            try:
+                REP[reputation_name]
+            except KeyError:
+                Log.error(f'reputation category [{reputation_name}] not found in REPUTATION enum')
+            else:
+                self.__class__.reputation_settings[reputation_name] = DIRECTION(direction)
+
+        # GEOLOCATION SETTINGS
+        geo_settings = [Item(*RFC1918)]  # used for categorizing private ip addresses
+
+        for region in proxy_settings.get_list('geolocation'):
+            geo_settings.extend(proxy_settings.get_items(f'geolocation->{region}->countries'))
 
         for country, direction in geo_settings:
-            
-            # using enum for category key and direction value
+
+            country_name = country.upper()
+
+            # membership test to detect potential critical errors in signature handling
             try:
-                self.__class__.geolocation_settings[country.upper()] = DIRECTION(direction)
+                GEO[country_name]
             except KeyError:
-                continue  # not all enums/countries are populated
+                Log.error(f'country [{country_name}] not found in GEOLOCATION enum')
+            else:
+                self.__class__.geolocation_settings[country_name] = DIRECTION(direction)
 
         self._initialize.done()
 

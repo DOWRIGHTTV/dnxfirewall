@@ -120,12 +120,12 @@ def generate_reputation(log: LogHandler_T) -> list[list[int, int]]:
     '''
     ip_rep_signatures, reputation_priority = _combine_reputation(log)
 
-    hosts_with_dup = defaultdict(list)
+    hosts_with_dup: defaultdict[int, list[tuple[int, int]]] = defaultdict(list)
     for signature in ip_rep_signatures:
 
         sig = signature.split()
         try:
-            ip_addr = ip_unpack(inet_aton(sig[0]))[0]
+            ip_addr: int = ip_unpack(inet_aton(sig[0]))[0]
             cat_id = int(REP[sig[1].upper()])
         except Exception as E:
             log.warning(f'invalid signature: {signature}, {E}')
