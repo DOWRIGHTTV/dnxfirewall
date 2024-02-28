@@ -65,7 +65,7 @@ class Authentication:
     @staticmethod
     # see if this is safe. if this returns something outside the dictionary, an error will occur.
     def get_user_role(username: str) -> Optional[str]:
-        local_accounts: ConfigChain = load_configuration('logins', filepath='dnx_webui/data')
+        local_accounts: ConfigChain = load_configuration('logins', filepath='dnx_webui/data', strict=False)
         try:
             return local_accounts[f'users->{username}->role']
         except KeyError:
@@ -127,7 +127,7 @@ class Authentication:
 
     @staticmethod
     def _user_authorized(username: str, hexpass: str) -> bool:
-        local_accounts: ConfigChain = load_configuration('logins', filepath='dnx_webui/data')
+        local_accounts: ConfigChain = load_configuration('logins', filepath='dnx_webui/data', strict=False)
         try:
             password = local_accounts[f'users->{username}->password']
         except KeyError:
