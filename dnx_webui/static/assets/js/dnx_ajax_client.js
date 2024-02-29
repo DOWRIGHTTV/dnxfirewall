@@ -48,7 +48,7 @@ class AjaxClient {
 
    handleResponse(response, field = null) {
        if (response.error) {
-           let commitError = document.querySelector('#ajax-error-modal');
+           let commitError = document.querySelector('.ajax-response-modal');
            commitError.querySelector('h5').innerText = response.message;
 
            let errorModal = M.Modal.init(
