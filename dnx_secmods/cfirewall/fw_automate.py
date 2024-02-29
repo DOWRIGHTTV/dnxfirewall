@@ -100,7 +100,7 @@ class FirewallAutomate:
 
     @cfg_read_poller('system', ext='firewall', filepath='dnx_profile/iptables')
     def _monitor_system_rules(self, loaded_rules: ConfigChain) -> None:
-        # 0-99: system reserved - 1. loopback 10/11. dhcp, 20/21. dns, 30/31. http, 40/41. https, etc
+        # 0-99: system reserved - 1. loopback 10/11. dhcp, 20/21. dns, 30/31. http, 40/41. https, etc.
         #   - add loopback to system table
         # 100-1059: zone mgmt rules. 100s place designates interface index
         #   - 0/1: webui, 2: cli, 3: ssh, 4: ping

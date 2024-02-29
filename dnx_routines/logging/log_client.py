@@ -11,7 +11,7 @@ from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import *
 from dnx_gentools.def_enums import LOG
 from dnx_gentools.standard_tools import classproperty, dnx_queue, Initialize
-from dnx_gentools.file_operations import change_file_owner, load_configuration, cfg_read_poller
+from dnx_gentools.file_operations import change_file_owner, load_data, cfg_read_poller
 
 from dnx_gentools.system_info import System
 
@@ -20,12 +20,9 @@ from dnx_gentools.system_info import System
 # ===============
 from typing import TYPE_CHECKING
 
-if (TYPE_CHECKING):
-    from dnx_routines.logging import LogHandler_T
-
 
 __all__ = (
-    'LogHandler', 'Log',
+    'LogHandler', 'Log', 'LogHandler_T',
 
     'direct_log', 'message', 'db_message', 'convert_level',
 
@@ -39,6 +36,20 @@ _format_time = System.format_time
 # ==============================
 # GENERIC LIGHTWEIGHT FUNCTIONS
 # ==============================
+direct_log_lock: Lock_T = threading.Lock()
+
+def _dump_to_file(path: str, msg: str, *, lock: Lock_T = None) -> None:
+
+    if (lock):
+        lock.acquire()
+
+    with open(path, 'a+') as log_file:
+        log_file.write(msg)
+
+    if (lock):
+        lock.release()
+
+
 def direct_log(m_name: str, message_level: LOG, msg: str, *, cli: bool = False) -> None:
     '''alternate system log method.
 
@@ -49,8 +60,9 @@ def direct_log(m_name: str, message_level: LOG, msg: str, *, cli: bool = False) 
         return
 
     log_path = f'{HOME_DIR}/dnx_profile/log/{m_name}/{_system_date(string=True)}-{m_name}.log'
-    with open(log_path, 'a+') as log_file:
-        log_file.write(f'{fast_time()}|{m_name}|{message_level.name.lower()}|{msg}\n')
+    log_msg  = f'{fast_time()}|{m_name}|{message_level.name.lower()}|{msg}\n'
+
+    _dump_to_file(log_path, log_msg, lock=direct_log_lock)
 
     if (cli and not Log.suppress_output):
         console_log(msg)
@@ -103,7 +115,7 @@ def convert_level(level: Optional[LOG] = None) -> Union[dict[int, list[str, str]
 # LOG HANDLING CLASS FACTORY
 # ===========================
 # process wide "instance" of LogHandler class, which can be used directly or subclassed.
-def _log_handler() -> LogHandler:
+def _log_handler():
 
     logging_level: int = 0
     handler_name: str = ''
@@ -145,10 +157,12 @@ def _log_handler() -> LogHandler:
             '''
             initialize log handler settings and monitor system configs for changes with log/syslog settings.
 
-            set console_output=True to enable "Log.cli" outputs in terminal.
+            set console_output=True to enable "Log.cli" outputs in the terminal.
             '''
             nonlocal handler_name, cli_output, log_path, db_client
 
+            # TODO: wtf is this? initializer doesnt seem to be used anywhere or even set so None.
+            #  - i think this is left over from a previous implementation.
             if (initializer is None):
                 raise RuntimeError('the log handler has already been started.')
 
@@ -314,6 +328,7 @@ def _log_handler() -> LogHandler:
             _log_buf.flush()
             _log_write_ct = 0
 
+    # TODO: is passing in the class necessary here. i feel like we should just reference it directly.
     def add_logging_methods(cls) -> None:
         '''dynamically overrides default log level methods depending on current log settings.
         '''
@@ -377,15 +392,15 @@ def _log_handler() -> LogHandler:
     return _LogHandler
 
 
-LogHandler = _log_handler()
-Log: LogHandler_T = LogHandler  # alias
+Log = LogHandler = _log_handler()
+LogHandler_T: TypeAlias = Type[LogHandler]
 
 # ========================
 # DIRECT ACCESS FUNCTIONS
 # ========================
 # TODO: test direct access functions after a log level is changed and methods are reset.
 #  - im pretty sure this reference will change so it will not work unless we setattr on the globals
-LogLevel = Callable[[str], None]
+LogLevel: TypeAlias = Callable[[str], None]
 
 emergency: LogLevel = LogHandler.emergency
 alert: LogLevel = LogHandler.alert
@@ -396,3 +411,81 @@ notice: LogLevel = LogHandler.notice
 informational: LogLevel = LogHandler.informational
 debug: LogLevel = LogHandler.debug
 cli: LogLevel = LogHandler.cli
+
+# ========================
+# EXCEPTION HOOKS
+# ========================
+# TODO: consider moving this to a separate module.
+# we will put this here for now since the log client is already imported by all modules that would be using it.
+# the associated log file writing will also be handled by the log client, so it might make sense to keep it here.
+import os as _os
+import sys as _sys
+import traceback as _tb
+
+_err_report_write_lock = threading.Lock()
+_err_report_path = f'{HOME_DIR}/dnx_profile/log/_err_reports/{_system_date(string=True)}_err.log'
+
+# Process hook -> called if an unhandled exception occurs in the Main thread or within a Thread exception hook.
+def _handle_unhandled_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        print(f'\nProcess [{__file__.split("/", 3)[3]}] terminated by Keyboard Interrupt.')
+        _os._exit(1)
+
+    err_report = _format_output(exc_type, exc_value, exc_traceback)
+
+    _dump_to_file(_err_report_path, err_report, lock=_err_report_write_lock)
+
+
+_sys.excepthook = _handle_unhandled_exception
+
+
+# Threads hook
+def _handle_unhandled_thread_exception(args, /):
+    ''' args = exc_type, exc_value, exc_traceback, thread
+    '''
+    err_report = _format_output(args.exc_type, args.exc_value, args.exc_traceback)
+
+    _dump_to_file(_err_report_path, err_report, lock=_err_report_write_lock)
+
+
+threading.excepthook = _handle_unhandled_thread_exception
+
+
+# UTILITY FUNCTIONS
+def _format_output(exc_type, exc_value, exc_traceback) -> str:
+    str_builder = [
+        _format_threads(),
+        f'{exc_type.split()[1][:-1]} -> {exc_value}\n',
+        '-' * 36,
+        ''.join(_tb.format_tb(exc_traceback)),
+        '-' * 36,
+        ''
+    ]
+
+    return '\n'.join(str_builder)
+
+def _format_threads() -> str:
+    active_threads = threading.enumerate()
+
+    str_builder = [
+        '=' * 36,
+        f'active: {len(active_threads)} time={fast_time()}',
+        '=' * 36
+    ]
+
+    for i, t in enumerate(threading.enumerate(), 1):
+
+        if t is threading.main_thread():
+            status = 'M'
+
+        elif t is threading.current_thread():
+            status = '!'
+
+        else:
+            status = 'R'
+
+        str_builder.append(f'[{status}] {t}')
+
+    str_builder.append('-' * 36)
+
+    return '\n'.join(str_builder)

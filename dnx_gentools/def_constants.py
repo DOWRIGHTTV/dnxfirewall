@@ -23,7 +23,7 @@ from dnx_iptools.def_structs import scm_creds_pack as _scm_creds_pack
 # lib dir is not in system path by default for all distros
 #
 # this assumes any module that would need the library files
-# imports this file first for module initializion. if this
+# imports this file first for module initialization. if this
 # is not the case, the lib dir will need to be added locally
 # to the module or this file should be imported first.
 _sys.path.append('/usr/local/lib')

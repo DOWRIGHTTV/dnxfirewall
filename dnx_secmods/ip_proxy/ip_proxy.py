@@ -111,67 +111,68 @@ _geolocation_settings = IPProxy.geolocation_settings
 def inspect(packet: IPPPacket) -> IPP_INSPECTION_RESULTS:
 
     # if category match and country is configured to block in direction of conn/packet
-    if country := packet.tracked_geo:
-        action, country_name = _country_action(country, packet)
+    if country_id := packet.tracked_geo:
+        action, country_name = _country_action(country_id, packet)
 
     else:
-        action, country_name = CONN_ACCEPT, GEO_ID_TO_STRING[country]
+        action, country_name = CONN_ACCEPT, GEO_ID_TO_STRING[country_id]  # GEO.NONE
 
-    # no need to check reputation of host if filtered by geolocation
-    if (action is CONN_ACCEPT):
+    # only checking ip_addr reputation if not filtered by geolocation
+    if (action != CONN_ACCEPT):
+        return IPP_INSPECTION_RESULTS((country_name, REP_ID_TO_STRING[-1]), action)  # REP.DNL
 
-        # if category match, and category is configured to block in direction of conn/packet
-        if reputation := REP_LOOKUP(packet.tracked_ip):
-            action, rep_name = _reputation_action(reputation, packet)
-
-        else:
-            rep_name = REP_ID_TO_STRING[reputation]
+    if reputation_id := REP_LOOKUP(packet.tracked_ip):
+        action, reputation_name = _reputation_action(reputation_id, packet)
 
     else:
-        rep_name = REP_ID_TO_STRING[-1]  # REP.DNL
+        reputation_name = REP_ID_TO_STRING[reputation_id]  # REP.NONE
 
-    return IPP_INSPECTION_RESULTS((country_name, rep_name), action)
+    return IPP_INSPECTION_RESULTS((country_name, reputation_name), action)
 
 # TODO: expand for profiles. reputation_settings[profile][category]
 # category setting lookup. will match packet direction with configured dir for category/category group.
-def _reputation_action(category: int, packet: IPPPacket) -> tuple[DECISION, REPUTATION]:
+def _reputation_action(reputation_id: int, packet: IPPPacket) -> tuple[DECISION, REPUTATION]:
 
     # flooring cat to its group id for easier matching
-    rep_group = REP_ID_TO_STRING[(category // 10) * 10]
+    rep_group = REP_ID_TO_STRING[(reputation_id // 10) * 10]
 
     # TOR categories need to be checked individually
     if (rep_group == 'TOR'):
-        rep_group = REP_ID_TO_STRING[category]
-
-        # only outbound traffic will match tor whitelist since this override is designed for a user to access tor
-        # and not to open a local machine to tor traffic.
-        # if (packet.direction is DIR.OUTBOUND and packet.local_ip in _tor_whitelist):
-        #     return CONN_ACCEPT
+        rep_group = REP_ID_TO_STRING[reputation_id]
 
     block_direction = _reputation_settings[rep_group]
-
-    # notify proxy the connection should be blocked. dir enum is Flag with bitwise ops.
+    # --------------------
+    # BLOCKING ACTIONS
+    # --------------------
+    # dir enum is _Flag with bitwise ops for easier/faster comparison.
     if (packet.direction & block_direction):
         # hardcoded for icmp to drop and tcp/udp to reject. # TODO: consider making this configurable.
         if (packet.protocol is PROTO.ICMP):
-            return CONN_DROP
+            return CONN_DROP, rep_group
 
-        return CONN_REJECT
+        return CONN_REJECT, rep_group
+    # --------------------
 
-    # default action is allow
-    return CONN_ACCEPT
+    # default action
+    return CONN_ACCEPT, rep_group
 
 # TODO: expand for profiles. geolocation_settings[profile][category]
-def _country_action(country: int, packet: IPPPacket) -> tuple[DECISION, GEOLOCATION]:
+def _country_action(country_id: int, packet: IPPPacket) -> tuple[DECISION, GEOLOCATION]:
 
-    country_name = GEO_ID_TO_STRING[country]
+    country_name = GEO_ID_TO_STRING[country_id]
 
-    # dir enum is _Flag with bitwise ops. this makes comparison much easier.
-    if (packet.direction & _geolocation_settings[country_name]):
+    block_direction = _geolocation_settings[country_name]
+    # --------------------
+    # BLOCKING ACTIONS
+    # --------------------
+    # dir enum is _Flag with bitwise ops for easier/faster comparison.
+    if (packet.direction & block_direction):
         # hardcoded for icmp to drop and tcp/udp to reject. # TODO: consider making this configurable.
         if (packet.protocol is PROTO.ICMP):
             return CONN_DROP, country_name
 
         return CONN_REJECT, country_name
+    # --------------------
 
+    # default action
     return CONN_ACCEPT, country_name

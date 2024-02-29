@@ -85,7 +85,7 @@ class FirewallControl:
         This is a replace operation on disk and thread/process safe.
         '''
         with ConfigurationManager(DEFAULT_VERSION, ext='firewall', file_path=DEFAULT_PATH) as dnx_fw:
-            fw_rules: ConfigChain = dnx_fw.load_configuration()
+            fw_rules: ConfigChain = dnx_fw.load_configuration(strict=False)
 
             fw_rules_copy = fw_rules.get_dict()
             fw_rules_copy[section] = updated_rules
@@ -108,7 +108,7 @@ class FirewallControl:
 
             # using standalone functions due to ConfigManager not being compatible with these operations
             # -> file swapping across multiple files to retain plain and encoding version of the rules
-            fw_rules: ConfigChain = load_configuration('pending', ext='firewall', filepath=DEFAULT_PATH)
+            fw_rules: ConfigChain = load_configuration('pending', ext='firewall', filepath=DEFAULT_PATH, strict=False)
 
             fw_rules_copy: dict[str, Any] = fw_rules.get_dict()
 
@@ -139,7 +139,7 @@ class FirewallControl:
         additional processing is required for webui or cli formats.
         section arg will change which ruleset is returned.
         '''
-        fw_rules = load_configuration(DEFAULT_VERSION, ext='firewall', filepath=DEFAULT_PATH).get_dict()
+        fw_rules = load_configuration(DEFAULT_VERSION, ext='firewall', filepath=DEFAULT_PATH, strict=False).get_dict()
 
         try:
             return fw_rules[section]
@@ -150,7 +150,7 @@ class FirewallControl:
     def ruleset_len(section: str = 'MAIN') -> int:
         '''returns len of firewall_pending ruleset. defaults to main and returns 0 on error.
         '''
-        fw_rules = load_configuration(DEFAULT_VERSION, ext='firewall', filepath=DEFAULT_PATH).get_dict()
+        fw_rules = load_configuration(DEFAULT_VERSION, ext='firewall', filepath=DEFAULT_PATH, strict=False).get_dict()
 
         try:
             return len(fw_rules[section])

@@ -228,7 +228,7 @@ def validate_reservation(res: config, /) -> Optional[ValidationError]:
 # ==============
 def configure_dhcp_switches(dhcp_settings: config):
     with ConfigurationManager('dhcp_server', cfg_type='global') as dnx:
-        server_settings: ConfigChain = dnx.load_configuration()
+        server_settings: ConfigChain = dnx.load_configuration(strict=False)
 
         interface = dhcp_settings.pop('interface')
 
@@ -237,9 +237,10 @@ def configure_dhcp_switches(dhcp_settings: config):
         server_settings[f'{config_path}->{dhcp_settings.cfg_key}'] = dhcp_settings.cfg_val
 
         dnx.write_configuration(server_settings.expanded_user_data)
+
 def configure_dhcp_settings(dhcp_settings: config):
     with ConfigurationManager('dhcp_server', cfg_type='global') as dnx:
-        server_settings: ConfigChain = dnx.load_configuration()
+        server_settings: ConfigChain = dnx.load_configuration(strict=False)
 
         interface = dhcp_settings.pop('interface')
 
@@ -282,9 +283,10 @@ def configure_reservation(dhcp: config, action: CFG) -> Optional[ValidationError
 
         dnx.write_configuration(dhcp_server_settings.expanded_user_data)
 
+# FIXME: this is referencing the wrong file. i should be dhcp_server.leases
 def remove_dhcp_lease(ip_addr: str) -> Optional[ValidationError]:
     with ConfigurationManager('dhcp_server', cfg_type='global') as dnx:
-        dhcp_leases: ConfigChain = dnx.load_configuration()
+        dhcp_leases: ConfigChain = dnx.load_configuration(strict=False)
 
         try:
             del dhcp_leases[f'leases->{ip_addr}']

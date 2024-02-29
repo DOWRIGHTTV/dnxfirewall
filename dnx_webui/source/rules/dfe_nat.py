@@ -196,7 +196,7 @@ def validate_snat_rule(rule: config, /, action: CFG) -> Optional[ValidationError
 # ==============
 def configure_open_wan_protocol(nat: config, *, action: CFG) -> None:
     with ConfigurationManager('global', cfg_type='security/ids_ips') as dnx:
-        protocol_settings: ConfigChain = dnx.load_configuration()
+        protocol_settings: ConfigChain = dnx.load_configuration(strict=False)
 
         if (action is CFG.ADD):
 

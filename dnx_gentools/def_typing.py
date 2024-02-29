@@ -66,5 +66,8 @@ if (TYPE_CHECKING and not _DISABLED):
     from dnx_gentools.def_namedtuples import INF_EVENT_LOG as _INF_EVENT_LOG
     from dnx_gentools.def_namedtuples import IPP_EVENT_LOG as _IPP_EVENT_LOG
     from dnx_gentools.def_namedtuples import IPS_EVENT_LOG as _IPS_EVENT_LOG
+    from dnx_gentools.def_namedtuples import SigFile as _SigFile
 
     EVENT_LOGS: TypeAlias = Union[_IPP_EVENT_LOG, _IPS_EVENT_LOG, _INF_EVENT_LOG]
+
+    SIGNATURE_MANIFEST: TypeAlias = list[_SigFile]

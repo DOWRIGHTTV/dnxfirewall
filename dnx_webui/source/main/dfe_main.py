@@ -770,7 +770,7 @@ def load_user_settings() -> None:
 
     else:
         # 1. theme
-        web_config: ConfigChain = load_configuration('logins', filepath='/dnx_webui/data')
+        web_config: ConfigChain = load_configuration('logins', filepath='/dnx_webui/data', strict=False)
 
         context_global.settings = web_config.get_dict(f'users->{user}->settings')
 

@@ -133,6 +133,7 @@ def validate_domain_categories(category: config, *, ruleset: str) -> Optional[tu
 # im being very explicit on the if statements because i would rather get the logic more right than pretty.
 def configure_domain_categories(category: config, *, ruleset: str):
     with ConfigurationManager('profiles/profile_1', cfg_type='security/dns') as dnx:
+        # TODO: does this need to be strict?
         dns_proxy: ConfigChain = dnx.load_configuration()
 
         # weird naming/ category structures are remnants from older config file formatting.

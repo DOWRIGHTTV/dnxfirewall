@@ -88,7 +88,8 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache_T:
             Log.notice('top domains cache has been cleared.')
 
         with ConfigurationManager('dns_server', ext='cache', cfg_type='global') as dnx:
-            cache_settings: ConfigChain = dnx.load_configuration()
+            # need non-strict mode here so the cache entries themselves don't get wiped out.
+            cache_settings: ConfigChain = dnx.load_configuration(strict=False)
 
             cache_settings['clear->standard'] = clear_dns_cache
             cache_settings['clear->top_domains'] = clear_top_domains
@@ -121,7 +122,7 @@ def dns_cache(*, dns_packet: Callable[[str], ClientQuery]) -> DNSCache_T:
 
         # updating persistent file first then sending requests
         with ConfigurationManager('dns_server', ext='cache', cfg_type='global') as dnx:
-            cache_storage: ConfigChain = dnx.load_configuration()
+            cache_storage: ConfigChain = dnx.load_configuration(strict=False)
 
             cache_storage['top_domains'] = top_domains
 

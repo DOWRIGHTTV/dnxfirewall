@@ -51,7 +51,7 @@ _properties = {
     ('service', 3): ['lime lighten-2', 'dns'],
     ('zone', 1): ['deep-purple lighten-2', 'border_inner'], ('zone', 2): ['purple lighten-2', 'border_inner']
 }
-def format_fw_obj(fw_obj: list, /) -> list[str, str]:
+def format_fw_obj(fw_obj: list, /) -> list[str]:
 
     properties = _properties.get((fw_obj[3], fw_obj[4]), ['', ''])
 
@@ -59,7 +59,8 @@ def format_fw_obj(fw_obj: list, /) -> list[str, str]:
         (f'<div class="chip tooltipped {properties[0]}" data-html="true" data-tooltip="<p style=width:160px>'
             f'{fw_obj[2]}<br>{fw_obj[3]}<br>{fw_obj[5]}<br>{fw_obj[6]}</p>">'
             f'<i class="material-icons tiny {properties[0]} valign-center">{properties[1]}</i> {fw_obj[1]}</div>'),
-        f'<i class="material-icons tiny valign-center">{properties[1]}</i>', properties[0]]
+        f'<i class="material-icons tiny valign-center">{properties[1]}</i>', properties[0]
+    ]
 
 
 return_data: tuple[bool, dict[str, Union[bool, str]]]
@@ -69,7 +70,7 @@ class WebPage(RulesWebPage):
     def load(section: str) -> dict[str, Any]:
         lzone_map: dict[int, str] = {ANY_ZONE: 'any'}
 
-        dnx_settings: ConfigChain = load_configuration('system', cfg_type='global')
+        dnx_settings: ConfigChain = load_configuration('system', cfg_type='global', strict=False)
 
         # building out interface to zone map NOTE: builtins only for now
         for intf_type in ['builtin', 'extended']:

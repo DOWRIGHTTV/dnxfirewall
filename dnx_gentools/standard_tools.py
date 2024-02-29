@@ -94,7 +94,7 @@ def dynamic_looper(loop_function: Callable):
 class ConfigurationMixinBase:
     '''Base class for security module configuration Mixins.
 
-    NOT defining slots to allow for primary parents to provide use/provide them.
+    NOT defining slots to allow for primary parents to use/provide them.
     '''
     module_class: ModuleClasses
 

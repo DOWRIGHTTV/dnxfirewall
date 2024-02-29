@@ -117,6 +117,7 @@ def validate_management_access(fields: config) -> Optional[ValidationError]:
 # ==============
 def configure_management_access(fields: config):
     with ConfigurationManager('system', cfg_type='global') as dnx:
+        # TODO: this will need to be non-strict when zone configuration is unlocked.
         mgmt_settings = dnx.load_configuration()
 
         mgmt_settings[f'mgmt_access->{fields.name}->{fields.service}'] = fields.action - 1 # enum offset

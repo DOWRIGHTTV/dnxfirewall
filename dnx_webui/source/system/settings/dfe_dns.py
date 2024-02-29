@@ -159,7 +159,7 @@ def validate_dns_record(query_name: str, *, action: CFG) -> Optional[ValidationE
 
 def validate_fallback_settings(settings: config) -> Optional[ValidationError]:
     with ConfigurationManager('dns_server') as dnx:
-        server_settings: ConfigChain = dnx.load_configuration()
+        server_settings: ConfigChain = dnx.load_configuration(strict=False)
 
         dot_enabled = server_settings['tls->enabled']
 
@@ -171,7 +171,7 @@ def validate_fallback_settings(settings: config) -> Optional[ValidationError]:
 # ==============
 def set_dns_servers(server_info: config) -> None:
     with ConfigurationManager('dns_server') as dnx:
-        server_settings: ConfigChain = dnx.load_configuration()
+        server_settings: ConfigChain = dnx.load_configuration(strict=False)
 
         server_settings['resolvers->primary->name'] = server_info.primary[0]
         server_settings['resolvers->primary->ip_address'] = server_info.primary[1]
@@ -183,7 +183,7 @@ def set_dns_servers(server_info: config) -> None:
 
 def update_dns_record(dns_record: config):
     with ConfigurationManager('dns_server') as dnx:
-        dns_records: ConfigChain = dnx.load_configuration()
+        dns_records: ConfigChain = dnx.load_configuration(strict=False)
 
         if (dns_record.action is CFG.ADD):
             dns_records[f'dns_server->records->{dns_record.name}'] = dns_record.ip
@@ -195,7 +195,7 @@ def update_dns_record(dns_record: config):
 
 def configure_protocol_options(settings: config, *, field: str) -> None:
     with ConfigurationManager('dns_server') as dnx:
-        dns_server_settings: ConfigChain = dnx.load_configuration()
+        dns_server_settings: ConfigChain = dnx.load_configuration(strict=False)
 
         if (field == 'dot'):
             dns_server_settings['tls->enabled'] = settings.enabled
@@ -210,7 +210,7 @@ def configure_protocol_options(settings: config, *, field: str) -> None:
 
 def set_dns_cache_clear_flag(clear_cache):
     with ConfigurationManager('dns_server', ext='cache') as dnx:
-        dns_server_settings: ConfigChain = dnx.load_configuration()
+        dns_server_settings: ConfigChain = dnx.load_configuration(strict=False)
 
         dns_server_settings['clear->standard'] = clear_cache.standard
         dns_server_settings['clear->top_domains'] = clear_cache.top_domains

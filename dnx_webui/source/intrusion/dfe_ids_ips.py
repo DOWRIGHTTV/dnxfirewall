@@ -223,7 +223,7 @@ def validate_passive_block_length(settings: config, /) -> Optional[ValidationErr
 # ==============
 def configure_ddos(ddos: CFG) -> None:
     with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
-        ips_settings: ConfigChain = dnx.load_configuration()
+        ips_settings: ConfigChain = dnx.load_configuration(strict=False)
 
         ips_settings['ddos->enabled'] = ddos.enabled
 
@@ -231,7 +231,7 @@ def configure_ddos(ddos: CFG) -> None:
 
 def configure_ddos_limits(ddos_limits: config) -> None:
     with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
-        ips_settings: ConfigChain = dnx.load_configuration()
+        ips_settings: ConfigChain = dnx.load_configuration(strict=False)
 
         for protocol, limit in ddos_limits.items():
             ips_settings[f'ddos->limits->source->{protocol}'] = limit
@@ -240,7 +240,7 @@ def configure_ddos_limits(ddos_limits: config) -> None:
 
 def configure_portscan(portscan: config, *, field: str) -> None:
     with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
-        ips_settings: ConfigChain = dnx.load_configuration()
+        ips_settings: ConfigChain = dnx.load_configuration(strict=False)
 
         if (field == 'enabled'):
             ips_settings['port_scan->enabled'] = portscan.enabled
@@ -255,7 +255,7 @@ def configure_portscan(portscan: config, *, field: str) -> None:
 
 def configure_general_settings(settings: config, /, field) -> None:
     with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
-        ips_settings: ConfigChain = dnx.load_configuration()
+        ips_settings: ConfigChain = dnx.load_configuration(strict=False)
 
         if (field == 'pb_length'):
             ips_settings['passive_block_ttl'] = settings.pb_length
@@ -267,7 +267,7 @@ def configure_general_settings(settings: config, /, field) -> None:
 
 def configure_ip_whitelist(whitelist: config, *, action: CFG) -> None:
     with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
-        ips_settings: ConfigChain = dnx.load_configuration()
+        ips_settings: ConfigChain = dnx.load_configuration(strict=False)
 
         if (action is CFG.ADD):
             ips_settings[f'whitelist->ip_whitelist->{whitelist.ip}'] = whitelist.name
@@ -279,7 +279,7 @@ def configure_ip_whitelist(whitelist: config, *, action: CFG) -> None:
 
 def configure_dns_whitelist(settings: config, /) -> None:
     with ConfigurationManager('profiles/profile_1', cfg_type='security/ids_ips') as dnx:
-        ips_settings: ConfigChain = dnx.load_configuration()
+        ips_settings: ConfigChain = dnx.load_configuration(strict=False)
 
         ips_settings['whitelist->dns_servers'] = settings.action
 
@@ -296,7 +296,7 @@ def pbl_remove_notify(host: int, timestamp: int) -> None:
     if error: return
 
     with ConfigurationManager('global', cfg_type='security/ids_ips') as dnx:
-        ips_global_settings: ConfigChain = dnx.load_configuration()
+        ips_global_settings: ConfigChain = dnx.load_configuration(strict=False)
 
         ips_global_settings[f'pbl_remove->{host}'] = timestamp
 

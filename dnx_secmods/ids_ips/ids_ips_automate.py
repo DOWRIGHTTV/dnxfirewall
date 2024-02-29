@@ -116,7 +116,7 @@ class IPSConfiguration(ConfigurationMixinBase):
         # NOTE: this is needed to remove from memory who were manually removed by user via webui
         if hosts_to_remove := proxy_settings.get_items('pbl_remove'):
             with ConfigurationManager('global', cfg_type='security/ids_ips') as dnx:
-                ips_global_settings: ConfigChain = dnx.load_configuration()
+                ips_global_settings: ConfigChain = dnx.load_configuration(strict=False)
 
                 for host, timestamp in hosts_to_remove:
                     # removing host from ips tracker/ suppression dictionary
