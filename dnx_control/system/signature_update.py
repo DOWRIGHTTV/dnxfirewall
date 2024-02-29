@@ -26,7 +26,7 @@ from dnx_gentools.file_operations import ConfigurationManager, calculate_file_ha
 # HOME_DIR: str = os.environ.get('HOME_DIR', '/'.join(os.path.realpath(__file__).split('/')[:-2]))
 
 URL = 'https://raw.githubusercontent.com'
-SIGNATURE_URL = f'{URL}/DOWRIGHTTV/dnxfirewall-signatures/update-candidate-1'
+SIGNATURE_URL = f'{URL}/DOWRIGHTTV/dnxfirewall-signatures/master'
 
 def format_downloaded_data(data: bytes) -> str:
     '''convert data to a format compatible with dnxfirewall and/or linux file systems.
