@@ -628,8 +628,8 @@ class Watcher:
         for _ in RUN_FOREVER:
 
             if (self.is_modified):
-                config_chain = load_configuration(
-                    self._watch_file, self._ext, cfg_type=self._cfg_type, filepath=self._filepath)
+                config_chain: ConfigChain = load_configuration(
+                    self._watch_file, self._ext, cfg_type=self._cfg_type, filepath=self._filepath, strict=False)
 
                 self._callback(*args, config_chain)
 
