@@ -85,7 +85,7 @@ class FirewallControl:
         This is a replace operation on disk and thread/process safe.
         '''
         with ConfigurationManager(DEFAULT_VERSION, ext='firewall', file_path=DEFAULT_PATH) as dnx_fw:
-            fw_rules: ConfigChain = dnx_fw.load_configuration()
+            fw_rules: ConfigChain = dnx_fw.load_configuration(strict=False)
 
             fw_rules_copy = fw_rules.get_dict()
             fw_rules_copy[section] = updated_rules
