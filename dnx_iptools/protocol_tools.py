@@ -55,14 +55,14 @@ class Route(NamedTuple):
     ad: int
 
     def __str__(self) -> str:
-        '''format -> S        10.1.1.0/24 [90/2170112] via 69.69.69.69, Serial0/0/0
+        '''format -> S        10.1.1.0/24 [90/2170112] via 69.69.69.69  Serial0/0/0
         '''
         gateway = 'Connected' if self.state == 'C' else self.gateway
 
-        state = self.state.ljust(7)
+        state = self.state.ljust(10)
         network = f'{self.net_id}/{self.cidr}'.ljust(18)
-        ad = f'[{self.ad}]'.rjust(5)
-        gateway = gateway.ljust(15)
+        ad = f'[{self.ad}]'.rjust(6)
+        gateway = gateway.ljust(18)
 
         return f'{state} {network} {ad} via {gateway} {self.intf}'
 
