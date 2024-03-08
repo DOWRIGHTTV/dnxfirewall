@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import traceback
 from datetime import timedelta
 
 from source.web_typing import *
@@ -592,12 +593,20 @@ def refresh_session(session_info: dict):
 def main():
     return send_to_login_page()
 
-# TODO: make this use a new non application error page because explanation doesnt make sense. also transfer session
-#  of logged in users.
 @app.errorhandler(404)
 def page_not_found(error):
 
     return render_template(general_error_page, theme=context_global.theme, general_error='page not found.')
+
+@app.errorhandler(500)
+def internal_server_error(error):
+    # --------------------------------------------- #
+    # LABEL: DEVELOPMENT_ONLY_CODE
+    if (server_type == 'development'):
+        error = traceback.format_exc()
+    # --------------------------------------------- #
+
+    return render_template(general_error_page, theme=context_global.theme, general_error=error)
 
 # --------------------------------------------- #
 # all standard page loads use this logic to decide the page action/ call the correct

@@ -9,11 +9,11 @@
             <form method="post">
               <div class="row">
                 <div class="input-field col s4 {{input_color}}">
-                  <input type="text" name="user_acct" id="ua" class="validate" placeholder="admin" required>
+                  <input type="text" name="user_acct" id="ua" class="validate" placeholder="192.168.69.0" required>
                   <label for="nid">Network ID</label>
                 </div>
                 <div class="input-field col s4 {{input_color}}">
-                  <input type="password" name="user_password" id="up" class="validate" placeholder="password" required>
+                  <input type="password" name="user_password" id="up" class="validate" placeholder="255.255.255.0" required>
                   <label for="nms">Netmask</label>
                 </div>
                 <div class="input-field col s4 {{input_color}}">
@@ -36,26 +36,27 @@
         </div>
         <div class="col s12">
           <div class="card-panel hoverable {{ theme.card }}">
-            {{ create_title('user list')|safe }}
-            <table class="striped centered">
+            {{ create_title('Route Table')|safe }}
+            <table class="striped">
               <thead>
               <tr>
                 <th style="width:100%"></th>
               </tr>
               </thead>
               <tbody>
-              {% for route in route_info.routing_table.items() %}
+              {% for route in route_info.routing_table %}
                 {% set message = 'Are you sure you want to remove this route entry ?' %}
                 <tr>
                   <td>
                     {% if 'C' in route.state %}
-                      -
+                      <span>-</span>
                     {% else %}
                       {{ create_button_with_modal(
                         'btn-floating btn-small red', 'remove', 1, loop.index, 1, 'route_remove', user, message)|safe
                       }}
                     {% endif %}
                   </td>
+                  <td><span style="white-space:pre-wrap;">{{ route }}</span></td>
                 </tr>
               {% endfor %}
               </tbody>

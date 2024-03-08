@@ -102,13 +102,18 @@ def cidrtoi(cidr: Union[str, int]) -> int:
     return ~((1 << hostmask) - 1) & (2**32 - 1)
 
 
-_CIDR_MAP = {
-    '255.255.255.0'  : '24', '255.255.255.128': '25', '255.255.255.192': '26',
-    '255.255.255.224': '27', '255.255.255.240': '28', '255.255.255.248': '29',
-    '255.255.255.252': '30', '255.255.255.254': '31', '255.255.255.255': '32'
-}
+# _CIDR_MAP = {
+#     '255.255.255.0'  : '24', '255.255.255.128': '25', '255.255.255.192': '26',
+#     '255.255.255.224': '27', '255.255.255.240': '28', '255.255.255.248': '29',
+#     '255.255.255.252': '30', '255.255.255.254': '31', '255.255.255.255': '32'
+# }
+# def masktocidr(netmask: str) -> str:
+#     return _CIDR_MAP[netmask]
+
 def masktocidr(netmask: str) -> str:
-    return _CIDR_MAP[netmask]
+    x = [bin(int(octet)).count('1') for octet in netmask.split('.')]
+
+    return str(sum(x))
 
 def get_routing_table() -> list[Route]:
     routing_table = []

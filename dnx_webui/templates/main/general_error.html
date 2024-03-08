@@ -1,14 +1,20 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="general-error" class="section">
+  <section id="general-error" class="section">
     <div class="container">
-        <div class="col s12 center">
-            <i class="material-icons large orange-text">warning</i>
+      <div class="row">
+        <div class="col s12">
+          <div class="card-panel hoverable {{ theme.card }}">
+            <div class="col s12 center">
+              <i class="material-icons large orange-text">warning</i>
+            </div>
+            <h5 class="black-text center">Generic error occurred.</h5>
+            <p class="center">
+              {{ general_error }}
+            </p>
+          </div>
         </div>
-        <h5 class="black-text center">Generic error occurred.</h5>
-        <p class="center">
-            {{general_error}}
-        </p>
+      </div>
     </div>
-</section>
+  </section>
 {% endblock %}
