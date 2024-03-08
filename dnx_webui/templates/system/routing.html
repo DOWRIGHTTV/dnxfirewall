@@ -1,0 +1,68 @@
+{% extends('layout.html') %}
+{% block body %}
+  <section id="users" class="section">
+    <div class="container">
+      <div class="row">
+        <div class="col s12">
+          <div class="card-panel hoverable {{ theme.card }}">
+            {{ create_title('add user')|safe }}
+            <form method="post">
+              <div class="row">
+                <div class="input-field col s4 {{input_color}}">
+                  <input type="text" name="user_acct" id="ua" class="validate" placeholder="admin" required>
+                  <label for="nid">Network ID</label>
+                </div>
+                <div class="input-field col s4 {{input_color}}">
+                  <input type="password" name="user_password" id="up" class="validate" placeholder="password" required>
+                  <label for="nms">Netmask</label>
+                </div>
+                <div class="input-field col s4 {{input_color}}">
+                  <select name="route_ad" id="nad">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="60">60</option>
+                    <option value="100">100</option>
+                  </select>
+                  <label for="route_ad">[Adm] Distance</label>
+                </div>
+              </div>
+              <div class="row">
+                <div class="input-field col s4 m2 offset-s4 offset-m5">
+                  <button class="btn waves-effect waves-light col s12" name="route_add">Add</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div class="col s12">
+          <div class="card-panel hoverable {{ theme.card }}">
+            {{ create_title('user list')|safe }}
+            <table class="striped centered">
+              <thead>
+              <tr>
+                <th style="width:100%"></th>
+              </tr>
+              </thead>
+              <tbody>
+              {% for route in route_info.routing_table.items() %}
+                {% set message = 'Are you sure you want to remove this route entry ?' %}
+                <tr>
+                  <td>
+                    {% if 'C' in route.state %}
+                      -
+                    {% else %}
+                      {{ create_button_with_modal(
+                        'btn-floating btn-small red', 'remove', 1, loop.index, 1, 'route_remove', user, message)|safe
+                      }}
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock %}

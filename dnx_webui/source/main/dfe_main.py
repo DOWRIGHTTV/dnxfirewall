@@ -80,12 +80,13 @@ from source.system.settings.dfe_dhcp import WebPage as dhcp_settings
 from source.system.settings.dfe_interface import WebPage as interface_settings
 from source.system.settings.dfe_logging import WebPage as logging_settings
 # import source.system.settings.dfe_syslog as syslog_settings
+from source.system.dfe_backups import WebPage as dfe_backups
 from source.system.log.dfe_traffic import WebPage as traffic_logs  # non standard -> log page logic
 from source.system.log.dfe_events import WebPage as sec_events  # non standard -> log page logic
 from source.system.log.dfe_system import WebPage as sys_logs  # non standard -> log page logic
-from source.system.dfe_users import WebPage as dfe_users
-from source.system.dfe_backups import WebPage as dfe_backups
+from source.system.dfe_routing import WebPage as dnx_routing
 from source.system.dfe_services import WebPage as dnx_services
+from source.system.dfe_users import WebPage as dfe_users
 
 from source.main.dfe_authentication import *
 
@@ -303,6 +304,100 @@ def intrusion_ips(session_info: dict):
 # --------------------------------------------- #
 #  START OF SYSTEMS MENU
 # --------------------------------------------- #
+@app.route('/system/backups', methods=['GET', 'POST'])
+@user_restrict('admin')
+def system_backups(session_info: dict):
+    page_settings = get_default_page_settings(session_info, uri_path=['system', 'backups'])
+
+    page_action = standard_page_logic(
+        dfe_backups, page_settings, 'current_backups', page_name='system/backups.html')
+
+    return page_action
+
+    #  START OF LOG SUB MENU
+    # ----------------------------------------- #
+@app.route('/system/log/traffic', methods=['GET', 'POST'])
+@user_restrict('user', 'admin')
+def system_logs_traffic(session_info: dict):
+    page_settings = {
+        'navi':        True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
+        'menu':        '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
+        'table_types': ['firewall', '.nat'],
+        'uri_path':    ['system', 'log', 'traffic']
+    }
+
+    page_settings.update(session_info)
+
+    page_action = log_page_logic(traffic_logs, page_settings, page_name='system/log/traffic/traffic.html')
+
+    return page_action
+
+@app.route('/system/log/events', methods=['GET', 'POST'])
+@user_restrict('user', 'admin')
+def system_logs_traffic_events(session_info: dict):
+    page_settings = {
+        'navi':        True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
+        'menu':        '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
+        'table_types': ['dns_proxy', 'ip_proxy', 'intrusion_prevention', 'infected_clients'],
+        'uri_path':    ['system', 'log', 'events']
+    }
+
+    page_settings.update(session_info)
+
+    page_action = log_page_logic(sec_events, page_settings, page_name='system/log/events/events.html')
+
+    return page_action
+
+@app.route('/system/log/system', methods=['GET', 'POST'])
+@user_restrict('user', 'admin')
+def system_logs_system(session_info: dict):
+    page_settings = {
+        'navi':      True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
+        'menu':      '1', 'dnx_table': True, 'ajax': True, 'auto_colorize': True,
+        'log_files': [
+            'combined', 'logins', 'web_app', 'system', 'dns_proxy', 'ip_proxy', 'ips', 'dhcp_server',  # 'syslog'
+        ],
+        'uri_path':  ['system', 'log', 'system']
+    }
+
+    page_settings.update(session_info)
+
+    page_action = log_page_logic(sys_logs, page_settings, page_name='system/log/system/system.html')
+
+    return page_action
+
+@app.post('/system/log/system/get')
+@user_restrict('user', 'admin')
+def system_logs_get(session_info: dict):
+    json_data = request.get_json(force=True)
+
+    _, _, table_data = sys_logs.handle_ajax(json_data)
+
+    return ajax_response(status=True, data=table_data)
+    #  END OF LOG SUB MENU
+    # ----------------------------------------- #
+
+@app.route('/system/routing', methods=['GET', 'POST'])
+@user_restrict('admin')
+def system_routing(session_info: dict):
+    page_settings = get_default_page_settings(session_info, uri_path=['system', 'routing'])
+
+    page_action = standard_page_logic(
+        dnx_routing, page_settings, 'route_info', page_name='system/routing.html'
+    )
+
+    return page_action
+
+@app.route('/system/services', methods=['GET', 'POST'])
+@user_restrict('admin')
+def system_services(session_info: dict):
+    page_settings = get_default_page_settings(session_info, uri_path=['system', 'services'])
+
+    page_action = standard_page_logic(
+        dnx_services, page_settings, 'service_info', page_name='system/services.html')
+
+    return page_action
+
     #  START OF SETTINGS SUB MENU
     # ----------------------------------------- #
 @app.route('/system/settings/dns', methods=['GET', 'POST'])
@@ -368,66 +463,8 @@ def system_settings_logging(session_info: dict):
 #
 #     return page_action
 
-    # END OF SETTINGS SUB MENU
+    #  END OF SETTINGS SUB MENU
     # ----------------------------------------- #
-@app.route('/system/log/traffic', methods=['GET', 'POST'])
-@user_restrict('user', 'admin')
-def system_logs_traffic(session_info: dict):
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu': '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
-        'table_types': ['firewall', '.nat'],
-        'uri_path': ['system', 'log', 'traffic']
-    }
-
-    page_settings.update(session_info)
-
-    page_action = log_page_logic(traffic_logs, page_settings, page_name='system/log/traffic/traffic.html')
-
-    return page_action
-
-@app.route('/system/log/events', methods=['GET', 'POST'])
-@user_restrict('user', 'admin')
-def system_logs_traffic_events(session_info: dict):
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu': '1', 'table': '1', 'dnx_table': True, 'ajax': False, 'auto_colorize': True,
-        'table_types': ['dns_proxy', 'ip_proxy', 'intrusion_prevention', 'infected_clients'],
-        'uri_path': ['system', 'log', 'events']
-    }
-
-    page_settings.update(session_info)
-
-    page_action = log_page_logic(sec_events, page_settings, page_name='system/log/events/events.html')
-
-    return page_action
-
-@app.route('/system/log/system', methods=['GET', 'POST'])
-@user_restrict('user', 'admin')
-def system_logs_system(session_info: dict):
-    page_settings = {
-        'navi': True, 'idle_timeout': True, 'log_timeout': True, 'standard_error': None,
-        'menu': '1', 'dnx_table': True, 'ajax': True, 'auto_colorize': True,
-        'log_files': [
-            'combined', 'logins', 'web_app', 'system', 'dns_proxy', 'ip_proxy', 'ips', 'dhcp_server',  # 'syslog'
-        ],
-        'uri_path': ['system', 'log', 'system']
-    }
-
-    page_settings.update(session_info)
-
-    page_action = log_page_logic(sys_logs, page_settings, page_name='system/log/system/system.html')
-
-    return page_action
-
-@app.post('/system/log/system/get')
-@user_restrict('user', 'admin')
-def system_logs_get(session_info: dict):
-    json_data = request.get_json(force=True)
-
-    _, _, table_data = sys_logs.handle_ajax(json_data)
-
-    return ajax_response(status=True, data=table_data)
 
 @app.route('/system/users', methods=['GET', 'POST'])
 @user_restrict('admin')
@@ -437,26 +474,6 @@ def system_users(session_info: dict):
     page_action = standard_page_logic(
         dfe_users, page_settings, 'user_list', page_name='system/users.html'
     )
-
-    return page_action
-
-@app.route('/system/backups', methods=['GET', 'POST'])
-@user_restrict('admin')
-def system_backups(session_info: dict):
-    page_settings = get_default_page_settings(session_info, uri_path=['system', 'backups'])
-
-    page_action = standard_page_logic(
-        dfe_backups, page_settings, 'current_backups', page_name='system/backups.html')
-
-    return page_action
-
-@app.route('/system/services', methods=['GET', 'POST'])
-@user_restrict('admin')
-def system_services(session_info: dict):
-    page_settings = get_default_page_settings(session_info, uri_path=['system', 'services'])
-
-    page_action = standard_page_logic(
-        dnx_services, page_settings, 'service_info', page_name='system/services.html')
 
     return page_action
 

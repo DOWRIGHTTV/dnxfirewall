@@ -308,14 +308,6 @@ class System:
 #        print(ip_whitelist)
         return ip_whitelist
 
-    @staticmethod
-    def standard_to_cidr(netmask: str) -> str:
-        return {
-            '255.255.255.0'  : '24', '255.255.255.128': '25', '255.255.255.192': '26',
-            '255.255.255.224': '27', '255.255.255.240': '28', '255.255.255.248': '29',
-            '255.255.255.252': '30', '255.255.255.254': '31', '255.255.255.255': '32'
-        }[netmask]
-
 
 _svc_shell = partial(run, shell=True, stdout=DEVNULL)
 

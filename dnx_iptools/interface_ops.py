@@ -2,14 +2,23 @@
 
 from __future__ import annotations
 
+import os
+import shutil
+import json
+
+from secrets import token_urlsafe
 from csv import reader as csv_reader
 from fcntl import ioctl
 from socket import socket, inet_aton, if_nameindex, AF_INET, SOCK_DGRAM
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import fast_sleep, ONE_SEC
+from dnx_gentools.def_constants import HOME_DIR, USER, GROUP, ONE_SEC, fast_sleep
 from dnx_gentools.def_enums import INTF
-from dnx_gentools.file_operations import load_configuration
+from dnx_gentools.file_operations import acquire_lock, release_lock, load_configuration, read_file, write_file
+from dnx_gentools.file_operations import json_to_yaml, yaml_to_json
+from dnx_gentools.def_exceptions import ConfigurationError
+
+from dnx_webui.source.web_validate import ValidationError
 
 from dnx_iptools.def_structs import fcntl_pack, long_unpack
 from dnx_iptools.cprotocol_tools import itoip
@@ -21,6 +30,12 @@ __all__ = (
     'get_mac', 'get_netmask', 'get_ipaddress', 'get_masquerade_ip',
     'get_arp_table'
 )
+
+# ================
+# TYPING IMPORTS
+# ================
+if (TYPE_CHECKING):
+    from dnx_routines.logging import LogHandler_T
 
 NO_ADDRESS: int = -1
 
@@ -194,3 +209,98 @@ def get_arp_table(*, modify: bool = False, host: Optional[str] = None) -> Union[
 
     else:
         return arp_table
+
+
+NETPLAN_PATH = '/etc/netplan'
+
+class InterfaceManager:
+    '''Class to ensure process safe operations on interface configuration files.
+    '''
+
+    log: ClassVar[LogHandler_T] = None
+    config_lock_path: ClassVar[ConfigLock] = f'{HOME_DIR}/dnx_profile/interfaces/interfaces.lock'
+
+    _intf_builtin:  ClassVar[str] = '01-dnx-interfaces.yaml'
+    _intf_extended: ClassVar[str] = '02-dnx-interfaces-extended.yaml'
+
+    _intf_cfg_path: str
+    _intf_cfg_netplan: dict
+    _intf_data_written: bool
+
+    __slots__ = (
+        'config_data',
+
+        '_config_hash', '_interfaces_lock',
+        
+        '_intf_cfg_path', '_intf_cfg_netplan'
+    )
+
+    @classmethod
+    def set_log_reference(cls, ref: LogHandler_T) -> None:
+        '''sets logging class reference for configuration manager specific errors.
+        '''
+        cls.log: LogHandler_T = ref
+
+    def __init__(self, intf_type=INTF.BUILTIN) -> None:
+        self.config_data: Optional[dict] = None
+
+        if (intf_type is INTF.BUILTIN):
+            self._intf_cfg_path = f'{NETPLAN_PATH}/{self._intf_builtin}'
+
+        elif (intf_type is INTF.EXTENDED):
+            self._intf_cfg_path = f'{NETPLAN_PATH}/{self._intf_extended}'
+
+    def __enter__(self):
+        self._interfaces_lock = acquire_lock(self.config_lock_path)
+
+        config_data = read_file(self._intf_cfg_path)
+
+        self._config_hash = hash(config_data)
+        self.config_data = yaml_to_json(config_data)
+
+        self.log.debug(f'Config file lock acquired for {self._intf_cfg_path}.')
+
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if (exc_type):
+            # releasing lock for purposes specified in flock(1) man page under -u (unlock) + close file.
+            release_lock(self._interfaces_lock)
+            self.log.debug(f'file lock released for {self._intf_cfg_path}')
+
+            if (exc_type is not ValidationError):
+                self.log.error(f'ConfigurationManager: {exc_val}')
+
+                raise ConfigurationError(f'ConfigurationManager failed while updating file. error->{exc_val}')
+
+            raise
+
+        updated_config = json_to_yaml(self.config_data)
+
+        # if the configuration has changed, write the new configuration to disk.
+        if (hash(updated_config) != self._config_hash):
+
+            # TEMP prefix is to wildcard match any orphaned files for deletion
+            temp_file_path = f'{HOME_DIR}/dnx_profile/interfaces/TEMP_{token_urlsafe(10)}'
+
+            if write_file(temp_file_path, updated_config):
+                # changing file permissions and settings owner to dnx:dnx to not cause permission issues after copy.
+                os.chmod(temp_file_path, 0o660)
+                shutil.chown(temp_file_path, user=USER, group=GROUP)
+
+                os.replace(temp_file_path, self._intf_cfg_path)
+
+                # TODO: add netplan apply command here.... (the caller might be a better fit for responsibility)
+
+        # releasing lock for purposes specified in flock(1) man page under -u (unlock) + close file.
+        release_lock(self._interfaces_lock)
+        self.log.debug(f'file lock released for {self._intf_cfg_path}')
+
+    # TODO: we might not need these methods if we alter the config within the context manually.
+    #  - i would say that if it turns out to be wonky logic, the methods route is probably better.
+    #    - at the same time, the routes will only be modified by a single source within the webui.
+    def add_route(self, intf: str, route: str):
+        pass
+
+    def remove_route(self, intf: str, route: str):
+        pass

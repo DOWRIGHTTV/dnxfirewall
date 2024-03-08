@@ -33,7 +33,8 @@ __all__ = (
     'load_configuration', 'write_configuration',
     'load_data', 'write_data',
     'append_to_file', 'tail_file', 'change_file_owner',
-    'json_to_yaml',
+    'json_to_yaml', 'yaml_to_json',
+    'write_file', 'read_file',
     'load_tlds', 'load_keywords', 'load_top_domains_filter',
     'calculate_file_hash',
     'cfg_read_poller', 'cfg_write_poller', 'Watcher',
@@ -132,6 +133,22 @@ def write_data(data: dict, filename: str, *, cfg_type: str = '', filepath: str =
     with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
         json.dump(data, settings, indent=2)
 
+def read_file(file_path: str) -> str:
+    '''read a file and return the contents as a string.
+
+    a convenience wrapper for the built-in with open('r') function context.
+    '''
+    with open(file_path, 'r') as f:
+        return f.read()
+
+def write_file(file_path: str, data: str) -> int:
+    '''write data to a file.
+
+    a convenience wrapper for the built-in with open('w') function context.
+    '''
+    with open(file_path, 'w') as f:
+        return f.write(data)
+
 def append_to_file(data: str, filename: str, *, filepath: str = 'dnx_profile/data/usr') -> None:
     '''append data to filepath. NOTE: needs to be refactored to new folder structure.
     '''
@@ -149,22 +166,6 @@ def change_file_owner(file_path: str) -> None:
 
     shutil.chown(file_path, user=USER, group=GROUP)
     os.chmod(file_path, 0o660)
-
-def json_to_yaml(data: Union[str, dict], *, is_string: bool = False) -> str:
-    '''
-    converts a json string or dictionary into yaml syntax and returns as string.
-
-    set "is_string" to True to skip over object serialization.
-    '''
-    if (not is_string):
-        data = json.dumps(data, indent=4)
-
-    str_replacement = ['{', '}', '"', ',']
-    for s in str_replacement:
-        data = data.replace(s, '')
-
-    # removing empty lines and sliding indent back by 4 spaces
-    return '\n'.join([y[4:] for y in data.splitlines() if y.strip()])
 
 def load_tlds() -> Generator[tuple[str, int]]:
     proxy_config: ConfigChain = load_configuration('profiles/profile_1', cfg_type='security/dns')
@@ -502,7 +503,7 @@ class ConfigurationManager:
         # initialization isn't required if config file is not specified.
         if (not name):
             # make debug log complete if in lock only mode
-            self._filename = 'ConfigurationManager'
+            self._filename = self.__class__.__name__
 
         else:
             self._data_written = False
@@ -551,10 +552,8 @@ class ConfigurationManager:
             os.unlink(self._temp_file_path)
 
         # releasing lock for purposes specified in flock(1) man page under -u (unlock)
-        RELEASE_LOCK(self._config_lock)
+        release_lock(self._config_lock)
 
-        # closing the file after unlocking to allow reference to be cleaned up.
-        self._config_lock.close()
         self.log.debug(f'file lock released for {self._filename}')
 
         if (exc_type is None):
@@ -661,3 +660,205 @@ class Watcher:
             return True
 
         return False
+
+# ====================================== #
+# CONFIGURATION CONVERSION FUNCTIONS
+# ====================================== #
+def _count_leading_spaces(line: str) -> int:
+    '''counts the number of leading spaces in a line.
+
+    the count stops when the first non-space character or the end of the line is reached
+    '''
+    count = 0
+
+    for c in line:
+
+        if c != ' ':
+            break
+
+        count += 1
+
+    return count
+
+def _detect_indent_spacing(s_splitlines: list[str]) -> list[tuple[int, str]]:
+    '''returns a list of tuples containing the indentation level and the line contents.
+    '''
+    top_level_indent = _count_leading_spaces(s_splitlines[0])
+    snd_level_indent = _count_leading_spaces(s_splitlines[1])
+    if (not top_level_indent):
+        space_ct = snd_level_indent
+    else:
+        space_ct = snd_level_indent // top_level_indent
+
+    s_indents = [
+        (0, s_splitlines[0][top_level_indent:]), (1, s_splitlines[1][top_level_indent:])
+    ]
+
+    for line in s_splitlines[2:]:
+        current_indent_level = _count_leading_spaces(line) // space_ct
+
+        s_indents.append(
+            (current_indent_level, line[top_level_indent:])
+        )
+
+    print('\n'.join(str(x) for x in s_indents))
+
+    return s_indents
+
+def _converter_build_list_ml(str_ml: list[tuple]) -> tuple[int, str]:
+    elements = []
+
+    for i, (_, line) in enumerate(str_ml[1:], 1):
+
+        line = line.strip().strip(',')
+
+        if line.endswith(']'):
+            break
+
+        elements.append(f'"{line}"')
+
+    return i, f'[{", ".join(elements)}]'
+
+def _converter_build_list(l_str: str) -> str:
+
+    elements = []
+    for item in l_str.strip('[]()').split(','):
+        item = item.strip()
+        # print(f'list item [{i}] -> {item}')
+        elements.append(f'{item}' if item.isdigit() else f'"{item}"')
+
+    list_str = f'[{", ".join(elements)}]'
+
+    # print(f'generated list: {list_str}')
+
+    return list_str
+
+def yaml_to_json(s: str, /, to_dict: bool = True) -> Union[str, dict]:
+    '''opens a yaml file and converts contents to a python dictionary.
+
+    set to_dict=False to return a json formatted string.
+    '''
+
+    # filtering out empty lines
+    s_parsed_indents = _detect_indent_spacing([l for l in s.splitlines() if l])
+    MAX_IDX = len(s_parsed_indents)
+
+    output_str = ['{']
+    offset = 0
+    for i in range(MAX_IDX):
+
+        idx = i + offset
+
+        cur_indent_level, line = s_parsed_indents[i + offset]
+
+        key, value = line.strip().split(':', 1)
+
+        # ===================================================
+        # type check and formatting
+        value = value.strip()
+
+        # start of new dict
+        if line.endswith(':'):
+            output_str.append(f'"{key}"' + ': {')
+
+            continue
+
+        if value.endswith('['):
+            # print(f'multiline list start -> {line}')
+            ml_len, value = _converter_build_list_ml(s_parsed_indents[idx:])
+            offset += ml_len
+
+            # update index for current iteration logic
+            idx += ml_len
+
+        elif value.startswith('['):
+            value = _converter_build_list(value)
+
+        elif (not value.isdigit()):
+            value = f'"{value}"'
+        # ===================================================
+
+        # continuation of dict
+        output_str.append(f'"{key}": {value}')
+
+        # ====================================================
+        # peeking at next indent level to see if we need to close a block
+        print(f'MAX_IDX->{MAX_IDX}, IDX->{idx}')
+        if (idx == MAX_IDX-1):
+            print('end of data.')
+            break
+
+        next_indent_level = s_parsed_indents[idx + 1][0]
+        if (cur_indent_level == next_indent_level):
+            output_str.append(', ')
+
+        elif (cur_indent_level > next_indent_level):
+            print(f'INDENT DROP: {cur_indent_level} -> {next_indent_level}', line)
+            close_brackets = '}' * (cur_indent_level - next_indent_level)
+
+            output_str.append(f'{close_brackets}, ')
+        # ====================================================
+
+    output_str.append('}' * (cur_indent_level + 1))
+    o_str = ''.join(output_str)
+
+    return o_str if not to_dict else json.loads(o_str)
+
+# we should convert to yaml line by line instead of doing the replace method.
+# now that we want to support dicts and lists, the replacement method makes more problems than it solves.
+def json_to_yaml(data: Union[str, dict], /, *, from_dict: bool = True) -> str:
+    '''converts a [restricted] python dictionary into yaml formatted string.
+
+    note: the python dictionary must be valid json.
+
+    set from_dict=False if the data is already a valid json formatted string.
+    '''
+    if (from_dict):
+        data = json.dumps(data, indent=2)
+
+    # slicing off the outermost brackets
+    s_parsed_indents = _detect_indent_spacing(
+        [l for l in data[2:-2].replace('"', '').splitlines() if l]
+    )
+
+    ongoing_list, list_builder = False, []
+
+    output_str = []
+    for _, line in s_parsed_indents:
+
+        # no nested lists. we don't need them, and i don't want the complexity.
+        if (not ongoing_list and line.endswith('[')):
+
+            ongoing_list = True
+            list_builder.append(line)
+
+            # print('list start->', line)
+
+        elif ongoing_list and (line.endswith(']') or line.endswith('],')):
+
+            ongoing_list = False
+            list_builder.append(line.strip(','))
+            output_str.append('\n'.join(list_builder))
+
+            list_builder.clear()
+
+            # print('list end->', line)
+
+        elif ongoing_list:
+
+            list_builder.append(line)
+
+            # print('list cont->', line)
+
+        else:
+            line = line.strip('{},')
+
+            # removing empty lines after the strip
+            if (not line.strip()):
+                continue
+
+            output_str.append(line)
+
+            # print('standard line->', line)
+
+    return '\n'.join(output_str)

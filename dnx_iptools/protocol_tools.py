@@ -11,14 +11,16 @@ from functools import partial
 from random import getrandbits
 from socket import socket, AF_INET, SOCK_RAW, SCM_CREDENTIALS
 from subprocess import run, CalledProcessError, DEVNULL
+from typing import NamedTuple
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import USER, RUN_FOREVER, byte_join, fast_time, UINT32_MAX
 from dnx_gentools.def_enums import PROTO
+from dnx_gentools.file_operations import read_file
 
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import PR_ICMP_HDR
-from dnx_iptools.cprotocol_tools import calc_checksum, itoip
+from dnx_iptools.cprotocol_tools import calc_checksum, itoip, hextoip
 
 # ===============
 # TYPING IMPORTS
@@ -36,47 +38,45 @@ __all__ = (
     'domain_stob', 'mac_stob',
     'mac_add_sep', 'strtobit',
     'create_dns_query_header',
-    'parse_query_name'
+    'parse_query_name',
+
+    'Route', 'get_routing_table',
 )
 
 btoia: Callable[[ByteString|int], int] = partial(int.from_bytes, byteorder='big', signed=False)
 # itoba: Callable[[int, int], bytes] = partial(int.to_bytes, byteorder='big', signed=False)
 
-def change_socket_owner(sock_path: str) -> bool:
-    '''attempts to change the file owner and permissions of the passed in socket to dnx/dnx.
 
-    following the change, the permissions will be set to 660.
-    return True on success, False on failure.
+class Route(NamedTuple):
+    intf: str
+    net_id: str
+    cidr: str
+    gateway: str
+    ad: int
 
-        required: run on unix sockets created by root.
-        optional: run on unix socket created by dnx (would only slightly reduce permissions)
-    '''
-    try:
-        shutil.chown(sock_path, user='dnx', group='dnx')
-        os.chmod(sock_path, 0o660)
-    except PermissionError:
-        return False
+    def __str__(self) -> str:
+        '''format -> S        10.1.1.0/24 [90/2170112] via 69.69.69.69, Serial0/0/0
+        '''
+        gateway = 'Connected' if self.state == 'C' else self.gateway
 
-    return True
+        state = self.state.ljust(7)
+        network = f'{self.net_id}/{self.cidr}'.ljust(18)
+        ad = f'[{self.ad}]'.rjust(5)
+        gateway = gateway.ljust(15)
 
-# ---------------------------------------
-# SERVICE SOCKET - Auth Validation
-# ---------------------------------------
-_getuser_info = pwd.getpwuid
-_getuser_groups = os.getgrouplist
-def authenticate_sender(anc_data: Iterable[tuple[int, int, bytes]]) -> bool:
-    anc_data = {msg_type: data for _, msg_type, data in anc_data}
+        return f'{state} {network} {ad} via {gateway} {self.intf}'
 
-    auth_data = anc_data.get(SCM_CREDENTIALS)
-    if (not auth_data):
-        return False
+    @property
+    def state(self) -> str:
 
-    pid, uid, gid = scm_creds_unpack(auth_data)
-    # USER is a dnxfirewall constant specified in def_constants
-    if (_getuser_info(uid).pw_name != USER):
-        return False
+        if (self.gateway == '0.0.0.0'): state_str = 'C'
+        else: state_str = 'S'
 
-    return True
+        if (self.cidr == '32'): state_str += '(H)'
+        elif (self.net_id == '0.0.0.0' and self.cidr == '0'): state_str += '(D)'
+
+        return state_str
+
 
 def mac_add_sep(mac_address: str, sep: str = ':') -> str:
     string_mac = []
@@ -100,6 +100,54 @@ def cidrtoi(cidr: Union[str, int]) -> int:
     hostmask: int = 32 - int(cidr)
 
     return ~((1 << hostmask) - 1) & (2**32 - 1)
+
+
+_CIDR_MAP = {
+    '255.255.255.0'  : '24', '255.255.255.128': '25', '255.255.255.192': '26',
+    '255.255.255.224': '27', '255.255.255.240': '28', '255.255.255.248': '29',
+    '255.255.255.252': '30', '255.255.255.254': '31', '255.255.255.255': '32'
+}
+def masktocidr(netmask: str) -> str:
+    return _CIDR_MAP[netmask]
+
+def get_routing_table() -> list[Route]:
+    routing_table = []
+
+    routes = read_file('/proc/net/route')
+
+    for line in routes.splitlines()[1:]:
+        line = line.split()
+
+        intf = line[0]
+        network = hextoip(line[1])
+        netmask = hextoip(line[7])
+        gateway = hextoip(line[2])
+        ad = int(line[6])
+
+        route = Route(intf, network, masktocidr(netmask), gateway, ad)
+
+        routing_table.append(route)
+
+    return routing_table
+
+# =====================
+# DNS related functions
+# =====================
+def domain_stob(domain_name: str) -> bytes:
+    domain_bytes = byte_join([
+        byte_pack(len(part)) + part.encode('utf-8') for part in domain_name.split('.')
+    ])
+
+    # root query (empty string) gets eval'd to length 0 and doesn't need a term byte.
+    # ternary will add term byte if the omain name is not a null value.
+    return domain_bytes + b'\x00' if domain_name else domain_bytes
+
+# will create dns header specific to request/query. default resource record count is 1, additional record count optional
+def create_dns_query_header(dns_id, arc=0, *, cd):
+
+    bit_fields = (1 << 8) | (cd << 4)
+
+    return dns_header_pack(dns_id, bit_fields, 1, 0, 0, arc)
 
 def parse_query_name(data: Union[bytes, memoryview], offset: int = 0, *,
                      quick: bool = False) -> Union[int, tuple[int, str, bool]]:
@@ -150,22 +198,9 @@ def parse_query_name(data: Union[bytes, memoryview], offset: int = 0, *,
 
     return offset, query_name[:-1].decode(), label_ct == 1
 
-def domain_stob(domain_name: str) -> bytes:
-    domain_bytes = byte_join([
-        byte_pack(len(part)) + part.encode('utf-8') for part in domain_name.split('.')
-    ])
-
-    # root query (empty string) gets eval'd to length 0 and doesn't need a term byte.
-    # ternary will add term byte if the omain name is not a null value.
-    return domain_bytes + b'\x00' if domain_name else domain_bytes
-
-# will create dns header specific to request/query. default resource record count is 1, additional record count optional
-def create_dns_query_header(dns_id, arc=0, *, cd):
-
-    bit_fields = (1 << 8) | (cd << 4)
-
-    return dns_header_pack(dns_id, bit_fields, 1, 0, 0, arc)
-
+# ======================
+# ICMP related functions
+# ======================
 # will ping specified host. to be used to prevent duplicate ip address handouts.
 def icmp_reachable(host_ip: int) -> bool:
 
@@ -228,3 +263,40 @@ def init_ping(timeout: float = .25) -> Callable[[str, int], bool]:
         return replies_rcvd/count > .5
 
     return ping
+
+# =======================================
+# SOCKET RELATED FUNCTIONS
+# =======================================
+def change_socket_owner(sock_path: str) -> bool:
+    '''attempts to change the file owner and permissions of the passed in socket to dnx/dnx.
+
+    following the change, the permissions will be set to 660.
+    return True on success, False on failure.
+
+        required: run on unix sockets created by root.
+        optional: run on unix socket created by dnx (would only slightly reduce permissions)
+    '''
+    try:
+        shutil.chown(sock_path, user='dnx', group='dnx')
+        os.chmod(sock_path, 0o660)
+    except PermissionError:
+        return False
+
+    return True
+
+# SERVICE SOCKET - Auth Validation
+_getuser_info = pwd.getpwuid
+_getuser_groups = os.getgrouplist
+def authenticate_sender(anc_data: Iterable[tuple[int, int, bytes]]) -> bool:
+    anc_data = {msg_type: data for _, msg_type, data in anc_data}
+
+    auth_data = anc_data.get(SCM_CREDENTIALS)
+    if (not auth_data):
+        return False
+
+    pid, uid, gid = scm_creds_unpack(auth_data)
+    # USER is a dnxfirewall constant specified in def_constants
+    if (_getuser_info(uid).pw_name != USER):
+        return False
+
+    return True

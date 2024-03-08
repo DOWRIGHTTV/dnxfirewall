@@ -1,6 +1,7 @@
 #!/usr/bin/env Cython
 
 from libc.errno cimport *
+from libc.stdlib cimport strtol
 from libc.stdio cimport snprintf, perror, printf
 from libc.stdint cimport uint8_t, uint16_t, uint32_t, uint_fast16_t
 from libc.string cimport strncpy  # memset, memcpy
@@ -68,6 +69,18 @@ cpdef unicode itoip(uint32_t ip):
     snprintf(ip_addr, sizeof(ip_addr), '%d.%d.%d.%d', octets[0], octets[1], octets[2], octets[3])
 
     return ip_addr.decode('utf-8')
+
+cpdef unicode hextoip(unicode hex_ip):
+
+    bhex = hex_ip.encode('utf-8')
+
+    cdef:
+        char* chex = bhex
+
+        uint32_t ip = <uint32_t>strtol(chex, NULL, 16)
+
+    return itoip(ntohl(ip))
+
 
 cpdef bytes calc_checksum(const uint8_t[:] data):
 
