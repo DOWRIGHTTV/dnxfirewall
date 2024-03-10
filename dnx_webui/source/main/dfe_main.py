@@ -13,6 +13,7 @@ from dnx_gentools.def_enums import CFG
 from dnx_gentools.def_exceptions import ConfigurationError
 from dnx_gentools.file_operations import load_configuration, ConfigurationManager
 
+from dnx_iptools.interface_ops import InterfaceManager
 from dnx_iptools.cprotocol_tools.cprotocol_tools import itoip
 
 from dnx_routines.database.ddb_connector_sqlite import DBConnector
@@ -54,6 +55,8 @@ Log.run(name='web_app')
 
 # NOTE: this will allow the config manager to reference the Log class without an import. (cyclical import error)
 ConfigurationManager.set_log_reference(Log)
+
+InterfaceManager.set_log_reference(Log)
 
 # initialize cfirewall manager - interfaces with cfirewall automate class through a fd.
 cfirewall = FirewallControl()

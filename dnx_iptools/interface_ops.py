@@ -28,7 +28,9 @@ __all__ = (
     'get_intf_builtin', 'load_interfaces',
     'wait_for_interface', 'wait_for_ip',
     'get_mac', 'get_netmask', 'get_ipaddress', 'get_masquerade_ip',
-    'get_arp_table'
+    'get_arp_table',
+
+    'InterfaceManager'
 )
 
 # ================
