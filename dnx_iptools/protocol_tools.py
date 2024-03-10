@@ -114,7 +114,7 @@ def strtoroute(intf: str, rs: str, /) -> Route:
 
     network = rl[1][:-1].split('/')
     gateway = rl[3][:-1]
-    ad      = rl[5]
+    ad      = rl[5][:-1]
 
     return Route(intf, network[0], network[1], gateway, int(ad))
 
