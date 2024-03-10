@@ -783,7 +783,7 @@ def yaml_to_json(s: str, /, to_dict: bool = True) -> Union[str, dict]:
 
         # ====================================================
         # peeking at next indent level to see if we need to close a block
-        print(f'MAX_IDX->{MAX_IDX}, IDX->{idx}')
+        # print(f'MAX_IDX->{MAX_IDX}, IDX->{idx}')
         if (idx == MAX_IDX-1):
             print('end of data.')
             break
@@ -793,7 +793,7 @@ def yaml_to_json(s: str, /, to_dict: bool = True) -> Union[str, dict]:
             output_str.append(', ')
 
         elif (cur_indent_level > next_indent_level):
-            print(f'INDENT DROP: {cur_indent_level} -> {next_indent_level}', line)
+            # print(f'INDENT DROP: {cur_indent_level} -> {next_indent_level}', line)
             close_brackets = '}' * (cur_indent_level - next_indent_level)
 
             output_str.append(f'{close_brackets}, ')

@@ -233,7 +233,7 @@ class InterfaceManager:
         'config_data',
 
         '_config_hash', '_interfaces_lock',
-        
+
         '_intf_cfg_path', '_intf_cfg_netplan'
     )
 
@@ -271,9 +271,9 @@ class InterfaceManager:
             self.log.debug(f'file lock released for {self._intf_cfg_path}')
 
             if (exc_type is not ValidationError):
-                self.log.error(f'ConfigurationManager: {exc_val}')
+                self.log.error(f'InterfaceManager: {exc_val}')
 
-                raise ConfigurationError(f'ConfigurationManager failed while updating file. error->{exc_val}')
+                raise ConfigurationError(f'InterfaceManager failed while updating file. error->{exc_val}')
 
             raise
 
