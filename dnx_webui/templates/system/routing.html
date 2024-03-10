@@ -5,7 +5,7 @@
       <div class="row">
         <div class="col s12">
           <div class="card-panel hoverable {{ theme.card }}">
-            {{ create_title('add user')|safe }}
+            {{ create_title('add route')|safe }}
             <form method="post">
               <div class="row">
                 <div class="input-field col s4 {{input_color}}">
@@ -23,7 +23,7 @@
                     <option value="60">60</option>
                     <option value="100">100</option>
                   </select>
-                  <label for="route_ad">[Adm] Distance</label>
+                  <label for="route_ad">Admin Distance</label>
                 </div>
               </div>
               <div class="row">
@@ -37,27 +37,38 @@
         <div class="col s12">
           <div class="card-panel hoverable {{ theme.card }}">
             {{ create_title('Route Table')|safe }}
-            <table class="striped">
+            <span>Codes: {{ route_info.routing_codes }}</span>
+            <span>Modifiers: {{ route_info.routing_modifiers }}</span>
+            <table class="striped centered">
               <thead>
               <tr>
-                <th style="width:15%"></th>
-                <th style="width:85%"></th>
+                <th style="width:5%"></th>
+                <th style="width:5%">State</th>
+                <th style="width:15%">Network</th>
+                <th style="width:5%">[Adm] Distance</th>
+                <th style="width:15%">Next Hop</th>
+                <th style="width:10%">Interface</th>
               </tr>
               </thead>
-              <tbody>
+              <tbody style="font-size:18px;">
+              {% set message = 'Are you sure you want to remove this route entry ?' %}
               {% for route in route_info.routing_table %}
-                {% set message = 'Are you sure you want to remove this route entry ?' %}
+                {% set r = (route|string).split() %}
                 <tr>
                   <td>
                     {% if 'C' in route.state %}
-                      <span>-</span>
+                      <span>--</span>
                     {% else %}
                       {{ create_button_with_modal(
                         'btn-floating btn-small red', 'remove', 1, loop.index, 1, 'route_remove', user, message)|safe
                       }}
                     {% endif %}
                   </td>
-                  <td><span style="white-space:pre-wrap;">{{ route }}</span></td>
+                  <td>{{ r[0] }}</td>
+                  <td>{{ r[1] }}</td>
+                  <td>{{ r[2] }}</td>
+                  <td>{{ r[3] }} {{ r[4] }}</td>
+                  <td>{{ r[5] }}</td>
                 </tr>
               {% endfor %}
               </tbody>

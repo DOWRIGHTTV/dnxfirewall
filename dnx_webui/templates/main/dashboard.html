@@ -4,7 +4,7 @@
     <div class="container">
       <div class="row row-flex">
         <div class="col s12 m6">
-          <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+          <div class="card-panel hoverable {{ theme.card }}">
             {{ create_title('unique domains')|safe }}
             <div class="row">
               <a><img src="/static/dashboard/dash_pi-{{dashboard['dc_graph'][0]}}{{dashboard['dc_graph'][1]}}.png" {{dash_icon_std}}></a>
@@ -26,7 +26,7 @@
           </div>
         </div>
         <div class="col s12 m6">
-          <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+          <div class="card-panel hoverable {{ theme.card }}">
             {{ create_title('total domains')|safe }}
             <div class="row">
               <a><img src="/static/dashboard/dash_pi-{{dashboard['rc_graph'][0]}}{{dashboard['rc_graph'][1]}}.png" {{dash_icon_std}}></a>
@@ -48,7 +48,7 @@
           </div>
         </div>
         <div class="col s12">
-          <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+          <div class="card-panel hoverable {{ theme.card }}">
             <a><img src="/static/dashboard/dash_search1.png" {{dash_icon_zoom}}></a>
             <h4 class="card-title">Most Searched Domains</h4>
             <div class="row">
@@ -86,7 +86,7 @@
           </div>
         </div>
         <div class="col s12">
-          <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+          <div class="card-panel hoverable {{ theme.card }}">
             <a><img src="/static/dashboard/dash_globe1.png" {{dash_icon_std}}></a>
             <h4 class="card-title">Country Activity</h4>
             <div class="row">
@@ -125,7 +125,7 @@
         </div>
       {% if dashboard['infected_hosts'] %}
         <div class="col s12">
-          <div class="card-panel card-panel-eql hoverable {{ theme.card }}">
+          <div class="card-panel hoverable {{ theme.card }}">
             <i class="material-icons large red-text">report_problem</i><br>
             <h4>Infected Hosts</h4>
             <div class="row">

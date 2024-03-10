@@ -22,7 +22,7 @@ from dnx_webui.source.web_validate import ValidationError
 
 from dnx_iptools.def_structs import fcntl_pack, long_unpack
 from dnx_iptools.cprotocol_tools import itoip
-from dnx_iptools.protocol_tools import btoia
+from dnx_iptools.protocol_tools import btoia, strtoroute, Route
 
 __all__ = (
     'get_intf_builtin', 'load_interfaces',
@@ -122,7 +122,7 @@ def wait_for_ip(interface: str) -> int:
         fast_sleep(ONE_SEC)
 
 def get_masquerade_ip(*, dst_ip: int, packed: bool = False) -> Union[bytes, int]:
-    '''return correct source ip address for a destination ip address based on the routing table.
+    '''return the correct source ip address for a destination ip address based on the routing table.
 
     return will be bytes if packed is True or an integer otherwise.
     a zeroed ip will be returned if error.
@@ -295,6 +295,21 @@ class InterfaceManager:
         # releasing lock for purposes specified in flock(1) man page under -u (unlock) + close file.
         release_lock(self._interfaces_lock)
         self.log.debug(f'file lock released for {self._intf_cfg_path}')
+
+    def get_configured_routes(self, intf: Optional[str] = None) -> list[Route]:
+
+        routes: list[Route] = []
+
+        ethernets = self.config_data['network']['ethernets']
+        vlans     = self.config_data['network'].get('vlans')
+
+        for intf, cfg in ethernets.items():
+            routes.extend([strtoroute(intf, r) for r in cfg.get('routes', [])])
+
+        for intf, cfg in vlans.items():
+            routes.extend([strtoroute(intf, r) for r in cfg.get('routes', [])])
+
+        return routes
 
     # TODO: we might not need these methods if we alter the config within the context manually.
     #  - i would say that if it turns out to be wonky logic, the methods route is probably better.

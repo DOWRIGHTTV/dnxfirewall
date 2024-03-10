@@ -16,6 +16,20 @@ from source.web_interfaces import StandardWebPage
 
 __all__ = ('WebPage',)
 
+ROUTE_CODES = [
+    'C - connected',
+    'S - static',
+    'NA - not available'
+]
+route_codes = ', '.join(ROUTE_CODES)
+
+ROUTE_MODIFIERS = [
+    '(D) - default route',
+    '(H) - host route',
+    '(I) - inactive (not implemented)'
+]
+route_modifiers = ', '.join(ROUTE_MODIFIERS)
+
 
 class WebPage(StandardWebPage):
     '''
@@ -23,7 +37,21 @@ class WebPage(StandardWebPage):
     '''
     @staticmethod
     def load(form: Form) -> dict[str, Any]:
-        return {'routing_table': get_routing_table()}
+        route_table = set(get_routing_table())
+
+        with InterfaceManager() as intf_mgr:
+            configured_routes = set(intf_mgr.get_configured_routes())
+
+        not_available = configured_routes - route_table
+
+        for route in not_available:
+            route.status = 0
+
+        return {
+            'route_codes': route_codes,
+            'route_modifiers': route_modifiers,
+            'routing_table': list(route_table & not_available)
+        }
 
     @staticmethod
     def update(form: Form) -> tuple[int, str]:

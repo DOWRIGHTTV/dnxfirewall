@@ -47,27 +47,53 @@ btoia: Callable[[ByteString|int], int] = partial(int.from_bytes, byteorder='big'
 # itoba: Callable[[int, int], bytes] = partial(int.to_bytes, byteorder='big', signed=False)
 
 
-class Route(NamedTuple):
+class Route:
     intf: str
     net_id: str
     cidr: str
     gateway: str
     ad: int
 
+    status: int
+
+    def __init__(self, intf: str, net_id: str, cidr: str, gateway: str, ad: int):
+        super().__setattr__('intf', intf)
+        super().__setattr__('net_id', net_id)
+        super().__setattr__('cidr', cidr)
+        super().__setattr__('gateway', gateway)
+        super().__setattr__('ad', ad)
+
+        super().__setattr__('status', 1)
+
+    def __setattr__(self, name, value):
+        if (name == 'status'):
+            if (value not in (0, 1)):
+                raise ValueError('status must be 0 or 1')
+
+            super().__setattr__(name, value)
+
+        else:
+            raise ValueError('Route information is immutable.')
+
+    def __delattr__(self, name):
+        raise ValueError('Route information is immutable.')
+
     def __str__(self) -> str:
-        '''format -> S        10.1.1.0/24 [90/2170112] via 69.69.69.69  Serial0/0/0
+        '''format -> S        10.1.1.0/24 [90/2170112] via 69.69.69.69, Serial0/0/0
         '''
         gateway = 'Connected' if self.state == 'C' else self.gateway
 
-        state = self.state.ljust(10)
+        state = self.state.ljust(7)
         network = f'{self.net_id}/{self.cidr}'.ljust(18)
-        ad = f'[{self.ad}]'.rjust(6)
-        gateway = gateway.ljust(18)
+        ad = f'[{self.ad}]'.rjust(5)
+        gateway = gateway.ljust(15)
 
         return f'{state} {network} {ad} via {gateway} {self.intf}'
 
     @property
     def state(self) -> str:
+
+        if (self.status == 0): return 'NA'
 
         if (self.gateway == '0.0.0.0'): state_str = 'C'
         else: state_str = 'S'
@@ -77,6 +103,20 @@ class Route(NamedTuple):
 
         return state_str
 
+    def format_netplan(self) -> str:
+        '''format: {to: 69.69.69.0/24, via: 192.168.83.69, metric: 10},
+        '''
+        return f'to: {self.net_id}/{self.cidr}, via: {self.gateway}, metric: {self.ad}'
+
+
+def strtoroute(intf: str, rs: str, /) -> Route:
+    rl = rs.split()
+
+    network = rl[0][:-1].split('/')
+    gateway = rl[3][:-1]
+    ad      = rl[5]
+
+    return Route(intf, network[0], network[1], gateway, int(ad))
 
 def mac_add_sep(mac_address: str, sep: str = ':') -> str:
     string_mac = []
@@ -100,15 +140,6 @@ def cidrtoi(cidr: Union[str, int]) -> int:
     hostmask: int = 32 - int(cidr)
 
     return ~((1 << hostmask) - 1) & (2**32 - 1)
-
-
-# _CIDR_MAP = {
-#     '255.255.255.0'  : '24', '255.255.255.128': '25', '255.255.255.192': '26',
-#     '255.255.255.224': '27', '255.255.255.240': '28', '255.255.255.248': '29',
-#     '255.255.255.252': '30', '255.255.255.254': '31', '255.255.255.255': '32'
-# }
-# def masktocidr(netmask: str) -> str:
-#     return _CIDR_MAP[netmask]
 
 def masktocidr(netmask: str) -> str:
     x = [bin(int(octet)).count('1') for octet in netmask.split('.')]
