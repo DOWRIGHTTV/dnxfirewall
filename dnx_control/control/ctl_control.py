@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import os
+import shutil
 
 from json import loads
+from functools import partial
 from socket import socket, AF_UNIX, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_PASSCRED, SCM_CREDENTIALS
 
 from dnx_gentools.def_typing import *
@@ -17,6 +19,13 @@ from dnx_iptools.protocol_tools import change_socket_owner, authenticate_sender
 from dnx_routines.logging.log_client import Log
 
 
+def netplan_push(file: str, apply: bool = False) -> None:
+
+
+
+    if (apply):
+        shell('netplan apply')
+
 MODULE_PERMISSIONS = {
     'webui': {
         'systemctl start': None,
@@ -28,6 +37,9 @@ MODULE_PERMISSIONS = {
 
         # python functions - must be allowed here and a reference provided
         'os.replace': os.replace
+
+        # custom command/functions
+        'netplan push':
     }
 }
 

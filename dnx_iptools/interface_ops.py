@@ -58,11 +58,16 @@ def get_intf_builtin(zone_name):
 
     return {intf_index: (intf_settings[f'{intf_path}->zone'], intf_settings[f'{intf_path}->ident'])}
 
-def load_interfaces(intf_type: INTF = INTF.BUILTIN, *, exclude: list = []) -> list[tuple[int, int, str]]:
+def load_interfaces(intf_type: INTF = INTF.BUILTIN, *, exclude: Optional[list] = None) -> list[tuple[int, int, str]]:
     '''return a list of tuples for the specified interface type.
+
+    interfaces not associated are filtered out by default.
 
         [(intf_index, zone, ident)]
     '''
+    if (exclude is None):
+        exclude = []
+
     intf_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
     dnx_interfaces = intf_settings.get_items(f'interfaces->{intf_type.name.lower()}')
@@ -76,6 +81,10 @@ def load_interfaces(intf_type: INTF = INTF.BUILTIN, *, exclude: list = []) -> li
         for intf_name, intf_info in dnx_interfaces:
 
             ident: str = intf_info['ident']
+            # filtering out interfaces not associated during installation
+            if (ident is None):
+                continue
+
             zone:  int = intf_info['zone']
             intf_index: int = system_interfaces.get(ident)
             if (not intf_index):
@@ -286,8 +295,12 @@ class InterfaceManager:
             temp_file_path = f'{HOME_DIR}/dnx_profile/interfaces/TEMP_{token_urlsafe(10)}'
 
             if write_file(temp_file_path, updated_config):
-                # changing file permissions and settings owner to dnx:dnx to not cause permission issues after copy.
-                os.chmod(temp_file_path, 0o660)
+                # sending replace command to system control service
+                cmd_args = [
+                    f'{HOME_DIR}/dnx_profile/interfaces/01-dnx-interfaces.yaml', '/etc/netplan/01-dnx-interfaces.yaml'
+                ]
+                system_action(module='webui', command='os.replace', args=cmd_args)
+
                 shutil.chown(temp_file_path, user=USER, group=GROUP)
 
                 os.replace(temp_file_path, self._intf_cfg_path)

@@ -10,7 +10,7 @@ import hashlib
 import subprocess
 
 from copy import copy
-from functools import wraps
+from functools import wraps, partial
 from secrets import token_urlsafe
 
 from dnx_gentools.def_typing import *
@@ -45,6 +45,7 @@ __all__ = (
 FILE_POLL_TIMER = 10
 
 file_exists = os.path.exists
+file_opener = partial(os.open, mode=0o640)
 
 sha256 = hashlib.sha256
 
@@ -146,7 +147,7 @@ def write_file(file_path: str, data: str) -> int:
 
     a convenience wrapper for the built-in with open('w') function context.
     '''
-    with open(file_path, 'w') as f:
+    with open(file_path, 'w', opener=file_opener) as f:
         return f.write(data)
 
 def append_to_file(data: str, filename: str, *, filepath: str = 'dnx_profile/data/usr') -> None:
@@ -165,6 +166,8 @@ def change_file_owner(file_path: str) -> None:
         raise RuntimeError('process must be ran as root user to change file owner.')
 
     shutil.chown(file_path, user=USER, group=GROUP)
+
+    # TODO: remove all instances of chmod as we migrate to using the low-level os.open + permissions syscall.
     os.chmod(file_path, 0o660)
 
 def load_tlds() -> Generator[tuple[str, int]]:
@@ -517,7 +520,7 @@ class ConfigurationManager:
             # self._system_path_file = f'{HOME_DIR}/{file_path}/system/{self._filename}'
             self._usr_path_file = f'{HOME_DIR}/{file_path}/usr/{self._filename}'
 
-    # attempts to acquire lock on system config lock (blocks until acquired), then opens a temporary
+    # attempt to acquire lock on system config lock (blocks until acquired), then opens a temporary
     # file which the new configuration will be written to, and finally returns the class object.
     def __enter__(self) -> ConfigurationManager:
         self._config_lock = acquire_lock(self.config_lock_file)
@@ -526,10 +529,9 @@ class ConfigurationManager:
         if (self._name):
             # TEMP prefix is to wildcard match any orphaned files for deletion
             self._temp_file_path = f'{HOME_DIR}/{self._file_path}/usr/TEMP_{token_urlsafe(10)}'
-            self._temp_file = open(self._temp_file_path, 'w+')
+            self._temp_file = open(self._temp_file_path, 'w+', opener=file_opener)
 
             # changing file permissions and settings owner to dnx:dnx to not cause permission issues after copy.
-            os.chmod(self._temp_file_path, 0o660)
             shutil.chown(self._temp_file_path, user=USER, group=GROUP)
 
         self.log.debug(f'Config file lock acquired for {self._filename}.')
