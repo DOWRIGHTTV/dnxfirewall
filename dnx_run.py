@@ -136,15 +136,18 @@ def parse_args() -> tuple[str, str, dict]:
     mod_settings = check_module(module)
     check_command(cmd, module, mod_settings)
 
+    # index of first argument to be passed through to the specified module
+    pt_arg_start = 2 if cmd in ['install'] else 3
+
     # branch override can be used to prevent the system from forcing a checkout of the release branches.
     arg_list = []
-    for arg in sys.argv[3:]:
+    for arg in sys.argv[pt_arg_start:]:
         if arg.startswith('-B'):
             os.environ['BRANCH_OVERRIDE'] = arg[2:]
         else:
             arg_list.append(arg)
 
-    os.environ['PASSTHROUGH_ARGS'] = ','.join(sys.argv[3:])
+    os.environ['PASSTHROUGH_ARGS'] = ','.join(arg_list)
 
     if ('_autoloader_' in os.environ['PASSTHROUGH_ARGS']):
         _AUTOLOADER = True
