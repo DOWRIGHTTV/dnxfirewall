@@ -65,6 +65,11 @@ class WebPage(StandardWebPage):
 
     @staticmethod
     def update(form: Form) -> tuple[int, str]:
+        system_settings: ConfigChain = load_configuration('system', cfg_type='global')
+
+        if system_settings['interfaces->builtin->wan->ident'] is None:
+            return 97, 'WAN interface available in local only mode.'
+
         if ('wan_state_update' in form):
 
             wan_state = form.get('wan_state_update', DATA.MISSING)
