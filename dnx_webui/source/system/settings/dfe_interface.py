@@ -38,11 +38,16 @@ class WebPage(StandardWebPage):
             ip_addr = itoip(interface.get_ipaddress(interface=wan_ident))
         except OverflowError:
             ip_addr = 'NOT SET'
+        except TypeError:
+            ip_addr = 'N/A'
+
 
         try:
             netmask = itoip(interface.get_netmask(interface=wan_ident))
         except OverflowError:
             netmask = 'NOT SET'
+        except TypeError:
+            netmask = 'N/A'
 
         return {
             'mac': {
