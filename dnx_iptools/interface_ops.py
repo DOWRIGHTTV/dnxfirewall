@@ -264,10 +264,17 @@ class InterfaceManager:
     def __enter__(self):
         self._interfaces_lock = acquire_lock(self.config_lock_path)
 
-        config_data = read_file(self._intf_cfg_path)
+        try:
+            config_data = read_file(self._intf_cfg_path)
+        except:
+            raise ConfigurationError(f'[{self._intf_cfg_path}] failed to read configuration')
 
         self._config_hash = hash(config_data)
-        self.config_data = yaml_to_json(config_data)
+
+        try:
+            self.config_data = yaml_to_json(config_data)
+        except:
+            raise ConfigurationError(f'[{self._intf_cfg_path}] failed to parse configuration')
 
         self.log.debug(f'Config file lock acquired for {self._intf_cfg_path}.')
 
@@ -282,7 +289,7 @@ class InterfaceManager:
             if (exc_type is not ValidationError):
                 self.log.error(f'InterfaceManager: {exc_val}')
 
-                raise ConfigurationError(f'InterfaceManager failed while updating file. error->{exc_val}')
+                raise ConfigurationError(f'InterfaceManager context failure -> {exc_val}')
 
             raise
 

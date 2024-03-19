@@ -68,7 +68,7 @@ class WebPage(StandardWebPage):
         system_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
         if system_settings['interfaces->builtin->wan->ident'] is None:
-            return 97, 'WAN interface available in local only mode.'
+            return 97, 'WAN interface not available in local only mode.'
 
         if ('wan_state_update' in form):
 
