@@ -264,6 +264,8 @@ class InterfaceManager:
     def __enter__(self):
         self._interfaces_lock = acquire_lock(self.config_lock_path)
 
+        self.log.debug(f'Config file lock acquired for {self._intf_cfg_path}.')
+
         try:
             config_data = read_file(self._intf_cfg_path)
         except:
@@ -275,8 +277,6 @@ class InterfaceManager:
             self.config_data = yaml_to_json(config_data)
         except:
             raise ConfigurationError(f'[{self._intf_cfg_path}] failed to parse configuration')
-
-        self.log.debug(f'Config file lock acquired for {self._intf_cfg_path}.')
 
         return self
 

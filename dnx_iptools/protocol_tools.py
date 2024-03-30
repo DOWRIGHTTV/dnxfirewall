@@ -56,6 +56,12 @@ class Route:
 
     status: int
 
+    def __hash__(self):
+        return hash((self.intf, self.net_id, self.cidr, self.gateway, self.ad))
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
+
     def __init__(self, intf: str, net_id: str, cidr: str, gateway: str, ad: int):
         super().__setattr__('intf', intf)
         super().__setattr__('net_id', net_id)

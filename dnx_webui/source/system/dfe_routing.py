@@ -9,6 +9,8 @@ from flask import session
 from source.web_typing import *
 from source.web_validate import *
 
+from dnx_gentools.def_enums import DATA
+from dnx_gentools.file_operations import config
 from dnx_iptools.interface_ops import InterfaceManager
 from dnx_iptools.protocol_tools import get_routing_table
 
@@ -50,11 +52,24 @@ class WebPage(StandardWebPage):
         return {
             'route_codes': route_codes,
             'route_modifiers': route_modifiers,
-            'routing_table': list(route_table & not_available)
+            'routing_table': list(route_table | not_available)
         }
 
     @staticmethod
     def update(form: Form) -> tuple[int, str]:
+        if 'route_add' in form:
+            route_info = config(**{
+                'net_id': ip_address(form.get('nid', DATA.MISSING)),
+                'net_mask': ip_address(form.get('nmk', DATA.MISSING)),
+                'gateway': ip_address(form.get('nxh', DATA.MISSING)),
+                'adm_distance': get_convert_int(form, 'nad')
+            })
+
+            if (route_info.adm_distance not in [10, 20, 60, 100]):
+                return 1, INVALID_FORM
+
+            print('setting route ->', route_info)
+
         return NO_STANDARD_ERROR
 
 # ==============

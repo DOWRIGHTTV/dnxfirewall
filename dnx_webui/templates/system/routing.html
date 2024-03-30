@@ -8,22 +8,26 @@
             {{ create_title('add route')|safe }}
             <form method="post">
               <div class="row">
-                <div class="input-field col s4 {{input_color}}">
-                  <input type="text" name="user_acct" id="ua" class="validate" placeholder="192.168.69.0" required>
+                <div class="input-field col s3 {{input_color}}">
+                  <input type="text" name="nid" id="nid" placeholder="192.168.69.0" {{ ip_addr_validate }} required>
                   <label for="nid">Network ID</label>
                 </div>
-                <div class="input-field col s4 {{input_color}}">
-                  <input type="password" name="user_password" id="up" class="validate" placeholder="255.255.255.0" required>
-                  <label for="nms">Netmask</label>
+                <div class="input-field col s3 {{input_color}}">
+                  <input type="text" name="nmk" id="nmk" placeholder="255.255.255.0" {{ ip_addr_validate }} required>
+                  <label for="nmk">Netmask</label>
                 </div>
-                <div class="input-field col s4 {{input_color}}">
-                  <select name="route_ad" id="nad">
+                <div class="input-field col s3 {{input_color}}">
+                  <input type="text" name="nxh" id="nxh" placeholder="192.168.83.69" {{ ip_addr_validate }} required>
+                  <label for="nxh">Next Hop</label>
+                </div>
+                <div class="input-field col s3 {{input_color}}">
+                  <select name="nad" id="nad">
                     <option value="10">10</option>
                     <option value="20">20</option>
                     <option value="60">60</option>
                     <option value="100">100</option>
                   </select>
-                  <label for="route_ad">Admin Distance</label>
+                  <label for="nad">Admin Distance</label>
                 </div>
               </div>
               <div class="row">
@@ -37,8 +41,8 @@
         <div class="col s12">
           <div class="card-panel hoverable {{ theme.card }}">
             {{ create_title('Route Table')|safe }}
-            <span>Codes: {{ route_info.routing_codes }}</span>
-            <span>Modifiers: {{ route_info.routing_modifiers }}</span>
+            <div class="row"><span>Codes: {{ route_info.route_codes }}</span></div>
+            <div class="row"><span>Modifiers: {{ route_info.route_modifiers }}</span></div>
             <table class="striped centered">
               <thead>
               <tr>
@@ -51,7 +55,7 @@
               </tr>
               </thead>
               <tbody style="font-size:18px;">
-              {% set message = 'Are you sure you want to remove this route entry ?' %}
+              {% set message = 'Are you sure you want to remove this route entry?' %}
               {% for route in route_info.routing_table %}
                 {% set r = (route|string).split() %}
                 <tr>

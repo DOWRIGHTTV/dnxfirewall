@@ -108,7 +108,7 @@ def write_configuration(
     '''
     filename = f'{cfg_type}/{filename}.{ext}' if cfg_type else f'{filename}.{ext}'
 
-    with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
+    with open(f'{HOME_DIR}/{filepath}/{filename}', 'w', opener=file_opener) as settings:
         json.dump(data, settings, indent=2)
 
 def load_data(filename: str, *, cfg_type: str = '', filepath: str = 'dnx_profile/data') -> dict:
@@ -131,7 +131,7 @@ def write_data(data: dict, filename: str, *, cfg_type: str = '', filepath: str =
     '''
     filename = f'{cfg_type}/{filename}' if cfg_type else f'{filename}'
 
-    with open(f'{HOME_DIR}/{filepath}/{filename}', 'w') as settings:
+    with open(f'{HOME_DIR}/{filepath}/{filename}', 'w', opener=file_opener) as settings:
         json.dump(data, settings, indent=2)
 
 def read_file(file_path: str) -> str:
@@ -787,7 +787,7 @@ def yaml_to_json(s: str, /, to_dict: bool = True) -> Union[str, dict]:
         # peeking at next indent level to see if we need to close a block
         # print(f'MAX_IDX->{MAX_IDX}, IDX->{idx}')
         if (idx == MAX_IDX-1):
-            print('end of data.')
+            # print('end of data.')
             break
 
         next_indent_level = s_parsed_indents[idx + 1][0]
@@ -859,7 +859,8 @@ def json_to_yaml(data: Union[str, dict], /, *, from_dict: bool = True) -> str:
             if (not line.strip()):
                 continue
 
-            output_str.append(line)
+            # trailing spaces removed to prevent hashing mismatches
+            output_str.append(line.rstrip())
 
             # print('standard line->', line)
 
