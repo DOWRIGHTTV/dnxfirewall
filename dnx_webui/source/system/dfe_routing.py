@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-import re
-
-from flask import session
-
 from source.web_typing import *
 from source.web_validate import *
 
@@ -59,22 +55,26 @@ class WebPage(StandardWebPage):
     def update(form: Form) -> tuple[int, str]:
         if 'route_add' in form:
             route_info = config(**{
-                'net_id': ip_address(form.get('nid', DATA.MISSING)),
-                'net_mask': ip_address(form.get('nmk', DATA.MISSING)),
-                'gateway': ip_address(form.get('nxh', DATA.MISSING)),
+                'net_id': form.get('nid', DATA.MISSING),
+                'net_mask': form.get('nmk', DATA.MISSING),
+                'gateway': form.get('nxh', DATA.MISSING),
                 'adm_distance': get_convert_int(form, 'nad')
             })
 
-            if (route_info.adm_distance not in [10, 20, 60, 100]):
-                return 1, INVALID_FORM
-
-            print('setting route ->', route_info)
+            if error := validate_route_add(route_info):
+                return 1, error.message
 
         return NO_STANDARD_ERROR
 
 # ==============
 # VALIDATION
 # ==============
+@input_validation
+def validate_route_add(route: config) -> Optional[ValidationError]:
+    if (route.adm_distance not in [10, 20, 60, 100]):
+        return ValidationError(INVALID_FORM)
+
+    ip_address(ip_iter=[route.net_id, route.net_mask, route.gateway])
 
 # ==============
 # CONFIGURATION

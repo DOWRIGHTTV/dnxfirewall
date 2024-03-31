@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import string
 
+from functools import wraps
 from ipaddress import IPv4Network, IPv4Address
 
 # TODO: consider moving this module, web_typing, and web_interfaces to dnx_webui folder instead of source
@@ -21,7 +22,7 @@ MAX_PORT = 65535
 MAX_PORT_RANGE = MAX_PORT + 1
 
 __all__ = (
-    'ValidationError',
+    'ValidationError', 'input_validation',
     
     'INVALID_FORM', 'NO_STANDARD_ERROR',
     'VALID_MAC', 'VALID_DOMAIN',
@@ -41,6 +42,23 @@ __all__ = (
 
 class ValidationError(DNXError):
     '''Webui processing failure or invalid user input.'''
+
+
+def input_validation(func):
+    '''converts try/catch semantic of ValidationError exception class to a return error by value.
+
+    func(*args, **kwargs) -> Optional[ValidationError]
+
+    manually returning exceptions as values is also supported.
+    '''
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except ValidationError as ve:
+            return ve
+
+    return wrapper
 
 
 _proto_map = {'any': 0, 'icmp': 1, 'tcp': 6, 'udp': 17}
