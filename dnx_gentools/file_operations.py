@@ -140,7 +140,7 @@ def read_file(file_path: str) -> str:
     a convenience wrapper for the built-in with open('r') function context.
     '''
     with open(file_path, 'r') as f:
-        return f.read()
+        return f.read().strip()
 
 def write_file(file_path: str, data: str) -> int:
     '''write data to a file.
