@@ -286,8 +286,8 @@ class InterfaceManager:
     log: ClassVar[LogHandler_T] = None
     config_lock_path: ClassVar[ConfigLock] = f'{HOME_DIR}/dnx_profile/interfaces/interfaces.lock'
 
-    _intf_builtin:  ClassVar[str] = '11-dnx-interfaces.yaml'
-    _intf_extended: ClassVar[str] = '12-dnx-interfaces-extended.yaml'
+    _intf_builtin:  ClassVar[str] = '01-dnx-interfaces.yaml'
+    _intf_extended: ClassVar[str] = '02-dnx-interfaces-extended.yaml'
 
     _intf_cfg_path: str
     _intf_cfg_netplan: dict
@@ -359,10 +359,10 @@ class InterfaceManager:
             if write_file(temp_file_path, updated_config):
                 # depending on the processes permissions, will replace directly or through the control proxy.
                 if (not ROOT):
-                    system_action(module='webui', command='os.replace', args=[temp_file_path, self._intf_cfg_path])
+                    system_action(module='webui', command='os.replace', args=[temp_file_path, self._intf_cfg_path + '.tmp'])
 
                 else:
-                    os.replace(temp_file_path, self._intf_cfg_path)
+                    os.replace(temp_file_path, self._intf_cfg_path + '.tmp')
 
         # releasing lock for purposes specified in flock(1) man page under -u (unlock) + close file.
         release_lock(self._interfaces_lock)
