@@ -20,14 +20,16 @@ from dnx_gentools.file_operations import ConfigurationError, json_to_yaml, yaml_
 from dnx_webui.source.web_validate import ValidationError
 
 from dnx_iptools.def_structs import fcntl_pack, long_unpack
-from dnx_iptools.cprotocol_tools import itoip
-from dnx_iptools.protocol_tools import btoia, strtoroute, Route
+from dnx_iptools.cprotocol_tools import itoip, iptoi, hextoip
+from dnx_iptools.protocol_tools import btoia, strtoroute, Route, masktocidr, cidrtoi
 
 __all__ = (
     'get_intf_builtin', 'load_interfaces',
     'wait_for_interface', 'wait_for_ip',
     'get_mac', 'get_netmask', 'get_ipaddress', 'get_masquerade_ip',
     'get_arp_table',
+
+    'get_routing_table', 'sort_routes', 'get_unified_routes', 'route_lookup',
 
     'InterfaceManager'
 )
@@ -219,6 +221,58 @@ def get_arp_table(*, modify: bool = False, host: Optional[str] = None) -> Union[
 
     else:
         return arp_table
+
+# =====================
+# ROUTING FUNCTIONS
+# =====================
+def get_routing_table() -> list[Route]:
+    routing_table = []
+
+    routes = read_file('/proc/net/route')
+
+    for line in routes.splitlines()[1:]:
+        line = line.split()
+
+        intf = line[0]
+        network = hextoip(line[1])
+        netmask = hextoip(line[7])
+        gateway = hextoip(line[2])
+        ad = line[6]
+
+        route = Route(intf, network, masktocidr(netmask), gateway, ad)
+
+        routing_table.append(route)
+
+    return routing_table
+
+def sort_routes(routes: Iterable[Route]) -> list[Route]:
+    return sorted(routes, key=lambda x: (int(x.ad), -int(x.cidr)))
+
+def get_unified_routes() -> list[Route]:
+    '''returns a sorted list of routes after merging the routing table with configured routes.
+    '''
+    route_table = set(get_routing_table())
+
+    with InterfaceManager() as intf_mgr:
+        configured_routes = set(intf_mgr.get_configured_routes())
+
+    not_available = configured_routes - route_table
+
+    for route in not_available:
+        route.status = 0
+
+    return sort_routes(route_table | not_available)
+
+def route_lookup(ip_address: int) -> Optional[Route]:
+    '''returns the matching route object for the given ip address.
+
+    None is returned if no matching route is found.
+    '''
+    for route in get_unified_routes():
+        if (ip_address & cidrtoi(route.cidr) == iptoi(route.net_id)):
+            return route
+
+    return None
 
 
 NETPLAN_PATH = '/etc/netplan'

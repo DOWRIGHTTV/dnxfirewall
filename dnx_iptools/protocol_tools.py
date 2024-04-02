@@ -11,17 +11,14 @@ from functools import partial
 from random import getrandbits
 from socket import socket, AF_INET, SOCK_RAW, SCM_CREDENTIALS
 from subprocess import run, CalledProcessError, DEVNULL
-from typing import NamedTuple
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import USER, RUN_FOREVER, byte_join, fast_time, UINT32_MAX, str_join
 from dnx_gentools.def_enums import PROTO
-from dnx_gentools.file_operations import read_file
 
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import PR_ICMP_HDR
-from dnx_iptools.cprotocol_tools import calc_checksum, itoip, iptoi, hextoip
-from dnx_iptools.interface_ops import InterfaceManager
+from dnx_iptools.cprotocol_tools import calc_checksum, itoip
 
 # ===============
 # TYPING IMPORTS
@@ -41,7 +38,7 @@ __all__ = (
     'create_dns_query_header',
     'parse_query_name',
 
-    'Route', 'get_routing_table', 'sort_routes', 'get_unified_routes', 'route_lookup',
+    'Route', 'strtoroute'
 )
 
 btoia: Callable[[ByteString|int], int] = partial(int.from_bytes, byteorder='big', signed=False)
@@ -133,7 +130,7 @@ def strtoroute(intf: str, rs: str, /) -> Route:
     gateway = rl[3][:-1]
     ad      = rl[5][:-1]
 
-    return Route(intf, network[0], network[1], gateway, int(ad))
+    return Route(intf, network[0], network[1], gateway, ad)
 
 def mac_add_sep(mac_address: str, sep: str = ':') -> str:
     string_mac = []
@@ -162,58 +159,6 @@ def masktocidr(netmask: str) -> str:
     x = [bin(int(octet)).count('1') for octet in netmask.split('.')]
 
     return str(sum(x))
-
-# =====================
-# ROUTING FUNCTIONS
-# =====================
-def get_routing_table() -> list[Route]:
-    routing_table = []
-
-    routes = read_file('/proc/net/route')
-
-    for line in routes.splitlines()[1:]:
-        line = line.split()
-
-        intf = line[0]
-        network = hextoip(line[1])
-        netmask = hextoip(line[7])
-        gateway = hextoip(line[2])
-        ad = line[6]
-
-        route = Route(intf, network, masktocidr(netmask), gateway, ad)
-
-        routing_table.append(route)
-
-    return routing_table
-
-def sort_routes(routes: Iterable[Route]) -> list[Route]:
-    return sorted(routes, key=lambda x: (int(x.ad), -int(x.cidr)))
-
-def get_unified_routes() -> list[Route]:
-    '''returns a sorted list of routes after merging the routing table with configured routes.
-    '''
-    route_table = set(get_routing_table())
-
-    with InterfaceManager() as intf_mgr:
-        configured_routes = set(intf_mgr.get_configured_routes())
-
-    not_available = configured_routes - route_table
-
-    for route in not_available:
-        route.status = 0
-
-    return sort_routes(route_table | not_available)
-
-def route_lookup(ip_address: int) -> Optional[Route]:
-    '''returns the matching route object for the given ip address.
-
-    None is returned if no matching route is found.
-    '''
-    for route in get_unified_routes():
-        if (ip_address & cidrtoi(route.cidr) == iptoi(route.net_id)):
-            return route
-
-    return None
 
 # =====================
 # DNS related functions

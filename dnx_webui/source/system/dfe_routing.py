@@ -7,8 +7,8 @@ from source.web_validate import *
 
 from dnx_gentools.def_enums import DATA
 from dnx_gentools.file_operations import ConfigurationError, config, system_configuration
-from dnx_iptools.interface_ops import InterfaceManager
-from dnx_iptools.protocol_tools import Route, get_unified_routes, route_lookup, masktocidr
+from dnx_iptools.interface_ops import InterfaceManager, get_unified_routes, route_lookup
+from dnx_iptools.protocol_tools import Route, masktocidr
 
 from source.web_interfaces import StandardWebPage
 
