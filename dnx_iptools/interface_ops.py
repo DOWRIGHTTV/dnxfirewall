@@ -12,16 +12,18 @@ from fcntl import ioctl
 from socket import socket, inet_aton, if_nameindex, AF_INET, SOCK_DGRAM
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import HOME_DIR, USER, GROUP, ONE_SEC, fast_sleep
+from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, ONE_SEC, fast_sleep
 from dnx_gentools.def_enums import INTF
 from dnx_gentools.file_operations import acquire_lock, release_lock, load_configuration, read_file, write_file
 from dnx_gentools.file_operations import ConfigurationError, json_to_yaml, yaml_to_json
 
-from dnx_webui.source.web_validate import ValidationError
-
 from dnx_iptools.def_structs import fcntl_pack, long_unpack
 from dnx_iptools.cprotocol_tools import itoip, iptoi, hextoip
 from dnx_iptools.protocol_tools import btoia, strtoroute, Route, masktocidr, cidrtoi
+
+from dnx_control.control.ctl_action import system_action
+
+from dnx_webui.source.web_validate import ValidationError
 
 __all__ = (
     'get_intf_builtin', 'load_interfaces',
@@ -284,8 +286,8 @@ class InterfaceManager:
     log: ClassVar[LogHandler_T] = None
     config_lock_path: ClassVar[ConfigLock] = f'{HOME_DIR}/dnx_profile/interfaces/interfaces.lock'
 
-    _intf_builtin:  ClassVar[str] = '01-dnx-interfaces.yaml'
-    _intf_extended: ClassVar[str] = '02-dnx-interfaces-extended.yaml'
+    _intf_builtin:  ClassVar[str] = '11-dnx-interfaces.yaml'
+    _intf_extended: ClassVar[str] = '12-dnx-interfaces-extended.yaml'
 
     _intf_cfg_path: str
     _intf_cfg_netplan: dict
@@ -355,17 +357,12 @@ class InterfaceManager:
             temp_file_path = f'{HOME_DIR}/dnx_profile/interfaces/TEMP_{token_urlsafe(10)}'
 
             if write_file(temp_file_path, updated_config):
-                # sending replace command to system control service
-                cmd_args = [
-                    f'{HOME_DIR}/dnx_profile/interfaces/01-dnx-interfaces.yaml', '/etc/netplan/01-dnx-interfaces.yaml'
-                ]
-                system_action(module='webui', command='os.replace', args=cmd_args)
+                # depending on the processes permissions, will replace directly or through the control proxy.
+                if (not ROOT):
+                    system_action(module='webui', command='os.replace', args=[temp_file_path, self._intf_cfg_path])
 
-                shutil.chown(temp_file_path, user=USER, group=GROUP)
-
-                os.replace(temp_file_path, self._intf_cfg_path)
-
-                # TODO: add netplan apply command here.... (the caller might be a better fit for responsibility)
+                else:
+                    os.replace(temp_file_path, self._intf_cfg_path)
 
         # releasing lock for purposes specified in flock(1) man page under -u (unlock) + close file.
         release_lock(self._interfaces_lock)

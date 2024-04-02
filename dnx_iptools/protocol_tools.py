@@ -120,7 +120,7 @@ class Route:
     def format_netplan(self) -> str:
         '''format: {to: 69.69.69.0/24, via: 192.168.83.69, metric: 10},
         '''
-        return str_join(['{', f'to: {self.net_id}/{self.cidr}, via: {self.gateway}, metric: {self.ad}', '}'])
+        return f'{{ to: {self.net_id}/{self.cidr}, via: {self.gateway}, metric: {self.ad} }}'
 
 
 def strtoroute(intf: str, rs: str, /) -> Route:
