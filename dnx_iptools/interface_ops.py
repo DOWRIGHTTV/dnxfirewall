@@ -265,11 +265,14 @@ def get_unified_routes() -> list[Route]:
 
     return sort_routes(route_table | not_available)
 
-def route_lookup(ip_address: int) -> Optional[Route]:
+def route_lookup(ip_address: Union[str, int]) -> Optional[Route]:
     '''returns the matching route object for the given ip address.
 
     None is returned if no matching route is found.
     '''
+    if isinstance(ip_address, str):
+        ip_address = iptoi(ip_address)
+
     for route in get_unified_routes():
         if (ip_address & cidrtoi(route.cidr) == iptoi(route.net_id)):
             return route
