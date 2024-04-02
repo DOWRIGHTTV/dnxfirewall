@@ -130,7 +130,7 @@ def _log_handler():
     logging_level: int = 0
     handler_name: str = ''
     cli_output: bool = False
-    system_action_audit: bool = False
+    system_action_audit: bool = True  # auditing system control events on by default
 
     log_path: str = f'{HOME_DIR}/dnx_profile/log/'
 
@@ -182,13 +182,14 @@ def _log_handler():
 
             cls.suppress_output = suppress_output
 
+            direct_log(handler_name, LOG.INFO, 'LogHandler initialization started.', cli=True)
+
             # need to get log level before initialization direct log or else it will be set to 0
             threading.Thread(target=log_settings).start()
             threading.Thread(target=slog_settings).start()
 
             cls._init_one.wait_for_threads(count=2)
 
-            direct_log(handler_name, LOG.INFO, 'LogHandler initialization started.', cli=True)
             threading.Thread(target=write_to_disk).start()
             direct_log(handler_name, LOG.NOTICE, 'LogHandler initialization complete.', cli=True)
 

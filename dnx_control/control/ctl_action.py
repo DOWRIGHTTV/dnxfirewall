@@ -59,4 +59,4 @@ def system_action(*, delay: int = NO_DELAY, **kwargs) -> None:
         Timer(delay, _system_action, args=(control_data,)).start()
 
     if (Log.control_audit):
-        direct_log('system', LOG.ERROR, f'{kwargs["module"]} sent system command {kwargs["command"]}')
+        direct_log('system', LOG.WARNING, f'{kwargs["module"]} sent system command {kwargs["command"]}')
