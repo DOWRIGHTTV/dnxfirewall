@@ -14,13 +14,14 @@ from subprocess import run, CalledProcessError, DEVNULL
 from typing import NamedTuple
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import USER, RUN_FOREVER, byte_join, fast_time, UINT32_MAX
+from dnx_gentools.def_constants import USER, RUN_FOREVER, byte_join, fast_time, UINT32_MAX, str_join
 from dnx_gentools.def_enums import PROTO
 from dnx_gentools.file_operations import read_file
 
 from dnx_iptools.def_structs import *
 from dnx_iptools.def_structures import PR_ICMP_HDR
-from dnx_iptools.cprotocol_tools import calc_checksum, itoip, hextoip
+from dnx_iptools.cprotocol_tools import calc_checksum, itoip, iptoi, hextoip
+from dnx_iptools.interface_ops import InterfaceManager
 
 # ===============
 # TYPING IMPORTS
@@ -34,13 +35,13 @@ __all__ = (
     'change_socket_owner', 'authenticate_sender',
     'icmp_reachable',
 
-    'cidrtoi',
+    'cidrtoi', 'masktocidr',
     'domain_stob', 'mac_stob',
     'mac_add_sep', 'strtobit',
     'create_dns_query_header',
     'parse_query_name',
 
-    'Route', 'get_routing_table',
+    'Route', 'get_routing_table', 'sort_routes', 'get_unified_routes', 'route_lookup',
 )
 
 btoia: Callable[[ByteString|int], int] = partial(int.from_bytes, byteorder='big', signed=False)
@@ -52,7 +53,7 @@ class Route:
     net_id: str
     cidr: str
     gateway: str
-    ad: int
+    ad: str
 
     status: int
 
@@ -62,7 +63,7 @@ class Route:
     def __eq__(self, other):
         return hash(self) == hash(other)
 
-    def __init__(self, intf: str, net_id: str, cidr: str, gateway: str, ad: int):
+    def __init__(self, intf: str, net_id: str, cidr: str, gateway: str, ad: str):
         super().__setattr__('intf', intf)
         super().__setattr__('net_id', net_id)
         super().__setattr__('cidr', cidr)
@@ -85,20 +86,20 @@ class Route:
         raise ValueError('Route information is immutable.')
 
     def __str__(self) -> str:
-        '''format -> S        10.1.1.0/24 [90/2170112] via 69.69.69.69, Serial0/0/0
-        '''
-        gateway = 'Connected' if self.state == 'C' else self.gateway
+        return f'{self.intf}, {self.net_id}, {self.cidr}, {self.gateway}, {self.ad}'
 
-        state = self.state.ljust(7)
-        network = f'{self.net_id}/{self.cidr}'.ljust(18)
-        ad = f'[{self.ad}]'.rjust(5)
-        gateway = gateway.ljust(15)
+    @property
+    def is_static(self) -> bool:
+        return 'S' in self.status
 
-        return f'{state} {network} {ad} via {gateway} {self.intf}'
+    @property
+    def is_connected(self) -> bool:
+        return 'C' in self.status
 
     @property
     def state(self) -> str:
 
+        # should only apply to static routes
         if (self.status == 0): return 'NA'
 
         if (self.gateway == '0.0.0.0'): state_str = 'C'
@@ -109,10 +110,20 @@ class Route:
 
         return state_str
 
+    def format_table(self) -> tuple[str, str, str, str, str]:
+        '''format -> S        10.1.1.0/24 [90/2170112] via 69.69.69.69, Serial0/0/0
+        '''
+        gateway = 'Connected' if self.state == 'C' else self.gateway
+
+        network = f'{self.net_id}/{self.cidr}'
+        ad = f'[{self.ad}]'
+
+        return (self.state, network, ad, f'via {gateway}', self.intf)
+
     def format_netplan(self) -> str:
         '''format: {to: 69.69.69.0/24, via: 192.168.83.69, metric: 10},
         '''
-        return f'to: {self.net_id}/{self.cidr}, via: {self.gateway}, metric: {self.ad}'
+        return str_join(['{', f'to: {self.net_id}/{self.cidr}, via: {self.gateway}, metric: {self.ad}', '}'])
 
 
 def strtoroute(intf: str, rs: str, /) -> Route:
@@ -152,6 +163,9 @@ def masktocidr(netmask: str) -> str:
 
     return str(sum(x))
 
+# =====================
+# ROUTING FUNCTIONS
+# =====================
 def get_routing_table() -> list[Route]:
     routing_table = []
 
@@ -164,13 +178,42 @@ def get_routing_table() -> list[Route]:
         network = hextoip(line[1])
         netmask = hextoip(line[7])
         gateway = hextoip(line[2])
-        ad = int(line[6])
+        ad = line[6]
 
         route = Route(intf, network, masktocidr(netmask), gateway, ad)
 
         routing_table.append(route)
 
     return routing_table
+
+def sort_routes(routes: Iterable[Route]) -> list[Route]:
+    return sorted(routes, key=lambda x: (int(x.ad), -int(x.cidr)))
+
+def get_unified_routes() -> list[Route]:
+    '''returns a sorted list of routes after merging the routing table with configured routes.
+    '''
+    route_table = set(get_routing_table())
+
+    with InterfaceManager() as intf_mgr:
+        configured_routes = set(intf_mgr.get_configured_routes())
+
+    not_available = configured_routes - route_table
+
+    for route in not_available:
+        route.status = 0
+
+    return sort_routes(route_table | not_available)
+
+def route_lookup(ip_address: int) -> Optional[Route]:
+    '''returns the matching route object for the given ip address.
+
+    None is returned if no matching route is found.
+    '''
+    for route in get_unified_routes():
+        if (ip_address & cidrtoi(route.cidr) == iptoi(route.net_id)):
+            return route
+
+    return None
 
 # =====================
 # DNS related functions
@@ -181,7 +224,7 @@ def domain_stob(domain_name: str) -> bytes:
     ])
 
     # root query (empty string) gets eval'd to length 0 and doesn't need a term byte.
-    # ternary will add term byte if the omain name is not a null value.
+    # ternary will add term byte if the domain name is not a null value.
     return domain_bytes + b'\x00' if domain_name else domain_bytes
 
 # will create dns header specific to request/query. default resource record count is 1, additional record count optional

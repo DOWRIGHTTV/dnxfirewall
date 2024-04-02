@@ -6,9 +6,9 @@ from source.web_typing import *
 from source.web_validate import *
 
 from dnx_gentools.def_enums import DATA
-from dnx_gentools.file_operations import config
+from dnx_gentools.file_operations import ConfigurationError, config, system_configuration
 from dnx_iptools.interface_ops import InterfaceManager
-from dnx_iptools.protocol_tools import get_routing_table
+from dnx_iptools.protocol_tools import Route, get_unified_routes, route_lookup, masktocidr
 
 from source.web_interfaces import StandardWebPage
 
@@ -35,25 +35,16 @@ class WebPage(StandardWebPage):
     '''
     @staticmethod
     def load(form: Form) -> dict[str, Any]:
-        route_table = set(get_routing_table())
-
-        with InterfaceManager() as intf_mgr:
-            configured_routes = set(intf_mgr.get_configured_routes())
-
-        not_available = configured_routes - route_table
-
-        for route in not_available:
-            route.status = 0
 
         return {
             'route_codes': route_codes,
             'route_modifiers': route_modifiers,
-            'routing_table': list(route_table | not_available)
+            'routing_table': get_unified_routes()
         }
 
     @staticmethod
     def update(form: Form) -> tuple[int, str]:
-        if 'route_add' in form:
+        if ('route_add' in form):
             route_info = config(**{
                 'net_id': form.get('nid', DATA.MISSING),
                 'net_mask': form.get('nmk', DATA.MISSING),
@@ -63,6 +54,15 @@ class WebPage(StandardWebPage):
 
             if error := validate_route_add(route_info):
                 return 1, error.message
+
+            if error := configure_route(route_info):
+                return 2, error.message
+
+        elif ('route_del' in form):
+            return 3, 'unable to delete route at this time.'
+
+        else:
+            return 99, INVALID_FORM
 
         return NO_STANDARD_ERROR
 
@@ -79,3 +79,15 @@ def validate_route_add(route: config) -> Optional[ValidationError]:
 # ==============
 # CONFIGURATION
 # ==============
+@system_configuration
+def configure_route(route: config) -> Optional[ConfigurationError]:
+    next_hop_route = route_lookup(route.gateway)
+    if next_hop_route is None:
+        return ConfigurationError('Unable to determine exit interface for the next hop IP Address.')
+
+    new_route = Route(
+        next_hop_route.intf, route.net_id, str(masktocidr(route.net_mask)), route.gateway, route.adm_distance
+    )
+
+    with InterfaceManager() as intf_mgr:
+        intf_mgr.add_route(new_route)

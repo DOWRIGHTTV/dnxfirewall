@@ -8,8 +8,7 @@ from source.web_typing import *
 from source.web_validate import *
 
 from dnx_gentools.def_enums import DATA
-from dnx_gentools.def_exceptions import ConfigurationError
-from dnx_gentools.file_operations import ConfigurationManager, load_configuration, config
+from dnx_gentools.file_operations import ConfigurationManager, ConfigurationError, load_configuration, config
 
 from source.web_interfaces import StandardWebPage
 

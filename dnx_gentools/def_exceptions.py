@@ -12,9 +12,6 @@ class DNXError(Exception):
     def message(self) -> Optional[str]:
         return self.args[0]
 
-class ConfigurationError(DNXError):
-    '''ConfigurationManager processing failure while in context.'''
-
 class ControlError(DNXError):
     '''System Action (control) failure. This is reraised and a functional alias to other Exceptions.'''
 

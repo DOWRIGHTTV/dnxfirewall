@@ -10,8 +10,7 @@ from source.web_typing import *
 
 from dnx_gentools.def_constants import HOME_DIR, FIVE_SEC, ppt
 from dnx_gentools.def_enums import CFG
-from dnx_gentools.def_exceptions import ConfigurationError
-from dnx_gentools.file_operations import load_configuration, ConfigurationManager
+from dnx_gentools.file_operations import ConfigurationManager, ConfigurationError, load_configuration
 
 from dnx_iptools.interface_ops import InterfaceManager
 from dnx_iptools.cprotocol_tools.cprotocol_tools import itoip
@@ -696,7 +695,7 @@ def categories_page_logic(dnx_page, page_settings: dict) -> str:
 
     return render_template('intrusion/domain/categories.html', theme=context_global.theme, **page_settings)
 
-# function called by restart/shutdown pages. will ensure the user specified operation gets executed
+# function called by restart/shutdown pages. will ensure the user-specified operation gets executed
 def handle_system_action(page_settings: dict):
 
     if (request.method == 'POST'):

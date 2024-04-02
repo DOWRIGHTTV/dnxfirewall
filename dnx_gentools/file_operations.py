@@ -17,7 +17,7 @@ from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER, fast_sleep
 from dnx_gentools.def_namedtuples import Item
 from dnx_gentools.def_enums import DNS_CAT, DATA
-from dnx_gentools.def_exceptions import ConfigurationError, ControlError
+from dnx_gentools.def_exceptions import DNXError, ControlError
 
 from dnx_webui.source.web_validate import ValidationError
 
@@ -39,7 +39,7 @@ __all__ = (
     'calculate_file_hash',
     'cfg_read_poller', 'cfg_write_poller', 'Watcher',
 
-    'config', 'ConfigChain', 'ConfigurationManager'
+    'config', 'ConfigChain', 'ConfigurationManager', 'ConfigurationError', 'system_configuration'
 )
 
 FILE_POLL_TIMER = 10
@@ -49,6 +49,29 @@ file_opener = partial(os.open, mode=0o640)
 
 sha256 = hashlib.sha256
 
+class ConfigurationError(DNXError):
+    '''System configuration context manager processing failure while in context.'''
+
+
+def system_configuration(func):
+    '''converts try/catch semantic of ConfigurationError exception class to a return error by value.
+
+    func(*args, **kwargs) -> Optional[ConfigurationError]
+
+    manually returning exceptions as values is also supported.
+    '''
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except ConfigurationError as ce:
+            return ce
+
+    return wrapper
+
+# =====================
+# FILE LOCKING (FLOCK)
+# =====================
 # aliases for readability
 ACQUIRE_LOCK: Callable[[TextIO], None] = lambda mutex: fcntl.flock(mutex, fcntl.LOCK_EX)
 RELEASE_LOCK: Callable[[TextIO], None] = lambda mutex: fcntl.flock(mutex, fcntl.LOCK_UN)
@@ -73,6 +96,9 @@ def release_lock(mutex: TextIO):
 
     mutex.close()
 
+# =====================
+# FILE IO OPERATIONS
+# =====================
 def load_configuration(
         filename: str, ext: str = 'cfg', *,
         cfg_type: str = '', filepath: str = 'dnx_profile/data', strict: bool = True) -> ConfigChain:
@@ -211,7 +237,7 @@ def calculate_file_hash(
         file_to_hash: str, *, path: str = 'dnx_profile', folder: str = 'data', full_path: bool = False) -> str:
     '''returns the sha256 secure hash of passed in file.
 
-    if full_path is True then the file_to_hash argument will be used as is.
+    if full_path is True, then the file_to_hash argument will be used as is.
     '''
     filepath = file_to_hash if full_path else f'{HOME_DIR}/{path}/{folder}/{file_to_hash}'
     if not file_exists(filepath):
@@ -703,7 +729,7 @@ def _detect_indent_spacing(s_splitlines: list[str]) -> list[tuple[int, str]]:
             (current_indent_level, line[top_level_indent:])
         )
 
-    print('\n'.join(str(x) for x in s_indents))
+    # print('\n'.join(str(x) for x in s_indents))
 
     return s_indents
 
@@ -746,7 +772,7 @@ def yaml_to_json(s: str, /, to_dict: bool = True) -> Union[str, dict]:
     MAX_IDX = len(s_parsed_indents)
 
     output_str = ['{']
-    offset = 0
+    offset, cur_indent_level = 0, 0
     for i in range(MAX_IDX):
 
         idx = i + offset

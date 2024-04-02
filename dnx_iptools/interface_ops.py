@@ -15,8 +15,7 @@ from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR, USER, GROUP, ONE_SEC, fast_sleep
 from dnx_gentools.def_enums import INTF
 from dnx_gentools.file_operations import acquire_lock, release_lock, load_configuration, read_file, write_file
-from dnx_gentools.file_operations import json_to_yaml, yaml_to_json
-from dnx_gentools.def_exceptions import ConfigurationError
+from dnx_gentools.file_operations import ConfigurationError, json_to_yaml, yaml_to_json
 
 from dnx_webui.source.web_validate import ValidationError
 
@@ -336,8 +335,8 @@ class InterfaceManager:
     # TODO: we might not need these methods if we alter the config within the context manually.
     #  - i would say that if it turns out to be wonky logic, the methods route is probably better.
     #    - at the same time, the routes will only be modified by a single source within the webui.
-    def add_route(self, intf: str, route: str):
-        pass
+    def add_route(self, route: Route):
+        self.config_data['network']['ethernets'][route.intf]['routes'].append(route.format_netplan())
 
-    def remove_route(self, intf: str, route: str):
-        pass
+    def remove_route(self, route: Route):
+        self.config_data['network']['ethernets'][route.intf]['routes'].remove(route.format_netplan())

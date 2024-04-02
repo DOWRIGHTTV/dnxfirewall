@@ -57,14 +57,14 @@
               <tbody style="font-size:18px;">
               {% set message = 'Are you sure you want to remove this route entry?' %}
               {% for route in route_info.routing_table %}
-                {% set r = (route|string).split() %}
+                {% set r = route.format_table() %}
                 <tr>
                   <td>
                     {% if 'C' in route.state %}
                       <span>--</span>
                     {% else %}
                       {{ create_button_with_modal(
-                        'btn-floating btn-small red', 'remove', 1, loop.index, 1, 'route_remove', user, message)|safe
+                        'btn-floating btn-small red', 'remove', 1, loop.index, 1, 'route_del', route|string, message)|safe
                       }}
                     {% endif %}
                   </td>
