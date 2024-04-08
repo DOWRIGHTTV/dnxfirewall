@@ -150,7 +150,7 @@ class WebPage(StandardWebPage):
         return NO_STANDARD_ERROR
 
     @staticmethod
-    def handle_ajax(json_data: dict) -> tuple[bool, WebError]:
+    def handle_ajax(json_data: Form) -> WebAjaxResponse:
 
         category = config(**{
             'type': json_data.get('type', DATA.MISSING),

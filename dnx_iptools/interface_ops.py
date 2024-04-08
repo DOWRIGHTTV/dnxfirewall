@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import os
-import shutil
-import json
 
 from secrets import token_urlsafe
 from csv import reader as csv_reader
@@ -12,12 +10,13 @@ from fcntl import ioctl
 from socket import socket, inet_aton, if_nameindex, AF_INET, SOCK_DGRAM
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, ONE_SEC, fast_sleep
+from dnx_gentools.def_constants import HOME_DIR, ROOT, ONE_SEC
+from dnx_gentools.def_constants import shell, fast_sleep
 from dnx_gentools.def_enums import INTF
 from dnx_gentools.file_operations import acquire_lock, release_lock, load_configuration, read_file, write_file
 from dnx_gentools.file_operations import ConfigurationError, json_to_yaml, yaml_to_json
 
-from dnx_iptools.def_structs import fcntl_pack, long_unpack
+from dnx_iptools.def_structs import fcntl_pack
 from dnx_iptools.cprotocol_tools import itoip, iptoi, hextoip
 from dnx_iptools.protocol_tools import btoia, strtoroute, Route, masktocidr, cidrtoi
 
@@ -112,7 +111,7 @@ def _is_ready(interface: str) -> int:
 def wait_for_interface(interface: str, delay: int = ONE_SEC) -> None:
     '''wait for the specified interface to show power with waiting for network state.
 
-    blocks until interface is up.
+    blocks until the interface is shown as "up".
     sleeps for delay length after each check.
     '''
     while True:
@@ -121,8 +120,6 @@ def wait_for_interface(interface: str, delay: int = ONE_SEC) -> None:
 
         fast_sleep(delay)
 
-# once the lan interface ip address is configured after interface is brought online, the loop will break. this will
-# allow the server to continue the startup process.
 def wait_for_ip(interface: str) -> int:
     '''wait for the ip address configuration of the specified interface.
 
@@ -297,7 +294,7 @@ class InterfaceManager:
     _intf_data_written: bool
 
     __slots__ = (
-        'config_data',
+        'config_data', 'error',
 
         '_config_hash', '_interfaces_lock',
 
@@ -312,6 +309,7 @@ class InterfaceManager:
 
     def __init__(self, intf_type=INTF.BUILTIN) -> None:
         self.config_data: Optional[dict] = None
+        self.error: Optional[ConfigurationError] = None
 
         if (intf_type is INTF.BUILTIN):
             self._intf_cfg_path = f'{NETPLAN_PATH}/{self._intf_builtin}'
@@ -339,37 +337,45 @@ class InterfaceManager:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if (exc_type):
-            # releasing lock for purposes specified in flock(1) man page under -u (unlock) + close file.
-            release_lock(self._interfaces_lock)
-            self.log.debug(f'file lock released for {self._intf_cfg_path}')
+        if (exc_type is None):
+            updated_config = json_to_yaml(self.config_data)
 
-            if (exc_type is not ValidationError):
-                self.log.error(f'InterfaceManager: {exc_val}')
+            # if the configuration has changed, write the new configuration to disk.
+            if (hash(updated_config) != self._config_hash):
+                self.error = self.__write_to_disk(updated_config)
 
-                raise ConfigurationError(f'InterfaceManager context failure -> {exc_val}')
-
-            raise
-
-        updated_config = json_to_yaml(self.config_data)
-
-        # if the configuration has changed, write the new configuration to disk.
-        if (hash(updated_config) != self._config_hash):
-
-            # TEMP prefix is to wildcard match any orphaned files for deletion
-            temp_file_path = f'{HOME_DIR}/dnx_profile/interfaces/TEMP_{token_urlsafe(10)}'
-
-            if write_file(temp_file_path, updated_config):
-                # depending on the processes permissions, will replace directly or through the control proxy.
-                if (not ROOT):
-                    system_action(module='webui', command='os.replace', args=[temp_file_path, self._intf_cfg_path + '.tmp'])
-
-                else:
-                    os.replace(temp_file_path, self._intf_cfg_path + '.tmp')
+                if (self.error):
+                    self.log.error(f'InterfaceManager: {self.error.message}')
 
         # releasing lock for purposes specified in flock(1) man page under -u (unlock) + close file.
         release_lock(self._interfaces_lock)
         self.log.debug(f'file lock released for {self._intf_cfg_path}')
+
+        if (exc_type is ValidationError):
+            raise
+
+        else:
+            self.log.error(f'InterfaceManager: {exc_val}')
+            self.error = ConfigurationError(f'InterfaceManager context failure -> {exc_val}')
+
+        return True
+
+    def __write_to_disk(self, updated_config: str) -> Optional[ConfigurationError]:
+        # TEMP prefix is to wildcard match any orphaned files for deletion
+        temp_file_path = f'{HOME_DIR}/dnx_profile/interfaces/TEMP_{token_urlsafe(10)}'
+
+        if write_file(temp_file_path, updated_config):
+            # depending on the processes permissions, will replace directly or through the control proxy.
+            if (not ROOT):
+                system_action(module='webui', command='os.replace', args=[temp_file_path, self._intf_cfg_path])
+                system_action(module='webui', command='netplan apply')
+
+            else:
+                os.replace(temp_file_path, self._intf_cfg_path)
+                shell('netplan apply')
+
+        else:
+            return ConfigurationError(f'InterfaceManager failed to write configuration to temp file.')
 
     def get_configured_routes(self, intf: Optional[str] = None) -> list[Route]:
 

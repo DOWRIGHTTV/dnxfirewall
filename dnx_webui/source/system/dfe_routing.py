@@ -6,7 +6,8 @@ from source.web_typing import *
 from source.web_validate import *
 
 from dnx_gentools.def_enums import DATA
-from dnx_gentools.file_operations import ConfigurationError, config, system_configuration
+from dnx_gentools.def_exceptions import err_as_value
+from dnx_gentools.file_operations import ConfigurationError, config
 from dnx_iptools.interface_ops import InterfaceManager, get_unified_routes, route_lookup
 from dnx_iptools.protocol_tools import Route, masktocidr
 
@@ -34,7 +35,7 @@ class WebPage(StandardWebPage):
     available methods: load, update
     '''
     @staticmethod
-    def load(form: Form) -> dict[str, Any]:
+    def load(form: Form) -> WebLoadResponse:
 
         return {
             'route_codes': route_codes,
@@ -43,7 +44,10 @@ class WebPage(StandardWebPage):
         }
 
     @staticmethod
-    def update(form: Form) -> tuple[int, str]:
+    def update(form: Form) -> WebUpdateError:
+
+
+
         if ('route_add' in form):
             route_info = config(**{
                 'net_id': form.get('nid', DATA.MISSING),
@@ -52,35 +56,80 @@ class WebPage(StandardWebPage):
                 'adm_distance': get_convert_int(form, 'nad')
             })
 
-            if error := validate_route_add(route_info):
-                return 1, error.message
+            if error := route_info.validate_fields():
+                return 11, error.message
 
-            if error := configure_route(route_info):
-                return 2, error.message
+            if error := validate_route_add(route_info):
+                return 12, error.message
+
+            if error := configure_route_add(route_info):
+                return 13, error.message
 
         elif ('route_del' in form):
-            return 3, 'unable to delete route at this time.'
+            route_info = config(**{
+                'route_str': form.get('route_del', DATA.MISSING)
+            })
+
+            if error := route_info.validate_fields():
+                return 21, error.message
+
+            if error := validate_route_del(route_info):
+                return 22, error.message
+
+            elif error := configure_route_del(route_info):
+                return 23, error.message
 
         else:
             return 99, INVALID_FORM
 
         return NO_STANDARD_ERROR
 
+
 # ==============
 # VALIDATION
 # ==============
-@input_validation
-def validate_route_add(route: config) -> Optional[ValidationError]:
-    if (route.adm_distance not in [10, 20, 60, 100]):
+def validate_adm_distance(adm_distance: str) -> Optional[ValidationError]:
+    if (adm_distance not in ['10', '20', '60', '100']):
+        return ValidationError('Invalid administrative distance.')
+
+err_as_value(ValidationError)
+def validate_route_del(route: str) -> Optional[ValidationError]:
+    '''if validation passes, a Route object will be added to the config object
+
+    | on_enter -> can be used to disable handling of a config form submission
+    | on_exit -> can be used to validate combined fields
+
+    expected format: 'eth0, 192.168.69.0, 24, 192.168.84.69, 10'
+    '''
+    try:
+        intf, net_id, net_mask, gateway, adm_distance = route.split()
+    except ValueError:
         return ValidationError(INVALID_FORM)
 
-    ip_address(ip_iter=[route.net_id, route.net_mask, route.gateway])
+    if (adm_distance not in ['10', '20', '60', '100']):
+        return ValidationError(INVALID_FORM)
 
+    ip_address(ip_iter=[net_id, net_mask, gateway])
+
+
+form_validator = ValidationConfigForm({
+    'route_add': {
+        # 'on_enter': ValidationFieldContext(),
+        'nid': ValidationFieldInfo(cfg_key='net_id', format=ip_address),
+        'nmk': ValidationFieldInfo(cfg_key='net_mask', format=ip_address),
+        'nxh': ValidationFieldInfo(cfg_key='gateway', format=ip_address),
+        'nad': ValidationFieldInfo(cfg_key='adm_distance', format=check_digit, validation=validate_adm_distance, convert=int),
+        'on_exit': ValidationFieldContext(call=lambda cfg: ip_network(f'{cfg.net_id}/{cfg.net_mask}'))
+    },
+    'route_del': {
+        'on_enter': ValidationFieldContext(call=lambda form: ValidationError('Unable to remove routes at this time.')),
+        'route_del': ValidationFieldInfo(cfg_key='route_str', validation=validate_route_del)
+    }
+})
 # ==============
 # CONFIGURATION
 # ==============
-@system_configuration
-def configure_route(route: config) -> Optional[ConfigurationError]:
+def configure_route_add(route: config) -> Optional[ConfigurationError]:
     next_hop_route = route_lookup(route.gateway)
     if next_hop_route is None:
         return ConfigurationError('Unable to determine exit interface for the next hop IP Address.')
@@ -89,5 +138,11 @@ def configure_route(route: config) -> Optional[ConfigurationError]:
         next_hop_route.intf, route.net_id, str(masktocidr(route.net_mask)), route.gateway, route.adm_distance
     )
 
-    with InterfaceManager() as intf_mgr:
-        intf_mgr.add_route(new_route)
+    interface_manager = InterfaceManager()
+    with interface_manager:
+        interface_manager.add_route(new_route)
+
+    return interface_manager.error
+
+def configure_route_del(route: config) -> Optional[ConfigurationError]:
+    pass

@@ -12,6 +12,7 @@ import subprocess
 from copy import copy
 from functools import wraps, partial
 from secrets import token_urlsafe
+from typing import NamedTuple
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER, fast_sleep
@@ -39,7 +40,7 @@ __all__ = (
     'calculate_file_hash',
     'cfg_read_poller', 'cfg_write_poller', 'Watcher',
 
-    'config', 'ConfigChain', 'ConfigurationManager', 'ConfigurationError', 'system_configuration'
+    'config', 'ConfigChain', 'ConfigurationManager', 'ConfigurationError',
 )
 
 FILE_POLL_TIMER = 10
@@ -51,23 +52,6 @@ sha256 = hashlib.sha256
 
 class ConfigurationError(DNXError):
     '''System configuration context manager processing failure while in context.'''
-
-
-def system_configuration(func):
-    '''converts try/catch semantic of ConfigurationError exception class to a return error by value.
-
-    func(*args, **kwargs) -> Optional[ConfigurationError]
-
-    manually returning exceptions as values is also supported.
-    '''
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except ConfigurationError as ce:
-            return ce
-
-    return wrapper
 
 # =====================
 # FILE LOCKING (FLOCK)
@@ -291,14 +275,14 @@ def cfg_write_poller(list_function: DNSListHandler) -> Wrapper:
     return wrapper
 
 class config(dict):
+    '''Configuration class for storing configuration key/value pairs.
 
-    def __init__(self, **kwargs: dict[str, Union[str, int, bool]]):
-        super().__init__()
+    provides validation and other utility methods for configuration data.
+    '''
+    def __init__(self, **kwargs: str | int | bool):
+        super().__init__(kwargs)
 
-        for k, v in kwargs.items():
-            self[k] = v
-
-    def __getattr__(self, item: str) -> Any:
+    def __getattr__(self, item: str) -> str | int | bool:
         '''calls __getitem__ and returns the returned value.
 
         raises AttributeError on error.
@@ -308,7 +292,7 @@ class config(dict):
         except KeyError:
             raise AttributeError
 
-    def __setattr__(self, key: str, value: Union[str, int, bool]):
+    def __setattr__(self, key: str, value: str | int | bool) -> None:
         self[key] = value
 
 
@@ -510,6 +494,8 @@ class ConfigurationManager:
     __slots__ = (
         '_name', '_ext', '_cfg_type', '_filename',
 
+        '_err_as_value', 'error',
+
         '_config_lock', '_data_written',
         '_file_path', '_usr_path_file',  # '_system_path_file',
         '_temp_file', '_temp_file_path',
@@ -521,13 +507,18 @@ class ConfigurationManager:
         '''
         cls.log: LogHandler_T = ref
 
-    def __init__(self, name: str = '', ext: str = 'cfg', cfg_type: str = '', file_path: str = None) -> None:
+    def __init__(self, name: str = '', ext: str = 'cfg', cfg_type: str = '', file_path: str = None, *,
+            err_as_value: bool = False) -> None:
         '''config_file can be omitted to allow for configuration lock to be used with
         external operations.
         '''
         self._name = name
         self._ext  = ext
         self._cfg_type = cfg_type
+
+        # error as value semantics
+        self._err_as_value = err_as_value
+        self.error = None
 
         # initialization isn't required if config file is not specified.
         if (not name):
@@ -584,16 +575,25 @@ class ConfigurationManager:
 
         self.log.debug(f'file lock released for {self._filename}')
 
+        # fast out if no error occurred
         if (exc_type is None):
             return True
 
+        # raise it regardless of in err_as_value mode
         if (exc_type is ControlError):
             raise
 
-        elif (exc_type is not ValidationError):
+        # raise it regardless of in err_as_value mode
+        elif (exc_type is ValidationError):
+            raise
+
+        else:
             self.log.error(f'ConfigurationManager: {exc_val}')
 
-            raise ConfigurationError(f'Configuration manager failed while updating file. error->{exc_val}')
+            self.error = ConfigurationError(f'Configuration manager failed while updating file. error->{exc_val}')
+
+            if (not self._err_as_value):
+                raise self.error
 
     # will load json data from file, convert it to a ConfigChain
     def load_configuration(self, *, strict: bool = True) -> ConfigChain:
