@@ -15,7 +15,7 @@ def web_module_load_callout(filename: str, import_cache: _dd[str, int] = _dd(int
     # note: only need the counter if circular imports will actually run through a file twice.
     import_cache[filename] += 1
     if os.environ.get('FLASK_ENV') == 'development':
-        print(f'importing <<{filename}[{_dd[filename]}]>>')
+        print(f'importing <<{filename}[{import_cache[filename]}]>>')
 
 if (TYPE_CHECKING):
     from typing import TypeAlias, Type, Any, Callable, ByteString, Optional, Union
