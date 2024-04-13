@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from source.web_typing import *
+
+web_module_load_callout(__file__)
+
 from source.web_validate import *
 
 from dnx_gentools.def_enums import DATA
@@ -46,43 +49,55 @@ class WebPage(StandardWebPage):
     @staticmethod
     def update(form: Form) -> WebUpdateError:
 
+        error, route_info = form_validator.parse_form(form)
+        if (error):
+            return 1, error.message
 
-
-        if ('route_add' in form):
-            route_info = config(**{
-                'net_id': form.get('nid', DATA.MISSING),
-                'net_mask': form.get('nmk', DATA.MISSING),
-                'gateway': form.get('nxh', DATA.MISSING),
-                'adm_distance': get_convert_int(form, 'nad')
-            })
-
-            if error := route_info.validate_fields():
-                return 11, error.message
-
-            if error := validate_route_add(route_info):
-                return 12, error.message
+        if (route_info.btn == 'route_add'):
 
             if error := configure_route_add(route_info):
-                return 13, error.message
+                return 11, error.message
 
-        elif ('route_del' in form):
-            route_info = config(**{
-                'route_str': form.get('route_del', DATA.MISSING)
-            })
+        elif (route_info.btn == 'route_del'):
 
-            if error := route_info.validate_fields():
+            if error := configure_route_del(route_info):
                 return 21, error.message
-
-            if error := validate_route_del(route_info):
-                return 22, error.message
-
-            elif error := configure_route_del(route_info):
-                return 23, error.message
 
         else:
             return 99, INVALID_FORM
 
         return NO_STANDARD_ERROR
+
+        # if ('route_add' in form):
+        #     route_info = config(**{
+        #         'net_id': form.get('nid', DATA.MISSING),
+        #         'net_mask': form.get('nmk', DATA.MISSING),
+        #         'gateway': form.get('nxh', DATA.MISSING),
+        #         'adm_distance': get_convert_int(form, 'nad')
+        #     })
+        #
+        #     if error := route_info.validate_fields():
+        #         return 11, error.message
+        #
+        #     if error := validate_route_add(route_info):
+        #         return 12, error.message
+        #
+        #     if error := configure_route_add(route_info):
+        #         return 13, error.message
+        #
+        # elif ('route_del' in form):
+        #     route_info = config(**{
+        #         'route_str': form.get('route_del', DATA.MISSING)
+        #     })
+        #
+        #     if error := route_info.validate_fields():
+        #         return 21, error.message
+        #
+        #     if error := validate_route_del(route_info):
+        #         return 22, error.message
+        #
+        #     if error := configure_route_del(route_info):
+        #         return 23, error.message
 
 
 # ==============

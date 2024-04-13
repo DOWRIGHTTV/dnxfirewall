@@ -5,6 +5,9 @@ from __future__ import annotations
 from flask import request
 
 from source.web_typing import *
+
+web_module_load_callout(__file__)
+
 from source.web_validate import *
 
 from dnx_gentools.def_constants import fast_time

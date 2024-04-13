@@ -12,6 +12,8 @@ from ipaddress import IPv4Network, IPv4Address
 # TODO: consider moving this module, web_typing, and web_interfaces to dnx_webui folder instead of source
 from dnx_webui.source.web_typing import *
 
+web_module_load_callout(__file__)
+
 from dnx_gentools.def_enums import CFG, DATA, PROTO
 from dnx_gentools.def_exceptions import DNXError
 from dnx_gentools.file_operations import config
@@ -98,7 +100,7 @@ class ValidationConfigForm:
         if (form_profile is DATA.MISSING):
             return ValidationError(INVALID_FORM), None
 
-        cfg = config(btn_name=btn_name)
+        cfg = config(btn=btn_name)
 
         for field_name, field_profile in form_profile.items():
 

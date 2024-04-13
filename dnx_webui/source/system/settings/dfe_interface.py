@@ -5,6 +5,9 @@ from __future__ import annotations
 import dnx_iptools.interface_ops as interface
 
 from source.web_typing import *
+
+web_module_load_callout(__file__)
+
 from source.web_validate import *
 
 from dnx_gentools.def_constants import HOME_DIR

@@ -6,6 +6,8 @@ from itertools import zip_longest
 
 from source.web_typing import *
 
+web_module_load_callout(__file__)
+
 from dnx_gentools.system_info import System
 
 from dnx_routines.database.ddb_connector_sqlite import DBConnector

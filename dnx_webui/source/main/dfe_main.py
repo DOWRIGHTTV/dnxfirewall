@@ -8,6 +8,8 @@ from datetime import timedelta
 
 from source.web_typing import *
 
+web_module_load_callout(__file__)
+
 from dnx_gentools.def_constants import HOME_DIR, FIVE_SEC, ppt
 from dnx_gentools.def_enums import CFG
 from dnx_gentools.file_operations import ConfigurationManager, ConfigurationError, load_configuration
@@ -92,13 +94,6 @@ from source.system.dfe_services import WebPage as dnx_services
 from source.system.dfe_users import WebPage as dfe_users
 
 from source.main.dfe_authentication import *
-
-# ===============
-# TYPING IMPORTS
-# ===============
-from typing import TYPE_CHECKING
-if (TYPE_CHECKING):
-    from source.web_typing import Optional, Union, ConfigChain
 
 # --------------------------------------------- #
 #  START OF NAVIGATION TABS
@@ -782,7 +777,7 @@ def set_user_settings() -> None:
         with ConfigurationManager('logins', file_path='/dnx_webui/data') as webui:
             webui_settings: ConfigChain = webui.load_configuration()
 
-            # this check prevents issues with log in/out transitions
+            # this check prevents issues with login/out transitions
             if user in webui_settings.get_list('users'):
 
                 webui_settings[f'users->{user}->settings->theme'] = new_theme
@@ -830,12 +825,21 @@ if (server_type == 'development'):
 
     @app.before_request
     def print_forms() -> None:
-        if (request.method == 'POST'):
-            print(f'form data\n{"=" * 12}')
-            if ajax_data := request.get_json(silent=True):
-                ppt(ajax_data)
-            else:
-                ppt(dict(request.form))
+        if (request.method != 'POST'):
+            return None
+
+        print(f'form data\n{"=" * 12}')
+        if ajax_data := request.get_json(silent=True):
+            ppt(ajax_data)
+
+        elif form_data := dict(request.form):
+
+            if private_data := form_data.pop('password', ''):
+                form_data['password'] = '*' * len(private_data)
+
+            ppt(form_data)
+
+        else: print('[no data]')
 
     @app.after_request
     def no_store_http_header(response):

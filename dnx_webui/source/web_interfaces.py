@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from source.web_typing import *
 
+web_module_load_callout(__file__)
+
 
 class WebPage:
     '''superclass for all other web page module types.'''

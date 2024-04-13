@@ -9,6 +9,9 @@ from typing import NamedTuple as _NamedTuple
 from collections import defaultdict
 
 from source.web_typing import *
+
+web_module_load_callout(__file__)
+
 from source.web_validate import *
 from source.object_manager import FWObjectManager, USER_RANGE
 
