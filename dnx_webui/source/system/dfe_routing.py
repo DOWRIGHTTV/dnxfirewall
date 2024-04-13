@@ -63,6 +63,7 @@ class WebPage(StandardWebPage):
             if error := configure_route_del(route_info):
                 return 21, error.message
 
+        # note: this is probably not needed anymore
         else:
             return 99, INVALID_FORM
 

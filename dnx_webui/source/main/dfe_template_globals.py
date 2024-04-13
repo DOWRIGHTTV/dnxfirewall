@@ -51,13 +51,17 @@ def create_button_with_modal(
 
     btn_classes = f'{classes} waves-effect waves-light modal-trigger'
 
+    # hidden input for button value is to add forward compatibility with the new form validation system
+
     button = (
         f'<a class="{btn_classes}" href="#modal{index}-{num}"><i class="material-icons">{icon}</i></a>'
         f'<div id="modal{index}-{num}" class="modal">'
           f'<div class="modal-content"><h5 class="{context_global.theme["modal_text"]}">{message}</h5></div>'
-          f'<form method="POST"><input type="hidden" name="tab" value="{tab}">'
+          f'<form method="POST">'
+            f'<input type="hidden" name="tab" value="{tab}">'
+            f'<input type="hidden" name="{btn_name}" value="{btn_value}">'
             '<div class="modal-footer">'
-              f'<button name="{btn_name}" value="{btn_value}" class="btn waves-effect waves-light">YES</button>'
+              f'<button name="vbtn" value="{btn_name}" class="btn waves-effect waves-light">YES</button>'
               '<a class="modal-close waves-effect waves-green btn-flat">Cancel</a>'
             '</div>'
           '</form>'
