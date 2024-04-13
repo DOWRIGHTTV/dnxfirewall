@@ -22,8 +22,6 @@ from dnx_iptools.protocol_tools import btoia, strtoroute, Route, masktocidr, cid
 
 from dnx_control.control.ctl_action import system_action
 
-from dnx_webui.source.web_validate import ValidationError
-
 __all__ = (
     'get_intf_builtin', 'load_interfaces',
     'wait_for_interface', 'wait_for_ip',
@@ -351,10 +349,7 @@ class InterfaceManager:
         release_lock(self._interfaces_lock)
         self.log.debug(f'file lock released for {self._intf_cfg_path}')
 
-        if (exc_type is ValidationError):
-            raise
-
-        else:
+        if (exc_type is not None):
             self.log.error(f'InterfaceManager: {exc_val}')
             self.error = ConfigurationError(f'InterfaceManager context failure -> {exc_val}')
 

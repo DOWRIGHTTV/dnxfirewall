@@ -5,17 +5,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from collections import defaultdict as _dd
 
-def web_module_load_callout(filename: str, import_cache: _dd[str, int] = _dd(int)) -> None:
+def web_module_load_callout(filename: str) -> None:
     '''print passed in filename to stdout.
 
     only active when FLASK_ENV=development
     '''
     import os
 
-    # note: only need the counter if circular imports will actually run through a file twice.
-    import_cache[filename] += 1
     if os.environ.get('FLASK_ENV') == 'development':
-        print(f'importing <<{filename}[{import_cache[filename]}]>>')
+        print(f'<| file import >> {filename} |>')
 
 if (TYPE_CHECKING):
     from typing import TypeAlias, Type, Any, Callable, ByteString, Optional, Union

@@ -12,15 +12,12 @@ import subprocess
 from copy import copy
 from functools import wraps, partial
 from secrets import token_urlsafe
-from typing import NamedTuple
 
 from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR, ROOT, USER, GROUP, RUN_FOREVER, fast_sleep
 from dnx_gentools.def_namedtuples import Item
 from dnx_gentools.def_enums import DNS_CAT, DATA
 from dnx_gentools.def_exceptions import DNXError, ControlError
-
-from dnx_webui.source.web_validate import ValidationError
 
 # ================
 # TYPING IMPORTS
@@ -581,10 +578,6 @@ class ConfigurationManager:
 
         # raise it regardless of in err_as_value mode
         if (exc_type is ControlError):
-            raise
-
-        # raise it regardless of in err_as_value mode
-        elif (exc_type is ValidationError):
             raise
 
         else:
