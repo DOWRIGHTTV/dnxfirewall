@@ -391,7 +391,11 @@ class InterfaceManager:
     #  - i would say that if it turns out to be wonky logic, the methods route is probably better.
     #    - at the same time, the routes will only be modified by a single source within the webui.
     def add_route(self, route: Route):
-        self.config_data['network']['ethernets'][route.intf]['routes'].append(route.format_netplan())
+        intf_type = 'ethernets' if '.' in route.intf else 'vlans'
+
+        self.config_data['network'][intf_type][route.intf]['routes'].append(route.format_netplan())
 
     def remove_route(self, route: Route):
-        self.config_data['network']['ethernets'][route.intf]['routes'].remove(route.format_netplan())
+        intf_type = 'ethernets' if '.' in route.intf else 'vlans'
+
+        self.config_data['network'][intf_type][route.intf]['routes'].remove(route.format_netplan())

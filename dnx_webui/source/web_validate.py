@@ -94,11 +94,11 @@ class ValidationConfigForm:
         '''
         btn_name = form.get(self.BUTTON_KEY, DATA.MISSING)
         if (btn_name is DATA.MISSING):
-            return ValidationError(INVALID_FORM), None
+            return ValidationError('Missing form action.'), None
 
         form_profile = self.page_forms.get(btn_name, DATA.MISSING)
         if (form_profile is DATA.MISSING):
-            return ValidationError(INVALID_FORM), None
+            return ValidationError('Unspecified form submitted.'), None
 
         cfg = config(btn=btn_name)
 
@@ -119,7 +119,7 @@ class ValidationConfigForm:
 
             field_value = form.get(field_name, DATA.MISSING)
             if (field_value is DATA.MISSING):
-                return ValidationError('Missing form field.'), None
+                return ValidationError(f'Missing form field [{field_name}].'), None
 
             # field format check will generally raise an exception, but added support for returning instead
             if (field_profile.format):
