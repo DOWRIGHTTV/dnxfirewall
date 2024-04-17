@@ -172,3 +172,47 @@ def merge_items(a1, a2):
 @app.template_global()
 def is_list(li, /) -> bool:
     return isinstance(li, list)
+
+def _highlighter_py():
+
+    PY_BOOL_HEX = '#0000FF'
+    PY_CONDITIONAL_HEX = '#0000FF'
+    PY_OPERATOR_HEX = '#0000FF'
+    PY_KEYWORD_HEX = '#0000FF'
+    PY_QUOTE_HEX = '#800000'
+    PY_STRING_HEX = '#e60000'
+
+    py_bools = ['False', 'True', 'None']
+    py_conditionals = ['if', 'elif', 'else']
+    py_operators = ['and', 'or', 'not', 'in', 'is']
+    py_keywords = [
+        ' as ', ' assert ', ' async ', ' await ', ' break ', ' class ', ' continue ',
+        ' def ', ' del ', ' except ', ' finally ', ' for ', ' from ', ' global ',
+        ' import ', ' lambda ', ' nonlocal ', ' pass ', ' raise ', ' return ', ' try ',
+        ' while ', ' with ', ' yield '
+    ]
+
+    def highlight_html_python(s: str) -> str:
+        for py_bool in py_bools:
+            s = s.replace(py_bool, f'<span style="color:{PY_BOOL_HEX};">{py_bool}</span>')
+
+        for py_conditional in py_conditionals:
+            s = s.replace(py_conditional, f'<span style="color:{PY_CONDITIONAL_HEX};">{py_conditional}</span>')
+
+        for py_operator in py_operators:
+            s = s.replace(py_operator, f'<span style="color:{PY_OPERATOR_HEX};">{py_operator}</span>')
+
+        for py_keyword in py_keywords:
+            s = s.replace(py_keyword, f' <span style="color:{PY_KEYWORD_HEX};">{py_keyword}</span> ')
+
+        # STRING REPLACEMENTS
+        s = s.replace(' "', f'<span style="color:{PY_QUOTE_HEX};">"</span><span style="color:{PY_STRING_HEX};">')
+
+        for c in ['" ', '",']:
+            s = s.replace(c, f'</span><span style="color:{PY_QUOTE_HEX};">"</span>')
+
+        return s
+
+    return highlight_html_python
+
+app.add_template_global(_highlighter_py(), 'highlighter_py')
