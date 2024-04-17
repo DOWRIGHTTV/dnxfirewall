@@ -175,16 +175,16 @@ def is_list(li, /) -> bool:
 
 def _highlighter_py():
 
-    PY_BOOL_HEX = '#0000FF'
-    PY_CONDITIONAL_HEX = '#0000FF'
-    PY_OPERATOR_HEX = '#0000FF'
-    PY_KEYWORD_HEX = '#0000FF'
-    PY_QUOTE_HEX = '#800000'
-    PY_STRING_HEX = '#e60000'
+    PY_BOOL_HEX = '#477766'
+    PY_CONDITIONAL_HEX = '#477766'
+    PY_OPERATOR_HEX = '#e66170'
+    PY_KEYWORD_HEX = '#a08050'
+    PY_QUOTE_HEX = '#02d045'
+    PY_STRING_HEX = '#00c4c4'
 
     py_bools = ['False', 'True', 'None']
     py_conditionals = ['if', 'elif', 'else']
-    py_operators = ['and', 'or', 'not', 'in', 'is']
+    py_operators = [' and ', ' or ', ' not ', ' in ', ' is ']
     py_keywords = [
         ' as ', ' assert ', ' async ', ' await ', ' break ', ' class ', ' continue ',
         ' def ', ' del ', ' except ', ' finally ', ' for ', ' from ', ' global ',
@@ -200,7 +200,7 @@ def _highlighter_py():
             s = s.replace(py_conditional, f'<span style="color:{PY_CONDITIONAL_HEX};">{py_conditional}</span>')
 
         for py_operator in py_operators:
-            s = s.replace(py_operator, f'<span style="color:{PY_OPERATOR_HEX};">{py_operator}</span>')
+            s = s.replace(py_operator, f' <span style="color:{PY_OPERATOR_HEX};">{py_operator}</span> ')
 
         for py_keyword in py_keywords:
             s = s.replace(py_keyword, f' <span style="color:{PY_KEYWORD_HEX};">{py_keyword}</span> ')
