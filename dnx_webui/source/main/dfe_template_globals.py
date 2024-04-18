@@ -200,16 +200,16 @@ def _highlighter_py():
             s = s.replace(py_conditional, f'<span style="color:{PY_CONDITIONAL_HEX};">{py_conditional}</span>')
 
         for py_operator in py_operators:
-            s = s.replace(py_operator, f' <span style="color:{PY_OPERATOR_HEX};">{py_operator}</span> ')
+            s = s.replace(py_operator, f'<span style="color:{PY_OPERATOR_HEX};">{py_operator}</span>')
 
         for py_keyword in py_keywords:
-            s = s.replace(py_keyword, f' <span style="color:{PY_KEYWORD_HEX};">{py_keyword}</span> ')
+            s = s.replace(py_keyword, f'<span style="color:{PY_KEYWORD_HEX};">{py_keyword}</span>')
 
         # STRING REPLACEMENTS
         s = s.replace(' "', f'<span style="color:{PY_QUOTE_HEX};">"</span><span style="color:{PY_STRING_HEX};">')
 
         for c in ['" ', '",']:
-            s = s.replace(c, f'</span><span style="color:{PY_QUOTE_HEX};">"</span>')
+            s = s.replace(c, f'</span><span style="color:{PY_QUOTE_HEX};">{c}</span>')
 
         return s
 
