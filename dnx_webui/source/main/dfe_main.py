@@ -601,6 +601,8 @@ def internal_server_error(error):
     # LABEL: DEVELOPMENT_ONLY_CODE
     if (server_type == 'development'):
         error = traceback.format_exc()
+
+        return render_template('main/dev_error.html', theme=context_global.theme, general_error=error)
     # --------------------------------------------- #
 
     return render_template(general_error_page, theme=context_global.theme, general_error=error)

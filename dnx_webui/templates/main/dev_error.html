@@ -1,6 +1,6 @@
 {% extends('layout.html') %}
 {% block body %}
-  <section id="general-error" class="section">
+  <section id="dev-error" class="section">
     <div class="container">
       <div class="row">
         <div class="col s12">
@@ -8,10 +8,12 @@
             <div class="col s12 center">
               <i class="material-icons large orange-text">warning</i>
             </div>
-            <h5 class="black-text center">Generic error occurred.</h5>
-            <p class="center">
-              {{ general_error }}
-            </p>
+            <h5 class="black-text center">Unhandled Exception</h5>
+            <div class="col s8 offset-s2 divider">
+              <p style="white-space: pre-wrap;">
+                {{ highlighter_py(general_error)|safe }}
+              </p>
+            </div>
           </div>
         </div>
       </div>
