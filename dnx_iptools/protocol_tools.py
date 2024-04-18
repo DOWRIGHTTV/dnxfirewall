@@ -13,6 +13,7 @@ from socket import socket, AF_INET, SOCK_RAW, SCM_CREDENTIALS
 from subprocess import run, CalledProcessError, DEVNULL
 
 from dnx_gentools.def_typing import *
+from dnx_gentools.def_exceptions import ParseError
 from dnx_gentools.def_constants import USER, RUN_FOREVER, byte_join, fast_time, UINT32_MAX, str_join
 from dnx_gentools.def_enums import PROTO
 
@@ -126,11 +127,16 @@ class Route:
 def strtoroute(intf: str, rs: str, /) -> Route:
     rl = rs.split()
 
-    network = rl[1][:-1].split('/')
-    gateway = rl[3][:-1]
-    ad      = rl[5][:-1]
+    try:
+        network = rl[1][:-1].split('/')
+        gateway = rl[3][:-1]
+        ad      = rl[5][:-1]
 
-    return Route(intf, network[0], network[1], gateway, ad)
+        route = Route(intf, network[0], network[1], gateway, ad)
+    except IndexError:
+        raise ParseError(f'Failed to convert route string to Route object. {rs}')
+
+    return route
 
 def mac_add_sep(mac_address: str, sep: str = ':') -> str:
     string_mac = []

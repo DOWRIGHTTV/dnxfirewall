@@ -19,6 +19,8 @@ class ControlError(DNXError):
 class ProtocolError(DNXError):
     '''Malformed network protocol.'''
 
+class ParseError(DNXError):
+    '''Failure to convert string to python object.'''
 
 def err_as_value(exc_type):
     '''converts try/catch semantic of the specified exception class to a return error by value.
