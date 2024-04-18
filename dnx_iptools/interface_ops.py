@@ -250,8 +250,12 @@ def get_unified_routes() -> list[Route]:
     '''
     route_table = set(get_routing_table())
 
-    with InterfaceManager() as intf_mgr:
-        configured_routes = set(intf_mgr.get_configured_routes())
+    intf_manager = InterfaceManager()
+    with intf_manager:
+        configured_routes = set(intf_manager.get_configured_routes())
+
+    if (intf_manager.error):
+        raise intf_manager.error
 
     not_available = configured_routes - route_table
 
