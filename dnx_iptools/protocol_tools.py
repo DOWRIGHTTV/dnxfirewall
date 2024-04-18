@@ -134,7 +134,7 @@ def strtoroute(intf: str, rs: str, /) -> Route:
 
         route = Route(intf, network[0], network[1], gateway, ad)
     except IndexError:
-        raise ParseError(f'Failed to convert route string to Route object. {rs}')
+        raise ParseError(f'Failed to convert route string to Route object. interface: {intf} route: {rs}')
 
     return route
 
