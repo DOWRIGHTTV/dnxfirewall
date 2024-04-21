@@ -748,7 +748,7 @@ def _converter_build_list(l_str: str) -> str:
         # print(f'list item [{i}] -> {item}')
         elements.append(f'{item}' if item.isdigit() else f'"{item}"')
 
-    list_str = f'[{", ".join(elements)}]'
+    list_str = f'[{", ".join(elements)}]' if elements else '[]'
 
     # print(f'generated list: {list_str}')
 
