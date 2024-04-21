@@ -744,11 +744,14 @@ def _converter_build_list(l_str: str) -> str:
 
     elements = []
     for item in l_str.strip('[]()').split(','):
-        item = item.strip()
-        # print(f'list item [{i}] -> {item}')
-        elements.append(f'{item}' if item.isdigit() else f'"{item}"')
 
-    list_str = f'[{", ".join(elements)}]' if elements else '[]'
+        # prevents appending empty strings to the list
+        # should only happen if the yaml list is empty
+        if item := item.strip():
+            # print(f'list item [{i}] -> {item}')
+            elements.append(f'{item}' if item.isdigit() else f'"{item}"')
+
+    list_str = f'[{", ".join(elements)}]'
 
     # print(f'generated list: {list_str}')
 
