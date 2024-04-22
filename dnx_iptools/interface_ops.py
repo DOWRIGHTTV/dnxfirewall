@@ -399,7 +399,7 @@ class InterfaceManager:
 
         self.config_data['network'][intf_type][route.intf]['routes'].append(route.format_netplan())
 
-    def remove_route(self, route: Route):
+    def del_route(self, route: Route):
         intf_type = 'vlans' if '.' in route.intf else 'ethernets'
 
         self.config_data['network'][intf_type][route.intf]['routes'].remove(route.format_netplan())
