@@ -10,7 +10,7 @@ from source.web_typing import *
 
 web_module_load_callout(__file__)
 
-from dnx_gentools.def_constants import HOME_DIR, FIVE_SEC, ppt
+from dnx_gentools.def_constants import HOME_DIR, FIVE_SEC, ONE_SEC, ppt, fast_sleep
 from dnx_gentools.def_enums import CFG
 from dnx_gentools.file_operations import ConfigurationManager, ConfigurationError, load_configuration
 
@@ -384,6 +384,10 @@ def system_routing(session_info: dict):
         dnx_routing, page_settings, 'route_info', page_name='system/routing.html'
     )
 
+    # todo: delay is to allow for the routing table to be updated before the page is loaded.
+    #    this is a temporary fix and should be replaced (probably by adding response/wait to control socket).
+    fast_sleep(ONE_SEC)
+
     return page_action
 
 @app.route('/system/services', methods=['GET', 'POST'])
@@ -500,7 +504,7 @@ def system_restart(session_info: dict, *, path: str):
 # removing user from session dict then removing them from locally stored session tracker to allow for cross session
 # awareness of users/accounts logged in.
 def dnx_logout(session_info: dict):
-    if user := session.pop('user', None):
+    if user := session.pop('user', ''):
         update_session_tracker(user, action=CFG.DEL)
 
     return redirect(url_for('dnx_login'))
