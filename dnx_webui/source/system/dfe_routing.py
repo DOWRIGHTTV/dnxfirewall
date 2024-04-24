@@ -111,7 +111,7 @@ def validate_adm_distance(adm_distance: str) -> Optional[ValidationError]:
 err_as_value(ValidationError)
 def validate_route_del(route: str) -> Optional[ValidationError]:
     try:
-        intf, net_id, net_mask, gateway, adm_distance = route.split()
+        intf, net_id, net_mask, gateway, adm_distance = route.split(', ')
     except ValueError:
         return ValidationError(INVALID_FORM)
 
@@ -133,7 +133,7 @@ form_validator = ValidationConfigForm({
     'route_del': {
         # 'on_enter': ValidationFieldContext(call=lambda form: ValidationError('Unable to remove routes at this time.')),
         'route_del': ValidationFieldInfo(cfg_key='route_str', validation=validate_route_del),
-        'on_exit': ValidationFieldContext(call=lambda cfg: cfg.update({'route_obj': Route(*cfg.route_str.split())}))
+        'on_exit': ValidationFieldContext(call=lambda cfg: cfg.update({'route_obj': Route(*cfg.route_str.split(', '))}))
     }
 })
 # ==============
