@@ -8,7 +8,7 @@ web_module_load_callout(__file__)
 
 from source.web_validate import *
 
-from dnx_gentools.def_enums import DATA
+from dnx_gentools.def_constants import ONE_SEC, fast_sleep
 from dnx_gentools.def_exceptions import err_as_value
 from dnx_gentools.file_operations import ConfigurationError, config
 from dnx_iptools.interface_ops import InterfaceManager, get_unified_routes, route_lookup
@@ -67,38 +67,11 @@ class WebPage(StandardWebPage):
         else:
             return 99, INVALID_FORM
 
-        return NO_STANDARD_ERROR
+        # todo: delay is to allow for the routing table to be updated before the page is loaded.
+        #    this is a temporary fix and should be replaced (probably by adding response/wait to control socket).
+        fast_sleep(ONE_SEC)
 
-        # if ('route_add' in form):
-        #     route_info = config(**{
-        #         'net_id': form.get('nid', DATA.MISSING),
-        #         'net_mask': form.get('nmk', DATA.MISSING),
-        #         'gateway': form.get('nxh', DATA.MISSING),
-        #         'adm_distance': get_convert_int(form, 'nad')
-        #     })
-        #
-        #     if error := route_info.validate_fields():
-        #         return 11, error.message
-        #
-        #     if error := validate_route_add(route_info):
-        #         return 12, error.message
-        #
-        #     if error := configure_route_add(route_info):
-        #         return 13, error.message
-        #
-        # elif ('route_del' in form):
-        #     route_info = config(**{
-        #         'route_str': form.get('route_del', DATA.MISSING)
-        #     })
-        #
-        #     if error := route_info.validate_fields():
-        #         return 21, error.message
-        #
-        #     if error := validate_route_del(route_info):
-        #         return 22, error.message
-        #
-        #     if error := configure_route_del(route_info):
-        #         return 23, error.message
+        return NO_STANDARD_ERROR
 
 
 # ==============
