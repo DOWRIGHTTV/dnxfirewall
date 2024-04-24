@@ -118,9 +118,12 @@ def validate_route_del(route: str) -> Optional[ValidationError]:
     if (adm_distance not in ['10', '20', '60', '100']):
         return ValidationError(INVALID_FORM)
 
-    ip_address(ip_iter=[net_id, net_mask, gateway])
+    ip_address(ip_iter=[net_id, gateway])
+    cidr(net_mask)
 
-
+# =========================
+# FORM VALIDATION TEMPLATE
+# =========================
 form_validator = ValidationConfigForm({
     'route_add': {
         # 'on_enter': ValidationFieldContext(),
