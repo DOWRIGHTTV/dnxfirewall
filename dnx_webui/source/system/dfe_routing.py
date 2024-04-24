@@ -110,13 +110,6 @@ def validate_adm_distance(adm_distance: str) -> Optional[ValidationError]:
 
 err_as_value(ValidationError)
 def validate_route_del(route: str) -> Optional[ValidationError]:
-    '''if validation passes, a Route object will be added to the config object
-
-    | on_enter -> can be used to disable handling of a config form submission
-    | on_exit -> can be used to validate combined fields
-
-    expected format: 'eth0, 192.168.69.0, 24, 192.168.84.69, 10'
-    '''
     try:
         intf, net_id, net_mask, gateway, adm_distance = route.split()
     except ValueError:
@@ -134,12 +127,13 @@ form_validator = ValidationConfigForm({
         'nid': ValidationFieldInfo(cfg_key='net_id', format=ip_address),
         'nmk': ValidationFieldInfo(cfg_key='net_mask', format=ip_address),
         'nxh': ValidationFieldInfo(cfg_key='gateway', format=ip_address),
-        'nad': ValidationFieldInfo(cfg_key='adm_distance', format=check_digit, validation=validate_adm_distance, convert=int),
+        'nad': ValidationFieldInfo(cfg_key='adm_distance', format=check_digit, validation=validate_adm_distance),
         'on_exit': ValidationFieldContext(call=lambda cfg: ip_network(f'{cfg.net_id}/{cfg.net_mask}'))
     },
     'route_del': {
-        'on_enter': ValidationFieldContext(call=lambda form: ValidationError('Unable to remove routes at this time.')),
-        'route_del': ValidationFieldInfo(cfg_key='route_str', validation=validate_route_del)
+        # 'on_enter': ValidationFieldContext(call=lambda form: ValidationError('Unable to remove routes at this time.')),
+        'route_del': ValidationFieldInfo(cfg_key='route_str', validation=validate_route_del),
+        'on_exit': ValidationFieldContext(call=lambda cfg: cfg.update({'route_obj': Route(*cfg.route_str.split())}))
     }
 })
 # ==============
@@ -165,10 +159,10 @@ def configure_route_del(route: config) -> Optional[ConfigurationError]:
     #     next_hop_route.intf, route.net_id, str(masktocidr(route.net_mask)), route.gateway, route.adm_distance
     # )
 
-    print(route)
+    print(route.route_obj)
 
     interface_manager = InterfaceManager()
     with interface_manager:
-        interface_manager.del_route(route)
+        interface_manager.del_route(route.route_obj)
 
     return interface_manager.error

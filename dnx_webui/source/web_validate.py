@@ -52,17 +52,17 @@ class ValidationError(DNXError):
 class ValidationFieldContext(NamedTuple):
     '''used for on_enter and on_exit sections in ValidationConfigForm.parse_form
 
-    | **call**: ``func(type[config])`` -- function hook
+    call: func(type[config]) -- function hook
     '''
     call: Callable[[Form|config], Optional[ValidationError]]
 
 class ValidationFieldInfo(NamedTuple):
     '''
-    | **cfg_key**: ``str`` -- name used when adding the form value to a config object
-    | `format`: ``func(str)|None`` -- basic function to check string conformity (ex: str.isdigit)
-    | `validation`: ``func(str)`` -- function to check system/config rule conformity
-    | `error_msg`: ``str`` -- message returned to client (if not provided, language default will be used)
-    | `convert`: ``func(str)`` -- convert form value from str to config type (if not provided, default is a no-op)
+    cfg_key: str -- name used when adding the form value to a config object
+    format: func(str)|None -- basic function to check string conformity (ex: str.isdigit)
+    validation: func(str) -- function to check system/config rule conformity
+    error_msg: str -- message returned to client (if not provided, language default will be used)
+    convert: func(str) -- convert form value from str to config type (if not provided, default is a no-op)
     '''
     cfg_key: str
     error_msg: Optional[str] = None
@@ -79,6 +79,9 @@ class ValidationConfigForm:
     '''Configuration class for storing configuration key/value pairs.
 
     provides validation and other utility methods for configuration data.
+
+    on_enter -> can be used to disable handling of a config form submission
+    on_exit -> can be used to validate combined fields
     '''
     BUTTON_KEY = 'vbtn'
 
