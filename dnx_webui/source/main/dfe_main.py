@@ -37,6 +37,7 @@ Flask.app = app
 # a new key is generated on every system start and stored in system config.
 app_config: ConfigChain = load_configuration('system', cfg_type='global')
 app.secret_key = app_config['flask->key']
+app.permanent_session_lifetime = timedelta(minutes=app_config['flask->session_timeout'])
 
 app.jinja_env.trim_blocks   = True
 app.jinja_env.lstrip_blocks = True
