@@ -24,6 +24,14 @@ def itoip(ipa: int) -> str:
         2130706433 > '127.0.0.1'
     '''
     ...
+def hextoip(hipa: str) -> str:
+    '''convert 8-byte/ (4) 2-byte char hex string to ip address in dot notation.
+
+        "00454545" > '69.69.69.0'
+
+    note: expecting big endian (network order) hex string.
+    '''
+    ...
 def calc_checksum(data: ByteString) -> bytes:
     '''calculate the tcp/ip checksum of a bytestring.
 

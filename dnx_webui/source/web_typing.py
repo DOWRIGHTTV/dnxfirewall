@@ -3,6 +3,17 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from collections import defaultdict as _dd
+
+def web_module_load_callout(filename: str) -> None:
+    '''print passed in filename to stdout.
+
+    only active when FLASK_ENV=development
+    '''
+    import os
+
+    if os.environ.get('FLASK_ENV') == 'development':
+        print(f'<| file import >> {filename} |>')
 
 if (TYPE_CHECKING):
     from typing import TypeAlias, Type, Any, Callable, ByteString, Optional, Union
@@ -16,9 +27,19 @@ if (TYPE_CHECKING):
 
     Callable_T: TypeAlias = Callable[[Any, ...], Any]
 
-    Form = ImmutableMultiDict[str, str]
-    Args = MultiDict[str, str]
-    WebError = dict[str, Union[int, str]]
+    JSON: TypeAlias = dict[str, Any]
+    Form: TypeAlias = ImmutableMultiDict[str, str]
+    Args: TypeAlias = MultiDict[str, str]
+
+    WebLoadResponse: TypeAlias = dict[str, Any]
+
+    STATUS: TypeAlias = bool
+    ERROR_CODE: TypeAlias = int
+    ERROR_MESSAGE: TypeAlias = str
+    WebUpdateError: TypeAlias = tuple[ERROR_CODE, ERROR_MESSAGE]
+    WebAjaxError: TypeAlias = dict[str, Union[int, str]]
+
+    WebAjaxResponse: TypeAlias = [STATUS, WebAjaxError]
 
     from source.web_interfaces import StandardWebPage as _StandardWebPage
     from source.web_interfaces import LogWebPage as _LogWebPage

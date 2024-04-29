@@ -61,7 +61,7 @@
               <div class="row">
                 <div class="input-field col s2 offset-s1 {{input_color}}">
                   <select name="zone">
-                    <option value="DMZ">DMZ</option>
+                    <option value="DMZ"{% if not dhcp_settings.interfaces.dmz.ident %} disabled{% endif %}>DMZ</option>
                     <option value="LAN">LAN</option>
                   </select>
                   <label>Interface</label>

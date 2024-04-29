@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import os
+import shutil
 
 from json import loads
+from functools import partial
 from socket import socket, AF_UNIX, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_PASSCRED, SCM_CREDENTIALS
 
 from dnx_gentools.def_typing import *

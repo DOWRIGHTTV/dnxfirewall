@@ -1,0 +1,28 @@
+{% extends('layout.html') %}
+{% block body %}
+  <section id="dev-error" class="section">
+    <div class="container">
+      <div class="row">
+        <div class="col s12">
+          <div class="card-panel hoverable {{ theme.card }}">
+            <div class="row">
+              <div class="col s12 center">
+                <i class="material-icons large orange-text">warning</i>
+              </div>
+            </div>
+            <div class="row">
+              <h5 class="black-text center">Unhandled Exception</h5>
+            </div>
+            <div class="row">
+              <div class="col s8 offset-s2">
+                <p style="white-space: pre-wrap; font-size: 16px;">
+                  {{ highlighter_py(general_error)|safe }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock %}

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import os
 import threading
 
 from json import dumps
+from functools import partial
 from socket import socket, AF_UNIX, SOCK_DGRAM, SOL_SOCKET, SCM_CREDENTIALS
 
 from dnx_gentools.def_typing import *
@@ -18,7 +20,7 @@ from dnx_gentools.system_info import System
 # ===============
 # TYPING IMPORTS
 # ===============
-from typing import TYPE_CHECKING
+#
 
 
 __all__ = (
@@ -37,13 +39,15 @@ _format_time = System.format_time
 # GENERIC LIGHTWEIGHT FUNCTIONS
 # ==============================
 direct_log_lock: Lock_T = threading.Lock()
+log_opener = partial(os.open, mode=0o640)
+log_exists = os.path.exists
 
 def _dump_to_file(path: str, msg: str, *, lock: Lock_T = None) -> None:
 
     if (lock):
         lock.acquire()
 
-    with open(path, 'a+') as log_file:
+    with open(path, 'a+', opener=log_opener) as log_file:
         log_file.write(msg)
 
     if (lock):
@@ -55,6 +59,9 @@ def direct_log(m_name: str, message_level: LOG, msg: str, *, cli: bool = False) 
 
     used to override global module log name if needed.
     does not require LogHandler initialization.
+
+    fixme: this can cause race conditions on file writes if direct writing to a log file tracked by the
+        modules primary log file handler.
     '''
     if (message_level > Log.current_lvl):
         return
@@ -62,12 +69,15 @@ def direct_log(m_name: str, message_level: LOG, msg: str, *, cli: bool = False) 
     log_path = f'{HOME_DIR}/dnx_profile/log/{m_name}/{_system_date(string=True)}-{m_name}.log'
     log_msg  = f'{fast_time()}|{m_name}|{message_level.name.lower()}|{msg}\n'
 
+    # if the log file doesn't already exist and the process is uid is root, we will change the owner to dnx.
+    change_owner = ROOT and not log_exists(log_path)
+
     _dump_to_file(log_path, log_msg, lock=direct_log_lock)
 
     if (cli and not Log.suppress_output):
         console_log(msg)
 
-    if (ROOT):
+    if (change_owner):
         change_file_owner(log_path)
 
 # system time/UTC will be used.
@@ -120,7 +130,7 @@ def _log_handler():
     logging_level: int = 0
     handler_name: str = ''
     cli_output: bool = False
-    system_action_audit: bool = False
+    system_action_audit: bool = True  # auditing system control events on by default
 
     log_path: str = f'{HOME_DIR}/dnx_profile/log/'
 
@@ -172,13 +182,14 @@ def _log_handler():
 
             cls.suppress_output = suppress_output
 
+            direct_log(handler_name, LOG.INFO, 'LogHandler initialization started.', cli=True)
+
             # need to get log level before initialization direct log or else it will be set to 0
             threading.Thread(target=log_settings).start()
             threading.Thread(target=slog_settings).start()
 
             cls._init_one.wait_for_threads(count=2)
 
-            direct_log(handler_name, LOG.INFO, 'LogHandler initialization started.', cli=True)
             threading.Thread(target=write_to_disk).start()
             direct_log(handler_name, LOG.NOTICE, 'LogHandler initialization complete.', cli=True)
 

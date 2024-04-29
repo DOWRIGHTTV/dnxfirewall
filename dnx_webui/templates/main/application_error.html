@@ -1,15 +1,21 @@
 {% extends('layout.html') %}
 {% block body %}
-<section id="application-error" class="section">
+  <section id="application-error" class="section">
     <div class="container">
-        <div class="col s12 center">
-            <i class="material-icons large orange-text">warning</i>
+      <div class="row">
+        <div class="col s12">
+          <div class="card-panel hoverable {{ theme.card }}">
+            <div class="col s12 center">
+              <i class="material-icons large orange-text">warning</i>
+            </div>
+            <h5 class="black-text center">Web application error occurred.</h5>
+            <p class="center">
+              {{ application_error }}
+            </p>
+            <h5 class="black-text center">See logs for more details.</h5>
+          </div>
         </div>
-        <h5 class="black-text center">Web application error occurred.</h5>
-        <p class="center">
-            {{application_error}}
-        </p>
-        <h5 class="black-text center">See logs for more details.</h5>
+      </div>
     </div>
-</section>
+  </section>
 {% endblock %}

@@ -68,6 +68,11 @@ class ServerConfiguration(ConfigurationMixinBase):
 
             # NOTE ex. ident: eth0, lo, enp0s3
             identity: str = intf['ident']
+
+            # filtering out interfaces not configured at install time
+            if (identity is None):
+                continue
+
             enabled:  int = intf['enabled']
             check_ip: int = intf['icmp_check']
 

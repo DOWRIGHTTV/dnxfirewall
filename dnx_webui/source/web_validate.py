@@ -5,13 +5,18 @@ from __future__ import annotations
 import re
 import string
 
+from types import MappingProxyType
+from typing import NamedTuple
 from ipaddress import IPv4Network, IPv4Address
 
 # TODO: consider moving this module, web_typing, and web_interfaces to dnx_webui folder instead of source
 from dnx_webui.source.web_typing import *
 
+web_module_load_callout(__file__)
+
 from dnx_gentools.def_enums import CFG, DATA, PROTO
 from dnx_gentools.def_exceptions import DNXError
+from dnx_gentools.file_operations import config
 
 
 BINT = (0, 1)
@@ -21,10 +26,12 @@ MAX_PORT = 65535
 MAX_PORT_RANGE = MAX_PORT + 1
 
 __all__ = (
-    'ValidationError',
-    
+    'ValidationError', 'ValidationConfigForm', 'ValidationFieldContext', 'ValidationFieldInfo',
+
     'INVALID_FORM', 'NO_STANDARD_ERROR',
     'VALID_MAC', 'VALID_DOMAIN',
+
+    'check_digit', 'check_bint',
 
     'convert_int', 'get_convert_int',
     'convert_bint', 'get_convert_bint',
@@ -42,6 +49,104 @@ __all__ = (
 class ValidationError(DNXError):
     '''Webui processing failure or invalid user input.'''
 
+class ValidationFieldContext(NamedTuple):
+    '''used for on_enter and on_exit sections in ValidationConfigForm.parse_form
+
+    call: func(type[config]) -- function hook
+    '''
+    call: Callable[[Form|config], Optional[ValidationError]]
+
+class ValidationFieldInfo(NamedTuple):
+    '''
+    cfg_key: str -- name used when adding the form value to a config object
+    format: func(str)|None -- basic function to check string conformity (ex: str.isdigit)
+    validation: func(str) -- function to check system/config rule conformity
+    error_msg: str -- message returned to client (if not provided, language default will be used)
+    convert: func(str) -- convert form value from str to config type (if not provided, default is a no-op)
+    '''
+    cfg_key: str
+    error_msg: Optional[str] = None
+    format: Callable[[str], Optional[ValidationError]] = None
+    validation: Callable[[str], Optional[ValidationError]] = None
+    convert: Callable[[str], Any] = lambda x: x
+
+FormButtonName = str
+FormFieldName = str
+ValidationPageForms_T: TypeAlias = dict[FormButtonName, dict[FormFieldName, ValidationFieldInfo|ValidationFieldContext]]
+ValidationPageForms_P: TypeAlias = MappingProxyType[FormButtonName, dict[FormFieldName, ValidationFieldInfo|ValidationFieldContext]]
+
+class ValidationConfigForm:
+    '''Configuration class for storing configuration key/value pairs.
+
+    provides validation and other utility methods for configuration data.
+
+    on_enter -> can be used to disable handling of a config form submission
+    on_exit -> can be used to validate combined fields
+    '''
+    BUTTON_KEY = 'vbtn'
+
+    __slots__ = ('page_forms',)
+
+    def __init__(self, page_forms: ValidationPageForms_T):
+        self.page_forms: ValidationPageForms_P = MappingProxyType(page_forms)
+
+    def parse_form(self, form: Form) -> tuple[Optional[ValidationError], Optional[config]]:
+        '''parses a form and returns a config object.
+
+        returns a tuple containing an error and a config object.
+        '''
+        btn_name = form.get(self.BUTTON_KEY, DATA.MISSING)
+        if (btn_name is DATA.MISSING):
+            return ValidationError('Missing form action.'), None
+
+        form_profile = self.page_forms.get(btn_name, DATA.MISSING)
+        if (form_profile is DATA.MISSING):
+            return ValidationError('Unspecified form submitted.'), None
+
+        cfg = config(btn=btn_name)
+
+        for field_name, field_profile in form_profile.items():
+
+            # context fields/ function calls
+            if (field_name == 'on_enter'):
+                if error := field_profile.call(form):
+                    return error, None
+
+                continue
+
+            elif (field_name == 'on_exit'):
+                if error := field_profile.call(cfg):
+                    return error, None
+
+                break
+
+            field_value = form.get(field_name, DATA.MISSING)
+            if (field_value is DATA.MISSING):
+                return ValidationError(f'Missing form field [{field_name}].'), None
+
+            # field format check will generally raise an exception, but added support for returning instead
+            if (field_profile.format):
+
+                try:
+                    if error := field_profile.format(field_value):
+                        return ValidationError(field_profile.error_msg or error.args[0]), None
+                except Exception as e:
+                    return ValidationError(field_profile.error_msg or e.args[0]), None
+
+            # field validation returns exception as value only
+            if (field_profile.validation):
+
+                if error := field_profile.validation(field_value):
+                    return error, None
+
+            cfg[field_profile.cfg_key] = field_profile.convert(field_value)
+
+        # unhandled form data. should only happen if the form is tampered with client side.
+        # if (form):
+        #     return ValidationError('Non-conforming form data present.'), None
+
+        return None, cfg
+
 
 _proto_map = {'any': 0, 'icmp': 1, 'tcp': 6, 'udp': 17}
 
@@ -52,6 +157,15 @@ INVALID_FORM: str = 'Invalid form data.'
 # TODO: mac regex allows trailing characters. it should hard cut after the exact char length.
 VALID_MAC = re.compile('(?:[0-9a-fA-F]:?){12}')
 VALID_DOMAIN = re.compile('(//|\\s+|^)(\\w\\.|\\w[A-Za-z0-9-]{0,61}\\w\\.){1,3}[A-Za-z]{2,6}')
+
+# to be used with the new form validation system
+def check_digit(s: str) -> Optional[ValidationError]:
+    if not s.isdigit():
+        return ValidationError('Invalid field type.')
+
+def check_bint(s: str) -> Optional[ValidationError]:
+    if s not in ['0', '1']:
+        return ValidationError('Invalid field type.')
 
 def get_convert_int(form: Union[Form, Args], key: str) -> Union[int, DATA]:
     '''gets string value from submitted form then converts into an integer and returns.
@@ -161,6 +275,10 @@ def _ip_address(ip_addr):
 
 # this is a convenience wrapper around above function to allow for multiple ips to be checked with one func call.
 def ip_address(ip_addr: Optional[str] = None, *, ip_iter: Optional[list['str']] = None) -> None:
+    '''raises a ValidationError if the ip address is not valid.
+
+    ip_iter can be used to check multiple with a single call and will raise Validation error on first invalid ip.
+    '''
     ip_iter = [ip_addr] if not ip_iter else ip_iter
     if (not isinstance(ip_iter, list)):
         raise ValidationError('Data format must be a list.')

@@ -51,13 +51,17 @@ def create_button_with_modal(
 
     btn_classes = f'{classes} waves-effect waves-light modal-trigger'
 
+    # hidden input for button value is to add forward compatibility with the new form validation system
+
     button = (
         f'<a class="{btn_classes}" href="#modal{index}-{num}"><i class="material-icons">{icon}</i></a>'
         f'<div id="modal{index}-{num}" class="modal">'
           f'<div class="modal-content"><h5 class="{context_global.theme["modal_text"]}">{message}</h5></div>'
-          f'<form method="POST"><input type="hidden" name="tab" value="{tab}">'
+          f'<form method="POST">'
+            f'<input type="hidden" name="tab" value="{tab}">'
+            f'<input type="hidden" name="{btn_name}" value="{btn_value}">'
             '<div class="modal-footer">'
-              f'<button name="{btn_name}" value="{btn_value}" class="btn waves-effect waves-light">YES</button>'
+              f'<button name="vbtn" value="{btn_name}" class="btn waves-effect waves-light">YES</button>'
               '<a class="modal-close waves-effect waves-green btn-flat">Cancel</a>'
             '</div>'
           '</form>'
@@ -168,3 +172,47 @@ def merge_items(a1, a2):
 @app.template_global()
 def is_list(li, /) -> bool:
     return isinstance(li, list)
+
+def _highlighter_py():
+
+    PY_BOOL_HEX = '#477766'
+    PY_CONDITIONAL_HEX = '#477766'
+    PY_OPERATOR_HEX = '#e66170'
+    PY_KEYWORD_HEX = '#a08050'
+    PY_QUOTE_HEX = '#02d045'
+    PY_STRING_HEX = '#00c4c4'
+
+    py_bools = ['False', 'True', 'None']
+    py_conditionals = ['if', 'elif', 'else']
+    py_operators = [' and ', ' or ', ' not ', ' in ', ' is ']
+    py_keywords = [
+        ' as ', ' assert ', ' async ', ' await ', ' break ', ' class ', ' continue ',
+        ' def ', ' del ', ' except ', ' finally ', ' for ', ' from ', ' global ',
+        ' import ', ' lambda ', ' nonlocal ', ' pass ', ' raise ', ' return ', ' try ',
+        ' while ', ' with ', ' yield '
+    ]
+
+    def highlight_html_python(s: str) -> str:
+        for py_bool in py_bools:
+            s = s.replace(py_bool, f'<span style="color:{PY_BOOL_HEX};">{py_bool}</span>')
+
+        for py_conditional in py_conditionals:
+            s = s.replace(py_conditional, f'<span style="color:{PY_CONDITIONAL_HEX};">{py_conditional}</span>')
+
+        for py_operator in py_operators:
+            s = s.replace(py_operator, f'<span style="color:{PY_OPERATOR_HEX};">{py_operator}</span>')
+
+        for py_keyword in py_keywords:
+            s = s.replace(py_keyword, f'<span style="color:{PY_KEYWORD_HEX};">{py_keyword}</span>')
+
+        # STRING REPLACEMENTS
+        s = s.replace(' "', f'<span style="color:{PY_QUOTE_HEX};">"</span><span style="color:{PY_STRING_HEX};">')
+
+        for c in ['" ', '",']:
+            s = s.replace(c, f'</span><span style="color:{PY_QUOTE_HEX};">{c}</span>')
+
+        return s
+
+    return highlight_html_python
+
+app.add_template_global(_highlighter_py(), 'highlighter_py')

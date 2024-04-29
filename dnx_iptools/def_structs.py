@@ -8,6 +8,7 @@ short_unpackf = _Struct('!H').unpack_from
 
 short_unpack = _Struct('!H').unpack
 long_unpack  = _Struct('!L').unpack
+long_unpackLE = _Struct('<L').unpack
 byte_pack    = _Struct('!B').pack
 short_pack   = _Struct('!H').pack
 long_pack    = _Struct('!L').pack

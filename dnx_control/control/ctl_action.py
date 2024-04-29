@@ -33,7 +33,7 @@ def system_action(*, delay: int = NO_DELAY, **kwargs) -> None:
     send requested system control action over local socket to SystemControl class/service.
 
     if no delay is specified, 0/NO_DELAY will be set as default, otherwise the action will be handled in a thread
-    and executed one delay time is reached.
+    and executed once the delay timer expires.
 
         expecting: module, command, args as keyword arguments
 
@@ -59,4 +59,4 @@ def system_action(*, delay: int = NO_DELAY, **kwargs) -> None:
         Timer(delay, _system_action, args=(control_data,)).start()
 
     if (Log.control_audit):
-        direct_log('system', LOG.ERROR, f'{kwargs["module"]} sent system command {kwargs["command"]}')
+        direct_log('system', LOG.WARNING, f'{kwargs["module"]} sent system command {kwargs["command"]}')

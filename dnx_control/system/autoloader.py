@@ -17,7 +17,7 @@ from dnx_gentools.def_typing import *
 from dnx_gentools.def_constants import HOME_DIR, INITIALIZE_MODULE, hardout, str_join
 from dnx_gentools.def_namedtuples import SigFile
 from dnx_gentools.file_operations import ConfigurationManager, write_configuration, json_to_yaml
-from dnx_gentools.file_operations import load_data, write_data,  change_file_owner
+from dnx_gentools.file_operations import read_file, write_file, load_data, write_data,  change_file_owner
 
 from dnx_iptools.iptables import IPTablesManager
 from dnx_routines.logging.log_client import Log
@@ -35,6 +35,7 @@ ERROR_SHOW_TIME = .33
 srun = partial(_run, shell=True, check=True)
 def lprint(sep: str = '-'): print(text.lightblue(f'{sep}' * os.get_terminal_size().columns))
 
+def tprint(s: str, /) -> None: lprint(); print(s); lprint()
 
 # ===============
 # BANNER
@@ -170,9 +171,7 @@ def check_already_ran() -> None:
 def set_branch() -> None:
     available_branches = ['development', 'stable']
 
-    lprint()
-    print(text.yellow('available branches'))
-    lprint()
+    tprint(text.yellow('available branches'))
 
     print(text.yellow('1. development'))
     print(text.yellow('2. stable'))
@@ -282,75 +281,119 @@ def progress(desc: str, *, completed: Optional[int] = None, total: Optional[int]
 # ============================
 # INTERFACE CONFIGURATION
 # ============================
+intf_templates = {
+    'WAN': {
+        'optional': 'yes',
+        'dhcp4': 'yes',
+        'dhcp4-overrides': {
+            'use-dns': 'false'
+        },
+        'nameservers': {
+            'addresses': '[_PRIMARY__SECONDARY_]'
+        }
+    },
+    'LAN': {
+        'optional': 'yes',
+        'addresses': '[192.168.83.1/24]'
+    },
+    'DMZ': {
+        'optional': 'yes',
+        'addresses': '[192.168.84.1/24]'
+    }
+}
 # convenience function wrapper for physical interface to dnxfirewall zone association.
 def configure_interfaces() -> None:
-    interfaces_detected: list[str] = check_system_interfaces()
+    intf_mode, interfaces_detected = get_system_interfaces()
 
-    user_intf_config: dict[str, str] = collect_interface_associations(interfaces_detected)
+    user_intf_config: dict[str, str] = get_interface_associations(intf_mode, interfaces_detected)
+
     public_dns_servers: dict = load_data('dns_server.cfg', cfg_type='system/global')['resolvers']
 
     set_dnx_interfaces(user_intf_config)
     set_dhcp_interfaces(user_intf_config)
 
-    with open(f'{SYSTEM_DIR}/interfaces/intf_config_template.cfg', 'r') as intf_configs_f:
-        intf_configs: str = intf_configs_f.read()
-
+    intf_configs = {"network": {"version": 2, "ethernets": {}}}
     for intf_name, intf in user_intf_config.items():
-        intf_configs = intf_configs.replace(f'_{intf_name}_', intf)
 
+        intf_configs['network']['ethernets'][intf] = intf_templates[intf_name]
+
+        # setting public dns servers on the interface so the system itself will use the user-configured servers.
+        if (intf_name == 'WAN'):
+            dns1: str = public_dns_servers['primary']['ip_address']
+            dns2: str = public_dns_servers['secondary']['ip_address']
+
+            intf_configs['network']['ethernets'][intf]['nameservers']['addresses'] = f'[{dns1},{dns2}]'
+
+    # NOTE: this is partially refactored. once the interface patch is complete, this will likely not be necessary.
     # storing the modified template containing specified interface names.
     # this will be used to configure wan interface via webui or change system level dns servers.
-    # note: json.loads is needed because the write function expects a python dictionary.
-    write_configuration(json.loads(intf_configs), 'interfaces', filepath=f'{SYSTEM_DIR}/interfaces')
+    intf_yaml = json_to_yaml(intf_configs)
+    write_file(f'{SYSTEM_DIR}/interfaces.yaml', intf_yaml)
 
-    # setting public dns servers on the interface so the system itself will use the user-configured servers.
-    dns1: str = public_dns_servers['primary']['ip_address']
-    dns2: str = public_dns_servers['secondary']['ip_address']
+    write_net_config(intf_yaml)
 
-    yaml_output: str = json_to_yaml(intf_configs, is_string=True)
-    yaml_output = yaml_output.replace('_PRIMARY__SECONDARY_', f'{dns1},{dns2}')
-
-    write_net_config(yaml_output)
-
-def check_system_interfaces() -> list[str]:
+def get_system_interfaces() -> tuple[str, list[str]]:
     interfaces_detected = [intf[1] for intf in socket.if_nameindex() if 'lo' not in intf[1]]
+    intf_mode = 'full'
 
-    if (len(interfaces_detected) < 3):
-        eprint(
-            text.yellow('minimum ') +
-            text.red('3 ') +
-            text.yellow(f'interfaces are required to deploy dnxfirewall. detected: {len(interfaces_detected)}.')
+    if (not interfaces_detected):
+        hardout(
+            text.red('no network interfaces detected. exiting...')
         )
 
-    return interfaces_detected
+    if (len(interfaces_detected) == 1):
+        intf_mode = 'local'
+        eprint(
+            text.yellow('only ') +
+            text.red('1 ') +
+            text.yellow('interface detected. the system will run in local only mode until an additional interface is set.')
+        )
 
-def collect_interface_associations(interfaces_detected: list[str]) -> dict[str, str]:
-    lprint()
-    print(text.yellow('available interfaces'))
-    lprint()
+    elif (len(interfaces_detected) == 2):
+        intf_mode = 'no-dmz'
+        eprint(
+            text.yellow('only ') +
+            text.red('2 ') +
+            text.yellow('interfaces detected. the system will run in no-dmz mode until an additional interface is set.')
+        )
+
+    return intf_mode, interfaces_detected
+
+def get_interface_associations(intf_mode, interfaces_detected: list[str]) -> dict[str, str]:
+    tprint(text.yellow('available interfaces'))
 
     for i, interface in enumerate(interfaces_detected, 1):
         print(text.yellow(f'{i}. {interface}'))
 
     lprint()
 
+    interface_config: dict[str, str] = {'LAN': ''}
+    if (intf_mode == 'no-dmz'):
+        interface_config['WAN'] = ''
+
+    elif (intf_mode == 'full'):
+        interface_config['WAN'] = ''
+        interface_config['DMZ'] = ''
+
     # build out full json for interface configs as dict
-    interface_config: dict[str, str] = {'WAN': '', 'LAN': '', 'DMZ': ''}
+    selections = set()
     while True:
         for int_name in interface_config:
             while True:
-                select = input(f'select {text.yellow(int_name)} interface: ')
-                if (select.isdigit() and int(select) in range(1, len(interfaces_detected)+1)):
-                    interface_config[int_name] = interfaces_detected[int(select)-1]
-                    break
+                try:
+                    select = int(input(f'select {text.yellow(int_name)} interface: '))
 
-                flash_input_error('invalid selection', 18)
+                    if (select not in selections):
+                        interface_config[int_name] = interfaces_detected[select - 1]
+
+                        break
+
+                    flash_input_error('interface already selected', 18)
+                except:
+                    flash_input_error('invalid selection', 18)
 
         if confirm_interfaces(interface_config):
-            if (len(set(interface_config.values())) == 3):
-                break
-
-            eprint(text.yellow('interface definitions must be unique.'))
+            break
 
     return interface_config
 
@@ -384,9 +427,12 @@ def set_dhcp_interfaces(user_intf_config: dict[str, str]) -> None:
     with ConfigurationManager('dhcp_server', cfg_type='global') as dhcp:
         dhcp_settings: ConfigChain = dhcp.load_configuration()
 
-        for zone in ['LAN', 'DMZ']:
+        for zone, intf in user_intf_config.items():
 
-            dhcp_settings[f'interfaces->builtin->{zone.lower()}->ident'] = user_intf_config[zone]
+            if (zone == 'WAN'):
+                continue
+
+            dhcp_settings[f'interfaces->builtin->{zone.lower()}->ident'] = intf
 
         dhcp.write_configuration(dhcp_settings.expanded_user_data)
 
@@ -412,6 +458,7 @@ def confirm_interfaces(interface_config: dict[str, str]) -> bool:
 # ============================
 # TODO: make sure the lib dir for libraries is in $PATH, if not add it.
 #   - alternatively can create a sim link in cfirewall then include that dir in the cython compile script.
+#   - note: it is currently specified as a libdir in the compiling script.
 def build_libraries(*, count_only: bool = False) -> None:
     global PROGRESS_TOTAL_COUNT
 
@@ -862,7 +909,10 @@ def run():
     # will hold all dynamically set commands prior to execution to get an accurate count for progress bar.
     dynamic_commands: list[tuple[str, Optional[str]]] = []
 
-    branch = checkout_configured_branch()
+    if ('BRANCH_OVERRIDE' in os.environ):
+        branch = os.environ['BRANCH_OVERRIDE']
+    else:
+        branch = checkout_configured_branch()
 
     # TODO: add a check to see if the branch is up to date and skip to signature update if it is.
     if (args._update_system):

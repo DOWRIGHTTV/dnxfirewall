@@ -5,6 +5,9 @@ from __future__ import annotations
 from subprocess import run
 
 from source.web_typing import *
+
+web_module_load_callout(__file__)
+
 from source.web_validate import *
 
 from dnx_gentools.def_enums import CFG, DATA
@@ -150,7 +153,7 @@ def validate_dnat_rule(rule: config, /, action: CFG) -> Optional[ValidationError
 
         if (rule.protocol == 'icmp'):
 
-            open_protocols: ConfigChain = load_configuration('global', cfg_type='security/ids_ips')
+            open_protocols: ConfigChain = load_configuration('global', cfg_type='security/ids_ips', strict=False)
             if (open_protocols['open_protocols->icmp']):
                 return ValidationError(
                     'Only one ICMP rule can be active at a time. Remove existing rule before adding another.'
@@ -171,9 +174,8 @@ def validate_dnat_rule(rule: config, /, action: CFG) -> Optional[ValidationError
         except:
             return ValidationError(INVALID_FORM)
 
-        open_protocol_settings: ConfigChain = load_configuration('global', cfg_type='security/ids_ips')
-        # check tcp/udp first, then icmp if it fails.
-        # if either fail, standard exception raised.
+        open_protocol_settings: ConfigChain = load_configuration('global', cfg_type='security/ids_ips', strict=False)
+        # check tcp/udp first, then icmp if it fails. if both fail, the form data is invalid.
         try:
             open_protocol_settings[f'open_protocols->{rule.protocol}->{rule.port}']
         except:

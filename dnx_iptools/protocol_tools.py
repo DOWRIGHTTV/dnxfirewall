@@ -13,7 +13,8 @@ from socket import socket, AF_INET, SOCK_RAW, SCM_CREDENTIALS
 from subprocess import run, CalledProcessError, DEVNULL
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import USER, RUN_FOREVER, byte_join, fast_time, UINT32_MAX
+from dnx_gentools.def_exceptions import ParseError
+from dnx_gentools.def_constants import USER, RUN_FOREVER, byte_join, fast_time, UINT32_MAX, str_join
 from dnx_gentools.def_enums import PROTO
 
 from dnx_iptools.def_structs import *
@@ -32,51 +33,110 @@ __all__ = (
     'change_socket_owner', 'authenticate_sender',
     'icmp_reachable',
 
-    'cidrtoi',
+    'cidrtoi', 'masktocidr',
     'domain_stob', 'mac_stob',
     'mac_add_sep', 'strtobit',
     'create_dns_query_header',
-    'parse_query_name'
+    'parse_query_name',
+
+    'Route', 'strtoroute'
 )
 
 btoia: Callable[[ByteString|int], int] = partial(int.from_bytes, byteorder='big', signed=False)
 # itoba: Callable[[int, int], bytes] = partial(int.to_bytes, byteorder='big', signed=False)
 
-def change_socket_owner(sock_path: str) -> bool:
-    '''attempts to change the file owner and permissions of the passed in socket to dnx/dnx.
 
-    following the change, the permissions will be set to 660.
-    return True on success, False on failure.
+class Route:
+    intf: str
+    net_id: str
+    cidr: str
+    gateway: str
+    ad: str
 
-        required: run on unix sockets created by root.
-        optional: run on unix socket created by dnx (would only slightly reduce permissions)
-    '''
+    status: int
+
+    def __hash__(self):
+        return hash((self.intf, self.net_id, self.cidr, self.gateway, self.ad))
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
+
+    def __init__(self, intf: str, net_id: str, cidr: str, gateway: str, ad: str):
+        super().__setattr__('intf', intf)
+        super().__setattr__('net_id', net_id)
+        super().__setattr__('cidr', cidr)
+        super().__setattr__('gateway', gateway)
+        super().__setattr__('ad', ad)
+
+        super().__setattr__('status', 1)
+
+    def __setattr__(self, name, value):
+        if (name == 'status'):
+            if (value not in (0, 1)):
+                raise ValueError('status must be 0 or 1')
+
+            super().__setattr__(name, value)
+
+        else:
+            raise ValueError('Route information is immutable.')
+
+    def __delattr__(self, name):
+        raise ValueError('Route information is immutable.')
+
+    def __str__(self) -> str:
+        return f'{self.intf}, {self.net_id}, {self.cidr}, {self.gateway}, {self.ad}'
+
+    @property
+    def is_static(self) -> bool:
+        return 'S' in self.status
+
+    @property
+    def is_connected(self) -> bool:
+        return 'C' in self.status
+
+    @property
+    def state(self) -> str:
+
+        # should only apply to static routes
+        if (self.status == 0): return 'NA'
+
+        if (self.gateway == '0.0.0.0'): state_str = 'C'
+        else: state_str = 'S'
+
+        if (self.cidr == '32'): state_str += '(H)'
+        elif (self.net_id == '0.0.0.0' and self.cidr == '0'): state_str += '(D)'
+
+        return state_str
+
+    def format_table(self) -> tuple[str, str, str, str, str]:
+        '''format -> S        10.1.1.0/24 [90/2170112] via 69.69.69.69, Serial0/0/0
+        '''
+        gateway = 'Connected' if self.state == 'C' else self.gateway
+
+        network = f'{self.net_id}/{self.cidr}'
+        ad = f'[{self.ad}]'
+
+        return (self.state, network, ad, f'via {gateway}', self.intf)
+
+    def format_netplan(self) -> str:
+        '''format: {to: 69.69.69.0/24, via: 192.168.83.69, metric: 10},
+        '''
+        return f'{{to: {self.net_id}/{self.cidr}, via: {self.gateway}, metric: {self.ad}}}'
+
+
+def strtoroute(intf: str, rs: str, /) -> Route:
+    rl = rs.split()
+
     try:
-        shutil.chown(sock_path, user='dnx', group='dnx')
-        os.chmod(sock_path, 0o660)
-    except PermissionError:
-        return False
+        network = rl[1][:-1].split('/')
+        gateway = rl[3][:-1]
+        ad      = rl[5][:-1]
 
-    return True
+        route = Route(intf, network[0], network[1], gateway, ad)
+    except IndexError:
+        raise ParseError(f'Failed to convert route string to Route object. interface: {intf} route: {rs}')
 
-# ---------------------------------------
-# SERVICE SOCKET - Auth Validation
-# ---------------------------------------
-_getuser_info = pwd.getpwuid
-_getuser_groups = os.getgrouplist
-def authenticate_sender(anc_data: Iterable[tuple[int, int, bytes]]) -> bool:
-    anc_data = {msg_type: data for _, msg_type, data in anc_data}
-
-    auth_data = anc_data.get(SCM_CREDENTIALS)
-    if (not auth_data):
-        return False
-
-    pid, uid, gid = scm_creds_unpack(auth_data)
-    # USER is a dnxfirewall constant specified in def_constants
-    if (_getuser_info(uid).pw_name != USER):
-        return False
-
-    return True
+    return route
 
 def mac_add_sep(mac_address: str, sep: str = ':') -> str:
     string_mac = []
@@ -100,6 +160,30 @@ def cidrtoi(cidr: Union[str, int]) -> int:
     hostmask: int = 32 - int(cidr)
 
     return ~((1 << hostmask) - 1) & (2**32 - 1)
+
+def masktocidr(netmask: str) -> str:
+    x = [bin(int(octet)).count('1') for octet in netmask.split('.')]
+
+    return str(sum(x))
+
+# =====================
+# DNS related functions
+# =====================
+def domain_stob(domain_name: str) -> bytes:
+    domain_bytes = byte_join([
+        byte_pack(len(part)) + part.encode('utf-8') for part in domain_name.split('.')
+    ])
+
+    # root query (empty string) gets eval'd to length 0 and doesn't need a term byte.
+    # ternary will add term byte if the domain name is not a null value.
+    return domain_bytes + b'\x00' if domain_name else domain_bytes
+
+# will create dns header specific to request/query. default resource record count is 1, additional record count optional
+def create_dns_query_header(dns_id, arc=0, *, cd):
+
+    bit_fields = (1 << 8) | (cd << 4)
+
+    return dns_header_pack(dns_id, bit_fields, 1, 0, 0, arc)
 
 def parse_query_name(data: Union[bytes, memoryview], offset: int = 0, *,
                      quick: bool = False) -> Union[int, tuple[int, str, bool]]:
@@ -150,22 +234,9 @@ def parse_query_name(data: Union[bytes, memoryview], offset: int = 0, *,
 
     return offset, query_name[:-1].decode(), label_ct == 1
 
-def domain_stob(domain_name: str) -> bytes:
-    domain_bytes = byte_join([
-        byte_pack(len(part)) + part.encode('utf-8') for part in domain_name.split('.')
-    ])
-
-    # root query (empty string) gets eval'd to length 0 and doesn't need a term byte.
-    # ternary will add term byte if the omain name is not a null value.
-    return domain_bytes + b'\x00' if domain_name else domain_bytes
-
-# will create dns header specific to request/query. default resource record count is 1, additional record count optional
-def create_dns_query_header(dns_id, arc=0, *, cd):
-
-    bit_fields = (1 << 8) | (cd << 4)
-
-    return dns_header_pack(dns_id, bit_fields, 1, 0, 0, arc)
-
+# ======================
+# ICMP related functions
+# ======================
 # will ping specified host. to be used to prevent duplicate ip address handouts.
 def icmp_reachable(host_ip: int) -> bool:
 
@@ -228,3 +299,40 @@ def init_ping(timeout: float = .25) -> Callable[[str, int], bool]:
         return replies_rcvd/count > .5
 
     return ping
+
+# =======================================
+# SOCKET RELATED FUNCTIONS
+# =======================================
+def change_socket_owner(sock_path: str) -> bool:
+    '''attempts to change the file owner and permissions of the passed in socket to dnx/dnx.
+
+    following the change, the permissions will be set to 660.
+    return True on success, False on failure.
+
+        required: run on unix sockets created by root.
+        optional: run on unix socket created by dnx (would only slightly reduce permissions)
+    '''
+    try:
+        shutil.chown(sock_path, user='dnx', group='dnx')
+        os.chmod(sock_path, 0o660)
+    except PermissionError:
+        return False
+
+    return True
+
+# SERVICE SOCKET - Auth Validation
+_getuser_info = pwd.getpwuid
+_getuser_groups = os.getgrouplist
+def authenticate_sender(anc_data: Iterable[tuple[int, int, bytes]]) -> bool:
+    anc_data = {msg_type: data for _, msg_type, data in anc_data}
+
+    auth_data = anc_data.get(SCM_CREDENTIALS)
+    if (not auth_data):
+        return False
+
+    pid, uid, gid = scm_creds_unpack(auth_data)
+    # USER is a dnxfirewall constant specified in def_constants
+    if (_getuser_info(uid).pw_name != USER):
+        return False
+
+    return True

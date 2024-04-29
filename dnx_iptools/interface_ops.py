@@ -2,25 +2,42 @@
 
 from __future__ import annotations
 
+import os
+
+from secrets import token_urlsafe
 from csv import reader as csv_reader
 from fcntl import ioctl
 from socket import socket, inet_aton, if_nameindex, AF_INET, SOCK_DGRAM
 
 from dnx_gentools.def_typing import *
-from dnx_gentools.def_constants import fast_sleep, ONE_SEC
+from dnx_gentools.def_constants import HOME_DIR, ROOT, ONE_SEC
+from dnx_gentools.def_constants import shell, fast_sleep
 from dnx_gentools.def_enums import INTF
-from dnx_gentools.file_operations import load_configuration
+from dnx_gentools.file_operations import acquire_lock, release_lock, load_configuration, read_file, write_file
+from dnx_gentools.file_operations import ConfigurationError, json_to_yaml, yaml_to_json
 
-from dnx_iptools.def_structs import fcntl_pack, long_unpack
-from dnx_iptools.cprotocol_tools import itoip
-from dnx_iptools.protocol_tools import btoia
+from dnx_iptools.def_structs import fcntl_pack
+from dnx_iptools.cprotocol_tools import itoip, iptoi, hextoip
+from dnx_iptools.protocol_tools import btoia, strtoroute, Route, masktocidr, cidrtoi
+
+from dnx_control.control.ctl_action import system_action
 
 __all__ = (
     'get_intf_builtin', 'load_interfaces',
     'wait_for_interface', 'wait_for_ip',
     'get_mac', 'get_netmask', 'get_ipaddress', 'get_masquerade_ip',
-    'get_arp_table'
+    'get_arp_table',
+
+    'get_routing_table', 'sort_routes', 'get_unified_routes', 'route_lookup',
+
+    'InterfaceManager'
 )
+
+# ================
+# TYPING IMPORTS
+# ================
+if (TYPE_CHECKING):
+    from dnx_routines.logging import LogHandler_T
 
 NO_ADDRESS: int = -1
 
@@ -41,11 +58,16 @@ def get_intf_builtin(zone_name):
 
     return {intf_index: (intf_settings[f'{intf_path}->zone'], intf_settings[f'{intf_path}->ident'])}
 
-def load_interfaces(intf_type: INTF = INTF.BUILTIN, *, exclude: list = []) -> list[tuple[int, int, str]]:
+def load_interfaces(intf_type: INTF = INTF.BUILTIN, *, exclude: Optional[list] = None) -> list[tuple[int, int, str]]:
     '''return a list of tuples for the specified interface type.
+
+    interfaces not associated are filtered out by default.
 
         [(intf_index, zone, ident)]
     '''
+    if (exclude is None):
+        exclude = []
+
     intf_settings: ConfigChain = load_configuration('system', cfg_type='global')
 
     dnx_interfaces = intf_settings.get_items(f'interfaces->{intf_type.name.lower()}')
@@ -59,6 +81,10 @@ def load_interfaces(intf_type: INTF = INTF.BUILTIN, *, exclude: list = []) -> li
         for intf_name, intf_info in dnx_interfaces:
 
             ident: str = intf_info['ident']
+            # filtering out interfaces not associated during installation
+            if (ident is None):
+                continue
+
             zone:  int = intf_info['zone']
             intf_index: int = system_interfaces.get(ident)
             if (not intf_index):
@@ -83,7 +109,7 @@ def _is_ready(interface: str) -> int:
 def wait_for_interface(interface: str, delay: int = ONE_SEC) -> None:
     '''wait for the specified interface to show power with waiting for network state.
 
-    blocks until interface is up.
+    blocks until the interface is shown as "up".
     sleeps for delay length after each check.
     '''
     while True:
@@ -92,8 +118,6 @@ def wait_for_interface(interface: str, delay: int = ONE_SEC) -> None:
 
         fast_sleep(delay)
 
-# once the lan interface ip address is configured after interface is brought online, the loop will break. this will
-# allow the server to continue the startup process.
 def wait_for_ip(interface: str) -> int:
     '''wait for the ip address configuration of the specified interface.
 
@@ -107,7 +131,7 @@ def wait_for_ip(interface: str) -> int:
         fast_sleep(ONE_SEC)
 
 def get_masquerade_ip(*, dst_ip: int, packed: bool = False) -> Union[bytes, int]:
-    '''return correct source ip address for a destination ip address based on the routing table.
+    '''return the correct source ip address for a destination ip address based on the routing table.
 
     return will be bytes if packed is True or an integer otherwise.
     a zeroed ip will be returned if error.
@@ -194,3 +218,188 @@ def get_arp_table(*, modify: bool = False, host: Optional[str] = None) -> Union[
 
     else:
         return arp_table
+
+# =====================
+# ROUTING FUNCTIONS
+# =====================
+def get_routing_table() -> list[Route]:
+    routing_table = []
+
+    routes = read_file('/proc/net/route')
+
+    for line in routes.splitlines()[1:]:
+        line = line.split()
+
+        intf = line[0]
+        network = hextoip(line[1])
+        netmask = hextoip(line[7])
+        gateway = hextoip(line[2])
+        ad = line[6]
+
+        route = Route(intf, network, masktocidr(netmask), gateway, ad)
+
+        routing_table.append(route)
+
+    return routing_table
+
+def sort_routes(routes: Iterable[Route]) -> list[Route]:
+    return sorted(routes, key=lambda x: (int(x.ad), -int(x.cidr)))
+
+def get_unified_routes() -> list[Route]:
+    '''returns a sorted list of routes after merging the routing table with configured routes.
+    '''
+    route_table = set(get_routing_table())
+
+    intf_manager = InterfaceManager()
+    with intf_manager:
+        configured_routes = set(intf_manager.get_configured_routes())
+
+    if (intf_manager.error):
+        raise intf_manager.error
+
+    not_available = configured_routes - route_table
+
+    for route in not_available:
+        route.status = 0
+
+    return sort_routes(route_table | not_available)
+
+def route_lookup(ip_address: Union[str, int]) -> Optional[Route]:
+    '''returns the matching route object for the given ip address.
+
+    None is returned if no matching route is found.
+    '''
+    if isinstance(ip_address, str):
+        ip_address = iptoi(ip_address)
+
+    for route in get_unified_routes():
+        if (ip_address & cidrtoi(route.cidr) == iptoi(route.net_id)):
+            return route
+
+    return None
+
+
+NETPLAN_PATH = '/etc/netplan'
+
+class InterfaceManager:
+    '''Class to ensure process safe operations on interface configuration files.
+    '''
+
+    log: ClassVar[LogHandler_T] = None
+    config_lock_path: ClassVar[ConfigLock] = f'{HOME_DIR}/dnx_profile/interfaces/interfaces.lock'
+
+    _intf_builtin:  ClassVar[str] = '01-dnx-interfaces.yaml'
+    _intf_extended: ClassVar[str] = '02-dnx-interfaces-extended.yaml'
+
+    _intf_cfg_path: str
+    _intf_cfg_netplan: dict
+    _intf_data_written: bool
+
+    __slots__ = (
+        'config_data', 'error',
+
+        '_config_hash', '_interfaces_lock',
+
+        '_intf_cfg_path', '_intf_cfg_netplan'
+    )
+
+    @classmethod
+    def set_log_reference(cls, ref: LogHandler_T) -> None:
+        '''sets logging class reference for configuration manager specific errors.
+        '''
+        cls.log: LogHandler_T = ref
+
+    def __init__(self, intf_type=INTF.BUILTIN) -> None:
+        self.config_data: Optional[dict] = None
+        self.error: Optional[ConfigurationError] = None
+
+        if (intf_type is INTF.BUILTIN):
+            self._intf_cfg_path = f'{NETPLAN_PATH}/{self._intf_builtin}'
+
+        elif (intf_type is INTF.EXTENDED):
+            self._intf_cfg_path = f'{NETPLAN_PATH}/{self._intf_extended}'
+
+    def __enter__(self):
+        self._interfaces_lock = acquire_lock(self.config_lock_path)
+
+        self.log.debug(f'Config file lock acquired for {self._intf_cfg_path}.')
+
+        try:
+            config_data = read_file(self._intf_cfg_path)
+        except:
+            raise ConfigurationError(f'[{self._intf_cfg_path}] failed to read configuration')
+
+        self._config_hash = hash(config_data)
+
+        try:
+            self.config_data = yaml_to_json(config_data)
+        except:
+            raise ConfigurationError(f'[{self._intf_cfg_path}] failed to parse configuration')
+
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if (exc_type is None):
+            updated_config = json_to_yaml(self.config_data)
+
+            # if the configuration has changed, write the new configuration to disk.
+            if (hash(updated_config) != self._config_hash):
+                self.error = self.__write_to_disk(updated_config)
+
+                if (self.error):
+                    self.log.error(f'InterfaceManager: {self.error.message}')
+
+        # releasing lock for purposes specified in flock(1) man page under -u (unlock) + close file.
+        release_lock(self._interfaces_lock)
+        self.log.debug(f'file lock released for {self._intf_cfg_path}')
+
+        if (exc_type is not None):
+            self.log.error(f'InterfaceManager: {exc_val}')
+            self.error = ConfigurationError(f'InterfaceManager context failure -> {exc_val}')
+
+        return True
+
+    def __write_to_disk(self, updated_config: str) -> Optional[ConfigurationError]:
+        # TEMP prefix is to wildcard match any orphaned files for deletion
+        temp_file_path = f'{HOME_DIR}/dnx_profile/interfaces/TEMP_{token_urlsafe(10)}'
+
+        if write_file(temp_file_path, updated_config):
+            # depending on the processes permissions, will replace directly or through the control proxy.
+            if (not ROOT):
+                system_action(module='webui', command='os.replace', args=[temp_file_path, self._intf_cfg_path])
+                system_action(module='webui', command='netplan apply')
+
+            else:
+                os.replace(temp_file_path, self._intf_cfg_path)
+                shell('netplan apply')
+
+        else:
+            return ConfigurationError(f'InterfaceManager failed to write configuration to temp file.')
+
+    def get_configured_routes(self, intf: Optional[str] = None) -> list[Route]:
+
+        routes: list[Route] = []
+
+        ethernets = self.config_data['network']['ethernets']
+        vlans     = self.config_data['network'].get('vlans')
+
+        for intf, cfg in ethernets.items():
+            routes.extend([strtoroute(intf, r) for r in cfg.get('routes', [])])
+
+        for intf, cfg in vlans.items():
+            routes.extend([strtoroute(intf, r) for r in cfg.get('routes', [])])
+
+        return routes
+
+    # TODO: we might not need these methods if we alter the config within the context manually.
+    #  - i would say that if it turns out to be wonky logic, the methods route is probably better.
+    #    - at the same time, the routes will only be modified by a single source within the webui.
+    def add_route(self, route: Route):
+        intf_type = 'vlans' if '.' in route.intf else 'ethernets'
+
+        self.config_data['network'][intf_type][route.intf]['routes'].append(route.format_netplan())
+
+    def del_route(self, route: Route):
+        intf_type = 'vlans' if '.' in route.intf else 'ethernets'
+
+        self.config_data['network'][intf_type][route.intf]['routes'].remove(route.format_netplan())

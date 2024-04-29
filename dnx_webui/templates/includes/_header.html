@@ -154,6 +154,11 @@
         <i class="material-icons right {{ theme.subnav_text }}">chevron_right</i>
       </a>
     </li>
+    <li {% if uri_path[1] == 'routing' %} class='active' {% endif %}>
+      <a href="system/routing" class="{{ theme.nav_text }}">
+        <i class="material-icons {{ theme.icon|safe }}">call_missed_outgoing</i>Routing
+      </a>
+    </li>
     <li {% if uri_path[1] == 'services' %} class='active' {% endif %}>
       <a href="system/services" class="{{ theme.nav_text }}">
         <i class="material-icons {{ theme.icon|safe }}">sync</i>Services

@@ -8,6 +8,8 @@ from typing import NamedTuple as _NamedTuple
 
 from source.web_typing import *
 
+web_module_load_callout(__file__)
+
 from dnx_gentools.def_constants import HOME_DIR
 from dnx_gentools.file_operations import tail_file
 

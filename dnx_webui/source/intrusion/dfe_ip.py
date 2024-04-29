@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from source.web_typing import *
+
+web_module_load_callout(__file__)
+
 from source.web_validate import *
 
 from dnx_gentools.def_enums import DATA, GEO, DIR
@@ -150,7 +153,7 @@ class WebPage(StandardWebPage):
         return NO_STANDARD_ERROR
 
     @staticmethod
-    def handle_ajax(json_data: dict) -> tuple[bool, WebError]:
+    def handle_ajax(json_data: Form) -> WebAjaxResponse:
 
         category = config(**{
             'type': json_data.get('type', DATA.MISSING),

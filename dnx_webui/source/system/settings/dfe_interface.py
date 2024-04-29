@@ -5,6 +5,9 @@ from __future__ import annotations
 import dnx_iptools.interface_ops as interface
 
 from source.web_typing import *
+
+web_module_load_callout(__file__)
+
 from source.web_validate import *
 
 from dnx_gentools.def_constants import HOME_DIR
@@ -38,11 +41,16 @@ class WebPage(StandardWebPage):
             ip_addr = itoip(interface.get_ipaddress(interface=wan_ident))
         except OverflowError:
             ip_addr = 'NOT SET'
+        except TypeError:
+            ip_addr = 'N/A'
+
 
         try:
             netmask = itoip(interface.get_netmask(interface=wan_ident))
         except OverflowError:
             netmask = 'NOT SET'
+        except TypeError:
+            netmask = 'N/A'
 
         return {
             'mac': {
@@ -60,6 +68,11 @@ class WebPage(StandardWebPage):
 
     @staticmethod
     def update(form: Form) -> tuple[int, str]:
+        system_settings: ConfigChain = load_configuration('system', cfg_type='global')
+
+        if system_settings['interfaces->builtin->wan->ident'] is None:
+            return 97, 'WAN interface not available in local only mode.'
+
         if ('wan_state_update' in form):
 
             wan_state = form.get('wan_state_update', DATA.MISSING)

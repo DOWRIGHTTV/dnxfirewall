@@ -3,19 +3,21 @@ from __future__ import annotations
 
 from source.web_typing import *
 
+web_module_load_callout(__file__)
+
 
 class WebPage:
-    '''super class for all other web page module types.'''
+    '''superclass for all other web page module types.'''
     @staticmethod
-    def load(form: Form) -> dict[str, Any]:
+    def load(form: Form) -> WebLoadResponse:
         raise NotImplementedError('load page not defined.')
 
     @staticmethod
-    def update(form: Form) -> tuple[int, str]:
+    def update(form: Form) -> WebUpdateError:
         raise NotImplementedError('update page not defined.')
 
     @staticmethod
-    def handle_ajax(json_data: dict) -> tuple[bool, WebError]:
+    def handle_ajax(json_data: JSON) -> WebAjaxResponse:
         raise NotImplementedError('handle ajax not defined.')
 
 
@@ -43,7 +45,7 @@ class RulesWebPage(WebPage):
     its primary purpose is to provide better static typing and error reporting/ handling.
     '''
     @staticmethod
-    def load(section: str) -> dict[str, Any]:
+    def load(section: str) -> WebLoadResponse:
         raise NotImplementedError('load page not defined.')
 
     @staticmethod

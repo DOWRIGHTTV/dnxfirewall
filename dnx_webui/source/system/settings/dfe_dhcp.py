@@ -5,6 +5,9 @@ from __future__ import annotations
 from ipaddress import IPv4Network, IPv4Address
 
 from source.web_typing import *
+
+web_module_load_callout(__file__)
+
 from source.web_validate import *
 
 from dnx_gentools.def_enums import CFG, DATA, DHCP

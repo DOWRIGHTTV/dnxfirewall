@@ -105,6 +105,7 @@ venv.bak/
 
 # pycharm
 .idea
+qodana.yaml
 
 # dnxfirewall
 *.sqlite3

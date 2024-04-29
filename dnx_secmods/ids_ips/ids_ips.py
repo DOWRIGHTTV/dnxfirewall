@@ -125,6 +125,8 @@ ddos_tracker: dict[PROTO, DDOS_TRACKERS] = {
     proto: DDOS_TRACKERS(Lock(), {}) for proto in [PROTO.TCP, PROTO.UDP, PROTO.ICMP]
 }
 
+ddos_firewall_lock = Lock()
+
 # =================
 # PSCAN INSPECTION
 # =================
@@ -273,6 +275,18 @@ def inspect_ddos(packet: IPSPacket) -> None:
     with ddos_protocol.lock:
         if not ddos_detected(ddos_protocol.tracker, packet): return
 
+    # todo: test this change.
+    #  correcting a logic issue that may be related to a major bug with ddos firewall rule creation and general failure.
+    # ensuring firewall rule creation is thread safe across all protocols.
+    # early return prevents duplicate ddos log entries seen:
+    #   - by a delay between detection and kernel offload
+    #   - packets already in queue
+    with ddos_firewall_lock:
+        if (packet.tracked_ip not in IDS_IPS.fw_rules):
+            IDS_IPS.fw_rules[packet.tracked_ip] = packet.timestamp
+
+        else: return
+
     if (IDS_IPS.ids_mode):
         Log.log(packet, IPS.LOGGED, engine=IPS.DDOS)
 
@@ -298,11 +312,6 @@ def ddos_detected(tracker: PROTO_TRACKER, packet: IPSPacket) -> bool:
     # ====================
     # if the ddos limit is exceeded and the host is not yet marked, return active ddos and add ip to tracker
     if threshold_exceeded(tracked_host, packet):
-
-        # this is to suppress log entries for ddos hosts that are being detected by the engine since there is
-        # a delay between detection and kernel offload or some packets are already in queue
-        if (packet.tracked_ip not in IDS_IPS.fw_rules):
-            IDS_IPS.fw_rules[packet.tracked_ip] = packet.timestamp
 
         return True
 

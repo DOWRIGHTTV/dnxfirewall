@@ -133,6 +133,7 @@ class IPSConfiguration(ConfigurationMixinBase):
     @looper(FIVE_MIN)
     # refactored function utilizing iptables + timestamp comment to identify rules to be expired.
     # this should inherently make the passive blocking system persist service or system reboots.
+    # todo: check for concurrency issues with ddos detection func on firewall rule lookup.
     def _clear_ip_tables(self) -> None:
         expired_hosts = System.ips_passively_blocked(block_length=self.__class__.block_length)
         if (not expired_hosts):
