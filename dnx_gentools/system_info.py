@@ -46,18 +46,18 @@ class Interface:
 class System:
 
     @staticmethod
-    # TODO: this seems completely fucked. ?????? are you high and drunk?
-    def cpu_usage() -> str:
+    def cpu_usage() -> float:
+        '''returns cpu usage as a percentage represented by a float. 69.82
+        '''
         with open('/proc/stat', 'r') as cpu:
             line = cpu.readline().split()
 
         idle = int(line[4])
+        total = sum([int(x) for x in line[1:]])
 
-        idle *= 100/sum([int(x) for x in line[1:]])
+        usage = round(100 - ((idle / total) * 100), 2)
 
-        percent = round(100 - idle, 2)
-#        print(utilization)
-        return f'{percent}%'
+        return usage
 
     @staticmethod
     def uptime() -> str:
@@ -78,7 +78,7 @@ class System:
         return uptime
 
     @staticmethod
-    def ram_usage() -> str:
+    def ram_usage() -> float:
         '''returns available ram %. 69.82%
         '''
         total, available = None, None
@@ -92,7 +92,7 @@ class System:
 
                 if (total and available): break
 
-        ram = f'{round((total / available) * 10, 1)}%'
+        ram = round((total / available) * 10, 1)
 #        print(ram)
         return ram
 

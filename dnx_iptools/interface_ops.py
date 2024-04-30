@@ -381,7 +381,7 @@ class InterfaceManager:
         routes: list[Route] = []
 
         ethernets = self.config_data['network']['ethernets']
-        vlans     = self.config_data['network'].get('vlans')
+        vlans     = self.config_data['network'].get('vlans', {})
 
         for intf, cfg in ethernets.items():
             routes.extend([strtoroute(intf, r) for r in cfg.get('routes', [])])
