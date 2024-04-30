@@ -216,3 +216,36 @@ def _highlighter_py():
     return highlight_html_python
 
 app.add_template_global(_highlighter_py(), 'highlighter_py')
+
+def resource_usage_bar():
+    '''returns a string containing HTML for a progress bar that displays the current resource usage.
+    '''
+
+    '''<svg width="100%" height="25px">
+  <svg preserveAspectRatio="none" viewBox="0 0 100 65">
+    <rect class="bg" fill="#ccc" width="100%" height="90%" rx="10"></rect>
+    <rect class="data" fill="#0074d9" width="45%" height="90%" rx="10"></rect>
+    <g class="markers">
+      <line x1="25%" y1="0" x2="25%" y2="100%"></line>
+      <line x1="50%" y1="0" x2="50%" y2="100%"></line>
+      <line x1="75%" y1="0" x2="75%" y2="100%"></line>
+    </g>
+  </svg>
+<g text-anchor="middle">
+    <text fill="#030303" x="50%" y="65%">25%</text>
+</g>
+</svg>
+<style>
+svg {
+  max-width: 120px;
+}
+svg > g > text {
+  font-weight: bold;
+}
+g > line {
+  stroke: black;
+  stroke-width: 0.5;
+  opacity: 30%;
+/*   vector-effect: non-scaling-stroke; */
+}
+</style>'''
