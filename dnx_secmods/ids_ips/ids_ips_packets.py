@@ -12,17 +12,13 @@ from dnx_iptools.interface_ops import load_interfaces
 
 class IPSPacket(NFPacket):
     tracked_ip: int
-    target_port: int
 
     __slots__ = (
-        'tracked_ip', 'target_port', 'icmp_payload_override', 'mark',
-
-        'action', 'direction', 'ipp_profile', 'dns_profile', 'ips_profile',
+        'tracked_ip', 'target_port', 'icmp_payload_override'
     )
 
     def __init__(self):
-        super().__init__()
-
+        # super().__init__()  # parent no longer uses __init__ method
         self.target_port: int = 0
         self.icmp_payload_override: bytes = b''
 

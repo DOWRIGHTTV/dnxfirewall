@@ -555,7 +555,7 @@ class NFPacket:
 # ==========================
 # pre-defined fields which are functionally constants for the purpose of connection resets
 ip_header_template: Structure_T = PR_IP_HDR(
-    (('ver_ihl', 69), ('tos', 0), ('ident', 0), ('flags_fro', 16384), ('ttl', 255), ('checksum',0))
+    (('ver_ihl', 69), ('tos', 0), ('ident', 0), ('flags_fro', 16384), ('ttl', 255), ('checksum', 0))
 )
 tcp_header_template: Structure_T = PR_TCP_HDR(
     (('seq_num', 696969), ('offset_control', 20500), ('window', 0), ('urg_ptr', 0))
@@ -605,7 +605,7 @@ class RawResponse:
             Thread(target=cls.__register, args=(intf,)).start()
 
     @classmethod
-    def __register(cls, intf: tuple[int, int, str]):
+    def __register(cls, intf: tuple[int, int, str]) -> None:
         '''will register interface with ip and socket. a new socket will be used every time this method is called.
         '''
         intf_index, zone, _intf = intf
@@ -631,19 +631,18 @@ class RawResponse:
         intf: NFQ_SEND_SOCK = cls._registered_socks_get(packet.in_intf)
 
         # TODO: skip masquerade when WAN int is statically assigned
-        #   why do we need to masquerade here??? wouldnt the initial dst ip be the current wan interface ip all the same?
+        #   why do we need to masquerade here?? wouldnt the initial dst ip be the current wan interface ip all the same?
         dnx_src_ip = packet.dst_ip if intf.zone != WAN_IN else get_masquerade_ip(dst_ip=packet.src_ip)
 
         # checking if dst port is associated with a nat.
-        # if so, will override necessary fields based on protocol and re-assign in the packet object.
+        # if so, will override the necessary fields based on protocol and re-assign in the packet object.
         # the chained if statement is for the more likely case of open port not being present.
-        open_ports: dict = cls._open_ports[packet.protocol]
-        if (open_ports):
-            port_override: int = open_ports.get(packet.dst_port)
-            if (port_override):
+        if open_ports := cls._open_ports[packet.protocol]:
+
+            if port_override := open_ports.get(packet.dst_port):
                 cls._packet_override(packet, dnx_src_ip, port_override)
 
-        # calling hook for packet generation. this can be overloaded by subclass.
+        # calling hook for packet generation.
         send_data: bytearray = cls._prepare_packet(packet, dnx_src_ip)
         try:
             intf.sock_sendto(send_data, (itoip(packet.src_ip), 0))
@@ -708,7 +707,7 @@ class RawResponse:
         return ip_header + proto_header + proto_payload
 
     @staticmethod
-    def _packet_override(packet: ProxyPackets, dnx_src_ip: int, port_override: int):
+    def _packet_override(packet: ProxyPackets, dnx_src_ip: int, port_override: int) -> None:
         if (packet.protocol is PROTO.TCP):
             packet.dst_port = port_override
 

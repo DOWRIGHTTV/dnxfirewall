@@ -108,15 +108,19 @@ cdef class CPacket:
 
             uint32_t in_interface   = nfq_get_indev(s.dnx_nfqhdr.nfq_d)
             uint32_t out_interface  = nfq_get_outdev(s.dnx_nfqhdr.nfq_d)
-            nfqnl_msg_packet_hw *hw = nfq_get_packet_hw(s.dnx_nfqhdr.nfq_d)
 
-        if (hw == NULL):
-            # nfq_get_packet_hw doesn't work on OUTPUT and PREROUTING chains
-            # NOTE: forcing error handling will ensure it is dealt with [properly].
-            raise OSError('MAC address not available in OUTPUT and PREROUTING chains')
+        # keep: as of now, no security module needs the mac_addr via nfqueue.
+        #  any module that needs the mac (ie. infected client logging), will get it via arp.
+        #  =====================================================================
+        #      nfqnl_msg_packet_hw *hw = nfq_get_packet_hw(s.dnx_nfqhdr.nfq_d)
+        #  #
+        #  if (hw == NULL):
+        #      # nfq_get_packet_hw doesn't work on OUTPUT and PREROUTING chains
+        #      # forcing error handling will ensure it is dealt with [properly].
+        #      raise OSError('MAC address not available in OUTPUT and PREROUTING chains')
 
         hw_info = (
-            in_interface, out_interface, <char*>hw.hw_addr, s.dnx_nfqhdr.timestamp
+            in_interface, out_interface, 'dnl', s.dnx_nfqhdr.timestamp  # keep: <char*>hw.hw_addr
         )
 
         return hw_info
