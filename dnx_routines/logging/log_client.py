@@ -127,6 +127,8 @@ def convert_level(level: Optional[LOG] = None) -> Union[dict[int, list[str, str]
 # process wide "instance" of LogHandler class, which can be used directly or subclassed.
 def _log_handler():
 
+    initialized: bool = False
+
     logging_level: int = 0
     handler_name: str = ''
     cli_output: bool = False
@@ -169,7 +171,7 @@ def _log_handler():
 
             set console_output=True to enable "Log.cli" outputs in the terminal.
             '''
-            nonlocal handler_name, cli_output, log_path, db_client
+            nonlocal initialized, handler_name, cli_output, log_path, db_client
 
             # TODO: wtf is this? initializer doesnt seem to be used anywhere or even set so None.
             #  - i think this is left over from a previous implementation.
@@ -192,6 +194,14 @@ def _log_handler():
 
             threading.Thread(target=write_to_disk).start()
             direct_log(handler_name, LOG.NOTICE, 'LogHandler initialization complete.', cli=True)
+
+            initialized = True
+
+        @classproperty
+        def is_running(_) -> bool:
+            '''returns True if the run method has been called and successfully set up the Log handler.
+            '''
+            return initialized
 
         @classproperty
         def current_lvl(_) -> int:
@@ -446,6 +456,9 @@ def _handle_unhandled_exception(exc_type, exc_value, exc_traceback):
 
     _dump_to_file(_err_report_path, err_report, lock=_err_report_write_lock)
 
+    # checking for Log handler initialization to prevent additional errors on early runtime thread exceptions
+    if (Log.is_running):
+        Log.alert(f'{str(exc_type).split()[1][:-1]} -> {exc_value} :: see {_err_report_path}')
 
 _sys.excepthook = _handle_unhandled_exception
 
@@ -466,7 +479,7 @@ threading.excepthook = _handle_unhandled_thread_exception
 def _format_output(exc_type, exc_value, exc_traceback) -> str:
     str_builder = [
         _format_threads(),
-        f'{exc_type.split()[1][:-1]} -> {exc_value}\n',
+        f'{str(exc_type).split()[1][:-1]} -> {exc_value}\n',
         '-' * 36,
         ''.join(_tb.format_tb(exc_traceback)),
         '-' * 36,

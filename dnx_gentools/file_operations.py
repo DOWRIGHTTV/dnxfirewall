@@ -43,7 +43,7 @@ __all__ = (
 FILE_POLL_TIMER = 10
 
 file_exists = os.path.exists
-file_opener = partial(os.open, mode=0o640)
+file_opener: Callable[[str, int], int | None] = partial(os.open, mode=0o640)
 
 sha256 = hashlib.sha256
 
@@ -91,7 +91,7 @@ def load_configuration(
     user_filename = f'{cfg_type}/{filename}.{ext}' if cfg_type else f'{filename}.{ext}'
 
     # note: quick parse for detecting if the configuration file is a profile, then set the system default accordingly.
-    # a profile will always have a cfg_type (i think) so dont need the logic for it not being present.
+    #  a profile will always have a cfg_type (i think) so dont need the logic for it not being present.
     system_filename = f'{cfg_type}/profiles/profile_0.cfg' if filename.split('/')[0] == 'profiles' else user_filename
 
     # loading system default configs
