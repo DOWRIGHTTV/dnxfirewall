@@ -160,8 +160,8 @@
                 <th>Uptime</th>
                 <th>CPU</th>
                 <th>RAM</th>
-                <th>Disk</th>
-
+                <th>Disk Used</th>
+                <th>Log Dir</th>
               </tr>
               </thead>
               <tbody>
@@ -169,7 +169,8 @@
                 <td>{{dashboard['uptime']}}</td>
                 <td>{{ resource_usage_bar(perc=dashboard['cpu'])|safe }}</td>
                 <td>{{ resource_usage_bar(perc=dashboard['ram'])|safe }}</td>
-                <td>add dis ples</td>
+                <td>{{ resource_usage_bar(perc=dashboard['disk'].log[1])|safe }}</td>
+                <td>{{ resource_usage_bar(perc=dashboard['disk'].used[1])|safe }}</td>
               </tr>
               </tbody>
             </table>
