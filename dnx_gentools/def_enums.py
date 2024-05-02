@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import os as _os
 import json as _json
+import os.path
 
 from enum import Enum as _Enum, IntEnum as _IntEnum, IntFlag as _IntFlag
+
+from dnx_gentools.def_constants import HOME_DIR as _HOME_DIR, SIG_DIR as _SIG_DIR
 
 # ===============
 # RUNTIME TYPES
@@ -211,11 +214,11 @@ TLD_CAT = _IntEnum('TLD_CAT', _TLD_LIST, start=0)
 #    - this will allow for the modification of countries without the need to update the codebase directly.
 #
 #   path: /dnx_profile/signatures/geo_lists/geolocation.cfg key: 'enum_list'
-_HOME_DIR: str = _os.environ.get('HOME_DIR', '/'.join(_os.path.realpath(__file__).split('/')[:-2]))
-_SIG_DIR: str = f'{_HOME_DIR}/dnx_profile/signatures'
-
-with open(f'{_SIG_DIR}/configuration/geolocation.cfg', 'r') as geo_cfg:
-    _GEO_LIST = _json.load(geo_cfg)['enum_list']
+try:
+    with open(f'{_SIG_DIR}/configuration/geolocation.cfg', 'r') as geo_cfg:
+        _GEO_LIST = _json.load(geo_cfg)['enum_list']
+except FileNotFoundError:
+    _GEO_LIST = ['NONE', 'RFC1918']
 
 GEO = _IntEnum('GEO', _GEO_LIST, start=0)
 GEOLOCATION = _NewType('GEOLOCATION', str)

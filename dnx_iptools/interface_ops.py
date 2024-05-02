@@ -141,12 +141,12 @@ def get_masquerade_ip(*, dst_ip: int, packed: bool = False) -> Union[bytes, int]
     s.connect((itoip(dst_ip), 0))
 
     try:
-        ip_addr = s.getsockname()[0]
+        ip_addr: str = s.getsockname()[0]
     except:
         return b'\x00'*4 if packed else 0
 
     else:
-        return inet_aton(ip_addr) if packed else ip_addr
+        return inet_aton(ip_addr) if packed else iptoi(ip_addr)
 
     finally:
         s.close()
@@ -381,7 +381,7 @@ class InterfaceManager:
         routes: list[Route] = []
 
         ethernets = self.config_data['network']['ethernets']
-        vlans     = self.config_data['network'].get('vlans')
+        vlans     = self.config_data['network'].get('vlans', {})
 
         for intf, cfg in ethernets.items():
             routes.extend([strtoroute(intf, r) for r in cfg.get('routes', [])])

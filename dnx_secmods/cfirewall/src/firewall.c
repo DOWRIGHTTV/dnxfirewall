@@ -24,9 +24,9 @@ FILENUM(4);
 #define PACKET_ACTION_MASK  3 // first 2 bits
 #define PACKET_DIR_MASK    12 // 2nd 2 bits
 
-#define SEND_TO_IP_PROXY  (IP_PROXY  << TWO_BYTES) | NF_QUEUE)
-#define SEND_TO_IDS_IPS   (IDS_IPS   << TWO_BYTES) | NF_QUEUE)
-#define SEND_TO_DNS_PROXY (DNS_PROXY << TWO_BYTES) | NF_QUEUE)
+#define SEND_TO_IP_PROXY  (IP_PROXY  << TWO_BYTES) | NF_QUEUE
+#define SEND_TO_IDS_IPS   (IDS_IPS   << TWO_BYTES) | NF_QUEUE
+#define SEND_TO_DNS_PROXY (DNS_PROXY << TWO_BYTES) | NF_QUEUE
 
 // ==================================
 // Firewall tables access lock
@@ -119,14 +119,14 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
             && pkt.sec_profiles & IP_PROXY_MASK ) {
 
         dnx_send_deferred_verdict(cfd, ntohl(nl_pkth->packet_id),
-            (pkt.sec_profiles << TWO_BYTES) | pkt_mark, SEND_TO_IP_PROXY;
+            (pkt.sec_profiles << TWO_BYTES) | pkt_mark, SEND_TO_IP_PROXY);
     }
-    // SEND TO IPS/IDS - criteria: accepted or dropped, inbound
+    // SEND TO IDS/IPS - criteria: accepted or dropped, inbound
     else if ( pkt.geo.dir == INBOUND // primary match
             && pkt.sec_profiles & IDS_IPS_MASK ) {
 
         dnx_send_deferred_verdict(cfd, ntohl(nl_pkth->packet_id),
-            (pkt.sec_profiles << TWO_BYTES) | pkt_mark, SEND_TO_IDS_IPS;
+            (pkt.sec_profiles << TWO_BYTES) | pkt_mark, SEND_TO_IDS_IPS);
     }
     // SEND TO DNS PROXY - criteria: accepted, outbound, udp/53
     else if ( pkt.action == DNX_ACCEPT // primary match
@@ -136,7 +136,7 @@ firewall_recv(nl_msg_hdr *nl_msgh, void *data)
             && pkt.protohdr->dport == htons(UDPPROTO_DNS) ) {
 
         dnx_send_deferred_verdict(cfd, ntohl(nl_pkth->packet_id),
-            (pkt.sec_profiles << TWO_BYTES) | pkt_mark, SEND_TO_DNS_PROXY;
+            (pkt.sec_profiles << TWO_BYTES) | pkt_mark, SEND_TO_DNS_PROXY);
     }
     // default: accept w/o sec policy, system rules, drop action w/o ips
     else {
