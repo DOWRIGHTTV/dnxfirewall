@@ -167,8 +167,8 @@
               <tbody>
               <tr>
                 <td>{{dashboard['uptime']}}</td>
-                <td>{{dashboard['cpu']}}</td>
-                <td>{{dashboard['ram']}}</td>
+                <td>{{ resource_usage_bar(dashboard['cpu'])|safe }}</td>
+                <td>{{ resource_usage_bar(dashboard['ram'])|safe }}</td>
                 <td>add dis ples</td>
               </tr>
               </tbody>
