@@ -79,7 +79,7 @@ class System:
 
     @staticmethod
     def ram_usage() -> float:
-        '''returns available ram %. 69.82%
+        '''returns ram usage as a percentage represented by a float. 69.82
         '''
         total, available = None, None
         with open('/proc/meminfo', 'r') as memory:
