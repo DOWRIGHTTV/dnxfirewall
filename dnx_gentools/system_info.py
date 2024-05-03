@@ -8,6 +8,7 @@ import datetime
 from time import ctime
 from functools import partial
 from datetime import datetime, timedelta
+from typing import NamedTuple
 from subprocess import run, CalledProcessError, DEVNULL
 
 from dnx_gentools.def_typing import *
@@ -26,6 +27,11 @@ __all__ = (
 
 util_shell = partial(run, shell=True, capture_output=True, text=True)
 Timestamp = Union[int, float]
+
+class DiskStats(NamedTuple):
+    size: tuple[float, float]
+    used: tuple[float, float]
+    log:  tuple[float, float]
 
 
 class Interface:
@@ -46,6 +52,18 @@ class Interface:
 class System:
 
     @staticmethod
+    def uptime() -> str:
+        with open('/proc/uptime', 'r') as f:
+            ut = timedelta(seconds=float(f.read().split()[0]))
+
+        ttl_minutes = ut.seconds // 60
+
+        hours = ttl_minutes // 60
+        minutes = ttl_minutes % 60
+
+        return f'days: {ut.days}, hours: {hours}, minutes: {minutes}'
+
+    @staticmethod
     def cpu_usage() -> float:
         '''returns cpu usage as a percentage represented by a float. 69.82
         '''
@@ -58,24 +76,6 @@ class System:
         usage = round(100 - ((idle / total) * 100), 2)
 
         return usage
-
-    @staticmethod
-    def uptime() -> str:
-        with open('/proc/uptime', 'r') as uptime:
-            uptime = int(float(uptime.readline().split()[0]))
-
-            uptime = str(timedelta(0, uptime))
-            utime = uptime.split()
-
-            if ('day' in uptime or 'days' in uptime):
-                utime2 = utime[2].split(':')
-                uptime = f'{utime[0]} day/s {utime2[0]} hour/s {utime2[1]} minute/s'
-
-            else:
-                utime0 = utime[0].split(':')
-                uptime = f'0 day/s {utime0[0]} hour/s {utime0[1]} minute/s'
-#        print(uptime)
-        return uptime
 
     @staticmethod
     def ram_usage() -> float:
@@ -95,6 +95,46 @@ class System:
         ram = round((total / available) * 10, 1)
 #        print(ram)
         return ram
+
+    @staticmethod
+    def disk_usage(folder_path: str) -> DiskStats:
+        '''Get the total disk size, disk space remaining, and disk space taken by the specified folder.
+
+        returns NamedTuple: DiskStats((GB, %), (GB, %), (GB, %))
+        '''
+        # Get the total disk space
+        disk_stats = os.statvfs('/')
+
+        total_disk_size_GB = round((disk_stats.f_blocks * disk_stats.f_frsize) / (1024 * 1024 * 1024), 2)
+
+        # Get the disk space remaining | calculate used
+        disk_space_free_GB = round((disk_stats.f_bfree * disk_stats.f_frsize) / (1024 * 1024 * 1024), 2)
+
+        disk_space_used_GB = round(total_disk_size_GB - disk_space_free_GB, 2)
+        disk_space_used_perc = round(disk_space_used_GB / total_disk_size_GB, 4) * 100
+
+        # Get the disk space taken by the folder
+        folder_size = 0
+        for dirpath, dirnames, filenames in os.walk(folder_path):
+
+            # print(dirpath, dirnames, filenames)
+
+            for f in filenames:
+
+                if (f == 'temp'): continue
+
+                fp = os.path.join(dirpath, f)
+
+                # print(f'checking size of {fp}.')
+
+                folder_size += os.path.getsize(fp)
+
+        folder_size_GB = round(folder_size / (1024 * 1024 * 1024), 2)
+        folder_size_perc = round(folder_size_GB / total_disk_size_GB, 4) * 100
+
+        return DiskStats(
+            (total_disk_size_GB, 100.0), (disk_space_used_GB, disk_space_used_perc), (folder_size_GB, folder_size_perc)
+        )
 
     @staticmethod
     def offset_and_format(logged_time: Timestamp) -> str:

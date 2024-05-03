@@ -18,13 +18,6 @@ from source.system.settings.dfe_interface import get_interfaces
 
 __all__ = ('WebPage')
 
-
-def _get_disk_usage():
-    '''total disk size, disk_space_used, log_folder_size'''
-    from types import SimpleNamespace
-
-    return SimpleNamespace(**{'stat': (212.00, 100.0), 'used': (71.56, 0.339), 'log': (69.69, 0.329)})
-
 class WebPage(StandardWebPage):
     '''
     available methods: load, update
@@ -41,7 +34,7 @@ class WebPage(StandardWebPage):
 
             'uptime': System.uptime(), 'cpu': System.cpu_usage(), 'ram': System.ram_usage(),
 
-            'disk': _get_disk_usage(), 'interfaces': get_interfaces(),
+            'disk': System.disk_usage('/home/dnx/dnxfirewall/dnx_profile/log'), 'interfaces': get_interfaces(),
         }
 
 def query_database():
