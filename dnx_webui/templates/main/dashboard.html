@@ -155,7 +155,11 @@
           <div class="card-panel hoverable {{ theme.card }}">
             <table class="striped centered">
               {{ create_title('system information', classes='center')|safe }}
-              <span>Uptime> {{dashboard['uptime']}}</span>
+              <div class="row">
+                <div class="col s6 offset-s3">
+                  <h6 class="center blue lighten-1">Uptime> {{dashboard['uptime']}}</h6>
+                </div>
+              </div>
               <thead>
               <tr>
                 <th>CPU</th>
