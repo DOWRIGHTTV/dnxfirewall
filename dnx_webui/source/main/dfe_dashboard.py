@@ -18,7 +18,6 @@ from source.system.settings.dfe_interface import get_interfaces
 
 __all__ = ('WebPage')
 
-
 class WebPage(StandardWebPage):
     '''
     available methods: load, update
@@ -35,7 +34,7 @@ class WebPage(StandardWebPage):
 
             'uptime': System.uptime(), 'cpu': System.cpu_usage(), 'ram': System.ram_usage(),
 
-            'interfaces': get_interfaces(),
+            'disk': System.disk_usage('/home/dnx/dnxfirewall/dnx_profile/log'), 'interfaces': get_interfaces(),
         }
 
 def query_database():
