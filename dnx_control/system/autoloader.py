@@ -24,6 +24,8 @@ from dnx_routines.logging.log_client import Log
 
 from dnx_cli.utils.shell_colors import text
 
+# todo: rework this module to hot reload if the file was changed/updated within the current update session.
+
 # ===============
 # TYPING IMPORTS
 # ===============
@@ -290,15 +292,18 @@ intf_templates = {
         },
         'nameservers': {
             'addresses': '[_PRIMARY__SECONDARY_]'
-        }
+        },
+        'routes': '[]'
     },
     'LAN': {
         'optional': 'yes',
-        'addresses': '[192.168.83.1/24]'
+        'addresses': '[192.168.83.1/24]',
+        'routes': '[]'
     },
     'DMZ': {
         'optional': 'yes',
-        'addresses': '[192.168.84.1/24]'
+        'addresses': '[192.168.84.1/24]',
+        'routes': '[]'
     }
 }
 # convenience function wrapper for physical interface to dnxfirewall zone association.
