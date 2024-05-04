@@ -240,3 +240,16 @@ table.striped > tbody > tr {
     text-shadow: 0 0 15px rgba(10, 220, 10, 0.5); }
   .multi-switch.sec-profiles > li {
     width: 36px; }
+
+/*svg based progress bar*/
+.svg-progress-bar {
+  max-width: 240px;
+  height: 40px; }
+  .svg-progress-bar text {
+    font-weight: bold;
+    font-size: 26px; }
+  .svg-progress-bar line {
+    stroke: black;
+    stroke-width: 0.25;
+    opacity: 50%;
+    vector-effect: non-scaling-stroke; }

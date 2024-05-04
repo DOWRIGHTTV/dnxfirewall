@@ -155,21 +155,25 @@
           <div class="card-panel hoverable {{ theme.card }}">
             <table class="striped centered">
               {{ create_title('system information', classes='center')|safe }}
+              <div class="row">
+                <div class="col s6 offset-s3">
+                  <h6 class="center blue lighten-1">Uptime> {{dashboard['uptime']}}</h6>
+                </div>
+              </div>
               <thead>
               <tr>
-                <th>Uptime</th>
                 <th>CPU</th>
                 <th>RAM</th>
-                <th>Disk</th>
-
+                <th>Disk Used</th>
+                <th>Log Dir</th>
               </tr>
               </thead>
               <tbody>
               <tr>
-                <td>{{dashboard['uptime']}}</td>
-                <td>{{dashboard['cpu']}}</td>
-                <td>{{dashboard['ram']}}</td>
-                <td>add dis ples</td>
+                <td>{{ resource_usage_bar(perc=dashboard['cpu'])|safe }}</td>
+                <td>{{ resource_usage_bar(perc=dashboard['ram'])|safe }}</td>
+                <td>{{ resource_usage_bar(perc=dashboard['disk'].used[1])|safe }}</td>
+                <td>{{ resource_usage_bar(perc=dashboard['disk'].log[1])|safe }}</td>
               </tr>
               </tbody>
             </table>

@@ -216,3 +216,32 @@ def _highlighter_py():
     return highlight_html_python
 
 app.add_template_global(_highlighter_py(), 'highlighter_py')
+
+@app.template_global()
+def resource_usage_bar(*, perc: float) -> str:
+    '''returns a string containing HTML for a progress bar that displays the current resource usage.
+    '''
+
+    green, yellow, orange, red = '#5EC435', '#E5DF1D', '#DF921D', '#BF3535'
+
+    if perc >= 90: bar_color = red
+    elif perc >= 75: bar_color = orange
+    elif perc >= 50: bar_color = yellow
+    else: bar_color = green
+
+    utilization_bar = f'''
+    <svg class="svg-progress-bar">
+      <svg preserveAspectRatio="none" viewBox="0 0 100 65">
+        <rect class="bg" fill="#ccc" width="100%" height="90%" rx="2"></rect>
+        <rect class="data" fill="{bar_color}" width="{perc}%" height="90%" rx="2"></rect>
+        <g class="markers">
+          <line x1="25%" y1="0" x2="25%" y2="100%"></line>
+          <line x1="50%" y1="0" x2="50%" y2="100%"></line>
+          <line x1="75%" y1="0" x2="75%" y2="100%"></line>
+        </g>
+      </svg>
+      <g text-anchor="middle"><text fill="#030303" x="50%" y="65%">{perc}%</text></g>
+    </svg>
+    '''
+
+    return utilization_bar
