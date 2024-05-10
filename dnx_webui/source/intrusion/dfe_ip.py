@@ -110,7 +110,7 @@ class WebPage(StandardWebPage):
             if (sec_profile in [DATA.MISSING, DATA.INVALID]):
                 return -1, 'unknown security profile selection.'
 
-        elif ('change_security_profile_ident' in form):
+        elif ('security_profile_ident' in form):
             sp_ident = config(**{
                 'idx': get_convert_in_range(form, 'security_profile', bounds=(1, 15)),
                 'name': form.get('security_profile_name', DATA.MISSING),
