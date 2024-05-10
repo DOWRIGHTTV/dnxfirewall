@@ -637,6 +637,12 @@ def standard_page_logic(dnx_page: StandardWebPage, page_settings: dict, data_key
             application_error_page, application_error=ce, theme=context_global.theme, **page_settings
         )
 
+    # --------------------------------------------- #
+    # LABEL: DEVELOPMENT_ONLY_CODE
+    if (WEBUI_DEVELOPMENT):
+        print('page_settings\n', page_settings)
+    # --------------------------------------------- #
+
     return render_template(page_name, theme=context_global.theme, **page_settings)
 
 def firewall_page_logic(dnx_page: RulesWebPage, page_settings: dict, data_key: str, *, page_name: str) -> str:
@@ -706,12 +712,6 @@ def categories_page_logic(dnx_page, page_settings: dict) -> str:
         return render_template(
             application_error_page, application_error=ce, theme=context_global.theme, **page_settings
         )
-
-    # --------------------------------------------- #
-    # LABEL: DEVELOPMENT_ONLY_CODE
-    if (WEBUI_DEVELOPMENT):
-        print('page_settings\n', page_settings)
-    # --------------------------------------------- #
 
     return render_template('intrusion/domain/categories.html', theme=context_global.theme, **page_settings)
 
