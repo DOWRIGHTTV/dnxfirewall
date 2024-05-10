@@ -13,6 +13,7 @@ export FLASK_APP=$FLASK_DIR
 export FLASK_ENV=development
 
 # WEBUI DEVELOPMENT FLAGS
+export INIT=1 # required to run in cli
 export WEBUI_DEVELOPMENT=1
 
 # RUN COMMANDS
