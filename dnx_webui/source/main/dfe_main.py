@@ -10,7 +10,7 @@ from source.web_typing import *
 
 web_module_load_callout(__file__)
 
-from dnx_gentools.def_constants import HOME_DIR, FIVE_SEC, ppt
+from dnx_gentools.def_constants import HOME_DIR, FIVE_SEC, WEBUI_DEVELOPMENT
 from dnx_gentools.def_enums import CFG
 from dnx_gentools.file_operations import ConfigurationManager, ConfigurationError, load_configuration
 from dnx_gentools.system_info import System
@@ -547,7 +547,7 @@ def dnx_blocked() -> str:
     #  authorized page will be served.
     # If the domain is not valid (regex) then the request will be redirected back to the blocked page without a domain.
     # !security: this is a crazy bit of code that should be tested much more as it is possible to do a sql injection
-    #  here if the validations below are bypassed.
+    #  here if the validations below are bypassed (should be limited to the domain "blocked" table).
     blocked_domain = request.args.get('dom', None)
     if (not blocked_domain):
         session.pop('user', None)
@@ -600,7 +600,7 @@ def page_not_found(error):
 def internal_server_error(error):
     # --------------------------------------------- #
     # LABEL: DEVELOPMENT_ONLY_CODE
-    if (server_type == 'development'):
+    if (WEBUI_DEVELOPMENT):
         error = traceback.format_exc()
 
         return render_template('main/dev_error.html', theme=context_global.theme, general_error=error)
@@ -612,7 +612,6 @@ def internal_server_error(error):
 # all standard page loads use this logic to decide the page action/ call the correct
 # lower level functions residing in each page's module
 def standard_page_logic(dnx_page: StandardWebPage, page_settings: dict, data_key: str, *, page_name: str) -> str:
-
     # todo: err_as_value semantic will make bypass the application error exception and show it in std_error.
     #  we should check the error type and send application error page if it is a ConfigurationError.
     #  this also means we should return the exception itself and not the message string.
@@ -667,9 +666,9 @@ def firewall_page_logic(dnx_page: RulesWebPage, page_settings: dict, data_key: s
 
 def log_page_logic(log_page: LogWebPage, page_settings: dict, *, page_name: str) -> str:
     # can now accept redirects from other places on the webui to load specific tables directly on load
-    # using uri queries FIXME: this has been temporarily suspended and should be reintroduced.
+    # using uri queries fixme: this has been temporarily suspended and should be reintroduced.
 
-    # TODO: we dont have explicit logic for "GET" and rely on exception handling to load page via GET. fix???
+    # todo: this logic is weird. update method just returns the load method. improve this.
 
     try:
         table, menu, table_data = log_page.update(request.form)
@@ -708,8 +707,15 @@ def categories_page_logic(dnx_page, page_settings: dict) -> str:
             application_error_page, application_error=ce, theme=context_global.theme, **page_settings
         )
 
+    # --------------------------------------------- #
+    # LABEL: DEVELOPMENT_ONLY_CODE
+    if (WEBUI_DEVELOPMENT):
+        print('page_settings\n', page_settings)
+    # --------------------------------------------- #
+
     return render_template('intrusion/domain/categories.html', theme=context_global.theme, **page_settings)
 
+# !security: code can shutdown or restart the system. -> ensure this cannot be abused.
 # function called by restart/shutdown pages. will ensure the user-specified operation gets executed
 def handle_system_action(page_settings: dict):
 
@@ -830,6 +836,10 @@ import source.main.dfe_template_globals
 # webui themes
 import source.main.dfe_themes
 
+# LABEL: DEVELOPMENT_ONLY_CODE
+# webui development helpers
+import source.main.dfe_main_dev
+
 # LABEL: CODE_NOT_STABLE
 # secure messenger extension
 import source.messenger.msg_main
@@ -839,36 +849,3 @@ import source.messenger.msg_main
 # =================================
 app.jinja_env.filters['itoip'] = itoip
 app.jinja_env.filters['ts_format_offset'] = System.offset_and_format
-
-# =================================
-# LABEL: DEVELOPMENT_ONLY_CODE
-# =================================
-# will only be registered if running on dev branch using flask dev server
-server_type = os.environ.get('FLASK_ENV')
-if (server_type == 'development'):
-
-    @app.before_request
-    def print_forms() -> None:
-        if (request.method != 'POST'):
-            return None
-
-        print(f'form data\n{"=" * 12}')
-        if ajax_data := request.get_json(silent=True):
-            ppt(ajax_data)
-
-        elif form_data := dict(request.form):
-
-            if private_data := form_data.pop('password', ''):
-                form_data['password'] = '*' * len(private_data)
-
-            ppt(form_data)
-
-        else: print('[no data]')
-
-    @app.after_request
-    def no_store_http_header(response):
-        # matches primary html files only
-        if ('.' not in request.path):
-            response.headers.add('Cache-Control', 'no-store')
-
-        return response

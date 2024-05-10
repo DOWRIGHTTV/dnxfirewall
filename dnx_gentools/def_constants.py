@@ -41,6 +41,7 @@ def INITIALIZE_MODULE(log_name: str):
 # =====================================================
 
 
+WEBUI_DEVELOPMENT: bool = _os.environ.get('WEBUI_DEVELOPMENT') == '1'
 ppt: _Callable[[_Any], None] = _PrettyPrinter(sort_dicts=False).pprint
 
 console_log: _Callable[[str], None] = _partial(print, flush=True)

@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from collections import defaultdict as _dd
 
 def web_module_load_callout(filename: str) -> None:
     '''print passed in filename to stdout.
 
-    only active when FLASK_ENV=development
+    only active when WEBUI_DEVELOPMENT is present in the environment.
     '''
     import os
 
     if os.environ.get('FLASK_ENV') == 'development':
         print(f'<| file import >> {filename} |>')
+
 
 if (TYPE_CHECKING):
     from typing import TypeAlias, Type, Any, Callable, ByteString, Optional, Union
