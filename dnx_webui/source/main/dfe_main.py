@@ -848,4 +848,4 @@ import source.messenger.msg_main
 # JINJA2 API - CUSTOM TEMPLATES
 # =================================
 app.jinja_env.filters['itoip'] = itoip
-app.jinja_env.filters['ts_format_offset'] = System.offset_and_format
+app.jinja_env.filters['ts_offset_format'] = System.offset_and_format
