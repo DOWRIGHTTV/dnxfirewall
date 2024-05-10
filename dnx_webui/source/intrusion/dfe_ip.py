@@ -112,7 +112,7 @@ class WebPage(StandardWebPage):
 
         elif ('change_security_profile_ident' in form):
             sp_ident = config(**{
-                'idx': get_convert_in_range(form, 'security_profile', bounds=(1, 15)),
+                'idx': get_convert_in_range(form, 'change_security_profile_ident', bounds=(1, 15)),
                 'name': form.get('security_profile_name', DATA.MISSING),
                 'desc': form.get('security_profile_desc', DATA.MISSING)
             })
