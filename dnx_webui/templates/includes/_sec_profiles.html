@@ -19,17 +19,19 @@
 </div>
 <div class="container">
   <div class="row row-thin">
-    <div class="col s6 offset-s3">
+    <div class="col s8 offset-s2">
       <div class="card-panel hoverable center {{ theme.card }}">
         <form method="post">
-          <div class="col s3">
-            <h6><input type="text" id="sp_name" name="security_profile_name" value="{{ page_settings['profile_name'] }}" required></h6>
-          </div>
-          <div class="col s6">
-            <h6><input type="text" id="sp_desc" name="security_profile_desc" value="{{ page_settings['profile_desc'] }}" required></h6>
-          </div>
-          <div class="col s3">
-            <button class="btn waves-effect waves-light col s12" name="change_security_profile_ident" value="{{ profile }}">Change</button>
+          <div class="row">
+            <div class="col s3">
+              <h6><input type="text" id="sp_name" name="security_profile_name" value="{{ page_settings.profile_name }}" required></h6>
+            </div>
+            <div class="col s6">
+              <h6><input type="text" id="sp_desc" name="security_profile_desc" value="{{ page_settings.profile_desc }}" required></h6>
+            </div>
+            <div class="col s3">
+              <button class="btn waves-effect waves-light col s12" name="change_security_profile_ident" value="{{ page_settings.security_profile }}">Change</button>
+            </div>
           </div>
         </form>
       </div>

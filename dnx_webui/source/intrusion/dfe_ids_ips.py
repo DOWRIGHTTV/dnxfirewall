@@ -25,9 +25,9 @@ class WebPage(StandardWebPage):
     '''
     @staticmethod
     def load(form: Form) -> WebLoadResponse:
-        # this will be validated by update method if it is present
+        # this was previously validated by the update method if it is present
         # on a direct page load, the profile will be set to the default (1).
-        sec_profile = form.get('security_profile', 1)
+        sec_profile = int(form.get('security_profile', 1))
 
         ips_profile: ConfigChain = load_configuration(f'profiles/profile_{sec_profile}', cfg_type='security/ids_ips')
         ips_global: ConfigChain = load_configuration('global', cfg_type='security/ids_ips')

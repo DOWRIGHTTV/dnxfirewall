@@ -81,7 +81,7 @@ from source.intrusion.dfe_ip import WebPage as ip_proxy
 from source.intrusion.domain.dfe_domain import WebPage as dns_proxy
 from source.intrusion.domain.dfe_xlist import WebPage as xlist
 from source.intrusion.domain.dfe_categories import WebPage as category_settings
-from source.intrusion.dfe_ids_ips import WebPage as dnx_ips
+from source.intrusion.dfe_ids_ips import WebPage as ids_ips
 from source.system.settings.dfe_dns import WebPage as dns_settings
 from source.system.settings.dfe_dhcp import WebPage as dhcp_settings
 from source.system.settings.dfe_interface import WebPage as interface_settings
@@ -290,13 +290,13 @@ def intrusion_domain_categories(session_info: dict):
 
     #  END OF DOMAIN SUB MENU
     # ----------------------------------------- #
-@app.route('/intrusion/ips', methods=['GET', 'POST'])
+@app.route('/intrusion/ids-ips', methods=['GET', 'POST'])
 @user_restrict('admin')
 def intrusion_ips(session_info: dict):
-    page_settings = get_default_page_settings(session_info, uri_path=['intrusion', 'ips'])
+    page_settings = get_default_page_settings(session_info, uri_path=['intrusion', 'ids-ips'])
 
     page_action = standard_page_logic(
-        dnx_ips, page_settings, 'ips_settings', page_name='intrusion/ids_ips.html'
+        ids_ips, page_settings, 'ips_settings', page_name='intrusion/ids_ips.html'
     )
 
     return page_action

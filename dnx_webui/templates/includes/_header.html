@@ -115,9 +115,9 @@
         <i class="material-icons {{ theme.icon|safe }}">public</i>IP
       </a>
     </li>
-    <li {% if uri_path[1] == 'ips' %} class='active' {% endif %}>
-      <a href="/intrusion/ips" class="{{ theme.nav_text }}">
-        <i class="material-icons {{ theme.icon|safe }}">report</i>IPS/IDS
+    <li {% if uri_path[1] == 'ids-ips' %} class='active' {% endif %}>
+      <a href="/intrusion/ids-ips" class="{{ theme.nav_text }}">
+        <i class="material-icons {{ theme.icon|safe }}">report</i>IDS/IPS
       </a>
     </li>
   </ul>
